@@ -164,7 +164,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		select_texture(get_tree_type().bark_tex, 0, 1);
 		shaders[is_normal_pass].enable();
 		tree_data_t::pre_draw(1, 0);
-		cur_tree->draw_branches(0.0);
+		cur_tree->draw_branches(0.0, 0);
 		tree_data_t::post_draw(1, 0);
 		shaders[is_normal_pass].disable();
 	}
@@ -359,7 +359,7 @@ bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
 
 
 void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer,
-	bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate)
+	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
 	assert(draw_branches != draw_leaves); // must enable only one
 	BLACK.do_glColor();
@@ -367,7 +367,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t 
 	tree_data_t::pre_draw(draw_branches, shadow_only);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->draw_tree(s, lod_renderer, draw_branches, draw_leaves, shadow_only, xlate, shader_loc);
+		i->draw_tree(s, lod_renderer, draw_branches, draw_leaves, shadow_only, reflection_pass, xlate, shader_loc);
 	}
 	tree_data_t::post_draw(draw_branches, shadow_only);
 }
@@ -458,14 +458,14 @@ void tree_cont_t::draw(bool shadow_only) {
 	// draw leaves
 	shader_t ls;
 	pre_leaf_draw(ls, 0);
-	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, zero_vector);
+	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, 0, zero_vector);
 	post_leaf_draw(ls);
 
 	// draw branches
 	shader_t bs;
 	bool const branch_smap(1 && !shadow_only); // looks better, but slower
 	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
-	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, zero_vector);
+	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, 0, zero_vector);
 	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 	bs.end_shader();
 }
@@ -823,19 +823,13 @@ bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) {
 		assert(leaf_data.size() >= 4*leaves.size());
 		glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
 	}
-	if (draw_branches) { // draw branches (untextured)
-		ensure_branch_vbo();
-		branch_vbo_manager.pre_render();
-		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0);
-		glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, 6*num_branch_quads, GL_UNSIGNED_SHORT, 0);
-		branch_vbo_manager.post_render();
-	}
+	if (draw_branches) {draw_branch_vbo(num_branch_quads, 1, 1);} // draw branches (untextured), low_detail=1
 	return 1;
 }
 
 
 void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
-	bool shadow_only, vector3d const &xlate, int shader_loc)
+	bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc)
 {
 	if (!created) return;
 	tree_data_t &td(tdata());
@@ -882,11 +876,11 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 			}
 			if (geom_opacity > 0.0) {
 				s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity);
-				draw_tree_branches(s, size_scale, xlate, shader_loc);
+				draw_tree_branches(s, size_scale, xlate, shader_loc, reflection_pass);
 			}
 		}
 		else {
-			draw_tree_branches(s, size_scale, xlate, shader_loc);
+			draw_tree_branches(s, size_scale, xlate, shader_loc, reflection_pass);
 		}
 	}
 	if (draw_leaves && has_leaves) {
@@ -910,10 +904,15 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 }
 
 
-void tree_data_t::create_indexed_quads_for_branches(vector<branch_vert_type_t> &data, vector<branch_index_t> &idata) const {
+void tree_data_t::ensure_branch_vbo() {
 
+	if (branch_vbo_manager.vbo != 0) return; // vbos already created
+	assert(branch_vbo_manager.ivbo == 0);
+	assert(num_branch_quads == 0 && num_unique_pts == 0);
+	vector<branch_vert_type_t> data; // static/reused?
+	vector<branch_index_t> idata;
 	unsigned const numcylin((unsigned)all_cylins.size());
-	unsigned num_quads(0), num_pts(0), cylin_id(0), data_pos(0), quad_id(0);
+	unsigned num_quads(0), num_pts(0), cylin_id(0), data_pos(0), quad_id(0), dix(0), idix(0), idix2(0);
 
 	for (unsigned i = 0; i < numcylin; ++i) { // determine required data size
 		bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
@@ -922,12 +921,13 @@ void tree_data_t::create_indexed_quads_for_branches(vector<branch_vert_type_t> &
 		num_pts   += (prev_connect ? 1 : 2)*ndiv;
 	}
 	assert(data.size() + num_pts < (1 << 8*sizeof(branch_index_t))); // cutting it close with 4th order branches
-	data.reserve(num_pts);
-	idata.reserve(6*num_quads);
+	data.resize(num_pts);
+	idata.resize(6*num_quads); // quads + quads/2 for LOD
+	idix2 = 4*num_quads;
 
 	for (unsigned i = 0; i < numcylin; i++) {
 		draw_cylin const &cylin(all_cylins[i]);
-		unsigned const ndiv(cylin.get_num_div());
+		unsigned const ndiv(cylin.get_num_div());//, ndiv2(ndiv/2);
 		point const ce[2] = {cylin.p1, cylin.p2};
 		float const ndiv_inv(1.0/ndiv);
 		vector3d v12; // (ce[1] - ce[0]).get_norm()
@@ -935,7 +935,7 @@ void tree_data_t::create_indexed_quads_for_branches(vector<branch_vert_type_t> &
 		bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
 
 		if (!prev_connect) { // new cylinder section
-			data_pos = (unsigned)data.size();
+			data_pos = dix;
 			quad_id  = cylin_id = 0;
 		}
 		for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
@@ -943,60 +943,73 @@ void tree_data_t::create_indexed_quads_for_branches(vector<branch_vert_type_t> &
 				float const tx(2.0*fabs(S*ndiv_inv - 0.5));
 				// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
 				vector3d const n(0.5*vpn.n[S] + 0.5*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
-				data.push_back(branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, float(cylin_id + j)));
+				data[dix++] = branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, float(cylin_id + j));
 			}
 		}
 		for (unsigned S = 0; S < ndiv; ++S) { // create index data
-			bool const last_edge((quad_id % ndiv) == ndiv-1);
-			unsigned const ix(data_pos + quad_id++);
-			idata.push_back(ix);
-			idata.push_back(ix+ndiv);
-			idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
-			idata.push_back(last_edge ? ix+1-ndiv : ix+1);
-			idata.push_back(ix);
-			idata.push_back(last_edge ? ix+1 : ix+ndiv+1);
+			bool const last_edge(((quad_id+S) % ndiv) == ndiv-1);
+			unsigned const ix(data_pos + quad_id+S);
+			idata[idix++] = ix;
+			idata[idix++] = ix+ndiv;
+			idata[idix++] = last_edge ? ix+1 : ix+1+ndiv;
+			idata[idix++] = last_edge ? ix+1-ndiv : ix+1;
 		}
+		for (unsigned S = 0; S < ndiv; S += 2) { // create index data for next LOD level
+			bool const last_edge(((quad_id+S) % ndiv) == ndiv-2);
+			unsigned const ix(data_pos + quad_id+S);
+			idata[idix2++] = ix;
+			idata[idix2++] = ix+ndiv;
+			idata[idix2++] = last_edge ? ix+2 : ix+2+ndiv;
+			idata[idix2++] = last_edge ? ix+2-ndiv: ix+2;
+		}
+		quad_id += ndiv;
 		++cylin_id;
 	} // for i
-}
-
-
-void tree_data_t::ensure_branch_vbo() {
-
-	if (branch_vbo_manager.vbo != 0) return; // vbos already created
-	assert(branch_vbo_manager.ivbo == 0);
-	assert(num_branch_quads == 0 && num_unique_pts == 0);
-	vector<branch_vert_type_t> data; // static/reused?
-	vector<branch_index_t> idata;
-	create_indexed_quads_for_branches(data, idata);
-	assert(data.size()  == data.capacity());
-	assert(idata.size() == idata.capacity());
-	num_branch_quads = idata.size()/6;
+	assert(idix  == 4*num_quads);
+	assert(dix   == data.size());
+	assert(idix2 == idata.size());
+	num_branch_quads = idata.size()/6; // quads + quads/2 for LOD
 	num_unique_pts   = data.size();
 	branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 }
 
 
-void tree_data_t::draw_branches(float size_scale) {
+void tree_data_t::draw_branches(float size_scale, bool reflection_pass) {
 
-	ensure_branch_vbo();
-	//glEnableClientState(GL_INDEX_ARRAY);
-	branch_vbo_manager.pre_render();
-	vert_norm_comp_tc::set_vbo_arrays(0, 0); // Note: could skip every other vert index for improved perf when distant
-	unsigned const num(6*((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale))))); // branch LOD
-	glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, num, GL_UNSIGNED_SHORT, 0); // draw with branch vbos
-	//glDisableClientState(GL_INDEX_ARRAY);
+	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
+	bool const low_detail(reflection_pass || ((size_scale == 0.0) ? 0 : (size_scale < 2.0)));
+	draw_branch_vbo(num, low_detail, 0);
 }
 
 
-void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc) {
+void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pass) {
+
+	if (TREE_4TH_BRANCHES) {low_detail = 0;} // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
+	ensure_branch_vbo();
+	branch_vbo_manager.pre_render();
+
+	if (shadow_pass) {
+		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0); // vertices only
+	}
+	else {
+		vert_norm_comp_tc::set_vbo_arrays(0, 0);
+	}
+	//glEnableClientState(GL_INDEX_ARRAY);
+	unsigned const idata_sz(4*num_branch_quads*sizeof(branch_index_t));
+	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, GL_UNSIGNED_SHORT, (void *)(low_detail ? idata_sz : 0));
+	//glDisableClientState(GL_INDEX_ARRAY);
+	branch_vbo_manager.post_render();
+}
+
+
+void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass) {
 
 	select_texture(tree_types[type].bark_tex, !s.is_setup());
 	set_color(bcolor);
 	if (s.is_setup()) {s.set_uniform_vector3d(shader_loc, (tree_center + xlate));}
 	glPushMatrix();
 	translate_to(tree_center + xlate);
-	tdata().draw_branches(size_scale);
+	tdata().draw_branches(size_scale, reflection_pass);
 	glPopMatrix();
 }
 

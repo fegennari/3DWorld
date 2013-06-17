@@ -746,7 +746,7 @@ void tile_t::gen_decid_trees_if_needed() {
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass) {
 
 	if (decid_trees.empty()) return;
-	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, 0, dtree_off.get_xlate());
+	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, 0, reflection_pass, dtree_off.get_xlate());
 }
 
 

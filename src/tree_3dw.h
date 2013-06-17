@@ -175,16 +175,15 @@ class tree_data_t {
 	//unsigned ref_count;
 	bool leaves_changed, reset_leaves;
 
-	void create_indexed_quads_for_branches(vector<branch_vert_type_t> &data, vector<branch_index_t> &idata) const;
 	void clear_vbo_ixs();
 
 public:
 	float base_radius, sphere_radius, sphere_center_zoff;
 	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
 
-	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1), last_update_frame(0),
-		leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
-		lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
+	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1),
+		last_update_frame(0), leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0),
+		sphere_center_zoff(0.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
@@ -201,7 +200,8 @@ public:
 	void bend_leaf(unsigned i, float angle);
 	bool draw_tree_shadow_only(bool draw_branches, bool draw_leaves);
 	void ensure_branch_vbo();
-	void draw_branches(float size_scale);
+	void draw_branches(float size_scale, bool reflection_pass);
+	void draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pass);
 	void draw_leaves(float size_scale);
 	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
 	tree_bb_tex_t const &get_render_branch_texture() const {return render_branch_texture;}
@@ -252,7 +252,7 @@ class tree
 	void drop_leaves();
 	void remove_leaf(unsigned i, bool update_data);
 	bool damage_leaf(unsigned i, float damage_done);
-	void draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc);
+	void draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass);
 	void draw_tree_leaves(shader_t const &s, float size_scale, vector3d const &xlate);
 	void update_leaf_cobj_color(unsigned i);
 	void copy_color(unsigned i, bool no_mark_changed=0);
@@ -267,7 +267,7 @@ public:
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
 	void draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
-		bool shadow_only, vector3d const &xlate, int shader_loc);
+		bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	void clear_context();
 	int delete_tree();
@@ -306,7 +306,8 @@ public:
 	bool was_generated() const {return generated;}
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
-	void draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool shadow_only, vector3d const &xlate);
+	void draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
+		bool shadow_only, bool reflection_pass, vector3d const &xlate);
 	void check_leaf_shadow_change();
 	static void pre_leaf_draw(shader_t &shader, bool enable_opacity);
 	static void post_leaf_draw(shader_t &shader);
