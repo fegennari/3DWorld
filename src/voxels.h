@@ -69,6 +69,8 @@ public:
 	V &get_ref     (unsigned x, unsigned y, unsigned z)        {return operator[](get_ix(x, y, z));}
 	void set       (unsigned x, unsigned y, unsigned z, V const &val) {operator[](get_ix(x, y, z)) = val;}
 	cube_t get_raw_bbox() const {return cube_t(lo_pos, center + (center - lo_pos));}
+	bool read(FILE *fp);
+	bool write(FILE *fp) const;
 };
 
 typedef voxel_grid<float> float_voxel_grid;
@@ -186,6 +188,8 @@ public:
 	sphere_t get_bsphere() const;
 	bool has_triangles() const;
 	bool has_filled_at_edges() const;
+	bool from_file(string const &fn);
+	bool to_file(string const &fn) const;
 };
 
 

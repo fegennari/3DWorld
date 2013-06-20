@@ -84,6 +84,76 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 }
 
 
+template<typename V> bool voxel_grid<V>::read(FILE *fp) {
+
+	// FIXME: what about nx, ny, nz, xblocks, yblocks, vsz, center, lo_pos
+	assert(fp);
+	unsigned sz(0);
+
+	if (fread(&sz, sizeof(unsigned), 1, fp) != 1) {
+		cerr << "Error reading voxel_grid size" << endl;
+		return 0;
+	}
+	if (empty()) {
+		resize(sz);
+	}
+	else if (sz != size()) {
+		cerr << "Error reading voxel_grid size: expected " << size() << " but got " << sz << endl;
+		return 0;
+	}
+	if (fread(&front(), sizeof(V), size(), fp) != size()) {
+		cerr << "Error reading voxel_grid data" << endl;
+		return 0;
+	}
+	return 1;
+}
+
+
+template<typename V> bool voxel_grid<V>::write(FILE *fp) const {
+
+	assert(fp);
+	unsigned const sz(size());
+	
+	if (fwrite(&sz, sizeof(unsigned), 1, fp) != 1) {
+		cerr << "Error writing voxel_grid size" << endl;
+		return 0;
+	}
+	if (fwrite(&front(), sizeof(V), size(), fp) != size()) {
+		cerr << "Error writing voxel_grid data" << endl;
+		return 0;
+	}
+	return 1;
+}
+
+
+bool voxel_model::from_file(string const &fn) {
+
+	FILE *fp(fopen(fn.c_str(), "rb"));
+
+	if (!fp) {
+		cerr << "Error opening voxel file " << fn << " for read" << endl;
+		return 0;
+	}
+	bool const success(read(fp) && outside.read(fp) && ao_lighting.read(fp)); // should ao_lighting be read or recalculated?
+	fclose(fp);
+	return success;
+}
+
+
+bool voxel_model::to_file(string const &fn) const {
+
+	FILE *fp(fopen(fn.c_str(), "wb"));
+
+	if (!fp) {
+		cerr << "Error opening voxel file " << fn << " for write" << endl;
+		return 0;
+	}
+	bool const success(write(fp) && outside.write(fp) && ao_lighting.write(fp)); // should ao_lighting be read or recalculated?
+	fclose(fp);
+	return success;
+}
+
+
 void voxel_manager::clear() {
 	
 	outside.clear();
