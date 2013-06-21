@@ -12,6 +12,9 @@ void main()
 	if (use_noise_tex) {
 		texel = get_texture_val(norm_normal, vpos);
 	}
+	else if (z_top_test) {
+		texel = get_texture_val_z_test(norm_normal, vpos);
+	}
 	else {
 		texel = lookup_triplanar_texture(vpos, norm_normal, tex0, tex0, tex0) * color0;
 	}

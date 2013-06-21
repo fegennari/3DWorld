@@ -479,6 +479,7 @@ public:
 
 				for (unsigned i = start; i < end; ++i) {
 					grass_t &g(grass[i]);
+					if (g.dir == zero_vector) continue; // already "removed"
 					float const dsq(p2p_dist_xy_sq(pos, g.p));
 					if (dsq > rad*rad) continue; // too far away
 					float const reld(sqrt(dsq)/rad);

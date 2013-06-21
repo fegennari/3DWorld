@@ -116,7 +116,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool smoke_en, bool has_lt_atten=0, bool use_smap=0, bool use_bmap=0, bool use_spec_map=0, bool use_mvm=0, bool force_tsl=0, bool use_light_colors=0);
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap);
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_noise_tex,
-	float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
+	bool z_top_test, float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
 void setup_object_render_data();
 void end_group(int &last_group_id);
 void draw_coll_surfaces(bool draw_solid, bool draw_trans);

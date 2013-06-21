@@ -300,13 +300,15 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 
 // texture units used: 0,8: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9-14: tree leaf textures
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
-	bool use_noise_tex, float tex_scale, float noise_scale, float tex_mix_saturate)
+	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
+	assert(!(use_noise_tex && z_top_test));
 	use_smap       &= shadow_map_enabled();
 	indir_lighting &= have_indir_smoke_tex;
 	dlights        &= (dl_tid > 0 && has_dl_sources);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
+	s.set_bool_prefix("z_top_test",     z_top_test,     1); // FS
 	s.setup_enabled_lights(2, 2); // FS; only 2, but could be up to 8 later
 	s.set_vert_shader("indir_lighting.part+procedural_gen");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+procedural_gen");

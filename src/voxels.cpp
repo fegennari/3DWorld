@@ -1282,7 +1282,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	if (!is_shadow_pass) {
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 		float const min_alpha(0.0); // not needed (yet)
-		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
+		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, 0, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		setup_tex_gen_for_rendering(s);
 	}
 	BLACK.do_glColor();

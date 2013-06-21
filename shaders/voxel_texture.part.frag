@@ -10,3 +10,8 @@ vec4 get_texture_val(in vec3 normal, in vec3 pos)
 	return mix(texel0, texel1, procedural_eval(pos));
 }
 
+vec4 get_texture_val_z_test(in vec3 normal, in vec3 pos)
+{
+	return lookup_triplanar_texture_2sz(pos, normal, tex0, tex0, tex0, tex1) * 0.5*(color0 + color1);
+}
+
