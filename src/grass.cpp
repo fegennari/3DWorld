@@ -439,6 +439,7 @@ public:
 				if (start == end) continue; // no grass at this location
 
 				for (unsigned i = start; i < end; ++i) {
+					if (grass[i].dir == zero_vector) continue; // removed
 					float const dsq(p2p_dist_xy_sq(pos, grass[i].p));
 					if (dsq > rad*rad) continue; // too far away
 					pos.z   = max(pos.z, (grass[i].p.z + grass[i].dir.z + radius));
@@ -455,13 +456,13 @@ public:
 		if (point_outside_mesh(x, y))      return 0.0;
 		unsigned const ix(y*MESH_X_SIZE + x);
 		assert(ix+1 < mesh_to_grass_map.size());
-		unsigned const num_grass(mesh_to_grass_map[ix+1] - mesh_to_grass_map[ix]);
+		unsigned const num_grass(mesh_to_grass_map[ix+1] - mesh_to_grass_map[ix]); // Note: ignores crushed/cut/removed grass
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw, bool add_blood) {
+	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw, bool add_blood, bool remove) {
 		if (burn && is_underwater(pos)) burn = 0;
-		if (!burn && !crush && !cut && !update_mh && !check_uw && !add_blood) return; // nothing left to do
+		if (!burn && !crush && !cut && !update_mh && !check_uw && !add_blood && !remove) return; // nothing left to do
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
@@ -529,6 +530,11 @@ public:
 						unsigned char uwc[3] = {120,  100, 50};
 						UNROLL_3X(updated |= (g.c[i_] != uwc[i_]);)
 						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(0.9*g.c[i_] + 0.1*uwc[i_]);)}
+					}
+					if (remove) {
+						// Note: if we're removing, it doesn't make sense to do any other operations since they won't have any effect
+						g.dir   = zero_vector; // make zero length (can't actually remove it)
+						updated = 1;
 					}
 					if (updated) {
 						min_up = min(min_up, i);
@@ -727,8 +733,8 @@ void draw_grass() {
 	if (!no_grass() && (display_mode & 0x02)) grass_manager.draw();
 }
 
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw, bool add_blood) {
-	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw, add_blood);
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw, bool add_blood, bool remove) {
+	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw, add_blood, remove);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {
