@@ -33,6 +33,7 @@ Crates
 
 Voxel terrain read/write
 Voxel top surface texture
+Grass on voxel terrain - dynamic update
 
 
  E: 2.9 process_groups()

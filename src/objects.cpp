@@ -84,7 +84,7 @@ void coll_obj::calc_size() {
 		volume = (4.0/3.0)*PI*radius*radius*radius;
 		break;
 	case COLL_POLYGON:
-		volume = polygon_area(points, npoints)*thickness;
+		volume = polygon_area(points, npoints)*thickness; // Note: thickness is 0 for voxel polygons
 		break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:

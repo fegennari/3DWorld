@@ -21,6 +21,7 @@ float grass_length(0.02), grass_width(0.002);
 
 extern bool has_dir_lights, has_snow, disable_shaders, no_sun_lpos_update;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
+extern unsigned create_voxel_landscape;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
 extern colorRGBA leaf_base_color;
 extern vector3d wind;
@@ -265,6 +266,11 @@ public:
 		modified.clear();
 	}
 
+	bool ao_lighting_too_low(point const &pos) {
+		float const keep_prob(5.0*(get_voxel_terrain_ao_lighting_val(pos) - 0.8));
+		return (keep_prob < 0.0 || (keep_prob < 1.0 && rgen.rand_float() > keep_prob)); // too dark
+	}
+
 	void gen_grass() {
 		RESET_TIME;
 		float const *h_tex(island ? h_sand     : h_dirt);
@@ -275,6 +281,7 @@ public:
 		modified.resize(XY_MULT_SIZE, 0);
 		object_types[GRASS].radius = 0.0;
 		rgen.pregen_floats(10000);
+		unsigned num_voxel_polys(0), num_voxel_blades(0);
 		
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue; // no grass
@@ -307,11 +314,43 @@ public:
 					}
 					// skip grass intersecting cobjs
 					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection
-					if (point_inside_voxel_terrain(pos)) continue; // inside voxel volume
+
+					if (create_voxel_landscape) {
+						if (point_inside_voxel_terrain(pos)) continue; // inside voxel volume
+						if (ao_lighting_too_low(pos))        continue; // too dark
+					}
 					add_grass_blade(pos, 0.8);
+				} // for n
+				if (create_voxel_landscape) {
+					float const blades_per_area(grass_density/dxdy);
+					coll_cell const &cell(v_collision_matrix[y][x]);
+					cube_t const test_cube(xval, xval+DX_VAL, yval, yval+DY_VAL, mesh_height[y][x], czmax+grass_length);
+
+					for (unsigned k = 0; k < cell.cvals.size(); ++k) {
+						int const index(cell.cvals[k]);
+						if (index < 0) continue;
+						assert(unsigned(index) < coll_objects.size());
+						coll_obj const &cobj(coll_objects[index]);
+						if (cobj.type != COLL_POLYGON || cobj.cp.cobj_type != COBJ_TYPE_VOX_TERRAIN) continue;
+						if (cobj.norm.z < 0.5) continue; // not oriented upward
+						if (!cobj.intersects(test_cube)) continue;
+						assert(cobj.npoints == 3); // triangles
+						float const density_scale(2.0*(cobj.norm.z - 0.5));
+						unsigned const num_blades(blades_per_area*density_scale*polygon_area(cobj.points, cobj.npoints));
+						++num_voxel_polys;
+
+						for (unsigned n = 0; n < num_blades; ++n) {
+							float const r1(rgen.rand_float()), r2(rgen.rand_float()), sqrt_r1(sqrt(r1));
+							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[1] + (sqrt_r1*r2)*cobj.points[2]);
+							if (ao_lighting_too_low(pos)) continue; // too dark
+							add_grass_blade(pos, 0.8); // FIXME: use cobj.norm instead of mesh normal
+							++num_voxel_blades;
+						}
+					} // for k
 				}
-			}
-		}
+			} // for x
+		} // for y
+		if (create_voxel_landscape) {cout << "voxel_polys: " << num_voxel_polys << ", voxel_blades: " << num_voxel_blades << endl;}
 		mesh_to_grass_map[XY_MULT_SIZE] = (unsigned)grass.size();
 		remove_excess_cap(grass);
 		PRINT_TIME("Grass Generation");
@@ -386,7 +425,7 @@ public:
 			//vector3d norm(plus_z); // use grass normal? 2-sided lighting?
 			//vector3d norm(grass[i].n);
 			//vector3d norm(surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]);
-			vector3d norm(interpolate_mesh_normal(grass[i].p));
+			vector3d norm(interpolate_mesh_normal(grass[i].p)); // FIXME: use voxel triangle normal instead of mesh normal
 			add_to_vbo_data(grass[i], vertex_data_buffer, ix, norm);
 
 			if (ix == block_size || i+1 == end) { // filled block or last entry
@@ -401,19 +440,20 @@ public:
 
 	float get_xy_bounds(point const &pos, float radius, int &x1, int &y1, int &x2, int &y2) const {
 		if (empty() || !is_over_mesh(pos)) return 0.0;
-
-		// determine radius at grass height
 		assert(radius > 0.0);
-		float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
-		if ((pos.z - radius) > (mh + grass_length)) return 0.0; // above grass
-		if ((pos.z + radius) < mh)                  return 0.0; // below the mesh
-		float const height(pos.z - (mh + grass_length));
-		float const rad((height > 0.0) ? sqrt(max(1.0E-6f, (radius*radius - height*height))) : radius);
-		x1 = get_xpos(pos.x - rad);
-		x2 = get_xpos(pos.x + rad);
-		y1 = get_ypos(pos.y - rad);
-		y2 = get_ypos(pos.y + rad);
-		return rad;
+
+		if (!create_voxel_landscape) { // determine radius at grass height
+			float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
+			if ((pos.z - radius) > (mh + grass_length)) return 0.0; // above grass
+			if ((pos.z + radius) < mh)                  return 0.0; // below the mesh
+			float const height(pos.z - (mh + grass_length));
+			if (height > 0.0) {radius = sqrt(max(1.0E-6f, (radius*radius - height*height)));}
+		}
+		x1 = get_xpos(pos.x - radius);
+		x2 = get_xpos(pos.x + radius);
+		y1 = get_ypos(pos.y - radius);
+		y2 = get_ypos(pos.y + radius);
+		return radius;
 	}
 
 	unsigned get_start_and_end(int x, int y, unsigned &start, unsigned &end) const {
@@ -486,9 +526,9 @@ public:
 					bool updated(0);
 
 					if (update_mh) {
-						float const mh(interpolate_mesh_zval(g.p.x, g.p.y, 0.0, 0, 1));
+						float const mh(interpolate_mesh_zval(g.p.x, g.p.y, 0.0, 0, 1)), delta_h(fabs(g.p.z - mh));
 
-						if (fabs(g.p.z - mh) > 0.01*grass_width) {
+						if (delta_h > 0.01*grass_width && (!create_voxel_landscape || delta_h < 4.0*grass_width)) {
 							g.p.z   = mh;
 							updated = 1;
 						}
@@ -629,6 +669,7 @@ public:
 				unsigned const ix(y*MESH_X_SIZE + x);
 				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+1]) continue; // empty section
 				point const mpos(get_mesh_xyz_pos(x, y));
+				float const grass_zmax((create_voxel_landscape ? max(mpos.z, czmax) : mpos.z) + grass_length);
 				bool visible(1);
 
 				if (dot_product(surface_normals[y  ][x  ], (adj_camera - mpos                      )) < 0.0 &&
@@ -640,7 +681,7 @@ public:
 				}
 				else {
 					cube_t const cube(mpos.x-grass_length, mpos.x+DX_VAL+grass_length,
-									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], mpos.z+grass_length);
+									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], grass_zmax);
 					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
 				
 					if (visible && (display_mode & 0x08)) {
@@ -664,7 +705,7 @@ public:
 						}
 					}
 				}
-				if (use_grass_shader && visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass
+				if (use_grass_shader && visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass (FIXME: voxels?)
 					nearby_ixs.push_back(ix);
 					visible = 0; // drawn in the second pass
 				}
