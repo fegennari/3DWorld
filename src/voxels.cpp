@@ -283,7 +283,7 @@ void voxel_manager::atten_at_top_only(float val) {
 }
 
 
-void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_inner) {
+void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_inner, bool no_atten_zbot) {
 
 	for (unsigned y = 0; y < ny; ++y) {
 		float const vy(2.0*fabs(y - 0.5*ny)/float(ny)); // 1 at edges, 0 at center
@@ -292,7 +292,8 @@ void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_in
 			float const vx(2.0*fabs(x - 0.5*nx)/float(nx)); // 1 at edges, 0 at center
 
 			for (unsigned z = 0; z < nz; ++z) {
-				float const vz(2.0*fabs(z - 0.5*nz)/float(nz)); // 1 at edges, 0 at center
+				float const deltaz(z - 0.5*nz), zval(no_atten_zbot ? max(0.0f, deltaz) : fabs(deltaz));
+				float const vz(2.0*zval/float(nz)); // 1 at edges, 0 at center
 				float const radius(sqrt(vx*vx + vy*vy + vz*vz));
 				float adj(0.0);
 				
@@ -385,7 +386,7 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 	assert(!empty());
 	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 	outside.init(nx, ny, nz, vsz, center, 0, params.num_blocks);
-	bool const sphere_mode(params.atten_at_edges == 3 || params.atten_at_edges == 4);
+	bool const sphere_mode(params.atten_sphere_mode());
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
@@ -501,7 +502,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 	vector<unsigned> work; // stack of voxels to process
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
-	if (params.atten_at_edges == 3 || params.atten_at_edges == 4 || !use_mesh) { // sphere mode / not mesh mode
+	if (params.atten_sphere_mode() || !use_mesh) { // sphere mode / not mesh mode
 		unsigned const x(nx/2), y(ny/2); // add a single point at the center of the sphere (will only work for filled sphere center)
 
 		if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {
@@ -1115,8 +1116,9 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 	case 0: break; // do nothing
 	case 1: atten_at_top_only(atten_thresh); break;
 	case 2: atten_at_edges   (atten_thresh); break;
-	case 3: atten_to_sphere  (atten_thresh, params.radius_val, 0); break;
-	case 4: atten_to_sphere  (atten_thresh, params.radius_val, 1); break;
+	case 3: atten_to_sphere  (atten_thresh, params.radius_val, 0, 0); break;
+	case 4: atten_to_sphere  (atten_thresh, params.radius_val, 1, 0); break;
+	case 5: atten_to_sphere  (atten_thresh, params.radius_val, 1, 1); break;
 	default: assert(0);
 	}
 	if (verbose) {PRINT_TIME("  Atten at Top/Edges");}
@@ -1508,7 +1510,7 @@ bool parse_voxel_option(FILE *fp) {
 		if (!read_uint(fp, global_voxel_params.atten_top_mode) || global_voxel_params.atten_top_mode > 2) voxel_file_err("atten_top_mode", error);
 	}
 	else if (str == "atten_at_edges") {
-		if (!read_uint(fp, global_voxel_params.atten_at_edges) || global_voxel_params.atten_at_edges > 4) voxel_file_err("atten_at_edges", error);
+		if (!read_uint(fp, global_voxel_params.atten_at_edges) || global_voxel_params.atten_at_edges > 5) voxel_file_err("atten_at_edges", error);
 	}
 	else if (str == "atten_thresh") {
 		if (!read_float(fp, global_voxel_params.atten_thresh) || global_voxel_params.atten_thresh <= 0.0) voxel_file_err("atten_thresh", error);

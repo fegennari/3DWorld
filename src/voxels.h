@@ -18,7 +18,7 @@ struct voxel_params_t {
 	float ao_radius, ao_weight_scale, ao_atten_power;
 	bool make_closed_surface, invert, remove_under_mesh, add_cobjs, normalize_to_1;
 	unsigned remove_unconnected; // 0=never, 1=init only, 2=always
-	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer)
+	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
 	unsigned keep_at_scene_edge; // 0=don't keep, 1=always keep, 2=only when scrolling
 	unsigned atten_top_mode; // 0=constant, 1=current mesh, 2=2d surface mesh
 	int geom_rseed;
@@ -36,6 +36,7 @@ struct voxel_params_t {
 	{
 			tids[0] = tids[1] = 0; colors[0] = colors[1] = WHITE;
 	}
+	bool atten_sphere_mode() const {return (atten_at_edges >= 3 && atten_at_edges <= 5);}
 };
 
 
@@ -98,7 +99,7 @@ public:
 	void create_from_cobjs(coll_obj_group &cobjs, float filled_val=1.0);
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);
-	void atten_to_sphere(float val, float inner_radius, bool atten_inner);
+	void atten_to_sphere(float val, float inner_radius, bool atten_inner, bool no_atten_zbot);
 	void determine_voxels_outside();
 	void remove_unconnected_outside();
 	bool is_outside(unsigned ix) const {assert(ix < outside.size()); return((outside[ix]&3) != 0);}

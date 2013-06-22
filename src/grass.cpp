@@ -284,14 +284,44 @@ public:
 		unsigned num_voxel_polys(0), num_voxel_blades(0);
 		
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
-			if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue; // no grass
-
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				mesh_to_grass_map[y*MESH_X_SIZE+x] = (unsigned)grass.size();
+				float const xval(get_xval(x)), yval(get_yval(y));
+
+				if (create_voxel_landscape) {
+					float const blades_per_area(grass_density/dxdy);
+					coll_cell const &cell(v_collision_matrix[y][x]);
+					cube_t const test_cube(xval, xval+DX_VAL, yval, yval+DY_VAL, mesh_height[y][x], czmax+grass_length);
+					float const nz_thresh = 0.4;
+
+					for (unsigned k = 0; k < cell.cvals.size(); ++k) {
+						int const index(cell.cvals[k]);
+						if (index < 0) continue;
+						assert(unsigned(index) < coll_objects.size());
+						coll_obj const &cobj(coll_objects[index]);
+						if (cobj.type != COLL_POLYGON || cobj.cp.cobj_type != COBJ_TYPE_VOX_TERRAIN) continue;
+						if (cobj.norm.z < nz_thresh)     continue; // not oriented upward
+						if (!cobj.intersects(test_cube)) continue;
+						assert(cobj.npoints == 3); // triangles
+						float const density_scale((cobj.norm.z - nz_thresh)/(1.0 - nz_thresh));
+						unsigned const num_blades(blades_per_area*density_scale*polygon_area(cobj.points, cobj.npoints) + 0.5);
+						++num_voxel_polys;
+
+						for (unsigned n = 0; n < num_blades; ++n) {
+							float const r1(rgen.rand_float()), r2(rgen.rand_float()), sqrt_r1(sqrt(r1));
+							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[1] + (sqrt_r1*r2)*cobj.points[2]);
+							if (ao_lighting_too_low(pos)) continue; // too dark
+							add_grass_blade(pos, 0.8); // FIXME: use cobj.norm instead of mesh normal
+							++num_voxel_blades;
+						}
+					} // for k
+				}
+
+				// create mesh grass
+				if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue; // no grass
 				if (x == MESH_X_SIZE-1 || y == MESH_Y_SIZE-1) continue; // mesh not drawn
 				if (is_mesh_disabled(x, y) || is_mesh_disabled(x+1, y) || is_mesh_disabled(x, y+1) || is_mesh_disabled(x+1, y+1)) continue; // mesh disabled
 				if (mesh_height[y][x] < water_matrix[y][x])   continue; // underwater (make this dynamically update?)
-				float const xval(get_xval(x)), yval(get_yval(y));
 				bool const do_cobj_check(hcm_chk(x, y) || hcm_chk(x+1, y) || hcm_chk(x, y+1) || hcm_chk(x+1, y+1));
 
 				for (unsigned n = 0; n < grass_density; ++n) {
@@ -321,33 +351,6 @@ public:
 					}
 					add_grass_blade(pos, 0.8);
 				} // for n
-				if (create_voxel_landscape) {
-					float const blades_per_area(grass_density/dxdy);
-					coll_cell const &cell(v_collision_matrix[y][x]);
-					cube_t const test_cube(xval, xval+DX_VAL, yval, yval+DY_VAL, mesh_height[y][x], czmax+grass_length);
-
-					for (unsigned k = 0; k < cell.cvals.size(); ++k) {
-						int const index(cell.cvals[k]);
-						if (index < 0) continue;
-						assert(unsigned(index) < coll_objects.size());
-						coll_obj const &cobj(coll_objects[index]);
-						if (cobj.type != COLL_POLYGON || cobj.cp.cobj_type != COBJ_TYPE_VOX_TERRAIN) continue;
-						if (cobj.norm.z < 0.5) continue; // not oriented upward
-						if (!cobj.intersects(test_cube)) continue;
-						assert(cobj.npoints == 3); // triangles
-						float const density_scale(2.0*(cobj.norm.z - 0.5));
-						unsigned const num_blades(blades_per_area*density_scale*polygon_area(cobj.points, cobj.npoints));
-						++num_voxel_polys;
-
-						for (unsigned n = 0; n < num_blades; ++n) {
-							float const r1(rgen.rand_float()), r2(rgen.rand_float()), sqrt_r1(sqrt(r1));
-							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[1] + (sqrt_r1*r2)*cobj.points[2]);
-							if (ao_lighting_too_low(pos)) continue; // too dark
-							add_grass_blade(pos, 0.8); // FIXME: use cobj.norm instead of mesh normal
-							++num_voxel_blades;
-						}
-					} // for k
-				}
 			} // for x
 		} // for y
 		if (create_voxel_landscape) {cout << "voxel_polys: " << num_voxel_polys << ", voxel_blades: " << num_voxel_blades << endl;}

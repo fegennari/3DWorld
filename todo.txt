@@ -32,8 +32,13 @@ Mesh height high frequency noise
 Crates
 
 Voxel terrain read/write
-Voxel top surface texture
-Grass on voxel terrain - dynamic update
+Voxel top surface texture:
+  - snow/grass
+  - specify in config as third texture
+Grass on voxel terrain:
+  - dynamic update when voxels are destroyed
+  - fix normal (constant +z?)
+  - update when MH changes only for mesh grass
 
 
  E: 2.9 process_groups()
