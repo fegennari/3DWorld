@@ -1269,7 +1269,10 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
 		to_update.push_back(tile);
 	}
-	if (!to_gen_trees.empty()) {
+	if (to_gen_trees.size() == 1) { // common case, no need for multiple threads
+		to_gen_trees[0]->init_pine_tree_draw();
+	}
+	else if (!to_gen_trees.empty()) {
 		#pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < (int)to_gen_trees.size(); ++i) {
 			to_gen_trees[i]->init_pine_tree_draw();
