@@ -16,16 +16,17 @@ float const TT_GRASS_COLOR_SCALE = 0.5;
 class grass_manager_t {
 
 protected:
-	struct grass_t { // size = 48
+	struct grass_t { // size = 44
 		point p;
 		vector3d dir, n;
 		unsigned char c[3];
-		unsigned char shadowed;
+		unsigned char shadowed : 1;
+		unsigned char on_mesh  : 1;
 		float w;
 
 		grass_t() {} // optimization
-		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, unsigned char const *const c_, float w_)
-			: p(p_), dir(dir_), n(n_), shadowed(0), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
+		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, unsigned char const *const c_, float w_, bool on_mesh_)
+			: p(p_), dir(dir_), n(n_), shadowed(0), on_mesh(on_mesh_), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
 		void merge(grass_t const &g);
 	};
 
@@ -43,7 +44,7 @@ public:
 	bool empty()  const {return grass.empty();}
 	void free_vbo();
 	void clear();
-	void add_grass_blade(point const &pos, float cscale);
+	void add_grass_blade(point const &pos, float cscale, bool on_mesh);
 	void create_new_vbo();
 	void add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const;
 	void begin_draw(float spec_weight) const;

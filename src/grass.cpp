@@ -54,7 +54,7 @@ void grass_manager_t::clear() {
 	grass.clear();
 }
 
-void grass_manager_t::add_grass_blade(point const &pos, float cscale) {
+void grass_manager_t::add_grass_blade(point const &pos, float cscale, bool on_mesh) {
 
 	vector3d const base_dir(plus_z);
 	//vector3d const base_dir(interpolate_mesh_normal(pos));
@@ -73,7 +73,7 @@ void grass_manager_t::add_grass_blade(point const &pos, float cscale) {
 	}
 	float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
 	float const width( grass_width *rgen.rand_uniform(0.7, 1.3));
-	grass.push_back(grass_t(pos, dir*length, norm, color, width));
+	grass.push_back(grass_t(pos, dir*length, norm, color, width, on_mesh));
 }
 
 void grass_manager_t::create_new_vbo() {
@@ -127,7 +127,7 @@ void grass_tile_manager_t::gen_block(unsigned bix) {
 			float const xval((x+bix*GRASS_BLOCK_SZ)*DX_VAL), yval(y*DY_VAL);
 
 			for (unsigned n = 0; n < grass_density; ++n) {
-				add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), TT_GRASS_COLOR_SCALE);
+				add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), TT_GRASS_COLOR_SCALE, 1);
 			}
 		}
 	}
@@ -311,7 +311,7 @@ public:
 							float const r1(rgen.rand_float()), r2(rgen.rand_float()), sqrt_r1(sqrt(r1));
 							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[1] + (sqrt_r1*r2)*cobj.points[2]);
 							if (ao_lighting_too_low(pos)) continue; // too dark
-							add_grass_blade(pos, 0.8); // FIXME: use cobj.norm instead of mesh normal
+							add_grass_blade(pos, 0.8, 0); // use cobj.norm instead of mesh normal?
 							++num_voxel_blades;
 						}
 					} // for k
@@ -349,7 +349,7 @@ public:
 						if (point_inside_voxel_terrain(pos)) continue; // inside voxel volume
 						if (ao_lighting_too_low(pos))        continue; // too dark
 					}
-					add_grass_blade(pos, 0.8);
+					add_grass_blade(pos, 0.8, 1);
 				} // for n
 			} // for x
 		} // for y
@@ -425,10 +425,9 @@ public:
 		if (alloc_data) {upload_vbo_data(NULL, 3*grass.size()*vntc_sz);} // initial upload (setup, no data)
 		
 		for (unsigned i = start, ix = 0; i < end; ++i) {
-			//vector3d norm(plus_z); // use grass normal? 2-sided lighting?
-			//vector3d norm(grass[i].n);
+			//vector3d norm(grass[i].n); // use grass normal? 2-sided lighting?
 			//vector3d norm(surface_normals[get_ypos(p1.y)][get_xpos(p1.x)]);
-			vector3d norm(interpolate_mesh_normal(grass[i].p)); // FIXME: use voxel triangle normal instead of mesh normal
+			vector3d norm(grass[i].on_mesh ? interpolate_mesh_normal(grass[i].p) : plus_z); // use +z normal for voxels
 			add_to_vbo_data(grass[i], vertex_data_buffer, ix, norm);
 
 			if (ix == block_size || i+1 == end) { // filled block or last entry
@@ -514,7 +513,7 @@ public:
 		for (int y = y1; y <= y2; ++y) {
 			for (int x = x1; x <= x2; ++x) {
 				if (point_outside_mesh(x, y)) continue;
-				bool const underwater((burn || check_uw) && has_water(x, y) && mesh_height[y][x] <= water_matrix[y][x]);
+				bool const maybe_underwater((burn || check_uw) && has_water(x, y) && mesh_height[y][x] <= water_matrix[y][x]);
 				unsigned start, end;
 				unsigned const ix(get_start_and_end(x, y, start, end));
 				if (start == end) continue; // no grass at this location
@@ -526,12 +525,13 @@ public:
 					float const dsq(p2p_dist_xy_sq(pos, g.p));
 					if (dsq > rad*rad) continue; // too far away
 					float const reld(sqrt(dsq)/rad);
+					bool const underwater(maybe_underwater && g.on_mesh);
 					bool updated(0);
 
-					if (update_mh) {
-						float const mh(interpolate_mesh_zval(g.p.x, g.p.y, 0.0, 0, 1)), delta_h(fabs(g.p.z - mh));
+					if (update_mh && g.on_mesh) {
+						float const mh(interpolate_mesh_zval(g.p.x, g.p.y, 0.0, 0, 1));
 
-						if (delta_h > 0.01*grass_width && (!create_voxel_landscape || delta_h < 4.0*grass_width)) {
+						if (fabs(g.p.z - mh) > 0.01*grass_width) {
 							g.p.z   = mh;
 							updated = 1;
 						}

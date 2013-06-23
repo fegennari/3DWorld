@@ -37,8 +37,6 @@ Voxel top surface texture:
   - specify in config as third texture
 Grass on voxel terrain:
   - dynamic update when voxels are destroyed
-  - fix normal (constant +z?)
-  - update when MH changes only for mesh grass
 
 
  E: 2.9 process_groups()
