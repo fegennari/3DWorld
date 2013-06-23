@@ -50,6 +50,9 @@ public:
 	voxel_grid() : nx(0), ny(0), nz(0), xblocks(0), yblocks(0), vsz(zero_vector) {}
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V default_val, unsigned num_blocks);
 	bool is_valid_range(int i[3]) const {return (i[0] >= 0 && i[1] >= 0 && i[2] >= 0 && i[0] < (int)nx && i[1] < (int)ny && i[2] < (int)nz);}
+	float get_xv(int x) const {return (x*vsz.x + lo_pos.x);}
+	float get_yv(int y) const {return (y*vsz.y + lo_pos.y);}
+	float get_zv(int z) const {return (z*vsz.z + lo_pos.z);}
 
 	void get_xyz(point const &p, int xyz[3]) const { // returns whether or not the point was inside the voxel volume
 		UNROLL_3X(xyz[i_] = int((p[i_] - lo_pos[i_])/vsz[i_]);); // convert to voxel space
@@ -151,6 +154,14 @@ protected:
 	};
 
 	vector<pt_ix_t> pt_to_ix;
+
+	struct merge_vn_t {
+		vertex_type_t *vn[4];
+		unsigned num;
+		merge_vn_t() : num(0) {}
+	};
+
+	typedef map<point, merge_vn_t> vert_norm_map_t;
 
 	struct comp_by_dist {
 		point const p;

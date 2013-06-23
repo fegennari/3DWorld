@@ -267,7 +267,7 @@ void voxel_manager::atten_at_top_only(float val) {
 				float &v(get_ref(x, y, z));
 	
 				if (params.atten_top_mode == 1) { // atten to mesh
-					float const z_atten(((z*vsz.z + lo_pos.z) - top_atten_val)/(vsz.z*nz) - 0.5);
+					float const z_atten(((get_zv(z)) - top_atten_val)/(vsz.z*nz) - 0.5);
 					if (z_atten > 0.0) v += val*z_atten;
 				}
 				else if (params.atten_top_mode == 2) { // atten to random
@@ -332,7 +332,7 @@ unsigned voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, uns
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
 			unsigned const xx(x+xhi), yy(y+yhi);
-			float const xval(xx*vsz.x + lo_pos.x), yval(yy*vsz.y + lo_pos.y);
+			float const xval(get_xv(xx)), yval(get_yv(yy));
 			if (all_under_mesh) all_under_mesh = ((outside.get(xx, yy, z) & UNDER_MESH_BIT) != 0);
 			
 			for (unsigned zhi = 0; zhi < 2; ++zhi) {
@@ -340,7 +340,7 @@ unsigned voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, uns
 				unsigned char const outside_val(outside.get(xx, yy, zz) & 7);
 				if (outside_val) cix |= 1 << vix; // outside or on edge
 				vals[vix] = (outside_val == ON_EDGE_BIT) ? params.isolevel : get(xx, yy, zz); // check on_edge status
-				pts [vix] = point(xval, yval, (zz*vsz.z + lo_pos.z));
+				pts [vix] = point(xval, yval, get_zv(zz));
 			}
 		}
 	}
@@ -1086,10 +1086,10 @@ void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_up
 			unsigned const xbix(blocks_to_update[i]%params.num_blocks), x1(xbix*xblocks), x2((xbix+1)*xblocks);
 			unsigned const ybix(blocks_to_update[i]/params.num_blocks), y1(ybix*yblocks), y2((ybix+1)*yblocks);
 			block_group_t group; // add a border of 1 to account for rounding errors
-			group.v[0][0] = max(get_xpos(x1*vsz.x + lo_pos.x)-1, 0); // x1
-			group.v[1][0] = max(get_ypos(y1*vsz.y + lo_pos.y)-1, 0); // y1
-			group.v[0][1] = min(get_xpos(x2*vsz.x + lo_pos.x)+1, MESH_X_SIZE); // x2
-			group.v[1][1] = min(get_ypos(y2*vsz.y + lo_pos.y)+1, MESH_Y_SIZE); // y2
+			group.v[0][0] = max(get_xpos(get_xv(x1))-1, 0); // x1
+			group.v[1][0] = max(get_ypos(get_yv(y1))-1, 0); // y1
+			group.v[0][1] = min(get_xpos(get_xv(x2))+1, MESH_X_SIZE); // x2
+			group.v[1][1] = min(get_ypos(get_yv(y2))+1, MESH_Y_SIZE); // y2
 
 			if (i == 0) {
 				cur_group = group;
@@ -1137,6 +1137,32 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 		create_block(block, 1, 0);
 	}
 	if (verbose) {PRINT_TIME("  Triangles to Model");}
+
+	if (tot_blocks > 1) { // merge triangle vertices along block seams
+		vert_norm_map_t vnmap; // FIXME: make a class member and apply this operation to modified blocks during dynamic update
+
+		for (unsigned block = 0; block < tot_blocks; ++block) {
+			unsigned const xbix(block%params.num_blocks), ybix(block/params.num_blocks);
+			cube_t const bbox(get_xv(xbix*xblocks), get_xv(min(nx-1, (xbix+1)*xblocks)), get_yv(ybix*yblocks), get_yv(min(ny-1, (ybix+1)*yblocks)), 0.0, 0.0);
+
+			for (tri_data_t::value_type::iterator i = tri_data[block].begin(); i != tri_data[block].end(); ++i) {
+				if (i->v.x != bbox.d[0][0] && i->v.x != bbox.d[0][1] && i->v.y != bbox.d[1][0] && i->v.y != bbox.d[1][1]) continue; // not at a block boundary
+				merge_vn_t &vn(vnmap[i->v]); // Note: should be no duplicates within the same block
+				assert(vn.num < 4); // too strong? can relax later
+				vn.vn[vn.num++] = &(*i);
+			}
+		}
+		for (vert_norm_map_t::const_iterator i = vnmap.begin(); i != vnmap.end(); ++i) {
+			unsigned const num(i->second.num);
+			if (num == 1) continue;
+			assert(num > 0);
+			vector3d normal(zero_vector);
+			for (unsigned n = 0; n < num; ++n) {normal += i->second.vn[n]->n;} // average the normals
+			normal /= num;
+			for (unsigned n = 0; n < num; ++n) {i->second.vn[n]->n = normal;} // make them equal
+		}
+		if (verbose) {PRINT_TIME("  Block Seam Merge");}
+	}
 
 	if (do_ao_lighting) {
 		calc_ao_lighting();
