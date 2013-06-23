@@ -158,10 +158,16 @@ protected:
 	struct merge_vn_t {
 		vertex_type_t *vn[4];
 		unsigned num;
-		merge_vn_t() : num(0) {}
+		vector3d normal;
+
+		merge_vn_t() : num(0), normal(zero_vector) {}
+		void add   (vertex_type_t &v) {assert(num < 4); vn[num++] = &v;}
+		void update(vertex_type_t &v) {if (normal == zero_vector) {normal = v.n;} else {v.n = normal;}}
+		void finalize();
 	};
 
 	typedef map<point, merge_vn_t> vert_norm_map_t;
+	vert_norm_map_t boundary_vnmap;
 
 	struct comp_by_dist {
 		point const p;
@@ -173,6 +179,8 @@ protected:
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	virtual bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create, bool count_only);
+	void update_boundary_normals_for_block(unsigned block_ix, bool calc_average);
+	void finalize_boundary_vmap();
 	void calc_ao_dirs();
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
 	void calc_ao_lighting();

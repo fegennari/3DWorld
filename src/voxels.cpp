@@ -737,6 +737,7 @@ void voxel_model::clear() {
 	pt_to_ix.clear();
 	modified_blocks.clear();
 	ao_lighting.clear();
+	boundary_vnmap.clear();
 	voxel_manager::clear();
 	volume_added = 0;
 }
@@ -1045,6 +1046,11 @@ void voxel_model::proc_pending_updates() {
 		modified_blocks.clear();
 		return;
 	}
+	if (!boundary_vnmap.empty()) { // fix block boundary vertex normals
+		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
+			update_boundary_normals_for_block(blocks_to_update[i], 0);
+		}
+	}
 	for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
 		calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
 	}
@@ -1107,6 +1113,38 @@ void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_up
 }
 
 
+void voxel_model::merge_vn_t::finalize() {
+
+	assert(num > 0);
+	if (num == 1) {normal = vn[0]->n; return;}
+	normal = zero_vector;
+	for (unsigned n = 0; n < num; ++n) {normal += vn[n]->n;} // average the vertex normals
+	normal /= num;
+	for (unsigned n = 0; n < num; ++n) {vn[n]->n = normal;} // make them equal
+}
+
+
+void voxel_model::update_boundary_normals_for_block(unsigned block_ix, bool calc_average) {
+
+	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
+	cube_t const bbox(get_xv(xbix*xblocks), get_xv(min(nx-1, (xbix+1)*xblocks)), get_yv(ybix*yblocks), get_yv(min(ny-1, (ybix+1)*yblocks)), 0.0, 0.0);
+
+	for (tri_data_t::value_type::iterator i = tri_data[block_ix].begin(); i != tri_data[block_ix].end(); ++i) {
+		if (i->v.x != bbox.d[0][0] && i->v.x != bbox.d[0][1] && i->v.y != bbox.d[1][0] && i->v.y != bbox.d[1][1]) continue; // not at a block boundary
+		// Note: should be no duplicates within the same block
+		if (calc_average) {boundary_vnmap[i->v].add(*i);} else {boundary_vnmap[i->v].update(*i);}
+	}
+}
+
+
+void voxel_model::finalize_boundary_vmap() {
+
+	for (vert_norm_map_t::iterator i = boundary_vnmap.begin(); i != boundary_vnmap.end(); ++i) {
+		i->second.finalize();
+	}
+}
+
+
 void voxel_model::build(bool verbose, bool do_ao_lighting) {
 
 	RESET_TIME;
@@ -1139,31 +1177,12 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 	if (verbose) {PRINT_TIME("  Triangles to Model");}
 
 	if (tot_blocks > 1) { // merge triangle vertices along block seams
-		vert_norm_map_t vnmap; // FIXME: make a class member and apply this operation to modified blocks during dynamic update
-
-		for (unsigned block = 0; block < tot_blocks; ++block) {
-			unsigned const xbix(block%params.num_blocks), ybix(block/params.num_blocks);
-			cube_t const bbox(get_xv(xbix*xblocks), get_xv(min(nx-1, (xbix+1)*xblocks)), get_yv(ybix*yblocks), get_yv(min(ny-1, (ybix+1)*yblocks)), 0.0, 0.0);
-
-			for (tri_data_t::value_type::iterator i = tri_data[block].begin(); i != tri_data[block].end(); ++i) {
-				if (i->v.x != bbox.d[0][0] && i->v.x != bbox.d[0][1] && i->v.y != bbox.d[1][0] && i->v.y != bbox.d[1][1]) continue; // not at a block boundary
-				merge_vn_t &vn(vnmap[i->v]); // Note: should be no duplicates within the same block
-				assert(vn.num < 4); // too strong? can relax later
-				vn.vn[vn.num++] = &(*i);
-			}
+		for (unsigned block_ix = 0; block_ix < tot_blocks; ++block_ix) {
+			update_boundary_normals_for_block(block_ix, 1);
 		}
-		for (vert_norm_map_t::const_iterator i = vnmap.begin(); i != vnmap.end(); ++i) {
-			unsigned const num(i->second.num);
-			if (num == 1) continue;
-			assert(num > 0);
-			vector3d normal(zero_vector);
-			for (unsigned n = 0; n < num; ++n) {normal += i->second.vn[n]->n;} // average the normals
-			normal /= num;
-			for (unsigned n = 0; n < num; ++n) {i->second.vn[n]->n = normal;} // make them equal
-		}
+		finalize_boundary_vmap();
 		if (verbose) {PRINT_TIME("  Block Seam Merge");}
 	}
-
 	if (do_ao_lighting) {
 		calc_ao_lighting();
 		if (verbose) {PRINT_TIME("  Voxel AO Lighting");}

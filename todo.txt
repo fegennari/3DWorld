@@ -34,7 +34,6 @@ Crates
 Voxel terrain:
   - read/write
   - dynamic grass update when voxels are destroyed
-  - fix dynamic block seams
 
 
  E: 2.9 process_groups()
