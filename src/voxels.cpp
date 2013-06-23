@@ -994,6 +994,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 	if (material_removed) {
 		maybe_create_fragments(center, radius, shooter, num_fragments);
+		modify_grass_at(center, max(2.5*radius, 0.5*vsz.mag()), 0, 0, 0, 0, 0, 0, 1); // remove any grass at this location
 	}
 	else {
 		volume_added = 1;

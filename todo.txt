@@ -30,10 +30,7 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 
 Mesh height high frequency noise
 Crates
-
-Voxel terrain:
-  - read/write
-  - dynamic grass update when voxels are destroyed
+Voxel terrain read/write
 
 
  E: 2.9 process_groups()
