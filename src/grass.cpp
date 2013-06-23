@@ -303,7 +303,7 @@ public:
 						if (cobj.norm.z < nz_thresh)     continue; // not oriented upward
 						if (!cobj.intersects(test_cube)) continue;
 						assert(cobj.npoints == 3); // triangles
-						float const density_scale((cobj.norm.z - nz_thresh)/(1.0 - nz_thresh));
+						float const density_scale((cobj.norm.z - nz_thresh)/(1.0 - nz_thresh)); // FIXME: better to use vertex normals and interpolate?
 						unsigned const num_blades(blades_per_area*density_scale*polygon_area(cobj.points, cobj.npoints) + 0.5);
 						++num_voxel_polys;
 

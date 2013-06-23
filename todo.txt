@@ -31,12 +31,10 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 Mesh height high frequency noise
 Crates
 
-Voxel terrain read/write
-Voxel top surface texture:
-  - snow/grass
-  - specify in config as third texture
-Grass on voxel terrain:
-  - dynamic update when voxels are destroyed
+Voxel terrain:
+  - read/write
+  - dynamic grass update when voxels are destroyed
+  - fix tile seams
 
 
  E: 2.9 process_groups()

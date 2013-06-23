@@ -1183,6 +1183,8 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 		select_texture(params.tids[i], 0);
 		s.add_uniform_color(cnames[i], params.colors[i]);
 	}
+	set_active_texture(15); // TU_ID=15
+	select_texture(params.tids[2], 0); // top texture
 	set_active_texture(0);
 }
 
@@ -1284,7 +1286,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	if (!is_shadow_pass) {
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 		float const min_alpha(0.0); // not needed (yet)
-		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, 0, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
+		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.top_tex_used, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		setup_tex_gen_for_rendering(s);
 	}
 	BLACK.do_glColor();
@@ -1528,6 +1530,11 @@ bool parse_voxel_option(FILE *fp) {
 	else if (str == "tid2") {
 		if (!read_str(fp, strc)) voxel_file_err("tid2", error);
 		global_voxel_params.tids[1] = get_texture_by_name(std::string(strc));
+	}
+	else if (str == "tid_top") {
+		if (!read_str(fp, strc)) voxel_file_err("tid_top", error);
+		global_voxel_params.tids[2] = get_texture_by_name(std::string(strc));
+		global_voxel_params.top_tex_used = 1;
 	}
 	else if (str == "base_color") {
 		if (!read_color(fp, global_voxel_params.base_color)) voxel_file_err("base_color", error);

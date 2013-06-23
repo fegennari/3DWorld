@@ -298,11 +298,10 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 }
 
 
-// texture units used: 0,8: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9-14: tree leaf textures
+// texture units used: 0,8,15: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9-14: tree leaf textures
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
-	assert(!(use_noise_tex && z_top_test));
 	use_smap       &= shadow_map_enabled();
 	indir_lighting &= have_indir_smoke_tex;
 	dlights        &= (dl_tid > 0 && has_dl_sources);
@@ -314,7 +313,8 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+procedural_gen");
 	s.begin_shader();
 	common_shader_block_post(s, dlights, use_smap, indir_lighting, min_alpha);
-	s.add_uniform_int("tex1", 8);
+	s.add_uniform_int("tex1",    8);
+	s.add_uniform_int("tex_top", 15); // not used in all cases
 	s.add_uniform_float("tex_scale", tex_scale);
 
 	if (use_noise_tex) {

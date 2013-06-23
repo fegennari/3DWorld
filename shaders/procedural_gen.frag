@@ -9,14 +9,21 @@ void main()
 	vec3 norm_normal = normalize(normal);
 	vec4 texel;
 
-	if (use_noise_tex) {
-		texel = get_texture_val(norm_normal, vpos);
-	}
-	else if (z_top_test) {
-		texel = get_texture_val_z_test(norm_normal, vpos);
+	if (z_top_test) {
+		if (use_noise_tex) {
+			texel = get_texture_val_z_test(norm_normal, vpos);
+		}
+		else {
+			lookup_triplanar_texture_2sz(vpos, norm_normal, tex0, tex0, tex0, tex1) * color0;
+		}
 	}
 	else {
-		texel = lookup_triplanar_texture(vpos, norm_normal, tex0, tex0, tex0) * color0;
+		if (use_noise_tex) {
+			texel = get_texture_val(norm_normal, vpos);
+		}
+		else {
+			texel = lookup_triplanar_texture(vpos, norm_normal, tex0, tex0, tex0) * color0;
+		}
 	}
 	float alpha = gl_Color.a;
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
