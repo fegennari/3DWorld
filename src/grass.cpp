@@ -291,7 +291,7 @@ public:
 				if (create_voxel_landscape) {
 					float const blades_per_area(grass_density/dxdy);
 					coll_cell const &cell(v_collision_matrix[y][x]);
-					cube_t const test_cube(xval, xval+DX_VAL, yval, yval+DY_VAL, mesh_height[y][x], czmax+grass_length);
+					cube_t const test_cube(xval-0.5*DX_VAL, xval+0.5*DX_VAL, yval-0.5*DY_VAL, yval+0.5*DY_VAL, mesh_height[y][x], czmax+grass_length);
 					float const nz_thresh = 0.4;
 
 					for (unsigned k = 0; k < cell.cvals.size(); ++k) {
@@ -310,7 +310,8 @@ public:
 						for (unsigned n = 0; n < num_blades; ++n) {
 							float const r1(rgen.rand_float()), r2(rgen.rand_float()), sqrt_r1(sqrt(r1));
 							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[1] + (sqrt_r1*r2)*cobj.points[2]);
-							if (ao_lighting_too_low(pos)) continue; // too dark
+							if (!test_cube.contains_pt(pos)) continue; // bbox test
+							if (ao_lighting_too_low(pos))    continue; // too dark
 							add_grass_blade(pos, 0.8, 0); // use cobj.norm instead of mesh normal?
 							++num_voxel_blades;
 						}
@@ -675,7 +676,8 @@ public:
 				float const grass_zmax((create_voxel_landscape ? max(mpos.z, czmax) : mpos.z) + grass_length);
 				bool visible(1);
 
-				if (dot_product(surface_normals[y  ][x  ], (adj_camera - mpos                      )) < 0.0 &&
+				if (x+1 < MESH_X_SIZE && y+1 < MESH_Y_SIZE &&
+					dot_product(surface_normals[y  ][x  ], (adj_camera - mpos                      )) < 0.0 &&
 					dot_product(surface_normals[y  ][x+1], (adj_camera - get_mesh_xyz_pos(x+1, y  ))) < 0.0 &&
 					dot_product(surface_normals[y+1][x+1], (adj_camera - get_mesh_xyz_pos(x+1, y+1))) < 0.0 &&
 					dot_product(surface_normals[y+1][x  ], (adj_camera - get_mesh_xyz_pos(x,   y+1))) < 0.0) // back_facing
