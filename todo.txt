@@ -31,6 +31,7 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 Mesh height high frequency noise
 Crates
 Voxel terrain read/write
+Voxel triangle simplification
 
 
  E: 2.9 process_groups()

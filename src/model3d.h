@@ -186,6 +186,7 @@ public:
 	void add_vertex(T const &v, vertex_map_t<T> &vmap);
 	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims);
 	void optimize(unsigned npts);
+	void mesh_simplify(unsigned npts);
 	void finalize(int prim_type);
 	void clear();
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}

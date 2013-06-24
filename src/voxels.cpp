@@ -815,6 +815,7 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 
 void voxel_model_ground::create_block_hook(unsigned block_ix, vector<triangle> const &triangles) {
 
+	tri_data[block_ix].mesh_simplify(3);
 	if (!add_cobjs) return; // nothing to do
 	cobj_params cparams(params.elasticity, params.base_color, 0, 0, NULL, 0, params.tids[0]);
 	cparams.cobj_type = COBJ_TYPE_VOX_TERRAIN;
