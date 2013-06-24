@@ -212,6 +212,8 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	void assign(T x_, T y_, T z_)    {x = x_; y = y_; z = z_;}
 	void operator+=(pointT const &p) {x += p.x; y += p.y; z += p.z;}
 	void operator-=(pointT const &p) {x -= p.x; y -= p.y; z -= p.z;}
+	void operator+=(T const &v)      {x += v; y += v; z += v;}
+	void operator-=(T const &v)      {x -= v; y -= v; z -= v;}
 	void operator*=(double m)        {x *= m; y *= m; z *= m;}
 
 	void operator/=(double d) {
@@ -256,6 +258,8 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	}
 	pointT operator+(pointT const &p)  const {return pointT((x+p.x), (y+p.y), (z+p.z));}
 	pointT operator-(pointT const &p)  const {return pointT((x-p.x), (y-p.y), (z-p.z));}
+	pointT operator+(T const &v)       const {return pointT((x+v), (y+v), (z+v));}
+	pointT operator-(T const &v)       const {return pointT((x-v), (y-v), (z-v));}
 	pointT operator*(T      const val) const {return pointT(x*val, y*val, z*val);}
 	pointT operator*(pointT const &p)  const {return pointT(x*p.x, y*p.y, z*p.z);} // pairwise multiply
 	pointT operator-()                 const {return pointT(-x, -y, -z);}
