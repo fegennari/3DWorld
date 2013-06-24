@@ -821,6 +821,7 @@
     <None Include="mapx\COLL_OBJS_mapx.txt" />
     <None Include="mapx\config_mapx.txt" />
     <None Include="mapx\courtyard.txt" />
+    <None Include="mapx\crate.txt" />
     <None Include="mapx\exploding_tank.txt" />
     <None Include="mapx\floor1.txt" />
     <None Include="mapx\floor2.txt" />

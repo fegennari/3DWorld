@@ -174,13 +174,20 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		if (!dir) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
 
 		if (textured) {
-			float a[4] = {0.0}, b[4] = {0.0};
-			a[t0] = tscale[0];
-			b[t1] = tscale[1];
-			a[3]  = texture_offset[t0]*tscale[0];
-			b[3]  = texture_offset[t1]*tscale[1];
-			set_texgen_vec4((cp.swap_txy ? b : a), 0, 0, shader);
-			set_texgen_vec4((cp.swap_txy ? a : b), 1, 0, shader);
+			for (unsigned e = 0; e < 2; ++e) {
+				unsigned const tdim(e ? t1 : t0);
+				float tg[4] = {0.0};
+
+				if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
+					tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
+					tg[3]    = (-d[tdim][0] + texture_offset[tdim])*tg[tdim];
+				}
+				else {
+					tg[tdim] = tscale[e];
+					tg[3]    = texture_offset[tdim]*tscale[e];
+				}
+				set_texgen_vec4(tg, (cp.swap_txy ^ (e != 0)), 0, shader);
+			}
 		}
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);

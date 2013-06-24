@@ -23,6 +23,14 @@ T -2.55 5.55 -0.69  i mapx/exploding_tank.txt
 T -3.45 5.55 -0.69  i mapx/exploding_tank.txt
 T  0.0  0.0 -0.29
 m 1.0
+
+# add some crates
+T -5.00 3.20 -0.69  m 0.1  i mapx/crate.txt
+T -5.01 3.17 -0.59  m 0.1  i mapx/crate.txt
+T -5.33 3.37 -0.69  m 0.1  i mapx/crate.txt
+T -5.18 3.42 -0.69  m 0.1  i mapx/crate.txt
+T -4.75 3.11 -0.69  m 0.1  i mapx/crate.txt
+
 e 0
 a 0 # non-destroyable
 

@@ -1065,6 +1065,9 @@ color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thicknes
 	if (cobj.type == COLL_CUBE && cobj.cp.light_atten > 0.0) {
 		color.alpha += (1.0 - color.alpha)*(1.0 - exp(-cobj.cp.light_atten*thickness));
 	}
+	if (tscale == 0.0) { // calculate tscale from object size
+		tscale = 3.0/(fabs(cobj.d[0][1] - cobj.d[0][0]) + fabs(cobj.d[1][1] - cobj.d[1][0]) + fabs(cobj.d[2][1] - cobj.d[2][0]));
+	}
 	copy_from(cobj);
 }
 

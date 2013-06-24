@@ -1495,7 +1495,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'y': // texture scale
-			if (fscanf(fp, "%f", &cobj.cp.tscale) != 1) {return read_error(fp, "texture scale", coll_obj_file);}
+			if (fscanf(fp, "%f", &cobj.cp.tscale) != 1) {return read_error(fp, "texture scale", coll_obj_file);} // okay if tscale=0 for cubes
 			break;
 
 		case 'Y': // texture translate (cubes, polygons, cylinder ends only), swap xy (cubes/polygons only): <tdx> <tdy> [<swap_xy>]
