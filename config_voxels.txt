@@ -15,7 +15,7 @@ default_ground_tex 13 # dirt texture
 
 #voxel tid_top grass29.raw # grass tex
 #grass_density 400
-#grass_size 0.02 0.002
+#grass_size 0.05 0.002
 
 gravity 1.0
 mesh_height 1.0

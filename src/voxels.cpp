@@ -365,7 +365,6 @@ unsigned voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, uns
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {
 		triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
 		if (tri.pts[0] == tri.pts[1] || tri.pts[0] == tri.pts[2] || tri.pts[1] == tri.pts[2]) continue; // invalid triangle
-		#pragma omp critical(triangles_push_back)
 		triangles.push_back(tri);
 	}
 	return triangles.size();
@@ -584,7 +583,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 					operator[](ix) = params.isolevel - (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
 				}
 			}
-			if (had_update && xy_updated) {xy_updated ->push_back(y*nx + x);}
+			if (had_update && xy_updated) {xy_updated->push_back(y*nx + x);}
 		}
 	}
 }
@@ -795,18 +794,17 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 			}
 		}
 	}
-	if (count_only) return count;
+	if (count_only) {return count;}
 
 	if (first_create) { // after the first creation pt_to_ix is out of order
 		pt_to_ix[block_ix].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
 		pt_to_ix[block_ix].ix = block_ix;
 	}
+	tri_data[block_ix].reserve_for_num_verts(3*triangles.size()); // optional optimization that makes little difference
 	vertex_map_t<vertex_type_t> vmap(1);
-	polygon_t poly(params.base_color);
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		poly.from_triangle(*i);
-		tri_data[block_ix].add_poly(poly, vmap);
+		tri_data[block_ix].add_triangle(*i, vmap);
 	}
 	create_block_hook(block_ix, triangles);
 	return triangles.size();
@@ -995,7 +993,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 
 	if (material_removed) {
 		maybe_create_fragments(center, radius, shooter, num_fragments);
-		modify_grass_at(center, max(2.5*radius, 0.5*vsz.mag()), 0, 0, 0, 0, 0, 0, 1); // remove any grass at this location
+		modify_grass_at(center, max(2.5*radius, vsz.mag()/sqrt(3.0)), 0, 0, 0, 0, 0, 0, 1); // remove any grass at this location
 	}
 	else {
 		volume_added = 1;
@@ -1032,9 +1030,11 @@ void voxel_model::proc_pending_updates() {
 	if (modified_blocks.empty()) return;
 	bool something_removed(0);
 	unsigned num_added(0);
-	if (params.remove_unconnected == 2) remove_unconnected_outside_modified_blocks();
+	if (params.remove_unconnected == 2) {remove_unconnected_outside_modified_blocks();}
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	
+	// FIXME: can we only remove/add voxels within the modified region of each block?
+	//        or, create the block first and only remove triangles that don't exist in the new block + add triangles that don't exist in the old block?
 	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
 		something_removed |= clear_block(blocks_to_update[i]);
 	}
@@ -1333,7 +1333,8 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	if (!is_shadow_pass) {
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 		float const min_alpha(0.0); // not needed (yet)
-		setup_procedural_shaders(s, min_alpha, 1, 1, 1, 1, params.top_tex_used, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
+		bool const use_noise_tex(params.tids[0] != params.tids[1] || params.colors[0] != params.colors[1]);
+		setup_procedural_shaders(s, min_alpha, 1, 1, 1, use_noise_tex, params.top_tex_used, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		setup_tex_gen_for_rendering(s);
 	}
 	BLACK.do_glColor();

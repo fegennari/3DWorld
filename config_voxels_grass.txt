@@ -4,13 +4,14 @@ include config_voxel_params.txt
 voxel xsize 128
 voxel ysize 128
 voxel zsize 128
-voxel num_blocks 8 # in x and y
+voxel num_blocks 16 # in x and y
 voxel normalize_to_1 0
 voxel ao_radius 4.0
 voxel atten_at_edges 5 # 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
 voxel radius_val 0.75
 voxel atten_thresh 2.5
 voxel geom_rseed 123
+voxel tex_scale 2.0
 voxel tid1 rock.03.raw # 66 rock tex
 voxel tid2 mossy_rock.jpg # 76 mossy rock tex
 voxel tid_top grass29.raw # grass tex
@@ -21,7 +22,7 @@ default_ground_tex 13 # dirt texture
 #default_ground_tex 0 # grass texture
 
 grass_density 200
-grass_size 0.02 0.002
+grass_size 0.05 0.002
 
 mesh_height 0.1
 mesh_scale 1.0

@@ -898,7 +898,6 @@ void display(void) {
 			check_gl_error(12);
 			if (TIMETEST) PRINT_TIME("E");
 			if (game_mode && b2down) fire_weapon();
-			proc_voxel_updates();
 			update_weapon_cobjs(); // and update cblade
 			check_gl_error(6);
 			if (TIMETEST) PRINT_TIME("F");
@@ -907,6 +906,8 @@ void display(void) {
 			if (!camera_view) {camera_shadow(camera);}
 			create_shadow_map(); // where should this go?
 			if (TIMETEST) PRINT_TIME("G");
+
+			proc_voxel_updates();
 
 			// send data to GPU
 			setup_object_render_data();
