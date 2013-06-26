@@ -211,6 +211,7 @@ void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 	float const sphere_radius(0.5*vsz.mag()/num_test_pts); // FIXME: step the radius to generate grayscale intersection values?
 	float const dv(1.0/(num_test_pts*num_test_pts*num_test_pts));
 
+	// Note: if we can get the normals from the cobjs here we can use dual contouring for a more exact voxel model
 	for (int y = max(0, llc[1]); y <= min(int(ny)-1, urc[1]); ++y) {
 		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
 			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
@@ -322,7 +323,7 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 }
 
 
-unsigned voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, bool count_only) const {
+unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_t<vertex_type_t> &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const {
 
 	float vals[8]; // 8 corner voxel values
 	point pts[8]; // corner points
@@ -349,12 +350,9 @@ unsigned voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, uns
 	unsigned const edge_val(voxel_detail::edge_table[cix]);
 	if (edge_val == 0)  return 0; // no polygons
 	int const *const tris(voxel_detail::tri_table[cix]);
-
-	if (count_only) {
-		unsigned count(0);
-		for (unsigned i = 0; tris[i] >= 0; i += 3) {++count;}
-		return count;
-	}
+	unsigned count(0);
+	for (unsigned i = 0; tris[i] >= 0; i += 3) {++count;}
+	if (count_only) {return count;}
 	point vlist[12];
 
 	for (unsigned i = 0; i < 12; ++i) {
@@ -365,9 +363,9 @@ unsigned voxel_manager::get_triangles_for_voxel(vector<triangle> &triangles, uns
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {
 		triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
 		if (tri.pts[0] == tri.pts[1] || tri.pts[0] == tri.pts[2] || tri.pts[1] == tri.pts[2]) continue; // invalid triangle
-		triangles.push_back(tri);
+		tri_verts.add_triangle(tri, vmap);
 	}
-	return triangles.size();
+	return count;
 }
 
 
@@ -494,11 +492,13 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 
 
 // outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored, 8-bit set=under mesh
+// NOTE: not thread safe due to class member <work>
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 	vector<unsigned> *xy_updated, vector<point> *updated_pts)
 {
 	assert(!outside.empty());
-	vector<unsigned> work; // stack of voxels to process
+	vector<unsigned> &work(temp_work); // stack of voxels to process
+	assert(work.empty());
 	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
 	if (params.atten_sphere_mode() || !use_mesh) { // sphere mode / not mesh mode
@@ -783,47 +783,44 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 
 	assert(block_ix < tri_data.size());
 	assert(tri_data[block_ix].empty());
+	vertex_map_t<vertex_type_t> vmap(1);
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
-	vector<triangle> triangles;
 	unsigned count(0);
 	
 	for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
 		for (unsigned x = xbix*xblocks; x < min(nx-1, (xbix+1)*xblocks); ++x) {
 			for (unsigned z = 0; z < nz-1; ++z) {
-				count += get_triangles_for_voxel(triangles, x, y, z, count_only);
+				count += add_triangles_for_voxel(tri_data[block_ix], vmap, x, y, z, count_only);
 			}
 		}
 	}
-	if (count_only) {return count;}
-
-	if (first_create) { // after the first creation pt_to_ix is out of order
-		pt_to_ix[block_ix].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
-		pt_to_ix[block_ix].ix = block_ix;
+	if (!count_only) {
+		if (first_create) { // after the first creation pt_to_ix is out of order
+			pt_to_ix[block_ix].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
+			pt_to_ix[block_ix].ix = block_ix;
+		}
+		create_block_hook(block_ix);
 	}
-	tri_data[block_ix].reserve_for_num_verts(3*triangles.size()); // optional optimization that makes little difference
-	vertex_map_t<vertex_type_t> vmap(1);
-
-	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		tri_data[block_ix].add_triangle(*i, vmap);
-	}
-	create_block_hook(block_ix, triangles);
-	return triangles.size();
+	return count;
 }
 
 
-void voxel_model_ground::create_block_hook(unsigned block_ix, vector<triangle> const &triangles) {
+void voxel_model_ground::create_block_hook(unsigned block_ix) {
 
-	tri_data[block_ix].mesh_simplify(3);
 	if (!add_cobjs) return; // nothing to do
 	cobj_params cparams(params.elasticity, params.base_color, 0, 0, NULL, 0, params.tids[0]);
 	cparams.cobj_type = COBJ_TYPE_VOX_TERRAIN;
 	assert(block_ix < data_blocks.size());
 	assert(data_blocks[block_ix].cids.empty());
-	data_blocks[block_ix].cids.reserve(triangles.size());
+	tri_data_t::value_type const &td(tri_data[block_ix]);
+	unsigned const num_verts(td.num_verts());
+	assert((num_verts % 3) == 0);
+	data_blocks[block_ix].cids.reserve(num_verts/3);
 
 	#pragma omp critical(add_coll_polygon)
-	for (vector<triangle>::const_iterator t = triangles.begin(); t < triangles.end(); ++t) {
-		int const cindex(add_coll_polygon(t->pts, 3, cparams, 0.0));
+	for (unsigned v = 0; v < num_verts; v += 3) {
+		point const pts[3] = {td.get_vert(v+0).v, td.get_vert(v+1).v, td.get_vert(v+2).v};
+		int const cindex(add_coll_polygon(pts, 3, cparams, 0.0));
 		assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
 		if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
 		data_blocks[block_ix].cids.push_back(cindex);

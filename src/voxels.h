@@ -86,12 +86,15 @@ protected:
 	bool use_mesh;
 	voxel_params_t params;
 	voxel_grid<unsigned char> outside;
+	vector<unsigned> temp_work; // used in remove_unconnected_outside_range()
+	typedef vert_norm vertex_type_t;
+	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 	void calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
-	unsigned get_triangles_for_voxel(vector<triangle> &triangles, unsigned x, unsigned y, unsigned z, bool count_only) const;
+	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_t<vertex_type_t> &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const;
 	void add_cobj_voxels(coll_obj &cobj, float filled_val);
 
 public:
@@ -133,8 +136,6 @@ class voxel_model : public voxel_manager {
 
 protected:
 	bool volume_added;
-	typedef vert_norm vertex_type_t;
-	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	tri_data_t tri_data;
 	noise_texture_manager_t noise_tex_gen;
 	std::set<unsigned> modified_blocks;
@@ -186,7 +187,7 @@ protected:
 	void calc_ao_lighting();
 
 	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {} // do nothing
-	virtual void create_block_hook(unsigned block_ix, vector<triangle> const &triangles) {}
+	virtual void create_block_hook(unsigned block_ix) {}
 	virtual void update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added) {}
 	virtual void pre_build_hook() {}
 
@@ -227,7 +228,7 @@ class voxel_model_ground : public voxel_model {
 
 	virtual bool clear_block(unsigned block_ix);
 	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;
-	virtual void create_block_hook(unsigned block_ix, vector<triangle> const &triangles);
+	virtual void create_block_hook(unsigned block_ix);
 	virtual void update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added);
 	virtual void pre_build_hook();
 

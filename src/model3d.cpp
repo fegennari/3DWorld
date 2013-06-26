@@ -254,20 +254,6 @@ template<typename T> void indexed_vntc_vect_t<T>::optimize(unsigned npts) {
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::mesh_simplify(unsigned npts) {
-
-	assert(npts == 3 || npts == 4);
-	if (empty()) return;
-
-	if (npts == 3) { // triangles
-		// WRITE
-	}
-	else { // quads
-		// WRITE
-	}
-}
-
-
 template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 
 	if (need_normalize) {
