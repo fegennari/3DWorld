@@ -1042,10 +1042,8 @@ bool orbiting_ship::regen_enabled() const { // if has_sobj, shouldn't have to ch
 }
 
 
-cobj_vector_t const &uobject::get_cobjs() const {
-	
-	return empty_cobjs;
-}
+cobj_vector_t const &uobject::get_cobjs() const {return empty_cobjs;}
+bool uobject::sphere_intersection(point const &c, float r) const {return dist_less_than(c, pos, (r + radius));}
 
 
 void uobject::gen_fragments(upos_point_type const &pos_offset, float rscale) const {
@@ -1065,10 +1063,18 @@ void uobject::gen_moving_fragments(point const &hit_pos, unsigned num, int tid, 
 
 	for (unsigned i = 0; i < num; ++i) {
 		unsigned const ltime(5*TICKS_PER_SECOND + rand()%TICKS_PER_SECOND);
-		point ppos(hit_pos + signed_rand_vector(0.5*rscale*radius));
-		ppos += (ppos - pos).get_norm()*0.1*radius;
-		vector3d const vel(vadd + ((ppos - pos).get_norm() + signed_rand_vector(0.25))*radius*vscale*0.02);
-		gen_particle(PTYPE_SPHERE, pcolor, pcolor, ltime, ppos, vel, rscale*radius*rand_uniform(0.05, 0.1), 0.0, ALIGN_NEUTRAL, 1, tid);
+		float const fragment_radius(rscale*radius*rand_uniform(0.05, 0.1));
+
+		for (unsigned n = 0; n < 4; ++n) { // make 4 attempts at generating the particle in a valid location
+			point ppos(hit_pos + signed_rand_vector(0.5*rscale*radius));
+			ppos += (ppos - pos).get_norm()*0.1*radius;
+
+			if (!check_fragment_self_coll() || !sphere_intersection(ppos, fragment_radius)) {
+				vector3d const vel(vadd + ((ppos - pos).get_norm() + signed_rand_vector(0.25))*radius*vscale*0.02);
+				gen_particle(PTYPE_SPHERE, pcolor, pcolor, ltime, ppos, vel, fragment_radius, 0.0, ALIGN_NEUTRAL, 1, tid);
+				break;
+			}
+		}
 	}
 }
 

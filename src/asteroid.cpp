@@ -136,11 +136,15 @@ public:
 			point mod_hit_pos(hit_pos);
 			
 			if (apply_damage(((wc == WCLASS_EXPLODE) ? 10.0 : 1.0)*damage_val, mod_hit_pos)) { // ship explosions are more damaging
-				gen_moving_fragments(mod_hit_pos, min(25U, max(1U, unsigned(20*damage_val))), get_fragment_tid(mod_hit_pos), 0.25);
+				int const fragment_tid(get_fragment_tid(mod_hit_pos));
+				unsigned const num_fragments(min(25U, max(1U, unsigned(20*damage_val))));
+				gen_moving_fragments(mod_hit_pos, num_fragments, fragment_tid, 0.25);
+				if (gen_more_small_fragments()) {gen_moving_fragments(mod_hit_pos, num_fragments, fragment_tid, 0.15);}
 			}
 		}
 		return uobj_asteroid::damage(val, type, hit_pos, source, wc);
 	}
+	virtual bool gen_more_small_fragments() const {return 0;}
 
 	virtual bool has_detailed_coll(free_obj const *const other_obj) const {
 		assert(other_obj);
@@ -359,6 +363,8 @@ public:
 		xform_point(p);
 		return model.get_texture_at(p);
 	}
+	virtual bool gen_more_small_fragments() const {return 1;}
+	virtual bool check_fragment_self_coll() const {return is_ok();}
 
 	virtual bool ship_int_obj(u_ship const *const ship, intersect_params &ip=intersect_params()) const {
 		if (!uobj_asteroid_destroyable::ship_int_obj(ship, ip)) return 0;

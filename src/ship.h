@@ -811,6 +811,7 @@ public:
 	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params())      const {assert(!ip.calc_int); return 1;}
 	virtual bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=intersect_params())      const;
 	virtual bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params())      const;
+	virtual bool sphere_intersection(point const &c, float r) const {return sphere_int_obj(c, r);} // inherited from uobject
 };
 
 
