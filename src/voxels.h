@@ -36,7 +36,7 @@ struct voxel_params_t {
 	{
 			tids[0] = tids[1] = tids[2] = 0; colors[0] = colors[1] = WHITE;
 	}
-	bool atten_sphere_mode() const {return (atten_at_edges >= 3 && atten_at_edges <= 5);}
+	bool atten_sphere_mode() const {return (atten_at_edges >= 3 && atten_at_edges <= 4);}
 };
 
 
@@ -49,6 +49,7 @@ public:
 
 	voxel_grid() : nx(0), ny(0), nz(0), xblocks(0), yblocks(0), vsz(zero_vector) {}
 	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V default_val, unsigned num_blocks);
+	void downsample_2x();
 	bool is_valid_range(int i[3]) const {return (i[0] >= 0 && i[1] >= 0 && i[2] >= 0 && i[0] < (int)nx && i[1] < (int)ny && i[2] < (int)nz);}
 	float get_xv(int x) const {return (x*vsz.x + lo_pos.x);}
 	float get_yv(int y) const {return (y*vsz.y + lo_pos.y);}
