@@ -744,7 +744,7 @@ void coll_obj_group::clear_ids() {
 
 void coll_obj_group::clear() { // unused, but may be useful
 	
-	has_lt_atten = 0;
+	has_lt_atten = has_voxel_cobjs = 0;
 	vector<coll_obj>::clear();
 	clear_ids();
 }

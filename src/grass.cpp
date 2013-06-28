@@ -246,7 +246,7 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	vector<unsigned char> modified; // only used for shadows
 	vector<int> last_occluder;
 	mutable vector<grass_data_t> vertex_data_buffer;
-	bool shadows_valid;
+	bool shadows_valid, has_voxel_grass;
 	int last_cobj;
 	int last_light;
 	point last_lpos;
@@ -256,7 +256,7 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	}
 
 public:
-	grass_manager_dynamic_t() : shadows_valid(0), last_light(-1), last_lpos(all_zeros) {}
+	grass_manager_dynamic_t() : shadows_valid(0), has_voxel_grass(0), last_light(-1), last_lpos(all_zeros) {}
 	void invalidate_shadows()  {shadows_valid = 0;}
 	
 	void clear() {
@@ -288,7 +288,8 @@ public:
 				mesh_to_grass_map[y*MESH_X_SIZE+x] = (unsigned)grass.size();
 				float const xval(get_xval(x)), yval(get_yval(y));
 
-				if (create_voxel_landscape) {
+				//if (create_voxel_landscape) {
+				if (coll_objects.has_voxel_cobjs) {
 					float const blades_per_area(grass_density/dxdy);
 					coll_cell const &cell(v_collision_matrix[y][x]);
 					cube_t const test_cube(xval-0.5*DX_VAL, xval+0.5*DX_VAL, yval-0.5*DY_VAL, yval+0.5*DY_VAL, mesh_height[y][x], czmax+grass_length);
@@ -315,6 +316,7 @@ public:
 							if (ao_lighting_too_low(pos))    continue; // too dark
 							add_grass_blade(pos, 0.8, 0); // use cobj.norm instead of mesh normal?
 							++num_voxel_blades;
+							has_voxel_grass = 1;
 						}
 					} // for k
 				}
@@ -355,7 +357,7 @@ public:
 				} // for n
 			} // for x
 		} // for y
-		if (create_voxel_landscape) {cout << "voxel_polys: " << num_voxel_polys << ", voxel_blades: " << num_voxel_blades << endl;}
+		if (has_voxel_grass) {cout << "voxel_polys: " << num_voxel_polys << ", voxel_blades: " << num_voxel_blades << endl;}
 		mesh_to_grass_map[XY_MULT_SIZE] = (unsigned)grass.size();
 		remove_excess_cap(grass);
 		PRINT_TIME("Grass Generation");
@@ -446,7 +448,7 @@ public:
 		if (empty() || !is_over_mesh(pos)) return 0.0;
 		assert(radius > 0.0);
 
-		if (!create_voxel_landscape) { // determine radius at grass height
+		if (!has_voxel_grass) { // determine radius at grass height
 			float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
 			if ((pos.z - radius) > (mh + grass_length)) return 0.0; // above grass
 			if ((pos.z + radius) < mh)                  return 0.0; // below the mesh
@@ -674,7 +676,7 @@ public:
 				unsigned const ix(y*MESH_X_SIZE + x);
 				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+1]) continue; // empty section
 				point const mpos(get_mesh_xyz_pos(x, y));
-				float const grass_zmax((create_voxel_landscape ? max(mpos.z, czmax) : mpos.z) + grass_length);
+				float const grass_zmax((has_voxel_grass ? max(mpos.z, czmax) : mpos.z) + grass_length);
 				bool visible(1);
 
 				if (x+1 < MESH_X_SIZE && y+1 < MESH_Y_SIZE &&

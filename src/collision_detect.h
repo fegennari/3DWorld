@@ -173,10 +173,10 @@ struct cobj_id_set_t : public set<unsigned> {
 class coll_obj_group : public vector<coll_obj> {
 
 public:
-	bool has_lt_atten;
+	bool has_lt_atten, has_voxel_cobjs;
 	cobj_id_set_t dynamic_ids, drawn_ids, platform_ids;
 
-	coll_obj_group() : has_lt_atten(0) {}
+	coll_obj_group() : has_lt_atten(0), has_voxel_cobjs(0) {}
 	void clear_ids();
 	void clear();
 	void finalize();
