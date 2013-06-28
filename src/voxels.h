@@ -17,7 +17,7 @@ struct voxel_params_t {
 	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate, z_gradient, height_eval_freq, radius_val;
 	float ao_radius, ao_weight_scale, ao_atten_power;
 	bool make_closed_surface, invert, remove_under_mesh, add_cobjs, normalize_to_1, top_tex_used;
-	unsigned remove_unconnected; // 0=never, 1=init only, 2=always
+	unsigned remove_unconnected; // 0=never, 1=init only, 2=always, 3=always, including interior holes
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
 	unsigned keep_at_scene_edge; // 0=don't keep, 1=always keep, 2=only when scrolling
 	unsigned atten_top_mode; // 0=constant, 1=current mesh, 2=2d surface mesh
@@ -87,12 +87,13 @@ protected:
 	bool use_mesh;
 	voxel_params_t params;
 	voxel_grid<unsigned char> outside;
-	vector<unsigned> temp_work; // used in remove_unconnected_outside_range()
+	vector<unsigned> temp_work; // used in remove_unconnected_outside_range()/flood_fill()
 	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 	void calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh);
+	void flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
 	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_t<vertex_type_t> &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const;
@@ -109,6 +110,7 @@ public:
 	void atten_to_sphere(float val, float inner_radius, bool atten_inner, bool no_atten_zbot);
 	void determine_voxels_outside();
 	void remove_unconnected_outside();
+	void remove_interior_holes();
 	bool is_outside(unsigned ix) const {assert(ix < outside.size()); return((outside[ix]&3) != 0);}
 	bool point_inside_volume(point const &pos) const;
 	bool point_intersect(point const &center, point *int_pt) const;

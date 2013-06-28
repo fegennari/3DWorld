@@ -84,6 +84,27 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 }
 
 
+template<typename V> void voxel_grid<V>::downsample_2x() { // modify in place, perserving total size, center, and lo_pos
+
+	assert(nx > 1 && ny > 1 && nz > 1);
+	assert(!(nx&1) && !(ny&1) && !(nz&1));
+	unsigned const dsnx(nx/2), dsny(ny/2), dsnz(nz/2);
+	vector<V> dsv(dsnx*dsny*dsnz, 0);
+
+	for (unsigned y = 0; y < ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			for (unsigned z = 0; z < nz; ++z) {
+				dsv[(z/2) + ((x/2) + (y/2)*dsnx)*dsnz] += get(x, y, z); // combine a block of 2x2x2 = 8 voxels
+			}
+		}
+	}
+	swap(dsv);
+	for (iterator i = begin(); i != end(); ++i) {*i /= 8;} // average voxel values
+	nx = dsnx; ny = dsny; nz = dsnz;
+	vsz *= 2.0;
+}
+
+
 template<typename V> bool voxel_grid<V>::read(FILE *fp) {
 
 	// FIXME: what about nx, ny, nz, xblocks, yblocks, vsz, center, lo_pos
@@ -491,6 +512,36 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 }
 
 
+void voxel_manager::flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask) {
+
+	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
+	int const step[3] = {nz, nx*nz, 1};
+
+	while (!work.empty()) {
+		unsigned const cur(work.back());
+		work.pop_back();
+		assert(cur < outside.size());
+		assert(outside[cur] & bit_mask);
+		unsigned const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
+		int const pos[3] = {x, y, z};
+
+		for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
+			for (unsigned dir = 0; dir < 2; ++dir) {
+				if (dir) {if (pos[dim] + 1 >= max_range[dim]) continue;}
+				else     {if (pos[dim] - 1 <  min_range[dim]) continue;}
+				unsigned const ix(cur + (dir ? step[dim] : -step[dim]));
+				//assert(ix < outside.size());
+						
+				if (outside[ix] == fill_val) {
+					work.push_back(ix);
+					outside[ix] |= bit_mask; // flag
+				}
+			}
+		}
+	} // while
+}
+
+
 // outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored, 8-bit set=under mesh
 // NOTE: not thread safe due to class member <work>
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
@@ -499,7 +550,6 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 	assert(!outside.empty());
 	vector<unsigned> &work(temp_work); // stack of voxels to process
 	assert(work.empty());
-	int const min_range[3] = {x1, y1, 0}, max_range[3] = {x2, y2, nz};
 
 	if (params.atten_sphere_mode() || !use_mesh) { // sphere mode / not mesh mode
 		unsigned const x(nx/2), y(ny/2); // add a single point at the center of the sphere (will only work for filled sphere center)
@@ -539,31 +589,7 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 			}
 		}
 	}
-
-	// flood fill anchored regions
-	while (!work.empty()) {
-		unsigned const cur(work.back());
-		work.pop_back();
-		assert(cur < outside.size());
-		assert(outside[cur] & ANCHORED_BIT);
-		unsigned const y(cur/(nz*nx)), cur_xz(cur - y*nz*nx), x(cur_xz/nz), z(cur_xz - x*nz);
-		assert(outside.get_ix(x, y, z) == cur);
-
-		for (unsigned dim = 0; dim < 3; ++dim) { // check neighbors
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				int pos[3] = {x, y, z};
-				pos[dim] += dir ? 1 : -1;
-				if (pos[dim] < min_range[dim] || pos[dim] >= max_range[dim]) continue; // off the grid
-				unsigned const ix(outside.get_ix(pos[0], pos[1], pos[2]));
-				assert(ix < outside.size());
-						
-				if (outside[ix] == 0) { // inside
-					work.push_back(ix);
-					outside[ix] |= ANCHORED_BIT; // mark as anchored
-				}
-			}
-		}
-	} // while
+	flood_fill_range(x1, y1, x2, y2, work, 0, ANCHORED_BIT); // fill inside voxels (anchor regions)
 
 	// if anchored or on_edge remove the anchored bit, else mark outside
 	for (unsigned y = y1; y < y2; ++y) {
@@ -584,6 +610,37 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 				}
 			}
 			if (had_update && xy_updated) {xy_updated->push_back(y*nx + x);}
+		}
+	}
+}
+
+
+void voxel_manager::remove_interior_holes() {
+
+	vector<unsigned> &work(temp_work); // stack of voxels to process
+	assert(work.empty());
+
+	for (unsigned y = 0; y < ny; ++y) { // seed with +z plane
+		for (unsigned x = 0; x < nx; ++x) {
+			unsigned const ix(outside.get_ix(x, y, nz-1));
+
+			if (outside[ix]) {
+				work.push_back(ix);
+				outside[ix] |= ANCHORED_BIT; // mark as anchored
+			}
+		}
+	}
+	if (work.empty()) return; // can't find empty space for the seed, bail out (shouldn't happen often)
+	flood_fill_range(0, 0, nx, ny, work, 1, ANCHORED_BIT); // fill outside, not on edge or under mesh, and non-anchored
+
+	// if inside but not anchored mark as outside
+	for (unsigned ix = 0; ix < size(); ++ix) {
+		if (outside[ix] & ANCHORED_BIT) { // anchored
+			outside[ix] &= ~ANCHORED_BIT; // remove anchored bit
+		}
+		else if (outside[ix] == 1) { // outside, not on edge or under mesh, and non-anchored
+			outside[ix] = 0; // make inside
+			operator[](ix) = params.isolevel + (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
 		}
 	}
 }
@@ -820,7 +877,20 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) {
 	#pragma omp critical(add_coll_polygon)
 	for (unsigned v = 0; v < num_verts; v += 3) {
 		point const pts[3] = {td.get_vert(v+0).v, td.get_vert(v+1).v, td.get_vert(v+2).v};
-		int const cindex(add_coll_polygon(pts, 3, cparams, 0.0));
+		int cindex(-1);
+
+#if 0 // only gets here ~4% of the time for large voxel terrain scene, and incompatible with grass
+		if (v+3 < num_verts) { // have a next triangle
+			point const pts2[3] = {td.get_vert(v+3).v, td.get_vert(v+4).v, td.get_vert(v+5).v};
+
+			if (pts2[0] == pts[1] && pts2[2] == pts[2] && (get_poly_norm(pts) - get_poly_norm(pts2)).mag() < 0.01) { // merge two tris into a quad
+				point const quad_pts[4] = {pts[0], pts[1], pts2[1], pts[2]};
+				cindex = add_coll_polygon(quad_pts, 4, cparams, 0.0);
+				v += 3; // skip the second triangle
+			}
+		}
+#endif
+		if (cindex < 0) {cindex = add_coll_polygon(pts, 3, cparams, 0.0);}
 		assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
 		if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
 		data_blocks[block_ix].cids.push_back(cindex);
@@ -1027,7 +1097,7 @@ void voxel_model::proc_pending_updates() {
 	if (modified_blocks.empty()) return;
 	bool something_removed(0);
 	unsigned num_added(0);
-	if (params.remove_unconnected == 2) {remove_unconnected_outside_modified_blocks();}
+	if (params.remove_unconnected >= 2) {remove_unconnected_outside_modified_blocks();}
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	
 	// FIXME: can we only remove/add voxels within the modified region of each block?
@@ -1161,7 +1231,9 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 	if (verbose) {PRINT_TIME("  Atten at Top/Edges");}
 	determine_voxels_outside();
 	if (verbose) {PRINT_TIME("  Determine Voxels Outside");}
-	if (params.remove_unconnected) remove_unconnected_outside();
+	if (params.remove_unconnected > 0) {remove_unconnected_outside();}
+	if (params.remove_unconnected > 2) {remove_interior_holes();}
+	remove_excess_cap(temp_work);
 	if (verbose) {PRINT_TIME("  Remove Unconnected");}
 	unsigned const tot_blocks(params.num_blocks*params.num_blocks);
 	assert(pt_to_ix.empty() && tri_data.empty());
@@ -1427,7 +1499,7 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 
 void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const &center, float radius, unsigned size, int rseed) {
 
-	params.remove_unconnected = 2; // always
+	params.remove_unconnected = 2; // always, but not holes
 	params.normalize_to_1 = 0;
 	params.atten_at_edges = 4; // sphere (could be 3 or 4)
 	params.freq           = 1.2;
@@ -1545,7 +1617,7 @@ bool parse_voxel_option(FILE *fp) {
 		if (!read_bool(fp, global_voxel_params.make_closed_surface)) voxel_file_err("make_closed_surface", error);
 	}
 	else if (str == "remove_unconnected") {
-		if (!read_uint(fp, global_voxel_params.remove_unconnected) || global_voxel_params.remove_unconnected > 2) voxel_file_err("remove_unconnected", error);
+		if (!read_uint(fp, global_voxel_params.remove_unconnected) || global_voxel_params.remove_unconnected > 3) voxel_file_err("remove_unconnected", error);
 	}
 	else if (str == "keep_at_scene_edge") {
 		if (!read_uint(fp, global_voxel_params.keep_at_scene_edge) || global_voxel_params.keep_at_scene_edge > 2) voxel_file_err("keep_at_scene_edge", error);

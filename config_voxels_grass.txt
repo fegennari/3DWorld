@@ -7,6 +7,7 @@ voxel zsize 128
 voxel num_blocks 16 # in x and y
 voxel normalize_to_1 0
 voxel ao_radius 4.0
+voxel remove_unconnected 3 # 0=never, 1=init only, 2=always, 3=always, including interior holes
 voxel atten_at_edges 5 # 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
 voxel radius_val 0.75
 voxel atten_thresh 2.5

@@ -31,9 +31,7 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 Mesh height high frequency noise
 
 Voxel terrain read/write
-Voxel triangle simplification
-Scene to voxel normals / DC
-Voxel asteroid fragment position
+Voxel terrain indirect sunlight
 
 
  E: 2.9 process_groups()
