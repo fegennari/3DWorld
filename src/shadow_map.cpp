@@ -250,7 +250,8 @@ pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds, bool 
 		rx = max(rx, fabs(dot_product(dirs[0], delta)));
 		ry = max(ry, fabs(dot_product(dirs[1], delta)));
 	}
-	float const angle(atan2(ry, 1.0f)), aspect(rx/ry);
+	float const frustum_skew_val(1.0 + 0.5*(bounds.d[2][1] - bounds.d[2][0])/dist);
+	float const angle(atan2(frustum_skew_val*ry, 1.0f)), aspect(rx/ry);
 	pos_dir_up const pdu(pos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), max(NEAR_CLIP, dist-radius), dist+radius, aspect);
 
 	if (set_matrix) {
