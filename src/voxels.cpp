@@ -879,7 +879,7 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) {
 		point const pts[3] = {td.get_vert(v+0).v, td.get_vert(v+1).v, td.get_vert(v+2).v};
 		int cindex(-1);
 
-#if 0 // only gets here ~4% of the time for large voxel terrain scene, and incompatible with grass
+#if 1 // only gets here ~4% of the time for the large voxel terrain scene
 		if (v+3 < num_verts) { // have a next triangle
 			point const pts2[3] = {td.get_vert(v+3).v, td.get_vert(v+4).v, td.get_vert(v+5).v};
 

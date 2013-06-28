@@ -302,14 +302,15 @@ public:
 						if (cobj.type != COLL_POLYGON || cobj.cp.cobj_type != COBJ_TYPE_VOX_TERRAIN) continue;
 						if (cobj.norm.z < nz_thresh)     continue; // not oriented upward
 						if (!cobj.intersects(test_cube)) continue;
-						assert(cobj.npoints == 3); // triangles
+						assert(cobj.npoints == 3 || cobj.npoints == 4); // triangles and quads
 						float const density_scale((cobj.norm.z - nz_thresh)/(1.0 - nz_thresh)); // FIXME: better to use vertex normals and interpolate?
 						unsigned const num_blades(blades_per_area*density_scale*polygon_area(cobj.points, cobj.npoints) + 0.5);
 						++num_voxel_polys;
 
 						for (unsigned n = 0; n < num_blades; ++n) {
 							float const r1(rgen.rand_float()), r2(rgen.rand_float()), sqrt_r1(sqrt(r1));
-							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[1] + (sqrt_r1*r2)*cobj.points[2]);
+							unsigned const ptix((cobj.npoints == 4 && n < num_blades/2) ? 3 : 1); // handle both triangles and quads
+							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[ptix] + (sqrt_r1*r2)*cobj.points[2]);
 							if (!test_cube.contains_pt(pos)) continue; // bbox test
 							if (ao_lighting_too_low(pos))    continue; // too dark
 							add_grass_blade(pos, 0.8, 0); // use cobj.norm instead of mesh normal?
