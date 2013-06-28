@@ -231,18 +231,28 @@ void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 	get_xyz(bcube.get_urc(), urc);
 	float const sphere_radius(0.5*vsz.mag()/num_test_pts); // FIXME: step the radius to generate grayscale intersection values?
 	float const dv(1.0/(num_test_pts*num_test_pts*num_test_pts));
+	vector3d const step_sz(vsz / num_test_pts);
 
 	// Note: if we can get the normals from the cobjs here we can use dual contouring for a more exact voxel model
 	for (int y = max(0, llc[1]); y <= min(int(ny)-1, urc[1]); ++y) {
 		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
 			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
+				point const pos(get_pt_at(x, y, z));
 				float val(0.0);
 
-				for (unsigned xx = 0; xx < num_test_pts; ++xx) {
-					for (unsigned yy = 0; yy < num_test_pts; ++yy) {
-						for (unsigned zz = 0; zz < num_test_pts; ++zz) {
-							point const offset(xx*vsz.x/num_test_pts, yy*vsz.y/num_test_pts, zz*vsz.z/num_test_pts);
-							if (cobj.sphere_intersects((get_pt_at(x, y, z) + offset), sphere_radius)) {val += dv;} // return value of 2 is considered an intersection
+				if (cobj.type == COLL_CUBE) {
+					cube_t vox_cube(pos, pos+vsz);
+					float const volume(vox_cube.get_volume());
+					vox_cube.intersect_with_cube(cobj);
+					val = vox_cube.get_volume()/volume; // ratio of filled volume
+				}
+				else {
+					for (unsigned xx = 0; xx < num_test_pts; ++xx) {
+						for (unsigned yy = 0; yy < num_test_pts; ++yy) {
+							for (unsigned zz = 0; zz < num_test_pts; ++zz) {
+								point const offset(xx*step_sz.x, yy*step_sz.y, zz*step_sz.z);
+								if (cobj.sphere_intersects((pos + offset), sphere_radius)) {val += dv;} // return value of 2 is considered an intersection
+							}
 						}
 					}
 				}
