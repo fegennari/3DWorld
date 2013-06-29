@@ -84,6 +84,46 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 }
 
 
+// Note: assumes mesh is centered around 0,0
+template<typename V> void voxel_grid<V>::init_from_heightmap(float **height, unsigned mesh_nx, unsigned mesh_ny,
+	unsigned zsteps, float mesh_xsize, float mesh_ysize, unsigned num_blocks, bool invert)
+{
+	assert(mesh_nx > 0 && mesh_ny > 0 && zsteps > 0);
+	float mzmin(0.0), mzmax(0.0);
+
+	for (unsigned y = 0; y < mesh_ysize; ++y) {
+		for (unsigned x = 0; x < mesh_xsize; ++x) {
+			if (x == 0 && y == 0) {
+				mzmin = mzmax = height[y][x];
+			}
+			else {
+				mzmin = min(mzmin, height[y][x]);
+				mzmax = max(mzmax, height[y][x]);
+			}
+		}
+	}
+	assert(mzmin < mzmax); // can't be completely flat
+	V const under_mesh_val(invert ? 1.0 : -1.0), over_mesh_val(1.0 - under_mesh_val);
+	point const mesh_center(0.0, 0.0, 0.5*(mzmin + mzmax));
+	vector3d const voxel_sz(mesh_xsize/mesh_nx, mesh_ysize/mesh_ny, (mzmax - mzmin)/zsteps);
+	init(mesh_nx, mesh_ny, zsteps, voxel_sz, mesh_center, over_mesh_val, num_blocks); // init with air
+
+	for (unsigned y = 0; y < mesh_ysize; ++y) {
+		for (unsigned x = 0; x < mesh_xsize; ++x) {
+			float const zval(nz*(height[y][x] - mzmin)/(mzmax - mzmin));
+			unsigned const zpos(min(nz-1, unsigned(zval)));
+			assert(zpos < nz);
+			float const remainder(zval - zpos);
+			set(x, y, zpos, (remainder*over_mesh_val + (1.0 - remainder)*under_mesh_val)); // voxel containing height value
+
+			for (unsigned z = 0; z < zpos; ++z) {
+				set(x, y, zpos, under_mesh_val);
+			}
+		}
+	}
+}
+
+
 template<typename V> void voxel_grid<V>::downsample_2x() { // modify in place, perserving total size, center, and lo_pos
 
 	assert(nx > 1 && ny > 1 && nz > 1);
