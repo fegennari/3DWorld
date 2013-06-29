@@ -1,6 +1,7 @@
 include mapx/config_mapx_base.txt
 
 grass_density 0
+disable_water 1
 
 create_voxel_landscape 0
 voxel remove_unconnected 0
@@ -13,7 +14,7 @@ voxel ao_weight_scale 5.0 # generally >= 2.0
 
 num_threads 8
 num_light_rays 50000 50000 1000000
-lighting_file_sky   mapx/lighting.voxel.data 0 1.5
+lighting_file_sky   mapx/lighting.voxel.data 0 0.5
 lighting_file_local mapx/lighting.voxel.local.data 0 0.2
 indir_light_exp 1.0
 

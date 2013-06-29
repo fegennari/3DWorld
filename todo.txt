@@ -33,7 +33,6 @@ Mesh height high frequency noise
 Voxel terrain read/write
 Voxel terrain indirect sunlight
 Indexed triangles version of marching cubes
-Lighting for voxel version of mapx
 
 
  E: 2.9 process_groups()
