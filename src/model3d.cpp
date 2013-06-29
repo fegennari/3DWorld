@@ -440,7 +440,7 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 
 	if (USE_INDEXED_VERTS) {
 		T v2(v);
-		if (vmap.get_average_normals()) v2.n = zero_vector;
+		if (vmap.get_average_normals()) {v2.n = zero_vector;}
 		vertex_map_t<T>::const_iterator it(vmap.find(v2));
 		unsigned ix;
 

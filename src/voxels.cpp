@@ -24,7 +24,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 voxel_params_t global_voxel_params;
 voxel_model_ground terrain_voxel_model;
 
-extern bool group_back_face_cull;
+extern bool group_back_face_cull, have_sun;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
 extern coll_obj_group coll_objects;
 
@@ -396,23 +396,16 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 
 unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_t<vertex_type_t> &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const {
 
-	float vals[8]; // 8 corner voxel values
-	point pts[8]; // corner points
 	unsigned cix(0);
 	bool all_under_mesh(params.remove_under_mesh && (display_mode & 0x01)); // if mesh draw is enabled
 
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
-			unsigned const xx(x+xhi), yy(y+yhi);
-			float const xval(get_xv(xx)), yval(get_yv(yy));
-			if (all_under_mesh) all_under_mesh = ((outside.get(xx, yy, z) & UNDER_MESH_BIT) != 0);
+			unsigned const ix(get_ix(x+xhi, y+yhi, z));
+			if (all_under_mesh) {all_under_mesh = ((outside[ix] & UNDER_MESH_BIT) != 0);}
 			
 			for (unsigned zhi = 0; zhi < 2; ++zhi) {
-				unsigned const zz(z+zhi), vix((xhi^yhi) + 2*yhi + 4*zhi);
-				unsigned char const outside_val(outside.get(xx, yy, zz) & 7);
-				if (outside_val) cix |= 1 << vix; // outside or on edge
-				vals[vix] = (outside_val == ON_EDGE_BIT) ? params.isolevel : get(xx, yy, zz); // check on_edge status
-				pts [vix] = point(xval, yval, get_zv(zz));
+				if (outside[ix + zhi] & 7) {cix |= 1 << ((xhi^yhi) + 2*yhi + 4*zhi);} // outside or on edge
 			}
 		}
 	}
@@ -424,12 +417,22 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 	unsigned count(0);
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {++count;}
 	if (count_only) {return count;}
+	cube_t const cube(get_xv(x), get_xv(x+1), get_yv(y), get_yv(y+1), get_zv(z), get_zv(z+1));
 	point vlist[12];
 
 	for (unsigned i = 0; i < 12; ++i) {
 		if (!(edge_val & (1 << i))) continue;
 		unsigned const *eix = voxel_detail::edge_to_vals[i];
-		vlist[i] = interpolate_pt(params.isolevel, pts[eix[0]], pts[eix[1]], vals[eix[0]], vals[eix[1]]);
+		float vals[2];
+		point pts[2];
+
+		for (unsigned d = 0; d < 2; ++d) {
+			unsigned const yhi((eix[d] & 2) >> 1), xhi(yhi ^ (eix[d] & 1)), zhi(eix[d] >> 2);
+			unsigned const ix(get_ix(x+xhi, y+yhi, z+zhi));
+			vals[d] = ((outside[ix] & 7) == ON_EDGE_BIT) ? params.isolevel : operator[](ix);
+			pts[d].assign(cube.d[0][xhi], cube.d[1][yhi], cube.d[2][zhi]);
+		}
+		vlist[i] = interpolate_pt(params.isolevel, pts[0], pts[1], vals[0], vals[1]);
 	}
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {
 		triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
@@ -846,6 +849,7 @@ void voxel_model::clear() {
 	boundary_vnmap.clear();
 	voxel_manager::clear();
 	volume_added = 0;
+	last_sun_pos = all_zeros;
 }
 
 
@@ -907,6 +911,9 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 			pt_to_ix[block_ix].ix = block_ix;
 		}
 		create_block_hook(block_ix);
+	}
+	else { // count_only
+		tri_data[block_ix].reserve_for_num_verts(3*count);
 	}
 	return count;
 }
@@ -1049,6 +1056,30 @@ void voxel_model::calc_ao_lighting() {
 	for (unsigned block = 0; block < tri_data.size(); ++block) {
 		calc_ao_lighting_for_block(block, 0);
 	}
+}
+
+
+void voxel_model::calc_indir_lighting_for_block(point const &cur_sun_pos, unsigned block_ix) {
+
+	// FIXME: WRITE
+}
+
+
+void voxel_model::calc_indir_lighting(point const &cur_sun_pos) {
+
+	last_sun_pos = cur_sun_pos;
+	if (cur_sun_pos == all_zeros) return; // no sun
+
+	for (unsigned block = 0; block < tri_data.size(); ++block) {
+		calc_indir_lighting_for_block(cur_sun_pos, block);
+	}
+}
+
+
+void voxel_model::check_indir_lighting() {
+
+	point const cur_sun_pos((have_sun && light_factor > 0.4) ? get_sun_pos() : all_zeros);
+	if (cur_sun_pos != last_sun_pos) {calc_indir_lighting(cur_sun_pos);}
 }
 
 
@@ -1290,6 +1321,7 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 	pt_to_ix.resize(tot_blocks);
 	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
 	pre_build_hook();
+	if (verbose) {PRINT_TIME("  Pre Build");}
 
 	#pragma omp parallel for schedule(static,1)
 	for (int block = 0; block < (int)tot_blocks; ++block) {
@@ -1318,6 +1350,7 @@ void voxel_model_ground::pre_build_hook() {
 	data_blocks.resize(tri_data.size());
 	if (!PRE_ALLOC_COBJS) return; // nothing to do
 	unsigned num_triangles(0);
+
 	#pragma omp parallel for schedule(static,1)
 	for (int block = 0; block < (int)tri_data.size(); ++block) {
 		num_triangles += create_block(block, 1, 1);
