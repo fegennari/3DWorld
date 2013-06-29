@@ -1463,8 +1463,8 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
 	assert(ltype < NUM_LIGHTING_TYPES);
 	alloc_if_req(lighting_file[ltype], NULL);
 	int write_mode(0);
-	if (fscanf(fp, "%s%i%f", lighting_file[ltype], &write_mode, &light_int_scale[ltype]) != 3) cfg_err("lighting_file command", error);
-	if (ltype == LIGHTING_GLOBAL) fscanf(fp, "%f", &first_ray_weight); // ok if fails
+	if (fscanf(fp, "%s%i%f", lighting_file[ltype], &write_mode, &light_int_scale[ltype]) != 3) {cfg_err("lighting_file command", error);}
+	if (ltype == LIGHTING_GLOBAL) {fscanf(fp, "%f", &first_ray_weight);} // ok if fails
 	(write_mode ? write_light_files[ltype] : read_light_files[ltype]) = 1;
 }
 
@@ -1842,13 +1842,13 @@ int load_config(string const &config_file) {
 
 		// lighting
 		else if (str == "lighting_file_sky") {
-			read_write_lighting_setup(fp, LIGHTING_SKY, error);
+			read_write_lighting_setup(fp, LIGHTING_SKY, error); // <filename> <write_mode> <scale>
 		}
 		else if (str == "lighting_file_global") {
-			read_write_lighting_setup(fp, LIGHTING_GLOBAL, error);
+			read_write_lighting_setup(fp, LIGHTING_GLOBAL, error); // <filename> <write_mode> <scale>
 		}
 		else if (str == "lighting_file_local") {
-			read_write_lighting_setup(fp, LIGHTING_LOCAL, error);
+			read_write_lighting_setup(fp, LIGHTING_LOCAL, error); // <filename> <write_mode> <scale>
 		}
 		else if (str == "num_light_rays") { // GLOBAL_RAYS is optional
 			if (fscanf(fp, "%u%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS, &GLOBAL_RAYS) < 3) cfg_err("num_light_rays command", error);

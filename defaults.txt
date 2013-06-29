@@ -2,6 +2,7 @@
 #house/config_house.txt
 #house/config_house_winter.txt
 #mapx/config_mapx.txt
+#mapx/config_mapx_voxels.txt
 #cornell_box/config_box.txt
 #config_scrolling.txt
 #config.txt

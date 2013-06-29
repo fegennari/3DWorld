@@ -820,6 +820,8 @@
     <None Include="mapx\chair.txt" />
     <None Include="mapx\COLL_OBJS_mapx.txt" />
     <None Include="mapx\config_mapx.txt" />
+    <None Include="mapx\config_mapx_base.txt" />
+    <None Include="mapx\config_mapx_voxels.txt" />
     <None Include="mapx\courtyard.txt" />
     <None Include="mapx\crate.txt" />
     <None Include="mapx\exploding_tank.txt" />
