@@ -196,6 +196,7 @@ public:
 	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts, bool quads_only) const;
 	void write(ostream &out) const;
 	void read(istream &in);
+	bool indexing_enabled() const {return !indices.empty();}
 };
 
 

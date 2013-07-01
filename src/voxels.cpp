@@ -24,7 +24,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 voxel_params_t global_voxel_params;
 voxel_model_ground terrain_voxel_model;
 
-extern bool group_back_face_cull, have_sun;
+extern bool group_back_face_cull;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
 extern coll_obj_group coll_objects;
 
@@ -849,7 +849,6 @@ void voxel_model::clear() {
 	boundary_vnmap.clear();
 	voxel_manager::clear();
 	volume_added = 0;
-	last_sun_pos = all_zeros;
 }
 
 
@@ -1059,30 +1058,6 @@ void voxel_model::calc_ao_lighting() {
 }
 
 
-void voxel_model::calc_indir_lighting_for_block(point const &cur_sun_pos, unsigned block_ix) {
-
-	// FIXME: WRITE
-}
-
-
-void voxel_model::calc_indir_lighting(point const &cur_sun_pos) {
-
-	last_sun_pos = cur_sun_pos;
-	if (cur_sun_pos == all_zeros) return; // no sun
-
-	for (unsigned block = 0; block < tri_data.size(); ++block) {
-		calc_indir_lighting_for_block(cur_sun_pos, block);
-	}
-}
-
-
-void voxel_model::check_indir_lighting() {
-
-	point const cur_sun_pos((have_sun && light_factor > 0.4) ? get_sun_pos() : all_zeros);
-	if (cur_sun_pos != last_sun_pos) {calc_indir_lighting(cur_sun_pos);}
-}
-
-
 // returns true if something was updated
 bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center,
 	point *damage_pos, int shooter, unsigned num_fragments)
@@ -1276,6 +1251,7 @@ void voxel_model::merge_vn_t::finalize() {
 
 void voxel_model::update_boundary_normals_for_block(unsigned block_ix, bool calc_average) {
 
+	if (!tri_data[block_ix].indexing_enabled()) return;
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
 	cube_t const bbox(get_xv(xbix*xblocks), get_xv(min(nx-1, (xbix+1)*xblocks)), get_yv(ybix*yblocks), get_yv(min(ny-1, (ybix+1)*yblocks)), 0.0, 0.0);
 
@@ -1478,6 +1454,7 @@ void voxel_model::core_render(shader_t &s, bool is_shadow_pass, bool no_vfc) {
 void voxel_model::render(bool is_shadow_pass) { // not const because of vbo caching, etc.
 
 	if (empty()) return; // nothing to do
+	pre_render(is_shadow_pass);
 	shader_t s;
 	set_fill_mode();
 	glDisable(GL_LIGHTING); // custom lighting calculations from this point on

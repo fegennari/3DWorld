@@ -140,7 +140,6 @@ class voxel_model : public voxel_manager {
 
 protected:
 	bool volume_added;
-	point last_sun_pos;
 	tri_data_t tri_data;
 	noise_texture_manager_t noise_tex_gen;
 	std::set<unsigned> modified_blocks;
@@ -190,17 +189,15 @@ protected:
 	void calc_ao_dirs();
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
 	void calc_ao_lighting();
-	void calc_indir_lighting_for_block(point const &cur_sun_pos, unsigned block_ix);
-	void calc_indir_lighting(point const &cur_sun_pos);
-	void check_indir_lighting();
 
 	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {} // do nothing
 	virtual void create_block_hook(unsigned block_ix) {}
 	virtual void update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added) {}
 	virtual void pre_build_hook() {}
+	virtual void pre_render(bool is_shadow_pass) {}
 
 public:
-	voxel_model(bool use_mesh_) : voxel_manager(use_mesh_), volume_added(0), last_sun_pos(all_zeros) {}
+	voxel_model(bool use_mesh_) : voxel_manager(use_mesh_), volume_added(0) {}
 	virtual ~voxel_model() {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
@@ -233,6 +230,9 @@ class voxel_model_ground : public voxel_model {
 		void clear() {cids.clear();}
 	};
 	vector<data_block_t> data_blocks;
+
+	void calc_indir_lighting_for_block(point const &cur_sun_pos, unsigned block_ix);
+	void calc_indir_lighting(point const &cur_sun_pos);
 
 	virtual bool clear_block(unsigned block_ix);
 	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;

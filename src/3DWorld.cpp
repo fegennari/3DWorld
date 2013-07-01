@@ -1845,7 +1845,7 @@ int load_config(string const &config_file) {
 			read_write_lighting_setup(fp, LIGHTING_SKY, error); // <filename> <write_mode> <scale>
 		}
 		else if (str == "lighting_file_global") {
-			read_write_lighting_setup(fp, LIGHTING_GLOBAL, error); // <filename> <write_mode> <scale>
+			read_write_lighting_setup(fp, LIGHTING_GLOBAL, error); // <filename> <write_mode> <scale> [<first ray weight>]
 		}
 		else if (str == "lighting_file_local") {
 			read_write_lighting_setup(fp, LIGHTING_LOCAL, error); // <filename> <write_mode> <scale>
