@@ -53,6 +53,7 @@ lmap_manager_t lmap_manager;
 
 extern bool disable_shaders;
 extern int animate2, display_mode, frame_counter, read_light_files[], write_light_files[];
+extern unsigned create_voxel_landscape;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
 extern colorRGBA cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
@@ -334,14 +335,14 @@ void reset_cobj_counters() {
 }
 
 
-void lmcell::get_final_color(colorRGB &color, float max_indir, float indir_scale) const {
+void lmcell::get_final_color(colorRGB &color, float max_indir, float indir_scale, float extra_ambient) const {
 
 	float const max_s(max(sc[0], max(sc[1], sc[2])));
 	float const max_g(max(gc[0], max(gc[1], gc[2])));
 	float const sv_scaled((max_s > 0.0 && sv > 0.0) ? min(1.0f, sv*light_int_scale[LIGHTING_SKY   ])/max_s : 0.0);
 	float const gv_scaled((max_g > 0.0 && gv > 0.0) ? min(1.0f, gv*light_int_scale[LIGHTING_GLOBAL])/max_g : 0.0);
 
-	UNROLL_3X(float indir_term(sv_scaled*sc[i_]*cur_ambient[i_] + gv_scaled*gc[i_]*cur_diffuse[i_]); \
+	UNROLL_3X(float indir_term((sv_scaled*sc[i_] + extra_ambient)*cur_ambient[i_] + gv_scaled*gc[i_]*cur_diffuse[i_]); \
 			  if (indir_term > 0.0 && indir_light_exp != 1.0) indir_term = pow(indir_term, indir_light_exp); \
 			  color[i_] = min(max_indir, indir_scale*indir_term) + min(1.0f, lc[i_]*light_int_scale[LIGHTING_LOCAL]);)
 }
@@ -676,7 +677,7 @@ void build_lightmap(bool verbose) {
 	if (verbose) PRINT_TIME(" Lighting Setup");
 	bool raytrace_lights[3];
 	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
-	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL]); // || create_voxel_landscape
+	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL] || create_voxel_landscape);
 	float const light_off(has_indir_lighting ? 0.0f : LIGHT_OFFSET);
 
 	// process vertical (Z) light projections

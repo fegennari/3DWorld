@@ -227,15 +227,14 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 				UNROLL_3X(data[off2+i_] = 0;)
 			}
 			else {
-				float const indir_scale(create_voxel_landscape ? get_voxel_terrain_ao_lighting_val(get_xyz_pos(x, y, z)) : 1.0);
 				colorRGB color;
-
+				float const indir_scale(create_voxel_landscape ? get_voxel_terrain_ao_lighting_val(get_xyz_pos(x, y, z)) : 1.0);
+				
 				if (vlm == NULL) {
-					color  = default_color;
-					color *= indir_scale;
+					color = default_color*indir_scale;
 				}
 				else {
-					vlm[z].get_final_color(color, 1.0, indir_scale);
+					vlm[z].get_final_color(color, 1.0, 1.0, indir_scale);
 				}
 				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
 			}

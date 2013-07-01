@@ -35,6 +35,14 @@ mesh_size  128 128 128
 scene_size 4.0 4.0 8.0
 shadow_map_sz 2048 # 4096?
 
+use_dense_voxels 1
+global_lighting_update 1
+num_threads 8
+max_ray_bounces 4
+num_light_rays 0 0 0 1000000
+lighting_file_global "" 1 0.1 0.0
+indir_light_exp 1.0
+
 end
 
 

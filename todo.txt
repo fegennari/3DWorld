@@ -31,7 +31,6 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 Mesh height high frequency noise
 
 Voxel terrain read/write
-Voxel terrain indirect sunlight
 Indexed triangles version of marching cubes
 
 
