@@ -25,6 +25,13 @@ struct bsp_tree_node {
 };
 
 
+struct mesh_query_ret {
+	int xpos, ypos;
+	float zval;
+	mesh_query_ret() : xpos(0), ypos(0), zval(0.0) {}
+};
+
+
 class mesh_bsp_tree; // forward reference
 
 
@@ -32,8 +39,8 @@ class mesh_intersector {
 
 	point v1, v2;
 	vector3d v2_v1;
-	int xpos, ypos, fast;
-	float zval;
+	int fast;
+	mesh_query_ret ret;
 
 	bool line_int_surface_cached();
 	bool line_intersect_surface();
@@ -46,7 +53,7 @@ class mesh_intersector {
 public:
 	friend class mesh_bsp_tree;
 	mesh_intersector(point const &v1_, point const &v2_, int fast_) :
-		v1(v1_), v2(v2_), v2_v1(v2 - v1), xpos(0), ypos(0), fast(fast_), zval(0.0) {}
+		v1(v1_), v2(v2_), v2_v1(v2 - v1), fast(fast_) {}
 	bool get_intersection(int &xpos_, int &ypos_, float &zval_, bool cached);
 	bool get_intersection();
 	bool get_any_non_intersection(point const *const pts, unsigned npts);
@@ -57,20 +64,17 @@ class mesh_bsp_tree {
 
 	bool dir0; // first subdivision direction
 	unsigned nlevels; // inclusive
-	int xpos, ypos;
-	float zval;
 	bsp_tree_node **tree; // {level, y/x}
-	mesh_intersector intersector;
 
 	mesh_bsp_tree(mesh_bsp_tree const &); // forbidden
 	void operator=(mesh_bsp_tree const &); // forbidden
 
-	bool search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level); // could almost be const
+	bool search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level, mesh_query_ret &ret) const; // Note: thread safe
 
 public:
 	mesh_bsp_tree();
 	~mesh_bsp_tree();
-	bool search(point const &v1, point const &v2, int &xpos_, int &ypos_, float &zval_); // could almost be const
+	bool search(point const &v1, point const &v2, mesh_query_ret &ret) const {return search_recur(v1, v2, 0, 0, 0, ret);} // Note: thread safe
 	bsp_tree_node const &get_root() const {assert(tree && tree[0]); return tree[0][0];}
 };
 

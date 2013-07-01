@@ -111,7 +111,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 		assert(!point_outside_mesh(xpos, ypos));
 		
 		if (!is_mesh_disabled(xpos, ypos)) {
-			if (p2.z > p1.z) return; // starts under mesh = bad
+			if (p2.z >= p1.z) return; // starts under mesh = bad
 			cpos  = (p1 + (p2 - p1)*(zval + SMALL_NUMBER - p1.z)/(p2.z - p1.z));
 			cnorm = vertex_normals[ypos][xpos];
 			coll  = 1;
@@ -645,6 +645,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	else {
 		if (ltype != LIGHTING_LOCAL) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
 		all_models.build_cobj_trees(1);
+		get_landscape_texture_color(0, 0); // hack to force creation of the cached_ls_colors vector in the master thread
 		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1, 0);
 	}
 	if (write_light_files[ltype]) {
@@ -700,6 +701,7 @@ bool lmap_manager_t::read_data_from_file(char const *const fn, int ltype) {
 
 bool lmap_manager_t::write_data_to_file(char const *const fn, int ltype) const {
 
+	if (fn == NULL || strcmp(fn, "''") == 0 || strcmp(fn, "\"\"") == 0) return 0; // don't write
 	FILE *fp;
 	assert(fn != NULL);
 	if (!open_file(fp, fn, "lighting output", "wb")) return 0;

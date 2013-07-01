@@ -43,8 +43,8 @@ bool mesh_intersector::line_int_surface_cached() {
 				if (point_outside_mesh(xval, yval)) continue;
 
 				if (intersect_mesh_quad(xval, yval)) {
-					x_last = xpos = xval;
-					y_last = ypos = yval;
+					x_last = ret.xpos = xval;
+					y_last = ret.ypos = yval;
 					return 1;
 				}
 			}
@@ -52,8 +52,8 @@ bool mesh_intersector::line_int_surface_cached() {
 	}
 	if (line_intersect_surface()) {
 		last_int = 1;
-		x_last   = xpos;
-		y_last   = ypos;
+		x_last   = ret.xpos;
+		y_last   = ret.ypos;
 		return 1;
 	}
 	last_int = 0;
@@ -64,9 +64,10 @@ bool mesh_intersector::line_int_surface_cached() {
 bool mesh_intersector::line_intersect_surface() {
 
 	if (fast + FAST_VIS_CALC >= 3) return line_intersect_surface_fast();
-	if (bspt) return bspt->search(v1, v2, xpos, ypos, zval);
+	if (bspt) return bspt->search(v1, v2, ret);
 	if (!check_iter_clip(fast + FAST_VIS_CALC >= 1)) return 0;
 	int x1(get_xpos(v1.x)), y1(get_ypos(v1.y)), x2(get_xpos(v2.x)), y2(get_ypos(v2.y));
+	int &xpos(ret.xpos), &ypos(ret.ypos);
 	xpos  = x1;
 	ypos  = y1;
 	v2_v1 = v2 - v1; // update after clip
@@ -127,9 +128,9 @@ bool mesh_intersector::line_intersect_surface_fast() { // DDA
 
 		// check x+0.5, y+0.5 (could use mesh_height)
 		if (!point_outside_mesh(ix, iy) && z_min_matrix[iy][ix] > z && z >= z_min && z <= z_max) {
-			xpos = ix;
-			ypos = iy;
-			zval = z;
+			ret.xpos = ix;
+			ret.ypos = iy;
+			ret.zval = z;
 			return 1;
 		}
 		x += xinc;
@@ -170,9 +171,9 @@ bool mesh_intersector::line_intersect_plane(int x1, int x2, int y1, int y2) {
 	for (int i = y1; i != y2+di; i += di) {
 		for (int j = x1; j != x2+dj; j += dj) {
 			if (intersect_mesh_quad(j, i)) { // vertex_normals[i][j]?
-				xpos = j;
-				ypos = i;
-				assert(!point_outside_mesh(xpos, ypos));
+				ret.xpos = j;
+				ret.ypos = i;
+				assert(!point_outside_mesh(ret.xpos, ret.ypos));
 				return 1;
 			}
 		}
@@ -208,7 +209,7 @@ bool mesh_intersector::intersect_plane(point const &mesh_pt, vector3d const &nor
 	double const px(v1.x + v2_v1.x*t + (sign ? DX_VAL : 0.0)), py(v1.y + v2_v1.y*t + (sign ? DY_VAL : 0.0));
 	double const T(0.00001); // tolerance
 	if (px < mesh_pt.x-T || px > (mesh_pt.x + DX_VAL)+T || py < mesh_pt.y-T || py > (mesh_pt.y + DY_VAL)+T) return 0;
-	zval = float(v1.z + v2_v1.z*t);
+	ret.zval = float(v1.z + v2_v1.z*t);
 	return 1;
 }
 
@@ -216,9 +217,9 @@ bool mesh_intersector::intersect_plane(point const &mesh_pt, vector3d const &nor
 bool mesh_intersector::get_intersection(int &xpos_, int &ypos_, float &zval_, bool cached) {
 	
 	bool const retval(cached ? line_int_surface_cached() : line_intersect_surface());
-	xpos_ = xpos;
-	ypos_ = ypos;
-	zval_ = zval;
+	xpos_ = ret.xpos;
+	ypos_ = ret.ypos;
+	zval_ = ret.zval;
 	return retval;
 }
 
@@ -226,10 +227,10 @@ bool mesh_intersector::get_intersection(int &xpos_, int &ypos_, float &zval_, bo
 bool mesh_intersector::get_intersection() {
 
 	float const v1z(v1.z), v2z(v2.z); // cache the starting z values (before clipping)
-	zval = zmin;
+	ret.zval = zmin;
 
 	if (line_int_surface_cached()) {
-		if (zval > min(v1z, v2z) && zval < max(v1z, v2z)) return 1;
+		if (ret.zval > min(v1z, v2z) && ret.zval < max(v1z, v2z)) return 1;
 		last_int = 0; // not a true intersection
 	}
 	return 0;
@@ -307,7 +308,7 @@ bool mesh_size_ok_for_bsp_tree() {
 }
 
 
-mesh_bsp_tree::mesh_bsp_tree() : xpos(0), ypos(0), zval(0.0), intersector(all_zeros, all_zeros, 0) {
+mesh_bsp_tree::mesh_bsp_tree() {
 
 	assert(mesh_size_ok_for_bsp_tree());
 	dir0    = (MESH_X_SIZE < MESH_Y_SIZE);
@@ -375,7 +376,7 @@ mesh_bsp_tree::~mesh_bsp_tree() {
 }
 
 
-bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level) { // recursive
+bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level, mesh_query_ret &ret) const { // recursive
 
 	assert(level <= nlevels);
 	unsigned bs[2];
@@ -396,13 +397,11 @@ bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, uns
 
 	if (level == nlevels) { // base case - at a leaf, now verify plane intersection
 		assert(x < unsigned(MESH_X_SIZE) && y < unsigned(MESH_Y_SIZE));
-		intersector.v1    = v1;
-		intersector.v2    = v2;
-		intersector.v2_v1 = v2 - v1;
+		mesh_intersector intersector(v1, v2, 0);
 		if (!intersector.intersect_mesh_quad(x, y)) return 0; // use the intersector's line-plane intersection function
-		zval = intersector.zval;
-		xpos = x;
-		ypos = y;
+		ret.zval = intersector.ret.zval;
+		ret.xpos = x;
+		ret.ypos = y;
 		return 1;
 	}
 	unsigned const dim((level&1) ^ dir0 ^ !bool(nlevels&1)), xv(x << (dim^1)), yv(y << dim);
@@ -410,19 +409,7 @@ bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, uns
 
 	for (unsigned i = 0; i < 2; ++i) {
 		unsigned const x2(xv + ((i^i0)&(dim^1))), y2(yv + ((i^i0)&dim));
-		if (search_recur(v1, v2, x2, y2, level+1)) return 1;
-	}
-	return 0;
-}
-
-
-bool mesh_bsp_tree::search(point const &v1, point const &v2, int &xpos_, int &ypos_, float &zval_) {
-
-	if (search_recur(v1, v2, 0, 0, 0)) {
-		xpos_ = xpos;
-		ypos_ = ypos;
-		zval_ = zval;
-		return 1;
+		if (search_recur(v1, v2, x2, y2, level+1, ret)) return 1;
 	}
 	return 0;
 }
