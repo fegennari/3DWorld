@@ -43,7 +43,7 @@ vector<portal> portals;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, preproc_cube_cobjs, scene_smap_vbo_invalid;
+extern bool clear_landscape_vbo, preproc_cube_cobjs, scene_smap_vbo_invalid, use_voxel_cobjs;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
@@ -1544,6 +1544,7 @@ int read_coll_objects(const char *coll_obj_file) {
 	cobj.init();
 	cobj.cp.elastic = 0.5; // default
 	cobj.cp.draw    = 1;   // default
+	if (use_voxel_cobjs) {cobj.cp.cobj_type = COBJ_TYPE_VOX_TERRAIN;}
 	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
 	if (tree_mode & 2) add_small_tree_coll_objs();
 	if (has_scenery2)  add_scenery_cobjs();

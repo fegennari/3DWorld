@@ -935,14 +935,21 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) {
 		point const pts[3] = {td.get_vert(v+0).v, td.get_vert(v+1).v, td.get_vert(v+2).v};
 		int cindex(-1);
 
-#if 1 // only gets here ~4% of the time for the large voxel terrain scene
+#if 1 // only gets here ~5% of the time for the large voxel terrain scene
 		if (v+3 < num_verts) { // have a next triangle
 			point const pts2[3] = {td.get_vert(v+3).v, td.get_vert(v+4).v, td.get_vert(v+5).v};
 
-			if (pts2[0] == pts[1] && pts2[2] == pts[2] && (get_poly_norm(pts) - get_poly_norm(pts2)).mag() < 0.01) { // merge two tris into a quad
-				point const quad_pts[4] = {pts[0], pts[1], pts2[1], pts[2]};
-				cindex = add_coll_polygon(quad_pts, 4, cparams, 0.0);
-				v += 3; // skip the second triangle
+			if ((get_poly_norm(pts) - get_poly_norm(pts2)).mag() < 0.01) {
+				if (pts2[0] == pts[1] && pts2[2] == pts[2]) { // merge two tris into a quad
+					point const quad_pts[4] = {pts[0], pts[1], pts2[1], pts[2]};
+					cindex = add_coll_polygon(quad_pts, 4, cparams, 0.0);
+					v += 3; // skip the second triangle
+				}
+				else if (pts2[1] == pts[1] && pts2[0] == pts[2]) { // merge two tris into a quad
+					point const quad_pts[4] = {pts[0], pts[1], pts2[2], pts[2]};
+					cindex = add_coll_polygon(quad_pts, 4, cparams, 0.0);
+					v += 3; // skip the second triangle
+				}
 			}
 		}
 #endif

@@ -2,6 +2,8 @@ include mapx/config_mapx_base.txt
 
 grass_density 0
 disable_water 1
+use_voxel_cobjs 1
+group_back_face_cull 1
 
 create_voxel_landscape 0
 voxel remove_unconnected 0
