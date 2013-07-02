@@ -91,13 +91,14 @@ protected:
 	vector<unsigned> temp_work; // used in remove_unconnected_outside_range()/flood_fill()
 	typedef vert_norm vertex_type_t;
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
+	typedef vertex_map_t<vertex_type_t> vertex_map_type_t;
 
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 	void calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh);
 	void flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
-	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_t<vertex_type_t> &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const;
+	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const;
 	void add_cobj_voxels(coll_obj &cobj, float filled_val);
 
 public:

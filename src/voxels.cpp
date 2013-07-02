@@ -394,7 +394,7 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 }
 
 
-unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_t<vertex_type_t> &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const {
+unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const {
 
 	unsigned cix(0);
 	bool all_under_mesh(params.remove_under_mesh && (display_mode & 0x01)); // if mesh draw is enabled
@@ -893,7 +893,7 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 
 	assert(block_ix < tri_data.size());
 	assert(tri_data[block_ix].empty());
-	vertex_map_t<vertex_type_t> vmap(1);
+	vertex_map_type_t vmap(1);
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
 	unsigned count(0);
 	

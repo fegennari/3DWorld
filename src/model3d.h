@@ -193,6 +193,7 @@ public:
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
+	unsigned get_ix  (unsigned i) const {assert(i < indices.size()); return indices[i];}
 	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts, bool quads_only) const;
 	void write(ostream &out) const;
 	void read(istream &in);
