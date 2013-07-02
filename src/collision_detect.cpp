@@ -517,7 +517,7 @@ int coll_obj::add_coll_cobj() {
 }
 
 
-void coll_obj::re_add_coll_cobj(int index, int remove_old, int dhcm) {
+void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 
 	if (!fixed) return;
 	assert(index >= 0);
@@ -526,17 +526,17 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old, int dhcm) {
 
 	switch (type) {
 	case COLL_CUBE:
-		add_coll_cube_to_matrix(index, dhcm);
+		add_coll_cube_to_matrix(index, 0);
 		break;
 	case COLL_SPHERE:
-		add_coll_sphere_to_matrix(index, dhcm);
+		add_coll_sphere_to_matrix(index, 0);
 		break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		add_coll_cylinder_to_matrix(index, dhcm);
+		add_coll_cylinder_to_matrix(index, 0);
 		break;
 	case COLL_POLYGON:
-		add_coll_polygon_to_matrix(index, dhcm);
+		add_coll_polygon_to_matrix(index, 0);
 		break;
 	default:
 		assert(0);

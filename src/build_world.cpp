@@ -802,7 +802,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 	}
 	else {
 		for (unsigned i = 0; i < coll_objects.size(); ++i) {
-			coll_objects[i].re_add_coll_cobj(i); // what about dhcm?
+			coll_objects[i].re_add_coll_cobj(i);
 		}
 	}
 	purge_coll_freed(1);
