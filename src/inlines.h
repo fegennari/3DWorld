@@ -609,13 +609,15 @@ inline bool is_mesh_disabled(int xpos, int ypos) {
 }
 
 
-inline int add_coll_cylinder(point const &p1, point const &p2, float radius, float radius2, cobj_params const &cparams, int platform_id=-1) {
-	return add_coll_cylinder(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, radius, radius2, cparams, platform_id);
+inline int add_coll_cylinder(point const &p1, point const &p2, float radius, float radius2,
+							 cobj_params const &cparams, int platform_id=-1, int dhcm=0)
+{
+	return add_coll_cylinder(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, radius, radius2, cparams, platform_id, dhcm);
 }
 
 
-inline int add_coll_cylinder(cylinder_3dw const &c, cobj_params const &cparams, int platform_id=-1) {
-	return add_coll_cylinder(c.p1.x, c.p1.y, c.p1.z, c.p2.x, c.p2.y, c.p2.z, c.r1, c.r2, cparams, platform_id);
+inline int add_coll_cylinder(cylinder_3dw const &c, cobj_params const &cparams, int platform_id=-1, int dhcm=0) {
+	return add_coll_cylinder(c.p1.x, c.p1.y, c.p1.z, c.p2.x, c.p2.y, c.p2.z, c.r1, c.r2, cparams, platform_id, dhcm);
 }
 
 

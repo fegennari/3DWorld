@@ -933,27 +933,28 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) {
 	#pragma omp critical(add_coll_polygon)
 	for (unsigned v = 0; v < num_verts; v += 3) {
 		point const pts[3] = {td.get_vert(v+0).v, td.get_vert(v+1).v, td.get_vert(v+2).v};
+		vector3d const normal(get_poly_norm(pts));
 		int cindex(-1);
 
 #if 1 // only gets here ~5% of the time for the large voxel terrain scene
 		if (v+3 < num_verts) { // have a next triangle
 			point const pts2[3] = {td.get_vert(v+3).v, td.get_vert(v+4).v, td.get_vert(v+5).v};
 
-			if ((get_poly_norm(pts) - get_poly_norm(pts2)).mag() < 0.01) {
+			if ((normal - get_poly_norm(pts2)).mag() < 0.01) {
 				if (pts2[0] == pts[1] && pts2[2] == pts[2]) { // merge two tris into a quad
 					point const quad_pts[4] = {pts[0], pts[1], pts2[1], pts[2]};
-					cindex = add_coll_polygon(quad_pts, 4, cparams, 0.0);
+					cindex = add_simple_coll_polygon(quad_pts, 4, cparams, normal);
 					v += 3; // skip the second triangle
 				}
 				else if (pts2[1] == pts[1] && pts2[0] == pts[2]) { // merge two tris into a quad
 					point const quad_pts[4] = {pts[0], pts[1], pts2[2], pts[2]};
-					cindex = add_coll_polygon(quad_pts, 4, cparams, 0.0);
+					cindex = add_simple_coll_polygon(quad_pts, 4, cparams, normal);
 					v += 3; // skip the second triangle
 				}
 			}
 		}
 #endif
-		if (cindex < 0) {cindex = add_coll_polygon(pts, 3, cparams, 0.0);}
+		if (cindex < 0) {cindex = add_simple_coll_polygon(pts, 3, cparams, normal);}
 		assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
 		if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
 		data_blocks[block_ix].cids.push_back(cindex);

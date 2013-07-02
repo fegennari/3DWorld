@@ -309,7 +309,8 @@ void tree::add_tree_collision_objects() {
 			// Note: line collisions with leaves will use the texture alpha component for a more exact test
 			point pts[4];
 			get_abs_leaf_pts(pts, i);
-			leaf_cobjs[i] = add_coll_polygon(pts, 4, cpl, 0.0, xlate, -1, 2);
+			for (int p = 0; p < 4; ++p) {pts[p] += xlate;}
+			leaf_cobjs[i] = add_simple_coll_polygon(pts, 4, cpl, leaves[i].norm, 2);
 			coll_objects[leaf_cobjs[i]].is_billboard = 1;
 		}
 	}

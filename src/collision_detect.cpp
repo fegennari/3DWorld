@@ -440,38 +440,58 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 }
 
 
+void set_coll_polygon(coll_obj &cobj, const point *points, int npoints, vector3d const &normal, float thickness) {
+
+	assert(npoints >= 3 && points != NULL); // too strict?
+	assert(npoints <= N_COLL_POLY_PTS);
+	assert(normal  != zero_vector);
+	cobj.norm = normal;
+	for (int i = 0; i < npoints; ++i) {cobj.points[i] = points[i];}
+	cobj.npoints   = npoints;
+	cobj.thickness = thickness;
+}
+
+
 // must be planar, convex polygon with unique consecutive points
-int add_coll_polygon(const point *points, int npoints, cobj_params const &cparams,
-	float thickness, point const &xlate, int platform_id, int dhcm)
-{
+int add_coll_polygon(const point *points, int npoints, cobj_params const &cparams, float thickness, int platform_id, int dhcm) {
+
 	assert(npoints >= 3 && points != NULL); // too strict?
 	assert(npoints <= N_COLL_POLY_PTS);
 	int const index(cobj_manager.get_next_avail_index());
-	coll_obj &cobj(coll_objects[index]);
 	//if (thickness == 0.0) thickness = MIN_POLY_THICK;
-	cobj.norm = get_poly_norm(points);
+	vector3d normal(get_poly_norm(points));
 
 	if (npoints == 4) { // average the normal from both triangles in case they're not coplanar
 		point const p2[3] = {points[0], points[2], points[3]};
 		vector3d const norm2(get_poly_norm(p2));
-		cobj.norm += ((dot_product(cobj.norm, norm2) < 0.0) ? -norm2 : norm2);
-		cobj.norm.normalize();
+		normal += ((dot_product(normal, norm2) < 0.0) ? -norm2 : norm2);
+		normal.normalize();
 	}
-	if (cobj.norm == zero_vector) {
+	if (normal == zero_vector) {
 		cout << "degenerate polygon created: points:" << endl;
 		for (int i = 0; i < npoints; ++i) {points[i].print(); cout << endl;}
 		cout << "valid: " << is_poly_valid(points) << endl;
-		cobj.norm = plus_z; // this shouldn't be possible, but FP accuracy/errors make this tough to prevent
+		normal = plus_z; // this shouldn't be possible, but FP accuracy/errors make this tough to prevent
 	}
-	for (int i = 0; i < npoints; ++i) {
-		cobj.points[i] = points[i] + xlate;
-	}
-	cobj.npoints   = npoints;
-	cobj.thickness = thickness;
+	set_coll_polygon(coll_objects[index], points, npoints, normal, thickness);
 	float brad;
 	point center; // unused
 	polygon_bounding_sphere(points, npoints, thickness, center, brad);
 	coll_objects.set_coll_obj_props(index, COLL_POLYGON, brad, 0.0, platform_id, cparams);
+	add_coll_polygon_to_matrix(index, dhcm);
+	return index;
+}
+
+
+// must be planar, convex polygon with unique consecutive points
+int add_simple_coll_polygon(const point *points, int npoints, cobj_params const &cparams, vector3d const &normal, int dhcm) {
+
+	int const index(cobj_manager.get_next_avail_index());
+	set_coll_polygon(coll_objects[index], points, npoints, normal, 0.0);
+	float brad;
+	point center; // unused
+	polygon_bounding_sphere(points, npoints, 0.0, center, brad);
+	coll_objects.set_coll_obj_props(index, COLL_POLYGON, brad, 0.0, -1, cparams);
 	add_coll_polygon_to_matrix(index, dhcm);
 	return index;
 }
@@ -502,7 +522,7 @@ int coll_obj::add_coll_cobj() {
 		cid = add_coll_cylinder(points[0], points[1], radius, radius2, cp, platform_id);
 		break;
 	case COLL_POLYGON:
-		cid = add_coll_polygon(points, npoints, cp, thickness, all_zeros, platform_id);
+		cid = add_coll_polygon(points, npoints, cp, thickness, platform_id);
 		break;
 	default:
 		assert(0);
