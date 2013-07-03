@@ -33,7 +33,7 @@ template class voxel_grid<float>; // explicit instantiation
 
 
 // if size==old_size, we do nothing;  if size==0, we only free the texture
-void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float freq, vector3d const &offset) {
+void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag, float freq, vector3d const &offset) {
 
 	if (size == tsize) return; // nothing to do
 	clear();
@@ -42,7 +42,14 @@ void noise_texture_manager_t::setup(unsigned size, int rseed, float mag, float f
 	voxels.clear();
 	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros, 0.0, 1);
 	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index);
+}
+
+
+void noise_texture_manager_t::ensure_tid() {
+
+	if (noise_tid) return; // already created
 	noise_tid = voxels.upload_to_3d_texture(GL_MIRRORED_REPEAT);
+	assert(noise_tid);
 }
 
 
@@ -921,8 +928,13 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 void voxel_model_ground::create_block_hook(unsigned block_ix) {
 
 	if (!add_cobjs) return; // nothing to do
-	cobj_params cparams(params.elasticity, params.base_color, 0, 0, NULL, 0, params.tids[0]);
-	cparams.cobj_type = COBJ_TYPE_VOX_TERRAIN;
+	cobj_params cparams[3];
+
+	for (unsigned d = 0; d < 3; ++d) {
+		colorRGBA const color(params.base_color.modulate_with((d == 2) ? WHITE : params.colors[d]));
+		cparams[d] = cobj_params(params.elasticity, color, 0, 0, NULL, 0, params.tids[d]);
+		cparams[d].cobj_type = COBJ_TYPE_VOX_TERRAIN;
+	}
 	assert(block_ix < data_blocks.size());
 	assert(data_blocks[block_ix].cids.empty());
 	tri_data_t::value_type const &td(tri_data[block_ix]);
@@ -934,6 +946,7 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) {
 	for (unsigned v = 0; v < num_verts; v += 3) {
 		point const pts[3] = {td.get_vert(v+0).v, td.get_vert(v+1).v, td.get_vert(v+2).v};
 		vector3d const normal(get_poly_norm(pts));
+		unsigned const cp_ix((params.top_tex_used && normal.z > 0.5) ? 2 : fabs(eval_noise_texture_at((pts[0] + pts[1] + pts[2])/3.0)) > 0.5);
 		int cindex(-1);
 
 #if 1 // only gets here ~5% of the time for the large voxel terrain scene
@@ -943,18 +956,18 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) {
 			if ((normal - get_poly_norm(pts2)).mag() < 0.01) {
 				if (pts2[0] == pts[1] && pts2[2] == pts[2]) { // merge two tris into a quad
 					point const quad_pts[4] = {pts[0], pts[1], pts2[1], pts[2]};
-					cindex = add_simple_coll_polygon(quad_pts, 4, cparams, normal);
+					cindex = add_simple_coll_polygon(quad_pts, 4, cparams[cp_ix], normal);
 					v += 3; // skip the second triangle
 				}
 				else if (pts2[1] == pts[1] && pts2[0] == pts[2]) { // merge two tris into a quad
 					point const quad_pts[4] = {pts[0], pts[1], pts2[2], pts[2]};
-					cindex = add_simple_coll_polygon(quad_pts, 4, cparams, normal);
+					cindex = add_simple_coll_polygon(quad_pts, 4, cparams[cp_ix], normal);
 					v += 3; // skip the second triangle
 				}
 			}
 		}
 #endif
-		if (cindex < 0) {cindex = add_simple_coll_polygon(pts, 3, cparams, normal);}
+		if (cindex < 0) {cindex = add_simple_coll_polygon(pts, 3, cparams[cp_ix], normal);}
 		assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
 		if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
 		data_blocks[block_ix].cids.push_back(cindex);
@@ -1284,6 +1297,8 @@ void voxel_model::finalize_boundary_vmap() {
 void voxel_model::build(bool verbose, bool do_ao_lighting) {
 
 	RESET_TIME;
+	noise_tex_gen.procedural_gen(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
+	if (verbose) {PRINT_TIME("  Procedural Texture Gen");}
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 
 	switch (params.atten_at_edges) {
@@ -1358,7 +1373,7 @@ void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool verbose
 void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
 	assert(s.is_setup());
-	noise_tex_gen.setup(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
+	noise_tex_gen.ensure_tid();
 	noise_tex_gen.bind_texture(5); // tu_id = 5
 	const char *cnames[2] = {"color0", "color1"};
 	unsigned const tu_ids[2] = {0,8};

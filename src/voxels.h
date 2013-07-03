@@ -130,7 +130,8 @@ class noise_texture_manager_t {
 
 public:
 	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
-	void setup(unsigned size, int rseed=321, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
+	void procedural_gen(unsigned size, int rseed=321, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
+	void ensure_tid();
 	void bind_texture(unsigned tu_id) const;
 	void clear();
 	float eval_at(point const &pos) const;
