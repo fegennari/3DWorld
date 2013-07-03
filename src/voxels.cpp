@@ -557,7 +557,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 	point center(all_zeros);
 
 	for (vector<point>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
-		maybe_create_fragments(*i, fragment_radius, NO_SOURCE, 1);
+		maybe_create_fragments(*i, fragment_radius, NO_SOURCE, 1, 0);
 		center += *i;
 	}
 	center /= updated_pts.size();
@@ -1123,8 +1123,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 	std::copy(blocks_to_update.begin(), blocks_to_update.end(), inserter(modified_blocks, modified_blocks.begin()));
 
 	if (material_removed) {
-		maybe_create_fragments(center, radius, shooter, num_fragments);
-		modify_grass_at(center, max(2.5*radius, vsz.mag()/sqrt(3.0)), 0, 0, 0, 0, 0, 0, 1); // remove any grass at this location
+		maybe_create_fragments(center, radius, shooter, num_fragments, 1);
 	}
 	else {
 		volume_added = 1;
@@ -1133,8 +1132,11 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 }
 
 
-void voxel_model_ground::maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {
+void voxel_model_ground::maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments, bool directly_from_update) const {
 
+	if (num_fragments > 0 || directly_from_update) {
+		modify_grass_at(center, max(2.5*radius, vsz.mag()/sqrt(3.0)), 0, 0, 0, 0, 0, 0, 1); // remove any grass at this location
+	}
 	if (num_fragments == 0) return;
 	float blend_val(fabs(eval_noise_texture_at(center)));
 	blend_val = min(max(params.tex_mix_saturate*(blend_val - 0.5), -0.5), 0.5) + 0.5;

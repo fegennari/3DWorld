@@ -191,7 +191,7 @@ protected:
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only);
 	void calc_ao_lighting();
 
-	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const {} // do nothing
+	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments, bool directly_from_update) const {} // do nothing
 	virtual void create_block_hook(unsigned block_ix) {}
 	virtual void update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added) {}
 	virtual void pre_build_hook() {}
@@ -236,7 +236,7 @@ class voxel_model_ground : public voxel_model {
 	void calc_indir_lighting(point const &cur_sun_pos);
 
 	virtual bool clear_block(unsigned block_ix);
-	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments) const;
+	virtual void maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments, bool directly_from_update) const;
 	virtual void create_block_hook(unsigned block_ix);
 	virtual void update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added);
 	virtual void pre_build_hook();
