@@ -1,24 +1,20 @@
 varying vec4 epos;
 varying vec3 eye_norm;
+varying vec2 tex_coord;
 
 #ifdef USE_BUMP_MAP
 uniform sampler2D bump_map;
 
-varying vec2 bump_tc;
-varying vec3 tangent_v, binorm_v;
+varying vec3 tangent_v;
 varying vec3 ts_pos; // tangent space pos
 
 vec3 apply_tbn(in vec3 v) {
-	vec3 new_v;
-	new_v.x = dot(v, tangent_v);
-	new_v.y = dot(v, binorm_v);
-	new_v.z = dot(v, eye_norm);
-	return new_v;
+	return vec3(dot(v, tangent_v), dot(v, cross(eye_norm, tangent_v)), dot(v, eye_norm));
 }
 
-// Note: we use tex coord 0 for the bump map (assuming it's the same tex coord for the regular texture)
+// Note: we assume the bump map tex coords are the same as the object diffuse tex coords
 vec3 apply_bump_map(inout vec3 light_dir) {
 	light_dir = apply_tbn(light_dir);
-	return normalize(texture2D(bump_map, bump_tc).xyz * 2.0 - 1.0);
+	return normalize(texture2D(bump_map, tex_coord).xyz * 2.0 - 1.0);
 }
 #endif

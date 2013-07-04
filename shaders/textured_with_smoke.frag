@@ -9,8 +9,7 @@ uniform float cube_bb[6];
 
 // clipped eye position, clipped vertex position
 varying vec3 eye, vpos, normal, lpos0, vposl; // world space
-varying vec2 tex_coord;
-// epos and eye_norm come from bump_map.frag
+// epos, eye_norm, and tex_coord come from bump_map.frag
 
 const float SMOKE_SCALE = 0.25;
 

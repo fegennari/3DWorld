@@ -7,8 +7,7 @@ uniform vec3 world_space_offset = vec3(0.0);
 attribute vec4 tex0_s, tex0_t;
 
 varying vec3 eye, vpos, normal, lpos0, vposl; // world space
-varying vec2 tex_coord; // FIXME: why doesn't gl_TexCoord[0] work?
-// epos and eye_norm come from bump_map.vert
+// epos, eye_norm, and tex_coord come from bump_map.vert
 
 void main()
 {
@@ -26,7 +25,7 @@ void main()
 		gl_TexCoord[0] = gl_MultiTexCoord0;
 		gl_TexCoord[0].st *= vec2(tex_scale_s, tex_scale_t);
 	}
-	tex_coord     = gl_TexCoord[0].st;
+	tex_coord     = gl_TexCoord[0].st; // FIXME: why doesn't using gl_TexCoord[0] work?
 	gl_Position   = ftransform();
 	gl_FrontColor = gl_Color;
 	eye_norm      = normalize(gl_NormalMatrix * gl_Normal);
