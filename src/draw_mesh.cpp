@@ -41,7 +41,7 @@ extern bool using_lightmap, combined_gu, has_snow, disable_shaders;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
-extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
+extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, sun_radius;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
 extern colorRGBA bkg_color;
@@ -724,6 +724,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	colorRGBA color;
 	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature), 1);
 	bool const reflections(!(display_mode & 0x20));
+	bool const no_specular(light_factor <= 0.4 || (get_sun_pos().z - sun_radius) < water_plane_z); // no sun or it's below the water level
 	color.alpha *= 0.5;
 
 	if (animate2 && temperature > W_FREEZE_POINT) {
@@ -731,7 +732,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
 		wave_time  += fticks;
 	}
-	if (light_factor >= 0.4 && get_sun_pos().z < water_plane_z) {set_specular(0.0, 1.0);} // has sun but it's below the water level
+	if (no_specular) {set_specular(0.0, 1.0);}
 	point const camera(get_camera_pos());
 	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
 	setup_water_plane_texgen(1.0, 1.0);
@@ -753,6 +754,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);
 	bool const rain_mode(add_waves && is_rain_enabled());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
+	if (no_specular) {s.set_prefix("#define NO_SPECULAR", 1);} // FS
 	s.setup_enabled_lights(2, 2); // FS
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	s.set_bool_prefix("reflections", reflections, 1); // FS
