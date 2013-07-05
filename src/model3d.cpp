@@ -323,7 +323,7 @@ template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned np
 		float const t1(A.t[1] - B.t[1]), t2(C.t[1] - B.t[1]), s1(A.t[0] - B.t[0]), s2(C.t[0] - B.t[0]);
 		float const val(s1*t2 - s2*t1), w((val < 0.0) ? -1.0 : 1.0);
 		vector4d const tangent((v1*t2 - v2*t1).get_norm(), w);
-		for (unsigned j = i; j < i+npts; ++j) get_vert(j).tangent += tangent;
+		for (unsigned j = i; j < i+npts; ++j) {get_vert(j).tangent += tangent;}
 	}
 	if (!indices.empty()) { // using index array, need to renormalilze tangents
 		for (iterator i = begin(); i != end(); ++i) {

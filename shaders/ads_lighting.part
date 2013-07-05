@@ -27,8 +27,7 @@ vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float 
 
 #ifdef USE_BUMP_MAP
 	float atten = length(normal); // multiply by length of eye norm to account for shadow map attenuation
-	normal  = atten*apply_bump_map(light_dir);
-	eye_pos = ts_pos; // convert to tangent space
+	normal = atten*apply_bump_map(light_dir, eye_pos);
 #endif
 
 #ifdef USE_LIGHT_COLORS

@@ -320,9 +320,12 @@ struct vector4d : public vector3d { // size = 16
 	vector4d() {}
 	vector4d(float x_, float y_, float z_, float w_) : vector3d(x_, y_, z_), w(w_) {}
 	vector4d(vector3d const &v, float w_) : vector3d(v), w(w_) {}
+	void assign(float x_, float y_, float z_, float w_)    {x = x_; y = y_; z = z_; w = w_;}
 	void print() const {cout << x << ", " << y << ", " << z << ", " << w;}
-	vector4d operator+(vector4d const &p)  const {return vector4d((x+p.x), (y+p.y), (z+p.z), (w+p.w));}
-	vector4d operator-(vector4d const &p)  const {return vector4d((x-p.x), (y-p.y), (z-p.z), (w-p.w));}
+	vector4d operator+ (vector4d const &p) const {return vector4d((x+p.x), (y+p.y), (z+p.z), (w+p.w));}
+	vector4d operator- (vector4d const &p) const {return vector4d((x-p.x), (y-p.y), (z-p.z), (w-p.w));}
+	void     operator+=(vector4d const &p) {x += p.x; y += p.y; z += p.z; w += p.w;}
+	void     operator-=(vector4d const &p) {x -= p.x; y -= p.y; z -= p.z; w -= p.w;}
 	vector4d operator-()                   const {return vector4d(-x, -y, -z, -w);}
 	bool operator==(vector4d const &v)     const {return (v.x == x && v.y == y && v.z == z && v.w == w);}
 	bool operator!=(vector4d const &v)     const {return !operator==(v);}
