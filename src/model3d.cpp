@@ -13,6 +13,7 @@ bool const USE_SHADERS       = 1;
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const USE_INDEXED_VERTS = 1;
+bool const CALC_TANGENT_VECT = 1; // slower and more memory but sometimes better quality/smoother transitions
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
@@ -374,7 +375,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	int loc(-1);
 	create_bind_vbo_and_upload(vbo, *this, 0);
 
-	if (enable_bump_map() && !is_shadow_pass && has_tangents && shader.is_setup()) { // Note: if we get here, T must be a vert_norm_tc_tan
+	if (CALC_TANGENT_VECT && enable_bump_map() && !is_shadow_pass && has_tangents && shader.is_setup()) { // Note: if we get here, T must be a vert_norm_tc_tan
 		assert(stride == sizeof(vert_norm_tc_tan));
 		loc = shader.get_attrib_loc("tangent");
 		assert(loc > 0);
@@ -383,8 +384,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		//glVertexAttribDivisor(loc, 1); // for reference, if and when instancing is used
 	}
 	glVertexPointer(3, GL_FLOAT, stride, 0);
-	if (have_normals)    glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));
-	if (have_tex_coords) glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));
+	if (have_normals)    {glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));}
+	if (have_tex_coords) {glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));}
 
 	if (indices.empty()) { // draw regular arrays
 		glDrawArrays(prim_type, 0, (unsigned)size());
@@ -405,7 +406,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		bind_vbo(0, 1);
 	}
 	bind_vbo(0);
-	if (loc >= 0) glDisableVertexAttribArray(loc);
+	if (loc >= 0) {glDisableVertexAttribArray(loc);}
 }
 
 
@@ -895,7 +896,7 @@ bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t
 	
 	if (skip) return 0;
 
-	if (use_bump_map()) {
+	if (CALC_TANGENT_VECT && use_bump_map()) {
 		geom_tan.add_poly(poly, vmap_tan, obj_id);
 	}
 	else {
@@ -1218,7 +1219,7 @@ void model3d::bind_all_used_tids() {
 		tmgr.ensure_tid_bound(m->get_render_texture()); // only one tid for now
 		
 		if (m->use_bump_map()) {
-			if (!m->geom.empty()) {
+			if (CALC_TANGENT_VECT && !m->geom.empty()) {
 				cerr << "Error loading model3d material " << m->name << ": Geometry is missing tangent vectors, so bump map cannot be enabled." << endl;
 				m->bump_tid = -1; // disable bump map
 			}
@@ -1415,8 +1416,11 @@ void model3ds::render(bool is_shadow_pass) {
 
 	for (unsigned bmap_pass = 0; bmap_pass < (use_shaders ? 2U : 1U); ++bmap_pass) {
 		shader_t s;
-		if (use_shaders) {setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, (bmap_pass != 0), enable_spec_map(), 0, two_sided_lighting);}
 
+		if (use_shaders) {
+			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
+			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
+		}
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (use_shaders ? (1 << bmap_pass) : 3));
 		}

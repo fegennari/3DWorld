@@ -2,7 +2,7 @@
 #house/config_house.txt
 #house/config_house_winter.txt
 #mapx/config_mapx.txt
-mapx/config_mapx_voxels.txt
+#mapx/config_mapx_voxels.txt
 #cornell_box/config_box.txt
 #config_scrolling.txt
 #config.txt
@@ -14,7 +14,7 @@ mapx/config_mapx_voxels.txt
 #config_river.txt
 #config_gym.txt
 #config_landscape.txt
-#sponza/config_sponza2.txt
+sponza/config_sponza2.txt
 #model_data/config_soda.txt
 #config_samples.txt
 #config_minecraft.txt

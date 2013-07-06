@@ -228,7 +228,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 
 
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
-	bool smoke_enabled, bool has_lt_atten, bool use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
+	bool smoke_enabled, bool has_lt_atten, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
 {
 	s.set_int_prefix ("use_texgen",      use_texgen,      0); // VS
 	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
@@ -247,7 +247,8 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 		}
 	}
 	for (unsigned i = 0; i < 2; ++i) {
-		if (use_bmap) {s.set_prefix("#define USE_BUMP_MAP", i);} // VS/FS
+		if (use_bmap     ) {s.set_prefix("#define USE_BUMP_MAP",       i);} // VS/FS
+		if (use_bmap == 2) {s.set_prefix("#define USE_TANGENT_VECTOR", i);} // VS/FS
 	}
 	s.setup_enabled_lights(8, 2); // FS
 }
@@ -255,7 +256,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
-	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, bool use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors)
+	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors)
 {
 	use_smap       &= shadow_map_enabled();
 	indir_lighting &= have_indir_smoke_tex;

@@ -14,7 +14,7 @@ float const TREE_DIST_RAND  = 0.2;
 float const LINE_THRESH     = 700.0;
 bool const SMALL_TREE_COLL  = 1;
 bool const DRAW_COBJS       = 0; // for debugging
-bool const USE_BUMP_MAP     = 0;
+bool const USE_BUMP_MAP     = 1;
 int  const NUM_SMALL_TREES  = 40000;
 unsigned const N_PT_LEVELS  = 6;
 unsigned const N_PT_RINGS   = 5;
@@ -393,9 +393,6 @@ void draw_small_trees(bool shadow_only) {
 	s.add_uniform_float("tex_scale_t", 5.0);
 
 	if (use_bump_map) {
-		vector4d const tangent(0.0, 0.0, 1.0, 1.0); // FIXME: set based on tree trunk direction?
-		int const tangent_loc(s.get_attrib_loc("tangent"));
-		if (tangent_loc >= 0) glVertexAttrib4fv(tangent_loc, &tangent.x);
 		set_active_texture(5);
 		select_texture(BARK2_NORMAL_TEX, 0);
 		set_active_texture(0);

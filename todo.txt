@@ -3,6 +3,7 @@ Fix ship collisions
 Tree branch/trunk bark bump maps
 Leaf/Branch overlap
 Multiple decid tree impostor orients
+Voxel terrain read/write
 
 Can't reproduce:
 - Black water reflection
@@ -30,8 +31,8 @@ glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 
 Mesh height high frequency noise
 
-Voxel terrain read/write
-Indexed triangles version of marching cubes
+Texture randomization
+Fireworks
 
 
  E: 2.9 process_groups()
