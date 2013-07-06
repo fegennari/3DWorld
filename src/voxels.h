@@ -98,7 +98,7 @@ protected:
 	void flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
-	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const;
+	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, unsigned x, unsigned y, unsigned z, bool count_only, unsigned lod_level) const;
 	void add_cobj_voxels(coll_obj &cobj, float filled_val);
 
 public:
@@ -130,6 +130,7 @@ class noise_texture_manager_t {
 
 public:
 	noise_texture_manager_t() : noise_tid(0), tsize(0) {}
+	void make_private_copy() {noise_tid = 0;} // Note: to be called *only* after a deep copy
 	void procedural_gen(unsigned size, int rseed=321, float mag=1.0, float freq=1.0, vector3d const &offset=zero_vector);
 	void ensure_tid();
 	void bind_texture(unsigned tu_id) const;
@@ -142,8 +143,8 @@ class voxel_model : public voxel_manager {
 
 protected:
 	bool volume_added;
-	tri_data_t tri_data;
-	noise_texture_manager_t noise_tex_gen;
+	vector<tri_data_t> tri_data; // one per LOD level
+	noise_texture_manager_t noise_tex_gen; // FIXME: share across models?
 	std::set<unsigned> modified_blocks;
 	voxel_grid<unsigned char> ao_lighting;
 
@@ -160,7 +161,7 @@ protected:
 		pt_ix_t(point const &pt_=all_zeros, unsigned const ix_=0) : pt(pt_), ix(ix_) {}
 	};
 
-	vector<pt_ix_t> pt_to_ix;
+	vector<vector<pt_ix_t> > pt_to_ix;
 
 	struct merge_vn_t {
 		vertex_type_t *vn[4];
@@ -174,7 +175,7 @@ protected:
 	};
 
 	typedef map<point, merge_vn_t> vert_norm_map_t;
-	vert_norm_map_t boundary_vnmap;
+	vector<vert_norm_map_t> boundary_vnmap;
 
 	struct comp_by_dist {
 		point const p;
@@ -185,7 +186,8 @@ protected:
 	void remove_unconnected_outside_modified_blocks(void);
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	virtual bool clear_block(unsigned block_ix);
-	unsigned create_block(unsigned block_ix, bool first_create, bool count_only);
+	unsigned create_block(unsigned block_ix, bool first_create, bool count_only, unsigned lod_level);
+	unsigned create_block_all_lods(unsigned block_ix, bool first_create, bool count_only);
 	void update_boundary_normals_for_block(unsigned block_ix, bool calc_average);
 	void finalize_boundary_vmap();
 	void calc_ao_dirs();
@@ -199,7 +201,7 @@ protected:
 	virtual void pre_render(bool is_shadow_pass) {}
 
 public:
-	voxel_model(bool use_mesh_) : voxel_manager(use_mesh_), volume_added(0) {}
+	voxel_model(bool use_mesh_, unsigned num_lod_levels);
 	virtual ~voxel_model() {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
@@ -207,12 +209,12 @@ public:
 	void proc_pending_updates();
 	void build(bool verbose, bool do_ao_lighting=1);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
-	void core_render(shader_t &s, bool is_shadow_pass, bool no_vfc=0);
-	void render(bool is_shadow_pass);
+	void core_render(shader_t &s, unsigned lod_level, bool is_shadow_pass, bool no_vfc=0);
+	void render(unsigned lod_level, bool is_shadow_pass);
 	virtual void free_context();
 	float eval_noise_texture_at(point const &pos) const;
 	float get_ao_lighting_val(point const &pos) const;
-	cube_t get_bcube() const {return ((tri_data.empty()) ? cube_t(center, center) : tri_data.get_bbox());}
+	cube_t get_bcube() const {return ((tri_data[0].empty()) ? cube_t(center, center) : tri_data[0].get_bbox());}
 	sphere_t get_bsphere() const;
 	bool has_triangles() const;
 	bool has_filled_at_edges() const;
@@ -243,7 +245,7 @@ class voxel_model_ground : public voxel_model {
 	virtual void pre_build_hook();
 
 public:
-	voxel_model_ground() : voxel_model(1), add_cobjs(0), add_as_fixed(0) {}
+	voxel_model_ground(unsigned num_lod_levels=1) : voxel_model(1, num_lod_levels), add_cobjs(0), add_as_fixed(0) {}
 	void clear();
 	void build(bool add_cobjs_, bool add_as_fixed_, bool verbose);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
@@ -255,7 +257,7 @@ class voxel_model_rock : public voxel_model {
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {} // do nothing
 
 public:
-	voxel_model_rock() : voxel_model(0) {}
+	voxel_model_rock(unsigned num_lod_levels) : voxel_model(0, num_lod_levels) {}
 	void build(bool verbose) {voxel_model::build(verbose, 0);}
 };
 
@@ -271,11 +273,12 @@ class voxel_model_space : public voxel_model {
 	void extract_shadow_edges(voxel_grid<unsigned char> const &shadow_data);
 
 public:
-	voxel_model_space() : voxel_model(0), ao_tid(0), shadow_tid(0) {}
+	voxel_model_space(unsigned num_lod_levels) : voxel_model(0, num_lod_levels), ao_tid(0), shadow_tid(0) {}
 	void clear() {voxel_model::clear(); shadow_edge_tris.clear();}
 	virtual void free_context() {voxel_model::free_context(); free_ao_and_shadow_texture();}
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 	vector<triangle> const &get_shadow_edge_tris() const {return shadow_edge_tris;}
+	void clone(voxel_model_space &dest) const;
 };
 
 

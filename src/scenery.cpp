@@ -511,6 +511,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 
 	assert(radius > 0.0);
 	if (!is_visible(shadow_only, radius, xlate)) return;
+	unsigned const lod_level = 0;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, radius));
 	color.do_glColor();
 	glPushMatrix();
@@ -523,7 +524,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 	else {
 		select_texture(get_tid());
 	}
-	model.core_render(s, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
+	model.core_render(s, lod_level, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 	glPopMatrix();
 }
 
@@ -917,6 +918,7 @@ void scenery_group::add_plant(point const &pos, float height, float radius, int 
 
 void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 
+	unsigned const num_voxel_rock_lod_levels = 1;
 	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(tree_scale+1))));
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
 	float const min_plant_z(water_plane_z + 0.016*zmax_est);
@@ -945,7 +947,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 				surface_rocks.back().create(j, i, 1, rock_vbo_manager);
 			}
 			else if (USE_VOXEL_ROCKS && val < 35) { // FIXME: too slow, and need special shaders for texturing
-				voxel_rocks.push_back(voxel_rock());
+				voxel_rocks.push_back(voxel_rock(num_voxel_rock_lod_levels));
 				voxel_rocks.back().create(j, i, 1);
 			}
 			else if (val < 50) { // 24.5%

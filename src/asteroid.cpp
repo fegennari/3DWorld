@@ -13,10 +13,11 @@
 #include "ship_util.h" // for gen_particle
 
 
-unsigned const ASTEROID_NDIV   = 32; // for sphere model, better if a power of 2
-unsigned const ASTEROID_VOX_SZ = 64; // for voxel model
-float    const AST_COLL_RAD    = 0.25; // limit collisions of large objects for accuracy (heightmap)
-float    const AST_PROC_HEIGHT = 0.1; // height values of procedural shader asteroids
+unsigned const ASTEROID_NDIV    = 32; // for sphere model, better if a power of 2
+unsigned const ASTEROID_VOX_SZ  = 64; // for voxel model
+unsigned const NUM_VOX_AST_LODS = 1;
+float    const AST_COLL_RAD     = 0.25; // limit collisions of large objects for accuracy (heightmap)
+float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader asteroids
 
 
 extern int animate2;
@@ -282,7 +283,7 @@ class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 public:
 	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
-		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), have_sun_pos(0)
+		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), model(NUM_VOX_AST_LODS), have_sun_pos(0)
 	{
 		//RESET_TIME;
 		float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ASTEROID_VOX_SZ, 2, rseed_ix)); // ndiv=2x2, will be translated to pos and scaled by radius during rendering
@@ -313,6 +314,7 @@ public:
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(model.get_params().tids[0]); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
 		unsigned const num_lights(min(8U, exp_lights.size()+2U));
+		unsigned const lod_level = 0;
 		shader_t &s(cached_voxel_shaders[num_lights]);
 		
 		if (s.is_setup()) { // already setup
@@ -338,7 +340,7 @@ public:
 		if (ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
 		ddata.color_a.do_glColor();
 		glEnable(GL_CULL_FACE);
-		model.core_render(s, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
+		model.core_render(s, lod_level, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 		glDisable(GL_CULL_FACE);
 		s.disable();
 

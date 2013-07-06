@@ -75,7 +75,7 @@ class voxel_rock : public scenery_obj {
 	unsigned get_tid() const {return model.get_params().tids[0];}
 
 public:
-	voxel_rock() : rseed(1) {}
+	voxel_rock(unsigned num_lod_levels) : model(num_lod_levels), rseed(1) {}
 	void create(int x, int y, int use_xy);
 	void build_model();
 	void add_cobjs();

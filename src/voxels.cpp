@@ -22,7 +22,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 
 
 voxel_params_t global_voxel_params;
-voxel_model_ground terrain_voxel_model;
+voxel_model_ground terrain_voxel_model(1); // one LOD level
 
 extern bool group_back_face_cull;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
@@ -401,18 +401,20 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 }
 
 
-unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, unsigned x, unsigned y, unsigned z, bool count_only) const {
-
+unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap,
+	unsigned x, unsigned y, unsigned z, bool count_only, unsigned lod_level) const
+{
 	unsigned cix(0);
+	unsigned const step(1 << lod_level);
 	bool all_under_mesh(params.remove_under_mesh && (display_mode & 0x01)); // if mesh draw is enabled
 
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
-			unsigned const ix(get_ix(x+xhi, y+yhi, z));
+			unsigned const ix(get_ix(x+step*xhi, y+step*yhi, z));
 			if (all_under_mesh) {all_under_mesh = ((outside[ix] & UNDER_MESH_BIT) != 0);}
 			
 			for (unsigned zhi = 0; zhi < 2; ++zhi) {
-				if (outside[ix + zhi] & 7) {cix |= 1 << ((xhi^yhi) + 2*yhi + 4*zhi);} // outside or on edge
+				if (outside[ix + step*zhi] & 7) {cix |= 1 << ((xhi^yhi) + 2*yhi + 4*zhi);} // outside or on edge
 			}
 		}
 	}
@@ -424,7 +426,7 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 	unsigned count(0);
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {++count;}
 	if (count_only) {return count;}
-	cube_t const cube(get_xv(x), get_xv(x+1), get_yv(y), get_yv(y+1), get_zv(z), get_zv(z+1));
+	cube_t const cube(get_xv(x), get_xv(x+step), get_yv(y), get_yv(y+step), get_zv(z), get_zv(z+step));
 	point vlist[12];
 
 	for (unsigned i = 0; i < 12; ++i) {
@@ -435,7 +437,7 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 
 		for (unsigned d = 0; d < 2; ++d) {
 			unsigned const yhi((eix[d] & 2) >> 1), xhi(yhi ^ (eix[d] & 1)), zhi(eix[d] >> 2);
-			unsigned const ix(get_ix(x+xhi, y+yhi, z+zhi));
+			unsigned const ix(get_ix(x+step*xhi, y+step*yhi, z+step*zhi));
 			vals[d] = ((outside[ix] & 7) == ON_EDGE_BIT) ? params.isolevel : operator[](ix);
 			pts[d].assign(cube.d[0][xhi], cube.d[1][yhi], cube.d[2][zhi]);
 		}
@@ -552,7 +554,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 			for (unsigned by = by1; by <= by2; ++by) {
 				for (unsigned bx = bx1; bx <= bx2; ++bx) {
 					unsigned const bix(by*num_blocks + bx);
-					assert(bix < tri_data.size());
+					assert(bix < tri_data[0].size());
 					modified_blocks.insert(bix);
 				}
 			}
@@ -800,7 +802,7 @@ sphere_t voxel_model::get_bsphere() const {
 
 	sphere_t bsphere(center, 0.0);
 	
-	for (tri_data_t::const_iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
+	for (tri_data_t::const_iterator i = tri_data[0].begin(); i != tri_data[0].end(); ++i) {
 		for (vector<vertex_type_t>::const_iterator v = i->begin(); v != i->end(); ++v) {
 			bsphere.radius = max(bsphere.radius, p2p_dist_sq(center, v->v));
 		}
@@ -812,7 +814,7 @@ sphere_t voxel_model::get_bsphere() const {
 
 bool voxel_model::has_triangles() const {
 
-	for (tri_data_t::const_iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
+	for (tri_data_t::const_iterator i = tri_data[0].begin(); i != tri_data[0].end(); ++i) {
 		if (!i->empty()) return 1;
 	}
 	return 0;
@@ -821,7 +823,7 @@ bool voxel_model::has_triangles() const {
 
 bool voxel_model::has_filled_at_edges() const {
 
-	for (tri_data_t::const_iterator i = tri_data.begin(); i != tri_data.end(); ++i) {
+	for (tri_data_t::const_iterator i = tri_data[0].begin(); i != tri_data[0].end(); ++i) {
 		unsigned const num(i->num_verts());
 		assert(!(num % 3));
 
@@ -846,14 +848,27 @@ unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 }
 
 
+voxel_model::voxel_model(bool use_mesh_, unsigned num_lod_levels) : voxel_manager(use_mesh_), volume_added(0) {
+
+	assert(num_lod_levels > 0);
+	tri_data.resize(num_lod_levels);
+	pt_to_ix.resize(num_lod_levels);
+	boundary_vnmap.resize(num_lod_levels);
+}
+
+
 void voxel_model::clear() {
 
 	free_context();
-	tri_data.clear();
-	pt_to_ix.clear();
+	assert(tri_data.size() == boundary_vnmap.size());
+	
+	for (unsigned i = 0; i < tri_data.size(); ++i) {
+		tri_data[i].clear();
+		pt_to_ix[i].clear();
+		boundary_vnmap[i].clear();
+	}
 	modified_blocks.clear();
 	ao_lighting.clear();
-	boundary_vnmap.clear();
 	voxel_manager::clear();
 	volume_added = 0;
 }
@@ -871,10 +886,14 @@ void voxel_model_ground::clear() {
 // returns true if something was cleared
 bool voxel_model::clear_block(unsigned block_ix) {
 
-	if (tri_data.empty()) return 0; // tri_data was already cleared
-	assert(block_ix < tri_data.size());
-	bool const was_nonempty(!tri_data[block_ix].empty());
-	tri_data[block_ix].clear();
+	if (tri_data[0].empty()) return 0; // tri_data was already cleared
+	bool was_nonempty(0);
+
+	for (unsigned i = 0; i < tri_data.size(); ++i) {
+		assert(block_ix < tri_data[i].size());
+		was_nonempty |= !tri_data[i][block_ix].empty();
+		tri_data[i][block_ix].clear();
+	}
 	return was_nonempty;
 }
 
@@ -896,36 +915,52 @@ bool voxel_model_ground::clear_block(unsigned block_ix) {
 
 
 // returns the number of triangles created
-unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool count_only) {
+unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool count_only, unsigned lod_level) {
 
-	assert(block_ix < tri_data.size());
-	assert(tri_data[block_ix].empty());
+	assert(lod_level < tri_data.size());
+	tri_data_t &td(tri_data[lod_level]);
+	assert(block_ix <td.size());
+	assert(td[block_ix].empty());
 	vertex_map_type_t vmap(1);
-	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
+	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks), step(1 << lod_level);
 	unsigned count(0);
 	
-	for (unsigned y = ybix*yblocks; y < min(ny-1, (ybix+1)*yblocks); ++y) {
-		for (unsigned x = xbix*xblocks; x < min(nx-1, (xbix+1)*xblocks); ++x) {
-			for (unsigned z = 0; z < nz-1; ++z) {
-				count += add_triangles_for_voxel(tri_data[block_ix], vmap, x, y, z, count_only);
+	for (unsigned y = ybix*yblocks; y < min(ny-step, (ybix+1)*yblocks); y += step) {
+		for (unsigned x = xbix*xblocks; x < min(nx-step, (xbix+1)*xblocks); x += step) {
+			for (unsigned z = 0; z < nz-step; z += step) {
+				count += add_triangles_for_voxel(td[block_ix], vmap, x, y, z, count_only, lod_level);
 			}
 		}
 	}
 	if (!count_only) {
 		if (first_create) { // after the first creation pt_to_ix is out of order
-			pt_to_ix[block_ix].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
-			pt_to_ix[block_ix].ix = block_ix;
+			assert(lod_level < pt_to_ix.size());
+			pt_to_ix[lod_level][block_ix].pt = (point((xbix+0.5)*xblocks, (ybix+0.5)*yblocks, nz/2)*vsz + lo_pos);
+			pt_to_ix[lod_level][block_ix].ix = block_ix;
 		}
-		create_block_hook(block_ix);
+		if (lod_level == 0) {create_block_hook(block_ix);}
 	}
 	else { // count_only
-		tri_data[block_ix].reserve_for_num_verts(3*count);
+		td[block_ix].reserve_for_num_verts(3*count);
 	}
 	return count;
 }
 
 
-void voxel_model_ground::create_block_hook(unsigned block_ix) {
+unsigned voxel_model::create_block_all_lods(unsigned block_ix, bool first_create, bool count_only) {
+
+	assert(!tri_data.empty());
+	unsigned count(0);
+
+	for (unsigned lod = 0; lod < (count_only ? 1 : tri_data.size()); ++lod) { // in count_only mode we only process the LOD 0
+		unsigned const lod_count(create_block(block_ix, first_create, count_only, lod));
+		if (lod == 0) {count = lod_count;} // only count LOD 0
+	}
+	return count;
+}
+
+
+void voxel_model_ground::create_block_hook(unsigned block_ix) { // lod_level == 0
 
 	if (!add_cobjs) return; // nothing to do
 	cobj_params cparams[3];
@@ -937,7 +972,7 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) {
 	}
 	assert(block_ix < data_blocks.size());
 	assert(data_blocks[block_ix].cids.empty());
-	tri_data_t::value_type const &td(tri_data[block_ix]);
+	tri_data_t::value_type const &td(tri_data[0][block_ix]);
 	unsigned const num_verts(td.num_verts());
 	assert((num_verts % 3) == 0);
 	data_blocks[block_ix].cids.reserve(num_verts/3);
@@ -1073,7 +1108,7 @@ void voxel_model::calc_ao_lighting() {
 	ao_lighting.init(nx, ny, nz, vsz, center, 255, params.num_blocks);
 	calc_ao_dirs();
 
-	for (unsigned block = 0; block < tri_data.size(); ++block) {
+	for (unsigned block = 0; block < tri_data[0].size(); ++block) {
 		calc_ao_lighting_for_block(block, 0);
 	}
 }
@@ -1126,7 +1161,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 			for (unsigned by = by1; by <= by2; ++by) {
 				for (unsigned bx = bx1; bx <= bx2; ++bx) {
 					unsigned const block_ix(by*params.num_blocks + bx);
-					assert(block_ix < tri_data.size());
+					assert(block_ix < tri_data[0].size());
 					blocks_to_update.insert(block_ix);
 				}
 			}
@@ -1188,13 +1223,13 @@ void voxel_model::proc_pending_updates() {
 
 	#pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
-		num_added += (create_block(blocks_to_update[i], 0, 0) > 0);
+		num_added += (create_block_all_lods(blocks_to_update[i], 0, 0) > 0);
 	}
 	if (!(num_added > 0 || something_removed)) { // nothing updated
 		modified_blocks.clear();
 		return;
 	}
-	if (!boundary_vnmap.empty()) { // fix block boundary vertex normals
+	if (!boundary_vnmap[0].empty()) { // fix block boundary vertex normals
 		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
 			update_boundary_normals_for_block(blocks_to_update[i], 0);
 		}
@@ -1274,22 +1309,28 @@ void voxel_model::merge_vn_t::finalize() {
 
 void voxel_model::update_boundary_normals_for_block(unsigned block_ix, bool calc_average) {
 
-	if (!tri_data[block_ix].indexing_enabled()) return;
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks);
 	cube_t const bbox(get_xv(xbix*xblocks), get_xv(min(nx-1, (xbix+1)*xblocks)), get_yv(ybix*yblocks), get_yv(min(ny-1, (ybix+1)*yblocks)), 0.0, 0.0);
 
-	for (tri_data_t::value_type::iterator i = tri_data[block_ix].begin(); i != tri_data[block_ix].end(); ++i) {
-		if (i->v.x != bbox.d[0][0] && i->v.x != bbox.d[0][1] && i->v.y != bbox.d[1][0] && i->v.y != bbox.d[1][1]) continue; // not at a block boundary
-		// Note: should be no duplicates within the same block
-		if (calc_average) {boundary_vnmap[i->v].add(*i);} else {boundary_vnmap[i->v].update(*i);}
+	for (unsigned lod = 0; lod < tri_data.size(); ++lod) {
+		if (!tri_data[lod][block_ix].indexing_enabled()) continue;
+
+		for (tri_data_t::value_type::iterator i = tri_data[lod][block_ix].begin(); i != tri_data[lod][block_ix].end(); ++i) {
+			if (i->v.x != bbox.d[0][0] && i->v.x != bbox.d[0][1] && i->v.y != bbox.d[1][0] && i->v.y != bbox.d[1][1]) continue; // not at a block boundary
+			// Note: should be no duplicates within the same block
+			merge_vn_t &vn(boundary_vnmap[lod][i->v]);
+			if (calc_average) {vn.add(*i);} else {vn.update(*i);}
+		}
 	}
 }
 
 
 void voxel_model::finalize_boundary_vmap() {
 
-	for (vert_norm_map_t::iterator i = boundary_vnmap.begin(); i != boundary_vnmap.end(); ++i) {
-		i->second.finalize();
+	for (unsigned lod = 0; lod < boundary_vnmap.size(); ++lod) {
+		for (vert_norm_map_t::iterator i = boundary_vnmap[lod].begin(); i != boundary_vnmap[lod].end(); ++i) {
+			i->second.finalize();
+		}
 	}
 }
 
@@ -1297,6 +1338,8 @@ void voxel_model::finalize_boundary_vmap() {
 void voxel_model::build(bool verbose, bool do_ao_lighting) {
 
 	RESET_TIME;
+	unsigned const lod_blocks(1 << (tri_data.size()-1));
+	assert((nx%(params.num_blocks*lod_blocks)) == 0 && (ny%(params.num_blocks*lod_blocks)) == 0 && (nz%lod_blocks) == 0); // LOD=max
 	noise_tex_gen.procedural_gen(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
 	if (verbose) {PRINT_TIME("  Procedural Texture Gen");}
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
@@ -1318,15 +1361,18 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 	remove_excess_cap(temp_work);
 	if (verbose) {PRINT_TIME("  Remove Unconnected");}
 	unsigned const tot_blocks(params.num_blocks*params.num_blocks);
-	assert(pt_to_ix.empty() && tri_data.empty());
-	pt_to_ix.resize(tot_blocks);
-	tri_data.resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
+	assert(pt_to_ix[0].empty() && tri_data[0].empty());
+	for (unsigned i = 0; i < pt_to_ix.size(); ++i) {pt_to_ix[i].resize(tot_blocks);}
+
+	for (unsigned i = 0; i < tri_data.size(); ++i) {
+		tri_data[i].resize(tot_blocks, indexed_vntc_vect_t<vertex_type_t>(0));
+	}
 	pre_build_hook();
 	if (verbose) {PRINT_TIME("  Pre Build");}
 
 	#pragma omp parallel for schedule(static,1)
 	for (int block = 0; block < (int)tot_blocks; ++block) {
-		create_block(block, 1, 0);
+		create_block_all_lods(block, 1, 0);
 	}
 	if (verbose) {PRINT_TIME("  Triangles to Model");}
 
@@ -1348,13 +1394,13 @@ void voxel_model_ground::pre_build_hook() {
 
 	assert(data_blocks.empty());
 	if (!add_cobjs)       return; // nothing to do
-	data_blocks.resize(tri_data.size());
+	data_blocks.resize(tri_data[0].size());
 	if (!PRE_ALLOC_COBJS) return; // nothing to do
 	unsigned num_triangles(0);
 
 	#pragma omp parallel for schedule(static,1)
-	for (int block = 0; block < (int)tri_data.size(); ++block) {
-		num_triangles += create_block(block, 1, 1);
+	for (int block = 0; block < (int)tri_data[0].size(); ++block) {
+		num_triangles += create_block_all_lods(block, 1, 1);
 	}
 	if (2*coll_objects.size() < num_triangles) {
 		reserve_coll_objects(coll_objects.size() + 1.1*num_triangles); // reserve with 10% buffer
@@ -1451,7 +1497,7 @@ void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 		if (ao_tid == 0) {ao_tid = create_3d_texture(nx, ny, nz, 1, ao_lighting, GL_LINEAR, GL_CLAMP_TO_EDGE);}
 		set_3d_texture_as_current(ao_tid, 9);
 	}
-	if (!shadow_tid) {
+	if (shadow_tid == 0) {
 		voxel_grid<unsigned char> shadow_data; // 0 == no light/in shadow, 255 = full light/no shadow
 		calc_shadows(shadow_data);
 		extract_shadow_edges(shadow_data);
@@ -1461,22 +1507,24 @@ void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 }
 
 
-void voxel_model::core_render(shader_t &s, bool is_shadow_pass, bool no_vfc) {
+void voxel_model::core_render(shader_t &s, unsigned lod_level, bool is_shadow_pass, bool no_vfc) {
 
-	for (vector<pt_ix_t>::const_iterator i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {
+	assert(lod_level < tri_data.size() && lod_level < pt_to_ix.size());
+
+	for (vector<pt_ix_t>::const_iterator i = pt_to_ix[lod_level].begin(); i != pt_to_ix[lod_level].end(); ++i) {
 		if (DEBUG_BLOCKS && s.is_setup()) {
 			const char *cnames[2] = {"color0", "color1"};
 			for (unsigned d = 0; d < 2; ++d) {
 				s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & params.num_blocks) != 0)) ? RED : BLUE));
 			}
 		}
-		assert(i->ix < tri_data.size());
-		tri_data[i->ix].render(s, is_shadow_pass, GL_TRIANGLES, no_vfc);
+		assert(i->ix < tri_data[lod_level].size());
+		tri_data[lod_level][i->ix].render(s, is_shadow_pass, GL_TRIANGLES, no_vfc);
 	}
 }
 
 
-void voxel_model::render(bool is_shadow_pass) { // not const because of vbo caching, etc.
+void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const because of vbo caching, etc.
 
 	if (empty()) return; // nothing to do
 	pre_render(is_shadow_pass);
@@ -1496,8 +1544,9 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 	float const spec(0.0), shine(1.0);
 	set_specular(spec, shine);
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
-	sort(pt_to_ix.begin(), pt_to_ix.end(), comp_by_dist(get_camera_pos())); // sort near to far
-	core_render(s, is_shadow_pass);
+	assert(lod_level < pt_to_ix.size());
+	sort(pt_to_ix[lod_level].begin(), pt_to_ix[lod_level].end(), comp_by_dist(get_camera_pos())); // sort near to far
+	core_render(s, lod_level, is_shadow_pass);
 	if (s.is_setup()) {s.end_shader();}
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
 	glDisable(GL_ALPHA_TEST);
@@ -1509,7 +1558,7 @@ void voxel_model::render(bool is_shadow_pass) { // not const because of vbo cach
 
 void voxel_model::free_context() {
 
-	tri_data.free_vbos();
+	for (unsigned i = 0; i < tri_data.size(); ++i) {tri_data[i].free_vbos();}
 	noise_tex_gen.clear();
 }
 
@@ -1527,6 +1576,21 @@ float voxel_model::eval_noise_texture_at(point const &pos) const {
 		fpos[i] = fpos[i] - 0.5; // transform from [0,1] to [-0.5,0.5]
 	}
 	return noise_tex_gen.eval_at(fpos*NOISE_TSIZE);
+}
+
+
+// Note: to be used to clone asteroids so that instances of the same base asteroids can be independently modified
+void voxel_model_space::clone(voxel_model_space &dest) const {
+	
+	dest = *this;
+	dest.ao_tid = dest.shadow_tid = 0; // clear but don't free since these will still be used by *this
+	dest.noise_tex_gen.make_private_copy();
+
+	for (unsigned lod = 0; lod < tri_data.size(); ++lod) {
+		for (tri_data_t::iterator i = dest.tri_data[lod].begin(); i != dest.tri_data[lod].end(); ++i) {
+			i->make_private_copy();
+		}
+	}
 }
 
 
@@ -1756,7 +1820,8 @@ bool parse_voxel_option(FILE *fp) {
 
 
 void render_voxel_data(bool shadow_pass) {
-	terrain_voxel_model.render(shadow_pass);
+	unsigned const lod_level = 0;
+	terrain_voxel_model.render(lod_level, shadow_pass);
 }
 
 void free_voxel_context() {
