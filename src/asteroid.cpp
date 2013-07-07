@@ -15,12 +15,13 @@
 
 unsigned const ASTEROID_NDIV    = 32; // for sphere model, better if a power of 2
 unsigned const ASTEROID_VOX_SZ  = 64; // for voxel model
-unsigned const NUM_VOX_AST_LODS = 1;
+unsigned const AST_VOX_NUM_BLK  = 2; // ndiv=2x2
+unsigned const NUM_VOX_AST_LODS = 3;
 float    const AST_COLL_RAD     = 0.25; // limit collisions of large objects for accuracy (heightmap)
 float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader asteroids
 
 
-extern int animate2;
+extern int animate2, display_mode;
 extern float fticks;
 extern colorRGBA sun_color;
 extern s_object clobj0;
@@ -286,7 +287,7 @@ public:
 		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), model(NUM_VOX_AST_LODS), have_sun_pos(0)
 	{
 		//RESET_TIME;
-		float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ASTEROID_VOX_SZ, 2, rseed_ix)); // ndiv=2x2, will be translated to pos and scaled by radius during rendering
+		float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ASTEROID_VOX_SZ, AST_VOX_NUM_BLK, rseed_ix)); // will be translated to pos and scaled by radius during rendering
 		assert(gen_radius > 0.0);
 		radius /= gen_radius;
 		//PRINT_TIME("Create Asteroid");
@@ -314,7 +315,7 @@ public:
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(model.get_params().tids[0]); return;}
 		if (ddata.shader.is_setup()) {ddata.shader.disable();}
 		unsigned const num_lights(min(8U, exp_lights.size()+2U));
-		unsigned const lod_level = 0;
+		unsigned const lod_level(min(16U/ddata.ndiv, NUM_VOX_AST_LODS-1));
 		shader_t &s(cached_voxel_shaders[num_lights]);
 		
 		if (s.is_setup()) { // already setup
