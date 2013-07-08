@@ -751,6 +751,7 @@
     <ClInclude Include="src\csg.h" />
     <ClInclude Include="src\draw_utils.h" />
     <ClInclude Include="src\dynamic_particle.h" />
+    <ClInclude Include="src\fast_atof.h" />
     <ClInclude Include="src\file_utils.h" />
     <ClInclude Include="src\function_registry.h" />
     <ClInclude Include="src\gameplay.h" />

@@ -6,9 +6,17 @@
 #include "3DWorld.h"
 #include "model3d.h"
 #include <fstream>
+#include <stdint.h>
+#include "fast_atof.h"
 
 
 extern model3ds all_models;
+
+// hack to avoid slow multithreaded locking in getc()/ungetc() in MSVC++
+#ifndef _getc_nolock
+#define _getc_nolock   getc
+#define _ungetc_nolock ungetc
+#endif
 
 
 class object_file_reader {
@@ -31,7 +39,11 @@ protected:
 		if (fp) fclose(fp);
 		fp = NULL;
 	}
-	int get_char(FILE *fp_)    const {return getc(fp_);}
+	int get_next_char() {assert(fp); return _getc_nolock(fp);}
+	void unget_last_char(int c) {assert(fp); _ungetc_nolock(c, fp);}
+	bool fast_isspace(char c)  const {return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '/r');}
+	bool fast_isdigit(char c)  const {return (c >= '0' && c <= '9');}
+	int get_char(FILE *fp_)    const {return _getc_nolock(fp_);}
 	int get_char(ifstream &in) const {return in.get();}
 
 	template<typename T> void read_to_newline(T &stream, string *str=NULL) const {
@@ -52,7 +64,7 @@ protected:
 		while (1) {
 			int const c(get_char(stream));
 			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
-			if (!isspace(c) || !str.empty()) str.push_back(c);
+			if (!fast_isspace(c) || !str.empty()) str.push_back(c);
 		}
 		return;
 	}
@@ -69,8 +81,71 @@ protected:
 		assert((unsigned)ix < vect_sz);
 	}
 
-	bool read_point(point &p, int req_num=3) {
-		return (fscanf(fp, "%f%f%f", &p.x, &p.y, &p.z) >= req_num);
+	bool read_point(point &p, unsigned req_num=3) {
+		//return (fscanf(fp, "%f%f%f", &p.x, &p.y, &p.z) >= (int)req_num);
+		for (unsigned i = 0; i < 3; ++i) {
+			unsigned ix(0);
+			
+			while (1) {
+				if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
+				char const c(get_next_char());
+				if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
+				
+				if (ix == 0 && !fast_isdigit(c) && c != '.' && c != '-') { // not a fp number
+					unget_last_char(c);
+					return ((i >= req_num) ? 1 : 0); // success if we read enough values
+				}
+				buffer[ix++] = c;
+			}
+			buffer[ix] = 0; // add null terminator
+			p[i] = Assimp::fast_atof(buffer);
+		}
+		return 1;
+	}
+
+	int fast_atoi(char *str) const {
+		//return atoi(str);
+		assert(str && str[0] != 0);
+		int v(0);
+		bool is_neg(0);
+		if (*str == '-') {is_neg = 1; ++str;} // negative
+
+		for (; *str; ++str) {
+			if (!fast_isdigit(*str)) return 0; // error
+			v = 10*v + unsigned(*str - '0');
+		}
+		return (is_neg ? -v : v);
+	}
+
+	bool read_int(int &v) {
+		//return (fscanf(fp, "%i", &v) == 1);
+		unsigned ix(0);
+			
+		while (1) {
+			if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
+			char const c(get_next_char());
+			if (ix == 0 && fast_isspace(c)) continue; // skip leading whitespace
+			if (!fast_isdigit(c) && !(ix == 0 && c == '-')) {unget_last_char(c); break;} // non-integer character, unget it and finish
+			buffer[ix++] = c;
+		}
+		if (ix == 0) return 0; // no integer characters were read
+		buffer[ix] = 0; // add null terminator
+		v = fast_atoi(buffer);
+		return 1;
+	}
+
+	bool read_string(char *s, unsigned max_len) {
+		//return (fscanf(fp, "%s", s) == 1);
+		unsigned ix(0);
+			
+		while (1) {
+			if (ix+1 >= max_len) return 0; // buffer overrun
+			char const c(get_next_char());
+			if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
+			s[ix++] = c;
+		}
+		s[ix] = 0; // add null terminator
+		return 1;
 	}
 
 public:
@@ -85,7 +160,7 @@ public:
 		char s[MAX_CHARS];
 		polygon_t poly;
 
-		while (fscanf(fp, "%s", s) == 1) {
+		while (read_string(s, MAX_CHARS)) {
 			if (s[0] == '#') { // comment
 				read_to_newline(fp); // ignore
 			}
@@ -102,22 +177,22 @@ public:
 				poly.resize(0);
 				int ix(0);
 
-				while (fscanf(fp, "%i", &ix) == 1) { // read vertex index
+				while (read_int(ix)) { // read vertex index
 					normalize_index(ix, (unsigned)v.size());
 					// only fill in the vertex (norm and tc will be unused)
 					if (ppts) poly.push_back(vert_norm_tc(v[ix], zero_vector, 0.0, 0.0));
-					int const c(getc(fp));
+					int const c(get_next_char());
 
 					if (c == '/') {
-						fscanf(fp, "%i", &ix); // text coord index, ok to fail
-						int const c2(getc(fp));
+						read_int(ix); // text coord index, ok to fail
+						int const c2(get_next_char());
 
 						if (c2 == '/') {
-							fscanf(fp, "%i", &ix); // normal index, ok to fail
+							read_int(ix); // normal index, ok to fail
 						}
-						else ungetc(c2, fp);
+						else unget_last_char(c2);
 					}
-					else ungetc(c, fp);
+					else unget_last_char(c);
 				}
 				if (ppts) split_polygon(poly, *ppts, POLY_COPLANAR_THRESH);
 			}
@@ -346,7 +421,7 @@ public:
 		tc.push_back(point2d<float>(0.0, 0.0)); // default tex coords
 		n.push_back(zero_vector); // default normal
 
-		while (fscanf(fp, "%s", s) == 1) {
+		while (read_string(s, MAX_CHARS)) {
 			if (s[0] == 0) {
 				cout << "empty/unparseable line?" << endl;
 				continue;
@@ -370,27 +445,27 @@ public:
 				unsigned const pix((unsigned)pb.pts.size());
 				int vix(0), tix(0), nix(0);
 
-				while (fscanf(fp, "%i", &vix) == 1) { // read vertex index
+				while (read_int(vix)) { // read vertex index
 					normalize_index(vix, (unsigned)v.size());
 					vntc_ix_t vntc_ix(vix, 0, 0);
-					int const c(getc(fp));
+					int const c(get_next_char());
 
 					if (c == '/') {
-						if (fscanf(fp, "%i", &tix) == 1) { // read text coord index
+						if (read_int(tix)) { // read text coord index
 							normalize_index(tix, (unsigned)tc.size()-1); // account for tc[0]
 							vntc_ix.tix = tix+1; // account for tc[0]
 						}
-						int const c2(getc(fp));
+						int const c2(get_next_char());
 
 						if (c2 == '/') {
-							if (fscanf(fp, "%i", &nix) == 1 && !recalc_normals) { // read normal index
+							if (read_int(nix) && !recalc_normals) { // read normal index
 								normalize_index(nix, (unsigned)n.size()-1); // account for n[0]
 								vntc_ix.nix = nix+1; // account for n[0]
 							} // else the normal will be recalculated later
 						}
-						else ungetc(c2, fp);
+						else unget_last_char(c2);
 					}
-					else ungetc(c, fp);
+					else unget_last_char(c);
 					pb.pts.push_back(vntc_ix);
 					++npts;
 				} // end while vertex
@@ -462,7 +537,7 @@ public:
 			}
 			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
 				if (fscanf(fp, "%u", &smoothing_group) != 1) {
-					if (fscanf(fp, "%s", s) != 1 || strcmp(s, "off") != 0) {
+					if (!read_string(s, MAX_CHARS) || strcmp(s, "off") != 0) {
 						cerr << "Error reading smoothing group from object file " << filename << endl;
 						return 0;
 					}

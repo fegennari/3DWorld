@@ -1,9 +1,9 @@
 Indirect lighting normal/direction
 Fix ship collisions
-Tree branch/trunk bark bump maps
 Leaf/Branch overlap
 Multiple decid tree impostor orients
 Voxel terrain read/write
+Support for cube map textures (planets, etc.)
 
 Can't reproduce:
 - Black water reflection
@@ -30,9 +30,10 @@ Remove usage of gl_TexCoord from shaders and replace with a varying variable
 glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
 
 Mesh height high frequency noise
-
 Texture randomization
-Fireworks
+Voxel asteroid/rock instancing
+Varied planet cloud brightness, swirly clouds, cloud normals
+Generate universe in another thread/multiple threads
 
 
  E: 2.9 process_groups()
