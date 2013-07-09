@@ -11,7 +11,7 @@ unsigned const AF_GRID_SZ = 8;
 
 
 class uasteroid : public uobject, public rotated_obj {
-	
+
 	unsigned inst_id;
 	vector3d scale, velocity;
 
@@ -27,6 +27,7 @@ public:
 	vector3d const &get_scale()    const {return scale;}
 	vector3d const &get_velocity() const {return velocity;}
 	float get_rel_mass()           const {return scale.x*scale.y*scale.z*radius*radius*radius;} // mass is proportional to volume which is proportional to radius^3
+	bool operator<(uasteroid const &a) const {return (inst_id < a.inst_id);} // for sorting by inst_id
 
 	virtual std::string get_name() const {return "Asteroid";}
 	virtual bool rename(std::string const &name_) {return 0;} // not renaemable

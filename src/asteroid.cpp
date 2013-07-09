@@ -568,6 +568,7 @@ void uasteroid_field::gen_asteroids() {
 	for (iterator i = begin(); i != end(); ++i) {
 		i->gen(pos, radius, AST_RADIUS_SCALE*radius);
 	}
+	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time
 }
 
 
