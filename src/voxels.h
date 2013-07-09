@@ -144,7 +144,7 @@ class voxel_model : public voxel_manager {
 protected:
 	bool volume_added;
 	vector<tri_data_t> tri_data; // one per LOD level
-	noise_texture_manager_t noise_tex_gen; // FIXME: share across models?
+	noise_texture_manager_t *noise_tex_gen;
 	std::set<unsigned> modified_blocks;
 	voxel_grid<unsigned char> ao_lighting;
 
@@ -201,7 +201,7 @@ protected:
 	virtual void pre_render(bool is_shadow_pass) {}
 
 public:
-	voxel_model(bool use_mesh_, unsigned num_lod_levels);
+	voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned num_lod_levels);
 	virtual ~voxel_model() {}
 	void clear();
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
@@ -227,6 +227,7 @@ class voxel_model_ground : public voxel_model {
 
 	bool add_cobjs, add_as_fixed;
 	vector<unsigned> last_blocks_updated;
+	noise_texture_manager_t private_ntg;
 
 	struct data_block_t {
 		vector<int> cids; // references into coll_objects
@@ -245,7 +246,7 @@ class voxel_model_ground : public voxel_model {
 	virtual void pre_build_hook();
 
 public:
-	voxel_model_ground(unsigned num_lod_levels=1) : voxel_model(1, num_lod_levels), add_cobjs(0), add_as_fixed(0) {}
+	voxel_model_ground(unsigned num_lod_levels=1) : voxel_model(&private_ntg, 1, num_lod_levels), add_cobjs(0), add_as_fixed(0) {}
 	void clear();
 	void build(bool add_cobjs_, bool add_as_fixed_, bool verbose);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
@@ -257,7 +258,7 @@ class voxel_model_rock : public voxel_model {
 	virtual void calc_ao_lighting_for_block(unsigned block_ix, bool increase_only) {} // do nothing
 
 public:
-	voxel_model_rock(unsigned num_lod_levels) : voxel_model(0, num_lod_levels) {}
+	voxel_model_rock(noise_texture_manager_t *ntg, unsigned num_lod_levels) : voxel_model(ntg, 0, num_lod_levels) {}
 	void build(bool verbose) {voxel_model::build(verbose, 0);}
 };
 
@@ -273,7 +274,7 @@ class voxel_model_space : public voxel_model {
 	void extract_shadow_edges(voxel_grid<unsigned char> const &shadow_data);
 
 public:
-	voxel_model_space(unsigned num_lod_levels) : voxel_model(0, num_lod_levels), ao_tid(0), shadow_tid(0) {}
+	voxel_model_space(noise_texture_manager_t *ntg, unsigned num_lod_levels) : voxel_model(ntg, 0, num_lod_levels), ao_tid(0), shadow_tid(0) {}
 	void clear() {voxel_model::clear(); shadow_edge_tris.clear();}
 	virtual void free_context() {voxel_model::free_context(); free_ao_and_shadow_texture();}
 	virtual void setup_tex_gen_for_rendering(shader_t &s);

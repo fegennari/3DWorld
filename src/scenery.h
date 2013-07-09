@@ -75,7 +75,7 @@ class voxel_rock : public scenery_obj {
 	unsigned get_tid() const {return model.get_params().tids[0];}
 
 public:
-	voxel_rock(unsigned num_lod_levels) : model(num_lod_levels), rseed(1) {}
+	voxel_rock(noise_texture_manager_t *ntg, unsigned num_lod_levels) : model(ntg, num_lod_levels), rseed(1) {}
 	void create(int x, int y, int use_xy);
 	void build_model();
 	void add_cobjs();
@@ -149,8 +149,9 @@ class scenery_group {
 	vector<s_log>        logs;
 	vector<s_stump>      stumps;
 	vector<s_plant>      plants;
-	vbo_vnc_block_manager_t plant_vbo_manager;
+	vbo_vnc_block_manager_t  plant_vbo_manager;
 	vbo_vntc_block_manager_t rock_vbo_manager;
+	noise_texture_manager_t  voxel_rock_ntg;
 
 public:
 	bool generated;

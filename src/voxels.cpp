@@ -35,7 +35,7 @@ template class voxel_grid<float>; // explicit instantiation
 // if size==old_size, we do nothing;  if size==0, we only free the texture
 void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag, float freq, vector3d const &offset) {
 
-	if (size == tsize) return; // nothing to do
+	if (size == tsize) return; // nothing to do (check mag, freq, etc.?)
 	clear();
 	tsize = size;
 	if (size == 0) return; // nothing else to do
@@ -848,7 +848,7 @@ unsigned voxel_model::get_block_ix(unsigned voxel_ix) const {
 }
 
 
-voxel_model::voxel_model(bool use_mesh_, unsigned num_lod_levels) : voxel_manager(use_mesh_), volume_added(0) {
+voxel_model::voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned num_lod_levels) : voxel_manager(use_mesh_), volume_added(0), noise_tex_gen(ntg) {
 
 	assert(num_lod_levels > 0);
 	tri_data.resize(num_lod_levels);
@@ -1340,7 +1340,11 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 	RESET_TIME;
 	unsigned const lod_blocks(1 << (tri_data.size()-1));
 	assert((nx%(params.num_blocks*lod_blocks)) == 0 && (ny%(params.num_blocks*lod_blocks)) == 0 && (nz%lod_blocks) == 0); // LOD=max
-	noise_tex_gen.procedural_gen(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
+	
+	if (noise_tex_gen) { // noise_tex_gen is shared across voxel asteroids and rocks, so we need to make sure exactly one is created
+		#pragma omp critical(noise_texture_creation)
+		noise_tex_gen->procedural_gen(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
+	}
 	if (verbose) {PRINT_TIME("  Procedural Texture Gen");}
 	float const atten_thresh((params.invert ? 1.0 : -1.0)*params.atten_thresh);
 
@@ -1419,8 +1423,11 @@ void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool verbose
 void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
 	assert(s.is_setup());
-	noise_tex_gen.ensure_tid();
-	noise_tex_gen.bind_texture(5); // tu_id = 5
+
+	if (noise_tex_gen) {
+		noise_tex_gen->ensure_tid();
+		noise_tex_gen->bind_texture(5); // tu_id = 5
+	}
 	const char *cnames[2] = {"color0", "color1"};
 	unsigned const tu_ids[2] = {0,8};
 
@@ -1559,12 +1566,13 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 void voxel_model::free_context() {
 
 	for (unsigned i = 0; i < tri_data.size(); ++i) {tri_data[i].free_vbos();}
-	noise_tex_gen.clear();
+	if (noise_tex_gen) {noise_tex_gen->clear();}
 }
 
 
 float voxel_model::eval_noise_texture_at(point const &pos) const {
 	
+	assert(noise_tex_gen);
 	point const spos((pos + vector3d(DX_VAL*xoff2, DY_VAL*yoff2, 0.0))*params.noise_scale);
 	point fpos;
 
@@ -1575,7 +1583,7 @@ float voxel_model::eval_noise_texture_at(point const &pos) const {
 		if ((spos[i] < 0.0) ^ (ival & 1)) fpos[i] = 1.0 - fpos[i]; // apply mirroring
 		fpos[i] = fpos[i] - 0.5; // transform from [0,1] to [-0.5,0.5]
 	}
-	return noise_tex_gen.eval_at(fpos*NOISE_TSIZE);
+	return noise_tex_gen->eval_at(fpos*NOISE_TSIZE);
 }
 
 
@@ -1584,7 +1592,6 @@ void voxel_model_space::clone(voxel_model_space &dest) const {
 	
 	dest = *this;
 	dest.ao_tid = dest.shadow_tid = 0; // clear but don't free since these will still be used by *this
-	dest.noise_tex_gen.make_private_copy();
 
 	for (unsigned lod = 0; lod < tri_data.size(); ++lod) {
 		for (tri_data_t::iterator i = dest.tri_data[lod].begin(); i != dest.tri_data[lod].end(); ++i) {
