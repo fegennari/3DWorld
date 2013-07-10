@@ -528,7 +528,26 @@ void sd_sphere_d::draw_ndiv_pow2(unsigned ndiv) const {
 	ndiv = max(ndiv, 4U);
 	unsigned skip(1);
 	for (unsigned n = (spn.ndiv >> 1); ndiv < n; n >>= 1, skip <<= 1) {}
-	draw_subdiv_sphere(zero_vector, 1, 1, NULL, NULL, NULL, 0.0, 0.0, 1.0, 0.0, 1.0, skip); // no bfc
+	//draw_subdiv_sphere(zero_vector, 1, 1, NULL, NULL, NULL, 0.0, 0.0, 1.0, 0.0, 1.0, skip); // no bfc
+	float const ndiv_inv(1.0/float(spn.ndiv));
+	static vector<vert_norm_tc> verts;
+	verts.resize(0);
+
+	for (unsigned s = 0; s < spn.ndiv; s += skip) {
+		s = min(s, spn.ndiv-1);
+		unsigned const sn((s+skip)%spn.ndiv), snt(min((s+skip), spn.ndiv));
+
+		if (s != 0) { // add degenerate triangle to preserve the triangle strip
+			for (unsigned d = 0; d < 2; ++d) {verts.push_back(vert_norm_tc(spn.points[s][0], zero_vector, 0, 0));}
+		}
+		for (unsigned t = 0; t <= spn.ndiv; t += skip) {
+			t = min(t, spn.ndiv);
+			verts.push_back(vert_norm_tc(spn.points[s ][t], spn.norms[s ][t], (1.0f - s  *ndiv_inv), (1.0f - t*ndiv_inv)));
+			verts.push_back(vert_norm_tc(spn.points[sn][t], spn.norms[sn][t], (1.0f - snt*ndiv_inv), (1.0f - t*ndiv_inv)));
+		}
+	} // for s
+	verts.front().set_state();
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, (unsigned)verts.size());
 }
 
 
