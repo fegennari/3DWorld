@@ -93,12 +93,20 @@ protected:
 	typedef vntc_vect_block_t<vertex_type_t> tri_data_t;
 	typedef vertex_map_t<vertex_type_t> vertex_map_type_t;
 
+	struct vert_ix_cache_entry {
+		int ix[3]; // x, y, z
+		vert_ix_cache_entry() {ix[0] = ix[1] = ix[2] = -1;}
+	};
+
+	typedef voxel_grid<vert_ix_cache_entry> voxel_ix_cache;
+
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 	void calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh);
 	void flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
-	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, unsigned x, unsigned y, unsigned z, bool count_only, unsigned lod_level) const;
+	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, voxel_ix_cache &vix_cache,
+		unsigned x, unsigned y, unsigned z, unsigned block_x0, unsigned block_y0, bool count_only, unsigned lod_level) const;
 	void add_cobj_voxels(coll_obj &cobj, float filled_val);
 
 public:

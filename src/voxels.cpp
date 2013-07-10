@@ -401,8 +401,8 @@ point voxel_manager::interpolate_pt(float isolevel, point const &pt1, point cons
 }
 
 
-unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap,
-	unsigned x, unsigned y, unsigned z, bool count_only, unsigned lod_level) const
+unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, voxel_ix_cache &vix_cache,
+	unsigned x, unsigned y, unsigned z, unsigned block_x0, unsigned block_y0, bool count_only, unsigned lod_level) const
 {
 	unsigned cix(0);
 	unsigned const step(1 << lod_level);
@@ -429,24 +429,101 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 	cube_t const cube(get_xv(x), get_xv(x+step), get_yv(y), get_yv(y+step), get_zv(z), get_zv(z+step));
 	point vlist[12];
 
-	for (unsigned i = 0; i < 12; ++i) {
-		if (!(edge_val & (1 << i))) continue;
-		unsigned const *eix = voxel_detail::edge_to_vals[i];
-		float vals[2];
-		point pts[2];
+	if (vix_cache.empty()) {
+		for (unsigned i = 0; i < 12; ++i) {
+			if (!(edge_val & (1 << i))) continue;
+			unsigned const *eix = voxel_detail::edge_to_vals[i];
+			float vals[2];
+			point pts[2];
 
-		for (unsigned d = 0; d < 2; ++d) {
-			unsigned const yhi((eix[d] & 2) >> 1), xhi(yhi ^ (eix[d] & 1)), zhi(eix[d] >> 2);
-			unsigned const ix(get_ix(x+step*xhi, y+step*yhi, z+step*zhi));
-			vals[d] = ((outside[ix] & 7) == ON_EDGE_BIT) ? params.isolevel : operator[](ix);
-			pts[d].assign(cube.d[0][xhi], cube.d[1][yhi], cube.d[2][zhi]);
+			for (unsigned d = 0; d < 2; ++d) {
+				unsigned const yhi((eix[d] & 2) >> 1), xhi(yhi ^ (eix[d] & 1)), zhi(eix[d] >> 2);
+				unsigned const ix(get_ix(x+step*xhi, y+step*yhi, z+step*zhi));
+				vals[d] = ((outside[ix] & 7) == ON_EDGE_BIT) ? params.isolevel : operator[](ix);
+				pts[d].assign(cube.d[0][xhi], cube.d[1][yhi], cube.d[2][zhi]);
+			}
+			vlist[i] = interpolate_pt(params.isolevel, pts[0], pts[1], vals[0], vals[1]);
 		}
-		vlist[i] = interpolate_pt(params.isolevel, pts[0], pts[1], vals[0], vals[1]);
+		for (unsigned i = 0; tris[i] >= 0; i += 3) {
+			triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
+			if (tri.pts[0] == tri.pts[1] || tri.pts[0] == tri.pts[2] || tri.pts[1] == tri.pts[2]) continue; // invalid triangle
+			tri_verts.add_triangle(tri, vmap);
+		}
 	}
-	for (unsigned i = 0; tris[i] >= 0; i += 3) {
-		triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
-		if (tri.pts[0] == tri.pts[1] || tri.pts[0] == tri.pts[2] || tri.pts[1] == tri.pts[2]) continue; // invalid triangle
-		tri_verts.add_triangle(tri, vmap);
+	else {
+		int *vixs[12] = {0};
+		unsigned const edge_to_dim_map[12] = {0, 2, 0, 2, 0, 2, 0, 2, 1, 1, 1, 1};
+#if 1
+		for (unsigned i = 0; i < 12; ++i) {
+			if (!(edge_val & (1 << i))) continue;
+			unsigned const *eix = voxel_detail::edge_to_vals[i];
+			unsigned xhv(1), yhv(1), zhv(1);
+			float vals[2];
+			point pts[2];
+
+			for (unsigned d = 0; d < 2; ++d) {
+				unsigned const yhi((eix[d] & 2) >> 1), xhi(yhi ^ (eix[d] & 1)), zhi(eix[d] >> 2);
+				unsigned const ix(get_ix(x+step*xhi, y+step*yhi, z+step*zhi));
+				xhv &= xhi; yhv &= yhi; zhv &= zhi;
+				vals[d] = ((outside[ix] & 7) == ON_EDGE_BIT) ? params.isolevel : operator[](ix);
+				pts[d].assign(cube.d[0][xhi], cube.d[1][yhi], cube.d[2][zhi]);
+			}
+			vlist[i] = interpolate_pt(params.isolevel, pts[0], pts[1], vals[0], vals[1]);
+			vixs [i] = &(vix_cache.get_ref((x-block_x0)+step*xhv, (y-block_y0)+step*yhv, z+step*zhv).ix[edge_to_dim_map[i]]);
+		}
+#endif
+		for (unsigned i = 0; tris[i] >= 0; i += 3) {
+#if 1
+			triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
+#else
+			triangle tri;
+
+			for (unsigned v = 0; v < 3; ++v) {
+				int const ix(tris[i+v]);
+				unsigned const *eix = voxel_detail::edge_to_vals[ix];
+
+				if (!vixs[ix]) { // not yet calculated
+					unsigned xhv(1), yhv(1), zhv(1);
+
+					for (unsigned d = 0; d < 2; ++d) {
+						unsigned const yhi((eix[d] & 2) >> 1), xhi(yhi ^ (eix[d] & 1)), zhi(eix[d] >> 2);
+						xhv &= xhi; yhv &= yhi; zhv &= zhi;
+					}
+					vixs[ix] = &(vix_cache.get_ref((x-block_x0)+step*xhv, (y-block_y0)+step*yhv, z+step*zhv).ix[edge_to_dim_map[ix]]);
+				}
+				if (*(vixs[ix]) < 0) { // not found in cache
+					float vals[2];
+					point pts[2];
+
+					for (unsigned d = 0; d < 2; ++d) {
+						unsigned const yhi((eix[d] & 2) >> 1), xhi(yhi ^ (eix[d] & 1)), zhi(eix[d] >> 2);
+						unsigned const ix2(get_ix(x+step*xhi, y+step*yhi, z+step*zhi));
+						vals[d] = ((outside[ix2] & 7) == ON_EDGE_BIT) ? params.isolevel : operator[](ix2);
+						pts[d].assign(cube.d[0][xhi], cube.d[1][yhi], cube.d[2][zhi]);
+					}
+					tri.pts[v] = interpolate_pt(params.isolevel, pts[0], pts[1], vals[0], vals[1]);
+				}
+				else {
+					tri.pts[v] = tri_verts[*(vixs[ix])].v;
+				}
+			}
+#endif
+			vector3d const normal(tri.get_normal());
+			if (normal == zero_vector) continue; // invalid triangle
+			
+			for (unsigned v = 0; v < 3; ++v) {
+				int *vix(vixs[tris[i+v]]);
+				
+				if (*vix < 0) {
+					*vix = tri_verts.size(); // next available vix
+					tri_verts.push_back(vertex_type_t(tri.pts[v], zero_vector));
+				}
+				assert(*vix < (int)tri_verts.size());
+				tri_verts[*vix].n += normal; // average the triangle normals to get the vertex normal
+				tri_verts.add_index(*vix);
+				tri_verts.mark_need_normalize();
+			} // for v
+		} // for i
 	}
 	return count;
 }
@@ -922,13 +999,15 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 	assert(block_ix <td.size());
 	assert(td[block_ix].empty());
 	vertex_map_type_t vmap(1);
+	voxel_ix_cache vix_cache;
+	vix_cache.init(xblocks+1, yblocks+1, nz, vsz, zero_vector, vert_ix_cache_entry(), 1);
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks), step(1 << lod_level);
 	unsigned count(0);
 	
 	for (unsigned y = ybix*yblocks; y < min(ny-step, (ybix+1)*yblocks); y += step) {
 		for (unsigned x = xbix*xblocks; x < min(nx-step, (xbix+1)*xblocks); x += step) {
 			for (unsigned z = 0; z < nz-step; z += step) {
-				count += add_triangles_for_voxel(td[block_ix], vmap, x, y, z, count_only, lod_level);
+				count += add_triangles_for_voxel(td[block_ix], vmap, vix_cache, x, y, z, xbix*xblocks, ybix*yblocks, count_only, lod_level);
 			}
 		}
 	}

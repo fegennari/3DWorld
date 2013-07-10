@@ -187,6 +187,7 @@ public:
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
 	void add_triangle(triangle const &t, vertex_map_t<T> &vmap);
 	void add_vertex(T const &v, vertex_map_t<T> &vmap);
+	void add_index(unsigned ix) {assert(ix < size()); indices.push_back(ix);}
 	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims);
 	void optimize(unsigned npts);
 	void finalize(int prim_type);
@@ -199,6 +200,7 @@ public:
 	void write(ostream &out) const;
 	void read(istream &in);
 	bool indexing_enabled() const {return !indices.empty();}
+	void mark_need_normalize() {need_normalize = 1;}
 };
 
 
