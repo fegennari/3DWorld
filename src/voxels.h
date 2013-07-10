@@ -105,7 +105,7 @@ protected:
 	void flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
 		vector<unsigned> *xy_updated, vector<point> *updated_pts);
-	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, vertex_map_type_t &vmap, voxel_ix_cache &vix_cache,
+	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, voxel_ix_cache &vix_cache,
 		unsigned x, unsigned y, unsigned z, unsigned block_x0, unsigned block_y0, bool count_only, unsigned lod_level) const;
 	void add_cobj_voxels(coll_obj &cobj, float filled_val);
 
