@@ -338,8 +338,7 @@ void draw_mesh_vbo() { // Note: uses fixed function pipeline
 	static unsigned mesh_vbo(0);
 		
 	if (clear_landscape_vbo) {
-		delete_vbo(mesh_vbo);
-		mesh_vbo = 0;
+		delete_and_zero_vbo(mesh_vbo);
 		clear_landscape_vbo = 0;
 	}
 	if (mesh_vbo == 0) {

@@ -410,9 +410,7 @@ void vbo_block_manager_t<vert_type_t>::clear() {
 
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::clear_vbo() {
-	
-	delete_vbo(vbo);
-	vbo = 0;
+	delete_and_zero_vbo(vbo);
 }
 
 // explicit template instantiations

@@ -43,13 +43,10 @@ void grass_manager_t::grass_t::merge(grass_t const &g) {
 }
 
 void grass_manager_t::free_vbo() {
-
-	delete_vbo(vbo);
-	vbo = 0;
+	delete_and_zero_vbo(vbo);
 }
 
 void grass_manager_t::clear() {
-
 	free_vbo();
 	grass.clear();
 }

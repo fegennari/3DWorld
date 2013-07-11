@@ -55,6 +55,8 @@ unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize);
 void disable_and_free_render_buffer(unsigned &render_buffer);
 bool gen_mipmaps(unsigned dim=2);
 
+inline void delete_and_zero_vbo(unsigned &id) {delete_vbo(id); id = 0;}
+
 
 // templated vbo management utility functions/classes
 

@@ -75,8 +75,7 @@ public:
 		draw_and_clear_verts(dverts, GL_TRIANGLES);
 	}
 	void free() {
-		delete_vbo(vbo);
-		vbo = 0;
+		delete_and_zero_vbo(vbo);
 		num_verts1 = num_verts2 = 0;
 		dverts.clear();
 	}

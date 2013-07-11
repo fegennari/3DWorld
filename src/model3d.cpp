@@ -186,9 +186,8 @@ template<typename T> void vntc_vect_t<T>::clear() {
 
 template<typename T> void vntc_vect_t<T>::free_vbos() {
 
-	delete_vbo(vbo);
-	delete_vbo(ivbo);
-	vbo = ivbo = 0;
+	delete_and_zero_vbo(vbo);
+	delete_and_zero_vbo(ivbo);
 }
 
 
