@@ -47,9 +47,9 @@ class surface_rock : public scenery_obj { // size = 1456+
 
 public:
 	surface_rock() : vbo_mgr_ix(-1), scale(0.0), surface(NULL) {}
-	void create(int x, int y, int use_xy, vbo_vntc_block_manager_t &vbo_manager);
+	void create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vntc_block_manager_t &vbo_manager) const;
+	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const;
 	void destroy();
 };
 
@@ -149,9 +149,9 @@ class scenery_group {
 	vector<s_log>        logs;
 	vector<s_stump>      stumps;
 	vector<s_plant>      plants;
-	vbo_vnc_block_manager_t  plant_vbo_manager;
-	vbo_vntc_block_manager_t rock_vbo_manager;
-	noise_texture_manager_t  voxel_rock_ntg;
+	vbo_vnc_block_manager_t plant_vbo_manager;
+	vbo_vnt_block_manager_t rock_vbo_manager;
+	noise_texture_manager_t voxel_rock_ntg;
 
 public:
 	bool generated;

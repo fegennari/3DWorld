@@ -133,6 +133,7 @@ public:
 typedef vbo_block_manager_t<vert_color> vbo_vc_block_manager_t;
 typedef vbo_block_manager_t<vert_norm_comp_color> vbo_vnc_block_manager_t;
 typedef vbo_block_manager_t<vert_norm_tc_color  > vbo_vntc_block_manager_t;
+typedef vbo_block_manager_t<vert_norm_tc        > vbo_vnt_block_manager_t;
 
 
 #endif // _DRAW_UTILS_H_

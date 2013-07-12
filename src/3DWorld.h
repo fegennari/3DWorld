@@ -737,6 +737,7 @@ struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 
 struct vert_norm_tc : public vert_norm { // size = 32
 	float t[2];
+	typedef vert_norm_tc non_color_class;
 	vert_norm_tc() {}
 	vert_norm_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm(v_, n_) {t[0] = ts;    t[1] = tt;   }
 	vert_norm_tc(point const &v_, vector3d const &n_, float const t_[2])  : vert_norm(v_, n_) {t[0] = t_[0]; t[1] = t_[1];}

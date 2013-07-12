@@ -353,6 +353,13 @@ void vbo_block_manager_t<vert_type_t>::add_points(vector<typename vert_type_t::n
 	}
 }
 
+template<>
+void vbo_block_manager_t<vert_norm_tc>::add_points(vector<vert_norm_tc> const &p, colorRGBA const &color) { // color is ignored
+
+	assert(!p.empty());
+	copy(p.begin(), p.end(), back_inserter(pts));
+}
+
 template< typename vert_type_t >
 unsigned vbo_block_manager_t<vert_type_t>::add_points_with_offset(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
 
@@ -416,7 +423,8 @@ void vbo_block_manager_t<vert_type_t>::clear_vbo() {
 // explicit template instantiations
 template class vbo_block_manager_t<vert_color>;
 template class vbo_block_manager_t<vert_norm_comp_color>;
-template class vbo_block_manager_t<vert_norm_tc_color  >;
+template class vbo_block_manager_t<vert_norm_tc_color>;
+template class vbo_block_manager_t<vert_norm_tc>;
 
 
 

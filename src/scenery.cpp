@@ -336,9 +336,7 @@ void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const { // Note
 }
 
 void rock_shape3d::clear_vbo() {
-
-	delete_vbo(vbo);
-	vbo = 0;
+	delete_and_zero_vbo(vbo);
 }
 
 
@@ -388,7 +386,7 @@ void surface_cache::clear_unref() {
 surface_cache surface_rock_cache;
 
 
-void surface_rock::create(int x, int y, int use_xy, vbo_vntc_block_manager_t &vbo_manager) {
+void surface_rock::create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager) {
 
 	gen_spos(x, y, use_xy);
 	radius  = rand_uniform2(0.1, 0.2)*rand_float2()/tree_scale;
@@ -405,14 +403,14 @@ void surface_rock::create(int x, int y, int use_xy, vbo_vntc_block_manager_t &vb
 	scale = radius/surface->rmax;
 	vector<vert_norm_tc> points;
 	surface->sd.get_quad_points(points);
-	vbo_mgr_ix = vbo_manager.add_points_with_offset(points, WHITE);
+	vbo_mgr_ix = vbo_manager.add_points_with_offset(points, WHITE); // color is unused
 }
 
 void surface_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vntc_block_manager_t &vbo_manager) const {
+void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const {
 
 	assert(surface);
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
@@ -428,14 +426,8 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, f
 	translate_to(pos);
 	uniform_scale(scale*get_size_scale(dist, scale_val));
 	rotate_into_plus_z(dir);
-
-	if (color == WHITE) { // not shadowed or underwater - vbo colors are correct
-		assert(vbo_mgr_ix >= 0);
-		vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
-	}
-	else {
-		surface->sd.draw_ndiv_pow2(shadow_only ? get_smap_ndiv(radius) : sscale*radius/dist);
-	}
+	assert(vbo_mgr_ix >= 0);
+	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
 	glPopMatrix();
 }
 
