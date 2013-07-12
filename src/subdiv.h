@@ -5,9 +5,11 @@
 #define _SUBDIV_H_
 
 #include "3DWorld.h"
+#include "gl_ext_arb.h"
 
 
 class sd_sphere_d; // forward reference
+class sd_sphere_vbo_d; // forward reference
 class upsurface;
 class coll_obj_group;
 
@@ -20,6 +22,7 @@ class sphere_point_norm { // size = 12
 
 public:
 	friend class sd_sphere_d;
+	friend class sd_sphere_vbo_d;
 	sphere_point_norm() : ndiv(0), points(NULL), norms(NULL) {}
 	void alloc(unsigned ndiv_);
 	void set_pointer_stride(unsigned ndiv_);
@@ -29,6 +32,7 @@ public:
 
 class sd_sphere_d { // size = 40
 
+protected:
 	point pos;
 	float radius, def_pert;
 	float const *perturb_map;
@@ -43,11 +47,13 @@ public:
 	float get_rmax() const;
 	void draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, bool const *const render_map=NULL,
 		float const *const exp_map=NULL, point const *const pt_shift=NULL, float expand=0.0,
-		float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0, unsigned sv1=1) const;
+		float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void get_quad_points(vector<vert_norm_tc> &quad_pts) const;
 	void get_triangles(vector<vert_wrap_t> &verts) const;
 	void get_triangles(vector<vert_norm_tc> &verts, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
-	void draw_ndiv_pow2(unsigned ndiv) const;
+	void get_triangle_strip_pow2(vector<vert_norm_tc> &verts, unsigned skip) const;
+	void get_triangle_vertex_list(vector<vert_norm_tc> &verts) const;
+	void get_triangle_index_list_pow2(vector<unsigned short> &indices, unsigned skip) const;
 	void set_data(point const &p, float r, int n, float const *pm, float dp=0.0, upsurface const *const s=NULL);
 	point    **get_points() const {return spn.points;}
 	vector3d **get_norms()  const {return spn.norms; }
@@ -55,6 +61,20 @@ public:
 	bool equal(point const &p, float r, int n) const {
 		return (p == pos && r == radius && n == spn.ndiv && spn.points != NULL);
 	}
+};
+
+
+class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vbo_manager_t {
+
+	vector<unsigned short> ix_offsets;
+
+	void ensure_vbos();
+
+public:
+	sd_sphere_vbo_d() {}
+	sd_sphere_vbo_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL) : sd_sphere_d(p, r, n, pm, dp, s) {}
+	void clear_vbos();
+	void draw_ndiv_pow2(unsigned ndiv, bool use_vbo);
 };
 
 

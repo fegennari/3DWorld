@@ -172,7 +172,7 @@ public:
 class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 
 	float scale_val;
-	upsurface surface;
+	mutable upsurface surface; // FIXME: mutable so that the contained sd_sphere_vbo_d can modify its vbo indexes
 	static vector<float> pmap_vector;
 
 public:
@@ -189,11 +189,11 @@ public:
 
 	// Note: this class overrides draw_with_texture() because it's used instanced
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id) const { // to allow overriding the texture id
-		if (ddata.ndiv <= 4) {ddata.draw_asteroid(force_tex_id); return;}
+		if (ddata.ndiv <= 4) {ddata.draw_asteroid(force_tex_id); return;} // doesn't make much difference
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		ddata.color_a.do_glColor();
 		select_texture(force_tex_id);
-		surface.sd.draw_ndiv_pow2(ddata.ndiv); // use vbo?
+		surface.sd.draw_ndiv_pow2(ddata.ndiv, 1); // use a vbo
 		end_texture();
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
@@ -255,6 +255,8 @@ public:
 		}
 		return 1;
 	}
+
+	virtual void clear_context() {surface.sd.clear_vbos();}
 
 	private:
 	float get_radius_at(point const &pt) const {
@@ -533,6 +535,11 @@ public:
 	int get_fragment_tid(unsigned ix, point const &hit_pos) const {
 		return get_asteroid(ix)->get_fragment_tid(hit_pos);
 	}
+	void clear_contexts() {
+		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
+			(*i)->clear_context();
+		}
+	}
 	void clear() {
 		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
 			delete *i;
@@ -545,8 +552,11 @@ asteroid_model_gen_t asteroid_model_gen;
 
 
 void ensure_asteroid_models() {
-
 	if (asteroid_model_gen.empty()) {asteroid_model_gen.gen(NUM_AST_MODELS, AST_FIELD_MODEL);}
+}
+
+void clear_asteroid_contexts() {
+	asteroid_model_gen.clear_contexts();
 }
 
 
@@ -638,6 +648,7 @@ void uasteroid_field::begin_render(shader_t &shader) {
 		shader.add_uniform_float("tex_scale", 0.5);
 	}
 	shader.enable();
+	set_fill_mode();
 	BLACK.do_glColor();
 	glEnable(GL_LIGHTING);
 	colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);

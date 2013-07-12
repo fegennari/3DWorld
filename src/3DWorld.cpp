@@ -139,7 +139,7 @@ void init_openal(int &argc, char** argv);
 
 void clear_sm_tree_vbos();
 void clear_scenery_vbos();
-
+void clear_asteroid_contexts();
 
 
 bool check_gl_error(unsigned loc_id) {
@@ -182,6 +182,7 @@ void clear_context() {
 	reset_tiled_terrain_state();
 	free_cobj_draw_group_dlists();
 	clear_univ_obj_contexts();
+	clear_asteroid_contexts();
 	clear_cached_shaders();
 	invalidate_cached_stars();
 	clear_landscape_vbo = 1;

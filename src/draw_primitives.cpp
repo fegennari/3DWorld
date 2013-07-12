@@ -374,11 +374,11 @@ void draw_cylindrical_section(point const &pos, float length, float r_inner, flo
 // back face culling requires the sphere to be untransformed (or the vertices to be per-transformed)
 void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, bool const *const render_map,
 									 float const *const exp_map, point const *const pt_shift, float expand,
-									 float s_beg, float s_end, float t_beg, float t_end, unsigned sv1) const
+									 float s_beg, float s_end, float t_beg, float t_end) const
 {
 	assert(!render_map || disable_bfc);
 	unsigned const ndiv(spn.ndiv);
-	assert(ndiv > 0 && sv1 > 0);
+	assert(ndiv > 0);
 	float const ndiv_inv(1.0/float(ndiv)), rv(def_pert + radius), rv_sq(rv*rv), tscale(texture);
 	float const toler(1.0E-6*radius*radius + rv_sq), dmax(rv + 0.1*radius), dmax_sq(dmax*dmax);
 	point **points   = spn.points;
@@ -388,17 +388,16 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
 	glBegin(use_quads ? GL_QUADS : GL_TRIANGLE_STRIP);
 
-	for (unsigned s = s0; s < s1; s += sv1) {
+	for (unsigned s = s0; s < s1; ++s) {
 		s = min(s, s1-1);
-		unsigned const sn((s+sv1)%ndiv), snt(min((s+sv1), s1));
+		unsigned const sn((s+1)%ndiv), snt(s+1);
 
 		if (use_quads) { // use slower quads - no back face culling
-			for (unsigned t = t0; t < t1; t += sv1) {
+			for (unsigned t = t0; t < t1; ++t) {
 				t = min(t, t1);
-				unsigned const ix(s*(ndiv+1)+t);
+				unsigned const ix(s*(ndiv+1)+t), tn(t+1);
 				if (render_map && !render_map[ix]) continue;
 				float const exp(expand + (exp_map ? exp_map[ix] : 0.0));
-				unsigned const tn(min(t+sv1, ndiv+1));
 				point          pts[4]     = {points[s][t], points[sn][t], points[sn][tn], points[s][tn]};
 				vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][tn], norms [s][tn]};
 				
@@ -421,8 +420,7 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 			if (s != s0) { // add degenerate triangle to preserve the triangle strip (only slightly faster than using multiple triangle strips)
 				for (unsigned d = 0; d < 2; ++d) {points[s][t0].do_glVertex();}
 			}
-			for (unsigned t = t0; t <= t1; t += sv1) {
-				t = min(t, t1);
+			for (unsigned t = t0; t <= t1; ++t) {
 				point    const pts[2]     = {points[s][t], points[sn][t]};
 				vector3d const normals[2] = {norms [s][t], norms [sn][t]};
 				bool draw(disable_bfc);
@@ -523,15 +521,9 @@ void sd_sphere_d::get_triangles(vector<vert_norm_tc> &verts, float s_beg, float 
 }
 
 
-void sd_sphere_d::draw_ndiv_pow2(unsigned ndiv) const {
+void sd_sphere_d::get_triangle_strip_pow2(vector<vert_norm_tc> &verts, unsigned skip) const {
 
-	ndiv = max(ndiv, 4U);
-	unsigned skip(1);
-	for (unsigned n = (spn.ndiv >> 1); ndiv < n; n >>= 1, skip <<= 1) {}
-	//draw_subdiv_sphere(zero_vector, 1, 1, NULL, NULL, NULL, 0.0, 0.0, 1.0, 0.0, 1.0, skip); // no bfc
 	float const ndiv_inv(1.0/float(spn.ndiv));
-	static vector<vert_norm_tc> verts;
-	verts.resize(0);
 
 	for (unsigned s = 0; s < spn.ndiv; s += skip) {
 		s = min(s, spn.ndiv-1);
@@ -546,8 +538,93 @@ void sd_sphere_d::draw_ndiv_pow2(unsigned ndiv) const {
 			verts.push_back(vert_norm_tc(spn.points[sn][t], spn.norms[sn][t], (1.0f - snt*ndiv_inv), (1.0f - t*ndiv_inv)));
 		}
 	} // for s
-	verts.front().set_state();
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, (unsigned)verts.size());
+}
+
+
+void sd_sphere_d::get_triangle_vertex_list(vector<vert_norm_tc> &verts) const {
+
+	float const ndiv_inv(1.0/float(spn.ndiv));
+
+	for (unsigned s = 0; s < spn.ndiv; ++s) {
+		for (unsigned t = 0; t <= spn.ndiv; ++t) {
+			verts.push_back(vert_norm_tc(spn.points[s][t], spn.norms[s][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv)));
+		}
+	}
+	assert(verts.size() <= 65536); // must fit into a 16-but unsigned index
+}
+
+
+void sd_sphere_d::get_triangle_index_list_pow2(vector<unsigned short> &indices, unsigned skip) const {
+
+	unsigned const stride(spn.ndiv + 1);
+
+	for (unsigned s = 0; s < spn.ndiv; s += skip) {
+		s = min(s, spn.ndiv-1);
+		unsigned const sn((s+skip)%spn.ndiv);
+
+		if (s != 0) { // add degenerate triangle to preserve the triangle strip
+			for (unsigned d = 0; d < 2; ++d) {indices.push_back(s*stride);}
+		}
+		for (unsigned t = 0; t <= spn.ndiv; t += skip) {
+			t = min(t, spn.ndiv);
+			indices.push_back(s *stride + t);
+			indices.push_back(sn*stride + t);
+		}
+	}
+}
+
+
+void sd_sphere_vbo_d::ensure_vbos() {
+
+	if (!vbo) {
+		vector<vert_norm_tc> verts;
+		get_triangle_vertex_list(verts);
+		create_vbo_and_upload(vbo, verts, 0, 1);
+	}
+	if (!ivbo) {
+		assert(ix_offsets.empty());
+		vector<unsigned short> indices;
+		ix_offsets.push_back(0);
+		
+		for (unsigned n = spn.ndiv, skip = 1, ix_ix = 0; n >= 4; n >>= 1, skip <<= 1, ++ix_ix) {
+			get_triangle_index_list_pow2(indices, skip);
+			ix_offsets.push_back(indices.size());
+		}
+		create_vbo_and_upload(ivbo, indices, 1, 1);
+	}
+	assert(!ix_offsets.empty());
+}
+
+
+void sd_sphere_vbo_d::clear_vbos() {
+
+	indexed_vbo_manager_t::clear_vbos();
+	ix_offsets.clear();
+}
+
+
+void sd_sphere_vbo_d::draw_ndiv_pow2(unsigned ndiv, bool use_vbo) {
+
+	ndiv = max(ndiv, 4U);
+	ensure_vbos();
+	unsigned lod(0);
+	for (unsigned n = (spn.ndiv >> 1); ndiv < n; n >>= 1, ++lod) {}
+
+	if (use_vbo) {
+		assert(lod+1 < ix_offsets.size());
+		pre_render();
+		vert_norm_tc::set_vbo_arrays();
+		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, spn.ndiv*(spn.ndiv+1), (ix_offsets[lod+1] - ix_offsets[lod]),
+			GL_UNSIGNED_SHORT, (void *)(ix_offsets[lod]*sizeof(unsigned short)));
+		post_render();
+	}
+	else {
+		static vector<vert_norm_tc> verts;
+		verts.resize(0);
+		get_triangle_strip_pow2(verts, (1 << lod));
+		verts.front().set_state();
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, (unsigned)verts.size());
+	}
 }
 
 
@@ -938,8 +1015,7 @@ void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride) { // s
 
 void free_sphere_vbos() {
 
-	delete_vbo(predef_sphere_vbo);
-	predef_sphere_vbo = 0;
+	delete_and_zero_vbo(predef_sphere_vbo);
 }
 
 
