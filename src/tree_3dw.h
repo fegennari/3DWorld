@@ -12,6 +12,8 @@
 float const TREE_DIST_SCALE = 100.0;
 float const TREE_DEN_THRESH = 0.55;
 
+//#define TREE_4TH_BRANCHES
+
 
 struct blastr; // forward reference
 class tree_data_t;
@@ -161,7 +163,11 @@ class tree_data_t {
 
 	typedef vert_norm_comp_color leaf_vert_type_t;
 	typedef vert_norm_comp_tc branch_vert_type_t;
+#ifdef TREE_4TH_BRANCHES
+	typedef unsigned branch_index_t;
+#else
 	typedef unsigned short branch_index_t;
+#endif
 
 	indexed_vbo_manager_t branch_vbo_manager;
 	unsigned leaf_vbo, num_branch_quads, num_unique_pts;

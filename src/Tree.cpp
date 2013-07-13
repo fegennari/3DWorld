@@ -30,7 +30,7 @@ float const BR_SHADOW_VAL    = 0.6;
 float const TREE_DEPTH       = 0.1;
 float const BASE_LEN_SCALE   = 0.8; // determines base cylinder overlap
 float const BRANCH_LEN_SCALE = 0.9; // determines branch cylinder overlap
-int const TREE_4TH_BRANCHES  = 0; // 1 = branches, 2 = branches + leaves
+int const TREE_4TH_LEAVES    = 0;
 int const TREE_COLL          = 2;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
@@ -913,16 +913,16 @@ void tree_data_t::ensure_branch_vbo() {
 	vector<branch_vert_type_t> data; // static/reused?
 	vector<branch_index_t> idata;
 	unsigned const numcylin((unsigned)all_cylins.size());
-	unsigned num_quads(0), num_pts(0), cylin_id(0), data_pos(0), quad_id(0), dix(0), idix(0), idix2(0);
+	unsigned num_quads(0), cylin_id(0), data_pos(0), quad_id(0), dix(0), idix(0), idix2(0);
 
 	for (unsigned i = 0; i < numcylin; ++i) { // determine required data size
 		bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
 		unsigned const ndiv(all_cylins[i].get_num_div());
-		num_quads += ndiv;
-		num_pts   += (prev_connect ? 1 : 2)*ndiv;
+		num_quads      += ndiv;
+		num_unique_pts += (prev_connect ? 1 : 2)*ndiv;
 	}
-	assert(data.size() + num_pts < (1 << 8*sizeof(branch_index_t))); // cutting it close with 4th order branches
-	data.resize(num_pts);
+	assert(num_unique_pts < (1ULL << (8*sizeof(branch_index_t)-1)));
+	data.resize(num_unique_pts);
 	idata.resize(6*num_quads); // quads + quads/2 for LOD
 	idix2 = 4*num_quads;
 
@@ -970,7 +970,6 @@ void tree_data_t::ensure_branch_vbo() {
 	assert(dix   == data.size());
 	assert(idix2 == idata.size());
 	num_branch_quads = idata.size()/6; // quads + quads/2 for LOD
-	num_unique_pts   = data.size();
 	branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 }
 
@@ -985,7 +984,9 @@ void tree_data_t::draw_branches(float size_scale, bool reflection_pass) {
 
 void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pass) {
 
-	if (TREE_4TH_BRANCHES) {low_detail = 0;} // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
+#ifdef TREE_4TH_BRANCHES
+	low_detail = 0; // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
+#endif
 	ensure_branch_vbo();
 	branch_vbo_manager.pre_render();
 
@@ -997,7 +998,7 @@ void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pas
 	}
 	//glEnableClientState(GL_INDEX_ARRAY);
 	unsigned const idata_sz(4*num_branch_quads*sizeof(branch_index_t));
-	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, GL_UNSIGNED_SHORT, (void *)(low_detail ? idata_sz : 0));
+	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, ((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT), (void *)(low_detail ? idata_sz : 0));
 	//glDisableClientState(GL_INDEX_ARRAY);
 	branch_vbo_manager.post_render();
 }
@@ -1322,7 +1323,7 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 			branch_tree.add_cobjs(0);
 		}
 		for (unsigned i = 0; i < num_total_cylins; ++i) {
-			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_BRANCHES > 1)) { // leaves will still be allocated
+			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_LEAVES)) { // leaves will still be allocated
 				add_leaves_to_cylin(i, tree_type, rel_leaf_size, deadness, leaves, all_cylins, branch_tree, cobjs);
 			}
 		}
@@ -1565,7 +1566,11 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	num_34_branches[0]   = 0; // this should start out 0
 	num_3_branches_min   = 6;
 	num_3_branches_max   = 10;
-	num_34_branches[1]   = (TREE_4TH_BRANCHES ? 2000 : 0);
+#ifdef TREE_4TH_BRANCHES
+	num_34_branches[1]   = 2000;
+#else
+	num_34_branches[1]   = 0;
+#endif
 	if (size <= 0) size  = rand_gen(40, 80); // tree size
 	base_radius            = size * (0.1*TREE_SIZE*tree_types[tree_type].branch_size/tree_scale);
 	num_leaves_per_occ     = 0.01*nleaves_scale*(rand_gen(30, 60) + size);
@@ -1670,7 +1675,9 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	}
 	
 	//done with base ------------------------------------------------------------------
-	if (TREE_4TH_BRANCHES) {create_4th_order_branches(nbranches);}
+#ifdef TREE_4TH_BRANCHES
+	create_4th_order_branches(nbranches);
+#endif
 
 	// FIXME: hack to prevent roots from being generated in scenes where trees are user-placed and affect the lighting voxel sparsity
 	root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
