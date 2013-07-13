@@ -2181,7 +2181,15 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		ocolor.do_glColor();
 	}
 	if (ndiv >= N_SPHERE_DIV) {
-		draw_surface(pos_, radius, size, ndiv);
+		if (surface == NULL || !surface->has_heightmap()) { // gas giant
+			ndiv /= 2; // don't need high resolution for gas giants since they have no heightmap
+			point viewed_from(vcp);
+			rotate_vector(viewed_from);
+			draw_subdiv_sphere(all_zeros, radius, ndiv, viewed_from, NULL, 1, 0); // with back-face culling
+		}
+		else {
+			draw_surface(pos_, radius, size, ndiv);
+		}
 	}
 	else {
 		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
@@ -2205,15 +2213,8 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 
 	RESET_TIME;
 	assert(ndiv > 0);
+	assert(surface != NULL);
 	bool const SD_TIMETEST(SHOW_SPHERE_TIME && size >= 256.0);
-
-	if (surface == NULL || !surface->has_heightmap()) { // gas giant
-		point viewed_from(get_player_pos() - pos_);
-		rotate_vector(viewed_from);
-		draw_subdiv_sphere(all_zeros, radius0, ndiv, viewed_from, NULL, 1, 0);
-		if (SD_TIMETEST) PRINT_TIME("Subdiv Sphere Draw");
-		return;
-	}
 
 	// sphere heightmap for rocky planet or moon
 	float const hmap_scale(get_hmap_scale());
