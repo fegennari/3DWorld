@@ -550,11 +550,10 @@ void sd_sphere_d::get_triangle_vertex_list(vector<vert_norm_tc> &verts) const {
 			verts.push_back(vert_norm_tc(spn.points[s][t], spn.norms[s][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv)));
 		}
 	}
-	assert(verts.size() <= 65536); // must fit into a 16-but unsigned index
 }
 
 
-void sd_sphere_d::get_triangle_index_list_pow2(vector<unsigned short> &indices, unsigned skip) const {
+void sd_sphere_d::get_triangle_index_list_pow2(vector<index_type_t> &indices, unsigned skip) const {
 
 	unsigned const stride(spn.ndiv + 1);
 
@@ -583,7 +582,7 @@ void sd_sphere_vbo_d::ensure_vbos() {
 	}
 	if (!ivbo) {
 		assert(ix_offsets.empty());
-		vector<unsigned short> indices;
+		vector<index_type_t> indices;
 		ix_offsets.push_back(0);
 		
 		for (unsigned n = spn.ndiv, skip = 1, ix_ix = 0; n >= 4; n >>= 1, skip <<= 1, ++ix_ix) {
@@ -615,7 +614,8 @@ void sd_sphere_vbo_d::draw_ndiv_pow2(unsigned ndiv, bool use_vbo) {
 		pre_render();
 		vert_norm_tc::set_vbo_arrays();
 		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, spn.ndiv*(spn.ndiv+1), (ix_offsets[lod+1] - ix_offsets[lod]),
-			GL_UNSIGNED_SHORT, (void *)(ix_offsets[lod]*sizeof(unsigned short)));
+			((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT),
+			(void *)(ix_offsets[lod]*sizeof(index_type_t)));
 		post_render();
 	}
 	else {

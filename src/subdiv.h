@@ -40,6 +40,8 @@ protected:
 	sphere_point_norm spn;
 
 public:
+	typedef unsigned index_type_t;
+
 	sd_sphere_d() : pos(all_zeros), radius(0.0), perturb_map(NULL), surf(NULL) {}
 	sd_sphere_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL) {set_data(p, r, n, pm, dp, s);}
 	void gen_points_norms_static(float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
@@ -53,7 +55,7 @@ public:
 	void get_triangles(vector<vert_norm_tc> &verts, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void get_triangle_strip_pow2(vector<vert_norm_tc> &verts, unsigned skip) const;
 	void get_triangle_vertex_list(vector<vert_norm_tc> &verts) const;
-	void get_triangle_index_list_pow2(vector<unsigned short> &indices, unsigned skip) const;
+	void get_triangle_index_list_pow2(vector<index_type_t> &indices, unsigned skip) const;
 	void set_data(point const &p, float r, int n, float const *pm, float dp=0.0, upsurface const *const s=NULL);
 	point    **get_points() const {return spn.points;}
 	vector3d **get_norms()  const {return spn.norms; }

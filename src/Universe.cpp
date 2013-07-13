@@ -2163,8 +2163,9 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svar
 		if (ndiv > 16) {ndiv = ndiv & 0xFFFC;}
 	}
 	else {
-		int const pref_ndiv(min((int)min(MAX_TEXTURE_SIZE, SPHERE_MAX_ND), ndiv));
+		int const pref_ndiv(min((int)SPHERE_MAX_ND, ndiv));
 		for (ndiv = 1; ndiv < pref_ndiv; ndiv <<= 1) {} // make a power of 2
+		ndiv = min(ndiv, (int)SPHERE_MAX_ND); // final clamp
 	}
 	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 	assert(ndiv > 0);
@@ -2235,7 +2236,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 		pmap = &perturb_map.front();
 
 		if (!CACHE_SPHERE_DATA || !surface->sd.equal(all_zeros, radius0, ndiv)) {
-			surface->free_dlist();
+			surface->free_context();
 			gen_data = 1;
 			float const cutoff(surface->min_cutoff), omcinv(1.0/(1.0 - cutoff)), radius_scale(hmap_scale*radius);
 			vector<float> const &heightmap(surface->heightmap);
@@ -3014,9 +3015,9 @@ vector3d ustar::get_solar_wind_accel(point const &obj_pos, float obj_mass, float
 }
 
 
-void urev_body::free_texture() { // and also free display list
+void urev_body::free_texture() { // and also free display list and vbo
 
-	if (surface != NULL) surface->free_dlist();
+	if (surface != NULL) surface->free_context();
 	::free_texture(tid);
 	tsize = 0;
 }

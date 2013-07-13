@@ -189,7 +189,7 @@ public:
 
 	// Note: this class overrides draw_with_texture() because it's used instanced
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id) const { // to allow overriding the texture id
-		if (ddata.ndiv <= 4) {ddata.draw_asteroid(force_tex_id); return;} // doesn't make much difference
+		//if (ddata.ndiv <= 4) {ddata.draw_asteroid(force_tex_id); return;} // doesn't make much difference
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		ddata.color_a.do_glColor();
 		select_texture(force_tex_id);
@@ -256,7 +256,7 @@ public:
 		return 1;
 	}
 
-	virtual void clear_context() {surface.sd.clear_vbos();}
+	virtual void clear_context() {surface.free_context();}
 
 	private:
 	float get_radius_at(point const &pt) const {

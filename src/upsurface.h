@@ -104,7 +104,7 @@ public:
 	void setup_draw_sphere(point const &pos, float radius, float dp, int ndiv, float const *const pmap);
 	void calc_rmax() {rmax = sd.get_rmax();}
 	bool exec_or_init_dlist();
-	void free_dlist();
+	void free_context();
 	void clear_cache();
 	bool has_heightmap() const {return (!heightmap.empty());}
 	void init_ptc_cache() const;

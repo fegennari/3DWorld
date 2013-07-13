@@ -203,13 +203,14 @@ bool upsurface::exec_or_init_dlist() {
 }
 
 
-void upsurface::free_dlist() {
+void upsurface::free_context() {
 
 	if (dlist > 0) {
 		assert(glIsList(dlist));
 		glDeleteLists(dlist, 1);
 		dlist = 0;
 	}
+	sd.clear_vbos();
 }
 
 
@@ -249,7 +250,7 @@ upsurface::ptc_block &upsurface::get_ptc(unsigned s, unsigned t, unsigned f) con
 upsurface::~upsurface() {
 
 	spn.free_data();
-	free_dlist();
+	free_context();
 }
 
 
