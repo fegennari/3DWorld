@@ -27,10 +27,7 @@ float const NO_AIR_TEMP      = 32.0;
 float const NDIV_SIZE_SCALE  = 12.0;
 float const NEBULA_PROB      = 0.65;
 
-bool const USE_HEIGHTMAP     = 1; // for planets/moons/(stars)
-bool const CACHE_SPHERE_DATA = 1; // more memory but much faster rendering
 bool const SHOW_SPHERE_TIME  = 0; // debugging
-bool const USE_SPHERE_DLISTS = 1; // faster on newer video cards, slower on older ones
 
 unsigned const MAX_TRIES     = 100;
 unsigned const SPHERE_MAX_ND = 256;
@@ -1783,7 +1780,7 @@ void urev_body::create_rocky_texture(unsigned size) {
 	tsize = size;
 	assert(tsize <= MAX_TEXTURE_SIZE);
 	vector<unsigned char> data(3*tsize*tsize);
-	gen_texture_data(&data.front(), tsize, USE_HEIGHTMAP);
+	gen_texture_data_and_heightmap(&data.front(), tsize);
 	setup_texture(tid, GL_MODULATE, 0, 1, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
 }
@@ -2208,72 +2205,58 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 
 	RESET_TIME;
 	assert(ndiv > 0);
-	point viewed_from(get_player_pos() - pos_);
-	rotate_vector(viewed_from);
-	float *pmap(NULL);
-	bool using_hmap(0), gen_data(0);
 	bool const SD_TIMETEST(SHOW_SPHERE_TIME && size >= 256.0);
 
-	if (USE_HEIGHTMAP && surface != NULL && surface->has_heightmap()) { // sphere heightmap for planet or moon
-		float const hmap_scale(get_hmap_scale());
-
-		if (univ_planet_lod && ndiv == SPHERE_MAX_ND) {
-			vector3d dir(get_player_dir()), upv(get_player_up());
-			rotate_vector(dir);
-			rotate_vector(upv);
-			pos_dir_up const pdu(viewed_from, dir, upv, tan_term, sin_term, NEAR_CLIP_SCALED, FAR_CLIP);
-			
-			if (display_mode & 0x20) {
-				surface->draw_view_clipped_sphere(pdu, radius0, hmap_scale, this);
-			}
-			else {
-				surface->draw_cube_mapped_sphere(pdu, radius0, hmap_scale, this);
-			}
-			if (SHOW_SPHERE_TIME) PRINT_TIME("Draw VCS");
-			return;
-		}
-		vector<float> &perturb_map(get_empty_perturb_map(ndiv));
-		pmap = &perturb_map.front();
-
-		if (!CACHE_SPHERE_DATA || !surface->sd.equal(all_zeros, radius0, ndiv)) {
-			surface->free_context();
-			gen_data = 1;
-			float const cutoff(surface->min_cutoff), omcinv(1.0/(1.0 - cutoff)), radius_scale(hmap_scale*radius);
-			vector<float> const &heightmap(surface->heightmap);
-			unsigned const ssize(surface->ssize);
-			assert(ssize > 0 && tsize > 0);
-
-			for (int i = 0; i < ndiv; ++i) { // maybe could skip this if perturb_map is the same?
-				unsigned const iy((i*ssize)/ndiv), offset((ndiv+1)*i);
-
-				for (int j = 0; j <= ndiv; ++j) {
-					//unsigned const ix((j*ssize)/(ndiv+1));
-					unsigned const ix((j == ndiv) ? (ssize-1) : (j*ssize)/ndiv);
-					float const val(heightmap[iy + ssize*ix]); // x and y are swapped
-					perturb_map[j + offset] = radius_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5);
-				}
-			}
-		}
-		using_hmap = 1;
-	} // USE_HEIGHTMAP
-	//if (SD_TIMETEST) PRINT_TIME("Sphere Setup");
-	bool const use_dlist(USE_SPHERE_DLISTS && surface != NULL);
-
-	if (use_dlist && surface->exec_or_init_dlist()) {
-		if (SD_TIMETEST) PRINT_TIME("Dlist Draw");
+	if (surface == NULL || !surface->has_heightmap()) { // gas giant
+		point viewed_from(get_player_pos() - pos_);
+		rotate_vector(viewed_from);
+		draw_subdiv_sphere(all_zeros, radius0, ndiv, viewed_from, NULL, 1, 0);
+		if (SD_TIMETEST) PRINT_TIME("Subdiv Sphere Draw");
 		return;
 	}
-	if (CACHE_SPHERE_DATA && using_hmap) {
-		assert(surface != NULL);
-		if (gen_data) surface->setup_draw_sphere(all_zeros, radius0, -0.5*get_hmap_scale()*radius, ndiv, pmap);
-		surface->sd.draw_subdiv_sphere(viewed_from, 1, use_dlist);
-		if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast");
+
+	// sphere heightmap for rocky planet or moon
+	float const hmap_scale(get_hmap_scale());
+
+	if (univ_planet_lod && ndiv == SPHERE_MAX_ND) {
+		vector3d dir(get_player_dir()), upv(get_player_up()), viewed_from(get_player_pos() - pos_);
+		rotate_vector(dir);
+		rotate_vector(upv);
+		rotate_vector(viewed_from);
+		pos_dir_up const pdu(viewed_from, dir, upv, tan_term, sin_term, NEAR_CLIP_SCALED, FAR_CLIP);
+			
+		if (display_mode & 0x20) {
+			surface->draw_view_clipped_sphere(pdu, radius0, hmap_scale, this);
+		}
+		else {
+			surface->draw_cube_mapped_sphere(pdu, radius0, hmap_scale, this);
+		}
+		if (SHOW_SPHERE_TIME) PRINT_TIME("Draw VCS");
+		return;
 	}
-	else {
-		draw_subdiv_sphere(all_zeros, radius0, ndiv, viewed_from, pmap, 1, use_dlist);
-		if (SD_TIMETEST) PRINT_TIME("Sphere Draw v2");
+	vector<float> &perturb_map(get_empty_perturb_map(ndiv));
+
+	if (!surface->sd.equal(all_zeros, radius0, ndiv)) {
+		surface->free_context();
+		float const cutoff(surface->min_cutoff), omcinv(1.0/(1.0 - cutoff)), radius_scale(hmap_scale*radius);
+		unsigned const ssize(surface->ssize);
+		assert(ssize > 0 && tsize > 0);
+
+		for (int i = 0; i < ndiv; ++i) { // maybe could skip this if perturb_map is the same?
+			unsigned const iy((i*ssize)/ndiv), offset((ndiv+1)*i);
+
+			for (int j = 0; j <= ndiv; ++j) {
+				//unsigned const ix((j*ssize)/(ndiv+1));
+				unsigned const ix((j == ndiv) ? (ssize-1) : (j*ssize)/ndiv);
+				float const val(surface->heightmap[iy + ssize*ix]); // x and y are swapped
+				perturb_map[j + offset] = radius_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5);
+			}
+		}
+		//if (SD_TIMETEST) PRINT_TIME("Sphere Setup");
+		surface->setup_draw_sphere(all_zeros, radius0, -0.5*hmap_scale*radius, ndiv, &perturb_map.front());
 	}
-	if (use_dlist) glEndList();
+	surface->sd.draw_ndiv_pow2(ndiv, 1);
+	if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast");
 }
 
 

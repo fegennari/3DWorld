@@ -90,21 +90,20 @@ private:
 
 public:
 	int type;
-	unsigned ssize, dlist;
+	unsigned ssize;
 	float max_mag, rmax, min_cutoff;
 	vector<float> heightmap;
 	sphere_point_norm spn;
 	sd_sphere_vbo_d sd;
 
-	upsurface(int type_=0) : type(type_), ssize(0), dlist(0) {}
+	upsurface(int type_=0) : type(type_), ssize(0) {}
 	~upsurface();
 	void gen(float mag, float freq, unsigned ntests=N_RAND_MAG_TESTS, float mm_scale=1.0);
 	void setup(unsigned size, float mcut, bool alloc_hmap);
 	float get_height_at(point const &pt, bool use_cache=0) const;
 	void setup_draw_sphere(point const &pos, float radius, float dp, int ndiv, float const *const pmap);
 	void calc_rmax() {rmax = sd.get_rmax();}
-	bool exec_or_init_dlist();
-	void free_context();
+	void free_context() {sd.clear_vbos();}
 	void clear_cache();
 	bool has_heightmap() const {return (!heightmap.empty());}
 	void init_ptc_cache() const;

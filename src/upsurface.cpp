@@ -190,30 +190,6 @@ void upsurface::setup_draw_sphere(point const &pos, float radius, float dp, int 
 }
 
 
-bool upsurface::exec_or_init_dlist() {
-
-	if (dlist == 0) {
-		dlist = glGenLists(1); // shouldn't return 0
-		glNewList(dlist, GL_COMPILE_AND_EXECUTE);
-		return 0;
-	}
-	assert(glIsList(dlist));
-	glCallList(dlist);
-	return 1;
-}
-
-
-void upsurface::free_context() {
-
-	if (dlist > 0) {
-		assert(glIsList(dlist));
-		glDeleteLists(dlist, 1);
-		dlist = 0;
-	}
-	sd.clear_vbos();
-}
-
-
 void upsurface::clear_cache() { // make sure the memory is deleted
 
 	vector<cache_entry>().swap(val_cache);
@@ -265,7 +241,7 @@ void urev_body::gen_surface() {
 }
 
 
-void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap) { // also generates heightmap
+void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned size) { // also generates heightmap
 
 	//RESET_TIME;
 	get_colors(a, b);
@@ -276,7 +252,7 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 	assert(surface);
 	unsigned const table_size(MAX_TEXTURE_SIZE << 1); // larger is more accurate
 	static float xtable[TOT_NUM_SINES*table_size], ytable[TOT_NUM_SINES*table_size];
-	surface->setup(size, max(water, lava), use_heightmap);
+	surface->setup(size, max(water, lava), 1); // use_heightmap=1
 	unsigned const num_sines(surface->num_sines);
 	float const *const rdata(surface->rdata);
 	float const sizef(size/TWO_PI), mt2(0.5*(table_size-1)), scale(1.5/surface->max_mag);
@@ -327,7 +303,7 @@ void urev_body::gen_texture_data(unsigned char *data, unsigned size, bool use_he
 				}
 			}
 			val = 0.5*(max(-1.0f, min(1.0f, scale*val)) + 1.0);
-			if (use_heightmap) surface->heightmap[hmoff + j] = val;
+			surface->heightmap[hmoff + j] = val;
 			get_surface_color((data + index), val, phi);
 			sin_s = s*cos_ds + c*sin_ds;
 			cos_s = c*cos_ds - s*sin_ds;

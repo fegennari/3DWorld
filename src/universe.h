@@ -219,7 +219,7 @@ public:
 	void check_gen_texture(unsigned size);
 	void create_rocky_texture(unsigned size);
 	void create_gas_giant_texture();
-	void gen_texture_data(unsigned char *data, unsigned size, bool use_heightmap);
+	void gen_texture_data_and_heightmap(unsigned char *data, unsigned size);
 	bool surface_test(float rad, point const &p, float &coll_r, bool simple) const;
 	float get_dheight_at(point const &p, bool exact=0) const;
 	bool pt_over_land(point const &p) const;
