@@ -68,7 +68,7 @@ public:
 
 class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vbo_manager_t {
 
-	vector<unsigned short> ix_offsets;
+	vector<unsigned> ix_offsets;
 
 	void ensure_vbos();
 

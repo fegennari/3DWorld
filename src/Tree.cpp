@@ -921,7 +921,7 @@ void tree_data_t::ensure_branch_vbo() {
 		num_quads      += ndiv;
 		num_unique_pts += (prev_connect ? 1 : 2)*ndiv;
 	}
-	assert(num_unique_pts < (1ULL << (8*sizeof(branch_index_t)-1)));
+	assert(num_unique_pts < (1ULL << 8*sizeof(branch_index_t)));
 	data.resize(num_unique_pts);
 	idata.resize(6*num_quads); // quads + quads/2 for LOD
 	idix2 = 4*num_quads;

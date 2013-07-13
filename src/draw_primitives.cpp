@@ -545,11 +545,14 @@ void sd_sphere_d::get_triangle_vertex_list(vector<vert_norm_tc> &verts) const {
 
 	float const ndiv_inv(1.0/float(spn.ndiv));
 
-	for (unsigned s = 0; s < spn.ndiv; ++s) {
+	for (unsigned s = 0; s <= spn.ndiv; ++s) {
+		unsigned const six(s%spn.ndiv);
+
 		for (unsigned t = 0; t <= spn.ndiv; ++t) {
-			verts.push_back(vert_norm_tc(spn.points[s][t], spn.norms[s][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv)));
+			verts.push_back(vert_norm_tc(spn.points[six][t], spn.norms[six][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv)));
 		}
 	}
+	assert(verts.size() < (1ULL << 8*sizeof(index_type_t)));
 }
 
 
@@ -558,16 +561,13 @@ void sd_sphere_d::get_triangle_index_list_pow2(vector<index_type_t> &indices, un
 	unsigned const stride(spn.ndiv + 1);
 
 	for (unsigned s = 0; s < spn.ndiv; s += skip) {
-		s = min(s, spn.ndiv-1);
-		unsigned const sn((s+skip)%spn.ndiv);
-
 		if (s != 0) { // add degenerate triangle to preserve the triangle strip
 			for (unsigned d = 0; d < 2; ++d) {indices.push_back(s*stride);}
 		}
 		for (unsigned t = 0; t <= spn.ndiv; t += skip) {
 			t = min(t, spn.ndiv);
-			indices.push_back(s *stride + t);
-			indices.push_back(sn*stride + t);
+			indices.push_back((s+0)   *stride + t);
+			indices.push_back((s+skip)*stride + t);
 		}
 	}
 }
@@ -613,7 +613,7 @@ void sd_sphere_vbo_d::draw_ndiv_pow2(unsigned ndiv, bool use_vbo) {
 		assert(lod+1 < ix_offsets.size());
 		pre_render();
 		vert_norm_tc::set_vbo_arrays();
-		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, spn.ndiv*(spn.ndiv+1), (ix_offsets[lod+1] - ix_offsets[lod]),
+		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (spn.ndiv+1)*(spn.ndiv+1), (ix_offsets[lod+1] - ix_offsets[lod]),
 			((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT),
 			(void *)(ix_offsets[lod]*sizeof(index_type_t)));
 		post_render();
