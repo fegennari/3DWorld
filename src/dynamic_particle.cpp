@@ -50,7 +50,9 @@ dynamic_particle::dynamic_particle(point const &p, float r, vector3d const &v, c
 
 void dynamic_particle::gen_pos() {
 	
-	rand_xy_point(rand_uniform(zbottom, (MAX_D_HEIGHT + max(ztop, czmax))), pos, 0);
+	do {
+		rand_xy_point(rand_uniform(zbottom, (MAX_D_HEIGHT + max(ztop, czmax))), pos, 0);
+	} while (point_inside_voxel_terrain(pos));
 }
 
 
