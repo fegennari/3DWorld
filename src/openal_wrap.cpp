@@ -411,21 +411,7 @@ void play_thunder(point const &pos, float gain, float delay) {
 }
 
 
-void openal_hello_world() {
-
-	openal_buffer buffer(alutCreateBufferHelloWorld());
-	openal_source source;
-	source.alloc();
-	source.set_buffer(buffer);
-	source.blocking_play();
-	source.free_source();
-	buffer.free_buffer();
-}
-
-
 void init_openal(int &argc, char** argv) {
-
-	//return; // not yet ready
 
 	if (!alutInit(&argc, argv)) {
 		check_and_print_alut_error();
