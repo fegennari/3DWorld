@@ -622,10 +622,21 @@ bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use
 }
 
 
+bool sphere_intersect_uobject(point const &pos, float radius) {
+
+	s_object result;
+	if (!universe.get_closest_object(result, pos, UTYPE_MOON, 1, 1.0)) return 0;
+	if (!result.object || !result.object->is_ok()) return 0; // can this happen?
+	if (!result.object->sphere_intersection(pos, radius)) return 0;
+	//cout << "intersects with " << result.object->get_name() << endl;
+	return 1;
+}
+
+
 bool get_closest_object(point const &pos, s_object &result, int obj_type, bool get_destroyed=0) {
 
 	if (!universe.get_closest_object(result, pos, obj_type, 1, 4.0, get_destroyed)) return 0;
-	return (result.type == obj_type && (result.object->is_ok() || get_destroyed));
+	return (result.type == obj_type && result.object != NULL && (get_destroyed || result.object->is_ok()));
 }
 
 

@@ -79,8 +79,11 @@ void add_ship_weapon(unsigned sclass, unsigned weapon, unsigned num, unsigned am
 
 bool is_valid_starting_ship_pos(point const &spos, unsigned sclass) {
 
-	unsigned const coll_ix(check_for_obj_coll(spos, sclasses[sclass].calc_cradius())); // FIXME: what about planet collisions?
-	return (coll_ix == 0);
+	float const radius(sclasses[sclass].calc_cradius());
+	unsigned const coll_ix(check_for_obj_coll(spos, radius));
+	if (coll_ix != 0) return 0; // intersection
+	// Note: the first time init ships are placed, the universe insn't created yet so this query will always return false
+	return !sphere_intersect_uobject(spos, radius);
 }
 
 
@@ -1015,7 +1018,8 @@ void add_other_ships(int align, unsigned num, bool initial) {
 	unsigned const ptot(psum[NUM_US_CLASS-1]);
 	assert(ptot > 0);
 
-	for (unsigned i = 0; i < num; ++i) { // FIXME: generate based on random but deterministic function (rand_gen_t::rand()?)
+	// generate based on random but deterministic function? could use rand_gen_t, but there are also nested calls to rand() elsewhere that would need to use it
+	for (unsigned i = 0; i < num; ++i) {
 		unsigned const randval(rand()%ptot);
 		unsigned sclass;
 
