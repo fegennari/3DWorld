@@ -221,9 +221,11 @@ public:
 	}
 };
 
+
 // ship_config.cpp
 void setup_ships();
-u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, point const &pos, float spread);
+bool is_valid_starting_ship_pos(point const &spos, unsigned sclass);
+u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, point const &pos, float spread, bool rand_spawned=0);
 
 // universe_control.cpp
 void send_warning_message(string const &msg);
@@ -238,7 +240,7 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 
 // ship.cpp
 void print_n_spaces(int n);
-u_ship *create_ship(unsigned sclass, point const &pos0, unsigned align, unsigned ai_type, unsigned target_mode, bool rand_orient);
+u_ship *create_ship(unsigned sclass, point const &pos0, unsigned align, unsigned ai_type, unsigned target_mode, bool rand_orient, int spawn_mode=0);
 bool add_uobj_ship(u_ship *ship);
 bool add_uobj(free_obj *obj, int coll_test=0);
 void reset_player_ship();

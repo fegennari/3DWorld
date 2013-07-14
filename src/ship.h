@@ -851,12 +851,26 @@ public:
 };
 
 
-class uobject_rand_spawn_t : public free_obj {
+class rand_spawn_mixin {
 
 protected:
+	upos_point_type &obj_pos;
+	float obj_radius;
 	bool first_pos, pos_valid;
 	float max_cdist; // max distance to camera
 
+public:
+	rand_spawn_mixin(upos_point_type &pos_, float obj_radius_, float dmax) :
+	  obj_pos(pos_), obj_radius(obj_radius_), first_pos(1), pos_valid(0), max_cdist(dmax) {assert(max_cdist > 0.0);}
+	void gen_rand_pos();
+	bool okay_to_respawn() const; // static?
+	bool needs_respawned() const;
+};
+
+
+class uobject_rand_spawn_t : public free_obj, public rand_spawn_mixin {
+
+protected:
 	void mark_pos_invalid();
 	virtual void gen_pos();
 
@@ -1137,7 +1151,8 @@ public:
 	bool can_return_to_parent()   const;
 	bool check_return_to_parent() const;
 	bool choose_destination();
-	void claim_world(uobject const *uobj);
+	virtual bool claim_world(uobject const *uobj);
+	virtual bool is_rand_spawn() const {return 0;} // hack to allow fighters to use the same derived class type
 	u_ship const *try_fighter_pickup() const;
 	free_obj const *try_orbital_regen(free_obj const *cur_targ, bool last_od, bool &targ_friend, bool &o_dock_close);
 	bool roll_to_face_target(float &roll_amt) const;
@@ -1320,6 +1335,23 @@ public:
 	void draw_bounding_volume(unsigned ndiv) const;
 };
 
+
+class rand_spawn_ship : public u_ship, public rand_spawn_mixin {
+
+	bool will_respawn;
+
+	void gen_valid_pos();
+	void destroy_or_respawn();
+
+public:
+	rand_spawn_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient, bool will_respawn_);
+	void apply_physics();
+	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
+		int align, unsigned eflags=0, free_obj const *parent_=NULL);
+	virtual bool claim_world(uobject const *uobj) {return 0;} // can't claim worlds
+	virtual string get_name() const {return u_ship::get_name() + " (randomly spawned)";}
+	virtual bool is_rand_spawn() const {return 1;}
+};
 
 #endif
 

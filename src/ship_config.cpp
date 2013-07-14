@@ -11,7 +11,7 @@ bool const SHOW_SHIP_RATINGS = 0;
 
 
 bool allow_add_ship(0), regen_uses_credits(0), respawn_req_hw(0), player_enemy(0), build_any(0);
-float spawn_dist(1.0), global_regen(0.0), hyperspeed_mult(200.0), ship_speed_scale(1.0), player_turn_rate(1.0);
+float spawn_dist(1.0), global_regen(0.0), hyperspeed_mult(200.0), ship_speed_scale(1.0), player_turn_rate(1.0), rand_spawn_ship_dmax(0.0);
 unsigned gen_counts  [NUM_ALIGNMENT] = {0};
 point ustart_pos(all_zeros);
 u_ship *player_ship_ptr = NULL; // easiest to just make this global
@@ -77,22 +77,28 @@ void add_ship_weapon(unsigned sclass, unsigned weapon, unsigned num, unsigned am
 }
 
 
-u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, point const &pos, float spread) {
+bool is_valid_starting_ship_pos(point const &spos, unsigned sclass) {
+
+	unsigned const coll_ix(check_for_obj_coll(spos, sclasses[sclass].calc_cradius())); // FIXME: what about planet collisions?
+	return (coll_ix == 0);
+}
+
+
+u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, point const &pos, float spread, bool rand_spawned) {
 
 	// check for p2p_dist(pos, get_player_pos2()) > thresh ?
 	assert(sclass < sclasses.size() && align < NUM_ALIGNMENT && (ai & AI_BASE_TYPE) < NUM_AI && targ < NUM_TARGET);
 	assert(!sclasses[sclass].orbiting_dock); // can't add these - must be attached to a planetary body
-	point spos;
+	point spos(pos);
 	unsigned const MAXITER(10);
 
-	// check for collisions (invalid starting locations)
-	for (unsigned i = 0; i < MAXITER; ++i) { // Note: This only works for non-new objects so won't work with init objects
-		spos = pos;
-		if (spread > 0.0) spos += signed_rand_vector_spherical(spread);
-		unsigned const coll_ix(check_for_obj_coll(spos, sclasses[sclass].calc_cradius())); // what about planet collisions?
-		if (coll_ix == 0) break;
+	if (spread > 0.0) { // check for collisions (invalid starting locations)
+		for (unsigned i = 0; i < MAXITER; ++i) { // Note: This only works for non-new objects so won't work with init objects
+			spos = pos + signed_rand_vector_spherical(spread);
+			if (is_valid_starting_ship_pos(spos, sclass)) break;
+		}
 	}
-	return create_ship(sclass, spos, align, ai, targ, 1);
+	return create_ship(sclass, spos, align, ai, targ, 1, (rand_spawned ? 2 : 0));
 }
 
 
@@ -983,6 +989,13 @@ void init_ship_weapon_classes() {
 }
 
 
+void maybe_rename_ship(u_ship *ship) {
+
+	assert(ship != NULL);
+	if (!ship_names.empty()) {ship->rename(ship_names[rand()%ship_names.size()]);}
+}
+
+
 void add_other_ships(int align, unsigned num, bool initial) {
 
 	assert(align < NUM_ALIGNMENT);
@@ -993,7 +1006,7 @@ void add_other_ships(int align, unsigned num, bool initial) {
 	}
 	if (num == 0) return;
 	unsigned psum[NUM_US_CLASS];
-	upos_point_type const &player(initial ? ustart_pos : get_player_pos2()); // can't call get_player_pos() while initializing
+	upos_point_type const &player(initial ? upos_point_type(ustart_pos) : get_player_pos2()); // can't call get_player_pos() while initializing
 
 	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
 		psum[i] = ship_add_prob[initial][align][i];
@@ -1002,17 +1015,31 @@ void add_other_ships(int align, unsigned num, bool initial) {
 	unsigned const ptot(psum[NUM_US_CLASS-1]);
 	assert(ptot > 0);
 
-	for (unsigned i = 0; i < num; ++i) { // *** generate based on random but deterministic function ***
+	for (unsigned i = 0; i < num; ++i) { // FIXME: generate based on random but deterministic function (rand_gen_t::rand()?)
 		unsigned const randval(rand()%ptot);
-		unsigned sclass, ai_type(AI_ATT_ENEMY);
+		unsigned sclass;
 
 		for (sclass = 0; sclass < NUM_US_CLASS; ++sclass) {
 			if (randval < psum[sclass]) break;
 		}
 		assert(sclass < NUM_US_CLASS);
-		u_ship *ship(add_ship(sclass, align, ai_type, TARGET_CLOSEST, player, spawn_dist)); // spawn near the player
-		assert(ship != NULL);
-		if (!ship_names.empty()) ship->rename(ship_names[rand()%ship_names.size()]);
+		u_ship *ship(add_ship(sclass, align, AI_ATT_ENEMY, TARGET_CLOSEST, player, spawn_dist)); // spawn near the player
+		maybe_rename_ship(ship);
+	}
+}
+
+
+void add_rand_spawn_ships() {
+
+	for (unsigned align = 0; align < (unsigned)NUM_ALIGNMENT; ++align) {
+		for (unsigned sclass = 0; sclass < (unsigned)NUM_US_CLASS; ++sclass) {
+			unsigned const num(0); // FIXME: get from config file
+
+			for (unsigned n = 0; n < num; ++n) {
+				u_ship *ship(add_ship(sclass, align, AI_ATT_ENEMY, TARGET_CLOSEST, all_zeros, 0.0, 1));
+				maybe_rename_ship(ship);
+			}
+		}
 	}
 }
 

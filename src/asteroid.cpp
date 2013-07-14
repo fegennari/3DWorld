@@ -750,7 +750,33 @@ int uasteroid::get_fragment_tid(point const &hit_pos) const {
 }
 
 
-// *** uobject_rand_spawn_t / ucomet ***
+// *** rand_spawn_mixin / uobject_rand_spawn_t / ucomet ***
+
+
+void rand_spawn_mixin::gen_rand_pos() {
+
+	for (unsigned iter_count = 0; iter_count < 10; ++iter_count) { // limit the number of iterations
+		vector3d const dir(first_pos ? signed_rand_vector(max_cdist) : signed_rand_vector_norm(max_cdist));
+		obj_pos = get_player_pos() + dir;
+		if (!player_pdu.valid || !univ_sphere_vis(obj_pos, obj_radius)) break; // don't spawn in player's view
+	}
+	first_pos = 0;
+	pos_valid = 1;
+}
+
+
+bool rand_spawn_mixin::okay_to_respawn() const {
+
+	if (clobj0.system < 0) return 0; // player not near a system, so don't respawn
+	if (player_ship().get_velocity().mag() > 0.2) return 0; // player ship moving too quickly, don't respawn
+	return 1;
+}
+
+
+bool rand_spawn_mixin::needs_respawned() const {
+
+	return !dist_less_than(obj_pos, get_player_pos(), (univ_sphere_vis(obj_pos, obj_radius) ? 2.0 : 1.01)*max_cdist); // further if visible
+}
 
 
 unsigned const comet_tids[2] = {ROCK_SPHERE_TEX, ICE_TEX};
@@ -766,7 +792,7 @@ uobject_rand_spawn_t *uobject_rand_spawn_t::create(unsigned type, float radius_,
 }
 
 
-uobject_rand_spawn_t::uobject_rand_spawn_t(float radius_, float dmax, float vmag) : first_pos(1), pos_valid(0), max_cdist(dmax) {
+uobject_rand_spawn_t::uobject_rand_spawn_t(float radius_, float dmax, float vmag) : rand_spawn_mixin(pos, radius_, dmax) {
 
 	assert(radius_ > 0.0 && dmax > 0.0 && vmag >= 0.0); // sanity checks
 	radius   = c_radius = radius_;
@@ -784,18 +810,10 @@ void uobject_rand_spawn_t::mark_pos_invalid() {
 
 void uobject_rand_spawn_t::gen_pos() {
 
-	if (clobj0.system < 0) return; // player not near a system, so don't respawn
-	if (player_ship().get_velocity().mag() > 0.2) return; // player ship moving too quickly, don't respawn
-
-	for (unsigned iter_count = 0; iter_count < 10; ++iter_count) { // limit the number of iterations
-		vector3d const dir(first_pos ? signed_rand_vector(max_cdist) : signed_rand_vector_norm(max_cdist));
-		pos = get_player_pos() + dir;
-		if (!player_pdu.valid || !univ_sphere_vis(pos, radius)) break; // don't spawn in player's view
-	}
+	if (!okay_to_respawn()) return;
+	gen_rand_pos();
 	if (dot_product(velocity, dir) > 0.0) {velocity *= -1.0;} // make it approach the camera
-	first_pos = 0;
-	pos_valid = 1;
-	flags    &= ~OBJ_FLAGS_NCOL; // clear the flag
+	flags &= ~OBJ_FLAGS_NCOL; // clear the flag
 }
 
 
@@ -804,7 +822,7 @@ void uobject_rand_spawn_t::explode(float damage, float bradius, int etype, vecto
 	free_obj::explode(0.2*damage, 0.2*bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
 
 	if (status == 1) { // actually exploded and was destroyed
-		status    = 0;
+		status = 0;
 		mark_pos_invalid(); // respawn
 	}
 }
@@ -814,10 +832,7 @@ void uobject_rand_spawn_t::advance_time(float timestep) {
 
 	if (!pos_valid) {gen_pos();}
 	free_obj::advance_time(timestep);
-
-	if (!dist_less_than(pos, get_player_pos(), (univ_sphere_vis(pos, radius) ? 2.0 : 1.01)*max_cdist)) { // further if visible
-		mark_pos_invalid(); // if too far from the player, respawn at a different location
-	}
+	if (needs_respawned()) {mark_pos_invalid();} // if too far from the player, respawn at a different location
 }
 
 

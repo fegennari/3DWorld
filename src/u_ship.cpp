@@ -53,7 +53,7 @@ float const SHIP_GMAX          = 10.0*MAX_SOBJ_GRAVITY;
 
 extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits, respawn_req_hw, hold_fighters, dock_fighters, build_any;
 extern int frame_counter, iticks, begin_motion, onscreen_display, display_mode;
-extern float fticks, urm_proj, global_regen, hyperspeed_mult, player_turn_rate;
+extern float fticks, urm_proj, global_regen, hyperspeed_mult, player_turn_rate, rand_spawn_ship_dmax;
 extern unsigned alloced_fobjs[], team_credits[], init_credits[], ind_ships_used[];
 extern exp_type_params et_params[];
 extern vector<free_obj const *> a_targets, attackers;
@@ -772,7 +772,7 @@ bool u_ship::choose_destination() {
 		float const rad(c_radius + dest_mgr.get_radius());
 
 		if (powered_priv() && dist_less_than(pos, dest_mgr.get_pos(), 1.6f*rad)) {
-			if (dest_mgr.claim_object(this, !has_homeworld())) claim_world(NULL);
+			claim_world(NULL); // or at least try to
 			dest_mgr.at_dest();
 		}
 		else {
@@ -797,7 +797,9 @@ bool u_ship::choose_destination() {
 }
 
 
-void u_ship::claim_world(uobject const *uobj) { // doesn't do a whole lot yet
+bool u_ship::claim_world(uobject const *uobj) { // doesn't do a whole lot yet
+
+	if (!is_player_ship() && !dest_mgr.claim_object(this, !has_homeworld())) {return 0;} // already claimed
 
 	if (!has_homeworld()) { // make this our homeworld
 		if (uobj == NULL) {
@@ -807,6 +809,7 @@ void u_ship::claim_world(uobject const *uobj) { // doesn't do a whole lot yet
 			homeworld.set_object(uobj);
 		}
 	}
+	return 1;
 }
 
 
@@ -1763,7 +1766,7 @@ void u_ship::spawn_fighter(point const &fpos, vector3d const &fire_dir) {
 	assert(type < sclasses.size() && type < us_weapons.size());
 	bool const boarding(sclasses[type].for_boarding); //specs().for_boarding
 	unsigned const targeting((boarding && !player_controlled()) ? TARGET_CLOSEST : TARGET_PARENT);
-	u_ship *ship(create_ship(type, fpos, alignment, AI_ATT_ENEMY, targeting, 0));
+	u_ship *ship(create_ship(type, fpos, alignment, AI_ATT_ENEMY, targeting, 0, is_rand_spawn()));
 	ship->target_obj = NULL;
 	ship->velocity   = zero_vector; // probably unnecessary
 	ship->dvel       = zero_vector;
@@ -2934,6 +2937,68 @@ void orbiting_ship::ai_action() {
 		last_build_time = time; // don't queue up builds - if can't build now then too bad, have to wait another iteration
 	}
 	u_ship::ai_action();
+}
+
+
+// ************ RAND_SPAWN_SHIP ************
+
+
+// pass a 2 as the last argument to create_ship()
+// remember to set rand_spawn_ship_dmax
+
+// * created at a random location, away from the player but not too far, out of sight
+// * when out of sight and far away, destroy (but not explode)
+// * if destroyed, respawn
+// * any fighters are also type rand_spawn_ship, except they don't respawn
+// * can't colonize or build anything
+rand_spawn_ship::rand_spawn_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient, bool will_respawn_)
+	: u_ship(sclass_, all_zeros, align, ai_type_, target_mode_, rand_orient), rand_spawn_mixin(pos, radius, rand_spawn_ship_dmax), will_respawn(will_respawn_)
+{
+	if (pos == all_zeros) {gen_valid_pos();} // otherwise we assume pos is where we want to start
+}
+
+
+void rand_spawn_ship::gen_valid_pos() {
+
+	do {
+		gen_rand_pos();
+	} while (!is_valid_starting_ship_pos(pos, sclass));
+}
+
+
+void rand_spawn_ship::destroy_or_respawn() {
+
+	if (will_respawn) { // respawn
+		reset();
+		gen_valid_pos();
+	}
+	else {
+		status = 1; // mark for removal
+	}
+}
+
+
+void rand_spawn_ship::apply_physics() {
+
+	u_ship::apply_physics();
+
+	if (is_ok() && needs_respawned()) {
+		if (okay_to_respawn()) {
+			destroy_or_respawn();
+		}
+		else {
+			// FIXME: what to do here? We have a ship far from the player, but the player is in hyperspeed or has left the system/galaxy
+			// for now, just let our ship continue on its course
+		}
+	}
+}
+
+
+void rand_spawn_ship::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time,
+	int wclass, int align, unsigned eflags, free_obj const *parent)
+{
+	u_ship::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent);
+	if (status == 1) {destroy_or_respawn();} // actually destroyed
 }
 
 
