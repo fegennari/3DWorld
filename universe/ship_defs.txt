@@ -597,6 +597,14 @@ $SHIP_ADD_INIT 1
 # $ALIGN ORANGE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
 # $ALIGN PURPLE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
 
+$SHIP_ADD_RAND_SPAWN 1 4.0
+#                 mult FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
+  $ALIGN NEUTRAL  1    0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   1   0   0   0   0   0   0   4   0   0   0   2   0   0   0   1   0   0   0   0   0   0   0   0
+  $ALIGN GOV      1    0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0
+  $ALIGN PIRATE   1    0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN RED      1    0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN BLUE     1    0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   2   0   0   0   0   0   0   0   0   0
+
 $SHIP_BUILD           0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
 
 

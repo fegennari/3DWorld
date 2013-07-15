@@ -1,4 +1,4 @@
-#universe/config_universe.txt
+universe/config_universe.txt
 #house/config_house.txt
 #house/config_house_winter.txt
 #mapx/config_mapx.txt
@@ -14,7 +14,7 @@
 #config_river.txt
 #config_gym.txt
 #config_landscape.txt
-sponza/config_sponza2.txt
+#sponza/config_sponza2.txt
 #model_data/config_soda.txt
 #config_samples.txt
 #config_minecraft.txt

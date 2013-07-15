@@ -10,7 +10,7 @@
 bool const SHOW_SHIP_RATINGS = 0;
 
 
-bool allow_add_ship(0), regen_uses_credits(0), respawn_req_hw(0), player_enemy(0), build_any(0);
+bool allow_add_ship(0), allow_spawn_ship(0), regen_uses_credits(0), respawn_req_hw(0), player_enemy(0), build_any(0);
 float spawn_dist(1.0), global_regen(0.0), hyperspeed_mult(200.0), ship_speed_scale(1.0), player_turn_rate(1.0), rand_spawn_ship_dmax(0.0);
 unsigned gen_counts  [NUM_ALIGNMENT] = {0};
 point ustart_pos(all_zeros);
@@ -105,6 +105,13 @@ u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, po
 }
 
 
+void maybe_rename_ship(u_ship *ship) {
+
+	assert(ship != NULL);
+	if (!ship_names.empty()) {ship->rename(ship_names[rand()%ship_names.size()]);}
+}
+
+
 // ************ ship_defs_file_reader ************
 
 
@@ -113,8 +120,8 @@ class ship_defs_file_reader {
 	enum {CMD_GLOBAL_REGEN=0, CMD_RAND_SEED, CMD_SPAWN_DIST, CMD_START_POS, CMD_HYPERSPEED, CMD_SPEED_SCALE, CMD_PLAYER_TURN,
 		CMD_SPAWN_HWORLD, CMD_PLAYER_ENEMY, CMD_BUILD_ANY, CMD_TEAM_CREDITS, CMD_SHIP, CMD_WEAP, CMD_WBEAM, CMD_SHIP_WEAP,
 		CMD_ADD, CMD_WEAP_PT, CMD_PLAYER_WEAP, CMD_MESH_PARAMS, CMD_SHIP_CYLINDER, CMD_SHIP_CUBE, CMD_SHIP_SPHERE, CMD_SHIP_TORUS,
-		CMD_SHIP_BCYLIN, CMD_SHIP_TRIANGLE, CMD_FLEET, CMD_SHIP_ADD_INIT, CMD_SHIP_ADD_GEN, CMD_SHIP_BUILD, CMD_ALIGN, CMD_SHIP_NAMES,
-		CMD_ADD_SHIP, CMD_ADD_ASTEROID, CMD_ADD_COMETS, CMD_BLACK_HOLE, CMD_PLAYER, CMD_LAST_PARENT, CMD_END};
+		CMD_SHIP_BCYLIN, CMD_SHIP_TRIANGLE, CMD_FLEET, CMD_SHIP_ADD_INIT, CMD_SHIP_ADD_GEN, SHIP_ADD_RAND_SPAWN, CMD_SHIP_BUILD, CMD_ALIGN,
+		CMD_SHIP_NAMES, CMD_ADD_SHIP, CMD_ADD_ASTEROID, CMD_ADD_COMETS, CMD_BLACK_HOLE, CMD_PLAYER, CMD_LAST_PARENT, CMD_END};
 	ifstream cfg;
 	kw_map command_m, ship_m, weap_m, explosion_m, align_m, ai_m, target_m, asteroid_m;
 	u_ship *last_ship;
@@ -477,30 +484,59 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 			}
 			break;
 
-		case CMD_SHIP_ADD_INIT: // <bool enabled> {$ALIGN}*
-		case CMD_SHIP_ADD_GEN:  // <bool enabled> {$ALIGN}*
+		case CMD_SHIP_ADD_INIT:   // <bool enabled> {$ALIGN}*
+		case CMD_SHIP_ADD_GEN:    // <bool enabled> {$ALIGN}*
+		case SHIP_ADD_RAND_SPAWN: // <bool enabled> <float dmax> {$ALIGN}*
 			{
 				ship_add_mode = cmd;
 				if (!(cfg >> add_ship_enabled)) return 0;
-				if (cmd == CMD_SHIP_ADD_GEN) allow_add_ship = add_ship_enabled;
+				if (cmd == CMD_SHIP_ADD_GEN) {allow_add_ship = add_ship_enabled;}
+
+				if (cmd == SHIP_ADD_RAND_SPAWN) {
+					allow_spawn_ship = add_ship_enabled;
+					if (!(cfg >> rand_spawn_ship_dmax)) return 0;
+				}
 			}
 			break;
 
 		case CMD_ALIGN: // <enum alignment> <unsigned num> <unsigned counts>+
 			{
-				assert(ship_add_mode == CMD_SHIP_ADD_INIT || ship_add_mode == CMD_SHIP_ADD_GEN);
+				assert(ship_add_mode == CMD_SHIP_ADD_INIT || ship_add_mode == CMD_SHIP_ADD_GEN || ship_add_mode == SHIP_ADD_RAND_SPAWN);
 				unsigned align, num;
 				if (!read_enum(align_m, align, "alignment")) return 0;
 				if (!(cfg >> num)) return 0;
-				bool const add_init(ship_add_mode == CMD_SHIP_ADD_INIT);
-				unsigned *prob(ship_add_prob[add_init][align]);
-				
-				for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
-					if (!(cfg >> prob[i])) return 0;
-					assert(prob[i] == 0 || !sclasses[i].orbiting_dock);
+
+				if (ship_add_mode == SHIP_ADD_RAND_SPAWN) {
+					for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
+						unsigned mult;
+						if (!(cfg >> mult)) return 0;
+						unsigned const tot_num(num*mult);
+
+						if (tot_num > 0 && (sclasses[i].orbiting_dock|| sclasses[i].dynamic_cobjs)) {
+							cerr << "Error: can't add orbiting docks or ships with dynamic cobjs as random spawn ships" << endl;
+							exit(1);
+						}
+						for (unsigned n = 0; n < tot_num; ++n) {
+							u_ship *ship(add_ship(i, align, AI_ATT_ENEMY, TARGET_CLOSEST, all_zeros, 0.0, 1));
+							maybe_rename_ship(ship);
+						}
+					}
 				}
-				if (add_ship_enabled && add_init && num > 0) add_other_ships(align, num, 1);
-				if (!add_init) gen_counts[align] = num;
+				else {
+					bool const add_init(ship_add_mode == CMD_SHIP_ADD_INIT);
+					unsigned *prob(ship_add_prob[add_init][align]);
+				
+					for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
+						if (!(cfg >> prob[i])) return 0;
+
+						if (prob[i] > 0 && sclasses[i].orbiting_dock) {
+							cerr << "Error: can't add orbiting docks as init/gen ships" << endl;
+							exit(1);
+						}
+					}
+					if (add_ship_enabled && add_init && num > 0) {add_other_ships(align, num, 1);}
+					if (!add_init) {gen_counts[align] = num;}
+				}
 			}
 			break;
 
@@ -639,7 +675,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
 void ship_defs_file_reader::setup_keywords() {
 
-	string const commands  ("$GLOBAL_REGEN $RAND_SEED $SPAWN_DIST $START_POS $HYPERSPEED $SPEED_SCALE $PLAYER_TURN $SPAWN_HWORLD $PLAYER_ENEMY $BUILD_ANY $TEAM_CREDITS $SHIP $WEAP $WBEAM $SHIP_WEAP $ADD $WEAP_PT $PLAYER_WEAP $MESH_PARAMS $SHIP_CYLINDER $SHIP_CUBE $SHIP_SPHERE $SHIP_TORUS $SHIP_BCYLIN $SHIP_TRIANGLE $FLEET $SHIP_ADD_INIT $SHIP_ADD_GEN $SHIP_BUILD $ALIGN $SHIP_NAMES $ADD_SHIP $ADD_ASTEROID $ADD_COMETS $BLACK_HOLE $PLAYER $LAST_PARENT $END");
+	string const commands  ("$GLOBAL_REGEN $RAND_SEED $SPAWN_DIST $START_POS $HYPERSPEED $SPEED_SCALE $PLAYER_TURN $SPAWN_HWORLD $PLAYER_ENEMY $BUILD_ANY $TEAM_CREDITS $SHIP $WEAP $WBEAM $SHIP_WEAP $ADD $WEAP_PT $PLAYER_WEAP $MESH_PARAMS $SHIP_CYLINDER $SHIP_CUBE $SHIP_SPHERE $SHIP_TORUS $SHIP_BCYLIN $SHIP_TRIANGLE $FLEET $SHIP_ADD_INIT $SHIP_ADD_GEN $SHIP_ADD_RAND_SPAWN $SHIP_BUILD $ALIGN $SHIP_NAMES $ADD_SHIP $ADD_ASTEROID $ADD_COMETS $BLACK_HOLE $PLAYER $LAST_PARENT $END");
 	string const ship_strs ("USC_FIGHTER USC_X1EXTREME USC_FRIGATE USC_DESTROYER USC_LCRUISER USC_HCRUISER USC_BCRUISER USC_ENFORCER USC_CARRIER USC_ARMAGEDDON USC_SHADOW USC_DEFSAT USC_STARBASE USC_BCUBE USC_BSPHERE USC_BTCUBE USC_BSPH_SM USC_BSHUTTLE USC_TRACTOR USC_GUNSHIP USC_NIGHTMARE USC_DWCARRIER USC_DWEXTERM USC_WRAITH USC_ABOMIN USC_REAPER USC_DEATH_ORB USC_SUPPLY USC_ANTI_MISS USC_JUGGERNAUT USC_SAUCER USC_SAUCER_V2 USC_MOTHERSHIP USC_HUNTER USC_SEIGE USC_COLONY USC_ARMED_COL USC_HW_COL USC_STARPORT USC_HW_SPORT");
 	string const weap_strs ("UWEAP_NONE UWEAP_TARGET UWEAP_QUERY UWEAP_RENAME UWEAP_DESTROY UWEAP_PBEAM UWEAP_EBEAM UWEAP_REPULSER UWEAP_TRACTORB UWEAP_G_HOOK UWEAP_LRCPA UWEAP_ENERGY UWEAP_ATOMIC UWEAP_ROCKET UWEAP_NUKEDEV UWEAP_TORPEDO UWEAP_EMP UWEAP_PT_DEF UWEAP_DFLARE UWEAP_CHAFF UWEAP_FIGHTER UWEAP_B_BAY UWEAP_CRU_BAY UWEAP_SOD_BAY UWEAP_BOARDING UWEAP_NM_BAY UWEAP_RFIRE UWEAP_FUSCUT UWEAP_SHIELDD UWEAP_THUNDER UWEAP_ESTEAL UWEAP_WRAI_BAY UWEAP_STAR UWEAP_HUNTER UWEAP_DEATHORB UWEAP_LITNING UWEAP_INFERNO UWEAP_PARALYZE UWEAP_MIND_C UWEAP_SAUC_BAY UWEAP_SEIGEC");
 	string const exp_strs  ("ETYPE_NONE ETYPE_FIRE ETYPE_NUCLEAR ETYPE_ENERGY ETYPE_ATOMIC ETYPE_PLASMA ETYPE_EMP ETYPE_STARB ETYPE_FUSION ETYPE_EBURST ETYPE_ESTEAL ETYPE_ANIM_FIRE ETYPE_SIEGE");
@@ -989,13 +1025,6 @@ void init_ship_weapon_classes() {
 	assert(us_weapons.size() == NUM_UWEAP);
 	player_init_weapons = player_ship().weapons;
 	if (SHOW_SHIP_RATINGS) print_ship_ratings(); // print out offense/defense ratings
-}
-
-
-void maybe_rename_ship(u_ship *ship) {
-
-	assert(ship != NULL);
-	if (!ship_names.empty()) {ship->rename(ship_names[rand()%ship_names.size()]);}
 }
 
 

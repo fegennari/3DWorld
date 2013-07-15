@@ -2943,14 +2943,11 @@ void orbiting_ship::ai_action() {
 // ************ RAND_SPAWN_SHIP ************
 
 
-// pass a 2 as the last argument to create_ship()
-// remember to set rand_spawn_ship_dmax
-
-// * created at a random location, away from the player but not too far, out of sight
-// * when out of sight and far away, destroy (but not explode)
-// * if destroyed, respawn
-// * any fighters are also type rand_spawn_ship, except they don't respawn
-// * can't colonize or build anything
+// created at a random location, away from the player but not too far, out of sight
+// when out of sight and far away, destroy (but not explode)
+// if destroyed, respawn
+// any fighters are also type rand_spawn_ship, except they don't respawn
+// can't colonize or build anything
 rand_spawn_ship::rand_spawn_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient, bool will_respawn_)
 	: u_ship(sclass_, all_zeros, align, ai_type_, target_mode_, rand_orient), rand_spawn_mixin(pos, radius, rand_spawn_ship_dmax), will_respawn(will_respawn_)
 {

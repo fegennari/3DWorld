@@ -302,11 +302,8 @@ u_ship *create_ship(unsigned sclass, point const &pos0, unsigned align, unsigned
 	u_ship *ship(NULL);
 
 	if (spawn_mode > 0) {
-		if (sclasses[sclass].dynamic_cobjs) { // currently abomination and reaper
-			cerr << "Can't currently randomly spawn a multipart ship of type " << sclasses[sclass].name << endl;
-			exit(0);
-		}
-		ship = new rand_spawn_ship(sclass, pos0, align, ai_type, target_mode, rand_orient, (spawn_mode > 0));
+		assert(!sclasses[sclass].dynamic_cobjs); // currently abomination and reaper
+		ship = new rand_spawn_ship(sclass, pos0, align, ai_type, target_mode, rand_orient, (spawn_mode > 1));
 	}
 	else if (sclasses[sclass].dynamic_cobjs) {
 		ship = new multipart_ship(sclass, pos0, align, ai_type, target_mode, rand_orient);
