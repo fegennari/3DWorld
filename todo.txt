@@ -35,8 +35,6 @@ Voxel asteroid/rock instancing
 Varied planet cloud brightness, swirly clouds, cloud normals
 Generate universe in another thread/multiple threads
 
-Fix engine trails
-
 
  E: 2.9 process_groups()
  H: 2.1 setup_object_render_data()

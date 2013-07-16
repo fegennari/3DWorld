@@ -267,7 +267,12 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 
 	if (ndiv > 3 && trail_color.alpha != 0.0 && vel.mag_sq() > 1.5E-6) {
 		float const dp(dot_product(vel, dir)/vel.mag());
-		if (dp > 0.0) {draw_engine_trail(draw_pos, 0.7*escale*sqrt(ar), 0.7, 3.0*dp, trail_color);}
+		
+		if (dp > 0.0) {
+			point epos(draw_pos);
+			obj->rotate_point_inv(epos);
+			draw_engine_trail(epos, 0.7*escale*sqrt(ar), 0.7, 3.0*dp, trail_color);
+		}
 	}
 }
 
