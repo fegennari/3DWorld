@@ -775,7 +775,7 @@ bool rand_spawn_mixin::okay_to_respawn() const {
 
 bool rand_spawn_mixin::needs_respawned() const {
 
-	return !dist_less_than(obj_pos, get_player_pos(), (univ_sphere_vis(obj_pos, obj_radius) ? 2.0 : 1.01)*max_cdist); // further if visible
+	return !dist_less_than(obj_pos, get_player_pos(), (univ_sphere_vis(obj_pos, obj_radius) ? 2.0 : 1.1)*max_cdist); // further if visible
 }
 
 

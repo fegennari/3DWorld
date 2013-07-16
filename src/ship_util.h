@@ -268,7 +268,8 @@ free_obj const *check_for_incoming_proj(point const &pos, int align, float dist)
 void shift_univ_objs(point const &pos, bool shift_player_ship);
 void draw_univ_objects(point const &pos);
 void purge_old_objs();
-void add_other_ships(int align, unsigned num=0, bool initial=0);
+void choose_n_random_sclasses(vector<unsigned> &sclasses, int align, unsigned num, bool initial, bool rand_spawned);
+void add_other_ships(int align, unsigned num=0, bool initial=0, bool rand_spawned=0);
 void gen_lightning_from(point const &pos, float radius, float dist, free_obj const *src);
 void add_colored_lights(point const &pos, float radius, colorRGBA const &color, float time, unsigned num, free_obj const *const obj);
 

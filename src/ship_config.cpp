@@ -15,7 +15,7 @@ float spawn_dist(1.0), global_regen(0.0), hyperspeed_mult(200.0), ship_speed_sca
 unsigned gen_counts  [NUM_ALIGNMENT] = {0};
 point ustart_pos(all_zeros);
 u_ship *player_ship_ptr = NULL; // easiest to just make this global
-unsigned ship_add_prob[2][NUM_ALIGNMENT][NUM_US_CLASS] = {0};
+unsigned ship_add_prob[3][NUM_ALIGNMENT][NUM_US_CLASS] = {0}; // {gen, init, rand spawn}
 vector<unsigned> build_types[NUM_ALIGNMENT];
 vector<string> ship_names;
 vector<us_class> sclasses;
@@ -102,13 +102,6 @@ u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, po
 		}
 	}
 	return create_ship(sclass, spos, align, ai, targ, 1, (rand_spawned ? 2 : 0));
-}
-
-
-void maybe_rename_ship(u_ship *ship) {
-
-	assert(ship != NULL);
-	if (!ship_names.empty()) {ship->rename(ship_names[rand()%ship_names.size()]);}
 }
 
 
@@ -505,38 +498,30 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 				unsigned align, num;
 				if (!read_enum(align_m, align, "alignment")) return 0;
 				if (!(cfg >> num)) return 0;
+				bool const add_init(ship_add_mode == CMD_SHIP_ADD_INIT), add_spawn(ship_add_mode == SHIP_ADD_RAND_SPAWN);
+				unsigned const prob_table_ix(add_init ? 1 : (add_spawn ? 2 : 0));
+				unsigned *prob(ship_add_prob[prob_table_ix][align]);
 
-				if (ship_add_mode == SHIP_ADD_RAND_SPAWN) {
-					for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
-						unsigned mult;
-						if (!(cfg >> mult)) return 0;
-						unsigned const tot_num(num*mult);
+				for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
+					if (!(cfg >> prob[i])) return 0;
+					unsigned const tot_num(num*prob[i]);
 
-						if (tot_num > 0 && (sclasses[i].orbiting_dock|| sclasses[i].dynamic_cobjs)) {
+					if (add_spawn) {
+						if (tot_num > 0 && (sclasses[i].orbiting_dock || sclasses[i].dynamic_cobjs)) {
 							cerr << "Error: can't add orbiting docks or ships with dynamic cobjs as random spawn ships" << endl;
 							exit(1);
 						}
-						for (unsigned n = 0; n < tot_num; ++n) {
-							u_ship *ship(add_ship(i, align, AI_ATT_ENEMY, TARGET_CLOSEST, all_zeros, 0.0, 1));
-							maybe_rename_ship(ship);
-						}
 					}
-				}
-				else {
-					bool const add_init(ship_add_mode == CMD_SHIP_ADD_INIT);
-					unsigned *prob(ship_add_prob[add_init][align]);
-				
-					for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
-						if (!(cfg >> prob[i])) return 0;
-
-						if (prob[i] > 0 && sclasses[i].orbiting_dock) {
+					else {
+						if (tot_num > 0 && sclasses[i].orbiting_dock) {
 							cerr << "Error: can't add orbiting docks as init/gen ships" << endl;
 							exit(1);
 						}
 					}
-					if (add_ship_enabled && add_init && num > 0) {add_other_ships(align, num, 1);}
-					if (!add_init) {gen_counts[align] = num;}
-				}
+				} // for i
+				if (add_ship_enabled && add_init  && num > 0) {add_other_ships(align, num, 1, 0);}
+				if (allow_spawn_ship && add_spawn && num > 0) {add_other_ships(align, num, 0, 1);}
+				if (!add_spawn && !add_init) {gen_counts[align] = num;}
 			}
 			break;
 
@@ -1028,20 +1013,15 @@ void init_ship_weapon_classes() {
 }
 
 
-void add_other_ships(int align, unsigned num, bool initial) {
+void choose_n_random_sclasses(vector<unsigned> &sclasses, int align, unsigned num, bool initial, bool rand_spawned) {
 
 	assert(align < NUM_ALIGNMENT);
-	
-	if (!initial) {
-		if (!allow_add_ship) return;
-		num = gen_counts[align];
-	}
 	if (num == 0) return;
 	unsigned psum[NUM_US_CLASS];
-	upos_point_type const &player(initial ? upos_point_type(ustart_pos) : get_player_pos2()); // can't call get_player_pos() while initializing
+	unsigned const prob_table_ix(initial ? 1 : (rand_spawned ? 2 : 0));
 
 	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
-		psum[i] = ship_add_prob[initial][align][i];
+		psum[i] = ship_add_prob[prob_table_ix][align][i];
 		if (i > 0) psum[i] += psum[i-1];
 	}
 	unsigned const ptot(psum[NUM_US_CLASS-1]);
@@ -1056,23 +1036,29 @@ void add_other_ships(int align, unsigned num, bool initial) {
 			if (randval < psum[sclass]) break;
 		}
 		assert(sclass < NUM_US_CLASS);
-		u_ship *ship(add_ship(sclass, align, AI_ATT_ENEMY, TARGET_CLOSEST, player, spawn_dist)); // spawn near the player
-		maybe_rename_ship(ship);
+		sclasses.push_back(sclass);
 	}
 }
 
 
-void add_rand_spawn_ships() {
+void add_other_ships(int align, unsigned num, bool initial, bool rand_spawned) {
 
-	for (unsigned align = 0; align < (unsigned)NUM_ALIGNMENT; ++align) {
-		for (unsigned sclass = 0; sclass < (unsigned)NUM_US_CLASS; ++sclass) {
-			unsigned const num(0); // FIXME: get from config file
+	assert(!initial || !rand_spawned);
+	assert(align < NUM_ALIGNMENT);
+	if (!initial && !rand_spawned) {num = (allow_add_ship ? gen_counts[align] : 0);}
+	if (num == 0) return;
+	point loc_center;
+	if      (initial)      {loc_center = upos_point_type(ustart_pos);}
+	else if (rand_spawned) {loc_center = all_zeros;}
+	else                   {loc_center = get_player_pos2();} // can't call get_player_pos() while initializing
+	vector<unsigned> sclasses;
+	choose_n_random_sclasses(sclasses, align, num, initial, rand_spawned);
 
-			for (unsigned n = 0; n < num; ++n) {
-				u_ship *ship(add_ship(sclass, align, AI_ATT_ENEMY, TARGET_CLOSEST, all_zeros, 0.0, 1));
-				maybe_rename_ship(ship);
-			}
-		}
+	for (vector<unsigned>::const_iterator i = sclasses.begin(); i != sclasses.end(); ++i) {
+		assert(*i < NUM_US_CLASS);
+		u_ship *ship(add_ship(*i, align, AI_ATT_ENEMY, TARGET_CLOSEST, loc_center, (rand_spawned ? 0.0 : spawn_dist), rand_spawned)); // spawn near the player
+		assert(ship != NULL);
+		if (!ship_names.empty()) {ship->rename(ship_names[rand()%ship_names.size()]);}
 	}
 }
 
