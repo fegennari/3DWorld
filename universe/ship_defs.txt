@@ -12,7 +12,7 @@ $SPEED_SCALE  1.0
 $PLAYER_TURN  8.6
 $SPAWN_HWORLD 0
 $PLAYER_ENEMY 0
-$RAND_SEED    3
+$RAND_SEED    4
 
 $ADD_ASTEROID 10 AS_MODEL_VOXEL 0.005 0.02 0.2 # number model rseed rmin rmax distribution [px py pz]
 $ADD_COMETS 12 0.01 0.0002 0.0006 4.0
