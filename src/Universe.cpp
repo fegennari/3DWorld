@@ -640,7 +640,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 	point_d const pos(rel_center);
 
 	// use lower detail when the player is moving quickly in hyperspeed since objects zoom by so quickly
-	float const velocity_mag(get_player_velocity().mag()), sscale_val(1.0/max(1.0f, velocity_mag)); // up to 2.5x lower
+	float const velocity_mag(get_player_velocity().mag()), sscale_val(1.0/max(1.0f, 2.0f*velocity_mag)); // up to 5x lower
 
 	if (!gen_only && nebula_pass) {
 		draw_nebulas(usg);
@@ -675,7 +675,7 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 			if (!univ_sphere_vis(cpos, galaxy.clusters[c].bounds)) continue;
 			float const max_size(calc_sphere_size(cpos, camera, STAR_MAX_SIZE));
 			ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
-			set_ambient_color((galaxy.color + cl.color)*0.5); // average the galaxy and cluster colors (but probably always reset below)
+			//set_ambient_color((galaxy.color + cl.color)*0.5); // average the galaxy and cluster colors (but probably always reset below)
 
 			for (unsigned j = cl.s1; j < cl.s2; ++j) {
 				bool const sel_s(sel_g && (int)j == clobj.system);
