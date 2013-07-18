@@ -383,7 +383,10 @@ void invalidate_cached_stars() {
 }
 
 
-// no_distant: 0: draw everything, 1: draw current cell, 2: draw current system
+struct cell_ixs_t {int ix[3];};
+
+
+// no_distant: 0: draw everything, 1: draw current cell only, 2: draw current system only
 void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only) {
 
 	//RESET_TIME;
@@ -407,29 +410,50 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 		last_player_pos = player_pos;
 		universe_pld[2].clear();
 	}
-	if ((no_distant != 2) || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
-		for (unsigned nebula_pass = 0; nebula_pass < 2; ++nebula_pass) {
-			if (draw_all && nebula_pass == 0) {player_pdu.valid = 0;}
-			bool const cur_cell_only(no_distant > 0 || (cache_stars && !draw_all && nebula_pass == 0));
-			int cxyz[3];
+	if (no_distant < 2 || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
+		// gather together the set of cells that are visible and need to be drawn
+		vector<cell_ixs_t> to_draw;
+		cell_ixs_t cix;
+		int cur_cix(-1);
 
-			for (cxyz[2] = 0; cxyz[2] < int(U_BLOCKS); ++cxyz[2]) { // z
-				for (cxyz[1] = 0; cxyz[1] < int(U_BLOCKS); ++cxyz[1]) { // y
-					for (cxyz[0] = 0; cxyz[0] < int(U_BLOCKS); ++cxyz[0]) { // x
-						draw_cell(cxyz, usg, clobj, 0, (nebula_pass != 0), no_move, skip_closest, cur_cell_only, gen_only);
-					}
+		for (cix.ix[2] = 0; cix.ix[2] < int(U_BLOCKS); ++cix.ix[2]) { // z
+			for (cix.ix[1] = 0; cix.ix[1] < int(U_BLOCKS); ++cix.ix[1]) { // y
+				for (cix.ix[0] = 0; cix.ix[0] < int(U_BLOCKS); ++cix.ix[0]) { // x
+					bool const sel_cell(clobj.cellxyz[0] == cix.ix[0] && clobj.cellxyz[1] == cix.ix[1] && clobj.cellxyz[2] == cix.ix[2]);
+					if (no_distant > 0 && !sel_cell) continue;
+					if (!get_cell(cix.ix).is_visible()) continue;
+					if (sel_cell) {cur_cix = to_draw.size();}
+					to_draw.push_back(cix);
 				}
 			}
-			if (draw_all && nebula_pass == 0) {
-				player_pdu.valid = 1;
-				universe_pld[2]  = universe_pld[0];
+		}
+
+		// first pass - create systems and draw distant stars
+		if (draw_all) {player_pdu.valid = 0;}
+
+		for (vector<cell_ixs_t>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
+			UNROLL_3X(current.cellxyz[i_] = i->ix[i_] + uxyz[i_];)
+			bool const sel_cell(cur_cix == (i - to_draw.begin()));
+			if (cache_stars && !draw_all && !sel_cell) continue;
+			get_cell(i->ix).draw_systems(usg, clobj, 0, no_move, skip_closest, sel_cell, gen_only);
+		}
+		if (draw_all) {
+			player_pdu.valid = 1;
+			universe_pld[2]  = universe_pld[0];
+		}
+		if (!gen_only) {
+			draw_universe_plds(0);
+
+			for (vector<cell_ixs_t>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
+				get_cell(i->ix).draw_nebulas(usg); // draw nebulas
 			}
-			if (!gen_only) {draw_universe_plds(0);}
 		}
 	}
 	if (clobj.has_valid_system()) { // in a system
 		for (unsigned pass = 1; pass < 3; ++pass) { // drawing passes 1-2
-			draw_cell(clobj.cellxyz, usg, clobj, pass, 0, no_move, skip_closest, 0, gen_only);
+			UNROLL_3X(current.cellxyz[i_] = clobj.cellxyz[i_] + uxyz[i_];)
+			ucell &cell(get_cell(clobj.cellxyz));
+			if (cell.is_visible()) {cell.draw_systems(usg, clobj, pass, no_move, skip_closest, 1, gen_only);}
 		}
 		if (!gen_only) {draw_universe_plds(0);}
 	}
@@ -606,16 +630,6 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 }
 
 
-void universe_t::draw_cell(int const cxyz[3], ushader_group &usg, s_object const &clobj, unsigned pass,
-	bool nebula_pass, bool no_move, bool skip_closest, bool cur_cell_only, bool gen_only)
-{
-	UNROLL_3X(current.cellxyz[i_] = cxyz[i_] + uxyz[i_];)
-	bool const sel_cell(clobj.cellxyz[0] == cxyz[0] && clobj.cellxyz[1] == cxyz[1] && clobj.cellxyz[2] == cxyz[2]);
-	if (cur_cell_only && !sel_cell) return;
-	get_cell(cxyz).draw(usg, clobj, pass, nebula_pass, no_move, skip_closest, sel_cell, gen_only);
-}
-
-
 void ucell::draw_nebulas(ushader_group &usg) const {
 
 	set_fill_mode();
@@ -627,27 +641,26 @@ void ucell::draw_nebulas(ushader_group &usg) const {
 }
 
 
+bool ucell::is_visible() const {
+
+	if (galaxies == NULL) return 0; // galaxies not yet allocated
+	return univ_sphere_vis(rel_center, CELL_SPHERE_RAD); // could use player_pdu.cube_visible()
+}
+
+
 // pass:
 //  0. Draw all except for the player's system
 //  If player's system is none (update: galaxy is none) then stop
 //  1. Draw the player's system except for the player's sobj
 //  2. Draw the player's sobj
-void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool nebula_pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only) {
+void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only) {
 
-	if (galaxies == NULL) return; // galaxies not yet allocated
-	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return; // could use player_pdu.cube_visible()
 	point const &camera(get_player_pos());
+	assert(!is_nan(camera));
 	point_d const pos(rel_center);
-
+	bool const p_system(clobj.has_valid_system());
 	// use lower detail when the player is moving quickly in hyperspeed since objects zoom by so quickly
 	float const velocity_mag(get_player_velocity().mag()), sscale_val(1.0/max(1.0f, 2.0f*velocity_mag)); // up to 5x lower
-
-	if (!gen_only && nebula_pass) {
-		draw_nebulas(usg);
-		return;
-	}
-	assert(!is_nan(camera));
-	bool const p_system(clobj.has_valid_system());
 
 	// draw galaxies
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // remember, galaxies can overlap
@@ -659,9 +672,9 @@ void ucell::draw(ushader_group &usg, s_object const &clobj, unsigned pass, bool 
 		if (!univ_sphere_vis(gpos, galaxy.radius)) continue; // conservative, since galaxies are not spherical
 		current.galaxy = i;
 		galaxy.process(*this);
-		set_ambient_color(galaxy.color);
 
 		if (!gen_only && pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
+			set_ambient_color(galaxy.color);
 			uasteroid_field::begin_render(usg.asteroid_shader);
 
 			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
