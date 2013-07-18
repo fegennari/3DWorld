@@ -33,7 +33,6 @@ Mesh height high frequency noise
 Texture randomization
 Voxel asteroid/rock instancing
 Varied planet cloud brightness, swirly clouds, cloud normals
-Generate universe in another thread/multiple threads
 
 
  E: 2.9 process_groups()

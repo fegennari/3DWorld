@@ -8,6 +8,7 @@
 #include "3DWorld.h"
 #include "universe_base.h"
 #include "upsurface.h"
+#include "draw_utils.h"
 #include <map>
 #include <sstream>
 
@@ -237,7 +238,7 @@ public:
 	int  get_owner() const {return owner;}
 	void set_owner_color() const;
 	void get_surface_color(unsigned char *data, float val, float phi) const;
-	bool draw(point_d pos_, ushader_group &usg, shadow_vars_t const &svars, bool use_light2);
+	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2);
 	void draw_surface(point_d const &pos_, float radius0, float size, int ndiv);
 	void show_colonizable_liveable(point const &pos_, float radius0) const;
 	void inc_orbiting_refs() {++orbiting_refs;}
@@ -330,7 +331,7 @@ public:
 	void gen_color();
 	colorRGBA get_ambient_color_val() const;
 	colorRGBA get_light_color() const;
-	bool draw(point_d pos_, ushader_group &usg);
+	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer star_plds[2]);
 	void draw_flares(int ndiv, bool texture);
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
 	vector3d get_solar_wind_accel(point const &obj_pos, float obj_mass, float obj_surf_area) const;
@@ -420,11 +421,17 @@ public:
 
 class ucell : public uobj_rgen { // size = 84
 
+	pt_line_drawer star_plds[2], planet_plds[2]; // {1-pixel, 2-pixel}
+	colorRGBA last_bkg_color;
+	point last_player_pos;
+	unsigned last_star_cache_ix;
+	bool cached_stars_valid;
+
 public:
 	point rel_center;
 	vector<ugalaxy> *galaxies; // must be a pointer to a vector to avoid deep copies
 
-	ucell() : galaxies(NULL) {}
+	ucell() : last_bkg_color(BLACK), last_player_pos(all_zeros), last_star_cache_ix(0), cached_stars_valid(0), galaxies(NULL) {}
 	void gen_cell(int const ii[3]);
 	void draw_nebulas(ushader_group &usg) const;
 	void draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only);
