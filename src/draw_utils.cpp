@@ -218,7 +218,7 @@ template<typename cwt> void pt_line_drawer_t<cwt>::vnc_cont::draw(int type) cons
 
 template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 		
-	if (points.empty() && lines.empty()) return;
+	if (empty()) return;
 	GLboolean const col_mat_en(glIsEnabled(GL_COLOR_MATERIAL));
 	assert(!(lines.size() & 1));
 	assert((triangles.size() % 3) == 0);
@@ -229,6 +229,20 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 	triangles.draw(GL_TRIANGLES);
 	if (!col_mat_en) glDisable(GL_COLOR_MATERIAL);
 	//cout << "mem: " << get_mem() << endl;
+}
+
+
+void pt_line_drawer_no_lighting_t::draw() const {
+	
+	if (!points.empty()) {
+		points.front().set_state();
+		glDrawArrays(GL_POINTS, 0, (unsigned)points.size());
+	}
+	if (!lines.empty()) {
+		assert(!(lines.size() & 1));
+		lines.front().set_state();
+		glDrawArrays(GL_LINES, 0, (unsigned)lines.size());
+	}
 }
 
 

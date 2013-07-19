@@ -61,6 +61,25 @@ typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
 typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 
 
+class pt_line_drawer_no_lighting_t {
+
+	vector<vert_color> points, lines;
+
+public:
+	void clear() {points.resize(0); lines.resize(0);}
+	void add_pt(point const &v, colorRGBA const &c) {
+		points.push_back(vert_color(v, c));
+	}
+	void add_line(point const &v1, colorRGBA const &c1, point const &v2, colorRGBA const &c2) {
+		lines.push_back(vert_color(v1, c1));
+		lines.push_back(vert_color(v2, c2));
+	}
+	void draw() const;
+	void draw_and_clear() {draw(); clear();}
+	bool empty() const {return (points.empty() && lines.empty());}
+};
+
+
 struct quad_batch_draw { // Note: might want an indexed version of this
 
 	vector<vert_norm_tc_color> verts;

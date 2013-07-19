@@ -364,7 +364,7 @@ public:
 };
 
 
-void draw_1pix_2pix_plds(pt_line_drawer plds[2], bool clear_pld0=1) {
+template<typename pld_t> void draw_1pix_2pix_plds(pld_t plds[2], bool clear_pld0=1) {
 
 	plds[0].draw();
 	if (clear_pld0) {plds[0].clear();}
@@ -378,9 +378,6 @@ void draw_1pix_2pix_plds(pt_line_drawer plds[2], bool clear_pld0=1) {
 
 
 void invalidate_cached_stars() {++star_cache_ix;}
-
-
-struct cell_ixs_t {int ix[3];};
 
 
 // no_distant: 0: draw everything, 1: draw current cell only, 2: draw current system only
@@ -2081,7 +2078,7 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 }
 
 
-bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer star_plds[2], bool distant) {
+bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t star_plds[2], bool distant) {
 
 	point const &camera(get_player_pos()); // view frustum has already been checked
 	vector3d const vcp(camera, pos_);
@@ -2096,22 +2093,21 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer star_plds[2], 
 	if (st_prod < 30.0) {blend_color(ocolor, ocolor, bkg_color, 0.00111*st_prod*st_prod, 1);} // small, attenuate (divide by 900)
 
 	if (distant) { // check that size < 2.5?
-		star_plds[size > 1.5].add_pt(make_pt_global(pos_), zero_vector, ocolor);
+		star_plds[size > 1.5].add_pt(make_pt_global(pos_), ocolor);
 	}
 	else if (size < 2.5) { // both point cases below, normal is camera->object vector
 		vector3d const &velocity(get_player_velocity());
 		float const vmag(velocity.mag());
 		bool const small(size < 1.5);
 		bool const draw_as_line(get_pixel_size(vmag, dist)*cross_product(velocity, vcp).mag() > 1.0*vcp_mag*vmag);
-		point const normal(camera - pos_); // Note: normal is unused for lighting
 		pos_ = make_pt_global(pos_);
 
 		if (draw_as_line) { // lines of light - "warp speed"
 			blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
-			star_plds[!small].add_line(pos_, normal, ocolor, (pos_ - velocity), normal, ocolor);
+			star_plds[!small].add_line(pos_, ocolor, (pos_ - velocity), ocolor);
 		}
 		else {
-			star_plds[!small].add_pt(pos_, normal, ocolor);
+			star_plds[!small].add_pt(pos_, ocolor);
 		}
 	}
 	else { // sphere
