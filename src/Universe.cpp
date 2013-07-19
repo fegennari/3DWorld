@@ -626,6 +626,15 @@ bool ucell::is_visible() const {
 }
 
 
+float get_pixel_size(float radius, float dist) {
+	return min(10000.0f, ((float)window_width)*radius/max(dist, TOLERANCE)); // approx. in pixels
+}
+
+inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
+	return (get_pixel_size(1.0, dist)*cross_product(get_player_velocity(), vcp).mag() > 1.0*vcp_mag);
+}
+
+
 // pass:
 //  0. Draw all except for the player's system
 //  If player's system is none (update: galaxy is none) then stop
@@ -634,7 +643,9 @@ bool ucell::is_visible() const {
 void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only) {
 
 	point const &camera(get_player_pos());
-	bool const cache_stars(pass == 0 && !sel_cell && !gen_only && dist_less_than(camera, last_player_pos, STAR_MAX_SIZE) &&
+	vector3d const vcp(camera, rel_center);
+	float const vcp_mag(vcp.mag()), dist(vcp_mag - CELL_SPHERE_RAD);
+	bool const cache_stars(pass == 0 && !sel_cell && !gen_only && !get_draw_as_line(dist, vcp, vcp_mag) && dist_less_than(camera, last_player_pos, STAR_MAX_SIZE) &&
 		bkg_color == last_bkg_color && star_cache_ix == last_star_cache_ix);
 
 	if (cache_stars && cached_stars_valid) { // should be true in combined_gu mode
@@ -783,7 +794,6 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 										float const overlap((pradius + moon.radius) - pt_line_dist(mpos, spos, ppos));
 
 										if (overlap > max_overlap) {
-											//cout << "moon " << l << " " << moon.getname() << " shadows planet " << k << " " << planet.getname() << endl;
 											max_overlap     = overlap;
 											svars.ss_pos    = make_pt_global(mpos);
 											svars.ss_radius = moon.radius;
@@ -2063,11 +2073,6 @@ void rotated_obj::rotate_vector_inv(vector3d &v) const {
 }
 
 
-float get_pixel_size(float radius, float dist) {
-	return min(10000.0f, ((float)window_width)*radius/max(dist, TOLERANCE)); // approx. in pixels
-}
-
-
 void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale) {
 
 	if (dist > 0.75*FAR_CLIP) { // behind far clipping plane - move closer and scale
@@ -2092,22 +2097,16 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 	colorRGBA ocolor(color);
 	if (st_prod < 30.0) {blend_color(ocolor, ocolor, bkg_color, 0.00111*st_prod*st_prod, 1);} // small, attenuate (divide by 900)
 
-	if (distant) { // check that size < 2.5?
-		star_plds[size > 1.5].add_pt(make_pt_global(pos_), ocolor);
-	}
-	else if (size < 2.5) { // both point cases below, normal is camera->object vector
-		vector3d const &velocity(get_player_velocity());
-		float const vmag(velocity.mag());
-		bool const small(size < 1.5);
-		bool const draw_as_line(get_pixel_size(vmag, dist)*cross_product(velocity, vcp).mag() > 1.0*vcp_mag*vmag);
+	if (size < 2.5) { // both point cases below, normal is camera->object vector
+		bool const draw_as_line(distant ? 0 : get_draw_as_line(dist, vcp, vcp_mag));
 		pos_ = make_pt_global(pos_);
 
 		if (draw_as_line) { // lines of light - "warp speed"
 			blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
-			star_plds[!small].add_line(pos_, ocolor, (pos_ - velocity), ocolor);
+			star_plds[size > 1.5].add_line(pos_, ocolor, (pos_ - get_player_velocity()), ocolor);
 		}
 		else {
-			star_plds[!small].add_pt(pos_, ocolor);
+			star_plds[size > 1.5].add_pt(pos_, ocolor);
 		}
 	}
 	else { // sphere
