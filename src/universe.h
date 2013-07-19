@@ -331,7 +331,7 @@ public:
 	void gen_color();
 	colorRGBA get_ambient_color_val() const;
 	colorRGBA get_light_color() const;
-	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer star_plds[2]);
+	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer star_plds[2], bool distant);
 	void draw_flares(int ndiv, bool texture);
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
 	vector3d get_solar_wind_accel(point const &obj_pos, float obj_mass, float obj_surf_area) const;

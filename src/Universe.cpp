@@ -617,7 +617,15 @@ void ucell::draw_nebulas(ushader_group &usg) const {
 bool ucell::is_visible() const {
 
 	if (galaxies == NULL) return 0; // galaxies not yet allocated
-	return univ_sphere_vis(rel_center, CELL_SPHERE_RAD); // could use player_pdu.cube_visible()
+	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return 0;
+	cube_t bcube(rel_center, rel_center);
+	bcube.expand_by(CELL_SPHERE_RAD);
+	if (!player_pdu.cube_visible(bcube)) return 0;
+
+	for (unsigned i = 0; i < galaxies->size(); ++i) { // remember, galaxies can overlap
+		if (univ_sphere_vis((rel_center + (*galaxies)[i].pos), (*galaxies)[i].radius)) return 1; // conservative, since galaxies are not spherical
+	}
+	return 0;
 }
 
 
@@ -629,7 +637,6 @@ bool ucell::is_visible() const {
 void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only) {
 
 	point const &camera(get_player_pos());
-	assert(!is_nan(camera));
 	bool const cache_stars(pass == 0 && !sel_cell && !gen_only && dist_less_than(camera, last_player_pos, STAR_MAX_SIZE) &&
 		bkg_color == last_bkg_color && star_cache_ix == last_star_cache_ix);
 
@@ -640,9 +647,30 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 	last_bkg_color     = bkg_color;
 	last_player_pos    = camera;
 	last_star_cache_ix = star_cache_ix;
+	cached_stars_valid = 0;
 	star_plds[0].clear();
-
 	point_d const pos(rel_center);
+
+	if (cache_stars) {
+		for (unsigned i = 0; i < galaxies->size(); ++i) {
+			ugalaxy &galaxy((*galaxies)[i]);
+			if (calc_sphere_size((pos + galaxy.pos), camera, STAR_MAX_SIZE, -galaxy.radius) < 0.18) continue; // too far away
+			current.galaxy = i;
+			galaxy.process(*this); // is this necessary?
+
+			for (unsigned s = 0; s < galaxy.sols.size(); ++s) {
+				ussystem &sol(galaxy.sols[s]);
+				point_d const spos(pos + sol.pos);
+
+				if (calc_sphere_size(spos, camera, sol.sun.radius) > 0.1 && sol.sun.is_ok()) {
+					sol.sun.draw(spos, usg, star_plds, 1);
+				}
+			}
+		} // galaxy i
+		draw_1pix_2pix_plds(star_plds, 0); // don't clear star_plds[0]
+		cached_stars_valid = 1;
+		return;
+	}
 	bool const p_system(clobj.has_valid_system());
 	// use lower detail when the player is moving quickly in hyperspeed since objects zoom by so quickly
 	float const velocity_mag(get_player_velocity().mag()), sscale_val(1.0/max(1.0f, 2.0f*velocity_mag)); // up to 5x lower
@@ -654,7 +682,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		ugalaxy &galaxy((*galaxies)[i]);
 		point_d const gpos(pos + galaxy.pos);
 		if (calc_sphere_size(gpos, camera, STAR_MAX_SIZE, -galaxy.radius) < 0.18) continue; // too far away
-		if (!cache_stars && !univ_sphere_vis(gpos, galaxy.radius)) continue; // conservative, since galaxies are not spherical
+		if (!univ_sphere_vis(gpos, galaxy.radius)) continue; // conservative, since galaxies are not spherical
 		current.galaxy = i;
 		galaxy.process(*this);
 
@@ -670,7 +698,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		}
 		for (unsigned c = 0; c < galaxy.clusters.size(); ++c) {
 			point const cpos(pos + galaxy.clusters[c].center);
-			if (!cache_stars && !univ_sphere_vis(cpos, galaxy.clusters[c].bounds)) continue;
+			if (!univ_sphere_vis(cpos, galaxy.clusters[c].bounds)) continue;
 			float const max_size(calc_sphere_size(cpos, camera, STAR_MAX_SIZE));
 			ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
 			//set_ambient_color((galaxy.color + cl.color)*0.5); // average the galaxy and cluster colors (but probably always reset below)
@@ -693,17 +721,17 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					continue;
 				}
 				bool const update_pass(sel_g && !no_move && ((int(tfticks)+j)&31) == 0);
-				if (!update_pass && sol.gen != 0 && !cache_stars && !univ_sphere_vis(spos, sol.radius)) continue;
+				if (!update_pass && sol.gen != 0 && !univ_sphere_vis(spos, sol.radius)) continue;
 				bool const sel_sun(sel_s && (clobj.type == UTYPE_STAR || clobj.type == UTYPE_SYSTEM));
 				bool const skip_s(p_system && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
-				bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && (!!cache_stars || univ_sphere_vis(spos, 2.0*sradius)));
+				bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
 				bool const planets_visible(PLANET_MAX_SIZE*sscale_val*sizes >= 0.3*sradius || !sclip);
 				current.system  = j;
 				current.cluster = sol.cluster_id;
 
 				for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) {
 					if (!gen_only && sun_visible && sol_draw_pass == unsigned(sel_s)) {
-						if (!sol.sun.draw(spos, usg, star_plds)) continue;
+						if (!sol.sun.draw(spos, usg, star_plds, 0)) continue;
 					}
 					if (planets_visible) sol.process();
 					if (sol.planets.empty()) continue;
@@ -850,10 +878,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 			} // system j
 		} // cluster cs
 	} // galaxy i
-	if (!gen_only) {
-		draw_1pix_2pix_plds(star_plds, !cache_stars); // don't clear star_plds[0] in cache_stars mode
-		cached_stars_valid = cache_stars;
-	}
+	if (!gen_only) {draw_1pix_2pix_plds(star_plds);}
 }
 
 
@@ -2056,25 +2081,24 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 }
 
 
-bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer star_plds[2]) {
+bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer star_plds[2], bool distant) {
 
-	point const &camera(get_player_pos());
+	point const &camera(get_player_pos()); // view frustum has already been checked
 	vector3d const vcp(camera, pos_);
 	float const vcp_mag(vcp.mag()), dist(vcp_mag - radius);
 	if (dist > U_VIEW_DIST) return 0; // too far away
 	float size(get_pixel_size(radius, dist)); // approx. in pixels
-	// view volume has already been checked
 	if (size < 0.02) return 0; // too small
 	float const st_prod(STAR_BRIGHTNESS*size*temp);
 	if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
 	move_in_front_of_far_clip(pos_, camera, size, vcp_mag, 1.35);
 	colorRGBA ocolor(color);
-		
-	if (st_prod < 30.0) {
-		float const cmult(0.00111*st_prod*st_prod); // small, attenuate (divide by 900)
-		blend_color(ocolor, ocolor, bkg_color, cmult, 1);
+	if (st_prod < 30.0) {blend_color(ocolor, ocolor, bkg_color, 0.00111*st_prod*st_prod, 1);} // small, attenuate (divide by 900)
+
+	if (distant) { // check that size < 2.5?
+		star_plds[size > 1.5].add_pt(make_pt_global(pos_), zero_vector, ocolor);
 	}
-	if (size < 2.5) { // both point cases below, normal is camera->object vector
+	else if (size < 2.5) { // both point cases below, normal is camera->object vector
 		vector3d const &velocity(get_player_velocity());
 		float const vmag(velocity.mag());
 		bool const small(size < 1.5);
