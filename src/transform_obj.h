@@ -14,12 +14,17 @@ protected:
 	double m[16];
 
 public:
-	xform_matrix();
+	xform_matrix() {load_identity();}
 	void normalize();
 	void apply() const {glMultMatrixd(m);}
 	void assign_mv_from_gl() {glGetDoublev(GL_MODELVIEW_MATRIX,  m);}
 	void assign_pj_from_gl() {glGetDoublev(GL_PROJECTION_MATRIX, m);}
+	void load_identity();
 	void rotate(float angle, vector3d const &rot);
+	void translate(vector3d const &t);
+	void scale(vector3d const &s);
+	void scale(float s) {scale(vector3d(s,s,s));}
+	double *get_ptr() {return m;}
 };
 
 

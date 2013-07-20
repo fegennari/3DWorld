@@ -17,14 +17,6 @@ extern obj_type object_types[];
 // *** xform_matrix ***
 
 
-xform_matrix::xform_matrix() {
-
-	for (unsigned i = 0; i < 16; ++i) {
-		m[i] = double((i%5) == 0); // identity
-	}
-}
-
-
 void xform_matrix::normalize() {
 
 	for (unsigned i = 0; i < 3; ++i) { // renormalize matrix to account for fp error
@@ -36,13 +28,39 @@ void xform_matrix::normalize() {
 }
 
 
+void xform_matrix::load_identity() {
+
+	for (unsigned i = 0; i < 16; ++i) {
+		m[i] = double((i%5) == 0);
+	}
+}
+
 void xform_matrix::rotate(float angle, vector3d const &rot) {
 
+	// FIXME: do native rotation - see CREATE_ROT_MATRIX
 	glPushMatrix();
 	glLoadIdentity();
 	rotate_about(angle, rot);
 	apply();
-	assign_mv_from_gl(); // uses GL rotation, should it use a custom rotation function?
+	assign_mv_from_gl();
+	glPopMatrix();
+}
+
+void xform_matrix::translate(vector3d const &t) {
+
+	glPushMatrix();
+	glLoadIdentity();
+	translate_to(t);
+	assign_mv_from_gl();
+	glPopMatrix();
+}
+
+void xform_matrix::scale(vector3d const &s) {
+
+	glPushMatrix();
+	glLoadIdentity();
+	scale_by(s);
+	assign_mv_from_gl();
 	glPopMatrix();
 }
 

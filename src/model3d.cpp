@@ -380,7 +380,6 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 		assert(loc > 0);
 		glEnableVertexAttribArray(loc);
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, (void *)sizeof(vert_norm_tc)); // stuff in at the end
-		//glVertexAttribDivisor(loc, 1); // for reference, if and when instancing is used
 	}
 	glVertexPointer(3, GL_FLOAT, stride, 0);
 	if (have_normals)    {glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));}
