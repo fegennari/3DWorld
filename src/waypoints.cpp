@@ -854,7 +854,7 @@ void shift_waypoints(vector3d const &vd) {
 void draw_waypoints() {
 
 	if (!SHOW_WAYPOINTS) return;
-	pt_line_drawer pld;
+	pt_line_drawer_no_lighting_t pld;
 
 	for (waypoint_vector::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
 		if (i->disabled) continue;
@@ -877,11 +877,13 @@ void draw_waypoints() {
 				bidir = (*k == wix);
 			}
 			if (!bidir || *j < wix) {
-				pld.add_line(i->pos, plus_z, (bidir ? YELLOW : WHITE), w.pos, plus_z, (bidir ? YELLOW : ORANGE));
+				pld.add_line(i->pos, (bidir ? YELLOW : WHITE), w.pos, (bidir ? YELLOW : ORANGE));
 			}
 		}
 	}
+	glDisable(GL_LIGHTING);
 	pld.draw();
+	glEnable(GL_LIGHTING);
 }
 
 

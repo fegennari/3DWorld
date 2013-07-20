@@ -43,7 +43,8 @@ extern point player_death_pos;
 extern pos_dir_up player_pdu;
 extern vector<us_weapon> us_weapons;
 extern exp_type_params et_params[];
-extern pt_line_drawer particle_pld, emissive_pld, glow_pld;
+extern pt_line_drawer particle_pld, glow_pld;
+extern pt_line_drawer_no_lighting_t emissive_pld;
 
 
 // ************ FREE_OBJ ************
@@ -874,10 +875,15 @@ float uparticle::damage(float val, int type, point const &hit_pos, free_obj cons
 void uparticle::draw_obj(uobj_draw_data &ddata) const {
 
 	colorRGBA color(color1);
-	if (color1 != color2) blend_color(color, color1, color2, CLIP_TO_01(1.0f - ((float)time)/((float)lifetime)), 1);
+	if (color1 != color2) {blend_color(color, color1, color2, CLIP_TO_01(1.0f - ((float)time)/((float)lifetime)), 1);}
 
 	if (ddata.draw_as_pt()) { // Note: may not be in correct back to front ordering for alpha blending
-		((ptype == PTYPE_GLOW) ? emissive_pld : particle_pld).add_pt(make_pt_global(pos), (get_player_pos2() - pos), color);
+		if (ptype == PTYPE_GLOW) {
+			emissive_pld.add_pt(make_pt_global(pos), color);
+		}
+		else {
+			particle_pld.add_pt(make_pt_global(pos), (get_player_pos2() - pos), color);
+		}
 		return;
 	}
 	color.do_glColor();

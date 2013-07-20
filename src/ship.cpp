@@ -33,7 +33,8 @@ vector<free_obj const *> a_targets(NUM_ALIGNMENT, NULL), attackers(NUM_ALIGNMENT
 vector<cached_obj> c_uobjs;
 vector<usw_ray> b_wrays, t_wrays; // beams and engine trails
 vector<temp_source> temp_sources;
-pt_line_drawer particle_pld, emissive_pld, glow_pld;
+pt_line_drawer particle_pld, glow_pld;
+pt_line_drawer_no_lighting_t emissive_pld;
 
 float weap_damage[NUM_UWEAP+NUM_EXTRA_DAM] = {0};
 float ship_damage_done[NUM_US_CLASS]  = {0};
@@ -771,7 +772,6 @@ void draw_univ_objects(point const &pos) {
 			glow_pld.draw_and_clear();
 		}
 	}
-
 	glEnable(GL_LIGHTING);
 	disable_blend();
 	set_additive_blend_mode();

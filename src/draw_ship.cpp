@@ -18,7 +18,7 @@ bool const ADD_CFLASH_LIGHTS = 1; // slower and uses lights but looks cool
 extern int display_mode, animate2, frame_counter; // for testing, etc.
 extern float fticks;
 extern vector<usw_ray> t_wrays;
-extern pt_line_drawer emissive_pld;
+extern pt_line_drawer_no_lighting_t emissive_pld;
 
 
 // ******************* USW_RAY, and SHIP_COLL_OBJ classes *******************
@@ -464,7 +464,7 @@ void uobj_draw_data::draw_usw_torpedo() const {
 void uobj_draw_data::draw_spherical_shot(colorRGBA const &color) const {
 
 	if (ndiv <= 3) {
-		emissive_pld.add_pt(make_pt_global(pos), (get_player_pos2() - pos), color);
+		emissive_pld.add_pt(make_pt_global(pos), color);
 		return;
 	}
 	set_emissive_color(color);

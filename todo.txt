@@ -28,6 +28,7 @@ No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
 
 glMultiDrawArrays(GLenum mode, GLint *first, GLsizei *count, GLsizei primcount)
+Better craters - push ground up at the perimeter
 
 Mesh height high frequency noise
 Texture randomization
