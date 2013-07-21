@@ -578,11 +578,13 @@ void instance_render_t::add_cur_inst() {
 void instance_render_t::draw(shader_t &shader, int prim_type, unsigned count, int index_type, void *indices) { // indices can be NULL
 
 	if (inst_xforms.empty()) return;
-	int const loc(shader.is_setup() ? shader.get_attrib_loc("inst_xform") : -1); // shader should include: attribute mat4 inst_xform;
+	int const loc(shader.is_setup() ? shader.get_attrib_loc("inst_xform_matrix", 1) : -1); // shader should include: attribute mat4 inst_xform_matrix;
 
 	if (loc < 0) { // hardware instancing not used, so we iterate
+		glPushMatrix();
+
 		for (vector<xform_matrix>::const_iterator i = inst_xforms.begin(); i != inst_xforms.end(); ++i) {
-			glPushMatrix();
+			glLoadIdentity();
 			i->apply();
 			
 			if (index_type != GL_NONE) { // indexed
@@ -592,20 +594,21 @@ void instance_render_t::draw(shader_t &shader, int prim_type, unsigned count, in
 				assert(indices == NULL);
 				glDrawArrays(prim_type, 0, count); // hard-coded first=0
 			}
-			glPopMatrix();
 		}
+		glPopMatrix();
 	}
 	else { // use hardware instancing
-		shader_float_matrix_uploader<4, double>::enable(loc, 1, inst_xforms.front().get_ptr());
+		shader_float_matrix_uploader<4>::enable(loc, 1, inst_xforms.front().get_ptr());
 	
 		if (index_type != GL_NONE) { // indexed
+			assert(glDrawElementsInstanced != NULL);
 			glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());
 		}
 		else {
 			assert(indices == NULL);
 			glDrawArraysInstanced(prim_type, 0, count, inst_xforms.size()); // hard-coded first=0
 		}
-		shader_float_matrix_uploader<4, double>::disable(loc);
+		shader_float_matrix_uploader<4>::disable(loc);
 	}
 	inst_xforms.clear();
 }
@@ -616,5 +619,6 @@ void instance_manager_t::register_draw_call(xform_matrix const *const xf, unsign
 	if (count != last_count || vbo != last_vbo || indices_ != indices) {flush();}
 	last_count = count; last_vbo = vbo; indices = indices_;
 	if (xf) {add_inst(*xf);} else {add_cur_inst();}
+	if (immediate_mode) {flush();}
 }
 

@@ -89,15 +89,15 @@ public:
 };
 
 
-template<unsigned N, typename FP> struct shader_float_matrix_uploader {
+template<unsigned N> struct shader_float_matrix_uploader {
 
-	static void enable(int start_loc, int divisor, FP *data) {
+	static void enable(int start_loc, int divisor, float const *const data) {
 		assert(start_loc >= 0 && divisor >= 0);
 
 		for (unsigned i = 0; i < N; ++i) {
 			int const loc(start_loc + i);
 			glEnableVertexAttribArray(loc);
-			glVertexAttribPointer(loc, N, ((sizeof(FP) == 4) ? GL_FLOAT : GL_DOUBLE), GL_FALSE, N*N*sizeof(FP), (void *)(data + N*i*sizeof(FP)));
+			glVertexAttribPointer(loc, N, GL_FLOAT, GL_FALSE, N*N*sizeof(float), (const void *)(data + N*i*sizeof(float)));
 			glVertexAttribDivisor(loc, divisor);
 		}
 	}
@@ -123,6 +123,7 @@ public:
 class instance_manager_t : public instance_render_t {
 
 	shader_t &shader;
+	bool immediate_mode;
 	int prim_type;
 	int index_type;
 	void *indices;
@@ -130,8 +131,9 @@ class instance_manager_t : public instance_render_t {
 
 public:
 	instance_manager_t(shader_t &shader_, int prim_type_, int index_type_=GL_NONE) :
-	  shader(shader_), prim_type(prim_type_), index_type(index_type_), indices(0), last_count(0), last_vbo(0) {}
-	~instance_manager_t() {flush();}
+	  shader(shader_), immediate_mode(0), prim_type(prim_type_), index_type(index_type_), indices(0), last_count(0), last_vbo(0) {}
+	//~instance_manager_t() {flush();} // ???
+	bool set_immediate_mode() {immediate_mode = 1;}
 	void flush() {draw(shader, prim_type, last_count, index_type, indices);}
 	void register_draw_call(xform_matrix const *const xf, unsigned count, unsigned vbo=0, void *indices_=NULL);
 	// add transforms?
