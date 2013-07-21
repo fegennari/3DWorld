@@ -20,7 +20,7 @@ extern obj_type object_types[];
 void xform_matrix::normalize() {
 
 	for (unsigned i = 0; i < 3; ++i) { // renormalize matrix to account for fp error
-		double const dist(sqrt(m[i+0]*m[i+0] + m[i+4]*m[i+4] + m[i+8]*m[i+8]));
+		float const dist(sqrt(m[i+0]*m[i+0] + m[i+4]*m[i+4] + m[i+8]*m[i+8]));
 		m[i+0] /= dist;
 		m[i+4] /= dist;
 		m[i+8] /= dist;
@@ -31,7 +31,7 @@ void xform_matrix::normalize() {
 void xform_matrix::load_identity() {
 
 	for (unsigned i = 0; i < 16; ++i) {
-		m[i] = double((i%5) == 0);
+		m[i] = float((i%5) == 0);
 	}
 }
 
