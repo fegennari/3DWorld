@@ -576,10 +576,9 @@ void instance_render_t::add_cur_inst() {
 }
 
 
-void instance_render_t::draw(shader_t &shader, int prim_type, unsigned count, int index_type, void *indices) { // indices can be NULL
+void instance_render_t::draw(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void *indices) { // indices can be NULL
 
 	if (inst_xforms.empty()) return;
-	int const loc(shader.is_setup() ? shader.get_attrib_loc("inst_xform_matrix", 1) : -1); // shader should include: attribute mat4 inst_xform_matrix;
 
 	if (loc < 0) { // hardware instancing not used, so we iterate
 		glPushMatrix();
@@ -599,13 +598,11 @@ void instance_render_t::draw(shader_t &shader, int prim_type, unsigned count, in
 		glPopMatrix();
 	}
 	else { // use hardware instancing
-		// FIXME: we need to upload the transforms here, but if there is a current vbo associated with the object data
-		// we need to determine the vbo, unbind it, upload the transforms, then rebind the original vbo
-		int cur_vbo(0);
-		glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &cur_vbo);
-		bind_vbo(0);
+		// we need to upload the transforms here, but if there is a current vbo associated with the object data
+		// we need to unbind it, upload the transforms, then rebind the original vbo
+		if (cur_vbo) {bind_vbo(0);}
 		shader_float_matrix_uploader<4>::enable(loc, 1, inst_xforms.front().get_ptr());
-		bind_vbo(cur_vbo);
+		if (cur_vbo) {bind_vbo(cur_vbo);}
 	
 		if (index_type != GL_NONE) { // indexed
 			glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());

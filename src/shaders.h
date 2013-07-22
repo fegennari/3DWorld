@@ -112,17 +112,18 @@ template<unsigned N> struct shader_float_matrix_uploader {
 class instance_render_t { // is this a base class of shader_t?
 
 	vector<xform_matrix> inst_xforms;
+	int loc;
 
 public:
+	instance_render_t(int loc_=-1) : loc(loc_) {}
 	void add_cur_inst();
 	void add_inst(xform_matrix const &xf) {inst_xforms.push_back(xf);}
-	void draw(shader_t &shader, int prim_type, unsigned count, int index_type=GL_NONE, void *indices=NULL);
+	void draw(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void *indices=NULL);
 };
 
 
 class instance_manager_t : public instance_render_t {
 
-	shader_t &shader;
 	bool immediate_mode;
 	int prim_type;
 	int index_type;
@@ -130,11 +131,11 @@ class instance_manager_t : public instance_render_t {
 	unsigned last_count, last_vbo;
 
 public:
-	instance_manager_t(shader_t &shader_, int prim_type_, int index_type_=GL_NONE) :
-	  shader(shader_), immediate_mode(0), prim_type(prim_type_), index_type(index_type_), indices(0), last_count(0), last_vbo(0) {}
+	instance_manager_t(int prim_type_, int index_type_=GL_NONE, int loc_=-1) :
+	  instance_render_t(loc_), immediate_mode(0), prim_type(prim_type_), index_type(index_type_), indices(0), last_count(0), last_vbo(0) {}
 	//~instance_manager_t() {flush();} // ???
 	bool set_immediate_mode() {immediate_mode = 1;}
-	void flush() {draw(shader, prim_type, last_count, index_type, indices);}
+	void flush() {draw(prim_type, last_count, last_vbo, index_type, indices);}
 	void register_draw_call(xform_matrix const *const xf, unsigned count, unsigned vbo=0, void *indices_=NULL);
 	// add transforms?
 };

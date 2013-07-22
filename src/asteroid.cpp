@@ -13,6 +13,7 @@
 #include "ship_util.h" // for gen_particle
 
 
+bool     const ENABLE_AF_INSTS  = 0; // more efficient on large asteroid fields, but less efficient when close/sparse (due to overhead), and normals are incorrect
 unsigned const ASTEROID_NDIV    = 32; // for sphere model, better if a power of 2
 unsigned const ASTEROID_VOX_SZ  = 64; // for voxel model
 unsigned const AST_VOX_NUM_BLK  = 2; // ndiv=2x2
@@ -200,7 +201,6 @@ public:
 		draw_with_texture(ddata, -1);
 	}
 	virtual bool draw_instanced(uobj_draw_data &ddata, instance_manager_t &imgr) const {
-		if (!(display_mode & 0x10)) return 0; // TESTING
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		// Note: this call may draw previous instances but will *not* draw the current inst, so we set the color/tid *after* the call
 		surface.sd.draw_vbo_instanced(ddata.ndiv, imgr); // use a vbo
@@ -535,8 +535,8 @@ public:
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
 		uobj_asteroid const *const asteroid(get_asteroid(ix));
 		uobj_draw_data ddata(asteroid, s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
-		// try to draw instanced, but do a normal draw without resetting the texture if that fails (not supported)
-		if (!asteroid->draw_instanced(ddata, imgr)) {asteroid->draw_with_texture(ddata, -1, 1);}
+		// try to draw instanced if enabled, but do a normal draw without resetting the texture if that fails (not supported)
+		if (!ENABLE_AF_INSTS || !asteroid->draw_instanced(ddata, imgr)) {asteroid->draw_with_texture(ddata, -1, 1);}
 		glPopMatrix();
 	}
 	void destroy_inst(unsigned ix, point const &pos, vector3d const &scale) {
@@ -650,7 +650,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 void uasteroid_field::begin_render(shader_t &shader) {
 
 	if (!shader.is_setup()) {
-		if (display_mode & 0x10) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
+		if (ENABLE_AF_INSTS) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid");
 		shader.set_frag_shader("ads_lighting.part*+triplanar_texture.part+asteroid");
@@ -693,7 +693,8 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	point sun_pos;
 	uobject const *sobj(NULL);
 	set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE);
-	instance_manager_t imgr(s, GL_TRIANGLE_STRIP, GL_UNSIGNED_INT); // assuming uobj_asteroid_hmap
+	int const loc(ENABLE_AF_INSTS ? s.get_attrib_loc("inst_xform_matrix", 1) : -1); // shader should include: attribute mat4 inst_xform_matrix;
+	instance_manager_t imgr(GL_TRIANGLE_STRIP, GL_UNSIGNED_INT, loc); // assuming uobj_asteroid_hmap
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		i->draw(pos_, camera, s, imgr);
@@ -734,7 +735,6 @@ void uasteroid::apply_physics(point const &af_pos, float af_radius) {
 	pos     += velocity;
 	
 	if (!dist_less_than((pos - af_pos), all_zeros, (af_radius - radius))) {  // outside asteroid field bounds
-		//velocity *= -1.0; // reverse
 		calc_reflection_angle(velocity, velocity, (af_pos - pos).get_norm()); // reflect
 	}
 }
@@ -745,7 +745,6 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s, inst
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis(apos, radius)) return;
 	if (calc_sphere_size(apos, camera, radius) < 1.0) return; // too small/far away
-	//((last_coll_id >= 0) ? RED : WHITE).do_glColor(); // testing
 	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s, imgr);
 }
 

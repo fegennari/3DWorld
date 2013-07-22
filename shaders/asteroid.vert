@@ -1,6 +1,9 @@
 varying vec3 vpos, normal, world_normal;
 varying vec4 epos;
+
+#ifdef USE_CUSTOM_XFORM
 attribute mat4 inst_xform_matrix;
+#endif
 
 void main()
 {
