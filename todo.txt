@@ -24,7 +24,6 @@ Use triangles instead of quads
 Remove display lists
  - cobj drawing
 Remove immediate mode calls
-- draw_cube()
 Remove non-shader rendering
 No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable

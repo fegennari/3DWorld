@@ -978,9 +978,9 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 	point const scale(sx, sy, sz);
 	point const xlate(pos - 0.5*scale); // move origin from center to min corner
 	float const sizes[3] = {sx, sy, sz};
-	glBegin(GL_QUADS);
+	vert_norm_tc verts[24];
 		
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+	for (unsigned i = 0, vix = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
@@ -989,24 +989,26 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 			point pt;
 			norm[n] = (2.0*j - 1.0); // -1 or 1
 			pt[n]   = j;
-			norm.do_glNormal();
 
 			for (unsigned s1 = 0; s1 < 2; ++s1) {
 				pt[d[1]] = s1;
 
-				for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
+				for (unsigned k = 0; k < 2; ++k, ++vix) { // iterate over vertices
 					pt[d[0]] = k^j^s1^1; // need to orient the vertices differently for each side
-						
+					verts[vix].v = pt*scale + xlate;
+					verts[vix].n = norm;
+
 					if (texture) {
-						glTexCoord2f((proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]],
-										(proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]]);
+						verts[vix].t[0] = (proportional_texture ? sizes[d[1]] : 1.0)*texture_scale*pt[d[1]];
+						verts[vix].t[1] = (proportional_texture ? sizes[d[0]] : 1.0)*texture_scale*pt[d[0]];
 					}
-					(pt*scale + xlate).do_glVertex();
 				}
 			}
 		} // for j
 	} // for i
-	glEnd();
+	verts[0].set_state();
+	if (!texture) {glDisableClientState(GL_TEXTURE_COORD_ARRAY);} // hack to disable texture coords
+	glDrawArrays(GL_QUADS, 0, 24);
 }
 
 
