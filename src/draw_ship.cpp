@@ -280,13 +280,14 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 void uobj_draw_data::draw_engine_trail(point const &offset, float width, float w2s, float len, colorRGBA const &color) const {
 
 	if (!animate2) return;
-	if ((len <= 1.5 && ndiv <= 3) || time < 4) return; // too small/far away to draw
-	if (vel.mag_sq() < TOLERANCE*TOLERANCE)    return; // not moving
+	if (len < TOLERANCE || (len <= 1.5 && ndiv <= 3) || time < 4) return; // too small/far away to draw
+	if (vel.mag_sq() < TOLERANCE*TOLERANCE) return; // not moving
 	assert(radius > 0.0 && width > 0.0 && w2s > 0.0 && len > 0.0);
 	point const pos2(pos + offset*radius);
-	vector3d const trail_dir(TRAIL_FOLLOWS_VEL ? vel : dir*vel.mag());
-	point const pos0(pos2 - trail_dir*len); // 1 tick (not times fticks)
-	t_wrays.push_back(usw_ray(width*radius, w2s*width*radius, pos2, pos0, color, ALPHA0));
+	vector3d const delta(len*(TRAIL_FOLLOWS_VEL ? vel : dir*vel.mag())); // 1 tick (not times fticks)
+	float const beamwidth(width*radius);
+	if (delta.mag_sq() < beamwidth*beamwidth) return; // rarely occurs, but will assertion fail if too small
+	t_wrays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, (pos2 - delta), color, ALPHA0));
 }
 
 

@@ -886,8 +886,6 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 		}
 		return;
 	}
-	color.do_glColor();
-
 	switch (ptype) {
 	case PTYPE_GLOW:
 		if (60.0*radius < ddata.dist) {
@@ -898,11 +896,13 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 		}
 		break;
 	case PTYPE_SPHERE: // low resolution particles (ship pieces)
+		color.do_glColor();
 		if (texture_id > 0) select_texture(texture_id);
 		draw_sphere_vbo(all_zeros, 1.0, min((no_coll() ? ddata.ndiv : max(3, 3*ddata.ndiv/4)), N_SPHERE_DIV/2), (texture_id > 0)); // fewer ndiv/more irregular?
 		if (texture_id > 0) end_texture();
 		break;
 	case PTYPE_TRIANGLE:
+		color.do_glColor();
 		rotate_about(angle, axis); // rotate around some random axis
 		ddata.draw_one_triangle();
 		break;

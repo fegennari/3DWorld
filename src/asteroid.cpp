@@ -190,7 +190,6 @@ public:
 
 	// Note: this class overrides draw_with_texture() because it's used instanced
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id, bool no_reset_texture=0) const { // to allow overriding the texture id
-		//if (ddata.ndiv <= 4) {ddata.draw_asteroid(force_tex_id); return;} // doesn't make much difference
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		ddata.color_a.do_glColor();
 		select_texture((force_tex_id >= 0) ? force_tex_id : tex_id);
@@ -903,10 +902,12 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		glPushMatrix();
 		ddata.color_a = (i ? colorRGBA(2.0, 1.2, 1.0, 1.0) : WHITE); // less blue for ice
 		if (i == 1) {set_specular(0.8, 50.0);} // not sure if this actually works
-		asteroid_model_gen.get_asteroid((inst_ids[i] + i) % NUM_AST_MODELS)->draw_with_texture(ddata, comet_tids[i]);
+		asteroid_model_gen.get_asteroid((inst_ids[i] + i) % NUM_AST_MODELS)->draw_with_texture(ddata, comet_tids[i], 1);
 		if (i == 1) {set_specular(0.0, 1.0);}
 		glPopMatrix();
 	}
+	end_texture();
+
 	if (temperature > 1.0) {
 		float const glow_weight(CLIP_TO_01(get_true_temp()/40.0f)); // 1.0 if camera is facing the lit side?
 		colorRGBA color(sun_color), color2(color);
