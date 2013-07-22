@@ -3,6 +3,7 @@
 // 11/1/10
 #include "shaders.h"
 #include "mesh.h" // for scene bounds
+#include "gl_ext_arb.h"
 #include <fstream>
 
 using namespace std;
@@ -598,11 +599,17 @@ void instance_render_t::draw(shader_t &shader, int prim_type, unsigned count, in
 		glPopMatrix();
 	}
 	else { // use hardware instancing
+		// FIXME: we need to upload the transforms here, but if there is a current vbo associated with the object data
+		// we need to determine the vbo, unbind it, upload the transforms, then rebind the original vbo
+		int cur_vbo(0);
+		glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &cur_vbo);
+		bind_vbo(0);
 		shader_float_matrix_uploader<4>::enable(loc, 1, inst_xforms.front().get_ptr());
+		bind_vbo(cur_vbo);
 	
 		if (index_type != GL_NONE) { // indexed
-			assert(glDrawElementsInstanced != NULL);
 			glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());
+			//glDrawElements(prim_type, count, index_type, indices); // testing
 		}
 		else {
 			assert(indices == NULL);

@@ -602,29 +602,51 @@ void sd_sphere_vbo_d::clear_vbos() {
 }
 
 
-void sd_sphere_vbo_d::draw_ndiv_pow2(unsigned ndiv, bool use_vbo) {
+unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 
 	ndiv = max(ndiv, 4U);
-	ensure_vbos();
 	unsigned lod(0);
-	for (unsigned n = (spn.ndiv >> 1); ndiv < n; n >>= 1, ++lod) {}
+	for (unsigned n = (max_ndiv >> 1); ndiv < n; n >>= 1, ++lod) {}
+	return lod;
+}
 
-	if (use_vbo) {
-		assert(lod+1 < ix_offsets.size());
-		pre_render();
-		vert_norm_tc::set_vbo_arrays();
-		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (spn.ndiv+1)*(spn.ndiv+1), (ix_offsets[lod+1] - ix_offsets[lod]),
-			((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT),
-			(void *)(ix_offsets[lod]*sizeof(index_type_t)));
-		post_render();
-	}
-	else {
-		static vector<vert_norm_tc> verts;
-		verts.resize(0);
-		get_triangle_strip_pow2(verts, (1 << lod));
-		verts.front().set_state();
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, (unsigned)verts.size());
-	}
+
+void sd_sphere_vbo_d::draw_ndiv_pow2(unsigned ndiv) {
+
+	unsigned const lod(calc_lod_pow2(spn.ndiv, ndiv));
+	static vector<vert_norm_tc> verts;
+	verts.resize(0);
+	get_triangle_strip_pow2(verts, (1 << lod));
+	verts.front().set_state();
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, (unsigned)verts.size());
+}
+
+
+void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned ndiv) {
+
+	unsigned const lod(calc_lod_pow2(spn.ndiv, ndiv));
+	ensure_vbos();
+	assert(lod+1 < ix_offsets.size());
+	pre_render();
+	vert_norm_tc::set_vbo_arrays();
+	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (spn.ndiv+1)*(spn.ndiv+1), (ix_offsets[lod+1] - ix_offsets[lod]),
+		((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT),
+		(void *)(ix_offsets[lod]*sizeof(index_type_t)));
+	post_render();
+}
+
+
+void sd_sphere_vbo_d::draw_vbo_instanced(unsigned ndiv, instance_manager_t &imgr) {
+
+	unsigned const lod(calc_lod_pow2(spn.ndiv, ndiv));
+	ensure_vbos();
+	assert(lod+1 < ix_offsets.size());
+	// Note: we register the draw call *before* setting the vbo,
+	// because this may render the previous set of instances using the previous vbo,
+	// but will *not* render the current sphere until a flush() is triggered later
+	imgr.register_draw_call(NULL, (ix_offsets[lod+1] - ix_offsets[lod]), vbo, (void *)(ix_offsets[lod]*sizeof(index_type_t)));
+	pre_render();
+	vert_norm_tc::set_vbo_arrays();
 }
 
 

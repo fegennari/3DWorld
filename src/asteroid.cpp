@@ -188,16 +188,25 @@ public:
 	}
 
 	// Note: this class overrides draw_with_texture() because it's used instanced
-	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id) const { // to allow overriding the texture id
+	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id, bool no_reset_texture=0) const { // to allow overriding the texture id
 		//if (ddata.ndiv <= 4) {ddata.draw_asteroid(force_tex_id); return;} // doesn't make much difference
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		ddata.color_a.do_glColor();
-		select_texture(force_tex_id);
-		surface.sd.draw_ndiv_pow2(ddata.ndiv, 1); // use a vbo
-		end_texture();
+		select_texture((force_tex_id >= 0) ? force_tex_id : tex_id);
+		surface.sd.draw_ndiv_pow2_vbo(ddata.ndiv); // use a vbo
+		if (!no_reset_texture) {end_texture();}
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
-		draw_with_texture(ddata, tex_id);
+		draw_with_texture(ddata, -1);
+	}
+	virtual bool draw_instanced(uobj_draw_data &ddata, instance_manager_t &imgr) const {
+		if (!(display_mode & 0x10)) return 0; // TESTING
+		if (scale_val != 1.0) {uniform_scale(scale_val);}
+		// Note: this call may draw previous instances but will *not* draw the current inst, so we set the color/tid *after* the call
+		surface.sd.draw_vbo_instanced(ddata.ndiv, imgr); // use a vbo
+		ddata.color_a.do_glColor();
+		select_texture(tex_id);
+		return 1;
 	}
 
 	virtual bool apply_damage(float damage, point &hit_pos) {
@@ -515,7 +524,7 @@ public:
 		assert(asteroids[ix]);
 		return asteroids[ix];
 	}
-	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s) const {
+	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s, instance_manager_t &imgr) const {
 		float const radius(max(scale.x, max(scale.y, scale.z)));
 		float const dist(p2p_dist(pos, camera)), dscale(NDIV_SCALE_AST*(radius/(dist + 0.1*radius)));
 		if (dscale < 0.5) return; // too far/small - clip it
@@ -526,7 +535,8 @@ public:
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
 		uobj_asteroid const *const asteroid(get_asteroid(ix));
 		uobj_draw_data ddata(asteroid, s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
-		asteroid->draw_obj(ddata);
+		// try to draw instanced, but do a normal draw without resetting the texture if that fails (not supported)
+		if (!asteroid->draw_instanced(ddata, imgr)) {asteroid->draw_with_texture(ddata, -1, 1);}
 		glPopMatrix();
 	}
 	void destroy_inst(unsigned ix, point const &pos, vector3d const &scale) {
@@ -640,6 +650,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 void uasteroid_field::begin_render(shader_t &shader) {
 
 	if (!shader.is_setup()) {
+		if (display_mode & 0x10) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid");
 		shader.set_frag_shader("ads_lighting.part*+triplanar_texture.part+asteroid");
@@ -682,10 +693,14 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	point sun_pos;
 	uobject const *sobj(NULL);
 	set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE);
+	instance_manager_t imgr(s, GL_TRIANGLE_STRIP, GL_UNSIGNED_INT); // assuming uobj_asteroid_hmap
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(pos_, camera, s);
+		i->draw(pos_, camera, s, imgr);
 	}
+	imgr.flush();
+	end_texture(); // move to end_render()?
+	indexed_vbo_manager_t::post_render(); // may not be required, but okay to always call
 }
 
 
@@ -725,13 +740,13 @@ void uasteroid::apply_physics(point const &af_pos, float af_radius) {
 }
 
 
-void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) const {
+void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s, instance_manager_t &imgr) const {
 
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis(apos, radius)) return;
 	if (calc_sphere_size(apos, camera, radius) < 1.0) return; // too small/far away
 	//((last_coll_id >= 0) ? RED : WHITE).do_glColor(); // testing
-	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s);
+	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s, imgr);
 }
 
 

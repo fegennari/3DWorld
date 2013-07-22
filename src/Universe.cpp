@@ -2277,7 +2277,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 		//if (SD_TIMETEST) PRINT_TIME("Sphere Setup");
 		surface->setup_draw_sphere(all_zeros, radius0, -0.5*hmap_scale*radius, ndiv, &perturb_map.front());
 	}
-	surface->sd.draw_ndiv_pow2(ndiv, 1);
+	surface->sd.draw_ndiv_pow2_vbo(ndiv);
 	if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast");
 }
 
