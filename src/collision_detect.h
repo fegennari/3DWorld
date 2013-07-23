@@ -343,19 +343,19 @@ public:
 
 class obj_draw_group {
 
-	unsigned start_cix, end_cix, dlist;
-	bool use_dlist, inside_beg_end, creating_new_dlist;
+	unsigned start_cix, end_cix, vbo, num_verts;
+	bool use_vbo, inside_beg_end;
+	vector<vert_norm> verts;
 
 public:
-	obj_draw_group(bool use_dlist_=0) : start_cix(0), end_cix(0), dlist(0), use_dlist(use_dlist_), inside_beg_end(0), creating_new_dlist(0) {}
-	void create_dlist();
-	void free_dlist();
-	void begin_render(unsigned &cix);
+	obj_draw_group(bool use_vbo_=0) : start_cix(0), end_cix(0), vbo(0), num_verts(0), use_vbo(use_vbo_), inside_beg_end(0) {}
+	void free_vbo();
+	void draw_vbo() const;
+	bool begin_render(unsigned &cix);
 	void end_render();
-	void mark_as_drawn(unsigned cix);
-	void set_dlist_enable(bool en) {assert(dlist == 0); use_dlist = en;} // can't call while the dlist is valid
-	bool in_dlist   () const {return creating_new_dlist;}
-	bool skip_render() const {return (in_dlist() && !creating_new_dlist);}
+	void add_draw_polygon(point const *const points, vector3d const &normal, unsigned npoints, unsigned cix);
+	void set_vbo_enable(bool en) {assert(vbo == 0); use_vbo = en;} // can't call while the vbo is valid
+	bool vbo_enabled() const {return use_vbo;}
 };
 
 

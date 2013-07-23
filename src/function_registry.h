@@ -330,7 +330,7 @@ int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cinde
 bool is_point_interior(point const &pos, float radius);
 
 // function prototypes - objects
-void free_cobj_draw_group_dlists();
+void free_cobj_draw_group_vbos();
 
 // function prototypes - coll_cell_search
 void build_cobj_tree(bool dynamic=0, bool verbose=1);

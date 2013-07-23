@@ -935,11 +935,11 @@ void add_polygons_to_cobj_vector(vector<coll_tquad> const &ppts, coll_obj const 
 }
 
 
-void create_xyz_groups(int *group_ids, bool use_dlist) {
+void create_xyz_groups(int *group_ids, bool use_vbo) {
 
 	for (unsigned i = 0; i < 3; ++i) {
 		group_ids[i] = (int)obj_draw_groups.size();
-		obj_draw_groups.push_back(obj_draw_group(use_dlist));
+		obj_draw_groups.push_back(obj_draw_group(use_vbo));
 	}
 }
 
@@ -1039,7 +1039,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				RESET_TIME;
 				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping, 3=full 3d model, 4=no cobjs, 5=cubes from voxels
 				bool const group_cobjs(ivals[0] != 0);
-				bool const use_dlist  (ivals[0] == 2);
+				bool const use_vbo    (ivals[0] == 2);
 				bool const use_model3d(ivals[0] >= 3);
 				bool const no_cobjs   (ivals[0] >= 4);
 				bool const use_cubes  (ivals[0] == 5);
@@ -1055,7 +1055,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				if (!no_cobjs) {
 					int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
-					if (group_cobjs) create_xyz_groups(group_ids, use_dlist);
+					if (group_cobjs) create_xyz_groups(group_ids, use_vbo);
 					check_layer(has_layer);
 					cobj.thickness *= xf.scale;
 					if (cobj.thickness == 0.0) cobj.thickness = MIN_POLY_THICK; // optional - will be set to this value later anyway

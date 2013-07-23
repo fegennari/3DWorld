@@ -348,7 +348,6 @@ void end_group(int &last_group_id) {
 
 	if (last_group_id < 0) return;
 	assert((unsigned)last_group_id < obj_draw_groups.size());
-	if (!obj_draw_groups[last_group_id].skip_render()) glEnd();
 	obj_draw_groups[last_group_id].end_render();
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
 	last_group_id = -1;

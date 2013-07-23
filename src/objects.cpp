@@ -290,11 +290,9 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		tex_dir[::get_max_dim(norm)] = 1.0;
 		set_poly_texgen(tid, tex_dir, shader);
 		assert((unsigned)group_id < obj_draw_groups.size());
-		obj_draw_groups[group_id].begin_render(cix); // cix may change here
-		if (obj_draw_groups[group_id].skip_render()) return; // already rendered with a dlist
-		glBegin(GL_TRIANGLES);
+		if (obj_draw_groups[group_id].begin_render(cix)) return; // cix may change here
 	}
-	if (!in_group || !obj_draw_groups[group_id].in_dlist()) {
+	if (!in_group || !obj_draw_groups[group_id].vbo_enabled()) { // don't do view frustum culling when creating the vbo
 		if (group_back_face_cull && in_group && dot_product_ptv(norm, get_camera_pos(), points[0]) < 0.0) return;
 		point center;
 		float brad;
@@ -304,15 +302,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	}
 	if (in_group) {
 		assert(is_thin_poly()); // thin triangle/quad
-		//vector3d const normal(get_norm_camera_orient(norm, points[0]));
-		unsigned const ixs[6] = {0,1,2,0,2,3};
-		unsigned const nix((npoints == 3) ? 3 : 6); // triangle or quad (2 tris)
-		
-		for (unsigned i = 0; i < nix; ++i) {
-			norm.do_glNormal(); // if vertex normals are needed, then use the model3d rendering path
-			points[ixs[i]].do_glVertex();
-		}
-		obj_draw_groups[group_id].mark_as_drawn(cix);
+		obj_draw_groups[group_id].add_draw_polygon(points, norm, npoints, cix);
 		return;
 	}
 	switch (type) {
@@ -868,79 +858,85 @@ bool obj_group::obj_has_shadow(unsigned obj_id) const {
 }
 
 
-void obj_draw_group::create_dlist() {
+void obj_draw_group::free_vbo() {
 
-	if (!use_dlist) return;
 	assert(!inside_beg_end);
-	dlist = glGenLists(1);
-	assert(glIsList(dlist));
+	if (!use_vbo) return;
+	if (vbo) {delete_and_zero_vbo(vbo);}
+	verts.clear();
+	start_cix = end_cix = num_verts = 0;
 }
 
 
-void obj_draw_group::free_dlist() {
+void obj_draw_group::draw_vbo() const {
 
-	if (!use_dlist) return;
-	assert(!inside_beg_end);
-	if (dlist > 0) glDeleteLists(dlist, 1);
-	start_cix = end_cix = dlist = 0;
+	if (num_verts == 0) return;
+	assert(vbo);
+	bind_vbo(vbo);
+	vert_norm::set_vbo_arrays();
+	glDrawArrays(GL_TRIANGLES, 0, num_verts);
+	bind_vbo(0);
 }
 
 
-void obj_draw_group::begin_render(unsigned &cix) {
+bool obj_draw_group::begin_render(unsigned &cix) { // returns true if rendering can be skipped
 
-	if (!use_dlist) return;
-	assert(!inside_beg_end); // can't call begin() twice
-		
-	if (dlist == 0) { // no dlist exists, so create it
-		create_dlist();
-		glNewList(dlist, GL_COMPILE_AND_EXECUTE);
-		creating_new_dlist = 1;
-		start_cix = cix;
-	}
-	assert(glIsList(dlist));
-
-	if (!creating_new_dlist) { // already created the dlist
-		assert(start_cix == cix); // must start at the same location as last time
-		assert(start_cix < end_cix); // can't have an empty range
-		cix = end_cix-1; // move the current index to the one before the end
-		glCallList(dlist);
-	}
+	assert(!inside_beg_end); // can't call begin_render() twice
 	inside_beg_end = 1;
+	assert(verts.empty());
+	if (!use_vbo) return 0;
+
+	if (!vbo) { // no vbo exists, so create it
+		start_cix = cix;
+		return 0;
+	}
+	// already created the vbo, so draw it
+	assert(start_cix == cix); // must start at the same location as last time
+	assert(start_cix < end_cix); // can't have an empty range
+	cix = end_cix-1; // move the current index to the one before the end
+	draw_vbo();
+	return 1;
 }
 
 
 void obj_draw_group::end_render() {
 
-	if (!use_dlist) return;
-	assert(inside_beg_end); // can't call end() without begin()
+	assert(inside_beg_end); // can't call end_render() without begin_render()
 	inside_beg_end = 0;
+	if (verts.empty()) return;
 
-	if (creating_new_dlist) {
-		glEndList();
-		creating_new_dlist = 0;
-		assert(start_cix < end_cix); // can't have an empty range
-	}
-}
-
-
-void obj_draw_group::mark_as_drawn(unsigned cix) {
-
-	if (!use_dlist) return;
-	assert(inside_beg_end);
-
-	if (creating_new_dlist) {
-		end_cix = cix+1;
+	if (use_vbo) {
+		assert(!vbo);
+		create_vbo_and_upload(vbo, verts);
+		num_verts = verts.size();
+		draw_vbo();
 	}
 	else {
-		assert(end_cix >= cix); // must end at the same place as when the dlist was created
+		verts.front().set_state();
+		glDrawArrays(GL_TRIANGLES, 0, verts.size());
 	}
+	verts.resize(0);
 }
 
 
-void free_cobj_draw_group_dlists() {
+void obj_draw_group::add_draw_polygon(point const *const points, vector3d const &normal, unsigned npoints, unsigned cix) {
+
+	assert(inside_beg_end);
+	assert(npoints == 3 || npoints == 4);
+	//normal = get_norm_camera_orient(normal, points[0]);
+	unsigned const ixs[6] = {0,1,2,0,2,3};
+		
+	for (unsigned i = 0; i < ((npoints == 3) ? 3U : 6U); ++i) { // triangle or quad (2 tris)
+		verts.push_back(vert_norm(points[ixs[i]], normal));
+	}
+	if (use_vbo) {end_cix = cix+1;}
+}
+
+
+void free_cobj_draw_group_vbos() {
 
 	for (vector<obj_draw_group>::iterator i = obj_draw_groups.begin(); i != obj_draw_groups.end(); ++i) {
-		i->free_dlist();
+		i->free_vbo();
 	}
 }
 

@@ -180,7 +180,7 @@ void clear_context() {
 	clear_sm_tree_vbos();
 	clear_scenery_vbos();
 	reset_tiled_terrain_state();
-	free_cobj_draw_group_dlists();
+	free_cobj_draw_group_vbos();
 	clear_univ_obj_contexts();
 	clear_asteroid_contexts();
 	clear_cached_shaders();
