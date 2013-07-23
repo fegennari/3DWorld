@@ -1037,7 +1037,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					return read_error(fp, "load object file command", coll_obj_file);
 				}
 				RESET_TIME;
-				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=display list grouping, 3=full 3d model, 4=no cobjs, 5=cubes from voxels
+				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from voxels
 				bool const group_cobjs(ivals[0] != 0);
 				bool const use_vbo    (ivals[0] == 2);
 				bool const use_model3d(ivals[0] >= 3);

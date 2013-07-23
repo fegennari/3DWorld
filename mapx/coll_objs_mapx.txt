@@ -369,7 +369,7 @@ n 0
 a 3 # destroyable/shatterable to portal
 l 0.7 0.95 0.95 0.95 0.1 -1 1 1.55 20.0 # semi-transparent glass
 
-# specular windows are slower because they can't use dlists,
+# specular windows are slower, especially when light attenuation is enabled,
 # and they're so transparent that the specular reflections are almost invisible
 r 0.9 100.0 # set specularity
 # z1,z2,y1,y2,x1,x2: 1 2 4 8 16 32, small x: 15, small y: 51, small z: 60

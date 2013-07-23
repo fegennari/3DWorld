@@ -493,7 +493,6 @@ bool shader_t::begin_shader(bool do_enable) {
 		assert(shader_ixs[0] && shader_ixs[1]); // vertex and fragment shaders are required, geometry shader is optional
 
 		if (shader_ixs[2]) { // setup geometry shader
-			// Note: we MUST *NOT* be in a display list when we get here
 			assert(GL_EXT_geometry_shader4);
 			glProgramParameteriEXT(program, GL_GEOMETRY_INPUT_TYPE_EXT,  in_prim);
 			glProgramParameteriEXT(program, GL_GEOMETRY_OUTPUT_TYPE_EXT, out_prim);

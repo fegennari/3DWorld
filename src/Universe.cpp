@@ -2135,7 +2135,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 			disable_blend();
 		}
 		usg.enable_star_shader(colorA, colorB);
-		draw_sphere_vbo(all_zeros, radius, ndiv, 0); // small sphere - use display list
+		draw_sphere_vbo(all_zeros, radius, ndiv, 0); // small sphere - use vbo
 		usg.disable_star_shader();
 		if (world_mode == WMODE_UNIVERSE && size >= 64) {draw_flares(ndiv, 1);}
 		glPopMatrix();
@@ -2214,7 +2214,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	}
 	else {
 		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
-		draw_sphere_vbo(all_zeros, radius, ndiv, texture); // small sphere - use display list
+		draw_sphere_vbo(all_zeros, radius, ndiv, texture); // small sphere - use vbo
 	}
 	if (texture) {usg.disable_planet_shader(*this, svars);} else {glDisable(GL_LIGHTING);}
 	glPopMatrix();
@@ -3020,7 +3020,7 @@ vector3d ustar::get_solar_wind_accel(point const &obj_pos, float obj_mass, float
 }
 
 
-void urev_body::free_texture() { // and also free display list and vbo
+void urev_body::free_texture() { // and also free vbos
 
 	if (surface != NULL) surface->free_context();
 	::free_texture(tid);

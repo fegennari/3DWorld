@@ -8,7 +8,7 @@
 #include "shaders.h"
 
 
-// predefined display lists
+// predefined sphere VBOs
 bool const USE_SPHERE_VBOS = 1;
 unsigned const NUM_PREDEF_SPHERES(4*N_SPHERE_DIV);
 
