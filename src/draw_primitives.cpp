@@ -636,17 +636,17 @@ void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned ndiv) {
 }
 
 
-void sd_sphere_vbo_d::draw_vbo_instanced(unsigned ndiv, instance_manager_t &imgr) {
+void sd_sphere_vbo_d::draw_instances(unsigned ndiv, instance_render_t &inst_render) {
 
 	unsigned const lod(calc_lod_pow2(spn.ndiv, ndiv));
 	ensure_vbos();
 	assert(lod+1 < ix_offsets.size());
-	// Note: we register the draw call *before* setting the vbo,
-	// because this may render the previous set of instances using the previous vbo,
-	// but will *not* render the current sphere until a flush() is triggered later
-	imgr.register_draw_call(NULL, (ix_offsets[lod+1] - ix_offsets[lod]), vbo, (void *)(ix_offsets[lod]*sizeof(index_type_t)));
 	pre_render();
 	vert_norm_tc::set_vbo_arrays();
+	inst_render.draw_and_clear(GL_TRIANGLE_STRIP, (ix_offsets[lod+1] - ix_offsets[lod]), vbo,
+		((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT),
+		(void *)(ix_offsets[lod]*sizeof(index_type_t)));
+	post_render();
 }
 
 

@@ -116,28 +116,10 @@ class instance_render_t { // is this a base class of shader_t?
 
 public:
 	instance_render_t(int loc_=-1) : loc(loc_) {}
+	void set_loc(int loc_) {loc = loc_;}
 	void add_cur_inst();
 	void add_inst(xform_matrix const &xf) {inst_xforms.push_back(xf);}
-	void draw(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void *indices=NULL);
-};
-
-
-class instance_manager_t : public instance_render_t {
-
-	bool immediate_mode;
-	int prim_type;
-	int index_type;
-	void *indices;
-	unsigned last_count, last_vbo;
-
-public:
-	instance_manager_t(int prim_type_, int index_type_=GL_NONE, int loc_=-1) :
-	  instance_render_t(loc_), immediate_mode(0), prim_type(prim_type_), index_type(index_type_), indices(0), last_count(0), last_vbo(0) {}
-	//~instance_manager_t() {flush();} // ???
-	bool set_immediate_mode() {immediate_mode = 1;}
-	void flush() {draw(prim_type, last_count, last_vbo, index_type, indices);}
-	void register_draw_call(xform_matrix const *const xf, unsigned count, unsigned vbo=0, void *indices_=NULL);
-	// add transforms?
+	void draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void *indices=NULL);
 };
 
 

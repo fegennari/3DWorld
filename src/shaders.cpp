@@ -575,7 +575,8 @@ void instance_render_t::add_cur_inst() {
 }
 
 
-void instance_render_t::draw(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void *indices) { // indices can be NULL
+// Note: assumes cur_vbo is currently bound by the caller, and will leave it bound after the call
+void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void *indices) { // indices can be NULL
 
 	if (inst_xforms.empty()) return;
 
@@ -605,7 +606,6 @@ void instance_render_t::draw(int prim_type, unsigned count, unsigned cur_vbo, in
 	
 		if (index_type != GL_NONE) { // indexed
 			glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());
-			//glDrawElements(prim_type, count, index_type, indices); // testing
 		}
 		else {
 			assert(indices == NULL);
@@ -614,14 +614,5 @@ void instance_render_t::draw(int prim_type, unsigned count, unsigned cur_vbo, in
 		shader_float_matrix_uploader<4>::disable(loc);
 	}
 	inst_xforms.clear();
-}
-
-
-void instance_manager_t::register_draw_call(xform_matrix const *const xf, unsigned count, unsigned vbo, void *indices_) {
-
-	if (count != last_count || vbo != last_vbo || indices_ != indices) {flush();}
-	last_count = count; last_vbo = vbo; indices = indices_;
-	if (xf) {add_inst(*xf);} else {add_cur_inst();}
-	if (immediate_mode) {flush();}
 }
 

@@ -12,7 +12,7 @@ class sd_sphere_d; // forward reference
 class sd_sphere_vbo_d; // forward reference
 class upsurface;
 class coll_obj_group;
-class instance_manager_t;
+class instance_render_t;
 
 
 class sphere_point_norm { // size = 12
@@ -79,7 +79,7 @@ public:
 	void clear_vbos();
 	void draw_ndiv_pow2(unsigned ndiv);
 	void draw_ndiv_pow2_vbo(unsigned ndiv);
-	void draw_vbo_instanced(unsigned ndiv, instance_manager_t &imgr);
+	void sd_sphere_vbo_d::draw_instances(unsigned ndiv, instance_render_t &inst_render);
 };
 
 
