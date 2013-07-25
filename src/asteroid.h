@@ -7,7 +7,7 @@
 
 #include "universe.h"
 
-unsigned const AF_GRID_SZ = 8;
+unsigned const AF_GRID_SZ = 12;
 
 
 class uasteroid : public uobject, public rotated_obj {

@@ -539,14 +539,15 @@ public:
 		float const radius(max(scale.x, max(scale.y, scale.z)));
 		float const dist(p2p_dist(pos, camera)), dscale(NDIV_SCALE_AST*(radius/(dist + 0.1*radius)));
 		if (dscale < 0.5) return; // too far/small - clip it
+		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
+		uobj_asteroid const *const asteroid(get_asteroid(ix));
 		glPushMatrix();
 		global_translate(pos);
 		if (rot_ang != 0.0) {rotate_about(rot_ang, rot_axis);}
 		scale_by(scale);
-		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
-		uobj_asteroid const *const asteroid(get_asteroid(ix));
-		
-		if (!asteroid->draw_instanced(ndiv)) { // try to draw instanced if enabled, but do a normal draw without resetting the texture if that fails
+
+		// try to draw instanced if enabled, but do a normal draw without resetting the texture if that fails
+		if (!asteroid->draw_instanced(ndiv)) { // FIXME: maybe this case shouldn't exist and we can only create instanceable asteroids?
 			uobj_draw_data ddata(asteroid, s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
 			asteroid->draw_with_texture(ddata, -1, 1);
 		}
