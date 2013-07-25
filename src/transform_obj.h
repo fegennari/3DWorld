@@ -15,6 +15,8 @@ protected:
 
 public:
 	xform_matrix() {load_identity();}
+	xform_matrix(float const *const m_) {assign(m_);}
+	void assign(float const *const m_) {for(unsigned i = 0; i < 16; ++i) {m[i] = m_[i];}}
 	void normalize();
 	void apply() const {glMultMatrixf(m);}
 	void assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  m);}
