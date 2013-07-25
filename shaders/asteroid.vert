@@ -8,14 +8,15 @@ attribute mat4 inst_xform_matrix;
 void main()
 {
 #ifdef USE_CUSTOM_XFORM
-	gl_Position   = (gl_ProjectionMatrix * inst_xform_matrix) * gl_Vertex;
-	normal        = normalize(transpose(inverse(mat3(inst_xform_matrix))) * gl_Normal); // for lighting (FIXME: incorrect?)
+	epos          = inst_xform_matrix * gl_Vertex;
+	gl_Position   = gl_ProjectionMatrix * epos;
+	normal        = normalize(transpose(inverse(mat3(inst_xform_matrix))) * gl_Normal);
 #else
+	epos          = gl_ModelViewMatrix * gl_Vertex;
 	gl_Position   = ftransform();
 	normal        = normalize(gl_NormalMatrix * gl_Normal); // for lighting
 #endif
 	gl_FrontColor = gl_Color;
 	world_normal  = gl_Normal; // for triplanar texturing
-	epos          = gl_ModelViewMatrix * gl_Vertex;
 	vpos          = gl_Vertex.xyz;
 } 
