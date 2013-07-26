@@ -25,14 +25,11 @@ Remove immediate mode calls
 Remove non-shader rendering
 No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
-Replace OpenGL matrix operations with a matrix class
-- For asteroid instancing
 
 Vertex Array Objects
 Better craters - push ground up at the perimeter
 Mesh height high frequency noise
 Texture randomization
-Varied planet cloud brightness, swirly clouds, cloud normals
 
 
  E: 2.9 process_groups()

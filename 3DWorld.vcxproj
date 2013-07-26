@@ -94,7 +94,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>glut-3.7.6-bin;JPEG-6B;glew-1.5.6\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\Targa;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freealut-1.1.0-bin\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20;zlib-1.2.1</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>glut-3.7.6-bin;JPEG-6B;glew-1.5.6\include;Targa;pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;matrix\src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -190,7 +190,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>glut-3.7.6-bin;JPEG-6B;glew-1.5.6\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\Targa;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\freealut-1.1.0-bin\include;C:\Users\Frank E. Gennari\Desktop\Frank\CS184\3DWorld\libpng-1.2.20;zlib-1.2.1</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>glut-3.7.6-bin;JPEG-6B;glew-1.5.6\include;Targa;pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;matrix\src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
