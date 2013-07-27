@@ -47,7 +47,7 @@ void increment_printed_number(unsigned num) {
 }
 
 
-void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
+void add_path_to_lmcs(lmap_manager_t &lmgr, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
 	if (first_pt && ltype == LIGHTING_GLOBAL) weight *= first_ray_weight; // lower weight - handled by direct illumination
 	if (weight < TOLERANCE) return;
@@ -58,7 +58,7 @@ void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &
 	if (!first_pt) p1 += step; // move past the first step so we don't double count
 
 	for (unsigned s = 0; s < nsteps+first_pt; ++s) {
-		lmcell *lmc(lmap_manager.get_lmcell(p1));
+		lmcell *lmc(lmgr.get_lmcell(p1));
 		
 		if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
 			float *color(lmc->get_offset(ltype));
@@ -73,7 +73,7 @@ void add_path_to_lmcs(point p1, point const &p2, float weight, colorRGBA const &
 }
 
 
-void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA color,
+void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, float weight0, colorRGBA color,
 					float line_length, int ignore_cobj, int ltype, unsigned depth, rand_gen_t &rgen)
 {
 	if (depth > MAX_RAY_BOUNCES) return;
@@ -96,7 +96,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	if (depth == 0 && coll && cpos == orig_p1) {
 		if (coll_objects[cindex].line_int_exact(p2, p1, t, cnorm, 0.0, 1.0)) {
 			cpos = (p2 + (p1 - p2)*t);
-			cast_light_ray(cpos, p2, weight, weight0, color, line_length, cindex, ltype, depth+1, rgen);
+			cast_light_ray(lmgr, cpos, p2, weight, weight0, color, line_length, cindex, ltype, depth+1, rgen);
 			return;
 		}
 	}
@@ -157,7 +157,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
 	// walk from p1 to p2, adding light to all lightmap cells encountered
-	add_path_to_lmcs(p1, p2, weight, color, ltype, (depth == 0));
+	add_path_to_lmcs(lmgr, p1, p2, weight, color, ltype, (depth == 0));
 	//if (!coll)    return;
 	if (p1 == p2) return; // line must have started inside a cobj - this is bad, but what can we do?
 
@@ -241,7 +241,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 						// test for collision with reversed ray to get the other intersection point
 						if (cobj.line_int_exact(p_end, p2, t, cnorm2, 0.0, 1.0)) { // not sure what to do if fails or tmax >= 1.0
 							point const p_int(p_end + (p2 - p_end)*t);
-							if (!dist_less_than(p2, p_int, get_step_size())) add_path_to_lmcs(p2, p_int, weight, color, ltype, (depth == 0));
+							if (!dist_less_than(p2, p_int, get_step_size())) {add_path_to_lmcs(lmgr, p2, p_int, weight, color, ltype, (depth == 0));}
 							
 							if (calc_refraction_angle(v_refract, v_refract2, -cnorm2, cobj.cp.refract_ix, 1.0)) {
 								p2    = p_int;
@@ -258,7 +258,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 						no_transmit = 1; // total internal reflection (could process an internal reflection)
 					}
 				}
-				if (!no_transmit) cast_light_ray(p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1, rgen); // transmitted
+				if (!no_transmit) cast_light_ray(lmgr, p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1, rgen); // transmitted
 			}
 			weight *= rweight; // reflected weight
 		}
@@ -278,7 +278,7 @@ void cast_light_ray(point p1, point p2, float weight, float weight0, colorRGBA c
 		if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
 		vector3d const v_new((v_ref*specular + new_v*(1.0 - specular)).get_norm());
 		p2 = p1 + v_new*line_length; // ending point: effectively at infinity
-		cast_light_ray(cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1, rgen);
+		cast_light_ray(lmgr, cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1, rgen);
 	}
 }
 
@@ -287,8 +287,9 @@ struct rt_data {
 	unsigned ix, num;
 	int rseed;
 	bool is_thread, verbose, randomized;
+	lmap_manager_t *lmgr;
 
-	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0) : ix(i), num(n), rseed(s), is_thread(t), verbose(v), randomized(r) {}
+	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0) : ix(i), num(n), rseed(s), is_thread(t), verbose(v), randomized(r), lmgr(NULL) {}
 };
 
 
@@ -364,6 +365,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 	for (unsigned t = 0; t < data.size(); ++t) {
 		// create a custom lmap_manager_t for each thread then merge them together?
 		data[t] = rt_data(t, num_threads, 234323*(t+1), !single_thread, (verbose && t == 0), randomized);
+		data[t].lmgr = &lmap_manager;
 	}
 	if (single_thread && blocking) { // pthreads disabled
 		start_func((void *)(&data[0]));
@@ -385,16 +387,16 @@ bool cube_light_src_vect::ray_intersects_any(point const &start_pt, point const 
 }
 
 
-void trace_one_global_ray(point const &pos, point const &pt, colorRGBA const &color, float ray_wt,
+void trace_one_global_ray(lmap_manager_t &lmgr, point const &pos, point const &pt, colorRGBA const &color, float ray_wt,
 	int ltype, bool is_scene_cube, rand_gen_t &rgen, float line_length)
 {
 	point const end_pt(pt + (pt - pos).get_norm()*line_length);
 	if (is_scene_cube && global_cube_lights.ray_intersects_any(pt, end_pt)) return; // don't double count
-	cast_light_ray(pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0, rgen);
+	cast_light_ray(lmgr, pos, end_pt, ray_wt, ray_wt, color, line_length, -1, ltype, 0, rgen);
 }
 
 
-void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA const &color, float ray_wt,
+void trace_ray_block_global_cube(lmap_manager_t &lmgr, cube_t const &bnds, point const &pos, colorRGBA const &color, float ray_wt,
 	unsigned nrays, int ltype, unsigned disabled_edges, bool is_scene_cube, bool verbose, bool randomized, rand_gen_t &rgen)
 {
 	float const line_length(2.0*get_scene_radius());
@@ -425,7 +427,7 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 				if (verbose && ((s%1000) == 0)) increment_printed_number(s/1000);
 				pt[d0] = rgen.rand_uniform(bnds.d[d0][0], bnds.d[d0][1]);
 				pt[d1] = rgen.rand_uniform(bnds.d[d1][0], bnds.d[d1][1]);
-				trace_one_global_ray(pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, line_length);
+				trace_one_global_ray(lmgr, pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, line_length);
 			}
 		}
 		else {
@@ -443,7 +445,7 @@ void trace_ray_block_global_cube(cube_t const &bnds, point const &pos, colorRGBA
 					if (kill_raytrace) break;
 					if (verbose && ((num%1000) == 0)) increment_printed_number(num/1000);
 					pt[d1] = bnds.d[d1][0] + (s1 + rgen.rand_uniform(0.0, 1.0))*len1/n1;
-					trace_one_global_ray(pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, line_length);
+					trace_one_global_ray(lmgr, pos, pt, color, ray_wt, ltype, is_scene_cube, rgen, line_length);
 				}
 			}
 		}
@@ -457,7 +459,7 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	if (pos.z < 0.0 || weight == 0.0 || color.alpha == 0.0) return; // below the horizon or zero weight, skip it
 	assert(ptr);
 	rt_data *data(static_cast<rt_data *>(ptr));
-	assert(data->num > 0);
+	assert(data->lmgr && data->num > 0);
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
 	unsigned long long cube_start_rays(0);
@@ -466,14 +468,14 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 		float const ray_wt(RAY_WEIGHT*weight*color.alpha/GLOBAL_RAYS);
 		assert(ray_wt > 0.0);
 		cube_t const bnds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
-		trace_ray_block_global_cube(bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose, data->randomized, rgen);
+		trace_ray_block_global_cube(*data->lmgr, bnds, pos, color, ray_wt, max(1U, GLOBAL_RAYS/data->num), LIGHTING_GLOBAL, 0, 1, data->verbose, data->randomized, rgen);
 	}
 	for (cube_light_src_vect::const_iterator i = global_cube_lights.begin(); i != global_cube_lights.end(); ++i) {
 		if (data->num == 0 || i->num_rays == 0) continue; // disabled
 		if (data->verbose) cout << "Cube volume light source " << (i - global_cube_lights.begin()) << " of " << global_cube_lights.size() << endl;
 		unsigned const num_rays(i->num_rays/data->num);
 		float const cube_weight(RAY_WEIGHT*weight*i->intensity/i->num_rays);
-		trace_ray_block_global_cube(i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose, data->randomized, rgen);
+		trace_ray_block_global_cube(*data->lmgr, i->bounds, pos, color, cube_weight, num_rays, LIGHTING_GLOBAL, i->disabled_edges, 0, data->verbose, data->randomized, rgen);
 		cube_start_rays += num_rays;
 	}
 	if (data->verbose) {
@@ -500,7 +502,7 @@ void *trace_ray_block_sky(void *ptr) {
 
 	assert(ptr);
 	rt_data *data(static_cast<rt_data *>(ptr));
-	assert(data->num > 0);
+	assert(data->lmgr && data->num > 0);
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
@@ -537,7 +539,7 @@ void *trace_ray_block_sky(void *ptr) {
 				if (dot_product(dirs[r], pt) >= 0.0) continue; // can get here when (-Z_SCENE_SIZE, Z_SCENE_SIZE) does not contain (czmin, czmax)
 				point const end_pt(pt + dirs[r]*line_length);
 				if (sky_cube_lights.ray_intersects_any(pt, end_pt)) continue; // don't double count
-				cast_light_ray(pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 0, rgen);
+				cast_light_ray(*data->lmgr, pt, end_pt, ray_wt, ray_wt, WHITE, line_length, -1, LIGHTING_SKY, 0, rgen);
 				++start_rays;
 			}
 		}
@@ -558,7 +560,7 @@ void *trace_ray_block_sky(void *ptr) {
 			vector3d dir(signed_rand_vector_norm());
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
 			point const end_pt(pt + dir*line_length);
-			cast_light_ray(pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0, rgen);
+			cast_light_ray(*data->lmgr, pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0, rgen);
 		}
 		if (data->verbose) cout << endl;
 	}
@@ -570,7 +572,7 @@ void *trace_ray_block_sky(void *ptr) {
 }
 
 
-void ray_trace_local_light_source(light_source const &ls, float line_length, unsigned num_rays, rand_gen_t &rgen) {
+void ray_trace_local_light_source(lmap_manager_t &lmgr, light_source const &ls, float line_length, unsigned num_rays, rand_gen_t &rgen) {
 
 	point const &lpos(ls.get_center());
 	colorRGBA lcolor(ls.get_color());
@@ -602,7 +604,7 @@ void ray_trace_local_light_source(light_source const &ls, float line_length, uns
 			start_pt = lpos + dir*r_inner;
 		}
 		point const end_pt(start_pt + dir*line_length);
-		cast_light_ray(start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, LIGHTING_LOCAL, 0, rgen);
+		cast_light_ray(lmgr, start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, LIGHTING_LOCAL, 0, rgen);
 	}
 }
 
@@ -612,7 +614,7 @@ void *trace_ray_block_local(void *ptr) {
 	assert(ptr);
 	if (LOCAL_RAYS == 0) return 0; // nothing to do
 	rt_data *data(static_cast<rt_data *>(ptr));
-	assert(data->num > 0);
+	assert(data->lmgr && data->num > 0);
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
@@ -624,7 +626,7 @@ void *trace_ray_block_local(void *ptr) {
 	}
 	for (unsigned i = 0; i < light_sources.size(); ++i) {
 		if (data->verbose) increment_printed_number(i);
-		ray_trace_local_light_source(light_sources[i], line_length, num_rays, rgen);
+		ray_trace_local_light_source(*data->lmgr, light_sources[i], line_length, num_rays, rgen);
 	}
 	if (data->verbose) cout << endl;
 	return 0;
