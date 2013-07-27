@@ -10,6 +10,11 @@ void main()
 	vec4 color = gl_FrontMaterial.emission;
 	vec3 norm_normal = normalize(normal);
 
+#ifdef HAS_CRATERS
+	if (dot(norm_normal, normalize(gl_LightSource[0].position.xyz - epos.xyz)) > 0.0) { // facing the sun
+		adjust_normal_for_craters(norm_normal, vpos); // add craters by modifying the normal
+	}
+#endif
 	for (int i = 0; i < 2; ++i) { // sun_diffuse, galaxy_ambient
 		color += add_pt_light_comp(norm_normal, epos, i);
 	}

@@ -14,12 +14,16 @@
 
 
 bool     const ENABLE_AF_INSTS  = 1; // more efficient on large asteroid fields, but less efficient when close/sparse (due to overhead), and normals are incorrect
+bool     const ENABLE_CRATERS   = 1;
 unsigned const ASTEROID_NDIV    = 32; // for sphere model, better if a power of 2
 unsigned const ASTEROID_VOX_SZ  = 64; // for voxel model
 unsigned const AST_VOX_NUM_BLK  = 2; // ndiv=2x2
 unsigned const NUM_VOX_AST_LODS = 3;
 float    const AST_COLL_RAD     = 0.25; // limit collisions of large objects for accuracy (heightmap)
 float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader asteroids
+
+unsigned const DEFAULT_AST_TEX  = ROCK_TEX; // MOON_TEX
+unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 
 
 extern int animate2, display_mode;
@@ -501,7 +505,7 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 
 unsigned const AST_FIELD_MODEL   = AS_MODEL_HMAP;
 unsigned const NUM_AST_MODELS    = 100;
-unsigned const AST_FLD_MAX_NUM   = 1000;
+unsigned const AST_FLD_MAX_NUM   = 1200;
 float    const AST_RADIUS_SCALE  = 0.04;
 float    const AST_AMBIENT_SCALE = 20.0;
 float    const AST_AMBIENT_VAL   = 0.15;
@@ -526,7 +530,7 @@ public:
 		asteroids.resize(num);
 
 		for (unsigned i = 0; i < num; ++i) { // create at the origin with radius=1
-			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, MOON_TEX/*ROCK_TEX*/, i);
+			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, DEFAULT_AST_TEX, i);
 		}
 		PRINT_TIME("Asteroid Model Gen");
 	}
@@ -671,10 +675,13 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 void uasteroid_field::begin_render(shader_t &shader) {
 
 	if (!shader.is_setup()) {
+		if (ENABLE_CRATERS) {shader.set_prefix("#define HAS_CRATERS", 1);} // FS
 		if (ENABLE_AF_INSTS) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid");
-		shader.set_frag_shader("ads_lighting.part*+triplanar_texture.part+asteroid");
+		string frag_shader_str("ads_lighting.part*+triplanar_texture.part");
+		if (ENABLE_CRATERS) {frag_shader_str += "+rand_gen.part*+craters.part";}
+		shader.set_frag_shader(frag_shader_str + "+asteroid");
 		shader.begin_shader();
 		shader.add_uniform_int("tex0", 0);
 		shader.add_uniform_float("tex_scale", 0.5);
@@ -682,6 +689,7 @@ void uasteroid_field::begin_render(shader_t &shader) {
 	shader.enable();
 	set_fill_mode();
 	glEnable(GL_LIGHTING);
+	glEnable(GL_CULL_FACE);
 	colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
 	int const light(GL_LIGHT0);
 	glLightfv(light, GL_AMBIENT, &acolor.R);
@@ -694,6 +702,7 @@ void uasteroid_field::end_render(shader_t &shader) {
 
 	shader.disable();
 	end_texture();
+	glDisable(GL_CULL_FACE);
 	glDisable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D); // may not be required
 }
@@ -809,9 +818,6 @@ bool rand_spawn_mixin::needs_respawned() const {
 
 	return !dist_less_than(obj_pos, get_player_pos(), (univ_sphere_vis(obj_pos, obj_radius) ? 2.0 : 1.1)*max_cdist); // further if visible
 }
-
-
-unsigned const comet_tids[2] = {ROCK_SPHERE_TEX, ICE_TEX};
 
 
 uobject_rand_spawn_t *uobject_rand_spawn_t::create(unsigned type, float radius_, float dmax, float vmag) {

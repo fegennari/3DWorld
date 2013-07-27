@@ -35,8 +35,6 @@ Mesh height high frequency noise
 Texture randomization
 
 Indir sun lighting incremental update
-Asteroid craters
-Asteroid texture
 
 
  E: 2.9 process_groups()
