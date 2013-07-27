@@ -35,7 +35,6 @@ Mesh height high frequency noise
 Texture randomization
 
 Indir sun lighting incremental update
-Noise cloud layer for gas giants
 Asteroid craters
 Asteroid texture
 

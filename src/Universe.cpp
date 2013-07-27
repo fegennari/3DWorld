@@ -245,13 +245,14 @@ public:
 		add_uniform_vector3d("rscale",   svars.rscale);
 		add_uniform_float("ring_ri",     svars.ring_ri);
 		add_uniform_float("ring_ro",     svars.ring_ro);
-		add_uniform_float("noise_scale", 4.0*body.cloud_scale); // clouds
+		add_uniform_float("noise_scale", 4.0*body.cloud_scale); // clouds / gas giant noise
 		
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
 			add_uniform_float("water_val",  body.water);
 			add_uniform_float("lava_val",   body.lava);
 		}
-		set_planet_uniforms(body.atmos, svars, use_light2);
+		add_uniform_vector3d("cloud_freq", (body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 1.0)));
+		set_planet_uniforms((body.gas_giant ? 0.5 : 1.0)*body.atmos, svars, use_light2);
 		return 1;
 	}
 	void disable_planet() {
