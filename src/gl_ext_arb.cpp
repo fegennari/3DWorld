@@ -112,40 +112,31 @@ void setup_fog_coord() {
 	}
 }
 
-
 void set_fog_coord(GLfloat val) {
 	glFogCoordf(val);
 }
 
-void enable_fog_coord() {
-	glFogi(GL_FOG_COORDINATE_SOURCE, GL_FOG_COORDINATE);
-}
 
-void disable_fog_coord() {
-	glFogi(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH); // is this correct?
-}
-
-
-// ***************** VBOs *****************
+// ***************** VBOs / VAOs *****************
 
 
 unsigned create_vbo() {
-	unsigned id;
+	unsigned vbo;
 	assert(glGenBuffers);
-	glGenBuffers(1, &id);
-	assert(id > 0);
-	return id;
+	glGenBuffers(1, &vbo);
+	assert(vbo > 0);
+	return vbo;
 }
 
 int get_buffer_target(bool is_index) {return (is_index ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER);}
 
-void bind_vbo(unsigned id, bool is_index) {
-	glBindBuffer(get_buffer_target(is_index), id);
+void bind_vbo(unsigned vbo, bool is_index) { // okay if vbo is zero
+	glBindBuffer(get_buffer_target(is_index), vbo);
 }
 
-void delete_vbo(unsigned id) {
-	if (id == 0) return;
-	glDeleteBuffers(1, &id);
+void delete_vbo(unsigned vbo) {
+	if (vbo == 0) return;
+	glDeleteBuffers(1, &vbo);
 }
 
 void upload_vbo_data(void const *const data, size_t size, bool is_index) {
@@ -155,6 +146,24 @@ void upload_vbo_data(void const *const data, size_t size, bool is_index) {
 
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index) {
 	glBufferSubData(get_buffer_target(is_index), offset, size, data);
+}
+
+
+unsigned create_vao() {
+	unsigned vao;
+	assert(glGenVertexArrays);
+	glGenVertexArrays(1, &vao); 
+	assert(vao > 0);
+	return vao;
+}
+
+void bind_vao(unsigned vao) { // okay if vao is zero
+	glBindVertexArray(vao);
+}
+
+void delete_vao(unsigned vao) {
+	if (vao == 0) return;
+	glDeleteVertexArrays(1, &vao);
 }
 
 
@@ -195,7 +204,6 @@ void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
 
 
 void disable_fbo() {
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

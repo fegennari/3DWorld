@@ -38,15 +38,16 @@ void set_3d_texture_as_current(unsigned tid, unsigned tu_id);
 // fog coord prototypes
 void setup_fog_coord();
 void set_fog_coord(GLfloat val);
-void enable_fog_coord();
-void disable_fog_coord();
 
 // gl_ext_arb
 unsigned create_vbo();
-void bind_vbo(unsigned id, bool is_index=0);
-void delete_vbo(unsigned id);
+void bind_vbo(unsigned vbo, bool is_index=0);
+void delete_vbo(unsigned vbo);
 void upload_vbo_data(void const *const data, size_t size, bool is_index=0);
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index=0);
+unsigned create_vao();
+void bind_vao(unsigned vao);
+void delete_vao(unsigned vao);
 void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo);
 void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo);
 void disable_fbo();

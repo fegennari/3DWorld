@@ -15,6 +15,7 @@ Parallax mapping
 Hardware tessellation
 God Rays
 Run leak detection
+Use assimp?
 
 Convert remaining raw textures to jpeg
 
@@ -25,11 +26,18 @@ Remove immediate mode calls
 Remove non-shader rendering
 No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
+Replace GL matrix operations with something else
+ - GLM
 
 Vertex Array Objects
 Better craters - push ground up at the perimeter
 Mesh height high frequency noise
 Texture randomization
+
+Indir sun lighting incremental update
+Noise cloud layer for gas giants
+Asteroid craters
+Asteroid texture
 
 
  E: 2.9 process_groups()
