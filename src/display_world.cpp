@@ -40,7 +40,7 @@ float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, indir_lighting_updated;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop;
@@ -982,6 +982,10 @@ void display(void) {
 		}
 		if (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1)) {
 			draw_compass_and_alt();
+		}
+		if (indir_lighting_updated) {
+			PURPLE.do_glColor();
+			draw_text(0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");
 		}
 		if (TIMETEST) PRINT_TIME("X");
 
