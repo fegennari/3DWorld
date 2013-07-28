@@ -51,6 +51,7 @@ void add_path_to_lmcs(lmap_manager_t &lmgr, point p1, point const &p2, float wei
 
 	if (first_pt && ltype == LIGHTING_GLOBAL) weight *= first_ray_weight; // lower weight - handled by direct illumination
 	if (weight < TOLERANCE) return;
+	assert(lmgr.is_allocated());
 	colorRGBA const cw(color*weight);
 	float const dist(p2p_dist(p1, p2)); // dist can be 0
 	unsigned const nsteps(1 + unsigned(dist/get_step_size())); // round up
@@ -344,10 +345,10 @@ public:
 };
 
 thread_manager_t<rt_data> thread_manager;
+lmap_manager_t thread_temp_lmap;
 
 
-// see https://computing.llnl.gov/tutorials/pthreads/
-void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool randomized) {
+void kill_current_raytrace_threads() {
 
 	if (thread_manager.is_active()) { // can't have two running at once, so kill the existing one
 		kill_raytrace = 1;
@@ -355,12 +356,20 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 		assert(!thread_manager.is_active());
 		kill_raytrace = 0;
 	}
+}
+
+
+// see https://computing.llnl.gov/tutorials/pthreads/
+void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool randomized) {
+
+	kill_current_raytrace_threads();
 	assert(num_threads > 0 && num_threads < 100);
 	assert(!keep_beams || num_threads == 1); // could use a pthread_mutex_t instead to make this legal
 	bool const single_thread(num_threads == 1);
 	if (verbose) cout << "Computing lighting on " << num_threads << " threads." << endl;
 	thread_manager.create(num_threads);
 	vector<rt_data> &data(thread_manager.data);
+	//thread_temp_lmap.init_from(lmap_manager);
 
 	for (unsigned t = 0; t < data.size(); ++t) {
 		// create a custom lmap_manager_t for each thread then merge them together?

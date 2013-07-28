@@ -63,6 +63,7 @@ struct lmcell { // size = 56
 	static unsigned get_dsz(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? 3 : 4);}
 	void get_final_color(colorRGB &color, float max_indir, float indir_scale=1.0, float extra_ambient=0.0) const;
 	void set_outside_colors();
+	void mix_lighting_with(lmcell const &lmc, float val);
 };
 
 
@@ -70,20 +71,26 @@ class lmap_manager_t {
 
 	vector<lmcell> vldata_alloc;
 	unsigned lm_zsize;
+	lmcell ***vlmap; // y, x, z (size is determined by {MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE}
+
+	lmap_manager_t(lmap_manager_t const &); // forbidden
+	void operator=(lmap_manager_t const &); // forbidden
 
 public:
-	lmcell ***vlmap; // y, x, z
-
 	lmap_manager_t() : lm_zsize(0), vlmap(NULL) {}
-	void clear() {vldata_alloc.clear();} // reset vlmap to NULL?
-	bool is_allocated() const {return (vlmap != NULL);}
+	void clear_cells() {vldata_alloc.clear();} // vlmap matrix headers are not cleared
+	bool is_allocated() const {return (vlmap != NULL && !vldata_alloc.empty());}
 	size_t size() const {return vldata_alloc.size();}
 	bool read_data_from_file(char const *const fn, int ltype);
 	bool write_data_to_file(char const *const fn, int ltype) const;
 	void clear_lighting_values(int ltype);
 	bool is_valid_cell(int x, int y, int z) const;
+	lmcell *get_column(int x, int y) {return vlmap[y][x];} // Note: no bounds checking
+	lmcell &get_lmcell(int x, int y, int z) {return get_column(x, y)[z];} // Note: no bounds checking
 	lmcell *get_lmcell(point const &p);
-	void alloc(unsigned nbins, unsigned zsize, unsigned char **need_lmcell);
+	template<typename T> void alloc(unsigned nbins, unsigned zsize, T **nonempty_bins);
+	void init_from(lmap_manager_t const &src);
+	void copy_data(lmap_manager_t const &src, float blend_weight=1.0);
 };
 
 

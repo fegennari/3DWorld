@@ -368,18 +368,18 @@ lmcell *lmap_manager_t::get_lmcell(point const &p) {
 }
 
 
-void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, unsigned char **need_lmcell) {
+template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, T **nonempty_bins) {
 
-	assert(need_lmcell != NULL);
-	if (vlmap == NULL) matrix_gen_2d(vlmap);
+	assert(nonempty_bins != NULL);
+	if (vlmap == NULL) {matrix_gen_2d(vlmap);} // create column headers once
 	lm_zsize = zsize;
-	vldata_alloc.resize(nbins);
+	vldata_alloc.resize(max(nbins, 1U)); // make size at least 1, even if there are no bins, so we can test on emptiness
 	unsigned cur_v(0);
 
 	// initialize lightmap
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			if (!need_lmcell[i][j]) {
+			if (!nonempty_bins[i][j]) {
 				vlmap[i][j] = NULL;
 				continue;
 			}
@@ -388,7 +388,54 @@ void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, unsigned char **need_
 			cur_v      += lm_zsize;
 		}
 	}
-	assert(cur_v == vldata_alloc.size());
+	assert(cur_v == nbins);
+}
+
+
+void lmap_manager_t::init_from(lmap_manager_t const &src) {
+
+	//assert(!is_allocated());
+	clear_cells(); // probably unnecessary
+	alloc(src.vldata_alloc.size(), src.lm_zsize, src.vlmap);
+	copy_data(src);
+}
+
+
+// *this = blend_weight*dest + (1.0 - blend_weight)*(*this)
+void lmap_manager_t::copy_data(lmap_manager_t const &src, float blend_weight) {
+
+	assert(vlmap && src.vlmap);
+	assert(src.lm_zsize == lm_zsize);
+	assert(src.vldata_alloc.size() == vldata_alloc.size());
+	assert(blend_weight >= 0.0);
+	if (blend_weight == 0.0) return; // keep existing dest
+
+	if (blend_weight == 1.0) {
+		vldata_alloc = src.vldata_alloc; // deep copy all lmcell data
+		return;
+	}
+	for (int i = 0; i < MESH_Y_SIZE; ++i) { // FIXME: openmp?
+		for (int j = 0; j < MESH_X_SIZE; ++j) {
+			if (!vlmap[i][j]) {assert(!src.vlmap[i][j]); continue;}
+			assert(src.vlmap[i][j]);
+			
+			for (unsigned z = 0; z < lm_zsize; ++z) {
+				vlmap[i][j][z].mix_lighting_with(src.vlmap[i][j][z], blend_weight);
+			}
+		}
+	}
+}
+
+
+// *this = val*lmc + (1.0 - val)*(*this)
+void lmcell::mix_lighting_with(lmcell const &lmc, float val) {
+
+	float const omv(1.0 - val); // Note: we ignore the flow values and smoke for now
+	sv = val*lmc.sv + omv*sv;
+	gv = val*lmc.gv + omv*gv;
+	UNROLL_3X(sc[i_] = val*lmc.sc[i_] + omv*sc[i_];)
+	UNROLL_3X(gc[i_] = val*lmc.gc[i_] + omv*gc[i_];)
+	UNROLL_3X(lc[i_] = val*lmc.lc[i_] + omv*lc[i_];)
 }
 
 
@@ -425,9 +472,10 @@ float get_flow_val(CELL_LOC_T const from[3], CELL_LOC_T const to[3]) { // 'from'
 		if (dmin < 0) break;
 		bool const positive(to[di] > cur[di]);
 		if (!positive) --cur[di]; // step backwards first then calc flow
+		lmcell const *const vlm(lmap_manager.get_column(cur[0], cur[1]));
 		
-		if (lmap_manager.vlmap[cur[1]][cur[0]]) {
-			float const fval(lmap_manager.vlmap[cur[1]][cur[0]][cur[2]].lflow[di]/255.0);
+		if (vlm) {
+			float const fval(vlm[cur[2]].lflow[di]/255.0);
 			mult_flow *= fval;
 			max_flow   = min(max_flow, fval);
 		}
@@ -459,18 +507,19 @@ void shift_lightmap(vector3d const &vd) {
 
 void regen_lightmap() {
 
-	assert(lmap_manager.vlmap != NULL);
+	assert(lmap_manager.is_allocated());
 	clear_lightmap();
-	//assert(lmap_manager.vlmap == NULL);
+	assert(!lmap_manager.is_allocated());
 	build_lightmap(0);
-	assert(lmap_manager.vlmap != NULL);
+	assert(lmap_manager.is_allocated());
 }
 
 
 void clear_lightmap() {
 
-	if (lmap_manager.vlmap == NULL) return;
-	lmap_manager.clear();
+	if (!lmap_manager.is_allocated()) return;
+	kill_current_raytrace_threads(); // kill raytrace threads and wait for them to finish since they are using the current lightmap
+	lmap_manager.clear_cells();
 	using_lightmap = 0;
 	lm_alloc       = 0;
 	czmin0         = czmin;
@@ -482,7 +531,7 @@ void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int
 {
 	assert(zstep > 0.0);
 	if (z_light_depth) z_light_depth[i][j] = MESH_SIZE[2];
-	lmcell *vldata(lmap_manager.vlmap[i][j]);
+	lmcell *vldata(lmap_manager.get_column(j, i));
 	if (vldata == NULL) return;
 	float const bbz[2][2] = {{get_xval(j), get_xval(j+1)}, {get_yval(i), get_yval(i+1)}}; // X x Y
 	coll_cell const &cell(v_collision_matrix[i][j]);
@@ -669,9 +718,9 @@ void build_lightmap(bool verbose) {
 	assert(zstep > 0.0);
 	float const z_atten(1.0 - (1.0 - Z_LT_ATTEN)/scene_scale), xy_atten(1.0 - (1.0 - XY_LT_ATTEN)/scene_scale);
 	lmap_manager.alloc(nbins, zsize, need_lmcell);
+	assert(ldynamic && lmap_manager.is_allocated());
 	using_lightmap = (nonempty > 0);
 	lm_alloc       = 1;
-	assert(ldynamic && lmap_manager.vlmap);
 	int **z_light_depth = NULL;
 	matrix_gen_2d(z_light_depth);
 	if (verbose) PRINT_TIME(" Lighting Setup");
@@ -720,7 +769,7 @@ void build_lightmap(bool verbose) {
 						assert(!point_outside_mesh(i[0], i[1]));
 						coll_cell const &cell(v_collision_matrix[i[1]][i[0]]);
 						unsigned const ncv((unsigned)cell.cvals.size());
-						lmcell *vlm(lmap_manager.vlmap[i[1]][i[0]]);
+						lmcell *vlm(lmap_manager.get_column(i[0], i[1]));
 
 						if (vlm == NULL) { // no cobjs
 							for (int v = zsize-1; v >= 0; --v) {
@@ -753,7 +802,6 @@ void build_lightmap(bool verbose) {
 								}
 							} // for c
 						} // if ncv > 0
-						//assert(vlm <= &vldata_alloc[lmap_manager.size() - zsize]);
 						float const m_height(mesh_height[i[1]][i[0]]);
 						int const zl_depth(z_light_depth[i[1]][i[0]]);
 
@@ -808,7 +856,7 @@ void build_lightmap(bool verbose) {
 
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-					assert(lmap_manager.vlmap[y][x]);
+					assert(lmap_manager.get_column(x, y));
 					float const xv(get_xval(x)), yv(get_yval(y));
 
 					for (int z = bnds[2][0]; z <= bnds[2][1]; ++z) {
@@ -833,7 +881,7 @@ void build_lightmap(bool verbose) {
 						}
 						cscale *= SLT_LINE_TEST_WT*flow[0] + SLT_FLOW_TEST_WT*flow[1];
 						if (cscale < CTHRESH) continue;
-						lmcell &lmc(lmap_manager.vlmap[y][x][z]);
+						lmcell &lmc(lmap_manager.get_lmcell(x, y, z));
 						UNROLL_3X(lmc.lc[i_] = min(1.0f, (lmc.lc[i_] + cscale*lcolor[i_]));) // what about diffuse/normals?
 					} // for z
 				} // for x
@@ -849,7 +897,7 @@ void build_lightmap(bool verbose) {
 		for (unsigned n = 0; n < NUM_LT_SMOOTH; ++n) { // low pass filter light, bleed to adjacent cells
 			for (int i = 0; i < MESH_Y_SIZE; ++i) {
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					lmcell *vlm(lmap_manager.vlmap[i][j]);
+					lmcell *vlm(lmap_manager.get_column(j, i));
 					if (vlm == NULL) continue;
 
 					for (int v = 0; v < (int)zsize; ++v) {
@@ -860,7 +908,7 @@ void build_lightmap(bool verbose) {
 
 						for (int k = max(0, i-1); k < min(MESH_Y_SIZE-1, i+1); ++k) {
 							for (int l = max(0, j-1); l < min(MESH_X_SIZE-1, j+1); ++l) {
-								if (lmap_manager.vlmap[k][l] == NULL) continue;
+								if (lmap_manager.get_column(l, k) == NULL) continue;
 
 								for (int m = max(0, v-1); m < min((int)zsize-1, v+1); ++m) {
 									unsigned const nsame((k == i) + (l == j) + (m == v));
@@ -868,9 +916,9 @@ void build_lightmap(bool verbose) {
 									unsigned const dim((k!=i) ? 1 : ((l!=j) ? 0 : 2)); // x, y, z
 									unsigned const ix((l>j)?(j+1):j), iy((k>i)?(i+1):i), iz((m>v)?(v+1):v);
 									bool const oob((int)ix >= MESH_X_SIZE || (int)iy >= MESH_Y_SIZE || iz >= zsize); // out of bounds
-									float flow(oob ? 1.0 : lmap_manager.vlmap[iy][ix][iz].lflow[dim]/255.0);
+									float flow(oob ? 1.0 : lmap_manager.get_lmcell(ix, iy, iz).lflow[dim]/255.0);
 									if (flow <= 0.0) continue;
-									lmcell &lm(lmap_manager.vlmap[k][l][m]);
+									lmcell &lm(lmap_manager.get_lmcell(l, k, m));
 									flow  *= lscales[nsame];
 									lm.sv += flow*vlmv;
 									UNROLL_3X(lm.lc[i_] = min(1.0f, (lm.lc[i_] + flow*color[i_]));) // assumes color.alpha is always either 0.0 or 1.0
@@ -904,7 +952,7 @@ void build_lightmap(bool verbose) {
 
 void update_flow_for_voxels(cube_t const &cube) {
 
-	if (!lm_alloc || !lmap_manager.vlmap) return;
+	if (!lm_alloc || !lmap_manager.is_allocated()) return;
 	int const cx1(max(0, get_xpos(cube.d[0][0]))), cx2(min(MESH_X_SIZE-1, get_xpos(cube.d[0][1])));
 	int const cy1(max(0, get_ypos(cube.d[1][0]))), cy2(min(MESH_Y_SIZE-1, get_ypos(cube.d[1][1])));
 	float const zstep(calc_czspan()/MESH_SIZE[2]);
@@ -1299,8 +1347,8 @@ void get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 void get_sd_light(int x, int y, int z, float *ls) {
 
 	if (lm_alloc && using_lightmap && !light_sources.empty() && lmap_manager.is_valid_cell(x, y, z)) {
-		assert(lmap_manager.vlmap);
-		float const *const lcolor(lmap_manager.vlmap[y][x][z].lc);
+		assert(lmap_manager.is_allocated());
+		float const *const lcolor(lmap_manager.get_lmcell(x, y, z).lc);
 		ADD_LIGHT_CONTRIB(lcolor, ls);
 	}
 }
@@ -1310,7 +1358,7 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic) {
 
 	float val(get_voxel_terrain_ao_lighting_val(p)); // shift p?
 	if (!lm_alloc) return val;
-	assert(lmap_manager.vlmap);
+	assert(lmap_manager.is_allocated());
 	bool outside_mesh(0);
 	colorRGB cscale(cur_ambient);
 	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
@@ -1322,8 +1370,8 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic) {
 		outside_mesh = is_under_mesh(p);
 		if (outside_mesh) val = 0.0; // under all collision objects (is this correct?)
 	}
-	else if (using_lightmap && p.z < czmax && lmap_manager.vlmap[y][x] != NULL) { // not above all collision objects and not empty cell
-		lmcell const &lmc(lmap_manager.vlmap[y][x][z]);
+	else if (using_lightmap && p.z < czmax && lmap_manager.get_column(x, y) != NULL) { // not above all collision objects and not empty cell
+		lmcell const &lmc(lmap_manager.get_lmcell(x, y, z));
 		lmc.get_final_color(cscale, 0.5, val);
 		val *= lmc.sv + lmc.gv;
 	}

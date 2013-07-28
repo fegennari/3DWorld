@@ -114,7 +114,7 @@ void diffuse_smoke(int x, int y, int z, lmcell &adj, float pos_rate, float neg_r
 	float delta(0.0); // Note: not using fticks due to instability
 	
 	if (lmap_manager.is_valid_cell(x, y, z)) {
-		lmcell &lmc(lmap_manager.vlmap[y][x][z]);
+		lmcell &lmc(lmap_manager.get_lmcell(x, y, z));
 		unsigned char const flow(dir ? adj.pflow[dim] : lmc.pflow[dim]);
 		if (flow == 0) return;
 		float const cur_smoke(lmc.smoke);
@@ -158,7 +158,7 @@ void distribute_smoke() { // called at most once per frame
 	// openmp doesn't really help here
 	for (int y = cur_skip; y < MESH_Y_SIZE; y += SMOKE_SKIPVAL) { // split the computation across several frames
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			lmcell *vldata(lmap_manager.vlmap[y][x]);
+			lmcell *vldata(lmap_manager.get_column(x, y));
 			if (vldata == NULL) continue;
 			
 			for (int z = 0; z < MESH_SIZE[2]; ++z) {
@@ -192,7 +192,7 @@ float get_smoke_at_pos(point const &pos) {
 	if (pos.z <= czmin0 || pos.z >= czmax) return 0.0;
 	int const x(get_xpos(pos.x)), y(get_ypos(pos.y)), z(get_zpos(pos.z));
 	if (point_outside_mesh(x, y) || z < 0 || z >= MESH_SIZE[2]) return 0.0;
-	lmcell const *const vldata(lmap_manager.vlmap[y][x]);
+	lmcell const *const vldata(lmap_manager.get_column(x, y));
 	return ((vldata == NULL) ? 0.0 : vldata[z].smoke);
 }
 
@@ -211,7 +211,7 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 	default_lmc.get_final_color(default_color, 1.0);
 
 	for (unsigned x = x_start; x < x_end; ++x) {
-		lmcell const *const vlm(lmap_manager.vlmap[y][x]);
+		lmcell const *const vlm(lmap_manager.get_column(x, y));
 		if (vlm == NULL && !update_lighting) continue; // x/y pairs that get into here should also be constant
 		unsigned const off(zsize*(y*MESH_X_SIZE + x));
 		bool const check_z_thresh((display_mode & 0x01) && !is_mesh_disabled(x, y));
@@ -282,7 +282,7 @@ bool upload_smoke_indir_texture() {
 	// ok when texture z size is not a power of 2
 	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_SIZE[2]), ncomp(4);
 
-	if (disable_shaders || lmap_manager.vlmap == NULL || sz == 0) {
+	if (disable_shaders || !lmap_manager.is_allocated() || sz == 0) {
 		have_indir_smoke_tex = 0;
 		return 0;
 	}

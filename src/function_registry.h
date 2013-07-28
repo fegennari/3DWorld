@@ -699,6 +699,7 @@ void free_shadow_map_textures();
 
 // function prototypes - raytrace
 float get_scene_radius();
+void kill_current_raytrace_threads();
 void check_update_global_lighting(unsigned lights);
 
 // function prototypes - voxels
