@@ -6,7 +6,7 @@ use_voxel_cobjs 1
 group_back_face_cull 1
 
 create_voxel_landscape 0
-voxel remove_unconnected 0
+voxel remove_unconnected 2
 voxel xsize 256
 voxel ysize 256
 voxel zsize 128

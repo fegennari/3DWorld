@@ -1358,8 +1358,12 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 
 	RESET_TIME;
 	unsigned const lod_blocks(1 << (tri_data.size()-1));
-	assert((nx%(params.num_blocks*lod_blocks)) == 0 && (ny%(params.num_blocks*lod_blocks)) == 0 && (nz%lod_blocks) == 0); // LOD=max
-	
+
+	if (lod_blocks > 1) { // LOD enabled, check that we divide evenly into blocks so that the max LOD level will work
+		assert((nx%(params.num_blocks*lod_blocks)) == 0);
+		assert((ny%(params.num_blocks*lod_blocks)) == 0);
+		assert((nz%lod_blocks) == 0);
+	}
 	if (noise_tex_gen) { // noise_tex_gen is shared across voxel asteroids and rocks, so we need to make sure exactly one is created
 		#pragma omp critical(noise_texture_creation)
 		noise_tex_gen->procedural_gen(NOISE_TSIZE, params.texture_rseed, 1.0, params.noise_freq);
