@@ -60,9 +60,9 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
 // Global Variables
-bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1);
+bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0);
 bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
-bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), use_waypoint_app_spots(0);
+bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
 bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
@@ -1470,6 +1470,26 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
 }
 
 
+template<typename T> class kw_to_val_map_t : private map<string, T*> {
+
+	int &error;
+
+public:
+	kw_to_val_map_t(int &error_) : error(error_) {}
+
+	void add(string const &k, T &v) {
+		bool const did_ins(insert(make_pair(k, &v)).second);
+		assert(did_ins);
+	}
+	bool maybe_set_from_fp(string const &str, FILE *fp) {
+		iterator it(find(str));
+		if (it == end()) return 0;
+		if (!read_type_t(fp, *it->second)) {cfg_err(str + " keyword", error);}
+		return 1;
+	}
+};
+
+
 // should be moved to another file eventually...
 // should use a hashtable here
 int load_config(string const &config_file) {
@@ -1479,8 +1499,96 @@ int load_config(string const &config_file) {
 	FILE *fp;
 	if (!open_file(fp, config_file.c_str(), "input configuration file")) return 0;
 
+	kw_to_val_map_t<bool>     kwmb(error);
+	kwmb.add("gen_tree_roots", gen_tree_roots);
+	kwmb.add("no_smoke_over_mesh", no_smoke_over_mesh);
+	kwmb.add("use_waypoints", use_waypoints);
+	kwmb.add("use_waypoint_app_spots", use_waypoint_app_spots);
+	kwmb.add("group_back_face_cull", group_back_face_cull);
+	kwmb.add("inf_terrain_scenery", inf_terrain_scenery);
+	kwmb.add("fast_water_reflect", fast_water_reflect);
+	kwmb.add("disable_shaders", disable_shaders);
+	kwmb.add("enable_model3d_tex_comp", enable_model3d_tex_comp);
+	kwmb.add("texture_alpha_in_red_comp", texture_alpha_in_red_comp);
+	kwmb.add("use_model2d_tex_mipmaps", use_model2d_tex_mipmaps);
+	kwmb.add("use_dense_voxels", use_dense_voxels);
+	kwmb.add("use_voxel_cobjs", use_voxel_cobjs);
+	kwmb.add("mt_cobj_tree_build", mt_cobj_tree_build);
+	kwmb.add("preproc_cube_cobjs", preproc_cube_cobjs);
+	kwmb.add("global_lighting_update", global_lighting_update);
+	kwmb.add("lighting_update_offline", lighting_update_offline);
+	kwmb.add("two_sided_lighting", two_sided_lighting);
+
+	kw_to_val_map_t<int>      kwmi(error);
+	kwmi.add("verbose", verbose_mode);
+	kwmi.add("load_coll_objs", load_coll_objs);
+	kwmi.add("glaciate", GLACIATE);
+	kwmi.add("dynamic_mesh_scroll", dynamic_mesh_scroll);
+	kwmi.add("mesh_seed", mesh_seed);
+	kwmi.add("universe_only", universe_only);
+	kwmi.add("disable_universe", disable_universe);
+	kwmi.add("disable_inf_terrain", disable_inf_terrain);
+	kwmi.add("left_handed", left_handed);
+	kwmi.add("unlimited_weapons", UNLIMITED_WEAPONS);
+	kwmi.add("destroy_thresh", destroy_thresh);
+	kwmi.add("rand_seed", srand_param);
+	kwmi.add("disable_water", INIT_DISABLE_WATER);
+	kwmi.add("disable_scenery", DISABLE_SCENERY);
+	kwmi.add("read_landscape", read_landscape);
+	kwmi.add("read_heightmap", read_heightmap);
+	kwmi.add("default_ground_tex", default_ground_tex);
+	kwmi.add("ground_effects_level", ground_effects_level);
+	kwmi.add("shadow_detail", shadow_detail);
+	kwmi.add("tree_coll_level", tree_coll_level);
+	kwmi.add("free_for_all", free_for_all);
+	kwmi.add("color_bit_depth", color_bit_depth);
+	kwmi.add("num_dodgeballs", num_dodgeballs);
+	kwmi.add("ntrees", num_trees);
+	kwmi.add("nsmileys", num_smileys);
+	kwmi.add("teams", teams);
+
+	kw_to_val_map_t<unsigned> kwmu(error);
+	kwmu.add("grass_density", grass_density);
+	kwmu.add("max_unique_trees", max_unique_trees);
+	kwmu.add("shadow_map_sz", shadow_map_sz);
+	kwmu.add("max_ray_bounces", MAX_RAY_BOUNCES);
+	kwmu.add("num_test_snowflakes", num_snowflakes);
+
+	kw_to_val_map_t<float>    kwmf(error);
+	kwmf.add("gravity", base_gravity);
+	kwmf.add("mesh_height", mesh_height_scale);
+	kwmf.add("mesh_scale", mesh_scale);
+	kwmf.add("mesh_z_cutoff", mesh_z_cutoff);
+	kwmf.add("disabled_mesh_z", disabled_mesh_z);
+	kwmf.add("relh_adj_tex", relh_adj_tex);
+	kwmf.add("set_czmax", czmax);
+	kwmf.add("camera_radius", CAMERA_RADIUS);
+	kwmf.add("camera_step_height", C_STEP_HEIGHT);
+	kwmf.add("wapypoint_sz_thresh", wapypoint_sz_thresh);
+	kwmf.add("tree_deadness", tree_deadness);
+	kwmf.add("sun_rot", sun_rot);
+	kwmf.add("moon_rot", moon_rot);
+	kwmf.add("cobj_z_bias", cobj_z_bias);
+	kwmf.add("indir_vert_offset", indir_vert_offset);
+	kwmf.add("self_damage", self_damage);
+	kwmf.add("team_damage", team_damage);
+	kwmf.add("player_damage", player_damage);
+	kwmf.add("smiley_damage", smiley_damage);
+	kwmf.add("player_speed", player_speed);
+	kwmf.add("smiley_speed", smiley_speed);
+	kwmf.add("speed_mult", speed_mult);
+	kwmf.add("smiley_accuracy", smiley_acc);
+	kwmf.add("crater_size", crater_size);
+	kwmf.add("indir_light_exp", indir_light_exp);
+	kwmf.add("snow_random", snow_random);
+	kwmf.add("temperature", init_temperature);
+
 	while (read_str(fp, strc)) { // slow but should be OK
 		string const str(strc);
+		if (kwmb.maybe_set_from_fp(str, fp)) continue;
+		if (kwmi.maybe_set_from_fp(str, fp)) continue;
+		if (kwmu.maybe_set_from_fp(str, fp)) continue;
+		if (kwmf.maybe_set_from_fp(str, fp)) continue;
 
 		if (str[0] == '#') { // comment
 			char letter(getc(fp));
@@ -1493,25 +1601,13 @@ int load_config(string const &config_file) {
 			if (!read_str(fp, include_fname)) cfg_err("include", error);
 			if (!load_config(include_fname )) cfg_err("nested include file", error);
 		}
-		else if (str == "grass_density") {
-			if (!read_uint(fp, grass_density)) cfg_err("grass density", error);
-		}
 		else if (str == "grass_size") {
 			if (!read_float(fp, grass_length) || !read_float(fp, grass_width) || grass_length <= 0.0 || grass_width <= 0.0) {
 				cfg_err("grass size", error);
 			}
 		}
-		else if (str == "ntrees") {
-			if (!read_int(fp, num_trees) || num_trees < 0) cfg_err("number of trees", error);
-		}
-		else if (str == "max_unique_trees") {
-			if (!read_uint(fp, max_unique_trees)) cfg_err("max_unique_trees", error);
-		}
 		else if (str == "force_tree_class") {
 			if (!read_int(fp, force_tree_class) || force_tree_class >= NUM_TREE_CLASSES) cfg_err("force_tree_class", error);
-		}
-		else if (str == "gen_tree_roots") {
-			if (!read_bool(fp, gen_tree_roots)) cfg_err("gen_tree_roots", error);
 		}
 		else if (str == "nleaves_scale") {
 			if (!read_float(fp, nleaves_scale) || nleaves_scale <= 0.0) cfg_err("nleaves_scale", error);
@@ -1522,19 +1618,12 @@ int load_config(string const &config_file) {
 			}
 			if (tree_lod_scales[0] < tree_lod_scales[1] || tree_lod_scales[2] < tree_lod_scales[3]) {cfg_err("tree_lod_scale values", error);}
 		}
-		else if (str == "nsmileys") {
-			if (!read_int(fp, num_smileys) || num_smileys < 0) cfg_err("number of smileys", error);
-		}
 		else if (str == "num_items") {
 			for (unsigned n = 0; n < sizeof(init_item_counts)/sizeof(unsigned); ++n) {
 				if (!read_uint(fp, init_item_counts[n])) {
-					cfg_err("number of items", error);
-					break;
+					cfg_err("number of items", error); break;
 				}
 			}
-		}
-		else if (str == "verbose") {
-			if (!read_int(fp, verbose_mode)) cfg_err("verbose mode", error);
 		}
 		else if (str == "game_mode_string") {
 			if (fscanf(fp, "%s%i%i", game_mode_string, &gmww, &gmwh) != 3 || gmww <= 0 || gmwh <= 0) cfg_err("game mode string", error);
@@ -1552,65 +1641,12 @@ int load_config(string const &config_file) {
 		else if (str == "scene_size") {
 			if (fscanf(fp, "%f%f%f", &X_SCENE_SIZE, &Y_SCENE_SIZE, &Z_SCENE_SIZE) != 3) cfg_err("scene size command", error);
 		}
-		else if (str == "shadow_map_sz") { // 0 disables
-			if (!read_uint(fp, shadow_map_sz)) cfg_err("shadow_map_sz command", error);
-		}
-		else if (str == "color_bit_depth") {
-			if (!read_int(fp, color_bit_depth)) cfg_err("color_bit_depth command", error);
-			if (color_bit_depth < 1 || (color_bit_depth >= 8 && color_bit_depth%8 != 0)) {cout << "Invalid color_bit_depth command in config file." << endl; error = 1;}
-		}
 		else if (str == "refresh_rate") {
 			if (!read_int(fp, refresh_rate) || refresh_rate < 1) cfg_err("refresh_rate command", error);
 		}
 		else if (str == "load_hmv") {
 			if (!read_int(fp, load_hmv)) cfg_err("load_hmv command", error);
 			if (fscanf(fp, "%f%f%f%f", &hmv_pos.x, &hmv_pos.y, &hmv_pos.z, &hmv_scale) != 4) cfg_err("load_hmv command", error);
-		}
-		else if (str == "load_coll_objs") {
-			if (!read_int(fp, load_coll_objs)) cfg_err("load coll objs command", error);
-		}
-		else if (str == "glaciate") {
-			if (!read_int(fp, GLACIATE)) cfg_err("glaciate command", error);
-		}
-		else if (str == "dynamic_mesh_scroll") {
-			if (!read_int(fp, dynamic_mesh_scroll)) cfg_err("dynamic_mesh_scroll command", error);
-		}
-		else if (str == "no_smoke_over_mesh") {
-			if (!read_bool(fp, no_smoke_over_mesh)) cfg_err("no_smoke_over_mesh command", error);
-		}
-		else if (str == "use_waypoints") {
-			if (!read_bool(fp, use_waypoints)) cfg_err("use_waypoints command", error);
-		}
-		else if (str == "use_waypoint_app_spots") {
-			if (!read_bool(fp, use_waypoint_app_spots)) cfg_err("use_waypoint_app_spots command", error);
-		}
-		else if (str == "group_back_face_cull") {
-			if (!read_bool(fp, group_back_face_cull)) cfg_err("group_back_face_cull command", error);
-		}
-		else if (str == "gravity") {
-			if (!read_float(fp, base_gravity)) cfg_err("gravity command", error);
-		}
-		else if (str == "temperature") {
-			if (!read_float(fp, init_temperature)) cfg_err("temperature command", error);
-			temperature = init_temperature;
-		}
-		else if (str == "mesh_seed") {
-			if (!read_int(fp, mesh_seed)) cfg_err("mesh seed scale command", error);
-		}
-		else if (str == "mesh_height") {
-			if (!read_float(fp, mesh_height_scale)) cfg_err("mesh height scale command", error);
-		}
-		else if (str == "mesh_scale") {
-			if (!read_float(fp, mesh_scale)) cfg_err("mesh scale command", error);
-		}
-		else if (str == "mesh_z_cutoff") {
-			if (!read_float(fp, mesh_z_cutoff)) cfg_err("mesh z cutoff command", error);
-		}
-		else if (str == "disabled_mesh_z") {
-			if (!read_float(fp, disabled_mesh_z)) cfg_err("disabled mesh z command", error);
-		}
-		else if (str == "relh_adj_tex") {
-			if (!read_float(fp, relh_adj_tex)) cfg_err("relh_adj_tex command", error);
 		}
 		else if (str == "water_h_off") { // abs [rel]
 			if (!read_float(fp, water_h_off)) cfg_err("water_h_off command", error);
@@ -1620,34 +1656,19 @@ int load_config(string const &config_file) {
 		else if (str == "lm_dz_adj") {
 			if (!read_float(fp, lm_dz_adj) || lm_dz_adj < 0.0) cfg_err("lm_dz_adj command", error);
 		}
-		else if (str == "set_czmax") {
-			if (!read_float(fp, czmax)) cfg_err("set_czmax command", error);
-		}
 		else if (str == "wind_velocity") {
-			if (fscanf(fp, "%f%f%f", &wind.x, &wind.y, &wind.z) != 3) cfg_err("wind_velocity command", error);
+			if (!read_vector(fp, wind)) cfg_err("wind_velocity command", error);
 		}
 		else if (str == "camera_height") {
 			if (fscanf(fp, "%lf", &camera_zh) != 1) cfg_err("camera_height command", error);
 		}
-		else if (str == "camera_radius") {
-			if (fscanf(fp, "%f", &CAMERA_RADIUS) != 1) cfg_err("camera_radius command", error);
-		}
-		else if (str == "camera_step_height") {
-			if (fscanf(fp, "%f", &C_STEP_HEIGHT) != 1) cfg_err("camera_step_height command", error);
-		}
-		else if (str == "wapypoint_sz_thresh") {
-			if (fscanf(fp, "%f", &wapypoint_sz_thresh) != 1) cfg_err("wapypoint_sz_thresh command", error);
-		}
 		else if (str == "player_start") {
-			if (fscanf(fp, "%f%f%f", &surface_pos.x, &surface_pos.y, &surface_pos.z) != 3) cfg_err("player_start command", error);
+			if (!read_vector(fp, surface_pos)) cfg_err("player_start command", error);
 		}
 		else if (str == "tree_size") {
 			float tree_size(1.0);
 			if (!read_float(fp, tree_size)) cfg_err("tree size command", error);
 			tree_scale = 1.0/tree_size;
-		}
-		else if (str == "tree_deadness") {
-			if (!read_float(fp, tree_deadness)) cfg_err("tree deadness command", error);
 		}
 		else if (str == "tree_branch_radius") {
 			if (!read_float(fp, branch_radius_scale) || branch_radius_scale <= 0.0) cfg_err("tree_branch_radius command", error);
@@ -1657,147 +1678,17 @@ int load_config(string const &config_file) {
 				cfg_err("leaf color command", error);
 			}
 		}
-		else if (str == "sun_rot") {
-			if (!read_float(fp, sun_rot)) cfg_err("sun_rot command", error);
-		}
-		else if (str == "moon_rot") {
-			if (!read_float(fp, moon_rot)) cfg_err("moon_rot command", error);
-		}
-		else if (str == "cobj_z_bias") {
-			if (!read_float(fp, cobj_z_bias)) cfg_err("cobj_z_bias command", error);
-		}
-		else if (str == "indir_vert_offset") {
-			if (!read_float(fp, indir_vert_offset)) cfg_err("indir_vert_offset command", error);
-		}
-		else if (str == "universe_only") {
-			if (!read_int(fp, universe_only)) cfg_err("universe only command", error);
-		}
-		else if (str == "disable_universe") {
-			if (!read_int(fp, disable_universe)) cfg_err("disable universe command", error);
-		}
-		else if (str == "disable_inf_terrain") {
-			if (!read_int(fp, disable_inf_terrain)) cfg_err("disable inf terrain command", error);
-		}
-		else if (str == "inf_terrain_scenery") {
-			if (!read_bool(fp, inf_terrain_scenery)) cfg_err("dinf_terrain_scenery command", error);
-		}
 		else if (str == "toggle_mesh_enabled") {
 			display_mode ^= 0x01;
 		}
 		else if (str == "player_name") {
 			if (!read_str(fp, player_name)) cfg_err("player name", error);
 		}
-		else if (str == "self_damage") {
-			if (!read_float(fp, self_damage)) cfg_err("self damage command", error);
-		}
-		else if (str == "team_damage") {
-			if (!read_float(fp, team_damage)) cfg_err("team damage command", error);
-		}
-		else if (str == "player_damage") {
-			if (!read_float(fp, player_damage)) cfg_err("player damage command", error);
-		}
-		else if (str == "smiley_damage") {
-			if (!read_float(fp, smiley_damage)) cfg_err("smiley damage command", error);
-		}
-		else if (str == "player_speed") {
-			if (!read_float(fp, player_speed)) cfg_err("player speed command", error);
-		}
-		else if (str == "smiley_speed") {
-			if (!read_float(fp, smiley_speed)) cfg_err("smiley speed command", error);
-		}
-		else if (str == "speed_mult") {
-			if (!read_float(fp, speed_mult)) cfg_err("speed mult speed command", error);
-		}
-		else if (str == "left_handed") {
-			if (!read_int(fp, left_handed)) cfg_err("left handed command", error);
-		}
-		else if (str == "unlimited_weapons") {
-			if (!read_int(fp, UNLIMITED_WEAPONS)) cfg_err("unlimited weapons command", error);
-		}
-		else if (str == "smiley_accuracy") {
-			if (!read_float(fp, smiley_acc)) cfg_err("smiley accuracy command", error);
-		}
-		else if (str == "crater_size") {
-			if (!read_float(fp, crater_size)) cfg_err("crater size command", error);
-		}
-		else if (str == "destroy_thresh") {
-			if (!read_int(fp, destroy_thresh)) cfg_err("destroy thresh command", error);
-		}
-		else if (str == "rand_seed") {
-			if (!read_int(fp, srand_param)) cfg_err("random seed command", error);
-		}
-		else if (str == "fast_water_reflect") {
-			if (!read_bool(fp, fast_water_reflect)) cfg_err("fast_water_reflect command", error);
-		}
-		else if (str == "disable_water") {
-			if (!read_int(fp, INIT_DISABLE_WATER)) cfg_err("disable water command", error);
-		}
-		else if (str == "disable_scenery") {
-			if (!read_int(fp, DISABLE_SCENERY)) cfg_err("disable scenery command", error);
-		}
-		else if (str == "disable_shaders") {
-			if (!read_bool(fp, disable_shaders)) cfg_err("disable shaders command", error);
-		}
-		else if (str == "enable_model3d_tex_comp") {
-			if (!read_bool(fp, enable_model3d_tex_comp)) cfg_err("enable_model3d_tex_comp command", error);
-		}
-		else if (str == "texture_alpha_in_red_comp") {
-			if (!read_bool(fp, texture_alpha_in_red_comp)) cfg_err("texture_alpha_in_red_comp command", error);
-		}
 		else if (str == "model3d_alpha_thresh") {
 			if (!read_float(fp, model3d_alpha_thresh) || model3d_alpha_thresh < 0.0 || model3d_alpha_thresh > 1.0) cfg_err("model3d_alpha_thresh command", error);
 		}
-		else if (str == "use_model2d_tex_mipmaps") {
-			if (!read_bool(fp, use_model2d_tex_mipmaps)) cfg_err("use_model2d_tex_mipmaps command", error);
-		}
-		else if (str == "use_dense_voxels") {
-			if (!read_bool(fp, use_dense_voxels)) cfg_err("use_dense_voxels command", error);
-		}
 		else if (str == "create_voxel_landscape") {
 			if (!read_uint(fp, create_voxel_landscape) || create_voxel_landscape > 2) cfg_err("create_voxel_landscape command", error);
-		}
-		else if (str == "use_voxel_cobjs") {
-			if (!read_bool(fp, use_voxel_cobjs)) cfg_err("use_voxel_cobjs command", error);
-		}
-		else if (str == "mt_cobj_tree_build") {
-			if (!read_bool(fp, mt_cobj_tree_build)) cfg_err("mt_cobj_tree_build command", error);
-		}
-		else if (str == "preproc_cube_cobjs") {
-			if (!read_bool(fp, preproc_cube_cobjs)) cfg_err("preproc_cube_cobjs command", error);
-		}
-		else if (str == "global_lighting_update") {
-			if (!read_bool(fp, global_lighting_update)) cfg_err("global_lighting_update command", error);
-		}
-		else if (str == "two_sided_lighting") {
-			if (!read_bool(fp, two_sided_lighting)) cfg_err("two_sided_lighting command", error);
-		}
-		else if (str == "read_landscape") {
-			if (!read_int(fp, read_landscape)) cfg_err("read landscape command", error);
-		}
-		else if (str == "read_heightmap") {
-			if (!read_int(fp, read_heightmap)) cfg_err("read heightmap command", error);
-		}
-		else if (str == "default_ground_tex") {
-			if (!read_int(fp, default_ground_tex)) cfg_err("default ground texture command", error);
-		}
-		else if (str == "ground_effects_level") {
-			if (!read_int(fp, ground_effects_level)) cfg_err("ground_effects_level command", error);
-		}
-		else if (str == "shadow_detail") {
-			if (!read_int(fp, shadow_detail)) cfg_err("shadow detail command", error);
-		}
-		else if (str == "tree_coll_level") {
-			if (!read_int(fp, tree_coll_level)) cfg_err("tree coll level command", error);
-		}
-		else if (str == "free_for_all") {
-			if (!read_int(fp, free_for_all)) cfg_err("free for all command", error);
-		}
-		else if (str == "teams") {
-			if (!read_int(fp, teams) || teams <= 0) cfg_err("teams command", error);
-		}
-		else if (str == "num_dodgeballs") {
-			if (!read_int(fp, num_dodgeballs)) cfg_err("num dodgeballs command", error);
-			num_dodgeballs = max(num_dodgeballs, 1); // have to have at least 1
 		}
 		else if (str == "team_start") {
 			bbox bb;
@@ -1843,7 +1734,6 @@ int load_config(string const &config_file) {
 			}
 			smoke_bounds.push_back(sb);
 		}
-
 		// lighting
 		else if (str == "lighting_file_sky") {
 			read_write_lighting_setup(fp, LIGHTING_SKY, error); // <filename> <write_mode> <scale>
@@ -1860,22 +1750,9 @@ int load_config(string const &config_file) {
 		else if (str == "num_threads") {
 			if (!read_nonzero_uint(fp, NUM_THREADS) || NUM_THREADS > 100) cfg_err("num_threads", error);
 		}
-		else if (str == "max_ray_bounces") {
-			if (!read_uint(fp, MAX_RAY_BOUNCES)) cfg_err("num_threads", error);
-		}
-		else if (str == "indir_light_exp") {
-			if (!read_float(fp, indir_light_exp)) cfg_err("indir_light_exp command", error);
-		}
-
 		// snow
-		else if (str == "num_test_snowflakes") { // in millions
-			if (!read_uint(fp, num_snowflakes)) cfg_err("num_test_snowflakes", error);
-		}
 		else if (str == "snow_depth") {
 			if (!read_float(fp, snow_depth) || snow_depth < 0.0) cfg_err("snow_depth command", error);
-		}
-		else if (str == "snow_random") {
-			if (!read_float(fp, snow_random)) cfg_err("snow_random command", error);
 		}
 		else if (str == "snow_file") {
 			alloc_if_req(snow_file, NULL);
@@ -1883,7 +1760,7 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%s%i", snow_file, &write_mode) != 2) cfg_err("snow_file command", error);
 			(write_mode ? write_snow_file : read_snow_file) = 1;
 		}
-
+		// image files
 		else if (str == "mesh_draw_bmp") {
 			if (!read_str(fp, md_fname)) cfg_err("mesh_draw_bmp command", error);
 		}
@@ -1898,12 +1775,19 @@ int load_config(string const &config_file) {
 			error = 1;
 		}
 		if (error) {cout << "Parse error in config file." << endl; break;}
+	} // while read
+	if (color_bit_depth < 1 || (color_bit_depth >= 8 && color_bit_depth%8 != 0)) {
+		cout << "Invalid color_bit_depth command in config file." << endl; error = 1;
 	}
 	if (universe_only && disable_universe) {
-		cout << "Error: universe_only and disable_universe are mutually exclusive" << endl;
-		error = 1;
+		cout << "Error: universe_only and disable_universe are mutually exclusive" << endl; error = 1;
 	}
 	fclose(fp);
+	temperature    = init_temperature;
+	num_dodgeballs = max(num_dodgeballs, 1); // have to have at least 1
+	num_trees      = max(num_trees,      0);
+	num_smileys    = max(num_smileys,    0);
+	teams          = max(teams,          1);
 	if (universe_only) world_mode = WMODE_UNIVERSE;
 
 	/*if (read_landscape) {
@@ -1915,8 +1799,8 @@ int load_config(string const &config_file) {
 	DISABLE_WATER = INIT_DISABLE_WATER;
 	XY_MULT_SIZE  = MESH_X_SIZE*MESH_Y_SIZE; // for bmp_to_chars() allocation
 	if (!gms_set) sprintf(game_mode_string, "%ix%i:%i@%i", gmww, gmwh, color_bit_depth, refresh_rate);
-	if (strlen(md_fname) > 0) if (!bmp_to_chars(md_fname, mesh_draw))     error = 1;
-	if (strlen(we_fname) > 0) if (!bmp_to_chars(we_fname, water_enabled)) error = 1;
+	if (strlen(md_fname) > 0) {if (!bmp_to_chars(md_fname, mesh_draw))     error = 1;}
+	if (strlen(we_fname) > 0) {if (!bmp_to_chars(we_fname, water_enabled)) error = 1;}
 	if (error) exit(1);
 	return 1;
 }
