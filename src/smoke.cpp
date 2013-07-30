@@ -27,7 +27,7 @@ colorRGB const_indir_color(BLACK);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders, no_smoke_over_mesh, indir_lighting_updated, no_sun_lpos_update;
+extern bool disable_shaders, no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
 extern int animate2, display_mode;
 extern float czmin0;
@@ -221,7 +221,7 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 			unsigned const off2(ncomp*(off + z));
 			float const smoke_val((vlm == NULL) ? 0.0 : CLIP_TO_01(smoke_scale*vlm[z].smoke));
 			data[off2+3] = (unsigned char)(255*smoke_val); // alpha: smoke
-			if (!update_lighting && !indir_lighting_updated) continue; // lighting not needed
+			if (!update_lighting && !lmap_manager.was_updated) continue; // lighting not needed
 				
 			if (check_z_thresh && get_zval(z+1) < mh) { // adjust by one because GPU will interpolate the texel
 				UNROLL_3X(data[off2+i_] = 0;)
@@ -252,7 +252,7 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 	default_lmc.set_outside_colors();
 	default_lmc.get_final_color(const_indir_color, 1.0);
 	
-	if (indir_lighting_updated || !update_lighting) { // running with multiple threads, don't use openmp
+	if (lmap_manager.was_updated || !update_lighting) { // running with multiple threads, don't use openmp
 		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
 			update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
 		}
@@ -297,7 +297,7 @@ bool upload_smoke_indir_texture() {
 	bool const lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
 	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed));
 	bool const could_have_smoke(smoke_exists || last_smoke_update > 0);
-	if (!full_update && !could_have_smoke && !indir_lighting_updated && !lighting_changed) return 0; // return 1?
+	if (!full_update && !could_have_smoke && !lmap_manager.was_updated && !lighting_changed) return 0; // return 1?
 
 	if (full_update) {
 		last_cur_ambient = cur_ambient;
@@ -316,7 +316,7 @@ bool upload_smoke_indir_texture() {
 	unsigned const y_end  (full_update ? MESH_Y_SIZE : (y_start + block_size));
 	update_smoke_indir_tex_range(0, MESH_X_SIZE, y_start, y_end, full_update);
 	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
-	if (cur_block == 0) indir_lighting_updated = 0; // only stop updating after we wrap around to the beginning again
+	if (cur_block == 0) {lmap_manager.was_updated = 0;} // only stop updating after we wrap around to the beginning again
 	have_indir_smoke_tex = 1;
 	//PRINT_TIME("Smoke Upload");
 	return 1;

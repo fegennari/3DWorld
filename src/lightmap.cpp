@@ -394,10 +394,12 @@ template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, 
 
 void lmap_manager_t::init_from(lmap_manager_t const &src) {
 
+	//RESET_TIME;
 	//assert(!is_allocated());
-	clear_cells(); // probably unnecessary
+	//clear_cells(); // probably unnecessary
 	alloc(src.vldata_alloc.size(), src.lm_zsize, src.vlmap);
 	copy_data(src);
+	//PRINT_TIME("lmap_manager_t::init_from");
 }
 
 
@@ -414,7 +416,7 @@ void lmap_manager_t::copy_data(lmap_manager_t const &src, float blend_weight) {
 		vldata_alloc = src.vldata_alloc; // deep copy all lmcell data
 		return;
 	}
-	for (int i = 0; i < MESH_Y_SIZE; ++i) { // FIXME: openmp?
+	for (int i = 0; i < MESH_Y_SIZE; ++i) { // openmp?
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			if (!vlmap[i][j]) {assert(!src.vlmap[i][j]); continue;}
 			assert(src.vlmap[i][j]);

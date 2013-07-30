@@ -16,13 +16,13 @@ float const SNOW_ALBEDO   = 0.9;
 float const ICE_ALBEDO    = 0.8;
 
 bool keep_beams(0); // debugging mode
-bool kill_raytrace(0), indir_lighting_updated(0);
+bool kill_raytrace(0);
 unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1}; // sky, global, local
 unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1}; // sky, global, local
 
-extern bool has_snow, global_lighting_update;
+extern bool has_snow, global_lighting_update, lighting_update_offline;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
 extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight;
 extern char *lighting_file[];
@@ -68,7 +68,7 @@ void add_path_to_lmcs(lmap_manager_t &lmgr, point p1, point const &p2, float wei
 		}
 		p1 += step;
 	}
-	indir_lighting_updated = 1;
+	lmgr.was_updated = 1;
 	cells_touched += nsteps;
 	++num_hits;
 }
@@ -287,10 +287,22 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 struct rt_data {
 	unsigned ix, num;
 	int rseed;
-	bool is_thread, verbose, randomized;
+	bool is_thread, verbose, randomized, is_running;
 	lmap_manager_t *lmgr;
 
-	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0) : ix(i), num(n), rseed(s), is_thread(t), verbose(v), randomized(r), lmgr(NULL) {}
+	rt_data(unsigned i=0, unsigned n=0, int s=1, bool t=0, bool v=0, bool r=0)
+		: ix(i), num(n), rseed(s), is_thread(t), verbose(v), randomized(r), is_running(0), lmgr(NULL) {}
+
+	void pre_run() {
+		assert(lmgr);
+		assert(num > 0);
+		assert(!is_running);
+		is_running = 1;
+	}
+	void post_run() {
+		assert(is_running);
+		is_running = 0;
+	}
 };
 
 
@@ -302,6 +314,13 @@ public:
 	vector<T> data; // to be filled in by the caller
 
 	bool is_active() const {return (!threads.empty());}
+
+	bool any_threads_running() const {
+		for (vector<T>::const_iterator i = data.begin(); i != data.end(); ++i) {
+			if (i->is_running) return 1;
+		}
+		return 0;
+	}
 
 	void clear() {
 		data.clear();
@@ -347,6 +366,8 @@ public:
 thread_manager_t<rt_data> thread_manager;
 lmap_manager_t thread_temp_lmap;
 
+bool indir_lighting_updated() {return (lmap_manager.was_updated || thread_temp_lmap.was_updated);}
+
 
 void kill_current_raytrace_threads() {
 
@@ -359,8 +380,18 @@ void kill_current_raytrace_threads() {
 }
 
 
+void update_lmap_from_temp_copy() {
+
+	if (!thread_temp_lmap.was_updated) return; // no updates
+	float const blend_weight = 1.0; // FIXME: slow blend over time to reduce popping
+	lmap_manager.copy_data(thread_temp_lmap, blend_weight);
+	thread_temp_lmap.was_updated = 0;
+	lmap_manager.was_updated     = 1;
+}
+
+
 // see https://computing.llnl.gov/tutorials/pthreads/
-void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool randomized) {
+void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool use_temp_lmap, bool randomized) {
 
 	kill_current_raytrace_threads();
 	assert(num_threads > 0 && num_threads < 100);
@@ -369,12 +400,12 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 	if (verbose) cout << "Computing lighting on " << num_threads << " threads." << endl;
 	thread_manager.create(num_threads);
 	vector<rt_data> &data(thread_manager.data);
-	//thread_temp_lmap.init_from(lmap_manager);
+	if (use_temp_lmap) {thread_temp_lmap.init_from(lmap_manager);}
 
 	for (unsigned t = 0; t < data.size(); ++t) {
 		// create a custom lmap_manager_t for each thread then merge them together?
 		data[t] = rt_data(t, num_threads, 234323*(t+1), !single_thread, (verbose && t == 0), randomized);
-		data[t].lmgr = &lmap_manager;
+		data[t].lmgr = (use_temp_lmap ? &thread_temp_lmap : &lmap_manager);
 	}
 	if (single_thread && blocking) { // pthreads disabled
 		start_func((void *)(&data[0]));
@@ -383,6 +414,7 @@ void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool
 	}
 	thread_manager.run(start_func);
 	if (blocking) thread_manager.join();
+	// if non-blocking, threads are finished when lmap_manager.was_updated is not set to true during the current frame
 }
 
 
@@ -468,7 +500,7 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 	if (pos.z < 0.0 || weight == 0.0 || color.alpha == 0.0) return; // below the horizon or zero weight, skip it
 	assert(ptr);
 	rt_data *data(static_cast<rt_data *>(ptr));
-	assert(data->lmgr && data->num > 0);
+	data->pre_run();
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
 	unsigned long long cube_start_rays(0);
@@ -491,6 +523,7 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 		cout << "start rays: " << GLOBAL_RAYS << ", cube_start_rays: " << cube_start_rays << ", total rays: "
 			<< tot_rays << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
+	data->post_run();
 }
 
 
@@ -511,7 +544,7 @@ void *trace_ray_block_sky(void *ptr) {
 
 	assert(ptr);
 	rt_data *data(static_cast<rt_data *>(ptr));
-	assert(data->lmgr && data->num > 0);
+	data->pre_run();
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
@@ -577,6 +610,7 @@ void *trace_ray_block_sky(void *ptr) {
 		cout << "start rays: " << start_rays << ", cube start rays: " << cube_start_rays << ", total rays: " << tot_rays
 			 << ", hits: " << num_hits << ", cells touched: " << cells_touched << endl;
 	}
+	data->post_run();
 	return 0;
 }
 
@@ -623,7 +657,7 @@ void *trace_ray_block_local(void *ptr) {
 	assert(ptr);
 	if (LOCAL_RAYS == 0) return 0; // nothing to do
 	rt_data *data(static_cast<rt_data *>(ptr));
-	assert(data->lmgr && data->num > 0);
+	data->pre_run();
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
 	float const scene_radius(get_scene_radius()), line_length(2.0*scene_radius);
@@ -637,7 +671,8 @@ void *trace_ray_block_local(void *ptr) {
 		if (data->verbose) increment_printed_number(i);
 		ray_trace_local_light_source(*data->lmgr, light_sources[i], line_length, num_rays, rgen);
 	}
-	if (data->verbose) cout << endl;
+	if (data->verbose) {cout << endl;}
+	data->post_run();
 	return 0;
 }
 
@@ -657,7 +692,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 		if (ltype != LIGHTING_LOCAL) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
 		all_models.build_cobj_trees(1);
 		get_landscape_texture_color(0, 0); // hack to force creation of the cached_ls_colors vector in the master thread
-		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1, 0);
+		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1, 0, 0);
 	}
 	if (write_light_files[ltype]) {
 		lmap_manager.write_data_to_file(lighting_file[ltype], ltype);
@@ -676,7 +711,7 @@ void check_update_global_lighting(unsigned lights) {
 	tot_rays = num_hits = cells_touched = 0;
 	lmap_manager.clear_lighting_values(LIGHTING_GLOBAL);
 	all_models.build_cobj_trees(0);
-	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 0, 0, 0); // reserve a thread for rendering
+	launch_threaded_job(max(1U, NUM_THREADS-1), rt_funcs[LIGHTING_GLOBAL], 0, 0, lighting_update_offline, 0); // reserve a thread for rendering
 }
 
 

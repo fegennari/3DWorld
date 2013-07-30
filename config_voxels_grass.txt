@@ -37,6 +37,7 @@ shadow_map_sz 2048 # 4096?
 
 use_dense_voxels 1
 global_lighting_update 1
+lighting_update_offline 0
 num_threads 8
 max_ray_bounces 4
 num_light_rays 0 0 0 1000000
