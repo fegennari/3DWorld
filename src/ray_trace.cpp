@@ -390,6 +390,15 @@ void update_lmap_from_temp_copy() {
 }
 
 
+void check_for_lighting_finished() { // to be called about once per frame
+
+	if (!thread_manager.is_active()) return; // inactive
+	if (thread_manager.any_threads_running()) return; // still running
+	thread_manager.clear();
+	update_lmap_from_temp_copy();
+}
+
+
 // see https://computing.llnl.gov/tutorials/pthreads/
 void launch_threaded_job(unsigned num_threads, void *(*start_func)(void *), bool verbose, bool blocking, bool use_temp_lmap, bool randomized) {
 

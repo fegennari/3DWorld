@@ -5,10 +5,6 @@ Multiple decid tree impostor orients
 Voxel terrain read/write
 Support for cube map textures (planets, etc.)
 
-Can't reproduce:
-- Black water reflection
-- Black colored blood spots
-
 More grass/plant types: Yellow and white flowers
 
 Parallax mapping
@@ -33,16 +29,4 @@ Vertex Array Objects
 Better craters - push ground up at the perimeter
 Mesh height high frequency noise
 Texture randomization
-
-Indir sun lighting incremental update
-
-
- E: 2.9 process_groups()
- H: 2.1 setup_object_render_data()
- I: 4.3 draw_coll_surfaces() (normally 3.1)
- J: 2.4 display_mesh() (normally 2.0)
- K: 2.5 draw grass+scenery (house)
- L: 2.9 draw_solid_object_groups()
- N: 1.5 draw_water() (normally 1.7)
- W: 3.2 draw_cracks_decals_smoke_and_fires()
 

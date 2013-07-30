@@ -171,6 +171,7 @@ public:
 };
 
 
+void check_for_lighting_finished();
 void compute_ray_trace_lighting(unsigned ltype);
 
 

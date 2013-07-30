@@ -293,6 +293,7 @@ bool upload_smoke_indir_texture() {
 	else { // will recreate the texture
 		assert(smoke_tex_data.size() == ncomp*sz); // sz should be constant (per config file/3DWorld session)
 	}
+	check_for_lighting_finished();
 	static colorRGBA last_cur_ambient(ALPHA0), last_cur_diffuse(ALPHA0);
 	bool const lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
 	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed));
