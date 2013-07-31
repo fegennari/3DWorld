@@ -184,7 +184,7 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 
 	float scale_val;
 	mutable upsurface surface; // FIXME: mutable so that the contained sd_sphere_vbo_d can modify its vbo indexes
-	mutable ast_instance_render_t inst_render; // FIXME: mutable because it caches instance transforms
+	ast_instance_render_t inst_render;
 	static vector<float> pmap_vector;
 
 public:
@@ -210,13 +210,13 @@ public:
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		draw_with_texture(ddata, -1);
 	}
-	virtual bool draw_instanced(unsigned ndiv) const {
+	virtual bool draw_instanced(unsigned ndiv) { // non-const because it caches instance transforms
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		inst_render.add_cur_inst();
 		inst_render.max_ndiv = max(inst_render.max_ndiv, ndiv);
 		return 1;
 	}
-	virtual void final_draw(int xfm_shader_loc) {
+	virtual void final_draw(int xfm_shader_loc) { // non-const because it clears instance transforms
 		select_texture(tex_id);
 		inst_render.set_loc(xfm_shader_loc);
 		surface.sd.draw_instances(inst_render.max_ndiv, inst_render);
@@ -534,26 +534,26 @@ public:
 		}
 		PRINT_TIME("Asteroid Model Gen");
 	}
-	uobj_asteroid *get_asteroid(unsigned ix) const {
+	uobj_asteroid const *get_asteroid(unsigned ix) const {
 		assert(ix < asteroids.size());
 		assert(asteroids[ix]);
 		return asteroids[ix];
 	}
-	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s) const {
+	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s) {
+		assert(ix < asteroids.size());
 		float const radius(max(scale.x, max(scale.y, scale.z)));
 		float const dist(p2p_dist(pos, camera)), dscale(NDIV_SCALE_AST*(radius/(dist + 0.1*radius)));
 		if (dscale < 0.5) return; // too far/small - clip it
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
-		uobj_asteroid const *const asteroid(get_asteroid(ix));
 		glPushMatrix();
 		global_translate(pos);
-		if (rot_ang != 0.0) {rotate_about(rot_ang, rot_axis);}
+		if (rot_ang != 0.0 && dscale > 2.0) {rotate_about(rot_ang, rot_axis);}
 		scale_by(scale);
 
 		// try to draw instanced if enabled, but do a normal draw without resetting the texture if that fails
-		if (!asteroid->draw_instanced(ndiv)) { // FIXME: maybe this case shouldn't exist and we can only create instanceable asteroids?
-			uobj_draw_data ddata(asteroid, s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
-			asteroid->draw_with_texture(ddata, -1, 1);
+		if (!asteroids[ix]->draw_instanced(ndiv)) { // maybe this case shouldn't exist and we can only create instanceable asteroids?
+			uobj_draw_data ddata(asteroids[ix], s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
+			asteroids[ix]->draw_with_texture(ddata, -1, 1);
 		}
 		glPopMatrix();
 	}
@@ -563,11 +563,9 @@ public:
 	int get_fragment_tid(unsigned ix, point const &hit_pos) const {
 		return get_asteroid(ix)->get_fragment_tid(hit_pos);
 	}
-	void final_draw(shader_t &s) {
-		int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
-
+	void final_draw(int loc) {
 		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
-			(*i)->final_draw(loc); // FIXME: only call on asteroids that have been rendered?
+			(*i)->final_draw(loc); // FIXME: only call on unique asteroids that have been rendered at least once?
 		}
 	}
 	void clear_contexts() {
@@ -613,17 +611,20 @@ void uasteroid_field::gen_asteroids() {
 	for (iterator i = begin(); i != end(); ++i) {
 		i->gen(pos, radius, AST_RADIUS_SCALE*radius);
 	}
-	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time
+	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time (probably irrelevant when instancing is enabled)
 }
 
 
 void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { // only needs to be called when visible
 
-	if (empty() || calc_sphere_size((pos + pos_), camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
+	if (empty()) return;
+	float const sphere_size(calc_sphere_size((pos + pos_), camera, AST_RADIUS_SCALE*radius));
+	if (sphere_size < 2.0) return; // asteroids are too small/far away
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->apply_physics(pos, radius);
 	}
+	if (sphere_size < 8.0) return; // asteroids are too small/far away
 
 	// check for collisions between asteroids
 	float const mult(0.5*AF_GRID_SZ/radius);
@@ -722,13 +723,15 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	draw_sphere_vbo(make_pt_global(afpos), radius, N_SPHERE_DIV, 0);*/
 	point sun_pos;
 	uobject const *sobj(NULL);
-	set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE);
+	bool const has_sun(set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE) >= 0);
+	s.add_uniform_float("crater_scale", (has_sun ? 1.0 : 0.0));
+	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
 	WHITE.do_glColor();
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		i->draw(pos_, camera, s);
 	}
-	asteroid_model_gen.final_draw(s); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
+	asteroid_model_gen.final_draw(loc); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
 }
 
 
@@ -756,8 +759,8 @@ void uasteroid::gen(upos_point_type const &pos_offset, float max_dist, float max
 void uasteroid::apply_physics(point const &af_pos, float af_radius) {
 
 	last_coll_id = -1;
-	float const vmag(velocity.mag()), vmax(10.0*AST_VEL_SCALE);
-	if (vmag > vmax) {velocity *= vmax/vmag;} // clamp max velocity (from collisions)
+	float const vmag_sq(velocity.mag_sq()), vmax(10.0*AST_VEL_SCALE);
+	if (vmag_sq > vmax*vmax) {velocity *= 0.99*vmax/sqrt(vmag_sq);} // clamp max velocity (from collisions)
 	rot_ang += fticks*rot_ang0;
 	pos     += velocity;
 	

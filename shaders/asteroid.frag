@@ -1,4 +1,5 @@
 uniform float tscale = 1.0;
+uniform float crater_scale = 1.0;
 uniform sampler2D tex0;
 
 varying vec3 vpos, normal, world_normal;
@@ -11,7 +12,7 @@ void main()
 	vec3 norm_normal = normalize(normal);
 
 #ifdef HAS_CRATERS
-	if (dot(norm_normal, normalize(gl_LightSource[0].position.xyz - epos.xyz)) > 0.0) { // facing the sun
+	if (crater_scale > 0.0 && dot(norm_normal, normalize(gl_LightSource[0].position.xyz - epos.xyz)) > 0.0) { // facing the sun
 		adjust_normal_for_craters(norm_normal, vpos); // add craters by modifying the normal
 	}
 #endif

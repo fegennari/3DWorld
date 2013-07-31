@@ -848,7 +848,7 @@ public:
 		int align, unsigned eflags=0, free_obj const *parent_=NULL);
 	virtual int get_fragment_tid(point const &hit_pos) const {return tex_id;}
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id, bool no_reset_texture=0) const {draw_obj(ddata);} // default is to ignore force_tex_id
-	virtual bool draw_instanced(unsigned ndiv) const {return 0;}
+	virtual bool draw_instanced(unsigned ndiv) {return 0;}
 	virtual void final_draw(int xfm_shader_loc) {}
 };
 
