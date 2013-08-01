@@ -187,35 +187,42 @@ int shader_t::attrib_loc_by_ix(unsigned ix) const {
 }
 
 
-void shader_t::add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const {
+void shader_t::set_attrib_float_array(int loc, float const *const val, unsigned num) const {
 
-	if (disable_shaders) return;
-	int const loc(attrib_loc_by_ix(ix));
-	if (loc < 0) return;
-
-	switch (num) {
-		case 1: glVertexAttrib1fv(loc, val); break;
-		case 2: glVertexAttrib2fv(loc, val); break;
-		case 3: glVertexAttrib3fv(loc, val); break;
-		case 4: glVertexAttrib4fv(loc, val); break;
-		default: assert(0);
+	if (loc >= 0) {
+		switch (num) {
+			case 1: glVertexAttrib1fv(loc, val); break;
+			case 2: glVertexAttrib2fv(loc, val); break;
+			case 3: glVertexAttrib3fv(loc, val); break;
+			case 4: glVertexAttrib4fv(loc, val); break;
+			case 16:
+				for (unsigned n = 0; n < 4; ++n) {
+					glVertexAttrib4fv(loc+n, val+4*n);
+				}
+				break; // mat4
+			default: assert(0);
+		}
 	}
 }
 
-
-void shader_t::add_attrib_float(unsigned ix, float val) const {
-
-	if (disable_shaders) return;
-	int const loc(attrib_loc_by_ix(ix));
-	if (loc >= 0) glVertexAttrib1f(loc, val);
+void shader_t::set_attrib_float(int loc, float val) const {
+	if (loc >= 0) {glVertexAttrib1f(loc, val);}
 }
 
+void shader_t::set_attrib_int(int loc, int val) const {
+	if (loc >= 0) {glVertexAttrib1s(loc, val);}
+}
+
+void shader_t::add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const {
+	if (!disable_shaders) {set_attrib_float_array(attrib_loc_by_ix(ix), val, num);}
+}
+
+void shader_t::add_attrib_float(unsigned ix, float val) const {
+	if (!disable_shaders) {set_attrib_float(attrib_loc_by_ix(ix), val);}
+}
 
 void shader_t::add_attrib_int(unsigned ix, int val) const {
-
-	if (disable_shaders) return;
-	int const loc(attrib_loc_by_ix(ix));
-	if (loc >= 0) glVertexAttrib1s(loc, val);
+	if (!disable_shaders) {set_attrib_int(attrib_loc_by_ix(ix), val);}
 }
 
 

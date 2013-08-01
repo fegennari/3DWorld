@@ -73,6 +73,9 @@ public:
 
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
 	void register_attrib_name(char const *const name, unsigned bind_ix);
+	void set_attrib_float_array(int loc, float const *const val, unsigned num) const;
+	void set_attrib_float      (int loc, float val) const;
+	void set_attrib_int        (int loc, int val) const;
 	void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const;
 	void add_attrib_float      (unsigned ix, float val) const;
 	void add_attrib_int        (unsigned ix, int val) const;
