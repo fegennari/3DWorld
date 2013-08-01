@@ -519,6 +519,7 @@ float get_eq_vol_scale(vector3d const &scale) {return pow(scale.x*scale.y*scale.
 class asteroid_model_gen_t {
 
 	vector<uobj_asteroid *> asteroids; // FIXME: a case for boost::shared_ptr<>?
+	colorRGBA tex_color;
 
 public:
 	//~asteroid_model_gen_t() {clear();} // can't free after GL context has been destroyed
@@ -528,6 +529,7 @@ public:
 		RESET_TIME;
 		assert(asteroids.empty());
 		asteroids.resize(num);
+		tex_color = texture_color(DEFAULT_AST_TEX);
 
 		for (unsigned i = 0; i < num; ++i) { // create at the origin with radius=1
 			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, DEFAULT_AST_TEX, i);
@@ -539,11 +541,17 @@ public:
 		assert(asteroids[ix]);
 		return asteroids[ix];
 	}
-	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s) {
+	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s, pt_line_drawer &pld) {
 		assert(ix < asteroids.size());
 		float const radius(max(scale.x, max(scale.y, scale.z)));
 		float const dist(p2p_dist(pos, camera)), dscale(NDIV_SCALE_AST*(radius/(dist + 0.1*radius)));
 		if (dscale < 0.5) return; // too far/small - clip it
+
+		if (dscale < 1.0) {
+			point const global_pos(make_pt_global(pos));
+			pld.add_pt(global_pos, (get_player_pos() - global_pos).get_norm(), tex_color);
+			return;
+		}
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
 		glPushMatrix();
 		global_translate(pos);
@@ -727,11 +735,20 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 	s.add_uniform_float("crater_scale", (has_sun ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
 	WHITE.do_glColor();
+	pt_line_drawer pld;
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(pos_, camera, s);
+		i->draw(pos_, camera, s, pld);
 	}
 	asteroid_model_gen.final_draw(loc); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
+
+	if (!pld.empty()) {
+		end_texture(0);
+		xform_matrix xf;
+		xf.assign_mv_from_gl();
+		s.set_attrib_float_array(loc, xf.get_ptr(), 16);
+		pld.draw();
+	}
 }
 
 
@@ -770,12 +787,12 @@ void uasteroid::apply_physics(point const &af_pos, float af_radius) {
 }
 
 
-void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s) const {
+void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const {
 
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis(apos, radius)) return;
 	if (calc_sphere_size(apos, camera, radius) < 1.0) return; // too small/far away
-	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s);
+	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s, pld);
 }
 
 
