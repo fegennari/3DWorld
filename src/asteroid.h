@@ -36,21 +36,39 @@ public:
 };
 
 
-class uasteroid_field : public uobject_base, public vector<uasteroid> {
+class uasteroid_cont : public uobject_base, public vector<uasteroid> {
 
-	vector<unsigned short> grid[AF_GRID_SZ][AF_GRID_SZ][AF_GRID_SZ];
 	int rseed;
 
 public:
-	uasteroid_field() : rseed(0) {}
+	uasteroid_cont() : rseed(0) {}
 	void init(point const &pos, float radius);
-	static void begin_render(shader_t &shader);
-	static void end_render(shader_t &shader);
 	void gen_asteroids();
-	void apply_physics(point_d const &pos_, point const &camera);
 	void draw(point_d const &pos_, point const &camera, shader_t &s);
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
+	virtual void gen_asteroid_placements() = 0;
+
+	static void begin_render(shader_t &shader);
+	static void end_render(shader_t &shader);
+};
+
+
+class uasteroid_field : public uasteroid_cont {
+
+	vector<unsigned short> grid[AF_GRID_SZ][AF_GRID_SZ][AF_GRID_SZ];
+
+public:
+	void apply_physics(point_d const &pos_, point const &camera);
+	virtual void gen_asteroid_placements();
+};
+
+
+class uasteroid_belt : public uasteroid_cont {
+
+public:
+	void apply_physics(point_d const &pos_, point const &camera);
+	virtual void gen_asteroid_placements();
 };
 
 

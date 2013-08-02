@@ -21,6 +21,7 @@ using std::istream;
 class s_object;
 class uasteroid;
 class uasteroid_field;
+class uasteroid_belt;
 
 
 // stellar object types - must be ordered largest to smallest
@@ -351,10 +352,11 @@ public:
 	unsigned cluster_id;
 	ustar sun;
 	vector<uplanet> planets;
+	uasteroid_belt *asteroid_belt;
 	ugalaxy *galaxy;
 	colorRGBA galaxy_color;
 	
-	ussystem() : cluster_id(0), galaxy(NULL), galaxy_color(ALPHA0) {}
+	ussystem() : cluster_id(0), asteroid_belt(NULL), galaxy(NULL), galaxy_color(ALPHA0) {}
 	void create(point const &pos_);
 	void calc_color();
 	void process();
@@ -377,9 +379,6 @@ public:
 	void free_uobj() {points.clear();}
 	bool is_valid() const {return !points.empty();}
 };
-
-
-class uasteroid_field;
 
 
 class ugalaxy : public uobj_rgen, public named_obj, public ellipsoid_t { // size = 148 (164)

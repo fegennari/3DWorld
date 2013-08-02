@@ -506,6 +506,7 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 unsigned const AST_FIELD_MODEL   = AS_MODEL_HMAP;
 unsigned const NUM_AST_MODELS    = 100;
 unsigned const AST_FLD_MAX_NUM   = 1200;
+unsigned const AST_BELT_MAX_NUM  = 10000;
 float    const AST_RADIUS_SCALE  = 0.04;
 float    const AST_AMBIENT_SCALE = 20.0;
 float    const AST_AMBIENT_VAL   = 0.15;
@@ -601,7 +602,7 @@ void clear_asteroid_contexts() {
 }
 
 
-void uasteroid_field::init(point const &pos_, float radius_) {
+void uasteroid_cont::init(point const &pos_, float radius_) {
 
 	pos    = pos_;
 	radius = radius_;
@@ -609,17 +610,34 @@ void uasteroid_field::init(point const &pos_, float radius_) {
 }
 
 
-void uasteroid_field::gen_asteroids() {
+void uasteroid_cont::gen_asteroids() {
 
 	global_rand_gen.set_state(rseed, 123);
 	ensure_asteroid_models();
 	clear();
+	gen_asteroid_placements();
+	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time (probably irrelevant when instancing is enabled)
+}
+
+
+void uasteroid_field::gen_asteroid_placements() {
+
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->gen(pos, radius, AST_RADIUS_SCALE*radius);
 	}
-	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time (probably irrelevant when instancing is enabled)
+}
+
+
+void uasteroid_belt::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
+
+	//resize((rand2() % AST_BELT_MAX_NUM) + 1);
+
+	for (iterator i = begin(); i != end(); ++i) {
+		// FIXME: WRITE
+		//i->gen(pos, radius, AST_RADIUS_SCALE*radius);
+	}
 }
 
 
@@ -681,7 +699,15 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 }
 
 
-void uasteroid_field::begin_render(shader_t &shader) {
+void uasteroid_belt::apply_physics(point_d const &pos_, point const &camera) { // only needs to be called when visible
+
+	if (empty()) return;
+	//for (iterator i = begin(); i != end(); ++i) {}
+	// FIXME: WRITE
+}
+
+
+void uasteroid_cont::begin_render(shader_t &shader) {
 
 	if (!shader.is_setup()) {
 		if (ENABLE_CRATERS) {shader.set_prefix("#define HAS_CRATERS", 1);} // FS
@@ -707,7 +733,7 @@ void uasteroid_field::begin_render(shader_t &shader) {
 }
 
 
-void uasteroid_field::end_render(shader_t &shader) {
+void uasteroid_cont::end_render(shader_t &shader) {
 
 	shader.disable();
 	end_texture();
@@ -717,28 +743,28 @@ void uasteroid_field::end_render(shader_t &shader) {
 }
 
 
-void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale);
-
-
-void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s) {
+void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s) {
 
 	point_d const afpos(pos + pos_);
 	if (!univ_sphere_vis(afpos, radius)) return;
 	if (calc_sphere_size(afpos, camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
 	if (empty()) {gen_asteroids();}
+
 	/*set_color(WHITE);
 	WHITE.do_glColor();
 	draw_sphere_vbo(make_pt_global(afpos), radius, N_SPHERE_DIV, 0);*/
-	point sun_pos;
-	uobject const *sobj(NULL);
+	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
+	point sun_pos; // unused
+	uobject const *sobj(NULL); // unused
 	bool const has_sun(set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE) >= 0);
+
 	s.add_uniform_float("crater_scale", (has_sun ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
 	WHITE.do_glColor();
 	pt_line_drawer pld;
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(pos_, camera, s, pld);
+		i->draw(pos_, camera, s, pld); // move in front of far clipping plane?
 	}
 	asteroid_model_gen.final_draw(loc); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
 
@@ -752,7 +778,7 @@ void uasteroid_field::draw(point_d const &pos_, point const &camera, shader_t &s
 }
 
 
-void uasteroid_field::destroy_asteroid(unsigned ix) {
+void uasteroid_cont::destroy_asteroid(unsigned ix) {
 
 	assert(ix < size());
 	operator[](ix).destroy();
