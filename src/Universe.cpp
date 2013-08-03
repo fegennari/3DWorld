@@ -747,6 +747,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 					if (planets_visible) { // asteroid fields may also be visible
 						if (sol.asteroid_belt && sel_s) {
+							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
 							uasteroid_field::begin_render(usg.asteroid_shader);
 							sol.asteroid_belt->draw(spos, camera, usg.asteroid_shader);
 							uasteroid_field::end_render(usg.asteroid_shader);
@@ -1346,13 +1347,12 @@ void ussystem::process() {
 	sun.num_satellites = planets.size();
 	assert(!asteroid_belt);
 
-	if (planets.size() > 1 /*&& (rand() & 1)*/) {
-		unsigned const inner_planet(rand() % (planets.size()-1)); // between two planet orbits, so won't increase system radius
+	if (planets.size() > 1 && !(rand2() & 1)) {
+		unsigned const inner_planet(rand2() % (planets.size()-1)); // between two planet orbits, so won't increase system radius
 		float const ab_radius(0.5*(planets[inner_planet].orbit + planets[inner_planet+1].orbit));
 		point const ab_pos(all_zeros); // at the system center (pos it relative)
-		asteroid_belt = new uasteroid_belt;
-		asteroid_belt->init(ab_pos, ab_radius);
-		asteroid_belt->gen_asteroids();
+		asteroid_belt = new uasteroid_belt(sun.rot_axis);
+		asteroid_belt->init(ab_pos, ab_radius); // gen_asteroids() will be called when drawing
 	}
 	radius = max(radius, 0.5f*(PLANET_TO_SUN_MIN_SPACING + PLANET_TO_SUN_MAX_SPACING)); // set min radius so that hyperspeed coll works
 	gen    = 1;

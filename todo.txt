@@ -30,3 +30,8 @@ Better craters - push ground up at the perimeter
 Mesh height high frequency noise
 Texture randomization
 
+Asteroid Belts:
+- Faster
+- Dust Clouds
+- Collision Detection
+- Ray Intersection

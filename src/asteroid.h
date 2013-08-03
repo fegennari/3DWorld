@@ -19,8 +19,12 @@ public:
 	int last_coll_id;
 
 	uasteroid() : inst_id(0), last_coll_id(-1) {}
-	void gen(upos_point_type const &pos_offset, float max_dist, float max_radius);
-	void apply_physics(point const &af_pos, float af_radius);
+	void gen_base(float max_radius);
+	void gen_spherical(upos_point_type const &pos_offset, float max_dist, float max_radius);
+	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal,
+		float belt_radius, float belt_width, float belt_thickness, float max_radius);
+	void apply_field_physics(point const &af_pos, float af_radius);
+	void apply_belt_physics(point const &af_pos, float af_radius);
 	void draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const;
 	void destroy();
 	void set_velocity(vector3d const &v) {velocity = v;}
@@ -66,7 +70,10 @@ public:
 
 class uasteroid_belt : public uasteroid_cont {
 
+	vector3d orbital_plane_normal;
+
 public:
+	uasteroid_belt(vector3d const &opn) : orbital_plane_normal(opn) {}
 	void apply_physics(point_d const &pos_, point const &camera);
 	virtual void gen_asteroid_placements();
 };

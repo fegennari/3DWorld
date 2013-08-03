@@ -504,7 +504,7 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 
 
 unsigned const AST_FIELD_MODEL   = AS_MODEL_HMAP;
-unsigned const NUM_AST_MODELS    = 100;
+unsigned const NUM_AST_MODELS    = 40;
 unsigned const AST_FLD_MAX_NUM   = 1200;
 unsigned const AST_BELT_MAX_NUM  = 10000;
 float    const AST_RADIUS_SCALE  = 0.04;
@@ -625,19 +625,24 @@ void uasteroid_field::gen_asteroid_placements() {
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->gen(pos, radius, AST_RADIUS_SCALE*radius);
+		i->gen_spherical(pos, radius, AST_RADIUS_SCALE*radius);
 	}
 }
 
 
 void uasteroid_belt::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
 
-	//resize((rand2() % AST_BELT_MAX_NUM) + 1);
+	resize((rand2() % AST_BELT_MAX_NUM/2) + AST_BELT_MAX_NUM/2); // 50% to 100% of max
+	float const belt_width(rand_uniform2(0.03, 0.04)*radius);
+	float const belt_thickness(rand_uniform2(0.2, 0.25)*belt_width);
+	float const max_ast_radius(0.002*radius);
+	float rmax(0.0);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		// FIXME: WRITE
-		//i->gen(pos, radius, AST_RADIUS_SCALE*radius);
+		i->gen_belt(pos, orbital_plane_normal, radius, belt_width, belt_thickness, max_ast_radius);
+		rmax = max(rmax, (p2p_dist(pos, i->pos) + i->radius));
 	}
+	radius = rmax; // update with the bounding radius of the generated asteroids
 }
 
 
@@ -648,7 +653,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 	if (sphere_size < 2.0) return; // asteroids are too small/far away
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->apply_physics(pos, radius);
+		i->apply_field_physics(pos, radius);
 	}
 	if (sphere_size < 8.0) return; // asteroids are too small/far away
 
@@ -702,15 +707,18 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 void uasteroid_belt::apply_physics(point_d const &pos_, point const &camera) { // only needs to be called when visible
 
 	if (empty()) return;
-	//for (iterator i = begin(); i != end(); ++i) {}
-	// FIXME: WRITE
+
+	for (iterator i = begin(); i != end(); ++i) {
+		i->apply_belt_physics(pos, radius);
+	}
+	// collision detection?
 }
 
 
 void uasteroid_cont::begin_render(shader_t &shader) {
 
 	if (!shader.is_setup()) {
-		if (ENABLE_CRATERS) {shader.set_prefix("#define HAS_CRATERS", 1);} // FS
+		if (ENABLE_CRATERS ) {shader.set_prefix("#define HAS_CRATERS",      1);} // FS
 		if (ENABLE_AF_INSTS) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid");
@@ -786,20 +794,41 @@ void uasteroid_cont::destroy_asteroid(unsigned ix) {
 }
 
 
-void uasteroid::gen(upos_point_type const &pos_offset, float max_dist, float max_radius) {
+void uasteroid::gen_base(float max_radius) {
 
-	assert(max_radius > 0.0 && max_radius < max_dist && max_radius);
-	rgen_values();
-	radius   = max_radius*rand_uniform(0.1, 1.0);
-	pos      = pos_offset + signed_rand_vector2_spherical(max_dist - radius);
-	rot_ang0 = 0.5*fabs(rand_gaussian2(0.0, 1.0)); // rotation rate
-	UNROLL_3X(velocity[i_] = AST_VEL_SCALE*rand_gaussian2(0.0, 1.0);)
-	inst_id  = rand2() % NUM_AST_MODELS;
+	assert(max_radius > 0.0);
+	rgen_values(); // sets rot_axis and rot_ang
 	UNROLL_3X(scale[i_] = rand_uniform2(0.5, 1.0);)
+	inst_id  = rand2() % NUM_AST_MODELS;
+	radius   = max_radius*rand_uniform2(0.1, 1.0);
+	rot_ang0 = 0.5*fabs(rand_gaussian2(0.0, 1.0)); // rotation rate
 }
 
 
-void uasteroid::apply_physics(point const &af_pos, float af_radius) {
+void uasteroid::gen_spherical(upos_point_type const &pos_offset, float max_dist, float max_radius) {
+
+	assert(max_radius < max_dist);
+	gen_base(max_radius);
+	pos = pos_offset + signed_rand_vector2_spherical(max_dist - radius);
+	UNROLL_3X(velocity[i_] = AST_VEL_SCALE*rand_gaussian2(0.0, 1.0);)
+}
+
+
+void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal,
+	float belt_radius, float belt_width, float belt_thickness, float max_radius)
+{
+	gen_base(max_radius);
+	vector3d vab[2];
+	get_ortho_vectors(orbital_plane_normal, vab);
+	float const theta(TWO_PI*rand_float2());
+	pos      = pos_offset; // start at center of system/sun
+	pos     += rand_gaussian2(belt_radius, belt_width)*(vab[0]*sinf(theta) + vab[1]*cosf(theta)); // move out to belt radius
+	pos     += rand_gaussian2(0.0, belt_thickness)*orbital_plane_normal;
+	velocity = zero_vector; // for now
+}
+
+
+void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 
 	last_coll_id = -1;
 	float const vmag_sq(velocity.mag_sq()), vmax(10.0*AST_VEL_SCALE);
@@ -810,6 +839,13 @@ void uasteroid::apply_physics(point const &af_pos, float af_radius) {
 	if (!dist_less_than((pos - af_pos), all_zeros, (af_radius - radius))) {  // outside asteroid field bounds
 		calc_reflection_angle(velocity, velocity, (af_pos - pos).get_norm()); // reflect
 	}
+}
+
+
+void uasteroid::apply_belt_physics(point const &af_pos, float af_radius) {
+
+	rot_ang += 0.25*fticks*rot_ang0; // slow rotation only
+	pos     += velocity;
 }
 
 
