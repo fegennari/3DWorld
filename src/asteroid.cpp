@@ -26,7 +26,7 @@ unsigned const DEFAULT_AST_TEX  = ROCK_TEX; // MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 
 
-extern int animate2, display_mode;
+extern int animate2, display_mode, frame_counter;
 extern float fticks;
 extern colorRGBA sun_color;
 extern s_object clobj0;
@@ -709,7 +709,7 @@ void uasteroid_belt::apply_physics(point_d const &pos_, point const &camera) { /
 	if (empty()) return;
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->apply_belt_physics(pos, radius);
+		i->apply_belt_physics(pos, orbital_plane_normal, radius);
 	}
 	// collision detection?
 }
@@ -825,6 +825,8 @@ void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbi
 	pos     += rand_gaussian2(belt_radius, belt_width)*(vab[0]*sinf(theta) + vab[1]*cosf(theta)); // move out to belt radius
 	pos     += rand_gaussian2(0.0, belt_thickness)*orbital_plane_normal;
 	velocity = zero_vector; // for now
+	float const dist(p2p_dist(pos, pos_offset)), aoR(dist/radius), rev_rate(0.04/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
+	rev_ang0 = rev_rate/dist;
 }
 
 
@@ -842,10 +844,12 @@ void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 }
 
 
-void uasteroid::apply_belt_physics(point const &af_pos, float af_radius) {
+void uasteroid::apply_belt_physics(point const &af_pos, vector3d const &op_normal, float af_radius) {
 
+	vector3d const dir(pos - af_pos);
 	rot_ang += 0.25*fticks*rot_ang0; // slow rotation only
-	pos     += velocity;
+	velocity = rev_ang0*cross_product(dir, op_normal); // adjust velocity so asteroids revolve around the sun
+	pos      = dir.mag()*(pos + velocity - af_pos).get_norm(); // renormalize for constant distance
 }
 
 

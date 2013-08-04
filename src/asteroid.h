@@ -24,7 +24,7 @@ public:
 	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal,
 		float belt_radius, float belt_width, float belt_thickness, float max_radius);
 	void apply_field_physics(point const &af_pos, float af_radius);
-	void apply_belt_physics(point const &af_pos, float af_radius);
+	void apply_belt_physics(point const &af_pos, vector3d const &op_normal, float af_radius);
 	void draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const;
 	void destroy();
 	void set_velocity(vector3d const &v) {velocity = v;}
