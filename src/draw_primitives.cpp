@@ -979,8 +979,9 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 	point const xlate(pos - 0.5*scale); // move origin from center to min corner
 	float const sizes[3] = {sx, sy, sz};
 	vert_norm_tc verts[24];
+	unsigned vix(0);
 		
-	for (unsigned i = 0, vix = 0; i < 3; ++i) { // iterate over dimensions
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
@@ -1008,7 +1009,8 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 	} // for i
 	verts[0].set_state();
 	if (!texture) {glDisableClientState(GL_TEXTURE_COORD_ARRAY);} // hack to disable texture coords
-	glDrawArrays(GL_QUADS, 0, 24);
+	assert(vix <= 24);
+	glDrawArrays(GL_QUADS, 0, vix);
 }
 
 

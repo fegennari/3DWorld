@@ -33,5 +33,3 @@ Texture randomization
 Asteroid Belts:
 - Dust Clouds
 - Faster Ray Intersection and Collision Detection
-
-Fix borg cube
