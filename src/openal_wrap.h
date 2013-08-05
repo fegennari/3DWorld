@@ -129,12 +129,13 @@ public:
 	openal_source &get_oldest_source();
 	openal_source &get_inactive_source();
 	openal_source &get_source(unsigned id) {assert(id < sources.size()); return sources[id];}
+	openal_source const &get_source(unsigned id) const {assert(id < sources.size()); return sources[id];}
 	void clear();
-	bool is_playing   (unsigned id) const {assert(id < sources.size()); return sources[id].is_playing();}
-	void play_source  (unsigned id) const {assert(id < sources.size()); sources[id].play  ();}
-	void stop_source  (unsigned id) const {assert(id < sources.size()); sources[id].stop  ();}
-	void pause_source (unsigned id) const {assert(id < sources.size()); sources[id].pause ();}
-	void rewind_source(unsigned id) const {assert(id < sources.size()); sources[id].rewind();}
+	bool is_playing   (unsigned id) const {return get_source(id).is_playing();}
+	void play_source  (unsigned id) const {get_source(id).play  ();}
+	void stop_source  (unsigned id) const {get_source(id).stop  ();}
+	void pause_source (unsigned id) const {get_source(id).pause ();}
+	void rewind_source(unsigned id) const {get_source(id).rewind();}
 };
 
 

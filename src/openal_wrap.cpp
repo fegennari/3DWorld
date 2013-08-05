@@ -20,6 +20,7 @@ buffer_manager_t sounds;
 source_manager_t sources, looping_sources;
 vector<delayed_sound_t> delayed_sounds;
 
+extern bool disable_sound;
 extern int frame_counter, iticks;
 extern float CAMERA_RADIUS;
 
@@ -85,6 +86,7 @@ void setup_sounds() {
 
 void set_sound_loop_state(unsigned id, bool play, float volume) { // volume=0.0 => use previous value
 
+	if (disable_sound) return;
 	assert(id < NUM_LOOP_SOUNDS);
 	bool const playing(looping_sources.is_playing(id));
 	if (play && volume > 0.0) {looping_sources.get_source(id).set_gain(CLIP_TO_01(volume)*loop_sound_gains[id]);}
@@ -323,6 +325,7 @@ void source_manager_t::clear() {
 // listner code
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient) {
 
+	if (disable_sound) return;
 	alListenerfv(AL_POSITION,    &pos.x);
     alListenerfv(AL_VELOCITY,    &vel.x);
     alListenerfv(AL_ORIENTATION, &orient.at.x);
@@ -342,6 +345,7 @@ void set_openal_listener_as_player() {
 void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener, vector3d const &vel) {
 
 	//RESET_TIME;
+	if (disable_sound) return;
 	point const listener(get_camera_pos());
 	float const dist(distance_to_camera(pos));
 	bool const close(dist < CAMERA_RADIUS);
@@ -380,6 +384,8 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 
 void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, float pitch, bool rel_to_listener) { // delay in seconds
 
+	if (disable_sound) return;
+
 	if (delay == 0.0) {
 		gen_sound(id, pos, gain, pitch, rel_to_listener);
 	}
@@ -412,6 +418,8 @@ void play_thunder(point const &pos, float gain, float delay) {
 
 
 void init_openal(int &argc, char** argv) {
+
+	if (disable_sound) return;
 
 	if (!alutInit(&argc, argv)) {
 		check_and_print_alut_error();
