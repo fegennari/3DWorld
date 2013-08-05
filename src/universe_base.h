@@ -95,6 +95,7 @@ struct ellipsoid_t {
 
 void reset_player_universe();
 bool get_universe_sun_pos(point const &pos, point &spos);
+bool has_sun_lighting(point const &pos);
 int  set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
 					uobject const *&sobj, float ambient_scale);
 uobject *line_intersect_universe(point const &start, vector3d const &dir, float length, float line_radius, float &dist);

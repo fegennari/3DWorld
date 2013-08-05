@@ -499,7 +499,9 @@ public:
 		return get_moon();
 	}
 	uasteroid_field &get_asteroid_field() const;
+	uasteroid_belt  &get_asteroid_belt () const;
 	uasteroid &get_asteroid() const;
+	void destroy_asteroid() const;
 };
 
 

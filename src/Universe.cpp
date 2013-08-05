@@ -173,7 +173,7 @@ void destroy_sobj(s_object const &target) {
 		target.get_moon().def_explode(u_exp_size[target.type], etype, signed_rand_vector());
 		break;
 	case UTYPE_ASTEROID:
-		target.get_asteroid_field().destroy_asteroid(target.asteroid);
+		target.destroy_asteroid();
 		break;
 	}
 	target.register_destroyed_sobj();
@@ -531,6 +531,13 @@ void clear_ambient_color() {
 }
 
 
+bool has_sun_lighting(point const &pos) {
+
+	s_object result;
+	return (universe.get_close_system(pos, result, 2.0) != 0);
+}
+
+
 // return values: -1: no sun, 0: not shadowed, 1: < half shadowed, 2: > half shadowed, 3: fully shadowed
 // caches sobj and only determines if there is a shadow if NULL
 int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
@@ -749,7 +756,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						if (sol.asteroid_belt && sel_s) {
 							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
 							uasteroid_field::begin_render(usg.asteroid_shader);
-							sol.asteroid_belt->draw(spos, camera, usg.asteroid_shader);
+							sol.asteroid_belt->draw(pos, camera, usg.asteroid_shader);
 							uasteroid_field::end_render(usg.asteroid_shader);
 						}
 						if (!has_sun) { // sun is gone
@@ -1350,9 +1357,8 @@ void ussystem::process() {
 	if (planets.size() > 1 && !(rand2() & 1)) {
 		unsigned const inner_planet(rand2() % (planets.size()-1)); // between two planet orbits, so won't increase system radius
 		float const ab_radius(0.5*(planets[inner_planet].orbit + planets[inner_planet+1].orbit));
-		point const ab_pos(all_zeros); // at the system center (pos it relative)
 		asteroid_belt = new uasteroid_belt(sun.rot_axis);
-		asteroid_belt->init(ab_pos, ab_radius); // gen_asteroids() will be called when drawing
+		asteroid_belt->init(pos, ab_radius); // gen_asteroids() will be called when drawing
 	}
 	radius = max(radius, 0.5f*(PLANET_TO_SUN_MIN_SPACING + PLANET_TO_SUN_MAX_SPACING)); // set min radius so that hyperspeed coll works
 	gen    = 1;
@@ -2511,11 +2517,10 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				if (!dist_less_than(pos, i->pos, expand*i->radius)) continue;
 
-				// FIXME: voxel positions are dynamic, so spatial subdivision is difficult
+				// FIXME: asteroid positions are dynamic, so spatial subdivision is difficult
 				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) {
 					if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
-					float const dista(p2p_dist(pos, j->pos));
-					result.assign(gc, -1, -1, dista, UTYPE_ASTEROID, NULL);
+					result.assign(gc, -1, -1, p2p_dist(pos, j->pos), UTYPE_ASTEROID, NULL);
 					result.asteroid_field = (i - galaxy.asteroid_fields.begin());
 					result.asteroid       = (j - i->begin());
 				}
@@ -2557,8 +2562,14 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				if (max_level == UTYPE_SYSTEM || max_level == UTYPE_STAR) continue; // system/star
 
 				if (max_level >= UTYPE_MOON && system.asteroid_belt) { // check for asteroid belt collisions
-					if (system.asteroid_belt->sphere_might_intersect((pos - system.pos), expand*system.asteroid_belt->get_max_asteroid_radius())) {
-						// FIXME: WRITE
+					if (system.asteroid_belt->sphere_might_intersect(pos, expand*system.asteroid_belt->get_max_asteroid_radius())) {
+						// FIXME: asteroid positions are dynamic, so spatial subdivision is difficult
+						for (uasteroid_field::const_iterator j = system.asteroid_belt->begin(); j != system.asteroid_belt->end(); ++j) {
+							if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
+							result.assign(gc, cl, s, p2p_dist(pos, j->pos), UTYPE_ASTEROID, NULL);
+							result.asteroid_field = -2; // special asteroid belt identifier
+							result.asteroid       = (j - system.asteroid_belt->begin());
+						}
 					}
 				}
 				unsigned const np((unsigned)system.planets.size());
@@ -2740,33 +2751,18 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 				uasteroid_field const &af(galaxy.asteroid_fields[av[ac].index]);
 
 				for (vector<uasteroid>::const_iterator i = af.begin(); i != af.end(); ++i) {
-					if (!dist_less_than(curr, i->pos, (i->radius + dist))) continue;
-
-					if (line_intersect_sphere(curr, dir, i->pos, (i->radius+line_radius), rdist, ldist, t)) { // line intersects asteroid bounding sphere
-						// transform line into asteroid's translated and scaled coord space
-						point curr2;
-						vector3d dir2;
-						vector3d const &ascale(i->get_scale());
-						UNROLL_3X(curr2[i_] = (curr[i_] - i->pos[i_])/ascale[i_]; dir2[i_] = dir[i_]/ascale[i_];)
-						dir2.normalize();
-						float rdist2, ldist2, t2; // unused
-
-						if (line_intersect_sphere(curr2, dir2, all_zeros, (i->radius+line_radius), rdist2, ldist2, t2)) { // somewhat more accurate test
-							if (t > 0.0 && ldist <= dist && (ctest.dist == 0.0 || ldist < ctest.dist)) {
-								//cout << "asteroid: " << (i - af.begin()) << ", ldist: " << ldist << ", ctest.dist: " << ctest.dist << endl;
-								ctest.dist            = ldist;
-								result.type           = UTYPE_ASTEROID;
-								result.dist           = ldist;
-								result.asteroid_field = av[ac].index;
-								result.asteroid       = i - af.begin();
-								coll                  = i->pos;
-							}
-						}
+					if (i->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
+						ctest.dist            = ldist;
+						result.type           = UTYPE_ASTEROID;
+						result.dist           = ldist;
+						result.asteroid_field = av[ac].index;
+						result.asteroid       = i - af.begin();
+						coll                  = i->pos;
 					}
-				}
-			} // ac
+				} // for i
+			} // for ac
 			av.resize(0);
-			float const asteroid_dist(ctest.dist);
+			float asteroid_dist(ctest.dist);
 
 			// systems
 			for (unsigned c = 0; c < galaxy.clusters.size(); ++c) {
@@ -2793,6 +2789,23 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 			for (unsigned sc = 0; sc < sv.size(); ++sc) {
 				ussystem &system(galaxy.sols[sv[sc].index]);
 				
+				if (system.asteroid_belt) {
+					if (system.asteroid_belt->line_might_intersect(curr, (curr + dist*dir))) {
+						for (vector<uasteroid>::const_iterator i = system.asteroid_belt->begin(); i != system.asteroid_belt->end(); ++i) {
+							if (i->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
+								asteroid_dist         = ldist;
+								ctest.dist            = ldist;
+								result.type           = UTYPE_ASTEROID;
+								result.dist           = ldist;
+								result.system         = sv[sc].index;
+								result.cluster        = system.cluster_id;
+								result.asteroid_field = -2; // special system asteroid belt index
+								result.asteroid       = i - system.asteroid_belt->begin();
+								coll                  = i->pos;
+							}
+						} // for i
+					}
+				}
 				if (system.sun.is_ok() && sv[sc].rad <= system.sun.radius && sv[sc].t > 0.0 && sv[sc].dist <= dist) {
 					if (asteroid_dist == 0.0 || sv[sc].dist < asteroid_dist) { // asteroid is not closer
 						ctest.index = -1;
@@ -2800,13 +2813,6 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 						ctest.rad   = sv[sc].rad;
 						ctest.t     = t;
 						pv.push_back(ctest); // line intersects sun
-					}
-				}
-				if (system.asteroid_belt) {
-					point const ab_rel_pos(curr - system.pos);
-
-					if (system.asteroid_belt->line_might_intersect(ab_rel_pos, (ab_rel_pos + dist*dir))) {
-						// FIXME: WRITE
 					}
 				}
 				for (unsigned i = 0; i < system.planets.size(); ++i) { // search for planets
@@ -3183,18 +3189,32 @@ uasteroid_field &s_object::get_asteroid_field() const {
 	return g.asteroid_fields[asteroid_field];
 }
 
+uasteroid_belt &s_object::get_asteroid_belt() const {
+	assert(asteroid_field == -2);
+	ussystem &system(get_system());
+	assert(system.asteroid_belt);
+	assert(asteroid >= 0);
+	assert((unsigned)asteroid < system.asteroid_belt->size());
+	return *system.asteroid_belt;
+}
+
 uasteroid &s_object::get_asteroid() const {
-	if (asteroid_field == -2) { // special identifier for system asteroid belt
-		ussystem &system(get_system());
-		assert(system.asteroid_belt);
-		assert(asteroid >= 0);
-		assert((unsigned)asteroid < system.asteroid_belt->size());
-		return (*system.asteroid_belt)[asteroid];
-	}
+	if (asteroid_field == -2) {return get_asteroid_belt()[asteroid];} // special identifier for system asteroid belt
 	uasteroid_field &af(get_asteroid_field());
 	assert(asteroid >= 0);
 	assert((unsigned)asteroid < af.size());
 	return af[asteroid];
+}
+
+void s_object::destroy_asteroid() const {
+	assert(type == UTYPE_ASTEROID);
+
+	if (asteroid_field == -2) { // special identifier for system asteroid belt
+		get_asteroid_belt().destroy_asteroid(asteroid);
+	}
+	else {
+		get_asteroid_field().destroy_asteroid(asteroid);
+	}
 }
 
 

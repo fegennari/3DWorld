@@ -31,7 +31,7 @@ Mesh height high frequency noise
 Texture randomization
 
 Asteroid Belts:
-- Faster
 - Dust Clouds
-- Collision Detection
-- Ray Intersection
+- Faster Ray Intersection and Collision Detection
+
+Fix borg cube

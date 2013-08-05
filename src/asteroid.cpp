@@ -41,6 +41,11 @@ void set_uniform_atten_lighting(int light);
 unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv);
 
 
+int get_spherical_texture(int tid) {
+	return ((tid == MOON_TEX) ? ROCK_SPHERE_TEX : tid);
+}
+
+
 void clear_cached_shaders() {
 
 	for (unsigned i = 0; i < 8; ++i) {
@@ -661,6 +666,7 @@ bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2) cons
 
 	if (empty()) return 0;
 	if (!line_sphere_intersect(p1, p2, pos, radius)) return 0; // optional optimization, may not be useful
+	if (sphere_might_intersect(p1, 0.0)) return 1; // first point inside torus
 	point pt[2] = {p1, p2};
 
 	for (unsigned d = 0; d < 2; ++d) { // convert to local coordinate space
@@ -680,7 +686,7 @@ bool uasteroid_belt::sphere_might_intersect(point const &sc, float sr) const {
 	rotate_vector3d_by_vr(orbital_plane_normal, plus_z, pt);
 	point p_int; // unused
 	vector3d norm; // unused
-	return sphere_torus_intersect(pt, sr, pos, inner_radius, outer_radius, p_int, norm, 0);
+	return sphere_torus_intersect(pt, sr, all_zeros, inner_radius, outer_radius, p_int, norm, 0);
 }
 
 
@@ -890,7 +896,7 @@ void uasteroid::apply_belt_physics(point const &af_pos, vector3d const &op_norma
 	vector3d const dir(pos - af_pos);
 	rot_ang += 0.25*fticks*rot_ang0; // slow rotation only
 	velocity = rev_ang0*cross_product(dir, op_normal); // adjust velocity so asteroids revolve around the sun
-	pos      = dir.mag()*(pos + velocity - af_pos).get_norm(); // renormalize for constant distance
+	pos      = af_pos + dir.mag()*(pos + velocity - af_pos).get_norm(); // renormalize for constant distance
 }
 
 
@@ -905,16 +911,32 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s, pt_l
 
 void uasteroid::destroy() {
 
-	//int const tid(get_fragment_tid(all_zeros));
-	int const tid(ROCK_SPHERE_TEX);
+	int const tid(get_spherical_texture(get_fragment_tid(all_zeros)));
+	float const color_scale(has_sun_lighting(pos) ? 1.0 : 2.5); // scale up the color to increase ambient
 	def_explode(u_exp_size[UTYPE_ASTEROID], ETYPE_ANIM_FIRE, signed_rand_vector());
-	gen_moving_fragments(pos, (40 + (rand()%20)), tid, 2.0*get_eq_vol_scale(scale), 0.5, velocity, WHITE*2.5); // scale up the color to increase ambient
+	gen_moving_fragments(pos, (40 + (rand()%20)), tid, 2.0*get_eq_vol_scale(scale), 0.5, velocity, WHITE*color_scale);
 	//asteroid_model_gen.destroy_inst(inst_id, pos, radius*scale); // fragments don't have correct velocity and are very dark (no added ambient)
 }
 
 
 int uasteroid::get_fragment_tid(point const &hit_pos) const {
 	return asteroid_model_gen.get_fragment_tid(inst_id, pos+hit_pos); // Note: asteroid_field pos is not added to hit_pos here
+}
+
+
+bool uasteroid::line_intersection(point const &p1, vector3d const &v12, float line_length, float line_radius, float &ldist) const {
+
+	if (!dist_less_than(p1, pos, (radius + line_length))) return 0;
+	float t, rdist;
+	if (!line_intersect_sphere(p1, v12, pos, (radius+line_radius), rdist, ldist, t)) return 0; // line intersects asteroid bounding sphere
+	// transform line into asteroid's translated and scaled coord space
+	point p1b;
+	vector3d v12b;
+	UNROLL_3X(p1b[i_] = (p1[i_] - pos[i_])/scale[i_]; v12b[i_] = v12[i_]/scale[i_];)
+	v12b.normalize();
+	float rdist2, ldist2, t2; // unused
+	if (!line_intersect_sphere(p1b, v12b, all_zeros, (radius+line_radius), rdist2, ldist2, t2)) return 0; // somewhat more accurate test
+	return (t > 0.0 && ldist <= line_length);
 }
 
 
