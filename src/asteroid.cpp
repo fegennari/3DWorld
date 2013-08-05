@@ -891,11 +891,12 @@ void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 }
 
 
-void uasteroid::apply_belt_physics(point const &af_pos, vector3d const &op_normal, float af_radius) {
+void uasteroid::apply_belt_physics(upos_point_type const &af_pos, vector3d const &op_normal, float af_radius) {
 
-	vector3d const dir(pos - af_pos);
+	// FIXME: still slightly unstable
+	upos_point_type const dir(pos - af_pos);
 	rot_ang += 0.25*fticks*rot_ang0; // slow rotation only
-	velocity = rev_ang0*cross_product(dir, op_normal); // adjust velocity so asteroids revolve around the sun
+	velocity = rev_ang0*cross_product(dir, upos_point_type(op_normal)).get_norm(); // adjust velocity so asteroids revolve around the sun
 	pos      = af_pos + dir.mag()*(pos + velocity - af_pos).get_norm(); // renormalize for constant distance
 }
 
