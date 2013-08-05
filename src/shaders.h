@@ -123,6 +123,8 @@ public:
 	void add_cur_inst();
 	void add_inst(xform_matrix const &xf) {inst_xforms.push_back(xf);}
 	void draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void *indices=NULL);
+	unsigned size () const {return inst_xforms.size();}
+	bool     empty() const {return inst_xforms.empty();}
 };
 
 

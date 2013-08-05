@@ -38,6 +38,7 @@ shader_t cached_proc_shaders [8];
 
 
 void set_uniform_atten_lighting(int light);
+unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv);
 
 
 void clear_cached_shaders() {
@@ -184,7 +185,7 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 
 	float scale_val;
 	mutable upsurface surface; // FIXME: mutable so that the contained sd_sphere_vbo_d can modify its vbo indexes
-	ast_instance_render_t inst_render;
+	ast_instance_render_t inst_render; // could be per-LOD level (4)
 	static vector<float> pmap_vector;
 
 public:
@@ -201,17 +202,20 @@ public:
 
 	// Note: this class overrides draw_with_texture() because it's used instanced
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id, bool no_reset_texture=0) const { // to allow overriding the texture id
+		unsigned const ndiv(3*ddata.ndiv/2); // increase ndiv because we want higher resolution to capture details
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
 		ddata.color_a.do_glColor();
 		select_texture((force_tex_id >= 0) ? force_tex_id : tex_id);
-		surface.sd.draw_ndiv_pow2_vbo(ddata.ndiv); // use a vbo
+		surface.sd.draw_ndiv_pow2_vbo(ndiv); // use a vbo
 		if (!no_reset_texture) {end_texture();}
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		draw_with_texture(ddata, -1);
 	}
 	virtual bool draw_instanced(unsigned ndiv) { // non-const because it caches instance transforms
+		ndiv = 3*ndiv/2; // increase ndiv because we want higher resolution to capture details
 		if (scale_val != 1.0) {uniform_scale(scale_val);}
+		//unsigned const lod(calc_lod_pow2(ASTEROID_NDIV, ndiv));
 		inst_render.add_cur_inst();
 		inst_render.max_ndiv = max(inst_render.max_ndiv, ndiv);
 		return 1;
@@ -632,17 +636,51 @@ void uasteroid_field::gen_asteroid_placements() {
 
 void uasteroid_belt::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
 
+	//RESET_TIME;
 	resize((rand2() % AST_BELT_MAX_NUM/2) + AST_BELT_MAX_NUM/2); // 50% to 100% of max
 	float const belt_width(rand_uniform2(0.03, 0.04)*radius);
 	float const belt_thickness(rand_uniform2(0.2, 0.25)*belt_width);
 	float const max_ast_radius(0.002*radius);
 	float rmax(0.0);
+	inner_radius = 0.0;
+	outer_radius = radius;
+	max_asteroid_radius = 0.0;
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->gen_belt(pos, orbital_plane_normal, radius, belt_width, belt_thickness, max_ast_radius);
+		float const ri(i->gen_belt(pos, orbital_plane_normal, outer_radius, belt_width, belt_thickness, max_ast_radius));
+		inner_radius = max(inner_radius, ri);
 		rmax = max(rmax, (p2p_dist(pos, i->pos) + i->radius));
+		max_asteroid_radius = max(max_asteroid_radius, i->radius);
 	}
 	radius = rmax; // update with the bounding radius of the generated asteroids
+	//PRINT_TIME("Asteroid Belt"); // 4ms
+}
+
+
+bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2) const {
+
+	if (empty()) return 0;
+	if (!line_sphere_intersect(p1, p2, pos, radius)) return 0; // optional optimization, may not be useful
+	point pt[2] = {p1, p2};
+
+	for (unsigned d = 0; d < 2; ++d) { // convert to local coordinate space
+		pt[d] -= pos;
+		rotate_vector3d_by_vr(orbital_plane_normal, plus_z, pt[d]);
+	}
+	float t(0.0); // unused
+	return line_torus_intersect(pt[0], pt[1], all_zeros, inner_radius, outer_radius, t);
+}
+
+
+bool uasteroid_belt::sphere_might_intersect(point const &sc, float sr) const {
+
+	if (empty()) return 0;
+	if (!dist_less_than(sc, pos, (radius + sr))) return 0;
+	point pt(sc - pos); // convert to local coordinate space
+	rotate_vector3d_by_vr(orbital_plane_normal, plus_z, pt);
+	point p_int; // unused
+	vector3d norm; // unused
+	return sphere_torus_intersect(pt, sr, pos, inner_radius, outer_radius, p_int, norm, 0);
 }
 
 
@@ -814,19 +852,22 @@ void uasteroid::gen_spherical(upos_point_type const &pos_offset, float max_dist,
 }
 
 
-void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal,
+// returns the distance from the asteroid to the asteroid belt center line (torus inner radius)
+float uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal,
 	float belt_radius, float belt_width, float belt_thickness, float max_radius)
 {
 	gen_base(max_radius);
 	vector3d vab[2];
 	get_ortho_vectors(orbital_plane_normal, vab);
 	float const theta(TWO_PI*rand_float2());
+	vector3d const dir(vab[0]*sinf(theta) + vab[1]*cosf(theta));
 	pos      = pos_offset; // start at center of system/sun
-	pos     += rand_gaussian2(belt_radius, belt_width)*(vab[0]*sinf(theta) + vab[1]*cosf(theta)); // move out to belt radius
+	pos     += rand_gaussian2(belt_radius, belt_width)*dir; // move out to belt radius
 	pos     += rand_gaussian2(0.0, belt_thickness)*orbital_plane_normal;
 	velocity = zero_vector; // for now
 	float const dist(p2p_dist(pos, pos_offset)), aoR(dist/radius), rev_rate(0.04/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
 	rev_ang0 = rev_rate/dist;
+	return radius + (pos - pos_offset - belt_radius*dir).mag();
 }
 
 

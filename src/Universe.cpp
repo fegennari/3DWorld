@@ -2557,7 +2557,9 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				if (max_level == UTYPE_SYSTEM || max_level == UTYPE_STAR) continue; // system/star
 
 				if (max_level >= UTYPE_MOON && system.asteroid_belt) { // check for asteroid belt collisions
-					// FIXME: WRITE
+					if (system.asteroid_belt->sphere_might_intersect((pos - system.pos), expand*system.asteroid_belt->get_max_asteroid_radius())) {
+						// FIXME: WRITE
+					}
 				}
 				unsigned const np((unsigned)system.planets.size());
 				
@@ -2801,7 +2803,11 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 					}
 				}
 				if (system.asteroid_belt) {
-					// FIXME: WRITE
+					point const ab_rel_pos(curr - system.pos);
+
+					if (system.asteroid_belt->line_might_intersect(ab_rel_pos, (ab_rel_pos + dist*dir))) {
+						// FIXME: WRITE
+					}
 				}
 				for (unsigned i = 0; i < system.planets.size(); ++i) { // search for planets
 					float const p_radius(system.planets[i].mosize);

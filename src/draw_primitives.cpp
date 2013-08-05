@@ -606,7 +606,7 @@ unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 
 	ndiv = max(ndiv, 4U);
 	unsigned lod(0);
-	for (unsigned n = (max_ndiv >> 1); ndiv < n; n >>= 1, ++lod) {}
+	for (unsigned n = (max_ndiv >> 1); ndiv <= n; n >>= 1, ++lod) {}
 	return lod;
 }
 
