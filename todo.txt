@@ -31,5 +31,10 @@ Mesh height high frequency noise
 Texture randomization
 
 Asteroid Belts:
-- Dust Clouds
+- Dust Clouds and smaller asteroids
 - Faster Ray Intersection and Collision Detection
+  - tighter gaussian/smaller torus Ri
+  - skip collision with particles
+  - modify pt.z to account for flattening in torus
+- rocket hits use correct texture and reduce size
+- large ships hitting small asteroids move the asteroids instead of stopping the ships

@@ -1075,8 +1075,9 @@ float us_projectile::damage(float val, int type, point const &hit_pos, free_obj 
 		float const damage_done(specs().no_exp_dam ? 0.0 : specs().damage);
 		explode(damage_done, specs().bradius, etype, dir, specs().btime, wclass, alignment, get_eflags(), parent);
 
-		if (sobj_coll && damage_done >= 20.0) { // exploded on a planet or moon
+		if (sobj_coll && damage_done >= 20.0) { // exploded on a planet, moon, or asteroid
 			point const hit_pos2(pos + (pos - hit_pos).get_norm()*radius);
+			// FIXME: get_fragment_tid() called on the wrong object - should be called on the uobject that was collided with
 			gen_moving_fragments(hit_pos2, min(25U, max(1U, unsigned(min(10.0f, 0.4f*damage_done)))), get_fragment_tid(all_zeros), 3.2, 6.0);
 		}
 	}
