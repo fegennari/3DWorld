@@ -616,7 +616,8 @@ public:
 
 protected:
 	bool near_b_hole;
-	unsigned flags, reset_timer, time, sobj_coll;
+	unsigned flags, reset_timer, time;
+	int sobj_coll_tid;
 	mutable int shadow_val;
 	float speed_factor, max_sfactor, temperature, extra_mass, rot_rate, sobj_dist, draw_rscale, ambient_scale;
 	point reset_pos;
@@ -658,7 +659,7 @@ public:
 	void set_vel(vector3d const &vel ) {velocity  = vel;}
 	void set_align(unsigned align)     {alignment = align;}
 	void set_sobj_dist(float dist)     {sobj_dist = dist;}
-	void set_sobj_coll()               {sobj_coll = 1;}
+	void set_sobj_coll_tid(int tid)    {sobj_coll_tid = tid;}
 	void reset_after(unsigned nticks) {if (reset_timer == 0) reset_timer = nticks;}
 	void reset_lights() {exp_lights.resize(0);}
 	void set_parent(free_obj const *p) {parent = p;}

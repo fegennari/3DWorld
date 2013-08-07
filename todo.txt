@@ -33,5 +33,4 @@ Texture randomization
 Asteroid Belts:
 - Dust Clouds and smaller asteroids
 - Faster Ray Intersection and Collision Detection
-- rocket hits use correct texture and reduce size
 - large ships hitting small asteroids move the asteroids instead of stopping the ships

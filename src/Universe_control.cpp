@@ -302,8 +302,9 @@ void process_univ_objects() {
 					
 					if (nmag < rsum) {
 						// FIXME: detailed collision?
+						// FIXME: projectile explosions damage the asteroid (reduce its radius?)
 						point const cpos(asteroid.pos + norm*(rsum/nmag)); // normalize, multiply, and add
-						uobj->set_sobj_coll();
+						uobj->set_sobj_coll_tid(asteroid.get_fragment_tid(obj_pos));
 						uobj->move_to(cpos); // setup correct position for explode?
 						uobj->collision(asteroid.pos, asteroid.get_velocity(), S_BODY_DENSITY, asteroid.radius, NULL, elastic); // large mass
 						uobj->move_to(cpos); // more accurate since this takes into account the terrain
@@ -338,7 +339,7 @@ void process_univ_objects() {
 
 						if (clobj.object->collision(obj_pos, radius_coll, uobj->get_velocity(), cpos, coll_r, simple_coll)) {
 							assert(clobj.object->mass > 0.0);
-							uobj->set_sobj_coll();
+							uobj->set_sobj_coll_tid(clobj.object->get_fragment_tid(obj_pos));
 							uobj->move_to(cpos); // setup correct position for explode?
 							uobj->collision(clobj_pos, zero_vector, S_BODY_DENSITY*clobj.object->mass, coll_r, NULL, elastic);
 							uobj->move_to(cpos); // more accurate since this takes into account the terrain
