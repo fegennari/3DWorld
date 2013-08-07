@@ -671,11 +671,20 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 }
 
 
+bool line_intersect_sun(point const &p1, point const &p2, s_object const &result, float halo) {
+
+	// avoid choosing a destination that requires flying through a star
+	if (!result.has_valid_system()) return 0;
+	ustar const &sun(result.get_system().sun);
+	return (sun.is_ok() && line_sphere_intersect(p1, p2, sun.pos, halo*sun.radius));
+}
+
+
 uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned align) {
 
 	s_object result;
 	float const g_expand(CELL_SIZE/GALAXY_MIN_SIZE); // Note: can be in more than one galaxy, but should be OK
-	if (!universe.get_closest_object(result, pos, UTYPE_GALAXY, 0, 1, 4.0, 0, g_expand) || result.type != UTYPE_GALAXY) return NULL;
+	if (!universe.get_closest_object(result, pos, UTYPE_SYSTEM, 0, 1, 4.0, 0, g_expand) || result.type < UTYPE_GALAXY) return NULL;
 	ugalaxy const &galaxy(result.get_galaxy());
 	uobject const *dest = NULL;
 	float const distval(2.5*galaxy.get_radius());
@@ -697,7 +706,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 				float const pvalue(planet.get_land_value(align, pos, sradius));
 
 				if (max_pvalue == 0.0 || pvalue > max_pvalue) {
-					if (planet_acceptable) {
+					if (planet_acceptable && !line_intersect_sun(pos, planet.pos, result, 2.0)) {
 						max_pvalue = pvalue;
 						max_svalue = svalue;
 						dest       = &planet;
@@ -707,7 +716,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 						if (!moon.colonizable() || moon.get_id() == exclude_id) continue;
 						float const mvalue(moon.get_land_value(align, pos, sradius));
 
-						if (max_pvalue == 0.0 || mvalue > max_pvalue) {
+						if ((max_pvalue == 0.0 || mvalue > max_pvalue) && !line_intersect_sun(pos, moon.pos, result, 2.0)) {
 							max_pvalue = mvalue;
 							max_svalue = svalue;
 							dest       = &moon;
