@@ -105,7 +105,7 @@ void setup_current_system() {
 		universe.draw_all_cells(clobj0, 1, 1, 2); // required to gen galaxies/systems
 	}
 	point const &pos(get_player_pos2());
-	universe.get_object_closest_to_pos(clobj0, pos, 4.0);
+	universe.get_object_closest_to_pos(clobj0, pos, 0, 4.0);
 	colorRGBA c1(ALPHA0), c2(ALPHA0);
 	float water(0.0);
 	atmosphere = 0.0;
@@ -236,7 +236,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 			add_camera_filter(colorRGBA(1.0, 0.0, 0.0, min(0.5, max(0.1, 0.1*tratio))), 3, -1, CAM_FILT_BURN); // NOISE_TEX
 		}
 	}
-	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 4.0);
+	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
 	if (!static_only) {setup_universe_fog(clobj0);}
 	glEnable(GL_COLOR_MATERIAL);
 	check_gl_error(120);
@@ -284,7 +284,8 @@ void process_univ_objects() {
 
 		// skip orbiting objects (no collisions or gravity effects, temperature is mostly constant)
 		s_object clobj; // closest object
-		int const found_close(orbiting ? 0 : universe.get_object_closest_to_pos(clobj, obj_pos));
+		bool const include_asteroids(!particle); // disable particle-asteroid collisions because they're too slow
+		int const found_close(orbiting ? 0 : universe.get_object_closest_to_pos(clobj, obj_pos, include_asteroids));
 		bool temp_known(0);
 
 		if (found_close) {
@@ -622,10 +623,10 @@ bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use
 }
 
 
-bool sphere_intersect_uobject(point const &pos, float radius) {
+bool sphere_intersect_uobject(point const &pos, float radius, bool include_asteroids) {
 
 	s_object result;
-	if (!universe.get_closest_object(result, pos, UTYPE_MOON, 1, 1.0)) return 0;
+	if (!universe.get_closest_object(result, pos, UTYPE_MOON, include_asteroids, 1, 1.0)) return 0;
 	if (!result.object || !result.object->is_ok()) return 0; // can this happen?
 	if (!result.object->sphere_intersection(pos, radius)) return 0;
 	//cout << "intersects with " << result.object->get_name() << endl;
@@ -633,9 +634,9 @@ bool sphere_intersect_uobject(point const &pos, float radius) {
 }
 
 
-bool get_closest_object(point const &pos, s_object &result, int obj_type, bool get_destroyed=0) {
+bool get_closest_object(point const &pos, s_object &result, int obj_type, bool include_asteroids, bool get_destroyed=0) {
 
-	if (!universe.get_closest_object(result, pos, obj_type, 1, 4.0, get_destroyed)) return 0;
+	if (!universe.get_closest_object(result, pos, obj_type, include_asteroids, 1, 4.0, get_destroyed)) return 0;
 	return (result.type == obj_type && result.object != NULL && (get_destroyed || result.object->is_ok()));
 }
 
@@ -643,7 +644,7 @@ bool get_closest_object(point const &pos, s_object &result, int obj_type, bool g
 uobject const *get_closest_world_ptr(point const &pos, int type) {
 
 	s_object result;
-	return (get_closest_object(pos, result, type) ? result.object : NULL);
+	return (get_closest_object(pos, result, type, 0) ? result.object : NULL);
 }
 
 
@@ -674,7 +675,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 
 	s_object result;
 	float const g_expand(CELL_SIZE/GALAXY_MIN_SIZE); // Note: can be in more than one galaxy, but should be OK
-	if (!universe.get_closest_object(result, pos, UTYPE_GALAXY, 1, 4.0, 0, g_expand) || result.type != UTYPE_GALAXY) return NULL;
+	if (!universe.get_closest_object(result, pos, UTYPE_GALAXY, 0, 1, 4.0, 0, g_expand) || result.type != UTYPE_GALAXY) return NULL;
 	ugalaxy const &galaxy(result.get_galaxy());
 	uobject const *dest = NULL;
 	float const distval(2.5*galaxy.get_radius());
@@ -736,11 +737,11 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 	int const world_types[2] = {UTYPE_PLANET, UTYPE_MOON};
 
 	for (unsigned t = 0; t < 2; ++t) {
-		if (!get_closest_object(pos, result, world_types[t])) continue;
-		if (result.object->get_id() != uobj_id)               continue;
+		if (!get_closest_object(pos, result, world_types[t], 0)) continue;
+		if (result.object->get_id() != uobj_id)                  continue;
 		urev_body &world(result.get_world());
-		if (world.owner != NO_OWNER || !world.colonizable())  continue;
-		if (check_for_land && !world.can_land_at(pos))        continue; // currently player only
+		if (world.owner != NO_OWNER || !world.colonizable())     continue;
+		if (check_for_land && !world.can_land_at(pos))           continue; // currently player only
 		if (PRINT_OWNERSHIP) cout << world.get_name() << " is claimed by " << get_owner_name(owner) << "." << endl;
 		float defend(world.resources);
 		bool owned(0);
@@ -992,7 +993,7 @@ void orbiting_ship::update_state() {
 	if (!(flags & OBJ_FLAGS_DIST) || exploding_now || (time&31) == 0) { // not too far away
 		s_object result;
 
-		if (get_closest_object(pos, result, orbiting_type, 1)) {
+		if (get_closest_object(pos, result, orbiting_type, 0, 1)) {
 			urev_body &world(result.get_world());
 
 			if (!world.is_ok()) { // was destroyed

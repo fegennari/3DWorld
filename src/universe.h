@@ -518,15 +518,15 @@ public:
 	void shift_cells(int dx, int dy, int dz);
 	void free_textures();
 	void draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only=0);
-	int get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed=0, float g_expand=1.0) const;
+	int get_closest_object(s_object &result, point pos, int max_level, bool include_asteroids, bool offset, float expand, bool get_destroyed=0, float g_expand=1.0) const;
 	bool get_trajectory_collisions(s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius) const;
 	float get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const;
 
-	int get_object_closest_to_pos(s_object &result, point const &pos, float expand=1.0) const {
-		return get_closest_object(result, pos, UTYPE_MOON, 1, expand);
+	int get_object_closest_to_pos(s_object &result, point const &pos, bool include_asteroids, float expand=1.0) const {
+		return get_closest_object(result, pos, UTYPE_MOON, include_asteroids, 1, expand);
 	}
 	int get_close_system(point const &pos, s_object &result, float expand) const {
-		if (!get_closest_object(result, pos, UTYPE_SYSTEM, 1, expand)) return 0; // find closest system (check last param=offset?)
+		if (!get_closest_object(result, pos, UTYPE_SYSTEM, 0, 1, expand)) return 0; // find closest system (check last param=offset?)
 		return result.has_valid_system();
 	}
 	bool bad_cell_xyz(int const cxyz[3]) const {

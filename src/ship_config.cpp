@@ -83,7 +83,7 @@ bool is_valid_starting_ship_pos(point const &spos, unsigned sclass) {
 	unsigned const coll_ix(check_for_obj_coll(spos, radius));
 	if (coll_ix != 0) return 0; // intersection
 	// Note: the first time init ships are placed, the universe insn't created yet so this query will always return false
-	return !sphere_intersect_uobject(spos, radius);
+	return !sphere_intersect_uobject(spos, radius, 0); // include_asteroids=0, since asteroids move and are slow to intersect with
 }
 
 

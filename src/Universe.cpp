@@ -2462,8 +2462,9 @@ string ustar::get_info() const {
 
 
 // if not find_largest then find closest
-int universe_t::get_closest_object(s_object &result, point pos, int max_level, bool offset, float expand, bool get_destroyed, float g_expand) const {
-
+int universe_t::get_closest_object(s_object &result, point pos, int max_level, bool include_asteroids,
+	bool offset, float expand, bool get_destroyed, float g_expand) const
+{
 	float min_gdist(CELL_SIZE);
 	if (offset) offset_pos(pos);
 	point posc(pos);
@@ -2513,7 +2514,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				min_gdist     = distg;
 			}
 		}
-		if (max_level >= UTYPE_MOON) { // check for asteroid field collisions
+		if (include_asteroids) { // check for asteroid field collisions
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				if (!dist_less_than(pos, i->pos, expand*i->radius)) continue;
 
@@ -2561,7 +2562,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				}
 				if (max_level == UTYPE_SYSTEM || max_level == UTYPE_STAR) continue; // system/star
 
-				if (max_level >= UTYPE_MOON && system.asteroid_belt) { // check for asteroid belt collisions
+				if (include_asteroids && system.asteroid_belt) { // check for asteroid belt collisions
 					if (system.asteroid_belt->sphere_might_intersect(pos, expand*system.asteroid_belt->get_max_asteroid_radius())) {
 						// FIXME: asteroid positions are dynamic, so spatial subdivision is difficult
 						for (uasteroid_field::const_iterator j = system.asteroid_belt->begin(); j != system.asteroid_belt->end(); ++j) {
@@ -2633,7 +2634,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 
 	// check for simple point
 	if (dist <= 0.0) {
-		int const ival(get_closest_object(result, start, UTYPE_MOON, 1, 1.0));
+		int const ival(get_closest_object(result, start, UTYPE_MOON, 1, 1, 1.0));
 
 		if (ival == 2 || (ival == 1 && result.dist <= line_radius)) { // collision at start
 			coll = start; return 1;
@@ -2668,7 +2669,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 
 	{ // check for start point collision (slow but important)
 		bool const fast_test(1);
-		int const ival(get_closest_object(result, start, (fast_test ? UTYPE_CELL : UTYPE_MOON), 0, 1.0));
+		int const ival(get_closest_object(result, start, (fast_test ? UTYPE_CELL : UTYPE_MOON), !fast_test, 0, 1.0));
 		assert(ival != 0 || result.val != 0);
 
 		if (!fast_test && (ival == 2 || (ival == 1 && result.dist <= line_radius))) { // collision at start
@@ -2911,7 +2912,7 @@ float universe_t::get_point_temperature(s_object const &clobj, point const &pos,
 	if (clobj.system >= 0) return get_temp_in_system(clobj, pos, sun_pos); // existing system is valid
 	s_object result; // invalid system - expand the search radius and try again
 	// FIXME: if galaxy is set, start there, and if not return 0.0
-	if (!get_closest_object(result, pos, UTYPE_SYSTEM, 1, 4.0) || result.system < 0) return 0.0;
+	if (!get_closest_object(result, pos, UTYPE_SYSTEM, 0, 1, 4.0) || result.system < 0) return 0.0;
 	return get_temp_in_system(result, pos, sun_pos);
 }
 
