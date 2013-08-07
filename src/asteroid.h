@@ -45,11 +45,14 @@ class uasteroid_cont : public uobject_base, public vector<uasteroid> {
 
 	int rseed;
 
+	void remove_asteroid(unsigned ix);
+
 public:
 	uasteroid_cont() : rseed(0) {}
 	void init(point const &pos, float radius);
 	void gen_asteroids();
 	void draw(point_d const &pos_, point const &camera, shader_t &s);
+	void detatch_asteroid(unsigned ix);
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
 	virtual void gen_asteroid_placements() = 0;

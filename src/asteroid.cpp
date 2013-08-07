@@ -506,6 +506,7 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 {
 	gen_fragments();
 	uobject::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
+	clear_context();
 }
 
 
@@ -837,11 +838,26 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s)
 }
 
 
+void uasteroid_cont::remove_asteroid(unsigned ix) {
+
+	//std::swap(at(ix), back()); pop_back();
+	erase(begin()+ix); // probably okay if empty after this call
+}
+
+
+void uasteroid_cont::detatch_asteroid(unsigned ix) {
+
+	assert(ix < size());
+	// FIXME: create a new asteroid from the instance and copy all the parameters
+	remove_asteroid(ix);
+}
+
+
 void uasteroid_cont::destroy_asteroid(unsigned ix) {
 
 	assert(ix < size());
 	operator[](ix).destroy();
-	erase(begin()+ix); // probably okay if empty after this call
+	remove_asteroid(ix);
 }
 
 
