@@ -15,6 +15,7 @@
 
 bool     const ENABLE_AF_INSTS  = 1; // more efficient on large asteroid fields, but less efficient when close/sparse (due to overhead), and normals are incorrect
 bool     const ENABLE_CRATERS   = 1;
+bool     const ENABLE_SHADOWS   = 1;
 unsigned const ASTEROID_NDIV    = 32; // for sphere model, better if a power of 2
 unsigned const ASTEROID_VOX_SZ  = 64; // for voxel model
 unsigned const AST_VOX_NUM_BLK  = 2; // ndiv=2x2
@@ -671,18 +672,18 @@ void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
 }
 
 
-bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2) const {
+bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, float line_radius) const {
 
 	if (empty()) return 0;
-	if (!line_sphere_intersect(p1, p2, pos, radius)) return 0; // optional optimization, may not be useful
-	if (sphere_might_intersect(p1, 0.0)) return 1; // first point inside torus
+	if (!line_sphere_intersect(p1, p2, pos, (radius + line_radius))) return 0; // optional optimization, may not be useful
+	if (sphere_might_intersect(p1, line_radius)) return 1; // first point inside torus
 	point pt[2] = {p1, p2};
 
 	for (unsigned d = 0; d < 2; ++d) {
 		xform_to_local_torus_coord_space(pt[d]);
 	}
 	float t(0.0); // unused
-	return line_torus_intersect(pt[0], pt[1], all_zeros, inner_radius, outer_radius, t);
+	return line_torus_intersect(pt[0], pt[1], all_zeros, (inner_radius + line_radius), outer_radius, t);
 }
 
 
@@ -763,18 +764,52 @@ void uasteroid_belt::apply_physics(point_d const &pos_, point const &camera) { /
 	for (iterator i = begin(); i != end(); ++i) {
 		i->apply_belt_physics(pos, orbital_plane_normal, radius);
 	}
-	// collision detection?
+	calc_shadowers();
+	// no collision detection
 }
 
 
-void uasteroid_cont::begin_render(shader_t &shader) {
+bool uasteroid_belt::might_cast_shadow(uobject const &uobj) const {
+
+	assert(system);
+	if (!dist_less_than(system->sun.pos, uobj.pos, (uobj.radius + inner_radius + outer_radius))) return 0;
+	float const projected_r(uobj.radius*(inner_radius + outer_radius)/p2p_dist(system->sun.pos, uobj.pos));
+	return line_might_intersect(system->sun.pos, uobj.pos, projected_r);
+}
+
+
+void uasteroid_belt::calc_shadowers() {
+
+	shadow_casters.clear();
+	if (!ENABLE_SHADOWS || !system || !system->sun.is_ok()) return;
+
+	for (vector<uplanet>::const_iterator p = system->planets.begin(); p != system->planets.end(); ++p) {
+		if (might_cast_shadow(*p)) {shadow_casters.push_back(sphere_t(p->pos, p->radius));}
+
+		for (vector<umoon>::const_iterator m = p->moons.begin(); m != p->moons.end(); ++m) {
+			if (might_cast_shadow(*m)) {shadow_casters.push_back(sphere_t(m->pos, m->radius));}
+		}
+	}
+	if (shadow_casters.size() > 8) {shadow_casters.resize(8);} // max number
+	sun_pos_radius.pos    = system->sun.pos;
+	sun_pos_radius.radius = system->sun.radius;
+}
+
+
+void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters) {
 
 	if (!shader.is_setup()) {
+		if (num_shadow_casters > 0) {
+			assert(num_shadow_casters <= 8);
+			for (unsigned d = 0; d < 2; ++d) {shader.set_prefix("#define ENABLE_SHADOWS", d);} // VS/FS
+		}
+		shader.set_int_prefix("num_shadow_casters", num_shadow_casters, 1); // FS
 		if (ENABLE_CRATERS ) {shader.set_prefix("#define HAS_CRATERS",      1);} // FS
 		if (ENABLE_AF_INSTS) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid");
 		string frag_shader_str("ads_lighting.part*+triplanar_texture.part");
+		if (num_shadow_casters > 0) {frag_shader_str += "+sphere_shadow.part*";}
 		if (ENABLE_CRATERS) {frag_shader_str += "+rand_gen.part*+craters.part";}
 		shader.set_frag_shader(frag_shader_str + "+asteroid");
 		shader.begin_shader();
@@ -810,14 +845,29 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s)
 	if (calc_sphere_size(afpos, camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
 	if (empty()) {gen_asteroids();}
 
-	/*set_color(WHITE);
-	WHITE.do_glColor();
-	draw_sphere_vbo(make_pt_global(afpos), radius, N_SPHERE_DIV, 0);*/
 	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
 	point sun_pos; // unused
 	uobject const *sobj(NULL); // unused
 	bool const has_sun(set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE) >= 0);
 
+	// Note: this block and associated variables could be mobed to uasteroid_belt, but we may want to use them for asteriod fields near within systems/near stars later
+	if (ENABLE_SHADOWS) { // setup shadow casters
+		if (!shadow_casters.empty()) {
+			int const sc_loc(s.get_uniform_loc("shadow_casters"));
+			assert(sc_loc >= 0); // must be available
+
+			for (vector<sphere_t>::const_iterator sc = shadow_casters.begin(); sc != shadow_casters.end(); ++sc) {
+				point const gpos(make_pt_global(sc->pos));
+				float const vals[4] = {gpos.x, gpos.y, gpos.z, sc->radius};
+				unsigned const ix(sc - shadow_casters.begin());
+				glUniform4fv((sc_loc + ix), 1, vals);
+			}
+		}
+		s.add_uniform_int("num_shadow_casters", shadow_casters.size());
+		s.add_uniform_vector3d("sun_pos", make_pt_global(sun_pos_radius.pos));
+		s.add_uniform_float("sun_radius", sun_pos_radius.radius);
+		upload_mvm_to_shader(s, "world_space_mvm");
+	}
 	s.add_uniform_float("crater_scale", (has_sun ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
 	WHITE.do_glColor();

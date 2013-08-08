@@ -44,6 +44,9 @@ public:
 class uasteroid_cont : public uobject_base, public vector<uasteroid> {
 
 	int rseed;
+protected:
+	vector<sphere_t> shadow_casters;
+	sphere_t sun_pos_radius;
 
 	void remove_asteroid(unsigned ix);
 
@@ -56,8 +59,9 @@ public:
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
 	virtual void gen_asteroid_placements() = 0;
+	void begin_render(shader_t &shader) {begin_render(shader, shadow_casters.size());}
 
-	static void begin_render(shader_t &shader);
+	static void begin_render(shader_t &shader, unsigned num_shadow_casters);
 	static void end_render(shader_t &shader);
 };
 
@@ -76,14 +80,18 @@ class uasteroid_belt : public uasteroid_cont {
 
 	vector3d orbital_plane_normal;
 	float inner_radius, outer_radius, max_asteroid_radius, width_to_thickness_ratio;
+	ussystem *system;
 
 	void xform_to_local_torus_coord_space(point &pt) const;
+	bool might_cast_shadow(uobject const &uobj) const;
 
 public:
-	uasteroid_belt(vector3d const &opn) : orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0), max_asteroid_radius(0.0), width_to_thickness_ratio(1.0) {}
+	uasteroid_belt(vector3d const &opn, ussystem *system_) : orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0),
+		max_asteroid_radius(0.0), width_to_thickness_ratio(1.0), system(system_) {}
 	void apply_physics(point_d const &pos_, point const &camera);
+	void calc_shadowers();
 	virtual void gen_asteroid_placements();
-	bool line_might_intersect(point const &p1, point const &p2) const;
+	bool line_might_intersect(point const &p1, point const &p2, float line_radius) const;
 	bool sphere_might_intersect(point const &sc, float sr) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}
 };

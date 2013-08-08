@@ -54,7 +54,6 @@ void check_xy_offsets();
 void post_window_redisplay();
 void display_universe();
 void display_inf_terrain(float uw_depth);
-bool universe_intersection_test(point const &pos, vector3d const &dir, float range);
 void update_temperature(bool verbose);
 void update_sound_loops();
 void calc_cur_ambient_diffuse();
@@ -176,7 +175,6 @@ point get_moon_pos() {
 
 colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 
-	//if (combined_gu && universe_intersection_test((p1 - get_camera_pos()), v12, 100.0)) return BLACK; // too slow
 	colorRGBA color(bkg_color);
 	// use textures[GRADIENT_TEX]?
 	

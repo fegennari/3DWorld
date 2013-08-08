@@ -1,4 +1,6 @@
-varying vec3 vpos, normal, world_normal;
+uniform mat4 world_space_mvm;
+
+varying vec3 vpos, normal, world_normal, world_space_pos;
 varying vec4 epos;
 
 #ifdef USE_CUSTOM_XFORM
@@ -15,6 +17,9 @@ void main()
 	epos          = gl_ModelViewMatrix * gl_Vertex;
 	gl_Position   = ftransform();
 	normal        = normalize(gl_NormalMatrix * gl_Normal); // for lighting
+#endif
+#ifdef ENABLE_SHADOWS
+	world_space_pos = (inverse(world_space_mvm) * epos).xyz;
 #endif
 	gl_FrontColor = gl_Color;
 	world_normal  = gl_Normal; // for triplanar texturing

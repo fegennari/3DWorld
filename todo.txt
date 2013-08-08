@@ -35,3 +35,4 @@ Asteroid Belts:
 - Faster Ray Intersection and Collision Detection
 - large ships hitting small asteroids move the asteroids instead of stopping the ships
   - Detatch asteroid from field/belt
+- Asteroid belts around planets

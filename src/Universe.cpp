@@ -704,7 +704,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 		if (!gen_only && pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
 			set_ambient_color(galaxy.color);
-			uasteroid_field::begin_render(usg.asteroid_shader);
+			uasteroid_field::begin_render(usg.asteroid_shader, 0);
 
 			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				if (animate2) {i->apply_physics(pos, camera);}
@@ -755,9 +755,10 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					if (planets_visible) { // asteroid fields may also be visible
 						if (sol.asteroid_belt && sel_s) {
 							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
-							uasteroid_field::begin_render(usg.asteroid_shader);
-							sol.asteroid_belt->draw(pos, camera, usg.asteroid_shader);
-							uasteroid_field::end_render(usg.asteroid_shader);
+							shader_t asteroid_belt_shader;
+							sol.asteroid_belt->begin_render(asteroid_belt_shader);
+							sol.asteroid_belt->draw(pos, camera, asteroid_belt_shader);
+							uasteroid_field::end_render(asteroid_belt_shader);
 						}
 						if (!has_sun) { // sun is gone
 							set_light_galaxy_ambient_only();
@@ -1357,7 +1358,7 @@ void ussystem::process() {
 	if (planets.size() > 1 && !(rand2() & 1)) {
 		unsigned const inner_planet(rand2() % (planets.size()-1)); // between two planet orbits, so won't increase system radius
 		float const ab_radius(0.5*(planets[inner_planet].orbit + planets[inner_planet+1].orbit));
-		asteroid_belt = new uasteroid_belt(sun.rot_axis);
+		asteroid_belt = new uasteroid_belt(sun.rot_axis, this);
 		asteroid_belt->init(pos, ab_radius); // gen_asteroids() will be called when drawing
 	}
 	radius = max(radius, 0.5f*(PLANET_TO_SUN_MIN_SPACING + PLANET_TO_SUN_MAX_SPACING)); // set min radius so that hyperspeed coll works
@@ -2791,7 +2792,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 				ussystem &system(galaxy.sols[sv[sc].index]);
 				
 				if (system.asteroid_belt) {
-					if (system.asteroid_belt->line_might_intersect(curr, (curr + dist*dir))) {
+					if (system.asteroid_belt->line_might_intersect(curr, (curr + dist*dir), line_radius)) {
 						for (vector<uasteroid>::const_iterator i = system.asteroid_belt->begin(); i != system.asteroid_belt->end(); ++i) {
 							if (i->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
 								asteroid_dist         = ldist;
