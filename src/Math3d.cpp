@@ -777,7 +777,12 @@ bool line_torus_intersect(point const &p1, point const &p2, point const &tc, flo
 	//if (!sphere_test_comp(p1, tc, v1, rsum*rsum)) return 0; // clip (optional), could test bounding cube or cylinder as well
 	vector3d v1(p2, p1); // line direction
 	double const vmag(v1.mag());
-	point l1(p1, tc); // translate to torus center
+	vector3d l1(p1 - tc); // translate to torus center
+	
+	if (p1 == tc) { // l1 is zero vector, this case doesn't work correctly
+		l1 = p2 - tc;
+		v1.negate();
+	}
 	return line_intersect_torus(l1.x, l1.y, l1.z, v1.x/vmag, v1.y/vmag, v1.z/vmag, ro, ri, vmag, t);
 }
 
