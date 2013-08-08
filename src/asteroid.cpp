@@ -774,7 +774,7 @@ bool uasteroid_belt::might_cast_shadow(uobject const &uobj) const {
 	assert(system);
 	if (!dist_less_than(system->sun.pos, uobj.pos, (uobj.radius + inner_radius + outer_radius))) return 0;
 	float const projected_r(uobj.radius*(inner_radius + outer_radius)/p2p_dist(system->sun.pos, uobj.pos));
-	return line_might_intersect(system->sun.pos, uobj.pos, projected_r);
+	return line_might_intersect(uobj.pos, system->sun.pos, projected_r);
 }
 
 

@@ -23,17 +23,15 @@ void main()
 	}
 #endif
 
+	float atten[2] = {1.0, 1.0};
 #ifdef ENABLE_SHADOWS
-	float atten = 1.0;
-
 	for (int i = 0; i < num_shadow_casters; ++i) {
-		atten *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, shadow_casters[i].xyz, shadow_casters[i].w);
+		atten[0] *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, shadow_casters[i].xyz, shadow_casters[i].w);
 	}
-	norm_normal *= atten;
 #endif
 
 	for (int i = 0; i < 2; ++i) { // sun_diffuse, galaxy_ambient
-		color += add_pt_light_comp(norm_normal, epos, i);
+		color += atten[i]*add_pt_light_comp(norm_normal, epos, i);
 	}
 	gl_FragColor = vec4(texel.rgb * clamp(color.rgb, 0.0, 1.0), texel.a * gl_Color.a); // use diffuse alpha directly;
 }
