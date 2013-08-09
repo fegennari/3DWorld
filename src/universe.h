@@ -21,7 +21,8 @@ using std::istream;
 class s_object;
 class uasteroid;
 class uasteroid_field;
-class uasteroid_belt;
+class uasteroid_belt_system;
+class uasteroid_belt_planet;
 
 
 // stellar object types - must be ordered largest to smallest
@@ -268,10 +269,11 @@ public:
 	vector<umoon> moons;
 	vector<color_wrapper> ring_data;
 	ussystem *system;
+	uasteroid_belt_planet *asteroid_belt;
 	unsigned ring_tid;
 	// trade items?
 
-	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), ring_ri(0.0), ring_ro(0.0), system(NULL), ring_tid(0) {}
+	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), ring_ri(0.0), ring_ro(0.0), system(NULL), asteroid_belt(NULL), ring_tid(0) {}
 	void create(bool phase);
 	void process();
 	point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -352,7 +354,7 @@ public:
 	unsigned cluster_id;
 	ustar sun;
 	vector<uplanet> planets;
-	uasteroid_belt *asteroid_belt;
+	uasteroid_belt_system *asteroid_belt;
 	ugalaxy *galaxy;
 	colorRGBA galaxy_color;
 	
@@ -499,7 +501,7 @@ public:
 		return get_moon();
 	}
 	uasteroid_field &get_asteroid_field() const;
-	uasteroid_belt  &get_asteroid_belt () const;
+	uasteroid_belt_system &get_asteroid_belt () const;
 	uasteroid &get_asteroid() const;
 	void destroy_asteroid() const;
 };

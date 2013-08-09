@@ -517,7 +517,8 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 unsigned const AST_FIELD_MODEL   = AS_MODEL_HMAP;
 unsigned const NUM_AST_MODELS    = 40;
 unsigned const AST_FLD_MAX_NUM   = 1200;
-unsigned const AST_BELT_MAX_NUM  = 10000;
+unsigned const AST_BELT_MAX_NS   = 10000;
+unsigned const AST_BELT_MAX_NP   = 4000;
 float    const AST_RADIUS_SCALE  = 0.04;
 float    const AST_AMBIENT_SCALE = 20.0;
 float    const AST_AMBIENT_VAL   = 0.15;
@@ -641,17 +642,13 @@ void uasteroid_field::gen_asteroid_placements() {
 }
 
 
-void uasteroid_belt::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
+void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius) {
 
-	//RESET_TIME;
-	resize((rand2() % AST_BELT_MAX_NUM/2) + AST_BELT_MAX_NUM/2); // 50% to 100% of max
-	float const belt_width(rand_uniform2(0.03, 0.04)*radius);
-	float const belt_thickness(rand_uniform2(0.2, 0.25)*belt_width);
-	float const max_ast_radius(0.002*radius);
 	float rmax(0.0), plane_dmax(0.0);
 	inner_radius = 0.0;
 	outer_radius = radius;
 	max_asteroid_radius = 0.0;
+	resize((rand2() % max_num/2) + max_num/2); // 50% to 100% of max
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->gen_belt(pos, orbital_plane_normal, outer_radius, belt_width, belt_thickness, max_ast_radius, inner_radius, plane_dmax);
@@ -660,7 +657,33 @@ void uasteroid_belt::gen_asteroid_placements() { // radius is the asteroid belt 
 	}
 	radius = rmax; // update with the bounding radius of the generated asteroids
 	width_to_thickness_ratio = inner_radius / plane_dmax;
+}
+
+
+void uasteroid_belt_system::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
+
+	//RESET_TIME;
+	float const belt_width(rand_uniform2(0.03, 0.04)*radius);
+	float const belt_thickness(rand_uniform2(0.2, 0.25)*belt_width);
+	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius);
 	//PRINT_TIME("Asteroid Belt"); // 4ms
+}
+
+
+void uasteroid_belt_planet::gen_asteroid_placements() { // radius is the asteroid belt distance from the planet
+
+	float const belt_thickness(rand_uniform2(0.08, 0.10)*bwidth);
+	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.004*radius);
+}
+
+
+void uasteroid_belt_planet::init_rings(point const &pos) {
+	
+	// FIXME: planet rings are elliptical, but asteroid field is circular
+	assert(planet);
+	float const rscale(planet->rscale.xy_mag()/SQRT2), ri(planet->ring_ri*rscale), ro(planet->ring_ro*rscale);
+	bwidth = 0.25*(ro - ri); // divide by 4 to account for the clamping of the gaussian distance function to 2*radius, and for radius vs. diameter
+	init(pos, 0.5*(ro + ri)); // center of the rings
 }
 
 
@@ -757,7 +780,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 }
 
 
-void uasteroid_belt::apply_physics(point_d const &pos_, point const &camera) { // only needs to be called when visible
+void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point const &camera) { // only needs to be called when visible
 
 	if (empty()) return;
 
@@ -769,7 +792,20 @@ void uasteroid_belt::apply_physics(point_d const &pos_, point const &camera) { /
 }
 
 
-bool uasteroid_belt::might_cast_shadow(uobject const &uobj) const {
+void uasteroid_belt_planet::apply_physics(upos_point_type const &pos_, point const &camera) { // only needs to be called when visible
+
+	if (empty()) return;
+
+	if (planet) { // move all asteroids along the planet's orbit
+		upos_point_type const delta_pos(planet->pos - pos);
+		pos = planet->pos;
+		for (iterator i = begin(); i != end(); ++i) {i->pos += delta_pos;}
+	}
+	calc_shadowers();
+}
+
+
+bool uasteroid_belt_system::might_cast_shadow(uobject const &uobj) const {
 
 	assert(system);
 	if (!dist_less_than(system->sun.pos, uobj.pos, (uobj.radius + inner_radius + outer_radius))) return 0;
@@ -778,7 +814,7 @@ bool uasteroid_belt::might_cast_shadow(uobject const &uobj) const {
 }
 
 
-void uasteroid_belt::calc_shadowers() {
+void uasteroid_belt_system::calc_shadowers() {
 
 	shadow_casters.clear();
 	if (!ENABLE_SHADOWS || !system || !system->sun.is_ok()) return;
@@ -793,6 +829,16 @@ void uasteroid_belt::calc_shadowers() {
 	if (shadow_casters.size() > 8) {shadow_casters.resize(8);} // max number
 	sun_pos_radius.pos    = system->sun.pos;
 	sun_pos_radius.radius = system->sun.radius;
+}
+
+
+void uasteroid_belt_planet::calc_shadowers() {
+
+	shadow_casters.clear();
+	if (!ENABLE_SHADOWS || !planet || !planet->is_ok() || !planet->system || !planet->system->sun.is_ok()) return;
+	shadow_casters.push_back(sphere_t(planet->pos, planet->radius));
+	sun_pos_radius.pos    = planet->system->sun.pos;
+	sun_pos_radius.radius = planet->system->sun.radius;
 }
 
 

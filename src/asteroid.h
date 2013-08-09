@@ -48,6 +48,7 @@ protected:
 	vector<sphere_t> shadow_casters;
 	sphere_t sun_pos_radius;
 
+	virtual void gen_asteroid_placements() = 0;
 	void remove_asteroid(unsigned ix);
 
 public:
@@ -58,7 +59,6 @@ public:
 	void detatch_asteroid(unsigned ix);
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
-	virtual void gen_asteroid_placements() = 0;
 	void begin_render(shader_t &shader) {begin_render(shader, shadow_casters.size());}
 
 	static void begin_render(shader_t &shader, unsigned num_shadow_casters);
@@ -78,22 +78,49 @@ public:
 
 class uasteroid_belt : public uasteroid_cont {
 
+protected:
 	vector3d orbital_plane_normal;
-	float inner_radius, outer_radius, max_asteroid_radius, width_to_thickness_ratio;
-	ussystem *system;
+	float max_asteroid_radius, inner_radius, outer_radius, width_to_thickness_ratio;
 
 	void xform_to_local_torus_coord_space(point &pt) const;
-	bool might_cast_shadow(uobject const &uobj) const;
+	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius);
 
 public:
-	uasteroid_belt(vector3d const &opn, ussystem *system_) : orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0),
-		max_asteroid_radius(0.0), width_to_thickness_ratio(1.0), system(system_) {}
-	void apply_physics(point_d const &pos_, point const &camera);
-	void calc_shadowers();
-	virtual void gen_asteroid_placements();
+	uasteroid_belt(vector3d const &opn) : orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0),
+		max_asteroid_radius(0.0), width_to_thickness_ratio(1.0) {}
+	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
 	bool line_might_intersect(point const &p1, point const &p2, float line_radius) const;
 	bool sphere_might_intersect(point const &sc, float sr) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}
+};
+
+
+class uasteroid_belt_system : public uasteroid_belt {
+
+	ussystem *system;
+
+	virtual void gen_asteroid_placements();
+	bool might_cast_shadow(uobject const &uobj) const;
+	void calc_shadowers();
+
+public:
+	uasteroid_belt_system(vector3d const &opn, ussystem *system_) : uasteroid_belt(opn), system(system_) {}
+	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
+};
+
+
+class uasteroid_belt_planet : public uasteroid_belt {
+
+	float bwidth;
+	uplanet *planet;
+
+	virtual void gen_asteroid_placements();
+	void calc_shadowers();
+
+public:
+	uasteroid_belt_planet(vector3d const &opn, uplanet *planet_) : uasteroid_belt(opn), bwidth(0.0), planet(planet_) {}
+	void init_rings(point const &pos);
+	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
 };
 
 
