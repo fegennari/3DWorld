@@ -190,13 +190,14 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 	};
 
 	float scale_val;
+	vector3d xyz_scale;
 	mutable upsurface surface; // FIXME: mutable so that the contained sd_sphere_vbo_d can modify its vbo indexes
 	ast_instance_render_t inst_render; // could be per-LOD level (4)
 	static vector<float> pmap_vector;
 
 public:
 	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
-		: uobj_asteroid_destroyable(pos_, radius_, tid, lt)
+		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), xyz_scale(1.0, 1.0, 1.0)
 	{
 		surface.rgen.set_state(rseed_ix, 1);
 		surface.gen(0.15, 2.0, 10, 1.0);
@@ -205,11 +206,12 @@ public:
 		surface.calc_rmax();
 		scale_val = 1.0/surface.rmax;
 	}
+	virtual void set_scale(vector3d const &scale) {xyz_scale = scale;}
 
 	// Note: this class overrides draw_with_texture() because it's used instanced
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id, bool no_reset_texture=0) const { // to allow overriding the texture id
 		unsigned const ndiv(3*ddata.ndiv/2); // increase ndiv because we want higher resolution to capture details
-		if (scale_val != 1.0) {uniform_scale(scale_val);}
+		scale_by(scale_val*xyz_scale);
 		ddata.color_a.do_glColor();
 		select_texture((force_tex_id >= 0) ? force_tex_id : tex_id);
 		surface.sd.draw_ndiv_pow2_vbo(ndiv); // use a vbo
@@ -220,7 +222,7 @@ public:
 	}
 	virtual bool draw_instanced(unsigned ndiv) { // non-const because it caches instance transforms
 		ndiv = 3*ndiv/2; // increase ndiv because we want higher resolution to capture details
-		if (scale_val != 1.0) {uniform_scale(scale_val);}
+		scale_by(scale_val*xyz_scale);
 		//unsigned const lod(calc_lod_pow2(ASTEROID_NDIV, ndiv));
 		inst_render.add_cur_inst();
 		inst_render.max_ndiv = max(inst_render.max_ndiv, ndiv);
@@ -264,14 +266,14 @@ public:
 
 	virtual float const *get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {
 		assert(ndiv >= 3);
-		float const dist_to_sun(p2p_dist(pos, sun_pos)), scale_val((dist_to_sun + p2p_dist(pos, obj_pos))/dist_to_sun);
+		float const dist_to_sun(p2p_dist(pos, sun_pos)), shadow_scale_val((dist_to_sun + p2p_dist(pos, obj_pos))/dist_to_sun);
 		pmap_vector.resize(ndiv);
 		point const ce[2] = {pos, sun_pos};
 		vector3d v12; // unused
 		vector_point_norm const &vpn(gen_cylinder_data(ce, c_radius, 0.0, ndiv, v12));
 
 		for (int i = 0; i < ndiv; ++i) { // assumes the cylinder is more or less constant radius
-			pmap_vector[i] = scale_val*(get_radius_at(vpn.p[i<<1]) - c_radius);
+			pmap_vector[i] = shadow_scale_val*(get_radius_at(vpn.p[i<<1]) - c_radius);
 		}
 		return &pmap_vector.front();
 	}
@@ -298,7 +300,7 @@ public:
 		get_tex_coords_at(pt, tx, ty);
 		point **points = surface.sd.get_points();
 		assert(points);
-		return radius*scale_val*points[tx][ty].mag();
+		return radius*scale_val*(xyz_scale*points[tx][ty]).mag();
 	}
 
 	void get_tex_coords_at(point const &query_pos, int &tx, int &ty) const {
@@ -976,7 +978,8 @@ void uasteroid_cont::detatch_asteroid(unsigned ix) {
 	uasteroid const &inst(operator[](ix));
 	uobj_asteroid *asteroid(uobj_asteroid::create(inst.pos, inst.radius, AST_FIELD_MODEL, inst.get_fragment_tid(inst.pos), inst.get_rseed(), 0)); // lt=0
 	asteroid->set_vel(inst.get_velocity());
-	// FIXME: scale, rotation
+	asteroid->set_scale(inst.get_scale());
+	// FIXME: rotation
 	add_uobj(asteroid);
 	remove_asteroid(ix);
 }
