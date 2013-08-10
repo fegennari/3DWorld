@@ -687,6 +687,19 @@ void uasteroid_belt_planet::init_rings(point const &pos) {
 }
 
 
+void uasteroid_belt::draw_bounding_torus(point const &pos_, colorRGBA const &color) const {
+
+	set_color(color);
+	color.do_glColor();
+	glPushMatrix();
+	global_translate(pos_ + pos);
+	rotate_from_v2v(orbital_plane_normal, plus_z);
+	glScalef(1.0, 1.0, 1.0/width_to_thickness_ratio);
+	draw_torus(inner_radius, outer_radius, 32, 32, 0);
+	glPopMatrix();
+}
+
+
 void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
 
 	pt -= pos;
@@ -706,7 +719,10 @@ bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, floa
 		xform_to_local_torus_coord_space(pt[d]);
 	}
 	float t(0.0); // unused
-	return line_torus_intersect(pt[0], pt[1], all_zeros, (inner_radius + line_radius), outer_radius, t);
+	float const ri(min((inner_radius + line_radius), outer_radius)), scale(1.0/outer_radius);
+	// line_intersect_torus() seems to have some bug where small ro causes it to always return false, so we rescale so that ro == 1.0
+	return line_torus_intersect(scale*pt[0], scale*pt[1], all_zeros, scale*ri, 1.0, t);
+	//return line_torus_intersect(pt[0], pt[1], all_zeros, ri, outer_radius, t);
 }
 
 
@@ -719,6 +735,17 @@ bool uasteroid_belt::sphere_might_intersect(point const &sc, float sr) const {
 	point p_int; // unused
 	vector3d norm; // unused
 	return sphere_torus_intersect(pt, sr, all_zeros, inner_radius, outer_radius, p_int, norm, 0);
+}
+
+
+float uasteroid_belt::get_dist_to_boundary(point const &pt) const {
+
+	//if (sphere_might_intersect(pt, 0.0)) return 0.0;
+	float const dp(dot_product((pt - pos), orbital_plane_normal));
+	point const vproj(pt - dp*orbital_plane_normal);
+	float const zd(max(0.0f, (fabs(dp) - inner_radius/width_to_thickness_ratio)));
+	float const xyd(max(0.0f, (fabs(outer_radius - p2p_dist(pos, vproj)) - inner_radius)));
+	return sqrt(xyd*xyd + zd*zd);
 }
 
 

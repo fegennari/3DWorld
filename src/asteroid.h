@@ -92,7 +92,9 @@ public:
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
 	bool line_might_intersect(point const &p1, point const &p2, float line_radius) const;
 	bool sphere_might_intersect(point const &sc, float sr) const;
+	float get_dist_to_boundary(point const &pt) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}
+	void draw_bounding_torus(point const &pos_, colorRGBA const &color=GREEN) const;
 };
 
 

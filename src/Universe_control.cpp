@@ -325,8 +325,16 @@ void process_univ_objects() {
 				float hmap_scale(0.0);
 				if (clobj.type == UTYPE_MOON  ) {hmap_scale = MOON_HMAP_SCALE;  }
 				if (clobj.type == UTYPE_PLANET) {hmap_scale = PLANET_HMAP_SCALE;}
-				float const dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
-				// FIXME: check distance to asteroid fields
+				float dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
+				
+				if (dist_to_cobj > 0.0 && is_ship && clobj.has_valid_system()) {
+					ussystem const &system(clobj.get_system());
+
+					if (system.asteroid_belt) {
+						// check distance to system asteroid fields (planet asteroid fields should be close enough to the planet already)
+						dist_to_cobj = min(dist_to_cobj, system.asteroid_belt->get_dist_to_boundary(obj_pos));
+					}
+				}
 				uobj->set_sobj_dist(dist_to_cobj);
 
 				if (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) {

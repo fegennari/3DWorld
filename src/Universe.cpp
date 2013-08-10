@@ -2842,8 +2842,6 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 					if (!dist_less_than(curr, planet.pos, (p_radius + dist))) continue;
 					
 					if (planet.asteroid_belt) {
-						// Note: since we're not implementing planet asteroid belt collision detection in get_closest_object(),
-						//       we'll only intersect the asteroids when the ray hits the planet, which is okay for queries initially
 						if (planet.asteroid_belt->line_might_intersect(curr, (curr + dist*dir), line_radius)) {
 							for (vector<uasteroid>::const_iterator a = planet.asteroid_belt->begin(); a != planet.asteroid_belt->end(); ++a) {
 								if (a->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
@@ -2858,7 +2856,6 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 							} // for a
 						}
 					}
-
 					// FIXME: test against exact planet contour?
 					if (line_intersect_sphere(curr, dir, planet.pos, (p_radius+line_radius), rdist, ldist, t)) {
 						if (asteroid_dist > 0.0 && ldist > asteroid_dist) continue; // asteroid is closer
@@ -3233,7 +3230,7 @@ uasteroid_belt &s_object::get_asteroid_belt() const {
 	assert(asteroid_field == AST_BELT_ID);
 	assert(asteroid >= 0);
 	
-	if (type == UTYPE_PLANET) { // planet asteroid belt
+	if (planet >= 0) { // planet asteroid belt
 		uplanet &planet(get_planet());
 		assert(planet.asteroid_belt);
 		assert((unsigned)asteroid < planet.asteroid_belt->size());
