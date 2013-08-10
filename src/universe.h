@@ -21,6 +21,7 @@ using std::istream;
 class s_object;
 class uasteroid;
 class uasteroid_field;
+class uasteroid_belt;
 class uasteroid_belt_system;
 class uasteroid_belt_planet;
 
@@ -457,6 +458,7 @@ public:
 	bool read(istream &in);
 	void init();
 	void assign(int gc, int cl, int sy, float di, int ty, uobj_solid *obj);
+	void assign_asteroid(float d, int ai, int afi) {type = UTYPE_ASTEROID; asteroid_field = afi; asteroid = ai; dist = d;}
 	bool operator<(const s_object &I) const;
 	bool bad_cell() const;
 	bool is_solid() const {return (type == UTYPE_STAR || type == UTYPE_PLANET || type == UTYPE_MOON || type == UTYPE_ASTEROID);}
@@ -501,7 +503,7 @@ public:
 		return get_moon();
 	}
 	uasteroid_field &get_asteroid_field() const;
-	uasteroid_belt_system &get_asteroid_belt () const;
+	uasteroid_belt  &get_asteroid_belt () const;
 	uasteroid &get_asteroid() const;
 	void destroy_asteroid() const;
 };
