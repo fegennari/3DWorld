@@ -28,6 +28,7 @@ public:
 	void draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const;
 	void destroy();
 	void set_velocity(vector3d const &v) {velocity = v;}
+	unsigned get_rseed()           const {return inst_id;}
 	vector3d const &get_scale()    const {return scale;}
 	vector3d const &get_velocity() const {return velocity;}
 	float get_rel_mass()           const {return scale.x*scale.y*scale.z*radius*radius*radius;} // mass is proportional to volume which is proportional to radius^3

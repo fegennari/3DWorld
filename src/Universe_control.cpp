@@ -309,8 +309,8 @@ void process_univ_objects() {
 						uobj->collision(asteroid.pos, asteroid.get_velocity(), S_BODY_DENSITY, asteroid.radius, NULL, elastic); // large mass
 						uobj->move_to(cpos); // more accurate since this takes into account the terrain
 
-						if (is_ship) {
-							// FIXME: detatch and apply collision to asteroids smaller than the ship?
+						if (is_ship && clobj.asteroid_field == AST_BELT_ID) { // ship collision with asteroid belt
+							//clobj.get_asteroid_belt().detatch_asteroid(clobj.asteroid); // incomplete
 						}
 					}
 				}
@@ -326,6 +326,7 @@ void process_univ_objects() {
 				if (clobj.type == UTYPE_MOON  ) {hmap_scale = MOON_HMAP_SCALE;  }
 				if (clobj.type == UTYPE_PLANET) {hmap_scale = PLANET_HMAP_SCALE;}
 				float const dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
+				// FIXME: check distance to asteroid fields
 				uobj->set_sobj_dist(dist_to_cobj);
 
 				if (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) {

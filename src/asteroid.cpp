@@ -944,7 +944,13 @@ void uasteroid_cont::remove_asteroid(unsigned ix) {
 void uasteroid_cont::detatch_asteroid(unsigned ix) {
 
 	assert(ix < size());
-	// FIXME: create a new asteroid from the instance and copy all the parameters
+	cout << "Detatch asteroid " << ix << " of " << size() << endl; // TESTING
+	// create a new asteroid from the instance and copy all the parameters
+	uasteroid const &inst(operator[](ix));
+	uobj_asteroid *asteroid(uobj_asteroid::create(inst.pos, inst.radius, AST_FIELD_MODEL, inst.get_fragment_tid(inst.pos), inst.get_rseed(), 0)); // lt=0
+	asteroid->set_vel(inst.get_velocity());
+	// FIXME: scale, rotation
+	add_uobj(asteroid);
 	remove_asteroid(ix);
 }
 

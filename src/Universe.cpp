@@ -144,7 +144,7 @@ uobject *line_intersect_universe(point const &start, vector3d const &dir, float 
 	point coll;
 	s_object target;
 
-	if (universe.get_trajectory_collisions(target, coll, dir, start, length, line_radius)) { // destroy and query
+	if (universe.get_trajectory_collisions(target, coll, dir, start, length, line_radius)) { // destroy, query, beams
 		if (target.is_solid()) {
 			dist = p2p_dist(start, coll);
 			if (target.type == UTYPE_ASTEROID) {return &target.get_asteroid();}
@@ -2593,7 +2593,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 						for (uasteroid_field::const_iterator j = system.asteroid_belt->begin(); j != system.asteroid_belt->end(); ++j) {
 							if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
 							result.assign(gc, cl, s, p2p_dist(pos, j->pos), UTYPE_ASTEROID, NULL);
-							result.asteroid_field = -2; // special asteroid belt identifier
+							result.asteroid_field = AST_BELT_ID; // special asteroid belt identifier
 							result.asteroid       = (j - system.asteroid_belt->begin());
 						}
 					}
@@ -2817,7 +2817,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 					if (system.asteroid_belt->line_might_intersect(curr, (curr + dist*dir), line_radius)) {
 						for (vector<uasteroid>::const_iterator a = system.asteroid_belt->begin(); a != system.asteroid_belt->end(); ++a) {
 							if (a->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
-								result.assign_asteroid(ldist, (a - system.asteroid_belt->begin()), -2); // special system asteroid belt index
+								result.assign_asteroid(ldist, (a - system.asteroid_belt->begin()), AST_BELT_ID);
 								result.system  = sv[sc].index;
 								result.cluster = system.cluster_id;
 								asteroid_dist  = ldist;
@@ -2847,7 +2847,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 						if (planet.asteroid_belt->line_might_intersect(curr, (curr + dist*dir), line_radius)) {
 							for (vector<uasteroid>::const_iterator a = planet.asteroid_belt->begin(); a != planet.asteroid_belt->end(); ++a) {
 								if (a->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
-									result.assign_asteroid(ldist, (a - planet.asteroid_belt->begin()), -2); // special system asteroid belt index
+									result.assign_asteroid(ldist, (a - planet.asteroid_belt->begin()), AST_BELT_ID);
 									result.planet  = i;
 									result.system  = sv[sc].index;
 									result.cluster = system.cluster_id;
@@ -3230,7 +3230,7 @@ uasteroid_field &s_object::get_asteroid_field() const {
 }
 
 uasteroid_belt &s_object::get_asteroid_belt() const {
-	assert(asteroid_field == -2);
+	assert(asteroid_field == AST_BELT_ID);
 	assert(asteroid >= 0);
 	
 	if (type == UTYPE_PLANET) { // planet asteroid belt
@@ -3248,7 +3248,7 @@ uasteroid_belt &s_object::get_asteroid_belt() const {
 }
 
 uasteroid &s_object::get_asteroid() const {
-	if (asteroid_field == -2) {return get_asteroid_belt()[asteroid];} // special identifier for system asteroid belt
+	if (asteroid_field == AST_BELT_ID) {return get_asteroid_belt()[asteroid];} // special identifier for system asteroid belt
 	uasteroid_field &af(get_asteroid_field());
 	assert(asteroid >= 0);
 	assert((unsigned)asteroid < af.size());
@@ -3258,7 +3258,7 @@ uasteroid &s_object::get_asteroid() const {
 void s_object::destroy_asteroid() const {
 	assert(type == UTYPE_ASTEROID);
 
-	if (asteroid_field == -2) { // special identifier for system asteroid belt
+	if (asteroid_field == AST_BELT_ID) { // special identifier for system asteroid belt
 		get_asteroid_belt().destroy_asteroid(asteroid);
 	}
 	else {

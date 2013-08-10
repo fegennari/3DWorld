@@ -36,6 +36,8 @@ float const u_exp_size[NUM_UTYPES] = {
 // stellar object modifications
 enum {MOD_DESTROYED=0, MOD_OWNER, MOD_NAME, N_UMODS};
 
+int const AST_BELT_ID = -2;
+
 
 float const GALAXY_SCALE    = 8.0;
 float const GALAXY_OVERLAP  = 0.5;
