@@ -812,12 +812,14 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point const &camera) { // only needs to be called when visible
 
 	if (empty()) return;
+	//RESET_TIME;
 	upos_point_type opn(orbital_plane_normal);
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->apply_belt_physics(pos, opn);
 	}
 	calc_shadowers();
+	//PRINT_TIME("Physics");
 	// no collision detection
 }
 
@@ -1037,14 +1039,15 @@ void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbi
 	float const dplane(rand_gaussian2_limited(0.0, belt_thickness, 2.5*belt_thickness));
 	float const dist_from_plane(sqrt(1.0 - 0.25*dval*dval)*dplane); // elliptical distribution
 	vector3d const dir(vab[0]*sinf(theta) + vab[1]*cosf(theta));
-	pos      = pos_offset; // start at center of system/sun
-	pos     += (delta_dist_to_sun + belt_radius)*dir; // move out to belt radius
-	pos     += dist_from_plane*orbital_plane_normal;
-	velocity = zero_vector; // for now
-	float const dist(p2p_dist(pos, pos_offset)), aoR(dist/radius), rev_rate(0.04/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
-	rev_ang0 = rev_rate/dist;
-	ri_max = max(ri_max, float(radius + sqrt(delta_dist_to_sun*delta_dist_to_sun + dist_from_plane*dist_from_plane)));
-	plane_dmax = max(plane_dmax, (radius + dplane)); // approximate
+	orbital_dist = delta_dist_to_sun + belt_radius;
+	pos          = pos_offset; // start at center of system/sun
+	pos         += orbital_dist*dir; // move out to belt radius
+	pos         += dist_from_plane*orbital_plane_normal;
+	velocity     = zero_vector; // for now
+	float const aoR(orbital_dist/radius), rev_rate(0.08/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
+	rev_ang0     = rev_rate/(orbital_dist*orbital_dist);
+	ri_max       = max(ri_max, float(radius + sqrt(delta_dist_to_sun*delta_dist_to_sun + dist_from_plane*dist_from_plane)));
+	plane_dmax   = max(plane_dmax, (radius + dplane)); // approximate
 }
 
 
@@ -1066,8 +1069,10 @@ void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_typ
 
 	upos_point_type const dir(pos - af_pos);
 	rot_ang += 0.25*fticks*rot_ang0; // slow rotation only
-	velocity = rev_ang0*cross_product(dir, op_normal).get_norm(); // adjust velocity so asteroids revolve around the sun
-	pos      = af_pos + dir.mag()*(pos + velocity - af_pos).get_norm(); // renormalize for constant distance
+	// adjust velocity so asteroids revolve around the sun
+	// Note: slightly off for asteroids not in the plane, should be cross_product(dir, op_normal).get_norm() but that's slower
+	velocity = rev_ang0*cross_product(dir, op_normal);
+	pos      = af_pos + orbital_dist*(pos + fticks*velocity - af_pos).get_norm(); // renormalize for constant distance
 }
 
 

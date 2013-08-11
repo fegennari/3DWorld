@@ -14,11 +14,12 @@ class uasteroid : public uobject, public rotated_obj {
 
 	unsigned inst_id;
 	vector3d scale, velocity;
+	float orbital_dist; // for asteroid_belt asteroids
 
 public:
 	int last_coll_id;
 
-	uasteroid() : inst_id(0), last_coll_id(-1) {}
+	uasteroid() : inst_id(0), orbital_dist(0.0), last_coll_id(-1) {}
 	void gen_base(float max_radius);
 	void gen_spherical(upos_point_type const &pos_offset, float max_dist, float max_radius);
 	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal,
