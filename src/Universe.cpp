@@ -1424,27 +1424,35 @@ void uplanet::create(bool phase) {
 	if (temp < FREEZE_TEMP) { // cold
 		gas_giant = (rel_radius > GAS_GIANT_MIN_REL_SZ);
 		atmos     = (gas_giant ? 1.0 : rand_uniform2(-0.2, 1.0));
-		water     = rand_uniform2(0.0, MAX_WATER); // ice
-		comment   = " (cold)";
+		//water     = rand_uniform2(0.0, MAX_WATER); // ice
+		water     = min(1.0f, rand_uniform2(0.0, 1.2)); // ice
+		comment   = " (Cold)";
+		if      (gas_giant)    {comment += " Gas Giant";}
+		else if (water > 0.75) {comment += " Ice Planet";}
+		else                   {comment += " Rocky Planet";}
 	}
 	else if (temp > NO_AIR_TEMP) { // very hot
 		gas_giant = (rel_radius > GAS_GIANT_MIN_REL_SZ);
 		atmos     = (gas_giant ? 1.0 : 0.0);
 		water     = 0.0;
 		lava      = (gas_giant ? 0.0 : max(0.0f, rand_uniform2(-0.4, 0.4)));
-		comment   = " (very hot)";
+		comment   = " (Very Hot)";
+		if      (gas_giant)  {comment += " Gas Giant";}
+		else if (lava > 0.1) {comment += " Volcanic Planet";}
+		else                 {comment += " Rocky Planet";}
 	}
 	else if (temp > BOIL_TEMP) { // hot
 		atmos   = rand_uniform2(-0.9, 0.5);
 		water   = 0.0;
-		comment = " (hot)";
+		comment = " (Hot) Rocky Planet";
 	}
 	else { // average temp
 		atmos   = rand_uniform2(-0.3, 1.5);
 		water   = max(0.0f, min(MAX_WATER, 0.5f*(atmos + rand_uniform2(-MAX_WATER, 0.9*MAX_WATER))));
-		comment = " (temperate)";
+		comment = " (Temperate)";
+		if (atmos > 0.5 && water > 0.25) {comment += " Terran Planet";}
+		else                             {comment += " Rocky Planet";}
 	}
-	if (gas_giant) {comment += " Gas Giant";}
 	atmos     = CLIP_TO_01(atmos);
 	float const rsc_scale(liveable() ? 2.0 : (colonizable() ? 1.0 : 0.5));
 	resources = 750.0*radius*rsc_scale*(1.0 + 0.25*atmos - 0.25*fabs(0.5 - water))*(1.0 - fabs(1.0 - density));
