@@ -104,6 +104,10 @@ float calc_sphere_size(point const &pos, point const &camera, float radius, floa
 	return ((float)window_width)*radius/max(TOLERANCE, (p2p_dist(pos, camera) + d_adj)); // approx. in pixels
 }
 
+bool sphere_size_less_than(point const &pos, point const &camera, float radius, float num_pixels) {
+	return (window_width*radius < num_pixels*p2p_dist(pos, camera));
+}
+
 
 void set_star_light_atten(int light, float atten) {
 

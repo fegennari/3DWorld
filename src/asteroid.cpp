@@ -812,9 +812,10 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point const &camera) { // only needs to be called when visible
 
 	if (empty()) return;
+	upos_point_type opn(orbital_plane_normal);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->apply_belt_physics(pos, orbital_plane_normal, radius);
+		i->apply_belt_physics(pos, opn);
 	}
 	calc_shadowers();
 	// no collision detection
@@ -917,7 +918,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s)
 
 	point_d const afpos(pos + pos_);
 	if (!univ_sphere_vis(afpos, radius)) return;
-	if (calc_sphere_size(afpos, camera, AST_RADIUS_SCALE*radius) < 1.0) return; // asteroids are too small/far away
+	if (sphere_size_less_than(afpos, camera, AST_RADIUS_SCALE*radius, 1.0)) return; // asteroids are too small/far away
 	if (empty()) {gen_asteroids();}
 
 	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
@@ -1061,11 +1062,11 @@ void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 }
 
 
-void uasteroid::apply_belt_physics(upos_point_type const &af_pos, vector3d const &op_normal, float af_radius) {
+void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal) {
 
 	upos_point_type const dir(pos - af_pos);
 	rot_ang += 0.25*fticks*rot_ang0; // slow rotation only
-	velocity = rev_ang0*cross_product(dir, upos_point_type(op_normal)).get_norm(); // adjust velocity so asteroids revolve around the sun
+	velocity = rev_ang0*cross_product(dir, op_normal).get_norm(); // adjust velocity so asteroids revolve around the sun
 	pos      = af_pos + dir.mag()*(pos + velocity - af_pos).get_norm(); // renormalize for constant distance
 }
 
@@ -1074,7 +1075,7 @@ void uasteroid::draw(point_d const &pos_, point const &camera, shader_t &s, pt_l
 
 	point_d const apos(pos_ + pos);
 	if (!univ_sphere_vis(apos, radius)) return;
-	if (calc_sphere_size(apos, camera, radius) < 1.0) return; // too small/far away
+	if (sphere_size_less_than(apos, camera, radius, 1.0)) return; // too small/far away
 	asteroid_model_gen.draw(inst_id, apos, radius*scale, camera, rot_axis, rot_ang, s, pld);
 }
 
