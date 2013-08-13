@@ -110,6 +110,7 @@ class uasteroid_belt_system : public uasteroid_belt {
 public:
 	uasteroid_belt_system(vector3d const &opn, ussystem *system_) : uasteroid_belt(opn), system(system_) {}
 	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
+	void draw_detail(point_d const &pos_, point const &camera) const;
 };
 
 

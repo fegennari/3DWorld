@@ -763,6 +763,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							sol.asteroid_belt->begin_render(asteroid_belt_shader);
 							sol.asteroid_belt->draw(pos, camera, asteroid_belt_shader);
 							uasteroid_field::end_render(asteroid_belt_shader);
+							sol.asteroid_belt->draw_detail(pos, camera);
 						}
 						if (!has_sun) { // sun is gone
 							set_light_galaxy_ambient_only();

@@ -513,7 +513,7 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 }
 
 
-// *** asteroid field ***
+// *** asteroid instance management ***
 
 
 unsigned const AST_FIELD_MODEL   = AS_MODEL_HMAP;
@@ -611,8 +611,102 @@ void ensure_asteroid_models() {
 	if (asteroid_model_gen.empty()) {asteroid_model_gen.gen(NUM_AST_MODELS, AST_FIELD_MODEL);}
 }
 
+
+// *** asteroid belt particles ***
+
+
+float rand_gaussian2_limited(float mean, float std_dev, float max_val) {
+
+	while (1) {
+		float const v(rand_gaussian2(mean, std_dev));
+		if (fabs(v - mean) < max_val) return v;
+	}
+	assert(0); // never gets here
+}
+
+
+class ast_belt_part_manager_t {
+
+	vector<point> pts; // include sizes?
+	unsigned vbo;
+
+public:
+	ast_belt_part_manager_t() : vbo(0) {}
+	void clear() {pts.clear(); clear_context();}
+	unsigned size () const {return pts.size();}
+	bool     empty() const {return pts.empty();}
+
+	// generates a toriodal section in the z=0 plane
+	void gen_torus_section(unsigned npts, float ro, float ri) {
+		float const max_angle(TWO_PI); // for now
+		pts.resize(npts);
+
+		for (unsigned i = 0; i < npts; ++i) { // FIXME: use rand_gen_t?
+			float const theta(rand_uniform2(0.0, max_angle));
+			float const dval(rand_gaussian2_limited(0.0, 1.0, 2.0));
+			float const dplane(rand_gaussian2_limited(0.0, ri, 2.5*ri));
+			vector3d const dir(sinf(theta), cosf(theta), 0.0);
+			pts[i] = (ro + ri*dval)*dir;
+			pts[i].z += sqrt(1.0 - 0.25*dval*dval)*dplane; // elliptical distribution
+		}
+	}
+	void clear_context() {
+		delete_vbo(vbo);
+		vbo = 0;
+	}
+	void draw_vbo() const {
+		assert(vbo);
+		bind_vbo(vbo);
+		vert_wrap_t::set_vbo_arrays();
+		glDrawArrays(GL_POINTS, 0, pts.size());
+		bind_vbo(0);
+	}
+	void draw(point const &center, vector3d const &rot_axis, float rot_angle, float xy_size, float z_size) {
+		create_vbo_and_upload(vbo, pts); // non-const due to this call
+		glPushMatrix();
+		global_translate(center);
+		rotate_from_v2v(rot_axis, plus_z);
+		if (rot_angle != 0.0) {rotate_about(rot_angle, rot_axis);}
+		scale_by(vector3d(xy_size, xy_size, z_size));
+		draw_vbo();
+		glPopMatrix();
+	}
+};
+
+ast_belt_part_manager_t ast_belt_part_manager;
+
+
 void clear_asteroid_contexts() {
+
 	asteroid_model_gen.clear_contexts();
+	ast_belt_part_manager.clear_context();
+}
+
+unsigned const AB_NUM_PARTS    = 200000;
+float const AB_WIDTH_TO_RADIUS = 0.035;
+float const AB_THICK_TO_WIDTH  = 0.22;
+
+
+// *** asteroid fields and belts ***
+
+
+void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera) const {
+
+	if (ast_belt_part_manager.empty()) {
+		ast_belt_part_manager.gen_torus_section(AB_NUM_PARTS, 1.0, AB_WIDTH_TO_RADIUS);
+	}
+	texture_color(DEFAULT_AST_TEX).do_glColor();
+	enable_blend();
+	glPointSize(2.0);
+	shader_t shader;
+	shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+	shader.set_vert_shader("asteroid_dust");
+	shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
+	shader.begin_shader();
+	ast_belt_part_manager.draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius, outer_radius/width_to_thickness_ratio);
+	shader.end_shader();
+	glPointSize(1.0);
+	disable_blend();
 }
 
 
@@ -665,8 +759,8 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 void uasteroid_belt_system::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
 
 	//RESET_TIME;
-	float const belt_width(rand_uniform2(0.03, 0.04)*radius);
-	float const belt_thickness(rand_uniform2(0.2, 0.25)*belt_width);
+	float const belt_width(AB_WIDTH_TO_RADIUS*rand_uniform2(0.9, 1.1)*radius);
+	float const belt_thickness(AB_THICK_TO_WIDTH*rand_uniform2(0.9, 1.1)*belt_width);
 	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius);
 	//PRINT_TIME("Asteroid Belt"); // 4ms
 }
@@ -721,6 +815,7 @@ bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, floa
 		xform_to_local_torus_coord_space(pt[d]);
 	}
 	float t(0.0); // unused
+	// FIXME: line_radius is incorrect in the z-dimension, should scale by width_to_thickness_ratio to compensate for torus squishing in z
 	float const ri(min((inner_radius + line_radius), outer_radius)), scale(1.0/outer_radius);
 	// line_intersect_torus() seems to have some bug where small ro causes it to always return false, so we rescale so that ro == 1.0
 	return line_torus_intersect(scale*pt[0], scale*pt[1], all_zeros, scale*ri, 1.0, t);
@@ -1013,16 +1108,6 @@ void uasteroid::gen_spherical(upos_point_type const &pos_offset, float max_dist,
 	gen_base(max_radius);
 	pos = pos_offset + signed_rand_vector2_spherical(max_dist - radius);
 	UNROLL_3X(velocity[i_] = AST_VEL_SCALE*rand_gaussian2(0.0, 1.0);)
-}
-
-
-float rand_gaussian2_limited(float mean, float std_dev, float max_val) {
-
-	while (1) {
-		float const v(rand_gaussian2(mean, std_dev));
-		if (fabs(v - mean) < max_val) return v;
-	}
-	assert(0); // never gets here
 }
 
 

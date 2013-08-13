@@ -848,6 +848,8 @@
     <None Include="model_data\config_soda.txt" />
     <None Include="shaders\asteroid.frag" />
     <None Include="shaders\asteroid.vert" />
+    <None Include="shaders\asteroid_dust.frag" />
+    <None Include="shaders\asteroid_dust.vert" />
     <None Include="shaders\atmosphere.frag" />
     <None Include="shaders\atmosphere.vert" />
     <None Include="shaders\bump_map.part.frag" />
