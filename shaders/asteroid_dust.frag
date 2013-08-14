@@ -2,8 +2,8 @@ varying vec4 epos;
 
 void main()
 {
-	float alpha = 1.0/(1.0 + 50.0*length(epos.xyz)); // attenuate when far from the camera
-	if (alpha < 0.04) {discard;}
+	float alpha = 1.0/(1.0 + 40.0*length(epos.xyz)); // attenuate when far from the camera
+	if (alpha < 0.01) {discard;}
 	vec3 normal = normalize(-epos.xyz); // facing the camera
 	vec4 color  = gl_FrontMaterial.emission;
 

@@ -1129,7 +1129,7 @@ void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbi
 	pos         += orbital_dist*dir; // move out to belt radius
 	pos         += dist_from_plane*orbital_plane_normal;
 	velocity     = zero_vector; // for now
-	float const aoR(orbital_dist/radius), rev_rate(0.08/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
+	float const aoR(orbital_dist/radius), rev_rate(0.12/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
 	rev_ang0     = rev_rate/(orbital_dist*orbital_dist);
 	ri_max       = max(ri_max, float(radius + sqrt(delta_dist_to_sun*delta_dist_to_sun + dist_from_plane*dist_from_plane)));
 	plane_dmax   = max(plane_dmax, (radius + dplane)); // approximate

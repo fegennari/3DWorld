@@ -746,24 +746,25 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 				bool const skip_s(p_system && ((pass == 1 && sel_sun) || (pass == 2 && !sel_sun)));
 				bool const has_sun(sol.sun.is_ok()), sun_visible(has_sun && !skip_s && univ_sphere_vis(spos, 2.0*sradius));
 				bool const planets_visible(PLANET_MAX_SIZE*sscale_val*sizes >= 0.3*sradius || !sclip);
+				bool draw_asteroid_belt(0);
 				current.system  = j;
 				current.cluster = sol.cluster_id;
 
-				for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) {
+				for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) { // behind sun, in front of sun
 					if (!gen_only && sun_visible && sol_draw_pass == unsigned(sel_s)) {
 						if (!sol.sun.draw(spos, usg, star_plds, 0)) continue;
 					}
-					if (planets_visible) sol.process();
+					if (sol_draw_pass == 0 && planets_visible) sol.process();
 					if (sol.planets.empty()) continue;
 
 					if (planets_visible) { // asteroid fields may also be visible
-						if (!gen_only && sol.asteroid_belt && sel_s) {
+						if (!gen_only && sol.asteroid_belt && sel_s && sol_draw_pass == 0) {
 							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
 							shader_t asteroid_belt_shader;
 							sol.asteroid_belt->begin_render(asteroid_belt_shader);
 							sol.asteroid_belt->draw(pos, camera, asteroid_belt_shader);
 							uasteroid_field::end_render(asteroid_belt_shader);
-							sol.asteroid_belt->draw_detail(pos, camera);
+							draw_asteroid_belt = 1;
 						}
 						if (!has_sun) { // sun is gone
 							set_light_galaxy_ambient_only();
@@ -880,6 +881,12 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					draw_1pix_2pix_plds(planet_plds);
 					glDisable(GL_LIGHTING);
 					
+					if (planet_asteroid_belt) {
+						shader_t asteroid_belt_shader;
+						planet_asteroid_belt->begin_render(asteroid_belt_shader);
+						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader);
+						uasteroid_field::end_render(asteroid_belt_shader);
+					}
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
 						if (!usg.rings_to_draw.empty()) {
 							glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
@@ -909,13 +916,8 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							usg.disable_atmospheric_shader();
 						}
 					} // pass
-					if (planet_asteroid_belt) { // FIXME: should probably go earlier in the drawing order
-						shader_t asteroid_belt_shader;
-						planet_asteroid_belt->begin_render(asteroid_belt_shader);
-						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader);
-						uasteroid_field::end_render(asteroid_belt_shader);
-					}
 				} // sol_draw_pass
+				if (draw_asteroid_belt) {sol.asteroid_belt->draw_detail(pos, camera);}
 			} // system j
 		} // cluster cs
 	} // galaxy i
@@ -1688,10 +1690,12 @@ point_d urev_body::do_update(point_d const &p0, bool update_rev, bool update_rot
 	float const ra1(rev_ang);
 	if ((animate2 || rot_ang == 0.0) && update_rot) rot_ang = rot_ang0 + double(tfticks)*double(rot_rate);
 	if ((animate2 || rev_ang == 0.0) && update_rev) rev_ang = rev_ang0 + double(tfticks)*double(rev_rate);
+	// compute absolute pos every update: stable over long time periods, but jittery due to fp error between frames
+	// compute relative pos every update: unstable over time, but very smooth movement between frames
 	point_d new_pos(v_orbit);
 	rotate_vector3d(vector3d_d(rev_axis), rev_ang/TO_DEG, new_pos); // more accurate (is this necessary?)
 	new_pos *= double(orbit);
-	new_pos += point_d(p0);
+	new_pos += p0;
 	pos      = new_pos;
 	if (update_rev && int(10*ra1) != int(10*rev_ang)) {calc_temperature();} // update every 0.1 degree
 	return new_pos;

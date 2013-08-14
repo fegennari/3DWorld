@@ -737,7 +737,7 @@ void display(void) {
 		else {
 			assert(timer1 >= time0);
 			tfticks = time_delta;
-			ftick   = (tfticks - tticks);
+			ftick   = (time_delta - tticks);
 			iticks  = (int)ftick;
 			tticks += iticks;
 			carry   = ftick - (float)iticks;
