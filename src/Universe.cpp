@@ -1431,8 +1431,7 @@ void uplanet::create(bool phase) {
 	if (temp < FREEZE_TEMP) { // cold
 		gas_giant = (rel_radius > GAS_GIANT_MIN_REL_SZ);
 		atmos     = (gas_giant ? 1.0 : rand_uniform2(-0.2, 1.0));
-		//water     = rand_uniform2(0.0, MAX_WATER); // ice
-		water     = min(1.0f, rand_uniform2(0.0, 1.2)); // ice
+		water     = (gas_giant ? 0.2 : 1.0)*min(1.0f, rand_uniform2(0.0, 1.2)); // ice // rand_uniform2(0.0, MAX_WATER)
 		comment   = " (Cold)";
 		if      (gas_giant)    {comment += " Gas Giant";}
 		else if (water > 0.75) {comment += " Ice Planet";}
@@ -1801,10 +1800,14 @@ void uplanet::gen_color() {
 	else {
 		gen_colorAB(MP_COLOR_VAR);
 	}
-	if (water > 0.0) { // blend water with land for distant views?
-		blend_color(color, ((temp < FREEZE_TEMP) ? P_ICE_C : P_WATER_C), color, water, 0);
+	if (!gas_giant) {
+		if (water > 0.0) { // blend water with land for distant views?
+			blend_color(color, ((temp < FREEZE_TEMP) ? P_ICE_C : P_WATER_C), color, water, 0);
+		}
+		if (atmos > 0.0) { // blend atmosphere with planet color for distant views
+			blend_color(color, CLOUD_C, color, 0.25*atmos, 0);
+		}
 	}
-	if (atmos > 0.0) blend_color(color, CLOUD_C, color, 0.5*atmos, 0); // blend atmosphere with planet color for distant views
 	color.set_valid_color();
 }
 
