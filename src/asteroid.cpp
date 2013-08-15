@@ -556,7 +556,7 @@ public:
 		assert(asteroids[ix]);
 		return asteroids[ix];
 	}
-	void draw(unsigned ix, point const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s, pt_line_drawer &pld) {
+	void draw(unsigned ix, point_d const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s, pt_line_drawer &pld) {
 		assert(ix < asteroids.size());
 		float const radius(max(scale.x, max(scale.y, scale.z)));
 		float const dist(p2p_dist(pos, camera)), dscale(NDIV_SCALE_AST*(radius/(dist + 0.1*radius)));
@@ -969,7 +969,7 @@ void uasteroid_belt_planet::calc_shadowers() {
 }
 
 
-void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters) {
+void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters, bool custom_lighting) {
 
 	if (!shader.is_setup()) {
 		if (num_shadow_casters > 0) {
@@ -993,11 +993,14 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters)
 	set_fill_mode();
 	glEnable(GL_LIGHTING);
 	glEnable(GL_CULL_FACE);
-	colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
-	int const light(GL_LIGHT0);
-	glLightfv(light, GL_AMBIENT, &acolor.R);
-	glLightfv(light, GL_DIFFUSE, &BLACK.R);
-	set_uniform_atten_lighting(light);
+
+	if (custom_lighting) {
+		colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
+		int const light(GL_LIGHT0);
+		glLightfv(light, GL_AMBIENT, &acolor.R);
+		glLightfv(light, GL_DIFFUSE, &BLACK.R);
+		set_uniform_atten_lighting(light);
+	}
 }
 
 
@@ -1011,7 +1014,7 @@ void uasteroid_cont::end_render(shader_t &shader) {
 }
 
 
-void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s) {
+void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set) {
 
 	point_d const afpos(pos + pos_);
 	if (!univ_sphere_vis(afpos, radius)) return;
@@ -1021,10 +1024,12 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s)
 	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
 	point sun_pos; // unused
 	uobject const *sobj(NULL); // unused
-	bool const has_sun(set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE) >= 0);
+	bool const has_sun(sun_light_already_set || set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE) >= 0);
 
 	// Note: this block and associated variables could be mobed to uasteroid_belt, but we may want to use them for asteriod fields near within systems/near stars later
 	if (ENABLE_SHADOWS) { // setup shadow casters
+		if (!has_sun) {shadow_casters.clear();} // optional, may never get here/not make a difference
+
 		if (!shadow_casters.empty()) {
 			int const sc_loc(s.get_uniform_loc("shadow_casters"));
 			assert(sc_loc >= 0); // must be available

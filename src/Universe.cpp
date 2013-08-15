@@ -708,11 +708,11 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 		if (!gen_only && pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
 			set_ambient_color(galaxy.color);
-			uasteroid_field::begin_render(usg.asteroid_shader, 0);
+			uasteroid_field::begin_render(usg.asteroid_shader, 0, 1);
 
 			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				if (animate2) {i->apply_physics(pos, camera);}
-				i->draw(pos, camera, usg.asteroid_shader);
+				i->draw(pos, camera, usg.asteroid_shader, 0);
 			}
 			uasteroid_field::end_render(usg.asteroid_shader);
 		}
@@ -761,8 +761,8 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						if (!gen_only && sol.asteroid_belt && sel_s && sol_draw_pass == 0) {
 							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
 							shader_t asteroid_belt_shader;
-							sol.asteroid_belt->begin_render(asteroid_belt_shader);
-							sol.asteroid_belt->draw(pos, camera, asteroid_belt_shader);
+							sol.asteroid_belt->begin_render(asteroid_belt_shader, 0);
+							sol.asteroid_belt->draw(pos, camera, asteroid_belt_shader, 0);
 							uasteroid_field::end_render(asteroid_belt_shader);
 							draw_asteroid_belt = 1;
 						}
@@ -883,8 +883,8 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					
 					if (planet_asteroid_belt) {
 						shader_t asteroid_belt_shader;
-						planet_asteroid_belt->begin_render(asteroid_belt_shader);
-						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader);
+						planet_asteroid_belt->begin_render(asteroid_belt_shader, 0);
+						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader, 1);
 						uasteroid_field::end_render(asteroid_belt_shader);
 					}
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet

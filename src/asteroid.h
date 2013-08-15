@@ -57,13 +57,13 @@ public:
 	uasteroid_cont() : rseed(0) {}
 	void init(point const &pos, float radius);
 	void gen_asteroids();
-	void draw(point_d const &pos_, point const &camera, shader_t &s);
+	void draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set);
 	void detatch_asteroid(unsigned ix);
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}
-	void begin_render(shader_t &shader) {begin_render(shader, shadow_casters.size());}
+	void begin_render(shader_t &shader, bool custom_lighting) {begin_render(shader, shadow_casters.size(), custom_lighting);}
 
-	static void begin_render(shader_t &shader, unsigned num_shadow_casters);
+	static void begin_render(shader_t &shader, unsigned num_shadow_casters, bool custom_lighting);
 	static void end_render(shader_t &shader);
 };
 
