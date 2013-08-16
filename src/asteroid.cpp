@@ -661,13 +661,13 @@ public:
 		glDrawArrays(GL_POINTS, 0, pts.size());
 		bind_vbo(0);
 	}
-	void draw(point const &center, vector3d const &rot_axis, float rot_angle, float xy_size, float z_size) {
+	void draw(point const &center, vector3d const &rot_axis, float rot_angle, vector3d const &size) {
 		create_vbo_and_upload(vbo, pts); // non-const due to this call
 		glPushMatrix();
 		global_translate(center);
-		rotate_from_v2v(rot_axis, plus_z);
+		rotate_into_plus_z(rot_axis);
 		if (rot_angle != 0.0) {rotate_about(rot_angle, rot_axis);}
-		scale_by(vector3d(xy_size, xy_size, z_size));
+		scale_by(size);
 		draw_vbo();
 		glPopMatrix();
 	}
@@ -703,7 +703,7 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 	shader.set_vert_shader("asteroid_dust");
 	shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
 	shader.begin_shader();
-	ast_belt_part_manager.draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius, outer_radius/width_to_thickness_ratio);
+	ast_belt_part_manager.draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius*scale);
 	shader.end_shader();
 	glPointSize(1.0);
 	disable_blend();
@@ -745,14 +745,16 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 	outer_radius = radius;
 	max_asteroid_radius = 0.0;
 	resize((rand2() % max_num/2) + max_num/2); // 50% to 100% of max
+	vector3d vxy[2] = {plus_x, plus_y};
+	for (unsigned d = 0; d < 2; ++d) {rotate_vector3d_by_vr(plus_z, orbital_plane_normal, vxy[d]);}
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->gen_belt(pos, orbital_plane_normal, outer_radius, belt_width, belt_thickness, max_ast_radius, inner_radius, plane_dmax);
+		i->gen_belt(pos, orbital_plane_normal, vxy, outer_radius, belt_width, belt_thickness, max_ast_radius, scale.x, scale.y, inner_radius, plane_dmax);
 		rmax = max(rmax, (p2p_dist(pos, i->pos) + i->radius));
 		max_asteroid_radius = max(max_asteroid_radius, i->radius);
 	}
-	radius = rmax; // update with the bounding radius of the generated asteroids
-	width_to_thickness_ratio = inner_radius / plane_dmax;
+	radius  = rmax; // update with the bounding radius of the generated asteroids
+	scale.z = plane_dmax / inner_radius;
 }
 
 
@@ -761,23 +763,24 @@ void uasteroid_belt_system::gen_asteroid_placements() { // radius is the asteroi
 	//RESET_TIME;
 	float const belt_width(AB_WIDTH_TO_RADIUS*rand_uniform2(0.9, 1.1)*radius);
 	float const belt_thickness(AB_THICK_TO_WIDTH*rand_uniform2(0.9, 1.1)*belt_width);
-	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius);
+	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius); // circular orbit, animated
 	//PRINT_TIME("Asteroid Belt"); // 4ms
 }
 
 
 void uasteroid_belt_planet::gen_asteroid_placements() { // radius is the asteroid belt distance from the planet
 
+	assert(planet);
 	float const belt_thickness(rand_uniform2(0.08, 0.10)*bwidth);
-	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.004*radius);
+	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.005*radius); // elliptical orbit, static
 }
 
 
 void uasteroid_belt_planet::init_rings(point const &pos) {
 	
-	// FIXME: planet rings are elliptical, but asteroid field is circular
 	assert(planet);
-	float const rscale(planet->rscale.xy_mag()/SQRT2), ri(planet->ring_ri*rscale), ro(planet->ring_ro*rscale);
+	//float const rscale(planet->rscale.xy_mag()/SQRT2), ri(planet->ring_ri*rscale), ro(planet->ring_ro*rscale);
+	float const ri(planet->ring_ri), ro(planet->ring_ro);
 	bwidth = 0.25*(ro - ri); // divide by 4 to account for the clamping of the gaussian distance function to 2*radius, and for radius vs. diameter
 	init(pos, 0.5*(ro + ri)); // center of the rings
 }
@@ -785,14 +788,16 @@ void uasteroid_belt_planet::init_rings(point const &pos) {
 
 void uasteroid_belt::draw_bounding_torus(point const &pos_, colorRGBA const &color) const {
 
+	enable_blend();
 	set_color(color);
 	color.do_glColor();
 	glPushMatrix();
 	global_translate(pos_ + pos);
-	rotate_from_v2v(orbital_plane_normal, plus_z);
-	glScalef(1.0, 1.0, 1.0/width_to_thickness_ratio);
+	rotate_into_plus_z(orbital_plane_normal);
+	scale_by(scale);
 	draw_torus(inner_radius, outer_radius, 32, 32, 0);
 	glPopMatrix();
+	disable_blend();
 }
 
 
@@ -800,7 +805,7 @@ void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
 
 	pt -= pos;
 	rotate_vector3d_by_vr(orbital_plane_normal, plus_z, pt);
-	pt.z *= width_to_thickness_ratio; // account for squished torus in orbital plane
+	UNROLL_3X(pt[i_] /= scale[i_];) // account for squished/elliptical torus in orbital plane
 }
 
 
@@ -815,7 +820,7 @@ bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, floa
 		xform_to_local_torus_coord_space(pt[d]);
 	}
 	float t(0.0); // unused
-	// FIXME: line_radius is incorrect in the z-dimension, should scale by width_to_thickness_ratio to compensate for torus squishing in z
+	// FIXME: line_radius is incorrect in the z-dimension, should scale by <scale> to compensate for torus elliptical scaling
 	float const ri(min((inner_radius + line_radius), outer_radius)), scale(1.0/outer_radius);
 	// line_intersect_torus() seems to have some bug where small ro causes it to always return false, so we rescale so that ro == 1.0
 	return line_torus_intersect(scale*pt[0], scale*pt[1], all_zeros, scale*ri, 1.0, t);
@@ -840,8 +845,8 @@ float uasteroid_belt::get_dist_to_boundary(point const &pt) const {
 	//if (sphere_might_intersect(pt, 0.0)) return 0.0;
 	float const dp(dot_product((pt - pos), orbital_plane_normal));
 	point const vproj(pt - dp*orbital_plane_normal);
-	float const zd(max(0.0f, (fabs(dp) - inner_radius/width_to_thickness_ratio)));
-	float const xyd(max(0.0f, (fabs(outer_radius - p2p_dist(pos, vproj)) - inner_radius)));
+	float const zd(max(0.0f, (fabs(dp) - inner_radius*scale.z)));
+	float const xyd(max(0.0f, (fabs(outer_radius - p2p_dist(pos, vproj)) - inner_radius))); // Note: ignores scale.x and scale.y
 	return sqrt(xyd*xyd + zd*zd);
 }
 
@@ -926,7 +931,11 @@ void uasteroid_belt_planet::apply_physics(upos_point_type const &pos_, point con
 	if (planet) { // move all asteroids along the planet's orbit
 		upos_point_type const delta_pos(planet->pos - pos);
 		pos = planet->pos;
-		for (iterator i = begin(); i != end(); ++i) {i->pos += delta_pos;}
+
+		for (iterator i = begin(); i != end(); ++i) {
+			i->rot_ang += fticks*i->rot_ang0; // rotation
+			i->pos     += delta_pos;
+		}
 	}
 	calc_shadowers();
 }
@@ -1117,18 +1126,16 @@ void uasteroid::gen_spherical(upos_point_type const &pos_offset, float max_dist,
 
 
 // returns the distance from the asteroid to the asteroid belt center line (torus inner radius)
-void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal,
-	float belt_radius, float belt_width, float belt_thickness, float max_radius, float &ri_max, float &plane_dmax)
+void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2], float belt_radius, float belt_width,
+	float belt_thickness, float max_radius, float xscale, float yscale, float &ri_max, float &plane_dmax)
 {
 	gen_base(max_radius);
-	vector3d vab[2];
-	get_ortho_vectors(orbital_plane_normal, vab);
 	float const theta(TWO_PI*rand_float2());
 	float const dval(rand_gaussian2_limited(0.0, 1.0, 2.0));
 	float const delta_dist_to_sun(belt_width*dval);
 	float const dplane(rand_gaussian2_limited(0.0, belt_thickness, 2.5*belt_thickness));
 	float const dist_from_plane(sqrt(1.0 - 0.25*dval*dval)*dplane); // elliptical distribution
-	vector3d const dir(vab[0]*sinf(theta) + vab[1]*cosf(theta));
+	vector3d const dir(xscale*vxy[0]*sinf(theta) + yscale*vxy[1]*cosf(theta)); // Note: only normalized if xscale=yscale=1
 	orbital_dist = delta_dist_to_sun + belt_radius;
 	pos          = pos_offset; // start at center of system/sun
 	pos         += orbital_dist*dir; // move out to belt radius
@@ -1158,7 +1165,7 @@ void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal) {
 
 	upos_point_type const dir(pos - af_pos);
-	rot_ang += 0.25*fticks*rot_ang0; // slow rotation only
+	rot_ang += 0.25*fticks*rot_ang0; // slow rotation
 	// adjust velocity so asteroids revolve around the sun
 	// Note: slightly off for asteroids not in the plane, should be cross_product(dir, op_normal).get_norm() but that's slower
 	velocity = rev_ang0*cross_product(dir, op_normal);
