@@ -100,6 +100,7 @@ public:
 	~upsurface();
 	void gen(float mag, float freq, unsigned ntests=N_RAND_MAG_TESTS, float mm_scale=1.0);
 	void setup(unsigned size, float mcut, bool alloc_hmap);
+	float get_one_minus_cutoff() const {return 1.0/max(0.01, (1.0 - min_cutoff));} // avoid div-by-zero
 	float get_height_at(point const &pt, bool use_cache=0) const;
 	void setup_draw_sphere(point const &pos, float radius, float dp, int ndiv, float const *const pmap);
 	void calc_rmax() {rmax = sd.get_rmax();}

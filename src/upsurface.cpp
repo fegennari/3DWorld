@@ -258,7 +258,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 	float const sizef(size/TWO_PI), mt2(0.5*(table_size-1)), scale(1.5/surface->max_mag);
 	float const delta(TWO_PI/size), sin_ds(sin(delta)), cos_ds(cos(delta));
 	unsigned const pole_thresh(size>>3);
-	wr_scale = 1.0/(1.0 - water);
+	wr_scale = 1.0/max(0.01, (1.0 - water));
 
 	for (unsigned i = 0; i < table_size; ++i) { // build sin table
 		unsigned const offset(i*num_sines);
@@ -320,7 +320,7 @@ bool urev_body::surface_test(float rad, point const &p, float &coll_r, bool simp
 		float const hmap_scale(get_hmap_scale());
 		if (p2p_dist(p, pos) > radius*(1.0 + hmap_scale*0.5) + rad) return 0; // test rmax
 		double const val(get_dheight_at(p, !simple)), cutoff(surface->min_cutoff);
-		coll_r = radius*(1.0 + hmap_scale*((max(cutoff, val) - cutoff)/(1.0 - cutoff) - 0.5));
+		coll_r = radius*(1.0 + hmap_scale*((max(cutoff, val) - cutoff)*surface->get_one_minus_cutoff() - 0.5));
 	}
 	return 1;
 }
@@ -364,7 +364,7 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, f
 	sd.gen_points_norms_static();
 	point **points   = sd.get_points();
 	vector3d **norms = sd.get_norms();
-	float const omcinv(1.0/(1.0 - min_cutoff)), rscale(hmap_scale*radius0), cscale(1.0/255.0);
+	float const omcinv(get_one_minus_cutoff()), rscale(hmap_scale*radius0), cscale(1.0/255.0);
 	float const multval(1.0/SUBDIV_SECTS), pi_over_nd(PI/ND_TEST), delta(multval*pi_over_nd);
 	float const sin_ds(sin(2.0*delta)), cos_ds(cos(2.0*delta)), sin_dt(sin(delta)), cos_dt(cos(delta));
 
@@ -448,7 +448,7 @@ void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, fl
 	unsigned const nsubdiv(SUBDIV_SECTS >> unsigned(pdu.pos.mag() > 1.5*radius0));
 	init_ptc_cache();
 	float const step(1.0/(float)ND_CUBE), step_inner(step/nsubdiv);
-	float const omcinv(1.0/(1.0 - min_cutoff)), rscale(hmap_scale*radius0), cscale(1.0/255.0);
+	float const omcinv(get_one_minus_cutoff()), rscale(hmap_scale*radius0), cscale(1.0/255.0);
 	point pt;
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions

@@ -1432,7 +1432,7 @@ void uplanet::create(bool phase) {
 	
 	if (temp < FREEZE_TEMP) { // cold
 		gas_giant = (rel_radius > GAS_GIANT_MIN_REL_SZ);
-		atmos     = (gas_giant ? 1.0 : rand_uniform2(-0.2, 1.0));
+		atmos     = (gas_giant ? 1.0 : rand_uniform2(-0.2, 1.0)); // less atmosphere for ice planets?
 		water     = (gas_giant ? 0.2 : 1.0)*min(1.0f, rand_uniform2(0.0, 1.2)); // ice // rand_uniform2(0.0, MAX_WATER)
 		comment   = " (Cold)";
 		if      (gas_giant)    {comment += " Gas Giant";}
@@ -1913,7 +1913,7 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 	unsigned char const gray[3]  = {100, 100, 100};
 	float const coldness(fabs(phi - PI_TWO)*2.0*PI_INV); // phi=PI/2 => equator, phi=0.0 => north pole, phi=PI => south pole
 
-	if (val < water) { // underwater
+	if (water >= 1.0 || val < water) { // underwater
 		RGB_BLOCK_COPY(data, wic[frozen]);
 
 		if (coldness > 0.8) { // ice
@@ -2335,7 +2335,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 
 	if (!surface->sd.equal(all_zeros, radius0, ndiv)) {
 		surface->free_context();
-		float const cutoff(surface->min_cutoff), omcinv(1.0/(1.0 - cutoff)), radius_scale(hmap_scale*radius);
+		float const cutoff(surface->min_cutoff), omcinv(surface->get_one_minus_cutoff()), radius_scale(hmap_scale*radius);
 		unsigned const ssize(surface->ssize);
 		assert(ssize > 0 && tsize > 0);
 
@@ -2346,7 +2346,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 				//unsigned const ix((j*ssize)/(ndiv+1));
 				unsigned const ix((j == ndiv) ? (ssize-1) : (j*ssize)/ndiv);
 				float const val(surface->heightmap[iy + ssize*ix]); // x and y are swapped
-				perturb_map[j + offset] = radius_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5);
+				perturb_map[j + offset] = radius_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5); // duplicated with urev_body::surface_test()
 			}
 		}
 		//if (SD_TIMETEST) PRINT_TIME("Sphere Setup");
