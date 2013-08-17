@@ -629,6 +629,7 @@ class ast_belt_part_manager_t {
 
 	vector<point> pts; // include sizes?
 	unsigned vbo;
+	sphere_t bsphere;
 
 public:
 	ast_belt_part_manager_t() : vbo(0) {}
@@ -636,11 +637,16 @@ public:
 	unsigned size () const {return pts.size();}
 	bool     empty() const {return pts.empty();}
 
-	// generates a toriodal section in the z=0 plane
-	void gen_torus_section(unsigned npts, float ro, float ri) {
-		float const max_angle(TWO_PI); // for now
+	// generates a toriodal section in the z=0 plane centered at (0,0,0)
+	void gen_torus_section(unsigned npts, float ro, float ri, float max_angle) {
 		pts.resize(npts);
 
+		if (max_angle >= PI) { // at least half the torus, use a central bounding sphere
+			bsphere.pos = all_zeros;
+		}
+		else { // torus subsection, use a local bounding sphere
+			bsphere.pos = ro*vector3d(sinf(0.5*max_angle), cosf(0.5*max_angle), 0.0);
+		}
 		for (unsigned i = 0; i < npts; ++i) { // FIXME: use rand_gen_t?
 			float const theta(rand_uniform2(0.0, max_angle));
 			float const dval(rand_gaussian2_limited(0.0, 1.0, 2.0));
@@ -648,6 +654,7 @@ public:
 			vector3d const dir(sinf(theta), cosf(theta), 0.0);
 			pts[i] = (ro + ri*dval)*dir;
 			pts[i].z += sqrt(1.0 - 0.25*dval*dval)*dplane; // elliptical distribution
+			bsphere.radius = max(bsphere.radius, p2p_dist(bsphere.pos, pts[i])); // no point radius
 		}
 	}
 	void clear_context() {
@@ -661,30 +668,43 @@ public:
 		glDrawArrays(GL_POINTS, 0, pts.size());
 		bind_vbo(0);
 	}
-	void draw(point const &center, vector3d const &rot_axis, float rot_angle, vector3d const &size) {
+	bool draw(point const &center, vector3d const &rot_axis, float rot_degrees, vector3d const &size) {
+		if (empty()) return 0;
+		float const bradius(bsphere.radius*max(max(size.x, size.y), size.z));
+		point spos(bsphere.pos*size);
+		if (rot_degrees != 0.0) {rotate_vector3d(plus_z, -TO_RADIANS*rot_degrees, spos);} // rotation is backwards from GL
+		rotate_vector3d_by_vr(plus_z, rot_axis, spos);
+		spos += center;
+		if (!univ_sphere_vis(spos, bradius)) return 0; // VFC
+		if ((distance_to_camera(spos) - bradius) > 0.75) return 0; // distance/size culling
+		
 		create_vbo_and_upload(vbo, pts); // non-const due to this call
 		glPushMatrix();
 		global_translate(center);
 		rotate_into_plus_z(rot_axis);
-		if (rot_angle != 0.0) {rotate_about(rot_angle, rot_axis);}
+		if (rot_degrees != 0.0) {rotate_about(rot_degrees, plus_z);}
 		scale_by(size);
+		//if (display_mode & 0x20) {draw_sphere_vbo(bsphere.pos, bsphere.radius, 32, 0);}
 		draw_vbo();
 		glPopMatrix();
+		return 1;
 	}
 };
 
-ast_belt_part_manager_t ast_belt_part_manager;
+ast_belt_part_manager_t ast_belt_part[2]; // full, partial segment
 
 
 void clear_asteroid_contexts() {
 
 	asteroid_model_gen.clear_contexts();
-	ast_belt_part_manager.clear_context();
+	for (unsigned d = 0; d < 2; ++d) {ast_belt_part[d].clear_context();}
 }
 
-unsigned const AB_NUM_PARTS    = 200000;
+unsigned const AB_NUM_PARTS_F  = 0;//200000;
+unsigned const AB_NUM_PARTS_S  = 20000;
 float const AB_WIDTH_TO_RADIUS = 0.035;
 float const AB_THICK_TO_WIDTH  = 0.22;
+unsigned const AB_NUM_PART_SEG = 50;
 
 
 // *** asteroid fields and belts ***
@@ -692,8 +712,10 @@ float const AB_THICK_TO_WIDTH  = 0.22;
 
 void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera) const {
 
-	if (ast_belt_part_manager.empty()) {
-		ast_belt_part_manager.gen_torus_section(AB_NUM_PARTS, 1.0, AB_WIDTH_TO_RADIUS);
+	for (unsigned d = 0; d < 2; ++d) {
+		if (ast_belt_part[d].empty()) {
+			ast_belt_part[d].gen_torus_section((d ? AB_NUM_PARTS_S : AB_NUM_PARTS_F), 1.0, AB_WIDTH_TO_RADIUS, TWO_PI/(d ? AB_NUM_PART_SEG : 1));
+		}
 	}
 	texture_color(DEFAULT_AST_TEX).do_glColor();
 	enable_blend();
@@ -703,7 +725,12 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 	shader.set_vert_shader("asteroid_dust");
 	shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
 	shader.begin_shader();
-	ast_belt_part_manager.draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius*scale);
+	ast_belt_part[0].draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
+
+	for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {
+		float const rot_deg(360.0*i/AB_NUM_PART_SEG);
+		ast_belt_part[1].draw((pos_ + pos), orbital_plane_normal, rot_deg, outer_radius*scale);
+	}
 	shader.end_shader();
 	glPointSize(1.0);
 	disable_blend();
@@ -746,10 +773,13 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 	max_asteroid_radius = 0.0;
 	resize((rand2() % max_num/2) + max_num/2); // 50% to 100% of max
 	vector3d vxy[2] = {plus_x, plus_y};
-	for (unsigned d = 0; d < 2; ++d) {rotate_vector3d_by_vr(plus_z, orbital_plane_normal, vxy[d]);}
-
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		rotate_vector3d_by_vr(plus_z, orbital_plane_normal, vxy[d]);
+		vxy[d] *= scale[d];
+	}
 	for (iterator i = begin(); i != end(); ++i) {
-		i->gen_belt(pos, orbital_plane_normal, vxy, outer_radius, belt_width, belt_thickness, max_ast_radius, scale.x, scale.y, inner_radius, plane_dmax);
+		i->gen_belt(pos, orbital_plane_normal, vxy, outer_radius, belt_width, belt_thickness, max_ast_radius, inner_radius, plane_dmax);
 		rmax = max(rmax, (p2p_dist(pos, i->pos) + i->radius));
 		max_asteroid_radius = max(max_asteroid_radius, i->radius);
 	}
@@ -1126,8 +1156,8 @@ void uasteroid::gen_spherical(upos_point_type const &pos_offset, float max_dist,
 
 
 // returns the distance from the asteroid to the asteroid belt center line (torus inner radius)
-void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2], float belt_radius, float belt_width,
-	float belt_thickness, float max_radius, float xscale, float yscale, float &ri_max, float &plane_dmax)
+void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2],
+	float belt_radius, float belt_width, float belt_thickness, float max_radius, float &ri_max, float &plane_dmax)
 {
 	gen_base(max_radius);
 	float const theta(TWO_PI*rand_float2());
@@ -1135,7 +1165,7 @@ void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbi
 	float const delta_dist_to_sun(belt_width*dval);
 	float const dplane(rand_gaussian2_limited(0.0, belt_thickness, 2.5*belt_thickness));
 	float const dist_from_plane(sqrt(1.0 - 0.25*dval*dval)*dplane); // elliptical distribution
-	vector3d const dir(xscale*vxy[0]*sinf(theta) + yscale*vxy[1]*cosf(theta)); // Note: only normalized if xscale=yscale=1
+	vector3d const dir(vxy[0]*sinf(theta) + vxy[1]*cosf(theta)); // Note: only normalized if xscale=yscale=1
 	orbital_dist = delta_dist_to_sun + belt_radius;
 	pos          = pos_offset; // start at center of system/sun
 	pos         += orbital_dist*dir; // move out to belt radius

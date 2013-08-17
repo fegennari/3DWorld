@@ -22,8 +22,8 @@ public:
 	uasteroid() : inst_id(0), orbital_dist(0.0), last_coll_id(-1) {}
 	void gen_base(float max_radius);
 	void gen_spherical(upos_point_type const &pos_offset, float max_dist, float max_radius);
-	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2], float belt_radius, float belt_width,
-		float belt_thickness, float max_radius, float xscale, float yscale, float &ri_max, float &plane_dmax);
+	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2],
+		float belt_radius, float belt_width, float belt_thickness, float max_radius, float &ri_max, float &plane_dmax);
 	void apply_field_physics(point const &af_pos, float af_radius);
 	void apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal);
 	void draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const;
