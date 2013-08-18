@@ -676,7 +676,7 @@ public:
 		rotate_vector3d_by_vr(plus_z, rot_axis, spos);
 		spos += center;
 		if (!univ_sphere_vis(spos, bradius)) return 0; // VFC
-		if ((distance_to_camera(spos) - bradius) > 0.75) return 0; // distance/size culling
+		if ((distance_to_camera(spos) - bradius) > 0.8) return 0; // distance/size culling
 		
 		create_vbo_and_upload(vbo, pts); // non-const due to this call
 		glPushMatrix();
@@ -700,6 +700,8 @@ void clear_asteroid_contexts() {
 	for (unsigned d = 0; d < 2; ++d) {ast_belt_part[d].clear_context();}
 }
 
+
+bool const ENABLE_DUST_SHADOWS = ENABLE_SHADOWS && 0; // slower, and not very noticeable
 unsigned const AB_NUM_PARTS_F  = 0;//200000;
 unsigned const AB_NUM_PARTS_S  = 20000;
 float const AB_WIDTH_TO_RADIUS = 0.035;
@@ -708,6 +710,16 @@ unsigned const AB_NUM_PART_SEG = 50;
 
 
 // *** asteroid fields and belts ***
+
+
+void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_casters) {
+
+	if (num_shadow_casters > 0) {
+		assert(num_shadow_casters <= 8);
+		for (unsigned d = 0; d < 2; ++d) {shader.set_prefix("#define ENABLE_SHADOWS", d);} // VS/FS
+	}
+	shader.set_int_prefix("num_shadow_casters", num_shadow_casters, 1); // FS
+}
 
 
 void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera) const {
@@ -721,10 +733,12 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 	enable_blend();
 	glPointSize(2.0);
 	shader_t shader;
+	if (ENABLE_DUST_SHADOWS) {set_shader_prefix_for_shadow_casters(shader, shadow_casters.size());}
 	shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	shader.set_vert_shader("asteroid_dust");
-	shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
+	shader.set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+asteroid_dust"); // +sphere_shadow.part*
 	shader.begin_shader();
+	if (ENABLE_DUST_SHADOWS) {upload_shader_casters(shader);}
 	ast_belt_part[0].draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
 
 	for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {
@@ -1030,16 +1044,6 @@ void uasteroid_belt_planet::calc_shadowers() {
 	shadow_casters.push_back(sphere_t(planet->pos, planet->radius));
 	sun_pos_radius.pos    = planet->system->sun.pos;
 	sun_pos_radius.radius = planet->system->sun.radius;
-}
-
-
-void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_casters) {
-
-	if (num_shadow_casters > 0) {
-		assert(num_shadow_casters <= 8);
-		for (unsigned d = 0; d < 2; ++d) {shader.set_prefix("#define ENABLE_SHADOWS", d);} // VS/FS
-	}
-	shader.set_int_prefix("num_shadow_casters", num_shadow_casters, 1); // FS
 }
 
 
