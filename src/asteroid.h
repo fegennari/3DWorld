@@ -52,6 +52,7 @@ protected:
 
 	virtual void gen_asteroid_placements() = 0;
 	void remove_asteroid(unsigned ix);
+	void upload_shader_casters(shader_t &s) const;
 
 public:
 	uasteroid_cont() : rseed(0) {}

@@ -2,12 +2,6 @@ uniform float tscale = 1.0;
 uniform float crater_scale = 1.0;
 uniform sampler2D tex0;
 
-#ifdef ENABLE_SHADOWS
-uniform vec3 sun_pos;
-uniform float sun_radius;
-uniform vec4 shadow_casters[8];
-#endif
-
 varying vec3 vpos, normal, world_normal, world_space_pos;
 varying vec4 epos;
 
@@ -22,13 +16,7 @@ void main()
 		adjust_normal_for_craters(norm_normal, vpos); // add craters by modifying the normal
 	}
 #endif
-
-	float atten[2] = {1.0, 1.0};
-#ifdef ENABLE_SHADOWS
-	for (int i = 0; i < num_shadow_casters; ++i) {
-		atten[0] *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, shadow_casters[i].xyz, shadow_casters[i].w);
-	}
-#endif
+	float atten[2] = {calc_shadow_atten(world_space_pos), 1.0};
 
 	for (int i = 0; i < 2; ++i) { // sun_diffuse, galaxy_ambient
 		color += atten[i]*add_pt_light_comp(norm_normal, epos, i);

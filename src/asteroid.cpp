@@ -1033,20 +1033,25 @@ void uasteroid_belt_planet::calc_shadowers() {
 }
 
 
+void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_casters) {
+
+	if (num_shadow_casters > 0) {
+		assert(num_shadow_casters <= 8);
+		for (unsigned d = 0; d < 2; ++d) {shader.set_prefix("#define ENABLE_SHADOWS", d);} // VS/FS
+	}
+	shader.set_int_prefix("num_shadow_casters", num_shadow_casters, 1); // FS
+}
+
+
 void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters, bool custom_lighting) {
 
 	if (!shader.is_setup()) {
-		if (num_shadow_casters > 0) {
-			assert(num_shadow_casters <= 8);
-			for (unsigned d = 0; d < 2; ++d) {shader.set_prefix("#define ENABLE_SHADOWS", d);} // VS/FS
-		}
-		shader.set_int_prefix("num_shadow_casters", num_shadow_casters, 1); // FS
+		set_shader_prefix_for_shadow_casters(shader, num_shadow_casters);
 		if (ENABLE_CRATERS ) {shader.set_prefix("#define HAS_CRATERS",      1);} // FS
 		if (ENABLE_AF_INSTS) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid");
-		string frag_shader_str("ads_lighting.part*+triplanar_texture.part");
-		if (num_shadow_casters > 0) {frag_shader_str += "+sphere_shadow.part*";}
+		string frag_shader_str("ads_lighting.part*+triplanar_texture.part+sphere_shadow.part*+sphere_shadow_casters.part");
 		if (ENABLE_CRATERS) {frag_shader_str += "+rand_gen.part*+craters.part";}
 		shader.set_frag_shader(frag_shader_str + "+asteroid");
 		shader.begin_shader();
@@ -1078,6 +1083,26 @@ void uasteroid_cont::end_render(shader_t &shader) {
 }
 
 
+void uasteroid_cont::upload_shader_casters(shader_t &s) const {
+
+	if (!shadow_casters.empty()) {
+		int const sc_loc(s.get_uniform_loc("shadow_casters"));
+		assert(sc_loc >= 0); // must be available
+
+		for (vector<sphere_t>::const_iterator sc = shadow_casters.begin(); sc != shadow_casters.end(); ++sc) {
+			point const gpos(make_pt_global(sc->pos));
+			float const vals[4] = {gpos.x, gpos.y, gpos.z, sc->radius};
+			unsigned const ix(sc - shadow_casters.begin());
+			glUniform4fv((sc_loc + ix), 1, vals);
+		}
+	}
+	s.add_uniform_int("num_shadow_casters", shadow_casters.size());
+	s.add_uniform_vector3d("sun_pos", make_pt_global(sun_pos_radius.pos));
+	s.add_uniform_float("sun_radius", sun_pos_radius.radius);
+	upload_mvm_to_shader(s, "world_space_mvm");
+}
+
+
 void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set) {
 
 	point_d const afpos(pos + pos_);
@@ -1090,25 +1115,10 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	uobject const *sobj(NULL); // unused
 	bool const has_sun(sun_light_already_set || set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE) >= 0);
 
-	// Note: this block and associated variables could be mobed to uasteroid_belt, but we may want to use them for asteriod fields near within systems/near stars later
+	// Note: this block and associated variables could be moved to uasteroid_belt, but we may want to use them for asteriod fields near within systems/near stars later
 	if (ENABLE_SHADOWS) { // setup shadow casters
 		if (!has_sun) {shadow_casters.clear();} // optional, may never get here/not make a difference
-
-		if (!shadow_casters.empty()) {
-			int const sc_loc(s.get_uniform_loc("shadow_casters"));
-			assert(sc_loc >= 0); // must be available
-
-			for (vector<sphere_t>::const_iterator sc = shadow_casters.begin(); sc != shadow_casters.end(); ++sc) {
-				point const gpos(make_pt_global(sc->pos));
-				float const vals[4] = {gpos.x, gpos.y, gpos.z, sc->radius};
-				unsigned const ix(sc - shadow_casters.begin());
-				glUniform4fv((sc_loc + ix), 1, vals);
-			}
-		}
-		s.add_uniform_int("num_shadow_casters", shadow_casters.size());
-		s.add_uniform_vector3d("sun_pos", make_pt_global(sun_pos_radius.pos));
-		s.add_uniform_float("sun_radius", sun_pos_radius.radius);
-		upload_mvm_to_shader(s, "world_space_mvm");
+		upload_shader_casters(s);
 	}
 	s.add_uniform_float("crater_scale", (has_sun ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
