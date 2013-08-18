@@ -25,7 +25,7 @@ public:
 	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2],
 		float belt_radius, float belt_width, float belt_thickness, float max_radius, float &ri_max, float &plane_dmax);
 	void apply_field_physics(point const &af_pos, float af_radius);
-	void apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal);
+	void apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal, vector<sphere_t> const &colliders);
 	void draw(point_d const &pos_, point const &camera, shader_t &s, pt_line_drawer &pld) const;
 	void destroy();
 	void set_velocity(vector3d const &v) {velocity = v;}
@@ -102,9 +102,12 @@ public:
 class uasteroid_belt_system : public uasteroid_belt {
 
 	ussystem *system;
+	vector<sphere_t> colliders;
 
 	virtual void gen_asteroid_placements();
+	bool is_potential_collider(uobject const &uobj) const;
 	bool might_cast_shadow(uobject const &uobj) const;
+	void calc_colliders();
 	void calc_shadowers();
 
 public:

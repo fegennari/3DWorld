@@ -943,14 +943,15 @@ void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point con
 
 	if (empty()) return;
 	//RESET_TIME;
+	calc_colliders();
 	upos_point_type opn(orbital_plane_normal);
 
 	for (iterator i = begin(); i != end(); ++i) {
-		i->apply_belt_physics(pos, opn);
+		i->apply_belt_physics(pos, opn, colliders);
 	}
 	calc_shadowers();
 	//PRINT_TIME("Physics");
-	// no collision detection
+	// no collision detection between asteroids as it's rare and too slow
 }
 
 
@@ -971,10 +972,34 @@ void uasteroid_belt_planet::apply_physics(upos_point_type const &pos_, point con
 }
 
 
+bool uasteroid_belt_system::is_potential_collider(uobject const &uobj) const {
+
+	if (!dist_less_than(uobj.pos, get_camera_pos(), 250*max_asteroid_radius)) return 0; // too far away to notice
+	if (!univ_sphere_vis(uobj.pos, 2.0*(uobj.radius + max_asteroid_radius)))  return 0; // expand radius somewhat
+	return sphere_might_intersect(uobj.pos, uobj.radius);
+}
+
+
+void uasteroid_belt_system::calc_colliders() {
+
+	colliders.clear();
+	if (!animate2 || !system) return;
+
+	for (vector<uplanet>::const_iterator p = system->planets.begin(); p != system->planets.end(); ++p) {
+		if (is_potential_collider(*p)) {colliders.push_back(sphere_t(p->pos, p->radius));}
+
+		for (vector<umoon>::const_iterator m = p->moons.begin(); m != p->moons.end(); ++m) {
+			if (is_potential_collider(*m)) {colliders.push_back(sphere_t(m->pos, m->radius));}
+		}
+	}
+}
+
+
 bool uasteroid_belt_system::might_cast_shadow(uobject const &uobj) const {
 
 	assert(system);
 	if (!dist_less_than(system->sun.pos, uobj.pos, (uobj.radius + inner_radius + outer_radius))) return 0;
+	if (sphere_might_intersect(uobj.pos, uobj.radius)) return 1; // uobj within asteroid belt
 	float const projected_r(uobj.radius*(inner_radius + outer_radius)/p2p_dist(system->sun.pos, uobj.pos));
 	return line_might_intersect(uobj.pos, system->sun.pos, projected_r);
 }
@@ -1192,7 +1217,7 @@ void uasteroid::apply_field_physics(point const &af_pos, float af_radius) {
 }
 
 
-void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal) {
+void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_type const &op_normal, vector<sphere_t> const &colliders) {
 
 	upos_point_type const dir(pos - af_pos);
 	rot_ang += 0.25*fticks*rot_ang0; // slow rotation
@@ -1200,6 +1225,13 @@ void uasteroid::apply_belt_physics(upos_point_type const &af_pos, upos_point_typ
 	// Note: slightly off for asteroids not in the plane, should be cross_product(dir, op_normal).get_norm() but that's slower
 	velocity = rev_ang0*cross_product(dir, op_normal);
 	pos      = af_pos + orbital_dist*(pos + fticks*velocity - af_pos).get_norm(); // renormalize for constant distance
+
+	for (vector<sphere_t>::const_iterator i = colliders.begin(); i != colliders.end(); ++i) {
+		if (dist_less_than(pos, i->pos, (radius + i->radius))) {
+			vector3d const coll_normal((pos - i->pos).get_norm());
+			pos = i->pos + (radius + i->radius)*coll_normal;
+		}
+	}
 }
 
 
