@@ -545,7 +545,7 @@ bool has_sun_lighting(point const &pos) {
 // return values: -1: no sun, 0: not shadowed, 1: < half shadowed, 2: > half shadowed, 3: fully shadowed
 // caches sobj and only determines if there is a shadow if NULL
 int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
-				   uobject const *&sobj, float ambient_scale) // based on current star and current galaxy
+				   uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s) // based on current star and current galaxy
 {
 	assert(radius < CELL_SIZE);
 	float const expand(2.0);
@@ -555,6 +555,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 	ussystem *sol(NULL);
 	point pos2(pos);
 	offset_pos(pos2);
+	float ambient_scale(ambient_scale_no_s);
 
 	if (result.galaxy >= 0) { // close to a galaxy
 		pos2 -= result.get_ucell().pos;
@@ -563,6 +564,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 		if (result.system >= 0) { // close to a solar system
 			sol   = &result.get_system();
 			color = sol->get_galaxy_color(); // non-const
+			ambient_scale = ambient_scale_s;
 		}
 		else {
 			ugalaxy const &galaxy(result.get_galaxy()); // galaxies shouldn't overlap

@@ -522,7 +522,8 @@ unsigned const AST_FLD_MAX_NUM   = 1200;
 unsigned const AST_BELT_MAX_NS   = 10000;
 unsigned const AST_BELT_MAX_NP   = 4000;
 float    const AST_RADIUS_SCALE  = 0.04;
-float    const AST_AMBIENT_SCALE = 20.0;
+float    const AST_AMBIENT_S     = 5.0;
+float    const AST_AMBIENT_NO_S  = 20.0;
 float    const AST_AMBIENT_VAL   = 0.15;
 float    const AST_VEL_SCALE     = 0.0002;
 float    const NDIV_SCALE_AST    = 800.0;
@@ -701,8 +702,8 @@ void clear_asteroid_contexts() {
 }
 
 
-unsigned const AB_NUM_PARTS_F  = 200000;
-unsigned const AB_NUM_PARTS_S  = 20000;
+unsigned const AB_NUM_PARTS_F  = 100000;
+unsigned const AB_NUM_PARTS_S  = 15000;
 float const AB_WIDTH_TO_RADIUS = 0.035;
 float const AB_THICK_TO_WIDTH  = 0.22;
 unsigned const AB_NUM_PART_SEG = 50;
@@ -721,8 +722,18 @@ void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_
 }
 
 
+bool set_af_color_from_system(point_d const &afpos, float radius) {
+
+	point sun_pos; // unused
+	uobject const *sobj(NULL); // unused
+	return (set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S) >= 0);
+}
+
+
 void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera) const {
 
+	point_d const afpos(pos_ + pos);
+	bool const has_sun(set_af_color_from_system(afpos, radius));
 	texture_color(DEFAULT_AST_TEX).do_glColor();
 	enable_blend();
 	shader_t shader;
@@ -734,25 +745,25 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 		shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
 		shader.begin_shader();
 		shader.add_uniform_float("alpha_scale", 2.0);
-		ast_belt_part[0].draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
+		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
 		shader.end_shader();
 	}
 	if (AB_NUM_PARTS_S > 0) { // local small asteroid bits (spheres)
 		if (ast_belt_part[1].empty()) {ast_belt_part[1].gen_torus_section(AB_NUM_PARTS_S, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI/AB_NUM_PART_SEG);}
 		for (unsigned i = 0; i < 2; ++i) {shader.set_prefix("#define DRAW_AS_SPHERES", i);} // VS/FS
-		if (ENABLE_SHADOWS) {set_shader_prefix_for_shadow_casters(shader, shadow_casters.size());}
+		if (ENABLE_SHADOWS && has_sun) {set_shader_prefix_for_shadow_casters(shader, shadow_casters.size());}
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid_dust");
 		shader.set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+asteroid_dust"); // +sphere_shadow.part*
 		shader.begin_shader();
 		shader.add_uniform_float("alpha_scale", 5.0);
 		shader.add_uniform_float("sphere_size", 0.05*window_width*max_asteroid_radius);
-		if (ENABLE_SHADOWS) {upload_shader_casters(shader);}
+		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
 		glEnable(GL_POINT_SPRITE);
 		glEnable(GL_PROGRAM_POINT_SIZE);
 
 		for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {
-			ast_belt_part[1].draw((pos_ + pos), orbital_plane_normal, (360.0*i/AB_NUM_PART_SEG), outer_radius*scale);
+			ast_belt_part[1].draw(afpos, orbital_plane_normal, (360.0*i/AB_NUM_PART_SEG), outer_radius*scale);
 		}
 		glDisable(GL_PROGRAM_POINT_SIZE);
 		glDisable(GL_POINT_SPRITE);
@@ -1128,7 +1139,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
 	point sun_pos; // unused
 	uobject const *sobj(NULL); // unused
-	bool const has_sun(sun_light_already_set || set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_SCALE) >= 0);
+	bool const has_sun(sun_light_already_set || set_af_color_from_system(afpos, radius));
 
 	// Note: this block and associated variables could be moved to uasteroid_belt, but we may want to use them for asteriod fields near within systems/near stars later
 	if (ENABLE_SHADOWS) { // setup shadow casters
