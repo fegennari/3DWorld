@@ -27,7 +27,7 @@ unsigned const DEFAULT_AST_TEX  = ROCK_TEX; // MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 
 
-extern int animate2, display_mode, frame_counter;
+extern int animate2, display_mode, frame_counter, window_width;
 extern float fticks;
 extern colorRGBA sun_color;
 extern s_object clobj0;
@@ -701,8 +701,7 @@ void clear_asteroid_contexts() {
 }
 
 
-bool const ENABLE_DUST_SHADOWS = ENABLE_SHADOWS && 0; // slower, and not very noticeable
-unsigned const AB_NUM_PARTS_F  = 0;//200000;
+unsigned const AB_NUM_PARTS_F  = 200000;
 unsigned const AB_NUM_PARTS_S  = 20000;
 float const AB_WIDTH_TO_RADIUS = 0.035;
 float const AB_THICK_TO_WIDTH  = 0.22;
@@ -724,29 +723,41 @@ void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_
 
 void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera) const {
 
-	for (unsigned d = 0; d < 2; ++d) {
-		if (ast_belt_part[d].empty()) {
-			ast_belt_part[d].gen_torus_section((d ? AB_NUM_PARTS_S : AB_NUM_PARTS_F), 1.0, AB_WIDTH_TO_RADIUS, TWO_PI/(d ? AB_NUM_PART_SEG : 1));
-		}
-	}
 	texture_color(DEFAULT_AST_TEX).do_glColor();
 	enable_blend();
-	glPointSize(2.0);
 	shader_t shader;
-	if (ENABLE_DUST_SHADOWS) {set_shader_prefix_for_shadow_casters(shader, shadow_casters.size());}
-	shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-	shader.set_vert_shader("asteroid_dust");
-	shader.set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+asteroid_dust"); // +sphere_shadow.part*
-	shader.begin_shader();
-	if (ENABLE_DUST_SHADOWS) {upload_shader_casters(shader);}
-	ast_belt_part[0].draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
 
-	for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {
-		float const rot_deg(360.0*i/AB_NUM_PART_SEG);
-		ast_belt_part[1].draw((pos_ + pos), orbital_plane_normal, rot_deg, outer_radius*scale);
+	if (AB_NUM_PARTS_F > 0) { // global asteroid dust (points)
+		if (ast_belt_part[0].empty()) {ast_belt_part[0].gen_torus_section(AB_NUM_PARTS_F, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI);}
+		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		shader.set_vert_shader("asteroid_dust");
+		shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
+		shader.begin_shader();
+		shader.add_uniform_float("alpha_scale", 2.0);
+		ast_belt_part[0].draw((pos_ + pos), orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
+		shader.end_shader();
 	}
-	shader.end_shader();
-	glPointSize(1.0);
+	if (AB_NUM_PARTS_S > 0) { // local small asteroid bits (spheres)
+		if (ast_belt_part[1].empty()) {ast_belt_part[1].gen_torus_section(AB_NUM_PARTS_S, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI/AB_NUM_PART_SEG);}
+		for (unsigned i = 0; i < 2; ++i) {shader.set_prefix("#define DRAW_AS_SPHERES", i);} // VS/FS
+		if (ENABLE_SHADOWS) {set_shader_prefix_for_shadow_casters(shader, shadow_casters.size());}
+		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		shader.set_vert_shader("asteroid_dust");
+		shader.set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+asteroid_dust"); // +sphere_shadow.part*
+		shader.begin_shader();
+		shader.add_uniform_float("alpha_scale", 5.0);
+		shader.add_uniform_float("sphere_size", 0.05*window_width*max_asteroid_radius);
+		if (ENABLE_SHADOWS) {upload_shader_casters(shader);}
+		glEnable(GL_POINT_SPRITE);
+		glEnable(GL_PROGRAM_POINT_SIZE);
+
+		for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {
+			ast_belt_part[1].draw((pos_ + pos), orbital_plane_normal, (360.0*i/AB_NUM_PART_SEG), outer_radius*scale);
+		}
+		glDisable(GL_PROGRAM_POINT_SIZE);
+		glDisable(GL_POINT_SPRITE);
+		shader.end_shader();
+	}
 	disable_blend();
 }
 
