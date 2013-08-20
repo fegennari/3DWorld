@@ -1,4 +1,5 @@
 uniform float alpha_scale = 1.0;
+uniform sampler2D tex0;
 
 varying vec3 world_space_pos;
 varying vec4 epos;
@@ -25,6 +26,9 @@ void main()
 	for (int i = 0; i < 2; ++i) { // sun_diffuse, galaxy_ambient
 		color += atten[i]*add_pt_light_comp(normal, epos, i);
 	}
+#ifdef DRAW_AS_SPHERES
+	color.rgb *= texture2D(tex0, gl_PointCoord).rgb;
+#endif
 	gl_FragColor = vec4(color.rgb, alpha * gl_Color.a); // use diffuse alpha directly;
 }
 

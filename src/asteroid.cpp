@@ -27,7 +27,7 @@ unsigned const DEFAULT_AST_TEX  = ROCK_TEX; // MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 
 
-extern int animate2, display_mode, frame_counter, window_width;
+extern int animate2, display_mode, frame_counter, window_width, window_height;
 extern float fticks;
 extern colorRGBA sun_color;
 extern s_object clobj0;
@@ -734,12 +734,12 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 
 	point_d const afpos(pos_ + pos);
 	bool const has_sun(set_af_color_from_system(afpos, radius));
-	texture_color(DEFAULT_AST_TEX).do_glColor();
 	enable_blend();
 	shader_t shader;
 
 	if (AB_NUM_PARTS_F > 0) { // global asteroid dust (points)
 		if (ast_belt_part[0].empty()) {ast_belt_part[0].gen_torus_section(AB_NUM_PARTS_F, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI);}
+		texture_color(DEFAULT_AST_TEX).do_glColor();
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid_dust");
 		shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
@@ -750,6 +750,7 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 	}
 	if (AB_NUM_PARTS_S > 0) { // local small asteroid bits (spheres)
 		if (ast_belt_part[1].empty()) {ast_belt_part[1].gen_torus_section(AB_NUM_PARTS_S, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI/AB_NUM_PART_SEG);}
+		WHITE.do_glColor();
 		for (unsigned i = 0; i < 2; ++i) {shader.set_prefix("#define DRAW_AS_SPHERES", i);} // VS/FS
 		if (ENABLE_SHADOWS && has_sun) {set_shader_prefix_for_shadow_casters(shader, shadow_casters.size());}
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
@@ -757,7 +758,9 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 		shader.set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+asteroid_dust"); // +sphere_shadow.part*
 		shader.begin_shader();
 		shader.add_uniform_float("alpha_scale", 5.0);
-		shader.add_uniform_float("sphere_size", 0.05*window_width*max_asteroid_radius);
+		shader.add_uniform_float("sphere_size", 0.1*window_height*max_asteroid_radius);
+		shader.add_uniform_int("tex0", 0);
+		select_texture(DEFAULT_AST_TEX, 0);
 		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
 		glEnable(GL_POINT_SPRITE);
 		glEnable(GL_PROGRAM_POINT_SIZE);
