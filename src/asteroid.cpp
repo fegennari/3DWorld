@@ -27,6 +27,7 @@ unsigned const DEFAULT_AST_TEX  = ROCK_TEX; // MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 
 
+extern bool no_asteroid_dust;
 extern int animate2, display_mode, frame_counter, window_width, window_height;
 extern float fticks;
 extern colorRGBA sun_color;
@@ -737,7 +738,7 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 	enable_blend();
 	shader_t shader;
 
-	if (AB_NUM_PARTS_F > 0) { // global asteroid dust (points)
+	if (AB_NUM_PARTS_F > 0 && world_mode == WMODE_UNIVERSE) { // global asteroid dust (points), only in universe mode
 		if (ast_belt_part[0].empty()) {ast_belt_part[0].gen_torus_section(AB_NUM_PARTS_F, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI);}
 		texture_color(DEFAULT_AST_TEX).do_glColor();
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
@@ -748,7 +749,7 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
 		shader.end_shader();
 	}
-	if (AB_NUM_PARTS_S > 0) { // local small asteroid bits (spheres)
+	if (AB_NUM_PARTS_S > 0 && !no_asteroid_dust) { // local small asteroid bits (spheres)
 		if (ast_belt_part[1].empty()) {ast_belt_part[1].gen_torus_section(AB_NUM_PARTS_S, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI/AB_NUM_PART_SEG);}
 		WHITE.do_glColor();
 		for (unsigned i = 0; i < 2; ++i) {shader.set_prefix("#define DRAW_AS_SPHERES", i);} // VS/FS
@@ -1235,7 +1236,7 @@ void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbi
 	pos         += orbital_dist*dir; // move out to belt radius
 	pos         += dist_from_plane*orbital_plane_normal;
 	velocity     = zero_vector; // for now
-	float const aoR(orbital_dist/radius), rev_rate(0.12/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
+	float const aoR(orbital_dist/radius), rev_rate(0.2/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
 	rev_ang0     = rev_rate/(orbital_dist*orbital_dist);
 	ri_max       = max(ri_max, float(radius + sqrt(delta_dist_to_sun*delta_dist_to_sun + dist_from_plane*dist_from_plane)));
 	plane_dmax   = max(plane_dmax, (radius + dplane)); // approximate

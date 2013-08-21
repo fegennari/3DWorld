@@ -760,13 +760,12 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					if (sol.planets.empty()) continue;
 
 					if (planets_visible) { // asteroid fields may also be visible
-						if (!gen_only && sol.asteroid_belt && sel_s && sol_draw_pass == 0) {
+						if (!gen_only && sol.asteroid_belt && sel_s && sol_draw_pass == 0 && pass == 1) {
 							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
 							shader_t asteroid_belt_shader;
 							sol.asteroid_belt->begin_render(asteroid_belt_shader, 0);
 							sol.asteroid_belt->draw(pos, camera, asteroid_belt_shader, 0);
 							uasteroid_field::end_render(asteroid_belt_shader);
-							//if (display_mode & 0x20) {sol.asteroid_belt->draw_bounding_torus(pos, colorRGBA(0.0, 1.0, 0.0, 0.5));} // TESTING
 							draw_asteroid_belt = 1;
 						}
 						if (!has_sun) { // sun is gone
@@ -889,7 +888,6 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						planet_asteroid_belt->begin_render(asteroid_belt_shader, 0);
 						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader, 1);
 						uasteroid_field::end_render(asteroid_belt_shader);
-						//if (display_mode & 0x20) {planet_asteroid_belt->draw_bounding_torus(pos, colorRGBA(0.0, 1.0, 0.0, 0.5));} // TESTING
 					}
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
 						if (!usg.rings_to_draw.empty()) {

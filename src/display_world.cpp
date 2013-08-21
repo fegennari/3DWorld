@@ -33,7 +33,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1);
+bool mesh_invalidated(1), no_asteroid_dust(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0);
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
@@ -523,7 +523,9 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 	bool const no_stars(is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6));
 	int const fog_enabled(glIsEnabled(GL_FOG));
 	if (fog_enabled) {glDisable(GL_FOG);}
+	no_asteroid_dust = (reflection_mode || no_stars); // FIXME: should really pass this down (5 levels of function calls)
 	draw_universe(1, 1, (no_stars ? 2 : 0)); // could clip by horizon?
+	no_asteroid_dust = 0;
 	if (fog_enabled) {glEnable(GL_FOG);}
 	if (TIMETEST) PRINT_TIME("0.2");
 	camera_pos = camera_pos_orig;
