@@ -590,7 +590,7 @@ public:
 	}
 	void final_draw(int loc) {
 		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
-			(*i)->final_draw(loc); // FIXME: only call on unique asteroids that have been rendered at least once?
+			(*i)->final_draw(loc); // could call only on asteroids that have been rendered at least once, but probably okay to always call
 		}
 	}
 	void clear_contexts() {
@@ -707,6 +707,8 @@ unsigned const AB_NUM_PARTS_F  = 100000;
 unsigned const AB_NUM_PARTS_S  = 15000;
 float const AB_WIDTH_TO_RADIUS = 0.035;
 float const AB_THICK_TO_WIDTH  = 0.22;
+float const AST_PARTICLE_SIZE  = 0.1;
+float const AST_BELT_ROT_RATE  = 0.2;
 unsigned const AB_NUM_PART_SEG = 50;
 
 
@@ -759,7 +761,7 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 		shader.set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+asteroid_dust"); // +sphere_shadow.part*
 		shader.begin_shader();
 		shader.add_uniform_float("alpha_scale", 5.0);
-		shader.add_uniform_float("sphere_size", 0.1*window_height*max_asteroid_radius);
+		shader.add_uniform_float("sphere_size", AST_PARTICLE_SIZE*window_height*max_asteroid_radius);
 		shader.add_uniform_int("tex0", 0);
 		select_texture(DEFAULT_AST_TEX, 0);
 		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
@@ -894,7 +896,6 @@ bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, floa
 	float const ri(min((inner_radius + line_radius), outer_radius)), scale(1.0/outer_radius);
 	// line_intersect_torus() seems to have some bug where small ro causes it to always return false, so we rescale so that ro == 1.0
 	return line_torus_intersect(scale*pt[0], scale*pt[1], all_zeros, scale*ri, 1.0, t);
-	//return line_torus_intersect(pt[0], pt[1], all_zeros, ri, outer_radius, t);
 }
 
 
@@ -1236,7 +1237,7 @@ void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbi
 	pos         += orbital_dist*dir; // move out to belt radius
 	pos         += dist_from_plane*orbital_plane_normal;
 	velocity     = zero_vector; // for now
-	float const aoR(orbital_dist/radius), rev_rate(0.2/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
+	float const aoR(orbital_dist/radius), rev_rate(AST_BELT_ROT_RATE/(aoR*sqrt(aoR))); // see urev_body::gen_rotrev()
 	rev_ang0     = rev_rate/(orbital_dist*orbital_dist);
 	ri_max       = max(ri_max, float(radius + sqrt(delta_dist_to_sun*delta_dist_to_sun + dist_from_plane*dist_from_plane)));
 	plane_dmax   = max(plane_dmax, (radius + dplane)); // approximate
