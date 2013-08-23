@@ -912,8 +912,7 @@ void obj_draw_group::end_render() {
 		draw_vbo();
 	}
 	else {
-		verts.front().set_state();
-		glDrawArrays(GL_TRIANGLES, 0, verts.size());
+		draw_verts(verts, GL_TRIANGLES);
 	}
 	verts.resize(0);
 }

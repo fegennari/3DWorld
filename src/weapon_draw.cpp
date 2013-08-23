@@ -856,9 +856,8 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 			UNROLL_3X(pos2[i_] *= rand_uniform(1.01, 1.2);)
 			verts[j+2] = pos2;
 		}
-		verts[0].set_state();
-		glDrawArrays(GL_LINE_STRIP, 0, verts.size());
-		if (hit) glLineWidth(1.0);
+		draw_verts(verts, GL_LINE_STRIP);
+		if (hit) {glLineWidth(1.0);}
 	}
 	set_std_blend_mode();
 	set_color_e(BLACK);

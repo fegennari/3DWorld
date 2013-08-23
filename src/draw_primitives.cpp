@@ -617,8 +617,7 @@ void sd_sphere_vbo_d::draw_ndiv_pow2(unsigned ndiv) {
 	static vector<vert_norm_tc> verts;
 	verts.resize(0);
 	get_triangle_strip_pow2(verts, (1 << lod));
-	verts.front().set_state();
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, (unsigned)verts.size());
+	draw_verts(verts, GL_TRIANGLE_STRIP);
 }
 
 

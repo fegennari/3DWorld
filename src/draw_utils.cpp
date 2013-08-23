@@ -233,16 +233,10 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 
 
 void pt_line_drawer_no_lighting_t::draw() const {
-	
-	if (!points.empty()) {
-		points.front().set_state();
-		glDrawArrays(GL_POINTS, 0, (unsigned)points.size());
-	}
-	if (!lines.empty()) {
-		assert(!(lines.size() & 1));
-		lines.front().set_state();
-		glDrawArrays(GL_LINES, 0, (unsigned)lines.size());
-	}
+
+	assert(!(lines.size() & 1));
+	draw_verts(points, GL_POINTS);
+	draw_verts(lines,  GL_LINES);
 }
 
 

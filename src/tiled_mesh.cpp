@@ -913,10 +913,7 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 				}
 			}
 		}
-		if (!wverts.empty()) {
-			wverts[0].set_state();
-			glDrawArrays(GL_QUADS, 0, wverts.size());
-		}
+		if (!wverts.empty()) {draw_verts(wverts, GL_QUADS);}
 	}
 	if (weight_tid > 0) {disable_textures_texgen();}
 }

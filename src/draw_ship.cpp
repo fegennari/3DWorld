@@ -75,15 +75,16 @@ void ship_bounded_cylinder::draw(unsigned ndiv) const {
 }
 
 
-void ship_triangle_list::draw(unsigned ndiv) const {
+void ship_triangle_list::draw(unsigned ndiv) const { // unused
 
-	glBegin(GL_TRIANGLES);
+	vector<vert_norm> verts;
+	verts.reserve(3*triangles.size());
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
-		i->get_normal().do_glNormal();
-		UNROLL_3X(i->pts[i_].do_glVertex();)
+		vector3d const normal(i->get_normal());
+		UNROLL_3X(verts.push_back(vert_norm(i->pts[i_], normal));)
 	}
-	glEnd();
+	draw_verts(verts, GL_TRIANGLES);
 }
 
 

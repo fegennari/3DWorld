@@ -521,10 +521,16 @@ int set_texture(float zval, int &tex_id) {
 }
 
 
-inline void draw_vertex(float x, float y, float z, bool in_y, float tscale=1.0) { // xz or zy
+void draw_vertex(float x, float y, float z, bool in_y, float tscale=1.0) { // xz or zy
 
 	glTexCoord2f(tscale*(in_y ? z : x), tscale*(in_y ? y : z));
 	glVertex3f(x, y, z);
+}
+
+
+void add_vertex(vector<vert_norm_tc> &verts, vector3d const &n, float x, float y, float z, bool in_y, float tscale=1.0) { // xz or zy
+
+	verts.push_back(vert_norm_tc(point(x, y, z), n, tscale*(in_y ? z : x), tscale*(in_y ? y : z)));
 }
 
 
