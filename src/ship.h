@@ -679,7 +679,7 @@ public:
 	void inverse_rotate() const;
 	void draw_shadow_volumes_from(uobject const *sobj, point const &sun_pos, float dscale, int ndiv, bool test) const;
 	void transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const;
-	void draw(shader_t &shader, point const &pos_) const;
+	void draw(shader_t &shader) const;
 
 	void invalidate_permanently() {status = 2;} // status set to anything other than 0 or 1 makes this object invalid
 	void verify_status() const {assert(status == 0 || status == 1);}

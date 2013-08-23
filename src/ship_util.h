@@ -266,7 +266,7 @@ us_projectile *create_projectile(unsigned type, free_obj const *const parent, un
 void apply_explosion(point const &pos, float radius, float damage, unsigned eflags, int wclass, uobject *ptr, free_obj const *parent);
 free_obj const *check_for_incoming_proj(point const &pos, int align, float dist);
 void shift_univ_objs(point const &pos, bool shift_player_ship);
-void draw_univ_objects(point const &pos);
+void draw_univ_objects();
 void purge_old_objs();
 void choose_n_random_sclasses(vector<unsigned> &sclasses, int align, unsigned num, bool initial, bool rand_spawned);
 void add_other_ships(int align, unsigned num=0, bool initial=0, bool rand_spawned=0);

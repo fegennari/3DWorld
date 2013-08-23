@@ -597,13 +597,12 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 }
 
 
-void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling has already been performed
+void free_obj::draw(shader_t &shader) const { // view culling has already been performed
 
 	//RESET_TIME;
 	if (!is_ok()) return; // dead
-	upos_point_type const finpos(pos + pos_);
 	bool const lg_obj_type(is_ship() || is_stationary());
-	float const dist(p2p_dist(finpos, get_player_pos2())), type_scale(lg_obj_type ? 0.75 : (is_particle() ? 1.2 : 1.0));
+	float const dist(p2p_dist(pos, get_player_pos2())), type_scale(lg_obj_type ? 0.75 : (is_particle() ? 1.2 : 1.0));
 	float const dscale(type_scale*NDIV_SCALE_U*(get_draw_radius()/(dist + 0.1*radius + TOLERANCE)));
 	if (dscale < 0.5 || (is_particle() && dscale < 1.0)) return; // too far/small - clip it
 	int ndiv(max(3, min((int)FREE_OBJ_MAX_NDIV, int(sqrt(10.0*dscale)))));
@@ -633,7 +632,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 	}
 	bool const known_shadowed(shadowed == 2 || (stencil_shadows && shadowed));
 	int const shadow_thresh(stencil_shadows ? 0 : 1);
-	int const light_val(no_lighting ? 0 : set_uobj_color(finpos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale));
+	int const light_val(no_lighting ? 0 : set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale));
 	shadow_val = max(shadowed, light_val); // only updated if drawn - close enough?
 	if (is_player_ship()) return; // don't draw player ship
 	if (light_val > 0 && sobj != NULL) sobjs.push_back(sobj);
@@ -658,7 +657,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 
 	for (unsigned pass = 0; pass < npasses; ++pass) {
 		if (pass > 0) {
-			set_uobj_color(finpos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale);
+			set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale);
 			udd.phase1 = 0;
 			udd.phase2 = 1;
 		}
@@ -700,7 +699,7 @@ void free_obj::draw(shader_t &shader, point const &pos_) const { // view culling
 			glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
 
-			set_uobj_color(finpos, c_radius, 0, 2, sun_pos, sobj, 0.0, 0.0); // enable diffuse/specular only
+			set_uobj_color(pos, c_radius, 0, 2, sun_pos, sobj, 0.0, 0.0); // enable diffuse/specular only
 			transform_and_draw_obj(udd, 1, 0, 1);
 
 			glDepthMask(GL_TRUE);

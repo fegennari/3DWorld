@@ -692,7 +692,7 @@ void setup_ship_draw_shader(shader_t &s) {
 }
 
 
-void draw_univ_objects(point const &pos) {
+void draw_univ_objects() {
 
 	//RESET_TIME;
 	unsigned const nobjs((unsigned)c_uobjs.size());
@@ -740,7 +740,7 @@ void draw_univ_objects(point const &pos) {
 		free_obj *fobj(sorted[i].second);
 		assert(fobj != NULL);
 		if (!fobj->is_ok()) continue;
-		fobj->draw(s, pos);
+		fobj->draw(s);
 		fobj->reset_lights(); // reset for next frameq
 	}
 	set_lighted_sides(1);
