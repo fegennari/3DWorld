@@ -35,8 +35,8 @@ extern s_object clobj0;
 extern vector<us_weapon> us_weapons;
 extern vector<usw_ray> t_wrays;
 
-shader_t cached_voxel_shaders[8]; // one for each value of num_lights
-shader_t cached_proc_shaders [8];
+shader_t cached_voxel_shaders[9]; // one for each value of num_lights (0-8)
+shader_t cached_proc_shaders [9];
 
 
 void set_uniform_atten_lighting(int light);

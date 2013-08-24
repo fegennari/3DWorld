@@ -77,6 +77,7 @@ int get_universe_ambient_light() {
 
 void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]) {
 
+	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	glEnable(light);
 	glLightfv(light, GL_AMBIENT, ambient);
 	glLightfv(light, GL_DIFFUSE, diffuse);
@@ -85,6 +86,7 @@ void set_colors_and_enable_light(int light, float const ambient[4], float const 
 
 void clear_colors_and_disable_light(int light) {
 
+	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	float const ad[4] = {0.0, 0.0, 0.0, 0.0};
 	glDisable(light);
 	glLightfv(light, GL_AMBIENT, ad);

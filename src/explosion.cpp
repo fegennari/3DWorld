@@ -352,6 +352,7 @@ void setup_point_light(point const &pos, colorRGBA const &color, float radius, u
 
 bool setup_br_light(unsigned index, point const &pos, unsigned gl_light) {
 
+	assert(gl_light < MAX_GL_LIGHT);
 	assert(index < blastrs.size());
 	blastr const &br(blastrs[index]);
 	if (br.time == 0) return 0;

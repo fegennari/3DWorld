@@ -10,9 +10,12 @@
 
 // GL_LIGHT[EXPLOSION_LIGHT] to GL_LIGHT[EXPLOSION_LIGHT + NUM_EXP_LIGHTS - 1] must be available
 // GL_LIGHT2 - GL_LIGHT7
+// Note: Lights 0 and 1 are for star and galaxy ambient; lights 6 and 7 are for engine lights
 int      const EXPLOSION_LIGHT    = GL_LIGHT2;
 int      const MAX_GL_LIGHT       = GL_LIGHT7 + 1;
-unsigned const NUM_EXP_LIGHTS     = min(5U, unsigned(MAX_GL_LIGHT - EXPLOSION_LIGHT)); // 5
+unsigned const NUM_EXP_LIGHTS     = MAX_GL_LIGHT - EXPLOSION_LIGHT; // 6
+int      const ENGINE_START_LIGHT = GL_LIGHT6; // Note: if engine lights are enabled, they will overwrite the lowest influence dynamic lights
+int      const ENGINE_DEF_LIGHT   = GL_LIGHT7;
 int      const BLAST_TIME         = 8; // default
 unsigned const EXP_FLAGS_NO_FFIRE = 0x01;
 unsigned const EXP_FLAGS_SHIP     = 0x02;
