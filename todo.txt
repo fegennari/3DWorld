@@ -40,5 +40,4 @@ Texture randomization
 Flashlight shadows?
 Point Sprites: berries on plants?
 
-Universe Ship Dynamic Lighting - Baster BR add
 Don't always draw all 8 lights in universe mode

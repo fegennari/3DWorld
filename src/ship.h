@@ -623,7 +623,7 @@ protected:
 	point reset_pos;
 	vector3d velocity, upv, dir, dvel, rot_axis, gvect;
 	free_obj const *target_obj, *parent;
-	vector<unsigned> exp_lights;
+	unsigned exp_lights[6], num_exp_lights; // NUM_EXP_LIGHTS=6 (explosion.h not included)
 	unsigned alignment;
 	float c_radius;
 
@@ -661,7 +661,7 @@ public:
 	void set_sobj_dist(float dist)     {sobj_dist = dist;}
 	void set_sobj_coll_tid(int tid)    {sobj_coll_tid = tid;}
 	void reset_after(unsigned nticks) {if (reset_timer == 0) reset_timer = nticks;}
-	void reset_lights() {exp_lights.resize(0);}
+	void reset_lights() {num_exp_lights = 0;}
 	void set_parent(free_obj const *p) {parent = p;}
 	void add_light(unsigned index);
 	vector3d get_orient() const;
@@ -727,7 +727,7 @@ public:
 	bool no_light()       const {return ((flags & OBJ_FLAGS_NOLT) != 0);}
 	bool is_decoy()       const {return ((flags & OBJ_FLAGS_DECY) != 0);}
 	bool is_orbiting()    const {return ((flags & OBJ_FLAGS_ORBT) != 0);}
-	bool has_lights()     const {return (!exp_lights.empty());}
+	bool has_lights()     const {return (num_exp_lights > 0);}
 	bool is_player_ship() const {return (this == (free_obj const *const)(&player_ship()));}
 	bool to_be_removed()  const {return (status != 0 && !is_player_ship() && !is_resetting());}
 	bool is_related(free_obj const *fobj)   const {assert(fobj); return (fobj->get_root_parent() == get_root_parent());}

@@ -384,15 +384,14 @@ void free_obj::set_temp(float temp, point const &tcenter, free_obj const *source
 
 void free_obj::add_light(unsigned index) {
 
-	unsigned const nexpl((unsigned)exp_lights.size());
-
-	if (nexpl < NUM_EXP_LIGHTS) {
-		exp_lights.push_back(index);
+	if (num_exp_lights < NUM_EXP_LIGHTS) {
+		exp_lights[num_exp_lights++] = index;
 		return;
 	}
+	assert(num_exp_lights <= NUM_EXP_LIGHTS);
 	unsigned old_i(0);
 
-	for (unsigned i = 1; i < nexpl; ++i) { // find lowest priority light (no light 0?)
+	for (unsigned i = 1; i < num_exp_lights; ++i) { // find lowest priority light
 		if (higher_priority(exp_lights[old_i], exp_lights[i])) old_i = i;
 	}
 	if (higher_priority(index, exp_lights[old_i])) {
@@ -636,8 +635,8 @@ void free_obj::draw(shader_t &shader) const { // view culling has already been p
 	shadow_val = max(shadowed, light_val); // only updated if drawn - close enough?
 	if (is_player_ship()) return; // don't draw player ship
 	if (light_val > 0 && sobj != NULL) sobjs.push_back(sobj);
-	assert(exp_lights.size() <= NUM_EXP_LIGHTS);
-	unsigned const nlights(min((unsigned)dscale, (unsigned)exp_lights.size())); // hack to avoid adding too many lights to tiny objects
+	assert(num_exp_lights <= NUM_EXP_LIGHTS);
+	unsigned const nlights(min((unsigned)dscale, num_exp_lights)); // hack to avoid adding too many lights to tiny objects
 
 	if (stencil_shadows && light_val != 3) {
 		if (shadowed) {

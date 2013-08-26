@@ -13,7 +13,7 @@ bool const EXPLODE_LIGHTING = 1;
 
 extern int display_mode;
 extern float uobj_rmax, urm_ship, urm_static, urm_proj, urm_nstat;
-extern vector<cached_obj> ships[], all_ships, stat_objs, coll_proj, decoys, c_uobjs;
+extern vector<cached_obj> ships[], all_ships, stat_objs, coll_proj, decoys, c_uobjs, c_uobjs_lit;
 extern vector<usw_ray> t_wrays;
 extern vector<us_weapon> us_weapons;
 
@@ -185,13 +185,15 @@ void apply_one_light(query_data &qdata, unsigned ix) {
 	if (!cobj.obj->sphere_int_obj(qdata.pos, qdata.radius)) return; // no detailed intersection (optional test)
 
 	if (cobj.flags & OBJ_FLAGS_SHIP) { // need a more exact intersection test (for light-emitting ships)
-		float const dist(p2p_dist(cobj.pos, qdata.pos));
+		if (!is_distant(cobj.pos, 0.1*cobj.radius) && !is_distant(qdata.pos, 0.05*qdata.radius)) { // both the ship and light are large/close
+			float const dist(p2p_dist(cobj.pos, qdata.pos));
 
-		if (dist > 2.0*cobj.radius) { // test for shadows
-			free_obj *fobj(NULL);
-			vector3d const delta((cobj.pos - qdata.pos)/dist); // start dir len cur ignore first_only check_parent [exp_r]
-			line_int_data li_data(qdata.pos, delta, (dist - cobj.radius), qdata.parent, cobj.obj, 1, 0); // check_parent?
-			if (line_intersect_objects(li_data, fobj, OBJ_TYPE_LGU) && fobj != qdata.parent) return;
+			if (dist > 2.0*cobj.radius) { // test for shadows
+				free_obj *fobj(NULL);
+				vector3d const delta((cobj.pos - qdata.pos)/dist); // start dir len cur ignore first_only check_parent [exp_r]
+				line_int_data li_data(qdata.pos, delta, (dist - cobj.radius), qdata.parent, cobj.obj, 1, 0); // check_parent?
+				if (line_intersect_objects(li_data, fobj, OBJ_TYPE_LGU) && fobj != qdata.parent) return;
+			}
 		}
 	}
 	cobj.obj->add_light(qdata.index);
@@ -375,11 +377,23 @@ void apply_explosion(point const &pos, float radius, float damage, unsigned efla
 }
 
 
+void calc_lit_uobjects() {
+
+	c_uobjs_lit.resize(0);
+
+	for (vector<cached_obj>::const_iterator i = c_uobjs.begin(); i != c_uobjs.end(); ++i) {
+		if (!(i->flags & (BAD_QUERY_FLAGS | OBJ_FLAGS_NOLT)) && !is_distant(i->pos, 0.5*i->radius) && univ_sphere_vis(i->pos, i->radius)) {
+			c_uobjs_lit.push_back(*i);
+		}
+	}
+}
+
+
 void add_br_light(unsigned index, point const &pos, float radius, free_obj const *const parent) { // is parent necessary?
 
 	assert((EXPLOSION_LIGHT + (int)NUM_EXP_LIGHTS) <= MAX_GL_LIGHT);
 	if (!EXPLODE_LIGHTING || NUM_EXP_LIGHTS == 0) return;
-	query_data qdata(&c_uobjs, pos, radius, uobj_rmax);
+	query_data qdata(&c_uobjs_lit, pos, radius, uobj_rmax);
 	qdata.index  = index;
 	qdata.parent = parent;
 	find_close_objects(qdata, apply_one_light, OBJ_FLAGS_NOLT);

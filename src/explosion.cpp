@@ -25,6 +25,8 @@ vector<explosion> explosions;
 extern bool disable_shaders;
 extern int iticks, game_mode, display_mode, animate2;
 
+void calc_lit_uobjects();
+
 
 // duration color1 color2
 exp_type_params et_params[NUM_ETYPES] = {
@@ -166,6 +168,7 @@ void update_blasts() {
 	gm_blast = 0;
 	unsigned const nbr((unsigned)blastrs.size());
 	int ltime(0);
+	if (world_mode == WMODE_UNIVERSE) {calc_lit_uobjects();}
 
 	for (unsigned i = 0; i < nbr; ++i) {
 		blastr &br(blastrs[i]);
@@ -188,10 +191,10 @@ void update_blasts() {
 			float const scale(size*size/distance_to_camera_sq(br.pos));
 
 			if (scale > 2.5E-5) {
-				if (br.cur_color.alpha > 0.01 /*&& br.type != ETYPE_NONE*/ && univ_sphere_vis_dist(br.pos, 0.2*size)) {
+				if (br.cur_color.alpha > 0.01 /*&& br.type != ETYPE_NONE*/ && !is_distant(br.pos, 0.2*size) && univ_sphere_vis(br.pos, size)) {
 					add_br_light(i, br.pos, size, br.parent);
 				}
-				if (animate2) add_parts_projs(br.pos, br.cur_size, br.dir, br.cur_color, br.type, br.src, br.parent);
+				if (animate2) {add_parts_projs(br.pos, br.cur_size, br.dir, br.cur_color, br.type, br.src, br.parent);}
 			}
 		}
 		else if (world_mode == WMODE_GROUND && game_mode && br.damage > 0.0) {

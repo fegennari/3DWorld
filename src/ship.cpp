@@ -28,6 +28,7 @@ vector<cached_obj> ships[NUM_ALIGNMENT], all_ships; // ships only - do we want v
 vector<cached_obj> stat_objs; // static objects, for intersection tests
 vector<cached_obj> coll_proj; // collision enabled projectiles, for point defense code
 vector<cached_obj> decoys;    // decoy projectiles, for projectile seeking
+vector<cached_obj> c_uobjs_lit; // lit objects, used for lighting
 vector<ship_explosion> exploding;
 vector<free_obj const *> a_targets(NUM_ALIGNMENT, NULL), attackers(NUM_ALIGNMENT, NULL);
 vector<cached_obj> c_uobjs;
