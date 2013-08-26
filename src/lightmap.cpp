@@ -690,7 +690,7 @@ void build_lightmap(bool verbose) {
 	// Note: this isn't really necessary when using ray casting for lighting,
 	//       but it helps ensure there are lmap cells around light sources to light the dynamic objects
 	for (unsigned i = 0; i < light_sources.size(); ++i) {
-		point bounds[2];
+		point bounds[2]; // unused
 		int bnds[3][2];
 		light_sources[i].get_bounds(bounds, bnds, SQRT_CTHRESH);
 
@@ -990,7 +990,7 @@ void setup_2d_texture(unsigned &tid) {
 // 6: reserved for shadow map sun
 // 7: reserved for shadow map moon
 // 8: reserved for specular maps
-void upload_dlights_textures() {
+void upload_dlights_textures(cube_t const &bounds) {
 
 	//RESET_TIME;
 	if (disable_shaders) return;
@@ -1015,9 +1015,9 @@ void upload_dlights_textures() {
 	float dl_data[max_dlights*floats_per_light] = {0.0};
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
 	unsigned const ysz(floats_per_light/4);
-	float const radius_scale(1.0/X_SCENE_SIZE);
-	vector3d const poff(-X_SCENE_SIZE, -Y_SCENE_SIZE, get_zval_min());
-	vector3d const pscale(0.5/X_SCENE_SIZE, 0.5/Y_SCENE_SIZE, 1.0/(get_zval_max() - poff.z));
+	float const radius_scale(1.0/(0.5*(bounds.d[0][1] - bounds.d[0][0]))); // bounds x radius inverted
+	vector3d const poff(bounds.get_llc()), psize(bounds.get_urc() - poff);
+	vector3d const pscale(1.0/psize.x, 1.0/psize.y, 1.0/psize.z);
 	has_dir_lights = 0;
 
 	for (unsigned i = 0; i < ndl; ++i) {
@@ -1132,7 +1132,7 @@ void add_camera_flashlight() {
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d const &d, float bw) {
 
 	if (!animate2) return;
-	float const sz_scale(sqrt(0.1*XY_SCENE_SIZE));
+	float const sz_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : sqrt(0.1*XY_SCENE_SIZE));
 	dl_sources2.push_back(light_source(sz_scale*sz, p, c, 1, d, bw));
 }
 
@@ -1212,7 +1212,7 @@ void clear_dynamic_lights() { // slow for large lights
 }
 
 
-void add_dynamic_lights() {
+void add_dynamic_lights_ground() {
 
 	//RESET_TIME;
 	if (!animate2) return;

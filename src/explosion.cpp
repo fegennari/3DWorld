@@ -120,13 +120,19 @@ void blastr::update() {
 }
 
 
+void blastr::add_as_dynamic_light() const {
+
+	colorRGBA light_color(cur_color);
+	if (type == ETYPE_ANIM_FIRE) blend_color(light_color, YELLOW, RED, float(time)/float(st_time), 1);
+	add_dynamic_light(min(3.5, 4.0*size), pos, light_color); // Note: 3.5 meant for ground mode, but also acceptable for universe mode (lights are never this large)
+}
+
+
 void blastr::process(int &ltime) const { // land mode
 
 	int const x0(get_xpos(pos.x)), y0(get_ypos(pos.y));
 	if (!point_interior_to_mesh(x0, y0)) return;
-	colorRGBA light_color(cur_color);
-	if (type == ETYPE_ANIM_FIRE) blend_color(light_color, YELLOW, RED, float(time)/float(st_time), 1);
-	add_dynamic_light(min(3.5, 4.0*size), pos, light_color);
+	add_as_dynamic_light();
 	if (!animate2) return;
 
 	if (damage > 0.0) {
@@ -156,6 +162,7 @@ void blastr::process(int &ltime) const { // land mode
 
 void update_blasts() {
 
+	//RESET_TIME;
 	gm_blast = 0;
 	unsigned const nbr((unsigned)blastrs.size());
 	int ltime(0);
@@ -191,6 +198,7 @@ void update_blasts() {
 			br.process(ltime);
 		}
 	} // for i
+	//PRINT_TIME("Update Blasts");
 }
 
 
@@ -344,8 +352,8 @@ void setup_point_light(point const &pos, colorRGBA const &color, float radius, u
 	assert(radius > 0.0);
 	float const atten2(0.1/(EXP_LIGHT_SCALE*radius));
 	glLightf(gl_light, GL_CONSTANT_ATTENUATION,  0.5);
-	glLightf(gl_light, GL_LINEAR_ATTENUATION,    20.0*atten2);
-	glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 5000.0*atten2);
+	glLightf(gl_light, GL_LINEAR_ATTENUATION,    20.0*atten2); // 1/radius
+	glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 5000.0*atten2); // 250/radius
 	set_gl_light_pos(gl_light, pos, 1.0); // point light source position
 }
 

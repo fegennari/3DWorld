@@ -191,7 +191,7 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
 	if (!enable)        {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights
 	if (has_dir_lights) {s.set_prefix("#define HAS_DIR_LIGHTS",    shader_type);}
-	s.set_bool_prefix("enable_dlights",  (enable && dl_tid > 0 && has_dl_sources), shader_type);
+	s.set_bool_prefix("enable_dlights", (enable && dl_tid > 0 && has_dl_sources), shader_type);
 }
 
 
@@ -337,9 +337,10 @@ void setup_object_render_data() {
 	if (TIMETEST) {PRINT_TIME("1 Distribute Smoke");}
 	upload_smoke_indir_texture();
 	if (TIMETEST) {PRINT_TIME("2 Upload Smoke");}
-	add_dynamic_lights();
+	add_dynamic_lights_ground();
 	if (TIMETEST) {PRINT_TIME("3 Add Dlights");}
-	upload_dlights_textures();
+	cube_t const dlight_bounds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, get_zval_min(), get_zval_max());
+	upload_dlights_textures(dlight_bounds); // get_scene_bounds()
 	if (TIMETEST) {PRINT_TIME("4 Dlights Textures");}
 	get_occluders();
 	if (TIMETEST) {PRINT_TIME("5 Get Occluders");}

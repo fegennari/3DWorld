@@ -709,7 +709,7 @@ void draw_univ_objects() {
 		bool const is_bad((co.flags & OBJ_FLAGS_BAD_) != 0);
 		float const radius_scaled(co.obj->get_draw_radius());
 
-		if (!is_bad && univ_sphere_vis_dist(co.pos, radius_scaled)) {
+		if (!is_bad && !is_distant(co.pos, radius_scaled) && univ_sphere_vis(co.pos, max(radius_scaled, co.radius))) { // Note: VFC must be conservative, so use larger radius
 			sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));
 
 			if (onscreen_display && (co.flags & OBJ_FLAGS_SHIP) && !co.obj->is_player_ship()) {		

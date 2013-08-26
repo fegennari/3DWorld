@@ -19,6 +19,14 @@ Remove deprecated OpenGL calls:
 Use triangles instead of quads
  - Tree billboards/leaves
 Remove immediate mode calls
+ - make_in_tris()/FRAGMENT's
+ - draw_sides_and_bottom()
+ - coll_obj::draw_coll_cube()
+ - coll_obj::draw_polygon()
+ - portal::pre_draw()
+ - draw_tquad()/draw_one_tquad()
+ - line3d::draw()
+ - draw_outside_water_range()
 Remove non-shader rendering
 No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
@@ -29,10 +37,8 @@ Vertex Array Objects
 Better craters - push ground up at the perimeter
 Mesh height high frequency noise
 Texture randomization
+Flashlight shadows?
+Point Sprites: berries on plants?
 
-Point Sprites:
-- fragments - draw_sized_point()
-- hail, bubbles, waypoints?
-- draw_spherical_shot()
-- draw_asteroid()
-- uparticle::draw_obj()
+Universe Ship Dynamic Lighting - Baster BR add
+Don't always draw all 8 lights in universe mode
