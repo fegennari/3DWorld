@@ -88,7 +88,7 @@ public:
 };
 
 
-class uobj_asteroid_shader : public uobj_asteroid {
+class uobj_asteroid_shader : public uobj_asteroid { // unused
 	int rseed_ix;
 
 public:
@@ -98,7 +98,7 @@ public:
 		c_radius = (1.0 + AST_PROC_HEIGHT)*radius;
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
-		if (ddata.shader.is_setup()) {ddata.shader.disable();}
+		if (ddata.shader->is_setup()) {ddata.shader->disable();}
 		unsigned const num_lights(min(8U, num_exp_lights+2U));
 		shader_t &s(cached_proc_shaders[num_lights]);
 		
@@ -125,7 +125,7 @@ public:
 		s.disable();
 
 		if (ddata.final_pass) {
-			if (ddata.shader.is_setup()) {ddata.shader.enable();}
+			if (ddata.shader->is_setup()) {ddata.shader->enable();}
 			end_texture();
 		}
 	}
@@ -353,7 +353,7 @@ public:
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(model.get_params().tids[0]); return;}
-		if (ddata.shader.is_setup()) {ddata.shader.disable();}
+		if (ddata.shader->is_setup()) {ddata.shader->disable();}
 		unsigned const num_lights(min(8U, num_exp_lights+2U));
 		unsigned const lod_level(min(16U/ddata.ndiv, NUM_VOX_AST_LODS-1));
 		shader_t &s(cached_voxel_shaders[num_lights]);
@@ -386,7 +386,7 @@ public:
 		s.disable();
 
 		if (ddata.final_pass) {
-			if (ddata.shader.is_setup()) {ddata.shader.enable();}
+			if (ddata.shader->is_setup()) {ddata.shader->enable();}
 			end_texture();
 		}
 	}
@@ -577,7 +577,7 @@ public:
 
 		// try to draw instanced if enabled, but do a normal draw without resetting the texture if that fails
 		if (!asteroids[ix]->draw_instanced(ndiv)) { // maybe this case shouldn't exist and we can only create instanceable asteroids?
-			uobj_draw_data ddata(asteroids[ix], s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
+			uobj_draw_data ddata(asteroids[ix], &s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
 			asteroids[ix]->draw_with_texture(ddata, -1, 1);
 		}
 		glPopMatrix();
