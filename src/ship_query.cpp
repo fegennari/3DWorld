@@ -11,6 +11,8 @@
 bool const EXPLODE_LIGHTING = 1;
 
 
+float uobjs_lit_rmax(0.0);
+
 extern int display_mode;
 extern float uobj_rmax, urm_ship, urm_static, urm_proj, urm_nstat;
 extern vector<cached_obj> ships[], all_ships, stat_objs, coll_proj, decoys, c_uobjs, c_uobjs_lit;
@@ -380,10 +382,12 @@ void apply_explosion(point const &pos, float radius, float damage, unsigned efla
 void calc_lit_uobjects() {
 
 	c_uobjs_lit.resize(0);
+	uobjs_lit_rmax = 0.0;
 
 	for (vector<cached_obj>::const_iterator i = c_uobjs.begin(); i != c_uobjs.end(); ++i) {
 		if (!(i->flags & (BAD_QUERY_FLAGS | OBJ_FLAGS_NOLT)) && !is_distant(i->pos, 0.5*i->radius) && univ_sphere_vis(i->pos, i->radius)) {
 			c_uobjs_lit.push_back(*i);
+			uobjs_lit_rmax = max(uobjs_lit_rmax, i->radius);
 		}
 	}
 }
@@ -393,7 +397,7 @@ void add_br_light(unsigned index, point const &pos, float radius, free_obj const
 
 	assert((EXPLOSION_LIGHT + (int)NUM_EXP_LIGHTS) <= MAX_GL_LIGHT);
 	if (!EXPLODE_LIGHTING || NUM_EXP_LIGHTS == 0) return;
-	query_data qdata(&c_uobjs_lit, pos, radius, uobj_rmax);
+	query_data qdata(&c_uobjs_lit, pos, radius, uobjs_lit_rmax);
 	qdata.index  = index;
 	qdata.parent = parent;
 	find_close_objects(qdata, apply_one_light, OBJ_FLAGS_NOLT);
