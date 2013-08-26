@@ -683,13 +683,22 @@ void draw_wrays(vector<usw_ray> &wrays) {
 }
 
 
-void setup_ship_draw_shader(shader_t &s) {
+void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
 
+	if (shadow_mode) {s.set_prefix("#define SHADOW_ONLY_MODE", 1);} // FS
 	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	s.set_vert_shader("ship_draw");
 	s.set_frag_shader("ads_lighting.part*+ship_draw");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
+}
+
+
+void disable_exp_lights() {
+
+	for (unsigned i = 0; i < NUM_EXP_LIGHTS; ++i) {
+		clear_colors_and_disable_light(EXPLOSION_LIGHT + i);
+	}
 }
 
 
@@ -702,9 +711,6 @@ void draw_univ_objects() {
 	point const &camera(get_player_pos2());
 	float const ch_dist(100.0*player_ship().specs().sensor_dist);
 
-	for (unsigned i = 0; i < NUM_EXP_LIGHTS; ++i) { // make sure the explosion lights start out cleared
-		clear_colors_and_disable_light(EXPLOSION_LIGHT + i);
-	}
 	for (unsigned i = 0; i < nobjs; ++i) { // make negative so it's sorted largest to smallest
 		cached_obj const &co(c_uobjs[i]);
 		bool const is_bad((co.flags & OBJ_FLAGS_BAD_) != 0);
@@ -729,14 +735,18 @@ void draw_univ_objects() {
 	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
 	bool const use_shaders((display_mode & 0x08) != 0);
-	shader_t s;
+	shader_t s[2];
 	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
 	set_lighted_sides(2); // doesn't hurt
 	enable_blend(); // doesn't hurt
 	clear_emissive_color(); // just to be sure
 	BLACK.do_glColor();
-	if (use_shaders) {setup_ship_draw_shader(s);}
+	disable_exp_lights(); // make sure the explosion lights start out cleared
 	
+	if (use_shaders) {
+		setup_ship_draw_shader(s[0], 0); // normal shader with dynamic lights
+		setup_ship_draw_shader(s[1], 1); // shadow shader, system lighting only
+	}
 	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
 		free_obj *fobj(sorted[i].second);
 		assert(fobj != NULL);
@@ -744,8 +754,9 @@ void draw_univ_objects() {
 		fobj->draw(s);
 		fobj->reset_lights(); // reset for next frameq
 	}
+	if (use_shaders) s[0].end_shader();
+	disable_exp_lights(); // make sure the explosion lights end cleared
 	set_lighted_sides(1);
-	if (use_shaders) s.end_shader();
 	enable_blend(); // redundant?
 	glDisable(GL_TEXTURE_2D);
 	particle_pld.draw_and_clear();

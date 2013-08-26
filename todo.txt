@@ -39,5 +39,3 @@ Mesh height high frequency noise
 Texture randomization
 Flashlight shadows?
 Point Sprites: berries on plants?
-
-Don't always draw all 8 lights in universe mode

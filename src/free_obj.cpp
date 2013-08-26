@@ -6,6 +6,7 @@
 #include "ship_util.h"
 #include "explosion.h"
 #include "draw_utils.h"
+#include "shaders.h"
 
 
 bool const PART_COLL_DESTROY = 0;
@@ -596,7 +597,7 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 }
 
 
-void free_obj::draw(shader_t &shader) const { // view culling has already been performed
+void free_obj::draw(shader_t shader[2]) const { // view culling has already been performed
 
 	//RESET_TIME;
 	if (!is_ok()) return; // dead
@@ -651,29 +652,25 @@ void free_obj::draw(shader_t &shader) const { // view culling has already been p
 	calc_rotation_vectors();
 	unsigned const npasses(partial_shadow ? get_num_draw_passes() : 1); // will be slow if > 1
 	bool const specular(!known_shadowed && (light_val == 0 || (!stencil_shadows && light_val == 1))); // less than half shadowed
-	uobj_draw_data udd(this, shader, ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
+	uobj_draw_data udd(this, &shader[0], ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
 		dist, radius, c_radius/radius, (nlights > 0), 1, !partial_shadow, 1, (npasses == 1));
 
+	if (ndiv > 3) {
+		for (unsigned i = 0; i < nlights; ++i) {
+			setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i));
+		}
+	}
 	for (unsigned pass = 0; pass < npasses; ++pass) {
 		if (pass > 0) {
 			set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale);
 			udd.phase1 = 0;
 			udd.phase2 = 1;
 		}
-		if (ndiv > 3) {
-			for (unsigned i = 0; i < nlights; ++i) {
-				setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i));
-			}
-		}
 		transform_and_draw_obj(udd, specular, 1, !partial_shadow);
 
-		if (ndiv > 3) {
-			for (unsigned i = 0; i < nlights; ++i) {
-				clear_colors_and_disable_light(EXPLOSION_LIGHT + i);
-			}
-		}
 		if (partial_shadow) { // partially shadowed - draw the sun's light with a stencil pass
 			// http://www.gamasutra.com/features/20021011/lengyel_05.htm
+			shader[1].enable(); udd.shader = &shader[1];
 			assert(!sobjs.empty());
 			glPushMatrix();
 			global_translate(pos);
@@ -717,6 +714,7 @@ void free_obj::draw(shader_t &shader) const { // view culling has already been p
 				glPopMatrix();
 				clear_emissive_color();
 			}
+			shader[0].enable(); udd.shader = &shader[0];
 		} // partial_shadow
 	} // pass
 	//if (GET_DELTA_TIME > 10) cout << get_name() << ": " << GET_DELTA_TIME << endl;
