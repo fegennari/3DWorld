@@ -380,6 +380,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
 	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
 	int last_tid(-1), last_group_id(-1);
+	vector<vert_wrap_t> portal_verts;
 	
 	if (draw_solid) {
 		vector<pair<float, int> > large_cobjs;
@@ -461,13 +462,13 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					s.set_uniform_float(ulocs[2], 1.0);
 					last_refract_ix = 1.0;
 				}
-				if (!in_portal) {portal::pre_draw(); in_portal = 1;}
+				if (!in_portal) {portal::pre_draw(portal_verts); in_portal = 1;}
 				unsigned const pix(-(ix+1));
 				assert(pix < portals.size());
-				portals[pix].draw();
+				portals[pix].draw(portal_verts);
 			}
 			else { // cobj
-				if (in_portal) {portal::post_draw(); in_portal = 0;}
+				if (in_portal) {portal::post_draw(portal_verts); in_portal = 0;}
 				unsigned cix(ix);
 				assert(cix < coll_objects.size());
 				coll_obj const &c(coll_objects[cix]);
@@ -489,7 +490,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				assert(cix == ix); // should not have changed
 			}
 		} // for i
-		if (in_portal) {portal::post_draw();}
+		if (in_portal) {portal::post_draw(portal_verts);}
 		end_group(last_group_id);
 		disable_blend();
 		draw_last.resize(0);
@@ -512,21 +513,24 @@ bool portal::is_visible() const {
 	return sphere_in_camera_view(center, rad, 2);
 }
 
-void portal::pre_draw() {
+void portal::pre_draw(vector<vert_wrap_t> &verts) {
 
 	float const scale[2] = {0.0, 0.0}, xlate[2] = {0.0, 0.0};
 	select_texture(WHITE_TEX, 0);
 	setup_polygon_texgen(plus_z, scale, xlate, zero_vector); // doesn't matter as long as it's set to something
 	ALPHA0.do_glColor();
-	glBegin(GL_QUADS);
+	assert(verts.empty());
 }
 
-void portal::post_draw() {
-	glEnd();
+void portal::post_draw(vector<vert_wrap_t> &verts) {
+
+	draw_verts(verts, GL_QUADS);
+	verts.clear();
 }
 
-void portal::draw() const {
-	draw_quad_from_4_pts(pts); // pre_draw()/post_draw() called externally
+void portal::draw(vector<vert_wrap_t> &verts) const {
+
+	for (unsigned i = 0; i < 4; ++i) {verts.push_back(pts[i]);}
 };
 
 

@@ -323,13 +323,13 @@ void line3d::draw(bool draw_as_tquads) const {
 		glLineWidth(width);
 		glDisable(GL_LIGHTING);
 		color.do_glColor();
-		glBegin(GL_LINES);
+		vector<vert_wrap_t> verts;
+		verts.reserve(2*(points.size() - 1));
 
 		for (unsigned i = 1; i < points.size(); ++i) {
-			points[i-1].do_glVertex();
-			points[i-0].do_glVertex();
+			for (unsigned d = 0; d < 2; ++d) {verts.push_back(points[i-!d]);}
 		}
-		glEnd();
+		draw_verts(verts, GL_LINES);
 		glLineWidth(1.0);
 		glEnable(GL_LIGHTING);
 		//glDisable(GL_BLEND);
