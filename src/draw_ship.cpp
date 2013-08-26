@@ -555,7 +555,7 @@ void uobj_draw_data::draw_usw_chaff() const {
 void uobj_draw_data::draw_usw_rfire() const {
 
 	if (1) {
-		if (animate2 && first_pass) {add_blastr(pos, dir, 1.5*radius, 0.0, 16, -1, WHITE, WHITE, ETYPE_ANIM_FIRE, obj);} // time&1 ?
+		if (animate2 && first_pass && (time & 1)) {add_blastr(pos, dir, 1.5*radius, 0.0, 16, -1, WHITE, WHITE, ETYPE_ANIM_FIRE, obj);}
 		return;
 	}
 	float const ctime(CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
@@ -630,7 +630,7 @@ void uobj_draw_data::draw_usw_seige() const {
 	setup_colors_draw_flare(pos, all_zeros, 5.0, 5.0, color);
 
 	if (time == 0) {
-		add_blastr(pos, dir, 10.0*radius, 0.0, 0.2*TICKS_PER_SECOND, -1, color, color, ETYPE_NONE, obj);
+		add_blastr(pos, dir, 10.0*radius, 0.0, int(0.2*TICKS_PER_SECOND), -1, color, color, ETYPE_NONE, obj);
 	}
 	else {
 		draw_engine_trail(all_zeros, 1.0, 0.1, min(time, 16U), color);
