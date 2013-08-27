@@ -184,10 +184,10 @@ void apply_one_light(query_data &qdata, unsigned ix) {
 
 	cached_obj const &cobj((*qdata.objs)[ix]);
 	assert(cobj.obj != NULL);
-	if (!cobj.obj->sphere_int_obj(qdata.pos, qdata.radius)) return; // no detailed intersection (optional test)
-
+	
 	if (cobj.flags & OBJ_FLAGS_SHIP) { // need a more exact intersection test (for light-emitting ships)
 		if (!is_distant(cobj.pos, 0.1*cobj.radius) && !is_distant(qdata.pos, 0.05*qdata.radius)) { // both the ship and light are large/close
+			if (!cobj.obj->sphere_int_obj(qdata.pos, qdata.radius)) return; // no detailed intersection (optional test)
 			float const dist(p2p_dist(cobj.pos, qdata.pos));
 
 			if (dist > 2.0*cobj.radius) { // test for shadows
@@ -381,6 +381,7 @@ void apply_explosion(point const &pos, float radius, float damage, unsigned efla
 
 void calc_lit_uobjects() {
 
+	//RESET_TIME;
 	c_uobjs_lit.resize(0);
 	uobjs_lit_rmax = 0.0;
 
@@ -390,6 +391,7 @@ void calc_lit_uobjects() {
 			uobjs_lit_rmax = max(uobjs_lit_rmax, i->radius);
 		}
 	}
+	//PRINT_TIME("Calc Lit Uobjects");
 }
 
 

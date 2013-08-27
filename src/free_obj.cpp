@@ -702,6 +702,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			glDepthFunc(GL_LEQUAL);
 			glDisable(GL_STENCIL_TEST);
 			set_std_blend_mode();
+			shader[0].enable(); udd.shader = &shader[0];
 
 			if (display_mode & 0x10) { // testing
 				set_emissive_color(GREEN); // will be reset
@@ -714,7 +715,6 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 				glPopMatrix();
 				clear_emissive_color();
 			}
-			shader[0].enable(); udd.shader = &shader[0];
 		} // partial_shadow
 	} // pass
 	//if (GET_DELTA_TIME > 10) cout << get_name() << ": " << GET_DELTA_TIME << endl;
