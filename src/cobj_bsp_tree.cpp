@@ -18,6 +18,9 @@ extern vector<unsigned> falling_cobjs;
 extern platform_cont platforms;
 
 
+// *** coll_tquad / tquad_t ***
+
+
 coll_tquad::coll_tquad(coll_obj const &c) : tquad_t(c.npoints), normal(c.norm), cid(c.id) {
 
 	assert(is_cobj_valid(c));
@@ -69,17 +72,7 @@ cube_t tquad_t::get_bcube() const {
 }
 
 
-void cobj_tree_tquads_t::calc_node_bbox(tree_node &n) const {
-
-	assert(n.start < n.end);
-	cube_t &c(n);
-	c = cube_t(X_SCENE_SIZE, -X_SCENE_SIZE, Y_SCENE_SIZE, -Y_SCENE_SIZE, czmax, czmin);
-
-	for (unsigned i = n.start; i < n.end; ++i) { // bbox union
-		tquads[i].update_bcube(c);
-	}
-	c.expand_by(POLY_TOLER);
-}
+// *** cobj_tree_base ***
 
 
 bool cobj_tree_base::check_for_leaf(unsigned num, unsigned skip_dims) {
@@ -106,7 +99,29 @@ bool cobj_tree_base::node_ix_mgr::check_node(unsigned &nix) const {
 }
 
 
-void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
+// *** cobj_tree_simple_type_t ***
+
+
+inline float get_vlo(coll_tquad const &t, unsigned dim) {
+	float vlo(min(min(t.pts[0][dim], t.pts[1][dim]), t.pts[2][dim]));
+	if (t.npts == 4) {vlo = min(vlo, t.pts[3][dim]);}
+	return vlo;
+}
+inline float get_vhi(coll_tquad const &t, unsigned dim) {
+	float vhi(max(max(t.pts[0][dim], t.pts[1][dim]), t.pts[2][dim]));
+	if (t.npts == 4) {vhi = max(vhi, t.pts[3][dim]);}
+	return vhi;
+}
+
+inline float get_vlo(sphere_t const &s, unsigned dim) {
+	return (s.pos[dim] - s.radius);
+}
+inline float get_vhi(sphere_t const &s, unsigned dim) {
+	return (s.pos[dim] + s.radius);
+}
+
+
+template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, unsigned skip_dims, unsigned depth) {
 
 	assert(nix < nodes.size());
 	tree_node &n(nodes[nix]);
@@ -129,16 +144,14 @@ void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned d
 	// split in this dimension
 	for (unsigned i = n.start; i < n.end; ++i) {
 		unsigned bix(2);
-		coll_tquad const &t(tquads[i]);
-		float vlo(min(min(t.pts[0][dim], t.pts[1][dim]), t.pts[2][dim])), vhi(max(max(t.pts[0][dim], t.pts[1][dim]), t.pts[2][dim]));
-		if (t.npts == 4) {vlo = min(vlo, t.pts[3][dim]); vhi = max(vhi, t.pts[3][dim]);}
-		if (vhi <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
-		if (vlo >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
-		temp_bins[bix].push_back(tquads[i]);
+		T const &obj(objects[i]);
+		if (get_vhi(obj, dim) <= sval_lo) {bix =  (depth&1);} // ends   before the split, put in bin 0
+		if (get_vlo(obj, dim) >= sval_hi) {bix = !(depth&1);} // starts after  the split, put in bin 1
+		temp_bins[bix].push_back(obj);
 	}
 	for (unsigned d = 0; d < 3; ++d) {
 		for (unsigned i = 0; i < temp_bins[d].size(); ++i) {
-			tquads[pos++] = temp_bins[d][i];
+			objects[pos++] = temp_bins[d][i];
 		}
 		bin_count[d] = temp_bins[d].size();
 		temp_bins[d].resize(0);
@@ -168,20 +181,36 @@ void cobj_tree_tquads_t::build_tree(unsigned nix, unsigned skip_dims, unsigned d
 }
 
 
-void cobj_tree_tquads_t::build_tree_top(bool verbose) {
+template<typename T> void cobj_tree_simple_type_t<T>::build_tree_top(bool verbose) {
 
-	nodes.reserve(get_conservative_num_nodes(tquads.size()));
-	nodes.push_back(tree_node(0, (unsigned)tquads.size()));
+	nodes.reserve(get_conservative_num_nodes(objects.size()));
+	nodes.push_back(tree_node(0, (unsigned)objects.size()));
 	assert(nodes.size() == 1);
 	max_depth = max_leaf_count = num_leaf_nodes = 0;
-	build_tree(0, 0, 0);
+	if (!objects.empty()) {build_tree(0, 0, 0);}
 	nodes[0].next_node_id = (unsigned)nodes.size();
-	for (unsigned i = 0; i < 3; ++i) {vector<coll_tquad>().swap(temp_bins[i]);}
+	for (unsigned i = 0; i < 3; ++i) {vector<T>().swap(temp_bins[i]);}
 
 	if (verbose) {
-		cout << "tquads: " << tquads.size() << ", nodes: " << nodes.size()  << ", depth: "
-				<< max_depth << ", max_leaf: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
+		cout << "objects: " << objects.size() << ", nodes: " << nodes.size()  << ", depth: "
+			 << max_depth << ", max_leaf: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
 	}
+}
+
+
+// *** cobj_tree_tquads_t ***
+
+
+void cobj_tree_tquads_t::calc_node_bbox(tree_node &n) const {
+
+	assert(n.start < n.end);
+	cube_t &c(n);
+	c = cube_t(X_SCENE_SIZE, -X_SCENE_SIZE, Y_SCENE_SIZE, -Y_SCENE_SIZE, czmax, czmin);
+
+	for (unsigned i = n.start; i < n.end; ++i) { // bbox union
+		objects[i].update_bcube(c);
+	}
+	c.expand_by(POLY_TOLER);
 }
 
 
@@ -189,16 +218,15 @@ void cobj_tree_tquads_t::add_cobjs(coll_obj_group const &cobjs, bool verbose) {
 
 	RESET_TIME;
 	clear();
-	tquads.reserve(cobjs.size()); // is this a good idea?
+	objects.reserve(cobjs.size()); // is this a good idea?
 		
 	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
 		if (i->status != COLL_STATIC) continue;
 		assert(i->type == COLL_POLYGON && i->thickness <= MIN_POLY_THICK);
-		tquads.push_back(coll_tquad(*i));
+		objects.push_back(coll_tquad(*i));
 	}
 	build_tree_top(verbose);
 	PRINT_TIME(" Cobj Tree Triangles Create (from Cobjs)");
-	//exit(0); // TESTING
 }
 
 
@@ -206,14 +234,13 @@ void cobj_tree_tquads_t::add_polygons(vector<polygon_t> const &polygons, bool ve
 
 	RESET_TIME;
 	clear();
-	tquads.reserve(polygons.size());
+	objects.reserve(polygons.size());
 		
 	for (vector<polygon_t>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
-		tquads.push_back(coll_tquad(*i));
+		objects.push_back(coll_tquad(*i));
 	}
 	build_tree_top(verbose);
 	PRINT_TIME(" Cobj Tree Triangles Create (from Polygons)");
-	//exit(0); // TESTING
 }
 
 
@@ -232,10 +259,10 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 			// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
-			if (cindex && (int)tquads[i].cid == ignore_cobj)             continue;
-			if (!tquads[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
-			if (cindex) *cindex = tquads[i].cid;
-			if (color ) *color  = tquads[i].color.get_c4();
+			if (cindex && (int)objects[i].cid == ignore_cobj)             continue;
+			if (!objects[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
+			if (cindex) *cindex = objects[i].cid;
+			if (color ) *color  = objects[i].color.get_c4();
 			cpos = p1 + (p2 - p1)*t;
 			if (!exact) return 1; // return first hit
 			nixm.dinv = vector3d(cpos - p1);
@@ -246,6 +273,53 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 	}
 	return ret;
 }
+
+
+// *** cobj_tree_sphere_t ***
+
+
+void cobj_tree_sphere_t::calc_node_bbox(tree_node &n) const {
+
+	assert(n.start < n.end);
+	cube_t &c(n);
+
+	for (unsigned i = n.start; i < n.end; ++i) { // bbox union
+		if (i == n.start) {c.set_from_sphere(objects[i]);} else {c.union_with_sphere(objects[i]);}
+	}
+}
+
+
+void cobj_tree_sphere_t::add_spheres(vector<sphere_with_id_t> &spheres_, bool verbose) {
+
+	clear();
+	objects.swap(spheres_); // copy, destroy input
+	build_tree_top(verbose);
+}
+
+
+void cobj_tree_sphere_t::get_ids_int_sphere(point const &center, float radius, vector<unsigned> &ids) const {
+
+	if (objects.empty()) return;
+	unsigned const num_nodes((unsigned)nodes.size());
+
+	for (unsigned nix = 0; nix < num_nodes;) {
+		tree_node const &n(nodes[nix]);
+		assert(n.start <= n.end);
+
+		if (!sphere_cube_intersect(center, radius, n)) {
+			assert(n.next_node_id > nix);
+			nix = n.next_node_id; // failed the bounding sphere test
+			continue;
+		}
+		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+			if (dist_less_than(center, objects[i].pos, (radius + objects[i].radius))) {ids.push_back(objects[i].id);}
+		}
+		++nix;
+	}
+}
+
+
+// *** cobj_bvh_tree ***
 
 
 bool cobj_bvh_tree::create_cixs() {

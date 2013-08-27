@@ -41,25 +41,37 @@ protected:
 	};
 
 public:
+	cobj_tree_base() : max_depth(0), max_leaf_count(0), num_leaf_nodes(0) {}
 	bool is_empty() const {return nodes.empty();}
 	void clear() {nodes.resize(0);}
 };
 
 
-class cobj_tree_tquads_t : public cobj_tree_base {
+template<typename T> class cobj_tree_simple_type_t : public cobj_tree_base {
 
-	vector<coll_tquad> tquads, temp_bins[3];
+protected:
+	vector<T> objects, temp_bins[3];
 
-	void calc_node_bbox(tree_node &n) const;
+	virtual void calc_node_bbox(tree_node &n) const = 0;
 	void build_tree(unsigned nix, unsigned skip_dims, unsigned depth);
 
 public:
+	virtual ~cobj_tree_simple_type_t() {}
+	
 	void clear() {
 		cobj_tree_base::clear();
-		tquads.clear(); // reserve(0)?
+		objects.clear(); // reserve(0)?
 	}
-	vector<coll_tquad> &get_tquads_ref() {return tquads;}
 	void build_tree_top(bool verbose);
+};
+
+
+class cobj_tree_tquads_t : public cobj_tree_simple_type_t<coll_tquad> {
+
+	virtual void calc_node_bbox(tree_node &n) const;
+
+public:
+	vector<coll_tquad> &get_tquads_ref() {return objects;}
 	void add_cobjs(coll_obj_group const &cobjs, bool verbose);
 	void add_polygons(vector<polygon_t> const &polygons, bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA *color, int *cindex, int ignore_cobj, bool exact) const;
@@ -71,6 +83,24 @@ public:
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
 		return check_coll_line(p1, p2, cpos, cnorm, &color, NULL, 0, exact);
 	}
+};
+
+
+struct sphere_with_id_t : public sphere_t {
+	unsigned id;
+	sphere_with_id_t() : id(0) {}
+	sphere_with_id_t(point const &p, float r, unsigned id_) : sphere_t(p, r), id(id_) {}
+};
+
+
+class cobj_tree_sphere_t : public cobj_tree_simple_type_t<sphere_with_id_t> {
+
+	virtual void calc_node_bbox(tree_node &n) const;
+
+public:
+	vector<unsigned> ids; // for using in get_ids_int_sphere()
+	void add_spheres(vector<sphere_with_id_t> &spheres_, bool verbose);
+	void get_ids_int_sphere(point const &center, float radius, vector<unsigned> &ids) const;
 };
 
 
