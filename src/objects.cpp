@@ -253,7 +253,7 @@ bool coll_obj::is_occluded_from_camera() const {
 }
 
 
-void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const {
+void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vector<vert_norm> &poly_verts, shader_t *shader) const {
 
 	if (no_draw()) return;
 	assert(id == cix); // always equal, but cix may be increased in this call
@@ -340,9 +340,8 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 
 	case COLL_POLYGON:
 		{
-			bool in_tris(0);
-			draw_extruded_polygon(tid, shader, 1, in_tris);
-			if (in_tris) {glEnd();}
+			draw_extruded_polygon(tid, shader, 1, poly_verts);
+			draw_and_clear_verts(poly_verts, GL_TRIANGLES);
 		}
 		break;
 	}

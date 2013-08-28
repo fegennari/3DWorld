@@ -381,6 +381,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
+	vector<vert_norm> poly_verts;
 	
 	if (draw_solid) {
 		vector<pair<float, int> > large_cobjs;
@@ -413,7 +414,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				draw_last.push_back(make_pair(-dist, cix)); // negative distance
 			}
 			else {
-				c.draw_cobj(cix, last_tid, last_group_id, &s); // i may not be valid after this call
+				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, &s); // i may not be valid after this call
 				
 				if (cix != *i) {
 					assert(cix > *i);
@@ -426,7 +427,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 		for (vector<pair<float, int> >::const_iterator i = large_cobjs.begin(); i != large_cobjs.end(); ++i) {
 			unsigned cix(i->second);
-			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, &s);
+			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, poly_verts, &s);
 		}
 	} // end draw solid
 	if (draw_trans) { // called second
@@ -486,7 +487,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					}
 					if (light_atten > 0.0) s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);
 				}
-				c.draw_cobj(cix, last_tid, last_group_id, &s);
+				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, &s);
 				assert(cix == ix); // should not have changed
 			}
 		} // for i

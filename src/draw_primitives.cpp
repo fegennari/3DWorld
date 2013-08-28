@@ -824,13 +824,6 @@ void disable_flares() {
 }
 
 
-void draw_quad_from_4_pts(point const *const pts) {
-
-	assert(pts != NULL);
-	for (unsigned i = 0; i < 4; ++i) {pts[i].do_glVertex();}
-}
-
-
 void draw_tquad(float xsize, float ysize, float z, bool texture, float tx1, float ty1, float tx2, float ty2) {
 
 	glBegin(GL_QUADS);
@@ -939,6 +932,7 @@ void pos_dir_up::draw_frustum() const {
 
 	float const nf_val[2] = {near_, far_};
 	point pts[2][4]; // {near, far} x {ll, lr, ur, ul}
+	vector<vert_wrap_t> verts;
 
 	for (unsigned d = 0; d < 2; ++d) {
 		point const center(pos + dir*nf_val[d]); // plane center
@@ -947,20 +941,15 @@ void pos_dir_up::draw_frustum() const {
 		pts[d][1] = center + cp*dx - upv_*dy;
 		pts[d][2] = center + cp*dx + upv_*dy;
 		pts[d][3] = center - cp*dx + upv_*dy;
+		for (unsigned i = 0; i < 4; ++i) {verts.push_back(pts[d][i]);} // near and far clipping planes
 	}
-	glBegin(GL_QUADS);
-	
-	// near and far
-	for (unsigned d = 0; d < 2; ++d) {
-		draw_quad_from_4_pts(pts[d]);
+	for (unsigned i = 0; i < 4; ++i) { // sides
+		verts.push_back(pts[0][(i+0)&3]);
+		verts.push_back(pts[0][(i+1)&3]);
+		verts.push_back(pts[1][(i+1)&3]);
+		verts.push_back(pts[1][(i+0)&3]);
 	}
-
-	// sides
-	for (unsigned i = 0; i < 4; ++i) {
-		point const side_pts[4] = {pts[0][(i+0)&3], pts[0][(i+1)&3], pts[1][(i+1)&3], pts[1][(i+0)&3]};
-		draw_quad_from_4_pts(side_pts);
-	}
-	glEnd();
+	draw_verts(verts, GL_QUADS);
 }
 
 

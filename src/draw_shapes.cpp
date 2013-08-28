@@ -159,6 +159,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 	// Note: with some amount of complexity, we can group more cube faces into a single draw call to reduce driver overhead
 	//       however, we tend to be GPU/fill rate limited anyway, especially with smoke/dlights, so it makes little difference
 	glBegin(GL_QUADS);
+	//static vector<vert_norm> verts;
 	
 	for (unsigned i = 0; i < 6; ++i) {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
@@ -192,9 +193,11 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);
 		normal.do_glNormal();
-		draw_quad_from_4_pts(pts);
+		for (unsigned i = 0; i < 4; ++i) {pts[i].do_glVertex();}
+		//for (unsigned i = 0; i < 4; ++i) {verts.push_back(vert_norm(pts[i], normal));}
 	}
 	glEnd();
+	//draw_and_clear_verts(verts, GL_QUADS);
 }
 
 
@@ -221,27 +224,26 @@ void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t *shader
 }
 
 
-void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, bool calc_normal_dir, shader_t *shader, bool &in_tris) const {
+void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d normal, bool calc_normal_dir, shader_t *shader, vector<vert_norm> &verts) const {
 
 	if (tid >= 0) { // textured
-		if (in_tris) {glEnd(); in_tris = 0;}
+		draw_and_clear_verts(verts, GL_TRIANGLES);
 		set_poly_texgen(tid, normal, shader);
 	}
-	if (!in_tris) {glBegin(GL_TRIANGLES); in_tris = 1;}
-	(calc_normal_dir ? get_norm_camera_orient(normal, get_center(points, npoints)) : normal).do_glNormal();
+	if(calc_normal_dir) {normal = get_norm_camera_orient(normal, get_center(points, npoints));}
 	assert(npoints == 3 || npoints == 4);
 	unsigned const tp[6] = {0,1,2, 0,2,3};
-	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {points[tp[i]].do_glVertex();} // 1-2 triangles
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(vert_norm(points[tp[i]], normal));} // 1-2 triangles
 }
 
 
-void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir, bool &in_tris) const {
+void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir, vector<vert_norm> &verts) const {
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	float const thick(fabs(thickness));
 	
 	if (thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
-		draw_polygon(tid, points, npoints, norm, calc_normal_dir, shader, in_tris);
+		draw_polygon(tid, points, npoints, norm, calc_normal_dir, shader, verts);
 	}
 	else {
 		point pts[2][4];
@@ -294,7 +296,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal
 					std::reverse(pts[s], pts[s]+npoints);
 					norm2.negate();
 				}
-				draw_polygon(tid, pts[s], npoints, norm2, calc_normal_dir, shader, in_tris); // draw bottom surface
+				draw_polygon(tid, pts[s], npoints, norm2, calc_normal_dir, shader, verts); // draw bottom surface
 				if (!s) std::reverse(pts[s], pts[s]+npoints);
 			}
 			else { // draw sides
@@ -303,7 +305,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal
 
 				if (!bfc || !camera_behind_polygon(side_pts, 4)) {
 					vector3d const norm2(get_poly_norm(side_pts));
-					draw_polygon(tid, side_pts, 4, norm2, calc_normal_dir, shader, in_tris);
+					draw_polygon(tid, side_pts, 4, norm2, calc_normal_dir, shader, verts);
 				}
 			}
 		}

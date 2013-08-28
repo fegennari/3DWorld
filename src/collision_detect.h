@@ -91,7 +91,7 @@ public:
 	void set_from_pts(point const *const pts, unsigned npts);
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t *shader) const;
+	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vector<vert_norm> &poly_verts, shader_t *shader) const;
 	void get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) const;
 	void add_to_vector(coll_obj_group &cobjs, int type_);
 	void check_if_cube();
@@ -151,8 +151,8 @@ public:
 	// drawing code
 	void draw_coll_cube(int do_fill, int tid, shader_t *shader) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t *shader) const;
-	void draw_polygon(int tid, point const *points, int npoints, vector3d const &normal, bool calc_normal_dir, shader_t *shader, bool &in_tris) const;
-	void draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir, bool &in_tris) const;
+	void draw_polygon(int tid, point const *points, int npoints, vector3d normal, bool calc_normal_dir, shader_t *shader, vector<vert_norm> &verts) const;
+	void draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir, vector<vert_norm> &verts) const;
 };
 
 
