@@ -1186,13 +1186,12 @@ void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned 
 
 void camera_filter::draw() {
 
-	bool const tex(tid >= 0 && glIsTexture(tid));
-	if (tex) select_texture(tid);
+	if (tid >= 0) select_texture(tid);
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(0.5*zval*tan_val), x((y*window_width)/window_height);
 	color.do_glColor();
-	draw_tquad(x, y, zval, tex);
-	if (tex) glDisable(GL_TEXTURE_2D);
+	draw_tquad(x, y, zval);
+	if (tid >= 0) glDisable(GL_TEXTURE_2D);
 }
 
 

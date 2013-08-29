@@ -824,20 +824,19 @@ void disable_flares() {
 }
 
 
-void draw_tquad(float xsize, float ysize, float z, bool texture, float tx1, float ty1, float tx2, float ty2) {
+void draw_one_tquad(float x1, float y1, float x2, float y2, float z) {
 
-	glBegin(GL_QUADS);
-	draw_one_tquad(-xsize, -ysize, xsize, ysize, z, texture, tx1, ty1, tx2, ty2);
-	glEnd();
+	vert_tc_t verts[4];
+	verts[0] = vert_tc_t(point(x1, y1, z), 0, 0);
+	verts[1] = vert_tc_t(point(x1, y2, z), 0, 1);
+	verts[2] = vert_tc_t(point(x2, y2, z), 1, 1);
+	verts[3] = vert_tc_t(point(x2, y1, z), 1, 0);
+	verts[0].set_state();
+	glDrawArrays(GL_QUADS, 0, 4);
 }
 
-
-void draw_one_tquad(float x1, float y1, float x2, float y2, float z, bool texture, float tx1, float ty1, float tx2, float ty2) {
-
-	if (texture) {glTexCoord2f(tx1, ty1);} glVertex3f(x1, y1, z);
-	if (texture) {glTexCoord2f(tx1, ty2);} glVertex3f(x1, y2, z);
-	if (texture) {glTexCoord2f(tx2, ty2);} glVertex3f(x2, y2, z);
-	if (texture) {glTexCoord2f(tx2, ty1);} glVertex3f(x2, y1, z);
+void draw_tquad(float xsize, float ysize, float z) {
+	draw_one_tquad(-xsize, -ysize, xsize, ysize, z);
 }
 
 

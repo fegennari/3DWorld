@@ -435,7 +435,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				select_texture(sb_tex ? SAW_B_TEX : SAW_TEX);
 
 				for (int w = 0; w < max(1, ammo); ++w) { // draw a blade for each ammo
-					draw_tquad(radius, radius, dz, 1);
+					draw_tquad(radius, radius, dz);
 					dz += 0.05*radius;
 				}
 				set_specular(0.0, 0.0);
@@ -651,7 +651,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_additive_blend_mode();
 				select_texture(FLARE1_TEX);
 				set_std_blend_mode();
-				draw_tquad(size, size, 0.0, 1);
+				draw_tquad(size, size, 0.0);
 				glDisable(GL_ALPHA_TEST);
 				glDisable(GL_TEXTURE_2D);
 				set_color_e(BLACK);
@@ -675,7 +675,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					translate_to(translates[i]);
 					glPushMatrix();
 					if (!is_camera) {rotate_into_camera_dir(pos0, dir);} // pos0 is approximate
-					draw_tquad(8.0*radius, 8.0*radius, 0.0, 1); // can't rotate towards camera, already rotated
+					draw_tquad(8.0*radius, 8.0*radius, 0.0); // can't rotate towards camera, already rotated
 					glPopMatrix();
 				}
 				set_color_e(BLACK);

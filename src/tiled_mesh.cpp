@@ -926,9 +926,7 @@ void tile_t::draw_water(shader_t &s, float z) {
 	bind_texture_tu(height_tid, 2);
 	s.add_uniform_float("zmin", mzmin);
 	s.add_uniform_float("zmax", mzmax);
-	glBegin(GL_QUADS);
-	draw_one_tquad(xv1, yv1, xv2, yv2, z, 1);
-	glEnd();
+	draw_one_tquad(xv1, yv1, xv2, yv2, z);
 }
 
 

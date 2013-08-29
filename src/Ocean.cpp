@@ -286,9 +286,9 @@ void draw_sand(colorRGBA &color, float cscale, int mode) {
 	plus_z.do_glNormal();
 	select_texture(SAND_TEX);
 	setup_texgen(SAND_REPEAT, SAND_REPEAT, 0.0, 0.0);
+	if (mode == 1) {draw_tquad(0.25*ocean.x, 0.25*ocean.y, oz3);} // texture coords are ignored
 	glBegin(GL_QUADS);
-	if (mode == 1) draw_one_tquad(-0.25*ocean.x, -0.25*ocean.y, 0.25*ocean.x, 0.25*ocean.y, oz3, 0);
-	
+
 	for (unsigned i = 0; i < 4; ++i) {
 		float const s0((-1.0 + 2.0*(i == 1 || i == 2))*(X_SCENE_SIZE - DX_VAL));
 		float const s1((-1.0 + 2.0*(i < 2))*(Y_SCENE_SIZE - DY_VAL));
