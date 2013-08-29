@@ -287,25 +287,25 @@ void draw_sand(colorRGBA &color, float cscale, int mode) {
 	select_texture(SAND_TEX);
 	setup_texgen(SAND_REPEAT, SAND_REPEAT, 0.0, 0.0);
 	if (mode == 1) {draw_tquad(0.25*ocean.x, 0.25*ocean.y, oz3);} // texture coords are ignored
-	glBegin(GL_QUADS);
+	vector<vert_wrap_t> verts;
 
 	for (unsigned i = 0; i < 4; ++i) {
 		float const s0((-1.0 + 2.0*(i == 1 || i == 2))*(X_SCENE_SIZE - DX_VAL));
 		float const s1((-1.0 + 2.0*(i < 2))*(Y_SCENE_SIZE - DY_VAL));
-		glVertex3f( 4.0*s0, 4.0*s1, oz3);
-		glVertex3f(-4.0*s1, 4.0*s0, oz3);
-		glVertex3f(    -s1,     s0, zmin);
-		glVertex3f(     s0,     s1, zmin);
+		verts.push_back(point( 4.0*s0, 4.0*s1, oz3));
+		verts.push_back(point(-4.0*s1, 4.0*s0, oz3));
+		verts.push_back(point(    -s1,     s0, zmin));
+		verts.push_back(point(     s0,     s1, zmin));
 	}
 	{
 		float val1(-X_SCENE_SIZE), limit(-Y_SCENE_SIZE+DY_VAL);
 
 		for (unsigned i = 1; i < (unsigned)MESH_X_SIZE; ++i) { // -y edge
 			float const val2(val1 + DX_VAL);
-			glVertex3f(val1, limit, zmin);
-			glVertex3f(val2, limit, zmin);
-			glVertex3f(val2, limit, mesh_height[1][i]);
-			glVertex3f(val1, limit, mesh_height[1][i-1]);
+			verts.push_back(point(val1, limit, zmin));
+			verts.push_back(point(val2, limit, zmin));
+			verts.push_back(point(val2, limit, mesh_height[1][i]));
+			verts.push_back(point(val1, limit, mesh_height[1][i-1]));
 			val1 = val2;
 		}
 	}
@@ -314,14 +314,14 @@ void draw_sand(colorRGBA &color, float cscale, int mode) {
 
 		for (unsigned i = 1; i < (unsigned)MESH_Y_SIZE; ++i) { // -x edge
 			float const val2(val1 + DY_VAL);
-			glVertex3f(limit, val1, zmin);
-			glVertex3f(limit, val2, zmin);
-			glVertex3f(limit, val2, mesh_height[i][1]);
-			glVertex3f(limit, val1, mesh_height[i-1][1]);
+			verts.push_back(point(limit, val1, zmin));
+			verts.push_back(point(limit, val2, zmin));
+			verts.push_back(point(limit, val2, mesh_height[i][1]));
+			verts.push_back(point(limit, val1, mesh_height[i-1][1]));
 			val1 = val2;
 		}
 	}
-	glEnd();
+	draw_verts(verts, GL_QUADS);
 	disable_textures_texgen();
 
 	if (!DISABLE_WATER) { // draw ocean barrier as well (upwards normal)
@@ -362,23 +362,20 @@ void set_ocean_alpha(colorRGBA &color, float zscale, int i, int j) {
 
 	if (FORCE_ALPHA_1) {
 		color.alpha = 1.0;
-		return;
 	}
-	if (point_outside_mesh(i, j)) {
+	else if (point_outside_mesh(i, j)) {
 		color.alpha = 1.0;
 	}
 	else {
 		color.alpha = max(0.4f, min(1.0f, (0.5f + zscale*(ocean.z - mesh_height[i][j]))));
 	}
-	color.do_glColor();
 }
 
 
-void draw_vertex(int index, float x, float y, float z, colorRGBA &color, float zscale) {
+void draw_vertex(int index, float x, float y, float z, colorRGBA &color, float zscale, vector<vert_norm_color> &verts) {
 
-	WaterVertNormal[index].do_glNormal();
 	set_ocean_alpha(color, zscale, int((y+Y_SCENE_SIZE)*DY_VAL_INV), int((x+X_SCENE_SIZE)*DX_VAL_INV));
-	glVertex3f(x, y, (z + ocean.z + WaterHeight[index]));
+	verts.push_back(vert_norm_color(point(x, y, (z + ocean.z + WaterHeight[index])), WaterVertNormal[index], color));
 }
 
 
@@ -457,7 +454,7 @@ void draw_ocean() {
 		update_incs();
 
 		//draw the detailed ocean
-		glBegin(GL_QUADS);
+		vector<vert_norm_color> verts;
 
 		for (float j = min_starty; j < min_endy; j++) {
 			float y(incrementy*j + starty);
@@ -465,13 +462,13 @@ void draw_ocean() {
 			
 			for (int i = min_startx; i < min_endx; i++) {
 				float const x(incrementx*i + startx);
-				draw_vertex(i+jwx,       x,            y,            0.0, color, zscale);
-				draw_vertex(fx(i+1)+jwx, x+incrementx, y,            0.0, color, zscale);
-				draw_vertex(fx(i+1)+fyj, x+incrementx, y+incrementy, 0.0, color, zscale);
-				draw_vertex(i+fyj,       x,            y+incrementy, 0.0, color, zscale);
+				draw_vertex(i+jwx,       x,            y,            0.0, color, zscale, verts);
+				draw_vertex(fx(i+1)+jwx, x+incrementx, y,            0.0, color, zscale, verts);
+				draw_vertex(fx(i+1)+fyj, x+incrementx, y+incrementy, 0.0, color, zscale, verts);
+				draw_vertex(i+fyj,       x,            y+incrementy, 0.0, color, zscale, verts);
 			}
 		}
-		glEnd();
+		draw_verts(verts, GL_QUADS);
 	}
 	disable_textures_texgen();
 	glDisable(GL_COLOR_MATERIAL);
@@ -502,28 +499,27 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 	enable_blend();
 	color.alpha = 1.0;
 	color.do_glColor();
-	glPushMatrix();
-	glTranslatef(0.0, 0.0, ocean.z);
-	glBegin(GL_QUADS);
-	glVertex2f(-ocean.x,      -ocean.y);
-	glVertex2f( ocean.x,      -ocean.y);
-	glVertex2f( ocean.x,      -OCEAN_SKEW_Y);
-	glVertex2f(-ocean.x,      -Y_SCENE_SIZE);
-	glVertex2f(-ocean.x,       OCEAN_SKEW_Y);
-	glVertex2f( ocean.x,       Y_SCENE_SIZE);
-	glVertex2f( ocean.x,       ocean.y);
-	glVertex2f(-ocean.x,       ocean.y);
-	glVertex2f(-ocean.x,      -Y_SCENE_SIZE);
-	glVertex2f(-OCEAN_SKEW_X, -Y_SCENE_SIZE);
-	glVertex2f(-X_SCENE_SIZE,  Y_SCENE_SIZE);
-	glVertex2f(-ocean.x,       Y_SCENE_SIZE);
-	glVertex2f( ocean.x,       Y_SCENE_SIZE);
-	glVertex2f( OCEAN_SKEW_X,  Y_SCENE_SIZE);
-	glVertex2f( X_SCENE_SIZE, -Y_SCENE_SIZE);
-	glVertex2f( ocean.x,      -Y_SCENE_SIZE);
-	glEnd();
+	vert_wrap_t verts[16];
+	verts[ 0] = point(-ocean.x,      -ocean.y, ocean.z);
+	verts[ 1] = point( ocean.x,      -ocean.y, ocean.z);
+	verts[ 2] = point( ocean.x,      -OCEAN_SKEW_Y, ocean.z);
+	verts[ 3] = point(-ocean.x,      -Y_SCENE_SIZE, ocean.z);
+	verts[ 4] = point(-ocean.x,       OCEAN_SKEW_Y, ocean.z);
+	verts[ 5] = point( ocean.x,       Y_SCENE_SIZE, ocean.z);
+	verts[ 6] = point( ocean.x,       ocean.y, ocean.z);
+	verts[ 7] = point(-ocean.x,       ocean.y, ocean.z);
+	verts[ 8] = point(-ocean.x,      -Y_SCENE_SIZE, ocean.z);
+	verts[ 9] = point(-OCEAN_SKEW_X, -Y_SCENE_SIZE, ocean.z);
+	verts[10] = point(-X_SCENE_SIZE,  Y_SCENE_SIZE, ocean.z);
+	verts[11] = point(-ocean.x,       Y_SCENE_SIZE, ocean.z);
+	verts[12] = point( ocean.x,       Y_SCENE_SIZE, ocean.z);
+	verts[13] = point( OCEAN_SKEW_X,  Y_SCENE_SIZE, ocean.z);
+	verts[14] = point( X_SCENE_SIZE, -Y_SCENE_SIZE, ocean.z);
+	verts[15] = point( ocean.x,      -Y_SCENE_SIZE, ocean.z);
+	verts[0].set_state();
+	glDrawArrays(GL_QUADS, 0, 16);
 
-	glBegin(GL_TRIANGLE_STRIP);
+	vector<vert_color> verts2;
 	float yval(-Y_SCENE_SIZE);
 	float const zscale(0.5/min(MAX_VIS_DEPTH, ocean.z - zmin));
 
@@ -534,19 +530,17 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 		for (int j = 1; j <= MESH_X_SIZE; ++j) {
 			if (i == MESH_Y_SIZE || j == MESH_X_SIZE || z_min_matrix[i][j] <= ocean.z || (i > 0 && j > 0 && z_min_matrix[i-1][j-1] <= ocean.z)) {
 				if (new_strip) {
-					glEnd();
-					glBegin(GL_TRIANGLE_STRIP);
-					color.do_glColor();
+					draw_and_clear_verts(verts2, GL_TRIANGLE_STRIP);
 					new_strip = 0;
 					set_ocean_alpha(color, zscale, i, j);
-					glVertex2f(xval, yval);
+					verts2.push_back(vert_color(point(xval, yval, ocean.z), color));
 					set_ocean_alpha(color, zscale, i+1, j);
-					glVertex2f(xval, (yval+DY_VAL));
+					verts2.push_back(vert_color(point(xval, (yval+DY_VAL), ocean.z), color));
 				}
 				set_ocean_alpha(color, zscale, i, j+1);
-				glVertex2f((xval+DX_VAL), yval);
+				verts2.push_back(vert_color(point((xval+DX_VAL), yval, ocean.z), color));
 				set_ocean_alpha(color, zscale, i+1, j+1);
-				glVertex2f((xval+DX_VAL), (yval+DY_VAL));
+				verts2.push_back(vert_color(point((xval+DX_VAL), (yval+DY_VAL), ocean.z), color));
 			}
 			else {
 				new_strip = 1;
@@ -555,11 +549,10 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 		}
 		yval += DY_VAL;
 	}
-	glEnd();
+	draw_and_clear_verts(verts2, GL_TRIANGLE_STRIP);
 	disable_blend();
 	disable_textures_texgen();
 	glEnable(GL_LIGHTING);
-	glPopMatrix();
 	if (show_fog) glEnable(GL_FOG);
 }
 
