@@ -671,7 +671,7 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 			int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
 
 			/*if (type == T_BUSH && nsides >= 24) {
-				draw_cube_map_sphere(all_zeros, width, N_SPHERE_DIV/2, 1, 1); // slower, but looks better
+				draw_cube_map_sphere(all_zeros, width, N_SPHERE_DIV/2, 1); // slower, but looks better
 			}
 			else*/ {
 				draw_sphere_vbo(all_zeros, width, nsides, 1, (type == T_PALM));

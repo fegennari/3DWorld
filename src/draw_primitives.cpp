@@ -691,7 +691,7 @@ void rotate_sphere_tex_to_dir(vector3d const &dir) { // dir must be normalized
 // unused
 // less efficient than regular sphere
 // textures must tile along all edges for this to look correct
-void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool texture, bool disable_bfc) {
+void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable_bfc) {
 
 	point pt;
 	float const step(1.0/ndiv);
@@ -723,7 +723,7 @@ void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool texture
 					}
 					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 						pt[d[0]] = s[0] = va[k^j]; // need to orient the vertices differently for each side
-						if (texture) glTexCoord2fv(s);
+						glTexCoord2fv(s);
 						vector3d const norm(pt.get_norm());
 						norm.do_glNormal();
 						(norm*radius + pos).do_glVertex();
@@ -831,8 +831,7 @@ void draw_one_tquad(float x1, float y1, float x2, float y2, float z) {
 	verts[1] = vert_tc_t(point(x1, y2, z), 0, 1);
 	verts[2] = vert_tc_t(point(x2, y2, z), 1, 1);
 	verts[3] = vert_tc_t(point(x2, y1, z), 1, 0);
-	verts[0].set_state();
-	glDrawArrays(GL_QUADS, 0, 4);
+	draw_verts(verts, 4, GL_QUADS);
 }
 
 void draw_tquad(float xsize, float ysize, float z) {

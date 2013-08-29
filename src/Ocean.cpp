@@ -516,8 +516,7 @@ void draw_ocean2(point &camera, colorRGBA &color, float cscale) {
 	verts[13] = point( OCEAN_SKEW_X,  Y_SCENE_SIZE, ocean.z);
 	verts[14] = point( X_SCENE_SIZE, -Y_SCENE_SIZE, ocean.z);
 	verts[15] = point( ocean.x,      -Y_SCENE_SIZE, ocean.z);
-	verts[0].set_state();
-	glDrawArrays(GL_QUADS, 0, 16);
+	draw_verts(verts, 16, GL_QUADS);
 
 	vector<vert_color> verts2;
 	float yval(-Y_SCENE_SIZE);

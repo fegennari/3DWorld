@@ -586,8 +586,7 @@ void ushadow_polygon::draw(upos_point_type const &pos) const {
 		verts[ix++].v = (p[0][i] - pos); // complete the triangles from the quads
 		verts[ix++].v = (p[1][(i+1)%npts] - pos);
 	}
-	verts[0].set_state();
-	glDrawArrays(GL_TRIANGLES, 0, ix);
+	draw_verts(verts, ix, GL_TRIANGLES);
 }
 
 

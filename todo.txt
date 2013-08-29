@@ -21,6 +21,9 @@ Use triangles instead of quads
 Remove immediate mode calls
  - coll_obj::draw_coll_cube()
  - draw_outside_water_range()
+ - draw_flare_no_blend()
+ - begin_line_tquad_draw()
+ - shape3d::draw()
 Remove non-shader rendering
 No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable

@@ -328,11 +328,6 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 }
 
 
-void draw_coll_vert(int i, int j) {
-	glVertex3f(get_xval(j), get_yval(i), max(czmin, v_collision_matrix[i][j].zmax));
-}
-
-
 void draw_mesh_vbo() { // Note: uses fixed function pipeline
 
 	static unsigned mesh_vbo(0);
@@ -455,15 +450,15 @@ void display_mesh(bool shadow_pass) { // fast array version
 		else {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			BLUE.do_glColor();
+			vector<vert_wrap_t> verts;
 
-			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-				glBegin(GL_TRIANGLE_STRIP);
-				
+			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {			
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					draw_coll_vert(i+0, j);
-					draw_coll_vert(i+1, j);
+					for (unsigned d = 0; d < 2; ++d) {
+						verts.push_back(point(get_xval(j), get_yval(i+d), max(czmin, v_collision_matrix[i+d][j].zmax)));
+					}
 				}
-				glEnd();
+				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			}
 		}
 		glEnable(GL_LIGHTING);

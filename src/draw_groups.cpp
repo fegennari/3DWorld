@@ -603,10 +603,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 					float const time(TIMESTEP*fticks);
 					point const pos2(pos + obj.velocity*time - point(0.0, 0.0, -base_gravity*GRAVITY*time*time*otype.gravity));
 					set_color(check_coll_line(pos, pos2, cindex, -1, 0, 0) ? RED : GREEN);
-					glBegin(GL_LINES);
-					pos.do_glVertex();
-					pos2.do_glVertex();
-					glEnd();
+					vert_wrap_t const lines[2] = {pos, pos2};
+					draw_verts(lines, 2, GL_LINES);
 				}
 				draw_sized_point(obj, tradius, cd_scale, color2, get_textured_color(tid, color2), do_texture, 0);
 			} // switch (type)
@@ -919,14 +917,14 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			glPushMatrix();
 			translate_to(pos2);
 			uniform_scale(radius);
-			glBegin(GL_LINES);
+			vert_wrap_t lines[4];
 
 			for (unsigned l = 0; l < 2; ++l) {
 				for (unsigned p = 0; p < 2; ++p) {
-					glVertex3f((p ? -0.12 : 0.12), 0.1, ((p^l) ? -0.12 : 0.12));
+					lines[2*l + p] = point((p ? -0.12 : 0.12), 0.1, ((p^l) ? -0.12 : 0.12));
 				}
 			}
-			glEnd();
+			draw_verts(lines, 4, GL_LINES);
 			glPopMatrix();
 			glLineWidth(1.0);
 		}
@@ -1049,12 +1047,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	glLineWidth(min(8.0f, max(1.0f, 5.0f/dist)));
 	glPushMatrix();
 	uniform_scale(radius);
-	glBegin(GL_LINE_STRIP);
-	glVertex3f(-0.5,  0.95, -0.2-hval);
-	glVertex3f(-0.15, 0.95, -0.4);
-	glVertex3f( 0.15, 0.95, -0.4);
-	glVertex3f( 0.5,  0.95, -0.2-hval);
-	glEnd();
+	vert_wrap_t const lines[4] = {point(-0.5, 0.95, -0.2-hval), point(-0.15, 0.95, -0.4), point( 0.15, 0.95, -0.4), point( 0.5, 0.95, -0.2-hval)};
+	draw_verts(lines, 4, GL_LINE_STRIP);
 	glPopMatrix();
 	glLineWidth(1.0);
 
@@ -1147,14 +1141,8 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 	rotate_by_vector(orient);
 	set_color_alpha(RED);
 	uniform_scale(radius);
-	glBegin(GL_TRIANGLES);
-	glVertex3f( 0.0,  0.0,  0.0);
-	glVertex3f( 1.8,  0.0, -2.0);
-	glVertex3f(-1.8,  0.0, -2.0);
-	glVertex3f( 0.0,  0.0,  0.0);
-	glVertex3f( 0.0,  1.8, -2.0);
-	glVertex3f( 0.0, -1.8, -2.0);
-	glEnd();
+	vert_wrap_t const verts[6] = {point(0.0, 0.0, 0.0), point(1.8, 0.0, -2.0), point(-1.8, 0.0, -2.0), point(0.0, 0.0, 0.0), point( 0.0, 1.8, -2.0), point(0.0, -1.8, -2.0)};
+	draw_verts(verts, 6, GL_TRIANGLES);
 	set_color_alpha(object_types[ROCKET].color);
 	glScalef(1.0, 1.0, -2.0);
 	draw_sphere_vbo_raw(ndiv, 0);
@@ -1352,8 +1340,7 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 		points[ix++] = star_pts[i<<1];
 		points[ix++] = star_pts[(i<<1)+1];
 	}
-	points[0].set_state();
-	glDrawArrays(GL_TRIANGLES, 0, 3*N_STAR_POINTS);
+	draw_verts(points, 3*N_STAR_POINTS, GL_TRIANGLES);
 	glPopMatrix();
 }
 

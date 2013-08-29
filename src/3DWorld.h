@@ -902,11 +902,14 @@ struct vert_norm_color_tangent : public vert_norm_color {
 };
 
 
+template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type) {
+	assert(verts && count > 0);
+	verts[0].set_state();
+	glDrawArrays(gl_type, 0, count);
+}
+
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type) {
-	if (!verts.empty()) {
-		verts.front().set_state();
-		glDrawArrays(gl_type, 0, (unsigned)verts.size());
-	}
+	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type);}
 }
 
 template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
