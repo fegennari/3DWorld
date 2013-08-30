@@ -130,7 +130,9 @@ void uobj_draw_data::disable_ship_flares() {
 void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex) {
 
 	set_emissive_color(color);
-	draw_flare_no_blend(pos, xlate, xsize, ysize, flare_tex);
+	static quad_batch_draw qbd; // probably doesn't need to be static
+	qbd.add_xlated_billboard(pos, xlate, get_camera_pos(), up_vector, colorRGBA(0,0,0, color.alpha), xsize, ysize);
+	qbd.draw_as_flares_and_clear(flare_tex);
 	end_texture();
 	clear_emissive_color();
 }
@@ -374,11 +376,13 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 	draw_sphere_vbo(all_zeros, 0.25, get_ndiv(ndiv/3), 0); // draw central area that shows up when the draw order is incorrect
 	set_emissive_color(color);
 	float angle(TWO_PI*time/TICKS_PER_SECOND);
+	static quad_batch_draw qbd; // probably doesn't need to be static
 
 	for (unsigned i = 0; i < 2; ++i) {
-		draw_flare_no_blend(pos, all_zeros, (2.0 + 1.0*sinf(angle)), (2.0 + 1.0*cosf(angle)), FLARE1_TEX);
+		qbd.add_xlated_billboard(pos, all_zeros, get_camera_pos(), up_vector, colorRGBA(0,0,0, color.alpha), (2.0 + 1.0*sinf(angle)), (2.0 + 1.0*cosf(angle)));
 		angle += PI;
 	}
+	qbd.draw_as_flares_and_clear(FLARE1_TEX);
 	end_texture();
 	clear_emissive_color();
 	if (!symmetric) glPushMatrix();
@@ -2327,12 +2331,13 @@ void uobj_draw_data::draw_black_hole() const { // should be non-rotated
 
 	BLACK.do_glColor();
 	draw_sphere_vbo(all_zeros, 0.3, ndiv, 0);
-	//WHITE.do_glColor();
 	vector3d const player_dir(player_ship().get_pos() - pos);
 	float const dist_to_player(player_dir.mag());
 
 	if (dist_to_player > 2.0*radius) {
-		draw_flare_no_blend(pos, player_dir*(1.2/dist_to_player), 3.0, 3.0); // move towards the camera
+		quad_batch_draw qbd;
+		qbd.add_xlated_billboard(pos, player_dir*(1.2/dist_to_player), get_camera_pos(), up_vector, BLACK, 3.0, 3.0);
+		qbd.draw_as_flares_and_clear(BLUR_TEX);
 	}
 }
 

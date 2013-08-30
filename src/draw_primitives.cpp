@@ -6,6 +6,7 @@
 #include "upsurface.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "draw_utils.h"
 
 
 // predefined sphere VBOs
@@ -778,29 +779,6 @@ void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex)
 void rotate_towards_camera(point const &pos) {
 
 	rotate_into_plus_z((get_camera_pos() - pos));
-}
-
-
-void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, float ysize, int flare_tex) {
-
-	glDepthMask(GL_FALSE);
-	point const camera(get_camera_pos());
-	select_texture(flare_tex);
-	vector3d const vdir(camera - pos); // z
-	vector3d const v1((cross_product(vdir, up_vector).get_norm())*xsize); // x (what if colinear?)
-	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
-	float const p[4][2] = {{0,0}, {0,1}, {1,1}, {1,0}};
-	unsigned const v[6] = {0,2,1, 0,3,2};
-	vdir.do_glNormal();
-	glBegin(GL_TRIANGLES);
-
-	for (unsigned i = 0; i < 6; ++i) { // draw as quad (2 triangles)
-		glTexCoord2f(p[v[i]][0], p[v[i]][1]);
-		(xlate + v1*(2.0*p[v[i]][0] - 1.0) + v2*(2.0*p[v[i]][1] - 1.0)).do_glVertex();
-	}
-	glEnd();
-	glDepthMask(GL_TRUE);
-	glDisable(GL_TEXTURE_2D);
 }
 
 

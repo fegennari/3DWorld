@@ -2199,13 +2199,16 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 			usg.enable_star_shader(ca, cb);
 			enable_blend();
 			set_additive_blend_mode();
-			if (size > 6.0) {draw_flare_no_blend(pos_, all_zeros, 3.0*radius, 3.0*radius);}
+			static quad_batch_draw qbd; // probably doesn't need to be static
 
 			if (cfr > 2.4) { // FIXME: factor out shared code?
-				draw_flare_no_blend(pos_, all_zeros, 0.4*cfr*radius, 0.4*cfr*radius, FLARE1_TEX);
-				draw_flare_no_blend(pos_, all_zeros, 0.5*radius, cfr*radius);
-				draw_flare_no_blend(pos_, all_zeros, cfr*radius, 0.5*radius);
+				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 0.4*cfr*radius, 0.4*cfr*radius);
+				qbd.draw_as_flares_and_clear(FLARE1_TEX);
+				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 0.5*radius, cfr*radius);
+				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, cfr*radius, 0.5*radius);
 			}
+			if (size > 6.0) {qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 3.0*radius, 3.0*radius);}
+			qbd.draw_as_flares_and_clear(BLUR_TEX);
 			set_std_blend_mode();
 			disable_blend();
 		}

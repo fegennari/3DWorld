@@ -181,7 +181,6 @@ void rotate_sphere_tex_to_dir(vector3d const &dir);
 void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable_bfc=0);
 void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex);
 void rotate_towards_camera(point const &pos);
-void draw_flare_no_blend(point const &pos, point const &xlate, float xsize, float ysize, int flare_tex=BLUR_TEX);
 void enable_flares(colorRGBA const &color, bool zoomed=0);
 void disable_flares();
 void draw_tquad(float xsize, float ysize, float z);

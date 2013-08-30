@@ -87,11 +87,16 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 	void add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n=plus_z, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
 	void add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n=plus_z,
 		float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
-	void add_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
+	void add_xlated_billboard(point const &pos, point const &xlate, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
 		float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool minimize_fill=0);
+	void add_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
+		float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool minimize_fill=0) {
+			add_xlated_billboard(pos, pos, viewer, up_dir, c, xsize, ysize, tx1, ty1, tx2, ty2, minimize_fill);
+	}
 	void add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c, float xsize, float ysize, float timescale);
 	void draw(int prim_type=GL_TRIANGLES) const {draw_verts(verts, prim_type);} // GL_QUADS or GL_TRIANGLES
 	void draw_and_clear(int prim_type=GL_TRIANGLES) {draw(prim_type); verts.clear();}
+	void draw_as_flares_and_clear(int flare_tex=BLUR_TEX);
 };
 
 

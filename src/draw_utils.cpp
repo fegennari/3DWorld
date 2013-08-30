@@ -259,7 +259,7 @@ void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector
 	add_quad_pts(pts, c, n, tx1, ty1, tx2, ty2);
 }
 
-void quad_batch_draw::add_billboard(point const &pos, point const &viewer, vector3d const &up_dir,
+void quad_batch_draw::add_xlated_billboard(point const &pos, point const &xlate, point const &viewer, vector3d const &up_dir,
 	colorRGBA const &c, float xsize, float ysize, float tx1, float ty1, float tx2, float ty2, bool minimize_fill)
 {
 	vector3d const vdir(viewer - pos); // z
@@ -276,12 +276,12 @@ void quad_batch_draw::add_billboard(point const &pos, point const &viewer, vecto
 
 		for (unsigned i = 0; i < 18; ++i) {
 			float const tcx(p[v[i]][0]), tcy(p[v[i]][1]);
-			point const pos(pos + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0));
-			verts.push_back(vert_norm_tc_color(pos, normal, tcx, tcy, cw.c, 1));
+			point const p(xlate + v1*(2.0*tcx - 1.0) + v2*(2.0*tcy - 1.0));
+			verts.push_back(vert_norm_tc_color(p, normal, tcx, tcy, cw.c, 1));
 		}
 	}
 	else { // draw as quad (2 triangles)
-		add_quad_dirs(pos, v1, v2, c, normal, tx1, ty1, tx2, ty2);
+		add_quad_dirs(xlate, v1, v2, c, normal, tx1, ty1, tx2, ty2);
 	}
 }
 
@@ -291,6 +291,16 @@ void quad_batch_draw::add_animated_billboard(point const &pos, point const &view
 	int const frame_id(max(0, min(15, int(16*timescale)))), tx(frame_id&3), ty(frame_id>>2);
 	point const gpos(make_pt_global(pos));
 	add_billboard(gpos, (viewer + gpos - pos), up_dir, c, xsize, ysize, 0.25*tx, 0.25*ty, 0.25*(tx+1), 0.25*(ty+1)); // upside down
+}
+
+
+void quad_batch_draw::draw_as_flares_and_clear(int flare_tex) {
+
+	glDepthMask(GL_FALSE);
+	select_texture(flare_tex);
+	draw_and_clear(GL_TRIANGLES);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_TEXTURE_2D);
 }
 
 
