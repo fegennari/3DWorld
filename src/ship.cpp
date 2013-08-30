@@ -744,8 +744,8 @@ void draw_univ_objects() {
 	disable_exp_lights(); // make sure the explosion lights start out cleared
 	
 	if (use_shaders) {
-		setup_ship_draw_shader(s[0], 0); // normal shader with dynamic lights
 		setup_ship_draw_shader(s[1], 1); // shadow shader, system lighting only
+		setup_ship_draw_shader(s[0], 0); // normal shader with dynamic lights
 	}
 	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
 		free_obj *fobj(sorted[i].second);
