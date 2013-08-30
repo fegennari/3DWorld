@@ -486,10 +486,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				draw_circle_normal(0.0175, 0.018, ndiv, 1);
 				rotate_to_dir(dir, 0.0, 1.0);
 				glLineWidth(2.0);
-				glBegin(GL_LINES);
-				point(-0.014, 0.01, 0.0).do_glVertex();
-				point(-0.01, -0.001, -0.15).do_glVertex();
-				glEnd();
+				vert_wrap_t const verts[2] = {point(-0.014, 0.01, 0.0), point(-0.01, -0.001, -0.15)};
+				draw_verts(verts, 2, GL_LINES);
 				glLineWidth(1.0);
 				rotate_to_dir(dir, 0.0, -1.0);
 			}
@@ -897,29 +895,23 @@ void show_crosshair(int in_zoom) {
 	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_LINE_SMOOTH);
 	glDisable(GL_LIGHTING);
+	vert_wrap_t verts[8];
 
 	if (in_zoom) {
 		glScalef(2.0, 2.0, 1.0);
-		glBegin(GL_LINES);
-
-		for (unsigned i = 0; i < 8; ++i) {
-			glVertex3f(xy[i], xy[(i+4)&7], zval);
-		}
-		glEnd();
+		for (unsigned i = 0; i < 8; ++i) {verts[i] = point(xy[i], xy[(i+4)&7], zval);}
+		draw_verts(verts, 8, GL_LINES);
 	}
 	else {
 		glPointSize(2.0);
-		glBegin(GL_POINTS);
-
-		for (unsigned i = 0; i < 8; i += 2) {
-			glVertex3f(xy[i], xy[(i+4)&7], zval);
-		}
-		glEnd();
+		for (unsigned i = 0; i < 4; ++i) {verts[i] = point(xy[2*i], xy[(2*i+4)&7], zval);}
+		draw_verts(verts, 4, GL_POINTS);
 		glPointSize(1.0);
 	}
-	glBegin(GL_POINTS);
-	point(0.0, 0.0, zval).do_glVertex();
-	glEnd();
+	glPointSize(2.0);
+	verts[0] = point(0.0, 0.0, zval);
+	draw_verts(verts, 1, GL_POINTS);
+	glPointSize(1.0);
 	disable_blend();
 	glDisable(GL_POINT_SMOOTH);
 	glDisable(GL_LINE_SMOOTH);
