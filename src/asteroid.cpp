@@ -867,7 +867,7 @@ void uasteroid_belt::draw_bounding_torus(point const &pos_, colorRGBA const &col
 	global_translate(pos_ + pos);
 	rotate_into_plus_z(orbital_plane_normal);
 	scale_by(scale);
-	draw_torus(inner_radius, outer_radius, 32, 32, 0);
+	draw_torus(inner_radius, outer_radius, 32, 32);
 	glPopMatrix();
 	disable_blend();
 }

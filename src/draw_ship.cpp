@@ -63,7 +63,7 @@ void ship_torus::draw(unsigned ndiv) const {
 
 	glPushMatrix();
 	translate_to(center);
-	draw_torus(ri, ro, max(3U, ndiv/2U), ndiv, 0);
+	draw_torus(ri, ro, max(3U, ndiv/2U), ndiv);
 	glPopMatrix();
 }
 
@@ -566,7 +566,7 @@ void uobj_draw_data::draw_usw_rfire() const {
 	glEnable(GL_CULL_FACE);
 	set_emissive_color(colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0));
 	select_texture(PLASMA_TEX);
-	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv, 1);
+	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv);
 	end_texture();
 	glDisable(GL_CULL_FACE);
 	clear_emissive_color();
@@ -1237,7 +1237,7 @@ void uobj_draw_data::draw_starbase() const {
 
 	// draw main body
 	color_a.do_glColor();
-	draw_torus(0.2, 1.0, get_ndiv(2*ndiv/3), 4*ndiv/3, (t_exp > 0.0)); // take from cobjs?
+	draw_torus(0.2, 1.0, get_ndiv(2*ndiv/3), 4*ndiv/3); // take from cobjs?
 
 	// draw center
 	color_b.do_glColor();
@@ -1386,7 +1386,7 @@ void uobj_draw_data::draw_gunship() const {
 	glTranslatef(0.0, 0.0, -0.7);
 
 	for (unsigned i = 0; i < 5; ++i) {
-		draw_torus(0.02, (0.3 - 0.05*abs(int(i) - 2)), ndiv3, ndiv, 0);
+		draw_torus(0.02, (0.3 - 0.05*abs(int(i) - 2)), ndiv3, ndiv);
 		glTranslatef(0.0, 0.0, 0.3);
 	}
 	glPopMatrix();
@@ -1574,7 +1574,7 @@ void uobj_draw_data::draw_dwexterm() const {
 		glPushMatrix();
 		glTranslatef(0.0, -0.18, 0.04+0.1*i);
 		glScalef(1.4, 0.85, 1.0);
-		draw_torus(0.02, 0.25, ndiv4, ndiv, 0);
+		draw_torus(0.02, 0.25, ndiv4, ndiv);
 		glPopMatrix();
 	}
 	glPushMatrix();
@@ -1949,7 +1949,7 @@ void uobj_draw_data::draw_anti_miss() const {
 	glPushMatrix();
 	glTranslatef(0.0, -0.5, 0.0);
 	glRotatef(90.0, 1.0, 0.0, 0.0);
-	draw_torus(0.2, 0.9, ndiv2, 4*ndiv/3, 0); // ring
+	draw_torus(0.2, 0.9, ndiv2, 4*ndiv/3); // ring
 	glPopMatrix();
 
 	if (ndiv > 4) {
@@ -2300,7 +2300,7 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 	}
 	if (starport && ndiv > 3) {
 		glTranslatef(0.0, 0.0, 0.25); // Note: push/pop not needed since this is the last draw
-		draw_torus(0.2, 1.05, ndiv2, 3*ndiv/2, textured);
+		draw_torus(0.2, 1.05, ndiv2, 3*ndiv/2);
 	}
 	if (textured) end_ship_texture();
 	glPopMatrix();

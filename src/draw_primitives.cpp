@@ -233,30 +233,21 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 
 	assert(r_outer > 0.0);
 	bool const disk(r_inner > 0.0);
-	glBegin(disk ? GL_TRIANGLE_STRIP : GL_TRIANGLE_FAN);
 	(invert_normals ? -plus_z : plus_z).do_glNormal();
-
-	if (!disk) {
-		glTexCoord2f(0.5, 0.5);
-		point(0.0, 0.0, zval).do_glVertex();
-	}
 	float const css((invert_normals ? 1.0 : -1.0)*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
 	float const inner_tscale(r_inner/r_outer);
 	float sin_s(0.0), cos_s(1.0);
+	static vector<vert_tc_t> verts;
+	if (!disk) {verts.push_back(vert_tc_t(point(0.0, 0.0, zval), 0.5, 0.5));}
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 		float const s(sin_s), c(cos_s);
-
-		if (disk) {
-			glTexCoord2f(0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c)));
-			point(r_inner*s, r_inner*c, zval).do_glVertex();
-		}
-		glTexCoord2f(0.5*(1.0 + s), (0.5*(1.0 + c)));
-		point(r_outer*s, r_outer*c, zval).do_glVertex();
+		if (disk) {verts.push_back(vert_tc_t(point(r_inner*s, r_inner*c, zval), 0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c))));}
+		verts.push_back(vert_tc_t(point(r_outer*s, r_outer*c, zval), 0.5*(1.0 + s), (0.5*(1.0 + c))));
 		sin_s = s*cos_ds + c*sin_ds;
 		cos_s = c*cos_ds - s*sin_ds;
 	}
-	glEnd();
+	draw_and_clear_verts(verts, (disk ? GL_TRIANGLE_STRIP : GL_TRIANGLE_FAN));
 }
 
 
@@ -309,7 +300,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			verts[3*s+1] = create_vert(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), 0.0, two_sided_lighting); // normalize?
 			verts[3*s+2] = create_vert(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), 0.0, two_sided_lighting); // normalize?
 		}
-		draw_verts(verts, GL_TRIANGLES);
+		draw_and_clear_verts(verts, GL_TRIANGLES);
 	}
 	else {
 		verts.resize(2*(ndiv+1));
@@ -320,28 +311,28 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			verts[2*S+0] = create_vert(vpn.p[(s<<1)+0], normal, (1.0 - S*ndiv_inv), 0.0, two_sided_lighting);
 			verts[2*S+1] = create_vert(vpn.p[(s<<1)+1], normal, (1.0 - S*ndiv_inv), 1.0, two_sided_lighting);
 		}
-		draw_verts(verts, GL_TRIANGLE_STRIP);
+		draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 	}
 	if (draw_sides_ends != 0) { // Note: two_sided_lighting doesn't apply here
 		float const r[2] = {radius1, radius2};
 
 		for (unsigned i = 0; i < 2; ++i) {
 			if (r[i] == 0.0 || (draw_sides_ends == 3+(!i))) continue;
-			glBegin(GL_TRIANGLE_FAN);
-			(i ? v12 : -v12).do_glNormal();
-			if (texture) glTexCoord2f(0.5, 0.5);
-			ce[i].do_glVertex();
+			vector3d const normal(i ? v12 : -v12);
+			verts.push_back(vert_norm_tc(ce[i], normal, 0.5, 0.5));
 
 			for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 				unsigned const ss(S%ndiv), s(i ? (ndiv - ss - 1) : ss);
+				float tc[2] = {0.0, 0.0};
 				
 				if (texture) { // inefficient, but uncommon
 					float const theta(TWO_PI*s/ndiv);
-					glTexCoord2f(0.5*(1.0 + sinf(theta)), (0.5*(1.0 + cosf(theta))));
+					tc[0] = 0.5*(1.0 + sinf(theta));
+					tc[1] = 0.5*(1.0 + cosf(theta));
 				}
-				vpn.p[(s<<1)+i].do_glVertex();
+				verts.push_back(vert_norm_tc(vpn.p[(s<<1)+i], normal, tc));
 			}
-			glEnd();
+			draw_and_clear_verts(verts, GL_TRIANGLE_FAN);
 		}
 	}
 }
@@ -697,6 +688,7 @@ void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable
 	point pt;
 	float const step(1.0/ndiv);
 	point const camera(get_camera_all());
+	vector<vert_norm_tc> verts;
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
@@ -706,11 +698,10 @@ void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable
 
 			for (int s = 0; s < ndiv; ++s) {
 				float const va[2] = {(step*(s+1)-0.5), (step*s-0.5)};
-				glBegin(GL_TRIANGLE_STRIP);
 
 				for (int t = 0; t <= ndiv; ++t) {
-					float s[2];
-					pt[d[1]] = s[1] = step*t - 0.5;
+					float tc[2];
+					pt[d[1]] = tc[1] = step*t - 0.5;
 
 					if (!disable_bfc) {
 						bool back_facing(1);
@@ -723,29 +714,27 @@ void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable
 						if (back_facing) continue;
 					}
 					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-						pt[d[0]] = s[0] = va[k^j]; // need to orient the vertices differently for each side
-						glTexCoord2fv(s);
+						pt[d[0]] = tc[0] = va[k^j]; // need to orient the vertices differently for each side
 						vector3d const norm(pt.get_norm());
-						norm.do_glNormal();
-						(norm*radius + pos).do_glVertex();
+						verts.push_back(vert_norm_tc((norm*radius + pos), norm, tc));
 					}
 				}
-				glEnd();
-			}
-		}
-	}
+				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
+			} // for s
+		} // for j
+	} // for i
 }
 
 
 // ******************** TORUS ********************
 
 
-void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex) { // at (0,0,0) in z-plane
+void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo) { // at (0,0,0) in z-plane, always textured
 
 	assert(ndivi > 2 && ndivo > 2);
 	float const ts(1.0/float(ndivo)), tt(1.0/float(ndivi)), ds(TWO_PI*ts), dt(TWO_PI*tt), cds(cos(ds)), sds(sin(ds));
-	static vector<float> sin_cos;
-	sin_cos.resize(2*ndivi);
+	vector<float> sin_cos(2*ndivi);
+	vector<vert_norm_tc> verts(2*(ndivi+1));
 
 	for (unsigned t = 0; t < ndivi; ++t) {
 		float const phi(t*dt);
@@ -755,20 +744,17 @@ void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex)
 	for (unsigned s = 0; s < ndivo; ++s) {
 		float const theta(s*ds), ct(cos(theta)), st(sin(theta));
 		point const pos[2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
-		glBegin(GL_TRIANGLE_STRIP);
 
 		for (unsigned t = 0; t <= ndivi; ++t) {
 			unsigned const t_((t == ndivi) ? 0 : t);
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				if (do_tex) glTexCoord2f(ts*(s+1-i), tt*t);
 				vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
-				delta.do_glNormal();
-				(pos[1-i]*ro + delta*ri).do_glVertex();
+				verts[(t<<1)+i] = vert_norm_tc((pos[1-i]*ro + delta*ri), delta, ts*(s+1-i), tt*t);
 			}
 		}
-		glEnd();
+		draw_verts(verts, GL_TRIANGLE_STRIP);
 	}
 }
 

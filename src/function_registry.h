@@ -179,7 +179,7 @@ void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int te
 								float s_beg, float s_end, float t_beg, float t_end);
 void rotate_sphere_tex_to_dir(vector3d const &dir);
 void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable_bfc=0);
-void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, bool do_tex);
+void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo);
 void rotate_towards_camera(point const &pos);
 void enable_flares(colorRGBA const &color, bool zoomed=0);
 void disable_flares();
