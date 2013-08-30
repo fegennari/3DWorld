@@ -217,22 +217,20 @@ void shape3d::draw(bool skip_color_set) const {
 	}
 	unsigned lcid(0);
 	if (colors.empty() && tid >= 0) select_texture(tid);
-	glBegin(GL_TRIANGLES);
+	vector<vert_norm_tc> verts;
 
 	for (unsigned i = 0; i < faces.size(); ++i) {
 		if (!colors.empty()) {
 			unsigned const color_id(faces[i].color_id);
 
 			if (i == 0 || color_id != lcid) {
-				glEnd();
+				draw_and_clear_verts(verts, GL_TRIANGLES);
 				select_texture(colors[color_id].tid);
-				if (!skip_color_set) set_color(colors[color_id].c);
+				if (!skip_color_set) {set_color(colors[color_id].c);}
 				set_specular(colors[color_id].spec1, colors[color_id].spec2);
-				glBegin(GL_TRIANGLES);
 				lcid = color_id;
 			}
 		}
-		faces[i].norm.do_glNormal();
 		int const max_dim(get_max_dim(faces[i].norm));
 
 		for (unsigned j = 0; j < 3; ++j) {
@@ -240,13 +238,12 @@ void shape3d::draw(bool skip_color_set) const {
 			assert(index < points.size());
 			point const p(points[index]);
 			int const d1[3] = {1,0,0}, d2[3] = {2,2,1};
-			glTexCoord2f(tex_scale*p[d1[max_dim]], tex_scale*p[d2[max_dim]]);
-			(p*scale + pos).do_glVertex();
+			verts.push_back(vert_norm_tc((p*scale + pos), faces[i].norm, tex_scale*p[d1[max_dim]], tex_scale*p[d2[max_dim]]));
 		}
 	}
-	glEnd();
+	draw_verts(verts, GL_TRIANGLES);
 	if (!skip_color_set) {disable_blend();}
-	if (tid >= 0) glDisable(GL_TEXTURE_2D);
+	if (tid >= 0) {glDisable(GL_TEXTURE_2D);}
 	if (!colors.empty()) {set_specular(0.0, 0.0);}
 }
 
