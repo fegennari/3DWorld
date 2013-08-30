@@ -5,6 +5,7 @@
 #include "3DWorld.h"
 #include "shape_line3d.h"
 #include "collision_detect.h"
+#include "draw_utils.h"
 #include <fstream>
 
 
@@ -306,13 +307,13 @@ void line3d::draw(bool draw_as_tquads) const {
 	}
 	if (draw_as_tquads) {
 		float const w(0.01*width);
-		begin_line_tquad_draw();
+		line_tquad_draw_t drawer;
 
 		for (unsigned i = 1; i < points.size(); ++i) {
-			draw_line_tquad(points[i-1], points[i], w, w, color, color,
+			drawer.add_line_tquad(points[i-1], points[i], w, w, color, color,
 				((i > 1) ? &points[i-2] : NULL), ((i+1 < points.size()) ? &points[i+1] : NULL));
 		}
-		end_line_tquad_draw();
+		drawer.draw(GL_QUADS);
 	}
 	else {
 		//glEnable(GL_BLEND);

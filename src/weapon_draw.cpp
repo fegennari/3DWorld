@@ -28,26 +28,26 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 
 
 
-void beam3d::draw() const {
+void beam3d::draw(line_tquad_draw_t &drawer) const {
 
 	if (shooter == CAMERA_ID) return; // camera (skip for now)
 	float const mag(sqrt(intensity));
 	colorRGBA c(color);
 	c.alpha *= mag;
-	draw_line_tquad(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? ALPHA0 : c));
+	drawer.add_line_tquad(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? ALPHA0 : c));
 }
 
 
 void draw_beams() {
 
 	if (beams.empty()) return;
-	begin_line_tquad_draw();
+	line_tquad_draw_t drawer;
 
 	for (unsigned i = 0; i < beams.size(); ++i) {
-		beams[i].draw();
+		beams[i].draw(drawer);
 	}
-	if (!keep_beams) beams.clear();
-	end_line_tquad_draw();
+	if (!keep_beams) {beams.clear();}
+	drawer.draw(GL_QUADS);
 }
 
 

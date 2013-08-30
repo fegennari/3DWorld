@@ -24,11 +24,11 @@ extern pt_line_drawer_no_lighting_t emissive_pld;
 // ******************* USW_RAY, and SHIP_COLL_OBJ classes *******************
 
 
-void usw_ray::draw() const { // use single sided cylinder with 1D blur rotated towards camera
+void usw_ray::draw(line_tquad_draw_t &drawer) const { // use single sided cylinder with 1D blur rotated towards camera
 
 	// camera view clip?
-	//draw_line_tquad(p1, p2, w1, w2, color1, color2, &prev, &next);
-	draw_line_as_tris(p1, p2, w1, w2, color1, color2, &prev, &next, 1);
+	//drawer.add_line_tquad(p1, p2, w1, w2, color1, color2, &prev, &next);
+	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, &prev, &next, 1);
 }
 
 

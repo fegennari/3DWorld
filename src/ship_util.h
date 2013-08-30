@@ -45,7 +45,7 @@ public:
 		assert(w1 > 0.0 && w2 > 0.0);
 	}
 	point const &get_pos() const {return p1;}
-	void draw() const;
+	void draw(line_tquad_draw_t &drawer) const;
 };
 
 

@@ -186,12 +186,6 @@ void disable_flares();
 void draw_tquad(float xsize, float ysize, float z);
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z);
 bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]);
-void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
-	point const* const prev=NULL, point const *const next=NULL);
-void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
-	point const* const prev=NULL, point const *const next=NULL, bool make_global=0);
-void begin_line_tquad_draw(bool draw_as_tris=0);
-void end_line_tquad_draw();
 void draw_simple_cube(cube_t const &c, bool texture);
 void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, bool scale_ndiv=0,
 			   float texture_scale=1.0, bool proportional_texture=0, vector3d const *const view_dir=NULL);

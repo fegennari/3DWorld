@@ -848,22 +848,19 @@ bool get_line_segment_as_quad_pts(point const &p1, point const &p2, float w1, fl
 }
 
 
-void draw_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
+void line_tquad_draw_t::add_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 	point const* const prev, point const *const next)
 {
 	point pts[4];
 	if (!get_line_segment_as_quad_pts(p1, p2, w1, w2, pts, prev, next)) return;
-	color1.do_glColor();
 	
 	for (unsigned i = 0; i < 4; ++i) {
-		if (i == 2 && color2 != color1) {color2.do_glColor();}
-		glTexCoord2f(((i == 0 || i == 3) ? 0.0 : 1.0), 0.5); // 1D blur texture
-		pts[i].do_glVertex();
+		verts.push_back(vert_tc_color(pts[i], ((i == 0 || i == 3) ? 0.0 : 1.0), 0.5, ((i&2) ? color2 : color1))); // tc for 1D blur texture
 	}
 }
 
 
-void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
+void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 	point const* const prev, point const *const next, bool make_global)
 {
 	assert(w1 > 0.0 && w2 > 0.0 && color1.is_valid() && color2.is_valid()); // validate
@@ -875,14 +872,13 @@ void draw_line_as_tris(point const &p1, point const &p2, float w1, float w2, col
 	colorRGBA const color[9] = {color2, color1, color2, color2, color1, color1, color2, color1, color2};
 
 	for (unsigned i = 0; i < 9; ++i) { // draw as 3 triangles
-		color[i].do_glColor();
-		glTexCoord2f(tc[i], 0.5); // 1D blur texture
-		(make_global ? make_pt_global(pts[ptix[i]]) : pts[ptix[i]]).do_glVertex();
+		point const pt(make_global ? make_pt_global(pts[ptix[i]]) : pts[ptix[i]]);
+		verts.push_back(vert_tc_color(pt, tc[i], 0.5, color[i])); // tc for 1D blur texture
 	}
 }
 
 
-void begin_line_tquad_draw(bool draw_as_tris) {
+void line_tquad_draw_t::draw(int prim_type) const { // supports quads and triangles
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glDisable(GL_LIGHTING);
@@ -890,13 +886,7 @@ void begin_line_tquad_draw(bool draw_as_tris) {
 	select_texture(BLUR_TEX);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
-	glBegin(draw_as_tris ? GL_TRIANGLES : GL_QUADS); // supports quads and triangles
-}
-
-
-void end_line_tquad_draw() {
-
-	glEnd();
+	draw_verts(verts, prim_type);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_TEXTURE_2D);
 	disable_blend();
