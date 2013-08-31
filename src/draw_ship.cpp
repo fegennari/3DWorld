@@ -142,20 +142,16 @@ void draw_crosshair(upos_point_type const &pos, float dist, colorRGBA const &col
 
 	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
-	GLboolean blend(glIsEnabled(GL_BLEND));
-	if (!blend) enable_blend();
+	enable_blend();
 	color.do_glColor();
 	glPushMatrix();
 	global_translate(pos);
 	rotate_towards_camera(pos);
 	double const size(0.01*dist);
-	glBegin(GL_LINE_LOOP);
-	glVertex2f( 0.0, 1.0*size); // z = 0.0
-	glVertex2f(-0.7*size, 0.0);
-	glVertex2f( 0.7*size, 0.0);
-	glEnd();
+	vert_wrap_t const verts[3] = {point(0.0, 1.0*size, 0.0), point(-0.7*size, 0.0, 0.0), point( 0.7*size, 0.0, 0.0)}; // z = 0.0
+	draw_verts(verts, 3, GL_LINE_LOOP);
 	glPopMatrix();
-	if (!blend) disable_blend();
+	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 }
@@ -418,7 +414,9 @@ void uobj_draw_data::setup_draw_ship() const {
 
 void uobj_draw_data::draw_one_triangle() const {
 
-	plus_z.do_glNormal(); // two-sided?
+	plus_z.do_glNormal(); // FIXME: two-sided?
+	//vert_wrap_t const verts[3] = {point(0.0, 1.4, 0.0), point(1.0, 0.0, 0.0), point(-1.0, 0.0, 0.0)};
+	//draw_verts(verts, 3, GL_TRIANGLES); // FIXME: VAO?
 	glBegin(GL_TRIANGLES);
 	glVertex3f( 0.0, 1.4, 0.0);
 	glVertex3f( 1.0, 0.0, 0.0);
@@ -1040,29 +1038,15 @@ void uobj_draw_data::draw_us_carrier() const {
 	glPopMatrix();
 
 	color_a.do_glColor();
-	glBegin(GL_QUADS);
-	glNormal3f( 0.9,  0,    0.45);
-	glVertex3f( 0.2, -0.09, 1.1);
-	glVertex3f( 0.4, -0.19, 0.7);
-	glVertex3f( 0.4,  0.19, 0.7);
-	glVertex3f( 0.2,  0.09, 1.1);
-	glNormal3f(-0.9,  0,    0.45);
-	glVertex3f(-0.2,  0.09, 1.1);
-	glVertex3f(-0.4,  0.19, 0.7);
-	glVertex3f(-0.4, -0.19, 0.7);
-	glVertex3f(-0.2, -0.09, 1.1);
-	glNormal3f( 0,    0.99, 0.12);
-	glVertex3f( 0.2,  0.09, 1.1);
-	glVertex3f( 0.4,  0.19, 0.7);
-	glVertex3f(-0.4,  0.19, 0.7);
-	glVertex3f(-0.2,  0.09, 1.1);
-	glNormal3f( 0,   -0.99, 0.12);
-	glVertex3f(-0.2, -0.09, 1.1);
-	glVertex3f(-0.4, -0.19, 0.7);
-	glVertex3f( 0.4, -0.19, 0.7);
-	glVertex3f( 0.2, -0.09, 1.1);
-	glEnd();
+	vector3d const n[4] = {vector3d(0.9, 0, 0.45), vector3d(-0.9, 0, 0.45), vector3d(0, 0.99, 0.12), vector3d(0, -0.99, 0.12)};
+	vert_norm const verts[16] = {
+		vert_norm(point( 0.2, -0.09, 1.1), n[0]), vert_norm(point( 0.4, -0.19, 0.7), n[0]), vert_norm(point( 0.4,  0.19, 0.7), n[0]), vert_norm(point( 0.2,  0.09, 1.1), n[0]),
+		vert_norm(point(-0.2,  0.09, 1.1), n[1]), vert_norm(point(-0.4,  0.19, 0.7), n[1]), vert_norm(point(-0.4, -0.19, 0.7), n[1]), vert_norm(point(-0.2, -0.09, 1.1), n[1]),
+		vert_norm(point( 0.2,  0.09, 1.1), n[2]), vert_norm(point( 0.4,  0.19, 0.7), n[2]), vert_norm(point(-0.4,  0.19, 0.7), n[2]), vert_norm(point(-0.2,  0.09, 1.1), n[2]),
+		vert_norm(point(-0.2, -0.09, 1.1), n[3]), vert_norm(point(-0.4, -0.19, 0.7), n[3]), vert_norm(point( 0.4, -0.19, 0.7), n[3]), vert_norm(point( 0.2, -0.09, 1.1), n[3])};
+	draw_verts(verts, 16, GL_QUADS);
 	if (t_exp > 0.0) glPopMatrix();
+
 	color_b.do_glColor();
 	set_ship_texture(SHIP_HULL_TEX);
 	draw_ehousing_pairs(1.0, 0.13, 0.14, 0.2, -1.4, 0.0, 1, point(0.7, 0.0, -1.2));
@@ -1300,29 +1284,16 @@ void uobj_draw_data::draw_bshuttle() const {
 	draw_cube(point(0.0, 0.0, -0.4), 1.3, 0.6, 1.6, 1);
 	end_texture();
 
-	glBegin(GL_QUADS);
-	glNormal3f( 0.0,   0.8, 0.6); // T
-	glVertex3f( 0.65,  0.0, 1.2);
-	glVertex3f( 0.65,  0.3, 0.4);
-	glVertex3f(-0.65,  0.3, 0.4);
-	glVertex3f(-0.65,  0.0, 1.2);
-	glNormal3f( 0.0,  -0.8, 0.6); // B
-	glVertex3f(-0.65,  0.0, 1.2);
-	glVertex3f(-0.65, -0.3, 0.4);
-	glVertex3f( 0.65, -0.3, 0.4);
-	glVertex3f( 0.65,  0.0, 1.2);
-	glEnd();
+	vector3d const n[2] = {vector3d(0.0, 0.8, 0.6), vector3d(0.0, -0.8, 0.6)};
+	vert_norm const qverts[8] = {
+		vert_norm(point( 0.65, 0.0, 1.2), n[0]), vert_norm(point( 0.65,  0.3, 0.4), n[0]), vert_norm(point(-0.65,  0.3, 0.4), n[0]), vert_norm(point(-0.65, 0.0, 1.2), n[0]), // T
+		vert_norm(point(-0.65, 0.0, 1.2), n[1]), vert_norm(point(-0.65, -0.3, 0.4), n[1]), vert_norm(point( 0.65, -0.3, 0.4), n[1]), vert_norm(point( 0.65, 0.0, 1.2), n[1])}; // B
+	draw_verts(qverts, 8, GL_QUADS);
 
-	glBegin(GL_TRIANGLES); // CCW for positive normal
-	glNormal3f(-1.0,   0,   0); // L
-	glVertex3f(-0.65,  0.3, 0.4);
-	glVertex3f(-0.65, -0.3, 0.4);
-	glVertex3f(-0.65,  0.0, 1.2);
-	glNormal3f( 1.0,   0,   0); // R
-	glVertex3f( 0.65,  0.0, 1.2);
-	glVertex3f( 0.65, -0.3, 0.4);
-	glVertex3f( 0.65,  0.3, 0.4);
-	glEnd();
+	vert_norm const tverts[8] = {
+		vert_norm(point(-0.65, 0.3, 0.4), -plus_x), vert_norm(point(-0.65, -0.3, 0.4), -plus_x), vert_norm(point(-0.65, 0.0, 1.2), -plus_x), // L
+		vert_norm(point( 0.65, 0.0, 1.2),  plus_x), vert_norm(point( 0.65, -0.3, 0.4),  plus_x), vert_norm(point( 0.65, 0.3, 0.4),  plus_x)}; // R
+	draw_verts(tverts, 6, GL_TRIANGLES);
 
 	color_b.do_glColor();
 	select_texture(BCUBE_T_TEX);
@@ -2112,18 +2083,18 @@ void uobj_draw_data::draw_headhunter() const {
 	setup_draw_ship();
 
 	if (ndiv > 3) { // draw fins
-		glBegin(GL_TRIANGLES);
+		vert_norm verts[12];
 
 		for (unsigned dim = 0; dim < 2; ++dim) { // {x,y}
 			for (unsigned dir = 0; dir < 2; ++dir) { // {-,+}
 				float const val(dir ? 1.0 : -1.0);
-				glNormal3f(val*dim, val*(1-dim), 0);
-				glVertex3f(0.05*val*(1-dim), 0.05*val*dim, -0.6);
-				glVertex3f(0.05*val*(1-dim), 0.05*val*dim, -1.6);
-				glVertex3f(0.45*val*(1-dim), 0.45*val*dim, -1.7);
+				vector3d const n(val*dim, val*(1-dim), 0);
+				verts[3*(2*dim+dir)+0] = vert_norm(point(0.05*val*(1-dim), 0.05*val*dim, -0.6), n);
+				verts[3*(2*dim+dir)+1] = vert_norm(point(0.05*val*(1-dim), 0.05*val*dim, -1.6), n);
+				verts[3*(2*dim+dir)+2] = vert_norm(point(0.45*val*(1-dim), 0.45*val*dim, -1.7), n);
 			}
 		}
-		glEnd();
+		draw_verts(verts, 12, GL_TRIANGLES);
 	}
 
 	// draw body
