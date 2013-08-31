@@ -99,14 +99,6 @@ void upsurface::pt_color::interpolate_from(pt_color const &A, pt_color const &B,
 }
 
 
-inline void upsurface::pt_color::draw(bool do_color) const {
-
-	if (do_color) glColor3ubv(c);
-	n.do_glNormal();
-	p.do_glVertex();
-}
-
-
 void upsurface::gen(float mag, float freq, unsigned ntests, float mm_scale) {
 
 	max_mag = 0.0;
@@ -358,6 +350,7 @@ inline bool back_facing_approx(point const &pt, vector3d const &norm, point cons
 // pos is all_zeros (already translated)
 void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const {
 
+	assert(cgc != NULL);
 	assert(radius0 > 0.0);
 	init_ptc_cache();
 	sd_sphere_d sd(all_zeros, radius0, ND_TEST, NULL);
@@ -367,6 +360,7 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, f
 	float const omcinv(get_one_minus_cutoff()), rscale(hmap_scale*radius0), cscale(1.0/255.0);
 	float const multval(1.0/SUBDIV_SECTS), pi_over_nd(PI/ND_TEST), delta(multval*pi_over_nd);
 	float const sin_ds(sin(2.0*delta)), cos_ds(cos(2.0*delta)), sin_dt(sin(delta)), cos_dt(cos(delta));
+	vector<vert_norm_color> verts;
 
 	for (unsigned s = 0; s < ND_TEST; ++s) {
 		unsigned const sn((s+1)%ND_TEST);
@@ -403,7 +397,7 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, f
 						float const val(get_height_at(pt, 1));
 						pt *= radius0;
 						pt += ptc.v[ss][tt].n*(rscale*(omcinv*(max(min_cutoff, val) - min_cutoff) - 0.5));
-						if (cgc) cgc->get_surface_color(ptc.v[ss][tt].c, val, (t + tt*multval)*pi_over_nd);
+						cgc->get_surface_color(ptc.v[ss][tt].c, val, (t + tt*multval)*pi_over_nd);
 						sin_t = sin_t2*cos_dt + cos_t2*sin_dt;
 						cos_t = cos_t2*cos_dt - sin_t2*sin_dt;
 					} // for tt
@@ -427,14 +421,12 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, f
 				ptc.state = 1;
 			}
 			for (unsigned ss = 1; ss < SUBDIV_SECTS+1; ++ss) { // render heightmap on higher resolution mesh
-				glBegin(GL_TRIANGLE_STRIP);
-
 				for (unsigned tt = 1; tt <= SUBDIV_SECTS+1; ++tt) {
 					for (unsigned i = 0; i < 2; ++i) {
-						ptc.v[ss + i][tt].draw(cgc != NULL); // texture?
+						ptc.v[ss + i][tt].add_pt(verts); // texture?
 					}
 				} // for tt
-				glEnd();
+				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			} // for ss
 		} // for t
 	} // for s
@@ -443,6 +435,7 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, f
 
 void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const {
 
+	assert(cgc != NULL);
 	assert(!(SUBDIV_SECTS&1)); // must be even
 	assert(radius0 > 0.0);
 	unsigned const nsubdiv(SUBDIV_SECTS >> unsigned(pdu.pos.mag() > 1.5*radius0));
@@ -450,6 +443,7 @@ void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, fl
 	float const step(1.0/(float)ND_CUBE), step_inner(step/nsubdiv);
 	float const omcinv(get_one_minus_cutoff()), rscale(hmap_scale*radius0), cscale(1.0/255.0);
 	point pt;
+	vector<vert_norm_color> verts;
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
@@ -490,7 +484,7 @@ void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, fl
 								float const val(get_height_at(pt_, 1));
 								pt_ *= radius0;
 								pt_ += ptc.v[ss][tt].n*(rscale*(omcinv*(max(min_cutoff, val) - min_cutoff) - 0.5));
-								if (cgc) cgc->get_surface_color(ptc.v[ss][tt].c, val, safe_acosf(ptc.v[ss][tt].n.z));
+								cgc->get_surface_color(ptc.v[ss][tt].c, val, safe_acosf(ptc.v[ss][tt].n.z));
 							} // for tt
 						} // for ss
 						for (unsigned ss = 1; ss <= nsubdiv+1; ++ss) { // calculate normals
@@ -512,8 +506,6 @@ void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, fl
 					unsigned const inc(1<<((s+t)%MOD_VAL)); // power of two
 
 					for (unsigned ss = 1; ss < nsubdiv+1; ss += inc) {
-						glBegin(GL_TRIANGLE_STRIP);
-
 						for (unsigned tt = 1; tt <= nsubdiv+1; tt += inc) {
 							for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
 								unsigned const ss_ix(ss + k*inc);
@@ -541,11 +533,11 @@ void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, fl
 										}
 									}
 								}
-								if (cgc == NULL) glTexCoord2f((step*s + step_inner*ss_ix), (step*t + step_inner*tt));
-								ptc_.draw(cgc != NULL);
+								//glTexCoord2f((step*s + step_inner*ss_ix), (step*t + step_inner*tt));
+								ptc_.add_pt(verts);
 							}
 						} // for tt
-						glEnd();
+						draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 					} // for ss
 				} // for t
 			} // for s
