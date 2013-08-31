@@ -595,21 +595,17 @@ void draw_water() {
 			}
 			if (nin < 4) { // not a full quad of water
 				if (last_draw) {wsd.draw_water_surface(i, j, wcolor, wsi);}
-				vector<vert_norm_color> &verts(wsd.get_verts());
-				colorRGBA prev_color(wcolor); // verts should be nonempty, so should get reset
 
-				if (last_draw || nin == 3) {
-					if (!verts.empty()) {prev_color = verts.back().get_c4();}
-					wsd.flush_triangles();
-					assert(verts.empty());
-				}
 				if (nin == 3) { // single triangle, use color from previous vertex
-					for (unsigned p = 0; p < 3; ++p) {
+					vector<vert_norm_color> &verts(wsd.get_verts());
+					colorRGBA prev_color(verts.empty() ? wcolor : verts.back().get_c4()); // verts should be nonempty, so should get reset
+
+					for (unsigned p = 0; p < 3; ++p) { // Note: if last_draw==1, degenerate triangles are generated
 						point const pt(get_xval(xin[p]), get_yval(yin[p]), (water_matrix[yin[p]][xin[p]] - SMALL_NUMBER));
 						verts.push_back(vert_norm_color(pt, wat_vert_normals[yin[p]][xin[p]], prev_color));
 					}
-					wsd.flush_triangles();
 				}
+				if (last_draw || nin == 3) {wsd.flush_triangles();}
 				last_draw = 0;
 			}
 		} // for j
