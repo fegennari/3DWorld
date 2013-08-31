@@ -709,7 +709,7 @@ void uobj_draw_data::draw_us_frigate() const {
 
 	glPushMatrix();
 	glScalef(1.6, 0.28, 1.2);
-	draw_sphere_vbo(all_zeros, 1.0, ndiv, textured);
+	draw_sphere_vbo(all_zeros, 1.0, 3*ndiv/2, textured);
 	glPopMatrix();
 	color_b.do_glColor();
 	glPushMatrix();
@@ -921,7 +921,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	glPushMatrix();
 	glTranslatef(0.0, dy, -0.2);
 	glScalef(1.1, 0.18, 1.2);
-	draw_sphere_vbo(all_zeros, 0.65, ndiv2, textured);
+	draw_sphere_vbo(all_zeros, 0.65, ndiv, textured);
 	glPopMatrix();
 	set_cloak_color(GRAY);
 
