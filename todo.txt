@@ -20,7 +20,6 @@ Use triangles instead of quads
  - Tree billboards/leaves
 Remove immediate mode calls
  - coll_obj::draw_coll_cube()
- - draw_outside_water_range()
 Remove non-shader rendering
 No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable

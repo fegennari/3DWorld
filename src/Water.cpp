@@ -112,7 +112,7 @@ void calc_water_normals();
 void compute_ripples();
 void update_valleys();
 void update_water_volumes();
-void draw_spillover(int i, int j, int si, int sj, int index, int vol_over, float blood_mix, float mud_mix);
+void draw_spillover(vector<vert_norm_color> &verts, int i, int j, int si, int sj, int index, int vol_over, float blood_mix, float mud_mix);
 int  calc_rest_pos(vector<int> &path_x, vector<int> &path_y, vector<char> &rp_set, int &x, int &y);
 void calc_water_flow();
 void init_water_springs(int nws);
@@ -217,6 +217,7 @@ class water_surface_draw {
 	bool big_water;
 	unsigned const bs, nx, ny;
 	vector<unsigned char> underwater;
+	vector<vert_norm_color> verts;
 
 public:
 	water_surface_draw() : big_water(0), bs(5), nx(BITSHIFT_CEIL(MESH_X_SIZE, bs)), ny(BITSHIFT_CEIL(MESH_Y_SIZE, bs)) {
@@ -236,6 +237,7 @@ public:
 		}
 	}
 	void set_big_water(bool bw) {big_water = bw;}
+	vector<vert_norm_color> &get_verts() {return verts;}
 
 	void blend_reflection_color(point const &v, colorRGBA &color, vector3d const &n, point const &camera) {
 
@@ -341,7 +343,7 @@ public:
 			int const ii(i+dd*dy);
 			point const v(x, y+dd*dy*DY_VAL, (dd ? zval2 : zval1));
 			vector3d const &n(wat_vert_normals[ii][j]);
-			colorRGBA color(last_row_colors[j].c);
+			colorRGBA color(last_row_colors[j].c); // note that the texture is blue, so that's why the color is more whiteish
 			float nscale(last_row_colors[j].s);
 		
 			if (last_row_colors[j].ix != ii) { // gets here about half the time
@@ -355,11 +357,13 @@ public:
 				if (using_lightmap) {get_sd_light(j, ii, get_zpos(v.z), (float *)&color);}
 				if (dd) {next_color_ix = color_scale_ix(color, nscale, ii);}
 			}
-			color.do_glColor(); // note that the texture is blue
-			(n * nscale).do_glNormal();
-			v.do_glVertex();
+			verts.push_back(vert_norm_color(v, n*nscale, color));
 		}
 		last_row_colors[j] = next_color_ix;
+	}
+
+	void flush_triangles() {
+		draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 	}
 };
 
@@ -377,13 +381,12 @@ void draw_outside_water_range(water_surface_draw &wsd, colorRGBA const &color, i
 				(wminside[i][j+dx]    == 2 && water_matrix[i][j+dx]    > mesh_height[i][j+dx]) ||
 				(wminside[i+dy][j+dx] == 2 && water_matrix[i+dy][j+dx] > mesh_height[i+dy][j+dx])))
 			{
-				if (!last_draw) {glBegin(GL_TRIANGLE_STRIP);}
 				wsd.draw_water_surface(i, j, color, 0, dx, dy);
 				last_draw = 1;
 			}
 			else if (last_draw) {
 				wsd.draw_water_surface(i, j, color, 0, dx, dy);
-				glEnd();
+				wsd.flush_triangles();
 				last_draw = 0;
 			}
 		}
@@ -512,7 +515,6 @@ void draw_water() {
 	color *= INT_WATER_ATTEN; // attenuate for interior water
 	colorRGBA wcolor(color);
 	wsd.set_big_water(0);
-	glBegin(GL_TRIANGLE_STRIP);
 	
 	// draw interior water (ponds)
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -558,19 +560,17 @@ void draw_water() {
 								(mesh_height[i][j] <= zval || (i > 0 && j > 0 && mesh_height[i-1][j-1] <= zval)))
 							{
 								if (last_water != 0) { // snow
-									glEnd();
+									wsd.flush_triangles();
 									select_texture(SNOW_TEX);
 									set_specular(0.6, 20.0);
-									glBegin(GL_TRIANGLE_STRIP);
 									last_water = 0;
 									color      = WHITE;
 								}
 							}
 							else if (last_water != 1) {
-								glEnd();
+								wsd.flush_triangles();
 								select_water_ice_texture(color);
 								color *= INT_WATER_ATTEN; // attenuate for interior water
-								glBegin(GL_TRIANGLE_STRIP);
 								last_water = 1;
 							}
 							if (wsi != last_wsi) {
@@ -593,25 +593,28 @@ void draw_water() {
 					}
 				}
 			}
-			if (nin < 4) {
-				if (last_draw) wsd.draw_water_surface(i, j, wcolor, wsi);
-				if (last_draw || nin == 3) glEnd();
+			if (nin < 4) { // not a full quad of water
+				if (last_draw) {wsd.draw_water_surface(i, j, wcolor, wsi);}
+				vector<vert_norm_color> &verts(wsd.get_verts());
+				colorRGBA prev_color(wcolor); // verts should be nonempty, so should get reset
 
-				if (nin == 3) { // single triangle, color is already set from above draw
-					glBegin(GL_TRIANGLES);
-
-					for (unsigned p = 0; p < 3; ++p) {
-						wat_vert_normals[yin[p]][xin[p]].do_glNormal();
-						glVertex3f(get_xval(xin[p]), get_yval(yin[p]), (water_matrix[yin[p]][xin[p]] - SMALL_NUMBER));
-					}
-					glEnd();
+				if (last_draw || nin == 3) {
+					if (!verts.empty()) {prev_color = verts.back().get_c4();}
+					wsd.flush_triangles();
+					assert(verts.empty());
 				}
-				if (last_draw || nin == 3) glBegin(GL_TRIANGLE_STRIP);
+				if (nin == 3) { // single triangle, use color from previous vertex
+					for (unsigned p = 0; p < 3; ++p) {
+						point const pt(get_xval(xin[p]), get_yval(yin[p]), (water_matrix[yin[p]][xin[p]] - SMALL_NUMBER));
+						verts.push_back(vert_norm_color(pt, wat_vert_normals[yin[p]][xin[p]], prev_color));
+					}
+					wsd.flush_triangles();
+				}
 				last_draw = 0;
 			}
 		} // for j
 	} // for i
-	glEnd();
+	wsd.flush_triangles();
 	disable_blend();
 	disable_point_specular();
 	set_specular(0.0, 1.0);
@@ -1087,6 +1090,8 @@ void update_valleys() {
 			}
 		}
 	}
+	vector<vert_norm_color> verts;
+
 	for (unsigned i = 0; i < valleys.size(); ++i) {
 		valley &v(valleys[i]); // pool that may be spilling (source)
 		valley::spill_func const &sf(v.sf);
@@ -1112,7 +1117,7 @@ void update_valleys() {
 			v.has_spilled = 1;
 			float const zval(max((v.zval - sf.z_over), v.min_zval)); // zval at spill point (local minima)
 			sync_water_height(i, sf.index, zval, sf.z_over);
-			draw_spillover(sf.i, sf.j, sf.si, sf.sj, sf.index, int(vol_over), v.blood_mix, v.mud_mix);
+			draw_spillover(verts, sf.i, sf.j, sf.si, sf.sj, sf.index, int(vol_over), v.blood_mix, v.mud_mix);
 			v.zval = zval;
 		}
 		else if (v.spill_index >= 0) {
@@ -1166,7 +1171,7 @@ void update_water_volumes() {
 // *** END VALLEYS/SPILLOVER ***
 
 
-int draw_spill_section(int x1, int y1, int x2, int y2, float z1, float z2, float width, int volume, int index, float blood_mix, float mud_mix) {
+int draw_spill_section(vector<vert_norm_color> &verts, int x1, int y1, int x2, int y2, float z1, float z2, float width, int volume, int index, float blood_mix, float mud_mix) {
 
 	assert(abs(x2 - x1) <= 1 && abs(y2 - y1) <= 1);
 	float const flow_height(FLOW_HEIGHT0*Z_SCENE_SIZE);
@@ -1177,10 +1182,10 @@ int draw_spill_section(int x1, int y1, int x2, int y2, float z1, float z2, float
 	if ((z1+flow_height) < water_plane_z && (z2+flow_height) < water_plane_z) return 0;
 	if (island && (z1+0.02) < ocean.z && (z2+0.02) < ocean.z) return 0;
 	vector3d const &norm(vertex_normals[y1][x1]);
-	norm.do_glNormal();
 
-	if (x1 == x2 && y1 == y2) {
-		for (unsigned i = 0; i < 2; ++i) glVertex3f(xa, ya, z1); // end at a point
+	if (x1 == x2 && y1 == y2) { // end at a point
+		colorRGBA const color(verts.empty() ? WATER_C : verts.back().get_c4()); // assert that verts is nonempty?
+		for (unsigned i = 0; i < 2; ++i) {verts.push_back(vert_norm_color(point(xa, ya, z1), norm, color));}
 		return 0;
 	}
 	float const xb(get_xval(x2)), yb(get_yval(y2));
@@ -1217,28 +1222,27 @@ int draw_spill_section(int x1, int y1, int x2, int y2, float z1, float z2, float
 			color.A = min(0.6f, max(0.2f, (0.2f + 0.2f*slope)));
 			color.R = color.G = min(0.7*color.B, max(0.3, (0.2 + 0.4*slope)));
 		}
-		if (mud_mix   > 0.01) blend_color(color, MUD_C,   color, mud_mix,   1);
-		if (blood_mix > 0.01) blend_color(color, BLOOD_C, color, blood_mix, 1);
+		if (mud_mix   > 0.01) {blend_color(color, MUD_C,   color, mud_mix,   1);}
+		if (blood_mix > 0.01) {blend_color(color, BLOOD_C, color, blood_mix, 1);}
 	}
-	color.do_glColor();
 	xa += flow_height*norm.x;
 	ya += flow_height*norm.y;
 	z1 += flow_height*norm.z;
 
 	if (x1 != x2 && y1 != y2) { // diagonal
 		assert(abs(x2 - x1) <= 1 && abs(y2 - y1) <= 1);
-		width = width/SQRT2;
+		width /= SQRT2;
 	}
 	for (unsigned i = 0; i < 2; ++i) {
-		float const xv(xa + ((y1 == y2) ? 0.0 : ((i ^ (y1 > y2)) ?   width : -width)));
-		float const yv(ya + ((x1 == x2) ? 0.0 : ((i ^ (x1 > x2)) ?  -width :  width)));
-		glVertex3f(xv, yv, z1);
+		float const xv(xa + ((y1 == y2) ? 0.0 : ((i ^ (y1 > y2)) ?  width : -width)));
+		float const yv(ya + ((x1 == x2) ? 0.0 : ((i ^ (x1 > x2)) ? -width :  width)));
+		verts.push_back(vert_norm_color(point(xv, yv, z1), norm, color));
 	}
 	return 1;
 }
 
 
-void draw_spillover(int i, int j, int si, int sj, int index, int vol_over, float blood_mix, float mud_mix) {
+void draw_spillover(vector<vert_norm_color> &verts, int i, int j, int si, int sj, int index, int vol_over, float blood_mix, float mud_mix) {
 
 	if (vol_over <= 0) return;
 	assert(!point_outside_mesh(j, i));
@@ -1253,18 +1257,16 @@ void draw_spillover(int i, int j, int si, int sj, int index, int vol_over, float
 	int const xs(nov ? -1 : valleys[index].x), ys(nov ? -1 : valleys[index].y);
 	int count(0);
 	enable_blend();
-	glBegin(GL_TRIANGLE_STRIP);
-	up_norm.do_glNormal();
 
 	if (!point_outside_mesh(sj, si)) {
-		draw_spill_section(sj, si, x1, y1, mesh_height[si][sj], z1, width, vol_over, index, blood_mix, mud_mix);
+		draw_spill_section(verts, sj, si, x1, y1, mesh_height[si][sj], z1, width, vol_over, index, blood_mix, mud_mix);
 	}
 	for (; (count < XY_SUM_SIZE) && (x1 != xs || y1 != ys) && point_interior_to_mesh(x1, y1); ++count) {
 		x2 = w_motion_matrix[y1][x1].x;
 		y2 = w_motion_matrix[y1][x1].y;
 		assert(!point_outside_mesh(x2, y2));
 		float const z2(mesh_height[y2][x2]);
-		int const draw_res(draw_spill_section(x1, y1, x2, y2, z1, z2, width, vol_over, index, blood_mix, mud_mix));
+		int const draw_res(draw_spill_section(verts, x1, y1, x2, y2, z1, z2, width, vol_over, index, blood_mix, mud_mix));
 		if (last_iteration || draw_res == 0) add_splash(x1, y1, 1.5*v_splash, 0.002*v_splash, 0); // hit fixed ocean/lake
 		if (last_iteration || draw_res != 1 || (x2 == x1 && y2 == y1)) break; // edge, disabled, or valley
 		last_iteration = (zval >= z2);
@@ -1273,7 +1275,7 @@ void draw_spillover(int i, int j, int si, int sj, int index, int vol_over, float
 		y1 = y2;
 	}
 	if (count == XY_SUM_SIZE) cout << "Error: Exceeded iteration limit in draw_spillover()." << endl;
-	glEnd();
+	draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 	disable_blend();
 }
 
