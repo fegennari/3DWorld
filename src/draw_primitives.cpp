@@ -378,7 +378,8 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
 	if (expand != 0.0) expand *= 0.25; // 1/4, for normalization
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
-	glBegin(use_quads ? GL_QUADS : GL_TRIANGLE_STRIP);
+	static vector<vert_norm> vn;
+	static vector<vert_norm_tc> vntc;
 
 	for (unsigned s = s0; s < s1; ++s) {
 		s = min(s, s1-1);
@@ -395,22 +396,31 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 				
 				if (exp != 0.0) { // average the normals
 					vector3d const quad_norm(normals[0] + normals[1] + normals[2] + normals[3]);
-					for (unsigned i = 0; i < 4; ++i) pts[i] += quad_norm*exp;
+					for (unsigned i = 0; i < 4; ++i) {pts[i] += quad_norm*exp;}
 				}
 				for (unsigned i = 0; i < 4; ++i) {
+					if (pt_shift) {pts[i] += pt_shift[ix];}
+
 					if (texture) {
-						glTexCoord2f(tscale*(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv),
-                                     tscale*(1.0f - ((i>>1) ? tn : t)*ndiv_inv));
+						float const tc[2] = {tscale*(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), tscale*(1.0f - ((i>>1) ? tn : t)*ndiv_inv)};
+						vntc.push_back(vert_norm_tc(pts[i], normals[i], tc));
 					}
-					if (pt_shift) pts[i] += pt_shift[ix];
-					normals[i].do_glNormal();
-					pts[i].do_glVertex();
+					else {
+						vn.push_back(vert_norm(pts[i], normals[i]));
+					}
 				}
 			} // for t
 		}
 		else { // use triangle strip
 			if (s != s0) { // add degenerate triangle to preserve the triangle strip (only slightly faster than using multiple triangle strips)
-				for (unsigned d = 0; d < 2; ++d) {points[s][t0].do_glVertex();}
+				for (unsigned d = 0; d < 2; ++d) {
+					if (texture) {
+						vntc.push_back(vert_norm_tc(points[s][t0], zero_vector, 0.0, 0.0));
+					}
+					else {
+						vn.push_back(vert_norm(points[s][t0], zero_vector));
+					}
+				}
 			}
 			for (unsigned t = t0; t <= t1; ++t) {
 				point    const pts[2]     = {points[s][t], points[sn][t]};
@@ -428,17 +438,22 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 						if (dist_sq > toler && (dist_sq > dmax_sq || dp > -0.3*p2p_dist(vfrom, pts[d]))) draw = 1;
 					}
 				}
-				if (draw) {
-					for (unsigned i = 0; i < 2; ++i) {
-						if (texture) glTexCoord2f(tscale*(1.0f - (i ? snt : s)*ndiv_inv), tscale*(1.0f - t*ndiv_inv));
-						normals[i].do_glNormal();
-						pts[i].do_glVertex();
+				if (!draw) {continue;}
+
+				for (unsigned i = 0; i < 2; ++i) {
+					if (texture) {
+						float const tc[2] = {tscale*(1.0f - (i ? snt : s)*ndiv_inv), tscale*(1.0f - t*ndiv_inv)};
+						vntc.push_back(vert_norm_tc(pts[i], normals[i], tc));
+					}
+					else {
+						vn.push_back(vert_norm(pts[i], normals[i]));
 					}
 				}
 			} // for t
 		}
 	} // for s
-	glEnd();
+	int const gl_type(use_quads ? GL_QUADS : GL_TRIANGLE_STRIP);
+	if (texture) {draw_and_clear_verts(vntc, gl_type);} else {draw_and_clear_verts(vn, gl_type);}
 }
 
 
