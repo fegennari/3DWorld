@@ -5,6 +5,7 @@
 #include "mesh.h"
 #include "dynamic_particle.h"
 #include "physics_objects.h"
+#include "shaders.h"
 
 
 float const TOLER_ = 1.0E-6;
@@ -125,12 +126,13 @@ void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c,
 
 void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 
+	assert(shader != NULL);
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
 	bool const back_face_cull(!is_semi_trans()); // no alpha
 	point const pos(points[0]), camera(get_camera_pos());
 	bool inside(!back_face_cull);
-	bool const textured(tid >= 0);
+	//bool const textured(tid >= 0); // Note: we assume the cube is always textured, so always setup texgen
 	float const ar(get_tex_ar(tid));
 	float const tscale[2] = {cp.tscale, ar*cp.tscale};
 
@@ -158,8 +160,9 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 	}
 	// Note: with some amount of complexity, we can group more cube faces into a single draw call to reduce driver overhead
 	//       however, we tend to be GPU/fill rate limited anyway, especially with smoke/dlights, so it makes little difference
-	glBegin(GL_QUADS);
-	//static vector<vert_norm> verts;
+	vert_norm verts[24];
+	float tex_attrs[2][4*24];
+	unsigned vix(0), tix[2] = {0,0};
 	
 	for (unsigned i = 0; i < 6; ++i) {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
@@ -174,30 +177,36 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		p[d0 ] = d[d0][0]; pts[3] = p;
 		if (!dir) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
 
-		if (textured) {
-			for (unsigned e = 0; e < 2; ++e) {
-				unsigned const tdim(e ? t1 : t0);
-				float tg[4] = {0.0};
+		for (unsigned e = 0; e < 2; ++e) {
+			unsigned const tdim(e ? t1 : t0);
+			float tg[4] = {0.0};
 
-				if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
-					tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
-					tg[3]    = (-d[tdim][0] + texture_offset[tdim])*tg[tdim];
-				}
-				else {
-					tg[tdim] = tscale[e];
-					tg[3]    = texture_offset[tdim]*tscale[e];
-				}
-				set_texgen_vec4(tg, (cp.swap_txy ^ (e != 0)), 0, shader);
+			if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
+				tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
+				tg[3]    = (-d[tdim][0] + texture_offset[tdim])*tg[tdim];
 			}
+			else {
+				tg[tdim] = tscale[e];
+				tg[3]    = texture_offset[tdim]*tscale[e];
+			}
+			bool const s_or_t(cp.swap_txy ^ (e != 0));
+			for (unsigned i = 0; i < 4; ++i) {UNROLL_4X(tex_attrs[s_or_t][tix[s_or_t]++] = tg[i_];)} // one per vertex
 		}
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);
-		normal.do_glNormal();
-		for (unsigned i = 0; i < 4; ++i) {pts[i].do_glVertex();}
-		//for (unsigned i = 0; i < 4; ++i) {verts.push_back(vert_norm(pts[i], normal));}
+		for (unsigned i = 0; i < 4; ++i) {verts[vix++] = vert_norm(pts[i], normal);}
+	} // for i
+	if (vix == 0) return; // no quads to draw
+	int const loc_ix[2] = {TEX0_S_ATTR, TEX0_T_ATTR};
+	int loc[2];
+
+	for (unsigned d = 0; d < 2; ++d) {
+		loc[d] = shader->attrib_loc_by_ix(loc_ix[d]);
+		glEnableVertexAttribArray(loc[d]);
+		glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)tex_attrs[d]);
 	}
-	glEnd();
-	//draw_and_clear_verts(verts, GL_QUADS);
+	draw_verts(verts, vix, GL_QUADS);
+	for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}
 }
 
 

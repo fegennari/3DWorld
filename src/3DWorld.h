@@ -292,7 +292,6 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	T xy_mag_sq() const {return (x*x + y*y);}
 	T xy_mag()    const {return sqrt(xy_mag_sq());}
 	bool is_nonzero() const {return (x != 0.0 || y != 0.0 || z != 0.0);}
-	void do_glVertex() const;
 	void do_glNormal() const;
 
 	bool operator<(pointT const &p) const { // needed for maps and stuff
@@ -307,10 +306,7 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 // premultiply a pointT by a scalar
 template<typename S, typename T> pointT<T> inline operator*(S const v, pointT<T> const &p) {return pointT<T>(v*p.x, v*p.y, v*p.z);}
 
-template<> inline void pointT<float >::do_glVertex() const {glVertex3fv((float *)this);}
 template<> inline void pointT<float >::do_glNormal() const {glNormal3fv((float *)this);}
-
-template<> inline void pointT<double>::do_glVertex() const {glVertex3dv((double *)this);}
 template<> inline void pointT<double>::do_glNormal() const {glNormal3dv((double *)this);}
 
 

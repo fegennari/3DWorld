@@ -26,7 +26,6 @@ class shader_t {
 	string shader_names[NUM_SHADER_TYPES];
 	int in_prim, out_prim, verts_out;
 
-	int attrib_loc_by_ix(unsigned ix) const;
 	void filename_split(string const &fname, vector<string> &fns, char sep) const;
 	bool load_shader_file(string const &fname, string &data) const;
 	unsigned get_shader(string const &name, unsigned type) const;
@@ -71,6 +70,7 @@ public:
 	void add_uniform_matrid_4x4  (char const *const name, float *m, bool transpose) const;
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
+	int attrib_loc_by_ix(unsigned ix) const;
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
 	void register_attrib_name(char const *const name, unsigned bind_ix);
 	void set_attrib_float_array(int loc, float const *const val, unsigned num) const;

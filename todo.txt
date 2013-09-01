@@ -19,7 +19,6 @@ Remove deprecated OpenGL calls:
 Use triangles instead of quads
  - Tree billboards/leaves
 Remove immediate mode calls
- - coll_obj::draw_coll_cube()
 Remove non-shader rendering
 No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
@@ -34,3 +33,4 @@ Flashlight shadows?
 Point Sprites: berries on plants?
 
 Abomination eye follows the target
+Two sided ship triangle normal
