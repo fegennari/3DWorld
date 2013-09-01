@@ -1280,15 +1280,14 @@ void uobj_draw_data::draw_bshuttle() const {
 	end_texture();
 
 	vector3d const n[2] = {vector3d(0.0, 0.8, 0.6), vector3d(0.0, -0.8, 0.6)};
-	vert_norm const qverts[8] = {
-		vert_norm(point( 0.65, 0.0, 1.2), n[0]), vert_norm(point( 0.65,  0.3, 0.4), n[0]), vert_norm(point(-0.65,  0.3, 0.4), n[0]), vert_norm(point(-0.65, 0.0, 1.2), n[0]), // T
-		vert_norm(point(-0.65, 0.0, 1.2), n[1]), vert_norm(point(-0.65, -0.3, 0.4), n[1]), vert_norm(point( 0.65, -0.3, 0.4), n[1]), vert_norm(point( 0.65, 0.0, 1.2), n[1])}; // B
-	draw_verts(qverts, 8, GL_QUADS);
-
-	vert_norm const tverts[8] = {
-		vert_norm(point(-0.65, 0.3, 0.4), -plus_x), vert_norm(point(-0.65, -0.3, 0.4), -plus_x), vert_norm(point(-0.65, 0.0, 1.2), -plus_x), // L
+	vert_norm const verts[18] = {
+		vert_norm(point( 0.65, 0.0, 1.2), n[0]), vert_norm(point( 0.65,  0.3, 0.4), n[0]), vert_norm(point(-0.65,  0.3, 0.4), n[0]), // T1
+		vert_norm(point( 0.65, 0.0, 1.2), n[0]), vert_norm(point(-0.65,  0.3, 0.4), n[0]), vert_norm(point(-0.65,  0.0, 1.2), n[0]), // T2
+		vert_norm(point(-0.65, 0.0, 1.2), n[1]), vert_norm(point(-0.65, -0.3, 0.4), n[1]), vert_norm(point( 0.65, -0.3, 0.4), n[1]), // B1
+		vert_norm(point(-0.65, 0.0, 1.2), n[1]), vert_norm(point( 0.65, -0.3, 0.4), n[1]), vert_norm(point( 0.65,  0.0, 1.2), n[1]), // B2
+		vert_norm(point(-0.65, 0.3, 0.4), -plus_x), vert_norm(point(-0.65, -0.3, 0.4), -plus_x), vert_norm(point(-0.65, 0.0, 1.2), -plus_x),  // L
 		vert_norm(point( 0.65, 0.0, 1.2),  plus_x), vert_norm(point( 0.65, -0.3, 0.4),  plus_x), vert_norm(point( 0.65, 0.3, 0.4),  plus_x)}; // R
-	draw_verts(tverts, 6, GL_TRIANGLES);
+	draw_verts(verts, 18, GL_TRIANGLES);
 
 	color_b.do_glColor();
 	select_texture(BCUBE_T_TEX);
