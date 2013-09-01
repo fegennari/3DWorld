@@ -414,14 +414,9 @@ void uobj_draw_data::setup_draw_ship() const {
 
 void uobj_draw_data::draw_one_triangle() const {
 
-	plus_z.do_glNormal(); // FIXME: two-sided?
-	//vert_wrap_t const verts[3] = {point(0.0, 1.4, 0.0), point(1.0, 0.0, 0.0), point(-1.0, 0.0, 0.0)};
-	//draw_verts(verts, 3, GL_TRIANGLES); // FIXME: VAO?
-	glBegin(GL_TRIANGLES);
-	glVertex3f( 0.0, 1.4, 0.0);
-	glVertex3f( 1.0, 0.0, 0.0);
-	glVertex3f(-1.0, 0.0, 0.0);
-	glEnd();
+	(-plus_z).do_glNormal(); // two-sided lighting
+	vert_wrap_t const verts[3] = {point(0.0, 1.4, 0.0), point(1.0, 0.0, 0.0), point(-1.0, 0.0, 0.0)};
+	draw_verts(verts, 3, GL_TRIANGLES);
 }
 
 
@@ -1770,15 +1765,16 @@ void uobj_draw_data::draw_abomination() const {
 	color_b.do_glColor();
 	assert(obj);
 	float const val(obj->get_state_val()); // 0.0 => fully closed, 1.0 => fully open
+	int const eyelid_ndiv(min(32, 2*ndiv));
 
 	if (0) {
-		draw_subdiv_sphere_section(point(0.0, 0.0, 0.5), 1.0, 2*ndiv, 0, 0.0, 1.0, 0.4*val, 1.0); // eye hole
+		draw_subdiv_sphere_section(point(0.0, 0.0, 0.5), 1.0, eyelid_ndiv, 0, 0.0, 1.0, 0.4*val, 1.0); // eye hole
 	}
 	else {
 		glPushMatrix();
 		glRotatef(-90.0, 0.0, 1.0, 0.0);
 		glRotatef(-90.0, 0.0, 0.0, 1.0);
-		draw_subdiv_sphere_section(point(0.0, 0.5, 0.0), 1.0, 2*ndiv, 0, 0.18*val, (1.0-0.18*val), 0.0, 1.0); // eye slit
+		draw_subdiv_sphere_section(point(0.0, 0.5, 0.0), 1.0, eyelid_ndiv, 0, 0.18*val, (1.0-0.18*val), 0.0, 1.0); // eye slit
 		glPopMatrix();
 	}
 	glPopMatrix(); // undo transformations

@@ -33,4 +33,3 @@ Flashlight shadows?
 Point Sprites: berries on plants?
 
 Abomination eye follows the target
-Two sided ship triangle normal
