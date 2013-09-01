@@ -14,8 +14,6 @@ bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
 
-extern bool disable_shaders;
-
 
 // *** uniform variables setup ***
 
@@ -32,7 +30,6 @@ char const *append_ix(string &s, unsigned i, bool as_array) {
 
 int shader_t::get_uniform_loc(char const *const name) const {
 
-	if (disable_shaders) return 0;
 	assert(program && name);
 	int const loc(glGetUniformLocation(program, name));
 	//cout << "name: " << name << ", loc: " << loc << endl;
@@ -75,42 +72,41 @@ void shader_t::set_uniform_matrid_4x4(int loc, float *m, bool transpose) {
 
 
 void shader_t::add_uniform_float_array(char const *const name, float const *const val, unsigned num) const {
-	if (!disable_shaders) set_uniform_float_array(get_uniform_loc(name), val, num);
+	set_uniform_float_array(get_uniform_loc(name), val, num);
 }
 
 void shader_t::add_uniform_float(char const *const name, float val) const {
-	if (!disable_shaders) set_uniform_float(get_uniform_loc(name), val);
+	set_uniform_float(get_uniform_loc(name), val);
 }
 
 void shader_t::add_uniform_int(char const *const name, int val) const {
-	if (!disable_shaders) set_uniform_int(get_uniform_loc(name), val);
+	set_uniform_int(get_uniform_loc(name), val);
 }
 
 void shader_t::add_uniform_vector2d(char const *const name, vector2d const &val) const {
-	if (!disable_shaders) set_uniform_vector2d(get_uniform_loc(name), val);
+	set_uniform_vector2d(get_uniform_loc(name), val);
 }
 
 void shader_t::add_uniform_vector3d(char const *const name, vector3d const &val) const {
-	if (!disable_shaders) set_uniform_vector3d(get_uniform_loc(name), val);
+	set_uniform_vector3d(get_uniform_loc(name), val);
 }
 
 void shader_t::add_uniform_color(char const *const name, colorRGBA const &val) const {
-	if (!disable_shaders) set_uniform_color(get_uniform_loc(name), val);
+	set_uniform_color(get_uniform_loc(name), val);
 }
 
 void shader_t::add_uniform_color(char const *const name, colorRGB  const &val) const {
-	if (!disable_shaders) set_uniform_color(get_uniform_loc(name), val);
+	set_uniform_color(get_uniform_loc(name), val);
 }
 
 void shader_t::add_uniform_matrid_4x4(char const *const name, float *m, bool transpose) const {
-	if (!disable_shaders) set_uniform_matrid_4x4(get_uniform_loc(name), m, transpose);
+	set_uniform_matrid_4x4(get_uniform_loc(name), m, transpose);
 }
 
 
 // unused, unfinished
 bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsigned size, unsigned &buffer_id) const {
 
-	if (disable_shaders) return 0;
 	assert(program && name);
 	assert(data && size);
 
@@ -172,7 +168,6 @@ int shader_t::get_attrib_loc(char const *const name, bool allow_fail) const {
 
 void shader_t::register_attrib_name(char const *const name, unsigned bind_ix) {
 
-	if (disable_shaders) return;
 	assert(bind_ix < 100); // sanity check
 	int const loc(get_attrib_loc(name));
 	if (bind_ix >= attrib_locs.size()) attrib_locs.resize(bind_ix+1);
@@ -214,15 +209,15 @@ void shader_t::set_attrib_int(int loc, int val) const {
 }
 
 void shader_t::add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const {
-	if (!disable_shaders) {set_attrib_float_array(attrib_loc_by_ix(ix), val, num);}
+	set_attrib_float_array(attrib_loc_by_ix(ix), val, num);
 }
 
 void shader_t::add_attrib_float(unsigned ix, float val) const {
-	if (!disable_shaders) {set_attrib_float(attrib_loc_by_ix(ix), val);}
+	set_attrib_float(attrib_loc_by_ix(ix), val);
 }
 
 void shader_t::add_attrib_int(unsigned ix, int val) const {
-	if (!disable_shaders) {set_attrib_int(attrib_loc_by_ix(ix), val);}
+	set_attrib_int(attrib_loc_by_ix(ix), val);
 }
 
 
@@ -477,9 +472,8 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 // See http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/glsl-core-tutorial-create-a-program/
 bool shader_t::begin_shader(bool do_enable) {
 
-	if (disable_shaders) return 0;
-	// get the program
 	//RESET_TIME;
+	// get the program
 	string pname(prog_name_suffix);
 	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {pname += shader_names[i] + ",";} // unique program identifier
 	string_prog_map::const_iterator it(loaded_programs.find(pname));

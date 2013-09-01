@@ -27,7 +27,7 @@ colorRGB const_indir_color(BLACK);
 cube_t cur_smoke_bb;
 vector<unsigned char> smoke_tex_data; // several MB
 
-extern bool disable_shaders, no_smoke_over_mesh, no_sun_lpos_update;
+extern bool no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
 extern int animate2, display_mode;
 extern float czmin0;
@@ -282,7 +282,7 @@ bool upload_smoke_indir_texture() {
 	// ok when texture z size is not a power of 2
 	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_SIZE[2]), ncomp(4);
 
-	if (disable_shaders || !lmap_manager.is_allocated() || sz == 0) {
+	if (!lmap_manager.is_allocated() || sz == 0) {
 		have_indir_smoke_tex = 0;
 		return 0;
 	}

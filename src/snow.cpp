@@ -17,7 +17,7 @@ bool has_snow(0);
 point vox_delta;
 map<int, unsigned> x_strip_map;
 
-extern bool disable_shaders, no_sun_lpos_update;
+extern bool no_sun_lpos_update;
 extern int display_mode, read_snow_file, write_snow_file;
 extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
@@ -742,23 +742,21 @@ void draw_snow() {
 	}
 	//RESET_TIME;
 	shader_t s;
+	bool const use_smap(shadow_map_enabled());
+	s.setup_enabled_lights(2, 2); // FS
+	set_dlights_booleans(s, ENABLE_SNOW_DLIGHTS, 1); // FS
+	s.check_for_fog_disabled();
+	for (unsigned d = 0; d < 2; ++d) {s.set_bool_prefix("no_normalize", !use_smap, d);} // VS/FS
+	s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
+	s.set_vert_shader("texture_gen.part+snow");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+per_pixel_lighting_textured");
+	s.begin_shader();
+	s.setup_scene_bounds();
+	setup_dlight_textures(s);
+	s.setup_fog_scale();
+	s.add_uniform_int("tex0", 0);
+	if (use_smap) set_smap_shader_for_all_lights(s);
 
-	if (!disable_shaders) {
-		bool const use_smap(shadow_map_enabled());
-		s.setup_enabled_lights(2, 2); // FS
-		set_dlights_booleans(s, ENABLE_SNOW_DLIGHTS, 1); // FS
-		s.check_for_fog_disabled();
-		for (unsigned d = 0; d < 2; ++d) {s.set_bool_prefix("no_normalize", !use_smap, d);} // VS/FS
-		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
-		s.set_vert_shader("texture_gen.part+snow");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+per_pixel_lighting_textured");
-		s.begin_shader();
-		s.setup_scene_bounds();
-		setup_dlight_textures(s);
-		s.setup_fog_scale();
-		s.add_uniform_int("tex0", 0);
-		if (use_smap) set_smap_shader_for_all_lights(s);
-	}
 	set_specular(0.5, 50.0);
 	set_color(SNOW_COLOR);
 	point const camera(get_camera_pos());

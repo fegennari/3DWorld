@@ -22,7 +22,6 @@ vector<blastr> blastrs;
 vector<unsigned> available;
 vector<explosion> explosions;
 
-extern bool disable_shaders;
 extern int iticks, game_mode, display_mode, animate2;
 
 void calc_lit_uobjects();
@@ -228,7 +227,7 @@ void draw_blasts() {
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 1);
-	select_multitex(WHITE_TEX, 1, disable_shaders);
+	select_multitex(WHITE_TEX, 1, 0);
 	vector<ix_type_pair> to_draw;
 
 	for (unsigned i = 0; i < blastrs.size(); ++i) {
@@ -251,7 +250,7 @@ void draw_blasts() {
 		if (br.type == ETYPE_ANIM_FIRE) {
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_texture(EXPLOSION_TEX, disable_shaders);
+				select_texture(EXPLOSION_TEX, 0);
 			}
 			qbd.add_animated_billboard(br.pos, get_camera_pos(), up_vector, br.cur_color, br.cur_size, br.cur_size, timescale);
 			
@@ -268,7 +267,7 @@ void draw_blasts() {
 		case ETYPE_PLASMA:
 		case ETYPE_EBURST:
 			{
-				if (begin_type) {select_texture(PLASMA_TEX, disable_shaders); glEnable(GL_CULL_FACE);}
+				if (begin_type) {select_texture(PLASMA_TEX, 0); glEnable(GL_CULL_FACE);}
 				// use distance_to_camera() for non-universe mode?
 				//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
 				br.cur_color.do_glColor();
@@ -283,7 +282,7 @@ void draw_blasts() {
 		case ETYPE_ATOMIC:
 			{
 				if (begin_type) {
-					select_texture(CLOUD_TEX, disable_shaders);
+					select_texture(CLOUD_TEX, 0);
 					//glEnable(GL_CULL_FACE);
 				}
 				s.add_uniform_float("min_alpha", 0.4*(1.0 - timescale));
@@ -307,8 +306,8 @@ void draw_blasts() {
 		case ETYPE_SIEGE:
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_multitex(((br.type == ETYPE_FUSION) ? FLARE5_TEX : BLUR_TEX), 0, disable_shaders);
-				if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1, disable_shaders);}
+				select_multitex(((br.type == ETYPE_FUSION) ? FLARE5_TEX : BLUR_TEX), 0, 0);
+				if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1, 0);}
 			}
 			if (universe) {
 				vector3d const dx(2.0*br.cur_size*cross_product(plus_z, br.dir).get_norm());
@@ -320,7 +319,7 @@ void draw_blasts() {
 			}
 			if (end_type) {
 				qbd.draw_and_clear();
-				if (br.type == ETYPE_STARB) {select_multitex(WHITE_TEX, 1, disable_shaders);} // set back to white
+				if (br.type == ETYPE_STARB) {select_multitex(WHITE_TEX, 1, 0);} // set back to white
 				glDepthMask(GL_TRUE);
 			}
 			break;

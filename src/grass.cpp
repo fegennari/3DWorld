@@ -19,7 +19,7 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
-extern bool has_dir_lights, has_snow, disable_shaders, no_sun_lpos_update;
+extern bool has_dir_lights, has_snow, no_sun_lpos_update;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
 extern unsigned create_voxel_landscape;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
@@ -655,7 +655,7 @@ public:
 		check_for_updates();
 
 		// check for dynamic light sources
-		bool const use_grass_shader(!disable_shaders && !has_snow && (display_mode & 0x0100));
+		bool const use_grass_shader(!has_snow && (display_mode & 0x0100));
 		shader_t s;
 		if (use_grass_shader) {setup_shaders(s, 1);} // enables lighting and shadows as well
 		begin_draw(0.2);

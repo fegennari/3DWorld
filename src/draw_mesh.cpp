@@ -37,7 +37,7 @@ int island(0);
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow, disable_shaders;
+extern bool using_lightmap, combined_gu, has_snow;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
@@ -385,7 +385,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 
 	shader_t s;
 
-	if (!shadow_pass && !disable_shaders) {
+	if (!shadow_pass) {
 		s.set_prefix("#define HAVE_DETAIL_TEXTURE", 0); // VS
 		s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
 		setup_mesh_and_water_shader(s);

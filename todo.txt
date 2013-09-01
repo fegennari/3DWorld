@@ -18,9 +18,7 @@ Convert remaining raw textures to jpeg
 Remove deprecated OpenGL calls:
 Use triangles instead of quads
  - Tree billboards/leaves
-Remove immediate mode calls
 Remove non-shader rendering
-No disable_shaders mode
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
 Replace GL matrix operations with something else
  - GLM

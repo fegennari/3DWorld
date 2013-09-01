@@ -51,7 +51,6 @@ vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic 
 lmap_manager_t lmap_manager;
 
 
-extern bool disable_shaders;
 extern int animate2, display_mode, frame_counter, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
@@ -993,7 +992,6 @@ void setup_2d_texture(unsigned &tid) {
 void upload_dlights_textures(cube_t const &bounds) {
 
 	//RESET_TIME;
-	if (disable_shaders) return;
 	static int supports_tex_int(2); // starts at unknown
 	static bool last_dlights_empty(0);
 	bool const cur_dlights_empty(dl_sources.empty());
