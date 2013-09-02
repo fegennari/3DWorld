@@ -1065,7 +1065,7 @@ void update_valleys() {
 		v.area        = 0.0;
 		v.spill_vol   = 0.0;
 		v.has_spilled = 0;
-		v.sf.spill    = 0;
+		v.sf.spill    = SPILL_NONE;
 		v.sf.z_over   = 0.0;
 		v.spill_index = -1;
 		v.depth       = v.zval - mesh_height[v.y][v.x];
@@ -1629,13 +1629,36 @@ void shift_water_springs(vector3d const &vd) {
 }
 
 
+float get_water_zmin(float mheight) {
+	return max(def_water_level, (mheight - (float)G_W_START_DEPTH));
+}
+
+
 // update region is inclusive: [x1,x2]x[y1,y2]
 void update_water_zvals(int x1, int y1, int x2, int y2) {
 
+	set<int> valleys_updated;
+
 	for (int i = y1; i <= y2; ++i) {
 		for (int j = x1; j <= x2; ++j) {
-			// *** WRITE *** - add new pool if there is a new local mimima?
+			if (wminside[i][j] != 1) continue; // not inside water
+			int const wsi(watershed_matrix[i][j].wsi);
+			assert(wsi >= 0);
+			if (wsi < wsections.size()) continue; // don't update water sections
+			valley &v(valleys[wsi]);
+			float const new_zmin(get_water_zmin(mesh_height[i][j]));
+			// FIXME: add new valley if there is a new local mimima?
+
+			if (new_zmin < v.min_zval) {
+				v.min_zval = new_zmin;
+				v.x        = j;
+				v.y        = i;
+			}
+			valleys_updated.insert(wsi);
 		}
+	}
+	if (valleys_updated.size() > 0) {
+		// FIXME: do some updating in this case?
 	}
 }
 
@@ -1733,19 +1756,15 @@ void valley::copy_state_from(valley const &v) {
 void valley::create(int wsi) {
 
 	assert(!point_outside_mesh(x, y));
-	zval = min_zval = max(def_water_level, (mesh_height[y][x] - (float)G_W_START_DEPTH));
-	int pindex(watershed_matrix[y][x].wsi), px(x); // initialize start to center
+	zval = min_zval = get_water_zmin(mesh_height[y][x]);
 
-	if (size_t(pindex) >= wsections.size() && pindex != wsi) {
-		cout << "Error in valley::create(): Invalid pool index: " << wsi << " vs. " << pindex << "." << endl;
+	if (size_t(watershed_matrix[y][x].wsi) >= wsections.size() && watershed_matrix[y][x].wsi != wsi) {
+		cout << "Error in valley::create(): Invalid pool index: " << wsi << " vs. " << watershed_matrix[y][x].wsi << "." << endl;
 		assert(0);
 	}
 	if (!wminside[y][x]) {
 		cout << "Error in valley::create(): Zero flag in watershed matrix." << endl;
 		assert(0);
-	}
-	for (++px; pindex == wsi && px < MESH_X_SIZE && wminside[y][px]; ++px) { // find first point on edge in +x direction (not used yet)
-		pindex = watershed_matrix[y][px].wsi;
 	}
 }
 
