@@ -266,7 +266,7 @@ public:
 	void invert_z()          const;
 	void setup_draw_ship()   const;
 
-	void draw_one_triangle() const;
+	void draw_one_triangle(vector3d const &rot_axis, float rot_deg) const;
 	void draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, colorRGBA const &ce,
 		float length, float width, float esize, float tailw) const;
 	void draw_usw_rocket()   const;

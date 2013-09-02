@@ -412,10 +412,12 @@ void uobj_draw_data::setup_draw_ship() const {
 // ******************* PROJECTILES *******************
 
 
-void uobj_draw_data::draw_one_triangle() const {
+void uobj_draw_data::draw_one_triangle(vector3d const &rot_axis, float rot_deg) const {
 
-	(-plus_z).do_glNormal(); // two-sided lighting
-	vert_wrap_t const verts[3] = {point(0.0, 1.4, 0.0), point(1.0, 0.0, 0.0), point(-1.0, 0.0, 0.0)};
+	vector3d coord_frame[3] = {plus_x, plus_y, -plus_z};
+	rotate_vector3d_multi(rot_axis, -rot_deg/TO_DEG, coord_frame, 3); // rotate_about(rot_deg, rot_axis);
+	coord_frame[2].do_glNormal(); // using two-sided lighting
+	vert_wrap_t const verts[3] = {1.4*coord_frame[1], coord_frame[0], -coord_frame[0]};
 	draw_verts(verts, 3, GL_TRIANGLES);
 }
 
@@ -544,8 +546,7 @@ void uobj_draw_data::draw_usw_dflare() const {
 void uobj_draw_data::draw_usw_chaff() const {
 
 	LT_GRAY.do_glColor();
-	rotate_about(PI*time, vector3d(1.0, 1.0, 1.0));
-	draw_one_triangle();
+	draw_one_triangle(vector3d(1.0, 1.0, 1.0), PI*time);
 }
 
 

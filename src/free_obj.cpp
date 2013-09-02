@@ -899,8 +899,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 		break;
 	case PTYPE_TRIANGLE:
 		color.do_glColor();
-		rotate_about(angle, axis); // rotate around some random axis
-		ddata.draw_one_triangle();
+		ddata.draw_one_triangle(axis, angle); // rotate around some random axis
 		break;
 	default:
 		assert(0);
