@@ -282,7 +282,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 	}
 	else { // add blood
 		add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(1.5, 0.4*double(sqrt(blood_v)))*radius);
-		modify_grass_at((pos - vector3d(0.0, 0.0, radius)), 1.8*radius, 0, 0, 0, 0, 1, 1); // check_uw?
+		modify_grass_at((pos - vector3d(0.0, 0.0, radius)), 1.8*radius, 0, 0, 0, 1, 1); // check_uw?
 	}
 	sstate.chunk_index = (sstate.chunk_index + 1) % NUM_CHUNK_BLOCKS;
 	
@@ -1268,7 +1268,6 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 				size *= close*sqrt(XY_SCENE_SIZE);
 				hv    = add_crater_to_landscape_texture(pos.x, pos.y, size);
 				update_mesh_height(xpos, ypos, int(crater_dist/HALF_DXY), damage2, 0.0, 0);
-				modify_grass_at(pos, crater_dist, 0, 0, 0, 1); // update grass height
 			}
 			if ((h_collision_matrix[ypos][xpos] - mesh_height[ypos][xpos]) < SMALL_NUMBER) {
 				create_ground_rubble(pos, shooter, hv, close, !crater);
@@ -1970,7 +1969,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	if (closest < 0) {
 		if (intersect == 1 && !coll) { // mesh intersection
 			//surface_damage[ypos][xpos] += dscale;
-			if (is_laser) modify_grass_at(res_pos, 0.25*HALF_DXY, 0, 1, 0, 0); // burn
+			if (is_laser) {modify_grass_at(res_pos, 0.25*HALF_DXY, 0, 1);} // burn
 		}
 		return res_pos;
 	}
@@ -2028,7 +2027,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 				range     = mesh_range;
 				cobj_coll = 0;
 			}
-			if (CBLADE_EXT_PT*ff > (range - 0.8f*cradius)) modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1, 0); // cut grass
+			if (CBLADE_EXT_PT*ff > (range - 0.8f*cradius)) {modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1);} // cut grass
 		}
 		if (cobj_coll) {
 			assert(unsigned(cindex) < coll_objects.size());

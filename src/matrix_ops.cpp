@@ -170,32 +170,35 @@ void compute_matrices() {
 	}
 	remove_all_coll_obj();
 
-	for (int i = 0; i < MESH_Y_SIZE; ++i) {
-		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			update_matrix_element(i, j);
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			update_matrix_element(x, y);
 		}
 	}
 	gen_mesh_bsp_tree();
 }
 
 
-void update_matrix_element(int i, int j) {
+void update_matrix_element(int xpos, int ypos) {
 
-	water_matrix[i][j]     = ((world_mode == WMODE_INF_TERRAIN) ? water_plane_z : def_water_level);
-	wat_vert_normals[i][j] = plus_z;
-	charge_dist[i][j]      = 0.4 + 0.6*rand_float();
-	calc_matrix_normal_at(mesh_height, vertex_normals, surface_normals, mesh_draw, MESH_X_SIZE, MESH_Y_SIZE, i, j);
+	water_matrix    [ypos][xpos] = ((world_mode == WMODE_INF_TERRAIN) ? water_plane_z : def_water_level);
+	wat_vert_normals[ypos][xpos] = plus_z;
+	charge_dist     [ypos][xpos] = 0.4 + 0.6*rand_float();
+	calc_matrix_normal_at(mesh_height, vertex_normals, surface_normals, mesh_draw, MESH_X_SIZE, MESH_Y_SIZE, xpos, ypos);
 }
 
 
+// mode is currently: 0=crater, 1=erosion
 void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode) {
 
+	//RESET_TIME;
 	assert(rad >= 0);
 	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad));
 	int const x2(min(MESH_X_SIZE-1, xpos+rad)), y2(min(MESH_Y_SIZE-1, ypos+rad));
 	float const zbot(island ? (ocean.z + 0.01) : (zbottom - 0.04));
+	vector<pair<int, int> > to_update; // {x, y}
 
-	for (int i = y1; i <= y2; ++i) {
+	for (int i = y1; i <= y2; ++i) { // first pass to update mesh
 		for (int j = x1; j <= x2; ++j) {
 			float const dh(sqrt(float((i - ypos)*(i - ypos) + (j - xpos)*(j - xpos))));
 			if (dh > rad)     continue;
@@ -203,54 +206,60 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 			if (mh < zbottom) continue;
 			float const mh2(max(zbot, (mh - scale*((mode == 0) ? (offset + rad - dh) : 1.0f/(offset + dh)))));
 			mesh_height[i][j] = min(mh, mh2);
-			if (h_collision_matrix[i][j] == mh) h_collision_matrix[i][j] = mesh_height[i][j]; // hcm was determined by mh
+			if (h_collision_matrix[i][j] == mh) {h_collision_matrix[i][j] = mesh_height[i][j];} // hcm was determined by mh
+			to_update.push_back(make_pair(j, i));
 		}
 	}
-	for (int i = y1; i <= y2; ++i) {
-		for (int j = x1; j <= x2; ++j) {
-			if ((sqrt(float((i - ypos)*(i - ypos) + (j - xpos)*(j - xpos)))) > rad) continue;
-			update_matrix_element(i, j); // requires mesh_height
-			update_motion_zmin_matrices(j, i); // requires mesh_height
+	for (vector<pair<int, int> >::const_iterator i = to_update.begin(); i != to_update.end(); ++i) { // second pass to update adjacent data
+		update_matrix_element(i->first, i->second); // requires mesh_height
+		update_motion_zmin_matrices(i->first, i->second); // requires mesh_height
+	}
+
+	// third pass to update grass (Note: could use a set to reduce the unnecessary edge updates)
+	for (int i = y1; i <= min(MESH_Y_SIZE-1, y2+1); ++i) { // we update one extra row/column since grass is per-mesh quad, not per-vertex
+		for (int j = x1; j <= min(MESH_X_SIZE-1, x2+1); ++j) {
+			grass_mesh_height_change(j, i);
 		}
 	}
 	update_scenery_zvals(x1, y1, x2, y2);
-	update_water_zvals(x1, y1, x2, y2);
+	update_water_zvals  (x1, y1, x2, y2);
 	mesh_invalidated = 1;
+	//PRINT_TIME("Mesh Height Update");
 }
 
 
 // not always correct if !enabled[i][j]
-vector3d get_matrix_surf_norm(float **matrix, char **enabled, int xsize, int ysize, int i, int j) {
+vector3d get_matrix_surf_norm(float **matrix, char **enabled, int xsize, int ysize, int x, int y) {
 
 	assert(matrix);
 	float nx(0.0), ny(0.0);
-	float const mhij(matrix[i][j]);
+	float const mhij(matrix[y][x]);
 	bool const test_md(enabled != NULL);
-	assert(i >= 0 && j >= 0 && i < ysize && j < xsize);
+	assert(y >= 0 && x >= 0 && y < ysize && x < xsize);
 
-	if (!test_md || enabled[i][j]) {
-		if (i < ysize-1) {
-			if (!test_md || enabled[i+1][j]) ny =  DX_VAL*(mhij - matrix[i+1][j]);
+	if (!test_md || enabled[y][x]) {
+		if (y < ysize-1) {
+			if (!test_md || enabled[y+1][x]) {ny =  DX_VAL*(mhij - matrix[y+1][x]);}
 		}
 		else {
-			if (!test_md || enabled[i-1][j]) ny = -DX_VAL*(mhij - matrix[i-1][j]);
+			if (!test_md || enabled[y-1][x]) {ny = -DX_VAL*(mhij - matrix[y-1][x]);}
 		}
-		if (j < xsize-1) {
-			if (!test_md || enabled[i][j+1]) nx =  DY_VAL*(mhij - matrix[i][j+1]);
+		if (x < xsize-1) {
+			if (!test_md || enabled[y][x+1]) {nx =  DY_VAL*(mhij - matrix[y][x+1]);}
 		}
 		else {
-			if (!test_md || enabled[i][j-1]) nx = -DY_VAL*(mhij - matrix[i][j-1]);
+			if (!test_md || enabled[y][x-1]) {nx = -DY_VAL*(mhij - matrix[y][x-1]);}
 		}
 	}
 	return vector3d(nx, ny, dxdy).get_norm();
 }
 
 
-void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize, int i, int j) {
+void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize, int xpos, int ypos) {
 
-	vector3d const norm(get_matrix_surf_norm(matrix, enabled, xsize, ysize, i, j));
-	sn[i][j] = norm;
-	vn[i][j] = (norm + sn[max(i-1, 0)][j] + sn[max(i-1, 0)][max(j-1, 0)] + sn[i][max(j-1, 0)])*0.25;
+	vector3d const norm(get_matrix_surf_norm(matrix, enabled, xsize, ysize, xpos, ypos));
+	sn[ypos][xpos] = norm;
+	vn[ypos][xpos] = (norm + sn[max(ypos-1, 0)][xpos] + sn[max(ypos-1, 0)][max(xpos-1, 0)] + sn[ypos][max(xpos-1, 0)])*0.25;
 }
 
 
@@ -260,7 +269,7 @@ void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, char **en
 
 	for (int y = 0; y < ysize; ++y) {
 		for (int x = 0; x < xsize; ++x) {
-			calc_matrix_normal_at(matrix, vn, sn, enabled, xsize, ysize, y, x);
+			calc_matrix_normal_at(matrix, vn, sn, enabled, xsize, ysize, x, y);
 		}
 	}
 }

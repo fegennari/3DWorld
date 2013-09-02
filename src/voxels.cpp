@@ -1202,7 +1202,7 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 void voxel_model_ground::maybe_create_fragments(point const &center, float radius, int shooter, unsigned num_fragments, bool directly_from_update) const {
 
 	if (num_fragments > 0 || directly_from_update) {
-		modify_grass_at(center, max(2.5*radius, vsz.mag()/sqrt(3.0)), 0, 0, 0, 0, 0, 0, 1); // remove any grass at this location
+		modify_grass_at(center, max(2.5*radius, vsz.mag()/sqrt(3.0)), 0, 0, 0, 0, 0, 1); // remove any grass at this location
 	}
 	if (num_fragments == 0) return;
 	float blend_val(fabs(eval_noise_texture_at(center)));

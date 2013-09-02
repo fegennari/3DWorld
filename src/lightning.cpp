@@ -294,7 +294,7 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 	}
 	else {
 		surface_damage[ypos][xpos] += damage;
-		modify_grass_at(pos, HALF_DXY, 0, 1, 0, 0); // burn
+		modify_grass_at(pos, HALF_DXY, 0, 1); // burn
 	}
 	if (ypos > 0)             surface_damage[ypos-1][xpos  ] += damage;
 	if (xpos > 0)             surface_damage[ypos  ][xpos-1] += damage;

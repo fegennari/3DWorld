@@ -151,7 +151,7 @@ void blastr::process(int &ltime) const { // land mode
 			}
 		}
 		//if (time == st_time) // only update grass on the first blast?
-		modify_grass_at(pos, 0.5*cur_size, 1, 1, 0, 0); // Note: calling this every time looks better, but is slower
+		modify_grass_at(pos, 0.5*cur_size, 1, 1); // crush and burn grass Note: calling this every time looks better, but is slower
 	}
 	if (gm_blast == 0 || time < ltime) { // used for object damage
 		ltime         = time;

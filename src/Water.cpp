@@ -471,7 +471,7 @@ void draw_water() {
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
 				if (wminside[i][j] == 1 && (rand()&255) == 0 && get_water_enabled(j, i) && !is_mesh_disabled(j, i)) {
-					modify_grass_at(get_mesh_xyz_pos(j, i), HALF_DXY, 0, 0, 0, 0, 1);
+					modify_grass_at(get_mesh_xyz_pos(j, i), HALF_DXY, 0, 0, 0, 1); // check underwater
 				}
 			}
 		}
@@ -652,7 +652,7 @@ void calc_water_normals() {
 				wsn1[j] = wat_vert_normals[i][j] = plus_z;
 			}
 			else if (wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) {
-				vector3d nv(get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, i, j));
+				vector3d nv(get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, j, i));
 				wsn1[j] = nv;
 				
 				if (i > 0) {

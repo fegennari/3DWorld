@@ -251,6 +251,12 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	bool hcm_chk(int x, int y) const {
 		return (!point_outside_mesh(x, y) && (mesh_height[y][x] + SMALL_NUMBER < h_collision_matrix[y][x]));
 	}
+	void check_and_update_grass(unsigned ix, unsigned min_up, unsigned max_up) {
+		if (min_up > max_up) return; // nothing updated
+		modified[ix] |= MOD_GEOM; // usually few duplicates each frame, except for cluster grenade explosions
+		if (vbo > 0) {upload_data_to_vbo(min_up, max_up+1, 0);}
+		//data_valid = 0;
+	}
 
 public:
 	grass_manager_dynamic_t() : shadows_valid(0), has_voxel_grass(0), last_light(-1), last_lpos(all_zeros) {}
@@ -503,9 +509,29 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw, bool add_blood, bool remove) {
+	void mesh_height_change(int x, int y) {
+		assert(!point_outside_mesh(x, y));
+		unsigned start, end;
+		unsigned const ix(get_start_and_end(x, y, start, end));
+		unsigned min_up(end+1), max_up(start);
+
+		for (unsigned i = start; i < end; ++i) { // will do nothing if there's no grass here
+			grass_t &g(grass[i]);
+			if (!g.on_mesh || g.dir == zero_vector) continue; // not on mesh, or already "removed"
+			float const mh(interpolate_mesh_zval(g.p.x, g.p.y, 0.0, 0, 1));
+
+			if (fabs(g.p.z - mh) > 0.01*grass_width) {
+				g.p.z  = mh;
+				min_up = min(min_up, i);
+				max_up = max(max_up, i);
+			}
+		} // for i
+		check_and_update_grass(ix, min_up, max_up);
+	}
+
+	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_blood, bool remove) {
 		if (burn && is_underwater(pos)) burn = 0;
-		if (!burn && !crush && !cut && !update_mh && !check_uw && !add_blood && !remove) return; // nothing left to do
+		if (!burn && !crush && !cut && !check_uw && !add_blood && !remove) return; // nothing left to do
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
@@ -517,10 +543,9 @@ public:
 				bool const maybe_underwater((burn || check_uw) && has_water(x, y) && mesh_height[y][x] <= water_matrix[y][x]);
 				unsigned start, end;
 				unsigned const ix(get_start_and_end(x, y, start, end));
-				if (start == end) continue; // no grass at this location
-				unsigned min_up(end), max_up(start);
+				unsigned min_up(end+1), max_up(start);
 
-				for (unsigned i = start; i < end; ++i) {
+				for (unsigned i = start; i < end; ++i) { // will do nothing if there's no grass here
 					grass_t &g(grass[i]);
 					if (g.dir == zero_vector) continue; // already "removed"
 					float const dsq(p2p_dist_xy_sq(pos, g.p));
@@ -529,14 +554,6 @@ public:
 					bool const underwater(maybe_underwater && g.on_mesh);
 					bool updated(0);
 
-					if (update_mh && g.on_mesh) {
-						float const mh(interpolate_mesh_zval(g.p.x, g.p.y, 0.0, 0, 1));
-
-						if (fabs(g.p.z - mh) > 0.01*grass_width) {
-							g.p.z   = mh;
-							updated = 1;
-						}
-					}
 					if (cut) {
 						float const length(g.dir.mag());
 
@@ -586,10 +603,7 @@ public:
 						max_up = max(max_up, i);
 					}
 				} // for i
-				if (min_up > max_up) continue; // nothing updated
-				modified[ix] |= MOD_GEOM; // usually few duplicates each frame, except for cluster grenade explosions
-				if (vbo > 0) upload_data_to_vbo(min_up, max_up+1, 0);
-				//data_valid = 0;
+				check_and_update_grass(ix, min_up, max_up);
 			} // for x
 		} // for y
 	}
@@ -777,11 +791,15 @@ void update_grass_vbos() {
 }
 
 void draw_grass() {
-	if (!no_grass() && (display_mode & 0x02)) grass_manager.draw();
+	if (!no_grass() && (display_mode & 0x02)) {grass_manager.draw();}
 }
 
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool update_mh, bool check_uw, bool add_blood, bool remove) {
-	if (!no_grass()) grass_manager.modify_grass(pos, radius, crush, burn, cut, update_mh, check_uw, add_blood, remove);
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_blood, bool remove) {
+	if (!no_grass()) {grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_blood, remove);}
+}
+
+void grass_mesh_height_change(int xpos, int ypos) {
+	if (!no_grass()) {grass_manager.mesh_height_change(xpos, ypos);}
 }
 
 bool place_obj_on_grass(point &pos, float radius) {

@@ -790,7 +790,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (iter == 0) {surf_collide_obj();} // only supports blood and chunks for now
 			
 			if (object_bounce(0, cnorm, 0.0, 0.0, radius)) {
-				if (radius >= LARGE_OBJ_RAD) modify_grass_at(pos, 2.0*radius, 1, 0, 0, 0); // crush grass a lot
+				if (radius >= LARGE_OBJ_RAD) {modify_grass_at(pos, 2.0*radius, 1);} // crush grass a lot
 				status = 1;
 				return; // objects bounce on mesh but not on collision objects
 			}
@@ -832,7 +832,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			status = 3;
 			if (radius >= LARGE_OBJ_RAD) check_vert_collision(obj_index, 1, iter); // adds instability though
 			assert(tstep > 0.0);
-			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) modify_grass_at(pos, radius, 1, 0, 0, 0); // crush grass
+			if (radius >= LARGE_OBJ_RAD && velocity != zero_vector) {modify_grass_at(pos, radius, 1);} // crush grass
 		}
 		else if (val == 1) { // stopped
 			if (otype.flags & IS_PRECIP) {
@@ -1335,7 +1335,7 @@ void particle_cloud::apply_physics(unsigned i) {
 	if (darkness < 0.0001) darkness = 0.0;
 	
 	if (damage > 0.0) {
-		if (is_fire()) modify_grass_at(pos, radius, 0, 1, 0, 0, 0);
+		if (is_fire()) {modify_grass_at(pos, radius, 0, 1);} // burn grass
 		do_area_effect_damage(pos, radius, damage*rscale, i, source, damage_type);
 	}
 	if (is_fire()) {

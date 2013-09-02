@@ -193,13 +193,13 @@ inline void set_zmax_est(float zval) {
 }
 
 
-void update_mesh_height() {
+void update_disabled_mesh_height() {
 
 	if (disabled_mesh_z == FAR_CLIP || mesh_draw == NULL) return;
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			if (is_mesh_disabled(j, i)) mesh_height[i][j] = disabled_mesh_z;
+			if (is_mesh_disabled(j, i)) {mesh_height[i][j] = disabled_mesh_z;}
 		}
 	}
 }
@@ -432,8 +432,8 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 		}
 		//matrix_delete_2d(read_mh);
 	} // end read
-	update_mesh_height();
-	if (surface_type != 5) calc_zminmax();
+	update_disabled_mesh_height();
+	if (surface_type != 5) {calc_zminmax();}
 
 	if (make_island) {
 		calc_zminmax();
@@ -822,7 +822,7 @@ bool read_mesh(const char *filename, float zmm) {
 		}
 	}
 	fclose(fp);
-	update_mesh_height();
+	update_disabled_mesh_height();
 	calc_zminmax();
 	set_zmax_est((zmm != 0.0) ? zmm : max(-zmin, zmax));
 	set_zvals();
