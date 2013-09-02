@@ -1752,20 +1752,25 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 
 void uobj_draw_data::draw_abomination() const {
 
-	unsigned const ndiv32(3*ndiv/2);
+	assert(obj);
+	float const val(obj->get_state_val()); // 0.0 => fully closed, 1.0 => fully open
+	unsigned const ndiv32(3*ndiv/2), eyelid_ndiv(min(32, 2*ndiv));
 	setup_draw_ship();
 	if (specular_en) set_specular(0.8, 80.0);
 	glTranslatef(0.0, 0.0, 2.0);
 
-	WHITE.do_glColor();
-	draw_sphere_vbo(point(0.0, 0.0, 0.45), 0.8, ndiv, 0); // eyeball
-	color_a.do_glColor();
-	draw_sphere_vbo(point(0.0, 0.0, 0.95), 0.4, get_ndiv(3*ndiv/4), 0, 1); // pupil, make move to follow the target
-	
+	if (val > 0.0) {
+		WHITE.do_glColor();
+		draw_sphere_vbo(point(0.0, 0.0, 0.45), 0.8, ndiv, 0); // eyeball
+
+		// rotate pupil to face the target when the eye is open and the target is in front
+		// Note: not quite correct, since direction is measured from abomination center, not eyeball
+		color_a.do_glColor();
+		vector3d const tdir_inv_z(-tdir.x, tdir.y, -tdir.z); // invert_z() inverts x and z
+		vector3d const pupil_dir((dot_product(tdir_inv_z, plus_z) > 0.2) ? tdir_inv_z : plus_z);
+		draw_sphere_vbo((point(0.0, 0.0, 0.45) + 0.5*pupil_dir), 0.4, get_ndiv(3*ndiv/4), 0, 0); // pupil
+	}
 	color_b.do_glColor();
-	assert(obj);
-	float const val(obj->get_state_val()); // 0.0 => fully closed, 1.0 => fully open
-	int const eyelid_ndiv(min(32, 2*ndiv));
 
 	if (0) {
 		draw_subdiv_sphere_section(point(0.0, 0.0, 0.5), 1.0, eyelid_ndiv, 0, 0.0, 1.0, 0.4*val, 1.0); // eye hole

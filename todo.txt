@@ -29,5 +29,3 @@ Mesh height high frequency noise
 Texture randomization
 Flashlight shadows?
 Point Sprites: berries on plants?
-
-Abomination eye follows the target
