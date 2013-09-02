@@ -680,11 +680,11 @@ void s_plant::add_cobjs() {
 	cpos.z  += height;
 	cpos2.z += 3.0*height/(36.0*height + 4.0);
 	bpos.z  -= 0.1*height;
-	coll_id  = add_coll_cylinder(bpos,  cpos, radius, 0.0,    cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX        )); // trunk
-	coll_id2 = add_coll_cylinder(cpos2, cpos, r2,     radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid)); // leaves
+	coll_id  = add_coll_cylinder(bpos, cpos, radius, 0.0, cobj_params(0.4, pltype[type].stemc, 0, 0, NULL, 0, WOOD_TEX)); // trunk
+	if (!no_leaves) {coll_id2 = add_coll_cylinder(cpos2, cpos, r2, radius, cobj_params(0.4, pltype[type].leafc, 0, 0, NULL, 0, pltype[type].tid));} // leaves
 }
 
-bool s_plant::check_sphere_coll(point &center, float sphere_radius) const {
+bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // used in tiled terrain mode, ignores no_leaves
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
@@ -711,6 +711,20 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 		}
 	}
 	vbo_mgr_ix = vbo_manager.add_points_with_offset(points, pltype[type].leafc);
+	no_leaves  = 0;
+}
+
+bool s_plant::update_zvals(int x1, int y1, int x2, int y2) {
+
+	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
+	
+	if (vbo_mgr_ix >= 0) { // update vbo points by (pos.z - orig_pz)
+		// Note: we can't easily or efficiently update a range of vbo data, since we would need to regenerate all the points
+		// and re-upload each segment that changed independently, so instead we just remove the leaves;
+		// this update can currently only come from create_explosion() => update_mesh_height() - removing the leaves should make sense
+		no_leaves = 1;
+	}
+	return 1;
 }
 
 bool s_plant::is_shadowed() const {
@@ -746,6 +760,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
 
+	if (no_leaves) return;
 	point const pos2(pos + xlate);
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
