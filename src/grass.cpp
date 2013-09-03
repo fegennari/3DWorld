@@ -366,13 +366,13 @@ public:
 		PRINT_TIME("Grass Generation");
 	}
 
-	unsigned char get_shadow_bits(int cid) const {
+	unsigned char get_shadow_bits(int cid) const { // unused
 		if (cid < 0) return MESH_SHADOW;
 		assert((unsigned)cid < coll_objects.size());
 		return ((coll_objects[cid].status == COLL_DYNAMIC) ? DYNAMIC_SHADOW : OBJECT_SHADOW);
 	}
 
-	unsigned char is_pt_shadowed(point const &pos, bool skip_dynamic) {
+	bool is_pt_shadowed(point const &pos, bool skip_dynamic) {
 		int const light(get_light());
 
 		// determine if grass can be shadowed based on mesh shadow
@@ -391,10 +391,10 @@ public:
 		if (last_cobj >= 0) { // check to see if last cobj still intersects
 			assert((unsigned)last_cobj < coll_objects.size());
 			point lpos;
-			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return get_shadow_bits(last_cobj);
+			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return 1;
 		}
 		if (is_visible_to_light_cobj(pos, light, 0.0, -1, skip_dynamic, &last_cobj)) return 0;
-		return get_shadow_bits(last_cobj);
+		return 1;
 	}
 
 	void find_shadows() {
