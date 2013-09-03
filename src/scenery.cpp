@@ -688,14 +688,12 @@ bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // u
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.1*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
-void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
+void s_plant::create_leaf_points(vector<vert_norm> &points) const {
 
 	// Note: could scale leaves for different plant types differently in x vs. y to allow for non-square textures (tighter bounds = lower fillrate)
-	if (vbo_mgr_ix >= 0) return; // already generated
 	float const wscale(250.0*radius*tree_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
 	unsigned const nlevels(unsigned(36.0*height*tree_scale)), nrings(3);
 	float rdeg(30.0);
-	vector<vert_norm> &points(vbo_manager.temp_points);
 	points.resize(4*nlevels*nrings);
 
 	for (unsigned j = 0, ix = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
@@ -710,19 +708,32 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 			add_rotated_quad_pts(&points.front(), ix, theta, rdeg/45.0, z, pos, scale);
 		}
 	}
-	vbo_mgr_ix = vbo_manager.add_points_with_offset(points, pltype[type].leafc);
+}
+
+void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
+
+	if (vbo_mgr_ix >= 0) return; // already generated
+	create_leaf_points(vbo_manager.temp_points);
+	vbo_mgr_ix = vbo_manager.add_points_with_offset(vbo_manager.temp_points, pltype[type].leafc);
 	no_leaves  = 0;
 }
 
-bool s_plant::update_zvals(int x1, int y1, int x2, int y2) {
+// to be called when the plant is translated or zval changes
+void s_plant::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager) {
+
+	assert(vbo_mgr_ix >= 0); // too strong? just return?
+	create_leaf_points(vbo_manager.temp_points);
+	vbo_manager.add_points(vbo_manager.temp_points, pltype[type].leafc);
+	vbo_manager.update_range(vbo_manager.temp_points, pltype[type].leafc, vbo_mgr_ix, vbo_mgr_ix+1);
+}
+
+bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
 
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	
-	if (vbo_mgr_ix >= 0) { // update vbo points by (pos.z - orig_pz)
-		// Note: we can't easily or efficiently update a range of vbo data, since we would need to regenerate all the points
-		// and re-upload each segment that changed independently, so instead we just remove the leaves;
-		// this update can currently only come from create_explosion() => update_mesh_height() - removing the leaves should make sense
-		no_leaves = 1;
+	if (vbo_mgr_ix >= 0) { // leaf pos changed - VBO data needs to be updated
+		//disable_leaves(); // remove the leaves (simpler and more efficient)
+		update_points_vbo(vbo_manager); // regenerate leaf points and re-upload VBO sub-data (slower)
 	}
 	return 1;
 }
@@ -906,7 +917,13 @@ void scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficien
 	update_scenery_zvals_vector(rocks,         x1, y1, x2, y2);
 	update_scenery_zvals_vector(logs,          x1, y1, x2, y2);
 	update_scenery_zvals_vector(stumps,        x1, y1, x2, y2);
-	update_scenery_zvals_vector(plants,        x1, y1, x2, y2);
+
+	for (unsigned i = 0; i < plants.size(); ++i) { // zval has change, remove and re-add cobjs
+		if (plants[i].update_zvals(x1, y1, x2, y2, plant_vbo_manager)) { // different signature (takes plant_vbo_manager)
+			plants[i].remove_cobjs();
+			plants[i].add_cobjs();
+		}
+	}
 }
 
 void scenery_group::do_rock_damage(point const &pos, float radius, float damage) {

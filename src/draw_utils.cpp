@@ -360,22 +360,22 @@ template class indexed_mesh_draw<vert_wrap_t>;
 
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
+void vbo_block_manager_t<vert_type_t>::add_points_int(vector<vert_type_t> &dest, vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
 
 	assert(!p.empty());
 	color_wrapper cw;
 	cw.set_c4(color);
 		
 	for (vector<vert_type_t::non_color_class>::const_iterator i = p.begin(); i != p.end(); ++i) {
-		pts.push_back(vert_type_t(*i, cw));
+		dest.push_back(vert_type_t(*i, cw));
 	}
 }
 
 template<>
-void vbo_block_manager_t<vert_norm_tc>::add_points(vector<vert_norm_tc> const &p, colorRGBA const &color) { // color is ignored
+void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &dest, vector<vert_norm_tc> const &p, colorRGBA const &color) { // color is ignored
 
 	assert(!p.empty());
-	copy(p.begin(), p.end(), back_inserter(pts));
+	copy(p.begin(), p.end(), back_inserter(dest));
 }
 
 template< typename vert_type_t >
@@ -404,6 +404,21 @@ bool vbo_block_manager_t<vert_type_t>::upload() {
 	if (offsets.back() != pts.size()) {offsets.push_back(pts.size());} // add terminator
 	create_vbo_and_upload(vbo, pts, 0, 1);
 	return 1;
+}
+
+template< typename vert_type_t >
+void vbo_block_manager_t<vert_type_t>::update_range(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color, unsigned six, unsigned eix) {
+
+	if (!vbo) return; // vbo not uploaded (assertion?)
+	assert(six < eix && eix < offsets.size());
+	unsigned const start(offsets[six]), update_size(offsets[eix] - start);
+	assert(p.size() == update_size);
+	vector<vert_type_t> update_verts;
+	add_points_int(update_verts, p, color);
+	bind_vbo(vbo);
+	upload_vbo_sub_data(&update_verts.front(), start*sizeof(vert_type_t), update_size*sizeof(vert_type_t));
+	bind_vbo(0);
+	pts.clear(); // or let the caller clear?
 }
 
 template< typename vert_type_t >

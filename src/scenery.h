@@ -125,15 +125,19 @@ class s_plant : public scenery_obj { // size = 40
 	int coll_id2, vbo_mgr_ix;
 	float height;
 
+	void create_leaf_points(vector<vert_norm> &points) const;
+
 public:
 	s_plant() : no_leaves(0), coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
+	void disable_leaves() {no_leaves = 1;}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
 	int create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager);
 	void create2(point const &pos_, float height_, float radius_, int type_, int calc_z, vbo_vnc_block_manager_t &vbo_manager);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void gen_points(vbo_vnc_block_manager_t &vbo_manager);
-	bool update_zvals(int x1, int y1, int x2, int y2);
+	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager);
+	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
 	void draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const;
 	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const;

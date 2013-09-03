@@ -142,6 +142,7 @@ template< typename vert_type_t > class vbo_block_manager_t {
 	unsigned vbo;
 
 	bool has_data() const {return (!pts.empty() || offsets.size() > 1);}
+	void add_points_int(vector<vert_type_t> &dest, vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color);
 
 public:
 	vector<vert_norm> temp_points;
@@ -151,12 +152,13 @@ public:
 	//~vbo_block_manager_t() {clear_vbo();}
 	bool is_uploaded() const {return (vbo != 0);}
 	void reserve_pts(unsigned num) {assert(pts.empty()); pts.reserve(num);}
-	void add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color);
+	void add_points(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {add_points_int(pts, p, color);}
 	unsigned add_points_with_offset(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color);
 	void render_range(int gl_type, unsigned six, unsigned eix) const;
 	void render_all(int gl_type) const {if (has_data()) {render_range(gl_type, 0, offsets.size()-1);}}
 	void draw_no_vbos(int gl_type) const {draw_verts(pts, gl_type);} // unused
 	bool upload();
+	void update_range(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color, unsigned six, unsigned eix);
 	void begin_render(bool color_mat) const;
 	void end_render() const;
 	void clear_points() {pts.swap(vector<vert_type_t>());}
