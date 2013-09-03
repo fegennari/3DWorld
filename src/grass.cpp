@@ -509,11 +509,12 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void mesh_height_change(int x, int y) {
+	void mesh_height_change(int x, int y, bool recalc_shadows) {
 		assert(!point_outside_mesh(x, y));
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
 		unsigned min_up(end+1), max_up(start);
+		if (shadow_map_enabled()) {recalc_shadows = 0;}
 
 		for (unsigned i = start; i < end; ++i) { // will do nothing if there's no grass here
 			grass_t &g(grass[i]);
@@ -524,10 +525,9 @@ public:
 				g.p.z  = mh;
 				min_up = min(min_up, i);
 				max_up = max(max_up, i);
-				// not entirely correct, since the cobj tree and mesh shadow data won't necessarily have been updated when this is called
-				// it may be more correct to defer this processing, or recalculate all grass lighting,
-				// but that's both complex and very expensive - so we disable it for now
-				//if (!shadow_map_enabled()) {g.shadowed = is_pt_shadowed((g.p + g.dir*0.5), 1);} 
+				// not entirely correct, since the mesh shadow data won't necessarily have been updated when this is called
+				// it may be more correct to defer this processing, or recalculate all grass lighting, but that's both complex and very expensive
+				if (recalc_shadows) {g.shadowed = is_pt_shadowed((g.p + g.dir*0.5), 1);} 
 			}
 		} // for i
 		check_and_update_grass(ix, min_up, max_up);
@@ -802,8 +802,8 @@ void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool
 	if (!no_grass()) {grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_blood, remove);}
 }
 
-void grass_mesh_height_change(int xpos, int ypos) {
-	if (!no_grass()) {grass_manager.mesh_height_change(xpos, ypos);}
+void grass_mesh_height_change(int xpos, int ypos, bool recalc_shadows) {
+	if (!no_grass()) {grass_manager.mesh_height_change(xpos, ypos, recalc_shadows);}
 }
 
 bool place_obj_on_grass(point &pos, float radius) {

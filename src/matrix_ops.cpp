@@ -221,11 +221,13 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 		update_motion_zmin_matrices(i->first, i->second); // requires mesh_height
 	}
 	update_scenery_zvals(x1, y1, x2, y2, rebuild_cobj_tree);
+	//if (rebuild_cobj_tree) {calc_visibility(SUN_SHADOW | MOON_SHADOW);} // too slow
 
 	// third pass to update grass
 	for (set<pair<int, int> >::const_iterator i = grass_update.begin(); i != grass_update.end(); ++i) {
-		grass_mesh_height_change(i->first, i->second);
+		grass_mesh_height_change(i->first, i->second, (rebuild_cobj_tree && 0));
 	}
+	// update waypoints?
 	mesh_invalidated = 1;
 	//PRINT_TIME("Mesh Height Update");
 }

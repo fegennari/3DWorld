@@ -586,7 +586,7 @@ void gen_grass(bool full_regen);
 void update_grass_vbos();
 void draw_grass();
 void modify_grass_at(point const &pos, float radius, bool crush=0, bool burn=0, bool cut=0, bool check_uw=0, bool add_blood=0, bool remove=0);
-void grass_mesh_height_change(int xpos, int ypos);
+void grass_mesh_height_change(int xpos, int ypos, bool recalc_shadows);
 bool place_obj_on_grass(point &pos, float radius);
 float get_grass_density(point const &pos);
 
