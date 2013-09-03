@@ -50,6 +50,8 @@ public:
 	void create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const;
+	void update_points_vbo(vbo_vnt_block_manager_t &vbo_manager);
+	void update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager);
 	void destroy();
 };
 
@@ -137,7 +139,7 @@ public:
 	bool check_sphere_coll(point &center, float sphere_radius) const;
 	void gen_points(vbo_vnc_block_manager_t &vbo_manager);
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager);
-	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager);
+	void update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
 	void draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const;
 	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const;

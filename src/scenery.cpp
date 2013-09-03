@@ -335,6 +335,15 @@ void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const { // Note
 	bind_vbo(0);
 }
 
+
+bool rock_shape3d::update_zvals(int x1, int y1, int x2, int y2) {
+
+	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
+	clear_vbo(); // clear and recreate points if pos changes
+	return 1;
+}
+
+
 void rock_shape3d::clear_vbo() {
 	delete_and_zero_vbo(vbo);
 }
@@ -429,6 +438,22 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, f
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
 	glPopMatrix();
+}
+
+void surface_rock::update_points_vbo(vbo_vnt_block_manager_t &vbo_manager) {
+
+	assert(vbo_mgr_ix >= 0);
+	vector<vert_norm_tc> points;
+	surface->sd.get_quad_points(points);
+	vbo_manager.update_range(points, WHITE, vbo_mgr_ix, vbo_mgr_ix+1); // color is unused
+}
+
+void surface_rock::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
+
+	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return;
+	if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);}
+	remove_cobjs();
+	add_cobjs();
 }
 
 void surface_rock::destroy() {
@@ -721,21 +746,21 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 // to be called when the plant is translated or zval changes
 void s_plant::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager) {
 
-	assert(vbo_mgr_ix >= 0); // too strong? just return?
+	assert(vbo_mgr_ix >= 0);
 	create_leaf_points(vbo_manager.temp_points);
-	vbo_manager.add_points(vbo_manager.temp_points, pltype[type].leafc);
 	vbo_manager.update_range(vbo_manager.temp_points, pltype[type].leafc, vbo_mgr_ix, vbo_mgr_ix+1);
 }
 
-bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
+void s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
 
-	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
+	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return;
 	
 	if (vbo_mgr_ix >= 0) { // leaf pos changed - VBO data needs to be updated
 		//disable_leaves(); // remove the leaves (simpler and more efficient)
 		update_points_vbo(vbo_manager); // regenerate leaf points and re-upload VBO sub-data (slower)
 	}
-	return 1;
+	remove_cobjs();
+	add_cobjs();
 }
 
 bool s_plant::is_shadowed() const {
@@ -911,18 +936,17 @@ void scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficien
 
 	assert(x1 <= x2 && y1 <= y2);
 	// test if there are any cobjs within this region?
-	update_scenery_zvals_vector(rock_shapes,   x1, y1, x2, y2);
-	update_scenery_zvals_vector(surface_rocks, x1, y1, x2, y2);
-	update_scenery_zvals_vector(voxel_rocks,   x1, y1, x2, y2);
-	update_scenery_zvals_vector(rocks,         x1, y1, x2, y2);
-	update_scenery_zvals_vector(logs,          x1, y1, x2, y2);
-	update_scenery_zvals_vector(stumps,        x1, y1, x2, y2);
+	update_scenery_zvals_vector(rock_shapes, x1, y1, x2, y2);
+	update_scenery_zvals_vector(voxel_rocks, x1, y1, x2, y2);
+	update_scenery_zvals_vector(rocks,       x1, y1, x2, y2);
+	update_scenery_zvals_vector(logs,        x1, y1, x2, y2);
+	update_scenery_zvals_vector(stumps,      x1, y1, x2, y2);
 
 	for (unsigned i = 0; i < plants.size(); ++i) { // zval has change, remove and re-add cobjs
-		if (plants[i].update_zvals(x1, y1, x2, y2, plant_vbo_manager)) { // different signature (takes plant_vbo_manager)
-			plants[i].remove_cobjs();
-			plants[i].add_cobjs();
-		}
+		plants[i].update_zvals(x1, y1, x2, y2, plant_vbo_manager); // different signature (takes plant_vbo_manager)
+	}
+	for (unsigned i = 0; i < surface_rocks.size(); ++i) { // zval has change, remove and re-add cobjs
+		surface_rocks[i].update_zvals(x1, y1, x2, y2, rock_vbo_manager); // different signature (takes rock_vbo_manager)
 	}
 }
 
