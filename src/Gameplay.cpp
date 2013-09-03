@@ -55,7 +55,7 @@ extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern unsigned create_voxel_landscape;
-extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_size;
+extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_depth, crater_radius;
 extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
 extern double camera_zh;
 extern point ocean, surface_pos, camera_last_pos;
@@ -1257,7 +1257,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	// large damage - throws up dirt and makes craters (later destroys trees)
 	if ((type == IMPACT || damage > 1000.0) && is_over_mesh(pos) && !point_outside_mesh(xpos, ypos)) {
 		float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1));
-		float const damage2(5.0E-6*Z_SCENE_SIZE*crater_size*damage*(256.0/(float)XY_SUM_SIZE)), crater_dist(0.36*size);
+		float const damage2(5.0E-6*Z_SCENE_SIZE*crater_depth*damage*(256.0/(float)XY_SUM_SIZE)), crater_dist(0.36*crater_radius*size);
 
 		if (fabs(zval - pos.z) < crater_dist) { // on/close to ground
 			int const crater(damage >= 1000.0 && point_interior_to_mesh(xpos, ypos) && type != PLASMA);

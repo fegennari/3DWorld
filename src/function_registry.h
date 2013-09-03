@@ -450,7 +450,7 @@ void select_liquid_color(colorRGBA &color, point const &pos);
 float get_blood_mix(point const &pos);
 void add_water_spring(point const &pos, vector3d const &vel, float rate, float diff, int calc_z, int gen_vel);
 void shift_water_springs(vector3d const &vd);
-void update_water_zvals(int x1, int y1, int x2, int y2);
+void update_water_zval(int x, int y, float old_mh);
 
 // function prototypes - lightning
 void compute_volume_matrix();

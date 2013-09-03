@@ -197,8 +197,10 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	int const x2(min(MESH_X_SIZE-1, xpos+rad)), y2(min(MESH_Y_SIZE-1, ypos+rad));
 	float const zbot(island ? (ocean.z + 0.01) : (zbottom - 0.04));
 	vector<pair<int, int> > to_update; // {x, y}
+	set<pair<int, int> > grass_update;
 
-	for (int i = y1; i <= y2; ++i) { // first pass to update mesh
+	// first pass to update mesh
+	for (int i = y1; i <= y2; ++i) {
 		for (int j = x1; j <= x2; ++j) {
 			float const dh(sqrt(float((i - ypos)*(i - ypos) + (j - xpos)*(j - xpos))));
 			if (dh > rad)     continue;
@@ -207,22 +209,23 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 			float const mh2(max(zbot, (mh - scale*((mode == 0) ? (offset + rad - dh) : 1.0f/(offset + dh)))));
 			mesh_height[i][j] = min(mh, mh2);
 			if (h_collision_matrix[i][j] == mh) {h_collision_matrix[i][j] = mesh_height[i][j];} // hcm was determined by mh
+			update_water_zval(j, i, mh);
 			to_update.push_back(make_pair(j, i));
+			for (int d = 0; d < 4; ++d) {grass_update.insert(make_pair(max(0, j-(d&1)), max(0, i-((d>>1)&1))));}
 		}
 	}
-	for (vector<pair<int, int> >::const_iterator i = to_update.begin(); i != to_update.end(); ++i) { // second pass to update adjacent data
+
+	// second pass to update adjacent data
+	for (vector<pair<int, int> >::const_iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		update_matrix_element(i->first, i->second); // requires mesh_height
 		update_motion_zmin_matrices(i->first, i->second); // requires mesh_height
 	}
 
-	// third pass to update grass (Note: could use a set to reduce the unnecessary edge updates)
-	for (int i = y1; i <= min(MESH_Y_SIZE-1, y2+1); ++i) { // we update one extra row/column since grass is per-mesh quad, not per-vertex
-		for (int j = x1; j <= min(MESH_X_SIZE-1, x2+1); ++j) {
-			grass_mesh_height_change(j, i);
-		}
+	// third pass to update grass
+	for (set<pair<int, int> >::const_iterator i = grass_update.begin(); i != grass_update.end(); ++i) {
+		grass_mesh_height_change(i->first, i->second);
 	}
 	update_scenery_zvals(x1, y1, x2, y2);
-	update_water_zvals  (x1, y1, x2, y2);
 	mesh_invalidated = 1;
 	//PRINT_TIME("Mesh Height Update");
 }

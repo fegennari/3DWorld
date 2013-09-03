@@ -1634,32 +1634,23 @@ float get_water_zmin(float mheight) {
 }
 
 
-// update region is inclusive: [x1,x2]x[y1,y2]
-void update_water_zvals(int x1, int y1, int x2, int y2) {
+void update_water_zval(int x, int y, float old_mh) {
 
-	set<int> valleys_updated;
-
-	for (int i = y1; i <= y2; ++i) {
-		for (int j = x1; j <= x2; ++j) {
-			if (wminside[i][j] != 1) continue; // not inside water
-			int const wsi(watershed_matrix[i][j].wsi);
-			assert(wsi >= 0);
-			if (wsi < wsections.size()) continue; // don't update water sections
-			valley &v(valleys[wsi]);
-			float const new_zmin(get_water_zmin(mesh_height[i][j]));
-			// FIXME: add new valley if there is a new local mimima?
-
-			if (new_zmin < v.min_zval) {
-				v.min_zval = new_zmin;
-				v.x        = j;
-				v.y        = i;
-			}
-			valleys_updated.insert(wsi);
-		}
+	if (wminside[y][x] == 2) { // outside water
+		// FIXME: check if this point is now part of a new local minima (inside water)?
 	}
-	if (valleys_updated.size() > 0) {
-		// FIXME: do some updating in this case?
-	}
+	if (wminside[y][x] != 1) return; // not inside water
+	int const wsi(watershed_matrix[y][x].wsi);
+	assert(wsi >= 0);
+	if (wsi < (int)wsections.size()) return; // don't update water sections
+	valley &v(valleys[wsi]);
+	float const mh(mesh_height[y][x]), new_zmin(get_water_zmin(mh));
+	// could use delta_h = (mh - old_mh) for updating volume
+	// FIXME: add new valley if there is a new local mimima?
+	if (new_zmin >= v.min_zval) return; // no change
+	v.min_zval = new_zmin;
+	v.x        = x;
+	v.y        = y;
 }
 
 
