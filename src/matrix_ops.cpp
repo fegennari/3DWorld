@@ -206,8 +206,16 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 			if (dh > rad)     continue;
 			float const mh(mesh_height[i][j]);
 			if (mh < zbottom) continue;
-			float const mh2(max(zbot, (mh - scale*((mode == 0) ? (offset + rad - dh) : 1.0f/(offset + dh)))));
-			mesh_height[i][j] = min(mh, mh2);
+			float delta_h;
+
+			if (mode == 0) { // crater
+				delta_h = offset + 0.9*rad - dh; // push the mesh up along the lip of the crater
+			}
+			else { // erosion
+				delta_h = 1.0/(offset + dh);
+			}
+			float const mh2(max(zbot, (mh - scale*delta_h)));
+			mesh_height[i][j] = mh2;//min(mh, mh2);
 			if (h_collision_matrix[i][j] == mh) {h_collision_matrix[i][j] = mesh_height[i][j];} // hcm was determined by mh
 			update_water_zval(j, i, mh);
 			to_update.push_back(make_pair(j, i));
