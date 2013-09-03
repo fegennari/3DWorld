@@ -291,7 +291,7 @@ void alloc_matrices();
 void delete_matrices();
 void compute_matrices();
 void update_matrix_element(int xpos, int ypos);
-void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode);
+void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode, bool rebuild_cobj_tree);
 vector3d get_matrix_surf_norm(float **matrix, char **enabled, int xsize, int ysize, int x, int y);
 void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize, int xpos, int ypos);
 void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize);
@@ -572,7 +572,7 @@ void draw_blasts();
 // function prototypes - scenery
 void gen_scenery();
 void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only=0);
-void update_scenery_zvals(int x1, int y1, int x2, int y2);
+void update_scenery_zvals(int x1, int y1, int x2, int y2, bool rebuild_cobj_tree);
 void free_scenery();
 void do_rock_damage(point const &pos, float radius, float damage);
 void add_scenery_cobjs();

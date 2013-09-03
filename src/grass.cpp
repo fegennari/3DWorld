@@ -524,6 +524,10 @@ public:
 				g.p.z  = mh;
 				min_up = min(min_up, i);
 				max_up = max(max_up, i);
+				// not entirely correct, since the cobj tree and mesh shadow data won't necessarily have been updated when this is called
+				// it may be more correct to defer this processing, or recalculate all grass lighting,
+				// but that's both complex and very expensive - so we disable it for now
+				//if (!shadow_map_enabled()) {g.shadowed = is_pt_shadowed((g.p + g.dir*0.5), 1);} 
 			}
 		} // for i
 		check_and_update_grass(ix, min_up, max_up);

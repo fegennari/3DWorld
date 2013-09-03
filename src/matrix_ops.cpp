@@ -189,7 +189,7 @@ void update_matrix_element(int xpos, int ypos) {
 
 
 // mode is currently: 0=crater, 1=erosion
-void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode) {
+void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode, bool rebuild_cobj_tree) {
 
 	//RESET_TIME;
 	assert(rad >= 0);
@@ -220,7 +220,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 		update_matrix_element(i->first, i->second); // requires mesh_height
 		update_motion_zmin_matrices(i->first, i->second); // requires mesh_height
 	}
-	update_scenery_zvals(x1, y1, x2, y2);
+	update_scenery_zvals(x1, y1, x2, y2, rebuild_cobj_tree);
 
 	// third pass to update grass
 	for (set<pair<int, int> >::const_iterator i = grass_update.begin(); i != grass_update.end(); ++i) {

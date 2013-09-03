@@ -1197,7 +1197,7 @@ int draw_spill_section(vector<vert_norm_color> &verts, int x1, int y1, int x2, i
 				add_hole_in_landscape_texture(xv[i], yv[i], rate);
 
 				if (EROSION_RATE > 0.0) { // erode terrain
-					update_mesh_height(xv[i], yv[i], EROSION_DIST, EROSION_RATE*rate, 4.0, 1);
+					update_mesh_height(xv[i], yv[i], EROSION_DIST, EROSION_RATE*rate, 4.0, 1, 0);
 					// update grass?
 				}
 			}

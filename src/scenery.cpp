@@ -448,12 +448,13 @@ void surface_rock::update_points_vbo(vbo_vnt_block_manager_t &vbo_manager) {
 	vbo_manager.update_range(points, WHITE, vbo_mgr_ix, vbo_mgr_ix+1); // color is unused
 }
 
-void surface_rock::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
+bool surface_rock::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager) {
 
-	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return;
+	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	if (vbo_mgr_ix >= 0) {update_points_vbo(vbo_manager);}
 	remove_cobjs();
 	add_cobjs();
+	return 1;
 }
 
 void surface_rock::destroy() {
@@ -751,9 +752,9 @@ void s_plant::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager) {
 	vbo_manager.update_range(vbo_manager.temp_points, pltype[type].leafc, vbo_mgr_ix, vbo_mgr_ix+1);
 }
 
-void s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
+bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
 
-	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return;
+	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	
 	if (vbo_mgr_ix >= 0) { // leaf pos changed - VBO data needs to be updated
 		//disable_leaves(); // remove the leaves (simpler and more efficient)
@@ -761,6 +762,7 @@ void s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager
 	}
 	remove_cobjs();
 	add_cobjs();
+	return 1;
 }
 
 bool s_plant::is_shadowed() const {
@@ -847,12 +849,13 @@ template<typename T> void free_scenery_vector(vector<T> &v) {
 	for (unsigned i = 0; i < v.size(); ++i) {v[i].destroy();}
 }
 
-template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int y1, int x2, int y2) {
+template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int y1, int x2, int y2, bool &updated) {
 	
 	for (unsigned i = 0; i < v.size(); ++i) { // zval has change, remove and re-add cobjs
 		if (v[i].update_zvals(x1, y1, x2, y2)) {
 			v[i].remove_cobjs();
 			v[i].add_cobjs();
+			updated = 1;
 		}
 	}
 }
@@ -932,22 +935,23 @@ void scenery_group::shift(vector3d const &vd) {
 }
 
 // update region is inclusive: [x1,x2]x[y1,y2]
-void scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
+void scenery_group::update_zvals(int x1, int y1, int x2, int y2, bool rebuild_cobj_tree) { // inefficient, should use spatial subdivision
 
 	assert(x1 <= x2 && y1 <= y2);
-	// test if there are any cobjs within this region?
-	update_scenery_zvals_vector(rock_shapes, x1, y1, x2, y2);
-	update_scenery_zvals_vector(voxel_rocks, x1, y1, x2, y2);
-	update_scenery_zvals_vector(rocks,       x1, y1, x2, y2);
-	update_scenery_zvals_vector(logs,        x1, y1, x2, y2);
-	update_scenery_zvals_vector(stumps,      x1, y1, x2, y2);
+	bool updated(0);
+	update_scenery_zvals_vector(rock_shapes, x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(voxel_rocks, x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(rocks,       x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(logs,        x1, y1, x2, y2, updated);
+	update_scenery_zvals_vector(stumps,      x1, y1, x2, y2, updated);
 
 	for (unsigned i = 0; i < plants.size(); ++i) { // zval has change, remove and re-add cobjs
-		plants[i].update_zvals(x1, y1, x2, y2, plant_vbo_manager); // different signature (takes plant_vbo_manager)
+		updated |= plants[i].update_zvals(x1, y1, x2, y2, plant_vbo_manager); // different signature (takes plant_vbo_manager)
 	}
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) { // zval has change, remove and re-add cobjs
-		surface_rocks[i].update_zvals(x1, y1, x2, y2, rock_vbo_manager); // different signature (takes rock_vbo_manager)
+		updated |= surface_rocks[i].update_zvals(x1, y1, x2, y2, rock_vbo_manager); // different signature (takes rock_vbo_manager)
 	}
+	if (updated && rebuild_cobj_tree) {build_cobj_tree(0, 0);} // slow, but probably necessary
 }
 
 void scenery_group::do_rock_damage(point const &pos, float radius, float damage) {
@@ -1127,8 +1131,8 @@ void shift_scenery(vector3d const &vd) {
 }
 
 // update region is inclusive: [x1,x2]x[y1,y2]
-void update_scenery_zvals(int x1, int y1, int x2, int y2) {
-	all_scenery.update_zvals(x1, y1, x2, y2);
+void update_scenery_zvals(int x1, int y1, int x2, int y2, bool rebuild_cobj_tree) {
+	all_scenery.update_zvals(x1, y1, x2, y2, rebuild_cobj_tree);
 }
 
 void free_scenery() {

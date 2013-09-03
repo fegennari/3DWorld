@@ -1267,7 +1267,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 				close = 1.1 - fabs(zval - pos.z)/crater_dist;
 				size *= close*sqrt(XY_SCENE_SIZE);
 				hv    = add_crater_to_landscape_texture(pos.x, pos.y, size);
-				update_mesh_height(xpos, ypos, int(crater_dist/HALF_DXY), damage2, 0.0, 0);
+				update_mesh_height(xpos, ypos, int(crater_dist/HALF_DXY), damage2, 0.0, 0, (crater_radius*crater_depth > 0.25));
 			}
 			if ((h_collision_matrix[ypos][xpos] - mesh_height[ypos][xpos]) < SMALL_NUMBER) {
 				create_ground_rubble(pos, shooter, hv, close, !crater);
