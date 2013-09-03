@@ -85,9 +85,17 @@ inline colorRGBA get_leaf_base_color(int type) {
 }
 
 
+colorRGBA get_leaf_texture_color(unsigned type) {
+
+	colorRGBA color(texture_color(tree_types[type].leaf_tex));
+	color.alpha = 1.0; // alpha is always 1.0 - texture alpha is handled by check_poly_billboard_alpha()
+	return color;
+}
+
+
 colorRGBA get_avg_leaf_color(unsigned type) {
 
-	return get_leaf_base_color(type).modulate_with(texture_color(tree_types[type].leaf_tex));
+	return get_leaf_base_color(type).modulate_with(get_leaf_texture_color(type));
 }
 
 
@@ -296,8 +304,7 @@ void tree::add_tree_collision_objects() {
 	}
 	if (tree_coll_level >= 4) {
 		int const ltid(tree_types[type].leaf_tex);
-		colorRGBA lcolor(get_avg_leaf_color(type));
-		lcolor.alpha = 1.0;
+		colorRGBA const lcolor(get_avg_leaf_color(type)); // will be reset in update_leaf_cobj_color()
 		cobj_params cpl(0.3, lcolor, TEST_RTREE_COBJS, 0, NULL, 0, (TEST_RTREE_COBJS ? -1 : ltid), 1.0, 0, 0);
 		cpl.shadow         = 0;
 		cpl.is_destroyable = 1; // so that truly_static() returns false
@@ -570,7 +577,7 @@ void tree_data_t::update_all_leaf_colors() {
 void tree::update_leaf_cobj_color(unsigned i) {
 
 	// update cobj color so that leaf water reflection is correct (Note: not always correct with tree instancing)
-	get_leaf_cobj(i).cp.color = colorRGBA(tdata().get_leaf_color(i)).modulate_with(texture_color(tree_types[type].leaf_tex));
+	get_leaf_cobj(i).cp.color = colorRGBA(tdata().get_leaf_color(i)).modulate_with(get_leaf_texture_color(type));
 }
 
 
