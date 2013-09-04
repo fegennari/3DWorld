@@ -418,7 +418,6 @@ void vbo_block_manager_t<vert_type_t>::update_range(vector<typename vert_type_t:
 	bind_vbo(vbo);
 	upload_vbo_sub_data(&update_verts.front(), start*sizeof(vert_type_t), update_size*sizeof(vert_type_t));
 	bind_vbo(0);
-	pts.clear(); // or let the caller clear?
 }
 
 template< typename vert_type_t >
