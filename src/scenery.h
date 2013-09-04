@@ -171,7 +171,7 @@ public:
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	void shift(vector3d const &vd);
-	void update_zvals(int x1, int y1, int x2, int y2, bool rebuild_cobj_tree);
+	bool update_zvals(int x1, int y1, int x2, int y2);
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 	void gen(int x1, int y1, int x2, int y2, float vegetation_);

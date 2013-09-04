@@ -329,6 +329,7 @@ public:
 	unsigned get_gpu_mem() const;
 	float get_rmax() const;
 	void update_zmax(float &tzmax) const;
+	bool update_zvals(int x1, int y1, int x2, int y2);
 	void check_render_textures();
 };
 

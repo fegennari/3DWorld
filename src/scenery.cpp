@@ -935,7 +935,7 @@ void scenery_group::shift(vector3d const &vd) {
 }
 
 // update region is inclusive: [x1,x2]x[y1,y2]
-void scenery_group::update_zvals(int x1, int y1, int x2, int y2, bool rebuild_cobj_tree) { // inefficient, should use spatial subdivision
+bool scenery_group::update_zvals(int x1, int y1, int x2, int y2) { // inefficient, should use spatial subdivision
 
 	assert(x1 <= x2 && y1 <= y2);
 	bool updated(0);
@@ -951,7 +951,7 @@ void scenery_group::update_zvals(int x1, int y1, int x2, int y2, bool rebuild_co
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) { // zval has change, remove and re-add cobjs
 		updated |= surface_rocks[i].update_zvals(x1, y1, x2, y2, rock_vbo_manager); // different signature (takes rock_vbo_manager)
 	}
-	if (updated && rebuild_cobj_tree) {build_cobj_tree(0, 0);} // slow, but probably necessary
+	return updated;
 }
 
 void scenery_group::do_rock_damage(point const &pos, float radius, float damage) {
@@ -1131,8 +1131,8 @@ void shift_scenery(vector3d const &vd) {
 }
 
 // update region is inclusive: [x1,x2]x[y1,y2]
-void update_scenery_zvals(int x1, int y1, int x2, int y2, bool rebuild_cobj_tree) {
-	all_scenery.update_zvals(x1, y1, x2, y2, rebuild_cobj_tree);
+bool update_scenery_zvals(int x1, int y1, int x2, int y2) {
+	return all_scenery.update_zvals(x1, y1, x2, y2);
 }
 
 void free_scenery() {

@@ -189,7 +189,7 @@ void update_matrix_element(int xpos, int ypos) {
 
 
 // mode is currently: 0=crater, 1=erosion
-void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode, bool rebuild_cobj_tree) {
+void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode, bool is_large_change) {
 
 	//RESET_TIME;
 	assert(rad >= 0);
@@ -228,12 +228,18 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 		update_matrix_element(i->first, i->second); // requires mesh_height
 		update_motion_zmin_matrices(i->first, i->second); // requires mesh_height
 	}
-	update_scenery_zvals(x1, y1, x2, y2, rebuild_cobj_tree);
-	//if (rebuild_cobj_tree) {calc_visibility(SUN_SHADOW | MOON_SHADOW);} // too slow
+	bool cobjs_updated(update_scenery_zvals(x1, y1, x2, y2));
+
+	if (is_large_change) {
+		cobjs_updated |= update_decid_tree_zvals(x1, y1, x2, y2);
+		cobjs_updated |= update_small_tree_zvals(x1, y1, x2, y2);
+		if (cobjs_updated) {build_cobj_tree(0, 0);} // slow, but probably necessary
+		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // too slow
+	}
 
 	// third pass to update grass
 	for (set<pair<int, int> >::const_iterator i = grass_update.begin(); i != grass_update.end(); ++i) {
-		grass_mesh_height_change(i->first, i->second, (rebuild_cobj_tree && 0));
+		grass_mesh_height_change(i->first, i->second, (is_large_change && 0));
 	}
 	// update waypoints?
 	mesh_invalidated = 1;

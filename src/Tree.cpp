@@ -2258,6 +2258,26 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 }
 
 
+bool tree_cont_t::update_zvals(int x1, int y1, int x2, int y2) {
+
+	bool updated(0);
+
+	// FIXME: explosions will be applied *after* the tree is moved, which isn't quite correct
+	for (iterator i = begin(); i != end(); ++i) {
+		point const &pos(i->get_center());
+		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+		if (xpos < x1 || xpos > x2 || ypos < y1 || ypos > y2) continue;
+		float const new_z(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1)); // use-real_equation=0
+		if (fabs(pos.z - new_z) < 0.01*i->get_radius()) continue;
+		i->remove_collision_objects();
+		i->shift_tree(point(0.0, 0.0, (new_z - pos.z)));
+		i->add_tree_collision_objects();
+		updated = 1;
+	}
+	return updated;
+}
+
+
 void tree_data_manager_t::ensure_init() {
 
 	if (max_unique_trees > 0 && empty()) {
@@ -2317,6 +2337,10 @@ void tree_cont_t::check_render_textures() {
 void shift_trees(vector3d const &vd) {
 	if (num_trees > 0) return; // dynamically created, not placed
 	t_trees.shift_by(vd);
+}
+
+bool update_decid_tree_zvals(int x1, int y1, int x2, int y2) {
+	return t_trees.update_zvals(x1, y1, x2, y2);
 }
 
 void add_tree_cobjs   () {t_trees.add_cobjs();}

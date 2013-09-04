@@ -31,15 +31,17 @@ public:
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
-	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
+	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode=0);
+	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_bark_color() const;
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager) const;
 	void draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
-	point get_pos() const {return pos;}
-	int get_type () const {return type;}
+	point get_pos()     const {return pos;}
+	float get_height()  const {return height;}
+	int get_type ()     const {return type;}
 	bool is_pine_tree() const {return (type == T_PINE || type == T_SH_PINE);}
 	float get_pine_tree_radius() const;
 	float get_zmax() const;
@@ -80,7 +82,8 @@ struct small_tree_group : public vector<small_tree> {
 	void clear_vbo_manager_and_ids(int which=3);
 	void clear_vbo_and_ids_if_needed(bool low_detail);
 	void clear_all();
-	void add_cobjs();
+	void add_cobjs_range(iterator b, iterator e);
+	void add_cobjs() {add_cobjs_range(begin(), end());}
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	void translate_by(vector3d const &vd);
@@ -91,6 +94,7 @@ struct small_tree_group : public vector<small_tree> {
 	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}
 	void update_zmax(float &tzmax) const;
+	bool update_zvals(int x1, int y1, int x2, int y2);
 	float get_rmax() const {return max_pt_radius;}
 };
 
