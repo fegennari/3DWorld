@@ -1637,9 +1637,10 @@ float get_water_zmin(float mheight) {
 void update_water_zval(int x, int y, float old_mh) {
 
 	if (wminside[y][x] == 2) { // outside water
-		// FIXME: check if this point is now part of a new local minima (inside water)?
+		// FIXME: check if this point is now part of a new local minima (inside water)? Requires moving this after update_motion_zmin_matrices()
 	}
 	if (wminside[y][x] != 1) return; // not inside water
+	// FIXME: check if now connected to outside water
 	int const wsi(watershed_matrix[y][x].wsi);
 	assert(wsi >= 0);
 	if (wsi < (int)wsections.size()) return; // don't update water sections
@@ -1648,6 +1649,8 @@ void update_water_zval(int x, int y, float old_mh) {
 	// could use delta_h = (mh - old_mh) for updating volume
 	// FIXME: add new valley if there is a new local mimima?
 	if (new_zmin >= v.min_zval) return; // no change
+	//v.zval += (v.min_zval - new_zmin);
+	if (v.zval == v.min_zval) {v.zval = new_zmin;} // no water yet, so move zval with zmin
 	v.min_zval = new_zmin;
 	v.x        = x;
 	v.y        = y;
