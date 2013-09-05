@@ -184,6 +184,14 @@ void update_matrix_element(int xpos, int ypos) {
 }
 
 
+struct mesh_update_t {
+	int x, y;
+	float old_mh;
+
+	mesh_update_t(int x_, int y_, float mh) : x(x_), y(y_), old_mh(mh) {}
+};
+
+
 // mode is currently: 0=crater, 1=erosion
 void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode, bool is_large_change) {
 
@@ -192,7 +200,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad));
 	int const x2(min(MESH_X_SIZE-1, xpos+rad)), y2(min(MESH_Y_SIZE-1, ypos+rad));
 	float const zbot(island ? (ocean.z + 0.01) : (zbottom - 0.04));
-	vector<pair<int, int> > to_update; // {x, y}
+	vector<mesh_update_t> to_update; // {x, y}
 	set<pair<int, int> > grass_update;
 
 	// first pass to update mesh
@@ -213,16 +221,20 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 			float const mh2(max(zbot, (mh - scale*delta_h)));
 			mesh_height[i][j] = mh2;//min(mh, mh2);
 			if (h_collision_matrix[i][j] == mh) {h_collision_matrix[i][j] = mesh_height[i][j];} // hcm was determined by mh
-			update_water_zval(j, i, mh);
-			to_update.push_back(make_pair(j, i));
+			to_update.push_back(mesh_update_t(j, i, mh));
 			for (int d = 0; d < 4; ++d) {grass_update.insert(make_pair(max(0, j-(d&1)), max(0, i-((d>>1)&1))));}
 		}
 	}
 
-	// second pass to update adjacent data
-	for (vector<pair<int, int> >::const_iterator i = to_update.begin(); i != to_update.end(); ++i) {
-		update_matrix_element(i->first, i->second); // requires mesh_height
-		update_motion_zmin_matrices(i->first, i->second); // requires mesh_height
+	// second pass to update adjacency data
+	for (vector<mesh_update_t>::const_iterator i = to_update.begin(); i != to_update.end(); ++i) {
+		update_matrix_element(i->x, i->y); // requires mesh_height
+		update_motion_zmin_matrices(i->x, i->y); // requires mesh_height
+	}
+
+	// third pass to update water, which depends on w_motion_matrix
+	for (vector<mesh_update_t>::const_iterator i = to_update.begin(); i != to_update.end(); ++i) {
+		update_water_zval(i->x, i->y, i->old_mh);
 	}
 	bool cobjs_updated(update_scenery_zvals(x1, y1, x2, y2));
 
@@ -233,7 +245,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // too slow
 	}
 
-	// third pass to update grass
+	// fourth pass to update grass, after cobjs/shadows have been updated
 	for (set<pair<int, int> >::const_iterator i = grass_update.begin(); i != grass_update.end(); ++i) {
 		grass_mesh_height_change(i->first, i->second, (is_large_change && 0));
 	}

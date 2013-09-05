@@ -25,7 +25,6 @@ Replace GL matrix operations with something else
  - GLM
 
 Better craters
-  - outside water becomes inside water - check flow path
   - new water local minima
   - mesh/grass shadow change
   - check mesh for grass texture when grass height changes

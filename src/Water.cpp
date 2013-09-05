@@ -1429,11 +1429,7 @@ int calc_rest_pos(vector<int> &path_x, vector<int> &path_y, vector<char> &rp_set
 		}
 		x2 = w_motion_matrix[y][x].x;
 		y2 = w_motion_matrix[y][x].y;
-
-		if (x2 == x && y2 == y) {
-			found = 1;
-			break;
-		}
+		if (x2 == x && y2 == y) {found = 1; break;}
 		x = x2;
 		y = y2;
 	} while (point_interior_to_mesh(x, y));
@@ -1634,13 +1630,57 @@ float get_water_zmin(float mheight) {
 }
 
 
+void make_outside_water(int x, int y) {
+
+	if (wminside[y][x] == 2) return; // already outside water
+	wminside[y][x] = 2; // make outside water (anything else we need to update? what if all of a valley disappears?)
+	watershed_matrix[y][x].wsi = -1; // invalid
+	water_matrix[y][x] = water_plane_z; // may be unnecessary
+}
+
+
 void update_water_zval(int x, int y, float old_mh) {
 
-	if (wminside[y][x] == 2) { // outside water
-		// FIXME: check if this point is now part of a new local minima (inside water)? Requires moving this after update_motion_zmin_matrices()
+	assert(!point_outside_mesh(x, y));
+	// FIXME: check water_enabled?
+
+	if (mesh_height[y][x] < water_plane_z) { // check if this pos is under the mesh
+		make_outside_water(x, y); // previously above the mesh
 	}
+#if 0
+	else { // above the mesh
+		// FIXME: check if this point is now part of a new local minima (inside water)?
+		//calc_rest_pos();
+		int x1(x), y1(y), x2(0), y2(0);
+		bool inside(0), outside(0);
+
+		for (unsigned i = 0; i < XY_SUM_SIZE; ++i) {
+			if (!point_interior_to_mesh(x1, y1)) {outside = 1; break;}
+			x2 = w_motion_matrix[y1][x1].x;
+			y2 = w_motion_matrix[y1][x1].y;
+			if (x2 == x1 && y2 == y1) {inside = 1; break;}
+			x1 = x2;
+			y1 = y2;
+		}
+		if (inside) {
+			int const wsi(watershed_matrix[y1][x1].wsi);
+
+			if (wsi >= 0 && wminside[y][x] == 2) { // previously outside water, now inside water
+				assert(wsi < (int)valleys.size());
+				wminside[y][x] = wminside[y1][x1];
+				water_matrix[y][x] = valleys[wsi].zval;
+				watershed_matrix[y][x].x = x1;
+				watershed_matrix[y][x].y = y1;
+				watershed_matrix[y][x].wsi = wsi;
+				//watershed_matrix[y][x].inside8 = ???;
+			}
+		}
+		else if (outside) { // outside water
+			make_outside_water(x, y);
+		} // else unknown
+	}
+#endif
 	if (wminside[y][x] != 1) return; // not inside water
-	// FIXME: check if now connected to outside water
 	int const wsi(watershed_matrix[y][x].wsi);
 	assert(wsi >= 0);
 	if (wsi < (int)wsections.size()) return; // don't update water sections
