@@ -1086,6 +1086,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color) {
 
+	set_color_alpha(colorRGBA(0.0, 0.0, 0.0, color.alpha));
 	((type == -1) ? color : get_powerup_color(type)).do_glColor();
 	draw_subdiv_sphere(pos, 0.7*radius, ndiv, 0, 0); // draw flare/billboard?
 	set_color_alpha(color);
