@@ -100,17 +100,8 @@ void set_color_by_status(int status) {
 
 
 void set_color_v2(const colorRGBA &color, int status) {
-
 	if (DEBUG_COLORCODE) {set_color_by_status(status);} else {set_color_alpha(color);}
 }
-
-
-void set_emissive_color_obj(colorRGBA const &color) {
-	color.do_glColor();
-	//set_emissive_color(color);
-	//set_color(color);
-}
-
 
 inline bool is_droplet(int type) {
 	return ((object_types[type].flags & OBJ_IS_DROP) || type == HAIL || type == CHARRED);
@@ -149,43 +140,46 @@ vector3d get_rotation_dirs_and_normal(vector3d const &o, float angle, vector3d &
 }
 
 
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, vector<vert_norm> &verts) {
+void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, colorRGBA const &color, vector<vert_norm_color> &verts) {
 
 	point p1, p2;
 	vector3d const normal(get_rotation_dirs_and_normal(o, angle, p1, p2));
-	verts.push_back(vert_norm((pos + 1.5*radius*p1), normal));
-	verts.push_back(vert_norm((pos - 1.5*radius*p1), normal));
-	verts.push_back(vert_norm((pos + 3.0*radius*p2), normal));
+	verts.push_back(vert_norm_color((pos + 1.5*radius*p1), normal, color));
+	verts.push_back(vert_norm_color((pos - 1.5*radius*p1), normal, color));
+	verts.push_back(vert_norm_color((pos + 3.0*radius*p2), normal, color));
 }
 
 
-void draw_rotated_textured_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, vector<vert_norm_tc> &verts) {
+void draw_rotated_textured_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, colorRGBA const &color, vector<vert_norm_tc_color> &verts) {
 
 	point p1, p2;
 	vector3d const normal(get_rotation_dirs_and_normal(o, angle, p1, p2));
 	float const ts(123.456*radius), tt(654.321*radius); // pseudo-random
-	verts.push_back(vert_norm_tc((pos + 1.5*radius*p1), normal, ts, tt));
-	verts.push_back(vert_norm_tc((pos - 1.5*radius*p1), normal, ts+2*tscale*radius, tt));
-	verts.push_back(vert_norm_tc((pos + 3.0*radius*p2), normal, ts, tt+2*tscale*radius));
+	verts.push_back(vert_norm_tc_color((pos + 1.5*radius*p1), normal, ts, tt, color));
+	verts.push_back(vert_norm_tc_color((pos - 1.5*radius*p1), normal, ts+2*tscale*radius, tt, color));
+	verts.push_back(vert_norm_tc_color((pos + 3.0*radius*p2), normal, ts, tt+2*tscale*radius, color));
 }
 
 
 void draw_thick_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
-	vector<vert_norm> &verts, float thickness, int tid, colorRGBA const &color)
+	vector<vert_norm_color> &verts, float thickness, int tid, colorRGBA const &color)
 {
+	static vector<vert_norm> uncolored_verts;
+	uncolored_verts.resize(0);
 	point p1, p2;
 	coll_obj cobj;
 	cobj.norm      = get_rotation_dirs_and_normal(o, angle, p1, p2);
 	cobj.type      = COLL_POLYGON;
 	cobj.thickness = thickness;
 	cobj.npoints   = 3;
-	cobj.cp.color  = color;
+	cobj.cp.color  = color; // doesn't need to be set
 	cobj.cp.tid    = tid; // Note: assumes texgen is used, so texturing may be incorrect
 	cobj.cp.tscale = tscale*radius;
 	cobj.points[0] = (pos + 1.5*radius*p1);
 	cobj.points[1] = (pos - 1.5*radius*p1);
 	cobj.points[2] = (pos + 3.0*radius*p2);
-	cobj.draw_extruded_polygon(tid, NULL, 0, verts);
+	cobj.draw_extruded_polygon(tid, NULL, 0, uncolored_verts);
+	for (unsigned i = 0; i < uncolored_verts.size(); ++i) {verts.push_back(vert_norm_color(uncolored_verts[i], color));}
 }
 
 
@@ -386,9 +380,9 @@ colorRGBA get_textured_color(int tid, colorRGBA const &color) {
 }
 
 
-void draw_and_clear_tris(vector<vert_norm> &vn, vector<vert_norm_tc> &vntc) {
+void draw_and_clear_tris(vector<vert_norm_color> &vn, vector<vert_norm_tc_color> &vntc) {
 
-	draw_and_clear_verts(vn, GL_TRIANGLES);
+	draw_and_clear_verts(vn,   GL_TRIANGLES);
 	draw_and_clear_verts(vntc, GL_TRIANGLES);
 }
 
@@ -533,7 +527,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		colorRGBA const &base_color(object_types[type].color);
 		quad_batch_draw particle_qbd;
 		vector<tid_color_to_ix_t> tri_fragments, sphere_fragments;
-		vector<vert_norm> shrapnel_verts;
+		vector<vert_norm_color> shrapnel_verts;
 
 		if (type == PARTICLE) {
 			glEnable(GL_ALPHA_TEST);
@@ -573,11 +567,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_star(pos, obj.orientation, obj.init_dir, tradius, obj.angle, 1);
 				break;
 			case SHRAPNEL:
-				{
-					set_emissive_color_obj(get_glow_color(obj, 1));
-					draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, shrapnel_verts);
-					break;
-				}
+				draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, get_glow_color(obj, 1), shrapnel_verts);
+				break;
 			case PARTICLE:
 				{
 					colorRGBA const glow_color(get_glow_color(obj, 0));
@@ -610,8 +601,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 			} // switch (type)
 		} // for j
 		sort(tri_fragments.begin(), tri_fragments.end()); // sort by tid
-		vector<vert_norm> fragment_vn;
-		vector<vert_norm_tc> fragment_vntc;
+		vector<vert_norm_color> fragment_vn;
+		vector<vert_norm_tc_color> fragment_vntc;
 		colorRGBA last_color(ALPHA0);
 		int last_tid(-1);
 
@@ -628,21 +619,21 @@ void draw_group(obj_group &objg, shader_t &s) {
 				set_color_alpha(i->c);
 				last_color = i->c;
 			}
+			colorRGBA emissive_color(BLACK);
+
 			if (obj.direction > 0) { // hot object, add color
-				colorRGBA gcolor(get_glow_color(obj, 1));
-				gcolor      *= 2.0*(obj.direction/255.0); // can be greater than 1.0
-				gcolor.alpha = i->c.alpha;
-				set_emissive_color_obj(gcolor);
+				emissive_color  = get_glow_color(obj, 1);
+				emissive_color *= 2.0*(obj.direction/255.0); // can be greater than 1.0
 			}
+			emissive_color.alpha = i->c.alpha;
 			float const tradius(obj.get_true_radius());
 
 			if (i->tid < 0) { // not textured, use thick triangle
-				draw_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, fragment_vn, 0.2*tradius, i->tid, i->c);
+				draw_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, fragment_vn, 0.2*tradius, i->tid, emissive_color);
 			}
 			else {
-				draw_rotated_textured_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, fragment_vntc); // obj.vdeform.z = tscale
+				draw_rotated_textured_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, emissive_color, fragment_vntc); // obj.vdeform.z = tscale
 			}
-			if (obj.direction > 0) {set_emissive_color_obj(colorRGBA(0.0, 0.0, 0.0, i->c.alpha));}
 		}
 		draw_and_clear_tris(fragment_vn, fragment_vntc);
 		sort(sphere_fragments.begin(), sphere_fragments.end()); // sort by tid
@@ -654,7 +645,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 		if (type == SHRAPNEL) {
 			draw_verts(shrapnel_verts, GL_TRIANGLES);
-			clear_emissive_color();
 		}
 		else if (type == PARTICLE) {
 			particle_qbd.draw();
@@ -1096,9 +1086,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color) {
 
-	set_emissive_color_obj((type == -1) ? color : get_powerup_color(type));
+	((type == -1) ? color : get_powerup_color(type)).do_glColor();
 	draw_subdiv_sphere(pos, 0.7*radius, ndiv, 0, 0); // draw flare/billboard?
-	clear_emissive_color();
 	set_color_alpha(color);
 	draw_subdiv_sphere(pos, radius, ndiv, 0, 0);
 }
@@ -1230,9 +1219,8 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 
 	if (time > 5) {
 		pos.z += 0.15*radius;
-		set_emissive_color_obj(get_landmine_light_color(time));
+		get_landmine_light_color(time).do_glColor();
 		draw_subdiv_sphere(pos, 0.15*radius, ndiv/2, 0, 0); // warning light
-		clear_emissive_color();
 	}
 	select_texture(object_types[LANDMINE].tid, 1, 1);
 }
@@ -1255,10 +1243,10 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	else {
 		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0, tmode);
 	}
-	set_emissive_color_obj(color);
-	if (animate2) radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));
+	set_color(BLACK); // ???
+	color.do_glColor();
+	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}
 	draw_sphere_vbo(pos, size*radius, ndiv, 1);
-	clear_emissive_color();
 	disable_texgen();
 	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) gen_particles(part_pos, 1);
 }
