@@ -298,7 +298,7 @@ bool small_tree_group::update_zvals(int x1, int y1, int x2, int y2) {
 		i->remove_cobjs();
 		i->translate_by(point(0.0, 0.0, (new_z - pos.z)));
 		i->update_points_vbo(vbo_manager[0], 0); // high detail only
-		add_cobjs_range(i, i+1);
+		if (tree_mode & 2) {add_cobjs_range(i, i+1);}
 		updated = 1;
 	}
 	return updated;

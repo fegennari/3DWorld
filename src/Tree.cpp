@@ -2271,7 +2271,7 @@ bool tree_cont_t::update_zvals(int x1, int y1, int x2, int y2) {
 		if (fabs(pos.z - new_z) < 0.01*i->get_radius()) continue;
 		i->remove_collision_objects();
 		i->shift_tree(point(0.0, 0.0, (new_z - pos.z)));
-		i->add_tree_collision_objects();
+		if (tree_mode & 1) {i->add_tree_collision_objects();}
 		updated = 1;
 	}
 	return updated;
