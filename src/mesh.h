@@ -85,7 +85,6 @@ extern float czmin, DZ_VAL2, DZ_VAL_INV2;
 
 
 // extern global arrays dependent on mesh size
-extern unsigned char **num_obj_on_mesh;
 extern valley_w  **watershed_matrix;
 extern char      **wminside;
 extern vector3d  **wat_surf_normals;

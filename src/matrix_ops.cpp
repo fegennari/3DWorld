@@ -25,7 +25,6 @@ float DX_VAL, DY_VAL, HALF_DXY, DX_VAL_INV, DY_VAL_INV, DZ_VAL, dxdy, CLOUD_CEIL
 
 
 // global arrays dependent on mesh size
-unsigned char **num_obj_on_mesh = NULL;
 valley_w  **watershed_matrix = NULL; // inside: 0 = outside mesh, 1 = inside mesh, 2 = under water level
 char      **wminside = NULL;
 vector3d  **wat_surf_normals = NULL;
@@ -99,8 +98,6 @@ void alloc_matrices() { // called at the beginning of main()
 	// reset parameters in case size has changed
 	set_scene_constants();
 	set_coll_rmax(max_obj_radius); // recompute
-
-	matrix_gen_2d(num_obj_on_mesh);
 	matrix_gen_2d(watershed_matrix);
 	matrix_gen_2d(wminside);
 	matrix_gen_2d(wat_vert_normals);
@@ -129,7 +126,6 @@ void delete_matrices() { // called at the end of main()
 
 	RESET_TIME;
 	if (!matrix_alloced) return;
-	matrix_delete_2d(num_obj_on_mesh);
 	matrix_delete_2d(watershed_matrix);
 	matrix_delete_2d(wminside);
 	matrix_delete_2d(wat_surf_normals);

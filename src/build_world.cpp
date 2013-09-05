@@ -274,7 +274,6 @@ void process_groups() {
 	int const lcf(camera_follow);
 	++scounter;
 	camera_follow = 0;
-	if (num_obj_on_mesh != NULL) matrix_clear_2d(num_obj_on_mesh); // should be < 1ms
 	if (begin_motion) build_cobj_tree(1, 0); // could also do after group processing
 	
 	for (int i = 0; i < num_groups; ++i) {
@@ -495,18 +494,6 @@ void process_groups() {
 							float const vmag(obj.velocity.mag());
 							obj.orientation = cview_dir;
 							obj.velocity    = cview_dir*vmag;
-						}
-					}
-				}
-				if (num_obj_on_mesh != NULL && obj.status == 4 && (precip || type == BLOOD)) { // avoid huge piles of stuff in the valley
-					int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-
-					if (!point_outside_mesh(xpos, ypos)) {
-						if (num_obj_on_mesh[ypos][xpos] > MAX_OBJ_ON_MESH) {
-							obj.status = 0;
-						}
-						else {
-							++num_obj_on_mesh[ypos][xpos];
 						}
 					}
 				}
