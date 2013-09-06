@@ -345,8 +345,8 @@ public:
 						int const id1(lttex[k1].id), id2(lttex[k2].id);
 						if (id1 != GROUND_TEX && id2 != GROUND_TEX) continue; // not ground texture
 						float density(1.0);
-						if (id1 != GROUND_TEX) density = t;
-						if (id2 != GROUND_TEX) density = 1.0 - t;
+						if (id1 != GROUND_TEX) {density = t;}
+						if (id2 != GROUND_TEX) {density = 1.0 - t;}
 						if (rgen.rand_float() >= density) continue; // skip - density too low
 					}
 					// skip grass intersecting cobjs
@@ -521,7 +521,7 @@ public:
 			if (!g.on_mesh || g.dir == zero_vector) continue; // not on mesh, or already "removed"
 			float const mh(interpolate_mesh_zval(g.p.x, g.p.y, 0.0, 0, 1));
 
-			if (fabs(g.p.z - mh) > 0.01*grass_width) {
+			if (fabs(g.p.z - mh) > 0.01*grass_width) { // is there any way we can check the ground texture to see if we sill have grass texture here?
 				g.p.z  = mh;
 				min_up = min(min_up, i);
 				max_up = max(max_up, i);
