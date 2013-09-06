@@ -535,7 +535,7 @@ void add_one_tquad(vector<vert_norm_tc> &verts, vector3d const &n, float x1, flo
 void draw_sides_and_bottom() {
 
 	int const lx(MESH_X_SIZE-1), ly(MESH_Y_SIZE-1);
-	float const botz(zbottom - 0.05), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
+	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
 	float const x1(-X_SCENE_SIZE), y1(-Y_SCENE_SIZE), x2(X_SCENE_SIZE-DX_VAL), y2(Y_SCENE_SIZE-DY_VAL);
 	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? ROCK_TEX : DIRT_TEX);
 	set_color(WHITE);

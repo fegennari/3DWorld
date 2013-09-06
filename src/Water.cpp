@@ -326,16 +326,16 @@ public:
 	void draw_water_surface(int i, int j, colorRGBA const &color_in, int wsi, int dx=1, int dy=1) {
 
 		assert(unsigned(j) < last_row_colors.size());
-		float const x(get_xval(j)), y(get_yval(i));
+		float const x(get_xval(j)), y(get_yval(i)), water_zmin(zbottom - MIN_WATER_DZ);
 		static float zval2(def_water_level);
-		float const zval1(water_matrix[i][j] - SMALL_NUMBER); // what if wminside[i][j]==0 ?
+		float const zval1(max(water_matrix[i][j], water_zmin) - SMALL_NUMBER); // never go below water_zmin, what if wminside[i][j]==0 ?
 		color_scale_ix next_color_ix;
 
 		if (i+dy >= 0 && i+dy < MESH_Y_SIZE) {
 			if (big_water || watershed_matrix[i+dy][j].wsi == wsi ||
 				(wminside[i+dy][j] == 1 && cont_surf(wsi, watershed_matrix[i+dy][j].wsi, valleys[wsi].zval)))
 			{
-				zval2 = water_matrix[i+dy][j] - SMALL_NUMBER;
+				zval2 = max(water_matrix[i+dy][j], water_zmin) - SMALL_NUMBER; // never go below water_zmin
 			}
 		}
 		for (int d = 0; d < 2; ++d) {
@@ -1172,11 +1172,12 @@ int draw_spill_section(vector<vert_norm_color> &verts, int x1, int y1, int x2, i
 	assert(abs(x2 - x1) <= 1 && abs(y2 - y1) <= 1);
 	float const flow_height(FLOW_HEIGHT0*Z_SCENE_SIZE);
 	assert(!point_outside_mesh(x1, y1));
-	if (!get_water_enabled(x1, y1) && !get_water_enabled(x2, y2)) return 2;
+	if (!get_water_enabled(x1, y1) && !get_water_enabled(x2, y2)) return 2; // water disabled
 	spillway_matrix[y1][x1] = (short)frame_counter;
 	float xa(get_xval(x1)), ya(get_yval(y1));
-	if ((z1+flow_height) < water_plane_z && (z2+flow_height) < water_plane_z) return 0;
-	if (island && (z1+0.02) < ocean.z && (z2+0.02) < ocean.z) return 0;
+	if ((z1+flow_height) < water_plane_z && (z2+flow_height) < water_plane_z)               return 0; // both ends under water plane
+	if ((z1+flow_height) < water_matrix[y1][x1] && (z2+flow_height) < water_matrix[y2][x2]) return 0; // both ends under local water
+	if (island && (z1+0.02) < ocean.z && (z2+0.02) < ocean.z)                               return 0; // both ends under ocean
 	vector3d const &norm(vertex_normals[y1][x1]);
 
 	if (x1 == x2 && y1 == y2) { // end at a point
@@ -1263,7 +1264,7 @@ void draw_spillover(vector<vert_norm_color> &verts, int i, int j, int si, int sj
 		assert(!point_outside_mesh(x2, y2));
 		float const z2(mesh_height[y2][x2]);
 		int const draw_res(draw_spill_section(verts, x1, y1, x2, y2, z1, z2, width, vol_over, index, blood_mix, mud_mix));
-		if (last_iteration || draw_res == 0) add_splash(x1, y1, 1.5*v_splash, 0.002*v_splash, 0); // hit fixed ocean/lake
+		if (last_iteration || draw_res == 0) {add_splash(x1, y1, 1.5*v_splash, 0.002*v_splash, 0);} // hit fixed ocean/lake
 		if (last_iteration || draw_res != 1 || (x2 == x1 && y2 == y1)) break; // edge, disabled, or valley
 		last_iteration = (zval >= z2);
 		z1 = (last_iteration ? zval : z2);

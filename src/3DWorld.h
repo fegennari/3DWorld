@@ -48,6 +48,10 @@ float    const MAX_SPLASH_DEPTH = 0.1;
 float    const WATER_INDEX_REFRACT = 1.333;
 float    const WATER_COL_ATTEN  = 0.6;
 
+float    const MESH_BOT_QUAD_DZ = 0.050; // measured from zbottom
+float    const MIN_WATER_DZ     = 0.045;
+float    const MESH_LOWEST_DZ   = 0.040;
+
 unsigned const TICKS_PER_SECOND = 40;
 
 float    const ISLAND_BOT_OFF   = 0.15;

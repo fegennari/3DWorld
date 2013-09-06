@@ -199,7 +199,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	assert(rad >= 0);
 	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad));
 	int const x2(min(MESH_X_SIZE-1, xpos+rad)), y2(min(MESH_Y_SIZE-1, ypos+rad));
-	float const zbot(island ? (ocean.z + 0.01) : (zbottom - 0.04));
+	float const zbot(island ? (ocean.z + 0.01) : (zbottom - MESH_LOWEST_DZ));
 	vector<mesh_update_t> to_update; // {x, y}
 	set<pair<int, int> > grass_update;
 
@@ -328,7 +328,7 @@ float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equa
 
 	if (world_mode == WMODE_INF_TERRAIN) {return get_exact_zval(xval, yval);}
 	int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
-	if (point_outside_mesh(xpos, ypos)) {return (use_real_equation ? get_exact_zval(xval, yval) : (zbottom - SMALL_NUMBER));}
+	if (point_outside_mesh(xpos, ypos)) {return (use_real_equation ? get_exact_zval(xval, yval) : (zbottom - MESH_LOWEST_DZ));}
 	assert(mesh_height != NULL);
 	float const xp((xval + X_SCENE_SIZE)*DX_VAL_INV), yp((yval + Y_SCENE_SIZE)*DY_VAL_INV);
 	int const x0((int)xp), y0((int)yp);
