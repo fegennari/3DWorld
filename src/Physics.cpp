@@ -145,7 +145,6 @@ void init_objects() {
 	object_types[LEAF].radius              = 0.005;
 	object_types[LEAF].lifetime            = 1200;
 	object_types[LEAF].density             = 0.3;
-	object_types[LEAF].elasticity          = 0.1;
 	object_types[LEAF].health              = 4000.0;
 	object_types[LEAF].color               = LEAF_C;
 	object_types[LEAF].flags               = NO_WATER_DAMAGE | OBJ_IS_FLAT;

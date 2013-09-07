@@ -1387,6 +1387,7 @@ void model3ds::free_context() {
 
 void model3ds::render(bool is_shadow_pass) {
 
+	if (empty()) return;
 	bool const use_shaders(get_use_shaders() && !is_shadow_pass);
 	set_lighted_sides(2);
 	set_fill_mode();

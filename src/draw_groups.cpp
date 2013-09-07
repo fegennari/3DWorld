@@ -429,7 +429,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			shader_t ls;
 			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1); // TSL=1, use light colors
 			ls.add_uniform_float("ambient_scale", 0.0);
-			quad_batch_draw qbd;
+			static quad_batch_draw qbd;
 			set_color(BLACK);
 
 			for (unsigned j = 0; j < ordering.size(); ++j) {
