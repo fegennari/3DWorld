@@ -61,7 +61,8 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 	bool const texture(tid >= 0 && glIsTexture(tid));
 	if (texture) select_texture(tid);
 	
-	if (lighted) { // set emission to color, ambient and diffuse to black
+	if (lighted) { // set emission to color, ambient and diffuse to black (could disable lighting)
+		set_color(BLACK);
 		set_color_e(color);
 	}
 	else {

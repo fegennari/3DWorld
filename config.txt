@@ -47,6 +47,8 @@ num_test_snowflakes 100 # in M
 
 include config_gameplay.txt
 unlimited_weapons 0
+crater_size 1.0
+crater_radius 4.0
 
 mesh_size  128 128 64
 scene_size 4.0 4.0 4.0

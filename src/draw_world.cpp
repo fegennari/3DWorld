@@ -1122,10 +1122,8 @@ void create_and_draw_cracks() {
 
 void draw_cracks_and_decals() {
 
+	if (decals.empty()) return;
 	create_and_draw_cracks();
-	tid_dist_order_vect_t decal_order;
-	get_draw_order(decals, decal_order);
-	if (decal_order.empty()) {return;} // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
 	set_color(BLACK);
@@ -1134,7 +1132,10 @@ void draw_cracks_and_decals() {
 	enable_blend();
 	quad_batch_draw qbd;
 	int last_tid(-1);
-	for (unsigned j = 0; j < decal_order.size(); ++j) {decals[decal_order[j].second].draw(qbd, last_tid);}
+
+	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
+		if (i->status && sphere_in_camera_view(i->pos, i->radius, 0)) {i->draw(qbd, last_tid);}
+	}
 	select_texture(last_tid);
 	qbd.draw();
 	disable_blend();
