@@ -780,17 +780,6 @@ void compute_brightness() {
 }
 
 
-typedef vector<pair<pair<int, float>, unsigned> > tid_dist_order_vect_t;
-
-template<typename T> void add_to_order_vect(order_vect_t &order, T const &v, float dist, unsigned ix) {
-	order.push_back(make_pair(-dist, ix));
-}
-
-void add_to_order_vect(tid_dist_order_vect_t &order, decal_obj const &decal, float dist, unsigned ix) {
-	order.push_back(make_pair(make_pair(decal.tid, -dist), ix));
-}
-
-
 template<typename S, typename T> void get_draw_order(vector<T> const &objs, vector<S> &order) {
 
 	point const camera(get_camera_pos());
@@ -798,10 +787,7 @@ template<typename S, typename T> void get_draw_order(vector<T> const &objs, vect
 	for (unsigned i = 0; i < objs.size(); ++i) {
 		if (!objs[i].status) continue;
 		point const pos(objs[i].get_pos());
-
-		if (sphere_in_camera_view(pos, objs[i].radius, 0)) {
-			add_to_order_vect(order, objs[i], p2p_dist_sq(pos, camera), i);
-		}
+		if (sphere_in_camera_view(pos, objs[i].radius, 0)) {order.push_back(make_pair(-p2p_dist_sq(pos, camera), i));}
 	}
 	sort(order.begin(), order.end()); // sort back to front
 }
