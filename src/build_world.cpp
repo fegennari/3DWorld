@@ -424,6 +424,7 @@ void process_groups() {
 								point pos2(pos + obj.velocity*time); // makes precipitation slower, but collision detection is more correct
 								pos2.z -= grav_dz; // maybe want to try with and without this?
 								// Note: we only do the line intersection test if the object moves by more than its radius this frame (static leaves don't)
+								// Note: could also test pos.z > v_collision_matrix[y][x].zmax
 								if (!dist_less_than(pos, pos2, radius)) {check_coll_line(pos, pos2, cindex, -1, 0, 0);} // return value is unused
 							}
 							assert(spf > 0);

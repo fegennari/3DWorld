@@ -280,6 +280,12 @@ void cloud_manager_t::draw() {
 		update_lighting();
 	}
 	if (cloud_model == 0) { // faster billboard texture mode
+		point const camera(get_camera_pos());
+		cube_t const bcube(get_bcube());
+		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
+		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
+		//if (!camera_pdu.cube_visible(bcube)) return; // incorrect, and rarely returns
+
 		create_texture(need_update);
 		enable_flares(get_cloud_color(), 1); // texture will be overriden
 		assert(cloud_tid);
@@ -291,10 +297,6 @@ void cloud_manager_t::draw() {
 		s.begin_shader();
 		s.add_uniform_int("tex0", 0);
 
-		point const camera(get_camera_pos());
-		cube_t const bcube(get_bcube());
-		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
-		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
 		quad_batch_draw qbd;
 		qbd.add_quad_dirs(point(camera.x, camera.y, cloud_top), vector3d(-xy_exp*cloud_xy, 0.0, 0.0), vector3d(0.0, xy_exp*cloud_xy, 0.0), WHITE, -plus_z);
 		qbd.draw();
