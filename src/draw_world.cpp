@@ -924,18 +924,11 @@ void fire::draw(quad_batch_draw &qbd, int &last_in_smoke) const {
 }
 
 
-void decal_obj::draw(quad_batch_draw &qbd, int &last_tid) const {
+void decal_obj::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
 	point const cur_pos(get_pos());
 	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) return; // back face culling
-	assert(tid >= 0);
-	
-	if (last_tid >= 0 && tid != last_tid) { // texture change, flush the qbd
-		select_texture(last_tid);
-		qbd.draw_and_clear();
-	}
-	last_tid = tid;
 	float const alpha_val(get_alpha());
 	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return; // distance culling
 	colorRGBA draw_color(color);
@@ -1124,23 +1117,25 @@ void draw_cracks_and_decals() {
 
 	if (decals.empty()) return;
 	create_and_draw_cracks();
+	map<int, quad_batch_draw> batches;
+
+	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
+		if (i->status && sphere_in_camera_view(i->pos, i->radius, 0)) {i->draw(batches[i->tid]);}
+	}
+	if (batches.empty()) return;
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
 	set_color(BLACK);
 	glDepthMask(GL_FALSE);
 	glDisable(GL_LIGHTING);
 	enable_blend();
-	quad_batch_draw qbd;
-	int last_tid(-1);
 
-	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
-		if (i->status && sphere_in_camera_view(i->pos, i->radius, 0)) {i->draw(qbd, last_tid);}
+	for (map<int, quad_batch_draw>::const_iterator i = batches.begin(); i != batches.end(); ++i) {
+		select_texture(i->first, 0, 1);
+		i->second.draw();
 	}
-	select_texture(last_tid);
-	qbd.draw();
 	disable_blend();
 	glDepthMask(GL_TRUE);
-	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_LIGHTING);
 	s.end_shader();
 }

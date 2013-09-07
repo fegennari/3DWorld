@@ -1358,7 +1358,7 @@ int vert_coll_detector::check_coll() {
 		check_cobj(only_cobj);
 		return coll;
 	}
-	for (int d = 0; d < 1+!skip_dynamic; ++d) {
+	for (int d = 0; d < 1+!skip_dynamic; ++d) { // using v_collision_matrix doesn't seem to help
 		get_coll_sphere_cobjs_tree(obj.pos, o_radius, -1, *this, (d != 0));
 	}
 	return coll;
