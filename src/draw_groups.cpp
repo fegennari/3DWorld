@@ -251,7 +251,6 @@ void draw_select_groups(int solid) {
 }
 
 
-
 struct wap_obj {
 
 	int id, ndiv;
@@ -514,7 +513,8 @@ void draw_group(obj_group &objg, shader_t &s) {
 				set_obj_specular(flags, 0.5*brightness);
 				dwobject const &obj(objg.get_obj(wa.id));
 				set_color_alpha(color);
-				draw_subdiv_sphere(obj.pos, radius, wa.ndiv, 0, 0);
+				//draw_subdiv_sphere(obj.pos, radius, wa.ndiv, 0, 0);
+				draw_sphere_vbo_back_to_front(obj.pos, radius, wa.ndiv, 0);
 			}
 		}
 		if (!smiley_weapons_to_draw.empty()) {
