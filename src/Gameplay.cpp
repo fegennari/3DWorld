@@ -1898,7 +1898,23 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
 			bool const is_glass(cobj.cp.is_glass());
-			gen_decal(coll_pos, 0.005, coll_norm, FLARE3_TEX, cindex, 1.0, (is_glass ? (WHITE*0.5 + cobj.cp.color*0.5) : BLACK), is_glass, 1); // inherit partial glass color
+			colorRGBA dcolor;
+			int decal_tid;
+
+			if (is_glass) {
+				decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
+			}
+			else if (is_laser) {
+				decal_tid = FLARE3_TEX; dcolor = BLACK;
+			}
+			else {
+				decal_tid = BULLET_D_TEX;
+				colorRGBA const tcolor(texture_color(BULLET_D_TEX)), ocolor(cobj.get_avg_color());
+				UNROLL_3X(dcolor[i_] = ocolor[i_]/max(0.01f, tcolor[i_]);) // fudge the color so that dcolor * tcolor = ocolor
+				dcolor.alpha = 1.0;
+				//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
+			}
+			gen_decal(coll_pos, 0.005, coll_norm, decal_tid, cindex, 1.0, dcolor, is_glass, 1); // inherit partial glass color
 
 			if (wtype == W_M16 && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
 				gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player

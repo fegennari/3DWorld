@@ -1117,6 +1117,7 @@ void draw_cracks_and_decals() {
 	enable_blend();
 
 	for (map<int, quad_batch_draw>::const_iterator i = batches.begin(); i != batches.end(); ++i) {
+		//if (i->first == BULLET_D_TEX) {} // enable bump mapping
 		select_texture(i->first, 0, 1);
 		i->second.draw();
 	}

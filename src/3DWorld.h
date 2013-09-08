@@ -1043,6 +1043,7 @@ public:
 	GLenum calc_format() const;
 	void calc_color();
 	void copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_comp);
+	void merge_in_alpha_channel(texture_t const &at);
 	void build_mipmaps();
 	void create_custom_mipmaps();
 	unsigned char const *get_mipmap_data(unsigned level) const;
@@ -1307,7 +1308,7 @@ enum {GROUND_TEX = 0, DARK_ROCK_TEX, WATER_TEX, WATER2_TEX, CLOUD_TEX, SUN_TEX, 
 	CLOUD_RAW_TEX, SNOWFLAKE_TEX, BLUR_CENT_TEX, GRADIENT_TEX, GRASS_BLADE_TEX, WIND_TEX, MOSSY_ROCK_TEX,
 	BARK1_TEX, BARK2_TEX, BARK2_NORMAL_TEX, BARK3_TEX, BARK4_TEX, WATER_NORMAL_TEX, WATER_CAUSTIC_TEX,
 	PS_NOISE_TEX, NOISE_GEN_TEX, NOISE_GEN_MIPMAP_TEX, SPARSE_NOISE_TEX, PLAYER_BBB_TEX, PINE_TREE_TEX,
-	FLARE1_TEX, FLARE2_TEX, FLARE3_TEX, FLARE4_TEX, FLARE5_TEX, FOAM_TEX
+	FLARE1_TEX, FLARE2_TEX, FLARE3_TEX, FLARE4_TEX, FLARE5_TEX, FOAM_TEX, BULLET_D_TEX, BULLET_A_TEX, BULLET_N_TEX
 };
 
 // lighting files/types

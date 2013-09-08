@@ -166,7 +166,11 @@ texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Nte: low resolut
 texture_t(0, 5, 0,    0,    0, 4, 1, "Flare3.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare4.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare5.jpg"), // 256x256
-texture_t(0, 5, 0,    0,    1, 3, 1, "foam1.jpg") // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "foam1.jpg"), // 512x512
+
+texture_t(0, 5, 0,    0,    0, 3, 1, "bullet_hole/bullet_diffuse.jpg"), // 256x256
+texture_t(0, 5, 0,    0,    0, 1, 1, "bullet_hole/bullet_alpha.jpg"), // 256x256
+texture_t(0, 5, 0,    0,    0, 3, 1, "bullet_hole/bullet_normal.jpg") // 256x256
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 };
@@ -245,6 +249,7 @@ void load_textures() {
 		if (!is_tex_disabled(i)) textures[i].load(i);
 	}
 	cout << endl;
+	textures[BULLET_D_TEX].merge_in_alpha_channel(textures[BULLET_A_TEX]);
 	gen_smoke_texture();
 	gen_plasma_texture();
 	gen_disintegrate_texture();
@@ -508,6 +513,15 @@ void texture_t::copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_c
 	for (unsigned i = 0; i < npixels; ++i) {
 		data[4*i+3] = (is_lum ? at.data[i] : at.data[4*i+alpha_offset]); // copy alpha values
 	}
+}
+
+
+void texture_t::merge_in_alpha_channel(texture_t const &at) {
+
+	assert(ncolors == 3 && at.ncolors == 1);
+	assert(width == at.width && height == at.height);
+	add_alpha_channel();
+	copy_alpha_from_texture(at, 0);
 }
 
 
