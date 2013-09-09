@@ -425,6 +425,7 @@ void draw_small_trees(bool shadow_only) {
 	}
 	set_fill_mode();
 	small_trees.draw_branches(shadow_only);
+	s.add_uniform_float("tex_scale_t", 1.0);
 	s.end_shader();
 
 	// draw leaves

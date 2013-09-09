@@ -10,6 +10,8 @@ varying vec4 tangent_v;
 
 #else
 
+uniform float bump_tb_scale = 1.0;
+
 // http://www.thetenthplanet.de/archives/1180
 mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv)
 {
@@ -27,7 +29,7 @@ mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv)
  
     // construct a scale-invariant frame 
     float invmax = inversesqrt(max(dot(T,T), dot(B,B)));
-    return mat3(T * invmax, -B * invmax, N);
+    return mat3((bump_tb_scale * T * invmax), (bump_tb_scale * -B * invmax), N);
 }
 #endif
 

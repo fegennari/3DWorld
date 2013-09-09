@@ -919,7 +919,7 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return; // distance culling
 	colorRGBA draw_color(color);
 
-	if (color != BLACK) {
+	if (color != BLACK && tid != BULLET_D_TEX) { // bullet hold textures are draw with shaders that have all these lighting terms enabled
 		bool const back_facing(dot_product_ptv(orient, cur_pos, get_light_pos()) > 0.0);
 		bool const is_shadowed(back_facing || !is_visible_to_light_cobj(cur_pos, get_light(), radius, -1, 0)); // cache shadowing cobj?
 		colorRGBA const d(is_shadowed ? BLACK : draw_color);
@@ -1109,22 +1109,36 @@ void draw_cracks_and_decals() {
 		if (i->status && sphere_in_camera_view(i->pos, i->radius, 0)) {i->draw(batches[i->tid]);}
 	}
 	if (batches.empty()) return;
-	shader_t s;
-	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
 	set_color(BLACK);
 	glDepthMask(GL_FALSE);
 	glDisable(GL_LIGHTING);
 	enable_blend();
+	shader_t std_shader, bump_map_shader;
 
 	for (map<int, quad_batch_draw>::const_iterator i = batches.begin(); i != batches.end(); ++i) {
-		//if (i->first == BULLET_D_TEX) {} // enable bump mapping
+		if (i->first == BULLET_D_TEX) {
+			if (!bump_map_shader.is_setup()) {
+				setup_smoke_shaders(bump_map_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1); // bump maps enabled
+				bump_map_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
+				set_active_texture(5);
+				select_texture(BULLET_N_TEX, 0);
+				set_active_texture(0);
+			}
+			bump_map_shader.enable();
+		}
+		else {
+			if (!std_shader.is_setup()) {setup_smoke_shaders(std_shader, 0.01, 0, 1, 0, 0, 0, 1);}
+			std_shader.enable();
+		}
 		select_texture(i->first, 0, 1);
 		i->second.draw();
 	}
 	disable_blend();
 	glDepthMask(GL_TRUE);
 	glEnable(GL_LIGHTING);
-	s.end_shader();
+	if (bump_map_shader.is_setup()) {bump_map_shader.add_uniform_float("bump_tb_scale", 1.0);} // reset
+	std_shader.end_shader();
+	bump_map_shader.end_shader();
 }
 
 
@@ -1132,7 +1146,7 @@ void draw_smoke_and_fires() {
 
 	if (part_clouds.empty() && fires.empty()) return; // nothing to draw
 	shader_t s;
-	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1); // min_alpha = 0.1-0.4
+	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1);
 	set_color(BLACK);
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
