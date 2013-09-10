@@ -256,7 +256,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 }
 
 
-// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map
+// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
 	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors)
 {
@@ -1118,10 +1118,17 @@ void draw_cracks_and_decals() {
 	for (map<int, quad_batch_draw>::const_iterator i = batches.begin(); i != batches.end(); ++i) {
 		if (i->first == BULLET_D_TEX) {
 			if (!bump_map_shader.is_setup()) {
-				setup_smoke_shaders(bump_map_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1); // bump maps enabled
+				// see http://cowboyprogramming.com/2007/01/05/parallax-mapped-bullet-holes/
+				bump_map_shader.set_prefix("#define TEXTURE_ALPHA_MASK",  1); // FS
+				bump_map_shader.set_prefix("#define ENABLE_PARALLAX_MAP", 1); // FS
+				setup_smoke_shaders(bump_map_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1); // bump maps enabled
 				bump_map_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
+				bump_map_shader.add_uniform_float("hole_depth", 0.2);
+				bump_map_shader.add_uniform_int("depth_map", 9);
 				set_active_texture(5);
 				select_texture(BULLET_N_TEX, 0);
+				set_active_texture(9);
+				select_texture(BULLET_D_TEX, 0);
 				set_active_texture(0);
 			}
 			bump_map_shader.enable();

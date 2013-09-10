@@ -67,7 +67,16 @@ vec3 add_light0(in vec3 n) {
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
 {
+#ifdef ENABLE_PARALLAX_MAP
+	vec4 texel  = texture2D(tex0, apply_parallax_map());
+#else
 	vec4 texel  = texture2D(tex0, tex_coord);
+#endif
+
+#ifdef TEXTURE_ALPHA_MASK
+	if (texel.a < 0.99) discard;
+#endif
+
 #ifndef NO_ALPHA_TEST
 	if (texel.a < min_alpha) discard; // Note: assumes walls don't have textures with alpha < 1
 #endif

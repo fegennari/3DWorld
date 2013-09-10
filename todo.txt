@@ -6,8 +6,6 @@ Support for cube map textures (planets, etc.)
 
 More grass/plant types: Yellow and white flowers
 
-Parallax mapping
-http://cowboyprogramming.com/2007/01/05/parallax-mapped-bullet-holes/
 Hardware tessellation
 God Rays
 http://http.developer.nvidia.com/GPUGems3/gpugems3_ch13.html
@@ -29,3 +27,8 @@ Better craters - mesh/grass shadow change
 Mesh height high frequency noise
 Texture randomization (Tiled Terrain)
 Point Sprites: berries on plants?
+Fireworks
+
+Parallax mapping
+  - Decals not along edge of cobj
+  - update tex coord used for normal map?

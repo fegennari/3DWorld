@@ -209,7 +209,7 @@ void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int t
 	color  = color_;
 	orient = o; // normal of attached surface at collision/anchor point
 	orient.normalize();
-	pos   += orient*rand_uniform(0.001, 0.002); // move away from the object it's attached to
+	pos   += 0.0015*orient; // move away from the object it's attached to
 	is_glass = is_glass_;
 }
 
