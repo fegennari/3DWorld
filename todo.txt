@@ -30,5 +30,4 @@ Point Sprites: berries on plants?
 Fireworks
 
 Parallax mapping
-  - Decals not along edge of cobj
   - update tex coord used for normal map?

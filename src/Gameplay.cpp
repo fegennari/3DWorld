@@ -1898,24 +1898,45 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
 			bool const is_glass(cobj.cp.is_glass());
-			colorRGBA dcolor;
-			int decal_tid;
-
-			if (is_glass) {
-				decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
-			}
-			else if (is_laser) {
-				decal_tid = FLARE3_TEX; dcolor = BLACK;
+			float const decal_radius(rand_uniform(0.004, 0.006));
+			bool contained(0);
+			
+			if (cobj.type == COLL_CUBE && decal_contained_in_cube(cobj, coll_pos, decal_radius, get_max_dim(coll_norm))) {
+				contained = 1;
 			}
 			else {
-				decal_tid = BULLET_D_TEX;
-				colorRGBA const tcolor(texture_color(BULLET_D_TEX)), ocolor(cobj.get_avg_color());
-				UNROLL_3X(dcolor[i_] = ocolor[i_]/max(0.01f, tcolor[i_]);) // fudge the color so that dcolor * tcolor = ocolor
-				dcolor.alpha = 1.0;
-				//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
-			}
-			gen_decal(coll_pos, 0.005, coll_norm, decal_tid, cindex, 1.0, dcolor, is_glass, 1); // inherit partial glass color
+				vector3d vab[2];
+				get_ortho_vectors(coll_norm, vab);
+				int cindex2(-1); // unused
+				contained = 1;
 
+				for (unsigned d = 0; d < 4; ++d) {
+					point const p0(coll_pos + ((d & 1) ? 1.0 : -1.0)*decal_radius*vab[d>>1]);
+					point const p1(p0 + decal_radius*coll_norm), p2(p0 - decal_radius*coll_norm); // move behind the decal into the cobj
+					if (cobj.line_intersect(p1, p2)) continue;
+					if (check_coll_line(p1, p2, cindex2, cindex, 1, 0)) continue;
+					contained = 0; break;
+				}
+			}
+			if (contained) {
+				colorRGBA dcolor;
+				int decal_tid;
+
+				if (is_glass) {
+					decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
+				}
+				else if (is_laser) {
+					decal_tid = FLARE3_TEX; dcolor = BLACK;
+				}
+				else {
+					decal_tid = BULLET_D_TEX;
+					colorRGBA const tcolor(texture_color(BULLET_D_TEX)), ocolor(cobj.get_avg_color());
+					UNROLL_3X(dcolor[i_] = ocolor[i_]/max(0.01f, tcolor[i_]);) // fudge the color so that dcolor * tcolor = ocolor
+					dcolor.alpha = 1.0;
+					//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
+				}
+				gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, 1.0, dcolor, is_glass, 1); // inherit partial glass color
+			}
 			if (wtype == W_M16 && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
 				gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player
 			}

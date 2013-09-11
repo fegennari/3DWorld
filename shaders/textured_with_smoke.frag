@@ -68,7 +68,7 @@ vec3 add_light0(in vec3 n) {
 void main()
 {
 #ifdef ENABLE_PARALLAX_MAP
-	vec4 texel  = texture2D(tex0, apply_parallax_map());
+	vec4 texel  = texture2D(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
 #else
 	vec4 texel  = texture2D(tex0, tex_coord);
 #endif

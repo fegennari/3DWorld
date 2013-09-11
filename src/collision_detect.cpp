@@ -1023,6 +1023,14 @@ void vert_coll_detector::check_cobj(int index) {
 }
 
 
+bool decal_contained_in_cube(cube_t const &cube, point const &pos, float radius, int dir) {
+
+	int const ds((dir+1)%3), dt((dir+2)%3);
+	float const dmin(min(min((cube.d[ds][1] - pos[ds]), (pos[ds] - cube.d[ds][0])), min((cube.d[dt][1] - pos[dt]), (pos[dt] - cube.d[dt][0]))));
+	return (dmin > radius);
+}
+
+
 void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool player_step) {
 
 	coll_obj const &cobj(coll_objects[index]);
@@ -1275,7 +1283,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		obj.velocity = zero_vector; // I think this is correct
 	}
 	// only use cubes for now, because leaves colliding with tree leaves and branches and resetting the normals is too unstable
-	if (cobj.type == COLL_CUBE && (otype.flags & OBJ_IS_FLAT)) obj.set_orient_for_coll(&norm);
+	if (cobj.type == COLL_CUBE && (otype.flags & OBJ_IS_FLAT)) {obj.set_orient_for_coll(&norm);}
 		
 	if ((otype.flags & OBJ_IS_CYLIN) && !already_bounced) {
 		if (fabs(norm.z) == 1.0) { // z collision
@@ -1307,11 +1315,11 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		
 	if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
 		if (cobj.type == COLL_CUBE && cobj.can_be_scorched()) {
-			int const dir(cdir >> 1), ds((dir+1)%3), dt((dir+2)%3);
 			float const sz(5.0*o_radius*rand_uniform(0.8, 1.2));
-			float const dmin(min(min((cobj.d[ds][1] - obj.pos[ds]), (obj.pos[ds] - cobj.d[ds][0])),
-					             min((cobj.d[dt][1] - obj.pos[dt]), (obj.pos[dt] - cobj.d[dt][0]))));
-			if (dmin > sz) {gen_decal((obj.pos - norm*o_radius), sz, norm, FLARE3_TEX, index, 0.75, BLACK, 0, 1);} // explosion
+
+			if (decal_contained_in_cube(cobj, obj.pos, sz, (cdir >> 1))) {
+				gen_decal((obj.pos - norm*o_radius), sz, norm, FLARE3_TEX, index, 0.75, BLACK, 0, 1); // explosion
+			}
 		}
 		obj.disable();
 	}
