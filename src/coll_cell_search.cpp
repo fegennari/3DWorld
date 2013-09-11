@@ -85,6 +85,8 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 				vector3d const v1(p2, p1);
 				bool const test_side(dot_product(v1, norm) > 0.0);
 				if (thick_poly_intersect(v1, p1, norm, pts, test_side, npoints)) return 1;
+				// Note: to be consistent with other volumetric primitives (cube, sphere), we return true if the entire line is within the extruded polygon volume
+				if (sphere_ext_poly_intersect(points, npoints, norm, p1, 0.0, thickness, 0.0)) return 1; // point p1 is contained
 			}
 			else { // test planar (2D) polygon
 				float t;
