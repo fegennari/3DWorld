@@ -48,8 +48,16 @@ uniform float hole_depth = 1.0;
 
 vec2 apply_parallax_map() {
     mat3 TBN    = get_tbn(-1.0); // FIXME: why is binormal inverted from bump map case?
+#ifdef PARALLAX_MAP_OFFSET_ADJ
+	vec2 offset = hole_depth * (TBN * -normalize(epos.xyz)).st;
+	float depth_at_1 = texture2D(depth_map, tex_coord+offset).w;
+	//if (depth_at_1 < 0.96f) {offset *= texture2D(depth_map, tex_coord).w;}
+	if (depth_at_1 < 0.96f) {offset *= (depth_at_1 + texture2D(depth_map, tex_coord).w) * 0.5;}
+#else
 	float depth = (texture2D(depth_map, tex_coord).w) * hole_depth; // Get depth from the alpha (w) of the relief map
-    return tex_coord + depth * (TBN * -normalize(epos.xyz)).st; // transform view vector to tangent space and offset the uv
+	vec2 offset = depth * (TBN * -normalize(epos.xyz)).st; // transform view vector to tangent space
+#endif
+    return tex_coord + offset; // offset the uv
 }
 #endif
 

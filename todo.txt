@@ -7,8 +7,6 @@ Support for cube map textures (planets, etc.)
 More grass/plant types: Yellow and white flowers
 
 Hardware tessellation
-God Rays
-http://http.developer.nvidia.com/GPUGems3/gpugems3_ch13.html
 Use assimp?
 Vertex Array Objects
 
@@ -28,6 +26,3 @@ Mesh height high frequency noise
 Texture randomization (Tiled Terrain)
 Point Sprites: berries on plants?
 Fireworks
-
-Parallax mapping
-  - update tex coord used for normal map?
