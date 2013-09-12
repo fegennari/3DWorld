@@ -22,33 +22,24 @@ int      const FREQ_FILTER        = 2; // higher = smoother landscape
 int      const MIN_FREQS          = 3;
 int      const FREQ_RANGE         = 80; // higher for more accurate mesh - should be 80
 int      const NUM_LOW_FREQ       = 2;
-
-float    const START_FREQ         = 240.0;
-float    const START_MAG          = 0.02;
-float    const MAG_MULT           = 2.0;
 float    const W_PLANE_Z          = 0.42;
 float    const HEIGHT_SCALE       = 0.01;
-
 unsigned const EST_RAND_PARAM     = 128;
-
 float    const READ_MESH_H_SCALE  = 0.0008;
 bool     const AUTOSCALE_HEIGHT   = 1;
 bool     const DEF_GLACIATE       = 1;
 float    const GLACIATE_EXP       = 3.0;
-
 bool     const GEN_SCROLLING_MESH = 1;
 float    const S_GEN_ATTEN_DIST   = 128.0;
 
+int   const F_TABLE_SIZE       = NUM_FREQ_COMP*N_RAND_SIN2;
+int   const START_L0_FREQ_COMP = NUM_FREQ_COMP - NUM_L0_FREQ_COMP;
 
 #define DO_GLACIATE_EXP(val) ((val)*(val)*(val)) // GLACIATE_EXP = 3.0
 
 
-float const FREQ_MULT          = 1.0/MAG_MULT;
-int   const F_TABLE_SIZE       = NUM_FREQ_COMP*N_RAND_SIN2;
-int   const START_L0_FREQ_COMP = NUM_FREQ_COMP - NUM_L0_FREQ_COMP;
-
-
 // Global Variables
+float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FREQ_MULT(0.5);
 int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
@@ -330,12 +321,13 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 		zmax = -LARGE_ZVAL;
 		zmin =  LARGE_ZVAL;
 	}
-	freqs[0] = START_FREQ;
-	mags[0]  = START_MAG;
+	// Note: none of these config values are error checked, maybe should at least check >= 0.0
+	freqs[0] = MESH_START_FREQ;
+	mags [0] = MESH_START_MAG;
 
 	for (int i = 1; i < num_freq; ++i) {
-		freqs[i] = freqs[i-1]*FREQ_MULT;
-		mags[i]  = mags[i-1]*MAG_MULT;
+		freqs[i] = freqs[i-1]*MESH_FREQ_MULT;
+		mags [i] = mags[i-1]*MESH_MAG_MULT;
 	}
 	if (make_island == 1) {
 		mags[1] = 0.4;
@@ -345,7 +337,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 	h_sum = 0.0;
 
 	for (int l = 0; l < num_freq; ++l) {
-		if (make_island == 1) freqs[l] *= ISLAND_FREQ_SCALE;
+		if (make_island == 1) {freqs[l] *= ISLAND_FREQ_SCALE;}
 		h_sum += mags[l];
 	}
 	h_sum *= N_RAND_SIN2*scaled_height*HEIGHT_SCALE;

@@ -115,6 +115,7 @@ extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale;
+extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
 extern point hmv_pos;
 extern int coll_id[];
 extern float tree_lod_scales[4];
@@ -1584,6 +1585,10 @@ int load_config(string const &config_file) {
 	kwmf.add("indir_light_exp", indir_light_exp);
 	kwmf.add("snow_random", snow_random);
 	kwmf.add("temperature", init_temperature);
+	kwmf.add("mesh_start_mag", MESH_START_MAG);
+	kwmf.add("mesh_start_freq", MESH_START_FREQ);
+	kwmf.add("mesh_mag_mult", MESH_MAG_MULT);
+	kwmf.add("mesh_freq_mult", MESH_FREQ_MULT);
 
 	while (read_str(fp, strc)) { // slow but should be OK
 		string const str(strc);

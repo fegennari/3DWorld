@@ -53,6 +53,11 @@ crater_radius 4.0
 mesh_size  128 128 64
 scene_size 4.0 4.0 4.0
 
+mesh_start_mag 0.02
+mesh_start_freq 240.0
+mesh_mag_mult 2.0
+mesh_freq_mult 0.5
+
 include config_resolution.txt
 #shadow_map_sz 2048
 
