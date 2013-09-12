@@ -44,11 +44,17 @@ bool decal_obj::is_on_cobj(int cobj) const {
 	assert((unsigned)cobj < coll_objects.size()); // can this fail if the cobj was destroyed? coll_objects only increases in size
 	coll_obj const &c(coll_objects[cobj]);
 	// spheres and cylinders not supported - decals look bad on rounded objects
-	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON)) return 0;
+	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON && c.type != COLL_CYLINDER)) return 0;
 	point const center(ipos + get_platform_delta());
-	if (!sphere_cube_intersect(center, SMALL_NUMBER, c)) return 0;
+	if (!sphere_cube_intersect(center, DECAL_OFFSET, c)) return 0;
 	if (c.type == COLL_CUBE) return 1;
-	if (c.thickness > MIN_POLY_THICK) {return (c.sphere_intersects(center, SMALL_NUMBER) == 1);} // thick polygon
+
+	if (c.type == COLL_CYLINDER) {
+		if (orient != plus_z && orient != -plus_z) return 0; // not on the cylinder end
+		return dist_xy_less_than(center, c.points[0], (c.radius + radius));
+	}
+	assert(c.type == COLL_POLYGON);
+	if (c.thickness > MIN_POLY_THICK) {return (c.sphere_intersects(center, DECAL_OFFSET) == 1);} // thick polygon
 	float t; // thin polygon case
 	point const p1(center - orient*MIN_POLY_THICK), p2(center + orient*MIN_POLY_THICK);
 	return line_poly_intersect(p1, p2, c.points, c.npoints, c.norm, t); // doesn't really work on extruded polygons
@@ -1023,11 +1029,28 @@ void vert_coll_detector::check_cobj(int index) {
 }
 
 
-bool decal_contained_in_cube(cube_t const &cube, point const &pos, float radius, int dir) {
+float decal_dist_to_cube_edge(cube_t const &cube, point const &pos, int dir) {
 
 	int const ds((dir+1)%3), dt((dir+2)%3);
-	float const dmin(min(min((cube.d[ds][1] - pos[ds]), (pos[ds] - cube.d[ds][0])), min((cube.d[dt][1] - pos[dt]), (pos[dt] - cube.d[dt][0]))));
-	return (dmin > radius);
+	return min(min((cube.d[ds][1] - pos[ds]), (pos[ds] - cube.d[ds][0])), min((cube.d[dt][1] - pos[dt]), (pos[dt] - cube.d[dt][0])));
+}
+
+
+bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dir) {
+
+	if (cobj.type == COLL_CUBE && decal_dist_to_cube_edge(cobj, pos, dir) > radius) return 1;
+	vector3d vab[2];
+	get_ortho_vectors(norm, vab);
+	int cindex2(-1); // unused
+
+	for (unsigned d = 0; d < 4; ++d) {
+		point const p0(pos + ((d & 1) ? 1.0 : -1.0)*radius*vab[d>>1]);
+		point const p1(p0 + 2.0*DECAL_OFFSET*norm), p2(p0 - 2.0*DECAL_OFFSET*norm); // move behind the decal into the cobj
+		if (cobj.line_intersect(p1, p2)) continue;
+		if (check_coll_line(p1, p2, cindex2, cobj.id, 1, 0)) continue;
+		return 0;
+	}
+	return 1;
 }
 
 
@@ -1315,11 +1338,8 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		
 	if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
 		if (cobj.type == COLL_CUBE && cobj.can_be_scorched()) {
-			float const sz(5.0*o_radius*rand_uniform(0.8, 1.2));
-
-			if (decal_contained_in_cube(cobj, obj.pos, sz, (cdir >> 1))) {
-				gen_decal((obj.pos - norm*o_radius), sz, norm, FLARE3_TEX, index, 0.75, BLACK, 0, 1); // explosion
-			}
+			float const sz(5.0*o_radius*rand_uniform(0.8, 1.2)), max_sz(decal_dist_to_cube_edge(cobj, obj.pos, (cdir >> 1)));
+			if (max_sz > 0.5*sz) {gen_decal((obj.pos - norm*o_radius), min(sz, max_sz), norm, FLARE3_TEX, index, 0.75, BLACK, 0, 1);} // explosion
 		}
 		obj.disable();
 	}
@@ -1333,7 +1353,11 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			create_blood = 1;
 		}
 		if (create_blood) {
-			gen_decal((obj.pos - norm*o_radius), 2.0*o_radius*rand_uniform(0.6, 1.4), norm, BLUR_CENT_TEX, index, 1.0, BLOOD_C);
+			float const sz(2.0*o_radius*rand_uniform(0.6, 1.4));
+			
+			if (decal_contained_in_cobj(cobj, obj.pos, norm, sz, (cdir >> 1))) {
+				gen_decal((obj.pos - norm*o_radius), sz, norm, BLUR_CENT_TEX, index, 1.0, BLOOD_C);
+			}
 		}
 		deform_obj(obj, norm, v0);
 	}

@@ -202,14 +202,13 @@ void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int t
 	tid    = tid_;
 	ipos   = p;
 	ipos  -= get_platform_delta(); // make relative to the at-rest platform pos
-	init_gen_rand(ipos, 0.0, 0.0);
+	init(ipos);
 	radius = r;
 	rot_angle = ang;
 	alpha  = init_alpha;
 	color  = color_;
-	orient = o; // normal of attached surface at collision/anchor point
-	orient.normalize();
-	pos   += 0.0015*orient; // move away from the object it's attached to
+	orient = o.get_norm(); // normal of attached surface at collision/anchor point
+	pos   += min(0.1*radius, 1.5*DECAL_OFFSET)*orient; // move away from the object it's attached to
 	is_glass = is_glass_;
 }
 

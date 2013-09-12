@@ -1899,26 +1899,8 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
 			bool const is_glass(cobj.cp.is_glass());
 			float const decal_radius(rand_uniform(0.004, 0.006));
-			bool contained(0);
-			
-			if (cobj.type == COLL_CUBE && decal_contained_in_cube(cobj, coll_pos, decal_radius, get_max_dim(coll_norm))) {
-				contained = 1;
-			}
-			else {
-				vector3d vab[2];
-				get_ortho_vectors(coll_norm, vab);
-				int cindex2(-1); // unused
-				contained = 1;
 
-				for (unsigned d = 0; d < 4; ++d) {
-					point const p0(coll_pos + ((d & 1) ? 1.0 : -1.0)*decal_radius*vab[d>>1]);
-					point const p1(p0 + decal_radius*coll_norm), p2(p0 - decal_radius*coll_norm); // move behind the decal into the cobj
-					if (cobj.line_intersect(p1, p2)) continue;
-					if (check_coll_line(p1, p2, cindex2, cindex, 1, 0)) continue;
-					contained = 0; break;
-				}
-			}
-			if (contained) {
+			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, decal_radius, get_max_dim(coll_norm))) {
 				colorRGBA dcolor;
 				int decal_tid;
 

@@ -931,7 +931,7 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	draw_color.alpha = alpha_val;
 	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	if (rot_angle != 0.0) {rotate_vector3d(orient, rot_angle, upv);}
-	qbd.add_billboard((cur_pos + 0.001*orient), (cur_pos + orient), upv, draw_color, radius, radius); // move slightly away from the object to blend properly with cracks
+	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, draw_color, radius, radius); // move slightly away from the object to blend properly with cracks
 }
 
 
@@ -1106,7 +1106,7 @@ void draw_cracks_and_decals() {
 	map<int, quad_batch_draw> batches;
 
 	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
-		if (i->status && sphere_in_camera_view(i->pos, i->radius, 0)) {i->draw(batches[i->tid]);}
+		if (i->status && sphere_in_camera_view(i->get_pos(), i->radius, 0)) {i->draw(batches[i->tid]);}
 	}
 	if (batches.empty()) return;
 	set_color(BLACK);

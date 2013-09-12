@@ -320,7 +320,7 @@ void cobj_stats();
 int  collision_detect_large_sphere(point &pos, float radius, unsigned flags);
 int  check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex);
 bool is_point_interior(point const &pos, float radius);
-bool decal_contained_in_cube(cube_t const &cube, point const &pos, float radius, int dir);
+bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d const &norm, float radius, int dir);
 
 // function prototypes - objects
 void free_cobj_draw_group_vbos();

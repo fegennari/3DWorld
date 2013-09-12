@@ -10,6 +10,7 @@
 #include "collision_detect.h"
 
 float const MAX_PART_CLOUD_RAD = 0.25;
+float const DECAL_OFFSET       = 0.001;
 
 extern float CAMERA_RADIUS, C_STEP_HEIGHT;
 
