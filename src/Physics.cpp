@@ -24,7 +24,7 @@ float    const WATER_DAMPING       = 0.1;
 float    const CRITICAL_ANGLE      = 0.5; // in radians, for skipping objects on water
 float    const BURN_DAMAGE         = 1200.0;
 unsigned const MAX_FIRE_TIME       = 10000;
-unsigned const SCORCH_TIME         = 60*TICKS_PER_SECOND;
+unsigned const DECAL_TIME          = 60*TICKS_PER_SECOND;
 bool     const ball_camera_view    = 0;
 bool     const PRINT_TIME_OF_DAY   = 1;
 
@@ -1451,14 +1451,14 @@ void fire::extinguish() {
 void decal_obj::apply_physics(unsigned i) {
 
 	if (!status) return;
-	time  += iticks;
-	if ((unsigned)time > SCORCH_TIME) status = 0;
+	time += iticks;
+	if ((unsigned)time > DECAL_TIME) status = 0;
 }
 
 
 float decal_obj::get_alpha() const {
 
-	return alpha*CLIP_TO_01(1.0f - float(time)/float(SCORCH_TIME));
+	return alpha*CLIP_TO_01(2.0f - 2.0f*float(time)/float(DECAL_TIME)); // first half alpha=1, second half fade to 0
 }
 
 

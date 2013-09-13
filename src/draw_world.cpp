@@ -918,16 +918,6 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	float const alpha_val(get_alpha());
 	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return; // distance culling
 	colorRGBA draw_color(color);
-
-	if (color != BLACK && tid != BULLET_D_TEX) { // bullet hold textures are draw with shaders that have all these lighting terms enabled
-		bool const back_facing(dot_product_ptv(orient, cur_pos, get_light_pos()) > 0.0);
-		bool const is_shadowed(back_facing || !is_visible_to_light_cobj(cur_pos, get_light(), radius, -1, 0)); // cache shadowing cobj?
-		colorRGBA const d(is_shadowed ? BLACK : draw_color);
-		colorRGBA a(draw_color);
-		get_shadowed_color(a, cur_pos, 0);
-		blend_color(draw_color, a, d, 0.5, 0);
-		draw_color.set_valid_color();
-	}
 	draw_color.alpha = alpha_val;
 	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	if (rot_angle != 0.0) {rotate_vector3d(orient, rot_angle, upv);}
@@ -1004,7 +994,7 @@ struct ray2d {
 };
 
 
-void create_and_draw_cracks() {
+void create_and_draw_cracks() { // adds to beams
 
 	if (decals.empty()) return;
 	vector<crack_point> cpts;  // static?
@@ -1102,50 +1092,65 @@ void create_and_draw_cracks() {
 void draw_cracks_and_decals() {
 
 	if (decals.empty()) return;
-	create_and_draw_cracks();
-	map<int, quad_batch_draw> batches;
+	create_and_draw_cracks(); // adds to beams
+	map<int, quad_batch_draw> batches; // maps from {tid, is_black} to quad batches
 
 	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
-		if (i->status && sphere_in_camera_view(i->get_pos(), i->radius, 0)) {i->draw(batches[i->tid]);}
+		if (i->status && sphere_in_camera_view(i->get_pos(), i->radius, 0)) {
+			i->draw(batches[(i->tid << 1) + (i->color == BLACK)]);
+		}
 	}
 	if (batches.empty()) return;
 	set_color(BLACK);
 	glDepthMask(GL_FALSE);
 	glDisable(GL_LIGHTING);
 	enable_blend();
-	shader_t std_shader, bump_map_shader;
+	shader_t black_shader, lighting_shader, bullet_shader;
 
 	for (map<int, quad_batch_draw>::const_iterator i = batches.begin(); i != batches.end(); ++i) {
-		if (i->first == BULLET_D_TEX) {
-			if (!bump_map_shader.is_setup()) {
+		int const tid(i->first >> 1);
+		bool const is_black(i->first & 1);
+
+		if (tid == BULLET_D_TEX) {
+			if (!bullet_shader.is_setup()) {
 				// see http://cowboyprogramming.com/2007/01/05/parallax-mapped-bullet-holes/
-				bump_map_shader.set_prefix("#define TEXTURE_ALPHA_MASK",  1); // FS
-				bump_map_shader.set_prefix("#define ENABLE_PARALLAX_MAP", 1); // FS
-				setup_smoke_shaders(bump_map_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1); // bump maps enabled
-				bump_map_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
-				bump_map_shader.add_uniform_float("hole_depth", 0.2);
-				bump_map_shader.add_uniform_int("depth_map", 9);
+				bullet_shader.set_prefix("#define TEXTURE_ALPHA_MASK",  1); // FS
+				bullet_shader.set_prefix("#define ENABLE_PARALLAX_MAP", 1); // FS
+				setup_smoke_shaders(bullet_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1); // bump maps enabled
+				bullet_shader.add_uniform_float("ambient_scale", 0.0); // shader is unique, so we don't have to reset this
+				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
+				bullet_shader.add_uniform_float("hole_depth", 0.2);
+				bullet_shader.add_uniform_int("depth_map", 9);
 				set_active_texture(5);
 				select_texture(BULLET_N_TEX, 0);
 				set_active_texture(9);
 				select_texture(BULLET_D_TEX, 0);
 				set_active_texture(0);
 			}
-			bump_map_shader.enable();
+			bullet_shader.enable();
+		}
+		else if (is_black) {
+			if (!black_shader.is_setup()) {setup_smoke_shaders(black_shader, 0.01, 0, 1, 0, 0, 0, 1);} // no lighting
+			black_shader.enable();
 		}
 		else {
-			if (!std_shader.is_setup()) {setup_smoke_shaders(std_shader, 0.01, 0, 1, 0, 0, 0, 1);}
-			std_shader.enable();
+			if (!lighting_shader.is_setup()) {
+				setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1);
+				lighting_shader.add_uniform_float("ambient_scale", 0.0);
+			}
+			lighting_shader.enable();
 		}
-		select_texture(i->first, 0, 1);
+		select_texture(tid, 0, 1);
 		i->second.draw();
-	}
+	} // for i
 	disable_blend();
 	glDepthMask(GL_TRUE);
 	glEnable(GL_LIGHTING);
-	if (bump_map_shader.is_setup()) {bump_map_shader.add_uniform_float("bump_tb_scale", 1.0);} // reset
-	std_shader.end_shader();
-	bump_map_shader.end_shader();
+	if (bullet_shader.is_setup()  ) {bullet_shader.add_uniform_float  ("bump_tb_scale", 1.0);} // reset
+	if (lighting_shader.is_setup()) {lighting_shader.add_uniform_float("ambient_scale", 1.0);} // reset
+	black_shader.end_shader();
+	lighting_shader.end_shader();
+	bullet_shader.end_shader();
 }
 
 
