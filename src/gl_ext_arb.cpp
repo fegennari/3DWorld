@@ -263,7 +263,7 @@ void post_render() {
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glEnable(GL_LIGHTING);
 	disable_fbo();
 	set_standard_viewport();
@@ -289,7 +289,7 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
 	colorRGBA const clear_colors[2] = {bkg_color, clear_normal};
 
-	for (unsigned d = 0; d < 2; ++d) {
+	for (unsigned d = 0; d < 2; ++d) { // {color, normal}
 		unsigned fbo_id(0);
 		enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
 		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);

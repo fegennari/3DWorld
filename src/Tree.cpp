@@ -156,7 +156,7 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		if (!shaders[0].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
-		colorRGBA leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()), 0.0); // transparent
+		colorRGBA const leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()), 0.0); // transparent
 		bool const use_depth_buffer(1), mipmap(0); // Note: for some reason mipmaps are slow and don't look any better
 		render(ttex, t.lr_x, t.lr_z, vector3d(0.0, 0.0, t.lr_z_cent), plus_y, leaf_bkg_color, use_depth_buffer, mipmap);
 	}
@@ -180,7 +180,8 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		if (!shaders[0].is_setup()) {setup_shader("no_lighting_tex_coord",     "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
-		colorRGBA branch_bkg_color(texture_color(get_tree_type().bark_tex), 0.0); // transparent
+		t.ensure_branch_vbo(); // Note: for some reason, this *must* be called before we get into draw_geom()
+		colorRGBA const branch_bkg_color(texture_color(get_tree_type().bark_tex), 0.0); // transparent
 		render(ttex, t.br_x, t.br_z, t.get_center(), plus_y, branch_bkg_color, 1, 0);
 	}
 };
