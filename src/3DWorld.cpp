@@ -69,7 +69,7 @@ int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), c
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
 int display_framerate(1), init_resize(1), temp_change(0), mesh_type(INIT_MESH_TYPE), mt2(0), is_cloudy(0);
-int star_init(0), recreated(1), cloud_model(0), force_tree_class(-1);
+int star_init(0), recreated(1), cloud_model(0), force_tree_class(-1), graffiti_mode(0);
 int displayed(0), min_time(0), resolution(1+(START_MODE==3)), res_old(1+(START_MODE!=3)), show_framerate(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0);
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
@@ -1175,7 +1175,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x02;   break;
 	case '3': // toggle water/ice
 		display_mode ^= 0x04;   break;
-	case '4': // toggle occlusion culling and VPLs
+	case '4': // toggle occlusion culling
 		display_mode ^= 0x08;   break;
 	case '5': // walk on snow/ship shadows/debugging
 		display_mode ^= 0x10;   break;
@@ -1187,8 +1187,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x80;   break;
 	case '9': // toggle ocean waves and leaf wind
 		display_mode ^= 0x0100; break;
-	case '0': // toggle universe stencil shadows
-		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows = !univ_stencil_shadows;}
+	case '0': // toggle universe stencil shadows / toggle graffiti mode
+		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;} else {++graffiti_mode;}
 		break;
 
 	case '\\': // enable dynamic particles (to test dynamic lighting, dynamic shadows, and collision detection)
