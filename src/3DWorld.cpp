@@ -86,7 +86,7 @@ unsigned num_snowflakes(0), create_voxel_landscape(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
-float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25);
+float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25), sm_tree_density(1.0);
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
 float CAMERA_RADIUS(0.06), C_STEP_HEIGHT(0.6), wapypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), dist_to_fire_sq(0.0);
 double camera_zh(0.0);
@@ -1500,7 +1500,7 @@ int load_config(string const &config_file) {
 	FILE *fp;
 	if (!open_file(fp, config_file.c_str(), "input configuration file")) return 0;
 
-	kw_to_val_map_t<bool>     kwmb(error);
+	kw_to_val_map_t<bool> kwmb(error);
 	kwmb.add("gen_tree_roots", gen_tree_roots);
 	kwmb.add("no_smoke_over_mesh", no_smoke_over_mesh);
 	kwmb.add("use_waypoints", use_waypoints);
@@ -1521,7 +1521,7 @@ int load_config(string const &config_file) {
 	kwmb.add("two_sided_lighting", two_sided_lighting);
 	kwmb.add("disable_sound", disable_sound);
 
-	kw_to_val_map_t<int>      kwmi(error);
+	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
 	kwmi.add("load_coll_objs", load_coll_objs);
 	kwmi.add("glaciate", GLACIATE);
@@ -1556,7 +1556,7 @@ int load_config(string const &config_file) {
 	kwmu.add("max_ray_bounces", MAX_RAY_BOUNCES);
 	kwmu.add("num_test_snowflakes", num_snowflakes);
 
-	kw_to_val_map_t<float>    kwmf(error);
+	kw_to_val_map_t<float> kwmf(error);
 	kwmf.add("gravity", base_gravity);
 	kwmf.add("mesh_height", mesh_height_scale);
 	kwmf.add("mesh_scale", mesh_scale);
@@ -1589,6 +1589,7 @@ int load_config(string const &config_file) {
 	kwmf.add("mesh_start_freq", MESH_START_FREQ);
 	kwmf.add("mesh_mag_mult", MESH_MAG_MULT);
 	kwmf.add("mesh_freq_mult", MESH_FREQ_MULT);
+	kwmf.add("sm_tree_density", sm_tree_density);
 
 	while (read_str(fp, strc)) { // slow but should be OK
 		string const str(strc);
