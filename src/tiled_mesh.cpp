@@ -883,9 +883,7 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 	bind_vbo(vbo, 0);
 	bind_vbo(ivbo[lod_level], 1);
 	unsigned const isz(size >> lod_level), ptr_stride(sizeof(vert_type_t));
-		
-	// can store normals in a normal map texture, but a vertex texture fetch is slow
-	glVertexPointer(3, GL_FLOAT, ptr_stride, 0);
+	glVertexPointer(3, GL_FLOAT, ptr_stride, 0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
 	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, GL_UNSIGNED_SHORT, 0);
 	bind_vbo(0, 0);
 	bind_vbo(0, 1);
