@@ -72,13 +72,14 @@ void main()
 {
 	// sand, dirt, grass, rock, snow
 	vec2 tc = gl_TexCoord[0].st;
+	vec2 diff_tc = tc; // separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
 	vec4 weights = texture2D(weights_tex, tc);
 	float weights4 = clamp((1.0 - weights.r - weights.g - weights.b - weights.a), 0.0, 1.0);
-	vec3 texel0  = cs2*weights.r*texture2D(tex2, ts2*tc).rgb +
-	               cs3*weights.g*texture2D(tex3, ts3*tc).rgb +
-				   cs4*weights.b*texture2D(tex4, ts4*tc).rgb +
-				   cs5*weights.a*texture2D(tex5, ts5*tc).rgb +
-				   cs6*weights4 *texture2D(tex6, ts6*tc).rgb;
+	vec3 texel0  = cs2*weights.r*texture2D(tex2, ts2*diff_tc).rgb +
+	               cs3*weights.g*texture2D(tex3, ts3*diff_tc).rgb +
+				   cs4*weights.b*texture2D(tex4, ts4*diff_tc).rgb +
+				   cs5*weights.a*texture2D(tex5, ts5*diff_tc).rgb +
+				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb;
 	vec3 texel1  = texture2D(detail_tex, gl_TexCoord[1].st).rgb; // detail texture
 
 	vec4 shadow_normal = texture2D(shadow_normal_tex, tc);

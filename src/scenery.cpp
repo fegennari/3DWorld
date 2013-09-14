@@ -46,6 +46,8 @@ inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR 
 
 
 bool skip_uw_draw(point const &pos, float radius) {
+
+	// used in tiled terrain mode to skip underwater rocks - otherwise, the fog calculation is incorrect (needs special air/water fog transition handling)
 	if (world_mode != WMODE_INF_TERRAIN || DISABLE_WATER || !(display_mode & 0x04)) return 0;
 	return (get_camera_pos().z > water_plane_z && (pos.z + radius) < (get_water_z_height() - OCEAN_WAVE_HEIGHT)); // water_plane_z
 }

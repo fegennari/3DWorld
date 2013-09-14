@@ -1152,9 +1152,11 @@ void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighti
 
 void tile_draw_t::setup_cloud_plane_uniforms(shader_t &s) {
 
+	//float const cloud_zmax(get_cloud_zmax()); // follows the camera zval - matches the drawn cloud layer but moves clouds on the terrain
+	float const cloud_zmax(0.5*(zmin + zmax) + max(zmax, CLOUD_CEILING)); // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
 	set_cloud_uniforms(s, 9);
 	s.add_uniform_float("cloud_scale",   0.535);
-	s.add_uniform_float("cloud_plane_z", get_cloud_zmax());
+	s.add_uniform_float("cloud_plane_z", cloud_zmax);
 	s.add_uniform_float("cloud_alpha",   0.75*atmosphere);
 }
 
@@ -1190,6 +1192,9 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 		set_active_texture(2);
 		setup_water_plane_texgen(8.0, 2.5); // tu_id=2; increase texture scale and change AR since the caustics texture is sparser than the water texture
 		set_active_texture(0);
+	}
+	else { // or just disable water fog calculation in the vertex shader (water_fog.part)?
+		s.add_uniform_float("water_plane_z", zmin); // used for fog calculation
 	}
 }
 

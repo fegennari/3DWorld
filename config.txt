@@ -21,7 +21,7 @@ disable_universe 1
 ground_effects_level 9
 
 grass_density 100
-grass_size 0.02 0.002
+grass_size 0.03 0.002
 
 tree_deadness 0.0 # 0.0 = alive, 1.0 = dead (winter)
 # R G B leaf_color_coherence tree_color_coherence
@@ -35,6 +35,7 @@ mesh_height 0.7
 mesh_scale 1.0
 camera_height 0.0
 tree_size 1.0
+sm_tree_density 1.0
 sun_rot 0.4
 shadow_detail 7
 tree_coll_level 4
