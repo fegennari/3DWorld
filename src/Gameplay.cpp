@@ -49,11 +49,11 @@ team_info *teaminfo = NULL;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled;
+extern bool vsync_enabled, spraypaint_mode;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER;
-extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh, graffiti_mode;
+extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern unsigned create_voxel_landscape;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_depth, crater_radius;
 extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
@@ -1385,7 +1385,12 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 
 void switch_player_weapon(int val) {
 
-	if (sstates != NULL && game_mode) sstates[CAMERA_ID].switch_weapon(val, 1);
+	if (game_mode) {
+		if (sstates != NULL) {sstates[CAMERA_ID].switch_weapon(val, 1);}
+	}
+	else if (spraypaint_mode) {
+		change_spraypaint_color();
+	}
 }
 
 
@@ -1412,8 +1417,13 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 	if (frame_counter == fire_frame) return; // to prevent two fires in the same frame
 	fire_frame = frame_counter;
 
-	if (!game_mode) { // flashlight/candlelight mode only
-		if (wmode & 1) add_camera_candlelight(); else add_camera_flashlight();
+	if (!game_mode) { // flashlight/candlelight/spraypaint mode only
+		if (spraypaint_mode) {
+			spray_paint((wmode & 1) != 0);
+		}
+		else {
+			if (wmode & 1) {add_camera_candlelight();} else {add_camera_flashlight();}
+		}
 		return;
 	}
 	if (!camera_reset) return;
@@ -1533,7 +1543,7 @@ float weapon_t::get_fire_vel() const {
 int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 
 	chosen_obj = -1;
-	float damage_scale(1.0), range;
+	float damage_scale(1.0), range(0.0);
 	vector3d velocity(zero_vector);
 	assert(UNLIMITED_WEAPONS || !no_weap_or_ammo());
 	int const weapon_id((weapon == W_GRENADE && (wmode&1)) ? W_CGRENADE : weapon);
@@ -1896,24 +1906,19 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		coll_obj &cobj(coll_objects[cindex]);
 		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), proj_type);
 
-		if ((graffiti_mode || !is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
-			bool const is_glass(cobj.cp.is_glass() && !graffiti_mode);
-			float decal_radius(graffiti_mode ? 0.03 : rand_uniform(0.004, 0.006));
+		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
+			bool const is_glass(cobj.cp.is_glass());
+			float const decal_radius(rand_uniform(0.004, 0.006));
 
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, decal_radius, get_max_dim(coll_norm))) {
 				colorRGBA dcolor;
 				int decal_tid;
 
-				if (graffiti_mode) { // graffiti mode
-					colorRGBA const colors[10] = {WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, BLACK};
-					dcolor     = colors[(graffiti_mode-1) % 10];
-					decal_tid  = BLUR_CENT_TEX;
+				if (is_laser) {
+					decal_tid = FLARE3_TEX; dcolor = BLACK;
 				}
 				else if (is_glass) {
 					decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
-				}
-				else if (is_laser) {
-					decal_tid = FLARE3_TEX; dcolor = BLACK;
 				}
 				else {
 					decal_tid = BULLET_D_TEX;
@@ -1922,7 +1927,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					dcolor.alpha = 1.0;
 					//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
 				}
-				gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, 1.0, dcolor, is_glass, !graffiti_mode); // inherit partial glass color
+				gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, 1.0, dcolor, is_glass, 1); // inherit partial glass color
 			}
 			if (wtype == W_M16 && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
 				gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player

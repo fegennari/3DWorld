@@ -715,6 +715,11 @@ int screenshot(unsigned window_width, unsigned window_height, char *file_path);
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
 int write_jpeg_data(unsigned window_width, unsigned window_height, char *file_path, unsigned char *data);
 
+// function prototypes - spray paint
+void change_spraypaint_color();
+void draw_spraypaint_crosshair();
+void spray_paint(bool permanent);
+
 
 #include "inlines.h"
 

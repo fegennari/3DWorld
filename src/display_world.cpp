@@ -40,7 +40,7 @@ float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop;
@@ -898,7 +898,7 @@ void display(void) {
 			process_groups();
 			check_gl_error(12);
 			if (TIMETEST) PRINT_TIME("E");
-			if (game_mode && b2down) fire_weapon();
+			if (b2down) fire_weapon();
 			update_weapon_cobjs(); // and update cblade
 			check_gl_error(6);
 			if (TIMETEST) PRINT_TIME("F");
@@ -980,6 +980,9 @@ void display(void) {
 			show_user_stats();
 			show_blood_on_camera();
 			show_crosshair(do_zoom);
+		}
+		else if (spraypaint_mode) {
+			draw_spraypaint_crosshair();
 		}
 		if (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1)) {
 			draw_compass_and_alt();
