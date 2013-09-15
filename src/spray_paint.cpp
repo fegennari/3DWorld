@@ -46,7 +46,7 @@ float get_decal_radius(point const &pos) {
 }
 
 
-void spray_paint(bool permanent) {
+void spray_paint(bool mode) {
 
 	// spray paint should affect cobjs, mesh, grass, and tree leaves - also can add volume to voxels
 	// play sound?
@@ -69,19 +69,19 @@ void spray_paint(bool permanent) {
 		float const decal_radius(get_decal_radius(coll_pos));
 
 		if (cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
-			update_voxel_sphere_region(coll_pos, decal_radius, (permanent ? -0.1 : 0.1), NO_SOURCE, 0); // add/remove voxel volume
+			update_voxel_sphere_region(coll_pos, decal_radius, (mode ? -0.1 : 0.1), NO_SOURCE, 0); // add/remove voxel volume
 		}
 		else if (cobj.status == COLL_STATIC && (!cobj.no_draw() || (cobj.cp.cobj_type != COBJ_TYPE_STD))) { // similar to cobj.can_be_scorched()
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, decal_radius, get_max_dim(coll_norm))) {
-				gen_decal(coll_pos, decal_radius, coll_norm, BLUR_CENT_TEX, cindex, 1.0, color, 0, 0); // FIXME: use permanent
+				gen_decal(coll_pos, decal_radius, coll_norm, BLUR_CENT_TEX, cindex, 1.0, color, 0, 0); // FIXME: mode=1 is permanent
 			}
 		}
 		//else if (tree_leaf) {} // FIXME: tree leaf color
 	}
 	else if (mesh_int) { // mesh intersection
 		float const decal_radius(get_decal_radius(coll_pos));
-		add_color_to_landscape_texture(color, xpos, ypos, 2.0*decal_radius);
-		modify_grass_at(coll_pos, 1.5*decal_radius, 0, 0, 0, 0, 1); // FIXME: need add_color mode (generalization of add_blood)
+		add_color_to_landscape_texture(color, coll_pos.x, coll_pos.y, 2.0*decal_radius);
+		modify_grass_at(coll_pos, 2.0*decal_radius, 0, 0, 0, 1, 1, 0, color);
 	}
 }
 

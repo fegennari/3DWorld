@@ -1797,9 +1797,11 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 	int const xpos0(get_xpos(xval)), ypos0(get_ypos(yval));
 	if (point_outside_mesh(xpos0, ypos0)) return; // off the terrain area
 	if (wminside[ypos0][xpos0] && water_matrix[ypos0][xpos0] > mesh_height[ypos0][xpos0]) return; // underwater
+
 	int const index(xpos0 + MESH_X_SIZE*ypos0);
-	if (ls_color_texels.find(index) != ls_color_texels.end()) return;
+	if (ls_color_texels.find(index) != ls_color_texels.end()) return; // don't update the same mesh location multiple times in the same frame
 	ls_color_texels.insert(index);
+
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	unsigned char *tex_data(tex.get_data());
 	float const xscale(((float)MESH_X_SIZE)/((float)tex.width)), yscale(((float)MESH_Y_SIZE)/((float)tex.height));

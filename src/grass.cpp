@@ -533,12 +533,14 @@ public:
 		check_and_update_grass(ix, min_up, max_up);
 	}
 
-	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_blood, bool remove) {
+	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
 		if (burn && is_underwater(pos)) burn = 0;
-		if (!burn && !crush && !cut && !check_uw && !add_blood && !remove) return; // nothing left to do
+		if (!burn && !crush && !cut && !check_uw && !add_color && !remove) return; // nothing left to do
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
+		color_wrapper cw;
+		if (add_color) {cw.set_c3(color);}
 
 		// modify grass within radius of pos
 		for (int y = y1; y <= y2; ++y) {
@@ -581,11 +583,10 @@ public:
 							}
 						}
 					}
-					if (add_blood && !underwater) {
+					if (add_color && !underwater) {
 						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
-						UNROLL_3X(updated |= (g.c[0] < 128 || g.c[1] > 0 || g.c[2] > 0);) // not already red
-						unsigned char const blood_color[3] = {128, 0, 0};
-						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_] + (1.0 - atten_val)*blood_color[i_]);)}
+						UNROLL_3X(updated |= (g.c[0] != cw.c[0] || g.c[1] != cw.c[1] || g.c[2] != cw.c[2]);) // not already red
+						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_] + (1.0 - atten_val)*cw.c[i_]);)}
 					}
 					if (burn && !underwater) {
 						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
@@ -798,8 +799,8 @@ void draw_grass() {
 	if (!no_grass() && (display_mode & 0x02)) {grass_manager.draw();}
 }
 
-void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_blood, bool remove) {
-	if (!no_grass()) {grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_blood, remove);}
+void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
+	if (!no_grass()) {grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_color, remove, color);}
 }
 
 void grass_mesh_height_change(int xpos, int ypos, bool recalc_shadows) {

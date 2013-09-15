@@ -690,7 +690,6 @@ void mouseMotion(int x, int y) {
 
 	case GLUT_RIGHT_BUTTON: // v: radius, h: up_vector
 		if (camera_mode == 1) break;
-		//if (display_mode & 0x80) {mouse_draw_on_ground(x, y);break;}
 
 		if (!camera_view) {
 			up_theta += MOUSE_ANG_ADJ*dx;

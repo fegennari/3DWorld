@@ -282,7 +282,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 	}
 	else { // add blood
 		add_color_to_landscape_texture(BLOOD_C, pos.x, pos.y, min(1.5, 0.4*double(sqrt(blood_v)))*radius);
-		modify_grass_at((pos - vector3d(0.0, 0.0, radius)), 1.8*radius, 0, 0, 0, 1, 1); // check_uw?
+		modify_grass_at((pos - vector3d(0.0, 0.0, radius)), 1.8*radius, 0, 0, 0, 1, 1, 0, BLOOD_C); // check_uw?
 	}
 	sstate.chunk_index = (sstate.chunk_index + 1) % NUM_CHUNK_BLOCKS;
 	

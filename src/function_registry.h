@@ -145,7 +145,6 @@ void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned 
 void draw_camera_filters(vector<camera_filter> &cfs);
 void draw_projectile_effects();
 void draw_env_other();
-void mouse_draw_on_ground(int x, int y);
 void draw_splash(float x, float y, float z, float size, colorRGBA color=WATER_C);
 void draw_text(float x, float y, float z, char const *text, float tsize=1.0, bool bitmap_font=0);
 void draw_framerate(float val);
@@ -586,7 +585,7 @@ bool no_grass();
 void gen_grass(bool full_regen);
 void update_grass_vbos();
 void draw_grass();
-void modify_grass_at(point const &pos, float radius, bool crush=0, bool burn=0, bool cut=0, bool check_uw=0, bool add_blood=0, bool remove=0);
+void modify_grass_at(point const &pos, float radius, bool crush=0, bool burn=0, bool cut=0, bool check_uw=0, bool add_color=0, bool remove=0, colorRGBA const &color=BLACK);
 void grass_mesh_height_change(int xpos, int ypos, bool recalc_shadows);
 bool place_obj_on_grass(point &pos, float radius);
 float get_grass_density(point const &pos);
@@ -718,7 +717,7 @@ int write_jpeg_data(unsigned window_width, unsigned window_height, char *file_pa
 // function prototypes - spray paint
 void change_spraypaint_color();
 void draw_spraypaint_crosshair();
-void spray_paint(bool permanent);
+void spray_paint(bool mode);
 
 
 #include "inlines.h"

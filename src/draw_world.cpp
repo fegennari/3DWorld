@@ -1281,18 +1281,6 @@ void draw_env_other() {
 }
 
 
-void mouse_draw_on_ground(int x, int y) {
-
-	swap(x, y); // landscape is rotated by 90 degrees
-	int const xscale(window_height), yscale(window_height);
-	int const xpos(int((float(x - 0.5*(window_width-window_height))/(float)xscale)*MESH_X_SIZE));
-	int const ypos(int(((float)y/(float)yscale)*MESH_Y_SIZE));
-	if (point_outside_mesh(xpos, ypos)) return;
-	accumulation_matrix[ypos][xpos] += 1000.0;
-	add_color_to_landscape_texture(WHITE, get_xval(xpos), get_yval(ypos), 1.0);
-}
-
-
 void draw_splash(float x, float y, float z, float size, colorRGBA color) {
 
 	assert(size >= 0.0);
