@@ -1000,6 +1000,7 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) { // lod_level == 
 	for (unsigned v = 0; v < num_verts; v += 3) {
 		point const pts[3] = {td.get_vert(v+0).v, td.get_vert(v+1).v, td.get_vert(v+2).v};
 		vector3d const normal(get_poly_norm(pts));
+		if (normal == zero_vector) continue; // degenerate polygon, skip it
 		unsigned const cp_ix((params.top_tex_used && normal.z > 0.5) ? 2 : fabs(eval_noise_texture_at((pts[0] + pts[1] + pts[2])/3.0)) > 0.5);
 		int cindex(-1);
 
