@@ -1095,13 +1095,20 @@ void draw_cracks_and_decals() {
 	if (decals.empty()) return;
 	create_and_draw_cracks(); // adds to beams
 	map<int, quad_batch_draw> batches; // maps from {tid, is_black} to quad batches
+	vector<pair<int, unsigned> > sorted_decals;
 
 	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
 		if (i->status && sphere_in_camera_view(i->get_pos(), i->radius, 0)) {
-			i->draw(batches[(i->tid << 1) + (i->color == BLACK)]);
+			sorted_decals.push_back(make_pair(-i->time, (i - decals.begin()))); // negate time, so largest time is first
 		}
 	}
-	if (batches.empty()) return;
+	if (sorted_decals.empty()) return;
+	sort(sorted_decals.begin(), sorted_decals.end()); // sort by time, so that spraypaint works (later paint is drawn after/over earlier paint)
+
+	for (unsigned i = 0; i < sorted_decals.size(); ++i) {
+		decal_obj const &d(decals[sorted_decals[i].second]);
+		d.draw(batches[(d.tid << 1) + (d.color == BLACK)]);
+	}
 	set_color(BLACK);
 	glDepthMask(GL_FALSE);
 	glDisable(GL_LIGHTING);
