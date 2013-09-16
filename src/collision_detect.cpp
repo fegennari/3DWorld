@@ -1339,7 +1339,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
 		if (cobj.type == COLL_CUBE && cobj.can_be_scorched()) {
 			float const sz(5.0*o_radius*rand_uniform(0.8, 1.2)), max_sz(decal_dist_to_cube_edge(cobj, obj.pos, (cdir >> 1)));
-			if (max_sz > 0.5*sz) {gen_decal((obj.pos - norm*o_radius), min(sz, max_sz), norm, FLARE3_TEX, index, 0.75, BLACK, 0, 1);} // explosion
+			if (max_sz > 0.5*sz) {gen_decal((obj.pos - norm*o_radius), min(sz, max_sz), norm, FLARE3_TEX, index, 0.75, BLACK, 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
 		}
 		obj.disable();
 	}
