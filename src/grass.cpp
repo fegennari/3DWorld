@@ -584,9 +584,12 @@ public:
 						}
 					}
 					if (add_color && !underwater) {
-						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));
 						UNROLL_3X(updated |= (g.c[0] != cw.c[0] || g.c[1] != cw.c[1] || g.c[2] != cw.c[2]);) // not already red
-						if (updated) {UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_] + (1.0 - atten_val)*cw.c[i_]);)}
+						
+						if (updated) {
+							float const atten_val(1.0 - color.alpha*(1.0 - reld)*(1.0 - reld));
+							UNROLL_3X(g.c[i_] = (unsigned char)(atten_val*g.c[i_] + (1.0 - atten_val)*cw.c[i_]);)
+						}
 					}
 					if (burn && !underwater) {
 						float const atten_val(1.0 - (1.0 - reld)*(1.0 - reld));

@@ -618,6 +618,27 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 }
 
 
+bool tree_data_t::spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color) {
+
+	if (leaf_data.empty()) return 0;
+	bool changed(0);
+
+	// Note: may apply to multiple trees if instancing is used
+	for (unsigned i = 0; i < leaves.size(); ++i) {
+		for (unsigned j = 0; j < 4; ++j) {
+			if (!dist_less_than(pos, leaves[i].pts[j], radius)) continue;
+			//make_private_tdata_copy(); // FIXME: do we want to make this a tree member function and make a private copy if leaf colors are changed?
+			float const blend_val(color.alpha*(1.0 - p2p_dist(pos, leaves[i].pts[j])/radius));
+			unsigned const ix((i<<2)+j);
+			assert(ix < leaf_data.size());
+			UNROLL_3X(leaf_data[ix].c[i_] = (unsigned char)((1.0 - blend_val)*leaf_data[ix].c[i_] + 255.0*blend_val*CLIP_TO_01(color[i_]));)
+			changed = leaves_changed = 1; // update a sub-range?
+		}
+	}
+	return changed;
+}
+
+
 void tree::burn_leaves() {
 
 	if (!physics_enabled()) return;
@@ -2279,6 +2300,16 @@ bool tree_cont_t::update_zvals(int x1, int y1, int x2, int y2) {
 }
 
 
+void tree_cont_t::spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color) {
+
+	for (iterator i = begin(); i != end(); ++i) {
+		if (dist_less_than(pos, i->sphere_center(), (radius + i->get_radius()))) {
+			i->spraypaint_leaves(pos, radius, cindex, color);
+		}
+	}
+}
+
+
 void tree_data_manager_t::ensure_init() {
 
 	if (max_unique_trees > 0 && empty()) {
@@ -2342,6 +2373,10 @@ void shift_trees(vector3d const &vd) {
 
 bool update_decid_tree_zvals(int x1, int y1, int x2, int y2) {
 	return t_trees.update_zvals(x1, y1, x2, y2);
+}
+
+void spraypaint_tree_leaves(point const &pos, float radius, int cindex, colorRGBA const &color) {
+	t_trees.spraypaint_leaves(pos, radius, cindex, color);
 }
 
 void add_tree_cobjs   () {t_trees.add_cobjs();}

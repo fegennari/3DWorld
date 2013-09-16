@@ -61,7 +61,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0);
-bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0), spraypaint_mode(0);
+bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
 bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0);
@@ -1187,7 +1187,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case '9': // toggle ocean waves and leaf wind
 		display_mode ^= 0x0100; break;
 	case '0': // toggle universe stencil shadows / toggle spraypaint mode
-		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;} else {spraypaint_mode ^= 1;}
+		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;} else {toggle_spraypaint_mode();}
 		break;
 
 	case '\\': // enable dynamic particles (to test dynamic lighting, dynamic shadows, and collision detection)

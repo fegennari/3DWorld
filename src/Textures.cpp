@@ -1811,6 +1811,7 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 	if (xpos < 0 || ypos < 0 || xpos >= tex.width || ypos >= tex.height) return;
 	int const rad(max(0, int(5.0*radius/((xscale + yscale)*(DX_VAL + DY_VAL))) - 1)), rad_sq(max(1, rad*rad)); // size in texture space
 	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad)), x2(min(tex.width-1, xpos+rad)), y2(min(tex.height-1, ypos+rad));
+	float const blend_scale(1.0/float(rad_sq));
 	unsigned char color_i[3];
 	unpack_color(color_i, color);
 
@@ -1822,7 +1823,7 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 
 			if (dist_sq < rad_sq) {
 				assert(offset + j <= tsize);
-				float const blend(0.8*(1.0 - float(dist_sq)/float(rad_sq)));
+				float const blend(0.8*color.alpha*(1.0 - float(dist_sq)*blend_scale));
 				int const o2(3*(offset + j));
 				assert(o2 + 3 <= maxsize);
 				BLEND_COLOR((tex_data + o2), color_i, (tex_data + o2), blend); // test if this texel is enabled for draw?
