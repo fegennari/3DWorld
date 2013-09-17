@@ -1942,7 +1942,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					dcolor.alpha = 1.0;
 					//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
 				}
-				gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, 1.0, dcolor, is_glass, 1); // inherit partial glass color
+				gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, is_glass, 1); // inherit partial glass color
 			}
 			if (wtype == W_M16 && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
 				gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player

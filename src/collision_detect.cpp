@@ -1058,7 +1058,7 @@ void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_no
 
 	if (cobj.type != COLL_CUBE || !cobj.can_be_scorched()) return;
 	float const sz(5.0*radius*rand_uniform(0.8, 1.2)), max_sz(decal_dist_to_cube_edge(cobj, pos, dir));
-	if (max_sz > 0.5*sz) {gen_decal(pos, min(sz, max_sz), coll_norm, FLARE3_TEX, cobj.id, 0.75, BLACK, 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
+	if (max_sz > 0.5*sz) {gen_decal(pos, min(sz, max_sz), coll_norm, FLARE3_TEX, cobj.id, colorRGBA(BLACK, 0.75), 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
 }
 
 
@@ -1361,7 +1361,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			float const sz(2.0*o_radius*rand_uniform(0.6, 1.4));
 			
 			if (decal_contained_in_cobj(cobj, obj.pos, norm, sz, (cdir >> 1))) {
-				gen_decal((obj.pos - norm*o_radius), sz, norm, BLUR_CENT_TEX, index, 1.0, BLOOD_C);
+				gen_decal((obj.pos - norm*o_radius), sz, norm, BLUR_CENT_TEX, index, BLOOD_C);
 			}
 		}
 		deform_obj(obj, norm, v0);

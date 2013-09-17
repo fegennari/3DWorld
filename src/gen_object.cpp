@@ -195,9 +195,9 @@ void fire::gen(point const &p, float size, float intensity, int src, bool is_sta
 }
 
 
-void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int lt, int tid_, int cid_, float init_alpha, colorRGBA const &color_, bool is_glass_) {
+void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int lt, int tid_, int cid_, colorRGBA const &color_, bool is_glass_) {
 
-	assert(r > 0.0 && init_alpha > 0.0 && lt > 0);
+	assert(r > 0.0 && color.alpha > 0.0 && lt > 0);
 	cid       = cid_; // must be set first
 	tid       = tid_;
 	lifetime  = lt;
@@ -206,8 +206,8 @@ void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int l
 	init(ipos);
 	radius    = r;
 	rot_angle = ang;
-	alpha     = init_alpha;
 	color     = color_;
+	alpha     = color.alpha;
 	orient    = o.get_norm(); // normal of attached surface at collision/anchor point
 	pos      += min(0.1*radius, 1.5*DECAL_OFFSET)*orient; // move away from the object it's attached to
 	is_glass  = is_glass_;
@@ -278,14 +278,14 @@ bool gen_fire(point const &pos, float size, int source, bool allow_close, bool i
 }
 
 
-void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid, float init_alpha, colorRGBA const &color, bool is_glass, bool rand_angle, int lifetime) {
+void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, int cid, colorRGBA const &color, bool is_glass, bool rand_angle, int lifetime) {
 
 	static point last_pos(all_zeros);
 	if (dist_less_than(pos, last_pos, 0.5*radius)) return; // skip duplicate/close locations
 	last_pos = pos;
 	float const rot_angle(rand_angle ? rand_uniform(0.0, TWO_PI) : 0.0);
 	decal_obj decal;
-	decal.gen(pos, radius, rot_angle, orient, lifetime, tid, cid, init_alpha, color, is_glass);
+	decal.gen(pos, radius, rot_angle, orient, lifetime, tid, cid, color, is_glass);
 	if (decal.is_on_cobj(cid)) {decals[decals.choose_element()] = decal;}
 }
 

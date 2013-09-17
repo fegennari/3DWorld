@@ -63,7 +63,9 @@ void draw_spraypaint_crosshair() {
 
 float get_spray_radius(point const &pos, float &alpha) {
 
-	return 0.03; // FIXME: dynamic, based on distance_to_camera(pos)
+	float const dist(distance_to_camera(pos)), radius(min(0.1, max(0.001, 0.05*dist)));
+	if (radius > 0.05) {alpha = 1.0 - 10.0*(radius - 0.05);} // 0.5 - 1.0
+	return radius;
 }
 
 
@@ -95,17 +97,17 @@ void spray_paint(bool mode) {
 		else if (cobj.status == COLL_STATIC && (!cobj.no_draw() || (cobj.cp.cobj_type != COBJ_TYPE_STD))) { // similar to cobj.can_be_scorched()
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, radius, get_max_dim(coll_norm))) {
 				int const lifetime(((mode & 1) ? 3600 : 60)*TICKS_PER_SECOND); // 1 min / 1 hour
-				gen_decal(coll_pos, radius, coll_norm, BLUR_CENT_TEX, cindex, 1.0, color, 0, 0, lifetime);
+				gen_decal(coll_pos, radius, coll_norm, BLUR_CENT_TEX, cindex, color, 0, 0, lifetime);
 			}
 		}
 		else if (cobj.is_billboard) { // Note: currently, only tree leaves use billboard cobj
-			spraypaint_tree_leaves(coll_pos, 2.0*radius, cindex, color);
+			spraypaint_tree_leaves(coll_pos, 1.5*radius, cindex, color);
 		}
 	}
 	else if (mesh_int) { // mesh intersection
 		float const radius(get_spray_radius(coll_pos, color.alpha));
-		add_color_to_landscape_texture(color, coll_pos.x, coll_pos.y, 2.0*radius);
-		modify_grass_at(coll_pos, 2.0*radius, 0, 0, 0, 1, 1, 0, color);
+		add_color_to_landscape_texture(color, coll_pos.x, coll_pos.y, 1.5*radius);
+		modify_grass_at(coll_pos, 1.5*radius, 0, 0, 0, 1, 1, 0, color);
 	}
 }
 

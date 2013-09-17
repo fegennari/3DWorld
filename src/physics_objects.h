@@ -132,8 +132,7 @@ struct decal_obj : public basic_physics_obj { // size = 76
 	vector3d orient;
 
 	decal_obj() : is_glass(0), cid(-1), tid(-1), lifetime(0), radius(0.0), alpha(1.0), rot_angle(0.0), color(BLACK) {}
-	void gen(point const &p, float r, float ang, vector3d const &o, int lt, int tid_, int cid_=-1,
-		float init_alpha=1.0, colorRGBA const &color_=BLACK, bool is_glass_=0);
+	void gen(point const &p, float r, float ang, vector3d const &o, int lt, int tid_, int cid_=-1, colorRGBA const &color_=BLACK, bool is_glass_=0);
 	void draw(quad_batch_draw &qbd) const;
 	bool is_on_cobj(int cobj) const;
 	void check_cobj();
