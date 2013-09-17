@@ -629,7 +629,7 @@ float rand_gaussian2_limited(float mean, float std_dev, float max_val) {
 
 class ast_belt_part_manager_t {
 
-	vector<point> pts; // include sizes?
+	vector<point> pts;
 	unsigned vbo;
 	sphere_t bsphere;
 
