@@ -518,6 +518,7 @@ void process_groups() {
 					blast_radius(pos, type, j, obj.source, 0);
 					gen_smoke(pos);
 					gen_fire(pos, ((type == PLASMA) ? obj.init_dir.x : rand_uniform(0.4, 1.0)), obj.source);
+					if (type == LANDMINE) {gen_landmine_scorch(obj.pos);}
 				}
 			}
 			if (type == LANDMINE && obj.status == 1 && !(obj.flags & (STATIC_COBJ_COLL | PLATFORM_COLL))) obj.time = 0; // don't start time until it lands

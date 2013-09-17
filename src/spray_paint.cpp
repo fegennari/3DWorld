@@ -84,7 +84,7 @@ void spray_paint(bool mode) {
 		coll_pos = pos + cview_dir*(range - 0.01); // simple and inexact, but seems OK
 		coll_pos.z += SMALL_NUMBER;
 	}
-	if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex)) { // hit cobjs
+	if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1)) { // hit cobjs (skip_dynamic=1)
 		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
 		coll_obj &cobj(coll_objects[cindex]);
 		float const radius(get_spray_radius(coll_pos, color.alpha));

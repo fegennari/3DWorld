@@ -1054,6 +1054,14 @@ bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d co
 }
 
 
+void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dir) { // not sure this belongs here
+
+	if (cobj.type != COLL_CUBE || !cobj.can_be_scorched()) return;
+	float const sz(5.0*radius*rand_uniform(0.8, 1.2)), max_sz(decal_dist_to_cube_edge(cobj, pos, dir));
+	if (max_sz > 0.5*sz) {gen_decal(pos, min(sz, max_sz), coll_norm, FLARE3_TEX, cobj.id, 0.75, BLACK, 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
+}
+
+
 void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool player_step) {
 
 	coll_obj const &cobj(coll_objects[index]);
@@ -1337,10 +1345,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	obj.verify_data();
 		
 	if (!obj.disabled() && (otype.flags & EXPL_ON_COLL)) {
-		if (cobj.type == COLL_CUBE && cobj.can_be_scorched()) {
-			float const sz(5.0*o_radius*rand_uniform(0.8, 1.2)), max_sz(decal_dist_to_cube_edge(cobj, obj.pos, (cdir >> 1)));
-			if (max_sz > 0.5*sz) {gen_decal((obj.pos - norm*o_radius), min(sz, max_sz), norm, FLARE3_TEX, index, 0.75, BLACK, 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
-		}
+		gen_explosion_decal((obj.pos - norm*o_radius), o_radius, norm, cobj, (cdir >> 1));
 		obj.disable();
 	}
 	if (!obj.disabled()) {

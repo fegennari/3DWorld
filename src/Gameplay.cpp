@@ -863,6 +863,20 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { 
 }
 
 
+void gen_landmine_scorch(point const &pos) {
+
+	float const o_radius(object_types[LANDMINE].radius);
+	point coll_pos;
+	vector3d coll_norm;
+	int cindex(-1);
+	
+	if (check_coll_line_exact(pos, (pos - vector3d(0.0, 0.0, 1.2*o_radius)), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1) && coll_norm == plus_z) {
+		assert(cindex >= 0 && cindex < (int)coll_objects.size());
+		gen_explosion_decal(point(pos.x, pos.y, coll_objects[cindex].d[2][1]), o_radius, coll_norm, coll_objects[cindex], 2); // top of cube
+	}
+}
+
+
 bool default_obj_coll(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type, int cobj_type) {
 
 	dwobject &obj(obj_groups[coll_id[cobj_type]].get_obj(index));
@@ -895,6 +909,7 @@ bool landmine_collision(int index, int obj_index, vector3d const &velocity, poin
 	//if (!smiley_collision(obj_index, index, velocity, obj.pos, energy, LANDMINE)) return 0;
 	blast_radius(obj.pos, LANDMINE, index, obj.source, 0);
 	gen_smoke(obj.pos);
+	gen_landmine_scorch(obj.pos);
 	obj.status = 0;
 	return 1;
 }
