@@ -64,8 +64,7 @@ state_file house/state.txt
 coll_obj_file house/COLL_OBJS_House.TXT
 ship_def_file universe/ship_defs.txt
 # mesh_file mesh.txt 1.0 0.0 0
-# mh_filename_raw heightmap.raw 1.0 0.0
-mh_filename_bmp house/heightmap_house.bmp 1.1 0.0
+mh_filename house/heightmap_house.bmp 1.1 0.0
 mesh_draw_bmp house/mesh_draw.bmp
 water_enabled_bmp house/water_enable.bmp
 

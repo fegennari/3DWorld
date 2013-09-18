@@ -86,7 +86,7 @@ texture_t(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
 texture_t(1, 0, 256,  256,  1, 4, 1, "@smoke"),  // not real file
 texture_t(1, 0, 64,   64,   1, 4, 1, "@plasma"), // not real file
 texture_t(1, 0, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
-texture_t(2, 5, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex", 1), // for loading real landscape texture
+texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex", 1), // for loading real landscape texture
 texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
 texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
 texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 0, 1, 8.0), // not real file
@@ -238,18 +238,23 @@ void load_texture_names() {
 }
 
 
+void set_landscape_texture_from_file() {
+
+	if (mesh_diffuse_tex_fn == NULL) {
+		cerr << "Error: mesh_diffuse_tex_fn must be specified when read_landscape is enabled" << endl;
+		exit(0);
+	}
+	texture_t &tex(textures[LANDSCAPE_TEX]);
+	tex.name  = mesh_diffuse_tex_fn;
+	tex.type  = 0; // loaded from file
+	tex.width = tex.height = 0; // reset to 0 for autodetect (only works with some formats)
+}
+
+
 void load_textures() {
 
 	cout << "loading textures";
-
-	if (read_landscape) {
-		if (mesh_diffuse_tex_fn == NULL) {
-			cerr << "Error: mesh_diffuse_tex_fn must be specified when read_landscape is enabled" << endl;
-			exit(0);
-		}
-		textures[LANDSCAPE_TEX].name = mesh_diffuse_tex_fn;
-		textures[LANDSCAPE_TEX].type = 0; // loaded from file
-	}
+	if (read_landscape) {set_landscape_texture_from_file();} // must be done first
 	load_texture_names();
 
 	for (int i = 0; i < NUM_TEXTURES; ++i) {

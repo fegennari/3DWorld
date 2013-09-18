@@ -50,12 +50,9 @@ char *defaults_file    = "defaults.txt";
 char *dstate_file      = "state.txt";
 char *dmesh_file       = "mesh.txt";
 char *dcoll_obj_file   = "coll_objs/coll_objs.txt";
-char *dmh_filename_raw = "heightmap.raw";
-char *dmh_filename_bmp = "heightmap.bmp";
 char *dship_def_file   = "ship_defs.txt";
 char *state_file(dstate_file), *mesh_file(dmesh_file), *coll_obj_file(dcoll_obj_file);
-char *mh_filename_raw(dmh_filename_raw), *mh_filename_bmp(dmh_filename_bmp), *mesh_diffuse_tex_fn(NULL);
-char *ship_def_file(dship_def_file), *snow_file(NULL);
+char *mh_filename(NULL), *mesh_diffuse_tex_fn(NULL), *ship_def_file(dship_def_file), *snow_file(NULL);
 char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
@@ -1722,13 +1719,9 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%s%f%f%i", mesh_file, &mesh_file_scale, &mesh_file_tz, &do_read_mesh) != 4) cfg_err("mesh_file command", error);
 			if (read_float(fp, rmz)) read_mesh_zmm = rmz;
 		}
-		else if (str == "mh_filename_raw") {
-			alloc_if_req(mh_filename_raw, dmh_filename_raw);
-			if (fscanf(fp, "%s%f%f", mh_filename_raw, &mesh_file_scale, &mesh_file_tz) != 3) cfg_err("mh_filename_raw command", error);
-		}
-		else if (str == "mh_filename_bmp") {
-			alloc_if_req(mh_filename_bmp, dmh_filename_bmp);
-			if (fscanf(fp, "%s%f%f", mh_filename_bmp, &mesh_file_scale, &mesh_file_tz) != 3) cfg_err("mh_filename_bmp command", error);
+		else if (str == "mh_filename") {
+			alloc_if_req(mh_filename, NULL);
+			if (fscanf(fp, "%s%f%f", mh_filename, &mesh_file_scale, &mesh_file_tz) != 3) cfg_err("mh_filename command", error);
 		}
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);

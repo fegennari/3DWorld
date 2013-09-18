@@ -31,8 +31,7 @@ include config_resolution.txt
 state_file state.txt
 coll_obj_file coll_objs/COLL_OBJS_River.TXT
 # mesh_file mesh.txt 1.0 0.0
-# mh_filename_raw heightmap.raw 1.0 0.0
-mh_filename_bmp heightmap_river.bmp 12.0 -1.3
+mh_filename heightmap_river.bmp 12.0 -1.3
 
 end
 

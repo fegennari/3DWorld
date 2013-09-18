@@ -71,8 +71,6 @@ water_enabled_bmp mapx/water_enable128.bmp
 # mesh_file mapx/mesh256.txt 1.0 0.0 1 5.0
 # mesh_draw_bmp mapx/mesh_draw256.bmp
 # water_enabled_bmp mapx/water_enable256.bmp
-# mh_filename_raw heightmap.raw 1.0 0.0
-# mh_filename_bmp heightmap_house.bmp 1.1 0.0
 
 end
 

@@ -62,7 +62,7 @@ extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
 extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
 extern point mesh_origin, surface_pos;
-extern char *mh_filename_raw, *mh_filename_bmp, *dem_filename, *mesh_file;
+extern char *mh_filename, *dem_filename, *mesh_file;
 extern rand_gen_t global_rand_gen;
 
 
@@ -156,9 +156,8 @@ bool read_mh2(bool is_bmp) {
 
 	FILE *fp;
 	float const mh_scale(READ_MESH_H_SCALE*mesh_file_scale*mesh_height_scale);
-	char *fn(is_bmp ? mh_filename_bmp : mh_filename_raw);
-	cout << "Reading mesh hieghtmap " << fn << endl;
-	if (!open_image_file(fn, fp, is_bmp, 1)) return 0;
+	cout << "Reading mesh hieghtmap " << mh_filename << endl;
+	if (!open_image_file(mh_filename, fp, is_bmp, 1)) return 0;
 	
 	for (int i = 0; i < MESH_Y_SIZE; ++i) { // hope it's the correct size
 		for (int j = 0; j < MESH_X_SIZE; ++j) {

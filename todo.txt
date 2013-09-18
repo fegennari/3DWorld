@@ -22,4 +22,7 @@ Mesh height high frequency noise / voxels / caves
 Point Sprites: berries on plants?
 Fireworks
 TT underwater dirt/vegetation
-Landmine scorch decal
+
+Somehow use game mode/fullscreen without changing the context?
+Large heightmap in tiled terrain mode
+Spraypaint tree leaves
