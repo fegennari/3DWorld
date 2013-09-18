@@ -156,6 +156,11 @@ bool read_mh2(bool is_bmp) {
 
 	FILE *fp;
 	float const mh_scale(READ_MESH_H_SCALE*mesh_file_scale*mesh_height_scale);
+
+	if (mh_filename == NULL) {
+		std::cerr << "Error: No mh_filename spcified in the config file." << endl;
+		return 0;
+	}
 	cout << "Reading mesh hieghtmap " << mh_filename << endl;
 	if (!open_image_file(mh_filename, fp, is_bmp, 1)) return 0;
 	

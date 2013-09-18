@@ -1713,15 +1713,15 @@ int load_config(string const &config_file) {
 			alloc_if_req(state_file, dstate_file);
 			if (!read_str(fp, state_file)) cfg_err("state_file command", error);
 		}
-		else if (str == "mesh_file") {
+		else if (str == "mesh_file") { // only the first parameter is required
 			float rmz(0.0);
 			alloc_if_req(mesh_file, dmesh_file);
-			if (fscanf(fp, "%s%f%f%i", mesh_file, &mesh_file_scale, &mesh_file_tz, &do_read_mesh) != 4) cfg_err("mesh_file command", error);
+			if (fscanf(fp, "%s%f%f%i", mesh_file, &mesh_file_scale, &mesh_file_tz, &do_read_mesh) < 1) cfg_err("mesh_file command", error);
 			if (read_float(fp, rmz)) read_mesh_zmm = rmz;
 		}
-		else if (str == "mh_filename") {
+		else if (str == "mh_filename") { // only the first parameter is required
 			alloc_if_req(mh_filename, NULL);
-			if (fscanf(fp, "%s%f%f", mh_filename, &mesh_file_scale, &mesh_file_tz) != 3) cfg_err("mh_filename command", error);
+			if (fscanf(fp, "%s%f%f", mh_filename, &mesh_file_scale, &mesh_file_tz) < 1) cfg_err("mh_filename command", error);
 		}
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);

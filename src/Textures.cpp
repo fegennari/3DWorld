@@ -241,7 +241,7 @@ void load_texture_names() {
 void set_landscape_texture_from_file() {
 
 	if (mesh_diffuse_tex_fn == NULL) {
-		cerr << "Error: mesh_diffuse_tex_fn must be specified when read_landscape is enabled" << endl;
+		cerr << "Error: mesh_diffuse_tex_fn must be specified when read_landscape is enabled." << endl;
 		exit(0);
 	}
 	texture_t &tex(textures[LANDSCAPE_TEX]);
