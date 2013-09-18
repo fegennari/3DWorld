@@ -33,5 +33,7 @@ smiley_speed 0.8
 mesh_size  1024 1024 1
 scene_size 4.0 4.0 4.0
 
+mesh_diffuse_tex_fn final1024.jpg
+
 include config_resolution.txt
 
