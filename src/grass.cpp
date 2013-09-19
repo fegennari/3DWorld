@@ -330,6 +330,11 @@ public:
 				if (is_mesh_disabled(x, y) || is_mesh_disabled(x+1, y) || is_mesh_disabled(x, y+1) || is_mesh_disabled(x+1, y+1)) continue; // mesh disabled
 				if (mesh_height[y][x] < water_matrix[y][x])   continue; // underwater (make this dynamically update?)
 				bool const do_cobj_check(hcm_chk(x, y) || hcm_chk(x+1, y) || hcm_chk(x, y+1) || hcm_chk(x+1, y+1));
+				float const vnz(vertex_normals[y][x].z);
+				float const *const sti(sthresh[0][0]);
+				float slope_scale(1.0);
+				if (vnz < sti[1]) {slope_scale = CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0]));} // handle steep slopes (dirt/rock texture replaces grass texture)
+				if (slope_scale == 0.0) continue; // no grass
 
 				for (unsigned n = 0; n < grass_density; ++n) {
 					float const xv(rgen.rand_uniform(xval, xval + DX_VAL));
@@ -347,7 +352,7 @@ public:
 						float density(1.0);
 						if (id1 != GROUND_TEX) {density = t;}
 						if (id2 != GROUND_TEX) {density = 1.0 - t;}
-						if (rgen.rand_float() >= density) continue; // skip - density too low
+						if (rgen.rand_float() >= slope_scale*density) continue; // skip - density too low
 					}
 					// skip grass intersecting cobjs
 					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection
