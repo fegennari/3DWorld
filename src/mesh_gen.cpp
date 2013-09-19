@@ -57,7 +57,7 @@ ttex lttex_sand[NTEX_SAND], lttex_dirt[NTEX_DIRT];
 
 extern bool combined_gu;
 extern int island, xoff, yoff, xoff2, yoff2, world_mode, resolution, rand_gen_index, mesh_scale_change;
-extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode;
+extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode, invert_mh_image;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
 extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
@@ -107,80 +107,50 @@ void calc_zminmax() {
 }
 
 
-bool bmp_to_chars(char *fname, char **&data) {
+bool bmp_to_chars(char *fname, char **&data) { // Note: supports all image formats
 
-	FILE *fp;
-	if (!open_image_file(fname, fp, 1, 1)) return 0;
+	assert(fname != NULL);
+	texture_t texture(0, 7, MESH_X_SIZE, MESH_Y_SIZE, 0, 1, 0, fname, 0); // invert_y=0
+	texture.load(-1); // generates fatal internal errors if load() fails, so return is always 1
+	assert(texture.width == MESH_X_SIZE && texture.height == MESH_Y_SIZE); // could make into an error
 	matrix_gen_2d(data);
-
-	for (unsigned i = 0; i < (unsigned)MESH_Y_SIZE; ++i) {
-		for (unsigned j = 0; j < (unsigned)MESH_X_SIZE; ++j) {
-			if (fread(&data[i][j], 1, 1, fp) != 1) { // could be more efficient
-				cout << "Error BMP image pixel (" << i << ", " << j << ")" << endl;
-				fclose(fp);
-				exit(1);
-			}
-		}
-	}
+	memcpy(data[0], texture.get_data(), XY_MULT_SIZE*sizeof(char));
+	texture.free_data();
 	return 1;
 }
 
 
-bool verify_bmp_header(FILE *&fp, bool grayscale) { // just assume BMP is correct for now
+// Note: only works for 8-bit heightmaps (higher precision textures are truncated)
+bool read_mesh_height_image(char const *fn) {
 
-	char header[56]; // 54 vs. 56?
-	size_t const nread1(fread(header, 54, 1, fp));
-	assert(nread1 == 1); // read BMP header assuming standard 14/16 byte header + 40 byte infoheader
-
-	if (grayscale) {
-		char data[1024]; // 54 vs. 56?
-		size_t const nread2(fread(data, 1024, 1, fp));
-		assert(nread2 == 1);
-	}
-	// *** FIX: check for correct header ***
-	return 1;
-}
-
-
-bool open_image_file(char *filename, FILE *&fp, bool is_bmp, bool grayscale) {
-
-	if (!open_file(fp, filename, "image", "rb"))     return 0;
-	if (is_bmp && !verify_bmp_header(fp, grayscale)) return 0;
-	return 1;
-}
-
-
-// code for reading height values stored as RAW or BMP image
-// x size must be a multiple of 4
-bool read_mh2(bool is_bmp) {
-
-	FILE *fp;
-	float const mh_scale(READ_MESH_H_SCALE*mesh_file_scale*mesh_height_scale);
-
-	if (mh_filename == NULL) {
+	if (fn == NULL) {
 		std::cerr << "Error: No mh_filename spcified in the config file." << endl;
 		return 0;
 	}
 	cout << "Reading mesh hieghtmap " << mh_filename << endl;
-	if (!open_image_file(mh_filename, fp, is_bmp, 1)) return 0;
-	
-	for (int i = 0; i < MESH_Y_SIZE; ++i) { // hope it's the correct size
+	texture_t texture(0, 7, MESH_X_SIZE, MESH_Y_SIZE, 0, 1, 0, fn, (invert_mh_image != 0));
+	texture.load(-1);
+		
+	if (texture.width != MESH_X_SIZE || texture.height != MESH_Y_SIZE) { // may be due to texture padding to make a multipe of 4
+		std::cerr << "Error reading mesh height image: Expected size " << MESH_X_SIZE << "x" << MESH_Y_SIZE
+				    << ", got size " << texture.width << "x" << texture.height << endl;
+		return 0;
+	}
+	unsigned char const *data(texture.get_data());
+	assert(data);
+	float const mh_scale(READ_MESH_H_SCALE*mesh_file_scale*mesh_height_scale);
+
+	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			unsigned char c;
-			if (fread(&c, 1, 1, fp) != 1) { // could be more efficient
-				cout << "Error reading mesh point (" << i << ", " << j << ")." << endl;
-				fclose(fp);
-				return 0;
-			}
-			mesh_height[i][j] = mh_scale*(float)c + mesh_file_tz; // 0 to 255
+			mesh_height[i][j] = mh_scale*(float)data[i*MESH_X_SIZE+j] + mesh_file_tz; // 0 to 255
 		}
 	}
-	fclose(fp);
+	texture.free_data();
 	return 1;
 }
 
 
-inline void set_zmax_est(float zval) {
+void set_zmax_est(float zval) {
 
 	zmax_est      = zval;
 	zmax_est2     = 2.0*zmax_est;
@@ -382,7 +352,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 		zmin = -zmax;
 		gen_mesh_random(0.1*scaled_height);
 	}
-	if (surface_type >= 3) { // read mesh from RAW or BMP image
+	if (surface_type >= 3) { // read mesh image file
 		static float **read_mh = NULL;
 
 		if (scrolling) {
@@ -419,7 +389,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 			memcpy(mesh_height[0], read_mh[0], XY_MULT_SIZE*sizeof(float));
 		}
 		else {
-			if (!((surface_type == 5) ? read_mesh(mesh_file, read_mesh_zmm) : read_mh2(surface_type == 4))) {
+			if (!((surface_type == 5) ? read_mesh(mesh_file, read_mesh_zmm) : read_mesh_height_image(mh_filename))) {
 				cout << "Error reading landscape height data." << endl;
 				exit(1);
 			}

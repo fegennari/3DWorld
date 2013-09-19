@@ -66,7 +66,7 @@ int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), c
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
 int display_framerate(1), init_resize(1), temp_change(0), mesh_type(INIT_MESH_TYPE), mt2(0), is_cloudy(0);
-int star_init(0), recreated(1), cloud_model(0), force_tree_class(-1);
+int star_init(0), recreated(1), cloud_model(0), force_tree_class(-1), invert_mh_image(0);
 int displayed(0), min_time(0), resolution(1+(START_MODE==3)), res_old(1+(START_MODE!=3)), show_framerate(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0);
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
@@ -1073,11 +1073,11 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'L': // increase terrain zoom
-		if (mesh_seed != 0 || read_heightmap) break; // ???
+		if (mesh_seed != 0 || read_heightmap) break;
 		if (world_mode != WMODE_UNIVERSE) change_terrain_zoom(2.0);
 		break;
 	case 'Y': // decrease terrain zoom
-		if (mesh_seed != 0 || read_heightmap) break; // ???
+		if (mesh_seed != 0 || read_heightmap) break;
 		if (world_mode != WMODE_UNIVERSE) change_terrain_zoom(0.5);
 		break;
 
@@ -1721,7 +1721,7 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "mh_filename") { // only the first parameter is required
 			alloc_if_req(mh_filename, NULL);
-			if (fscanf(fp, "%s%f%f", mh_filename, &mesh_file_scale, &mesh_file_tz) < 1) cfg_err("mh_filename command", error);
+			if (fscanf(fp, "%s%f%f%i", mh_filename, &mesh_file_scale, &mesh_file_tz, &invert_mh_image) < 1) cfg_err("mh_filename command", error);
 		}
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);
@@ -1793,12 +1793,6 @@ int load_config(string const &config_file) {
 	num_smileys    = max(num_smileys,    0);
 	teams          = max(teams,          1);
 	if (universe_only) world_mode = WMODE_UNIVERSE;
-
-	/*if (read_landscape) {
-		DISABLE_SCENERY = 1;
-		DISABLE_WATER   = 1;
-		num_trees       = 0;
-	}*/
 	//if (read_heightmap && dynamic_mesh_scroll) cout << "Warning: read_heightmap and dynamic_mesh_scroll are currently incompatible options as the heightmap does not scroll." << endl;
 	DISABLE_WATER = INIT_DISABLE_WATER;
 	XY_MULT_SIZE  = MESH_X_SIZE*MESH_Y_SIZE; // for bmp_to_chars() allocation

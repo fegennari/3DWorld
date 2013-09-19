@@ -732,15 +732,31 @@ void texture_t::load(int index) {
 }
 
 
+bool verify_bmp_header(FILE *&fp, bool grayscale) { // just assume BMP is correct for now
+
+	char header[56]; // 54 vs. 56?
+	size_t const nread1(fread(header, 54, 1, fp));
+	assert(nread1 == 1); // read BMP header assuming standard 14/16 byte header + 40 byte infoheader
+
+	if (grayscale) {
+		char data[1024];
+		size_t const nread2(fread(data, 1024, 1, fp));
+		assert(nread2 == 1);
+	}
+	// *** FIX: check for correct header (image size, etc.) ***
+	return 1;
+}
+
+
 // load an .RAW or .BMP file as a texture
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel)
 void texture_t::load_raw_bmp(int index) {
 
 	assert(ncolors == 1 || ncolors == 3 || ncolors == 4);
 	if (format == 3) assert(ncolors == 4);
-	FILE *file = open_texture_file(name); // open texture data
+	FILE *file(open_texture_file(name)); // open texture data
 	assert(file != NULL);
-	if (format == 1 && !verify_bmp_header(file, 0)) exit(1);
+	if (format == 1 && !verify_bmp_header(file, (ncolors == 1))) exit(1);
 
 	// allocate buffer
 	unsigned const size(num_pixels());
@@ -756,15 +772,10 @@ void texture_t::load_raw_bmp(int index) {
 		}
 		auto_insert_alpha_channel(index);
 	}
-	else if (ncolors == 1) { // grayscale luminance (unused/untested)
-		vector<unsigned char> td2(size);
-		size_t const nread(fread(&td2.front(), size, 1, file)); assert(nread == 1);
-		for(unsigned i = 0; i < size; ++i) {UNROLL_3X(data[3*i+i_] = td2[i];)}
-	}
-	else {
+	else { // RGB or grayscale luminance
 		size_t const nread(fread(data, ncolors*size, 1, file)); assert(nread == 1);
 	}
-	if (format == 1) { // bitmap file
+	if (format == 1 && (ncolors == 3 || ncolors == 4)) { // RGB/RGBA bitmap file
 		for(unsigned i = 0; i < size; ++i) {
 			swap(data[ncolors*i+0], data[ncolors*i+2]); // BGR[A] => RGB[A]
 		}

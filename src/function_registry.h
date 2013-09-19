@@ -246,8 +246,6 @@ void gen_gauss_rand_arr();
 
 // function prototypes - mesh_gen
 bool bmp_to_chars(char *fname, char **&data);
-bool verify_bmp_header(FILE *&fp, bool grayscale);
-bool open_image_file(char *filename, FILE *&fp, bool is_bmp, bool is_grayscale);
 void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_zvals);
 float get_glaciated_zval(float zval);
 float calc_glaciated_rel_value(float value);
