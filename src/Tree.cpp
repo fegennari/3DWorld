@@ -625,10 +625,13 @@ bool tree_data_t::spraypaint_leaves(point const &pos, float radius, int cindex, 
 
 	// Note: may apply to multiple trees if instancing is used
 	for (unsigned i = 0; i < leaves.size(); ++i) {
-		for (unsigned j = 0; j < 4; ++j) {
-			if (!dist_less_than(pos, leaves[i].pts[j], radius)) continue;
+		point const center(leaves[i].get_center());
+		bool const center_close(dist_less_than(pos, center, radius));
+
+		for (unsigned j = 0; j < 4; ++j) { // use closest point - leaf corner or center
+			if (!dist_less_than(pos, leaves[i].pts[j], radius) && !center_close) continue;
 			//make_private_tdata_copy(); // FIXME: do we want to make this a tree member function and make a private copy if leaf colors are changed?
-			float const blend_val(color.alpha*(1.0 - p2p_dist(pos, leaves[i].pts[j])/radius));
+			float const blend_val(color.alpha*(1.0 - min(p2p_dist(pos, leaves[i].pts[j]), p2p_dist(pos, center))/radius));
 			unsigned const ix((i<<2)+j);
 			assert(ix < leaf_data.size());
 			UNROLL_3X(leaf_data[ix].c[i_] = (unsigned char)((1.0 - blend_val)*leaf_data[ix].c[i_] + 255.0*blend_val*CLIP_TO_01(color[i_]));)
