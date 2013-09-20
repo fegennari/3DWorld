@@ -249,11 +249,11 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 
 	generated = 1; // mark as generated if we got here, even if there are no actual trees generated
 	if (vegetation_ == 0.0) return;
-	float const tscale(sm_tree_density*calc_tree_scale()), tsize(calc_tree_size()); // random tree generation based on transformed mesh height function
-	int const ntrees(int(min(1.0f, vegetation_*tscale*tscale/8.0f)*NUM_SMALL_TREES));
+	float const tscale(calc_tree_scale()), tsize(calc_tree_size()); // random tree generation based on transformed mesh height function
+	int const ntrees(int(min(1.0f, vegetation_*sm_tree_density*tscale*tscale/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
 	assert(x1 < x2 && y1 < y2);
-	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/(sm_tree_density*sqrt(tree_scale)))));
+	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
 	mesh_xy_grid_cache_t density_gen;
 	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1));
