@@ -34,7 +34,7 @@ mesh_size  1024 1024 1
 scene_size 4.0 4.0 4.0
 
 mesh_diffuse_tex_fn textures/final1024.jpg
-mh_filename textures/landscape_heightmap.raw
+mh_filename textures/landscape_heightmap.jpg 1.0 0.0 1
 
 include config_resolution.txt
 
