@@ -121,7 +121,7 @@ bool bmp_to_chars(char *fname, char **&data) { // Note: supports all image forma
 
 
 // Note: only works for 8-bit heightmaps (higher precision textures are truncated)
-bool read_mesh_height_image(char const *fn) {
+bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 
 	if (fn == NULL) {
 		std::cerr << "Error: No mh_filename spcified in the config file." << endl;
@@ -129,7 +129,8 @@ bool read_mesh_height_image(char const *fn) {
 	}
 	cout << "Reading mesh hieghtmap " << mh_filename << endl;
 	texture_t texture(0, 7, MESH_X_SIZE, MESH_Y_SIZE, 0, 1, 0, fn, (invert_mh_image != 0));
-	texture.load(-1);
+	texture.load(-1, allow_resize, 1); // allow 2-byte grayscale (currently only works for PNGs)
+	if (allow_resize) {texture.resize(MESH_X_SIZE, MESH_Y_SIZE);}
 		
 	if (texture.width != MESH_X_SIZE || texture.height != MESH_Y_SIZE) { // may be due to texture padding to make a multipe of 4
 		std::cerr << "Error reading mesh height image: Expected size " << MESH_X_SIZE << "x" << MESH_Y_SIZE
@@ -139,10 +140,14 @@ bool read_mesh_height_image(char const *fn) {
 	unsigned char const *data(texture.get_data());
 	assert(data);
 	float const mh_scale(READ_MESH_H_SCALE*mesh_file_scale*mesh_height_scale);
+	assert(texture.ncolors == 1 || texture.ncolors == 2); // one or two byte grayscale
+	unsigned ix(0);
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			mesh_height[i][j] = mh_scale*(float)data[i*MESH_X_SIZE+j] + mesh_file_tz; // 0 to 255
+			float const val((texture.ncolors == 2) ? ((data[ix] << 8) + data[ix+1])/256.0 : data[ix]);
+			mesh_height[i][j] = mh_scale*val + mesh_file_tz;
+			ix += texture.ncolors;
 		}
 	}
 	texture.free_data();

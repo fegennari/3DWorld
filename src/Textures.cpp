@@ -680,7 +680,7 @@ string get_file_extension(string const &filename, unsigned level, bool make_lowe
 }
 
 
-void texture_t::load(int index) {
+void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
 
 	if (type > 0) { // generated texture
 		alloc();
@@ -715,9 +715,9 @@ void texture_t::load(int index) {
 
 		switch (format) {
 		case 0: case 1: case 2: case 3: load_raw_bmp(index); break; // raw
-		case 4: load_targa(index); break;
-		case 5: load_jpeg(index); break;
-		case 6: load_png(index); break;
+		case 4: load_targa(index, allow_diff_width_height); break;
+		case 5: load_jpeg (index, allow_diff_width_height); break;
+		case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
 		}
 		if (invert_y) {do_invert_y();} // upside down
 
@@ -784,7 +784,7 @@ void texture_t::load_raw_bmp(int index) {
 }
 
 
-void texture_t::load_targa(int index) {
+void texture_t::load_targa(int index, bool allow_diff_width_height) {
 
 	assert(!is_allocated());
 	tga_image img;
@@ -799,7 +799,7 @@ void texture_t::load_targa(int index) {
 			exit(1);
 		}
 	}
-	if (width == 0 && height == 0) {
+	if (allow_diff_width_height || (width == 0 && height == 0)) {
 		width  = img.width;
 		height = img.height;
 		assert(width > 0 && height > 0);
@@ -822,7 +822,7 @@ void texture_t::load_targa(int index) {
 }
 
 
-void texture_t::load_jpeg(int index) {
+void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 
 #ifdef ENABLE_JPEG
 	jpeg_decompress_struct cinfo;
@@ -839,7 +839,7 @@ void texture_t::load_jpeg(int index) {
 	jpeg_read_header(&cinfo, TRUE);
 	jpeg_start_decompress(&cinfo);
 
-	if (width == 0 && height == 0) {
+	if (allow_diff_width_height || (width == 0 && height == 0)) {
 		width  = cinfo.output_width;
 		height = cinfo.output_height;
 		assert(width > 0 && height > 0);
@@ -869,7 +869,7 @@ void texture_t::load_jpeg(int index) {
 }
 
 
-void texture_t::load_png(int index) {
+void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
 
 #ifdef ENABLE_PNG
 	FILE *fp(open_texture_file(name));
@@ -889,18 +889,24 @@ void texture_t::load_png(int index) {
 	unsigned const w(png_get_image_width(png_ptr, info_ptr));
 	unsigned const h(png_get_image_height(png_ptr, info_ptr));
 	int const bit_depth(png_get_bit_depth(png_ptr, info_ptr));
+	unsigned const png_ncolors(png_get_channels(png_ptr, info_ptr));
 
-	if (width == 0 && height == 0) {
+	if (allow_diff_width_height || (width == 0 && height == 0)) {
 		width  = w;
 		height = h;
 		assert(width > 0 && height > 0);
 	}
 	assert(w == width && h == height);
-	unsigned const png_ncolors(png_get_channels(png_ptr, info_ptr));
 	bool const want_alpha_channel(ncolors == 4 && png_ncolors == 3);
 	ncolors = png_ncolors;
-	if (bit_depth == 16) png_set_strip_16(png_ptr);
-	if (bit_depth < 8)   png_set_packing(png_ptr);
+
+	if (allow_two_byte_grayscale && ncolors == 1 && bit_depth == 16) {
+		ncolors = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
+	}
+	else {
+		if (bit_depth == 16) {png_set_strip_16(png_ptr);}
+		if (bit_depth < 8)   {png_set_packing(png_ptr);}
+	}
 	vector<unsigned char *> rows(height);
 	unsigned const scanline_size(ncolors*width);
 	alloc();
@@ -1030,7 +1036,7 @@ void texture_t::resize(int new_w, int new_h) {
 	unsigned char *new_data(new unsigned char[new_w*new_h*ncolors]);
 	int const ret(gluScaleImage(calc_format(), width, height, GL_UNSIGNED_BYTE, data, new_w, new_h, GL_UNSIGNED_BYTE, new_data));
 	if (ret) cout << "GLU error during image scale: " << gluErrorString(ret) << "." << endl;
-	free_data();
+	free_data(); // only if size increases?
 	data   = new_data;
 	width  = new_w;
 	height = new_h;

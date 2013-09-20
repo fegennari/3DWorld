@@ -1053,11 +1053,11 @@ public:
 	void free_mm_data();
 	void free_data();
 	void gl_delete();
-	void load(int index);
+	void load(int index, bool allow_diff_width_height=0, bool allow_two_byte_grayscale=0);
 	void load_raw_bmp(int index);
-	void load_targa(int index);
-	void load_jpeg(int index);
-	void load_png(int index);
+	void load_targa(int index, bool allow_diff_width_height);
+	void load_jpeg(int index, bool allow_diff_width_height);
+	void load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void auto_insert_alpha_channel(int index);
 	void do_invert_y();
 	void fix_word_alignment();

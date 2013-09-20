@@ -28,7 +28,7 @@ float const LITNING_DIST    = 1.2;
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees;
-extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks;
+extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
 extern point sun_pos, moon_pos, surface_pos;
 extern float h_dirt[];
@@ -731,7 +731,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_br
 
 void tile_t::gen_decid_trees_if_needed() {
 
-	if (max_unique_trees == 0) {
+	if (num_trees > 0 && max_unique_trees == 0) {
 		cout << "Warning: max_unique_trees needs to be set to something reasonable for tiled terrain mode trees to work efficiently. Setting to 100." << endl;
 		max_unique_trees = 100;
 	}

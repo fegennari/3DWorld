@@ -1,12 +1,12 @@
 include config_landscape.txt
 
-read_heightmap 0
+disable_inf_terrain 1
 
 mesh_height 1.0
 mesh_size  1024 1024 1
 scene_size 4.0 4.0 4.0
 
 mesh_diffuse_tex_fn ../models/Puget_Sound/ps_texture_1k.png
-mh_filename ../models/Puget_Sound/ps_height_1024.png 1.5 0.0 1 # invert y
+mh_filename ../models/Puget_Sound/ps_height_1K.png 1.5 0.0 1
 
 
