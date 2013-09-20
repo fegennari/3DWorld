@@ -51,10 +51,21 @@ void grass_manager_t::clear() {
 	grass.clear();
 }
 
+vector3d grass_manager_t::interpolate_mesh_normal(point const &pos) const {
+
+	float const xp((pos.x + X_SCENE_SIZE)*DX_VAL_INV), yp((pos.y + Y_SCENE_SIZE)*DY_VAL_INV);
+	int const x0((int)xp), y0((int)yp);
+	if (point_outside_mesh(x0, y0) || point_outside_mesh(x0+1, y0+1)) return plus_z; // shouldn't get here
+	float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0));
+	return vertex_normals[y0+0][x0+0]*((1.0 - xpi)*(1.0 - ypi))
+			+ vertex_normals[y0+1][x0+0]*((1.0 - xpi)*ypi)
+			+ vertex_normals[y0+0][x0+1]*(xpi*(1.0 - ypi))
+		    + vertex_normals[y0+1][x0+1]*(xpi*ypi);
+}
+
 void grass_manager_t::add_grass_blade(point const &pos, float cscale, bool on_mesh) {
 
-	vector3d const base_dir(plus_z);
-	//vector3d const base_dir(interpolate_mesh_normal(pos));
+	vector3d const base_dir(on_mesh ? 0.5*(plus_z + interpolate_mesh_normal(pos)) : plus_z); // average mesh normal and +z for grass on mesh
 	vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
 	vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
 	float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
@@ -335,8 +346,10 @@ public:
 				float slope_scale(1.0);
 				if (vnz < sti[1]) {slope_scale = CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0]));} // handle steep slopes (dirt/rock texture replaces grass texture)
 				if (slope_scale == 0.0) continue; // no grass
+				assert(vnz > 0.0);
+				unsigned const tile_density(round_fp(grass_density/vnz)); // slightly more grass on steep slopes so that we have equal density over the surface, not just the XY projection
 
-				for (unsigned n = 0; n < grass_density; ++n) {
+				for (unsigned n = 0; n < tile_density; ++n) {
 					float const xv(rgen.rand_uniform(xval, xval + DX_VAL));
 					float const yv(rgen.rand_uniform(yval, yval + DY_VAL));
 					float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
@@ -413,17 +426,6 @@ public:
 			grass[i].shadowed = is_pt_shadowed((grass[i].p + grass[i].dir*0.5), 1); // per vertex shadows?
 		}
 		PRINT_TIME("Grass Find Shadows");
-	}
-
-	vector3d interpolate_mesh_normal(point const &pos) const {
-		float const xp((pos.x + X_SCENE_SIZE)*DX_VAL_INV), yp((pos.y + Y_SCENE_SIZE)*DY_VAL_INV);
-		int const x0((int)xp), y0((int)yp);
-		if (point_outside_mesh(x0, y0) || point_outside_mesh(x0+1, y0+1)) return plus_z; // shouldn't get here
-		float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0));
-		return vertex_normals[y0+0][x0+0]*((1.0 - xpi)*(1.0 - ypi))
-			 + vertex_normals[y0+1][x0+0]*((1.0 - xpi)*ypi)
-			 + vertex_normals[y0+0][x0+1]*(xpi*(1.0 - ypi))
-		     + vertex_normals[y0+1][x0+1]*(xpi*ypi);
 	}
 
 	void upload_data_to_vbo(unsigned start, unsigned end, bool alloc_data) const {

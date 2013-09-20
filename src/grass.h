@@ -36,6 +36,8 @@ protected:
 	rand_gen_t rgen;
 	typedef vert_norm_comp_color grass_data_t;
 
+	vector3d interpolate_mesh_normal(point const &pos) const;
+
 public:
 	grass_manager_t() : vbo(0), data_valid(0) {}
 	// can't free in the destructor because the gl context may be destroyed before this point
