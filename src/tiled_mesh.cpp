@@ -692,10 +692,10 @@ void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_d
 void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass) const {
 
 	if (pine_trees.empty()) return;
-	glPushMatrix();
 	vector3d const xlate(ptree_off.get_xlate());
+	glPushMatrix();
 	translate_to(xlate);
-		
+	
 	if (draw_branches) {
 		float const dscale(get_tree_dist_scale());
 
@@ -710,7 +710,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_br
 		float const weight(1.0 - get_tree_far_weight()); // 0 => low detail, 1 => high detail
 
 		if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
-			if (draw_near_leaves) { // GL_SAMPLE_ALPHA_TO_COVERAGE?
+			if (draw_near_leaves) {
 				s.add_uniform_float("max_noise", weight);
 				draw_tree_leaves_lod(s, xlate, 0);
 				s.add_uniform_float("max_noise", 1.0);

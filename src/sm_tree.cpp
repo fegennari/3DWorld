@@ -497,8 +497,9 @@ void small_tree::setup_rotation(rand_gen_t &rgen) {
 
 vector3d small_tree::get_rot_dir() const {
 
+	if (r_angle == 0.0) return plus_z;
 	vector3d dir(plus_z);
-	if (r_angle != 0.0) rotate_vector3d(vector3d(rx, ry, 0.0), -r_angle/TO_DEG, dir); // oops, rotation is backwards
+	rotate_vector3d(vector3d(rx, ry, 0.0), -r_angle/TO_DEG, dir); // oops, rotation is backwards
 	return dir;
 }
 
@@ -647,18 +648,16 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, max(1.5*width, 0.5*height), 0)) return;
+	if (shadow_only ? !is_over_mesh(pos2) : !camera_pdu.sphere_visible_test(pos2, max(1.5*width, 0.5*height))) return;
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size_scale(zoom_f*stt[type].ss*width*window_width);
 	bool const pine_tree(is_pine_tree());
 
-	if ((mode & 1) && type != T_BUSH) {
-		float const dist(distance_to_camera(pos + xlate)), size(size_scale/dist);
+	if ((mode & 1) && type != T_BUSH) { // trunk
+		float const dist(distance_to_camera(pos + xlate));
 
-		if (shadow_only || size > 1.0) { // trunk
-			float const cz(camera_origin.z - cview_radius*cview_dir.z), vxy(1.0 - (cz - pos.z)/dist);
-
-			if (pine_tree || dist < 0.2 || vxy >= 0.2*width/stt[type].h) { // if trunk not obscured by leaves
-				cylinder_3dw const cylin(get_trunk_cylin());
+		if (shadow_only || size_scale > dist) {
+			if (pine_tree || dist < 0.2 || (1.0 - ((camera_origin.z - cview_radius*cview_dir.z) - pos.z)/dist)*stt[type].h >= 0.2*width) { // if trunk not obscured by leaves
+				cylinder_3dw const cylin(get_trunk_cylin()); // cache in the tree?
 
 				if (!shadow_only && LINE_THRESH*zoom_f*(cylin.r1 + cylin.r2) < dist) { // draw as line
 					point const p2((cylin.r2 == 0.0) ? (0.2*cylin.p1 + 0.8*cylin.p2) : cylin.p2);
@@ -674,7 +673,7 @@ void small_tree::draw(int mode, bool shadow_only, vbo_vnc_block_manager_t const 
 				else { // draw as cylinder
 					if (world_mode == WMODE_GROUND) {set_color(get_bark_color());}
 					if (!shadow_only) {select_texture(stt[type].bark_tid);}
-					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size))));
+					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, 1);
 				}
 			}
