@@ -685,7 +685,7 @@ void tile_t::update_pine_tree_state(bool upload_if_needed) {
 void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const {
 
 	bool const draw_all(low_detail || camera_pdu.point_visible_test(get_center())); // tile center is in view
-	pine_trees.draw_pine_leaves(0, low_detail, draw_all, xlate);
+	pine_trees.draw_pine_leaves(0, low_detail, draw_all, contains_camera(), xlate);
 }
 
 

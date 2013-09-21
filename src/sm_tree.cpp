@@ -210,7 +210,7 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, ve
 }
 
 
-void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, vector3d const &xlate) const {
+void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, bool sort_front_to_back, vector3d const &xlate) const {
 
 	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
 	vbomgr.begin_render(1);
@@ -219,7 +219,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 	if (draw_all_pine) {
 		vbomgr.render_all(GL_QUADS);
 	}
-	else {
+	else if (sort_front_to_back) {
 		assert(!low_detail);
 		vector<pair<float, unsigned> > to_draw(size());
 		point const ref_pos(get_camera_pos() - xlate);
@@ -231,6 +231,11 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			operator[](to_draw[i].second).draw_pine_leaves(vbomgr, xlate);
+		}
+	}
+	else {
+		for (const_iterator i = begin(); i != end(); ++i) {
+			i->draw_pine_leaves(vbomgr, xlate);
 		}
 	}
 	vbomgr.end_render();
