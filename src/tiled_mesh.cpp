@@ -1453,8 +1453,22 @@ void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves
 
 void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 
-	// nearby trunks
+	// leaves
+	enable_blend(); // for fog transparency
 	shader_t s;
+	set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
+	s.add_uniform_float("radius_scale", calc_tree_size());
+	set_specular(0.2, 8.0);
+	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass); // far leaves
+	s.end_shader();
+	disable_blend();
+	set_pine_tree_shader(s, "pine_tree");
+	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass); // near leaves
+	assert(tree_trunk_pts.empty());
+	s.end_shader();
+	set_specular(0.0, 1.0);
+
+	// nearby trunks
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
@@ -1464,7 +1478,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	s.add_uniform_float("tex_scale_t", 1.0);
 	s.end_shader();
 
-	// leaves/distant trunks
+	// distant trunks
 	enable_blend(); // for fog transparency
 		
 	if (!tree_trunk_pts.empty()) { // color/texture already set above
@@ -1478,18 +1492,8 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 		tree_trunk_pts.resize(0);
 		s.end_shader();
 	}
-	set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
-	s.add_uniform_float("radius_scale", calc_tree_size());
-	set_specular(0.2, 8.0);
-	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass); // far leaves
-	s.end_shader();
-	set_pine_tree_shader(s, "pine_tree");
-	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass); // near leaves
-	assert(tree_trunk_pts.empty());
-	s.end_shader();
-	glDisable(GL_TEXTURE_2D);
-	set_specular(0.0, 1.0);
 	disable_blend();
+	glDisable(GL_TEXTURE_2D);
 }
 
 
