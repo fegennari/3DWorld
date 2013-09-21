@@ -238,12 +238,12 @@ void load_texture_names() {
 }
 
 
+bool using_custom_landscape_texture() {return (read_landscape && mesh_diffuse_tex_fn != NULL);}
+
+
 void set_landscape_texture_from_file() {
 
-	if (mesh_diffuse_tex_fn == NULL) {
-		cerr << "Error: mesh_diffuse_tex_fn must be specified when read_landscape is enabled." << endl;
-		exit(0);
-	}
+	assert(mesh_diffuse_tex_fn != NULL);
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	tex.name  = mesh_diffuse_tex_fn;
 	tex.type  = 0; // loaded from file
@@ -254,7 +254,7 @@ void set_landscape_texture_from_file() {
 void load_textures() {
 
 	cout << "loading textures";
-	if (read_landscape) {set_landscape_texture_from_file();} // must be done first
+	if (using_custom_landscape_texture()) {set_landscape_texture_from_file();} // must be done first
 	load_texture_names();
 
 	for (int i = 0; i < NUM_TEXTURES; ++i) {
@@ -1545,7 +1545,7 @@ void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2
 void create_landscape_texture() {
 
 	RESET_TIME;
-	if (read_landscape || world_mode == WMODE_INF_TERRAIN) return;
+	if (using_custom_landscape_texture() || world_mode == WMODE_INF_TERRAIN) return;
 	cached_ls_colors.clear();
 	int tox0(0), toy0(0), scroll(0);
 	texture_t &tex(textures[LANDSCAPE_TEX]);
@@ -1683,7 +1683,7 @@ void create_landscape_texture() {
 	} // for i
 	PRINT_TIME(" Data Gen");
 
-	if (!read_landscape) {
+	if (!using_custom_landscape_texture()) {
 		if (landscape0 == NULL || !scroll) { // initialize/copy entire texture
 			int const totsize(tex.num_bytes());
 			if (landscape0 == NULL) landscape0 = new unsigned char[totsize];
@@ -1727,7 +1727,7 @@ void regrow_landscape_texture_amt0() {
 
 	//RESET_TIME;
 	static int counter(0);
-	if (read_landscape || iticks == 0) return; // is it too strong to use both iticks and fticks?
+	if (using_custom_landscape_texture() || iticks == 0) return; // is it too strong to use both iticks and fticks?
 	if (ls0_invalid) create_landscape_texture();
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	assert(tex.is_allocated() && landscape0 != NULL);
