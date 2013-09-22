@@ -272,10 +272,11 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 	float const tscale(calc_tree_scale()), tsize(calc_tree_size()); // random tree generation based on transformed mesh height function
 	int const ntrees(int(min(1.0f, vegetation_*sm_tree_density*tscale*tscale/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
-	bool const approx_tree_zval = 0; // disabled, too inaccurate for large mesh spacing relative to tree size
 	assert(x1 < x2 && y1 < y2);
+	bool const approx_tree_zval(world_mode == WMODE_INF_TERRAIN); // faster, but lower z-value accuracy, and only works for tiled terrain mode
 	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
+	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
 	mesh_xy_grid_cache_t density_gen, height_gen;
 	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1));
 	if (approx_tree_zval) {height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5), DX_VAL, DY_VAL, (x2-x1), (y2-y1));}
@@ -290,13 +291,13 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 			for (int n = 0; n < trees_per_block; ++n) {
 				if (dist_test > (TREE_DEN_THRESH*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
 				rgen.rand_mix();
-				float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
-				float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
-				float const zpos(approx_tree_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1));
+				float const xval(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
+				float const yval(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
+				float const zpos(approx_tree_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
 				int const ttype(get_tree_type_from_height(zpos, rgen));
 				if (ttype == TREE_NONE) continue;
 				float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));
-				small_tree st(point(xpos, ypos, zpos-0.1*height), height, width, ttype, 0, rgen);
+				small_tree st(point(xval, yval, zpos+zval_adj*height), height, width, ttype, 0, rgen);
 				st.setup_rotation(rgen);
 				add_tree(st);
 			}
@@ -530,9 +531,11 @@ cylinder_3dw small_tree::get_trunk_cylin() const {
 
 	if (type == T_BUSH) {return cylinder_3dw();}
 	vector3d const dir(get_rot_dir());
-	float const hval(is_pine_tree() ? 1.0 : 0.75), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
+	bool const is_pine(is_pine_tree());
+	float const hval(is_pine ? 1.0 : 0.75), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
+	float const mod_width(width*(is_pine ? 0.8*len/(hval*height) : 1.0));
 	point const p1((pos + dir*(zbot - pos.z)));
-	return cylinder_3dw(p1, (p1 + dir*len), stt[type].ws*width, stt[type].w2*width);
+	return cylinder_3dw(p1, (p1 + dir*len), stt[type].ws*mod_width, stt[type].w2*mod_width);
 }
 
 

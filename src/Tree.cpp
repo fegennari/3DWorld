@@ -27,7 +27,6 @@ int   const LEAF_GEN_RAND2   = 200000; // larger is fewer leaves falling
 float const DIST_C_SCALE     = 0.01;
 float const LEAF_SHADOW_VAL  = 0.25;
 float const BR_SHADOW_VAL    = 0.6;
-float const TREE_DEPTH       = 0.1;
 float const BASE_LEN_SCALE   = 0.8; // determines base cylinder overlap
 float const BRANCH_LEN_SCALE = 0.9; // determines branch cylinder overlap
 int const TREE_4TH_LEAVES    = 0;

@@ -11,6 +11,7 @@
 
 float const TREE_DIST_SCALE = 100.0;
 float const TREE_DEN_THRESH = 0.55;
+float const TREE_DEPTH      = 0.1;
 
 //#define TREE_4TH_BRANCHES
 
