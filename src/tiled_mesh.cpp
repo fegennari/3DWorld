@@ -1271,10 +1271,12 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		to_gen_trees[0]->init_pine_tree_draw();
 	}
 	else if (!to_gen_trees.empty()) {
+		//RESET_TIME;
 		#pragma omp parallel for schedule(static,1)
 		for (int i = 0; i < (int)to_gen_trees.size(); ++i) {
 			to_gen_trees[i]->init_pine_tree_draw();
 		}
+		//PRINT_TIME("Gen Trees2");
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		(*i)->ensure_vbo(data, indices);

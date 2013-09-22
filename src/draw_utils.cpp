@@ -360,28 +360,25 @@ template class indexed_mesh_draw<vert_wrap_t>;
 
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::add_points_int(vector<vert_type_t> &dest, vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
+void vbo_block_manager_t<vert_type_t>::add_points_int(vector<vert_type_t> &dest, typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {
 
-	assert(!p.empty());
+	assert(p != NULL && npts > 0);
 	color_wrapper cw;
 	cw.set_c4(color);
-		
-	for (vector<vert_type_t::non_color_class>::const_iterator i = p.begin(); i != p.end(); ++i) {
-		dest.push_back(vert_type_t(*i, cw));
-	}
+	for (unsigned i = 0; i < npts; ++i) {dest.push_back(vert_type_t(p[i], cw));}
 }
 
 template<>
-void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &dest, vector<vert_norm_tc> const &p, colorRGBA const &color) { // color is ignored
+void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &dest, vert_norm_tc const *const p, unsigned npts, colorRGBA const &color) { // color is ignored
 
-	assert(!p.empty());
-	copy(p.begin(), p.end(), back_inserter(dest));
+	assert(p != NULL && npts > 0);
+	copy(p, p+npts, back_inserter(dest));
 }
 
 template< typename vert_type_t >
-unsigned vbo_block_manager_t<vert_type_t>::add_points_with_offset(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color) {
+unsigned vbo_block_manager_t<vert_type_t>::add_points_with_offset(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {
 
-	add_points(p, color);
+	add_points(p, npts, color);
 	if (offsets.empty()) {offsets.push_back(0);} // start at 0
 	unsigned const next_ix(offsets.size() - 1);
 	offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
@@ -407,14 +404,14 @@ bool vbo_block_manager_t<vert_type_t>::upload() {
 }
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::update_range(vector<typename vert_type_t::non_color_class> const &p, colorRGBA const &color, unsigned six, unsigned eix) {
+void vbo_block_manager_t<vert_type_t>::update_range(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color, unsigned six, unsigned eix) {
 
 	if (!vbo) return; // vbo not uploaded (assertion?)
 	assert(six < eix && eix < offsets.size());
 	unsigned const start(offsets[six]), update_size(offsets[eix] - start);
-	assert(p.size() == update_size);
+	assert(npts == update_size);
 	vector<vert_type_t> update_verts;
-	add_points_int(update_verts, p, color);
+	add_points_int(update_verts, p, npts, color);
 	bind_vbo(vbo);
 	upload_vbo_sub_data(&update_verts.front(), start*sizeof(vert_type_t), update_size*sizeof(vert_type_t));
 	bind_vbo(0);

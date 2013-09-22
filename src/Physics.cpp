@@ -1451,7 +1451,7 @@ void decal_obj::apply_physics(unsigned i) {
 
 	if (!status) return;
 	time += iticks;
-	if ((unsigned)time > lifetime) {status = 0;}
+	if (time > lifetime) {status = 0;}
 }
 
 

@@ -727,13 +727,12 @@ void s_plant::create_leaf_points(vector<vert_norm> &points) const {
 	for (unsigned j = 0, ix = 0; j < nlevels; ++j) { // could do the same optimizations as the high detail pine tree
 		float const sz(0.07*(height + 0.03/tree_scale)*((nlevels - j + 3.0)/(float)nlevels));
 		float const z((j + 3.0)*height/(nlevels + 4.0));
-		vector3d const scale(sz*wscale, sz*wscale, sz);
 
 		for (unsigned k = 0; k < nrings; ++k) {
 			float const theta(TWO_PI*(3.3*j + 0.2*k) + theta0);
 			int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
 			rdeg += 0.01*(val - 150);
-			add_rotated_quad_pts(&points.front(), ix, theta, rdeg/45.0, z, pos, scale);
+			add_rotated_quad_pts(&points.front(), ix, theta, z, pos, sz*wscale, sz*rdeg/45.0);
 		}
 	}
 }

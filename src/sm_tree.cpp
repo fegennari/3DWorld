@@ -92,8 +92,16 @@ void small_tree_group::finalize(bool low_detail) {
 	vbo_manager[low_detail].clear();
 	vbo_manager[low_detail].reserve_pts(4*(low_detail ? 1 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
 
-	for (iterator i = begin(); i != end(); ++i) {
-		i->calc_points(vbo_manager[low_detail], low_detail);
+	if (!low_detail) { // high detail, create using multiple threads
+		#pragma omp parallel for schedule(static,1)
+		for (int i = 0; i < (int)size(); ++i) {
+			operator[](i).calc_points(vbo_manager[low_detail], low_detail);
+		}
+	}
+	else {
+		for (iterator i = begin(); i != end(); ++i) {
+			i->calc_points(vbo_manager[low_detail], low_detail);
+		}
 	}
 }
 
@@ -264,12 +272,14 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 	float const tscale(calc_tree_scale()), tsize(calc_tree_size()); // random tree generation based on transformed mesh height function
 	int const ntrees(int(min(1.0f, vegetation_*sm_tree_density*tscale*tscale/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
+	bool const approx_tree_zval = 0; // disabled, too inaccurate for large mesh spacing relative to tree size
 	assert(x1 < x2 && y1 < y2);
 	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
-	mesh_xy_grid_cache_t density_gen;
+	mesh_xy_grid_cache_t density_gen, height_gen;
 	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1));
-	
+	if (approx_tree_zval) {height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5), DX_VAL, DY_VAL, (x2-x1), (y2-y1));}
+
 	for (int i = y1; i < y2; i += skip_val) {
 		for (int j = x1; j < x2; j += skip_val) {
 			rgen.set_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
@@ -282,7 +292,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 				rgen.rand_mix();
 				float const xpos(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
 				float const ypos(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
-				float const zpos(interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1));
+				float const zpos(approx_tree_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xpos, ypos, 0.0, 1, 1));
 				int const ttype(get_tree_type_from_height(zpos, rgen));
 				if (ttype == TREE_NONE) continue;
 				float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));
@@ -586,39 +596,39 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), sz_scale(SQRT2*get_pine_tree_radius());
 	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
-	vector<vert_norm> &points(vbo_manager.temp_points);
 
 	if (!low_detail) { // high detail
-		points.resize(4*N_PT_LEVELS*N_PT_RINGS);
+		unsigned const npts(4*N_PT_LEVELS*N_PT_RINGS);
+		vert_norm points[npts];
 		float const rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 
 		for (unsigned j = 0, ix = 0; j < N_PT_LEVELS; ++j) {
 			float const sz(sz_scale*(N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS);
 			float const z((j + 1.8)*height0/(N_PT_LEVELS + 2.8) - rd*sz);
-			vector3d const scale(sz, sz, sz);
 
 			for (unsigned k = 0; k < N_PT_RINGS; ++k) {
 				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
-				add_rotated_quad_pts(&points.front(), ix, theta, rd, z, center, scale); // bounds are (sz, sz, rd*sz+z)
+				add_rotated_quad_pts(points, ix, theta, z, center, sz, rd*sz); // bounds are (sz, sz, rd*sz+z)
 			}
 		}
 		if (update_mode) {
 			assert(vbo_mgr_ix >= 0);
-			vbo_manager.update_range(points, color, vbo_mgr_ix, vbo_mgr_ix+1);
+			vbo_manager.update_range(points, npts, color, vbo_mgr_ix, vbo_mgr_ix+1);
 		}
-		else {
-			vbo_mgr_ix = vbo_manager.add_points_with_offset(points, color);
+		else { // we only get into this case when running in parallel
+			#pragma omp critical(pine_tree_vbo_update)
+			vbo_mgr_ix = vbo_manager.add_points_with_offset(points, npts, color);
 		}
 	}
 	else { // low detail billboard
 		assert(!update_mode);
-		points.resize(4);
+		vert_norm points[4];
 		vert_norm vn(pos, vector3d(1.5*sz_scale/calc_tree_size(), 0.0, 0.816));
 		vn.v.z = center.z + 1.45*sz_scale + 0.1*height;
 		points[0] = points[1] = vn; // top two vertices
 		vn.v.z = center.z - 0.55*sz_scale - 0.2*height;
 		points[2] = points[3] = vn; // bottom two vertices
-		vbo_manager.add_points(points, color);
+		vbo_manager.add_points(points, 4, color);
 	}
 }
 
