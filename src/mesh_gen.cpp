@@ -647,9 +647,10 @@ void compute_scale(int make_island) {
 void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
 
 	assert(nx >= 0 && ny >= 0);
+	assert(start_eval_sin <= end_eval_sin && end_eval_sin <= F_TABLE_SIZE);
 	cur_nx = nx; cur_ny = ny;
-	xterms.resize(nx*F_TABLE_SIZE);
-	yterms.resize(ny*F_TABLE_SIZE);
+	xterms.resize(nx*F_TABLE_SIZE, 0.0);
+	yterms.resize(ny*F_TABLE_SIZE, 0.0);
 	hoff = 0.0;
 	float const ms_scale((island && world_mode == WMODE_GROUND) ? 1.0/ISLAND_MAG_SCALE : 1.0);
 	float const mscale(ms_scale*mesh_scale), mscale_z(ms_scale*mesh_scale_z);
@@ -684,11 +685,10 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate) co
 	float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
 	float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
 	float zval(hoff);
-	for (int i = start_eval_sin; i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
+	for (int i = start_eval_sin; i < end_eval_sin; ++i) {zval += xptr[i]*yptr[i];} // performance critical
 	if (GLACIATE && glaciate && !island) zval = get_glaciated_zval(zval);
 	return zval;
 }
-
 
 
 float eval_mesh_sin_terms(float xv, float yv) {
