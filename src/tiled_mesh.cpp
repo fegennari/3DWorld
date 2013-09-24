@@ -117,12 +117,12 @@ void tile_t::update_terrain_params() {
 }
 
 
-float tile_t::get_min_dist_to_pt(point const &pt) const {
+float tile_t::get_min_dist_to_pt(point const &pt, bool xy_only) const {
 
 	point p1(pt), p2(get_center());
 	bool const ret(do_line_clip(p1, p2, get_bcube().d)); // only clip in x and y?
 	assert(ret);
-	return p2p_dist(pt, p1);
+	return (xy_only ? p2p_dist_xy(pt, p1) : p2p_dist(pt, p1));
 }
 
 float tile_t::get_max_xy_dist_to_pt(point const &pt) const {
@@ -702,7 +702,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_br
 		if (dscale < 1.0) { // close, draw as polygons
 			pine_trees.draw_branches(0, xlate, &trunk_pts);
 		}
-		else if (dscale < 2.0) { // far away, use low detail branches
+		else if (dscale < 2.0 && get_tree_far_weight() < 0.5) { // far away, use low detail branches
 			pine_trees.add_trunk_pts(xlate, trunk_pts);
 		} // else very far, skip branches
 	}
@@ -712,12 +712,12 @@ void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_br
 		if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
 			if (draw_near_leaves) {
 				s.add_uniform_float("max_noise", weight);
-				draw_tree_leaves_lod(s, xlate, 0);
+				draw_tree_leaves_lod(s, xlate, 0); // near leaves
 				s.add_uniform_float("max_noise", 1.0);
 			}
 			if (draw_far_leaves) {
 				s.add_uniform_float("min_noise", weight);
-				draw_tree_leaves_lod(s, xlate, 1);
+				draw_tree_leaves_lod(s, xlate, 1); // far leaves
 				s.add_uniform_float("min_noise", 0.0);
 			}
 		}

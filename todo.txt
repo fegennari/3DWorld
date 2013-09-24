@@ -25,4 +25,3 @@ TT underwater dirt/vegetation
 
 Somehow use game mode/fullscreen without changing the context?
 Large heightmap in tiled terrain mode
-Dense pine tree TT perf

@@ -50,7 +50,8 @@ public:
 };
 
 
-inline float get_scaled_tile_radius  () {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
+inline float get_scaled_tile_radius() {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
+inline float get_tree_scale_denom  () {return max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
 
 
 struct tile_xy_pair {
@@ -153,7 +154,7 @@ public:
 		float const xv1(get_xval(wx1 + xoff - xoff2)), yv1(get_yval(wy1 + yoff - yoff2));
 		return cube_t(xv1, xv1+(wx2-wx1)*DX_VAL, yv1, yv1+(wy2-wy1)*DY_VAL, water_plane_z, water_plane_z); // zero area in z
 	}
-	float get_min_dist_to_pt(point const &pt) const;
+	float get_min_dist_to_pt(point const &pt, bool xy_only=0) const;
 	float get_max_xy_dist_to_pt(point const &pt) const;
 	bool contains_camera() const {return get_bcube().contains_pt_xy(get_camera_pos());}
 	void calc_start_step(int dx, int dy);
@@ -209,7 +210,7 @@ public:
 	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*TILE_RADIUS;}
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
 	float get_scenery_dist_scale(bool reflection_pass) const {return get_dist_to_camera_in_tiles()/get_scenery_thresh(reflection_pass);}
-	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
+	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/get_tree_scale_denom();}
 	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
 	float get_grass_dist_scale() const {return get_dist_to_camera_in_tiles()/GRASS_THRESH;}
 
