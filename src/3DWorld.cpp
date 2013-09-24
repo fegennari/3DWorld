@@ -52,7 +52,7 @@ char *dmesh_file       = "mesh.txt";
 char *dcoll_obj_file   = "coll_objs/coll_objs.txt";
 char *dship_def_file   = "ship_defs.txt";
 char *state_file(dstate_file), *mesh_file(dmesh_file), *coll_obj_file(dcoll_obj_file);
-char *mh_filename(NULL), *mesh_diffuse_tex_fn(NULL), *ship_def_file(dship_def_file), *snow_file(NULL);
+char *mh_filename(NULL), *mh_filename_tt(NULL), *mesh_diffuse_tex_fn(NULL), *ship_def_file(dship_def_file), *snow_file(NULL);
 char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
@@ -1722,6 +1722,10 @@ int load_config(string const &config_file) {
 		else if (str == "mh_filename") { // only the first parameter is required
 			alloc_if_req(mh_filename, NULL);
 			if (fscanf(fp, "%s%f%f%i", mh_filename, &mesh_file_scale, &mesh_file_tz, &invert_mh_image) < 1) cfg_err("mh_filename command", error);
+		}
+		else if (str == "mh_filename_tiled_terrain") {
+			alloc_if_req(mh_filename_tt, NULL);
+			if (fscanf(fp, "%s", mh_filename_tt) != 1) cfg_err("mh_filename command", error);
 		}
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);

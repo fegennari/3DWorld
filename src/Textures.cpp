@@ -1148,6 +1148,16 @@ void texture_t::create_custom_mipmaps() {
 }
 
 
+float texture_t::get_heightmap_value(unsigned x, unsigned y) const {
+
+	assert(is_allocated());
+	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
+	assert(x < (unsigned)width && y < (unsigned)height);
+	unsigned const ix(width*y + x);
+	return ((ncolors == 2) ? (data[ix<<1] + data[(ix<<1)+1]/256.0) : data[ix]);
+}
+
+
 void texture_t::load_from_gl() { // also set tid?
 
 	alloc();

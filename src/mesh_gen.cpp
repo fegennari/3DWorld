@@ -62,7 +62,7 @@ extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
 extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
 extern point mesh_origin, surface_pos;
-extern char *mh_filename, *dem_filename, *mesh_file;
+extern char *mh_filename, *mesh_file;
 extern rand_gen_t global_rand_gen;
 
 
@@ -127,7 +127,7 @@ bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 		std::cerr << "Error: No mh_filename spcified in the config file." << endl;
 		return 0;
 	}
-	cout << "Reading mesh hieghtmap " << mh_filename << endl;
+	cout << "Reading mesh heightmap " << mh_filename << endl;
 	texture_t texture(0, 7, MESH_X_SIZE, MESH_Y_SIZE, 0, 1, 0, fn, (invert_mh_image != 0));
 	texture.load(-1, allow_resize, 1); // allow 2-byte grayscale (currently only works for PNGs)
 	if (allow_resize) {texture.resize(MESH_X_SIZE, MESH_Y_SIZE);}
@@ -137,17 +137,11 @@ bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 				    << ", got size " << texture.width << "x" << texture.height << endl;
 		return 0;
 	}
-	unsigned char const *data(texture.get_data());
-	assert(data);
 	float const mh_scale(READ_MESH_H_SCALE*mesh_file_scale*mesh_height_scale);
-	assert(texture.ncolors == 1 || texture.ncolors == 2); // one or two byte grayscale
-	unsigned ix(0);
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			float const val((texture.ncolors == 2) ? ((data[ix] << 8) + data[ix+1])/256.0 : data[ix]);
-			mesh_height[i][j] = mh_scale*val + mesh_file_tz;
-			ix += texture.ncolors;
+			mesh_height[i][j] = mh_scale*texture.get_heightmap_value(j, i) + mesh_file_tz;
 		}
 	}
 	texture.free_data();

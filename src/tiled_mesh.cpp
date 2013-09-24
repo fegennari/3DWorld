@@ -31,6 +31,7 @@ extern unsigned grass_density, max_unique_trees;
 extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
 extern point sun_pos, moon_pos, surface_pos;
+extern char *mh_filename_tt;
 extern float h_dirt[];
 extern texture_t textures[];
 extern tree_data_manager_t tree_data_manager;
@@ -70,6 +71,36 @@ void bind_texture_tu(unsigned tid, unsigned tu_id) {
 
 
 #define BILINEAR_INTERP(arr, var, x, y) (y*(x*arr[1][1].var + (1.0-x)*arr[1][0].var) + (1.0-y)*(x*arr[0][1].var + (1.0-x)*arr[0][0].var))
+
+
+// *** terrain_hmap_manager_t ***
+
+
+struct terrain_hmap_manager_t {
+
+	texture_t texture;
+
+	void load(char const *const fn, bool invert_y=0) {
+		assert(fn != NULL);
+		cout << "Loading terrain heightmap file " << fn << endl;
+		assert(!texture.is_allocated()); // can only call once
+		texture = texture_t(0, 7, 0, 0, 0, 1, 0, fn, invert_y);
+		texture.load(-1);
+	}
+	float get_clamped_height(int x, int y) const {
+		return texture.get_heightmap_value(max(0, min(texture.width-1, x)), max(0, min(texture.height-1, y)));
+	}
+	float interpolate_height(float x, float y) const { // bilinear interpolation
+		int const xlo(floor(x)), ylo(floor(y));
+		float const xv(x - xlo), yv(y - ylo);
+		return   yv *(xv*get_clamped_height(xlo+1, ylo+1) + (1.0-xv)*get_clamped_height(xlo, ylo+1)) +
+			(1.0-yv)*(xv*get_clamped_height(xlo+1, ylo  ) + (1.0-xv)*get_clamped_height(xlo, ylo  ));
+	}
+	bool enabled() const {return texture.is_allocated();}
+	~terrain_hmap_manager_t() {texture.free_data();}
+};
+
+terrain_hmap_manager_t terrain_hmap_manager;
 
 
 // *** tile_t ***
@@ -1037,6 +1068,13 @@ void lightning_strike_t::end_draw() const {glDisable(LIGHTNING_LIGHT);} // even 
 
 
 // *** tile_draw_t ***
+
+
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
+
+	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
+	if (mh_filename_tt != NULL) {terrain_hmap_manager.load(mh_filename_tt);}
+}
 
 
 void tile_draw_t::clear() {

@@ -1078,6 +1078,7 @@ public:
 	colorRGBA get_avg_color() const {return color;}
 	unsigned char *get_data() {assert(data); return data;}
 	unsigned char const *get_data() const {assert(data); return data;}
+	float get_heightmap_value(unsigned x, unsigned y) const;
 };
 
 
