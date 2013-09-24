@@ -1053,7 +1053,7 @@ public:
 	void free_mm_data();
 	void free_data();
 	void gl_delete();
-	void load(int index, bool allow_diff_width_height=0, bool allow_two_byte_grayscale=0);
+	void load(int index, bool allow_diff_width_height=0, bool allow_two_byte_grayscale=0, bool ignore_word_alignment=0);
 	void load_raw_bmp(int index);
 	void load_targa(int index, bool allow_diff_width_height);
 	void load_jpeg(int index, bool allow_diff_width_height);

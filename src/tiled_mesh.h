@@ -264,7 +264,9 @@ class tile_draw_t {
 	};
 
 public:
-	tile_draw_t();
+	tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
+		assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
+	}
 	//~tile_draw_t() {clear();}
 	void clear();
 	float update();

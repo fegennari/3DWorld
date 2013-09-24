@@ -111,7 +111,7 @@ bool bmp_to_chars(char *fname, char **&data) { // Note: supports all image forma
 
 	assert(fname != NULL);
 	texture_t texture(0, 7, MESH_X_SIZE, MESH_Y_SIZE, 0, 1, 0, fname, 0); // invert_y=0
-	texture.load(-1); // generates fatal internal errors if load() fails, so return is always 1
+	texture.load(-1, 0, 0, 1); // generates fatal internal errors if load() fails, so return is always 1
 	assert(texture.width == MESH_X_SIZE && texture.height == MESH_Y_SIZE); // could make into an error
 	matrix_gen_2d(data);
 	memcpy(data[0], texture.get_data(), XY_MULT_SIZE*sizeof(char));
@@ -129,7 +129,7 @@ bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 	}
 	cout << "Reading mesh heightmap " << mh_filename << endl;
 	texture_t texture(0, 7, MESH_X_SIZE, MESH_Y_SIZE, 0, 1, 0, fn, (invert_mh_image != 0));
-	texture.load(-1, allow_resize, 1); // allow 2-byte grayscale (currently only works for PNGs)
+	texture.load(-1, allow_resize, 1, 1); // allow 2-byte grayscale (currently only works for PNGs)
 	if (allow_resize) {texture.resize(MESH_X_SIZE, MESH_Y_SIZE);}
 		
 	if (texture.width != MESH_X_SIZE || texture.height != MESH_Y_SIZE) { // may be due to texture padding to make a multipe of 4

@@ -680,7 +680,7 @@ string get_file_extension(string const &filename, unsigned level, bool make_lowe
 }
 
 
-void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
+void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale, bool ignore_word_alignment) {
 
 	if (type > 0) { // generated texture
 		alloc();
@@ -727,7 +727,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		else {
 			try_compact_to_lum();
 		}
-		fix_word_alignment();
+		if (!ignore_word_alignment) {fix_word_alignment();}
 	}
 }
 

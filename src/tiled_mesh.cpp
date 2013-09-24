@@ -29,6 +29,7 @@ float const LITNING_DIST    = 1.2;
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees;
 extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
+extern int invert_mh_image;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
 extern point sun_pos, moon_pos, surface_pos;
 extern char *mh_filename_tt;
@@ -83,9 +84,14 @@ struct terrain_hmap_manager_t {
 	void load(char const *const fn, bool invert_y=0) {
 		assert(fn != NULL);
 		cout << "Loading terrain heightmap file " << fn << endl;
+		RESET_TIME;
 		assert(!texture.is_allocated()); // can only call once
 		texture = texture_t(0, 7, 0, 0, 0, 1, 0, fn, invert_y);
-		texture.load(-1);
+		texture.load(-1, 0, 1, 1);
+		PRINT_TIME("Heightmap Load");
+	}
+	void maybe_load(char const *const fn, bool invert_y=0) {
+		if (fn != NULL && !enabled()) {load(fn, invert_y);}
 	}
 	float get_clamped_height(int x, int y) const {
 		return texture.get_heightmap_value(max(0, min(texture.width-1, x)), max(0, min(texture.height-1, y)));
@@ -1070,13 +1076,6 @@ void lightning_strike_t::end_draw() const {glDisable(LIGHTNING_LIGHT);} // even 
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
-
-	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
-	if (mh_filename_tt != NULL) {terrain_hmap_manager.load(mh_filename_tt);}
-}
-
-
 void tile_draw_t::clear() {
 
 	//cout << "clear with " << tiles.size() << " tiles" << endl;
@@ -1093,6 +1092,7 @@ void tile_draw_t::clear() {
 float tile_draw_t::update() { // view-independent updates
 
 	//RESET_TIME;
+	terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0));
 	to_draw.clear();
 	float terrain_zmin(FAR_CLIP);
 	grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
