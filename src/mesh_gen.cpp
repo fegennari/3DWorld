@@ -120,6 +120,9 @@ bool bmp_to_chars(char *fname, char **&data) { // Note: supports all image forma
 }
 
 
+float scale_mh_texture_val(float val) {return mesh_height_scale*(READ_MESH_H_SCALE*mesh_file_scale*val + mesh_file_tz);}
+
+
 // Note: only works for 8-bit heightmaps (higher precision textures are truncated)
 bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 
@@ -137,11 +140,9 @@ bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 				    << ", got size " << texture.width << "x" << texture.height << endl;
 		return 0;
 	}
-	float const mh_scale(READ_MESH_H_SCALE*mesh_file_scale*mesh_height_scale);
-
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			mesh_height[i][j] = mh_scale*texture.get_heightmap_value(j, i) + mesh_file_tz;
+			mesh_height[i][j] = scale_mh_texture_val(texture.get_heightmap_value(j, i));
 		}
 	}
 	texture.free_data();

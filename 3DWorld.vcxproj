@@ -799,9 +799,11 @@
   <ItemGroup>
     <None Include="coll_objs_minecraft.txt" />
     <None Include="coll_objs_samples.txt" />
+    <None Include="config_berkeley.txt" />
     <None Include="config_gameplay.txt" />
     <None Include="config_minecraft.txt" />
     <None Include="config_puget_sound.txt" />
+    <None Include="config_puget_sound_tt.txt" />
     <None Include="config_resolution.txt" />
     <None Include="config_samples.txt" />
     <None Include="config_voxels.txt" />

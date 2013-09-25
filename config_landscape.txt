@@ -2,12 +2,10 @@ ntrees 0
 nsmileys 6
 verbose 0
 rand_seed 0
+glaciate 0
 load_hmv 0 0 0 0 0
 load_coll_objs 0
 disable_universe 1
-disable_water 1
-disable_inf_terrain 1
-disable_scenery 1
 read_landscape 1
 read_heightmap 0
 ground_effects_level 0
@@ -32,9 +30,6 @@ smiley_speed 0.8
 
 mesh_size  1024 1024 1
 scene_size 4.0 4.0 4.0
-
-mesh_diffuse_tex_fn textures/final1024.jpg
-mh_filename textures/landscape_heightmap.jpg 1.0 0.0 1
 
 include config_resolution.txt
 

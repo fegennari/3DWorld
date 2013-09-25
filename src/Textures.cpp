@@ -1148,7 +1148,7 @@ void texture_t::create_custom_mipmaps() {
 }
 
 
-float texture_t::get_heightmap_value(unsigned x, unsigned y) const {
+float texture_t::get_heightmap_value(unsigned x, unsigned y) const { // returns values from 0 to 256
 
 	assert(is_allocated());
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale

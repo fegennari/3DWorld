@@ -77,6 +77,12 @@ void bind_texture_tu(unsigned tid, unsigned tu_id) {
 // *** terrain_hmap_manager_t ***
 
 
+unsigned const TEX_EDGE_MODE    = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
+unsigned const TEX_LOOKUP_SCALE = 1; // >= 1
+
+float scale_mh_texture_val(float val);
+
+
 struct terrain_hmap_manager_t {
 
 	texture_t texture;
@@ -93,8 +99,29 @@ struct terrain_hmap_manager_t {
 	void maybe_load(char const *const fn, bool invert_y=0) {
 		if (fn != NULL && !enabled()) {load(fn, invert_y);}
 	}
-	float get_clamped_height(int x, int y) const {
-		return texture.get_heightmap_value(max(0, min(texture.width-1, x)), max(0, min(texture.height-1, y)));
+	float get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
+		x += texture.width /2; // offset (0,0) to texture center
+		y += texture.height/2;
+
+		switch (TEX_EDGE_MODE) {
+		case 0: // clamp
+			x = max(0, min(texture.width -1, x));
+			y = max(0, min(texture.height-1, y));
+			break;
+		case 1: // cliff/underwater
+			if (x < 0 || y < 0 || x >= texture.width || y >= texture.height) { // off the texture
+				return scale_mh_texture_val(0.0); // use min value
+			}
+			break;
+		case 2: // mirror
+			{
+				int const xmod(abs(x)%texture.width), ymod(abs(y)%texture.height), xdiv(x/texture.width), ydiv(y/texture.height);
+				x = (((xdiv&1) ^ (xdiv<0)) ? (texture.width  - xmod - 1) : xmod);
+				y = (((ydiv&1) ^ (ydiv<0)) ? (texture.height - ymod - 1) : ymod);
+			}
+			break;
+		}
+		return scale_mh_texture_val(texture.get_heightmap_value(x, y));
 	}
 	float interpolate_height(float x, float y) const { // bilinear interpolation
 		int const xlo(floor(x)), ylo(floor(y));
@@ -261,14 +288,27 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	mzmax = -FAR_CLIP;
 	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + OCEAN_WAVE_HEIGHT);
 	unsigned const block_size(zvsize/4);
-	create_xy_arrays(height_gen, zvsize, 1.0);
 
-	#pragma omp parallel for schedule(static,1)
-	for (int y = 0; y < (int)zvsize; ++y) {
-		for (unsigned x = 0; x < zvsize; ++x) {
-			float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
-			float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
-			zvals[y*zvsize + x] = hoff + hscale*height_gen.eval_index(x, y);
+	if (terrain_hmap_manager.enabled()) {
+		for (int y = 0; y < (int)zvsize; ++y) {
+			for (unsigned x = 0; x < zvsize; ++x) {
+				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
+				float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
+				float const hv(terrain_hmap_manager.get_clamped_height(TEX_LOOKUP_SCALE*(x1 + x), TEX_LOOKUP_SCALE*(y1 + y)));
+				zvals[y*zvsize + x] = hoff + hscale*hv;
+			}
+		}
+	}
+	else {
+		create_xy_arrays(height_gen, zvsize, 1.0);
+
+		#pragma omp parallel for schedule(static,1)
+		for (int y = 0; y < (int)zvsize; ++y) {
+			for (unsigned x = 0; x < zvsize; ++x) {
+				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
+				float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
+				zvals[y*zvsize + x] = hoff + hscale*height_gen.eval_index(x, y);
+			}
 		}
 	}
 	for (unsigned yy = 0; yy < 4; ++yy) {

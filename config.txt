@@ -35,7 +35,7 @@ mesh_height 0.7
 mesh_scale 1.0
 camera_height 0.0
 tree_size 1.0
-sm_tree_density 1.0
+sm_tree_density 2.0
 sun_rot 0.4
 shadow_detail 7
 tree_coll_level 4

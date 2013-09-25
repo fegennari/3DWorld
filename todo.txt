@@ -24,4 +24,8 @@ Fireworks
 TT underwater dirt/vegetation
 
 Somehow use game mode/fullscreen without changing the context?
-Large heightmap in tiled terrain mode
+
+Large heightmap in tiled terrain mode:
+ - Fix mesh cracks
+ - Walk on mesh
+ - deeper water, lower slope, more sand?
