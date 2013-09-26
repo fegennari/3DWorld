@@ -100,8 +100,8 @@ struct terrain_hmap_manager_t {
 		if (fn != NULL && !enabled()) {load(fn, invert_y);}
 	}
 	float get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
-		x += texture.width /2; // offset (0,0) to texture center
-		y += texture.height/2;
+		x = round_fp(mesh_scale*x) + texture.width /2; // scale and offset (0,0) to texture center
+		y = round_fp(mesh_scale*y) + texture.height/2;
 
 		switch (TEX_EDGE_MODE) {
 		case 0: // clamp

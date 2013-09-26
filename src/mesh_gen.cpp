@@ -120,7 +120,7 @@ bool bmp_to_chars(char *fname, char **&data) { // Note: supports all image forma
 }
 
 
-float scale_mh_texture_val(float val) {return mesh_height_scale*(READ_MESH_H_SCALE*mesh_file_scale*val + mesh_file_tz);}
+float scale_mh_texture_val(float val) {return (READ_MESH_H_SCALE*mesh_height_scale*mesh_file_scale*val + mesh_file_tz)/mesh_scale_z;}
 
 
 // Note: only works for 8-bit heightmaps (higher precision textures are truncated)
