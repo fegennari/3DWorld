@@ -57,15 +57,16 @@ public:
 class grass_tile_manager_t : public grass_manager_t {
 
 	vector<unsigned> vbo_offsets[NUM_GRASS_LODS];
-	unsigned start_render_ix, end_render_ix;
+	unsigned num_grass_blocks, start_render_ix, end_render_ix;
 
 	void gen_block(unsigned bix);
 	void gen_lod_block(unsigned bix, unsigned lod);
 
 public:
-	grass_tile_manager_t() : start_render_ix(0), end_render_ix(0) {}
+	grass_tile_manager_t() : num_grass_blocks(0), start_render_ix(0), end_render_ix(0) {}
 	void clear();
-	unsigned get_gpu_mem() const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
+	unsigned get_gpu_mem   () const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
+	unsigned get_num_blocks() const {return num_grass_blocks;}
 	void upload_data();
 	void gen_grass();
 	void update();

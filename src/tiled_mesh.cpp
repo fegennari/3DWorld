@@ -19,6 +19,7 @@ float const CREATE_DIST_TILES = 1.5;
 float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 1.7;
 float const GRASS_LOD_SCALE   = 16.0;
+float const GRASS_DIST_SLOPE  = 0.25;
 
 int   const LIGHTNING_LIGHT = GL_LIGHT2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
@@ -44,6 +45,7 @@ void set_water_plane_uniforms(shader_t &s);
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
+float get_grass_thresh    () {return (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH;}
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool pine_trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool decid_trees_enabled  () {return ((tree_mode & 1) && vegetation > 0.0);}
@@ -854,7 +856,10 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 
 void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
 
-	if (grass_blocks.empty() || get_grass_dist_scale() > 1.0) return;
+	if (grass_blocks.empty()) return;
+	float const grass_thresh(get_grass_thresh() + 1.0/GRASS_DIST_SLOPE);
+	point const camera(get_camera_pos());
+	if (get_min_dist_to_pt(camera) > grass_thresh) return;
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(weight_tid, 3);
 	bind_texture_tu(shadow_normal_tid, 4);
@@ -876,8 +881,9 @@ void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
 	unsigned const ty_loc(s.get_uniform_loc("translate_y"));
 	int const dx(xoff - xoff2), dy(yoff - yoff2);
 	float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
-	float const lod_scale(1.0/get_scaled_tile_radius());
-	point const camera(get_camera_pos()), adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
+	float const lod_scale(GRASS_LOD_SCALE/get_scaled_tile_radius());
+	float const block_grass_thresh(grass_thresh + (SQRT2*radius)/grass_block_dim);
+	point const adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
 	glPushMatrix();
 	glTranslatef(llcx, llcy, 0.0);
 
@@ -889,8 +895,7 @@ void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
 			if (gb.ix == 0) continue; // empty block
 			cube_t const bcube(llcx+x*dx_step, llcx+(x+1)*dx_step, llcy+y*dy_step, llcy+(y+1)*dy_step, gb.zmin, (gb.zmax + grass_length));
 			point const center(bcube.get_cube_center());
-			if ((p2p_dist_xy(camera, center) - radius)*TILE_RADIUS*lod_scale > GRASS_THRESH) continue;
-			if (!camera_pdu.cube_visible(bcube)) continue;
+			if (!dist_less_than(camera, center, block_grass_thresh) || !camera_pdu.cube_visible(bcube)) continue;
 			bool back_facing(1);
 
 			for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) {
@@ -900,7 +905,7 @@ void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
 				}
 			}
 			if (back_facing) continue;
-			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(GRASS_LOD_SCALE*lod_scale*distance_to_camera(center))));
+			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(lod_scale*distance_to_camera(center))));
 			grass_tile_manager.render_block((gb.ix - 1), lod_level);
 		}
 	}
@@ -1712,8 +1717,8 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		set_noise_tex(s, 5);
 		s.setup_fog_scale();
 		s.add_uniform_float("height", grass_length);
-		s.add_uniform_float("dist_const", (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH);
-		s.add_uniform_float("dist_slope", 0.25);
+		s.add_uniform_float("dist_const", get_grass_thresh());
+		s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
 		setup_cloud_plane_uniforms(s);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {

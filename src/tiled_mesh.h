@@ -212,7 +212,6 @@ public:
 	float get_scenery_dist_scale(bool reflection_pass) const {return get_dist_to_camera_in_tiles()/get_scenery_thresh(reflection_pass);}
 	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/get_tree_scale_denom();}
 	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
-	float get_grass_dist_scale() const {return get_dist_to_camera_in_tiles()/GRASS_THRESH;}
 
 	// *** trees ***
 	template <typename T> void postproc_trees(T const &trees, float &tzmax) { // pine/decidious trees

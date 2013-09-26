@@ -154,8 +154,8 @@ void grass_tile_manager_t::gen_lod_block(unsigned bix, unsigned lod) {
 	unsigned const search_dist(1*grass_density); // enough for one cell
 	unsigned const start_ix(vbo_offsets[lod-1][bix]), end_ix(vbo_offsets[lod-1][bix+1]); // from previous LOD
 	float const dmax(2.5*grass_width*(1 << lod));
-	vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused;
-			
+	vector<unsigned char> used((end_ix - start_ix), 0); // initially all unused
+	
 	for (unsigned i = start_ix; i < end_ix; ++i) {
 		if (used[i-start_ix]) continue; // already used
 		grass.push_back(grass[i]); // seed with an existing grass blade
@@ -212,7 +212,7 @@ void grass_tile_manager_t::gen_grass() {
 	RESET_TIME;
 	assert(NUM_GRASS_LODS > 0);
 	assert((MESH_X_SIZE % GRASS_BLOCK_SZ) == 0 && (MESH_Y_SIZE % GRASS_BLOCK_SZ) == 0);
-	unsigned const num_grass_blocks(MESH_X_SIZE/GRASS_BLOCK_SZ);
+	num_grass_blocks = MESH_X_SIZE/GRASS_BLOCK_SZ;
 
 	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
 		vbo_offsets[lod].resize(num_grass_blocks+1);
