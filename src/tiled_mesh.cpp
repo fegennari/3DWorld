@@ -949,6 +949,20 @@ void tile_t::ensure_weights(mesh_xy_grid_cache_t &height_gen) {
 }
 
 
+unsigned tile_t::get_lod_level(bool reflection_pass) const {
+
+	unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
+	float dist(get_dist_to_camera_in_tiles());
+
+    while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS) {
+        dist /= 2;
+        ++lod_level;
+    }
+	assert(lod_level < NUM_LODS);
+	return lod_level;
+}
+
+
 void tile_t::draw(shader_t &s, bool reflection_pass) const {
 
 	assert(vbo);
@@ -964,22 +978,43 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 		s.add_uniform_vector3d("cloud_offset", offset);
 	}
 	bind_texture_tu(shadow_normal_tid, 7);
-	unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
-	float dist(get_dist_to_camera_in_tiles());
-
-    while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS) {
-        dist /= 2;
-        ++lod_level;
-    }
-	assert(lod_level < NUM_LODS);
+	unsigned const lod_level(get_lod_level(reflection_pass));
 	assert(vbo > 0 && ivbo[lod_level] > 0);
 	bind_vbo(vbo, 0);
 	bind_vbo(ivbo[lod_level], 1);
 	unsigned const isz(size >> lod_level), ptr_stride(sizeof(vert_type_t));
 	glVertexPointer(3, GL_FLOAT, ptr_stride, 0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
 	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, GL_UNSIGNED_SHORT, 0);
-	bind_vbo(0, 0);
-	bind_vbo(0, 1);
+	bind_vbo(0, 1); // unbind index buffer
+	vector<unsigned short> crack_ixs;
+
+	// fill in the cracks
+	for (unsigned dim = 0; dim < 2; ++dim) { // x,y
+		for (unsigned dir = 0; dir < 2; ++dir) { // lo, hi
+			int dx(0), dy(0);
+			(dim ? dy : dx) += (dir ? 1 : -1);
+			tile_t *adj(get_adj_tile(dx, dy));
+			if (adj == NULL) continue; // no adjacent tile
+			unsigned const adj_lod(adj->get_lod_level(reflection_pass));
+			if (adj_lod <= lod_level) continue; // not a high=>low LOD transition
+			//assert(adj_lod == lod_level+1); // too strong
+			//if (!adj->is_visible() || adj->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue;
+			unsigned const lo_step(1 << adj_lod), hi_step(1 << (adj_lod - 1)); // Note: in the rare case where adj_lod > lod_level+1, we may miss some of the crack
+
+			for (unsigned xy = 0; xy < size; xy += lo_step) {
+				for (unsigned n = 0; n < 3; ++n) { // one triangle
+					if (dim == 0) { // adjacent in x, step in y
+						crack_ixs.push_back((xy + n*hi_step)*stride + dir*size);
+					}
+					else { // adjacent in y, step in x
+						crack_ixs.push_back(dir*size*stride + (xy + n*hi_step));
+					}
+				}
+			}
+		} // for dir
+	} // for dim
+	if (!crack_ixs.empty()) {glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_SHORT, &crack_ixs.front());}
+	bind_vbo(0, 0); // unbind vertex buffer
 	glPopMatrix();
 
 	if (has_water()) { // draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
