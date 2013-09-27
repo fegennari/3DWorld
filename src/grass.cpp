@@ -132,10 +132,10 @@ void grass_tile_manager_t::gen_block(unsigned bix) {
 
 	for (unsigned y = 0; y < GRASS_BLOCK_SZ; ++y) {
 		for (unsigned x = 0; x < GRASS_BLOCK_SZ; ++x) {
-			float const xval((x+bix*GRASS_BLOCK_SZ)*DX_VAL), yval(y*DY_VAL);
+			float const xval(x*DX_VAL), yval(y*DY_VAL);
 
 			for (unsigned n = 0; n < grass_density; ++n) {
-				add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), TT_GRASS_COLOR_SCALE, 1);
+				add_grass_blade(point(rgen.rand_uniform(xval, xval+DX_VAL), rgen.rand_uniform(yval, yval+DY_VAL), 0.0), TT_GRASS_COLOR_SCALE, 0); // no mesh normal
 			}
 		}
 	}
@@ -212,12 +212,11 @@ void grass_tile_manager_t::gen_grass() {
 	RESET_TIME;
 	assert(NUM_GRASS_LODS > 0);
 	assert((MESH_X_SIZE % GRASS_BLOCK_SZ) == 0 && (MESH_Y_SIZE % GRASS_BLOCK_SZ) == 0);
-	num_grass_blocks = MESH_X_SIZE/GRASS_BLOCK_SZ;
 
 	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
-		vbo_offsets[lod].resize(num_grass_blocks+1);
+		vbo_offsets[lod].resize(NUM_RND_GRASS_BLOCKS+1);
 		vbo_offsets[lod][0] = grass.size(); // start
-		for (unsigned i = 0; i < num_grass_blocks; ++i) {gen_lod_block(i, lod);}
+		for (unsigned i = 0; i < NUM_RND_GRASS_BLOCKS; ++i) {gen_lod_block(i, lod);}
 	}
 	PRINT_TIME("Grass Tile Gen");
 }
@@ -236,7 +235,7 @@ void grass_tile_manager_t::update() { // to be called once per frame
 
 
 // Note: density won't work if grass is spatially sorted, which is currently the case for tiled terrain grass
-void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float density) {
+void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float density, unsigned instance_count) {
 
 	assert(density > 0.0 && density <= 1.0);
 	assert(lod < NUM_GRASS_LODS);
@@ -244,7 +243,15 @@ void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float d
 	unsigned const start_ix(vbo_offsets[lod][block_ix]), end_ix(vbo_offsets[lod][block_ix+1]);
 	assert(start_ix < end_ix && end_ix <= grass.size());
 	unsigned const num_tris(ceil(density*(end_ix - start_ix)));
-	if(num_tris > 0) {glDrawArrays(GL_TRIANGLES, 3*start_ix, 3*num_tris);}
+	if (num_tris == 0) return;
+	
+	if (instance_count > 0) {
+		bind_vbo(vbo); // needed because incoming vbo is 0 (so that instance attrib array isn't bound to a vbo)
+		glDrawArraysInstanced(GL_TRIANGLES, 3*start_ix, 3*num_tris, instance_count);
+	}
+	else {
+		glDrawArrays(GL_TRIANGLES, 3*start_ix, 3*num_tris);
+	}
 }
 
 

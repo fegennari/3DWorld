@@ -704,7 +704,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				grass_block_t &gb(grass_blocks[bix]);
 					
 				if (gb.ix == 0) { // not yet set
-					gb.ix   = bx + 1;
+					gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
 					gb.zmin = mhmin;
 					gb.zmax = mhmax;
 				}
@@ -854,7 +854,7 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 }
 
 
-void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
+void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc) {
 
 	if (grass_blocks.empty()) return;
 	float const grass_thresh(get_grass_thresh() + 1.0/GRASS_DIST_SLOPE);
@@ -878,7 +878,6 @@ void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
 	}
 	unsigned const grass_block_dim(get_grass_block_dim());
 	assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
-	unsigned const ty_loc(s.get_uniform_loc("translate_y"));
 	int const dx(xoff - xoff2), dy(yoff - yoff2);
 	float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
 	float const lod_scale(GRASS_LOD_SCALE/get_scaled_tile_radius());
@@ -888,8 +887,6 @@ void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
 	glTranslatef(llcx, llcy, 0.0);
 
 	for (unsigned y = 0; y < grass_block_dim; ++y) {
-		s.set_uniform_float(ty_loc, y*dy_step);
-
 		for (unsigned x = 0; x < grass_block_dim; ++x) {
 			grass_block_t const &gb(grass_blocks[y*grass_block_dim+x]);
 			if (gb.ix == 0) continue; // empty block
@@ -906,7 +903,21 @@ void tile_t::draw_grass(shader_t &s, bool use_cloud_shadows) {
 			}
 			if (back_facing) continue;
 			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(lod_scale*distance_to_camera(center))));
-			grass_tile_manager.render_block((gb.ix - 1), lod_level);
+			assert(insts != NULL);
+			insts[lod_level].resize(NUM_RND_GRASS_BLOCKS); // may already be the correct size
+			unsigned const bix(gb.ix - 1);
+			assert(bix < NUM_RND_GRASS_BLOCKS);
+			insts[lod_level][bix].push_back(vector2d(x*dx_step, y*dy_step));
+		}
+	}
+	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
+		for (unsigned bix = 0; bix < insts[lod].size(); ++bix) {
+			vector<vector2d> &v(insts[lod][bix]);
+			if (v.empty()) continue;
+			bind_vbo(0); // clear any current grass vbo that may be bound
+			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), &v.front());
+			grass_tile_manager.render_block(bix, lod, 1.0, v.size());
+			v.clear();
 		}
 	}
 	glPopMatrix();
@@ -1699,6 +1710,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	if (reflection_pass) return; // no grass refletion (yet)
 	grass_tile_manager.begin_draw(0.1);
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
+	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 
 	for (unsigned pass = 0; pass < 2; ++pass) { // wind, no wind
 		shader_t s;
@@ -1721,11 +1733,17 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
 		setup_cloud_plane_uniforms(s);
 
+		int const lt_loc(s.get_attrib_loc("local_translate"));
+		assert(lt_loc >= 0);
+		glEnableVertexAttribArray(lt_loc);
+		glVertexAttribDivisor(lt_loc, 1);
+
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			if ((to_draw[i].second->get_dist_to_camera_in_tiles() > 0.5) == pass) {
-				to_draw[i].second->draw_grass(s, use_cloud_shadows);
+				to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
 			}
 		}
+		glDisableVertexAttribArray(lt_loc);
 		s.end_shader();
 	}
 	grass_tile_manager.end_draw();

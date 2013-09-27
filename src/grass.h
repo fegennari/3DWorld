@@ -8,9 +8,10 @@
 #include "3DWorld.h"
 
 
-unsigned const NUM_GRASS_LODS    = 6;
-unsigned const GRASS_BLOCK_SZ    = 4;
-float const TT_GRASS_COLOR_SCALE = 0.5;
+unsigned const NUM_GRASS_LODS       = 6;
+unsigned const NUM_RND_GRASS_BLOCKS = 16;
+unsigned const GRASS_BLOCK_SZ       = 4;
+float const TT_GRASS_COLOR_SCALE    = 0.5;
 
 
 class grass_manager_t {
@@ -57,20 +58,19 @@ public:
 class grass_tile_manager_t : public grass_manager_t {
 
 	vector<unsigned> vbo_offsets[NUM_GRASS_LODS];
-	unsigned num_grass_blocks, start_render_ix, end_render_ix;
+	unsigned start_render_ix, end_render_ix;
 
 	void gen_block(unsigned bix);
 	void gen_lod_block(unsigned bix, unsigned lod);
 
 public:
-	grass_tile_manager_t() : num_grass_blocks(0), start_render_ix(0), end_render_ix(0) {}
+	grass_tile_manager_t() : start_render_ix(0), end_render_ix(0) {}
 	void clear();
-	unsigned get_gpu_mem   () const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
-	unsigned get_num_blocks() const {return num_grass_blocks;}
+	unsigned get_gpu_mem() const {return (vbo ? 3*size()*sizeof(grass_data_t) : 0);}
 	void upload_data();
 	void gen_grass();
 	void update();
-	void render_block(unsigned block_ix, unsigned lod, float density=1.0);
+	void render_block(unsigned block_ix, unsigned lod, float density=1.0, unsigned instance_count=0);
 };
 
 

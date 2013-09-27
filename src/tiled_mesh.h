@@ -233,7 +233,7 @@ public:
 	// *** scenery/grass ***
 	void update_scenery();
 	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass);
-	void draw_grass(shader_t &s, bool use_cloud_shadows);
+	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 
 	// *** rendering ***
 	void ensure_vbo(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]);
