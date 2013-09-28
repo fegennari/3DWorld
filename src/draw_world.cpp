@@ -617,7 +617,7 @@ void draw_moon() {
 		glDisable(GL_LIGHTING);
 		enable_blend();
 		color.do_glColor();
-		draw_subdiv_sphere(pos, 1.02*moon_radius, N_SPHERE_DIV, 0, 0);
+		draw_subdiv_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, 0, 0);
 		glEnable(GL_LIGHTING);
 		disable_blend();
 	}
