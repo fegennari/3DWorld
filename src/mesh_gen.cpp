@@ -43,7 +43,7 @@ float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FRE
 int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
-float mesh_height_scale(1.0), zmm_calc(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
+float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
 float *sin_table(NULL), *cos_table(NULL);
 float sinTable[F_TABLE_SIZE][5];
 
@@ -258,10 +258,55 @@ float get_island_xy_element(int i, int dim, float val, float val2, float val3, i
 }
 
 
-void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_zvals) {
+void gen_rand_sine_table_entries(bool make_island, float scaled_height) {
 
 	float xf_scale((float)MESH_Y_SIZE/(float)MESH_X_SIZE), yf_scale(1.0/xf_scale);
+	if (X_SCENE_SIZE > Y_SCENE_SIZE) yf_scale *= (float)Y_SCENE_SIZE/(float)X_SCENE_SIZE;
+	if (Y_SCENE_SIZE > X_SCENE_SIZE) xf_scale *= (float)X_SCENE_SIZE/(float)Y_SCENE_SIZE;
 	float mags[NUM_FREQ_COMP], freqs[NUM_FREQ_COMP];
+	int const num_freq(make_island ? NUM_L0_FREQ_COMP : NUM_FREQ_COMP);
+	// Note: none of these config values are error checked, maybe should at least check >= 0.0
+	freqs[0] = MESH_START_FREQ;
+	mags [0] = MESH_START_MAG;
+
+	for (int i = 1; i < num_freq; ++i) {
+		freqs[i] = freqs[i-1]*MESH_FREQ_MULT;
+		mags [i] = mags[i-1]*MESH_MAG_MULT;
+	}
+	if (make_island == 1) {
+		mags[1] = 0.4;
+		mags[2] = 0.2;
+	}
+	h_sum = 0.0;
+
+	for (int l = 0; l < num_freq; ++l) {
+		if (make_island == 1) {freqs[l] *= ISLAND_FREQ_SCALE;}
+		h_sum += mags[l];
+	}
+	float const mesh_h((make_island ? ISLAND_MAG_SCALE : 1.0)*scaled_height/sqrt(0.1*N_RAND_SIN2));
+	h_sum *= N_RAND_SIN2*scaled_height*HEIGHT_SCALE;
+	static rand_gen_t rgen; // static so that later calls to this function will generate different values
+	if (mesh_seed != 0) {rgen.set_state(mesh_seed, 12345);}
+
+	for (int l = 0; l < num_freq; ++l) {
+		int const offset(l*N_RAND_SIN2);
+		float const x_freq(freqs[l]/((float)MESH_X_SIZE)), y_freq(freqs[l]/((float)MESH_Y_SIZE));
+		float const mheight(mags[l]*mesh_h);
+
+		for (int i = 0; i < N_RAND_SIN2; ++i) {
+			int const index(offset + i);
+			sinTable[index][0] = rgen.rand_uniform(0.2, 1.0)*mheight; // magnitude
+			sinTable[index][1] = rgen.rand_float()*TWO_PI; // y phase
+			sinTable[index][2] = rgen.rand_float()*TWO_PI; // x phase
+			sinTable[index][3] = rgen.rand_uniform(0.01, 1.0)*x_freq*yf_scale; // y frequency
+			sinTable[index][4] = rgen.rand_uniform(0.01, 1.0)*y_freq*xf_scale; // x frequency
+		}
+	}
+}
+
+
+void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_zvals) {
+
 	static bool init(0);
 	vector<float> atten_table(MESH_X_SIZE);
 	assert((read_landscape != 0) + (read_heightmap != 0) + (do_read_mesh != 0) <= 1);
@@ -279,80 +324,37 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 	bool surface_generated(0);
 	bool const loaded_surface(surface_type >= 3);
 	bool const gen_scroll_surface(GEN_SCROLLING_MESH && scrolling && loaded_surface);
-	++cache_counter; // invalidate mesh cache
-	int const num_freq(make_island ? NUM_L0_FREQ_COMP : NUM_FREQ_COMP);
 	float const scaled_height(MESH_HEIGHT*mesh_height_scale);
-	float const mesh_h((make_island ? ISLAND_MAG_SCALE : 1.0)*scaled_height/sqrt(0.1*N_RAND_SIN2));
+	++cache_counter; // invalidate mesh cache
 
 	if (make_island) {
 		mesh_scale   = 1.0;
 		mesh_scale_z = 1.0;
 	}
-	compute_scale(make_island);
-	island   = make_island;
-
 	if (surface_type != 5) {
 		zmax = -LARGE_ZVAL;
 		zmin =  LARGE_ZVAL;
 	}
-	// Note: none of these config values are error checked, maybe should at least check >= 0.0
-	freqs[0] = MESH_START_FREQ;
-	mags [0] = MESH_START_MAG;
-
-	for (int i = 1; i < num_freq; ++i) {
-		freqs[i] = freqs[i-1]*MESH_FREQ_MULT;
-		mags [i] = mags[i-1]*MESH_MAG_MULT;
-	}
-	if (make_island == 1) {
-		mags[1] = 0.4;
-		mags[2] = 0.2;
-	}
+	compute_scale(make_island);
 	matrix_clear_2d(mesh_height);
-	h_sum = 0.0;
+	island = make_island;
 
-	for (int l = 0; l < num_freq; ++l) {
-		if (make_island == 1) {freqs[l] *= ISLAND_FREQ_SCALE;}
-		h_sum += mags[l];
+	// Note: we always create the sine table, even when using a heightmap, because it may be used for random tree distributions, etc.
+	if (!keep_sin_table || !init) {
+		surface_generated = 1;
+		gen_rand_sine_table_entries((make_island != 0), scaled_height);
 	}
-	h_sum *= N_RAND_SIN2*scaled_height*HEIGHT_SCALE;
-
 	if (surface_type == 0 || gen_scroll_surface) { // sine waves
-		if (X_SCENE_SIZE > Y_SCENE_SIZE) yf_scale *= (float)Y_SCENE_SIZE/(float)X_SCENE_SIZE;
-		if (Y_SCENE_SIZE > X_SCENE_SIZE) xf_scale *= (float)X_SCENE_SIZE/(float)Y_SCENE_SIZE;
-		
-		if (!keep_sin_table || !init) {
-			if (mesh_seed != 0) set_rand2_state(mesh_seed, 12345);
-			surface_generated = 1;
-			zmm_calc = 0.0;
-
-			for (int l = 0; l < num_freq; ++l) {
-				int const offset(l*N_RAND_SIN2);
-				float const x_freq(freqs[l]/((float)MESH_X_SIZE)), y_freq(freqs[l]/((float)MESH_Y_SIZE));
-				float const mheight(mags[l]*mesh_h);
-
-				for (int i = 0; i < N_RAND_SIN2; ++i) {
-					int const index(offset + i);
-					sinTable[index][0] = rand_uniform2(0.2, 1.0)*mheight; // magnitude
-					sinTable[index][1] = rand_float2()*TWO_PI; // y phase
-					sinTable[index][2] = rand_float2()*TWO_PI; // x phase
-					sinTable[index][3] = rand_uniform2(0.01, 1.0)*x_freq*yf_scale; // y frequency
-					sinTable[index][4] = rand_uniform2(0.01, 1.0)*y_freq*xf_scale; // x frequency
-					zmm_calc += sinTable[index][0];
-				}
-			}
-			zmm_calc /= mesh_scale_z;
-			// *** sort sinTable? ***
-		}
 		if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) {
 			gen_mesh_sine_table(mesh_height, xoff2, yoff2, MESH_X_SIZE, MESH_Y_SIZE, make_island);
-		} // world_mode test
-	} // end sine waves
+		}
+	}
 	if (surface_type == 1) { // random
 		zmax = -LARGE_ZVAL;
 		zmin = -zmax;
 		gen_mesh_random(0.1*scaled_height);
 	}
-	if (surface_type >= 3) { // read mesh image file
+	else if (surface_type >= 3) { // read mesh image file
 		static float **read_mh = NULL;
 
 		if (scrolling) {

@@ -30,4 +30,3 @@ Large heightmap in tiled terrain mode:
  - overhead map mode
  - fog at horizon over water
  - incorrect occlusion culling
- - create sine terms for tree density sampling
