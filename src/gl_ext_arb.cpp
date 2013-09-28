@@ -101,22 +101,6 @@ void set_3d_texture_as_current(unsigned tid, unsigned tu_id) {
 }
 
 
-// ***************** FOG_COORD *****************
-
-
-void setup_fog_coord() {
-
-	if (!glFogCoordf) {
-		cout << "*** Can't find fog_coord extension ***" << endl;
-		assert(0);
-	}
-}
-
-void set_fog_coord(GLfloat val) {
-	glFogCoordf(val);
-}
-
-
 // ***************** VBOs / VAOs *****************
 
 

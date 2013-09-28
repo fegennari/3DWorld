@@ -340,7 +340,6 @@ void set_gl_params() {
 	float lmodel_ambient[]     = {0.0, 0.0, 0.0, 1.0};
     float lmodel_localviewer[] = {0.0};
 	float lmodel_side[]        = {0.0};
-	setup_fog_coord();
 	reset_fog();
 	glDepthFunc(GL_LESS);
 	set_std_blend_mode();

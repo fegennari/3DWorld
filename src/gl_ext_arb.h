@@ -35,10 +35,6 @@ void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff
 					   unsigned ncomp, unsigned char const *const data);
 void set_3d_texture_as_current(unsigned tid, unsigned tu_id);
 
-// fog coord prototypes
-void setup_fog_coord();
-void set_fog_coord(GLfloat val);
-
 // gl_ext_arb
 unsigned create_vbo();
 void bind_vbo(unsigned vbo, bool is_index=0);
