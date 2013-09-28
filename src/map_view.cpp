@@ -22,6 +22,17 @@ extern obj_group obj_groups[];
 
 
 
+float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, bool use_hmap_height, float xstart, float ystart, float scale, int i, int j) {
+
+	if (use_hmap_height) {
+		return get_tiled_terrain_height_tex((xstart + X_SCENE_SIZE + j*scale)*DX_VAL_INV, (ystart + Y_SCENE_SIZE + i*scale)*DY_VAL_INV);
+	}
+	else {
+		return height_gen.eval_index(j, i, 1);
+	}
+}
+
+
 void draw_overhead_map() {
 
 	//RESET_TIME
@@ -74,8 +85,10 @@ void draw_overhead_map() {
 	vector3d const dir(vector3d(cview_dir.x, cview_dir.y, 0.0).get_norm());
 	int const cx(int(nx2 - map_x/scale)), cy(int(ny2 - map_y/scale));
 	int const xx(cx + int(4*dir.x)), yy(cy + int(4*dir.y));
+	bool const use_hmap_height(using_tiled_terrain_hmap_tex());
+	float const xstart(x0 - nx2*scale), ystart(y0 - ny2*scale);
 	mesh_xy_grid_cache_t height_gen;
-	height_gen.build_arrays((x0 - nx2*scale), (y0 - ny2*scale), scale, scale, nx, ny);
+	if (!use_hmap_height) {height_gen.build_arrays(xstart, ystart, scale, scale, nx, ny);}
 	vector<unsigned char> buf(nx*ny*3*sizeof(unsigned char));
 	vector3d const light_dir(get_light_pos().get_norm()); // assume directional lighting to origin
 
@@ -100,7 +113,7 @@ void draw_overhead_map() {
 				rgb[0] = rgb[1] = rgb[2] = 0; // world boundary
 			}
 			else {
-				float height(CLIP_TO_01(hscale*(height_gen.eval_index(j, i, 1) + zmax2)));
+				float height(CLIP_TO_01(hscale*(get_mesh_height(height_gen, use_hmap_height, xstart, ystart, scale, i, j) + zmax2)));
 
 				if (!map_color) { // grayscale
 					rgb[0] = rgb[1] = rgb[2] = (unsigned char)(255.0*pow(height, glaciate_exp_inv)); // un-glaciate: slow
@@ -135,7 +148,7 @@ void draw_overhead_map() {
 
 						if (height > map_heights[4]) {
 							float const hx((j == 0) ? height : last_height);
-							float const hy(CLIP_TO_01(hscale*(height_gen.eval_index(j, max(i-1, 0), 1) + zmax2)));
+							float const hy(CLIP_TO_01(hscale*(get_mesh_height(height_gen, use_hmap_height, xstart, ystart, scale, max(i-1, 0), j) + zmax2)));
 							normal = vector3d(DY_VAL*(hx - height), DX_VAL*(hy - height), dxdy).get_norm();
 						}
 						last_height = height;
