@@ -83,7 +83,6 @@ float    const RAIN_MIN_TEMP    = 2.0; // degrees C
 float    const SNOW_MAX_TEMP    = -2.0;
 float    const WATER_MAX_TEMP   = 100.0; // boiling point
 float    const DEF_TEMPERATURE  = 20.0;
-float    const OCEAN_WAVE_HEIGHT= 0.01;
 
 float    const SNOW_ACC         = 10.0;
 float    const W_FREEZE_POINT   = -0.1;

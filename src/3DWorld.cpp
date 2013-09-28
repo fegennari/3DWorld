@@ -42,6 +42,7 @@ float const MOUSE_TRAN_ADJ = 0.01;   // mouse translate adjustment
 float const MOUSE_ANG_ADJ  = PI/350; // mouse camera angle increment
 float const MA_TOLERANCE   = 0.0001; // tolerance adjustment
 float const CAMERA_AIR_CONT= 0.5;
+float const DEF_OCEAN_WAVE_HEIGHT = 0.01;
 
 int const START_MODE       = WMODE_GROUND; // 0 = island/standard mesh, 1 = planet/universe, 2 = no redraw mesh, 3 = infinite terrain
 
@@ -84,8 +85,9 @@ float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.
 float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25), sm_tree_density(1.0);
-float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
 float CAMERA_RADIUS(0.06), C_STEP_HEIGHT(0.6), wapypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), dist_to_fire_sq(0.0);
+float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT);
+float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
@@ -1586,6 +1588,7 @@ int load_config(string const &config_file) {
 	kwmf.add("mesh_mag_mult", MESH_MAG_MULT);
 	kwmf.add("mesh_freq_mult", MESH_FREQ_MULT);
 	kwmf.add("sm_tree_density", sm_tree_density);
+	kwmf.add("ocean_wave_height", ocean_wave_height);
 
 	while (read_str(fp, strc)) { // slow but should be OK
 		string const str(strc);

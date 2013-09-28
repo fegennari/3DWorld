@@ -317,12 +317,6 @@ int is_in_ice(int xpos, int ypos) {
 }
 
 
-float get_exact_zval(float xval, float yval) {
-
-	return eval_one_surface_point(((xval + X_SCENE_SIZE)*DX_VAL_INV + 0.5), ((yval + Y_SCENE_SIZE)*DY_VAL_INV + 0.5));
-}
-
-
 // This really solves for the z value of an x/y point on the mesh plane, but it is somewhat like interpolation.
 float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equation, int ignore_ice) {
 

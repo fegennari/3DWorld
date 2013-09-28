@@ -32,6 +32,7 @@ extern unsigned grass_density, max_unique_trees;
 extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
+extern float ocean_wave_height;
 extern point sun_pos, moon_pos, surface_pos;
 extern char *mh_filename_tt;
 extern float h_dirt[];
@@ -79,8 +80,7 @@ void bind_texture_tu(unsigned tid, unsigned tu_id) {
 // *** terrain_hmap_manager_t ***
 
 
-unsigned const TEX_EDGE_MODE    = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
-unsigned const TEX_LOOKUP_SCALE = 1; // >= 1
+unsigned const TEX_EDGE_MODE = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
 
 float scale_mh_texture_val(float val);
 
@@ -102,6 +102,7 @@ struct terrain_hmap_manager_t {
 		if (fn != NULL && !enabled()) {load(fn, invert_y);}
 	}
 	float get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
+		assert(enabled());
 		x = round_fp(mesh_scale*x) + texture.width /2; // scale and offset (0,0) to texture center
 		y = round_fp(mesh_scale*y) + texture.height/2;
 
@@ -135,7 +136,17 @@ struct terrain_hmap_manager_t {
 	~terrain_hmap_manager_t() {texture.free_data();}
 };
 
+
 terrain_hmap_manager_t terrain_hmap_manager;
+
+
+bool using_tiled_terrain_hmap_tex() {
+	return (world_mode == WMODE_INF_TERRAIN && terrain_hmap_manager.enabled());
+}
+
+float get_tiled_terrain_height_tex(float xval, float yval) {
+	return terrain_hmap_manager.interpolate_height(xval, yval);
+}
 
 
 // *** tile_t ***
@@ -288,15 +299,15 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	calc_start_step(0, 0);
 	mzmin =  FAR_CLIP;
 	mzmax = -FAR_CLIP;
-	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + OCEAN_WAVE_HEIGHT);
+	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
 	unsigned const block_size(zvsize/4);
 
-	if (terrain_hmap_manager.enabled()) {
+	if (using_tiled_terrain_hmap_tex()) {
 		for (int y = 0; y < (int)zvsize; ++y) {
 			for (unsigned x = 0; x < zvsize; ++x) {
 				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
 				float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
-				float const hv(terrain_hmap_manager.get_clamped_height(TEX_LOOKUP_SCALE*(x1 + x), TEX_LOOKUP_SCALE*(y1 + y)));
+				float const hv(terrain_hmap_manager.get_clamped_height((x1 + x), (y1 + y)));
 				zvals[y*zvsize + x] = hoff + hscale*hv;
 			}
 		}

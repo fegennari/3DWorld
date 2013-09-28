@@ -43,7 +43,7 @@ upos_point_type cur_origin(all_zeros);
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
-extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop;
+extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height;
 extern double camera_zh;
 extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
@@ -665,7 +665,7 @@ float get_ocean_wave_height() {
 	if (!(display_mode & 0x0100)) return 0.0;
 	static float time(0.0);
 	if (animate2 && temperature > W_FREEZE_POINT) time += fticks;
-	return OCEAN_WAVE_HEIGHT*sin(1.0*time/TICKS_PER_SECOND); // add small waves
+	return ocean_wave_height*sin(1.0*time/TICKS_PER_SECOND); // add small waves
 }
 
 

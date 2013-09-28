@@ -209,6 +209,8 @@ void draw_water_sides(int check_zvals);
 float get_inf_terrain_fog_dist();
 
 // function prototypes - tiled mesh
+bool using_tiled_terrain_hmap_tex();
+float get_tiled_terrain_height_tex(float xval, float yval);
 float update_tiled_terrain();
 void pre_draw_tiled_terrain();
 void draw_tiled_terrain(bool reflection_pass);
@@ -253,7 +255,7 @@ float do_glaciate_exp(float value);
 float get_rel_wpz();
 void init_terrain_mesh();
 float eval_mesh_sin_terms(float xv, float yv);
-float eval_one_surface_point(float xval, float yval);
+float get_exact_zval(float xval, float yval);
 void reset_offsets();
 float get_water_z_height();
 void update_mesh(float dms, bool do_regen_trees);

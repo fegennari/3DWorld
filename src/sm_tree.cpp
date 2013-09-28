@@ -273,13 +273,13 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 	int const ntrees(int(min(1.0f, vegetation_*sm_tree_density*tscale*tscale/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
 	assert(x1 < x2 && y1 < y2);
-	bool const approx_tree_zval(world_mode == WMODE_INF_TERRAIN); // faster, but lower z-value accuracy, and only works for tiled terrain mode
+	bool const approx_zval(world_mode == WMODE_INF_TERRAIN && !using_tiled_terrain_hmap_tex()); // faster, but lower z-value accuracy, and only works for tiled terrain mode
 	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
 	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
 	mesh_xy_grid_cache_t density_gen, height_gen;
 	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1));
-	if (approx_tree_zval) {height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5), DX_VAL, DY_VAL, (x2-x1), (y2-y1));}
+	if (approx_zval) {height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5), DX_VAL, DY_VAL, (x2-x1), (y2-y1));}
 
 	for (int i = y1; i < y2; i += skip_val) {
 		for (int j = x1; j < x2; j += skip_val) {
@@ -293,7 +293,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 				rgen.rand_mix();
 				float const xval(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
 				float const yval(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
-				float const zpos(approx_tree_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
+				float const zpos(approx_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
 				int const ttype(get_tree_type_from_height(zpos, rgen));
 				if (ttype == TREE_NONE) continue;
 				float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));

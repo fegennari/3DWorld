@@ -698,15 +698,20 @@ float eval_mesh_sin_terms(float xv, float yv) {
 }
 
 
-float eval_one_surface_point(float xval, float yval) {
+float get_exact_zval(float xval, float yval) {
+
+	xval = (xval + X_SCENE_SIZE)*DX_VAL_INV + 0.5; // convert from real to index space, as in get_xpos()/get_ypos() but as FP
+	yval = (yval + Y_SCENE_SIZE)*DY_VAL_INV + 0.5;
 
 	if ((read_landscape || read_heightmap) && world_mode == WMODE_GROUND) { // interpolate from provided coords
 		int xy[2] = {int(xval + 0.5), int(yval + 0.5)};
 		clamp_to_mesh(xy);
 		return mesh_height[xy[1]][xy[0]]; // could interpolate?
 	}
-	float const xv(mesh_scale*(xval + xoff2 - (MESH_X_SIZE >> 1))), yv(mesh_scale*(yval + yoff2 - (MESH_Y_SIZE >> 1)));
-	float const zval(eval_mesh_sin_terms(xv, yv)/mesh_scale_z);
+	xval += xoff2; // offset by current mesh transform
+	yval += yoff2;
+	if (using_tiled_terrain_hmap_tex()) {return get_tiled_terrain_height_tex(xval, yval);}
+	float const zval(eval_mesh_sin_terms(mesh_scale*(xval - (MESH_X_SIZE >> 1)), mesh_scale*(yval - (MESH_Y_SIZE >> 1)))/mesh_scale_z);
 	return ((GLACIATE && !island) ? get_glaciated_zval(zval) : zval);
 }
 

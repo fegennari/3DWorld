@@ -26,6 +26,8 @@ TT underwater dirt/vegetation
 Somehow use game mode/fullscreen without changing the context?
 
 Large heightmap in tiled terrain mode:
- - Walk on mesh
- - deeper water, lower slope, more sand?
-
+ - more sand - adjust texture offset or add config file param
+ - overhead map mode
+ - fog at horizon over water
+ - incorrect occlusion culling
+ - create sine terms for tree density sampling
