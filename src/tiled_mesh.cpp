@@ -328,7 +328,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 		for (unsigned xx = 0; xx < 4; ++xx) {
 			sub_zmin[yy][xx] =  FAR_CLIP;
 			sub_zmax[yy][xx] = -FAR_CLIP;
-			unsigned const x_end((xx+1)*block_size + 1), y_end((yy+1)*block_size + 1); // need extra overlap due to zvsize = stride+1 = size+2
+			unsigned const x_end((xx+1)*block_size), y_end((yy+1)*block_size); // last row/column is skipped because it's not rendered
 			assert(x_end < zvsize && y_end < zvsize);
 
 			for (unsigned y = yy*block_size; y <= y_end; ++y) {
