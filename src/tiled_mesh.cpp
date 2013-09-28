@@ -328,10 +328,11 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 		for (unsigned xx = 0; xx < 4; ++xx) {
 			sub_zmin[yy][xx] =  FAR_CLIP;
 			sub_zmax[yy][xx] = -FAR_CLIP;
+			unsigned const x_end((xx+1)*block_size + 1), y_end((yy+1)*block_size + 1); // need extra overlap due to zvsize = stride+1 = size+2
+			assert(x_end < zvsize && y_end < zvsize);
 
-			for (unsigned y = yy*block_size; y <= (yy+1)*block_size; ++y) { // misses the last row and column?
-				for (unsigned x = xx*block_size; x <= (xx+1)*block_size; ++x) {
-					assert(x < zvsize && y < zvsize);
+			for (unsigned y = yy*block_size; y <= y_end; ++y) {
+				for (unsigned x = xx*block_size; x <= x_end; ++x) {
 					float const z(zvals[y*zvsize + x]);
 					sub_zmin[yy][xx] = min(sub_zmin[yy][xx], z);
 					sub_zmax[yy][xx] = max(sub_zmax[yy][xx], z);
@@ -1433,7 +1434,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
 void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { // copied from get_cube_points
 
-	unsigned i[3] = {0,0,0};
+	unsigned i[3] = {0,0,1};
 
 	for (i[0] = 0; i[0] < 2; ++i[0]) {
 		for (i[1] = 0; i[1] < 2; ++i[1]) {

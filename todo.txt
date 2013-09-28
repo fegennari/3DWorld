@@ -26,4 +26,4 @@ TT underwater dirt/vegetation
 Somehow use game mode/fullscreen without changing the context?
 
 Large heightmap in tiled terrain mode:
- - incorrect occlusion culling
+ - mesh shadows
