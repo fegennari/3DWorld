@@ -405,7 +405,7 @@ void draw_cloud_plane(bool reflection_pass) {
 		s.set_frag_shader("linear_fog.part+fog_only");
 		s.begin_shader();
 		s.setup_fog_scale();
-		s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
+		s.add_uniform_float("water_plane_z", zmin);
 		BLACK.do_glColor();
 		imd.render_z_plane(-size, -size, size, size, zmin, CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
@@ -419,7 +419,7 @@ void draw_cloud_plane(bool reflection_pass) {
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds");
 	s.begin_shader();
 	s.setup_fog_scale();
-	s.add_uniform_float("water_plane_z", get_tiled_terrain_water_level());
+	s.add_uniform_float("water_plane_z", zmin);
 	s.add_uniform_float("cloud_scale", 0.5);
 	s.add_uniform_vector3d("camera_pos", camera);
 	s.add_uniform_vector3d("sun_pos", get_sun_pos());
