@@ -3,7 +3,7 @@ include config_landscape.txt
 ocean_wave_height 0.0005
 camera_height 0.08
 
-#ntrees 20
+ntrees 20
 nleaves_scale 2.0
 tree_branch_radius 0.5
 

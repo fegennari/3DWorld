@@ -285,6 +285,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 		for (int j = x1; j < x2; j += skip_val) {
 			rgen.set_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
 						   (845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
+			rgen.rand(); // increase randomness (slower, but less regular - which is important for pine trees in tiled terrain mode)
 			if ((rgen.rand_seed_mix()%tree_prob) != 0) continue; // not selected
 			float const dist_test(get_rel_height(density_gen.eval_index(j-x1, i-y1, 1), -zmax_est, zmax_est));
 
