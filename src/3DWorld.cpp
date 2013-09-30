@@ -59,7 +59,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0);
-bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0);
+bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
 bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0);
@@ -1517,6 +1517,7 @@ int load_config(string const &config_file) {
 	kwmb.add("lighting_update_offline", lighting_update_offline);
 	kwmb.add("two_sided_lighting", two_sided_lighting);
 	kwmb.add("disable_sound", disable_sound);
+	kwmb.add("start_maximized", start_maximized);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
@@ -1853,6 +1854,7 @@ int main(int argc, char** argv) {
 	set_scene_constants();
 	load_texture_names(); // needs to be before config file load
 	load_top_level_config(defaults_file);
+	if (start_maximized) {maximize();}
 	load_textures();
 	load_flare_textures(); // Sun Flare
 	setup_shaders();

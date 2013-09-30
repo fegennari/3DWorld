@@ -3,7 +3,6 @@ Leaf/Branch overlap
 Multiple decid tree impostor orients
 Voxel terrain read/write
 Support for cube map textures (planets, etc.)
-
 More grass/plant types: Yellow and white flowers
 Hardware tessellation
 Use assimp?
@@ -18,9 +17,7 @@ Remove non-shader rendering
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
 Replace GL matrix operations with something else (GLM?)
 
-Mesh height high frequency noise / voxels / caves
+Instance voxel mountains
 Point Sprites: berries on plants?
 Fireworks
-TT underwater dirt/vegetation
-
-Somehow use game mode/fullscreen without changing the context?
+TT underwater dirt/vegetation, seaweed in/on water
