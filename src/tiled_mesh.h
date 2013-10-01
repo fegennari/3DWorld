@@ -224,7 +224,7 @@ public:
 	void init_pine_tree_draw();
 	void update_pine_tree_state(bool upload_if_needed);
 	unsigned num_pine_trees() const {return pine_trees.size();}
-	void draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const;
+	void draw_tree_leaves_lod(vector3d const &xlate, bool low_detail) const;
 	void draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass) const;
 	unsigned num_decid_trees() const {return decid_trees.size();}
 	void gen_decid_trees_if_needed();

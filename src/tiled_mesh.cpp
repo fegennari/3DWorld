@@ -773,7 +773,7 @@ void tile_t::update_pine_tree_state(bool upload_if_needed) {
 }
 
 
-void tile_t::draw_tree_leaves_lod(shader_t &s, vector3d const &xlate, bool low_detail) const {
+void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail) const {
 
 	bool const draw_all(low_detail || camera_pdu.point_visible_test(get_center())); // tile center is in view
 	pine_trees.draw_pine_leaves(0, low_detail, draw_all, contains_camera(), xlate);
@@ -803,17 +803,17 @@ void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_br
 		if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
 			if (draw_near_leaves) {
 				s.add_uniform_float("max_noise", weight);
-				draw_tree_leaves_lod(s, xlate, 0); // near leaves
+				draw_tree_leaves_lod(xlate, 0); // near leaves
 				s.add_uniform_float("max_noise", 1.0);
 			}
 			if (draw_far_leaves) {
 				s.add_uniform_float("min_noise", weight);
-				draw_tree_leaves_lod(s, xlate, 1); // far leaves
+				draw_tree_leaves_lod(xlate, 1); // far leaves
 				s.add_uniform_float("min_noise", 0.0);
 			}
 		}
 		else if ((weight == 0.0) ? draw_far_leaves : draw_near_leaves) {
-			draw_tree_leaves_lod(s, xlate, (weight == 0.0));
+			draw_tree_leaves_lod(xlate, (weight == 0.0));
 		}
 	}
 	glPopMatrix();
@@ -1605,6 +1605,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass); // far leaves
 	s.end_shader();
 	disable_blend();
+
 	set_pine_tree_shader(s, "pine_tree");
 	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass); // near leaves
 	assert(tree_trunk_pts.empty());
@@ -1781,7 +1782,6 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		setup_cloud_plane_uniforms(s);
 
 		int const lt_loc(s.get_attrib_loc("local_translate"));
-		assert(lt_loc >= 0);
 		glEnableVertexAttribArray(lt_loc);
 		glVertexAttribDivisor(lt_loc, 1);
 

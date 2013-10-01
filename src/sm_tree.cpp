@@ -235,7 +235,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 		for (unsigned i = 0; i < size(); ++i) {
 			to_draw[i] = make_pair(p2p_dist_sq(operator[](i).get_pos(), ref_pos), i);
 		}
-		if (world_mode == WMODE_INF_TERRAIN) {sort(to_draw.begin(), to_draw.end());} // sort front to back for early Z culling
+		sort(to_draw.begin(), to_draw.end()); // sort front to back for early Z culling
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			operator[](to_draw[i].second).draw_pine_leaves(vbomgr, xlate);
@@ -671,11 +671,15 @@ void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager) const { /
 }
 
 
+bool small_tree::is_visible_pine(vector3d const &xlate) const {
+
+	return camera_pdu.sphere_visible_test((pos + xlate + point(0.0, 0.0, 0.5*height)), max(1.5*width, 0.5*height));
+}
+
+
 void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const {
 
-	if (!is_pine_tree()) return;
-	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	if (camera_pdu.sphere_visible_test(pos2, max(1.5*width, 0.5*height))) {draw_pine(vbo_manager);}
+	if (is_pine_tree() && is_visible_pine(xlate)) {draw_pine(vbo_manager);}
 }
 
 
@@ -683,8 +687,7 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
-	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	if (shadow_only ? !is_over_mesh(pos2) : !camera_pdu.sphere_visible_test(pos2, max(1.5*width, 0.5*height))) return;
+	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_visible_pine(xlate)) return;
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size_scale(zoom_f*stt[type].ss*width*window_width);
 
 	if ((mode & 1) && type != T_BUSH) { // trunk
