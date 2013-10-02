@@ -1546,6 +1546,7 @@ int load_config(string const &config_file) {
 	kwmi.add("ntrees", num_trees);
 	kwmi.add("nsmileys", num_smileys);
 	kwmi.add("teams", teams);
+	kwmi.add("init_tree_mode", tree_mode);
 
 	kw_to_val_map_t<unsigned> kwmu(error);
 	kwmu.add("grass_density", grass_density);
@@ -1799,6 +1800,7 @@ int load_config(string const &config_file) {
 	num_trees      = max(num_trees,      0);
 	num_smileys    = max(num_smileys,    0);
 	teams          = max(teams,          1);
+	tree_mode      = tree_mode % 4;
 	if (universe_only) world_mode = WMODE_UNIVERSE;
 	//if (read_heightmap && dynamic_mesh_scroll) cout << "Warning: read_heightmap and dynamic_mesh_scroll are currently incompatible options as the heightmap does not scroll." << endl;
 	DISABLE_WATER = INIT_DISABLE_WATER;
