@@ -635,7 +635,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	else { // low detail billboard
 		assert(!update_mode);
 		//float const normal_z = 0.816; // high detail tree polygon normal
-		float const normal_z = 0.98; // blends better in practice
+		float const normal_z = 0.95; // blends better in practice
 		vert_norm points[4];
 		vert_norm vn(pos, vector3d(1.5*sz_scale/calc_tree_size(), 0.0, normal_z));
 		vn.v.z = center.z + 1.45*sz_scale + 0.1*height;

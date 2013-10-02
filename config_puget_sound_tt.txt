@@ -13,6 +13,7 @@ disable_water 0
 disable_scenery 1
 inf_terrain_scenery 1
 ground_effects_level 2 # 1 = mesh shadows, 2 = mesh + cloud shadows
+init_tree_mode 2 # pine trees
 
 grass_density 100
 grass_size 0.03 0.002

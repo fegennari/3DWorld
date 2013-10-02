@@ -1609,6 +1609,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	shader_t s;
 	set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
 	s.add_uniform_float("radius_scale", calc_tree_size());
+	s.add_uniform_float("ambient_scale", 1.5);
 	set_specular(0.2, 8.0);
 	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass); // far leaves
 	s.end_shader();
