@@ -279,7 +279,8 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 	int const ntrees(int(min(1.0f, vegetation_*sm_tree_density*tscale*tscale/8.0f)*NUM_SMALL_TREES));
 	if (ntrees == 0) return;
 	assert(x1 < x2 && y1 < y2);
-	bool const approx_zval(world_mode == WMODE_INF_TERRAIN && !using_tiled_terrain_hmap_tex()); // faster, but lower z-value accuracy, and only works for tiled terrain mode
+	bool const use_hmap_tex(using_tiled_terrain_hmap_tex());
+	bool const approx_zval(world_mode == WMODE_INF_TERRAIN && !use_hmap_tex); // faster, but lower z-value accuracy, and only works for tiled terrain mode
 	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
 	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
@@ -303,6 +304,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 				float const zpos(approx_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
 				int const ttype(get_tree_type_from_height(zpos, rgen));
 				if (ttype == TREE_NONE) continue;
+				if (use_hmap_tex && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) {continue;}
 				float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));
 				small_tree st(point(xval, yval, zpos+zval_adj*height), height, width, ttype, 0, rgen);
 				st.setup_rotation(rgen);

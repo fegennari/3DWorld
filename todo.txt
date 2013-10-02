@@ -22,4 +22,4 @@ Point Sprites: berries on plants?
 Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 
-Trees test slope in TT mode, at least for heightmap images
+TT pine tree color match - normal map texture?

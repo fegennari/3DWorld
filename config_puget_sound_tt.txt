@@ -6,6 +6,7 @@ camera_height 0.08
 ntrees 20
 nleaves_scale 2.0
 tree_branch_radius 0.5
+sm_tree_density 2.0
 
 disable_inf_terrain 0
 disable_water 0

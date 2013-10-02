@@ -211,6 +211,7 @@ float get_inf_terrain_fog_dist();
 // function prototypes - tiled mesh
 bool using_tiled_terrain_hmap_tex();
 float get_tiled_terrain_height_tex(float xval, float yval);
+vector3d get_tiled_terrain_height_tex_norm(int x, int y);
 float update_tiled_terrain();
 void pre_draw_tiled_terrain();
 void draw_tiled_terrain(bool reflection_pass);

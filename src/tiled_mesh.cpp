@@ -132,6 +132,10 @@ struct terrain_hmap_manager_t {
 		return   yv *(xv*get_clamped_height(xlo+1, ylo+1) + (1.0-xv)*get_clamped_height(xlo, ylo+1)) +
 			(1.0-yv)*(xv*get_clamped_height(xlo+1, ylo  ) + (1.0-xv)*get_clamped_height(xlo, ylo  ));
 	}
+	vector3d get_norm(int x, int y) const {
+		return vector3d(DY_VAL*(get_clamped_height(x, y) - get_clamped_height(x+1, y)),
+			            DX_VAL*(get_clamped_height(x, y) - get_clamped_height(x, y+1)), dxdy).get_norm();
+	}
 	bool enabled() const {return texture.is_allocated();}
 	~terrain_hmap_manager_t() {texture.free_data();}
 };
@@ -146,6 +150,10 @@ bool using_tiled_terrain_hmap_tex() {
 
 float get_tiled_terrain_height_tex(float xval, float yval) {
 	return terrain_hmap_manager.interpolate_height(xval, yval);
+}
+
+vector3d get_tiled_terrain_height_tex_norm(int x, int y) {
+	return terrain_hmap_manager.get_norm(x, y);
 }
 
 
