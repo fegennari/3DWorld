@@ -34,6 +34,7 @@ public:
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode=0);
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
+	colorRGBA get_leaf_color() const {return color;}
 	colorRGBA get_bark_color() const;
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager) const;
 	bool is_visible_pine(vector3d const &xlate) const;
@@ -89,6 +90,7 @@ struct small_tree_group : public vector<small_tree> {
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	void translate_by(vector3d const &vd);
+	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
 	void draw_branches(bool shadow_only, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
 	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector) const;
 	void draw_non_pine_leaves(bool shadow_only, vector3d const &xlate=zero_vector) const;
