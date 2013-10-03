@@ -757,8 +757,9 @@ bool tile_t::update_range() { // if returns 0, tile will be deleted
 
 void tile_t::init_pine_tree_draw() {
 
+	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
-	pine_trees.gen_trees(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, vegetation*get_avg_veg());
+	pine_trees.gen_trees(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, density);
 	pine_trees.calc_trunk_pts();
 	postproc_trees(pine_trees, ptzmax);
 }
@@ -1318,6 +1319,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100));
 	if (has_water     ) {s.set_prefix("#define HAS_WATER", 1);} // FS
 	if (water_caustics) {s.set_prefix("#define WATER_CAUSTICS", 1);} // FS
+	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
 	s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
 	s.begin_shader();

@@ -94,7 +94,7 @@ struct small_tree_group : public vector<small_tree> {
 	void draw_branches(bool shadow_only, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
 	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector) const;
 	void draw_non_pine_leaves(bool shadow_only, vector3d const &xlate=zero_vector) const;
-	void gen_trees(int x1, int y1, int x2, int y2, float vegetation_);
+	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);
 	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}
 	void update_zmax(float &tzmax) const;

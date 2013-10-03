@@ -271,30 +271,37 @@ float calc_tree_scale() {return (Z_SCENE_SIZE*tree_scale)/16.0;}
 float calc_tree_size () {return SM_TREE_SIZE*Z_SCENE_SIZE/calc_tree_scale();}
 
 
-void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetation_) {
+// density = x1,y1 x2,y1 x1,y2 x2,y2
+void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const density[4]) {
 
 	generated = 1; // mark as generated if we got here, even if there are no actual trees generated
-	if (vegetation_ == 0.0) return;
-	float const tscale(calc_tree_scale()), tsize(calc_tree_size()); // random tree generation based on transformed mesh height function
-	int const ntrees(int(min(1.0f, vegetation_*sm_tree_density*tscale*tscale/8.0f)*NUM_SMALL_TREES));
-	if (ntrees == 0) return;
+	if (sm_tree_density == 0.0 || vegetation == 0.0) return;
+	if (density[0] == 0.0 && density[1] == 0.0 && density[2] == 0.0 && density[3] == 0.0) return;
 	assert(x1 < x2 && y1 < y2);
+	float const tscale(calc_tree_scale()), tsize(calc_tree_size()), ntrees_mult(vegetation*sm_tree_density*tscale*tscale/8.0f);
+	int const skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
 	bool const use_hmap_tex(using_tiled_terrain_hmap_tex());
 	bool const approx_zval(world_mode == WMODE_INF_TERRAIN && !use_hmap_tex); // faster, but lower z-value accuracy, and only works for tiled terrain mode
-	int const tree_prob(max(1, XY_MULT_SIZE/ntrees)), trees_per_block(max(1, ntrees/XY_MULT_SIZE)), skip_val(max(1, int(1.0/(sqrt(sm_tree_density*tree_scale)))));
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
 	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
-	mesh_xy_grid_cache_t density_gen, height_gen;
+	mesh_xy_grid_cache_t density_gen, height_gen; // random tree generation based on transformed mesh height function
 	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1));
 	if (approx_zval) {height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5), DX_VAL, DY_VAL, (x2-x1), (y2-y1));}
+	float const dxv(skip_val/(x2 - x1 - 1.0)), dyv(skip_val/(y2 - y1 - 1.0));
+	float xv(0.0), yv(0.0);
 
-	for (int i = y1; i < y2; i += skip_val) {
-		for (int j = x1; j < x2; j += skip_val) {
+	for (int i = y1; i < y2; i += skip_val, yv += dyv) {
+		for (int j = x1; j < x2; j += skip_val, xv += dxv) {
+			float const cur_density(yv*(xv*density[3] + (1.0-xv)*density[2]) + (1.0-yv)*(xv*density[1] + (1.0-xv)*density[0]));
+			int const ntrees(int(min(1.0f, cur_density*ntrees_mult)*NUM_SMALL_TREES));
+			if (ntrees == 0) continue;
+			int const tree_prob(max(1, XY_MULT_SIZE/ntrees));
 			rgen.set_state((657435*(i + yoff2) + 243543*(j + xoff2) + 734533*rand_gen_index),
 						   (845631*(j + xoff2) + 667239*(i + yoff2) + 846357*rand_gen_index));
 			rgen.rand(); // increase randomness (slower, but less regular - which is important for pine trees in tiled terrain mode)
 			if ((rgen.rand_seed_mix()%tree_prob) != 0) continue; // not selected
 			float const dist_test(get_rel_height(density_gen.eval_index(j-x1, i-y1, 1), -zmax_est, zmax_est));
+			int const trees_per_block(max(1, ntrees/XY_MULT_SIZE));
 
 			for (int n = 0; n < trees_per_block; ++n) {
 				if (dist_test > (TREE_DEN_THRESH*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
@@ -311,6 +318,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float vegetatio
 				add_tree(st);
 			}
 		}
+		xv = 0.0; // reset for next y iter
 	}
 	if (world_mode == WMODE_GROUND) {sort_by_type();}
 }
@@ -405,9 +413,10 @@ void gen_small_trees() {
 		remove_small_tree_cobjs();
 		purge_coll_freed(1);
 	}
+	float const density[4] = {1.0, 1.0, 1.0, 1.0};
 	small_trees.clear_all();
 	small_trees = small_tree_group(); // really force a clear
-	small_trees.gen_trees(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation);
+	small_trees.gen_trees(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, density);
 	small_trees.finalize(0);
 	//PRINT_TIME("Gen");
 	small_trees.add_cobjs();
