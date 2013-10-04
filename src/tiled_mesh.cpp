@@ -526,7 +526,8 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 
 	tree_map.resize(0);
 	tree_map.resize(stride*stride, 255);
-	apply_ao_shadows_for_trees(this, 0);
+	bool const no_adj_test(trmax < min(xstep, ystep));
+	apply_ao_shadows_for_trees(this, no_adj_test);
 }
 
 
