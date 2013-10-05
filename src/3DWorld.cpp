@@ -1536,7 +1536,6 @@ int load_config(string const &config_file) {
 	kwmi.add("disable_scenery", DISABLE_SCENERY);
 	kwmi.add("read_landscape", read_landscape);
 	kwmi.add("read_heightmap", read_heightmap);
-	kwmi.add("default_ground_tex", default_ground_tex);
 	kwmi.add("ground_effects_level", ground_effects_level);
 	kwmi.add("shadow_detail", shadow_detail);
 	kwmi.add("tree_coll_level", tree_coll_level);
@@ -1734,6 +1733,10 @@ int load_config(string const &config_file) {
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);
 			if (fscanf(fp, "%s", mesh_diffuse_tex_fn) != 1) cfg_err("mesh_diffuse_tex_fn command", error);
+		}
+		else if (str == "default_ground_tex") {
+			if (!read_str(fp, strc)) cfg_err("default_ground_tex", error);
+			default_ground_tex = get_texture_by_name(std::string(strc));
 		}
 		else if (str == "ship_def_file") {
 			alloc_if_req(ship_def_file, dship_def_file);

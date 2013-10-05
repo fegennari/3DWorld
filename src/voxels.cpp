@@ -1572,8 +1572,7 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	}
 	BLACK.do_glColor();
 	set_color_d(params.base_color);
-	float const spec(0.0), shine(1.0);
-	set_specular(spec, shine);
+	set_specular(params.spec_mag, params.spec_exp);
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
 	assert(lod_level < pt_to_ix.size());
 	sort(pt_to_ix[lod_level].begin(), pt_to_ix[lod_level].end(), comp_by_dist(get_camera_pos())); // sort near to far
@@ -1789,6 +1788,12 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "ao_atten_power") {
 		if (!read_float(fp, global_voxel_params.ao_atten_power) || global_voxel_params.ao_atten_power <= 0.0) voxel_file_err("ao_atten_power", error);
+	}
+	else if (str == "specular_mag") {
+		if (!read_float(fp, global_voxel_params.spec_mag) || global_voxel_params.spec_mag < 0.0) voxel_file_err("specular_mag", error);
+	}
+	else if (str == "specular_exp") {
+		if (!read_float(fp, global_voxel_params.spec_exp) || global_voxel_params.spec_exp <= 0.0) voxel_file_err("specular_exp", error);
 	}
 	else if (str == "invert") {
 		if (!read_bool(fp, global_voxel_params.invert)) voxel_file_err("invert", error);
