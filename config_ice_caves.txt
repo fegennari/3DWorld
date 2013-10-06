@@ -3,18 +3,20 @@ include config_voxels.txt
 rand_seed 0
 disable_water 1
 default_ground_tex snow2.jpg # snow texture
+mesh_detail_tex snow2.jpg # snow texture
 #voxel tid_top snow2.jpg # snow texure
 
 mesh_size  128 128 64
 scene_size 16.0 16.0 4.0
 
-voxel color1 1.0 1.0 1.2 1.0
-voxel color2 1.0 1.0 1.3 1.0
+voxel color1 1.0 1.0 1.0 1.0
+voxel color2 1.0 1.0 1.1 1.0
 voxel tid1 snow2.jpg
 voxel tid2 snow2.jpg
 #voxel tid2 ice.raw
-voxel specular_mag 1.0
+voxel specular_mag 0.6
 voxel specular_exp 40.0
+ambient_lighting_scale 1.0 1.0 1.8
 
 end
 

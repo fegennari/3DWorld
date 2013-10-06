@@ -47,7 +47,7 @@ extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, co
 extern float temperature, atmosphere, zbottom, indir_vert_offset;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
-extern colorRGB const_indir_color;
+extern colorRGB const_indir_color, ambient_lighting_scale;
 extern colorRGBA bkg_color, sun_color;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
@@ -171,6 +171,7 @@ void calc_cur_ambient_diffuse() {
 	}
 	if (ncomp > 0) {
 		float const cscale(0.5 + 0.5/ncomp);
+		cur_ambient       = cur_ambient.modulate_with(ambient_lighting_scale);
 		cur_ambient      *= cscale; // only really valid for sun and moon
 		cur_diffuse      *= cscale;
 		cur_ambient.alpha = 1.0;
@@ -302,7 +303,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 }
 
 
-// texture units used: 0,8,15: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9-14: tree leaf textures
+// texture units used: 0,8,15: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9-14: tree leaf textures | 9: AO texture, 10: voxel shadow texture
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {

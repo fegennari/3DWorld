@@ -39,7 +39,7 @@ vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, combined_gu, has_snow;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
-extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain;
+extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, sun_radius;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
@@ -321,7 +321,7 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty);
 
 	if (use_detail_tex) { // blend in detail nose texture at 30x scale
-		select_multitex(NOISE_TEX, 1, 0, 0);
+		select_multitex(mesh_detail_tex, 1, 0, 0);
 		setup_texgen(30.0*tex_scale/TWO_XSS, 30.0*tex_scale/TWO_YSS, 0.0, 0.0);
 		set_active_texture(0);
 	}
