@@ -91,7 +91,7 @@ float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
-colorRGB ambient_lighting_scale(1,1,1);
+colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color;
 set<unsigned char> keys, keyset;
 char game_mode_string[256] = {"640x480:32@85"};
@@ -1772,6 +1772,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "ambient_lighting_scale") {
 			if (fscanf(fp, "%f%f%f", &ambient_lighting_scale.R, &ambient_lighting_scale.G, &ambient_lighting_scale.B) != 3) cfg_err("ambient_lighting_scale command", error);
+		}
+		else if (str == "mesh_color_scale") {
+			if (fscanf(fp, "%f%f%f", &mesh_color_scale.R, &mesh_color_scale.G, &mesh_color_scale.B) != 3) cfg_err("mesh_color_scale command", error);
 		}
 		// snow
 		else if (str == "snow_depth") {

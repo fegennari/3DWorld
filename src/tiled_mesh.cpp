@@ -1533,7 +1533,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 	shader_t s;
 	setup_mesh_draw_shaders(s, reflection_pass);
 	s.add_uniform_float("spec_scale", 1.0);
-	setup_mesh_lighting();
+	set_fill_mode();
 	set_array_client_state(1, 0, 0, 0);
 	enable_blend(); // for fog transparency
 

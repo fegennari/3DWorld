@@ -201,7 +201,6 @@ void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, boo
 float integrate_water_dist(point const &targ_pos, point const &src_pos, float const water_z);
 void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2);
 float get_cloud_shadow_atten(int x, int y);
-void setup_mesh_lighting();
 void run_post_mesh_draw();
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex=1);
 void display_mesh(bool shadow_pass=0);

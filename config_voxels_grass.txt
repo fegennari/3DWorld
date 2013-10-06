@@ -27,9 +27,7 @@ grass_size 0.05 0.002
 
 mesh_height 0.1
 mesh_scale 1.0
-
 create_voxel_landscape 1
-use_dense_voxels 0
 
 mesh_size  128 128 128
 scene_size 4.0 4.0 8.0

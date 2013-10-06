@@ -44,6 +44,7 @@ extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, sun_radius;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
+extern colorRGB mesh_color_scale;
 extern colorRGBA bkg_color;
 extern float h_dirt[];
 
@@ -66,18 +67,6 @@ float camera_min_dist_to_surface() { // min dist of four corners and center
 	get_matrix_point(MESH_X_SIZE/2, MESH_Y_SIZE/2, pos);
 	dist = min(dist, distance_to_camera(pos));
 	return dist;
-}
-
-
-void setup_mesh_lighting() {
-
-	colorRGBA ambient_color(DEF_AMBIENT, DEF_AMBIENT, DEF_AMBIENT, 1.0);
-	colorRGBA diffuse_color(DEF_DIFFUSE, DEF_DIFFUSE, DEF_DIFFUSE, 1.0);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, &diffuse_color.R);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, &ambient_color.R);
-	glEnable(GL_COLOR_MATERIAL);
-	diffuse_color.do_glColor();
-	set_fill_mode();
 }
 
 
@@ -151,8 +140,7 @@ class mesh_vertex_draw {
 			sd = min(MAX_SURFD, max(0.0f, (sd - healr)));
 			color_scale *= max(0.0f, (1.0f - sd));
 		}
-		//data[c].c.set_to_val(color_scale);
-		colorRGB color(color_scale, color_scale, color_scale);
+		colorRGB color(mesh_color_scale*color_scale);
 		if (using_lightmap) {get_sd_light(j, i, get_zpos(data[c].v.z), &color.R);}
 
 		if (shadow_map_enabled()) {
@@ -463,7 +451,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 		}
 		glEnable(GL_LIGHTING);
 	}
-	setup_mesh_lighting();
+	set_fill_mode();
 	update_landscape_texture();
 	if (SHOW_MESH_TIME) PRINT_TIME("Landscape Texture");
 	glDisable(GL_NORMALIZE);
@@ -473,13 +461,16 @@ void display_mesh(bool shadow_pass) { // fast array version
 		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
+	//set_specular(1.0, 40.0);
 
 	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
+		(mesh_color_scale*DEF_DIFFUSE).do_glColor();
 		draw_mesh_vbo();
 	}
 	else { // slower mesh draw with more features
 		draw_mesh_mvd(0);
 	}
+	//set_specular(0.0, 1.0);
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	disable_multitex(1, 1);
 	disable_textures_texgen();
