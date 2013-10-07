@@ -19,12 +19,6 @@ voxel specular_exp 40.0
 ambient_lighting_scale 0.5 0.5 1.5
 mesh_color_scale 1.0 1.0 2.0 # clamped to [0.0, 1.0]?
 
-use_dense_voxels 1
-global_lighting_update 1
-lighting_update_offline 1
-num_threads 8
-max_ray_bounces 4
-num_light_rays 0 0 0 1000000
 lighting_file_global "" 1 0.1 0.0
 
 end
