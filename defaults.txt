@@ -9,6 +9,7 @@
 #config_voxels.txt
 #config_voxels2.txt
 #config_voxels_grass.txt
+#config_ice_caves.txt
 #config_trees.txt
 #config_water.txt
 #config_river.txt
@@ -16,6 +17,7 @@
 #config_berkeley.txt
 #config_puget_sound.txt
 config_puget_sound_tt.txt
+#config_grand_canyon.txt
 #sponza/config_sponza2.txt
 #model_data/config_soda.txt
 #config_samples.txt

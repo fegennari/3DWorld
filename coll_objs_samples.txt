@@ -25,5 +25,6 @@ t 0 0 0  s 1 2  M 0  m 0.12  l 0.8 1.0 1.0 1.0 1.0 27 1  O ../models/san-miguel/
 #t 0 0 0  s 1 2  M 0  m 0.01  O "../models/starship/Insignia Class Starship.model3d" 4 0 0 0
 #t 0 0 0  s 1 2  M 0  m 0.00002  O ../models/powerplant/powerplant.model3d 4 0 0 1
 #t 0 0 1.0  s 1 2  M 0  m 0.5  O ../models/Mitsuba/mitsuba.obj 3 0 0 0
+#t 0 0 -30.0  s 1 2  M 0  m 1.0  O ../models/angel.obj 4 0 0 0
 
 
