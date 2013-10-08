@@ -714,7 +714,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		unsigned want_alpha_channel(ncolors == 4);
 
 		switch (format) {
-		case 0: case 1: case 2: case 3: load_raw_bmp(index); break; // raw
+		case 0: case 1: case 2: case 3: load_raw_bmp(index, allow_diff_width_height); break; // raw
 		case 4: load_targa(index, allow_diff_width_height); break;
 		case 5: load_jpeg (index, allow_diff_width_height); break;
 		case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
@@ -753,7 +753,7 @@ struct bmp_infoheader { // 40 bytes
 };
 
 
-bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &ncolors) {
+bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &ncolors, bool allow_diff_width_height) {
 
 	bmp_header header;
 	bmp_infoheader infoheader;
@@ -762,13 +762,14 @@ bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &
 		cerr << "Error reading bitmap header/infoheader for file " << fn << endl;
 		return 0;
 	}
-	if (width   == 0) {width   = infoheader.width;}
-	if (height  == 0) {height  = infoheader.height;}
-	if (ncolors == 0) {ncolors = infoheader.ncolours;}
+	int const img_ncolors(infoheader.bits >> 3);
+	if (width   == 0 || allow_diff_width_height) {width  = infoheader.width;}
+	if (height  == 0 || allow_diff_width_height) {height = infoheader.height;}
+	if (ncolors == 0) {ncolors = img_ncolors;} // not reliable?
 
-	if (width != infoheader.width || height != infoheader.height) { // ignore ncolors mismatch (fails for brick.bmp?)
+	if (width != infoheader.width || height != infoheader.height) { // check ncolors?
 		cerr << "Error: bitmap file " << fn << " has incorrect width/height/ncolors: expected " << width << " " << height << " " << ncolors
-			 << " but got " << infoheader.width << " " << infoheader.height << " " << infoheader.ncolours << endl;
+			 << " but got " << infoheader.width << " " << infoheader.height << " " << img_ncolors << endl;
 		return 0;
 	}
 	assert(width > 0 && height > 0 && ncolors > 0);
@@ -787,13 +788,16 @@ bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &
 
 // load an .RAW or .BMP file as a texture
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel)
-void texture_t::load_raw_bmp(int index) {
+void texture_t::load_raw_bmp(int index, bool allow_diff_width_height) {
 
 	assert(ncolors == 1 || ncolors == 3 || ncolors == 4);
 	if (format == 3) assert(ncolors == 4);
 	FILE *file(open_texture_file(name)); // open texture data
 	assert(file != NULL);
-	if (format == 1 && !read_bmp_header(file, name, width, height, ncolors)) {exit(1);}
+	
+	if (format == 1) { // BMP
+		if (!read_bmp_header(file, name, width, height, ncolors, allow_diff_width_height)) {exit(1);}
+	}
 	unsigned const size(num_pixels()); // allocate buffer
 
 	if (size == 0) {
@@ -807,13 +811,34 @@ void texture_t::load_raw_bmp(int index) {
 	if (ncolors == 4 && format != 3) { // add alpha
 		for (unsigned i = 0; i < size; ++i) {
 			unsigned char buf[4];
-			size_t const nread(fread(buf, 3, 1, file)); assert(nread == 1);
+
+			if (fread(buf, 3, 1, file) != 1) {
+				cerr << "Error loading data from texture image " << name << endl;
+				exit(1);
+			}
 			RGB_BLOCK_COPY((data+(i<<2)), buf);
 		}
 		auto_insert_alpha_channel(index);
 	}
+#if 0 // untested, enable if/when can be tested
+	else if (format == 1 && (ncolors*width & 3)) { // not a multiple of 4 bytes - need to handle BMP padding
+		unsigned const row_bytes(ncolors*width), stride(row_bytes + 4 - (row_bytes & 3)), nbytes(num_bytes());
+
+		for (unsigned row = 0, pos = 0; row < (unsigned)height; ++row, pos += row_bytes) {
+			assert(pos < nbytes);
+
+			if (fread(data+pos, min(stride, nbytes-pos), 1, file) != 1) { // skip the padding bytes on the final scanline
+				cerr << "Error loading data from texture image " << name << endl;
+				exit(1);
+			}
+		}
+	}
+#endif
 	else { // RGB or grayscale luminance
-		size_t const nread(fread(data, ncolors*size, 1, file)); assert(nread == 1);
+		if (fread(data, ncolors*size, 1, file) != 1) {
+			cerr << "Error loading data from texture image " << name << endl;
+			exit(1);
+		}
 	}
 	if (format == 1 && (ncolors == 3 || ncolors == 4)) { // RGB/RGBA bitmap file
 		for(unsigned i = 0; i < size; ++i) {
