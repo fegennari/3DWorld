@@ -732,18 +732,55 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 }
 
 
-bool verify_bmp_header(FILE *&fp, bool grayscale) { // just assume BMP is correct for now
+// http://paulbourke.net/dataformats/bmp/
+struct bmp_header { // 14 bytes (may be padded to 16, but we only read 14)
+   unsigned short int type;                 /* Magic identifier            */
+   unsigned int size;                       /* File size in bytes          */
+   unsigned short int reserved1, reserved2;
+   unsigned int offset;                     /* Offset to image data, bytes */
+};
 
-	char header[56]; // 54 vs. 56?
-	size_t const nread1(fread(header, 54, 1, fp));
-	assert(nread1 == 1); // read BMP header assuming standard 14/16 byte header + 40 byte infoheader
+struct bmp_infoheader { // 40 bytes
+   unsigned int size;               /* Header size in bytes      */
+   int width,height;                /* Width and height of image */
+   unsigned short int planes;       /* Number of colour planes   */
+   unsigned short int bits;         /* Bits per pixel            */
+   unsigned int compression;        /* Compression type          */
+   unsigned int imagesize;          /* Image size in bytes       */
+   int xresolution,yresolution;     /* Pixels per meter          */
+   unsigned int ncolours;           /* Number of colours         */
+   unsigned int importantcolours;   /* Important colours         */
+};
 
-	if (grayscale) {
-		char data[1024];
-		size_t const nread2(fread(data, 1024, 1, fp));
-		assert(nread2 == 1);
+
+bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &ncolors) {
+
+	bmp_header header;
+	bmp_infoheader infoheader;
+
+	if (fread(&header, 14, 1, fp) != 1 || fread(&infoheader, 40, 1, fp) != 1) {
+		cerr << "Error reading bitmap header/infoheader for file " << fn << endl;
+		return 0;
 	}
-	// *** FIX: check for correct header (image size, etc.) ***
+	if (width   == 0) {width   = infoheader.width;}
+	if (height  == 0) {height  = infoheader.height;}
+	if (ncolors == 0) {ncolors = infoheader.ncolours;}
+
+	if (width != infoheader.width || height != infoheader.height) { // ignore ncolors mismatch (fails for brick.bmp?)
+		cerr << "Error: bitmap file " << fn << " has incorrect width/height/ncolors: expected " << width << " " << height << " " << ncolors
+			 << " but got " << infoheader.width << " " << infoheader.height << " " << infoheader.ncolours << endl;
+		return 0;
+	}
+	assert(width > 0 && height > 0 && ncolors > 0);
+
+	if (ncolors == 1) { // read and discard color index table, and just use index values as grayscale values
+		char data[1024];
+
+		if (fread(data, 1024, 1, fp) != 1) {
+			cerr << "Error reading bitmap data for file " << fn << endl;
+			return 0;
+		}
+	}
 	return 1;
 }
 
@@ -756,10 +793,13 @@ void texture_t::load_raw_bmp(int index) {
 	if (format == 3) assert(ncolors == 4);
 	FILE *file(open_texture_file(name)); // open texture data
 	assert(file != NULL);
-	if (format == 1 && !verify_bmp_header(file, (ncolors == 1))) exit(1);
+	if (format == 1 && !read_bmp_header(file, name, width, height, ncolors)) {exit(1);}
+	unsigned const size(num_pixels()); // allocate buffer
 
-	// allocate buffer
-	unsigned const size(num_pixels());
+	if (size == 0) {
+		cerr << "Error loading texture image " << name << ": size not specified and not readable from this image format" << endl;
+		exit(1);
+	}
 	assert(!is_allocated());
 	alloc();
 
