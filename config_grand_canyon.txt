@@ -1,12 +1,10 @@
 include config_landscape.txt
 
 disable_water 1
-disable_inf_terrain 0
+disable_inf_terrain 1
 disable_scenery 1
 mesh_size  4096 2048 0
-#mesh_size 128 128 1
 scene_size 8.0 4.0 4.0
 
 mesh_diffuse_tex_fn ../models/grand_canyon/gcanyon_color_4k2k.bmp
 mh_filename ../models/grand_canyon/gcanyon_height.png 1.0 0.0 1
-mh_filename_tiled_terrain ../models/grand_canyon/gcanyon_height.png
