@@ -196,8 +196,11 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 }
 
 
-void common_shader_block_pre(shader_t &s, bool dlights, bool use_shadow_map, bool indir_lighting, float min_alpha) {
+void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, bool &indir_lighting, float min_alpha) {
 
+	use_shadow_map &= shadow_map_enabled();
+	indir_lighting &= have_indir_smoke_tex;
+	dlights        &= (dl_tid > 0 && has_dl_sources);
 	s.check_for_fog_disabled();
 	if (min_alpha == 0.0) {s.set_prefix("#define NO_ALPHA_TEST", 1);} // FS
 	s.set_bool_prefixes("indir_lighting", indir_lighting, 3); // VS/FS
@@ -262,10 +265,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
 	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors)
 {
-	use_smap       &= shadow_map_enabled();
-	indir_lighting &= have_indir_smoke_tex;
-	smoke_en       &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
-	dlights        &= (dl_tid > 0 && has_dl_sources);
+	smoke_en &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
 	if (use_light_colors) {s.set_prefix("#define USE_LIGHT_COLORS", 1);} // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
@@ -291,9 +291,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap) {
 
-	use_smap &= shadow_map_enabled();
-	dlights  &= (dl_tid > 0 && has_dl_sources);
-	common_shader_block_pre(s, dlights, use_smap, 0, 0.0);
+	bool indir_lighting(0);
+	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
@@ -307,9 +306,6 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
-	use_smap       &= shadow_map_enabled();
-	indir_lighting &= have_indir_smoke_tex;
-	dlights        &= (dl_tid > 0 && has_dl_sources);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
 	s.set_bool_prefix("z_top_test",     z_top_test,     1); // FS
