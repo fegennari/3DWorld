@@ -28,7 +28,7 @@ player_damage 0.25
 smiley_accuracy 1
 smiley_speed 0.8
 
-mesh_size  1024 1024 1
+mesh_size  1024 1024 0
 scene_size 4.0 4.0 4.0
 
 include config_resolution.txt

@@ -19,7 +19,7 @@ grass_density 100
 grass_size 0.03 0.002
 
 mesh_height 1.0
-mesh_size  128 128 1
+mesh_size  128 128 0
 scene_size 4.0 4.0 4.0
 
 #mh_filename ../models/Puget_Sound/ps_height_1K.png 1.5 -0.033 1

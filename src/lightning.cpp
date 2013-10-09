@@ -91,6 +91,7 @@ void compute_volume_matrix_if_invalid() {
 
 void lightning::gen() {
 
+	if (MESH_Z_SIZE == 0) return; // disabled
 	L_STRENGTH_MULT = BASE_L_STRENGTH_MULT*(MESH_Z_SIZE/50.0);
 	L_DAMAGE_MULT   = BASE_L_DAMAGE_MULT  *(MESH_Z_SIZE/50.0);
 	is_cloudy       = 1;

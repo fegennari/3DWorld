@@ -3,7 +3,7 @@ include config_landscape.txt
 disable_water 1
 disable_inf_terrain 0
 disable_scenery 1
-mesh_size  4096 2048 1
+mesh_size  4096 2048 0
 #mesh_size 128 128 1
 scene_size 8.0 4.0 4.0
 
