@@ -615,13 +615,13 @@ float small_tree::get_pine_tree_radius() const {
 void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
 
 	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
-	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height), sz_scale(SQRT2*get_pine_tree_radius());
-	point const center(pos + point(0.0, 0.0, ((type == T_PINE) ? 0.35*height : 0.0)));
+	float const sz_scale(SQRT2*get_pine_tree_radius()), dz((type == T_PINE) ? 0.35*height : 0.0);
 
 	if (!low_detail) { // high detail
 		unsigned const npts(4*N_PT_LEVELS*N_PT_RINGS);
+		float const rd(0.5), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
+		point const center(pos + point(0.0, 0.0, dz));
 		vert_norm points[npts];
-		float const rd(0.5), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
 
 		for (unsigned j = 0, ix = 0; j < N_PT_LEVELS; ++j) {
 			float const sz(sz_scale*(N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS);
@@ -643,13 +643,11 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	}
 	else { // low detail billboard
 		assert(!update_mode);
-		//float const normal_z = 0.816; // high detail tree polygon normal
-		float const normal_z = 0.95; // blends better in practice
 		vert_norm points[4];
-		vert_norm vn(pos, vector3d(1.5*sz_scale/calc_tree_size(), 0.0, normal_z));
-		vn.v.z = center.z + 1.45*sz_scale + 0.1*height;
+		vert_norm vn(pos, vector3d(1.5*sz_scale/calc_tree_size(), 0.0, 0.0)); // ranges from around 0.25 to 0.75
+		vn.v.z = pos.z + dz + 1.45*sz_scale + 0.1*height;
 		points[0] = points[1] = vn; // top two vertices
-		vn.v.z = center.z - 0.55*sz_scale - 0.2*height;
+		vn.v.z = pos.z + dz - 0.55*sz_scale - 0.2*height;
 		points[2] = points[3] = vn; // bottom two vertices
 		vbo_manager.add_points(points, 4, color);
 	}
