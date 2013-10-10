@@ -325,14 +325,13 @@ void draw_mesh_vbo() { // Note: uses fixed function pipeline
 		clear_landscape_vbo = 0;
 	}
 	if (mesh_vbo == 0) {
-		vector<point> data; // vertex and normals
-		data.reserve(4*MESH_X_SIZE*(MESH_Y_SIZE-1));
+		vector<vert_norm_comp> data; // vertex and normals
+		data.reserve(2*MESH_X_SIZE*(MESH_Y_SIZE-1));
 
 		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
 				for (unsigned k = 0; k < 2; ++k) {
-					data.push_back(get_mesh_xyz_pos(j, i+k));
-					data.push_back(vertex_normals[i+k][j]);
+					data.push_back(vert_norm_comp(get_mesh_xyz_pos(j, i+k), vertex_normals[i+k][j]));
 				}
 			}
 		}
@@ -341,7 +340,7 @@ void draw_mesh_vbo() { // Note: uses fixed function pipeline
 	else {
 		bind_vbo(mesh_vbo);
 	}
-	vert_norm::set_vbo_arrays();
+	vert_norm_comp::set_vbo_arrays();
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
 		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);

@@ -1729,7 +1729,7 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "mh_filename_tiled_terrain") {
 			alloc_if_req(mh_filename_tt, NULL);
-			if (fscanf(fp, "%s", mh_filename_tt) != 1) cfg_err("mh_filename command", error);
+			if (fscanf(fp, "%s", mh_filename_tt) != 1) cfg_err("mh_filename_tiled_terrain command", error);
 		}
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);

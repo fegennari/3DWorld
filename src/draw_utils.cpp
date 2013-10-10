@@ -32,9 +32,21 @@ void vert_wrap_t::set_vbo_arrays(bool set_state) {
 	glVertexPointer(3, GL_FLOAT, sizeof(point), (void *)(0));
 }
 
+void vert_tc_t::set_vbo_arrays(unsigned force_stride, bool set_state) {
+	if (set_state) {set_array_client_state(1, 1, 0, 0);}
+	unsigned const stride(force_stride ? force_stride : sizeof(vert_tc_t));
+	glVertexPointer(3, GL_FLOAT, sizeof(point), (void *)(0));
+	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_wrap_t)));
+}
+
 void vert_norm::set_vbo_arrays(unsigned force_stride, bool set_state) {
 	if (set_state) {set_array_client_state(1, 0, 1, 0);}
 	set_vn_ptrs((force_stride ? force_stride : sizeof(vert_norm)), 0);
+}
+
+void vert_norm_comp::set_vbo_arrays(unsigned force_stride, bool set_state) {
+	if (set_state) {set_array_client_state(1, 0, 1, 0);}
+	set_vn_ptrs(force_stride ? force_stride : sizeof(vert_norm_comp), 1);
 }
 
 void vert_norm_comp_tc::set_vbo_arrays(unsigned force_stride, bool set_state) {

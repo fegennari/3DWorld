@@ -724,6 +724,7 @@ struct vert_tc_t : public vert_wrap_t { // size = 20
 	vert_tc_t() {}
 	vert_tc_t(point const &v_, float ts, float tt) : vert_wrap_t(v_) {t[0] = ts; t[1] = tt;}
 	void set_state() const;
+	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };
 
 
@@ -733,6 +734,7 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 	vert_norm_comp(point const &v_, vector3d  const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 	vert_norm_comp(point const &v_, norm_comp const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 	void set_state() const;
+	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };
 
 
