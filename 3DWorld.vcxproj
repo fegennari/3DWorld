@@ -803,6 +803,7 @@
     <None Include="config_gameplay.txt" />
     <None Include="config_grand_canyon.txt" />
     <None Include="config_grand_canyon_tt.txt" />
+    <None Include="config_hetch.txt" />
     <None Include="config_ice_caves.txt" />
     <None Include="config_minecraft.txt" />
     <None Include="config_puget_sound.txt" />

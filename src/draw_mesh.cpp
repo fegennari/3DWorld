@@ -318,6 +318,7 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 
 void draw_mesh_vbo() { // Note: uses fixed function pipeline
 
+	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
 	static unsigned mesh_vbo(0);
 		
 	if (clear_landscape_vbo) {

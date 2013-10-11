@@ -19,6 +19,7 @@
 config_puget_sound_tt.txt
 #config_grand_canyon.txt
 #config_grand_canyon_tt.txt
+#config_hetch.txt
 #sponza/config_sponza2.txt
 #model_data/config_soda.txt
 #config_samples.txt
