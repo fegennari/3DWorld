@@ -32,6 +32,10 @@ extern int xoff, yoff, frame_counter;
 extern float grass_length, water_plane_z;
 
 
+typedef unsigned short index_type_t;
+//typedef unsigned index_type_t;
+
+
 class lightning_strike_t {
 
 	int time;
@@ -198,7 +202,7 @@ public:
 	void check_shadow_map_and_normal_texture();
 
 	// *** mesh creation ***
-	void create_data(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]);
+	void create_data(vector<vert_type_t> &data, vector<index_type_t> indices[NUM_LODS]);
 	void ensure_height_tid();
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 	void create_texture(mesh_xy_grid_cache_t &height_gen);
@@ -237,7 +241,7 @@ public:
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 
 	// *** rendering ***
-	void ensure_vbo(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]);
+	void ensure_vbo(vector<vert_type_t> &data, vector<index_type_t> indices[NUM_LODS]);
 	void ensure_weights(mesh_xy_grid_cache_t &height_gen);
 	void draw(shader_t &s, bool reflection_pass) const;
 	void draw_water(shader_t &s, float z);

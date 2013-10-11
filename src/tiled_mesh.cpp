@@ -237,7 +237,7 @@ unsigned tile_t::get_gpu_mem() const {
 	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (L8)
 
 	for (unsigned i = 0; i < NUM_LODS; ++i) {
-		if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(unsigned short);
+		if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(index_type_t);
 	}
 	return mem;
 }
@@ -571,12 +571,13 @@ void tile_t::check_shadow_map_and_normal_texture() {
 
 // *** mesh creation ***
 
-void tile_t::create_data(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
+void tile_t::create_data(vector<vert_type_t> &data, vector<index_type_t> indices[NUM_LODS]) {
 
 	//RESET_TIME;
 	assert(zvals.size() == zvsize*zvsize);
 	calc_start_step(mesh_off.dxoff, mesh_off.dyoff);
 	data.resize(stride*stride);
+	assert(data.size() < (1ULL << (sizeof(index_type_t) << 3)));
 
 	for (unsigned y = 0; y <= size; ++y) {
 		for (unsigned x = 0; x <= size; ++x) {
@@ -948,7 +949,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 
 // *** rendering ***
 
-void tile_t::ensure_vbo(vector<vert_type_t> &data, vector<unsigned short> indices[NUM_LODS]) {
+void tile_t::ensure_vbo(vector<vert_type_t> &data, vector<index_type_t> indices[NUM_LODS]) {
 
 	if (vbo) return; // already allocated
 	create_data(data, indices);
@@ -1005,10 +1006,11 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 	bind_vbo(vbo, 0);
 	bind_vbo(ivbo[lod_level], 1);
 	unsigned const isz(size >> lod_level), ptr_stride(sizeof(vert_type_t));
+	int const index_type((sizeof(index_type_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
 	glVertexPointer(3, GL_FLOAT, ptr_stride, 0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
-	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, GL_UNSIGNED_SHORT, 0);
+	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, index_type, 0);
 	bind_vbo(0, 1); // unbind index buffer
-	vector<unsigned short> crack_ixs;
+	vector<index_type_t> crack_ixs;
 
 	// fill in the cracks
 	for (unsigned dim = 0; dim < 2; ++dim) { // x,y
@@ -1035,7 +1037,7 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 			}
 		} // for dir
 	} // for dim
-	if (!crack_ixs.empty()) {glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_SHORT, &crack_ixs.front());}
+	if (!crack_ixs.empty()) {glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), index_type, &crack_ixs.front());}
 	bind_vbo(0, 0); // unbind vertex buffer
 	glPopMatrix();
 
@@ -1407,7 +1409,7 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
 	vector<tile_t::vert_type_t> data;
-	vector<unsigned short> indices[NUM_LODS];
+	vector<index_type_t> indices[NUM_LODS];
 	vector<tile_t *> to_update, to_gen_trees;
 		
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {

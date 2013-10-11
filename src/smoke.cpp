@@ -278,11 +278,15 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 bool upload_smoke_indir_texture() {
 
 	//RESET_TIME;
+	if (!lmap_manager.is_allocated()) {
+		have_indir_smoke_tex = 0;
+		return 0;
+	}
 	assert((MESH_Y_SIZE%SMOKE_SEND_SKIP) == 0);
 	// ok when texture z size is not a power of 2
 	unsigned const sz(MESH_X_SIZE*MESH_Y_SIZE*MESH_SIZE[2]), ncomp(4);
 
-	if (!lmap_manager.is_allocated() || sz == 0) {
+	if (sz == 0) {
 		have_indir_smoke_tex = 0;
 		return 0;
 	}
