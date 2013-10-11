@@ -584,19 +584,21 @@ void tile_t::create_data(vector<vert_type_t> &data, vector<index_type_t> indices
 			data[y*stride + x].assign((xstart + x*xstep), (ystart + y*ystep), zvals[y*zvsize + x]);
 		}
 	}
-	for (unsigned i = 0; i < NUM_LODS; ++i) {
-		indices[i].resize(4*(size>>i)*(size>>i));
-		unsigned const step(1 << i);
+	for (unsigned i = 0, step = 1; i < NUM_LODS; ++i, step <<= 1) {
+		unsigned const size_i_ceil((size + step - 1)/step);
+		indices[i].resize(4*size_i_ceil*size_i_ceil);
+		unsigned iix(0);
 
-		for (unsigned y = 0; y < size; y += step) {
-			for (unsigned x = 0; x < size; x += step) {
-				unsigned const vix(y*stride + x), iix(4*((y>>i)*(size>>i) + (x>>i)));
-				indices[i][iix+0] = vix;
-				indices[i][iix+1] = vix + step*stride;
-				indices[i][iix+2] = vix + step*stride + step;
-				indices[i][iix+3] = vix + step;
+		for (unsigned y = 0, ny = 0; ny < size_i_ceil; y += step, ++ny) {
+			for (unsigned x = 0, nx = 0; nx < size_i_ceil; x += step, ++nx) {
+				unsigned const xn(min(x+step, size)), yn(min(y+step, size));
+				indices[i][iix++] = y *stride + x;
+				indices[i][iix++] = yn*stride + x;
+				indices[i][iix++] = yn*stride + xn;
+				indices[i][iix++] = y *stride + xn;
 			}
 		}
+		assert(iix == indices[i].size());
 	}
 	//PRINT_TIME("Create Data");
 }
@@ -1005,10 +1007,10 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 	assert(vbo > 0 && ivbo[lod_level] > 0);
 	bind_vbo(vbo, 0);
 	bind_vbo(ivbo[lod_level], 1);
-	unsigned const isz(size >> lod_level), ptr_stride(sizeof(vert_type_t));
+	unsigned const step(1 << lod_level), isz_ceil((size + step - 1)/step), ptr_stride(sizeof(vert_type_t));
 	int const index_type((sizeof(index_type_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
 	glVertexPointer(3, GL_FLOAT, ptr_stride, 0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
-	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz*isz, index_type, 0);
+	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz_ceil*isz_ceil, index_type, 0);
 	bind_vbo(0, 1); // unbind index buffer
 	vector<index_type_t> crack_ixs;
 
@@ -1024,14 +1026,17 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 			//assert(adj_lod == lod_level+1); // too strong
 			//if (!adj->is_visible() || adj->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue;
 			unsigned const lo_step(1 << adj_lod), hi_step(1 << (adj_lod - 1)); // Note: in the rare case where adj_lod > lod_level+1, we may miss some of the crack
+			unsigned const size_lo_ceil((size + step - 1)/lo_step);
 
-			for (unsigned xy = 0; xy < size; xy += lo_step) {
+			for (unsigned xy = 0, nxy = 0; nxy < size_lo_ceil; xy += lo_step, ++nxy) {
+				unsigned const xyn(min(xy+lo_step, size));
+				
 				for (unsigned n = 0; n < 3; ++n) { // one triangle
 					if (dim == 0) { // adjacent in x, step in y
-						crack_ixs.push_back((xy + n*hi_step)*stride + dir*size);
+						crack_ixs.push_back(min((xy + n*hi_step), size)*stride + dir*size);
 					}
 					else { // adjacent in y, step in x
-						crack_ixs.push_back(dir*size*stride + (xy + n*hi_step));
+						crack_ixs.push_back(dir*size*stride + min((xy + n*hi_step), size));
 					}
 				}
 			}
