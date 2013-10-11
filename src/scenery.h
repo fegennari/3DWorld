@@ -121,11 +121,12 @@ public:
 };
 
 
-class s_plant : public scenery_obj { // size = 40
+class s_plant : public scenery_obj { // size = 56
 
 	bool no_leaves;
 	int coll_id2, vbo_mgr_ix;
 	float height;
+	vector<vert_wrap_t> berries;
 
 	void create_leaf_points(vector<vert_norm> &points) const;
 
@@ -143,6 +144,7 @@ public:
 	bool is_shadowed() const;
 	void draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const;
 	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const;
+	void draw_berries(vector3d const &xlate) const;
 	void remove_cobjs();
 	void destroy();
 };

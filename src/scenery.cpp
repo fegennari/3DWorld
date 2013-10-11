@@ -743,6 +743,12 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 	create_leaf_points(vbo_manager.temp_points);
 	vbo_mgr_ix = vbo_manager.add_points_with_offset(vbo_manager.temp_points, pltype[type].leafc);
 	no_leaves  = 0;
+#if 0
+	// create berries
+	for (vector<vert_norm>::const_iterator i = vbo_manager.temp_points.begin(); i != vbo_manager.temp_points.end(); ++i) {
+		berries.push_back(i->v); // FIXME: temporary
+	}
+#endif
 }
 
 // to be called when the plant is translated or zval changes
@@ -755,8 +761,10 @@ void s_plant::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager) {
 
 bool s_plant::update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager) {
 
+	float orig_z(pos.z);
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
-	
+	for (vector<vert_wrap_t>::iterator i = berries.begin(); i != berries.end(); ++i) {i->v.z += (pos.z - orig_z);}
+
 	if (vbo_mgr_ix >= 0) { // leaf pos changed - VBO data needs to be updated
 		//disable_leaves(); // remove the leaves (simpler and more efficient)
 		update_points_vbo(vbo_manager); // regenerate leaf points and re-upload VBO sub-data (slower)
@@ -791,7 +799,6 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	}
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-		if (!shadow_only) select_texture(WOOD_TEX);
 		color.do_glColor();
 		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
 	}
@@ -810,6 +817,22 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
 }
 
+void s_plant::draw_berries(vector3d const &xlate) const {
+
+	//if (display_mode & 0x10) return; // TESTING
+	if (berries.empty()) return;
+	if (!sphere_in_camera_view(pos+xlate, (height + radius), 0)) return;
+	float const dist(distance_to_camera(pos+xlate));
+	if (get_pt_line_thresh()*radius < dist) return; // too small/far away
+	float const size_scale(radius/dist);
+	RED.do_glColor(); // FIXME: use plant type
+
+	for (vector<vert_wrap_t>::const_iterator i = berries.begin(); i != berries.end(); ++i) {
+		int const ndiv(min(24, max(4, int(500.0*size_scale))));
+		draw_sphere_vbo(i->v, 0.001, ndiv, 0); // use LOD and/or point sprites? (see asteroid dust)
+	}
+}
+
 void s_plant::remove_cobjs() {
 
 	remove_reset_coll_obj(coll_id2);
@@ -818,6 +841,7 @@ void s_plant::remove_cobjs() {
 
 void s_plant::destroy() {
 
+	berries.clear();
 	remove_cobjs();
 	scenery_obj::destroy(); // will remove coll_id twice, which is OK
 }
@@ -1069,9 +1093,17 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	}
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, xlate, scale_val);
+	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
 		plants[i].draw_stem(sscale, shadow_only, xlate);
+	}
+	if (!shadow_only) { // no berry shadows
+		select_texture(WHITE_TEX); // berries are untextured
+
+		for (unsigned i = 0; i < plants.size(); ++i) {
+			plants[i].draw_berries(xlate);
+		}
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
 	glDisable(GL_COLOR_MATERIAL);
