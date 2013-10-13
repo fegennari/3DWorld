@@ -772,6 +772,10 @@ bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &
 			 << " but got " << infoheader.width << " " << infoheader.height << " " << img_ncolors << endl;
 		return 0;
 	}
+	if (infoheader.compression != 0) {
+		cerr << "Error: BMP compression mode " << infoheader.compression << " is not supported" << endl;
+		return 0;
+	}
 	assert(width > 0 && height > 0 && ncolors > 0);
 
 	if (ncolors == 1) { // read and discard color index table, and just use index values as grayscale values
