@@ -11,6 +11,7 @@
 
 bool const DEBUG_TILES        = 0;
 bool const DEBUG_TILE_BOUNDS  = 0;
+bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 float const FOG_DIST_TILES    = 1.4;
@@ -32,7 +33,7 @@ extern unsigned grass_density, max_unique_trees;
 extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
-extern float ocean_wave_height;
+extern float ocean_wave_height, sm_tree_density, tree_scale;
 extern point sun_pos, moon_pos, surface_pos;
 extern char *mh_filename_tt;
 extern float h_dirt[];
@@ -42,6 +43,9 @@ extern pt_line_drawer tree_scenery_pld;
 
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 void set_water_plane_uniforms(shader_t &s);
+
+void create_pine_tree_instances();
+unsigned get_pine_tree_inst_gpu_mem();
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -56,6 +60,11 @@ bool is_grass_enabled     () {return ((display_mode & 0x02) && GRASS_THRESH > 0.
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
+
+bool enable_instanced_pine_trees() {
+	float const ntrees_mult(vegetation*sm_tree_density*tree_scale*tree_scale);
+	return (ENABLE_INST_PINE && ntrees_mult > 20 != 0 && max_unique_trees > 0); // enable when there are lots of trees
+}
 
 
 grass_tile_manager_t grass_tile_manager;
@@ -763,6 +772,7 @@ void tile_t::init_pine_tree_draw() {
 
 	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
+	if (enable_instanced_pine_trees()) {pine_trees.instanced = 1;}
 	pine_trees.gen_trees(x1+ptree_off.dxoff, y1+ptree_off.dyoff, x2+ptree_off.dxoff, y2+ptree_off.dyoff, density);
 	pine_trees.calc_trunk_pts();
 	postproc_trees(pine_trees, ptzmax);
@@ -786,15 +796,17 @@ void tile_t::update_pine_tree_state(bool upload_if_needed) {
 }
 
 
-void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail) const {
+// non-const because of cached instance data within pine_trees
+void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xlate_loc) {
 
 	bool const draw_all(low_detail || camera_pdu.point_visible_test(get_center())); // tile center is in view
-	pine_trees.draw_pine_leaves(0, low_detail, draw_all, contains_camera(), xlate);
+	pine_trees.draw_pine_leaves(0, low_detail, draw_all, contains_camera(), xlate, xlate_loc);
 }
 
 
-void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass) const {
-
+void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves,
+	bool draw_far_leaves, bool reflection_pass, int xlate_loc)
+{
 	if (pine_trees.empty()) return;
 	vector3d const xlate(ptree_off.get_xlate());
 	glPushMatrix();
@@ -816,17 +828,17 @@ void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_br
 		if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
 			if (draw_near_leaves) {
 				s.add_uniform_float("max_noise", weight);
-				draw_tree_leaves_lod(xlate, 0); // near leaves
+				draw_tree_leaves_lod(xlate, 0, xlate_loc); // near leaves
 				s.add_uniform_float("max_noise", 1.0);
 			}
 			if (draw_far_leaves) {
 				s.add_uniform_float("min_noise", weight);
-				draw_tree_leaves_lod(xlate, 1); // far leaves
+				draw_tree_leaves_lod(xlate, 1, xlate_loc); // far leaves
 				s.add_uniform_float("min_noise", 0.0);
 			}
 		}
 		else if ((weight == 0.0) ? draw_far_leaves : draw_near_leaves) {
-			draw_tree_leaves_lod(xlate, (weight == 0.0));
+			draw_tree_leaves_lod(xlate, (weight == 0.0), xlate_loc);
 		}
 	}
 	glPopMatrix();
@@ -1426,6 +1438,9 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
 		to_update.push_back(tile);
 	}
+	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {
+		create_pine_tree_instances();
+	}
 	if (to_gen_trees.size() == 1) { // common case, no need for multiple threads
 		to_gen_trees[0]->init_pine_tree_draw();
 	}
@@ -1553,9 +1568,9 @@ void tile_draw_t::draw(bool reflection_pass) {
 	s.end_shader();
 		
 	if (DEBUG_TILES) {
-		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
+		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_pine_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: "
-			<< num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + grass_mem) << ", tree mem: " << in_mb(tree_mem)
+			<< num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem) << ", tree mem: " << in_mb(tree_mem)
 			<< ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;
 	}
 	run_post_mesh_draw();
@@ -1604,30 +1619,41 @@ void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs) {
 }
 
 
-void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass) {
+void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass, int xlate_loc) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
-		to_draw[i].second->draw_pine_trees(s, tree_trunk_pts, branches, near_leaves, far_leaves, reflection_pass);
+		to_draw[i].second->draw_pine_trees(s, tree_trunk_pts, branches, near_leaves, far_leaves, reflection_pass, xlate_loc);
 	}
 }
 
 
 void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 
-	// leaves
+	// far leaves
 	enable_blend(); // for fog transparency
 	shader_t s;
 	set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
 	s.add_uniform_float("radius_scale", calc_tree_size());
 	s.add_uniform_float("ambient_scale", 1.5);
 	set_specular(0.2, 8.0);
-	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass); // far leaves
+	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass);
 	s.end_shader();
 	disable_blend();
 
+	// near leaves
+	int xlate_loc(-1);
+	if (enable_instanced_pine_trees()) {s.set_prefix("#define ENABLE_INSTANCING", 0);} // VS
 	set_pine_tree_shader(s, "pine_tree");
-	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass); // near leaves
+	
+	if (enable_instanced_pine_trees()) {
+		s.add_uniform_float("vertex_scale", calc_tree_size()); // default is 0.8
+		xlate_loc = s.get_attrib_loc("xlate");
+		glEnableVertexAttribArray(xlate_loc);
+		glVertexAttribDivisor(xlate_loc, 1);
+	}
+	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass, xlate_loc);
 	assert(tree_trunk_pts.empty());
+	if (xlate_loc >= 0) {glDisableVertexAttribArray(xlate_loc);}
 	s.end_shader();
 	set_specular(0.0, 1.0);
 

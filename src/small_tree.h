@@ -12,17 +12,19 @@
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
 
 
-class small_tree { // size = 81 (82)
+class small_tree { // size = 85 (88)
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
 	vector<int> coll_id;
 	int vbo_mgr_ix; // high detail
+	int inst_id; // for instancing
 	float height, width, r_angle, rx, ry, rv[3];
 	point pos;
 	colorRGBA color;
 
 public:
-	small_tree() : type(-1) {clear_vbo_mgr_ix();}
+	small_tree() : type(-1), inst_id(-1) {clear_vbo_mgr_ix();}
+	small_tree(point const &p, unsigned instance_id);
 	small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen);
 	void setup_rotation(rand_gen_t &rgen);
 	vector3d get_rot_dir() const;
@@ -36,7 +38,7 @@ public:
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_leaf_color() const {return color;}
 	colorRGBA get_bark_color() const;
-	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager) const;
+	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=0) const;
 	bool is_visible_pine(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
 	void draw(int mode, bool shadow_only, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
@@ -46,6 +48,7 @@ public:
 	float get_height()  const {return height;}
 	int get_type ()     const {return type;}
 	bool is_pine_tree() const {return (type == T_PINE || type == T_SH_PINE);}
+	unsigned get_inst_id() const {assert(inst_id >= 0); return inst_id;}
 	float get_pine_tree_radius() const;
 	float get_zmax() const;
 
@@ -65,11 +68,20 @@ struct small_tree_group : public vector<small_tree> {
 	vbo_vnc_block_manager_t vbo_manager[2]; // {high, low} detail
 	vector<point> trunk_pts;
 	rand_gen_t rgen;
-	bool generated;
+	bool generated, instanced;
 	unsigned num_pine_trees;
 	float max_pt_radius;
+
+	struct pine_tree_inst_t {
+		unsigned id;
+		point pt;
+
+		pine_tree_inst_t(unsigned id_, point const &pt_) : id(id_), pt(pt_) {}
+		bool operator<(pine_tree_inst_t const &i) const {return (id < i.id);}
+	};
+	vector<pine_tree_inst_t> insts;
 	
-	small_tree_group() : generated(0), num_pine_trees(0), max_pt_radius(0.0) {}
+	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), max_pt_radius(0.0) {}
 	void sort_by_type() {stable_sort(begin(), end());}
 
 	void sort_by_dist_to_camera() {
@@ -92,7 +104,7 @@ struct small_tree_group : public vector<small_tree> {
 	void translate_by(vector3d const &vd);
 	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
 	void draw_branches(bool shadow_only, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
-	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector) const;
+	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector, int xlate_loc=-1);
 	void draw_non_pine_leaves(bool shadow_only, vector3d const &xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);
 	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
@@ -100,6 +112,7 @@ struct small_tree_group : public vector<small_tree> {
 	void update_zmax(float &tzmax) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	float get_rmax() const {return max_pt_radius;}
+	small_tree const &get_tree(unsigned ix) const {assert(ix < size()); return operator[](ix);}
 };
 
 

@@ -21,11 +21,13 @@ unsigned const N_PT_RINGS   = 5;
 
 
 small_tree_group small_trees;
+small_tree_group tree_instances;
 pt_line_drawer tree_scenery_pld;
 
 extern bool has_dir_lights;
 extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
+extern unsigned max_unique_trees;
 extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, OCEAN_DEPTH;
 
 
@@ -62,6 +64,9 @@ colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
 	}
 	return c;
 }
+
+
+unsigned get_pine_tree_inst_gpu_mem() {return tree_instances.get_gpu_mem();}
 
 
 void small_tree_group::add_tree(small_tree &st) {
@@ -109,6 +114,11 @@ void small_tree_group::finalize(bool low_detail) {
 void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) {
 
 	if (empty() || is_uploaded(low_detail)) return;
+
+	if (instanced && !low_detail) {
+		tree_instances.finalize_upload_and_clear_pts(0); // high detail
+		return;
+	}
 	//RESET_TIME;
 	finalize(low_detail);
 	//if (!low_detail) {PRINT_TIME("Finalize");}
@@ -229,30 +239,61 @@ void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> >
 }
 
 
-void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, bool sort_front_to_back, vector3d const &xlate) const {
+void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, bool sort_front_to_back, vector3d const &xlate, int xlate_loc) {
 
-	vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
-	vbomgr.begin_render(1);
+	if (empty()) return;
 	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
 
-	if (draw_all_pine) {
-		vbomgr.render_all(GL_QUADS);
-	}
-	else if (sort_front_to_back) {
-		assert(!low_detail);
-		vector<pair<float, unsigned> > to_draw;
-		get_back_to_front_ordering(to_draw, xlate);
+	if (instanced && !low_detail) { // sort_front_to_back not supported
+		assert(xlate_loc >= 0);
 
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			operator[](to_draw[i].second).draw_pine_leaves(vbomgr, xlate);
+		if (!draw_all_pine || insts.size() != size()) { // recompute insts
+			insts.clear();
+
+			for (const_iterator i = begin(); i != end(); ++i) {
+				if (draw_all_pine || i->is_visible_pine(xlate)) {insts.push_back(pine_tree_inst_t(i->get_inst_id(), i->get_pos()));}
+			}
+			if (insts.empty()) return; // nothing to draw
+			sort(insts.begin(), insts.end());
 		}
+		static vector<point> pts; // class member?
+		pts.resize(insts.size()); // force max possible size so that pts won't be resized later, and the pointer should remain valid
+		glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), &pts.front());
+		vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail
+		vbomgr.begin_render(1);
+
+		for (vector<pine_tree_inst_t>::const_iterator i = insts.begin(); i != insts.end();) { // Note: no increment
+			unsigned const inst_id(i->id);
+			unsigned ix(0);
+			for (; i != insts.end() && i->id == inst_id; ++i) {pts[ix++] = i->pt;}
+			assert(inst_id < tree_instances.size());
+			tree_instances[inst_id].draw_pine(vbomgr, ix);
+		}
+		vbomgr.end_render();
 	}
 	else {
-		for (const_iterator i = begin(); i != end(); ++i) {
-			i->draw_pine_leaves(vbomgr, xlate);
+		vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
+		vbomgr.begin_render(1);
+
+		if (draw_all_pine) {
+			vbomgr.render_all(GL_QUADS);
 		}
+		else if (sort_front_to_back) {
+			assert(!low_detail);
+			vector<pair<float, unsigned> > to_draw;
+			get_back_to_front_ordering(to_draw, xlate);
+
+			for (unsigned i = 0; i < to_draw.size(); ++i) {
+				operator[](to_draw[i].second).draw_pine_leaves(vbomgr, xlate);
+			}
+		}
+		else {
+			for (const_iterator i = begin(); i != end(); ++i) {
+				i->draw_pine_leaves(vbomgr, xlate);
+			}
+		}
+		vbomgr.end_render();
 	}
-	vbomgr.end_render();
 }
 
 
@@ -260,6 +301,7 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const &xl
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		if (i->is_pine_tree()) continue;
+		assert(!instanced); // only pine trees can be instanced
 		int const type(i->get_type());
 		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
 		i->draw(2, shadow_only, xlate);
@@ -269,6 +311,20 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const &xl
 
 float calc_tree_scale() {return (Z_SCENE_SIZE*tree_scale)/16.0;}
 float calc_tree_size () {return SM_TREE_SIZE*Z_SCENE_SIZE/calc_tree_scale();}
+
+
+void create_pine_tree_instances() {
+
+	if (tree_instances.size() == max_unique_trees) return; // already done
+	assert(tree_instances.empty());
+	rand_gen_t rgen;
+
+	for (unsigned i = 0; i < max_unique_trees; ++i) { // Note: pine trees not rotated
+		int const ttype((rgen.rand()%10 == 0) ? T_SH_PINE : T_PINE);
+		float const height(rgen.rand_uniform(0.4, 1.0)), width(rgen.rand_uniform(0.25, 0.35));
+		tree_instances.add_tree(small_tree(all_zeros, height, width, ttype, 0, rgen));
+	}
+}
 
 
 // density = x1,y1 x2,y1 x1,y2 x2,y2
@@ -312,10 +368,19 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 				int const ttype(get_tree_type_from_height(zpos, rgen));
 				if (ttype == TREE_NONE) continue;
 				if (use_hmap_tex && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) {continue;}
-				float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));
-				small_tree st(point(xval, yval, zpos+zval_adj*height), height, width, ttype, 0, rgen);
-				st.setup_rotation(rgen);
-				add_tree(st);
+
+				if (instanced) {
+					assert(ttype == T_SH_PINE || ttype == T_PINE);
+					assert(zval_adj == 0.0); // must be inf terrain mode
+					assert(max_unique_trees > 0);
+					add_tree(small_tree(point(xval, yval, zpos), (rgen.rand()%max_unique_trees)));
+				}
+				else {
+					float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));
+					small_tree st(point(xval, yval, zpos+zval_adj*height), height, width, ttype, 0, rgen);
+					st.setup_rotation(rgen);
+					add_tree(st);
+				}
 			}
 		}
 		xv = 0.0; // reset for next y iter
@@ -426,7 +491,9 @@ void gen_small_trees() {
 
 
 void clear_sm_tree_vbos() {
+
 	small_trees.clear_vbos();
+	tree_instances.clear_vbos();
 }
 
 void add_small_tree_coll_objs() { // doesn't handle rotation angle
@@ -486,12 +553,26 @@ void draw_small_trees(bool shadow_only) {
 }
 
 
+// instanced constructor
+small_tree::small_tree(point const &p, unsigned instance_id) {
+
+	*this = tree_instances.get_tree(instance_id);
+	assert(coll_id.empty());
+	clear_vbo_mgr_ix();
+	inst_id = instance_id;
+	pos     = p;
+	float const tsize(calc_tree_size());
+	width  *= tsize;
+	height *= tsize;
+}
+
+
 small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen) :
-	type(t), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
+	type(t), inst_id(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
 	clear_vbo_mgr_ix();
-	for (unsigned i = 0; i < 3; ++i) rv[i] = rgen.randd();
-	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;
+	for (unsigned i = 0; i < 3; ++i) {rv[i] = rgen.randd();} // for bark color
+	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;}
 
 	switch (type) {
 	case T_PINE: // pine tree
@@ -518,7 +599,7 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 	case T_BUSH: // bush
 		color  = colorgen(0.6, 0.9, 0.7, 1.0, 0.1, 0.2, rgen);
 		pos.z += 0.3*height;
-		if (rgen.rand()%100 < 50) pos.z -= height*rgen.rand_uniform(0.0, 0.2);
+		if (rgen.rand()%100 < 50) {pos.z -= height*rgen.rand_uniform(0.0, 0.2);}
 		break;
 	default: assert(0);
 	}
@@ -678,11 +759,11 @@ colorRGBA small_tree::get_bark_color() const {
 }
 
 
-void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager) const { // 30 quads per tree
+void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances) const { // 30 quads per tree
 
 	assert(is_pine_tree());
 	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1); // draw textured quad if far away?
+	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1, num_instances);
 }
 
 

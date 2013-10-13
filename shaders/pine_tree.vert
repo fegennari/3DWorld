@@ -1,8 +1,20 @@
+#ifdef ENABLE_INSTANCING
+attribute vec3 xlate;
+uniform float vertex_scale = 1.0;
+#endif
+
 void main()
 {
 	set_tc0_from_vert_id();
-	gl_Position     = ftransform();
+#ifdef ENABLE_INSTANCING
+	vec4 vertex     = gl_Vertex;
+	vertex.xyz     *= vertex_scale;
+	vertex.xyz     += xlate;
+	vec4 epos       = gl_ModelViewMatrix  * vertex;
+#else
 	vec4 epos       = gl_ModelViewMatrix * gl_Vertex;
+#endif
+	gl_Position     = gl_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz); // set standard fog coord
 	vec3 normal     = normalize(gl_NormalMatrix * gl_Normal);
 	//normal         *= normal.z/abs(normal.z); // two-sided lighting
