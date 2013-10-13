@@ -23,4 +23,3 @@ Instanced Spheres: objects, berries, small decid tree leaves
 Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 TIFF image reader
-TT texture mirroring artifact

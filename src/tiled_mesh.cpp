@@ -128,8 +128,8 @@ struct terrain_hmap_manager_t {
 		case 2: // mirror
 			{
 				int const xmod(abs(x)%texture.width), ymod(abs(y)%texture.height), xdiv(x/texture.width), ydiv(y/texture.height);
-				x = (((xdiv&1) ^ (xdiv<0)) ? (texture.width  - xmod - 1) : xmod);
-				y = (((ydiv&1) ^ (ydiv<0)) ? (texture.height - ymod - 1) : ymod);
+				x = ((xdiv & 1) ? (texture.width  - xmod - 1) : xmod);
+				y = ((ydiv & 1) ? (texture.height - ymod - 1) : ymod);
 			}
 			break;
 		}
