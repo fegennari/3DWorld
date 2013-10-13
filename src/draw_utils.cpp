@@ -398,10 +398,16 @@ unsigned vbo_block_manager_t<vert_type_t>::add_points_with_offset(typename vert_
 }
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::render_range(int gl_type, unsigned six, unsigned eix) const {
+void vbo_block_manager_t<vert_type_t>::render_range(int gl_type, unsigned six, unsigned eix, unsigned num_instances) const {
 
 	assert(six < eix && eix < offsets.size());
-	glDrawArrays(gl_type, offsets[six], offsets[eix]-offsets[six]);
+
+	if (num_instances > 0) { // instanced rendering
+		glDrawArraysInstanced(gl_type, offsets[six], offsets[eix]-offsets[six], num_instances);
+	}
+	else { // normal rendering
+		glDrawArrays(gl_type, offsets[six], offsets[eix]-offsets[six]);
+	}
 }
 
 template< typename vert_type_t >
@@ -424,7 +430,7 @@ void vbo_block_manager_t<vert_type_t>::update_range(typename vert_type_t::non_co
 	assert(npts == update_size);
 	vector<vert_type_t> update_verts;
 	add_points_int(update_verts, p, npts, color);
-	bind_vbo(vbo);
+	bind_cur_vbo();
 	upload_vbo_sub_data(&update_verts.front(), start*sizeof(vert_type_t), update_size*sizeof(vert_type_t));
 	bind_vbo(0);
 }
@@ -435,16 +441,20 @@ void vbo_block_manager_t<vert_type_t>::begin_render(bool color_mat) const {
 	if (!has_data()) return;
 	if (color_mat) {glEnable(GL_COLOR_MATERIAL);}
 	set_color(BLACK);
-	assert(vbo);
-	bind_vbo(vbo);
+	bind_cur_vbo();
 	vert_type_t::set_vbo_arrays();
 }
 
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::end_render() const {
-
 	glDisable(GL_COLOR_MATERIAL);
 	bind_vbo(0);
+}
+
+template< typename vert_type_t >
+void vbo_block_manager_t<vert_type_t>::bind_cur_vbo() const {
+	assert(vbo);
+	bind_vbo(vbo);
 }
 
 template< typename vert_type_t >
