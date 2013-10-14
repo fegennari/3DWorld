@@ -24,6 +24,10 @@ void wrap_png_error(png_structp, png_const_charp) {
 }
 #endif
 
+#ifdef ENABLE_TIFF
+#include "tiffio.h"
+#endif
+
 
 float const TEXTURE_SMOOTH        = 0.01;
 float const TEXTURE_SMOOTH_I      = 0.1;
@@ -59,7 +63,7 @@ struct lspot {
 
 texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
-// format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto
+// format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
 // type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 //texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
@@ -191,6 +195,7 @@ int landscape_changed(0), lchanged0(0), skip_regrow(0), ltx1(0), lty1(0), ltx2(0
 unsigned char *landscape0 = NULL;
 
 
+extern bool mesh_difuse_tex_comp;
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid, reflection_tid;
 extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only;
@@ -248,6 +253,8 @@ void set_landscape_texture_from_file() {
 	tex.name  = mesh_diffuse_tex_fn;
 	tex.type  = 0; // loaded from file
 	tex.width = tex.height = 0; // reset to 0 for autodetect (only works with some formats)
+	tex.use_mipmaps = 1;
+	tex.do_compress = mesh_difuse_tex_comp; // compression is slow (one time cost), but saves GPU memory
 }
 
 
@@ -687,7 +694,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 	}
 	else {
 		if (format == 7) { // auto
-			// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto
+			// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff
 			string const ext(get_file_extension(name, 0, 1));
 		
 			if (0) {}
@@ -706,6 +713,9 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			else if (ext == "png") {
 				format = 6;
 			}
+			else if (ext == "tif" || ext == "tiff") {
+				format = 8;
+			}
 			else {
 				cerr << "Error: Unidentified image file format for autodetect: " << ext << " in filename " << name << endl;
 				exit(1);
@@ -718,7 +728,12 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		case 4: load_targa(index, allow_diff_width_height); break;
 		case 5: load_jpeg (index, allow_diff_width_height); break;
 		case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
+		case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break; // FIXME - tiff
+		default:
+			cerr << "Unsupported image format: " << format << endl;
+			exit(1);
 		}
+		assert(is_allocated());
 		if (invert_y) {do_invert_y();} // upside down
 
 		if (want_alpha_channel && ncolors < 4) {
@@ -994,6 +1009,77 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	}
 #else
 	cerr << "Error loading texture image file " << name << ": png support has not been enabled." << endl;
+	exit(1);
+#endif
+}
+
+
+void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
+
+#ifdef ENABLE_TIFF
+	TIFF* tif = TIFFOpen(name.c_str(), "r"); // FIXME: ignores texture directory
+    
+	if (tif == NULL) {
+		cerr << "Error opening tiff file " << name << " for read." << endl;
+		exit(1);
+	}
+	uint32 w(0), h(0);
+	uint16 bit_depth(0), config(0);
+	TIFFGetField(tif, TIFFTAG_IMAGEWIDTH,    &w);
+	TIFFGetField(tif, TIFFTAG_IMAGELENGTH,   &h);
+	TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bit_depth);
+	TIFFGetField(tif, TIFFTAG_PLANARCONFIG,  &config);
+
+	if (allow_diff_width_height || (width == 0 && height == 0)) {
+		width  = w;
+		height = h;
+		assert(width > 0 && height > 0);
+	}
+	assert(w == width && h == height);
+	
+	if (allow_two_byte_grayscale && (ncolors == 0 || ncolors == 1) && bit_depth == 16) { // 16-bit grayscale
+		ncolors = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
+		tmsize_t const sl_size(TIFFScanlineSize(tif));
+		assert(sl_size == 2*width);
+        tdata_t buf = _TIFFmalloc(sl_size);
+		assert(buf);
+		alloc();
+		assert(config == PLANARCONFIG_CONTIG); // no support for PLANARCONFIG_SEPARATE
+
+		for (uint32 row = 0; row < height; row++) { // FIXME: this seems incorrect, but not well documented
+			TIFFReadScanline(tif, buf, row);
+			
+			for (int i = 0; i < width; ++i) { // x-values
+				for (unsigned d = 0; d < 2; ++d) { // bytes
+					data[2*((height - row - 1)*width + i) + 1 - d] = ((unsigned char const *)buf)[2*i + d]; // swap bytes
+				}
+			}
+		}
+        _TIFFfree(buf);
+	}
+	else {
+		if (ncolors == 0) {ncolors = 4;} // 3?
+		uint32 *raster = (uint32 *)_TIFFmalloc(num_pixels() * sizeof(uint32));
+		assert(raster != NULL);
+
+		if (!TIFFReadRGBAImage(tif, width, height, raster, 0)) {
+			cerr << "Error reading data from tiff file " << name << "." << endl;
+			exit(1);
+		}
+		alloc();
+
+		for (int y = 0; y < height; ++y) {
+			for (int x = 0; x < width; ++x) {
+				unsigned const ix(y*width + x);
+				unsigned char const *d((unsigned char const *)(raster + ix));
+				for (int i = 0; i < ncolors; ++i) {data[ncolors*ix+i] = d[i];} // not correct for lum+alpha textures?
+			}
+		}
+		_TIFFfree(raster);
+	}
+	TIFFClose(tif);
+#else
+	cerr << "Error loading texture image file " << name << ": tiff support has not been enabled." << endl;
 	exit(1);
 #endif
 }
