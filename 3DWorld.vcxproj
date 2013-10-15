@@ -428,6 +428,7 @@
     </ClCompile>
     <ClCompile Include="src\gl_ext_arb.cpp" />
     <ClCompile Include="src\grass.cpp" />
+    <ClCompile Include="src\image_io.cpp" />
     <ClCompile Include="src\lightmap.cpp" />
     <ClCompile Include="src\lightning.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>

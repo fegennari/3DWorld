@@ -9,6 +9,9 @@
 #include "gl_includes.h"
 
 
+int write_jpeg_data(unsigned window_width, unsigned window_height, FILE *fp, unsigned char *data);
+
+
 FILE *open_screenshot_file(char *file_path, char *basename) {
 
 	FILE *fp;
@@ -53,58 +56,14 @@ int screenshot(unsigned window_width, unsigned window_height, char *file_path) {
 }
 
 
-#ifdef ENABLE_JPEG
-
-#include "../jpeg-6b/jpeglib.h"
-
-int write_jpeg_data(unsigned window_width, unsigned window_height, char *file_path, unsigned char *data) {
-
-	struct jpeg_compress_struct cinfo;
-	struct jpeg_error_mgr jerr;
-	JSAMPROW row_pointer[1];
-	FILE *fp = open_screenshot_file(file_path, "screenshot.jpg");
-	if (fp == NULL) return 0;
-
-	unsigned const step_size(3*window_width);
-	JSAMPLE *rgb_row(new JSAMPLE[step_size]);
-	cinfo.err = jpeg_std_error(&jerr);
-	jpeg_create_compress(&cinfo);
-	jpeg_stdio_dest(&cinfo, fp);
-	cinfo.image_width      = window_width;
-	cinfo.image_height     = window_height;
-	cinfo.input_components = 3;
-	cinfo.in_color_space   = JCS_RGB;
-	jpeg_set_defaults(&cinfo);
-	jpeg_start_compress(&cinfo, TRUE);
-
-	while (cinfo.next_scanline < cinfo.image_height) {
-		row_pointer[0] = &data[(window_height-cinfo.next_scanline-1)*step_size];
-		jpeg_write_scanlines(&cinfo, row_pointer, 1);
-	}
-	jpeg_finish_compress(&cinfo);
-	jpeg_destroy_compress(&cinfo);
-	delete [] rgb_row;
-	fclose(fp);
-	return 1;
-}
-
-#else
-
-int write_jpeg_data(unsigned window_width, unsigned window_height, char *file_path, unsigned char *data) {
-
-  printf("Error: JPEG support is not enabled.\n");
-  return 0;
-}
-
-#endif
-
-
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
 
+	FILE *fp = open_screenshot_file(file_path, "screenshot.jpg");
+	if (fp == NULL) return 0;
 	unsigned char *buf(new unsigned char[(window_width+1)*(window_height+1)*3]);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, buf);
-	int const ret(write_jpeg_data(window_width, window_height, file_path, buf));
+	int const ret(write_jpeg_data(window_width, window_height, fp, buf));
 	delete [] buf;
 	return ret;
 }
