@@ -6,10 +6,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <assert.h>
 #include "gl_includes.h"
 
 
-int write_jpeg_data(unsigned window_width, unsigned window_height, FILE *fp, unsigned char *data);
+int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char const *const data, bool invert_y);
 
 
 FILE *open_screenshot_file(char *file_path, char *basename) {
@@ -45,10 +46,8 @@ int screenshot(unsigned window_width, unsigned window_height, char *file_path) {
 
 	for (unsigned i = 0; i < window_height; ++i) {
 		unsigned const offset((window_height-i-1)*window_width);
-
-		for (unsigned j = 0; j < window_width; ++j) {
-			fprintf(fp, "%c%c%c", buf[3*(j+offset)], buf[3*(j+offset)+1], buf[3*(j+offset)+2]);
-		}
+		int const num_write(fwrite((buf + 3*offset), 3, window_width, fp));
+		assert(num_write == window_width);
 	}
 	delete [] buf;
 	fclose(fp);
@@ -63,7 +62,7 @@ int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
 	unsigned char *buf(new unsigned char[(window_width+1)*(window_height+1)*3]);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, buf);
-	int const ret(write_jpeg_data(window_width, window_height, fp, buf));
+	int const ret(write_jpeg_data(window_width, window_height, fp, buf, 1));
 	delete [] buf;
 	return ret;
 }

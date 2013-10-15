@@ -248,6 +248,15 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height) {
 		}
 	}
 	fclose(file);
+#if 0
+	if (format == 0 && ncolors == 3) { // TESTING
+		string fn(name);
+		fn.erase(fn.begin()+fn.size()-4, fn.end());
+		fn = texture_dir + "/gen/" + fn + ".jpg";
+		cout << "Writing " << fn << endl;
+		write_to_jpg(fn);
+	}
+#endif
 }
 
 
@@ -336,26 +345,27 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 }
 
 
-int write_jpeg_data(unsigned window_width, unsigned window_height, FILE *fp, unsigned char *data) {
+int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char const *const data, bool invert_y) {
 
 #ifdef ENABLE_JPEG
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
-	JSAMPROW row_pointer[1];
-	unsigned const step_size(3*window_width);
+	unsigned const step_size(3*width);
 	JSAMPLE *rgb_row(new JSAMPLE[step_size]);
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&cinfo);
 	jpeg_stdio_dest(&cinfo, fp);
-	cinfo.image_width      = window_width;
-	cinfo.image_height     = window_height;
+	cinfo.image_width      = width;
+	cinfo.image_height     = height;
 	cinfo.input_components = 3;
 	cinfo.in_color_space   = JCS_RGB;
 	jpeg_set_defaults(&cinfo);
 	jpeg_start_compress(&cinfo, TRUE);
 
 	while (cinfo.next_scanline < cinfo.image_height) {
-		row_pointer[0] = &data[(window_height-cinfo.next_scanline-1)*step_size];
+		JSAMPROW row_pointer[1];
+		unsigned const yval(invert_y ? (height-cinfo.next_scanline-1) : cinfo.next_scanline);
+		row_pointer[0] = (unsigned char *)&data[yval*step_size]; // cast away the const (we know the data won't be modified)
 		jpeg_write_scanlines(&cinfo, row_pointer, 1);
 	}
 	jpeg_finish_compress(&cinfo);
@@ -367,6 +377,19 @@ int write_jpeg_data(unsigned window_width, unsigned window_height, FILE *fp, uns
   cerr << "Error: JPEG support is not enabled." << endl;
   return 0;
 #endif
+}
+
+
+int texture_t::write_to_jpg(string const &fn) const {
+
+	assert(ncolors == 3); // only supports RGB for now
+	FILE *fp(fopen(fn.c_str(), "wb"));
+
+	if (fp == NULL) {
+		cerr << "Error opening jpg file " << fn << " for write." << endl;
+		return 0;
+	}
+	return write_jpeg_data(width, height, fp, data, 0); // no invert
 }
 
 

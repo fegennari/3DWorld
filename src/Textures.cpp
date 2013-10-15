@@ -29,12 +29,6 @@ bool const CHECK_FOR_LUM       = 1;
 float const SMOOTH_SKY_POLES   = 0.2;
 
 
-struct lspot {
-
-	int x, y;
-	float mag;
-};
-
 
 //GROUND ROCK WATER WATER2 SKY SUN MOON EARTH ICE SNOW LEAF WOOD SAND ROCK2 CAMOFLAGE GRASS PALM SMOKE PLASMA GEN LANDSCAPE TREE_END TREE_SNOW TREE_HEMI ...
 //0      1    2     3      4   5   6    7     8   9    10   11   12   13    14        15    16   17    18     19  20        21       22        23        ...
@@ -47,8 +41,8 @@ texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a ba
 //texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
 texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
-texture_t(0, 0, 512,  512,  1, 3, 1, "water.raw"),
-texture_t(0, 0, 64,   64,   1, 3, 1, "water_sm.raw"), // WATER2_TEX is unused
+texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
+texture_t(0, 5, 64,   64,   1, 3, 1, "water_sm.jpg"), // WATER2_TEX is unused
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 0, 64,   64,   1, 3, 1, "sun.raw"),
 texture_t(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
@@ -58,9 +52,9 @@ texture_t(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
 texture_t(0, 7, 0,  0,  1, 3, 2, "snow2.jpg"),
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1, 1, 4.0), // 128x128
 texture_t(0, 0, 128,  128,  1, 3, 0, "bark.raw"), // mipmap?
-texture_t(0, 0, 512,  512,  1, 3, 2, "desert_sand.raw"),
+texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg"),
 texture_t(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
-texture_t(0, 0, 512,  512,  1, 3, 1, "camoflage.raw"),
+texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
 texture_t(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
 texture_t(0, 0, 512,  512,  1, 3, 1, "manhole.bmp", 1),
@@ -101,21 +95,22 @@ texture_t(0, 0, 128,  128,  1, 3, 1, "particleb.raw", 0, 1, 8.0),
 texture_t(0, 0, 128,  128,  1, 3, 1, "plaster.raw"),
 texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw", 0, 1, 8.0),
 texture_t(0, 0, 256,  32,   1, 3, 1, "CommandCAD.raw", 1),
+//texture_t(0, 5, 256,  32,   1, 3, 1, "CommandCAD.jpg"),
 texture_t(1, 0, 32,   32,   1, 4, 1, "@disint"),   // not real file
 texture_t(1, 0, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
 texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe", 0, 1, 8.0), // not real file
 texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe", 0, 1, 8.0), // not real file
-texture_t(0, 0, 512,  512,  1, 3, 1, "bcube.raw"),
+texture_t(0, 5, 512,  512,  1, 3, 1, "bcube.jpg"),
 texture_t(0, 0, 512,  512,  0, 4, 1, "explosion.raw"),
-texture_t(0, 0, 512,  512,  1, 3, 1, "shiphull.raw"),
-texture_t(0, 0, 512,  512,  1, 3, 1, "bcube2.raw"),
-texture_t(0, 0, 512,  512,  1, 3, 1, "bcube_tactical.raw"),
+texture_t(0, 5, 512,  512,  1, 3, 1, "shiphull.jpg"),
+texture_t(0, 5, 512,  512,  1, 3, 1, "bcube2.jpg"),
+texture_t(0, 5, 512,  512,  1, 3, 1, "bcube_tactical.jpg"),
 texture_t(0, 0, 512,  256,  1, 3, 1, "rock_sphere.raw"),
 texture_t(0, 6, 0,    0,    0, 4, 3, "papaya_leaf.png", 1, 1, 4.0), // 256x256
 texture_t(0, 3, 256,  256,  0, 4, 3, "coffee_leaf.raw"), // half the texture is wasted, but leaves must be square (for now)
 //texture_t(0, 6, 0,    0,    0, 4, 3, "coffee_leaf.png", 1), // 256x256
 texture_t(0, 0, 256,  256,  1, 4, 0, "smiley_skull.raw"),
-texture_t(0, 0, 512,  512,  1, 3, 1, "ice.2.raw"),
+texture_t(0, 5, 512,  512,  1, 3, 1, "ice.2.jpg"),
 texture_t(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
 texture_t(0, 0, 16,   16,   1, 3, 0, "black.raw"),
 texture_t(0, 0, 16,   16,   1, 3, 0, "white.raw"),
