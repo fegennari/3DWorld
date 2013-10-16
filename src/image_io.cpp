@@ -260,6 +260,25 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height) {
 }
 
 
+int texture_t::write_to_bmp(string const &fn) const { // or RAW format?
+
+	FILE *fp(fopen(fn.c_str(), "wb"));
+
+	if (fp == NULL) {
+		cerr << "Error opening bmp file " << fn << " for write." << endl;
+		return 0;
+	}
+	cerr << "Error: BMP texture file writing is not yet implemented" << endl;
+	return 0;
+	// FIXME: WRITE header
+	if (fwrite(data, 1, num_bytes(), fp) != num_bytes()) {
+		cerr << "Error writing data for bmp file " << fn << "." << endl;
+	}
+	fclose(fp);
+	return 1;
+}
+
+
 void texture_t::load_targa(int index, bool allow_diff_width_height) {
 
 	assert(!is_allocated());
@@ -389,7 +408,7 @@ int texture_t::write_to_jpg(string const &fn) const {
 		cerr << "Error opening jpg file " << fn << " for write." << endl;
 		return 0;
 	}
-	return write_jpeg_data(width, height, fp, data, 0); // no invert
+	return write_jpeg_data(width, height, fp, data, 0); // no invert, fclose(fp) is called within this function
 }
 
 

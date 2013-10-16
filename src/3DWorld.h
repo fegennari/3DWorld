@@ -1071,6 +1071,7 @@ public:
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	void load_from_gl();
 	int write_to_jpg(std::string const &fn) const;
+	int write_to_bmp(std::string const &fn) const;
 	float get_component(float xval, float yval, int comp) const;
 	void check_init() {if (tid == 0) do_gl_init();}
 	unsigned num_pixels() const {return width*height;}
