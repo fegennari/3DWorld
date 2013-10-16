@@ -4,8 +4,8 @@ disable_water 1
 disable_inf_terrain 1
 disable_scenery 1
 
-#mesh_size  2048 2048 0
-mesh_size  2305 2945 0
+mesh_size  2048 2048 0
+#mesh_size  2305 2945 0
 scene_size 4.0 5.0 4.0
 
 mesh_diffuse_tex_fn ..\..\..\Graphics\CDLOD\hetch\overlaymap.jpg 0

@@ -429,11 +429,12 @@ GLenum texture_t::calc_internal_format() const {
 	static int has_comp(2); // starts unknown
 	if (has_comp == 2) has_comp = has_extension("GL_ARB_texture_compression"); // unknown, calculate it
 	assert(ncolors >= 1 && ncolors <= 4);
+	if (is_16_bit_gray) {return GL_LUMINANCE16;} // compressed?
 	return get_internal_texture_format(ncolors, (COMPRESS_TEXTURES && has_comp && do_compress && type != 2));
 }
 
 GLenum texture_t::calc_format() const {
-	return get_texture_format(ncolors);
+	return (is_16_bit_gray ? GL_LUMINANCE : get_texture_format(ncolors));
 }
 
 
@@ -451,7 +452,7 @@ void texture_t::do_gl_init() {
 	assert(is_allocated() && width > 0 && height > 0);
 	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap, 0, 0, 0, anisotropy);
 	//if (use_mipmaps == 1 || use_mipmaps == 2) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
 	if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
 	if (use_mipmaps == 3) create_custom_mipmaps();
 	assert(glIsTexture(tid));
@@ -459,7 +460,7 @@ void texture_t::do_gl_init() {
 }
 
 
-void texture_t::calc_color() {
+void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 
 	assert(is_allocated());
 	float colors[4] = {0.0}, weight(0.0);
@@ -537,8 +538,8 @@ void texture_t::build_mipmaps() {
 	for (unsigned level = 0; level < mm_offsets.size(); ++level) {
 		unsigned const tsz(width >> level);
 		assert(tsz > 1);
-		int const ret(gluScaleImage(format, tsz,   tsz,   GL_UNSIGNED_BYTE, get_mipmap_data(level),
-			                                tsz/2, tsz/2, GL_UNSIGNED_BYTE, (mm_data + mm_offsets[level])));
+		int const ret(gluScaleImage(format, tsz,   tsz,   get_data_format(), get_mipmap_data(level),
+			                                tsz/2, tsz/2, get_data_format(), (mm_data + mm_offsets[level])));
 		if (ret) cout << "GLU error during mipmap image scale: " << gluErrorString(ret) << "." << endl;
 	}
 }
@@ -721,7 +722,7 @@ void texture_t::resize(int new_w, int new_h) {
 	if (new_w == width && new_h == height) return; // already correct size
 	assert(data != NULL && width > 0 && height > 0 && new_w > 0 && new_h > 0);
 	unsigned char *new_data(new unsigned char[new_w*new_h*ncolors]);
-	int const ret(gluScaleImage(calc_format(), width, height, GL_UNSIGNED_BYTE, data, new_w, new_h, GL_UNSIGNED_BYTE, new_data));
+	int const ret(gluScaleImage(calc_format(), width, height, get_data_format(), data, new_w, new_h, get_data_format(), new_data));
 	if (ret) cout << "GLU error during image scale: " << gluErrorString(ret) << "." << endl;
 	free_data(); // only if size increases?
 	data   = new_data;
@@ -763,7 +764,7 @@ void texture_t::make_normal_map() {
 		cout << "Error: Skipping RGBA Bump/Normal map " << name << "." << endl;
 		return;
 	}
-	assert(ncolors == 1); // grayscale heightmap
+	assert(ncolors == 1 && !is_16_bit_gray); // 8-bit grayscale heightmap
 	ncolors = 3; // convert to RGB
 	unsigned char *new_data(new unsigned char[num_bytes()]);
 	int max_delta(1);
@@ -829,7 +830,7 @@ void texture_t::create_custom_mipmaps() {
 				}
 			}
 		}
-		glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, format, GL_UNSIGNED_BYTE, &odata.front());
+		glTexImage2D(GL_TEXTURE_2D, level, calc_internal_format(), w2, h2, 0, format, get_data_format(), &odata.front());
 		idata.swap(odata);
 	}
 }
@@ -841,14 +842,14 @@ float texture_t::get_heightmap_value(unsigned x, unsigned y) const { // returns 
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
 	assert(x < (unsigned)width && y < (unsigned)height);
 	unsigned const ix(width*y + x);
-	return ((ncolors == 2) ? (data[ix<<1] + data[(ix<<1)+1]/256.0) : data[ix]);
+	return ((ncolors == 2) ? (data[ix<<1]/256.0 + data[(ix<<1)+1]) : data[ix]);
 }
 
 
 void texture_t::load_from_gl() { // also set tid?
 
 	alloc();
-	glGetTexImage(GL_TEXTURE_2D, 0, calc_format(), GL_UNSIGNED_BYTE, data);
+	glGetTexImage(GL_TEXTURE_2D, 0, calc_format(), get_data_format(), data);
 }
 
 
@@ -1830,7 +1831,7 @@ bool is_billboard_texture_transparent(point const *const points, point const &po
 }
 
 
-void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest) { // used with texture_pair_t/render-to-texture
+void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest) { // used with texture_pair_t/render-to-texture RGBA
 
 	assert(txsize > 0 && tysize > 0);
 	if (tid) return; // already created

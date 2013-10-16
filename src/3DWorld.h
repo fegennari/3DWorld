@@ -1019,7 +1019,7 @@ class texture_t { // size = 116
 public:
 	std::string name;
 	char type, format, use_mipmaps;
-	bool wrap, invert_y, do_compress, has_binary_alpha;
+	bool wrap, invert_y, do_compress, has_binary_alpha, is_16_bit_gray;
 	int width, height, ncolors, bump_tid, alpha_tid;
 	float anisotropy, mipmap_alpha_weight;
 
@@ -1031,17 +1031,18 @@ private:
 
 public:
 	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), invert_y(0), do_compress(0), has_binary_alpha(0),
-		width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1), anisotropy(1.0), mipmap_alpha_weight(1.0),
-		data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
+		is_16_bit_gray(0), width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1), anisotropy(1.0),
+		mipmap_alpha_weight(1.0), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
 	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0)
 		: name(n), type(t), format(f), use_mipmaps(um), wrap(wra), invert_y(inv), do_compress(do_comp), has_binary_alpha(0),
-		width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw),
+		is_16_bit_gray(0), width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw),
 		data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	void init();
 	void do_gl_init();
 	GLenum calc_internal_format() const;
 	GLenum calc_format() const;
+	GLenum get_data_format() const {return (is_16_bit_gray ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE);}
 	void calc_color();
 	void copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_comp);
 	void merge_in_alpha_channel(texture_t const &at);

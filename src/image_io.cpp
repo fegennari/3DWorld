@@ -425,7 +425,9 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 	ncolors = png_ncolors;
 
 	if (allow_two_byte_grayscale && ncolors == 1 && bit_depth == 16) {
-		ncolors = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
+		ncolors        = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
+		is_16_bit_gray = 1;
+		png_set_swap(png_ptr); // change big endian to little endian
 	}
 	else {
 		if (bit_depth == 16) {png_set_strip_16(png_ptr);}
@@ -478,21 +480,20 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 	assert(w == width && h == height);
 	
 	if (allow_two_byte_grayscale && (ncolors == 0 || ncolors == 1) && bit_depth == 16) { // 16-bit grayscale
-		ncolors = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
+		ncolors        = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
+		is_16_bit_gray = 1;
 		tmsize_t const sl_size(TIFFScanlineSize(tif));
 		assert(sl_size == 2*width);
         tdata_t buf = _TIFFmalloc(sl_size);
 		assert(buf);
 		alloc();
-		assert(config == PLANARCONFIG_CONTIG); // no support for PLANARCONFIG_SEPARATE
+		assert(config == PLANARCONFIG_CONTIG); // no support for PLANARCONFIG_SEPARATE, but could be added later
 
-		for (int row = 0; row < height; row++) { // FIXME: this seems incorrect, but not well documented
+		for (int row = 0; row < height; row++) {
 			TIFFReadScanline(tif, buf, row);
-			
-			for (int i = 0; i < width; ++i) { // x-values
-				for (unsigned d = 0; d < 2; ++d) { // bytes
-					data[2*((height - row - 1)*width + i) + 1 - d] = ((unsigned char const *)buf)[2*i + d]; // swap bytes
-				}
+
+			for (int i = 0; i < sl_size; ++i) { // x-values
+				data[sl_size*(height - row - 1) + i] = ((unsigned char const *)buf)[i]; // assumes little endian byte ordering, no swap required, may need to check this?
 			}
 		}
         _TIFFfree(buf);
