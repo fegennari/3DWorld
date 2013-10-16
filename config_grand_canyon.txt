@@ -7,4 +7,4 @@ mesh_size  4096 2048 0
 scene_size 8.0 4.0 4.0
 
 mesh_diffuse_tex_fn ../models/grand_canyon/gcanyon_color_4k2k.bmp 0
-mh_filename ../models/grand_canyon/gcanyon_height.png 1.0 0.0 1
+mh_filename ../models/grand_canyon/gcanyon_height.png 1.0 0.0 0

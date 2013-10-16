@@ -62,7 +62,7 @@ texture_t(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
 texture_t(1, 0, 256,  256,  1, 4, 1, "@smoke"),  // not real file
 texture_t(1, 0, 64,   64,   1, 4, 1, "@plasma"), // not real file
 texture_t(1, 0, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
-texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex", 1), // for loading real landscape texture
+texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex"), // for loading real landscape texture
 texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
 texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
 texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 0, 1, 8.0), // not real file
