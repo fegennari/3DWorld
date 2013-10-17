@@ -1072,6 +1072,7 @@ public:
 	void load_from_gl();
 	int write_to_jpg(std::string const &fn) const;
 	int write_to_bmp(std::string const &fn) const;
+	int write_to_png(std::string const &fn) const;
 	float get_component(float xval, float yval, int comp) const;
 	void check_init() {if (tid == 0) do_gl_init();}
 	unsigned num_pixels() const {return width*height;}

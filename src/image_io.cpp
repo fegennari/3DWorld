@@ -257,6 +257,15 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height) {
 		write_to_jpg(fn);
 	}
 #endif
+#if 0
+	if (format == 0) { // TESTING
+		string fn(name);
+		fn.erase(fn.begin()+fn.size()-4, fn.end());
+		fn = texture_dir + "/gen/" + fn + ".png";
+		cout << "Writing " << fn << endl;
+		write_to_png(fn);
+	}
+#endif
 }
 
 
@@ -299,7 +308,10 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 		height = img.height;
 		assert(width > 0 && height > 0);
 	}
-	assert(img.width == width && img.height == height);
+	if (img.width != width || img.height != height) {
+		cout << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << img.width << "x" << img.height << endl;
+		exit(1);
+	}
 	alloc();
 	//if (!tga_is_top_to_bottom(&img)) tga_flip_vert(&img);
 	//if (tga_is_right_to_left(&img)) tga_flip_horiz(&img);
@@ -339,7 +351,10 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 		height = cinfo.output_height;
 		assert(width > 0 && height > 0);
 	}
-	assert(cinfo.output_width == width && cinfo.output_height == height);
+	if (cinfo.output_width != width || cinfo.output_height != height) {
+		cout << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << cinfo.output_width << "x" << cinfo.output_height << endl;
+		exit(1);
+	}
 	bool const want_alpha_channel(ncolors == 4 && cinfo.output_components == 3);
 	ncolors = cinfo.output_components; // Note: can never be 4
 	unsigned const scanline_size(ncolors*width);
@@ -393,7 +408,7 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	fclose(fp);
 	return 1;
 #else
-  cerr << "Error: JPEG support is not enabled." << endl;
+  cerr << "Error: JPEG writing support is not enabled." << endl;
   return 0;
 #endif
 }
@@ -439,7 +454,10 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 		height = h;
 		assert(width > 0 && height > 0);
 	}
-	assert(w == width && h == height);
+	if (w != width || h != height) {
+		cout << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << w << "x" << h << endl;
+		exit(1);
+	}
 	bool const want_alpha_channel(ncolors == 4 && png_ncolors == 3);
 	ncolors = png_ncolors;
 
@@ -471,6 +489,61 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 #else
 	cerr << "Error loading texture image file " << name << ": png support has not been enabled." << endl;
 	exit(1);
+#endif
+}
+
+
+int texture_t::write_to_png(string const &fn) const {
+
+#ifdef ENABLE_PNG
+	FILE *fp(fopen(fn.c_str(), "wb"));
+
+	if (fp == NULL) {
+		cerr << "Error opening png file " << fn << " for write." << endl;
+		return 0;
+	}
+	// Initialize write structure
+	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	assert(png_ptr != NULL);
+
+	// Initialize info structure
+	png_infop info_ptr = png_create_info_struct(png_ptr);
+	assert(info_ptr != NULL);
+	png_init_io(png_ptr, fp);
+
+	// Write header
+	int color_type, bit_depth;
+
+	if (is_16_bit_gray) {
+		color_type = PNG_COLOR_TYPE_GRAY;
+		bit_depth  = 16;
+	}
+	else {
+		switch (ncolors) {
+		case 1: color_type = PNG_COLOR_TYPE_GRAY; break;
+		case 2: color_type = PNG_COLOR_TYPE_GRAY_ALPHA; break;
+		case 3: color_type = PNG_COLOR_TYPE_RGB; break;
+		case 4: color_type = PNG_COLOR_TYPE_RGB_ALPHA; break;
+		default: assert(0);
+		}
+		bit_depth = 8;
+	}
+	int const compression(PNG_COMPRESSION_TYPE_BASE); // FIXME
+	png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_INTERLACE_NONE, compression, PNG_FILTER_TYPE_BASE);
+	png_write_info(png_ptr, info_ptr);
+
+	// Write image data
+	for (int y = 0; y < height; y++) {png_write_row(png_ptr, (data + y*width*ncolors));}
+
+	// End write
+	png_write_end(png_ptr, NULL);
+	png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
+	png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+	fclose(fp);
+	return 1;
+#else
+	cerr << "Error: PNG writing support is not enabled." << endl;
+	return 0;
 #endif
 }
 
