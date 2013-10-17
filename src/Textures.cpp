@@ -35,92 +35,91 @@ float const SMOOTH_SKY_POLES   = 0.2;
 
 texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
-// format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff
+// format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generate (not loaded from file)
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
 // type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
-//texture_t(0, 0, 512,  512,  1, 3, 0, "ground.raw"),
-texture_t(0, 0, 128,  128,  1, 3, 2, "grass29.raw"), // mipmap for small trees?
-texture_t(0, 0, 256,  256,  1, 3, 1, "rock.raw"),
+//texture_t(0, 6, 512,  512,  1, 3, 0, "ground.png"),
+texture_t(0, 6, 128,  128,  1, 3, 2, "grass29.png"), // mipmap for small trees?
+texture_t(0, 6, 256,  256,  1, 3, 1, "rock.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
 texture_t(0, 5, 64,   64,   1, 3, 1, "water_sm.jpg"), // WATER2_TEX is unused
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
-texture_t(0, 0, 64,   64,   1, 3, 1, "sun.raw"),
-texture_t(0, 0, 128,  128,  1, 3, 1, "moon.raw"),
-texture_t(0, 0, 256,  256,  0, 3, 1, "earth.raw"),
-texture_t(0, 0, 64,   64,   1, 3, 1, "ice.raw"), // marble?
-//texture_t(0, 0, 256,  256,  1, 3, 2, "snow.raw"),
+texture_t(0, 6, 64,   64,   1, 3, 1, "sun.png"),
+texture_t(0, 6, 128,  128,  1, 3, 1, "moon.png"),
+texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
+texture_t(0, 6, 64,   64,   1, 3, 1, "ice.png"), // marble?
+//texture_t(0, 6, 256,  256,  1, 3, 2, "snow.png"),
 texture_t(0, 7, 0,  0,  1, 3, 2, "snow2.jpg"),
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1, 1, 4.0), // 128x128
-texture_t(0, 0, 128,  128,  1, 3, 0, "bark.raw"), // mipmap?
+texture_t(0, 6, 128,  128,  1, 3, 0, "bark.png"), // mipmap?
 texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg"),
-texture_t(0, 0, 256,  256,  1, 3, 2, "rock2.raw"),
+texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
-texture_t(0, 0, 128,  128,  1, 3, 0, "grass4.raw"),
+texture_t(0, 6, 128,  128,  1, 3, 0, "grass4.png"),
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
 texture_t(0, 0, 512,  512,  1, 3, 1, "manhole.bmp", 1),
-texture_t(0, 0, 128,  128,  1, 4, 3, "palmtree.raw"),
-texture_t(1, 0, 256,  256,  1, 4, 1, "@smoke"),  // not real file
-texture_t(1, 0, 64,   64,   1, 4, 1, "@plasma"), // not real file
-texture_t(1, 0, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
+texture_t(0, 6, 128,  128,  1, 4, 3, "palmtree.png", 1),
+texture_t(1, 9, 256,  256,  1, 4, 1, "@smoke"),  // not real file
+texture_t(1, 9, 64,   64,   1, 4, 1, "@plasma"), // not real file
+texture_t(1, 9, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
 texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex"), // for loading real landscape texture
-texture_t(1, 0, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
-texture_t(1, 0, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
+texture_t(1, 9, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
+texture_t(1, 9, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
 texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 0, 1, 8.0), // not real file
-texture_t(0, 0, 256,  256,  1, 3, 1, "paneling.raw", 0, 1, 16.0),
-texture_t(0, 0, 256,  256,  1, 3, 1, "cblock.raw", 0, 1, 8.0),
+texture_t(0, 6, 256,  256,  1, 3, 1, "paneling.png", 0, 1, 16.0),
+texture_t(0, 6, 256,  256,  1, 3, 1, "cblock.png", 0, 1, 8.0),
 texture_t(0, 5, 0,    0,    0, 4, 3, "mj_leaf.jpg", 1), // 128x128
 texture_t(0, 5, 0,    0,    0, 4, 3, "live_oak.jpg", 1, 1, 4.0), // 80x128
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf2.jpg", 1, 1, 4.0), // 212x256
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf3c.jpg", 1, 1, 4.0), // 208x256
 texture_t(0, 5, 0,    0,    0, 4, 3, "plant1.jpg", 1), // 256x256
-texture_t(0, 0, 256,  256,  0, 4, 3, "plant2.raw"),
+texture_t(0, 6, 256,  256,  0, 4, 3, "plant2.png", 1),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "plant2.jpg", 1), // 160x256
-texture_t(0, 0, 256,  256,  0, 4, 3, "plant3.raw"),
+texture_t(0, 6, 256,  256,  0, 4, 3, "plant3.png", 1),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "plant3.jpg", 1), // 176x256
 texture_t(0, 5, 0,    0,    0, 4, 3, "hibiscus.jpg", 1), // 64x64
-texture_t(1, 0, 256,  256,  1, 3, 1, "@fence", 0, 1, 8.0), // not real file, light paneling
-texture_t(0, 0, 128,  128,  1, 3, 1, "skull.raw", 1),
-texture_t(0, 0, 64,   64,   1, 3, 1, "radiation.raw"),
-texture_t(0, 0, 128,  128,  1, 3, 1, "yuck.raw", 1),
-texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade.raw"),
-texture_t(0, 0, 256,  256,  0, 4, 0, "sawblade_b.raw"),
-texture_t(0, 0, 256,  256,  0, 4, 1, "blur.raw"),
-texture_t(0, 0, 256,  256,  1, 4, 1, "blur_s.raw"),
-texture_t(0, 0, 256,  256,  0, 4, 3, "pine.raw", 0, 1, 1.0, 0.36),
+texture_t(1, 9, 256,  256,  1, 3, 1, "@fence", 0, 1, 8.0), // not real file, light paneling
+texture_t(0, 6, 128,  128,  1, 3, 1, "skull.png"),
+texture_t(0, 6, 64,   64,   1, 3, 1, "radiation.png", 1),
+texture_t(0, 6, 128,  128,  1, 3, 1, "yuck.png"),
+texture_t(0, 6, 256,  256,  0, 4, 0, "sawblade.png", 1),
+texture_t(0, 6, 256,  256,  0, 4, 0, "sawblade_b.png", 1),
+texture_t(0, 6, 256,  256,  0, 4, 1, "blur.png"),
+texture_t(0, 6, 256,  256,  1, 4, 1, "blur_s.png"),
+texture_t(0, 6, 256,  256,  0, 4, 3, "pine.png", 1, 1, 1.0, 0.36),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "pine.jpg", 1, 1, 1.0, 0.36), // 184x256
-texture_t(0, 0, 128,  128,  1, 3, 1, "noise.raw"),
-texture_t(0, 0, 128,  128,  1, 3, 1, "wood.raw"),
-texture_t(0, 0, 128,  128,  1, 3, 1, "hb_brick.raw", 0, 1, 8.0),
-texture_t(0, 0, 128,  128,  1, 3, 1, "particleb.raw", 0, 1, 8.0),
-texture_t(0, 0, 128,  128,  1, 3, 1, "plaster.raw"),
-texture_t(0, 0, 256,  256,  1, 3, 1, "tile.raw", 0, 1, 8.0),
-texture_t(0, 0, 256,  32,   1, 3, 1, "CommandCAD.raw", 1),
-//texture_t(0, 5, 256,  32,   1, 3, 1, "CommandCAD.jpg"),
-texture_t(1, 0, 32,   32,   1, 4, 1, "@disint"),   // not real file
-texture_t(1, 0, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@hstripe", 0, 1, 8.0), // not real file
-texture_t(1, 0, 32,   32,   1, 3, 0, "@vstripe", 0, 1, 8.0), // not real file
+texture_t(0, 6, 128,  128,  1, 3, 1, "noise.png"),
+texture_t(0, 6, 128,  128,  1, 3, 1, "wood.png"),
+texture_t(0, 6, 128,  128,  1, 3, 1, "hb_brick.png", 0, 1, 8.0),
+texture_t(0, 6, 128,  128,  1, 3, 1, "particleb.png", 0, 1, 8.0),
+texture_t(0, 6, 128,  128,  1, 3, 1, "plaster.png"),
+texture_t(0, 6, 256,  256,  1, 3, 1, "tile.png", 0, 1, 8.0),
+texture_t(0, 6, 256,  32,   1, 3, 1, "CommandCAD.png"),
+texture_t(1, 9, 32,   32,   1, 4, 1, "@disint"),   // not real file
+texture_t(1, 9, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
+texture_t(1, 9, 32,   32,   1, 3, 0, "@hstripe", 0, 1, 8.0), // not real file
+texture_t(1, 9, 32,   32,   1, 3, 0, "@vstripe", 0, 1, 8.0), // not real file
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube.jpg"),
-texture_t(0, 0, 512,  512,  0, 4, 1, "explosion.raw"),
+texture_t(0, 6, 512,  512,  0, 4, 1, "explosion.png", 1),
 texture_t(0, 5, 512,  512,  1, 3, 1, "shiphull.jpg"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube2.jpg"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube_tactical.jpg"),
-texture_t(0, 0, 512,  256,  1, 3, 1, "rock_sphere.raw"),
+texture_t(0, 6, 512,  256,  1, 3, 1, "rock_sphere.png"),
 texture_t(0, 6, 0,    0,    0, 4, 3, "papaya_leaf.png", 1, 1, 4.0), // 256x256
-texture_t(0, 3, 256,  256,  0, 4, 3, "coffee_leaf.raw"), // half the texture is wasted, but leaves must be square (for now)
-//texture_t(0, 6, 0,    0,    0, 4, 3, "coffee_leaf.png", 1), // 256x256
-texture_t(0, 0, 256,  256,  1, 4, 0, "smiley_skull.raw"),
+//texture_t(0, 6, 256,  256,  0, 4, 3, "coffee_leaf.png"), // half the texture is wasted, but leaves must be square (for now)
+texture_t(0, 6, 0,    0,    0, 4, 3, "coffee_leaf.png", 1), // 256x256
+texture_t(0, 6, 256,  256,  1, 4, 0, "smiley_skull.png", 1),
 texture_t(0, 5, 512,  512,  1, 3, 1, "ice.2.jpg"),
-texture_t(0, 0, 256,  256,  1, 3, 2, "rock.03.raw"),
-texture_t(0, 0, 16,   16,   1, 3, 0, "black.raw"),
-texture_t(0, 0, 16,   16,   1, 3, 0, "white.raw"),
-texture_t(0, 0, 512,  512,  0, 4, 0, "fire.raw", 1),
+texture_t(0, 6, 256,  256,  1, 3, 2, "rock.03.png"),
+texture_t(0, 6, 16,   16,   1, 3, 0, "black.png"),
+texture_t(0, 6, 16,   16,   1, 3, 0, "white.png"),
+texture_t(0, 6, 512,  512,  0, 4, 0, "fire.png"),
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
-texture_t(0, 0, 256,  256,  0, 4, 0, "snowflake.raw"),
-texture_t(1, 0, 128,  128,  0, 4, 1, "@blur_center"), // not real file
-texture_t(1, 0, 1,    128,  1, 4, 0, "@gradient"), // not real file
-texture_t(0, 0, 1024, 128,  0, 3, 1, "grass_blade.raw"),
-texture_t(1, 0, 1024, 1024, 1, 1, 1, "@wind_texture"),  // not real file
+texture_t(0, 6, 256,  256,  0, 4, 0, "snowflake.png", 1),
+texture_t(1, 9, 128,  128,  0, 4, 1, "@blur_center"), // not real file
+texture_t(1, 9, 1,    128,  1, 4, 0, "@gradient"), // not real file
+texture_t(0, 6, 1024, 128,  0, 3, 1, "grass_blade.png", 1),
+texture_t(1, 9, 1024, 1024, 1, 1, 1, "@wind_texture"),  // not real file
 texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
 // bark
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
@@ -133,10 +132,10 @@ texture_t(0, 4, 0,    0,    1, 3, 1, "water_normal.tga", 0, 1, 8.0), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "caustics.jpg"), // 512x512
 // noise
 texture_t(0, 6, 0,    0,    1, 1, 0, "perlin_simplex.png"), // 256x256
-texture_t(1, 0, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
-texture_t(1, 0, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
-texture_t(1, 0, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
-texture_t(1, 0, 128,  128,  1, 3, 1, "@player_bbb_tex"), // not real file
+texture_t(1, 9, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
+texture_t(1, 9, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
+texture_t(1, 9, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
+texture_t(1, 9, 128,  128,  1, 3, 1, "@player_bbb_tex"), // not real file
 texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves.jpg", 1, 0, 1.0, 0.28), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare1.jpg"), // 384x384
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Nte: low resolution)

@@ -13,7 +13,7 @@ voxel color1 1.0 1.0 1.0 1.0
 voxel color2 1.0 1.0 1.1 1.0
 voxel tid1 snow2.jpg
 voxel tid2 snow2.jpg
-#voxel tid2 ice.raw
+#voxel tid2 ice.png
 voxel specular_mag 0.6
 voxel specular_exp 40.0
 ambient_lighting_scale 0.5 0.5 1.5

@@ -8,9 +8,6 @@ Hardware tessellation
 Use assimp?
 Vertex Array Objects
 
-Convert remaining raw textures to jpeg
-Texture image writer bmp
-
 Remove deprecated OpenGL calls:
 Use triangles instead of quads
  - Tree billboards/leaves

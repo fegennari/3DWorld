@@ -64,7 +64,7 @@ N  8.0   2.9  -0.4   8.0   2.9 -0.05  8.0   6.0 -0.05   8.0    6.0  -0.4  -1.0  
 # foundation
 #######################################
 
-l 0.9 0.7 0.6 0.55 1.0 cblock.raw 1 # concrete block (red/brown)
+l 0.9 0.7 0.6 0.55 1.0 cblock.png 1 # concrete block (red/brown)
 y 6.0
 # foundation/basement
 a 0 # non-destroyable

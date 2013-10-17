@@ -11,7 +11,7 @@ voxel atten_at_edges 4 # 0=no atten, 1=top only, 2=all 5 edges (excludes the bot
 voxel radius_val 0.75
 voxel atten_thresh 3.0
 voxel geom_rseed 123
-voxel tid1 rock.03.raw # 66 rock tex
+voxel tid1 rock.03.png # 66 rock tex
 voxel tid2 mossy_rock.jpg # 76 mossy rock tex
 
 disable_water 1
