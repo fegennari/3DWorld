@@ -63,7 +63,7 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 
 bool enable_instanced_pine_trees() {
 	float const ntrees_mult(vegetation*sm_tree_density*tree_scale*tree_scale);
-	return (ENABLE_INST_PINE && ntrees_mult > 20 != 0 && max_unique_trees > 0); // enable when there are lots of trees
+	return (ENABLE_INST_PINE && ntrees_mult > 20 && max_unique_trees > 0); // enable when there are lots of trees
 }
 
 

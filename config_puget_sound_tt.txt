@@ -4,6 +4,7 @@ ocean_wave_height 0.0005
 camera_height 0.08
 
 ntrees 20
+max_unique_trees 100
 nleaves_scale 2.0
 tree_branch_radius 0.5
 sm_tree_density 2.0
