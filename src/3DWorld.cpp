@@ -431,7 +431,7 @@ void check_xy_offsets() {
 
 float calc_speed() {
 
-	float speed(pow(3.0f, min(2, do_run)));
+	float speed(pow(3.0f, min(((world_mode == WMODE_INF_TERRAIN) ? 3 : 2), do_run)));
 	if (camera_in_air) speed *= CAMERA_AIR_CONT; // what about smileys?
 	if (!KBD_HANDLER)  speed /= 0.75;
 	return speed;
