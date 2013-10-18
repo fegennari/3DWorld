@@ -1029,6 +1029,8 @@ private:
 	colorRGBA color;
 	vector<unsigned> mm_offsets;
 
+	void maybe_swap_rb(unsigned char *ptr) const;
+
 public:
 	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), invert_y(0), do_compress(0), has_binary_alpha(0),
 		is_16_bit_gray(0), width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1), anisotropy(1.0),
@@ -1056,7 +1058,7 @@ public:
 	void free_data();
 	void gl_delete();
 	void load(int index, bool allow_diff_width_height=0, bool allow_two_byte_grayscale=0, bool ignore_word_alignment=0);
-	void load_raw_bmp(int index, bool allow_diff_width_height);
+	void load_raw_bmp(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void load_targa(int index, bool allow_diff_width_height);
 	void load_jpeg(int index, bool allow_diff_width_height);
 	void load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);

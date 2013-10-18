@@ -107,7 +107,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		unsigned want_alpha_channel(ncolors == 4);
 
 		switch (format) {
-		case 0: case 1: case 2: case 3: load_raw_bmp(index, allow_diff_width_height); break; // raw
+		case 0: case 1: case 2: case 3: load_raw_bmp(index, allow_diff_width_height, allow_two_byte_grayscale); break; // raw
 		case 4: load_targa(index, allow_diff_width_height); break;
 		case 5: load_jpeg (index, allow_diff_width_height); break;
 		case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
@@ -127,6 +127,16 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		}
 		if (!ignore_word_alignment) {fix_word_alignment();}
 	}
+#if 0
+	if (name.size() > 4 && name.front() != '@') {
+		string fn(name);
+		fn.erase(fn.begin()+fn.size()-4, fn.end());
+		fn += ".bmp";
+		fn  = texture_dir + "/gen/";
+		cout << "Writing " << fn << endl;
+		write_to_bmp(fn);
+	}
+#endif
 }
 
 
@@ -151,7 +161,7 @@ struct bmp_infoheader { // 40 bytes
 };
 
 
-bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &ncolors, bool allow_diff_width_height) {
+bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &ncolors, bool allow_diff_width_height, bool allow_two_byte_grayscale, bool &is_16_bit_gray) {
 
 	bmp_header header;
 	bmp_infoheader infoheader;
@@ -176,11 +186,15 @@ bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &
 	}
 	assert(width > 0 && height > 0 && ncolors > 0);
 
+	if (allow_two_byte_grayscale && ncolors == 1 && img_ncolors == 2) { // Note: not officially part of the BMP spec, but we allow it since we write in this format
+		ncolors        = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values
+		is_16_bit_gray = 1;
+	}
 	if (ncolors == 1) { // read and discard color index table, and just use index values as grayscale values
-		char data[1024];
+		char color_table[1024];
 
-		if (fread(data, 1024, 1, fp) != 1) {
-			cerr << "Error reading bitmap data for file " << fn << endl;
+		if (fread(color_table, 1024, 1, fp) != 1) {
+			cerr << "Error reading bitmap color table for file " << fn << endl;
 			return 0;
 		}
 	}
@@ -190,7 +204,7 @@ bool read_bmp_header(FILE *&fp, string const &fn, int &width, int &height, int &
 
 // load an .RAW or .BMP file as a texture
 // format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel)
-void texture_t::load_raw_bmp(int index, bool allow_diff_width_height) {
+void texture_t::load_raw_bmp(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
 
 	assert(ncolors == 1 || ncolors == 3 || ncolors == 4);
 	if (format == 3) assert(ncolors == 4);
@@ -198,7 +212,7 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height) {
 	assert(file != NULL);
 	
 	if (format == 1) { // BMP
-		if (!read_bmp_header(file, name, width, height, ncolors, allow_diff_width_height)) {exit(1);}
+		if (!read_bmp_header(file, name, width, height, ncolors, allow_diff_width_height, allow_two_byte_grayscale, is_16_bit_gray)) {exit(1);}
 	}
 	unsigned const size(num_pixels()); // allocate buffer
 
@@ -242,30 +256,20 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height) {
 			exit(1);
 		}
 	}
-	if (format == 1 && (ncolors == 3 || ncolors == 4)) { // RGB/RGBA bitmap file
-		for(unsigned i = 0; i < size; ++i) {
-			swap(data[ncolors*i+0], data[ncolors*i+2]); // BGR[A] => RGB[A]
-		}
-	}
+	if (format == 1) {maybe_swap_rb(data);}
 	fclose(file);
-#if 0
-	if (format == 0 && ncolors == 3) { // TESTING
-		string fn(name);
-		fn.erase(fn.begin()+fn.size()-4, fn.end());
-		fn = texture_dir + "/gen/" + fn + ".jpg";
-		cout << "Writing " << fn << endl;
-		write_to_jpg(fn);
+}
+
+
+void texture_t::maybe_swap_rb(unsigned char *ptr) const { // ptr is assumed to be of size num_bytes()
+
+	assert(ptr != NULL);
+	if (ncolors != 3 && ncolors != 4) return;
+	unsigned const size(num_pixels());
+
+	for(unsigned i = 0; i < size; ++i) {
+		swap(ptr[ncolors*i+0], ptr[ncolors*i+2]); // BGR[A] => RGB[A]
 	}
-#endif
-#if 0
-	if (format == 0) { // TESTING
-		string fn(name);
-		fn.erase(fn.begin()+fn.size()-4, fn.end());
-		fn = texture_dir + "/gen/" + fn + ".png";
-		cout << "Writing " << fn << endl;
-		write_to_png(fn);
-	}
-#endif
 }
 
 
@@ -277,11 +281,37 @@ int texture_t::write_to_bmp(string const &fn) const { // or RAW format?
 		cerr << "Error opening bmp file " << fn << " for write." << endl;
 		return 0;
 	}
-	cerr << "Error: BMP texture file writing is not yet implemented" << endl;
-	return 0;
-	// FIXME: WRITE header
-	if (fwrite(data, 1, num_bytes(), fp) != num_bytes()) {
-		cerr << "Error writing data for bmp file " << fn << "." << endl;
+	bmp_header header = {0};
+	header.type = 19778; // bitmap
+	bmp_infoheader infoheader = {0};
+	infoheader.width  = width;
+	infoheader.height = height;
+	infoheader.bits   = ncolors << 3;
+	infoheader.planes = 1;
+	infoheader.size   = 40;
+	infoheader.xresolution = infoheader.yresolution = 1200; // arbitrary nonzero
+
+	if (fwrite(&header, 14, 1, fp) != 1 || fwrite(&infoheader, 40, 1, fp) != 1) {
+		cerr << "Error writing bitmap header/infoheader for file " << fn << endl;
+		return 0;
+	}
+	if (ncolors == 1) { // add color index table
+		char color_table[1024] = {0};
+
+		for (unsigned i = 0; i < 256; ++i) {
+			UNROLL_3X(color_table[(i<<2)+i_] = i;)
+		}
+		if (fwrite(color_table, 1024, 1, fp) != 1) {
+			cerr << "Error writing bitmap color table for file " << fn << endl;
+			return 0;
+		}
+	}
+	unsigned const size(num_bytes());
+	vector<unsigned char> data_swap_rb(data, data+size);
+	maybe_swap_rb(&data_swap_rb.front());
+
+	if (fwrite(&data_swap_rb.front(), 1, size, fp) != size) {
+		cerr << "Error writing bitmap data for file " << fn << endl;
 	}
 	fclose(fp);
 	return 1;
@@ -528,8 +558,7 @@ int texture_t::write_to_png(string const &fn) const {
 		}
 		bit_depth = 8;
 	}
-	int const compression(PNG_COMPRESSION_TYPE_BASE); // FIXME
-	png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_INTERLACE_NONE, compression, PNG_FILTER_TYPE_BASE);
+	png_set_IHDR(png_ptr, info_ptr, width, height, bit_depth, color_type, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 	png_write_info(png_ptr, info_ptr);
 
 	// Write image data
