@@ -94,10 +94,133 @@ unsigned const TEX_EDGE_MODE = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
 float scale_mh_texture_val(float val);
 
 
-struct terrain_hmap_manager_t {
+class tex_mod_map_manager_t {
+
+public:
+	typedef unsigned short tex_ix_t;
+	typedef unsigned short hmap_val_t;
+	unsigned max_tex_ix() const {return (1 << (sizeof(tex_ix_t) << 3));} // use a constant?
+
+	struct tex_xy_t {
+		tex_ix_t x, y;
+
+		tex_xy_t() {x = y = 0;}
+		tex_xy_t(tex_ix_t x_, tex_ix_t y_) {x = x; y = y;}
+		bool operator==(tex_xy_t const &t) const {return (x == t.x && y == t.y);}
+		bool operator< (tex_xy_t const &t) const {return ((x == t.x) ? (y < t.y) : (x < t.x));}
+	};
+
+	struct mod_map_val_t {
+		hmap_val_t val;
+		mod_map_val_t(hmap_val_t v=0) : val(v) {} // init to zero
+	};
+
+	struct mod_elem_t : public tex_xy_t {
+		hmap_val_t delta;
+		mod_elem_t() {}
+		mod_elem_t(pair<tex_xy_t, mod_map_val_t> const &v) : tex_xy_t(v.first), delta(v.second.val) {}
+	};
+
+	struct tex_mod_map_t : public map<tex_xy_t, mod_map_val_t> { // for uniquing/combining modifications to the same xy point
+		// Note: this isn't entirely correct due to the clamping in the height texture update
+		void add(mod_elem_t const &elem) {operator[](elem).val += elem.delta;}
+	};
+
+	typedef vector<mod_elem_t> tex_mod_vect_t;
+
+protected:
+	tex_mod_map_t mod_map;
+
+public:
+	void add_mod(mod_elem_t const &elem) {mod_map.add(elem);}
+
+	void add_mod(tex_mod_vect_t const &mod) { // vector (could use a template function)
+		for (tex_mod_vect_t::const_iterator i = mod.begin(); i != mod.end(); ++i) {add_mod(*i);}
+	}
+	void add_mod(tex_mod_map_t const &mod) { // map (could use a template function)
+		for (tex_mod_map_t::const_iterator i = mod.begin(); i != mod.end(); ++i) {add_mod(mod_elem_t(*i));}
+	}
+	bool read_mod(string const &fn) {
+		//assert(mod_map.empty()); // ???
+		mod_map.clear(); // allow merging ???
+		FILE *fp(fopen(fn.c_str(), "rb"));
+
+		if (fp == NULL) {
+			cerr << "Error opening terrain height mod map " << fn << " for read" << endl;
+			return 0;
+		}
+		unsigned sz(0);
+		unsigned const sz_read(fread(&sz, sizeof(unsigned), 1, fp));
+		assert(sz_read == 1); // add error checking?
+
+		for (unsigned i = 0; i < sz; ++i) {
+			mod_elem_t elem;
+			unsigned const elem_read(fread(&elem, sizeof(mod_elem_t), 1, fp)); // use a larger block?
+			assert(elem_read == 1); // add error checking?
+			mod_map.add(elem);
+		}
+		fclose(fp);
+		return 1;
+	}
+	bool write_mod(string const &fn) const {
+		FILE *fp(fopen(fn.c_str(), "wb"));
+
+		if (fp == NULL) {
+			cerr << "Error opening terrain height mod map " << fn << " for write" << endl;
+			return 0;
+		}
+		unsigned const sz(mod_map.size());
+		unsigned const sz_write(fwrite(&sz, sizeof(unsigned), 1, fp));
+		assert(sz_write == 1); // add error checking?
+
+		for (tex_mod_map_t::const_iterator i = mod_map.begin(); i != mod_map.end(); ++i) {
+			mod_elem_t const elem(*i); // could use *i directly?
+			unsigned const elem_write(fwrite(&elem, sizeof(mod_elem_t), 1, fp)); // use a larger block?
+			assert(elem_write == 1); // add error checking?
+		}
+		fclose(fp);
+		return 1;
+	}
+};
+
+
+class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 
 	texture_t texture;
 
+	bool clamp_xy(int &x, int &y) const {
+		assert(texture.width > 0 && texture.height > 0);
+		x = round_fp(mesh_scale*x) + texture.width /2; // scale and offset (0,0) to texture center
+		y = round_fp(mesh_scale*y) + texture.height/2;
+
+		switch (TEX_EDGE_MODE) {
+		case 0: // clamp
+			x = max(0, min(texture.width -1, x));
+			y = max(0, min(texture.height-1, y));
+			break;
+		case 1: // cliff/underwater
+			if (x < 0 || y < 0 || x >= texture.width || y >= texture.height) {return 0;} // off the texture
+			break;
+		case 2: // mirror
+			{
+				int const xmod(abs(x)%texture.width), ymod(abs(y)%texture.height), xdiv(x/texture.width), ydiv(y/texture.height);
+				x = ((xdiv & 1) ? (texture.width  - xmod - 1) : xmod);
+				y = ((ydiv & 1) ? (texture.height - ymod - 1) : ymod);
+			}
+			break;
+		}
+		return 1;
+	}
+	bool clamp_elem(mod_elem_t &elem) {
+		assert((unsigned)max(texture.width, texture.height) <= max_tex_ix());
+		int x(elem.x), y(elem.y);
+		if (!clamp_xy(x, y)) return 0;
+		assert(x >= 0 && y >= 0 && x < texture.width && y < texture.height);
+		elem.x = x; elem.y = y;
+		return 1;
+	}
+
+public:
 	void load(char const *const fn, bool invert_y=0) {
 		assert(fn != NULL);
 		cout << "Loading terrain heightmap file " << fn << endl;
@@ -112,27 +235,7 @@ struct terrain_hmap_manager_t {
 	}
 	float get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
 		assert(enabled());
-		x = round_fp(mesh_scale*x) + texture.width /2; // scale and offset (0,0) to texture center
-		y = round_fp(mesh_scale*y) + texture.height/2;
-
-		switch (TEX_EDGE_MODE) {
-		case 0: // clamp
-			x = max(0, min(texture.width -1, x));
-			y = max(0, min(texture.height-1, y));
-			break;
-		case 1: // cliff/underwater
-			if (x < 0 || y < 0 || x >= texture.width || y >= texture.height) { // off the texture
-				return scale_mh_texture_val(0.0); // use min value
-			}
-			break;
-		case 2: // mirror
-			{
-				int const xmod(abs(x)%texture.width), ymod(abs(y)%texture.height), xdiv(x/texture.width), ydiv(y/texture.height);
-				x = ((xdiv & 1) ? (texture.width  - xmod - 1) : xmod);
-				y = ((ydiv & 1) ? (texture.height - ymod - 1) : ymod);
-			}
-			break;
-		}
+		if (!clamp_xy(x, y)) {return scale_mh_texture_val(0.0);} // off the texture, use min value
 		return scale_mh_texture_val(texture.get_heightmap_value(x, y));
 	}
 	float interpolate_height(float x, float y) const { // bilinear interpolation
@@ -144,6 +247,25 @@ struct terrain_hmap_manager_t {
 	vector3d get_norm(int x, int y) const {
 		return vector3d(DY_VAL*(get_clamped_height(x, y) - get_clamped_height(x+1, y)),
 			            DX_VAL*(get_clamped_height(x, y) - get_clamped_height(x, y+1)), dxdy).get_norm();
+	}
+	bool modify_height(mod_elem_t &elem) { // elem may be modified
+		if (!clamp_elem(elem)) return 0;
+		texture.modify_heightmap_value(elem.x, elem.y, elem.delta, 1);
+		return 1;
+	}
+	bool modify_and_cache_height(mod_elem_t &elem) { // elem may be modified
+		if (!modify_height(elem)) return 0;
+		add_mod(elem);
+		return 1;
+	}
+	bool read_mod(string const &fn) {
+		tex_mod_map_manager_t::read_mod(fn);
+
+		for (tex_mod_map_t::const_iterator i = mod_map.begin(); i != mod_map.end(); ++i) { // apply the mod to the current texture
+			assert(i->first.x < texture.width && i->first.y < texture.height); // ensure the mod values fit within the texture
+			bool const ret(modify_height(mod_elem_t(*i))); // should *not* modify the temporary
+			assert(ret); // require success
+		}
 	}
 	bool enabled() const {return texture.is_allocated();}
 	~terrain_hmap_manager_t() {texture.free_data();}

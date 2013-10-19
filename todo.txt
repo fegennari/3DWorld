@@ -20,3 +20,4 @@ Instanced Spheres: berries, small decid tree leaves
 Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
+Modify and read/write modified TT heightmap data

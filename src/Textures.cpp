@@ -845,6 +845,25 @@ float texture_t::get_heightmap_value(unsigned x, unsigned y) const { // returns 
 }
 
 
+void texture_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta) {
+
+	assert(is_allocated());
+	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
+	assert(x < (unsigned)width && y < (unsigned)height);
+	unsigned const ix(width*y + x);
+
+	if (ncolors == 1) {
+		if (val_is_delta) {val += data[ix];}
+		data[ix] = max(0, min(255, val)); // clamp
+	}
+	else { // ncolors == 2
+		unsigned short *ptr((unsigned short *)(data[ix<<1]));
+		if (val_is_delta) {val += *ptr;}
+		*ptr = max(0, min(65535, val)); // clamp
+	}
+}
+
+
 void texture_t::load_from_gl() { // also set tid?
 
 	alloc();
