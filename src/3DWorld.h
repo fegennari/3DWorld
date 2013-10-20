@@ -1023,7 +1023,7 @@ public:
 	int width, height, ncolors, bump_tid, alpha_tid;
 	float anisotropy, mipmap_alpha_weight;
 
-private:
+protected:
 	unsigned char *data, *orig_data, *colored_data, *mm_data;
 	unsigned tid;
 	colorRGBA color;
@@ -1086,8 +1086,6 @@ public:
 	colorRGBA get_avg_color() const {return color;}
 	unsigned char *get_data() {assert(data); return data;}
 	unsigned char const *get_data() const {assert(data); return data;}
-	float get_heightmap_value(unsigned x, unsigned y) const;
-	void modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta);
 };
 
 

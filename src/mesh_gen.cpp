@@ -7,6 +7,7 @@
 #include "mesh.h"
 #include "textures_3dw.h"
 #include "sinf.h"
+#include "heightmap.h"
 
 
 int      const NUM_FREQ_COMP      = 9;
@@ -131,21 +132,21 @@ bool read_mesh_height_image(char const *fn, bool allow_resize=1) {
 		return 0;
 	}
 	cout << "Reading mesh heightmap " << mh_filename << endl;
-	texture_t texture(0, 7, MESH_X_SIZE, MESH_Y_SIZE, 0, 1, 0, fn, (invert_mh_image != 0));
-	texture.load(-1, allow_resize, 1, 1); // allow 2-byte grayscale (currently only works for PNGs)
-	if (allow_resize) {texture.resize(MESH_X_SIZE, MESH_Y_SIZE);}
+	heightmap_t hmap(0, 7, MESH_X_SIZE, MESH_Y_SIZE, fn, (invert_mh_image != 0));
+	hmap.load(-1, allow_resize, 1, 1); // allow 2-byte grayscale (currently only works for PNGs)
+	if (allow_resize) {hmap.resize(MESH_X_SIZE, MESH_Y_SIZE);}
 		
-	if (texture.width != MESH_X_SIZE || texture.height != MESH_Y_SIZE) { // may be due to texture padding to make a multipe of 4
+	if (hmap.width != MESH_X_SIZE || hmap.height != MESH_Y_SIZE) { // may be due to texture padding to make a multipe of 4
 		std::cerr << "Error reading mesh height image: Expected size " << MESH_X_SIZE << "x" << MESH_Y_SIZE
-				    << ", got size " << texture.width << "x" << texture.height << endl;
+				    << ", got size " << hmap.width << "x" << hmap.height << endl;
 		return 0;
 	}
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			mesh_height[i][j] = scale_mh_texture_val(texture.get_heightmap_value(j, i));
+			mesh_height[i][j] = scale_mh_texture_val(hmap.get_heightmap_value(j, i));
 		}
 	}
-	texture.free_data();
+	hmap.free_data();
 	return 1;
 }
 
