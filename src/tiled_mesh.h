@@ -84,7 +84,7 @@ class tile_t {
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep;
-	bool shadows_invalid, weights_invalid, in_queue, last_occluded;
+	bool shadows_invalid, weights_invalid, mesh_height_invalid, in_queue, last_occluded;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
@@ -133,6 +133,8 @@ public:
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()?
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
+	bool mesh_invalid() const {return mesh_height_invalid;}
+	void invalidate_mesh_height() {mesh_height_invalid = 1;}
 	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
 	void set_last_occluded(bool val) {last_occluded = val; last_occluded_frame = frame_counter;}
 	bool was_last_occluded  () const {return (last_occluded_frame == frame_counter &&  last_occluded);}
@@ -246,6 +248,7 @@ public:
 	void draw(shader_t &s, bool reflection_pass) const;
 	void draw_water(shader_t &s, float z);
 	bool check_player_collision() const;
+	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const;
 }; // tile_t
 
 
@@ -298,6 +301,7 @@ public:
 	void clear_vbos_tids(bool vclear, bool tclear);
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 	bool check_player_collision() const;
+	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &tile_xpos, int &tile_ypos) const;
 }; // tile_draw_t
 
 

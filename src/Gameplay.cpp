@@ -1403,6 +1403,9 @@ void switch_player_weapon(int val) {
 	if (game_mode) {
 		if (sstates != NULL) {sstates[CAMERA_ID].switch_weapon(val, 1);}
 	}
+	else if (world_mode == WMODE_INF_TERRAIN) {
+		change_inf_terrain_fire_mode();
+	}
 	else if (spraypaint_mode) {
 		change_spraypaint_color();
 	}

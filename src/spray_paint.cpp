@@ -36,6 +36,7 @@ void show_cur_spraypaint_mode() {
 
 void toggle_spraypaint_mode() {
 
+	if (world_mode != WMODE_GROUND) return;
 	spraypaint_mode ^= 1;
 	show_cur_spraypaint_mode();
 }
@@ -43,6 +44,7 @@ void toggle_spraypaint_mode() {
 
 void change_spraypaint_color() {
 
+	if (world_mode != WMODE_GROUND) return;
 	paint_color_ix = (paint_color_ix + 1) % NUM_PAINT_COLORS;
 	show_cur_spraypaint_mode();
 }
@@ -50,6 +52,7 @@ void change_spraypaint_color() {
 
 void draw_spraypaint_crosshair() {
 
+	if (world_mode != WMODE_GROUND) return;
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
 	enable_blend();

@@ -1423,6 +1423,9 @@ void fire_weapon() {
 
 	fire_key = 1;
 
+	if (world_mode == WMODE_INF_TERRAIN) {
+		inf_terrain_fire_weapon();
+	}
 	if (world_mode != WMODE_UNIVERSE) {
 		assert(sstates != NULL);
 		sstates[CAMERA_ID].gamemode_fire_weapon();

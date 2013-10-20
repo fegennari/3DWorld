@@ -114,12 +114,10 @@ bool mesh_intersector::line_intersect_surface() {
 
 bool mesh_intersector::line_intersect_surface_fast() { // DDA
 
-	if (!check_iter_clip(0))  return 0;
+	if (!check_iter_clip(0)) return 0;
 	int const x1(get_xpos(v1.x)), y1(get_ypos(v1.y)), x2(get_xpos(v2.x)), y2(get_ypos(v2.y));
-	if (x1 == x2 && y1 == y2) return 0; // near vertical line, what to do?
 	int const dx(x2 - x1), dy(y2 - y1), steps(max(abs(dx), abs(dy)));
-	assert(steps > 0);
-	double const dz(v2.z - v1.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/double(steps+1));
+	double const dz(v2.z - v1.z), xinc((steps == 0) ? 0.0 : dx/(double)steps), yinc((steps == 0) ? 0.0 : dy/(double)steps), zinc(dz/double(steps+1));
 	double x(x1), y(y1), z(v1.z - zinc); // -zinc is kind of strange but necessary for proper functioning
 	double const z_min(min(v1.z, v2.z)), z_max(max(v1.z, v2.z));
 
@@ -128,14 +126,10 @@ bool mesh_intersector::line_intersect_surface_fast() { // DDA
 
 		// check x+0.5, y+0.5 (could use mesh_height)
 		if (!point_outside_mesh(ix, iy) && z_min_matrix[iy][ix] > z && z >= z_min && z <= z_max) {
-			ret.xpos = ix;
-			ret.ypos = iy;
-			ret.zval = z;
+			ret.xpos = ix; ret.ypos = iy; ret.zval = z;
 			return 1;
 		}
-		x += xinc;
-		y += yinc;
-		z += zinc;
+		x += xinc; y += yinc; z += zinc;
 	}
 	return 0;
 }

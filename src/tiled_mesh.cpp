@@ -29,8 +29,11 @@ float const LITNING_TIME2   = 40.0;
 float const LITNING_DIST    = 1.2;
 
 
+unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
+point mesh_hit_pos(all_zeros);
+
 extern bool inf_terrain_scenery;
-extern unsigned grass_density, max_unique_trees;
+extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
 extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
@@ -112,8 +115,8 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_
 }
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
-	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1), weights_invalid(1), in_queue(0),
-	mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1), weights_invalid(1), mesh_height_invalid(0),
+	in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -1060,6 +1063,33 @@ bool tile_t::check_player_collision() const {
 }
 
 
+bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const {
+
+	if (!check_line_clip(v1, v2, get_mesh_bcube().d)) return 0;
+	// similar to mesh_intersector::line_intersect_surface_fast()
+	int const xp1(get_xpos(v1.x) - x1 - xoff + xoff2), yp1(get_ypos(v1.y) - y1 - yoff + yoff2);
+	int const xp2(get_xpos(v2.x) - x1 - xoff + xoff2), yp2(get_ypos(v2.y) - y1 - yoff + yoff2);
+	int const dx(xp2 - xp1), dy(yp2 - yp1), steps(max(abs(dx), abs(dy)));
+	double const dz(v2.z - v1.z), xinc((steps == 0) ? 0.0 : dx/(double)steps), yinc((steps == 0) ? 0.0 : dy/(double)steps), zinc(dz/double(steps+1));
+	double x(xp1), y(yp1), z(v1.z - zinc); // -zinc is kind of strange but necessary for proper functioning
+
+	for (int k = 0; k <= steps; ++k) {
+		int const ix((int)x), iy((int)y);
+
+		if (!point_outside_mesh(ix, iy) && zvals[iy*zvsize + ix] > z) {
+			float const cur_t((z - v1.z)/(v2.z - v1.z));
+
+			if (cur_t >= 0.0 && cur_t <= 1.0) {
+				xpos = ix; ypos = iy; t = cur_t;
+				return 1;
+			}
+		}
+		x += xinc; y += yinc; z += zinc;
+	}
+	return 0;
+}
+
+
 // *** lightning_strike_t ***
 
 point lightning_strike_t::get_pos() const {
@@ -1158,7 +1188,7 @@ void tile_draw_t::clear() {
 }
 
 
-float tile_draw_t::update() { // view-independent updates
+float tile_draw_t::update() { // view-independent updates; returns terrain zmin
 
 	//RESET_TIME;
 	terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0));
@@ -1175,7 +1205,7 @@ float tile_draw_t::update() { // view-independent updates
 	vector<tile_xy_pair> to_erase;
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
-		if (!i->second->update_range()) {
+		if (i->second->mesh_invalid() || !i->second->update_range()) {
 			to_erase.push_back(i->first);
 			i->second->clear();
 			delete i->second;
@@ -1814,6 +1844,31 @@ bool tile_draw_t::check_player_collision() const {
 }
 
 
+bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &tile_xpos, int &tile_ypos) const {
+
+	t = 2.0; // > 1.0
+	intersected_tile = NULL;
+
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		float tn(1.0);
+		int xpos(0), ypos(0);
+
+		// Note: could make this faster by passing tmin, tmax into line_intersect_mesh() here and using for early termination,
+		// but this code is plenty fast enough to do a single query each frame as it is
+		if (i->second->line_intersect_mesh(v1, v2, tn, xpos, ypos) && tn < t) {
+			t = tn; tile_xpos = xpos; tile_ypos = ypos;
+			intersected_tile = i->second; // constness?
+		}
+	}
+	if (intersected_tile != NULL) {
+		assert(t >= 0 && t <= 1.0);
+		//intersected_tile->invalidate_mesh_height();
+		return 1;
+	}
+	return 0;
+}
+
+
 tile_draw_t terrain_tile_draw;
 
 
@@ -1822,14 +1877,53 @@ float update_tiled_terrain() {return terrain_tile_draw.update();}
 void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
 
 void draw_tiled_terrain(bool reflection_pass) {
+
 	//RESET_TIME;
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
+
+	if (mesh_hit_pos != all_zeros && inf_terrain_fire_mode != 0 && !reflection_pass) { // use a bool instead?
+		RED.do_glColor();
+		glDisable(GL_LIGHTING);
+		draw_sphere_vbo(mesh_hit_pos, 0.1, N_SPHERE_DIV, 0);
+		glDisable(GL_LIGHTING);
+		//mesh_hit_pos = all_zeros;
+	}
 }
+
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
 void clear_tiled_terrain() {terrain_tile_draw.clear();}
 void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids(1,1);}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
+
+bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
+
+	float t(0.0);
+	tile_t *tile(NULL); // unused
+	int xpos(0), ypos(0); // unused
+	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return 0;
+	p_int = v1 + t*(v2 - v1);
+	return 1;
+}
+
+void change_inf_terrain_fire_mode() {
+
+	unsigned const NUM_MODES = 3;
+	inf_terrain_fire_mode = (inf_terrain_fire_mode + 1) % NUM_MODES;
+	string const modes[NUM_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height"};
+	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
+}
+
+void inf_terrain_fire_weapon() {
+
+	mesh_hit_pos = all_zeros;
+	if (inf_terrain_fire_mode == 0) return; // ignore
+	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
+	
+	if (line_intersect_tiled_mesh(v1, v2, mesh_hit_pos)) {
+		// do stuff
+	}
+}
 
 

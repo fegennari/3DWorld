@@ -41,6 +41,7 @@ upos_point_type cur_origin(all_zeros);
 
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode;
+extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height;
@@ -981,6 +982,9 @@ void display(void) {
 			show_blood_on_camera();
 			show_crosshair(do_zoom);
 		}
+		else if (world_mode == WMODE_INF_TERRAIN && inf_terrain_fire_mode) {
+			show_crosshair(do_zoom);
+		}
 		else if (spraypaint_mode) {
 			draw_spraypaint_crosshair();
 		}
@@ -1181,6 +1185,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	apply_camera_offsets(camera);
 	compute_brightness();
 	set_global_state();
+	if (b2down) fire_weapon();
 
 	if (init_x && mesh_type != 0) {
 		mesh_type = 0;
