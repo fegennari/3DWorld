@@ -38,7 +38,7 @@ void heightmap_t::modify_heightmap_value(unsigned x, unsigned y, int val, bool v
 		data[ix] = max(0, min(255, val)); // clamp
 	}
 	else { // ncolors == 2
-		unsigned short *ptr((unsigned short *)(data[ix<<1]));
+		unsigned short *ptr((unsigned short *)(data + (ix<<1)));
 		if (val_is_delta) {val += *ptr;}
 		*ptr = max(0, min(65535, val)); // clamp
 	}
@@ -177,6 +177,12 @@ bool terrain_hmap_manager_t::modify_and_cache_height(mod_elem_t &elem) { // elem
 	if (!modify_height(elem)) return 0;
 	add_mod(elem);
 	return 1;
+}
+
+tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::scale_delta(float delta) const {
+
+	int const scale_factor(1 << (hmap.bytes_per_channel() << 3));
+	return scale_factor*CLIP_TO_pm1(delta);
 }
 
 bool terrain_hmap_manager_t::read_mod(string const &fn) {

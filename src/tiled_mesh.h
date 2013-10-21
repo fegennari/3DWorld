@@ -301,7 +301,7 @@ public:
 	void clear_vbos_tids(bool vclear, bool tclear);
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 	bool check_player_collision() const;
-	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &tile_xpos, int &tile_ypos) const;
+	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;
 }; // tile_draw_t
 
 

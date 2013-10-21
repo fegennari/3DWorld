@@ -30,7 +30,6 @@ float const LITNING_DIST    = 1.2;
 
 
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
-point mesh_hit_pos(all_zeros);
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
@@ -677,7 +676,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				grass_block_t &gb(grass_blocks[bix]);
 					
 				if (gb.ix == 0) { // not yet set
-					gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+					gb.ix = (((x1 + x) + 1567*(y1 + y)) % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+					//gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
 					gb.zmin = mhmin;
 					gb.zmax = mhmax;
 				}
@@ -1065,22 +1065,23 @@ bool tile_t::check_player_collision() const {
 
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const {
 
-	if (!check_line_clip(v1, v2, get_mesh_bcube().d)) return 0;
+	point v1c(v1), v2c(v2); // clipped verts
+	if (!do_line_clip(v1c, v2c, get_mesh_bcube().d)) return 0;
 	// similar to mesh_intersector::line_intersect_surface_fast()
-	int const xp1(get_xpos(v1.x) - x1 - xoff + xoff2), yp1(get_ypos(v1.y) - y1 - yoff + yoff2);
-	int const xp2(get_xpos(v2.x) - x1 - xoff + xoff2), yp2(get_ypos(v2.y) - y1 - yoff + yoff2);
-	int const dx(xp2 - xp1), dy(yp2 - yp1), steps(max(abs(dx), abs(dy)));
-	double const dz(v2.z - v1.z), xinc((steps == 0) ? 0.0 : dx/(double)steps), yinc((steps == 0) ? 0.0 : dy/(double)steps), zinc(dz/double(steps+1));
-	double x(xp1), y(yp1), z(v1.z - zinc); // -zinc is kind of strange but necessary for proper functioning
+	int const xp1(get_xpos(v1c.x) - x1 - xoff + xoff2), yp1(get_ypos(v1c.y) - y1 - yoff + yoff2);
+	int const xp2(get_xpos(v2c.x) - x1 - xoff + xoff2), yp2(get_ypos(v2c.y) - y1 - yoff + yoff2);
+	int const dx(xp2 - xp1), dy(yp2 - yp1), steps(max(1, max(abs(dx), abs(dy))));
+	double const dz(v2c.z - v1c.z), xinc(dx/(double)steps), yinc(dy/(double)steps), zinc(dz/(double)steps);
+	double x(xp1), y(yp1), z(v1c.z - 0.1*fabs(zinc)); // z offset required to avoid problems with zval at bcube.z1
 
 	for (int k = 0; k <= steps; ++k) {
 		int const ix((int)x), iy((int)y);
 
 		if (!point_outside_mesh(ix, iy) && zvals[iy*zvsize + ix] > z) {
-			float const cur_t((z - v1.z)/(v2.z - v1.z));
+			float const cur_t((zvals[iy*zvsize + ix] - v1.z)/(v2.z - v1.z)); // t relative to original v1, v2
 
 			if (cur_t >= 0.0 && cur_t <= 1.0) {
-				xpos = ix; ypos = iy; t = cur_t;
+				xpos = x1 + ix; ypos = y1 + iy; t = cur_t;
 				return 1;
 			}
 		}
@@ -1844,25 +1845,24 @@ bool tile_draw_t::check_player_collision() const {
 }
 
 
-bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &tile_xpos, int &tile_ypos) const {
+bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const {
 
 	t = 2.0; // > 1.0
 	intersected_tile = NULL;
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		float tn(1.0);
-		int xpos(0), ypos(0);
+		int new_xpos(0), new_ypos(0);
 
 		// Note: could make this faster by passing tmin, tmax into line_intersect_mesh() here and using for early termination,
 		// but this code is plenty fast enough to do a single query each frame as it is
-		if (i->second->line_intersect_mesh(v1, v2, tn, xpos, ypos) && tn < t) {
-			t = tn; tile_xpos = xpos; tile_ypos = ypos;
+		if (i->second->line_intersect_mesh(v1, v2, tn, new_xpos, new_ypos) && tn < t) {
+			t = tn; xpos = new_xpos; ypos = new_ypos;
 			intersected_tile = i->second; // constness?
 		}
 	}
 	if (intersected_tile != NULL) {
-		assert(t >= 0 && t <= 1.0);
-		//intersected_tile->invalidate_mesh_height();
+		assert(t >= 0 && t <= 1.0); // okay even with fp error?
 		return 1;
 	}
 	return 0;
@@ -1882,12 +1882,19 @@ void draw_tiled_terrain(bool reflection_pass) {
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
 
-	if (mesh_hit_pos != all_zeros && inf_terrain_fire_mode != 0 && !reflection_pass) { // use a bool instead?
-		RED.do_glColor();
-		glDisable(GL_LIGHTING);
-		draw_sphere_vbo(mesh_hit_pos, 0.1, N_SPHERE_DIV, 0);
-		glDisable(GL_LIGHTING);
-		//mesh_hit_pos = all_zeros;
+	if (inf_terrain_fire_mode != 0 && !reflection_pass) { // use a bool instead?
+		point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
+		point hit_pos;
+	
+		if (line_intersect_tiled_mesh(v1, v2, hit_pos)) {
+			int const fog_enabled(glIsEnabled(GL_FOG));
+			if (fog_enabled) {glDisable(GL_FOG);}
+			RED.do_glColor();
+			glDisable(GL_LIGHTING);
+			draw_sphere_vbo(hit_pos, 0.1, N_SPHERE_DIV, 0);
+			glDisable(GL_LIGHTING);
+			if (fog_enabled) {glEnable(GL_FOG);}
+		}
 	}
 }
 
@@ -1917,13 +1924,22 @@ void change_inf_terrain_fire_mode() {
 
 void inf_terrain_fire_weapon() {
 
-	mesh_hit_pos = all_zeros;
-	if (inf_terrain_fire_mode == 0) return; // ignore
+	if (inf_terrain_fire_mode == 0 || !using_tiled_terrain_hmap_tex()) return; // ignore
+	//if (frame_counter & 1) return; // FIXME: limit firing rate to 1 in every 2 or 4 frames?
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
-	
-	if (line_intersect_tiled_mesh(v1, v2, mesh_hit_pos)) {
-		// do stuff
-	}
+	float t(0.0); // unused
+	tile_t *tile(NULL);
+	int xpos(0), ypos(0);
+	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
+
+	// FIXME: red dot too close to the screen?
+	// FIXME: handle tile borders
+	// FIXME: update too slow when trees are enabled
+	float const delta_mag = 0.1;
+	float const delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
+	tex_mod_map_manager_t::mod_elem_t elem(xpos, ypos, delta);
+	terrain_hmap_manager.modify_and_cache_height(elem);
+	tile->invalidate_mesh_height();
 }
 
 

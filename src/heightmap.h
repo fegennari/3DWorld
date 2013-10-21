@@ -9,6 +9,7 @@
 
 
 class heightmap_t : public texture_t {
+
 public:
 	heightmap_t() {}
 	heightmap_t(char t, char f, int w, int h, std::string const &n, bool inv) :
@@ -22,14 +23,14 @@ class tex_mod_map_manager_t {
 
 public:
 	typedef unsigned short tex_ix_t;
-	typedef unsigned short hmap_val_t;
+	typedef int hmap_val_t; // really needs to be from -2^16 to 2^16, so we need 17 bits
 	unsigned max_tex_ix() const {return (1 << (sizeof(tex_ix_t) << 3));} // use a constant?
 
 	struct tex_xy_t {
 		tex_ix_t x, y;
 
 		tex_xy_t() {x = y = 0;}
-		tex_xy_t(tex_ix_t x_, tex_ix_t y_) {x = x; y = y;}
+		tex_xy_t(tex_ix_t x_, tex_ix_t y_) : x(x_), y(y_) {}
 		bool operator==(tex_xy_t const &t) const {return (x == t.x && y == t.y);}
 		bool operator< (tex_xy_t const &t) const {return ((x == t.x) ? (y < t.y) : (x < t.x));}
 	};
@@ -42,6 +43,7 @@ public:
 	struct mod_elem_t : public tex_xy_t {
 		hmap_val_t delta;
 		mod_elem_t() {}
+		mod_elem_t(tex_ix_t x_, tex_ix_t y_, hmap_val_t d) : tex_xy_t(x_, y_), delta(d) {}
 		mod_elem_t(pair<tex_xy_t, mod_map_val_t> const &v) : tex_xy_t(v.first), delta(v.second.val) {}
 	};
 
@@ -81,6 +83,7 @@ public:
 	vector3d get_norm(int x, int y) const;
 	bool modify_height(mod_elem_t &elem);
 	bool modify_and_cache_height(mod_elem_t &elem);
+	hmap_val_t scale_delta(float delta) const;
 	bool read_mod(std::string const &fn);
 	bool enabled() const {return hmap.is_allocated();}
 	~terrain_hmap_manager_t() {hmap.free_data();}
