@@ -145,6 +145,13 @@ void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 	PRINT_TIME("Heightmap Load");
 }
 
+bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {
+
+	if (fn == NULL || enabled()) return 0;
+	load(fn, invert_y);
+	return 1;
+}
+
 float terrain_hmap_manager_t::get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
 
 	assert(enabled());

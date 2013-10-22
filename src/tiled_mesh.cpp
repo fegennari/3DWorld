@@ -30,6 +30,7 @@ float const LITNING_DIST    = 1.2;
 
 
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
+string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
@@ -102,6 +103,30 @@ float get_tiled_terrain_height_tex(float xval, float yval) {
 
 vector3d get_tiled_terrain_height_tex_norm(int x, int y) {
 	return terrain_hmap_manager.get_norm(x, y);
+}
+
+void read_default_hmap_modmap() {
+
+	if (!read_hmap_modmap_fn.empty()) {
+		if (terrain_hmap_manager.read_mod(read_hmap_modmap_fn)) {
+			cout << "Read heightmap modmap " << read_hmap_modmap_fn << endl;
+		}
+		else {
+			cerr << "Error reading heightmap modmap " << read_hmap_modmap_fn << endl;
+		}
+	}
+}
+
+void write_default_hmap_modmap() {
+
+	if (!write_hmap_modmap_fn.empty()) {
+		if (terrain_hmap_manager.write_mod(write_hmap_modmap_fn)) {
+			cout << "Wrote heightmap modmap " << write_hmap_modmap_fn << endl;
+		}
+		else {
+			cerr << "Error writing heightmap modmap " << write_hmap_modmap_fn << endl;
+		}
+	}
 }
 
 
@@ -1077,11 +1102,14 @@ bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int
 	for (int k = 0; k <= steps; ++k) {
 		int const ix((int)x), iy((int)y);
 
-		if (!point_outside_mesh(ix, iy) && zvals[iy*zvsize + ix] > z) {
-			float const cur_t((zvals[iy*zvsize + ix] - v1.z)/(v2.z - v1.z)); // t relative to original v1, v2
+		if (ix >= 0 && iy >= 0 && ix <= (int)size && iy <= (int)size && zvals[iy*zvsize + ix] > z) {
+			// Note: we use z instead of zvals here because zvals may be much too high if we enter this tile while the line is under the mesh
+			float const cur_t(((z - 0.5*zinc) - v1.z)/(v2.z - v1.z)); // t relative to original v1, v2
 
 			if (cur_t >= 0.0 && cur_t <= 1.0) {
-				xpos = x1 + ix; ypos = y1 + iy; t = cur_t;
+				xpos = x1 + ix; if (xpos < 0) {xpos += 4;} // FIXME: account for fp truncation sign dependence?
+				ypos = y1 + iy; if (ypos < 0) {ypos += 4;}
+				t = cur_t;
 				return 1;
 			}
 		}
@@ -1192,7 +1220,9 @@ void tile_draw_t::clear() {
 float tile_draw_t::update() { // view-independent updates; returns terrain zmin
 
 	//RESET_TIME;
-	terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0));
+	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {
+		read_default_hmap_modmap();
+	}
 	to_draw.clear();
 	float terrain_zmin(FAR_CLIP);
 	grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
@@ -1925,21 +1955,19 @@ void change_inf_terrain_fire_mode() {
 void inf_terrain_fire_weapon() {
 
 	if (inf_terrain_fire_mode == 0 || !using_tiled_terrain_hmap_tex()) return; // ignore
-	//if (frame_counter & 1) return; // FIXME: limit firing rate to 1 in every 2 or 4 frames?
+	if (frame_counter & 3) return; // limit firing rate to 1 in every 4 frames
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
 	float t(0.0); // unused
 	tile_t *tile(NULL);
 	int xpos(0), ypos(0);
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
 
-	// FIXME: red dot too close to the screen?
 	// FIXME: handle tile borders
 	// FIXME: update too slow when trees are enabled
 	float const delta_mag = 0.1;
 	float const delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
 	tex_mod_map_manager_t::mod_elem_t elem(xpos, ypos, delta);
-	terrain_hmap_manager.modify_and_cache_height(elem);
-	tile->invalidate_mesh_height();
+	if (terrain_hmap_manager.modify_and_cache_height(elem)) {tile->invalidate_mesh_height();}
 }
 
 

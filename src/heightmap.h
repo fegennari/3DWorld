@@ -75,9 +75,7 @@ class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 
 public:
 	void load(char const *const fn, bool invert_y=0);
-	void maybe_load(char const *const fn, bool invert_y=0) {
-		if (fn != NULL && !enabled()) {load(fn, invert_y);}
-	}
+	bool maybe_load(char const *const fn, bool invert_y=0);
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;
 	vector3d get_norm(int x, int y) const;
