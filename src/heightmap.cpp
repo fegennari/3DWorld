@@ -197,8 +197,7 @@ bool terrain_hmap_manager_t::read_mod(string const &fn) {
 
 	for (tex_mod_map_t::const_iterator i = mod_map.begin(); i != mod_map.end(); ++i) { // apply the mod to the current texture
 		assert(i->first.x < hmap.width && i->first.y < hmap.height); // ensure the mod values fit within the texture
-		bool const ret(modify_height(mod_elem_t(*i))); // should *not* modify the temporary
-		assert(ret); // require success
+		hmap.modify_heightmap_value(i->first.x, i->first.y, i->second.val, 1); // no clamping
 	}
 	return 1;
 }

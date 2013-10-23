@@ -27,4 +27,7 @@ scene_size 4.0 4.0 4.0
 mh_filename ../models/Puget_Sound/ps_height_1K.png 250.0 -5.7 0
 mh_filename_tiled_terrain ../models/Puget_Sound/ps_height_16K.bmp
 
+read_hmap_modmap_filename ../models/Puget_Sound/hmap.mod
+write_hmap_modmap_filename ../models/Puget_Sound/hmap.mod
+
 

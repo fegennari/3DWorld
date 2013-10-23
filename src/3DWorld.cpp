@@ -119,6 +119,7 @@ extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
 extern point hmv_pos;
 extern int coll_id[];
 extern float tree_lod_scales[4];
+extern string read_hmap_modmap_fn, write_hmap_modmap_fn;
 extern vector<bbox> team_starts;
 extern player_state *sstates;
 extern pt_line_drawer obj_pld;
@@ -1112,13 +1113,21 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'H': // save mesh state/modmap
-		if (world_mode != WMODE_UNIVERSE) save_state(state_file); else export_modmap("output.modmap");
+		if (world_mode == WMODE_UNIVERSE) {
+			export_modmap("output.modmap");
+		}
+		else if (world_mode == WMODE_GROUND) {
+			save_state(state_file);
+		}
+		else if (world_mode == WMODE_INF_TERRAIN) {
+			write_default_hmap_modmap();
+		}
 		break;
 	case 'J': // load mesh state
-		if (world_mode != WMODE_UNIVERSE) load_state(state_file);
+		if (world_mode == WMODE_GROUND) {load_state(state_file);}
 		break;
 	case 'I': // write mesh points
-		if (world_mode != WMODE_UNIVERSE) write_mesh(mesh_file);
+		if (world_mode == WMODE_GROUND) {write_mesh(mesh_file);}
 		break;
 
 	// screenshots
@@ -1719,6 +1728,12 @@ int load_config(string const &config_file) {
 		else if (str == "state_file") {
 			alloc_if_req(state_file, dstate_file);
 			if (!read_str(fp, state_file)) cfg_err("state_file command", error);
+		}
+		else if (str == "read_hmap_modmap_filename") {
+			if (!read_string(fp, read_hmap_modmap_fn)) cfg_err("read_hmap_modmap_filename command", error);
+		}
+		else if (str == "write_hmap_modmap_filename") {
+			if (!read_string(fp, write_hmap_modmap_fn)) cfg_err("write_hmap_modmap_filename command", error);
 		}
 		else if (str == "mesh_file") { // only the first parameter is required
 			float rmz(0.0);

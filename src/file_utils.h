@@ -30,6 +30,13 @@ inline bool read_bool (FILE *fp, bool     &val) {
 	return 1;
 }
 
+inline bool read_string(FILE *fp, string &str) {
+	char s[MAX_CHARS] = {0};
+	if (!read_str(fp, s)) return 0;
+	str = s;
+	return 1;
+}
+
 
 inline bool read_type_t(FILE *fp, int       &val) {return read_int   (fp, val);}
 inline bool read_type_t(FILE *fp, unsigned  &val) {return read_uint  (fp, val);}

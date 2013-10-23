@@ -42,10 +42,10 @@ void toggle_spraypaint_mode() {
 }
 
 
-void change_spraypaint_color() {
+void change_spraypaint_color(int val) {
 
 	if (world_mode != WMODE_GROUND) return;
-	paint_color_ix = (paint_color_ix + 1) % NUM_PAINT_COLORS;
+	paint_color_ix = (paint_color_ix + NUM_PAINT_COLORS + val) % NUM_PAINT_COLORS;
 	show_cur_spraypaint_mode();
 }
 

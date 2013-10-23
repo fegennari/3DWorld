@@ -111,9 +111,6 @@ void read_default_hmap_modmap() {
 		if (terrain_hmap_manager.read_mod(read_hmap_modmap_fn)) {
 			cout << "Read heightmap modmap " << read_hmap_modmap_fn << endl;
 		}
-		else {
-			cerr << "Error reading heightmap modmap " << read_hmap_modmap_fn << endl;
-		}
 	}
 }
 
@@ -122,9 +119,6 @@ void write_default_hmap_modmap() {
 	if (!write_hmap_modmap_fn.empty()) {
 		if (terrain_hmap_manager.write_mod(write_hmap_modmap_fn)) {
 			cout << "Wrote heightmap modmap " << write_hmap_modmap_fn << endl;
-		}
-		else {
-			cerr << "Error writing heightmap modmap " << write_hmap_modmap_fn << endl;
 		}
 	}
 }
@@ -1944,10 +1938,10 @@ bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
 	return 1;
 }
 
-void change_inf_terrain_fire_mode() {
+void change_inf_terrain_fire_mode(int val) {
 
 	unsigned const NUM_MODES = 3;
-	inf_terrain_fire_mode = (inf_terrain_fire_mode + 1) % NUM_MODES;
+	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_MODES + val) % NUM_MODES;
 	string const modes[NUM_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
@@ -1964,10 +1958,23 @@ void inf_terrain_fire_weapon() {
 
 	// FIXME: handle tile borders
 	// FIXME: update too slow when trees are enabled
-	float const delta_mag = 0.1;
-	float const delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
-	tex_mod_map_manager_t::mod_elem_t elem(xpos, ypos, delta);
-	if (terrain_hmap_manager.modify_and_cache_height(elem)) {tile->invalidate_mesh_height();}
+	int const mod_radius  = 0; // FIXME: user-specified
+	float const delta_mag = 0.1; // FIXME: user-specified
+	float const base_delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
+	bool modified(0);
+
+	for (int y = ypos - mod_radius; y <= ypos + mod_radius; ++y) {
+		for (int x = xpos - mod_radius; x <= xpos + mod_radius; ++x) {
+			float const dist(sqrt(float(y - ypos)*float(y - ypos) + float(x - xpos)*float(x - xpos)));
+			if (dist > mod_radius) continue; // round (instead of square)
+			float const delta(base_delta); // flat region
+			//float const delta(base_delta); // triangular/pyramid
+			//float const delta(base_delta); // spherical
+			tex_mod_map_manager_t::mod_elem_t elem(x, y, delta);
+			modified |= terrain_hmap_manager.modify_and_cache_height(elem);
+		}
+	}
+	if (modified) {tile->invalidate_mesh_height();}
 }
 
 

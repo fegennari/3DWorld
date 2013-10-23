@@ -211,6 +211,7 @@ float get_inf_terrain_fog_dist();
 bool using_tiled_terrain_hmap_tex();
 float get_tiled_terrain_height_tex(float xval, float yval);
 vector3d get_tiled_terrain_height_tex_norm(int x, int y);
+void write_default_hmap_modmap();
 float update_tiled_terrain();
 void pre_draw_tiled_terrain();
 void draw_tiled_terrain(bool reflection_pass);
@@ -222,7 +223,7 @@ void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(shader_t &s, float zval);
 bool check_player_tiled_terrain_collision();
 bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int);
-void change_inf_terrain_fire_mode();
+void change_inf_terrain_fire_mode(int val);
 void inf_terrain_fire_weapon();
 
 // function prototypes - precipitation
@@ -720,7 +721,7 @@ int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
 
 // function prototypes - spray paint
 void toggle_spraypaint_mode();
-void change_spraypaint_color();
+void change_spraypaint_color(int val);
 void draw_spraypaint_crosshair();
 void spray_paint(bool mode);
 
