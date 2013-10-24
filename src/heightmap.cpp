@@ -124,16 +124,6 @@ bool terrain_hmap_manager_t::clamp_xy(int &x, int &y) const {
 	return 1;
 }
 
-bool terrain_hmap_manager_t::clamp_elem(mod_elem_t &elem) {
-
-	assert((unsigned)max(hmap.width, hmap.height) <= max_tex_ix());
-	int x(elem.x), y(elem.y);
-	if (!clamp_xy(x, y)) return 0;
-	assert(x >= 0 && y >= 0 && x < hmap.width && y < hmap.height);
-	elem.x = x; elem.y = y;
-	return 1;
-}
-
 void terrain_hmap_manager_t::load(char const *const fn, bool invert_y) {
 
 	assert(fn != NULL);
@@ -174,7 +164,7 @@ vector3d terrain_hmap_manager_t::get_norm(int x, int y) const {
 
 bool terrain_hmap_manager_t::modify_height(mod_elem_t &elem) { // elem may be modified
 
-	if (!clamp_elem(elem)) return 0;
+	assert((unsigned)max(hmap.width, hmap.height) <= max_tex_ix());
 	hmap.modify_heightmap_value(elem.x, elem.y, elem.delta, 1);
 	return 1;
 }

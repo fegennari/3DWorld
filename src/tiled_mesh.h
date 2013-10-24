@@ -161,6 +161,7 @@ public:
 		float const xv1(get_xval(wx1 + xoff - xoff2)), yv1(get_yval(wy1 + yoff - yoff2));
 		return cube_t(xv1, xv1+(wx2-wx1)*DX_VAL, yv1, yv1+(wy2-wy1)*DY_VAL, water_plane_z, water_plane_z); // zero area in z
 	}
+	void fill_adj_mask(bool mask[3][3], int x, int y) const;
 	float get_min_dist_to_pt(point const &pt, bool xy_only=0) const;
 	float get_max_xy_dist_to_pt(point const &pt) const;
 	bool contains_camera() const {return get_bcube().contains_pt_xy(get_camera_pos());}

@@ -36,7 +36,7 @@ extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
 extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, atmosphere;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks, atmosphere;
 extern float ocean_wave_height, sm_tree_density, tree_scale;
 extern point sun_pos, moon_pos, surface_pos;
 extern char *mh_filename_tt;
@@ -166,6 +166,16 @@ void tile_t::update_terrain_params() {
 			param.dirt   = CLIP_TO_01(5.0f*(eval_mesh_sin_terms(dirt_mult*xv, dirt_mult*yv) + 1.0f));
 		}
 	}
+}
+
+
+// used to determine what adjacent tiles modifying this location in global space can affect
+void tile_t::fill_adj_mask(bool mask[3][3], int x, int y) const { // mask is {y-1, y, y+1} x {x-1, x, x+1}
+
+	if (x >= x1 && x <= x2 && y >= y1 && y <= y2) {mask[1][1] |= 1;} // ourself
+	if (x <= x1) {mask[1][0] |= 1; mask[0][0] |= (y <= y1); mask[2][0] |= (y >= y2);} // left  + top/bottom left  corners
+	if (x >= x2) {mask[1][2] |= 1; mask[0][2] |= (y <= y1); mask[2][2] |= (y >= y2);} // right + top/bottom right corners
+	mask[0][1] |= (y <= y1); mask[2][1] |= (y >= y2); // top/bottom edges
 }
 
 
@@ -1101,9 +1111,9 @@ bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int
 			float const cur_t(((z - 0.5*zinc) - v1.z)/(v2.z - v1.z)); // t relative to original v1, v2
 
 			if (cur_t >= 0.0 && cur_t <= 1.0) {
-				xpos = x1 + ix; if (xpos < 0) {xpos += 4;} // FIXME: account for fp truncation sign dependence?
-				ypos = y1 + iy; if (ypos < 0) {ypos += 4;}
-				t = cur_t;
+				xpos = x1 + ix;
+				ypos = y1 + iy;
+				t    = cur_t;
 				return 1;
 			}
 		}
@@ -1938,6 +1948,7 @@ bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
 	return 1;
 }
 
+
 void change_inf_terrain_fire_mode(int val) {
 
 	unsigned const NUM_MODES = 3;
@@ -1946,35 +1957,57 @@ void change_inf_terrain_fire_mode(int val) {
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
+
 void inf_terrain_fire_weapon() {
 
 	if (inf_terrain_fire_mode == 0 || !using_tiled_terrain_hmap_tex()) return; // ignore
-	if (frame_counter & 3) return; // limit firing rate to 1 in every 4 frames
+	static float last_tfticks(0.0);
+	if ((tfticks - last_tfticks) < 0.1*TICKS_PER_SECOND) return; // limit firing rate 100ms
+	last_tfticks = tfticks;
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
 	float t(0.0); // unused
 	tile_t *tile(NULL);
 	int xpos(0), ypos(0);
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
 
-	// FIXME: handle tile borders
 	// FIXME: update too slow when trees are enabled
-	int const mod_radius  = 0; // FIXME: user-specified
-	float const delta_mag = 0.1; // FIXME: user-specified
+	int const mod_shape   = 3; // 0 = constant/flat, 1 = linear, 2 = quadratic, 3 = cosine
+	int const mod_radius  = 32; // FIXME: user-specified
+	float const delta_mag = 0.02; // FIXME: user-specified
+	assert(mod_radius <= min(MESH_X_SIZE, MESH_Y_SIZE)); // only allow for a single adjacent tile
 	float const base_delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
-	bool modified(0);
+	bool modified[3][3] = {0};
+	tile_xy_pair const tp(tile->get_tile_xy_pair());
 
 	for (int y = ypos - mod_radius; y <= ypos + mod_radius; ++y) {
 		for (int x = xpos - mod_radius; x <= xpos + mod_radius; ++x) {
-			float const dist(sqrt(float(y - ypos)*float(y - ypos) + float(x - xpos)*float(x - xpos)));
-			if (dist > mod_radius) continue; // round (instead of square)
-			float const delta(base_delta); // flat region
-			//float const delta(base_delta); // triangular/pyramid
-			//float const delta(base_delta); // spherical
-			tex_mod_map_manager_t::mod_elem_t elem(x, y, delta);
-			modified |= terrain_hmap_manager.modify_and_cache_height(elem);
+			float const dist(sqrt(float(y - ypos)*float(y - ypos) + float(x - xpos)*float(x - xpos))), dval(dist/max(1, mod_radius));
+			if (dval > 1.0) continue; // round (instead of square)
+			float delta(base_delta); // constant/flat
+
+			if (mod_shape == 1) { // linear
+				delta *= 1.0 - dval;
+			}
+			else if (mod_shape == 2) { // quadratic
+				delta *= 1.0 - dval*dval;
+			}
+			else if (mod_shape == 3) { // cosine
+				delta *= cos(0.5*PI*dval);
+			}
+			int clamped_x(x), clamped_y(y);
+			if (!terrain_hmap_manager.clamp_xy(clamped_x, clamped_y)) continue;
+			assert(clamped_x >= 0 && clamped_y >= 0);
+			tex_mod_map_manager_t::mod_elem_t elem(clamped_x, clamped_y, delta);
+			if (terrain_hmap_manager.modify_and_cache_height(elem)) {tile->fill_adj_mask(modified, x, y);}
 		}
 	}
-	if (modified) {tile->invalidate_mesh_height();}
+	for (int dy = -1; dy <= 1; ++dy) {
+		for (int dx = -1; dx <= 1; ++dx) {
+			if (!modified[dy+1][dx+1]) continue;
+			tile_t *adj_tile(get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy)));
+			if (adj_tile) {adj_tile->invalidate_mesh_height();}
+		}
+	}
 }
 
 

@@ -70,12 +70,10 @@ class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 
 	heightmap_t hmap;
 
-	bool clamp_xy(int &x, int &y) const;
-	bool clamp_elem(mod_elem_t &elem);
-
 public:
 	void load(char const *const fn, bool invert_y=0);
 	bool maybe_load(char const *const fn, bool invert_y=0);
+	bool clamp_xy(int &x, int &y) const;
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;
 	vector3d get_norm(int x, int y) const;
