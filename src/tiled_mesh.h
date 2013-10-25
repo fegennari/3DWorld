@@ -32,9 +32,6 @@ extern int xoff, yoff, frame_counter;
 extern float grass_length, water_plane_z;
 
 
-typedef unsigned short index_type_t;
-//typedef unsigned index_type_t;
-
 
 class lightning_strike_t {
 
@@ -81,7 +78,7 @@ class tile_t {
 	};
 
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
-	unsigned weight_tid, height_tid, shadow_normal_tid, vbo, ivbo[NUM_LODS];
+	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep;
 	bool shadows_invalid, weights_invalid, mesh_height_invalid, in_queue, last_occluded;
@@ -174,7 +171,6 @@ public:
 	void clear();
 	void clear_shadows();
 	void clear_tids();
-	void init_vbo_ids();
 	void clear_vbo_tid(bool vclear, bool tclear);
 	void create_xy_arrays(mesh_xy_grid_cache_t &height_gen, unsigned xy_size, float xy_scale);
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
@@ -205,7 +201,7 @@ public:
 	void check_shadow_map_and_normal_texture();
 
 	// *** mesh creation ***
-	void create_data(vector<vert_type_t> &data, vector<index_type_t> indices[NUM_LODS]);
+	void create_data(vector<vert_type_t> &data);
 	void ensure_height_tid();
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 	void create_texture(mesh_xy_grid_cache_t &height_gen);
@@ -244,9 +240,9 @@ public:
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 
 	// *** rendering ***
-	void ensure_vbo(vector<vert_type_t> &data, vector<index_type_t> indices[NUM_LODS]);
+	void ensure_vbo(vector<vert_type_t> &data);
 	void ensure_weights(mesh_xy_grid_cache_t &height_gen);
-	void draw(shader_t &s, bool reflection_pass) const;
+	void draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pass) const;
 	void draw_water(shader_t &s, float z);
 	bool check_player_collision() const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const;
@@ -260,6 +256,7 @@ class tile_draw_t {
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
 	tile_map tiles;
+	unsigned ivbo[NUM_LODS];
 	draw_vect_t to_draw;
 	vector<point> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
@@ -272,9 +269,7 @@ class tile_draw_t {
 	};
 
 public:
-	tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
-		assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
-	}
+	tile_draw_t();
 	//~tile_draw_t() {clear();}
 	void clear();
 	float update();

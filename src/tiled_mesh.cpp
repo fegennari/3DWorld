@@ -64,6 +64,7 @@ bool is_grass_enabled     () {return ((display_mode & 0x02) && GRASS_THRESH > 0.
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
+unsigned get_tile_size() {return MESH_X_SIZE;}
 
 bool enable_instanced_pine_trees() {
 	float const ntrees_mult(vegetation*sm_tree_density*tree_scale*tree_scale);
@@ -127,10 +128,7 @@ void write_default_hmap_modmap() {
 // *** tile_t ***
 
 tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(0), stride(0),
-	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager)
-{
-	init_vbo_ids();
-}
+	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1), weights_invalid(1), mesh_height_invalid(0),
@@ -146,7 +144,6 @@ tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_ti
 	radius = calc_radius();
 	mzmin  = mzmax = ptzmax = dtzmax = get_camera_pos().z;
 	base_tsize = NORM_TEXELS;
-	init_vbo_ids();
 }
 
 
@@ -212,10 +209,6 @@ unsigned tile_t::get_gpu_mem() const {
 	if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	if (height_tid > 0) mem += 2*num_texels; // 2 bytes per texel (L16)
 	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (L8)
-
-	for (unsigned i = 0; i < NUM_LODS; ++i) {
-		if (ivbo[i] > 0) mem += (size>>i)*(size>>i)*sizeof(index_type_t);
-	}
 	return mem;
 }
 
@@ -249,18 +242,10 @@ void tile_t::clear_tids() {
 	gen_tsize = 0;
 }
 
-void tile_t::init_vbo_ids() {
-
-	vbo = 0;
-	for (unsigned i = 0; i < NUM_LODS; ++i) {ivbo[i] = 0;}
-}
-
 void tile_t::clear_vbo_tid(bool vclear, bool tclear) {
 
 	if (vclear) {
-		delete_vbo(vbo);
-		for (unsigned i = 0; i < NUM_LODS; ++i) {delete_vbo(ivbo[i]);}
-		init_vbo_ids();
+		delete_and_zero_vbo(vbo);
 		clear_shadows();
 		pine_trees.clear_vbos();
 		decid_trees.clear_context(); // only necessary if not using instancing
@@ -548,34 +533,17 @@ void tile_t::check_shadow_map_and_normal_texture() {
 
 // *** mesh creation ***
 
-void tile_t::create_data(vector<vert_type_t> &data, vector<index_type_t> indices[NUM_LODS]) {
+void tile_t::create_data(vector<vert_type_t> &data) {
 
 	//RESET_TIME;
 	assert(zvals.size() == zvsize*zvsize);
 	calc_start_step(mesh_off.dxoff, mesh_off.dyoff);
 	data.resize(stride*stride);
-	assert(data.size() < (1ULL << (sizeof(index_type_t) << 3)));
 
 	for (unsigned y = 0; y <= size; ++y) {
 		for (unsigned x = 0; x <= size; ++x) {
 			data[y*stride + x].assign((xstart + x*xstep), (ystart + y*ystep), zvals[y*zvsize + x]);
 		}
-	}
-	for (unsigned i = 0, step = 1; i < NUM_LODS; ++i, step <<= 1) {
-		unsigned const size_i_ceil((size + step - 1)/step);
-		indices[i].resize(4*size_i_ceil*size_i_ceil);
-		unsigned iix(0);
-
-		for (unsigned y = 0, ny = 0; ny < size_i_ceil; y += step, ++ny) {
-			for (unsigned x = 0, nx = 0; nx < size_i_ceil; x += step, ++nx) {
-				unsigned const xn(min(x+step, size)), yn(min(y+step, size));
-				indices[i][iix++] = y *stride + x;
-				indices[i][iix++] = yn*stride + x;
-				indices[i][iix++] = yn*stride + xn;
-				indices[i][iix++] = y *stride + xn;
-			}
-		}
-		assert(iix == indices[i].size());
 	}
 	//PRINT_TIME("Create Data");
 }
@@ -730,7 +698,7 @@ bool tile_t::update_range() { // if returns 0, tile will be deleted
 
 	if (pine_trees_enabled()) {update_pine_tree_state(0);} // can free pine tree vbos
 	float const dist(get_rel_dist_to_camera());
-	if (dist > CLEAR_DIST_TILES) clear_vbo_tid(1,1);
+	if (dist > CLEAR_DIST_TILES) {clear_vbo_tid(1,1);}
 	return (dist < DELETE_DIST_TILES);
 }
 
@@ -932,18 +900,12 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 
 // *** rendering ***
 
-void tile_t::ensure_vbo(vector<vert_type_t> &data, vector<index_type_t> indices[NUM_LODS]) {
+void tile_t::ensure_vbo(vector<vert_type_t> &data) {
 
 	if (vbo) return; // already allocated
-	create_data(data, indices);
+	create_data(data);
 	if (any_trees_enabled()) {apply_tree_ao_shadows();}
 	create_vbo_and_upload(vbo, data, 0, 1);
-
-	for (unsigned i = 0; i < NUM_LODS; ++i) {
-		assert(ivbo[i] == 0);
-		assert(!indices[i].empty());
-		create_vbo_and_upload(ivbo[i], indices[i], 1, 1);
-	}
 	assert(vbo);
 }
 
@@ -969,7 +931,7 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
-void tile_t::draw(shader_t &s, bool reflection_pass) const {
+void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pass) const {
 
 	assert(vbo);
 	assert(size > 0);
@@ -985,15 +947,14 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 	}
 	bind_texture_tu(shadow_normal_tid, 7);
 	unsigned const lod_level(get_lod_level(reflection_pass));
-	assert(vbo > 0 && ivbo[lod_level] > 0);
+	assert(vbo > 0 && ivbo[lod_level] != 0);
 	bind_vbo(vbo, 0);
 	bind_vbo(ivbo[lod_level], 1);
 	unsigned const step(1 << lod_level), isz_ceil((size + step - 1)/step), ptr_stride(sizeof(vert_type_t));
-	int const index_type((sizeof(index_type_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
 	glVertexPointer(3, GL_FLOAT, ptr_stride, 0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
-	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz_ceil*isz_ceil, index_type, 0);
+	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz_ceil*isz_ceil, GL_UNSIGNED_INT, 0);
 	bind_vbo(0, 1); // unbind index buffer
-	vector<index_type_t> crack_ixs;
+	vector<unsigned> crack_ixs;
 
 	// fill in the cracks
 	for (unsigned dim = 0; dim < 2; ++dim) { // x,y
@@ -1023,7 +984,7 @@ void tile_t::draw(shader_t &s, bool reflection_pass) const {
 			}
 		} // for dir
 	} // for dim
-	if (!crack_ixs.empty()) {glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), index_type, &crack_ixs.front());}
+	if (!crack_ixs.empty()) {glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_INT, &crack_ixs.front());}
 	bind_vbo(0, 0); // unbind vertex buffer
 	glPopMatrix();
 
@@ -1208,7 +1169,16 @@ void lightning_strike_t::end_draw() const {glDisable(LIGHTNING_LIGHT);} // even 
 // *** tile_draw_t ***
 
 
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
+
+	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
+	for (unsigned i = 0; i < NUM_LODS; ++i) {ivbo[i] = 0;}
+}
+
+
 void tile_draw_t::clear() {
+
+	clear_vbos_tids(1, 1); // needed to clear ivbo
 
 	//cout << "clear with " << tiles.size() << " tiles" << endl;
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -1253,7 +1223,7 @@ float tile_draw_t::update() { // view-independent updates; returns terrain zmin
 		for (int x = x1; x <= x2; ++x ) {
 			tile_xy_pair const txy(x, y);
 			if (tiles.find(txy) != tiles.end()) continue; // already exists
-			tile_t tile(MESH_X_SIZE, x, y);
+			tile_t tile(get_tile_size(), x, y);
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
 			new_tile->create_zvals(height_gen);
@@ -1428,9 +1398,30 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
 	vector<tile_t::vert_type_t> data;
-	vector<index_type_t> indices[NUM_LODS];
 	vector<tile_t *> to_update, to_gen_trees;
-		
+	
+	if (ivbo[0] == 0) { // rebuild index vbo
+		unsigned const size(get_tile_size()), stride(size+1);
+
+		for (unsigned i = 0, step = 1; i < NUM_LODS; ++i, step <<= 1) {
+			unsigned const size_i_ceil((size + step - 1)/step);
+			vector<unsigned> indices(4*size_i_ceil*size_i_ceil);
+			unsigned iix(0);
+
+			for (unsigned y = 0, ny = 0; ny < size_i_ceil; y += step, ++ny) {
+				for (unsigned x = 0, nx = 0; nx < size_i_ceil; x += step, ++nx) {
+					unsigned const xn(min(x+step, size)), yn(min(y+step, size));
+					indices[iix++] = y *stride + x;
+					indices[iix++] = yn*stride + x;
+					indices[iix++] = yn*stride + xn;
+					indices[iix++] = y *stride + xn;
+				}
+			}
+			assert(iix == indices.size());
+			assert(ivbo[i] == 0);
+			create_vbo_and_upload(ivbo[i], indices, 1, 1);
+		}
+	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second);
 		assert(tile);
@@ -1455,7 +1446,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		//PRINT_TIME("Gen Trees2");
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
-		(*i)->ensure_vbo(data, indices);
+		(*i)->ensure_vbo(data);
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		(*i)->ensure_weights(height_gen);
@@ -1488,6 +1479,12 @@ void tile_draw_t::draw(bool reflection_pass) {
 	unsigned num_trees(0);
 	unsigned long long mem(0), tree_mem(0);
 	to_draw.clear();
+
+	if (DEBUG_TILES) {
+		for (unsigned i = 0; i < NUM_LODS; ++i) {
+			if (ivbo[i] > 0) {mem += 4*(get_tile_size()>>i)*(get_tile_size()>>i)*sizeof(unsigned);} // approximate
+		}
+	}
 
 	// determine potential occluders
 	float const OCCLUDER_DIST = 0.2;
@@ -1563,7 +1560,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
-		if (display_mode & 0x01) {to_draw[i].second->draw(s, reflection_pass);}
+		if (display_mode & 0x01) {to_draw[i].second->draw(s, ivbo, reflection_pass);}
 	}
 	disable_blend();
 	disable_multitex(2, 1); // disable texgen on tu_id=2
@@ -1856,6 +1853,7 @@ void tile_draw_t::clear_vbos_tids(bool vclear, bool tclear) {
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		i->second->clear_vbo_tid(vclear, tclear);
 	}
+	for (unsigned i = 0; i < NUM_LODS; ++i) {delete_and_zero_vbo(ivbo[i]);}
 }
 
 
@@ -1974,7 +1972,7 @@ void inf_terrain_fire_weapon() {
 	int const mod_shape   = 3; // 0 = constant/flat, 1 = linear, 2 = quadratic, 3 = cosine
 	int const mod_radius  = 32; // FIXME: user-specified
 	float const delta_mag = 0.02; // FIXME: user-specified
-	assert(mod_radius <= min(MESH_X_SIZE, MESH_Y_SIZE)); // only allow for a single adjacent tile
+	assert(mod_radius <= get_tile_size()); // only allow for a single adjacent tile
 	float const base_delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
 	bool modified[3][3] = {0};
 	tile_xy_pair const tp(tile->get_tile_xy_pair());

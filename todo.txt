@@ -21,4 +21,6 @@ Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
 
-Modify TT heightmap data delta and radius
+Modify TT heightmap data delta, radius, and shape UI
+TT hmap mod file size/memory - store brush instead?
+TT triplanar detail texture
