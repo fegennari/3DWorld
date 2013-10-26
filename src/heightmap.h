@@ -52,17 +52,34 @@ public:
 		void add(mod_elem_t const &elem) {operator[](elem).val += elem.delta;}
 	};
 
+	struct hmap_brush_t {
+		int x, y;
+		unsigned radius;
+		hmap_val_t delta;
+		short shape; // 0 = constant/flat square, 1 = constant/flat round, 2 = linear, 3 = quadratic, 4 = cosine
+
+		hmap_brush_t() : x(0), y(0), radius(0), delta(0), shape(0) {}
+		hmap_brush_t(int x_, int y_, hmap_val_t d, unsigned r, short s) : x(x_), y(y_), delta(d), radius(r), shape(s) {assert(shape <= 4);}
+		void apply(tex_mod_map_manager_t *tmmm) const;
+	};
+
 	typedef vector<mod_elem_t> tex_mod_vect_t;
+	typedef vector<hmap_brush_t> brush_vect_t;
 
 protected:
 	tex_mod_map_t mod_map;
+	brush_vect_t brush_vect;
 
 public:
 	void add_mod(mod_elem_t const &elem) {mod_map.add(elem);}
 	void add_mod(tex_mod_vect_t const &mod);
 	void add_mod(tex_mod_map_t const &mod);
+	void apply_and_cache_brush(hmap_brush_t const &brush) {brush_vect.push_back(brush); brush.apply(this);}
 	bool read_mod(std::string const &fn);
 	bool write_mod(std::string const &fn) const;
+
+	virtual bool modify_height_value(int x, int y, hmap_val_t delta) = 0;
+	virtual ~tex_mod_map_manager_t() {}
 };
 
 
@@ -77,8 +94,9 @@ public:
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;
 	vector3d get_norm(int x, int y) const;
-	bool modify_height(mod_elem_t &elem);
-	bool modify_and_cache_height(mod_elem_t &elem);
+	virtual bool modify_height_value(int x, int y, hmap_val_t delta) {modify_height(mod_elem_t(x, y, delta)); return 1;} // unused
+	void modify_height(mod_elem_t const &elem);
+	void modify_and_cache_height(mod_elem_t const &elem) {modify_height(elem); add_mod(elem);} // unused
 	hmap_val_t scale_delta(float delta) const;
 	bool read_mod(std::string const &fn);
 	bool enabled() const {return hmap.is_allocated();}

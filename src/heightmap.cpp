@@ -16,6 +16,30 @@ extern float mesh_scale, dxdy;
 float scale_mh_texture_val(float val);
 
 
+void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm) const {
+
+	for (int yp = y - (int)radius; yp <= y + (int)radius; ++yp) {
+		for (int xp = x - (int)radius; xp <= x + (int)radius; ++xp) {
+			float const dist(sqrt(float(yp - y)*float(yp - y) + float(xp - x)*float(xp - x))), dval(dist/max(1U, radius));
+			if (shape > 0 && dval > 1.0) continue; // round (instead of square)
+			float mod_delta(delta); // constant/flat
+
+			if (shape == 2) { // linear
+				mod_delta *= 1.0 - dval;
+			}
+			else if (shape == 3) { // quadratic
+				mod_delta *= 1.0 - dval*dval;
+			}
+			else if (shape == 4) { // cosine
+				mod_delta *= cos(0.5*PI*dval);
+			}
+			assert(tmmm);
+			tmmm->modify_height_value(xp, yp, round_fp(mod_delta));
+		}
+	}
+}
+
+
 float heightmap_t::get_heightmap_value(unsigned x, unsigned y) const { // returns values from 0 to 256
 
 	assert(is_allocated());
@@ -53,6 +77,23 @@ void tex_mod_map_manager_t::add_mod(tex_mod_map_t const &mod) { // map (could us
 	for (tex_mod_map_t::const_iterator i = mod.begin(); i != mod.end(); ++i) {add_mod(mod_elem_t(*i));}
 }
 
+unsigned const header_sig  = 0xdeadbeef;
+unsigned const trailer_sig = 0xbeefdead;
+
+unsigned read_uint(FILE *fp) {
+
+	unsigned v(0);
+	unsigned const v_read(fread(&v, sizeof(unsigned), 1, fp));
+	assert(v_read == 1); // add error checking?
+	return v;
+}
+
+void write_uint(FILE *fp, unsigned v) {
+
+	unsigned v_write(fwrite(&v, sizeof(unsigned), 1, fp));
+	assert(v_write == 1); // add error checking?
+}
+
 bool tex_mod_map_manager_t::read_mod(string const &fn) {
 
 	//assert(mod_map.empty()); // ???
@@ -63,15 +104,32 @@ bool tex_mod_map_manager_t::read_mod(string const &fn) {
 		cerr << "Error opening terrain height mod map " << fn << " for read" << endl;
 		return 0;
 	}
-	unsigned sz(0);
-	unsigned const sz_read(fread(&sz, sizeof(unsigned), 1, fp));
-	assert(sz_read == 1); // add error checking?
+	unsigned const header(read_uint(fp));
+
+	if (header != header_sig) {
+		cerr << "Error: incorrect header found in terrain height mod map " << fn << "." << endl;
+		return 0;
+	}
+	unsigned const sz(read_uint(fp));
 
 	for (unsigned i = 0; i < sz; ++i) {
 		mod_elem_t elem;
 		unsigned const elem_read(fread(&elem, sizeof(mod_elem_t), 1, fp)); // use a larger block?
 		assert(elem_read == 1); // add error checking?
 		mod_map.add(elem);
+	}
+	unsigned const bsz(read_uint(fp));
+	brush_vect.resize(bsz);
+
+	if (!brush_vect.empty()) { // write brushes
+		unsigned const elem_read(fread(&brush_vect.front(), sizeof(brush_vect_t::value_type), brush_vect.size(), fp));
+		assert(elem_read == brush_vect.size()); // add error checking?
+	}
+	unsigned const trailer(read_uint(fp));
+
+	if (trailer != trailer_sig) {
+		cerr << "Error: incorrect trailer found in terrain height mod map " << fn << "." << endl;
+		return 0;
 	}
 	fclose(fp);
 	return 1;
@@ -85,15 +143,21 @@ bool tex_mod_map_manager_t::write_mod(string const &fn) const {
 		cerr << "Error opening terrain height mod map " << fn << " for write" << endl;
 		return 0;
 	}
-	unsigned const sz(mod_map.size());
-	unsigned const sz_write(fwrite(&sz, sizeof(unsigned), 1, fp));
-	assert(sz_write == 1); // add error checking?
+	write_uint(fp, header_sig);
+	write_uint(fp, mod_map.size());
 
 	for (tex_mod_map_t::const_iterator i = mod_map.begin(); i != mod_map.end(); ++i) {
 		mod_elem_t const elem(*i); // could use *i directly?
 		unsigned const elem_write(fwrite(&elem, sizeof(mod_elem_t), 1, fp)); // use a larger block?
 		assert(elem_write == 1); // add error checking?
 	}
+	write_uint(fp, brush_vect.size());
+
+	if (!brush_vect.empty()) { // write brushes
+		unsigned const elem_write(fwrite(&brush_vect.front(), sizeof(brush_vect_t::value_type), brush_vect.size(), fp));
+		assert(elem_write == brush_vect.size()); // add error checking?
+	}
+	write_uint(fp, trailer_sig);
 	fclose(fp);
 	return 1;
 }
@@ -162,18 +226,10 @@ vector3d terrain_hmap_manager_t::get_norm(int x, int y) const {
 			        DX_VAL*(get_clamped_height(x, y) - get_clamped_height(x, y+1)), dxdy).get_norm();
 }
 
-bool terrain_hmap_manager_t::modify_height(mod_elem_t &elem) { // elem may be modified
+void terrain_hmap_manager_t::modify_height(mod_elem_t const &elem) {
 
 	assert((unsigned)max(hmap.width, hmap.height) <= max_tex_ix());
 	hmap.modify_heightmap_value(elem.x, elem.y, elem.delta, 1);
-	return 1;
-}
-
-bool terrain_hmap_manager_t::modify_and_cache_height(mod_elem_t &elem) { // elem may be modified
-
-	if (!modify_height(elem)) return 0;
-	add_mod(elem);
-	return 1;
 }
 
 tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::scale_delta(float delta) const {
@@ -188,6 +244,9 @@ bool terrain_hmap_manager_t::read_mod(string const &fn) {
 	for (tex_mod_map_t::const_iterator i = mod_map.begin(); i != mod_map.end(); ++i) { // apply the mod to the current texture
 		assert(i->first.x < hmap.width && i->first.y < hmap.height); // ensure the mod values fit within the texture
 		hmap.modify_heightmap_value(i->first.x, i->first.y, i->second.val, 1); // no clamping
+	}
+	for (brush_vect_t::const_iterator i = brush_vect.begin(); i != brush_vect.end(); ++i) { // apply the brushes to the current texture
+		i->apply(this);
 	}
 	return 1;
 }

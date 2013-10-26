@@ -91,7 +91,43 @@ void bind_texture_tu(unsigned tid, unsigned tu_id) {
 #define BILINEAR_INTERP(arr, var, x, y) (y*(x*arr[1][1].var + (1.0-x)*arr[1][0].var) + (1.0-y)*(x*arr[0][1].var + (1.0-x)*arr[0][0].var))
 
 
-terrain_hmap_manager_t terrain_hmap_manager;
+class tiled_terrain_hmap_manager_t : public terrain_hmap_manager_t {
+
+	tile_t *cur_tile;
+	bool modified[3][3];
+
+public:
+	tiled_terrain_hmap_manager_t() : cur_tile(NULL) {}
+
+	void apply_brush(tex_mod_map_manager_t::hmap_brush_t const &brush, tile_t *tile) {
+		assert(tile != NULL);
+		cur_tile = tile;
+		assert(brush.radius <= get_tile_size()); // only allow for a single adjacent tile
+		tile_xy_pair const tp(tile->get_tile_xy_pair());
+		for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(modified[i][i_] = 0;)}
+		apply_and_cache_brush(brush);
+
+		for (int dy = -1; dy <= 1; ++dy) {
+			for (int dx = -1; dx <= 1; ++dx) {
+				if (!modified[dy+1][dx+1]) continue;
+				tile_t *adj_tile(get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy)));
+				if (adj_tile) {adj_tile->invalidate_mesh_height();}
+			}
+		}
+		cur_tile = NULL;
+	}
+	virtual bool modify_height_value(int x, int y, hmap_val_t delta) {
+		int clamped_x(x), clamped_y(y);
+		if (!clamp_xy(clamped_x, clamped_y)) return 0;
+		assert(clamped_x >= 0 && clamped_y >= 0);
+		modify_height(tex_mod_map_manager_t::mod_elem_t(clamped_x, clamped_y, delta)); // Note: *not* cached at this level
+		if (cur_tile) {cur_tile->fill_adj_mask(modified, x, y);}
+		return 1;
+	}
+};
+
+
+tiled_terrain_hmap_manager_t terrain_hmap_manager;
 
 
 bool using_tiled_terrain_hmap_tex() {
@@ -1969,43 +2005,12 @@ void inf_terrain_fire_weapon() {
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
 
 	// FIXME: update too slow when trees are enabled
-	int const mod_shape   = 3; // 0 = constant/flat, 1 = linear, 2 = quadratic, 3 = cosine
-	int const mod_radius  = 32; // FIXME: user-specified
-	float const delta_mag = 0.02; // FIXME: user-specified
-	assert(mod_radius <= get_tile_size()); // only allow for a single adjacent tile
-	float const base_delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
-	bool modified[3][3] = {0};
-	tile_xy_pair const tp(tile->get_tile_xy_pair());
-
-	for (int y = ypos - mod_radius; y <= ypos + mod_radius; ++y) {
-		for (int x = xpos - mod_radius; x <= xpos + mod_radius; ++x) {
-			float const dist(sqrt(float(y - ypos)*float(y - ypos) + float(x - xpos)*float(x - xpos))), dval(dist/max(1, mod_radius));
-			if (dval > 1.0) continue; // round (instead of square)
-			float delta(base_delta); // constant/flat
-
-			if (mod_shape == 1) { // linear
-				delta *= 1.0 - dval;
-			}
-			else if (mod_shape == 2) { // quadratic
-				delta *= 1.0 - dval*dval;
-			}
-			else if (mod_shape == 3) { // cosine
-				delta *= cos(0.5*PI*dval);
-			}
-			int clamped_x(x), clamped_y(y);
-			if (!terrain_hmap_manager.clamp_xy(clamped_x, clamped_y)) continue;
-			assert(clamped_x >= 0 && clamped_y >= 0);
-			tex_mod_map_manager_t::mod_elem_t elem(clamped_x, clamped_y, delta);
-			if (terrain_hmap_manager.modify_and_cache_height(elem)) {tile->fill_adj_mask(modified, x, y);}
-		}
-	}
-	for (int dy = -1; dy <= 1; ++dy) {
-		for (int dx = -1; dx <= 1; ++dx) {
-			if (!modified[dy+1][dx+1]) continue;
-			tile_t *adj_tile(get_tile_from_xy(tile_xy_pair(tp.x + dx, tp.y + dy)));
-			if (adj_tile) {adj_tile->invalidate_mesh_height();}
-		}
-	}
+	int const mod_shape       = 4; // 0 = constant/flat square, 1 = constant/flat round, 2 = linear, 3 = quadratic, 4 = cosine
+	unsigned const mod_radius = 32; // FIXME: user-specified
+	float const delta_mag     = 0.02; // FIXME: user-specified
+	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
+	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, mod_radius, mod_shape);
+	terrain_hmap_manager.apply_brush(brush, tile);
 }
 
 
