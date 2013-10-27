@@ -8,12 +8,18 @@
 #include "3DWorld.h"
 
 
+enum {BSHAPE_CONST_SQ=0, BSHAPE_CNST_CIR, BSHAPE_LINEAR, BSHAPE_QUADRATIC, BSHAPE_COSINE, BSHAPE_FLAT_SQ, BSHAPE_FLAT_CIR, NUM_BSHAPES};
+
+
 class heightmap_t : public texture_t {
+
+	unsigned get_pixel_ix(unsigned x, unsigned y) const;
 
 public:
 	heightmap_t() {}
 	heightmap_t(char t, char f, int w, int h, std::string const &n, bool inv) :
 	texture_t(t, f, w, h, 0, 1, 0, n, inv) {}
+	unsigned get_pixel_value (unsigned x, unsigned y) const;
 	float get_heightmap_value(unsigned x, unsigned y) const;
 	void modify_heightmap_value(unsigned x, unsigned y, int val, bool val_is_delta);
 };
@@ -56,10 +62,11 @@ public:
 		int x, y;
 		unsigned radius;
 		hmap_val_t delta;
-		short shape; // 0 = constant/flat square, 1 = constant/flat round, 2 = linear, 3 = quadratic, 4 = cosine
+		short shape;
 
 		hmap_brush_t() : x(0), y(0), radius(0), delta(0), shape(0) {}
-		hmap_brush_t(int x_, int y_, hmap_val_t d, unsigned r, short s) : x(x_), y(y_), delta(d), radius(r), shape(s) {assert(shape <= 4);}
+		hmap_brush_t(int x_, int y_, hmap_val_t d, unsigned r, short s) : x(x_), y(y_), delta(d), radius(r), shape(s) {assert(shape < NUM_BSHAPES);}
+		bool is_flatten_brush() const {return (shape == BSHAPE_FLAT_SQ || shape == BSHAPE_FLAT_CIR);}
 		void apply(tex_mod_map_manager_t *tmmm) const;
 	};
 
@@ -81,7 +88,7 @@ public:
 	bool read_mod(std::string const &fn);
 	bool write_mod(std::string const &fn) const;
 
-	virtual bool modify_height_value(int x, int y, hmap_val_t delta) = 0;
+	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta) = 0;
 	virtual ~tex_mod_map_manager_t() {}
 };
 
@@ -94,12 +101,13 @@ public:
 	void load(char const *const fn, bool invert_y=0);
 	bool maybe_load(char const *const fn, bool invert_y=0);
 	bool clamp_xy(int &x, int &y) const;
+	hmap_val_t get_clamped_pixel_value(int x, int y) const;
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;
 	vector3d get_norm(int x, int y) const;
-	virtual bool modify_height_value(int x, int y, hmap_val_t delta) {modify_height(mod_elem_t(x, y, delta)); return 1;} // unused
-	void modify_height(mod_elem_t const &elem);
-	void modify_and_cache_height(mod_elem_t const &elem) {modify_height(elem); add_mod(elem);} // unused
+	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta) {modify_height(mod_elem_t(x, y, val), is_delta); return 1;} // unused
+	void modify_height(mod_elem_t const &elem, bool is_delta);
+	void modify_and_cache_height(mod_elem_t const &elem, bool is_delta) {modify_height(elem, is_delta); add_mod(elem);} // unused
 	hmap_val_t scale_delta(float delta) const;
 	bool read_mod(std::string const &fn);
 	bool enabled() const {return hmap.is_allocated();}

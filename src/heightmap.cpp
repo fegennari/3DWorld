@@ -16,37 +16,53 @@ extern float mesh_scale, dxdy;
 float scale_mh_texture_val(float val);
 
 
+//enum {BSHAPE_CONST_SQ=0, BSHAPE_CNST_CIR, BSHAPE_LINEAR, BSHAPE_QUADRATIC, BSHAPE_COSINE, BSHAPE_FLAT_SQ, BSHAPE_FLAT_CIR, NUM_BSHAPES};
 void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm) const {
 
 	for (int yp = y - (int)radius; yp <= y + (int)radius; ++yp) {
 		for (int xp = x - (int)radius; xp <= x + (int)radius; ++xp) {
 			float const dist(sqrt(float(yp - y)*float(yp - y) + float(xp - x)*float(xp - x))), dval(dist/max(1U, radius));
-			if (shape > 0 && dval > 1.0) continue; // round (instead of square)
-			float mod_delta(delta); // constant/flat
+			if (shape != BSHAPE_CONST_SQ && shape != BSHAPE_FLAT_SQ && dval > 1.0) continue; // round (instead of square)
+			float mod_delta(delta); // constant
 
-			if (shape == 2) { // linear
-				mod_delta *= 1.0 - dval;
+			if (shape == BSHAPE_LINEAR) {
+				mod_delta *= 1.0 - dval; // linear
 			}
-			else if (shape == 3) { // quadratic
-				mod_delta *= 1.0 - dval*dval;
+			else if (shape == BSHAPE_QUADRATIC) {
+				mod_delta *= 1.0 - dval*dval; // quadratic
 			}
-			else if (shape == 4) { // cosine
-				mod_delta *= cos(0.5*PI*dval);
+			else if (shape == BSHAPE_COSINE) {
+				mod_delta *= cos(0.5*PI*dval); // cosine
 			}
 			assert(tmmm);
-			tmmm->modify_height_value(xp, yp, round_fp(mod_delta));
+			tmmm->modify_height_value(xp, yp, round_fp(mod_delta), !is_flatten_brush());
 		}
 	}
 }
 
 
-float heightmap_t::get_heightmap_value(unsigned x, unsigned y) const { // returns values from 0 to 256
+unsigned heightmap_t::get_pixel_ix(unsigned x, unsigned y) const {
 
 	assert(is_allocated());
 	assert(ncolors == 1 || ncolors == 2); // one or two byte grayscale
 	assert(x < (unsigned)width && y < (unsigned)height);
-	unsigned const ix(width*y + x);
-	return ((ncolors == 2) ? (data[ix<<1]/256.0 + data[(ix<<1)+1]) : data[ix]);
+	return (width*y + x);
+}
+
+
+unsigned heightmap_t::get_pixel_value(unsigned x, unsigned y) const {
+
+	unsigned const ix(get_pixel_ix(x, y));
+	if (ncolors == 1) {return data[ix];}
+	return *((unsigned short *)(data + (ix<<1)));
+}
+
+
+float heightmap_t::get_heightmap_value(unsigned x, unsigned y) const { // returns values from 0 to 256
+
+	unsigned const ix(get_pixel_ix(x, y));
+	if (ncolors == 1) {return data[ix];}
+	return (data[ix<<1]/256.0 + data[(ix<<1)+1]);
 }
 
 
@@ -223,6 +239,12 @@ bool terrain_hmap_manager_t::maybe_load(char const *const fn, bool invert_y) {
 	return 1;
 }
 
+tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::get_clamped_pixel_value(int x, int y) const {
+
+	if (!clamp_xy(x, y)) return 0; // not sure what to do in this case - can we ever get here?
+	return hmap.get_pixel_value(x, y);
+}
+
 float terrain_hmap_manager_t::get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
 
 	assert(enabled());
@@ -239,14 +261,15 @@ float terrain_hmap_manager_t::interpolate_height(float x, float y) const { // bi
 }
 
 vector3d terrain_hmap_manager_t::get_norm(int x, int y) const {
+
 	return vector3d(DY_VAL*(get_clamped_height(x, y) - get_clamped_height(x+1, y)),
 			        DX_VAL*(get_clamped_height(x, y) - get_clamped_height(x, y+1)), dxdy).get_norm();
 }
 
-void terrain_hmap_manager_t::modify_height(mod_elem_t const &elem) {
+void terrain_hmap_manager_t::modify_height(mod_elem_t const &elem, bool is_delta) {
 
 	assert((unsigned)max(hmap.width, hmap.height) <= max_tex_ix());
-	hmap.modify_heightmap_value(elem.x, elem.y, elem.delta, 1);
+	hmap.modify_heightmap_value(elem.x, elem.y, elem.delta, is_delta);
 }
 
 tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::scale_delta(float delta) const {

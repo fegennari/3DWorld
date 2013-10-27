@@ -99,10 +99,14 @@ class tiled_terrain_hmap_manager_t : public terrain_hmap_manager_t {
 public:
 	tiled_terrain_hmap_manager_t() : cur_tile(NULL) {}
 
-	void apply_brush(tex_mod_map_manager_t::hmap_brush_t const &brush, tile_t *tile, bool cache) {
+	void apply_brush(tex_mod_map_manager_t::hmap_brush_t brush, tile_t *tile, bool cache) { // Note: brush is copied and may be modified
 		cur_tile = tile;
 		assert(brush.radius <= get_tile_size()); // only allow for a single adjacent tile
 		for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(modified[i][i_] = 0;)}
+
+		if (brush.is_flatten_brush()) { // use heightmap value at brush center instead of a delta
+			brush.delta = get_clamped_pixel_value(brush.x, brush.y); // Note: original delta is overwritten/unused in this case
+		}
 		if (cache) {apply_and_cache_brush(brush);} else {terrain_hmap_manager_t::apply_brush(brush);}
 		if (cur_tile == NULL) return; // no tile specified, so can't do any updates
 		tile_xy_pair const tp(cur_tile->get_tile_xy_pair());
@@ -116,11 +120,13 @@ public:
 		}
 		cur_tile = NULL;
 	}
-	virtual bool modify_height_value(int x, int y, hmap_val_t delta) {
+	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta) {
+		// FIXME: if mesh_scale < 1.0 we should skip some values to avoid duplicate updates
+		// FIXME: if mesh_scale > 1.0 we should iterate more to fill in the gaps
 		int clamped_x(x), clamped_y(y);
 		if (!clamp_xy(clamped_x, clamped_y)) return 0;
 		assert(clamped_x >= 0 && clamped_y >= 0);
-		modify_height(tex_mod_map_manager_t::mod_elem_t(clamped_x, clamped_y, delta)); // Note: *not* cached at this level
+		modify_height(tex_mod_map_manager_t::mod_elem_t(clamped_x, clamped_y, val), is_delta); // Note: *not* cached at this level
 		if (cur_tile) {cur_tile->fill_adj_mask(modified, x, y);}
 		return 1;
 	}
@@ -1989,9 +1995,9 @@ bool hmap_mod_enabled() {return (inf_terrain_fire_mode && using_tiled_terrain_hm
 
 void change_inf_terrain_fire_mode(int val) {
 
-	unsigned const NUM_MODES = 3;
+	unsigned const NUM_MODES = 4;
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_MODES + val) % NUM_MODES;
-	string const modes[NUM_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height"};
+	string const modes[NUM_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
@@ -2016,7 +2022,7 @@ void inf_terrain_fire_weapon() {
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
 
 	// FIXME: update too slow when trees are enabled
-	int const mod_shape       = 4; // 0 = constant/flat square, 1 = constant/flat round, 2 = linear, 3 = quadratic, 4 = cosine
+	int const mod_shape       = (inf_terrain_fire_mode == 3) ? BSHAPE_FLAT_SQ : BSHAPE_COSINE;
 	unsigned const mod_radius = 32; // FIXME: user-specified
 	float const delta_mag     = 0.02; // FIXME: user-specified
 	// FIXME: will skip some hmap pixels when scaled
@@ -2030,6 +2036,7 @@ void inf_terrain_undo_hmap_mod() {
 	if (!hmap_mod_enabled()) return;
 	tex_mod_map_manager_t::hmap_brush_t brush;
 	if (!terrain_hmap_manager.pop_last_brush(brush)) return;
+	if (brush.is_flatten_brush()) return; // can't undo this brush since it's lossy
 	// FIXME: won't work if clamping to min/max height occurred when applying the brush the first time
 	brush.delta = -brush.delta; // invert
 	terrain_hmap_manager.apply_brush(brush, get_tile_for_xy(brush.x, brush.y), 0); // don't cache
