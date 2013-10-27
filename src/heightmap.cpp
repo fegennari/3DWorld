@@ -77,6 +77,23 @@ void tex_mod_map_manager_t::add_mod(tex_mod_map_t const &mod) { // map (could us
 	for (tex_mod_map_t::const_iterator i = mod.begin(); i != mod.end(); ++i) {add_mod(mod_elem_t(*i));}
 }
 
+bool tex_mod_map_manager_t::pop_last_brush(hmap_brush_t &last_brush) {
+
+	if (brush_vect.empty()) return 0;
+	last_brush = brush_vect.back();
+	brush_vect.pop_back();
+	return 1;
+}
+
+bool tex_mod_map_manager_t::undo_last_brush() {
+
+	hmap_brush_t brush;
+	if (!pop_last_brush(brush)) return 0; // nothing to undo
+	brush.delta = -brush.delta; // invert the delta to undo
+	apply_brush(brush); // apply inverse brush to cancel/undo the previous operation
+	return 1;
+}
+
 unsigned const header_sig  = 0xdeadbeef;
 unsigned const trailer_sig = 0xbeefdead;
 
@@ -246,7 +263,7 @@ bool terrain_hmap_manager_t::read_mod(string const &fn) {
 		hmap.modify_heightmap_value(i->first.x, i->first.y, i->second.val, 1); // no clamping
 	}
 	for (brush_vect_t::const_iterator i = brush_vect.begin(); i != brush_vect.end(); ++i) { // apply the brushes to the current texture
-		i->apply(this);
+		apply_brush(*i);
 	}
 	return 1;
 }

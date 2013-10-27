@@ -225,6 +225,7 @@ bool check_player_tiled_terrain_collision();
 bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int);
 void change_inf_terrain_fire_mode(int val);
 void inf_terrain_fire_weapon();
+void inf_terrain_undo_hmap_mod();
 
 // function prototypes - precipitation
 void draw_tiled_terrain_precipitation();
@@ -724,6 +725,10 @@ void toggle_spraypaint_mode();
 void change_spraypaint_color(int val);
 void draw_spraypaint_crosshair();
 void spray_paint(bool mode);
+
+// function prototypes - edit_ui
+bool ui_intercept_keyboard(unsigned char key, bool is_special);
+bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down);
 
 
 #include "inlines.h"

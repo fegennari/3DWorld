@@ -21,6 +21,8 @@ Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
 
+Keyboard-based controls UI
 Modify TT heightmap data delta, radius, and shape UI
+Brush for setting delta equal to height at center
 
 Infinite rain "seed" to determine final lake/pond positions instantly

@@ -100,13 +100,13 @@ class tiled_terrain_hmap_manager_t : public terrain_hmap_manager_t {
 public:
 	tiled_terrain_hmap_manager_t() : cur_tile(NULL) {}
 
-	void apply_brush(tex_mod_map_manager_t::hmap_brush_t const &brush, tile_t *tile) {
-		assert(tile != NULL);
+	void apply_brush(tex_mod_map_manager_t::hmap_brush_t const &brush, tile_t *tile, bool cache) {
 		cur_tile = tile;
 		assert(brush.radius <= get_tile_size()); // only allow for a single adjacent tile
-		tile_xy_pair const tp(tile->get_tile_xy_pair());
 		for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(modified[i][i_] = 0;)}
-		apply_and_cache_brush(brush);
+		if (cache) {apply_and_cache_brush(brush);} else {terrain_hmap_manager_t::apply_brush(brush);}
+		if (cur_tile == NULL) return; // no tile specified, so can't do any updates
+		tile_xy_pair const tp(cur_tile->get_tile_xy_pair());
 
 		for (int dy = -1; dy <= 1; ++dy) {
 			for (int dx = -1; dx <= 1; ++dx) {
@@ -1987,6 +1987,8 @@ bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
 }
 
 
+bool hmap_mod_enabled() {return (inf_terrain_fire_mode && using_tiled_terrain_hmap_tex());}
+
 void change_inf_terrain_fire_mode(int val) {
 
 	unsigned const NUM_MODES = 3;
@@ -1995,10 +1997,17 @@ void change_inf_terrain_fire_mode(int val) {
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
+tile_t *get_tile_for_xy(int x, int y) {
+
+	int const tsz(get_tile_size());
+	if (x < 0) {x -= tsz-1;} // handle truncation toward lower integer
+	if (y < 0) {y -= tsz-1;}
+	return get_tile_from_xy(tile_xy_pair(x/tsz, y/tsz));
+}
 
 void inf_terrain_fire_weapon() {
 
-	if (inf_terrain_fire_mode == 0 || !using_tiled_terrain_hmap_tex()) return; // ignore
+	if (!hmap_mod_enabled()) return; // ignore
 	static float last_tfticks(0.0);
 	if ((tfticks - last_tfticks) < 0.1*TICKS_PER_SECOND) return; // limit firing rate 100ms
 	last_tfticks = tfticks;
@@ -2015,7 +2024,17 @@ void inf_terrain_fire_weapon() {
 	// FIXME: will skip some hmap pixels when scaled
 	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
 	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, mod_radius, mod_shape);
-	terrain_hmap_manager.apply_brush(brush, tile);
+	terrain_hmap_manager.apply_brush(brush, tile, 1); // cache
+}
+
+void inf_terrain_undo_hmap_mod() {
+
+	if (!hmap_mod_enabled()) return;
+	tex_mod_map_manager_t::hmap_brush_t brush;
+	if (!terrain_hmap_manager.pop_last_brush(brush)) return;
+	// FIXME: won't work if clamping to min/max height occurred when applying the brush the first time
+	brush.delta = -brush.delta; // invert
+	terrain_hmap_manager.apply_brush(brush, get_tile_for_xy(brush.x, brush.y), 0); // don't cache
 }
 
 

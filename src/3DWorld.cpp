@@ -623,6 +623,7 @@ void mouseButton(int button, int state, int x, int y) {
 
 	bool const fire_button((button == GLUT_RIGHT_BUTTON || (passive_motion && button == GLUT_LEFT_BUTTON)));
 	add_uevent_mbutton(button, state, x, y);
+	if (ui_intercept_mouse(button, state, x, y, 1)) return; // already handled
 
 	if ((camera_mode == 1 || world_mode == WMODE_UNIVERSE) && fire_button) {
 		b2down = !state;
@@ -648,6 +649,7 @@ void mouseMotion(int x, int y) {
 		return;
 	}
 	add_uevent_mmotion(x, y);
+	if (ui_intercept_mouse(0, 0, x, y, 0)) return; // already handled
 	float dx(float(x - last_mouse_x)), dy(float(y - last_mouse_y));
 	if (camera_mode == 1 && passive_motion) button = GLUT_LEFT_BUTTON;
 
@@ -780,6 +782,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
     switch (key) {
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
+		break;
+
+	case 8: // backspace
+		inf_terrain_undo_hmap_mod();
 		break;
 	
 	case 'm': // maximize/minimize
@@ -1216,6 +1222,7 @@ void print_wind() {
 void keyboard2(int key, int x, int y) {
 
 	add_uevent_keyboard_special(key, x, y);
+	if (ui_intercept_keyboard(key, 1)) return; // already handled
 
 	switch (key) {
 	case GLUT_KEY_UP:
@@ -1372,6 +1379,7 @@ void exec_text(string const &text) {
 void keyboard(unsigned char key, int x, int y) {
 
 	add_uevent_keyboard(key, x, y);
+	if (ui_intercept_keyboard(key, 0)) return; // already handled (should this go into keyboard_proc()?)
 
 	if (key == 13) { // enter key - toggle text mode
 		if (kbd_text_mode) exec_text(user_text);

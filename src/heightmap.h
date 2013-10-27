@@ -74,7 +74,10 @@ public:
 	void add_mod(mod_elem_t const &elem) {mod_map.add(elem);}
 	void add_mod(tex_mod_vect_t const &mod);
 	void add_mod(tex_mod_map_t const &mod);
-	void apply_and_cache_brush(hmap_brush_t const &brush) {brush_vect.push_back(brush); brush.apply(this);}
+	void apply_brush(hmap_brush_t const &brush) {brush.apply(this);}
+	void apply_and_cache_brush(hmap_brush_t const &brush) {brush_vect.push_back(brush); apply_brush(brush);}
+	bool pop_last_brush(hmap_brush_t &last_brush);
+	bool undo_last_brush(); // unused
 	bool read_mod(std::string const &fn);
 	bool write_mod(std::string const &fn) const;
 
