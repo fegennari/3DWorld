@@ -19,7 +19,7 @@ cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update;
 extern int window_width, window_height, cloud_model, draw_model, display_mode, xoff, yoff, animate2, is_cloudy;
-extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
+extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, lowest_tt_mesh_z, zmin, zmax;
 extern vector3d wind;
 extern colorRGBA sun_color;
 
@@ -398,16 +398,16 @@ void draw_cloud_plane(bool reflection_pass) {
 		s.end_shader();
 	}
 
-	// draw a plane at zmin to properly blend the fog
+	// draw a plane at lowest_tt_mesh_z to properly blend the fog
 	if (!reflection_pass) {
 		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 		s.set_vert_shader("water_fog.part+fog_only");
 		s.set_frag_shader("linear_fog.part+fog_only");
 		s.begin_shader();
 		s.setup_fog_scale();
-		s.add_uniform_float("water_plane_z", zmin);
+		s.add_uniform_float("water_plane_z", lowest_tt_mesh_z); // min(lowest_tt_mesh_z, water_plane_z)?
 		BLACK.do_glColor();
-		imd.render_z_plane(-size, -size, size, size, zmin, CLOUD_NUM_DIV, CLOUD_NUM_DIV);
+		imd.render_z_plane(-size, -size, size, size, lowest_tt_mesh_z, CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
 	}
 

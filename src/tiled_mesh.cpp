@@ -30,6 +30,7 @@ float const LITNING_DIST    = 1.2;
 
 
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
+float lowest_tt_mesh_z(0.0);
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 
 extern bool inf_terrain_scenery;
@@ -362,6 +363,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	}
 	assert(mzmin <= mzmax);
 	radius = 0.5*sqrt((xstep*xstep + ystep*ystep)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
+	lowest_tt_mesh_z = min(lowest_tt_mesh_z, mzmin); // update with the lowest mesh point we've seen
 	//PRINT_TIME("Create Zvals");
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
 }
@@ -1299,7 +1301,9 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool
 	for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
 		int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
 		float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
-		float const cscale((tid == GROUND_TEX) ? TT_GRASS_COLOR_SCALE : 1.0); // darker grass
+		float cscale(1.0);
+		if (tid == GROUND_TEX) {cscale = TT_GRASS_COLOR_SCALE;} // darker grass
+		if (tid == ROCK_TEX  ) {cscale = 0.5;} // darker rock
 		unsigned const tu_id(start_tu_id + i);
 		select_multitex(tid, tu_id, 0);
 		std::ostringstream oss1, oss2, oss3;
@@ -2008,6 +2012,7 @@ void inf_terrain_fire_weapon() {
 	int const mod_shape       = 4; // 0 = constant/flat square, 1 = constant/flat round, 2 = linear, 3 = quadratic, 4 = cosine
 	unsigned const mod_radius = 32; // FIXME: user-specified
 	float const delta_mag     = 0.02; // FIXME: user-specified
+	// FIXME: will skip some hmap pixels when scaled
 	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
 	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, mod_radius, mod_shape);
 	terrain_hmap_manager.apply_brush(brush, tile);

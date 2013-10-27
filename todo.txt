@@ -22,3 +22,5 @@ TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
 
 Modify TT heightmap data delta, radius, and shape UI
+
+Infinite rain "seed" to determine final lake/pond positions instantly
