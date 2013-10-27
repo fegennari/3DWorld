@@ -133,7 +133,7 @@ void free_cloud_textures();
 void draw_puffy_clouds(int order);
 float get_cloud_zmax();
 void set_cloud_uniforms(shader_t &s, unsigned tu_id);
-void draw_cloud_plane(bool reflection_pass);
+void draw_cloud_plane(float terrain_zmin, bool reflection_pass);
 void draw_sky(int order);
 void compute_brightness();
 void setup_water_plane_texgen(float s_scale, float t_scale);

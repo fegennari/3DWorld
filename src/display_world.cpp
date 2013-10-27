@@ -1114,7 +1114,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 		draw_sun_moon_stars();
 		draw_sun_flare();
 	}
-	if (display_mode & 0x40) {draw_cloud_plane(1);} // slower but a nice effect
+	if (display_mode & 0x40) {draw_cloud_plane(zmin, 1);} // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	// setup above-water clip plane for mesh
 	double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)
@@ -1219,7 +1219,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		draw_sun_moon_stars();
 		if (fog_enabled) {glEnable(GL_FOG);}
 	}
-	draw_cloud_plane(0); // these two lines could go in either order
+	draw_cloud_plane(zmin2, 0); // these two lines could go in either order
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
 	calc_cur_ambient_diffuse();

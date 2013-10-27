@@ -30,7 +30,6 @@ float const LITNING_DIST    = 1.2;
 
 
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
-float lowest_tt_mesh_z(0.0);
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 
 extern bool inf_terrain_scenery;
@@ -363,7 +362,6 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	}
 	assert(mzmin <= mzmax);
 	radius = 0.5*sqrt((xstep*xstep + ystep*ystep)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
-	lowest_tt_mesh_z = min(lowest_tt_mesh_z, mzmin); // update with the lowest mesh point we've seen
 	//PRINT_TIME("Create Zvals");
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
 }
