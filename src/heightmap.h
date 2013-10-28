@@ -115,4 +115,17 @@ public:
 };
 
 
+struct hmap_brush_param_t {
+
+	unsigned delay; // placement delay in ticks
+	int shape;
+	int radius_exp;
+	unsigned delta_exp;
+
+	hmap_brush_param_t() : delay(1), shape(BSHAPE_COSINE), radius_exp(5), delta_exp(4) {}
+	unsigned get_radius() const {return ((radius_exp < 0) ? 0 : (1 << radius_exp));}
+	float get_delta_mag() const {return 0.001*pow(2.0f, (float)delta_exp);}
+};
+
+
 #endif // _HEIGHTMAP_H_

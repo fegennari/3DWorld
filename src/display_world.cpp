@@ -1002,6 +1002,7 @@ void display(void) {
 			if (cdist > REL_SCROLL_DIST) scroll_scene();
 		}
 	} // not universe mode
+	draw_enabled_ui_menus();
 	swap_buffers_and_redraw();
 	check_gl_error(11);
 	if (TIMETEST) PRINT_TIME("Y");

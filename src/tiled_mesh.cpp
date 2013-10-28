@@ -31,6 +31,7 @@ float const LITNING_DIST    = 1.2;
 
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
+hmap_brush_param_t cur_brush_param;
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
@@ -2013,21 +2014,19 @@ void inf_terrain_fire_weapon() {
 
 	if (!hmap_mod_enabled()) return; // ignore
 	static float last_tfticks(0.0);
-	if ((tfticks - last_tfticks) < 0.1*TICKS_PER_SECOND) return; // limit firing rate 100ms
+	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
 	last_tfticks = tfticks;
 	point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
 	float t(0.0); // unused
 	tile_t *tile(NULL);
 	int xpos(0), ypos(0);
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
-
 	// FIXME: update too slow when trees are enabled
-	int const mod_shape       = (inf_terrain_fire_mode == 3) ? BSHAPE_FLAT_SQ : BSHAPE_COSINE;
-	unsigned const mod_radius = 32; // FIXME: user-specified
-	float const delta_mag     = 0.02; // FIXME: user-specified
-	// FIXME: will skip some hmap pixels when scaled
-	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0)));
-	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, mod_radius, mod_shape);
+	unsigned shape(cur_brush_param.shape);
+	if (inf_terrain_fire_mode == 3) {shape = ((shape == BSHAPE_CONST_SQ) ? BSHAPE_FLAT_SQ : BSHAPE_FLAT_CIR);} // enable a flattening shape
+	float const delta_mag(cur_brush_param.get_delta_mag()*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0));
+	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag));
+	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, cur_brush_param.get_radius(), shape);
 	terrain_hmap_manager.apply_brush(brush, tile, 1); // cache
 }
 

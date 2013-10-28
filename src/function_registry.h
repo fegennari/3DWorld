@@ -729,6 +729,7 @@ void spray_paint(bool mode);
 // function prototypes - edit_ui
 bool ui_intercept_keyboard(unsigned char key, bool is_special);
 bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down);
+void draw_enabled_ui_menus();
 
 
 #include "inlines.h"

@@ -20,8 +20,5 @@ Instanced Spheres: berries, small decid tree leaves
 Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
-
-Keyboard-based controls UI
-Modify TT heightmap data delta, radius, and shape UI
-
 Infinite rain "seed" to determine final lake/pond positions instantly
+UI for Voxel Modify
