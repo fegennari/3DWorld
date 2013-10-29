@@ -17,25 +17,33 @@ float scale_mh_texture_val(float val);
 
 
 //enum {BSHAPE_CONST_SQ=0, BSHAPE_CNST_CIR, BSHAPE_LINEAR, BSHAPE_QUADRATIC, BSHAPE_COSINE, BSHAPE_FLAT_SQ, BSHAPE_FLAT_CIR, NUM_BSHAPES};
-void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int step_sz) const {
+void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int step_sz, unsigned num_steps) const {
+
+	assert(num_steps > 0);
+	float const step_delta(1.0/num_steps);
 
 	for (int yp = y - (int)radius; yp <= y + (int)radius; yp += step_sz) {
 		for (int xp = x - (int)radius; xp <= x + (int)radius; xp += step_sz) {
-			float const dist(sqrt(float(yp - y)*float(yp - y) + float(xp - x)*float(xp - x))), dval(dist/max(1U, radius));
-			if (shape != BSHAPE_CONST_SQ && shape != BSHAPE_FLAT_SQ && dval > 1.0) continue; // round (instead of square)
-			float mod_delta(delta); // constant
+			for (unsigned sy = 0; sy < num_steps; ++sy) {
+				for (unsigned sx = 0; sx < num_steps; ++sx) {
+					float const dx(sx*step_delta), dy(sy*step_delta);
+					float const dist(sqrt(float(yp + dy - y)*float(yp + dy - y) + float(xp + dx - x)*float(xp + dx - x))), dval(dist/max(1U, radius));
+					if (shape != BSHAPE_CONST_SQ && shape != BSHAPE_FLAT_SQ && dval > 1.0) continue; // round (instead of square)
+					float mod_delta(delta); // constant
 
-			if (shape == BSHAPE_LINEAR) {
-				mod_delta *= 1.0 - dval; // linear
+					if (shape == BSHAPE_LINEAR) {
+						mod_delta *= 1.0 - dval; // linear
+					}
+					else if (shape == BSHAPE_QUADRATIC) {
+						mod_delta *= 1.0 - dval*dval; // quadratic
+					}
+					else if (shape == BSHAPE_COSINE) {
+						mod_delta *= cos(0.5*PI*dval); // cosine
+					}
+					assert(tmmm);
+					tmmm->modify_height_value(xp, yp, round_fp(mod_delta), !is_flatten_brush(), dx, dy);
+				}
 			}
-			else if (shape == BSHAPE_QUADRATIC) {
-				mod_delta *= 1.0 - dval*dval; // quadratic
-			}
-			else if (shape == BSHAPE_COSINE) {
-				mod_delta *= cos(0.5*PI*dval); // cosine
-			}
-			assert(tmmm);
-			tmmm->modify_height_value(xp, yp, round_fp(mod_delta), !is_flatten_brush());
 		}
 	}
 }

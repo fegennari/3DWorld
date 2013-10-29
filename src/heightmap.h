@@ -67,7 +67,7 @@ public:
 		hmap_brush_t() : x(0), y(0), radius(0), delta(0), shape(0) {}
 		hmap_brush_t(int x_, int y_, hmap_val_t d, unsigned r, short s) : x(x_), y(y_), delta(d), radius(r), shape(s) {assert(shape < NUM_BSHAPES);}
 		bool is_flatten_brush() const {return (shape == BSHAPE_FLAT_SQ || shape == BSHAPE_FLAT_CIR);}
-		void apply(tex_mod_map_manager_t *tmmm, int step_sz=1) const;
+		void apply(tex_mod_map_manager_t *tmmm, int step_sz=1, unsigned num_steps=1) const;
 	};
 
 	typedef vector<mod_elem_t> tex_mod_vect_t;
@@ -81,14 +81,18 @@ public:
 	void add_mod(mod_elem_t const &elem) {mod_map.add(elem);}
 	void add_mod(tex_mod_vect_t const &mod);
 	void add_mod(tex_mod_map_t const &mod);
-	void apply_brush(hmap_brush_t const &brush, int step_sz=1) {brush.apply(this, step_sz);}
-	void apply_and_cache_brush(hmap_brush_t const &brush, int step_sz=1) {brush_vect.push_back(brush); apply_brush(brush, step_sz);}
+	void apply_brush(hmap_brush_t const &brush, int step_sz=1, unsigned num_steps=1) {brush.apply(this, step_sz, num_steps);}
+
+	void apply_and_cache_brush(hmap_brush_t const &brush, int step_sz=1, unsigned num_steps=1) {
+		brush_vect.push_back(brush);
+		apply_brush(brush, step_sz, num_steps);
+	}
 	bool pop_last_brush(hmap_brush_t &last_brush);
 	bool undo_last_brush(); // unused
 	bool read_mod(std::string const &fn);
 	bool write_mod(std::string const &fn) const;
 
-	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta) = 0;
+	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x=0.0, float fract_y=0.0) = 0;
 	virtual ~tex_mod_map_manager_t() {}
 };
 
@@ -105,7 +109,12 @@ public:
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;
 	vector3d get_norm(int x, int y) const;
-	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta) {modify_height(mod_elem_t(x, y, val), is_delta); return 1;} // unused
+
+	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta, float fract_x=0.0, float fract_y=0.0) { // unused
+		assert(fract_x == 0.0 && fract_y == 0.0);
+		modify_height(mod_elem_t(x, y, val), is_delta);
+		return 1;
+	}
 	void modify_height(mod_elem_t const &elem, bool is_delta);
 	void modify_and_cache_height(mod_elem_t const &elem, bool is_delta) {modify_height(elem, is_delta); add_mod(elem);} // unused
 	hmap_val_t scale_delta(float delta) const;
