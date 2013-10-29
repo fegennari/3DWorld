@@ -10,6 +10,8 @@
 
 enum {BSHAPE_CONST_SQ=0, BSHAPE_CNST_CIR, BSHAPE_LINEAR, BSHAPE_QUADRATIC, BSHAPE_COSINE, BSHAPE_FLAT_SQ, BSHAPE_FLAT_CIR, NUM_BSHAPES};
 
+float scale_mh_texture_val(float val);
+
 
 class heightmap_t : public texture_t {
 
@@ -105,7 +107,9 @@ public:
 	void load(char const *const fn, bool invert_y=0);
 	bool maybe_load(char const *const fn, bool invert_y=0);
 	bool clamp_xy(int &x, int &y, float fract_x=0.0, float fract_y=0.0) const;
+	bool clamp_no_scale(int &x, int &y) const;
 	hmap_val_t get_clamped_pixel_value(int x, int y) const;
+	float get_raw_height(int x, int y) const {return scale_mh_texture_val(hmap.get_heightmap_value(x, y));}
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;
 	vector3d get_norm(int x, int y) const;

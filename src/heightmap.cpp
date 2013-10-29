@@ -11,9 +11,8 @@ using namespace std;
 
 unsigned const TEX_EDGE_MODE = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
 
+extern int display_mode;
 extern float mesh_scale, dxdy;
-
-float scale_mh_texture_val(float val);
 
 
 //enum {BSHAPE_CONST_SQ=0, BSHAPE_CNST_CIR, BSHAPE_LINEAR, BSHAPE_QUADRATIC, BSHAPE_COSINE, BSHAPE_FLAT_SQ, BSHAPE_FLAT_CIR, NUM_BSHAPES};
@@ -203,12 +202,18 @@ bool tex_mod_map_manager_t::write_mod(string const &fn) const {
 	return 1;
 }
 
-
 bool terrain_hmap_manager_t::clamp_xy(int &x, int &y, float fract_x, float fract_y) const {
 
+	x = round_fp(mesh_scale*(x + fract_x));
+	y = round_fp(mesh_scale*(y + fract_y));
+	return clamp_no_scale(x, y);
+}
+
+bool terrain_hmap_manager_t::clamp_no_scale(int &x, int &y) const {
+
 	assert(hmap.width > 0 && hmap.height > 0);
-	x = round_fp(mesh_scale*(x + fract_x)) + hmap.width /2; // scale and offset (0,0) to texture center
-	y = round_fp(mesh_scale*(y + fract_y)) + hmap.height/2;
+	x += hmap.width /2; // scale and offset (0,0) to texture center
+	y += hmap.height/2;
 
 	switch (TEX_EDGE_MODE) {
 	case 0: // clamp
@@ -256,16 +261,25 @@ tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::get_clamped_pixel_valu
 float terrain_hmap_manager_t::get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
 
 	assert(enabled());
+
+	if (mesh_scale < 1.0) {
+		// interpolate
+	}
+	if (mesh_scale > 1.0) {
+		// sample multiple pixels as a mipmap?
+	}
 	if (!clamp_xy(x, y)) {return scale_mh_texture_val(0.0);} // off the texture, use min value
-	return scale_mh_texture_val(hmap.get_heightmap_value(x, y));
+	return get_raw_height(x, y);
 }
 
 float terrain_hmap_manager_t::interpolate_height(float x, float y) const { // bilinear interpolation
 
-	int const xlo(floor(x)), ylo(floor(y));
-	float const xv(x - xlo), yv(y - ylo);
-	return   yv *(xv*get_clamped_height(xlo+1, ylo+1) + (1.0-xv)*get_clamped_height(xlo, ylo+1)) +
-		(1.0-yv)*(xv*get_clamped_height(xlo+1, ylo  ) + (1.0-xv)*get_clamped_height(xlo, ylo  ));
+	float const sx(mesh_scale*x), sy(mesh_scale*y);
+	int xlo(floor(sx)), ylo(floor(sy)), xhi(ceil(sx)), yhi(ceil(sy));
+	float const xv((xlo == xhi) ? 0.0 : (sx - xlo)/float(xhi - xlo)), yv((ylo == yhi) ? 0.0 : (sy - ylo)/float(yhi - ylo)); // avoid div-by-zero
+	if (!clamp_no_scale(xlo, ylo) || !clamp_no_scale(xhi, yhi)) {return scale_mh_texture_val(0.0);}
+	return   yv *(xv*get_raw_height(xhi, yhi) + (1.0-xv)*get_raw_height(xlo, yhi)) +
+		(1.0-yv)*(xv*get_raw_height(xhi, ylo) + (1.0-xv)*get_raw_height(xlo, ylo));
 }
 
 vector3d terrain_hmap_manager_t::get_norm(int x, int y) const {
