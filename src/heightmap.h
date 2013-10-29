@@ -67,7 +67,7 @@ public:
 		hmap_brush_t() : x(0), y(0), radius(0), delta(0), shape(0) {}
 		hmap_brush_t(int x_, int y_, hmap_val_t d, unsigned r, short s) : x(x_), y(y_), delta(d), radius(r), shape(s) {assert(shape < NUM_BSHAPES);}
 		bool is_flatten_brush() const {return (shape == BSHAPE_FLAT_SQ || shape == BSHAPE_FLAT_CIR);}
-		void apply(tex_mod_map_manager_t *tmmm) const;
+		void apply(tex_mod_map_manager_t *tmmm, int step_sz=1) const;
 	};
 
 	typedef vector<mod_elem_t> tex_mod_vect_t;
@@ -81,8 +81,8 @@ public:
 	void add_mod(mod_elem_t const &elem) {mod_map.add(elem);}
 	void add_mod(tex_mod_vect_t const &mod);
 	void add_mod(tex_mod_map_t const &mod);
-	void apply_brush(hmap_brush_t const &brush) {brush.apply(this);}
-	void apply_and_cache_brush(hmap_brush_t const &brush) {brush_vect.push_back(brush); apply_brush(brush);}
+	void apply_brush(hmap_brush_t const &brush, int step_sz=1) {brush.apply(this, step_sz);}
+	void apply_and_cache_brush(hmap_brush_t const &brush, int step_sz=1) {brush_vect.push_back(brush); apply_brush(brush, step_sz);}
 	bool pop_last_brush(hmap_brush_t &last_brush);
 	bool undo_last_brush(); // unused
 	bool read_mod(std::string const &fn);
@@ -100,7 +100,7 @@ class terrain_hmap_manager_t : public tex_mod_map_manager_t {
 public:
 	void load(char const *const fn, bool invert_y=0);
 	bool maybe_load(char const *const fn, bool invert_y=0);
-	bool clamp_xy(int &x, int &y) const;
+	bool clamp_xy(int &x, int &y, float fract_x=0.0, float fract_y=0.0) const;
 	hmap_val_t get_clamped_pixel_value(int x, int y) const;
 	float get_clamped_height(int x, int y) const;
 	float interpolate_height(float x, float y) const;

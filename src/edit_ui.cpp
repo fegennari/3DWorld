@@ -50,7 +50,7 @@ enum {HMAP_DELAY=0, HMAP_CTR_SHAPE, HMAP_CTR_RADIUS, HMAP_CTR_DELTA, HMAP_NUM_CT
 string const hmap_ctr_names[HMAP_NUM_CTR] = {"Placement Delay", "Brush Shape", "Brush Radius", "Brush Delta"};
 string const brush_shapes[NUM_BSHAPES] = {"Constant Square", "Constant Circle", "Linear Circle", "Quadratic Circle", "Cosine Circle", "Flat Square", "Flat Circle"};
 
-extern int show_scores;
+extern int show_scores, world_mode;
 extern unsigned inf_terrain_fire_mode;
 extern hmap_brush_param_t cur_brush_param;
 
@@ -94,7 +94,7 @@ public:
 	hmap_kbd_menu_t(hmap_brush_param_t &bp) : keyboard_menu_t(HMAP_NUM_CTR), brush_param(bp), max_radius_exp(0) {
 		for (unsigned sz = 1; sz < get_tile_size(); sz <<= 1) {++max_radius_exp;}
 	}
-	virtual bool is_enabled() const {return (show_scores && inf_terrain_fire_mode);}
+	virtual bool is_enabled() const {return (show_scores && inf_terrain_fire_mode && world_mode == WMODE_INF_TERRAIN);}
 
 	virtual void change_value(int delta) {
 		switch (cur_control) {

@@ -108,7 +108,8 @@ public:
 		if (brush.is_flatten_brush()) { // use heightmap value at brush center instead of a delta
 			brush.delta = get_clamped_pixel_value(brush.x, brush.y); // Note: original delta is overwritten/unused in this case
 		}
-		if (cache) {apply_and_cache_brush(brush);} else {terrain_hmap_manager_t::apply_brush(brush);}
+		int const step_sz(max(1, int(1.0/mesh_scale + SMALL_NUMBER))); // Note: only intended to work when mesh_scale is a power of 0.5 (or generally an integer reciprocol)
+		if (cache) {apply_and_cache_brush(brush, step_sz);} else {terrain_hmap_manager_t::apply_brush(brush, step_sz);}
 		if (cur_tile == NULL) return; // no tile specified, so can't do any updates
 		tile_xy_pair const tp(cur_tile->get_tile_xy_pair());
 
@@ -122,14 +123,20 @@ public:
 		cur_tile = NULL;
 	}
 	virtual bool modify_height_value(int x, int y, hmap_val_t val, bool is_delta) {
-		// FIXME: if mesh_scale < 1.0 we should skip some values to avoid duplicate updates
-		// FIXME: if mesh_scale > 1.0 we should iterate more to fill in the gaps
-		int clamped_x(x), clamped_y(y);
-		if (!clamp_xy(clamped_x, clamped_y)) return 0;
-		assert(clamped_x >= 0 && clamped_y >= 0);
-		modify_height(tex_mod_map_manager_t::mod_elem_t(clamped_x, clamped_y, val), is_delta); // Note: *not* cached at this level
-		if (cur_tile) {cur_tile->fill_adj_mask(modified, x, y);}
-		return 1;
+		bool updated(0);
+		unsigned const num_steps(max(1U, unsigned(mesh_scale + SMALL_NUMBER))); // Note: only intended to work when mesh_scale is a power of 2 (or generally an integer)
+
+		for (unsigned sy = 0; sy < num_steps; ++sy) {
+			for (unsigned sx = 0; sx < num_steps; ++sx) {
+				int clamped_x(x), clamped_y(y);
+				if (!clamp_xy(clamped_x, clamped_y, sx/mesh_scale, sy/mesh_scale)) continue;
+				assert(clamped_x >= 0 && clamped_y >= 0);
+				modify_height(tex_mod_map_manager_t::mod_elem_t(clamped_x, clamped_y, val), is_delta); // Note: *not* cached at this level
+				updated = 1;
+			}
+		}
+		if (updated && cur_tile) {cur_tile->fill_adj_mask(modified, x, y);}
+		return updated;
 	}
 };
 

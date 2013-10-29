@@ -17,10 +17,10 @@ float scale_mh_texture_val(float val);
 
 
 //enum {BSHAPE_CONST_SQ=0, BSHAPE_CNST_CIR, BSHAPE_LINEAR, BSHAPE_QUADRATIC, BSHAPE_COSINE, BSHAPE_FLAT_SQ, BSHAPE_FLAT_CIR, NUM_BSHAPES};
-void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm) const {
+void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int step_sz) const {
 
-	for (int yp = y - (int)radius; yp <= y + (int)radius; ++yp) {
-		for (int xp = x - (int)radius; xp <= x + (int)radius; ++xp) {
+	for (int yp = y - (int)radius; yp <= y + (int)radius; yp += step_sz) {
+		for (int xp = x - (int)radius; xp <= x + (int)radius; xp += step_sz) {
 			float const dist(sqrt(float(yp - y)*float(yp - y) + float(xp - x)*float(xp - x))), dval(dist/max(1U, radius));
 			if (shape != BSHAPE_CONST_SQ && shape != BSHAPE_FLAT_SQ && dval > 1.0) continue; // round (instead of square)
 			float mod_delta(delta); // constant
@@ -196,11 +196,11 @@ bool tex_mod_map_manager_t::write_mod(string const &fn) const {
 }
 
 
-bool terrain_hmap_manager_t::clamp_xy(int &x, int &y) const {
+bool terrain_hmap_manager_t::clamp_xy(int &x, int &y, float fract_x, float fract_y) const {
 
 	assert(hmap.width > 0 && hmap.height > 0);
-	x = round_fp(mesh_scale*x) + hmap.width /2; // scale and offset (0,0) to texture center
-	y = round_fp(mesh_scale*y) + hmap.height/2;
+	x = round_fp(mesh_scale*(x + fract_x)) + hmap.width /2; // scale and offset (0,0) to texture center
+	y = round_fp(mesh_scale*(y + fract_y)) + hmap.height/2;
 
 	switch (TEX_EDGE_MODE) {
 	case 0: // clamp
