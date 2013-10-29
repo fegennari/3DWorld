@@ -316,6 +316,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	unsigned const block_size(zvsize/4);
 
 	if (using_tiled_terrain_hmap_tex()) {
+		#pragma omp parallel for schedule(static,1) // may not be necessary
 		for (int y = 0; y < (int)zvsize; ++y) {
 			for (unsigned x = 0; x < zvsize; ++x) {
 				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);

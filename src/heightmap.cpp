@@ -261,13 +261,8 @@ tex_mod_map_manager_t::hmap_val_t terrain_hmap_manager_t::get_clamped_pixel_valu
 float terrain_hmap_manager_t::get_clamped_height(int x, int y) const { // translate so that (0,0) is in the center of the heightmap texture
 
 	assert(enabled());
-
-	if (mesh_scale < 1.0) {
-		// interpolate
-	}
-	if (mesh_scale > 1.0) {
-		// sample multiple pixels as a mipmap?
-	}
+	if (mesh_scale < 1.0) {return interpolate_height(float(x), float(y));}
+	if (mesh_scale > 1.0) {} // sample multiple pixels as a mipmap?
 	if (!clamp_xy(x, y)) {return scale_mh_texture_val(0.0);} // off the texture, use min value
 	return get_raw_height(x, y);
 }
