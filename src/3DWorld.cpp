@@ -779,7 +779,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	int mtime2;
 	static int lmtype(0);
 
-    switch (key) {
+    switch (key) { // available: QWAXOP somtimes SZ
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -1041,39 +1041,16 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		}
 		break;
 
-	// leaf colors
-	case 'Q':
-		leaf_color_coherence -= 0.05;
-		leaf_color_changed    = 1;
-		break;
-	case 'W':
-		leaf_color_coherence += 0.05;
-		leaf_color_changed    = 1;
-		break;
-	case 'A':
-		leaf_base_color.R  -= 0.1;
-		leaf_color_changed  = 1;
-		break;
 	case 'S':
 		if (world_mode == WMODE_UNIVERSE) {toggle_player_ship_stop(); break;}
-		leaf_base_color.R  += 0.1;
-		leaf_color_changed  = 1;
+		// available
 		break;
 	case 'Z':
-		if (map_mode) {
-			map_zoom *= MAP_ZOOM;
-		}
-		else {
-			leaf_base_color.G -= 0.1;
-		}
+		if (map_mode) {map_zoom *= MAP_ZOOM; break;}
+		// avialable
 		break;
-	case 'X':
-		leaf_base_color.G += 0.1; break;
-	case 'O':
-		tree_color_coherence -= 0.1; break;
-	case 'P':
-		tree_color_coherence += 0.1; break;
-	case 'E':
+
+	case 'E': // reset leaf colors
 		leaf_color_coherence = 0.5;
 		tree_color_coherence = 0.2;
 		leaf_base_color.R    = 0.2;

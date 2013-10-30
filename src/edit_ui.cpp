@@ -15,7 +15,8 @@ protected:
 	unsigned num_controls, cur_control;
 
 	void draw_one_control_text(unsigned control_ix, string const &name, string const &cur_value, float slider_pos) const {
-		assert(slider_pos >= 0.0 && slider_pos <= 1.0);
+		//assert(slider_pos >= 0.0 && slider_pos <= 1.0);
+		slider_pos = CLIP_TO_01(slider_pos);
 		assert(control_ix < num_controls);
 		bool const selected(control_ix == cur_control);
 		(selected ? ORANGE : YELLOW).do_glColor();
@@ -45,6 +46,8 @@ public:
 	}
 };
 
+
+// ************ Tiled Terrain Heightmap Brush/Editing ************
 
 enum {HMAP_DELAY=0, HMAP_CTR_SHAPE, HMAP_CTR_RADIUS, HMAP_CTR_DELTA, HMAP_NUM_CTR};
 string const hmap_ctr_names[HMAP_NUM_CTR] = {"Placement Delay", "Brush Shape", "Brush Radius", "Brush Delta"};
@@ -115,11 +118,69 @@ public:
 	}
 };
 
+
+// ************ Leaf Colors ************
+
+enum {TREE_COLOR_VAR=0, LEAF_COLOR_VAR, LEAF_RED_COMP, LEAF_GREEN_COMP, LEAF_BLUE_COMP, NUM_LEAF_CONT};
+string const leaf_ctr_names[NUM_LEAF_CONT] = {"Tree Color Variance", "Leaf Color Variance", "Leaf Red Component", "Leaf Green Component", "Leaf Blue Component"};
+
+extern int leaf_color_changed, game_mode;
+extern float leaf_color_coherence, tree_color_coherence; // [0.0, 1.0] in steps of 0.1
+extern colorRGBA leaf_base_color; // can set R and G in [-1.0, 1.0] in steps of 0.1
+
+class leaf_color_kbd_menu_t : public keyboard_menu_t {
+
+	virtual void draw_one_control(unsigned control_ix) const {
+		assert(control_ix < NUM_LEAF_CONT);
+		ostringstream value;
+		float spos(0.0);
+
+		switch (control_ix) {
+		case TREE_COLOR_VAR:
+			spos = tree_color_coherence;
+			value << spos;
+			break;
+		case LEAF_COLOR_VAR:
+			spos = (1.0 - leaf_color_coherence);
+			value << spos;
+			break;
+		default:
+			spos = leaf_base_color[control_ix-LEAF_RED_COMP];
+			value << spos;
+			spos = 0.5*(spos + 1.0); // center around 0.0
+		}
+		draw_one_control_text(control_ix, leaf_ctr_names[control_ix], value.str(), spos);
+	}
+
+public:
+	leaf_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT) {}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode == WMODE_GROUND);}
+
+	virtual void change_value(int delta) {
+		switch (cur_control) {
+		case TREE_COLOR_VAR:
+			tree_color_coherence = max(0.0f, (tree_color_coherence + 0.1f*delta)); // no maximum
+			break;
+		case LEAF_COLOR_VAR:
+			leaf_color_coherence = CLIP_TO_01(leaf_color_coherence - 0.1f*delta); // delta is backwards
+			break;
+		default:
+			leaf_base_color[cur_control-LEAF_RED_COMP] = (leaf_base_color[cur_control-LEAF_RED_COMP] + 0.1f*delta); // no minimum/maximum
+			break;
+		}
+		leaf_color_changed = 1;
+	}
+};
+
+
+// ************ Top-Level UI Hooks ************
+
 hmap_kbd_menu_t hmap_menu(cur_brush_param);
+leaf_color_kbd_menu_t leaf_color_menu;
 
 
-unsigned const NUM_KBD_MENUS = 1;
-keyboard_menu_t *kbd_menus[NUM_KBD_MENUS] = {&hmap_menu};
+unsigned const NUM_KBD_MENUS = 2;
+keyboard_menu_t *kbd_menus[NUM_KBD_MENUS] = {&hmap_menu, &leaf_color_menu};
 
 
 bool ui_intercept_keyboard(unsigned char key, bool is_special) {
