@@ -133,6 +133,8 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < NUM_LEAF_CONT);
 		ostringstream value;
+		value.precision(1);
+		value << fixed; // fixed precision in units of 0.1
 		float spos(0.0);
 
 		switch (control_ix) {
@@ -165,7 +167,7 @@ public:
 			leaf_color_coherence = CLIP_TO_01(leaf_color_coherence - 0.1f*delta); // delta is backwards
 			break;
 		default:
-			leaf_base_color[cur_control-LEAF_RED_COMP] = (leaf_base_color[cur_control-LEAF_RED_COMP] + 0.1f*delta); // no minimum/maximum
+			leaf_base_color[cur_control-LEAF_RED_COMP] = CLIP_TO_pm1(leaf_base_color[cur_control-LEAF_RED_COMP] + 0.1f*delta);
 			break;
 		}
 		leaf_color_changed = 1;
