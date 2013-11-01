@@ -1083,6 +1083,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			break;
 		}
 		obj_groups[coll_id[PRECIP]].toggle_enable();
+		//if (obj_groups[coll_id[PRECIP]].is_enabled()) {seed_water_on_mesh(10.0);} // instantly seed the mesh with water
 		break;
 
 	case 'N': // decrease precipitation rate by 1.5X

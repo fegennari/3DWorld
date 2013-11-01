@@ -88,7 +88,7 @@ struct water_section {
 
 
 // Global Variables
-int total_watershed(0), w_acc(0), start_ripple(0), DISABLE_WATER(0), first_water_run(0), is_snow(0), added_wsprings(0);
+int total_watershed(0), has_accumulation(0), start_ripple(0), DISABLE_WATER(0), first_water_run(0), has_snow_accum(0), added_wsprings(0);
 float max_water_height, min_water_height, def_water_level;
 vector<valley> valleys;
 vector<water_spring> water_springs;
@@ -406,7 +406,7 @@ void draw_water() {
 	process_water_springs();
 	add_waves();
 	if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
-	if (DISABLE_WATER || (island && !w_acc)) return;
+	if (DISABLE_WATER || (island && !has_accumulation)) return;
 	water_surface_draw wsd;
 	shader_t s;
 
@@ -519,7 +519,7 @@ void draw_water() {
 	// draw interior water (ponds)
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			if (!is_ice && is_snow) update_accumulation(i, j);
+			if (!is_ice && has_snow_accum) {update_accumulation(i, j);}
 			nin = 0;
 
 			if (wminside[i][j] == 1) {
@@ -1729,7 +1729,7 @@ void update_accumulation(int xpos, int ypos) {
 
 	float acc(accumulation_matrix[ypos][xpos]);
 	if (acc <= 0.0) return;
-	w_acc  = 1; // melt snow
+	has_accumulation = 1; // melt snow
 	float melted(((temperature - W_FREEZE_POINT)/MELT_RATE)*(NIGHT_MELT + (1.0 - NIGHT_MELT)*light_factor));
 	// FIXME: shadow_mask may not be valid if shadow maps are being used
 	if (light_factor >= 0.5 && (shadow_mask[LIGHT_SUN][ypos][xpos] & SHADOWED_ALL)) {melted *= SHADE_MELT;}

@@ -39,7 +39,7 @@ point flow_source(0.0, 0.0, -2.0);
 obj_type object_types[NUM_TOT_OBJS];
 
 extern int num_groups, display_mode, frame_counter, game_mode, island, camera_coll_id, ocean_set;
-extern int s_ball_id, world_mode, w_acc, is_snow, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
+extern int s_ball_id, world_mode, has_accumulation, has_snow_accum, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
 extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks, water_plane_z;
 extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
 extern point ocean;
@@ -1185,27 +1185,43 @@ void reanimate_objects() {
 }
 
 
-void accumulate_object(point const &pos, int type) {
+void seed_water_on_mesh(float amount) {
+
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			if (wminside[y][x] != 1) continue;
+			int const wsi(watershed_matrix[y][x].wsi);
+			assert(wsi < valleys.size());
+			valleys[wsi].w_volume += amount;
+			has_accumulation = 1; // object inside volume
+		}
+	}
+}
+
+
+void accumulate_object(point const &pos, int type, float amount) {
 
 	if (pos.x < -X_SCENE_SIZE+0.1*DX_VAL || pos.x > X_SCENE_SIZE-0.1*DX_VAL ||
 		pos.y < -Y_SCENE_SIZE+0.1*DY_VAL || pos.y > Y_SCENE_SIZE-0.1*DY_VAL) return;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return;
-	w_acc = 1; // object inside volume
 
 	if (temperature > W_FREEZE_POINT) {
 		if (!DISABLE_WATER && (display_mode & 0x04) && wminside[ypos][xpos] == 1) {
 			int const wsi(watershed_matrix[ypos][xpos].wsi);
+			assert(wsi < valleys.size());
 			float const wvol(valleys[wsi].w_volume);
-			if (wvol >= 0) {valleys[wsi].blood_mix = (valleys[wsi].blood_mix*wvol + 1.0*(type == BLOOD))/(wvol + 1.0);}
-			valleys[wsi].w_volume += 1.0;
+			if (wvol >= 0) {valleys[wsi].blood_mix = (valleys[wsi].blood_mix*wvol + amount*(type == BLOOD))/(wvol + amount);}
+			valleys[wsi].w_volume += amount;
+			has_accumulation = 1; // object inside volume
 		}
 	}
 	else if (type == SNOW) {
-		is_snow = 1;
-		float const acc(SNOW_ACC*(1.0 + rand_float()));
+		float const acc(SNOW_ACC*amount*(1.0 + rand_float()));
 		accumulation_matrix[ypos][xpos] += acc;
 		add_snow_to_landscape_texture(pos, acc);
+		has_snow_accum  |= (acc > 0.0);
+		has_accumulation = 1; // object inside volume
 	}
 }
 
@@ -1577,13 +1593,8 @@ void auto_advance_time() { // T = 1 hour
 		precip_inited   = 1;
 	}
 	prate += 0.2*rgen.signed_rand_float();
-	
-	if (prate < -0.5) {
-		prate = -1.0 - prate;
-	}
-	else if (prate > 0.5) {
-		prate = 1.0 - prate;
-	}
+	if      (prate < -0.5) {prate = -1.0 - prate;}
+	else if (prate >  0.5) {prate =  1.0 - prate;}
 	precip += 0.4*prate;
 	precip  = max(-2.0f, min(1.0f, precip));
 
@@ -1606,7 +1617,6 @@ void auto_advance_time() { // T = 1 hour
 			calc_visibility(vis_recalc);
 		}
 	}
-	
 	if (PRINT_TIME_OF_DAY) {
 		if (hrtime24 < 12) {
 			cout << "Time = " << (hrtime24==0  ? 12 : hrtime24   ) << ":" << (((itime&1) == 0) ? "00" : "30") << " AM";

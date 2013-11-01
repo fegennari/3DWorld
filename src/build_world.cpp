@@ -45,7 +45,7 @@ cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 extern bool clear_landscape_vbo, preproc_cube_cobjs, scene_smap_vbo_invalid, use_voxel_cobjs;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, mesh_type, island;
-extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, is_snow, scrolling, num_items, camera_coll_id;
+extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, model_czmin, model_czmax;
 extern point cpos2, orig_camera, orig_cdir;
@@ -502,7 +502,7 @@ void process_groups() {
 			} // !obj.disabled()
 			if (!recreated && status != 0 && obj.status != 1 && obj.status != OBJ_STAT_RES) {
 				if ((precip || type == BLOOD || type == WDROPLET) && obj.status == 0) {
-					accumulate_object(pos, type);
+					accumulate_object(pos, type, 1.0);
 				}
 				else if (type == SKULL && obj.status == 0) { // create skull fragments
 					unsigned const num(rand()%8 + 5);
@@ -569,8 +569,9 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	if (generate_mesh) {
 		create_landscape_texture();
 		PRINT_TIME("Landscape Texture generation");
-		is_snow      = 0;
-		start_ripple = 0;
+		has_snow_accum   = 0;
+		has_accumulation = 0;
+		start_ripple     = 0;
 	}
 	compute_volume_matrix();
 	calc_motion_direction();

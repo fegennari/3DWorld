@@ -16,9 +16,7 @@ Remove usage of gl_TexCoord from shaders and replace with a varying variable
 Replace GL matrix operations with something else (GLM?)
 
 Berries on plants
-Instanced Spheres: berries, small decid tree leaves
 Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
-Infinite rain "seed" to determine final lake/pond positions instantly
 UI for Voxel Modify
