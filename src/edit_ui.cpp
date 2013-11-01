@@ -119,6 +119,56 @@ public:
 };
 
 
+// ************ Voxel Editing ************
+
+enum {VOXEL_SHAPE=0, VOXEL_SIZE, VOXEL_VALUE, NUM_VOXEL_CONT};
+string const voxel_ctr_names[NUM_VOXEL_CONT] = {"Brush Size", "Brush Shape", "Brush Weight"};
+
+// some externs
+
+class voxel_edit_kbd_menu_t : public keyboard_menu_t {
+
+	virtual void draw_one_control(unsigned control_ix) const {
+		assert(control_ix < NUM_VOXEL_CONT);
+		ostringstream value;
+		float spos(0.0);
+
+		switch (control_ix) {
+		case VOXEL_SHAPE:
+			//
+			break;
+		case VOXEL_SIZE:
+			//
+			break;
+		case VOXEL_VALUE:
+			//
+			break;
+		default: assert(0);
+		}
+		draw_one_control_text(control_ix, voxel_ctr_names[control_ix], value.str(), spos);
+	}
+
+public:
+	voxel_edit_kbd_menu_t() : keyboard_menu_t(NUM_VOXEL_CONT) {}
+	virtual bool is_enabled() const {return 0;} // FIXME
+
+	virtual void change_value(int delta) {
+		switch (cur_control) {
+		case VOXEL_SHAPE:
+			//
+			break;
+		case VOXEL_SIZE:
+			//
+			break;
+		case VOXEL_VALUE:
+			//
+			break;
+		default: assert(0);
+		}
+	}
+};
+
+
 // ************ Leaf Colors ************
 
 enum {TREE_COLOR_VAR=0, LEAF_COLOR_VAR, LEAF_RED_COMP, LEAF_GREEN_COMP, LEAF_BLUE_COMP, NUM_LEAF_CONT};
@@ -178,11 +228,12 @@ public:
 // ************ Top-Level UI Hooks ************
 
 hmap_kbd_menu_t hmap_menu(cur_brush_param);
+voxel_edit_kbd_menu_t voxel_edit_menu;
 leaf_color_kbd_menu_t leaf_color_menu;
 
 
-unsigned const NUM_KBD_MENUS = 2;
-keyboard_menu_t *kbd_menus[NUM_KBD_MENUS] = {&hmap_menu, &leaf_color_menu};
+keyboard_menu_t *kbd_menus[] = {&hmap_menu, &voxel_edit_menu, &leaf_color_menu};
+unsigned const NUM_KBD_MENUS = sizeof(kbd_menus)/sizeof(kbd_menus[0]);
 
 
 bool ui_intercept_keyboard(unsigned char key, bool is_special) {
