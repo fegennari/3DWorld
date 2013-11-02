@@ -711,7 +711,7 @@ void compute_ray_trace_lighting(unsigned ltype) {
 
 void check_update_global_lighting(unsigned lights) {
 
-	if (!global_lighting_update) return;
+	if (!global_lighting_update || !(read_light_files[LIGHTING_GLOBAL] || write_light_files[LIGHTING_GLOBAL])) return;
 	if (!(lights & (SUN_SHADOW | MOON_SHADOW))) return;
 	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return; // nothing to do
 	if (!lmap_manager.is_allocated()) return; // too early
