@@ -7,7 +7,7 @@ ntrees 20
 max_unique_trees 100
 nleaves_scale 2.0
 tree_branch_radius 0.5
-sm_tree_density 2.0
+sm_tree_density 1.5
 
 disable_inf_terrain 0
 disable_water 0
