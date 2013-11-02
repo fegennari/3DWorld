@@ -9,7 +9,7 @@
 #include "model3d.h"
 
 
-bool scene_smap_vbo_invalid(0);
+bool scene_smap_vbo_invalid(0), voxel_shadows_updated(0);
 unsigned shadow_map_sz(0);
 pos_dir_up orig_camera_pdu;
 
@@ -310,7 +310,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 	tu_id = (6 + light); // Note: currently used with 2 lights, up to TU7
 	bool const has_dynamic(!tid || scene_smap_vbo_invalid || no_sparse_smap_update()); // Note: force two frames of updates the first time the smap is created by setting has_dynamic
-	bool const update_smap(has_dynamic || last_has_dynamic || lpos != last_lpos); // Note: see view clipping in indexed_vntc_vect_t<T>::render()
+	bool const update_smap(has_dynamic || last_has_dynamic || lpos != last_lpos || voxel_shadows_updated); // Note: see view clipping in indexed_vntc_vect_t<T>::render()
 	last_has_dynamic = has_dynamic;
 	last_lpos = lpos;
 
@@ -419,7 +419,8 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 			glPopMatrix();
 		}
 		disable_fbo();
-	} // !no_create_smap
+		voxel_shadows_updated = 0;
+	} // update_smap
 	
 	// reset state
 	glMatrixMode(GL_TEXTURE);

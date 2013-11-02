@@ -23,13 +23,17 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 
 voxel_params_t global_voxel_params;
 voxel_model_ground terrain_voxel_model(1); // one LOD level
+voxel_brush_t voxel_brush;
 
-extern bool group_back_face_cull;
+extern bool group_back_face_cull, voxel_editing, voxel_shadows_updated;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
+extern float tfticks;
 extern coll_obj_group coll_objects;
 
 
 template class voxel_grid<float>; // explicit instantiation
+
+int  get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos);
 
 
 // if size==old_size, we do nothing;  if size==0, we only free the texture
@@ -1313,6 +1317,7 @@ void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_up
 		}
 		if (cur_group.area() > 0) {update_ao_texture(cur_group);}
 	}
+	voxel_shadows_updated = 1;
 }
 
 
@@ -1881,6 +1886,34 @@ bool update_voxel_sphere_region(point const &center, float radius, float val_at_
 
 void proc_voxel_updates() {
 	terrain_voxel_model.proc_pending_updates();
+}
+
+float get_voxel_brush_step() {return terrain_voxel_model.vsz.x;}
+
+
+void modify_voxels(bool mode) {
+
+	if (!coll_objects.has_voxel_cobjs) return; // no voxels to modify
+	static float last_tfticks(0.0);
+	if ((tfticks - last_tfticks) <= voxel_brush.delay) return; // limit firing rate
+	last_tfticks = tfticks;
+	point const pos(get_camera_pos());
+	int xpos(0), ypos(0), cindex(-1);
+	point coll_pos;
+	vector3d coll_norm;
+	float range(FAR_CLIP);
+	if (get_range_to_mesh(pos, cview_dir, coll_pos, xpos, ypos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
+
+	if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1)) { // hit cobjs (skip_dynamic=1)
+		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
+
+		if (coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
+			//voxel_brush.shape // FIXME: sphere vs. cube, etc.
+			float const radius(get_voxel_brush_step()*voxel_brush.radius);
+			float const weight(pow(2.0f, voxel_brush.weight_exp)*(mode ? -0.1 : 0.1));
+			update_voxel_sphere_region(coll_pos, radius, weight, NO_SOURCE, 0);
+		}
+	}
 }
 
 

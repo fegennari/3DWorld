@@ -40,6 +40,15 @@ struct voxel_params_t {
 };
 
 
+struct voxel_brush_t {
+
+	int shape, weight_exp;
+	unsigned delay, radius;
+
+	voxel_brush_t() : shape(0), weight_exp(0), delay(0), radius(1) {}
+};
+
+
 // stored internally in yxz order
 template<typename V> class voxel_grid : public vector<V> {
 public:

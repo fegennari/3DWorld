@@ -95,7 +95,7 @@ void spray_paint(bool mode) {
 		float const radius(get_spray_radius(coll_pos, color.alpha));
 
 		if (cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
-			update_voxel_sphere_region(coll_pos, radius, color.alpha*(mode ? -0.1 : 0.1), NO_SOURCE, 0); // add/remove voxel volume
+			// spraypaint the voxels?
 		}
 		else if (cobj.status == COLL_STATIC && (!cobj.no_draw() || (cobj.cp.cobj_type != COBJ_TYPE_STD))) { // similar to cobj.can_be_scorched()
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, radius, get_max_dim(coll_norm))) {
@@ -113,6 +113,4 @@ void spray_paint(bool mode) {
 		modify_grass_at(coll_pos, 1.5*radius, 0, 0, 0, 1, 1, 0, color);
 	}
 }
-
-
 

@@ -62,7 +62,7 @@ bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil
 bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
-bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0);
+bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), voxel_editing(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -779,7 +779,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	int mtime2;
 	static int lmtype(0);
 
-    switch (key) { // available: QWAXOP somtimes SZ
+    switch (key) { // available: QWAXOP somtimes Z
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -1043,6 +1043,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'S':
 		if (world_mode == WMODE_UNIVERSE) {toggle_player_ship_stop(); break;}
+		if (world_mode == WMODE_GROUND && create_voxel_landscape) {voxel_editing ^= 1;}
 		// available
 		break;
 	case 'Z':

@@ -5,6 +5,7 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "heightmap.h" // for hmap_brush_t
+#include "voxels.h" // for voxel_brush_t
 
 using namespace std;
 
@@ -121,12 +122,24 @@ public:
 
 // ************ Voxel Editing ************
 
-enum {VOXEL_SHAPE=0, VOXEL_SIZE, VOXEL_VALUE, NUM_VOXEL_CONT};
-string const voxel_ctr_names[NUM_VOXEL_CONT] = {"Brush Size", "Brush Shape", "Brush Weight"};
+enum {VOXEL_DELAY=0, VOXEL_SHAPE, VOXEL_RADIUS, VOXEL_WEIGHT, NUM_VOXEL_CONT};
+string const voxel_ctr_names[NUM_VOXEL_CONT] = {"Brush Delay", "Brush Shape", "Brush Radius", "Brush Weight"};
 
-// some externs
+enum {VB_SHAPE_SPHERE=0, VB_SHAPE_CUBE, NUM_VB_SHAPES};
+string const vb_shape_names[NUM_VB_SHAPES] = {"Sphere", "Cube"};
+
+unsigned const MAX_VB_RADIUS = 20; // in voxel dx size units
+int const MAX_VB_WEIGHT_EXP  = 4;
+
+extern bool voxel_editing;
+extern int game_mode;
+extern voxel_brush_t voxel_brush;
+
+float get_voxel_brush_step();
 
 class voxel_edit_kbd_menu_t : public keyboard_menu_t {
+
+	voxel_brush_t &brush;
 
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < NUM_VOXEL_CONT);
@@ -134,14 +147,24 @@ class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 		float spos(0.0);
 
 		switch (control_ix) {
+		case VOXEL_DELAY:
+			spos = (brush.delay/10.0);
+			value << brush.delay;
+			break;
 		case VOXEL_SHAPE:
-			//
+			spos = (brush.shape/float(NUM_VB_SHAPES-1));
+			assert(brush.shape < NUM_VB_SHAPES);
+			value << vb_shape_names[brush.shape];
 			break;
-		case VOXEL_SIZE:
-			//
+		case VOXEL_RADIUS:
+			spos = float(brush.radius-1)/float(MAX_VB_RADIUS-1);
+			value.precision(1);
+			value << fixed; // fixed precision in units of 0.1
+			value << get_voxel_brush_step()*brush.radius << " (" << brush.radius << " units)";
 			break;
-		case VOXEL_VALUE:
-			//
+		case VOXEL_WEIGHT:
+			spos = 0.5*(brush.weight_exp + MAX_VB_WEIGHT_EXP)/MAX_VB_WEIGHT_EXP;
+			value << pow(2.0f, brush.weight_exp);
 			break;
 		default: assert(0);
 		}
@@ -149,19 +172,22 @@ class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 	}
 
 public:
-	voxel_edit_kbd_menu_t() : keyboard_menu_t(NUM_VOXEL_CONT) {}
-	virtual bool is_enabled() const {return 0;} // FIXME
+	voxel_edit_kbd_menu_t(voxel_brush_t &brush_) : keyboard_menu_t(NUM_VOXEL_CONT), brush(brush_) {}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && voxel_editing && world_mode == WMODE_GROUND);}
 
 	virtual void change_value(int delta) {
 		switch (cur_control) {
+		case VOXEL_DELAY:
+			brush.delay = max(0, min(10, ((int)brush.delay + delta)));
+			break;
 		case VOXEL_SHAPE:
-			//
+			brush.shape = max(0, min(NUM_VB_SHAPES-1, (brush.shape + delta)));
 			break;
-		case VOXEL_SIZE:
-			//
+		case VOXEL_RADIUS:
+			brush.radius = max(1, min((int)MAX_VB_RADIUS, ((int)brush.radius + delta)));
 			break;
-		case VOXEL_VALUE:
-			//
+		case VOXEL_WEIGHT:
+			brush.weight_exp = max(-MAX_VB_WEIGHT_EXP, min(MAX_VB_WEIGHT_EXP, (brush.weight_exp + delta)));
 			break;
 		default: assert(0);
 		}
@@ -174,7 +200,7 @@ public:
 enum {TREE_COLOR_VAR=0, LEAF_COLOR_VAR, LEAF_RED_COMP, LEAF_GREEN_COMP, LEAF_BLUE_COMP, NUM_LEAF_CONT};
 string const leaf_ctr_names[NUM_LEAF_CONT] = {"Tree Color Variance", "Leaf Color Variance", "Leaf Red Component", "Leaf Green Component", "Leaf Blue Component"};
 
-extern int leaf_color_changed, game_mode;
+extern int leaf_color_changed;
 extern float leaf_color_coherence, tree_color_coherence; // [0.0, 1.0] in steps of 0.1
 extern colorRGBA leaf_base_color; // can set R and G in [-1.0, 1.0] in steps of 0.1
 
@@ -206,7 +232,7 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 
 public:
 	leaf_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT) {}
-	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode == WMODE_GROUND);}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && !voxel_editing && world_mode == WMODE_GROUND);}
 
 	virtual void change_value(int delta) {
 		switch (cur_control) {
@@ -228,7 +254,7 @@ public:
 // ************ Top-Level UI Hooks ************
 
 hmap_kbd_menu_t hmap_menu(cur_brush_param);
-voxel_edit_kbd_menu_t voxel_edit_menu;
+voxel_edit_kbd_menu_t voxel_edit_menu(voxel_brush);
 leaf_color_kbd_menu_t leaf_color_menu;
 
 

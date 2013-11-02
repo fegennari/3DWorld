@@ -40,7 +40,7 @@ float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, voxel_editing;
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
@@ -982,7 +982,7 @@ void display(void) {
 			show_blood_on_camera();
 			show_crosshair(do_zoom);
 		}
-		else if (world_mode == WMODE_INF_TERRAIN && inf_terrain_fire_mode) {
+		else if ((world_mode == WMODE_INF_TERRAIN && inf_terrain_fire_mode) || (world_mode == WMODE_GROUND && voxel_editing)) {
 			show_crosshair(do_zoom);
 		}
 		else if (spraypaint_mode) {
