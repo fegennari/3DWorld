@@ -282,26 +282,6 @@ bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, i
 }
 
 
-// Note: not always correct due to backwards polygons, two sided polygons, two polgyons on top of each other, intersecting cobjs, etc.
-bool is_pt_inside_or_near_cobj(point const &pt, float dist, int ignore_cobj, bool skip_dynamic) { // unused
-
-	if (pt.z <= czmin || pt.z >= czmax || !is_over_mesh(pt)) return 0;
-	int cindex;
-	point cpos;
-	vector3d cnorm;
-	point const near_end_pt(pt.x, pt.y, pt.z+dist); // shoot a ray straight up
-	if (check_coll_line(pt, near_end_pt, cindex, ignore_cobj, skip_dynamic, 0)) return 1; // object is close (solid volume?)
-	point const far_end_pt(pt.x, pt.y, czmax+SMALL_NUMBER); // shoot a ray straight up
-	if (!check_coll_line_exact(pt, far_end_pt, cpos, cnorm, cindex, 0.0, ignore_cobj, 0, 0, skip_dynamic)) return 0; // no objects above
-	assert((unsigned)cindex < coll_objects.size());
-	coll_obj const &cobj(coll_objects[cindex]);
-	if (cobj.type != COLL_POLYGON) return 0; // only polygons are non-volume cobjs
-	// only model3d, voxel terrain, and grouped cobjs have reliable normal directions
-	if (cobj.cp.cobj_type != COBJ_TYPE_STD && !(cobj.group_id >= 0 && group_back_face_cull)) return 0;
-	return (cobj.norm.z > 0.0); // inside the polygon contour if hit the back face of a polygon (normal pointing up)
-}
-
-
 bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const {
 
 	switch (type) {
