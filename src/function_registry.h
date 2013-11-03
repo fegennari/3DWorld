@@ -351,7 +351,6 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_n
 						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0);
 bool cobj_contained_ref(point pos1, point center, const point *pts, unsigned npts, int cobj, int &last_cobj);
 bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj);
-bool is_pt_inside_or_near_cobj(point const &pt, float dist, int ignore_cobj, bool skip_dynamic);
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);
 void add_camera_cobj(point const &pos);
 void force_onto_surface_mesh(point &pos);
@@ -716,6 +715,8 @@ bool point_inside_voxel_terrain(point const &pos);
 float get_voxel_terrain_ao_lighting_val(point const &pos);
 bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 void proc_voxel_updates();
+bool check_voxel_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact);
+void get_voxel_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd);
 void modify_voxels(bool mode);
 
 // function prototypes - screenshot

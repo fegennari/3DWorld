@@ -10,6 +10,7 @@
 #include "shaders.h"
 #include "file_utils.h"
 #include "openal_wrap.h"
+#include "cobj_bsp_tree.h"
 
 
 bool const DEBUG_BLOCKS    = 0;
@@ -879,6 +880,10 @@ voxel_model::voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned 
 }
 
 
+voxel_model_ground::voxel_model_ground(unsigned num_lod_levels)
+	: voxel_model(&private_ntg, 1, num_lod_levels), add_cobjs(0), add_as_fixed(0), cobj_tree(&coll_objects) {}
+
+
 void voxel_model::clear() {
 
 	free_context();
@@ -1629,6 +1634,62 @@ void voxel_model_space::clone(voxel_model_space &dest) const {
 }
 
 
+void voxel_query_tree::bvh_tree_row::init(coll_obj_group const *cobjs, unsigned sz) {
+
+	for (unsigned i = 0; i < sz; ++i) {push_back(cobj_bvh_tree(cobjs, 1, 0, 0, 0, 1));}
+}
+
+void voxel_query_tree::bvh_tree_matrix::init(coll_obj_group const *cobjs, unsigned sz, unsigned row_sz) {
+
+	resize(sz);
+	for (iterator i = begin(); i != end(); ++i) {i->init(cobjs, row_sz);}
+}
+
+
+void voxel_query_tree::add_cobjs_for_block(vector<unsigned> const &cids, unsigned block_x, unsigned block_y) {
+
+	//RESET_TIME;
+	assert(block_y < tree_matrix.size());
+	assert(block_x < tree_matrix[block_y].size());
+	cobj_bvh_tree &tree(tree_matrix[block_y][block_x]);
+	tree.clear();
+	if (cids.empty()) return; // nothing else to do
+	tree.add_cobj_ids(cids);
+	tree.build_tree_from_cixs(0); // do_mt_build=0
+	tree_matrix[block_y].update_bcube(block_x); // push the bcube up
+	tree_matrix.update_bcube(block_y); // push the bcube up
+	//PRINT_TIME("Add Cobjs for Block");
+}
+
+bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact) const {
+
+	point cur_p2(p2);
+	bool ret(0);
+	// FIXME: use bcubes for early termination
+	// FIXME: iterate in line direction if exact
+	for (bvh_tree_matrix::const_iterator i = tree_matrix.begin(); i != tree_matrix.end(); ++i) {
+		for (bvh_tree_row::const_iterator j = i->begin(); j != i->end(); ++j) {
+			if (j->check_coll_line(p1, cur_p2, cpos, cnorm, cindex, -1, exact, 0, 0)) {
+				if (!exact) return 1; // return the first hit
+				cur_p2 = cpos; // clip the line so that t always decreases
+				ret = 1;
+			}
+		}
+	}
+	return ret;
+}
+
+void voxel_query_tree::get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const {
+
+	// FIXME: use bcubes for early termination
+	for (bvh_tree_matrix::const_iterator i = tree_matrix.begin(); i != tree_matrix.end(); ++i) {
+		for (bvh_tree_row::const_iterator j = i->begin(); j != i->end(); ++j) {
+			j->get_coll_sphere_cobjs(center, radius, -1, vcd);
+		}
+	}
+}
+
+
 void setup_voxel_landscape(voxel_params_t const &params, float default_val) {
 
 	unsigned const nx((params.xsize > 0) ? params.xsize : MESH_X_SIZE);
@@ -1886,6 +1947,14 @@ bool update_voxel_sphere_region(point const &center, float radius, float val_at_
 
 void proc_voxel_updates() {
 	terrain_voxel_model.proc_pending_updates();
+}
+
+bool check_voxel_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact) {
+	return terrain_voxel_model.check_coll_line(p1, p2, cpos, cnorm, cindex, exact);
+}
+
+void get_voxel_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) {
+	terrain_voxel_model.get_coll_sphere_cobjs(center, radius, vcd);
 }
 
 float get_voxel_brush_step() {return terrain_voxel_model.vsz.x;}

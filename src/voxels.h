@@ -49,6 +49,57 @@ struct voxel_brush_t {
 };
 
 
+class voxel_query_tree {
+
+	template <typename T> struct bvh_tree_group : public vector<T> {
+
+		bool bcube_valid;
+		cube_t bcube;
+
+		bvh_tree_group() : bcube_valid(0) {}
+		
+		bool get_root_bcube(cube_t &bc) const {
+			if (bcube_valid) {bc = bcube;}
+			return bcube_valid;
+		}
+		void update_bcube(unsigned ix) {
+			assert(ix < size());
+			cube_t bc;
+			if (!operator[](ix).get_root_bcube(bc)) return; // invalid/empty bcube
+			if (!bcube_valid) {bcube = bc;} else {bcube.union_with_cube(bc);}
+			bcube_valid = 1;
+		}
+		void calc_bcube() {
+			bcube_valid = 0;
+			for (const_iterator i = begin(); i != end(); ++i) {update_bcube(i);}
+		}
+	};
+
+	struct bvh_tree_row : public bvh_tree_group<cobj_bvh_tree> {
+		void init(coll_obj_group const *cobjs, unsigned sz);
+	};
+
+	struct bvh_tree_matrix : public bvh_tree_group<bvh_tree_row> {
+		void init(coll_obj_group const *cobjs, unsigned sz, unsigned row_sz);
+	};
+
+	coll_obj_group const *cobjs;
+	bvh_tree_matrix tree_matrix;
+
+public:
+	voxel_query_tree(coll_obj_group const *cobjs_) : cobjs(cobjs_) {}
+	void clear() {tree_matrix.clear();}
+
+	void init(unsigned nx, unsigned ny) {
+		clear();
+		tree_matrix.init(cobjs, ny, nx);
+	}
+	void add_cobjs_for_block(vector<unsigned> const &cids, unsigned block_x, unsigned block_y);
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact) const;
+	void get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const;
+};
+
+
 // stored internally in yxz order
 template<typename V> class voxel_grid : public vector<V> {
 public:
@@ -245,6 +296,7 @@ class voxel_model_ground : public voxel_model {
 	bool add_cobjs, add_as_fixed;
 	vector<unsigned> last_blocks_updated;
 	noise_texture_manager_t private_ntg;
+	voxel_query_tree cobj_tree;
 
 	struct data_block_t {
 		vector<int> cids; // references into coll_objects
@@ -263,9 +315,15 @@ class voxel_model_ground : public voxel_model {
 	virtual void pre_build_hook();
 
 public:
-	voxel_model_ground(unsigned num_lod_levels=1) : voxel_model(&private_ntg, 1, num_lod_levels), add_cobjs(0), add_as_fixed(0) {}
+	voxel_model_ground(unsigned num_lod_levels=1);
 	void clear();
 	void build(bool add_cobjs_, bool add_as_fixed_, bool verbose);
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact) const {
+		return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, exact);
+	}
+	void get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const {
+		cobj_tree.get_coll_sphere_cobjs(center, radius, vcd);
+	}
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 };
 
