@@ -44,6 +44,7 @@ public:
 	cobj_tree_base() : max_depth(0), max_leaf_count(0), num_leaf_nodes(0) {}
 	bool is_empty() const {return nodes.empty();}
 	void clear() {nodes.resize(0);}
+	bool get_root_bcube(cube_t &bc) const;
 };
 
 
@@ -106,10 +107,10 @@ public:
 
 class cobj_bvh_tree : public cobj_tree_base {
 
-	coll_obj_group const &cobjs;
+	coll_obj_group const *cobjs;
 	vector<unsigned> cixs;
 	unsigned extra_cobjs_added, extra_cobj_blocks, cixs_bef_last_ec_add, nodes_bef_last_ec_add, last_ec_caller_id; // extra_cobjs stuff
-	bool is_static, is_dynamic, occluders_only, cubes_only;
+	bool is_static, is_dynamic, occluders_only, cubes_only, inc_voxel_cobjs;
 
 	struct per_thread_data {
 		vector<unsigned> temp_bins[3];
@@ -123,8 +124,8 @@ class cobj_bvh_tree : public cobj_tree_base {
 		void increment_node_ix() {assert(cur_nix >= start_nix); cur_nix++;}
 	};
 
-	void add_cobj(unsigned ix) {if (obj_ok(cobjs[ix])) cixs.push_back(ix);}
-	coll_obj const &get_cobj(unsigned ix) const {return cobjs[cixs[ix]];}
+	void add_cobj(unsigned ix) {if (obj_ok((*cobjs)[ix])) cixs.push_back(ix);}
+	coll_obj const &get_cobj(unsigned ix) const {return (*cobjs)[cixs[ix]];}
 	bool create_cixs();
 	void calc_node_bbox(tree_node &n) const;
 	void build_tree_top_level_omp();
@@ -132,16 +133,19 @@ class cobj_bvh_tree : public cobj_tree_base {
 
 	bool obj_ok(coll_obj const &c) const {
 		return (((is_static && c.status == COLL_STATIC) || (is_dynamic && c.status == COLL_DYNAMIC) || (!is_static && !is_dynamic)) &&
-			(!occluders_only || c.is_occluder()) && !c.cp.no_coll && (!cubes_only || c.type == COLL_CUBE));
+			(!occluders_only || c.is_occluder()) && !c.cp.no_coll && (!cubes_only || c.type == COLL_CUBE) &&
+			(inc_voxel_cobjs || c.cp.cobj_type != COBJ_TYPE_VOX_TERRAIN));
 	}
 
 public:
-	cobj_bvh_tree(coll_obj_group const &cobjs_, bool s, bool d, bool o, bool c)
+	cobj_bvh_tree(coll_obj_group const *cobjs_, bool s, bool d, bool o, bool c, bool v)
 		: cobjs(cobjs_), extra_cobjs_added(0), extra_cobj_blocks(0), cixs_bef_last_ec_add(0), nodes_bef_last_ec_add(0), last_ec_caller_id(0),
-		is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c) {}
+		is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c), inc_voxel_cobjs(v) {assert(cobjs);}
 
 	void clear();
+	void add_cobj_ids(vector<unsigned> const &cids) {assert(cixs.empty() && !cids.empty()); cixs = cids;}
 	void add_cobjs(bool verbose);
+	void build_tree_from_cixs(bool do_mt_build);
 	void add_extra_cobjs(vector<unsigned> const &cobj_ixs, unsigned caller_id);
 	bool try_remove_last_extra_cobjs_block(unsigned caller_id);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,

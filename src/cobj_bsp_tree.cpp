@@ -75,6 +75,14 @@ cube_t tquad_t::get_bcube() const {
 // *** cobj_tree_base ***
 
 
+bool cobj_tree_base::get_root_bcube(cube_t &bc) const {
+	
+	if (nodes.empty()) {return 0;}
+	bc = nodes[0];
+	return 1;
+}
+
+
 bool cobj_tree_base::check_for_leaf(unsigned num, unsigned skip_dims) {
 
 	if (num <= MAX_LEAF_SIZE || skip_dims == 7) { // base case
@@ -325,16 +333,16 @@ void cobj_tree_sphere_t::get_ids_int_sphere(point const &center, float radius, v
 bool cobj_bvh_tree::create_cixs() {
 
 	if (is_dynamic && !is_static) { // use dynamic_ids
-		for (cobj_id_set_t::const_iterator i = cobjs.dynamic_ids.begin(); i != cobjs.dynamic_ids.end(); ++i) {
-			assert(*i < cobjs.size());
-			assert(cobjs[*i].status == COLL_DYNAMIC);
+		for (cobj_id_set_t::const_iterator i = cobjs->dynamic_ids.begin(); i != cobjs->dynamic_ids.end(); ++i) {
+			assert(*i < cobjs->size());
+			assert((*cobjs)[*i].status == COLL_DYNAMIC);
 			add_cobj(*i);
 		}
 	}
 	else {
-		if (is_static && !occluders_only && !cubes_only) cixs.reserve(cobjs.size()); // normal static mode
+		if (is_static && !occluders_only && !cubes_only) {cixs.reserve(cobjs->size());} // normal static mode
 		
-		for (unsigned i = 0; i < cobjs.size(); ++i) {
+		for (unsigned i = 0; i < cobjs->size(); ++i) {
 			add_cobj(i);
 		}
 	}
@@ -367,8 +375,21 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 	RESET_TIME;
 	clear();
 	if (!create_cixs()) return; // nothing to be done
-	max_depth = max_leaf_count = num_leaf_nodes = 0;
 	bool const do_mt_build(mt_cobj_tree_build && cixs.size() > 10000);
+	build_tree_from_cixs(do_mt_build);
+
+	if (verbose) {
+		PRINT_TIME(" Cobj Tree Create");
+		cout << "cobjs: " << cobjs->size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size()
+				<< ", depth: " << max_depth << ", max_leaves: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
+	}
+}
+
+
+// to be called from within add_cobjs() or after a call to add_cobj_ids()
+void cobj_bvh_tree::build_tree_from_cixs(bool do_mt_build) {
+
+	max_depth = max_leaf_count = num_leaf_nodes = 0;
 	nodes.resize(get_conservative_num_nodes(cixs.size()) + 64*do_mt_build); // add 8 extra nodes for each of 8 top level splits
 	unsigned const root(0);
 	nodes[root] = tree_node(0, (unsigned)cixs.size());
@@ -382,12 +403,6 @@ void cobj_bvh_tree::add_cobjs(bool verbose) {
 		nodes.resize(ptd.get_next_node_ix());
 	}
 	nodes[root].next_node_id = (unsigned)nodes.size();
-
-	if (verbose) {
-		PRINT_TIME(" Cobj Tree Create");
-		cout << "cobjs: " << cobjs.size() << ", leaves: " << cixs.size() << ", nodes: " << nodes.size()
-				<< ", depth: " << max_depth << ", max_leaves: " << max_leaf_count << ", leaf_nodes: " << num_leaf_nodes << endl;
-	}
 }
 
 
@@ -406,7 +421,7 @@ void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs, unsigned c
 	unsigned const new_root(nodes_bef_last_ec_add);
 
 	for (vector<unsigned>::const_iterator i = cobj_ixs.begin(); i != cobj_ixs.end(); ++i) {
-		assert(*i < cobjs.size());
+		assert(*i < cobjs->size());
 		add_cobj(*i);
 	}
 	// FIXME: could result in duplicate cobjs in the tree if a cobj in cobj_ixs replaces a cobj that was deleted in the tree
@@ -717,9 +732,9 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 }
 
 
-cobj_bvh_tree cobj_tree_static (coll_objects, 1, 0, 0, 0);
-cobj_bvh_tree cobj_tree_dynamic(coll_objects, 0, 1, 0, 0);
-cobj_bvh_tree cobj_tree_occlude(coll_objects, 1, 0, 1, 0);
+cobj_bvh_tree cobj_tree_static (&coll_objects, 1, 0, 0, 0, 1); // includes voxels
+cobj_bvh_tree cobj_tree_dynamic(&coll_objects, 0, 1, 0, 0, 0);
+cobj_bvh_tree cobj_tree_occlude(&coll_objects, 1, 0, 1, 0, 0);
 cobj_tree_tquads_t cobj_tree_triangles;
 
 
@@ -759,7 +774,8 @@ bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos,
 								vector3d &cnorm, int &cindex, int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn)
 {
 	//return cobj_tree_triangles.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
-	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn);
+	bool ret(get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn));
+	return ret;
 }
 
 // can use with snow shadows, grass shadows, tree leaf shadows
@@ -767,31 +783,32 @@ bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ign
 
 	vector3d cnorm; // unused
 	point cpos; // unused
-	return get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn);
+	if (get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn)) return 1;
+	return 0;
 }
 
-
+// used in destroy_cobj for cobj destroy/modification and connected/anchoring tests
 void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler,
 	bool dynamic, bool check_ccounter, int id_for_cobj_int)
 {
 	get_tree(dynamic).get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);
 }
 
-
+// used in cobj_contained_ref() for grass occlusion
 bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts,
 	unsigned npts, int ignore_cobj, int &cobj)
 {
 	return cobj_tree_occlude.is_cobj_contained(p1, p2, viewer, pts, npts, ignore_cobj, cobj);
 }
 
-
+// used in get_occluders() for occlusion culling
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj,
 	vector<int> *cobjs, cobj_query_callback *cqc, bool dynamic, bool occlude)
 {
 	(occlude ? cobj_tree_occlude : get_tree(dynamic)).get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc, occlude);
 }
 
-
+// used in vert_coll_detector for object collision detection
 void get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, vert_coll_detector &vcd, bool dynamic) {
 	get_tree(dynamic).get_coll_sphere_cobjs(center, radius, cobj, vcd);
 }

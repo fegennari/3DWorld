@@ -1341,7 +1341,7 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
 		leaves.reserve(nl);
 		coll_obj_group branch_cobjs;
-		cobj_bvh_tree branch_tree(branch_cobjs, 0, 0, 0, 0);
+		cobj_bvh_tree branch_tree(&branch_cobjs, 0, 0, 0, 0, 0);
 		vector<unsigned> cobjs;
 
 		if (CHECK_LEAF_BRANCH_COLL) {
