@@ -932,7 +932,7 @@ bool voxel_model_ground::clear_block(unsigned block_ix) {
 	if (add_cobjs) {
 		assert(block_ix < data_blocks.size());
 
-		for (vector<int>::const_iterator i = data_blocks[block_ix].cids.begin(); i != data_blocks[block_ix].cids.end(); ++i) {
+		for (vector<unsigned>::const_iterator i = data_blocks[block_ix].cids.begin(); i != data_blocks[block_ix].cids.end(); ++i) {
 			remove_coll_object(*i);
 		}
 		data_blocks[block_ix].clear();
@@ -1036,6 +1036,9 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) { // lod_level == 
 		if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
 		data_blocks[block_ix].cids.push_back(cindex);
 	}
+	// Note: this call is really only safe to do without trying to the add_coll_polygon critical section because
+	// coll_objects has been reserved ahead of time and won't be resized (meaning the pointers are always valid)
+	cobj_tree.add_cobjs_for_block(data_blocks[block_ix].cids, block_ix%params.num_blocks, block_ix/params.num_blocks);
 }
 
 
@@ -1281,6 +1284,7 @@ void update_ao_texture(block_group_t const &group) {
 
 void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added) {
 
+#if 0
 	if (add_cobjs) {
 		vector<unsigned> cixs;
 		cixs.reserve(num_added);
@@ -1297,6 +1301,7 @@ void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_up
 		//sort(cixs.begin(), cixs.end()); // doesn't really help
 		add_to_cobj_tree(cixs, 0);
 	}
+#endif
 	if (!ao_lighting.empty()) {
 		block_group_t cur_group;
 
@@ -1450,6 +1455,7 @@ void voxel_model_ground::build(bool add_cobjs_, bool add_as_fixed_, bool verbose
 
 	add_cobjs    = add_cobjs_;
 	add_as_fixed = add_as_fixed_;
+	cobj_tree.init(params.num_blocks, params.num_blocks);
 	voxel_model::build(verbose);
 }
 
@@ -1661,30 +1667,82 @@ void voxel_query_tree::add_cobjs_for_block(vector<unsigned> const &cids, unsigne
 	//PRINT_TIME("Add Cobjs for Block");
 }
 
-bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact) const {
 
-	point cur_p2(p2);
+bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
+
+	if (tree_matrix.empty()) return 0;
 	bool ret(0);
-	// FIXME: use bcubes for early termination
-	// FIXME: iterate in line direction if exact
-	for (bvh_tree_matrix::const_iterator i = tree_matrix.begin(); i != tree_matrix.end(); ++i) {
-		for (bvh_tree_row::const_iterator j = i->begin(); j != i->end(); ++j) {
-			if (j->check_coll_line(p1, cur_p2, cpos, cnorm, cindex, -1, exact, 0, 0)) {
+	point p1b(p1), p2b(p2);
+	if (!do_line_clip(p1b, p2b, tree_matrix.bcube.d)) return 0;
+
+#if 1
+	bool const xdir(p1.x < p2.x), ydir(p1.y < p2.y);
+	int const start(ydir ? 0 : tree_matrix.size()-1), end(ydir ? tree_matrix.size() : -1), delta(ydir ? 1 : -1);
+	
+	// Note: could use a nested quadtree at the top/row levels for faster rejection, but performance seems good as is
+	for (int i = start; i != end; i += delta) {
+		bvh_tree_row const &row(tree_matrix[i]);
+		if (max(p1b.y, p2b.y) < row.bcube.d[1][0] || min(p1b.y, p2b.y) > row.bcube.d[1][1]) continue;
+		point p1c(p1b), p2c(p2b);
+		if (!do_line_clip(p1c, p2c, row.bcube.d)) continue;
+		int const row_start(xdir ? 0 : row.size()-1), row_end(xdir ? row.size() : -1), row_delta(xdir ? 1 : -1);
+
+		for (int j = row_start; j != row_end; j += row_delta) {
+			cube_t bcube;
+			if (!row[j].get_root_bcube(bcube)) continue; // empty tree
+			if (max(p1c.x, p2c.x) < bcube.d[0][0] || min(p1c.x, p2c.x) > bcube.d[0][1]) continue;
+			point p1d(p1c), p2d(p2c);
+			if (!do_line_clip(p1d, p2d, bcube.d)) continue;
+
+			if (row[j].check_coll_line(p1d, p2d, cpos, cnorm, cindex, ignore_cobj, exact, 0, 0)) {
 				if (!exact) return 1; // return the first hit
-				cur_p2 = cpos; // clip the line so that t always decreases
 				ret = 1;
+				p2c = p2b = cpos; // clip the line so that t always decreases
+				if (!do_line_clip(p1c, p2c, row.bcube.d)) break; // do_line_clip() should never fail
 			}
 		}
 	}
+
+#else
+	for (bvh_tree_matrix::const_iterator i = tree_matrix.begin(); i != tree_matrix.end(); ++i) { // y-dim
+		if (max(p1b.y, p2b.y) < i->bcube.d[1][0] || min(p1b.y, p2b.y) > i->bcube.d[1][1]) continue;
+		point p1c(p1b), p2c(p2b);
+		if (!do_line_clip(p1c, p2c, i->bcube.d)) continue;
+
+		for (bvh_tree_row::const_iterator j = i->begin(); j != i->end(); ++j) { // x-dim
+			cube_t bcube;
+			if (!j->get_root_bcube(bcube)) continue;
+			if (max(p1c.x, p2c.x) < bcube.d[0][0] || min(p1c.x, p2c.x) > bcube.d[0][1]) continue;
+			point p1d(p1c), p2d(p2c);
+			if (!do_line_clip(p1d, p2d, bcube.d)) continue;
+
+			if (j->check_coll_line(p1d, p2d, cpos, cnorm, cindex, ignore_cobj, exact, 0, 0)) {
+				if (!exact) return 1; // return the first hit
+				ret = 1;
+				p2c = p2b = cpos; // clip the line so that t always decreases
+				if (!do_line_clip(p1c, p2c, i->bcube.d)) break; // do_line_clip() should never fail
+			}
+		}
+	}
+#endif
 	return ret;
 }
 
 void voxel_query_tree::get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const {
 
-	// FIXME: use bcubes for early termination
+	if (tree_matrix.empty()) return;
+	cube_t sphere_bcube(center, center);
+	sphere_bcube.expand_by(radius);
+	if (!tree_matrix.bcube.intersects(sphere_bcube)) return;
+
+	// Note: could use a nested quadtree at the top/row levels for faster rejection, but performance seems good as is
 	for (bvh_tree_matrix::const_iterator i = tree_matrix.begin(); i != tree_matrix.end(); ++i) {
+		if (!i->bcube.intersects(sphere_bcube)) continue;
+
 		for (bvh_tree_row::const_iterator j = i->begin(); j != i->end(); ++j) {
-			j->get_coll_sphere_cobjs(center, radius, -1, vcd);
+			cube_t bcube;
+			if (!j->get_root_bcube(bcube)) continue; // empty tree
+			if (bcube.intersects(sphere_bcube)) {j->get_coll_sphere_cobjs(center, radius, -1, vcd);}
 		}
 	}
 }
@@ -1949,11 +2007,13 @@ void proc_voxel_updates() {
 	terrain_voxel_model.proc_pending_updates();
 }
 
-bool check_voxel_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact) {
-	return terrain_voxel_model.check_coll_line(p1, p2, cpos, cnorm, cindex, exact);
+bool check_voxel_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) {
+	if (terrain_voxel_model.empty()) return 0;
+	return terrain_voxel_model.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, exact);
 }
 
 void get_voxel_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) {
+	if (terrain_voxel_model.empty()) return;
 	terrain_voxel_model.get_coll_sphere_cobjs(center, radius, vcd);
 }
 
@@ -1973,8 +2033,8 @@ void modify_voxels(bool mode) {
 	float range(FAR_CLIP);
 	if (get_range_to_mesh(pos, cview_dir, coll_pos, xpos, ypos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
 
-	if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1)) { // hit cobjs (skip_dynamic=1)
-	//if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 1)) {
+	//if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1)) { // hit cobjs (skip_dynamic=1)
+	if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, -1, 1)) {
 		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
 
 		if (coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {

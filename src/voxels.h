@@ -95,7 +95,7 @@ public:
 		tree_matrix.init(cobjs, ny, nx);
 	}
 	void add_cobjs_for_block(vector<unsigned> const &cids, unsigned block_x, unsigned block_y);
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact) const;
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const;
 	void get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const;
 };
 
@@ -299,7 +299,7 @@ class voxel_model_ground : public voxel_model {
 	voxel_query_tree cobj_tree;
 
 	struct data_block_t {
-		vector<int> cids; // references into coll_objects
+		vector<unsigned> cids; // references into coll_objects
 		//unsigned tri_data_ix;
 		void clear() {cids.clear();}
 	};
@@ -318,8 +318,8 @@ public:
 	voxel_model_ground(unsigned num_lod_levels=1);
 	void clear();
 	void build(bool add_cobjs_, bool add_as_fixed_, bool verbose);
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, bool exact) const {
-		return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, exact);
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
+		return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, exact);
 	}
 	void get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const {
 		cobj_tree.get_coll_sphere_cobjs(center, radius, vcd);

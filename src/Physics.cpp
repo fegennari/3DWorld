@@ -1191,7 +1191,7 @@ void seed_water_on_mesh(float amount) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			if (wminside[y][x] != 1) continue;
 			int const wsi(watershed_matrix[y][x].wsi);
-			assert(wsi < valleys.size());
+			assert(wsi < (int)valleys.size());
 			valleys[wsi].w_volume += amount;
 			has_accumulation = 1; // object inside volume
 		}
@@ -1209,7 +1209,7 @@ void accumulate_object(point const &pos, int type, float amount) {
 	if (temperature > W_FREEZE_POINT) {
 		if (!DISABLE_WATER && (display_mode & 0x04) && wminside[ypos][xpos] == 1) {
 			int const wsi(watershed_matrix[ypos][xpos].wsi);
-			assert(wsi < valleys.size());
+			assert(wsi < (int)valleys.size());
 			float const wvol(valleys[wsi].w_volume);
 			if (wvol >= 0) {valleys[wsi].blood_mix = (valleys[wsi].blood_mix*wvol + amount*(type == BLOOD))/(wvol + amount);}
 			valleys[wsi].w_volume += amount;

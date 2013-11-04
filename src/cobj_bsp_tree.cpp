@@ -456,7 +456,6 @@ bool cobj_bvh_tree::try_remove_last_extra_cobjs_block(unsigned caller_id) {
 bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpos,
 	vector3d &cnorm, int &cindex, int ignore_cobj, bool exact, int test_alpha, bool skip_non_drawn) const
 {
-	cindex = -1;
 	if (nodes.empty()) return 0;
 	bool ret(0);
 	float t(0.0), tmin(0.0), tmax(1.0), max_alpha(0.0);
@@ -732,7 +731,7 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 }
 
 
-cobj_bvh_tree cobj_tree_static (&coll_objects, 1, 0, 0, 0, 1); // includes voxels
+cobj_bvh_tree cobj_tree_static (&coll_objects, 1, 0, 0, 0, 0); // does not include voxels
 cobj_bvh_tree cobj_tree_dynamic(&coll_objects, 0, 1, 0, 0, 0);
 cobj_bvh_tree cobj_tree_occlude(&coll_objects, 1, 0, 1, 0, 0);
 cobj_tree_tquads_t cobj_tree_triangles;
@@ -773,19 +772,22 @@ bool try_undo_last_add_to_cobj_tree(unsigned caller_id) {
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex,
 	int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels)
 {
+	cindex = -1;
 	//return cobj_tree_triangles.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
 	bool ret(get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn));
-	if (include_voxels && !dynamic) {ret |= check_voxel_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, 1);}
+	if (include_voxels && !dynamic) {ret |= check_voxel_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1);}
 	return ret;
 }
 
 // can use with snow shadows, grass shadows, tree leaf shadows
-bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels) {
-
+bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj,
+	bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels)
+{
 	vector3d cnorm; // unused
 	point cpos; // unused
+	cindex = -1;
 	if (get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn)) return 1;
-	if (include_voxels && !dynamic && check_voxel_coll_line(p1, p2, cpos, cnorm, cindex, 1)) return 1;
+	if (include_voxels && !dynamic && check_voxel_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0)) return 1;
 	return 0;
 }
 
