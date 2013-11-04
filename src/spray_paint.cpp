@@ -89,15 +89,12 @@ void spray_paint(bool mode) {
 		coll_pos = pos + cview_dir*(range - 0.01); // simple and inexact, but seems OK
 		coll_pos.z += SMALL_NUMBER;
 	}
-	if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1)) { // hit cobjs (skip_dynamic=1)
+	if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 0)) { // hit cobjs (skip_dynamic=1), ignore voxels
 		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
 		coll_obj &cobj(coll_objects[cindex]);
 		float const radius(get_spray_radius(coll_pos, color.alpha));
 
-		if (cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
-			// spraypaint the voxels?
-		}
-		else if (cobj.status == COLL_STATIC && (!cobj.no_draw() || (cobj.cp.cobj_type != COBJ_TYPE_STD))) { // similar to cobj.can_be_scorched()
+		if (cobj.status == COLL_STATIC && (!cobj.no_draw() || (cobj.cp.cobj_type != COBJ_TYPE_STD))) { // similar to cobj.can_be_scorched()
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, radius, get_max_dim(coll_norm))) {
 				int const lifetime(((mode & 1) ? 3600 : 60)*TICKS_PER_SECOND); // 1 min / 1 hour
 				gen_decal(coll_pos, radius, coll_norm, BLUR_CENT_TEX, cindex, color, 0, 0, lifetime);

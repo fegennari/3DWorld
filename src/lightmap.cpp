@@ -853,7 +853,7 @@ void build_lightmap(bool verbose) {
 			int bnds[3][2], cobj(-1), last_cobj(-1);
 			CELL_LOC_T const *const cent(ls.get_cent());
 			ls.get_bounds(bounds, bnds, SQRT_CTHRESH);
-			if (SLT_LINE_TEST_WT > 0.0) check_coll_line(lpos, lpos, cobj, -1, 1, 2); // check cobj containment and ignore that shape
+			if (SLT_LINE_TEST_WT > 0.0) {check_coll_line(lpos, lpos, cobj, -1, 1, 2, 1);} // check cobj containment and ignore that shape (ignore voxels)
 
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
@@ -874,7 +874,7 @@ void build_lightmap(bool verbose) {
 
 						if (SLT_LINE_TEST_WT > 0.0) { // slow
 							if ((last_cobj >= 0 && coll_objects[last_cobj].line_intersect(lpos, p)) ||
-								check_coll_line(p, lpos, last_cobj, cobj, 1, 3)) flow[0] = 0.0;
+								check_coll_line(p, lpos, last_cobj, cobj, 1, 3)) {flow[0] = 0.0;}
 						}
 						if (SLT_FLOW_TEST_WT > 0.0) {
 							CELL_LOC_T const cur_loc[3] = {x, y, z};

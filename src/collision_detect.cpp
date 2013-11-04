@@ -915,7 +915,7 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 }
 
 
-bool is_point_interior(point const &pos, float radius) { // is query point interior to mesh or cobjs
+bool is_point_interior(point const &pos, float radius) { // is query point interior to mesh, cobjs, or voxels
 
 	if (!is_over_mesh(pos)) return 0; // off scene bounds, outside
 	if (is_under_mesh(pos)) return 1; // under mesh, inside
@@ -1046,8 +1046,7 @@ bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d co
 	for (unsigned d = 0; d < 4; ++d) {
 		point const p0(pos + ((d & 1) ? 1.0 : -1.0)*radius*vab[d>>1]);
 		point const p1(p0 + 2.0*DECAL_OFFSET*norm), p2(p0 - 2.0*DECAL_OFFSET*norm); // move behind the decal into the cobj
-		if (cobj.line_intersect(p1, p2)) continue;
-		if (check_coll_line(p1, p2, cindex2, cobj.id, 1, 0)) continue;
+		if (cobj.line_intersect(p1, p2) || check_coll_line(p1, p2, cindex2, cobj.id, 1, 0, 0)) continue; // exclude voxels
 		return 0;
 	}
 	return 1;

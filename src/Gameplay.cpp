@@ -870,7 +870,7 @@ void gen_landmine_scorch(point const &pos) {
 	vector3d coll_norm;
 	int cindex(-1);
 	
-	if (check_coll_line_exact(pos, (pos - vector3d(0.0, 0.0, 1.2*o_radius)), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1) && coll_norm == plus_z) {
+	if (check_coll_line_exact(pos, (pos - vector3d(0.0, 0.0, 1.2*o_radius)), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 0) && coll_norm == plus_z) { // no voxels
 		assert(cindex >= 0 && cindex < (int)coll_objects.size());
 		gen_explosion_decal(point(pos.x, pos.y, coll_objects[cindex].d[2][1]), o_radius, coll_norm, coll_objects[cindex], 2); // top of cube
 	}

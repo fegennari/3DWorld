@@ -770,20 +770,22 @@ bool try_undo_last_add_to_cobj_tree(unsigned caller_id) {
 }
 
 // can use with ray trace lighting, snow collision?, maybe water reflections
-bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos,
-								vector3d &cnorm, int &cindex, int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn)
+bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex,
+	int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels)
 {
 	//return cobj_tree_triangles.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
 	bool ret(get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn));
+	if (include_voxels && !dynamic) {ret |= check_voxel_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, 1);}
 	return ret;
 }
 
 // can use with snow shadows, grass shadows, tree leaf shadows
-bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn) {
+bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels) {
 
 	vector3d cnorm; // unused
 	point cpos; // unused
 	if (get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn)) return 1;
+	if (include_voxels && !dynamic && check_voxel_coll_line(p1, p2, cpos, cnorm, cindex, 1)) return 1;
 	return 0;
 }
 

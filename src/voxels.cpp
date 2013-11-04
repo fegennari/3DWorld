@@ -1974,6 +1974,7 @@ void modify_voxels(bool mode) {
 	if (get_range_to_mesh(pos, cview_dir, coll_pos, xpos, ypos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
 
 	if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1)) { // hit cobjs (skip_dynamic=1)
+	//if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 1)) {
 		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
 
 		if (coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
