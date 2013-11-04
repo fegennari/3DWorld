@@ -742,6 +742,7 @@ cobj_bvh_tree &get_tree(bool dynamic) {
 }
 
 void build_cobj_tree(bool dynamic, bool verbose) {
+
 	get_tree(dynamic).add_cobjs(verbose);
 	
 	if (!dynamic) { // static
@@ -758,14 +759,6 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 		cobj_tree_static.try_remove_last_extra_cobjs_block(caller_id);
 		cobj_tree_static.add_extra_cobjs(moving_cids, caller_id);
 	}
-}
-
-void add_to_cobj_tree(vector<unsigned> const &cobj_ixs, unsigned caller_id) { // no cobj_tree_occlude update?
-	cobj_tree_static.add_extra_cobjs(cobj_ixs, caller_id);
-}
-
-bool try_undo_last_add_to_cobj_tree(unsigned caller_id) {
-	return cobj_tree_static.try_remove_last_extra_cobjs_block(caller_id);
 }
 
 // can use with ray trace lighting, snow collision?, maybe water reflections

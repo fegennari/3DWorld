@@ -906,7 +906,6 @@ void voxel_model_ground::clear() {
 	voxel_model::clear();
 	for (unsigned i = 0; i < data_blocks.size(); ++i) {clear_block(i);} // unnecessary?
 	data_blocks.clear();
-	last_blocks_updated.clear();
 }
 
 
@@ -1284,24 +1283,6 @@ void update_ao_texture(block_group_t const &group) {
 
 void voxel_model_ground::update_blocks_hook(vector<unsigned> const &blocks_to_update, unsigned num_added) {
 
-#if 0
-	if (add_cobjs) {
-		vector<unsigned> cixs;
-		cixs.reserve(num_added);
-		bool can_undo_last_cboj_tree_add(!last_blocks_updated.empty());
-
-		for (vector<unsigned>::const_iterator i = last_blocks_updated.begin(); i != last_blocks_updated.end(); ++i) {
-			if (modified_blocks.find(*i) == modified_blocks.end()) {can_undo_last_cboj_tree_add = 0; break;}
-		}
-		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
-			copy(data_blocks[blocks_to_update[i]].cids.begin(), data_blocks[blocks_to_update[i]].cids.end(), back_inserter(cixs));
-		}
-		if (can_undo_last_cboj_tree_add) {try_undo_last_add_to_cobj_tree(0);}
-		last_blocks_updated = blocks_to_update;
-		//sort(cixs.begin(), cixs.end()); // doesn't really help
-		add_to_cobj_tree(cixs, 0);
-	}
-#endif
 	if (!ao_lighting.empty()) {
 		block_group_t cur_group;
 
@@ -1654,7 +1635,6 @@ void voxel_query_tree::bvh_tree_matrix::init(coll_obj_group const *cobjs, unsign
 
 void voxel_query_tree::add_cobjs_for_block(vector<unsigned> const &cids, unsigned block_x, unsigned block_y) {
 
-	//RESET_TIME;
 	assert(block_y < tree_matrix.size());
 	assert(block_x < tree_matrix[block_y].size());
 	cobj_bvh_tree &tree(tree_matrix[block_y][block_x]);
@@ -1664,7 +1644,6 @@ void voxel_query_tree::add_cobjs_for_block(vector<unsigned> const &cids, unsigne
 	tree.build_tree_from_cixs(0); // do_mt_build=0
 	tree_matrix[block_y].update_bcube(block_x); // push the bcube up
 	tree_matrix.update_bcube(block_y); // push the bcube up
-	//PRINT_TIME("Add Cobjs for Block");
 }
 
 
@@ -1674,8 +1653,6 @@ bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &
 	bool ret(0);
 	point p1b(p1), p2b(p2);
 	if (!do_line_clip(p1b, p2b, tree_matrix.bcube.d)) return 0;
-
-#if 1
 	bool const xdir(p1.x < p2.x), ydir(p1.y < p2.y);
 	int const start(ydir ? 0 : tree_matrix.size()-1), end(ydir ? tree_matrix.size() : -1), delta(ydir ? 1 : -1);
 	
@@ -1702,29 +1679,6 @@ bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &
 			}
 		}
 	}
-
-#else
-	for (bvh_tree_matrix::const_iterator i = tree_matrix.begin(); i != tree_matrix.end(); ++i) { // y-dim
-		if (max(p1b.y, p2b.y) < i->bcube.d[1][0] || min(p1b.y, p2b.y) > i->bcube.d[1][1]) continue;
-		point p1c(p1b), p2c(p2b);
-		if (!do_line_clip(p1c, p2c, i->bcube.d)) continue;
-
-		for (bvh_tree_row::const_iterator j = i->begin(); j != i->end(); ++j) { // x-dim
-			cube_t bcube;
-			if (!j->get_root_bcube(bcube)) continue;
-			if (max(p1c.x, p2c.x) < bcube.d[0][0] || min(p1c.x, p2c.x) > bcube.d[0][1]) continue;
-			point p1d(p1c), p2d(p2c);
-			if (!do_line_clip(p1d, p2d, bcube.d)) continue;
-
-			if (j->check_coll_line(p1d, p2d, cpos, cnorm, cindex, ignore_cobj, exact, 0, 0)) {
-				if (!exact) return 1; // return the first hit
-				ret = 1;
-				p2c = p2b = cpos; // clip the line so that t always decreases
-				if (!do_line_clip(p1c, p2c, i->bcube.d)) break; // do_line_clip() should never fail
-			}
-		}
-	}
-#endif
 	return ret;
 }
 
@@ -2033,8 +1987,7 @@ void modify_voxels(bool mode) {
 	float range(FAR_CLIP);
 	if (get_range_to_mesh(pos, cview_dir, coll_pos, xpos, ypos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
 
-	//if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1)) { // hit cobjs (skip_dynamic=1)
-	if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, -1, 1)) {
+	if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, -1, 1)) { // hit voxel cobjs
 		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
 
 		if (coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {

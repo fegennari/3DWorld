@@ -19,4 +19,8 @@ Berries on plants
 Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
+
 UI for Voxel Modify
+Voxel shadow alignment
+Dynamic cobjs partial tree rebuild
+Don't add voxels as cobjs?

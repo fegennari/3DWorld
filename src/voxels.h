@@ -294,7 +294,6 @@ public:
 class voxel_model_ground : public voxel_model {
 
 	bool add_cobjs, add_as_fixed;
-	vector<unsigned> last_blocks_updated;
 	noise_texture_manager_t private_ntg;
 	voxel_query_tree cobj_tree;
 
