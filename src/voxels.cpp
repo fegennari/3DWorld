@@ -1682,7 +1682,7 @@ bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &
 	return ret;
 }
 
-void voxel_query_tree::get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const {
+void voxel_query_tree::get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const {
 
 	if (tree_matrix.empty()) return;
 	cube_t sphere_bcube(center, center);
@@ -1696,7 +1696,7 @@ void voxel_query_tree::get_coll_sphere_cobjs(point const &center, float radius, 
 		for (bvh_tree_row::const_iterator j = i->begin(); j != i->end(); ++j) {
 			cube_t bcube;
 			if (!j->get_root_bcube(bcube)) continue; // empty tree
-			if (bcube.intersects(sphere_bcube)) {j->get_coll_sphere_cobjs(center, radius, -1, vcd);}
+			if (bcube.intersects(sphere_bcube)) {j->get_coll_sphere_cobjs(center, radius, ignore_cobj, vcd);}
 		}
 	}
 }
@@ -1966,9 +1966,9 @@ bool check_voxel_coll_line(point const &p1, point const &p2, point &cpos, vector
 	return terrain_voxel_model.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, exact);
 }
 
-void get_voxel_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) {
+void get_voxel_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) {
 	if (terrain_voxel_model.empty()) return;
-	terrain_voxel_model.get_coll_sphere_cobjs(center, radius, vcd);
+	terrain_voxel_model.get_coll_sphere_cobjs(center, radius, ignore_cobj, vcd);
 }
 
 float get_voxel_brush_step() {return terrain_voxel_model.vsz.x;}

@@ -96,7 +96,7 @@ public:
 	}
 	void add_cobjs_for_block(vector<unsigned> const &cids, unsigned block_x, unsigned block_y);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const;
-	void get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const;
+	void get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const;
 };
 
 
@@ -320,8 +320,8 @@ public:
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact) const {
 		return cobj_tree.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, exact);
 	}
-	void get_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd) const {
-		cobj_tree.get_coll_sphere_cobjs(center, radius, vcd);
+	void get_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd) const {
+		cobj_tree.get_coll_sphere_cobjs(center, radius, ignore_cobj, vcd);
 	}
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 };

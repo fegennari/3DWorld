@@ -366,7 +366,6 @@ void cobj_bvh_tree::clear() {
 
 	cobj_tree_base::clear();
 	cixs.resize(0);
-	extra_cobjs_added = extra_cobj_blocks = cixs_bef_last_ec_add = nodes_bef_last_ec_add = last_ec_caller_id = 0;
 }
 
 
@@ -403,52 +402,6 @@ void cobj_bvh_tree::build_tree_from_cixs(bool do_mt_build) {
 		nodes.resize(ptd.get_next_node_ix());
 	}
 	nodes[root].next_node_id = (unsigned)nodes.size();
-}
-
-
-void cobj_bvh_tree::add_extra_cobjs(vector<unsigned> const &cobj_ixs, unsigned caller_id) {
-
-	if (cobj_ixs.empty()) return;
-	unsigned const max_extra_roots(max(8U, unsigned(log(float(nodes.size()))/log(2.0))));
-	
-	if ((extra_cobjs_added + cobj_ixs.size()) > nodes.size()/4 || extra_cobj_blocks >= max_extra_roots) {
-		add_cobjs(0); // too many extra cobjs - rebuild the entire tree
-		return;
-	}
-	cixs_bef_last_ec_add  = cixs.size();
-	nodes_bef_last_ec_add = nodes.size();
-	last_ec_caller_id     = caller_id;
-	unsigned const new_root(nodes_bef_last_ec_add);
-
-	for (vector<unsigned>::const_iterator i = cobj_ixs.begin(); i != cobj_ixs.end(); ++i) {
-		assert(*i < cobjs->size());
-		add_cobj(*i);
-	}
-	// FIXME: could result in duplicate cobjs in the tree if a cobj in cobj_ixs replaces a cobj that was deleted in the tree
-	//        this is *probably* ok since it will duplicate a small number of times
-	nodes.resize(nodes.size() + get_conservative_num_nodes(cobj_ixs.size()) + 1); // Note: not required to be "large enough" here
-	nodes[new_root] = tree_node(cixs_bef_last_ec_add, (unsigned)cixs.size());
-	per_thread_data ptd(new_root+1, nodes.size(), 1);
-	build_tree(new_root, 0, 0, ptd);
-	nodes.resize(ptd.get_next_node_ix());
-	nodes[new_root].next_node_id = (unsigned)nodes.size();
-	extra_cobjs_added += (cixs.size() - cixs_bef_last_ec_add); // actual number added
-	++extra_cobj_blocks;
-}
-
-
-bool cobj_bvh_tree::try_remove_last_extra_cobjs_block(unsigned caller_id) {
-
-	if (extra_cobj_blocks == 0 || caller_id != last_ec_caller_id) return 0; // can't remove anything (nothing added or rebuilt since last add)
-	assert(cixs.size() >= cixs_bef_last_ec_add && nodes.size() >= nodes_bef_last_ec_add);
-	nodes.resize(nodes_bef_last_ec_add);
-	cixs.resize(cixs_bef_last_ec_add);
-	unsigned const last_num_added(cixs.size() - cixs_bef_last_ec_add);
-	assert(extra_cobjs_added >= last_num_added);
-	extra_cobjs_added -= last_num_added; 
-	--extra_cobj_blocks;
-	cixs_bef_last_ec_add = nodes_bef_last_ec_add = last_ec_caller_id = 0; // reset so we can't remove last again
-	return 1;
 }
 
 
@@ -731,9 +684,11 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 }
 
 
+// is_static is_dynamic occluders_only cubes_only inc_voxel_cobjs
 cobj_bvh_tree cobj_tree_static (&coll_objects, 1, 0, 0, 0, 0); // does not include voxels
 cobj_bvh_tree cobj_tree_dynamic(&coll_objects, 0, 1, 0, 0, 0);
 cobj_bvh_tree cobj_tree_occlude(&coll_objects, 1, 0, 1, 0, 0);
+cobj_bvh_tree cobj_tree_static_moving(&coll_objects, 1, 0, 0, 0, 0);
 cobj_tree_tquads_t cobj_tree_triangles;
 
 
@@ -750,14 +705,16 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 		//cobj_tree_triangles.add_cobjs(coll_objects, verbose);
 	}
 	else { // dynamic
+		cobj_tree_static_moving.clear();
 		vector<unsigned> moving_cids(falling_cobjs);
 
 		for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
 			copy(i->cobjs.begin(), i->cobjs.end(), back_inserter(moving_cids));
 		}
-		unsigned const caller_id(1);
-		cobj_tree_static.try_remove_last_extra_cobjs_block(caller_id);
-		cobj_tree_static.add_extra_cobjs(moving_cids, caller_id);
+		if (!moving_cids.empty()) {
+			cobj_tree_static_moving.add_cobj_ids(moving_cids);
+			cobj_tree_static_moving.build_tree_from_cixs(0);
+		}
 	}
 }
 
@@ -768,7 +725,8 @@ bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, v
 	cindex = -1;
 	//return cobj_tree_triangles.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
 	bool ret(get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn));
-	if (include_voxels && !dynamic) {ret |= check_voxel_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1);}
+	if (!dynamic) {ret |= cobj_tree_static_moving.check_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn);}
+	if (!dynamic && include_voxels) {ret |= check_voxel_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1);}
 	return ret;
 }
 
@@ -780,7 +738,8 @@ bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ign
 	point cpos; // unused
 	cindex = -1;
 	if (get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn)) return 1;
-	if (include_voxels && !dynamic && check_voxel_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0)) return 1;
+	if (!dynamic && cobj_tree_static_moving.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn)) return 1;
+	if (!dynamic && include_voxels && check_voxel_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0)) return 1;
 	return 0;
 }
 
@@ -789,6 +748,7 @@ void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, in
 	bool dynamic, bool check_ccounter, int id_for_cobj_int)
 {
 	get_tree(dynamic).get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);
+	if (!dynamic) {cobj_tree_static_moving.get_intersecting_cobjs(cube, cobjs, ignore_cobj, toler, check_ccounter, id_for_cobj_int);}
 }
 
 // used in cobj_contained_ref() for grass occlusion
@@ -802,12 +762,15 @@ bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, 
 void get_coll_line_cobjs_tree(point const &pos1, point const &pos2, int ignore_cobj,
 	vector<int> *cobjs, cobj_query_callback *cqc, bool dynamic, bool occlude)
 {
-	(occlude ? cobj_tree_occlude : get_tree(dynamic)).get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc, occlude);
+	(occlude ? cobj_tree_occlude : get_tree(dynamic)) .get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc, occlude);
+	if (!dynamic && !occlude) {cobj_tree_static_moving.get_coll_line_cobjs(pos1, pos2, ignore_cobj, cobjs, cqc, occlude);}
 }
 
 // used in vert_coll_detector for object collision detection
 void get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, vert_coll_detector &vcd, bool dynamic) {
 	get_tree(dynamic).get_coll_sphere_cobjs(center, radius, cobj, vcd);
+	if (!dynamic) {cobj_tree_static_moving.get_coll_sphere_cobjs(center, radius, cobj, vcd);}
+	if (!dynamic) {get_voxel_coll_sphere_cobjs(center, radius, cobj, vcd);}
 }
 
 

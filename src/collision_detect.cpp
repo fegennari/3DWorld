@@ -1400,7 +1400,6 @@ int vert_coll_detector::check_coll() {
 	for (int d = 0; d < 1+!skip_dynamic; ++d) { // using v_collision_matrix doesn't seem to help
 		get_coll_sphere_cobjs_tree(obj.pos, o_radius, -1, *this, (d != 0));
 	}
-	get_voxel_coll_sphere_cobjs(obj.pos, o_radius, *this);
 	return coll;
 }
 

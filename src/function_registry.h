@@ -714,7 +714,7 @@ float get_voxel_terrain_ao_lighting_val(point const &pos);
 bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, int shooter, unsigned num_fragments=0);
 void proc_voxel_updates();
 bool check_voxel_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact);
-void get_voxel_coll_sphere_cobjs(point const &center, float radius, vert_coll_detector &vcd);
+void get_voxel_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd);
 void modify_voxels(bool mode);
 
 // function prototypes - screenshot

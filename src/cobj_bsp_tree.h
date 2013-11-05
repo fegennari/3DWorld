@@ -109,7 +109,6 @@ class cobj_bvh_tree : public cobj_tree_base {
 
 	coll_obj_group const *cobjs;
 	vector<unsigned> cixs;
-	unsigned extra_cobjs_added, extra_cobj_blocks, cixs_bef_last_ec_add, nodes_bef_last_ec_add, last_ec_caller_id; // extra_cobjs stuff
 	bool is_static, is_dynamic, occluders_only, cubes_only, inc_voxel_cobjs;
 
 	struct per_thread_data {
@@ -139,15 +138,12 @@ class cobj_bvh_tree : public cobj_tree_base {
 
 public:
 	cobj_bvh_tree(coll_obj_group const *cobjs_, bool s, bool d, bool o, bool c, bool v)
-		: cobjs(cobjs_), extra_cobjs_added(0), extra_cobj_blocks(0), cixs_bef_last_ec_add(0), nodes_bef_last_ec_add(0), last_ec_caller_id(0),
-		is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c), inc_voxel_cobjs(v) {assert(cobjs);}
+		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c), inc_voxel_cobjs(v) {assert(cobjs);}
 
 	void clear();
 	void add_cobj_ids(vector<unsigned> const &cids) {assert(cixs.empty() && !cids.empty()); cixs = cids;}
 	void add_cobjs(bool verbose);
 	void build_tree_from_cixs(bool do_mt_build);
-	void add_extra_cobjs(vector<unsigned> const &cobj_ixs, unsigned caller_id);
-	bool try_remove_last_extra_cobjs_block(unsigned caller_id);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,
 		bool exact, int test_alpha, bool skip_non_drawn) const;
 	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const;
