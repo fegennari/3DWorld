@@ -914,8 +914,13 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 		if (tmin >= tmax) return 0; \
 	}
 
+#define TEST_CLIP_T2(va, vb, dinv, vcinv) \
+	{float const t((va - vb)*dinv); \
+	 if (vcinv > 0.0) {if (t > tmin) tmin = t;} else {if (t < tmax) tmax = t;} \
+	 if (tmin >= tmax) return 0;}
 
-// probably the most performance critical function in 3DWorld
+
+// performance critical
 bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float &tmin, float &tmax) {
 
 	int const region1(get_region(v1, d)), region2(get_region(v2, d));
@@ -935,12 +940,6 @@ bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float 
 }
 
 
-#define TEST_CLIP_T2(va, vb, dinv, vcinv) \
-	{float const t((va - vb)*dinv); \
-	 if (vcinv > 0.0) {if (t > tmin) tmin = t;} else {if (t < tmax) tmax = t;} \
-	 if (tmin >= tmax) return 0;}
-
-
 bool get_line_clip2(point const &v1, vector3d const &dinv, float const d[3][2]) {
 
 	float tmin(0.0), tmax(1.0);
@@ -954,14 +953,23 @@ bool get_line_clip2(point const &v1, vector3d const &dinv, float const d[3][2]) 
 }
 
 
-// return 1 if line intersects the cube
+// performance critical: return 1 if line intersects the cube
 bool do_line_clip(point &v1, point &v2, float const d[3][2]) {
 
-	float tmin, tmax;
-	if (!get_line_clip(v1, v2, d, tmin, tmax)) return 0;
+	int const region1(get_region(v1, d)), region2(get_region(v2, d));
+	if (region1 & region2) return 0; // line outside
+	int const region3(region1 | region2);
+	if (region3 == 0) return 1; // both points inside => entire line inside
+	float tmin(0.0), tmax(1.0);
 	vector3d const dv(v2, v1);
-	if (tmax > TOLERANCE)         v2  = v1 + dv*tmax;
-	if (tmin < (1.0 - TOLERANCE)) v1 += dv*tmin;
+	TEST_CLIP_T(0x01, d[0][0], v1.x, dv.x,  dv.x); // -x plane
+	TEST_CLIP_T(0x02, d[0][1], v1.x, dv.x, -dv.x); // +x plane
+	TEST_CLIP_T(0x04, d[1][0], v1.y, dv.y,  dv.y); // -y plane
+	TEST_CLIP_T(0x08, d[1][1], v1.y, dv.y, -dv.y); // +y plane
+	TEST_CLIP_T(0x10, d[2][0], v1.z, dv.z,  dv.z); // -z plane
+	TEST_CLIP_T(0x20, d[2][1], v1.z, dv.z, -dv.z); // +z plane
+	if (tmax > TOLERANCE)         {v2  = v1 + dv*tmax;}
+	if (tmin < (1.0 - TOLERANCE)) {v1 += dv*tmin;}
 	return 1;
 }
 
