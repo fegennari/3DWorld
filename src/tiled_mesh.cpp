@@ -222,14 +222,14 @@ void tile_t::fill_adj_mask(bool mask[3][3], int x, int y) const { // mask is {y-
 float tile_t::get_min_dist_to_pt(point const &pt, bool xy_only) const {
 
 	point p1(pt), p2(get_center());
-	bool const ret(do_line_clip(p1, p2, get_bcube().d)); // only clip in x and y?
-	assert(ret);
+	bool const ret(do_line_clip(p1, p2, get_mesh_bcube().d)); // only clip in x and y?
+	assert(ret || mzmin == mzmax); // just assert ret? does the BCUBE_ZTOLER bias fix this?
 	return (xy_only ? p2p_dist_xy(pt, p1) : p2p_dist(pt, p1));
 }
 
-float tile_t::get_max_xy_dist_to_pt(point const &pt) const {
+float tile_t::get_max_xy_dist_to_pt(point const &pt) const { // unused
 
-	cube_t const bc(get_bcube());
+	cube_t const bc(get_mesh_bcube());
 	float const dx(max(fabs(pt.x - bc.d[0][0]), fabs(pt.x - bc.d[0][1])));
 	float const dy(max(fabs(pt.y - bc.d[1][0]), fabs(pt.y - bc.d[1][1])));
 	return sqrt(dx*dx + dy*dy);
@@ -1033,7 +1033,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	glPopMatrix();
 
 	if (has_water()) { // draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
-		cube_t const bcube(get_bcube());
+		cube_t const bcube(get_mesh_bcube());
 		static vector<vert_wrap_t> wverts;
 		wverts.resize(0);
 

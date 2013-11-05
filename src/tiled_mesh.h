@@ -26,6 +26,7 @@ float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH_REF= 1.6;
 float const SCENERY_THRESH    = 4.0;
 float const GRASS_THRESH      = 1.5;
+float const BCUBE_ZTOLER      = 1.0E-6;
 
 
 extern int xoff, yoff, frame_counter;
@@ -142,11 +143,11 @@ public:
 	}
 	cube_t get_bcube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), z2(get_tile_zmax());
-		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin, z2);
+		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin-BCUBE_ZTOLER, z2+BCUBE_ZTOLER);
 	}
 	cube_t get_mesh_bcube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
-		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin, mzmax);
+		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin-BCUBE_ZTOLER, mzmax+BCUBE_ZTOLER); // Note: bias by BCUBE_ZTOLER so dz != 0 when mzmin == mzmax
 	}
 	cube_t get_mesh_sub_bcube(unsigned x, unsigned y) const {
 		assert(x < 4 && y < 4);
