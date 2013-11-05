@@ -26,7 +26,7 @@ voxel_params_t global_voxel_params;
 voxel_model_ground terrain_voxel_model(1); // one LOD level
 voxel_brush_t voxel_brush;
 
-extern bool group_back_face_cull, voxel_editing, voxel_shadows_updated;
+extern bool group_back_face_cull, voxel_shadows_updated;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
 extern float tfticks;
 extern coll_obj_group coll_objects;

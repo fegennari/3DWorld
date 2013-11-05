@@ -131,8 +131,7 @@ string const vb_shape_names[NUM_VB_SHAPES] = {"Sphere", "Cube"};
 unsigned const MAX_VB_RADIUS = 20; // in voxel dx size units
 int const MAX_VB_WEIGHT_EXP  = 4;
 
-extern bool voxel_editing;
-extern int game_mode;
+extern int game_mode, voxel_editing;
 extern voxel_brush_t voxel_brush;
 
 float get_voxel_brush_step();
@@ -164,7 +163,7 @@ class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 			break;
 		case VOXEL_WEIGHT:
 			spos = 0.5*(brush.weight_exp + MAX_VB_WEIGHT_EXP)/MAX_VB_WEIGHT_EXP;
-			value << pow(2.0f, brush.weight_exp);
+			value << pow(2.0f, brush.weight_exp) * ((voxel_editing == 2) ? -1.0 : 1.0);
 			break;
 		default: assert(0);
 		}
