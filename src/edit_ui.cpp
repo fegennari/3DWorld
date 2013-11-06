@@ -13,6 +13,7 @@ using namespace std;
 class keyboard_menu_t {
 
 protected:
+	string title;
 	unsigned num_controls, cur_control;
 
 	void draw_one_control_text(unsigned control_ix, string const &name, string const &cur_value, float slider_pos) const {
@@ -35,7 +36,7 @@ protected:
 	virtual void draw_one_control(unsigned control_ix) const = 0;
 
 public:
-	keyboard_menu_t(unsigned num_controls_) : num_controls(num_controls_), cur_control(0) {assert(num_controls > 0);}
+	keyboard_menu_t(unsigned num_controls_, string const &title_) : num_controls(num_controls_), cur_control(0), title(title_) {assert(num_controls > 0);}
 	virtual ~keyboard_menu_t() {}
 	virtual bool is_enabled() const = 0;
 	void next_control() {cur_control = (cur_control == num_controls-1) ? 0  : (cur_control+1);}
@@ -43,6 +44,10 @@ public:
 	virtual void change_value(int delta) = 0;
 
 	void draw_controls() const {
+		if (!title.empty()) {
+			YELLOW.do_glColor();
+			draw_text(-0.01, 0.01, -0.02, title.c_str(), 1.0, 0);
+		}
 		for (unsigned i = 0; i < num_controls; ++i) {draw_one_control(i);}
 	}
 };
@@ -95,7 +100,7 @@ class hmap_kbd_menu_t : public keyboard_menu_t {
 	}
 
 public:
-	hmap_kbd_menu_t(hmap_brush_param_t &bp) : keyboard_menu_t(HMAP_NUM_CTR), brush_param(bp), max_radius_exp(0) {
+	hmap_kbd_menu_t(hmap_brush_param_t &bp) : keyboard_menu_t(HMAP_NUM_CTR, "Heightmap Edit"), brush_param(bp), max_radius_exp(0) {
 		for (unsigned sz = 1; sz < get_tile_size(); sz <<= 1) {++max_radius_exp;}
 	}
 	virtual bool is_enabled() const {return (show_scores && inf_terrain_fire_mode && world_mode == WMODE_INF_TERRAIN);}
@@ -171,7 +176,7 @@ class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 	}
 
 public:
-	voxel_edit_kbd_menu_t(voxel_brush_t &brush_) : keyboard_menu_t(NUM_VOXEL_CONT), brush(brush_) {}
+	voxel_edit_kbd_menu_t(voxel_brush_t &brush_) : keyboard_menu_t(NUM_VOXEL_CONT, "Voxel Edit"), brush(brush_) {}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && voxel_editing && world_mode == WMODE_GROUND);}
 
 	virtual void change_value(int delta) {
@@ -230,7 +235,7 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 	}
 
 public:
-	leaf_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT) {}
+	leaf_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT, "Leaf Colors") {}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && !voxel_editing && world_mode == WMODE_GROUND);}
 
 	virtual void change_value(int delta) {

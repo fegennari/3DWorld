@@ -779,7 +779,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	int mtime2;
 	static int lmtype(0);
 
-    switch (key) { // available: QWAXOP somtimes Z
+    switch (key) { // available: QWAXOP somtimes SZ
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -1043,7 +1043,6 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'S':
 		if (world_mode == WMODE_UNIVERSE) {toggle_player_ship_stop(); break;}
-		if (world_mode == WMODE_GROUND && create_voxel_landscape) {voxel_editing = (voxel_editing+1)%3;}
 		// available
 		break;
 	case 'Z':

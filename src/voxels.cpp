@@ -27,7 +27,7 @@ voxel_model_ground terrain_voxel_model(1); // one LOD level
 voxel_brush_t voxel_brush;
 
 extern bool group_back_face_cull, voxel_shadows_updated;
-extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate;
+extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing;
 extern float tfticks;
 extern coll_obj_group coll_objects;
 
@@ -1974,7 +1974,16 @@ void get_voxel_coll_sphere_cobjs(point const &center, float radius, int ignore_c
 float get_voxel_brush_step() {return terrain_voxel_model.vsz.x;}
 
 
-void modify_voxels(bool mode) {
+void change_voxel_editing_mode(int val) {
+
+	unsigned const NUM_MODES = 3;
+	voxel_editing = (voxel_editing + NUM_MODES + val) % NUM_MODES;
+	string const modes[NUM_MODES] = {"Not Editing Voxels", "Increase Voxel Weight/Add", "Decrease Voxel Weight/Remove"};
+	print_text_onscreen(modes[voxel_editing], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
+}
+
+
+void modify_voxels() {
 
 	if (!coll_objects.has_voxel_cobjs) return; // no voxels to modify
 	static float last_tfticks(0.0);
@@ -1993,7 +2002,7 @@ void modify_voxels(bool mode) {
 		if (coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
 			//voxel_brush.shape // FIXME: sphere vs. cube, etc.
 			float const radius(get_voxel_brush_step()*voxel_brush.radius);
-			float const weight(pow(2.0f, voxel_brush.weight_exp)*(mode ? -0.1 : 0.1));
+			float const weight(pow(2.0f, voxel_brush.weight_exp)*((voxel_editing == 2) ? -0.1 : 0.1));
 			update_voxel_sphere_region(coll_pos, radius, weight, NO_SOURCE, 0);
 		}
 	}

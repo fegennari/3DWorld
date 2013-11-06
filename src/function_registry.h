@@ -715,7 +715,8 @@ bool update_voxel_sphere_region(point const &center, float radius, float val_at_
 void proc_voxel_updates();
 bool check_voxel_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact);
 void get_voxel_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd);
-void modify_voxels(bool mode);
+void change_voxel_editing_mode(int val);
+void modify_voxels();
 
 // function prototypes - screenshot
 int screenshot(unsigned window_width, unsigned window_height, char *file_path);

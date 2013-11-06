@@ -1406,6 +1406,9 @@ void switch_player_weapon(int val) {
 	else if (world_mode == WMODE_INF_TERRAIN) {
 		change_inf_terrain_fire_mode(val);
 	}
+	else if (world_mode == WMODE_GROUND && create_voxel_landscape) {
+		change_voxel_editing_mode(val);
+	}
 	else if (spraypaint_mode) {
 		change_spraypaint_color(val);
 	}
@@ -1437,7 +1440,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 
 	if (!game_mode) { // flashlight/candlelight/spraypaint mode only
 		if (voxel_editing) {
-			modify_voxels(voxel_editing == 2);
+			modify_voxels();
 		}
 		else if (spraypaint_mode) {
 			spray_paint((wmode & 1) != 0);
