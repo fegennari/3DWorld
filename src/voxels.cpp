@@ -24,7 +24,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 
 voxel_params_t global_voxel_params;
 voxel_model_ground terrain_voxel_model(1); // one LOD level
-voxel_brush_t voxel_brush;
+voxel_brush_params_t voxel_brush_params;
 
 extern bool group_back_face_cull, voxel_shadows_updated;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing;
@@ -1971,8 +1971,12 @@ void get_voxel_coll_sphere_cobjs(point const &center, float radius, int ignore_c
 	terrain_voxel_model.get_coll_sphere_cobjs(center, radius, ignore_cobj, vcd);
 }
 
-float get_voxel_brush_step() {return terrain_voxel_model.vsz.x;}
 
+// ************ Voxel Editing ************
+
+vector<voxel_brush_t> brushes_applied;
+
+float get_voxel_brush_step() {return terrain_voxel_model.vsz.x;}
 
 void change_voxel_editing_mode(int val) {
 
@@ -1982,12 +1986,29 @@ void change_voxel_editing_mode(int val) {
 	print_text_onscreen(modes[voxel_editing], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
+void apply_brush(voxel_brush_t const &brush) {
+
+	float const radius(get_voxel_brush_step()*brush.radius);
+	float const weight(pow(2.0f, brush.weight_exp)*brush.weight_scale);
+	//voxel_brush.shape // FIXME: sphere vs. cube, etc.
+	update_voxel_sphere_region(brush.pos, radius, weight, NO_SOURCE, 0);
+}
+
+void undo_voxel_brush() {
+
+	// Note: approximate, not exact undo; also doesn't undo unconnected voxel removal
+	if (brushes_applied.empty()) return; // nothing to undo
+	voxel_brush_t brush(brushes_applied.back());
+	brush.weight_scale *= -1.0; // invert weight
+	apply_brush(brush);
+	brushes_applied.pop_back(); // remove the brush
+}
 
 void modify_voxels() {
 
 	if (!coll_objects.has_voxel_cobjs) return; // no voxels to modify
 	static float last_tfticks(0.0);
-	if ((tfticks - last_tfticks) <= voxel_brush.delay) return; // limit firing rate
+	if ((tfticks - last_tfticks) <= voxel_brush_params.delay) return; // limit firing rate
 	last_tfticks = tfticks;
 	point const pos(get_camera_pos());
 	int xpos(0), ypos(0), cindex(-1);
@@ -2000,10 +2021,10 @@ void modify_voxels() {
 		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
 
 		if (coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
-			//voxel_brush.shape // FIXME: sphere vs. cube, etc.
-			float const radius(get_voxel_brush_step()*voxel_brush.radius);
-			float const weight(pow(2.0f, voxel_brush.weight_exp)*((voxel_editing == 2) ? -0.1 : 0.1));
-			update_voxel_sphere_region(coll_pos, radius, weight, NO_SOURCE, 0);
+			voxel_brush_params.weight_scale = ((voxel_editing == 2) ? -0.1 : 0.1);
+			voxel_brush_t const brush(voxel_brush_params, coll_pos);
+			apply_brush(brush);
+			brushes_applied.push_back(brush);
 		}
 	}
 }

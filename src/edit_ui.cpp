@@ -5,9 +5,12 @@
 #include "3DWorld.h"
 #include "function_registry.h"
 #include "heightmap.h" // for hmap_brush_t
-#include "voxels.h" // for voxel_brush_t
+#include "voxels.h" // for voxel_brush_params_t
 
 using namespace std;
+
+bool  const MENU_BITMAP_TEXT = 0;
+float const MENU_TEXT_SIZE   = 1.0;
 
 
 class keyboard_menu_t {
@@ -29,9 +32,7 @@ protected:
 		oss << "+";
 		for (unsigned n = pos+1; n < ndiv; ++n) {oss << "-";}
 		oss << "  " << name << ": " << cur_value;
-		bool const bitmap = 0;
-		float const size = 1.0;
-		draw_text(-0.01, 0.01-0.0014*(num_controls - control_ix), -0.02, oss.str().c_str(), size, bitmap);
+		draw_text(-0.01, 0.01-0.0014*(num_controls - control_ix), -0.02, oss.str().c_str(), MENU_TEXT_SIZE, MENU_BITMAP_TEXT);
 	}
 	virtual void draw_one_control(unsigned control_ix) const = 0;
 
@@ -46,7 +47,7 @@ public:
 	void draw_controls() const {
 		if (!title.empty()) {
 			YELLOW.do_glColor();
-			draw_text(-0.01, 0.01, -0.02, title.c_str(), 1.0, 0);
+			draw_text(-0.01, 0.01, -0.02, title.c_str(), MENU_TEXT_SIZE, MENU_BITMAP_TEXT);
 		}
 		for (unsigned i = 0; i < num_controls; ++i) {draw_one_control(i);}
 	}
@@ -137,13 +138,13 @@ unsigned const MAX_VB_RADIUS = 20; // in voxel dx size units
 int const MAX_VB_WEIGHT_EXP  = 4;
 
 extern int game_mode, voxel_editing;
-extern voxel_brush_t voxel_brush;
+extern voxel_brush_params_t voxel_brush_params;
 
 float get_voxel_brush_step();
 
 class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 
-	voxel_brush_t &brush;
+	voxel_brush_params_t &brush;
 
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < NUM_VOXEL_CONT);
@@ -176,7 +177,7 @@ class voxel_edit_kbd_menu_t : public keyboard_menu_t {
 	}
 
 public:
-	voxel_edit_kbd_menu_t(voxel_brush_t &brush_) : keyboard_menu_t(NUM_VOXEL_CONT, "Voxel Edit"), brush(brush_) {}
+	voxel_edit_kbd_menu_t(voxel_brush_params_t &brush_) : keyboard_menu_t(NUM_VOXEL_CONT, "Voxel Edit"), brush(brush_) {}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && voxel_editing && world_mode == WMODE_GROUND);}
 
 	virtual void change_value(int delta) {
@@ -258,7 +259,7 @@ public:
 // ************ Top-Level UI Hooks ************
 
 hmap_kbd_menu_t hmap_menu(cur_brush_param);
-voxel_edit_kbd_menu_t voxel_edit_menu(voxel_brush);
+voxel_edit_kbd_menu_t voxel_edit_menu(voxel_brush_params);
 leaf_color_kbd_menu_t leaf_color_menu;
 
 

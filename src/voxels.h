@@ -40,12 +40,21 @@ struct voxel_params_t {
 };
 
 
-struct voxel_brush_t {
+struct voxel_brush_params_t {
 
 	int shape, weight_exp;
 	unsigned delay, radius;
+	float weight_scale;
 
-	voxel_brush_t() : shape(0), weight_exp(0), delay(0), radius(1) {}
+	voxel_brush_params_t() : shape(0), weight_exp(0), delay(0), radius(1), weight_scale(1.0) {}
+};
+
+struct voxel_brush_t : public voxel_brush_params_t {
+
+	point pos;
+
+	voxel_brush_t() {}
+	voxel_brush_t(voxel_brush_params_t const &params, point const &pos_) : voxel_brush_params_t(params), pos(pos_) {}
 };
 
 

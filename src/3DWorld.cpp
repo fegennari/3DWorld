@@ -785,7 +785,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 8: // backspace
-		inf_terrain_undo_hmap_mod();
+		if (world_mode == WMODE_INF_TERRAIN) {inf_terrain_undo_hmap_mod();}
+		else if (world_mode == WMODE_GROUND) {undo_voxel_brush();}
 		break;
 	
 	case 'm': // maximize/minimize
