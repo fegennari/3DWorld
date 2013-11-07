@@ -395,7 +395,7 @@ public:
 		float const damage_radius(min(0.5, 0.1*damage));
 		xform_point(hit_pos);
 		point const center(hit_pos);
-		bool const damaged(model.update_voxel_sphere_region(center, damage_radius, -1.0, &hit_pos));
+		bool const damaged(model.update_voxel_sphere_region(center, damage_radius, -1.0, 1, 1, &hit_pos));
 		xform_point_inv(hit_pos);
 		hit_pos += 0.5*(radius/ASTEROID_VOX_SZ)*(hit_pos - pos).get_norm(); // move slightly away from asteroid center
 		return damaged;

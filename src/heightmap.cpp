@@ -5,6 +5,7 @@
 #include "heightmap.h"
 #include "function_registry.h"
 #include "inlines.h"
+#include "file_utils.h"
 
 using namespace std;
 
@@ -120,20 +121,6 @@ bool tex_mod_map_manager_t::undo_last_brush() {
 unsigned const header_sig  = 0xdeadbeef;
 unsigned const trailer_sig = 0xbeefdead;
 
-unsigned read_uint(FILE *fp) {
-
-	unsigned v(0);
-	unsigned const v_read(fread(&v, sizeof(unsigned), 1, fp));
-	assert(v_read == 1); // add error checking?
-	return v;
-}
-
-void write_uint(FILE *fp, unsigned v) {
-
-	unsigned v_write(fwrite(&v, sizeof(unsigned), 1, fp));
-	assert(v_write == 1); // add error checking?
-}
-
 bool tex_mod_map_manager_t::read_mod(string const &fn) {
 
 	//assert(mod_map.empty()); // ???
@@ -144,13 +131,11 @@ bool tex_mod_map_manager_t::read_mod(string const &fn) {
 		cerr << "Error opening terrain height mod map " << fn << " for read" << endl;
 		return 0;
 	}
-	unsigned const header(read_uint(fp));
-
-	if (header != header_sig) {
+	if (read_binary_uint(fp) != header_sig) {
 		cerr << "Error: incorrect header found in terrain height mod map " << fn << "." << endl;
 		return 0;
 	}
-	unsigned const sz(read_uint(fp));
+	unsigned const sz(read_binary_uint(fp));
 
 	for (unsigned i = 0; i < sz; ++i) {
 		mod_elem_t elem;
@@ -158,16 +143,14 @@ bool tex_mod_map_manager_t::read_mod(string const &fn) {
 		assert(elem_read == 1); // add error checking?
 		mod_map.add(elem);
 	}
-	unsigned const bsz(read_uint(fp));
+	unsigned const bsz(read_binary_uint(fp));
 	brush_vect.resize(bsz);
 
-	if (!brush_vect.empty()) { // write brushes
+	if (!brush_vect.empty()) { // read brushes
 		unsigned const elem_read(fread(&brush_vect.front(), sizeof(brush_vect_t::value_type), brush_vect.size(), fp));
 		assert(elem_read == brush_vect.size()); // add error checking?
 	}
-	unsigned const trailer(read_uint(fp));
-
-	if (trailer != trailer_sig) {
+	if (read_binary_uint(fp) != trailer_sig) {
 		cerr << "Error: incorrect trailer found in terrain height mod map " << fn << "." << endl;
 		return 0;
 	}
@@ -183,21 +166,21 @@ bool tex_mod_map_manager_t::write_mod(string const &fn) const {
 		cerr << "Error opening terrain height mod map " << fn << " for write" << endl;
 		return 0;
 	}
-	write_uint(fp, header_sig);
-	write_uint(fp, mod_map.size());
+	write_binary_uint(fp, header_sig);
+	write_binary_uint(fp, mod_map.size());
 
 	for (tex_mod_map_t::const_iterator i = mod_map.begin(); i != mod_map.end(); ++i) {
 		mod_elem_t const elem(*i); // could use *i directly?
 		unsigned const elem_write(fwrite(&elem, sizeof(mod_elem_t), 1, fp)); // use a larger block?
 		assert(elem_write == 1); // add error checking?
 	}
-	write_uint(fp, brush_vect.size());
+	write_binary_uint(fp, brush_vect.size());
 
 	if (!brush_vect.empty()) { // write brushes
 		unsigned const elem_write(fwrite(&brush_vect.front(), sizeof(brush_vect_t::value_type), brush_vect.size(), fp));
 		assert(elem_write == brush_vect.size()); // add error checking?
 	}
-	write_uint(fp, trailer_sig);
+	write_binary_uint(fp, trailer_sig);
 	fclose(fp);
 	return 1;
 }

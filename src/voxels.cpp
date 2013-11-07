@@ -1146,7 +1146,7 @@ void voxel_model::calc_ao_lighting() {
 
 
 // returns true if something was updated
-bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center,
+bool voxel_model::update_voxel_sphere_region(point const &center, float radius, float val_at_center, bool spherical, int falloff_exp,
 	point *damage_pos, int shooter, unsigned num_fragments)
 {
 	assert(radius > 0.0);
@@ -1171,11 +1171,11 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				point const pos(get_pt_at(x, y, z));
 				if (use_mesh && is_under_mesh(pos)) continue;
 				float const dist(max(0.0f, (p2p_dist(center, pos) - dist_adjust)));
-				if (dist >= radius) continue; // too far
+				if (spherical && dist >= radius) continue; // too far
 				// update voxel values, linear falloff with distance from center (ending at 0.0 at radius)
 				float &val(get_ref(x, y, z));
 				float const prev_val(val);
-				val += val_at_center*(1.0 - dist/radius);
+				val += val_at_center*pow(min(1.0f, (1.0f - dist/radius)), (float)falloff_exp);
 				if (params.normalize_to_1) val = CLIP_TO_pm1(val);
 				if (val == prev_val) continue; // no change
 				calc_outside_val(x, y, z, ((outside.get(x, y, z) & UNDER_MESH_BIT) != 0));
@@ -1954,7 +1954,7 @@ bool update_voxel_sphere_region(point const &center, float radius, float val_at_
 
 	// optimization/hack to skip the update if the player didn't cause it and the camera can't see it
 	if (shooter != CAMERA_ID && !camera_pdu.sphere_visible_test(center, radius)) return 0;
-	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(display_framerate ? 1.0 : -1.0), NULL, shooter, num_fragments);
+	return terrain_voxel_model.update_voxel_sphere_region(center, radius, val_at_center*(display_framerate ? 1.0 : -1.0), 1, 1, NULL, shooter, num_fragments);
 }
 
 void proc_voxel_updates() {
@@ -1974,9 +1974,87 @@ void get_voxel_coll_sphere_cobjs(point const &center, float radius, int ignore_c
 
 // ************ Voxel Editing ************
 
-vector<voxel_brush_t> brushes_applied;
-
 float get_voxel_brush_step() {return terrain_voxel_model.vsz.x;}
+
+unsigned const vheader_sig  = 0xbeefdead;
+unsigned const vtrailer_sig = 0xdeadbeef;
+
+class voxel_brush_manager_t {
+
+	vector<voxel_brush_t> brush_vect;
+
+public:
+	void clear() {brush_vect.clear();}
+	void add_brush(voxel_brush_t const &brush) {brush_vect.push_back(brush);}
+
+	void apply_brush(voxel_brush_t const &brush) {
+		float const radius(get_voxel_brush_step()*brush.radius);
+		float const weight(pow(2.0f, brush.weight_exp)*brush.weight_scale);
+		bool const spherical(brush.shape != VB_SHAPE_CUBE);
+		int const falloff_exp(spherical ? (brush.shape - VB_SHAPE_CONSTANT) : 0); // 0 to N
+		terrain_voxel_model.update_voxel_sphere_region(brush.pos, radius, weight, spherical, falloff_exp, NULL, NO_SOURCE, 0);
+	}
+	void apply_and_add_brush(voxel_brush_t const &brush) {
+		apply_brush(brush);
+		add_brush(brush);
+	}
+	void undo_last_brush() {
+		// Note: approximate, not exact undo; also doesn't undo unconnected voxel removal
+		if (brush_vect.empty()) return; // nothing to undo
+		voxel_brush_t brush(brush_vect.back());
+		brush.weight_scale *= -1.0; // invert weight
+		apply_brush(brush);
+		brush_vect.pop_back(); // remove the brush
+	}
+
+	bool read(string const &fn) {
+		clear(); // allow merging ???
+		FILE *fp(fopen(fn.c_str(), "rb"));
+
+		if (fp == NULL) {
+			cerr << "Error opening voxel brush file " << fn << " for read" << endl;
+			return 0;
+		}
+		if (read_binary_uint(fp) != vheader_sig) {
+			cerr << "Error: incorrect header found in voxel brush file " << fn << "." << endl;
+			return 0;
+		}
+		unsigned const bsz(read_binary_uint(fp));
+		brush_vect.resize(bsz);
+
+		if (!brush_vect.empty()) { // write brushes
+			unsigned const elem_read(fread(&brush_vect.front(), sizeof(voxel_brush_t), brush_vect.size(), fp));
+			assert(elem_read == brush_vect.size()); // add error checking?
+		}
+		if (read_binary_uint(fp) != vtrailer_sig) {
+			cerr << "Error: incorrect trailer found in voxel brush file " << fn << "." << endl;
+			return 0;
+		}
+		fclose(fp);
+		return 1;
+	}
+	bool write(string const &fn) const {
+		FILE *fp(fopen(fn.c_str(), "wb"));
+
+		if (fp == NULL) {
+			cerr << "Error opening voxel brush file " << fn << " for write" << endl;
+			return 0;
+		}
+		write_binary_uint(fp, vheader_sig);
+		write_binary_uint(fp, brush_vect.size());
+
+		if (!brush_vect.empty()) { // write brushes
+			unsigned const elem_write(fwrite(&brush_vect.front(), sizeof(voxel_brush_t), brush_vect.size(), fp));
+			assert(elem_write == brush_vect.size()); // add error checking?
+		}
+		write_binary_uint(fp, vtrailer_sig);
+		fclose(fp);
+		return 1;
+	}
+};
+
+voxel_brush_manager_t brush_manager;
+
 
 void change_voxel_editing_mode(int val) {
 
@@ -1986,23 +2064,8 @@ void change_voxel_editing_mode(int val) {
 	print_text_onscreen(modes[voxel_editing], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 
-void apply_brush(voxel_brush_t const &brush) {
-
-	float const radius(get_voxel_brush_step()*brush.radius);
-	float const weight(pow(2.0f, brush.weight_exp)*brush.weight_scale);
-	//voxel_brush.shape // FIXME: sphere vs. cube, etc.
-	update_voxel_sphere_region(brush.pos, radius, weight, NO_SOURCE, 0);
-}
-
-void undo_voxel_brush() {
-
-	// Note: approximate, not exact undo; also doesn't undo unconnected voxel removal
-	if (brushes_applied.empty()) return; // nothing to undo
-	voxel_brush_t brush(brushes_applied.back());
-	brush.weight_scale *= -1.0; // invert weight
-	apply_brush(brush);
-	brushes_applied.pop_back(); // remove the brush
-}
+void apply_brush(voxel_brush_t const &brush) {brush_manager.apply_brush(brush);}
+void undo_voxel_brush() {brush_manager.undo_last_brush();}
 
 void modify_voxels() {
 
@@ -2019,13 +2082,9 @@ void modify_voxels() {
 
 	if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, -1, 1)) { // hit voxel cobjs
 		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
-
-		if (coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) {
-			voxel_brush_params.weight_scale = ((voxel_editing == 2) ? -0.1 : 0.1);
-			voxel_brush_t const brush(voxel_brush_params, coll_pos);
-			apply_brush(brush);
-			brushes_applied.push_back(brush);
-		}
+		assert(coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN);
+		voxel_brush_params.weight_scale = ((voxel_editing == 2) ? -0.1 : 0.1);
+		brush_manager.apply_and_add_brush(voxel_brush_t(voxel_brush_params, coll_pos));
 	}
 }
 

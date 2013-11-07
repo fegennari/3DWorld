@@ -130,9 +130,7 @@ public:
 
 enum {VOXEL_DELAY=0, VOXEL_SHAPE, VOXEL_RADIUS, VOXEL_WEIGHT, NUM_VOXEL_CONT};
 string const voxel_ctr_names[NUM_VOXEL_CONT] = {"Brush Delay", "Brush Shape", "Brush Radius", "Brush Weight"};
-
-enum {VB_SHAPE_SPHERE=0, VB_SHAPE_CUBE, NUM_VB_SHAPES};
-string const vb_shape_names[NUM_VB_SHAPES] = {"Sphere", "Cube"};
+string const vb_shape_names [NUM_VB_SHAPES ] = {"Constant Cube", "Constant Sphere", "Linear Sphere", "Quadratic Sphere"};
 
 unsigned const MAX_VB_RADIUS = 20; // in voxel dx size units
 int const MAX_VB_WEIGHT_EXP  = 4;

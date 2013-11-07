@@ -9,6 +9,8 @@
 
 struct coll_tquad;
 
+enum {VB_SHAPE_CUBE=0, VB_SHAPE_CONSTANT, VB_SHAPE_LINEAR, VB_SHAPE_QUADRATIC, NUM_VB_SHAPES};
+
 
 struct voxel_params_t {
 
@@ -46,7 +48,7 @@ struct voxel_brush_params_t {
 	unsigned delay, radius;
 	float weight_scale;
 
-	voxel_brush_params_t() : shape(0), weight_exp(0), delay(0), radius(1), weight_scale(1.0) {}
+	voxel_brush_params_t() : shape(VB_SHAPE_LINEAR), weight_exp(0), delay(0), radius(1), weight_scale(1.0) {}
 };
 
 struct voxel_brush_t : public voxel_brush_params_t {
@@ -281,7 +283,8 @@ public:
 	voxel_model(noise_texture_manager_t *ntg, bool use_mesh_, unsigned num_lod_levels);
 	virtual ~voxel_model() {}
 	void clear();
-	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
+	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, bool spherical, int falloff_exp,
+		point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
 	unsigned get_texture_at(point const &pos) const;
 	void proc_pending_updates();
 	void build(bool verbose, bool do_ao_lighting=1);

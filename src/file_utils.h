@@ -14,6 +14,18 @@ inline bool read_nonzero_uint(FILE *fp, unsigned &val) {return (fscanf(fp, "%u",
 inline bool read_float(FILE *fp, float    &val) {return (fscanf(fp, "%f", &val) == 1);}
 inline bool read_str  (FILE *fp, char     *val) {return (fscanf(fp, "%s",  val) == 1);}
 
+inline unsigned read_binary_uint(FILE *fp) {
+	unsigned v(0);
+	unsigned const v_read(fread(&v, sizeof(unsigned), 1, fp));
+	assert(v_read == 1); // add error checking?
+	return v;
+}
+
+inline void write_binary_uint(FILE *fp, unsigned v) {
+	unsigned v_write(fwrite(&v, sizeof(unsigned), 1, fp));
+	assert(v_write == 1); // add error checking?
+}
+
 inline bool read_vector(FILE *fp, vector3d &v) { // or point
 	return (fscanf(fp, "%f%f%f", &v.x, &v.y, &v.z) == 3);
 }
@@ -30,7 +42,7 @@ inline bool read_bool (FILE *fp, bool     &val) {
 	return 1;
 }
 
-inline bool read_string(FILE *fp, string &str) {
+inline bool read_string(FILE *fp, std::string &str) {
 	char s[MAX_CHARS] = {0};
 	if (!read_str(fp, s)) return 0;
 	str = s;
