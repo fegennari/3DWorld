@@ -211,7 +211,7 @@ float get_inf_terrain_fog_dist();
 bool using_tiled_terrain_hmap_tex();
 float get_tiled_terrain_height_tex(float xval, float yval);
 vector3d get_tiled_terrain_height_tex_norm(int x, int y);
-void write_default_hmap_modmap();
+bool write_default_hmap_modmap();
 float update_tiled_terrain();
 void pre_draw_tiled_terrain();
 void draw_tiled_terrain(bool reflection_pass);
@@ -715,6 +715,7 @@ bool update_voxel_sphere_region(point const &center, float radius, float val_at_
 void proc_voxel_updates();
 bool check_voxel_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj, bool exact);
 void get_voxel_coll_sphere_cobjs(point const &center, float radius, int ignore_cobj, vert_coll_detector &vcd);
+bool write_voxel_brushes();
 void change_voxel_editing_mode(int val);
 void undo_voxel_brush();
 void modify_voxels();

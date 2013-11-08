@@ -149,22 +149,20 @@ vector3d get_tiled_terrain_height_tex_norm(int x, int y) {
 	return terrain_hmap_manager.get_norm(x, y);
 }
 
-void read_default_hmap_modmap() {
+bool read_default_hmap_modmap() {
 
-	if (!read_hmap_modmap_fn.empty()) {
-		if (terrain_hmap_manager.read_mod(read_hmap_modmap_fn)) {
-			cout << "Read heightmap modmap " << read_hmap_modmap_fn << endl;
-		}
-	}
+	if (read_hmap_modmap_fn.empty()) return 0;
+	if (!terrain_hmap_manager.read_mod(read_hmap_modmap_fn)) return 0;
+	cout << "Read heightmap modmap " << read_hmap_modmap_fn << endl;
+	return 1;
 }
 
-void write_default_hmap_modmap() {
+bool write_default_hmap_modmap() {
 
-	if (!write_hmap_modmap_fn.empty()) {
-		if (terrain_hmap_manager.write_mod(write_hmap_modmap_fn)) {
-			cout << "Wrote heightmap modmap " << write_hmap_modmap_fn << endl;
-		}
-	}
+	if (write_hmap_modmap_fn.empty()) return 0;
+	if (!terrain_hmap_manager.write_mod(write_hmap_modmap_fn)) return 0;
+	cout << "Wrote heightmap modmap " << write_hmap_modmap_fn << endl;
+	return 1;
 }
 
 

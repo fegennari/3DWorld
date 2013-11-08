@@ -34,7 +34,8 @@ extern coll_obj_group coll_objects;
 
 template class voxel_grid<float>; // explicit instantiation
 
-int  get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos);
+int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos);
+bool read_voxel_brushes();
 
 
 // if size==old_size, we do nothing;  if size==0, we only free the texture
@@ -528,7 +529,7 @@ struct block_group_t {
 };
 
 
-void voxel_model::remove_unconnected_outside_modified_blocks() {
+void voxel_model::remove_unconnected_outside_modified_blocks(bool no_gen_fragments) {
 
 	if (modified_blocks.empty()) return;
 	int const pad = 1;
@@ -585,6 +586,7 @@ void voxel_model::remove_unconnected_outside_modified_blocks() {
 	}
 	//cout << "blocks out " << modified_blocks.size() << " groups " << groups.size() << " group work " << group_work << " updated " << updated_pts.size() << " xy_up " << xy_updated.size() << endl;
 	if (updated_pts.empty()) return;
+	if (no_gen_fragments) return;
 	float const fragment_radius(0.5*vsz.mag());
 	point center(all_zeros);
 
@@ -1236,13 +1238,13 @@ unsigned voxel_model::get_texture_at(point const &pos) const {
 }
 
 
-void voxel_model::proc_pending_updates() {
+void voxel_model::proc_pending_updates(bool no_gen_fragments) {
 
 	RESET_TIME;
 	if (modified_blocks.empty()) return;
 	bool something_removed(0);
 	unsigned num_added(0);
-	if (params.remove_unconnected >= 2) {remove_unconnected_outside_modified_blocks();}
+	if (params.remove_unconnected >= 2) {remove_unconnected_outside_modified_blocks(no_gen_fragments);}
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	
 	// FIXME: can we only remove/add voxels within the modified region of each block?
@@ -1730,6 +1732,11 @@ void gen_voxel_landscape() {
 	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
+	
+	if (read_voxel_brushes()) {
+		terrain_voxel_model.proc_pending_updates(1); // no_gen_fragments=1
+		PRINT_TIME(" Load Voxel Brushes");
+	}
 }
 
 
@@ -1974,6 +1981,8 @@ void get_voxel_coll_sphere_cobjs(point const &center, float radius, int ignore_c
 
 // ************ Voxel Editing ************
 
+string read_voxel_brush_fn, write_voxel_brush_fn("voxel_brushes.data");
+
 float get_voxel_brush_step() {return terrain_voxel_model.vsz.x;}
 
 unsigned const vheader_sig  = 0xbeefdead;
@@ -2005,6 +2014,9 @@ public:
 		brush.weight_scale *= -1.0; // invert weight
 		apply_brush(brush);
 		brush_vect.pop_back(); // remove the brush
+	}
+	void apply_all_brushes() {
+		for (vector<voxel_brush_t>::const_iterator i = brush_vect.begin(); i != brush_vect.end(); ++i) {apply_brush(*i);}
 	}
 
 	bool read(string const &fn) {
@@ -2054,6 +2066,24 @@ public:
 };
 
 voxel_brush_manager_t brush_manager;
+
+
+bool read_voxel_brushes() {
+
+	if (read_voxel_brush_fn.empty()) return 0;
+	if (!brush_manager.read(read_voxel_brush_fn)) return 0;
+	brush_manager.apply_all_brushes();
+	cout << "Read Voxel Brushes " << read_voxel_brush_fn << endl;
+	return 1;
+}
+
+bool write_voxel_brushes() {
+
+	if (write_voxel_brush_fn.empty()) return 0;
+	if (!brush_manager.write(write_voxel_brush_fn)) return 0;
+	cout << "Wrote Voxel Brushes " << write_voxel_brush_fn << endl;
+	return 1;
+}
 
 
 void change_voxel_editing_mode(int val) {

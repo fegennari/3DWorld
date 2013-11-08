@@ -119,7 +119,7 @@ extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
 extern point hmv_pos;
 extern int coll_id[];
 extern float tree_lod_scales[4];
-extern string read_hmap_modmap_fn, write_hmap_modmap_fn;
+extern string read_hmap_modmap_fn, write_hmap_modmap_fn, read_voxel_brush_fn, write_voxel_brush_fn;
 extern vector<bbox> team_starts;
 extern player_state *sstates;
 extern pt_line_drawer obj_pld;
@@ -1102,7 +1102,12 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			export_modmap("output.modmap");
 		}
 		else if (world_mode == WMODE_GROUND) {
-			save_state(state_file);
+			if (voxel_editing) {
+				write_voxel_brushes();
+			}
+			else {
+				save_state(state_file);
+			}
 		}
 		else if (world_mode == WMODE_INF_TERRAIN) {
 			write_default_hmap_modmap();
@@ -1721,6 +1726,12 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "write_hmap_modmap_filename") {
 			if (!read_string(fp, write_hmap_modmap_fn)) cfg_err("write_hmap_modmap_filename command", error);
+		}
+		else if (str == "read_voxel_brush_filename") {
+			if (!read_string(fp, read_voxel_brush_fn)) cfg_err("read_voxel_brush_filename command", error);
+		}
+		else if (str == "write_voxel_brush_filename") {
+			if (!read_string(fp, write_voxel_brush_fn)) cfg_err("write_voxel_brush_filename command", error);
 		}
 		else if (str == "mesh_file") { // only the first parameter is required
 			float rmz(0.0);

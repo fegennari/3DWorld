@@ -262,7 +262,7 @@ protected:
 		bool operator()(pt_ix_t const &a, pt_ix_t const &b) const {return (p2p_dist_sq(a.pt, p) < p2p_dist_sq(b.pt, p));}
 	};
 
-	void remove_unconnected_outside_modified_blocks(void);
+	void remove_unconnected_outside_modified_blocks(bool no_gen_fragments);
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	virtual bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create, bool count_only, unsigned lod_level);
@@ -286,7 +286,7 @@ public:
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, bool spherical, int falloff_exp,
 		point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
 	unsigned get_texture_at(point const &pos) const;
-	void proc_pending_updates();
+	void proc_pending_updates(bool no_gen_fragments=0);
 	void build(bool verbose, bool do_ao_lighting=1);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 	void core_render(shader_t &s, unsigned lod_level, bool is_shadow_pass, bool no_vfc=0);
