@@ -103,14 +103,6 @@ void set_gl_light_pos(int light, point const &pos, float w) {
 }
 
 
-void get_shadowed_color(colorRGBA &color_a, point const &pos, bool no_dynamic) {
-
-	if ((using_lightmap || create_voxel_landscape || (!no_dynamic && has_dl_sources)) && color_a != BLACK) { // somewhat slow
-		get_indir_light(color_a, (pos + vector3d(0.0, 0.0, 0.01)), no_dynamic); // get above mesh
-	}
-}
-
-
 void set_color_alpha(colorRGBA color, float alpha) {
 
 	color.alpha *= alpha;
@@ -878,7 +870,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 				blend_color(c, SUN_C, c, 0.75*mult, 0); // 75% direct sun lighting
 			}
 		}
-		get_indir_light(c, p, 0); // could move outside of the parts loop if too slow
+		get_indir_light(c, p); // could move outside of the parts loop if too slow
 	}
 	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent

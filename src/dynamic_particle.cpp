@@ -65,11 +65,11 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 		set_color(BLACK);
 		set_color_e(color);
 	}
-	else {
+	else { // this case is unused
 		bool is_shadowed(!is_visible_to_light_cobj(pos, get_light(), radius, -1, 0));
-		colorRGBA a(color);
-		get_shadowed_color(a, pos, 0);
-		set_color_a(a);
+		colorRGBA color_a(color);
+		if (color_a != BLACK) {get_indir_light(color_a, (pos + vector3d(0.0, 0.0, 0.01)));}
+		set_color_a(color_a);
 		set_color_d(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
 	}
 	int const ndiv(min(N_SPHERE_DIV, max(3, int(3.0f*sqrt(radius*window_width/distance_to_camera(pos))))));

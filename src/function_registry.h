@@ -97,7 +97,6 @@ void set_gl_light_pos(int light, point const &pos, float w);
 void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]);
 void clear_colors_and_disable_light(int light);
 int get_light();
-void get_shadowed_color(colorRGBA &color_a, point const &pos, bool no_dynamic);
 void set_color_alpha(colorRGBA color, float alpha=1.0);
 void draw_camera_weapon(bool want_has_trans);
 void draw_solid_object_groups();
@@ -657,7 +656,7 @@ void upload_dlights_textures(cube_t const &bounds);
 void setup_dlight_textures(shader_t &s);
 bool is_in_darkness(point const &pos, float radius, int cobj);
 void get_sd_light(int x, int y, int z, float *ls);
-float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic);
+float get_indir_light(colorRGBA &a, point const &p);
 unsigned enable_dynamic_lights(point const &center=all_zeros, float radius=0.0);
 void disable_dynamic_lights(unsigned num_dlights);
 

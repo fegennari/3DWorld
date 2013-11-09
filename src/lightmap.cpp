@@ -1306,7 +1306,7 @@ float add_specular(point const &p, vector3d const &ldir, vector3d const &norm, f
 bool is_in_darkness(point const &pos, float radius, int cobj) {
 
 	colorRGBA c(WHITE);
-	get_indir_light(c, pos, 0); // this is faster so do it first
+	get_indir_light(c, pos); // this is faster so do it first
 	if ((c.R + c.G + c.B) > DARKNESS_THRESH) return 0;
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
@@ -1354,7 +1354,7 @@ void get_sd_light(int x, int y, int z, float *ls) {
 }
 
 
-float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic) {
+float get_indir_light(colorRGBA &a, point const &p) { // Note: return value is unused
 
 	float val(get_voxel_terrain_ao_lighting_val(p)); // shift p?
 	if (!lm_alloc) return val;
@@ -1378,12 +1378,10 @@ float get_indir_light(colorRGBA &a, point const &p, bool no_dynamic) {
 	else if (val < 1.0) {
 		cscale *= val;
 	}
-	if (!no_dynamic && !outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
+	if (!outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
 		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale);
 	}
-	// FIXME: Need to divide by ambient term here because we will be multiplying by it in the lighting computation later
-	// Should this set the emissive term? What about materials that are already emissive? Just use a shader everywhere?
-	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_])/max(0.01f, cur_ambient[i_]);)
+	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_]);)
 	return val;
 }
 
