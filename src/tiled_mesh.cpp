@@ -172,8 +172,8 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_
 	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
-	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), shadows_invalid(1), weights_invalid(1), mesh_height_invalid(0),
-	in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), shadows_invalid(1), weights_invalid(1),
+	mesh_height_invalid(0), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -546,11 +546,13 @@ void tile_t::check_shadow_map_and_normal_texture() {
 	//RESET_TIME;
 	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
 	//PRINT_TIME("Calc Shadows");
+	min_normal_z = 1.0;
 
 	for (unsigned y = 0; y < stride; ++y) {
 		for (unsigned x = 0; x < stride; ++x) {
 			unsigned const ix(y*stride + x), ix2(y*zvsize + x);
 			vector3d const norm(get_norm(y*zvsize + x));
+			min_normal_z = min(min_normal_z, norm.z);
 			UNROLL_3X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0)););
 			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]);
 
@@ -963,7 +965,15 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 
 	unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
 	float dist(get_dist_to_camera_in_tiles());
-
+	
+	if (min_normal_z > 0.0) { // normals have been calculated, adjust detail based on max slope
+		if (min_normal_z > 0.9) { // flat, lower detail
+			dist *= (min_normal_z > 0.95) ? 4.0 : 2.0;
+		}
+		else if (min_normal_z < 0.25) { // high slope, higher detail
+			dist /= -log(2.0*min_normal_z)/log(2.0);
+		}
+	}
     while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS) {
         dist /= 2;
         ++lod_level;

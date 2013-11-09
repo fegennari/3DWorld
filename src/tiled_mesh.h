@@ -81,7 +81,7 @@ class tile_t {
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
-	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep;
+	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep, min_normal_z;
 	bool shadows_invalid, weights_invalid, mesh_height_invalid, in_queue, last_occluded;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
