@@ -58,7 +58,7 @@ public:
 
 enum {HMAP_DELAY=0, HMAP_CTR_SHAPE, HMAP_CTR_RADIUS, HMAP_CTR_DELTA, HMAP_NUM_CTR};
 string const hmap_ctr_names[HMAP_NUM_CTR] = {"Placement Delay", "Brush Shape", "Brush Radius", "Brush Delta"};
-string const brush_shapes[NUM_BSHAPES] = {"Constant Square", "Constant Circle", "Linear Circle", "Quadratic Circle", "Cosine Circle", "Flat Square", "Flat Circle"};
+string const brush_shapes[NUM_BSHAPES] = {"Constant Square", "Constant Circle", "Linear Circle", "Quadratic Circle", "Cosine Circle", "Sine Circle", "Flat Square", "Flat Circle"};
 
 extern int show_scores, world_mode;
 extern unsigned inf_terrain_fire_mode;
@@ -83,7 +83,7 @@ class hmap_kbd_menu_t : public keyboard_menu_t {
 			value << brush_param.delay;
 			break;
 		case HMAP_CTR_SHAPE:
-			spos = (brush_param.shape/float(BSHAPE_COSINE));
+			spos = (brush_param.shape/float(BSHAPE_SINE));
 			assert(brush_param.shape < NUM_BSHAPES);
 			value << brush_shapes[brush_param.shape];
 			break;
@@ -112,7 +112,7 @@ public:
 			brush_param.delay = max(0, min(10, ((int)brush_param.delay + delta)));
 			break;
 		case HMAP_CTR_SHAPE:
-			brush_param.shape = max(0, min((int)BSHAPE_COSINE, (brush_param.shape + delta)));
+			brush_param.shape = max(0, min((int)BSHAPE_SINE, (brush_param.shape + delta)));
 			break;
 		case HMAP_CTR_RADIUS:
 			brush_param.radius_exp = max(-1, min((int)max_radius_exp, ((int)brush_param.radius_exp + delta)));
