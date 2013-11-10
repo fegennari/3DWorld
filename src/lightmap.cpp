@@ -508,6 +508,7 @@ void shift_lightmap(vector3d const &vd) {
 
 void regen_lightmap() {
 
+	if (MESH_Z_SIZE == 0) return; // not using lmap
 	assert(lmap_manager.is_allocated());
 	clear_lightmap();
 	assert(!lmap_manager.is_allocated());
