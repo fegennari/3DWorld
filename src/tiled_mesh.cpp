@@ -644,8 +644,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
 	calc_start_step(mesh_off.dxoff, mesh_off.dyoff); // reset
 
-	//#pragma omp parallel for schedule(static,1)
-	for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) {
+	for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
 		for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
 			float weights[NTEX_DIRT] = {0};
 			unsigned const ix(y*zvsize + x);
@@ -855,7 +854,7 @@ void tile_t::update_scenery() {
 	if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
 	if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
 	scenery_off.set_from_xyoff2();
-	scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg());
+	scenery.gen(x1+scenery_off.dxoff, y1+scenery_off.dyoff, x2+scenery_off.dxoff, y2+scenery_off.dyoff, vegetation*get_avg_veg(), 1);
 }
 
 

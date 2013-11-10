@@ -32,7 +32,7 @@ struct surface_cache {
 	typedef map<seed_pair, upsurface *> surface_map;
 	surface_map scache;
 
-	upsurface *get_surface();
+	upsurface *get_surface(bool fixed_sz_rock_cache);
 	void clear();
 	void clear_unref();
 };
@@ -47,7 +47,7 @@ class surface_rock : public scenery_obj { // size = 1456+
 
 public:
 	surface_rock() : vbo_mgr_ix(-1), scale(0.0), surface(NULL) {}
-	void create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager);
+	void create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager, bool fixed_sz_rock_cache);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const;
 	void update_points_vbo(vbo_vnt_block_manager_t &vbo_manager);
@@ -176,7 +176,7 @@ public:
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
-	void gen(int x1, int y1, int x2, int y2, float vegetation_);
+	void gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache);
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate);
 	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);

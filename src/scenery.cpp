@@ -351,9 +351,16 @@ void rock_shape3d::clear_vbo() {
 }
 
 
-upsurface *surface_cache::get_surface() {
+upsurface *surface_cache::get_surface(bool fixed_sz_rock_cache) {
 
-	seed_pair const sp(global_rand_gen.rseed1, global_rand_gen.rseed2);
+	seed_pair sp;
+	
+	if (fixed_sz_rock_cache) { // cache size is 256
+		sp = seed_pair((global_rand_gen.rseed1 & 15), (global_rand_gen.rseed2 & 15));
+	}
+	else {
+		sp = seed_pair(global_rand_gen.rseed1, global_rand_gen.rseed2);
+	}
 	surface_map::const_iterator it(scache.find(sp));
 		
 	if (it != scache.end()) {
@@ -397,12 +404,12 @@ void surface_cache::clear_unref() {
 surface_cache surface_rock_cache;
 
 
-void surface_rock::create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager) {
+void surface_rock::create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager, bool fixed_sz_rock_cache) {
 
 	gen_spos(x, y, use_xy);
 	radius  = rand_uniform2(0.1, 0.2)*rand_float2()/tree_scale;
 	dir     = signed_rand_vector2_norm();
-	surface = surface_rock_cache.get_surface();
+	surface = surface_rock_cache.get_surface(fixed_sz_rock_cache);
 	assert(surface);
 
 	if (surface->ssize == 0) { // not inited
@@ -993,8 +1000,9 @@ void scenery_group::add_plant(point const &pos, float height, float radius, int 
 	plants.back().create2(pos, height, radius, type, calc_z, plant_vbo_manager);
 }
 
-void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
+void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache) {
 
+	//RESET_TIME;
 	unsigned const num_voxel_rock_lod_levels = 1;
 	unsigned const smod(max(200U, unsigned(3.321*XY_MULT_SIZE/(tree_scale+1))));
 	float const min_stump_z(water_plane_z + 0.010*zmax_est);
@@ -1021,7 +1029,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 			}
 			else if (val < 15) { // 7%
 				surface_rocks.push_back(surface_rock());
-				surface_rocks.back().create(j, i, 1, rock_vbo_manager);
+				surface_rocks.back().create(j, i, 1, rock_vbo_manager, fixed_sz_rock_cache);
 			}
 			else if (USE_VOXEL_ROCKS && val < 35) { // FIXME: too slow, and need special shaders for texturing
 				voxel_rocks.push_back(voxel_rock(&voxel_rock_ntg, num_voxel_rock_lod_levels));
@@ -1041,7 +1049,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 			}
 		}
 	}
-	surface_rock_cache.clear_unref();
+	if (!fixed_sz_rock_cache) {surface_rock_cache.clear_unref();}
 	sort(plants.begin(), plants.end()); // sort by type
 
 	if (!voxel_rocks.empty()) {
@@ -1053,6 +1061,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_) {
 		}
 		PRINT_TIME("Gen Voxel Rocks");
 	}
+	//PRINT_TIME("Gen Scenery");
 }
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate) {
@@ -1138,7 +1147,7 @@ void gen_scenery() {
 	has_scenery = 0;
 	if (DISABLE_SCENERY || (NO_ISLAND_SCENERY && island)) return;
 	has_scenery = 1;
-	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation);
+	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation, 0);
 	all_scenery.add_cobjs();
 }
 
