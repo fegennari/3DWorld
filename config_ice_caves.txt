@@ -21,6 +21,9 @@ mesh_color_scale 1.0 1.0 2.0 # clamped to [0.0, 1.0]?
 
 lighting_file_global "" 1 0.1 0.0
 
+read_voxel_brush_filename ../models/ice_caves_vb.data
+write_voxel_brush_filename ../models/ice_caves_vb.data
+
 end
 
 
