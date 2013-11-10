@@ -160,8 +160,12 @@ void apply_camera_offsets(point const &camera) {
 point get_sun_pos() {
 
 	point pos(sun_pos);
+	// Note: moving the sun and moon along with the camera makes the sun seem to be infintely far away and looks more real;
+	// however, it also makes the shadows misalign slightly, especially for large scenes;
+	// we can't have the shadows move with the camera either because then we would have to recompute them every time the player moves
+	// Note: if this line is commented out, we must also change inf terrain mode sun drawing
 	if (camera_mode == 1) pos += surface_pos;
-	else if (combined_gu) pos += get_camera_pos(); // universe is always centered around the camera
+	if (camera_mode != 1 && combined_gu) pos += get_camera_pos(); // universe is always centered around the camera
 	return pos;
 }
 
