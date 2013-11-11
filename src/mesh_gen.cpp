@@ -677,13 +677,13 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 }
 
 
-float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate) const {
+float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin) const {
 
 	assert(x < cur_nx && y < cur_ny);
 	float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
 	float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
 	float zval(hoff);
-	for (int i = start_eval_sin; i < end_eval_sin; ++i) {zval += xptr[i]*yptr[i];} // performance critical
+	for (int i = max(start_eval_sin, min_start_sin); i < end_eval_sin; ++i) {zval += xptr[i]*yptr[i];} // performance critical
 	if (GLACIATE && glaciate && !island) zval = get_glaciated_zval(zval);
 	return zval;
 }

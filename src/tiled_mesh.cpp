@@ -649,7 +649,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			float weights[NTEX_DIRT] = {0};
 			unsigned const ix(y*zvsize + x);
 			float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-			float const rand_offset(noise_scale*height_gen.eval_index(x, y, 0));
+			float const rand_offset(noise_scale*height_gen.eval_index(x, y, 0, 50));
 			float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 			float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
 			float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);

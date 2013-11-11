@@ -29,7 +29,7 @@ class mesh_xy_grid_cache_t {
 public:
 	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), hoff(0.0) {}
 	void build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny);
-	float eval_index(unsigned x, unsigned y, bool glaciate=1) const;
+	float eval_index(unsigned x, unsigned y, bool glaciate=1, int min_start_sin=0) const;
 };
 
 
