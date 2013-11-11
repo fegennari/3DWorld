@@ -61,7 +61,8 @@ bool pine_trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool decid_trees_enabled  () {return ((tree_mode & 1) && vegetation > 0.0);}
 bool any_trees_enabled    () {return (pine_trees_enabled() || decid_trees_enabled());}
 bool scenery_enabled      () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
-bool is_grass_enabled     () {return ((display_mode & 0x02) && GRASS_THRESH > 0.0 && grass_density > 0);}
+bool gen_grass_map        () {return (GRASS_THRESH > 0.0 && grass_density > 0 && vegetation > 0.0);}
+bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());}
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
@@ -709,7 +710,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 				data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
 			}
-			if (grass && x < size && y < size) {
+			if (grass && x < size && y < size && gen_grass_map()) {
 				unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
 				if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
 				assert(bix < grass_blocks.size());
