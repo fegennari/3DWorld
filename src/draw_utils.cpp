@@ -372,6 +372,15 @@ template class indexed_mesh_draw<vert_wrap_t>;
 
 
 template< typename vert_type_t >
+unsigned vbo_block_manager_t<vert_type_t>::get_offset_for_last_points_added() {
+
+	if (offsets.empty()) {offsets.push_back(0);} // start at 0
+	unsigned const next_ix(offsets.size() - 1);
+	offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
+	return next_ix;
+}
+
+template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::add_points_int(vector<vert_type_t> &dest, typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {
 
 	assert(p != NULL && npts > 0);
@@ -385,16 +394,6 @@ void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &des
 
 	assert(p != NULL && npts > 0);
 	copy(p, p+npts, back_inserter(dest));
-}
-
-template< typename vert_type_t >
-unsigned vbo_block_manager_t<vert_type_t>::add_points_with_offset(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {
-
-	add_points(p, npts, color);
-	if (offsets.empty()) {offsets.push_back(0);} // start at 0
-	unsigned const next_ix(offsets.size() - 1);
-	offsets.push_back(pts.size()); // range will be [start_ix, start_ix+p.size()]
-	return next_ix;
 }
 
 template< typename vert_type_t >

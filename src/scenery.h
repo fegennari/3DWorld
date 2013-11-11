@@ -31,7 +31,6 @@ struct surface_cache {
 	typedef pair<long, long> seed_pair;
 	typedef map<seed_pair, upsurface *> surface_map;
 	surface_map scache;
-	vector<vert_norm_tc> points; // buffer for reusing memory
 
 	upsurface *get_surface(bool fixed_sz_rock_cache);
 	void clear();

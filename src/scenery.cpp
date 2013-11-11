@@ -419,9 +419,8 @@ void surface_rock::create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo
 		surface->calc_rmax();
 	}
 	scale = radius/surface->rmax;
-	surface_rock_cache.points.clear();
-	surface->sd.get_quad_points(surface_rock_cache.points);
-	vbo_mgr_ix = vbo_manager.add_points_with_offset(surface_rock_cache.points, WHITE); // color is unused
+	surface->sd.get_quad_points(vbo_manager.get_pts_vector_for_adding());
+	vbo_mgr_ix = vbo_manager.get_offset_for_last_points_added();
 }
 
 void surface_rock::add_cobjs() {

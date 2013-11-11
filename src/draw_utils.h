@@ -154,7 +154,11 @@ public:
 	void reserve_pts(unsigned num) {assert(pts.empty()); pts.reserve(num);}
 	void add_points(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {add_points_int(pts, p, npts, color);}
 	void add_points(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {add_points_int(pts, &v.front(), v.size(), color);}
-	unsigned add_points_with_offset(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color);
+	unsigned get_offset_for_last_points_added();
+	unsigned add_points_with_offset(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {
+		add_points(p, npts, color);
+		return get_offset_for_last_points_added();
+	}
 	unsigned add_points_with_offset(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {return add_points_with_offset(&v.front(), v.size(), color);}
 	void render_range(int gl_type, unsigned six, unsigned eix, unsigned num_instances=0) const;
 	void render_all(int gl_type, unsigned num_instances=0) const {if (has_data()) {render_range(gl_type, 0, offsets.size()-1, num_instances);}}
@@ -166,6 +170,7 @@ public:
 	void end_render() const;
 	void bind_cur_vbo() const;
 	void clear_points() {pts.swap(vector<vert_type_t>());}
+	vector<vert_type_t> &get_pts_vector_for_adding() {return pts;}
 	void clear_vbo();
 	void clear();
 	void upload_and_clear_points() {upload(); clear_points();}
