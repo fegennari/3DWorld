@@ -60,7 +60,7 @@ enum {HMAP_DELAY=0, HMAP_CTR_SHAPE, HMAP_CTR_RADIUS, HMAP_CTR_DELTA, HMAP_NUM_CT
 string const hmap_ctr_names[HMAP_NUM_CTR] = {"Placement Delay", "Brush Shape", "Brush Radius", "Brush Delta"};
 string const brush_shapes[NUM_BSHAPES] = {"Constant Square", "Constant Circle", "Linear Circle", "Quadratic Circle", "Cosine Circle", "Sine Circle", "Flat Square", "Flat Circle"};
 
-extern int show_scores, world_mode;
+extern int show_scores, world_mode, game_mode;
 extern unsigned inf_terrain_fire_mode;
 extern hmap_brush_param_t cur_brush_param;
 
@@ -104,7 +104,7 @@ public:
 	hmap_kbd_menu_t(hmap_brush_param_t &bp) : keyboard_menu_t(HMAP_NUM_CTR, "Heightmap Edit"), brush_param(bp), max_radius_exp(0) {
 		for (unsigned sz = 1; sz < get_tile_size(); sz <<= 1) {++max_radius_exp;}
 	}
-	virtual bool is_enabled() const {return (show_scores && inf_terrain_fire_mode && world_mode == WMODE_INF_TERRAIN);}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && inf_terrain_fire_mode && world_mode == WMODE_INF_TERRAIN);}
 
 	virtual void change_value(int delta) {
 		switch (cur_control) {
@@ -135,7 +135,7 @@ string const vb_shape_names [NUM_VB_SHAPES ] = {"Constant Cube", "Constant Spher
 unsigned const MAX_VB_RADIUS = 20; // in voxel dx size units
 int const MAX_VB_WEIGHT_EXP  = 4;
 
-extern int game_mode, voxel_editing;
+extern int voxel_editing;
 extern voxel_brush_params_t voxel_brush_params;
 
 float get_voxel_brush_step();
@@ -254,14 +254,86 @@ public:
 };
 
 
+// ************ Water Colors/Properties ************
+
+water_params_t water_params;
+
+enum {WATERP_ALPHA=0, WATERP_MUD, WATERP_BRIGHT, WATERP_REFLECT, WATERP_GREEN, NUM_WATER_CONT};
+string const water_ctr_names[NUM_WATER_CONT] = {"Alpha Scale", "Mud Content", "Brightness", "Reflectivity", "Green Hue"};
+
+class water_color_kbd_menu_t : public keyboard_menu_t {
+
+	virtual void draw_one_control(unsigned control_ix) const {
+		assert(control_ix < NUM_WATER_CONT);
+		ostringstream value;
+		value.precision(1);
+		value << fixed; // fixed precision in units of 0.01
+		float spos(0.0);
+
+		switch (control_ix) {
+		case WATERP_ALPHA:
+			value << water_params.alpha;
+			spos = water_params.alpha/1.5;
+			break;
+		case WATERP_MUD:
+			value << water_params.mud;
+			spos = water_params.mud;
+			break;
+		case WATERP_BRIGHT:
+			value << water_params.bright;
+			spos = 0.5*water_params.bright; // 0.0 to 2.0
+			break;
+		case WATERP_REFLECT:
+			value << water_params.reflect;
+			spos = water_params.reflect;
+			break;
+		case WATERP_GREEN:
+			value << water_params.green;
+			spos = 2.0*water_params.green;
+			break;
+		default:
+			assert(0);
+		}
+		draw_one_control_text(control_ix, water_ctr_names[control_ix], value.str(), spos);
+	}
+
+public:
+	water_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT, "Water Colors") {}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && !inf_terrain_fire_mode && world_mode == WMODE_INF_TERRAIN);}
+
+	virtual void change_value(int delta) {
+		switch (cur_control) {
+		case WATERP_ALPHA:
+			water_params.alpha = max(0.0f, min(1.5f, (water_params.alpha + 0.05f*delta))); // 0.0 to 1.5 in steps of 0.05
+			break;
+		case WATERP_MUD:
+			water_params.mud = CLIP_TO_01(water_params.mud + 0.05f*delta); // 0.0 to 1.0 in steps of 0.05
+			break;
+		case WATERP_BRIGHT:
+			water_params.bright = max(0.0f, min(2.0f, (water_params.bright + 0.1f*delta))); // 0.0 to 2.0 in steps of 0.1
+			break;
+		case WATERP_REFLECT:
+			water_params.reflect = CLIP_TO_01(water_params.reflect + 0.05f*delta); // 0.0 to 1.0 in steps of 0.05
+			break;
+		case WATERP_GREEN:
+			water_params.green = max(0.0f, min(0.5f, (water_params.green + 0.05f*delta))); // 0.0 to 0.5 in steps of 0.025
+			break;
+		default:
+			assert(0);
+		}
+	}
+};
+
+
 // ************ Top-Level UI Hooks ************
 
 hmap_kbd_menu_t hmap_menu(cur_brush_param);
 voxel_edit_kbd_menu_t voxel_edit_menu(voxel_brush_params);
 leaf_color_kbd_menu_t leaf_color_menu;
+water_color_kbd_menu_t water_color_menu;
 
 
-keyboard_menu_t *kbd_menus[] = {&hmap_menu, &voxel_edit_menu, &leaf_color_menu};
+keyboard_menu_t *kbd_menus[] = {&hmap_menu, &voxel_edit_menu, &leaf_color_menu, &water_color_menu};
 unsigned const NUM_KBD_MENUS = sizeof(kbd_menus)/sizeof(kbd_menus[0]);
 
 
@@ -275,12 +347,13 @@ bool ui_intercept_keyboard(unsigned char key, bool is_special) {
 		if (kbd_menus[i]->is_enabled()) {assert(!kbd_menu); kbd_menu = kbd_menus[i];}
 	}
 	if (kbd_menu == NULL) return 0; // no keyboard menu enabled
+	int const change_mag((glutGetModifiers() & GLUT_ACTIVE_SHIFT) ? 10 : 1); // move 10x if shift is set
 	
 	switch (key) {
-	case GLUT_KEY_UP:    kbd_menu->next_control(  ); return 1;
-	case GLUT_KEY_DOWN:  kbd_menu->prev_control(  ); return 1;
-	case GLUT_KEY_LEFT:  kbd_menu->change_value(-1); return 1; // more than one if modifier (shift?) is set?
-	case GLUT_KEY_RIGHT: kbd_menu->change_value( 1); return 1; // more than one if modifier (shift?) is set?
+	case GLUT_KEY_UP:    kbd_menu->next_control(); return 1;
+	case GLUT_KEY_DOWN:  kbd_menu->prev_control(); return 1;
+	case GLUT_KEY_LEFT:  kbd_menu->change_value(-1*change_mag); return 1;
+	case GLUT_KEY_RIGHT: kbd_menu->change_value( 1*change_mag); return 1;
 	}
 	return 0;
 }

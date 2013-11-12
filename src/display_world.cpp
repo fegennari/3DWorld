@@ -49,6 +49,7 @@ extern double camera_zh;
 extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
 extern colorRGBA sun_color, bkg_color;
+extern water_params_t water_params;
 extern vector<camera_filter> cfilters;
 
 void check_xy_offsets();
@@ -59,6 +60,7 @@ void update_temperature(bool verbose);
 void update_sound_loops();
 void calc_cur_ambient_diffuse();
 bool indir_lighting_updated();
+colorRGBA get_tt_water_color();
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -618,10 +620,10 @@ colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 
 	if (underwater) { // under water/ice
 		float const camera_z(get_camera_pos().z);
-		fog_color = (temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C;
+		fog_color = get_tt_water_color();
 		fog_color.alpha = 1.0;
-		atten_uw_fog_color(fog_color, (water_plane_z - camera_z));
-		fog_dist = 0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2));
+		atten_uw_fog_color(fog_color, 2.0*water_params.alpha*(water_plane_z - camera_z)); // more opaque = effectively deeper
+		fog_dist = (0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * (1.55 - water_params.alpha);
 	}
 	else {
 		get_avg_sky_color(fog_color);

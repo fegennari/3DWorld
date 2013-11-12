@@ -47,10 +47,10 @@ extern vector3d up_norm, wind;
 extern colorRGB mesh_color_scale;
 extern colorRGBA bkg_color;
 extern float h_dirt[];
+extern water_params_t water_params;
 
 
 void draw_sides_and_bottom();
-
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -706,15 +706,24 @@ void set_water_plane_uniforms(shader_t &s) {
 }
 
 
+colorRGBA get_tt_water_color() {
+
+	colorRGBA color;
+	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature), 1);
+	blend_color(color, colorRGBA(0.15, 0.1, 0.05, 1.0), color, water_params.mud, 0); // blend in mud color
+	color.alpha *= water_params.alpha;
+	color       *= water_params.bright;
+	return color;
+}
+
+
 // texture units used: 0: reflection texture, 1: water normal map, 2: mesh height texture
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
-	colorRGBA color;
-	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature), 1);
 	bool const reflections(!(display_mode & 0x20));
 	bool const no_specular(light_factor <= 0.4 || (get_sun_pos().z - sun_radius) < water_plane_z); // no sun or it's below the water level
-	color.alpha *= 0.5;
+	colorRGBA const color(get_tt_water_color());
 
 	if (animate2 && temperature > W_FREEZE_POINT) {
 		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
@@ -764,6 +773,8 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	// waves (as normal map)
 	select_multitex(WATER_NORMAL_TEX, 1, 0);
 	s.add_uniform_int("water_normal_tex", 1);
+	s.add_uniform_float("water_green_comp", water_params.green);
+	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	set_water_plane_uniforms(s);
 
 	if (rain_mode) {s.add_uniform_float("noise_time", frame_counter);} // rain ripples
