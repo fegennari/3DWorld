@@ -7,12 +7,14 @@ uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
 uniform float cloud_alpha    = 1.0;
 uniform vec3 cloud_offset    = vec3(0.0);
+uniform vec3 uw_atten_max;
+uniform vec3 uw_atten_scale;
 varying vec3 vertex; // world space
 varying vec4 epos;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
-	color.rgb *= vec3(1.0) - min(vec3(0.98, 0.97, 0.95), vec3(1.5, 0.9, 0.5)*dist*2.0);
+	color.rgb *= vec3(1.0) - min(uw_atten_max, uw_atten_scale*dist*2.0);
 }
 
 float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) {

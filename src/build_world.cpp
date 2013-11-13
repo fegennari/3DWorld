@@ -69,6 +69,7 @@ void gen_star_points();
 int gen_game_obj(int type);
 point get_sstate_pos(int id);
 void reset_smoke_tex_data();
+void calc_uw_atten_colors();
 
 
 
@@ -554,6 +555,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	l_strike.time = LITNING_TIME; // reset lightning
 	kill_current_raytrace_threads();
 	if (!keep_sin_table) clear_tiled_terrain();
+	calc_uw_atten_colors();
 
 	if (generate_mesh) {
 		if (generate_mesh != 2) {

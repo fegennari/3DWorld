@@ -2,7 +2,7 @@ varying vec3 normal;
 varying vec4 epos, proj_pos;
 uniform sampler2D reflection_tex, water_normal_tex, height_tex;
 uniform vec4 water_color, reflect_color;
-uniform float noise_time, wave_time, wave_amplitude, water_plane_z;
+uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale;
 uniform float x1, y1, x2, y2, zmin, zmax;
 
 vec3 water_normal_lookup(in vec2 tc) {
@@ -49,10 +49,10 @@ void main()
 
 	if (reflections) {
 		// add some green at shallow view angles
-		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), 0.2*(1.0 - cos_view_angle));
+		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), water_green_comp*(1.0 - cos_view_angle));
 
 		// calculate reflections
-		float reflect_w  = get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
+		float reflect_w  = reflect_scale*get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
 		vec2 ref_tex_st  = clamp(0.5*proj_pos.xy/proj_pos.w + 0.3*ripple + vec2(0.5, 0.5), 0.0, 1.0);
 		vec4 reflect_tex = vec4(texture2D(reflection_tex, ref_tex_st).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);

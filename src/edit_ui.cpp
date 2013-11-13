@@ -256,7 +256,14 @@ public:
 
 // ************ Water Colors/Properties ************
 
+colorRGB uw_atten_max(BLACK), uw_atten_scale(BLACK);
 water_params_t water_params;
+
+void calc_uw_atten_colors() {
+
+	blend_color(uw_atten_scale, colorRGB(0.9, 1.0, 1.5), colorRGB(1.5, 0.9, 0.5), water_params.mud); // blend in mud color
+	UNROLL_3X(uw_atten_max[i_] = CLIP_TO_01(1.0f - 0.03f/uw_atten_scale[i_]);)
+}
 
 enum {WATERP_ALPHA=0, WATERP_MUD, WATERP_BRIGHT, WATERP_REFLECT, WATERP_GREEN, NUM_WATER_CONT};
 string const water_ctr_names[NUM_WATER_CONT] = {"Alpha Scale", "Mud Content", "Brightness", "Reflectivity", "Green Hue"};
@@ -266,18 +273,18 @@ class water_color_kbd_menu_t : public keyboard_menu_t {
 	virtual void draw_one_control(unsigned control_ix) const {
 		assert(control_ix < NUM_WATER_CONT);
 		ostringstream value;
-		value.precision(1);
+		value.precision(2);
 		value << fixed; // fixed precision in units of 0.01
 		float spos(0.0);
 
 		switch (control_ix) {
 		case WATERP_ALPHA:
 			value << water_params.alpha;
-			spos = water_params.alpha/1.5;
+			spos = water_params.alpha/1.5; // 0.0 to 1.5
 			break;
 		case WATERP_MUD:
 			value << water_params.mud;
-			spos = water_params.mud;
+			spos = water_params.mud; // 0.0 to 1.0
 			break;
 		case WATERP_BRIGHT:
 			value << water_params.bright;
@@ -285,11 +292,11 @@ class water_color_kbd_menu_t : public keyboard_menu_t {
 			break;
 		case WATERP_REFLECT:
 			value << water_params.reflect;
-			spos = water_params.reflect;
+			spos = water_params.reflect; // 0.0 to 1.0
 			break;
 		case WATERP_GREEN:
 			value << water_params.green;
-			spos = 2.0*water_params.green;
+			spos = 2.5*water_params.green; // 0.0 to 0.5
 			break;
 		default:
 			assert(0);
@@ -316,11 +323,12 @@ public:
 			water_params.reflect = CLIP_TO_01(water_params.reflect + 0.05f*delta); // 0.0 to 1.0 in steps of 0.05
 			break;
 		case WATERP_GREEN:
-			water_params.green = max(0.0f, min(0.5f, (water_params.green + 0.05f*delta))); // 0.0 to 0.5 in steps of 0.025
+			water_params.green = max(0.0f, min(0.5f, (water_params.green + 0.02f*delta))); // 0.0 to 0.4 in steps of 0.02
 			break;
 		default:
 			assert(0);
 		}
+		calc_uw_atten_colors();
 	}
 };
 

@@ -1381,6 +1381,8 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	if (has_water) {
 		set_water_plane_uniforms(s);
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
+		s.add_uniform_color("uw_atten_max",   uw_atten_max);
+		s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 
 		if (water_caustics) {
 			select_multitex(WATER_CAUSTIC_TEX, 10, 0);

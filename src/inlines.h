@@ -16,6 +16,7 @@ extern float light_factor, relh_adj_tex, glaciate_exp_inv, cview_radius, czmin, 
 extern point cview_dir, camera_origin, camera_pos;
 extern upos_point_type cur_origin;
 extern vector3d up_vector;
+extern colorRGB uw_atten_max, uw_atten_scale;
 extern pos_dir_up camera_pdu, player_pdu;
 extern char **mesh_draw;
 extern float gauss_rand_arr[], SCENE_SIZE[];
@@ -494,6 +495,10 @@ inline int get_region(point const &v, float const d[3][2]) {
 // ****************** MISC GL ************************
 
 
+inline void blend_color(colorRGB &C, const colorRGB &A, const colorRGB &B, float mix) {
+	UNROLL_3X(C[i_] = mix*A[i_] + (1.0 - mix)*B[i_];);
+}
+
 inline void blend_color(colorRGBA &C, const colorRGBA &A, const colorRGBA &B, float mix, int calc_alpha) {
 
 	UNROLL_3X(C[i_] = mix*A[i_] + (1.0 - mix)*B[i_];);
@@ -587,10 +592,7 @@ inline void water_color_atten(float *c, int x, int y, point const &pos) {
 
 
 inline void atten_by_water_depth(float *c, float dist) {
-
-	float const m[3] = {0.98, 0.97, 0.95};
-	float const s[3] = {1.5,  0.9,  0.5 };
-	UNROLL_3X(c[i_] *= (1.0 - min(m[i_], s[i_]*dist));)
+	UNROLL_3X(c[i_] *= (1.0 - min(uw_atten_max[i_], uw_atten_scale[i_]*dist));)
 	//UNROLL_3X(c[i_] *= max(1.0f-m[i_], exp(-s[i_]*dist));)
 }
 

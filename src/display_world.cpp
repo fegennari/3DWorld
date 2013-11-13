@@ -623,7 +623,7 @@ colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 		fog_color = get_tt_water_color();
 		fog_color.alpha = 1.0;
 		atten_uw_fog_color(fog_color, 2.0*water_params.alpha*(water_plane_z - camera_z)); // more opaque = effectively deeper
-		fog_dist = (0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * (1.55 - water_params.alpha);
+		fog_dist = max(0.1, (0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * (1.5 - water_params.alpha)); // not sure why the max of 0.1 is required
 	}
 	else {
 		get_avg_sky_color(fog_color);
