@@ -263,6 +263,7 @@ void calc_uw_atten_colors() {
 
 	blend_color(uw_atten_scale, colorRGB(0.9, 1.0, 1.5), colorRGB(1.5, 0.9, 0.5), water_params.mud); // blend in mud color
 	UNROLL_3X(uw_atten_max[i_] = CLIP_TO_01(1.0f - 0.03f/uw_atten_scale[i_]);)
+	uw_atten_scale *= 0.05 + 0.95*water_params.alpha;
 }
 
 enum {WATERP_ALPHA=0, WATERP_MUD, WATERP_BRIGHT, WATERP_REFLECT, WATERP_GREEN, NUM_WATER_CONT};

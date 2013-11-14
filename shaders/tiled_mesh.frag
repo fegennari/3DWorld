@@ -6,6 +6,7 @@ uniform float water_atten    = 1.0;
 uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
 uniform float cloud_alpha    = 1.0;
+uniform float caustics_weight= 1.0;
 uniform vec3 cloud_offset    = vec3(0.0);
 uniform vec3 uw_atten_max;
 uniform vec3 uw_atten_scale;
@@ -52,13 +53,12 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 #ifdef WATER_CAUSTICS
 		if (i == 0) { // only for light0 (sun)
 			// apply underwater caustics texture
-			float cweight = shadow_weight*wave_amplitude*min(8.0*(water_plane_z - vertex.z), 0.5);
+			float cweight = shadow_weight*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
 			vec3  cval    = 4.0*mix(texture2D(caustic_tex, gl_TexCoord[2].st).rgb, texture2D(caustic_tex, (gl_TexCoord[2].st + vec2(0.3, 0.6))).rgb, ntime);
 			color.rgb    *= mix(vec3(1.0), cval, cweight);
 		}
 #endif
-
 		// apply underwater attenuation
 		// Note: ok if vertex is above the water, dist will come out as 0
 		vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space

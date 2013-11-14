@@ -40,6 +40,7 @@ extern int invert_mh_image;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks, atmosphere;
 extern float ocean_wave_height, sm_tree_density, tree_scale;
 extern point sun_pos, moon_pos, surface_pos;
+extern water_params_t water_params;
 extern char *mh_filename_tt;
 extern float h_dirt[];
 extern texture_t textures[];
@@ -1362,7 +1363,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
-	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100));
+	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
 	if (has_water     ) {s.set_prefix("#define HAS_WATER", 1);} // FS
 	if (water_caustics) {s.set_prefix("#define WATER_CAUSTICS", 1);} // FS
 	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
@@ -1387,6 +1388,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 		if (water_caustics) {
 			select_multitex(WATER_CAUSTIC_TEX, 10, 0);
 			s.add_uniform_int("caustic_tex", 10);
+			s.add_uniform_float("caustics_weight", (1.5 - water_params.alpha));
 		}
 		set_active_texture(2);
 		setup_water_plane_texgen(8.0, 2.5); // tu_id=2; increase texture scale and change AR since the caustics texture is sparser than the water texture
