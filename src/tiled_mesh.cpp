@@ -35,7 +35,7 @@ hmap_brush_param_t cur_brush_param;
 
 extern bool inf_terrain_scenery;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
-extern int island, DISABLE_WATER, display_mode, show_fog, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
+extern int island, DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks, atmosphere;
 extern float ocean_wave_height, sm_tree_density, tree_scale;
@@ -63,7 +63,7 @@ bool any_trees_enabled    () {return (pine_trees_enabled() || decid_trees_enable
 bool scenery_enabled      () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
 bool gen_grass_map        () {return (GRASS_THRESH > 0.0 && grass_density > 0 && vegetation > 0.0);}
 bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());}
-bool cloud_shadows_enabled() {return (ground_effects_level >= 2);}
+bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
 unsigned get_tile_size() {return MESH_X_SIZE;}

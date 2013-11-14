@@ -413,25 +413,27 @@ void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 	}
 
 	// draw clouds
-	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-	s.set_prefix("#define NUM_OCTAVES 8",     1); // FS
-	s.set_bool_prefix("underwater_atten", (glIsEnabled(GL_FOG) != 0), 1); // FS
-	s.set_vert_shader("water_fog.part+clouds");
-	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds");
-	s.begin_shader();
-	s.setup_fog_scale();
-	s.add_uniform_float("water_plane_z", zmin);
-	s.add_uniform_float("cloud_scale", 0.5);
-	s.add_uniform_vector3d("camera_pos", camera);
-	s.add_uniform_vector3d("sun_pos", get_sun_pos());
-	s.add_uniform_color("sun_color", sun_color);
-	set_cloud_uniforms(s, 0);
-	s.add_uniform_vector3d("cloud_offset", offset);
-	enable_blend();
-	cloud_color.do_glColor();
-	render_spherical_section(imd, size, rval_inv, z1, z2);
-	disable_blend();
-	s.end_shader();
+	if ((display_mode & 0x40) == 0) { // on by default
+		s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		s.set_prefix("#define NUM_OCTAVES 8",     1); // FS
+		s.set_bool_prefix("underwater_atten", (glIsEnabled(GL_FOG) != 0), 1); // FS
+		s.set_vert_shader("water_fog.part+clouds");
+		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds");
+		s.begin_shader();
+		s.setup_fog_scale();
+		s.add_uniform_float("water_plane_z", zmin);
+		s.add_uniform_float("cloud_scale", 0.5);
+		s.add_uniform_vector3d("camera_pos", camera);
+		s.add_uniform_vector3d("sun_pos", get_sun_pos());
+		s.add_uniform_color("sun_color", sun_color);
+		set_cloud_uniforms(s, 0);
+		s.add_uniform_vector3d("cloud_offset", offset);
+		enable_blend();
+		cloud_color.do_glColor();
+		render_spherical_section(imd, size, rval_inv, z1, z2);
+		disable_blend();
+		s.end_shader();
+	}
 	glDepthMask(GL_TRUE);
 }
 
