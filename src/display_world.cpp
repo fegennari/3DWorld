@@ -399,7 +399,7 @@ void set_uniform_atten_lighting(int light) {
 void setup_lighting(bool underwater, float depth) {
 	
 	// background color code
-	config_bkg_color_and_clear(underwater, depth, 0);
+	config_bkg_color_and_clear(underwater, depth, (world_mode == WMODE_INF_TERRAIN));
 	
 	// setup light position
 	float const light_pos_scale((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode 
@@ -613,7 +613,7 @@ void atten_uw_fog_color(colorRGBA &color, float depth) {
 }
 
 
-colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
+void set_inf_terrain_fog(bool underwater, float zmin2) {
 
 	float fog_dist;
 	colorRGBA fog_color;
@@ -629,11 +629,10 @@ colorRGBA set_inf_terrain_fog(bool underwater, float zmin2) {
 		get_avg_sky_color(fog_color);
 		fog_dist = get_inf_terrain_fog_dist();
 	}
-	fog_color = set_lighted_fog_color(fog_color); // under water/ice
+	set_lighted_fog_color(fog_color); // under water/ice
 	glFogf(GL_FOG_END, fog_dist);
 	glFogf(GL_FOG_DENSITY, 0.05); // density isn't used, but it doesn't hurt to set it to around this value in case it is
 	glEnable(GL_FOG);
-	return fog_color;
 }
 
 
@@ -1124,7 +1123,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 		draw_sun_moon_stars();
 		draw_sun_flare();
 	}
-	if (display_mode & 0x40) {draw_cloud_plane(zmin, 1);} // slower but a nice effect
+	draw_cloud_plane(zmin, 1); // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	// setup above-water clip plane for mesh
 	double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)
@@ -1209,12 +1208,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	mesh_type     = 0;
 	float const zmin2(update_tiled_terrain());
 	bool const draw_water(water_enabled && water_plane_z >= zmin2);
-
-	if (show_fog || underwater) {
-		colorRGBA const fog_color(set_inf_terrain_fog(underwater, zmin2));
-		glClearColor_rgba(fog_color);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	}
+	if (show_fog || underwater) {set_inf_terrain_fog(underwater, zmin2);}
 	unsigned reflection_tid(0);
 	if (draw_water && !underwater) reflection_tid = create_reflection();
 
