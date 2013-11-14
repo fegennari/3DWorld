@@ -365,8 +365,8 @@ public:
 					if (default_ground_tex < 0 && zmin < zmax) {
 						float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
 						int k1, k2;
-						float t;
-						get_tids(relh, NTEX-1, h_tex, k1, k2, t); // t==0 => use k1, t==1 => use k2
+						float t(0.0);
+						get_tids(relh, NTEX-1, h_tex, k1, k2, &t); // t==0 => use k1, t==1 => use k2
 						int const id1(lttex[k1].id), id2(lttex[k2].id);
 						if (id1 != GROUND_TEX && id2 != GROUND_TEX) continue; // not ground texture
 						float density(1.0);

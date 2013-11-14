@@ -629,7 +629,6 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	float const MESH_NOISE_FREQ  = 80.0;
 	float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
 	int k1, k2, k3, k4, sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
-	float t;
 
 	for (unsigned i = 0; i < NTEX_DIRT; ++i) {
 		switch (lttex_dirt[i].id) {
@@ -655,17 +654,15 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 			float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
 			float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
-			get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2, t);
-			get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4, t);
+			get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2);
+			get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4);
 			bool const same_tid(k1 == k4);
+			float t(0.0);
 			k2 = k4;
-				
-			if (same_tid) {
-				t = 0.0;
-			}
-			else {
+			
+			if (!same_tid) {
 				float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
-				get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, t);
+				get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, &t);
 			}
 			float const vnz(get_norm(ix).z);
 			float weight_scale(1.0);

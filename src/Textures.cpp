@@ -1210,13 +1210,13 @@ void update_lttex_ix(int &ix) { // note: assumes lttex_dirt (no islands)
 }
 
 
-void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2, float &t) {
+void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2, float *t) {
 
 	for (k1 = 0; k1 < NTEXm1 && relh >= h_tex[k1]; ++k1) {} // find first texture with height greater than relh
 	float const blend_border(island ? TEXTURE_SMOOTH_I : TEXTURE_SMOOTH);
 
 	if (k1 < NTEXm1 && (h_tex[k1] - relh) < blend_border) {
-		t  = 1.0 - (h_tex[k1] - relh)/blend_border;
+		if (t) {*t = 1.0 - (h_tex[k1] - relh)/blend_border;}
 		k2 = k1+1;
 		update_lttex_ix(k1);
 		update_lttex_ix(k2);
@@ -1272,9 +1272,8 @@ void create_landscape_texture() {
 			float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
 			float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
 			int k1a, k1b, k2a, k2b;
-			float t;
-			get_tids(relh1, NTEXm1, h_tex, k1a, k2a, t);
-			get_tids(relh2, NTEXm1, h_tex, k1b, k2b, t);
+			get_tids(relh1, NTEXm1, h_tex, k1a, k2a);
+			get_tids(relh2, NTEXm1, h_tex, k1b, k2b);
 			tids[i][j] = char((k1a == k2b) ? k1a : -1);
 		}
 	}
@@ -1309,7 +1308,7 @@ void create_landscape_texture() {
 					float const mh00(mesh_height[ypos][xpos]), mh01(mesh_height[ypos][xpos1]), mh10(mesh_height[ypos1][xpos]), mh11(mesh_height[ypos1][xpos1]);
 					float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
 					float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
-					get_tids(relh, NTEXm1, h_tex, k1, k2, t);
+					get_tids(relh, NTEXm1, h_tex, k1, k2, &t);
 					if (k1 != k2) assert(k2 == k1+1 || vegetation == 0.0);
 				}
 				else {
