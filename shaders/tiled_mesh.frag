@@ -10,8 +10,7 @@ uniform float caustics_weight= 1.0;
 uniform vec3 cloud_offset    = vec3(0.0);
 uniform vec3 uw_atten_max;
 uniform vec3 uw_atten_scale;
-varying vec3 vertex; // world space
-varying vec4 epos;
+varying vec4 vertex; // world space
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -28,16 +27,16 @@ vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in f
 	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0), shininess);
 }
 
-vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float spec, in float shininess) {
+vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float shadow_weight, in float spec, in float shininess) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 lightDir = normalize(gl_LightSource[i].position.xyz);
 		
-	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex.
+	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex
 	float NdotL = dot(normal, lightDir);
 	vec4 light  = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 
 	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) {
-		vec3 cpos = vertex + cloud_offset;
+		vec3 cpos = vertex.xyz + cloud_offset;
 		float t = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
 		normal *= 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
 	}
@@ -63,7 +62,7 @@ vec4 add_light_comp(in vec3 normal, in int i, in float shadow_weight, in float s
 		// Note: ok if vertex is above the water, dist will come out as 0
 		vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
 		float depth = water_plane_z - vertex.z;
-		float dist  = integrate_water_dist(vertex, eye.xyz, water_plane_z) + min(4.0*depth, integrate_water_dist(vertex, light.xyz, water_plane_z)); // clamp light pos dir
+		float dist  = integrate_water_dist(vertex.xyz, eye.xyz, water_plane_z) + min(4.0*depth, integrate_water_dist(vertex.xyz, light.xyz, water_plane_z)); // clamp light pos dir
 		atten_color(color, dist*water_atten);
 	}
 #endif
@@ -87,15 +86,16 @@ void main()
 	vec4 shadow_normal = texture2D(shadow_normal_tex, tc);
 	vec3 normal = normalize(gl_NormalMatrix * ((2.0*shadow_normal.xyz - 1.0) * vec3(1.0, 1.0, normal_z_scale))); // eye space
 	//normal += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5);
-	vec4 color  = gl_LightModel.ambient;
+	vec4 color = gl_LightModel.ambient;
 	//texel0 = mix(vec3(0.05, 0.25, 0.05), texel0, shadow_normal.w*shadow_normal.w);
+	vec4 epos = (gl_ModelViewMatrix * vertex);
 	
 	if (enable_light0) {
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 20.0*weights.b + 40.0*weights4;
-		color += add_light_comp(normal, 0, shadow_normal.w, spec, shininess);
+		color += add_light_comp(normal, epos, 0, shadow_normal.w, spec, shininess);
 	}
-	if (enable_light1) {color += add_light_comp(normal, 1, shadow_normal.w, 0.0, 1.0);}
-	if (enable_light2) {color += add_light_comp(normal, 2, 1.0, 0.0, 1.0) * calc_light_atten(epos, 2);}
+	if (enable_light1) {color += add_light_comp(normal, epos, 1, shadow_normal.w, 0.0, 1.0);}
+	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 0.0, 1.0) * calc_light_atten(epos, 2);}
 	gl_FragColor = apply_fog(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a)); // add fog
 }
