@@ -183,7 +183,8 @@ tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_ti
 	x2 = x1 + size;
 	y2 = y1 + size;
 	wx1 = x2; wy1 = y2; wx2 = x1; wy2 = y1; // start denormalized
-	calc_start_step(0, 0);
+	xstart = get_xval(x1 + mesh_off.dxoff);
+	ystart = get_yval(y1 + mesh_off.dyoff);
 	radius = calc_radius();
 	mzmin  = mzmax = ptzmax = dtzmax = get_camera_pos().z;
 	base_tsize = NORM_TEXELS;
@@ -233,14 +234,6 @@ float tile_t::get_max_xy_dist_to_pt(point const &pt) const { // unused
 	float const dx(max(fabs(pt.x - bc.d[0][0]), fabs(pt.x - bc.d[0][1])));
 	float const dy(max(fabs(pt.y - bc.d[1][0]), fabs(pt.y - bc.d[1][1])));
 	return sqrt(dx*dx + dy*dy);
-}
-
-void tile_t::calc_start_step(int dx, int dy) {
-
-	xstart = get_xval(x1 + dx);
-	ystart = get_yval(y1 + dy);
-	xstep  = (get_xval(x2 + dx) - xstart)/size;
-	ystep  = (get_yval(y2 + dy) - ystart)/size;
 }
 
 
@@ -300,7 +293,7 @@ void tile_t::clear_vbo_tid(bool vclear, bool tclear) {
 
 void tile_t::create_xy_arrays(mesh_xy_grid_cache_t &height_gen, unsigned xy_size, float xy_scale) {
 
-	height_gen.build_arrays(xy_scale*(xstart - 0.5*xstep), xy_scale*(ystart + 0.5*ystep), xy_scale*xstep, xy_scale*ystep, xy_size, xy_size);
+	height_gen.build_arrays(xy_scale*get_xval(x1), xy_scale*get_yval(y1), xy_scale*DX_VAL, xy_scale*DY_VAL, xy_size, xy_size);
 }
 
 
@@ -309,7 +302,6 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	//RESET_TIME;
 	if (enable_terrain_env) {update_terrain_params();}
 	zvals.resize(zvsize*zvsize);
-	calc_start_step(0, 0);
 	mzmin =  FAR_CLIP;
 	mzmax = -FAR_CLIP;
 	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
@@ -369,7 +361,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	assert(mzmin <= mzmax);
-	radius = 0.5*sqrt((xstep*xstep + ystep*ystep)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
+	radius = 0.5*sqrt((DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 	//PRINT_TIME("Create Zvals");
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
 }
@@ -469,8 +461,8 @@ void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float radius)
 
 bool tile_t::add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test) {
 
-	int const xc(round_fp((pos.x - xstart)/xstep)), yc(round_fp((pos.y - ystart)/ystep));
-	int rval(max(int(radius/xstep), int(radius/ystep)) + 1);
+	int const xc(round_fp((pos.x - xstart)/DX_VAL)), yc(round_fp((pos.y - ystart)/DY_VAL));
+	int rval(max(int(radius/DX_VAL), int(radius/DY_VAL)) + 1);
 	int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
 	bool on_edge(0);
 	float const scale(0.6/rval);
@@ -532,7 +524,7 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 
 	tree_map.resize(0);
 	tree_map.resize(stride*stride, 255);
-	bool const no_adj_test(trmax < min(xstep, ystep));
+	bool const no_adj_test(trmax < min(DX_VAL, DY_VAL));
 	apply_ao_shadows_for_trees(this, no_adj_test);
 }
 
@@ -581,17 +573,14 @@ void tile_t::check_shadow_map_and_normal_texture() {
 
 void tile_t::create_data(vector<vert_type_t> &data) {
 
-	//RESET_TIME;
 	assert(zvals.size() == zvsize*zvsize);
-	calc_start_step(mesh_off.dxoff, mesh_off.dyoff);
 	data.resize(stride*stride);
 
 	for (unsigned y = 0; y <= size; ++y) {
 		for (unsigned x = 0; x <= size; ++x) {
-			data[y*stride + x].assign((xstart + x*xstep), (ystart + y*ystep), zvals[y*zvsize + x]);
+			data[y*stride + x].assign(x*DX_VAL, y*DY_VAL, zvals[y*zvsize + x]);
 		}
 	}
-	//PRINT_TIME("Create Data");
 }
 
 
@@ -641,9 +630,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	assert(sand_tex_ix >= 0 && dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0 && snow_tex_ix >= 0);
-	calc_start_step(0, 0);
 	create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
-	calc_start_step(mesh_off.dxoff, mesh_off.dyoff); // reset
 
 	for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
 		for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
@@ -988,12 +975,11 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	assert(weight_tid > 0);
 	bind_2d_texture(weight_tid);
 	glPushMatrix();
-	translate_to(mesh_off.get_xlate());
-	set_landscape_texgen(1.0, (-x1 - mesh_off.dxoff), (-y1 - mesh_off.dyoff), MESH_X_SIZE, MESH_Y_SIZE);
+	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
+	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE);
 		
 	if (!reflection_pass && cloud_shadows_enabled()) {
-		vector3d const offset(-mesh_off.dxoff*DX_VAL, -mesh_off.dyoff*DY_VAL, 0.0);
-		s.add_uniform_vector3d("cloud_offset", offset);
+		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
 	bind_texture_tu(shadow_normal_tid, 7);
 	unsigned const lod_level(get_lod_level(reflection_pass));

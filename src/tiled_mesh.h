@@ -81,7 +81,7 @@ class tile_t {
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
-	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, xstep, ystep, min_normal_z;
+	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z;
 	bool shadows_invalid, weights_invalid, mesh_height_invalid, in_queue, last_occluded;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
@@ -123,7 +123,7 @@ public:
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~tile_t() {clear_vbo_tid(1,1);}
 	void invalidate_shadows() {shadows_invalid = 1;}
-	float calc_radius() const {return 0.5*sqrt(xstep*xstep + ystep*ystep)*size;} // approximate (lower bound)
+	float calc_radius() const {return 0.5*sqrt(DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
 	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), max(ptzmax, dtzmax));}
@@ -163,7 +163,6 @@ public:
 	float get_min_dist_to_pt(point const &pt, bool xy_only=0) const;
 	float get_max_xy_dist_to_pt(point const &pt) const;
 	bool contains_camera() const {return get_bcube().contains_pt_xy(get_camera_pos());}
-	void calc_start_step(int dx, int dy);
 	unsigned get_gpu_mem() const;
 
 	unsigned get_tree_mem() const { // only accounts for top-level class memory
