@@ -771,6 +771,15 @@ void quit_3dworld() {
 }
 
 
+void switch_weapon_mode() {
+
+	if (sstates != NULL) {
+		++sstates[CAMERA_ID].wmode;
+		sstates[CAMERA_ID].verify_wmode();
+	}
+}
+
+
 // This function is called whenever there is a keyboard input
 // key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127)
 // x and y are the location of the mouse
@@ -779,7 +788,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	int mtime2;
 	static int lmtype(0);
 
-    switch (key) { // available: QWAXOP somtimes SZ
+    switch (key) { // available: QAXOP somtimes SZ
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -950,6 +959,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 	case 'e': // next weapon
 		if (world_mode == WMODE_UNIVERSE) player_ship().switch_weapon(0); else switch_player_weapon(1);
+		break;
+	case 'W': // switch weapon mode
+		switch_weapon_mode();
 		break;
 
 	case 'o': // toggle vsync
@@ -1260,10 +1272,7 @@ void keyboard2(int key, int x, int y) {
 		break;
 
 	case GLUT_KEY_F4: // switch weapon mode
-		if (sstates != NULL) {
-			++sstates[CAMERA_ID].wmode;
-			sstates[CAMERA_ID].verify_wmode();
-		}
+		switch_weapon_mode();
 		break;
 
 	case GLUT_KEY_F5: // toggle large/small trees
