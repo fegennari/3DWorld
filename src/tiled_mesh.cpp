@@ -953,7 +953,9 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 	
 	if (min_normal_z > 0.0) { // normals have been calculated, adjust detail based on max slope
 		if (min_normal_z > 0.9) { // flat, lower detail
-			dist *= (min_normal_z > 0.95) ? 4.0 : 2.0;
+			if (!is_water_enabled() || mzmax < water_plane_z || mzmin > water_plane_z) { // use get_water_z_height()?
+				dist *= (min_normal_z > 0.95) ? 4.0 : 2.0;
+			}
 		}
 		else if (min_normal_z < 0.25) { // high slope, higher detail
 			dist /= -log(2.0*min_normal_z)/log(2.0);
