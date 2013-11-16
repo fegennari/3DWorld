@@ -1,7 +1,7 @@
 uniform float dist_const  = 10.0;
 uniform float dist_slope  = 0.5;
 uniform float cloud_alpha = 1.0;
-uniform float x1, y1, x2, y2, wx2, wy2, zmin, zmax;
+uniform float x1, y1, x2, y2, zmin, zmax;
 uniform sampler2D height_tex, shadow_normal_tex, weight_tex, noise_tex;
 uniform float cloud_plane_z;
 uniform vec3 cloud_offset = vec3(0.0);
@@ -26,7 +26,7 @@ void main()
 	vec4 vertex = gl_Vertex;
 	vertex.xy  += local_translate;
 	vertex.z   += zmin + (zmax - zmin)*texture2D(height_tex, vec2((vertex.x - x1)/(x2 - x1), (vertex.y - y1)/(y2 - y1))).r;
-	vec2 tc2    = vec2(vertex.x/wx2, vertex.y/wy2);
+	vec2 tc2    = vec2(vertex.x/(x1 + x2), vertex.y/(y1 + y2)); // same as (x2 - x1 - 1.0*DX_VAL)
 	if (enable_grass_wind) {vertex.xyz += get_grass_wind_delta(vertex.xyz, tc.s);}
 
 	vec4 epos   = gl_ModelViewMatrix  * vertex;

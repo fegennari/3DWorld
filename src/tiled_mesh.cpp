@@ -866,12 +866,6 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(weight_tid, 3);
 	bind_texture_tu(shadow_normal_tid, 4);
-	s.add_uniform_float("x1",  -0.5*DX_VAL);
-	s.add_uniform_float("y1",  -0.5*DY_VAL);
-	s.add_uniform_float("x2",  (size + 0.5)*DX_VAL);
-	s.add_uniform_float("y2",  (size + 0.5)*DY_VAL);
-	s.add_uniform_float("wx2", size*DX_VAL);
-	s.add_uniform_float("wy2", size*DY_VAL);
 	s.add_uniform_float("zmin", mzmin);
 	s.add_uniform_float("zmax", mzmax);
 		
@@ -1867,6 +1861,10 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		s.add_uniform_float("dist_const", get_grass_thresh());
 		s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
 		setup_cloud_plane_uniforms(s);
+		s.add_uniform_float("x1", -0.5*DX_VAL);
+		s.add_uniform_float("y1", -0.5*DY_VAL);
+		s.add_uniform_float("x2", (get_tile_size() + 0.5)*DX_VAL);
+		s.add_uniform_float("y2", (get_tile_size() + 0.5)*DY_VAL);
 
 		int const lt_loc(s.get_attrib_loc("local_translate"));
 		glEnableVertexAttribArray(lt_loc);

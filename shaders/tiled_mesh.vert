@@ -7,5 +7,5 @@ void main()
 	setup_texgen2();
 	vertex = gl_Vertex;
 	gl_Position = ftransform();
-	set_fog_coord();
+	set_fog_coord(vertex);
 } 
