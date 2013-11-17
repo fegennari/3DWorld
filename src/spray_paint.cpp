@@ -5,6 +5,7 @@
 #include "collision_detect.h"
 #include "gameplay.h"
 #include "tree_3dw.h"
+#include "openal_wrap.h"
 
 using namespace std;
 
@@ -17,6 +18,7 @@ colorRGBA const paint_colors  [NUM_PAINT_COLORS] = {WHITE, RED, GREEN, BLUE, YEL
 bool spraypaint_mode(0);
 unsigned paint_color_ix(0);
 
+extern float CAMERA_RADIUS;
 extern coll_obj_group coll_objects;
 
 
@@ -109,5 +111,6 @@ void spray_paint(bool mode) {
 		add_color_to_landscape_texture(color, coll_pos.x, coll_pos.y, 1.5*radius);
 		modify_grass_at(coll_pos, 1.5*radius, 0, 0, 0, 1, 1, 0, color);
 	}
+	gen_sound(SOUND_SPRAY, (pos + CAMERA_RADIUS*cview_dir), 0.2, 1.0);
 }
 
