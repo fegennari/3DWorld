@@ -175,7 +175,7 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), shadows_invalid(1), weights_invalid(1),
-	mesh_height_invalid(0), in_queue(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -453,18 +453,18 @@ void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float radius)
 }
 
 
-bool tile_t::add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test) {
+void tile_t::add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test) {
 
 	int const xc(round_fp((pos.x - xstart)/DX_VAL)), yc(round_fp((pos.y - ystart)/DY_VAL));
 	int rval(max(int(radius/DX_VAL), int(radius/DY_VAL)) + 1);
 	int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
-	bool on_edge(0);
 	float const scale(0.6/rval);
+	bool updated(0);
 
 	for (int y = y1; y <= y2; ++y) {
 		for (int x = x1; x <= x2; ++x) {
 			float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
-			if (dist < rval) {tree_map[y*stride + x] *= (0.2 + 0.8*scale*dist);}
+			if (dist < rval) {tree_map[y*stride + x] *= (0.2 + 0.8*scale*dist); updated = 1;}
 		}
 	}
 	if (!no_adj_test) {
@@ -474,13 +474,14 @@ bool tile_t::add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test
 		for (int dy = -1; dy <= 1; ++dy) {
 			for (int dx = -1; dx <= 1; ++dx) {
 				if (dx == 0 && dy == 0) continue;
-				if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, radius); on_edge = 1;}
+				if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, radius);}
 			}
 		}
 	}
-	invalidate_shadows();
-	weights_invalid = 1; // Note: may be slow, and doesn't have a big impact
-	return on_edge;
+	if (updated) { // tree_map was modified, so we need to recalculate both weights (grass replaced with dirt) and shadows
+		invalidate_shadows();
+		if (has_any_grass) {weights_invalid = 1;} // Note: may be slow, and doesn't have a big impact
+	}
 }
 
 
@@ -525,13 +526,13 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 
 void tile_t::check_shadow_map_and_normal_texture() {
 
-	if (shadows_invalid) {free_texture(shadow_normal_tid);}
-	if (shadow_normal_tid) return; // up-to-date
-	setup_texture(shadow_normal_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+	if (shadow_normal_tid && !shadows_invalid) return; // up-to-date
+	//RESET_TIME;
+	bool const tid_is_valid(shadow_normal_tid != 0);
+	if (!tid_is_valid) {setup_texture(shadow_normal_tid, GL_MODULATE, 0, 0, 0, 0, 0);}
 	vector<norm_comp_with_shadow> data(stride*stride);
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	assert(has_sun || has_moon);
-	//RESET_TIME;
 	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
 	//PRINT_TIME("Calc Shadows");
 	min_normal_z = 1.0;
@@ -558,8 +559,15 @@ void tile_t::check_shadow_map_and_normal_texture() {
 			data[ix].v[3] = shadow_val;
 		}
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
+	if (tid_is_valid) { // overwrite old data
+		bind_2d_texture(shadow_normal_tid);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, stride, stride, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
+	}
+	else { // allocate and write
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
+	}
 	shadows_invalid = 0;
+	//PRINT_TIME("Calc and Upload Shadows");
 }
 
 
@@ -619,6 +627,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	assert(zvals.size() == zvsize*zvsize);
 	//RESET_TIME;
 	weights_invalid = 0;
+	has_any_grass   = 0;
 	grass_blocks.clear();
 	unsigned const grass_block_dim(get_grass_block_dim()), tsize(stride);
 	unsigned char *data(new unsigned char[4*tsize*tsize]); // RGBA
@@ -663,6 +672,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			float const vnz(get_norm(ix).z);
 			float weight_scale(1.0);
 			bool const grass(lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == GROUND_TEX), snow(lttex_dirt[k2].id == SNOW_TEX);
+			has_any_grass |= grass;
 
 			if (grass || snow) {
 				float const *const sti(sthresh[0][snow]);
@@ -685,41 +695,44 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			unsigned const ix_val(y*tsize + x), off(4*ix_val);
 			float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
 			float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv));
-			float const grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
-			float const gscale(CLIP_TO_01(2.5f*(grass_scale - 0.5f) + 0.5f));
 
-			if (dirt_scale  < 1.0) { // apply dirt scale: convert dirt to sand
+			if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
 				weights[sand_tex_ix ] += (1.0 - dirt_scale )*weights[dirt_tex_ix];
 				weights[dirt_tex_ix ] *= dirt_scale;
 			}
-			if (grass_scale < 1.0) { // apply grass scale: convert grass to sand
-				weights[sand_tex_ix ] += (1.0 - gscale)*weights[grass_tex_ix];
-				weights[grass_tex_ix] *= gscale;
-			}
-			if (!tree_map.empty() && tree_map[ix_val] < 255) { // replace grass under trees with dirt
-				float const v(tree_map[ix_val]/255.0);
-				weights[dirt_tex_ix]  += (1.0 - v)*weights[grass_tex_ix];
-				weights[grass_tex_ix] *= v;
-			}
+			if (grass) {
+				float const grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
+
+				if (grass_scale < 1.0) { // apply grass scale: convert grass to sand
+					float const gscale(CLIP_TO_01(2.5f*(grass_scale - 0.5f) + 0.5f));
+					weights[sand_tex_ix ] += (1.0 - gscale)*weights[grass_tex_ix];
+					weights[grass_tex_ix] *= gscale;
+				}
+				if (!tree_map.empty() && tree_map[ix_val] < 255) { // replace grass under trees with dirt
+					float const v(tree_map[ix_val]/255.0);
+					weights[dirt_tex_ix]  += (1.0 - v)*weights[grass_tex_ix];
+					weights[grass_tex_ix] *= v;
+				}
+				if (x < size && y < size && gen_grass_map()) {
+					unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
+					if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
+					assert(bix < grass_blocks.size());
+					grass_block_t &gb(grass_blocks[bix]);
+					
+					if (gb.ix == 0) { // not yet set
+						gb.ix = (((x1 + x) + 1567*(y1 + y)) % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+						//gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+						gb.zmin = mhmin;
+						gb.zmax = mhmax;
+					}
+					else {
+						gb.zmin = min(gb.zmin, mhmin);
+						gb.zmax = max(gb.zmax, mhmax);
+					}
+				}
+			} // end grass
 			for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
 				data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
-			}
-			if (grass && x < size && y < size && gen_grass_map()) {
-				unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
-				if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
-				assert(bix < grass_blocks.size());
-				grass_block_t &gb(grass_blocks[bix]);
-					
-				if (gb.ix == 0) { // not yet set
-					gb.ix = (((x1 + x) + 1567*(y1 + y)) % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
-					//gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
-					gb.zmin = mhmin;
-					gb.zmax = mhmax;
-				}
-				else {
-					gb.zmin = min(gb.zmin, mhmin);
-					gb.zmax = max(gb.zmax, mhmax);
-				}
 			}
 		} // for x
 	} // for y

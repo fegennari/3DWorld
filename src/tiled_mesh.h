@@ -82,7 +82,7 @@ class tile_t {
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z;
-	bool shadows_invalid, weights_invalid, mesh_height_invalid, in_queue, last_occluded;
+	bool shadows_invalid, weights_invalid, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
@@ -197,7 +197,7 @@ public:
 		return ((adj_tile && !adj_tile->tree_map.empty()) ? adj_tile : NULL);
 	}
 	void push_tree_ao_shadow(int dx, int dy, point const &pos, float radius) const;
-	bool add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test);
+	void add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test);
 	void apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test);
 	void apply_tree_ao_shadows();
 	void check_shadow_map_and_normal_texture();
