@@ -244,7 +244,7 @@ unsigned tile_t::get_gpu_mem() const {
 	if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
 	if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	if (height_tid > 0) mem += 2*num_texels; // 2 bytes per texel (L16)
-	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (L8)
+	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	return mem;
 }
 
@@ -982,6 +982,10 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE);
 	
+	/*if (display_mode & 0x10) {
+		bind_texture_tu(height_tid, 11);
+		set_shader_zmin_zmax(s);
+	}*/
 	if (!reflection_pass && cloud_shadows_enabled()) {
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
@@ -1358,6 +1362,8 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
+	//bool const use_hmap_tex((display_mode & 0x10) != 0);
+	//if (use_hmap_tex  ) {s.set_prefix("#define USE_HEIGHT_TEX", 0);} // VS
 	if (has_water     ) {s.set_prefix("#define HAS_WATER", 1);} // FS
 	if (water_caustics) {s.set_prefix("#define WATER_CAUSTICS", 1);} // FS
 	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
@@ -1373,6 +1379,10 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	setup_cloud_plane_uniforms(s);
 	setup_terrain_textures(s, 2, 0);
 
+	/*if (use_hmap_tex) {
+		set_tile_xy_vals(s);
+		s.add_uniform_int("height_tex", 11);
+	}*/
 	if (has_water) {
 		set_water_plane_uniforms(s);
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
