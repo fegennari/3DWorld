@@ -438,14 +438,8 @@ void tile_t::calc_shadows(bool calc_sun, bool calc_moon, bool no_push) {
 		if (!calc_light[l])    continue; // light not enabled
 		if (!smask[l].empty()) continue; // already calculated (cached)
 		smask[l].resize(zvals.size(), 0);
-
 		//if (normal_zmin < 1.0 && get_light_pos(l).get_norm().xy_mag() < normal_zmin) { // terrain slope lower than sun slope
-		if (no_push) {
-			calc_shadows_for_light(l);
-		}
-		else {
-			proc_tile_queue(this, l);
-		}
+		if (no_push) {calc_shadows_for_light(l);} else {proc_tile_queue(this, l);}
 	}
 }
 
@@ -571,6 +565,21 @@ void tile_t::check_shadow_map_and_normal_texture() {
 
 // *** mesh creation ***
 
+// Note: unclear what we should return here:
+// * mzmin/mzmax has the best resolution, but is slightly discontinuous at tile borders as adjacent tiles have different mzmin/mzmax
+// * zmin/zmax is const and continuous, but just an estimate; we may have tiles that extend outside these bounds that would get clipped or wrap around
+// * calculated mzmin/mzmax across all visible tiles is accurate, but has popping/adjacency misalignment when new tiles come into view that change min/max z
+// * min(zmin, mzmin)/max(zmax, mzmax) is continuous for most of the range, and will never be clipped, so may be a good compromise
+float tile_t::get_htex_zmin() const {return min(zmin, mzmin);}
+float tile_t::get_htex_zmax() const {return max(zmax, mzmax);}
+
+void tile_t::set_shader_zmin_zmax(shader_t &s) const {
+
+	s.add_uniform_float("zmin", get_htex_zmin());
+	s.add_uniform_float("zmax", get_htex_zmax());
+}
+
+
 void tile_t::create_data(vector<vert_type_t> &data) {
 
 	assert(zvals.size() == zvsize*zvsize);
@@ -587,13 +596,13 @@ void tile_t::create_data(vector<vert_type_t> &data) {
 void tile_t::ensure_height_tid() {
 
 	if (height_tid) return;
-	float const scale(65535/(mzmax - mzmin));
+	float const ht_zmin(get_htex_zmin()), scale(65535/(get_htex_zmax() - ht_zmin));
 	assert(zvals.size() == zvsize*zvsize);
 	vector<unsigned short> data(stride*stride);
 
 	for (unsigned y = 0; y < stride; ++y) {
 		for (unsigned x = 0; x < stride; ++x) {
-			data[y*stride+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - mzmin));
+			data[y*stride+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - ht_zmin));
 		}
 	}
 	setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
@@ -866,8 +875,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(weight_tid, 3);
 	bind_texture_tu(shadow_normal_tid, 4);
-	s.add_uniform_float("zmin", mzmin);
-	s.add_uniform_float("zmax", mzmax);
+	set_shader_zmin_zmax(s);
 		
 	if (use_cloud_shadows) {
 		vector3d const offset(get_xval(x1), get_yval(y1), 0.0);
@@ -973,7 +981,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	glPushMatrix();
 	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE);
-		
+	
 	if (!reflection_pass && cloud_shadows_enabled()) {
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
@@ -1048,13 +1056,12 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 }
 
 
-void tile_t::draw_water(shader_t &s, float z) {
+void tile_t::draw_water(shader_t &s, float z) const {
 
 	if (!has_water() || get_rel_dist_to_camera() > DRAW_DIST_TILES || !is_visible()) return;
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*DX_VAL), yv2(yv1+(y2-y1)*DY_VAL);
 	bind_texture_tu(height_tid, 2);
-	s.add_uniform_float("zmin", mzmin);
-	s.add_uniform_float("zmax", mzmax);
+	set_shader_zmin_zmax(s);
 	draw_one_tquad(xv1, yv1, xv2, yv2, z);
 }
 
@@ -1334,6 +1341,14 @@ void tile_draw_t::setup_cloud_plane_uniforms(shader_t &s) {
 	s.add_uniform_float("cloud_scale",   0.535);
 	s.add_uniform_float("cloud_plane_z", cloud_zmax);
 	s.add_uniform_float("cloud_alpha",   0.75*atmosphere);
+}
+
+void set_tile_xy_vals(shader_t &s) {
+
+	s.add_uniform_float("x1", -0.5*DX_VAL);
+	s.add_uniform_float("y1", -0.5*DY_VAL);
+	s.add_uniform_float("x2", (get_tile_size() + 0.5)*DX_VAL);
+	s.add_uniform_float("y2", (get_tile_size() + 0.5)*DY_VAL);
 }
 
 
@@ -1861,10 +1876,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		s.add_uniform_float("dist_const", get_grass_thresh());
 		s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
 		setup_cloud_plane_uniforms(s);
-		s.add_uniform_float("x1", -0.5*DX_VAL);
-		s.add_uniform_float("y1", -0.5*DY_VAL);
-		s.add_uniform_float("x2", (get_tile_size() + 0.5)*DX_VAL);
-		s.add_uniform_float("y2", (get_tile_size() + 0.5)*DY_VAL);
+		set_tile_xy_vals(s);
 
 		int const lt_loc(s.get_attrib_loc("local_translate"));
 		glEnableVertexAttribArray(lt_loc);

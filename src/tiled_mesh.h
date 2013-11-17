@@ -126,6 +126,8 @@ public:
 	float calc_radius() const {return 0.5*sqrt(DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
+	float get_htex_zmin() const;
+	float get_htex_zmax() const;
 	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), max(ptzmax, dtzmax));}
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()?
@@ -240,10 +242,11 @@ public:
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 
 	// *** rendering ***
+	void set_shader_zmin_zmax(shader_t &s) const;
 	void ensure_vbo(vector<vert_type_t> &data);
 	void ensure_weights(mesh_xy_grid_cache_t &height_gen);
 	void draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pass) const;
-	void draw_water(shader_t &s, float z);
+	void draw_water(shader_t &s, float z) const;
 	bool check_player_collision() const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const;
 }; // tile_t
