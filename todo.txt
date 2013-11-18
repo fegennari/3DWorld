@@ -21,7 +21,7 @@ TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
 User-placed trees
 
-Reuse tile vbos and tids
+Reuse tile tids
 Faster TT weights_invalid update
 TT Terrain Ambient Occlusion
 TT Normal Map(s)

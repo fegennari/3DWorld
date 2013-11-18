@@ -251,7 +251,7 @@ unsigned tile_t::get_gpu_mem() const {
 
 void tile_t::clear() {
 
-	clear_vbo_tid(1, 1);
+	clear_vbo_tid();
 	tree_map.clear();
 	zvals.clear();
 	clear_shadows();
@@ -278,16 +278,19 @@ void tile_t::clear_tids() {
 	gen_tsize = 0;
 }
 
-void tile_t::clear_vbo_tid(bool vclear, bool tclear) {
+void tile_t::clear_vbo_tid(vector<unsigned> *vbo_free_list) {
 
-	if (vclear) {
-		delete_and_zero_vbo(vbo);
-		clear_shadows();
-		pine_trees.clear_vbos();
-		decid_trees.clear_context(); // only necessary if not using instancing
-		scenery.clear_vbos();
+	if (vbo_free_list) {
+		if (vbo) {vbo_free_list->push_back(vbo); vbo = 0;}
 	}
-	if (tclear) {clear_tids();}
+	else {
+		delete_and_zero_vbo(vbo);
+	}
+	clear_shadows();
+	pine_trees.clear_vbos();
+	decid_trees.clear_context(); // only necessary if not using instancing
+	scenery.clear_vbos();
+	clear_tids();
 }
 
 
@@ -750,12 +753,12 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 }
 
 
-bool tile_t::update_range() { // if returns 0, tile will be deleted
+bool tile_t::update_range(vector<unsigned> *vbo_free_list) { // if returns 0, tile will be deleted
 
 	if (pine_trees_enabled()) {update_pine_tree_state(0);} // can free pine tree vbos
 	float const dist(get_rel_dist_to_camera());
-	if (dist > CLEAR_DIST_TILES) {clear_vbo_tid(1,1);}
-	return (dist < DELETE_DIST_TILES);
+	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid(vbo_free_list);}
+	return (dist < DELETE_DIST_TILES || mesh_height_invalid);
 }
 
 
@@ -949,12 +952,22 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 
 // *** rendering ***
 
-void tile_t::ensure_vbo(vector<vert_type_t> &data) {
+void tile_t::ensure_vbo(vector<vert_type_t> &data, vector<unsigned> *vbo_free_list) {
 
 	if (vbo) return; // already allocated
 	create_data(data);
 	if (any_trees_enabled()) {apply_tree_ao_shadows();}
-	create_vbo_and_upload(vbo, data, 0, 1);
+
+	if (vbo_free_list && !vbo_free_list->empty()) {
+		vbo = vbo_free_list->back();
+		vbo_free_list->pop_back();
+		bind_vbo(vbo);
+		upload_vbo_data(&data.front(), data.size()*sizeof(vert_type_t));
+		bind_vbo(0);
+	}
+	else {
+		create_vbo_and_upload(vbo, data, 0, 1);
+	}
 	assert(vbo);
 }
 
@@ -1238,7 +1251,7 @@ tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
 
 void tile_draw_t::clear() {
 
-	clear_vbos_tids(1, 1); // needed to clear ivbo
+	clear_vbos_tids(); // needed to clear ivbo and free list
 
 	//cout << "clear with " << tiles.size() << " tiles" << endl;
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -1270,7 +1283,7 @@ float tile_draw_t::update() { // view-independent updates; returns terrain zmin
 	vector<tile_xy_pair> to_erase;
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
-		if (i->second->mesh_invalid() || !i->second->update_range()) {
+		if (!i->second->update_range(&vbo_free_list)) {
 			to_erase.push_back(i->first);
 			i->second->clear();
 			delete i->second;
@@ -1525,7 +1538,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		//PRINT_TIME("Gen Trees2");
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
-		(*i)->ensure_vbo(data);
+		(*i)->ensure_vbo(data, &vbo_free_list);
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		(*i)->ensure_weights(height_gen);
@@ -1563,6 +1576,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			if (ivbo[i] > 0) {mem += 4*(get_tile_size()>>i)*(get_tile_size()>>i)*sizeof(unsigned);} // approximate
 		}
+
 	}
 
 	// determine potential occluders
@@ -1577,6 +1591,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 			if (tile->get_rel_dist_to_camera() > OCCLUDER_DIST || !tile->is_visible()) continue;
 			occluders.push_back(tile);
 		}
+		mem += 2*(MESH_X_SIZE+1)*MESH_X_SIZE*sizeof(tile_t::vert_type_t)*vbo_free_list.size();
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second);
@@ -1647,9 +1662,9 @@ void tile_draw_t::draw(bool reflection_pass) {
 		
 	if (DEBUG_TILES) {
 		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_pine_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
-		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", trees drawn: "
-			<< num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem) << ", tree mem: " << in_mb(tree_mem)
-			<< ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;
+		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", vbo_free_list: " << vbo_free_list.size()
+			<< ", trees drawn: " << num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem)
+			<< ", tree mem: " << in_mb(tree_mem) << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;
 	}
 	run_post_mesh_draw();
 	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
@@ -1928,11 +1943,15 @@ void tile_draw_t::update_lightning(bool reflection_pass) {
 }
 
 
-void tile_draw_t::clear_vbos_tids(bool vclear, bool tclear) {
+void tile_draw_t::clear_vbos_tids() {
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		i->second->clear_vbo_tid(vclear, tclear);
+		i->second->clear_vbo_tid();
 	}
+	for (vector<unsigned>::const_iterator i = vbo_free_list.begin(); i != vbo_free_list.end(); ++i) {
+		delete_vbo(*i);
+	}
+	vbo_free_list.clear();
 	for (unsigned i = 0; i < NUM_LODS; ++i) {delete_and_zero_vbo(ivbo[i]);}
 }
 
@@ -2012,7 +2031,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
 void clear_tiled_terrain() {terrain_tile_draw.clear();}
-void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids(1,1);}
+void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids();}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
 

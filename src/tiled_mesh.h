@@ -121,7 +121,7 @@ public:
 	tile_t();
 	tile_t(unsigned size_, int x, int y);
 	// can't free in the destructor because the gl context may be destroyed before this point
-	//~tile_t() {clear_vbo_tid(1,1);}
+	//~tile_t() {clear_vbo_tid();}
 	void invalidate_shadows() {shadows_invalid = 1;}
 	float calc_radius() const {return 0.5*sqrt(DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
@@ -133,7 +133,6 @@ public:
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()?
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
-	bool mesh_invalid() const {return mesh_height_invalid;}
 	void invalidate_mesh_height() {mesh_height_invalid = 1;}
 	float get_avg_veg() const {return 0.25*(params[0][0].veg + params[0][1].veg + params[1][0].veg + params[1][1].veg);}
 	void set_last_occluded(bool val) {last_occluded = val; last_occluded_frame = frame_counter;}
@@ -174,7 +173,7 @@ public:
 	void clear();
 	void clear_shadows();
 	void clear_tids();
-	void clear_vbo_tid(bool vclear, bool tclear);
+	void clear_vbo_tid(vector<unsigned> *vbo_free_list=NULL);
 	void create_xy_arrays(mesh_xy_grid_cache_t &height_gen, unsigned xy_size, float xy_scale);
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
 
@@ -212,7 +211,7 @@ public:
 	float get_rel_dist_to_camera() const {
 		return max(0.0f, p2p_dist_xy(get_camera_pos(), get_center()) - radius)/get_scaled_tile_radius();
 	}
-	bool update_range();
+	bool update_range(vector<unsigned> *vbo_free_list);
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_bcube());}
 	float get_dist_to_camera_in_tiles() const {return get_rel_dist_to_camera()*TILE_RADIUS;}
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
@@ -244,7 +243,7 @@ public:
 
 	// *** rendering ***
 	void set_shader_zmin_zmax(shader_t &s) const;
-	void ensure_vbo(vector<vert_type_t> &data);
+	void ensure_vbo(vector<vert_type_t> &data, vector<unsigned> *vbo_free_list);
 	void ensure_weights(mesh_xy_grid_cache_t &height_gen);
 	void draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pass) const;
 	void draw_water(shader_t &s, float z) const;
@@ -261,6 +260,7 @@ class tile_draw_t {
 
 	tile_map tiles;
 	unsigned ivbo[NUM_LODS];
+	vector<unsigned> vbo_free_list;
 	draw_vect_t to_draw;
 	vector<point> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
@@ -298,7 +298,7 @@ public:
 	void draw_scenery(bool reflection_pass);
 	void draw_grass(bool reflection_pass);
 	void update_lightning(bool reflection_pass);
-	void clear_vbos_tids(bool vclear, bool tclear);
+	void clear_vbos_tids();
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 	bool check_player_collision() const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;
