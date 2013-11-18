@@ -5,11 +5,11 @@
 #mapx/config_mapx_voxels.txt
 #cornell_box/config_box.txt
 #config_scrolling.txt
-#config.txt
+config.txt
 #config_voxels.txt
 #config_voxels2.txt
 #config_voxels_grass.txt
-config_ice_caves.txt
+#config_ice_caves.txt
 #config_trees.txt
 #config_water.txt
 #config_river.txt

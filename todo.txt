@@ -19,6 +19,11 @@ Berries on plants
 Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
 PNG or BMP screenshots, or reuse the key?
+User-placed trees
 
-UI for Voxel Modify - Improve
-Voxel shadow alignment
+Reuse tile vbos and tids
+Faster TT weights_invalid update
+TT Terrain Ambient Occlusion
+TT Normal Map(s)
+Weather/Physics UI
+  - key to switch UI modes
