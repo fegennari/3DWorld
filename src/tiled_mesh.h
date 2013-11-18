@@ -82,11 +82,11 @@ class tile_t {
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z;
-	bool shadows_invalid, weights_invalid, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
+	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
-	vector<unsigned char> tree_map;
+	vector<unsigned char> tree_map, weight_data;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group pine_trees;

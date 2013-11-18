@@ -174,7 +174,7 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_
 	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
-	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), shadows_invalid(1), weights_invalid(1),
+	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), shadows_invalid(1), recalc_tree_grass_weights(1),
 	mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
@@ -253,6 +253,7 @@ void tile_t::clear() {
 
 	clear_vbo_tid();
 	tree_map.clear();
+	weight_data.clear();
 	zvals.clear();
 	clear_shadows();
 	pine_trees.clear_all();
@@ -483,7 +484,7 @@ void tile_t::add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test
 	}
 	if (updated) { // tree_map was modified, so we need to recalculate both weights (grass replaced with dirt) and shadows
 		invalidate_shadows();
-		if (has_any_grass) {weights_invalid = 1;} // Note: may be slow, and doesn't have a big impact
+		if (has_any_grass) {recalc_tree_grass_weights = 1;} // Note: may be slow, and doesn't have a big impact
 	}
 }
 
@@ -628,15 +629,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	assert(!island);
 	assert(zvals.size() == zvsize*zvsize);
 	//RESET_TIME;
-	has_any_grass = 0;
-	grass_blocks.clear();
-	unsigned const grass_block_dim(get_grass_block_dim()), tsize(stride);
-	unsigned char *data(new unsigned char[4*tsize*tsize]); // RGBA
-	float const xy_mult(1.0/float(size)), water_level(get_water_z_height());
-	float const MESH_NOISE_SCALE = 0.003;
-	float const MESH_NOISE_FREQ  = 80.0;
-	float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
-	int k1, k2, k3, k4, sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
+	unsigned const tsize(stride);
+	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
 
 	for (unsigned i = 0; i < NTEX_DIRT; ++i) {
 		switch (lttex_dirt[i].id) {
@@ -649,106 +643,126 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	assert(sand_tex_ix >= 0 && dirt_tex_ix >= 0 && grass_tex_ix >= 0 && rock_tex_ix >= 0 && snow_tex_ix >= 0);
-	create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
 
-	for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
-		for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
-			float weights[NTEX_DIRT] = {0};
-			unsigned const ix(y*zvsize + x);
-			float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
-			float const rand_offset(noise_scale*height_gen.eval_index(x, y, 0, 50));
-			float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
-			float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
-			float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
-			get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2);
-			get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4);
-			bool const same_tid(k1 == k4);
-			float t(0.0);
-			k2 = k4;
+	if (weight_tid == 0) { // create weights
+		has_any_grass = 0;
+		grass_blocks.clear();
+		weight_data.resize(4*tsize*tsize); // RGBA
+		unsigned const grass_block_dim(get_grass_block_dim());
+		float const xy_mult(1.0/float(size)), water_level(get_water_z_height());
+		float const MESH_NOISE_SCALE = 0.003;
+		float const MESH_NOISE_FREQ  = 80.0;
+		float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
+		int k1, k2, k3, k4;
+		create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
+
+		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
+			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
+				float weights[NTEX_DIRT] = {0};
+				unsigned const ix(y*zvsize + x);
+				float const mh00(zvals[ix]), mh01(zvals[ix+1]), mh10(zvals[ix+zvsize]), mh11(zvals[ix+zvsize+1]);
+				float const rand_offset(noise_scale*height_gen.eval_index(x, y, 0, 50));
+				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
+				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
+				float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
+				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2);
+				get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4);
+				bool const same_tid(k1 == k4);
+				float t(0.0);
+				k2 = k4;
 			
-			if (!same_tid) {
-				float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
-				get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, &t);
-			}
-			float const vnz(get_norm(ix).z);
-			float weight_scale(1.0);
-			bool const grass(lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == GROUND_TEX), snow(lttex_dirt[k2].id == SNOW_TEX);
-			has_any_grass |= grass;
+				if (!same_tid) {
+					float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
+					get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, &t);
+				}
+				float const vnz(get_norm(ix).z);
+				float weight_scale(1.0);
+				bool const grass(lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == GROUND_TEX), snow(lttex_dirt[k2].id == SNOW_TEX);
+				has_any_grass |= grass;
 
-			if (grass || snow) {
-				float const *const sti(sthresh[0][snow]);
+				if (grass || snow) {
+					float const *const sti(sthresh[0][snow]);
 
-				if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
-					if (grass) { // ground/grass
-						float const rock_weight((lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == ROCK_TEX) ? t : 0.0);
-						weight_scale = CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0]));
-						weights[rock_tex_ix] += (1.0 - weight_scale)*rock_weight;
-						weights[dirt_tex_ix] += (1.0 - weight_scale)*(1.0 - rock_weight);
+					if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
+						if (grass) { // ground/grass
+							float const rock_weight((lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == ROCK_TEX) ? t : 0.0);
+							weight_scale = CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0]));
+							weights[rock_tex_ix] += (1.0 - weight_scale)*rock_weight;
+							weights[dirt_tex_ix] += (1.0 - weight_scale)*(1.0 - rock_weight);
+						}
+						else { // snow
+							weight_scale = CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0]));
+							weights[rock_tex_ix] += 1.0 - weight_scale;
+						}
 					}
-					else { // snow
-						weight_scale = CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0]));
-						weights[rock_tex_ix] += 1.0 - weight_scale;
+				}
+				weights[k2] += weight_scale*t;
+				weights[k1] += weight_scale*(1.0 - t);
+				unsigned const ix_val(y*tsize + x), off(4*ix_val);
+				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
+				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv));
+
+				if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
+					weights[sand_tex_ix ] += (1.0 - dirt_scale )*weights[dirt_tex_ix];
+					weights[dirt_tex_ix ] *= dirt_scale;
+				}
+				if (grass) {
+					float const grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
+
+					if (grass_scale < 1.0) { // apply grass scale: convert grass to sand
+						float const gscale(CLIP_TO_01(2.5f*(grass_scale - 0.5f) + 0.5f));
+						weights[sand_tex_ix ] += (1.0 - gscale)*weights[grass_tex_ix];
+						weights[grass_tex_ix] *= gscale;
 					}
-				}
-			}
-			weights[k2] += weight_scale*t;
-			weights[k1] += weight_scale*(1.0 - t);
-			unsigned const ix_val(y*tsize + x), off(4*ix_val);
-			float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
-			float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv));
-
-			if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
-				weights[sand_tex_ix ] += (1.0 - dirt_scale )*weights[dirt_tex_ix];
-				weights[dirt_tex_ix ] *= dirt_scale;
-			}
-			if (grass) {
-				float const grass_scale((mhmin < water_level) ? 0.0 : BILINEAR_INTERP(params, grass, xv, yv)); // no grass under water
-
-				if (grass_scale < 1.0) { // apply grass scale: convert grass to sand
-					float const gscale(CLIP_TO_01(2.5f*(grass_scale - 0.5f) + 0.5f));
-					weights[sand_tex_ix ] += (1.0 - gscale)*weights[grass_tex_ix];
-					weights[grass_tex_ix] *= gscale;
-				}
-				if (!tree_map.empty() && tree_map[ix_val] < 255) { // replace grass under trees with dirt
-					float const v(tree_map[ix_val]/255.0);
-					weights[dirt_tex_ix]  += (1.0 - v)*weights[grass_tex_ix];
-					weights[grass_tex_ix] *= v;
-				}
-				if (x < size && y < size && gen_grass_map()) {
-					unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
-					if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
-					assert(bix < grass_blocks.size());
-					grass_block_t &gb(grass_blocks[bix]);
+					if (x < size && y < size && gen_grass_map()) {
+						unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
+						if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
+						assert(bix < grass_blocks.size());
+						grass_block_t &gb(grass_blocks[bix]);
 					
-					if (gb.ix == 0) { // not yet set
-						gb.ix = (((x1 + x) + 1567*(y1 + y)) % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
-						//gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
-						gb.zmin = mhmin;
-						gb.zmax = mhmax;
+						if (gb.ix == 0) { // not yet set
+							gb.ix = (((x1 + x) + 1567*(y1 + y)) % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+							//gb.ix = (rand() % NUM_RND_GRASS_BLOCKS) + 1; // select a random block
+							gb.zmin = mhmin;
+							gb.zmax = mhmax;
+						}
+						else {
+							gb.zmin = min(gb.zmin, mhmin);
+							gb.zmax = max(gb.zmax, mhmax);
+						}
 					}
-					else {
-						gb.zmin = min(gb.zmin, mhmin);
-						gb.zmax = max(gb.zmax, mhmax);
-					}
+				} // end grass
+				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
+					weight_data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
 				}
-			} // end grass
-			for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
-				data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
-			}
-		} // for x
-	} // for y
+			} // for x
+		} // for y
+	}
+	else { // use existing weights
+		assert(recalc_tree_grass_weights); // can only get here in this case
+		assert(weight_data.size() == 4*tsize*tsize);
+	}
+	vector<unsigned char> data(weight_data); // deep copy so that tree_map doesn't alter original weights
+
+	if (!tree_map.empty()) {
+		for (unsigned i = 0; i < tsize*tsize; ++i) { // replace grass under trees with dirt
+			unsigned const off(4*i);
+			if (tree_map[i] == 255 || data[off+grass_tex_ix] == 0) continue; // no trees or no grass
+			float const v(tree_map[i]/255.0);
+			data[off+dirt_tex_ix]   = (unsigned char)(max(0.0, min(255.0, (data[off+dirt_tex_ix] + (1.0 - v)*data[off+grass_tex_ix]))));
+			data[off+grass_tex_ix] *= v;
+		}
+	}
 	if (weight_tid == 0) { // create weight texture
 		setup_texture(weight_tid, GL_MODULATE, 0, 0, 0, 0, 0);
 		assert(weight_tid > 0 && glIsTexture(weight_tid));
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // internal_format = GL_COMPRESSED_RGBA - too slow
 	}
 	else { // update texture
-		assert(weights_invalid);
 		bind_2d_texture(weight_tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
 	}
-	delete [] data;
-	weights_invalid = 0;
+	recalc_tree_grass_weights = 0;
 	//PRINT_TIME("Texture Upload");
 }
 
@@ -973,7 +987,7 @@ void tile_t::ensure_vbo(vector<vert_type_t> &data, vector<unsigned> *vbo_free_li
 
 void tile_t::ensure_weights(mesh_xy_grid_cache_t &height_gen) {
 
-	if (weight_tid == 0 || weights_invalid) {create_texture(height_gen);}
+	if (weight_tid == 0 || recalc_tree_grass_weights) {create_texture(height_gen);}
 	check_shadow_map_and_normal_texture();
 }
 

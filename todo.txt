@@ -1,7 +1,6 @@
 Fix ship collisions
 Leaf/Branch overlap
 Multiple decid tree impostor orients
-Voxel terrain read/write
 Support for cube map textures (planets, etc.)
 More grass/plant types: Yellow and white flowers
 Hardware tessellation
@@ -16,13 +15,9 @@ Remove usage of gl_TexCoord from shaders and replace with a varying variable
 Replace GL matrix operations with something else (GLM?)
 
 Berries on plants
-Fireworks
 TT underwater dirt/vegetation, seaweed in/on water
-PNG or BMP screenshots, or reuse the key?
 User-placed trees
 
-Reuse tile tids
-Faster TT weights_invalid update
 TT Terrain Ambient Occlusion
 TT Normal Map(s)
 Weather/Physics UI
