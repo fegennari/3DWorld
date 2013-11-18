@@ -622,12 +622,10 @@ void tile_t::ensure_height_tid() {
 
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	assert(weight_tid == 0);
 	assert(!island);
 	assert(zvals.size() == zvsize*zvsize);
 	//RESET_TIME;
-	weights_invalid = 0;
-	has_any_grass   = 0;
+	has_any_grass = 0;
 	grass_blocks.clear();
 	unsigned const grass_block_dim(get_grass_block_dim()), tsize(stride);
 	unsigned char *data(new unsigned char[4*tsize*tsize]); // RGBA
@@ -736,11 +734,18 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			}
 		} // for x
 	} // for y
-	setup_texture(weight_tid, GL_MODULATE, 0, 0, 0, 0, 0);
-	assert(weight_tid > 0 && glIsTexture(weight_tid));
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
-	glDisable(GL_TEXTURE_2D);
+	if (weight_tid == 0) { // create weight texture
+		setup_texture(weight_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		assert(weight_tid > 0 && glIsTexture(weight_tid));
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, data); // internal_format = GL_COMPRESSED_RGBA - too slow
+	}
+	else { // update texture
+		assert(weights_invalid);
+		bind_2d_texture(weight_tid);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	}
 	delete [] data;
+	weights_invalid = 0;
 	//PRINT_TIME("Texture Upload");
 }
 
@@ -955,8 +960,7 @@ void tile_t::ensure_vbo(vector<vert_type_t> &data) {
 
 void tile_t::ensure_weights(mesh_xy_grid_cache_t &height_gen) {
 
-	if (weights_invalid) {free_texture(weight_tid);}
-	if (weight_tid == 0) {create_texture(height_gen);}
+	if (weight_tid == 0 || weights_invalid) {create_texture(height_gen);}
 	check_shadow_map_and_normal_texture();
 }
 
