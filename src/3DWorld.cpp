@@ -58,7 +58,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 
 // Global Variables
-bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0);
+bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0);
 bool univ_planet_lod(0), show_lightning(0), disable_shaders(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
@@ -1518,6 +1518,7 @@ int load_config(string const &config_file) {
 	kwmb.add("use_waypoint_app_spots", use_waypoint_app_spots);
 	kwmb.add("group_back_face_cull", group_back_face_cull);
 	kwmb.add("inf_terrain_scenery", inf_terrain_scenery);
+	kwmb.add("enable_tiled_mesh_ao", enable_tiled_mesh_ao);
 	kwmb.add("fast_water_reflect", fast_water_reflect);
 	kwmb.add("disable_shaders", disable_shaders);
 	kwmb.add("enable_model3d_tex_comp", enable_model3d_tex_comp);

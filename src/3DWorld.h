@@ -153,7 +153,8 @@ int const WATER_CLIP_PLANE  = GL_CLIP_PLANE0;
 
 #define BITSHIFT_CEIL(num, bs) (((num-1) >> bs) + 1)
 
-#define UNROLL_3X(expr) {{unsigned const i_(0); expr} {unsigned const i_(1); expr} {unsigned const i_(2); expr}}
+#define UNROLL_2X(expr) {{unsigned const i_(0); expr} {unsigned const i_(1); expr}}
+#define UNROLL_3X(expr) {UNROLL_2X(expr) {unsigned const i_(2); expr}}
 #define UNROLL_4X(expr) {UNROLL_3X(expr) {unsigned const i_(3); expr}}
 
 

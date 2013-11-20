@@ -27,7 +27,7 @@ vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in f
 	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0), shininess);
 }
 
-vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float shadow_weight, in float spec, in float shininess) {
+vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 lightDir = normalize(gl_LightSource[i].position.xyz);
 		
@@ -42,17 +42,15 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float shadow_weig
 	}
 	
 	// compute the ambient and diffuse lighting
-	vec4 diffuse = gl_LightSource[i].diffuse;
-	vec4 ambient = gl_LightSource[i].ambient;
-	vec4 color   = ambient + shadow_weight*max(dot(normal, lightDir), 0.0)*diffuse;
-	if (enable_light0) {color += get_light_specular(normal, lightDir, epos.xyz, shadow_weight*spec, shininess);}
+	vec4 color = a_scale*gl_LightSource[i].ambient + ds_scale*max(dot(normal, lightDir), 0.0)*gl_LightSource[i].diffuse;
+	if (enable_light0) {color += get_light_specular(normal, lightDir, epos.xyz, ds_scale*spec, shininess);}
 	
 #ifdef HAS_WATER
 	if (vertex.z < water_plane_z) { // underwater
 #ifdef WATER_CAUSTICS
 		if (i == 0) { // only for light0 (sun)
 			// apply underwater caustics texture
-			float cweight = shadow_weight*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
+			float cweight = ds_scale*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
 			vec3  cval    = 4.0*mix(texture2D(caustic_tex, gl_TexCoord[2].st).rgb, texture2D(caustic_tex, (gl_TexCoord[2].st + vec2(0.3, 0.6))).rgb, ntime);
 			color.rgb    *= mix(vec3(1.0), cval, cweight);
@@ -83,19 +81,27 @@ void main()
 				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb;
 	vec3 texel1  = texture2D(detail_tex, gl_TexCoord[1].st).rgb; // detail texture
 
-	vec4 shadow_normal = texture2D(shadow_normal_tex, tc);
-	vec3 normal = normalize(gl_NormalMatrix * ((2.0*shadow_normal.xyz - 1.0) * vec3(1.0, 1.0, normal_z_scale))); // eye space
-	//normal += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5);
+	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc);
+	float diffuse_scale = shadow_normal.w;
+#ifdef NO_AO
+	float ambient_scale = 1.0; // force ambient scale to 1.0
+#else
+	float ambient_scale = 1.5*shadow_normal.z;
+#endif
+	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
+	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
+	normal = normalize(gl_NormalMatrix * normal); // eye space
+	//normal += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5); // add noise
 	vec4 color = gl_LightModel.ambient;
-	//texel0 = mix(vec3(0.05, 0.25, 0.05), texel0, shadow_normal.w*shadow_normal.w);
-	vec4 epos = (gl_ModelViewMatrix * vertex);
+	vec4 epos  = (gl_ModelViewMatrix * vertex);
 	
-	if (enable_light0) {
+	if (enable_light0) { // sun
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 20.0*weights.b + 40.0*weights4;
-		color += add_light_comp(normal, epos, 0, shadow_normal.w, spec, shininess);
+		color += add_light_comp(normal, epos, 0, diffuse_scale, ambient_scale, spec, shininess);
 	}
-	if (enable_light1) {color += add_light_comp(normal, epos, 1, shadow_normal.w, 0.0, 1.0);}
-	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 0.0, 1.0) * calc_light_atten(epos, 2);}
+	if (enable_light1) {color += add_light_comp(normal, epos, 1, diffuse_scale, ambient_scale, 0.0, 1.0);} // moon
+	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0) * calc_light_atten(epos, 2);} // lightning
 	gl_FragColor = apply_fog(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a)); // add fog
+	//gl_FragColor = apply_fog(color); // untextured (white) for debugging
 }

@@ -61,6 +61,8 @@ struct tile_xy_pair {
 	int x, y;
 	tile_xy_pair(int x_=0, int y_=0) : x(x_), y(y_) {}
 	bool operator<(tile_xy_pair const &t) const {return ((y == t.y) ? (x < t.x) : (y < t.y));}
+	void operator+=(tile_xy_pair const &tp) {x += tp.x; y += tp.y;}
+	void operator-=(tile_xy_pair const &tp) {x -= tp.x; y -= tp.y;}
 };
 
 class tile_t;
@@ -86,7 +88,7 @@ class tile_t {
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
-	vector<unsigned char> tree_map, weight_data;
+	vector<unsigned char> tree_map, weight_data, ao_lighting;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	small_tree_group pine_trees;

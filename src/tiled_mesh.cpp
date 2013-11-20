@@ -33,7 +33,7 @@ unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 
-extern bool inf_terrain_scenery;
+extern bool inf_terrain_scenery, enable_tiled_mesh_ao;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
 extern int island, DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image;
@@ -368,6 +368,57 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	radius = 0.5*sqrt((DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 	//PRINT_TIME("Create Zvals");
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
+
+	// Note: mesh ambient occlusion calculation can be here
+	// we would need to put the ambient term into a texture as a single color channel, either in shadow_normal_tid or somewhere else
+	if (enable_tiled_mesh_ao) {
+		//RESET_TIME;
+		unsigned const NUM_DIRS  = 8;
+		unsigned const NUM_STEPS = 8;
+		unsigned ix(0);
+		tile_xy_pair ao_dirs[NUM_DIRS];
+
+		for (int y = -1; y <= 1; ++y) {
+			for (int x = -1; x <= 1; ++x) {
+				if (x != 0 || y != 0) {ao_dirs[ix++] = tile_xy_pair(x, y);}
+			}
+		}
+		assert(ix == NUM_DIRS);
+		float const dz(0.5*HALF_DXY);
+		ao_lighting.resize(stride*stride);
+
+		#pragma omp parallel for schedule(static,1)
+		for (int y = 0; y < (int)stride; ++y) {
+			for (int x = 0; x < (int)stride; ++x) {
+				unsigned atten(0);
+
+				for (unsigned d = 0; d < NUM_DIRS; ++d) {
+					float z0(zvals[y*zvsize + x]);
+					tile_xy_pair step(ao_dirs[d]);
+					tile_xy_pair v(x, y);
+
+					for (unsigned s = 0; s < NUM_STEPS; ++s) {
+						v    += step;
+						z0   += dz;
+						//step += step; // multiply by 2 for exponential step size
+						step += ao_dirs[d]; // linear increase
+						
+						if (v.x < 0 || v.y < 0 || v.x >= (int)zvsize || v.y >= (int)zvsize) { // off the tile
+							break; // assume no intersection	
+						}
+						if (zvals[v.y*zvsize + v.x] > z0) { // hit a higher point
+							atten += (NUM_STEPS - s);
+							break;
+						}
+					} // for s
+				} // for d
+				assert(atten <= NUM_DIRS*NUM_STEPS);
+				float const ao_scale(1.0 - float(atten)/float(NUM_DIRS*NUM_STEPS));
+				ao_lighting[y*stride + x] = (unsigned char)(255.0*ao_scale);
+			} // for x
+		} // for y
+		//PRINT_TIME("AO Lighting");
+	}
 }
 
 
@@ -534,7 +585,7 @@ void tile_t::check_shadow_map_and_normal_texture() {
 	//RESET_TIME;
 	bool const tid_is_valid(shadow_normal_tid != 0);
 	if (!tid_is_valid) {setup_texture(shadow_normal_tid, GL_MODULATE, 0, 0, 0, 0, 0);}
-	vector<norm_comp_with_shadow> data(stride*stride);
+	vector<norm_comp_with_shadow> data(stride*stride); // stored as (n.x, n.y, ao_lighting, shadow_val)
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	assert(has_sun || has_moon);
 	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
@@ -546,8 +597,8 @@ void tile_t::check_shadow_map_and_normal_texture() {
 			unsigned const ix(y*stride + x), ix2(y*zvsize + x);
 			vector3d const norm(get_norm(y*zvsize + x));
 			min_normal_z = min(min_normal_z, norm.z);
-			UNROLL_3X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0)););
-			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]);
+			UNROLL_2X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));); // Note: we only set x and y here, z is calculated in the shader
+			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
 
 			if (!mesh_shadows) {
 				// do nothing
@@ -558,8 +609,9 @@ void tile_t::check_shadow_map_and_normal_texture() {
 				shadow_val *= blend_light(light_factor, !no_sun, !no_moon);
 			}
 			else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {
-				shadow_val = 0; // full shadow
+				shadow_val = 0; // fully in shadow
 			}
+			data[ix].v[2] = (ao_lighting.empty() ? 255 : ao_lighting[ix]); // full ambient if AO lighting is disabled
 			data[ix].v[3] = shadow_val;
 		}
 	}
@@ -1408,6 +1460,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
 	//bool const use_hmap_tex((display_mode & 0x10) != 0);
 	//if (use_hmap_tex  ) {s.set_prefix("#define USE_HEIGHT_TEX", 0);} // VS
+	if (display_mode & 0x10) {s.set_prefix("#define NO_AO", 1);} // FS
 	if (has_water     ) {s.set_prefix("#define HAS_WATER", 1);} // FS
 	if (water_caustics) {s.set_prefix("#define WATER_CAUSTICS", 1);} // FS
 	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
@@ -2064,6 +2117,7 @@ bool hmap_mod_enabled() {return (inf_terrain_fire_mode && using_tiled_terrain_hm
 
 void change_inf_terrain_fire_mode(int val) {
 
+	if (!hmap_mod_enabled()) return; // ignore
 	unsigned const NUM_MODES = 4;
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_MODES + val) % NUM_MODES;
 	string const modes[NUM_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh"};
