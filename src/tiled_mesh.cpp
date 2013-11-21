@@ -824,7 +824,7 @@ bool tile_t::update_range(vector<unsigned> *vbo_free_list) { // if returns 0, ti
 	if (pine_trees_enabled()) {update_pine_tree_state(0);} // can free pine tree vbos
 	float const dist(get_rel_dist_to_camera());
 	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid(vbo_free_list);}
-	return (dist < DELETE_DIST_TILES || mesh_height_invalid);
+	return (dist < DELETE_DIST_TILES && !mesh_height_invalid);
 }
 
 
@@ -2117,7 +2117,7 @@ bool hmap_mod_enabled() {return (inf_terrain_fire_mode && using_tiled_terrain_hm
 
 void change_inf_terrain_fire_mode(int val) {
 
-	if (!hmap_mod_enabled()) return; // ignore
+	if (!using_tiled_terrain_hmap_tex()) return; // ignore
 	unsigned const NUM_MODES = 4;
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_MODES + val) % NUM_MODES;
 	string const modes[NUM_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh"};
@@ -2135,6 +2135,7 @@ tile_t *get_tile_for_xy(int x, int y) {
 void inf_terrain_fire_weapon() {
 
 	if (!hmap_mod_enabled()) return; // ignore
+	//RESET_TIME;
 	static float last_tfticks(0.0);
 	if ((tfticks - last_tfticks) <= cur_brush_param.delay) return; // limit firing rate
 	last_tfticks = tfticks;
@@ -2150,6 +2151,7 @@ void inf_terrain_fire_weapon() {
 	tex_mod_map_manager_t::hmap_val_t const base_delta(terrain_hmap_manager.scale_delta(delta_mag));
 	tex_mod_map_manager_t::hmap_brush_t const brush(xpos, ypos, base_delta, cur_brush_param.get_radius(), shape);
 	terrain_hmap_manager.apply_brush(brush, tile, 1); // cache
+	//PRINT_TIME("Hmap Brush");
 }
 
 void inf_terrain_undo_hmap_mod() {

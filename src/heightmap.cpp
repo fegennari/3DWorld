@@ -6,6 +6,7 @@
 #include "function_registry.h"
 #include "inlines.h"
 #include "file_utils.h"
+#include "sinf.h"
 
 using namespace std;
 
@@ -20,14 +21,16 @@ extern float mesh_scale, dxdy;
 void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int step_sz, unsigned num_steps) const {
 
 	assert(num_steps > 0);
-	float const step_delta(1.0/num_steps);
+	float const step_delta(1.0/num_steps), r_inv(1.0/max(1U, radius));
+	bool const is_delta(!is_flatten_brush());
 
+	#pragma omp parallel for schedule(dynamic,1) // only ~1.8x faster
 	for (int yp = y - (int)radius; yp <= y + (int)radius; yp += step_sz) {
 		for (int xp = x - (int)radius; xp <= x + (int)radius; xp += step_sz) {
 			for (unsigned sy = 0; sy < num_steps; ++sy) {
 				for (unsigned sx = 0; sx < num_steps; ++sx) {
 					float const dx(sx*step_delta), dy(sy*step_delta);
-					float const dist(sqrt(float(yp + dy - y)*float(yp + dy - y) + float(xp + dx - x)*float(xp + dx - x))), dval(dist/max(1U, radius));
+					float const dist(sqrt(float(yp + dy - y)*float(yp + dy - y) + float(xp + dx - x)*float(xp + dx - x))), dval(dist*r_inv);
 					if (shape != BSHAPE_CONST_SQ && shape != BSHAPE_FLAT_SQ && dval > 1.0) continue; // round (instead of square)
 					float mod_delta(delta); // constant
 
@@ -38,13 +41,13 @@ void tex_mod_map_manager_t::hmap_brush_t::apply(tex_mod_map_manager_t *tmmm, int
 						mod_delta *= 1.0 - dval*dval; // quadratic
 					}
 					else if (shape == BSHAPE_COSINE) {
-						mod_delta *= cos(0.5*PI*dval); // cosine
+						mod_delta *= COSF(0.5*PI*dval); // cosine
 					}
 					else if (shape == BSHAPE_SINE) {
-						mod_delta *= 0.5*(1.0 + sin(PI*dval + 0.5*PI)); // sine
+						mod_delta *= 0.5*(1.0 + SINF(PI*dval + 0.5*PI)); // sine
 					}
 					assert(tmmm);
-					tmmm->modify_height_value(xp, yp, round_fp(mod_delta), !is_flatten_brush(), dx, dy);
+					tmmm->modify_height_value(xp, yp, round_fp(mod_delta), is_delta, dx, dy);
 				}
 			}
 		}
@@ -200,6 +203,7 @@ bool terrain_hmap_manager_t::clamp_no_scale(int &x, int &y) const {
 	assert(hmap.width > 0 && hmap.height > 0);
 	x += hmap.width /2; // scale and offset (0,0) to texture center
 	y += hmap.height/2;
+	if (x >= 0 && y >= 0 && x < hmap.width && y < hmap.height) return 1; // nothing to do (optimization)
 
 	switch (TEX_EDGE_MODE) {
 	case 0: // clamp
@@ -207,8 +211,7 @@ bool terrain_hmap_manager_t::clamp_no_scale(int &x, int &y) const {
 		y = max(0, min(hmap.height-1, y));
 		break;
 	case 1: // cliff/underwater
-		if (x < 0 || y < 0 || x >= hmap.width || y >= hmap.height) {return 0;} // off the texture
-		break;
+		return 0; // off the texture
 	case 2: // mirror
 		{
 			int const xmod(abs(x)%hmap.width), ymod(abs(y)%hmap.height), xdiv(x/hmap.width), ydiv(y/hmap.height);
