@@ -90,10 +90,10 @@ void main()
 #endif
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
-	normal = normalize(gl_NormalMatrix * normal); // eye space
-	//normal += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5); // add noise
-	vec4 color = gl_LightModel.ambient;
-	vec4 epos  = (gl_ModelViewMatrix * vertex);
+	normal      = normalize(gl_NormalMatrix * normal); // eye space
+	//normal     += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5); // add noise
+	vec4 color  = gl_LightModel.ambient;
+	vec4 epos   = (gl_ModelViewMatrix * vertex);
 	
 	if (enable_light0) { // sun
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow

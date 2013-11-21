@@ -10,14 +10,14 @@ attribute vec2 local_translate;
 
 varying vec2 tc;
 
-vec4 add_light_comp(in vec3 vertex, in vec3 normal, in vec4 epos, in int i, in float ds_scale) {
+vec4 add_light_comp(in vec3 vertex, in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale) {
 	if (apply_cloud_shadows) {
 		vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 		vec3 cpos  = vertex + cloud_offset;
 		float t    = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
 		ds_scale  *= 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
 	}
-	return add_light_comp_pos_scaled(normal, epos, i, ds_scale);
+	return add_light_comp_pos_scaled(normal, epos, i, ds_scale, a_scale);
 }
 
 void main()
@@ -38,12 +38,16 @@ void main()
 	grass_weight *= 1.0 - clamp(dist_slope*(gl_FogFragCoord - dist_const), 0.0, 1.0); // decrease weight far away from camera
 	
 	// calculate lighting
-	vec4 shadow_normal = texture2D(shadow_normal_tex, tc2);
-	vec3 normal = normalize(gl_NormalMatrix * (2.0*shadow_normal.xyz - 1.0)); // eye space
+	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc2);
+	float diffuse_scale = shadow_normal.w;
+	float ambient_scale = 1.5*shadow_normal.z;
+	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
+	vec3 normal = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
+	normal      = normalize(gl_NormalMatrix * normal); // eye space
 	vec4 color  = gl_Color * gl_LightModel.ambient;
 	//if (grass_weight < noise_weight) {
-	if (enable_light0) {color += add_light_comp(vertex.xyz, normal, epos, 0, shadow_normal.w);}
-	if (enable_light1) {color += add_light_comp(vertex.xyz, normal, epos, 1, shadow_normal.w);}
+	if (enable_light0) {color += add_light_comp(vertex.xyz, normal, epos, 0, diffuse_scale, ambient_scale);}
+	if (enable_light1) {color += add_light_comp(vertex.xyz, normal, epos, 1, diffuse_scale, ambient_scale);}
 	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2);}
 	//}
 	color.a = ((grass_weight < noise_weight) ? 0.0 : color.a); // skip some grass blades by making them transparent
