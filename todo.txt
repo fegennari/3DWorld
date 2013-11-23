@@ -18,7 +18,7 @@ Berries on plants
 TT underwater dirt/vegetation, seaweed in/on water
 User-placed trees
 
-TT Terrain Ambient Occlusion
+TT Terrain Ambient Occlusion Kernel
 TT Normal Map(s)
 Weather/Physics UI
   - key to switch UI modes

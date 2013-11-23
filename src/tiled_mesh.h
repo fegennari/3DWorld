@@ -63,6 +63,8 @@ struct tile_xy_pair {
 	bool operator<(tile_xy_pair const &t) const {return ((y == t.y) ? (x < t.x) : (y < t.y));}
 	void operator+=(tile_xy_pair const &tp) {x += tp.x; y += tp.y;}
 	void operator-=(tile_xy_pair const &tp) {x -= tp.x; y -= tp.y;}
+	tile_xy_pair operator+(tile_xy_pair const &tp) const {return tile_xy_pair(x+tp.x, y+tp.y);}
+	tile_xy_pair operator-(tile_xy_pair const &tp) const {return tile_xy_pair(x-tp.x, y-tp.y);}
 };
 
 class tile_t;
@@ -82,7 +84,7 @@ class tile_t {
 
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
-	unsigned size, stride, zvsize, base_tsize, gen_tsize;
+	unsigned size, stride, zvsize, base_tsize, gen_tsize, ao_adj_tile_mask;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
@@ -131,6 +133,7 @@ public:
 	float get_htex_zmin() const;
 	float get_htex_zmax() const;
 	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), max(ptzmax, dtzmax));}
+	float get_zval(int x, int y) const {assert(!zvals.empty()); assert(x >= 0 && y >= 0 && x < (int)zvsize && y < (int)zvsize); return zvals[y*zvsize + x];}
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()?
 	bool pine_trees_generated() const {return pine_trees.generated;}
@@ -184,6 +187,7 @@ public:
 	}
 
 	// *** shadows ***
+	void calc_mesh_ao_lighting(int xs, int ys, int xe, int ye, bool is_push_mode);
 	void calc_shadows_for_light(unsigned l);
 	static void proc_tile_queue(tile_t *init_tile, unsigned l);
 	void calc_shadows(bool calc_sun, bool calc_moon, bool no_push=0);
@@ -203,6 +207,7 @@ public:
 	void apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test);
 	void apply_tree_ao_shadows();
 	void check_shadow_map_and_normal_texture();
+	void upload_shadow_map_and_normal_texture(bool tid_is_valid);
 
 	// *** mesh creation ***
 	void create_data(vector<vert_type_t> &data);
