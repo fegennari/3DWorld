@@ -695,7 +695,7 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 			else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {
 				shadow_val = 0; // fully in shadow
 			}
-			data[ix].v[2] = (ao_lighting.empty() ? 255 : ao_lighting[ix]); // full ambient if AO lighting is disabled
+			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]); // 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
 			data[ix].v[3] = shadow_val;
 		}
 	}
@@ -1543,7 +1543,6 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
 	//bool const use_hmap_tex((display_mode & 0x10) != 0);
 	//if (use_hmap_tex  ) {s.set_prefix("#define USE_HEIGHT_TEX", 0);} // VS
-	if (display_mode & 0x10) {s.set_prefix("#define NO_AO", 1);} // FS
 	if (has_water     ) {s.set_prefix("#define HAS_WATER", 1);} // FS
 	if (water_caustics) {s.set_prefix("#define WATER_CAUSTICS", 1);} // FS
 	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
@@ -2052,6 +2051,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		shader_t s;
 		bool const enable_wind((display_mode & 0x0100) && pass == 0);
 		lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
+		if (pass == 1) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
 		s.set_bool_prefix("enable_grass_wind", enable_wind, 0); // VS
 		s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_texture.part+grass_tiled");
 		s.set_frag_shader("linear_fog.part+grass_tiled");
@@ -2075,7 +2075,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		glVertexAttribDivisor(lt_loc, 1);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			if ((to_draw[i].second->get_dist_to_camera_in_tiles() > 0.5) == pass) {
+			if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5) == pass) { // xyz dist
 				to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
 			}
 		}

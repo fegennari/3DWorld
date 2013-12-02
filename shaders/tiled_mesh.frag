@@ -83,11 +83,7 @@ void main()
 
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc);
 	float diffuse_scale = shadow_normal.w;
-#ifdef NO_AO
-	float ambient_scale = 1.0; // force ambient scale to 1.0
-#else
 	float ambient_scale = 1.5*shadow_normal.z;
-#endif
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(gl_NormalMatrix * normal); // eye space
