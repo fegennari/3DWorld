@@ -1010,21 +1010,27 @@ void vert_coll_detector::check_cobj(int index) {
 	bool const player_step(player && ((type == CAMERA && camera_change) || (cobj.d[2][1] - z1) <= o_radius*C_STEP_HEIGHT));
 	check_cobj_intersect(index, 1, player_step);
 
-	if (type == CAMERA && camera_zh > 0.0) {
-		unsigned const nsteps((unsigned)ceil(camera_zh/o_radius));
-		float const step_sz(camera_zh/nsteps), pz(pos.z), opz(obj.pos.z), poz(pold.z);
+	if (type == CAMERA) {
+		if (camera_zh > 0.0) {
+			unsigned const nsteps((unsigned)ceil(camera_zh/o_radius));
+			float const step_sz(camera_zh/nsteps), pz(pos.z), opz(obj.pos.z), poz(pold.z);
 
-		for (unsigned i = 1; i <= nsteps; ++i) {
-			float const step(i*step_sz);
-			pos.z     = pz  + step;
-			obj.pos.z = opz + step;
-			pold.z    = poz + step;
-			if (pos.z-o_radius > cobj.d[2][1] || pos.z+o_radius < cobj.d[2][0]) continue;
-			check_cobj_intersect(index, 0, 0);
+			for (unsigned i = 1; i <= nsteps; ++i) {
+				float const step(i*step_sz);
+				pos.z     = pz  + step;
+				obj.pos.z = opz + step;
+				pold.z    = poz + step;
+				if (pos.z-o_radius > cobj.d[2][1] || pos.z+o_radius < cobj.d[2][0]) continue;
+				check_cobj_intersect(index, 0, 0);
+			}
+			pos.z     = pz;
+			obj.pos.z = opz;
+			pold.z    = poz;
 		}
-		pos.z     = pz;
-		obj.pos.z = opz;
-		pold.z    = poz;
+		if (game_mode && sstates != NULL) {
+			// FIXME: add collision detection for player weapon?
+			//sstates[CAMERA_ID].weapon
+		}
 	}
 }
 
