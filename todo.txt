@@ -25,5 +25,4 @@ Weather/Physics UI
 
 Game mode weapon/scene clipping/collision (add weapon collision or clear depth buffer on weapon draw)
 3D explosions similar to nebulas (universe and ground mode)
-Grass lower ambient at base/higher ambient at tip
-Fix grass distance clipping again
+Lighting at edge of tiled grass (when Z nears zero)?

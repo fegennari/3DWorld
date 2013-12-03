@@ -222,10 +222,14 @@ void tile_t::fill_adj_mask(bool mask[3][3], int x, int y) const { // mask is {y-
 
 float tile_t::get_min_dist_to_pt(point const &pt, bool xy_only) const {
 
-	point p1(pt), p2(get_center());
-	bool const ret(do_line_clip(p1, p2, get_mesh_bcube().d)); // only clip in x and y?
-	assert(ret || mzmin == mzmax); // just assert ret? does the BCUBE_ZTOLER bias fix this?
-	return (xy_only ? p2p_dist_xy(pt, p1) : p2p_dist(pt, p1));
+	cube_t const bcube(get_mesh_bcube());
+	float dsq(0.0);
+
+	for (unsigned i = 0; i < (xy_only ? 2U : 3U); ++i) {
+		float const dist(max(0.0f, max((bcube.d[i][0] - pt[i]), (pt[i] - bcube.d[i][1]))));
+		dsq += dist*dist;
+	}
+	return sqrt(dsq);
 }
 
 float tile_t::get_max_xy_dist_to_pt(point const &pt) const { // unused
