@@ -26,9 +26,12 @@ void main()
 	vec4 vertex = gl_Vertex;
 	vertex.xy  += local_translate;
 	float z_val = zmin + (zmax - zmin)*texture2D(height_tex, vec2((vertex.x - x1)/(x2 - x1), (vertex.y - y1)/(y2 - y1))).r;
+	float ascale= 1.0;
 #ifdef DEC_HEIGHT_WHEN_FAR
 	float dist  = length((gl_ModelViewMatrix * (vertex + vec4(0, 0, z_val, 0))).xyz);
-	vertex.z   *= 1.0 - clamp(dist_slope*(dist - dist_const), 0.0, 1.0); // decrease height far away from camera
+	float zscale= 1.0 - clamp(dist_slope*(dist - dist_const), 0.0, 1.0);
+	vertex.z   *= zscale; // decrease height far away from camera
+	ascale      = min(1.0, 10.0*zscale);
 #endif
 	vertex.z   += z_val;
 	vec2 tc2    = vec2(vertex.x/(x1 + x2), vertex.y/(y1 + y2)); // same as (x2 - x1 - 1.0*DX_VAL)
@@ -39,7 +42,7 @@ void main()
 	gl_FogFragCoord = length(epos.xyz);
 	float grass_weight = texture2D(weight_tex, tc2).b;
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
-	float noise_weight = texture2D(noise_tex,  vec2(10.0*gl_Color.r, 10.0*gl_Color.g)).r; // "hash" the color
+	float noise_weight = texture2D(noise_tex, 10.0*vec2(gl_Color.r, gl_Color.g)).r; // "hash" the color
 	
 	// calculate lighting
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc2);
@@ -54,6 +57,6 @@ void main()
 	if (enable_light1) {color += add_light_comp(vertex.xyz, normal, epos, 1, diffuse_scale, ambient_scale);}
 	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2);}
 	//}
-	color.a = ((grass_weight < noise_weight) ? 0.0 : color.a); // skip some grass blades by making them transparent
+	color.a *= ascale*((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
 	gl_FrontColor = color;
 } 

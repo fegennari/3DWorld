@@ -1042,7 +1042,7 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 
 void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc) {
 
-	if (grass_blocks.empty()) return;
+	if (grass_blocks.empty()) return; // or can test has_any_grass
 	float const grass_thresh(get_grass_thresh() + 1.0/GRASS_DIST_SLOPE);
 	point const camera(get_camera_pos());
 	if (get_min_dist_to_pt(camera) > grass_thresh) return;
