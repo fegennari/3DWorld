@@ -44,7 +44,7 @@ void main()
 	// calculate lighting
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc2);
 	float diffuse_scale = shadow_normal.w;
-	float ambient_scale = 1.5*shadow_normal.z;
+	float ambient_scale = 1.5*shadow_normal.z * (1.5 - 0.75*tc.s); // decreased ambient at base, increased ambient at tip
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(gl_NormalMatrix * normal); // eye space
