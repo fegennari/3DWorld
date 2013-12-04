@@ -907,6 +907,64 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 }
 
 
+// ************ UPARTICLE_CLOUD ************
+
+
+shader_t upc_shader; // FIXME: some way to pass this through uobj_draw_data so it's not a global?
+
+void end_part_cloud_draw() {upc_shader.end_shader();}
+
+
+uparticle_cloud::uparticle_cloud(point const &pos_, float radius_, colorRGBA const &ci1, colorRGBA const &co1,
+	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage_) : lifetime(lt), damage_v(damage_)
+{
+	colors[0][0] = ci1;
+	colors[0][1] = co1;
+	colors[1][0] = ci2;
+	colors[1][1] = co2;
+	flags     = OBJ_FLAGS_NCOL | OBJ_FLAGS_NOPC | OBJ_FLAGS_NEXD | OBJ_FLAGS_NOLT; // not sure about OBJ_FLAGS_NOLT
+	pos       = pos_;
+	radius    = radius_;
+	c_radius  = radius;
+	alignment = ALIGN_NEUTRAL;
+	draw_rscale = 1.0; // ???
+	free_obj::reset();
+	gen_pts(radius);
+}
+
+
+void uparticle_cloud::apply_physics() {
+
+	if (time > lifetime) {
+		status = 1;
+		return;
+	}
+	free_obj::apply_physics();
+	// FIXME: increase radius with time, etc.
+}
+
+
+void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const {
+
+	float const lt_scale(CLIP_TO_01(1.0f - ((float)time)/((float)lifetime)));
+	colorRGBA cur_colors[2]; // {inner, outer}
+	for (unsigned d = 0; d < 2; ++d) {blend_color(cur_colors[d], colors[d][0], colors[d][1], lt_scale, 1);}
+	//if (ddata.shader) {ddata.shader->disable();} // unnecessary?
+	shader_t &s(upc_shader);
+	shader_setup(s);
+	s.enable();
+	s.add_uniform_color("color1", cur_colors[0]); // FIXME: inner vs. outer colors/don't need 3
+	s.add_uniform_color("color2", cur_colors[0]);
+	s.add_uniform_color("color3", cur_colors[1]);
+	s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
+	s.add_uniform_float("radius", radius);
+	s.add_uniform_float("offset", pos.x);
+	cur_colors[0].do_glColor();
+	draw_quads();
+	if (ddata.shader) {ddata.shader->enable();}
+}
+
+
 // ************ US_PROJECTILE ************
 
 

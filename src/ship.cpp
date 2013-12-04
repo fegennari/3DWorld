@@ -63,8 +63,8 @@ extern vector<us_class> sclasses;
 extern vector<us_weapon> us_weapons;
 
 
-
 void collision_detect_objects(vector<cached_obj> &objs0, unsigned t);
+void end_part_cloud_draw();
 
 
 // ************ STATISTICS GATHERING ************
@@ -755,6 +755,7 @@ void draw_univ_objects() {
 		fobj->reset_lights(); // reset for next frameq
 	}
 	if (use_shaders) s[0].end_shader();
+	end_part_cloud_draw();
 	disable_exp_lights(); // make sure the explosion lights end cleared
 	set_lighted_sides(1);
 	enable_blend(); // redundant?

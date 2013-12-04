@@ -444,16 +444,8 @@ void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale);
 
 
-void unebula::gen(float range, ellipsoid_t const &bounds) {
+void volume_part_cloud::gen_pts(float radius) {
 
-	// Note: bounds is not currently used, but it can be used to scale the nebula to the galaxy's ellipsoid (but requires some transforms in the shader)
-	rand_gen_t rgen;
-	rgen.set_state(rand2(), rand2());
-	radius = rgen.rand_uniform(0.1, 0.15)*range;
-
-	for (unsigned d = 0; d < 3; ++d) {
-		color[d] = colorRGBA(rgen.rand_uniform(0.3, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.9), 1.0);
-	}
 	unsigned ix(0);
 	points.resize(4*13);
 
@@ -479,6 +471,44 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 }
 
 
+/*static*/ void volume_part_cloud::shader_setup(shader_t &s) {
+
+	if (s.is_setup()) return; // nothing else to do
+	s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
+	s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
+	s.set_vert_shader("nebula");
+	s.set_frag_shader("nebula");
+	s.begin_shader();
+	s.add_uniform_int("noise_tex", 0);
+	s.add_uniform_float("noise_scale", 0.01);
+	bind_3d_texture(get_noise_tex_3d(32, 4)); // RGBA noise
+}
+
+
+void volume_part_cloud::draw_quads() const {
+
+	enable_blend();
+	glDepthMask(GL_FALSE); // no depth writing
+	draw_verts(points, GL_QUADS);
+	glDepthMask(GL_TRUE);
+	disable_blend();
+}
+
+
+void unebula::gen(float range, ellipsoid_t const &bounds) {
+
+	// Note: bounds is not currently used, but it can be used to scale the nebula to the galaxy's ellipsoid (but requires some transforms in the shader)
+	rand_gen_t rgen;
+	rgen.set_state(rand2(), rand2());
+	radius = rgen.rand_uniform(0.1, 0.15)*range;
+
+	for (unsigned d = 0; d < 3; ++d) {
+		color[d] = colorRGBA(rgen.rand_uniform(0.3, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.9), 1.0);
+	}
+	gen_pts(radius);
+}
+
+
 void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const { // Note: new VFC here
 
 	pos_ += pos;
@@ -496,19 +526,8 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 		mod_color[d] = color[d];
 		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.3*dist_scale);
 	}
-	if (!s.is_setup()) {
-		s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
-		s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
-		s.set_vert_shader("nebula");
-		s.set_frag_shader("nebula");
-		s.begin_shader();
-		s.add_uniform_int("noise_tex", 0);
-		s.add_uniform_float("noise_scale", 0.01);
-		bind_3d_texture(get_noise_tex_3d(32, 4)); // RGBA noise
-	}
+	shader_setup(s);
 	s.enable();
-	enable_blend();
-	glDepthMask(GL_FALSE); // no depth writing
 	s.add_uniform_color("color1", mod_color[0]);
 	s.add_uniform_color("color2", mod_color[1]);
 	s.add_uniform_color("color3", mod_color[2]);
@@ -516,9 +535,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 	s.add_uniform_float("radius", radius);
 	s.add_uniform_float("offset", pos.x);
 	mod_color[0].do_glColor();
-	draw_verts(points, GL_QUADS);
-	glDepthMask(GL_TRUE);
-	disable_blend();
+	draw_quads();
 	s.disable();
 	glPopMatrix();
 }

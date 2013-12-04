@@ -835,7 +835,7 @@ public:
 };
 
 
-class uobj_asteroid : public stationary_obj { // a free_obj that doesn't actually move?
+class uobj_asteroid : public stationary_obj {
 
 protected:
 	int tex_id;
@@ -945,6 +945,36 @@ public:
 	bool can_move()    const {return 1;}
 	string get_name()  const {return "Particle";}
 	void draw_obj(uobj_draw_data &ddata) const;
+};
+
+
+class uparticle_cloud : public free_obj, public volume_part_cloud {
+
+	unsigned lifetime;
+	float damage_v; // or temperature?
+	colorRGBA colors[2][2]; // {inner, outer} x {start, end}
+
+public:
+	uparticle_cloud() {}
+	uparticle_cloud(point const &pos_, float radius_, colorRGBA const &ci1, colorRGBA const &co1, colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage_);
+
+	// virtuals
+	void apply_physics();
+	float get_mass()       const {return 0.001*free_obj::get_mass();} // very small
+	float get_elasticity() const {return 0.0;} // inelastic
+	float get_max_t()  const {return 1.0E6;} // very high
+	bool calc_rvs()    const {return 0;}
+	bool need_blend()  const {return 1;}
+	bool can_move()    const {return 0;} // set to 1 later?
+	//float damage_done() const {return damage_v;}
+	string get_name()  const {return "Particle Cloud";}
+	void draw_obj(uobj_draw_data &ddata) const;
+
+	// no intersections (particle clouds are gasses, not solids)
+	bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const {return 0;}
+	bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params())      const {return 0;}
+	bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=intersect_params())      const {return 0;}
+	bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params())      const {return 0;}
 };
 
 

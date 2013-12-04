@@ -372,11 +372,9 @@ public:
 };
 
 
-class unebula : public uobject_base {
+class unebula : public uobject_base, public volume_part_cloud {
 
 	colorRGBA color[3];
-	typedef vert_norm_comp vert_type_t;
-	vector<vert_type_t> points;
 
 public:
 	void gen(float range, ellipsoid_t const &bounds);
