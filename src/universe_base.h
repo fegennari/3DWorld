@@ -94,7 +94,7 @@ protected:
 
 public:
 	void gen_pts(float radius);
-	static void shader_setup(shader_t &s);
+	static void shader_setup(shader_t &s, float noise_scale);
 	void draw_quads() const;
 };
 

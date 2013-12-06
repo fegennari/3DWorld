@@ -83,7 +83,6 @@ u_ship::u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_
 
 u_ship::~u_ship() {
 	
-	assert(bad_flag_set());
 	status = 1;
 	free_weapons();
 	surface_mesh.clear();

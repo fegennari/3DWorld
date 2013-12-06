@@ -760,6 +760,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					if (sol.planets.empty()) continue;
 
 					if (planets_visible) { // asteroid fields may also be visible
+						// Note: asteroid belts aren't drawn in the first frame because sel_s won't be set, since clobj isn't valid before the first frame is drawn (universe not yet created)
 						if (!gen_only && sol.asteroid_belt && sel_s && sol_draw_pass == 0 && pass == 1) {
 							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
 							shader_t asteroid_belt_shader;

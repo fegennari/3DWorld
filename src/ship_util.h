@@ -242,7 +242,7 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 // ship.cpp
 void print_n_spaces(int n);
 u_ship *create_ship(unsigned sclass, point const &pos0, unsigned align, unsigned ai_type, unsigned target_mode, bool rand_orient, int spawn_mode=0);
-bool add_uobj_ship(u_ship *ship);
+void add_uobj_ship(u_ship *ship);
 bool add_uobj(free_obj *obj, int coll_test=0);
 void reset_player_ship();
 free_obj *line_intersect_free_objects(line_int_data &li_data, int obj_types, unsigned align, bool align_only);
@@ -286,6 +286,10 @@ void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, 
 void draw_crosshair(upos_point_type const &pos, float dist, colorRGBA const &color);
 void draw_crosshair_from_camera(point const &pos, colorRGBA const &color);
 void add_lightning_wray(float width, point const &p1, point const &p2);
+
+// free_obj.cpp
+void add_uparticle_cloud(point const &pos, float rmin, float rmax, colorRGBA const &ci1, colorRGBA const &co1,
+	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage, float expand_exp);
 
 
 #endif

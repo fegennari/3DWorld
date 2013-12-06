@@ -290,11 +290,12 @@ bool add_uobj(free_obj *obj, int coll_test) {
 }
 
 
-bool add_uobj_ship(u_ship *ship) {
+void add_uobj_ship(u_ship *ship) {
 
 	assert(ship);
 	++alloced_fobjs[0];
-	return add_uobj(ship, 0);
+	bool const coll(add_uobj(ship, 0));
+	assert(!coll);
 }
 
 
@@ -831,10 +832,9 @@ void purge_old_objs() {
 		if (uobjs[i]->to_be_removed()) {
 			if (!uobjs[i]->dec_ref()) { // all ships and stationary objects should be deleted through this point and nowhere else, can't allocate on the stack
 				assert(!uobjs[i]->is_player_ship());
-				assert(uobjs[i]->is_ship() || uobjs[i]->is_stationary()); // sanity check
-				uobjs[i]->invalidate_permanently();
-				++alloced_fobjs[1];
-				delete uobjs[i];
+				assert(uobjs[i]->is_ship() || uobjs[i]->is_stationary() || uobjs[i]->get_name() == "Particle Cloud"); // sanity check
+				if (uobjs[i]->is_ship()) {++alloced_fobjs[1];}
+				delete uobjs[i]; // Note: this is the *only* place where ships, stationary objects, and particle clouds are deleted
 			}
 		}
 		else {

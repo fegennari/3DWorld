@@ -683,7 +683,6 @@ public:
 
 	void invalidate_permanently() {status = 2;} // status set to anything other than 0 or 1 makes this object invalid
 	void verify_status() const {assert(status == 0 || status == 1);}
-	bool bad_flag_set()  const {return (status == 2);}
 	void check_distant();
 	
 	void add_flag(unsigned f)             {flags       |= f;}
@@ -822,7 +821,7 @@ class stationary_obj : public free_obj { // a free_obj that doesn't actually mov
 
 public:
 	stationary_obj(unsigned type_, point const &pos_, float radius_, unsigned lt=0);
-	virtual ~stationary_obj() {assert(bad_flag_set()); status = 1;}
+	virtual ~stationary_obj() {status = 1;}
 	float get_max_t() const {return 1000.0;} // a big number
 	virtual float damage(float val, int type, point const &hit_pos, free_obj const *source, int wc);
 	virtual void draw_obj(uobj_draw_data &ddata) const;
@@ -951,16 +950,18 @@ public:
 class uparticle_cloud : public free_obj, public volume_part_cloud {
 
 	unsigned lifetime;
-	float damage_v; // or temperature?
+	float rmin, rmax, damage_v, expand_exp; // or temperature?
 	colorRGBA colors[2][2]; // {inner, outer} x {start, end}
 
 public:
 	uparticle_cloud() {}
-	uparticle_cloud(point const &pos_, float radius_, colorRGBA const &ci1, colorRGBA const &co1, colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage_);
+	uparticle_cloud(point const &pos_, float rmin_, float rmax_, colorRGBA const &ci1, colorRGBA const &co1, colorRGBA const &ci2,
+		colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_);
+	float get_lt_scale() const {return CLIP_TO_01((float)time/(float)lifetime);}
 
 	// virtuals
 	void apply_physics();
-	float get_mass()       const {return 0.001*free_obj::get_mass();} // very small
+	float get_mass()       const {return 0.001*S_BODY_DENSITY*MASS_SCALE*rmax*rmax*rmax;} // very small
 	float get_elasticity() const {return 0.0;} // inelastic
 	float get_max_t()  const {return 1.0E6;} // very high
 	bool calc_rvs()    const {return 0;}
@@ -1153,7 +1154,7 @@ protected:
 public:
 	static unsigned const max_type = NUM_US_CLASS;
 	u_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient);
-	virtual ~u_ship(); // virtual?
+	virtual ~u_ship();
 	void reset();
 	void create_from(u_ship_base const &base);
 	void move_by(point const &pos_);

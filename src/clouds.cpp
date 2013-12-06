@@ -471,7 +471,7 @@ void volume_part_cloud::gen_pts(float radius) {
 }
 
 
-/*static*/ void volume_part_cloud::shader_setup(shader_t &s) {
+/*static*/ void volume_part_cloud::shader_setup(shader_t &s, float noise_scale) {
 
 	if (s.is_setup()) return; // nothing else to do
 	s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
@@ -480,18 +480,16 @@ void volume_part_cloud::gen_pts(float radius) {
 	s.set_frag_shader("nebula");
 	s.begin_shader();
 	s.add_uniform_int("noise_tex", 0);
-	s.add_uniform_float("noise_scale", 0.01);
+	s.add_uniform_float("noise_scale", noise_scale);
 	bind_3d_texture(get_noise_tex_3d(32, 4)); // RGBA noise
 }
 
 
 void volume_part_cloud::draw_quads() const {
 
-	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing
 	draw_verts(points, GL_QUADS);
 	glDepthMask(GL_TRUE);
-	disable_blend();
 }
 
 
@@ -526,16 +524,21 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 		mod_color[d] = color[d];
 		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.3*dist_scale);
 	}
-	shader_setup(s);
+	shader_setup(s, 0.01);
 	s.enable();
-	s.add_uniform_color("color1", mod_color[0]);
-	s.add_uniform_color("color2", mod_color[1]);
-	s.add_uniform_color("color3", mod_color[2]);
+	s.add_uniform_color("color1i", mod_color[0]);
+	s.add_uniform_color("color1o", mod_color[0]);
+	s.add_uniform_color("color2i", mod_color[1]);
+	s.add_uniform_color("color2o", mod_color[1]);
+	s.add_uniform_color("color3i", mod_color[2]);
+	s.add_uniform_color("color3o", mod_color[2]);
 	s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
 	s.add_uniform_float("radius", radius);
 	s.add_uniform_float("offset", pos.x);
 	mod_color[0].do_glColor();
+	enable_blend();
 	draw_quads();
+	disable_blend();
 	s.disable();
 	glPopMatrix();
 }

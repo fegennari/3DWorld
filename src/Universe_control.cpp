@@ -1129,6 +1129,7 @@ void ustar::explode(float damage, float bradius, int etype, vector3d const &edir
 		gen_particle(PTYPE_GLOW, color, color_a0, plifetime, pos, vel, sz, 1000.0, ALIGN_NEUTRAL, 1);
 	}
 	uobject::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
+	add_uparticle_cloud(pos, 1.0*radius, 10.0*radius, colorA, colorB, colorRGBA(colorA, 0.0), colorRGBA(colorB, 0.0), 60*TICKS_PER_SECOND, 1000.0, 0.3);
 }
 
 

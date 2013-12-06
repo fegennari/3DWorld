@@ -835,10 +835,7 @@ vector3d uparticle::get_tot_vel_at(point const &cpos) const {
 
 void uparticle::apply_physics() {
 
-	if (time > lifetime) {
-		status = 1;
-		return;
-	}
+	if (time > lifetime) {status = 1; return;}
 	free_obj::apply_physics();
 	angle += rrate*fticks; // increase rotation
 }
@@ -915,49 +912,58 @@ shader_t upc_shader; // FIXME: some way to pass this through uobj_draw_data so i
 void end_part_cloud_draw() {upc_shader.end_shader();}
 
 
-uparticle_cloud::uparticle_cloud(point const &pos_, float radius_, colorRGBA const &ci1, colorRGBA const &co1,
-	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage_) : lifetime(lt), damage_v(damage_)
+void add_uparticle_cloud(point const &pos, float rmin, float rmax, colorRGBA const &ci1, colorRGBA const &co1,
+	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage, float expand_exp)
 {
+	uparticle_cloud *upc(new uparticle_cloud(pos, rmin, rmax, ci1, co1, ci2, co2, lt, damage, expand_exp));
+	bool const coll(add_uobj(upc, 0));
+	assert(!coll);
+}
+
+
+uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, colorRGBA const &ci1, colorRGBA const &co1,
+	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_)
+	: lifetime(lt), rmin(rmin_), rmax(rmax_), damage_v(damage_), expand_exp(expand_exp_)
+{
+	assert(rmin > 0.0 && rmin < rmax);
+	free_obj::reset();
 	colors[0][0] = ci1;
-	colors[0][1] = co1;
-	colors[1][0] = ci2;
+	colors[1][0] = co1;
+	colors[0][1] = ci2;
 	colors[1][1] = co2;
 	flags     = OBJ_FLAGS_NCOL | OBJ_FLAGS_NOPC | OBJ_FLAGS_NEXD | OBJ_FLAGS_NOLT; // not sure about OBJ_FLAGS_NOLT
-	pos       = pos_;
-	radius    = radius_;
-	c_radius  = radius;
+	pos       = reset_pos = pos_;
+	radius    = c_radius = rmin_;
 	alignment = ALIGN_NEUTRAL;
 	draw_rscale = 1.0; // ???
-	free_obj::reset();
-	gen_pts(radius);
+	gen_pts(1.0); // generate the points using a radius of 1.0 and scale them to the current radius during rendering
 }
 
 
 void uparticle_cloud::apply_physics() {
 
-	if (time > lifetime) {
-		status = 1;
-		return;
-	}
+	if (time > lifetime) {status = 1; return;}
 	free_obj::apply_physics();
-	// FIXME: increase radius with time, etc.
+	radius = c_radius = rmin + (rmax - rmin)*pow(get_lt_scale(), expand_exp);
 }
 
 
 void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const {
 
-	float const lt_scale(CLIP_TO_01(1.0f - ((float)time)/((float)lifetime)));
+	float const lt_scale(get_lt_scale());
 	colorRGBA cur_colors[2]; // {inner, outer}
-	for (unsigned d = 0; d < 2; ++d) {blend_color(cur_colors[d], colors[d][0], colors[d][1], lt_scale, 1);}
-	//if (ddata.shader) {ddata.shader->disable();} // unnecessary?
+	for (unsigned d = 0; d < 2; ++d) {blend_color(cur_colors[d], colors[d][1], colors[d][0], lt_scale, 1);}
 	shader_t &s(upc_shader);
-	shader_setup(s);
+	shader_setup(s, 0.2);
 	s.enable();
-	s.add_uniform_color("color1", cur_colors[0]); // FIXME: inner vs. outer colors/don't need 3
-	s.add_uniform_color("color2", cur_colors[0]);
-	s.add_uniform_color("color3", cur_colors[1]);
+	s.add_uniform_color("color1i", cur_colors[0]); // FIXME: more color variation
+	s.add_uniform_color("color1o", cur_colors[1]);
+	s.add_uniform_color("color2i", cur_colors[0]);
+	s.add_uniform_color("color2o", cur_colors[1]);
+	s.add_uniform_color("color3i", cur_colors[0]);
+	s.add_uniform_color("color3o", cur_colors[1]);
 	s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
-	s.add_uniform_float("radius", radius);
+	s.add_uniform_float("radius", 1.0); // vertex will be scaled by radius
 	s.add_uniform_float("offset", pos.x);
 	cur_colors[0].do_glColor();
 	draw_quads();
