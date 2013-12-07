@@ -954,7 +954,7 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const {
 	colorRGBA cur_colors[2]; // {inner, outer}
 	for (unsigned d = 0; d < 2; ++d) {blend_color(cur_colors[d], colors[d][1], colors[d][0], lt_scale, 1);}
 	shader_t &s(upc_shader);
-	shader_setup(s, 0.4, 1); // grayscale noise
+	shader_setup(s, 0.3, 1); // grayscale noise
 	s.enable();
 	s.add_uniform_color("color1i", cur_colors[0]);
 	s.add_uniform_color("color1o", cur_colors[1]);

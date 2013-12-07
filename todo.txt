@@ -24,4 +24,3 @@ Weather/Physics UI
   - key to switch UI modes
 
 Game mode weapon/scene clipping/collision (add weapon collision or clear depth buffer on weapon draw)
-3D explosions similar to nebulas (universe and ground mode)

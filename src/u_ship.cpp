@@ -2469,12 +2469,16 @@ void u_ship::do_explode() {
 
 	vector3d edir(dir + gen_rand_vector_uniform(0.25));
 	edir.normalize();
-	def_explode(get_def_explode_damage(), specs().exp_type, edir, WCLASS_EXPLODE,
-		alignment, EXP_FLAGS_SHIP, parent); // can we blame a ship's explosion on its parent?
+	int const etype(specs().exp_type);
+	def_explode(get_def_explode_damage(), etype, edir, WCLASS_EXPLODE, alignment, EXP_FLAGS_SHIP, parent); // can we blame a ship's explosion on its parent?
 	
 	if (specs().mass >= 10.0) { // medium to large ship
 		float const gain(0.001/max(1E-6f, distance_to_camera(pos)));
 		if (gain > 0.001) {gen_sound(SOUND_EXPLODE, pos, gain);}
+	}
+	if (specs().mass >= 25.0 && (etype == ETYPE_NUCLEAR || etype == ETYPE_STARB)) { // fairly large ship
+		colorRGBA ci((etype == ETYPE_NUCLEAR) ? WHITE : YELLOW), co((etype == ETYPE_NUCLEAR) ? BLUE : RED);
+		add_uparticle_cloud(pos, 1.0*radius, 4.0*radius, ci, co, colorRGBA(ci, 0.0), colorRGBA(co, 0.0), 10*TICKS_PER_SECOND, 0.0, 0.3);
 	}
 }
 
