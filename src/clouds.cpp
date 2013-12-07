@@ -444,6 +444,12 @@ void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale);
 
 
+/*static*/ colorRGBA volume_part_cloud::gen_color(rand_gen_t &rgen) {
+
+	return colorRGBA(rgen.rand_uniform(0.3, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.9), 1.0);
+}
+
+
 void volume_part_cloud::gen_pts(float radius) {
 
 	unsigned ix(0);
@@ -471,17 +477,19 @@ void volume_part_cloud::gen_pts(float radius) {
 }
 
 
-/*static*/ void volume_part_cloud::shader_setup(shader_t &s, float noise_scale) {
+/*static*/ void volume_part_cloud::shader_setup(shader_t &s, float noise_scale, unsigned noise_ncomp) {
 
+	assert(noise_ncomp == 1 || noise_ncomp == 4);
 	if (s.is_setup()) return; // nothing else to do
 	s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
+	s.set_int_prefix("noise_ncomp", noise_ncomp, 1); // FS
 	s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
 	s.set_vert_shader("nebula");
 	s.set_frag_shader("nebula");
 	s.begin_shader();
 	s.add_uniform_int("noise_tex", 0);
 	s.add_uniform_float("noise_scale", noise_scale);
-	bind_3d_texture(get_noise_tex_3d(32, 4)); // RGBA noise
+	bind_3d_texture(get_noise_tex_3d(32, noise_ncomp));
 }
 
 
@@ -499,10 +507,7 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 	rand_gen_t rgen;
 	rgen.set_state(rand2(), rand2());
 	radius = rgen.rand_uniform(0.1, 0.15)*range;
-
-	for (unsigned d = 0; d < 3; ++d) {
-		color[d] = colorRGBA(rgen.rand_uniform(0.3, 1.0), rgen.rand_uniform(0.1, 0.5), rgen.rand_uniform(0.2, 0.9), 1.0);
-	}
+	UNROLL_3X(color[i_] = gen_color(rgen);)
 	gen_pts(radius);
 }
 
@@ -524,7 +529,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 		mod_color[d] = color[d];
 		mod_color[d].alpha *= ((draw_model == 1) ? 1.0 : 0.3*dist_scale);
 	}
-	shader_setup(s, 0.01);
+	shader_setup(s, 0.01, 4); // RGBA noise
 	s.enable();
 	s.add_uniform_color("color1i", mod_color[0]);
 	s.add_uniform_color("color1o", mod_color[0]);

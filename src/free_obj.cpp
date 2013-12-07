@@ -935,7 +935,7 @@ uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, co
 	pos       = reset_pos = pos_;
 	radius    = c_radius = rmin_;
 	alignment = ALIGN_NEUTRAL;
-	draw_rscale = 1.0; // ???
+	draw_rscale = 1.0; // ?
 	gen_pts(1.0); // generate the points using a radius of 1.0 and scale them to the current radius during rendering
 }
 
@@ -954,14 +954,10 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const {
 	colorRGBA cur_colors[2]; // {inner, outer}
 	for (unsigned d = 0; d < 2; ++d) {blend_color(cur_colors[d], colors[d][1], colors[d][0], lt_scale, 1);}
 	shader_t &s(upc_shader);
-	shader_setup(s, 0.2);
+	shader_setup(s, 0.4, 1); // grayscale noise
 	s.enable();
-	s.add_uniform_color("color1i", cur_colors[0]); // FIXME: more color variation
+	s.add_uniform_color("color1i", cur_colors[0]);
 	s.add_uniform_color("color1o", cur_colors[1]);
-	s.add_uniform_color("color2i", cur_colors[0]);
-	s.add_uniform_color("color2o", cur_colors[1]);
-	s.add_uniform_color("color3i", cur_colors[0]);
-	s.add_uniform_color("color3o", cur_colors[1]);
 	s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
 	s.add_uniform_float("radius", 1.0); // vertex will be scaled by radius
 	s.add_uniform_float("offset", pos.x);

@@ -23,10 +23,16 @@ void main()
 			val  += texture3D(noise_tex, noise_scale*(freq*pos))/freq;
 			freq *= 2.0;
 		}
-		val      = clamp(2.0*(0.5*val-0.4), 0.0, 1.0);
-		color.a *= val.a;
-		color    = mix(color, mix(color2i, color2o, dist), abs(val.r - val.g));
-		color    = mix(color, mix(color2i, color2o, dist), abs(val.r - val.b));
+		val = clamp(2.0*(0.5*val-0.4), 0.0, 1.0);
+		
+		if (noise_ncomp == 1) { // grayscale
+			color.a *= val.r;
+		}
+		else { // RGBA
+			color.a *= val.a;
+			color = mix(color, mix(color2i, color2o, dist), abs(val.r - val.g));
+			color = mix(color, mix(color3i, color3o, dist), abs(val.r - val.b));
+		}
 		color.a *= clamp((1.0 - dist), 0.0, 1.0); // attenuate near edges to create a spherical shape
 	}
 	color.a *= clamp((1.5*abs(dot(normal, view_dir)) - 0.5), 0.0, 1.0); // attenuate billboards not facing the camera

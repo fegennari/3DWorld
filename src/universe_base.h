@@ -93,8 +93,9 @@ protected:
 	vector<vert_type_t> points;
 
 public:
+	static colorRGBA gen_color(rand_gen_t &rgen);
 	void gen_pts(float radius);
-	static void shader_setup(shader_t &s, float noise_scale);
+	static void shader_setup(shader_t &s, float noise_scale, unsigned noise_ncomp);
 	void draw_quads() const;
 };
 

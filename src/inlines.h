@@ -505,6 +505,13 @@ inline void blend_color(colorRGBA &C, const colorRGBA &A, const colorRGBA &B, fl
 	if (calc_alpha) C[3] = mix*A[3] + (1.0 - mix)*B[3];
 }
 
+inline colorRGBA blend_color(const colorRGBA &A, const colorRGBA &B, float mix, int calc_alpha) {
+
+	colorRGBA C(0.0, 0.0, 0.0, A.alpha);
+	blend_color(C, A, B, mix, calc_alpha);
+	return C;
+}
+
 
 inline void translate_to(point const &p) {
 	glTranslatef(p.x, p.y, p.z);
