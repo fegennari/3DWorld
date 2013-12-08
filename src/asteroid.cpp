@@ -50,7 +50,7 @@ int get_spherical_texture(int tid) {
 
 void clear_cached_shaders() {
 
-	for (unsigned i = 0; i < 8; ++i) {
+	for (unsigned i = 0; i < 9; ++i) {
 		cached_voxel_shaders[i].end_shader();
 		cached_proc_shaders [i].end_shader();
 	}
