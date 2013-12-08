@@ -1131,7 +1131,7 @@ void ustar::explode(float damage, float bradius, int etype, vector3d const &edir
 	uobject::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
 	colorRGBA ci(colorA), co(colorB);
 	blend_color(co, co, RED, 0.5); // red shift outer color
-	add_uparticle_cloud(pos, 1.0*radius, 10.0*radius, ci, co, colorRGBA(ci, 0.0), colorRGBA(co, 0.0), 60*TICKS_PER_SECOND, 1000.0, 0.3);
+	add_uparticle_cloud(pos, 1.0*radius, 10.0*radius, ci, co, colorRGBA(ci, 0.0), colorRGBA(co, 0.0), 60*TICKS_PER_SECOND, 1000.0, 0.3, 0.4);
 }
 
 

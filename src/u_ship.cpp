@@ -2478,7 +2478,7 @@ void u_ship::do_explode() {
 	}
 	if (specs().mass >= 25.0 && (etype == ETYPE_NUCLEAR || etype == ETYPE_STARB)) { // fairly large ship
 		colorRGBA ci((etype == ETYPE_NUCLEAR) ? WHITE : YELLOW), co((etype == ETYPE_NUCLEAR) ? BLUE : RED);
-		add_uparticle_cloud(pos, 1.0*radius, 4.0*radius, ci, co, colorRGBA(ci, 0.0), colorRGBA(co, 0.0), 10*TICKS_PER_SECOND, 0.0, 0.3);
+		add_uparticle_cloud(pos, 1.0*radius, 4.0*radius, ci, co, colorRGBA(ci, 0.0), colorRGBA(co, 0.0), 10*TICKS_PER_SECOND, 0.0, 0.3, 0.1);
 	}
 }
 

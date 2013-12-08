@@ -913,17 +913,17 @@ void end_part_cloud_draw() {upc_shader.end_shader();}
 
 
 void add_uparticle_cloud(point const &pos, float rmin, float rmax, colorRGBA const &ci1, colorRGBA const &co1,
-	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage, float expand_exp)
+	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage, float expand_exp, float noise_scale)
 {
-	uparticle_cloud *upc(new uparticle_cloud(pos, rmin, rmax, ci1, co1, ci2, co2, lt, damage, expand_exp));
+	uparticle_cloud *upc(new uparticle_cloud(pos, rmin, rmax, ci1, co1, ci2, co2, lt, damage, expand_exp, noise_scale));
 	bool const coll(add_uobj(upc, 0));
 	assert(!coll);
 }
 
 
 uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, colorRGBA const &ci1, colorRGBA const &co1,
-	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_)
-	: lifetime(lt), rmin(rmin_), rmax(rmax_), damage_v(damage_), expand_exp(expand_exp_)
+	colorRGBA const &ci2, colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_, float noise_scale_)
+	: lifetime(lt), rmin(rmin_), rmax(rmax_), damage_v(damage_), expand_exp(expand_exp_), noise_scale(noise_scale_)
 {
 	assert(rmin > 0.0 && rmin < rmax);
 	free_obj::reset();
@@ -931,11 +931,12 @@ uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, co
 	colors[1][0] = co1;
 	colors[0][1] = ci2;
 	colors[1][1] = co2;
-	flags     = OBJ_FLAGS_NCOL | OBJ_FLAGS_NOPC | OBJ_FLAGS_NEXD | OBJ_FLAGS_NOLT; // not sure about OBJ_FLAGS_NOLT
-	pos       = reset_pos = pos_;
-	radius    = c_radius = rmin_;
-	alignment = ALIGN_NEUTRAL;
+	flags       = OBJ_FLAGS_NCOL | OBJ_FLAGS_NOPC | OBJ_FLAGS_NEXD | OBJ_FLAGS_NOLT; // not sure about OBJ_FLAGS_NOLT
+	pos         = reset_pos = pos_;
+	radius      = c_radius = rmin_;
+	alignment   = ALIGN_NEUTRAL;
 	draw_rscale = 1.0; // ?
+	hashval     = 1000*pos.x;
 	gen_pts(1.0); // generate the points using a radius of 1.0 and scale them to the current radius during rendering
 }
 
@@ -948,19 +949,20 @@ void uparticle_cloud::apply_physics() {
 }
 
 
-void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const {
+void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes GL_BLEND is already enabled
 
 	float const lt_scale(get_lt_scale());
 	colorRGBA cur_colors[2]; // {inner, outer}
 	for (unsigned d = 0; d < 2; ++d) {blend_color(cur_colors[d], colors[d][1], colors[d][0], lt_scale, 1);}
 	shader_t &s(upc_shader);
-	shader_setup(s, 0.3, 1); // grayscale noise
+	shader_setup(s, 1); // grayscale noise
 	s.enable();
-	s.add_uniform_color("color1i", cur_colors[0]);
-	s.add_uniform_color("color1o", cur_colors[1]);
+	s.add_uniform_float("noise_scale", noise_scale);
+	s.add_uniform_color("color1i",     cur_colors[0]);
+	s.add_uniform_color("color1o",     cur_colors[1]);
+	s.add_uniform_float("radius",      1.0); // vertex will be scaled by radius
+	s.add_uniform_float("offset",      hashval); // used as a hash
 	s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
-	s.add_uniform_float("radius", 1.0); // vertex will be scaled by radius
-	s.add_uniform_float("offset", pos.x);
 	cur_colors[0].do_glColor();
 	draw_quads();
 	if (ddata.shader) {ddata.shader->enable();}

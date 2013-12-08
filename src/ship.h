@@ -950,13 +950,13 @@ public:
 class uparticle_cloud : public free_obj, public volume_part_cloud {
 
 	unsigned lifetime;
-	float rmin, rmax, damage_v, expand_exp; // or temperature?
+	float rmin, rmax, damage_v, expand_exp, noise_scale, hashval; // or damage_v temperature? unused
 	colorRGBA colors[2][2]; // {inner, outer} x {start, end}
 
 public:
 	uparticle_cloud() {}
 	uparticle_cloud(point const &pos_, float rmin_, float rmax_, colorRGBA const &ci1, colorRGBA const &co1, colorRGBA const &ci2,
-		colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_);
+		colorRGBA const &co2, unsigned lt, float damage_, float expand_exp_, float noise_scale_);
 	float get_lt_scale() const {return CLIP_TO_01((float)time/(float)lifetime);}
 
 	// virtuals
