@@ -931,7 +931,7 @@ uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, co
 	colors[1][0] = co1;
 	colors[0][1] = ci2;
 	colors[1][1] = co2;
-	flags       = OBJ_FLAGS_NCOL | OBJ_FLAGS_NOPC | OBJ_FLAGS_NEXD | OBJ_FLAGS_NOLT; // not sure about OBJ_FLAGS_NOLT
+	flags       = OBJ_FLAGS_NCOL | OBJ_FLAGS_NOPC | OBJ_FLAGS_NEXD | OBJ_FLAGS_NOLT | OBJ_FLAGS_PARC; // not sure about OBJ_FLAGS_NOLT
 	pos         = reset_pos = pos_;
 	radius      = c_radius = rmin_;
 	alignment   = ALIGN_NEUTRAL;

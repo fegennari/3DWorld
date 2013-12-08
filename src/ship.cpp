@@ -20,7 +20,7 @@ unsigned const NUM_EXTRA_DAM = 4;
 bool player_autopilot(0), player_auto_stop(0), hold_fighters(0), dock_fighters(0);
 int onscreen_display(0);
 unsigned alloced_fobjs[3] = {0}; // testing
-float uobj_rmax(0.0), urm_ship(0.0), urm_static(0.0), urm_proj(0.0), urm_nstat(0.0);
+float uobj_rmax(0.0), urm_ship(0.0), urm_static(0.0), urm_proj(0.0);
 point player_death_pos(all_zeros), universe_origin(all_zeros);
 vector<free_obj *> uobjs; // ships, projectiles, etc.
 vector<cached_obj> coll_objs; // only collision objects
@@ -385,9 +385,6 @@ void apply_univ_physics() {
 			urm_static = max(urm_static, radius);
 			stat_objs.push_back(c_uobjs[i]);
 		}
-		else {
-			urm_nstat = max(urm_nstat, radius);
-		}
 		if (!(flags & OBJ_FLAGS_NCOL)) { // has collisions
 			coll_objs.push_back(c_uobjs[i]);
 
@@ -401,8 +398,8 @@ void apply_univ_physics() {
 			if (flags & OBJ_FLAGS_SHIP) ++nsh;
 			if (flags & OBJ_FLAGS_PART) ++npa;
 		}
+		if (!(flags & OBJ_FLAGS_PARC)) {uobj_rmax = max(uobj_rmax, radius);}
 	}
-	uobj_rmax = max(urm_static, urm_nstat);
 	if (TIMETEST) cout << "  nobj: " << nobjs << " ship: " << nsh << " proj: " << npr << " part: " << npa << endl;
 	if (TIMETEST) PRINT_TIME("  Rmax + Ship Vector Creation");
 
@@ -832,7 +829,7 @@ void purge_old_objs() {
 		if (uobjs[i]->to_be_removed()) {
 			if (!uobjs[i]->dec_ref()) { // all ships and stationary objects should be deleted through this point and nowhere else, can't allocate on the stack
 				assert(!uobjs[i]->is_player_ship());
-				assert(uobjs[i]->is_ship() || uobjs[i]->is_stationary() || uobjs[i]->get_name() == "Particle Cloud"); // sanity check
+				assert(uobjs[i]->is_ship() || uobjs[i]->is_stationary() || uobjs[i]->is_part_cloud()); // sanity check
 				if (uobjs[i]->is_ship()) {++alloced_fobjs[1];}
 				delete uobjs[i]; // Note: this is the *only* place where ships, stationary objects, and particle clouds are deleted
 			}

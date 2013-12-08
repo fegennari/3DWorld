@@ -103,6 +103,7 @@ unsigned const OBJ_FLAGS_NOLT = 0x1000; // no light models on this object
 unsigned const OBJ_FLAGS_DECY = 0x2000; // is a decoy
 unsigned const OBJ_FLAGS_DIST = 0x4000; // distant object - use faster physics
 unsigned const OBJ_FLAGS_ORBT = 0x8000; // orbiting object
+unsigned const OBJ_FLAGS_PARC = 0x10000;// particle cloud
 
 // collision detection object types
 int const OBJ_TYPE_UOBJ  = 0x01; // planets, moons, etc.
@@ -718,6 +719,7 @@ public:
 	bool is_fighter()     const {return ((flags & OBJ_FLAGS_FITR) != 0);}
 	bool is_stationary()  const {return ((flags & OBJ_FLAGS_STAT) != 0);}
 	bool is_particle()    const {return ((flags & OBJ_FLAGS_PART) != 0);}
+	bool is_part_cloud()  const {return ((flags & OBJ_FLAGS_PARC) != 0);}
 	bool is_proj()        const {return ((flags & OBJ_FLAGS_PROJ) != 0);}
 	bool no_proj_coll()   const {return ((flags & OBJ_FLAGS_NOPC) != 0);}
 	bool no_coll2()       const {return ((flags & OBJ_FLAGS_NOC2) != 0);}
