@@ -894,7 +894,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	unsigned const ndiv2(get_ndiv(ndiv/2));
 	setup_draw_ship();
 	float const escale(0.35), dy(0.05), erad(0.1);
-	colorRGBA const ecolor(colorRGBA(1.0, 0.9, 0.2));
+	colorRGBA const ecolor(1.0, 0.9, 0.2);
 	light_engine_pair(ecolor, 0, escale, 0.4, dy, (1.0 + 0.2*escale)); // average of two engines, eflags isn't quite right
 	bool const textured(1);
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
@@ -1093,7 +1093,7 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 
 	assert(nengines == 2);
 	setup_draw_ship();
-	colorRGBA const ecolor(colorRGBA(0.7, 0.7, 1.0, 1.0)); // lighter blue
+	colorRGBA const ecolor(0.7, 0.7, 1.0, 1.0); // lighter blue
 	light_engine_pair(ecolor, 0, 0.45, 0.42, -0.62, 0.86);
 	
 	// main body, with perturb_map and render_map
@@ -2210,8 +2210,7 @@ void uobj_draw_data::draw_seige() const {
 	glPopMatrix(); // undo transformations
 
 	if (is_moving()) { // draw engine glow
-		colorRGBA color;
-		blend_color(color, color_a, WHITE, 0.5, 1);
+		colorRGBA const color(blend_color(color_a, WHITE, 0.5, 1));
 		enable_ship_flares(color);
 
 		for (unsigned i = 0; i < 3; ++i) {
