@@ -226,6 +226,7 @@ void init_window() {
 
 void maximize() {
 
+	assert(!maximized);
 	//glutHideWindow();
 	clear_context();
 	glutGameModeString(game_mode_string);
@@ -235,6 +236,7 @@ void maximize() {
 	wh2           = window_height;
 	window_width  = gmww;
 	window_height = gmwh;
+	maximized     = 1;
 	init_context();
 	glutSetCursor(GLUT_CURSOR_NONE);
 	nop_frame     = 1;
@@ -243,12 +245,14 @@ void maximize() {
 
 void un_maximize() {
 
+	assert(maximized);
 	//glutShowWindow();
 	clear_context();
 	glutLeaveGameMode();
 	curr_window   = orig_window;
 	window_width  = ww2;
 	window_height = wh2;
+	maximized     = 0;
 	init_context();
 	//nop_frame = 1;
 }
@@ -608,7 +612,6 @@ void resize(int x, int y) {
 	set_perspective(PERSP_ANGLE, 1.0);
 	set_gl_params();
 	calc_viewing_cone();
-	curr_window = glutGetWindow();
 	post_window_redisplay();
 	display_window_resized();
 }
@@ -803,8 +806,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		mtime2 = GET_TIME_MS();
 		if (min_time != 0 && (mtime2 - min_time) < MIN_TIME_MS) break;
 		min_time = mtime2;
-		if (maximized) un_maximize(); else maximize();
-		maximized = !maximized;
+		if (maximized) {un_maximize();} else {maximize();}
 		displayed = 0;
 		break;
 
