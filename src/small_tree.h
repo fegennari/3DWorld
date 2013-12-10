@@ -32,6 +32,7 @@ public:
 	void add_cobjs(cobj_params &cp, cobj_params &cp_trunk);
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
+	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode=0);
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
@@ -101,6 +102,7 @@ struct small_tree_group : public vector<small_tree> {
 	void add_cobjs() {add_cobjs_range(begin(), end());}
 	void remove_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
+	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void translate_by(vector3d const &vd);
 	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
 	void draw_branches(bool shadow_only, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;

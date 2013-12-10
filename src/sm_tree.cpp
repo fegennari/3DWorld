@@ -204,7 +204,22 @@ bool small_tree_group::check_sphere_coll(point &center, float radius) const {
 	bool coll(0);
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		coll |= i->check_sphere_coll(center, radius);
+		coll |= i->check_sphere_coll(center, radius); // Note: calculates/updates center, so we can't early terminate in case there are multiple collisions
+	}
+	return coll;
+}
+
+
+// if t is non-NULL, calculate the point of intersection
+bool small_tree_group::line_intersect(point const &p1, point const &p2, float *t) const { // if t != NULL, it should start at 1.0 (the end of the line)
+
+	bool coll(0);
+
+	for (const_iterator i = begin(); i != end(); ++i) {
+		if (i->line_intersect(p1, p2, t)) {
+			coll = 1;
+			if (t == NULL) break;
+		}
 	}
 	return coll;
 }
@@ -647,25 +662,25 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 		cp_trunk.tid = stt[type].bark_tid;
 	}
 	if (type != T_BUSH && type != T_SH_PINE) {coll_id.push_back(add_coll_cylinder(get_trunk_cylin(), cp_trunk, -1, 1));}
-	vector3d const dir(get_rot_dir());
+	vector3d const dirh(get_rot_dir()*height);
 
 	switch (type) {
 	case T_PINE: // pine tree
 	case T_SH_PINE: // short pine tree
 		// Note: smaller than the actual pine tree render at the base so that it's easier for the player to walk under pine trees
-		coll_id.push_back(add_coll_cylinder((pos + ((type == T_PINE) ? dir*(0.35*height) : all_zeros)), (pos + dir*height), get_pine_tree_radius(), 0.0, cp, -1, 1));
+		coll_id.push_back(add_coll_cylinder((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0, cp, -1, 1));
 		break;
 	case T_DECID: // decidious tree
-		coll_id.push_back(add_coll_sphere((pos + dir*(0.75*height)), 1.3*width, cp, -1, 1));
+		coll_id.push_back(add_coll_sphere((pos + 0.75*dirh), 1.3*width, cp, -1, 1));
 		break;
 	case T_TDECID: // tall decidious tree
-		coll_id.push_back(add_coll_sphere((pos + dir*(0.8*height)), 0.8*width, cp, -1, 1));
+		coll_id.push_back(add_coll_sphere((pos + 0.8*dirh), 0.8*width, cp, -1, 1));
 		break;
 	case T_BUSH: // bush
 		coll_id.push_back(add_coll_sphere(pos, 1.2*width, cp, -1, 1));
 		break;
 	case T_PALM: // palm tree
-		coll_id.push_back(add_coll_sphere((pos + dir*(0.65*height)), 0.5*width, cp, -1, 1)); // small sphere
+		coll_id.push_back(add_coll_sphere((pos + 0.65*dirh), 0.5*width, cp, -1, 1)); // small sphere
 		break;
 	default: assert(0);
 	}
@@ -680,14 +695,41 @@ void small_tree::remove_cobjs() {
 }
 
 
-bool small_tree::check_sphere_coll(point &center, float radius) const { // very simple check against trunk only
+// very simple check against trunk only, for collisions with a player walking on the ground
+bool small_tree::check_sphere_coll(point &center, float radius) const {
 
 	if (type == T_BUSH) return 0; // no trunk, not yet handled
 	return sphere_vert_cylin_intersect(center, radius, get_trunk_cylin());
 }
 
 
+bool small_tree::line_intersect(point const &p1, point const &p2, float *t) const {
+
+	assert(is_pine_tree()); // Note: can work on other tree types, but it's more complex, and we only need pine trees in tiled terrain mode
+	vector3d const dirh(get_rot_dir()*height);
+	cylinder_3dw const cylins[2] = {get_trunk_cylin(), cylinder_3dw((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0)};
+	bool coll(0);
+	
+	for (unsigned i = 0; i < 2; ++i) {
+		if (t == NULL) {
+			coll |= line_intersect_cylinder(p1, p2, cylins[i], 0); // no check ends
+			if (coll) break;
+		}
+		else {
+			float t_new(0.0);
+			
+			if (line_intersect_trunc_cone(p1, p2, cylins[i].p1, cylins[i].p2, cylins[i].r1, cylins[i].r2, 0, t_new) && t_new < *t) {
+				*t   = t_new; // would be more efficient if we could pass *t in as t_max
+				coll = 1;
+			}
+		}
+	}
+	return coll;
+}
+
+
 float small_tree::get_pine_tree_radius() const {
+
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
 	return 0.35*(height0 + 0.03/tree_scale);
 }
