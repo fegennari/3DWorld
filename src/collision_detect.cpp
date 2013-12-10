@@ -1027,9 +1027,12 @@ void vert_coll_detector::check_cobj(int index) {
 			obj.pos.z = opz;
 			pold.z    = poz;
 		}
-		if (game_mode && sstates != NULL) {
-			// FIXME: add collision detection for player weapon?
-			//sstates[CAMERA_ID].weapon
+		if (game_mode && sstates != NULL) { // collision detection for player weapon
+			sphere_t weapon_bsphere(get_weapon_bsphere(sstates[CAMERA_ID].weapon));
+
+			if (weapon_bsphere.radius > 0.0) {
+				// FIXME: write
+			}
 		}
 	}
 }

@@ -540,6 +540,7 @@ void draw_beams();
 void show_blood_on_camera();
 void update_weapon_cobjs();
 int select_dodgeball_texture(int shooter);
+sphere_t get_weapon_bsphere(int weapon);
 void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale);
 void draw_weapon_in_hand(int shooter);
 bool weap_has_transparent(int shooter);

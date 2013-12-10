@@ -18,9 +18,11 @@ Berries on plants
 TT underwater dirt/vegetation, seaweed in/on water
 User-placed trees
 
-TT Terrain Ambient Occlusion Kernel
 TT Normal Map(s)
 Weather/Physics UI
   - key to switch UI modes
 
-Game mode weapon/scene clipping/collision (add weapon collision or clear depth buffer on weapon draw)
+Game mode weapon/scene clipping/collision
+TT shadow map for trees?
+
+First 64 bytes of class should be the most commonly accessed (variables)

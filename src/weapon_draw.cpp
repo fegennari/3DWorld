@@ -690,6 +690,12 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 }
 
 
+sphere_t get_weapon_bsphere(int weapon) {
+
+	return sphere_t(); // FIXME: write
+}
+
+
 void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale) {
 
 	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, NO_SOURCE, 0, 1.0, 0.0, 0.0, scale, 0);
