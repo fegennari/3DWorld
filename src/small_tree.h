@@ -15,12 +15,12 @@ enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_
 class small_tree { // size = 85 (88)
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
-	vector<int> coll_id;
 	int vbo_mgr_ix; // high detail
 	int inst_id; // for instancing
 	float height, width, r_angle, rx, ry, rv[3];
 	point pos;
 	colorRGBA color;
+	vector<int> coll_id;
 
 public:
 	small_tree() : type(-1), inst_id(-1) {clear_vbo_mgr_ix();}

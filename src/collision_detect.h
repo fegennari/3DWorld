@@ -67,10 +67,10 @@ class csg_cube;
 class coll_obj : public cube_t { // size = 224
 
 public:
-	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	char type, destroy, status;
 	unsigned char last_coll, coll_type;
 	bool fixed, is_billboard, falling;
+	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	float radius, radius2, thickness, volume, v_fall;
 	int counter, id;
 	short platform_id, group_id, waypt_id, npoints;

@@ -1018,11 +1018,11 @@ colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black with alpha of 0.0
 class texture_t { // size = 116
 
 public:
-	std::string name;
 	char type, format, use_mipmaps;
 	bool wrap, invert_y, do_compress, has_binary_alpha, is_16_bit_gray;
 	int width, height, ncolors, bump_tid, alpha_tid;
 	float anisotropy, mipmap_alpha_weight;
+	std::string name;
 
 protected:
 	unsigned char *data, *orig_data, *colored_data, *mm_data;
@@ -1038,9 +1038,9 @@ public:
 		mipmap_alpha_weight(1.0), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
 	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0)
-		: name(n), type(t), format(f), use_mipmaps(um), wrap(wra), invert_y(inv), do_compress(do_comp), has_binary_alpha(0),
+		: type(t), format(f), use_mipmaps(um), wrap(wra), invert_y(inv), do_compress(do_comp), has_binary_alpha(0),
 		is_16_bit_gray(0), width(w), height(h), ncolors(nc), bump_tid(-1), alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw),
-		data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
+		name(n), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 	void init();
 	void do_gl_init();
 	GLenum calc_internal_format() const;

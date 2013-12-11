@@ -24,5 +24,3 @@ Weather/Physics UI
 
 Game mode weapon/scene clipping/collision
 TT shadow map for trees?
-
-First 64 bytes of class should be the most commonly accessed (variables)
