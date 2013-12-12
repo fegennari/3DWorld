@@ -725,7 +725,7 @@ void free_obj::draw_shadow_volumes_from(uobject const *sobj, point const &sun_po
 	int nsides((player ? 2 : 1)*min(2*N_CYL_SIDES, min(max(N_CYL_SIDES, 4*ndiv), max(3, ndiv_raw))));
 	if (nsides > 32) nsides &= ~7; // remove the last three bits
 	ushadow_sphere uss(sobj->get_pos(), sobj_radius, pos, c_radius, sun_pos, nsides, player, NULL);
-	float const *const pmap(sobj->get_sphere_shadow_pmap(sun_pos, pos, nsides)); // FIXME: implement this for planets and moons
+	float const *const pmap(sobj->get_sphere_shadow_pmap(sun_pos, pos, nsides)); // FIXME: implement this for planets and moons using urev_body::surface
 	if (pmap) uss.set_pmap(pmap);
 	uss.draw_geom(pos, test);
 }

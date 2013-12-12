@@ -1732,7 +1732,7 @@ void update_accumulation(int xpos, int ypos) {
 	has_accumulation = 1; // melt snow
 	float melted(((temperature - W_FREEZE_POINT)/MELT_RATE)*(NIGHT_MELT + (1.0 - NIGHT_MELT)*light_factor));
 	// FIXME: shadow_mask may not be valid if shadow maps are being used
-	if (light_factor >= 0.5 && (shadow_mask[LIGHT_SUN][ypos][xpos] & SHADOWED_ALL)) {melted *= SHADE_MELT;}
+	if (light_factor >= 0.5 && shadow_mask != NULL && (shadow_mask[LIGHT_SUN][ypos][xpos] & SHADOWED_ALL)) {melted *= SHADE_MELT;}
 	accumulation_matrix[ypos][xpos] = max(0.0f, (acc - melted));
 
 	if (!DISABLE_WATER && wminside[ypos][xpos] == 1) {

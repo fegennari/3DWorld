@@ -649,7 +649,7 @@ public:
 		else { // torus subsection, use a local bounding sphere
 			bsphere.pos = ro*vector3d(sinf(0.5*max_angle), cosf(0.5*max_angle), 0.0);
 		}
-		for (unsigned i = 0; i < npts; ++i) { // FIXME: use rand_gen_t?
+		for (unsigned i = 0; i < npts; ++i) { // FIXME: use rand_gen_t (which would need gaussian support)?
 			float const theta(rand_uniform2(0.0, max_angle));
 			float const dval(rand_gaussian2_limited(0.0, 1.0, 2.0));
 			float const dplane(rand_gaussian2_limited(0.0, ri, 2.5*ri));

@@ -2231,7 +2231,7 @@ void inf_terrain_fire_weapon() {
 	tile_t *tile(NULL);
 	int xpos(0), ypos(0);
 	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return;
-	// FIXME: update too slow when trees are enabled
+	// Note: update is slow when trees are enabled
 	unsigned shape(cur_brush_param.shape);
 	if (inf_terrain_fire_mode == 3) {shape = ((shape == BSHAPE_CONST_SQ) ? BSHAPE_FLAT_SQ : BSHAPE_FLAT_CIR);} // enable a flattening shape
 	float const delta_mag(cur_brush_param.get_delta_mag()*((inf_terrain_fire_mode == 1) ? 1.0 : -1.0));

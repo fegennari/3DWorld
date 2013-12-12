@@ -746,7 +746,7 @@ public:
 						}
 					}
 				}
-				if (use_grass_shader && visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass (FIXME: voxels?)
+				if (use_grass_shader && visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass
 					nearby_ixs.push_back(ix);
 					visible = 0; // drawn in the second pass
 				}

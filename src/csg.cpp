@@ -908,7 +908,7 @@ bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cub
 			removed = cube.subtract_from_polygon(new_cobjs, *this);
 		}
 		else {
-			removed = cube.subtract_from_thick_polygon(new_cobjs, *this); // not yet implemented
+			removed = cube.subtract_from_thick_polygon(new_cobjs, *this); // implemented but not yet finished
 		}
 	}
 	return removed;

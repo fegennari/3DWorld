@@ -20,9 +20,9 @@ enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, NUM_PLANT_TYPES};
 struct plant_type {
 
 	int tid;
-	colorRGBA stemc, leafc;
+	colorRGBA stemc, leafc, berryc;
 
-	plant_type(int tid_, colorRGBA const &sc, colorRGBA const &lc) : tid(tid_), stemc(sc), leafc(lc) {}
+	plant_type(int tid_, colorRGBA const &sc, colorRGBA const &lc, colorRGBA const &bc) : tid(tid_), stemc(sc), leafc(lc), berryc(bc) {}
 };
 
 

@@ -26,10 +26,12 @@ void wrap_png_error(png_structp, png_const_charp) {
 
 std::string const texture_dir("textures");
 
+string append_texture_dir(string const &filename) {return (texture_dir + "/" + filename);}
+
 
 FILE *open_texture_file(string const &filename) {
 
-	FILE *fp = fopen((texture_dir + "/" + filename).c_str(), "rb");
+	FILE *fp = fopen(append_texture_dir(filename).c_str(), "rb");
 	if (fp != NULL) return fp;
 
 	// if not in the current directory, then look in the current directory
@@ -111,7 +113,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		case 4: load_targa(index, allow_diff_width_height); break;
 		case 5: load_jpeg (index, allow_diff_width_height); break;
 		case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
-		case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break; // FIXME - tiff
+		case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
 		default:
 			cerr << "Unsupported image format: " << format << endl;
 			exit(1);
@@ -322,7 +324,7 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 
 	assert(!is_allocated());
 	tga_image img;
-	tga_result ret(tga_read(&img, (texture_dir + "/" + name).c_str())); // try textures directory
+	tga_result ret(tga_read(&img, append_texture_dir(name).c_str())); // try textures directory
 	//cout << "load texture" << name << endl;
 
 	if (ret != TGA_NOERR) {
@@ -580,8 +582,9 @@ int texture_t::write_to_png(string const &fn) const {
 void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale) {
 
 #ifdef ENABLE_TIFF
-	TIFF* tif = TIFFOpen(name.c_str(), "r"); // FIXME: ignores texture directory
-    
+	TIFF* tif = TIFFOpen(append_texture_dir(name).c_str(), "r"); // first try texture directory
+	if (tif == NULL) {tif = TIFFOpen(name.c_str(), "r");} // not found, try current directory
+
 	if (tif == NULL) {
 		cerr << "Error opening tiff file " << name << " for read." << endl;
 		exit(1);

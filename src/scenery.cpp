@@ -21,12 +21,12 @@ colorRGBA const leaf_c(0.7, 0.7, 0.7, 1.0);
 
 // tid, stemc, leafc
 plant_type const pltype[NUM_PLANT_TYPES] = {
-	plant_type(MJ_LEAF_TEX, stem_c,   leaf_c),
-	plant_type(PLANT1_TEX,  stem_c,   leaf_c),
-	plant_type(PLANT2_TEX,  stem_c,   leaf_c),
-	plant_type(PLANT3_TEX,  stem_c,   leaf_c),
-	plant_type(PLANT4_TEX,  stem_c,   leaf_c),
-	plant_type(COFFEE_TEX,  LT_BROWN, WHITE)
+	plant_type(MJ_LEAF_TEX, stem_c,   leaf_c, RED),
+	plant_type(PLANT1_TEX,  stem_c,   leaf_c, RED),
+	plant_type(PLANT2_TEX,  stem_c,   leaf_c, RED),
+	plant_type(PLANT3_TEX,  stem_c,   leaf_c, RED),
+	plant_type(PLANT4_TEX,  stem_c,   leaf_c, RED),
+	plant_type(COFFEE_TEX,  LT_BROWN, WHITE,  RED)
 };
 
 
@@ -750,9 +750,10 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 	vbo_mgr_ix = vbo_manager.add_points_with_offset(vbo_manager.temp_points, pltype[type].leafc);
 	no_leaves  = 0;
 #if 0
-	// create berries
-	for (vector<vert_norm>::const_iterator i = vbo_manager.temp_points.begin(); i != vbo_manager.temp_points.end(); ++i) {
-		berries.push_back(i->v); // FIXME: temporary
+	if (pltype[type].berryc.A != 0.0) { // create berries
+		for (vector<vert_norm>::const_iterator i = vbo_manager.temp_points.begin(); i != vbo_manager.temp_points.end(); ++i) {
+			berries.push_back(i->v); // FIXME: temporary
+		}
 	}
 #endif
 }
@@ -831,7 +832,7 @@ void s_plant::draw_berries(vector3d const &xlate) const {
 	float const dist(distance_to_camera(pos+xlate));
 	if (get_pt_line_thresh()*radius < dist) return; // too small/far away
 	float const size_scale(radius/dist);
-	RED.do_glColor(); // FIXME: use plant type
+	pltype[type].berryc.do_glColor();
 
 	for (vector<vert_wrap_t>::const_iterator i = berries.begin(); i != berries.end(); ++i) {
 		int const ndiv(min(24, max(4, int(500.0*size_scale))));

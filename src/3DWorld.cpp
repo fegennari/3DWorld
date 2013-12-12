@@ -1040,9 +1040,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			else {
 				reset_planet_defaults(); // have to do this so that regen_trees gets correct vegetation
 			}
-			remove_tree_cobjs(); // FIXME: make part of regen_trees()?
+			remove_tree_cobjs();
 			regen_trees(1, 0);
-			build_cobj_tree(); // FIXME: make part of regen_trees()?
+			build_cobj_tree();
 			gen_grass(1);
 			clear_tiled_terrain();
 			
