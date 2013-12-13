@@ -309,12 +309,18 @@ bool urev_body::surface_test(float rad, point const &p, float &coll_r, bool simp
 
 	// not quite right - should take into consideration peaks in surrounding geometry that also intersect the sphere
 	if (surface != NULL && surface->has_heightmap()) {
-		float const hmap_scale(get_hmap_scale());
-		if (p2p_dist(p, pos) > radius*(1.0 + hmap_scale*0.5) + rad) return 0; // test rmax
-		double const val(get_dheight_at(p, !simple)), cutoff(surface->min_cutoff);
-		coll_r = radius*(1.0 + hmap_scale*((max(cutoff, val) - cutoff)*surface->get_one_minus_cutoff() - 0.5));
+		if (p2p_dist(p, pos) > radius*(1.0 + get_hmap_scale()*0.5) + rad) return 0; // test rmax
+		coll_r = get_radius_at(p, !simple);
 	}
 	return 1;
+}
+
+
+float urev_body::get_radius_at(point const &p, bool exact) const {
+
+	if (surface == NULL) return radius;
+	double const val(get_dheight_at(p, exact)), cutoff(surface->min_cutoff);
+	return radius*(1.0 + get_hmap_scale()*((max(cutoff, val) - cutoff)*surface->get_one_minus_cutoff() - 0.5));
 }
 
 

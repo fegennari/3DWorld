@@ -1114,6 +1114,24 @@ void uobject::gen_moving_fragments(point const &hit_pos, unsigned num, int tid, 
 }
 
 
+float const *uobject::get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {
+
+	if (!has_custom_shadow_profile()) return NULL;
+	assert(ndiv >= 3);
+	float const dist_to_sun(p2p_dist(pos, sun_pos)), shadow_scale_val((dist_to_sun + p2p_dist(pos, obj_pos))/dist_to_sun);
+	static vector<float> pmap_vector;
+	pmap_vector.resize(ndiv);
+	point const ce[2] = {pos, sun_pos};
+	vector3d v12; // unused
+	vector_point_norm const &vpn(gen_cylinder_data(ce, radius, 0.0, ndiv, v12));
+
+	for (int i = 0; i < ndiv; ++i) { // assumes the cylinder is more or less constant radius
+		pmap_vector[i] = shadow_scale_val*(get_radius_at(vpn.p[i<<1]) - radius);
+	}
+	return &pmap_vector.front();
+}
+
+
 void ustar::explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
 					int align, unsigned eflags, free_obj const *parent_)
 {

@@ -70,6 +70,7 @@ public:
 	void gen_fragments(upos_point_type const &pos_offset=upos_point_type(0,0,0), float rscale=1.0) const;
 	void gen_moving_fragments(point const &hit_pos, unsigned num, int tid=-1, float rscale=1.0, float vscale=1.0,
 		vector3d const &vadd=zero_vector, colorRGBA const &pcolor=WHITE) const;
+	float const *get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const;
 	virtual std::string get_name() const = 0;
 	virtual std::string get_info() const {return "";}
 	virtual int get_id() const {return 0;} // standard uobject has no id
@@ -79,7 +80,8 @@ public:
 	virtual cobj_vector_t const &get_cobjs() const;
 	virtual bool casts_detailed_shadow() const {return !get_cobjs().empty();}
 	virtual void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool test) const {assert(0);}
-	virtual float const *get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {return NULL;}
+	virtual float get_radius_at(point const &p, bool exact=0) const {return radius;}
+	virtual bool has_custom_shadow_profile() const {return 0;}
 	virtual int get_fragment_tid(point const &hit_pos) const {return ROCK_SPHERE_TEX;}
 	virtual bool sphere_intersection(point const &c, float r) const;
 	virtual bool check_fragment_self_coll() const {return 0;}

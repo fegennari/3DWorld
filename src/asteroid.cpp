@@ -194,7 +194,6 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 	vector3d xyz_scale;
 	mutable upsurface surface; // FIXME: mutable so that the contained sd_sphere_vbo_d can modify its vbo indexes
 	ast_instance_render_t inst_render; // could be per-LOD level (4)
-	static vector<float> pmap_vector;
 
 public:
 	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
@@ -208,6 +207,7 @@ public:
 		scale_val = 1.0/surface.rmax;
 	}
 	virtual void set_scale(vector3d const &scale) {xyz_scale = scale;}
+	virtual bool has_custom_shadow_profile() const {return 1;}
 
 	// Note: this class overrides draw_with_texture() because it's used instanced
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id, bool no_reset_texture=0) const { // to allow overriding the texture id
@@ -265,20 +265,6 @@ public:
 		return damaged;
 	}
 
-	virtual float const *get_sphere_shadow_pmap(point const &sun_pos, point const &obj_pos, int ndiv) const {
-		assert(ndiv >= 3);
-		float const dist_to_sun(p2p_dist(pos, sun_pos)), shadow_scale_val((dist_to_sun + p2p_dist(pos, obj_pos))/dist_to_sun);
-		pmap_vector.resize(ndiv);
-		point const ce[2] = {pos, sun_pos};
-		vector3d v12; // unused
-		vector_point_norm const &vpn(gen_cylinder_data(ce, c_radius, 0.0, ndiv, v12));
-
-		for (int i = 0; i < ndiv; ++i) { // assumes the cylinder is more or less constant radius
-			pmap_vector[i] = shadow_scale_val*(get_radius_at(vpn.p[i<<1]) - c_radius);
-		}
-		return &pmap_vector.front();
-	}
-
 	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const {
 		if (r > AST_COLL_RAD*radius) return uobj_asteroid_destroyable::sphere_int_obj(c, r, ip); // use default sphere collision
 		float const asteroid_radius(get_radius_at(c));
@@ -296,7 +282,7 @@ public:
 	virtual void clear_context() {surface.free_context();}
 
 	private:
-	float get_radius_at(point const &pt) const {
+	virtual float get_radius_at(point const &pt, bool exact=0) const {
 		int tx, ty;
 		get_tex_coords_at(pt, tx, ty);
 		point **points = surface.sd.get_points();
@@ -311,8 +297,6 @@ public:
 		get_tex_coord(query_dir, vector3d(0.0, 1.0, 0.0), ASTEROID_NDIV, ASTEROID_NDIV, tx, ty, 1);
 	}
 };
-
-vector<float> uobj_asteroid_hmap::pmap_vector; // static
 
 
 // FIXME: sphere collision normal / pos

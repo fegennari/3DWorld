@@ -229,7 +229,9 @@ public:
 	void create_gas_giant_texture();
 	void gen_texture_data_and_heightmap(unsigned char *data, unsigned size);
 	bool surface_test(float rad, point const &p, float &coll_r, bool simple) const;
+	float get_radius_at(point const &p, bool exact=0) const;
 	float get_dheight_at(point const &p, bool exact=0) const;
+	virtual bool has_custom_shadow_profile() const {return (surface != NULL);}
 	bool pt_over_land(point const &p) const;
 	bool can_land() const;
 	bool can_land_at(point const &p) const {return (can_land() && pt_over_land(p));}
@@ -413,7 +415,7 @@ public:
 	void calc_color();
 	void calc_bounding_sphere();
 	bool create(ucell const &cell, int index);
-	float get_radius_at(point const &pos_) const;
+	float get_radius_at(point const &pos_, bool exact=0) const;
 	bool is_close_to(ugalaxy const &g, float overlap_amount) const;
 	void process(ucell const &cell);
 	bool gen_system_loc(vector<point> const &placed);

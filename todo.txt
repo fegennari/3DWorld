@@ -26,4 +26,3 @@ TT shadow map for trees?
 
 voxel_grid read/write
 gen_torus_section rand_gen_t
-get_sphere_shadow_pmap

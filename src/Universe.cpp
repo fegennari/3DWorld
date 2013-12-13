@@ -1087,9 +1087,9 @@ point ugalaxy::gen_valid_system_pos() const {
 }
 
 
-float ugalaxy::get_radius_at(point const &pos_) const {
+float ugalaxy::get_radius_at(point const &pos_, bool exact) const {
 
-	if (lrq_rad > 0.0 && p2p_dist_sq(pos_, lrq_pos) < 0.000001*min(radius*radius, p2p_dist_sq(pos_, pos))) {
+	if (!exact && lrq_rad > 0.0 && p2p_dist_sq(pos_, lrq_pos) < 0.000001*min(radius*radius, p2p_dist_sq(pos_, pos))) {
 		return 1.001*lrq_rad; // point is so close to last point that we can used the cached value (be conservative)
 	}
 	vector3d dir(pos_);
