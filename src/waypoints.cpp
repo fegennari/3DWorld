@@ -29,6 +29,7 @@ extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern coll_obj_group coll_objects;
+extern vector<teleporter> teleporters;
 
 
 // ********** waypt_used_set **********
@@ -335,6 +336,10 @@ public:
 				w.item_ix       = j;
 				has_item_placed = 1;
 			}
+		}
+		for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
+			cout << "TELEPORTER!" << endl;
+			add_if_valid(i->pos, -1, 0); // does this waypoint need any state to be set?
 		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
 	}

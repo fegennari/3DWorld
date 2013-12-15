@@ -234,6 +234,15 @@ struct player_state { // size = big
 };
 
 
+struct teleporter : public sphere_t {
+
+	point dest;
+
+	void draw() const; // maybe should be static and applied to all teleporters
+	bool maybe_teleport_object(point &opos, float oradius) const;
+};
+
+
 // function prototypes
 bool check_step_dz(point &cur, point const &lpos, float radius);
 int find_optimal_next_waypoint(unsigned cur, wpt_goal const &goal);

@@ -221,6 +221,7 @@ void draw_stuff(int draw_uw, int timer1) {
 		if (TIMETEST) PRINT_TIME("O");
 		draw_hmv();
 		draw_scenery(0, 1);
+		draw_teleporters();
 		check_gl_error(21);
 		if (TIMETEST) PRINT_TIME("P");
 		draw_coll_surfaces(0, 1);

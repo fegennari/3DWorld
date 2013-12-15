@@ -40,6 +40,7 @@ point star_pts[2*N_STAR_POINTS];
 vector<user_waypt_t> user_waypoints;
 coll_obj_group fixed_cobjs;
 vector<portal> portals;
+vector<teleporter> teleporters;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
@@ -992,7 +993,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
 	
-	while (!end) { // available: ?
+	while (!end) { // available: guz HJKUVXZ
 		assert(fp != NULL);
 		char letter((char)getc(fp));
 		
@@ -1389,6 +1390,16 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				fscanf(fp, "%f%f%f", &p.normal.x, &p.normal.y, &p.normal.z); // optional/can fail
 				portals.push_back(p);
+			}
+			break;
+
+		case 'x': // teleporter sx sy sz  dx dy dz  radius
+			{
+				teleporter tp;
+				if (fscanf(fp, "%f%f%f%f%f%f%f", &tp.pos.x, &tp.pos.y, &tp.pos.z, &tp.dest.x, &tp.dest.y, &tp.dest.z, &tp.radius) != 7) {
+					return read_error(fp, "teleporter", coll_obj_file);
+				}
+				teleporters.push_back(tp);
 			}
 			break;
 

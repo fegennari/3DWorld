@@ -569,6 +569,8 @@ void free_smiley_textures();
 void clear_cached_waypoints();
 int get_ammo_or_obj(int wid);
 int wid_need_weapon(int wid);
+void draw_teleporters();
+bool maybe_teleport_object(point &opos, float oradius);
 
 // function prototypes - explosion
 void update_blasts();

@@ -19,6 +19,7 @@ extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern vector<spark_t> sparks;
 extern vector<beam3d> beams;
+extern vector<teleporter> teleporters;
 extern int coll_id[];
 extern blood_spot blood_spots[];
 extern player_state *sstates;
@@ -923,6 +924,30 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 	glDisable(GL_LINE_SMOOTH);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
+}
+
+
+// not sure where this belongs
+void draw_teleporters() {
+
+	for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
+		i->draw();
+	}
+}
+
+
+void teleporter::draw() const {
+
+	float const draw_radius(radius); // may be larger than radius
+	
+	if (camera_pdu.sphere_visible_test(pos, draw_radius)) { // draw pos
+		set_color(RED);
+		draw_sphere_vbo(pos, draw_radius, N_SPHERE_DIV, 0);
+	}
+	if (camera_pdu.sphere_visible_test(dest, draw_radius)) { // draw dest (temporary)
+		set_color(BLUE);
+		draw_sphere_vbo(dest, draw_radius, N_SPHERE_DIV, 0);
+	}
 }
 
 

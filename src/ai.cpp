@@ -39,6 +39,7 @@ extern player_state *sstates;
 extern team_info *teaminfo;
 extern vector<string> avail_smiley_names;
 extern waypoint_vector waypoints;
+extern vector<teleporter> teleporters;
 
 
 
@@ -1030,6 +1031,7 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	assert(obj.type == SMILEY);
 	assert(obj_groups[coll_id[SMILEY]].enabled);
 	if (!check_smiley_status(obj, smiley_id)) {fall_counter = 0; return;}
+	maybe_teleport_object(obj.pos, object_types[SMILEY].radius);
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
 	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}
@@ -1520,6 +1522,23 @@ float player_state::weapon_range(bool use_far_clip) const {
 void player_state::verify_wmode() {
 
 	if (weapon == W_GRENADE && (wmode&1) && p_ammo[weapon] < int(weapons[W_CGRENADE].def_ammo) && !UNLIMITED_WEAPONS) wmode = 0;
+}
+
+
+bool maybe_teleport_object(point &opos, float oradius) {
+
+	for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
+		if (i->maybe_teleport_object(opos, oradius)) return 1; // we don't support collisions with multiple teleporters at the same time
+	}
+	return 0;
+}
+
+
+bool teleporter::maybe_teleport_object(point &opos, float oradius) const {
+
+	if (!dist_less_than(pos, opos, radius+oradius)) return 0; // not close enough
+	opos += (dest - pos); // maintain relative distance from center (could also use opos = dest)
+	return 1;
 }
 
 
