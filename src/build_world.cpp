@@ -377,9 +377,8 @@ void process_groups() {
 				if (type == SNOW) obj.angle = rand_uniform(0.7, 1.3); // used as radius
 			}
 			if (precip) obj.update_precip_type();
-			point const old_pos(pos);
 			unsigned char const obj_flags(obj.flags);
-			int const status(obj.status);
+			int const orig_status(obj.status);
 			obj.flags &= ~PLATFORM_COLL;
 			++used_objs;
 			++num_objs;
@@ -396,6 +395,8 @@ void process_groups() {
 						obj.disable(); // plasma dies when it stops
 					}
 					else {
+						if (large_radius) {maybe_teleport_object(obj.pos, radius);} // teleport!
+						point const old_pos(pos); // after teleporting
 						unsigned spf(1);
 						int cindex(-1);
 
@@ -502,7 +503,7 @@ void process_groups() {
 				}
 				obj.add_obj_dynamic_light(j);
 			} // !obj.disabled()
-			if (!recreated && status != 0 && obj.status != 1 && obj.status != OBJ_STAT_RES) {
+			if (!recreated && orig_status != 0 && obj.status != 1 && obj.status != OBJ_STAT_RES) {
 				if ((precip || type == BLOOD || type == WDROPLET) && obj.status == 0) {
 					accumulate_object(pos, type, 1.0);
 				}

@@ -23,6 +23,8 @@ Weather/Physics UI
 
 Game mode weapon/scene clipping/collision
 TT shadow map for trees?
+Teleporters
+Grebade/sfpart colors?
 
 voxel_grid read/write
 gen_torus_section rand_gen_t
