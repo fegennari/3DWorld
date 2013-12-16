@@ -1031,7 +1031,7 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	assert(obj.type == SMILEY);
 	assert(obj_groups[coll_id[SMILEY]].enabled);
 	if (!check_smiley_status(obj, smiley_id)) {fall_counter = 0; return;}
-	maybe_teleport_object(obj.pos, object_types[SMILEY].radius);
+	if (maybe_teleport_object(obj.pos, object_types[SMILEY].radius)) {player_teleported(obj.pos, smiley_id);}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
 	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}

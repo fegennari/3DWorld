@@ -1469,8 +1469,11 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	int coll(0);
 	float const radius(CAMERA_RADIUS);
 	dwobject camera_obj(def_objects[CAMERA]); // make a fresh copy
-	if (maybe_teleport_object(pos, radius)) {camera_last_pos = pos;}
-
+	
+	if (maybe_teleport_object(pos, radius)) {
+		player_teleported(pos, CAMERA_ID);
+		camera_last_pos = pos;
+	}
 	if (!cflight) { // make sure camera is over simulation region
 		camera_in_air = 0;
 		player_clip_to_scene(pos);

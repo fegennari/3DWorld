@@ -88,20 +88,6 @@ public:
 };
 
 
-class volume_part_cloud {
-
-protected:
-	typedef vert_norm_comp vert_type_t;
-	vector<vert_type_t> points;
-
-public:
-	static colorRGBA gen_color(rand_gen_t &rgen);
-	void gen_pts(float radius);
-	static void shader_setup(shader_t &s, unsigned noise_ncomp);
-	void draw_quads() const;
-};
-
-
 struct ellipsoid_t {
 
 	float xy_angle;

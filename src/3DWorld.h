@@ -1199,6 +1199,23 @@ public:
 };
 
 
+class shader_t;
+
+
+class volume_part_cloud {
+
+protected:
+	typedef vert_norm_comp vert_type_t;
+	vector<vert_type_t> points;
+
+public:
+	static colorRGBA gen_color(rand_gen_t &rgen);
+	void gen_pts(float radius);
+	static void shader_setup(shader_t &s, unsigned noise_ncomp);
+	void draw_quads() const;
+};
+
+
 struct water_params_t {
 
 	float alpha, mud, bright, reflect, green;
@@ -1312,7 +1329,7 @@ enum {RAIN = 0, SNOW, HAIL, LEAF, BALL, S_BALL, SMILEY, BLOOD, CHARRED, CHUNK,
 	PROJC, DROPLET, WDROPLET, SAND, DIRT, ROCK, FRAGMENT, PARTICLE, HEALTH, SHIELD,
 	POWERUP, WEAPON, AMMO, WA_PACK, CAMERA, PRECIP, BLAST_RADIUS, PROJECTILE, BEAM, IMPACT,
 	PLASMA_LT_D, LASER, DROWNED, BURNED, FIRE, FELL, FROZEN, SUFFOCATED, CRUSHED, GASSED,
-	WAYPOINT, SMOKE, DYNAM_PART, SKULL, GRASS, NUM_TOT_OBJS};
+	WAYPOINT, SMOKE, DYNAM_PART, SKULL, GRASS, TELEPORTER, NUM_TOT_OBJS};
 
 // textures
 enum {GROUND_TEX = 0, DARK_ROCK_TEX, WATER_TEX, WATER2_TEX, CLOUD_TEX, SUN_TEX, MOON_TEX, EARTH_TEX, MARBLE_TEX, SNOW_TEX,
@@ -1372,7 +1389,6 @@ class  coll_obj_group;
 class  shape3d;
 struct lightning;
 struct color_tid_vol;
-class  shader_t;
 class  vert_coll_detector;
 struct cobj_query_callback;
 struct user_waypt_t;

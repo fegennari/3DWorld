@@ -199,7 +199,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 
 bool self_coll_invalid(int type, int obj_index) {
 
-	if (type == ROCKET || type == SEEK_D || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED) {
+	if (type == ROCKET || type == SEEK_D || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) {
 		return 1;
 	}
 	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL) &&
@@ -1368,10 +1368,9 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 }
 
 
-// fire and gas damage
-void do_area_effect_damage(point &pos, float effect_radius, float damage, int index, int source, int type) {
+// fire and gas damage and telefrags (Note: index is unused)
+void do_area_effect_damage(point const &pos, float effect_radius, float damage, int index, int source, int type) {
 
-	vector3d velocity(zero_vector);
 	float const radius(object_types[SMILEY].radius + effect_radius);
 	point camera_pos(get_camera_pos());
 	camera_pos.z -= 0.5*camera_zh; // average/center of camera
@@ -1381,7 +1380,7 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 		dist_to_fire_sq = ((dist_to_fire_sq == 0.0) ? dist_sq : min(dist_to_fire_sq, dist_sq));
 	}
 	if (!spectate && camera_mode == 1 && dist_less_than(pos, camera_pos, radius)) { // test the player
-		if (camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), velocity, pos, damage, type)) {
+		if (camera_collision(CAMERA_ID, ((source == NO_SOURCE) ? CAMERA_ID : source), zero_vector, pos, damage, type)) {
 			if (type == FIRE && camera_health > 0.0 && ((rand()&63) == 0)) {gen_sound(SOUND_AGONY, pos);} // skip if player has shielding and self damage?
 		}
 	}
@@ -1391,10 +1390,16 @@ void do_area_effect_damage(point &pos, float effect_radius, float damage, int in
 		for (unsigned i = 0; i < objg.end_id; ++i) {
 			if (!objg.get_obj(i).disabled() && dist_less_than(pos, objg.get_obj(i).pos, radius)) {
 				// test for objects blocking the damage effects?
-				smiley_collision(i, ((source == NO_SOURCE) ? i : source), velocity, pos, damage, type);
+				smiley_collision(i, ((source == NO_SOURCE) ? i : source), zero_vector, pos, damage, type);
 			}
 		}
 	}
+}
+
+
+void player_teleported(point const &pos, int player_id) { // check for telefrags
+
+	do_area_effect_damage(pos, object_types[SMILEY].radius, 10000, -1, player_id, TELEPORTER);
 }
 
 

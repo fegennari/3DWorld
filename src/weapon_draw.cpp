@@ -14,7 +14,7 @@ set<int> scheduled_weapons;
 extern bool keep_beams, have_indir_smoke_tex;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
 extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
-extern float fticks;
+extern float fticks, tfticks;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
 extern vector<spark_t> sparks;
@@ -930,23 +930,44 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 // not sure where this belongs
 void draw_teleporters() {
 
+	shader_t s;
+	teleporter::shader_setup(s, 4); // RGBA noise
+	s.enable();
+	s.add_uniform_float("noise_scale", 1.2);
+	s.add_uniform_color("color1i", RED);
+	s.add_uniform_color("color1o", RED);
+	s.add_uniform_color("color2i", GREEN);
+	s.add_uniform_color("color2o", GREEN);
+	s.add_uniform_color("color3i", BLUE);
+	s.add_uniform_color("color3o", BLUE);
+	WHITE.do_glColor();
+	enable_blend();
+
 	for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
-		i->draw();
+		i->draw(s);
 	}
+	disable_blend();
 }
 
 
-void teleporter::draw() const {
+void teleporter::draw(shader_t &s) const {
 
-	float const draw_radius(radius); // may be larger than radius
-	
+	float const draw_radius(get_draw_radius()); // larger than radius
+
 	if (camera_pdu.sphere_visible_test(pos, draw_radius)) { // draw pos
-		set_color(RED);
-		draw_sphere_vbo(pos, draw_radius, N_SPHERE_DIV, 0);
+		s.add_uniform_float("radius",  draw_radius);
+		s.add_uniform_float("offset",  (100.0*pos.x + 0.002*tfticks)); // used as a hash
+		s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
+		glPushMatrix();
+		translate_to(pos);
+		draw_quads();
+		glPopMatrix();
 	}
-	if (camera_pdu.sphere_visible_test(dest, draw_radius)) { // draw dest (temporary)
+	if (camera_pdu.sphere_visible_test(dest, radius)) { // draw dest (temporary)
+		s.disable();
 		set_color(BLUE);
-		draw_sphere_vbo(dest, draw_radius, N_SPHERE_DIV, 0);
+		draw_sphere_vbo(dest, radius, N_SPHERE_DIV, 0);
+		s.enable();
 	}
 }
 

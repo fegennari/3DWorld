@@ -234,11 +234,13 @@ struct player_state { // size = big
 };
 
 
-struct teleporter : public sphere_t {
+struct teleporter : public sphere_t, public volume_part_cloud {
 
 	point dest;
 
-	void draw() const; // maybe should be static and applied to all teleporters
+	float get_draw_radius() const {return 1.5*radius;}
+	void setup() {gen_pts(get_draw_radius());}
+	void draw(shader_t &s) const; // maybe should be static and applied to all teleporters
 	bool maybe_teleport_object(point &opos, float oradius) const;
 };
 

@@ -1402,6 +1402,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				xf.xform_pos(tp.pos);
 				xf.xform_pos(tp.dest);
+				tp.setup();
 				teleporters.push_back(tp);
 			}
 			break;
