@@ -338,8 +338,8 @@ public:
 			}
 		}
 		for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
-			cout << "TELEPORTER!" << endl;
-			add_if_valid(i->pos, -1, 0); // does this waypoint need any state to be set?
+			int const ix(add_if_valid(i->pos, -1, 0)); // does this waypoint need any state to be set?
+			//if (ix >= 0) {waypoints[ix].goal = 1;}
 		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
 	}

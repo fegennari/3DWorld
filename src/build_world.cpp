@@ -1400,6 +1400,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (fscanf(fp, "%f%f%f%f%f%f%f", &tp.pos.x, &tp.pos.y, &tp.pos.z, &tp.dest.x, &tp.dest.y, &tp.dest.z, &tp.radius) != 7) {
 					return read_error(fp, "teleporter", coll_obj_file);
 				}
+				xf.xform_pos(tp.pos);
+				xf.xform_pos(tp.dest);
 				teleporters.push_back(tp);
 			}
 			break;
