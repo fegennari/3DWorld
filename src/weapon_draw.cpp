@@ -936,8 +936,8 @@ void draw_teleporters() {
 	s.add_uniform_float("noise_scale", 1.2);
 	s.add_uniform_color("color1i", RED);
 	s.add_uniform_color("color1o", RED);
-	s.add_uniform_color("color2i", GREEN);
-	s.add_uniform_color("color2o", GREEN);
+	s.add_uniform_color("color2i", YELLOW);
+	s.add_uniform_color("color2o", YELLOW);
 	s.add_uniform_color("color3i", BLUE);
 	s.add_uniform_color("color3o", BLUE);
 	WHITE.do_glColor();
@@ -956,17 +956,22 @@ void teleporter::draw(shader_t &s) const {
 
 	if (camera_pdu.sphere_visible_test(pos, draw_radius)) { // draw pos
 		s.add_uniform_float("radius",  draw_radius);
-		s.add_uniform_float("offset",  (100.0*pos.x + 0.002*tfticks)); // used as a hash
+		s.add_uniform_float("offset",  (100.0*pos.x + 0.001*tfticks)); // used as a hash
 		s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
 		glPushMatrix();
 		translate_to(pos);
 		draw_quads();
 		glPopMatrix();
+
+		s.disable();
+		set_color(colorRGBA(1.0, 1.0, 1.0, 0.1));
+		draw_sphere_vbo_back_to_front(pos, draw_radius, N_SPHERE_DIV, 0);
+		s.enable();
 	}
-	if (camera_pdu.sphere_visible_test(dest, radius)) { // draw dest (temporary)
+	if ((display_mode & 0x10) && camera_pdu.sphere_visible_test(dest, 0.25*radius)) { // draw dest (debugging)
 		s.disable();
 		set_color(BLUE);
-		draw_sphere_vbo(dest, radius, N_SPHERE_DIV, 0);
+		draw_sphere_vbo(dest, 0.25*radius, N_SPHERE_DIV, 0);
 		s.enable();
 	}
 }
