@@ -27,7 +27,10 @@ Teleporters:
  - Sound
  - Teleport effects (at appearance spot)
  - User-placed with a weapon (translocator?)
-Grenade/sfpart colors?
+Starbase texture
+Burning smiley/skull/cobj texture
+More explosion sparks
 
 voxel_grid read/write
 gen_torus_section rand_gen_t
+Cleanup perf/stats printouts

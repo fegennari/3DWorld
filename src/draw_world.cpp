@@ -108,7 +108,8 @@ void set_color_alpha(colorRGBA color, float alpha) {
 	color.alpha *= alpha;
 	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor(); // sets alpha component
 	set_color_a(BLACK);
-	set_color_d(color);
+	// FIXME: replace black with near black to fix a color setting bug that sometimes leaves the object as white when black is specified
+	set_color_d((color == BLACK) ? colorRGBA(0.001, 0.001, 0.001, color.alpha) : color);
 }
 
 
