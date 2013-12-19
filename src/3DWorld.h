@@ -158,7 +158,7 @@ int const WATER_CLIP_PLANE  = GL_CLIP_PLANE0;
 #define UNROLL_4X(expr) {UNROLL_3X(expr) {unsigned const i_(3); expr}}
 
 
-enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER};
+enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER, CAM_FILT_TELEPORT};
 
 
 template<typename T> struct point2d { // size = 8
@@ -1094,11 +1094,12 @@ public:
 struct camera_filter {
 
 	int tid;
-	unsigned time;
+	unsigned time, init_time; // in ticks
+	bool fades;
 	colorRGBA color;
 
 	camera_filter() : time(0) {}
-	camera_filter(colorRGBA const &c, unsigned t, int tid_) : tid(tid_), time(t), color(c) {}
+	camera_filter(colorRGBA const &c, unsigned t, int tid_, bool fades_) : tid(tid_), time(t), init_time(t), color(c), fades(fades_) {}
 	void draw();
 };
 

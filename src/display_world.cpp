@@ -227,10 +227,10 @@ void draw_stuff(int draw_uw, int timer1) {
 		draw_coll_surfaces(0, 1);
 		check_gl_error(22);
 		if (TIMETEST) PRINT_TIME("Q");
-		render_models(0);
+		render_models(0); // FIXME: should be earlier?
 		check_gl_error(24);
 		if (TIMETEST) PRINT_TIME("R");
-		render_voxel_data(0);
+		render_voxel_data(0); // FIXME: should be earlier?
 		check_gl_error(25);
 		if (TIMETEST) PRINT_TIME("S");
 		draw_cracks_and_decals();
@@ -560,7 +560,7 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 		if (reflection_mode) {glGetFloatv(GL_FOG_COLOR, (float *)&color);} // make the sky reflection in the background blend with the fog in the foreground
 		color.alpha *= 0.75*atmosphere*min(1.0, (light_factor - 0.4)/0.2);
 		vector<camera_filter> cfs;
-		cfs.push_back(camera_filter(color, 1, -1));
+		cfs.push_back(camera_filter(color, 1, -1, 0));
 		draw_camera_filters(cfs);
 	}
 	do_look_at();

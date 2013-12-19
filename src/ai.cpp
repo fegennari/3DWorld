@@ -7,6 +7,7 @@
 #include "player_state.h"
 #include "physics_objects.h"
 #include "textures_3dw.h"
+#include "openal_wrap.h"
 
 
 bool const NO_SMILEY_ACTION       = 0;
@@ -1031,7 +1032,7 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	assert(obj.type == SMILEY);
 	assert(obj_groups[coll_id[SMILEY]].enabled);
 	if (!check_smiley_status(obj, smiley_id)) {fall_counter = 0; return;}
-	if (maybe_teleport_object(obj.pos, object_types[SMILEY].radius)) {player_teleported(obj.pos, smiley_id);}
+	if (maybe_teleport_object(obj.pos, object_types[SMILEY].radius, 1)) {player_teleported(obj.pos, smiley_id);}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
 	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}
@@ -1525,19 +1526,23 @@ void player_state::verify_wmode() {
 }
 
 
-bool maybe_teleport_object(point &opos, float oradius) {
+bool maybe_teleport_object(point &opos, float oradius, bool is_player) {
 
-	for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
-		if (i->maybe_teleport_object(opos, oradius)) return 1; // we don't support collisions with multiple teleporters at the same time
+	for (vector<teleporter>::iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
+		if (i->maybe_teleport_object(opos, oradius, is_player)) return 1; // we don't support collisions with multiple teleporters at the same time
 	}
 	return 0;
 }
 
 
-bool teleporter::maybe_teleport_object(point &opos, float oradius) const {
+bool teleporter::maybe_teleport_object(point &opos, float oradius, bool is_player) {
 
 	if (!dist_less_than(pos, opos, radius+oradius)) return 0; // not close enough
+	float const gain(is_player ? 1.0 : 0.1), pitch(is_player ? 0.6 : 2.0);
+	gen_sound(SOUND_POWERUP, opos, gain, pitch); // FIXME: different sound
 	opos += (dest - pos); // maintain relative distance from center (could also use opos = dest)
+	gen_sound(SOUND_POWERUP, opos, gain, pitch); // FIXME: different sound
+	last_used_tfticks = tfticks;
 	return 1;
 }
 

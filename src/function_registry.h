@@ -140,7 +140,7 @@ void draw_water_plane(float zval, unsigned reflection_tid);
 void draw_bubbles();
 void draw_cracks_and_decals();
 void draw_smoke_and_fires();
-void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix);
+void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix, bool fades=0);
 void draw_camera_filters(vector<camera_filter> &cfs);
 void draw_projectile_effects();
 void draw_env_other();
@@ -570,7 +570,7 @@ void clear_cached_waypoints();
 int get_ammo_or_obj(int wid);
 int wid_need_weapon(int wid);
 void draw_teleporters();
-bool maybe_teleport_object(point &opos, float oradius);
+bool maybe_teleport_object(point &opos, float oradius, bool is_player);
 void player_teleported(point const &pos, int player_id);
 
 // function prototypes - explosion

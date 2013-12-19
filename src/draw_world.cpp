@@ -1181,12 +1181,12 @@ void draw_smoke_and_fires() {
 }
 
 
-void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix) {
-
+void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix, bool fades) {
+	
 	assert(ix < MAX_CFILTERS);
 	if (color.alpha == 0.0) return;
 	if (cfilters.size() <= ix) cfilters.resize(ix+1);
-	cfilters[ix] = camera_filter(color, time, tid);
+	cfilters[ix] = camera_filter(color, time, tid, fades);
 }
 
 
@@ -1195,7 +1195,9 @@ void camera_filter::draw() {
 	if (tid >= 0) select_texture(tid);
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(0.5*zval*tan_val), x((y*window_width)/window_height);
-	color.do_glColor();
+	colorRGBA cur_color(color);
+	if (fades) {cur_color.alpha *= float(time)/float(init_time);}
+	cur_color.do_glColor();
 	draw_tquad(x, y, zval);
 	if (tid >= 0) glDisable(GL_TEXTURE_2D);
 }

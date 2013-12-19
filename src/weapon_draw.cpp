@@ -934,12 +934,6 @@ void draw_teleporters() {
 	teleporter::shader_setup(s, 4); // RGBA noise
 	s.enable();
 	s.add_uniform_float("noise_scale", 1.2);
-	s.add_uniform_color("color1i", RED);
-	s.add_uniform_color("color1o", RED);
-	s.add_uniform_color("color2i", YELLOW);
-	s.add_uniform_color("color2o", YELLOW);
-	s.add_uniform_color("color3i", BLUE);
-	s.add_uniform_color("color3o", BLUE);
 	WHITE.do_glColor();
 	enable_blend();
 
@@ -952,21 +946,41 @@ void draw_teleporters() {
 
 void teleporter::draw(shader_t &s) const {
 
-	float const draw_radius(get_draw_radius()); // larger than radius
+	float const ACTIVATE_DELAY = 1.0; // in seconds
+	float const use_scale(CLIP_TO_01(ACTIVATE_DELAY - (tfticks - last_used_tfticks)/TICKS_PER_SECOND));
+	float const draw_radius(get_draw_radius()), light_radius(8.0*draw_radius), use_light_radius(2.0*use_scale*light_radius);
+	colorRGBA const c1(blend_color(YELLOW,  RED,    use_scale, 0));
+	colorRGBA const c2(blend_color(WHITE,   YELLOW, use_scale, 0));
+	colorRGBA const c3(blend_color(LT_BLUE, BLUE,   use_scale, 0));
 
+	if (use_scale > 0.0 && camera_pdu.sphere_visible_test(pos, use_light_radius)) {
+		add_dynamic_light(use_light_radius, pos, LT_BLUE);
+	}
+	if (game_mode && begin_motion && camera_pdu.sphere_visible_test(pos, light_radius)) {
+		colorRGBA const lt_color(blend_color(blend_color(c1, c2, fabs(sin(0.05*tfticks)), 0), c3, fabs(cos(0.07*tfticks)), 0));
+		add_dynamic_light(light_radius, pos, lt_color);
+	}
 	if (camera_pdu.sphere_visible_test(pos, draw_radius)) { // draw pos
-		s.add_uniform_float("radius",  draw_radius);
-		s.add_uniform_float("offset",  (100.0*pos.x + 0.001*tfticks)); // used as a hash
+		s.add_uniform_color("color1i", c1);
+		s.add_uniform_color("color1o", c1);
+		s.add_uniform_color("color2i", c2);
+		s.add_uniform_color("color2o", c2);
+		s.add_uniform_color("color3i", c3);
+		s.add_uniform_color("color3o", c3);
+		s.add_uniform_float("radius", draw_radius);
+		s.add_uniform_float("offset", (100.0*pos.x + 0.001*tfticks)); // used as a hash
 		s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
 		glPushMatrix();
 		translate_to(pos);
 		draw_quads();
 		glPopMatrix();
 
-		s.disable();
-		set_color(colorRGBA(1.0, 1.0, 1.0, 0.1));
-		draw_sphere_vbo_back_to_front(pos, draw_radius, N_SPHERE_DIV, 0);
-		s.enable();
+		if (use_scale > 0.9) {
+			s.disable();
+			set_color(colorRGBA(1.0, 1.0, 1.0, 0.5*(use_scale - 0.9)));
+			draw_sphere_vbo_back_to_front(pos, draw_radius, N_SPHERE_DIV, 0); // FIXME: use random dissolve texture like exploding starbase
+			s.enable();
+		}
 	}
 	if ((display_mode & 0x10) && camera_pdu.sphere_visible_test(dest, 0.25*radius)) { // draw dest (debugging)
 		s.disable();

@@ -395,7 +395,7 @@ void process_groups() {
 						obj.disable(); // plasma dies when it stops
 					}
 					else {
-						if (large_radius) {maybe_teleport_object(obj.pos, radius);} // teleport!
+						if (large_radius) {maybe_teleport_object(obj.pos, radius, 0);} // teleport!
 						point const old_pos(pos); // after teleporting
 						unsigned spf(1);
 						int cindex(-1);
