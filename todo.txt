@@ -31,4 +31,3 @@ Laser in smoke
 
 voxel_grid read/write
 gen_torus_section rand_gen_t
-Cleanup perf/stats printouts

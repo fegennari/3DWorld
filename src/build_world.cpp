@@ -610,8 +610,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		create_waypoints(user_waypoints);
 		PRINT_TIME("Waypoint Creation");
 	}
-	reanimate_objects(); // allow stationary/stuck objects to move about the new terrain
-	PRINT_TIME("Object reanimation");
+	reanimate_objects(); // allow stationary/stuck objects to move about the new terrain (fast so no timing)
 
 	unsigned char sflags(0);
 	float const lf(fabs(sun_rot/PI - 1.0)); // light_factor

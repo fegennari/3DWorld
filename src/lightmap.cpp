@@ -393,12 +393,10 @@ template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, 
 
 void lmap_manager_t::init_from(lmap_manager_t const &src) {
 
-	//RESET_TIME;
 	//assert(!is_allocated());
 	//clear_cells(); // probably unnecessary
 	alloc(src.vldata_alloc.size(), src.lm_zsize, src.vlmap);
 	copy_data(src);
-	//PRINT_TIME("lmap_manager_t::init_from");
 }
 
 
@@ -669,7 +667,6 @@ void build_lightmap(bool verbose) {
 	if (!ldynamic) matrix_gen_2d(ldynamic, MESH_X_SIZE, MESH_Y_SIZE);
 	if (MESH_Z_SIZE == 0) return;
 
-	if (verbose) cout << "Building lightmap" << endl;
 	RESET_TIME;
 	unsigned nonempty(0);
 	unsigned char **need_lmcell = NULL;
@@ -716,7 +713,7 @@ void build_lightmap(bool verbose) {
 	unsigned const nbins(nonempty*zsize);
 	MESH_SIZE[2] = zsize; // override MESH_SIZE[2]
 	float const zstep(czspan/zsize), scene_scale(MESH_X_SIZE/128.0);
-	if (verbose) cout << "zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;
+	if (verbose) {cout << "Lightmap zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;}
 	assert(zstep > 0.0);
 	float const z_atten(1.0 - (1.0 - Z_LT_ATTEN)/scene_scale), xy_atten(1.0 - (1.0 - XY_LT_ATTEN)/scene_scale);
 	lmap_manager.alloc(nbins, zsize, need_lmcell);
@@ -725,7 +722,6 @@ void build_lightmap(bool verbose) {
 	lm_alloc       = 1;
 	int **z_light_depth = NULL;
 	matrix_gen_2d(z_light_depth);
-	if (verbose) PRINT_TIME(" Lighting Setup");
 	bool raytrace_lights[3];
 	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
 	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL] || create_voxel_landscape);
@@ -740,7 +736,6 @@ void build_lightmap(bool verbose) {
 			calc_flow_for_xy(flow_prof, z_light_depth, i, j, proc_cobjs, !has_indir_lighting, zstep, z_atten, light_off);
 		} // for j
 	} // for i
-	if (verbose) PRINT_TIME(" Lighting Z + Flow");
 	int const bnds[2][2] = {{0, MESH_X_SIZE-1}, {0, MESH_Y_SIZE-1}};
 	float const fbnds[2] = {(X_SCENE_SIZE - TOLER), (Y_SCENE_SIZE - TOLER)};
 	int counter(0);
@@ -840,7 +835,6 @@ void build_lightmap(bool verbose) {
 		} // for dim
 		pass_weight *= PASS_WEIGHT_ATT;
 	} // for pass
-	if (verbose) PRINT_TIME(" Lighting XY");
 
 	// add in static light sources
 	if (!raytrace_lights[LIGHTING_LOCAL]) {
@@ -889,7 +883,6 @@ void build_lightmap(bool verbose) {
 				} // for x
 			} // for y
 		} // for i
-		if (verbose) PRINT_TIME(" Light Source Addition");
 	}
 
 	// smoothing passes
@@ -931,8 +924,8 @@ void build_lightmap(bool verbose) {
 				} // for j
 			} // for i
 		} // for n
-		if (verbose) PRINT_TIME(" Lighting Smooth");
 	} // if LIGHT_SPREAD
+	if (verbose) PRINT_TIME(" Lighting Setup + XYZ Passes");
 
 	if (nbins > 0) {
 		// Note: sky and global lighting use the same data structure for reading/writing, so they should have the same filename if used together
@@ -941,14 +934,14 @@ void build_lightmap(bool verbose) {
 		for (unsigned ltype = 0; ltype < NUM_LIGHTING_TYPES; ++ltype) {
 			if (raytrace_lights[ltype]) {
 				compute_ray_trace_lighting(ltype);
-				if (verbose) {PRINT_TIME((type_names[ltype] + " Lightmap Ray Trace").c_str());}
+				if (verbose) {PRINT_TIME((type_names[ltype] + " Lighting Load/Ray Trace").c_str());}
 			}
 		}
 	}
 	reset_cobj_counters();
 	matrix_delete_2d(z_light_depth);
 	matrix_delete_2d(need_lmcell);
-	PRINT_TIME(" Lighting");
+	PRINT_TIME(" Lighting Total");
 }
 
 

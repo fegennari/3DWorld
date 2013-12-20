@@ -335,7 +335,7 @@ void free_textures() {
 
 void reset_textures() {
 
-	cout << "Freeing textures..." << endl;
+	cout << "Freeing textures..." << endl; // only print if something was loaded?
 	free_textures();
 	free_smiley_textures(); // should this be guarded by a conditional?
 	free_universe_textures();
@@ -1240,7 +1240,6 @@ void create_landscape_texture() {
 	unsigned char *tex_data(tex.get_data());
 	assert(tex.ncolors == 3);
 	static int tox(0), toy(0);
-	if (!scrolling) cout << "Generating landscape terrain texture." << endl;
 
 	if (scrolling) { // ensure texture alignment when scrolling
 		tox0 = (dx_scroll*width) /MESH_X_SIZE;
@@ -1367,15 +1366,12 @@ void create_landscape_texture() {
 			}
 		} // for j
 	} // for i
-	PRINT_TIME(" Data Gen");
-
 	if (!using_custom_landscape_texture()) {
 		if (landscape0 == NULL || !scroll) { // initialize/copy entire texture
 			int const totsize(tex.num_bytes());
 			if (landscape0 == NULL) landscape0 = new unsigned char[totsize];
 			memcpy(landscape0, tex_data, totsize*sizeof(unsigned char));
 			ls0_invalid = 0;
-			PRINT_TIME(" Landscape0 Gen");
 		}
 		else if (lchanged0) { // create landscape0
 			for (int i = i0; i != i1; i += di) {
@@ -1391,7 +1387,6 @@ void create_landscape_texture() {
 				}
 			}
 			ls0_invalid = 0;
-			PRINT_TIME(" Landscape0 Copy");
 		}
 		else { // delay creation of landscape0 until it's needed
 			ls0_invalid = 1;
@@ -1405,7 +1400,7 @@ void create_landscape_texture() {
 		tex.gl_delete(); // should we try to update rather than recreating from scratch?
 		tex.do_gl_init();
 	}
-	PRINT_TIME(" Final");
+	PRINT_TIME(" Gen Landscape Texture");
 }
 
 

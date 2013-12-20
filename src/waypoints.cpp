@@ -498,7 +498,10 @@ public:
 				if (next[j] >= to_start && next[j] < to_end) waypoints[next[j]].prev_wpts.push_back(i);
 			}
 		}
-		if (verbose) cout << "vis edges: " << visible << ", cand edges: " << cand_edges << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
+		if (verbose) {
+			cout << "Waypoints: " << waypoints.size() << ", vis edges: " << visible << ", cand edges: " << cand_edges
+				 << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
+		}
 #if 0
 		RESET_TIME; // performance test
 		for (unsigned iter = 0; iter < 10; ++iter) {
@@ -747,7 +750,6 @@ void create_waypoints(vector<user_waypt_t> const &user_waypoints) {
 	}
 	wb.connect_all_waypoints();
 	PRINT_TIME("  Waypoint Connectivity");
-	cout << "Waypoints: " << waypoints.size() << endl;
 }
 
 

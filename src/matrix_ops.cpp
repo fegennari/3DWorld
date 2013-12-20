@@ -90,7 +90,6 @@ void set_scene_constants() {
 // This file is mostly preprocessing.
 void alloc_matrices() { // called at the beginning of main()
 
-	RESET_TIME;
 	assert(!matrix_alloced && MESH_Y_SIZE >= 4 && MESH_Y_SIZE <= 4096 && MESH_X_SIZE >= 4 && MESH_X_SIZE <= 4096);
 	assert(X_SCENE_SIZE > 0.0 && Y_SCENE_SIZE > 0.0 && Z_SCENE_SIZE > 0.0);
 	cout << "mesh = " << MESH_X_SIZE << "x" << MESH_Y_SIZE << ", scene = " << X_SCENE_SIZE << "x" << Y_SCENE_SIZE << endl;
@@ -118,13 +117,11 @@ void alloc_matrices() { // called at the beginning of main()
 	matrix_gen_3d(shadow_mask,   NUM_LIGHT_SRC);
 	matrix_gen_2d(wat_surf_normals, MESH_X_SIZE, 2); // only two rows
 	matrix_alloced = 1;
-	PRINT_TIME("matrix alloc");
 }
 
 
 void delete_matrices() { // called at the end of main()
 
-	RESET_TIME;
 	if (!matrix_alloced) return;
 	matrix_delete_2d(watershed_matrix);
 	matrix_delete_2d(wminside);
@@ -146,7 +143,6 @@ void delete_matrices() { // called at the end of main()
 	matrix_delete_3d(volume_matrix, MESH_Z_SIZE);
 	matrix_delete_3d(shadow_mask,   NUM_LIGHT_SRC);
 	matrix_alloced = 0;
-	PRINT_TIME("matrix delete");
 }
 
 
