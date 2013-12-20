@@ -1519,7 +1519,7 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 void add_laser_beam(beam3d const &beam) {
 
 	beams.push_back(beam);
-	if (LASER_PATH_LIGHT) add_line_light(beam.pts[0], beam.pts[1], RED, 0.4, min(1.0f, sqrt(beam.intensity)));
+	if (LASER_PATH_LIGHT) {add_line_light(beam.pts[0], beam.pts[1], RED, 0.4, min(1.0f, sqrt(beam.intensity)));}
 }
 
 
@@ -1617,6 +1617,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			if (underwater) firing_error += UWATER_FERR_ADD;
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
 			create_shell_casing(fpos, dir, shooter, radius, 0);
+			beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0)); // generate bullet light trail
 			return 1;
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
@@ -1662,6 +1663,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
 			beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
 			add_laser_beam(beam); // might not need to actually add laser itself for camera/player
+			// FIXME: check for smoke along laser beam path and add glow halo
 		}
 		break;
 

@@ -28,7 +28,6 @@ Teleporters:
 Starbase texture
 Burning smiley/skull/cobj texture
 Laser in smoke
-M16 Bullet lines
 
 voxel_grid read/write
 gen_torus_section rand_gen_t
