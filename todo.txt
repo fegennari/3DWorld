@@ -27,7 +27,6 @@ Teleporters:
  - User-placed with a weapon (translocator?)
 Starbase texture
 Burning smiley/skull/cobj texture
-More explosion sparks
 Laser in smoke
 M16 Bullet lines
 

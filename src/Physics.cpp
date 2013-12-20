@@ -1452,7 +1452,7 @@ void fire::apply_physics(unsigned i) {
 			radius -= 0.017;
 		}
 	} // !is_static
-	if (animate2 && damage > 0.005 && (rand()%int(0.8/damage)) == 0) gen_particles(pos, 1);
+	if (animate2 && damage > 0.005 && (rand()%max(1, int(0.5/damage))) == 0) {gen_particles(pos, 1);}
 }
 
 

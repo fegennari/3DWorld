@@ -1249,7 +1249,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}
 	draw_sphere_vbo(pos, size*radius, ndiv, 1);
 	disable_texgen();
-	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) gen_particles(part_pos, 1);
+	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) {gen_particles(part_pos, 1);}
 }
 
 
@@ -1307,7 +1307,7 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	float const size(radius*rand_uniform(0.5, 0.7));
 	sparks.push_back(spark_t(spos, scolor, size));
 	add_dynamic_light(0.15, spos, scolor); // out of sync by a frame?
-	if (!in_ammo && (rand()&15) == 0) gen_particles(spos, 1, 0.5, 1);
+	if (!in_ammo && (rand()&15) == 0) {gen_particles(spos, 1, 0.5, 1);}
 }
 
 
