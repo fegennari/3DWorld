@@ -740,6 +740,8 @@ void draw_sky(int order) {
 	select_texture(CLOUD_TEX);
 
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
+	bool const depth_clamp_enabled(glIsEnabled(GL_DEPTH_CLAMP) != 0);
+	if (depth_clamp_enabled) {glDisable(GL_DEPTH_CLAMP);}
 	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius)); // GL_EYE_LINEAR
 	set_color_a(cloud_color);
 	set_color_d(cloud_color); // disable lighting (BLACK)?
@@ -747,6 +749,7 @@ void draw_sky(int order) {
 	disable_textures_texgen(); // reset S and T parameters
 	disable_blend();
 	glDisable(light);
+	if (depth_clamp_enabled) {glEnable(GL_DEPTH_CLAMP);}
 }
 
 

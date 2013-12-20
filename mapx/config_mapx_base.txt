@@ -16,6 +16,7 @@ disable_scenery 1
 read_landscape 0
 read_heightmap 0
 start_maximized 1
+enable_depth_clamp 1
 
 gravity 1.0
 temperature 10.0

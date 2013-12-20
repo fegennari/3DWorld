@@ -14,22 +14,22 @@ Remove usage of gl_TexCoord from shaders and replace with a varying variable
 Replace GL matrix operations with something else (GLM?)
 
 Berries on plants
-TT underwater dirt/vegetation, seaweed in/on water
 User-placed trees
 
 TT Normal Map(s)
+Normal map self shadowing
 Weather/Physics UI
   - key to switch UI modes
 
-Game mode weapon/scene clipping/collision
 TT shadow map for trees?
 Teleporters:
- - Sound
  - Teleport effects (at appearance spot)
  - User-placed with a weapon (translocator?)
 Starbase texture
 Burning smiley/skull/cobj texture
 More explosion sparks
+Laser in smoke
+M16 Bullet lines
 
 voxel_grid read/write
 gen_torus_section rand_gen_t

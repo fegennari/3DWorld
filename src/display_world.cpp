@@ -40,7 +40,7 @@ float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp;
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
@@ -785,6 +785,7 @@ void display(void) {
 	setup_sphere_vbos();
 	check_gl_error(2);
 	update_sound_loops();
+	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} else {glDisable(GL_DEPTH_CLAMP);}
 
 	if (world_mode == WMODE_UNIVERSE) {
 		display_universe(); // infinite universe
