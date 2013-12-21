@@ -18,6 +18,8 @@ vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in i
 	return calc_spec_term(max(dot(normal, half_vect), 0.0), i);
 }
 
+vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later
+
 // Note: eye space point light computation with no attenuation, or use vec3(0.0) for directional
 vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale)
 {
@@ -27,6 +29,7 @@ vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float 
 
 #ifdef USE_BUMP_MAP
 	float atten = length(normal); // multiply by length of eye norm to account for shadow map attenuation
+	atten *= clamp(5.0*dot(normal/atten, light_dir), 0.0, 1.0); // fix self-shadowing
 	normal = atten*apply_bump_map(light_dir, eye_pos);
 #endif
 

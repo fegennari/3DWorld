@@ -44,6 +44,7 @@ vec3 add_light0(in vec3 n) {
 	vec3 eye_pos   = epos.xyz;
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - eye_pos);
 #ifdef USE_BUMP_MAP
+	nscale *= clamp(5.0*dot(n, light_dir), 0.0, 1.0); // fix self-shadowing
 	vec3 lnormal = nscale*apply_bump_map(light_dir, eye_pos);
 #else
 	vec3 lnormal = nscale*n;

@@ -17,7 +17,6 @@ Berries on plants
 User-placed trees
 
 TT Normal Map(s)
-Normal map self shadowing
 Weather/Physics UI
   - key to switch UI modes
 
@@ -28,6 +27,7 @@ Teleporters:
 Starbase texture
 Burning smiley/skull/cobj texture
 Laser in smoke
+Cloud Puffs use noise texture instead of blur texture
 
 voxel_grid read/write
 gen_torus_section rand_gen_t
