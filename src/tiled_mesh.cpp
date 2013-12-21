@@ -1539,16 +1539,18 @@ void set_tile_xy_vals(shader_t &s) {
 }
 
 
-// uses texture units 0-10
+// uses texture units 0-11
 void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
+	bool const use_normal_map((display_mode & 0x10) != 0);
 	//bool const use_hmap_tex((display_mode & 0x10) != 0);
 	//if (use_hmap_tex  ) {s.set_prefix("#define USE_HEIGHT_TEX", 0);} // VS
 	if (has_water     ) {s.set_prefix("#define HAS_WATER", 1);} // FS
 	if (water_caustics) {s.set_prefix("#define WATER_CAUSTICS", 1);} // FS
+	if (use_normal_map) {s.set_prefix("#define USE_NORMAL_MAP", 1);} // FS
 	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
 	s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
@@ -1566,6 +1568,10 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 		set_tile_xy_vals(s);
 		s.add_uniform_int("height_tex", 11);
 	}*/
+	if (use_normal_map) {
+		select_multitex(ROCK_NORMAL_TEX, 11, 0, 1);
+		s.add_uniform_int("detail_normal_tex", 11);
+	}
 	if (has_water) {
 		set_water_plane_uniforms(s);
 		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
@@ -1839,10 +1845,8 @@ void tile_draw_t::draw_water(shader_t &s, float zval) const {
 
 void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
 
-	set_active_texture(tu_id);
-	select_texture(DITHER_NOISE_TEX, 0);
+	select_multitex(DITHER_NOISE_TEX, tu_id, 0, 1);
 	s.add_uniform_int("noise_tex", tu_id);
-	set_active_texture(0);
 }
 
 void tile_draw_t::set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {

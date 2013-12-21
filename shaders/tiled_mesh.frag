@@ -1,4 +1,4 @@
-uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, noise_tex, caustic_tex;
+uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, noise_tex, caustic_tex, detail_normal_tex;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
 uniform float water_plane_z, cloud_plane_z, wave_time, wave_amplitude;
@@ -27,12 +27,27 @@ vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in f
 	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0), shininess);
 }
 
+vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal) {
+	// FIXME: optimize
+	vec3 tangent = normalize(cross((gl_ModelViewMatrix * vec4(1,0,0,1)).xyz, normal));
+	vec3 binorm  = normalize(cross(normal, tangent));
+	mat3 TBN     = transpose(mat3(tangent, binorm, normalize(normal))); // {Y, X, Z} for normal in +Z
+	light_dir = TBN * light_dir;
+	eye_pos   = TBN * eye_pos;
+	vec2 dnt_tc = 0.25*gl_TexCoord[1].st; // scaled detail texture tc
+	return (2.0*texture2D(detail_normal_tex, dnt_tc).rgb - 1.0);
+}
+
 vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
-	vec3 lightDir = normalize(gl_LightSource[i].position.xyz);
+	vec3 light_dir = normalize(gl_LightSource[i].position.xyz);
+#ifdef USE_NORMAL_MAP
+	ds_scale *= clamp(5.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
+	normal    = apply_bump_map(light_dir, epos, normal);
+#endif
 		
 	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex
-	float NdotL = dot(normal, lightDir);
+	float NdotL = dot(normal, light_dir);
 	vec4 light  = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
 
 	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) {
@@ -42,8 +57,8 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	}
 	
 	// compute the ambient and diffuse lighting
-	vec4 color = a_scale*gl_LightSource[i].ambient + ds_scale*max(dot(normal, lightDir), 0.0)*gl_LightSource[i].diffuse;
-	if (enable_light0) {color += get_light_specular(normal, lightDir, epos.xyz, ds_scale*spec, shininess);}
+	vec4 color = a_scale*gl_LightSource[i].ambient + ds_scale*max(dot(normal, light_dir), 0.0)*gl_LightSource[i].diffuse;
+	if (enable_light0) {color += get_light_specular(normal, light_dir, epos.xyz, ds_scale*spec, shininess);}
 	
 #ifdef HAS_WATER
 	if (vertex.z < water_plane_z) { // underwater
