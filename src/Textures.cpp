@@ -124,7 +124,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
 // bark
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg", 0, 0, 4.0), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg"), // 892x892
 texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png"), // 1024x768
 // normal/caustic maps
@@ -148,7 +148,7 @@ texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_diffuse.jpg"), // 256x2
 texture_t(0, 5, 0,    0,    0, 1, 0, "bullet_hole/bullet_alpha.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_normal.jpg"), // 256x256
 
-texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg")
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 0, 4.0)
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y [do_compress [anisotropy [mipmap_alpha_weight]]]]
 };

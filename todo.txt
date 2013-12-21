@@ -3,7 +3,6 @@ Multiple decid tree impostor orients
 Support for cube map textures (planets, etc.)
 More grass/plant types: Yellow and white flowers
 Hardware tessellation
-Use assimp?
 Vertex Array Objects
 
 Remove deprecated OpenGL calls:
@@ -17,6 +16,8 @@ Berries on plants
 User-placed trees
 
 TT Normal Map(s)
+ - High slopes
+
 Weather/Physics UI
   - key to switch UI modes
 
@@ -28,6 +29,4 @@ Starbase texture
 Burning smiley/skull/cobj texture
 Laser in smoke
 Cloud Puffs use noise texture instead of blur texture
-
-voxel_grid read/write
-gen_torus_section rand_gen_t
+gen_torus_section rand_gen_t - requires gaussian rand support

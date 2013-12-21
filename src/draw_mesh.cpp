@@ -308,9 +308,9 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty);
 
-	if (use_detail_tex) { // blend in detail nose texture at 30x scale
+	if (use_detail_tex) { // blend in detail nose texture at 32x scale
 		select_multitex(mesh_detail_tex, 1, 0, 0);
-		setup_texgen(30.0*tex_scale/TWO_XSS, 30.0*tex_scale/TWO_YSS, 0.0, 0.0);
+		setup_texgen(32.0*tex_scale/TWO_XSS, 32.0*tex_scale/TWO_YSS, 0.0, 0.0);
 		set_active_texture(0);
 	}
 }
