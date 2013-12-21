@@ -78,7 +78,7 @@ void main()
 
 #ifdef HAS_CRATERS
 	// facing the sun or planet (reflected light), and not over water (blue)
-	if ((lscale0 > 0.0 || lscale2 > 0.0) && (texel.b - texel.r - texel.g) < 0.0) {
+	if ((lscale0 > 0.0 || lscale2 > 0.0) && (texel.b - texel.r - texel.g) < 0.0) { // smoother transition?
 		adjust_normal_for_craters(norm, vertex); // add craters by modifying the normal
 	}
 #endif
