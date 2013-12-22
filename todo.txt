@@ -14,16 +14,14 @@ Replace GL matrix operations with something else (GLM?)
 
 Berries on plants
 User-placed trees
+Laser in smoke
 Tiled terrain texture coords on high slopes
 
 Weather/Physics UI
   - key to switch UI modes
 
-Teleporters:
- - Teleport effects (at appearance spot)
- - User-placed with a weapon (translocator?)
+User-placed teleporter weapon (translocator?)
 Starbase texture
 Burning smiley/skull/cobj texture
-Laser in smoke
 Cloud Puffs use noise texture instead of blur texture
 gen_torus_section rand_gen_t - requires gaussian rand support

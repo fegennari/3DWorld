@@ -155,6 +155,7 @@ void main()
 	
 		// smoke volume iteration using 3D texture, pos to eye
 		for (int i = 0; i < num_steps; ++i) {
+			// Note: we could also lookup dynamic lighting here, which would be very slow but would also look really nice
 			vec4 tex_val = texture3D(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
 			float smoke  = smoke_sscale*tex_val.a*step_weight;
 			float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));

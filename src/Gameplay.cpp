@@ -49,7 +49,7 @@ team_info *teaminfo = NULL;
 vector<bbox> team_starts;
 
 
-extern bool vsync_enabled, spraypaint_mode;
+extern bool vsync_enabled, spraypaint_mode, smoke_visible;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
 extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
@@ -858,7 +858,7 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { 
 		if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {
 			gen_smoke((pos + orient.get_norm()*(2.0*radius)), 0.2);
 		}
-		add_blastr(pos, orient, 2.0*radius, 0.0, 4, -2, WHITE, WHITE, ETYPE_ANIM_FIRE);
+		add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, WHITE, WHITE, ETYPE_ANIM_FIRE);
 	}
 }
 
@@ -1520,6 +1520,14 @@ void add_laser_beam(beam3d const &beam) {
 
 	beams.push_back(beam);
 	if (LASER_PATH_LIGHT) {add_line_light(beam.pts[0], beam.pts[1], RED, 0.4, min(1.0f, sqrt(beam.intensity)));}
+
+	/*if (smoke_visible) {
+		point p1(beam.pts[0]), p2(beam.pts[1]);
+
+		if (do_line_clip_scene(p1, p2, czmin, czmax)) {
+			// FIXME: check for smoke along laser beam path and add glow halo
+		}
+	}*/
 }
 
 
@@ -1617,7 +1625,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			if (underwater) firing_error += UWATER_FERR_ADD;
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
 			create_shell_casing(fpos, dir, shooter, radius, 0);
-			beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0)); // generate bullet light trail
+			if (shooter != CAMERA_ID) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0));} // generate bullet light trail
 			return 1;
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
@@ -1663,7 +1671,6 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
 			beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
 			add_laser_beam(beam); // might not need to actually add laser itself for camera/player
-			// FIXME: check for smoke along laser beam path and add glow halo
 		}
 		break;
 

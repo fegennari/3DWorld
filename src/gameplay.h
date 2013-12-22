@@ -121,7 +121,7 @@ string const obj_type_names[NUM_TOT_OBJS] = {
 	"Projectile Hit", "Droplet", "Water Droplet", "Sand", "Dirt", "Rock", "Fragment", "Particle", "Health", "Shields",
 	"Powerup", "Weapon", "Ammo", "Pack", "Camera", "Precipitation", "Blast Radius", "Projectile", "laser beam", "Impact",
 	"Plasma Lightning Damage", "Laser", "Drowned", "Burned", "Fire", "Fell", "Froze", "Suffocated", "Crushed", "Poison Gas",
-	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleporter"
+	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleport" // Telefrag?
 };
 
 string const powerup_names[NUM_POWERUPS] =

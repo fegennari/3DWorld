@@ -1470,8 +1470,7 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	float const radius(CAMERA_RADIUS);
 	dwobject camera_obj(def_objects[CAMERA]); // make a fresh copy
 	
-	if (maybe_teleport_object(pos, radius, 1)) {
-		player_teleported(pos, CAMERA_ID);
+	if (maybe_teleport_object(pos, radius, CAMERA_ID)) {
 		camera_last_pos = pos;
 		add_camera_filter(colorRGBA(0.5, 0.5, 1.0, 1.0), TICKS_PER_SECOND/4, -1, CAM_FILT_TELEPORT, 1); // a quarter second of fading light blue
 	}
