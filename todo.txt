@@ -15,13 +15,12 @@ Replace GL matrix operations with something else (GLM?)
 Berries on plants
 User-placed trees
 
-TT Normal Map(s)
+TT Normal Map
  - High slopes
 
 Weather/Physics UI
   - key to switch UI modes
 
-TT shadow map for trees?
 Teleporters:
  - Teleport effects (at appearance spot)
  - User-placed with a weapon (translocator?)

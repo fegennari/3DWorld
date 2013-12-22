@@ -84,7 +84,7 @@ class tile_t {
 
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
-	unsigned size, stride, zvsize, base_tsize, gen_tsize, ao_adj_tile_mask;
+	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
@@ -187,7 +187,7 @@ public:
 	}
 
 	// *** shadows ***
-	void calc_mesh_ao_lighting(int xs, int ys, int xe, int ye, bool is_push_mode);
+	void calc_mesh_ao_lighting();
 	void calc_shadows_for_light(unsigned l);
 	static void proc_tile_queue(tile_t *init_tile, unsigned l);
 	void calc_shadows(bool calc_sun, bool calc_moon, bool no_push=0);

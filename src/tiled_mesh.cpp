@@ -174,7 +174,7 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_
 	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
-	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), ao_adj_tile_mask(0), trmax(0.0), min_normal_z(0.0), shadows_invalid(1), recalc_tree_grass_weights(1),
+	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), shadows_invalid(1), recalc_tree_grass_weights(1),
 	mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
@@ -316,13 +316,10 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	unsigned const block_size(zvsize/4);
 
 	if (using_tiled_terrain_hmap_tex()) {
-		#pragma omp parallel for schedule(static,1) // may not be necessary
+		#pragma omp parallel for schedule(static,1) // may not be necessary, but helps
 		for (int y = 0; y < (int)zvsize; ++y) {
 			for (unsigned x = 0; x < zvsize; ++x) {
-				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
-				float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
-				float const hv(terrain_hmap_manager.get_clamped_height((x1 + x), (y1 + y)));
-				zvals[y*zvsize + x] = hoff + hscale*hv;
+				zvals[y*zvsize + x] = terrain_hmap_manager.get_clamped_height((x1 + x), (y1 + y));
 			}
 		}
 	}
@@ -377,10 +374,9 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 
 // *** shadows + AO lighting ***
 
-void tile_t::calc_mesh_ao_lighting(int xs, int ys, int xe, int ye, bool is_push_mode) {
+void tile_t::calc_mesh_ao_lighting() {
 
 	//RESET_TIME;
-	assert(xs < xe && ys < ye);
 	unsigned const NUM_DIRS  = 8; // Note: required to be 8 for adj tile calculation
 	unsigned const NUM_STEPS = 8;
 	unsigned const ray_len(NUM_STEPS*(NUM_STEPS+1)/2); // 36
@@ -388,29 +384,41 @@ void tile_t::calc_mesh_ao_lighting(int xs, int ys, int xe, int ye, bool is_push_
 
 	// caclulate ray step directions and adjacent tiles
 	tile_xy_pair const cur_tp(get_tile_xy_pair());
-	tile_xy_pair ao_dirs[NUM_DIRS]; //    0  1  2  3  4  5  6  7
-	tile_t *adj_tiles[NUM_DIRS] = {0}; // -- 0- +- -0 +0 -+ 0+ ++
-	if (is_push_mode) {ao_adj_tile_mask = 0;}
+	tile_xy_pair ao_dirs[NUM_DIRS]; // 0  1  2  3  4  5  6  7
 	unsigned ix(0);
 
 	for (int y = -1; y <= 1; ++y) {
 		for (int x = -1; x <= 1; ++x) {
-			if (x == 0 && y == 0) continue;
-			ao_dirs  [ix] = tile_xy_pair(x, y);
-			adj_tiles[ix] = get_tile_from_xy(cur_tp + ao_dirs[ix]);
-			if (is_push_mode && adj_tiles[ix]) {ao_adj_tile_mask |= (1 << ix);}
-			++ix;
+			if (x != 0 || y != 0) {ao_dirs[ix++] = tile_xy_pair(x, y);}
 		}
 	}
 	assert(ix == NUM_DIRS);
 
-	// cast rays through the mesh to determine lighting
+	// create context zvals, which may overlap with other tiles (that need not be created at this point)
+	unsigned const context_sz(stride + 2*ray_len);
+	vector<float> czv(context_sz*context_sz);
+
+	#pragma omp parallel for schedule(static,1)
+	for (int y = 0; y < (int)context_sz; ++y) {
+		for (int x = 0; x < (int)context_sz; ++x) {
+			int const xv(x - ray_len), yv(y - ray_len);
+
+			if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {
+				czv[y*context_sz + x] = zvals[yv*zvsize + xv];
+			}
+			else {
+				czv[y*context_sz + x] = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
+			}
+		}
+	}
+
+	// calculate ao_lighting values by casting rays through the mesh zvals
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);
 
-	#pragma omp parallel for schedule(static,1) if (is_push_mode)
-	for (int y = ys; y < ye; ++y) {
-		for (int x = xs; x < xe; ++x) {
+	#pragma omp parallel for schedule(static,1)
+	for (int y = 0; y < (int)stride; ++y) {
+		for (int x = 0; x < (int)stride; ++x) {
 			unsigned atten(0);
 
 			for (unsigned d = 0; d < NUM_DIRS; ++d) {
@@ -423,48 +431,10 @@ void tile_t::calc_mesh_ao_lighting(int xs, int ys, int xe, int ye, bool is_push_
 					z0   += dz;
 					//step += step; // multiply by 2 for exponential step size
 					step += ao_dirs[d]; // linear increase (Note: must agree with max_ray_length)
-					float zval;
-
-					if (v.x < 0) { // -x
-						if (v.y < 0) { // -y
-							if (!adj_tiles[0]) break; // off the tiles
-							zval = adj_tiles[0]->get_zval(v.x+size, v.y+size);
-						}
-						else if (v.y > (int)stride) { // +y
-							if (!adj_tiles[5]) break; // off the tiles
-							zval = adj_tiles[5]->get_zval(v.x+size, v.y-size);
-						}
-						else {
-							if (!adj_tiles[3]) break; // off the tiles
-							zval = adj_tiles[3]->get_zval(v.x+size, v.y);
-						}
-					}
-					else if (v.x > (int)stride) { // +x
-						if (v.y < 0) { // -y
-							if (!adj_tiles[2]) break; // off the tiles
-							zval = adj_tiles[2]->get_zval(v.x-size, v.y+size);
-						}
-						else if (v.y > (int)stride) { // +y
-							if (!adj_tiles[7]) break; // off the tiles
-							zval = adj_tiles[7]->get_zval(v.x-size, v.y-size);
-						}
-						else {
-							if (!adj_tiles[4]) break; // off the tiles
-							zval = adj_tiles[4]->get_zval(v.x-size, v.y);
-						}
-					}
-					else if (v.y < 0) { // -y
-						if (!adj_tiles[1]) break; // off the tiles
-						zval = adj_tiles[1]->get_zval(v.x, v.y+size);
-					}
-					else if (v.y > (int)stride) { // +y
-						if (!adj_tiles[6]) break; // off the tiles
-						zval = adj_tiles[6]->get_zval(v.x, v.y-size);
-					}
-					else {
-						zval = zvals[v.y*zvsize + v.x];
-					}
-					if (zval > z0) { // hit a higher point
+					int const xv(v.x + ray_len), yv(v.y + ray_len);
+					assert(xv >= 0 && yv >= 0 && xv < (int)context_sz && yv < (int)context_sz);
+						
+					if (czv[yv*context_sz + xv] > z0) { // hit a higher point
 						atten += (NUM_STEPS - s);
 						break;
 					}
@@ -475,29 +445,6 @@ void tile_t::calc_mesh_ao_lighting(int xs, int ys, int xe, int ye, bool is_push_
 			ao_lighting[y*stride + x] = (unsigned char)(255.0*ao_scale);
 		} // for x
 	} // for y
-	if (is_push_mode) { // update adjacent tiles (push)
-		for (unsigned i = 0; i < NUM_DIRS; ++i) {
-			unsigned const adj_bit(1 << (NUM_DIRS-i-1));
-			tile_t *t(adj_tiles[i]);
-			if (!t || !t->shadow_normal_tid || t->ao_lighting.empty()) continue; // no tile, or AO lighting not yet calculated
-			if (t->ao_adj_tile_mask & adj_bit) continue; // current tile was already valid when adjacent tile AO was calculated
-			
-			switch(i) { // is_push_mode=0 | -- 0- +- -0 +0 -+ 0+ ++
-			case 0: t->calc_mesh_ao_lighting(stride-ray_len, stride-ray_len, stride,  stride,  0); break; // --
-			case 1: t->calc_mesh_ao_lighting(0,              stride-ray_len, stride,  stride,  0); break; // 0-
-			case 2: t->calc_mesh_ao_lighting(0,              stride-ray_len, ray_len, stride,  0); break; // +-
-			case 3: t->calc_mesh_ao_lighting(stride-ray_len, 0,              stride,  stride,  0); break; // -0
-			case 4: t->calc_mesh_ao_lighting(0,              0,              ray_len, stride,  0); break; // +0
-			case 5: t->calc_mesh_ao_lighting(stride-ray_len, 0,              stride,  ray_len, 0); break; // -+
-			case 6: t->calc_mesh_ao_lighting(0,              0,              stride,  ray_len, 0); break; // 0+
-			case 7: t->calc_mesh_ao_lighting(0,              0,              ray_len, ray_len, 0); break; // ++
-			default: assert(0);
-			}
-			//t->calc_mesh_ao_lighting(0, 0, stride, stride, 0);
-			t->upload_shadow_map_and_normal_texture(1); // check shadows_invalid?
-			t->ao_adj_tile_mask |= adj_bit;
-		}
-	}
 	//PRINT_TIME("AO Lighting");
 }
 
@@ -667,7 +614,7 @@ void tile_t::check_shadow_map_and_normal_texture() {
 	assert(has_sun || has_moon);
 	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
 	//PRINT_TIME("Calc Shadows");
-	if (enable_tiled_mesh_ao && ao_lighting.empty()) {calc_mesh_ao_lighting(0, 0, stride, stride, 1);}
+	if (enable_tiled_mesh_ao && using_tiled_terrain_hmap_tex() && ao_lighting.empty()) {calc_mesh_ao_lighting();}
 	upload_shadow_map_and_normal_texture(tid_is_valid);
 	shadows_invalid = 0;
 	//PRINT_TIME("Calc and Upload Shadows");
