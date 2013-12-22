@@ -408,7 +408,7 @@ void tile_t::calc_mesh_ao_lighting(int xs, int ys, int xe, int ye, bool is_push_
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);
 
-	#pragma omp parallel for schedule(static,1)
+	#pragma omp parallel for schedule(static,1) if (is_push_mode)
 	for (int y = ys; y < ye; ++y) {
 		for (int x = xs; x < xe; ++x) {
 			unsigned atten(0);
