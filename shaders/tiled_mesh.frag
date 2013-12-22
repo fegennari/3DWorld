@@ -27,23 +27,20 @@ vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in f
 	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0), shininess);
 }
 
-vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal) {
-	// FIXME: optimize
-	vec3 tangent = normalize(cross((gl_ModelViewMatrix * vec4(1,0,0,1)).xyz, normal));
-	vec3 binorm  = normalize(cross(normal, tangent));
-	mat3 TBN     = transpose(mat3(tangent, binorm, normalize(normal))); // {Y, X, Z} for normal in +Z
+vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal, in float bump_scale) {
+	vec3 tan  = normalize(cross(gl_ModelViewMatrix[0].xyz, normal));
+	mat3 TBN  = transpose(mat3(tan, cross(normal, tan), normalize(normal))); // world space {Y, X, Z} for normal in +Z
 	light_dir = TBN * light_dir;
 	eye_pos   = TBN * eye_pos;
-	vec2 dnt_tc = 0.25*gl_TexCoord[1].st; // scaled detail texture tc
-	return (2.0*texture2D(detail_normal_tex, dnt_tc).rgb - 1.0);
+	return mix(vec3(0,0,1), (2.0*texture2D(detail_normal_tex, 0.25*gl_TexCoord[1].st).rgb - 1.0), bump_scale); // scaled detail texture tc
 }
 
-vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess) {
+vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 light_dir = normalize(gl_LightSource[i].position.xyz);
 #ifdef USE_NORMAL_MAP
 	ds_scale *= clamp(5.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
-	normal    = apply_bump_map(light_dir, epos, normal);
+	normal    = apply_bump_map(light_dir, epos, normal, bump_scale);
 #endif
 		
 	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex
@@ -89,16 +86,17 @@ void main()
 	vec2 diff_tc = tc; // separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
 	vec4 weights = texture2D(weights_tex, tc);
 	float weights4 = clamp((1.0 - weights.r - weights.g - weights.b - weights.a), 0.0, 1.0);
-	vec3 texel0  = cs2*weights.r*texture2D(tex2, ts2*diff_tc).rgb +
-	               cs3*weights.g*texture2D(tex3, ts3*diff_tc).rgb +
-				   cs4*weights.b*texture2D(tex4, ts4*diff_tc).rgb +
-				   cs5*weights.a*texture2D(tex5, ts5*diff_tc).rgb +
-				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb;
+	vec3 texel0  = cs2*weights.r*texture2D(tex2, ts2*diff_tc).rgb + // sand
+	               cs3*weights.g*texture2D(tex3, ts3*diff_tc).rgb + // dirt
+				   cs4*weights.b*texture2D(tex4, ts4*diff_tc).rgb + // grass
+				   cs5*weights.a*texture2D(tex5, ts5*diff_tc).rgb + // rock
+				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb;  // snow
 	vec3 texel1  = texture2D(detail_tex, gl_TexCoord[1].st).rgb; // detail texture
 
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc);
 	float diffuse_scale = shadow_normal.w;
 	float ambient_scale = 1.5*shadow_normal.z;
+	float bump_scale    = 1.0 - weights.b; // bumps on everything but grass
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(gl_NormalMatrix * normal); // eye space
@@ -109,10 +107,10 @@ void main()
 	if (enable_light0) { // sun
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 20.0*weights.b + 40.0*weights4;
-		color += add_light_comp(normal, epos, 0, diffuse_scale, ambient_scale, spec, shininess);
+		color += add_light_comp(normal, epos, 0, diffuse_scale, ambient_scale, spec, shininess, bump_scale);
 	}
-	if (enable_light1) {color += add_light_comp(normal, epos, 1, diffuse_scale, ambient_scale, 0.0, 1.0);} // moon
-	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0) * calc_light_atten(epos, 2);} // lightning
+	if (enable_light1) {color += add_light_comp(normal, epos, 1, diffuse_scale, ambient_scale, 0.0, 1.0, bump_scale);} // moon
+	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
 	gl_FragColor = apply_fog(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a)); // add fog
 	//gl_FragColor = apply_fog(color); // untextured (white) for debugging
 }
