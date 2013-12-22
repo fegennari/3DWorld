@@ -1186,7 +1186,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x02;   break;
 	case '3': // toggle water/ice
 		display_mode ^= 0x04;   break;
-	case '4': // toggle occlusion culling
+	case '4': // toggle occlusion culling / tiled terrain detail normal maps
 		display_mode ^= 0x08;   break;
 	case '5': // walk on snow/ship shadows/debugging
 		display_mode ^= 0x10;   break;

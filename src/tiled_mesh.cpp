@@ -1492,7 +1492,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
-	bool const use_normal_map((display_mode & 0x10) != 0);
+	bool const use_normal_map(!reflection_pass && (display_mode & 0x08) != 0); // enabled by default
 	//bool const use_hmap_tex((display_mode & 0x10) != 0);
 	//if (use_hmap_tex  ) {s.set_prefix("#define USE_HEIGHT_TEX", 0);} // VS
 	if (has_water     ) {s.set_prefix("#define HAS_WATER", 1);} // FS

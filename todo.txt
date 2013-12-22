@@ -14,9 +14,7 @@ Replace GL matrix operations with something else (GLM?)
 
 Berries on plants
 User-placed trees
-
-TT Normal Map
- - High slopes
+Tiled terrain texture coords on high slopes
 
 Weather/Physics UI
   - key to switch UI modes
