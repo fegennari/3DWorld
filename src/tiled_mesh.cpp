@@ -397,17 +397,24 @@ void tile_t::calc_mesh_ao_lighting() {
 	// create context zvals, which may overlap with other tiles (that need not be created at this point)
 	unsigned const context_sz(stride + 2*ray_len);
 	vector<float> czv(context_sz*context_sz);
+	mesh_xy_grid_cache_t height_gen;
+	bool const using_hmap(using_tiled_terrain_hmap_tex());
+	if (!using_hmap) {height_gen.build_arrays(get_xval(x1 - ray_len), get_yval(y1 - ray_len), DX_VAL, DY_VAL, context_sz, context_sz);}
 
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)context_sz; ++y) {
 		for (int x = 0; x < (int)context_sz; ++x) {
 			int const xv(x - ray_len), yv(y - ray_len);
+			float &zv(czv[y*context_sz + x]);
 
 			if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {
-				czv[y*context_sz + x] = zvals[yv*zvsize + xv];
+				zv = zvals[yv*zvsize + xv];
+			}
+			else if (using_hmap) {
+				zv = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
 			}
 			else {
-				czv[y*context_sz + x] = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
+				zv = height_gen.eval_index(x, y); // Note: not using hoff/hscale here since they are undefined outside the tile bounds
 			}
 		}
 	}
@@ -614,7 +621,7 @@ void tile_t::check_shadow_map_and_normal_texture() {
 	assert(has_sun || has_moon);
 	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
 	//PRINT_TIME("Calc Shadows");
-	if (enable_tiled_mesh_ao && using_tiled_terrain_hmap_tex() && ao_lighting.empty()) {calc_mesh_ao_lighting();}
+	if (enable_tiled_mesh_ao && ao_lighting.empty()) {calc_mesh_ao_lighting();}
 	upload_shadow_map_and_normal_texture(tid_is_valid);
 	shadows_invalid = 0;
 	//PRINT_TIME("Calc and Upload Shadows");
