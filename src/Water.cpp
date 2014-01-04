@@ -652,16 +652,12 @@ void calc_water_normals() {
 				wsn1[j] = wat_vert_normals[i][j] = plus_z;
 			}
 			else if (wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) {
-				vector3d nv(get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, j, i));
-				wsn1[j] = nv;
-				
-				if (i > 0) {
-					nv += wsn0[j];
-					if (j > 0) {nv += wsn0[j-1];}
-				}
-				else {nv.z += 2.0;}
-				if (j > 0) {nv += wsn1[j-1];} else {nv.z += 2.0;}
-				wat_vert_normals[i][j] = nv*0.25;
+				wsn1[j] = get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, j, i);
+				vector3d nv(wsn1[j]);
+				if (i > 0)          {nv += wsn0[j];}
+				if (i > 0 && j > 0) {nv += wsn0[j-1];}
+				if (j > 0)          {nv += wsn1[j-1];}
+				wat_vert_normals[i][j] = nv.get_norm();
 			} // inside
 			else {
 				wsn1[j] = wat_vert_normals[i][j] = plus_z;

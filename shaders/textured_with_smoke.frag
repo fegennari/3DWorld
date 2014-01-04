@@ -84,17 +84,17 @@ void main()
 	float alpha = gl_Color.a;
 
 	if (do_lt_atten) {
-		vec3 v_inc = eye - vpos;
+		vec3 v_inc = normalize(eye - vpos);
 
 		//if (light_atten > 0.0) { // account for light attenuating/reflecting semi-transparent materials
-			vec3 far_pt   = vpos - 100.0*v_inc/length(v_inc); // move it far away
+			vec3 far_pt   = vpos - 100.0*v_inc; // move it far away
 			pt_pair res   = clip_line(vpos, far_pt, cube_bb);
 			float dist    = length(res.v1 - res.v2);
 			float atten   = exp(-light_atten*dist);
 			alpha += (1.0 - alpha)*(1.0 - atten);
 		//}
 		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
-			float reflect_w = get_fresnel_reflection(normalize(v_inc), normalize(normal), 1.0, refract_ix);
+			float reflect_w = get_fresnel_reflection(v_inc, normalize(normal), 1.0, refract_ix);
 			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha
 		} // else exiting ray in back surface - ignore for now since we don't refract the ray
 	}

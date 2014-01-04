@@ -179,26 +179,20 @@ void AnimateWater() {
 }
 
 
-void calc_ocean_normals() {
+void calc_ocean_normals() { // similar to calc_water_normals()
 
 	for (int j = 0; j < WaterY; j++) {
 		int const jwx(j*WaterX), fyj(fy(j+1)*WaterX);
 
 		for (int i = 0; i < WaterX; i++) {
 			float const wmij(WaterHeight[i+jwx]);
-			vector3d nv((WaterHeight[fx(i+1)+jwx] - wmij), (WaterHeight[i+fyj] - wmij), incxy);
-			nv.normalize();
-			WaterNormal[i+jwx] = nv;
-
-			if (i > 0) {
-				nv += WaterNormal[i-1+jwx];
-				if (j > 0) nv += WaterNormal[i-1+(jwx - WaterX)];
-			}
-			if (j > 0)  nv    += WaterNormal[i+(jwx - WaterX)];
-			if (i == 0) nv.z  += 2.0;
-			if (j == 0) nv.z  += 2.0;
+			WaterNormal[i+jwx] = vector3d((WaterHeight[fx(i+1)+jwx] - wmij), (WaterHeight[i+fyj] - wmij), incxy).get_norm();
+			vector3d nv(WaterNormal[i+jwx]);
+			if (i > 0)          {nv += WaterNormal[i-1+jwx];}
+			if (i > 0 && j > 0) {nv += WaterNormal[i-1+(jwx - WaterX)];}
+			if (j > 0)          {nv += WaterNormal[i+(jwx - WaterX)];}
 			nv.y = -nv.y;
-			WaterVertNormal[i+jwx] = nv*0.25;
+			WaterVertNormal[i+jwx] = nv.get_norm();
 		}
 	}
 }

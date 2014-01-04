@@ -282,7 +282,7 @@ void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **
 
 	vector3d const norm(get_matrix_surf_norm(matrix, enabled, xsize, ysize, xpos, ypos));
 	sn[ypos][xpos] = norm;
-	vn[ypos][xpos] = (norm + sn[max(ypos-1, 0)][xpos] + sn[max(ypos-1, 0)][max(xpos-1, 0)] + sn[ypos][max(xpos-1, 0)])*0.25;
+	vn[ypos][xpos] = (norm + sn[max(ypos-1, 0)][xpos] + sn[max(ypos-1, 0)][max(xpos-1, 0)] + sn[ypos][max(xpos-1, 0)]).get_norm();
 }
 
 
