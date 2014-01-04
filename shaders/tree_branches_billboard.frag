@@ -14,16 +14,15 @@ void main()
 
 	// transform normal into billboard orientation 
 	vec3 normal = 2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0);
-	normal.y   *= -1.0; // texture is rendered with ybot < ytop
-	vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
-	vec3 vdir   = normalize(eye.xyz - world_space_pos.xyz);
-	float angle = acos(dot(normalize(ref_dir.xy), normalize(vdir.xy)));
-	if (cross(vdir, ref_dir).z < 0.0) {angle = -angle;} // rotate the other direction
-	mat3 mrot   = mat3(cos(angle), -sin(angle), 0.0,
-			           sin(angle),  cos(angle), 0.0,
-			           0.0,         0.0,        1.0);
-	normal      = mrot * normal;
-	normal      = normalize(gl_NormalMatrix * normal); // convert to eye space
+	normal.y *= -1.0; // texture is rendered with ybot < ytop
+	vec4 eye  = gl_ModelViewMatrixInverse[3]; // world space
+	vec3 vdir = eye.xyz - world_space_pos.xyz;
+	vec2 rd_n = normalize(ref_dir.xy);
+	vec2 vd_n = normalize(vdir.xy);
+	float dp  = dot(rd_n, vd_n);
+	float s   = length(cross(vec3(rd_n, 0), vec3(vd_n, 0))) * ((cross(vdir, ref_dir).z < 0.0) ? -1.0 : 1.0);
+	mat3 mrot = mat3(dp, -s, 0.0,  s, dp, 0.0,  0.0, 0.0, 1.0);
+	normal    = normalize(gl_NormalMatrix * (mrot * normal)); // convert to eye space
 	
 	vec4 color  = gl_Color * gl_LightModel.ambient;
 	if (enable_light0) color += add_light_comp(normal, 0);
