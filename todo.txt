@@ -23,5 +23,46 @@ Weather/Physics UI
 User-placed teleporter weapon (translocator?)
 Starbase texture
 Burning smiley/skull/cobj texture
-Cloud Puffs use noise texture instead of blur texture
 gen_torus_section rand_gen_t - requires gaussian rand support
+Better water splashes (bullet hits, etc.)
+
+************************
+
+Star shader:
+https://www.shadertoy.com/view/4dXGR4
+
+Revisit optimality of cube-frustum intersection test
+
+Vertex normals for mesh come from opposite side (+/-) points
+Model3d, mesh, and water normals
+  http://www.iquilezles.org/www/articles/normals/normals.htm
+
+Fog color more yellow when looking at side exposed to the sun
+More fog in valleys (in morning?)
+
+Increase cloud density when cloudy via shader uniform
+Cloud lighting based on thickness/distance to sun
+2D cloud noise octaves from different color components of texture
+
+TT Raindrop splashes as white spots in water
+TT Foam at water edge using procedural texture when waves are enabled
+TT Raise mesh with grass texture to grass height when grass is not drawn
+
+Ray tracer uses specular intensity to randomly choose between specular and diffuse reflection dir
+Ray tracer uses cosine of normal for diffuse reflection and specular shine
+Ray tracer thread/ray coherence experiments
+
+Perlin noise function experiments
+  http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
+
+TT increase near and far clipping distances when the camera is far above the mesh
+TT uses lower res source data for distant tiles (far below the player as height increases)
+TT Underwater stuff
+
+Smaller universe near clipping plane when close to a planet, or clamp depth
+Faster cube mapped sphere planet render
+Planet texture width 2x height
+Render nearby planet in chunks
+Normap map texture for planets instead of storing vertex normals (such as tiled mesh)
+
+Try using Boost in 3DWorld, in particular shared_ptr
