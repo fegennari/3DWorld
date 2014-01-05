@@ -1211,7 +1211,9 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	ocean.z       = water_plane_z;
 	camera_mode   = 1; // walking on ground
 	mesh_type     = 0;
-	float const zmin2(update_tiled_terrain());
+	float min_camera_dist(0.0);
+	float const zmin2(update_tiled_terrain(min_camera_dist));
+	bool const change_near_far_clip(!camera_surf_collide && min_camera_dist > 0.0);
 	bool const draw_water(water_enabled && water_plane_z >= zmin2);
 	if (show_fog || underwater) {set_inf_terrain_fog(underwater, zmin2);}
 	unsigned reflection_tid(0);
@@ -1228,6 +1230,10 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		draw_sun_moon_stars();
 		if (fog_enabled) {glEnable(GL_FOG);}
 	}
+	if (change_near_far_clip) {
+		set_perspective_near_far((NEAR_CLIP + 0.01*min_camera_dist), (FAR_CLIP + min_camera_dist));
+		do_look_at(); // clear depth buffer?
+	}
 	draw_cloud_plane(zmin2, 0); // these two lines could go in either order
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
@@ -1241,6 +1247,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (underwater ) {draw_tiled_terrain_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, reflection_tid);}
 	if (!underwater) {draw_tiled_terrain_precipitation();}
+	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)
 	check_xy_offsets();
 	init_x = 0;
 	if (TIMETEST) PRINT_TIME("3.9");

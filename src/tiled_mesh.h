@@ -167,7 +167,7 @@ public:
 		return cube_t(xv1, xv1+(wx2-wx1)*DX_VAL, yv1, yv1+(wy2-wy1)*DY_VAL, water_plane_z, water_plane_z); // zero area in z
 	}
 	void fill_adj_mask(bool mask[3][3], int x, int y) const;
-	float get_min_dist_to_pt(point const &pt, bool xy_only=0) const;
+	float get_min_dist_to_pt(point const &pt, bool xy_only=0, bool mesh_only=1) const;
 	float get_max_xy_dist_to_pt(point const &pt) const;
 	bool contains_camera() const {return get_bcube().contains_pt_xy(get_camera_pos());}
 	unsigned get_gpu_mem() const;
@@ -283,7 +283,7 @@ public:
 	tile_draw_t();
 	//~tile_draw_t() {clear();}
 	void clear();
-	float update();
+	float update(float &min_camera_dist);
 	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand);
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader);
 	static void lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows);

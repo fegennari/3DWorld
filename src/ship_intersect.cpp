@@ -12,7 +12,6 @@ float const MIN_SHADOW_DIST = 0.01;
 
 
 extern int display_mode;
-extern float perspective_nclip;
 
 
 

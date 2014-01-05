@@ -384,15 +384,21 @@ void reset_camera_pos() {
 }
 
 
-void set_perspective(float fovy, float nc_scale) {
+void set_perspective_near_far(float near_clip, float far_clip) {
 
-	perspective_fovy  = fovy;
-	perspective_nclip = nc_scale*NEAR_CLIP;
+	perspective_nclip = near_clip;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(fovy, ((GLdouble)window_width)/window_height, perspective_nclip, FAR_CLIP);
+	gluPerspective(perspective_fovy, ((GLdouble)window_width)/window_height, perspective_nclip, far_clip);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
+}
+
+
+void set_perspective(float fovy, float nc_scale) {
+
+	perspective_fovy = fovy;
+	set_perspective_near_far(nc_scale*NEAR_CLIP, FAR_CLIP);
 }
 
 

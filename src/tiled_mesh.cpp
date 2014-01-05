@@ -36,7 +36,7 @@ hmap_brush_param_t cur_brush_param;
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
 extern int island, DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
-extern int invert_mh_image, is_cloudy;
+extern int invert_mh_image, is_cloudy, camera_surf_collide;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere;
 extern point sun_pos, moon_pos, surface_pos;
@@ -220,9 +220,9 @@ void tile_t::fill_adj_mask(bool mask[3][3], int x, int y) const { // mask is {y-
 }
 
 
-float tile_t::get_min_dist_to_pt(point const &pt, bool xy_only) const {
+float tile_t::get_min_dist_to_pt(point const &pt, bool xy_only, bool mesh_only) const {
 
-	cube_t const bcube(get_mesh_bcube());
+	cube_t const bcube(mesh_only ? get_mesh_bcube() : get_bcube());
 	float dsq(0.0);
 
 	for (unsigned i = 0; i < (xy_only ? 2U : 3U); ++i) {
@@ -367,6 +367,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	}
 	assert(mzmin <= mzmax);
 	radius = 0.5*sqrt((DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
+	ptzmax = dtzmax = mzmin; // no trees yet
 	//PRINT_TIME("Create Zvals");
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
 }
@@ -1210,8 +1211,9 @@ void tile_t::draw_water(shader_t &s, float z) const {
 bool tile_t::check_player_collision() const {
 
 	if (!contains_camera()) return 0;
-	bool coll(0);
 	point camera(get_camera_pos());
+	if (camera.z > get_tile_zmax() + CAMERA_RADIUS) return 0; // camera is completely above the tile
+	bool coll(0);
 
 	if (!pine_trees.empty()) {
 		camera -= ptree_off.get_xlate();
@@ -1371,7 +1373,7 @@ void tile_draw_t::clear() {
 }
 
 
-float tile_draw_t::update() { // view-independent updates; returns terrain zmin
+float tile_draw_t::update(float &min_camera_dist) { // view-independent updates; returns terrain zmin
 
 	//RESET_TIME;
 	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {
@@ -1381,13 +1383,14 @@ float tile_draw_t::update() { // view-independent updates; returns terrain zmin
 	float terrain_zmin(FAR_CLIP);
 	grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
 	assert(MESH_X_SIZE == MESH_Y_SIZE); // limitation, for now
-	point const camera(get_camera_pos() - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
+	point const cpos(get_camera_pos()), camera(cpos - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
 	int const tile_radius(int(CREATE_DIST_TILES*TILE_RADIUS) + 1);
 	int const toffx(int(0.5*camera.x/X_SCENE_SIZE)), toffy(int(0.5*camera.y/Y_SCENE_SIZE));
 	int const x1(-tile_radius + toffx), y1(-tile_radius + toffy);
 	int const x2( tile_radius + toffx), y2( tile_radius + toffy);
 	unsigned const init_tiles((unsigned)tiles.size());
 	vector<tile_xy_pair> to_erase;
+	min_camera_dist = FAR_CLIP;
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
 		if (!i->second->update_range(&vbo_free_list)) {
@@ -1413,6 +1416,7 @@ float tile_draw_t::update() { // view-independent updates; returns terrain zmin
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // calculate terrain_zmin
 		if (i->second->get_rel_dist_to_camera() <= DRAW_DIST_TILES) {
 			terrain_zmin = min(terrain_zmin, i->second->get_zmin());
+			if (!camera_surf_collide) {min_camera_dist = min(min_camera_dist, i->second->get_min_dist_to_pt(cpos, 0, 0));}
 		}
 	}
 	if (DEBUG_TILES && (tiles.size() != init_tiles || !to_erase.empty())) {
@@ -1757,6 +1761,8 @@ void tile_draw_t::draw(bool reflection_pass) {
 		} // check_occlusion
 		to_draw.push_back(make_pair(dist, tile));
 	} // for i
+
+	// draw visible tiles
 	sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
 	shader_t s;
 	setup_mesh_draw_shaders(s, reflection_pass);
@@ -2115,8 +2121,8 @@ bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t
 tile_draw_t terrain_tile_draw;
 
 
-tile_t *get_tile_from_xy(tile_xy_pair const &tp) {return terrain_tile_draw.get_tile_from_xy(tp);}
-float update_tiled_terrain() {return terrain_tile_draw.update();}
+tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get_tile_from_xy(tp);}
+float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
 void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
 
 void draw_tiled_terrain(bool reflection_pass) {

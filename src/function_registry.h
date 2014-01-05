@@ -20,7 +20,8 @@ void enable_point_specular();
 void disable_point_specular();
 void reset_fog();
 void set_light_atten(int light, float attenuation=1.0);
-void set_perspective(float fovy, float nc_scale);
+void set_perspective_near_far(float near_clip, float far_clip);
+void set_perspective(float fovy, float nc_scale=1.0);
 float get_moon_light_factor();
 void setup_basic_fog();
 void check_zoom();
@@ -211,7 +212,7 @@ bool using_tiled_terrain_hmap_tex();
 float get_tiled_terrain_height_tex(float xval, float yval);
 vector3d get_tiled_terrain_height_tex_norm(int x, int y);
 bool write_default_hmap_modmap();
-float update_tiled_terrain();
+float update_tiled_terrain(float &min_camera_dist);
 void pre_draw_tiled_terrain();
 void draw_tiled_terrain(bool reflection_pass);
 void draw_tiled_terrain_lightning(bool reflection_pass);
@@ -356,7 +357,6 @@ int  set_true_obj_height(point &pos, point const &lpos, float step_height, float
 
 // function prototypes - math3d
 float fix_angle(float angle);
-vector3d get_poly_norm(point const *points);
 void get_face_normal(shape3d &shape, int face_id);
 void calc_reflection_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm);
 bool calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d const &norm, float n1, float n2);

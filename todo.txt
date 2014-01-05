@@ -4,6 +4,7 @@ Support for cube map textures (planets, etc.)
 More grass/plant types: Yellow and white flowers
 Hardware tessellation
 Vertex Array Objects
+Try using Boost in 3DWorld, in particular shared_ptr
 
 Remove deprecated OpenGL calls:
 Use triangles instead of quads
@@ -13,12 +14,9 @@ Remove usage of gl_TexCoord from shaders and replace with a varying variable
 Replace GL matrix operations with something else (GLM?)
 
 Berries on plants
-User-placed trees
 Laser in smoke
 Tiled terrain texture coords on high slopes
-
-Weather/Physics UI
-  - key to switch UI modes
+Weather/Physics UI / key to switch UI modes
 
 User-placed teleporter weapon (translocator?)
 Starbase texture
@@ -43,15 +41,14 @@ Cloud lighting based on thickness/distance to sun
 
 TT Raindrop splashes as white spots in water
 TT Foam at water edge using procedural texture when waves are enabled
-TT Raise mesh with grass texture to grass height when grass is not drawn
 
 Ray tracer uses cosine of normal for diffuse reflection and specular shine
 Ray tracer thread/ray coherence experiments
 
 Perlin noise function experiments
   http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
+Higher order interpolation functions
 
-TT increase near and far clipping distances when the camera is far above the mesh
 TT uses lower res source data for distant tiles (far below the player as height increases)
 TT Underwater stuff
 
@@ -59,5 +56,3 @@ Faster cube mapped sphere planet render
 Planet texture width 2x height
 Render nearby planet in chunks
 Normap map texture for planets instead of storing vertex normals (such as tiled mesh)
-
-Try using Boost in 3DWorld, in particular shared_ptr
