@@ -163,7 +163,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	if (p1 == p2) return; // line must have started inside a cobj - this is bad, but what can we do?
 
 	// update ray weight based on object material properties
-	float specular(0.0);
+	float specular(0.0), shine(1.0);
 
 	if (water_coll) {
 		assert(!ice_coll && !snow_coll);
@@ -191,12 +191,14 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	} // Note: no else
 	if (snow_coll) {
 		weight  *= SNOW_ALBEDO; // white
-		specular = 0.8;
+		specular = 0.5;
+		shine    = 50.0;
 	}
 	else if (ice_coll) {
 		weight  *= ICE_ALBEDO*ICE_C.get_luminance();
 		color    = color.modulate_with(ICE_C);
-		specular = 0.9;
+		specular = 0.9; // see w_spec
+		shine    = 70.0;
 	}
 	else if (mesh_coll) { // collision with mesh
 		colorRGBA const lc(get_landscape_texture_color(xpos, ypos));
@@ -209,6 +211,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 		// FIXME - get this from the model?
 		// requires storing material id in each coll_tquad and calculating approx specular component from specular color and textures
 		specular = 0.0;
+		shine    = 1.0;
 	}
 	else { // collision with cobj
 		assert(cindex >= 0);
@@ -216,6 +219,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 		float luminance(1.0), alpha(1.0);
 		get_lum_alpha(cobj.cp.color, cobj.cp.tid, luminance, alpha); // use alpha?
 		specular = cobj.cp.specular;
+		shine    = cobj.cp.shine;
 		weight  *= luminance;
 		color    = color.modulate_with(cobj.get_avg_color());
 
@@ -265,7 +269,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 		}
 		weight *= (DIFFUSE_REFL*(1.0 - specular) + SPEC_REFL*specular);
 	}
-	//if (rgen.rand_float() < weight/last_weight) return; weight = last_weight; // end the ray
+	//if (rgen.rand_float() < weight/last_weight) return; weight = last_weight; // end the ray (Russian roulette)
 	if (weight < WEIGHT_THRESH*weight0) return;
 
 	// create reflected ray and make recursive call(s)
@@ -275,9 +279,16 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	unsigned const num_splits((depth == 0) ? INIT_RAY_SPLITS[ltype] : NUM_RAY_SPLITS[ltype]);
 	
 	for (unsigned n = 0; n < num_splits; ++n) {
-		vector3d new_v(rgen.signed_rand_vector().get_norm()); // add random diffuse scatter
-		if (dot_product(new_v, cnorm) < 0.0) new_v.negate(); // make in same direction as normal
-		vector3d const v_new((v_ref*specular + new_v*(1.0 - specular)).get_norm());
+		vector3d v_new;
+
+		if (specular > 0 && specular >= rgen.rand_float()) { // specular reflection
+			v_new = v_ref; // perfect specular reflection (infinite shininess)
+			// FIXME: use shine somehow
+		}
+		else { // diffuse reflection
+			v_new = rgen.signed_rand_vector().get_norm(); // add random diffuse scatter
+			if (dot_product(v_new, cnorm) < 0.0) {v_new.negate();} // make in same direction as normal
+		}
 		p2 = p1 + v_new*line_length; // ending point: effectively at infinity
 		cast_light_ray(lmgr, cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1, rgen);
 	}

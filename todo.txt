@@ -48,7 +48,6 @@ TT Raindrop splashes as white spots in water
 TT Foam at water edge using procedural texture when waves are enabled
 TT Raise mesh with grass texture to grass height when grass is not drawn
 
-Ray tracer uses specular intensity to randomly choose between specular and diffuse reflection dir
 Ray tracer uses cosine of normal for diffuse reflection and specular shine
 Ray tracer thread/ray coherence experiments
 
