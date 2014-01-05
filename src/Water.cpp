@@ -49,7 +49,7 @@ bool     const NO_ICE_RIPPLES      = 0;
 bool     const USE_SEA_FOAM        = 1;
 int      const UPDATE_UW_LANDSCAPE = 2;
 
-float const w_spec[2][2] = {{0.8, 80.0}, {0.9, 70.0}};
+float const w_spec[2][2] = {{0.9, 80.0}, {0.5, 60.0}};
 
 enum {SPILL_NONE, SPILL_OUTSIDE, SPILL_INSIDE};
 

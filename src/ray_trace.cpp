@@ -197,8 +197,8 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	else if (ice_coll) {
 		weight  *= ICE_ALBEDO*ICE_C.get_luminance();
 		color    = color.modulate_with(ICE_C);
-		specular = 0.9; // see w_spec
-		shine    = 70.0;
+		specular = 0.5; // see w_spec
+		shine    = 60.0;
 	}
 	else if (mesh_coll) { // collision with mesh
 		colorRGBA const lc(get_landscape_texture_color(xpos, ypos));
