@@ -44,7 +44,7 @@ extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightnin
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
-extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height;
+extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern double camera_zh;
 extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
@@ -628,6 +628,9 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 	}
 	else {
 		get_avg_sky_color(fog_color);
+		colorRGBA cloud_color(get_cloud_color());
+		cloud_color.alpha = 1.0;
+		blend_color(fog_color, cloud_color, bkg_color, 0.375, 1); // weighted more towards bkg_color
 		fog_dist = get_inf_terrain_fog_dist();
 	}
 	set_lighted_fog_color(fog_color); // under water/ice
