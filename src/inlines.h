@@ -548,13 +548,6 @@ template<typename T> inline void rotate_vector3d_norm(pointT<T> const &vrot, dou
 	vout.normalize();
 }
 
-// apply the same rotation to vout that is required to rotate v1 to v2
-inline void rotate_vector3d_by_vr(vector3d const &v1, vector3d const &v2, vector3d &vout) { // v1 rotated by vout = v2
-	vector3d vrot;
-	cross_product(v2, v1, vrot);
-	if (vrot != zero_vector) rotate_vector3d(vrot, get_norm_angle(v1, v2), vout);
-}
-
 inline void rotate_from_v2v(vector3d const &v1, vector3d const &v2) {
 	rotate_about(TO_DEG*get_norm_angle(v1, v2), cross_product(v2, v1));
 }

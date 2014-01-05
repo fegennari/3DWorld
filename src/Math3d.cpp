@@ -52,8 +52,7 @@ bool calc_refraction_angle(vector3d const &v_inc, vector3d &v_ref, vector3d cons
 float get_fresnel_reflection(vector3d const &v_inc, vector3d const &norm, float n1, float n2) { // vectors must be normalized
 
 	// http://en.wikipedia.org/wiki/Fresnel_equations
-	float const theta_i(get_angle(v_inc, norm));
-	float const cos_theta_i(cosf(theta_i)), sin_theta_i(sinf(theta_i));
+	float const cos_theta_i(dot_product(v_inc, norm)), sin_theta_i(cross_product(v_inc, norm).mag());
 	float const val((n1/n2)*sin_theta_i), cos_theta_t(sqrt(1.0 - val*val));
 	float const rs_sqrt((n1*cos_theta_i - n2*cos_theta_t)/(n1*cos_theta_i + n2*cos_theta_t));
 	float const rp_sqrt((n1*cos_theta_t - n2*cos_theta_i)/(n1*cos_theta_t + n2*cos_theta_i));
@@ -1163,6 +1162,25 @@ template void rotate_vector3d(vector3d vin, vector3d const &vrot, double angle, 
 template void rotate_vector3d(vector3d_d vin, vector3d_d const &vrot, double angle, vector3d_d &vout);
 template void rotate_vector3d_multi(vector3d const &vrot, double angle, vector3d *vout, unsigned nv);
 template void rotate_vector3d_multi(vector3d_d const &vrot, double angle, vector3d_d *vout, unsigned nv);
+
+
+// apply the same rotation to vout that is required to rotate v1 to v2
+void rotate_vector3d_by_vr(vector3d v1, vector3d v2, vector3d &vout) { // v1 rotated by vout = v2
+
+	v1.normalize();
+	v2.normalize();
+	vector3d const v(cross_product(v2, v1));
+	double const c(dot_product(v1, v2));
+	if (abs(c + 1.0) < TOLERANCE) return; // v1 and v2 are parallel
+	double const t(1.0/(1.0+c)), tX(t*v.x), tY(t*v.y);
+	double const m[3][3] = {
+		{tX*v.x + c,    tX*v.y + v.z,  tX*v.z    - v.y},
+		{tX*v.y - v.z,  tY*v.y + c,    tY*v.z    + v.x},
+		{tX*v.z + v.y,  tY*v.z - v.x,  t*v.z*v.z + c},
+	};
+	vector3d const vin(vout);
+	matrix_mult(vin, vout, m);
+}
 
 
 void mirror_about_plane(vector3d const &norm, point const &pt) { // applies to GL state
