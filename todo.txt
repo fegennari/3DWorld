@@ -55,7 +55,6 @@ TT increase near and far clipping distances when the camera is far above the mes
 TT uses lower res source data for distant tiles (far below the player as height increases)
 TT Underwater stuff
 
-Smaller universe near clipping plane when close to a planet, or clamp depth
 Faster cube mapped sphere planet render
 Planet texture width 2x height
 Render nearby planet in chunks
