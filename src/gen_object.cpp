@@ -368,6 +368,59 @@ void gen_gauss_rand_arr() {
 }
 
 
+void rand_gen_t::pregen_floats(unsigned num) {
+	pregen_rand_reals.resize(num);
+
+	for (unsigned i = 0; i < num; ++i) {
+		randome_int(pregen_rand_reals[i]);
+		pregen_rand_reals[i] /= 2147483563.;
+	}
+	cur_pos = 0;
+}
+
+double rand_gen_t::randd() {
+	if (!pregen_rand_reals.empty()) {
+		float const val(pregen_rand_reals[cur_pos++]);
+		if (cur_pos == pregen_rand_reals.size()) cur_pos = 0;
+		return val;
+	}
+	double rand_num;
+	randome_int(rand_num);
+	return rand_num/2147483563.;
+}
+
+vector3d rand_gen_t::signed_rand_vector(float scale) {
+	assert(scale > 0.0);
+	return vector3d(scale*signed_rand_float(), scale*signed_rand_float(), scale*signed_rand_float());
+}
+
+vector3d rand_gen_t::signed_rand_vector_norm(float scale) {
+	assert(scale > 0.0);
+
+	while (1) {
+		vector3d const v(signed_rand_vector(scale));
+		if (v.mag_sq() > scale*TOLERANCE) return v.get_norm();
+	}
+	return zero_vector; // never gets here
+}
+
+vector3d rand_gen_t::signed_rand_vector_spherical(float scale) {
+	assert(scale > 0.0);
+
+	while (1) {
+		vector3d const v(signed_rand_vector(scale));
+		if (v.mag_sq() < scale*scale) return v;
+	}
+	return zero_vector; // never gets here
+}
+
+point rand_gen_t::gen_rand_cube_point(cube_t const &c) {
+	point pt;
+	UNROLL_3X(pt[i_] = rand_uniform(c.d[i_][0], c.d[i_][1]););
+	return pt;
+}
+
+
 
 
 
