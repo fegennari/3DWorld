@@ -422,7 +422,7 @@ void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 		s.begin_shader();
 		s.setup_fog_scale();
 		s.add_uniform_float("water_plane_z", zmin);
-		s.add_uniform_float("cloud_scale", 0.5);
+		s.add_uniform_float("cloud_scale", (is_cloudy ? 1.0 : 0.5));
 		s.add_uniform_vector3d("camera_pos", camera);
 		s.add_uniform_vector3d("sun_pos", get_sun_pos());
 		s.add_uniform_color("sun_color", sun_color);

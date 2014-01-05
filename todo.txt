@@ -33,16 +33,13 @@ https://www.shadertoy.com/view/4dXGR4
 
 Revisit optimality of cube-frustum intersection test
 
-Vertex normals for mesh come from opposite side (+/-) points
-Model3d, mesh, and water normals
+Vertex normals for mesh (terrain and water) come from opposite side (+/-) points
+Model3d normals weighted by polygon area
   http://www.iquilezles.org/www/articles/normals/normals.htm
 
 Fog color more yellow when looking at side exposed to the sun
 More fog in valleys (in morning?)
-
-Increase cloud density when cloudy via shader uniform
 Cloud lighting based on thickness/distance to sun
-2D cloud noise octaves from different color components of texture
 
 TT Raindrop splashes as white spots in water
 TT Foam at water edge using procedural texture when waves are enabled
