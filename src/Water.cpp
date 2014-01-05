@@ -49,10 +49,9 @@ bool     const NO_ICE_RIPPLES      = 0;
 bool     const USE_SEA_FOAM        = 1;
 int      const UPDATE_UW_LANDSCAPE = 2;
 
-float const w_spec[2][2] = {{0.3, 80.0}, {0.4, 70.0}};
+float const w_spec[2][2] = {{0.8, 80.0}, {0.9, 70.0}};
 
 enum {SPILL_NONE, SPILL_OUTSIDE, SPILL_INSIDE};
-
 
 
 struct water_spring { // size = 40;

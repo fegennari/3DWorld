@@ -1129,7 +1129,7 @@ void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout) { // pr
 	};
 
 
-// Note: for some reason, making vin by const reference is bad (fails ship weapon intersection assertion)
+// Note: making vin by const reference is bad (fails ship weapon intersection assertion)
 template<typename T> void rotate_vector3d(pointT<T> vin, pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vin by angle about vrot to get vout
 
 	CREATE_ROT_MATRIX(vrot, angle);
