@@ -1,6 +1,6 @@
 varying vec3 normal;
 varying vec4 epos, proj_pos;
-uniform sampler2D reflection_tex, water_normal_tex, height_tex;
+uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale;
 uniform float x1, y1, x2, y2, zmin, zmax;
@@ -21,11 +21,14 @@ void main()
 
 	vec3 norm   = normalize(normal); // renormalize
 	vec2 ripple = vec2(0,0);
+	vec3 add_color = vec3(0);
 
 	if (add_noise) { // for rain
 		vec3 wave_n = get_wave_normal(fract(4.61*noise_time)*3.0*proj_pos.xy/proj_pos.w);
 		norm        = normalize(norm + 0.06*gl_NormalMatrix*wave_n);
 		ripple     += 0.025*wave_n.xy;
+		vec2 tc     = 20.0*gl_TexCoord[1].st + vec2(2.7*noise_time, 2.6*noise_time);
+		add_color  += vec3(1) * (1.0 - texture2D(noise_tex, tc).r); // Note that the texture is white with blue dots
 	}
 	vec3 light_norm = norm;
 
@@ -59,6 +62,7 @@ void main()
 	}
 
 	// determine final color with fog
+	color.rgb += add_color;
 	vec4 frag_color = vec4(color.rgb * lighting.rgb, color.a * gl_FrontMaterial.diffuse.a); // use diffuse alpha directly
 	gl_FragColor = apply_fog_epos(frag_color, epos);
 }

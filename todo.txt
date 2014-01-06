@@ -37,7 +37,7 @@ Fog color more yellow when looking at side exposed to the sun
 More fog in valleys (in morning?)
 Cloud lighting based on thickness/distance to sun
 
-TT Raindrop splashes as white spots in water
+Fix incorrect handling of raindrop PNG image
 TT Foam at water edge using procedural texture when waves are enabled
 
 Ray tracer uses cosine of normal for diffuse reflection and specular shine

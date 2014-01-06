@@ -11,7 +11,7 @@
 
 int const NTEX_SAND    = 4;
 int const NTEX_DIRT    = 5;
-int const NUM_TEXTURES = 100;
+int const NUM_TEXTURES = 101;
 
 struct ttex {
 

@@ -1244,7 +1244,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (TIMETEST) PRINT_TIME("3.26");
 	draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.3");
-	if (underwater ) {draw_tiled_terrain_precipitation();}
+	//if (underwater ) {draw_tiled_terrain_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, reflection_tid);}
 	if (!underwater) {draw_tiled_terrain_precipitation();}
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)

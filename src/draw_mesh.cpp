@@ -777,7 +777,11 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	set_water_plane_uniforms(s);
 
-	if (rain_mode) {s.add_uniform_float("noise_time", frame_counter);} // rain ripples
+	if (rain_mode) {
+		select_multitex(RAINDROP_TEX, 3, 0);
+		s.add_uniform_int  ("noise_tex", 3);
+		s.add_uniform_float("noise_time", frame_counter); // rain ripples
+	}
 	set_color(WHITE);
 	draw_tiled_terrain_water(s, zval);
 	s.end_shader();
