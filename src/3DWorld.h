@@ -505,7 +505,7 @@ template<typename T> cube_t get_polygon_bbox(vector<T> const &p) {
 }
 
 
-vector3d get_poly_norm(point const *const points);
+vector3d get_poly_norm(point const *const points, bool normalize=1);
 
 struct tquad_t { // size = 52
 
@@ -516,7 +516,7 @@ struct tquad_t { // size = 52
 	bool is_valid() const;
 	void update_bcube(cube_t &c) const;
 	cube_t get_bcube() const;
-	vector3d get_norm() const {return get_poly_norm(pts);}
+	vector3d get_norm(bool normalize=1) const {return get_poly_norm(pts, normalize);}
 	point const &operator[](unsigned i) const {return pts[i];}
 	point       &operator[](unsigned i)       {return pts[i];}
 };
@@ -943,7 +943,7 @@ template<typename T> struct triangle_t {
 	triangle_t() {}
 	triangle_t(T const &p1, T const &p2, T const &p3) {pts[0] = p1; pts[1] = p2; pts[2] = p3;}
 	triangle_t(T const *const p) {pts[0] = p[0]; pts[1] = p[1]; pts[2] = p[2];}
-	vector3d get_normal() const {return get_poly_norm(pts);}
+	vector3d get_normal(bool normalize=1) const {return get_poly_norm(pts, normalize);}
 	void operator+=(T const &p) {pts[0] += p; pts[1] += p; pts[2] += p;}
 };
 

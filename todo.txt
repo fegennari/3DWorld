@@ -17,6 +17,7 @@ Berries on plants
 Laser in smoke
 Tiled terrain texture coords on high slopes
 Weather/Physics UI / key to switch UI modes
+TT mode underwater content
 
 User-placed teleporter weapon (translocator?)
 Starbase texture
@@ -30,10 +31,7 @@ Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
 Revisit optimality of cube-frustum intersection test
-
 Vertex normals for mesh (terrain and water) come from opposite side (+/-) points
-Model3d normals weighted by polygon area
-  http://www.iquilezles.org/www/articles/normals/normals.htm
 
 Fog color more yellow when looking at side exposed to the sun
 More fog in valleys (in morning?)
@@ -50,7 +48,6 @@ Perlin noise function experiments
 Higher order interpolation functions
 
 TT uses lower res source data for distant tiles (far below the player as height increases)
-TT Underwater stuff
 
 Faster cube mapped sphere planet render
 Planet texture width 2x height

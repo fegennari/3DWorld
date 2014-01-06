@@ -431,6 +431,7 @@ template<typename T> void indexed_vntc_vect_t<T>::add_poly(polygon_t const &poly
 template<typename T> void indexed_vntc_vect_t<T>::add_triangle(triangle const &t, vertex_map_t<T> &vmap) {
 
 	vector3d const normal(t.get_normal());
+	//vector3d const normal(t.get_normal(!(USE_INDEXED_VERTS && vmap.get_average_normals()))); // weight by triangle area
 	UNROLL_3X(add_vertex(T(t.pts[i_], normal), vmap);)
 }
 

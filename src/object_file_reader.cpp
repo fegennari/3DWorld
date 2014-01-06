@@ -473,7 +473,10 @@ public:
 				vector3d &normal(pb.polys.back().n);
 				
 				for (unsigned i = pix; i < pix+npts-2; ++i) { // find a nonzero normal
-					normal = cross_product((v[pb.pts[i+1].vix] - v[pb.pts[i].vix]), (v[pb.pts[i+2].vix] - v[pb.pts[i].vix])).get_norm(); // backwards?
+					normal = cross_product((v[pb.pts[i+1].vix] - v[pb.pts[i].vix]), (v[pb.pts[i+2].vix] - v[pb.pts[i].vix])); // backwards?
+					// if we disable this normalize() we will weight normal contributions by polygon area,
+					// but we have to change the code below and it causes problems with vertex uniquing
+					normal.normalize();
 					if (normal != zero_vector) break; // got a good normal
 				}
 				if (recalc_normals) {

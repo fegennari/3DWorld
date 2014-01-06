@@ -246,11 +246,11 @@ inline void orthogonalize_dir(vector3d const &vin, vector3d const &dir, vector3d
 }
 
 
-inline vector3d get_poly_norm(point const *const points) { // requires at least 3 points
+inline vector3d get_poly_norm(point const *const points, bool normalize) { // requires at least 3 points
 
 	assert(points != NULL);
 	vector3d norm;
-	get_normal(points[0], points[1], points[2], norm, 1);
+	get_normal(points[0], points[1], points[2], norm, normalize);
 	return norm;
 }
 
