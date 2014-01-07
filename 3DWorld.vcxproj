@@ -874,6 +874,8 @@
     <None Include="shaders\draw_mesh.vert" />
     <None Include="shaders\dynamic_lighting.part" />
     <None Include="shaders\exponential_fog.part.frag" />
+    <None Include="shaders\fog_epos_only.frag" />
+    <None Include="shaders\fog_epos_only.vert" />
     <None Include="shaders\fog_only.frag" />
     <None Include="shaders\fog_only.vert" />
     <None Include="shaders\fresnel.part" />
@@ -921,6 +923,7 @@
     <None Include="shaders\sphere_shadow_casters.part.frag" />
     <None Include="shaders\star_draw.frag" />
     <None Include="shaders\star_draw.vert" />
+    <None Include="shaders\star_draw_iq.frag" />
     <None Include="shaders\tc_by_vert_id.part.vert" />
     <None Include="shaders\textured_with_fog.frag" />
     <None Include="shaders\textured_with_fog_opacity.frag" />
