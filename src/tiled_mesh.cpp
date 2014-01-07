@@ -33,7 +33,7 @@ unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 
-extern bool inf_terrain_scenery, enable_tiled_mesh_ao;
+extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
 extern int island, DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide;
@@ -1466,9 +1466,9 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool
 void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {
 
 	s.setup_enabled_lights(3, (1 << lighting_shader)); // sun, moon, and lightning
-	s.set_prefix("#define USE_QUADRATIC_FOG",       1); // FS
-	s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1); // FS
-	s.set_prefix("#define USE_LIGHT_COLORS",        lighting_shader);
+	if (!underwater) {s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);} // FS
+	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+	s.set_prefix("#define USE_LIGHT_COLORS",  lighting_shader);
 }
 
 void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows) {

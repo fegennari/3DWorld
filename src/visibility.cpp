@@ -168,6 +168,7 @@ bool pos_dir_up::cube_visible(cube_t const &cube) const {
 	point cube_pts[8];
 	get_cube_points(cube.d, cube_pts);
 	return pt_set_visible<8>(cube_pts);
+	// Note: if the above call returns true, we could perform a further check for the frustum (all points) to the outside of each plane of the cube
 }
 
 

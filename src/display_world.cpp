@@ -373,7 +373,7 @@ void auto_advance_camera() {
 }
 
 
-void config_bkg_color_and_clear(bool underwater, float depth, bool no_fog) {
+void config_bkg_color_and_clear(float depth, bool no_fog) {
 
 	calc_bkg_color();
 	glClearColor_rgba((!no_fog && show_fog) ? GRAY : bkg_color);
@@ -397,10 +397,10 @@ void set_uniform_atten_lighting(int light) {
 }
 
 
-void setup_lighting(bool underwater, float depth) {
+void setup_lighting(float depth) {
 	
 	// background color code
-	config_bkg_color_and_clear(underwater, depth, (world_mode == WMODE_INF_TERRAIN));
+	config_bkg_color_and_clear(depth, (world_mode == WMODE_INF_TERRAIN));
 	
 	// setup light position
 	float const light_pos_scale((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode 
@@ -491,7 +491,7 @@ void draw_sun_moon_stars() {
 }
 
 
-void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
+void draw_universe_bkg(float depth, bool reflection_mode) {
 
 	RESET_TIME;
 
@@ -523,7 +523,7 @@ void draw_universe_bkg(bool underwater, float depth, bool reflection_mode) {
 	}
 
 	// draw universe as background
-	if (!reflection_mode) {config_bkg_color_and_clear(underwater, depth, 1);}
+	if (!reflection_mode) {config_bkg_color_and_clear(depth, 1);}
 	point const camera_pos_orig(camera_pos);
 	camera_pos = player_pos; // trick universe code into thinking the camera is at the player's ship
 	stop_player_ship();
@@ -624,7 +624,7 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 		fog_color = get_tt_water_color();
 		fog_color.alpha = 1.0;
 		atten_uw_fog_color(fog_color, 2.0*water_params.alpha*(water_plane_z - camera_z)); // more opaque = effectively deeper
-		fog_dist = max(0.1, (0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * (1.5 - water_params.alpha)); // not sure why the max of 0.1 is required
+		fog_dist = (0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * (1.5 - water_params.alpha);
 	}
 	else {
 		get_avg_sky_color(fog_color);
@@ -877,7 +877,7 @@ void display(void) {
 			sun_color = SUN_LT_C;
 			apply_red_sky(sun_color);
 			reset_planet_defaults();
-			setup_lighting(underwater, depth);
+			setup_lighting(depth);
 			set_light_atten(GL_LIGHT0, 1.0); // reset light0
 			check_gl_error(4);
 			if (TIMETEST) PRINT_TIME("B");
@@ -887,7 +887,7 @@ void display(void) {
 		}
 		else { // finite terrain mode
 			if (combined_gu) { // light from current system's star
-				draw_universe_bkg(underwater, depth, 0); // infinite universe as background
+				draw_universe_bkg(depth, 0); // infinite universe as background
 			}
 			if (TIMETEST) PRINT_TIME("C");
 
@@ -1114,7 +1114,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	// setup viewport and projection matrix
 	glViewport(0, 0, xsize, ysize);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	if (combined_gu && !is_cloudy) {draw_universe_bkg(underwater, 0.0, 1);} // infinite universe as background
+	if (combined_gu && !is_cloudy) {draw_universe_bkg(0.0, 1);} // infinite universe as background
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	set_perspective(PERSP_ANGLE, 1.0);
@@ -1223,11 +1223,11 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (draw_water && !underwater) reflection_tid = create_reflection();
 
 	if (combined_gu) {
-		draw_universe_bkg(underwater, uw_depth, 0); // infinite universe as background
+		draw_universe_bkg(uw_depth, 0); // infinite universe as background
 		check_gl_error(4);
 	}
 	else {
-		config_bkg_color_and_clear(underwater, uw_depth, 1);
+		config_bkg_color_and_clear(uw_depth, 1);
 		int const fog_enabled(glIsEnabled(GL_FOG));
 		if (fog_enabled) {glDisable(GL_FOG);}
 		draw_sun_moon_stars();

@@ -22,16 +22,15 @@ Starbase texture
 Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
+Fix strips at LOD changes > 1
 
 ************************
 
 Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
-Revisit optimality of cube-frustum intersection test
 Vertex normals for mesh (terrain and water) come from opposite side (+/-) points
 
-Sun/sun flare/sun fog when under water
 More fog in valleys (in morning?)
 Fog decreases at high altitude (based on camera height/far clip distance used?)
 Cloud lighting based on thickness/distance to sun
