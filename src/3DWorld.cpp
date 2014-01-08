@@ -51,7 +51,7 @@ char *defaults_file    = "defaults.txt";
 char *dstate_file      = "state.txt";
 char *dmesh_file       = "mesh.txt";
 char *dcoll_obj_file   = "coll_objs/coll_objs.txt";
-char *dship_def_file   = "ship_defs.txt";
+char *dship_def_file   = "universe/ship_defs.txt";
 char *state_file(dstate_file), *mesh_file(dmesh_file), *coll_obj_file(dcoll_obj_file);
 char *mh_filename(NULL), *mh_filename_tt(NULL), *mesh_diffuse_tex_fn(NULL), *ship_def_file(dship_def_file), *snow_file(NULL);
 char *lighting_file[NUM_LIGHTING_TYPES] = {0};
@@ -1036,7 +1036,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'U':
-		if (world_mode != WMODE_UNIVERSE) { // toggle universe background mode
+		if (/*!disable_universe &&*/ world_mode != WMODE_UNIVERSE) { // toggle universe background mode
 			combined_gu = !combined_gu;
 			
 			if (combined_gu) { // do a fake draw pass to force the universe to be created so we can determine the closest planet/moon and setup lighting/water/temperature/vegetation/etc.

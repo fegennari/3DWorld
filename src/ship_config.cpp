@@ -1003,7 +1003,7 @@ void init_ship_weapon_classes() {
 	ship_defs_file_reader reader;
 
 	if (!reader.read_file(ship_def_file)) {
-		cerr << "Error reading ship definitions file '" << ship_def_file << "." << endl;
+		cerr << "Error reading ship definitions file '" << ship_def_file << "'." << endl;
 		exit(1);
 	}
 	assert(sclasses.size()   == NUM_US_CLASS);
