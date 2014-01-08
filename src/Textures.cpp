@@ -147,7 +147,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "foam1.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_diffuse.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 1, 0, "bullet_hole/bullet_alpha.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_normal.jpg"), // 256x256
-texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 1, 4.0),
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 0, 2.0),
 
 texture_t(0, 5, 0,    0,    1, 3, 1, "raindrop_dots.jpg")
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
