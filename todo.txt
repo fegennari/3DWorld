@@ -22,7 +22,9 @@ Starbase texture
 Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
-Fix strips at LOD changes > 1
+
+TT puget mesh spike reflection
+No TT bump maps for distant tiles (reduce tiling artifacts)
 
 ************************
 

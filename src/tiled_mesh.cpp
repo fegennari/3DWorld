@@ -1145,25 +1145,25 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 			(dim ? dy : dx) += (dir ? 1 : -1);
 			tile_t *adj(get_adj_tile(dx, dy));
 			if (adj == NULL) continue; // no adjacent tile
-			unsigned const adj_lod(adj->get_lod_level(reflection_pass));
-			if (adj_lod <= lod_level) continue; // not a high=>low LOD transition
-			//assert(adj_lod == lod_level+1); // too strong
 			//if (!adj->is_visible() || adj->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue;
-			unsigned const lo_step(1 << adj_lod), hi_step(1 << (adj_lod - 1)); // Note: in the rare case where adj_lod > lod_level+1, we may miss some of the crack
-			unsigned const size_lo_ceil((size + step - 1)/lo_step);
 
-			for (unsigned xy = 0, nxy = 0; nxy < size_lo_ceil; xy += lo_step, ++nxy) {
-				unsigned const xyn(min(xy+lo_step, size));
+			for (unsigned adj_lod = adj->get_lod_level(reflection_pass); adj_lod > lod_level; --adj_lod) { // for all levels of high=>low LOD transitions
+				unsigned const lo_step(1 << adj_lod), hi_step(1 << (adj_lod - 1));
+				unsigned const size_lo_ceil((size + step - 1)/lo_step);
+
+				for (unsigned xy = 0, nxy = 0; nxy < size_lo_ceil; xy += lo_step, ++nxy) {
+					unsigned const xyn(min(xy+lo_step, size));
 				
-				for (unsigned n = 0; n < 3; ++n) { // one triangle
-					if (dim == 0) { // adjacent in x, step in y
-						crack_ixs.push_back(min((xy + n*hi_step), size)*stride + dir*size);
-					}
-					else { // adjacent in y, step in x
-						crack_ixs.push_back(dir*size*stride + min((xy + n*hi_step), size));
+					for (unsigned n = 0; n < 3; ++n) { // one triangle
+						if (dim == 0) { // adjacent in x, step in y
+							crack_ixs.push_back(min((xy + n*hi_step), size)*stride + dir*size);
+						}
+						else { // adjacent in y, step in x
+							crack_ixs.push_back(dir*size*stride + min((xy + n*hi_step), size));
+						}
 					}
 				}
-			}
+			} // for adj_lod
 		} // for dir
 	} // for dim
 	if (!crack_ixs.empty()) {glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_INT, &crack_ixs.front());}
