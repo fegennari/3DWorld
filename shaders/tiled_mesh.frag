@@ -104,6 +104,7 @@ void main()
 	//normal     += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5); // add noise
 	vec4 color  = gl_LightModel.ambient;
 	vec4 epos   = (gl_ModelViewMatrix * vertex);
+	bump_scale *= clamp((2.5 - 0.1*length(epos.xyz)), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
 	
 	if (enable_light0) { // sun
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
