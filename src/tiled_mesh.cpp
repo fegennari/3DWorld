@@ -240,6 +240,10 @@ float tile_t::get_max_xy_dist_to_pt(point const &pt) const { // unused
 	return sqrt(dx*dx + dy*dy);
 }
 
+float tile_t::get_bsphere_radius_inc_water() const {
+	return ((is_water_enabled() && mzmax < water_plane_z) ? max(radius, (water_plane_z - 0.5f*(mzmin + mzmax))) : radius); // include water
+}
+
 
 unsigned tile_t::get_gpu_mem() const {
 
@@ -532,19 +536,19 @@ void tile_t::calc_shadows(bool calc_sun, bool calc_moon, bool no_push) {
 }
 
 
-void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float radius) const {
+void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius) const {
 
 	tile_t *const adj_tile(get_adj_tile_smap(dx, dy));
 	if (!adj_tile) return;
 	point const pos2(pos + mesh_off.subtract_from(adj_tile->mesh_off));
-	adj_tile->add_tree_ao_shadow(pos2, radius, 1);
+	adj_tile->add_tree_ao_shadow(pos2, tradius, 1);
 }
 
 
-void tile_t::add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test) {
+void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test) {
 
 	int const xc(round_fp((pos.x - xstart)/DX_VAL)), yc(round_fp((pos.y - ystart)/DY_VAL));
-	int rval(max(int(radius/DX_VAL), int(radius/DY_VAL)) + 1);
+	int rval(max(int(tradius/DX_VAL), int(tradius/DY_VAL)) + 1);
 	int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
 	float const scale(0.6/rval);
 	bool updated(0);
@@ -562,7 +566,7 @@ void tile_t::add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test
 		for (int dy = -1; dy <= 1; ++dy) {
 			for (int dx = -1; dx <= 1; ++dx) {
 				if (dx == 0 && dy == 0) continue;
-				if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, radius);}
+				if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, tradius);}
 			}
 		}
 	}

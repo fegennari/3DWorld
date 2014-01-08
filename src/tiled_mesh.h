@@ -202,8 +202,8 @@ public:
 		tile_t *adj_tile(get_adj_tile(dx, dy));
 		return ((adj_tile && !adj_tile->tree_map.empty()) ? adj_tile : NULL);
 	}
-	void push_tree_ao_shadow(int dx, int dy, point const &pos, float radius) const;
-	void add_tree_ao_shadow(point const &pos, float radius, bool no_adj_test);
+	void push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius) const;
+	void add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test);
 	void apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test);
 	void apply_tree_ao_shadows();
 	void check_shadow_map_and_normal_texture();
@@ -218,8 +218,9 @@ public:
 	float get_rel_dist_to_camera(bool xy_dist=1) const {
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();
 	}
+	float get_bsphere_radius_inc_water() const;
 	bool update_range(vector<unsigned> *vbo_free_list);
-	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), radius, get_bcube());}
+	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), get_bsphere_radius_inc_water(), get_bcube());}
 	float get_dist_to_camera_in_tiles(bool xy_dist=1) const {return get_rel_dist_to_camera(xy_dist)*TILE_RADIUS;}
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
 	float get_scenery_dist_scale(bool reflection_pass) const {return get_dist_to_camera_in_tiles()/get_scenery_thresh(reflection_pass);}
