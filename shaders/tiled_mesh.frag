@@ -32,7 +32,7 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal, in
 	mat3 TBN  = transpose(mat3(tan, cross(normal, tan), normalize(normal))); // world space {Y, X, Z} for normal in +Z
 	light_dir = TBN * light_dir;
 	eye_pos   = TBN * eye_pos;
-	return mix(vec3(0,0,1), (2.0*texture2D(detail_normal_tex, 0.25*gl_TexCoord[1].st).rgb - 1.0), bump_scale); // scaled detail texture tc
+	return normalize(mix(vec3(0,0,1), (2.0*texture2D(detail_normal_tex, 0.25*gl_TexCoord[1].st).rgb - 1.0), bump_scale)); // scaled detail texture tc
 }
 
 vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {
