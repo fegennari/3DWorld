@@ -1092,7 +1092,7 @@ void tile_t::ensure_weights(mesh_xy_grid_cache_t &height_gen) {
 
 unsigned tile_t::get_lod_level(bool reflection_pass) const {
 
-	unsigned lod_level(reflection_pass ? min(NUM_LODS-1, 1U) : 0);
+	unsigned lod_level((reflection_pass && min_normal_z > 0.1) ? min(NUM_LODS-1, 1U) : 0);
 	float dist(get_dist_to_camera_in_tiles());
 	
 	if (min_normal_z > 0.0) { // normals have been calculated, adjust detail based on max slope
@@ -1688,6 +1688,7 @@ unsigned in_mb(unsigned long long v) {return v/1024/1024;}
 
 void tile_draw_t::draw(bool reflection_pass) {
 
+	//cout << "zmin: " << zmin << ", zmax: " << zmax << ", wpz: " << water_plane_z << endl; // TESTING
 	//RESET_TIME;
 	unsigned num_trees(0);
 	unsigned long long mem(0), tree_mem(0);

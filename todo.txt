@@ -24,7 +24,6 @@ gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
 Set specular for gold/metal materials
 
-TT puget mesh spike reflection
 TT puget snow lighting banding in combined_gu mode and sunset
 
 ************************
