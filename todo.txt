@@ -24,8 +24,6 @@ gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
 Set specular for gold/metal materials
 
-TT puget snow lighting banding in combined_gu mode and sunset
-
 ************************
 
 Star shader:
@@ -33,12 +31,11 @@ https://www.shadertoy.com/view/4dXGR4
 
 Vertex normals for mesh (terrain and water) come from opposite side (+/-) points
 
-More fog in valleys (in morning?)
-Fog decreases at high altitude (based on camera height/far clip distance used?)
+More fog in valleys
+Fog decreases at high altitude
 Cloud lighting based on thickness/distance to sun
-
-Fix incorrect handling of raindrop PNG image
 TT Foam at water edge using procedural texture when waves are enabled
+TT uses lower res source data for distant tiles (far below the player as height increases)
 
 Ray tracer uses cosine of normal for diffuse reflection and specular shine
 Ray tracer thread/ray coherence experiments
@@ -46,8 +43,6 @@ Ray tracer thread/ray coherence experiments
 Perlin noise function experiments
   http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 Higher order interpolation functions
-
-TT uses lower res source data for distant tiles (far below the player as height increases)
 
 Faster cube mapped sphere planet render
 Planet texture width 2x height
