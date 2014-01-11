@@ -709,7 +709,7 @@ void set_water_plane_uniforms(shader_t &s) {
 colorRGBA get_tt_water_color() {
 
 	colorRGBA color;
-	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature), 1);
+	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature), 1, 2.0); // 2x specular
 	blend_color(color, colorRGBA(0.15, 0.1, 0.05, 1.0), color, water_params.mud, 0); // blend in mud color
 	color.alpha *= water_params.alpha;
 	color       *= water_params.bright;
@@ -717,7 +717,7 @@ colorRGBA get_tt_water_color() {
 }
 
 
-// texture units used: 0: reflection texture, 1: water normal map, 2: mesh height texture
+// texture units used: 0: reflection texture, 1: water normal map, 2: mesh height texture, 3: rain noise, 4: deep water normal map
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
@@ -758,6 +758,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	s.set_bool_prefix("reflections", reflections, 1); // FS
 	s.set_bool_prefix("add_waves", add_waves, 1); // FS
 	s.set_bool_prefix("add_noise", rain_mode, 1); // FS
+	s.set_bool_prefix("deep_water_waves", add_waves, 1); // FS (always enabled with waves for now)
 	s.set_vert_shader("texture_gen.part+water_plane");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
 	s.begin_shader();
@@ -770,9 +771,11 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	s.add_uniform_int  ("height_tex",     2);
 	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
 
-	// waves (as normal map)
-	select_multitex(WATER_NORMAL_TEX, 1, 0);
-	s.add_uniform_int("water_normal_tex", 1);
+	// waves (as normal maps)
+	select_multitex(WATER_NORMAL_TEX,       1, 0);
+	select_multitex(OCEAN_WATER_NORMAL_TEX, 4, 0);
+	s.add_uniform_int("water_normal_tex",      1);
+	s.add_uniform_int("deep_water_normal_tex", 4);
 	s.add_uniform_float("water_green_comp", water_params.green);
 	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	set_water_plane_uniforms(s);

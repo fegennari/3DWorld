@@ -61,7 +61,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	if (vertex.z < water_plane_z) { // underwater
 #ifdef WATER_CAUSTICS
 		if (i == 0) { // only for light0 (sun)
-			// apply underwater caustics texture
+			// apply underwater caustics texture (Note: matches shallow water wave normal map, but not deep water wave normal map)
 			float cweight = ds_scale*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
 			vec3  cval    = 4.0*mix(texture2D(caustic_tex, gl_TexCoord[2].st).rgb, texture2D(caustic_tex, (gl_TexCoord[2].st + vec2(0.3, 0.6))).rgb, ntime);

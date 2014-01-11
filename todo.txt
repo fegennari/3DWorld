@@ -31,8 +31,12 @@ https://www.shadertoy.com/view/4dXGR4
 
 Vertex normals for mesh (terrain and water) come from opposite side (+/-) points
 
+Fix underwater rock specular
+
 More fog in valleys
 Fog decreases at high altitude
+  - remove cylinder water cap?
+  - fog for plants
   - increase far clipping distance
   - draw more distant tiles
   - camera above cloud plane
@@ -54,4 +58,4 @@ Normap map texture for planets instead of storing vertex normals (such as tiled 
 
 Gamma correction/sRGB
 
-Visual Studio profile and static error check (analysis)
+Visual Studio profile (incompatible with OpenMP) and static error check (analysis)

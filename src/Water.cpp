@@ -161,18 +161,18 @@ void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 }
 
 
-void select_water_ice_texture(colorRGBA &color, float *use_this_temp, bool set_avg_color_instead) {
+void select_water_ice_texture(colorRGBA &color, float *use_this_temp, bool set_avg_color_instead, float specular_scale) {
 
 	int tid(-1);
 
 	if (((use_this_temp != NULL) ? *use_this_temp : temperature) > W_FREEZE_POINT) { // water
 		tid = WATER_TEX;
-		set_specular(w_spec[0][0], w_spec[0][1]);
+		set_specular(specular_scale*w_spec[0][0], specular_scale*w_spec[0][1]);
 		color = WATER_C;
 	}
 	else { // ice
 		tid = ICE_TEX;
-		set_specular(w_spec[1][0], w_spec[1][1]);
+		set_specular(specular_scale*w_spec[1][0], specular_scale*w_spec[1][1]);
 		color = ICE_C;
 	}
 	if (set_avg_color_instead) {
