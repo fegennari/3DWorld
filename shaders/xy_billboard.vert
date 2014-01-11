@@ -1,6 +1,9 @@
+varying float world_space_zval;
+
 void main()
 {
 	set_tc0_from_vert_id();
+	world_space_zval = gl_Vertex.z;
 	gl_Position     = ftransform();
 	gl_FogFragCoord = length((gl_ModelViewMatrix * gl_Vertex).xyz); // set standard fog coord
 	vec3 color      = vec3(0.0);

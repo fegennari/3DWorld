@@ -226,6 +226,8 @@ bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int);
 void change_inf_terrain_fire_mode(int val);
 void inf_terrain_fire_weapon();
 void inf_terrain_undo_hmap_mod();
+void setup_tt_fog_pre(shader_t &s);
+void setup_tt_fog_post(shader_t &s);
 
 // function prototypes - precipitation
 void draw_tiled_terrain_precipitation();

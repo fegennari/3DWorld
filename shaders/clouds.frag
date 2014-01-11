@@ -16,6 +16,6 @@ void main()
 	float black_mix = ((underwater_atten && t > 0.0 && t < 1.0) ? 1.0 : 0.0);
 	float alpha     = gen_cloud_alpha(pos.xy);
 	vec4 cscale     = mix(vec4(1,1,1, alpha), vec4(0,0,0,1), black_mix);
-	gl_FragColor    = apply_fog(color2*cscale);
-	//gl_FragColor    = apply_fog_colored(color2*cscale, (gl_ModelViewMatrix * vec4(vertex, 1.0)));
+	//gl_FragColor    = apply_fog_scaled(color2*cscale, vertex.z);
+	gl_FragColor    = apply_fog_colored(color2*cscale, vec4(vertex, 1.0));
 }

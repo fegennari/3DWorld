@@ -754,14 +754,14 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	if (no_specular) {s.set_prefix("#define NO_SPECULAR", 1);} // FS
 	s.setup_enabled_lights(2, 2); // FS
-	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+	setup_tt_fog_pre(s);
 	s.set_bool_prefix("reflections", reflections, 1); // FS
 	s.set_bool_prefix("add_waves", add_waves, 1); // FS
 	s.set_bool_prefix("add_noise", rain_mode, 1); // FS
 	s.set_vert_shader("texture_gen.part+water_plane");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
 	s.begin_shader();
-	s.setup_fog_scale();
+	setup_tt_fog_post(s);
 	s.add_uniform_int  ("reflection_tex", 0);
 	s.add_uniform_color("water_color",    color);
 	s.add_uniform_color("reflect_color",  rcolor);

@@ -1467,11 +1467,24 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool
 }
 
 
+void setup_tt_fog_pre(shader_t &s) {
+
+	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+	if (display_mode & 0x10) {s.set_prefix("#define USE_NONUNIFORM_FOG", 1);} // FS
+}
+
+void setup_tt_fog_post(shader_t &s) {
+
+	s.setup_fog_scale();
+	s.add_uniform_float("fog_bot", zmax);
+	s.add_uniform_float("fog_top", (zmax + (zmax - zmin)));
+}
+
 void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {
 
 	s.setup_enabled_lights(3, (1 << lighting_shader)); // sun, moon, and lightning
 	if (!underwater) {s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);} // FS
-	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+	setup_tt_fog_pre(s);
 	s.set_prefix("#define USE_LIGHT_COLORS",  lighting_shader);
 }
 
@@ -1517,7 +1530,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
 	s.begin_shader();
-	s.setup_fog_scale();
+	setup_tt_fog_post(s);
 	s.add_uniform_int("weights_tex", 0);
 	s.add_uniform_int("detail_tex",  1);
 	s.add_uniform_int("shadow_normal_tex", 7);
@@ -1826,7 +1839,7 @@ void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs) {
 	s.set_vert_shader("ads_lighting.part*+tc_by_vert_id.part+" + vs);
 	s.set_frag_shader("linear_fog.part+noise_dither.part+pine_tree");
 	s.begin_shader();
-	s.setup_fog_scale();
+	setup_tt_fog_post(s);
 	s.add_uniform_int("branch_tex", 0);
 	s.add_uniform_float("min_alpha", 0.75);
 	set_tree_dither_noise_tex(s, 1); // TU=1
@@ -1873,8 +1886,9 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	set_specular(0.0, 1.0);
 
 	// nearby trunks
-	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+	setup_tt_fog_pre(s);
 	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
+	setup_tt_fog_post(s);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 	s.add_uniform_float("tex_scale_t", 5.0);
 	set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
@@ -1913,7 +1927,7 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 
 	shared_shader_lighting_setup(s, 1);
 	s.begin_shader();
-	s.setup_fog_scale();
+	setup_tt_fog_post(s);
 #ifdef USE_TREE_BB_TEX_ATLAS
 	s.add_uniform_vector2d("normal_tc_off",   vector2d(0.5, 0.0));
 	s.add_uniform_vector2d("normal_tc_scale", vector2d(0.5, 1.0));
@@ -1947,12 +1961,12 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 	{ // draw branches
 		shader_t bs;
 		bs.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
-		bs.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
+		setup_tt_fog_pre(bs);
 		bs.set_vert_shader("per_pixel_lighting");
 		bs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tiled_tree_branches");
 		bs.begin_shader();
 		if (USE_TREE_BILLBOARDS) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
-		bs.setup_fog_scale();
+		setup_tt_fog_post(bs);
 		set_tree_dither_noise_tex(bs, 1); // TU=1
 		bs.add_uniform_int("tex0", 0);
 		bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
@@ -1995,7 +2009,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass) {
 	s.set_vert_shader("ads_lighting.part*+two_lights_texture");
 	s.set_frag_shader("linear_fog.part+textured_with_fog");
 	s.begin_shader();
-	s.setup_fog_scale();
+	setup_tt_fog_post(s);
 	s.add_uniform_int("tex0", 0);
 		
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
@@ -2036,7 +2050,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		s.add_uniform_int("weight_tex", 3);
 		s.add_uniform_int("shadow_normal_tex", 4);
 		set_noise_tex(s, 5);
-		s.setup_fog_scale();
+		setup_tt_fog_post(s);
 		s.add_uniform_float("height", grass_length);
 		s.add_uniform_float("dist_const", get_grass_thresh());
 		s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);

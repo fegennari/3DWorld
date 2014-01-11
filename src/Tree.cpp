@@ -386,7 +386,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS - required for dynamic lighting
 	if (!has_dl_sources && !lightning_enabled()) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
-	if (world_mode == WMODE_INF_TERRAIN) {s.set_prefix("#define USE_QUADRATIC_FOG",   1);} // FS
+	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_pre(s);} // FS
 	s.setup_enabled_lights(2, 1); // VS
 	s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
 
@@ -400,7 +400,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 		s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+leaf_lighting.part+tc_by_vert_id.part+tree_leaves");
 		s.begin_shader();
 	}
-	s.setup_fog_scale();
+	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);} else {s.setup_fog_scale();}
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_active_texture(0);
 	s.add_uniform_int("tex0", 0);
