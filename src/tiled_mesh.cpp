@@ -1186,7 +1186,12 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 				int dxy[2] = {0,0};
 				dxy[dim] = (dir ? 1 : -1);
 				tile_t const *const adj_tile(get_adj_tile(dxy[0], dxy[1]));
-				if (adj_tile && adj_tile->get_rel_dist_to_camera() < DRAW_DIST_TILES) continue; // adj tile exists
+				
+				if (adj_tile) {
+					if (adj_tile->get_rel_dist_to_camera() < DRAW_DIST_TILES && !adj_tile->was_last_occluded()) continue;
+					if (!adj_tile->has_water ()) continue; // adj tile has no water, so we can't have any uncapped water on this edge
+					if (!adj_tile->is_visible()) continue; // adj tile not visible,  so we can't see this edge
+				}
 				unsigned const num_steps = 10;
 				float const dz(water_plane_z - mzmin), zstep(dz/num_steps);
 

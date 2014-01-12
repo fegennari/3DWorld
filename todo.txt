@@ -26,8 +26,6 @@ Higher order interpolation functions
 
 ************************
 
-Fix water edge rendering
-
 Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
