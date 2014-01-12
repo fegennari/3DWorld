@@ -2,7 +2,7 @@ varying vec3 normal;
 varying vec4 epos, proj_pos;
 uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex;
 uniform vec4 water_color, reflect_color;
-uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale;
+uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
 uniform float x1, y1, x2, y2, zmin, zmax;
 
 vec3 water_normal_lookup(in vec2 tc) {
@@ -47,10 +47,10 @@ void main()
 		if (deep_water_waves) {
 			// deep water waves shouldn't move (much) with the wind, but that would require another set of TCs, texgen matrix, etc.
 			vec3 deep_wave_n = 1.25*wave_amplitude*get_deep_wave_normal(gl_TexCoord[0].st);
-			wave_n = mix(wave_n, deep_wave_n, clamp((0.8*depth - 0.2), 0.0, 1.0));
+			wave_n = mix(wave_n, deep_wave_n, clamp((0.8*depth*mesh_z_scale - 0.2), 0.0, 1.0));
 		}
 		vec3 wave_n_eye = gl_NormalMatrix * wave_n;
-		if (reflections) {green_scale += 1.0 - 0.8*abs(dot(norm, normalize(wave_n_eye)));} // add green to sides of waves (though this increases shader time)
+		if (reflections) {green_scale += 0.8*(1.0 - abs(dot(norm, normalize(wave_n_eye))));} // add green to sides of waves (though this increases shader time)
 		light_norm = normalize(norm + wave_n_eye);
 		norm       = normalize(norm + 0.1*wave_n_eye); // lower scale for fresnel term
 		ripple    += 0.05*wave_n.xy;

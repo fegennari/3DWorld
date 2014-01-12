@@ -233,6 +233,9 @@ void urev_body::gen_surface() {
 }
 
 
+// Note: many planet/sphere renderers use a texture with width = 2*height, which yields square regions at the equator
+// here we use a square texture for simplicity, so that this code can be shared with (and be similar to)
+// the rest of the 3DWorld sphere generation and drawing code; it also produces more uniform regions near the poles
 void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned size) { // also generates heightmap
 
 	//RESET_TIME;

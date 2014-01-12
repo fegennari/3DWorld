@@ -400,22 +400,11 @@ void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 
 	// draw a plane at terrain_zmin to properly blend the fog
 	if (!reflection_pass && glIsEnabled(GL_FOG)) {
-#if 1
 		colorRGBA fog_color;
 		glGetFloatv(GL_FOG_COLOR, (float *)&fog_color);
 		fog_color.do_glColor();
 		glDisable(GL_LIGHTING);
-#else
-		setup_tt_fog_pre(s);
-		s.set_vert_shader("water_fog.part+fog_only");
-		s.set_frag_shader("linear_fog.part+fog_only");
-		s.begin_shader();
-		setup_tt_fog_post(s);
-		s.add_uniform_float("water_plane_z", zval);
-		BLACK.do_glColor();
-#endif
-		float const zval(terrain_zmin - SMALL_NUMBER);
-		imd.render_z_plane(-size, -size, size, size, zval, CLOUD_NUM_DIV, CLOUD_NUM_DIV);
+		imd.render_z_plane(-size, -size, size, size, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
 		glEnable(GL_LIGHTING);
 	}

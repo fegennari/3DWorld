@@ -765,17 +765,19 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	s.add_uniform_color("water_color",    color);
 	s.add_uniform_color("reflect_color",  rcolor);
 	s.add_uniform_int  ("height_tex",     2);
+	s.add_uniform_float("water_green_comp", water_params.green);
+	s.add_uniform_float("reflect_scale",    water_params.reflect);
+	s.add_uniform_float("mesh_z_scale",     mesh_scale);
+	set_water_plane_uniforms(s);
 	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
 
 	// waves (as normal maps)
-	select_multitex(WATER_NORMAL_TEX,       1, 0);
-	select_multitex(OCEAN_WATER_NORMAL_TEX, 4, 0);
-	s.add_uniform_int("water_normal_tex",      1);
-	s.add_uniform_int("deep_water_normal_tex", 4);
-	s.add_uniform_float("water_green_comp", water_params.green);
-	s.add_uniform_float("reflect_scale",    water_params.reflect);
-	set_water_plane_uniforms(s);
-
+	if (add_waves) {
+		select_multitex(WATER_NORMAL_TEX,       1, 0);
+		select_multitex(OCEAN_WATER_NORMAL_TEX, 4, 0);
+		s.add_uniform_int("water_normal_tex",      1);
+		s.add_uniform_int("deep_water_normal_tex", 4);
+	}
 	if (rain_mode) {
 		select_multitex(RAINDROP_TEX, 3, 0);
 		s.add_uniform_int  ("noise_tex", 3);

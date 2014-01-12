@@ -37,7 +37,7 @@ Fog decreases at high altitude
   - increase far clipping distance
   - draw more distant tiles (larger/lower res at high delta-z)
   - camera above cloud plane
-Cloud lighting based on thickness/distance to sun
+TT Cloud lighting based on thickness/distance to sun
 TT Foam at water edge/wave peaks using procedural texture when waves are enabled
 
 Ray tracer uses cosine of normal for diffuse reflection and specular shine
@@ -46,9 +46,10 @@ Ray tracer thread/ray coherence experiments
 Perlin noise function experiments
   http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 
-Faster cube mapped sphere planet render
-Planet texture width 2x height
-Render nearby planet in chunks
-Normap map texture for planets instead of storing vertex normals (such as tiled mesh)
+Render nearby planet in chunks starting with draw_cube_mapped_sphere()
+Planet VBOs use compressed normals
 
-Visual Studio profile (incompatible with OpenMP) and static error check (analysis)
+Visual Studio profile
+http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
+
+static error check (analysis)
