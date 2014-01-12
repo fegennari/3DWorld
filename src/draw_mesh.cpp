@@ -461,7 +461,6 @@ void display_mesh(bool shadow_pass) { // fast array version
 		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
-	//set_specular(1.0, 40.0);
 
 	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
 		(mesh_color_scale*DEF_DIFFUSE).do_glColor();
@@ -470,7 +469,6 @@ void display_mesh(bool shadow_pass) { // fast array version
 	else { // slower mesh draw with more features
 		draw_mesh_mvd(0);
 	}
-	//set_specular(0.0, 1.0);
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	disable_multitex(1, 1);
 	disable_textures_texgen();

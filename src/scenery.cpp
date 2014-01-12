@@ -1066,6 +1066,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 
 void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate) {
 
+	set_specular(0.25, 20.0); // a small amount of specular
 	plant_vbo_manager.upload();
 	plant_vbo_manager.begin_render(s.is_setup());
 
@@ -1073,6 +1074,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, xlate);
 	}
 	plant_vbo_manager.end_render();
+	set_specular(0.0, 1.0);
 }
 
 

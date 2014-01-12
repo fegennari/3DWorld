@@ -1705,6 +1705,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 
 	//cout << "zmin: " << zmin << ", zmax: " << zmax << ", wpz: " << water_plane_z << endl; // TESTING
 	//RESET_TIME;
+	set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
 	unsigned num_trees(0);
 	unsigned long long mem(0), tree_mem(0);
 	to_draw.clear();
