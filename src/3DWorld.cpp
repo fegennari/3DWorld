@@ -697,6 +697,7 @@ void mouseMotion(int x, int y) {
 			camera_origin.x += MOUSE_TRAN_ADJ*dy;
 			camera_origin.y += MOUSE_TRAN_ADJ*dx;
 		}
+		// Note: could use the middle button to move the sun/moon, etc.
 		break;
 
 	case GLUT_RIGHT_BUTTON: // v: radius, h: up_vector

@@ -723,7 +723,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const no_specular(light_factor <= 0.4 || (get_sun_pos().z - sun_radius) < water_plane_z); // no sun or it's below the water level
 	colorRGBA const color(get_tt_water_color());
 
-	if (animate2 && temperature > W_FREEZE_POINT) {
+	if (animate2 && (combined_gu ? univ_temp : init_temperature) > W_FREEZE_POINT) {
 		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
 		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
 		wave_time  += fticks;

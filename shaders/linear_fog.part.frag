@@ -74,14 +74,15 @@ vec4 apply_fog_colored(in vec4  color,    // original color of the pixel
 #endif
 }
 
+// Note: these two functions assume the sun is light0, and it's a directional light
 vec4 apply_fog_colored(in vec4 color, in vec4 vertex) {
 	vec4 epos       = gl_ModelViewMatrix * vertex;
 	float fog_scale = gl_FogFragCoord*get_custom_fog_scale(vertex.z);
-	return apply_fog_colored(color, fog_scale, -normalize(epos.xyz), normalize(epos.xyz - gl_LightSource[0].position.xyz));
+	return apply_fog_colored(color, fog_scale, -normalize(epos.xyz), normalize(-gl_LightSource[0].position.xyz));
 }
 
 vec4 apply_fog_colored_epos(in vec4 color, in vec4 epos) {
 	float fog_coord = length(epos.xyz)*get_custom_fog_scale_epos(epos);
-	return apply_fog_colored(color, fog_coord, -normalize(epos.xyz), normalize(epos.xyz - gl_LightSource[0].position.xyz));
+	return apply_fog_colored(color, fog_coord, -normalize(epos.xyz), normalize(-gl_LightSource[0].position.xyz));
 }
 

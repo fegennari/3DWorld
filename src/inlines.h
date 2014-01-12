@@ -54,6 +54,9 @@ template<typename T> inline T interpolate_3d(T const *v, unsigned npts, float s,
 	return T(INTERP_1D(v, s, t, npts, [0]), INTERP_1D(v, s, t, npts, [1]), INTERP_1D(v, s, t, npts, [2]));
 }
 
+// these interpolation functions take and return x in (0.0, 1.0)
+inline float cubic_interpolate  (float x) {return ((3 - 2*x)*x*x);}
+inline float quintic_interpolate(float x) {return ((5*x*x - 15*x + 10)*x*x*x);}
 
 inline int round_fp(double val) {return ((val > 0.0) ? int(val + 0.5) : int(val - 0.5));}
 
