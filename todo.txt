@@ -22,34 +22,30 @@ Starbase texture
 Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
-Set specular for gold/metal materials
+Higher order interpolation functions
 
 ************************
 
 Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
-Vertex normals for mesh (terrain and water) come from opposite side (+/-) points
-
-Fix underwater rock specular
+Extend TT universe light pos (water lighting, cloud shadows, etc. - directional)
+Water UI: wave amplitude/speed
+AA of specular from normal maps
 
 More fog in valleys
 Fog decreases at high altitude
-  - remove cylinder water cap?
-  - fog for plants
   - increase far clipping distance
-  - draw more distant tiles
+  - draw more distant tiles (larger/lower res at high delta-z)
   - camera above cloud plane
 Cloud lighting based on thickness/distance to sun
-TT Foam at water edge using procedural texture when waves are enabled
-TT uses lower res source data for distant tiles (far below the player as height increases)
+TT Foam at water edge/wave peaks using procedural texture when waves are enabled
 
 Ray tracer uses cosine of normal for diffuse reflection and specular shine
 Ray tracer thread/ray coherence experiments
 
 Perlin noise function experiments
   http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
-Higher order interpolation functions
 
 Faster cube mapped sphere planet render
 Planet texture width 2x height
