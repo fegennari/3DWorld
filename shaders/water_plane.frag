@@ -38,17 +38,19 @@ void main()
 		add_color  += vec3(1) * (1.0 - texture2D(noise_tex, tc).r); // Note that the texture is white with blue dots
 	}
 	vec3 light_norm = norm;
+	float green_scale = 0.0;
 
 	if (add_waves) {
 		// calculate ripple adjustment of normal and reflection based on scaled water normal map texture
-		//wave_amplitude *= clamp((4.0 - 0.1*length(epos.xyz)), 0.0, 1.0); // reduces tiling, but distant specular is bad
 		vec3 wave_n = wave_amplitude*get_wave_normal(gl_TexCoord[0].st);
 
 		if (deep_water_waves) {
+			// deep water waves shouldn't move (much) with the wind, but that would require another set of TCs, texgen matrix, etc.
 			vec3 deep_wave_n = 1.25*wave_amplitude*get_deep_wave_normal(gl_TexCoord[0].st);
 			wave_n = mix(wave_n, deep_wave_n, clamp((0.8*depth - 0.2), 0.0, 1.0));
 		}
 		vec3 wave_n_eye = gl_NormalMatrix * wave_n;
+		if (reflections) {green_scale += 1.0 - 0.8*abs(dot(norm, normalize(wave_n_eye)));} // add green to sides of waves (though this increases shader time)
 		light_norm = normalize(norm + wave_n_eye);
 		norm       = normalize(norm + 0.1*wave_n_eye); // lower scale for fresnel term
 		ripple    += 0.05*wave_n.xy;
@@ -65,7 +67,8 @@ void main()
 
 	if (reflections) {
 		// add some green at shallow view angles
-		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), water_green_comp*(1.0 - cos_view_angle));
+		green_scale += (1.0 - cos_view_angle);
+		color = mix(color, vec4(0.0, 1.0, 0.5, color.a), water_green_comp*min(1.0, green_scale));
 
 		// calculate reflections
 		float reflect_w  = reflect_scale*get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
