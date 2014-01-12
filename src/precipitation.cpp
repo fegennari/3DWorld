@@ -7,7 +7,7 @@
 
 float const PRECIP_DIST = 20.0;
 
-extern int animate2, is_cloudy;
+extern int animate2;
 extern float temperature, fticks, zmin, water_plane_z, brightness;
 extern vector3d wind;
 extern int coll_id[];
