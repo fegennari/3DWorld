@@ -41,6 +41,7 @@ void main()
 
 	if (add_waves) {
 		// calculate ripple adjustment of normal and reflection based on scaled water normal map texture
+		//wave_amplitude *= clamp((4.0 - 0.1*length(epos.xyz)), 0.0, 1.0); // reduces tiling, but distant specular is bad
 		vec3 wave_n = wave_amplitude*get_wave_normal(gl_TexCoord[0].st);
 
 		if (deep_water_waves) {

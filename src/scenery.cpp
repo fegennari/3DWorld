@@ -132,9 +132,9 @@ float scenery_obj::get_size_scale(float dist_to_camera, float scale_val, float s
 }
 
 
-colorRGBA scenery_obj::get_atten_color(colorRGBA c) const {
+colorRGBA scenery_obj::get_atten_color(colorRGBA c, vector3d const &xlate) const {
 
-	water_color_atten_at_pos(c, (pos + point(0.0, 0.0, radius)));
+	water_color_atten_at_pos(c, (pos + xlate + point(0.0, 0.0, radius)));
 	return c;
 }
 
@@ -320,7 +320,7 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const { // Note: assumes texture is already setup
 
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
-	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius))).do_glColor();
+	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius), xlate)).do_glColor();
 	unsigned const vert_size(3*faces.size());
 
 	if (vbo == 0) {
@@ -431,7 +431,7 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, f
 
 	assert(surface);
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, radius));
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, radius));
 	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
@@ -497,7 +497,7 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float s
 
 	float const rmax(1.3*radius);
 	if (!is_visible(shadow_only, rmax, xlate)) return;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, rmax));
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, rmax));
 	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
@@ -538,7 +538,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 	assert(radius > 0.0);
 	if (!is_visible(shadow_only, radius, xlate)) return;
 	unsigned const lod_level = 0;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE)*get_shadowed_color(pos+xlate, radius));
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, radius));
 	color.do_glColor();
 	glPushMatrix();
 	translate_to(pos);

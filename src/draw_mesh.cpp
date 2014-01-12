@@ -83,7 +83,7 @@ float integrate_water_dist(point const &targ_pos, point const &src_pos, float co
 	float const t(min(1.0f, (water_z - targ_pos.z)/fabs(src_pos.z - targ_pos.z))); // min(1.0,...) for underwater case
 	point p_int(targ_pos + (src_pos - targ_pos)*t);
 	int const xp(get_xpos(targ_pos.x)), yp(get_ypos(targ_pos.y));
-	if (world_mode == WMODE_GROUND && !point_outside_mesh(xp, yp)) p_int.z = min(src_pos.z, water_matrix[yp][xp]); // account for ripples
+	if (world_mode == WMODE_GROUND && !point_outside_mesh(xp, yp)) {p_int.z = min(src_pos.z, water_matrix[yp][xp]);} // account for ripples
 	return p2p_dist(p_int, targ_pos)*mesh_scale;
 }
 
