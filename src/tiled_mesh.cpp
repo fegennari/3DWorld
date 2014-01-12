@@ -646,6 +646,9 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 			min_normal_z = min(min_normal_z, norm.z);
 			UNROLL_2X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));); // Note: we only set x and y here, z is calculated in the shader
 			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
+			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
+			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]);
+			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.5 + 0.5*shadow_val/255.0)); // add ambient occlusion from trees
 
 			if (!mesh_shadows) {
 				// do nothing
@@ -658,7 +661,6 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 			else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {
 				shadow_val = 0; // fully in shadow
 			}
-			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]); // 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
 			data[ix].v[3] = shadow_val;
 		}
 	}
