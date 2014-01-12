@@ -26,11 +26,13 @@ Higher order interpolation functions
 
 ************************
 
+Fix water edge rendering
+
 Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
-Extend TT universe light pos (water lighting, cloud shadows, etc. - directional)
 AA of specular from normal maps
+Gamma correction/sRGB
 
 More fog in valleys
 Fog decreases at high altitude
@@ -50,7 +52,5 @@ Faster cube mapped sphere planet render
 Planet texture width 2x height
 Render nearby planet in chunks
 Normap map texture for planets instead of storing vertex normals (such as tiled mesh)
-
-Gamma correction/sRGB
 
 Visual Studio profile (incompatible with OpenMP) and static error check (analysis)

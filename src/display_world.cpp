@@ -397,18 +397,22 @@ void set_uniform_atten_lighting(int light) {
 }
 
 
+float get_light_pos_scale() {
+	return ((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode 
+}
+
+
 void setup_lighting(float depth) {
 	
 	// background color code
 	config_bkg_color_and_clear(depth, (world_mode == WMODE_INF_TERRAIN));
 	
 	// setup light position
-	float const light_pos_scale((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode 
 	glDisable(GL_LIGHT0);
 	glDisable(GL_LIGHT1);
 	glDisable(GL_LIGHT2);
-	set_gl_light_pos(GL_LIGHT0, sun_pos*light_pos_scale,  LIGHT_W_VAL);
-	set_gl_light_pos(GL_LIGHT1, moon_pos*light_pos_scale, LIGHT_W_VAL);
+	set_gl_light_pos(GL_LIGHT0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
+	set_gl_light_pos(GL_LIGHT1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	set_uniform_atten_lighting(GL_LIGHT0); // reset attenuation to 1.0
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
@@ -543,7 +547,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	setup_current_system();
 	glPushMatrix();
 	translate_to(get_camera_pos());
-	set_gl_light_pos(GL_LIGHT0, sun_pos, LIGHT_W_VAL);
+	set_gl_light_pos(GL_LIGHT0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	glPopMatrix();
 	set_light_atten(GL_LIGHT0, max(0.25f, min(4.0f, 0.0007f*sun_pos.mag()/univ_sun_rad)));
 	glDisable(GL_LIGHT1); // no moonlight (for now)
