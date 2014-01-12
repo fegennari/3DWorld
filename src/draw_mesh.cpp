@@ -699,7 +699,7 @@ void setup_water_plane_texgen(float s_scale, float t_scale) {
 void set_water_plane_uniforms(shader_t &s) {
 
 	s.add_uniform_float("wave_time",      wave_time);
-	s.add_uniform_float("wave_amplitude", min(1.0, 1.5*wind.mag())); // No waves if (temperature < W_FREEZE_POINT)?
+	s.add_uniform_float("wave_amplitude", water_params.wave_amp*min(1.0, 1.5*wind.mag())); // No waves if (temperature < W_FREEZE_POINT)?
 	s.add_uniform_float("water_plane_z",  water_plane_z);
 }
 
@@ -764,8 +764,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	s.add_uniform_int  ("reflection_tex", 0);
 	s.add_uniform_color("water_color",    color);
 	s.add_uniform_color("reflect_color",  rcolor);
-	s.add_uniform_float("ripple_scale",   10.0);
-	s.add_uniform_float("ripple_mag",     2.0);
 	s.add_uniform_int  ("height_tex",     2);
 	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
 

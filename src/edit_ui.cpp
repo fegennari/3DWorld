@@ -266,8 +266,8 @@ void calc_uw_atten_colors() {
 	uw_atten_scale *= 0.05 + 0.95*water_params.alpha;
 }
 
-enum {WATERP_ALPHA=0, WATERP_MUD, WATERP_BRIGHT, WATERP_REFLECT, WATERP_GREEN, NUM_WATER_CONT};
-string const water_ctr_names[NUM_WATER_CONT] = {"Alpha Scale", "Mud Content", "Brightness", "Reflectivity", "Green Hue"};
+enum {WATERP_ALPHA=0, WATERP_MUD, WATERP_BRIGHT, WATERP_REFLECT, WATERP_GREEN, WATERP_WAVE_AMP, NUM_WATER_CONT};
+string const water_ctr_names[NUM_WATER_CONT] = {"Alpha Scale", "Mud Content", "Brightness", "Reflectivity", "Green Hue", "Wave Amplitude"};
 
 class water_color_kbd_menu_t : public keyboard_menu_t {
 
@@ -299,6 +299,10 @@ class water_color_kbd_menu_t : public keyboard_menu_t {
 			value << water_params.green;
 			spos = 2.5*water_params.green; // 0.0 to 0.5
 			break;
+		case WATERP_WAVE_AMP:
+			value << water_params.wave_amp;
+			spos = 0.25*water_params.wave_amp; // 0.0 to 4.0
+			break;
 		default:
 			assert(0);
 		}
@@ -306,7 +310,7 @@ class water_color_kbd_menu_t : public keyboard_menu_t {
 	}
 
 public:
-	water_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT, "Water Colors") {}
+	water_color_kbd_menu_t() : keyboard_menu_t(NUM_WATER_CONT, "Water Colors") {}
 	virtual bool is_enabled() const {return (show_scores && !game_mode && !inf_terrain_fire_mode && world_mode == WMODE_INF_TERRAIN);}
 
 	virtual void change_value(int delta) {
@@ -325,6 +329,9 @@ public:
 			break;
 		case WATERP_GREEN:
 			water_params.green = max(0.0f, min(0.5f, (water_params.green + 0.02f*delta))); // 0.0 to 0.4 in steps of 0.02
+			break;
+		case WATERP_WAVE_AMP:
+			water_params.wave_amp = max(0.0f, min(4.0f, (water_params.wave_amp + 0.2f*delta))); // 0.0 to 4.0 in steps of 0.2
 			break;
 		default:
 			assert(0);

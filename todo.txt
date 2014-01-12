@@ -30,7 +30,6 @@ Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
 Extend TT universe light pos (water lighting, cloud shadows, etc. - directional)
-Water UI: wave amplitude/speed
 AA of specular from normal maps
 
 More fog in valleys

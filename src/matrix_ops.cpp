@@ -252,6 +252,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 
 
 // not always correct if !enabled[i][j]
+// Note: may be more accurate if we look at pairs of heights on both sides of {x,y}
 vector3d get_matrix_surf_norm(float **matrix, char **enabled, int xsize, int ysize, int x, int y) {
 
 	assert(matrix);

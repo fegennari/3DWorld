@@ -1187,8 +1187,8 @@ public:
 
 struct water_params_t {
 
-	float alpha, mud, bright, reflect, green;
-	water_params_t() : alpha(0.5), mud(0.0), bright(1.0), reflect(1.0), green(0.16) {}
+	float alpha, mud, bright, reflect, green, wave_amp;
+	water_params_t() : alpha(0.5), mud(0.0), bright(1.0), reflect(1.0), green(0.16), wave_amp(1.0) {}
 };
 
 
