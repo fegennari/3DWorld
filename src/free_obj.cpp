@@ -670,7 +670,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 
 		if (partial_shadow) { // partially shadowed - draw the sun's light with a stencil pass
 			// http://www.gamasutra.com/features/20021011/lengyel_05.htm
-			shader[1].enable(); udd.shader = &shader[1];
+			if (shader[1].is_setup()) {shader[1].enable(); udd.shader = &shader[1];}
 			assert(!sobjs.empty());
 			glPushMatrix();
 			global_translate(pos);
@@ -702,7 +702,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			glDepthFunc(GL_LEQUAL);
 			glDisable(GL_STENCIL_TEST);
 			set_std_blend_mode();
-			shader[0].enable(); udd.shader = &shader[0];
+			if (shader[0].is_setup()) {shader[0].enable(); udd.shader = &shader[0];}
 
 			if (display_mode & 0x10) { // testing
 				set_emissive_color(GREEN); // will be reset
@@ -716,7 +716,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 				clear_emissive_color();
 			}
 		} // partial_shadow
-	} // pass
+	} // passq
 	//if (GET_DELTA_TIME > 10) cout << get_name() << ": " << GET_DELTA_TIME << endl;
 }
 
