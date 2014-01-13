@@ -18,6 +18,15 @@ vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in i
 	return calc_spec_term(max(dot(normal, half_vect), 0.0), i);
 }
 
+// Togsvig antialiasing for mipmapped normal maps
+vec4 get_light_specular_antialiased(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in int i) {
+	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
+	float nmag = length(normal);
+	float ft   = nmag/(nmag + gl_FrontMaterial.shininess*(1.0 - nmag));
+	float fs   = ft*gl_FrontMaterial.shininess;
+	return (1.0 + fs)/(1.0 + gl_FrontMaterial.shininess) * gl_FrontLightProduct[i].specular * pow(max(dot(normal, half_vect)/nmag, 0.0), fs);
+}
+
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later
 
 // Note: eye space point light computation with no attenuation, or use vec3(0.0) for directional

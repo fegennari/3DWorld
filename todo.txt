@@ -22,16 +22,13 @@ Starbase texture
 Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
-Higher order interpolation functions
-Skip shadow map lookup for large objects known to be in shadow (back facing normal?)
+* Higher order interpolation functions
+* Skip shadow map lookup for large objects known to be in shadow (back facing normal?)
 
 ************************
 
 Star shader:
 https://www.shadertoy.com/view/4dXGR4
-
-AA of specular from normal maps
-ftp://download.nvidia.com/developer/Papers/Mipmapping_Normal_Maps.pdf
 
 More fog in valleys
 Fog decreases at high altitude
@@ -51,4 +48,4 @@ Render nearby planet in chunks starting with draw_cube_mapped_sphere()
 Visual Studio profile
 http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
 
-static error check (analysis)
+* static error check (analysis)
