@@ -1152,7 +1152,7 @@ unsigned create_3d_noise_texture(unsigned size, unsigned ncomp) {
 
 	vector<unsigned char> data(ncomp*size*size*size);
 	noise_fill(&data.front(), data.size());
-	return create_3d_texture(size, size, size, ncomp, data, GL_LINEAR, GL_REPEAT);
+	return create_3d_texture(size, size, size, ncomp, data, GL_LINEAR, GL_REPEAT); // compressed?
 }
 
 

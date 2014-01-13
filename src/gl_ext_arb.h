@@ -30,7 +30,7 @@ void disable_multitex(unsigned tu_id, bool do_disable_texgen=0);
 
 // 3D texture prototypes
 void bind_3d_texture(unsigned tid);
-unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap);
+unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress=0);
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data);
 void set_3d_texture_as_current(unsigned tid, unsigned tu_id);
