@@ -23,7 +23,6 @@ Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
 * Higher order interpolation functions
-* Skip shadow map lookup for large objects known to be in shadow (back facing normal?)
 
 ************************
 

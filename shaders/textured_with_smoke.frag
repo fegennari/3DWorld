@@ -18,7 +18,9 @@ const float SMOKE_SCALE = 0.25;
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
 vec3 add_light0(in vec3 n) {
-	float nscale = (use_shadow_map ? get_shadow_map_weight_light0(epos, n) : 1.0);
+	vec3 eye_pos   = epos.xyz;
+	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - eye_pos); // Note: could drop the -eye_pos for a directional light
+	float nscale   = (use_shadow_map ? ((dot(n, light_dir) > 0.0) ? get_shadow_map_weight_light0(epos, n) : 0.0) : 1.0); // back-facing test
 
 #ifdef DYNAMIC_SMOKE_SHADOWS
 	if (lpos0 != vposl && nscale > 0.0) {
@@ -41,8 +43,6 @@ vec3 add_light0(in vec3 n) {
 #endif
 	//return add_light_comp_pos(nscale*n, epos, 0).rgb;
 	// special cased add_light_comp_pos - FIXME: find a better way to make the index constant for optimization
-	vec3 eye_pos   = epos.xyz;
-	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - eye_pos);
 #ifdef USE_BUMP_MAP
 	nscale *= clamp(5.0*dot(n, light_dir), 0.0, 1.0); // fix self-shadowing
 	vec3 lnormal = nscale*apply_bump_map(light_dir, eye_pos);
