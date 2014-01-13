@@ -743,6 +743,8 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	float t[2];
 	vert_norm_comp_tc() {}
 	vert_norm_comp_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
+	vert_norm_comp_tc(point const &v_, vector3d const &n_, float tc[2]) : vert_norm_comp(v_, n_) {t[0] = tc[0]; t[1] = tc[1];}
+	void set_state() const;
 	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };
 
@@ -751,6 +753,7 @@ struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 	short t[2]; // could even use char
 	vert_norm_comp_tc_comp() {}
 	vert_norm_comp_tc_comp(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = 32767*ts; t[1] = 32767*tt;}
+	void set_state() const;
 	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };
 
@@ -823,12 +826,12 @@ struct vert_color : public color_wrapper { // size = 16
 
 struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 	typedef vert_norm non_color_class;
-	void set_state() const;
 	vert_norm_color() {}
 	vert_norm_color(vert_norm const &vn, color_wrapper const &cw) : vert_norm(vn), color_wrapper(cw) {}
 	vert_norm_color(vert_norm const &vn, colorRGBA const &c_) : vert_norm(vn) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const     &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
+	void set_state() const;
 	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };
 
@@ -881,6 +884,7 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_) {
 		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
+	void set_state() const;
 	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };
 
@@ -892,6 +896,7 @@ struct vert_norm_comp_tc_comp_color : public vert_norm_comp_tc_comp, public colo
 	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_) {
 		v = v_; set_norm(n_); t[0] = 32767*ts; t[1] = 32767*tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
+	void set_state() const;
 	static void set_vbo_arrays(unsigned force_stride=0, bool set_state=1);
 };
 
