@@ -73,6 +73,7 @@ void main()
 #else
 	vec4 texel  = texture2D(tex0, tex_coord);
 #endif
+	//texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
 
 #ifdef TEXTURE_ALPHA_MASK
 	if (texel.a < 0.99) discard;
@@ -103,6 +104,7 @@ void main()
 #endif
 	vec3 lit_color = gl_Color.rgb*base_color_scale; // base color (with some lighting)
 	add_indir_lighting(lit_color);
+	//lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
 
 #ifdef USE_WINDING_RULE_FOR_NORMAL
 	float normal_sign = ((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
@@ -131,6 +133,7 @@ void main()
 		lit_color += add_dlights(vpos, n, eye, dlight_color); // dynamic lighting
 	}
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
+	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
 
 #ifndef SMOKE_ENABLED
 #ifndef NO_ALPHA_TEST

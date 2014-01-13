@@ -31,7 +31,6 @@ Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
 AA of specular from normal maps
-Gamma correction/sRGB
 
 More fog in valleys
 Fog decreases at high altitude
