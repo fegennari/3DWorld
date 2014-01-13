@@ -31,6 +31,7 @@ Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
 AA of specular from normal maps
+ftp://download.nvidia.com/developer/Papers/Mipmapping_Normal_Maps.pdf
 
 More fog in valleys
 Fog decreases at high altitude
@@ -46,7 +47,6 @@ Perlin noise function experiments
   http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 
 Render nearby planet in chunks starting with draw_cube_mapped_sphere()
-Planet VBOs use compressed normals
 
 Visual Studio profile
 http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
