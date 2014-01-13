@@ -62,10 +62,11 @@ vec4 apply_fog_scaled(in vec4 color, in float world_z) {
 vec4 apply_fog_colored(in vec4  color,    // original color of the pixel
                        in float distance, // camera to point distance
                        in vec3  ray_dir,  // camera to point vector
-                       in vec3  sun_dir)  // sun light direction
+                       in vec3  sun_dir,  // sun light direction
+					   in float cscale)   // color scale
 {
 #ifdef USE_QUADRATIC_FOG // hack to make this only apply to tiled terrain mode, which uses custom quadratic fog
-    float sun_amount = ((sun_dir.z > 0.0) ? max(dot(ray_dir, sun_dir), 0.0) : 0.0);
+    float sun_amount = ((sun_dir.z > 0.0) ? max(cscale*dot(ray_dir, sun_dir), 0.0) : 0.0);
 	vec4 sun_color   = vec4(max(gl_Fog.color.r, gl_Fog.color.b), max(gl_Fog.color.g, gl_Fog.color.b), 0.5*(gl_Fog.color.r + gl_Fog.color.g), gl_Fog.color.a);
     vec4 fog_color   = mix(gl_Fog.color, sun_color, pow(sun_amount, 8.0));
 	return apply_fog_ffc(color, distance, fog_color);
@@ -75,14 +76,14 @@ vec4 apply_fog_colored(in vec4  color,    // original color of the pixel
 }
 
 // Note: these two functions assume the sun is light0, and it's a directional light
-vec4 apply_fog_colored(in vec4 color, in vec4 vertex) {
+vec4 apply_fog_colored(in vec4 color, in vec4 vertex, in float cscale) {
 	vec4 epos       = gl_ModelViewMatrix * vertex;
 	float fog_scale = gl_FogFragCoord*get_custom_fog_scale(vertex.z);
-	return apply_fog_colored(color, fog_scale, -normalize(epos.xyz), normalize(-gl_LightSource[0].position.xyz));
+	return apply_fog_colored(color, fog_scale, -normalize(epos.xyz), normalize(-gl_LightSource[0].position.xyz), cscale);
 }
 
-vec4 apply_fog_colored_epos(in vec4 color, in vec4 epos) {
+vec4 apply_fog_colored_epos(in vec4 color, in vec4 epos, in float cscale) {
 	float fog_coord = length(epos.xyz)*get_custom_fog_scale_epos(epos);
-	return apply_fog_colored(color, fog_coord, -normalize(epos.xyz), normalize(-gl_LightSource[0].position.xyz));
+	return apply_fog_colored(color, fog_coord, -normalize(epos.xyz), normalize(-gl_LightSource[0].position.xyz), cscale);
 }
 

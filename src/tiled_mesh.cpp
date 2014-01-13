@@ -1507,7 +1507,7 @@ void tile_draw_t::setup_cloud_plane_uniforms(shader_t &s) {
 	//float const cloud_zmax(get_cloud_zmax()); // follows the camera zval - matches the drawn cloud layer but moves clouds on the terrain
 	float const cloud_zmax(0.5*(zmin + zmax) + max(zmax, CLOUD_CEILING)); // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
 	set_cloud_uniforms(s, 9);
-	s.add_uniform_float("cloud_scale",   (is_cloudy ? 1.07 : 0.535));
+	s.add_uniform_float("cloud_scale",   (is_cloudy ? 1.0 : 0.535));
 	s.add_uniform_float("cloud_alpha",   (is_cloudy ? 0.8 : 0.75)*atmosphere);
 	s.add_uniform_float("cloud_plane_z", cloud_zmax);
 }
