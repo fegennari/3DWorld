@@ -87,6 +87,8 @@ void set_camera_pdu() {
 }
 
 
+// Note: near and far clip aren't flat planes like a true frustum - they're curved like a spherical section
+// this is close enough to a frustum in practice, and makes sphere intersection much easier and faster
 pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f, float a)
 		: pos(p), dir(d), upv(u), tterm(t), sterm(s), tterm_sq2_inv(2.0/(tterm*tterm)),
 		near_(n), far_(f), A((a == 0.0) ? double(window_width)/double(window_height) : a), valid(1)

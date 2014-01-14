@@ -1238,8 +1238,11 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		if (fog_enabled) {glEnable(GL_FOG);}
 	}
 	if (change_near_far_clip) {
-		set_perspective_near_far((NEAR_CLIP + 0.01*min_camera_dist), (FAR_CLIP + min_camera_dist));
+		float const near_clip(NEAR_CLIP + 0.01*min_camera_dist), far_clip(FAR_CLIP + min_camera_dist);
+		set_perspective_near_far(near_clip, far_clip);
 		do_look_at(); // clear depth buffer?
+		camera_pdu.near_ = near_clip; // override camera frustum near/far clip so that VFC will be correct
+		camera_pdu.far_  = far_clip;
 	}
 	draw_cloud_plane(zmin2, 0); // these two lines could go in either order
 	draw_sun_flare();
