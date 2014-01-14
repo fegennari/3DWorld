@@ -7,6 +7,7 @@ uniform sampler2DShadow sm_tex0, sm_tex1;
 float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in int sm_tu_id, in sampler2DShadow sm_tex) {
 #ifndef NO_SMAP_NORMAL_OFFSET
 	pos.xyz += norm_bias_scale*z_bias*normal;
+	//pos.xyz += norm_bias_scale*z_bias*normalize(gl_ModelViewMatrixInverse[3].xyz - pos.xyz); // world space view vector
 #endif
 	vec4 shadow_coord = gl_TextureMatrix[sm_tu_id] * pos;
 	return sm_scale*shadow2DProj(sm_tex, shadow_coord + vec4(0, 0, -z_bias*shadow_coord.w, 0)).r;

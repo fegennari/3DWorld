@@ -56,7 +56,7 @@ vector3d grass_manager_t::interpolate_mesh_normal(point const &pos) const {
 	float const xp((pos.x + X_SCENE_SIZE)*DX_VAL_INV), yp((pos.y + Y_SCENE_SIZE)*DY_VAL_INV);
 	int const x0((int)xp), y0((int)yp);
 	if (point_outside_mesh(x0, y0) || point_outside_mesh(x0+1, y0+1)) return plus_z; // shouldn't get here
-	float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0));
+	float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0)); // cubic_interpolate()?
 	return vertex_normals[y0+0][x0+0]*((1.0 - xpi)*(1.0 - ypi))
 			+ vertex_normals[y0+1][x0+0]*((1.0 - xpi)*ypi)
 			+ vertex_normals[y0+0][x0+1]*(xpi*(1.0 - ypi))

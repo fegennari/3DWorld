@@ -260,7 +260,7 @@ float terrain_hmap_manager_t::interpolate_height(float x, float y) const { // bi
 
 	float const sx(mesh_scale*x), sy(mesh_scale*y);
 	int xlo(floor(sx)), ylo(floor(sy)), xhi(ceil(sx)), yhi(ceil(sy));
-	float const xv((xlo == xhi) ? 0.0 : (sx - xlo)/float(xhi - xlo)), yv((ylo == yhi) ? 0.0 : (sy - ylo)/float(yhi - ylo)); // avoid div-by-zero
+	float const xv((xlo == xhi) ? 0.0 : (sx - xlo)/float(xhi - xlo)), yv((ylo == yhi) ? 0.0 : (sy - ylo)/float(yhi - ylo)); // avoid div-by-zero (use cubic_interpolate()?)
 	if (!clamp_no_scale(xlo, ylo) || !clamp_no_scale(xhi, yhi)) {return scale_mh_texture_val(0.0);}
 	return   yv *(xv*get_raw_height(xhi, yhi) + (1.0-xv)*get_raw_height(xlo, yhi)) +
 		(1.0-yv)*(xv*get_raw_height(xhi, ylo) + (1.0-xv)*get_raw_height(xlo, ylo));
