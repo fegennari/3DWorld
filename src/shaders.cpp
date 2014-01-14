@@ -565,6 +565,14 @@ void shader_t::end_shader() { // ok to call if not in a shader
 }
 
 
+void shader_t::begin_color_only_shader() {
+
+	set_vert_shader("vert_xform_only");
+	set_frag_shader("color_only");
+	begin_shader();
+}
+
+
 // **************** INSTANCING ****************
 
 

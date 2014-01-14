@@ -403,10 +403,9 @@ void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 		colorRGBA fog_color;
 		glGetFloatv(GL_FOG_COLOR, (float *)&fog_color);
 		fog_color.do_glColor();
-		glDisable(GL_LIGHTING);
+		s.begin_color_only_shader();
 		imd.render_z_plane(-size, -size, size, size, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
-		glEnable(GL_LIGHTING);
 	}
 
 	// draw clouds

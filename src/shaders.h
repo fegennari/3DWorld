@@ -49,6 +49,7 @@ public:
 	static void disable() {glUseProgram(0);}
 	bool begin_shader(bool do_enable=1);
 	void end_shader();
+	void begin_color_only_shader();
 
 	int get_uniform_loc(char const *const name) const;
 	static void set_uniform_float_array(int loc, float const *const val, unsigned num);

@@ -540,9 +540,7 @@ void draw_stars(float alpha) {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
 	shader_t s;
-	s.set_vert_shader("vert_xform_only");
-	s.set_frag_shader("color_only");
-	s.begin_shader();
+	s.begin_color_only_shader();
 	vector<vert_color> pts;
 	pts.reserve(num_stars);
 
