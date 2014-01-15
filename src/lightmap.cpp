@@ -51,7 +51,7 @@ vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic 
 lmap_manager_t lmap_manager;
 
 
-extern int animate2, display_mode, frame_counter, read_light_files[], write_light_files[];
+extern int animate2, display_mode, frame_counter, camera_coll_id, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
 extern colorRGBA cur_ambient, cur_diffuse;
@@ -1117,7 +1117,34 @@ void add_camera_candlelight() {
 
 void add_camera_flashlight() {
 
-	add_dynamic_light(4.0, get_camera_pos(), SUN_C, cview_dir, 0.02);
+	float const bwidth = 0.02;
+	float const radius = 4.0;
+	point const camera(get_camera_pos());
+	add_dynamic_light(radius, camera, SUN_C, cview_dir, bwidth);
+
+	if (display_mode & 0x10) { // add one bounce of indirect lighting
+		unsigned const NUM_VPLS = 32;
+		float const theta(acosf(1.0f - bwidth /*- 0.5*LT_DIR_FALLOFF*/)); // flashlight beam angle
+		float const rad_per_len(tan(theta));
+		vector3d vab[2];
+		get_ortho_vectors(cview_dir, vab);
+
+		for (unsigned i = 0; i < NUM_VPLS; ++i) {
+			float const a(TWO_PI*i/NUM_VPLS);
+			vector3d const delta((sin(a)*vab[0] + cos(a)*vab[1]).get_norm()); // already normalized?
+			vector3d const dir(cview_dir + rad_per_len*delta);
+			int cindex;
+			point cpos;
+			vector3d cnorm;
+			
+			if (check_coll_line_exact(camera, (camera + 0.5*radius*dir), cpos, cnorm, cindex, 0.0, camera_coll_id, 1, 0, 0)) {
+				cpos -= 0.0001*radius*cnorm; // move behind the collision plane so as not to multiply light
+				assert(cindex >= 0);
+				colorRGBA const color(SUN_C.modulate_with(coll_objects[cindex].get_avg_color()));
+				add_dynamic_light(0.1*radius, cpos, color*0.15, cnorm, 0.5); // wide angle (almost hemisphere)
+			}
+		}
+	}
 }
 
 
