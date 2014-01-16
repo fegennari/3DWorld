@@ -51,8 +51,7 @@ static error check (analysis)
 Laser line light sources
 Sphere light sources for floating lights?
 Path tracing dynamic light in Sponza?
-Shader use distance() instead of length()
 
-combined_gu mode for maps has problems with water and texture gen
+combined_gu mode for maps has problems with texture gen
 
 Runtime modify/reload of shaders

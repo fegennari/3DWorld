@@ -28,6 +28,7 @@ extern bool univ_planet_lod; // smaller near_clip if true?
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
 extern float def_water_level, water_plane_z, water_h_off_rel, tan_term, sin_term, init_temperature, camera_shake;
+extern char **water_enabled;
 extern unsigned team_credits[];
 extern string user_text;
 extern vector<free_obj *> uobjs;
@@ -152,15 +153,18 @@ void setup_current_system() {
 		}
 		else {
 			if (DISABLE_WATER == 2) DISABLE_WATER = 0; // enable
-			float const water_level(0.5 + 0.5*(water - 0.5)), rel_wpz(get_rel_wpz());
 
-			if (fabs(water_level - rel_wpz) > 0.001) {
-				cout << "water: " << water << ", water_level: " << water_level << ", rel_wpz: " << rel_wpz << ", water_h_off_rel: " << water_h_off_rel << endl;
-				water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
-				water_h_off_rel = water_level - get_rel_wpz();
-				regen_mesh      = 1; // regen texture (is this needed?)
-				def_water_level = water_plane_z = get_water_z_height(); // ???
-				calc_watershed();
+			if (water_enabled == NULL) { // only adjust water level if a custom water_enable mask hasn't been set
+				float const water_level(0.5 + 0.5*(water - 0.5)), rel_wpz(get_rel_wpz());
+
+				if (fabs(water_level - rel_wpz) > 0.001) {
+					cout << "water: " << water << ", water_level: " << water_level << ", rel_wpz: " << rel_wpz << ", water_h_off_rel: " << water_h_off_rel << endl;
+					water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
+					water_h_off_rel = water_level - get_rel_wpz();
+					regen_mesh      = 1; // regen texture (is this needed?)
+					def_water_level = water_plane_z = get_water_z_height(); // ???
+					calc_watershed();
+				}
 			}
 		}
 	}
