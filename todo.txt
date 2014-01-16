@@ -33,7 +33,7 @@ Fog decreases at high altitude
   - increase far clipping distance
   - draw more distant tiles (larger/lower res at high delta-z)
   - camera above cloud plane
-* TT Foam at water edge/wave peaks using procedural texture when waves are enabled
+TT Foam at water edge/wave peaks using procedural texture when waves are enabled
 
 Ray tracer uses cosine of normal for diffuse reflection and specular shine
 Ray tracer thread/ray coherence experiments
@@ -46,8 +46,13 @@ Render nearby planet in chunks starting with draw_cube_mapped_sphere()
 Visual Studio profile
 http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
 
-* static error check (analysis)
+static error check (analysis)
 
 Laser line light sources
 Sphere light sources for floating lights?
 Path tracing dynamic light in Sponza?
+Shader use distance() instead of length()
+
+combined_gu mode for maps has problems with water and texture gen
+
+Runtime modify/reload of shaders

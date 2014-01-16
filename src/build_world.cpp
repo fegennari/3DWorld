@@ -1156,7 +1156,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'L': // light: size xpos ypos zpos color [direction beamwidth [inner_radius]]
+		case 'L': // point light: size xpos ypos zpos color [direction beamwidth [inner_radius]]
 			if (fscanf(fp, "%f%f%f%f%f%f%f%f", &fvals[0], &pos.x, &pos.y, &pos.z, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 8) {
 				return read_error(fp, "light source", coll_obj_file);
 			}
@@ -1169,7 +1169,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					xf.xform_pos_rm(vel);
 					fscanf(fp, "%f", &r_inner);
 				}
-				light_sources.push_back(light_source(fvals[0], pos, lcolor, 0, vel, beamwidth, r_inner));
+				light_sources.push_back(light_source(fvals[0], pos, pos, lcolor, 0, vel, beamwidth, r_inner));
 			}
 			break;
 

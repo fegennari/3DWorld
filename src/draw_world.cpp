@@ -38,7 +38,7 @@ vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
-extern bool have_sun, using_lightmap, has_dl_sources, has_dir_lights, smoke_exists, two_sided_lighting;
+extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu;
 extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island, xoff, yoff;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode;
@@ -183,8 +183,9 @@ void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
 
 void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
-	if (!enable)        {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights
-	if (has_dir_lights) {s.set_prefix("#define HAS_DIR_LIGHTS",    shader_type);}
+	if (!enable)         {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights
+	if (has_spotlights)  {s.set_prefix("#define HAS_SPOTLIGHTS",    shader_type);}
+	if (has_line_lights) {s.set_prefix("#define HAS_LINE_LIGHTS",   shader_type);}
 	s.set_bool_prefix("enable_dlights", (enable && dl_tid > 0 && has_dl_sources), shader_type);
 }
 

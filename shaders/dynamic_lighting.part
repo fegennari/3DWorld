@@ -4,7 +4,6 @@ uniform usampler2D dlelm_tex, dlgb_tex;
 
 const float LT_DIR_FALLOFF = 0.005;
 
-
 float get_dir_light_scale(in vec3 pos, in vec3 lpos, in vec3 dir, in float bwidth) {
 	vec3 obj_dir  = normalize(lpos - pos);
 	float dp      = dot(obj_dir, (2.0*dir - 1.0)); // map dir [0,1] to [-1,1]
@@ -12,10 +11,19 @@ float get_dir_light_scale(in vec3 pos, in vec3 lpos, in vec3 dir, in float bwidt
 	return clamp(2.0*(dp_norm + bwidth + LT_DIR_FALLOFF - 1.0)/LT_DIR_FALLOFF, 0.0, 1.0);
 }
 
-float get_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // Note: doesn't handle the radius==0 case
+float get_point_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // Note: doesn't handle the radius==0 case
 	float rscale = max(0.0, (radius - distance(pos, lpos)))/radius;
 	return rscale*rscale; // quadratic 1/r^2 attenuation
 }
+
+float get_line_intensity_at(in vec3 pos, in vec3 lpos1, in vec3 lpos2, in float radius, out vec3 lpos) { // Note: doesn't handle the radius==0 case
+	vec3 L = (lpos2 - lpos1);
+	lpos   = lpos1 + L*clamp(dot((pos - lpos1), L)/dot(L,L), 0.0, 1.0);
+	float rscale = max(0.0, (radius - distance(lpos, pos)))/radius; // use point-to-line distance
+	return rscale*rscale; // quadratic 1/r^2 attenuation
+}
+
+//float get_sphere_intensity_at(in vec3 pos, in vec3 lpos, in float sradius, in float radius) {}
 
 vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye, in vec3 diff_color) {
 	vec3 color = vec3(0.0);
@@ -32,17 +40,30 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye, in vec3 diff_color)
 		lpos_r.xyz *= scene_scale; // convert from [0,1] back into world space
 		lpos_r.xyz += scene_llc;
 		lpos_r.w   *= 0.5*scene_scale.x;
-		//if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
+		//if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case (not valid for line lights)
 		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
 		lcolor.rgb     *= 10.0; // unscale color
 		lcolor.rgb      = 2.0*lcolor.rgb - 1.0; // map [0,1] to [-1,1] for negative light support
-		float intensity = get_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
-		
-#ifdef HAS_DIR_LIGHTS
-		vec4 dir_w = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // light direction, beamwidth
-		intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
-#endif
 
+#if defined(HAS_LINE_LIGHTS) || defined(HAS_SPOTLIGHTS)
+		// fetch another texture block which contains some combination of dir, bw, and lpos2
+		vec4 dir_w = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // {light direction, beamwidth} - OR - {light pos 2, 0.0}
+#endif
+		float intensity;
+#ifdef HAS_LINE_LIGHTS // technically cylinder light
+		if (dir_w.w == 0.0) { // this is a line light
+			vec3 lpos2 = dir_w.xyz*scene_scale + scene_llc; // other end point of line
+			intensity  = get_line_intensity_at(dlpos, lpos_r.xyz, lpos2, lpos_r.w, lpos_r.xyz); // put the point used for lighting into lpos_r.xyz
+		}
+		else { // point light
+#else
+		if (true) { // always a point light
+#endif
+			intensity = get_point_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
+#ifdef HAS_SPOTLIGHTS
+			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
+#endif
+		}
 		vec3 eye_pos   = eye - dlpos;
 #ifdef USE_BUMP_MAP
 		vec3 lpos_eye  = (gl_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // convert from world to eye to tangent space

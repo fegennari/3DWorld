@@ -41,7 +41,7 @@ float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
 float const DARKNESS_THRESH  = 0.1;
 
 
-bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_dir_lights(0), use_dense_voxels(0), has_indir_lighting(0);
+bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
 float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
@@ -79,20 +79,12 @@ inline void reset_lighting(float &mesh_light, float &vals, float &vscale) {
 
 
 // radius == 0.0 is really radius == infinity (no attenuation)
-light_source::light_source(float sz, point const &p, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, int gl_id) :
-	dynamic(id), gl_light_id(gl_id), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
-	r_inner(ri), bwidth(bw), center(p), dir(d.get_norm()), color(c)
+light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri) :
+	dynamic(id), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
+	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
-	calc_cent();
-}
-
-
-void light_source::calc_cent() {
-
-	for (unsigned i = 0; i < 3; ++i) {
-		cent[i] = max(0, min(MESH_SIZE[i]-1, get_dim_pos(center[i], i))); // clamp to mesh bounds
-	}
+	assert(!(is_directional() && is_line_light())); // can't be both
 }
 
 
@@ -103,21 +95,22 @@ void light_source::add_color(colorRGBA const &c) {
 }
 
 
-float light_source::get_intensity_at(point const &pos) const {
+float light_source::get_intensity_at(point const &p) const {
 
-	if (radius == 0.0)                   return color[3]; // no falloff
-	if (fabs(pos.z - center.z) > radius) return 0.0; // fast test
-	float const dist_sq(p2p_dist_sq(pos, center));
-	if (dist_sq > radius*radius)         return 0.0;
-	float const rscale((radius - sqrt(dist_sq))*radius_inv);
+	if (radius == 0.0) return color[3]; // no falloff
+	float dist;
+
+	if (is_line_light()) { // FIXME_LIGHT - use version from dynamic lighting shader?
+		dist = (dot_product(p-pos, p-pos2) > 0.0) ? min(p2p_dist(p, pos), p2p_dist(pos, pos2)) : pt_line_dist(p, pos, pos2);
+	}
+	else {
+		if (fabs(p.z - pos.z) > radius) return 0.0; // fast test
+		float const dist_sq(p2p_dist_sq(p, pos));
+		if (dist_sq > radius*radius)    return 0.0;
+		dist = sqrt(dist_sq);
+	}
+	float const rscale((radius - dist)*radius_inv);
 	return rscale*rscale*color[3]; // quadratic 1/r^2 attenuation
-}
-
-
-bool light_source::lights_polygon(point const &pc, float rsize, vector3d const* const norm) const {
-	
-	if (norm && dot_product_ptv(*norm, center, pc) <= 0.0) return 0;
-	return (radius == 0.0 || dist_less_than(pc, center, (radius + rsize)));
 }
 
 
@@ -145,9 +138,11 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh
 		float const rb(radius*(1.0 - sqrt_thresh));
 
 		for (unsigned d = 0; d < 3; ++d) {
+			bounds[0][d] = min(pos[d], pos2[d]) - rb; // lower
+			bounds[1][d] = max(pos[d], pos2[d]) + rb; // upper
+
 			for (unsigned j = 0; j < 2; ++j) {
-				bounds[j][d] = center[d] + (j ? rb : -rb);
-				bnds[d][j]   = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bounds[j][d] + bounds_offset[d]), d)));
+				bnds[d][j] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bounds[j][d] + bounds_offset[d]), d)));
 			}
 		}
 	}
@@ -156,17 +151,9 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh
 
 bool light_source::is_visible() const {
 
-	return (radius == 0.0 || sphere_in_camera_view(center, radius, 0)); // max_level?
-}
-
-
-void light_source::shift_by(vector3d const &vd) {
-	
-	center += vd;
-
-	for (unsigned i = 0; i < 3; ++i) { // z-shift may not be correct
-		cent[i] = max(0, min(MESH_SIZE[i]-1, (cent[i] + int((2.0*SCENE_SIZE[i]/MESH_SIZE[i])*vd[i])))); // clamp to mesh bounds
-	}
+	if (radius == 0.0 || sphere_in_camera_view(pos, radius, 0)) return 1; // max_level?
+	if (is_line_light() && sphere_in_camera_view(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)), 0)) return 1; // use bounding sphere
+	return 0;
 }
 
 
@@ -176,10 +163,9 @@ void light_source::combine_with(light_source const &l) {
 	float const w1(radius*radius*radius), w2(l.radius*l.radius*l.radius), wsum(w1 + w2), wa(w1/wsum), wb(w2/wsum);
 	radius     = pow(wsum, (1.0f/3.0f));
 	radius_inv = 1.0/radius;
-	center    *= wa;
-	center    += l.center*wb; // weighted average
+	pos       *= wa;
+	pos       += l.pos*wb; // weighted average
 	blend_color(color, color, l.color, wa, 1);
-	calc_cent();
 }
 
 
@@ -187,7 +173,8 @@ void light_source::draw(int ndiv) const {
 
 	if (radius == 0.0) return;
 	set_color(color);
-	draw_sphere_vbo(center, 0.05*radius, ndiv, 0);
+	draw_sphere_vbo(pos, 0.05*radius, ndiv, 0);
+	if (pos2 != pos) {draw_sphere_vbo(pos2, 0.05*radius, ndiv, 0);} // line light source, draw both points
 }
 
 
@@ -840,13 +827,17 @@ void build_lightmap(bool verbose) {
 	if (!raytrace_lights[LIGHTING_LOCAL]) {
 		for (unsigned i = 0; i < light_sources.size(); ++i) {
 			light_source &ls(light_sources[i]);
-			point const &lpos(ls.get_center());
+			assert(!ls.is_line_light()); // not supported here
+			point const &lpos(ls.get_pos());
 			if (!is_over_mesh(lpos)) continue;
-			ls.calc_cent();
 			colorRGBA const &lcolor(ls.get_color());
 			point bounds[2];
 			int bnds[3][2], cobj(-1), last_cobj(-1);
-			CELL_LOC_T const *const cent(ls.get_cent());
+			CELL_LOC_T cent[3];
+			
+			for (unsigned i = 0; i < 3; ++i) {
+				cent[i] = max(0, min(MESH_SIZE[i]-1, get_dim_pos(lpos[i], i))); // clamp to mesh bounds
+			}
 			ls.get_bounds(bounds, bnds, SQRT_CTHRESH);
 			if (SLT_LINE_TEST_WT > 0.0) {check_coll_line(lpos, lpos, cobj, -1, 1, 2, 1);} // check cobj containment and ignore that shape (ignore voxels)
 
@@ -1010,15 +1001,18 @@ void upload_dlights_textures(cube_t const &bounds) {
 	float const radius_scale(1.0/(0.5*(bounds.d[0][1] - bounds.d[0][0]))); // bounds x radius inverted
 	vector3d const poff(bounds.get_llc()), psize(bounds.get_urc() - poff);
 	vector3d const pscale(1.0/psize.x, 1.0/psize.y, 1.0/psize.z);
-	has_dir_lights = 0;
+	has_spotlights = has_line_lights = 0;
 
 	for (unsigned i = 0; i < ndl; ++i) {
+		bool const line_light(dl_sources[i].is_line_light());
 		float *data(dl_data + i*floats_per_light);
 		dl_sources[i].pack_to_floatv(data); // {center,radius, color, dir,beamwidth}
 		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale to [0,1] range
 		UNROLL_3X(data[i_+4] *= 0.1;) // scale color down
+		if (line_light) {UNROLL_3X(data[i_+8] = (data[i_+8] - poff[i_])*pscale[i_];)} // scale to [0,1] range
 		data[3] *= radius_scale;
-		has_dir_lights |= dl_sources[i].is_directional();
+		has_spotlights  |= dl_sources[i].is_directional();
+		has_line_lights |= line_light;
 	}
 	if (dl_tid == 0) {
 		setup_2d_texture(dl_tid);
@@ -1148,11 +1142,11 @@ void add_camera_flashlight() {
 }
 
 
-void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d const &d, float bw) {
+void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d const &d, float bw, point *line_end_pos) {
 
 	if (!animate2) return;
 	float const sz_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : sqrt(0.1*XY_SCENE_SIZE));
-	dl_sources2.push_back(light_source(sz_scale*sz, p, c, 1, d, bw));
+	dl_sources2.push_back(light_source(sz_scale*sz, p, (line_end_pos ? *line_end_pos : p), c, 1, d, bw));
 }
 
 
@@ -1161,12 +1155,19 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 	if (!animate2) return;
 	point p[2] = {p1, p2};
 	if (!do_line_clip_scene(p[0], p[1], zbottom, max(ztop, czmax))) return;
-	vector3d dir(p[1] - p[0]);
-	float const length(dir.mag());
-	dir.normalize();
 
-	for (float d = 0.0; d <= length; d += 0.5*size) {
-		add_dynamic_light(size*intensity, (p[0] + dir*d), color);
+	if (display_mode & 0x10) {
+		// FIXME: split into multiple smaller segments to reduce total bounding cube area?
+		add_dynamic_light(size*intensity, p[0], color, p[1]-p[0], 1.0, &p[1]); // real line light
+	}
+	else {
+		vector3d dir(p[1] - p[0]);
+		float const length(dir.mag());
+		dir.normalize();
+
+		for (float d = 0.0; d <= length; d += 0.5*size) {
+			add_dynamic_light(size*intensity, (p[0] + dir*d), color);
+		}
 	}
 }
 
@@ -1208,9 +1209,10 @@ bool dls_cell::check_add_light(unsigned ix) const {
 bool light_source::try_merge_into(light_source &ls) const {
 
 	if (ls.radius < radius) return 0; // shouldn't get here because of radius sort
-	if (!dist_less_than(center, ls.center, 0.2*max(HALF_DXY, radius)))         return 0;
+	if (!dist_less_than(pos, ls.pos, 0.2*max(HALF_DXY, radius))) return 0;
 	if (ls.bwidth != bwidth || ls.r_inner != r_inner || ls.dynamic != dynamic) return 0;
-	if (bwidth < 1.0 && dot_product(dir, ls.dir) < 0.95)                       return 0;
+	if (bwidth < 1.0 && dot_product(dir, ls.dir) < 0.95) return 0;
+	if (pos != pos2 || ls.pos != ls.pos2) return 0; // don't merge line lights
 	colorRGBA lcolor(color);
 	float const rr(radius/ls.radius);
 	lcolor.alpha *= rr*rr; // scale by radius ratio squared
@@ -1243,7 +1245,8 @@ void add_dynamic_lights_ground() {
 	dl_sources.swap(dl_sources2);
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
-		dl_sources.push_back(light_source(0.94, gen_rand_scene_pos(), BLUE, 1));
+		point const pos(gen_rand_scene_pos());
+		dl_sources.push_back(light_source(0.94, pos, pos, BLUE, 1));
 	}
 	// Note: do we want to sort by y/x position to minimize cache misses?
 	sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
@@ -1257,10 +1260,12 @@ void add_dynamic_lights_ground() {
 	for (unsigned i = 0; i < ndl; ++i) {
 		light_source &ls(dl_sources[i]);
 		if (!ls.is_visible()) continue; // view culling
-		point const &center(ls.get_center());
-		if ((center.z - ls.get_radius()) > max(ztop, czmax)) continue; // above everything, rarely occurs
-		int const xcent(get_xpos(center.x)), ycent(get_ypos(center.y));
-		if (!point_outside_mesh(xcent, ycent) && !ldynamic[ycent][xcent].check_add_light(i)) continue;
+		float const ls_radius(ls.get_radius());
+		if ((min(ls.get_pos().z, ls.get_pos2().z) - ls_radius) > max(ztop, czmax)) continue; // above everything, rarely occurs
+		point const &lpos(ls.get_pos()), &lpos2(ls.get_pos2());
+		bool const line_light(ls.is_line_light());
+		int const xcent(get_xpos(lpos.x)), ycent(get_ypos(lpos.y));
+		if (!line_light && !point_outside_mesh(xcent, ycent) && !ldynamic[ycent][xcent].check_add_light(i)) continue;
 		point bounds[2];
 		int bnds[3][2];
 		unsigned const ix(i);
@@ -1273,14 +1278,21 @@ void add_dynamic_lights_ground() {
 		first = 0;
 		int const xsize(bnds[0][1]-bnds[0][0]), ysize(bnds[1][1]-bnds[1][0]);
 		int const radius((max(xsize, ysize)>>1)+2), rsq(radius*radius);
+		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			int const y_sq((y-ycent)*(y-ycent));
 
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-				if (rsq == 1 || ((x-xcent)*(x-xcent) + y_sq) <= rsq) {
-					ldynamic[y][x].add_light(ix, bounds[0][2], bounds[1][2]); // could do flow clipping here?
+				if (rsq > 1) {
+					if (line_light) {
+						float const px(get_xval(x)), py(get_yval(y)), lx(lpos2.x - lpos.x), ly(lpos2.y - lpos.y);
+						float const cp_mag(lx*(lpos.y - py) - ly*(lpos.x - px));
+						if (cp_mag*cp_mag > line_rsq*(lx*lx + ly*ly)) continue;
+					}
+					else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
 				}
+				ldynamic[y][x].add_light(ix, bounds[0][2], bounds[1][2]); // could do flow clipping here?
 			}
 		}
 	}
@@ -1300,16 +1312,23 @@ void add_dynamic_lights_ground() {
 
 void light_source::pack_to_floatv(float *data) const {
 
-	// store light_source as: {center.xyz, radius}, {color.rgba}, {dir, bwidth}
+	// store light_source as: {pos.xyz, radius}, {color.rgba}, {dir.xyz|pos2.xyz, bwidth}
 	// Note: we don't really need to store the z-component of dir because we can calculate it from sqrt(1 - x*x - y*y),
 	//       but doing this won't save us any texture data so it's not worth the trouble
 	assert(data);
-	UNROLL_3X(*(data++) = center[i_];)
+	UNROLL_3X(*(data++) = pos[i_];)
 	*(data++) = radius;
 	UNROLL_3X(*(data++) = 0.5*(1.0 + color[i_]);) // map [-1,1] => [0,1] for negative light support
 	*(data++) = color[3];
-	UNROLL_3X(*(data++) = 0.5*(1.0 + dir  [i_]);) // map [-1,1] to [0,1]
-	*(data++) = bwidth; // [0,1]
+
+	if (is_line_light()) { // FIXME: cache this value in light_source for efficiency?
+		UNROLL_3X(*(data++) = pos2[i_];)
+		*(data++) = 0.0; // pack bwidth as 0 to indicate a line light
+	}
+	else {
+		UNROLL_3X(*(data++) = 0.5*(1.0 + dir  [i_]);) // map [-1,1] to [0,1]
+		*(data++) = bwidth; // [0,1]
+	}
 }
 
 
@@ -1353,10 +1372,9 @@ void get_dynamic_light(int x, int y, int z, point const &p, float lightscale, fl
 		light_source const &lsrc(dl_sources[ls_ix]);
 		float cscale(lightscale*lsrc.get_intensity_at(p));
 		if (cscale < CTHRESH) continue;
-		point const &lpos(lsrc.get_center());
 		
 		if (lsrc.is_directional()) {
-			cscale *= lsrc.get_dir_intensity(lpos - p);
+			cscale *= lsrc.get_dir_intensity(lsrc.get_pos() - p);
 			if (cscale < CTHRESH) continue;
 		}
 		colorRGBA const &lsc(lsrc.get_color());
@@ -1408,7 +1426,7 @@ float get_indir_light(colorRGBA &a, point const &p) { // Note: return value is u
 }
 
 
-unsigned enable_dynamic_lights(point const &center, float radius) {
+unsigned enable_dynamic_lights(point const &center, float radius) { // used for tree leaves
 
 	assert(radius > 0.0);
 	point const camera(get_camera_pos());
@@ -1417,9 +1435,10 @@ unsigned enable_dynamic_lights(point const &center, float radius) {
 	for (unsigned i = 0; i < dl_sources.size(); ++i) { // Note: could use ldynamic for faster queries
 		light_source const &ls(dl_sources[i]);
 		//if (ls.is_directional()) continue; // not correctly handled by GL point lights
+		//if (ls.is_line_light ()) continue; // not correctly handled by GL point lights
 		float const ls_radius(ls.get_radius());
 		if (ls_radius == 0.0) continue; // not handling zero radius lights yet
-		point const &ls_center(ls.get_center());
+		point const &ls_center(ls.get_pos()); // FIXME_LIGHT
 		if (!dist_less_than(center, ls_center, (radius + ls_radius))) continue;
 		if (ls.is_directional() && ls.get_dir_intensity(ls_center - center) == 0.0) continue; // wrong direction
 		if (!sphere_in_camera_view(ls_center, ls_radius, 0)) continue;
@@ -1438,7 +1457,7 @@ unsigned enable_dynamic_lights(point const &center, float radius) {
 		glLightf(gl_light, GL_CONSTANT_ATTENUATION,  1.0);
 		glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
 		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 10.0/(ls.get_radius()*ls.get_radius()));
-		set_gl_light_pos(gl_light, ls.get_center(), 1.0); // point light source position
+		set_gl_light_pos(gl_light, ls.get_pos(), 1.0); // point light source position
 	}
 	return num_dlights;
 }

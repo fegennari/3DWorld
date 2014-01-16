@@ -637,7 +637,8 @@ void *trace_ray_block_sky(void *ptr) {
 
 void ray_trace_local_light_source(lmap_manager_t &lmgr, light_source const &ls, float line_length, unsigned num_rays, rand_gen_t &rgen) {
 
-	point const &lpos(ls.get_center());
+	assert(!ls.is_line_light());
+	point const &lpos(ls.get_pos());
 	colorRGBA lcolor(ls.get_color());
 	if (LOCAL_RAYS == 0 || lcolor.alpha == 0.0) return; // nothing to do
 	float const ray_wt(1000.0*lcolor.alpha*ls.get_radius()/LOCAL_RAYS), r_inner(ls.get_r_inner());

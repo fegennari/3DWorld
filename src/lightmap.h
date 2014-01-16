@@ -98,32 +98,28 @@ public:
 class light_source { // size = 64
 
 	bool dynamic;
-	char gl_light_id;
 	float radius, radius_inv, r_inner, bwidth;
-	CELL_LOC_T cent[3];
-	point center;
+	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
 	colorRGBA color;
 
 public:
 	light_source() {}
-	light_source(float sz, point const &p, colorRGBA const &c, bool id, vector3d const &d=plus_z, float bw=1.0, float ri=0.0, int gl_id=-1);
-	void calc_cent();
+	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=plus_z, float bw=1.0, float ri=0.0);
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
 	float get_radius()           const {return radius;}
-	float get_r_inner()          const {return r_inner;}
-	point const &get_center()    const {return center;}
-	CELL_LOC_T const *get_cent() const {return cent;}
-	float get_intensity_at(point const &pos) const;
+	float get_r_inner()          const {return r_inner;} // > 0.0 for sphere light
+	point const &get_pos()       const {return pos;}
+	point const &get_pos2()      const {return pos2;}
+	float get_intensity_at(point const &p) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;
-	bool lights_polygon(point const &pc, float rsize, vector3d const* const norm=NULL) const;
 	void get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
 	bool is_visible()     const;
 	bool is_directional() const {return (bwidth < 1.0);}
+	bool is_line_light()  const {return (pos != pos2);} // technically cylinder light
 	bool is_dynamic()     const {return dynamic;}
-	int  get_light_id()   const {assert(gl_light_id >= 0); return gl_light_id;}
-	void shift_by(vector3d const &vd);
+	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
 	void combine_with(light_source const &l);
 	void draw(int ndiv) const;
 	void pack_to_floatv(float *data) const;

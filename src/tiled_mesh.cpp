@@ -1402,6 +1402,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	unsigned const init_tiles((unsigned)tiles.size());
 	vector<tile_xy_pair> to_erase;
 	min_camera_dist = FAR_CLIP;
+	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
 		if (!i->second->update_range(&vbo_free_list)) {
