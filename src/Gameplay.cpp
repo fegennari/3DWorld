@@ -12,7 +12,6 @@
 
 
 bool const SELF_LASER_DAMAGE = 1;
-bool const LASER_PATH_LIGHT  = 1; // slow
 bool const SMILEY_GAS        = 1;
 float const SHADOW_COL_VAL   = 0.5;
 float const UWATER_FERR_ADD  = 0.05;
@@ -1519,15 +1518,8 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 void add_laser_beam(beam3d const &beam) {
 
 	beams.push_back(beam);
-	if (LASER_PATH_LIGHT) {add_line_light(beam.pts[0], beam.pts[1], RED, 0.4, min(1.0f, sqrt(beam.intensity)));}
-
-	/*if (smoke_visible) {
-		point p1(beam.pts[0]), p2(beam.pts[1]);
-
-		if (do_line_clip_scene(p1, p2, czmin, czmax)) {
-			// FIXME: check for smoke along laser beam path and add glow halo
-		}
-	}*/
+	add_line_light(beam.pts[0], beam.pts[1], RED, 0.35, min(1.0f, sqrt(beam.intensity)));
+	//if (smoke_visible) {} // FIXME: check for smoke along laser beam path and add glow halo
 }
 
 

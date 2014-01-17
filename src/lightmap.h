@@ -112,7 +112,7 @@ public:
 	float get_r_inner()          const {return r_inner;} // > 0.0 for sphere light
 	point const &get_pos()       const {return pos;}
 	point const &get_pos2()      const {return pos2;}
-	float get_intensity_at(point const &p) const;
+	float get_intensity_at(point const &p, point &updated_lpos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;
 	void get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
 	bool is_visible()     const;

@@ -47,11 +47,7 @@ Visual Studio profile
 http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
 
 static error check (analysis)
-
-Laser line light sources
-Sphere light sources for floating lights?
-Path tracing dynamic light in Sponza?
+Path tracing dynamic light in Sponza
+Runtime modify/reload of shaders
 
 combined_gu mode for maps has problems with texture gen
-
-Runtime modify/reload of shaders
