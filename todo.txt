@@ -28,8 +28,7 @@ Better water splashes (bullet hits, etc.)
 Star shader:
 https://www.shadertoy.com/view/4dXGR4
 
-More fog in valleys
-Fog decreases at high altitude
+Fog decreases at high altitude, increases in valleys
   - increase far clipping distance
   - draw more distant tiles (larger/lower res at high delta-z)
   - camera above cloud plane
@@ -49,5 +48,3 @@ http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional
 static error check (analysis)
 Path tracing dynamic light in Sponza
 Runtime modify/reload of shaders
-
-combined_gu mode for maps has problems with texture gen

@@ -107,7 +107,9 @@ template<unsigned N> struct shader_float_matrix_uploader {
 	}
 	static void disable(int start_loc) {
 		for (unsigned i = 0; i < N; ++i) {
-			glDisableVertexAttribArray(start_loc + i);
+			int const loc(start_loc + i);
+			glVertexAttribDivisor(loc, 0);
+			glDisableVertexAttribArray(loc);
 		}
 	}
 };

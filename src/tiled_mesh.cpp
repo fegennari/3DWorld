@@ -1890,7 +1890,11 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	}
 	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass, xlate_loc);
 	assert(tree_trunk_pts.empty());
-	if (xlate_loc >= 0) {glDisableVertexAttribArray(xlate_loc);}
+	
+	if (xlate_loc >= 0) {
+		glVertexAttribDivisor(xlate_loc, 0);
+		glDisableVertexAttribArray(xlate_loc);
+	}
 	s.end_shader();
 	set_specular(0.0, 1.0);
 
@@ -2075,6 +2079,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 				to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
 			}
 		}
+		glVertexAttribDivisor(lt_loc, 0);
 		glDisableVertexAttribArray(lt_loc);
 		s.end_shader();
 	}

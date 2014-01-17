@@ -13,19 +13,19 @@ void main()
 {
 	if (use_texgen == 1) {
 		setup_texgen0();
+		tex_coord = gl_TexCoord[0].st;
 	}
 	else if (use_texgen == 2) {
-		gl_TexCoord[0].s = dot(gl_Vertex, tex0_s);
-		gl_TexCoord[0].t = dot(gl_Vertex, tex0_t);
+		tex_coord.s = dot(gl_Vertex, tex0_s);
+		tex_coord.t = dot(gl_Vertex, tex0_t);
 	}
 	else if (use_texgen == 3) {
 		set_tc0_from_vert_id();
+		tex_coord = gl_TexCoord[0].st;
 	}
 	else {
-		gl_TexCoord[0] = gl_MultiTexCoord0;
-		gl_TexCoord[0].st *= vec2(tex_scale_s, tex_scale_t);
+		tex_coord = gl_MultiTexCoord0.st * vec2(tex_scale_s, tex_scale_t);
 	}
-	tex_coord     = gl_TexCoord[0].st; // FIXME: why doesn't using gl_TexCoord[0] work?
 	gl_Position   = ftransform();
 	gl_FrontColor = gl_Color;
 	eye_norm      = normalize(gl_NormalMatrix * gl_Normal);
