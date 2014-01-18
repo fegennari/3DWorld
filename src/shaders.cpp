@@ -383,7 +383,7 @@ void clear_shaders() {
 }
 
 
-bool shader_t::load_shader_file(string const &fname, string &data) const {
+bool shader_t::load_shader_file(string const &fname, string &data) {
 
 	if (fname.empty()) return 0;
 	map<string, string>::const_iterator i(loaded_files.find(fname));
@@ -403,32 +403,30 @@ bool shader_t::load_shader_file(string const &fname, string &data) const {
 }
 
 
-void shader_t::filename_split(string const &fname, vector<string> &fns, char sep) const {
+bool shader_t::clear_shader_file(string const &fname) {
 
-	stringstream ss(fname);
-    string fn;
-    while (getline(ss, fn, sep)) fns.push_back(fn);
+	assert(!fname.empty());
+	map<string, string>::iterator i(loaded_files.find(fname));
+	if (i == loaded_files.end()) return 0; // not found - error?
+	loaded_files.erase(i);
+	return 1;
 }
 
 
-unsigned shader_t::get_shader(string const &name, unsigned type) const {
-	
-	//RESET_TIME;
-	if (name.empty()) return 0; // none selected
-	int const shader_type_table   [NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER};
+void shader_t::filename_split(string const &fname, vector<string> &fns, char sep) {
+
+	stringstream ss(fname);
+    string fn;
+	while (getline(ss, fn, sep)) {fns.push_back(fn);}
+}
+
+
+void shader_t::get_shader_filenames(string const &name, unsigned type, vector<string> &fns) {
+
 	string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
-	assert(type < NUM_SHADER_TYPES);
-	string const lookup_name(name + prepend_string[type]);
-	string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
-	if (it != loaded_shaders[type].end()) {return it->second;} // already loaded
-	
-	// create a new shader
-	string const version_info("#version 400\n");
-	string data(version_info + prepend_string[type]);
-	vector<string> fns;
 	filename_split(name, fns, '+');
 
-	for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
+	for (vector<string>::iterator i = fns.begin(); i != fns.end(); ++i) {
 		assert(!i->empty());
 		string fname(shaders_dir + "/" + *i);
 		
@@ -438,31 +436,84 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		else { // add shader type extension
 			fname += "." + shader_name_table[type];
 		}
-		if (!load_shader_file(fname, data)) {
-			cerr << "Error loading shader file " << fname << ". Exiting." << endl;
-			exit(1);
-		}
+		*i = fname;
 	}
-	if (DEBUG_SHADER) cout << "final shader data for <" << name << ">:" << endl << data << endl;
-	unsigned const shader(glCreateShader(shader_type_table[type]));
-	
-	if (!shader) {
-		cerr << "Error: Failed to create shader " << name << ". Exiting." << endl;
-		exit(1);
-	}
-	const char *src(data.c_str());
-	glShaderSource(shader, 1, &src, 0);
-	glCompileShader(shader);
-	int status(0);
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+}
 
-	if (status != GL_TRUE) {
-		cerr << "Compilation of shader " << name << " failed with status " << status << endl;
-		print_shader_info_log(shader);
-		cout << endl;
-		exit(1);
+
+bool yes_no_query(string const &query_str) {
+
+	while (1) {
+		cout << query_str << " [Y|N]" << endl;
+		string str;
+		cin >> str;
+		if (str == "Y" || str == "y" || str == "1") {return 1;}
+		if (str == "N" || str == "n" || str == "0") {return 0;}
+		cout << "Answer not understood" << endl;
 	}
-	if (PRINT_LOG) print_shader_info_log(shader);
+	return 0; // never gets here
+}
+
+
+unsigned shader_t::get_shader(string const &name, unsigned type) const {
+	
+	//RESET_TIME;
+	if (name.empty()) return 0; // none selected
+	int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER};
+	assert(type < NUM_SHADER_TYPES);
+	string const lookup_name(name + prepend_string[type]);
+	string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
+	if (it != loaded_shaders[type].end()) {return it->second;} // already loaded
+	
+	// create a new shader
+	string const version_info("#version 400\n");
+	vector<string> fns;
+	get_shader_filenames(name, type, fns);
+	bool failed(0);
+	unsigned shader(0);
+
+	while (1) { // retry loop
+		if (failed) {
+			if (!yes_no_query("Retry?")) {
+				cerr << "Exiting." << endl;
+				exit(1);
+			}
+			for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
+				if (clear_shader_file(*i)) {cout << "Reloading shader component " << *i << endl;}
+			}
+			failed = 0;
+		}
+		string data(version_info + prepend_string[type]);
+
+		for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
+			if (!load_shader_file(*i, data)) {
+				cerr << "Error loading shader file " << *i << "." << endl;
+				failed = 1; break;
+			}
+		}
+		if (failed) continue;
+		if (DEBUG_SHADER) {cout << "final shader data for <" << name << ">:" << endl << data << endl;}
+		shader = glCreateShader(shader_type_table[type]);
+	
+		if (!shader) {
+			cerr << "Error: Failed to create shader " << name << "." << endl;
+			failed = 1; continue;
+		}
+		const char *src(data.c_str());
+		glShaderSource(shader, 1, &src, 0);
+		glCompileShader(shader);
+		int status(0);
+		glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+
+		if (status != GL_TRUE) {
+			cerr << "Compilation of shader " << name << " failed with status " << status << endl;
+			print_shader_info_log(shader);
+			cerr << endl;
+			failed = 1; continue;
+		}
+		break;
+	} // while(1)
+	if (PRINT_LOG) {print_shader_info_log(shader);}
 	loaded_shaders[type][lookup_name] = shader; // cache the shader
 	//PRINT_TIME("Create Shader");
 	return shader;
@@ -523,7 +574,7 @@ bool shader_t::begin_shader(bool do_enable) {
 }
 
 
-void shader_t::print_shader_info_log(unsigned shader) const {
+void shader_t::print_shader_info_log(unsigned shader) {
 
 	int len(0), len2(0);
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len);
