@@ -798,9 +798,12 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	int mtime2;
 	static int lmtype(0);
 
-    switch (key) { // available: QAXOP somtimes SZ
+    switch (key) { // available: AXOP somtimes SZ
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
+		break;
+	case 'Q':
+		reload_all_shaders();
 		break;
 
 	case 8: // backspace

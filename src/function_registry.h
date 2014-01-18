@@ -674,6 +674,7 @@ void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons
 char const *append_ix(std::string &s, unsigned i, bool as_array);
 bool setup_shaders();
 void clear_shaders();
+void reload_all_shaders();
 
 // function prototypes - snow
 bool snow_enabled();

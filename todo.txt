@@ -47,4 +47,3 @@ http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional
 
 static error check (analysis)
 Path tracing dynamic light in Sponza
-Runtime modify/reload of shaders
