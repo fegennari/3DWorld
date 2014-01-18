@@ -185,7 +185,6 @@ void clear_context() {
 	free_cobj_draw_group_vbos();
 	clear_univ_obj_contexts();
 	clear_asteroid_contexts();
-	clear_cached_shaders();
 	invalidate_cached_stars();
 	clear_landscape_vbo = 1;
 }

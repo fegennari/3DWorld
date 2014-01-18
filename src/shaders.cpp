@@ -380,6 +380,7 @@ void clear_shaders() {
 	for (unsigned d = 0; d < NUM_SHADER_TYPES; ++d) {
 		loaded_shaders[d].clear();
 	}
+	clear_cached_shaders();
 }
 
 
