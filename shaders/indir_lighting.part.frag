@@ -13,6 +13,7 @@ void add_indir_lighting(inout vec3 lit_color) {
 	
 	if (indir_lighting) {
 		vec3 indir_light = texture3D(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
+		//indir_light = pow(indir_light, vec3(0.45)); // gamma correction
 		lit_color += diffuse * indir_light; // indirect lighting
 	}
 }

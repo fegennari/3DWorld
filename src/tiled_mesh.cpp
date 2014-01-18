@@ -1107,7 +1107,7 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 			dist /= -log(2.0*min_normal_z)/log(2.0);
 		}
 	}
-    while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS) {
+    while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS && (size>>(lod_level+1)) >= 4) { // never divide smaller than 4x4 quads
         dist /= 2;
         ++lod_level;
     }
@@ -1639,6 +1639,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
 		for (unsigned i = 0, step = 1; i < NUM_LODS; ++i, step <<= 1) {
 			unsigned const size_i_ceil((size + step - 1)/step);
+			if (size_i_ceil < 2) continue; // too small, don't create LOD for this level (will never be used during rendering)
 			vector<unsigned> indices(4*size_i_ceil*size_i_ceil);
 			unsigned iix(0);
 

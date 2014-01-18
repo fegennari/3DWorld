@@ -31,6 +31,7 @@ https://www.shadertoy.com/view/4dXGR4
 Fog decreases at high altitude, increases in valleys
   - increase far clipping distance
   - draw more distant tiles (larger/lower res at high delta-z)
+    - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
   - camera above cloud plane
 TT Foam at water edge/wave peaks using procedural texture when waves are enabled
 
