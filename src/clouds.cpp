@@ -362,7 +362,7 @@ void render_spherical_section(indexed_mesh_draw<vert_wrap_t> &imd, float size, f
 void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 
 	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity (0: clouds follow the camera, 1: clouds are stationary)
-	float const size(FAR_CLIP), rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
+	float const size(camera_pdu.far_), rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
 	float const z1(zmin), z2(get_cloud_zmax()), ndiv_inv(1.0/CLOUD_NUM_DIV);
 	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
 	vector3d const offset(-camera + cloud_rel_vel*world_pos);
