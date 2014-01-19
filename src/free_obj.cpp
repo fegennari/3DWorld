@@ -715,6 +715,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 				glPopMatrix();
 				clear_emissive_color();
 			}
+			glDepthFunc(GL_LESS);
 		} // partial_shadow
 	} // passq
 	//if (GET_DELTA_TIME > 10) cout << get_name() << ": " << GET_DELTA_TIME << endl;

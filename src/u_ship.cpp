@@ -2692,6 +2692,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			draw_sphere_vbo_back_to_front(all_zeros, ssize, 3*ndiv/2, has_hit_dir); // partial sphere?
 			glDisable(GL_CULL_FACE);
 			clear_emissive_color();
+			glDepthFunc(GL_LESS);
 			set_std_blend_mode();
 
 			if (has_hit_dir) {
