@@ -174,8 +174,9 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_
 	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
 
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
-	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), shadows_invalid(1), recalc_tree_grass_weights(1),
-	mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
+	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
+	mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -194,11 +195,12 @@ tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_ti
 void tile_t::update_terrain_params() {
 
 	float const off_mult(0.4), height_mult(0.8), dirt_mult(1.0), veg_mult(5.0), off_scale(1.0);
+	float const xv1(get_xval(x1)), xv2(xv1 + (x2-x1)*deltax), yv1(get_yval(y1)), yv2(yv1 + (y2-y1)*deltay);
 
 	for (unsigned yp = 0; yp < 2; ++yp) {
 		for (unsigned xp = 0; xp < 2; ++xp) {
 			terrain_params_t &param(params[yp][xp]);
-			float const xv(mesh_scale*get_xval(xp ? x2 : x1)), yv(mesh_scale*get_yval(yp ? y2 : y1));
+			float const xv(mesh_scale*(xp ? xv2 : xv1)), yv(mesh_scale*(yp ? yv2 : yv1));
 			//param.hoff   = off_scale*eval_mesh_sin_terms(off_mult*xv+123, off_mult*yv+456);
 			//param.hscale = min(2.0f, max(0.5f, 0.5f*fabs(eval_mesh_sin_terms(height_mult*xv+789, height_mult*yv+111))));
 			float const veg_val(eval_mesh_sin_terms(veg_mult*xv, veg_mult*yv));
@@ -303,12 +305,6 @@ void tile_t::clear_vbo_tid(vector<unsigned> *vbo_free_list) {
 }
 
 
-void tile_t::create_xy_arrays(mesh_xy_grid_cache_t &height_gen, unsigned xy_size, float xy_scale) {
-
-	height_gen.build_arrays(xy_scale*get_xval(x1), xy_scale*get_yval(y1), xy_scale*DX_VAL, xy_scale*DY_VAL, xy_size, xy_size);
-}
-
-
 void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 
 	//RESET_TIME;
@@ -328,7 +324,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	else {
-		create_xy_arrays(height_gen, zvsize, 1.0);
+		height_gen.build_arrays(get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize);
 
 		#pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)zvsize; ++y) {
@@ -370,7 +366,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	assert(mzmin <= mzmax);
-	radius = 0.5*sqrt((DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
+	radius = 0.5*sqrt((deltax*deltax + deltay*deltay)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 	ptzmax = dtzmax = mzmin; // no trees yet
 	//PRINT_TIME("Create Zvals");
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
@@ -404,7 +400,7 @@ void tile_t::calc_mesh_ao_lighting() {
 	vector<float> czv(context_sz*context_sz);
 	mesh_xy_grid_cache_t height_gen;
 	bool const using_hmap(using_tiled_terrain_hmap_tex());
-	if (!using_hmap) {height_gen.build_arrays(get_xval(x1 - ray_len), get_yval(y1 - ray_len), DX_VAL, DY_VAL, context_sz, context_sz);}
+	if (!using_hmap) {height_gen.build_arrays(get_xval(x1 - ray_len), get_yval(y1 - ray_len), deltax, deltay, context_sz, context_sz);}
 
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)context_sz; ++y) {
@@ -547,8 +543,8 @@ void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius
 
 void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test) {
 
-	int const xc(round_fp((pos.x - xstart)/DX_VAL)), yc(round_fp((pos.y - ystart)/DY_VAL));
-	int rval(max(int(tradius/DX_VAL), int(tradius/DY_VAL)) + 1);
+	int const xc(round_fp((pos.x - xstart)/deltax)), yc(round_fp((pos.y - ystart)/deltay));
+	int rval(max(int(tradius/deltax), int(tradius/deltay)) + 1);
 	int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
 	float const scale(0.6/rval);
 	bool updated(0);
@@ -611,7 +607,7 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 
 	tree_map.resize(0);
 	tree_map.resize(stride*stride, 255);
-	bool const no_adj_test(trmax < min(DX_VAL, DY_VAL));
+	bool const no_adj_test(trmax < min(deltax, deltay));
 	apply_ao_shadows_for_trees(this, no_adj_test);
 }
 
@@ -699,7 +695,7 @@ void tile_t::create_data(vector<vert_type_t> &data) {
 
 	for (unsigned y = 0; y <= size; ++y) {
 		for (unsigned x = 0; x <= size; ++x) {
-			data[y*stride + x].assign(x*DX_VAL, y*DY_VAL, zvals[y*zvsize + x]);
+			data[y*stride + x].assign(x*deltax, y*deltay, zvals[y*zvsize + x]);
 		}
 	}
 }
@@ -754,7 +750,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const MESH_NOISE_FREQ  = 80.0;
 		float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
 		int k1, k2, k3, k4;
-		create_xy_arrays(height_gen, zvsize, MESH_NOISE_FREQ);
+		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax, MESH_NOISE_FREQ*deltay, zvsize, zvsize);
 
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
@@ -1019,7 +1015,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 	unsigned const grass_block_dim(get_grass_block_dim());
 	assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
 	int const dx(xoff - xoff2), dy(yoff - yoff2);
-	float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*DX_VAL), dy_step(GRASS_BLOCK_SZ*DY_VAL);
+	float const llcx(get_xval(x1+dx)), llcy(get_yval(y1+dy)), dx_step(GRASS_BLOCK_SZ*deltax), dy_step(GRASS_BLOCK_SZ*deltay);
 	float const lod_scale(GRASS_LOD_SCALE/get_scaled_tile_radius());
 	float const block_grass_thresh(grass_thresh + (SQRT2*radius)/grass_block_dim);
 	point const adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
@@ -1038,7 +1034,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 			for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) {
 				for (unsigned xx = x*GRASS_BLOCK_SZ; xx <= (x+1)*GRASS_BLOCK_SZ && back_facing; ++xx) {
 					unsigned const ix(yy*zvsize + xx);
-					back_facing &= (dot_product(get_norm(ix), (adj_camera - point(llcx+xx*DX_VAL, llcy+yy*DY_VAL, zvals[ix]))) < 0.0);
+					back_facing &= (dot_product(get_norm(ix), (adj_camera - point(llcx+xx*deltax, llcy+yy*deltay, zvals[ix]))) < 0.0);
 				}
 			}
 			if (back_facing) continue;
@@ -1212,7 +1208,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 void tile_t::draw_water(shader_t &s, float z) const {
 
 	if (!has_water() || get_rel_dist_to_camera() > DRAW_DIST_TILES || !is_visible()) return;
-	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*DX_VAL), yv2(yv1+(y2-y1)*DY_VAL);
+	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
 	bind_texture_tu(height_tid, 2);
 	set_shader_zmin_zmax(s);
 	draw_one_tquad(xv1, yv1, xv2, yv2, z);

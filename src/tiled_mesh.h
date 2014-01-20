@@ -85,7 +85,7 @@ class tile_t {
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
-	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z;
+	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
@@ -127,7 +127,7 @@ public:
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~tile_t() {clear_vbo_tid();}
 	void invalidate_shadows() {shadows_invalid = 1;}
-	float calc_radius() const {return 0.5*sqrt(DX_VAL*DX_VAL + DY_VAL*DY_VAL)*size;} // approximate (lower bound)
+	float calc_radius() const {return 0.5*sqrt(deltax*deltax + deltay*deltay)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
 	float get_htex_zmin() const;
@@ -150,21 +150,21 @@ public:
 	cube_t get_bcube() const {
 		// Note: here we include the water plane's contribution to the upper z bound, since we draw the water as part of the tile contents
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), z2(max(get_tile_zmax(), water_plane_z));
-		return cube_t(xv1-trmax, xv1+(x2-x1)*DX_VAL+trmax, yv1-trmax, yv1+(y2-y1)*DY_VAL+trmax, mzmin-BCUBE_ZTOLER, z2+BCUBE_ZTOLER);
+		return cube_t(xv1-trmax, xv1+(x2-x1)*deltax+trmax, yv1-trmax, yv1+(y2-y1)*deltay+trmax, mzmin-BCUBE_ZTOLER, z2+BCUBE_ZTOLER);
 	}
 	cube_t get_mesh_bcube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
-		return cube_t(xv1, xv1+(x2-x1)*DX_VAL, yv1, yv1+(y2-y1)*DY_VAL, mzmin-BCUBE_ZTOLER, mzmax+BCUBE_ZTOLER); // Note: bias by BCUBE_ZTOLER so dz != 0 when mzmin == mzmax
+		return cube_t(xv1, xv1+(x2-x1)*deltax, yv1, yv1+(y2-y1)*deltay, mzmin-BCUBE_ZTOLER, mzmax+BCUBE_ZTOLER); // Note: bias by BCUBE_ZTOLER so dz != 0 when mzmin == mzmax
 	}
 	cube_t get_mesh_sub_bcube(unsigned x, unsigned y) const {
 		assert(x < 4 && y < 4);
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
-		float const xv2(xv1+(x2-x1)*DX_VAL), yv2(yv1+(y2-y1)*DY_VAL), dx((xv2 - xv1)/4), dy((yv2 - yv1)/4);
+		float const xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay), dx((xv2 - xv1)/4), dy((yv2 - yv1)/4);
 		return cube_t((xv1 + x*dx), (xv1 + (x+1)*dx), (yv1 + y*dy), (yv1 + (y+1)*dy), sub_zmin[y][x], sub_zmax[y][x]);
 	}
 	cube_t get_water_bcube() const {
 		float const xv1(get_xval(wx1 + xoff - xoff2)), yv1(get_yval(wy1 + yoff - yoff2));
-		return cube_t(xv1, xv1+(wx2-wx1)*DX_VAL, yv1, yv1+(wy2-wy1)*DY_VAL, water_plane_z, water_plane_z); // zero area in z
+		return cube_t(xv1, xv1+(wx2-wx1)*deltax, yv1, yv1+(wy2-wy1)*deltay, water_plane_z, water_plane_z); // zero area in z
 	}
 	void fill_adj_mask(bool mask[3][3], int x, int y) const;
 	float get_min_dist_to_pt(point const &pt, bool xy_only=0, bool mesh_only=1) const;
@@ -179,7 +179,6 @@ public:
 	void clear_shadows();
 	void clear_tids();
 	void clear_vbo_tid(vector<unsigned> *vbo_free_list=NULL);
-	void create_xy_arrays(mesh_xy_grid_cache_t &height_gen, unsigned xy_size, float xy_scale);
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
 
 	vector3d get_norm(unsigned ix) const {
