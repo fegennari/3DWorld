@@ -715,6 +715,45 @@ colorRGBA get_tt_water_color() {
 }
 
 
+void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth, colorRGBA const &color, colorRGBA const &rcolor) {
+
+	if (no_specular) {s.set_prefix("#define NO_SPECULAR",     1);} // FS
+	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH", 1);} // FS
+	s.setup_enabled_lights(2, 2); // FS
+	setup_tt_fog_pre(s);
+	s.set_bool_prefix("reflections",      reflections, 1); // FS
+	s.set_bool_prefix("add_waves",        add_waves,   1); // FS
+	s.set_bool_prefix("add_noise",        rain_mode,   1); // FS
+	s.set_bool_prefix("deep_water_waves", add_waves,   1); // FS (always enabled with waves for now)
+	s.set_vert_shader("texture_gen.part+water_plane");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
+	s.begin_shader();
+	setup_tt_fog_post(s);
+	s.add_uniform_int  ("reflection_tex", 0);
+	s.add_uniform_color("water_color",    color);
+	s.add_uniform_color("reflect_color",  rcolor);
+	s.add_uniform_int  ("height_tex",     2);
+	s.add_uniform_float("water_green_comp", water_params.green);
+	s.add_uniform_float("reflect_scale",    water_params.reflect);
+	s.add_uniform_float("mesh_z_scale",     mesh_scale);
+	set_water_plane_uniforms(s);
+	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
+
+	// waves (as normal maps)
+	if (add_waves) {
+		select_multitex(WATER_NORMAL_TEX,       1, 0);
+		select_multitex(OCEAN_WATER_NORMAL_TEX, 4, 0);
+		s.add_uniform_int("water_normal_tex",      1);
+		s.add_uniform_int("deep_water_normal_tex", 4);
+	}
+	if (rain_mode) {
+		select_multitex(RAINDROP_TEX, 3, 0);
+		s.add_uniform_int  ("noise_tex", 3);
+		s.add_uniform_float("noise_time", frame_counter); // rain ripples
+	}
+}
+
+
 // texture units used: 0: reflection texture, 1: water normal map, 2: mesh height texture, 3: rain noise, 4: deep water normal map
 void draw_water_plane(float zval, unsigned reflection_tid) {
 
@@ -750,42 +789,22 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);
 	bool const rain_mode(add_waves && is_rain_enabled());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
-	if (no_specular) {s.set_prefix("#define NO_SPECULAR", 1);} // FS
-	s.setup_enabled_lights(2, 2); // FS
-	setup_tt_fog_pre(s);
-	s.set_bool_prefix("reflections", reflections, 1); // FS
-	s.set_bool_prefix("add_waves", add_waves, 1); // FS
-	s.set_bool_prefix("add_noise", rain_mode, 1); // FS
-	s.set_bool_prefix("deep_water_waves", add_waves, 1); // FS (always enabled with waves for now)
-	s.set_vert_shader("texture_gen.part+water_plane");
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
-	s.begin_shader();
-	setup_tt_fog_post(s);
-	s.add_uniform_int  ("reflection_tex", 0);
-	s.add_uniform_color("water_color",    color);
-	s.add_uniform_color("reflect_color",  rcolor);
-	s.add_uniform_int  ("height_tex",     2);
-	s.add_uniform_float("water_green_comp", water_params.green);
-	s.add_uniform_float("reflect_scale",    water_params.reflect);
-	s.add_uniform_float("mesh_z_scale",     mesh_scale);
-	set_water_plane_uniforms(s);
-	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
-
-	// waves (as normal maps)
-	if (add_waves) {
-		select_multitex(WATER_NORMAL_TEX,       1, 0);
-		select_multitex(OCEAN_WATER_NORMAL_TEX, 4, 0);
-		s.add_uniform_int("water_normal_tex",      1);
-		s.add_uniform_int("deep_water_normal_tex", 4);
-	}
-	if (rain_mode) {
-		select_multitex(RAINDROP_TEX, 3, 0);
-		s.add_uniform_int  ("noise_tex", 3);
-		s.add_uniform_float("noise_time", frame_counter); // rain ripples
-	}
+	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
+	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 	set_color(WHITE);
 	draw_tiled_terrain_water(s, zval);
+	glDepthFunc(GL_LESS);
 	s.end_shader();
+#if 0
+	if (camera_pdu.far_ > 1.1*FAR_CLIP) { // camera is high above the mesh (Enable when extended mesh is drawn)
+		// FIXME: changes apparent water color, only draw the area not covered by tiles (somehow)?
+		setup_water_plane_shader(s, no_specular, reflections, add_waves, 0, 0, color, rcolor); // rain_mode=0, use_depth=0
+		indexed_mesh_draw<vert_wrap_t> imd;
+		float const size(camera_pdu.far_*SQRT2);
+		imd.render_z_plane(-size, -size, size, size, (zval - SMALL_NUMBER), 8, 8); // 8x8 grid
+		s.end_shader();
+	}
+#endif
 	disable_blend();
 	set_specular(0.0, 1.0);
 	disable_textures_texgen();
