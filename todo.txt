@@ -12,7 +12,6 @@ Remove usage of gl_TexCoord from shaders and replace with a varying variable
 Replace GL matrix operations with something else (GLM?)
 
 Berries on plants
-Laser in smoke
 Tiled terrain texture coords on high slopes
 Weather/Physics UI / key to switch UI modes
 TT mode underwater content

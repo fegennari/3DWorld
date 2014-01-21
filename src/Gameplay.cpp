@@ -1660,7 +1660,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	case W_LASER: // line of sight damage
 		{
-			projectile_test(fpos, dir, firing_error, damage, shooter, range);
+			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, -1);
 			beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
 			add_laser_beam(beam); // might not need to actually add laser itself for camera/player
 		}
@@ -1831,7 +1831,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	assert(!is_nan(damage));
 	assert(intensity <= 1.0 && LASER_REFL_ATTEN < 1.0);
 	int closest(-1), closest_t(0), coll(0), xpos(0), ypos(0), cindex(-1);
-	point coll_pos, res_pos(pos);
+	point coll_pos(pos);
 	vector3d vcf(vcf_), vca(pos), coll_norm(plus_z);
 	float const vcf_mag(vcf.mag()), MAX_RANGE(min((float)FAR_CLIP, 2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE + Z_SCENE_SIZE)));
 	float specular(0.0), luminance(0.0), alpha(1.0), refract_ix(1.0), hardness(1.0);
@@ -1861,7 +1861,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	int const proj_type(is_laser ? BEAM : PROJECTILE);
 	range = get_projectile_range(pos, vcf, 0.01*radius, range, coll_pos, coll_norm, coll, cindex, shooter, !is_laser, ignore_cobj);
 	if (cindex >= 0) assert(unsigned(cindex) < coll_objects.size());
-	point cpos(pos), p_int(pos), lsip(pos);
+	point p_int(pos), lsip(pos);
 
 	if (cindex >= 0) {
 		cobj_params const &cp(coll_objects[cindex].cp);
@@ -1887,8 +1887,8 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			if (line_sphere_int(vcf0, lsip, apos, otype.radius, p_int, 1)) {
 				closest   = i;
 				closest_t = type;
-				cpos      = p_int;
-				range     = p2p_dist(pos, cpos);
+				coll_pos  = p_int;
+				range     = p2p_dist(pos, coll_pos);
 				hardness  = 1.0; // 'hard'
 				
 				if (is_laser && type != SMILEY && type != CAMERA) {
@@ -1905,17 +1905,46 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		if (dist < (range + CAMERA_RADIUS + SMALL_NUMBER) && line_sphere_int(vcf0, lsip, camera, CAMERA_RADIUS, p_int, 1)) {
 			closest   = 0;
 			closest_t = CAMERA;
-			cpos      = p_int;
-			range     = p2p_dist(pos, cpos);
+			coll_pos  = p_int;
+			range     = p2p_dist(pos, coll_pos);
 			hardness  = 1.0;
-			camera_collision(wtype, shooter, zero_vector, cpos, damage, proj_type);
 		}
 	}
-	if (closest_t == SMILEY) {
-		smiley_collision(closest, shooter, zero_vector, cpos, damage, proj_type);
+
+	// check for smoke occlusion of laser beam
+	if (is_laser && smoke_visible) {
+		vector3d const delta(coll_pos - pos);
+		unsigned const nsteps(delta.mag()/HALF_DXY); // okay if zero
+
+		if (nsteps > 1) {
+			float const SMOKE_SCALE = 0.25;
+			vector3d const step(delta/nsteps);
+			point cur_pos(pos);
+			float visibility(1.0);
+
+			for (unsigned i = 0; i < nsteps; ++i) {
+				visibility *= (1.0 - SMOKE_SCALE*get_smoke_at_pos(cur_pos));
+
+				if (visibility < 0.25) { // mostly smoke, laser beam ends here (dissipates in the smoke)
+					range = p2p_dist(pos, cur_pos);
+					return cur_pos;
+				}
+				cur_pos += step;
+			}
+			damage    *= visibility;
+			intensity *= visibility;
+		}
+	}
+
+	// use collision point/object for damage, sparks, etc.
+	if (closest_t == CAMERA) {
+		camera_collision(wtype, shooter, zero_vector, coll_pos, damage, proj_type);
+	}
+	else if (closest_t == SMILEY) {
+		smiley_collision(closest, shooter, zero_vector, coll_pos, damage, proj_type);
 		if (is_laser && (rand()%6) == 0) gen_smoke(coll_pos);
 	}
-	if ((intersect || coll) && dist_less_than(coll_pos, pos, (X_SCENE_SIZE + Y_SCENE_SIZE))) { // spark
+	else if ((intersect || coll) && dist_less_than(coll_pos, pos, (X_SCENE_SIZE + Y_SCENE_SIZE))) { // spark
 		if (!is_underwater(coll_pos)) {
 			colorRGBA const scolor(is_laser ? RED : colorRGBA(1.0, 0.7, 0.0, 1.0));
 			float const ssize((is_laser ? ((wmode&1) ? 0.015 : 0.020)*intensity : 0.025)*((closest_t == CAMERA) ? 0.5 : 1.0));
@@ -1923,14 +1952,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			point const light_pos(coll_pos - vcf*(0.1*ssize));
 			add_dynamic_light(0.6*CLIP_TO_01(sqrt(intensity)), light_pos, scolor);
 
-			if (coll && hardness >= 0.5 && intensity >= 1.0 && (!is_laser || (alpha == 1.0 && ((rand()&1) == 0)))) {
-				gen_particles(light_pos, 1, 0.5, 1); // sparks
+			if (coll && hardness >= 0.5 && intensity >= 0.5 && (!is_laser || (alpha == 1.0 && ((rand()&1) == 0)))) {
+				gen_particles(light_pos, 1, 0.5, 1); // particle
 			}
 		}
-		res_pos = coll_pos;
-	}
-	else if (closest >= 0) {
-		res_pos = cpos;
 	}
 	if (coll && cindex >= 0 && closest < 0) { // hit cobjs (like tree leaves)
 		coll_obj &cobj(coll_objects[cindex]);
@@ -1984,6 +2009,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		float range0(MAX_RANGE), range1(range0), atten(LASER_REFL_ATTEN);
 		point end_pos(coll_pos);
 		vector3d vref(vcf);
+		int coll2(coll);
 
 		if (coll) { // hit coll obj
 			float reflect(alpha);
@@ -2004,7 +2030,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				float refract(1.0 - reflect);
 
 				if (refract > 0.01) { // refracted light (index of refraction changes angle?)
-					if (coll && cindex >= 0) refract *= coll_objects[cindex].get_light_transmit(coll_pos, (coll_pos + vcf*FAR_CLIP));
+					if (cindex >= 0) refract *= coll_objects[cindex].get_light_transmit(coll_pos, (coll_pos + vcf*FAR_CLIP));
 					refract = min(LASER_REFL_ATTEN, refract);
 
 					if (refract > 0.01) {
@@ -2017,26 +2043,24 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		else { // hit ice - ice may not actually be in +z (if it has frozen ripples)
 			calc_reflection_angle(vcf, vref, wat_vert_normals[ypos][xpos]); // don't have water surface normals
 			end_pos = projectile_test(coll_pos, vref, 0.0, atten*damage, shooter, range0, atten*intensity);
-			coll    = (end_pos != coll_pos);
+			coll2   = (end_pos != coll_pos);
 		}
 		if (reflects && atten > 0.0) {
-			add_laser_beam_segment(coll_pos, end_pos, vref, coll, (range0 > 0.9*MAX_RANGE), atten*intensity);
+			add_laser_beam_segment(coll_pos, end_pos, vref, coll2, (range0 > 0.9*MAX_RANGE), atten*intensity);
 		}
 	}
 	float const dscale((shooter >= CAMERA_ID) ? sstate.get_damage_scale() : 1.0);
 
-	if (closest < 0) {
+	if (closest < 0) { // not a dynamic object (static object)
 		if (intersect == 1 && !coll) { // mesh intersection
 			//surface_damage[ypos][xpos] += dscale;
-			if (is_laser) {modify_grass_at(res_pos, 0.25*HALF_DXY, 0, 1);} // burn
+			if (is_laser) {modify_grass_at(coll_pos, 0.25*HALF_DXY, 0, 1);} // burn
 		}
-		return res_pos;
 	}
-	if (closest_t != SMILEY && closest_t != CAMERA) {
-		obj_groups[coll_id[closest_t]].get_obj(closest).damage_object(dscale*damage, res_pos, pos, wtype);
-		return res_pos;
+	else if (closest_t != SMILEY && closest_t != CAMERA) {
+		obj_groups[coll_id[closest_t]].get_obj(closest).damage_object(dscale*damage, coll_pos, pos, wtype);
 	}
-	return cpos;
+	return coll_pos;
 }
 
 
