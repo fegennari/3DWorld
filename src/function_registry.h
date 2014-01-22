@@ -167,8 +167,8 @@ void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool dr
 void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends);
 void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, float zval=0.0);
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
-	int draw_sides_ends=0, bool two_sided_lighting=0, float const *const perturb_map=NULL);
-void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture=0);
+	int draw_sides_ends=0, bool two_sided_lighting=0, float const *const perturb_map=NULL, float tex_scale_len=1.0);
+void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture=0, float tex_scale_len=1.0);
 void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv);
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
 						int texture, bool disable_bfc, bool const *const render_map=NULL, float const *const exp_map=NULL,
@@ -178,7 +178,7 @@ void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int te
 								float s_beg, float s_end, float t_beg, float t_end);
 void rotate_sphere_tex_to_dir(vector3d const &dir);
 void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable_bfc=0);
-void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo);
+void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i=1.0, float tex_scale_o=1.0);
 void rotate_towards_camera(point const &pos);
 void enable_flares(colorRGBA const &color, bool zoomed=0);
 void disable_flares();
@@ -192,7 +192,7 @@ void gen_quad_tex_coords(float *tdata, unsigned num, unsigned stride);
 void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void free_sphere_vbos();
 void setup_sphere_vbos();
-void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture);
+void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, float tex_scale_len=1.0);
 void draw_sphere_vbo_raw(int ndiv, bool textured, bool half=0);
 void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half=0, bool bfc=0, int shader_loc=-1);
 void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, bool textured);

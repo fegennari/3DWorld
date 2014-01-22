@@ -278,7 +278,7 @@ vert_norm_tc create_vert(point const &p, vector3d const &n, float ts, float tt, 
 
 // draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = pt1 end, 4 = pt2 end
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
-						int draw_sides_ends, bool two_sided_lighting, float const *const perturb_map)
+						int draw_sides_ends, bool two_sided_lighting, float const *const perturb_map, float tex_scale_len)
 {
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
@@ -295,8 +295,8 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
 			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv);
-			//verts[3*s+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), 1.0, two_sided_lighting); // small discontinuities at every position
-			verts[3*s+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], 0.5, 1.0, two_sided_lighting); // one big discontinuity at one position
+			//verts[3*s+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
+			verts[3*s+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], 0.5, tex_scale_len, two_sided_lighting); // one big discontinuity at one position
 			verts[3*s+1] = create_vert(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), 0.0, two_sided_lighting); // normalize?
 			verts[3*s+2] = create_vert(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), 0.0, two_sided_lighting); // normalize?
 		}
@@ -309,7 +309,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 			unsigned const s(S%ndiv);
 			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
 			verts[2*S+0] = create_vert(vpn.p[(s<<1)+0], normal, (1.0 - S*ndiv_inv), 0.0, two_sided_lighting);
-			verts[2*S+1] = create_vert(vpn.p[(s<<1)+1], normal, (1.0 - S*ndiv_inv), 1.0, two_sided_lighting);
+			verts[2*S+1] = create_vert(vpn.p[(s<<1)+1], normal, (1.0 - S*ndiv_inv), tex_scale_len, two_sided_lighting);
 		}
 		draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 	}
@@ -326,7 +326,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 				float tc[2] = {0.0, 0.0};
 				
 				if (texture) { // inefficient, but uncommon
-					float const theta(TWO_PI*s/ndiv);
+					float const theta(TWO_PI*s*ndiv_inv);
 					tc[0] = 0.5*(1.0 + sinf(theta));
 					tc[1] = 0.5*(1.0 + cosf(theta));
 				}
@@ -338,18 +338,18 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 }
 
 
-void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture) {
+void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, float tex_scale_len) {
 
-	draw_fast_cylinder(all_zeros, point(0.0, 0.0, l), r1, r2, ndiv, texture);
+	draw_fast_cylinder(all_zeros, point(0.0, 0.0, l), r1, r2, ndiv, texture, 0, 0, NULL, tex_scale_len);
 }
 
 
-void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture) {
+void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture, float tex_scale_len) {
 
 	assert(r_outer > 0.0 && r_inner >= 0.0 && length >= 0.0 && ndiv > 0 && r_outer >= r_inner);
 	glPushMatrix();
 	translate_to(pos);
-	draw_cylin_fast(r_outer, r_outer, length, ndiv, texture);
+	draw_cylin_fast(r_outer, r_outer, length, ndiv, texture, tex_scale_len);
 
 	if (r_inner != r_outer) {
 		if (r_inner != 0.0) {draw_cylin_fast(r_inner, r_inner, length, ndiv, texture);}
@@ -740,10 +740,10 @@ void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable
 // ******************** TORUS ********************
 
 
-void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo) { // at (0,0,0) in z-plane, always textured
+void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i, float tex_scale_o) { // at (0,0,0) in z-plane, always textured
 
 	assert(ndivi > 2 && ndivo > 2);
-	float const ts(1.0/float(ndivo)), tt(1.0/float(ndivi)), ds(TWO_PI*ts), dt(TWO_PI*tt), cds(cos(ds)), sds(sin(ds));
+	float const ts(tex_scale_o/ndivo), tt(tex_scale_i/ndivi), ds(TWO_PI/ndivo), dt(TWO_PI/ndivi), cds(cos(ds)), sds(sin(ds));
 	vector<float> sin_cos(2*ndivi);
 	vector<vert_norm_tc> verts(2*(ndivi+1));
 
@@ -752,11 +752,11 @@ void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo) { // at (0,0
 		sin_cos[(t<<1)+0] = cos(phi);
 		sin_cos[(t<<1)+1] = sin(phi);
 	}
-	for (unsigned s = 0; s < ndivo; ++s) {
+	for (unsigned s = 0; s < ndivo; ++s) { // outer
 		float const theta(s*ds), ct(cos(theta)), st(sin(theta));
 		point const pos[2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
 
-		for (unsigned t = 0; t <= ndivi; ++t) {
+		for (unsigned t = 0; t <= ndivi; ++t) { // inner
 			unsigned const t_((t == ndivi) ? 0 : t);
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
 

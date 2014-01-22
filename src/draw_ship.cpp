@@ -32,9 +32,9 @@ void usw_ray::draw(line_tquad_draw_t &drawer) const { // use single sided cylind
 }
 
 
-void ship_cylinder::draw_cylin(unsigned ndiv, bool textured) const {
+void ship_cylinder::draw_cylin(unsigned ndiv, bool textured, float tex_scale_len) const {
 
-	draw_fast_cylinder(p1, p2, r1, r2, ndiv, textured, check_ends);
+	draw_fast_cylinder(p1, p2, r1, r2, ndiv, textured, check_ends, 0, NULL, tex_scale_len);
 }
 
 
@@ -1214,22 +1214,24 @@ void uobj_draw_data::draw_starbase() const {
 	cobj_vector_t const &cobjs(obj->get_cobjs());
 	assert(cobjs.size() == 8); // should make this more flexible later
 	setup_exp_texture();
+	if (t_exp == 0.0) {set_ship_texture(SPACESHIP1_TEX);}
 
 	// draw main body
 	color_a.do_glColor();
-	draw_torus(0.2, 1.0, get_ndiv(2*ndiv/3), 4*ndiv/3); // take from cobjs?
+	draw_torus(0.2, 1.0, get_ndiv(2*ndiv/3), 4*ndiv/3, 1.0, 4.0); // take from cobjs?
 
 	// draw center
 	color_b.do_glColor();
-	cobjs[1]->draw_cylin(cyl_ndiv, (t_exp > 0.0));
+	cobjs[1]->draw_cylin(cyl_ndiv, (t_exp > 0.0), 2.0);
 
 	// draw spokes
 	set_cloak_color(BRONZE_C);
 
 	for (unsigned i = 2; i < cobjs.size(); ++i) {
-		cobjs[i]->draw_cylin(spoke_ndiv, (t_exp > 0.0));
+		cobjs[i]->draw_cylin(spoke_ndiv, (t_exp > 0.0), 4.0);
 	}
 	end_exp_texture();
+	if (t_exp == 0.0) {end_ship_texture();}
 }
 
 
@@ -1945,6 +1947,8 @@ void uobj_draw_data::draw_juggernaut() const {
 
 	unsigned const ndiv2(get_ndiv(ndiv/2));
 	setup_draw_ship();
+	if (powered && first_pass) setup_point_light(point(0.0, 0.05, -0.95), color_b, 1.0*radius, ENGINE_DEF_LIGHT);
+
 	glPushMatrix();
 	glScalef(0.85, 1.2, 1.0);
 	draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // main body
@@ -1999,6 +2003,7 @@ void uobj_draw_data::draw_juggernaut() const {
 		glPopMatrix();
 	}
 	glPopMatrix();
+	if (powered && first_pass) clear_colors_and_disable_light(ENGINE_DEF_LIGHT);
 }
 
 
@@ -2013,7 +2018,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	color_b.do_glColor(); // WHITE?
 	if (specular_en) set_specular(0.9, 90.0);
 	if (pt_light) setup_point_light(point(0.0, 0.0, -0.5), color_a, 3.0*radius, ENGINE_DEF_LIGHT);
-	set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SPACESHIP2_TEX);
 	glPushMatrix();
 	glScalef(1.0, 1.0, 0.1);
 	draw_sphere_vbo(all_zeros, 1.0, ndiv32, 1); // center

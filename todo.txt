@@ -16,8 +16,13 @@ Tiled terrain texture coords on high slopes
 Weather/Physics UI / key to switch UI modes
 TT mode underwater content
 
-User-placed teleporter weapon (translocator?)
 Starbase texture
+  - handle explosion texture
+    - black body light emission
+  - emissive texture
+  - light colors or hull color?
+
+User-placed teleporter weapon (translocator?)
 Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
