@@ -16,11 +16,7 @@ Tiled terrain texture coords on high slopes
 Weather/Physics UI / key to switch UI modes
 TT mode underwater content
 
-Starbase texture
-  - black body light emission in explosion texture
-  - emissive texture
-    - light based on team color?
-
+black body light emission in ship explosion texture
 User-placed teleporter weapon (translocator?)
 Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support

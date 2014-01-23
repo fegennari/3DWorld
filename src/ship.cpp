@@ -692,6 +692,8 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
 	s.set_frag_shader("ads_lighting.part*+ship_draw");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
+	s.add_uniform_float("lum_scale",  0.0);
+	s.add_uniform_float("lum_offset", 0.0);
 
 	if (disint_tex) {
 		select_multitex(DISINT_TEX, 1, 0);

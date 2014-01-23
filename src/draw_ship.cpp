@@ -1213,6 +1213,7 @@ void uobj_draw_data::draw_starbase() const {
 	assert(cobjs.size() == 8); // should make this more flexible later
 	setup_exp_texture(1);
 	set_ship_texture(SPACESHIP1_TEX);
+	if (shader && powered) {shader->add_uniform_float("lum_scale", 2.0); shader->add_uniform_float("lum_offset", -1.0);}
 
 	// draw main body (textured)
 	WHITE.do_glColor();
@@ -1225,6 +1226,7 @@ void uobj_draw_data::draw_starbase() const {
 			cobjs[i]->draw_cylin(spoke_ndiv, (t_exp > 0.0), 3.0);
 		}
 	}
+	if (shader && powered) {shader->add_uniform_float("lum_scale", 0.0); shader->add_uniform_float("lum_offset", 0.0);}
 	end_ship_texture();
 
 	// draw center (team colored)
