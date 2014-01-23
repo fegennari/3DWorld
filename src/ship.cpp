@@ -9,6 +9,7 @@
 #include "timetest.h"
 #include "shaders.h"
 #include "draw_utils.h"
+#include "gl_ext_arb.h"
 
 
 bool const TIMETEST          = (GLOBAL_TIMETEST || 0);
@@ -683,12 +684,19 @@ void draw_wrays(vector<usw_ray> &wrays) {
 
 void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
 
+	bool const disint_tex(!exploding.empty()); // this is slow, so only enable if some ship is exploding and needs this mode
 	if (shadow_mode) {s.set_prefix("#define SHADOW_ONLY_MODE", 1);} // FS
+	if (disint_tex ) {s.set_prefix("#define ALPHA_MASK_TEX",   1);} // FS
 	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	s.set_vert_shader("ship_draw");
 	s.set_frag_shader("ads_lighting.part*+ship_draw");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
+
+	if (disint_tex) {
+		select_multitex(DISINT_TEX, 1, 0);
+		s.add_uniform_int("alpha_mask_tex", 1);
+	}
 }
 
 

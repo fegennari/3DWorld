@@ -17,10 +17,9 @@ Weather/Physics UI / key to switch UI modes
 TT mode underwater content
 
 Starbase texture
-  - handle explosion texture
-    - black body light emission
+  - black body light emission in explosion texture
   - emissive texture
-  - light colors or hull color?
+    - light based on team color?
 
 User-placed teleporter weapon (translocator?)
 Burning smiley/skull/cobj texture
