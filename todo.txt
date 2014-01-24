@@ -22,7 +22,6 @@ Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
 Texture atlases
-Random gen textures are one color component (disint tex)
 
 ************************
 

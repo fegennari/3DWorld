@@ -10,7 +10,7 @@ void main()
 {
 #ifdef ALPHA_MASK_TEX
 	if (min_alpha != 0.0) { // this test may or may not help performance
-		float alpha_mask = texture2D(alpha_mask_tex, gl_TexCoord[0].st).a;
+		float alpha_mask = texture2D(alpha_mask_tex, gl_TexCoord[0].st).r;
 		if (alpha_mask < min_alpha) discard; // slow
 	}
 #endif

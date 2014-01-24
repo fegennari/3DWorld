@@ -95,7 +95,7 @@ texture_t(0, 6, 128,  128,  1, 3, 1, "particleb.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "plaster.png"),
 texture_t(0, 6, 256,  256,  1, 3, 1, "tile.png", 0, 1, 8.0),
 texture_t(0, 6, 256,  32,   1, 3, 1, "CommandCAD.png"),
-texture_t(1, 9, 32,   32,   1, 4, 1, "@disint"),   // not real file
+texture_t(1, 9, 32,   32,   1, 1, 1, "@disint"),   // not real file
 texture_t(1, 9, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
 texture_t(1, 9, 32,   32,   1, 3, 0, "@hstripe", 0, 1, 8.0), // not real file
 texture_t(1, 9, 32,   32,   1, 3, 0, "@vstripe", 0, 1, 8.0), // not real file
@@ -908,11 +908,16 @@ void setup_1d_texture(unsigned &tid, int type, bool mipmap, bool wrap, bool mirr
 
 void texture_t::gen_rand_texture(unsigned char val, unsigned char a_add, unsigned a_rand) {
 
-	assert(ncolors == 4);
 	unsigned const size(num_pixels());
+	assert(ncolors == 1 || ncolors == 4);
 
 	for (unsigned i = 0; i < size; ++i) {
-		RGBA_BLOCK_ASSIGN((data+(i<<2)), val, val, val, (a_add + (unsigned char)(rand() % a_rand)));
+		if (ncolors == 1) { // alpha/luminance
+			data[i] = (a_add + (unsigned char)(rand() % a_rand));
+		}
+		else {
+			RGBA_BLOCK_ASSIGN((data+(i<<2)), val, val, val, (a_add + (unsigned char)(rand() % a_rand)));
+		}
 	}
 }
 

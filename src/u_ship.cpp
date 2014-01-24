@@ -2525,6 +2525,7 @@ void u_ship::fragment(vector3d const &edir, float num, bool outside_cr) const { 
 	unsigned const etype(specs().exp_type);
 	float const nscale((etype == ETYPE_NONE) ? 1.5 : 1.0), pscale(0.25*radius), psize(min(pscale, MAX_PARTICLE_SIZE*nscale));
 	float const mvscale(max(0.5f, (2.0f*pscale/MAX_PARTICLE_SIZE)));
+	float const rscale(is_player_ship() ? 4.0 : 1.0); // move particles further out if player ship so they don't block the screen
 	unsigned const modval(min(unsigned(MAX_N_PARTICLES*nscale), max(2U, unsigned(BASE_NUM_PARTS*mvscale)))/2);
 	unsigned const num_particles(unsigned(num*(modval + (rand()%modval))));
 	bool const nuclear_distrib(num >= 0.5 && specs().exp_type == ETYPE_NUCLEAR);
@@ -2535,11 +2536,11 @@ void u_ship::fragment(vector3d const &edir, float num, bool outside_cr) const { 
 		float const sz(psize*rand_uniform(0.25, 1.0));
 		vector3d dpos(gen_rand_vector_uniform(1.0 + num));
 		//if (outside_cr) dpos *= rand_uniform(1.0, 1.2)/dpos.mag();
-		point const ppos(pos + dpos*(outside_cr ? c_radius : radius));
+		point const ppos(pos + dpos*(outside_cr ? c_radius : radius)*rscale);
 		vector3d const dv(ppos, pos);
 		float const dv_mag(dv.mag());
 		vector3d vel(velocity*0.1);
-		if (dv_mag > TOLERANCE) vel + dv*(0.000015/dv_mag);
+		if (dv_mag > TOLERANCE) {vel + dv*(0.000015/dv_mag);}
 
 		if (nuclear_distrib) {
 			vector3d expdir(edir + gen_rand_vector_uniform(0.15));
