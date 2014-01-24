@@ -248,7 +248,8 @@ public:
 
 	colorRGBA apply_cloak(colorRGBA const &color) const;
 	void draw_bounding_sphere(colorRGBA color) const;
-	void setup_exp_texture(bool do_scale) const;
+	void setup_exp_scale() const;
+	void setup_exp_texture() const;
 	void end_exp_texture() const;
 	void end_specular()    const {if (specular_en) set_specular(0.0, 1.0);}
 	void inverse_rotate()  const;
@@ -333,9 +334,10 @@ struct ship_explosion {
 
   float bradius, damage;
   point pos;
+  bool disint_tex;
   
-  ship_explosion() : bradius(0.0), damage(0.0), pos(all_zeros) {}
-  ship_explosion(float r, float d, point const &p) : bradius(r), damage(d), pos(p) {}
+  ship_explosion() : bradius(0.0), damage(0.0), pos(all_zeros), disint_tex(0) {}
+  ship_explosion(float r, float d, point const &p, bool dt) : bradius(r), damage(d), pos(p), disint_tex(dt) {}
 };
 
 
@@ -514,7 +516,7 @@ public:
 	bool reversible, stoppable, has_hyper, has_fast_speed, mpredict, has_cloak, regen_fighters, regen_ammo, regen_crew;
 	bool parallel_fire, symmetric, self_shadow, cont_frag, for_boarding, can_board, orbiting_dock, dynamic_cobjs, uses_tdir;
 	bool emits_light, suicides, kamikaze, no_disable, uses_mesh2d, mesh_deform, mesh_remove, mesh_expand;
-	bool mu_expand, mesh_trans;
+	bool mu_expand, mesh_trans, exp_disint;
 	int turreted;
 	unsigned sclass, weap_spread, shield_sects, draw_passes, fire_speed, exp_type, exp_subtype, death_delay, regen_delay;
 	unsigned cost, ncrew, nengines, engine_lights;

@@ -220,12 +220,16 @@ void uobj_draw_data::draw_bounding_sphere(colorRGBA color) const { // unused
 }
 
 
-void uobj_draw_data::setup_exp_texture(bool do_scale) const {
+void uobj_draw_data::setup_exp_scale() const {
 
-	// Is this valid during explosion frames?
-	if (t_exp > 0.0) { // drops from 1.0 to 0.0
-		if (do_scale) {uniform_scale(1.0 + 0.25*(1.0 - t_exp));}
-		if (shader) {shader->add_uniform_float("min_alpha", (0.9 + 0.06*(1.0 - t_exp)));}
+	if (t_exp > 0.0) {uniform_scale(1.0 + 0.25*(1.0 - t_exp));} // t_exp drops from 1.0 to 0.0
+}
+
+
+void uobj_draw_data::setup_exp_texture() const {
+
+	if (shader && t_exp > 0.0) { // drops from 1.0 to 0.0
+		shader->add_uniform_float("min_alpha", (0.9 + 0.06*(1.0 - t_exp)));
 		set_lighted_sides(2);
 	}
 }
@@ -233,8 +237,8 @@ void uobj_draw_data::setup_exp_texture(bool do_scale) const {
 
 void uobj_draw_data::end_exp_texture() const {
 
-	if (t_exp > 0.0) {
-		if (shader) {shader->add_uniform_float("min_alpha", 0.0);}
+	if (shader && t_exp > 0.0) {
+		shader->add_uniform_float("min_alpha", 0.0);
 		set_lighted_sides(1);
 	}
 }
@@ -1174,7 +1178,7 @@ void uobj_draw_data::draw_us_shadow() const { // could be improved
 void uobj_draw_data::draw_defsat() const {
 
 	setup_draw_ship();
-	setup_exp_texture(1);
+	setup_exp_scale();
 
 	// draw main body
 	glPushMatrix();
@@ -1187,7 +1191,6 @@ void uobj_draw_data::draw_defsat() const {
 	color_a.do_glColor();
 	draw_sphere_vbo(point(0.0, 0.0, 1.4), 0.5, ndiv, (t_exp > 0));
 	glPopMatrix();
-	end_exp_texture();
 
 	// draw solar panels
 	color_b.do_glColor();
@@ -1211,7 +1214,7 @@ void uobj_draw_data::draw_starbase() const {
 	int const cyl_ndiv(get_ndiv((2*ndiv)/3)), spoke_ndiv(get_ndiv(ndiv/2));
 	cobj_vector_t const &cobjs(obj->get_cobjs());
 	assert(cobjs.size() == 8); // should make this more flexible later
-	setup_exp_texture(1);
+	setup_exp_scale();
 	set_ship_texture(SPACESHIP1_TEX);
 	if (shader && powered) {shader->add_uniform_float("lum_scale", 2.0); shader->add_uniform_float("lum_offset", -1.0);}
 
@@ -1232,7 +1235,6 @@ void uobj_draw_data::draw_starbase() const {
 	// draw center (team colored)
 	color_a.do_glColor();
 	cobjs[1]->draw_cylin(cyl_ndiv, (t_exp > 0.0), 2.0);
-	end_exp_texture();
 }
 
 
@@ -2236,7 +2238,6 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 
 	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/4));
 	setup_draw_ship();
-	setup_exp_texture(0);
 	bool const textured(1);
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 
@@ -2280,7 +2281,6 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 		glTranslatef(0.0, 0.0, 0.25); // Note: push/pop not needed since this is the last draw
 		draw_torus(0.2, 1.05, ndiv2, 3*ndiv/2);
 	}
-	end_exp_texture();
 	if (textured) end_ship_texture();
 	glPopMatrix();
 }

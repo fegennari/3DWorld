@@ -620,7 +620,7 @@ bool u_ship::obstacle_avoid(vector3d &orient, float target_dist, bool sobjs_only
 ship_explosion u_ship::get_explosion() const {
 
 	float const size(get_def_explode_damage());
-	return ship_explosion(size*radius, EXPLOSION_DAMAGE*size*radius, pos);
+	return ship_explosion(size*radius, EXPLOSION_DAMAGE*size*radius, pos, sclasses[sclass].exp_disint);
 }
 
 
@@ -2605,6 +2605,8 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		set_color_e(colorRGBA(2.0*over_temp, 0.0, 0.0, 1.0));
 	}
 	if (cloaked < 1.0) {
+		if (sclasses[sclass].exp_disint) {ddata.setup_exp_texture();}
+
 		//RESET_TIME;
 		switch (sclass) {
 		case USC_FIGHTER:    ddata.draw_us_fighter();   break;
@@ -2650,6 +2652,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		default: assert(0);
 		}
 		//if (GET_DELTA_TIME > 10) PRINT_TIME(get_name());
+		if (sclasses[sclass].exp_disint) {ddata.end_exp_texture();}
 	}
 	if (over_temp > 0.0) set_color_e(BLACK);
 

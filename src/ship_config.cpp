@@ -789,7 +789,7 @@ bool us_class::read_from_ifstream(ifstream &in) {
 		>> stoppable >> has_hyper >> has_fast_speed >> mpredict >> has_cloak >> regen_fighters >> regen_ammo >> regen_crew
 		>> parallel_fire >> symmetric >> self_shadow >> cont_frag >> for_boarding >> can_board >> orbiting_dock
 		>> dynamic_cobjs >> uses_tdir >> emits_light >> engine_lights >> suicides >> kamikaze >> no_disable >> uses_mesh2d
-		>> turreted >> weap_spread >> shield_sects >> draw_passes >> ddelay >> rdelay)) return 0;
+		>> turreted >> weap_spread >> shield_sects >> draw_passes >> exp_disint >> ddelay >> rdelay)) return 0;
 	if (!read_color(in, base_color)) return 0;
 	death_delay = unsigned(TICKS_PER_SECOND*ddelay);
 	regen_delay = ((rdelay > 0.0 || global_regen > 0.0) ? (death_delay + unsigned(TICKS_PER_SECOND*(rdelay + global_regen))) : 0);

@@ -1941,14 +1941,13 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 #ifdef USE_TREE_BB_TEX_ATLAS
 	s.add_uniform_vector2d("normal_tc_off",   vector2d(0.5, 0.0));
 	s.add_uniform_vector2d("normal_tc_scale", vector2d(0.5, 1.0));
-	s.add_uniform_int("color_map",  0);
 	s.add_uniform_int("normal_map", 0);
 #else
 	s.add_uniform_vector2d("normal_tc_off",   vector2d(0.0, 0.0));
 	s.add_uniform_vector2d("normal_tc_scale", vector2d(1.0, 1.0));
-	s.add_uniform_int("color_map",  0);
 	s.add_uniform_int("normal_map", 1);
 #endif
+	s.add_uniform_int("color_map",  0);
 	set_tree_dither_noise_tex(s, 2); // TU=2
 }
 

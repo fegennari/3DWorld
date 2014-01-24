@@ -376,8 +376,8 @@ void apply_univ_physics() {
 			urm_ship = max(urm_ship, radius);
 			ships[alignment].push_back(c_uobjs[i]);
 			all_ships.push_back(c_uobjs[i]);
-			if (obj->is_exploding()) exploding.push_back(obj->get_explosion());
-			if (obj->is_ship() && !obj->is_fighter() && !obj->is_orbiting()) ++ind_ships_used[alignment];
+			if (obj->is_exploding()) {exploding.push_back(obj->get_explosion());}
+			if (obj->is_ship() && !obj->is_fighter() && !obj->is_orbiting()) {++ind_ships_used[alignment];}
 		}
 		if (flags & OBJ_FLAGS_DECY) { // decoy
 			decoys.push_back(c_uobjs[i]);
@@ -682,9 +682,8 @@ void draw_wrays(vector<usw_ray> &wrays) {
 }
 
 
-void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
+void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 
-	bool const disint_tex(!exploding.empty()); // this is slow, so only enable if some ship is exploding and needs this mode
 	if (shadow_mode) {s.set_prefix("#define SHADOW_ONLY_MODE", 1);} // FS
 	if (disint_tex ) {s.set_prefix("#define ALPHA_MASK_TEX",   1);} // FS
 	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
@@ -752,8 +751,10 @@ void draw_univ_objects() {
 	disable_exp_lights(); // make sure the explosion lights start out cleared
 	
 	if (use_shaders) {
-		setup_ship_draw_shader(s[1], 1); // shadow shader, system lighting only
-		setup_ship_draw_shader(s[0], 0); // normal shader with dynamic lights
+		bool disint_tex(0); // this is slow, so only enable if some ship is exploding and needs this mode
+		for (vector<ship_explosion>::const_iterator i = exploding.begin(); i != exploding.end(); ++i) {disint_tex |= i->disint_tex;}
+		setup_ship_draw_shader(s[1], 1, disint_tex); // shadow shader, system lighting only
+		setup_ship_draw_shader(s[0], 0, disint_tex); // normal shader with dynamic lights
 	}
 	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
 		free_obj *fobj(sorted[i].second);

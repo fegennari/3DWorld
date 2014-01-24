@@ -16,11 +16,13 @@ Tiled terrain texture coords on high slopes
 Weather/Physics UI / key to switch UI modes
 TT mode underwater content
 
-black body light emission in ship explosion texture
 User-placed teleporter weapon (translocator?)
+black body light emission in ship explosion texture
 Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
+Texture atlases
+Random gen textures are one color component (disint tex)
 
 ************************
 
