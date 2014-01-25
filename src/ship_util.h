@@ -282,7 +282,6 @@ float get_ship_cost     (unsigned sclass, unsigned align, unsigned reserve_credi
 bool alloc_resources_for(unsigned sclass, unsigned align, unsigned reserve_credits=0, float discount=0.0);
 
 // draw_ship.cpp
-void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex=BLUR_TEX);
 void draw_crosshair(upos_point_type const &pos, float dist, colorRGBA const &color);
 void draw_crosshair_from_camera(point const &pos, colorRGBA const &color);
 void add_lightning_wray(float width, point const &p1, point const &p2);

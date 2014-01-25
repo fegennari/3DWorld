@@ -108,33 +108,22 @@ void end_ship_texture() {
 }
 
 
-void uobj_draw_data::enable_ship_flares(colorRGBA const &color, int tid) {
+void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) {
 
+	// disabling of the depth mask is not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	set_emissive_color(color);
-	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
-	select_texture(tid);
 	set_additive_blend_mode();
-}
-
-
-void uobj_draw_data::disable_ship_flares() {
-
-	qbd.draw_and_clear();
+	qbd.draw_as_flares_and_clear(tid);
 	end_texture();
-	glDepthMask(GL_TRUE);
+	clear_emissive_color();
 	set_std_blend_mode();
-	clear_emissive_color();
 }
 
 
-void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex) {
+void uobj_draw_data::setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex) {
 
-	set_emissive_color(color);
-	static quad_batch_draw qbd; // probably doesn't need to be static
 	qbd.add_xlated_billboard(pos, xlate, get_camera_pos(), up_vector, colorRGBA(0,0,0, color.alpha), xsize, ysize);
-	qbd.draw_as_flares_and_clear(flare_tex);
-	end_texture();
-	clear_emissive_color();
+	draw_ship_flares(color, flare_tex);
 }
 
 
@@ -318,7 +307,6 @@ void uobj_draw_data::draw_engine_pairs(colorRGBA const &color, unsigned eflags_i
 		point const &per_pair_off, unsigned num_pairs, float ar, vector3d const &stretch_dir) const
 {
 	if (ndiv < 4 || !is_moving() || !first_pass) return; // really should check for thrust, first_pass isn't quite right
-	enable_ship_flares(color); // draw engine glow
 
 	for (unsigned p = 0; p < num_pairs; ++p) {
 		for (unsigned i = 0; i < 2; ++i) {
@@ -331,7 +319,7 @@ void uobj_draw_data::draw_engine_pairs(colorRGBA const &color, unsigned eflags_i
 		dy += per_pair_off.y;
 		dz += per_pair_off.z;
 	}
-	disable_ship_flares();
+	draw_ship_flares(color); // draw engine glow
 }
 
 
@@ -604,9 +592,8 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 
 	clear_emissive_color();
 	glPopMatrix(); // undo transforms
-	enable_ship_flares(WHITE);
 	draw_engine(ALPHA0, lpos0, 3.0*rad*(1.0 + instability));
-	disable_ship_flares();
+	draw_ship_flares(WHITE);
 
 	if (lit && animate2 && first_pass) {
 		add_light_source(lpos, 3.9*size*radius, light_color);
@@ -672,7 +659,6 @@ void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 
 	if (is_moving()) { // draw engine glow
 		point pos2(0.0, -0.75, 2.3);
-		enable_ship_flares(YELLOW);
 		
 		if (ndiv > 4) {
 			for (unsigned i = 0; i < nengines; ++i) {
@@ -684,7 +670,7 @@ void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 			pos2.y += edy;
 			if (eflags != 7) draw_engine(YELLOW, pos2, 1.7);
 		}
-		disable_ship_flares();
+		draw_ship_flares(YELLOW);
 	}
 	if (is_scaled) glPopMatrix();
 }
@@ -738,13 +724,12 @@ void uobj_draw_data::draw_us_frigate() const {
 
 	if (is_moving()) { // draw engine glow
 		point pos2(-0.75, 0.0, 1.7);
-		enable_ship_flares(YELLOW);
 		
 		for (unsigned i = 0; i < nengines; ++i) {
 			if (!(eflags & (1 << i))) draw_engine(YELLOW, pos2, 1.0);
 			pos2.x += edx;
 		}
-		disable_ship_flares();
+		draw_ship_flares(YELLOW);
 	}
 }
 
@@ -798,13 +783,12 @@ void uobj_draw_data::draw_us_destroyer() const {
 
 	if (is_moving()) { // draw engine glow
 		float const escale(0.6);
-		enable_ship_flares(YELLOW);
 
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
 			if (!(eflags & (1 << i))) draw_engine(YELLOW, point(sinf(theta), cosf(theta), 1.3), escale);
 		}
-		disable_ship_flares();
+		draw_ship_flares(YELLOW);
 	}
 }
 
@@ -879,13 +863,12 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 
 	if (is_moving()) { // draw engine glow
 		point pos2(0.0, 0.0, 0.46/escale);
-		enable_ship_flares(LT_BLUE);
 		
 		for (unsigned i = 0; i < nengines; ++i) {
 			pos2 += epos[i];
 			if (!(eflags & (1 << i))) draw_engine(LT_BLUE, pos2, escale);
 		}
-		disable_ship_flares();
+		draw_ship_flares(LT_BLUE);
 	}
 }
 
@@ -986,14 +969,13 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 	if (is_moving()) { // draw engine glow
 		float const escale(0.3);
 		colorRGBA const color(1.0, 0.9, 0.2);
-		enable_ship_flares(color);
 		if (!(eflags & 1)) draw_engine(color, point(0.0, 0.0, 1.26), 2.0*escale); // center engine
 		
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
 			if (!(eflags & (1 << (i+1)))) draw_engine(color, point(epos*sinf(theta), epos*cosf(theta), 1.21), escale);
 		}
-		disable_ship_flares();
+		draw_ship_flares(color);
 	}
 }
 
@@ -1379,13 +1361,11 @@ void uobj_draw_data::draw_gunship() const {
 	glPopMatrix(); // undo invert_z()
 
 	if (is_moving()) { // draw engine glow
-		enable_ship_flares(GOLD);
-
 		for (unsigned i = 0; i < 4; ++i) {
 			point const epos(0.35*dxy[0][i], 0.35*dxy[1][i], 1.15);
 			if (!(eflags & (1 << i))) draw_engine(GOLD, epos*1.125, 0.5);
 		}
-		disable_ship_flares();
+		draw_ship_flares(GOLD);
 	}
 }
 
@@ -1416,9 +1396,8 @@ void uobj_draw_data::draw_nightmare() const {
 	glPopMatrix(); // undo invert_z()
 
 	if (is_moving() && !(eflags & 1)) { // draw engine glow
-		enable_ship_flares(RED);
 		draw_engine(RED, point(0.0, 0.0, 1.3), 1.5);
-		disable_ship_flares();
+		draw_ship_flares(RED);
 	}
 }
 
@@ -2080,9 +2059,8 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	glPopMatrix(); // undo invert_z()
 
 	if (ndiv > 4 && is_moving() && !(eflags & 1) && vel.mag_sq() > 1.0E-7) { // draw engine glow
-		enable_ship_flares(color_a);
 		draw_engine(color_a, (rotated ? point(0.0, -0.5, 0.0) : point(0.0, 0.0, 0.5)), 1.0);
-		disable_ship_flares();
+		draw_ship_flares(color_a);
 	}
 }
 
@@ -2116,9 +2094,8 @@ void uobj_draw_data::draw_headhunter() const {
 
 	if (is_moving() && !(eflags & 1)) { // draw engine glow
 		colorRGBA const color(0.75, 0.75, 1.0, 1.0);
-		enable_ship_flares(color);
 		draw_engine(color, point(0.0, 0.0, 1.8), 0.8);
-		disable_ship_flares();
+		draw_ship_flares(color);
 	}
 }
 
@@ -2219,7 +2196,6 @@ void uobj_draw_data::draw_seige() const {
 
 	if (is_moving()) { // draw engine glow
 		colorRGBA const color(blend_color(color_a, WHITE, 0.5, 1));
-		enable_ship_flares(color);
 
 		for (unsigned i = 0; i < 3; ++i) {
 			if (eflags & (1 << i)) continue;
@@ -2229,7 +2205,7 @@ void uobj_draw_data::draw_seige() const {
 			ept.z   = -ept.z + 0.4;
 			draw_engine(color, ept, 0.3, 2.5, edir);
 		}
-		disable_ship_flares();
+		draw_ship_flares(color);
 	}
 }
 

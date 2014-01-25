@@ -886,7 +886,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 			glow_pld.add_pt(make_pt_global(pos), vector3d(2.0*radius, 0.0, 0.0), color); // FIXME: radius encoded as normal.x
 		}
 		else {
-			setup_colors_draw_flare(pos, all_zeros, 2.0, 2.0, color); // Note: draw order isn't always correct
+			ddata.setup_colors_draw_flare(pos, all_zeros, 2.0, 2.0, color); // Note: draw order isn't always correct
 		}
 		break;
 	case PTYPE_SPHERE: // low resolution particles (ship pieces)

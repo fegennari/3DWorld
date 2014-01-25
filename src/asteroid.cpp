@@ -1447,9 +1447,8 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		colorRGBA color(sun_color), color2(color);
 		color.alpha  = glow_weight;
 		color2.alpha = 0.0;
-		ddata.enable_ship_flares(color);
 		ddata.draw_engine(color, all_zeros, 4.0, 1.0, all_zeros); // coma
-		ddata.disable_ship_flares();
+		ddata.draw_ship_flares(color);
 
 		if (animate2) { // create tails
 			color.alpha *= 0.5;
