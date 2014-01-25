@@ -202,7 +202,7 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
 	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
-	mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	is_distant(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -486,6 +486,7 @@ void tile_t::calc_mesh_ao_lighting() {
 void tile_t::calc_shadows_for_light(unsigned l) {
 
 	assert(!smask[l].empty());
+	if (is_distant) return; // Note: can be made to work, but won't work as-is
 	tile_xy_pair const tp(get_tile_xy_pair());
 
 	// pull from adjacent tiles that already had their shadows calculated
@@ -497,7 +498,7 @@ void tile_t::calc_shadows_for_light(unsigned l) {
 	for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
 		sh_out[l][!d].resize(zvsize, MESH_MIN_Z); // init value really should not be used, but it sometimes is
 		tile_t *adj_tile(get_tile_from_xy(adj_tp[d]));
-		if (adj_tile == NULL) continue; // no adjacent tile
+		if (adj_tile == NULL || adj_tile->is_distant) continue; // no adjacent tile
 		vector<float> const &adj_sh_out(adj_tile->sh_out[l][!d]);
 				
 		if (adj_sh_out.empty()) { // adjacent tile not initialized
@@ -534,7 +535,7 @@ void tile_t::proc_tile_queue(tile_t *init_tile, unsigned l) {
 		for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
 			if (t->sh_out[l][!d] == prev_sh_out[!d]) continue; // unchanged, no update needed
 			tile_t *adj_tile(get_tile_from_xy(adj_tp2[d]));
-			if (adj_tile == NULL || adj_tile->smask[l].empty() || adj_tile->in_queue) continue; // no adjacent tile, not initialized, or already in queue
+			if (adj_tile == NULL || adj_tile->is_distant || adj_tile->smask[l].empty() || adj_tile->in_queue) continue; // no adjacent tile, not initialized, or already in queue
 			tile_queue.push_front(adj_tile); // changed, push to adjacent tiles
 			adj_tile->in_queue = 1;
 		}
@@ -561,7 +562,7 @@ void tile_t::calc_shadows(bool calc_sun, bool calc_moon, bool no_push) {
 void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius) const {
 
 	tile_t *const adj_tile(get_adj_tile_smap(dx, dy));
-	if (!adj_tile) return;
+	if (!adj_tile || adj_tile->is_distant) return;
 	point const pos2(pos + mesh_off.subtract_from(adj_tile->mesh_off));
 	adj_tile->add_tree_ao_shadow(pos2, tradius, 1);
 }
@@ -617,12 +618,12 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 			add_tree_ao_shadow((i->get_center() + dt_off), 0.6*i->get_radius(), no_adj_test); // less dense => smaller radius
 		}
 	}
-	if (!no_adj_test) { // pull mode
+	if (!no_adj_test && !is_distant) { // pull mode
 		for (int dy = -1; dy <= 1; ++dy) {
 			for (int dx = -1; dx <= 1; ++dx) {
 				if (dx == 0 && dy == 0) continue;
 				tile_t const *const adj_tile(get_adj_tile_smap(dx, dy));
-				if (adj_tile) {apply_ao_shadows_for_trees(adj_tile, 1);}
+				if (adj_tile && !adj_tile->is_distant) {apply_ao_shadows_for_trees(adj_tile, 1);}
 			}
 		}
 	}
@@ -631,6 +632,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 
 void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsigned char shadow weight instead?
 
+	if (is_distant) return; // not needed/used
 	tree_map.resize(0);
 	tree_map.resize(stride*stride, 255);
 	bool const no_adj_test(trmax < min(deltax, deltay));
@@ -729,7 +731,7 @@ void tile_t::create_data(vector<vert_type_t> &data) {
 
 void tile_t::ensure_height_tid() {
 
-	if (height_tid) return;
+	if (height_tid || is_distant) return; // already exists, or tile is distant and height_tid is unnecessary
 	float const ht_zmin(get_htex_zmin()), scale(65535/(get_htex_zmax() - ht_zmin));
 	assert(zvals.size() == zvsize*zvsize);
 	vector<unsigned short> data(stride*stride);
@@ -836,7 +838,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 						weights[sand_tex_ix ] += (1.0 - gscale)*weights[grass_tex_ix];
 						weights[grass_tex_ix] *= gscale;
 					}
-					if (x < size && y < size && gen_grass_map()) {
+					if (!is_distant && x < size && y < size && gen_grass_map()) {
 						unsigned const bx(x/GRASS_BLOCK_SZ), by(y/GRASS_BLOCK_SZ), bix(by*grass_block_dim + bx);
 						if (grass_blocks.empty()) {grass_blocks.resize(grass_block_dim*grass_block_dim);}
 						assert(bix < grass_blocks.size());
@@ -902,6 +904,7 @@ bool tile_t::update_range(vector<unsigned> *vbo_free_list) { // if returns 0, ti
 
 void tile_t::init_pine_tree_draw() {
 
+	if (is_distant) return; // no pine trees (yet)
 	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
 	if (enable_instanced_pine_trees()) {pine_trees.instanced = 1;}
@@ -983,7 +986,7 @@ void tile_t::gen_decid_trees_if_needed() {
 		cout << "Warning: max_unique_trees needs to be set to something reasonable for tiled terrain mode trees to work efficiently. Setting to 100." << endl;
 		max_unique_trees = 100;
 	}
-	if (decid_trees.was_generated()) return; // already generated
+	if (is_distant || decid_trees.was_generated()) return; // already generated, or distant tile (no trees yet)
 	assert(decid_trees.empty());
 	dtree_off.set_from_xyoff2();
 	decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg());
@@ -1002,6 +1005,7 @@ void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool
 
 void tile_t::update_scenery() {
 
+	if (is_distant) return; // no scenery
 	float const dist_scale(get_scenery_dist_scale(0)); // tree_dist_scale should correlate with mesh scale
 	if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
 	if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
@@ -1171,7 +1175,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 		for (unsigned dir = 0; dir < 2; ++dir) { // lo, hi
 			int dx(0), dy(0);
 			(dim ? dy : dx) += (dir ? 1 : -1);
-			tile_t *adj(get_adj_tile(dx, dy));
+			tile_t *adj(get_adj_tile(dx, dy)); // FIXME: handle (is_distant != adj->is_distant)
 			if (adj == NULL) continue; // no adjacent tile
 			//if (!adj->is_visible() || adj->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue;
 
@@ -1198,7 +1202,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	bind_vbo(0, 0); // unbind vertex buffer
 	glPopMatrix();
 
-	if (has_water()) { // draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
+	if (!is_distant && has_water()) { // draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
 		cube_t const bcube(get_mesh_bcube());
 		static vector<vert_wrap_t> wverts;
 		wverts.resize(0);
@@ -1209,7 +1213,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 				dxy[dim] = (dir ? 1 : -1);
 				tile_t const *const adj_tile(get_adj_tile(dxy[0], dxy[1]));
 				
-				if (adj_tile) {
+				if (adj_tile && !adj_tile->is_distant) {
 					if (adj_tile->get_rel_dist_to_camera() < DRAW_DIST_TILES && !adj_tile->was_last_occluded()) continue;
 					if (!adj_tile->has_water ()) continue; // adj tile has no water, so we can't have any uncapped water on this edge
 					if (!adj_tile->is_visible()) continue; // adj tile not visible,  so we can't see this edge
@@ -1233,7 +1237,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 
 void tile_t::draw_water(shader_t &s, float z) const {
 
-	if (!has_water() || get_rel_dist_to_camera() > DRAW_DIST_TILES || !is_visible()) return;
+	if (is_distant || !has_water() || get_rel_dist_to_camera() > DRAW_DIST_TILES || !is_visible()) return;
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
 	bind_texture_tu(height_tid, 2);
 	set_shader_zmin_zmax(s);
@@ -1243,7 +1247,7 @@ void tile_t::draw_water(shader_t &s, float z) const {
 
 bool tile_t::check_player_collision() const {
 
-	if (!contains_camera()) return 0;
+	if (is_distant || !contains_camera()) return 0;
 	point camera(get_camera_pos());
 	if (camera.z > get_tile_zmax() + CAMERA_RADIUS) return 0; // camera is completely above the tile
 	bool coll(0);
@@ -1270,6 +1274,7 @@ bool tile_t::check_player_collision() const {
 
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const {
 
+	if (is_distant) return 0; // Note: this can be made to work, but won't work as-is
 	point v1c(v1), v2c(v2); // clipped verts
 	if (!do_line_clip(v1c, v2c, get_mesh_bcube().d)) return 0;
 	// similar to mesh_intersector::line_intersect_surface_fast()
