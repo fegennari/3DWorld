@@ -3,6 +3,7 @@ uniform float min_alpha  = 0.0;
 uniform float lum_scale  = 0.0;
 uniform float lum_offset = 0.0;
 
+varying vec2 tc;
 varying vec4 epos;
 varying vec3 normal; // eye space
 
@@ -10,11 +11,11 @@ void main()
 {
 #ifdef ALPHA_MASK_TEX
 	if (min_alpha != 0.0) { // this test may or may not help performance
-		float alpha_mask = texture2D(alpha_mask_tex, gl_TexCoord[0].st).r;
+		float alpha_mask = texture2D(alpha_mask_tex, tc).r;
 		if (alpha_mask < min_alpha) discard; // slow
 	}
 #endif
-	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
+	vec4 texel = texture2D(tex0, tc);
 	//if (texel.a <= min_alpha) discard; // slow
 	vec3 n = (gl_FrontFacing ? normalize(normal) : -normalize(normal)); // two-sided lighting
 	vec4 color = vec4(0);
