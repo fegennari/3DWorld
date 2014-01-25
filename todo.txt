@@ -22,6 +22,8 @@ Burning smiley/skull/cobj texture
 gen_torus_section rand_gen_t - requires gaussian rand support
 Better water splashes (bullet hits, etc.)
 Texture atlases
+Cache the static parts of shadow maps?
+Ship engine batch draw, flush on transparent objects and at end
 
 ************************
 
@@ -32,7 +34,6 @@ Fog decreases at high altitude, increases in valleys
   - increase far clipping distance
   - draw more distant tiles (larger/lower res at high delta-z)
     - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
-  - camera above cloud plane
 TT Foam at water edge/wave peaks using procedural texture when waves are enabled
 
 Ray tracer uses cosine of normal for diffuse reflection and specular shine

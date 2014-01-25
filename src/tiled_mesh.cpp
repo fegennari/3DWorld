@@ -66,12 +66,38 @@ bool gen_grass_map        () {return (GRASS_THRESH > 0.0 && grass_density > 0 &&
 bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());}
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
+bool nonunif_fog_enabled  () {return ((display_mode & 0x10) != 0);}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
-unsigned get_tile_size() {return MESH_X_SIZE;}
+float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
+float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
+float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
+unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 bool enable_instanced_pine_trees() {
 	float const ntrees_mult(vegetation*sm_tree_density*tree_scale*tree_scale);
 	return (ENABLE_INST_PINE && ntrees_mult > 20 && max_unique_trees > 0); // enable when there are lots of trees
+}
+
+
+float get_tt_fog_based_far_clip(float min_camera_dist) {
+
+	float const uniform_fog_far_clip(FAR_CLIP + min_camera_dist);
+	if (!nonunif_fog_enabled()) {return uniform_fog_far_clip;}
+	float const zf(get_tt_fog_bot()), z0(get_tt_fog_top()), zc(get_camera_pos().z), zm(zmax);
+	assert(zm <= zf && zf <= z0); // we currently only support these cases
+	if (zc < zf) {return uniform_fog_far_clip;} // camera below max fog line, fog density == 1.0, so use standard far clip
+	float const FD(get_inf_terrain_fog_dist()); // 67.2
+	float dfavg;
+	
+	if (zc < z0) { // camera within linear fog/atmosphere region
+		dfavg = (2*z0 - zf - zc)/(2*(z0 - zf))*(zc - zf) + (zf - zm);
+	}
+	else { // camera above fog/atmosphere
+		dfavg = 0.5*(zf + z0) - zm;
+	}
+	float const fog_dist((zc - zm)*sqrt(max((FD*FD/(dfavg*dfavg) - 1.0), 0.0)));
+	//cout << "FD: " << FD << ", fog_dist: " << fog_dist << ", FAR_CLIP: " << FAR_CLIP << ", final: " << max(FAR_CLIP, 1.1f*fog_dist) << endl;
+	return max(uniform_fog_far_clip, 1.1f*fog_dist); // add 10% padding
 }
 
 
@@ -1474,14 +1500,14 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool
 void setup_tt_fog_pre(shader_t &s) {
 
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
-	if (display_mode & 0x10) {s.set_prefix("#define USE_NONUNIFORM_FOG", 1);} // FS
+	if (nonunif_fog_enabled()) {s.set_prefix("#define USE_NONUNIFORM_FOG", 1);} // FS
 }
 
 void setup_tt_fog_post(shader_t &s) {
 
 	s.setup_fog_scale();
-	s.add_uniform_float("fog_bot", zmax);
-	s.add_uniform_float("fog_top", (zmax + (zmax - zmin)));
+	s.add_uniform_float("fog_bot", get_tt_fog_top());
+	s.add_uniform_float("fog_top", get_tt_fog_bot());
 }
 
 void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {

@@ -1135,15 +1135,17 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 		draw_sun_moon_stars();
 		draw_sun_flare();
 	}
-	draw_cloud_plane(zmin, 1); // slower but a nice effect
+	draw_cloud_planes(zmin, 1, 1, 0); // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
-	// setup above-water clip plane for mesh
-	double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)
-	glEnable(WATER_CLIP_PLANE);
-	glClipPlane(WATER_CLIP_PLANE, plane);
-	draw_tiled_terrain(1);
-	glDisable(WATER_CLIP_PLANE);
-	// could render more of the scene here
+
+	if (get_camera_pos().z <= get_tt_cloud_level()) { // camera is below the clouds
+		// setup above-water clip plane for mesh
+		double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)
+		glEnable(WATER_CLIP_PLANE);
+		glClipPlane(WATER_CLIP_PLANE, plane);
+		draw_tiled_terrain(1); // draw terrain
+		glDisable(WATER_CLIP_PLANE);
+	}
 	glPopMatrix(); // end mirror transform
 
 	// render reflection to texture
@@ -1238,13 +1240,15 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		if (fog_enabled) {glEnable(GL_FOG);}
 	}
 	if (change_near_far_clip) {
-		float const near_clip(NEAR_CLIP + 0.01*min_camera_dist), far_clip(FAR_CLIP + min_camera_dist);
+		float const near_clip(NEAR_CLIP + 0.01*min_camera_dist);
+		float const far_clip(get_tt_fog_based_far_clip(min_camera_dist));
 		set_perspective_near_far(near_clip, far_clip);
 		do_look_at(); // clear depth buffer?
 		camera_pdu.near_ = near_clip; // override camera frustum near/far clip so that VFC will be correct
 		camera_pdu.far_  = far_clip;
 	}
-	draw_cloud_plane(zmin2, 0); // these two lines could go in either order
+	bool const camera_above_clouds(camera.z > get_tt_cloud_level());
+	draw_cloud_planes(zmin2, 0, !camera_above_clouds, 1); // these two lines could go in either order
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
 	calc_cur_ambient_diffuse();
@@ -1257,6 +1261,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	//if (underwater ) {draw_tiled_terrain_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, reflection_tid);}
 	if (!underwater) {draw_tiled_terrain_precipitation();}
+	draw_cloud_planes(zmin2, 0, camera_above_clouds, 0);
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)
 	check_xy_offsets();
 	init_x = 0;

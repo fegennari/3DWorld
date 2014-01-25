@@ -359,17 +359,31 @@ void render_spherical_section(indexed_mesh_draw<vert_wrap_t> &imd, float size, f
 
 
 // not a plane, but a spherical section
-void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
+void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil, bool draw_floor) {
 
+	shader_t s;
+	static indexed_mesh_draw<vert_wrap_t> imd;
+	float const size(camera_pdu.far_);
+
+	// draw a plane at terrain_zmin to properly blend the fog (needs to be first when camera is above the clouds)
+	if (draw_floor && !reflection_pass && glIsEnabled(GL_FOG)) {
+		glDepthMask(GL_FALSE);
+		colorRGBA fog_color;
+		glGetFloatv(GL_FOG_COLOR, (float *)&fog_color);
+		fog_color.do_glColor();
+		s.begin_color_only_shader();
+		imd.render_z_plane(-size, -size, size, size, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
+		s.end_shader();
+		glDepthMask(GL_TRUE);
+	}
+	if (!draw_ceil) return;
 	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity (0: clouds follow the camera, 1: clouds are stationary)
-	float const size(camera_pdu.far_), rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
-	float const z1(zmin), z2(get_cloud_zmax()), ndiv_inv(1.0/CLOUD_NUM_DIV);
+	float const rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
+	float const cloud_z(get_tt_cloud_level()); // halfway between the to of the mountains and the end of the atmosphere
+	float const z1(zmin), z2(min(cloud_z, get_cloud_zmax())), ndiv_inv(1.0/CLOUD_NUM_DIV);
 	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
 	vector3d const offset(-camera + cloud_rel_vel*world_pos);
 	colorRGBA const cloud_color(get_cloud_color());
-	static indexed_mesh_draw<vert_wrap_t> imd;
-	shader_t s;
-	glDepthMask(GL_FALSE);
 
 	if (animate2) {
 		cloud_wind_pos.x -= fticks*wind.x;
@@ -377,6 +391,8 @@ void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 	}
 
 	// draw a static textured upper cloud layer
+	glDepthMask(GL_FALSE);
+
 	if (1) {
 		s.set_vert_shader("texture_gen.part+no_lighting_texture_gen");
 		s.set_frag_shader("simple_texture");
@@ -395,16 +411,6 @@ void draw_cloud_plane(float terrain_zmin, bool reflection_pass) {
 		render_spherical_section(imd, size, rval_inv, z1+z_offset, z2+z_offset);
 		disable_textures_texgen();
 		disable_blend();
-		s.end_shader();
-	}
-
-	// draw a plane at terrain_zmin to properly blend the fog
-	if (!reflection_pass && glIsEnabled(GL_FOG)) {
-		colorRGBA fog_color;
-		glGetFloatv(GL_FOG_COLOR, (float *)&fog_color);
-		fog_color.do_glColor();
-		s.begin_color_only_shader();
-		imd.render_z_plane(-size, -size, size, size, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
 	}
 

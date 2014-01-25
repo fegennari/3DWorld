@@ -133,7 +133,7 @@ void free_cloud_textures();
 void draw_puffy_clouds(int order);
 float get_cloud_zmax();
 void set_cloud_uniforms(shader_t &s, unsigned tu_id);
-void draw_cloud_plane(float terrain_zmin, bool reflection_pass);
+void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil, bool draw_floor);
 void draw_sky(int order);
 void compute_brightness();
 void setup_water_plane_texgen(float s_scale, float t_scale);
@@ -205,7 +205,11 @@ void run_post_mesh_draw();
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex=1);
 void display_mesh(bool shadow_pass=0);
 void draw_water_sides(int check_zvals);
+float get_tt_fog_top();
+float get_tt_fog_bot();
+float get_tt_cloud_level();
 float get_inf_terrain_fog_dist();
+float get_tt_fog_based_far_clip(float min_camera_dist);
 
 // function prototypes - tiled mesh
 bool using_tiled_terrain_hmap_tex();

@@ -795,8 +795,8 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	draw_tiled_terrain_water(s, zval);
 	glDepthFunc(GL_LESS);
 	s.end_shader();
-#if 0
-	if (camera_pdu.far_ > 1.1*FAR_CLIP) { // camera is high above the mesh (Enable when extended mesh is drawn)
+
+	if ((display_mode & 0x10) && camera_pdu.far_ > 1.1*FAR_CLIP) { // camera is high above the mesh (Enable when extended mesh is drawn)
 		// FIXME: changes apparent water color, only draw the area not covered by tiles (somehow)?
 		setup_water_plane_shader(s, no_specular, reflections, add_waves, 0, 0, color, rcolor); // rain_mode=0, use_depth=0
 		indexed_mesh_draw<vert_wrap_t> imd;
@@ -804,7 +804,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		imd.render_z_plane(-size, -size, size, size, (zval - SMALL_NUMBER), 8, 8); // 8x8 grid
 		s.end_shader();
 	}
-#endif
 	disable_blend();
 	set_specular(0.0, 1.0);
 	disable_textures_texgen();
