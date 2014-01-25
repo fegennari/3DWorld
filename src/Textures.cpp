@@ -1279,7 +1279,6 @@ void create_landscape_texture() {
 			if (keepy && (j+dx_scroll) > 0 && (j+dx_scroll) < MESH_X_SIZE-1) continue;
 			int const i1(min(myszm1, i+1)), j1(min(mxszm1, j+1));
 			float const mh00(mesh_height[i][j]), mh01(mesh_height[i][j1]), mh10(mesh_height[i1][j]), mh11(mesh_height[i1][j1]);
-			//float const dist(fabs(mh01 - mh00) + fabs(mh00 - mh10) + fabs(mh01 - mh11) + fabs(mh10 - mh11));
 			float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
 			float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
 			int k1a, k1b, k2a, k2b;
@@ -1293,11 +1292,13 @@ void create_landscape_texture() {
 	int const j0((tox0 < 0) ? width -1 : 0), j1((tox0 < 0) ? -1 : width ), dj((tox0 < 0) ? -1 : 1);
 	int const wxtx(wx-tox0), wxtx3(3*wxtx), j00(max(0, -tox0)), j01(min(width, wx-tox0));
 	
-	for (int i = i0; i != i1; i += di) {
-		int j10(j0);
+	#pragma omp parallel for schedule(static,1)
+	for (int ii = 0; ii < height; ++ii) {
+		int const i((toy0 < 0) ? height-ii-1 : ii);
 		float const yp(yscale*(float)i);
 		int const lly(i + toy0), offset(3*i*width), ypos(max(0, min(myszm1, (int)yp))), ypos1(min(myszm1, ypos+1));
 		float const ypi(yp - (float)ypos);
+		int j10(j0);
 
 		if (scroll && lly >= 0 && lly < hy) {
 			memmove((tex_data+offset+3*j00), (tex_data+3*((j00+tox0)+lly*width)), 3*(j01-j00)); // range could be overlapping
