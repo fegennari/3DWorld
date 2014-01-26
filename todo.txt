@@ -24,8 +24,6 @@ Better water splashes (bullet hits, etc.)
 Texture atlases
 Cache the static parts of shadow maps?
 
-draw_spherical_shot()
-
 ************************
 
 Star shader:

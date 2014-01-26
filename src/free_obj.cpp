@@ -609,7 +609,8 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 	if (ndiv > 8 && (ndiv&1)) ++ndiv; // an even size is divisible by 2, so hemispheres can be created exactly
 	bool const stencil_shadows(STENCIL_SHADOWS && univ_stencil_shadows && lg_obj_type), no_lighting(no_light());
 	uobject const *sobj(NULL);
-	vector<uobject const *> sobjs;
+	static vector<uobject const *> sobjs;
+	sobjs.resize(0);
 	point sun_pos; // should be the same as lpos?
 	int shadowed(0);
 	bool partial_shadow(0);

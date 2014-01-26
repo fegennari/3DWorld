@@ -2402,6 +2402,8 @@ void ustar::solar_flare::update(colorRGBA const &color) {
 	length += 0.02*length*fticks_capped;
 	radius += 0.02*radius*fticks_capped;
 	angle  += 0.2*fticks_capped;
+	length  = min(length, 2.0f);
+	radius  = min(radius, 0.5f);
 }
 
 

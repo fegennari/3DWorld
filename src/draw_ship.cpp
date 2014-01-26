@@ -416,7 +416,7 @@ void uobj_draw_data::draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, 
 {
 	cb.do_glColor();
 	glTranslatef(0.0, 0.0, 0.5*length);
-	draw_cylinder(length, width, width, ndiv, 1, 0, 1);
+	draw_cylinder(length, width, width, ndiv, (ndiv >= 10), 0, 1);
 	
 	if (ndiv > 3) {
 		cn.do_glColor();
@@ -1441,7 +1441,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 			invert_z();
 			draw_sphere_vbo(all_zeros, 0.72, ndiv35, 0, 1); // rear
 			glPopMatrix();
-			glTranslatef(0.0, 0.0, 0.01);
+			if (i < 3) glTranslatef(0.0, 0.0, 0.01);
 		}
 		glPopMatrix();
 
@@ -2051,7 +2051,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 				float const theta(TWO_PI*i/float(nlights));
 				draw_sphere_vbo(point(cosf(theta), sinf(theta), 0.0), 0.045, ndiv4, 0);
 
-				if (is_lit) {
+				if (is_lit && ndiv > 12) {
 					float const theta2(TWO_PI*(nlights-i)/float(nlights));
 					point lpos2(-1.5*cosf(theta2), -1.5*sinf(theta2), 0.0); // account for scaling
 					if (rotated) {swap(lpos2.y, lpos2.z);} // account for rotation
