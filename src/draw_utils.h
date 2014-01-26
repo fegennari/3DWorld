@@ -93,9 +93,11 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 		float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool minimize_fill=0) {
 			add_xlated_billboard(pos, pos, viewer, up_dir, c, xsize, ysize, tx1, ty1, tx2, ty2, minimize_fill);
 	}
+	bool empty() const {return verts.empty();}
+	void clear() {verts.clear();}
 	void add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c, float xsize, float ysize, float timescale);
 	void draw(int prim_type=GL_TRIANGLES) const {draw_verts(verts, prim_type);} // GL_QUADS or GL_TRIANGLES
-	void draw_and_clear(int prim_type=GL_TRIANGLES) {draw(prim_type); verts.clear();}
+	void draw_and_clear(int prim_type=GL_TRIANGLES) {draw(prim_type); clear();}
 	void draw_as_flares_and_clear(int flare_tex=BLUR_TEX);
 };
 

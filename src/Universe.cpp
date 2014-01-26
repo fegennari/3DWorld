@@ -271,6 +271,7 @@ public:
 			setup_planet_star_shader();
 			set_vert_shader("star_draw");
 			set_frag_shader("perlin_clouds_3d.part*+star_draw");
+			//set_frag_shader("star_draw_iq");
 			begin_shader();
 			add_uniform_int("tex0", 0);
 			add_uniform_int("cloud_noise_tex", 1);

@@ -110,6 +110,7 @@ void end_ship_texture() {
 
 void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) {
 
+	if (qbd.empty()) return;
 	// disabling of the depth mask is not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	set_emissive_color(color);
 	set_additive_blend_mode();
@@ -359,10 +360,8 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 
 	if (!symmetric) glPopMatrix();
 	set_emissive_color(color);
-	draw_sphere_vbo(all_zeros, 0.25, get_ndiv(ndiv/3), 0); // draw central area that shows up when the draw order is incorrect
-	set_emissive_color(color);
+	if (ndiv > 8) {draw_sphere_vbo(all_zeros, 0.25, get_ndiv(ndiv/3), 0);} // draw central area that shows up when the draw order is incorrect
 	float angle(TWO_PI*time/TICKS_PER_SECOND);
-	static quad_batch_draw qbd; // probably doesn't need to be static
 
 	for (unsigned i = 0; i < 2; ++i) {
 		qbd.add_xlated_billboard(pos, all_zeros, get_camera_pos(), up_vector, colorRGBA(0,0,0, color.alpha), (2.0 + 1.0*sinf(angle)), (2.0 + 1.0*cosf(angle)));
@@ -546,6 +545,7 @@ void uobj_draw_data::draw_usw_rfire() const {
 		if (animate2 && first_pass && (time & 1)) {add_blastr(pos, dir, 1.5*radius, 0.0, 16, -1, WHITE, WHITE, ETYPE_ANIM_FIRE, obj);}
 		return;
 	}
+	// Note: this version is unused
 	float const ctime(CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
 	glEnable(GL_CULL_FACE);
 	set_emissive_color(colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0));
@@ -1881,6 +1881,10 @@ void uobj_draw_data::draw_supply() const {
 	clear_emissive_color();
 	glPopMatrix(); // undo invert_z()
 
+	if (light_color != BLACK) { // draw blinky light flare
+		draw_engine(light_color, point(0.0, 0.0, -1.825), 0.2);
+		draw_ship_flares(light_color);
+	}
 	for (unsigned i = 0; i < 3; ++i) {
 		draw_engine_pairs(LT_BLUE, (i<<1), 0.5, 0.25, (-0.4 + 0.4*i), 1.75);
 	}
@@ -1954,7 +1958,7 @@ void uobj_draw_data::draw_juggernaut() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.05, -0.45);
 	glScalef(0.55, 1.5, 1.0);
-	if (powered) set_emissive_color(color_b); else color_b.do_glColor();
+	if (powered) {set_emissive_color(color_b);} else {color_b.do_glColor();}
 	draw_sphere_vbo(all_zeros, 0.65, ndiv, 0); // back
 	if (powered) clear_emissive_color();
 	glPopMatrix();
@@ -2033,30 +2037,33 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 		for (unsigned i = 0; i < nwpts; ++i) {
 			((i&1) ? colorRGBA(0.5, 0.3, 0.3, 1.0) : (mothership ? colorRGBA(0.8, 0.5, 0.2, 1.0) : colorRGBA(0.3, 0.3, 0.5, 1.0))).do_glColor();
 			float const theta(TWO_PI*i/float(nwpts));
-
 			draw_sphere_vbo(point(0.6*cosf(theta), 0.6*sinf(theta), 0.16), 0.065, ndiv2, 0);
 		}
 	}
 	if (ndiv > 8) {
 		unsigned const nlights(mothership ? 16 : 12);
 
-		for (unsigned is_lit = 0; is_lit < 2; ++is_lit) {
-			if (is_lit) {
-				set_emissive_color(RED); // always red
-			}
-			else {
-				color_b.do_glColor();
-			}
+		for (unsigned is_lit = 0; is_lit < (powered + 1U); ++is_lit) {
+			if (is_lit) {set_emissive_color(RED);} else {color_b.do_glColor();}
+
 			for (unsigned i = 0; i < nlights; ++i) {
 				if ((powered && ((i+(on_time>>2))&3) == 0) != is_lit) continue; // incorrect state
 				float const theta(TWO_PI*i/float(nlights));
 				draw_sphere_vbo(point(cosf(theta), sinf(theta), 0.0), 0.045, ndiv4, 0);
+
+				if (is_lit) {
+					float const theta2(TWO_PI*(nlights-i)/float(nlights));
+					point lpos2(-1.5*cosf(theta2), -1.5*sinf(theta2), 0.0); // account for scaling
+					if (rotated) {swap(lpos2.y, lpos2.z);} // account for rotation
+					draw_engine(RED, lpos2, 0.2);
+				}
 			}
 			if (is_lit) clear_emissive_color();
 		}
 	}
 	end_specular();
-	glPopMatrix(); // undo invert_z()
+	glPopMatrix(); // undo invert_z(), scale, and possible rotate
+	draw_ship_flares(RED);
 
 	if (ndiv > 4 && is_moving() && !(eflags & 1) && vel.mag_sq() > 1.0E-7) { // draw engine glow
 		draw_engine(color_a, (rotated ? point(0.0, -0.5, 0.0) : point(0.0, 0.0, 0.5)), 1.0);
@@ -2290,7 +2297,6 @@ void uobj_draw_data::draw_black_hole() const { // should be non-rotated
 	float const dist_to_player(player_dir.mag());
 
 	if (dist_to_player > 2.0*radius) {
-		quad_batch_draw qbd;
 		qbd.add_xlated_billboard(pos, player_dir*(1.2/dist_to_player), get_camera_pos(), up_vector, BLACK, 3.0, 3.0);
 		qbd.draw_as_flares_and_clear(BLUR_TEX);
 	}
