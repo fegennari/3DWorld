@@ -252,12 +252,12 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 
 
 // length can be negative
-void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only) {
+void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only, float z_offset) {
 	
 	assert(ndiv > 0 );
-	draw_cylin_fast(radius1, radius2, length, ndiv, 1); // tex coords?
-	if (draw_ends && !last_end_only  && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1, 0.0);}
-	if (draw_ends && !first_end_only && radius2 > 0.0) {draw_circle_normal(0.0, radius2, ndiv, 0, length);}
+	draw_cylin_fast(radius1, radius2, length, ndiv, 1, 1.0, z_offset); // tex coords?
+	if (draw_ends && !last_end_only  && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1, z_offset);}
+	if (draw_ends && !first_end_only && radius2 > 0.0) {draw_circle_normal(0.0, radius2, ndiv, 0, z_offset+length);}
 }
 
 
@@ -338,23 +338,23 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 }
 
 
-void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, float tex_scale_len) {
+void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, float tex_scale_len, float z_offset) {
 
-	draw_fast_cylinder(all_zeros, point(0.0, 0.0, l), r1, r2, ndiv, texture, 0, 0, NULL, tex_scale_len);
+	draw_fast_cylinder(point(0.0, 0.0, z_offset), point(0.0, 0.0, z_offset+l), r1, r2, ndiv, texture, 0, 0, NULL, tex_scale_len);
 }
 
 
-void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture, float tex_scale_len) {
+void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture, float tex_scale_len, float z_offset) {
 
 	assert(r_outer > 0.0 && r_inner >= 0.0 && length >= 0.0 && ndiv > 0 && r_outer >= r_inner);
 	glPushMatrix();
 	translate_to(pos);
-	draw_cylin_fast(r_outer, r_outer, length, ndiv, texture, tex_scale_len);
+	draw_cylin_fast(r_outer, r_outer, length, ndiv, texture, tex_scale_len, z_offset);
 
 	if (r_inner != r_outer) {
-		if (r_inner != 0.0) {draw_cylin_fast(r_inner, r_inner, length, ndiv, texture);}
-		draw_circle_normal(r_inner, r_outer, ndiv, 1, 0.0);
-		draw_circle_normal(r_inner, r_outer, ndiv, 0, length);
+		if (r_inner != 0.0) {draw_cylin_fast(r_inner, r_inner, length, ndiv, texture, tex_scale_len, z_offset);}
+		draw_circle_normal(r_inner, r_outer, ndiv, 1, z_offset);
+		draw_circle_normal(r_inner, r_outer, ndiv, 0, z_offset+length);
 	}
 	glPopMatrix();
 }
