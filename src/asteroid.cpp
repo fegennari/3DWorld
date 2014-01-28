@@ -601,10 +601,10 @@ void ensure_asteroid_models() {
 // *** asteroid belt particles ***
 
 
-float rand_gaussian2_limited(float mean, float std_dev, float max_val) {
+float rand_gaussian_limited(rand_gen_t &rgen, float mean, float std_dev, float max_val) {
 
 	while (1) {
-		float const v(rand_gaussian2(mean, std_dev));
+		float const v(rgen.rand_gaussian(mean, std_dev));
 		if (fabs(v - mean) < max_val) return v;
 	}
 	assert(0); // never gets here
@@ -626,6 +626,7 @@ public:
 	// generates a toriodal section in the z=0 plane centered at (0,0,0)
 	void gen_torus_section(unsigned npts, float ro, float ri, float max_angle) {
 		pts.resize(npts);
+		rand_gen_t rgen;
 
 		if (max_angle >= PI) { // at least half the torus, use a central bounding sphere
 			bsphere.pos = all_zeros;
@@ -633,10 +634,10 @@ public:
 		else { // torus subsection, use a local bounding sphere
 			bsphere.pos = ro*vector3d(sinf(0.5*max_angle), cosf(0.5*max_angle), 0.0);
 		}
-		for (unsigned i = 0; i < npts; ++i) { // FIXME: use rand_gen_t (which would need gaussian support)?
-			float const theta(rand_uniform2(0.0, max_angle));
-			float const dval(rand_gaussian2_limited(0.0, 1.0, 2.0));
-			float const dplane(rand_gaussian2_limited(0.0, ri, 2.5*ri));
+		for (unsigned i = 0; i < npts; ++i) {
+			float const theta(rgen.rand_uniform(0.0, max_angle));
+			float const dval(rand_gaussian_limited(rgen, 0.0, 1.0, 2.0));
+			float const dplane(rand_gaussian_limited(rgen, 0.0, ri, 2.5*ri));
 			vector3d const dir(sinf(theta), cosf(theta), 0.0);
 			pts[i] = (ro + ri*dval)*dir;
 			pts[i].z += sqrt(1.0 - 0.25*dval*dval)*dplane; // elliptical distribution
@@ -1211,9 +1212,9 @@ void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbi
 {
 	gen_base(max_radius);
 	float const theta(TWO_PI*rand_float2());
-	float const dval(rand_gaussian2_limited(0.0, 1.0, 2.0));
+	float const dval(rand_gaussian_limited(global_rand_gen, 0.0, 1.0, 2.0));
 	float const delta_dist_to_sun(belt_width*dval);
-	float const dplane(rand_gaussian2_limited(0.0, belt_thickness, 2.5*belt_thickness));
+	float const dplane(rand_gaussian_limited(global_rand_gen, 0.0, belt_thickness, 2.5*belt_thickness));
 	float const dist_from_plane(sqrt(1.0 - 0.25*dval*dval)*dplane); // elliptical distribution
 	vector3d const dir(vxy[0]*sinf(theta) + vxy[1]*cosf(theta)); // Note: only normalized if xscale=yscale=1
 	orbital_dist = delta_dist_to_sun + belt_radius;

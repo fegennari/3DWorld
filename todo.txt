@@ -17,12 +17,12 @@ Weather/Physics UI / key to switch UI modes
 TT mode underwater content
 
 User-placed teleporter weapon (translocator?)
-black body light emission in ship explosion texture
-Burning smiley/skull/cobj texture
-gen_torus_section rand_gen_t - requires gaussian rand support
+* black body light emission in ship explosion texture
+* Burning smiley/skull/cobj texture
 Better water splashes (bullet hits, etc.)
 Texture atlases
 Cache the static parts of shadow maps?
+* reorder physics/collision/AI to be after rendering static parts of the scene
 
 ************************
 
@@ -33,7 +33,7 @@ Fog decreases at high altitude, increases in valleys
   - draw more distant tiles (larger/lower res at high delta-z)
     - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
-TT Foam at water edge/wave peaks using procedural texture when waves are enabled
+* TT Foam at water edge/wave peaks using procedural texture when waves are enabled
 
 Ray tracer uses cosine of normal for diffuse reflection and specular shine
 Ray tracer thread/ray coherence experiments
