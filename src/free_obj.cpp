@@ -967,7 +967,8 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes G
 	s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
 	cur_colors[0].do_glColor();
 	draw_quads();
-	if (ddata.shader) {ddata.shader->enable();}
+	bool const use_shaders((display_mode & 0x08) != 0);
+	if (use_shaders && ddata.shader) {ddata.shader->enable();}
 }
 
 

@@ -494,8 +494,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			}
 			set_color_alpha(RED, alpha);
 			draw_circle_normal(0.004, 0.0043, ndiv, 1);
-			glTranslatef(0.0, 0.0, -0.15);
-			glTranslatef(tx, ty, 0.0);
+			glTranslatef(tx, ty, -0.15);
 			set_color_alpha(GOLD, alpha);
 			draw_circle_normal(0.0075, 0.009, ndiv, 1, 0.15);
 			set_color_alpha(BLACK, alpha);

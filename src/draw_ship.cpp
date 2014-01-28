@@ -218,7 +218,7 @@ void uobj_draw_data::setup_exp_scale() const {
 
 void uobj_draw_data::setup_exp_texture() const {
 
-	if (shader && t_exp > 0.0) { // drops from 1.0 to 0.0
+	if (shader && shader->is_setup() && t_exp > 0.0) { // drops from 1.0 to 0.0
 		shader->add_uniform_float("min_alpha", (0.9 + 0.06*(1.0 - t_exp)));
 		set_lighted_sides(2);
 	}
@@ -227,7 +227,7 @@ void uobj_draw_data::setup_exp_texture() const {
 
 void uobj_draw_data::end_exp_texture() const {
 
-	if (shader && t_exp > 0.0) {
+	if (shader && shader->is_setup() && t_exp > 0.0) {
 		shader->add_uniform_float("min_alpha", 0.0);
 		set_lighted_sides(1);
 	}
@@ -754,7 +754,7 @@ void uobj_draw_data::draw_us_destroyer() const {
 	color_b.do_glColor();
 	draw_cylinder(0.05, 0.7, 0.7, ndiv, 1, 0, 0, 0.8); // front ring
 	glPopMatrix();
-	draw_cylindrical_section(point(0.0, 0.0, -0.1), 0.2, 0.85, 1.2, get_ndiv((3*ndiv)/2), textured); // engine ring
+	draw_cylindrical_section(0.2, 0.85, 1.2, get_ndiv((3*ndiv)/2), textured, -0.1); // engine ring
 	if (textured) end_ship_texture();
 
 	if (ndiv > 4) { // draw engines supports
@@ -1093,7 +1093,7 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 			cgray.do_glColor();
 
 			if (ndiv > 9) {
-				draw_cylindrical_section(all_zeros, w, 0.9*radius, 1.05*radius, ndiv_c, 0, 1.0, zval);
+				draw_cylindrical_section(w, 0.9*radius, 1.05*radius, ndiv_c, 0, 1.0, zval);
 			}
 			else {
 				draw_cylin_fast(1.05*radius, 1.05*radius, w, ndiv_c, 0, 1.0, zval);
@@ -1178,7 +1178,8 @@ void uobj_draw_data::draw_starbase() const {
 	assert(cobjs.size() == 8); // should make this more flexible later
 	setup_exp_scale();
 	set_ship_texture(SPACESHIP1_TEX);
-	if (shader && powered) {shader->add_uniform_float("lum_scale", 2.0); shader->add_uniform_float("lum_offset", -1.0);}
+	bool const use_lum_scale(powered && shader && shader->is_setup());
+	if (use_lum_scale) {shader->add_uniform_float("lum_scale", 2.0); shader->add_uniform_float("lum_offset", -1.0);}
 
 	// draw main body (textured)
 	WHITE.do_glColor();
@@ -1191,7 +1192,7 @@ void uobj_draw_data::draw_starbase() const {
 			cobjs[i]->draw_cylin(spoke_ndiv, (t_exp > 0.0), 3.0);
 		}
 	}
-	if (shader && powered) {shader->add_uniform_float("lum_scale", 0.0); shader->add_uniform_float("lum_offset", 0.0);}
+	if (use_lum_scale) {shader->add_uniform_float("lum_scale", 0.0); shader->add_uniform_float("lum_offset", 0.0);}
 	end_ship_texture();
 
 	// draw center (team colored)

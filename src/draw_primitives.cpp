@@ -70,10 +70,8 @@ vector_point_norm const &gen_cylinder_data(point const ce[2], float radius1, flo
 
 	for (unsigned S = s0; S < s1; ++S) { // build points table
 		float const s(sin_s), c(cos_s);
-
-		for (unsigned i = 0; i < 2; ++i) {
-			vpn.p[(S<<1)+i] = ce[i] + (vab[0]*(r[i]*s)) + (vab[1]*(r[i]*c));
-		}
+		vpn.p[(S<<1)+0] = ce[0] + (vab[0]*(r[0]*s)) + (vab[1]*(r[0]*c)); // loop unrolled
+		vpn.p[(S<<1)+1] = ce[1] + (vab[0]*(r[1]*s)) + (vab[1]*(r[1]*c));
 		sin_s = s*cos_ds + c*sin_ds;
 		cos_s = c*cos_ds - s*sin_ds;
 	}
@@ -293,7 +291,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 	else if (radius2 == 0.0) { // cone (Note: still not perfect for pine tree trunks and enforcer ships)
 		verts.resize(3*ndiv);
 
-		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
+		for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
 			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv);
 			//verts[3*s+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
 			verts[3*s+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], 0.5, tex_scale_len, two_sided_lighting); // one big discontinuity at one position
@@ -344,11 +342,9 @@ void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, float 
 }
 
 
-void draw_cylindrical_section(point const &pos, float length, float r_inner, float r_outer, int ndiv, bool texture, float tex_scale_len, float z_offset) {
+void draw_cylindrical_section(float length, float r_inner, float r_outer, int ndiv, bool texture, float tex_scale_len, float z_offset) {
 
 	assert(r_outer > 0.0 && r_inner >= 0.0 && length >= 0.0 && ndiv > 0 && r_outer >= r_inner);
-	glPushMatrix();
-	translate_to(pos);
 	draw_cylin_fast(r_outer, r_outer, length, ndiv, texture, tex_scale_len, z_offset);
 
 	if (r_inner != r_outer) {
@@ -356,7 +352,6 @@ void draw_cylindrical_section(point const &pos, float length, float r_inner, flo
 		draw_circle_normal(r_inner, r_outer, ndiv, 1, z_offset);
 		draw_circle_normal(r_inner, r_outer, ndiv, 0, z_offset+length);
 	}
-	glPopMatrix();
 }
 
 
