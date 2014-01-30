@@ -40,7 +40,7 @@ pt_line_drawer bubble_pld;
 
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu;
-extern int is_cloudy, iticks, display_mode, show_fog, num_groups, island, xoff, yoff;
+extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, island, xoff, yoff;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode;
 extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
@@ -254,17 +254,19 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 }
 
 
-// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map
+// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
-void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting,
-	bool dlights, bool smoke_en, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors)
+void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
+	bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors, float burn_offset)
 {
+	bool const use_burn_mask(burn_offset > -1.0);
 	smoke_en &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
 	if (use_light_colors) {s.set_prefix("#define USE_LIGHT_COLORS", 1);} // FS
+	if (use_burn_mask   ) {s.set_prefix("#define APPLY_BURN_MASK",  1);} // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+indir_lighting.part+tc_by_vert_id.part+no_lt_texgen_smoke");
-	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
+	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+textured_with_smoke");
 	s.begin_shader();
 
 	if (use_texgen == 2) {
@@ -280,6 +282,13 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
 	if (use_mvm ) {upload_mvm_to_shader(s, "world_space_mvm");}
 	if (smoke_en) {s.add_uniform_color("smoke_color", colorRGB(GRAY));}
+
+	if (use_burn_mask) {
+		s.add_uniform_float("burn_tex_scale", 0.05); // FIXME: hard-coded
+		s.add_uniform_float("burn_offset", burn_offset);
+		s.add_uniform_int("burn_mask", 10);
+		select_multitex(PLASMA_TEX, 10, 0); // DISINT_TEX?
+	}
 }
 
 

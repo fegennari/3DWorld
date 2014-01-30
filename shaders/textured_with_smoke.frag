@@ -135,6 +135,10 @@ void main()
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
 
+#ifdef APPLY_BURN_MASK
+	color = apply_burn_mask(color, tex_coord);
+#endif
+
 #ifndef SMOKE_ENABLED
 #ifndef NO_ALPHA_TEST
 	if (color.a <= min_alpha) discard;

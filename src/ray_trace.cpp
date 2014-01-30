@@ -283,10 +283,10 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 
 		if (specular > 0 && specular >= rgen.rand_float()) { // specular reflection
 			v_new = v_ref; // perfect specular reflection (infinite shininess)
-			// FIXME: use shine somehow
+			// FIXME: use shine somehow (cosine distribution)
 		}
 		else { // diffuse reflection
-			v_new = rgen.signed_rand_vector().get_norm(); // add random diffuse scatter
+			v_new = rgen.signed_rand_vector().get_norm(); // add random diffuse scatter (use cosine distribution?)
 			if (dot_product(v_new, cnorm) < 0.0) {v_new.negate();} // make in same direction as normal
 		}
 		p2 = p1 + v_new*line_length; // ending point: effectively at infinity

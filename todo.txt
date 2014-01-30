@@ -26,25 +26,15 @@ Cache the static parts of shadow maps?
 
 ************************
 
-Star shader:
-https://www.shadertoy.com/view/4dXGR4
+Star shader: https://www.shadertoy.com/view/4dXGR4
 
 Fog decreases at high altitude, increases in valleys
   - draw more distant tiles (larger/lower res at high delta-z)
     - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
 * TT Foam at water edge/wave peaks using procedural texture when waves are enabled
-
-Ray tracer uses cosine of normal for diffuse reflection and specular shine
-Ray tracer thread/ray coherence experiments
-
-Perlin noise function experiments
-  http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
-
+Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 Render nearby planet in chunks starting with draw_cube_mapped_sphere()
-
-Visual Studio profile
-http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
-
+Visual Studio profile: http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
 static error check (analysis)
 Path tracing dynamic light in Sponza

@@ -4,6 +4,7 @@ uniform float sm_scale0, sm_scale1;
 uniform int sm_tu_id0, sm_tu_id1;
 uniform sampler2DShadow sm_tex0, sm_tex1;
 
+// pos and normal are in eye space
 float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in int sm_tu_id, in sampler2DShadow sm_tex) {
 #ifndef NO_SMAP_NORMAL_OFFSET
 	pos.xyz += norm_bias_scale*z_bias*normal;
