@@ -937,7 +937,7 @@ void gen_plasma_texture() {
 
 void gen_disintegrate_texture() {
 
-	textures[DISINT_TEX].gen_rand_texture(255, 230, 26);
+	textures[DISINT_TEX].gen_rand_texture(255, 1, 255);
 }
 
 

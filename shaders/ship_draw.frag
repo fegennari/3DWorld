@@ -28,5 +28,9 @@ void main()
 	// add other emissive term based on texture luminance
 	color.rgb = mix(color.rgb, vec3(1.0), clamp(lum_scale*(texel.r + texel.g + texel.b + lum_offset), 0.0, 1.0));
 #endif
-	gl_FragColor = vec4(texel.rgb * clamp(color.rgb, 0.0, 1.0), texel.a * gl_Color.a); // use diffuse alpha directly
+	color = vec4(texel.rgb * clamp(color.rgb, 0.0, 1.0), texel.a * gl_Color.a); // use diffuse alpha directly
+#ifdef BURN_MASK_TEX
+	if (burn_offset > -1.0) {color = apply_burn_mask(color, tc);} // slow, conditional may or may not help
+#endif
+	gl_FragColor = color;
 }

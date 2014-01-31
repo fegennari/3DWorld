@@ -17,7 +17,6 @@ Weather/Physics UI / key to switch UI modes
 TT mode underwater content
 
 User-placed teleporter weapon (translocator?)
-* black body light emission in ship explosion texture
 * Burning smiley/skull/cobj texture
 Better water splashes (bullet hits, etc.)
 Texture atlases

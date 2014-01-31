@@ -55,7 +55,7 @@ float align_t_kills[NUM_ALIGNMENT]    = {0};
 float friendly_kills[NUM_ALIGNMENT]   = {0};
 
 
-extern int show_framerate, display_mode, animate2;
+extern int show_framerate, frame_counter, display_mode, animate2;
 extern float fticks, tfticks;
 extern unsigned owner_counts[];
 extern float resource_counts[];
@@ -684,11 +684,12 @@ void draw_wrays(vector<usw_ray> &wrays) {
 
 void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 
+	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
 	if (shadow_mode) {s.set_prefix("#define SHADOW_ONLY_MODE", 1);} // FS
-	if (disint_tex ) {s.set_prefix("#define ALPHA_MASK_TEX",   1);} // FS
+	if (disint_tex ) {s.set_prefix("#define BURN_MASK_TEX",    1);} // FS
 	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	s.set_vert_shader("ship_draw");
-	s.set_frag_shader("ads_lighting.part*+ship_draw");
+	s.set_frag_shader("ads_lighting.part*+black_body_burn.part+ship_draw");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("lum_scale",  0.0);
@@ -696,7 +697,9 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 
 	if (disint_tex) {
 		select_multitex(DISINT_TEX, 1, 0);
-		s.add_uniform_int("alpha_mask_tex", 1);
+		s.add_uniform_int ("burn_mask", 1); // used instead of alpha_mask_tex
+		s.add_uniform_float("burn_offset",   -1.0);
+		s.add_uniform_float("burn_tex_scale", 1.0);
 	}
 }
 

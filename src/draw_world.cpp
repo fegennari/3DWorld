@@ -287,7 +287,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_float("burn_tex_scale", 0.05); // FIXME: hard-coded
 		s.add_uniform_float("burn_offset", burn_offset);
 		s.add_uniform_int("burn_mask", 10);
-		select_multitex(PLASMA_TEX, 10, 0); // DISINT_TEX?
+		select_multitex(DISINT_TEX, 10, 0); // PLASMA_TEX?
 	}
 }
 
@@ -377,8 +377,12 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_specular(0.0, 1.0);
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
+
+	float burn_offset(-1.0);
+	if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
+
 	shader_t s;
-	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
+	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, 0, burn_offset);
 	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
