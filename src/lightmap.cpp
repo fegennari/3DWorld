@@ -1084,6 +1084,7 @@ void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *cons
 
 void setup_dlight_textures(shader_t &s) {
 
+	assert(dl_tid > 0 && elem_tid > 0 && gb_tid > 0 ); // && flow_tid >= 0
 	set_one_texture(s, dl_tid,   2, "dlight_tex");
 	set_one_texture(s, elem_tid, 3, "dlelm_tex");
 	set_one_texture(s, gb_tid,   4, "dlgb_tex");

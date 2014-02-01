@@ -366,8 +366,9 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	static vector<pair<float, int> > draw_last;
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (!draw_solid && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
-	set_lighted_sides(2);
 	set_fill_mode();
+	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
+	set_lighted_sides(2);
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glEnable(GL_TEXTURE_GEN_S);
@@ -377,10 +378,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_specular(0.0, 1.0);
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
-
 	float burn_offset(-1.0);
-	if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
-
+	//if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
 	shader_t s;
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, 0, burn_offset);
 	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled

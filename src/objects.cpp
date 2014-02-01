@@ -351,23 +351,20 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c, int eflags, vector3d const *const view_dir=NULL) {
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
+		unsigned const d0((i+1)%3), d1((i+2)%3);
 
 		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			if ((eflags & EFLAGS[n][j]) || (view_dir && (((*view_dir)[n] < 0.0) ^ j))) continue; // back facing or disabled
-			point pt;
-			pt[n] = c.d[n][j];
-
-			for (unsigned s = 0; s < 2; ++s) { // d[1] dim
-				pt[d[1]] = c.d[d[1]][s];
-
-				for (unsigned k = 0; k < 2; ++k) { // d[0] dim
-					pt[d[0]] = c.d[d[0]][k^j^s^1]; // need to orient the vertices differently for each side
-					verts.push_back(pt);
-				}
-			}
-			verts.push_back(verts[verts.size()-4]); // convert quads to triangles
-			verts.push_back(verts[verts.size()-3]);
+			if ((eflags & EFLAGS[i][j]) || (view_dir && (((*view_dir)[i] < 0.0) ^ j))) continue; // back facing or disabled
+			point pts[4], p;
+			p[i]  = c.d[i][j];
+			p[d0] = c.d[d0][0];
+			p[d1] = c.d[d1][0]; pts[0] = p;
+			p[d0] = c.d[d0][1]; pts[1] = p;
+			p[d1] = c.d[d1][1]; pts[2] = p;
+			p[d0] = c.d[d0][0]; pts[3] = p;
+			if (!j) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
+			unsigned const ixs[6] = {1,2,3,0,1,3}; // convert quads to triangles
+			for (unsigned k = 0; k < 6; ++k) {verts.push_back(pts[ixs[k]]);}
 		}
 	}
 }

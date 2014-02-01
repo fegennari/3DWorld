@@ -126,7 +126,6 @@ void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c,
 
 void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 
-	assert(shader != NULL);
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
 	bool const back_face_cull(!is_semi_trans()); // no alpha
@@ -176,6 +175,10 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		p[d1 ] = d[d1][1]; pts[2] = p;
 		p[d0 ] = d[d0][0]; pts[3] = p;
 		if (!dir) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
+		vector3d normal(zero_vector);
+		normal[dim] = (dir ? 1.0 : -1.0);
+		for (unsigned i = 0; i < 4; ++i) {verts[vix++] = vert_norm(pts[i], normal);}
+		if (tid < 0 || shader == NULL) continue;
 
 		for (unsigned e = 0; e < 2; ++e) {
 			unsigned const tdim(e ? t1 : t0);
@@ -192,11 +195,13 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 			bool const s_or_t(cp.swap_txy ^ (e != 0));
 			for (unsigned i = 0; i < 4; ++i) {UNROLL_4X(tex_attrs[s_or_t][tix[s_or_t]++] = tg[i_];)} // one per vertex
 		}
-		vector3d normal(zero_vector);
-		normal[dim] = (dir ? 1.0 : -1.0);
-		for (unsigned i = 0; i < 4; ++i) {verts[vix++] = vert_norm(pts[i], normal);}
 	} // for i
 	if (vix == 0) return; // no quads to draw
+
+	if (tid < 0 || shader == NULL) {
+		draw_verts(verts, vix, GL_QUADS);
+		return;
+	}
 	int const loc_ix[2] = {TEX0_S_ATTR, TEX0_T_ATTR};
 	int loc[2];
 
