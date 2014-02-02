@@ -54,8 +54,6 @@ void camera_shadow(point const &camera);
 int  get_shape_shadow_bb(point const *points, int npoints, int l, int quality, point const &lpos,
 	int &xmin, int &ymin, int &xmax, int &ymax, int &ret_val, unsigned char stype);
 void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir);
-int  enable_shadow_envelope(point const &pos, float radius, unsigned light_sources, int is_dynamic);
-void disable_shadow_envelope(unsigned light_sources);
 void dynamic_sphere_shadow(point const &pos, float radius, unsigned light_sources, int quality);
 int  sphere_shadow(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality);
 int  cylinder_shadow(point p1, point p2, float radius1, float radius2, unsigned light_sources, int shadow_ends, int is_dynamic, int quality);

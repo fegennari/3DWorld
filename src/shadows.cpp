@@ -15,18 +15,8 @@ float const SUN_THETA       = 1.2;
 float const MOON_THETA      = 0.3;
 
 
-struct shad_env { // shadow envelope
-
-	int enabled, x1, y1, x2, y2;
-	float z1, z2;
-
-	shad_env() : enabled(0) {}
-};
-
-
 int dshadow_lights(0);
 point light_pos;
-shad_env s_env[NUM_LIGHT_SRC];
 
 extern bool combined_gu;
 extern int island, ground_effects_level, scrolling;
@@ -119,7 +109,8 @@ void add_cobj_shadows(unsigned light_sources) {
 		}
 	}
 #else
-	for (unsigned i = 0; i < t_trees.size(); ++i) {
+	#pragma omp parallel for schedule(dynamic,1) // only ~2x faster
+	for (int i = 0; i < (int)t_trees.size(); ++i) {
 		t_trees[i].gen_tree_shadows(light_sources);
 	}
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
@@ -131,22 +122,13 @@ void add_cobj_shadows(unsigned light_sources) {
 
 
 // first point must be the light position
-bool point_to_point_visibility(point const &pos1, point const &pos2, int &xpos, int &ypos, float &zval, int fast, int light) {
+bool point_to_point_visibility(point const &pos1, point const &pos2, int &xpos, int &ypos, float &zval, int fast) {
 
 	// extend line to span z values of [zmin+?, zmax-?]
 	// P = pos1 + t*(pos2 - pos1) = pos1 + t*v12
 	// t = (P - pos1)/v12
 	vector3d const v12(pos2, pos1);
 	float z1(zmin), z2(zmax);
-
-	if (light >= 0) {
-		assert(light < NUM_LIGHT_SRC);
-
-		if (s_env[light].enabled) {
-			z1 = max(z1, s_env[light].z1);
-			z2 = min(z2, s_env[light].z2);
-		}
-	}
 	if (v12.z > 0.0) z1 = max(z1, pos2.z);
 	if (v12.z < 0.0) z2 = min(z2, pos2.z);
 	float const tmin((z1 - pos1.z)/v12.z), tmax((z2 - pos1.z)/v12.z);
@@ -216,7 +198,7 @@ int get_shape_shadow_bb(point const *points, int npoints, int l, int quality, po
 					saw = 1;
 				}
 			}
-			else if (point_to_point_visibility(lpos, pt, xp, yp, zval, 1, l)) {
+			else if (point_to_point_visibility(lpos, pt, xp, yp, zval, 1)) {
 				// pt.z = object z, lpos.z = light z, zval = mesh intersection z
 				if ((pt.z > lpos.z && pt.z      < zval)    // mesh   => object => light    - can this happen?
 					|| (pt.z < lpos.z && pt.z   > zval)    // light  => object => mesh
@@ -254,50 +236,6 @@ void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts
 	for (unsigned i = 0; i < npts; ++i) {
 		float const theta(TWO_PI*i/npts);
 		pts[i] = pos + v1*(sinf(theta)*radius) + v2*(cosf(theta)*radius);
-	}
-}
-
-
-int enable_shadow_envelope(point const &pos, float radius, unsigned light_sources, int is_dynamic) {
-
-	unsigned char const SHADOW_TYPE(is_dynamic ? DYNAMIC_SHADOW : OBJECT_SHADOW);
-	int shadowed(0), ret_val(0);
-	point lpos, pts[8];
-
-	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if (!light_valid(light_sources, l, lpos)) continue;
-		//if (!is_visible_from_light(pos, lpos, 1)) continue;
-		get_sphere_points(pos, radius, pts, 8, (pos - lpos));
-		shad_env &se(s_env[l]);
-		se.enabled = get_shape_shadow_bb(pts, 8, l, 1, lpos, se.x1, se.y1, se.x2, se.y2, ret_val, SHADOW_TYPE);
-
-		if (se.enabled) {
-			se.z1 = zmax;
-			se.z2 = zmin;
-			
-			for (int i = se.y1; i <= se.y2; ++i) {
-				for (int j = se.x1; j <= se.x2; ++j) {
-					if (shadow_mask[l][i][j] & SHADOW_TYPE) continue;
-					se.z1 = min(se.z1, mesh_height[i][j]);
-					se.z2 = max(se.z2, mesh_height[i][j]);
-				}
-			}
-			if (se.z1 > se.z2) { // no unshadowed vertices in range
-				se.enabled = 0;
-			}
-			else {
-				shadowed = 1;
-			}
-		}
-	}
-	return shadowed;
-}
-
-
-void disable_shadow_envelope(unsigned light_sources) {
-
-	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if (light_sources & (1 << l)) s_env[l].enabled = 0;
 	}
 }
 

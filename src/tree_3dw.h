@@ -270,7 +270,7 @@ public:
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed);
 	void calc_leaf_shadows();
-	void gen_tree_shadows(unsigned light_sources);
+	void gen_tree_shadows(unsigned light_sources) const;
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;

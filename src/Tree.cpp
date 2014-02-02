@@ -255,13 +255,12 @@ bool tree::is_over_mesh() const {
 }
 
 
-void tree::gen_tree_shadows(unsigned light_sources) {
+void tree::gen_tree_shadows(unsigned light_sources) const {
 
 	if (shadow_detail < 2 || !physics_enabled()) return;
 	// Note: not entirely correct since an off mesh tree can still cast a shadow on the mesh
 	if (!is_over_mesh()) return; // optimization
 	tree_data_t const &td(tdata());
-	if (!enable_shadow_envelope(sphere_center(), td.sphere_radius, light_sources, 1)) return;
 	vector<draw_cylin> const &cylins(td.get_all_cylins());
 
 	for (unsigned i = 0; i < cylins.size(); i++) {
@@ -278,7 +277,6 @@ void tree::gen_tree_shadows(unsigned light_sources) {
 		get_abs_leaf_pts(pts, i);
 		polygon_shadow(pts, leaves[i].norm, 4, 0.0, light_sources, 0, 0, 0, ltid);
 	}
-	disable_shadow_envelope(light_sources);
 }
 
 
