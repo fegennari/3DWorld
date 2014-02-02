@@ -428,7 +428,7 @@ public:
 		shadows_valid = 1;
 		data_valid    = 0;
 
-		#pragma omp parallel for schedule(static,1)
+		#pragma omp parallel for schedule(dynamic,1) // 4-5x faster
 		for (int i = 0; i < (int)mesh_to_grass_map.size()-1; ++i) {
 			int last_cobj(-1);
 			for (unsigned j = mesh_to_grass_map[i]; j < mesh_to_grass_map[i+1]; ++j) {

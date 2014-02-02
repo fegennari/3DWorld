@@ -1701,7 +1701,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	}
 	else if (!to_gen_trees.empty()) {
 		//RESET_TIME;
-		#pragma omp parallel for schedule(static,1)
+		#pragma omp parallel for schedule(dynamic,1)
 		for (int i = 0; i < (int)to_gen_trees.size(); ++i) {
 			to_gen_trees[i]->init_pine_tree_draw();
 		}

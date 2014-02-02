@@ -245,7 +245,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
 	float const zscale((params.invert ? -1.0 : 1.0)*params.z_gradient/(nz-1));
 
-	#pragma omp parallel for schedule(static,1)
+	#pragma omp parallel for schedule(dynamic,1)
 	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
@@ -1073,7 +1073,7 @@ void voxel_model::calc_ao_lighting_for_block(unsigned block_ix, bool increase_on
 	unsigned const x_end(min(nx, (xbix+1)*xblocks)), y_end(min(ny, (ybix+1)*yblocks));
 	int const voxel_sz[3] = {nx, ny, nz};
 	
-	#pragma omp parallel for schedule(static,1)
+	#pragma omp parallel for schedule(dynamic,1)
 	for (int yi = ybix*yblocks; yi < (int)y_end; yi += ystep) {
 		for (unsigned xi = xbix*xblocks; xi < x_end; xi += xstep) {
 			if (xi == 0 || yi == 0 || xi >= nx-xstep || (unsigned)yi >= ny-ystep) continue; // at the mesh edges
@@ -1254,7 +1254,7 @@ void voxel_model::proc_pending_updates(bool no_gen_fragments) {
 	}
 	if (something_removed) purge_coll_freed(0); // unecessary?
 
-	#pragma omp parallel for schedule(static,1)
+	#pragma omp parallel for schedule(dynamic,1)
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
 		num_added += (create_block_all_lods(blocks_to_update[i], 0, 0) > 0);
 	}
@@ -1396,7 +1396,7 @@ void voxel_model::build(bool verbose, bool do_ao_lighting) {
 	pre_build_hook();
 	if (verbose) {PRINT_TIME("  Pre Build");}
 
-	#pragma omp parallel for schedule(static,1)
+	#pragma omp parallel for schedule(dynamic,1)
 	for (int block = 0; block < (int)tot_blocks; ++block) {
 		create_block_all_lods(block, 1, 0);
 	}
@@ -1424,7 +1424,7 @@ void voxel_model_ground::pre_build_hook() {
 	if (!PRE_ALLOC_COBJS) return; // nothing to do
 	unsigned num_triangles(0);
 
-	#pragma omp parallel for schedule(static,1)
+	#pragma omp parallel for schedule(dynamic,1)
 	for (int block = 0; block < (int)tri_data[0].size(); ++block) {
 		num_triangles += create_block_all_lods(block, 1, 1);
 	}

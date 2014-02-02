@@ -520,7 +520,7 @@ void create_snow_map(voxel_map &vmap) {
 	unsigned progress(0);
 	cout << "Snow accumulation progress (out of " << num_per_dim << "): 0";
 
-	#pragma omp parallel for schedule(static,1)
+	#pragma omp parallel for schedule(static,1) // dynamic?
 	for (int y = 0; y < num_per_dim; ++y) {
 		#pragma omp critical(snow_prog_update)
 		increment_printed_number(progress++);
