@@ -262,7 +262,6 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	vector<int> last_occluder;
 	mutable vector<grass_data_t> vertex_data_buffer;
 	bool shadows_valid, has_voxel_grass;
-	int last_cobj;
 	int last_light;
 	point last_lpos;
 
@@ -397,7 +396,7 @@ public:
 		return ((coll_objects[cid].status == COLL_DYNAMIC) ? DYNAMIC_SHADOW : OBJECT_SHADOW);
 	}
 
-	bool is_pt_shadowed(point const &pos, bool skip_dynamic) {
+	bool is_pt_shadowed(point const &pos, int &last_cobj, bool skip_dynamic) {
 		int const light(get_light());
 
 		// determine if grass can be shadowed based on mesh shadow
@@ -425,12 +424,16 @@ public:
 	void find_shadows() {
 		if (empty()) return;
 		RESET_TIME;
-		last_cobj     = -1;
+		assert(!mesh_to_grass_map.empty());
 		shadows_valid = 1;
 		data_valid    = 0;
 
-		for (unsigned i = 0; i < grass.size(); ++i) {
-			grass[i].shadowed = is_pt_shadowed((grass[i].p + grass[i].dir*0.5), 1); // per vertex shadows?
+		#pragma omp parallel for schedule(static,1)
+		for (int i = 0; i < (int)mesh_to_grass_map.size()-1; ++i) {
+			int last_cobj(-1);
+			for (unsigned j = mesh_to_grass_map[i]; j < mesh_to_grass_map[i+1]; ++j) {
+				grass[j].shadowed = is_pt_shadowed((grass[j].p + grass[j].dir*0.5), last_cobj, 1); // per vertex shadows?
+			}
 		}
 		PRINT_TIME("Grass Find Shadows");
 	}
@@ -528,6 +531,7 @@ public:
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
 		unsigned min_up(end+1), max_up(start);
+		int last_cobj(-1);
 		if (shadow_map_enabled()) {recalc_shadows = 0;}
 
 		for (unsigned i = start; i < end; ++i) { // will do nothing if there's no grass here
@@ -541,7 +545,7 @@ public:
 				max_up = max(max_up, i);
 				// not entirely correct, since the mesh shadow data won't necessarily have been updated when this is called
 				// it may be more correct to defer this processing, or recalculate all grass lighting, but that's both complex and very expensive
-				if (recalc_shadows) {g.shadowed = is_pt_shadowed((g.p + g.dir*0.5), 1);} 
+				if (recalc_shadows) {g.shadowed = is_pt_shadowed((g.p + g.dir*0.5), last_cobj, 1);} 
 			}
 		} // for i
 		check_and_update_grass(ix, min_up, max_up);
