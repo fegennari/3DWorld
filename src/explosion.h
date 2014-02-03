@@ -44,7 +44,7 @@ struct blastr { // size = 73 (76)
 	int time, st_time, type, src;
 	float size, cur_size, damage;
 	point pos;
-	vector3d dir;
+	vector3d dir, up_vector;
 	colorRGBA color1, color2, cur_color;
 	free_obj const *parent;
 
@@ -52,7 +52,7 @@ struct blastr { // size = 73 (76)
 	blastr(int tm, int ty, int sr, float sz, float dam, point const &p, vector3d const &d,
 		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL)
 		: time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), pos(p), dir(d.get_norm()),
-		color1(c1), color2(c2), cur_color(c1), parent(pa) {}
+		up_vector(plus_y), color1(c1), color2(c2), cur_color(c1), parent(pa) {}
 	void check_pointers();
 	void update();
 	void add_as_dynamic_light() const;

@@ -93,6 +93,7 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 	if (NO_NONETYPE_BRS && type == ETYPE_NONE) return;
 	assert(size > 0.0 && time > 0);
 	blastr br(time, type, src, size, damage, pos, dir, color1, color2, parent);
+	if (type == ETYPE_ANIM_FIRE) {br.up_vector = signed_rand_vector_norm();}
 	br.update();
 
 	if (available.empty()) {
@@ -252,7 +253,7 @@ void draw_blasts() {
 				glDepthMask(GL_FALSE);
 				select_texture(EXPLOSION_TEX, 0);
 			}
-			qbd.add_animated_billboard(br.pos, get_camera_pos(), up_vector, br.cur_color, br.cur_size, br.cur_size, timescale);
+			qbd.add_animated_billboard(br.pos, get_camera_pos(), br.up_vector, br.cur_color, br.cur_size, br.cur_size, timescale);
 			
 			if (end_type) {
 				qbd.draw_and_clear();
