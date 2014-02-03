@@ -122,6 +122,31 @@ struct fire : public basic_physics_obj { // size = 60
 };
 
 
+class water_particle_manager {
+
+	struct part_t {
+		point p; // position
+		vector3d v; // velocity
+		color_wrapper c;
+
+		part_t() {}
+		part_t(point const &p_, vector3d const &v_, colorRGBA const &c_) : p(p_), v(v_) {c.set_c4(c_);}
+	};
+
+	vector<part_t> parts;
+
+public:
+	static colorRGBA calc_color(float mud_mix, float blood_mix) {
+		return blend_color(BLOOD_C, blend_color(MUD_C, WATER_C, mud_mix, 1), blood_mix, 1);
+	}
+	void clear() {parts.clear();}
+	void gen_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num);
+	void apply_physics();
+	void draw() const;
+	bool is_pos_valid(point const &pos) const;
+};
+
+
 struct decal_obj : public basic_physics_obj { // size = 76
 
 	bool is_glass;

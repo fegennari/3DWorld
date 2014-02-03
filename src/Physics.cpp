@@ -52,6 +52,7 @@ extern obj_vector_t<bubble> bubbles;
 extern obj_vector_t<particle_cloud> part_clouds;
 extern obj_vector_t<fire> fires;
 extern obj_vector_t<decal_obj> decals;
+extern water_particle_manager water_part_man;
 
 
 int get_obj_zval(point &pt, float &dz, float z_offset);
@@ -1097,10 +1098,9 @@ int dwobject::check_water_collision(float vz_old) {
 				
 				if (type != DROPLET) {
 					if (type == SHRAPNEL) {
-						if (rand()%10 < 6) energy = 0.0;
-						energy *= 0.2;
+						if (rand()%10 < 6) {energy = 0.0;} else {energy *= 0.2;}
 					}
-					if (energy > 0.0) add_splash(xpos, ypos, energy, radius, (radius >= LARGE_OBJ_RAD));
+					if (energy > 0.0) add_splash(pos, xpos, ypos, energy, radius, (radius >= LARGE_OBJ_RAD));
 				}
 			}
 		}
@@ -1455,7 +1455,6 @@ void fire::apply_physics(unsigned i) {
 	if (animate2 && damage > 0.005 && (rand()%max(1, int(0.5/damage))) == 0) {gen_particles(pos, 1);}
 }
 
-
 void fire::extinguish() {
 
 	status = 0;
@@ -1470,10 +1469,34 @@ void decal_obj::apply_physics(unsigned i) {
 	if (time > lifetime) {status = 0;}
 }
 
-
 float decal_obj::get_alpha() const {
 
 	return alpha*CLIP_TO_01(2.0f - 2.0f*float(time)/float(lifetime)); // first half alpha=1, second half fade to 0
+}
+
+bool water_particle_manager::is_pos_valid(point const &pos) const {
+
+	if (!is_over_mesh(pos))    return 0; // outside simulation region
+	if (pos.z < water_plane_z) return 0;
+	if (!dist_less_than(pos, get_camera_pos(), 8.0)) return 0; // too far away
+	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+	if (point_outside_mesh(xpos, ypos)) return 0; // can this fail?
+	return (pos.z > max(mesh_height[ypos][xpos], water_matrix[ypos][xpos]));
+}
+
+
+void water_particle_manager::apply_physics() {
+
+	unsigned o(0);
+	float const g_acc(base_gravity*GRAVITY*tstep*object_types[DROPLET].gravity), terminal_v(object_types[DROPLET].terminal_vel);
+
+	for (unsigned i = 0; i < parts.size(); ++i) {
+		part_t &part(parts[i]);
+		part.v.z = max(-terminal_v, (part.v.z - g_acc)); // apply gravity + terminal velocity
+		part.p  += tstep*part.v; // add velocity to position
+		if (is_pos_valid(part.p)) {parts[o++] = part;} // above water and mesh - copy/compact
+	}
+	parts.resize(o);
 }
 
 
@@ -1507,6 +1530,7 @@ void advance_physics_objects() {
 	apply_obj_physics(part_clouds);
 	apply_obj_physics(fires);
 	apply_obj_physics(decals);
+	water_part_man.apply_physics();
 
 	for (unsigned i = 0; i < decals.size(); ++i) {
 		decals[i].check_cobj();

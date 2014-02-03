@@ -1231,7 +1231,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	if (underwater) {
 		depth = min(0.25f, max(depth, 0.01f));
 		assert(damage >= 0.0);
-		add_splash(xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
+		add_splash(pos, xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
 	}
 	if (damage > 500.0) { // everything except for plasma
 		gen_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
@@ -1362,7 +1362,7 @@ void do_impact_damage(point const &fpos, vector3d const &dir, vector3d const &ve
 	if (has_water(xpos, ypos) && water_matrix[ypos][xpos] > (fpos.z - radius) &&
 		water_matrix[ypos][xpos] < (fpos.z + radius + MAX_SPLASH_DEPTH))
 	{
-		add_splash(xpos, ypos, damage, 0.6*radius, (weapon != W_BLADE || ((rand()&31) == 0)));
+		add_splash(fpos, xpos, ypos, damage, 0.6*radius, (weapon != W_BLADE || ((rand()&31) == 0)));
 	}
 }
 

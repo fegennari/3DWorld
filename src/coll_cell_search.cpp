@@ -223,7 +223,7 @@ public:
 			float const mx(get_xval(xpos)), my(get_yval(ypos));
 		
 			if (splash_pos.x > (mx-DX_VAL) && splash_pos.x < (mx+DX_VAL) && splash_pos.y > (my-DY_VAL) && splash_pos.y < (my+DY_VAL)) {
-				add_splash(xpos, ypos, 25.0, 0.01, 1); // dynamic water
+				add_splash(splash_pos, xpos, ypos, 25.0, 0.01, 1); // dynamic water
 				draw_splash(splash_pos.x, splash_pos.y, (wmz + 0.0001), splash_val);
 				gen_line_of_bubbles(splash_pos, pos2);
 				return 1;

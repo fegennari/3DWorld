@@ -19,7 +19,7 @@ TT mode underwater content
 
 User-placed teleporter weapon (translocator?)
 * Burning smiley/skull/cobj texture
-* Better water splashes (bullet hits, etc.)
+Better water splashes (bullet hits, etc.)
 Cache the static parts of shadow maps?
 * reorder physics/collision/AI to be after rendering static parts of the scene
 
@@ -39,8 +39,8 @@ static error check (analysis)
 Path tracing dynamic light in Sponza
 
 Raytracing rendering mode
-Better pine tree texture
-
 Ray trace test last cobj and use that tmin if intersected
 Ray trace use texel color from cobj
+
 Animated smoke texture (smilar to fire and explosion)
+Better pine tree texture

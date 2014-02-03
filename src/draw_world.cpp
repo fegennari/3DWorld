@@ -60,6 +60,7 @@ extern obj_vector_t<particle_cloud> part_clouds;
 extern cloud_manager_t cloud_manager;
 extern obj_vector_t<fire> fires;
 extern obj_vector_t<decal_obj> decals;
+extern water_particle_manager water_part_man;
 extern cube_t cur_smoke_bb;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
@@ -971,6 +972,30 @@ void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, 
 }
 
 
+void water_particle_manager::draw() const {
+
+	if (parts.empty()) return;
+	// use point sprites?
+	// calculate normal in a shader?
+	point const camera(get_camera_pos());
+	vector<vert_norm_color> verts;
+	verts.resize(parts.size());
+
+	for (unsigned i = 0; i < parts.size(); ++i) {
+		vector3d const p2c(camera - parts[i].p);
+		verts[i] = vert_norm_color(parts[i].p, p2c.get_norm(), parts[i].c.c); // normal faces camera
+		verts[i].c[3] *= min(1.0, 2.0/p2c.mag());
+	}
+	glEnable(GL_COLOR_MATERIAL);
+	glPointSize(2.0);
+	enable_blend();
+	draw_verts(verts, GL_POINTS);
+	disable_blend();
+	glPointSize(1.0);
+	glDisable(GL_COLOR_MATERIAL);
+}
+
+
 struct crack_point {
 
 	point pos, orig_pos;
@@ -1276,6 +1301,7 @@ void draw_projectile_effects() {
 	draw_blasts();
 	draw_beams();
 	draw_sparks();
+	water_part_man.draw(); // not really a projectile effect, but it's drawn with them
 }
 
 

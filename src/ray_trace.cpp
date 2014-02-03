@@ -216,6 +216,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	else { // collision with cobj
 		assert(cindex >= 0);
 		coll_obj const &cobj(coll_objects[cindex]);
+		// FIXME: do a texture lookup for textured cobjs
 		float luminance(1.0), alpha(1.0);
 		get_lum_alpha(cobj.cp.color, cobj.cp.tid, luminance, alpha); // use alpha?
 		specular = cobj.cp.specular;

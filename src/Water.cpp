@@ -843,7 +843,8 @@ void compute_ripples() {
 }
 
 
-void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound) {
+// Note: we could calculate xpos and ypox from pos, but in all callers xpos and ypos are already available
+void add_splash(point const &pos, int xpos, int ypos, float energy, float radius, bool add_sound) {
 
 	//energy *= 10.0;
 	if (DISABLE_WATER || !(display_mode & 0x04))  return;
@@ -883,16 +884,18 @@ void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound) 
 					ndrops = min(ndrops, int(0.25*valleys[watershed_matrix[ypos][xpos].wsi].w_volume));
 				}
 				if (ndrops > 0) {
-					obj_group &objg(obj_groups[droplet_id]);
 					//valleys[watershed_matrix[ypos][xpos].wsi].w_volume -= ndrops;
 					float const vz(5.0 + (0.2 + 0.1*water_mix)*sqrt_energy);
-					point const pos(get_xval(xpos), get_yval(ypos), (water_matrix[ypos][xpos] + 2.5*radius));
+					point const ppos(pos + vector3d(0.0, 0.0, 1.0*radius));
+					float const mud_mix(in_wmatrix ? valleys[wsi].mud_mix : 0.0), blood_mix(in_wmatrix ? valleys[wsi].blood_mix : 0.0);
+					add_water_particles(ppos, vector3d(0.0, 0.0, 1.5*vz), 0.25*vz, 1.0*radius, mud_mix, blood_mix, (20 + (rand()&7))*ndrops);
+					obj_group &objg(obj_groups[droplet_id]);
 					
-					for (int o = 0; o < ndrops; ++o) { // less efficient
+					for (int o = 0; o < ndrops; ++o) {
 						int const i(objg.choose_object());
-						objg.create_object_at(i, pos);
+						objg.create_object_at(i, ppos);
 						objg.get_obj(i).velocity = gen_rand_vector(vz*rand_uniform(0.05, 0.1), 20.0, PI_TWO);
-						vadd_rand(objg.get_obj(i).pos, 1.0*radius);
+						vadd_rand(objg.get_obj(i).pos, 1.0*radius, 1);
 					}
 					if (add_sound && energy > 10.0) {gen_sound(SOUND_SPLASH1, pos, min(1.0, 0.05*sqrt_energy));}
 				}
@@ -1259,7 +1262,7 @@ void draw_spillover(vector<vert_norm_color> &verts, int i, int j, int si, int sj
 		assert(!point_outside_mesh(x2, y2));
 		float const z2(mesh_height[y2][x2]);
 		int const draw_res(draw_spill_section(verts, x1, y1, x2, y2, z1, z2, width, vol_over, index, blood_mix, mud_mix));
-		if (last_iteration || draw_res == 0) {add_splash(x1, y1, 1.5*v_splash, 0.002*v_splash, 0);} // hit fixed ocean/lake
+		if (last_iteration || draw_res == 0) {add_splash(point(get_xval(x1), get_yval(y1), water_matrix[y1][x1]), x1, y1, 1.5*v_splash, 0.002*v_splash, 0);} // hit fixed ocean/lake
 		if (last_iteration || draw_res != 1 || (x2 == x1 && y2 == y1)) break; // edge, disabled, or valley
 		last_iteration = (zval >= z2);
 		z1 = (last_iteration ? zval : z2);

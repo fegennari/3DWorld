@@ -23,12 +23,13 @@ obj_vector_t<bubble> bubbles(MAX_BUBBLES);
 obj_vector_t<particle_cloud> part_clouds(MAX_PART_CLOUDS);
 obj_vector_t<fire> fires(MAX_FIRES);
 obj_vector_t<decal_obj> decals(MAX_DECALS);
+water_particle_manager water_part_man;
 float gauss_rand_arr[N_RAND_DIST+2];
 rand_gen_t global_rand_gen;
 
 
 extern int star_init, begin_motion, animate2, show_fog;
-extern float zmax_est, zmax, ztop;
+extern float zmax_est, zmax, ztop, water_plane_z;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -353,16 +354,32 @@ void gen_leaf_at(point const *const points, vector3d const &normal, int type, co
 }
 
 
+void water_particle_manager::gen_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num) {
+
+	if (!is_pos_valid(pos)) return; // origin invalid
+
+	for (unsigned i = 0; i < num; ++i) {
+		point ppos;
+		do {ppos = pos + signed_rand_vector_spherical(gen_radius);} while (!is_pos_valid(ppos)); // find a valid particle starting pos
+		vector3d pvel(vadd + signed_rand_vector_spherical(vmag));
+		if (pvel.z < 0.0) {pvel.z *= -1.0;} // make sure it's going up
+		parts.push_back(part_t(ppos, pvel, color));
+	}
+}
+
+
+void add_water_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, float mud_mix, float blood_mix, unsigned num) {
+	water_part_man.gen_particles(pos, vadd, vmag, gen_radius, water_part_man.calc_color(mud_mix, blood_mix), num);
+}
+
+
 void gen_gauss_rand_arr() {
 
 	float const RG_NORM(sqrt(3.0/N_RAND_GAUSS)), mconst(2.0E-4*RG_NORM), aconst(((float)N_RAND_GAUSS)*RG_NORM);
 
 	for (int i = 0; i < N_RAND_DIST+2; ++i) {
 		float val(0.0);
-
-		for (int j = 0; j < N_RAND_GAUSS; ++j) {
-			val += rand()%10000;
-		}
+		for (int j = 0; j < N_RAND_GAUSS; ++j) {val += rand()%10000;}
 		gauss_rand_arr[i] = mconst*val - aconst;
 	}
 }

@@ -253,6 +253,7 @@ void gen_particles(point const &pos, unsigned num, float lt_scale=1.0, bool fade
 int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, float time_mult,
 	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment, float hotness=0.0);
 void gen_leaf_at(point const *const points, vector3d const &normal, int type, colorRGB const &color);
+void add_water_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, float mud_mix, float blood_mix, unsigned num);
 void gen_gauss_rand_arr();
 
 // function prototypes - mesh_gen
@@ -448,7 +449,7 @@ bool mesh_is_underwater(int x, int y);
 void water_color_atten_at_pos(colorRGBA &c, point const &pos);
 void select_water_ice_texture(colorRGBA &color, float *use_this_temp=NULL, bool set_avg_color_instead=0, float specular_scale=1.0);
 void draw_water();
-void add_splash(int xpos, int ypos, float energy, float radius, bool add_sound);
+void add_splash(point const &pos, int xpos, int ypos, float energy, float radius, bool add_sound);
 bool add_water_section(float x1, float y1, float x2, float y2, float zval, float wvol);
 void float_downstream(point &pos, float radius);
 void calc_watershed();

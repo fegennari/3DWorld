@@ -128,7 +128,7 @@ inline vector3d signed_rand_vector_spherical(float scale=1.0) {
 }
 
 
-inline void vadd_rand(vector3d &v, float rval) {v += signed_rand_vector(rval);}
+inline void vadd_rand(vector3d &v, float rval, bool spherical=0) {v += (spherical ? signed_rand_vector_spherical(rval) : signed_rand_vector(rval));}
 
 
 // ***************** VECTOR MATH ********************
