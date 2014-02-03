@@ -100,7 +100,7 @@ texture_t(1, 9, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
 texture_t(1, 9, 32,   32,   1, 3, 0, "@hstripe", 0, 1, 8.0), // not real file
 texture_t(1, 9, 32,   32,   1, 3, 0, "@vstripe", 0, 1, 8.0), // not real file
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube.jpg"),
-texture_t(0, 6, 512,  512,  0, 4, 1, "explosion.png", 1),
+texture_t(0, 6, 512,  512,  0, 4, 1, "atlas/explosion.png", 1),
 texture_t(0, 5, 512,  512,  1, 3, 1, "shiphull.jpg"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube2.jpg"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube_tactical.jpg"),
@@ -113,7 +113,7 @@ texture_t(0, 5, 512,  512,  1, 3, 1, "ice.2.jpg"),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock.03.png"),
 texture_t(0, 6, 16,   16,   1, 3, 0, "black.png"),
 texture_t(0, 6, 16,   16,   1, 3, 0, "white.png"),
-texture_t(0, 6, 512,  512,  0, 4, 0, "fire.png"),
+texture_t(0, 6, 512,  512,  0, 4, 0, "atlas/fire.png"),
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 6, 256,  256,  0, 4, 0, "snowflake.png", 1),
 texture_t(1, 9, 128,  128,  0, 4, 1, "@blur_center"), // not real file
