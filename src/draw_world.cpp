@@ -890,7 +890,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 	}
 	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
-	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, 0, 0, 1, 1, MIN_PARTICLE_FILL);
+	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, tex_range_t(), MIN_PARTICLE_FILL);
 }
 
 
@@ -927,7 +927,8 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	draw_color.alpha = alpha_val;
 	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	if (rot_angle != 0.0) {rotate_vector3d(orient, rot_angle, upv);}
-	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, draw_color, radius, radius); // move slightly away from the object to blend properly with cracks
+	// move slightly away from the object to blend properly with cracks
+	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, draw_color, radius, radius, tex_range);
 }
 
 
@@ -1183,8 +1184,8 @@ void draw_cracks_and_decals() {
 	disable_blend();
 	glDepthMask(GL_TRUE);
 	glEnable(GL_LIGHTING);
-	if (bullet_shader.is_setup()  ) {bullet_shader.add_uniform_float  ("bump_tb_scale", 1.0);} // reset
-	if (lighting_shader.is_setup()) {lighting_shader.add_uniform_float("ambient_scale", 1.0);} // reset
+	if (bullet_shader.is_setup()  ) {bullet_shader.enable();   bullet_shader.add_uniform_float  ("bump_tb_scale", 1.0);} // reset
+	if (lighting_shader.is_setup()) {lighting_shader.enable(); lighting_shader.add_uniform_float("ambient_scale", 1.0);} // reset
 	black_shader.end_shader();
 	lighting_shader.end_shader();
 	bullet_shader.end_shader();

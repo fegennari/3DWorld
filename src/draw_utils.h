@@ -84,14 +84,13 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 
 	vector<vert_norm_tc_color> verts;
 
-	void add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n=plus_z, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
-	void add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n=plus_z,
-		float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0);
+	void add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t());
+	void add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t());
 	void add_xlated_billboard(point const &pos, point const &xlate, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
-		float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool minimize_fill=0);
+		float xsize, float ysize, tex_range_t const &tr=tex_range_t(), bool minimize_fill=0);
 	void add_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
-		float xsize, float ysize, float tx1=0.0, float ty1=0.0, float tx2=1.0, float ty2=1.0, bool minimize_fill=0) {
-			add_xlated_billboard(pos, pos, viewer, up_dir, c, xsize, ysize, tx1, ty1, tx2, ty2, minimize_fill);
+		float xsize, float ysize, tex_range_t const &tr=tex_range_t(), bool minimize_fill=0) {
+			add_xlated_billboard(pos, pos, viewer, up_dir, c, xsize, ysize, tr, minimize_fill);
 	}
 	bool empty() const {return verts.empty();}
 	void clear() {verts.clear();}

@@ -690,6 +690,20 @@ struct colorRGBA : public colorRGB { // size = 16
 };
 
 
+struct tex_range_t {
+
+	float x1, y1, x2, y2;
+
+	tex_range_t() : x1(0.0), y1(0.0), x2(1.0), y2(1.0) {}
+	tex_range_t(float x1_, float y1_, float x2_, float y2_) : x1(x1_), y1(y1_), x2(x2_), y2(y2_) {}
+
+	static tex_range_t from_atlas(unsigned xv, unsigned yv, unsigned nx, unsigned ny) {
+		assert(nx > 0 && ny > 0 && xv < nx && yv < ny);
+		return tex_range_t(xv/float(nx), yv/float(ny), (xv+1)/float(nx), (yv+1)/float(ny));
+	}
+};
+
+
 struct vert_norm { // size = 24
 	point v;
 	vector3d n;
@@ -1321,7 +1335,7 @@ enum {GROUND_TEX = 0, DARK_ROCK_TEX, WATER_TEX, WATER2_TEX, CLOUD_TEX, SUN_TEX, 
 	BARK1_TEX, BARK2_TEX, BARK2_NORMAL_TEX, BARK3_TEX, BARK4_TEX, WATER_NORMAL_TEX, OCEAN_WATER_NORMAL_TEX, WATER_CAUSTIC_TEX,
 	PS_NOISE_TEX, NOISE_GEN_TEX, NOISE_GEN_MIPMAP_TEX, SPARSE_NOISE_TEX, PLAYER_BBB_TEX, PINE_TREE_TEX,
 	FLARE1_TEX, FLARE2_TEX, FLARE3_TEX, FLARE4_TEX, FLARE5_TEX, FOAM_TEX, BULLET_D_TEX, BULLET_A_TEX, BULLET_N_TEX,
-	ROCK_NORMAL_TEX, RAINDROP_TEX, SPACESHIP1_TEX, SPACESHIP2_TEX
+	ROCK_NORMAL_TEX, RAINDROP_TEX, SPACESHIP1_TEX, SPACESHIP2_TEX, BLOOD_SPLAT_TEX
 };
 
 // lighting files/types

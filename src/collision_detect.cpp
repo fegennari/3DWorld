@@ -1357,19 +1357,27 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		obj.disable();
 	}
 	if (!obj.disabled()) {
-		bool create_blood(0);
+		float sz_scale(1.0);
+		int blood_tid(-1);
+		colorRGBA color;
+		tex_range_t tex_range;
 
 		if (type == BLOOD && (fabs(obj.velocity.z) > 1.0 || v0.z > 1.0) && !(obj.flags & STATIC_COBJ_COLL) && (rand()&1) == 0) { // only when on a not-bottom surface
-			create_blood = 1;
+			blood_tid = BLUR_CENT_TEX; // blood droplet splat
+			color     = BLOOD_C;
+			sz_scale  = 2.0;
 		}
 		else if (type == CHUNK && !(obj.flags & TYPE_FLAG) && (fabs(obj.velocity.z) > 1.0 || fabs(v0.z) > 1.0)) {
-			create_blood = 1;
+			blood_tid = BLOOD_SPLAT_TEX; // bloody chunk splat
+			tex_range = tex_range_t::from_atlas((rand()&1), (rand()&1), 2, 2); // 2x2 texture atlas
+			color     = WHITE; // color is in the texture
+			sz_scale  = 4.0;
 		}
-		if (create_blood) {
-			float const sz(2.0*o_radius*rand_uniform(0.6, 1.4));
+		if (blood_tid >= 0) {
+			float const sz(sz_scale*o_radius*rand_uniform(0.6, 1.4));
 			
 			if (decal_contained_in_cobj(cobj, obj.pos, norm, sz, (cdir >> 1))) {
-				gen_decal((obj.pos - norm*o_radius), sz, norm, BLUR_CENT_TEX, index, BLOOD_C);
+				gen_decal((obj.pos - norm*o_radius), sz, norm, blood_tid, index, color, 0, 0, 60*TICKS_PER_SECOND, tex_range);
 			}
 		}
 		deform_obj(obj, norm, v0);
