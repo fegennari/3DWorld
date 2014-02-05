@@ -100,7 +100,7 @@ texture_t(1, 9, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
 texture_t(1, 9, 32,   32,   1, 3, 0, "@hstripe", 0, 1, 8.0), // not real file
 texture_t(1, 9, 32,   32,   1, 3, 0, "@vstripe", 0, 1, 8.0), // not real file
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube.jpg"),
-texture_t(0, 6, 512,  512,  0, 4, 1, "atlas/explosion.png", 1),
+texture_t(0, 6, 0  ,  0  ,  0, 4, 1, "atlas/explosion.png", 1),
 texture_t(0, 5, 512,  512,  1, 3, 1, "shiphull.jpg"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube2.jpg"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube_tactical.jpg"),
@@ -113,7 +113,7 @@ texture_t(0, 5, 512,  512,  1, 3, 1, "ice.2.jpg"),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock.03.png"),
 texture_t(0, 6, 16,   16,   1, 3, 0, "black.png"),
 texture_t(0, 6, 16,   16,   1, 3, 0, "white.png"),
-texture_t(0, 6, 512,  512,  0, 4, 0, "atlas/fire.png"),
+texture_t(0, 6, 0  ,  0  ,  0, 4, 0, "atlas/fire.png"),
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 6, 256,  256,  0, 4, 0, "snowflake.png", 1),
 texture_t(1, 9, 128,  128,  0, 4, 1, "@blur_center"), // not real file
@@ -1792,27 +1792,60 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 }
 
 
-float texture_t::get_component(float xval, float yval, int comp) const {
+unsigned texture_t::get_texel_ix(float u, float v) const {
 
-	assert(comp < ncolors);
-	int tx(int(width *xval) & (width -1)); // width and height are a power of 2
-	int ty(int(height*yval) & (height-1));
+	int tx(int(width *u) & (width -1)); // assumes width and height are a power of 2
+	int ty(int(height*v) & (height-1));
 	if (tx < 0) tx += width;
 	if (ty < 0) ty += height;
 	assert(tx >= 0 && ty >= 0 && tx < width && ty < height);
-	return data[ncolors*(width*ty + tx) + comp]/255.0;
+	return (width*ty + tx);
 }
 
 
-float get_texture_component(unsigned tid, float xval, float yval, int comp) {
+colorRGBA texture_t::get_texel(unsigned ix) const {
+
+	assert(ix < num_pixels());
+	unsigned const off(ncolors*ix);
+
+	switch (ncolors) {
+	case 1: // grayscale
+		{float const val(data[off]/255.0); return colorRGBA(val, val, val, 1.0);} // alpha=1.0
+	case 2: // luminance + alpha
+		{float const val(data[off]/255.0); return colorRGBA(val, val, val, data[off+1]/255.0);}
+	case 3: // RGB
+		return colorRGBA(data[off+0]/255.0, data[off+1]/255.0, data[off+2]/255.0, 1.0); // alpha=1.0
+	case 4: // RGBA
+		return colorRGBA(data[off+0]/255.0, data[off+1]/255.0, data[off+2]/255.0, data[off+3]/255.0);
+	default: assert(0);
+	}
+	return BLACK; // never gets here
+}
+
+
+float texture_t::get_component(float u, float v, int comp) const {
+
+	assert(comp < ncolors);
+	return data[ncolors*get_texel_ix(u, v) + comp]/255.0;
+}
+
+
+float get_texture_component(unsigned tid, float u, float v, int comp) {
 
 	assert(tid < NUM_TEXTURES);
-	return textures[tid].get_component(xval, yval, comp);
+	return textures[tid].get_component(u, v, comp);
+}
+
+colorRGBA get_texture_color(unsigned tid, float u, float v) {
+
+	assert(tid < NUM_TEXTURES);
+	return textures[tid].get_texel(u, v);
 }
 
 
-bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid) {
+vector2d get_billboard_texture_uv(point const *const points, point const &pos) {
 
+	assert(points != NULL);
 	// ordered: (s,t) => (0,1), (0,0), (1,0), (1,1)
 	float d[4]; // distance from coll point to quad edge
 
@@ -1822,9 +1855,16 @@ bool is_billboard_texture_transparent(point const *const points, point const &po
 	}
 	assert(d[0] + d[2] > 0.0);
 	assert(d[1] + d[3] > 0.0);
-	float const tx(d[0]/((d[0] + d[2]))), ty(d[1]/(d[1] + d[3])); // y is upside down
-	assert(tx >= 0.0 && tx <= 1.0 && ty >= 0.0 && ty <= 1.0);
-	return (get_texture_component(tid, tx, ty, 3) == 0.0);
+	vector2d const uv(d[0]/(d[0] + d[2]), d[1]/(d[1] + d[3])); // y is upside down
+	assert(uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0);
+	return uv;
+}
+
+
+bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid) {
+
+	vector2d const uv(get_billboard_texture_uv(points, pos));
+	return (get_texture_component(tid, uv.x, uv.y, 3) == 0.0);
 }
 
 

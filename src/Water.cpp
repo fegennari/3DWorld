@@ -238,7 +238,7 @@ public:
 	void set_big_water(bool bw) {big_water = bw;}
 	vector<vert_norm_color> &get_verts() {return verts;}
 
-	void blend_reflection_color(point const &v, colorRGBA &color, vector3d const &n, point const &camera) {
+	void blend_reflection_color(point const &v, colorRGBA &color, vector3d const &n, point const &camera) const {
 
 		vector3d const view_dir((v - camera).get_norm());
 		float const view_dp(dot_product(view_dir, n));

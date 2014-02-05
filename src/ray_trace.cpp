@@ -207,7 +207,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	}
 	else if (model_coll) {
 		weight  *= model_color.get_luminance();
-		color    = color.modulate_with(model_color);
+		color    = color.modulate_with(model_color); // FIXME: model texture coords?
 		// FIXME - get this from the model?
 		// requires storing material id in each coll_tquad and calculating approx specular component from specular color and textures
 		specular = 0.0;
@@ -216,13 +216,12 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	else { // collision with cobj
 		assert(cindex >= 0);
 		coll_obj const &cobj(coll_objects[cindex]);
-		// FIXME: do a texture lookup for textured cobjs
-		float luminance(1.0), alpha(1.0);
-		get_lum_alpha(cobj.cp.color, cobj.cp.tid, luminance, alpha); // use alpha?
+		colorRGBA const cobj_color(cobj.get_color_at_point(cpos, cnorm));
+		float const alpha(cobj_color.alpha);
 		specular = cobj.cp.specular;
 		shine    = cobj.cp.shine;
-		weight  *= luminance;
-		color    = color.modulate_with(cobj.get_avg_color());
+		weight  *= cobj_color.get_luminance();
+		color    = color.modulate_with(cobj_color);
 
 		// calculate refracted ray
 		if (alpha < 1.0) { // semi-transparent

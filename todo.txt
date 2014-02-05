@@ -38,9 +38,10 @@ Visual Studio profile: http://codeka.com/blogs/index.php/2009/03/21/got-visual-s
 static error check (analysis)
 Path tracing dynamic light in Sponza
 
-Raytracing rendering mode
-Ray trace test last cobj and use that tmin if intersected
+Raytracing rendering mode + last cobj test/tmin update
 Ray trace use texel color from cobj
 
 Animated smoke texture (smilar to fire and explosion)
 Better pine tree texture
+
+GPU temperature/perf monitor

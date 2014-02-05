@@ -1095,7 +1095,10 @@ public:
 	int write_to_jpg(std::string const &fn) const;
 	int write_to_bmp(std::string const &fn) const;
 	int write_to_png(std::string const &fn) const;
-	float get_component(float xval, float yval, int comp) const;
+	unsigned get_texel_ix(float u, float v) const;
+	colorRGBA get_texel(unsigned ix) const;
+	colorRGBA get_texel(float u, float v) const {return get_texel(get_texel_ix(u, v));}
+	float get_component(float u, float v, int comp) const;
 	void check_init() {if (tid == 0) do_gl_init();}
 	unsigned num_pixels() const {return width*height;}
 	unsigned num_bytes()  const {return ncolors*num_pixels();}

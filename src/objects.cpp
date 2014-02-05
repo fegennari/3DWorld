@@ -339,10 +339,8 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 		break;
 
 	case COLL_POLYGON:
-		{
-			draw_extruded_polygon(tid, shader, 1, poly_verts);
-			draw_and_clear_verts(poly_verts, GL_TRIANGLES);
-		}
+		draw_extruded_polygon(tid, shader, 1, poly_verts);
+		draw_and_clear_verts(poly_verts, GL_TRIANGLES);
 		break;
 	}
 }

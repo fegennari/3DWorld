@@ -502,7 +502,9 @@ void disable_texgen();
 void disable_textures_texgen();
 void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], vector3d const &offset, bool swap_txy=0, shader_t *shader=NULL);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
-float get_texture_component(unsigned tid, float xval, float yval, int comp);
+float get_texture_component(unsigned tid, float u, float v, int comp);
+colorRGBA get_texture_color(unsigned tid, float u, float v);
+vector2d get_billboard_texture_uv(point const *const points, point const &pos);
 bool is_billboard_texture_transparent(point const *const points, point const &pos, int tid);
 
 // function prototypes - sun flares

@@ -303,6 +303,53 @@ bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsi
 }
 
 
+colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal) const {
+
+	// FIXME: model3d cobjs don't have cp.tid set here, they use textures from the model3d class + per-vertex tex coords
+	if (cp.tid < 0) {return cp.color;}
+#if 1
+	return get_avg_color();
+#else
+	if (is_billboard_cobj()) { // we assume normal == norm
+		vector2d const uv(get_billboard_texture_uv(points, pos));
+		return get_texture_color(cp.tid, uv.x, uv.y);
+	}
+	float tc[2] = {0};
+
+	switch (type) {
+	case COLL_CUBE:
+		//draw_coll_cube();
+		break;
+	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT:
+		//setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(cp.tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader);
+		//if (!(cp.surfs & 1)) {set_poly_texgen(cp.tid, (points[1] - points[0]).get_norm(), shader);} // draw ends
+		break;
+	case COLL_SPHERE:
+		//setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(cp.tid)*cp.tscale, plus_z, texture_offset, shader);
+		break;
+	case COLL_POLYGON: // we assume normal == norm
+		if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
+		//set_poly_texgen(cp.tid, normal, shader);
+		float const scale[2] = {cp.tscale, get_tex_ar(cp.tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
+		//setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, shader);
+		int const d0(get_min_dim(norm));
+		vector3d v[2] = {all_zeros, all_zeros};
+		v[0][d0] = 1.0;
+		cross_product(norm, v[0], v[1]);
+		cross_product(norm, v[1], v[0]);
+
+		for (unsigned i = 0; i < 2; ++i) {
+			float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(texture_offset, v[i]))};
+			//set_texgen_vec4(tex_param, ((i != 0) ^ cp.swap_txy), 1, shader);
+			glTexGenfv((((i != 0) ^ cp.swap_txy) ? GL_T : GL_S), GL_EYE_PLANE, tex_param);
+		}
+		break;
+	}
+#endif
+}
+
+
 bool coll_obj::is_occluder() const {
 	
 	if (status != COLL_STATIC || !cp.draw || is_semi_trans()) return 0; // cp.might_be_drawn()?
