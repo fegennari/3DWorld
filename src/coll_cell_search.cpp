@@ -303,51 +303,65 @@ bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsi
 }
 
 
-colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal) const {
+colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal, bool fast) const {
 
 	// FIXME: model3d cobjs don't have cp.tid set here, they use textures from the model3d class + per-vertex tex coords
-	if (cp.tid < 0) {return cp.color;}
+	if (fast) {return get_avg_color();}
 
 	if (is_billboard_cobj()) { // we assume normal == norm
 		vector2d const uv(get_billboard_texture_uv(points, pos));
 		return get_texture_color(cp.tid, uv.x, uv.y);
 	}
-#if 1
-	return get_avg_color();
-#else
-	float tc[2] = {0};
+	float tc[2] = {0}; // texture uv
+	float const tscale[2] = {cp.tscale, get_tex_ar(cp.tid)*cp.tscale};
 
 	switch (type) {
 	case COLL_CUBE:
-		//draw_coll_cube();
-		break;
+		{
+			int const dim(::get_max_dim(normal)); // Note: dir doesn't matter
+			unsigned const t0((2-dim)>>1), t1(1+((2-dim)>0));
+
+			for (unsigned e = 0; e < 2; ++e) {
+				unsigned const tdim(e ? t1 : t0);
+				bool const s_or_t(cp.swap_txy ^ (e != 0));
+
+				if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
+					tc[s_or_t] = (pos[tdim] - d[tdim][0] + texture_offset[tdim])/(d[tdim][1] - d[tdim][0]);
+				}
+				else {
+					tc[s_or_t] = (pos[tdim] + texture_offset[tdim])*tscale[e];
+				}
+			}
+			break;
+		}
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		//setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(cp.tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader);
+		//setup_sphere_cylin_texgen(tscale[0], tscale[1], (points[1] - points[0]), texture_offset, shader);
 		//if (!(cp.surfs & 1)) {set_poly_texgen(cp.tid, (points[1] - points[0]).get_norm(), shader);} // draw ends
-		break;
-	case COLL_SPHERE:
-		//setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(cp.tid)*cp.tscale, plus_z, texture_offset, shader);
-		break;
-	case COLL_POLYGON: // we assume normal == norm
-		if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
-		//set_poly_texgen(cp.tid, normal, shader);
-		float const scale[2] = {cp.tscale, get_tex_ar(cp.tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
-		//setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, shader);
-		int const d0(get_min_dim(norm));
-		vector3d v[2] = {all_zeros, all_zeros};
-		v[0][d0] = 1.0;
-		cross_product(norm, v[0], v[1]);
-		cross_product(norm, v[1], v[0]);
+		return get_avg_color(); // not supported yet
 
-		for (unsigned i = 0; i < 2; ++i) {
-			float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(texture_offset, v[i]))};
-			//set_texgen_vec4(tex_param, ((i != 0) ^ cp.swap_txy), 1, shader);
-			glTexGenfv((((i != 0) ^ cp.swap_txy) ? GL_T : GL_S), GL_EYE_PLANE, tex_param);
+	case COLL_SPHERE:
+		//setup_sphere_cylin_texgen(tscale[0], tscale[1], plus_z, texture_offset, shader);
+		return get_avg_color(); // not supported yet
+
+	case COLL_POLYGON: // we assume normal == norm
+		{
+			if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
+			float const xlate[2] = {cp.tdx, cp.tdy};
+			int const d0(get_min_dim(norm));
+			vector3d v[2] = {all_zeros, all_zeros};
+			v[0][d0] = 1.0;
+			cross_product(norm, v[0], v[1]);
+			cross_product(norm, v[1], v[0]);
+
+			for (unsigned i = 0; i < 2; ++i) {
+				//float const tex_param[4] = {tscale[i]*v[i].x, tscale[i]*v[i].y, tscale[i]*v[i].z, (xlate[i] + tscale[i]*dot_product(texture_offset, v[i]))};
+				tc[(i != 0) ^ cp.swap_txy] = tscale[i]*dot_product(v[i], pos+texture_offset) + xlate[i];
+			}
 		}
 		break;
 	}
-#endif
+	return get_texture_color(cp.tid, tc[0], tc[1]); // Note: slow due to texture memory access
 }
 
 

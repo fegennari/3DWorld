@@ -216,7 +216,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	else { // collision with cobj
 		assert(cindex >= 0);
 		coll_obj const &cobj(coll_objects[cindex]);
-		colorRGBA const cobj_color(cobj.get_color_at_point(cpos, cnorm));
+		colorRGBA const cobj_color(cobj.get_color_at_point(cpos, cnorm, 1)); // fast/average color
 		float const alpha(cobj_color.alpha);
 		specular = cobj.cp.specular;
 		shine    = cobj.cp.shine;

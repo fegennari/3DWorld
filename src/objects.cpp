@@ -553,14 +553,6 @@ float coll_obj::get_light_transmit(point v1, point v2) const {
 }
 
 
-colorRGBA coll_obj::get_avg_color() const {
-
-	colorRGBA color(cp.color);
-	if (cp.tid >= 0) color = color.modulate_with(texture_color(cp.tid));
-	return color;
-}
-
-
 bool coll_obj::check_poly_billboard_alpha(point const &p1, point const &p2, float t) const {
 
 	return (!has_poly_billboard_alpha() || !is_billboard_texture_transparent(points, (p1 + (p2 - p1)*t), cp.tid));

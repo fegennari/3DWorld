@@ -129,7 +129,7 @@ public:
 	point get_center_pt() const;
 	float get_max_dim()   const;
 	float get_light_transmit(point v1, point v2) const;
-	colorRGBA get_avg_color() const;
+	colorRGBA get_avg_color() const {return ((cp.tid >= 0) ? cp.color.modulate_with(texture_color(cp.tid)) : cp.color);}
 	void bounding_sphere(point &center, float &brad) const;
 	bool is_billboard_cobj() const {return (is_billboard && is_thin_poly() && npoints == 4);}
 	bool has_poly_billboard_alpha() const {return (is_billboard_cobj() && cp.has_alpha_texture());}
@@ -137,7 +137,7 @@ public:
 	bool line_intersect(point const &p1, point const &p2) const;
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const;
 	bool intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const; // coll_cell_search.cpp
-	colorRGBA get_color_at_point(point const &pos, vector3d const &normal) const;
+	colorRGBA get_color_at_point(point const &pos, vector3d const &normal, bool fast) const;
 	bool is_occluded_from_camera() const;
 	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
 	void create_portal() const; // destroy_cobj.cpp

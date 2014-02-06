@@ -132,8 +132,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 	point const pos(points[0]), camera(get_camera_pos());
 	bool inside(!back_face_cull);
 	//bool const textured(tid >= 0); // Note: we assume the cube is always textured, so always setup texgen
-	float const ar(get_tex_ar(tid));
-	float const tscale[2] = {cp.tscale, ar*cp.tscale};
+	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
 
 	if (!inside) { // check if in the camera's view volume intersects the cube - if so we must render all faces
 		float const dist(NEAR_CLIP + CAMERA_RADIUS);
