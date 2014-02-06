@@ -1121,7 +1121,7 @@ void tile_t::ensure_weights(mesh_xy_grid_cache_t &height_gen) {
 unsigned tile_t::get_lod_level(bool reflection_pass) const {
 
 	unsigned lod_level((reflection_pass && min_normal_z > 0.1) ? min(NUM_LODS-1, 1U) : 0);
-	float dist(get_dist_to_camera_in_tiles());
+	float dist(get_dist_to_camera_in_tiles(0));
 	
 	if (min_normal_z > 0.0) { // normals have been calculated, adjust detail based on max slope
 		if (min_normal_z > 0.9) { // flat, lower detail
