@@ -41,7 +41,7 @@ pt_line_drawer bubble_pld;
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, island, xoff, yoff;
-extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode;
+extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, DISABLE_WATER;
 extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset;
@@ -1317,6 +1317,7 @@ void draw_env_other() {
 void draw_splash(float x, float y, float z, float size, colorRGBA color) {
 
 	assert(size >= 0.0);
+	if (DISABLE_WATER || !(display_mode & 0x04)) return;
 	if (size == 0.0 || temperature <= W_FREEZE_POINT && !island) return;
 	if (size > 0.1) size = sqrt(10.0*size)/10.0;
 	unsigned const num_rings(min(10U, (unsigned)ceil(size)));

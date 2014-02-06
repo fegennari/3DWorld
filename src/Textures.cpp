@@ -1794,8 +1794,11 @@ void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, u
 
 unsigned texture_t::get_texel_ix(float u, float v) const {
 
-	int tx(int(width *u) & (width -1)); // assumes width and height are a power of 2
-	int ty(int(height*v) & (height-1));
+	u -= 1.0E-6f; v -= 1.0E-6f; // make 1.0 equal width-1 | height-1
+	//int tx(int(width *u) & (width -1));
+	//int ty(int(height*v) & (height-1)); // assumes width and height are a power of 2
+	int tx(int(width *u) % width ); // width and height can be any nonzero value
+	int ty(int(height*v) % height);
 	if (tx < 0) tx += width;
 	if (ty < 0) ty += height;
 	assert(tx >= 0 && ty >= 0 && tx < width && ty < height);
@@ -1855,8 +1858,9 @@ vector2d get_billboard_texture_uv(point const *const points, point const &pos) {
 	}
 	assert(d[0] + d[2] > 0.0);
 	assert(d[1] + d[3] > 0.0);
-	vector2d const uv(d[0]/(d[0] + d[2]), d[1]/(d[1] + d[3])); // y is upside down
-	assert(uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0);
+	vector2d uv(d[0]/(d[0] + d[2]), d[1]/(d[1] + d[3])); // y is upside down
+	uv.x = CLIP_TO_01(uv.x); uv.y = CLIP_TO_01(uv.y); // clamp uv to account for fp rounding errors (and incorrect pos?)
+	//assert(uv.x >= 0.0 && uv.x <= 1.0 && uv.y >= 0.0 && uv.y <= 1.0); // more restrictive case
 	return uv;
 }
 

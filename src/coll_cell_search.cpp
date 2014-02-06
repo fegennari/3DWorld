@@ -307,13 +307,14 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal)
 
 	// FIXME: model3d cobjs don't have cp.tid set here, they use textures from the model3d class + per-vertex tex coords
 	if (cp.tid < 0) {return cp.color;}
-#if 1
-	return get_avg_color();
-#else
+
 	if (is_billboard_cobj()) { // we assume normal == norm
 		vector2d const uv(get_billboard_texture_uv(points, pos));
 		return get_texture_color(cp.tid, uv.x, uv.y);
 	}
+#if 1
+	return get_avg_color();
+#else
 	float tc[2] = {0};
 
 	switch (type) {
