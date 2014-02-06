@@ -493,7 +493,7 @@ void draw_trees(bool shadow_only) {
 		//glFinish(); // testing
 		//PRINT_TIME(((tree_mode & 2) ? "Large + Small Trees" : "Large Trees"));
 	}
-	leaf_color_changed = 0; // Note: only visible trees will be updated
+	if (!shadow_only) {leaf_color_changed = 0;} // Note: only visible trees will be updated
 }
 
 
