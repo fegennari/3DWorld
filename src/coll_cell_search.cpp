@@ -316,7 +316,8 @@ void get_ortho_vectors(vector3d const &norm, vector3d v[2]) {
 colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal, bool fast) const {
 
 	// FIXME: model3d cobjs don't have cp.tid set here, they use textures from the model3d class + per-vertex tex coords
-	if (fast || cp.tid < 0) {return get_avg_color();}
+	if (cp.tid < 0) {return cp.color;}
+	if (fast)       {return get_avg_color();}
 
 	if (is_billboard_cobj()) { // we assume normal == norm
 		vector2d const uv(get_billboard_texture_uv(points, pos));
@@ -382,7 +383,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 		}
 		break;
 	}
-	return get_texture_color(cp.tid, tc[0], tc[1]); // Note: slow due to texture memory access
+	return cp.color.modulate_with(get_texture_color(cp.tid, tc[0], tc[1])); // Note: slow due to texture memory access
 }
 
 
