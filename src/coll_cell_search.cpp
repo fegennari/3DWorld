@@ -303,10 +303,20 @@ bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsi
 }
 
 
+void get_ortho_vectors(vector3d const &norm, vector3d v[2]) {
+
+	int const d0(get_min_dim(norm));
+	v[0] = zero_vector;
+	v[0][d0] = 1.0;
+	cross_product(norm, v[0], v[1]);
+	cross_product(norm, v[1], v[0]);
+}
+
+
 colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal, bool fast) const {
 
 	// FIXME: model3d cobjs don't have cp.tid set here, they use textures from the model3d class + per-vertex tex coords
-	if (fast) {return get_avg_color();}
+	if (fast || cp.tid < 0) {return get_avg_color();}
 
 	if (is_billboard_cobj()) { // we assume normal == norm
 		vector2d const uv(get_billboard_texture_uv(points, pos));
@@ -314,6 +324,9 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 	}
 	float tc[2] = {0}; // texture uv
 	float const tscale[2] = {cp.tscale, get_tex_ar(cp.tid)*cp.tscale};
+	float const xlate [2] = {cp.tdx, cp.tdy};
+	vector3d v[2], dir(plus_z); // default for sphere case
+	point const poff(pos + texture_offset);
 
 	switch (type) {
 	case COLL_CUBE:
@@ -326,38 +339,46 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 				bool const s_or_t(cp.swap_txy ^ (e != 0));
 
 				if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
-					tc[s_or_t] = (pos[tdim] - d[tdim][0] + texture_offset[tdim])/(d[tdim][1] - d[tdim][0]);
+					tc[s_or_t] = (poff[tdim] - d[tdim][0])/(d[tdim][1] - d[tdim][0]);
 				}
 				else {
-					tc[s_or_t] = (pos[tdim] + texture_offset[tdim])*tscale[e];
+					tc[s_or_t] = poff[tdim]*tscale[e];
 				}
 			}
 			break;
 		}
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		//setup_sphere_cylin_texgen(tscale[0], tscale[1], (points[1] - points[0]), texture_offset, shader);
-		//if (!(cp.surfs & 1)) {set_poly_texgen(cp.tid, (points[1] - points[0]).get_norm(), shader);} // draw ends
-		return get_avg_color(); // not supported yet
+		dir = points[1] - points[0];
 
-	case COLL_SPHERE:
-		//setup_sphere_cylin_texgen(tscale[0], tscale[1], plus_z, texture_offset, shader);
-		return get_avg_color(); // not supported yet
-
-	case COLL_POLYGON: // we assume normal == norm
-		{
-			if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
-			float const xlate[2] = {cp.tdx, cp.tdy};
-			int const d0(get_min_dim(norm));
-			vector3d v[2] = {all_zeros, all_zeros};
-			v[0][d0] = 1.0;
-			cross_product(norm, v[0], v[1]);
-			cross_product(norm, v[1], v[0]);
+		if (!(cp.surfs & 1) && fabs(dot_product(dir, normal)/dir.mag()) > 0.5) { // assume we hit the cylinder end
+			get_poly_texgen_dirs(dir.get_norm(), v);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				//float const tex_param[4] = {tscale[i]*v[i].x, tscale[i]*v[i].y, tscale[i]*v[i].z, (xlate[i] + tscale[i]*dot_product(texture_offset, v[i]))};
-				tc[(i != 0) ^ cp.swap_txy] = tscale[i]*dot_product(v[i], pos+texture_offset) + xlate[i];
+				tc[(i != 0) ^ cp.swap_txy] = tscale[i]*dot_product(v[i], poff) + xlate[i];
 			}
+			break;
+		}
+		// else assume we hit the cylinder sides, and fall through
+	case COLL_SPHERE: // dir will be +z
+		{
+			int const dim(::get_max_dim(dir));
+			point p1, p2;
+	
+			for (unsigned i = 0; i < 3; ++i) {
+				p1[i] = (i == dim) ? tscale[0] : 0.0;
+				p2[i] = (i == dim) ? 0.0       : tscale[1];
+			}
+			tc[0] = dot_product(p1, poff);
+			tc[1] = dot_product(p2, poff);
+			break;
+		}
+	case COLL_POLYGON: // we assume normal == norm
+		if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
+		get_poly_texgen_dirs(norm, v);
+
+		for (unsigned i = 0; i < 2; ++i) {
+			tc[(i != 0) ^ cp.swap_txy] = tscale[i]*dot_product(v[i], poff) + xlate[i];
 		}
 		break;
 	}

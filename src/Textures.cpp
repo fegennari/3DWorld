@@ -1761,15 +1761,21 @@ void disable_textures_texgen() {
 }
 
 
+void get_poly_texgen_dirs(vector3d const &norm, vector3d v[2]) { // similar to get_ortho_vectors()
+
+	v[0] = all_zeros;
+	v[0][get_min_dim(norm)] = 1.0;
+	cross_product(norm, v[0], v[1]);
+	cross_product(norm, v[1], v[0]);
+}
+
+
 void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2],
 	vector3d const &offset, bool swap_txy, shader_t *shader)
 {
-	int const d0(get_min_dim(norm));
-	vector3d v[2] = {all_zeros, all_zeros};
-	v[0][d0] = 1.0;
-	cross_product(norm, v[0], v[1]);
-	cross_product(norm, v[1], v[0]);
-
+	vector3d v[2];
+	get_poly_texgen_dirs(norm, v);
+	
 	for (unsigned i = 0; i < 2; ++i) {
 		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(offset, v[i]))};
 		set_texgen_vec4(tex_param, ((i != 0) ^ swap_txy), 1, shader);

@@ -500,6 +500,7 @@ void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float t
 void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off=0.0, int mode=GL_EYE_LINEAR);
 void disable_texgen();
 void disable_textures_texgen();
+void get_poly_texgen_dirs(vector3d const &norm, vector3d v[2]);
 void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], vector3d const &offset, bool swap_txy=0, shader_t *shader=NULL);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
 float get_texture_component(unsigned tid, float u, float v, int comp);
