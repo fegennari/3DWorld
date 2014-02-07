@@ -195,7 +195,7 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 }
 
 
-class water_spalsh_search {
+class water_spalsh_search { // for projectiles, etc.
 
 	point const &pos1, &pos2;
 	float splash_val;
@@ -223,7 +223,7 @@ public:
 			float const mx(get_xval(xpos)), my(get_yval(ypos));
 		
 			if (splash_pos.x > (mx-DX_VAL) && splash_pos.x < (mx+DX_VAL) && splash_pos.y > (my-DY_VAL) && splash_pos.y < (my+DY_VAL)) {
-				add_splash(splash_pos, xpos, ypos, 25.0, 0.01, 1); // dynamic water
+				add_splash(splash_pos, xpos, ypos, 25.0, 0.01, 1, 0.2*(pos2 - pos1).get_norm()); // dynamic water
 				draw_splash(splash_pos.x, splash_pos.y, (wmz + 0.0001), splash_val);
 				gen_line_of_bubbles(splash_pos, pos2);
 				return 1;

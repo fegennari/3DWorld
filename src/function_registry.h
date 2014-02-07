@@ -450,7 +450,7 @@ bool mesh_is_underwater(int x, int y);
 void water_color_atten_at_pos(colorRGBA &c, point const &pos);
 void select_water_ice_texture(colorRGBA &color, float *use_this_temp=NULL, bool set_avg_color_instead=0, float specular_scale=1.0);
 void draw_water();
-void add_splash(point const &pos, int xpos, int ypos, float energy, float radius, bool add_sound);
+void add_splash(point const &pos, int xpos, int ypos, float energy, float radius, bool add_sound, vector3d const &vadd=zero_vector);
 bool add_water_section(float x1, float y1, float x2, float y2, float zval, float wvol);
 void float_downstream(point &pos, float radius);
 void calc_watershed();

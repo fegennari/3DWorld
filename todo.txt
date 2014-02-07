@@ -19,13 +19,8 @@ TT mode underwater content
 
 User-placed teleporter weapon (translocator?)
 * Burning smiley/skull/cobj texture
-Better water splashes (bullet hits, etc.)
 Cache the static parts of shadow maps?
 * reorder physics/collision/AI to be after rendering static parts of the scene
-
-************************
-
-Star shader: https://www.shadertoy.com/view/4dXGR4
 
 Fog decreases at high altitude, increases in valleys
   - draw more distant tiles (larger/lower res at high delta-z)
@@ -36,12 +31,10 @@ Perlin noise function experiments: http://www.iquilezles.org/www/articles/moreno
 Render nearby planet in chunks starting with draw_cube_mapped_sphere()
 Visual Studio profile: http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
 static error check (analysis)
-Path tracing dynamic light in Sponza
 
+Path tracing dynamic light in Sponza
 Raytracing rendering mode + last cobj test/tmin update
-Ray trace use texel color from cobj
+Ray trace use texel color from cobj (faster)
 
 Animated smoke texture (smilar to fire and explosion)
 Better pine tree texture
-
-GPU temperature/perf monitor
