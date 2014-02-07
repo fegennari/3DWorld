@@ -455,62 +455,88 @@ bool csg_cube::subtract_from_cube(coll_obj_group &new_cobjs, coll_obj const &cob
 }
 
 
-// returns 1 if some work is done
+float get_closest_pt_on_line_t(point const &pos, point const &l1, point const &l2) { // use for line lights as well?
+
+	vector3d const L(l2 - l1);
+	return CLIP_TO_01(dot_product((pos - l1), L)/L.mag_sq());
+}
+
+
+// subtract ourself from cobj; returns 1 if some work is done
 bool csg_cube::subtract_from_cylinder(coll_obj_group &new_cobjs, coll_obj &cobj) const { // subtract ourself from cobjs[index]
 
 	assert(cobj.is_cylinder());
 	float const radius(max(cobj.radius, cobj.radius2)); // containment/intersection tests are conservative
 	point const &p0(cobj.points[0]), &p1(cobj.points[1]);
-
-	for (unsigned p = 0; p < 3; ++p) { // m,n,p dimensions
-		unsigned const m((p+1)%3), n((p+2)%3);
-		if (p0[m] != p1[m] || p0[n] != p1[n]) continue;
-		assert(p0[p] != p1[p]);
+	int const p(get_max_dim(p0 - p1));
+	unsigned const m((p+1)%3), n((p+2)%3);
+	
+	if (p0[m] != p1[m] || p0[n] != p1[n]) { // not axis aligned, we approximate the cube as sphere bounding the min dim
+		if (cobj.radius != cobj.radius2) return 0; // not handling non-axis aligned truncated cone
+		float const radius(0.5*min_len());
+		if (radius < cobj.radius) return 0; // cylinder is too thick
+		point const center(get_cube_center());
+		if (!pt_line_dist_less_than(center, p0, p1, radius)) return 0; // centerline is too far
+		float const delta_t(radius/p2p_dist(p0, p1));
+		float const t(get_closest_pt_on_line_t(center, p0, p1)), t0(t - delta_t), t1(t + delta_t);
 		
-		if (p0[p] > p1[p]) {
-			swap(cobj.points[0], cobj.points[1]); // upside down (note that p0/p1 are also swapped)
-			swap(cobj.radius,    cobj.radius2);
-		}
-		float const c[2][2] = {{p0[m]-radius, p0[m]+radius}, {p0[n]-radius, p0[n]+radius}};
-		if (c[0][0] <  d[m][0] || c[0][1] >  d[m][1]) return 0; // no m-containment
-		if (c[1][0] <  d[n][0] || c[1][1] >  d[n][1]) return 0; // no n-containment
-		if (p0[p]   >= d[p][1] || p1[p]   <= d[p][0]) return 0; // no p-intersection
-		if (p0[p]   >= d[p][0] && p1[p]   <= d[p][1]) return 1; // p-containment - remove
-		csg_cube const cube(cobj, 1);
-		if (cube.is_zero_area()) return 1; // if zero area then remove it entirely
-		cobj.points[0][m] = cobj.points[1][m]; // update cobj.d?
-		cobj.points[0][n] = cobj.points[1][n];
-		unsigned nv(0);
-		float vals[4];
-
-		if (p0[p] < d[p][0]) {
-			vals[nv++] = p0[p];   // A
-			vals[nv++] = d[p][0]; // B
-		}
-		if (p1[p] > d[p][1]) {
-			vals[nv++] = d[p][1]; // C
-			vals[nv++] = p1[p];   // D
-		}
-		for (unsigned i = 0; i < nv; i += 2) {
+		if (t0 > 0.0) { // add p0 segment
 			new_cobjs.push_back(cobj); // keep properties of old coll cylinder
-			new_cobjs.back().cp.surfs = 0; // reset edge flags in case the ends become exposed
-			
-			for (unsigned j = 0; j < 2; ++j) {
-				new_cobjs.back().points[j][p] = vals[i+j];
-			}
-			if (cobj.radius != cobj.radius2) { // calculate new radius values
-				float rv[2];
-
-				for (unsigned j = 0; j < 2; ++j) {
-					rv[j] = cobj.radius + (cobj.radius2 - cobj.radius)*(vals[i+j] - p0[p])/(p1[p] - p0[p]);
-				}
-				new_cobjs.back().radius  = rv[0];
-				new_cobjs.back().radius2 = rv[1];
-			}
+			new_cobjs.back().cp.surfs  = 0; // reset edge flags in case the ends become exposed
+			new_cobjs.back().points[1] = p0 + t0*(p1 - p0); // set new p1
+		}
+		if (t1 < 1.0) { // add p1 segment
+			new_cobjs.push_back(cobj); // keep properties of old coll cylinder
+			new_cobjs.back().cp.surfs  = 0; // reset edge flags in case the ends become exposed
+			new_cobjs.back().points[0] = p0 + t1*(p1 - p0); // set new p0
 		}
 		return 1;
-	} // for p
-	return 0;
+	}
+	assert(p0[p] != p1[p]);
+		
+	if (p0[p] > p1[p]) {
+		swap(cobj.points[0], cobj.points[1]); // upside down (note that p0/p1 are also swapped)
+		swap(cobj.radius,    cobj.radius2);
+	}
+	float const c[2][2] = {{p0[m]-radius, p0[m]+radius}, {p0[n]-radius, p0[n]+radius}};
+	if (c[0][0] <  d[m][0] || c[0][1] >  d[m][1]) return 0; // no m-containment
+	if (c[1][0] <  d[n][0] || c[1][1] >  d[n][1]) return 0; // no n-containment
+	if (p0[p]   >= d[p][1] || p1[p]   <= d[p][0]) return 0; // no p-intersection
+	if (p0[p]   >= d[p][0] && p1[p]   <= d[p][1]) return 1; // p-containment - remove
+	csg_cube const cube(cobj, 1);
+	if (cube.is_zero_area()) return 1; // if zero area then remove it entirely
+	cobj.points[0][m] = cobj.points[1][m]; // update cobj.d?
+	cobj.points[0][n] = cobj.points[1][n];
+	unsigned nv(0);
+	float vals[4];
+
+	if (p0[p] < d[p][0]) {
+		vals[nv++] = p0[p];   // A
+		vals[nv++] = d[p][0]; // B
+	}
+	if (p1[p] > d[p][1]) {
+		vals[nv++] = d[p][1]; // C
+		vals[nv++] = p1[p];   // D
+	}
+	for (unsigned i = 0; i < nv; i += 2) {
+		new_cobjs.push_back(cobj); // keep properties of old coll cylinder
+		coll_obj &ncobj(new_cobjs.back());
+		ncobj.cp.surfs = 0; // reset edge flags in case the ends become exposed
+			
+		for (unsigned j = 0; j < 2; ++j) {
+			ncobj.points[j][p] = vals[i+j];
+		}
+		if (cobj.radius != cobj.radius2) { // calculate new radius values
+			float rv[2];
+
+			for (unsigned j = 0; j < 2; ++j) {
+				rv[j] = cobj.radius + (cobj.radius2 - cobj.radius)*(vals[i+j] - p0[p])/(p1[p] - p0[p]);
+			}
+			ncobj.radius  = rv[0];
+			ncobj.radius2 = rv[1];
+		}
+	} // for i
+	return 1;
 }
 
 
@@ -899,6 +925,9 @@ bool coll_obj::subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cub
 		for (unsigned i = 0; i < new_cobjs.size(); ++i) {
 			cube.unset_adjacent_edge_flags(new_cobjs[i]); // is this necessary?
 		}
+	}
+	else if (cube.contains_cube(*this)) {
+		removed = 1; // completely contained
 	}
 	else if (is_cylinder()) {
 		removed = cube.subtract_from_cylinder(new_cobjs, *this);

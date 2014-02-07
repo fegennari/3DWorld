@@ -282,9 +282,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		if (cobjs[i].cp.cobj_type != COBJ_TYPE_STD)    continue;
 		int const D(cobjs[i].destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
-		bool const is_cylinder(cobjs[i].is_cylinder()), is_cube(cobjs[i].type == COLL_CUBE), is_polygon(cobjs[i].type == COLL_POLYGON);
-		bool const csg_obj(is_cube || is_cylinder || is_polygon), shatter(D >= SHATTERABLE);
-		if (!shatter && !csg_obj)       continue;
+		bool const is_cube(cobjs[i].type == COLL_CUBE), is_polygon(cobjs[i].type == COLL_POLYGON), shatter(D >= SHATTERABLE);
 		if (!cobjs[i].intersects(cube)) continue; // no intersection
 		csg_cube const cube2(cobjs[i], 1);
 		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
