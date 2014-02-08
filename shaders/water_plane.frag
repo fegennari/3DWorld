@@ -16,9 +16,14 @@ vec3 get_wave_normal(in vec2 tc) {
 vec3 deep_water_normal_lookup(in vec2 tc) {
 	return 2.0*(texture2D(deep_water_normal_tex, 1.04*tc).rgb - 0.5);
 }
-vec3 get_deep_wave_normal(in vec2 tc) {
+vec4 get_norm_foam_val(vec3 n) {
+	return vec4(n, clamp(3.0*(0.5 - dot(n, vec3(0,0,1))), 0.0, 1.0)); // use dot product with +z
+}
+vec4 get_deep_wave_normal(in vec2 tc) {
 	float ntime = 2.0*abs(fract(0.011*wave_time) - 0.5);
-	return mix(deep_water_normal_lookup(tc), deep_water_normal_lookup(tc + vec2(0.5, 0.5)), ntime);
+	vec3 n1 = deep_water_normal_lookup(tc);
+	vec3 n2 = deep_water_normal_lookup(tc + vec2(0.5, 0.5));
+	return mix(get_norm_foam_val(n1), get_norm_foam_val(n2), ntime);
 }
 
 void main()
@@ -31,6 +36,7 @@ void main()
 	vec3 norm   = normalize(normal); // renormalize
 	vec2 ripple = vec2(0,0);
 	vec3 add_color = vec3(0);
+	float foam_amt = 0.0;
 
 	if (add_noise) { // for rain
 		vec3 wave_n = get_wave_normal(fract(4.61*noise_time)*3.0*proj_pos.xy/proj_pos.w);
@@ -48,8 +54,10 @@ void main()
 #ifdef USE_WATER_DEPTH
 		if (deep_water_waves) {
 			// deep water waves shouldn't move (much) with the wind, but that would require another set of TCs, texgen matrix, etc.
-			vec3 deep_wave_n = 1.25*wave_amplitude*get_deep_wave_normal(gl_TexCoord[0].st);
-			wave_n = mix(wave_n, deep_wave_n, clamp((0.8*depth*mesh_z_scale - 0.2), 0.0, 1.0));
+			vec4 norm_fa = get_deep_wave_normal(gl_TexCoord[0].st);
+			float deep_wave_scale = clamp((0.8*depth*mesh_z_scale - 0.2), 0.0, 1.0);
+			wave_n   = mix(wave_n, 1.25*wave_amplitude*normalize(norm_fa.xyz), deep_wave_scale);
+			foam_amt = deep_wave_scale*norm_fa.w;
 		}
 #endif
 		vec3 wave_n_eye = gl_NormalMatrix * wave_n;
@@ -73,6 +81,7 @@ void main()
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);
 	color = mix(color, vec4(0.0, 1.0, 0.5, color.a), water_green_comp*min(1.0, green_scale));
+	color = mix(color, vec4(1.0), foam_amt);
 
 	if (reflections) { // calculate reflections
 		float reflect_w  = reflect_scale*get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);

@@ -129,7 +129,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg"), // 892x892
 texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png"), // 1024x768
 // normal/caustic maps
 texture_t(0, 4, 0,    0,    1, 3, 1, "normal_maps/water_normal.tga", 0, 1, 8.0), // 512x512
-texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/ocean_water_normal.png", 0, 1, 4.0), // 1024x1024
+texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/ocean_water_normal.png", 0, 0, 4.0), // 1024x1024 (Note: compression disabled as it causes artifacts)
 texture_t(0, 5, 0,    0,    1, 3, 1, "caustics.jpg"), // 512x512
 // noise
 texture_t(0, 6, 0,    0,    1, 1, 0, "perlin_simplex.png"), // 256x256
@@ -148,7 +148,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "foam1.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_diffuse.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 1, 0, "bullet_hole/bullet_alpha.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_normal.jpg"), // 256x256
-texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 0, 2.0),
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 0, 2.0), // (Note: compression disabled as it causes artifacts)
 
 texture_t(0, 5, 0,    0,    1, 3, 1, "raindrop_dots.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship1.jpg"),
