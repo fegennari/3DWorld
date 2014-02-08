@@ -229,7 +229,7 @@ void coll_obj::set_from_pts(point const *const pts, unsigned npts) {
 }
 
 
-void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir, vector3d const &offset, shader_t *shader) { // dir does not need to be normalized
+void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir, vector3d const &offset, shader_t *shader, bool swap_st) { // dir does not need to be normalized
 
 	int const dim(get_max_dim(dir));
 	point p1, p2;
@@ -238,6 +238,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 		p1[i] = (i == dim) ? s_scale : 0.0;
 		p2[i] = (i == dim) ? 0.0     : t_scale;
 	}
+	if (swap_st) {swap(p1, p2);}
 	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, offset),
 		              p2.x, p2.y, p2.z, dot_product(p2, offset), GL_EYE_LINEAR, shader);
 }
@@ -318,7 +319,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 			int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 			bool const draw_ends(!(cp.surfs & 1)), draw_sides_ends(draw_ends && tid < 0);
-			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader);}
+			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader, cp.swap_txy);}
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_sides_ends, !draw_ends); // Note: using texgen, not textured
 			
 			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
@@ -333,7 +334,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 		{
 			float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
-			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader);}
+			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader, cp.swap_txy);}
 			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
 		}
 		break;

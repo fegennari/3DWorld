@@ -370,6 +370,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 				p1[i] = (i == dim) ? tscale[0] : 0.0;
 				p2[i] = (i == dim) ? 0.0       : tscale[1];
 			}
+			if (cp.swap_txy) {swap(p1, p2);}
 			tc[0] = dot_product(p1, poff);
 			tc[1] = dot_product(p2, poff);
 			break;
