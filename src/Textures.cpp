@@ -47,9 +47,9 @@ texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 6, 64,   64,   1, 3, 1, "sun.png"),
 texture_t(0, 6, 128,  128,  1, 3, 1, "moon.png"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
-texture_t(0, 6, 64,   64,   1, 3, 1, "ice.png"), // marble?
+texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg"),
 //texture_t(0, 6, 256,  256,  1, 3, 2, "snow.png"),
-texture_t(0, 7, 0,  0,  1, 3, 2, "snow2.jpg"),
+texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg"),
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1, 1, 4.0), // 128x128
 texture_t(0, 6, 128,  128,  1, 3, 0, "bark.png"), // mipmap?
 texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg"),
@@ -153,7 +153,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 0, 2.0), 
 texture_t(0, 5, 0,    0,    1, 3, 1, "raindrop_dots.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship1.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship2.jpg"),
-texture_t(0, 6, 0,    0,    0, 4, 1, "atlas/blood.png")
+texture_t(0, 6, 0,    0,    0, 4, 1, "atlas/blood.png"),
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
