@@ -39,24 +39,24 @@ texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a ba
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 //texture_t(0, 6, 512,  512,  1, 3, 0, "ground.png"),
-texture_t(0, 6, 128,  128,  1, 3, 2, "grass29.png"), // mipmap for small trees?
+texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png"), // mipmap for small trees?
 texture_t(0, 6, 256,  256,  1, 3, 1, "rock.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
-texture_t(0, 5, 64,   64,   1, 3, 1, "water_sm.jpg"), // WATER2_TEX is unused
+texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg"),
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 6, 64,   64,   1, 3, 1, "sun.png"),
 texture_t(0, 6, 128,  128,  1, 3, 1, "moon.png"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
-texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg"),
-//texture_t(0, 6, 256,  256,  1, 3, 2, "snow.png"),
+texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg"), // or marble2.jpg
 texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg"),
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1, 1, 4.0), // 128x128
-texture_t(0, 6, 128,  128,  1, 3, 0, "bark.png"), // mipmap?
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark2.jpg"), // bark.jpg: 224x224, bark2.jpg: 400x400 (Note: must match baseball bat texture size)
 texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg"),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
-texture_t(0, 6, 128,  128,  1, 3, 0, "grass4.png"),
+texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg"), // 1024x1024
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
+//texture_t(0, 5, 512,  512,  1, 3, 1, "brick1.jpg", 0, 1, 8.0),
 texture_t(0, 0, 512,  512,  1, 3, 1, "manhole.bmp", 1),
 texture_t(0, 6, 128,  128,  1, 4, 3, "palmtree.png", 1),
 texture_t(1, 9, 256,  256,  1, 4, 1, "@smoke"),  // not real file
@@ -89,7 +89,7 @@ texture_t(0, 6, 256,  256,  1, 4, 1, "blur_s.png"),
 texture_t(0, 6, 256,  256,  0, 4, 3, "pine.png", 1, 1, 1.0, 0.36),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "pine.jpg", 1, 1, 1.0, 0.36), // 184x256
 texture_t(0, 6, 128,  128,  1, 3, 1, "noise.png"),
-texture_t(0, 6, 128,  128,  1, 3, 1, "wood.png"),
+texture_t(0, 5, 0,    0,    1, 3, 1, "wood.jpg"), // 768x768
 texture_t(0, 6, 128,  128,  1, 3, 1, "hb_brick.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "particleb.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "plaster.png"),
@@ -136,7 +136,7 @@ texture_t(0, 6, 0,    0,    1, 1, 0, "perlin_simplex.png"), // 256x256
 texture_t(1, 9, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
 texture_t(1, 9, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
 texture_t(1, 9, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
-texture_t(1, 9, 128,  128,  1, 3, 1, "@player_bbb_tex"), // not real file
+texture_t(1, 9, 400,  400,  1, 3, 1, "@player_bbb_tex"), // not real file (Note: must match bark texture size)
 texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves.jpg", 1, 0, 1.0, 0.28), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare1.jpg"), // 384x384
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Nte: low resolution)
@@ -945,7 +945,7 @@ void gen_disintegrate_texture() {
 void gen_tree_hemi_texture() {
 
 	assert(SPHERE_SECTION >= 0.0 && SPHERE_SECTION <= 1.0);
-	unsigned char const *grass_tex_data(textures[GRASS_TEX].get_data());
+	unsigned char const *grass_tex_data(textures[GROUND_TEX].get_data());
 	texture_t &tex(textures[TREE_HEMI_TEX]);
 	unsigned char *tex_data(tex.get_data());
 	int const sphere_h(int((1.0 - SPHERE_SECTION)*tex.height));

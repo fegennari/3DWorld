@@ -128,7 +128,7 @@ B -0.4 1.22 -2.02 -1.5  0.0  0.1 # Porch Slab
 B -0.5 1.1  -1.9  -1.4 -0.7 -0.6 # Floor Under Porch Slab
 #a 1 # destroyable
 y 9.0
-l 0.7 1.0 1.0 1.0 1.0 49 1 # plaster ceiling
+l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco ceiling
 B -1.95 1.35 -2.15  2.95 0.7 0.75 # Ceiling + Gutter - Falling objects get stuck in the gutter
 B  1.1  1.45 -0.55 -0.15 0.7 0.75 # Around the Chimney
 
@@ -222,7 +222,7 @@ B -1.66 -0.2 -0.1 2.68 0.0 0.05
 B -0.2   0.1  1.8 2.68 0.0 0.05
 
 y 6.0
-l 0.7 1.0 1.0 1.0 1.0 49 1 # plaster/white paint
+l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco/white paint
 B -1.66 -0.4 -1.88 -0.1 -0.01 0.05 # Above Back Room
 e 0
 
@@ -257,9 +257,9 @@ l 0.75 1.0 1.0 1.0 1.0 46 1 # wood2
 e 7
 B -1.69 -0.48 -1.9  -1.89 0.05 0.71 1 # Front Driveway Wall
 
-# Outside Wall Plaster
+# Outside Wall plaster/stucco
 y 9.0
-l 0.7 1.0 1.0 1.0 1.0 49 1 # plaster
+l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco
 e 19
 B -1.7  -1.69 -1.89  2.69 0.05  0.71 1 # Left Side Wall
 e 11
@@ -396,6 +396,9 @@ B 0.9 1.35 -0.55 -0.15 -0.6 -0.3
 L 0.75  1.10 -0.35 -0.42  1.0 0.3 0.05 0.5 # Light in Fireplace
 L 0.25  0.65 -0.35 -0.18  1.0 0.3 0.05 0.5
 
+l 0.95 1.0 1.0 1.0 1.0 8 1 # Marble
+B 0.85 0.95 -0.58 -0.12 -0.6 -0.58
+
 
 # Inside Walls Top
 y 6.0
@@ -405,7 +408,7 @@ y 6.0
 l 0.7 0.4 0.3 0.1 1.0 11 1 # wood
 B -1.2 -1.0 -0.4 -0.1 0.05 0.15
 y 9.0
-l 0.7 1.0 1.0 1.0 1.0 49 1 # plaster
+l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco
 B -0.5 -0.4 -1.0 -0.1 0.05 0.7
 B -1.7  0.2 -0.1  0.0 0.05 0.7 
 B  0.6  1.1 -0.1  0.0 0.05 0.7 
@@ -435,7 +438,7 @@ B -0.4 -0.1  1.8  1.9 0.6  0.7
 B 0.0 0.1 -1.4 -0.9 0.05 0.3 # Spindles Wall
 B 0.0 0.4  1.4  1.5 0.05 0.3 
 l 0.95 1.0 1.0 1.0 1.0 8 1 # Marble
-B 0.0 0.41 1.39 1.51 0.3 0.31
+B 0.0 0.41 1.39 1.51 0.3 0.31 # marble sill
 
 # Spindles
 y 4.0
@@ -444,6 +447,7 @@ e 3
 C 0.05 -1.25 0.3 0.05 -1.25 0.7 0.016 0.016
 D 0.0 0.15 0.0 2
 e 0
+B -0.01 0.11 -1.4 -0.89 0.3 0.31
 
 # Inside Walls Bottom
 y 10.0
@@ -678,21 +682,26 @@ D  0.1 0.0 0.0  6  0.0 0.0 -0.05
 
 # Pine Trees
 y 4.0
-l 0.1 0.0 0.25 0.05 1.0 0 1 # pine tree leaves
+Y 0 0 1 # swap x and y
+l 0.1 0.1 0.4 0.2 1.0 15 1 # pine tree leaves - hedge texture
 e 1
 C 0.1 -2.18 -0.05 0.1 -2.18 0.75 0.28 0.0 # Front Yard
 D 0.9 0.0 0.0 1
+Y 0 0 0 # unswap x and y
 e 0
 B 0.13 0.97 -2.33 -2.0 -0.1 0.23
 
+Y 0 0 1 # swap x and y
 e 3
 C -0.12 3.1 -0.65 -0.12 3.1 -0.35 0.15 0.15 # Back Yard
 D 0.0 0.3 0.0 2
 e 0
 S -0.12 3.1 -0.35 0.15
 D 0.0 0.3 0.0 2
+Y 0 0 0 # unswap x and y
 
 # Hedges
+l 0.1 0.3 0.5 0.3 1.0 15 1 # pine tree leaves - hedge texture
 B -2.2 -2.0 -4.8 -2.5 0.0 0.2 # Front Main 1
 B -3.2 -2.0 -4.8 -4.6 0.0 0.2 # Front Main 2
 B -3.3 -3.2 -4.8 -4.6 0.0 0.15
@@ -727,11 +736,13 @@ e 0
 
 # Closets
 y 8.0
-l 0.8 0.6 0.5 0.35 1.0 46 1
+Y 0 0 1 # swap x and y
+l 0.8 0.6 0.5 0.35 1.0 46 1 # wood
 B -1.69 -1.21 -0.48 -0.42 0.1 0.7
 B -0.99 -0.83 -0.48 -0.42 0.1 0.7
 B -1.43 -0.81  1.42  1.48 0.1 0.7
 B -0.48 -0.42  0.01  0.33 0.1 0.7
+Y 0 0 0 # unswap x and y
 
 
 # Furniture
