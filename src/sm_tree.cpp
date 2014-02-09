@@ -43,8 +43,8 @@ struct sm_tree_type {
 sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
 	sm_tree_type(0.00, 0.10, 0.35, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_PINE
 	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // HEDGE_TEX?
-	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  GROUND_TEX,    BARK1_TEX), // T_TDECID
-	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   GROUND_TEX,    BARK4_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
+	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_TDECID
+	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   HEDGE_TEX,     BARK4_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
 	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX,      BARK1_TEX), // T_PALM FIXME: PALM_BARK_TEX?
 	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
@@ -594,7 +594,7 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 		height *= 1.2;
 		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
 		break;
-	case T_SH_PINE: // pine tree
+	case T_SH_PINE: // short pine tree
 		width  *= 1.2;
 		height *= 0.8;
 		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
@@ -605,13 +605,13 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 		height *= 2.0;
 		break;
 	case T_DECID: // decidious tree
-		color = colorgen(0.6, 0.9, 0.7, 1.0, 0.4, 0.7, rgen);
+		color = colorgen(0.5, 0.8, 0.7, 1.0, 0.4, 0.7, rgen);
 		break;
 	case T_TDECID: // tall decidious tree
-		color = colorgen(0.3, 0.6, 0.7, 1.0, 0.1, 0.2, rgen);
+		color = colorgen(0.4, 0.7, 0.8, 1.0, 0.3, 0.5, rgen);
 		break;
 	case T_BUSH: // bush
-		color  = colorgen(0.6, 0.9, 0.7, 1.0, 0.1, 0.2, rgen);
+		color  = colorgen(0.5, 0.8, 0.7, 1.0, 0.3, 0.5, rgen);
 		pos.z += 0.3*height;
 		if (rgen.rand()%100 < 50) {pos.z -= height*rgen.rand_uniform(0.0, 0.2);}
 		break;

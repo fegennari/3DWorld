@@ -65,7 +65,7 @@ texture_t(1, 9, 64,   64,   1, 4, 1, "@plasma"), // not real file
 texture_t(1, 9, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
 texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex"), // for loading real landscape texture
 texture_t(1, 9, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
-texture_t(1, 9, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
+texture_t(1, 9, 1024, 1024, 1, 4, 1, "@tree_hemi", 0, 1), // not real file, compression is too slow, mipmap for trees?
 texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, 0, 8.0), // compression is slow
 texture_t(0, 6, 256,  256,  1, 3, 1, "paneling.png", 0, 1, 16.0),
 texture_t(0, 6, 256,  256,  1, 3, 1, "cblock.png", 0, 1, 8.0),
@@ -79,7 +79,7 @@ texture_t(0, 6, 256,  256,  0, 4, 3, "plant2.png", 1),
 texture_t(0, 6, 256,  256,  0, 4, 3, "plant3.png", 1),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "plant3.jpg", 1), // 176x256
 texture_t(0, 5, 0,    0,    0, 4, 3, "hibiscus.jpg", 1), // 64x64
-texture_t(1, 9, 256,  256,  1, 3, 1, "@fence", 0, 1, 8.0), // not real file, light paneling
+texture_t(0, 5, 0,    0,    1, 3, 1, "fence.jpg", 0, 0, 8.0), // 896x896, compression is slow
 texture_t(0, 6, 128,  128,  1, 3, 1, "skull.png"),
 texture_t(0, 6, 64,   64,   1, 3, 1, "radiation.png", 1),
 texture_t(0, 6, 128,  128,  1, 3, 1, "yuck.png"),
@@ -186,10 +186,7 @@ extern char *mesh_diffuse_tex_fn;
 void gen_smoke_texture();
 void gen_plasma_texture();
 void gen_disintegrate_texture();
-void gen_tree_snow_texture();
 void gen_tree_hemi_texture();
-void gen_plant_texture();
-void gen_fence_texture();
 void gen_blur_inv_texture();
 void gen_stripe_texture(int tid, bool horiz);
 void gen_tree_end_texture();
@@ -253,7 +250,6 @@ void load_textures() {
 	gen_smoke_texture();
 	gen_plasma_texture();
 	gen_disintegrate_texture();
-	gen_fence_texture();
 	update_player_bbb_texture(0.0, 0);
 	gen_blur_inv_texture(); // must be after BLUR_TEX
 	gen_stripe_texture(HSTRIPE_TEX, 1);
@@ -923,20 +919,15 @@ void texture_t::gen_rand_texture(unsigned char val, unsigned char a_add, unsigne
 
 
 void gen_smoke_texture() {
-
 	unsigned char const smoke_color(255);
 	textures[SMOKE_TEX].gen_rand_texture(smoke_color, 0, 256); // same as PLASMA_TEX but larger
 }
 
-
 void gen_plasma_texture() {
-
 	textures[PLASMA_TEX].gen_rand_texture(255, 0, 256);
 }
 
-
 void gen_disintegrate_texture() {
-
 	textures[DISINT_TEX].gen_rand_texture(255, 1, 255);
 }
 
@@ -944,8 +935,10 @@ void gen_disintegrate_texture() {
 void gen_tree_hemi_texture() {
 
 	assert(SPHERE_SECTION >= 0.0 && SPHERE_SECTION <= 1.0);
-	unsigned char const *grass_tex_data(textures[GROUND_TEX].get_data());
+	texture_t const &gtex(textures[HEDGE_TEX]);
 	texture_t &tex(textures[TREE_HEMI_TEX]);
+	assert(tex.width == gtex.width && tex.height == gtex.height);
+	unsigned char const *grass_tex_data(gtex.get_data());
 	unsigned char *tex_data(tex.get_data());
 	int const sphere_h(int((1.0 - SPHERE_SECTION)*tex.height));
 
@@ -963,21 +956,6 @@ void gen_tree_hemi_texture() {
 			RGB_BLOCK_COPY((tex_data+offset), (grass_tex_data+offset2));
 			tex_data[offset+3] = 255; // A
 		}
-	}
-}
-
-
-void gen_fence_texture() {
-
-	texture_t &tex(textures[FENCE_TEX]);
-	unsigned char const *tex_data2(textures[PANELING_TEX].get_data());
-	assert(tex_data2 != NULL && tex.width == textures[PANELING_TEX].width && tex.height == textures[PANELING_TEX].height);
-	assert(tex.ncolors == 3 && textures[PANELING_TEX].ncolors == 3);
-	unsigned char *tex_data(tex.get_data());
-	unsigned const size(tex.num_bytes());
-
-	for (unsigned i = 0; i < size; ++i) { // convert to lighter color
-		tex_data[i] = (unsigned char)min((unsigned)255, ((unsigned)tex_data2[i]) << 2);
 	}
 }
 
@@ -1019,10 +997,7 @@ void gen_blur_inv_texture() {
 
 	for (int i = 0; i < tex.height; ++i) {
 		unsigned char val(max(64, min(255, (2*255*(tex.height-i-1))/tex.height)));
-		
-		for (int j = 0; j < tex.width; ++j) {
-			tex_data[((i*tex.width+j)<<2)+3] = val;
-		}
+		for (int j = 0; j < tex.width; ++j) {tex_data[((i*tex.width+j)<<2)+3] = val;}
 	}
 }
 
@@ -1101,10 +1076,7 @@ void gen_wind_texture() {
 	assert(tex_data2 != NULL && tex.width == textures[CLOUD_RAW_TEX].width && tex.height == textures[CLOUD_RAW_TEX].height);
 	unsigned char *tex_data(tex.get_data());
 	unsigned const size(tex.num_pixels());
-
-	for (unsigned i = 0; i < size; ++i) {
-		tex_data[i] = tex_data2[(i<<2)+3]; // put alpha in luminance
-	}
+	for (unsigned i = 0; i < size; ++i) {tex_data[i] = tex_data2[(i<<2)+3];} // put alpha in luminance
 }
 
 

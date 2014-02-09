@@ -1,9 +1,7 @@
 Fix ship collisions
-Support for cube map textures (planets, etc.)
 More grass/plant types: Yellow and white flowers
 Hardware tessellation
 Vertex Array Objects
-Texture atlases
 Try using Boost in 3DWorld, in particular shared_ptr
 
 Remove deprecated OpenGL calls:
@@ -19,19 +17,18 @@ TT mode underwater content
 
 User-placed teleporter weapon (translocator?)
 * Burning smiley/skull/cobj texture
-Cache the static parts of shadow maps?
 * reorder physics/collision/AI to be after rendering static parts of the scene
 
-Fog decreases at high altitude, increases in valleys
-  - draw more distant tiles (larger/lower res at high delta-z)
-    - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
+Fog increases in valleys
+Draw more distant tiles (larger/lower res at high delta-z)
+  - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
 Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 Render nearby planet in chunks starting with draw_cube_mapped_sphere()
 Visual Studio profile: http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
 static error check (analysis)
 
-Path tracing dynamic light in Sponza
+Path tracing dynamic light in Sponza (or precalc light for some positions?)
 Raytracing rendering mode + last cobj test/tmin update
 Ray trace use texel color from cobj (faster)
 
