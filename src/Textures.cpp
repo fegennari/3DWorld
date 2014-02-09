@@ -45,7 +45,8 @@ texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg"),
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 6, 64,   64,   1, 3, 1, "sun.png"),
-texture_t(0, 6, 128,  128,  1, 3, 1, "moon.png"),
+//texture_t(0, 6, 128,  128,  1, 3, 1, "moon.png"),
+texture_t(0, 5, 0,    0,    1, 3, 1, "moon.jpg"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg"), // or marble2.jpg
 texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg"),
@@ -65,7 +66,7 @@ texture_t(1, 9, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
 texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex"), // for loading real landscape texture
 texture_t(1, 9, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
 texture_t(1, 9, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
-texture_t(1, 1, 512,  512,  1, 3, 1, "@shingle", 0, 1, 8.0), // not real file
+texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, 1, 8.0), // not real file
 texture_t(0, 6, 256,  256,  1, 3, 1, "paneling.png", 0, 1, 16.0),
 texture_t(0, 6, 256,  256,  1, 3, 1, "cblock.png", 0, 1, 8.0),
 texture_t(0, 5, 0,    0,    0, 4, 3, "mj_leaf.jpg", 1), // 128x128
@@ -187,7 +188,6 @@ void gen_plasma_texture();
 void gen_disintegrate_texture();
 void gen_tree_snow_texture();
 void gen_tree_hemi_texture();
-void gen_shingle_texture();
 void gen_plant_texture();
 void gen_fence_texture();
 void gen_blur_inv_texture();
@@ -253,7 +253,6 @@ void load_textures() {
 	gen_smoke_texture();
 	gen_plasma_texture();
 	gen_disintegrate_texture();
-	gen_shingle_texture();
 	gen_fence_texture();
 	update_player_bbb_texture(0.0, 0);
 	gen_blur_inv_texture(); // must be after BLUR_TEX
@@ -964,23 +963,6 @@ void gen_tree_hemi_texture() {
 			RGB_BLOCK_COPY((tex_data+offset), (grass_tex_data+offset2));
 			tex_data[offset+3] = 255; // A
 		}
-	}
-}
-
-
-void gen_shingle_texture() {
-
-	texture_t &tex(textures[SHINGLE_TEX]);
-	unsigned char const *tex_data2(textures[BRICK_TEX].get_data());
-	assert(tex_data2 != NULL && tex.width == textures[BRICK_TEX].width && tex.height == textures[BRICK_TEX].height);
-	assert(tex.ncolors == 3 && textures[BRICK_TEX].ncolors == 3);
-	unsigned char *tex_data(tex.get_data());
-	unsigned const size(tex.num_pixels());
-
-	for (unsigned i = 0; i < size; ++i) { // convert brick texture to grayscale
-		unsigned const offset(3*i);
-		unsigned char const val((unsigned char)(((unsigned)tex_data2[offset+0] + (unsigned)tex_data2[offset+1] + (unsigned)tex_data2[offset+2])/3));
-		RGB_BLOCK_ASSIGN((tex_data+offset), val, val, val);
 	}
 }
 

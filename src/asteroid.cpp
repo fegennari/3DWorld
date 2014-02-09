@@ -23,7 +23,7 @@ unsigned const NUM_VOX_AST_LODS = 3;
 float    const AST_COLL_RAD     = 0.25; // limit collisions of large objects for accuracy (heightmap)
 float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader asteroids
 
-unsigned const DEFAULT_AST_TEX  = ROCK_TEX; // MOON_TEX
+unsigned const DEFAULT_AST_TEX  = MOON_TEX; // ROCK_TEX or MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 
 
@@ -44,7 +44,8 @@ unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv);
 
 
 int get_spherical_texture(int tid) {
-	return ((tid == MOON_TEX) ? ROCK_SPHERE_TEX : tid);
+	//return ((tid == MOON_TEX) ? ROCK_SPHERE_TEX : tid);
+	return tid; // ROCK_SPHERE_TEX no longer matches MOON_TEX
 }
 
 
