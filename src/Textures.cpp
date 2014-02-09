@@ -42,20 +42,20 @@ texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a ba
 texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png"), // mipmap for small trees?
 texture_t(0, 6, 256,  256,  1, 3, 1, "rock.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
-texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg"),
+texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg", 0, 0), // compression is slow
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 6, 64,   64,   1, 3, 1, "sun.png"),
 //texture_t(0, 6, 128,  128,  1, 3, 1, "moon.png"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "moon.jpg"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
-texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg"), // or marble2.jpg
+texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg", 0, 0), // or marble2.jpg, compression is slow
 texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg"),
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1, 1, 4.0), // 128x128
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark2.jpg"), // bark.jpg: 224x224, bark2.jpg: 400x400 (Note: must match baseball bat texture size)
 texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg"),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
-texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg"), // 1024x1024
+texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg", 0, 0), // 1024x1024, compression is slow
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
 //texture_t(0, 5, 512,  512,  1, 3, 1, "brick1.jpg", 0, 1, 8.0),
 texture_t(0, 0, 512,  512,  1, 3, 1, "manhole.bmp", 1),
@@ -66,7 +66,7 @@ texture_t(1, 9, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
 texture_t(2, 7, 1024, 1024, 0, 3, LANDSCAPE_MIPMAP, "@landscape_tex"), // for loading real landscape texture
 texture_t(1, 9, 128,  128,  0, 3, 0, "@tree_end"),  // not real file
 texture_t(1, 9, 128,  128,  1, 4, 1, "@tree_hemi"), // not real file, mipmap for trees?
-texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, 1, 8.0), // not real file
+texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, 0, 8.0), // compression is slow
 texture_t(0, 6, 256,  256,  1, 3, 1, "paneling.png", 0, 1, 16.0),
 texture_t(0, 6, 256,  256,  1, 3, 1, "cblock.png", 0, 1, 8.0),
 texture_t(0, 5, 0,    0,    0, 4, 3, "mj_leaf.jpg", 1), // 128x128
@@ -90,7 +90,7 @@ texture_t(0, 6, 256,  256,  1, 4, 1, "blur_s.png"),
 texture_t(0, 6, 256,  256,  0, 4, 3, "pine.png", 1, 1, 1.0, 0.36),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "pine.jpg", 1, 1, 1.0, 0.36), // 184x256
 texture_t(0, 6, 128,  128,  1, 3, 1, "noise.png"),
-texture_t(0, 5, 0,    0,    1, 3, 1, "wood.jpg"), // 768x768
+texture_t(0, 5, 0,    0,    1, 3, 1, "wood.jpg", 0, 0), // 768x768, compression is slow
 texture_t(0, 6, 128,  128,  1, 3, 1, "hb_brick.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "particleb.png", 0, 1, 8.0),
 texture_t(0, 6, 128,  128,  1, 3, 1, "plaster.png"),
@@ -126,8 +126,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg", 0, 0, 4.0), // 512x512
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg"), // 892x892
-texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png"), // 1024x768
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg", 0, 0), // 892x892, compression is slow
+texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png", 0, 0), // 1024x768, compression is slow
 // normal/caustic maps
 texture_t(0, 4, 0,    0,    1, 3, 1, "normal_maps/water_normal.tga", 0, 1, 8.0), // 512x512
 texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/ocean_water_normal.png", 0, 0, 4.0), // 1024x1024 (Note: compression disabled as it causes artifacts)
