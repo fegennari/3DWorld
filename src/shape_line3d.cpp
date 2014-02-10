@@ -297,7 +297,7 @@ void shape3d::destroy() {
 // ************** LINE3D *************
 
 
-void line3d::draw() const {
+void line3d::draw() const { // FIXME SHADERS: uses fixed function pipeline
 
 	if (points.empty()) return;
 	

@@ -83,7 +83,7 @@ public:
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
 		ddata.color_a.do_glColor();
 		model3d.draw();
-		end_texture();
+		end_texture(0);
 		enable_blend();
 	}
 };
@@ -211,9 +211,9 @@ public:
 		unsigned const ndiv(3*ddata.ndiv/2); // increase ndiv because we want higher resolution to capture details
 		scale_by(scale_val*xyz_scale);
 		ddata.color_a.do_glColor();
-		select_texture((force_tex_id >= 0) ? force_tex_id : tex_id);
+		select_texture(((force_tex_id >= 0) ? force_tex_id : tex_id), 0);
 		surface.sd.draw_ndiv_pow2_vbo(ndiv); // use a vbo
-		if (!no_reset_texture) {end_texture();}
+		if (!no_reset_texture) {end_texture(0);}
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		draw_with_texture(ddata, -1);
@@ -227,7 +227,7 @@ public:
 		return 1;
 	}
 	virtual void final_draw(int xfm_shader_loc) { // non-const because it clears instance transforms
-		select_texture(tex_id);
+		select_texture(tex_id, 0);
 		inst_render.set_loc(xfm_shader_loc);
 		surface.sd.draw_instances(inst_render.max_ndiv, inst_render);
 		inst_render.max_ndiv = 0;
@@ -504,8 +504,8 @@ unsigned const AST_FLD_MAX_NUM   = 1200;
 unsigned const AST_BELT_MAX_NS   = 10000;
 unsigned const AST_BELT_MAX_NP   = 4000;
 float    const AST_RADIUS_SCALE  = 0.04;
-float    const AST_AMBIENT_S     = 5.0;
-float    const AST_AMBIENT_NO_S  = 20.0;
+float    const AST_AMBIENT_S     = 2.5;
+float    const AST_AMBIENT_NO_S  = 10.0;
 float    const AST_AMBIENT_VAL   = 0.15;
 float    const AST_VEL_SCALE     = 0.0002;
 float    const NDIV_SCALE_AST    = 800.0;
@@ -1090,7 +1090,6 @@ void uasteroid_cont::end_render(shader_t &shader) {
 	shader.disable();
 	end_texture(0);
 	glDisable(GL_CULL_FACE);
-	glDisable(GL_TEXTURE_2D); // may not be required, depending on asteroid type
 }
 
 
@@ -1436,7 +1435,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		if (i == 1) {set_specular(0.0, 1.0);}
 		glPopMatrix();
 	}
-	end_texture();
+	end_texture(0);
 
 	if (temperature > 1.0) {
 		float const glow_weight(CLIP_TO_01(get_true_temp()/40.0f)); // 1.0 if camera is facing the lit side?
