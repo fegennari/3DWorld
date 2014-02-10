@@ -121,7 +121,7 @@ public:
 			s.add_uniform_float("height_scale", AST_PROC_HEIGHT);
 		}
 		colorRGBA(0.5, 0.45, 0.4, 1.0).do_glColor(); // Note: ignores color_a
-		select_texture(WHITE_TEX);
+		select_texture(WHITE_TEX, 0);
 		draw_sphere_vbo(all_zeros, 1.0, 3*ddata.ndiv/2, 1);
 		s.disable();
 

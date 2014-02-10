@@ -20,7 +20,7 @@ protected:
 	vector<vert_type_t> verts;
 	rand_gen_t rgen;
 
-	void render(int type, colorRGBA const &color) const {
+	void render(int type, colorRGBA const &color) const { // FIXME SHADERS: uses fixed function pipeline
 		if (empty()) return;
 		color.do_glColor();
 		assert(!(size() % VERTS_PER_PRIM));

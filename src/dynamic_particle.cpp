@@ -56,7 +56,7 @@ void dynamic_particle::gen_pos() {
 }
 
 
-void dynamic_particle::draw() const { // lights, color, texture, shadowed
+void dynamic_particle::draw() const { // lights, color, texture, shadowed, FIXME SHADERS: uses fixed function pipeline
 
 	bool const texture(tid >= 0 && glIsTexture(tid));
 	if (texture) select_texture(tid);

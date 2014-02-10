@@ -156,7 +156,6 @@ inline bool TEAM_ALIGNED(unsigned const a) {
 }
 
 inline void end_texture(bool enable=1) {
-	//glDisable(GL_TEXTURE_2D);
 	select_texture(WHITE_TEX, enable); // texturing is always enabled
 }
 

@@ -228,7 +228,7 @@ void draw_select_groups(int solid) {
 	}
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 		set_specular(0.0, 1.0); // disable
-		select_texture(object_types[SNOW].tid, 1, 1);
+		select_texture(object_types[SNOW].tid, 0, 1);
 		check_drawing_flags(object_types[SNOW].flags, 1);
 		glDepthMask(GL_FALSE);
 		shader_t s;
@@ -245,7 +245,6 @@ void draw_select_groups(int solid) {
 		snow_pld.draw_and_clear();
 		s.end_shader();
 		glDepthMask(GL_TRUE);
-		glDisable(GL_TEXTURE_2D);
 		check_drawing_flags(object_types[SNOW].flags, 0);
 	}
 }

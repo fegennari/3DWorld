@@ -472,7 +472,7 @@ void uobj_draw_data::draw_usw_emp() const {
 
 	float const alpha(0.5*CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
 	glPushMatrix();
-	select_texture(SBLUR_TEX);
+	select_texture(SBLUR_TEX, 0);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.01);
 	set_emissive_color(colorRGBA(1.0, 0.9, 0.7, alpha));
@@ -541,7 +541,7 @@ void uobj_draw_data::draw_usw_rfire() const {
 	float const ctime(CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
 	glEnable(GL_CULL_FACE);
 	set_emissive_color(colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0));
-	select_texture(PLASMA_TEX);
+	select_texture(PLASMA_TEX, 0);
 	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv);
 	end_texture();
 	glDisable(GL_CULL_FACE);
@@ -575,7 +575,7 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 	colorRGBA const light_color(1.0, 0.95, 0.9);
 	set_emissive_color(light_color);
 	rotate_about(360.0*rand_float(), signed_rand_vector());
-	select_texture(NOISE_TEX);
+	select_texture(NOISE_TEX, 0);
 
 	mesh2d star_mesh;
 	star_mesh.set_size(ndiv_);
@@ -1125,7 +1125,7 @@ void uobj_draw_data::draw_us_shadow() const { // could be improved
 	draw_sphere_vbo(point(0.0, 0.0, 0.2/1.2), 1.0, ndiv, 1);
 	glPopMatrix();
 	color_b.do_glColor();
-	select_texture(CAMOFLAGE_TEX);
+	select_texture(CAMOFLAGE_TEX, 0);
 	glScalef(0.9, 0.4, 0.8);
 	draw_sphere_vbo(point(0.0, 0.0, -0.6/0.8), 1.0, ndiv, 1);
 	end_ship_texture();
@@ -1150,7 +1150,7 @@ void uobj_draw_data::draw_defsat() const {
 	// draw solar panels
 	color_b.do_glColor();
 	if (specular_en) set_specular(0.8, 90.0);
-	select_texture(PARTB_TEX);
+	select_texture(PARTB_TEX, 0);
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		draw_cube(point((i ? -1.0 : 1.0), 0.0, 0.0), 1.1, 0.8, 0.1, 1, 1, 4.0);
@@ -1201,7 +1201,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 	if (is_cube && obj) obj->rotate_point(view_dir);
 
 	if (phase1) {
-		select_texture((is_cube && is_small) ? BCUBE_T_TEX : BCUBE_TEX);
+		select_texture(((is_cube && is_small) ? BCUBE_T_TEX : BCUBE_TEX), 0);
 		color_b.do_glColor();
 
 		if (is_cube) {
@@ -1214,7 +1214,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 	if (phase2) {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.2);
-		select_texture(SMOKE_TEX);
+		select_texture(SMOKE_TEX, 0);
 		colorRGBA outer_color(color_a*0.5);
 		outer_color.do_glColor();
 
@@ -1237,7 +1237,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 void uobj_draw_data::draw_bshuttle() const {
 
 	setup_draw_ship();
-	select_texture(BCUBE_T_TEX);
+	select_texture(BCUBE_T_TEX, 0);
 	draw_cube(point(0.0, 0.0, -0.4), 1.3, 0.6, 1.6, 1);
 	end_texture();
 
@@ -1252,7 +1252,7 @@ void uobj_draw_data::draw_bshuttle() const {
 	draw_verts(verts, 18, GL_TRIANGLES);
 
 	color_b.do_glColor();
-	select_texture(BCUBE_T_TEX);
+	select_texture(BCUBE_T_TEX, 0);
 	draw_ehousing_pairs(1.0, 0.18, 0.18, 0.22, 1.6, 0.0, 1, point(-0.8, 0.0, -0.8)); // length r1 r2 lcone dx dy
 	end_texture();
 	glPopMatrix(); // undo invert_z()
@@ -1473,7 +1473,7 @@ void uobj_draw_data::draw_dwexterm() const {
 	glTranslatef(0.0, 0.0, -0.15);
 
 	// backbone + body
-	select_texture(BCUBE2_TEX);
+	select_texture(BCUBE2_TEX, 0);
 	draw_cube(point(0.0, 0.01,  0.45), 0.12, 0.14, 1.5, 1, 1, 2.0, 1);
 	draw_cube(point(0.0, 0.01, -1.15), 0.12, 0.14, 0.1, 1, 1, 2.0, 1);
 	draw_cube(point(0.0, 0.00, -0.70), 0.36, 0.16, 0.8, 1, 1, 2.0, 1);
@@ -1665,7 +1665,7 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 	}
 
 	// draw body
-	select_texture(NOISE_TEX);
+	select_texture(NOISE_TEX, 0);
 	colorRGBA color_c(color_b);
 	color_c.alpha = 0.8;
 	color_c.do_glColor(); // bluegreen
@@ -2065,7 +2065,7 @@ void uobj_draw_data::draw_seige() const {
 
 	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/2));
 	setup_draw_ship();
-	select_texture(NOISE_TEX);
+	select_texture(NOISE_TEX, 0);
 
 	// draw top
 	color_b.do_glColor();
@@ -2232,7 +2232,7 @@ void uobj_draw_data::draw_default_ship() const {
 void uobj_draw_data::draw_asteroid(int tex_id) const {
 
 	color_a.do_glColor();
-	select_texture(tex_id);
+	select_texture(tex_id, 0);
 	draw_sphere_vbo(all_zeros, 1.0, 3*ndiv/2, 1);
 	end_texture();
 }

@@ -56,12 +56,12 @@ void draw_spraypaint_crosshair() {
 
 	if (world_mode != WMODE_GROUND) return;
 	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_LIGHTING);
+	set_color(colorRGBA(0.0, 0.0, 0.0, 0.5));
 	enable_blend();
-	colorRGBA(get_cur_paint_color(), 0.5).do_glColor();
+	set_color_e(get_cur_paint_color());
 	draw_circle_normal(0.0009, 0.0010, 64, 1, -0.05);
+	set_color_e(BLACK);
 	disable_blend();
-	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
 }
 

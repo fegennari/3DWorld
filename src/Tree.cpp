@@ -452,7 +452,7 @@ void tree_cont_t::post_leaf_draw(shader_t &shader) {
 	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
 	glDisable(GL_ALPHA_TEST);
-	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_2D); // needed in shadow_only mode since shaders aren't used
 }
 
 
@@ -843,7 +843,7 @@ void tree_data_t::post_draw(bool branches_or_leaves, bool shadow_only) {
 }
 
 
-bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) {
+bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) { // FIXME SHADERS: uses fixed function pipeline
 
 	if (draw_leaves && !leaves.empty()) { // draw leaves
 		if (leaf_vbo == 0) return 0; // if the leaf_vbo hasn't been allocated we need to go through the regular rendering path to get the leaf data uploaded

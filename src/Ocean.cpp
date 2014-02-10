@@ -373,7 +373,7 @@ void draw_vertex(int index, float x, float y, float z, colorRGBA &color, float z
 }
 
 
-void draw_ocean() {
+void draw_ocean() { // FIXME SHADERS: uses fixed function pipeline
 
 	if (!island) {
 		ocean_set = 0;
@@ -395,11 +395,11 @@ void draw_ocean() {
 	pt.z     -= 0.3*(FAR_CLIP+X_SCENE_SIZE);
 	ocean.assign((FAR_CLIP + X_SCENE_SIZE), (FAR_CLIP + Y_SCENE_SIZE), (zmin + OCEAN_DEPTH));
 	if (distance_to_camera(pt) > (FAR_CLIP+X_SCENE_SIZE)/2.0) return;
-	set_lighted_sides(2);
 	set_fill_mode();
 
 	if (display_mode & 0x0100) {
 		color.do_glColor();
+		set_lighted_sides(2);
 		draw_ocean2(camera, color, cscale);
 		set_lighted_sides(1);
 		plus_z.do_glNormal();
@@ -408,15 +408,14 @@ void draw_ocean() {
 	if (ocean_draw == 0) AnimateWater();
 	set_view_points();
 	if (!can_see_ocean && !can_see_far_ocean) return;
+	glEnable(GL_COLOR_MATERIAL);
 	float const zscale(0.5/min(MAX_VIS_DEPTH, ocean.z - zmin));
-	glDisable(GL_LIGHTING);
 	draw_sand(color, cscale, (camera.z <= ocean.z + 0.1));
-	glEnable(GL_LIGHTING);
 	enable_blend();
 	if (show_fog) glDisable(GL_FOG);
+	set_lighted_sides(2);
 	select_texture(WATER_TEX);
 	plus_z.do_glNormal();
-	glEnable(GL_COLOR_MATERIAL);
 	color.do_glColor();
 	setup_texgen(OCEAN_REPEAT, OCEAN_REPEAT, 0.0, 0.0);
 	int min_startx(0), min_endx(WaterX), min_starty(0), min_endy(WaterY);

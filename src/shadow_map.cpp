@@ -273,18 +273,18 @@ cube_t get_scene_bounds() {
 
 void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
-	glDisable(GL_LIGHTING);
 	enable_blend();
+	set_color(colorRGBA(0.0, 0.0, 0.0, 0.25));
 
 	// draw scene bounds
-	glColor4f(1.0, 1.0, 1.0, 0.25);
+	set_color_e(WHITE);
 	draw_simple_cube(get_scene_bounds(), 0);
 
 	// draw light frustum
-	glColor4f(1.0, 1.0, 0.0, 0.25);
+	set_color_e(YELLOW);
 	get_pt_cube_frustum_pdu(lpos, get_scene_bounds(), 0).draw_frustum();
+	set_color_e(BLACK);
 	disable_blend();
-	glEnable(GL_LIGHTING);
 }
 
 
@@ -346,7 +346,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 
 	if (update_smap) {
 		// render shadow geometry
-		glDisable(GL_LIGHTING);
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 		WHITE.do_glColor();
 		check_gl_error(202);
@@ -430,7 +429,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glEnable(GL_LIGHTING);
 
 	// Now rendering from the camera POV, using the FBO to generate shadows
 	check_gl_error(203);

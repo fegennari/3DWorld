@@ -769,7 +769,7 @@ void draw_univ_objects() {
 	disable_exp_lights(); // make sure the explosion lights end cleared
 	set_lighted_sides(1);
 	enable_blend(); // redundant?
-	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_2D); // may not be required
 	particle_pld.draw_and_clear();
 	glDisable(GL_LIGHTING);
 	emissive_pld.draw_and_clear(); // FIXME SHADERS: uses fixed function pipeline

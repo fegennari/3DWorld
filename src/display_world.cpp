@@ -1181,7 +1181,6 @@ unsigned create_reflection() {
 	}
 	assert(glIsTexture(reflection_tid));
 	create_reflection_texture(reflection_tid, xsize, ysize);
-	glDisable(GL_TEXTURE_2D);
 	check_gl_error(999);
 	return reflection_tid;
 }

@@ -347,7 +347,6 @@ void quad_batch_draw::draw_as_flares_and_clear(int flare_tex) { // Note: used in
 	select_texture(flare_tex, 0);
 	draw_and_clear(GL_TRIANGLES);
 	glDepthMask(GL_TRUE);
-	//glDisable(GL_TEXTURE_2D);
 }
 
 

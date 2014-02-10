@@ -1560,7 +1560,6 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	pre_render(is_shadow_pass);
 	shader_t s;
 	set_fill_mode();
-	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	
 	if (!is_shadow_pass) {
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
@@ -1579,8 +1578,6 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	if (s.is_setup()) {s.end_shader();}
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
 	glDisable(GL_ALPHA_TEST);
-	glDisable(GL_TEXTURE_2D);
-	glEnable(GL_LIGHTING);
 	set_specular(0.0, 1.0);
 }
 
