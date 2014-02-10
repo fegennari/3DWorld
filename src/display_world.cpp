@@ -288,7 +288,6 @@ float get_framerate(int &timer_b) {
 		fr_average = ((fr_average == 0.0) ? framerate : ((NUM_AVG - 1)*fr_average + framerate)/NUM_AVG);
 	}
 	return fr_average;
-
 }
 
 
@@ -305,7 +304,7 @@ void final_draw(float framerate) {
 void swap_buffers_and_redraw() {
 
 	glutSwapBuffers();
-	if (animate) post_window_redisplay();
+	if (animate) {post_window_redisplay();} // before glutSwapBuffers()?
 }
 
 

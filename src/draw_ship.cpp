@@ -97,15 +97,8 @@ inline int get_ndiv(int num) {
 	return ndiv;
 }
 
-void set_ship_texture(int tid) {
-	bool const use_shaders((display_mode & 0x08) != 0);
-	select_texture(tid, !use_shaders);
-}
-
-void end_ship_texture() {
-	bool const use_shaders((display_mode & 0x08) != 0);
-	end_texture(!use_shaders);
-}
+void set_ship_texture(int tid) {select_texture(tid, 0);}
+void end_ship_texture()        {end_texture(0);}
 
 
 void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) {

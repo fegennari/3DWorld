@@ -744,7 +744,6 @@ void draw_univ_objects() {
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
-	bool const use_shaders((display_mode & 0x08) != 0);
 	shader_t s[2];
 	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
 	set_lighted_sides(2); // doesn't hurt
@@ -753,12 +752,11 @@ void draw_univ_objects() {
 	BLACK.do_glColor();
 	disable_exp_lights(); // make sure the explosion lights start out cleared
 	
-	if (use_shaders) {
-		bool disint_tex(0); // this is slow, so only enable if some ship is exploding and needs this mode
-		for (vector<ship_explosion>::const_iterator i = exploding.begin(); i != exploding.end(); ++i) {disint_tex |= i->disint_tex;}
-		setup_ship_draw_shader(s[1], 1, disint_tex); // shadow shader, system lighting only
-		setup_ship_draw_shader(s[0], 0, disint_tex); // normal shader with dynamic lights
-	}
+	bool disint_tex(0); // this is slow, so only enable if some ship is exploding and needs this mode
+	for (vector<ship_explosion>::const_iterator i = exploding.begin(); i != exploding.end(); ++i) {disint_tex |= i->disint_tex;}
+	setup_ship_draw_shader(s[1], 1, disint_tex); // shadow shader, system lighting only
+	setup_ship_draw_shader(s[0], 0, disint_tex); // normal shader with dynamic lights
+	
 	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
 		free_obj *fobj(sorted[i].second);
 		assert(fobj != NULL);
@@ -766,7 +764,7 @@ void draw_univ_objects() {
 		fobj->draw(s);
 		fobj->reset_lights(); // reset for next frameq
 	}
-	if (use_shaders) s[0].end_shader();
+	s[0].end_shader();
 	end_part_cloud_draw();
 	disable_exp_lights(); // make sure the explosion lights end cleared
 	set_lighted_sides(1);
@@ -777,25 +775,20 @@ void draw_univ_objects() {
 	emissive_pld.draw_and_clear();
 
 	if (!glow_pld.empty()) {
-		if (use_shaders) {
-			select_texture(BLUR_TEX, 0);
-			glDepthMask(GL_FALSE);
-			shader_t s;
-			s.set_prefix("#define SIZE_FROM_NORMAL", 2); // GS
-			s.set_vert_shader("particle_draw");
-			s.set_frag_shader("simple_texture");
-			s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
-			s.begin_shader();
-			s.add_uniform_int("tex0", 0);
-			s.add_uniform_float("min_alpha", 0.0);
-			glow_pld.draw_and_clear();
-			s.end_shader();
-			glDepthMask(GL_TRUE);
-			glDisable(GL_TEXTURE_2D);
-		}
-		else {
-			glow_pld.draw_and_clear();
-		}
+		select_texture(BLUR_TEX, 0);
+		glDepthMask(GL_FALSE);
+		shader_t s;
+		s.set_prefix("#define SIZE_FROM_NORMAL", 2); // GS
+		s.set_vert_shader("particle_draw");
+		s.set_frag_shader("simple_texture");
+		s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
+		s.begin_shader();
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_float("min_alpha", 0.0);
+		glow_pld.draw_and_clear();
+		s.end_shader();
+		glDepthMask(GL_TRUE);
+		glDisable(GL_TEXTURE_2D);
 	}
 	glEnable(GL_LIGHTING);
 	disable_blend();
