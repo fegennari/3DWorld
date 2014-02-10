@@ -218,7 +218,6 @@ void draw_blasts() {
 	if (blastrs.empty()) return;
 	//RESET_TIME;
 	bool const universe(world_mode == WMODE_UNIVERSE);
-	glDisable(GL_LIGHTING);
 	enable_blend();
 	//glEnable(GL_ALPHA_TEST);
 	//glAlphaFunc(GL_GREATER, 0.05);
@@ -331,10 +330,8 @@ void draw_blasts() {
 		if (end_type) {set_std_blend_mode();}
 	} // for i
 	s.end_shader();
-	glDisable(GL_TEXTURE_2D);
 	//glDisable(GL_ALPHA_TEST);
 	disable_blend();
-	glEnable(GL_LIGHTING);
 	//PRINT_TIME("Draw Blasts");
 }
 

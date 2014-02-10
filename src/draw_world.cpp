@@ -374,7 +374,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glEnable(GL_TEXTURE_GEN_S);
 	glEnable(GL_TEXTURE_GEN_T);
-	glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
@@ -502,7 +501,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		draw_last.resize(0);
 	} // end draw_trans
 	s.end_shader();
-	glEnable(GL_LIGHTING);
 	disable_textures_texgen();
 	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
@@ -567,7 +565,7 @@ void draw_stars(float alpha) {
 		}
 		pts.push_back(vert_color(stars[i].pos, color));
 	}
-	draw_verts(pts, GL_POINTS);
+	draw_verts(pts, GL_POINTS); // FIXME SHADERS: uses fixed function pipeline
 	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
@@ -1141,7 +1139,6 @@ void draw_cracks_and_decals() {
 	}
 	set_color(BLACK);
 	glDepthMask(GL_FALSE);
-	glDisable(GL_LIGHTING);
 	enable_blend();
 	shader_t black_shader, lighting_shader, bullet_shader;
 
@@ -1183,7 +1180,6 @@ void draw_cracks_and_decals() {
 	} // for i
 	disable_blend();
 	glDepthMask(GL_TRUE);
-	glEnable(GL_LIGHTING);
 	if (bullet_shader.is_setup()  ) {bullet_shader.enable();   bullet_shader.add_uniform_float  ("bump_tb_scale", 1.0);} // reset
 	if (lighting_shader.is_setup()) {lighting_shader.enable(); lighting_shader.add_uniform_float("ambient_scale", 1.0);} // reset
 	black_shader.end_shader();
@@ -1206,17 +1202,14 @@ void draw_smoke_and_fires() {
 	get_draw_order(fires, fire_order);
 	
 	if (!fire_order.empty()) {
-		glDisable(GL_LIGHTING);
 		enable_blend();
 		quad_batch_draw qbd;
-		select_texture(FIRE_TEX);
+		select_texture(FIRE_TEX, 0);
 		int last_in_smoke(-1);
 		for (unsigned j = 0; j < fire_order.size(); ++j) {fires[fire_order[j].second].draw(qbd, last_in_smoke);}
 		qbd.draw();
 		set_std_blend_mode();
 		disable_blend();
-		glDisable(GL_TEXTURE_2D);
-		glEnable(GL_LIGHTING);
 	}
 	s.end_shader();
 }
@@ -1273,7 +1266,7 @@ void spark_t::draw(quad_batch_draw &qbd) const {
 }
 
 
-void draw_sparks() {
+void draw_sparks() { // FIXME SHADERS: uses fixed function pipeline
 
 	if (sparks.empty()) return;
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

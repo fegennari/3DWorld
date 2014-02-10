@@ -1394,10 +1394,9 @@ void model3ds::render(bool is_shadow_pass) {
 	set_fill_mode();
 	
 	if (is_shadow_pass) {
-		glDisable(GL_LIGHTING);
+		glDisable(GL_LIGHTING); // FIXME SHADERS: uses fixed function pipeline
 	}
 	else if (use_shaders) {
-		glDisable(GL_LIGHTING); // custom lighting calculations from this point on
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 	}
 	else {
@@ -1427,8 +1426,8 @@ void model3ds::render(bool is_shadow_pass) {
 		if (use_shaders) {s.end_shader();}
 	}
 	glDisable(GL_ALPHA_TEST);
-	glDisable(GL_TEXTURE_2D);
-	glEnable(GL_LIGHTING);
+	if (!use_shaders)   {glDisable(GL_TEXTURE_2D);}
+	if (is_shadow_pass) {glEnable(GL_LIGHTING);}
 	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
 }

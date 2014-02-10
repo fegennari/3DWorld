@@ -1077,7 +1077,6 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 	}
 	shader.enable();
 	set_fill_mode();
-	glEnable(GL_LIGHTING);
 	glEnable(GL_CULL_FACE);
 
 	if (custom_lighting) {
@@ -1095,7 +1094,6 @@ void uasteroid_cont::end_render(shader_t &shader) {
 	shader.disable();
 	end_texture();
 	glDisable(GL_CULL_FACE);
-	glDisable(GL_LIGHTING);
 	glDisable(GL_TEXTURE_2D); // may not be required
 }
 

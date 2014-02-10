@@ -316,7 +316,7 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 }
 
 
-void draw_mesh_vbo() { // Note: uses fixed function pipeline
+void draw_mesh_vbo() { // FIXME SHADERS: uses fixed function pipeline
 
 	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
 	static unsigned mesh_vbo(0);
@@ -417,39 +417,38 @@ void display_mesh(bool shadow_pass) { // fast array version
 	else {
 		uw_mesh_lighting.clear();
 	}
-	if (DEBUG_COLLS) {
-		glDisable(GL_LIGHTING);
+	if (DEBUG_COLLS == 2) {
+		enable_blend();
+		set_color(colorRGBA(1.0, 0.0, 0.0, 0.1));
+		set_color_e(RED);
 
-		if (DEBUG_COLLS == 2) {
-			enable_blend();
-			colorRGBA(1.0, 0.0, 0.0, 0.1).do_glColor();
-
-			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					if (v_collision_matrix[i][j].zmin < v_collision_matrix[i][j].zmax) {
-						point const p1(get_xval(j+0), get_yval(i+0),v_collision_matrix[i][j].zmin);
-						point const p2(get_xval(j+1), get_yval(i+1),v_collision_matrix[i][j].zmax);
-						draw_cube((p1 + p2)*0.5, (p2.x - p1.x), (p2.y - p1.y), (p2.z - p1.z), 0);
-					}
+		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+			for (int j = 0; j < MESH_X_SIZE; ++j) {
+				if (v_collision_matrix[i][j].zmin < v_collision_matrix[i][j].zmax) {
+					point const p1(get_xval(j+0), get_yval(i+0),v_collision_matrix[i][j].zmin);
+					point const p2(get_xval(j+1), get_yval(i+1),v_collision_matrix[i][j].zmax);
+					draw_cube((p1 + p2)*0.5, (p2.x - p1.x), (p2.y - p1.y), (p2.z - p1.z), 0);
 				}
 			}
-			disable_blend();
 		}
-		else {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			BLUE.do_glColor();
-			vector<vert_wrap_t> verts;
+		disable_blend();
+		set_color_e(BLACK);
+	}
+	else if (DEBUG_COLLS == 1) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		set_color(BLUE);
+		set_color_e(BLUE);
+		vector<vert_wrap_t> verts;
 
-			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {			
-				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					for (unsigned d = 0; d < 2; ++d) {
-						verts.push_back(point(get_xval(j), get_yval(i+d), max(czmin, v_collision_matrix[i+d][j].zmax)));
-					}
+		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {			
+			for (int j = 0; j < MESH_X_SIZE; ++j) {
+				for (unsigned d = 0; d < 2; ++d) {
+					verts.push_back(point(get_xval(j), get_yval(i+d), max(czmin, v_collision_matrix[i+d][j].zmax)));
 				}
-				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			}
+			draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 		}
-		glEnable(GL_LIGHTING);
+		set_color_e(BLACK);
 	}
 	set_fill_mode();
 	update_landscape_texture();
@@ -806,8 +805,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	}
 	disable_blend();
 	set_specular(0.0, 1.0);
-	disable_textures_texgen();
-	glEnable(GL_LIGHTING);
+	disable_textures_texgen(); // disable_texgen()?
 }
 
 

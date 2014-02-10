@@ -169,7 +169,7 @@ float cloud_manager_t::get_max_xy_extent() const {
 }
 
 
-bool cloud_manager_t::create_texture(bool force_recreate) {
+bool cloud_manager_t::create_texture(bool force_recreate) { // FIXME SHADERS: uses fixed function pipeline
 
 	RESET_TIME;
 	unsigned const xsize(USE_CLOUD_FBO ? CLOUD_GEN_TEX_SZ : min(CLOUD_GEN_TEX_SZ, (unsigned)window_width));

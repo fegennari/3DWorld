@@ -772,7 +772,7 @@ void draw_univ_objects() {
 	glDisable(GL_TEXTURE_2D);
 	particle_pld.draw_and_clear();
 	glDisable(GL_LIGHTING);
-	emissive_pld.draw_and_clear();
+	emissive_pld.draw_and_clear(); // FIXME SHADERS: uses fixed function pipeline
 
 	if (!glow_pld.empty()) {
 		select_texture(BLUR_TEX, 0);
@@ -788,7 +788,6 @@ void draw_univ_objects() {
 		glow_pld.draw_and_clear();
 		s.end_shader();
 		glDepthMask(GL_TRUE);
-		glDisable(GL_TEXTURE_2D);
 	}
 	glEnable(GL_LIGHTING);
 	disable_blend();

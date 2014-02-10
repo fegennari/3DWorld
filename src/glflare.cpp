@@ -95,7 +95,7 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 		}
 		qbd.add_quad_dirs((axis*flare[i].loc + center), sx, sy, c);
 	}
-	qbd.draw();
+	qbd.draw(); // FIXME SHADERS: uses fixed function pipeline
 	glEnable(GL_DEPTH_TEST);
 	disable_blend();
 	set_std_blend_mode();

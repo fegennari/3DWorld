@@ -33,7 +33,7 @@ float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, bool use_hmap_heig
 }
 
 
-void draw_overhead_map() {
+void draw_overhead_map() { // FIXME SHADERS: uses fixed function pipeline
 
 	//RESET_TIME
 	unsigned tid(0);

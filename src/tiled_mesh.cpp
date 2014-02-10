@@ -2198,10 +2198,10 @@ void draw_tiled_terrain(bool reflection_pass) {
 		if (line_intersect_tiled_mesh(v1, v2, hit_pos)) {
 			int const fog_enabled(glIsEnabled(GL_FOG));
 			if (fog_enabled) {glDisable(GL_FOG);}
-			RED.do_glColor();
-			glDisable(GL_LIGHTING);
+			set_color(RED);
+			set_color_e(RED);
 			draw_sphere_vbo(hit_pos, 0.1, N_SPHERE_DIV, 0);
-			glDisable(GL_LIGHTING);
+			set_color_e(BLACK);
 			if (fog_enabled) {glEnable(GL_FOG);}
 		}
 	}

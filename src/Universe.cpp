@@ -394,7 +394,6 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	unpack_color(water_c, P_WATER_C); // recalculate every time
 	unpack_color(ice_c,   P_ICE_C  );
 	ushader_group usg;
-	glDisable(GL_LIGHTING);
 
 	if (no_distant < 2 || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
 		// gather together the set of cells that are visible and need to be drawn
@@ -433,7 +432,6 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 			if (cell.is_visible()) {cell.draw_systems(usg, clobj, pass, no_move, skip_closest, 1, gen_only);} // and asteroids
 		}
 	}
-	glEnable(GL_LIGHTING);
 	//PRINT_TIME("Draw Cells");
 	//exit(0);
 }
@@ -881,9 +879,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							}
 						}
 					} // planet k
-					glEnable(GL_LIGHTING);
-					draw_1pix_2pix_plds(planet_plds);
-					glDisable(GL_LIGHTING);
+					draw_1pix_2pix_plds(planet_plds); // FIXME SHADERS: uses fixed function pipeline
 					
 					if (planet_asteroid_belt) {
 						shader_t asteroid_belt_shader;
@@ -2278,8 +2274,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		WHITE.do_glColor();
 	}
 	else {
-		glEnable(GL_LIGHTING);
-		ocolor.do_glColor();
+		ocolor.do_glColor(); // FIXME SHADERS: uses fixed function pipeline
 	}
 	if (ndiv >= N_SPHERE_DIV) {
 		if (surface == NULL || !surface->has_heightmap()) { // gas giant
@@ -2296,7 +2291,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
 		draw_sphere_vbo(all_zeros, radius, ndiv, texture); // small sphere - use vbo
 	}
-	if (texture) {usg.disable_planet_shader(*this, svars);} else {glDisable(GL_LIGHTING);}
+	if (texture) {usg.disable_planet_shader(*this, svars);}
 	glPopMatrix();
 	return 1;
 }
