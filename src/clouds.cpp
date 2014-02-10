@@ -329,7 +329,7 @@ float get_cloud_zmax() {return get_camera_pos().z + max(zmax, CLOUD_CEILING);}
 
 void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
 
-	select_multitex(NOISE_GEN_TEX, tu_id, 0);
+	select_multitex(NOISE_GEN_TEX, tu_id);
 	s.add_uniform_int("cloud_noise_tex", tu_id);
 	s.add_uniform_vector2d("dxy", cloud_wind_pos);
 }
@@ -409,7 +409,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		cloud_color2.alpha *= (is_cloudy ? 1.0 : 0.5);
 		cloud_color2.do_glColor();
 		render_spherical_section(imd, size, rval_inv, z1+z_offset, z2+z_offset);
-		disable_textures_texgen();
+		disable_texgen();
 		disable_blend();
 		s.end_shader();
 	}

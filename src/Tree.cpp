@@ -439,7 +439,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity) {
 		set_leaf_shader(shader, 0.75, 1, 0, 3, enable_opacity);
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
-			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i, 0);
+			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);
 		}
 	}
 }

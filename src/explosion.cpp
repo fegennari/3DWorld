@@ -227,7 +227,7 @@ void draw_blasts() {
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 1);
-	select_multitex(WHITE_TEX, 1, 0);
+	select_multitex(WHITE_TEX, 1);
 	vector<ix_type_pair> to_draw;
 
 	for (unsigned i = 0; i < blastrs.size(); ++i) {
@@ -306,8 +306,8 @@ void draw_blasts() {
 		case ETYPE_SIEGE:
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_multitex(((br.type == ETYPE_FUSION) ? FLARE5_TEX : BLUR_TEX), 0, 0);
-				if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1, 0);}
+				select_multitex(((br.type == ETYPE_FUSION) ? FLARE5_TEX : BLUR_TEX), 0);
+				if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1);}
 			}
 			if (universe) {
 				vector3d const dx(2.0*br.cur_size*cross_product(plus_z, br.dir).get_norm());
@@ -319,7 +319,7 @@ void draw_blasts() {
 			}
 			if (end_type) {
 				qbd.draw_and_clear();
-				if (br.type == ETYPE_STARB) {select_multitex(WHITE_TEX, 1, 0);} // set back to white
+				if (br.type == ETYPE_STARB) {select_multitex(WHITE_TEX, 1);} // set back to white
 				glDepthMask(GL_TRUE);
 			}
 			break;

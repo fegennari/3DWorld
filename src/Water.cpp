@@ -179,7 +179,7 @@ void select_water_ice_texture(colorRGBA &color, float *use_this_temp, bool set_a
 		color = color.modulate_with(texture_color(tid));
 	}
 	else {
-		select_texture(tid);
+		select_texture(tid, 0);
 	}
 	color *= DARK_WATER_ATTEN;
 }
@@ -440,7 +440,7 @@ void draw_water() {
 		int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
 
 		if (USE_SEA_FOAM) { // use sea foam texture
-			select_multitex(FOAM_TEX, 1, 0, 0);
+			select_multitex(FOAM_TEX, 1, 0);
 			setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0);
 			set_active_texture(0);
 			s.add_uniform_float("detail_tex_scale", 1.0);
@@ -461,7 +461,7 @@ void draw_water() {
 		disable_blend();
 		disable_point_specular();
 		set_specular(0.0, 1.0);
-		disable_textures_texgen();
+		disable_texgen();
 		glEnable(GL_NORMALIZE);
 		if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 		if (camera.z < water_plane_z) {draw_water_sides(1);}
@@ -560,7 +560,7 @@ void draw_water() {
 							{
 								if (last_water != 0) { // snow
 									wsd.flush_triangles();
-									select_texture(SNOW_TEX);
+									select_texture(SNOW_TEX, 0);
 									set_specular(0.6, 20.0);
 									last_water = 0;
 									color      = WHITE;
@@ -619,7 +619,7 @@ void draw_water() {
 		disable_texgen();
 		set_active_texture(0);
 	}
-	disable_textures_texgen();
+	disable_texgen();
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_COLOR_MATERIAL);
 	s.end_shader();

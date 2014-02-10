@@ -25,7 +25,7 @@ void init_glew();
 
 // multitexture prototypes
 void set_active_texture(unsigned tu_id);
-void select_multitex(int id, unsigned tu_id, bool enable=1, bool reset=1);
+void select_multitex(int id, unsigned tu_id, bool reset=1);
 void disable_multitex(unsigned tu_id, bool do_disable_texgen=0);
 
 // 3D texture prototypes
@@ -144,6 +144,7 @@ class render_to_texture_t {
 	unsigned tsize;
 
 	void pre_render(float xsize, float ysize, unsigned nx, unsigned ny, point const &center, vector3d const &view_dir) const;
+	static void post_render();
 
 public:
 	render_to_texture_t(unsigned tsize_) : tsize(tsize_) {}

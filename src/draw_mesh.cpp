@@ -309,7 +309,7 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty);
 
 	if (use_detail_tex) { // blend in detail nose texture at 32x scale
-		select_multitex(mesh_detail_tex, 1, 0, 0);
+		select_multitex(mesh_detail_tex, 1, 0);
 		setup_texgen(32.0*tex_scale/TWO_XSS, 32.0*tex_scale/TWO_YSS, 0.0, 0.0);
 		set_active_texture(0);
 	}
@@ -520,7 +520,7 @@ void add_one_tquad(vector<vert_norm_tc> &verts, vector3d const &n, float x1, flo
 
 
 // NOTE: There is a buffer of one unit around the drawn area
-void draw_sides_and_bottom() {
+void draw_sides_and_bottom() { // FIXME SHADERS: uses fixed function pipeline
 
 	int const lx(MESH_X_SIZE-1), ly(MESH_Y_SIZE-1);
 	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
@@ -675,7 +675,6 @@ void water_renderer::draw() { // modifies color
 	}
 	disable_blend();
 	set_specular(0.0, 1.0);
-	glDisable(GL_TEXTURE_2D);
 }
 
 
@@ -740,13 +739,13 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 
 	// waves (as normal maps)
 	if (add_waves) {
-		select_multitex(WATER_NORMAL_TEX,       1, 0);
-		select_multitex(OCEAN_WATER_NORMAL_TEX, 4, 0);
+		select_multitex(WATER_NORMAL_TEX,       1);
+		select_multitex(OCEAN_WATER_NORMAL_TEX, 4);
 		s.add_uniform_int("water_normal_tex",      1);
 		s.add_uniform_int("deep_water_normal_tex", 4);
 	}
 	if (rain_mode) {
-		select_multitex(RAINDROP_TEX, 3, 0);
+		select_multitex(RAINDROP_TEX, 3);
 		s.add_uniform_int  ("noise_tex", 3);
 		s.add_uniform_float("noise_time", frame_counter); // rain ripples
 	}
@@ -805,7 +804,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	}
 	disable_blend();
 	set_specular(0.0, 1.0);
-	disable_textures_texgen(); // disable_texgen()?
+	disable_texgen();
 }
 
 

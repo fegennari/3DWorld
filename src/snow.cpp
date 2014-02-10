@@ -761,11 +761,11 @@ void draw_snow() {
 	set_color(SNOW_COLOR);
 	point const camera(get_camera_pos());
 	glDisable(GL_NORMALIZE);
-	//select_texture(NOISE_TEX);; // detail texture
-	select_texture(SNOW_TEX); // detail texture
+	//select_texture(NOISE_TEX, 0); // detail texture
+	select_texture(SNOW_TEX, 0); // detail texture
 	setup_texgen(50.0, 50.0, 0.0, 0.0);
 	snow_draw.draw();
-	disable_textures_texgen();
+	disable_texgen();
 	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
 	s.end_shader();

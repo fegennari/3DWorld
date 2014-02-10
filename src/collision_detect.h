@@ -91,7 +91,7 @@ public:
 	void set_from_pts(point const *const pts, unsigned npts);
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vector<vert_norm> &poly_verts, shader_t *shader) const;
+	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vector<vert_norm> &poly_verts, shader_t &shader) const;
 	void get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) const;
 	void add_to_vector(coll_obj_group &cobjs, int type_);
 	void check_if_cube();

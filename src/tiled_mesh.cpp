@@ -1231,7 +1231,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 		}
 		if (!wverts.empty()) {draw_verts(wverts, GL_QUADS);}
 	}
-	if (weight_tid > 0) {disable_textures_texgen();}
+	if (weight_tid > 0) {disable_texgen();}
 }
 
 
@@ -1490,7 +1490,7 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool
 		if (tid == GROUND_TEX) {cscale = TT_GRASS_COLOR_SCALE;} // darker grass
 		if (tid == ROCK_TEX  ) {cscale = 0.5;} // darker rock
 		unsigned const tu_id(start_tu_id + i);
-		select_multitex(tid, tu_id, 0);
+		select_multitex(tid, tu_id);
 		std::ostringstream oss1, oss2, oss3;
 		oss1 << "tex" << tu_id;
 		oss2 << "ts"  << tu_id;
@@ -1579,7 +1579,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 		s.add_uniform_int("height_tex", 11);
 	}*/
 	if (use_normal_map) {
-		select_multitex(ROCK_NORMAL_TEX, 11, 0, 1);
+		select_multitex(ROCK_NORMAL_TEX, 11, 1);
 		s.add_uniform_int("detail_normal_tex", 11);
 	}
 	if (has_water) {
@@ -1589,7 +1589,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 		s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 
 		if (water_caustics) {
-			select_multitex(WATER_CAUSTIC_TEX, 10, 0);
+			select_multitex(WATER_CAUSTIC_TEX, 10);
 			s.add_uniform_int("caustic_tex", 10);
 			s.add_uniform_float("caustics_weight", (1.5 - water_params.alpha));
 		}
@@ -1860,7 +1860,7 @@ void tile_draw_t::draw_water(shader_t &s, float zval) const {
 
 void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
 
-	select_multitex(DITHER_NOISE_TEX, tu_id, 0, 1);
+	select_multitex(DITHER_NOISE_TEX, tu_id, 1);
 	s.add_uniform_int("noise_tex", tu_id);
 }
 

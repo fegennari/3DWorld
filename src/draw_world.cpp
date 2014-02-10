@@ -288,7 +288,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_float("burn_tex_scale", 0.05); // FIXME: hard-coded
 		s.add_uniform_float("burn_offset", burn_offset);
 		s.add_uniform_int("burn_mask", 10);
-		select_multitex(DISINT_TEX, 10, 0); // PLASMA_TEX?
+		select_multitex(DISINT_TEX, 10); // PLASMA_TEX?
 	}
 }
 
@@ -418,7 +418,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				draw_last.push_back(make_pair(-dist, cix)); // negative distance
 			}
 			else {
-				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, &s); // i may not be valid after this call
+				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, s); // i may not be valid after this call
 				
 				if (cix != *i) {
 					assert(cix > *i);
@@ -431,7 +431,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 		for (vector<pair<float, int> >::const_iterator i = large_cobjs.begin(); i != large_cobjs.end(); ++i) {
 			unsigned cix(i->second);
-			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, poly_verts, &s);
+			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, poly_verts, s);
 		}
 	} // end draw solid
 	if (draw_trans) { // called second
@@ -491,7 +491,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					}
 					if (light_atten > 0.0) s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);
 				}
-				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, &s);
+				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, s);
 				assert(cix == ix); // should not have changed
 			}
 		} // for i
@@ -501,7 +501,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		draw_last.resize(0);
 	} // end draw_trans
 	s.end_shader();
-	disable_textures_texgen();
+	disable_texgen();
 	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
 	//if (draw_solid) PRINT_TIME("Final Draw");
@@ -696,7 +696,7 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 }
 
 
-void draw_sky(int order) {
+void draw_sky(int order) { // FIXME SHADERS: uses fixed function pipeline
 
 	if (atmosphere < 0.01) return; // no atmosphere
 	set_specular(0.0, 1.0);

@@ -19,7 +19,7 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
-extern bool has_snow, no_sun_lpos_update;
+extern bool no_sun_lpos_update;
 extern int island, default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
 extern unsigned create_voxel_landscape;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
@@ -108,7 +108,7 @@ void grass_manager_t::begin_draw(float spec_weight) const {
 	assert(vbo > 0);
 	bind_vbo(vbo);
 	grass_data_t::set_vbo_arrays();
-	select_texture(GRASS_BLADE_TEX);
+	select_texture(GRASS_BLADE_TEX, 0);
 	set_specular(spec_weight, 20.0);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.99);
@@ -122,7 +122,6 @@ void grass_manager_t::end_draw() const {
 	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
 	glDisable(GL_ALPHA_TEST);
-	glDisable(GL_TEXTURE_2D);
 	bind_vbo(0);
 	check_gl_error(40);
 }
@@ -695,9 +694,8 @@ public:
 		check_for_updates();
 
 		// check for dynamic light sources
-		bool const use_grass_shader(!has_snow && (display_mode & 0x0100));
 		shader_t s;
-		if (use_grass_shader) {setup_shaders(s, 1);} // enables lighting and shadows as well
+		setup_shaders(s, 1); // enables lighting and shadows as well
 		begin_draw(0.2);
 
 		// draw the grass
@@ -750,7 +748,7 @@ public:
 						}
 					}
 				}
-				if (use_grass_shader && visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass
+				if (visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass
 					nearby_ixs.push_back(ix);
 					visible = 0; // drawn in the second pass
 				}
@@ -790,7 +788,7 @@ void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
 	s.add_uniform_float("wind_x", wind.x);
 	s.add_uniform_float("wind_y", wind.y);
 	s.add_uniform_int("wind_noise_tex", tu_id);
-	select_multitex(WIND_TEX, tu_id, 0);
+	select_multitex(WIND_TEX, tu_id);
 }
 
 

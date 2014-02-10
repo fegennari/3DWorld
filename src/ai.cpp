@@ -1112,7 +1112,6 @@ void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id
 	}
 	select_smiley_texture(smiley_id); // update a strip from y1 to y2
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, y1, SMILEY_TEX_SIZE, (y2-y1), GL_RGB, GL_UNSIGNED_BYTE, (tdata + 3*SMILEY_TEX_SIZE*y1));
-	glDisable(GL_TEXTURE_2D);
 }
 
 
@@ -1372,7 +1371,6 @@ void select_smiley_texture(int smiley_id) {
 		init_smiley_texture(smiley_id);
 	}
 	assert(glIsTexture(sstates[smiley_id].tid));
-	glEnable(GL_TEXTURE_2D);
 	bind_2d_texture(sstates[smiley_id].tid);
 }
 

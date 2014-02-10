@@ -40,10 +40,10 @@ void set_active_texture(unsigned tu_id) {
 }
 
 
-void select_multitex(int id, unsigned tu_id, bool enable, bool reset) {
+void select_multitex(int id, unsigned tu_id, bool reset) {
 
 	set_active_texture(tu_id);
-	select_texture(id, enable);
+	select_texture(id, 0);
 	if (reset) {set_active_texture(0);}
 }
 
@@ -52,7 +52,6 @@ void disable_multitex(unsigned tu_id, bool do_disable_texgen) {
 
 	set_active_texture(tu_id);
 	if (do_disable_texgen) {disable_texgen();}
-	glDisable(GL_TEXTURE_2D);
 	set_active_texture(0); // end back at texture 0
 }
 
@@ -236,20 +235,16 @@ void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsi
 	glLoadIdentity();
 	rotate_from_v2v(-plus_z, view_dir);
 	translate_to(-center);
-
-	// render
-	glDisable(GL_LIGHTING);
 }
 
 
-void post_render() {
+void render_to_texture_t::post_render() {
 
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glEnable(GL_LIGHTING);
 	disable_fbo();
 	set_standard_viewport();
 }
