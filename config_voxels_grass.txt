@@ -15,7 +15,7 @@ voxel geom_rseed 123
 voxel tex_scale 2.0
 voxel tid1 rock.03.png # 66 rock tex
 voxel tid2 mossy_rock.jpg # 76 mossy rock tex
-voxel tid_top grass29.png # grass tex
+voxel tid_top grass.png # grass tex
 #voxel tid_top snow2.jpg # snow tex
 
 disable_water 1
