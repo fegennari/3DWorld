@@ -297,7 +297,7 @@ void shape3d::destroy() {
 // ************** LINE3D *************
 
 
-void line3d::draw(bool draw_as_tquads) const {
+void line3d::draw() const {
 
 	if (points.empty()) return;
 	
@@ -305,34 +305,22 @@ void line3d::draw(bool draw_as_tquads) const {
 		cout << "Invalid line: Cannot draw." << endl;
 		return;
 	}
-	if (draw_as_tquads) {
-		float const w(0.01*width);
-		line_tquad_draw_t drawer;
+	//glEnable(GL_BLEND);
+	//glEnable(GL_LINE_SMOOTH);
+	glLineWidth(width);
+	glDisable(GL_LIGHTING);
+	color.do_glColor();
+	vector<vert_wrap_t> verts;
+	verts.reserve(2*(points.size() - 1));
 
-		for (unsigned i = 1; i < points.size(); ++i) {
-			drawer.add_line_tquad(points[i-1], points[i], w, w, color, color,
-				((i > 1) ? &points[i-2] : NULL), ((i+1 < points.size()) ? &points[i+1] : NULL));
-		}
-		drawer.draw(GL_QUADS);
+	for (unsigned i = 1; i < points.size(); ++i) {
+		for (unsigned d = 0; d < 2; ++d) {verts.push_back(points[i-!d]);}
 	}
-	else {
-		//glEnable(GL_BLEND);
-		//glEnable(GL_LINE_SMOOTH);
-		glLineWidth(width);
-		glDisable(GL_LIGHTING);
-		color.do_glColor();
-		vector<vert_wrap_t> verts;
-		verts.reserve(2*(points.size() - 1));
-
-		for (unsigned i = 1; i < points.size(); ++i) {
-			for (unsigned d = 0; d < 2; ++d) {verts.push_back(points[i-!d]);}
-		}
-		draw_verts(verts, GL_LINES);
-		glLineWidth(1.0);
-		glEnable(GL_LIGHTING);
-		//glDisable(GL_BLEND);
-		//glDisable(GL_LINE_SMOOTH);
-	}
+	draw_verts(verts, GL_LINES);
+	glLineWidth(1.0);
+	glEnable(GL_LIGHTING);
+	//glDisable(GL_BLEND);
+	//glDisable(GL_LINE_SMOOTH);
 }
 
 

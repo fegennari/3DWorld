@@ -1006,7 +1006,7 @@ public:
 	colorRGBA color;
 
 	line3d() {}
-	void draw(bool draw_as_tquads=0) const;
+	void draw() const;
 	void destroy();
 	bool empty() const {return points.empty();}
 };

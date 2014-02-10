@@ -314,14 +314,11 @@ void lightning::draw() const {
 	for (unsigned i = 0; i < path.size(); ++i) {
 		assert(!path[i].points.empty());
 		if (animate2) add_dynamic_light(0.6*path[i].width*lscale, path[i].points.back(), LITN_C);
-		path[i].draw(0);
+		path[i].draw();
 	}
 	if (animate2) add_dynamic_light(7.8*lscale, litning_pos, LITN_C);
 	set_std_blend_mode();
 	disable_blend();
 	glDisable(GL_LINE_SMOOTH);
 }
-
-
-
 

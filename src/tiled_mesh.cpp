@@ -1365,7 +1365,7 @@ void lightning_strike_t::draw() const {
 
 	if (!enabled()) return;
 	glEnable(GL_LINE_SMOOTH);
-	path.draw(0); // disable fog?
+	path.draw(); // disable fog?
 	glDisable(GL_LINE_SMOOTH);
 	create_gl_light(LIGHTNING_LIGHT);
 }
