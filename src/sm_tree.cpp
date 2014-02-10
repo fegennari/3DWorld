@@ -256,7 +256,7 @@ void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> >
 void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, bool sort_front_to_back, vector3d const &xlate, int xlate_loc) {
 
 	if (empty()) return;
-	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
+	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid), 0);
 
 	if (instanced && !low_detail) { // sort_front_to_back not supported
 		assert(xlate_loc >= 0);
@@ -851,7 +851,7 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 				}
 				else { // draw as cylinder
 					if (world_mode == WMODE_GROUND) {set_color(get_bark_color());}
-					if (!shadow_only) {select_texture(stt[type].bark_tid);}
+					if (!shadow_only) {select_texture(stt[type].bark_tid, 0);}
 					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, 1);
 				}

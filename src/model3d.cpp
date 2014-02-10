@@ -823,7 +823,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
 			set_active_texture(8);
-			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX);}
+			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX, 0);}
 			set_active_texture(0);
 		}
 		if (alpha < 1.0 && ni != 1.0) {

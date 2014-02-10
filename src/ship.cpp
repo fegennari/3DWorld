@@ -659,7 +659,7 @@ void clear_univ_obj_contexts() {
 }
 
 
-void draw_wrays(vector<usw_ray> &wrays) {
+void draw_wrays(vector<usw_ray> &wrays) { // FIXME SHADERS: uses fixed function pipeline
 
 	if (wrays.empty()) return;
 	glDepthMask(GL_FALSE); // ???
@@ -769,7 +769,7 @@ void draw_univ_objects() {
 	disable_exp_lights(); // make sure the explosion lights end cleared
 	set_lighted_sides(1);
 	enable_blend(); // redundant?
-	glDisable(GL_TEXTURE_2D); // may not be required
+	glDisable(GL_TEXTURE_2D); // can be removed if end_texture() never enabled
 	particle_pld.draw_and_clear();
 	glDisable(GL_LIGHTING);
 	emissive_pld.draw_and_clear(); // FIXME SHADERS: uses fixed function pipeline

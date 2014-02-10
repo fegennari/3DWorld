@@ -39,7 +39,7 @@ void beam3d::draw(line_tquad_draw_t &drawer) const {
 }
 
 
-void draw_beams() {
+void draw_beams() { // FIXME SHADERS: uses fixed function pipeline
 
 	if (beams.empty()) return;
 	line_tquad_draw_t drawer;

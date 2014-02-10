@@ -2687,7 +2687,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			if (has_hit_dir) { // rotate so that shields appear at hit direction
 				glEnable(GL_ALPHA_TEST);
 				glAlphaFunc(GL_GREATER, 0.01);
-				select_texture(SBLUR_TEX);
+				select_texture(SBLUR_TEX, 0);
 				rotate_sphere_tex_to_dir(hit_dir);
 			}
 			//if (ssects == 1) {} // scale to create tightly bounding ellipsoid?
@@ -2700,7 +2700,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			set_std_blend_mode();
 
 			if (has_hit_dir) {
-				end_texture();
+				end_texture(0);
 				glDisable(GL_ALPHA_TEST);
 			}
 		} // show shields

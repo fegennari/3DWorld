@@ -121,14 +121,10 @@ public:
 			s.add_uniform_float("height_scale", AST_PROC_HEIGHT);
 		}
 		colorRGBA(0.5, 0.45, 0.4, 1.0).do_glColor(); // Note: ignores color_a
-		select_texture(WHITE_TEX, 0);
+		end_texture(0);
 		draw_sphere_vbo(all_zeros, 1.0, 3*ddata.ndiv/2, 1);
 		s.disable();
-
-		if (ddata.final_pass) {
-			if (ddata.shader->is_setup()) {ddata.shader->enable();}
-			end_texture();
-		}
+		if (ddata.final_pass && ddata.shader->is_setup()) {ddata.shader->enable();}
 	}
 };
 
@@ -372,7 +368,7 @@ public:
 
 		if (ddata.final_pass) {
 			if (ddata.shader->is_setup()) {ddata.shader->enable();}
-			end_texture();
+			end_texture(0);
 		}
 	}
 
@@ -1092,9 +1088,9 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 void uasteroid_cont::end_render(shader_t &shader) {
 
 	shader.disable();
-	end_texture();
+	end_texture(0);
 	glDisable(GL_CULL_FACE);
-	glDisable(GL_TEXTURE_2D); // may not be required
+	glDisable(GL_TEXTURE_2D); // may not be required, depending on asteroid type
 }
 
 
