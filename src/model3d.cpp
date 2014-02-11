@@ -846,8 +846,6 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		geom.render(shader, 0);
 		geom_tan.render(shader, 0);
-		if (use_bump_map())    disable_multitex(5);
-		if (enable_spec_map()) disable_multitex(8);
 		set_color_e(BLACK);
 		if (ns > 0.0) {set_specular(0.0, 1.0);}
 		if (alpha_tid >= 0) disable_blend();

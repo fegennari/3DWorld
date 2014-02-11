@@ -409,7 +409,6 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		cloud_color2.alpha *= (is_cloudy ? 1.0 : 0.5);
 		cloud_color2.do_glColor();
 		render_spherical_section(imd, size, rval_inv, z1+z_offset, z2+z_offset);
-		disable_texgen();
 		disable_blend();
 		s.end_shader();
 	}

@@ -459,7 +459,6 @@ void draw_water() {
 	disable_blend();
 	disable_point_specular();
 	set_specular(0.0, 1.0);
-	disable_texgen();
 	glEnable(GL_NORMALIZE);
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 	if (camera.z < water_plane_z) {draw_water_sides(1);}
@@ -614,10 +613,8 @@ void draw_water() {
 
 	if (USE_SEA_FOAM) {
 		set_active_texture(1);
-		disable_texgen();
 		set_active_texture(0);
 	}
-	disable_texgen();
 	glEnable(GL_NORMALIZE);
 	glDisable(GL_COLOR_MATERIAL);
 	s.end_shader();

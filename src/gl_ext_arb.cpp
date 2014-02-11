@@ -48,14 +48,6 @@ void select_multitex(int id, unsigned tu_id, bool reset) {
 }
 
 
-void disable_multitex(unsigned tu_id, bool do_disable_texgen) {
-
-	set_active_texture(tu_id);
-	if (do_disable_texgen) {disable_texgen();}
-	set_active_texture(0); // end back at texture 0
-}
-
-
 // ***************** 3D TEXTURES *****************
 
 

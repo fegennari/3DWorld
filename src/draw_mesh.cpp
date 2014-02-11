@@ -341,10 +341,12 @@ void draw_mesh_vbo() { // FIXME SHADERS: uses fixed function pipeline
 		bind_vbo(mesh_vbo);
 	}
 	vert_norm_comp::set_vbo_arrays();
+	glEnable(GL_TEXTURE_GEN_S); glEnable(GL_TEXTURE_GEN_T);
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
 		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
 	}
+	glDisable(GL_TEXTURE_GEN_S); glDisable(GL_TEXTURE_GEN_T);
 	bind_vbo(0);
 }
 
@@ -468,8 +470,8 @@ void display_mesh(bool shadow_pass) { // fast array version
 		draw_mesh_mvd(0);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
-	disable_multitex(1, 1);
-	disable_textures_texgen();
+	set_active_texture(0);
+	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_COLOR_MATERIAL);
 	draw_sides_and_bottom();
 	run_post_mesh_draw();
@@ -803,7 +805,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	}
 	disable_blend();
 	set_specular(0.0, 1.0);
-	disable_texgen();
 }
 
 

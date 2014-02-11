@@ -1230,7 +1230,6 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 		}
 		if (!wverts.empty()) {draw_verts(wverts, GL_QUADS);}
 	}
-	if (weight_tid > 0) {disable_texgen();}
 }
 
 
@@ -1830,7 +1829,6 @@ void tile_draw_t::draw(bool reflection_pass) {
 		if (display_mode & 0x01) {to_draw[i].second->draw(s, ivbo, reflection_pass);}
 	}
 	disable_blend();
-	disable_multitex(2, 1); // disable texgen on tu_id=2
 	s.end_shader();
 		
 	if (DEBUG_TILES) {

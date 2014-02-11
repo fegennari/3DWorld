@@ -1654,10 +1654,7 @@ void set_texgen_vec4(float const v[4], bool s_or_t, bool enable_and_set_mode, sh
 		shader->add_attrib_float_array((s_or_t ? TEX0_T_ATTR : TEX0_S_ATTR), v, 4);
 	}
 	else {
-		if (enable_and_set_mode) {
-			glEnable(s_or_t ? GL_TEXTURE_GEN_T : GL_TEXTURE_GEN_S);
-			glTexGeni((s_or_t ? GL_T : GL_S), GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-		}
+		if (enable_and_set_mode) {glTexGeni((s_or_t ? GL_T : GL_S), GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);}
 		glTexGenfv((s_or_t ? GL_T : GL_S), GL_EYE_PLANE, v);
 	}
 }
@@ -1676,21 +1673,6 @@ void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off, i
 
 	assert(xscale != 0.0 && yscale != 0.0);
 	setup_texgen_full(xscale, 0.0, z_off, tx, 0.0, yscale, z_off, ty, mode);
-}
-
-
-void disable_texgen() {
-
-	glDisable(GL_TEXTURE_GEN_S);
-	glDisable(GL_TEXTURE_GEN_T);
-}
-
-
-void disable_textures_texgen() {
-
-	disable_texgen();
-	glDisable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, 0); // bind to none
 }
 
 

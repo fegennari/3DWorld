@@ -26,7 +26,6 @@ void init_glew();
 // multitexture prototypes
 void set_active_texture(unsigned tu_id);
 void select_multitex(int id, unsigned tu_id, bool reset=1);
-void disable_multitex(unsigned tu_id, bool do_disable_texgen=0);
 
 // 3D texture prototypes
 void bind_3d_texture(unsigned tid);

@@ -372,8 +372,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_lighted_sides(2);
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-	glEnable(GL_TEXTURE_GEN_S);
-	glEnable(GL_TEXTURE_GEN_T);
 	set_color_a(BLACK);
 	set_specular(0.0, 1.0);
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
@@ -501,7 +499,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		draw_last.resize(0);
 	} // end draw_trans
 	s.end_shader();
-	disable_texgen();
 	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
 	//if (draw_solid) PRINT_TIME("Final Draw");
@@ -752,11 +749,13 @@ void draw_sky(int order) { // FIXME SHADERS: uses fixed function pipeline
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
 	bool const depth_clamp_enabled(glIsEnabled(GL_DEPTH_CLAMP) != 0);
 	if (depth_clamp_enabled) {glDisable(GL_DEPTH_CLAMP);}
+	glEnable(GL_TEXTURE_GEN_S); glEnable(GL_TEXTURE_GEN_T);
 	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius)); // GL_EYE_LINEAR
 	set_color_a(cloud_color);
 	set_color_d(cloud_color); // disable lighting (BLACK)?
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
-	disable_textures_texgen(); // reset S and T parameters
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_GEN_S); glDisable(GL_TEXTURE_GEN_T);
 	disable_blend();
 	glDisable(light);
 	if (depth_clamp_enabled) {glEnable(GL_DEPTH_CLAMP);}
@@ -967,7 +966,7 @@ void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, 
 	qbd.draw();
 	glDisable(GL_ALPHA_TEST);
 	disable_flares();
-	//disable_multitex(1);
+	//set_active_texture(0);
 }
 
 

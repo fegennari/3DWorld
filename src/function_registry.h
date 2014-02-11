@@ -498,8 +498,6 @@ void gen_tex_height_tables();
 void set_texgen_vec4(float const v[4], bool s_or_t, bool enable_and_set_mode, shader_t *shader=NULL);
 void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, int mode=GL_EYE_LINEAR, shader_t *shader=NULL);
 void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off=0.0, int mode=GL_EYE_LINEAR);
-void disable_texgen();
-void disable_textures_texgen();
 void get_poly_texgen_dirs(vector3d const &norm, vector3d v[2]);
 void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2], vector3d const &offset, bool swap_txy=0, shader_t *shader=NULL);
 void get_tex_coord(vector3d const &dir, vector3d const &sdir, unsigned txsize, unsigned tysize, int &tx, int &ty, bool invert);
