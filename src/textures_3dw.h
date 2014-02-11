@@ -8,8 +8,6 @@
 
 #include "3DWorld.h"
 
-
-int const NTEX_SAND    = 4;
 int const NTEX_DIRT    = 5;
 int const NUM_TEXTURES = 105;
 
@@ -20,7 +18,7 @@ struct ttex {
 };
 
 
-extern ttex lttex_sand[], lttex_dirt[];
+extern ttex lttex_dirt[];
 
 
 #define RGB_BLOCK_COPY(dst, src)           {dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2];            }

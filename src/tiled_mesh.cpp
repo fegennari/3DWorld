@@ -35,7 +35,7 @@ hmap_brush_param_t cur_brush_param;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
-extern int island, DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
+extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere;
@@ -750,7 +750,6 @@ void tile_t::ensure_height_tid() {
 
 void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
-	assert(!island);
 	assert(zvals.size() == zvsize*zvsize);
 	//RESET_TIME;
 	unsigned const tsize(stride);
@@ -805,7 +804,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				has_any_grass |= grass;
 
 				if (grass || snow) {
-					float const *const sti(sthresh[0][snow]);
+					float const *const sti(sthresh[snow]);
 
 					if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
 						if (grass) { // ground/grass
@@ -1479,12 +1478,12 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 }
 
 
-void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id, bool use_sand) {
+void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
 
 	unsigned const base_tsize(NORM_TEXELS);
 
-	for (int i = 0; i < (use_sand ? NTEX_SAND : NTEX_DIRT); ++i) {
-		int const tid(use_sand ? lttex_sand[i].id : lttex_dirt[i].id);
+	for (int i = 0; i < NTEX_DIRT; ++i) {
+		int const tid(lttex_dirt[i].id);
 		float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
 		float cscale(1.0);
 		if (tid == GROUND_TEX) {cscale = TT_GRASS_COLOR_SCALE;} // darker grass
@@ -1572,7 +1571,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 	set_noise_tex(s, 8);
 	setup_cloud_plane_uniforms(s);
-	setup_terrain_textures(s, 2, 0);
+	setup_terrain_textures(s, 2);
 
 	/*if (use_hmap_tex) {
 		set_tile_xy_vals(s);

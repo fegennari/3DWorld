@@ -20,7 +20,7 @@ int matrix_alloced(0);
 int MESH_X_SIZE(DEF_MESH_X_SIZE), MESH_Y_SIZE(DEF_MESH_Y_SIZE), MESH_Z_SIZE(DEF_MESH_Z_SIZE);
 float X_SCENE_SIZE(DEF_X_SCENE_SIZE), Y_SCENE_SIZE(DEF_Y_SCENE_SIZE), Z_SCENE_SIZE(DEF_Z_SCENE_SIZE);
 int MESH_SIZE[3], MAX_XY_SIZE, XY_MULT_SIZE, XY_SUM_SIZE, MAX_RUN_DIST, I_TIMESCALE;
-float SCENE_SIZE[3], MESH_HEIGHT, OCEAN_DEPTH, XY_SCENE_SIZE, TWO_XSS, TWO_YSS;
+float SCENE_SIZE[3], MESH_HEIGHT, XY_SCENE_SIZE, TWO_XSS, TWO_YSS;
 float DX_VAL, DY_VAL, HALF_DXY, DX_VAL_INV, DY_VAL_INV, DZ_VAL, dxdy, CLOUD_CEILING, LARGE_ZVAL;
 
 
@@ -48,9 +48,8 @@ short     ***volume_matrix = NULL;
 unsigned char ***shadow_mask = NULL;
 
 extern bool last_int, mesh_invalidated;
-extern int world_mode, MAX_RUN_DIST, island, xoff, yoff, I_TIMESCALE2, DISABLE_WATER;
+extern int world_mode, MAX_RUN_DIST, xoff, yoff, I_TIMESCALE2, DISABLE_WATER;
 extern float zmax, zmin, water_plane_z, def_water_level, temperature, max_obj_radius;
-extern point ocean;
 
 
 void update_motion_zmin_matrices(int xpos, int ypos);
@@ -70,7 +69,6 @@ void set_scene_constants() {
 	I_TIMESCALE   = min(MAX_I_TIMESCALE, max(1, int(XY_SUM_SIZE/128)));
 	I_TIMESCALE2  = I_TIMESCALE;
 	MESH_HEIGHT   = 0.10*Z_SCENE_SIZE;
-	OCEAN_DEPTH   = 0.05*Z_SCENE_SIZE;
 	XY_SCENE_SIZE = 0.5*(X_SCENE_SIZE + Y_SCENE_SIZE);
 	TWO_XSS       = 2.0*X_SCENE_SIZE;
 	TWO_YSS       = 2.0*Y_SCENE_SIZE;
@@ -195,7 +193,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	assert(rad >= 0);
 	int const x1(max(0, xpos-rad)), y1(max(0, ypos-rad));
 	int const x2(min(MESH_X_SIZE-1, xpos+rad)), y2(min(MESH_Y_SIZE-1, ypos+rad));
-	float const zbot(island ? (ocean.z + 0.01) : (zbottom - MESH_LOWEST_DZ));
+	float const zbot(zbottom - MESH_LOWEST_DZ);
 	vector<mesh_update_t> to_update; // {x, y}
 	set<pair<int, int> > grass_update;
 
@@ -310,7 +308,7 @@ void get_matrix_point(int xpos, int ypos, point &pt) {
 int is_in_ice(int xpos, int ypos) {
 
 	if (DISABLE_WATER || temperature > W_FREEZE_POINT || point_outside_mesh(xpos, ypos)) return 0;
-	return (wminside[ypos][xpos] && (!island || mesh_height[ypos][xpos] > (ocean.z + SMALL_NUMBER)));
+	return wminside[ypos][xpos];
 }
 
 

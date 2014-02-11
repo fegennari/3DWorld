@@ -95,12 +95,11 @@ vector<water_section> wsections;
 spillover spill;
 
 extern bool using_lightmap, has_snow, fast_water_reflect;
-extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2, ocean_set;
-extern int world_mode, island, rand_gen_index, begin_motion, animate, animate2, blood_spilled;
+extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2;
+extern int world_mode, rand_gen_index, begin_motion, animate, animate2, blood_spilled;
 extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll, INIT_DISABLE_WATER;
 extern float temperature, zmax, zmin, zbottom, ztop, light_factor, water_plane_z, fticks, mesh_scale;
 extern float TIMESTEP, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
-extern point ocean;
 extern vector3d up_norm, wind, total_wind;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -404,7 +403,7 @@ void draw_water() {
 	process_water_springs();
 	add_waves();
 	if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
-	if (DISABLE_WATER || (island && !has_accumulation)) return;
+	if (DISABLE_WATER) return;
 	water_surface_draw wsd;
 	shader_t s;
 
@@ -426,45 +425,45 @@ void draw_water() {
 	float const tx_val(tx_scale*xoff2*DX_VAL + tdx), ty_val(ty_scale*yoff2*DX_VAL + tdy);
 	if (DEBUG_WATER_TIME) {PRINT_TIME("1 WSD Init");}
 
-	if (!island) { // draw exterior water (oceans)
-		if (camera.z >= water_plane_z) {draw_water_sides(1);}
-		if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
-		glDisable(GL_NORMALIZE);
-		enable_blend();
-		enable_point_specular();
-		select_water_ice_texture(color);
-		setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
-		color.alpha *= 0.5;
-		wsd.set_big_water(1);
-		int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
+	// draw exterior water (oceans)
+	if (camera.z >= water_plane_z) {draw_water_sides(1);}
+	if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
+	glDisable(GL_NORMALIZE);
+	enable_blend();
+	enable_point_specular();
+	select_water_ice_texture(color);
+	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
+	color.alpha *= 0.5;
+	wsd.set_big_water(1);
+	int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
 
-		if (USE_SEA_FOAM) { // use sea foam texture
-			select_multitex(FOAM_TEX, 1, 0);
-			setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0);
-			set_active_texture(0);
-			s.add_uniform_float("detail_tex_scale", 1.0);
-		}
-		if (1) {
-			// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
-			point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
-			int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
-			draw_outside_water_range(wsd, color, cxpos, cypos, xend, yend,  1,  1);
-			draw_outside_water_range(wsd, color, cxpos, cypos, xend, 0,     1, -1);
-			draw_outside_water_range(wsd, color, cxpos, cypos, 0,    yend, -1,  1);
-			draw_outside_water_range(wsd, color, cxpos, cypos, 0,    0,    -1, -1);
-		}
-		else {
-			draw_outside_water_range(wsd, color, 0, 0, xend, yend, 1, 1);
-		}
-		if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
-		disable_blend();
-		disable_point_specular();
-		set_specular(0.0, 1.0);
-		disable_texgen();
-		glEnable(GL_NORMALIZE);
-		if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
-		if (camera.z < water_plane_z) {draw_water_sides(1);}
+	if (USE_SEA_FOAM) { // use sea foam texture
+		select_multitex(FOAM_TEX, 1, 0);
+		setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0);
+		set_active_texture(0);
+		s.add_uniform_float("detail_tex_scale", 1.0);
 	}
+	if (1) {
+		// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
+		point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
+		int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
+		draw_outside_water_range(wsd, color, cxpos, cypos, xend, yend,  1,  1);
+		draw_outside_water_range(wsd, color, cxpos, cypos, xend, 0,     1, -1);
+		draw_outside_water_range(wsd, color, cxpos, cypos, 0,    yend, -1,  1);
+		draw_outside_water_range(wsd, color, cxpos, cypos, 0,    0,    -1, -1);
+	}
+	else {
+		draw_outside_water_range(wsd, color, 0, 0, xend, yend, 1, 1);
+	}
+	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
+	disable_blend();
+	disable_point_specular();
+	set_specular(0.0, 1.0);
+	disable_texgen();
+	glEnable(GL_NORMALIZE);
+	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
+	if (camera.z < water_plane_z) {draw_water_sides(1);}
+	
 	if (!no_grass()) {
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
@@ -525,7 +524,7 @@ void draw_water() {
 				assert(size_t(wsi) < valleys.size());
 				float const z_min(z_min_matrix[i][j]), zval(valleys[wsi].zval), wzval(water_matrix[i][j]), wzmax(max(zval, wzval));
 
-				if (wzmax >= z_min - G_W_STOP_DEPTH && (!island || wzmax > ocean.z)) {
+				if (wzmax >= z_min - G_W_STOP_DEPTH) {
 					if (!is_ice && UPDATE_UW_LANDSCAPE && (rand()&63) == 0) {
 						add_hole_in_landscape_texture(j, i, 1.2*fticks*(0.02 + wzmax - z_min));
 					}
@@ -846,8 +845,8 @@ void compute_ripples() {
 void add_splash(point const &pos, int xpos, int ypos, float energy, float radius, bool add_sound, vector3d const &vadd) {
 
 	//energy *= 10.0;
-	if (DISABLE_WATER || !(display_mode & 0x04))  return;
-	if (temperature <= W_FREEZE_POINT && !island) return;
+	if (DISABLE_WATER || !(display_mode & 0x04)) return;
+	if (temperature <= W_FREEZE_POINT) return;
 	int in_wmatrix(0), wsi(0);
 	float water_mix(1.0);
 
@@ -1174,7 +1173,6 @@ int draw_spill_section(vector<vert_norm_color> &verts, int x1, int y1, int x2, i
 	float xa(get_xval(x1)), ya(get_yval(y1));
 	if ((z1+flow_height) < water_plane_z && (z2+flow_height) < water_plane_z)               return 0; // both ends under water plane
 	if ((z1+flow_height) < water_matrix[y1][x1] && (z2+flow_height) < water_matrix[y2][x2]) return 0; // both ends under local water
-	if (island && (z1+0.02) < ocean.z && (z2+0.02) < ocean.z)                               return 0; // both ends under ocean
 	vector3d const &norm(vertex_normals[y1][x1]);
 
 	if (x1 == x2 && y1 == y2) { // end at a point
@@ -1306,34 +1304,26 @@ void calc_watershed() {
 		init_water_springs(NUM_WATER_SPRINGS);
 		return;
 	}
-	if (island) {
-		def_water_level = water_plane_z = ocean.z;
-		mode = 1;
-	}
-	else {
-		ocean.z = water_plane_z;
+	if (ztop < water_plane_z) { // all water
+		def_water_level = water_plane_z;
 
-		if (ztop < water_plane_z) { // all water
-			def_water_level = water_plane_z;
-
-			for (int i = 0; i < MESH_Y_SIZE; ++i) {
-				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					water_matrix[i][j]     = water_plane_z;
-					wminside[i][j]         = 2;
-					wat_vert_normals[i][j] = plus_z;
-				}
+		for (int i = 0; i < MESH_Y_SIZE; ++i) {
+			for (int j = 0; j < MESH_X_SIZE; ++j) {
+				water_matrix[i][j]     = water_plane_z;
+				wminside[i][j]         = 2;
+				wat_vert_normals[i][j] = plus_z;
 			}
-			max_water_height = def_water_level;
-			min_water_height = def_water_level;
-			return;
 		}
-		else if (zbottom < water_plane_z) { // some water
-			def_water_level = water_plane_z;
-			mode            = 1;
-		}
-		else { // no water
-			def_water_level = zmin;
-		}
+		max_water_height = def_water_level;
+		min_water_height = def_water_level;
+		return;
+	}
+	else if (zbottom < water_plane_z) { // some water
+		def_water_level = water_plane_z;
+		mode            = 1;
+	}
+	else { // no water
+		def_water_level = zmin;
 	}
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
@@ -1703,10 +1693,6 @@ bool is_underwater(point const &pos, int check_bottom, float *depth) { // or und
 		if (depth) *depth = max(0.0f, (water_plane_z - pos.z));
 		return (pos.z < water_plane_z);
 	}
-	if (ocean_set && pos.z < ocean.z) {
-		if (depth) *depth = ocean.z - pos.z;
-		return 1;
-	}
 	assert(water_matrix && mesh_height);
 	if (!(display_mode & 0x04) || !is_over_mesh(pos) || pos.z < zmin || pos.z > max_water_height) return 0;
 	//if (pos.z < min_water_height) return 1;
@@ -1740,7 +1726,7 @@ void update_accumulation(int xpos, int ypos) {
 
 int get_water_wsi(int xpos, int ypos) {
 
-	if (point_outside_mesh(xpos, ypos) || wminside[ypos][xpos] != 1 || (island && mesh_height[ypos][xpos] <= ocean.z)) return -1;
+	if (point_outside_mesh(xpos, ypos) || wminside[ypos][xpos] != 1) return -1;
 	int const wsi(watershed_matrix[ypos][xpos].wsi);
 	assert(size_t(wsi) < valleys.size());
 	return wsi;

@@ -37,4 +37,3 @@ Better pine tree texture
 Make TT and ground mode trees agree
 
 SUN_TEX is unused - remove?
-Remove old ocean/island mode

@@ -238,8 +238,8 @@ void draw_tiled_terrain_precipitation();
 void draw_overhead_map();
 
 // function prototypes - gen_obj
-void gen_stars(float alpha, int half_sphere);
-void gen_star(star &star1, int half_sphere);
+void gen_stars(float alpha, int half_sphere=0);
+void gen_star(star &star1, int half_sphere=0);
 void rand_xy_point(float zval, point &pt, unsigned flags);
 void gen_object_pos(point &position, unsigned flags);
 void gen_bubble(point const &pos, float r=0.0, colorRGBA const &c=WATER_C);
@@ -259,7 +259,7 @@ void gen_gauss_rand_arr();
 
 // function prototypes - mesh_gen
 bool bmp_to_chars(char *fname, char **&data);
-void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_zvals);
+void gen_mesh(int surface_type, int keep_sin_table, int update_zvals);
 float get_glaciated_zval(float zval);
 float calc_glaciated_rel_value(float value);
 float do_glaciate_exp(float value);

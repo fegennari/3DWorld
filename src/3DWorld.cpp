@@ -44,7 +44,7 @@ float const MA_TOLERANCE   = 0.0001; // tolerance adjustment
 float const CAMERA_AIR_CONT= 0.5;
 float const DEF_OCEAN_WAVE_HEIGHT = 0.01;
 
-int const START_MODE       = WMODE_GROUND; // 0 = island/standard mesh, 1 = planet/universe, 2 = no redraw mesh, 3 = infinite terrain
+int const START_MODE       = WMODE_GROUND; // 0 = standard mesh, 1 = planet/universe, 2 = infinite terrain
 
 
 char *defaults_file    = "defaults.txt";
@@ -66,7 +66,7 @@ bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enab
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
-int display_framerate(1), init_resize(1), temp_change(0), mesh_type(INIT_MESH_TYPE), mt2(0), is_cloudy(0);
+int display_framerate(1), init_resize(1), temp_change(0), is_cloudy(0);
 int star_init(0), recreated(1), cloud_model(0), force_tree_class(-1), invert_mh_image(0), voxel_editing(0);
 int displayed(0), min_time(0), resolution(1+(START_MODE==3)), res_old(1+(START_MODE!=3)), show_framerate(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0);
@@ -378,7 +378,7 @@ void reset_camera_pos() {
 	c_theta       = DEF_CTHETA;
 	c_phi         = DEF_CPHI;
 	camera_y      = DEF_CAMY;
-	if (world_mode == WMODE_UNIVERSE && !island) camera_origin.z = zcenter;
+	if (world_mode == WMODE_UNIVERSE) camera_origin.z = zcenter;
 	if (passive_motion) m_button = GLUT_LEFT_BUTTON;
 }
 
@@ -508,15 +508,7 @@ void advance_camera(int dir) {
 
 void change_terrain_zoom(float val) {
 
-	if (island) {
-		mesh_scale  = 1.0;
-		tree_scale /= val;
-		rand_gen_index = rand();
-		regen_trees(1, 0);
-		build_cobj_tree();
-		gen_grass(0);
-	}
-	else if (!(display_mode & 0x01)) { // mesh not enabled - only scale trees
+	if (!(display_mode & 0x01)) { // mesh not enabled - only scale trees
 		tree_scale /= val;
 		regen_trees(1, 0);
 		build_cobj_tree();
@@ -556,8 +548,6 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 		world_mode = (world_mode+1)%NUM_WMODE;
 	} while ((disable_universe && world_mode == WMODE_UNIVERSE) || (disable_inf_terrain && world_mode == WMODE_INF_TERRAIN));
 	
-	if (world_mode == WMODE_INF_TERRAIN && island) world_mode = WMODE_GROUND; // unsupported
-	
 	if (world_mode == WMODE_UNIVERSE) { // save camera position parameters
 		xoff_ = xoff; yoff_ = yoff; xoff2_ = xoff2; yoff2_ = yoff2;
 		camera_pos_ = camera_pos; // fix_player_upv()?
@@ -576,11 +566,9 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 	post_window_redisplay();
 	
 	if (world_mode == WMODE_INF_TERRAIN) {
-		mt2        = mesh_type;
 		swap(resolution, res_old);
 	}
 	else if (world_mode == WMODE_GROUND) {
-		mesh_type  = mt2;
 		swap(resolution, res_old);
 		if (combined_gu) regen_trees(1, 0);
 	}
@@ -795,9 +783,8 @@ void switch_weapon_mode() {
 void keyboard_proc(unsigned char key, int x, int y) {
 
 	int mtime2;
-	static int lmtype(0);
 
-    switch (key) { // available: AXOP somtimes SZ
+    switch (key) { // available: AXOP somtimes SZi
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -832,10 +819,6 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			break;
 		}
 		if (mesh_seed != 0 || read_heightmap) break;
-		if (mesh_type != lmtype) {
-			star_init = 0;
-			lmtype = mesh_type;
-		}
 		rand_gen_index = rand();
 		gen_scene(1, (world_mode == WMODE_GROUND), 0, 0, 0);
 		regen_lightmap();
@@ -871,13 +854,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		}
 		break;
 
-	case 'i': // change mesh type (flat/mountain island vs. mountains) / toggle autopilot
-		if (world_mode == WMODE_UNIVERSE) {
-			toggle_autopilot();
-			break;
-		}
-		mesh_type  = (mesh_type+1)%3;
-		mesh_scale = tree_scale = 1.0;
+	case 'i': // toggle autopilot
+		if (world_mode == WMODE_UNIVERSE) {toggle_autopilot();}
 		break;
 
 	case 'n': // toggle fog / reset player target
@@ -990,7 +968,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 	case '-': // decrease temp
 		temperature -= TEMP_INCREMENT;
-		temperature  = max(temperature, (island ? 1.0f : ABSOLUTE_ZERO));
+		temperature  = max(temperature, ABSOLUTE_ZERO);
 		cout << "Temperature = " << temperature << " degrees C." << endl;
 		temp_change = 1;
 		break;
@@ -1205,7 +1183,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x40;   break;
 	case '8': // toggle water caustics/smoke (change text draw mode - stroke vs. bitmap - disabled)
 		display_mode ^= 0x80;   break;
-	case '9': // toggle ocean waves and leaf wind
+	case '9': // toggle leaf wind
 		display_mode ^= 0x0100; break;
 	case '0': // toggle universe stencil shadows / toggle spraypaint mode
 		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;} else {toggle_spraypaint_mode();}

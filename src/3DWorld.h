@@ -54,7 +54,6 @@ float    const MESH_LOWEST_DZ   = 0.040;
 
 unsigned const TICKS_PER_SECOND = 40;
 
-float    const ISLAND_BOT_OFF   = 0.15;
 float    const SMALL_NUMBER     = 0.001;
 float    const MIN_POLY_THICK   = 0.001;
 float    const LARGE_DIST       = 200.0;

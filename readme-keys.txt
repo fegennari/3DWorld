@@ -33,7 +33,6 @@ e	next weapon (default = ball)
 f	print framerate to console along with other statistics
 g	pause/resume playback of a user eventlist
 h	toggle camera collision detection in ground mode (default = OFF)
-i	switch between island, raised island, and land floating in space (must recreate mesh with c afterwards, default = island)
 j	toggle camera real physics/collision (default = OFF)
 k	switch between filled polygon and wireframe mesh in normal mode (default = filled), switch between color and grayscale in mapmode (default = COLOR)
 l	toggle lightning OFF, ON, NO_SHADOWS (default = OFF)
@@ -87,7 +86,7 @@ C	create new mesh
 6	switch between mesh lighting/shadow models (experimental, default is fastest model)
 7	toggle show snow accumulation (slower, default = OFF)
 8	toggle mouse draw mode (must enable snow with key 7, default = OFF)
-9	toggle ocean waves (default = ON)
+9	toggle leaf wind (default = ON)
 0	toggle stencil shadows off mesh/on water (default = ON)
 
 -	decrease temperature by 10 degrees C (starts at 20 degrees C)
@@ -112,7 +111,7 @@ DOWN_ARROW		increase wind in y direction by 0.5
 SPACE			fire (game mode only)
 TAB				show scores (game mode only)
 
-F1	switch mode: universe/planet, experimental land, infinite terrain, island/land (default = universe)
+F1	switch mode: universe/planet, infinite terrain, land (default = land)
 F2	toggle game mode/smileys (default = ON)
 F3	switch world display between normal and "experimental" (default = normal)
 F4  switch weapon firing mode

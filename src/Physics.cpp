@@ -38,11 +38,10 @@ vector3d wind(0.4, 0.2, 0.0), total_wind(0.0, 0.0, 0.0);
 point flow_source(0.0, 0.0, -2.0);
 obj_type object_types[NUM_TOT_OBJS];
 
-extern int num_groups, display_mode, frame_counter, game_mode, island, camera_coll_id, ocean_set;
+extern int num_groups, display_mode, frame_counter, game_mode, camera_coll_id;
 extern int s_ball_id, world_mode, has_accumulation, has_snow_accum, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
 extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks, water_plane_z;
 extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
-extern point ocean;
 extern vector3d up_norm, orig_cdir;
 extern vector<valley> valleys;
 extern int coll_id[];
@@ -767,10 +766,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			return;
 		}
 		if (val == 0) {
-			if (pos.z < zmin || (flags & Z_STOPPED)) {
-				status = 0; // out of simulation region and underwater
-				if (island) draw_splash(pos.x, pos.y, (ocean.z + 0.001), SPLASH_BASE_SZ*sqrt(get_coll_energy(zero_vector, velocity, otype.mass)));
-			}
+			if (pos.z < zmin || (flags & Z_STOPPED)) {status = 0;} // out of simulation region and underwater
 			return;
 		}
 		int const wcoll(check_water_collision(vz_old));
@@ -988,27 +984,19 @@ int dwobject::check_water_collision(float vz_old) {
 
 	obj_type const &otype(object_types[type]);
 	float const radius(otype.radius);
-	if (!island && ((pos.z - radius) > max_water_height)) return 0; // quick check for efficiency
+	if ((pos.z - radius) > max_water_height) return 0; // quick check for efficiency
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
-	if (point_outside_mesh(xpos, ypos))                   return 0; // off the mesh
-	bool in_ocean(0);
+	if (point_outside_mesh(xpos, ypos))      return 0; // off the mesh
 	float water_height;
 	vector3d old_v(velocity);
-
-	if (island && (pos.z - radius) <= ocean.z) {
-		water_height = ocean.z;
-		in_ocean     = 1;
-	}
-	else {
-		if (!has_water(xpos, ypos)) return 0; // not over water
-		water_height = water_matrix[ypos][xpos];
-		if (!is_mesh_disabled(xpos, ypos) && water_height < mesh_height[ypos][xpos]) return 0;
-		if (!(flags & IN_WATER) && (pos.z - radius) > water_height)                  return 0; // ???
-	}
+	if (!has_water(xpos, ypos)) return 0; // not over water
+	water_height = water_matrix[ypos][xpos];
+	if (!is_mesh_disabled(xpos, ypos) && water_height < mesh_height[ypos][xpos]) return 0;
+	if (!(flags & IN_WATER) && (pos.z - radius) > water_height)                  return 0; // ???
 	if (!is_mesh_disabled(xpos, ypos) && (pos.z + radius + SMALL_NUMBER) < mesh_height[ypos][xpos]) return 0;
 	bool const exp_on_coll((otype.flags & EXPL_ON_COLL) != 0);
 	
-	if (temperature > W_FREEZE_POINT || in_ocean) { // water - object adds to water if precipitation
+	if (temperature > W_FREEZE_POINT) { // water - object adds to water if precipitation
 		assert(type != SMILEY);
 		bool const no_water_damage((object_types[type].flags & NO_WATER_DAMAGE) != 0);
 		bool splash(0);
@@ -1300,7 +1288,7 @@ void bubble::apply_physics(unsigned i) {
 	if (point_outside_mesh(xpos, ypos)) {
 		status = 0; // out of simulation region
 	}
-	else if (pos.z >= water_matrix[ypos][xpos] && (!ocean_set || pos.z >= ocean.z)) {
+	else if (pos.z >= water_matrix[ypos][xpos]) {
 		draw_splash(pos.x, pos.y, (water_matrix[ypos][xpos] + 0.0002), 2.0*radius, color);
 		status = 0; // pops at water surface
 	}
@@ -1388,7 +1376,7 @@ void fire::apply_physics(unsigned i) {
 	pos2.z -= radius;
 	bool underwater(is_underwater(pos2));
 
-	if (underwater && !island && temperature <= W_FREEZE_POINT) { // on/under ice
+	if (underwater && temperature <= W_FREEZE_POINT) { // on/under ice
 		radius    *= pow(0.95f, fticks); // slowly die out
 		underwater = 0;
 	}

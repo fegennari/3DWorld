@@ -51,13 +51,13 @@ vector<bbox> team_starts;
 extern bool vsync_enabled, spraypaint_mode, smoke_visible;
 extern int game_mode, window_width, window_height, world_mode, fire_key, spectate, begin_motion, animate2;
 extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf_collide, b2down;
-extern int ocean_set, num_groups, island, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
+extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern unsigned create_voxel_landscape;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_depth, crater_radius;
 extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
 extern double camera_zh;
-extern point ocean, surface_pos, camera_last_pos;
+extern point surface_pos, camera_last_pos;
 extern int coll_id[];
 extern obj_type object_types[];
 extern obj_group obj_groups[];
@@ -1040,18 +1040,13 @@ void create_ground_rubble(point pos, int shooter, float hv, float close, int cal
 	if (calc_hv) {
 		hv = (outside ? 0.5 : get_rel_height(mesh_height[ypos][xpos], zmin, zmax));
 	}
-	if (island && hv < 0.25) { // sand
-		int const num(int(close*(4.5*(0.2 - hv) + 0.1)*(50 + rand()%100)));
-		float const params[7] = {4.0, 6.0, 4.0, 0.5, 0.5, 0.8, 0.2};
-		gen_rubble(SAND, num, pos, shooter, params);
-	}
-	if (hv < 0.57 && (!island || hv > 0.2)) { // dirt
+	if (hv < 0.57) { // dirt
 		int const num(int(close*(1.0 - 3.0*fabs(hv - 0.3))*(75 + rand()%150)));
 		float const params[7] = {3.5, 5.5, 5.0, 0.3, 0.7, 0.6, 0.4};
-		gen_rubble(DIRT, num, pos, shooter, params);
+		gen_rubble(DIRT, num, pos, shooter, params); // or SAND
 	}
-	if (hv > 0.5 || (island && hv > 0.35)) { // rocks
-		int const num(int(close*(3.0*min(0.3, (hv - 0.5 + 0.15*(island == 1))) + 0.1)*(30 + rand()%60)));
+	if (hv > 0.5) { // rocks
+		int const num(int(close*(3.0*min(0.3, (hv - 0.5)) + 0.1)*(30 + rand()%60)));
 		float const params[7] = {3.0, 6.0, 4.5, 0.2, 1.0, 0.5, 0.5};
 		gen_rubble(ROCK, num, pos, shooter, params);
 	}
@@ -1776,7 +1771,7 @@ int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, in
 	point ice_coll_pos(vca);
 
 	// compute range to ice surface (currently only at the default water level)
-	if (temperature <= W_FREEZE_POINT && !island) { // firing into ice
+	if (temperature <= W_FREEZE_POINT) { // firing into ice
 		ixpos = get_xpos(pos.x);
 		iypos = get_ypos(pos.y);
 
@@ -2070,7 +2065,7 @@ float get_projectile_range(point const &pos, vector3d vcf, float dist, float ran
 						   int &coll, int &cindex, int source, int check_splash, int ignore_cobj)
 {
 	vcf.normalize();
-	float const splash_val((!DISABLE_WATER && check_splash && (temperature > W_FREEZE_POINT || island)) ? SPLASH_BASE_SZ*100.0 : 0.0);
+	float const splash_val((!DISABLE_WATER && check_splash && (temperature > W_FREEZE_POINT)) ? SPLASH_BASE_SZ*100.0 : 0.0);
 	point const pos1(pos + vcf*dist), pos2(pos + vcf*range);
 	coll = 0;
 

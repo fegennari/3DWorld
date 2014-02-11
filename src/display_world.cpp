@@ -479,7 +479,7 @@ void setup_lighting(float depth) {
 void draw_sun_moon_stars() {
 
 	if (light_factor <= 0.4) { // moon
-		if (!is_cloudy) {gen_stars(1.0, island);}
+		if (!is_cloudy) {gen_stars(1.0);}
 		draw_moon();
 	}
 	else if (light_factor >= 0.6) { // sun
@@ -487,7 +487,7 @@ void draw_sun_moon_stars() {
 	}
 	else { // sun and moon
 		float const lfn(1.0 - 5.0*(light_factor - 0.4));
-		if (!is_cloudy) {gen_stars(lfn, island);}
+		if (!is_cloudy) {gen_stars(lfn);}
 		draw_moon();
 		draw_sun();
 	}
@@ -648,7 +648,6 @@ void scroll_scene() {
 	RESET_TIME;
 	point const camera(get_camera_pos());
 	cout << "Shifting Scene..." << endl;
-	mesh_type     = 0; // don't scroll to an island
 	camera_change = 1;
 	scrolling     = 1;
 	dx_scroll     = int(camera.x*DX_VAL_INV);
@@ -932,8 +931,7 @@ void display(void) {
 			check_gl_error(101);
 
 			if (underwater) {
-				bool const is_ice(temperature <= W_FREEZE_POINT && (!island || camera.z > ocean.z));
-				colorRGBA fog_color(is_ice ? ICE_C : WATER_C); // under ice/water
+				colorRGBA fog_color((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C); // under ice/water
 				fog_color.alpha = 1.0;
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
@@ -1015,7 +1013,7 @@ void display(void) {
 		}
 		if (TIMETEST) PRINT_TIME("X");
 
-		if (dynamic_mesh_scroll && world_mode == WMODE_GROUND && camera_mode == 1 && !island && !camera_view) {
+		if (dynamic_mesh_scroll && world_mode == WMODE_GROUND && camera_mode == 1 && !camera_view) {
 			float const cdist(max(fabs(camera.x/X_SCENE_SIZE), fabs(camera.y/Y_SCENE_SIZE)));
 			if (cdist > REL_SCROLL_DIST) scroll_scene();
 		}
@@ -1035,14 +1033,12 @@ void display_universe() { // infinite universe
 	RESET_TIME;
 
 	if (!init || init_x) {
-		mesh_type = INIT_MESH_TYPE;
-		init      = 1;
-		init_x    = 0;
-		show_fog  = 0;
+		init     = 1;
+		init_x   = 0;
+		show_fog = 0;
 		update_cpos();
 	}
 	camera_view = 0;
-	ocean_set   = 0;
 	framerate   = get_framerate(timer_b);
 	init_universe_display();
 	bkg_color   = BACKGROUND_NIGHT;
@@ -1207,16 +1203,9 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	set_global_state();
 	if (b2down) fire_weapon();
 
-	if (init_x && mesh_type != 0) {
-		mesh_type = 0;
-		gen_scene(1, 0, KEEP_MESH, 0, 0);
-		recreated = 1;
-	}
 	bool const water_enabled((display_mode & 0x04) && !DISABLE_WATER);
 	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_CLIP);
-	ocean.z       = water_plane_z;
 	camera_mode   = 1; // walking on ground
-	mesh_type     = 0;
 	float min_camera_dist(0.0);
 	float const zmin2(update_tiled_terrain(min_camera_dist));
 	bool const change_near_far_clip(!camera_surf_collide && min_camera_dist > 0.0);

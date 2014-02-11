@@ -11,12 +11,6 @@
 
 
 int      const NUM_FREQ_COMP      = 9;
-int      const NUM_L0_FREQ_COMP   = 6;
-float    const I_ATTEN_VAL        = 0.25;
-float    const ISLAND_SHAPE_EXP   = 1.75;
-float    const ISLAND_MAG_SCALE   = 1.6;
-float    const ISLAND_FREQ_SCALE  = 2.5;
-float    const SHAPE_PERIOD_SCALE = 1.0;
 float    const MESH_SCALE_Z_EXP   = 0.7;
 int      const N_RAND_SIN2        = 10;
 int      const FREQ_FILTER        = 2; // higher = smoother landscape
@@ -33,8 +27,7 @@ float    const GLACIATE_EXP       = 3.0;
 bool     const GEN_SCROLLING_MESH = 1;
 float    const S_GEN_ATTEN_DIST   = 128.0;
 
-int   const F_TABLE_SIZE       = NUM_FREQ_COMP*N_RAND_SIN2;
-int   const START_L0_FREQ_COMP = NUM_FREQ_COMP - NUM_L0_FREQ_COMP;
+int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
 
 #define DO_GLACIATE_EXP(val) ((val)*(val)*(val)) // GLACIATE_EXP = 3.0
 
@@ -48,16 +41,14 @@ float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
 float *sin_table(NULL), *cos_table(NULL);
 float sinTable[F_TABLE_SIZE][5];
 
-int const mesh_tids_sand[NTEX_SAND] = {SAND_TEX, GROUND_TEX, ROCK_TEX,   SNOW_TEX};
 int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX,   GROUND_TEX, ROCK_TEX, SNOW_TEX};
-float const mesh_rh_sand[NTEX_SAND] = {0.18, 0.40, 0.70, 1.0};
 float const mesh_rh_dirt[NTEX_DIRT] = {0.40, 0.44, 0.60, 0.75, 1.0};
-float sthresh[2][2][2] = {{{0.68, 0.86}, {0.48, 0.72}}, {{0.5, 0.7}, {0.3, 0.55}}}; // {normal, island}, {grass, snow}, {lo, hi}
-ttex lttex_sand[NTEX_SAND], lttex_dirt[NTEX_DIRT];
+float sthresh[2][2] = {{0.68, 0.86}, {0.48, 0.72}}; // {grass, snow}, {lo, hi}
+ttex lttex_dirt[NTEX_DIRT];
 
 
 extern bool combined_gu;
-extern int island, xoff, yoff, xoff2, yoff2, world_mode, resolution, rand_gen_index, mesh_scale_change;
+extern int xoff, yoff, xoff2, yoff2, world_mode, resolution, rand_gen_index, mesh_scale_change;
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode, invert_mh_image;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
@@ -72,7 +63,7 @@ void gen_terrain_map();
 void estimate_zminmax(bool using_eq);
 void set_zvals();
 void update_temperature(bool verbose);
-void compute_scale(int make_island);
+void compute_scale();
 
 
 
@@ -194,10 +185,10 @@ void gen_mesh_random(float height) {
 
 
 
-void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, int ysize, int make_island) {
+void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, int ysize) {
 
 	assert(matrix);
-	int const num_freq(make_island ? NUM_L0_FREQ_COMP : NUM_FREQ_COMP), nsines(num_freq*N_RAND_SIN2);
+	int const nsines(NUM_FREQ_COMP*N_RAND_SIN2);
 	float hoff(0.0);
 	int i2(y_offset - ysize/2), j2(x_offset - xsize/2);
 	vector<float> jTerms(xsize*(end_eval_sin - start_eval_sin));
@@ -239,57 +230,28 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 }
 
 
-float get_island_xy_element(int i, int dim, float val, float val2, float val3, int make_island) {
-
-	float v(1.0);
-
-	if (make_island == 2) {
-		if (i < val2) {
-			v = sinf(val3*i);
-		}
-		else if (i > (MESH_SIZE[dim] - val2)) {
-			v = sinf(val3*(MESH_SIZE[dim]-i-1));
-		}
-	}
-	else {
-		v = cosf(get_dim_val(i, dim)*val);
-	}
-	if (ISLAND_SHAPE_EXP != 1.0) v = pow(fabs(v), ISLAND_SHAPE_EXP);
-	return v;
-}
-
-
-void gen_rand_sine_table_entries(bool make_island, float scaled_height) {
+void gen_rand_sine_table_entries(float scaled_height) {
 
 	float xf_scale((float)MESH_Y_SIZE/(float)MESH_X_SIZE), yf_scale(1.0/xf_scale);
 	if (X_SCENE_SIZE > Y_SCENE_SIZE) yf_scale *= (float)Y_SCENE_SIZE/(float)X_SCENE_SIZE;
 	if (Y_SCENE_SIZE > X_SCENE_SIZE) xf_scale *= (float)X_SCENE_SIZE/(float)Y_SCENE_SIZE;
 	float mags[NUM_FREQ_COMP], freqs[NUM_FREQ_COMP];
-	int const num_freq(make_island ? NUM_L0_FREQ_COMP : NUM_FREQ_COMP);
 	// Note: none of these config values are error checked, maybe should at least check >= 0.0
 	freqs[0] = MESH_START_FREQ;
 	mags [0] = MESH_START_MAG;
 
-	for (int i = 1; i < num_freq; ++i) {
+	for (int i = 1; i < NUM_FREQ_COMP; ++i) {
 		freqs[i] = freqs[i-1]*MESH_FREQ_MULT;
 		mags [i] = mags[i-1]*MESH_MAG_MULT;
 	}
-	if (make_island == 1) {
-		mags[1] = 0.4;
-		mags[2] = 0.2;
-	}
 	h_sum = 0.0;
-
-	for (int l = 0; l < num_freq; ++l) {
-		if (make_island == 1) {freqs[l] *= ISLAND_FREQ_SCALE;}
-		h_sum += mags[l];
-	}
-	float const mesh_h((make_island ? ISLAND_MAG_SCALE : 1.0)*scaled_height/sqrt(0.1*N_RAND_SIN2));
+	for (int l = 0; l < NUM_FREQ_COMP; ++l) {h_sum += mags[l];}
+	float const mesh_h(scaled_height/sqrt(0.1*N_RAND_SIN2));
 	h_sum *= N_RAND_SIN2*scaled_height*HEIGHT_SCALE;
 	static rand_gen_t rgen; // static so that later calls to this function will generate different values
 	if (mesh_seed != 0) {rgen.set_state(mesh_seed, 12345);}
 
-	for (int l = 0; l < num_freq; ++l) {
+	for (int l = 0; l < NUM_FREQ_COMP; ++l) {
 		int const offset(l*N_RAND_SIN2);
 		float const x_freq(freqs[l]/((float)MESH_X_SIZE)), y_freq(freqs[l]/((float)MESH_Y_SIZE));
 		float const mheight(mags[l]*mesh_h);
@@ -306,7 +268,7 @@ void gen_rand_sine_table_entries(bool make_island, float scaled_height) {
 }
 
 
-void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_zvals) {
+void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 
 	static bool init(0);
 	vector<float> atten_table(MESH_X_SIZE);
@@ -328,26 +290,21 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 	float const scaled_height(MESH_HEIGHT*mesh_height_scale);
 	++cache_counter; // invalidate mesh cache
 
-	if (make_island) {
-		mesh_scale   = 1.0;
-		mesh_scale_z = 1.0;
-	}
 	if (surface_type != 5) {
 		zmax = -LARGE_ZVAL;
 		zmin =  LARGE_ZVAL;
 	}
-	compute_scale(make_island);
+	compute_scale();
 	matrix_clear_2d(mesh_height);
-	island = make_island;
 
 	// Note: we always create the sine table, even when using a heightmap, because it may be used for random tree distributions, etc.
 	if (!keep_sin_table || !init) {
 		surface_generated = 1;
-		gen_rand_sine_table_entries((make_island != 0), scaled_height);
+		gen_rand_sine_table_entries(scaled_height);
 	}
 	if (surface_type == 0 || gen_scroll_surface) { // sine waves
 		if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) {
-			gen_mesh_sine_table(mesh_height, xoff2, yoff2, MESH_X_SIZE, MESH_Y_SIZE, make_island);
+			gen_mesh_sine_table(mesh_height, xoff2, yoff2, MESH_X_SIZE, MESH_Y_SIZE);
 		}
 	}
 	if (surface_type == 1) { // random
@@ -404,39 +361,7 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 	update_disabled_mesh_height();
 	if (surface_type != 5) {calc_zminmax();}
 
-	if (make_island) {
-		calc_zminmax();
-		{
-			float const val(SHAPE_PERIOD_SCALE*PI_TWO/X_SCENE_SIZE), val2(I_ATTEN_VAL*MESH_X_SIZE), val3(PI_TWO/val2);
-
-			for (int i = 0; i < MESH_X_SIZE; ++i) {
-				atten_table[i] = get_island_xy_element(i, 0, val, val2, val3, make_island);
-			}
-		}
-		{
-			float const val(SHAPE_PERIOD_SCALE*PI_TWO/Y_SCENE_SIZE), val2(I_ATTEN_VAL*MESH_Y_SIZE), val3(PI_TWO/val2);
-			float const zmin2(zmin), zmin2b(zmin2 - 0.15);
-
-			for (int i = 0; i < MESH_Y_SIZE; ++i) {
-				float const cosY(get_island_xy_element(i, 1, val, val2, val3, make_island));
-				
-				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					float const zval((mesh_height[i][j] - zmin2b)*cosY*atten_table[j] + zmin2);
-					zmin = min(zmin, zval);
-					zmax = max(zmax, zval);
-					mesh_height[i][j] = zval;
-				}
-			}
-		}
-		if (AUTOSCALE_HEIGHT && world_mode == WMODE_GROUND) {
-			mesh_origin.z   = 0.0;
-			camera_origin.z = 0.0;
-		}
-		water_plane_z = zmin - SMALL_NUMBER;
-		set_zmax_est(max(zmax, -zmin));
-		ztop          = zmax;
-	} // end make_island
-	else if (surface_type != 5) { // not make_island
+	if (surface_type != 5) {
 		if (!keep_sin_table || !init || update_zvals) {
 			if (AUTOSCALE_HEIGHT && world_mode == WMODE_GROUND) {
 				float const zval(0.5*(zmin + zmax));
@@ -449,11 +374,11 @@ void gen_mesh(int surface_type, int make_island, int keep_sin_table, int update_
 		else {
 			set_zvals();
 		}
-	} // end not make_island
+	}
 	update_temperature(1);
 	gen_terrain_map();
 
-	if (GLACIATE && !make_island && world_mode == WMODE_GROUND && (!keep_sin_table || !init || update_zvals) && AUTOSCALE_HEIGHT) {
+	if (GLACIATE && world_mode == WMODE_GROUND && (!keep_sin_table || !init || update_zvals) && AUTOSCALE_HEIGHT) {
 		float const zval(0.5*(zbottom + ztop)); // readjust camera height
 		mesh_origin.z   = zval;
 		camera_origin.z = zval;
@@ -504,31 +429,25 @@ void glaciate() {
 void init_terrain_mesh() {
 
 	float const rel_wpz(get_rel_wpz());
-	unsigned const sizes[2] = {NTEX_SAND, NTEX_DIRT}; // move into gen_tex_height_tables()?
-	int const *const mesh_tids[2] = {mesh_tids_sand, mesh_tids_dirt};
-	float const *const mesh_rh[2] = {mesh_rh_sand,   mesh_rh_dirt};
-	ttex *ts[2] = {lttex_sand, lttex_dirt};
 
-	for (unsigned d = 0; d < 2; ++d) {
-		for (unsigned i = 0; i < sizes[d]; ++i) {
-			ts[d][i].id = mesh_tids[d][i];
-			float const def_h(mesh_rh[d][i]);
-			float h;
+	for (unsigned i = 0; i < NTEX_DIRT; ++i) { // move into gen_tex_height_tables()?
+		lttex_dirt[i].id = mesh_tids_dirt[i];
+		float const def_h(mesh_rh_dirt[i]);
+		float h;
 
-			if (mesh_rh[d][i] < W_PLANE_Z) { // below water
-				h = def_h*rel_wpz/W_PLANE_Z;
-			}
-			else { // above water
-				float const rel_h((def_h - W_PLANE_Z)/(1.0 - W_PLANE_Z));
-				h = rel_wpz + rel_h*(1.0 - rel_wpz);
-				
-				if (mesh_tids[d][i] == SNOW_TEX) {
-					h = min(h, def_h); // snow can't get lower when water lowers
-					if (temperature > 40.0) h += 0.01*(temperature - 40.0); // less snow with increasing temperature
-				}
-			}
-			ts[d][i].zval = h;
+		if (mesh_rh_dirt[i] < W_PLANE_Z) { // below water
+			h = def_h*rel_wpz/W_PLANE_Z;
 		}
+		else { // above water
+			float const rel_h((def_h - W_PLANE_Z)/(1.0 - W_PLANE_Z));
+			h = rel_wpz + rel_h*(1.0 - rel_wpz);
+				
+			if (mesh_tids_dirt[i] == SNOW_TEX) {
+				h = min(h, def_h); // snow can't get lower when water lowers
+				if (temperature > 40.0) h += 0.01*(temperature - 40.0); // less snow with increasing temperature
+			}
+		}
+		lttex_dirt[i].zval = h;
 	}
 	gen_tex_height_tables();
 }
@@ -536,7 +455,7 @@ void init_terrain_mesh() {
 
 void gen_terrain_map() {
 
-	if (GLACIATE && !island) {
+	if (GLACIATE) {
 		glaciate();
 	}
 	else {
@@ -592,7 +511,7 @@ void set_zvals() {
 float get_water_z_height() {
 
 	float wpz(get_rel_wpz());
-	if (GLACIATE && !island) wpz = DO_GLACIATE_EXP(wpz);
+	if (GLACIATE) wpz = DO_GLACIATE_EXP(wpz);
 	return wpz*zmax_est2 - zmax_est + water_h_off;
 }
 
@@ -604,7 +523,7 @@ void update_temperature(bool verbose) {
 	// keep planet temperatures in combined landscape + universe
 	alt_temp = (combined_gu ? univ_temp : init_temperature);
 
-	if (island || read_landscape || read_heightmap || do_read_mesh) {
+	if (read_landscape || read_heightmap || do_read_mesh) {
 		temperature = alt_temp;
 		return;
 	}
@@ -624,21 +543,11 @@ void update_temperature(bool verbose) {
 }
 
 
-void compute_scale(int make_island) {
+void compute_scale() {
 
-	int num_freq, iscale, filter;
-
-	if (make_island) {
-		num_freq = NUM_L0_FREQ_COMP;
-		filter   = FREQ_FILTER + START_L0_FREQ_COMP - 1;
-	}
-	else {
-		num_freq = NUM_FREQ_COMP;
-		filter   = FREQ_FILTER;
-	}
-	iscale         = int(log(mesh_scale)/log(2.0));
-	start_eval_sin = N_RAND_SIN2*max(0, min(num_freq-MIN_FREQS, (iscale+filter)));
-	end_eval_sin   = N_RAND_SIN2*min(num_freq, (start_eval_sin+FREQ_RANGE));
+	int const iscale(int(log(mesh_scale)/log(2.0)));
+	start_eval_sin = N_RAND_SIN2*max(0, min(NUM_FREQ_COMP-MIN_FREQS, (iscale+FREQ_FILTER)));
+	end_eval_sin   = N_RAND_SIN2*min(NUM_FREQ_COMP, (start_eval_sin+FREQ_RANGE));
 }
 
 
@@ -650,9 +559,7 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 	xterms.resize(nx*F_TABLE_SIZE, 0.0);
 	yterms.resize(ny*F_TABLE_SIZE, 0.0);
 	hoff = 0.0;
-	float const ms_scale((island && world_mode == WMODE_GROUND) ? 1.0/ISLAND_MAG_SCALE : 1.0);
-	float const mscale(ms_scale*mesh_scale), mscale_z(ms_scale*mesh_scale_z);
-	float const msx(mscale*DX_VAL_INV), msy(mscale*DY_VAL_INV), ms2(0.5*mscale), msz_inv(1.0/mscale_z);
+	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale), msz_inv(1.0/mesh_scale_z);
 
 	if (end_eval_sin < F_TABLE_SIZE) {
 		float const xval(msx*(x0 + 0.5*(nx-1)*dx)), yval(msy*(y0 + 0.5*(ny-1)*dy)); // center points
@@ -684,7 +591,7 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 	float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
 	float zval(hoff);
 	for (int i = max(start_eval_sin, min_start_sin); i < end_eval_sin; ++i) {zval += xptr[i]*yptr[i];} // performance critical
-	if (GLACIATE && glaciate && !island) zval = get_glaciated_zval(zval);
+	if (GLACIATE && glaciate) zval = get_glaciated_zval(zval);
 	return zval;
 }
 
@@ -715,7 +622,7 @@ float get_exact_zval(float xval, float yval) {
 	yval += yoff2;
 	if (using_tiled_terrain_hmap_tex()) {return get_tiled_terrain_height_tex(xval, yval);}
 	float const zval(eval_mesh_sin_terms(mesh_scale*(xval - (MESH_X_SIZE >> 1)), mesh_scale*(yval - (MESH_Y_SIZE >> 1)))/mesh_scale_z);
-	return ((GLACIATE && !island) ? get_glaciated_zval(zval) : zval);
+	return (GLACIATE ? get_glaciated_zval(zval) : zval);
 }
 
 
@@ -747,7 +654,7 @@ void update_mesh(float dms, bool do_regen_trees) { // called when mesh_scale cha
 	if (world_mode == WMODE_INF_TERRAIN) {
 		zmax = -LARGE_ZVAL;
 		zmin =  LARGE_ZVAL;
-		compute_scale(0);
+		compute_scale();
 		estimate_zminmax(1);
 		gen_tex_height_tables();
 	}

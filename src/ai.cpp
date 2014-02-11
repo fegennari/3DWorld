@@ -28,12 +28,12 @@ vector<od_data> oddatav; // used as a temporary
 
 
 extern bool has_wpt_goal, use_waypoint_app_spots;
-extern int island, iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
+extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id;
 extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage, base_gravity;
 extern double camera_zh;
-extern point ocean, orig_camera, orig_cdir;
+extern point orig_camera, orig_cdir;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -329,7 +329,6 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) { // find closest visible target
 		point const pos2(get_sstate_pos(oddatav[i].id));
-		if (island && (pos2.z < ocean.z)) continue;
 		if (avoid_dir != zero_vector && dot_product_ptv(pos2, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
 		float const dist(oddatav[i].dist);
 
@@ -452,11 +451,11 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 			for (unsigned i = 0; i < objg.end_id; ++i) {
 				dwobject const &obj(objg.get_obj(i));
 				bool const placed((obj.flags & USER_PLACED) != 0);
-				if (obj.disabled())                                              continue;
-				if (!is_over_mesh(obj.pos) || (island && (obj.pos.z < ocean.z))) continue;
-				if (!placed && !sphere_in_view(pdu, obj.pos, radius, 0))         continue; // view culling (disabled for predef object locations)
+				if (obj.disabled())                                      continue;
+				if (!is_over_mesh(obj.pos))                              continue;
+				if (!placed && !sphere_in_view(pdu, obj.pos, radius, 0)) continue; // view culling (disabled for predef object locations)
 				if (avoid_dir != zero_vector && dot_product_ptv(obj.pos, pos, avoid_dir) > 0.0) continue; // need to avoid this direction
-				if (is_in_darkness(obj.pos, radius, obj.coll_id))                continue;
+				if (is_in_darkness(obj.pos, radius, obj.coll_id))        continue;
 				if (dist_less_than(obj.pos, pos, sradius)) {cout << "bad cobj: " << obj.coll_id << endl; continue;} // for error checking, should not fail
 				float cost((target_pos == obj.pos) ? 0.75 : 1.0); // favor original targets
 
@@ -543,7 +542,6 @@ int is_good_smiley_pos(int xpos, int ypos) {
 	if (xpos < 1 || ypos < 1 || xpos >= MESH_X_SIZE-1 || ypos >= MESH_Y_SIZE-1)  return 0;
 	float const radius(object_types[SMILEY].radius), zval(mesh_height[ypos][xpos] + radius);
 	if (temperature > W_FREEZE_POINT && zval <= water_matrix[ypos][xpos])        return 0;
-	if (island && zval <= ocean.z) return 0;
 	if (point_inside_voxel_terrain(point(get_xval(xpos), get_yval(ypos), zval))) return 0;
 	int cindex;
 	if (!check_legal_move(xpos, ypos, zval, radius, cindex)) return 0;

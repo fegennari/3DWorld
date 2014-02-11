@@ -12,7 +12,7 @@
 
 float const MESH_MIN_Z = -1.0E6; // special mesh height that is guaranteed to be smaller than any mesh zval
 
-extern float sthresh[2][2][2];
+extern float sthresh[2][2];
 
 
 struct ripple_state {

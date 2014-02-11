@@ -25,9 +25,8 @@ float L_STRENGTH_MULT, L_DAMAGE_MULT;
 point litning_pos;
 lightning l_strike;
 
-extern int is_cloudy, game_mode, world_mode, ocean_set, iticks, DISABLE_WATER, animate2;
+extern int is_cloudy, game_mode, world_mode, iticks, DISABLE_WATER, animate2;
 extern float zmin, temperature, lt_green_int, water_plane_z, ztop, fticks;
-extern point ocean;
 extern vector<valley> valleys;
 
 
@@ -249,7 +248,6 @@ void lightning::gen_recur(point const &start, float strength, int xpos, int ypos
 			break;
 		}
 		if (zval <= get_lit_h(ptx, pty))  break;
-		if (ocean_set && zval < ocean.z)  break;
 		if (rand()%L_FORK_END_PARAM == 0) break;
 		zval -= dz;
 	}

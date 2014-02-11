@@ -24,10 +24,10 @@ small_tree_group small_trees;
 small_tree_group tree_instances;
 pt_line_drawer tree_scenery_pld;
 
-extern int window_width, shadow_detail, draw_model, island, num_trees, do_zoom, tree_mode, xoff2, yoff2;
+extern int window_width, shadow_detail, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern unsigned max_unique_trees;
-extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, OCEAN_DEPTH;
+extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation;
 
 
 struct sm_tree_type {
@@ -432,7 +432,6 @@ void small_tree_group::update_zmax(float &tzmax) const {
 int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 
 	if (zpos < water_plane_z) return TREE_CLASS_NONE;
-	if (island && (zpos > 0.14*Z_SCENE_SIZE || zpos < (zmin + OCEAN_DEPTH))) return TREE_CLASS_NONE;
 	
 	if (force_tree_class >= 0) {
 		assert(force_tree_class < NUM_TREE_CLASSES);
@@ -442,13 +441,7 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	if (relh > 0.9) return TREE_CLASS_NONE; // too high
 	if (relh > 0.6) return TREE_CLASS_PINE;
 	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
-
-	if (island) {
-		if (zpos < 0.85*(zmin + OCEAN_DEPTH)) return TREE_CLASS_PALM;
-	}
-	else {
-		if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
-	}
+	if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
 	return TREE_CLASS_DECID;
 }
 

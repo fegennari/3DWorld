@@ -20,9 +20,9 @@ unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002);
 
 extern bool no_sun_lpos_update;
-extern int island, default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
+extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
 extern unsigned create_voxel_landscape;
-extern float vegetation, zmin, zmax, fticks, tfticks, h_sand[], h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
+extern float vegetation, zmin, zmax, fticks, tfticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
 extern colorRGBA leaf_base_color;
 extern vector3d wind;
 extern obj_type object_types[];
@@ -292,9 +292,6 @@ public:
 
 	void gen_grass() {
 		RESET_TIME;
-		float const *h_tex(island ? h_sand     : h_dirt);
-		ttex  const *lttex(island ? lttex_sand : lttex_dirt);
-		int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
 		float const dz_inv(1.0/(zmax - zmin));
 		mesh_to_grass_map.resize(XY_MULT_SIZE+1, 0);
 		modified.resize(XY_MULT_SIZE, 0);
@@ -347,7 +344,7 @@ public:
 				if (mesh_height[y][x] < water_matrix[y][x])   continue; // underwater (make this dynamically update?)
 				bool const do_cobj_check(hcm_chk(x, y) || hcm_chk(x+1, y) || hcm_chk(x, y+1) || hcm_chk(x+1, y+1));
 				float const vnz(vertex_normals[y][x].z);
-				float const *const sti(sthresh[0][0]);
+				float const *const sti(sthresh[0]);
 				float slope_scale(1.0);
 				if (vnz < sti[1]) {slope_scale = CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0]));} // handle steep slopes (dirt/rock texture replaces grass texture)
 				if (slope_scale == 0.0) continue; // no grass
@@ -364,8 +361,8 @@ public:
 						float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
 						int k1, k2;
 						float t(0.0);
-						get_tids(relh, NTEX-1, h_tex, k1, k2, &t); // t==0 => use k1, t==1 => use k2
-						int const id1(lttex[k1].id), id2(lttex[k2].id);
+						get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, &t); // t==0 => use k1, t==1 => use k2
+						int const id1(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
 						if (id1 != GROUND_TEX && id2 != GROUND_TEX) continue; // not ground texture
 						float density(1.0);
 						if (id1 != GROUND_TEX) {density = t;}

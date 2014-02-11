@@ -161,7 +161,7 @@ texture_t(0, 6, 0,    0,    0, 4, 1, "atlas/blood.png"),
 
 
 // zval should depend on def_water_level and temperature
-float h_sand[NTEX_SAND], h_dirt[NTEX_DIRT], clip_hs1, clip_hs2, clip_hd1;
+float h_dirt[NTEX_DIRT], clip_hd1;
 std::set<int> ls_color_texels;
 vector<colorRGBA> cached_ls_colors;
 
@@ -177,7 +177,7 @@ unsigned char *landscape0 = NULL;
 
 extern bool mesh_difuse_tex_comp;
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, flow_tid, reflection_tid;
-extern int world_mode, island, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
+extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only;
 extern float zmax, zmin, zmax_est, glaciate_exp, relh_adj_tex, vegetation, fticks;
 extern char *mesh_diffuse_tex_fn;
@@ -1154,23 +1154,11 @@ colorRGBA get_landscape_texture_color(int xpos, int ypos) {
 inline int get_bare_ls_tid(float zval) {
 
 	float const relh(relh_adj_tex + (zval - zmin)/(zmax - zmin));
-
-	if (island) {
-		if (relh > clip_hs1) { // deep into grass
-			return ((relh > clip_hs2) ? ROCK_TEX : DIRT_TEX); // rock or dirt
-		}
-		else {
-			return SAND_TEX; // sand
-		}
-	}
-	else {
-		return ((relh > clip_hd1) ? ROCK_TEX : DIRT_TEX); // rock or dirt
-	}
-	return 0;
+	return ((relh > clip_hd1) ? ROCK_TEX : DIRT_TEX); // rock or dirt
 }
 
 
-void update_lttex_ix(int &ix) { // note: assumes lttex_dirt (no islands)
+void update_lttex_ix(int &ix) { // note: assumes lttex_dirt
 
 	if (DISABLE_WATER == 2 && lttex_dirt[ix].id == SNOW_TEX  ) --ix;
 	if (vegetation == 0.0  && lttex_dirt[ix].id == GROUND_TEX) ++ix;
@@ -1180,10 +1168,9 @@ void update_lttex_ix(int &ix) { // note: assumes lttex_dirt (no islands)
 void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2, float *t) {
 
 	for (k1 = 0; k1 < NTEXm1 && relh >= h_tex[k1]; ++k1) {} // find first texture with height greater than relh
-	float const blend_border(island ? TEXTURE_SMOOTH_I : TEXTURE_SMOOTH);
 
-	if (k1 < NTEXm1 && (h_tex[k1] - relh) < blend_border) {
-		if (t) {*t = 1.0 - (h_tex[k1] - relh)/blend_border;}
+	if (k1 < NTEXm1 && (h_tex[k1] - relh) < TEXTURE_SMOOTH) {
+		if (t) {*t = 1.0 - (h_tex[k1] - relh)/TEXTURE_SMOOTH;}
 		k2 = k1+1;
 		update_lttex_ix(k1);
 		update_lttex_ix(k2);
@@ -1217,15 +1204,12 @@ void create_landscape_texture() {
 		scroll = (x1 < x2 && y1 < y2 && abs(tox0) < width && abs(toy0) < height);
 	}
 	float const dz(zmax - zmin), dz_inv(1.0/dz);
-	float const *h_tex(island ? h_sand     : h_dirt);
-	ttex  const *lttex(island ? lttex_sand : lttex_dirt);
-	int   const   NTEX(island ? NTEX_SAND  : NTEX_DIRT);
 	int const mxszm1(MESH_X_SIZE-1), myszm1(MESH_Y_SIZE-1), dxv(width/MESH_X_SIZE), dyv(height/MESH_Y_SIZE);
-	int const NTEXm1(NTEX-1), def_id((default_ground_tex >= 0) ? default_ground_tex : GROUND_TEX);
+	int const NTEXm1(NTEX_DIRT-1), def_id((default_ground_tex >= 0) ? default_ground_tex : GROUND_TEX);
 	float const xscale(((float)MESH_X_SIZE)/((float)width)), yscale(((float)MESH_Y_SIZE)/((float)height));
 	static char **tids = NULL;
 	if (tids == NULL) matrix_gen_2d(tids);
-	assert(NTEX < 128);
+	assert(NTEX_DIRT < 128);
 	
 	for (int i = 0; i < MESH_Y_SIZE; ++i) { // makes a big performance improvement
 		int const keepy(scroll && (i+dy_scroll) > 0 && (i+dy_scroll) < MESH_Y_SIZE-1);
@@ -1237,8 +1221,8 @@ void create_landscape_texture() {
 			float const relh1(relh_adj_tex + (min(min(mh00, mh01), min(mh10, mh11)) - zmin)*dz_inv);
 			float const relh2(relh_adj_tex + (max(max(mh00, mh01), max(mh10, mh11)) - zmin)*dz_inv);
 			int k1a, k1b, k2a, k2b;
-			get_tids(relh1, NTEXm1, h_tex, k1a, k2a);
-			get_tids(relh2, NTEXm1, h_tex, k1b, k2b);
+			get_tids(relh1, NTEXm1, h_dirt, k1a, k2a);
+			get_tids(relh2, NTEXm1, h_dirt, k1b, k2b);
 			tids[i][j] = char((k1a == k2b) ? k1a : -1);
 		}
 	}
@@ -1275,14 +1259,14 @@ void create_landscape_texture() {
 					float const mh00(mesh_height[ypos][xpos]), mh01(mesh_height[ypos][xpos1]), mh10(mesh_height[ypos1][xpos]), mh11(mesh_height[ypos1][xpos1]);
 					float const mh((1.0 - xpi)*((1.0 - ypi)*mh00 + ypi*mh10) + xpi*((1.0 - ypi)*mh01 + ypi*mh11));
 					float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
-					get_tids(relh, NTEXm1, h_tex, k1, k2, &t);
+					get_tids(relh, NTEXm1, h_dirt, k1, k2, &t);
 					if (k1 != k2) assert(k2 == k1+1 || vegetation == 0.0);
 				}
 				else {
 					k1 = k2 = tids[ypos][xpos];
 				}
-				id  = lttex[k1].id;
-				id2 = lttex[k2].id;
+				id  = lttex_dirt[k1].id;
+				id2 = lttex_dirt[k2].id;
 			}
 			texture_t const &t1(textures[id]);
 			unsigned char const *t1_data(t1.get_data());
@@ -1301,7 +1285,7 @@ void create_landscape_texture() {
 			// handle steep slopes (dirt/rock texture replaces grass texture)
 			bool const grass(id == GROUND_TEX || id2 == GROUND_TEX), snow(id2 == SNOW_TEX);
 			if (!grass && !snow) continue;
-			float const *const sti(sthresh[island][snow]);
+			float const *const sti(sthresh[snow]);
 			float const vnz00(vertex_normals[ypos][xpos].z);
 			if (vnz00 > sti[1]+0.1) continue; // not steep enough
 			float const vnz01(vertex_normals[ypos][xpos1].z), vnz10(vertex_normals[ypos1][xpos].z), vnz11(vertex_normals[ypos1][xpos1].z);
@@ -1651,20 +1635,15 @@ int snow_height(point pos) {
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return 0;
 	double const relh(relh_adj_tex + (mesh_height[ypos][xpos] - zmin)/(zmax - zmin));
-	return (island ? (relh > h_sand[2]) : (relh > h_dirt[3]));
+	return (relh > h_dirt[3]);
 }
 
 
 void gen_tex_height_tables() {
 
-	for (unsigned i = 0; i < NTEX_SAND; ++i) {
-		h_sand[i] = pow(lttex_sand[i].zval, glaciate_exp);
-	}
 	for (unsigned i = 0; i < NTEX_DIRT; ++i) {
 		h_dirt[i] = pow(lttex_dirt[i].zval, glaciate_exp);
 	}
-	clip_hs1 = (0.25*h_sand[1] + 0.75*h_sand[0]);
-	clip_hs2 = (0.90*h_sand[1] + 0.10*h_sand[0]);
 	clip_hd1 = (0.90*h_dirt[1] + 0.10*h_dirt[0]);
 }
 

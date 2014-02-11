@@ -19,7 +19,7 @@ point ocean;
 pos_dir_up camera_pdu;
 
 extern bool combined_gu, fast_water_reflect;
-extern int window_width, window_height, do_zoom, ocean_set, display_mode, shadow_detail, ground_effects_level, camera_coll_id, DISABLE_WATER;
+extern int window_width, window_height, do_zoom, display_mode, shadow_detail, ground_effects_level, camera_coll_id, DISABLE_WATER;
 extern float zmin, zmax, czmin, czmax, zbottom, ztop, sun_rot, moon_rot;
 extern point sun_pos, moon_pos, litning_pos;
 extern obj_type object_types[];
@@ -229,18 +229,9 @@ conditions under which an object is viewable:
 // dir must be normalized
 bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level, bool no_frustum_test) {
 
-	point const &viewer(pdu.pos);
-
-	if (ocean_set) {
-		if (((fabs(pos.x) - radius) > ocean.x || (fabs(pos.y) - radius) > ocean.y)) return 0; // case 1
-		
-		if (is_over_mesh(pos)) { // added new check
-			if (viewer.z < ocean.z && (pos.z - radius) > ocean.z)  return 0; // case 3a
-			if (viewer.z > ocean.z && (pos.z + radius) < ocean.z)  return 0; // case 3b
-		}
-	}
 	if (!no_frustum_test && !pdu.sphere_visible_test(pos, radius)) return 0;
 	if (max_level == 0 || world_mode != WMODE_GROUND)              return 1;
+	point const &viewer(pdu.pos);
 	
 	if (is_over_mesh(viewer)) {
 		float const zmax(pos.z + radius);

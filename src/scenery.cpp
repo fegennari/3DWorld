@@ -8,12 +8,11 @@
 #include "gl_ext_arb.h"
 
 
-bool     const NO_ISLAND_SCENERY = 1;
-bool     const USE_VOXEL_ROCKS   = 0;
-unsigned const ROCK_NDIV         = 24;
-unsigned const ROCK_VOX_SZ       = 32;
-float    const SHADOW_VAL        = 0.5;
-float    const PT_LINE_THRESH    = 800.0;
+bool     const USE_VOXEL_ROCKS = 0;
+unsigned const ROCK_NDIV       = 24;
+unsigned const ROCK_VOX_SZ     = 32;
+float    const SHADOW_VAL      = 0.5;
+float    const PT_LINE_THRESH  = 800.0;
 
 
 colorRGBA const stem_c(0.4, 0.6, 0.2, 1.0);
@@ -33,7 +32,7 @@ plant_type const pltype[NUM_PLANT_TYPES] = {
 int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 
 
-extern int num_trees, xoff2, yoff2, rand_gen_index, island, window_width, do_zoom, display_mode, draw_model, DISABLE_WATER;
+extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, draw_model, DISABLE_WATER;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 extern rand_gen_t global_rand_gen;
@@ -1147,7 +1146,7 @@ void gen_scenery() {
 	all_scenery.clear();
 	all_scenery = scenery_group(); // really force a clear
 	has_scenery = 0;
-	if (DISABLE_SCENERY || (NO_ISLAND_SCENERY && island)) return;
+	if (DISABLE_SCENERY) return;
 	has_scenery = 1;
 	all_scenery.gen(1, 1, MESH_X_SIZE-1, MESH_Y_SIZE-1, vegetation, 0);
 	all_scenery.add_cobjs();

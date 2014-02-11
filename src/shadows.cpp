@@ -19,7 +19,7 @@ int dshadow_lights(0);
 point light_pos;
 
 extern bool combined_gu;
-extern int island, ground_effects_level, scrolling;
+extern int ground_effects_level, scrolling;
 extern float sun_rot, moon_rot, zmin, zmax, zbottom, ztop;
 extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;

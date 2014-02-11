@@ -33,12 +33,11 @@ struct fp_ratio {
 
 // Global Variables
 bool clear_landscape_vbo;
-int island(0);
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, combined_gu, has_snow;
-extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ocean_set, ground_effects_level, animate2;
+extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, sun_radius;
@@ -410,7 +409,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 	}
 	RESET_TIME;
 
-	if ((display_mode & 0x80) && !DISABLE_WATER && !ocean_set && zmin < max_water_height && ground_effects_level != 0) {
+	if ((display_mode & 0x80) && !DISABLE_WATER && zmin < max_water_height && ground_effects_level != 0) {
 		gen_uw_lighting();
 		if (SHOW_MESH_TIME) PRINT_TIME("Underwater Lighting");
 	}
@@ -472,7 +471,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 	disable_multitex(1, 1);
 	disable_textures_texgen();
 	glDisable(GL_COLOR_MATERIAL);
-	if (!island) draw_sides_and_bottom();
+	draw_sides_and_bottom();
 	run_post_mesh_draw();
 
 	if (SHOW_NORMALS) {

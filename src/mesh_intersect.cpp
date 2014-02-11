@@ -15,7 +15,7 @@ bool last_int(0);
 mesh_bsp_tree *bspt = NULL;
 
 
-extern int ocean_set, display_mode;
+extern int display_mode;
 extern float zmin, zmax, ztop, zbottom;
 
 
@@ -276,7 +276,6 @@ bool line_intersect_mesh(point const &v1, point const &v2, int &xpos, int &ypos,
 
 bool is_visible_from_light(point const &pos, point const &lpos, int fast) {
 
-	if (ocean_set && lpos.z < zmin)    return 0;
 	if (lpos.x == 0.0 && lpos.y == 0.0 && lpos.z == 0.0) return 0;
 	if (lpos.z > ztop && pos.z > ztop) return 1; // above the mesh
 	return !line_intersect_mesh(lpos, pos, fast);

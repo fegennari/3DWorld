@@ -20,8 +20,6 @@ float const LEAF_DAM_SCALE   = 0.00002;
 float const LEAF_HEAL_RATE   = 0.00001;
 float const TREE_SIZE        = 0.005; // 0.0015
 float const REL_LEAF_SIZE    = 3.5;
-float const TREE_MIN_H       = -0.15; // 0.15
-float const TREE_MAX_H       = 0.6;
 int   const LEAF_GEN_RAND1   = 10; //500
 int   const LEAF_GEN_RAND2   = 200000; // larger is fewer leaves falling
 float const DIST_C_SCALE     = 0.01;
@@ -62,10 +60,9 @@ tree_cont_t t_trees(tree_data_manager);
 
 
 extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots;
-extern int shadow_detail, island, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
+extern int shadow_detail, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
-extern point ocean;
 extern lightning l_strike;
 extern blastr latest_blastr;
 extern texture_t textures[];
@@ -797,7 +794,7 @@ unsigned tree_data_t::get_gpu_mem() const {
 
 bool tree::is_visible_to_camera(vector3d const &xlate) const {
 
-	int const level((island || get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh in non-island mode?
+	int const level((get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh?
 	return sphere_in_camera_view((sphere_center() + xlate), 1.1*tdata().sphere_radius, level);
 }
 
@@ -2171,8 +2168,8 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 		generated = 1;
 		return;
 	}
-	float const min_tree_h(island ? TREE_MIN_H : (water_plane_z + 0.01*zmax_est));
-	float const max_tree_h(island ? TREE_MAX_H : 1.8*zmax_est);
+	float const min_tree_h(water_plane_z + 0.01*zmax_est);
+	float const max_tree_h(1.8*zmax_est);
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
 	unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
 	shared_tree_data.ensure_init();
