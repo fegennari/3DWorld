@@ -2700,7 +2700,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			set_std_blend_mode();
 
 			if (has_hit_dir) {
-				end_texture(0);
+				end_texture();
 				glDisable(GL_ALPHA_TEST);
 			}
 		} // show shields

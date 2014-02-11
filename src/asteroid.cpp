@@ -83,7 +83,7 @@ public:
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
 		ddata.color_a.do_glColor();
 		model3d.draw();
-		end_texture(0);
+		end_texture();
 		enable_blend();
 	}
 };
@@ -121,7 +121,7 @@ public:
 			s.add_uniform_float("height_scale", AST_PROC_HEIGHT);
 		}
 		colorRGBA(0.5, 0.45, 0.4, 1.0).do_glColor(); // Note: ignores color_a
-		end_texture(0);
+		end_texture();
 		draw_sphere_vbo(all_zeros, 1.0, 3*ddata.ndiv/2, 1);
 		s.disable();
 		if (ddata.final_pass && ddata.shader->is_setup()) {ddata.shader->enable();}
@@ -213,7 +213,7 @@ public:
 		ddata.color_a.do_glColor();
 		select_texture(((force_tex_id >= 0) ? force_tex_id : tex_id), 0);
 		surface.sd.draw_ndiv_pow2_vbo(ndiv); // use a vbo
-		if (!no_reset_texture) {end_texture(0);}
+		if (!no_reset_texture) {end_texture();}
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		draw_with_texture(ddata, -1);
@@ -368,7 +368,7 @@ public:
 
 		if (ddata.final_pass) {
 			if (ddata.shader->is_setup()) {ddata.shader->enable();}
-			end_texture(0);
+			end_texture();
 		}
 	}
 
@@ -1088,7 +1088,7 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 void uasteroid_cont::end_render(shader_t &shader) {
 
 	shader.disable();
-	end_texture(0);
+	end_texture();
 	glDisable(GL_CULL_FACE);
 }
 
@@ -1141,7 +1141,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	asteroid_model_gen.final_draw(loc); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
 
 	if (!pld.empty()) {
-		end_texture(0);
+		end_texture();
 		xform_matrix xf;
 		xf.assign_mv_from_gl();
 		s.set_attrib_float_array(loc, xf.get_ptr(), 16);
@@ -1435,7 +1435,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 		if (i == 1) {set_specular(0.0, 1.0);}
 		glPopMatrix();
 	}
-	end_texture(0);
+	end_texture();
 
 	if (temperature > 1.0) {
 		float const glow_weight(CLIP_TO_01(get_true_temp()/40.0f)); // 1.0 if camera is facing the lit side?

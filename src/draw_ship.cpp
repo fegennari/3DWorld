@@ -98,7 +98,7 @@ inline int get_ndiv(int num) {
 }
 
 void set_ship_texture(int tid) {select_texture(tid, 0);}
-void end_ship_texture()        {end_texture(0);}
+void end_ship_texture()        {end_texture();}
 
 
 void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) {

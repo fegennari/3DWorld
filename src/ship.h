@@ -155,8 +155,8 @@ inline bool TEAM_ALIGNED(unsigned const a) {
 	return (a != ALIGN_NEUTRAL && a != ALIGN_GOV && (a != ALIGN_PLAYER || player_enemy));
 }
 
-inline void end_texture(bool enable=1) {
-	select_texture(WHITE_TEX, enable); // texturing is always enabled
+inline void end_texture() {
+	select_texture(WHITE_TEX, 0); // texturing is always enabled
 }
 
 void merge_weapons(vector<ship_weapon> &weapons, ship_weapon const &w); // has to be here in the header
