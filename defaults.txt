@@ -4,7 +4,7 @@
 #mapx/config_mapx.txt
 #mapx/config_mapx_voxels.txt
 #cornell_box/config_box.txt
-#config_scrolling.txt
+config_scrolling.txt
 #config.txt
 #config_voxels.txt
 #config_voxels2.txt
@@ -16,7 +16,7 @@
 #config_gym.txt
 #config_berkeley.txt
 #config_puget_sound.txt
-config_puget_sound_tt.txt
+#config_puget_sound_tt.txt
 #config_grand_canyon.txt
 #config_grand_canyon_tt.txt
 #config_hetch.txt

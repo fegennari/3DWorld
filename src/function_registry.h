@@ -513,17 +513,6 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 void load_flare_textures();
 void free_flare_textures();
 
-// function prototypes - ocean
-void draw_ocean();
-double gamma (double x);
-double MitsuyasuDistribution (double f, double theta);
-double EPM(double f);
-double EnergyDistribution(double f, double theta);
-double Amplitude(double f, double theta, double k);
-void AnimateWater();
-void InitWater();
-void calc_ocean_normals();
-
 // function prototypes - gameplay/ai
 bool camera_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool smiley_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);

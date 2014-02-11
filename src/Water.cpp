@@ -121,7 +121,6 @@ void update_accumulation(int xpos, int ypos);
 void shift_water_springs(vector3d const &vd);
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend);
-void set_ocean_z();
 void setup_mesh_and_water_shader(shader_t &s);
 
 
@@ -1308,7 +1307,6 @@ void calc_watershed() {
 		return;
 	}
 	if (island) {
-		set_ocean_z();
 		def_water_level = water_plane_z = ocean.z;
 		mode = 1;
 	}

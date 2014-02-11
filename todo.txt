@@ -1,4 +1,3 @@
-Fix ship collisions
 More grass/plant types: Yellow and white flowers
 Hardware tessellation
 Vertex Array Objects
@@ -6,18 +5,17 @@ Try using Boost in 3DWorld, in particular shared_ptr
 
 Remove deprecated OpenGL calls:
 Use triangles instead of quads (Tree billboards/leaves)
-Remove non-shader rendering
+Remove non-shader rendering (see FIXME SHADERS)
 Remove usage of gl_TexCoord from shaders and replace with a varying variable
 Replace GL matrix operations with something else (GLM?)
 
-Berries on plants
+* Berries on plants
 Tiled terrain texture coords on high slopes
 Weather/Physics UI / key to switch UI modes
 TT mode underwater content
 
 User-placed teleporter weapon (translocator?)
 * Burning smiley/skull/cobj texture
-* reorder physics/collision/AI to be after rendering static parts of the scene
 
 Fog increases in valleys
 Draw more distant tiles (larger/lower res at high delta-z)
@@ -35,4 +33,8 @@ Ray trace use texel color from cobj (faster)
 Animated smoke texture (smilar to fire and explosion)
 Better pine tree texture
 
-Use normal map in indir texture lookup offset somehow?
+* Use normal map in indir texture lookup offset somehow?
+Make TT and ground mode trees agree
+
+SUN_TEX is unused - remove?
+Remove old ocean/island mode

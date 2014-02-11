@@ -973,7 +973,6 @@ void display(void) {
 			}
 			if (TIMETEST) PRINT_TIME("M");
 			if (display_mode & 0x04) {draw_water();} // must be after process_groups()
-			if (display_mode & 0x01) {draw_ocean();}
 			check_gl_error(9);
 			if (TIMETEST) PRINT_TIME("N");
 			draw_stuff(underwater, timer1);
