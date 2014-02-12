@@ -6,6 +6,8 @@
 uniform sampler2D texture, freq_tex;
 uniform float time;
 
+varying vec2 tc;
+
 float snoise(vec3 uv, float res)	// by trisomie21
 {
 	const vec3 s = vec3(1e0, 1e2, 1e4);
@@ -39,7 +41,7 @@ void main(void)
 	vec3 orangeRed		= vec3( 0.8, 0.35, 0.1 );
 	float aspect	= 1.0; // FIXME
 	//vec2 uv			= gl_FragCoord.xy / iResolution.xy;
-	vec2 uv         = gl_TexCoord[0].st;
+	vec2 uv         = tc;
 	vec2 p 			= -0.5 + uv;
 	p.x *= aspect;
 

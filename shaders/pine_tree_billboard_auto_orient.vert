@@ -7,7 +7,7 @@ void main()
 	set_tc0_from_vert_id();
 	vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
 	vec3 dir    = normalize(cross(vec3(0,0,1), (gl_Vertex.xyz - eye.xyz)));
-	vec4 vertex = gl_Vertex + vec4(((2.0*gl_TexCoord[0].s - 1.0) * radius_scale * gl_Normal.x * dir), 0.0);
+	vec4 vertex = gl_Vertex + vec4(((2.0*tc.s - 1.0) * radius_scale * gl_Normal.x * dir), 0.0);
 	world_space_zval = vertex.z;
 	gl_Position = gl_ModelViewProjectionMatrix * vertex;
 	gl_FogFragCoord = length((gl_ModelViewMatrix * vertex).xyz); // set standard fog coord

@@ -9,7 +9,6 @@
 #include "vertex_opt.h"
 #include <fstream>
 
-bool const USE_SHADERS       = 1;
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const USE_INDEXED_VERTS = 1;
@@ -17,7 +16,8 @@ bool const CALC_TANGENT_VECT = 1; // slower and more memory but sometimes better
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
-extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps, two_sided_lighting;
+extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
+extern bool two_sided_lighting, have_indir_smoke_tex;
 extern int display_mode;
 extern float model3d_alpha_thresh;
 extern pos_dir_up orig_camera_pdu;
@@ -27,9 +27,8 @@ extern bool vert_opt_flags[3];
 model3ds all_models;
 
 
-bool get_use_shaders() {return (USE_SHADERS && !disable_shaders);}
-bool enable_bump_map() {return (ENABLE_BUMP_MAPS && get_use_shaders() && (display_mode & 0x20) == 0);} // enabled by default
-bool enable_spec_map() {return (ENABLE_SPEC_MAPS && get_use_shaders());}
+bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shaders && (display_mode & 0x20) == 0);} // enabled by default
+bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shaders);}
 bool no_sparse_smap_update();
 
 
@@ -1224,6 +1223,7 @@ void model3d::bind_all_used_tids() {
 				tmgr.ensure_tid_bound(m->bump_tid);
 				m->geom_tan.calc_tangents();
 			}
+			needs_bump_maps = 1;
 		}
 		if (m->use_spec_map()) tmgr.ensure_tid_bound(m->s_tid);
 		needs_alpha_test |= m->get_needs_alpha_test();
@@ -1385,47 +1385,54 @@ void model3ds::free_context() {
 
 
 void model3ds::render(bool is_shadow_pass) {
-
+	
 	if (empty()) return;
-	bool const use_shaders(get_use_shaders() && !is_shadow_pass);
+	bool const shader_effects(!disable_shaders && !is_shadow_pass);
 	set_lighted_sides(2);
 	set_fill_mode();
 	
 	if (is_shadow_pass) {
-		glDisable(GL_LIGHTING); // FIXME SHADERS: uses fixed function pipeline
+		// FIXME: textuing is disabled, so alpha mask textures won't work
+		// FIXME SHADERS: uses fixed function pipeline
 	}
-	else if (use_shaders) {
+	else if (shader_effects && have_indir_smoke_tex) {
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 	}
 	else {
 		set_color_a(WHITE);
-		glEnable(GL_TEXTURE_2D);
-		glEnable(GL_ALPHA_TEST);
 	}
 	BLACK.do_glColor();
 	set_specular(0.0, 1.0);
-	bool needs_alpha_test(0);
+	bool needs_alpha_test(0), needs_bump_maps(0);
 
 	for (const_iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
+		if (shader_effects) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 	}
 	float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 
-	for (unsigned bmap_pass = 0; bmap_pass < (use_shaders ? 2U : 1U); ++bmap_pass) {
+	for (unsigned bmap_pass = 0; bmap_pass < (needs_bump_maps ? 2U : 1U); ++bmap_pass) {
 		shader_t s;
 
-		if (use_shaders) {
+		if (is_shadow_pass) {
+
+		}
+		else if (shader_effects) {
 			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
 			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
 		}
-		for (iterator m = begin(); m != end(); ++m) { // non-const
-			m->render(s, is_shadow_pass, (use_shaders ? (1 << bmap_pass) : 3));
+		else {
+			s.setup_enabled_lights(2, 1); // sun and moon VS lighting
+			s.set_vert_shader("ads_lighting.part*+two_lights_texture");
+			s.set_frag_shader("simple_texture");
+			s.begin_shader();
+			s.add_uniform_int("tex0", 0);
 		}
-		if (use_shaders) {s.end_shader();}
+		for (iterator m = begin(); m != end(); ++m) { // non-const
+			m->render(s, is_shadow_pass, (shader_effects ? (1 << bmap_pass) : 3));
+		}
+		if (!is_shadow_pass) {s.end_shader();}
 	}
-	glDisable(GL_ALPHA_TEST);
-	if (!use_shaders)   {glDisable(GL_TEXTURE_2D);}
-	if (is_shadow_pass) {glEnable(GL_LIGHTING);}
 	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
 }

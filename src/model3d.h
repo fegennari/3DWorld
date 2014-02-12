@@ -315,7 +315,7 @@ class model3d {
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bbox;
-	bool from_model3d_file, ignore_ambient, has_cobjs, needs_alpha_test;
+	bool from_model3d_file, ignore_ambient, has_cobjs, needs_alpha_test, needs_bump_maps;
 
 	// materials
 	deque<material_t> materials;
@@ -328,8 +328,8 @@ public:
 	texture_manager &tmgr;
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0)
-		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c),
-		bbox(all_zeros_cube), from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0), needs_alpha_test(0) {}
+		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube),
+		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -360,6 +360,7 @@ public:
 		return coll_tree.check_coll_line(p1, p2, cpos, cnorm, color, exact);
 	}
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
+	bool get_needs_bump_maps () const {return needs_bump_maps;}
 	void get_stats(model3d_stats_t &stats) const;
 	void show_stats() const;
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;

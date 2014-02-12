@@ -1,11 +1,13 @@
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
+
 varying vec3 dlpos, dl_normal; // world space
 varying vec3 normal;
+varying vec2 tc;
 
 void main()
 {
-	vec4 texel = texture2D(tex0, gl_TexCoord[0].st);
+	vec4 texel = texture2D(tex0, tc);
 	if (texel.a <= min_alpha) discard;
 	
 	vec4 epos    = gl_ModelViewMatrix * vec4(dlpos, 1.0);

@@ -4,10 +4,11 @@ uniform vec2 normal_tc_off   = vec2(0.0);
 uniform vec2 normal_tc_scale = vec2(1.0);
 
 varying vec4 eye_space_pos;
+varying vec2 tc;
 
 void main()
 {
-	vec2 tc_scaled = normal_tc_scale*gl_TexCoord[0].st;
+	vec2 tc_scaled = normal_tc_scale*tc;
 	vec4 texel = texture2D(color_map, tc_scaled);
 	if (texel.a < 0.75) discard; // transparent
 	//if (normal.w == 0.0) discard; // normal not written to (uses nearest filter)

@@ -6,7 +6,8 @@ Try using Boost in 3DWorld, in particular shared_ptr
 Remove deprecated OpenGL calls:
 Use triangles instead of quads (Tree billboards/leaves)
 Remove non-shader rendering (see FIXME SHADERS)
-Remove usage of gl_TexCoord from shaders and replace with a varying variable
+  - Small tree leaves
+  - Model3d shadow_pass
 Replace GL matrix operations with something else (GLM?)
 
 * Berries on plants
@@ -37,3 +38,5 @@ Better pine tree texture
 Make TT and ground mode trees agree
 
 SUN_TEX is unused - remove?
+Fix/check missing distant stars
+disable_shaders => disable_shader_effects

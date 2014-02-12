@@ -149,8 +149,8 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		shaders[is_normal_pass].disable();
 	}
 	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
-		if (!shaders[0].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
-		if (!shaders[1].is_setup()) {setup_shader("tc_by_vert_id.part+tree_leaves_no_lighting", "write_normal_textured", 1);} // normals
+		if (!shaders[0].is_setup()) {setup_shader("texture_gen.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
+		if (!shaders[1].is_setup()) {setup_shader("texture_gen.part+tree_leaves_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
 		colorRGBA const leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()), 0.0); // transparent
 		bool const use_depth_buffer(1), mipmap(0); // Note: for some reason mipmaps are slow and don't look any better
@@ -392,7 +392,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use
 		//setup_wind_for_shader(s, 1); // FIXME: add wind?
 	}
 	else {
-		s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+leaf_lighting.part+tc_by_vert_id.part+tree_leaves");
+		s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+leaf_lighting.part+texture_gen.part+tree_leaves");
 		s.begin_shader();
 	}
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);} else {s.setup_fog_scale();}
@@ -455,6 +455,7 @@ void tree_cont_t::post_leaf_draw(shader_t &shader) {
 
 void tree_cont_t::draw(bool shadow_only) {
 
+	if (empty()) return;
 	tree_lod_render_t lod_renderer(0); // disabled
 
 	// draw leaves, then branches: much faster for distant trees, slightly slower for near trees

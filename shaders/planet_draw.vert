@@ -1,9 +1,10 @@
 uniform mat4 world_space_mvm;
 varying vec3 normal, world_space_pos, vertex;
+varying vec2 tc;
 
 void main()
 {
-	gl_TexCoord[0]  = gl_MultiTexCoord0;
+	tc              = gl_MultiTexCoord0;
 	normal          = normalize(gl_NormalMatrix * gl_Normal);
 	vertex          = gl_Vertex.xyz;
 	vec4 epos       = gl_ModelViewMatrix * gl_Vertex;

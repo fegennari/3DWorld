@@ -1128,7 +1128,7 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 		draw_opaque_objects(s, shadow_only, xlate, 1); // FIXME SHADERS: uses fixed function pipeline
 		glDisable(GL_TEXTURE_2D);
 	}
-	if (draw_transparent) { // draw leaves
+	if (draw_transparent && !plants.empty()) { // draw leaves
 		shader_t s;
 		set_leaf_shader(s, 0.9, 1, 0);
 		draw_plant_leaves(s, shadow_only, xlate);

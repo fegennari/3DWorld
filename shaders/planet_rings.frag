@@ -4,6 +4,7 @@ uniform sampler2D noise_tex, particles_tex;
 uniform sampler1D ring_tex;
 
 varying vec3 normal, world_space_pos, vertex;
+varying vec2 tc;
 
 
 vec4 add_light_rings(in vec3 n, in vec4 epos)
@@ -29,16 +30,16 @@ void main()
 	vec4 epos = gl_ModelViewMatrix * vec4(vertex, 1.0);
 	texel.a *= pow(abs(dot(normal, normalize(epos.xyz))), 0.2); // 5th root
 
-	vec2 tc = 16*gl_TexCoord[0].st;
-	vec3 norm2 = normalize(normal + vec3(texture2D(noise_tex, tc).r-0.5, texture2D(noise_tex, tc+vec2(0.4,0.7)).r-0.5, texture2D(noise_tex, tc+vec2(0.3,0.8)).r-0.5));
+	vec2 tcs   = 16*tc;
+	vec3 norm2 = normalize(normal + vec3(texture2D(noise_tex, tcs).r-0.5, texture2D(noise_tex, tcs+vec2(0.4,0.7)).r-0.5, texture2D(noise_tex, tcs+vec2(0.3,0.8)).r-0.5));
 	vec4 color = gl_FrontMaterial.emission;
 	color.rgb += add_light_rings(norm2, epos).rgb; // ambient, diffuse, and specular
 	color.rgb += (gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 
-	float alpha = texture2D(particles_tex, 23 *gl_TexCoord[0].st).r;
-	alpha      += texture2D(particles_tex, 42 *gl_TexCoord[0].st).r;
-	alpha      += texture2D(particles_tex, 75 *gl_TexCoord[0].st).r;
-	alpha      += texture2D(particles_tex, 133*gl_TexCoord[0].st).r;
+	float alpha = texture2D(particles_tex, 23 *tc).r;
+	alpha      += texture2D(particles_tex, 42 *tc).r;
+	alpha      += texture2D(particles_tex, 75 *tc).r;
+	alpha      += texture2D(particles_tex, 133*tc).r;
 	if (alpha == 0.0) discard;
 	color.a    *= min(1.0, alpha); // add 4 octaves of random particles
 

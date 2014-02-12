@@ -1,8 +1,9 @@
 varying vec4 world_space_pos, eye_space_pos;
+varying vec2 tc;
 
 void main()
 {
-	gl_TexCoord[0]  = gl_MultiTexCoord0;
+	tc              = gl_MultiTexCoord0;
 	gl_Position     = ftransform();
 	world_space_pos = gl_Vertex;
 	eye_space_pos   = gl_ModelViewMatrix * gl_Vertex;

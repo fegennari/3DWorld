@@ -388,7 +388,7 @@ void set_perspective_near_far(float near_clip, float far_clip) {
 	perspective_nclip = near_clip;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(perspective_fovy, ((GLdouble)window_width)/window_height, perspective_nclip, far_clip);
+	gluPerspective(perspective_fovy, ((double)window_width)/window_height, perspective_nclip, far_clip);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }

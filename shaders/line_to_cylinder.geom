@@ -4,6 +4,7 @@ varying vec3 normal; // world space
 varying vec4 epos;
 varying vec3 eye_norm;
 varying vec3 vpos, spos, lpos0, vposl; // world space, not used
+varying out vec2 tc;
 
 void main()
 {
@@ -41,7 +42,7 @@ void main()
 			gl_Position = gl_ProjectionMatrix * epos;
 			normal      = normalize(delta); // world space
 			eye_norm    = normalize(gl_NormalMatrix * normal); // eye space
-			gl_TexCoord[0].st = vec2(float(s)/float(ndiv), float(i));
+			tc          = vec2(float(s)/float(ndiv), float(i));
 			EmitVertex();
 		}
 		sin_s = sin_val;

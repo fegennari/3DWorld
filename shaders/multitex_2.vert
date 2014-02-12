@@ -1,8 +1,8 @@
+varying vec2 tc;
+
 void main()
 {
-	// set both tex coords to the same value
-	gl_TexCoord[0] = gl_MultiTexCoord0;
-	gl_TexCoord[1] = gl_MultiTexCoord0;
+	tc            = gl_MultiTexCoord0;
 	gl_Position   = ftransform();
 	gl_FrontColor = gl_Color;
 }

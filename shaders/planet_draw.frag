@@ -17,6 +17,7 @@ uniform sampler2D tex0;
 #endif
 
 varying vec3 normal, world_space_pos, vertex;
+varying vec2 tc;
 
 
 void main()
@@ -25,7 +26,7 @@ void main()
 	if (dot(normal, epos.xyz) > 0.0) discard; // back facing
 
 #ifdef GAS_GIANT
-	float tc = gl_TexCoord[0].t + 0.04*(gen_cloud_alpha_static_non_norm(5.0*vertex) - 0.5);
+	float tc_adj = tc.t + 0.04*(gen_cloud_alpha_static_non_norm(5.0*vertex) - 0.5);
 	float v0 = 1.0; // using a variable here is slow
 	vec3 dir = normalize(vertex); // world space normal
 
@@ -38,12 +39,12 @@ void main()
 		center.xy   = vec2((center.x*ct - center.y*st), (center.y*ct + center.x*st)); // rotation
 #endif
 		float dist  = (0.25 + 0.75*rand_01(v0+3.0))*length(vec3(1.0, 1.0, 2.0)*(dir - normalize(center)));
-		tc         += 0.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
+		tc_adj     += 0.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
 		v0         += 4.0;
 	}
-	vec4 texel   = texture1D(tex0, tc);
+	vec4 texel   = texture1D(tex0, tc_adj);
 #else
-	vec4 texel   = texture2D(tex0, gl_TexCoord[0].st);
+	vec4 texel   = texture2D(tex0, tc);
 #endif
 	float atten0 = light_scale[0] * calc_light_atten(epos, 0);
 	float atten2 = light_scale[2] * calc_light_atten(epos, 2);

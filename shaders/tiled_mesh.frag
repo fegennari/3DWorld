@@ -10,7 +10,9 @@ uniform float caustics_weight= 1.0;
 uniform vec3 cloud_offset    = vec3(0.0);
 uniform vec3 uw_atten_max;
 uniform vec3 uw_atten_scale;
+
 varying vec4 vertex; // world space
+varying vec2 tc, tc2, tc3;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -32,7 +34,7 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal, in
 	mat3 TBN  = transpose(mat3(tan, cross(normal, tan), normalize(normal))); // world space {Y, X, Z} for normal in +Z
 	light_dir = TBN * light_dir;
 	eye_pos   = TBN * eye_pos;
-	return normalize(mix(vec3(0,0,1), (2.0*texture2D(detail_normal_tex, 0.25*gl_TexCoord[1].st).rgb - 1.0), bump_scale)); // scaled detail texture tc
+	return normalize(mix(vec3(0,0,1), (2.0*texture2D(detail_normal_tex, 0.25*tc2).rgb - 1.0), bump_scale)); // scaled detail texture tc
 }
 
 vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {
@@ -64,7 +66,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 			// apply underwater caustics texture (Note: matches shallow water wave normal map, but not deep water wave normal map)
 			float cweight = ds_scale*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
-			vec3  cval    = 4.0*mix(texture2D(caustic_tex, gl_TexCoord[2].st).rgb, texture2D(caustic_tex, (gl_TexCoord[2].st + vec2(0.3, 0.6))).rgb, ntime);
+			vec3  cval    = 4.0*mix(texture2D(caustic_tex, tc3).rgb, texture2D(caustic_tex, (tc3 + vec2(0.3, 0.6))).rgb, ntime);
 			color.rgb    *= mix(vec3(1.0), cval, cweight);
 		}
 #endif
@@ -82,7 +84,6 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 void main()
 {
 	// sand, dirt, grass, rock, snow
-	vec2 tc = gl_TexCoord[0].st;
 	vec2 diff_tc = tc; // separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
 	//diff_tc.s += 0.1*vertex.z; // we really need something like triplanar texturing here to deal with stretching on steep slopes
 	vec4 weights = texture2D(weights_tex, tc);
@@ -92,7 +93,7 @@ void main()
 				   cs4*weights.b*texture2D(tex4, ts4*diff_tc).rgb + // grass
 				   cs5*weights.a*texture2D(tex5, ts5*diff_tc).rgb + // rock
 				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb;  // snow
-	vec3 texel1  = texture2D(detail_tex, gl_TexCoord[1].st).rgb; // detail texture
+	vec3 texel1  = texture2D(detail_tex, tc2).rgb; // detail texture
 
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc);
 	float diffuse_scale = shadow_normal.w;

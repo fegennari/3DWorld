@@ -13,7 +13,7 @@ void main()
 {
 	if (use_texgen == 1) {
 		setup_texgen0();
-		tex_coord = gl_TexCoord[0].st;
+		tex_coord = tc;
 	}
 	else if (use_texgen == 2) {
 		tex_coord.s = dot(gl_Vertex, tex0_s);
@@ -21,7 +21,7 @@ void main()
 	}
 	else if (use_texgen == 3) {
 		set_tc0_from_vert_id();
-		tex_coord = gl_TexCoord[0].st;
+		tex_coord = tc;
 	}
 	else {
 		tex_coord = gl_MultiTexCoord0.st * vec2(tex_scale_s, tex_scale_t);

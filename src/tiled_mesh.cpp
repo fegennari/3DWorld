@@ -1870,7 +1870,7 @@ void tile_draw_t::set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {
 void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs) {
 
 	shared_shader_lighting_setup(s, 0);
-	s.set_vert_shader("ads_lighting.part*+tc_by_vert_id.part+" + vs);
+	s.set_vert_shader("ads_lighting.part*+texture_gen.part+" + vs);
 	s.set_frag_shader("linear_fog.part+noise_dither.part+pine_tree");
 	s.begin_shader();
 	setup_tt_fog_post(s);
