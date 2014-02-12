@@ -1388,14 +1388,10 @@ void model3ds::render(bool is_shadow_pass) {
 	
 	if (empty()) return;
 	bool const shader_effects(!disable_shaders && !is_shadow_pass);
-	set_lighted_sides(2);
 	set_fill_mode();
 	
-	if (is_shadow_pass) {
-		// FIXME: textuing is disabled, so alpha mask textures won't work
-		// FIXME SHADERS: uses fixed function pipeline
-	}
-	else if (shader_effects && have_indir_smoke_tex) {
+	// FIXME: in shadow pass, textuing is disabled, so alpha mask textures won't work
+	if (shader_effects && have_indir_smoke_tex) {
 		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
 	}
 	else {
@@ -1415,7 +1411,7 @@ void model3ds::render(bool is_shadow_pass) {
 		shader_t s;
 
 		if (is_shadow_pass) {
-
+			s.begin_color_only_shader();
 		}
 		else if (shader_effects) {
 			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
@@ -1431,9 +1427,8 @@ void model3ds::render(bool is_shadow_pass) {
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (shader_effects ? (1 << bmap_pass) : 3));
 		}
-		if (!is_shadow_pass) {s.end_shader();}
+		s.end_shader();
 	}
-	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
 }
 

@@ -547,7 +547,6 @@ void draw_stars(float alpha) {
 	enable_blend();
 	glPointSize(2.0);
 	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_LIGHTING);
 	shader_t s;
 	s.begin_color_only_shader();
 	vector<vert_color> pts;
@@ -562,10 +561,9 @@ void draw_stars(float alpha) {
 		}
 		pts.push_back(vert_color(stars[i].pos, color));
 	}
-	draw_verts(pts, GL_POINTS); // FIXME SHADERS: uses fixed function pipeline
+	draw_verts(pts, GL_POINTS);
 	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
 	glPointSize(1.0);
 	disable_blend();
 	glPopMatrix();
