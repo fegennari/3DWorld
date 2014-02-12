@@ -911,7 +911,6 @@
     <None Include="shaders\star_draw.frag" />
     <None Include="shaders\star_draw.vert" />
     <None Include="shaders\star_draw_iq.frag" />
-    <None Include="shaders\tc_by_vert_id.part.vert" />
     <None Include="shaders\textured_with_fog.frag" />
     <None Include="shaders\textured_with_fog_opacity.frag" />
     <None Include="shaders\tiled_mesh.frag" />
