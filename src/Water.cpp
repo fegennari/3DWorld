@@ -430,7 +430,6 @@ void draw_water() {
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
 	glDisable(GL_NORMALIZE);
 	enable_blend();
-	enable_point_specular();
 	select_water_ice_texture(color);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 	color.alpha *= 0.5;
@@ -457,7 +456,6 @@ void draw_water() {
 	}
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	disable_blend();
-	disable_point_specular();
 	set_specular(0.0, 1.0);
 	glEnable(GL_NORMALIZE);
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
@@ -503,7 +501,6 @@ void draw_water() {
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 	glDisable(GL_NORMALIZE);
 	enable_blend();
-	enable_point_specular();
 	unsigned nin(0);
 	int xin[4], yin[4], last_wsi(-1);
 	bool const disp_snow((display_mode & 0x40) && temperature <= SNOW_MAX_TEMP);
@@ -608,7 +605,6 @@ void draw_water() {
 	} // for i
 	wsd.flush_triangles();
 	disable_blend();
-	disable_point_specular();
 	set_specular(0.0, 1.0);
 
 	if (USE_SEA_FOAM) {

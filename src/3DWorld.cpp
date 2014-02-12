@@ -293,20 +293,6 @@ void set_lighted_sides(int num) {
 }
 
 
-void enable_point_specular() {
-
-	float lmodel_localviewer[] = {1};
-	glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, lmodel_localviewer);
-}
-
-
-void disable_point_specular() {
-
-	float lmodel_localviewer[] = {0};
-	glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, lmodel_localviewer);
-}
-
-
 void set_light_atten(int light, float attenuation) {
 
 	float vals[4];
