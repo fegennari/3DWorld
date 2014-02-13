@@ -37,7 +37,7 @@ scene_size 16.0 16.0 4.0
 
 include config_resolution.txt
 shadow_map_sz 2048 # 4096?
-disable_shaders 0
+disable_shader_effects 0
 
 use_dense_voxels 1
 global_lighting_update 1

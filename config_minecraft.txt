@@ -13,7 +13,7 @@ use_model2d_tex_mipmaps 1
 preproc_cube_cobjs 1 # slower load time but slightly fewer cubes
 
 group_back_face_cull 1
-disable_shaders 1
+disable_shader_effects 1
 #shadow_map_sz 4096
 coll_obj_file coll_objs_minecraft.txt
 

@@ -16,7 +16,7 @@ bool const CALC_TANGENT_VECT = 1; // slower and more memory but sometimes better
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
-extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shaders, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
+extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern bool two_sided_lighting, have_indir_smoke_tex;
 extern int display_mode;
 extern float model3d_alpha_thresh;
@@ -27,8 +27,8 @@ extern bool vert_opt_flags[3];
 model3ds all_models;
 
 
-bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shaders && (display_mode & 0x20) == 0);} // enabled by default
-bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shaders);}
+bool enable_bump_map() {return (ENABLE_BUMP_MAPS && !disable_shader_effects && (display_mode & 0x20) == 0);} // enabled by default
+bool enable_spec_map() {return (ENABLE_SPEC_MAPS && !disable_shader_effects);}
 bool no_sparse_smap_update();
 
 
@@ -825,7 +825,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX, 0);}
 			set_active_texture(0);
 		}
-		if (!disable_shaders && alpha < 1.0 && ni != 1.0) {
+		if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {
 			//shader.add_uniform_float("refract_index", ni); // FIXME: set index of refraction (and reset it at the end)
 		}
 		if (alpha_tid >= 0) enable_blend();
@@ -835,7 +835,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (ns > 0.0) {set_specular(spec_val, ns);} // ns<=0 is undefined?
 		set_color_e(colorRGBA(ke, alpha));
 
-		if (!disable_shaders && have_indir_smoke_tex) {
+		if (!disable_shader_effects && have_indir_smoke_tex) {
 			set_color_d(get_ad_color());
 		}
 		else {
@@ -1386,7 +1386,7 @@ void model3ds::free_context() {
 void model3ds::render(bool is_shadow_pass) {
 	
 	if (empty()) return;
-	bool const shader_effects(!disable_shaders && !is_shadow_pass);
+	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
 	set_fill_mode();
 	set_color_a(BLACK); // ambient will be set by indirect lighting in the shader, when enabled
 	BLACK.do_glColor();
