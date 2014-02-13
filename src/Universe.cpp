@@ -344,6 +344,7 @@ public:
 class ushader_group {
 	universe_shader_t planet_shader[2][2][2]; // {without/with rings}x{rocky vs. gas giant}x{without/with craters (moons)} - not all variations used
 	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
+	shader_t color_only_shader;
 
 	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
 		return planet_shader[svars.ring_ro > 0.0][body.gas_giant][body.type == UTYPE_MOON];
@@ -367,6 +368,12 @@ public:
 		return atmospheric_shader.enable_atmospheric(planet, planet_pos, svars);
 	}
 	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
+	
+	void enable_color_only_shader() {
+		if (!color_only_shader.is_setup()) {color_only_shader.begin_color_only_shader();}
+		else {color_only_shader.enable();}
+	}
+	void disable_color_only_shader() {color_only_shader.disable();}
 };
 
 
@@ -648,6 +655,14 @@ inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
 }
 
 
+void ucell::draw_all_stars(ushader_group &usg, bool clear_pld0) {
+
+	usg.enable_color_only_shader();
+	draw_1pix_2pix_plds(star_plds, 0); // don't clear star_plds[0]
+	usg.disable_color_only_shader();
+}
+
+
 // pass:
 //  0. Draw all except for the player's system
 //  If player's system is none (update: galaxy is none) then stop
@@ -662,7 +677,9 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		bkg_color == last_bkg_color && star_cache_ix == last_star_cache_ix);
 
 	if (cache_stars && cached_stars_valid) { // should be true in combined_gu mode
+		usg.enable_color_only_shader();
 		star_plds[0].draw();
+		usg.disable_color_only_shader();
 		return; // that's it
 	}
 	last_bkg_color     = bkg_color;
@@ -688,7 +705,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 				}
 			}
 		} // galaxy i
-		draw_1pix_2pix_plds(star_plds, 0); // don't clear star_plds[0]
+		draw_all_stars(usg, 0);
 		cached_stars_valid = 1;
 		return;
 	}
@@ -921,7 +938,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 			} // system j
 		} // cluster cs
 	} // galaxy i
-	if (!gen_only) {draw_1pix_2pix_plds(star_plds);}
+	if (!gen_only) {draw_all_stars(usg, 1);}
 }
 
 
