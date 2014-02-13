@@ -955,12 +955,9 @@ void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, 
 
 	enable_flares(color, zoomed); // color will be set per object
 	//select_multitex(CLOUD_TEX, 1);
-	glAlphaFunc(GL_GREATER, 0.01);
-	glEnable(GL_ALPHA_TEST); // makes it faster
 	quad_batch_draw qbd;
 	draw_objects(pc, qbd);
 	qbd.draw();
-	glDisable(GL_ALPHA_TEST);
 	disable_flares();
 	//set_active_texture(0);
 }

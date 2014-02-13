@@ -169,7 +169,7 @@ float cloud_manager_t::get_max_xy_extent() const {
 }
 
 
-bool cloud_manager_t::create_texture(bool force_recreate) { // FIXME SHADERS: uses fixed function pipeline
+bool cloud_manager_t::create_texture(bool force_recreate) {
 
 	RESET_TIME;
 	unsigned const xsize(USE_CLOUD_FBO ? CLOUD_GEN_TEX_SZ : min(CLOUD_GEN_TEX_SZ, (unsigned)window_width));
@@ -219,7 +219,10 @@ bool cloud_manager_t::create_texture(bool force_recreate) { // FIXME SHADERS: us
 	bool const was_valid(camera_pdu.valid);
 	camera_pdu.valid = 0; // disable view frustum culling
 	camera_pos = origin;
+	shader_t s;
+	s.begin_simple_textured_shader(0.01);
 	draw_part_clouds(*this, WHITE, 1); // draw clouds
+	s.end_shader();
 	camera_pos = orig_cpos;
 	camera_pdu.valid = was_valid;
 	set_red_only(0);
@@ -273,6 +276,7 @@ void cloud_manager_t::draw() {
 	static bool had_sun(0);
 	static float last_sun_rot(0.0);
 	bool const need_update(!no_sun_lpos_update && (sun_rot != last_sun_rot || have_sun != had_sun));
+	shader_t s;
 
 	if (need_update) {
 		last_sun_rot = sun_rot;
@@ -291,7 +295,6 @@ void cloud_manager_t::draw() {
 		assert(cloud_tid);
 		bind_2d_texture(cloud_tid);
 
-		shader_t s;
 		s.set_vert_shader("no_lighting_tex_coord");
 		s.set_frag_shader("cloud_billboard");
 		s.begin_shader();
@@ -300,12 +303,13 @@ void cloud_manager_t::draw() {
 		quad_batch_draw qbd;
 		qbd.add_quad_dirs(point(camera.x, camera.y, cloud_top), vector3d(-xy_exp*cloud_xy, 0.0, 0.0), vector3d(0.0, xy_exp*cloud_xy, 0.0), WHITE, -plus_z);
 		qbd.draw();
-		s.end_shader();
 		disable_flares();
 	}
 	else {
+		s.begin_simple_textured_shader(0.01);
 		draw_part_clouds(*this, get_cloud_color(), 1);
 	}
+	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
 	//PRINT_TIME("Clouds");
 }

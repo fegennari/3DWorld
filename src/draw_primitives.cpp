@@ -774,23 +774,18 @@ void rotate_towards_camera(point const &pos) {
 }
 
 
-void enable_flares(colorRGBA const &color, bool zoomed) { // alpha test?
+void enable_flares(colorRGBA const &color, bool zoomed) { // used for clouds and smoke
 
-	glDisable(GL_LIGHTING);
 	color.do_glColor();
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	enable_blend();
-	if (draw_model == 0) select_texture(zoomed ? BLUR_CENT_TEX : BLUR_TEX);
-	plus_z.do_glNormal(); // is this required?
+	if (draw_model == 0) {select_texture((zoomed ? BLUR_CENT_TEX : BLUR_TEX), 0);}
 }
-
 
 void disable_flares() {
 
-	glDisable(GL_TEXTURE_2D);
 	disable_blend();
 	glDepthMask(GL_TRUE);
-	glEnable(GL_LIGHTING);
 }
 
 
@@ -801,7 +796,7 @@ void draw_one_tquad(float x1, float y1, float x2, float y2, float z) {
 	verts[1] = vert_tc_t(point(x1, y2, z), 0, 1);
 	verts[2] = vert_tc_t(point(x2, y2, z), 1, 1);
 	verts[3] = vert_tc_t(point(x2, y1, z), 1, 0);
-	draw_verts(verts, 4, GL_QUADS);
+	draw_verts(verts, 4, GL_TRIANGLE_FAN);
 }
 
 void draw_tquad(float xsize, float ysize, float z) {
