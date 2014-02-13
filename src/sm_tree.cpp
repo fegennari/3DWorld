@@ -546,19 +546,19 @@ void draw_small_trees(bool shadow_only) {
 	// draw leaves
 	small_trees.vbo_manager[0].upload();
 	setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v, 1); // dynamic lights, but no smoke, use light colors
-	set_lighted_sides(2);
 	glEnable(GL_ALPHA_TEST);
 	glAlphaFunc(GL_GREATER, 0.75);
 	small_trees.draw_pine_leaves(shadow_only);
 	s.end_shader();
 
+	set_lighted_sides(2);
 	//setup_smoke_shaders(s, 0.75, 0, 0, 0, v, v, 0, 0, v); // dynamic lights, but no smoke (slow, but looks better)
 	small_trees.draw_non_pine_leaves(shadow_only); // FIXME SHADERS: uses fixed function pipeline
 	//s.end_shader();
 	glDisable(GL_TEXTURE_2D);
+	set_lighted_sides(1);
 
 	glDisable(GL_ALPHA_TEST);
-	set_lighted_sides(1);
 	tree_scenery_pld.draw_and_clear();
 	//PRINT_TIME("small tree draw");
 }

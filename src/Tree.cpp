@@ -425,7 +425,6 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity) {
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.75);
 	}
-	set_lighted_sides(2);
 	set_specular(0.1, 10.0);
 	glDisable(GL_NORMALIZE);
 	
@@ -445,7 +444,6 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity) {
 void tree_cont_t::post_leaf_draw(shader_t &shader) {
 
 	shader.disable();
-	set_lighted_sides(1);
 	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
 	glDisable(GL_ALPHA_TEST);

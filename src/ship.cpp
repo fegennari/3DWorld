@@ -746,7 +746,6 @@ void draw_univ_objects() {
 	//PRINT_TIME("Sort");
 	shader_t s[2];
 	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
-	set_lighted_sides(2); // doesn't hurt
 	enable_blend(); // doesn't hurt
 	clear_emissive_color(); // just to be sure
 	BLACK.do_glColor();
@@ -767,7 +766,6 @@ void draw_univ_objects() {
 	s[0].end_shader();
 	end_part_cloud_draw();
 	disable_exp_lights(); // make sure the explosion lights end cleared
-	set_lighted_sides(1);
 	enable_blend(); // redundant?
 	particle_pld.draw_and_clear();
 	glDisable(GL_LIGHTING);

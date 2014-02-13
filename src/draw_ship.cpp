@@ -213,7 +213,6 @@ void uobj_draw_data::setup_exp_texture() const {
 
 	if (shader && shader->is_setup() && t_exp > 0.0) { // drops from 1.0 to 0.0 (burn offset -0.75 to 0.5)
 		shader->add_uniform_float("burn_offset", (-0.75*t_exp + 0.5*(1.0 - t_exp)));
-		set_lighted_sides(2);
 	}
 }
 
@@ -222,7 +221,6 @@ void uobj_draw_data::end_exp_texture() const {
 
 	if (shader && shader->is_setup() && t_exp > 0.0) {
 		shader->add_uniform_float("burn_offset", -1.0);
-		set_lighted_sides(1);
 	}
 }
 

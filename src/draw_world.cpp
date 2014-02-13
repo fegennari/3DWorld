@@ -369,7 +369,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (!draw_solid && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
 	set_fill_mode();
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	set_lighted_sides(2);
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	set_color_a(BLACK);
@@ -499,7 +498,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		draw_last.resize(0);
 	} // end draw_trans
 	s.end_shader();
-	set_lighted_sides(1);
 	set_specular(0.0, 1.0);
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }
