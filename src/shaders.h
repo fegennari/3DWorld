@@ -54,34 +54,34 @@ public:
 	void begin_color_only_shader();
 
 	int get_uniform_loc(char const *const name) const;
-	static void set_uniform_float_array(int loc, float const *const val, unsigned num);
-	static void set_uniform_float      (int loc, float val);
-	static void set_uniform_int        (int loc, int val);
-	static void set_uniform_vector2d   (int loc, vector2d const &val);
-	static void set_uniform_vector3d   (int loc, vector3d const &val);
-	static void set_uniform_color      (int loc, colorRGBA const &val);
-	static void set_uniform_color      (int loc, colorRGB  const &val);
-	static void set_uniform_matrid_4x4 (int loc, float *m, bool transpose);
+	static bool set_uniform_float_array(int loc, float const *const val, unsigned num);
+	static bool set_uniform_float      (int loc, float val);
+	static bool set_uniform_int        (int loc, int val);
+	static bool set_uniform_vector2d   (int loc, vector2d const &val);
+	static bool set_uniform_vector3d   (int loc, vector3d const &val);
+	static bool set_uniform_color      (int loc, colorRGBA const &val);
+	static bool set_uniform_color      (int loc, colorRGB  const &val);
+	static bool set_uniform_matrid_4x4 (int loc, float *m, bool transpose);
 
-	void add_uniform_float_array (char const *const name, float const *const val, unsigned num) const;
-	void add_uniform_float       (char const *const name, float val) const;
-	void add_uniform_int         (char const *const name, int val) const;
-	void add_uniform_vector2d    (char const *const name, vector2d const &val) const;
-	void add_uniform_vector3d    (char const *const name, vector3d const &val) const;
-	void add_uniform_color       (char const *const name, colorRGBA const &val) const;
-	void add_uniform_color       (char const *const name, colorRGB  const &val) const;
-	void add_uniform_matrid_4x4  (char const *const name, float *m, bool transpose) const;
+	bool add_uniform_float_array (char const *const name, float const *const val, unsigned num) const;
+	bool add_uniform_float       (char const *const name, float val) const;
+	bool add_uniform_int         (char const *const name, int val) const;
+	bool add_uniform_vector2d    (char const *const name, vector2d const &val) const;
+	bool add_uniform_vector3d    (char const *const name, vector3d const &val) const;
+	bool add_uniform_color       (char const *const name, colorRGBA const &val) const;
+	bool add_uniform_color       (char const *const name, colorRGB  const &val) const;
+	bool add_uniform_matrid_4x4  (char const *const name, float *m, bool transpose) const;
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
 	int attrib_loc_by_ix(unsigned ix) const;
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
 	void register_attrib_name(char const *const name, unsigned bind_ix);
-	void set_attrib_float_array(int loc, float const *const val, unsigned num) const;
-	void set_attrib_float      (int loc, float val) const;
-	void set_attrib_int        (int loc, int val) const;
-	void add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const;
-	void add_attrib_float      (unsigned ix, float val) const;
-	void add_attrib_int        (unsigned ix, int val) const;
+	bool set_attrib_float_array(int loc, float const *const val, unsigned num) const;
+	bool set_attrib_float      (int loc, float val) const;
+	bool set_attrib_int        (int loc, int val) const;
+	bool add_attrib_float_array(unsigned ix, float const *const val, unsigned num) const;
+	bool add_attrib_float      (unsigned ix, float val) const;
+	bool add_attrib_int        (unsigned ix, int val) const;
 
 	void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
 	void setup_scene_bounds() const;
