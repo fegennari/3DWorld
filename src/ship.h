@@ -240,7 +240,7 @@ public:
 
 	inline bool is_moving() const {return (powered && (vel.mag_sq() > TOLERANCE));}
 	bool can_have_engine_lights() const;
-	bool draw_as_pt() const {return (NDIV_SCALE_U*radius < dist);}
+	bool draw_as_pt(float rscale=1.0) const {return (NDIV_SCALE_U*rscale*radius < dist);}
 
 	static void draw_ship_flares(colorRGBA const &color, int tid=BLUR_TEX);
 	static void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex=BLUR_TEX);
