@@ -52,6 +52,7 @@ public:
 	bool begin_shader(bool do_enable=1);
 	void end_shader();
 	void begin_color_only_shader();
+	void begin_simple_textured_shader(float min_alpha=0.0);
 
 	int get_uniform_loc(char const *const name) const;
 	static bool set_uniform_float_array(int loc, float const *const val, unsigned num);

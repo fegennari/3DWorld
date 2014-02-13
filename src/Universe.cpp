@@ -898,7 +898,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					} // planet k
 					draw_1pix_2pix_plds(planet_plds); // FIXME SHADERS: uses fixed function pipeline
 					
-					if (planet_asteroid_belt) {
+					if (planet_asteroid_belt) { // we normally only get here once per frame, so the overhead is acceptable
 						shader_t asteroid_belt_shader;
 						planet_asteroid_belt->begin_render(asteroid_belt_shader, 0);
 						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader, 1);

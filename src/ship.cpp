@@ -761,16 +761,27 @@ void draw_univ_objects() {
 		assert(fobj != NULL);
 		if (!fobj->is_ok()) continue;
 		fobj->draw(s);
-		fobj->reset_lights(); // reset for next frameq
+		fobj->reset_lights(); // reset for next frame
 	}
-	s[0].end_shader();
-	end_part_cloud_draw();
+	end_part_cloud_draw(); // leaves program==0
 	disable_exp_lights(); // make sure the explosion lights end cleared
 	enable_blend(); // redundant?
-	particle_pld.draw_and_clear();
-	glDisable(GL_LIGHTING);
-	emissive_pld.draw_and_clear(); // FIXME SHADERS: uses fixed function pipeline
 
+	if (!particle_pld.empty()) {
+		s[0].enable();
+		point sun_pos; // unused
+		uobject const *sobj(NULL); // unused
+		set_uobj_color(camera, 0.0, 0, 1, sun_pos, sobj, 2.0, 2.0); // increased ambient scale
+		particle_pld.draw_and_clear();
+	}
+	s[0].end_shader();
+
+	if (!emissive_pld.empty()) {
+		shader_t s;
+		s.begin_color_only_shader();
+		emissive_pld.draw_and_clear();
+		s.end_shader();
+	}
 	if (!glow_pld.empty()) {
 		select_texture(BLUR_TEX, 0);
 		glDepthMask(GL_FALSE);
@@ -786,7 +797,6 @@ void draw_univ_objects() {
 		s.end_shader();
 		glDepthMask(GL_TRUE);
 	}
-	glEnable(GL_LIGHTING);
 	disable_blend();
 	set_additive_blend_mode();
 	draw_wrays(b_wrays); // draw beam weapons (where should this be?)

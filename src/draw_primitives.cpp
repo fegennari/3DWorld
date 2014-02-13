@@ -872,17 +872,14 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 
 void line_tquad_draw_t::draw(int prim_type) const { // supports quads and triangles
 
+	shader_t s;
+	s.begin_simple_textured_shader(0.01);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDisable(GL_LIGHTING);
 	enable_blend();
-	select_texture(BLUR_TEX);
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.01);
+	select_texture(BLUR_TEX, 0);
 	draw_verts(verts, prim_type);
-	glDisable(GL_ALPHA_TEST);
-	glDisable(GL_TEXTURE_2D);
 	disable_blend();
-	glEnable(GL_LIGHTING);
+	s.end_shader();
 }
 
 

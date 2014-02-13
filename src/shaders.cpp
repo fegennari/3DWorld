@@ -633,6 +633,15 @@ void shader_t::begin_color_only_shader() {
 	begin_shader();
 }
 
+void shader_t::begin_simple_textured_shader(float min_alpha) {
+
+	set_vert_shader("no_lighting_tex_coord");
+	set_frag_shader("simple_texture");
+	begin_shader();
+	add_uniform_float("min_alpha", min_alpha);
+	add_uniform_int("tex0", 0);
+}
+
 
 // **************** INSTANCING ****************
 
