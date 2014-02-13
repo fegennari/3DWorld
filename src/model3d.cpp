@@ -373,7 +373,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	int loc(-1);
 	create_bind_vbo_and_upload(vbo, *this, 0);
 
-	if (CALC_TANGENT_VECT && enable_bump_map() && !is_shadow_pass && has_tangents && shader.is_setup()) { // Note: if we get here, T must be a vert_norm_tc_tan
+	if (CALC_TANGENT_VECT && enable_bump_map() && !is_shadow_pass && has_tangents) { // Note: if we get here, T must be a vert_norm_tc_tan
 		assert(stride == sizeof(vert_norm_tc_tan));
 		loc = shader.get_attrib_loc("tangent");
 		assert(loc > 0);
@@ -825,21 +825,20 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX, 0);}
 			set_active_texture(0);
 		}
-		if (alpha < 1.0 && ni != 1.0) {
+		if (!disable_shaders && alpha < 1.0 && ni != 1.0) {
 			//shader.add_uniform_float("refract_index", ni); // FIXME: set index of refraction (and reset it at the end)
 		}
 		if (alpha_tid >= 0) enable_blend();
 		float const spec_val((ks.R + ks.G + ks.B)/3.0);
 		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
+		shader.add_uniform_float("min_alpha", min_alpha);
 		if (ns > 0.0) {set_specular(spec_val, ns);} // ns<=0 is undefined?
 		set_color_e(colorRGBA(ke, alpha));
 
-		if (shader.is_setup()) {
+		if (!disable_shaders && have_indir_smoke_tex) {
 			set_color_d(get_ad_color());
-			shader.add_uniform_float("min_alpha", min_alpha);
 		}
 		else {
-			glAlphaFunc(GL_GREATER, min_alpha);
 			set_color_a(colorRGBA((ignore_ambient ? kd : ka), alpha));
 			set_color_d(colorRGBA(kd, alpha));
 		}
@@ -1244,7 +1243,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_m
 			assert(unbound_tid >= 0);
 			select_texture(unbound_tid, 0);
 			set_color_d(unbound_color);
-			if (shader.is_setup()) shader.add_uniform_float("min_alpha", 0.0);
+			shader.add_uniform_float("min_alpha", 0.0);
 		}
 		unbound_geom.render(shader, is_shadow_pass);
 	}
@@ -1389,14 +1388,7 @@ void model3ds::render(bool is_shadow_pass) {
 	if (empty()) return;
 	bool const shader_effects(!disable_shaders && !is_shadow_pass);
 	set_fill_mode();
-	
-	// FIXME: in shadow pass, textuing is disabled, so alpha mask textures won't work
-	if (shader_effects && have_indir_smoke_tex) {
-		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
-	}
-	else {
-		set_color_a(WHITE);
-	}
+	set_color_a(BLACK); // ambient will be set by indirect lighting in the shader, when enabled
 	BLACK.do_glColor();
 	set_specular(0.0, 1.0);
 	bool needs_alpha_test(0), needs_bump_maps(0);
@@ -1407,6 +1399,7 @@ void model3ds::render(bool is_shadow_pass) {
 	}
 	float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 
+	// FIXME: in shadow pass, textuing is disabled, so alpha mask textures won't work
 	for (unsigned bmap_pass = 0; bmap_pass < (needs_bump_maps ? 2U : 1U); ++bmap_pass) {
 		shader_t s;
 
