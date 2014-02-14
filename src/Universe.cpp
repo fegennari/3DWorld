@@ -3088,9 +3088,7 @@ void set_lighting_params() {
 	set_colors_and_enable_light(a_light, ambient, zero4); // universe + galaxy ambient
 	set_gl_light_pos(a_light, all_zeros, 0.0);
 	set_light_atten(a_light, 1.0);
-	glEnable(GL_NORMALIZE);
-	//glEnable(GL_BLEND);
-	//glEnable(GL_POINT_SMOOTH);
+	//enable_blend();
 	//glEnable(GL_LINE_SMOOTH);
 }
 

@@ -7,6 +7,7 @@
 #include "physics_objects.h"
 #include "player_state.h"
 #include "draw_utils.h"
+#include "shaders.h"
 #include <queue>
 
 
@@ -861,16 +862,18 @@ void shift_waypoints(vector3d const &vd) {
 void draw_waypoints() {
 
 	if (!SHOW_WAYPOINTS) return;
+	shader_t s;
+	s.begin_color_only_shader();
 	pt_line_drawer_no_lighting_t pld;
 
 	for (waypoint_vector::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
 		if (i->disabled) continue;
 		unsigned const wix(i - waypoints.begin());
-		if      (i->visited)     set_color(ORANGE);
-		else if (i->goal)        set_color(RED);
-		else if (i->user_placed) set_color(YELLOW);
-		else if (i->placed_item) set_color(PURPLE);
-		else                     set_color(WHITE);
+		if      (i->visited)     ORANGE.do_glColor(); // Note: could use lighting for these
+		else if (i->goal)        RED.do_glColor();
+		else if (i->user_placed) YELLOW.do_glColor();
+		else if (i->placed_item) PURPLE.do_glColor();
+		else                     WHITE.do_glColor();
 		draw_sphere_vbo(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2, 0);
 		if (!SHOW_WAYPOINT_EDGES) continue;
 
@@ -888,9 +891,8 @@ void draw_waypoints() {
 			}
 		}
 	}
-	glDisable(GL_LIGHTING);
 	pld.draw();
-	glEnable(GL_LIGHTING);
+	s.end_shader();
 }
 
 

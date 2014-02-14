@@ -659,7 +659,7 @@ void clear_univ_obj_contexts() {
 }
 
 
-void draw_wrays(vector<usw_ray> &wrays) { // FIXME SHADERS: uses fixed function pipeline
+void draw_wrays(vector<usw_ray> &wrays) {
 
 	if (wrays.empty()) return;
 	glDepthMask(GL_FALSE); // ???
@@ -720,6 +720,8 @@ void draw_univ_objects() {
 	sorted.resize(0);
 	point const &camera(get_player_pos2());
 	float const ch_dist(100.0*player_ship().specs().sensor_dist);
+	shader_t chs;
+	if (onscreen_display) {chs.begin_color_only_shader();} // for crosshairs
 
 	for (unsigned i = 0; i < nobjs; ++i) { // make negative so it's sorted largest to smallest
 		cached_obj const &co(c_uobjs[i]);
@@ -741,6 +743,7 @@ void draw_univ_objects() {
 			co.obj->reset_lights(); // reset for next frame
 		}
 	}
+	chs.end_shader();
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
@@ -804,8 +807,11 @@ void draw_univ_objects() {
 	set_std_blend_mode();
 
 	if (onscreen_display) { // draw player death marker
+		shader_t s;
+		s.begin_color_only_shader();
 		draw_crosshair_from_camera(universe_origin, MAGENTA); // starts off as player start marker - world origin
 		if (player_death_pos != universe_origin) draw_crosshair_from_camera(player_death_pos, ORANGE);
+		s.end_shader();
 	}
 	//PRINT_TIME("Draw");
 }

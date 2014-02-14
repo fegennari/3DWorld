@@ -259,7 +259,6 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 		if (TIMETEST) PRINT_TIME(" Free Obj Draw");
 	}
 	check_shift_universe();
-	glDisable(GL_TEXTURE_2D); // may not be required
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(get_universe_ambient_light());
 	glEnable(GL_LIGHT0);

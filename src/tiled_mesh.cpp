@@ -1949,7 +1949,6 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 		s.end_shader();
 	}
 	disable_blend();
-	glDisable(GL_TEXTURE_2D);
 }
 
 

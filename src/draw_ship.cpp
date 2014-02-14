@@ -123,7 +123,6 @@ void uobj_draw_data::setup_colors_draw_flare(point const &pos, point const &xlat
 
 void draw_crosshair(upos_point_type const &pos, float dist, colorRGBA const &color) { // for onscreen targeting
 
-	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
 	color.do_glColor();
@@ -136,7 +135,6 @@ void draw_crosshair(upos_point_type const &pos, float dist, colorRGBA const &col
 	glPopMatrix();
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
 }
 
 

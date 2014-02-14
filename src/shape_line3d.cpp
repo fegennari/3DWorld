@@ -6,6 +6,7 @@
 #include "shape_line3d.h"
 #include "collision_detect.h"
 #include "draw_utils.h"
+#include "shaders.h"
 #include <fstream>
 
 
@@ -204,7 +205,7 @@ void shape3d::add_vertex(unsigned vertex, unsigned face_id, unsigned &face_count
 }
 
 
-void shape3d::draw(bool skip_color_set) const {
+void shape3d::draw(bool skip_color_set) const { // FIXME SHADERS: uses fixed function pipeline
 
 	if (points.empty()) return;
 	
@@ -297,7 +298,7 @@ void shape3d::destroy() {
 // ************** LINE3D *************
 
 
-void line3d::draw() const { // FIXME SHADERS: uses fixed function pipeline
+void line3d::draw() const {
 
 	if (points.empty()) return;
 	
@@ -308,7 +309,8 @@ void line3d::draw() const { // FIXME SHADERS: uses fixed function pipeline
 	//glEnable(GL_BLEND);
 	//glEnable(GL_LINE_SMOOTH);
 	glLineWidth(width);
-	glDisable(GL_LIGHTING);
+	shader_t s;
+	s.begin_color_only_shader();
 	color.do_glColor();
 	vector<vert_wrap_t> verts;
 	verts.reserve(2*(points.size() - 1));
@@ -318,7 +320,7 @@ void line3d::draw() const { // FIXME SHADERS: uses fixed function pipeline
 	}
 	draw_verts(verts, GL_LINES);
 	glLineWidth(1.0);
-	glEnable(GL_LIGHTING);
+	s.end_shader();
 	//glDisable(GL_BLEND);
 	//glDisable(GL_LINE_SMOOTH);
 }

@@ -2,11 +2,11 @@
 // by Frank Gennari
 // 9/2/02
 
-
 #include "3DWorld.h"
 #include "mesh.h"
 #include "textures_3dw.h"
 #include "physics_objects.h"
+#include "shaders.h"
 
 
 bool const MAP_VIEW_LIGHTING = 1;
@@ -33,7 +33,7 @@ float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, bool use_hmap_heig
 }
 
 
-void draw_overhead_map() { // FIXME SHADERS: uses fixed function pipeline
+void draw_overhead_map() {
 
 	//RESET_TIME
 	unsigned tid(0);
@@ -179,13 +179,12 @@ void draw_overhead_map() { // FIXME SHADERS: uses fixed function pipeline
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glColor3f(1.0, 1.0, 1.0);
-	glDisable(GL_LIGHTING);
-	glEnable(GL_TEXTURE_2D);
+	shader_t s;
+	s.begin_simple_textured_shader();
 	setup_texture(tid, GL_MODULATE, 0, 0, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, nx, ny, 0, GL_RGB, GL_UNSIGNED_BYTE, &buf.front());
 	draw_tquad(0.58*((float)window_width)/((float)window_height), 0.58, -1.0);
 	free_texture(tid);
-	glEnable(GL_LIGHTING);
-	glDisable(GL_TEXTURE_2D);
+	s.end_shader();
 	//PRINT_TIME("draw map")
 }

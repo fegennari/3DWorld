@@ -219,8 +219,6 @@ void draw_select_groups(int solid) {
 			}
 		}
 	}
-	glDisable(GL_TEXTURE_2D);
-
 	if (s.is_setup()) {
 		s.end_shader();
 		indir_vert_offset = orig_ivo; // restore original variable values

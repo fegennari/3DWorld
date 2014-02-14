@@ -2,6 +2,7 @@
 #include "function_registry.h"
 #include "textures_3dw.h"
 #include "draw_utils.h"
+#include "shaders.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,10 +60,9 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 	float global_scale(6.0);
 	GLuint bound_to(0);
 
-	glDisable(GL_LIGHTING);
-	glEnable(GL_TEXTURE_2D);
+	shader_t s;
+	s.begin_simple_textured_shader();
 	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_DITHER);
 	enable_blend();
 	glBlendFunc(GL_ONE, GL_ONE);
 
@@ -95,12 +95,11 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 		}
 		qbd.add_quad_dirs((axis*flare[i].loc + center), sx, sy, c);
 	}
-	qbd.draw(); // FIXME SHADERS: uses fixed function pipeline
+	qbd.draw();
 	glEnable(GL_DEPTH_TEST);
 	disable_blend();
 	set_std_blend_mode();
-	glEnable(GL_LIGHTING);
-	glDisable(GL_TEXTURE_2D);
+	s.end_shader();
 }
 
 

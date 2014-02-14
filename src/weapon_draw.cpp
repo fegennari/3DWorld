@@ -55,10 +55,9 @@ void draw_beams() {
 void show_blood_on_camera() {
 
 	enable_blend();
-	glDisable(GL_LIGHTING);
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.5);
-	select_texture(BLUR_TEX);
+	shader_t s;
+	s.begin_simple_textured_shader(0.5);
+	select_texture(BLUR_TEX, 0);
 	quad_batch_draw qbd;
 	
 	for (unsigned i = 0; i < NUM_BS; ++i) {
@@ -79,9 +78,7 @@ void show_blood_on_camera() {
 	}
 	qbd.draw();
 	disable_blend();
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_ALPHA_TEST);
-	glEnable(GL_LIGHTING);
+	s.end_shader();
 }
 
 
@@ -898,9 +895,9 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 	glDisable(GL_DEPTH_TEST);
 	color.do_glColor();
 	enable_blend();
-	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_LINE_SMOOTH);
-	glDisable(GL_LIGHTING);
+	shader_t s;
+	s.begin_color_only_shader();
 	vert_wrap_t verts[8];
 
 	if (in_zoom) {
@@ -919,10 +916,9 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 	draw_verts(verts, 1, GL_POINTS);
 	glPointSize(1.0);
 	disable_blend();
-	glDisable(GL_POINT_SMOOTH);
 	glDisable(GL_LINE_SMOOTH);
-	glEnable(GL_LIGHTING);
 	glEnable(GL_DEPTH_TEST);
+	s.end_shader();
 }
 
 

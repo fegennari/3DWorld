@@ -76,7 +76,7 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed, FIXME
 	bool const bfc(!texture || !textures[tid].has_alpha());
 	draw_subdiv_sphere(pos, radius, ndiv, texture, bfc); // point if far away?
 	if (lighted) set_color_e(BLACK);
-	if (texture) glDisable(GL_TEXTURE_2D);
+	if (texture) glDisable(GL_TEXTURE_2D); // FIXME SHADERS: uses fixed function pipeline
 }
 
 

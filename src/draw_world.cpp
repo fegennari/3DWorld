@@ -572,12 +572,13 @@ void draw_sun() {
 
 	point const pos(get_sun_pos());
 	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 1)) return;
-	glDisable(GL_LIGHTING);
+	shader_t s;
+	s.begin_color_only_shader();
 	colorRGBA color(SUN_C);
 	apply_red_sky(color);
 	color.do_glColor();
 	draw_subdiv_sphere(pos, sun_radius, N_SPHERE_DIV, 1, 0);
-	glEnable(GL_LIGHTING);
+	s.end_shader();
 }
 
 
@@ -596,7 +597,7 @@ void draw_moon() {
 		set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
 	}
 	select_texture(MOON_TEX);
-	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
+	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0); // FIXME SHADERS: uses fixed function pipeline
 	glDisable(GL_TEXTURE_2D);
 	if (light_factor < 0.6) glEnable(GL_LIGHT1); // moon
 	if (light_factor > 0.4) glEnable(GL_LIGHT0); // sun
@@ -605,11 +606,12 @@ void draw_moon() {
 	if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
 		colorRGBA color(bkg_color);
 		color.alpha = 5.0*(light_factor - 0.4);
-		glDisable(GL_LIGHTING);
+		shader_t s;
+		s.begin_color_only_shader();
 		enable_blend();
 		color.do_glColor();
 		draw_subdiv_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, 0, 0);
-		glEnable(GL_LIGHTING);
+		s.end_shader();
 		disable_blend();
 	}
 }
@@ -632,7 +634,7 @@ void draw_earth() {
 		glRotatef(67.0, 0.6, 0.8, 0.0);
 		glRotatef(rot_angle, 0.0, 0.0, 1.0);
 		glRotatef(180.0, 1.0, 0.0, 0.0);
-		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1);
+		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1); // FIXME SHADERS: uses fixed function pipeline
 		glPopMatrix();
 		glDisable(GL_TEXTURE_2D);
 	}
@@ -687,7 +689,7 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 }
 
 
-void draw_sky(int order) { // FIXME SHADERS: uses fixed function pipeline
+void draw_sky(int order) {
 
 	if (atmosphere < 0.01) return; // no atmosphere
 	set_specular(0.0, 1.0);
@@ -727,16 +729,17 @@ void draw_sky(int order) { // FIXME SHADERS: uses fixed function pipeline
 		glLightf(light, GL_QUADRATIC_ATTENUATION, 0.01);
 	}
 	if (have_sun && light_factor > 0.4) { // draw horizon
-		glDisable(GL_LIGHTING);
+		shader_t s;
+		s.begin_simple_textured_shader();
 		colorRGBA horizon_color;
 		float const blend_val(atmosphere*CLIP_TO_01(10.0f*(light_factor - 0.4f)));
 		blend_color(horizon_color, WHITE, ALPHA0, blend_val, 1);
 		horizon_color.alpha *= 0.5;
 		apply_red_sky(horizon_color);
 		horizon_color.do_glColor();
-		select_texture(GRADIENT_TEX);
+		select_texture(GRADIENT_TEX, 0);
 		draw_sphere_vbo(center, 1.05*radius, N_SPHERE_DIV, 1);
-		glEnable(GL_LIGHTING);
+		s.end_shader();
 	}
 	select_texture(CLOUD_TEX);
 
@@ -747,7 +750,7 @@ void draw_sky(int order) { // FIXME SHADERS: uses fixed function pipeline
 	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius)); // GL_EYE_LINEAR
 	set_color_a(cloud_color);
 	set_color_d(cloud_color); // disable lighting (BLACK)?
-	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
+	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1); // FIXME SHADERS: uses fixed function pipeline
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_TEXTURE_GEN_S); glDisable(GL_TEXTURE_GEN_T);
 	disable_blend();
@@ -1216,22 +1219,21 @@ void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned 
 
 void camera_filter::draw() {
 
-	if (tid >= 0) select_texture(tid);
+	select_texture(tid, 0, 1); // use WHITE_TEX if tid < 0
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(0.5*zval*tan_val), x((y*window_width)/window_height);
 	colorRGBA cur_color(color);
 	if (fades) {cur_color.alpha *= float(time)/float(init_time);}
 	cur_color.do_glColor();
 	draw_tquad(x, y, zval);
-	if (tid >= 0) glDisable(GL_TEXTURE_2D);
 }
 
 
 void draw_camera_filters(vector<camera_filter> &cfs) {
 
 	if (cfs.empty()) return;
-	GLboolean lighting(glIsEnabled(GL_LIGHTING));
-	if (lighting) glDisable(GL_LIGHTING);
+	shader_t s;
+	s.begin_simple_textured_shader();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
 
@@ -1242,7 +1244,7 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 	}
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
-	if (lighting) glEnable(GL_LIGHTING);
+	s.end_shader();
 }
 
 
@@ -1256,22 +1258,19 @@ void spark_t::draw(quad_batch_draw &qbd) const {
 }
 
 
-void draw_sparks() { // FIXME SHADERS: uses fixed function pipeline
+void draw_sparks() {
 
 	if (sparks.empty()) return;
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDisable(GL_LIGHTING);
 	enable_blend();
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.01);
 	set_additive_blend_mode();
-	select_texture(FLARE2_TEX);
+	shader_t s;
+	s.begin_simple_textured_shader(0.01);
+	select_texture(FLARE2_TEX, 0);
 	quad_batch_draw qbd;
 	draw_objects(sparks, qbd);
 	qbd.draw();
-	glDisable(GL_TEXTURE_2D);
-	glEnable(GL_LIGHTING);
-	glDisable(GL_ALPHA_TEST);
+	s.end_shader();
 	set_std_blend_mode();
 	disable_blend();
 	set_fill_mode();
@@ -1326,7 +1325,8 @@ void draw_splash(float x, float y, float z, float size, colorRGBA color) {
 void draw_text(float x, float y, float z, char const *text, float tsize, bool bitmap_font) {
 
 	//bitmap_font |= ((display_mode & 0x80) != 0);
-	glDisable(GL_LIGHTING);
+	shader_t s;
+	s.begin_color_only_shader();
 	glDisable(GL_DEPTH_TEST);
 
 	if (bitmap_font) {
@@ -1371,7 +1371,7 @@ void draw_text(float x, float y, float z, char const *text, float tsize, bool bi
 		glDisable(GL_BLEND);
 	}
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
+	s.end_shader();
 }
 
 

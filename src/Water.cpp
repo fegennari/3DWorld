@@ -497,7 +497,6 @@ void draw_water() {
 		calc_water_normals();
 	}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
-	glEnable(GL_TEXTURE_2D);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 	glDisable(GL_NORMALIZE);
 	enable_blend();

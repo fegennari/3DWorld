@@ -3,6 +3,7 @@
 // 10/24/12
 #include "3DWorld.h"
 #include "physics_objects.h"
+#include "shaders.h"
 
 
 float const PRECIP_DIST = 20.0;
@@ -20,15 +21,16 @@ protected:
 	vector<vert_type_t> verts;
 	rand_gen_t rgen;
 
-	void render(int type, colorRGBA const &color) const { // FIXME SHADERS: uses fixed function pipeline
+	void render(int type, colorRGBA const &color) const {
 		if (empty()) return;
 		color.do_glColor();
 		assert(!(size() % VERTS_PER_PRIM));
 		plus_z.do_glNormal();
 		enable_blend(); // split into point smooth and blend?
-		glDisable(GL_LIGHTING);
+		shader_t s;
+		s.begin_color_only_shader();
 		draw_verts(verts, type);
-		glEnable(GL_LIGHTING);
+		s.end_shader();
 		disable_blend();
 	}
 
