@@ -872,33 +872,44 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 	colorRGBA color(color1);
 	if (color1 != color2) {blend_color(color, color1, color2, CLIP_TO_01(1.0f - ((float)time)/((float)lifetime)), 1);}
 
-	if (ddata.draw_as_pt((ptype == PTYPE_GLOW) ? 1.0 : 0.75)) { // Note: may not be in correct back to front ordering for alpha blending
-		if (ptype == PTYPE_GLOW) {
-			emissive_pld.add_pt(make_pt_global(pos), color);
-		}
-		else {
-			particle_pld.add_pt(make_pt_global(pos), (get_player_pos2() - pos), color);
-		}
-		return;
-	}
 	switch (ptype) {
 	case PTYPE_GLOW:
-		if (60.0*radius < ddata.dist) {
+		if (ddata.draw_as_pt()) {
+			emissive_pld.add_pt(make_pt_global(pos), color); // Note: may not be in correct back to front ordering for alpha blending
+		}
+		else if (60.0*radius < ddata.dist) {
 			glow_pld.add_pt(make_pt_global(pos), vector3d(2.0*radius, 0.0, 0.0), color); // FIXME: radius encoded as normal.x
 		}
 		else {
 			ddata.setup_colors_draw_flare(pos, all_zeros, 2.0, 2.0, color); // Note: draw order isn't always correct
 		}
 		break;
+
 	case PTYPE_SPHERE: // low resolution particles (ship pieces)
-		color.do_glColor();
-		if (texture_id > 0) select_texture(texture_id, 0);
-		draw_sphere_vbo(all_zeros, 1.0, min((no_coll() ? ddata.ndiv : max(3, 3*ddata.ndiv/4)), N_SPHERE_DIV/2), (texture_id > 0)); // fewer ndiv/more irregular?
-		if (texture_id > 0) end_texture();
+		if (ddata.draw_as_pt(0.8)) {
+			if (texture_id >= 0) {color = color.modulate_with(texture_color(texture_id));}
+			particle_pld.add_pt(make_pt_global(pos), (get_player_pos2() - pos), color);
+		}
+		else {
+			color.do_glColor();
+			if (texture_id >= 0) select_texture(texture_id, 0);
+			draw_sphere_vbo(all_zeros, 1.0, min((no_coll() ? ddata.ndiv : max(3, 3*ddata.ndiv/4)), N_SPHERE_DIV/2), (texture_id > 0)); // fewer ndiv/more irregular?
+			if (texture_id >= 0) end_texture();
+		}
 		break;
+
 	case PTYPE_TRIANGLE:
-		color.do_glColor();
-		ddata.draw_one_triangle(axis, angle); // rotate around some random axis
+		if (ddata.draw_as_pt(0.6)) {
+			vector3d normal(plus_z);
+			rotate_vector3d(axis, angle, normal);
+			if (dot_product(normal, vector3d(get_player_pos2() - pos)) < 0.0) {normal = -normal;} // side facing the player
+			particle_pld.add_pt(make_pt_global(pos), normal, color);
+		}
+		// medium distance: vector of untextured triangles to draw at end?
+		else {
+			color.do_glColor();
+			ddata.draw_one_triangle(axis, angle); // rotate around some random axis
+		}
 		break;
 	default:
 		assert(0);
