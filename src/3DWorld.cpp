@@ -339,6 +339,7 @@ void set_gl_params() {
     glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, lmodel_localviewer);
     glLightModelfv(GL_LIGHT_MODEL_TWO_SIDE, lmodel_side);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING);
     glEnable(GL_NORMALIZE);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glDisable(GL_COLOR_MATERIAL);

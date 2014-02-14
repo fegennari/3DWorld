@@ -428,7 +428,6 @@ void draw_water() {
 	// draw exterior water (oceans)
 	if (camera.z >= water_plane_z) {draw_water_sides(1);}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
-	glDisable(GL_NORMALIZE);
 	enable_blend();
 	select_water_ice_texture(color);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
@@ -457,7 +456,6 @@ void draw_water() {
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	disable_blend();
 	set_specular(0.0, 1.0);
-	glEnable(GL_NORMALIZE);
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 	if (camera.z < water_plane_z) {draw_water_sides(1);}
 	
@@ -498,7 +496,6 @@ void draw_water() {
 	}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
-	glDisable(GL_NORMALIZE);
 	enable_blend();
 	unsigned nin(0);
 	int xin[4], yin[4], last_wsi(-1);
@@ -610,7 +607,6 @@ void draw_water() {
 		set_active_texture(1);
 		set_active_texture(0);
 	}
-	glEnable(GL_NORMALIZE);
 	glDisable(GL_COLOR_MATERIAL);
 	s.end_shader();
 	update_water_volumes();
