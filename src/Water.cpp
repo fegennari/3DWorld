@@ -345,7 +345,7 @@ public:
 		
 			if (last_row_colors[j].ix != ii) { // gets here about half the time
 				color  = color_in;
-				nscale = get_cloud_shadow_atten(j, i);
+				nscale = 0.5 + 0.5*get_cloud_shadow_atten(j, i); // shadows on water are less strong (due to high specular - not that it really helps)
 
 				if (!(display_mode & 0x20) && !has_snow && v.z > mesh_height[ii][j]) { // calculate water reflection and blend into color
 					point const camera(get_camera_pos());
