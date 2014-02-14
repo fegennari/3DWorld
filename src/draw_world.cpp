@@ -642,16 +642,6 @@ void draw_earth() {
 }
 
 
-void draw_stationary_earth(float radius) {
-
-	set_fill_mode();
-	select_texture(EARTH_TEX);
-	set_color(WHITE);
-	draw_subdiv_sphere(all_zeros, radius, N_SPHERE_DIV, 1, 0);
-	glDisable(GL_TEXTURE_2D);
-}
-
-
 void apply_red_sky(colorRGBA &color) {
 
 	if (light_factor > 0.45 && light_factor < 0.55) { // red sky at night/morning
