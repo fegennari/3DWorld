@@ -9,6 +9,7 @@ Remove non-shader rendering (see FIXME SHADERS)
   - Small tree leaves
   - Model3d shadow_pass
 Replace GL matrix operations with something else (GLM?)
+Remove some set_lighted_sides() calls
 
 * Berries on plants
 Tiled terrain texture coords on high slopes
@@ -36,7 +37,4 @@ Better pine tree texture
 
 * Use normal map in indir texture lookup offset somehow?
 Make TT and ground mode trees agree
-
-SUN_TEX is unused - remove?
-Fix/check missing distant stars
-disable_shaders => disable_shader_effects
+Group unlit ship particle triangles?

@@ -44,8 +44,7 @@ texture_t(0, 6, 256,  256,  1, 3, 1, "rock.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg", 0, 0), // compression is slow
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
-texture_t(0, 6, 64,   64,   1, 3, 1, "sun.png"),
-//texture_t(0, 6, 128,  128,  1, 3, 1, "moon.png"),
+texture_t(0, 5, 0,    0,    1, 3, 1, "brick1.jpg"), // brick2?
 texture_t(0, 5, 0,    0,    1, 3, 1, "moon.jpg"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg", 0, 0), // or marble2.jpg, compression is slow
