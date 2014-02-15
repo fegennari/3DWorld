@@ -24,9 +24,9 @@ float get_shadow_map_weight_light1(in vec4 pos, in vec3 normal) {
 vec4 add_light_comp_pos_smap_light0(in vec3 normal, in vec4 epos) {
 	if (use_shadow_map) {normal *= get_shadow_map_weight_light0(epos, normal);}
 	//if (use_shadow_map) {normal *= ((dot(normal, (gl_LightSource[0].position.xyz - epos)) > 0.0) ? get_shadow_map_weight_light0(epos, normal) : 0.0);}
-	return add_light_comp_pos(normal, epos, 0);
+	return add_light_comp_pos0(normal, epos);
 }
 vec4 add_light_comp_pos_smap_light1(in vec3 normal, in vec4 epos) {
 	if (use_shadow_map) {normal *= get_shadow_map_weight_light1(epos, normal);}
-	return add_light_comp_pos(normal, epos, 1);
+	return add_light_comp_pos1(normal, epos);
 }

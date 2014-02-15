@@ -15,7 +15,7 @@ void main()
 	const float normal_z = 0.95; // blends better in practice
 	vec3 normal = normalize(normal_z*gl_NormalMatrix[2] + vec3(0.0, 0.0, sqrt(1.0 - normal_z*normal_z))) / ambient_scale;
 	vec3 color  = vec3(0.0);
-	if (enable_light0) color += add_light_comp(normal, 0).rgb;
-	if (enable_light1) color += add_light_comp(normal, 1).rgb;
+	if (enable_light0) color += add_light_comp0(normal).rgb;
+	if (enable_light1) color += add_light_comp1(normal).rgb;
 	gl_FrontColor = vec4(color, gl_Color.a);
 } 

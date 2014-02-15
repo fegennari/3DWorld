@@ -12,7 +12,7 @@ vec4 add_light_rings(in vec3 n, in vec4 epos)
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz); // normalize the light's direction in eye space
 	vec4 diffuse   = gl_Color * gl_LightSource[0].diffuse;
 	vec4 ambient   = gl_Color * gl_LightSource[0].ambient;
-	vec4 specular  = get_light_specular(n, light_dir, epos.xyz, 0);
+	vec4 specular  = get_light_specular(n, light_dir, epos.xyz, gl_FrontLightProduct[0].specular);
 	float atten    = calc_light_atten(epos, 0);
 	if (sun_radius > 0.0) {atten *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, planet_pos, planet_radius);} // sun exists
 	return (ambient + (abs(dot(n, light_dir))*diffuse + specular)) * atten;

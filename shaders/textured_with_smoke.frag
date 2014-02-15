@@ -41,27 +41,7 @@ vec3 add_light0(in vec3 n) {
 		}
 	}
 #endif
-	//return add_light_comp_pos(nscale*n, epos, 0).rgb;
-	// special cased add_light_comp_pos - FIXME: find a better way to make the index constant for optimization
-#ifdef USE_BUMP_MAP
-	nscale *= clamp(5.0*dot(n, light_dir), 0.0, 1.0); // fix self-shadowing
-	vec3 lnormal = nscale*apply_bump_map(light_dir, eye_pos);
-#else
-	vec3 lnormal = nscale*n;
-#endif
-#ifdef USE_LIGHT_COLORS
-	vec3 diffuse = gl_Color.rgb * gl_LightSource[0].diffuse.rgb;
-	vec3 ambient = gl_Color.rgb * gl_LightSource[0].ambient.rgb;
-#else // use light material properties
-	vec3 diffuse = gl_FrontLightProduct[0].diffuse.rgb;
-	vec3 ambient = gl_FrontLightProduct[0].ambient.rgb;
-#endif
-#ifdef NO_SPECULAR
-	vec3 specular = vec3(0.0);
-#else
-	vec3 specular = get_light_specular(lnormal, light_dir, eye_pos, 0).rgb;
-#endif
-	return (ambient_scale*ambient + max(dot(lnormal, light_dir), 0.0)*diffuse + specular);
+	return add_light_comp_pos0(nscale*n, epos).rgb;
 }
 
 // Note: This may seem like it can go into the vertex shader as well,

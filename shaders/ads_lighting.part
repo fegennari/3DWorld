@@ -1,33 +1,24 @@
 uniform float ambient_scale = 1.0;
 
-vec4 calc_spec_term(in float NdotHV, in int i) {
-	vec4 spec_color = gl_FrontLightProduct[i].specular;
+vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec4 spec_color) {
+	vec3 half_vect  = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
 #ifdef USE_SPEC_MAP
 	spec_color.rgb *= get_spec_color();
 #endif
-	return spec_color * pow(NdotHV, gl_FrontMaterial.shininess);
-}
-
-vec4 get_light_specular_fast(in vec3 normal, in int i) { // unused
-	float NdotHV = max(dot(normal, normalize(gl_LightSource[i].halfVector.xyz)), 0.0);
-	return calc_spec_term(NdotHV, i);
-}
-
-vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in int i) {
-	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
-	return calc_spec_term(max(dot(normal, half_vect), 0.0), i);
-}
-
-// Togsvig antialiasing for mipmapped normal maps
-vec4 get_light_specular_antialiased(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in int i) {
-	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
-	float nmag = length(normal);
-	float ft   = nmag/(nmag + gl_FrontMaterial.shininess*(1.0 - nmag));
-	float fs   = ft*gl_FrontMaterial.shininess;
-	return (1.0 + fs)/(1.0 + gl_FrontMaterial.shininess) * gl_FrontLightProduct[i].specular * pow(max(dot(normal, half_vect)/nmag, 0.0), fs);
+	return spec_color * pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess);
 }
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later
+
+void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos) {
+#ifdef USE_BUMP_MAP
+	float atten = length(normal); // multiply by length of eye norm to account for shadow map attenuation
+	atten *= clamp(5.0*dot(normal/atten, light_dir), 0.0, 1.0); // fix self-shadowing
+	normal = atten*apply_bump_map(light_dir, eye_pos);
+#endif
+}
+
+// general case, plus hard-coded functions for light0 and light1 to help the compiler optimize
 
 // Note: eye space point light computation with no attenuation, or use vec3(0.0) for directional
 vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale)
@@ -35,13 +26,7 @@ vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float 
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
 	vec3 eye_pos   = epos.xyz;
 	vec3 light_dir = normalize(gl_LightSource[i].position.xyz - eye_pos);
-
-#ifdef USE_BUMP_MAP
-	float atten = length(normal); // multiply by length of eye norm to account for shadow map attenuation
-	atten *= clamp(5.0*dot(normal/atten, light_dir), 0.0, 1.0); // fix self-shadowing
-	normal = atten*apply_bump_map(light_dir, eye_pos);
-#endif
-
+	maybe_apply_bump_map_self_shadowed(normal, light_dir, eye_pos);
 #ifdef USE_LIGHT_COLORS
 #ifdef USE_COLOR_IN0
 	vec4 color = gl_FrontColorIn[0];
@@ -57,18 +42,64 @@ vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float 
 #ifdef NO_SPECULAR
 	vec4 specular = vec4(0.0);
 #else
-	vec4 specular = get_light_specular(normal, light_dir, eye_pos, i);
+	vec4 specular = get_light_specular(normal, light_dir, eye_pos, gl_FrontLightProduct[i].specular);
 #endif
 	return (ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
 }
 
-vec4 add_light_comp_pos(in vec3 normal, in vec4 epos, in int i) {
-	return add_light_comp_pos_scaled(normal, epos, i, 1.0, 1.0);
+vec4 add_light_comp_pos_scaled0(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale) {
+	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
+	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
+#ifdef USE_LIGHT_COLORS
+#ifdef USE_COLOR_IN0
+	vec4 color = gl_FrontColorIn[0];
+#else
+	vec4 color = gl_Color;
+#endif
+	vec4 diffuse = color * gl_LightSource[0].diffuse;
+	vec4 ambient = color * gl_LightSource[0].ambient;
+#else // use light material properties
+	vec4 diffuse = gl_FrontLightProduct[0].diffuse;
+	vec4 ambient = gl_FrontLightProduct[0].ambient;
+#endif
+#ifdef NO_SPECULAR
+	vec4 specular = vec4(0.0);
+#else
+	vec4 specular = get_light_specular(normal, light_dir, epos.xyz, gl_FrontLightProduct[0].specular);
+#endif
+	return (ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
 }
 
-vec4 add_light_comp(in vec3 normal, in int i) {
-	return add_light_comp_pos(normal, vec4(0.0), i);
+vec4 add_light_comp_pos_scaled1(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale) {
+	vec3 light_dir = normalize(gl_LightSource[1].position.xyz - epos.xyz);
+	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
+#ifdef USE_LIGHT_COLORS
+#ifdef USE_COLOR_IN0
+	vec4 color = gl_FrontColorIn[0];
+#else
+	vec4 color = gl_Color;
+#endif
+	vec4 diffuse = color * gl_LightSource[1].diffuse;
+	vec4 ambient = color * gl_LightSource[1].ambient;
+#else // use light material properties
+	vec4 diffuse = gl_FrontLightProduct[1].diffuse;
+	vec4 ambient = gl_FrontLightProduct[1].ambient;
+#endif
+#ifdef NO_SPECULAR
+	vec4 specular = vec4(0.0);
+#else
+	vec4 specular = get_light_specular(normal, light_dir, epos.xyz, gl_FrontLightProduct[1].specular);
+#endif
+	return (ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
 }
+
+vec4 add_light_comp_pos (in vec3 normal, in vec4 epos, in int i) {return add_light_comp_pos_scaled (normal, epos, i, 1.0, 1.0);}
+vec4 add_light_comp_pos0(in vec3 normal, in vec4 epos)           {return add_light_comp_pos_scaled0(normal, epos,    1.0, 1.0);}
+vec4 add_light_comp_pos1(in vec3 normal, in vec4 epos)           {return add_light_comp_pos_scaled1(normal, epos,    1.0, 1.0);}
+
+vec4 add_light_comp (in vec3 normal, in int i) {return add_light_comp_pos (normal, vec4(0.0), i);}
+vec4 add_light_comp0(in vec3 normal)           {return add_light_comp_pos0(normal, vec4(0.0)   );}
+vec4 add_light_comp1(in vec3 normal)           {return add_light_comp_pos1(normal, vec4(0.0)   );}
 
 
 float calc_light_atten(in vec4 epos, in int i) {

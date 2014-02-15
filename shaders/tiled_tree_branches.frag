@@ -11,8 +11,8 @@ void main()
 	vec4 texel   = texture2D(tex0, tc);
 	vec3 normal2 = normalize(normal); // renormalize
 	vec4 color   = gl_FrontMaterial.emission + gl_FrontMaterial.ambient * gl_LightModel.ambient;
-	if (enable_light0) color += add_light_comp_pos(normal2, epos, 0); // sun
-	if (enable_light1) color += add_light_comp_pos(normal2, epos, 1); // moon
-	if (enable_light2) color += add_light_comp_pos(normal2, epos, 2) * calc_light_atten(epos, 2); // lightning
+	if (enable_light0) color += add_light_comp_pos0(normal2, epos); // sun
+	if (enable_light1) color += add_light_comp_pos1(normal2, epos); // moon
+	if (enable_light2) color += add_light_comp_pos (normal2, epos, 2) * calc_light_atten(epos, 2); // lightning
 	gl_FragColor = apply_fog_epos(texel*color, epos);
 }
