@@ -602,11 +602,6 @@ void draw_water() {
 	wsd.flush_triangles();
 	disable_blend();
 	set_specular(0.0, 1.0);
-
-	if (USE_SEA_FOAM) {
-		set_active_texture(1);
-		set_active_texture(0);
-	}
 	glDisable(GL_COLOR_MATERIAL);
 	s.end_shader();
 	update_water_volumes();

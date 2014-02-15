@@ -295,11 +295,8 @@ public:
 			add_uniform_int("noise_tex",     1);
 			add_uniform_int("particles_tex", 2);
 		}
-		set_active_texture(1);
-		select_texture(NOISE_GEN_MIPMAP_TEX, 0);
-		set_active_texture(2);
-		select_texture(SPARSE_NOISE_TEX, 0);
-		set_active_texture(0);
+		select_multitex(NOISE_GEN_MIPMAP_TEX, 1, 0);
+		select_multitex(SPARSE_NOISE_TEX,     2, 1);
 		enable();
 		add_uniform_vector3d("planet_pos", planet_pos);
 		add_uniform_float("planet_radius", planet.radius);

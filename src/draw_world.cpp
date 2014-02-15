@@ -1139,11 +1139,8 @@ void draw_cracks_and_decals() {
 				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
 				bullet_shader.add_uniform_float("hole_depth", 0.2);
 				bullet_shader.add_uniform_int("depth_map", 9);
-				set_active_texture(5);
-				select_texture(BULLET_N_TEX, 0);
-				set_active_texture(9);
-				select_texture(BULLET_D_TEX, 0);
-				set_active_texture(0);
+				select_multitex(BULLET_N_TEX, 5, 0);
+				select_multitex(BULLET_D_TEX, 9, 1);
 			}
 			bullet_shader.enable();
 		}

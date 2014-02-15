@@ -626,6 +626,7 @@ void shader_t::end_shader() { // ok to call if not in a shader
 }
 
 
+// some simple shared shaders
 void shader_t::begin_color_only_shader() {
 
 	set_vert_shader("vert_xform_only");
@@ -633,9 +634,15 @@ void shader_t::begin_color_only_shader() {
 	begin_shader();
 }
 
-void shader_t::begin_simple_textured_shader(float min_alpha) {
+void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights) {
 
-	set_vert_shader("no_lighting_tex_coord");
+	if (include_2_lights) {
+		setup_enabled_lights(2, 1); // sun and moon VS lighting
+		set_vert_shader("ads_lighting.part*+two_lights_texture");
+	}
+	else {
+		set_vert_shader("no_lighting_tex_coord");
+	}
 	set_frag_shader("simple_texture");
 	begin_shader();
 	add_uniform_float("min_alpha", min_alpha);

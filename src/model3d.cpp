@@ -1411,11 +1411,7 @@ void model3ds::render(bool is_shadow_pass) {
 			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
 		}
 		else {
-			s.setup_enabled_lights(2, 1); // sun and moon VS lighting
-			s.set_vert_shader("ads_lighting.part*+two_lights_texture");
-			s.set_frag_shader("simple_texture");
-			s.begin_shader();
-			s.add_uniform_int("tex0", 0);
+			s.begin_simple_textured_shader(0.0, 1); // with lighting
 		}
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (shader_effects ? (1 << bmap_pass) : 3));

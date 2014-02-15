@@ -317,7 +317,7 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const &xl
 		if (i->is_pine_tree()) continue;
 		assert(!instanced); // only pine trees can be instanced
 		int const type(i->get_type());
-		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
+		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid, 0);} // first of this type
 		i->draw(2, shadow_only, xlate);
 	}
 }
@@ -527,39 +527,39 @@ void draw_small_trees(bool shadow_only) {
 	if (small_trees.empty() || !(tree_mode & 2)) return;
 	if (small_trees.size() < 100) {small_trees.sort_by_dist_to_camera();} // shadow_only?
 	shader_t s;
-	bool const v(!shadow_only), use_bump_map(USE_BUMP_MAP && v);
+	bool const all_pine(small_trees.num_pine_trees == small_trees.size());
+	bool const v(!shadow_only), use_bump_map(USE_BUMP_MAP && !shadow_only && all_pine); // bump maps only work with pine tree trunks
 
 	// draw trunks
-	setup_smoke_shaders(s, 0.0, 0, 0, 0, v, v, 0, 0, v, use_bump_map, 0, v); // dynamic lights, but no smoke
-	s.add_uniform_float("tex_scale_t", 5.0);
-
-	if (use_bump_map) {
-		set_active_texture(5);
-		select_texture(BARK2_NORMAL_TEX, 0);
-		set_active_texture(0);
+	if (shadow_only) {
+		s.begin_color_only_shader();
 	}
+	else {
+		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, use_bump_map, 0, 1); // dynamic lights, but no smoke
+		s.add_uniform_float("tex_scale_t", 5.0);
+	}
+	if (use_bump_map) {select_multitex(BARK2_NORMAL_TEX, 5, 1);}
 	set_fill_mode();
 	small_trees.draw_branches(shadow_only);
-	s.add_uniform_float("tex_scale_t", 1.0);
+	if (!shadow_only) {s.add_uniform_float("tex_scale_t", 1.0);}
 	s.end_shader();
 
 	// draw leaves
-	small_trees.vbo_manager[0].upload();
-	setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v, 1); // dynamic lights, but no smoke, use light colors
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.75);
-	small_trees.draw_pine_leaves(shadow_only);
-	s.end_shader();
+	if (small_trees.num_pine_trees > 0) { // pine trees
+		small_trees.vbo_manager[0].upload();
+		setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v, 1); // dynamic lights, but no smoke, use light colors, texgen
+		small_trees.draw_pine_leaves(shadow_only);
+		s.end_shader();
+	}
+	if (!all_pine) { // non-pine trees
+		//setup_smoke_shaders(s, 0.75, 0, 0, 0, v, v, 0, 0, v); // dynamic lights, but no smoke (slow, but looks better)
+		s.begin_simple_textured_shader(0.75, !shadow_only); // with lighting, unless shadow_only
+		small_trees.draw_non_pine_leaves(shadow_only);
+		if (s.is_setup()) s.end_shader();
+	}
 
-	set_lighted_sides(2);
-	//setup_smoke_shaders(s, 0.75, 0, 0, 0, v, v, 0, 0, v); // dynamic lights, but no smoke (slow, but looks better)
-	small_trees.draw_non_pine_leaves(shadow_only); // FIXME SHADERS: uses fixed function pipeline
-	//s.end_shader();
-	glDisable(GL_TEXTURE_2D);
-	set_lighted_sides(1);
-
-	glDisable(GL_ALPHA_TEST);
-	tree_scenery_pld.draw_and_clear();
+	//select_texture(WHITE_TEX, 0); // untextured
+	tree_scenery_pld.draw_and_clear(); // FIXME SHADERS: uses fixed function pipeline
 	//PRINT_TIME("small tree draw");
 }
 
