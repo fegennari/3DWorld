@@ -69,13 +69,6 @@ float camera_min_dist_to_surface() { // min dist of four corners and center
 }
 
 
-void run_post_mesh_draw() {
-	
-	glEnable(GL_NORMALIZE);
-	glDisable(GL_COLOR_MATERIAL);
-}
-
-
 float integrate_water_dist(point const &targ_pos, point const &src_pos, float const water_z) {
 
 	if (src_pos.z == targ_pos.z) return 0.0;
@@ -456,7 +449,6 @@ void display_mesh(bool shadow_pass) { // fast array version
 	set_fill_mode();
 	update_landscape_texture();
 	if (SHOW_MESH_TIME) PRINT_TIME("Landscape Texture");
-	glDisable(GL_NORMALIZE);
 
 	if (!DISABLE_TEXTURES) {
 		select_texture(LANDSCAPE_TEX, 0);
@@ -473,9 +465,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	set_active_texture(0);
-	glDisable(GL_COLOR_MATERIAL);
 	draw_sides_and_bottom();
-	run_post_mesh_draw();
 
 	if (SHOW_NORMALS) {
 		vector<vert_wrap_t> verts;

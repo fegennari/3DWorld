@@ -1830,14 +1830,13 @@ void tile_draw_t::draw(bool reflection_pass) {
 	}
 	disable_blend();
 	s.end_shader();
-		
+	
 	if (DEBUG_TILES) {
 		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_pine_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
 		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", vbo_free_list: " << vbo_free_list.size()
 			<< ", trees drawn: " << num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem)
 			<< ", tree mem: " << in_mb(tree_mem) << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;
 	}
-	run_post_mesh_draw();
 	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
