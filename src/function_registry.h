@@ -15,7 +15,6 @@ void disable_blend();
 void set_std_blend_mode();
 void set_additive_blend_mode();
 void set_array_client_state(bool va, bool tca, bool na, bool ca);
-void set_lighted_sides(int num);
 void reset_fog();
 void set_light_atten(int light, float attenuation=1.0);
 void set_perspective_near_far(float near_clip, float far_clip);

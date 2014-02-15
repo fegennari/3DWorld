@@ -634,14 +634,14 @@ void shader_t::begin_color_only_shader() {
 	begin_shader();
 }
 
-void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights) {
+void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen) {
 
 	if (include_2_lights) {
 		setup_enabled_lights(2, 1); // sun and moon VS lighting
-		set_vert_shader("ads_lighting.part*+two_lights_texture");
+		set_vert_shader(use_texgen ? "ads_lighting.part*+texture_gen.part+two_lights_texture_gen" : "ads_lighting.part*+two_lights_texture");
 	}
 	else {
-		set_vert_shader("no_lighting_tex_coord");
+		set_vert_shader(use_texgen ? "texture_gen.part+no_lighting_texture_gen" : "no_lighting_tex_coord");
 	}
 	set_frag_shader("simple_texture");
 	begin_shader();

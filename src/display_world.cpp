@@ -787,7 +787,6 @@ void display(void) {
 		}
 		return;
 	}
-	set_lighted_sides(1);
 	displayed = 1;
 	up_vector.assign(0.0, sinf(up_theta), camera_y*cosf(up_theta));
 	setup_sphere_vbos();

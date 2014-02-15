@@ -284,15 +284,6 @@ void set_additive_blend_mode() {
 }
 
 
-void set_lighted_sides(int num) {
-
-	assert(num == 1 || num == 2);
-	float lmodel_side[1];
-	lmodel_side[0] = float(num - 1);
-    glLightModelfv(GL_LIGHT_MODEL_TWO_SIDE, lmodel_side);
-}
-
-
 void set_light_atten(int light, float attenuation) {
 
 	float vals[4];

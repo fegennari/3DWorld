@@ -315,9 +315,12 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 }
 
 
-void draw_mesh_vbo() { // FIXME SHADERS: uses fixed function pipeline
+void draw_mesh_vbo() {
 
 	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
+	// Note: ignores detail texture
+	shader_t s;
+	s.begin_simple_textured_shader(0.0, 1, 1); // lighting + texgen
 	static unsigned mesh_vbo(0);
 		
 	if (clear_landscape_vbo) {
@@ -341,13 +344,12 @@ void draw_mesh_vbo() { // FIXME SHADERS: uses fixed function pipeline
 		bind_vbo(mesh_vbo);
 	}
 	vert_norm_comp::set_vbo_arrays();
-	glEnable(GL_TEXTURE_GEN_S); glEnable(GL_TEXTURE_GEN_T);
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
 		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
 	}
-	glDisable(GL_TEXTURE_GEN_S); glDisable(GL_TEXTURE_GEN_T);
 	bind_vbo(0);
+	s.end_shader();
 }
 
 
@@ -457,7 +459,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 	glDisable(GL_NORMALIZE);
 
 	if (!DISABLE_TEXTURES) {
-		select_texture(LANDSCAPE_TEX);
+		select_texture(LANDSCAPE_TEX, 0);
 		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
@@ -471,7 +473,6 @@ void display_mesh(bool shadow_pass) { // fast array version
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	set_active_texture(0);
-	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_COLOR_MATERIAL);
 	draw_sides_and_bottom();
 	run_post_mesh_draw();
@@ -521,16 +522,17 @@ void add_one_tquad(vector<vert_norm_tc> &verts, vector3d const &n, float x1, flo
 
 
 // NOTE: There is a buffer of one unit around the drawn area
-void draw_sides_and_bottom() { // FIXME SHADERS: uses fixed function pipeline
+void draw_sides_and_bottom() {
 
 	int const lx(MESH_X_SIZE-1), ly(MESH_Y_SIZE-1);
 	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
 	float const x1(-X_SCENE_SIZE), y1(-Y_SCENE_SIZE), x2(X_SCENE_SIZE-DX_VAL), y2(Y_SCENE_SIZE-DY_VAL);
 	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? ROCK_TEX : DIRT_TEX);
+	shader_t s;
+	s.begin_simple_textured_shader(0.0, 1); // with lighting
 	set_color(WHITE);
-	set_lighted_sides(2);
 	set_fill_mode();
-	if (!DISABLE_TEXTURES) select_texture(texture);
+	select_texture((DISABLE_TEXTURES ? WHITE_TEX : texture), 0);
 	vector<vert_norm_tc> verts;
 	add_one_tquad(verts, -plus_z, x1, y1, x2, y2, botz, ts*x1, ts*y1, ts*x2, ts*y2);
 	float xv(x1), yv(y1);
@@ -539,10 +541,11 @@ void draw_sides_and_bottom() { // FIXME SHADERS: uses fixed function pipeline
 		for (unsigned d = 0; d < 2; ++d) {
 			int const xy_ix(d ? ly : 0);
 			float const limit(d ? y2 : y1);
-			add_vertex(verts, -plus_y, xv,        limit, botz, 0, ts);
-			add_vertex(verts, -plus_y, xv+DX_VAL, limit, botz, 0, ts);
-			add_vertex(verts, -plus_y, xv+DX_VAL, limit, mesh_height[xy_ix][i  ], 0, ts);
-			add_vertex(verts, -plus_y, xv,        limit, mesh_height[xy_ix][i-1], 0, ts);
+			vector3d const &n(d ? plus_y : -plus_y);
+			add_vertex(verts, n, xv,        limit, botz, 0, ts);
+			add_vertex(verts, n, xv+DX_VAL, limit, botz, 0, ts);
+			add_vertex(verts, n, xv+DX_VAL, limit, mesh_height[xy_ix][i  ], 0, ts);
+			add_vertex(verts, n, xv,        limit, mesh_height[xy_ix][i-1], 0, ts);
 		}
 		xv += DX_VAL;
 	}
@@ -550,16 +553,16 @@ void draw_sides_and_bottom() { // FIXME SHADERS: uses fixed function pipeline
 		for (unsigned d = 0; d < 2; ++d) {
 			int const xy_ix(d ? lx : 0);
 			float const limit(d ? x2 : x1);
-			add_vertex(verts, plus_x, limit, yv,        botz, 1, ts);
-			add_vertex(verts, plus_x, limit, yv+DY_VAL, botz, 1, ts);
-			add_vertex(verts, plus_x, limit, yv+DY_VAL, mesh_height[i][xy_ix  ], 1, ts);
-			add_vertex(verts, plus_x, limit, yv,        mesh_height[i-1][xy_ix], 1, ts);
+			vector3d const &n(d ? plus_x : -plus_x);
+			add_vertex(verts, n, limit, yv,        botz, 1, ts);
+			add_vertex(verts, n, limit, yv+DY_VAL, botz, 1, ts);
+			add_vertex(verts, n, limit, yv+DY_VAL, mesh_height[i  ][xy_ix], 1, ts);
+			add_vertex(verts, n, limit, yv,        mesh_height[i-1][xy_ix], 1, ts);
 		}
 		yv += DY_VAL;
 	}
 	draw_verts(verts, GL_QUADS);
-	set_lighted_sides(1);
-	glDisable(GL_TEXTURE_2D);
+	s.end_shader();
 }
 
 
