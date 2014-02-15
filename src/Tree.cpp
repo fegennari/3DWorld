@@ -376,10 +376,10 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t 
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix, bool enable_opacity) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix, bool enable_opacity, bool no_dlights) {
 
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS - required for dynamic lighting
-	if (!has_dl_sources && !lightning_enabled()) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
+	if (no_dlights || (!has_dl_sources && !lightning_enabled())) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
 	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_pre(s);} // FS
 	s.setup_enabled_lights(2, 1); // VS
@@ -419,20 +419,15 @@ void tree_cont_t::check_leaf_shadow_change() {
 }
 
 
-void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity) {
+void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only) {
 
-	if (draw_model == 0 && !enable_opacity) { // solid fill
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.75);
-	}
 	set_specular(0.1, 10.0);
-	glDisable(GL_NORMALIZE);
 	
 	if (shader.is_setup()) {
 		shader.enable();
 	}
 	else {
-		set_leaf_shader(shader, 0.75, 1, 0, 3, enable_opacity);
+		set_leaf_shader(shader, 0.75, 1, 0, 3, enable_opacity, shadow_only);
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
 			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);
@@ -444,10 +439,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity) {
 void tree_cont_t::post_leaf_draw(shader_t &shader) {
 
 	shader.disable();
-	glEnable(GL_NORMALIZE);
 	set_specular(0.0, 1.0);
-	glDisable(GL_ALPHA_TEST);
-	glDisable(GL_TEXTURE_2D); // needed in shadow_only mode since shaders aren't used
 }
 
 
@@ -459,7 +451,7 @@ void tree_cont_t::draw(bool shadow_only) {
 	// draw leaves, then branches: much faster for distant trees, slightly slower for near trees
 	// draw leaves
 	shader_t ls;
-	pre_leaf_draw(ls, 0);
+	pre_leaf_draw(ls, 0, shadow_only);
 	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, 0, zero_vector);
 	post_leaf_draw(ls);
 
@@ -839,11 +831,11 @@ void tree_data_t::post_draw(bool branches_or_leaves, bool shadow_only) {
 }
 
 
-bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) { // FIXME SHADERS: uses fixed function pipeline
+bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) {
 
 	if (draw_leaves && !leaves.empty()) { // draw leaves
 		if (leaf_vbo == 0) return 0; // if the leaf_vbo hasn't been allocated we need to go through the regular rendering path to get the leaf data uploaded
-		select_texture(tree_types[tree_type].leaf_tex);
+		select_texture(tree_types[tree_type].leaf_tex, 0);
 		bind_vbo(leaf_vbo);
 		leaf_vert_type_t::set_vbo_arrays(0, 0); // could also disable normals and colors, but that doesn't seem to help much
 		assert(leaf_data.size() >= 4*leaves.size());

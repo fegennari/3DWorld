@@ -321,7 +321,7 @@ public:
 	void draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
 		bool shadow_only, bool reflection_pass, vector3d const &xlate);
 	void check_leaf_shadow_change();
-	static void pre_leaf_draw(shader_t &shader, bool enable_opacity);
+	static void pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only=0);
 	static void post_leaf_draw(shader_t &shader);
 	void draw(bool shadow_only);
 	unsigned delete_all();
