@@ -56,6 +56,8 @@ public:
 	}
 	void render() const {
 		if (num_verts2 == 0) return; // empty
+		shader_t s;
+		s.begin_color_only_shader();
 		assert(num_verts1 <= num_verts2);
 		assert(vbo_valid());
 		bind_vbo(vbo);
@@ -70,9 +72,13 @@ public:
 			glDisable(GL_CULL_FACE);
 		}
 		bind_vbo(0);
+		s.end_shader();
 	}
 	void render_dynamic() {
+		shader_t s;
+		s.begin_color_only_shader();
 		draw_and_clear_verts(dverts, GL_TRIANGLES);
+		s.end_shader();
 	}
 	void free() {
 		delete_and_zero_vbo(vbo);
@@ -347,6 +353,12 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	if (update_smap) {
 		// render shadow geometry
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
+		bool lights_enabled[8];
+		
+		for (unsigned d = 0; d < 8; ++d) { // disable lighting so that shaders that auto-detect enabled lights don't try to do lighting
+			lights_enabled[d] = (glIsEnabled(GL_LIGHT0+d) != 0);
+			if (lights_enabled[d]) {glDisable(GL_LIGHT0+d);}
+		}
 		WHITE.do_glColor();
 		check_gl_error(202);
 
@@ -419,7 +431,11 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		}
 		disable_fbo();
 		voxel_shadows_updated = 0;
-	} // update_smap
+
+		for (unsigned d = 0; d < 8; ++d) {
+			if (lights_enabled[d]) {glEnable(GL_LIGHT0+d);}
+		}
+	} // end update_smap
 	
 	// reset state
 	glMatrixMode(GL_TEXTURE);
