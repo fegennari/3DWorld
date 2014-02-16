@@ -48,7 +48,7 @@ void dynamic_particle::gen_pos() {
 }
 
 
-void dynamic_particle::draw() const { // lights, color, texture, shadowed, FIXME SHADERS: uses fixed function pipeline
+void dynamic_particle::draw() const { // lights, color, texture, shadowed
 
 	// Note: currently, we only support emissive, untextured particles
 	// if we need to support lighting and textures it can be added later by using a different shader

@@ -588,19 +588,17 @@ void draw_moon() {
 	point const pos(get_moon_pos());
 	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
 	set_color(WHITE);
-	glDisable(GL_LIGHT0);
-	glDisable(GL_LIGHT1);
-
-	if (have_sun) {
-		float const ambient[4] = {0.05, 0.05, 0.05, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0};
-		set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
-		set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
-	}
-	select_texture(MOON_TEX);
-	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0); // FIXME SHADERS: uses fixed function pipeline
-	glDisable(GL_TEXTURE_2D);
-	if (light_factor < 0.6) glEnable(GL_LIGHT1); // moon
-	if (light_factor > 0.4) glEnable(GL_LIGHT0); // sun
+	float const ambient[4] = {0.05, 0.05, 0.05, 1.0}, diffuse[4] = {1.0*have_sun, 1.0*have_sun, 1.0*have_sun, 1.0};
+	set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
+	set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
+	shader_t s;
+	s.set_vert_shader("ads_lighting.part*+moon_draw");
+	s.set_frag_shader("simple_texture");
+	s.begin_shader();
+	s.add_uniform_int("tex0", 0);
+	select_texture(MOON_TEX, 0);
+	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
+	s.end_shader();
 	glDisable(GL_LIGHT4);
 
 	if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
