@@ -413,38 +413,40 @@ void display_mesh(bool shadow_pass) { // fast array version
 	else {
 		uw_mesh_lighting.clear();
 	}
-	if (DEBUG_COLLS == 2) {
-		enable_blend();
-		set_color(colorRGBA(1.0, 0.0, 0.0, 0.1));
-		set_color_e(RED);
+	if (DEBUG_COLLS) {
+		shader_t s;
+		s.begin_color_only_shader();
 
-		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				if (v_collision_matrix[i][j].zmin < v_collision_matrix[i][j].zmax) {
-					point const p1(get_xval(j+0), get_yval(i+0),v_collision_matrix[i][j].zmin);
-					point const p2(get_xval(j+1), get_yval(i+1),v_collision_matrix[i][j].zmax);
-					draw_cube((p1 + p2)*0.5, (p2.x - p1.x), (p2.y - p1.y), (p2.z - p1.z), 0);
+		if (DEBUG_COLLS == 2) {
+			enable_blend();
+			colorRGBA(1.0, 0.0, 0.0, 0.1).do_glColor();
+
+			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
+				for (int j = 0; j < MESH_X_SIZE; ++j) {
+					if (v_collision_matrix[i][j].zmin < v_collision_matrix[i][j].zmax) {
+						point const p1(get_xval(j+0), get_yval(i+0),v_collision_matrix[i][j].zmin);
+						point const p2(get_xval(j+1), get_yval(i+1),v_collision_matrix[i][j].zmax);
+						draw_cube((p1 + p2)*0.5, (p2.x - p1.x), (p2.y - p1.y), (p2.z - p1.z), 0);
+					}
 				}
 			}
+			disable_blend();
 		}
-		disable_blend();
-		set_color_e(BLACK);
-	}
-	else if (DEBUG_COLLS == 1) {
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		set_color(BLUE);
-		set_color_e(BLUE);
-		vector<vert_wrap_t> verts;
+		else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			BLUE.do_glColor();
+			vector<vert_wrap_t> verts;
 
-		for (int i = 0; i < MESH_Y_SIZE-1; ++i) {			
-			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				for (unsigned d = 0; d < 2; ++d) {
-					verts.push_back(point(get_xval(j), get_yval(i+d), max(czmin, v_collision_matrix[i+d][j].zmax)));
+			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {			
+				for (int j = 0; j < MESH_X_SIZE; ++j) {
+					for (unsigned d = 0; d < 2; ++d) {
+						verts.push_back(point(get_xval(j), get_yval(i+d), max(czmin, v_collision_matrix[i+d][j].zmax)));
+					}
 				}
+				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			}
-			draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 		}
-		set_color_e(BLACK);
+		s.end_shader();
 	}
 	set_fill_mode();
 	update_landscape_texture();

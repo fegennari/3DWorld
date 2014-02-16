@@ -323,7 +323,6 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_sides_ends, !draw_ends); // Note: using texgen, not textured
 			
 			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
-				select_texture(tid, 0); // reset texture to fix a texgen bug
 				set_poly_texgen(tid, (points[1] - points[0]).get_norm(), &shader);
 				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 2); // Note: using texgen, not textured
 			}

@@ -709,10 +709,7 @@ void draw_sun_flare() {
 		else if (world_mode == WMODE_INF_TERRAIN) {
 			if (viewer.z < water_plane_z) {intensity = CLIP_TO_01(1.0f - 1.0f*(water_plane_z - viewer.z));} // attenuate sun flare when underwater
 		}
-		int const fog_enbaled(glIsEnabled(GL_FOG));
-		glDisable(GL_FOG);
 		DoFlares(viewer, camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0), intensity);
-		if (fog_enbaled) glEnable(GL_FOG);
 	}
 	//PRINT_TIME("Query + Flare");
 }

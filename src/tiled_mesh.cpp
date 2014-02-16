@@ -2191,13 +2191,11 @@ void draw_tiled_terrain(bool reflection_pass) {
 		point hit_pos;
 	
 		if (line_intersect_tiled_mesh(v1, v2, hit_pos)) {
-			int const fog_enabled(glIsEnabled(GL_FOG));
-			if (fog_enabled) {glDisable(GL_FOG);}
-			set_color(RED);
-			set_color_e(RED);
+			shader_t s;
+			s.begin_color_only_shader();
+			RED.do_glColor();
 			draw_sphere_vbo(hit_pos, 0.1, N_SPHERE_DIV, 0);
-			set_color_e(BLACK);
-			if (fog_enabled) {glEnable(GL_FOG);}
+			s.end_shader();
 		}
 	}
 }

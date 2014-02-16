@@ -368,9 +368,10 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 	shader_t s;
 	static indexed_mesh_draw<vert_wrap_t> imd;
 	float const size(camera_pdu.far_);
+	bool const fog_enabled(glIsEnabled(GL_FOG) != 0);
 
 	// draw a plane at terrain_zmin to properly blend the fog (needs to be first when camera is above the clouds)
-	if (draw_floor && !reflection_pass && glIsEnabled(GL_FOG)) {
+	if (draw_floor && !reflection_pass && fog_enabled) {
 		glDepthMask(GL_FALSE);
 		colorRGBA fog_color;
 		glGetFloatv(GL_FOG_COLOR, (float *)&fog_color);
@@ -421,7 +422,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 	if ((display_mode & 0x40) == 0) { // on by default
 		setup_tt_fog_pre(s);
 		s.set_prefix("#define NUM_OCTAVES 8", 1); // FS
-		s.set_bool_prefix("underwater_atten", (glIsEnabled(GL_FOG) != 0), 1); // FS
+		s.set_bool_prefix("underwater_atten", fog_enabled, 1); // FS
 		s.set_vert_shader("water_fog.part+clouds");
 		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds");
 		s.begin_shader();

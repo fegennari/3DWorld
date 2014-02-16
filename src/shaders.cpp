@@ -636,17 +636,21 @@ void shader_t::begin_color_only_shader() {
 
 void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen) {
 
+	bool use_fog(0);
+
 	if (include_2_lights) {
 		setup_enabled_lights(2, 1); // sun and moon VS lighting
 		set_vert_shader(use_texgen ? "ads_lighting.part*+texture_gen.part+two_lights_texture_gen" : "ads_lighting.part*+two_lights_texture");
+		use_fog = (glIsEnabled(GL_FOG) != 0);
 	}
 	else {
 		set_vert_shader(use_texgen ? "texture_gen.part+no_lighting_texture_gen" : "no_lighting_tex_coord");
 	}
-	set_frag_shader("simple_texture");
+	set_frag_shader(use_fog ? "linear_fog.part+textured_with_fog" : "simple_texture");
 	begin_shader();
 	add_uniform_float("min_alpha", min_alpha);
 	add_uniform_int("tex0", 0);
+	if (use_fog) {add_uniform_float("fog_scale", 1.0);}
 }
 
 

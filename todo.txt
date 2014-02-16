@@ -6,10 +6,9 @@ Try using Boost in 3DWorld, in particular shared_ptr
 Remove deprecated OpenGL calls:
 Use triangles instead of quads (Tree billboards/leaves)
 Remove non-shader rendering (see FIXME SHADERS)
-  - Small tree leaves
-  - Model3d shadow_pass
 Replace GL matrix operations with something else (GLM?)
-Remove some set_lighted_sides() calls
+GL_NORMALIZE, GL_LIGHTING, GL_TEXTURE_*, GL_COLOR_MATERIAL?
+Unify color vs. material color - set_base_color_scale()
 
 * Berries on plants
 Tiled terrain texture coords on high slopes
@@ -37,4 +36,4 @@ Better pine tree texture
 
 * Use normal map in indir texture lookup offset somehow?
 Make TT and ground mode trees agree
-Group unlit ship particle triangles?
+Remove old lightmap light propagation code?

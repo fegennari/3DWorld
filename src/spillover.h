@@ -11,7 +11,6 @@
 class spillover {
 
 public:
-	//void clear() {data.clear();} // seems to have problems in MS Visual Studio - compiler bug?
 	void clear() {data.resize(0);}
 	void init(unsigned max_index);
 	void insert(unsigned index1, unsigned index2);
