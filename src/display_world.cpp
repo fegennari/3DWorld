@@ -219,7 +219,6 @@ void draw_stuff(int draw_uw, int timer1) {
 		draw_trees();
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("O");
-		draw_hmv();
 		draw_scenery(0, 1);
 		draw_teleporters();
 		check_gl_error(21);

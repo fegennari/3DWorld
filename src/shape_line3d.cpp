@@ -154,21 +154,13 @@ void shape3d::get_face_normal(unsigned face_id) {
 }
 
 
-void shape3d::get_triangle_center(point &center, unsigned face_id, unsigned quality) {
+void shape3d::get_triangle_center(point &center, unsigned face_id) {
 
 	assert(face_id < faces.size());
 	unsigned const *const verts(faces[face_id].v);
 	assert(verts != NULL);
 	assert(verts[0] < points.size() && verts[1] < points.size() && verts[2] < points.size());
 	point const p1(points[verts[0]]), p2(points[verts[1]]), p3(points[verts[2]]);
-
-	// faster than above but not completely accurate
-	if (quality == 0) {
-		for (unsigned i = 0; i < 3; ++i) {
-			center[i] = (p1[i] + p2[i] + p3[i])/3.0;
-		}
-		return;
-	}
 	point m1, m2;
 
 	for (unsigned i = 0; i < 3; ++i) {
@@ -202,51 +194,6 @@ void shape3d::add_vertex(unsigned vertex, unsigned face_id, unsigned &face_count
 	verts[0] = p1;
 	verts[1] = p2;
 	verts[2] = vertex;
-}
-
-
-void shape3d::draw(bool skip_color_set) const { // FIXME SHADERS: uses fixed function pipeline
-
-	if (points.empty()) return;
-	
-	if (points.size() < 3 || faces.empty()) {
-		cout << "Invalid shape: Cannot draw." << endl;
-		return;
-	}
-	if (!skip_color_set) {
-		enable_blend();
-		set_color(color);
-	}
-	unsigned lcid(0);
-	if (colors.empty() && tid >= 0) select_texture(tid);
-	vector<vert_norm_tc> verts;
-
-	for (unsigned i = 0; i < faces.size(); ++i) {
-		if (!colors.empty()) {
-			unsigned const color_id(faces[i].color_id);
-
-			if (i == 0 || color_id != lcid) {
-				draw_and_clear_verts(verts, GL_TRIANGLES);
-				select_texture(colors[color_id].tid);
-				if (!skip_color_set) {set_color(colors[color_id].c);}
-				set_specular(colors[color_id].spec1, colors[color_id].spec2);
-				lcid = color_id;
-			}
-		}
-		int const max_dim(get_max_dim(faces[i].norm));
-
-		for (unsigned j = 0; j < 3; ++j) {
-			unsigned const index(faces[i].v[j]);
-			assert(index < points.size());
-			point const p(points[index]);
-			int const d1[3] = {1,0,0}, d2[3] = {2,2,1};
-			verts.push_back(vert_norm_tc((p*scale + pos), faces[i].norm, tex_scale*p[d1[max_dim]], tex_scale*p[d2[max_dim]]));
-		}
-	}
-	draw_verts(verts, GL_TRIANGLES);
-	if (!skip_color_set) {disable_blend();}
-	if (tid >= 0) {glDisable(GL_TEXTURE_2D);}
-	if (!colors.empty()) {set_specular(0.0, 0.0);}
 }
 
 

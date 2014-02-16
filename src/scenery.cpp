@@ -213,7 +213,7 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 			point center;
 			unsigned const face_id(rand2()%face_counter);
 			get_face_normal(face_id);
-			get_triangle_center(center, face_id, 1);
+			get_triangle_center(center, face_id);
 
 			for (unsigned j = 0; j < 3; ++j) {
 				points[i][j] = center[j] + faces[face_id].norm[j]*size*rand2d();
@@ -1096,7 +1096,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	}
 	rock_vbo_manager.end_render();
 	glEnable(GL_COLOR_MATERIAL);
-	draw_scenery_vector(rocks,  sscale, shadow_only, xlate, scale_val);
+	draw_scenery_vector(rocks, sscale, shadow_only, xlate, scale_val);
 
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
 		voxel_rocks[i].draw(sscale, shadow_only, xlate, scale_val, s);

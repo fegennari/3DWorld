@@ -70,14 +70,11 @@ public:
 	size_t get_num_faces() const             {return faces.size();}
 	void gen_face_normals();
 	void get_face_normal(unsigned face_id);
-	void get_triangle_center(point &center, unsigned face_id, unsigned quality);
+	void get_triangle_center(point &center, unsigned face_id);
 	void add_vertex(unsigned vertex, unsigned face_id, unsigned &face_counter);
-	void draw(bool skip_color_set=0) const;
 	void get_triangle_verts(vector<vert_norm_tc> &verts) const;
 	void add_cobjs(vector<int> &cids, bool draw);
 	void destroy();
-	bool is_allocated() const {return (!points.empty() && !faces.empty());}
-	colorRGBA get_color() const {return color;}
 };
 
 

@@ -8,8 +8,7 @@
 #include "collision_detect.h"
 
 
-int const DRAW_HMV_COBJS = 1;
-float const wheelr       = 0.118;
+float const wheelr = 0.118;
 
 float hmv_scale(1.0);
 point hmv_pos(all_zeros);
@@ -20,31 +19,6 @@ extern int load_hmv;
 
 
 void add_hmv_coll_objs(point &pos, float scale);
-
-
-
-void draw_hmv() {
-
-	if (DRAW_HMV_COBJS || !load_hmv) return;
-	set_fill_mode();
-
-	// draw body
-	hmv_shape.draw(); // CAMOFLAGE_TEX
-
-	// draw wheels
-	glPushMatrix();
-	translate_to(hmv_pos);
-	uniform_scale(hmv_scale);
-	set_color(BKGRAY);
-	glRotatef(90.0, 1.0, 0.0, 0.0); // x = x, y = z, z = -y
-	unsigned const nsides((3*N_CYL_SIDES)/2);
-
-	for (unsigned i = 0; i < 4; ++i) {
-		point const pos((0.19 + (float(i>1))*.62), 0.0, (-(float(i&1))*0.42 - 0.08));
-		draw_fast_cylinder(pos, pos+vector3d(0.0, 0.0, 0.08), wheelr, wheelr, nsides, 0, 1);
-	}
-	glPopMatrix();
-}
 
 
 void build_hmv_shape() {
@@ -92,14 +66,14 @@ void add_hmv_coll_objs(point &pos, float scale) {
 		purge_coll_freed(1);
 	}
 	// wheels
-	cobj_params const cp(0.9, BKGRAY, DRAW_HMV_COBJS, 0);
+	cobj_params const cp(0.9, BKGRAY, 1, 0); // drawn
 	hmv_coll_obj.push_back(add_coll_cylinder(x+0.19*scale, y+0.08*scale, z, x+0.19*scale, y,            z, wheelr, wheelr, cp));
 	hmv_coll_obj.push_back(add_coll_cylinder(x+0.19*scale, y+0.5*scale,  z, x+0.19*scale, y+0.42*scale, z, wheelr, wheelr, cp));
 	hmv_coll_obj.push_back(add_coll_cylinder(x+0.81*scale, y+0.08*scale, z, x+0.81*scale, y,            z, wheelr, wheelr, cp));
 	hmv_coll_obj.push_back(add_coll_cylinder(x+0.81*scale, y+0.5*scale,  z, x+0.81*scale, y+0.42*scale, z, wheelr, wheelr, cp));
 
 	// body
-	hmv_shape.add_cobjs(hmv_coll_obj, DRAW_HMV_COBJS);
+	hmv_shape.add_cobjs(hmv_coll_obj, 1); // drawn
 }
 
 

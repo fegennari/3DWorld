@@ -591,7 +591,6 @@ bool place_obj_on_grass(point &pos, float radius);
 float get_grass_density(point const &pos);
 
 // function prototypes - draw mech
-void draw_hmv();
 void build_hmv_shape();
 void delete_hmv_shape();
 void add_shape_coll_objs();
