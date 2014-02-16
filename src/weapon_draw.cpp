@@ -353,6 +353,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	vector3d v_trans;
 	point const pos0(get_final_pos(pos, dir, cradius, scale, rxy, v_trans));
 	float const tx(-cradius*dir.x/rxy), ty(-cradius*dir.y/rxy);
+	select_texture(WHITE_TEX, 0);
 	
 	if (draw_pass == 0) { // draw solid objects
 		int ndiv(int(get_zoom_scale()*280.0*cradius/(distance_to_camera(pos) + SMALL_NUMBER)));
@@ -375,7 +376,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_LANDMINE:
 		case W_GRENADE: // draw_grenade()?
 		case W_CGRENADE:
-			if (do_texture) select_texture((wid == W_BALL) ? select_dodgeball_texture(shooter) : object_types[oid].tid);
+			if (do_texture) select_texture(((wid == W_BALL) ? select_dodgeball_texture(shooter) : object_types[oid].tid), 0);
 			radius = 0.4*object_types[oid].radius;
 			if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) radius *= 1.2;
 			translate_to(v_trans);
@@ -385,7 +386,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			set_specular(0.8, 40.0);
 			draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);
 			set_specular(0.0, 0.0);
-			if (do_texture) glDisable(GL_TEXTURE_2D);
 			break;
 
 		case W_STAR5:
@@ -430,7 +430,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_specular(0.9, 90.0);
 				float dz((ammo > 1) ? -0.025*radius*ammo : 0.0);
 				plus_z.do_glNormal();
-				select_texture(sb_tex ? SAW_B_TEX : SAW_TEX);
+				select_texture((sb_tex ? SAW_B_TEX : SAW_TEX), 0);
 
 				for (int w = 0; w < max(1, ammo); ++w) { // draw a blade for each ammo
 					draw_tquad(radius, radius, dz);
@@ -438,7 +438,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				}
 				set_specular(0.0, 0.0);
 				glDisable(GL_ALPHA_TEST);
-				glDisable(GL_TEXTURE_2D);
 			}
 			break;
 
@@ -579,14 +578,13 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_BBBAT:
 			radius = 0.004;
 			set_color_alpha(LT_BROWN, alpha);
-			select_texture(is_camera ? PLAYER_BBB_TEX : WOOD_TEX); // customize the player's baseball bat
+			select_texture((is_camera ? PLAYER_BBB_TEX : WOOD_TEX), 0); // customize the player's baseball bat
 			glRotatef(45.0, -dir.y, dir.x, 0.0);
 			glTranslatef(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera
 			glRotatef(get_bbbat_angle(fire_val), (left_handed ? 0.5 : -0.5), 0.5, 0.0);
 			draw_cylinder(16.0*radius, radius, 1.2*radius, ndiv);
 			draw_sphere_vbo(point(0.0, 0.0, 16.0*radius), 1.2*radius, ndiv, 1);
-			glDisable(GL_TEXTURE_2D);
 			break;
 
 		case W_LASER:
@@ -644,11 +642,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glEnable(GL_ALPHA_TEST);
 				glAlphaFunc(GL_GREATER, 0.001);
 				set_additive_blend_mode();
-				select_texture(FLARE1_TEX);
+				select_texture(FLARE1_TEX, 0);
 				set_std_blend_mode();
 				draw_tquad(size, size, 0.0);
 				glDisable(GL_ALPHA_TEST);
-				glDisable(GL_TEXTURE_2D);
 				set_color_e(BLACK);
 			}
 			break;
@@ -664,7 +661,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(-0.9*rdx, -0.9*rdy, 0.124), point(1.9*rdx, 1.9*rdy, -0.002)};
-				select_texture(FLARE2_TEX);
+				select_texture(FLARE2_TEX, 0);
 				
 				for (unsigned i = 0; i < 2; ++i) {
 					translate_to(translates[i]);
@@ -676,11 +673,11 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_color_e(BLACK);
 				set_std_blend_mode();
 				glDisable(GL_ALPHA_TEST);
-				glDisable(GL_TEXTURE_2D);
 			}
 			break;
 		}
 	}
+	select_texture(WHITE_TEX, 0);
 	glPopMatrix();
 	disable_blend();
 	//glEnable(GL_DEPTH_TEST);
@@ -794,7 +791,7 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 	point const player(get_camera_pos());
 	enable_blend();
 	glEnable(GL_CULL_FACE);
-	select_texture(PLASMA_TEX);
+	select_texture(PLASMA_TEX, 0);
 	float radius(object_types[PLASMA].radius);
 	obj_group &objg(obj_groups[cid]);
 	if (shooter == CAMERA_ID || (objg.get_obj(shooter).flags & CAMERA_VIEW)) ndiv *= 3;

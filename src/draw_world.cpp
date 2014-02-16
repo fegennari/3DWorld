@@ -626,17 +626,18 @@ void draw_earth() {
 	static float rot_angle(0.0);
 
 	if (sphere_in_camera_view(pos, earth_radius, 1)) {
+		shader_t s;
+		s.begin_simple_textured_shader(0.0, 1);
 		set_fill_mode();
-		select_texture(EARTH_TEX);
+		select_texture(EARTH_TEX, 0);
 		set_color(WHITE);
 		glPushMatrix();
 		translate_to(pos);
 		glRotatef(67.0, 0.6, 0.8, 0.0);
 		glRotatef(rot_angle, 0.0, 0.0, 1.0);
 		glRotatef(180.0, 1.0, 0.0, 0.0);
-		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1); // FIXME SHADERS: uses fixed function pipeline
+		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1);
 		glPopMatrix();
-		glDisable(GL_TEXTURE_2D);
 	}
 	rot_angle += 0.2*fticks;
 }
