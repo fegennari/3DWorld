@@ -39,7 +39,7 @@ vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu;
+extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, DISABLE_WATER;
 extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape;
@@ -703,22 +703,6 @@ void draw_sky(int order) {
 	enable_blend();
 
 	if (have_sun && light_factor > 0.4) { // sun lighting of clouds
-		float diffuse[4], ambient[4];
-		point lpos(get_sun_pos()), lsint;
-		vector3d const sun_v((get_camera_pos() - lpos).get_norm());
-		if (line_sphere_int(sun_v, lpos, center, radius, lsint, 1)) lpos = lsint;
-		
-		for (unsigned i = 0; i < 4; ++i) { // even alpha?
-			diffuse[i] = 1.0*sun_color[i];
-			ambient[i] = 0.5*sun_color[i];
-		}
-		set_gl_light_pos(light, lpos, 1.0); // w - point light source
-		set_colors_and_enable_light(light, ambient, diffuse);
-		glLightf(light, GL_CONSTANT_ATTENUATION,  0.0);
-		glLightf(light, GL_LINEAR_ATTENUATION,    0.01);
-		glLightf(light, GL_QUADRATIC_ATTENUATION, 0.01);
-	}
-	if (have_sun && light_factor > 0.4) { // draw horizon
 		shader_t s;
 		s.begin_simple_textured_shader();
 		colorRGBA horizon_color;
@@ -728,24 +712,38 @@ void draw_sky(int order) {
 		apply_red_sky(horizon_color);
 		horizon_color.do_glColor();
 		select_texture(GRADIENT_TEX, 0);
-		draw_sphere_vbo(center, 1.05*radius, N_SPHERE_DIV, 1);
+		draw_sphere_vbo(center, 1.05*radius, N_SPHERE_DIV, 1); // draw horizon
 		s.end_shader();
+
+		point lpos(get_sun_pos()), lsint;
+		vector3d const sun_v((get_camera_pos() - lpos).get_norm());
+		if (line_sphere_int(sun_v, lpos, center, radius, lsint, 1)) {lpos = lsint;}
+		set_gl_light_pos(light, lpos, 1.0); // w=1.0 - point light source
+		colorRGBA const ambient(sun_color*0.5);
+		set_colors_and_enable_light(light, &ambient.R, &sun_color.R);
+		glLightf(light, GL_CONSTANT_ATTENUATION,  0.0);
+		glLightf(light, GL_LINEAR_ATTENUATION,    0.01);
+		glLightf(light, GL_QUADRATIC_ATTENUATION, 0.01);
 	}
-	select_texture(CLOUD_TEX);
 
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
-	bool const depth_clamp_enabled(glIsEnabled(GL_DEPTH_CLAMP) != 0);
-	if (depth_clamp_enabled) {glDisable(GL_DEPTH_CLAMP);}
-	glEnable(GL_TEXTURE_GEN_S); glEnable(GL_TEXTURE_GEN_T);
 	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius)); // GL_EYE_LINEAR
-	set_color_a(cloud_color);
-	set_color_d(cloud_color); // disable lighting (BLACK)?
-	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1); // FIXME SHADERS: uses fixed function pipeline
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_TEXTURE_GEN_S); glDisable(GL_TEXTURE_GEN_T);
+	if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
+	shader_t s;
+	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+	s.setup_enabled_lights(5, 1); // sun, moon, and L4 VS lighting (L2 and L3 are set but unused)
+	s.set_vert_shader("ads_lighting.part*+texture_gen.part+cloud_sphere");
+	s.set_frag_shader("simple_texture");
+	s.begin_shader();
+	s.add_uniform_float("min_alpha", 0.0);
+	s.add_uniform_int("tex0", 0);
+	cloud_color.do_glColor();
+	select_texture(CLOUD_TEX, 0);
+	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
+	s.end_shader();
 	disable_blend();
 	glDisable(light);
-	if (depth_clamp_enabled) {glEnable(GL_DEPTH_CLAMP);}
+	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 }
 
 
