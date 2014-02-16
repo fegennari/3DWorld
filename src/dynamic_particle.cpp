@@ -6,6 +6,7 @@
 #include "dynamic_particle.h"
 #include "mesh.h"
 #include "physics_objects.h"
+#include "shaders.h"
 
 
 bool     const DEBUG_TIME     = 0;
@@ -28,7 +29,7 @@ extern obj_type object_types[];
 // ************ dynamic_particle ************
 
 
-dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(0.03, 0.07)), moves(1), shadows(1), lighted(1),
+dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(0.03, 0.07)), moves(1), lighted(1),
 	collides(1), chdir(0), gravity(0), tid(-1), cid(-1), intensity(rand_uniform(0.6, 1.3)*0.2*XY_SCENE_SIZE),
 	bwidth(1.0), velocity(signed_rand_vector(rand_uniform(0.6, 3.0)))
 {
@@ -36,15 +37,6 @@ dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(0.03, 0.
 	colorRGBA const colors[] = {WHITE, RED, GREEN, BLUE, YELLOW};
 	color = colors[rand() % (sizeof(colors)/sizeof(colorRGBA))];
 	gen_pos();
-}
-
-
-dynamic_particle::dynamic_particle(point const &p, float r, vector3d const &v, colorRGBA const &c, float i,
-		float bw, int t, bool m, bool s, bool l, bool coll, bool cd, bool g)
-		: sphere_t(p, r), moves(m), shadows(s), lighted(l), collides(coll), chdir(cd), gravity(g),
-		tid(t), cid(-1), intensity(i), bwidth(bw), velocity(v), color(c)
-{
-	if (pos == all_zeros) gen_pos();
 }
 
 
@@ -58,25 +50,12 @@ void dynamic_particle::gen_pos() {
 
 void dynamic_particle::draw() const { // lights, color, texture, shadowed, FIXME SHADERS: uses fixed function pipeline
 
-	bool const texture(tid >= 0 && glIsTexture(tid));
-	if (texture) select_texture(tid);
-	
-	if (lighted) { // set emission to color, ambient and diffuse to black (could disable lighting)
-		set_color(BLACK);
-		set_color_e(color);
-	}
-	else { // this case is unused
-		bool is_shadowed(!is_visible_to_light_cobj(pos, get_light(), radius, -1, 0));
-		colorRGBA color_a(color);
-		if (color_a != BLACK) {get_indir_light(color_a, (pos + vector3d(0.0, 0.0, 0.01)));}
-		set_color_a(color_a);
-		set_color_d(is_shadowed ? colorRGBA(0.0, 0.0, 0.0, color.alpha) : color);
-	}
+	// Note: currently, we only support emissive, untextured particles
+	// if we need to support lighting and textures it can be added later by using a different shader
+	assert(lighted && tid < 0);
+	color.do_glColor();
 	int const ndiv(min(N_SPHERE_DIV, max(3, int(3.0f*sqrt(radius*window_width/distance_to_camera(pos))))));
-	bool const bfc(!texture || !textures[tid].has_alpha());
-	draw_subdiv_sphere(pos, radius, ndiv, texture, bfc); // point if far away?
-	if (lighted) set_color_e(BLACK);
-	if (texture) glDisable(GL_TEXTURE_2D); // FIXME SHADERS: uses fixed function pipeline
+	draw_subdiv_sphere(pos, radius, ndiv, (tid >= 0), 0); // point if far away?
 }
 
 
@@ -134,23 +113,23 @@ void dynamic_particle::apply_physics(float stepsize, int index) { // begin_motio
 
 
 void dynamic_particle::add_light() const { // dynamic lights
-	if (lighted) add_dynamic_light(intensity, pos, color, velocity, bwidth); // beam in direction of velocity
+	if (lighted) {add_dynamic_light(intensity, pos, color, velocity, bwidth);} // beam in direction of velocity
 }
 
 void dynamic_particle::add_cobj_shadows() const { // cobjs, dynamic objects
-	if (shadows) add_shadow_obj(pos, radius, -1);
+	add_shadow_obj(pos, radius, -1);
 }
 
 void dynamic_particle::add_mesh_shadows() const {
-	if (shadows) dynamic_sphere_shadow(pos, radius, CHECK_ALL_SHADOW, 0); // sphere_shadow? quality?
+	dynamic_sphere_shadow(pos, radius, CHECK_ALL_SHADOW, 0); // sphere_shadow? quality?
 }
 
 void dynamic_particle::add_cobj() {
-	if (ADD_DP_COBJS) cid = add_coll_sphere(pos, radius, cobj_params(0.7, color, 0, 1));
+	if (ADD_DP_COBJS) {cid = add_coll_sphere(pos, radius, cobj_params(0.7, color, 0, 1));}
 }
 
 void dynamic_particle::remove_cobj() {
-	if (ADD_DP_COBJS) remove_coll_object(cid);
+	if (ADD_DP_COBJS) {remove_coll_object(cid);}
 	cid = -1;
 }
 
@@ -161,31 +140,23 @@ void dynamic_particle::remove_cobj() {
 void dynamic_particle_system::create_particles(unsigned num, bool only_if_empty) {
 
 	if (only_if_empty && size() > 0) return;
-	RESET_TIME;
 	clear();
 	particles.reserve(num);
-
-	for (unsigned i = 0; i < num; ++i) {
-		add_particle(dynamic_particle());
-	}
-	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Create");
+	for (unsigned i = 0; i < num; ++i) {add_particle(dynamic_particle());}
 }
 
 
 void dynamic_particle_system::draw() const {
-	
-	RESET_TIME;
 
-	for (unsigned i = 0; i < size(); ++i) {
-		particles[i].draw();
-	}
-	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Draw");
+	shader_t s;
+	s.begin_color_only_shader();
+	for (unsigned i = 0; i < size(); ++i) {particles[i].draw();}
+	s.end_shader();
 }
 
 
 void dynamic_particle_system::apply_physics(float stepsize) {
 	
-	RESET_TIME;
 	for (unsigned i = 0; i < size(); ++i) {
 		particles[i].remove_cobj();
 
@@ -194,37 +165,24 @@ void dynamic_particle_system::apply_physics(float stepsize) {
 		}
 		particles[i].add_cobj();
 	}
-	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Physics");
 }
 
 
 void dynamic_particle_system::add_light() const {
 	
-	RESET_TIME;
-	for (unsigned i = 0; i < size(); ++i) {
-		particles[i].add_light();
-	}
-	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Add DLight");
+	for (unsigned i = 0; i < size(); ++i) {particles[i].add_light();}
 }
 
 
 void dynamic_particle_system::add_cobj_shadows() const {
 	
-	RESET_TIME;
-	for (unsigned i = 0; i < size(); ++i) {
-		particles[i].add_cobj_shadows();
-	}
-	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Cobj Shadows");
+	for (unsigned i = 0; i < size(); ++i) {particles[i].add_cobj_shadows();}
 }
 
 
 void dynamic_particle_system::add_mesh_shadows() const {
 	
-	RESET_TIME;
-	for (unsigned i = 0; i < size(); ++i) {
-		particles[i].add_mesh_shadows();
-	}
-	if (DEBUG_TIME && size() > 0) PRINT_TIME("DPS Mesh Shadows");
+	for (unsigned i = 0; i < size(); ++i) {particles[i].add_mesh_shadows();}
 }
 
 

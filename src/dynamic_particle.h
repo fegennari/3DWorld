@@ -7,7 +7,7 @@
 
 class dynamic_particle : public sphere_t { // size = 60
 
-	bool moves, shadows, lighted, collides, chdir, gravity;
+	bool moves, lighted, collides, chdir, gravity;
 	int tid, cid;
 	float intensity, bwidth;
 	vector3d velocity;
@@ -15,8 +15,6 @@ class dynamic_particle : public sphere_t { // size = 60
 
 public:
 	dynamic_particle();
-	dynamic_particle(point const &p, float r, vector3d const &v, colorRGBA const &c, float i,
-		float bw, int t, bool m, bool s, bool l, bool coll, bool cd, bool g);
 	~dynamic_particle() {remove_cobj();}
 	void gen_pos();
 	void draw() const; // lights, color, texture, shadowed

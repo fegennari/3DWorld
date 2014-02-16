@@ -532,7 +532,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	stop_player_ship();
 	if (TIMETEST) PRINT_TIME("0.1");
 	bool const no_stars(is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6));
-	int const fog_enabled(glIsEnabled(GL_FOG));
+	int const fog_enabled(glIsEnabled(GL_FOG)); // FIXME SHADERS: can remove when all universe code uses shaders
 	if (fog_enabled) {glDisable(GL_FOG);}
 	no_asteroid_dust = (reflection_mode || no_stars); // FIXME: should really pass this down (5 levels of function calls)
 	draw_universe(1, 1, (no_stars ? 2 : 0)); // could clip by horizon?
@@ -1216,10 +1216,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	}
 	else {
 		config_bkg_color_and_clear(uw_depth, 1);
-		int const fog_enabled(glIsEnabled(GL_FOG));
-		if (fog_enabled) {glDisable(GL_FOG);}
 		draw_sun_moon_stars();
-		if (fog_enabled) {glEnable(GL_FOG);}
 	}
 	if (change_near_far_clip) {
 		float const near_clip(NEAR_CLIP + 0.01*min_camera_dist);
