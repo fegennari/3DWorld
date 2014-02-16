@@ -351,7 +351,7 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, int prim_type, bool no_vfc) {
+template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool is_shadow_pass, int prim_type, bool no_vfc) {
 
 	if (empty()) return;
 	finalize(prim_type);
@@ -373,9 +373,9 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	int loc(-1);
 	create_bind_vbo_and_upload(vbo, *this, 0);
 
-	if (CALC_TANGENT_VECT && enable_bump_map() && !is_shadow_pass && has_tangents) { // Note: if we get here, T must be a vert_norm_tc_tan
+	if (CALC_TANGENT_VECT && shader != NULL && enable_bump_map() && !is_shadow_pass && has_tangents) { // Note: if we get here, T must be a vert_norm_tc_tan
 		assert(stride == sizeof(vert_norm_tc_tan));
-		loc = shader.get_attrib_loc("tangent");
+		loc = shader->get_attrib_loc("tangent");
 		assert(loc > 0);
 		glEnableVertexAttribArray(loc);
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, (void *)sizeof(vert_norm_tc)); // stuff in at the end
@@ -699,7 +699,7 @@ template<typename T> void geometry_t<T>::calc_tangents() {
 template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, int prim_type) {
 
 	for (vntc_vect_block_t<T>::iterator i = blocks.begin(); i != blocks.end(); ++i) {
-		i->render(shader, is_shadow_pass, prim_type);
+		i->render(&shader, is_shadow_pass, prim_type);
 	}
 }
 

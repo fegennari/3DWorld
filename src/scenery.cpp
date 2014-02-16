@@ -532,7 +532,7 @@ void voxel_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, get_tid()));
 }
 
-void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t &s) {
+void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t *s) {
 
 	assert(radius > 0.0);
 	if (!is_visible(shadow_only, radius, xlate)) return;
@@ -543,11 +543,11 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 	translate_to(pos);
 	uniform_scale(radius*get_size_scale(distance_to_camera(pos+xlate), scale_val));
 	
-	if (s.is_setup()) {
-		model.setup_tex_gen_for_rendering(s);
+	if (s != NULL) {
+		model.setup_tex_gen_for_rendering(*s);
 	}
 	else {
-		select_texture(get_tid());
+		select_texture(get_tid(), 0);
 	}
 	model.core_render(s, lod_level, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 	glPopMatrix();
@@ -615,10 +615,10 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 	glPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(dir);
-	if (!shadow_only) select_texture(TREE_END_TEX);
+	if (!shadow_only) select_texture(TREE_END_TEX, 0);
 	draw_circle_normal(0.0, radius,  ndiv, 1, 0.0);
 	draw_circle_normal(0.0, radius2, ndiv, 0, length);
-	if (!shadow_only) select_texture(get_tid());
+	if (!shadow_only) select_texture(get_tid(), 0);
 	draw_cylin_fast(radius, radius2, length, ndiv, 1);
 	glPopMatrix();
 }
@@ -674,9 +674,9 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
 	glPushMatrix();
 	translate_to(pos - point(0.0, 0.0, 0.2*height));
-	if (!shadow_only) select_texture(TREE_END_TEX);
+	if (!shadow_only) select_texture(TREE_END_TEX, 0);
 	draw_circle_normal(0.0, radius2, ndiv, 0, 1.2*height);
-	if (!shadow_only) select_texture(get_tid());
+	if (!shadow_only) select_texture(get_tid(), 0);
 	draw_cylin_fast(radius, radius2, 1.2*height, ndiv, 1);
 	glPopMatrix();
 }
@@ -1077,11 +1077,10 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 }
 
 
-void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val) {
+void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val) {
 
 	set_fill_mode();
-	glEnable(GL_COLOR_MATERIAL);
-	select_texture(DARK_ROCK_TEX);
+	select_texture(DARK_ROCK_TEX, 0);
 
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
 		rock_shapes[i].draw(shadow_only, xlate);
@@ -1089,13 +1088,12 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	rock_vbo_manager.upload();
 	rock_vbo_manager.begin_render(1);
-	if (!shadow_only) {select_texture(ROCK_SPHERE_TEX);}
+	if (!shadow_only) {select_texture(ROCK_SPHERE_TEX, 0);}
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
 		surface_rocks[i].draw(sscale, shadow_only, xlate, scale_val, rock_vbo_manager);
 	}
 	rock_vbo_manager.end_render();
-	glEnable(GL_COLOR_MATERIAL);
 	draw_scenery_vector(rocks, sscale, shadow_only, xlate, scale_val);
 
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
@@ -1103,21 +1101,19 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	}
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, xlate, scale_val);
-	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
+	if (!shadow_only) {select_texture(WOOD_TEX, 0);} // plant stems use wood texture
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
 		plants[i].draw_stem(sscale, shadow_only, xlate);
 	}
 	if (!shadow_only) { // no berry shadows
-		select_texture(WHITE_TEX); // berries are untextured
+		select_texture(WHITE_TEX, 0); // berries are untextured
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw_berries(xlate);
 		}
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
-	glDisable(GL_COLOR_MATERIAL);
-	glDisable(GL_TEXTURE_2D);
 }
 
 
@@ -1125,7 +1121,10 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 
 	if (draw_opaque) { // draw stems, rocks, logs, and stumps
 		shader_t s; // unset
-		draw_opaque_objects(s, shadow_only, xlate, 1); // FIXME SHADERS: uses fixed function pipeline
+		s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+		s.begin_simple_textured_shader(0.0, 1); // with lighting
+		draw_opaque_objects(NULL, shadow_only, xlate, 1); // shader not passed in here (may be needed later for voxel rocks)
+		s.end_shader();
 	}
 	if (draw_transparent && !plants.empty()) { // draw leaves
 		shader_t s;

@@ -362,7 +362,7 @@ public:
 		if (ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
 		ddata.color_a.do_glColor();
 		glEnable(GL_CULL_FACE);
-		model.core_render(s, lod_level, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
+		model.core_render(&s, lod_level, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 		glDisable(GL_CULL_FACE);
 		s.disable();
 

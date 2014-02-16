@@ -182,7 +182,7 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 public:
 	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
-	void render(shader_t &shader, bool is_shadow_pass, int prim_type, bool no_vfc=0);
+	void render(shader_t *shader, bool is_shadow_pass, int prim_type, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
 	void add_triangle(triangle const &t, vertex_map_t<T> &vmap);
