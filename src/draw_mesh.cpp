@@ -49,7 +49,7 @@ extern float h_dirt[];
 extern water_params_t water_params;
 
 
-void draw_sides_and_bottom();
+void draw_sides_and_bottom(bool shadow_pass);
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -312,6 +312,7 @@ void draw_mesh_vbo() {
 
 	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
 	// Note: ignores detail texture
+	// Note: doesn't work correctly for the shadow pass if the vbo hasn't been created
 	shader_t s;
 	s.begin_simple_textured_shader(0.0, 1, 1); // lighting + texgen
 	static unsigned mesh_vbo(0);
@@ -369,7 +370,10 @@ void draw_mesh_mvd(bool shadow_pass) {
 
 	shader_t s;
 
-	if (!shadow_pass) {
+	if (shadow_pass) {
+		s.begin_color_only_shader(); // don't even need colors
+	}
+	else {
 		s.set_prefix("#define HAVE_DETAIL_TEXTURE", 0); // VS
 		s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
 		setup_mesh_and_water_shader(s);
@@ -392,7 +396,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 		if (mvd.c > 1) glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
 		y += DY_VAL;
 	} // for i
-	if (s.is_setup()) {s.end_shader();}
+	s.end_shader();
 }
 
 
@@ -401,7 +405,12 @@ void display_mesh(bool shadow_pass) { // fast array version
 	if (mesh_height == NULL) return; // no mesh to display
 
 	if (shadow_pass) {
-		draw_mesh_vbo(); //draw_mesh_mvd(1);
+		draw_mesh_mvd(1);
+		float lzmin(0.0);
+		if (light_factor <= 0.4)      {lzmin = moon_pos.z;}
+		else if (light_factor >= 0.6) {lzmin = sun_pos.z;}
+		else                          {lzmin = min(sun_pos.z, moon_pos.z);}
+		if (lzmin < zmax) {draw_sides_and_bottom(0);} // sun/moon is low on the horizon, so include the mesh sides
 		return;
 	}
 	RESET_TIME;
@@ -467,12 +476,14 @@ void display_mesh(bool shadow_pass) { // fast array version
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	set_active_texture(0);
-	draw_sides_and_bottom();
+	draw_sides_and_bottom(0);
 
 	if (SHOW_NORMALS) {
 		vector<vert_wrap_t> verts;
 		verts.reserve(2*XY_MULT_SIZE);
-		set_color(RED);
+		shader_t s;
+		s.begin_color_only_shader();
+		RED.do_glColor();
 
 		for (int i = 1; i < MESH_Y_SIZE-2; ++i) {
 			for (int j = 1; j < MESH_X_SIZE-1; ++j) {
@@ -482,6 +493,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 			}
 		}
 		draw_verts(verts, GL_LINES);
+		s.end_shader();
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Final");
 }
@@ -514,14 +526,20 @@ void add_one_tquad(vector<vert_norm_tc> &verts, vector3d const &n, float x1, flo
 
 
 // NOTE: There is a buffer of one unit around the drawn area
-void draw_sides_and_bottom() {
+void draw_sides_and_bottom(bool shadow_pass) {
 
 	int const lx(MESH_X_SIZE-1), ly(MESH_Y_SIZE-1);
 	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
 	float const x1(-X_SCENE_SIZE), y1(-Y_SCENE_SIZE), x2(X_SCENE_SIZE-DX_VAL), y2(Y_SCENE_SIZE-DY_VAL);
 	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? ROCK_TEX : DIRT_TEX);
 	shader_t s;
-	s.begin_simple_textured_shader(0.0, 1); // with lighting
+
+	if (shadow_pass) {
+		s.begin_color_only_shader();
+	}
+	else {
+		s.begin_simple_textured_shader(0.0, 1); // with lighting
+	}
 	set_color(WHITE);
 	set_fill_mode();
 	select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
