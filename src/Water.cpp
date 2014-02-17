@@ -414,7 +414,6 @@ void draw_water() {
 	setup_mesh_and_water_shader(s);
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	set_fill_mode();
-	glEnable(GL_COLOR_MATERIAL);
 	point const camera(get_camera_pos());
 	bool const is_ice(temperature <= W_FREEZE_POINT);
 
@@ -602,7 +601,6 @@ void draw_water() {
 	wsd.flush_triangles();
 	disable_blend();
 	set_specular(0.0, 1.0);
-	glDisable(GL_COLOR_MATERIAL);
 	s.end_shader();
 	update_water_volumes();
 	if (!lc0 && rand()%5 != 0) landscape_changed = 0; // reset, only update landscape 20% of the time

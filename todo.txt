@@ -7,7 +7,8 @@ Remove deprecated OpenGL calls:
 Use triangles instead of quads (Tree billboards/leaves)
 Replace GL matrix operations with something else (GLM?)
 GL_COLOR_MATERIAL: Unify color vs. material color - set_base_color_scale(), set_color_e()
-- grass, water, universe
+- universe, pt_line_drawer, vbo_block_manager_t::begin_render()
+remove is_setup() calls
 
 * Berries on plants
 Tiled terrain texture coords on high slopes

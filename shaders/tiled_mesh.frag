@@ -103,7 +103,7 @@ void main()
 	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(gl_NormalMatrix * normal); // eye space
 	//normal     += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5); // add noise
-	vec4 color  = gl_LightModel.ambient;
+	vec4 color  = vec4(0,0,0,1);
 	vec4 epos   = (gl_ModelViewMatrix * vertex);
 	bump_scale *= clamp((2.5 - 0.1*length(epos.xyz)), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
 	

@@ -110,12 +110,10 @@ void grass_manager_t::begin_draw(float spec_weight) const {
 	grass_data_t::set_vbo_arrays();
 	select_texture(GRASS_BLADE_TEX);
 	set_specular(spec_weight, 20.0);
-	glEnable(GL_COLOR_MATERIAL);
 }
 
 void grass_manager_t::end_draw() const {
 
-	glDisable(GL_COLOR_MATERIAL);
 	set_specular(0.0, 1.0);
 	bind_vbo(0);
 	check_gl_error(40);

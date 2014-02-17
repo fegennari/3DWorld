@@ -1518,7 +1518,7 @@ void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_sh
 	s.setup_enabled_lights(3, (1 << lighting_shader)); // sun, moon, and lightning
 	if (!underwater) {s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);} // FS
 	setup_tt_fog_pre(s);
-	s.set_prefix("#define USE_LIGHT_COLORS",  lighting_shader);
+	s.set_prefix("#define USE_LIGHT_COLORS", lighting_shader);
 }
 
 void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows) {

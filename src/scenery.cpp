@@ -1067,7 +1067,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 
 	set_specular(0.25, 20.0); // a small amount of specular
 	plant_vbo_manager.upload();
-	plant_vbo_manager.begin_render(s.is_setup());
+	plant_vbo_manager.begin_render(1); // enable color_material
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
 		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, xlate);
