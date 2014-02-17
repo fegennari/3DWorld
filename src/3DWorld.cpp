@@ -308,36 +308,22 @@ void set_light_atten(int light, float attenuation) {
 
 void reset_fog() {
 
-	glFogi(GL_FOG_MODE, GL_LINEAR);
 	glFogfv(GL_FOG_COLOR, (float *)&GRAY);
 	glFogf(GL_FOG_DENSITY, 0.2);
 	glFogf(GL_FOG_START, 0.1);
 	glFogf(GL_FOG_END, ((world_mode == WMODE_INF_TERRAIN) ? get_inf_terrain_fog_dist() : 2.5*Z_SCENE_SIZE));
-	glFogf(GL_FOG_INDEX, 0.0);
 }
 
 
 void set_gl_params() {
 
-	float lmodel_ambient[]     = {0.0, 0.0, 0.0, 1.0};
-    float lmodel_localviewer[] = {0.0};
-	float lmodel_side[]        = {0.0};
 	reset_fog();
 	glDepthFunc(GL_LESS);
 	set_std_blend_mode();
-	glShadeModel(GL_SMOOTH);
-    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
-    glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, lmodel_localviewer);
-    glLightModelfv(GL_LIGHT_MODEL_TWO_SIDE, lmodel_side);
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-    glEnable(GL_NORMALIZE);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glDisable(GL_COLOR_MATERIAL);
 	set_specular(0.0, 1.0);
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_FRONT);
-
 	glHint(GL_FOG_HINT, GL_NICEST); // doesn't work correctly on my laptop
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // GL_FASTEST
 	glHint(GL_LINE_SMOOTH_HINT,    GL_NICEST);
