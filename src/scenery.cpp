@@ -1067,7 +1067,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 
 	set_specular(0.25, 20.0); // a small amount of specular
 	plant_vbo_manager.upload();
-	plant_vbo_manager.begin_render(1); // enable color_material
+	plant_vbo_manager.begin_render();
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
 		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, xlate);
@@ -1087,7 +1087,7 @@ void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d 
 	}
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	rock_vbo_manager.upload();
-	rock_vbo_manager.begin_render(1);
+	rock_vbo_manager.begin_render();
 	if (!shadow_only) {select_texture(ROCK_SPHERE_TEX);}
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {

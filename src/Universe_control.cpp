@@ -242,7 +242,6 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 	}
 	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
 	if (!static_only) {setup_universe_fog(clobj0);}
-	glEnable(GL_COLOR_MATERIAL);
 	check_gl_error(120);
 	universe.draw_all_cells(clobj0, skip_closest, skip_closest, no_distant, gen_only);
 	check_gl_error(121);
@@ -259,7 +258,6 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 		if (TIMETEST) PRINT_TIME(" Free Obj Draw");
 	}
 	check_shift_universe();
-	glDisable(GL_COLOR_MATERIAL);
 	glDisable(get_universe_ambient_light());
 	glEnable(GL_LIGHT0);
 	//draw_universe_sun_flare(); // doesn't look right

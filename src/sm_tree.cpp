@@ -274,7 +274,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 		pts.resize(insts.size()); // force max possible size so that pts won't be resized later, and the pointer should remain valid
 		glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), &pts.front());
 		vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail
-		vbomgr.begin_render(1);
+		vbomgr.begin_render();
 
 		for (vector<pine_tree_inst_t>::const_iterator i = insts.begin(); i != insts.end();) { // Note: no increment
 			unsigned const inst_id(i->id);
@@ -287,7 +287,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 	}
 	else {
 		vbo_vnc_block_manager_t const &vbomgr(vbo_manager[low_detail]);
-		vbomgr.begin_render(1);
+		vbomgr.begin_render();
 
 		if (draw_all_pine) {
 			vbomgr.render_all(GL_QUADS);

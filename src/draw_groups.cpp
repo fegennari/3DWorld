@@ -219,11 +219,28 @@ void draw_select_groups(int solid) {
 			}
 		}
 	}
-	if (s.is_setup()) {
+	s.end_shader();
+	
+	if (!puddle_qbd.empty() || !obj_pld.empty()) {
+		setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1); // light colors
+		enable_blend();
+		set_color(RED);
+		GREEN.do_glColor();
+
+		if (!puddle_qbd.verts.empty()) { // draw puddles
+			glDepthMask(GL_FALSE);
+			select_texture(BLUR_TEX);
+			puddle_qbd.draw_and_clear();
+			glDepthMask(GL_TRUE);
+		}
+		select_no_texture();
+		obj_pld.draw_and_clear();
+		disable_blend();
 		s.end_shader();
-		indir_vert_offset = orig_ivo; // restore original variable values
-		cobj_z_bias       = orig_czb;
 	}
+	indir_vert_offset = orig_ivo; // restore original variable values
+	cobj_z_bias       = orig_czb;
+
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 		set_specular(0.0, 1.0); // disable
 		select_texture(object_types[SNOW].tid);
@@ -344,11 +361,6 @@ bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) { // only u
 		if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
 	}
 	return is_shadowed;
-}
-
-
-void set_base_color_scale(shader_t const &s, float val) { // hack to force usage of material properties instead of color
-	if (s.is_setup()) {s.add_uniform_float("base_color_scale", val);}
 }
 
 
@@ -646,22 +658,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 			particle_qbd.draw();
 			glDisable(GL_ALPHA_TEST);
 		}
-		if (!puddle_qbd.verts.empty() || !obj_pld.empty()) {
-			glEnable(GL_COLOR_MATERIAL); // unnecessary/doesn't work?
-			set_color(base_color); // FIXME: per-object color is ignored?
-			set_base_color_scale(s, 0.0);
-
-			if (!puddle_qbd.verts.empty()) { // draw puddles
-				glDepthMask(GL_FALSE);
-				select_texture(BLUR_TEX);
-				puddle_qbd.draw_and_clear();
-				glDepthMask(GL_TRUE);
-			}
-			select_no_texture();
-			if (!obj_pld.empty()) {obj_pld.draw_and_clear();}
-			set_base_color_scale(s, 1.0);
-			glDisable(GL_COLOR_MATERIAL);
-		}
 	} // small object
 	check_drawing_flags(flags, 0);
 	select_no_texture();
@@ -703,7 +699,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		assert(!do_texture);
 		colorRGBA color2(color);
 		if (type == RAIN) color2.alpha *= 0.5; // rain is mostly transparent when small
-		puddle_qbd.add_billboard(pos, (pos + plus_z), plus_x, /*color2*/WHITE, 5.0*radius, 5.0*radius);
+		puddle_qbd.add_billboard(pos, (pos + plus_z), plus_x, color2, 5.0*radius, 5.0*radius);
 		return;
 	}
 	if (draw_snowflake) { // draw as a point to be converted to a billboard by the geometry shader

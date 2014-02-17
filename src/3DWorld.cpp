@@ -323,8 +323,6 @@ void set_gl_params() {
 	glDepthFunc(GL_LESS);
 	set_std_blend_mode();
 	glEnable(GL_DEPTH_TEST);
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-	glDisable(GL_COLOR_MATERIAL);
 	set_specular(0.0, 1.0);
 
 	glHint(GL_FOG_HINT, GL_NICEST); // doesn't work correctly on my laptop

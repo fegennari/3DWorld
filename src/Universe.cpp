@@ -379,7 +379,6 @@ public:
 	
 	void enable_planet_colored_shader(bool use_light2) { // Note: use_light2 is ignored in the shader
 		if (!planet_colored_shader.is_setup()) {
-			if (display_mode & 0x10) {planet_colored_shader.set_prefix("#define FASTER", 1);} // FS
 			planet_colored_shader.set_vert_shader("per_pixel_lighting");
 			planet_colored_shader.set_frag_shader("ads_lighting.part*+planet_draw_distant");
 			planet_colored_shader.begin_shader();

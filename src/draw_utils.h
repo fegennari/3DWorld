@@ -167,7 +167,7 @@ public:
 	bool upload();
 	void update_range(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color, unsigned six, unsigned eix);
 	void update_range(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color, unsigned six, unsigned eix) {update_range(&v.front(), v.size(), color, six, eix);}
-	void begin_render(bool color_mat) const;
+	void begin_render() const;
 	void end_render() const;
 	void bind_cur_vbo() const;
 	void clear_points() {pts.swap(vector<vert_type_t>());}

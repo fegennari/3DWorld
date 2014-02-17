@@ -6,8 +6,7 @@ Try using Boost in 3DWorld, in particular shared_ptr
 Remove deprecated OpenGL calls:
 Use triangles instead of quads (Tree billboards/leaves)
 Replace GL matrix operations with something else (GLM?)
-GL_COLOR_MATERIAL: Unify color vs. material color - set_base_color_scale(), set_color_e()
-- universe, pt_line_drawer, vbo_block_manager_t::begin_render()
+GL_COLOR_MATERIAL: Unify color vs. material color
 remove is_setup() calls
 
 * Berries on plants

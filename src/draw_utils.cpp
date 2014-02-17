@@ -466,10 +466,9 @@ void vbo_block_manager_t<vert_type_t>::update_range(typename vert_type_t::non_co
 }
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::begin_render(bool color_mat) const {
+void vbo_block_manager_t<vert_type_t>::begin_render() const {
 
 	if (!has_data()) return;
-	if (color_mat) {glEnable(GL_COLOR_MATERIAL);}
 	set_color(BLACK);
 	bind_cur_vbo();
 	vert_type_t::set_vbo_arrays();
@@ -477,7 +476,6 @@ void vbo_block_manager_t<vert_type_t>::begin_render(bool color_mat) const {
 
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::end_render() const {
-	glDisable(GL_COLOR_MATERIAL);
 	bind_vbo(0);
 }
 
