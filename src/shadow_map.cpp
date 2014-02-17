@@ -279,18 +279,19 @@ cube_t get_scene_bounds() {
 
 void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
+	shader_t s;
+	s.begin_color_only_shader();
 	enable_blend();
-	set_color(colorRGBA(0.0, 0.0, 0.0, 0.25));
 
 	// draw scene bounds
-	set_color_e(WHITE);
+	colorRGBA(1.0, 1.0, 1.0, 0.25).do_glColor(); // white
 	draw_simple_cube(get_scene_bounds(), 0);
 
 	// draw light frustum
-	set_color_e(YELLOW);
+	colorRGBA(1.0, 1.0, 0.0, 0.25).do_glColor(); // yellow
 	get_pt_cube_frustum_pdu(lpos, get_scene_bounds(), 0).draw_frustum();
-	set_color_e(BLACK);
 	disable_blend();
+	s.end_shader();
 }
 
 

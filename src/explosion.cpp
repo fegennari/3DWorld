@@ -219,14 +219,13 @@ void draw_blasts() {
 	//RESET_TIME;
 	bool const universe(world_mode == WMODE_UNIVERSE);
 	enable_blend();
-	//glEnable(GL_ALPHA_TEST);
-	//glAlphaFunc(GL_GREATER, 0.05);
 	shader_t s;
 	s.set_vert_shader("multitex_2");
 	s.set_frag_shader("multitex_2");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 1);
+	//s.add_uniform_float("min_alpha", 0.05);
 	select_multitex(WHITE_TEX, 1);
 	vector<ix_type_pair> to_draw;
 
@@ -330,7 +329,6 @@ void draw_blasts() {
 		if (end_type) {set_std_blend_mode();}
 	} // for i
 	s.end_shader();
-	//glDisable(GL_ALPHA_TEST);
 	disable_blend();
 	//PRINT_TIME("Draw Blasts");
 }

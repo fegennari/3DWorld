@@ -6,6 +6,7 @@
 #include "gameplay.h"
 #include "tree_3dw.h"
 #include "openal_wrap.h"
+#include "shaders.h"
 
 using namespace std;
 
@@ -55,14 +56,15 @@ void change_spraypaint_color(int val) {
 void draw_spraypaint_crosshair() {
 
 	if (world_mode != WMODE_GROUND) return;
+	shader_t s;
+	s.begin_color_only_shader();
 	glDisable(GL_DEPTH_TEST);
-	set_color(colorRGBA(0.0, 0.0, 0.0, 0.5));
 	enable_blend();
-	set_color_e(get_cur_paint_color());
+	colorRGBA(get_cur_paint_color(), 0.5).do_glColor();
 	draw_circle_normal(0.0009, 0.0010, 64, 1, -0.05);
-	set_color_e(BLACK);
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
+	s.end_shader();
 }
 
 

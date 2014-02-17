@@ -557,9 +557,14 @@ void draw_small_trees(bool shadow_only) {
 		small_trees.draw_non_pine_leaves(shadow_only);
 		if (s.is_setup()) s.end_shader();
 	}
-
-	//select_texture(WHITE_TEX); // untextured
-	tree_scenery_pld.draw_and_clear(); // FIXME SHADERS: uses fixed function pipeline
+	if (!tree_scenery_pld.empty()) {
+		shader_t s;
+		s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+		s.begin_simple_textured_shader(0.0, 1); // with lighting
+		select_texture(WHITE_TEX); // untextured
+		tree_scenery_pld.draw_and_clear();
+		s.end_shader();
+	}
 	//PRINT_TIME("small tree draw");
 }
 

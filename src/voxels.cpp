@@ -1575,7 +1575,6 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	core_render((is_shadow_pass ? NULL : &s), lod_level, is_shadow_pass);
 	if (!is_shadow_pass) {s.end_shader();}
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
-	glDisable(GL_ALPHA_TEST);
 	set_specular(0.0, 1.0);
 }
 
