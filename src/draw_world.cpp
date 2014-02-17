@@ -515,7 +515,7 @@ bool portal::is_visible() const {
 void portal::pre_draw(vector<vert_wrap_t> &verts) {
 
 	float const scale[2] = {0.0, 0.0}, xlate[2] = {0.0, 0.0};
-	select_texture(WHITE_TEX, 0);
+	select_texture(WHITE_TEX);
 	setup_polygon_texgen(plus_z, scale, xlate, zero_vector); // doesn't matter as long as it's set to something
 	ALPHA0.do_glColor();
 	assert(verts.empty());
@@ -596,7 +596,7 @@ void draw_moon() {
 	s.set_frag_shader("simple_texture");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
-	select_texture(MOON_TEX, 0);
+	select_texture(MOON_TEX);
 	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
 	s.end_shader();
 	glDisable(GL_LIGHT4);
@@ -627,7 +627,7 @@ void draw_earth() {
 		shader_t s;
 		s.begin_simple_textured_shader(0.0, 1);
 		set_fill_mode();
-		select_texture(EARTH_TEX, 0);
+		select_texture(EARTH_TEX);
 		set_color(WHITE);
 		glPushMatrix();
 		translate_to(pos);
@@ -710,7 +710,7 @@ void draw_sky(int order) {
 		horizon_color.alpha *= 0.5;
 		apply_red_sky(horizon_color);
 		horizon_color.do_glColor();
-		select_texture(GRADIENT_TEX, 0);
+		select_texture(GRADIENT_TEX);
 		draw_sphere_vbo(center, 1.05*radius, N_SPHERE_DIV, 1); // draw horizon
 		s.end_shader();
 
@@ -737,7 +737,7 @@ void draw_sky(int order) {
 	s.add_uniform_float("min_alpha", 0.0);
 	s.add_uniform_int("tex0", 0);
 	cloud_color.do_glColor();
-	select_texture(CLOUD_TEX, 0);
+	select_texture(CLOUD_TEX);
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
 	s.end_shader();
 	disable_blend();
@@ -1152,7 +1152,7 @@ void draw_cracks_and_decals() {
 			}
 			lighting_shader.enable();
 		}
-		select_texture(tid, 0, 1);
+		select_texture(tid);
 		i->second.draw();
 	} // for i
 	disable_blend();
@@ -1181,7 +1181,7 @@ void draw_smoke_and_fires() {
 	if (!fire_order.empty()) {
 		enable_blend();
 		quad_batch_draw qbd;
-		select_texture(FIRE_TEX, 0);
+		select_texture(FIRE_TEX);
 		int last_in_smoke(-1);
 		for (unsigned j = 0; j < fire_order.size(); ++j) {fires[fire_order[j].second].draw(qbd, last_in_smoke);}
 		qbd.draw();
@@ -1203,7 +1203,7 @@ void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned 
 
 void camera_filter::draw() {
 
-	select_texture(tid, 0, 1); // use WHITE_TEX if tid < 0
+	select_texture(tid); // use WHITE_TEX if tid < 0
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(0.5*zval*tan_val), x((y*window_width)/window_height);
 	colorRGBA cur_color(color);
@@ -1250,7 +1250,7 @@ void draw_sparks() {
 	set_additive_blend_mode();
 	shader_t s;
 	s.begin_simple_textured_shader(0.01);
-	select_texture(FLARE2_TEX, 0);
+	select_texture(FLARE2_TEX);
 	quad_batch_draw qbd;
 	draw_objects(sparks, qbd);
 	qbd.draw();

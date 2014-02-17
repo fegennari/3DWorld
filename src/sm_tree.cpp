@@ -256,7 +256,7 @@ void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> >
 void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool draw_all_pine, bool sort_front_to_back, vector3d const &xlate, int xlate_loc) {
 
 	if (empty()) return;
-	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid), 0);
+	select_texture((draw_model != 0) ? WHITE_TEX : (low_detail ? PINE_TREE_TEX : stt[T_PINE].leaf_tid));
 
 	if (instanced && !low_detail) { // sort_front_to_back not supported
 		assert(xlate_loc >= 0);
@@ -317,7 +317,7 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const &xl
 		if (i->is_pine_tree()) continue;
 		assert(!instanced); // only pine trees can be instanced
 		int const type(i->get_type());
-		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid, 0);} // first of this type
+		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
 		i->draw(2, shadow_only, xlate);
 	}
 }
@@ -558,7 +558,7 @@ void draw_small_trees(bool shadow_only) {
 		if (s.is_setup()) s.end_shader();
 	}
 
-	//select_texture(WHITE_TEX, 0); // untextured
+	//select_texture(WHITE_TEX); // untextured
 	tree_scenery_pld.draw_and_clear(); // FIXME SHADERS: uses fixed function pipeline
 	//PRINT_TIME("small tree draw");
 }
@@ -844,7 +844,7 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 				}
 				else { // draw as cylinder
 					if (world_mode == WMODE_GROUND) {set_color(get_bark_color());}
-					if (!shadow_only) {select_texture(stt[type].bark_tid, 0);}
+					if (!shadow_only) {select_texture(stt[type].bark_tid);}
 					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, 1);
 				}

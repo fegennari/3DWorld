@@ -1939,7 +1939,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	if (!tree_trunk_pts.empty()) { // color/texture already set above
 		set_pine_tree_shader(s, "xy_billboard");
 		assert(!(tree_trunk_pts.size() & 1));
-		select_texture(WHITE_TEX, 0); // enable=0
+		select_texture(WHITE_TEX);
 		get_tree_trunk_color(T_PINE, 1).do_glColor();
 		set_array_client_state(1, 0, 0, 0);
 		glVertexPointer(3, GL_FLOAT, sizeof(point), &tree_trunk_pts.front());

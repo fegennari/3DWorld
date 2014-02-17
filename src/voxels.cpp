@@ -1456,7 +1456,7 @@ void voxel_model::setup_tex_gen_for_rendering(shader_t &s) {
 
 	for (unsigned i = 0; i < 2; ++i) {
 		set_active_texture(tu_ids[i]);
-		select_texture(params.tids[i], 0);
+		select_texture(params.tids[i]);
 		s.add_uniform_color(cnames[i], params.colors[i]);
 	}
 	select_multitex(params.tids[2], 15); // top texture

@@ -177,7 +177,7 @@ void select_water_ice_texture(colorRGBA &color, float *use_this_temp, bool set_a
 		color = color.modulate_with(texture_color(tid));
 	}
 	else {
-		select_texture(tid, 0);
+		select_texture(tid);
 	}
 	color *= DARK_WATER_ATTEN;
 }
@@ -550,7 +550,7 @@ void draw_water() {
 							{
 								if (last_water != 0) { // snow
 									wsd.flush_triangles();
-									select_texture(SNOW_TEX, 0);
+									select_texture(SNOW_TEX);
 									set_specular(0.6, 20.0);
 									last_water = 0;
 									color      = WHITE;

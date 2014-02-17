@@ -298,23 +298,14 @@ void check_init_texture(int id) {
 }
 
 
-bool select_texture(int id, bool enable, bool white_tex_default) {
+bool select_texture(int id) {
 
-	if (id < 0) {
-		if (white_tex_default) {
-			check_init_texture(WHITE_TEX);
-			textures[WHITE_TEX].bind_gl();
-		}
-		else {
-			glBindTexture(GL_TEXTURE_2D, 0); // bind to none
-		}
-		return 0;
-	}
+	bool const no_tex(id < 0);
+	if (no_tex) {id = WHITE_TEX;} //glBindTexture(GL_TEXTURE_2D, 0); // bind to none
 	assert(id < NUM_TEXTURES);
 	check_init_texture(id);
-	if (enable) glEnable(GL_TEXTURE_2D);
 	textures[id].bind_gl();
-	return 1;
+	return !no_tex;
 }
 
 

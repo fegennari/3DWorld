@@ -139,7 +139,7 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 	}
 	virtual void draw_geom(bool is_normal_pass) {
 		BLACK.do_glColor();
-		select_texture(get_tree_type().leaf_tex, 0, 1);
+		select_texture(get_tree_type().leaf_tex);
 		shaders[is_normal_pass].enable();
 		tree_data_t::pre_draw(0, 0);
 		cur_tree->gen_leaf_color();
@@ -165,7 +165,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 
 	virtual void draw_geom(bool is_normal_pass) {
 		WHITE.do_glColor();
-		select_texture(get_tree_type().bark_tex, 0, 1);
+		select_texture(get_tree_type().bark_tex);
 		shaders[is_normal_pass].enable();
 		tree_data_t::pre_draw(1, 0);
 		cur_tree->draw_branches(0.0, 0);
@@ -835,7 +835,7 @@ bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) {
 
 	if (draw_leaves && !leaves.empty()) { // draw leaves
 		if (leaf_vbo == 0) return 0; // if the leaf_vbo hasn't been allocated we need to go through the regular rendering path to get the leaf data uploaded
-		select_texture(tree_types[tree_type].leaf_tex, 0);
+		select_texture(tree_types[tree_type].leaf_tex);
 		bind_vbo(leaf_vbo);
 		leaf_vert_type_t::set_vbo_arrays(0, 0); // could also disable normals and colors, but that doesn't seem to help much
 		assert(leaf_data.size() >= 4*leaves.size());
@@ -1023,7 +1023,7 @@ void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pas
 
 void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass) {
 
-	select_texture(tree_types[type].bark_tex, 0);
+	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
 	if (s.is_setup()) {s.set_uniform_vector3d(shader_loc, (tree_center + xlate));}
 	glPushMatrix();

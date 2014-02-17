@@ -404,7 +404,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		s.begin_shader();
 		s.add_uniform_int("tex0", 0);
 		enable_blend();
-		select_texture(CLOUD_RAW_TEX, 0);
+		select_texture(CLOUD_RAW_TEX);
 		float const xy_scale(0.02), z_offset(0.01*size);
 		float const sx(1.0/(1.0 + min(2.0, 0.5*fabs(wind.x))));
 		float const sy(1.0/(1.0 + min(2.0, 0.5*fabs(wind.y))));

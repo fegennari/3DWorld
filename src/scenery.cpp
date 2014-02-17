@@ -547,7 +547,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 		model.setup_tex_gen_for_rendering(*s);
 	}
 	else {
-		select_texture(get_tid(), 0);
+		select_texture(get_tid());
 	}
 	model.core_render(s, lod_level, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 	glPopMatrix();
@@ -615,10 +615,10 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 	glPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(dir);
-	if (!shadow_only) select_texture(TREE_END_TEX, 0);
+	if (!shadow_only) select_texture(TREE_END_TEX);
 	draw_circle_normal(0.0, radius,  ndiv, 1, 0.0);
 	draw_circle_normal(0.0, radius2, ndiv, 0, length);
-	if (!shadow_only) select_texture(get_tid(), 0);
+	if (!shadow_only) select_texture(get_tid());
 	draw_cylin_fast(radius, radius2, length, ndiv, 1);
 	glPopMatrix();
 }
@@ -674,9 +674,9 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
 	glPushMatrix();
 	translate_to(pos - point(0.0, 0.0, 0.2*height));
-	if (!shadow_only) select_texture(TREE_END_TEX, 0);
+	if (!shadow_only) select_texture(TREE_END_TEX);
 	draw_circle_normal(0.0, radius2, ndiv, 0, 1.2*height);
-	if (!shadow_only) select_texture(get_tid(), 0);
+	if (!shadow_only) select_texture(get_tid());
 	draw_cylin_fast(radius, radius2, 1.2*height, ndiv, 1);
 	glPopMatrix();
 }
@@ -817,7 +817,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
-	select_texture(((draw_model == 0) ? pltype[type].tid : WHITE_TEX), 0); // could pre-bind textures and select using shader int, but probably won't improve performance
+	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
 	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
@@ -1080,7 +1080,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val) {
 
 	set_fill_mode();
-	select_texture(DARK_ROCK_TEX, 0);
+	select_texture(DARK_ROCK_TEX);
 
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
 		rock_shapes[i].draw(shadow_only, xlate);
@@ -1088,7 +1088,7 @@ void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d 
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	rock_vbo_manager.upload();
 	rock_vbo_manager.begin_render(1);
-	if (!shadow_only) {select_texture(ROCK_SPHERE_TEX, 0);}
+	if (!shadow_only) {select_texture(ROCK_SPHERE_TEX);}
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
 		surface_rocks[i].draw(sscale, shadow_only, xlate, scale_val, rock_vbo_manager);
@@ -1101,13 +1101,13 @@ void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d 
 	}
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, xlate, scale_val);
-	if (!shadow_only) {select_texture(WOOD_TEX, 0);} // plant stems use wood texture
+	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
 		plants[i].draw_stem(sscale, shadow_only, xlate);
 	}
 	if (!shadow_only) { // no berry shadows
-		select_texture(WHITE_TEX, 0); // berries are untextured
+		select_texture(WHITE_TEX); // berries are untextured
 
 		for (unsigned i = 0; i < plants.size(); ++i) {
 			plants[i].draw_berries(xlate);

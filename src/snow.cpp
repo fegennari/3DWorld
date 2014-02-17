@@ -760,8 +760,7 @@ void draw_snow() {
 	set_specular(0.5, 50.0);
 	set_color(SNOW_COLOR);
 	point const camera(get_camera_pos());
-	//select_texture(NOISE_TEX, 0); // detail texture
-	select_texture(SNOW_TEX, 0); // detail texture
+	select_texture(SNOW_TEX); // detail texture (or could use NOISE_TEX)
 	setup_texgen(50.0, 50.0, 0.0, 0.0);
 	snow_draw.draw();
 	set_specular(0.0, 1.0);

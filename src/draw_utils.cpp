@@ -344,7 +344,7 @@ void quad_batch_draw::add_animated_billboard(point const &pos, point const &view
 void quad_batch_draw::draw_as_flares_and_clear(int flare_tex) { // Note: used in flows where texturing is always enabled
 
 	glDepthMask(GL_FALSE);
-	select_texture(flare_tex, 0);
+	select_texture(flare_tex);
 	draw_and_clear(GL_TRIANGLES);
 	glDepthMask(GL_TRUE);
 }

@@ -779,7 +779,7 @@ void enable_flares(colorRGBA const &color, bool zoomed) { // used for clouds and
 	color.do_glColor();
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	enable_blend();
-	if (draw_model == 0) {select_texture((zoomed ? BLUR_CENT_TEX : BLUR_TEX), 0);}
+	if (draw_model == 0) {select_texture(zoomed ? BLUR_CENT_TEX : BLUR_TEX);}
 }
 
 void disable_flares() {
@@ -871,7 +871,7 @@ void line_tquad_draw_t::draw(int prim_type) const { // supports quads and triang
 	s.begin_simple_textured_shader(0.01);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	enable_blend();
-	select_texture(BLUR_TEX, 0);
+	select_texture(BLUR_TEX);
 	draw_verts(verts, prim_type);
 	disable_blend();
 	s.end_shader();

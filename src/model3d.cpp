@@ -813,7 +813,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			has_binary_alpha = tmgr.has_binary_alpha(tex_id);
 		}
 		else {
-			select_texture(((default_tid >= 0) ? default_tid : WHITE_TEX), 0); // no texture specified - use white texture
+			select_texture((default_tid >= 0) ? default_tid : WHITE_TEX); // no texture specified - use white texture
 		}
 		if (use_bump_map()) {
 			set_active_texture(5);
@@ -822,7 +822,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
 			set_active_texture(8);
-			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX, 0);}
+			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX);}
 			set_active_texture(0);
 		}
 		if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {
@@ -1241,7 +1241,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_m
 	if ((bmap_pass_mask & 1) && unbound_color.alpha > 0.0) { // enabled, not in bump map only pass
 		if (!is_shadow_pass) {
 			assert(unbound_tid >= 0);
-			select_texture(unbound_tid, 0);
+			select_texture(unbound_tid);
 			set_color_d(unbound_color);
 			shader.add_uniform_float("min_alpha", 0.0);
 		}

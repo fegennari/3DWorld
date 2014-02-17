@@ -211,7 +211,7 @@ public:
 		unsigned const ndiv(3*ddata.ndiv/2); // increase ndiv because we want higher resolution to capture details
 		scale_by(scale_val*xyz_scale);
 		ddata.color_a.do_glColor();
-		select_texture(((force_tex_id >= 0) ? force_tex_id : tex_id), 0);
+		select_texture((force_tex_id >= 0) ? force_tex_id : tex_id);
 		surface.sd.draw_ndiv_pow2_vbo(ndiv); // use a vbo
 		if (!no_reset_texture) {end_texture();}
 	}
@@ -227,7 +227,7 @@ public:
 		return 1;
 	}
 	virtual void final_draw(int xfm_shader_loc) { // non-const because it clears instance transforms
-		select_texture(tex_id, 0);
+		select_texture(tex_id);
 		inst_render.set_loc(xfm_shader_loc);
 		surface.sd.draw_instances(inst_render.max_ndiv, inst_render);
 		inst_render.max_ndiv = 0;
@@ -745,7 +745,7 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 		shader.add_uniform_float("alpha_scale", 5.0);
 		shader.add_uniform_float("sphere_size", AST_PARTICLE_SIZE*window_height*max_asteroid_radius);
 		shader.add_uniform_int("tex0", 0);
-		select_texture(DEFAULT_AST_TEX, 0);
+		select_texture(DEFAULT_AST_TEX);
 		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
 		glEnable(GL_POINT_SPRITE);
 		glEnable(GL_PROGRAM_POINT_SIZE);

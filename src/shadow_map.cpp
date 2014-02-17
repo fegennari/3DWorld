@@ -218,7 +218,7 @@ bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
 		bind_2d_texture(sm_tid);
 	}
 	else {
-		select_texture(WHITE_TEX, 0); // default wite texture
+		select_texture(WHITE_TEX); // default wite texture
 	}
 	set_active_texture(0);
 	return 1;

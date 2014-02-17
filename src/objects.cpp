@@ -278,7 +278,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 		colorRGBA(0.0, 0.0, 0.0, cp.color.alpha).do_glColor();
 	}
 	if (tid != last_tid) {
-		bool const textured(select_texture(tid, 0));
+		bool const textured(select_texture(tid));
 		assert(textured);
 		last_tid = tid;
 	}

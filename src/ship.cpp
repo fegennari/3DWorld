@@ -748,7 +748,7 @@ void draw_univ_objects() {
 	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
 	shader_t s[2];
-	select_texture(WHITE_TEX, 0); // always textured (see end_texture())
+	select_texture(WHITE_TEX); // always textured (see end_texture())
 	enable_blend(); // doesn't hurt
 	clear_emissive_color(); // just to be sure
 	BLACK.do_glColor();
@@ -786,7 +786,7 @@ void draw_univ_objects() {
 		s.end_shader();
 	}
 	if (!glow_pld.empty()) {
-		select_texture(BLUR_TEX, 0);
+		select_texture(BLUR_TEX);
 		glDepthMask(GL_FALSE);
 		shader_t s;
 		s.set_prefix("#define SIZE_FROM_NORMAL", 2); // GS

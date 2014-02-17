@@ -108,7 +108,7 @@ void grass_manager_t::begin_draw(float spec_weight) const {
 	assert(vbo > 0);
 	bind_vbo(vbo);
 	grass_data_t::set_vbo_arrays();
-	select_texture(GRASS_BLADE_TEX, 0);
+	select_texture(GRASS_BLADE_TEX);
 	set_specular(spec_weight, 20.0);
 	glEnable(GL_COLOR_MATERIAL);
 }

@@ -453,7 +453,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 	if (SHOW_MESH_TIME) PRINT_TIME("Landscape Texture");
 
 	if (!DISABLE_TEXTURES) {
-		select_texture(LANDSCAPE_TEX, 0);
+		select_texture(LANDSCAPE_TEX);
 		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
@@ -524,7 +524,7 @@ void draw_sides_and_bottom() {
 	s.begin_simple_textured_shader(0.0, 1); // with lighting
 	set_color(WHITE);
 	set_fill_mode();
-	select_texture((DISABLE_TEXTURES ? WHITE_TEX : texture), 0);
+	select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
 	vector<vert_norm_tc> verts;
 	add_one_tquad(verts, -plus_z, x1, y1, x2, y2, botz, ts*x1, ts*y1, ts*x2, ts*y2);
 	float xv(x1), yv(y1);
@@ -776,7 +776,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		rcolor = WHITE;
 	}
 	else {
-		select_texture(WHITE_TEX, 0);
+		select_texture(WHITE_TEX);
 		glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
 		//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 	}

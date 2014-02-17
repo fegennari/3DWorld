@@ -112,7 +112,7 @@ inline bool get_cull_face(int type, colorRGBA const &color) {
 }
 
 void select_no_texture() {
-	select_texture(WHITE_TEX, 0);
+	select_texture(WHITE_TEX);
 }
 
 void scale_color_uw(colorRGBA &color, point const &pos) {
@@ -226,7 +226,7 @@ void draw_select_groups(int solid) {
 	}
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 		set_specular(0.0, 1.0); // disable
-		select_texture(object_types[SNOW].tid, 0, 1);
+		select_texture(object_types[SNOW].tid);
 		check_drawing_flags(object_types[SNOW].flags, 1);
 		glDepthMask(GL_FALSE);
 		shader_t s;
@@ -393,7 +393,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 	int tid(otype.tid);
 	float const radius(otype.radius), cd_scale(NDIV_SCALE*radius*window_width);
 	unsigned const flags(otype.flags);
-	bool do_texture(select_texture(tid, 0, 1));
+	bool do_texture(select_texture(tid));
 	colorRGBA color(otype.color);
 	set_color_alpha(color);
 	check_drawing_flags(flags, 1);
@@ -436,7 +436,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			
 				if (draw_model == 0 && tid != last_tid) {
 					qbd.draw_and_clear();
-					select_texture(tid, 0, 1);
+					select_texture(tid);
 					last_tid = tid;
 				}
 				point pos(obj.pos);
@@ -501,7 +501,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {
 			check_drawing_flags(otype.flags, 1);
-			select_texture(tid, 0, 1);
+			select_texture(tid);
 		}
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < wap_vis_objs[j].size(); ++k) {
@@ -607,7 +607,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			
 			if (i->tid != last_tid) {
 				draw_and_clear_tris(fragment_vn, fragment_vntc);
-				select_texture(i->tid, 0, 1);
+				select_texture(i->tid);
 				last_tid = i->tid;
 			}
 			if (i->c != last_color) { // color change requires a new batch (or could put color into fragment_vn[tc])
@@ -636,7 +636,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 
 		for (vector<tid_color_to_ix_t>::const_iterator i = sphere_fragments.begin(); i != sphere_fragments.end(); ++i) {
 			dwobject &obj(objg.get_obj(i->ix));
-			select_texture(i->tid, 0, 1);
+			select_texture(i->tid);
 			draw_sized_point(obj, obj.get_true_radius(), cd_scale, i->c, get_textured_color(tid, i->c), (i->tid >= 0), 2);
 		}
 		if (type == SHRAPNEL) {
@@ -653,7 +653,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 
 			if (!puddle_qbd.verts.empty()) { // draw puddles
 				glDepthMask(GL_FALSE);
-				select_texture(BLUR_TEX, 0);
+				select_texture(BLUR_TEX);
 				puddle_qbd.draw_and_clear();
 				glDepthMask(GL_TRUE);
 			}
@@ -782,7 +782,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 
 	if (atype >= 0) {
 		check_drawing_flags(object_types[atype].flags, 1);
-		int const textured(select_texture(object_types[atype].tid, 0, 1));
+		bool const textured(select_texture(object_types[atype].tid));
 		set_color_alpha(object_types[atype].color);
 		bool const cull_face(get_cull_face(atype, color));
 		if (cull_face) glEnable(GL_CULL_FACE);
@@ -994,7 +994,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		set_color_alpha(colorRGBA(1.0, (0.25 + 0.015*health), 0.0, alpha));
 	}
 	if (game_mode == 2) { // dodgeball
-		select_texture(CAMOFLAGE_TEX, 0);
+		select_texture(CAMOFLAGE_TEX);
 	}
 	else {
 		select_smiley_texture(id);
@@ -1044,7 +1044,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		draw_smiley_part(pos4, pos, orient, SF_TONGUE, 0, ndiv2);
 	}
 	if (game_mode == 2 && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
-		select_texture(select_dodgeball_texture(id), 0, 1);
+		select_texture(select_dodgeball_texture(id));
 		set_color_alpha(mult_alpha(object_types[BALL].color, alpha));
 		draw_sphere_vbo(point(0.0, 1.3*radius, 0.0), 0.8*object_types[BALL].radius, ndiv, 1);
 		select_no_texture();
@@ -1054,7 +1054,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	int const hit(get_smiley_hit(hit_dir, id));
 
 	if (hit > 0) { // hit - draw damage or shields
-		select_texture(SBLUR_TEX, 0);
+		select_texture(SBLUR_TEX);
 		enable_blend();
 		colorRGBA color2((sstates[id].shields < 0.01) ? BLOOD_C : GREEN);
 		color2.alpha = alpha*hit/6.0;
@@ -1069,7 +1069,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		glPopMatrix();
 
 		if (powerup == PU_SHIELD) {
-			select_texture(PLASMA_TEX, 0);
+			select_texture(PLASMA_TEX);
 			set_color_alpha(PURPLE, alpha); // not scaled
 			draw_sphere_vbo(pos, 1.05*radius, ndiv, 1);
 		}
@@ -1092,7 +1092,7 @@ void draw_powerup(point const &pos, float radius, int ndiv, int type, const colo
 
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix) {
 
-	select_texture(tid, 0, 1);
+	select_texture(tid);
 	glPushMatrix();
 	translate_to(pos);
 	
@@ -1151,7 +1151,7 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	glRotatef(90.0, -1.0, 0.0, 0.0);
 	glRotatef(90.0,  0.0, 1.0, 0.0);
 	set_color_alpha(WHITE);
-	select_texture(SKULL_TEX, 0);
+	select_texture(SKULL_TEX);
 	draw_sphere_vbo_raw(ndiv, 1);
 	select_no_texture();
 	glPopMatrix();
@@ -1219,7 +1219,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 		get_landmine_light_color(time).do_glColor();
 		draw_subdiv_sphere(pos, 0.15*radius, ndiv/2, 0, 0); // warning light
 	}
-	select_texture(object_types[LANDMINE].tid, 0, 1);
+	select_texture(object_types[LANDMINE].tid);
 }
 
 

@@ -250,7 +250,7 @@ void draw_blasts() {
 		if (br.type == ETYPE_ANIM_FIRE) {
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_texture(EXPLOSION_TEX, 0);
+				select_texture(EXPLOSION_TEX);
 			}
 			qbd.add_animated_billboard(br.pos, get_camera_pos(), br.up_vector, br.cur_color, br.cur_size, br.cur_size, timescale);
 			
@@ -267,7 +267,7 @@ void draw_blasts() {
 		case ETYPE_PLASMA:
 		case ETYPE_EBURST:
 			{
-				if (begin_type) {select_texture(PLASMA_TEX, 0); glEnable(GL_CULL_FACE);}
+				if (begin_type) {select_texture(PLASMA_TEX); glEnable(GL_CULL_FACE);}
 				// use distance_to_camera() for non-universe mode?
 				//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
 				br.cur_color.do_glColor();
@@ -282,7 +282,7 @@ void draw_blasts() {
 		case ETYPE_ATOMIC:
 			{
 				if (begin_type) {
-					select_texture(CLOUD_TEX, 0);
+					select_texture(CLOUD_TEX);
 					//glEnable(GL_CULL_FACE);
 				}
 				s.add_uniform_float("min_alpha", 0.4*(1.0 - timescale));

@@ -57,7 +57,7 @@ void show_blood_on_camera() {
 	enable_blend();
 	shader_t s;
 	s.begin_simple_textured_shader(0.5);
-	select_texture(BLUR_TEX, 0);
+	select_texture(BLUR_TEX);
 	quad_batch_draw qbd;
 	
 	for (unsigned i = 0; i < NUM_BS; ++i) {
@@ -353,7 +353,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	vector3d v_trans;
 	point const pos0(get_final_pos(pos, dir, cradius, scale, rxy, v_trans));
 	float const tx(-cradius*dir.x/rxy), ty(-cradius*dir.y/rxy);
-	select_texture(WHITE_TEX, 0);
+	select_texture(WHITE_TEX);
 	
 	if (draw_pass == 0) { // draw solid objects
 		int ndiv(int(get_zoom_scale()*280.0*cradius/(distance_to_camera(pos) + SMALL_NUMBER)));
@@ -376,7 +376,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_LANDMINE:
 		case W_GRENADE: // draw_grenade()?
 		case W_CGRENADE:
-			if (do_texture) select_texture(((wid == W_BALL) ? select_dodgeball_texture(shooter) : object_types[oid].tid), 0);
+			if (do_texture) {select_texture((wid == W_BALL) ? select_dodgeball_texture(shooter) : object_types[oid].tid);}
 			radius = 0.4*object_types[oid].radius;
 			if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) radius *= 1.2;
 			translate_to(v_trans);
@@ -430,7 +430,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_specular(0.9, 90.0);
 				float dz((ammo > 1) ? -0.025*radius*ammo : 0.0);
 				plus_z.do_glNormal();
-				select_texture((sb_tex ? SAW_B_TEX : SAW_TEX), 0);
+				select_texture(sb_tex ? SAW_B_TEX : SAW_TEX);
 
 				for (int w = 0; w < max(1, ammo); ++w) { // draw a blade for each ammo
 					draw_tquad(radius, radius, dz);
@@ -578,7 +578,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_BBBAT:
 			radius = 0.004;
 			set_color_alpha(LT_BROWN, alpha);
-			select_texture((is_camera ? PLAYER_BBB_TEX : WOOD_TEX), 0); // customize the player's baseball bat
+			select_texture(is_camera ? PLAYER_BBB_TEX : WOOD_TEX); // customize the player's baseball bat
 			glRotatef(45.0, -dir.y, dir.x, 0.0);
 			glTranslatef(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera
@@ -642,7 +642,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glEnable(GL_ALPHA_TEST);
 				glAlphaFunc(GL_GREATER, 0.001);
 				set_additive_blend_mode();
-				select_texture(FLARE1_TEX, 0);
+				select_texture(FLARE1_TEX);
 				set_std_blend_mode();
 				draw_tquad(size, size, 0.0);
 				glDisable(GL_ALPHA_TEST);
@@ -661,7 +661,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(-0.9*rdx, -0.9*rdy, 0.124), point(1.9*rdx, 1.9*rdy, -0.002)};
-				select_texture(FLARE2_TEX, 0);
+				select_texture(FLARE2_TEX);
 				
 				for (unsigned i = 0; i < 2; ++i) {
 					translate_to(translates[i]);
@@ -677,7 +677,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 		}
 	}
-	select_texture(WHITE_TEX, 0);
+	select_texture(WHITE_TEX);
 	glPopMatrix();
 	disable_blend();
 	//glEnable(GL_DEPTH_TEST);
@@ -750,7 +750,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	unsigned const delay(max(1u, weapons[wid].fire_delay));
 	float const fire_val((float)sstate.fire_frame/(float)delay);
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
-	select_texture(WHITE_TEX, 0); // always textured, but not enabled
+	select_texture(WHITE_TEX); // always textured
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass);
 	if (shooter == CAMERA_ID) fired = 0;
@@ -791,12 +791,12 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 	point const player(get_camera_pos());
 	enable_blend();
 	glEnable(GL_CULL_FACE);
-	select_texture(PLASMA_TEX, 0);
+	select_texture(PLASMA_TEX);
 	float radius(object_types[PLASMA].radius);
 	obj_group &objg(obj_groups[cid]);
 	if (shooter == CAMERA_ID || (objg.get_obj(shooter).flags & CAMERA_VIEW)) ndiv *= 3;
 	draw_plasma(pos, (pos + pos0), radius, psize, ndiv, 0, 1, 0);
-	select_texture(WHITE_TEX, 0);
+	select_texture(WHITE_TEX);
 	glDisable(GL_CULL_FACE);
 	if (psize < 0.9*MAX_PLASMA_SIZE) return;
 

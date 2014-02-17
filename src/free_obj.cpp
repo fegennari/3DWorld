@@ -892,7 +892,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 		}
 		else {
 			color.do_glColor();
-			if (texture_id >= 0) select_texture(texture_id, 0);
+			if (texture_id >= 0) select_texture(texture_id);
 			draw_sphere_vbo(all_zeros, 1.0, min((no_coll() ? ddata.ndiv : max(3, 3*ddata.ndiv/4)), N_SPHERE_DIV/2), (texture_id > 0)); // fewer ndiv/more irregular?
 			if (texture_id >= 0) end_texture();
 		}
