@@ -531,12 +531,9 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	stop_player_ship();
 	if (TIMETEST) PRINT_TIME("0.1");
 	bool const no_stars(is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6));
-	int const fog_enabled(glIsEnabled(GL_FOG)); // FIXME SHADERS: can remove when all universe code uses shaders
-	if (fog_enabled) {glDisable(GL_FOG);}
 	no_asteroid_dust = (reflection_mode || no_stars); // FIXME: should really pass this down (5 levels of function calls)
 	draw_universe(1, 1, (no_stars ? 2 : 0)); // could clip by horizon?
 	no_asteroid_dust = 0;
-	if (fog_enabled) {glEnable(GL_FOG);}
 	if (TIMETEST) PRINT_TIME("0.2");
 	camera_pos = camera_pos_orig;
 	glPopMatrix(); // undo universe transform

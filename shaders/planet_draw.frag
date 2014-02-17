@@ -46,7 +46,7 @@ void main()
 #else
 	vec4 texel   = texture2D(tex0, tc);
 #endif
-	float atten0 = light_scale[0] * calc_light_atten(epos, 0);
+	float atten0 = light_scale[0] * calc_light_atten0(epos);
 	float atten2 = light_scale[2] * calc_light_atten(epos, 2);
 	float sscale = atten0;
 
@@ -85,13 +85,13 @@ void main()
 #endif
 
 	vec3 epos_norm = normalize(epos.xyz);
-	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
 	vec3 ambient   = (gl_LightSource[0].ambient.rgb * atten0) + (gl_LightSource[1].ambient.rgb * light_scale[1]);
 	vec3 diffuse   = (gl_LightSource[0].diffuse.rgb * max(dot(norm, ldir0), 0.0) * lscale0 * sscale) +
 	                 (gl_LightSource[2].diffuse.rgb * max(dot(norm, ldir2), 0.0) * lscale2 * atten2 * max(dot(ldir2, ldir20), 0.0));
 	vec3 color     = (texel.rgb * (ambient + diffuse));
 
 #ifndef GAS_GIANT
+	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
 	float specval  = pow(max(dot(norm, half_vect), 0.0), gl_FrontMaterial.shininess);
 	color         += ((water_val > 0.0) ? 1.0 : 0.0) * gl_FrontLightProduct[0].specular.rgb * specval * pow(texel.b, 4.0) * sscale;
 

@@ -198,6 +198,12 @@ struct planet_draw_data_t {
 
 float get_light_scale(unsigned light) {return (glIsEnabled(light) ? 1.0 : 0.0);}
 
+void set_light_scale(shader_t &s, bool use_light2) {
+
+	vector3d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1), (use_light2 ? 1.0 : 0.0));
+	s.add_uniform_vector3d("light_scale", light_scale);
+}
+
 
 class universe_shader_t : public shader_t {
 	void shared_setup(const char *texture_name="tex0") {
@@ -211,8 +217,7 @@ class universe_shader_t : public shader_t {
 		set_prefix("#define NUM_OCTAVES 8", 1); // FS
 	}
 	void set_planet_uniforms(float atmosphere, shadow_vars_t const &svars, bool use_light2) {
-		vector3d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1), (use_light2 ? 1.0 : 0.0));
-		add_uniform_vector3d("light_scale", light_scale);
+		set_light_scale(*this, use_light2);
 		add_uniform_float("atmosphere",  atmosphere);
 		add_uniform_vector3d("sun_pos",  svars.sun_pos);
 		add_uniform_float("sun_radius",  svars.sun_radius);
@@ -341,7 +346,7 @@ public:
 class ushader_group {
 	universe_shader_t planet_shader[2][2][2]; // {without/with rings}x{rocky vs. gas giant}x{without/with craters (moons)} - not all variations used
 	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
-	shader_t color_only_shader;
+	shader_t color_only_shader, planet_colored_shader;
 
 	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
 		return planet_shader[svars.ring_ro > 0.0][body.gas_giant][body.type == UTYPE_MOON];
@@ -371,6 +376,18 @@ public:
 		else {color_only_shader.enable();}
 	}
 	void disable_color_only_shader() {color_only_shader.disable();}
+	
+	void enable_planet_colored_shader(bool use_light2) { // Note: use_light2 is ignored in the shader
+		if (!planet_colored_shader.is_setup()) {
+			if (display_mode & 0x10) {planet_colored_shader.set_prefix("#define FASTER", 1);} // FS
+			planet_colored_shader.set_vert_shader("per_pixel_lighting");
+			planet_colored_shader.set_frag_shader("ads_lighting.part*+planet_draw_distant");
+			planet_colored_shader.begin_shader();
+			set_light_scale(planet_colored_shader, use_light2);
+		}
+		else {planet_colored_shader.enable();}
+	}
+	void disable_planet_colored_shader() {planet_colored_shader.disable();}
 };
 
 
@@ -893,8 +910,11 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							}
 						}
 					} // planet k
-					draw_1pix_2pix_plds(planet_plds); // FIXME SHADERS: uses fixed function pipeline
-					
+					if (!planet_plds[0].empty() || !planet_plds[1].empty()) {
+						usg.enable_planet_colored_shader(0);
+						draw_1pix_2pix_plds(planet_plds);
+						usg.disable_planet_colored_shader();
+					}
 					if (planet_asteroid_belt) { // we normally only get here once per frame, so the overhead is acceptable
 						shader_t asteroid_belt_shader;
 						planet_asteroid_belt->begin_render(asteroid_belt_shader, 0);
@@ -2277,18 +2297,19 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	}
 	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 	assert(ndiv > 0);
-	if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);}
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
 		
 	if (texture) { // texture map
+		usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);
 		assert(tid > 0);
 		(gas_giant ? bind_1d_texture(tid) : bind_2d_texture(tid));
 		WHITE.do_glColor();
 	}
 	else {
-		ocolor.do_glColor(); // FIXME SHADERS: uses fixed function pipeline
+		usg.enable_planet_colored_shader(use_light2);
+		ocolor.do_glColor();
 	}
 	if (ndiv >= N_SPHERE_DIV) {
 		if (surface == NULL || !surface->has_heightmap()) { // gas giant
@@ -2305,7 +2326,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
 		draw_sphere_vbo(all_zeros, radius, ndiv, texture); // small sphere - use vbo
 	}
-	if (texture) {usg.disable_planet_shader(*this, svars);}
+	if (texture) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
 	glPopMatrix();
 	return 1;
 }

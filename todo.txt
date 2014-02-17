@@ -7,8 +7,9 @@ Remove deprecated OpenGL calls:
 Use triangles instead of quads (Tree billboards/leaves)
 Remove non-shader rendering (see FIXME SHADERS)
 Replace GL matrix operations with something else (GLM?)
-GL_NORMALIZE, GL_LIGHTING, GL_TEXTURE_*, GL_COLOR_MATERIAL?, GL_ALPHA_TEST?
+GL_NORMALIZE, GL_LIGHTING, GL_COLOR_MATERIAL?, GL_ALPHA_TEST?
 Unify color vs. material color - set_base_color_scale(), set_color_e()
+- water_particle_manager, grass, water, universe
 
 * Berries on plants
 Tiled terrain texture coords on high slopes
