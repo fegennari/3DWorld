@@ -317,6 +317,8 @@ void reset_fog() {
 
 void set_gl_params() {
 
+	float lmodel_ambient[] = {0.0, 0.0, 0.0, 1.0};
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient); // apparently this is necessary as some shaders use this value
 	reset_fog();
 	glDepthFunc(GL_LESS);
 	set_std_blend_mode();
@@ -324,6 +326,7 @@ void set_gl_params() {
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 	glDisable(GL_COLOR_MATERIAL);
 	set_specular(0.0, 1.0);
+
 	glHint(GL_FOG_HINT, GL_NICEST); // doesn't work correctly on my laptop
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // GL_FASTEST
 	glHint(GL_LINE_SMOOTH_HINT,    GL_NICEST);
