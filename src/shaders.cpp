@@ -653,6 +653,13 @@ void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_ligh
 	if (use_fog) {add_uniform_float("fog_scale", 1.0);}
 }
 
+void shader_t::begin_untextured_lit_glcolor_shader() {
+
+	set_prefix("#define USE_LIGHT_COLORS", 0); // VS
+	begin_simple_textured_shader(0.0, 1); // lighting (not actually textured)
+	select_texture(WHITE_TEX); // untextured
+}
+
 
 // **************** INSTANCING ****************
 

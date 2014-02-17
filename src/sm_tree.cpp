@@ -559,9 +559,7 @@ void draw_small_trees(bool shadow_only) {
 	}
 	if (!tree_scenery_pld.empty()) {
 		shader_t s;
-		s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
-		s.begin_simple_textured_shader(0.0, 1); // with lighting
-		select_texture(WHITE_TEX); // untextured
+		s.begin_untextured_lit_glcolor_shader();
 		tree_scenery_pld.draw_and_clear();
 		s.end_shader();
 	}

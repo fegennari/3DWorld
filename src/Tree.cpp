@@ -1013,10 +1013,8 @@ void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pas
 	else {
 		vert_norm_comp_tc::set_vbo_arrays(0, 0);
 	}
-	//glEnableClientState(GL_INDEX_ARRAY);
 	unsigned const idata_sz(4*num_branch_quads*sizeof(branch_index_t));
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, ((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT), (void *)(low_detail ? idata_sz : 0));
-	//glDisableClientState(GL_INDEX_ARRAY);
 	branch_vbo_manager.post_render();
 }
 

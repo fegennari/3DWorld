@@ -791,7 +791,7 @@ void bubble::draw(bool set_liquid_color) const {
 		bubble_pld.add_pt(pos, (get_camera_pos() - pos), color2);
 	}
 	else {
-		set_color(color2);
+		color2.do_glColor();
 		int const ndiv(max(4, min(16, int(4.0*sqrt(point_dia)))));
 		draw_sphere_vbo(pos, radius, ndiv, 0);
 	}
@@ -928,14 +928,16 @@ template<typename T, typename ARG> void draw_objects(vector<T> const &objs, ARG 
 void draw_bubbles() {
 
 	if (bubbles.empty()) return;
+	shader_t s;
+	s.begin_untextured_lit_glcolor_shader();
 	glEnable(GL_CULL_FACE);
 	enable_blend();
-	set_color(WATER_C);
 	bool const set_liquid_color(world_mode == WMODE_GROUND);
 	draw_objects(bubbles, set_liquid_color);
 	bubble_pld.draw_and_clear();
 	disable_blend();
 	glDisable(GL_CULL_FACE);
+	s.end_shader();
 }
 
 
@@ -965,13 +967,14 @@ void water_particle_manager::draw() const {
 		verts[i] = vert_norm_color(parts[i].p, p2c.get_norm(), parts[i].c.c); // normal faces camera
 		verts[i].c[3] *= min(1.0, 2.0/p2c.mag());
 	}
-	glEnable(GL_COLOR_MATERIAL);
+	shader_t s;
+	s.begin_untextured_lit_glcolor_shader();
 	glPointSize(2.0);
 	enable_blend();
 	draw_verts(verts, GL_POINTS);
 	disable_blend();
 	glPointSize(1.0);
-	glDisable(GL_COLOR_MATERIAL);
+	s.end_shader();
 }
 
 
