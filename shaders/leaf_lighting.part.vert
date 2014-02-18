@@ -12,7 +12,7 @@ void calc_leaf_lighting()
 	
 	// Compute the globalAmbient term
 	bool shadowed = (sqrt(dot(gl_Normal, gl_Normal)) < 0.4);
-	vec4 color    = gl_Color * gl_LightModel.ambient;
+	vec4 color    = gl_FrontMaterial.emission;
 	if (enable_light0) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0);
 	if (enable_light1) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1);
 #ifndef NO_LEAF_DLIGHTS

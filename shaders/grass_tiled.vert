@@ -51,7 +51,7 @@ void main()
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(gl_NormalMatrix * normal); // eye space
-	vec4 color  = gl_Color * gl_LightModel.ambient;
+	vec4 color  = gl_FrontMaterial.emission;
 	//if (grass_weight < noise_weight) {
 	if (enable_light0) {color += add_light_comp(vertex.xyz, normal, epos, 0, diffuse_scale, ambient_scale);}
 	if (enable_light1) {color += add_light_comp(vertex.xyz, normal, epos, 1, diffuse_scale, ambient_scale);}

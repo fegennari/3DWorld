@@ -18,7 +18,7 @@ void main()
 	vec3 normal = normalize(gl_NormalMatrix * (2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0)));
 	if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse (could use faceforward())
 	
-	vec4 color = gl_Color * gl_LightModel.ambient;
+	vec4 color = gl_FrontMaterial.emission;
 	const bool shadowed = false;
 	if (enable_light0) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0);
 	if (enable_light1) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1);

@@ -25,7 +25,7 @@ void main()
 	mat3 mrot = mat3(dp, -s, 0.0,  s, dp, 0.0,  0.0, 0.0, 1.0);
 	normal    = normalize(gl_NormalMatrix * (mrot * normal)); // convert to eye space
 	
-	vec4 color  = gl_Color * gl_LightModel.ambient;
+	vec4 color  = gl_FrontMaterial.emission;
 	if (enable_light0) color += add_light_comp0(normal);
 	if (enable_light1) color += add_light_comp1(normal);
 	if (enable_light2) color += add_light_comp (normal, 2) * calc_light_atten(eye_space_pos, 2);

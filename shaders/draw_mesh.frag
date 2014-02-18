@@ -9,7 +9,7 @@ varying vec3 eye_norm;
 
 void main()
 {
-	vec4 lit_color = gl_Color * gl_LightModel.ambient;
+	vec4 lit_color = gl_FrontMaterial.emission;
 	if (enable_light0) lit_color += add_light_comp_pos_smap_light0(eye_norm, epos);
 	if (enable_light1) lit_color += add_light_comp_pos_smap_light1(eye_norm, epos);
 	lit_color = clamp(lit_color, 0.0, 1.0);
