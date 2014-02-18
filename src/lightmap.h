@@ -48,14 +48,14 @@ struct normal_cell { // size = 24, unused
 };
 
 
-struct lmcell { // size = 56
+struct lmcell { // size = 52
 
 	float sc[3], sv, gc[3], gv, lc[3], smoke; // *c[3]: RGB sky, global, local colors
-	unsigned char lflow[3], pflow[3]; // flow: x, y, z
+	unsigned char pflow[3]; // flow: x, y, z
 	//normal_cell n;
 	
 	lmcell() : sv(0.0), gv(0.0), smoke(0.0) {
-		UNROLL_3X(sc[i_] = gc[i_] = lc[i_] = 0.0; lflow[i_] = pflow[i_] = 255;)
+		UNROLL_3X(sc[i_] = gc[i_] = lc[i_] = 0.0; pflow[i_] = 255;)
 	}
 	float       *get_offset(int ltype)       {return (sc + 4*ltype);}
 	float const *get_offset(int ltype) const {return (sc + 4*ltype);}
@@ -89,7 +89,7 @@ public:
 	lmcell *get_column(int x, int y) {return vlmap[y][x];} // Note: no bounds checking
 	lmcell &get_lmcell(int x, int y, int z) {return get_column(x, y)[z];} // Note: no bounds checking
 	lmcell *get_lmcell(point const &p);
-	template<typename T> void alloc(unsigned nbins, unsigned zsize, T **nonempty_bins);
+	template<typename T> void alloc(unsigned nbins, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell);
 	void init_from(lmap_manager_t const &src);
 	void copy_data(lmap_manager_t const &src, float blend_weight=1.0);
 };

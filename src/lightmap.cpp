@@ -9,13 +9,8 @@
 #include "shaders.h"
 
 
-bool const CAMERA_CANDLE_LT  = 0;
-bool const CAMERA_FLASH_LT   = 0; // looks cool
-bool const POLY_XY_OVER_CHK  = 0;
 bool const SHOW_STAT_LIGHTS  = 0; // debugging
 bool const SHOW_DYNA_LIGHTS  = 0; // debugging
-unsigned const NUM_LT_SMOOTH = 2; // nominally 2
-unsigned const NUM_XY_PASSES = 2; // nominally 2
 unsigned const NUM_RAND_LTS  = 0;
 
 int      const START_LIGHT   = GL_LIGHT2;
@@ -24,25 +19,16 @@ unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
 
 float const CTHRESH          = 0.025;
 float const SQRT_CTHRESH     = sqrt(CTHRESH);
-float const Z_WT_SCALE       = 1.0;
-float const XY_WT_SCALE      = 1.0;
-float const LIGHT_OFFSET     = 0.02;
-float const LIGHT_SPREAD     = 0.4;
-float const PASS_WEIGHT_ATT  = 0.4;
-float const UNDER_M_RECOVER  = 0.25;
-float const Z_LT_ATTEN       = 0.99;
-float const XY_LT_ATTEN      = 0.94;
 float const DZ_VAL_SCALE     = 2.0;
 float const SHIFT_VAL        = 0.5; // hack to fix some offset problem
-float const SLT_LINE_TEST_WT = 0.5; // SLT_LINE_TEST_WT + SLT_FLOW_TEST_WT == 1.0
-float const SLT_FLOW_TEST_WT = 0.5;
 float const LT_DIR_FALLOFF   = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
 float const DARKNESS_THRESH  = 0.1;
+float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
 
 
 bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0);
-unsigned dl_tid(0), elem_tid(0), gb_tid(0), flow_tid(0);
+unsigned dl_tid(0), elem_tid(0), gb_tid(0);
 float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
@@ -64,14 +50,6 @@ extern vector<light_source> enabled_lights;
 inline bool add_cobj_ok(coll_obj const &cobj) { // skip small things like tree leaves and such
 	
 	return (cobj.fixed && !cobj.disabled() && cobj.volume > 0.0001); // cobj.type == COLL_CUBE
-}
-
-
-inline void reset_lighting(float &mesh_light, float &vals, float &vscale) {
-
-	mesh_light = min(1.0f, (mesh_light + UNDER_M_RECOVER*(128.0f/MESH_X_SIZE))); // mesh accumulates ambient light
-	vals       = mesh_light;
-	vscale     = XY_WT_SCALE;
 }
 
 
@@ -227,9 +205,7 @@ bool r_profile::add_rect(float const d[3][2], unsigned d0, unsigned d1, float al
 		if (alpha < 1.0) {
 			// *** WRITE ***
 		}
-		else {
-			avg_alpha = 1.0;
-		}
+		else {avg_alpha = 1.0;}
 		rects.resize(0);
 		add_rect_int(r);
 		filled = 1;
@@ -354,12 +330,12 @@ lmcell *lmap_manager_t::get_lmcell(point const &p) {
 }
 
 
-template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, T **nonempty_bins) {
+template<typename T> void lmap_manager_t::alloc(unsigned nbins, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell) {
 
 	assert(nonempty_bins != NULL);
 	if (vlmap == NULL) {matrix_gen_2d(vlmap);} // create column headers once
 	lm_zsize = zsize;
-	vldata_alloc.resize(max(nbins, 1U)); // make size at least 1, even if there are no bins, so we can test on emptiness
+	vldata_alloc.resize(max(nbins, 1U), init_lmcell); // make size at least 1, even if there are no bins, so we can test on emptiness
 	unsigned cur_v(0);
 
 	// initialize lightmap
@@ -382,7 +358,7 @@ void lmap_manager_t::init_from(lmap_manager_t const &src) {
 
 	//assert(!is_allocated());
 	//clear_cells(); // probably unnecessary
-	alloc(src.vldata_alloc.size(), src.lm_zsize, src.vlmap);
+	alloc(src.vldata_alloc.size(), src.lm_zsize, src.vlmap, lmcell());
 	copy_data(src);
 }
 
@@ -425,53 +401,6 @@ void lmcell::mix_lighting_with(lmcell const &lmc, float val) {
 }
 
 
-#define GET_DIST_FROM(A, B) {int const val(dv[A]*(from[B] - dvt[B]) - dv[B]*(from[A] - dvt[A])); dist += val*val;}
-
-
-// Note: assumes input ranges are valid
-// from = center, to = query point
-float get_flow_val(CELL_LOC_T const from[3], CELL_LOC_T const to[3]) { // 'from' should be the light source
-
-	CELL_LOC_T const dv[3] = {(to[0] - from[0]), (to[1] - from[1]), (to[2] - from[2])};
-	if (dv[0] == 0 && dv[1] == 0 && dv[2] == 0) return 1.0;
-	CELL_LOC_T cur[3] = {from[0], from[1], from[2]};
-	float mult_flow(1.0), max_flow(1.0), val(1.0);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		assert(from[i] >= 0 && from[i] < MESH_SIZE[i]);
-		assert(to[i]   >= 0 && to[i]   < MESH_SIZE[i]);
-	}
-	while (val > CTHRESH) {
-		unsigned di(0);
-		int dmin(-1);
-	
-		for (unsigned d = 0; d < 3; ++d) {
-			if (cur[d] == to[d]) continue;
-			int dist(0);
-			CELL_LOC_T dvt[3] = {cur[0], cur[1], cur[2]};
-			dvt[d] += ((to[d] > cur[d]) ? 1 : -1);
-			GET_DIST_FROM(0, 1);
-			GET_DIST_FROM(1, 2);
-			GET_DIST_FROM(2, 0);
-			if (dmin == -1 || dist < dmin) {dmin = dist; di = d;}
-		}
-		if (dmin < 0) break;
-		bool const positive(to[di] > cur[di]);
-		if (!positive) --cur[di]; // step backwards first then calc flow
-		lmcell const *const vlm(lmap_manager.get_column(cur[0], cur[1]));
-		
-		if (vlm) {
-			float const fval(vlm[cur[2]].lflow[di]/255.0);
-			mult_flow *= fval;
-			max_flow   = min(max_flow, fval);
-		}
-		if ( positive) ++cur[di]; // calc flow first then step forward
-		val = 0.5*(max_flow + mult_flow); // not sure which is best - max or mult, so choose their average
-	}
-	return val;
-}
-
-
 bool has_fixed_cobjs(int x, int y) {
 
 	assert(!point_outside_mesh(x, y));
@@ -482,14 +411,6 @@ bool has_fixed_cobjs(int x, int y) {
 	}
 	return 0;
 }
-
-
-void shift_lightmap(vector3d const &vd) {
-
-	// *** FIX ***
-	regen_lightmap();
-}
-
 
 void regen_lightmap() {
 
@@ -513,20 +434,15 @@ void clear_lightmap() {
 }
 
 
-void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int j,
-	bool proc_cobjs, bool calc_lval, float zstep, float z_atten, float light_off)
-{
+void calc_flow_for_xy(r_profile flow_prof[3], int i, int j, bool proc_cobjs, float zstep) {
+
 	assert(zstep > 0.0);
-	if (z_light_depth) z_light_depth[i][j] = MESH_SIZE[2];
 	lmcell *vldata(lmap_manager.get_column(j, i));
 	if (vldata == NULL) return;
 	float const bbz[2][2] = {{get_xval(j), get_xval(j+1)}, {get_yval(i), get_yval(i+1)}}; // X x Y
 	coll_cell const &cell(v_collision_matrix[i][j]);
 	unsigned const ncv((unsigned)cell.cvals.size());
-	float val(1.0), vscale(Z_WT_SCALE);
-	r_profile prof(bbz);
 	vector<pair<float, unsigned> > cobj_z;
-	bool alpha1(1);
 
 	if (proc_cobjs) {
 		for (unsigned q = 0; q < ncv; ++q) {
@@ -542,86 +458,48 @@ void calc_flow_for_xy(r_profile flow_prof[2][3], int **z_light_depth, int i, int
 					
 			if (r_cobj.overlaps(bbz) && add_cobj_ok(cobj) && cobj.clip_in_2d(bbz, cztop, 0, 1, 1)) {
 				cobj_z.push_back(make_pair(cztop, cid)); // still incorrect for coll polygon since x and y aren't clipped
-				if (cobj.cp.color.alpha < 1.0) alpha1 = 0;
 			}
 		}
 		sort(cobj_z.begin(), cobj_z.end(), std::greater<pair<float, unsigned> >()); // max to min z
 	}
 	unsigned const ncv2((unsigned)cobj_z.size());
-	unsigned c(0);
 
 	for (int v = MESH_SIZE[2]-1; v >= 0; --v) { // top to bottom
-		float const old_val(val);
 		float zb(czmin0 + v*zstep), zt(zb + zstep); // cell Z bounds
-		float flow_val[2][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
 				
-		if (Z_WT_SCALE == 0.0 || zt < mesh_height[i][j]) { // under mesh
-			val = 0.0;
+		if (zt < mesh_height[i][j]) { // under mesh
+			UNROLL_3X(vldata[v].pflow[i_] = 0;) // all zeros
 		}
 		else if (!proc_cobjs) {
-			for (unsigned d = 0; d < 3; ++d) {
-				flow_val[0][d] = flow_val[1][d] = 1.0;
-			}
-			val = 1.0;
+			UNROLL_3X(vldata[v].pflow[i_] = 255;) // all ones
 		}
-		else {
-			if (val > 0.0) {
-				for (; val > 0.0 && c < ncv2 && cobj_z[c].first >= zb; ++c) {
-					coll_obj const &cobj(coll_objects[cobj_z[c].second]);
-
-					if (cobj.cp.color.alpha > MIN_SHADOW_ALPHA && cobj_z[c].first < zt) { // test for ztop in current voxel //(v == MESH_SIZE[2]-1) ||
-						prof.add_rect(cobj.d, 0, 1, cobj.cp.color.alpha);
-						if (prof.is_filled()) val = 0.0;
-					}
-				}
-				float const new_val(prof.den_inv());
-				assert(new_val > -TOLER && new_val <= (val + TOLER));
-						
-				if (new_val == 1.0) {
-					if (z_light_depth) z_light_depth[i][j] = v;
-					vscale = Z_WT_SCALE;
-				}
-				val = new_val;
-			} // if val > 0.0
+		else { // above mesh case
 			float const bb[3][2]  = {{bbz[0][0], bbz[0][1]}, {bbz[1][0], bbz[1][1]}, {zb, zt}};
 			float const bbx[2][2] = {{bb[1][0], bb[1][1]}, {zb, zt}}; // YxZ
 			float const bby[2][2] = {{zb, zt}, {bb[0][0], bb[0][1]}}; // ZxX
-
-			for (unsigned d = 0; d < unsigned(1 + !alpha1); ++d) {
-				flow_prof[d][0].reset_bbox(bbx);
-				flow_prof[d][1].reset_bbox(bby);
-				flow_prof[d][2].reset_bbox(bbz);
-			}
+			flow_prof[0].reset_bbox(bbx);
+			flow_prof[1].reset_bbox(bby);
+			flow_prof[2].reset_bbox(bbz);
+			
 			for (unsigned c2 = 0; c2 < ncv2; ++c2) { // could make this more efficient
 				coll_obj &cobj(coll_objects[cobj_z[c2].second]);
 				if (cobj.d[0][0] >= bb[0][1] || cobj.d[0][1]     <= bb[0][0]) continue; // no intersection
 				if (cobj.d[1][0] >= bb[1][1] || cobj.d[1][1]     <= bb[1][0]) continue;
 				if (cobj.d[2][0] >= bb[2][1] || cobj_z[c2].first <= bb[2][0]) continue;
-				float const cztop(cobj.d[2][1]), alpha(cobj.cp.color.alpha);
+				float const cztop(cobj.d[2][1]);
 				cobj.d[2][1] = cobj_z[c2].first;
 						
 				for (unsigned d = 0; d < 3; ++d) { // critical path
-					if (alpha > MIN_SHADOW_ALPHA) flow_prof[0][d].add_rect(cobj.d, (d+1)%3, (d+2)%3, alpha);
-					if (!alpha1)                  flow_prof[1][d].add_rect(cobj.d, (d+1)%3, (d+2)%3, 1.0);
+					flow_prof[d].add_rect(cobj.d, (d+1)%3, (d+2)%3, 1.0);
 				}
-				cobj.d[2][1] = cztop;
+				cobj.d[2][1] = cztop; // restore original value
 			} // for c2
-			for (unsigned d = 0; d < unsigned(1 + !alpha1); ++d) {
-				for (unsigned e = 0; e < 3; ++e) {
-					flow_val[d][e] = flow_prof[d][e].den_inv();
-					assert(flow_val[d][e] > -TOLER);
-				}
+			for (unsigned e = 0; e < 3; ++e) {
+				float const fv(flow_prof[e].den_inv());
+				assert(fv > -TOLER);
+				vldata[v].pflow[e] = (unsigned char)(255.5*CLIP_TO_01(fv));
 			}
 		} // if above mesh
-		for (unsigned d = 0; d < 3; ++d) {
-			vldata[v].lflow[d] = (unsigned char)(255.5*CLIP_TO_01(flow_val[0][d]));
-			vldata[v].pflow[d] = (unsigned char)(255.5*CLIP_TO_01(flow_val[!alpha1][d]));
-		}
-		if (calc_lval) {
-			vldata[v].sv = 0.5*vscale*(val + old_val) + light_off; // what about colors?
-			vscale *= z_atten;
-			UNROLL_3X(vldata[v].sc[i_] = 1.0;)
-		}
 	} // for v
 }
 
@@ -644,7 +522,7 @@ void build_lightmap(bool verbose) {
 	}
 
 	// calculate and allocate some data we need even if the lmap is not used
-	assert(DZ_VAL > 0.0 && Z_LT_ATTEN > 0.0 && Z_LT_ATTEN <= 1.0 && XY_LT_ATTEN > 0.0 && XY_LT_ATTEN <= 1.0);
+	assert(DZ_VAL > 0.0);
 	DZ_VAL2       = DZ_VAL/DZ_VAL_SCALE;
 	DZ_VAL_INV2   = 1.0/DZ_VAL2;
 	SHIFT_DXYZ[0] = SHIFT_DX = SHIFT_VAL*DX_VAL;
@@ -665,7 +543,7 @@ void build_lightmap(bool verbose) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			bool const fixed(!coll_objects.empty() && has_fixed_cobjs(j, i));
 			need_lmcell[i][j] = (use_dense_voxels || fixed);
-			has_fixed        |= fixed;
+			has_fixed        |= fixed; // only used in an assertion below
 			if (need_lmcell[i][j]) ++nonempty;
 		}
 	}
@@ -702,126 +580,30 @@ void build_lightmap(bool verbose) {
 	float const zstep(czspan/zsize), scene_scale(MESH_X_SIZE/128.0);
 	if (verbose) {cout << "Lightmap zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;}
 	assert(zstep > 0.0);
-	float const z_atten(1.0 - (1.0 - Z_LT_ATTEN)/scene_scale), xy_atten(1.0 - (1.0 - XY_LT_ATTEN)/scene_scale);
-	lmap_manager.alloc(nbins, zsize, need_lmcell);
-	assert(ldynamic && lmap_manager.is_allocated());
-	using_lightmap = (nonempty > 0);
-	lm_alloc       = 1;
-	int **z_light_depth = NULL;
-	matrix_gen_2d(z_light_depth);
 	bool raytrace_lights[3];
 	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
 	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL] || create_voxel_landscape);
-	float const light_off(has_indir_lighting ? 0.0f : LIGHT_OFFSET);
+	lmcell init_lmcell;
+
+	if (!has_indir_lighting) { // set a default value that isn't all black
+		init_lmcell.sv = init_lmcell.gv = DEF_SKY_GLOBAL_LT;
+		UNROLL_3X(init_lmcell.sc[i_] = init_lmcell.gc[i_] = 1.0;)
+	}
+	lmap_manager.alloc(nbins, zsize, need_lmcell, init_lmcell);
+	assert(ldynamic && lmap_manager.is_allocated());
+	using_lightmap = (nonempty > 0);
+	lm_alloc       = 1;
 
 	// process vertical (Z) light projections
-	r_profile flow_prof[2][3]; // {light, particle} x {x, y, z}
+	r_profile flow_prof[3]; // particle {x, y, z}
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			bool const proc_cobjs(need_lmcell[i][j] & 1);
-			calc_flow_for_xy(flow_prof, z_light_depth, i, j, proc_cobjs, !has_indir_lighting, zstep, z_atten, light_off);
-		} // for j
-	} // for i
+			calc_flow_for_xy(flow_prof, i, j, proc_cobjs, zstep);
+		}
+	}
 	int const bnds[2][2] = {{0, MESH_X_SIZE-1}, {0, MESH_Y_SIZE-1}};
-	float const fbnds[2] = {(X_SCENE_SIZE - TOLER), (Y_SCENE_SIZE - TOLER)};
-	int counter(0);
-	float pass_weight(1.0);
-
-	// process lateral (X and Y) light projections
-	for (unsigned pass = 0; pass < NUM_XY_PASSES; ++pass) {
-		if (XY_WT_SCALE == 0.0 || nbins == 0 || dz == 0.0 || has_indir_lighting) continue;
-
-		for (unsigned dim = 0; dim < 2; ++dim) { // x/y
-			for (unsigned dir = 0; dir < 2; ++dir) { // +/-
-				for (int s = bnds[dim][0]; s < bnds[dim][1]; ++s) { // outer iteration (direction doesn't matter)
-					float bb[2][2] = {{czmin0, (czmax + lm_dz_adj)}, {0, 0}}; // {z, x/y}
-
-					for (unsigned d = 0; d < 2; ++d) {
-						bb[1][d] = get_dim_val((s+d), dim);
-					}
-					r_profile prof(bb);
-					vector<float> vals(zsize, 1.0); // start at full light
-					vector<float> vscale(zsize, XY_WT_SCALE*pass_weight);
-					vector<float> mesh_light(zsize, 1.0);
-					float const tmax(fbnds[!dim]);
-					int const dt(dir ? -1 : 1);
-					++counter;
-
-					for (int t = bnds[!dim][dir]; t != (bnds[!dim][!dir] + dt); t += dt) { // inner iteration
-						int i[2] = {(dim ? t : s), (dim ? s : t)}; // dim = 0 => {s, t} = {x, y}
-						assert(!point_outside_mesh(i[0], i[1]));
-						coll_cell const &cell(v_collision_matrix[i[1]][i[0]]);
-						unsigned const ncv((unsigned)cell.cvals.size());
-						lmcell *vlm(lmap_manager.get_column(i[0], i[1]));
-
-						if (vlm == NULL) { // no cobjs
-							for (int v = zsize-1; v >= 0; --v) {
-								reset_lighting(mesh_light[v], vals[v], vscale[v]);
-							}
-							prof.clear();
-							continue;
-						}
-						if (ncv > 0) {
-							float t_bnds[2];
-							
-							for (unsigned d = 0; d < 2; ++d) {
-								t_bnds[d] = get_dim_val((t+d), !dim); // bounds of current t row
-							}
-							for (unsigned c = 0; c < ncv; ++c) { // skip entire column somehow?
-								coll_obj &cobj(coll_objects[cell.cvals[c]]);
-								if (cobj.status != COLL_STATIC) continue;
-								if (cobj.type == COLL_CUBE && cobj.counter == counter) continue; // already processed
-								if (cobj.d[2][1] < zbottom || cobj.cp.color.alpha <= MIN_SHADOW_ALPHA || !add_cobj_ok(cobj)) continue;
-								float xyval(cobj.d[!dim][dir]);
-								//if (!cobj.clip_in_2d(bb, xyval, 2, dim, dir)) continue;
-								float const tv(min(tmax, max(-tmax, xyval))); // clip to scene
-
-								if ((tv < t_bnds[1] && tv >= t_bnds[0]) || (POLY_XY_OVER_CHK && cobj.type == COLL_POLYGON &&
-									cobj.d[!dim][0] < t_bnds[1] && cobj.d[!dim][1] >= t_bnds[0]))
-								{ // test for intersection or polygon bbox overlap with current column
-									cobj.counter = counter;
-									prof.add_rect(cobj.d, 2, dim, cobj.cp.color.alpha); // somewhat critical path
-									if (prof.is_filled()) break;
-								}
-							} // for c
-						} // if ncv > 0
-						float const m_height(mesh_height[i[1]][i[0]]);
-						int const zl_depth(z_light_depth[i[1]][i[0]]);
-
-						if (zl_depth < int(zsize)) {
-							float const clipval[2] = {(czmin0 + zl_depth*zstep), (czmin0 + zsize*zstep)};
-							prof.clear_within(clipval);
-						}
-						for (int v = zsize-1; v >= 0; --v) {
-							float const zb(czmin0 + v*zstep), zt(zb + zstep); // cell Z bounds
-							float old_val(vals[v]);
-
-							if (zl_depth <= v) { // lit from above
-								reset_lighting(mesh_light[v], vals[v], vscale[v]);
-								old_val = vals[v];
-							}
-							else if (vals[v] > 0.0) { // not already zero
-								float const clipval[2] = {zb, zt};
-								float const new_val(prof.clipped_den_inv(clipval));
-								assert(new_val > -TOLER);
-								vals[v] = min(old_val, new_val); // can't increase due to density
-							}
-							if (old_val > 0.0) {
-								if (zt < m_height) { // under mesh
-									mesh_light[v] = 0.0; // reset mesh light
-									vals[v]       = 0.0; // can't get lit if under mesh
-								}
-								vlm[v].sv = min(1.0f, (vlm[v].sv + vscale[v]*0.5f*(vals[v] + old_val))); // merge XY and Z values
-							}
-							vscale[v] *= xy_atten;
-						} // for v
-					} // for t
-				} // for s
-			} // for dir
-		} // for dim
-		pass_weight *= PASS_WEIGHT_ATT;
-	} // for pass
 
 	// add in static light sources
 	if (!raytrace_lights[LIGHTING_LOCAL]) {
@@ -839,7 +621,7 @@ void build_lightmap(bool verbose) {
 				cent[i] = max(0, min(MESH_SIZE[i]-1, get_dim_pos(lpos[i], i))); // clamp to mesh bounds
 			}
 			ls.get_bounds(bounds, bnds, SQRT_CTHRESH);
-			if (SLT_LINE_TEST_WT > 0.0) {check_coll_line(lpos, lpos, cobj, -1, 1, 2, 1);} // check cobj containment and ignore that shape (ignore voxels)
+			check_coll_line(lpos, lpos, cobj, -1, 1, 2, 1); // check cobj containment and ignore that shape (ignore voxels)
 
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
@@ -856,18 +638,9 @@ void build_lightmap(bool verbose) {
 							cscale *= ls.get_dir_intensity(lpos - p);
 							if (cscale < CTHRESH) continue;
 						}
-						float flow[2] = {1.0, 1.0};
-
-						if (SLT_LINE_TEST_WT > 0.0) { // slow
-							if ((last_cobj >= 0 && coll_objects[last_cobj].line_intersect(lpos, p)) ||
-								check_coll_line(p, lpos, last_cobj, cobj, 1, 3)) {flow[0] = 0.0;} // Note: if we add line light souce support, we need to get an updated lpos
-						}
-						if (SLT_FLOW_TEST_WT > 0.0) {
-							CELL_LOC_T const cur_loc[3] = {x, y, z};
-							flow[1] = get_flow_val(cent, cur_loc); // determine flow value to this lmcell
-						}
-						cscale *= SLT_LINE_TEST_WT*flow[0] + SLT_FLOW_TEST_WT*flow[1];
-						if (cscale < CTHRESH) continue;
+						point const lpos_ext(lpos + HALF_DXY*(p - lpos).get_norm()); // extend away from light to account for light fixtures
+						if ((last_cobj >= 0 && coll_objects[last_cobj].line_intersect(lpos_ext, p)) ||
+							check_coll_line(p, lpos_ext, last_cobj, cobj, 1, 3)) {continue;}
 						lmcell &lmc(lmap_manager.get_lmcell(x, y, z));
 						UNROLL_3X(lmc.lc[i_] = min(1.0f, (lmc.lc[i_] + cscale*lcolor[i_]));) // what about diffuse/normals?
 					} // for z
@@ -875,47 +648,6 @@ void build_lightmap(bool verbose) {
 			} // for y
 		} // for i
 	}
-
-	// smoothing passes
-	if (LIGHT_SPREAD > 0.0 && (!raytrace_lights[LIGHTING_SKY] || !raytrace_lights[LIGHTING_LOCAL])) {
-		float const lscales[4] = {1.0/SQRT3, 1.0/SQRT2, 1.0, 0.0};
-
-		for (unsigned n = 0; n < NUM_LT_SMOOTH; ++n) { // low pass filter light, bleed to adjacent cells
-			for (int i = 0; i < MESH_Y_SIZE; ++i) {
-				for (int j = 0; j < MESH_X_SIZE; ++j) {
-					lmcell *vlm(lmap_manager.get_column(j, i));
-					if (vlm == NULL) continue;
-
-					for (int v = 0; v < (int)zsize; ++v) {
-						float vlmv(vlm[v].sv);
-						float const *const color(vlm[v].lc);
-						if (vlmv == 0.0 && color[0] == 0.0 && color[1] == 0.0 && color[2] == 0.0) continue;
-						vlmv *= LIGHT_SPREAD*scene_scale;
-
-						for (int k = max(0, i-1); k < min(MESH_Y_SIZE-1, i+1); ++k) {
-							for (int l = max(0, j-1); l < min(MESH_X_SIZE-1, j+1); ++l) {
-								if (lmap_manager.get_column(l, k) == NULL) continue;
-
-								for (int m = max(0, v-1); m < min((int)zsize-1, v+1); ++m) {
-									unsigned const nsame((k == i) + (l == j) + (m == v));
-									if (nsame != 2) continue; // for now, to make flow calculations simpler
-									unsigned const dim((k!=i) ? 1 : ((l!=j) ? 0 : 2)); // x, y, z
-									unsigned const ix((l>j)?(j+1):j), iy((k>i)?(i+1):i), iz((m>v)?(v+1):v);
-									bool const oob((int)ix >= MESH_X_SIZE || (int)iy >= MESH_Y_SIZE || iz >= zsize); // out of bounds
-									float flow(oob ? 1.0 : lmap_manager.get_lmcell(ix, iy, iz).lflow[dim]/255.0);
-									if (flow <= 0.0) continue;
-									lmcell &lm(lmap_manager.get_lmcell(l, k, m));
-									flow  *= lscales[nsame];
-									lm.sv += flow*vlmv;
-									UNROLL_3X(lm.lc[i_] = min(1.0f, (lm.lc[i_] + flow*color[i_]));) // assumes color.alpha is always either 0.0 or 1.0
-								} // for m
-							} // for l
-						} // for k
-					} // for v
-				} // for j
-			} // for i
-		} // for n
-	} // if LIGHT_SPREAD
 	if (verbose) PRINT_TIME(" Lighting Setup + XYZ Passes");
 
 	if (nbins > 0) {
@@ -930,7 +662,6 @@ void build_lightmap(bool verbose) {
 		}
 	}
 	reset_cobj_counters();
-	matrix_delete_2d(z_light_depth);
 	matrix_delete_2d(need_lmcell);
 	PRINT_TIME(" Lighting Total");
 }
@@ -942,14 +673,14 @@ void update_flow_for_voxels(cube_t const &cube) {
 	int const cx1(max(0, get_xpos(cube.d[0][0]))), cx2(min(MESH_X_SIZE-1, get_xpos(cube.d[0][1])));
 	int const cy1(max(0, get_ypos(cube.d[1][0]))), cy2(min(MESH_Y_SIZE-1, get_ypos(cube.d[1][1])));
 	float const zstep(calc_czspan()/MESH_SIZE[2]);
-	r_profile flow_prof[2][3];
+	r_profile flow_prof[3];
 
 	for (int y = cy1; y <= cy2; ++y) {
 		for (int x = cx1; x <= cx2; ++x) {
 			assert(!point_outside_mesh(x, y));
 			bool const fixed(!coll_objects.empty() && has_fixed_cobjs(x, y));
 			bool const proc_cobjs(use_dense_voxels || fixed);
-			calc_flow_for_xy(flow_prof, NULL, y, x, proc_cobjs, 0, zstep, 1.0, 0.0);
+			calc_flow_for_xy(flow_prof, y, x, proc_cobjs, zstep);
 		} // for x
 	} //for y
 }
@@ -1084,11 +815,10 @@ void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *cons
 
 void setup_dlight_textures(shader_t &s) {
 
-	assert(dl_tid > 0 && elem_tid > 0 && gb_tid > 0 ); // && flow_tid >= 0
+	assert(dl_tid > 0 && elem_tid > 0 && gb_tid > 0 );
 	set_one_texture(s, dl_tid,   2, "dlight_tex");
 	set_one_texture(s, elem_tid, 3, "dlelm_tex");
 	set_one_texture(s, gb_tid,   4, "dlgb_tex");
-	//set_one_texture(p, flow_tid, 5, "flow_tex");
 	set_active_texture(0);
 }
 
@@ -1238,8 +968,6 @@ void add_dynamic_lights_ground() {
 	if (!animate2) return;
 	assert(ldynamic);
 	clear_dynamic_lights();
-	if (CAMERA_CANDLE_LT) add_camera_candlelight();
-	if (CAMERA_FLASH_LT)  add_camera_flashlight();
 	dl_sources.swap(dl_sources2);
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
@@ -1327,18 +1055,6 @@ void light_source::pack_to_floatv(float *data) const {
 		UNROLL_3X(*(data++) = 0.5*(1.0 + dir  [i_]);) // map [-1,1] to [0,1]
 		*(data++) = bwidth; // [0,1]
 	}
-}
-
-
-float add_specular(point const &p, vector3d const &ldir, vector3d const &norm, float const *const spec) {
-
-	if (!spec || spec[0] == 0.0) return 0.0;
-	vector3d const c2p((get_camera_pos(), p).get_norm() + ldir.get_norm());
-	float dp(dot_product(norm, c2p));
-	if (dp <= 0.0) return 0.0;
-	// Note: we assume exponent (spec[1]) is high, so we can skip if dp is small enough
-	dp *= InvSqrt(c2p.mag_sq());
-	return ((dp > 0.5) ? spec[0]*pow(dp, spec[1]) : 0.0);
 }
 
 
@@ -1469,9 +1185,7 @@ unsigned enable_dynamic_lights(point const &center, float radius) { // used for 
 
 void disable_dynamic_lights(unsigned num_dlights) {
 
-	for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {
-		glDisable(i);
-	}
+	for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {glDisable(i);}
 }
 
 
