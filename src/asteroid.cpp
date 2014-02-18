@@ -101,7 +101,6 @@ public:
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		unsigned const num_lights(min(8U, num_exp_lights+2U));
 		shader_t &s(cached_proc_shaders[num_lights]);
-		//if (ddata.shader->is_setup()) {ddata.shader->disable();} // unnecessary
 		
 		if (s.is_setup()) { // already setup
 			s.enable();
@@ -337,7 +336,6 @@ public:
 		unsigned const num_lights(min(8U, num_exp_lights+2U));
 		unsigned const lod_level(min(16U/ddata.ndiv, NUM_VOX_AST_LODS-1));
 		shader_t &s(cached_voxel_shaders[num_lights]);
-		//if (ddata.shader->is_setup()) {ddata.shader->disable();} // unnecessary
 		
 		if (s.is_setup()) { // already setup
 			s.enable();

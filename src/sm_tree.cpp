@@ -555,7 +555,7 @@ void draw_small_trees(bool shadow_only) {
 		//setup_smoke_shaders(s, 0.75, 0, 0, 0, v, v, 0, 0, v); // dynamic lights, but no smoke (slow, but looks better)
 		s.begin_simple_textured_shader(0.75, !shadow_only); // with lighting, unless shadow_only
 		small_trees.draw_non_pine_leaves(shadow_only);
-		if (s.is_setup()) s.end_shader();
+		s.end_shader();
 	}
 	if (!tree_scenery_pld.empty()) {
 		shader_t s;

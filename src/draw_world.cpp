@@ -378,7 +378,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	//if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
 	shader_t s;
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, 0, burn_offset);
-	if (!s.is_setup()) has_lt_atten = 0; // shaders disabled
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
 	vector<vert_norm> poly_verts;

@@ -366,7 +366,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t 
 {
 	assert(draw_branches != draw_leaves); // must enable only one
 	BLACK.do_glColor();
-	int const shader_loc((draw_branches && s.is_setup()) ? s.get_uniform_loc("world_space_offset") : -1);
+	int const shader_loc(draw_branches ? s.get_uniform_loc("world_space_offset") : -1);
 	tree_data_t::pre_draw(draw_branches, shadow_only);
 
 	for (iterator i = begin(); i != end(); ++i) {
@@ -1023,7 +1023,7 @@ void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d cons
 
 	select_texture(tree_types[type].bark_tex);
 	set_color(bcolor);
-	if (s.is_setup()) {s.set_uniform_vector3d(shader_loc, (tree_center + xlate));}
+	s.set_uniform_vector3d(shader_loc, (tree_center + xlate));
 	glPushMatrix();
 	translate_to(tree_center + xlate);
 	tdata().draw_branches(size_scale, reflection_pass);
@@ -1089,7 +1089,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
 	unsigned num_dlights(0);
-	bool const enable_dlights(has_dl_sources && world_mode == WMODE_GROUND && s.is_setup());
+	bool const enable_dlights(has_dl_sources && world_mode == WMODE_GROUND);
 
 	if (enable_dlights) {
 		num_dlights = enable_dynamic_lights((sphere_center() + xlate), td.sphere_radius);

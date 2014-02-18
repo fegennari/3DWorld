@@ -45,7 +45,6 @@ public:
 	}
 	void set_tess_control_shader(string const &tcs_name_) {shader_names[3] = tcs_name_;}
 	void set_tess_eval_shader   (string const &tes_name_) {shader_names[4] = tes_name_;}
-	void init_from_active_shader(shader_t const &s) {assert(s.is_setup()); program = s.program;}
 
 	bool is_setup() const {return (program > 0);}
 	void enable () const {assert(program); glUseProgram(program);}

@@ -209,7 +209,7 @@ void uobj_draw_data::setup_exp_scale() const {
 
 void uobj_draw_data::setup_exp_texture() const {
 
-	if (shader && shader->is_setup() && t_exp > 0.0) { // drops from 1.0 to 0.0 (burn offset -0.75 to 0.5)
+	if (shader && t_exp > 0.0) { // drops from 1.0 to 0.0 (burn offset -0.75 to 0.5)
 		shader->add_uniform_float("burn_offset", (-0.75*t_exp + 0.5*(1.0 - t_exp)));
 	}
 }
@@ -217,9 +217,7 @@ void uobj_draw_data::setup_exp_texture() const {
 
 void uobj_draw_data::end_exp_texture() const {
 
-	if (shader && shader->is_setup() && t_exp > 0.0) {
-		shader->add_uniform_float("burn_offset", -1.0);
-	}
+	if (shader && t_exp > 0.0) {shader->add_uniform_float("burn_offset", -1.0);}
 }
 
 
@@ -1167,7 +1165,7 @@ void uobj_draw_data::draw_starbase() const {
 	assert(cobjs.size() == 8); // should make this more flexible later
 	setup_exp_scale();
 	set_ship_texture(SPACESHIP1_TEX);
-	bool const use_lum_scale(powered && shader && shader->is_setup());
+	bool const use_lum_scale(powered && shader);
 	if (use_lum_scale) {shader->add_uniform_float("lum_scale", 2.0); shader->add_uniform_float("lum_offset", -1.0);}
 
 	// draw main body (textured)
