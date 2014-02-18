@@ -262,7 +262,6 @@ void enable_blend() {
 	glEnable(GL_BLEND);
 	glEnable(GL_POINT_SMOOTH);
 	//glEnable(GL_LINE_SMOOTH);
-	//glEnable(GL_POLYGON_SMOOTH);
 }
 
 
@@ -271,7 +270,6 @@ void disable_blend() {
 	glDisable(GL_BLEND);
 	glDisable(GL_POINT_SMOOTH);
 	//glDisable(GL_LINE_SMOOTH);
-	//glDisable(GL_POLYGON_SMOOTH);
 }
 
 
@@ -322,12 +320,6 @@ void set_gl_params() {
 	set_std_blend_mode();
 	glEnable(GL_DEPTH_TEST);
 	set_specular(0.0, 1.0);
-
-	glHint(GL_FOG_HINT, GL_NICEST); // doesn't work correctly on my laptop
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // GL_FASTEST
-	glHint(GL_LINE_SMOOTH_HINT,    GL_NICEST);
-	glHint(GL_POINT_SMOOTH_HINT,   GL_NICEST);
-	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 }
 
 

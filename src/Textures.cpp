@@ -441,7 +441,6 @@ void texture_t::do_gl_init() {
 	//RESET_TIME;
 	assert(is_allocated() && width > 0 && height > 0);
 	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap, 0, 0, 0, anisotropy);
-	//if (use_mipmaps == 1 || use_mipmaps == 2) glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
 	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
 	if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
 	if (use_mipmaps == 3) create_custom_mipmaps();
