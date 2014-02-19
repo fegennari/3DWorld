@@ -329,9 +329,10 @@ void set_emissive_color_only(colorRGBA const &color) {
 }
 
 
+// Note: shader is passed all the way into here just to set the min_alpha for cblade
 void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid, int wmode, int fframe, int p_loaded,
 				 int ammo, int rot_counter, unsigned delay, int shooter, int sb_tex, float alpha, float dpos,
-				 float fire_val, float scale, bool draw_pass)
+				 float fire_val, float scale, bool draw_pass, shader_t &shader)
 {
 	bool const just_fired(abs(fframe - (int)delay) <= 1), is_camera(shooter == CAMERA_ID);
 	
@@ -425,8 +426,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				if (fframe > 0) glRotatef((540.0*fframe)/delay, 0.0, 1.0, 0.0);
 				glRotatef(angle, 0.0, 0.0, 1.0);
 				set_color_alpha(WHITE, alpha);
-				glEnable(GL_ALPHA_TEST);
-				glAlphaFunc(GL_GREATER, 0.95*alpha);
+				shader.add_uniform_float("min_alpha", 0.95*alpha);
 				set_specular(0.9, 90.0);
 				float dz((ammo > 1) ? -0.025*radius*ammo : 0.0);
 				plus_z.do_glNormal();
@@ -437,7 +437,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					dz += 0.05*radius;
 				}
 				set_specular(0.0, 0.0);
-				glDisable(GL_ALPHA_TEST);
+				shader.add_uniform_float("min_alpha", 0.01);
 			}
 			break;
 
@@ -639,13 +639,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_emissive_color_only(ORANGE);
 				glTranslatef(0.0, 0.0, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
-				glEnable(GL_ALPHA_TEST);
-				glAlphaFunc(GL_GREATER, 0.001);
 				set_additive_blend_mode();
 				select_texture(FLARE1_TEX);
 				set_std_blend_mode();
 				draw_tquad(size, size, 0.0);
-				glDisable(GL_ALPHA_TEST);
 				set_color_e(BLACK);
 			}
 			break;
@@ -655,8 +652,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				radius = 0.0042;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
 				set_emissive_color_only(ORANGE);
-				glEnable(GL_ALPHA_TEST);
-				glAlphaFunc(GL_GREATER, 0.001);
 				set_additive_blend_mode();
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
@@ -672,7 +667,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				}
 				set_color_e(BLACK);
 				set_std_blend_mode();
-				glDisable(GL_ALPHA_TEST);
 			}
 			break;
 		}
@@ -690,9 +684,9 @@ sphere_t get_weapon_bsphere(int weapon) {
 }
 
 
-void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale) {
+void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader) {
 
-	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, NO_SOURCE, 0, 1.0, 0.0, 0.0, scale, 0);
+	draw_weapon(pos, dir, radius, cid, wid, 0, 0, 0, 1, 0, 2, NO_SOURCE, 0, 1.0, 0.0, 0.0, scale, 0, shader);
 }
 
 
@@ -715,7 +709,7 @@ bool weap_has_transparent(int shooter) {
 }
 
 
-void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
+void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader) {
 
 	assert(shooter == CAMERA_ID || shooter < num_smileys);
 	assert(sstates != NULL);
@@ -752,16 +746,16 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass) {
 	point const pos((draw_pass == 0 && wid == W_BLADE) ? sstate.cb_pos : get_sstate_draw_pos(shooter));
 	select_texture(WHITE_TEX); // always textured
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
-		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass);
+		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass, shader);
 	if (shooter == CAMERA_ID) fired = 0;
 	if (cull_face) glDisable(GL_CULL_FACE);
 }
 
 
-void draw_weapon_in_hand(int shooter) {
+void draw_weapon_in_hand(int shooter, shader_t &shader) {
 
 	if (!game_mode) return;
-	draw_weapon_in_hand_real(shooter, 0);
+	draw_weapon_in_hand_real(shooter, 0, shader);
 	scheduled_weapons.insert(shooter); // should not be duplicates, but just in case draw_scheduled_weapons() isn't called
 }
 
@@ -770,10 +764,10 @@ void draw_scheduled_weapons() {
 	
 	if (scheduled_weapons.empty()) return;
 	shader_t s;
-	setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1);
+	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1);
 
 	for (set<int>::const_iterator i = scheduled_weapons.begin(); i != scheduled_weapons.end(); ++i) {
-		draw_weapon_in_hand_real(*i, 1);
+		draw_weapon_in_hand_real(*i, 1, s);
 	}
 	s.end_shader();
 	scheduled_weapons.clear();

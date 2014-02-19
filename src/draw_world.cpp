@@ -118,8 +118,8 @@ void draw_camera_weapon(bool want_has_trans) {
 
 	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
 	shader_t s;
-	setup_smoke_shaders(s, 0.0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1);
-	draw_weapon_in_hand(-1);
+	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1);
+	draw_weapon_in_hand(-1, s);
 	s.end_shader();
 }
 

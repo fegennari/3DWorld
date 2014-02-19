@@ -2685,6 +2685,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 				translate_to(dir*(z_end - sid*z_step));
 			}
 			if (has_hit_dir) { // rotate so that shields appear at hit direction
+				//if (ddata.shader) {ddata.shader->add_uniform_float("min_alpha", 0.01);}
 				glEnable(GL_ALPHA_TEST);
 				glAlphaFunc(GL_GREATER, 0.01);
 				select_texture(SBLUR_TEX);

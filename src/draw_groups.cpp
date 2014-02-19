@@ -19,7 +19,6 @@ bool const SHOW_DRAW_TIME    = 0;
 float const NDIV_SCALE       = 1.6;
 
 
-
 // Global Variables
 quad_batch_draw puddle_qbd;
 pt_line_drawer obj_pld;
@@ -39,19 +38,17 @@ extern player_state *sstates;
 extern int coll_id[];
 
 
-
 void draw_group(obj_group &objg, shader_t &s);
 void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
 					  bool do_texture, int is_chunky=0);
-void draw_weapon2(dwobject const &obj, float radius);
-void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j);
+void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader);
 void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type,
 					  int use_orient, int ndiv, float scale=1.0);
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
-				 float health, int id, mesh2d const *const mesh);
+				 float health, int id, mesh2d const *const mesh, shader_t &shader);
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color);
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix);
-void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv);
+void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, shader_t &shader);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo);
@@ -272,8 +269,9 @@ struct wap_obj {
 };
 
 
-void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float radius, const colorRGBA &color, int ndiv, int j, bool in_ammo) {
-
+void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float radius,
+	const colorRGBA &color, int ndiv, int j, bool in_ammo, shader_t &shader)
+{
 	dwobject const &obj(objg.get_obj(j));
 	point const &pos(obj.pos);
 	bool const cull_face(get_cull_face(type, color));
@@ -283,7 +281,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	case SMILEY:
 		if (!(obj.flags & CAMERA_VIEW)) {
 			draw_smiley(pos, obj.orientation, radius, ndiv, obj.time, obj.health, j,
-				(in_ammo ? NULL : &objg.get_td()->get_mesh(j)));
+				(in_ammo ? NULL : &objg.get_td()->get_mesh(j)), shader);
 		}
 		break;
 	case SFPART:
@@ -293,7 +291,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), ndiv);
 		break;
 	case SKULL:
-		draw_skull(pos, obj.orientation, radius, obj.status, ndiv);
+		draw_skull(pos, obj.orientation, radius, obj.status, ndiv, shader);
 		break;
 	case ROCKET:
 		draw_rocket(pos, obj.init_dir, radius, obj.type, ndiv, obj.time);
@@ -501,15 +499,19 @@ void draw_group(obj_group &objg, shader_t &s) {
 			++num_drawn;
 			float const pt_size(cd_scale/distance_to_camera(pos));
 			int const ndiv(min(N_SPHERE_DIV, max(3, int(min(pt_size, 3.0f*sqrt(pt_size))))));
-			draw_obj(objg, wap_vis_objs, type, radius, color, ndiv, j, 0);
+			draw_obj(objg, wap_vis_objs, type, radius, color, ndiv, j, 0, s);
 		} // for j
 		for (unsigned k = 0; k < wap_vis_objs[0].size(); ++k) { // draw weapons
-			draw_weapon2(objg.get_obj(wap_vis_objs[0][k].id), radius);
+			dwobject const &obj(objg.get_obj(wap_vis_objs[0][k].id));
+			int const wid((int)obj.direction);
+			vector3d v(obj.pos);
+			if (wid != W_BLADE) {v.x += 0.7*radius;}
+			draw_weapon_simple(v, -plus_x, 0.5*radius, obj.coll_id, wid, 0.25, s);
 		}
 		for (unsigned k = 0; k < wap_vis_objs[1].size(); ++k) { // draw ammo
 			unsigned const j(wap_vis_objs[1][k].id);
 			assert(j < objg.max_objects());
-			draw_ammo(objg, radius, color, wap_vis_objs[1][k].ndiv, j);
+			draw_ammo(objg, radius, color, wap_vis_objs[1][k].ndiv, j, s);
 		}
 		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {
 			check_drawing_flags(otype.flags, 1);
@@ -527,7 +529,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 		if (!smiley_weapons_to_draw.empty()) {
 			for (vector<unsigned>::const_iterator i = smiley_weapons_to_draw.begin(); i != smiley_weapons_to_draw.end(); ++i) {
-				draw_weapon_in_hand(*i); // Note: view culling doesn't use correct bounding sphere for all weapons
+				draw_weapon_in_hand(*i, s); // Note: view culling doesn't use correct bounding sphere for all weapons
 			}
 		}
 	} // large objects
@@ -537,10 +539,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 		vector<tid_color_to_ix_t> tri_fragments, sphere_fragments;
 		vector<vert_norm_color> shrapnel_verts;
 
-		if (type == PARTICLE) {
-			glEnable(GL_ALPHA_TEST);
-			glAlphaFunc(GL_GREATER, 0.01);
-		}
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
 			point const &pos(obj.pos);
@@ -656,7 +654,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 		}
 		else if (type == PARTICLE) {
 			particle_qbd.draw();
-			glDisable(GL_ALPHA_TEST);
 		}
 	} // small object
 	check_drawing_flags(flags, 0);
@@ -760,16 +757,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 }
 
 
-void draw_weapon2(dwobject const &obj, float radius) {
-
-	int const wid((int)obj.direction);
-	vector3d d(-1.0, 0.0, 0.0), v(obj.pos);
-	if (wid != W_BLADE) v.x += 0.7*radius;
-	draw_weapon_simple(v, d, 0.5*radius, obj.coll_id, wid, 0.25);
-}
-
-
-void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j) {
+void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader) {
 
 	dwobject const &obj(objg.get_obj(j));
 	point pos(obj.pos);
@@ -814,7 +802,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 			draw_subdiv_sphere(pos, 0.6*radius, ndiv, 1, 0);
 			break;
 		default:
-			draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, 1);
+			draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, 1, shader);
 		}
 		if (cull_face) glDisable(GL_CULL_FACE);
 	}
@@ -875,7 +863,7 @@ colorRGBA mult_alpha(colorRGBA const &c, float alpha) {
 
 
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
-				 float health, int id, mesh2d const *const mesh)
+				 float health, int id, mesh2d const *const mesh, shader_t &shader)
 {
 	colorRGBA color;
 	int const powerup(sstates[id].powerup), ndiv2(max(3, (ndiv>>1)));
@@ -1056,12 +1044,11 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		color2.alpha = alpha*hit/6.0;
 		set_color_alpha(color2);
 		glPushMatrix();
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.05);
+		shader.add_uniform_float("min_alpha", 0.05);
 		translate_to(pos);
 		rotate_sphere_tex_to_dir(hit_dir);
 		draw_sphere_vbo(all_zeros, 1.015*radius, ndiv, 1);
-		glDisable(GL_ALPHA_TEST);
+		shader.add_uniform_float("min_alpha", 0.01);
 		glPopMatrix();
 
 		if (powerup == PU_SHIELD) {
@@ -1102,17 +1089,16 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 }
 
 
-void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv) {
+void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, shader_t &shader) {
 
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.9);
+	shader.add_uniform_float("min_alpha", 0.9);
 	glPushMatrix();
 	translate_to(pos);
 	rotate_from_v2v(orient, vector3d(0.0, -1.0, 0.0));
 	glRotatef(180.0, 0.0, 1.0, 0.0);
 	draw_sphere_vbo_back_to_front(all_zeros, radius, 2*ndiv, 1);
 	glPopMatrix();
-	glDisable(GL_ALPHA_TEST);
+	shader.add_uniform_float("min_alpha", 0.01);
 }
 
 

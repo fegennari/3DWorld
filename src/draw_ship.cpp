@@ -468,6 +468,7 @@ void uobj_draw_data::draw_usw_emp() const {
 	glPushMatrix();
 	select_texture(SBLUR_TEX);
 	glEnable(GL_ALPHA_TEST);
+	//if (shader) {shader->add_uniform_float("min_alpha", 0.01);}
 	glAlphaFunc(GL_GREATER, 0.01);
 	set_emissive_color(colorRGBA(1.0, 0.9, 0.7, alpha));
 	glRotatef(90.0, 1.0, 0.0, 0.0);
@@ -1206,6 +1207,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		}
 	}
 	if (phase2) {
+		//if (shader) {shader->add_uniform_float("min_alpha", 0.2);}
 		glEnable(GL_ALPHA_TEST);
 		glAlphaFunc(GL_GREATER, 0.2);
 		select_texture(SMOKE_TEX);
