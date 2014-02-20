@@ -2164,8 +2164,8 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 	shared_tree_data.ensure_init();
 	mesh_xy_grid_cache_t density_gen[NUM_TREE_TYPES+1];
 
-	if (NONUNIFORM_TREE_DEN) {
-		for (unsigned i = 0; i <= NUM_TREE_TYPES; ++i) {
+	if (NONUNIFORM_TREE_DEN) { // i==0 is the coverage density map, i>0 are the per-tree type coverage maps
+		for (int i = 0; i <= NUM_TREE_TYPES; ++i) { // Note: i should be signed
 			float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)*(i==0 ? 1.0 : 0.1)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
 			density_gen[i].build_arrays(xscale*(x1 + xoff2 + 1000*i), yscale*(y1 + yoff2 - 1500*i), xscale, yscale, (x2-x1), (y2-y1));
 		}
@@ -2196,10 +2196,9 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 				float max_val(0.0);
 
 				for (unsigned tt = 0; tt < NUM_TREE_TYPES; ++tt) {
-					float const den_val(density_gen[tt+1].eval_index(j-x1, i-y1, 1));
+					float const den_val(density_gen[tt+1].eval_index(j-x1, i-y1, 0)); // no glaciate
 					if (max_val == 0.0 || den_val > max_val) {max_val = den_val; ttype = tt;}
 				}
-				max_val = get_rel_height(max_val, -zmax_est, zmax_est);
 			}
 			if (!shared_tree_data.empty()) {
 				if (ttype >= 0) {
@@ -2244,7 +2243,7 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 			PRINT_TIME(" gen tree fast");
 			return;
 		}
-		int const ext_x1(1), ext_x2(MESH_X_SIZE-1), ext_y1(1), ext_y2(MESH_Y_SIZE-1);
+		int const border(1), ext_x1(border), ext_x2(MESH_X_SIZE-border), ext_y1(border), ext_y2(MESH_Y_SIZE-border);
 
 		if (scrolling && t_trees.scroll_trees(ext_x1, ext_x2, ext_y1, ext_y2)) {
 			t_trees.post_scroll_remove();

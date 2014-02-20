@@ -34,6 +34,4 @@ Ray trace use texel color from cobj (faster)
 
 Animated smoke texture (smilar to fire and explosion)
 Better pine tree texture
-
 * Use normal map in indir texture lookup offset somehow?
-Make TT and ground mode trees agree
