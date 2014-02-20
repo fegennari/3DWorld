@@ -781,7 +781,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	}
 	if (no_specular) {set_specular(0.0, 1.0);}
 	point const camera(get_camera_pos());
-	vector3d(0.0, 0.0, ((camera.z < zval) ? -1.0 : 1.0)).do_glNormal();
 	setup_water_plane_texgen(1.0, 1.0);
 	set_fill_mode();
 	enable_blend();
@@ -802,6 +801,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const rain_mode(add_waves && is_rain_enabled());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
+	s.add_uniform_float("normal_z", ((camera.z < zval) ? -1.0 : 1.0));
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 	set_color(WHITE);
 	draw_tiled_terrain_water(s, zval);

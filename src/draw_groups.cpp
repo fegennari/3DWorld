@@ -1298,13 +1298,12 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 		rotate_by_vector(init_dir, -90.0);
 		if (angle != 0.0) rotate_about(angle, orient);
 	}
-	orient.do_glNormal();
-	vert_wrap_t points[3*N_STAR_POINTS];
+	vert_norm points[3*N_STAR_POINTS];
 
 	for (int i = N_STAR_POINTS-1, ix = 0; i >= 0; --i) { // Note: needs 2-sided lighting
-		points[ix++] = star_pts[(i == 0) ? (N_STAR_POINTS<<1)-1 : (i<<1)-1];
-		points[ix++] = star_pts[i<<1];
-		points[ix++] = star_pts[(i<<1)+1];
+		points[ix++] = vert_norm(star_pts[(i == 0) ? (N_STAR_POINTS<<1)-1 : (i<<1)-1], orient);
+		points[ix++] = vert_norm(star_pts[i<<1], orient);
+		points[ix++] = vert_norm(star_pts[(i<<1)+1], orient);
 	}
 	draw_verts(points, 3*N_STAR_POINTS, GL_TRIANGLES);
 	glPopMatrix();

@@ -178,7 +178,7 @@ void draw_overhead_map() {
 	}
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	glColor3f(1.0, 1.0, 1.0);
+	WHITE.do_glColor();
 	shader_t s;
 	s.begin_simple_textured_shader();
 	setup_texture(tid, GL_MODULATE, 0, 0, 0);

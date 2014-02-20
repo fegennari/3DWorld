@@ -396,7 +396,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			glRotatef(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
 			set_color_alpha(object_types[oid].color, alpha);
 			set_specular(0.8, 40.0);
-			draw_star(zero_vector, zero_vector, zero_vector, radius, 0.0, 0);
+			draw_star(zero_vector, plus_z, zero_vector, radius, 0.0, 0); // Note: +z may not be the correct normal?
 			set_specular(0.0, 0.0);
 			break;
 
@@ -429,7 +429,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				shader.add_uniform_float("min_alpha", 0.95*alpha);
 				set_specular(0.9, 90.0);
 				float dz((ammo > 1) ? -0.025*radius*ammo : 0.0);
-				plus_z.do_glNormal();
 				select_texture(sb_tex ? SAW_B_TEX : SAW_TEX);
 
 				for (int w = 0; w < max(1, ammo); ++w) { // draw a blade for each ammo

@@ -391,8 +391,8 @@ void uobj_draw_data::draw_one_triangle(vector3d const &rot_axis, float rot_deg) 
 
 	vector3d coord_frame[3] = {plus_x, plus_y, -plus_z};
 	rotate_vector3d_multi(rot_axis, -rot_deg/TO_DEG, coord_frame, 3); // rotate_about(rot_deg, rot_axis);
-	coord_frame[2].do_glNormal(); // using two-sided lighting
-	vert_wrap_t const verts[3] = {1.4*coord_frame[1], coord_frame[0], -coord_frame[0]};
+	vector3d const &n(coord_frame[2]); // using two-sided lighting
+	vert_norm const verts[3] = {vert_norm(1.4*coord_frame[1], n), vert_norm(coord_frame[0], n), vert_norm(-coord_frame[0], n)};
 	draw_verts(verts, 3, GL_TRIANGLES);
 }
 

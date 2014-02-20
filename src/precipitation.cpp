@@ -25,7 +25,6 @@ protected:
 		if (empty()) return;
 		color.do_glColor();
 		assert(!(size() % VERTS_PER_PRIM));
-		plus_z.do_glNormal();
 		enable_blend(); // split into point smooth and blend?
 		shader_t s;
 		s.begin_color_only_shader();

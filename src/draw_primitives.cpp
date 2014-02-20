@@ -231,17 +231,17 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 
 	assert(r_outer > 0.0);
 	bool const disk(r_inner > 0.0);
-	(invert_normals ? -plus_z : plus_z).do_glNormal();
+	vector3d const n(invert_normals ? -plus_z : plus_z);
 	float const css((invert_normals ? 1.0 : -1.0)*TWO_PI/(float)ndiv), sin_ds(sin(css)), cos_ds(cos(css));
 	float const inner_tscale(r_inner/r_outer);
 	float sin_s(0.0), cos_s(1.0);
-	static vector<vert_tc_t> verts;
-	if (!disk) {verts.push_back(vert_tc_t(point(0.0, 0.0, zval), 0.5, 0.5));}
+	static vector<vert_norm_tc> verts;
+	if (!disk) {verts.push_back(vert_norm_tc(point(0.0, 0.0, zval), n, 0.5, 0.5));}
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 		float const s(sin_s), c(cos_s);
-		if (disk) {verts.push_back(vert_tc_t(point(r_inner*s, r_inner*c, zval), 0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c))));}
-		verts.push_back(vert_tc_t(point(r_outer*s, r_outer*c, zval), 0.5*(1.0 + s), (0.5*(1.0 + c))));
+		if (disk) {verts.push_back(vert_norm_tc(point(r_inner*s, r_inner*c, zval), n, 0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c))));}
+		verts.push_back(vert_norm_tc(point(r_outer*s, r_outer*c, zval), n, 0.5*(1.0 + s), (0.5*(1.0 + c))));
 		sin_s = s*cos_ds + c*sin_ds;
 		cos_s = c*cos_ds - s*sin_ds;
 	}
@@ -789,17 +789,17 @@ void disable_flares() {
 }
 
 
-void draw_one_tquad(float x1, float y1, float x2, float y2, float z) {
+void draw_one_tquad(float x1, float y1, float x2, float y2, float z) { // Note: normal is +z
 
-	vert_tc_t verts[4];
-	verts[0] = vert_tc_t(point(x1, y1, z), 0, 0);
-	verts[1] = vert_tc_t(point(x1, y2, z), 0, 1);
-	verts[2] = vert_tc_t(point(x2, y2, z), 1, 1);
-	verts[3] = vert_tc_t(point(x2, y1, z), 1, 0);
+	vert_norm_tc verts[4];
+	verts[0] = vert_norm_tc(point(x1, y1, z), plus_z, 0, 0);
+	verts[1] = vert_norm_tc(point(x1, y2, z), plus_z, 0, 1);
+	verts[2] = vert_norm_tc(point(x2, y2, z), plus_z, 1, 1);
+	verts[3] = vert_norm_tc(point(x2, y1, z), plus_z, 1, 0);
 	draw_verts(verts, 4, GL_TRIANGLE_FAN);
 }
 
-void draw_tquad(float xsize, float ysize, float z) {
+void draw_tquad(float xsize, float ysize, float z) { // Note: normal is +z
 	draw_one_tquad(-xsize, -ysize, xsize, ysize, z);
 }
 
