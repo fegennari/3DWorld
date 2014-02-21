@@ -1123,15 +1123,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	}
 	draw_cloud_planes(zmin, 1, 1, 0); // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
-
-	if (get_camera_pos().z <= get_tt_cloud_level()) { // camera is below the clouds
-		// setup above-water clip plane for mesh
-		double const plane[4] = {0.0, 0.0, 1.0, -water_plane_z}; // water at z=-water_z (mirrored)
-		glEnable(WATER_CLIP_PLANE);
-		glClipPlane(WATER_CLIP_PLANE, plane);
-		draw_tiled_terrain(1); // draw terrain
-		glDisable(WATER_CLIP_PLANE);
-	}
+	if (get_camera_pos().z <= get_tt_cloud_level()) {draw_tiled_terrain(1);} // camera is below the clouds
 	glPopMatrix(); // end mirror transform
 
 	// render reflection to texture

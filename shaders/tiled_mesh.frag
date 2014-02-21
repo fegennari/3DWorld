@@ -83,6 +83,9 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 
 void main()
 {
+#ifdef REFLECTION_MODE
+	if (vertex.z < water_plane_z) {discard;}
+#endif
 	// sand, dirt, grass, rock, snow
 	vec2 diff_tc = tc; // separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
 	//diff_tc.s += 0.1*vertex.z; // we really need something like triplanar texturing here to deal with stretching on steep slopes
