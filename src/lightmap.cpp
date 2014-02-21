@@ -691,7 +691,7 @@ void update_flow_for_voxels(cube_t const &cube) {
 
 void setup_2d_texture(unsigned &tid) {
 
-	setup_texture(tid, GL_MODULATE, 0, 0, 0, 0, 0, 1);
+	setup_texture(tid, 0, 0, 0, 0, 0, 1);
 }
 
 

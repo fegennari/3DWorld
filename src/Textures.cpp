@@ -440,7 +440,7 @@ void texture_t::do_gl_init() {
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//RESET_TIME;
 	assert(is_allocated() && width > 0 && height > 0);
-	setup_texture(tid, GL_MODULATE/*GL_DECAL*/, (use_mipmaps != 0), wrap, wrap, 0, 0, 0, anisotropy);
+	setup_texture(tid, (use_mipmaps != 0), wrap, wrap, 0, 0, 0, anisotropy);
 	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
 	if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
 	if (use_mipmaps == 3) create_custom_mipmaps();
@@ -848,7 +848,7 @@ void bind_2d_texture(unsigned tid) {
 
 
 // 2D texture
-void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy) {
+void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy) {
 
 	assert(tid == 0);
 	assert(!nearest || !mipmap);
@@ -856,9 +856,6 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 
 	// select our current texture
 	bind_2d_texture(tid);
-
-	// select modulate to mix texture with color for shading (decal keeps texture color)
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, type);
 
 	// when texture area is small, use linear filter (bilinear filter the closest mipmap)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
@@ -878,13 +875,12 @@ void setup_texture(unsigned &tid, int type, bool mipmap, bool wrap_s, bool wrap_
 }
 
 
-void setup_1d_texture(unsigned &tid, int type, bool mipmap, bool wrap, bool mirror, bool nearest) {
+void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool nearest) {
 
 	assert(tid == 0);
 	assert(!nearest || !mipmap);
 	glGenTextures(1, &tid);
 	bind_1d_texture(tid);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, type);
 	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
 	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
 	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, (wrap ? (mirror ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE));
@@ -1786,7 +1782,7 @@ void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool
 
 	assert(txsize > 0 && tysize > 0);
 	if (tid) return; // already created
-	setup_texture(tid, GL_MODULATE, mipmap, 0, 0, 0, 0, nearest);
+	setup_texture(tid, mipmap, 0, 0, 0, 0, nearest);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 }
 

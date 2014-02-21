@@ -1163,7 +1163,7 @@ void init_smiley_texture(int smiley_id) {
 		}
 	}
 	if (sstates[smiley_id].tid == 0) {
-		setup_texture(sstates[smiley_id].tid, GL_MODULATE, 0, 0, 0);
+		setup_texture(sstates[smiley_id].tid, 0, 0, 0);
 	}
 	else {
 		bind_2d_texture(sstates[smiley_id].tid);

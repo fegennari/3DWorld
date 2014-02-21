@@ -183,7 +183,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	if (cloud_tid && !force_recreate) return 0; // nothing to do
 	
 	if (!cloud_tid) {
-		setup_texture(cloud_tid, GL_MODULATE, 0, 0, 0);
+		setup_texture(cloud_tid, 0, 0, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(cloud_tid));

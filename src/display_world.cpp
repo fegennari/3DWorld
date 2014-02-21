@@ -375,7 +375,7 @@ void config_bkg_color_and_clear(float depth, bool no_fog) {
 
 	calc_bkg_color();
 	glClearColor_rgba((!no_fog && show_fog) ? GRAY : bkg_color);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT /*| GL_ACCUM_BUFFER_BIT*/); // Clear the background
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // Clear the background
 }
 
 
@@ -1155,7 +1155,7 @@ unsigned create_reflection() {
 		last_ysize = ysize;
 	}
 	if (!reflection_tid) {
-		setup_texture(reflection_tid, GL_MODULATE, 0, 0, 0);
+		setup_texture(reflection_tid, 0, 0, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(reflection_tid));

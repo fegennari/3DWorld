@@ -645,7 +645,7 @@ void tile_t::check_shadow_map_and_normal_texture() {
 	if (shadow_normal_tid && !shadows_invalid) return; // up-to-date
 	//RESET_TIME;
 	bool const tid_is_valid(shadow_normal_tid != 0);
-	if (!tid_is_valid) {setup_texture(shadow_normal_tid, GL_MODULATE, 0, 0, 0, 0, 0);}
+	if (!tid_is_valid) {setup_texture(shadow_normal_tid, 0, 0, 0, 0, 0);}
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	assert(has_sun || has_moon);
 	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
@@ -741,7 +741,7 @@ void tile_t::ensure_height_tid() {
 			data[y*stride+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - ht_zmin));
 		}
 	}
-	setup_texture(height_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+	setup_texture(height_tid, 0, 0, 0, 0, 0);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
@@ -877,7 +877,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		}
 	}
 	if (weight_tid == 0) { // create weight texture
-		setup_texture(weight_tid, GL_MODULATE, 0, 0, 0, 0, 0);
+		setup_texture(weight_tid, 0, 0, 0, 0, 0);
 		assert(weight_tid > 0 && glIsTexture(weight_tid));
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // internal_format = GL_COMPRESSED_RGBA - too slow
 	}

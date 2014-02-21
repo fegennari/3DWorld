@@ -681,7 +681,6 @@ struct colorRGBA : public colorRGB { // size = 16
 	bool is_valid() const {return (R >= 0 && G >= 0 && B >= 0 && A >= 0 && R <= 1 && G <= 1 && B <= 1 && A <= 1);}
 	void print()    const {cout << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A;}
 	void do_glColor() const {glColor4fv((float *)this);}
-	void do_glColor4ubv() const;
 };
 
 
@@ -811,13 +810,6 @@ struct color_wrapper_float { // size = 16
 	colorRGB  get_c3() const {return colorRGB(c.R, c.G, c.B);}
 	colorRGBA get_c4() const {return c;}
 };
-
-
-inline void colorRGBA::do_glColor4ubv() const {
-	color_wrapper cw;
-	cw.set_c4(*this);
-	glColor4ubv(cw.c);
-}
 
 
 struct vert_color : public color_wrapper { // size = 16

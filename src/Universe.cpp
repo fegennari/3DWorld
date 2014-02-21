@@ -1909,7 +1909,7 @@ void urev_body::create_rocky_texture(unsigned size) {
 	assert(tsize <= MAX_TEXTURE_SIZE);
 	vector<unsigned char> data(3*tsize*tsize);
 	gen_texture_data_and_heightmap(&data.front(), tsize);
-	setup_texture(tid, GL_MODULATE, 0, 1, 0);
+	setup_texture(tid, 0, 1, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, tsize, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
 }
 
@@ -1931,7 +1931,7 @@ void urev_body::create_gas_giant_texture() {
 		UNROLL_3X(data[3*i+i_] = (unsigned char)(255.0*color[i_]);)
 	}
 	bool const mipmap = 1; // Note: somewhat slow when the player is flying by quickly
-	setup_1d_texture(tid, GL_MODULATE, mipmap, 0, 0, 0);
+	setup_1d_texture(tid, mipmap, 0, 0, 0);
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB8, tsize, 0, GL_RGB, GL_UNSIGNED_BYTE, &data.front());
 	if (mipmap) {gen_mipmaps(1);}
 }
@@ -2474,7 +2474,7 @@ void uplanet::ensure_rings_texture() {
 
 	if (ring_data.empty() || ring_tid > 0) return; // no rings, or texture already created
 	bool const mipmap = 1; // Note: somewhat slow when the player is flying by quickly
-	setup_1d_texture(ring_tid, GL_MODULATE, mipmap, 0, 0, 0);
+	setup_1d_texture(ring_tid, mipmap, 0, 0, 0);
 	glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA8, RING_TEX_SZ, 0, GL_RGBA, GL_UNSIGNED_BYTE, &ring_data.front());
 	if (mipmap) {gen_mipmaps(1);}
 }
