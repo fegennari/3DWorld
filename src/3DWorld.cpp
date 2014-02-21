@@ -1386,9 +1386,19 @@ void fire_weapon() {
 }
 
 
+string get_all_gl_extensions() {
+
+	int n(0);
+	glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+	string ext;
+	for (int i = 0; i < n; i++) {ext += (const char *)glGetStringi(GL_EXTENSIONS, i);}
+	return ext;
+}
+
+
 bool has_extension(string const &ext) { // is this always correct?
 
-	return (strstr((const char *)glGetString(GL_EXTENSIONS), ext.c_str()) != NULL);
+	return (strstr(get_all_gl_extensions().c_str(), ext.c_str()) != NULL);
 }
 
 
@@ -1845,7 +1855,7 @@ int main(int argc, char** argv) {
 	load_textures();
 	load_flare_textures(); // Sun Flare
 	setup_shaders();
-	//cout << "Extensions: " << (char*) glGetString(GL_EXTENSIONS) << endl;
+	//cout << "Extensions: " << get_all_gl_extensions() << endl;
 
 	if (!universe_only) { // universe mode should be able to do without these initializations
 		init_objects();

@@ -42,11 +42,11 @@ upos_point_type cur_origin(all_zeros);
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp;
 extern unsigned inf_terrain_fire_mode;
-extern int auto_time_adv, camera_flight, reset_timing, enable_fsource, run_forward, window_width, window_height, voxel_editing;
+extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern double camera_zh;
-extern point mesh_origin, flow_source, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
+extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
 extern colorRGBA sun_color, bkg_color;
 extern water_params_t water_params;
@@ -66,20 +66,6 @@ colorRGBA get_tt_water_color();
 void glClearColor_rgba(const colorRGBA &color) {
 
 	glClearColor(color.R, color.G, color.B, color.A);
-}
-
-
-void set_fsource_light() {
-
-	if (!enable_fsource) return;
-	float const diffuse[4] = {1.0,  1.0,  1.0,  1.0};
-	float const ambient[4] = {0.25, 0.25, 0.25, 1.0};
-	int const light(GL_LIGHT2);
-	set_colors_and_enable_light(light, ambient, diffuse);
-	set_gl_light_pos(light, flow_source, 1.0);
-	glLightf(light, GL_CONSTANT_ATTENUATION,  0.6);
-	glLightf(light, GL_LINEAR_ATTENUATION,    1.2);
-	glLightf(light, GL_QUADRATIC_ATTENUATION, 0.6);
 }
 
 
@@ -414,7 +400,6 @@ void setup_lighting(float depth) {
 	set_uniform_atten_lighting(GL_LIGHT0); // reset attenuation to 1.0
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
-	set_fsource_light();
 	float const mlf(get_moon_light_factor());
 	float ambient[4], diffuse[4];
 	ambient[3] = diffuse[3] = 1.0;
