@@ -66,6 +66,7 @@ universe_t universe; // the top level universe
 
 extern bool univ_planet_lod;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
+extern unsigned enabled_lights;
 extern float tan_term, sin_term, fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
@@ -196,11 +197,11 @@ struct planet_draw_data_t {
 };
 
 
-float get_light_scale(unsigned light) {return (glIsEnabled(light) ? 1.0 : 0.0);}
+float get_light_scale(unsigned light) {return (is_light_enabled(light) ? 1.0 : 0.0);}
 
 void set_light_scale(shader_t &s, bool use_light2) {
 
-	vector3d const light_scale(get_light_scale(GL_LIGHT0), get_light_scale(GL_LIGHT1), (use_light2 ? 1.0 : 0.0));
+	vector3d const light_scale(get_light_scale(0), get_light_scale(1), (use_light2 ? 1.0 : 0.0));
 	s.add_uniform_vector3d("light_scale", light_scale);
 }
 
@@ -550,7 +551,7 @@ bool get_universe_sun_pos(point const &pos, point &spos) {
 void clear_ambient_color() {
 
 	float const uambient[4] = {0.0, 0.0, 0.0, 0.0};
-	glLightfv(get_universe_ambient_light(), GL_AMBIENT, uambient); // light is not enabled or disabled
+	glLightfv(GL_LIGHT0+get_universe_ambient_light(), GL_AMBIENT, uambient); // light is not enabled or disabled
 }
 
 
@@ -3074,7 +3075,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 
 void set_light_galaxy_ambient_only() {
 
-	glDisable(GL_LIGHT0);
+	disable_light(0);
 	float const zero4[4] = {0.0, 0.0, 0.0, 0.0};
 	glLightfv(GL_LIGHT0, GL_AMBIENT, zero4); // need to zero it out as well, since shaders ignore light enable state
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, zero4);
@@ -3084,28 +3085,26 @@ void set_light_galaxy_ambient_only() {
 void set_ambient_color(colorRGBA const &color) {
 
 	float uambient[4];
-	int const a_light(get_universe_ambient_light());
-	glEnable(a_light);
+	enable_light(get_universe_ambient_light());
 
 	for (unsigned i = 0; i < 3; ++i) {
 		uambient[i] = GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i]);
 	}
 	uambient[3] = 1.0;
-	glLightfv(a_light, GL_AMBIENT, uambient);
+	glLightfv(GL_LIGHT0+get_universe_ambient_light(), GL_AMBIENT, uambient);
 }
 
 
 void set_lighting_params() {
 
 	float const ambient[4] = {0.5, 0.5, 0.5, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0}, zero4[4] = {0.0, 0.0, 0.0, 0.0};
-	int const a_light(get_universe_ambient_light()), s_light(GL_LIGHT0);
+	int const a_light(GL_LIGHT0+get_universe_ambient_light()), s_light(GL_LIGHT0);
 	set_colors_and_enable_light(s_light, ambient, diffuse); // single star diffuse + ambient
 	set_gl_light_pos(s_light, all_zeros, 0.0);
 	set_colors_and_enable_light(a_light, ambient, zero4); // universe + galaxy ambient
 	set_gl_light_pos(a_light, all_zeros, 0.0);
 	set_light_atten(a_light, 1.0);
 	//enable_blend();
-	//glEnable(GL_LINE_SMOOTH);
 }
 
 

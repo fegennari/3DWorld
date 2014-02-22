@@ -258,8 +258,8 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 		if (TIMETEST) PRINT_TIME(" Free Obj Draw");
 	}
 	check_shift_universe();
-	glDisable(get_universe_ambient_light());
-	glEnable(GL_LIGHT0);
+	disable_light(get_universe_ambient_light());
+	enable_light(0);
 	//draw_universe_sun_flare(); // doesn't look right
 	inited = 1;
 	if (TIMETEST) PRINT_TIME(" Final Universe");

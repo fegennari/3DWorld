@@ -47,7 +47,6 @@ public:
 	void gen();
 	void update();
 	void draw() const;
-	void create_gl_light(int light) const;
 	void end_draw() const;
 };
 

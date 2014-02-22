@@ -15,6 +15,7 @@ bool const PRINT_LOG    = 0;
 string const shaders_dir = "shaders";
 
 extern bool fog_enabled;
+extern unsigned enabled_lights;
 
 
 // *** uniform variables setup ***
@@ -234,10 +235,10 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 	char name[14] = "enable_light0";
 
 	for (unsigned i = 0; i < num; ++i) { // 0=sun, 1=moon, ...
-		GLboolean const enabled(glIsEnabled(GL_LIGHT0 + i));
+		bool const enabled(is_light_enabled(i));
 		prog_name_suffix.push_back(enabled ? '1' : '0');
 		name[12] = char('0'+i);
-		set_bool_prefixes(name, (enabled != 0), shaders_enabled);
+		set_bool_prefixes(name, enabled, shaders_enabled);
 	}
 }
 

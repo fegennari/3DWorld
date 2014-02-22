@@ -42,7 +42,7 @@ extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_l
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, DISABLE_WATER;
-extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape;
+extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape, enabled_lights;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
@@ -72,14 +72,14 @@ void set_fill_mode() {
 }
 
 int get_universe_ambient_light() {
-	return ((world_mode == WMODE_UNIVERSE) ? GL_LIGHT1 : GL_LIGHT3);
+	return ((world_mode == WMODE_UNIVERSE) ? 1 : 3);
 }
 
 
 void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	glEnable(light);
+	enable_light(light - GL_LIGHT0);
 	glLightfv(light, GL_AMBIENT, ambient);
 	glLightfv(light, GL_DIFFUSE, diffuse);
 }
@@ -89,7 +89,7 @@ void clear_colors_and_disable_light(int light) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	float const ad[4] = {0.0, 0.0, 0.0, 0.0};
-	glDisable(light);
+	disable_light(light - GL_LIGHT0);
 	glLightfv(light, GL_AMBIENT, ad);
 	glLightfv(light, GL_DIFFUSE, ad);
 }
@@ -142,6 +142,11 @@ void set_specular(float specularity, float shininess) {
 }
 
 
+bool is_light_enabled(int l) {assert(l < 8); return ((enabled_lights & (1<<l)) != 0);}
+void enable_light    (int l) {assert(l < 8); enabled_lights |=  (1<<l);}
+void disable_light   (int l) {assert(l < 8); enabled_lights &= ~(1<<l);}
+
+
 void calc_cur_ambient_diffuse() {
 
 	float a[4], d[4], lval[4];
@@ -149,19 +154,17 @@ void calc_cur_ambient_diffuse() {
 	cur_ambient = cur_diffuse = BLACK;
 
 	for (unsigned i = 0; i < 8; ++i) { // max of 8 lights (GL_LIGHT0 - GL_LIGHT7): sun, moon, lightning
+		if (!is_light_enabled(i)) continue;
 		int const light(GL_LIGHT0 + i); // should be sequential
-
-		if (glIsEnabled(light)) {
-			float atten(1.0);
-			glGetLightfv(light, GL_AMBIENT, a);
-			glGetLightfv(light, GL_DIFFUSE, d);
-			glGetLightfv(light, GL_POSITION, lval);
-			if (lval[3] != 0.0) glGetLightfv(light, GL_CONSTANT_ATTENUATION, &atten); // point light source only
-			assert(atten > 0.0);
-			UNROLL_3X(cur_ambient[i_] += a[i_]/atten; cur_diffuse[i_] += d[i_]/atten;)
-			//cout << "A: "; cur_ambient.print(); cout << "  D: "; cur_diffuse.print(); cout << endl;
-			++ncomp;
-		}
+		float atten(1.0);
+		glGetLightfv(light, GL_AMBIENT, a);
+		glGetLightfv(light, GL_DIFFUSE, d);
+		glGetLightfv(light, GL_POSITION, lval);
+		if (lval[3] != 0.0) glGetLightfv(light, GL_CONSTANT_ATTENUATION, &atten); // point light source only
+		assert(atten > 0.0);
+		UNROLL_3X(cur_ambient[i_] += a[i_]/atten; cur_diffuse[i_] += d[i_]/atten;)
+		//cout << "A: "; cur_ambient.print(); cout << "  D: "; cur_diffuse.print(); cout << endl;
+		++ncomp;
 	}
 	if (ncomp > 0) {
 		float const cscale(0.5 + 0.5/ncomp);
@@ -597,7 +600,7 @@ void draw_moon() {
 	select_texture(MOON_TEX);
 	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
 	s.end_shader();
-	glDisable(GL_LIGHT4);
+	disable_light(4);
 
 	if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
 		colorRGBA color(bkg_color);
@@ -695,7 +698,7 @@ void draw_sky(int order) {
 		}
 	}
 	cur_spo = sky_pos_orient(center, radius, sky_rot_xy[0], sky_rot_xy[1]);
-	int const light(GL_LIGHT4);
+	int const light_id(4);
 	set_fill_mode();
 	enable_blend();
 
@@ -715,12 +718,13 @@ void draw_sky(int order) {
 		point lpos(get_sun_pos()), lsint;
 		vector3d const sun_v((get_camera_pos() - lpos).get_norm());
 		if (line_sphere_int(sun_v, lpos, center, radius, lsint, 1)) {lpos = lsint;}
-		set_gl_light_pos(light, lpos, 1.0); // w=1.0 - point light source
+		int const gl_light(GL_LIGHT0 + light_id);
+		set_gl_light_pos(gl_light, lpos, 1.0); // w=1.0 - point light source
 		colorRGBA const ambient(sun_color*0.5);
-		set_colors_and_enable_light(light, &ambient.R, &sun_color.R);
-		glLightf(light, GL_CONSTANT_ATTENUATION,  0.0);
-		glLightf(light, GL_LINEAR_ATTENUATION,    0.01);
-		glLightf(light, GL_QUADRATIC_ATTENUATION, 0.01);
+		set_colors_and_enable_light(gl_light, &ambient.R, &sun_color.R);
+		glLightf(gl_light, GL_CONSTANT_ATTENUATION,  0.0);
+		glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.01);
+		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 0.01);
 	}
 
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
@@ -739,7 +743,7 @@ void draw_sky(int order) {
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
 	s.end_shader();
 	disable_blend();
-	glDisable(light);
+	disable_light(light_id);
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 }
 

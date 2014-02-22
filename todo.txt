@@ -5,6 +5,13 @@ Try using Boost in 3DWorld, in particular shared_ptr
 
 Remove deprecated OpenGL calls:
 http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
+ - Color*
+ - Color/Normal/TexCoord/VertexPointer, Enable/DisableClientState
+ - Material*, Light*, LIGHTi
+ - Non-sprite points
+ - Wide lines
+ - ALPHA and LUMINANCE texture formats
+
 Use triangles instead of quads (Tree billboards/leaves)
 Replace GL matrix operations with something else (GLM?)
 Point size/line width: lightning, smileys, weapons, universe star streaks
@@ -25,13 +32,9 @@ Draw more distant tiles (larger/lower res at high delta-z)
 
 Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 Render nearby planet in chunks starting with draw_cube_mapped_sphere()
-Visual Studio profile: http://codeka.com/blogs/index.php/2009/03/21/got-visual-studio-2008-professional-want
+Visual Studio profile
 static error check (analysis)
 
 Path tracing dynamic light in Sponza (or precalc light for some positions?)
-Raytracing rendering mode + last cobj test/tmin update
-Ray trace use texel color from cobj (faster)
-
-Animated smoke texture (smilar to fire and explosion)
 Better pine tree texture
 * Use normal map in indir texture lookup offset somehow?

@@ -59,7 +59,7 @@ tree_data_manager_t tree_data_manager;
 tree_cont_t t_trees(tree_data_manager);
 
 
-extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots;
+extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled;
 extern int shadow_detail, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
@@ -239,7 +239,7 @@ float get_tree_z_bottom(float z, point const &pos) {
 	return ((world_mode == WMODE_GROUND && is_over_mesh(pos)) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
 }
 
-bool lightning_enabled() {return (world_mode == WMODE_INF_TERRAIN && glIsEnabled(GL_LIGHT2));}
+bool lightning_enabled() {return (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled);}
 
 
 bool tree::is_over_mesh() const {

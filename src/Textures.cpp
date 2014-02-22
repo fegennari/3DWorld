@@ -268,12 +268,10 @@ void load_textures() {
 	}
 	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
 
-	int max_tc(0), max_tu(0), max_tiu(0), max_ctiu(0);
-	glGetIntegerv(GL_MAX_TEXTURE_COORDS,      &max_tc);
-	glGetIntegerv(GL_MAX_TEXTURE_UNITS,       &max_tu);
+	int max_tiu(0), max_ctiu(0);
 	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_tiu);
 	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &max_ctiu);
-	cout << "max TCs: " << max_tc << ", max TUs: " << max_tu << ", max FS TIUs: " << max_tiu << ", max combined TIUs: " << max_ctiu << endl;
+	cout << "max TIUs: " << max_tiu << ", max combined TIUs: " << max_ctiu << endl;
 }
 
 

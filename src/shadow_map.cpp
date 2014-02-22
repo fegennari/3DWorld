@@ -14,6 +14,7 @@ unsigned shadow_map_sz(0);
 pos_dir_up orig_camera_pdu;
 
 extern int window_width, window_height, animate2, display_mode, ground_effects_level, num_trees, camera_coll_id;
+extern unsigned enabled_lights;
 extern vector<shadow_sphere> shadow_objs;
 extern coll_obj_group coll_objects;
 
@@ -202,7 +203,7 @@ bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
 
 	if (!shadow_map_enabled()) return 0;
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
-	if (!glIsEnabled(GL_LIGHT0 + light)) return 0;
+	if (!is_light_enabled(light)) return 0;
 	point lpos; // unused
 	unsigned const sm_tu_id(get_shadow_map_tu_id(light));
 	bool const light_valid(light_valid(0xFF, light, lpos));
@@ -353,12 +354,8 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	if (update_smap) {
 		// render shadow geometry
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
-		bool lights_enabled[8];
-		
-		for (unsigned d = 0; d < 8; ++d) { // disable lighting so that shaders that auto-detect enabled lights don't try to do lighting
-			lights_enabled[d] = (glIsEnabled(GL_LIGHT0+d) != 0);
-			if (lights_enabled[d]) {glDisable(GL_LIGHT0+d);}
-		}
+		unsigned const orig_enabled_lights(enabled_lights);
+		enabled_lights = 0; // disable lighting so that shaders that auto-detect enabled lights don't try to do lighting
 		WHITE.do_glColor();
 		check_gl_error(202);
 
@@ -431,10 +428,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		}
 		disable_fbo();
 		voxel_shadows_updated = 0;
-
-		for (unsigned d = 0; d < 8; ++d) {
-			if (lights_enabled[d]) {glEnable(GL_LIGHT0+d);}
-		}
+		enabled_lights = orig_enabled_lights;
 	} // end update_smap
 	
 	// reset state
@@ -474,7 +468,7 @@ void create_shadow_map() {
 	point lpos;
 	
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		if (!light_valid(0xFF, l, lpos) || !glIsEnabled(GL_LIGHT0 + l)) continue;
+		if (!light_valid(0xFF, l, lpos) || !is_light_enabled(l)) continue;
 		smap_data[l].create_shadow_map_for_light(l, lpos);
 	}
 	scene_smap_vbo_invalid = 0;

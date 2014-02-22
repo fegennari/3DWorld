@@ -13,8 +13,8 @@ bool const SHOW_STAT_LIGHTS  = 0; // debugging
 bool const SHOW_DYNA_LIGHTS  = 0; // debugging
 unsigned const NUM_RAND_LTS  = 0;
 
-int      const START_LIGHT   = GL_LIGHT2;
-int      const END_LIGHT     = GL_LIGHT7 + 1;
+int      const START_LIGHT   = 2;
+int      const END_LIGHT     = 8; // one past the end
 unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
 
 float const CTHRESH          = 0.025;
@@ -1168,7 +1168,7 @@ unsigned enable_dynamic_lights(point const &center, float radius) { // used for 
 	unsigned const num_dlights(min((unsigned)vis_lights.size(), MAX_LIGHTS));
 
 	for (unsigned i = 0; i < num_dlights; ++i) {
-		int const gl_light(START_LIGHT+i);
+		int const gl_light(GL_LIGHT0+START_LIGHT+i);
 		light_source const &ls(dl_sources[vis_lights[i].second]);
 		colorRGBA const &dcolor(ls.get_color()), acolor(dcolor*0.2); // 20% ambient
 		set_colors_and_enable_light(gl_light, (float *)(&acolor), (float *)(&dcolor));
@@ -1185,7 +1185,7 @@ unsigned enable_dynamic_lights(point const &center, float radius) { // used for 
 
 void disable_dynamic_lights(unsigned num_dlights) {
 
-	for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {glDisable(i);}
+	for (int i = START_LIGHT; i < int(START_LIGHT+num_dlights); ++i) {disable_light(i);}
 }
 
 

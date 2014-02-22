@@ -35,7 +35,7 @@ float const FOG_COLOR_ATTEN    = 0.75;
 
 bool mesh_invalidated(1), no_asteroid_dust(0), fog_enabled(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
-unsigned reflection_tid(0);
+unsigned reflection_tid(0), enabled_lights(0); // 8 bit flags
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
 
@@ -392,9 +392,7 @@ void setup_lighting(float depth) {
 	config_bkg_color_and_clear(depth, (world_mode == WMODE_INF_TERRAIN));
 	
 	// setup light position
-	glDisable(GL_LIGHT0);
-	glDisable(GL_LIGHT1);
-	glDisable(GL_LIGHT2);
+	enabled_lights = 0;
 	set_gl_light_pos(GL_LIGHT0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
 	set_gl_light_pos(GL_LIGHT1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	set_uniform_atten_lighting(GL_LIGHT0); // reset attenuation to 1.0
@@ -530,7 +528,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	set_gl_light_pos(GL_LIGHT0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	glPopMatrix();
 	set_light_atten(GL_LIGHT0, max(0.25f, min(4.0f, 0.0007f*sun_pos.mag()/univ_sun_rad)));
-	glDisable(GL_LIGHT1); // no moonlight (for now)
+	disable_light(1); // no moonlight (for now)
 	
 	if (!have_sun || light_factor < 0.5) { // sun below horizon
 		glLightfv(GL_LIGHT0, GL_DIFFUSE, &BLACK.R); // no diffuse

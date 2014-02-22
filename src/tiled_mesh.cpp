@@ -23,12 +23,13 @@ float const DELETE_DIST_TILES = 1.7;
 float const GRASS_LOD_SCALE   = 16.0;
 float const GRASS_DIST_SLOPE  = 0.25;
 
-int   const LIGHTNING_LIGHT = GL_LIGHT2;
+int   const LIGHTNING_LIGHT = 2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
 float const LITNING_TIME2   = 40.0;
 float const LITNING_DIST    = 1.2;
 
 
+bool tt_lightning_enabled(0);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
@@ -1313,7 +1314,6 @@ point lightning_strike_t::get_pos() const {
 	return avg_pos / path.points.size();
 }
 
-
 void lightning_strike_t::gen() {
 
 	float const cloud_zmax(get_cloud_zmax()), hmax(cloud_zmax - water_plane_z);
@@ -1340,7 +1340,6 @@ void lightning_strike_t::gen() {
 	play_thunder(lightning_pos, 10.0, delay); // second to the last (above the mesh)
 }
 
-
 void lightning_strike_t::update() {
 
 	int const rnum(int(fticks*LIGHTNING_FREQ));
@@ -1358,30 +1357,28 @@ void lightning_strike_t::update() {
 	}
 }
 
-
 void lightning_strike_t::draw() const {
 
 	if (!enabled()) return;
 	glEnable(GL_LINE_SMOOTH);
 	path.draw(); // disable fog?
 	glDisable(GL_LINE_SMOOTH);
-	create_gl_light(LIGHTNING_LIGHT);
-}
-
-
-void lightning_strike_t::create_gl_light(int light) const {
-
+	int const gl_light(GL_LIGHT0 + LIGHTNING_LIGHT);
 	colorRGBA const ambient(path.color*0.2);
 	float const radius(0.4*get_scaled_tile_radius());
-	set_colors_and_enable_light(light, &ambient.R, &path.color.R);
-	glLightf(light, GL_CONSTANT_ATTENUATION,  0.1);
-	glLightf(light, GL_LINEAR_ATTENUATION,    0.0);
-	glLightf(light, GL_QUADRATIC_ATTENUATION, 1.0/(radius*radius));
-	set_gl_light_pos(light, get_pos(), 1.0); // point light source position
+	set_colors_and_enable_light(gl_light, &ambient.R, &path.color.R);
+	glLightf(gl_light, GL_CONSTANT_ATTENUATION,  0.1);
+	glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
+	glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 1.0/(radius*radius));
+	set_gl_light_pos(gl_light, get_pos(), 1.0); // point light source position
+	tt_lightning_enabled = 1;
 }
 
+void lightning_strike_t::end_draw() const {
 
-void lightning_strike_t::end_draw() const {glDisable(LIGHTNING_LIGHT);} // even if not currently enabled, in case it was enabled before an update
+	disable_light(LIGHTNING_LIGHT); // even if not currently enabled, in case it was enabled before an update
+	tt_lightning_enabled = 0;
+}
 
 
 // *** tile_draw_t ***
