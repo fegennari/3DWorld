@@ -783,22 +783,22 @@ void upload_dlights_textures(cube_t const &bounds) {
 	}
 	if (elem_tid == 0) {
 		setup_2d_texture(elem_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16UI_EXT, elem_tex_sz, elem_tex_sz, 0, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_SHORT, elem_data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, elem_tex_sz, elem_tex_sz, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, elem_data);
 	}
 	else {
 		bind_2d_texture(elem_tid);
 		unsigned const height(min(elem_tex_sz, (elix/elem_tex_sz+1))); // approximate ceiling
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_sz, height, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_SHORT, elem_data);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_sz, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, elem_data);
 	}
 
 	// step 3: grid bag(s)
 	if (gb_tid == 0) {
 		setup_2d_texture(gb_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE32UI_EXT, MESH_X_SIZE, MESH_Y_SIZE, 0, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT, &gb_data.front()); // Nx x Ny
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, MESH_X_SIZE, MESH_Y_SIZE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, &gb_data.front()); // Nx x Ny
 	}
 	else {
 		bind_2d_texture(gb_tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MESH_X_SIZE, MESH_Y_SIZE, GL_LUMINANCE_INTEGER_EXT, GL_UNSIGNED_INT, &gb_data.front());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MESH_X_SIZE, MESH_Y_SIZE, GL_RED_INTEGER, GL_UNSIGNED_INT, &gb_data.front());
 	}
 	//PRINT_TIME("Dlight Texture Upload");
 	//cout << "ndl: " << ndl << ", elix: " << elix << ", gb_sz: " << XY_MULT_SIZE << endl;

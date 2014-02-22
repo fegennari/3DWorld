@@ -116,7 +116,6 @@ void load_flare_textures() {
 
 	int id(0);
 	static bool init(1);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 	for (unsigned i = 0; i < NUM_SHINE; i++) {
 		std::ostringstream oss;
