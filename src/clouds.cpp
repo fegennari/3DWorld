@@ -17,7 +17,7 @@ unsigned const CLOUD_NUM_DIV = 32;
 vector2d cloud_wind_pos(0.0, 0.0);
 cloud_manager_t cloud_manager;
 
-extern bool have_sun, no_sun_lpos_update;
+extern bool have_sun, no_sun_lpos_update, fog_enabled;
 extern int window_width, window_height, cloud_model, draw_model, display_mode, xoff, yoff, animate2, is_cloudy;
 extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
 extern vector3d wind;
@@ -368,7 +368,6 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 	shader_t s;
 	static indexed_mesh_draw<vert_wrap_t> imd;
 	float const size(camera_pdu.far_);
-	bool const fog_enabled(glIsEnabled(GL_FOG) != 0);
 
 	// draw a plane at terrain_zmin to properly blend the fog (needs to be first when camera is above the clouds)
 	if (draw_floor && !reflection_pass && fog_enabled) {

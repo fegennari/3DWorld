@@ -33,7 +33,7 @@ float const CR_SCALE           = 0.1;
 float const FOG_COLOR_ATTEN    = 0.75;
 
 
-bool mesh_invalidated(1), no_asteroid_dust(0);
+bool mesh_invalidated(1), no_asteroid_dust(0), fog_enabled(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0);
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
@@ -278,7 +278,7 @@ float get_framerate(int &timer_b) {
 
 void final_draw(float framerate) {
 
-	glDisable(GL_FOG);
+	fog_enabled = 0;
 	glLoadIdentity();
 	draw_camera_filters(cfilters);
 	draw_frame_rate(framerate);
@@ -570,7 +570,7 @@ void setup_basic_fog() {
 	if (!show_fog) return;
 	set_lighted_fog_color(GRAY);
 	glFogf(GL_FOG_END, 2.5*Z_SCENE_SIZE);
-	glEnable(GL_FOG);
+	fog_enabled = 1;
 }
 
 
@@ -620,7 +620,7 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 	set_lighted_fog_color(fog_color); // under water/ice
 	glFogf(GL_FOG_END, fog_dist);
 	glFogf(GL_FOG_DENSITY, 0.05); // density isn't used, but it doesn't hurt to set it to around this value in case it is
-	glEnable(GL_FOG);
+	fog_enabled = 1;
 }
 
 
@@ -876,7 +876,7 @@ void display(void) {
 			}
 			// draw background
 			if (!combined_gu) {draw_sun_moon_stars();}
-			if (show_fog || underwater) {glEnable(GL_FOG);}
+			if (show_fog || underwater) {fog_enabled = 1;}
 			if (!show_lightning) {l_strike.enabled = 0;}
 			compute_brightness();
 			if (!combined_gu) {draw_earth();}

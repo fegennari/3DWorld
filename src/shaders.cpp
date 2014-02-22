@@ -14,6 +14,8 @@ bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
 
+extern bool fog_enabled;
+
 
 // *** uniform variables setup ***
 
@@ -250,13 +252,13 @@ void shader_t::setup_scene_bounds() const {
 
 void shader_t::setup_fog_scale() const {
 
-	add_uniform_float("fog_scale", (glIsEnabled(GL_FOG) ? 1.0 : 0.0));
+	add_uniform_float("fog_scale", (fog_enabled ? 1.0 : 0.0));
 }
 
 
 void shader_t::check_for_fog_disabled() {
 
-	if (!glIsEnabled(GL_FOG)) {for (unsigned d = 0; d < 2; ++d) {set_prefix("#define NO_FOG", d);}} // VS/FS
+	if (!fog_enabled) {for (unsigned d = 0; d < 2; ++d) {set_prefix("#define NO_FOG", d);}} // VS/FS
 }
 
 
@@ -636,16 +638,14 @@ void shader_t::begin_color_only_shader() {
 
 void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen) {
 
-	bool use_fog(0);
-
 	if (include_2_lights) {
 		setup_enabled_lights(2, 1); // sun and moon VS lighting
 		set_vert_shader(use_texgen ? "ads_lighting.part*+texture_gen.part+two_lights_texture_gen" : "ads_lighting.part*+two_lights_texture");
-		use_fog = (glIsEnabled(GL_FOG) != 0);
 	}
 	else {
 		set_vert_shader(use_texgen ? "texture_gen.part+no_lighting_texture_gen" : "no_lighting_tex_coord");
 	}
+	bool const use_fog(include_2_lights && fog_enabled);
 	set_frag_shader(use_fog ? "linear_fog.part+textured_with_fog" : "simple_texture");
 	begin_shader();
 	add_uniform_float("min_alpha", min_alpha);
