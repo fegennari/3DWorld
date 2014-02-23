@@ -42,7 +42,7 @@ class lightning_strike_t {
 public:
 	lightning_strike_t() : time(0) {}
 	bool enabled() const {return (time > 0);}
-	void clear() {path.destroy(); time = 0;}
+	void clear() {path.points.clear(); time = 0;}
 	point get_pos() const;
 	void gen();
 	void update();

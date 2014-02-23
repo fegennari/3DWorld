@@ -479,12 +479,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			glTranslatef(0.0, 0.0, 0.15);
 
 			if (shooter != NO_SOURCE) {
-				draw_circle_normal(0.0175, 0.018, ndiv, 1);
+				draw_circle_normal(0.017, 0.0175, 2*ndiv, 1);
 				rotate_to_dir(dir, 0.0, 1.0);
-				glLineWidth(2.0);
-				vert_wrap_t const verts[2] = {point(-0.014, 0.01, 0.0), point(-0.01, -0.001, -0.15)};
-				draw_verts(verts, 2, GL_LINES);
-				glLineWidth(1.0);
+				draw_fast_cylinder(point(-0.014, 0.01, 0.0), point(-0.01, -0.001, -0.15), 0.0001, 0.0001, ndiv/2, 0);
 				rotate_to_dir(dir, 0.0, -1.0);
 			}
 			set_color_alpha(RED, alpha);

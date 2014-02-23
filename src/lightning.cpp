@@ -122,10 +122,6 @@ void lightning::gen() {
 	compute_volume_matrix_if_invalid();
 	enabled = 0;
 	time    = 0;
-
-	for (unsigned i = 0; i < path.size(); ++i) {
-		path[i].destroy();
-	}
 	path.clear();
 	int xpos(0), ypos(0);
 	float max_e(0.0), charge(0);
@@ -199,13 +195,13 @@ void lightning::gen_recur(point const &start, float strength, int xpos, int ypos
 	if (zpos < 0 || zpos >= MESH_Z_SIZE || point_outside_mesh(xpos, ypos)) return; // note this will return if MESH_Z_SIZE == 1
 	path.push_back(line3d());
 	int const max_points(MESH_X_SIZE + MESH_Y_SIZE + MESH_Z_SIZE);
-	vector<point> points(max_points);
+	vector<vert_wrap_t> points(max_points);
 	int ptx(xpos), pty(ypos);
 	float const dz((CLOUD_CEILING + ztop - zmin)/MESH_Z_SIZE);
-	points[0] = start;
+	points[0].v = start;
 
 	for (; zpos > 0 && i < max_points-2; --zpos, ++i) {
-		if (i > 0) {points[i].assign(get_xval(ptx), get_yval(pty), zval);}
+		if (i > 0) {points[i].v.assign(get_xval(ptx), get_yval(pty), zval);}
 		int val(volume_matrix[zpos-1][pty][ptx]), val2(0), nforks(1), nforks2(0), x0(0);
 		lforks[0][0] = ptx;
 		lforks[0][1] = pty;
@@ -238,7 +234,7 @@ void lightning::gen_recur(point const &start, float strength, int xpos, int ypos
 
 		for (int j = 0; j < nforks2; ++j) {
 			if (j != x0 && rand()%max(1, FORK_PROB) == 0) {
-				gen_recur(points[i], FORK_ATTEN*strength, lforks[j][0], lforks[j][1], zpos, zval, l_frame_counter);
+				gen_recur(points[i].v, FORK_ATTEN*strength, lforks[j][0], lforks[j][1], zpos, zval, l_frame_counter);
 			}
 		}
 		if (val == 0) break;
@@ -253,18 +249,18 @@ void lightning::gen_recur(point const &start, float strength, int xpos, int ypos
 	}
 	++i;
 	assert(i < max_points && path_id < path.size());
-	points[i].assign(get_xval(ptx), get_yval(pty), (hit_water ? water_matrix[pty][ptx] : get_lit_h(ptx, pty)));
-	float const dist_ratio(1.0/distance_to_camera(points[i]));
+	points[i].v.assign(get_xval(ptx), get_yval(pty), (hit_water ? water_matrix[pty][ptx] : get_lit_h(ptx, pty)));
+	float const dist_ratio(1.0/distance_to_camera(points[i].v));
 	points.resize(i+1);
-	path[path_id].points = points;
 	path[path_id].color  = LITN_C;
+	path[path_id].points = points;
 	path[path_id].width  = max(rand_uniform(1.0, 2.0), min(4.0f, L_STRENGTH_MULT*strength*dist_ratio));
 
 	if (path_id == 0) {
-		end = points[i]; // main branch
+		end = points[i].v; // main branch
 		path[0].width *= 2.0;
 	}
-	do_lightning_damage(points[i], L_DAMAGE_MULT*strength, hit_water);
+	do_lightning_damage(points[i].v, L_DAMAGE_MULT*strength, hit_water);
 }
 
 
@@ -311,7 +307,7 @@ void lightning::draw() const {
 
 	for (unsigned i = 0; i < path.size(); ++i) {
 		assert(!path[i].points.empty());
-		if (animate2) add_dynamic_light(0.6*path[i].width*lscale, path[i].points.back(), LITN_C);
+		if (animate2) add_dynamic_light(0.6*path[i].width*lscale, path[i].points.back().v, LITN_C);
 		path[i].draw();
 	}
 	if (animate2) add_dynamic_light(7.8*lscale, litning_pos, LITN_C);

@@ -989,12 +989,10 @@ class line3d { // size = 28
 
 public:
 	float width;
-	vector<point> points;
+	vector<vert_wrap_t> points;
 	colorRGBA color;
 
-	line3d() {}
 	void draw() const;
-	void destroy();
 	bool empty() const {return points.empty();}
 };
 

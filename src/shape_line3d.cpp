@@ -10,6 +10,7 @@
 #include <fstream>
 
 
+extern int display_mode;
 extern vector3d up_norm;
 
 
@@ -255,24 +256,11 @@ void line3d::draw() const {
 	shader_t s;
 	s.begin_color_only_shader();
 	color.do_glColor();
-	vector<vert_wrap_t> verts;
-	verts.reserve(2*(points.size() - 1));
-
-	for (unsigned i = 1; i < points.size(); ++i) {
-		for (unsigned d = 0; d < 2; ++d) {verts.push_back(points[i-!d]);}
-	}
-	draw_verts(verts, GL_LINES);
+	draw_verts(points, GL_LINE_STRIP);
 	glLineWidth(1.0);
 	s.end_shader();
 	//glDisable(GL_BLEND);
 	//glDisable(GL_LINE_SMOOTH);
-}
-
-
-void line3d::destroy() {
-
-	points.clear();
-	color = BLACK;
 }
 
 

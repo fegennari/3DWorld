@@ -1289,7 +1289,7 @@ point lightning_strike_t::get_pos() const {
 	assert(path.points.size() >= 2);
 	//return path.points[path.points.size()-2];
 	point avg_pos(all_zeros);
-	for (vector<point>::const_iterator i = path.points.begin(); i != path.points.end(); ++i) {avg_pos += *i;}
+	for (vector<vert_wrap_t>::const_iterator i = path.points.begin(); i != path.points.end(); ++i) {avg_pos += i->v;}
 	return avg_pos / path.points.size();
 }
 
