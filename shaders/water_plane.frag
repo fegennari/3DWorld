@@ -5,7 +5,6 @@ varying vec2 tc, tc2;
 uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
-uniform float x1, y1, x2, y2, zmin, zmax;
 
 vec3 water_normal_lookup(in vec2 wtc) {
 	return 2.0*(texture2D(water_normal_tex, 0.5*wtc).rgb - 0.5);
@@ -31,7 +30,7 @@ vec4 get_deep_wave_normal(in vec2 wtc) {
 void main()
 {
 #ifdef USE_WATER_DEPTH // else we assume water is neither too shallow nor too deep
-	float mesh_z = zmin + (zmax - zmin)*texture2D(height_tex, tc2).r;
+	float mesh_z = texture2D(height_tex, tc2).r;
 	float depth  = water_plane_z - mesh_z;
 	if (depth <= 0.0) discard;
 #endif

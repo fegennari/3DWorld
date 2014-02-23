@@ -129,8 +129,6 @@ public:
 	float calc_radius() const {return 0.5*sqrt(deltax*deltax + deltay*deltay)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
-	float get_htex_zmin() const;
-	float get_htex_zmax() const;
 	float get_tile_zmax() const {return max((mzmax + (grass_blocks.empty() ? 0.0f : grass_length)), max(ptzmax, dtzmax));}
 	float get_zval(int x, int y) const {assert(!zvals.empty()); assert(x >= 0 && y >= 0 && x < (int)zvsize && y < (int)zvsize); return zvals[y*zvsize + x];}
 	bool has_water() const {return (mzmin < water_plane_z);}
@@ -248,7 +246,6 @@ public:
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 
 	// *** rendering ***
-	void set_shader_zmin_zmax(shader_t &s) const;
 	void ensure_vbo(vector<vert_type_t> &data, vector<unsigned> *vbo_free_list);
 	void ensure_weights(mesh_xy_grid_cache_t &height_gen);
 	void draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pass) const;

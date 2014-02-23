@@ -68,6 +68,7 @@ bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool nonunif_fog_enabled  () {return ((display_mode & 0x10) != 0);}
+bool use_hmap_tex         () {return (0 && (display_mode & 0x10));}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
@@ -280,7 +281,7 @@ unsigned tile_t::get_gpu_mem() const {
 	unsigned const num_texels(stride*stride);
 	if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
 	if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
-	if (height_tid > 0) mem += 2*num_texels; // 2 bytes per texel (L16)
+	if (height_tid > 0) mem += 4*num_texels; // 2 bytes per texel (F32)
 	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	return mem;
 }
@@ -702,20 +703,6 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 
 // *** mesh creation ***
 
-// Note: unclear what we should return here:
-// * mzmin/mzmax has the best resolution, but is slightly discontinuous at tile borders as adjacent tiles have different mzmin/mzmax
-// * zmin/zmax is const and continuous, but just an estimate; we may have tiles that extend outside these bounds that would get clipped or wrap around
-// * calculated mzmin/mzmax across all visible tiles is accurate, but has popping/adjacency misalignment when new tiles come into view that change min/max z
-// * min(zmin, mzmin)/max(zmax, mzmax) is continuous for most of the range, and will never be clipped, so may be a good compromise
-float tile_t::get_htex_zmin() const {return min(zmin, mzmin);}
-float tile_t::get_htex_zmax() const {return max(zmax, mzmax);}
-
-void tile_t::set_shader_zmin_zmax(shader_t &s) const {
-
-	s.add_uniform_float("zmin", get_htex_zmin());
-	s.add_uniform_float("zmax", get_htex_zmax());
-}
-
 
 void tile_t::create_data(vector<vert_type_t> &data) {
 
@@ -733,19 +720,16 @@ void tile_t::create_data(vector<vert_type_t> &data) {
 void tile_t::ensure_height_tid() {
 
 	if (height_tid || is_distant) return; // already exists, or tile is distant and height_tid is unnecessary
-	float const ht_zmin(get_htex_zmin()), scale(65535/(get_htex_zmax() - ht_zmin));
 	assert(zvals.size() == zvsize*zvsize);
-	vector<unsigned short> data(stride*stride);
+	vector<float> data(stride*stride);
 
 	for (unsigned y = 0; y < stride; ++y) {
 		for (unsigned x = 0; x < stride; ++x) {
-			data[y*stride+x] = (unsigned short)(scale*(zvals[y*zvsize+x] - ht_zmin));
+			data[y*stride+x] = zvals[y*zvsize+x]; // remove the last column
 		}
 	}
 	setup_texture(height_tid, 0, 0, 0, 0, 0);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE16, stride, stride, 0, GL_LUMINANCE, GL_UNSIGNED_SHORT, &data.front());
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, stride, stride, 0, GL_RED, GL_FLOAT, &data.front());
 }
 
 
@@ -1036,7 +1020,6 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(weight_tid, 3);
 	bind_texture_tu(shadow_normal_tid, 4);
-	set_shader_zmin_zmax(s);
 		
 	if (use_cloud_shadows) {
 		vector3d const offset(get_xval(x1), get_yval(y1), 0.0);
@@ -1151,11 +1134,8 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	glPushMatrix();
 	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE);
-	
-	/*if (display_mode & 0x10) {
-		bind_texture_tu(height_tid, 11);
-		set_shader_zmin_zmax(s);
-	}*/
+	if (use_hmap_tex()) {bind_texture_tu(height_tid, 12);}
+
 	if (!reflection_pass && cloud_shadows_enabled()) {
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
@@ -1239,7 +1219,6 @@ void tile_t::draw_water(shader_t &s, float z) const {
 	if (is_distant || !has_water() || get_rel_dist_to_camera() > DRAW_DIST_TILES || !is_visible()) return;
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
 	bind_texture_tu(height_tid, 2);
-	set_shader_zmin_zmax(s);
 	draw_one_tquad(xv1, yv1, xv2, yv2, z);
 }
 
@@ -1537,22 +1516,22 @@ void tile_draw_t::setup_cloud_plane_uniforms(shader_t &s) {
 
 void set_tile_xy_vals(shader_t &s) {
 
+	float const inv_scale(1.0/(get_tile_size() + 1.0));
 	s.add_uniform_float("x1", -0.5*DX_VAL);
 	s.add_uniform_float("y1", -0.5*DY_VAL);
-	s.add_uniform_float("x2", (get_tile_size() + 0.5)*DX_VAL);
-	s.add_uniform_float("y2", (get_tile_size() + 0.5)*DY_VAL);
+	s.add_uniform_float("dx_inv", inv_scale*DX_VAL_INV);
+	s.add_uniform_float("dy_inv", inv_scale*DY_VAL_INV);
 }
 
 
-// uses texture units 0-11
+// uses texture units 0-11 (12 if using hmap texture)
 void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
 	bool const use_normal_map(!reflection_pass && (display_mode & 0x08) != 0); // enabled by default
-	//bool const use_hmap_tex((display_mode & 0x10) != 0);
-	//if (use_hmap_tex   ) {s.set_prefix("#define USE_HEIGHT_TEX",  0);} // VS
+	if (use_hmap_tex() ) {s.set_prefix("#define USE_HEIGHT_TEX",  0);} // VS
 	if (has_water      ) {s.set_prefix("#define HAS_WATER",       1);} // FS
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",  1);} // FS
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",  1);} // FS
@@ -1570,10 +1549,10 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	setup_cloud_plane_uniforms(s);
 	setup_terrain_textures(s, 2);
 
-	/*if (use_hmap_tex) {
+	if (use_hmap_tex()) {
 		set_tile_xy_vals(s);
-		s.add_uniform_int("height_tex", 11);
-	}*/
+		s.add_uniform_int("height_tex", 12);
+	}
 	if (use_normal_map) {
 		select_multitex(ROCK_NORMAL_TEX, 11, 1);
 		s.add_uniform_int("detail_normal_tex", 11);
