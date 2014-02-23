@@ -1075,7 +1075,7 @@ public:
 	void fix_word_alignment();
 	void add_alpha_channel();
 	void resize(int new_w, int new_h);
-	void try_compact_to_lum();
+	bool try_compact_to_lum();
 	void make_normal_map();
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	void load_from_gl();

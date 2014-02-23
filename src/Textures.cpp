@@ -56,7 +56,6 @@ texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg", 0, 0), // 1024x1024, compression is slow
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
-//texture_t(0, 5, 512,  512,  1, 3, 1, "brick1.jpg", 0, 1, 8.0),
 texture_t(0, 0, 512,  512,  1, 3, 1, "manhole.bmp", 1),
 texture_t(0, 6, 128,  128,  1, 4, 3, "palmtree.png", 1),
 texture_t(1, 9, 256,  256,  1, 4, 1, "@smoke"),  // not real file
@@ -417,12 +416,12 @@ GLenum texture_t::calc_internal_format() const {
 	static int has_comp(2); // starts unknown
 	if (has_comp == 2) has_comp = has_extension("GL_ARB_texture_compression"); // unknown, calculate it
 	assert(ncolors >= 1 && ncolors <= 4);
-	if (is_16_bit_gray) {return GL_LUMINANCE16;} // compressed?
+	if (is_16_bit_gray) {return GL_R16;} // compressed?
 	return get_internal_texture_format(ncolors, (COMPRESS_TEXTURES && has_comp && do_compress && type != 2));
 }
 
 GLenum texture_t::calc_format() const {
-	return (is_16_bit_gray ? GL_LUMINANCE : get_texture_format(ncolors));
+	return (is_16_bit_gray ? GL_RED : get_texture_format(ncolors));
 }
 
 
@@ -719,10 +718,10 @@ void texture_t::resize(int new_w, int new_h) {
 }
 
 
-void texture_t::try_compact_to_lum() {
+bool texture_t::try_compact_to_lum() {
 
 	assert(is_allocated());
-	if (!CHECK_FOR_LUM || ncolors != 3) return;
+	if (!CHECK_FOR_LUM || ncolors != 3) return 0;
 	// determine if it's really a luminance texture
 	unsigned const npixels(num_pixels());
 	bool is_lum(1);
@@ -730,16 +729,15 @@ void texture_t::try_compact_to_lum() {
 	for (unsigned i = 0; i < npixels && is_lum; ++i) {
 		is_lum &= (data[3*i+1] == data[3*i] && data[3*i+2] == data[3*i]);
 	}
-	if (!is_lum) return;
+	if (!is_lum) return 0;
+	//cout << "make luminance " << name << endl;
 	// RGB equal, make it a single color (luminance) channel
 	ncolors = 1; // add alpha channel
 	unsigned char *new_data(new unsigned char[num_bytes()]);
-
-	for (unsigned i = 0; i < npixels; ++i) {
-		new_data[i] = data[3*i];
-	}
+	for (unsigned i = 0; i < npixels; ++i) {new_data[i] = data[3*i];}
 	free_data();
 	data = new_data;
+	return 1;
 }
 
 
