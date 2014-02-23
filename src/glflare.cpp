@@ -61,7 +61,10 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 	GLuint bound_to(0);
 
 	shader_t s;
-	s.begin_simple_textured_shader();
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("simple_texture_luminance");
+	s.begin_shader();
+	s.add_uniform_int("tex0", 0);
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
 	glBlendFunc(GL_ONE, GL_ONE);
@@ -107,7 +110,7 @@ void gen_texture(std::string const &filename, GLuint &tid, int &id, bool init) {
 
 	if (init) ft_buf[id] = load_luminance(filename, &ft_width[id], &ft_height[id], &ft_components[id]);
 	setup_texture(tid, 0, 0, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8, ft_width[id], ft_height[id], 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, ft_buf[id]);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, ft_width[id], ft_height[id], 0, GL_RED, GL_UNSIGNED_BYTE, ft_buf[id]);
 	id++;
 }
 

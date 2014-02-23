@@ -945,10 +945,8 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 			}
 		} // for j
 	} // for i
-	verts[0].set_state();
-	if (!texture) {glDisableClientState(GL_TEXTURE_COORD_ARRAY);} // hack to disable texture coords
 	assert(vix <= 24);
-	glDrawArrays(GL_QUADS, 0, vix);
+	draw_verts(verts, vix, GL_QUADS);
 }
 
 
