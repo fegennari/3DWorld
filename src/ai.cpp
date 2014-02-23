@@ -1081,7 +1081,7 @@ void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id
 	switch (type) {
 		case IMPACT:
 			color = PURPLE; break;
-		case PLASMA: case FIRE: case BURNED: case LASER: case BLAST_RADIUS:
+		case PLASMA: case FIRE: case BURNED: case LASER: case BLAST_RADIUS: case BEAM:
 			color = BLACK;  break;
 		default:
 			color = RED;
@@ -1285,11 +1285,12 @@ void player_state::smiley_action(int smiley_id) {
 }
 
 
-colorRGBA get_smiley_team_color(int smiley_id) {
+colorRGBA get_smiley_team_color(int smiley_id, bool ignore_teams) {
 
 	colorRGBA const tcolors[] = {RED, BLUE, GREEN, MAGENTA, CYAN, BROWN, PINK, GRAY, LT_BLUE, ORANGE, WHITE};
 	if (teams <= 1) return tcolors[0];
-	return tcolors[min(((smiley_id+1)%teams), int(sizeof(tcolors)/sizeof(colorRGBA)-1))];
+	int const max_colors(sizeof(tcolors)/sizeof(colorRGBA)-1);
+	return tcolors[min(((smiley_id+1)%(ignore_teams ? max_colors : teams)), max_colors)];
 }
 
 

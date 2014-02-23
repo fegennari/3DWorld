@@ -248,11 +248,7 @@ void shape3d::destroy() {
 void line3d::draw() const {
 
 	if (points.empty()) return;
-	
-	if (points.size() < 2) {
-		cout << "Invalid line: Cannot draw." << endl;
-		return;
-	}
+	assert(points.size() >= 2);
 	//glEnable(GL_BLEND);
 	//glEnable(GL_LINE_SMOOTH);
 	glLineWidth(width);

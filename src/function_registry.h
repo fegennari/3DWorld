@@ -558,7 +558,7 @@ void update_game_frame();
 void change_game_mode();
 void free_dodgeballs(bool camera, bool smileys);
 int gen_smiley_or_player_pos(point &pos, int index);
-colorRGBA get_smiley_team_color(int smiley_id);
+colorRGBA get_smiley_team_color(int smiley_id, bool ignore_teams=0);
 void select_smiley_texture(int smiley_id);
 void free_smiley_textures();
 void clear_cached_waypoints();

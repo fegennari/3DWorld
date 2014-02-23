@@ -883,20 +883,12 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		}
 		else {
 			set_color_alpha(BLACK);
-			glLineWidth(min(8.0f, max(1.0f, 6.0f/dist)));
-			glPushMatrix();
-			translate_to(pos2);
-			uniform_scale(radius);
-			vert_wrap_t lines[4];
 
 			for (unsigned l = 0; l < 2; ++l) {
-				for (unsigned p = 0; p < 2; ++p) {
-					lines[2*l + p] = point((p ? -0.12 : 0.12), 0.1, ((p^l) ? -0.12 : 0.12));
-				}
+				point pts[2];
+				for (unsigned p = 0; p < 2; ++p) {pts[p] = pos2 + radius*point((p ? -0.12 : 0.12), 0.1, ((p^l) ? -0.12 : 0.12));}
+				draw_fast_cylinder(pts[0], pts[1], 0.02*radius, 0.02*radius, ndiv2, 0);
 			}
-			draw_verts(lines, 4, GL_LINES);
-			glPopMatrix();
-			glLineWidth(1.0);
 		}
 		pos2.x *= -1.0;
 	}
@@ -1000,11 +992,9 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		draw_sphere_vbo(all_zeros, 0.94*radius, ndiv, 0);
 		glPopMatrix();
 	}
+
 	// draw unique identifier
-	int temp(teams);
-	teams = 10; // 10 default colors
-	set_color_alpha(mult_alpha(get_smiley_team_color(id+1), alpha));
-	teams = temp;
+	set_color_alpha(mult_alpha(get_smiley_team_color(id+1, 1), alpha)); // ignore teams and use max_colors
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, 0.8*radius);
 	glScalef(1.0, 1.0, 0.3);
@@ -1014,13 +1004,11 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	// draw mouth
 	float const hval(0.004*(100.0 - min(160.0f, health)));
 	set_color_alpha(mult_alpha(BLACK, alpha));
-	glLineWidth(min(8.0f, max(1.0f, 5.0f/dist)));
-	glPushMatrix();
-	uniform_scale(radius);
-	vert_wrap_t const lines[4] = {point(-0.5, 0.95, -0.2-hval), point(-0.15, 0.95, -0.4), point( 0.15, 0.95, -0.4), point( 0.5, 0.95, -0.2-hval)};
-	draw_verts(lines, 4, GL_LINE_STRIP);
-	glPopMatrix();
-	glLineWidth(1.0);
+	point const pts[4] = {point(-0.5, 0.95, -0.2-hval), point(-0.15, 0.95, -0.4), point( 0.15, 0.95, -0.4), point( 0.5, 0.95, -0.2-hval)};
+
+	for (unsigned i = 0; i < 3; ++i) {
+		draw_fast_cylinder(radius*pts[i], radius*pts[i+1], 0.04*radius, 0.04*radius, ndiv2, 0);
+	}
 
 	// draw tongue
 	if (sstates[id].kill_time < int(2*TICKS_PER_SECOND) || powerup == PU_DAMAGE) { // stick your tongue out at a dead enemy
@@ -1040,7 +1028,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	if (hit > 0) { // hit - draw damage or shields
 		select_texture(SBLUR_TEX);
 		enable_blend();
-		colorRGBA color2((sstates[id].shields < 0.01) ? BLOOD_C : GREEN);
+		colorRGBA color2((sstates[id].shields < 0.01) ? BLOOD_C : GREEN); // black color for burns?
 		color2.alpha = alpha*hit/6.0;
 		set_color_alpha(color2);
 		glPushMatrix();
