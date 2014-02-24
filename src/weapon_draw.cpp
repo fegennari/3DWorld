@@ -817,7 +817,6 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 		UNROLL_3X(target[i_] -= pos[i_]*v[i_];)
 		target.normalize();
 	}
-	set_color(LITN_C);
 	set_color_e(LITN_C);
 	set_additive_blend_mode();
 	int const num_rays((rand()%6)-2);
@@ -830,22 +829,23 @@ void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
 			UNROLL_3X(pos2[i_] += rand_uniform(0.9, 1.3)*radius*target[i_];)
 			vadd_rand(pos2, 0.5*radius);
 			smiley_collision(min_i, shooter, zero_vector, pos2, PLASMA_LT_DAMAGE, PLASMA_LT_D);
-			glLineWidth(2.0);
 		}
 		else {
 			vadd_rand(pos2, 1.7*radius);
 		}
 		unsigned const npts(rand() & 15);
-		vector<vert_wrap_t> verts(npts + 2);
-		verts[0].v = pos;
-		verts[1].v = pos2;
+		line3d line;
+		line.color = LITN_C;
+		line.width = (hit ? 0.3 : 0.15);
+		line.points.resize(npts + 2);
+		line.points[0] = pos;
+		line.points[1] = pos2;
 
 		for (unsigned j = 0; j < npts; ++j) {
 			UNROLL_3X(pos2[i_] *= rand_uniform(1.01, 1.2);)
-			verts[j+2] = pos2;
+			line.points[j+2] = pos2;
 		}
-		draw_verts(verts, GL_LINE_STRIP);
-		if (hit) {glLineWidth(1.0);}
+		line.draw_lines();
 	}
 	set_std_blend_mode();
 	set_color_e(BLACK);
