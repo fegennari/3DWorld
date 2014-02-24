@@ -35,8 +35,9 @@ vector<free_obj const *> a_targets(NUM_ALIGNMENT, NULL), attackers(NUM_ALIGNMENT
 vector<cached_obj> c_uobjs;
 vector<usw_ray> b_wrays, t_wrays; // beams and engine trails
 vector<temp_source> temp_sources;
-pt_line_drawer particle_pld, glow_pld;
+pt_line_drawer particle_pld;
 pt_line_drawer_no_lighting_t emissive_pld;
+point_sprite_drawer glow_psd;
 
 float weap_damage[NUM_UWEAP+NUM_EXTRA_DAM] = {0};
 float ship_damage_done[NUM_US_CLASS]  = {0};
@@ -785,7 +786,7 @@ void draw_univ_objects() {
 		emissive_pld.draw_and_clear();
 		s.end_shader();
 	}
-	if (!glow_pld.empty()) {
+	if (!glow_psd.empty()) {
 		select_texture(BLUR_TEX);
 		glDepthMask(GL_FALSE);
 		shader_t s;
@@ -796,7 +797,7 @@ void draw_univ_objects() {
 		s.begin_shader();
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_float("min_alpha", 0.0);
-		glow_pld.draw_and_clear();
+		glow_psd.draw_and_clear(s);
 		s.end_shader();
 		glDepthMask(GL_TRUE);
 	}

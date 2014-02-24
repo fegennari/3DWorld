@@ -56,7 +56,6 @@ public:
 	bool empty() const {return (points.empty() && lines.empty() && triangles.empty());}
 };
 
-
 typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
 typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 
@@ -78,6 +77,24 @@ public:
 	void draw_and_clear() {draw(); clear();}
 	bool empty() const {return (points.empty() && lines.empty());}
 };
+
+
+// Note: we may want versions with and without normals
+template<class vert_type_t> class point_sprite_drawer_t {
+
+	vector<vert_type_t> points;
+	vector<float> sizes;
+
+public:
+	void clear() {points.resize(0); sizes.resize(0);}
+	void add_pt(vert_type_t const &v, float s) {points.push_back(v); sizes.push_back(s);}
+	void draw(shader_t &s) const;
+	void draw_and_clear(shader_t &s) {draw(s); clear();}
+	bool empty() const {return points.empty();}
+};
+
+typedef point_sprite_drawer_t<vert_color     > point_sprite_drawer;
+typedef point_sprite_drawer_t<vert_norm_color> point_sprite_drawer_norm;
 
 
 struct quad_batch_draw { // Note: might want an indexed version of this

@@ -40,4 +40,4 @@ Better pine tree texture
 * Use normal map in indir texture lookup offset somehow?
 Revisit tiled terrain heightmap texture?
 
-point_sprite_drawer
+make glow_psd use point sprites

@@ -4,6 +4,7 @@
 #include "draw_utils.h"
 #include "function_registry.h"
 #include "gl_ext_arb.h"
+#include "shaders.h"
 
 
 void set_array_client_state(bool va, bool tca, bool na, bool ca) {
@@ -282,6 +283,22 @@ void pt_line_drawer_no_lighting_t::draw() const {
 	draw_verts(points, GL_POINTS);
 	draw_verts(lines,  GL_LINES);
 }
+
+
+template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(shader_t &s) const {
+
+	if (empty()) return;
+	assert(points.size() == sizes.size());
+	int const loc(s.get_attrib_loc("point_size"));
+	assert(loc > 0);
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(float), (void *)(&sizes.front()));
+	draw_verts(points, GL_POINTS);
+	glDisableVertexAttribArray(loc);
+}
+
+template class point_sprite_drawer_t<vert_color     >;
+template class point_sprite_drawer_t<vert_norm_color>;
 
 
 void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n, tex_range_t const &tr) {
