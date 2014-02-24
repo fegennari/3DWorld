@@ -1289,7 +1289,7 @@ point lightning_strike_t::get_pos() const {
 	assert(path.points.size() >= 2);
 	//return path.points[path.points.size()-2];
 	point avg_pos(all_zeros);
-	for (vector<vert_wrap_t>::const_iterator i = path.points.begin(); i != path.points.end(); ++i) {avg_pos += i->v;}
+	for (vector<point>::const_iterator i = path.points.begin(); i != path.points.end(); ++i) {avg_pos += *i;}
 	return avg_pos / path.points.size();
 }
 
@@ -1309,7 +1309,7 @@ void lightning_strike_t::gen() {
 		if (pos.z < zstop) break; // mesh or water intersection (should the line be clipped?)
 	}
 	assert(path.points.size() >= 2);
-	path.width = 2.0;
+	path.width = 10.0;
 	path.color = LITN_C;
 	time       = 1; // nonzero
 
@@ -1339,9 +1339,11 @@ void lightning_strike_t::update() {
 void lightning_strike_t::draw() const {
 
 	if (!enabled()) return;
-	glEnable(GL_LINE_SMOOTH);
-	path.draw(); // disable fog?
-	glDisable(GL_LINE_SMOOTH);
+	shader_t s;
+	s.begin_simple_textured_shader();
+	path.draw_lines(); // disable fog?
+	s.end_shader();
+
 	int const gl_light(GL_LIGHT0 + LIGHTNING_LIGHT);
 	colorRGBA const ambient(path.color*0.2);
 	float const radius(0.4*get_scaled_tile_radius());

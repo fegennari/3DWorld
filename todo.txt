@@ -38,3 +38,6 @@ static error check (analysis)
 Path tracing dynamic light in Sponza (or precalc light for some positions?)
 Better pine tree texture
 * Use normal map in indir texture lookup offset somehow?
+Revisit tiled terrain heightmap texture?
+
+point_sprite_drawer

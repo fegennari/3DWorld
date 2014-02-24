@@ -6,7 +6,6 @@
 #include "shape_line3d.h"
 #include "collision_detect.h"
 #include "draw_utils.h"
-#include "shaders.h"
 #include <fstream>
 
 
@@ -246,21 +245,18 @@ void shape3d::destroy() {
 // ************** LINE3D *************
 
 
-void line3d::draw() const {
+void line3d::draw_lines() const {
 
 	if (points.empty()) return;
 	assert(points.size() >= 2);
-	//glEnable(GL_BLEND);
-	//glEnable(GL_LINE_SMOOTH);
-	glLineWidth(width);
-	shader_t s;
-	s.begin_color_only_shader();
-	color.do_glColor();
-	draw_verts(points, GL_LINE_STRIP);
-	glLineWidth(1.0);
-	s.end_shader();
-	//glDisable(GL_BLEND);
-	//glDisable(GL_LINE_SMOOTH);
+	line_tquad_draw_t drawer;
+	float const w(0.01*width);
+
+	for (unsigned i = 1; i < points.size(); ++i) {
+		drawer.add_line_as_tris(points[i-1], points[i], w, w, color, color,
+			((i >= 2) ? &points[i-2] : NULL), ((i+1 < points.size()) ? &points[i+1] : NULL));
+	}
+	drawer.draw(GL_TRIANGLES);
 }
 
 
