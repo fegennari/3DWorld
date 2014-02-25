@@ -268,11 +268,9 @@ template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
 		
 	if (empty()) return;
 	assert(!(lines.size() & 1));
-	assert((triangles.size() % 3) == 0);
 	set_array_client_state(1, 0, 1, 1);
 	points.draw(GL_POINTS);
 	lines.draw(GL_LINES);
-	triangles.draw(GL_TRIANGLES);
 	//cout << "mem: " << get_mem() << endl;
 }
 
