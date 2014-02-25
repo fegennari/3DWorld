@@ -391,19 +391,6 @@ public:
 };
 
 
-template<typename pld_t> void draw_1pix_2pix_plds(pld_t plds[2], bool clear_pld0=1) {
-
-	plds[0].draw();
-	if (clear_pld0) {plds[0].clear();}
-	if (plds[1].empty()) return;
-	glPointSize(2.0); // 2 pixel diameter
-	glLineWidth(2.0); // 2 pixel width
-	plds[1].draw_and_clear();
-	glPointSize(1.0);
-	glLineWidth(1.0);
-}
-
-
 void invalidate_cached_stars() {++star_cache_ix;}
 
 
@@ -671,8 +658,12 @@ inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
 
 void ucell::draw_all_stars(ushader_group &usg, bool clear_pld0) {
 
+	if (star_plds[0].empty() && star_plds[1].empty()) return;
 	usg.enable_color_only_shader();
-	draw_1pix_2pix_plds(star_plds, 0); // don't clear star_plds[0]
+	star_plds[0].draw(); // don't clear
+	glPointSize(2.0); // 2 pixel diameter
+	star_plds[1].draw_and_clear();
+	glPointSize(1.0);
 	usg.disable_color_only_shader();
 }
 
@@ -912,7 +903,10 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					} // planet k
 					if (!planet_plds[0].empty() || !planet_plds[1].empty()) {
 						usg.enable_planet_colored_shader(0);
-						draw_1pix_2pix_plds(planet_plds);
+						planet_plds[0].draw_and_clear();
+						glPointSize(2.0); // 2 pixel diameter
+						planet_plds[1].draw_and_clear();
+						glPointSize(1.0);
 						usg.disable_planet_colored_shader();
 					}
 					if (planet_asteroid_belt) { // we normally only get here once per frame, so the overhead is acceptable
@@ -2210,7 +2204,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 
 		if (draw_as_line) { // lines of light - "warp speed"
 			blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
-			star_plds[size > 1.5].add_line(pos_, ocolor, (pos_ - get_player_velocity()), ocolor);
+			star_plds[0].add_line(pos_, ocolor, (pos_ - get_player_velocity()), ocolor); // lines are always one pixel wide
 		}
 		else {
 			star_plds[size > 1.5].add_pt(pos_, ocolor);

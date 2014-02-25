@@ -891,14 +891,13 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 		glScalef(2.0, 2.0, 1.0);
 		for (unsigned i = 0; i < 8; ++i) {verts[i] = point(xy[i], xy[(i+4)&7], zval);}
 		draw_verts(verts, 8, GL_LINES);
+		glPointSize(2.0);
 	}
 	else {
 		glPointSize(2.0);
 		for (unsigned i = 0; i < 4; ++i) {verts[i] = point(xy[2*i], xy[(2*i+4)&7], zval);}
 		draw_verts(verts, 4, GL_POINTS);
-		glPointSize(1.0);
 	}
-	glPointSize(2.0);
 	verts[0] = point(0.0, 0.0, zval);
 	draw_verts(verts, 1, GL_POINTS);
 	glPointSize(1.0);
