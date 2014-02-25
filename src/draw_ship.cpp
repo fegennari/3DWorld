@@ -19,6 +19,7 @@ extern int display_mode, animate2, frame_counter; // for testing, etc.
 extern float fticks;
 extern vector<usw_ray> t_wrays;
 extern pt_line_drawer_no_lighting_t emissive_pld;
+extern shader_t emissive_shader;
 
 
 // ******************* USW_RAY, and SHIP_COLL_OBJ classes *******************
@@ -467,15 +468,12 @@ void uobj_draw_data::draw_usw_emp() const {
 	float const alpha(0.5*CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
 	glPushMatrix();
 	select_texture(SBLUR_TEX);
-	glEnable(GL_ALPHA_TEST);
-	//if (shader) {shader->add_uniform_float("min_alpha", 0.01);}
-	glAlphaFunc(GL_GREATER, 0.01);
-	set_emissive_color(colorRGBA(1.0, 0.9, 0.7, alpha));
+	emissive_shader.enable();
+	colorRGBA(1.0, 0.9, 0.7, alpha).do_glColor();
 	glRotatef(90.0, 1.0, 0.0, 0.0);
 	draw_sphere_vbo_back_to_front(all_zeros, 1.0, ndiv, 1);
-	glDisable(GL_ALPHA_TEST);
+	if (shader) {shader->enable();}
 	end_ship_texture();
-	clear_emissive_color();
 	glPopMatrix();
 	if (animate2) gen_lightning_from(pos, radius, 0.5, obj);
 }
@@ -1207,9 +1205,6 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		}
 	}
 	if (phase2) {
-		//if (shader) {shader->add_uniform_float("min_alpha", 0.2);}
-		glEnable(GL_ALPHA_TEST);
-		glAlphaFunc(GL_GREATER, 0.2);
 		select_texture(SMOKE_TEX);
 		colorRGBA outer_color(color_a*0.5);
 		outer_color.do_glColor();
@@ -1220,7 +1215,6 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		else {
 			draw_sphere_vbo(all_zeros, 1.0, ndiv2, 1);
 		}
-		glDisable(GL_ALPHA_TEST);
 	}
 	end_ship_texture();
 	

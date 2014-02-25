@@ -6,6 +6,7 @@
 #include "ship_util.h"
 #include "explosion.h"
 #include "openal_wrap.h"
+#include "shaders.h"
 #include <sstream>
 
 
@@ -63,6 +64,7 @@ extern vector<us_weapon> us_weapons;
 extern vector<usw_ray> b_wrays;
 extern vector<temp_source> temp_sources;
 extern vector<unsigned> build_types[];
+extern shader_t emissive_shader;
 
 
 // ************ U_SHIP ************
@@ -2685,25 +2687,19 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 				translate_to(dir*(z_end - sid*z_step));
 			}
 			if (has_hit_dir) { // rotate so that shields appear at hit direction
-				//if (ddata.shader) {ddata.shader->add_uniform_float("min_alpha", 0.01);}
-				glEnable(GL_ALPHA_TEST);
-				glAlphaFunc(GL_GREATER, 0.01);
 				select_texture(SBLUR_TEX);
 				rotate_sphere_tex_to_dir(hit_dir);
 			}
 			//if (ssects == 1) {} // scale to create tightly bounding ellipsoid?
 			assert(radius > 0.0);
-			set_emissive_color(color_alpha);
+			emissive_shader.enable();
+			color_alpha.do_glColor();
 			draw_sphere_vbo_back_to_front(all_zeros, ssize, 3*ndiv/2, has_hit_dir); // partial sphere?
 			glDisable(GL_CULL_FACE);
-			clear_emissive_color();
 			glDepthFunc(GL_LESS);
 			set_std_blend_mode();
-
-			if (has_hit_dir) {
-				end_texture();
-				glDisable(GL_ALPHA_TEST);
-			}
+			if (ddata.shader) {ddata.shader->enable();}
+			if (has_hit_dir) {end_texture();}
 		} // show shields
 	} // final pass/phase
 #ifdef TIME_SHIP_DRAW

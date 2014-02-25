@@ -38,6 +38,7 @@ vector<temp_source> temp_sources;
 pt_line_drawer particle_pld;
 pt_line_drawer_no_lighting_t emissive_pld;
 point_sprite_drawer glow_psd;
+shader_t emissive_shader;
 
 float weap_damage[NUM_UWEAP+NUM_EXTRA_DAM] = {0};
 float ship_damage_done[NUM_US_CLASS]  = {0};
@@ -754,7 +755,8 @@ void draw_univ_objects() {
 	clear_emissive_color(); // just to be sure
 	BLACK.do_glColor();
 	disable_exp_lights(); // make sure the explosion lights start out cleared
-	
+	emissive_shader.begin_simple_textured_shader(0.001); // textured, no lighting, will be disabled by ship draw shader
+
 	bool disint_tex(0); // this is slow, so only enable if some ship is exploding and needs this mode
 	for (vector<ship_explosion>::const_iterator i = exploding.begin(); i != exploding.end(); ++i) {disint_tex |= i->disint_tex;}
 	setup_ship_draw_shader(s[1], 1, disint_tex); // shadow shader, system lighting only
@@ -767,6 +769,7 @@ void draw_univ_objects() {
 		fobj->draw(s);
 		fobj->reset_lights(); // reset for next frame
 	}
+	emissive_shader.end_shader();
 	end_part_cloud_draw(); // leaves program==0
 	disable_exp_lights(); // make sure the explosion lights end cleared
 	enable_blend(); // redundant?

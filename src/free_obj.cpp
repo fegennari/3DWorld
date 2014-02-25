@@ -878,7 +878,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.draw_as_pt()) {
 			emissive_pld.add_pt(make_pt_global(pos), color); // Note: may not be in correct back to front ordering for alpha blending
 		}
-		else if ((display_mode & 0x20) || 60.0*radius < ddata.dist) {
+		else if (60.0*radius < ddata.dist) {
 			glow_psd.add_pt(vert_color(make_pt_global(pos), color), 2.0*radius); // Note: may not be in correct back to front ordering for alpha blending
 		}
 		else {
