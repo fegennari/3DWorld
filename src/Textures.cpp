@@ -709,7 +709,9 @@ void texture_t::resize(int new_w, int new_h) {
 	if (new_w == width && new_h == height) return; // already correct size
 	assert(data != NULL && width > 0 && height > 0 && new_w > 0 && new_h > 0);
 	unsigned char *new_data(new unsigned char[new_w*new_h*ncolors]);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // required to handle calls from from fix_word_alignment()
 	int const ret(gluScaleImage(calc_format(), width, height, get_data_format(), data, new_w, new_h, get_data_format(), new_data));
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 	if (ret) cout << "GLU error during image scale: " << gluErrorString(ret) << "." << endl;
 	free_data(); // only if size increases?
 	data   = new_data;

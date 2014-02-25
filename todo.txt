@@ -10,7 +10,6 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Color/Normal/TexCoord/VertexPointer, Enable/DisableClientState
  - Material*, Light*, LIGHTi
  - Non-sprite points
- - GL_LUMINANCE texture formats
  - Use triangles instead of quads (Tree billboards/leaves)
  - Replace GL matrix operations with something else (GLM?)
 

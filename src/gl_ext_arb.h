@@ -6,21 +6,15 @@
 #define _GL_EXT_ARB_H_
 
 
-// FIXME: should use GL_RED and GL_RG for 1 and 2 component textures instead of LUMINANCE;
-// however, this won't work because most shaders want to use RGB, and try_compact_to_lum()
-// may convert some textures that were specified as RGB to 1 component (RED only);
-// we could remove the try_compact_to_lum() call, but that's required for alpha textures
-// that get merged in as the alpha channel of an RGB texture,
-// but texture_t doesn't know if it's to be used as an alpha component or a luminance value
 inline GLenum get_internal_texture_format(int ncolors, bool compressed=0) { // Note: ncolors=2 is unused
-	GLenum const cformats[4] = {GL_COMPRESSED_LUMINANCE, GL_COMPRESSED_LUMINANCE_ALPHA, GL_COMPRESSED_RGB, GL_COMPRESSED_RGBA};
-	GLenum const formats [4] = {GL_LUMINANCE8, GL_LUMINANCE8_ALPHA8, GL_RGB8, GL_RGBA8};
+	GLenum const cformats[4] = {GL_COMPRESSED_RED, GL_COMPRESSED_RG, GL_COMPRESSED_RGB, GL_COMPRESSED_RGBA};
+	GLenum const formats [4] = {GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
 	return (compressed ? cformats : formats)[ncolors-1];
 }
 
 inline GLenum get_texture_format(int ncolors) {
 	assert(ncolors >= 1 && ncolors <= 4);
-	GLenum const formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
+	GLenum const formats[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
 	return formats[ncolors-1];
 }
 

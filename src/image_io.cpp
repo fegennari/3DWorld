@@ -106,7 +106,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 				exit(1);
 			}
 		}
-		unsigned want_alpha_channel(ncolors == 4);
+		unsigned const want_alpha_channel(ncolors == 4), want_luminance(ncolors == 1);
 
 		switch (format) {
 		case 0: case 1: case 2: case 3: load_raw_bmp(index, allow_diff_width_height, allow_two_byte_grayscale); break; // raw
@@ -124,7 +124,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		if (want_alpha_channel && ncolors < 4) {
 			add_alpha_channel();
 		}
-		else {
+		else if (want_luminance && ncolors == 3) {
 			try_compact_to_lum();
 		}
 		if (!ignore_word_alignment) {fix_word_alignment();}
