@@ -76,12 +76,18 @@ int get_universe_ambient_light() {
 }
 
 
-void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]) {
+void set_light_colors(int light, float const *const ambient, float const *const diffuse) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	enable_light(light - GL_LIGHT0);
 	glLightfv(light, GL_AMBIENT, ambient);
 	glLightfv(light, GL_DIFFUSE, diffuse);
+}
+
+
+void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]) {
+
+	enable_light(light - GL_LIGHT0);
+	set_light_colors(light, ambient, diffuse);
 }
 
 
@@ -90,8 +96,7 @@ void clear_colors_and_disable_light(int light) {
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	float const ad[4] = {0.0, 0.0, 0.0, 0.0};
 	disable_light(light - GL_LIGHT0);
-	glLightfv(light, GL_AMBIENT, ad);
-	glLightfv(light, GL_DIFFUSE, ad);
+	set_light_colors(light, ad, ad);
 }
 
 
@@ -101,6 +106,14 @@ void set_gl_light_pos(int light, point const &pos, float w) {
 	float const position[4] = {pos.x, pos.y, pos.z, w};
 	glLightfv(light, GL_POSITION, position);
 	gl_light_positions[light - GL_LIGHT0] = pos;
+}
+
+
+void setup_gl_light_atten(int light, float c_a, float l_a, float q_a) {
+
+	glLightf(light, GL_CONSTANT_ATTENUATION,  c_a);
+	glLightf(light, GL_LINEAR_ATTENUATION,    l_a);
+	glLightf(light, GL_QUADRATIC_ATTENUATION, q_a);
 }
 
 
@@ -723,9 +736,7 @@ void draw_sky(int order) {
 		set_gl_light_pos(gl_light, lpos, 1.0); // w=1.0 - point light source
 		colorRGBA const ambient(sun_color*0.5);
 		set_colors_and_enable_light(gl_light, &ambient.R, &sun_color.R);
-		glLightf(gl_light, GL_CONSTANT_ATTENUATION,  0.0);
-		glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.01);
-		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 0.01);
+		setup_gl_light_atten(gl_light, 0.0, 0.01, 0.01);
 	}
 
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot

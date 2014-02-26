@@ -349,9 +349,7 @@ void setup_point_light(point const &pos, colorRGBA const &color, float radius, u
 	// set light attenuation
 	assert(radius > 0.0);
 	float const atten2(0.1/(EXP_LIGHT_SCALE*radius));
-	glLightf(gl_light, GL_CONSTANT_ATTENUATION,  0.5);
-	glLightf(gl_light, GL_LINEAR_ATTENUATION,    20.0*atten2); // 1/radius
-	glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 5000.0*atten2); // 250/radius
+	setup_gl_light_atten(gl_light, 0.5, 20.0*atten2, 5000.0*atten2);
 	set_gl_light_pos(gl_light, pos, 1.0); // point light source position
 }
 

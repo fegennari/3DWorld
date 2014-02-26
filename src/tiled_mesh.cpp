@@ -1348,9 +1348,7 @@ void lightning_strike_t::draw() const {
 	colorRGBA const ambient(path.color*0.2);
 	float const radius(0.4*get_scaled_tile_radius());
 	set_colors_and_enable_light(gl_light, &ambient.R, &path.color.R);
-	glLightf(gl_light, GL_CONSTANT_ATTENUATION,  0.1);
-	glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
-	glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 1.0/(radius*radius));
+	setup_gl_light_atten(gl_light, 0.1, 0.0, 1.0/(radius*radius));
 	set_gl_light_pos(gl_light, get_pos(), 1.0); // point light source position
 	tt_lightning_enabled = 1;
 }

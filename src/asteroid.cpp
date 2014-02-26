@@ -39,7 +39,6 @@ shader_t cached_voxel_shaders[9]; // one for each value of num_lights (0-8)
 shader_t cached_proc_shaders [9];
 
 
-void set_uniform_atten_lighting(int light);
 unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv);
 
 
@@ -1075,10 +1074,8 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 
 	if (custom_lighting) {
 		colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
-		int const light(GL_LIGHT0);
-		glLightfv(light, GL_AMBIENT, &acolor.R);
-		glLightfv(light, GL_DIFFUSE, &BLACK.R);
-		set_uniform_atten_lighting(light);
+		set_light_colors(GL_LIGHT0, &acolor.R, &BLACK.R);
+		setup_gl_light_atten(GL_LIGHT0, 1.0, 0.0, 0.0);
 	}
 }
 

@@ -288,18 +288,14 @@ void set_light_atten(int light, float attenuation) {
 	glGetLightfv(light, GL_POSITION, vals);
 
 	if (vals[3] != 0.0) { // point light
-		glLightf(light, GL_CONSTANT_ATTENUATION,  attenuation);
-		glLightf(light, GL_LINEAR_ATTENUATION,    0.0);
-		glLightf(light, GL_QUADRATIC_ATTENUATION, 0.0);
+		setup_gl_light_atten(light, attenuation, 0.0, 0.0);
 	}
 	else { // directional light
-		int params[2] = {GL_AMBIENT, GL_DIFFUSE};
-
-		for (unsigned i = 0; i < 2; ++i) {
-			glGetLightfv(light, params[i], vals);
-			for (unsigned d = 0; d < 4; ++d) vals[d] /= attenuation;
-			glLightfv(light, params[i], vals);
-		}
+		float a[4], d[4];
+		glGetLightfv(light, GL_AMBIENT, a);
+		glGetLightfv(light, GL_DIFFUSE, d);
+		UNROLL_4X(vals[i_] /= attenuation;)
+		set_light_colors(light, a, d);
 	}
 }
 

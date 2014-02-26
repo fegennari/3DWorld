@@ -559,7 +559,6 @@ typedef string modmap_val_t;
 typedef map<s_object, modmap_val_t> modmap;
 
 
-
 struct coll_test { // size = 16
 
 	int index;
@@ -568,15 +567,12 @@ struct coll_test { // size = 16
 };
 
 
-inline uplanet const &get_planet(s_object const &so) {
-  return so.get_planet();
-}
+inline uplanet const &get_planet(s_object const &so) {return so.get_planet();}
 
 
 bool import_default_modmap();
 bool import_modmap(string const &filename);
 bool export_modmap(string const &filename);
-void set_star_light_atten(int light, float atten);
 s_object get_shifted_sobj(s_object const &sobj);
 float calc_sphere_size(point const &pos, point const &camera, float radius, float d_adj=0.0);
 bool sphere_size_less_than(point const &pos, point const &camera, float radius, float num_pixels);

@@ -1172,9 +1172,7 @@ unsigned enable_dynamic_lights(point const &center, float radius) { // used for 
 		light_source const &ls(dl_sources[vis_lights[i].second]);
 		colorRGBA const &dcolor(ls.get_color()), acolor(dcolor*0.2); // 20% ambient
 		set_colors_and_enable_light(gl_light, (float *)(&acolor), (float *)(&dcolor));
-		glLightf(gl_light, GL_CONSTANT_ATTENUATION,  1.0);
-		glLightf(gl_light, GL_LINEAR_ATTENUATION,    0.0);
-		glLightf(gl_light, GL_QUADRATIC_ATTENUATION, 10.0/(ls.get_radius()*ls.get_radius()));
+		setup_gl_light_atten(gl_light, 1.0, 0.0, 10.0/(ls.get_radius()*ls.get_radius()));
 		point lpos(ls.get_pos());
 		if (ls.is_line_light() && p2p_dist_sq(ls.get_pos2(), center) < p2p_dist_sq(lpos, center)) {lpos = ls.get_pos2();}
 		set_gl_light_pos(gl_light, lpos, 1.0); // point light source position

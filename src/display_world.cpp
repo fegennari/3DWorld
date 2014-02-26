@@ -373,14 +373,6 @@ void reset_planet_defaults() {
 }
 
 
-void set_uniform_atten_lighting(int light) {
-
-	glLightf(light, GL_CONSTANT_ATTENUATION,  1.0);
-	glLightf(light, GL_LINEAR_ATTENUATION,    0.0);
-	glLightf(light, GL_QUADRATIC_ATTENUATION, 0.0);
-}
-
-
 float get_light_pos_scale() {
 	return ((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode 
 }
@@ -395,7 +387,7 @@ void setup_lighting(float depth) {
 	enabled_lights = 0;
 	set_gl_light_pos(GL_LIGHT0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
 	set_gl_light_pos(GL_LIGHT1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
-	set_uniform_atten_lighting(GL_LIGHT0); // reset attenuation to 1.0
+	setup_gl_light_atten(GL_LIGHT0, 1.0, 0.0, 0.0); // reset attenuation to 1.0
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
 	float const mlf(get_moon_light_factor());

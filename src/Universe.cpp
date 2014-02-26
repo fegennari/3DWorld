@@ -112,9 +112,7 @@ bool sphere_size_less_than(point const &pos, point const &camera, float radius, 
 
 void set_star_light_atten(int light, float atten) {
 
-	glLightf(light, GL_CONSTANT_ATTENUATION,  STAR_CONST);
-	glLightf(light, GL_LINEAR_ATTENUATION,    atten*STAR_LINEAR_SCALED);
-	glLightf(light, GL_QUADRATIC_ATTENUATION, atten*STAR_QUAD_SCALED);
+	setup_gl_light_atten(light, STAR_CONST, atten*STAR_LINEAR_SCALED, atten*STAR_QUAD_SCALED);
 }
 
 
@@ -865,8 +863,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 							if (has_sun && planet.is_ok()) { // setup planet as an additional light source for all moons
 								colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
-								glLightfv(p_light, GL_AMBIENT, &BLACK.R);
-								glLightfv(p_light, GL_DIFFUSE, &pcolor.R); // planet diffuse
+								set_light_colors(p_light, &BLACK.R, &pcolor.R); // use planet diffuse
 								set_gl_light_pos(p_light, make_pt_global(ppos), 1.0); // point light at planet center
 								set_star_light_atten(p_light, 5.0*PLANET_MAX_SIZE/planet.radius);
 							}
@@ -3069,10 +3066,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 
 void set_light_galaxy_ambient_only() {
 
-	disable_light(0);
-	float const zero4[4] = {0.0, 0.0, 0.0, 0.0};
-	glLightfv(GL_LIGHT0, GL_AMBIENT, zero4); // need to zero it out as well, since shaders ignore light enable state
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, zero4);
+	clear_colors_and_disable_light(GL_LIGHT0); // need to zero it out as well, since shaders ignore light enable state
 }
 
 
