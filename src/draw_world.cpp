@@ -524,13 +524,14 @@ void portal::pre_draw(vector<vert_wrap_t> &verts) {
 
 void portal::post_draw(vector<vert_wrap_t> &verts) {
 
-	draw_verts(verts, GL_QUADS);
+	draw_verts(verts, GL_TRIANGLES);
 	verts.clear();
 }
 
 void portal::draw(vector<vert_wrap_t> &verts) const {
 
-	for (unsigned i = 0; i < 4; ++i) {verts.push_back(pts[i]);}
+	unsigned const ixs[6] = {0, 1, 2, 0, 2, 3};
+	for (unsigned i = 0; i < 6; ++i) {verts.push_back(pts[ixs[i]]);}
 };
 
 

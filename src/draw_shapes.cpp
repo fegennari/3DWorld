@@ -196,21 +196,18 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		}
 	} // for i
 	if (vix == 0) return; // no quads to draw
-
-	if (tid < 0 || shader == NULL) {
-		draw_verts(verts, vix, GL_QUADS);
-		return;
-	}
-	int const loc_ix[2] = {TEX0_S_ATTR, TEX0_T_ATTR};
+	bool const use_tcs(tid >= 0 && shader != NULL);
 	int loc[2];
 
-	for (unsigned d = 0; d < 2; ++d) {
-		loc[d] = shader->attrib_loc_by_ix(loc_ix[d]);
-		glEnableVertexAttribArray(loc[d]);
-		glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)tex_attrs[d]);
+	if (use_tcs) {
+		for (unsigned d = 0; d < 2; ++d) {
+			loc[d] = shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR);
+			glEnableVertexAttribArray(loc[d]);
+			glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)tex_attrs[d]);
+		}
 	}
 	draw_verts(verts, vix, GL_QUADS);
-	for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}
+	if (use_tcs) {for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}}
 }
 
 

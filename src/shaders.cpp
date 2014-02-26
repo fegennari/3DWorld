@@ -57,15 +57,19 @@ bool shader_t::set_uniform_vector2d(int loc, vector2d const &val) {
 	if (loc >= 0) {glUniform2fv(loc, 1, &val.x); return 1;} else {return 0;}
 }
 
-bool shader_t::set_uniform_vector3d(int loc, vector3d const &val) {
+bool shader_t::set_uniform_vector3d(int loc, vector3d const &val) { // same as colorRGB
 	if (loc >= 0) {glUniform3fv(loc, 1, &val.x); return 1;} else {return 0;}
 }
 
-bool shader_t::set_uniform_color(int loc, colorRGBA const &val) {
+bool shader_t::set_uniform_vector4d(int loc, vector4d const &val) { // same as colorRGBA
+	if (loc >= 0) {glUniform4fv(loc, 1, &val.x); return 1;} else {return 0;}
+}
+
+bool shader_t::set_uniform_color(int loc, colorRGBA const &val) { // same as vector3d
 	if (loc >= 0) {glUniform4fv(loc, 1, &val.R); return 1;} else {return 0;}
 }
 
-bool shader_t::set_uniform_color(int loc, colorRGB  const &val) {
+bool shader_t::set_uniform_color(int loc, colorRGB  const &val) { // same as vector3d
 	if (loc >= 0) {glUniform3fv(loc, 1, &val.R); return 1;} else {return 0;}
 }
 

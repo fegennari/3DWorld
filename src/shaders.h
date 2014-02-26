@@ -61,6 +61,7 @@ public:
 	static bool set_uniform_int        (int loc, int val);
 	static bool set_uniform_vector2d   (int loc, vector2d const &val);
 	static bool set_uniform_vector3d   (int loc, vector3d const &val);
+	static bool set_uniform_vector4d   (int loc, vector4d const &val);
 	static bool set_uniform_color      (int loc, colorRGBA const &val);
 	static bool set_uniform_color      (int loc, colorRGB  const &val);
 	static bool set_uniform_matrid_4x4 (int loc, float *m, bool transpose);

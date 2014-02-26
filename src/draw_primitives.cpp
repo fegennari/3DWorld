@@ -1025,8 +1025,8 @@ void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bo
 
 		if (has_xform) {
 			if (shader_loc >= 0) { // unused/untested mode
-				colorRGBA const v(pos.x, pos.y, pos.z, radius); // Note: packing xlate and scale into color
-				shader_t::set_uniform_color(shader_loc, v);
+				vector4d const v(pos, radius);
+				shader_t::set_uniform_vector4d(shader_loc, v);
 			}
 			else {
 				glPushMatrix();
