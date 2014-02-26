@@ -41,7 +41,7 @@ pt_line_drawer bubble_pld;
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, xoff, yoff;
-extern int window_width, window_height, game_mode, enable_fsource, draw_model, camera_mode, DISABLE_WATER;
+extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER;
 extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape, enabled_lights;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset;
@@ -1283,14 +1283,6 @@ void draw_projectile_effects() {
 	draw_beams();
 	draw_sparks();
 	water_part_man.draw(); // not really a projectile effect, but it's drawn with them
-}
-
-
-void draw_env_other() {
-
-	if (!enable_fsource) return;
-	set_color(BLACK);
-	draw_subdiv_sphere(flow_source, 0.05, N_SPHERE_DIV, 0, 0);
 }
 
 

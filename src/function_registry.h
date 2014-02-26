@@ -143,7 +143,6 @@ void draw_smoke_and_fires();
 void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix, bool fades=0);
 void draw_camera_filters(vector<camera_filter> &cfs);
 void draw_projectile_effects();
-void draw_env_other();
 void draw_splash(float x, float y, float z, float size, colorRGBA color=WATER_C);
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize=1.0, bool bitmap_font=0);
 void draw_framerate(float val);

@@ -872,7 +872,6 @@ void display(void) {
 			if (!combined_gu) {draw_earth();}
 			draw_sky(0);
 			draw_puffy_clouds(0);
-			draw_env_other();
 			check_gl_error(5);
 			if (TIMETEST) PRINT_TIME("D");
 
