@@ -311,7 +311,7 @@ struct rt_data {
 		is_running = 1;
 	}
 	void post_run() {
-		assert(is_running);
+		assert(is_running); // can this fail due to race conditions? too strong? remove?
 		is_running = 0;
 	}
 };
@@ -405,7 +405,7 @@ void check_for_lighting_finished() { // to be called about once per frame
 
 	if (!thread_manager.is_active()) return; // inactive
 	if (thread_manager.any_threads_running()) return; // still running
-	thread_manager.clear();
+	thread_manager.join(); // clear() or join()?
 	update_lmap_from_temp_copy();
 }
 
