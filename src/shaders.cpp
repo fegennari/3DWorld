@@ -641,6 +641,12 @@ void shader_t::begin_color_only_shader() {
 	begin_shader();
 }
 
+void shader_t::begin_color_only_shader(colorRGBA const &color) {
+
+	color.do_glColor();
+	begin_color_only_shader();
+}
+
 void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen) {
 
 	if (include_2_lights) {

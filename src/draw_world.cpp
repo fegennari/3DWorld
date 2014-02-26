@@ -556,7 +556,6 @@ void draw_stars(float alpha) {
 	UNROLL_3X(bkg[i_] = (1.0 - alpha)*bkg_color[i_];)
 	glPushMatrix();
 	if (camera_mode == 1) {translate_to(surface_pos);}
-	set_color(BLACK);
 	enable_blend();
 	glPointSize(2.0);
 	glDisable(GL_DEPTH_TEST);
@@ -588,10 +587,9 @@ void draw_sun() {
 	point const pos(get_sun_pos());
 	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 1)) return;
 	shader_t s;
-	s.begin_color_only_shader();
 	colorRGBA color(SUN_C);
 	apply_red_sky(color);
-	color.do_glColor();
+	s.begin_color_only_shader(color);
 	draw_subdiv_sphere(pos, sun_radius, N_SPHERE_DIV, 1, 0);
 	s.end_shader();
 }
@@ -620,9 +618,8 @@ void draw_moon() {
 		colorRGBA color(bkg_color);
 		color.alpha = 5.0*(light_factor - 0.4);
 		shader_t s;
-		s.begin_color_only_shader();
+		s.begin_color_only_shader(color);
 		enable_blend();
-		color.do_glColor();
 		draw_subdiv_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, 0, 0);
 		s.end_shader();
 		disable_blend();
@@ -1323,11 +1320,11 @@ void draw_splash(float x, float y, float z, float size, colorRGBA color) {
 }
 
 
-void draw_text(float x, float y, float z, char const *text, float tsize, bool bitmap_font) {
+void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize, bool bitmap_font) {
 
 	//bitmap_font |= ((display_mode & 0x80) != 0);
 	shader_t s;
-	s.begin_color_only_shader();
+	s.begin_color_only_shader(color);
 	glDisable(GL_DEPTH_TEST);
 
 	if (bitmap_font) {
@@ -1379,10 +1376,9 @@ void draw_text(float x, float y, float z, char const *text, float tsize, bool bi
 void draw_framerate(float val) {
 
 	char text[32];
-	WHITE.do_glColor();
 	sprintf(text, "%3.1f", val);
 	float const ar(((float)window_width)/((float)window_height));
-	draw_text(-0.011*ar, -0.011, -2.0*NEAR_CLIP, text);
+	draw_text(WHITE, -0.011*ar, -0.011, -2.0*NEAR_CLIP, text);
 }
 
 
@@ -1391,15 +1387,14 @@ void draw_compass_and_alt() { // and temperature
 	char text[64];
 	float const aspect_ratio((float)window_width/(float)window_height);
 	string const dirs[8] = {"N", "NW", "W", "SW", "S", "SE", "E", "NE"};
-	YELLOW.do_glColor();
 	sprintf(text, "Loc: (%3.2f, %3.2f, %3.2f)", (camera_origin.x+(xoff2-xoff)*DX_VAL), (camera_origin.y+(yoff2-yoff)*DY_VAL), camera_origin.z);
-	draw_text(-0.005*aspect_ratio, -0.01, -0.02, text);
+	draw_text(YELLOW, -0.005*aspect_ratio, -0.01, -0.02, text);
 	float const theta(safe_acosf(cview_dir.x)*TO_DEG);
 	int const octant(int(((cview_dir.y < 0) ? (360.0 - theta) : theta)/45.0 + 22.5)&7);
 	sprintf(text, "%s", dirs[octant].c_str());
-	draw_text(0.005*aspect_ratio, -0.01, -0.02, text);
+	draw_text(YELLOW, 0.005*aspect_ratio, -0.01, -0.02, text);
 	sprintf(text, "Temp: %iC", int(temperature));
-	draw_text(0.007*aspect_ratio, -0.01, -0.02, text);
+	draw_text(YELLOW, 0.007*aspect_ratio, -0.01, -0.02, text);
 }
 
 

@@ -2169,8 +2169,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 	
 		if (line_intersect_tiled_mesh(v1, v2, hit_pos)) {
 			shader_t s;
-			s.begin_color_only_shader();
-			RED.do_glColor();
+			s.begin_color_only_shader(RED);
 			draw_sphere_vbo(hit_pos, 0.1, N_SPHERE_DIV, 0);
 			s.end_shader();
 		}

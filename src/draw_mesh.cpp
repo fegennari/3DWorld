@@ -424,11 +424,10 @@ void display_mesh(bool shadow_pass) { // fast array version
 	}
 	if (DEBUG_COLLS) {
 		shader_t s;
-		s.begin_color_only_shader();
 
 		if (DEBUG_COLLS == 2) {
 			enable_blend();
-			colorRGBA(1.0, 0.0, 0.0, 0.1).do_glColor();
+			s.begin_color_only_shader(colorRGBA(1.0, 0.0, 0.0, 0.1));
 
 			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 				for (int j = 0; j < MESH_X_SIZE; ++j) {
@@ -443,7 +442,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 		}
 		else {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			BLUE.do_glColor();
+			s.begin_color_only_shader(BLUE);
 			vector<vert_wrap_t> verts;
 
 			for (int i = 0; i < MESH_Y_SIZE-1; ++i) {			
@@ -482,8 +481,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 		vector<vert_wrap_t> verts;
 		verts.reserve(2*XY_MULT_SIZE);
 		shader_t s;
-		s.begin_color_only_shader();
-		RED.do_glColor();
+		s.begin_color_only_shader(RED);
 
 		for (int i = 1; i < MESH_Y_SIZE-2; ++i) {
 			for (int j = 1; j < MESH_X_SIZE-1; ++j) {
@@ -539,8 +537,8 @@ void draw_sides_and_bottom(bool shadow_pass) {
 	}
 	else {
 		s.begin_simple_textured_shader(0.0, 1); // with lighting
+		set_color(WHITE);
 	}
-	set_color(WHITE);
 	set_fill_mode();
 	select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
 	vector<vert_norm_tc> verts;

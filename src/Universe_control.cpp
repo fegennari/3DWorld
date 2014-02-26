@@ -574,16 +574,14 @@ void draw_universe_stats() {
 	point const camera(ps.get_pos()), camera_scaled(camera/CELL_SIZE);
 	vector3d const dir(ps.get_dir().get_norm());
 	float const player_temp(player_ship().get_true_temp());
-	YELLOW.do_glColor();
 	//sprintf(text, "Loc: (%i: %3.3f, %i: %3.3f, %i: %3.3f)  Dir: (%1.3f, %1.3f, %1.3f)", uxyz[0], camera_scaled.x, uxyz[1], camera_scaled.y, uxyz[2], camera_scaled.z, dir.x, dir.y, dir.z);
 	sprintf(text, "Loc: (%3.4f, %3.4f, %3.4f)  Dir: (%1.3f, %1.3f, %1.3f)  T: %3.1f",
 		uxyz[0]+camera_scaled.x, uxyz[1]+camera_scaled.y, uxyz[2]+camera_scaled.z, dir.x, dir.y, dir.z, player_temp);
-	draw_text(-0.009*aspect_ratio, -0.014, -0.028, text);
+	draw_text(YELLOW, -0.009*aspect_ratio, -0.014, -0.028, text);
 
 	// draw shields, armor, weapon status, etc.
 	int const shields(int(100.0*ps.get_shields()/ps.get_max_shields()));
 	int const armor(int(100.0*ps.get_armor()/ps.get_max_armor()));
-	RED.do_glColor();
 
 	if (ps.need_ammo()) {
 		int const ammo(ps.get_ammo());
@@ -592,20 +590,18 @@ void draw_universe_stats() {
 	else {
 		sprintf(text, "Shields %d  Armor %d", shields, armor);
 	}
-	draw_text(-0.006*aspect_ratio, -0.011, -0.02, text);
+	draw_text(RED, -0.006*aspect_ratio, -0.011, -0.02, text);
 
 	// draw credits, kills, total kills
-	WHITE.do_glColor();
 	sprintf(text, "Credits: %u", (ps.ncredits + team_credits[ALIGN_PLAYER]));
-	draw_text(0.0086*aspect_ratio, 0.0135, -0.025, text);
+	draw_text(WHITE, 0.0086*aspect_ratio, 0.0135, -0.025, text);
 	sprintf(text, "Kills: %u/%u", ps.get_num_kills(), ps.get_tot_kills());
-	draw_text(0.0086*aspect_ratio, 0.0126, -0.025, text);
+	draw_text(WHITE, 0.0086*aspect_ratio, 0.0126, -0.025, text);
 	sprintf(text, "Deaths: %u", ps.get_num_deaths());
-	draw_text(0.0086*aspect_ratio, 0.0117, -0.025, text);
+	draw_text(WHITE, 0.0086*aspect_ratio, 0.0117, -0.025, text);
 
 	// draw message text (user typed)
-	WHITE.do_glColor();
-	if (!user_text.empty()) draw_text(-0.010*aspect_ratio, 0.010, -0.02, user_text.c_str()); // x and z are scaled
+	if (!user_text.empty()) draw_text(WHITE, -0.010*aspect_ratio, 0.010, -0.02, user_text.c_str()); // x and z are scaled
 }
 
 

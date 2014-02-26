@@ -2158,29 +2158,25 @@ void show_user_stats() {
 	
 	if (camera_mode == 1 && camera_surf_collide) {
 		int const ammo((UNLIMITED_WEAPONS && weapons[sstate.weapon].need_ammo) ? -666 : sstate.p_ammo[sstate.weapon]);
-		RED.do_glColor();
 		sprintf(text, "%s %d  %s %d  %s %d  Frags %d  Best %d  Total %d  Deaths %d",
 			((chealth < 25.0) ? "HEALTH" : "Health"), int(chealth + 0.5),
 			((sstate.shields < 25.0) ? "SHIELDS" : "Shields"), int(sstate.shields + 0.5),
 			((sstate.no_ammo()) ? "AMMO" : "Ammo"), ammo,
 			sstate.kills, max(sstate.max_kills, -sstate.deaths), sstate.tot_kills, sstate.deaths);
-		draw_text(-0.014, -0.012, -0.022, text);
+		draw_text(RED, -0.014, -0.012, -0.022, text);
 
 		if (sstate.powerup_time > 0 && sstate.powerup >= 0) {
-			colorRGBA const pc(get_powerup_color(sstate.powerup));
-			pc.do_glColor();
 			sprintf(text, "%is %s", int(sstate.powerup_time/TICKS_PER_SECOND + 0.5), powerup_names[sstate.powerup].c_str());
-			draw_text(-0.015, -0.012, -0.025, text);
+			draw_text(get_powerup_color(sstate.powerup), -0.015, -0.012, -0.025, text);
 		}
 	}
 	if (show_scores) {
 		team_stats_t tot_stats;
 
 		for (int i = CAMERA_ID; i < num_smileys; ++i) {
-			get_smiley_team_color(i).do_glColor();
 			sprintf(text, "%s: K: %i D: %i S: %i TK: %i Score: %i\n",
 				sstates[i].name.c_str(), sstates[i].tot_kills, sstates[i].deaths, sstates[i].suicides, sstates[i].team_kills, sstates[i].get_score());
-			draw_text(-0.008, 0.01-0.0014*(i+1), -0.02, text);
+			draw_text(get_smiley_team_color(i), -0.008, 0.01-0.0014*(i+1), -0.02, text);
 			tot_stats.add(sstates[i]);
 		}
 		if (teams > 1) {
@@ -2190,15 +2186,13 @@ void show_user_stats() {
 				team_stats[(i+teams)%teams].add(sstates[i]);
 			}
 			for (int i = 0; i < teams; ++i) {
-				get_smiley_team_color(i).do_glColor();
 				sprintf(text, "Team %u: Kills: %i Deaths: %i Score: %i\n",
 					i, team_stats[i].kills, team_stats[i].deaths, team_stats[i].score);
-				draw_text(-0.008, 0.01-0.0014*(i+num_smileys+1)-0.0008, -0.02, text);
+				draw_text(get_smiley_team_color(i), -0.008, 0.01-0.0014*(i+num_smileys+1)-0.0008, -0.02, text);
 			}
 		} // teams > 1
-		WHITE.do_glColor();
 		sprintf(text, "Total: Kills: %i Deaths: %i Score: %i\n", tot_stats.kills, tot_stats.deaths, tot_stats.score);
-		draw_text(-0.008, 0.01-0.0014*(num_smileys+teams+1)-0.0016, -0.02, text);
+		draw_text(WHITE, -0.008, 0.01-0.0014*(num_smileys+teams+1)-0.0016, -0.02, text);
 	} // show_scores
 }
 
@@ -2206,8 +2200,7 @@ void show_user_stats() {
 void show_other_messages() {
 
 	if (msg_params.mtime <= 0) return;
-	msg_params.color.do_glColor();
-	draw_text(-0.008/msg_params.size, 0.005, -0.02/msg_params.size, message.c_str(), 1.0, msg_params.bitmap);
+	draw_text(msg_params.color, -0.008/msg_params.size, 0.005, -0.02/msg_params.size, message.c_str(), 1.0, msg_params.bitmap);
 	msg_params.mtime -= iticks;
 }
 

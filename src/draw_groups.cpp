@@ -221,8 +221,6 @@ void draw_select_groups(int solid) {
 	if (!puddle_qbd.empty() || !obj_pld.empty()) {
 		setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1); // light colors
 		enable_blend();
-		set_color(RED);
-		GREEN.do_glColor();
 
 		if (!puddle_qbd.verts.empty()) { // draw puddles
 			glDepthMask(GL_FALSE);
@@ -436,7 +434,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1); // TSL=1, use light colors
 			ls.add_uniform_float("ambient_scale", 0.0);
 			static quad_batch_draw qbd;
-			set_color(BLACK);
 
 			for (unsigned j = 0; j < ordering.size(); ++j) {
 				dwobject const &obj(objg.get_obj(ordering[j].second));

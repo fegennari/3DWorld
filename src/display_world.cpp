@@ -975,8 +975,7 @@ void display(void) {
 			draw_compass_and_alt();
 		}
 		if (indir_lighting_updated()) {
-			PURPLE.do_glColor();
-			draw_text(0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");
+			draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");
 		}
 		if (TIMETEST) PRINT_TIME("X");
 

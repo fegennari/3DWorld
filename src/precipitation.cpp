@@ -23,11 +23,10 @@ protected:
 
 	void render(int type, colorRGBA const &color) const {
 		if (empty()) return;
-		color.do_glColor();
 		assert(!(size() % VERTS_PER_PRIM));
 		enable_blend(); // split into point smooth and blend?
 		shader_t s;
-		s.begin_color_only_shader();
+		s.begin_color_only_shader(color);
 		draw_verts(verts, type);
 		s.end_shader();
 		disable_blend();

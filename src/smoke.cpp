@@ -178,11 +178,6 @@ void distribute_smoke() { // called at most once per frame
 	}
 	cur_skip = (cur_skip+1) % SMOKE_SKIPVAL;
 	//PRINT_TIME("Distribute Smoke");
-#if 0
-	set_color(RED);
-	draw_simple_cube(cur_smoke_bb, 0);
-	//for (vector<cube_t>::const_iterator i = smoke_bounds.begin(); i != smoke_bounds.end(); ++i) {draw_simple_cube(*i, 0);}
-#endif
 }
 
 

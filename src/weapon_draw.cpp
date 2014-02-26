@@ -880,11 +880,10 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 	float const xy1(0.0006*scale), xy2(0.0002*scale), zval(-0.05*scale);
 	float const xy[8] = {-xy1, -xy2, xy1, xy2, 0.0, 0.0, 0.0, 0.0};
 	glDisable(GL_DEPTH_TEST);
-	color.do_glColor();
 	enable_blend();
 	glEnable(GL_LINE_SMOOTH);
 	shader_t s;
-	s.begin_color_only_shader();
+	s.begin_color_only_shader(color);
 	vert_wrap_t verts[8];
 
 	if (in_zoom) {
