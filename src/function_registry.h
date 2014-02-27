@@ -175,6 +175,7 @@ void draw_subdiv_sphere(point const &pos, float radius, int ndiv, int texture, b
 void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int texture,
 								float s_beg, float s_end, float t_beg, float t_end);
 void rotate_sphere_tex_to_dir(vector3d const &dir);
+void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorRGBA const &color);
 void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable_bfc=0);
 void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i=1.0, float tex_scale_o=1.0);
 void rotate_towards_camera(point const &pos);

@@ -2166,13 +2166,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 	if (inf_terrain_fire_mode != 0 && !reflection_pass) { // use a bool instead?
 		point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
 		point hit_pos;
-	
-		if (line_intersect_tiled_mesh(v1, v2, hit_pos)) {
-			shader_t s;
-			s.begin_color_only_shader(RED);
-			draw_sphere_vbo(hit_pos, 0.1, N_SPHERE_DIV, 0);
-			s.end_shader();
-		}
+		if (line_intersect_tiled_mesh(v1, v2, hit_pos)) {draw_single_colored_sphere(hit_pos, 0.1, N_SPHERE_DIV, RED);}
 	}
 }
 

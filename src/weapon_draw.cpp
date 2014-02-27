@@ -956,16 +956,14 @@ void teleporter::draw(shader_t &s) const {
 		glPopMatrix();
 
 		if (use_scale > 0.9) {
-			s.disable();
-			set_color(colorRGBA(1.0, 1.0, 1.0, 0.5*(use_scale - 0.9)));
+			shader_t cs;
+			cs.begin_color_only_shader(colorRGBA(1.0, 1.0, 1.0, 0.5*(use_scale - 0.9)));
 			draw_sphere_vbo_back_to_front(pos, draw_radius, N_SPHERE_DIV, 0); // FIXME: use random dissolve texture like exploding starbase
 			s.enable();
 		}
 	}
 	if ((display_mode & 0x10) && camera_pdu.sphere_visible_test(dest, 0.25*radius)) { // draw dest (debugging)
-		s.disable();
-		set_color(BLUE);
-		draw_sphere_vbo(dest, 0.25*radius, N_SPHERE_DIV, 0);
+		draw_single_colored_sphere(dest, 0.25*radius, N_SPHERE_DIV, BLUE);
 		s.enable();
 	}
 }

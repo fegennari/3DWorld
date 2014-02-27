@@ -686,6 +686,15 @@ void rotate_sphere_tex_to_dir(vector3d const &dir) { // dir must be normalized
 }
 
 
+void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorRGBA const &color) {
+
+	shader_t s;
+	s.begin_color_only_shader(color);
+	draw_subdiv_sphere(pos, radius, ndiv, 0, 0);
+	s.end_shader();
+}
+
+
 // unused
 // less efficient than regular sphere
 // textures must tile along all edges for this to look correct

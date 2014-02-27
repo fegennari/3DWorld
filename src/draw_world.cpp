@@ -586,12 +586,9 @@ void draw_sun() {
 
 	point const pos(get_sun_pos());
 	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 1)) return;
-	shader_t s;
 	colorRGBA color(SUN_C);
 	apply_red_sky(color);
-	s.begin_color_only_shader(color);
-	draw_subdiv_sphere(pos, sun_radius, N_SPHERE_DIV, 1, 0);
-	s.end_shader();
+	draw_single_colored_sphere(pos, sun_radius, N_SPHERE_DIV, color);
 }
 
 
@@ -617,11 +614,8 @@ void draw_moon() {
 	if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
 		colorRGBA color(bkg_color);
 		color.alpha = 5.0*(light_factor - 0.4);
-		shader_t s;
-		s.begin_color_only_shader(color);
 		enable_blend();
-		draw_subdiv_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, 0, 0);
-		s.end_shader();
+		draw_single_colored_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, color);
 		disable_blend();
 	}
 }
