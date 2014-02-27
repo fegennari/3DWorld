@@ -1280,29 +1280,59 @@ void draw_projectile_effects() {
 }
 
 
-void draw_splash(float x, float y, float z, float size, colorRGBA color) {
+struct splash_ring_t {
+
+	point pos;
+	float size;
+	colorRGBA color;
+
+	splash_ring_t(point const &pos_, float size_, colorRGBA const &color_) : pos(pos_), size(size_), color(color_) {}
+
+	void draw() const {
+		unsigned const num_rings(min(10U, (unsigned)ceil(size)));
+		float radius(min(size, 0.025f));
+		float const dr(0.5*radius);
+		unsigned const ndiv(max(3, min(N_CYL_SIDES, int(1000.0*radius/max(TOLERANCE, distance_to_camera(pos))))));
+		set_color(color);
+		glPushMatrix();
+		translate_to(pos);
+
+		for (unsigned i = 0; i < num_rings; ++i) {
+			draw_circle_normal((radius - 0.5*dr), radius, ndiv, 0);
+			radius += dr;
+		}
+		glPopMatrix();
+	}
+};
+
+
+vector<splash_ring_t> splashes;
+
+
+void draw_splash(float x, float y, float z, float size, colorRGBA color) { // queue it up for drawing
 
 	assert(size >= 0.0);
 	if (DISABLE_WATER || !(display_mode & 0x04)) return;
 	if (size == 0.0 || temperature <= W_FREEZE_POINT) return;
 	if (size > 0.1) size = sqrt(10.0*size)/10.0;
-	unsigned const num_rings(min(10U, (unsigned)ceil(size)));
-	size = min(size, 0.025f);
-	float radius(size);
-	float const dr(0.5*size);
-	point const pos(x, y, z+SMALL_NUMBER);
-	unsigned const ndiv(max(3, min(N_CYL_SIDES, int(1000.0*size/max(TOLERANCE, distance_to_camera(pos))))));
 	select_liquid_color(color, get_xpos(x), get_ypos(y));
-	set_color(color);
-	set_fill_mode();
-	glPushMatrix();
-	translate_to(pos);
+	splashes.push_back(splash_ring_t(point(x, y, z+0.001), size, color));
+}
 
-	for (unsigned i = 0; i < num_rings; ++i) {
-		draw_circle_normal((radius - 0.5*dr), radius, ndiv, 0);
-		radius += dr;
+
+void draw_splashes() {
+
+	if (splashes.empty()) return;
+	shader_t s;
+	select_texture(WHITE_TEX); // untextured
+	s.begin_simple_textured_shader(0.0, 1); // lit but not actually textured
+	set_fill_mode();
+
+	for (vector<splash_ring_t>::const_iterator i = splashes.begin(); i != splashes.end(); ++i) {
+		i->draw();
 	}
-	glPopMatrix();
+	s.end_shader();
+	splashes.clear(); // only last one frame
 }
 
 

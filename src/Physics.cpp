@@ -1082,7 +1082,7 @@ int dwobject::check_water_collision(float vz_old) {
 			float energy(get_coll_energy(old_v, (exp_on_coll ? zero_vector : velocity), otype.mass));
 
 			if (energy > 0.0) {
-				draw_splash(pos.x, pos.y, (water_height + 0.0001), SPLASH_BASE_SZ*sqrt(energy));
+				draw_splash(pos.x, pos.y, water_height, SPLASH_BASE_SZ*sqrt(energy));
 				
 				if (type != DROPLET) {
 					if (type == SHRAPNEL) {
@@ -1289,7 +1289,7 @@ void bubble::apply_physics(unsigned i) {
 		status = 0; // out of simulation region
 	}
 	else if (pos.z >= water_matrix[ypos][xpos]) {
-		draw_splash(pos.x, pos.y, (water_matrix[ypos][xpos] + 0.0002), 2.0*radius, color);
+		draw_splash(pos.x, pos.y, water_matrix[ypos][xpos], 2.0*radius, color);
 		status = 0; // pops at water surface
 	}
 }

@@ -201,6 +201,7 @@ void draw_stuff(int draw_uw, int timer1) {
 		draw_bubbles();
 	}
 	else {
+		draw_splashes();
 		draw_snow();
 		draw_trees();
 		check_gl_error(20);

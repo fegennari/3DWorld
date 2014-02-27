@@ -278,7 +278,7 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 		accumulation_matrix[ypos][xpos] = 0.0;
 
 		if (hit_water) {
-			draw_splash(pos.x, pos.y, (pos.z + 0.0001), 0.05);
+			draw_splash(pos.x, pos.y, pos.z, 0.05);
 			valleys[wsi].w_volume = max(0.0f, (valleys[wsi].w_volume - ice_eff*EVAP_AMOUNT));
 		}
 		else {
@@ -286,7 +286,7 @@ void do_lightning_damage(point &pos, float damage, int hit_water) {
 		}
 	}
 	else if (!DISABLE_WATER && wminside[ypos][xpos] == 2) { // exterior water
-		if (hit_water) draw_splash(pos.x, pos.y, (pos.z + 0.0001), 0.05);
+		if (hit_water) draw_splash(pos.x, pos.y, pos.z, 0.05);
 	}
 	else {
 		surface_damage[ypos][xpos] += damage;
