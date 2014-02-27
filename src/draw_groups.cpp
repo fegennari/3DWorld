@@ -868,7 +868,6 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	glPushMatrix();
 	translate_to(pos);
 	rotate_to_dir(orient);
-	//uniform_scale(radius);
 	point pos2(-0.4*radius, 0.85*radius, 0.3*radius);
 
 	// draw eyes
@@ -900,12 +899,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	switch (powerup) {
 		case PU_DAMAGE: // devil horns
 			set_color_alpha(RED);
-			glPushMatrix();
-			glTranslatef( 0.3*radius, 0.7*radius, 0.6*radius);
-			draw_cylinder(0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
-			glTranslatef(-0.6*radius, 0.0, 0.0);
-			draw_cylinder(0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
-			glPopMatrix();
+			draw_cylinder(point( 0.3*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
+			draw_cylinder(point(-0.3*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
 			break;
 
 		case PU_REGEN: // raindrops
@@ -927,15 +922,12 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		case PU_FLIGHT: // propeller or wings?
 			set_color_alpha(BLACK);
 			glPushMatrix();
-			glTranslatef(0.0, 0.0, 0.9*radius);
-			draw_cylinder(0.5*radius, 0.05*radius, 0.05*radius, ndiv2, 0);
-			glTranslatef(0.0, 0.0, 0.5*radius);
+			draw_cylinder(0.5*radius, 0.05*radius, 0.05*radius, ndiv2, 0, 0, 0, 0.9*radius);
+			glTranslatef(0.0, 0.0, 1.4*radius);
 			glRotatef(float((30*time)%360), 0.0, 0.0, 1.0);
 			glScalef(1.0, 0.25, 0.05);
-			glTranslatef( 0.5*radius, 0.0, 0.0);
-			draw_sphere_vbo(all_zeros, 0.5*radius, ndiv, 0); // propeller
-			glTranslatef(-1.0*radius, 0.0, 0.0);
-			draw_sphere_vbo(all_zeros, 0.5*radius, ndiv, 0); // propeller
+			draw_sphere_vbo(point( 0.5*radius, 0.0, 0.0), 0.5*radius, ndiv, 0); // propeller
+			draw_sphere_vbo(point(-0.5*radius, 0.0, 0.0), 0.5*radius, ndiv, 0); // propeller
 			glPopMatrix();
 			break;
 
@@ -984,18 +976,16 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	if (teams > 1) { // draw team headband
 		set_color_alpha(mult_alpha(get_smiley_team_color(id), alpha));
 		glPushMatrix();
-		glTranslatef(0.0, 0.0, 0.45*radius);
 		glScalef(1.0, 1.0, 0.5);
-		draw_sphere_vbo(all_zeros, 0.94*radius, ndiv, 0);
+		draw_sphere_vbo(point(0.0, 0.0, 0.9*radius), 0.94*radius, ndiv, 0);
 		glPopMatrix();
 	}
 
 	// draw unique identifier
 	set_color_alpha(mult_alpha(get_smiley_team_color(id+1, 1), alpha)); // ignore teams and use max_colors
 	glPushMatrix();
-	glTranslatef(0.0, 0.0, 0.8*radius);
 	glScalef(1.0, 1.0, 0.3);
-	draw_sphere_vbo(all_zeros, 0.65*radius, ndiv, 0);
+	draw_sphere_vbo(point(0.0, 0.0, (0.8/0.3)*radius), 0.65*radius, ndiv, 0);
 	glPopMatrix();
 	
 	// draw mouth
@@ -1277,7 +1267,6 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 	
 	glPushMatrix();
 	translate_to(pos);
-	uniform_scale(2.0*radius);
 
 	if (rotate) {
 		rotate_by_vector(init_dir, -90.0);
@@ -1286,9 +1275,9 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 	vert_norm points[3*N_STAR_POINTS];
 
 	for (int i = N_STAR_POINTS-1, ix = 0; i >= 0; --i) { // Note: needs 2-sided lighting
-		points[ix++] = vert_norm(star_pts[(i == 0) ? (N_STAR_POINTS<<1)-1 : (i<<1)-1], orient);
-		points[ix++] = vert_norm(star_pts[i<<1], orient);
-		points[ix++] = vert_norm(star_pts[(i<<1)+1], orient);
+		points[ix++] = vert_norm(2.0*radius*star_pts[(i == 0) ? (N_STAR_POINTS<<1)-1 : (i<<1)-1], orient);
+		points[ix++] = vert_norm(2.0*radius*star_pts[i<<1], orient);
+		points[ix++] = vert_norm(2.0*radius*star_pts[(i<<1)+1], orient);
 	}
 	draw_verts(points, 3*N_STAR_POINTS, GL_TRIANGLES);
 	glPopMatrix();
@@ -1301,7 +1290,6 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	assert(type == 0 || type == 1);
 	float const point_size(cd_scale/distance_to_camera(pos));
 	int const ndiv(max(3, min(N_SPHERE_DIV/2, int(point_size))));
-	//glDepthMask(1);
 	glPushMatrix();
 	translate_to(pos);
 	glRotatef(TO_DEG*init_dir.x, 0.0, 0.0, 1.0);
@@ -1320,7 +1308,6 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	}
 	if (point_size > 1.0) {draw_circle_normal(0, ((type == 0) ? 1.0 : 1.28), ndiv, 0, ((type == 0) ? 0.0 : -2.8));}
 	glPopMatrix();
-	//glDepthMask(0);
 }
 
 

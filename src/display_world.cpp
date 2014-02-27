@@ -516,10 +516,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 
 	// setup sun light source
 	setup_current_system();
-	glPushMatrix();
-	translate_to(get_camera_pos());
 	set_gl_light_pos(GL_LIGHT0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
-	glPopMatrix();
 	set_light_atten(GL_LIGHT0, max(0.25f, min(4.0f, 0.0007f*sun_pos.mag()/univ_sun_rad)));
 	disable_light(1); // no moonlight (for now)
 	

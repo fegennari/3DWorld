@@ -554,8 +554,7 @@ void draw_stars(float alpha) {
 	if (alpha <= 0.0) return;
 	colorRGBA color(BLACK), bkg;
 	UNROLL_3X(bkg[i_] = (1.0 - alpha)*bkg_color[i_];)
-	glPushMatrix();
-	if (camera_mode == 1) {translate_to(surface_pos);}
+	point const xlate((camera_mode == 1) ? surface_pos : all_zeros);
 	enable_blend();
 	glPointSize(2.0);
 	glDisable(GL_DEPTH_TEST);
@@ -571,14 +570,13 @@ void draw_stars(float alpha) {
 			float const c(stars[i].color[j]*stars[i].intensity);
 			color[j] = ((alpha >= 1.0) ? c : (alpha*c + bkg[j]));
 		}
-		pts.push_back(vert_color(stars[i].pos, color));
+		pts.push_back(vert_color((stars[i].pos + xlate), color));
 	}
 	draw_verts(pts, GL_POINTS);
 	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
 	glPointSize(1.0);
 	disable_blend();
-	glPopMatrix();
 }
 
 

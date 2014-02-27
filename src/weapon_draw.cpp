@@ -523,10 +523,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_specular(0.8, 50.0);
 				rot_angle = max(0.0, 1.0*fire_val);
 				if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
-				glTranslatef(0.6*tx, 0.6*ty, 0.0);
-				draw_cylinder(point(0.0, 0.0, 0.076), 0.064,     radius,     radius, 2*ndiv, 1);
-				draw_cylinder(point(0.0, 0.0, 0.000), 0.076, 2.8*radius, 2.0*radius, 2*ndiv, 1);
-				draw_cylinder(point(0.0, 0.0, 0.136), 0.012, 1.5*radius, 1.5*radius, 2*ndiv, 1);
+				draw_cylinder(point(0.6*tx, 0.6*ty, 0.076), 0.064,     radius,     radius, 2*ndiv, 1);
+				draw_cylinder(point(0.6*tx, 0.6*ty, 0.000), 0.076, 2.8*radius, 2.0*radius, 2*ndiv, 1);
+				draw_cylinder(point(0.6*tx, 0.6*ty, 0.136), 0.012, 1.5*radius, 1.5*radius, 2*ndiv, 1);
 			}
 			else { // shrapnel chaingun
 				radius = 0.004;
@@ -631,9 +630,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_M16:
 			if (just_fired) {
 				float const size(((wmode&1) == 0) ? 0.02 : 0.0272);
-				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				set_emissive_color_only(ORANGE);
-				glTranslatef(0.0, 0.0, (((wmode&1) == 0) ? 0.15 : 0.12));
+				glTranslatef(0.6*tx, 0.6*ty, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
 				set_additive_blend_mode();
 				select_texture(FLARE1_TEX);

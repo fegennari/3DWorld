@@ -2437,9 +2437,8 @@ void ustar::solar_flare::draw(float size, int ndiv, bool texture) const {
 	blend_color(c, color2, color1, t, 1);
 	c.do_glColor();
 	glPushMatrix();
-	uniform_scale(size);
 	rotate_about(angle, dir);
-	draw_fast_cylinder(point(0.0, 0.0, 0.9), point(0.0, 0.0, (length + 0.9)), radius, 0.0, ndiv, texture);
+	draw_fast_cylinder(point(0.0, 0.0, 0.9*size), point(0.0, 0.0, (length + 0.9)*size), radius*size, 0.0, ndiv, texture);
 	glPopMatrix();
 }
 

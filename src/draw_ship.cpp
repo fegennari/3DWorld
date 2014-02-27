@@ -982,8 +982,7 @@ void uobj_draw_data::draw_us_carrier() const {
 		set_ship_texture(VSTRIPE_TEX);
 		draw_cylin_fast(0.03, 0.03, 0.1, ndiv, 1, 1.0, 0.18);
 		if (specular_en) set_specular(0.4, 50.0);
-		glTranslatef(0.0, 0.0, 0.28); // faster than passing in a nonzero pos - no push/pop required
-		draw_sphere_vbo(all_zeros, 0.07, get_ndiv(ndiv/3), 1); // control tower
+		draw_sphere_vbo(point(0.0, 0.0, 0.28), 0.07, get_ndiv(ndiv/3), 1); // control tower
 		end_specular();
 	}
 	end_ship_texture();
@@ -1963,17 +1962,16 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 
 	if (ndiv > 4) {
 		color_a.do_glColor();
-		glPushMatrix();
-		glTranslatef(0.0, 0.0, 0.4);
 
 		if (mothership) {
-			draw_cylin_fast(0.15, 0.0, 0.6, ndiv2, 0); // pointy top cylinder
+			draw_cylin_fast(0.15, 0.0, 0.6, ndiv2, 0, 1.0, 0.4); // pointy top cylinder
 		}
 		else {
+			glPushMatrix();
 			glScalef(1.0, 1.0, 0.5);
-			draw_sphere_vbo(all_zeros, 0.15, ndiv2, 0); // topmost sphere
+			draw_sphere_vbo(point(0.0, 0.0, 0.8), 0.15, ndiv2, 0); // topmost sphere
+			glPopMatrix();
 		}
-		glPopMatrix();
 	}
 	if (ndiv > 6) {
 		unsigned const nwpts(mothership ? 10 : 6);
