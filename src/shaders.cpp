@@ -413,7 +413,10 @@ public:
 	}
 
 	static void get_shader_filenames(string const &name, unsigned type, vector<string> &fns) {
-		string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
+		assert(type < NUM_SHADER_TYPES);
+		string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
+		string const shader_prefix_files[NUM_SHADER_TYPES] = {"", "", "", "", ""}; // always included
+		if (!shader_prefix_files[type].empty()) {fns.push_back(shader_prefix_files[type]);} // add first, if nonempty
 		filename_split(name, fns, '+');
 
 		for (vector<string>::iterator i = fns.begin(); i != fns.end(); ++i) {
