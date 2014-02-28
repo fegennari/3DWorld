@@ -308,11 +308,12 @@ void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_t
 
 struct program_t {
 	unsigned p, sixs[NUM_SHADER_TYPES];
+	bool valid;
 
-	program_t() : p(0) {
+	program_t() : p(0), valid(0) {
 		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {sixs[i] = 0;}
 	}
-	program_t(unsigned p_, unsigned sixs_[NUM_SHADER_TYPES]) : p(p_) {
+	program_t(unsigned p_, unsigned sixs_[NUM_SHADER_TYPES]) : p(p_), valid(1) {
 		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {sixs[i] = sixs_[i];}
 	}
 };
@@ -337,16 +338,24 @@ public:
 };
 
 
-class string_shad_map : public map<string, unsigned> {
+struct ix_valid_t {
+	unsigned ix;
+	bool valid;
+	ix_valid_t() : ix(0), valid(0) {}
+	ix_valid_t(unsigned const ix_) : ix(ix_), valid(1) {}
+};
+
+
+class string_shad_map : public map<string, ix_valid_t> {
 public:
 	void clear() {
 		free_data();
-		map<string, unsigned>::clear();
+		map<string, ix_valid_t>::clear();
 	}
 	void free_data() {
 		for (const_iterator i = begin(); i != end(); ++i) {
-			//assert(glIsShader(i->second));
-			glDeleteShader(i->second);
+			//assert(glIsShader(i->second.ix));
+			glDeleteShader(i->second.ix);
 		}
 	}
 	// can't free in the destructor because the gl context may be destroyed before this point
@@ -354,9 +363,78 @@ public:
 };
 
 
-string_prog_map loaded_programs;
-string_shad_map loaded_shaders[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4
-map<string, string> loaded_files;
+class shader_manager_t {
+
+	string_prog_map loaded_programs;
+	string_shad_map loaded_shaders[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4
+	map<string, string> loaded_files;
+
+public:
+	void clear() {
+		loaded_programs.clear();
+		for (unsigned d = 0; d < NUM_SHADER_TYPES; ++d) {loaded_shaders[d].clear();}
+	}
+
+	void clear_and_reload() {
+		clear();
+		loaded_files.clear();
+	}
+
+	bool load_shader_file(string const &fname, string &data) {
+		if (fname.empty()) return 0;
+		map<string, string>::const_iterator i(loaded_files.find(fname));
+	
+		if (i != loaded_files.end()) {
+			data += i->second;
+			return 1;
+		}
+		ifstream in(fname.c_str());
+		if (!in.good()) return 0;
+		string line, file_contents;
+		while (std::getline(in, line)) {file_contents += line + '\n';}
+		loaded_files[fname] = file_contents;
+		if (PRINT_SHADER) cout << "shader data:" << endl << file_contents << endl;
+		data += file_contents;
+		return 1;
+	}
+
+	bool clear_shader_file(string const &fname) {
+		assert(!fname.empty());
+		map<string, string>::iterator i(loaded_files.find(fname));
+		if (i == loaded_files.end()) return 0; // not found - error?
+		loaded_files.erase(i);
+		return 1;
+	}
+
+	static void filename_split(string const &fname, vector<string> &fns, char sep) {
+		stringstream ss(fname);
+		string fn;
+		while (getline(ss, fn, sep)) {fns.push_back(fn);}
+	}
+
+	static void get_shader_filenames(string const &name, unsigned type, vector<string> &fns) {
+		string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
+		filename_split(name, fns, '+');
+
+		for (vector<string>::iterator i = fns.begin(); i != fns.end(); ++i) {
+			assert(!i->empty());
+			string fname(shaders_dir + "/" + *i);
+		
+			if ((*i)[i->size()-1] == '*') { // wildcard shader file: works with all shader types
+				fname.erase(fname.size()-1);
+			}
+			else { // add shader type extension
+				fname += "." + shader_name_table[type];
+			}
+			*i = fname;
+		}
+	}
+
+	ix_valid_t &get_shader_by_name(string const &name, unsigned type) {return loaded_shaders[type][name];}
+	program_t &get_program_by_name(string const &name) {return loaded_programs[name];}
+};
+
+shader_manager_t shader_manager;
 
 
 bool setup_shaders() {
@@ -382,12 +460,8 @@ bool setup_shaders() {
 
 void clear_shaders() {
 
-	loaded_programs.clear();
-
-	for (unsigned d = 0; d < NUM_SHADER_TYPES; ++d) {
-		loaded_shaders[d].clear();
-	}
 	clear_cached_shaders();
+	shader_manager.clear();
 }
 
 
@@ -395,66 +469,8 @@ void reload_all_shaders() { // clears and reloads *everything*
 
 	// Note: do we want/need some function called every frame that check if shader files have been modified and calls this?
 	cout << "Reloading all shaders" << endl;
-	clear_shaders();
-	loaded_files.clear();
-}
-
-
-bool shader_t::load_shader_file(string const &fname, string &data) {
-
-	if (fname.empty()) return 0;
-	map<string, string>::const_iterator i(loaded_files.find(fname));
-	
-	if (i != loaded_files.end()) {
-		data += i->second;
-		return 1;
-	}
-	ifstream in(fname.c_str());
-	if (!in.good()) return 0;
-	string line, file_contents;
-	while (std::getline(in, line)) {file_contents += line + '\n';}
-	loaded_files[fname] = file_contents;
-	if (PRINT_SHADER) cout << "shader data:" << endl << file_contents << endl;
-	data += file_contents;
-	return 1;
-}
-
-
-bool shader_t::clear_shader_file(string const &fname) {
-
-	assert(!fname.empty());
-	map<string, string>::iterator i(loaded_files.find(fname));
-	if (i == loaded_files.end()) return 0; // not found - error?
-	loaded_files.erase(i);
-	return 1;
-}
-
-
-void shader_t::filename_split(string const &fname, vector<string> &fns, char sep) {
-
-	stringstream ss(fname);
-    string fn;
-	while (getline(ss, fn, sep)) {fns.push_back(fn);}
-}
-
-
-void shader_t::get_shader_filenames(string const &name, unsigned type, vector<string> &fns) {
-
-	string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
-	filename_split(name, fns, '+');
-
-	for (vector<string>::iterator i = fns.begin(); i != fns.end(); ++i) {
-		assert(!i->empty());
-		string fname(shaders_dir + "/" + *i);
-		
-		if ((*i)[i->size()-1] == '*') { // wildcard shader file: works with all shader types
-			fname.erase(fname.size()-1);
-		}
-		else { // add shader type extension
-			fname += "." + shader_name_table[type];
-		}
-		*i = fname;
-	}
+	clear_cached_shaders();
+	shader_manager.clear_and_reload();
 }
 
 
@@ -479,13 +495,13 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER};
 	assert(type < NUM_SHADER_TYPES);
 	string const lookup_name(name + prepend_string[type]);
-	string_shad_map::const_iterator it(loaded_shaders[type].find(lookup_name));
-	if (it != loaded_shaders[type].end()) {return it->second;} // already loaded
+	ix_valid_t &ixv(shader_manager.get_shader_by_name(lookup_name, type));
+	if (ixv.valid) {return ixv.ix;} // already loaded
 	
 	// create a new shader
 	string const version_info("#version 400\n");
 	vector<string> fns;
-	get_shader_filenames(name, type, fns);
+	shader_manager.get_shader_filenames(name, type, fns);
 	bool failed(0);
 	unsigned shader(0);
 
@@ -496,14 +512,14 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 				exit(1);
 			}
 			for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
-				if (clear_shader_file(*i)) {cout << "Reloading shader component " << *i << endl;}
+				if (shader_manager.clear_shader_file(*i)) {cout << "Reloading shader component " << *i << endl;}
 			}
 			failed = 0;
 		}
 		string data(version_info + prepend_string[type]);
 
 		for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
-			if (!load_shader_file(*i, data)) {
+			if (!shader_manager.load_shader_file(*i, data)) {
 				cerr << "Error loading shader file " << *i << "." << endl;
 				failed = 1; break;
 			}
@@ -531,7 +547,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		break;
 	} // while(1)
 	if (PRINT_LOG) {print_shader_info_log(shader);}
-	loaded_shaders[type][lookup_name] = shader; // cache the shader
+	ixv = ix_valid_t(shader); // cache the shader
 	//PRINT_TIME("Create Shader");
 	return shader;
 }
@@ -544,11 +560,10 @@ bool shader_t::begin_shader(bool do_enable) {
 	// get the program
 	string pname(prog_name_suffix);
 	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {pname += shader_names[i] + ",";} // unique program identifier
-	string_prog_map::const_iterator it(loaded_programs.find(pname));
-	program = 0;
+	program_t &prog(shader_manager.get_program_by_name(pname));
 
-	if (it != loaded_programs.end()) { // program already exists
-		program = it->second.p;
+	if (prog.valid) { // program already exists
+		program = prog.p;
 	}
 	else { // create a new program
 		program = glCreateProgram();
@@ -583,7 +598,7 @@ bool shader_t::begin_shader(bool do_enable) {
 			exit(1);
 		}
 		if (PRINT_LOG) print_program_info_log();
-		loaded_programs[pname] = program_t(program, shader_ixs); // cache the program
+		prog = program_t(program, shader_ixs); // cache the program
 		//PRINT_TIME("Create Program"); // 90ms
 	}
 	if (do_enable) {enable();}

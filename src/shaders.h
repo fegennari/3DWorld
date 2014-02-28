@@ -26,10 +26,6 @@ class shader_t {
 	string shader_names[NUM_SHADER_TYPES];
 	int in_prim, out_prim, verts_out;
 
-	static void filename_split(string const &fname, vector<string> &fns, char sep);
-	static void get_shader_filenames(string const &name, unsigned type, vector<string> &fns);
-	static bool load_shader_file(string const &fname, string &data);
-	static bool clear_shader_file(string const &fname);
 	unsigned get_shader(string const &name, unsigned type) const;
 	static void print_shader_info_log(unsigned shader);
 	void print_program_info_log() const;
