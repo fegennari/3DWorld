@@ -17,6 +17,9 @@ public:
 	xform_matrix() {load_identity();}
 	xform_matrix(float const *const m_) {assign(m_);}
 	void assign(float const *const m_) {for(unsigned i = 0; i < 16; ++i) {m[i] = m_[i];}}
+	void assign(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15) {
+		m[0] = v0; m[1] = v1; m[2] = v2; m[3] = v3; m[4] = v4; m[5] = v5; m[6] = v6; m[7] = v7; m[8] = v8; m[9] = v9; m[10] = v10; m[11] = v11; m[12] = v12; m[13] = v13; m[14] = v14; m[15] = v15;
+	}
 	void normalize();
 	void apply() const {glMultMatrixf(m);}
 	void assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  m);}

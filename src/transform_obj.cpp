@@ -30,9 +30,7 @@ void xform_matrix::normalize() {
 
 void xform_matrix::load_identity() {
 
-	for (unsigned i = 0; i < 16; ++i) {
-		m[i] = float((i%5) == 0);
-	}
+	for (unsigned i = 0; i < 16; ++i) {m[i] = (((i%5) == 0) ? 1.0 : 0.0);}
 }
 
 void xform_matrix::rotate(float angle, vector3d const &rot) {
