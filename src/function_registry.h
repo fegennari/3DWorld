@@ -656,7 +656,7 @@ void upload_dlights_textures(cube_t const &bounds);
 void setup_dlight_textures(shader_t &s);
 bool is_in_darkness(point const &pos, float radius, int cobj);
 void get_sd_light(int x, int y, int z, float *ls);
-float get_indir_light(colorRGBA &a, point const &p);
+void get_indir_light(colorRGBA &a, point const &p);
 
 // function prototypes - tessellate
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt, bool split_quads);

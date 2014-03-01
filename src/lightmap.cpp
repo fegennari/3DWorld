@@ -31,7 +31,7 @@ bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_l
 unsigned dl_tid(0), elem_tid(0), gb_tid(0);
 float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
-float dlight_bb[3][2] = {0}, SHIFT_DXYZ[3] = {SHIFT_DX, SHIFT_DY, 0.0};
+float dlight_bb[3][2] = {0};
 dls_cell **ldynamic = NULL;
 vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic {cur frame, next frame}
 lmap_manager_t lmap_manager;
@@ -434,7 +434,7 @@ void clear_lightmap() {
 }
 
 
-void calc_flow_for_xy(r_profile flow_prof[3], int i, int j, bool proc_cobjs, float zstep) {
+void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, float zstep) {
 
 	assert(zstep > 0.0);
 	lmcell *vldata(lmap_manager.get_column(j, i));
@@ -523,11 +523,9 @@ void build_lightmap(bool verbose) {
 
 	// calculate and allocate some data we need even if the lmap is not used
 	assert(DZ_VAL > 0.0);
-	DZ_VAL2       = DZ_VAL/DZ_VAL_SCALE;
-	DZ_VAL_INV2   = 1.0/DZ_VAL2;
-	SHIFT_DXYZ[0] = SHIFT_DX = SHIFT_VAL*DX_VAL;
-	SHIFT_DXYZ[1] = SHIFT_DY = SHIFT_VAL*DY_VAL;
-	czmin0        = czmin;//max(czmin, zbottom);
+	DZ_VAL2     = DZ_VAL/DZ_VAL_SCALE;
+	DZ_VAL_INV2 = 1.0/DZ_VAL2;
+	czmin0      = czmin;//max(czmin, zbottom);
 	assert(lm_dz_adj >= 0.0);
 	if (!ldynamic) matrix_gen_2d(ldynamic, MESH_X_SIZE, MESH_Y_SIZE);
 	if (MESH_Z_SIZE == 0) return;
@@ -594,13 +592,13 @@ void build_lightmap(bool verbose) {
 	using_lightmap = (nonempty > 0);
 	lm_alloc       = 1;
 
-	// process vertical (Z) light projections
+	// calculate particle flow values
 	r_profile flow_prof[3]; // particle {x, y, z}
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
 			bool const proc_cobjs(need_lmcell[i][j] & 1);
-			calc_flow_for_xy(flow_prof, i, j, proc_cobjs, zstep);
+			calc_flow_profile(flow_prof, i, j, proc_cobjs, zstep);
 		}
 	}
 	int const bnds[2][2] = {{0, MESH_X_SIZE-1}, {0, MESH_Y_SIZE-1}};
@@ -679,8 +677,7 @@ void update_flow_for_voxels(cube_t const &cube) {
 		for (int x = cx1; x <= cx2; ++x) {
 			assert(!point_outside_mesh(x, y));
 			bool const fixed(!coll_objects.empty() && has_fixed_cobjs(x, y));
-			bool const proc_cobjs(use_dense_voxels || fixed);
-			calc_flow_for_xy(flow_prof, y, x, proc_cobjs, zstep);
+			calc_flow_profile(flow_prof, y, x, (use_dense_voxels || fixed), zstep);
 		} // for x
 	} //for y
 }
@@ -690,7 +687,6 @@ void update_flow_for_voxels(cube_t const &cube) {
 
 
 void setup_2d_texture(unsigned &tid) {
-
 	setup_texture(tid, 0, 0, 0, 0, 0, 1);
 }
 
@@ -956,7 +952,7 @@ void clear_dynamic_lights() { // slow for large lights
 	assert(ldynamic);
 	
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
-		for (int x = 0; x < MESH_X_SIZE; ++x) ldynamic[y][x].clear();
+		for (int x = 0; x < MESH_X_SIZE; ++x) {ldynamic[y][x].clear();}
 	}
 	dl_sources.resize(0);
 }
@@ -1023,14 +1019,10 @@ void add_dynamic_lights_ground() {
 		}
 	}
 	if (SHOW_STAT_LIGHTS) {
-		for (unsigned i = 0; i < light_sources.size(); ++i) {
-			light_sources[i].draw(16);
-		}
+		for (unsigned i = 0; i < light_sources.size(); ++i) {light_sources[i].draw(16);}
 	}
 	if (SHOW_DYNA_LIGHTS) {
-		for (unsigned i = 0; i < dl_sources.size(); ++i) {
-			dl_sources[i].draw(16);
-		}
+		for (unsigned i = 0; i < dl_sources.size(); ++i) {dl_sources[i].draw(16);}
 	}
 	//PRINT_TIME("Dynamic Light Add");
 }
@@ -1082,54 +1074,42 @@ void get_sd_light(int x, int y, int z, float *ls) {
 }
 
 
-float get_indir_light(colorRGBA &a, point const &p) { // Note: return value is unused
+void get_indir_light(colorRGBA &a, point const &p) { // Note: return value is unused
 
-	float val(get_voxel_terrain_ao_lighting_val(p)); // shift p?
-	if (!lm_alloc) return val;
+	if (!lm_alloc) return;
 	assert(lmap_manager.is_allocated());
-	bool outside_mesh(0);
 	colorRGB cscale(cur_ambient);
 	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
 	
-	if (point_outside_mesh(x, y)) {
-		outside_mesh = 1; // outside the range
-	}
-	else if (p.z <= czmin0) {
-		outside_mesh = is_under_mesh(p);
-		if (outside_mesh) val = 0.0; // under all collision objects (is this correct?)
-	}
-	else if (using_lightmap && p.z < czmax && lmap_manager.get_column(x, y) != NULL) { // not above all collision objects and not empty cell
-		lmcell const &lmc(lmap_manager.get_lmcell(x, y, z));
-		lmc.get_final_color(cscale, 0.5, val);
-		val *= lmc.sv + lmc.gv;
-	}
-	else if (val < 1.0) {
-		cscale *= val;
-	}
-	if (!outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
-		dls_cell const &ldv(ldynamic[y][x]);
+	if (!point_outside_mesh(x, y) && p.z > czmin0) { // inside the mesh range and above the lowest cobj
+		float val(get_voxel_terrain_ao_lighting_val(p));
 		
-		if (ldv.check_z(p[2])) {
-			unsigned const lsz((unsigned)ldv.size());
-			CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
+		if (using_lightmap && p.z < czmax && lmap_manager.get_column(x, y) != NULL) { // not above all collision objects and not empty cell
+			lmap_manager.get_lmcell(x, y, z).get_final_color(cscale, 0.5, val);
+		}
+		else if (val < 1.0) {
+			cscale *= val;
+		}
+		if (!dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
+			dls_cell const &ldv(ldynamic[y][x]);
+		
+			if (ldv.check_z(p[2])) {
+				unsigned const lsz((unsigned)ldv.size());
+				CELL_LOC_T const cl[3] = {x, y, z};
 
-			for (unsigned l = 0; l < lsz; ++l) {
-				unsigned const ls_ix(ldv.get(l));
-				assert(ls_ix < dl_sources.size());
-				light_source const &lsrc(dl_sources[ls_ix]);
-				point lpos;
-				float color_scale(lsrc.get_intensity_at(p, lpos));
-				if (color_scale < CTHRESH) continue;
-		
-				if (lsrc.is_directional()) {
-					cscale *= lsrc.get_dir_intensity(lpos - p);
+				for (unsigned l = 0; l < lsz; ++l) {
+					unsigned const ls_ix(ldv.get(l));
+					assert(ls_ix < dl_sources.size());
+					light_source const &lsrc(dl_sources[ls_ix]);
+					point lpos;
+					float color_scale(lsrc.get_intensity_at(p, lpos));
 					if (color_scale < CTHRESH) continue;
-				}
-				cscale += lsrc.get_color()*color_scale;
-			} // for l
+					if (lsrc.is_directional()) {color_scale *= lsrc.get_dir_intensity(lpos - p);}
+					cscale += lsrc.get_color()*color_scale;
+				} // for l
+			}
 		}
 	}
 	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_]);)
-	return val;
 }
 
