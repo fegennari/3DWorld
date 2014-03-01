@@ -1071,33 +1071,6 @@ bool is_in_darkness(point const &pos, float radius, int cobj) {
 }
 
 
-void get_dynamic_light(int x, int y, int z, point const &p, float lightscale, float *ls) {
-
-	if (dl_sources.empty()) return;
-	assert(!point_outside_mesh(x, y));
-	dls_cell const &ldv(ldynamic[y][x]);
-	if (!ldv.check_z(p[2])) return;
-	unsigned const lsz((unsigned)ldv.size());
-	CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
-
-	for (unsigned l = 0; l < lsz; ++l) {
-		unsigned const ls_ix(ldv.get(l));
-		assert(ls_ix < dl_sources.size());
-		light_source const &lsrc(dl_sources[ls_ix]);
-		point lpos;
-		float cscale(lightscale*lsrc.get_intensity_at(p, lpos));
-		if (cscale < CTHRESH) continue;
-		
-		if (lsrc.is_directional()) {
-			cscale *= lsrc.get_dir_intensity(lpos - p);
-			if (cscale < CTHRESH) continue;
-		}
-		colorRGBA const &lsc(lsrc.get_color());
-		UNROLL_3X(ls[i_] += lsc[i_]*cscale;)
-	}
-}
-
-
 // used on mesh and water
 void get_sd_light(int x, int y, int z, float *ls) {
 
@@ -1134,7 +1107,27 @@ float get_indir_light(colorRGBA &a, point const &p) { // Note: return value is u
 		cscale *= val;
 	}
 	if (!outside_mesh && !dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
-		get_dynamic_light(x, y, z, p, 1.0, (float *)&cscale);
+		dls_cell const &ldv(ldynamic[y][x]);
+		
+		if (ldv.check_z(p[2])) {
+			unsigned const lsz((unsigned)ldv.size());
+			CELL_LOC_T const cl[3] = {x, y, z}; // what about SHIFT_VAL?
+
+			for (unsigned l = 0; l < lsz; ++l) {
+				unsigned const ls_ix(ldv.get(l));
+				assert(ls_ix < dl_sources.size());
+				light_source const &lsrc(dl_sources[ls_ix]);
+				point lpos;
+				float color_scale(lsrc.get_intensity_at(p, lpos));
+				if (color_scale < CTHRESH) continue;
+		
+				if (lsrc.is_directional()) {
+					cscale *= lsrc.get_dir_intensity(lpos - p);
+					if (color_scale < CTHRESH) continue;
+				}
+				cscale += lsrc.get_color()*color_scale;
+			} // for l
+		}
 	}
 	UNROLL_3X(a[i_] *= min(1.0f, cscale[i_]);)
 	return val;

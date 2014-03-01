@@ -594,6 +594,8 @@ struct colorRGB { // size = 12
 		}
 		return R; // never gets here
 	}
+	colorRGB operator+ (colorRGB const &c) const {return colorRGB(R+c.R, G+c.G, B+c.B);}
+	void     operator+=(colorRGB const &c)       {R += c.R; G += c.G; B += c.B;;}
 	colorRGB operator*(float val) const {return colorRGB(R*val, G*val, B*val);}
 	void operator*=(float val) {R *= val; G *= val; B *= val;}
 
