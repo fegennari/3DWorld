@@ -2029,7 +2029,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass) {
 	}
 	tree_scenery_pld.draw_and_clear();
 	s.end_shader();
-	set_leaf_shader(s, 0.9, 1, 0, 0, 0, 1);
+	set_leaf_shader(s, 0.9, 1, 0, 0, 1);
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass); // leaves

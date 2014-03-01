@@ -606,7 +606,7 @@ void shift_hmv(vector3d const &vd);
 colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture);
 int get_tree_class_from_height(float zpos, bool pine_trees_only);
 int get_tree_type_from_height(float zpos, rand_gen_t &rgen);
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords=0, bool use_geom_shader=0, unsigned tc_start_ix=0, bool enable_opacity=0, bool no_dlights=0);
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords=0, unsigned tc_start_ix=0, bool enable_opacity=0, bool no_dlights=0);
 bool update_decid_tree_zvals(int x1, int y1, int x2, int y2);
 bool update_small_tree_zvals(int x1, int y1, int x2, int y2);
 
@@ -657,8 +657,6 @@ void setup_dlight_textures(shader_t &s);
 bool is_in_darkness(point const &pos, float radius, int cobj);
 void get_sd_light(int x, int y, int z, float *ls);
 float get_indir_light(colorRGBA &a, point const &p);
-unsigned enable_dynamic_lights(point const &center=all_zeros, float radius=0.0);
-void disable_dynamic_lights(unsigned num_dlights);
 
 // function prototypes - tessellate
 void split_polygon_to_cobjs(coll_obj const &cobj, coll_obj_group &split_polygons, vector<point> const &poly_pt, bool split_quads);

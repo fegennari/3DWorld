@@ -37,4 +37,4 @@ Better pine tree texture
 * Use normal map in indir texture lookup offset somehow?
 Revisit tiled terrain heightmap texture?
 make glow_psd use point sprites
-Try dynamic lighting with tree leaves and smoke in VS?
+Try dynamic lighting with smoke in VS

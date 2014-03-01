@@ -376,31 +376,28 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t 
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, bool use_geom_shader, unsigned tc_start_ix, bool enable_opacity, bool no_dlights) {
+void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned tc_start_ix, bool enable_opacity, bool no_dlights) {
 
+	if (world_mode == WMODE_INF_TERRAIN) {
+		no_dlights = 1;
+		setup_tt_fog_pre(s); // FS
+	}
 	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS - required for dynamic lighting
-	if (no_dlights || (!has_dl_sources && !lightning_enabled())) {s.set_prefix("#define NO_LEAF_DLIGHTS", 0);} // VS optimization
-	if (gen_tex_coords)                  {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
-	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_pre(s);} // FS
+	if (gen_tex_coords) {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	s.setup_enabled_lights(2, 1); // VS
+	s.set_bool_prefix("enable_light2", lightning_enabled(), 0); // VS
 	s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
-
-	if (use_geom_shader) { // unused
-		s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+leaf_lighting.part+tree_leaves_as_pts");
-		s.set_geom_shader("output_textured_quad.part+point_to_quad", GL_POINTS, GL_TRIANGLE_STRIP, 4);
-		s.begin_shader();
-		//setup_wind_for_shader(s, 1); // FIXME: add wind?
-	}
-	else {
-		s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+leaf_lighting.part+texture_gen.part+tree_leaves");
-		s.begin_shader();
-	}
+	set_dlights_booleans(s, !no_dlights, 0); // VS
+	s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+dynamic_lighting.part*+leaf_lighting.part+texture_gen.part+tree_leaves");
+	s.begin_shader();
+	s.setup_scene_bounds();
+	if (!no_dlights) {setup_dlight_textures(s);}
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);} else {s.setup_fog_scale();}
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_active_texture(0);
 	s.add_uniform_int("tex0", 0);
-	s.add_uniform_int("num_dlights", 0);
 	if (gen_tex_coords) {s.add_uniform_int("tc_start_ix", tc_start_ix);}
+	s.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 	check_gl_error(301);
 }
 
@@ -411,9 +408,7 @@ void tree_cont_t::check_leaf_shadow_change() {
 	point const lpos(get_light_pos());
 		
 	if (!no_sun_lpos_update && lpos != last_lpos) {
-		for (iterator i = begin(); i != end(); ++i) {
-			i->calc_leaf_shadows();
-		}
+		for (iterator i = begin(); i != end(); ++i) {i->calc_leaf_shadows();}
 	}
 	last_lpos = lpos;
 }
@@ -427,7 +422,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 		shader.enable();
 	}
 	else {
-		set_leaf_shader(shader, 0.75, 1, 0, 3, enable_opacity, shadow_only);
+		set_leaf_shader(shader, 0.75, 1, 3, enable_opacity, shadow_only);
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
 			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);
@@ -870,9 +865,9 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 	
 	if (draw_leaves && has_leaves) {
 		burn_leaves();
-		if (l_strike.enabled == 1)    lightning_damage(l_strike.end);
-		if (game_mode && gm_blast)    blast_damage(&latest_blastr);
-		if (begin_motion && animate2) drop_leaves();
+		if (l_strike.enabled == 1 && animate2) {lightning_damage(l_strike.end);}
+		if (game_mode && gm_blast) {blast_damage(&latest_blastr);}
+		if (begin_motion && animate2) {drop_leaves();}
 	}
 	if (draw_shadow_leaves) {draw_tree_leaves(s, 0.0, xlate); return;}
 	if (TEST_RTREE_COBJS) return;
@@ -1088,21 +1083,11 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
-	unsigned num_dlights(0);
-	bool const enable_dlights(has_dl_sources && world_mode == WMODE_GROUND);
-
-	if (enable_dlights) {
-		num_dlights = enable_dynamic_lights((sphere_center() + xlate), td.sphere_radius);
-		s.add_uniform_int("num_dlights", num_dlights);
-	}
-	else if (lightning_enabled()) {
-		s.add_uniform_int("num_dlights", 1);
-	}
+	if (has_dl_sources && world_mode == WMODE_GROUND) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
 	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
 	glPushMatrix();
 	translate_to(tree_center + xlate);
 	td.draw_leaves(size_scale);
-	if (enable_dlights) {disable_dynamic_lights(num_dlights);}
 	glPopMatrix();
 }
 
