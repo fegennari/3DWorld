@@ -1,5 +1,5 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-uniform float step_delta, half_dxy;
+uniform float step_delta;
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform vec3 smoke_color;
@@ -7,7 +7,8 @@ uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
 
 // clipped eye position, clipped vertex position
-varying vec3 eye, vpos, normal, lpos0, vposl; // world space
+varying vec3 eye, lpos0, vposl; // world space
+//varying vec3 vpos, normal; // world space, come from indir_lighting.part.frag
 // epos, eye_norm, and tex_coord come from bump_map.frag
 
 const float SMOKE_SCALE = 0.25;

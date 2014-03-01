@@ -42,13 +42,10 @@ void main()
 		eye    = gl_ModelViewMatrixInverse[3].xyz; // world space
 		normal = normalize(gl_Normal);
 	}
-	setup_indir_lighting(vpos, normal);
 #ifdef USE_BUMP_MAP
 	setup_tbn();
 #endif
 
-#ifndef SMOKE_ENABLED
-#endif
 #ifdef DYNAMIC_SMOKE_SHADOWS
 	lpos0 = (gl_ModelViewMatrixInverse * gl_LightSource[0].position).xyz;
 	pt_pair res2 = clip_line(vpos, lpos0, smoke_bb);

@@ -8,5 +8,4 @@ void main()
 	normal   = normalize(gl_Normal);
 	eye_norm = normalize(gl_NormalMatrix * normal);
 	vpos     = gl_Vertex.xyz;
-	setup_indir_lighting(vpos, normal);
 } 

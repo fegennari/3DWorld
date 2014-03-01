@@ -1,7 +1,6 @@
 uniform float min_alpha = 0.0;
 
-// clipped eye position, clipped vertex position
-varying vec3 vpos, normal; // world space
+//varying vec3 vpos, normal; // world space, come from indir_lighting.part.frag
 varying vec3 eye_norm;
 
 void main()
