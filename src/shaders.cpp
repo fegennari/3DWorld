@@ -13,6 +13,7 @@ bool const DEBUG_SHADER = 0; // print final generated shaders
 bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
+string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
 
 extern bool fog_enabled;
 extern unsigned enabled_lights;
@@ -414,7 +415,6 @@ public:
 
 	static void get_shader_filenames(string const &name, unsigned type, vector<string> &fns) {
 		assert(type < NUM_SHADER_TYPES);
-		string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
 		string const shader_prefix_files[NUM_SHADER_TYPES] = {"", "", "", "", ""}; // always included
 		if (!shader_prefix_files[type].empty()) {fns.push_back(shader_prefix_files[type]);} // add first, if nonempty
 		filename_split(name, fns, '+');
@@ -532,7 +532,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		shader = glCreateShader(shader_type_table[type]);
 	
 		if (!shader) {
-			cerr << "Error: Failed to create shader " << name << "." << endl;
+			cerr << "Error: Failed to create " << shader_name_table[type] << " shader " << name << "." << endl;
 			failed = 1; continue;
 		}
 		const char *src(data.c_str());
@@ -542,7 +542,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
 
 		if (status != GL_TRUE) {
-			cerr << "Compilation of shader " << name << " failed with status " << status << endl;
+			cerr << "Compilation of " << shader_name_table[type] << " shader " << name << " failed with status " << status << endl;
 			print_shader_info_log(shader);
 			cerr << endl;
 			failed = 1; continue;
