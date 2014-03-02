@@ -61,11 +61,15 @@ vec2 apply_parallax_map() {
 }
 #endif
 
+vec3 get_bump_map_normal() {
+	return normalize(texture2D(bump_map, tex_coord).xyz * 2.0 - 1.0);
+}
+
 // Note: we assume the bump map tex coords are the same as the object diffuse tex coords
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 	mat3 TBN  = get_tbn(1.0);
 	light_dir = TBN * light_dir;
 	eye_pos   = TBN * eye_pos;
-	return normalize(texture2D(bump_map, tex_coord).xyz * 2.0 - 1.0);
+	return get_bump_map_normal();
 }
 #endif
