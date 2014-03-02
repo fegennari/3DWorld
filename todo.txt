@@ -1,14 +1,13 @@
 More grass/plant types: Yellow and white flowers
 Hardware tessellation
 Vertex Array Objects
-Primitive restart for degenerate indexed triangles
 Try using Boost in 3DWorld, in particular shared_ptr
 
 Remove deprecated OpenGL calls:
 http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Color*
  - Color/Normal/TexCoord/VertexPointer, Enable/DisableClientState
- - Material*, Light*, LIGHTi
+ - Material*, Light*, LIGHTi, glFog
  - Non-sprite points
  - Use triangles instead of quads (Tree billboards/leaves)
  - text/glRasterPos
@@ -17,10 +16,8 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
    * Remove get of GL matrices
 
 * Berries on plants
-Tiled terrain texture coords on high slopes
-Weather/Physics UI / key to switch UI modes
+Weather/Physics UI
 TT mode underwater content
-
 User-placed teleporter weapon (translocator?)
 * Burning smiley/skull/cobj texture
 
@@ -29,11 +26,9 @@ Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
 Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
-Render nearby planet in chunks starting with draw_cube_mapped_sphere()
 Visual Studio profile
 static error check (analysis)
 
-Path tracing dynamic light in Sponza (or precalc light for some positions?)
 Better pine tree texture
 Revisit tiled terrain heightmap texture?
 make glow_psd use point sprites

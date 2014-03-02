@@ -729,6 +729,7 @@ void draw_spraypaint_crosshair();
 void spray_paint(bool mode);
 
 // function prototypes - edit_ui
+void next_selected_menu_ix();
 bool ui_intercept_keyboard(unsigned char key, bool is_special);
 bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down);
 void draw_enabled_ui_menus();

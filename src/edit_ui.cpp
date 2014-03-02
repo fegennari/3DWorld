@@ -231,7 +231,7 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 
 public:
 	leaf_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT, "Leaf Colors") {}
-	virtual bool is_enabled() const {return (show_scores && !game_mode && !voxel_editing && world_mode == WMODE_GROUND);}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode == WMODE_GROUND);}
 
 	virtual void change_value(int delta) {
 		switch (cur_control) {
@@ -307,7 +307,7 @@ class water_color_kbd_menu_t : public keyboard_menu_t {
 
 public:
 	water_color_kbd_menu_t() : keyboard_menu_t(NUM_WATER_CONT, "Water Colors") {}
-	virtual bool is_enabled() const {return (show_scores && !game_mode && !inf_terrain_fire_mode && world_mode == WMODE_INF_TERRAIN);}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode == WMODE_INF_TERRAIN);}
 
 	virtual void change_value(int delta) {
 		switch (cur_control) {
@@ -339,6 +339,7 @@ public:
 
 // ************ Top-Level UI Hooks ************
 
+unsigned selected_menu_ix(0);
 hmap_kbd_menu_t hmap_menu(cur_brush_param);
 voxel_edit_kbd_menu_t voxel_edit_menu(voxel_brush_params);
 leaf_color_kbd_menu_t leaf_color_menu;
@@ -349,15 +350,39 @@ keyboard_menu_t *kbd_menus[] = {&hmap_menu, &voxel_edit_menu, &leaf_color_menu, 
 unsigned const NUM_KBD_MENUS = sizeof(kbd_menus)/sizeof(kbd_menus[0]);
 
 
+void next_selected_menu_ix() {
+
+	unsigned num_enabled(0);
+	for (unsigned i = 0; i < NUM_KBD_MENUS; ++i) {if (kbd_menus[i]->is_enabled()) {++num_enabled;}}
+	if (num_enabled > 1) {++selected_menu_ix;} else {selected_menu_ix = 0;} // increment if there are multiple choices
+	if (selected_menu_ix >= num_enabled) {selected_menu_ix = 0;} // wraparound
+}
+
+
+keyboard_menu_t *get_enabled_menu() {
+
+	keyboard_menu_t *kbd_menu(NULL);
+	unsigned num_enabled(0);
+	
+	for (unsigned i = 0; i < NUM_KBD_MENUS; ++i) {
+		assert(kbd_menus[i]);
+
+		if (kbd_menus[i]->is_enabled()) {
+			kbd_menu = kbd_menus[i];
+			if ((num_enabled++) == selected_menu_ix) {return kbd_menu;} // use this one (Nth enabled menu)
+		}
+	}
+	if (kbd_menu == NULL) {return NULL;}
+	assert(num_enabled > 0);
+	selected_menu_ix = num_enabled - 1; // set to the last one (which was used)
+	return kbd_menu;
+}
+
+
 bool ui_intercept_keyboard(unsigned char key, bool is_special) {
 
 	if (!is_special) return 0; // only using special keys right now
-	keyboard_menu_t *kbd_menu(NULL);
-	
-	for (unsigned i = 0; i < NUM_KBD_MENUS; ++i) { // Note: doesn't handle more than one enabled menu
-		assert(kbd_menus[i]);
-		if (kbd_menus[i]->is_enabled()) {assert(!kbd_menu); kbd_menu = kbd_menus[i];}
-	}
+	keyboard_menu_t *const kbd_menu(get_enabled_menu());
 	if (kbd_menu == NULL) return 0; // no keyboard menu enabled
 	int const change_mag((glutGetModifiers() & GLUT_ACTIVE_SHIFT) ? 10 : 1); // move 10x if shift is set
 	
@@ -380,15 +405,8 @@ bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down) {
 
 void draw_enabled_ui_menus() {
 
-	bool drawn(0);
-
-	for (unsigned i = 0; i < NUM_KBD_MENUS; ++i) { // Note: doesn't handle more than one enabled menu
-		assert(kbd_menus[i]);
-		if (!kbd_menus[i]->is_enabled()) continue;
-		assert(!drawn);
-		kbd_menus[i]->draw_controls();
-		drawn = 1;
-	}
+	keyboard_menu_t const *const kbd_menu(get_enabled_menu());
+	if (kbd_menu) {kbd_menu->draw_controls();}
 }
 
 

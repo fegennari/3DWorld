@@ -742,6 +742,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		reload_all_shaders();
 		break;
 
+	case 'X': // change selected UI menu
+		next_selected_menu_ix();
+		break;
+
 	case 8: // backspace
 		if (world_mode == WMODE_INF_TERRAIN) {inf_terrain_undo_hmap_mod();}
 		else if (world_mode == WMODE_GROUND) {undo_voxel_brush();}
