@@ -145,27 +145,23 @@ void setup_current_system(float sun_intensity) {
 		c1         = moon.colorA;
 		c2         = moon.colorB;
 	}
-	if (water != last_water) {
+	if (water == 0.0) {
+		if (DISABLE_WATER == 0) DISABLE_WATER = 2; // temporary disable
+	}
+	else {
+		if (DISABLE_WATER == 2) DISABLE_WATER = 0; // enable
+	}
+	if (water != last_water && water > 0.0 && water_enabled == NULL) { // only adjust water level if a custom water_enable mask hasn't been set
 		last_water = water;
+		float const water_level(0.5 + 0.5*(water - 0.5)), rel_wpz(get_rel_wpz());
 
-		if (water == 0.0) {
-			if (DISABLE_WATER == 0) DISABLE_WATER = 2; // temporary disable
-		}
-		else {
-			if (DISABLE_WATER == 2) DISABLE_WATER = 0; // enable
-
-			if (water_enabled == NULL) { // only adjust water level if a custom water_enable mask hasn't been set
-				float const water_level(0.5 + 0.5*(water - 0.5)), rel_wpz(get_rel_wpz());
-
-				if (fabs(water_level - rel_wpz) > 0.001) {
-					cout << "water: " << water << ", water_level: " << water_level << ", rel_wpz: " << rel_wpz << ", water_h_off_rel: " << water_h_off_rel << endl;
-					water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
-					water_h_off_rel = water_level - get_rel_wpz();
-					regen_mesh      = 1; // regen texture (is this needed?)
-					def_water_level = water_plane_z = get_water_z_height(); // ???
-					calc_watershed();
-				}
-			}
+		if (fabs(water_level - rel_wpz) > 0.001) {
+			cout << "water: " << water << ", water_level: " << water_level << ", rel_wpz: " << rel_wpz << ", water_h_off_rel: " << water_h_off_rel << endl;
+			water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
+			water_h_off_rel = water_level - get_rel_wpz();
+			regen_mesh      = 1; // regen texture (is this needed?)
+			def_water_level = water_plane_z = get_water_z_height(); // ???
+			calc_watershed();
 		}
 	}
 	if (clobj0.type >= UTYPE_STAR) { // determine gravity
