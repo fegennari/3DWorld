@@ -511,7 +511,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	glPopMatrix(); // undo universe transform
 
 	// setup sun light source
-	float const sun_intensity(max(0.25f, min(4.0f, 0.0015f*sun_pos.mag()/univ_sun_rad)));
+	float const sun_intensity(max(0.25f, min(4.0f, 1000.0f*univ_sun_rad/sun_pos.mag())));
 	setup_current_system(sun_intensity);
 	set_gl_light_pos(GL_LIGHT0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	disable_light(1); // no moonlight (for now)
