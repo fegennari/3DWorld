@@ -672,6 +672,7 @@ void draw_sun_flare() {
 			intensity = 0.1 + 0.9*float(nvis)/float(npts);
 		}
 		else if (world_mode == WMODE_INF_TERRAIN) {
+			if (sun_pos.z < zmin) return; // sun below the mesh
 			if (viewer.z < water_plane_z) {intensity = CLIP_TO_01(1.0f - 1.0f*(water_plane_z - viewer.z));} // attenuate sun flare when underwater
 		}
 		DoFlares(viewer, camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0), intensity);
