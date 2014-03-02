@@ -93,7 +93,7 @@ void do_univ_init() {
 }
 
 
-void setup_current_system() {
+void setup_current_system(float sun_intensity) {
 	
 	bool regen_mesh(0);
 	static int inited(0);
@@ -173,7 +173,7 @@ void setup_current_system() {
 		base_gravity = 70.0*clobj0.object->gravity;
 	}
 	float const a_scale(0.5 + 1.0*atmosphere); // higher atmosphere = more clouds = more ambient lighting (FIXME: cloud color for ambient?)
-	set_current_system_light(clobj0, pos, a_scale, 0.5);
+	set_current_system_light(clobj0, pos, a_scale*sun_intensity, 0.5*sun_intensity);
 
 	if (fabs(univ_temp - last_temp) > 0.1) { // update temperature
 		cout << "temperature: " << univ_temp << endl;

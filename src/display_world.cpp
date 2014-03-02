@@ -511,9 +511,9 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	glPopMatrix(); // undo universe transform
 
 	// setup sun light source
-	setup_current_system();
+	float const sun_intensity(max(0.25f, min(4.0f, 0.0015f*sun_pos.mag()/univ_sun_rad)));
+	setup_current_system(sun_intensity);
 	set_gl_light_pos(GL_LIGHT0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
-	set_light_atten(GL_LIGHT0, max(0.25f, min(4.0f, 0.0007f*sun_pos.mag()/univ_sun_rad)));
 	disable_light(1); // no moonlight (for now)
 	
 	if (!have_sun || light_factor < 0.5) { // sun below horizon
@@ -841,7 +841,6 @@ void display(void) {
 			apply_red_sky(sun_color);
 			reset_planet_defaults();
 			setup_lighting(depth);
-			set_light_atten(GL_LIGHT0, 1.0); // reset light0
 			check_gl_error(4);
 			if (TIMETEST) PRINT_TIME("B");
 		}
@@ -1026,7 +1025,6 @@ void display_universe() { // infinite universe
 	if (TIMETEST) PRINT_TIME("Draw Universe");
 	draw_blasts();
 	if (TIMETEST) PRINT_TIME("Draw Blasts");
-	set_light_atten(GL_LIGHT0, 1.0); // reset light0
 	final_draw(framerate);
 	show_crosshair(WHITE, do_zoom);
 	draw_universe_stats();

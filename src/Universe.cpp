@@ -3087,10 +3087,9 @@ void set_lighting_params() {
 	float const ambient[4] = {0.5, 0.5, 0.5, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0}, zero4[4] = {0.0, 0.0, 0.0, 0.0};
 	int const a_light(GL_LIGHT0+get_universe_ambient_light()), s_light(GL_LIGHT0);
 	set_colors_and_enable_light(s_light, ambient, diffuse); // single star diffuse + ambient
-	set_gl_light_pos(s_light, all_zeros, 0.0);
+	set_gl_light_pos(s_light, all_zeros, 0.0); // directional light
 	set_colors_and_enable_light(a_light, ambient, zero4); // universe + galaxy ambient
-	set_gl_light_pos(a_light, all_zeros, 0.0);
-	set_light_atten(a_light, 1.0);
+	set_gl_light_pos(a_light, all_zeros, 0.0); // directional light
 	//enable_blend();
 }
 

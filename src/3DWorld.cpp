@@ -284,24 +284,6 @@ void set_additive_blend_mode() {
 }
 
 
-void set_light_atten(int light, float attenuation) {
-
-	float vals[4];
-	glGetLightfv(light, GL_POSITION, vals);
-
-	if (vals[3] != 0.0) { // point light
-		setup_gl_light_atten(light, attenuation, 0.0, 0.0);
-	}
-	else { // directional light
-		float a[4], d[4];
-		glGetLightfv(light, GL_AMBIENT, a);
-		glGetLightfv(light, GL_DIFFUSE, d);
-		UNROLL_4X(vals[i_] /= attenuation;)
-		set_light_colors(light, a, d);
-	}
-}
-
-
 void reset_fog() {
 
 	set_lighted_fog_color(GRAY);
