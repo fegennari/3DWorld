@@ -260,6 +260,7 @@ public:
 	virtual void calc_temperature() = 0;
 	virtual void get_valid_orbit_r(float &orbit_r, float obj_r) const = 0;
 	virtual bool colonizable_int() const = 0;
+	virtual float get_vegetation() const = 0;
 	virtual point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
 	virtual void free_texture();
 	virtual void free_uobj();
@@ -312,6 +313,7 @@ public:
 	bool shadowed_by_planet();
 	void get_valid_orbit_r(float &orbit_r, float obj_r) const;
 	bool colonizable_int() const {return (radius > 1.5*MOON_MIN_SIZE && planet && planet->colonizable());}
+	float get_vegetation() const {return 0;}
 	float get_hmap_scale() const {return MOON_HMAP_SCALE;}
 	string get_name() const {return "Moon " + getname();}
 };

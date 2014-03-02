@@ -998,6 +998,7 @@ void display_universe() { // infinite universe
 	}
 	camera_view = 0;
 	framerate   = get_framerate(timer_b);
+	setup_landscape_tex_colors(ALPHA0, ALPHA0); // reset for asteroids
 	init_universe_display();
 	bkg_color   = BACKGROUND_NIGHT;
 	glClearColor_rgba(bkg_color);

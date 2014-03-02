@@ -2519,7 +2519,7 @@ string urev_body::get_info() const {
 
 	ostringstream oss;
 	oss << "Radius: " << radius << ", Temp: " << temp << ", Resources: " << resources << ", Water: " << water
-		<< ", Atmos: " << atmos  << endl << "Can Land: " << can_land() << ", Colonizable: " << colonizable()
+		<< ", Atmos: " << atmos << ", Vegetation: " << get_vegetation() << endl << "Can Land: " << can_land() << ", Colonizable: " << colonizable()
 		<< ", Liveable: " << liveable() << ", Satellites: " << num_satellites << comment;
 	get_owner_info(oss);
 	return oss.str();
