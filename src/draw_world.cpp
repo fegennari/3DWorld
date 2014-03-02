@@ -162,30 +162,22 @@ void disable_light   (int l) {assert(l < 8); enabled_lights &= ~(1<<l);}
 
 void calc_cur_ambient_diffuse() {
 
-	float a[4], d[4], lval[4];
 	unsigned ncomp(0);
-	cur_ambient = cur_diffuse = BLACK;
+	cur_ambient = cur_diffuse = BLACK; // FIXME: alpha unused, should be colorRGB?
 
-	for (unsigned i = 0; i < 8; ++i) { // max of 8 lights (GL_LIGHT0 - GL_LIGHT7): sun, moon, lightning
+	for (unsigned i = 0; i < 2; ++i) { // sun, moon
 		if (!is_light_enabled(i)) continue;
 		int const light(GL_LIGHT0 + i); // should be sequential
-		float atten(1.0);
+		float a[4], d[4];
 		glGetLightfv(light, GL_AMBIENT, a);
 		glGetLightfv(light, GL_DIFFUSE, d);
-		glGetLightfv(light, GL_POSITION, lval);
-		if (lval[3] != 0.0) glGetLightfv(light, GL_CONSTANT_ATTENUATION, &atten); // point light source only
-		assert(atten > 0.0);
-		UNROLL_3X(cur_ambient[i_] += a[i_]/atten; cur_diffuse[i_] += d[i_]/atten;)
-		//cout << "A: "; cur_ambient.print(); cout << "  D: "; cur_diffuse.print(); cout << endl;
+		UNROLL_3X(cur_ambient[i_] += a[i_]; cur_diffuse[i_] += d[i_];)
 		++ncomp;
 	}
 	if (ncomp > 0) {
 		float const cscale(0.5 + 0.5/ncomp);
-		cur_ambient       = cur_ambient.modulate_with(ambient_lighting_scale);
-		cur_ambient      *= cscale; // only really valid for sun and moon
-		cur_diffuse      *= cscale;
-		cur_ambient.alpha = 1.0;
-		cur_diffuse.alpha = 1.0;
+		cur_ambient  = cur_ambient.modulate_with(ambient_lighting_scale) * cscale;
+		cur_diffuse *= cscale;
 	}
 }
 
@@ -1338,13 +1330,14 @@ void draw_text(colorRGBA const &color, float x, float y, float z, char const *te
 
 	//bitmap_font |= ((display_mode & 0x80) != 0);
 	shader_t s;
-	s.begin_color_only_shader(color);
 	glDisable(GL_DEPTH_TEST);
 
-	if (bitmap_font) {
+	if (bitmap_font) { // FIXME: uses fixed function pipeline, need to replace glRasterPos and glutBitmapCharacter with something else
+		color.do_glColor();
 		glRasterPos3f(x, y, z);
 	}
 	else {
+		s.begin_color_only_shader(color);
 		glEnable(GL_BLEND);
 		glEnable(GL_LINE_SMOOTH);
 		glPushMatrix();
@@ -1381,9 +1374,9 @@ void draw_text(colorRGBA const &color, float x, float y, float z, char const *te
 		glPopMatrix();
 		glDisable(GL_LINE_SMOOTH);
 		glDisable(GL_BLEND);
+		s.end_shader();
 	}
 	glEnable(GL_DEPTH_TEST);
-	s.end_shader();
 }
 
 
