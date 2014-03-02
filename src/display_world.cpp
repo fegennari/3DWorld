@@ -38,6 +38,7 @@ int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0), enabled_lights(0); // 8 bit flags
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
 upos_point_type cur_origin(all_zeros);
+colorRGBA cur_fog_color(GRAY);
 
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp;
@@ -317,22 +318,17 @@ void calc_bkg_color() {
 
 
 float get_lf_scale(float lf) {
-
 	return CLIP_TO_01(5.0f*(lf - 0.4f));
 }
 
-
 float get_moon_light_factor() {
-
 	return fabs(moon_rot/PI - 1.0);
 }
 
 
 void add_sun_effect(colorRGBA &color) {
 
-	for (unsigned i = 0; i < 4; ++i) {
-		color[i] *= sun_color[i];
-	}
+	color = color.modulate_with(sun_color);
 	float cmult(have_sun ? get_lf_scale(light_factor) : 0.0); // light from sun
 
 	if (!combined_gu && light_factor < 0.6) { // light from moon
@@ -343,11 +339,11 @@ void add_sun_effect(colorRGBA &color) {
 }
 
 
-colorRGBA set_lighted_fog_color(colorRGBA color) {
+void set_lighted_fog_color(colorRGBA const &color) {
 
-	add_sun_effect(color);
-	glFogfv(GL_FOG_COLOR, (float *)&color);
-	return color;
+	cur_fog_color = color;
+	add_sun_effect(cur_fog_color);
+	glFogfv(GL_FOG_COLOR, (float *)&cur_fog_color);
 }
 
 
@@ -529,7 +525,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	// setup background and init for standard mesh draw
 	if (light_factor > 0.4) { // translucent blue for atmosphere
 		colorRGBA color(bkg_color);
-		if (reflection_mode) {glGetFloatv(GL_FOG_COLOR, (float *)&color);} // make the sky reflection in the background blend with the fog in the foreground
+		if (reflection_mode) {color = cur_fog_color;} // make the sky reflection in the background blend with the fog in the foreground
 		color.alpha *= 0.75*atmosphere*min(1.0, (light_factor - 0.4)/0.2);
 		vector<camera_filter> cfs;
 		cfs.push_back(camera_filter(color, 1, -1, 0));

@@ -143,6 +143,8 @@ void clear_sm_tree_vbos();
 void clear_scenery_vbos();
 void clear_asteroid_contexts();
 
+void set_lighted_fog_color(colorRGBA const &color);
+
 
 bool check_gl_error(unsigned loc_id) {
 
@@ -302,7 +304,7 @@ void set_light_atten(int light, float attenuation) {
 
 void reset_fog() {
 
-	glFogfv(GL_FOG_COLOR, (float *)&GRAY);
+	set_lighted_fog_color(GRAY);
 	glFogf(GL_FOG_DENSITY, 0.2);
 	glFogf(GL_FOG_START, 0.1);
 	glFogf(GL_FOG_END, ((world_mode == WMODE_INF_TERRAIN) ? get_inf_terrain_fog_dist() : 2.5*Z_SCENE_SIZE));

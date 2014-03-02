@@ -44,7 +44,7 @@ extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
 extern colorRGB mesh_color_scale;
-extern colorRGBA bkg_color;
+extern colorRGBA bkg_color, cur_fog_color;
 extern float h_dirt[];
 extern water_params_t water_params;
 
@@ -792,7 +792,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	}
 	else {
 		select_texture(WHITE_TEX);
-		glGetFloatv(GL_FOG_COLOR, (float *)&rcolor);
+		rcolor = cur_fog_color;
 		//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 	}
 	bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);

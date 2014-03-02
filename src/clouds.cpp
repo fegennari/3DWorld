@@ -21,7 +21,7 @@ extern bool have_sun, no_sun_lpos_update, fog_enabled;
 extern int window_width, window_height, cloud_model, draw_model, display_mode, xoff, yoff, animate2, is_cloudy;
 extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
 extern vector3d wind;
-extern colorRGBA sun_color;
+extern colorRGBA sun_color, cur_fog_color;
 
 
 void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, bool zoomed);
@@ -372,9 +372,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 	// draw a plane at terrain_zmin to properly blend the fog (needs to be first when camera is above the clouds)
 	if (draw_floor && !reflection_pass && fog_enabled) {
 		glDepthMask(GL_FALSE);
-		colorRGBA fog_color;
-		glGetFloatv(GL_FOG_COLOR, (float *)&fog_color);
-		s.begin_color_only_shader(fog_color);
+		s.begin_color_only_shader(cur_fog_color);
 		imd.render_z_plane(-size, -size, size, size, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
 		glDepthMask(GL_TRUE);
