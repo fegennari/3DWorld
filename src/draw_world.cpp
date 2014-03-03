@@ -27,11 +27,19 @@ struct sky_pos_orient {
 };
 
 
+struct gl_light_params_t {
+
+	point pos;
+	colorRGBA ambient, diffuse;
+	gl_light_params_t() : pos(all_zeros), ambient(BLACK), diffuse(BLACK) {}
+};
+
+
 // Global Variables
 float sun_radius, moon_radius, earth_radius, brightness(1.0);
 colorRGBA cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
-point gl_light_positions[8] = {all_zeros};
+gl_light_params_t gl_light_params[8];
 point const earth_pos(-15.0, -8.0, 21.0);
 sky_pos_orient cur_spo(point(0,0,0),1,0,0);
 vector3d up_norm(plus_z);
@@ -76,15 +84,17 @@ int get_universe_ambient_light() {
 }
 
 
-void set_light_colors(int light, float const *const ambient, float const *const diffuse) {
+void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	glLightfv(light, GL_AMBIENT, ambient);
-	glLightfv(light, GL_DIFFUSE, diffuse);
+	glLightfv(light, GL_AMBIENT, &ambient.R);
+	glLightfv(light, GL_DIFFUSE, &diffuse.R);
+	gl_light_params[light - GL_LIGHT0].ambient = ambient;
+	gl_light_params[light - GL_LIGHT0].diffuse = diffuse;
 }
 
 
-void set_colors_and_enable_light(int light, float const ambient[4], float const diffuse[4]) {
+void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA const &diffuse) {
 
 	enable_light(light - GL_LIGHT0);
 	set_light_colors(light, ambient, diffuse);
@@ -94,9 +104,8 @@ void set_colors_and_enable_light(int light, float const ambient[4], float const 
 void clear_colors_and_disable_light(int light) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	float const ad[4] = {0.0, 0.0, 0.0, 0.0};
 	disable_light(light - GL_LIGHT0);
-	set_light_colors(light, ad, ad);
+	set_light_colors(light, BLACK, BLACK);
 }
 
 
@@ -105,7 +114,7 @@ void set_gl_light_pos(int light, point const &pos, float w) {
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	float const position[4] = {pos.x, pos.y, pos.z, w};
 	glLightfv(light, GL_POSITION, position);
-	gl_light_positions[light - GL_LIGHT0] = pos;
+	gl_light_params[light - GL_LIGHT0].pos = pos;
 }
 
 
@@ -167,11 +176,8 @@ void calc_cur_ambient_diffuse() {
 
 	for (unsigned i = 0; i < 2; ++i) { // sun, moon
 		if (!is_light_enabled(i)) continue;
-		int const light(GL_LIGHT0 + i); // should be sequential
-		float a[4], d[4];
-		glGetLightfv(light, GL_AMBIENT, a);
-		glGetLightfv(light, GL_DIFFUSE, d);
-		UNROLL_3X(cur_ambient[i_] += a[i_]; cur_diffuse[i_] += d[i_];)
+		cur_ambient += gl_light_params[i].ambient;
+		cur_diffuse += gl_light_params[i].diffuse;
 		++ncomp;
 	}
 	if (ncomp > 0) {
@@ -588,7 +594,7 @@ void draw_moon() {
 	point const pos(get_moon_pos());
 	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
 	set_color(WHITE);
-	float const ambient[4] = {0.05, 0.05, 0.05, 1.0}, diffuse[4] = {1.0*have_sun, 1.0*have_sun, 1.0*have_sun, 1.0};
+	colorRGBA const ambient(0.05, 0.05, 0.05, 1.0), diffuse(1.0*have_sun, 1.0*have_sun, 1.0*have_sun, 1.0);
 	set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
 	set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
 	shader_t s;
@@ -716,7 +722,7 @@ void draw_sky(int order) {
 		int const gl_light(GL_LIGHT0 + light_id);
 		set_gl_light_pos(gl_light, lpos, 1.0); // w=1.0 - point light source
 		colorRGBA const ambient(sun_color*0.5);
-		set_colors_and_enable_light(gl_light, &ambient.R, &sun_color.R);
+		set_colors_and_enable_light(gl_light, ambient, sun_color);
 		setup_gl_light_atten(gl_light, 0.0, 0.01, 0.01);
 	}
 

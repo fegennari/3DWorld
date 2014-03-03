@@ -59,32 +59,24 @@ void display_universe();
 void display_inf_terrain(float uw_depth);
 void update_temperature(bool verbose);
 void update_sound_loops();
-void calc_cur_ambient_diffuse();
 bool indir_lighting_updated();
 colorRGBA get_tt_water_color();
 
 
 void glClearColor_rgba(const colorRGBA &color) {
-
 	glClearColor(color.R, color.G, color.B, color.A);
 }
 
 
-void calc_moon_atten(float *ambient, float *diffuse, float mlf) {
+void calc_moon_atten(colorRGBA &ambient, colorRGBA &diffuse, float mlf) {
 
-	if (mlf < 0.6) {
-		float const moon_atten((mlf < 0.5) ? 0.0 : 10.0*(mlf - 0.5));
-		for (unsigned i = 0; i < 3; ++i) diffuse[i] *= moon_atten;
-	}
-	for (unsigned i = 0; i < 3; ++i) {
-		ambient[i] *= 0.5;
-		diffuse[i] *= 0.5;
-	}
+	if (mlf < 0.6) {diffuse *= ((mlf < 0.5) ? 0.0 : 10.0*(mlf - 0.5));}
+	ambient *= 0.5;
+	diffuse *= 0.5;
 }
 
 
 void set_standard_viewport() {
-
 	glViewport(0, 0, window_width, window_height);
 }
 
@@ -388,7 +380,7 @@ void setup_lighting(float depth) {
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
 	float const mlf(get_moon_light_factor());
-	float ambient[4], diffuse[4];
+	colorRGBA ambient, diffuse;
 	ambient[3] = diffuse[3] = 1.0;
 
 	// Note: should this be set in universe lighting?
@@ -1185,8 +1177,6 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	draw_cloud_planes(zmin2, 0, !camera_above_clouds, 1); // these two lines could go in either order
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
-	calc_cur_ambient_diffuse();
-	if (TIMETEST) PRINT_TIME("3.25");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
 	pre_draw_tiled_terrain();
 	if (TIMETEST) PRINT_TIME("3.26");

@@ -8,7 +8,6 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Color*
  - Color/Normal/TexCoord/VertexPointer, Enable/DisableClientState
  - Material*, Light*, LIGHTi, glFog
-    * glGetLightfv
  - Non-sprite points
  - Use triangles instead of quads (Tree billboards/leaves)
  - text/glRasterPos

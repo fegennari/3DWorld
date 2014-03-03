@@ -337,16 +337,8 @@ void draw_blasts() {
 void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light) {
 
 	if (color.alpha == 0.0 || color == BLACK) return; // shouldn't get here
-	float uambient[4], udiffuse[4];
-
-	for (unsigned d = 0; d < 3; ++d) { // set color
-		uambient[d] = 0.2*color[d];
-		udiffuse[d] = 1.0*color[d];
-	}
-	uambient[3] = udiffuse[3] = color[3]; // alpha
-	set_colors_and_enable_light(gl_light, uambient, udiffuse);
-
-	// set light attenuation
+	colorRGBA const uambient(color*0.2);
+	set_colors_and_enable_light(gl_light, uambient, color);
 	assert(radius > 0.0);
 	float const atten2(0.1/(EXP_LIGHT_SCALE*radius));
 	setup_gl_light_atten(gl_light, 0.5, 20.0*atten2, 5000.0*atten2);

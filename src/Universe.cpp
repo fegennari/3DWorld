@@ -863,7 +863,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 							if (has_sun && planet.is_ok()) { // setup planet as an additional light source for all moons
 								colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
-								set_light_colors(p_light, &BLACK.R, &pcolor.R); // use planet diffuse
+								set_light_colors(p_light, BLACK, pcolor); // use planet diffuse
 								set_gl_light_pos(p_light, make_pt_global(ppos), 1.0); // point light at planet center
 								set_star_light_atten(p_light, 5.0*PLANET_MAX_SIZE/planet.radius);
 							}
@@ -3037,7 +3037,7 @@ inline void uobj_solid::set_grav_mass() {
 
 void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale) {
 
-	float uambient[4], udiffuse[4];
+	colorRGBA uambient, udiffuse;
 	int const light(GL_LIGHT0);
 	point const lpos(make_pt_global(pos));
 	float const ambient_scale(a_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA);
@@ -3055,8 +3055,8 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	uambient[3] = (no_ambient ? 0.0 : 1.0);
 	udiffuse[3] = (shadowed   ? 0.0 : 1.0);
 	set_colors_and_enable_light(light, uambient, udiffuse);
-	//cout << "UA: "; ((colorRGBA *)(&uambient))->print(); cout << endl;
-	//cout << "UD: "; ((colorRGBA *)(&udiffuse))->print(); cout << endl;
+	//cout << "UA: "; uambient.print(); cout << endl;
+	//cout << "UD: "; udiffuse.print(); cout << endl;
 
 	// set light attenuation - cache this?
 	set_star_light_atten(light, max(0.25f, min(1.0f, STAR_MAX_SIZE/radius)));
@@ -3084,13 +3084,11 @@ void set_ambient_color(colorRGBA const &color) {
 
 void set_lighting_params() {
 
-	float const ambient[4] = {0.5, 0.5, 0.5, 1.0}, diffuse[4] = {1.0, 1.0, 1.0, 1.0}, zero4[4] = {0.0, 0.0, 0.0, 0.0};
 	int const a_light(GL_LIGHT0+get_universe_ambient_light()), s_light(GL_LIGHT0);
-	set_colors_and_enable_light(s_light, ambient, diffuse); // single star diffuse + ambient
+	set_colors_and_enable_light(s_light, GRAY, WHITE); // single star diffuse + ambient
 	set_gl_light_pos(s_light, all_zeros, 0.0); // directional light
-	set_colors_and_enable_light(a_light, ambient, zero4); // universe + galaxy ambient
+	set_colors_and_enable_light(a_light, GRAY, BLACK); // universe + galaxy ambient
 	set_gl_light_pos(a_light, all_zeros, 0.0); // directional light
-	//enable_blend();
 }
 
 
