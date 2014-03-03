@@ -7,6 +7,7 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 #include "draw_utils.h"
+#include "transform_obj.h"
 
 
 // predefined sphere VBOs

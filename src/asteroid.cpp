@@ -11,6 +11,7 @@
 #include "explosion.h"
 #include "asteroid.h"
 #include "ship_util.h" // for gen_particle
+#include "transform_obj.h"
 
 
 bool     const ENABLE_AF_INSTS  = 1; // more efficient on large asteroid fields, but less efficient when close/sparse (due to overhead), and normals are incorrect

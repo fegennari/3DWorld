@@ -8,6 +8,9 @@
 #include "shaders.h"
 #include "model3d.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+
 
 bool scene_smap_vbo_invalid(0), voxel_shadows_updated(0);
 unsigned shadow_map_sz(0);
@@ -117,62 +120,9 @@ void free_smap_vbo() {
 }
 
 
-struct matrix4x4f : public xform_matrix {
+void set_texture_matrix(xform_matrix_glm &camera_mv_matrix) {
 
-	struct matrix3x3f {
-		vector3d x,y,z;
-
-		float get_determinant() const {
-			return (x.x*(y.y*z.z - y.z*z.y) - y.x*(x.y*z.z - x.z*z.y) + z.x*(x.y*y.z - x.z*y.y));
-		}
-	};
-
-	matrix3x3f get_sub_matrix(unsigned x, unsigned y) const {
-		matrix3x3f tmp;
-		unsigned xoffset(0);
-
-		for (unsigned i = 0; i < 4; i++) {
-			if (i == x) continue;
-			unsigned yoffset(0);
-
-			for (unsigned j = 0; j < 4; j++) {
-				if (j == y) continue;
-				*(((float*) &tmp) + xoffset*3 + yoffset) = m[i*4 + j];
-				yoffset++;
-			}
-			xoffset++;
-		}
-		return tmp;
-	}
-
-	float get_determinant() const {
-		float result(0.0), i(1.0);
-
-		for (unsigned n = 0; n < 4; n++, i *= -1.0) {
-			result += m[n] * get_sub_matrix(0, n).get_determinant() * i;
-		}
-		return result;
-	}
-
-	matrix4x4f get_inverse() {
-		matrix4x4f inverse;
-		float const m4determinant(get_determinant());
-		assert(fabs(m4determinant) > TOLERANCE);
-
-		for (unsigned i = 0; i < 4; i++) {
-			for (unsigned j = 0; j < 4; j++) {
-				int const sign(1-((i+j)&1)*2);
-				inverse.m[i + j*4] = get_sub_matrix(i, j).get_determinant() * sign / m4determinant;
-			}
-		}
-		return inverse;
-	}
-};
-
-
-void set_texture_matrix(matrix4x4f &camera_mv_matrix) {
-
-	matrix4x4f modelView, projection;
+	xform_matrix_glm modelView, projection;
 	
 	// This matrix transforms every coordinate {x,y,z} to {x,y,z}* 0.5 + 0.5 
 	// Moving from unit cube [-1,1] to [0,1]  
@@ -185,14 +135,13 @@ void set_texture_matrix(matrix4x4f &camera_mv_matrix) {
 	// Grab modelview and projection matrices
 	modelView.assign_mv_from_gl();
 	projection.assign_pj_from_gl();
-	glMatrixMode(GL_TEXTURE);
-	glLoadIdentity();
-	glLoadMatrixf(bias);
-	
+
 	// Concatating all matrice into one
+	glMatrixMode(GL_TEXTURE);
+	glLoadMatrixf(bias);
 	projection.apply();
 	modelView.apply();
-	camera_mv_matrix.get_inverse().apply();
+	xform_matrix_glm(glm::affineInverse((glm::mat4)camera_mv_matrix)).apply();
 	
 	// Go back to normal matrix mode
 	glMatrixMode(GL_MODELVIEW);
@@ -332,7 +281,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	}
 
 	// setup render state
-	matrix4x4f camera_mv_matrix;
+	xform_matrix_glm camera_mv_matrix;
 	camera_mv_matrix.assign_mv_from_gl(); // cache the camera modelview matrix before we change it
 	glViewport(0, 0, shadow_map_sz, shadow_map_sz);
 	glClear(GL_DEPTH_BUFFER_BIT);

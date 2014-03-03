@@ -6,7 +6,6 @@
 #define _SHADERS_H_
 
 #include "3DWorld.h"
-#include "transform_obj.h"
 
 using std::string;
 
@@ -114,22 +113,6 @@ template<unsigned N> struct shader_float_matrix_uploader {
 			glDisableVertexAttribArray(loc);
 		}
 	}
-};
-
-
-class instance_render_t { // is this a base class of shader_t?
-
-	vector<xform_matrix> inst_xforms;
-	int loc;
-
-public:
-	instance_render_t(int loc_=-1) : loc(loc_) {}
-	void set_loc(int loc_) {loc = loc_;}
-	void add_cur_inst();
-	void add_inst(xform_matrix const &xf) {inst_xforms.push_back(xf);}
-	void draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void *indices=NULL);
-	unsigned size () const {return inst_xforms.size();}
-	bool     empty() const {return inst_xforms.empty();}
 };
 
 

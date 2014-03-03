@@ -7,7 +7,6 @@
 #include "tree_3dw.h"
 #include "lightmap.h"
 #include "textures_3dw.h"
-#include "transform_obj.h"
 #include "dynamic_particle.h"
 #include "physics_objects.h"
 #include "model3d.h"

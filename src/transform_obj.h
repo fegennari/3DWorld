@@ -6,6 +6,8 @@
 #define _TRANSFORM_OBJ_H_
 
 #include "3DWorld.h"
+#include "mesh2d.h"
+#include <glm/mat4x4.hpp>
 
 
 class xform_matrix {
@@ -20,59 +22,25 @@ public:
 	void assign(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15) {
 		m[0] = v0; m[1] = v1; m[2] = v2; m[3] = v3; m[4] = v4; m[5] = v5; m[6] = v6; m[7] = v7; m[8] = v8; m[9] = v9; m[10] = v10; m[11] = v11; m[12] = v12; m[13] = v13; m[14] = v14; m[15] = v15;
 	}
+	void apply() const;
+	void assign_mv_from_gl();
+	void assign_pj_from_gl();
 	void normalize();
-	void apply() const {glMultMatrixf(m);}
-	void assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  m);}
-	void assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, m);}
 	void load_identity();
 	void rotate(float angle, vector3d const &rot);
-	void translate(vector3d const &t);
-	void scale(vector3d const &s);
-	void scale(float s) {scale(vector3d(s,s,s));}
 	float *get_ptr() {return m;}
 };
 
 
-struct mesh2d {
+struct xform_matrix_glm : public glm::mat4 {
 
-	float *pmap; // perturbation map
-	bool *rmap;  // render map
-	float *emap; // expand map
-	point *ptsh; // point shift map
-	unsigned size;
-
-	unsigned get_index(unsigned s, unsigned t) const {assert(s < size && t <= size); return (s*(size+1) + t);}
-
-public:
-	float expand;
-
-	mesh2d() : pmap(NULL), rmap(NULL), emap(NULL), ptsh(NULL), size(0), expand(0.0) {}
-	//~mesh2d() {clear();}
-	void clear();
-	unsigned get_num()     const {assert(size > 0); return size*(size+1);} // square, with an extra row
-	unsigned choose_rand() const {return (rand() % get_num());}
-	void set_size(unsigned sz);
-	template<typename T> void alloc_ptr(T *&p, T const val);
-	void alloc_pmap();
-	void alloc_rmap();
-	void alloc_emap();
-	void alloc_ptsh();
-	void reset_pmap();
-	void add_random(float mag, float min_mag, float max_mag, unsigned skipval=0);
-	void mult_by(float val);
-	void unset_rand_rmap(unsigned num_remove);
-	void set_rand_expand(float mag, unsigned num_exp);
-	void set_rand_translate(point const &tp, unsigned num_trans);
-	void set_val(unsigned s, unsigned t, float val)      {assert(pmap); pmap[get_index(s, t)] = val;}
-	float get_val(unsigned s, unsigned t) const          {assert(pmap); return pmap[get_index(s, t)];}
-	void  set_rm(unsigned s, unsigned t, bool val)       {assert(rmap); rmap[get_index(s, t)] = val;}
-	bool  get_rm(unsigned s, unsigned t) const           {assert(rmap); return rmap[get_index(s, t)];}
-	void  set_em(unsigned s, unsigned t, float val)      {assert(emap); emap[get_index(s, t)] = val;}
-	float get_em(unsigned s, unsigned t) const           {assert(emap); return emap[get_index(s, t)];}
-	void  set_pt(unsigned s, unsigned t, point const &p) {assert(ptsh); ptsh[get_index(s, t)] = p;}
-	point get_pt(unsigned s, unsigned t) const           {assert(ptsh); return ptsh[get_index(s, t)];}
-	unsigned get_size() const {return size;}
-	void draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord) const;
+	xform_matrix_glm() {}
+	xform_matrix_glm(glm::mat4 const &m) : glm::mat4(m) {}
+	void apply() const;
+	void assign_mv_from_gl();
+	void assign_pj_from_gl();
+	float *get_ptr();
+	float const *get_ptr() const;
 };
 
 
@@ -94,17 +62,30 @@ struct transform_data {
 		return perturb_maps[i];
 	}
 	void set_perturb_size(unsigned i, unsigned sz);
-	void add_rand_perturb(unsigned i, float mag, float min_mag, float max_mag);
 	void add_perturb_at(unsigned s, unsigned t, unsigned i, float val, float min_mag, float max_mag);
 	void reset_perturb_if_set(unsigned i);
 	~transform_data();
 };
 
 
+class instance_render_t { // is this a base class of shader_t?
+
+	vector<xform_matrix> inst_xforms;
+	int loc;
+
+public:
+	instance_render_t(int loc_=-1) : loc(loc_) {}
+	void set_loc(int loc_) {loc = loc_;}
+	void add_cur_inst();
+	void add_inst(xform_matrix const &xf) {inst_xforms.push_back(xf);}
+	void draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void *indices=NULL);
+	unsigned size () const {return inst_xforms.size();}
+	bool     empty() const {return inst_xforms.empty();}
+};
+
+
 // function prototypes
 void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add=0.0, float a_mult=1.0);
-void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0);
-void update_deformation(dwobject &obj);
 
 
 #endif

@@ -6,7 +6,7 @@
 #define _SHIP_H_
 
 #include "universe_base.h"
-#include "transform_obj.h"
+#include "mesh2d.h"
 #include "function_registry.h"
 #include "string"
 #include "deque"

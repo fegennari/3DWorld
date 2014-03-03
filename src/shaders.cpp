@@ -4,6 +4,7 @@
 #include "shaders.h"
 #include "mesh.h" // for scene bounds
 #include "gl_ext_arb.h"
+#include "transform_obj.h"
 #include <fstream>
 
 using namespace std;
@@ -691,14 +692,6 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 
 
 // **************** INSTANCING ****************
-
-
-void instance_render_t::add_cur_inst() {
-
-	xform_matrix xf;
-	xf.assign_mv_from_gl();
-	add_inst(xf);
-}
 
 
 // Note: assumes cur_vbo is currently bound by the caller, and will leave it bound after the call

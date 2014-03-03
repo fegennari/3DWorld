@@ -4,7 +4,6 @@
 
 #include "3DWorld.h"
 #include "mesh.h"
-#include "transform_obj.h"
 #include "player_state.h"
 #include "physics_objects.h"
 #include "openal_wrap.h"

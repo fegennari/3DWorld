@@ -5,9 +5,8 @@
 #include "mesh.h"
 #include "transform_obj.h"
 #include "physics_objects.h"
-
-
-unsigned const DEFAULT_MESH2D_SIZE((2*N_SPHERE_DIV)/3);
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 
 extern float base_gravity, tstep, fticks;
@@ -15,6 +14,18 @@ extern obj_type object_types[];
 
 
 // *** xform_matrix ***
+
+
+void xform_matrix::apply() const {glMultMatrixf(m);}
+void xform_matrix::assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  m);}
+void xform_matrix::assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, m);}
+
+void xform_matrix_glm::apply() const {glMultMatrixf(get_ptr());}
+void xform_matrix_glm::assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  get_ptr());}
+void xform_matrix_glm::assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, get_ptr());}
+
+float       *xform_matrix_glm::get_ptr()       {glm::mat4       &m(*this); return glm::value_ptr(m);}
+float const *xform_matrix_glm::get_ptr() const {glm::mat4 const &m(*this); return glm::value_ptr(m);}
 
 
 void xform_matrix::normalize() {
@@ -40,24 +51,6 @@ void xform_matrix::rotate(float angle, vector3d const &rot) {
 	glLoadIdentity();
 	rotate_about(angle, rot);
 	apply();
-	assign_mv_from_gl();
-	glPopMatrix();
-}
-
-void xform_matrix::translate(vector3d const &t) {
-
-	glPushMatrix();
-	glLoadIdentity();
-	translate_to(t);
-	assign_mv_from_gl();
-	glPopMatrix();
-}
-
-void xform_matrix::scale(vector3d const &s) {
-
-	glPushMatrix();
-	glLoadIdentity();
-	scale_by(s);
 	assign_mv_from_gl();
 	glPopMatrix();
 }
@@ -181,14 +174,6 @@ void transform_data::set_perturb_size(unsigned i, unsigned sz) {
 }
 
 
-void transform_data::add_rand_perturb(unsigned i, float mag, float min_mag, float max_mag) {
-	
-	assert(i < perturb_maps.size());
-	set_perturb_size(i, DEFAULT_MESH2D_SIZE);
-	perturb_maps[i].add_random(mag, min_mag, max_mag);
-}
-
-
 void transform_data::add_perturb_at(unsigned s, unsigned t, unsigned i, float val, float min_mag, float max_mag) {
 
 	assert(i < perturb_maps.size());
@@ -273,5 +258,17 @@ void update_deformation(dwobject &obj) {
 	}
 }
 
+
+// **************** INSTANCING ****************
+
+
+void instance_render_t::add_cur_inst() {
+
+	xform_matrix xf;
+	xf.assign_mv_from_gl();
+	add_inst(xf);
+}
+
+// Note: instance_render_t::draw_and_clear() is defined in shaders.cpp
 
 

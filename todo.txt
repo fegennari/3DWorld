@@ -11,7 +11,7 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Non-sprite points
  - Use triangles instead of quads (Tree billboards/leaves)
  - text/glRasterPos
- - Replace GL matrix operations with something else (GLM?)
+ - Replace GL matrix operations with GLM
    * Remove texture matrix
    * Remove get of GL matrices
 
@@ -25,7 +25,7 @@ Fog increases in valleys
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
-Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
+Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm | use GLM
 Visual Studio profile
 static error check (analysis)
 

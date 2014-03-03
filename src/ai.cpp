@@ -1116,7 +1116,6 @@ void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id
 void add_damage_to_smiley_surface(vector3d const &dir, float size, int smiley_id) {
 
 	float const radius(object_types[SMILEY].radius);
-	//obj_groups[coll_id[SMILEY]].get_td()->add_rand_perturb(smiley_id, 0.004*size*radius, -0.6*radius, 0.4*radius);
 	transform_data *td(obj_groups[coll_id[SMILEY]].get_td());
 	td->set_perturb_size(smiley_id, PMAP_SIZE);
 	vector3d sdir(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).orientation);

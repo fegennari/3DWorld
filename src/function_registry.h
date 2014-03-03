@@ -733,6 +733,10 @@ bool ui_intercept_keyboard(unsigned char key, bool is_special);
 bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down);
 void draw_enabled_ui_menus();
 
+// function prototypes - transform_obj
+void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0);
+void update_deformation(dwobject &obj);
+
 
 #include "inlines.h"
 
