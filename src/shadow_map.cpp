@@ -120,28 +120,25 @@ void free_smap_vbo() {
 }
 
 
-void set_texture_matrix(xform_matrix_glm &camera_mv_matrix) {
-
-	xform_matrix_glm modelView, projection;
+void set_texture_matrix(xform_matrix &camera_mv_matrix) {
 	
 	// This matrix transforms every coordinate {x,y,z} to {x,y,z}* 0.5 + 0.5 
 	// Moving from unit cube [-1,1] to [0,1]  
-	const float bias[16] = {	
+	glm::mat4 const bias(	
 		0.5, 0.0, 0.0, 0.0, 
 		0.0, 0.5, 0.0, 0.0,
 		0.0, 0.0, 0.5, 0.0,
-		0.5, 0.5, 0.5, 1.0};
+		0.5, 0.5, 0.5, 1.0);
 	
 	// Grab modelview and projection matrices
+	xform_matrix modelView, projection;
 	modelView.assign_mv_from_gl();
 	projection.assign_pj_from_gl();
 
 	// Concatating all matrice into one
 	glMatrixMode(GL_TEXTURE);
-	glLoadMatrixf(bias);
-	projection.apply();
-	modelView.apply();
-	xform_matrix_glm(glm::affineInverse((glm::mat4)camera_mv_matrix)).apply();
+	glm::mat4 const xf(bias * projection * modelView * glm::affineInverse((glm::mat4)camera_mv_matrix));
+	xform_matrix(xf).load_gl();
 	
 	// Go back to normal matrix mode
 	glMatrixMode(GL_MODELVIEW);
@@ -281,7 +278,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	}
 
 	// setup render state
-	xform_matrix_glm camera_mv_matrix;
+	xform_matrix camera_mv_matrix;
 	camera_mv_matrix.assign_mv_from_gl(); // cache the camera modelview matrix before we change it
 	glViewport(0, 0, shadow_map_sz, shadow_map_sz);
 	glClear(GL_DEPTH_BUFFER_BIT);

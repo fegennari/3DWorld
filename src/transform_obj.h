@@ -7,40 +7,26 @@
 
 #include "3DWorld.h"
 #include "mesh2d.h"
+
+#define GLM_FORCE_RADIANS
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 
 
-class xform_matrix {
+inline glm::vec3 vec3_from_vector3d(vector3d const &v) {return glm::vec3(v.x, v.y, v.z);}
 
-protected:
-	float m[16];
 
-public:
-	xform_matrix() {load_identity();}
-	xform_matrix(float const *const m_) {assign(m_);}
-	void assign(float const *const m_) {for(unsigned i = 0; i < 16; ++i) {m[i] = m_[i];}}
-	void assign(float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8, float v9, float v10, float v11, float v12, float v13, float v14, float v15) {
-		m[0] = v0; m[1] = v1; m[2] = v2; m[3] = v3; m[4] = v4; m[5] = v5; m[6] = v6; m[7] = v7; m[8] = v8; m[9] = v9; m[10] = v10; m[11] = v11; m[12] = v12; m[13] = v13; m[14] = v14; m[15] = v15;
-	}
+struct xform_matrix : public glm::mat4 {
+
+	xform_matrix() {}
+	xform_matrix(glm::mat4 const &m) : glm::mat4(m) {}
 	void apply() const;
-	void assign_mv_from_gl();
-	void assign_pj_from_gl();
-	void normalize();
-	void load_identity();
-	void rotate(float angle, vector3d const &rot);
-	float *get_ptr() {return m;}
-};
-
-
-struct xform_matrix_glm : public glm::mat4 {
-
-	xform_matrix_glm() {}
-	xform_matrix_glm(glm::mat4 const &m) : glm::mat4(m) {}
-	void apply() const;
+	void load_gl() const;
 	void assign_mv_from_gl();
 	void assign_pj_from_gl();
 	float *get_ptr();
 	float const *get_ptr() const;
+	void normalize();
 };
 
 

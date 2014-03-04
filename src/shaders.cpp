@@ -703,8 +703,7 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 		glPushMatrix();
 
 		for (vector<xform_matrix>::const_iterator i = inst_xforms.begin(); i != inst_xforms.end(); ++i) {
-			glLoadIdentity();
-			i->apply();
+			i->load_gl();
 			
 			if (index_type != GL_NONE) { // indexed
 				glDrawElements(prim_type, count, index_type, indices);

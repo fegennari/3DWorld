@@ -5,8 +5,10 @@
 #include "mesh.h"
 #include "transform_obj.h"
 #include "physics_objects.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 
 extern float base_gravity, tstep, fticks;
@@ -16,19 +18,18 @@ extern obj_type object_types[];
 // *** xform_matrix ***
 
 
-void xform_matrix::apply() const {glMultMatrixf(m);}
-void xform_matrix::assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  m);}
-void xform_matrix::assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, m);}
+void xform_matrix::apply  () const {glMultMatrixf(get_ptr());}
+void xform_matrix::load_gl() const {glLoadMatrixf(get_ptr());}
+void xform_matrix::assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  get_ptr());}
+void xform_matrix::assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, get_ptr());}
 
-void xform_matrix_glm::apply() const {glMultMatrixf(get_ptr());}
-void xform_matrix_glm::assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  get_ptr());}
-void xform_matrix_glm::assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, get_ptr());}
-
-float       *xform_matrix_glm::get_ptr()       {glm::mat4       &m(*this); return glm::value_ptr(m);}
-float const *xform_matrix_glm::get_ptr() const {glm::mat4 const &m(*this); return glm::value_ptr(m);}
+float       *xform_matrix::get_ptr()       {glm::mat4       &m(*this); return glm::value_ptr(m);}
+float const *xform_matrix::get_ptr() const {glm::mat4 const &m(*this); return glm::value_ptr(m);}
 
 
 void xform_matrix::normalize() {
+
+	float *m(get_ptr());
 
 	for (unsigned i = 0; i < 3; ++i) { // renormalize matrix to account for fp error
 		float const dist(sqrt(m[i+0]*m[i+0] + m[i+4]*m[i+4] + m[i+8]*m[i+8]));
@@ -36,23 +37,6 @@ void xform_matrix::normalize() {
 		m[i+4] /= dist;
 		m[i+8] /= dist;
 	}
-}
-
-
-void xform_matrix::load_identity() {
-
-	for (unsigned i = 0; i < 16; ++i) {m[i] = (((i%5) == 0) ? 1.0 : 0.0);}
-}
-
-void xform_matrix::rotate(float angle, vector3d const &rot) {
-
-	// FIXME: do native rotation - see CREATE_ROT_MATRIX
-	glPushMatrix();
-	glLoadIdentity();
-	rotate_about(angle, rot);
-	apply();
-	assign_mv_from_gl();
-	glPopMatrix();
 }
 
 
@@ -190,9 +174,7 @@ void transform_data::reset_perturb_if_set(unsigned i) {
 
 transform_data::~transform_data() {
 		
-	for (unsigned i = 0; i < perturb_maps.size(); ++i) {
-		perturb_maps[i].clear();
-	}
+	for (unsigned i = 0; i < perturb_maps.size(); ++i) {perturb_maps[i].clear();}
 }
 
 
@@ -206,13 +188,12 @@ void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lp
 
 		if (!point_outside_mesh(xpos, ypos)) {
 			vector3d const delta(pos, lpos);
-			double const dmag(delta.mag()), angle(a_mult*(360.0*dmag/(TWO_PI*radius)) + a_add);
+			float const dmag(delta.mag()), angle(a_mult*(dmag/radius) + a_add);
 			vector3d const vrot(cross_product(surface_normals[ypos][xpos], delta/dmag));
-			float const vrm(vrot.mag());
 
-			if (vrm > TOLERANCE) {
+			if (vrot.mag() > TOLERANCE) {
 				matrix.normalize();
-				matrix.rotate(angle, vrot);
+				matrix = glm::rotate(glm::mat4(), angle, vec3_from_vector3d(vrot)) * matrix;
 			}
 		}
 	}
@@ -230,20 +211,13 @@ void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0) { // ap
 
 	if (vd_mag > max(2.0f*vthresh, 12.0f/fticks) && (fabs(v0.x) + fabs(v0.y)) > 0.01) { // what about when it hits the ground/mesh?
 		float const deform_mag(SQRT3*deform*min(1.0, 0.05*vd_mag));
-		
-		for (unsigned d = 0; d < 3; ++d) {
-			obj.vdeform[d] -= fabs(norm[d])*deform_mag;
-		}
+		UNROLL_3X(obj.vdeform[i_] -= fabs(norm[i_])*deform_mag;)
 		obj.vdeform *= SQRT3/obj.vdeform.mag(); // normalize the volume
 		float vdmin(1.0 - deform);
+		UNROLL_3X(vdmin = min(vdmin, obj.vdeform[i_]);)
 
-		for (unsigned d = 0; d < 3; ++d) {
-			vdmin = min(vdmin, obj.vdeform[d]);
-		}
 		if (vdmin < (1.0 - deform)) {
-			for (unsigned d = 0; d < 3; ++d) {
-				obj.vdeform[d] += ((1.0 - deform) - vdmin);
-			}
+			UNROLL_3X(obj.vdeform[i_] += ((1.0 - deform) - vdmin);)
 			obj.vdeform *= SQRT3/obj.vdeform.mag(); // re-normalize
 		}
 	}
