@@ -108,7 +108,7 @@ bool shader_t::add_uniform_color(char const *const name, colorRGB  const &val) c
 	return set_uniform_color(get_uniform_loc(name), val);
 }
 
-bool shader_t::add_uniform_matrid_4x4(char const *const name, float *m, bool transpose) const {
+bool shader_t::add_uniform_matrix_4x4(char const *const name, float *m, bool transpose) const {
 	return set_uniform_matrid_4x4(get_uniform_loc(name), m, transpose);
 }
 
@@ -691,7 +691,15 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 }
 
 
-// **************** INSTANCING ****************
+// **************** INSTANCING + TRANSFORMS ****************
+
+
+void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
+
+	xform_matrix m;
+	m.assign_mv_from_gl();
+	s.add_uniform_matrix_4x4(var_name, m.get_ptr(), 0);
+}
 
 
 // Note: assumes cur_vbo is currently bound by the caller, and will leave it bound after the call
@@ -700,10 +708,10 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 	if (inst_xforms.empty()) return;
 
 	if (loc < 0) { // hardware instancing not used, so we iterate
-		glPushMatrix();
+		assert(0); // this flow is unused
 
 		for (vector<xform_matrix>::const_iterator i = inst_xforms.begin(); i != inst_xforms.end(); ++i) {
-			i->load_gl();
+			//i->load_gl(); // replace with shader upload
 			
 			if (index_type != GL_NONE) { // indexed
 				glDrawElements(prim_type, count, index_type, indices);
@@ -713,7 +721,6 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 				glDrawArrays(prim_type, 0, count); // hard-coded first=0
 			}
 		}
-		glPopMatrix();
 	}
 	else { // use hardware instancing
 		// we need to upload the transforms here, but if there is a current vbo associated with the object data

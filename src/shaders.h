@@ -69,7 +69,7 @@ public:
 	bool add_uniform_vector3d    (char const *const name, vector3d const &val) const;
 	bool add_uniform_color       (char const *const name, colorRGBA const &val) const;
 	bool add_uniform_color       (char const *const name, colorRGB  const &val) const;
-	bool add_uniform_matrid_4x4  (char const *const name, float *m, bool transpose) const;
+	bool add_uniform_matrix_4x4  (char const *const name, float *m, bool transpose) const;
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
 	int attrib_loc_by_ix(unsigned ix) const;

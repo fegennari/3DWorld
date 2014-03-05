@@ -29,6 +29,7 @@ struct smap_data_t {
 	pos_dir_up pdu;
 	point last_lpos;
 	bool last_has_dynamic;
+	xform_matrix texture_matrix;
 
 	smap_data_t() : tid(0), tu_id(0), fbo_id(0), last_has_dynamic(0) {last_lpos = all_zeros;}
 
@@ -120,7 +121,7 @@ void free_smap_vbo() {
 }
 
 
-void set_texture_matrix(xform_matrix &camera_mv_matrix) {
+void set_texture_matrix(xform_matrix &camera_mv_matrix, int light) {
 	
 	// This matrix transforms every coordinate {x,y,z} to {x,y,z}* 0.5 + 0.5 
 	// Moving from unit cube [-1,1] to [0,1]  
@@ -130,26 +131,18 @@ void set_texture_matrix(xform_matrix &camera_mv_matrix) {
 		0.0, 0.0, 0.5, 0.0,
 		0.5, 0.5, 0.5, 1.0);
 	
-	// Grab modelview and projection matrices
 	xform_matrix modelView, projection;
 	modelView.assign_mv_from_gl();
 	projection.assign_pj_from_gl();
-
-	// Concatating all matrice into one
-	glMatrixMode(GL_TEXTURE);
-	glm::mat4 const xf(bias * projection * modelView * glm::affineInverse((glm::mat4)camera_mv_matrix));
-	xform_matrix(xf).load_gl();
-	
-	// Go back to normal matrix mode
-	glMatrixMode(GL_MODELVIEW);
+	assert(light >= 0 && light < NUM_LIGHT_SRC);
+	smap_data[light].texture_matrix = (bias * projection * modelView * glm::affineInverse((glm::mat4)camera_mv_matrix));
 }
 
 
 bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
 
-	if (!shadow_map_enabled()) return 0;
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
-	if (!is_light_enabled(light)) return 0;
+	if (!shadow_map_enabled() || !is_light_enabled(light)) return 0;
 	point lpos; // unused
 	unsigned const sm_tu_id(get_shadow_map_tu_id(light));
 	bool const light_valid(light_valid(0xFF, light, lpos));
@@ -157,6 +150,7 @@ bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) {
 	s.add_uniform_int  (append_ix(string("sm_tu_id"), light, 0), sm_tu_id);
 	s.add_uniform_int  (append_ix(string("sm_tex"),   light, 0), sm_tu_id);
 	s.add_uniform_float(append_ix(string("sm_scale"), light, 0), (light_valid ? 1.0 : 0.0));
+	s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), smap_data[light].texture_matrix.get_ptr(), 0);
 	set_active_texture(sm_tu_id);
 
 	if (light_valid) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
@@ -289,11 +283,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	camera_pos = lpos;
 	pdu        = camera_pdu = get_pt_cube_frustum_pdu(lpos, get_scene_bounds(), 1);
 	check_gl_error(201);
-
-	// setup texture matrix
-	set_active_texture(tu_id);
-	set_texture_matrix(camera_mv_matrix);
-	set_active_texture(0);
+	set_texture_matrix(camera_mv_matrix, light);
 
 	if (update_smap) {
 		// render shadow geometry
@@ -376,8 +366,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	} // end update_smap
 	
 	// reset state
-	glMatrixMode(GL_TEXTURE);
-	glLoadIdentity();
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);

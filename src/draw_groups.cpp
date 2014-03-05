@@ -47,7 +47,7 @@ void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orien
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
 				 float health, int id, mesh2d const *const mesh, shader_t &shader);
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color);
-void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix);
+void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix, shader_t &shader);
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, shader_t &shader);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv);
@@ -312,7 +312,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	case BALL:
 		// FIXME: this is the only place where drawing an object modifies its physics state, but it's difficult to move the code
 		draw_rolling_obj(pos, objg.get_obj(j).init_dir, radius, obj.status, ndiv, ((obj.flags & PLATFORM_COLL) != 0),
-			dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)));
+			dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)), shader);
 		break;
 	case POWERUP:
 	case HEALTH:
@@ -1048,7 +1048,7 @@ void draw_powerup(point const &pos, float radius, int ndiv, int type, const colo
 }
 
 
-void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix) {
+void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix, shader_t &shader) {
 
 	select_texture(tid);
 	glPushMatrix();
@@ -1056,7 +1056,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 	
 	if (matrix) {
 		if (on_platform) lpos = pos; // reset now so there's no rotation
-		apply_obj_mesh_roll(*matrix, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
+		apply_obj_mesh_roll(*matrix, shader, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
 	}
 	draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
 	glPopMatrix();

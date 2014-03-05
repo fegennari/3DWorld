@@ -188,14 +188,6 @@ void calc_cur_ambient_diffuse() {
 }
 
 
-void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
-
-	float mvm[16];
-	glGetFloatv(GL_MODELVIEW_MATRIX, mvm);
-	s.add_uniform_matrid_4x4(var_name, mvm, 0);
-}
-
-
 void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
 	if (!enable)         {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights

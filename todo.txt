@@ -12,7 +12,6 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Use triangles instead of quads (Tree billboards/leaves)
  - text/glRasterPos
  - Replace GL matrix operations with GLM
-   * Remove texture matrix
    * Remove get of GL matrices
 
 * Berries on plants

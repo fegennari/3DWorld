@@ -54,7 +54,7 @@ struct transform_data {
 };
 
 
-class instance_render_t { // is this a base class of shader_t?
+class instance_render_t {
 
 	vector<xform_matrix> inst_xforms;
 	int loc;
@@ -71,7 +71,7 @@ public:
 
 
 // function prototypes
-void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add=0.0, float a_mult=1.0);
+void apply_obj_mesh_roll(xform_matrix &matrix, shader_t &shader, point const &pos, point const &lpos, float radius, float a_add=0.0, float a_mult=1.0);
 
 
 #endif
