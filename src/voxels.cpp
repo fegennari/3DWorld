@@ -1559,23 +1559,26 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	shader_t s;
 	set_fill_mode();
 	
-	if (!is_shadow_pass) {
-		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
+	if (is_shadow_pass) {
+		s.begin_color_only_shader();
+	}
+	else {
 		float const min_alpha(0.0); // not needed (yet)
 		bool const use_noise_tex(params.tids[0] != params.tids[1] || params.colors[0] != params.colors[1]);
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, use_noise_tex, params.top_tex_used, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		setup_tex_gen_for_rendering(s);
+		set_color_a(BLACK); // ambient will be set by indirect lighting in the shader
+		BLACK.do_glColor();
+		set_color_d(params.base_color);
+		set_specular(params.spec_mag, params.spec_exp);
 	}
-	BLACK.do_glColor();
-	set_color_d(params.base_color);
-	set_specular(params.spec_mag, params.spec_exp);
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
 	assert(lod_level < pt_to_ix.size());
 	sort(pt_to_ix[lod_level].begin(), pt_to_ix[lod_level].end(), comp_by_dist(get_camera_pos())); // sort near to far
 	core_render((is_shadow_pass ? NULL : &s), lod_level, is_shadow_pass);
-	if (!is_shadow_pass) {s.end_shader();}
+	s.end_shader();
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
-	set_specular(0.0, 1.0);
+	if (!is_shadow_pass) {set_specular(0.0, 1.0);}
 }
 
 
