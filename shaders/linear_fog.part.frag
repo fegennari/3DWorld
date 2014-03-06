@@ -1,5 +1,7 @@
 uniform float fog_scale    = 0.0;
 uniform float fog_fade_val = 8.0;
+uniform float fog_end      = 1.0;
+uniform vec4 fog_color     = vec4(1.0);
 
 #ifdef USE_NONUNIFORM_FOG
 // linear fog from 1.0 at/below fog_bot to 0.0 at/above fog_top
@@ -34,7 +36,7 @@ float get_custom_fog_scale_epos(in vec4 epos) {
 
 // linear/quadratic fog
 vec4 apply_fog_ffc(in vec4 color, in float ffc, in vec4 fog_color) {
-	float fog = clamp((gl_Fog.end - ffc) * gl_Fog.scale, 0.0, 1.0);
+	float fog = clamp((fog_end - ffc)/fog_end, 0.0, 1.0);
 #ifdef USE_QUADRATIC_FOG
 	fog = 1.0 - (1.0-fog)*(1.0-fog); // quadratic term
 #endif
@@ -48,15 +50,15 @@ vec4 apply_fog_ffc(in vec4 color, in float ffc, in vec4 fog_color) {
 }
 
 vec4 apply_fog(in vec4 color) {
-	return apply_fog_ffc(color, gl_FogFragCoord, gl_Fog.color);
+	return apply_fog_ffc(color, gl_FogFragCoord, fog_color);
 }
 
 vec4 apply_fog_epos(in vec4 color, in vec4 epos) {
-	return apply_fog_ffc(color, length(epos.xyz)*get_custom_fog_scale_epos(epos), gl_Fog.color);
+	return apply_fog_ffc(color, length(epos.xyz)*get_custom_fog_scale_epos(epos), fog_color);
 }
 
 vec4 apply_fog_scaled(in vec4 color, in float world_z) {
-	return apply_fog_ffc(color, gl_FogFragCoord*get_custom_fog_scale(world_z), gl_Fog.color);
+	return apply_fog_ffc(color, gl_FogFragCoord*get_custom_fog_scale(world_z), fog_color);
 }
 
 vec4 apply_fog_colored(in vec4  color,    // original color of the pixel
@@ -67,11 +69,11 @@ vec4 apply_fog_colored(in vec4  color,    // original color of the pixel
 {
 #ifdef USE_QUADRATIC_FOG // hack to make this only apply to tiled terrain mode, which uses custom quadratic fog
     float sun_amount = ((sun_dir.z > 0.0) ? max(cscale*dot(ray_dir, sun_dir), 0.0) : 0.0);
-	vec4 sun_color   = vec4(max(gl_Fog.color.r, gl_Fog.color.b), max(gl_Fog.color.g, gl_Fog.color.b), 0.5*(gl_Fog.color.r + gl_Fog.color.g), gl_Fog.color.a);
-    vec4 fog_color   = mix(gl_Fog.color, sun_color, pow(sun_amount, 8.0));
+	vec4 sun_color   = vec4(max(fog_color.r, fog_color.b), max(fog_color.g, fog_color.b), 0.5*(fog_color.r + fog_color.g), fog_color.a);
+    vec4 fog_color   = mix(fog_color, sun_color, pow(sun_amount, 8.0));
 	return apply_fog_ffc(color, distance, fog_color);
 #else
-	return apply_fog_ffc(color, distance, gl_Fog.color);
+	return apply_fog_ffc(color, distance, fog_color);
 #endif
 }
 

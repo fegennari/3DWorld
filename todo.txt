@@ -7,7 +7,7 @@ Remove deprecated OpenGL calls:
 http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Color*
  - Color/Normal/TexCoord/VertexPointer, Enable/DisableClientState
- - Material*, Light*, LIGHTi, glFog
+ - Material*, Light*, LIGHTi
  - Non-sprite points
  - Use triangles instead of quads (Tree billboards/leaves)
  - text/glRasterPos
@@ -31,4 +31,3 @@ static error check (analysis)
 Better pine tree texture
 Revisit tiled terrain heightmap texture?
 make glow_psd use point sprites
-Planet textures width = 2x height

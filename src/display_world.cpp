@@ -36,7 +36,7 @@ float const FOG_COLOR_ATTEN    = 0.75;
 bool mesh_invalidated(1), no_asteroid_dust(0), fog_enabled(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0), enabled_lights(0); // 8 bit flags
-float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0);
+float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0);
 upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY);
 
@@ -331,11 +331,11 @@ void add_sun_effect(colorRGBA &color) {
 }
 
 
-void set_lighted_fog_color(colorRGBA const &color) {
+void setup_linear_fog(colorRGBA const &color, float fog_end) {
 
 	cur_fog_color = color;
+	cur_fog_end   = fog_end;
 	add_sun_effect(cur_fog_color);
-	glFogfv(GL_FOG_COLOR, (float *)&cur_fog_color);
 }
 
 
@@ -544,8 +544,7 @@ void draw_game_elements(int timer1) {
 void setup_basic_fog() {
 
 	if (!show_fog) return;
-	set_lighted_fog_color(GRAY);
-	glFogf(GL_FOG_END, 2.5*Z_SCENE_SIZE);
+	setup_linear_fog(GRAY, 2.5*Z_SCENE_SIZE);
 	fog_enabled = 1;
 }
 
@@ -593,9 +592,7 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 		blend_color(fog_color, cloud_color, bkg_color, 0.375, 1); // weighted more towards bkg_color
 		fog_dist = get_inf_terrain_fog_dist();
 	}
-	set_lighted_fog_color(fog_color); // under water/ice
-	glFogf(GL_FOG_END, fog_dist);
-	glFogf(GL_FOG_DENSITY, 0.05); // density isn't used, but it doesn't hurt to set it to around this value in case it is
+	setup_linear_fog(fog_color, fog_dist); // under water/ice
 	fog_enabled = 1;
 }
 
@@ -887,9 +884,8 @@ void display(void) {
 				fog_color.alpha = 1.0;
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
-				set_lighted_fog_color(fog_color);
 				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.B)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
-				glFogf(GL_FOG_END, fog_dist);
+				setup_linear_fog(fog_color, fog_dist);
 			}
 
 			// draw the scene

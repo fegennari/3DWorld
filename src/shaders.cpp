@@ -18,6 +18,8 @@ string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tes
 
 extern bool fog_enabled;
 extern unsigned enabled_lights;
+extern float cur_fog_end;
+extern colorRGBA cur_fog_color;
 
 
 // *** uniform variables setup ***
@@ -260,6 +262,8 @@ void shader_t::setup_scene_bounds() const {
 void shader_t::setup_fog_scale() const {
 
 	add_uniform_float("fog_scale", (fog_enabled ? 1.0 : 0.0));
+	add_uniform_float("fog_end",   cur_fog_end);
+	add_uniform_color("fog_color", cur_fog_color);
 }
 
 
@@ -680,7 +684,7 @@ void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_ligh
 	begin_shader();
 	add_uniform_float("min_alpha", min_alpha);
 	add_uniform_int("tex0", 0);
-	if (use_fog) {add_uniform_float("fog_scale", 1.0);}
+	if (use_fog) {setup_fog_scale();}
 }
 
 void shader_t::begin_untextured_lit_glcolor_shader() {
