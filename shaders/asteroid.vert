@@ -1,4 +1,5 @@
 uniform mat4 world_space_mvm;
+uniform vec4 color = vec4(1.0);
 
 varying vec3 vpos, normal, world_normal, world_space_pos;
 varying vec4 epos;
@@ -21,7 +22,7 @@ void main()
 #ifdef ENABLE_SHADOWS
 	world_space_pos = (inverse(world_space_mvm) * epos).xyz;
 #endif
-	gl_FrontColor = gl_Color;
+	gl_FrontColor = color;
 	world_normal  = gl_Normal; // for triplanar texturing
 	vpos          = gl_Vertex.xyz;
 } 

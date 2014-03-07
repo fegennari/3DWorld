@@ -916,7 +916,6 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						if (!usg.rings_to_draw.empty()) {
 							glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 							enable_blend();
-							WHITE.do_glColor();
 
 							for (vector<planet_draw_data_t>::const_iterator k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
 								uplanet &planet(sol.planets[k->ix]);
@@ -929,7 +928,6 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						}
 						if (pass == 0 && !usg.atmos_to_draw.empty()) {
 							enable_blend();
-							WHITE.do_glColor();
 							glEnable(GL_CULL_FACE);
 
 							for (vector<planet_draw_data_t>::const_iterator k = usg.atmos_to_draw.begin(); k != usg.atmos_to_draw.end(); ++k) {
@@ -2290,10 +2288,9 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	apply_gl_rotate();
 		
 	if (texture) { // texture map
-		usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);
+		usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2); // always WHITE
 		assert(tid > 0);
 		(gas_giant ? bind_1d_texture(tid) : bind_2d_texture(tid));
-		WHITE.do_glColor();
 	}
 	else {
 		usg.enable_planet_colored_shader(use_light2);
@@ -2474,7 +2471,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	assert(ring_ri > 0.0 && ring_ri < ring_ro);
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
-	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir);
+	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir); // always WHITE
 	glPushMatrix();
 	global_translate(pos_);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
@@ -2487,7 +2484,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const {
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
-	if (!usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars)) return;
+	if (!usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars)) return; // always WHITE
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();

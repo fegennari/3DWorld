@@ -358,7 +358,7 @@ public:
 			s.add_uniform_vector3d("tex_eval_offset", zero_vector);
 		}
 		if (ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
-		ddata.color_a.do_glColor();
+		s.add_uniform_color("color", ddata.color_a);
 		glEnable(GL_CULL_FACE);
 		model.core_render(&s, lod_level, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 		glDisable(GL_CULL_FACE);
@@ -722,18 +722,17 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 
 	if (AB_NUM_PARTS_F > 0 && world_mode == WMODE_UNIVERSE) { // global asteroid dust (points), only in universe mode
 		if (ast_belt_part[0].empty()) {ast_belt_part[0].gen_torus_section(AB_NUM_PARTS_F, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI);}
-		texture_color(DEFAULT_AST_TEX).do_glColor();
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid_dust");
 		shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
 		shader.begin_shader();
 		shader.add_uniform_float("alpha_scale", 2.0);
+		shader.add_uniform_color("color", texture_color(DEFAULT_AST_TEX));
 		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
 		shader.end_shader();
 	}
 	if (AB_NUM_PARTS_S > 0 && !no_asteroid_dust) { // local small asteroid bits (spheres)
 		if (ast_belt_part[1].empty()) {ast_belt_part[1].gen_torus_section(AB_NUM_PARTS_S, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI/AB_NUM_PART_SEG);}
-		WHITE.do_glColor();
 		for (unsigned i = 0; i < 2; ++i) {shader.set_prefix("#define DRAW_AS_SPHERES", i);} // VS/FS
 		if (ENABLE_SHADOWS && has_sun) {set_shader_prefix_for_shadow_casters(shader, shadow_casters.size());}
 		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
@@ -743,6 +742,7 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 		shader.add_uniform_float("alpha_scale", 5.0);
 		shader.add_uniform_float("sphere_size", AST_PARTICLE_SIZE*window_height*max_asteroid_radius);
 		shader.add_uniform_int("tex0", 0);
+		shader.add_uniform_color("color", WHITE);
 		select_texture(DEFAULT_AST_TEX);
 		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
 		glEnable(GL_POINT_SPRITE);
@@ -1069,11 +1069,11 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 		shader.begin_shader();
 		shader.add_uniform_int("tex0", 0);
 		shader.add_uniform_float("tex_scale", 0.5);
+		shader.add_uniform_color("color", WHITE);
 	}
 	shader.enable();
 	set_fill_mode();
 	glEnable(GL_CULL_FACE);
-	WHITE.do_glColor();
 
 	if (custom_lighting) {
 		colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);

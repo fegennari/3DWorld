@@ -8,5 +8,5 @@ void main()
 	epos            = gl_ModelViewMatrix * gl_Vertex;
 	world_space_pos = (inverse(world_space_mvm) * epos).xyz;
 	gl_Position     = ftransform();
-	gl_FrontColor   = gl_Color;
+	gl_FrontColor   = vec4(1.0); // white
 }
