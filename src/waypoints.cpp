@@ -868,12 +868,14 @@ void draw_waypoints() {
 
 	for (waypoint_vector::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
 		if (i->disabled) continue;
+		colorRGBA color;
 		unsigned const wix(i - waypoints.begin());
-		if      (i->visited)     ORANGE.do_glColor(); // Note: could use lighting for these
-		else if (i->goal)        RED.do_glColor();
-		else if (i->user_placed) YELLOW.do_glColor();
-		else if (i->placed_item) PURPLE.do_glColor();
-		else                     WHITE.do_glColor();
+		if      (i->visited)     color = ORANGE; // Note: could use lighting for these
+		else if (i->goal)        color = RED;
+		else if (i->user_placed) color = YELLOW;
+		else if (i->placed_item) color = PURPLE;
+		else                     color = WHITE;
+		color.do_glColor();
 		draw_sphere_vbo(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2, 0);
 		if (!SHOW_WAYPOINT_EDGES) continue;
 

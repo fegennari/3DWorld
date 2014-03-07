@@ -313,8 +313,9 @@ void draw_mesh_vbo() {
 	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
 	// Note: ignores detail texture
 	// Note: doesn't work correctly for the shadow pass if the vbo hasn't been created
+	colorRGBA const color(mesh_color_scale*DEF_DIFFUSE);
 	shader_t s;
-	s.begin_simple_textured_shader(0.0, 1, 1); // lighting + texgen
+	s.begin_simple_textured_shader(0.0, 1, 1, &color); // lighting + texgen
 	static unsigned mesh_vbo(0);
 		
 	if (clear_landscape_vbo) {
@@ -467,7 +468,6 @@ void display_mesh(bool shadow_pass) { // fast array version
 	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
 	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
-		(mesh_color_scale*DEF_DIFFUSE).do_glColor();
 		draw_mesh_vbo();
 	}
 	else { // slower mesh draw with more features
@@ -536,8 +536,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 		s.begin_color_only_shader();
 	}
 	else {
-		s.begin_simple_textured_shader(0.0, 1); // with lighting
-		set_color(WHITE);
+		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE); // with lighting
 	}
 	set_fill_mode();
 	select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);

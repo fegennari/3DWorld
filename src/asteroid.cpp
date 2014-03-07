@@ -82,7 +82,7 @@ public:
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
 		ddata.color_a.do_glColor();
-		model3d.draw();
+		model3d.draw_using_vbo();
 		end_texture();
 		enable_blend();
 	}
@@ -1073,6 +1073,7 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 	shader.enable();
 	set_fill_mode();
 	glEnable(GL_CULL_FACE);
+	WHITE.do_glColor();
 
 	if (custom_lighting) {
 		colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
@@ -1129,7 +1130,6 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	}
 	s.add_uniform_float("crater_scale", (has_sun ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
-	WHITE.do_glColor();
 	pt_line_drawer pld;
 
 	for (const_iterator i = begin(); i != end(); ++i) {

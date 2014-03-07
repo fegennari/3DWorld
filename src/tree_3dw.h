@@ -33,7 +33,6 @@ class tree_lod_render_t {
 
 		entry_t() : td(NULL) {}
 		entry_t(tree_data_t const *td_, point const &pos_, colorRGBA const &color_) : td(td_), pos(pos_), color(color_) {assert(td);}
-		void set_gl_color() const {color.do_glColor();}
 		bool operator<(entry_t const &e) const {return (td < e.td);} // compare tree data pointer values
 	};
 

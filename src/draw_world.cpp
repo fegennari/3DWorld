@@ -619,10 +619,9 @@ void draw_earth() {
 
 	if (sphere_in_camera_view(pos, earth_radius, 1)) {
 		shader_t s;
-		s.begin_simple_textured_shader(0.0, 1);
+		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE);
 		set_fill_mode();
 		select_texture(EARTH_TEX);
-		set_color(WHITE);
 		glPushMatrix();
 		translate_to(pos);
 		glRotatef(67.0, 0.6, 0.8, 0.0);
@@ -696,14 +695,13 @@ void draw_sky(int order) {
 	enable_blend();
 
 	if (have_sun && light_factor > 0.4) { // sun lighting of clouds
-		shader_t s;
-		s.begin_simple_textured_shader();
 		colorRGBA horizon_color;
 		float const blend_val(atmosphere*CLIP_TO_01(10.0f*(light_factor - 0.4f)));
 		blend_color(horizon_color, WHITE, ALPHA0, blend_val, 1);
 		horizon_color.alpha *= 0.5;
 		apply_red_sky(horizon_color);
-		horizon_color.do_glColor();
+		shader_t s;
+		s.begin_simple_textured_shader(0.0, 0, 0, &horizon_color);
 		select_texture(GRADIENT_TEX);
 		draw_sphere_vbo(center, 1.05*radius, N_SPHERE_DIV, 1); // draw horizon
 		s.end_shader();

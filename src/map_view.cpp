@@ -178,9 +178,8 @@ void draw_overhead_map() {
 	}
 	glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	WHITE.do_glColor();
 	shader_t s;
-	s.begin_simple_textured_shader();
+	s.begin_simple_textured_shader(0.0, 0, 0, &WHITE);
 	setup_texture(tid, 0, 0, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, nx, ny, 0, GL_RGB, GL_UNSIGNED_BYTE, &buf.front());
 	draw_tquad(0.58*((float)window_width)/((float)window_height), 0.58, -1.0);

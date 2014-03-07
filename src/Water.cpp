@@ -150,7 +150,7 @@ bool mesh_is_underwater(int x, int y) {
 
 void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 
-	if (DISABLE_WATER || pos.z > ((world_mode == WMODE_GROUND) ? max_water_height : water_plane_z)) return;
+	if (DISABLE_WATER || world_mode == WMODE_UNIVERSE || pos.z > ((world_mode == WMODE_GROUND) ? max_water_height : water_plane_z)) return;
 	int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
 		
 	if (world_mode != WMODE_GROUND || (has_water(x, y) && pos.z < water_matrix[y][x])) {

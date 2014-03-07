@@ -1388,8 +1388,6 @@ void model3ds::render(bool is_shadow_pass) {
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
 	set_fill_mode();
-	set_color_a(BLACK); // ambient will be set by indirect lighting in the shader, when enabled
-	BLACK.do_glColor();
 	set_specular(0.0, 1.0);
 	bool needs_alpha_test(0), needs_bump_maps(0);
 
@@ -1409,6 +1407,8 @@ void model3ds::render(bool is_shadow_pass) {
 		else if (shader_effects) {
 			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
 			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
+			set_color_a(BLACK); // ambient will be set by indirect lighting in the shader, when enabled
+			BLACK.do_glColor();
 		}
 		else {
 			s.begin_simple_textured_shader(0.0, 1); // with lighting

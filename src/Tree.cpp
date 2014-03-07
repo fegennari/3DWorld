@@ -138,13 +138,12 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		shaders[ix].add_uniform_int("tc_start_ix", 3);
 	}
 	virtual void draw_geom(bool is_normal_pass) {
-		BLACK.do_glColor();
 		select_texture(get_tree_type().leaf_tex);
 		shaders[is_normal_pass].enable();
 		tree_data_t::pre_draw(0, 0);
 		cur_tree->gen_leaf_color();
 		cur_tree->leaf_draw_setup(0);
-		cur_tree->draw_leaves(0.0);
+		cur_tree->draw_leaves(0.0); // sets color
 		tree_data_t::post_draw(0, 0);
 		shaders[is_normal_pass].disable();
 	}
@@ -164,7 +163,7 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 	render_tree_branches_to_texture_t(unsigned tsize_) : render_tree_to_texture_t(tsize_) {}
 
 	virtual void draw_geom(bool is_normal_pass) {
-		WHITE.do_glColor();
+		WHITE.do_glColor(); // branch color will be applied to the billboard later
 		select_texture(get_tree_type().bark_tex);
 		shaders[is_normal_pass].enable();
 		tree_data_t::pre_draw(1, 0);

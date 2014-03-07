@@ -320,6 +320,11 @@ void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const { // Note
 
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
 	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius), xlate)).do_glColor();
+	draw_using_vbo();
+}
+
+void rock_shape3d::draw_using_vbo() const {
+
 	unsigned const vert_size(3*faces.size());
 
 	if (vbo == 0) {

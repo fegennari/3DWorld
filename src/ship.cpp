@@ -753,7 +753,6 @@ void draw_univ_objects() {
 	select_texture(WHITE_TEX); // always textured (see end_texture())
 	enable_blend(); // doesn't hurt
 	clear_emissive_color(); // just to be sure
-	BLACK.do_glColor();
 	disable_exp_lights(); // make sure the explosion lights start out cleared
 	emissive_shader.begin_simple_textured_shader(0.001); // textured, no lighting, will be disabled by ship draw shader
 

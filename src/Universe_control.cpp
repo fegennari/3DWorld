@@ -202,7 +202,6 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 	RESET_TIME;
 	static int inited(0), first_frame_drawn(0);
 	set_lighting_params();
-	WHITE.do_glColor();
 	do_univ_init();
 
 	// clobj0 will not be set - need to draw cells before there are any sobjs

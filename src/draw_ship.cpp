@@ -192,11 +192,10 @@ colorRGBA uobj_draw_data::apply_cloak(colorRGBA const &color) const {
 }
 
 
-void uobj_draw_data::draw_bounding_sphere(colorRGBA color) const { // unused
+void uobj_draw_data::draw_bounding_sphere(colorRGBA const &color) const { // unused
 
 	glEnable(GL_CULL_FACE);
-	color.alpha = 0.25;
-	color.do_glColor();
+	colorRGBA(color, 0.25).do_glColor(); // alpha=0.25
 	draw_sphere_vbo(all_zeros, crs, ndiv, 0);
 	glDisable(GL_CULL_FACE);
 }
@@ -364,8 +363,7 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 
 void uobj_draw_data::set_cloak_color(colorRGBA const &color) const {
 
-	colorRGBA const cloakc(apply_cloak(color));
-	cloakc.do_glColor();
+	apply_cloak(color).do_glColor();
 }
 
 
@@ -1205,8 +1203,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 	}
 	if (phase2) {
 		select_texture(SMOKE_TEX);
-		colorRGBA outer_color(color_a*0.5);
-		outer_color.do_glColor();
+		(color_a*0.5).do_glColor(); // outer color
 
 		if (is_cube) {
 			draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, 0, 1.0, 0, &view_dir);
@@ -1340,8 +1337,7 @@ void uobj_draw_data::draw_nightmare() const {
 	color_b.do_glColor();
 	draw_sphere_vbo(point(0.0, 0.0,  0.1), 1.0, 3*ndiv/2, 0);
 
-	if (ndiv > 3) {
-		// draw points
+	if (ndiv > 3) { // draw points
 		for (unsigned i = 0; i < 4; ++i) {
 			float const x(1.0 - 2.0*(i&1)), y(1.0 - 2.0*(i>>1));
 			point const pt1(0.5*x, 0.5*y, 0.5), pt2(x, y, 1.0);
@@ -1655,9 +1651,7 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 
 	// draw body
 	select_texture(NOISE_TEX);
-	colorRGBA color_c(color_b);
-	color_c.alpha = 0.8;
-	color_c.do_glColor(); // bluegreen
+	colorRGBA(color_b, 0.8).do_glColor(); // bluegreen, alpha=0.8
 
 	if (phase1) {
 		glPushMatrix();

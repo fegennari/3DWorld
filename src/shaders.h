@@ -48,7 +48,7 @@ public:
 	void end_shader();
 	void begin_color_only_shader();
 	void begin_color_only_shader(colorRGBA const &color);
-	void begin_simple_textured_shader(float min_alpha=0.0, bool include_2_lights=0, bool use_texgen=0);
+	void begin_simple_textured_shader(float min_alpha=0.0, bool include_2_lights=0, bool use_texgen=0, colorRGBA const *const color=NULL);
 	void begin_untextured_lit_glcolor_shader();
 
 	int get_uniform_loc(char const *const name) const;

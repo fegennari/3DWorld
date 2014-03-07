@@ -246,7 +246,7 @@ public:
 	static void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex=BLUR_TEX);
 
 	colorRGBA apply_cloak(colorRGBA const &color) const;
-	void draw_bounding_sphere(colorRGBA color) const;
+	void draw_bounding_sphere(colorRGBA const &color) const;
 	void setup_exp_scale() const;
 	void setup_exp_texture() const;
 	void end_exp_texture() const;
