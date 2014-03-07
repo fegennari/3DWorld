@@ -1840,10 +1840,7 @@ void uplanet::gen_color() {
 void umoon::gen_color() {
 	
 	float const brightness(rand_uniform2(0.5, 0.75));
-
-	for (unsigned i = 0; i < 3; ++i) {
-		color[i] = 0.75*brightness + 0.25*rand2d();
-	}
+	for (unsigned i = 0; i < 3; ++i) {color[i] = 0.75*brightness + 0.25*rand2d();}
 	color.alpha = 1.0;
 	color.set_valid_color();
 	gen_colorAB(1.4*MP_COLOR_VAR);

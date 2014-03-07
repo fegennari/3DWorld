@@ -83,9 +83,8 @@ inline colorRGBA get_leaf_base_color(int type) {
 
 colorRGBA get_leaf_texture_color(unsigned type) {
 
-	colorRGBA color(texture_color(tree_types[type].leaf_tex));
-	color.alpha = 1.0; // alpha is always 1.0 - texture alpha is handled by check_poly_billboard_alpha()
-	return color;
+	// alpha is always 1.0 - texture alpha is handled by check_poly_billboard_alpha()
+	return colorRGBA(texture_color(tree_types[type].leaf_tex), 1.0);
 }
 
 

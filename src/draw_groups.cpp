@@ -378,9 +378,7 @@ struct tid_color_to_ix_t {
 colorRGBA get_textured_color(int tid, colorRGBA const &color) {
 
 	if (tid < 0) {return color;}
-	colorRGBA tcolor(texture_color(tid));
-	tcolor.alpha = 1.0; // don't use texture alpha
-	return tcolor.modulate_with(color);
+	return colorRGBA(texture_color(tid), 1.0).modulate_with(color); // don't use texture alpha
 }
 
 
@@ -1015,9 +1013,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	if (hit > 0) { // hit - draw damage or shields
 		select_texture(SBLUR_TEX);
 		enable_blend();
-		colorRGBA color2((sstates[id].shields < 0.01) ? BLOOD_C : GREEN); // black color for burns?
-		color2.alpha = alpha*hit/6.0;
-		set_color_alpha(color2);
+		colorRGBA const color2((sstates[id].shields < 0.01) ? BLOOD_C : GREEN); // black color for burns?
+		set_color_alpha(color2, alpha*hit/6.0);
 		glPushMatrix();
 		shader.add_uniform_float("min_alpha", 0.05);
 		translate_to(pos);

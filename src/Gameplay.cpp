@@ -1672,8 +1672,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			point start_pos(fpos + dir*(0.5*r));
 			
 			if (is_underwater(start_pos)) {
-				colorRGBA color(DK_GREEN);
-				color.alpha = 0.75;
+				colorRGBA color(DK_GREEN, 0.75);
 
 				for (unsigned n = 0; n < 4; ++n) {
 					start_pos += signed_rand_vector(0.05*radius);

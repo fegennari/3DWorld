@@ -1128,8 +1128,7 @@ void ustar::explode(float damage, float bradius, int etype, vector3d const &edir
 					int align, unsigned eflags, free_obj const *parent_)
 {
 	unsigned const num_parts(80 + rand()%40); // make size-dependent?
-	colorRGBA color_a0(color);
-	color_a0.alpha = 0.0;
+	colorRGBA color_a0(color, 0.0);
 
 	for (unsigned i = 0; i < num_parts; ++i) {
 		unsigned const plifetime(unsigned(TICKS_PER_SECOND*rand_uniform(30.0, 45.0)));

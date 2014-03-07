@@ -600,10 +600,8 @@ void draw_moon() {
 	disable_light(4);
 
 	if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
-		colorRGBA color(bkg_color);
-		color.alpha = 5.0*(light_factor - 0.4);
 		enable_blend();
-		draw_single_colored_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, color);
+		draw_single_colored_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, colorRGBA(bkg_color, 5.0*(light_factor - 0.4)));
 		disable_blend();
 	}
 }
@@ -655,9 +653,7 @@ colorRGBA get_cloud_color() {
 
 void get_avg_sky_color(colorRGBA &avg_color) {
 
-	colorRGBA cloud_color(get_cloud_color());
-	cloud_color.alpha = 1.0;
-	blend_color(avg_color, cloud_color, bkg_color, 0.5, 1);
+	blend_color(avg_color, colorRGBA(get_cloud_color(), 1.0), bkg_color, 0.5, 1);
 }
 
 
@@ -895,12 +891,10 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) return; // back face culling
 	float const alpha_val(get_alpha());
 	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return; // distance culling
-	colorRGBA draw_color(color);
-	draw_color.alpha = alpha_val;
 	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	if (rot_angle != 0.0) {rotate_vector3d(orient, rot_angle, upv);}
 	// move slightly away from the object to blend properly with cracks
-	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, draw_color, radius, radius, tex_range);
+	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, colorRGBA(color, alpha_val), radius, radius, tex_range);
 }
 
 

@@ -580,15 +580,13 @@ void set_inf_terrain_fog(bool underwater, float zmin2) {
 
 	if (underwater) { // under water/ice
 		float const camera_z(get_camera_pos().z);
-		fog_color = get_tt_water_color();
-		fog_color.alpha = 1.0;
+		fog_color = colorRGBA(get_tt_water_color(), 1.0); // alpha = 1.0
 		atten_uw_fog_color(fog_color, 2.0*water_params.alpha*(water_plane_z - camera_z)); // more opaque = effectively deeper
 		fog_dist = (0.3 + 1.5*Z_SCENE_SIZE*(camera_z - zmin2)/max(1.0E-3f, (water_plane_z - zmin2))) * max(0.1, (1.5 - water_params.alpha));
 	}
 	else {
 		get_avg_sky_color(fog_color);
-		colorRGBA cloud_color(get_cloud_color());
-		cloud_color.alpha = 1.0;
+		colorRGBA const cloud_color(get_cloud_color(), 1.0); // alpha = 1.0
 		blend_color(fog_color, cloud_color, bkg_color, 0.375, 1); // weighted more towards bkg_color
 		fog_dist = get_inf_terrain_fog_dist();
 	}
@@ -880,8 +878,7 @@ void display(void) {
 			check_gl_error(101);
 
 			if (underwater) {
-				colorRGBA fog_color((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C); // under ice/water
-				fog_color.alpha = 1.0;
+				colorRGBA fog_color(((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C), 1.0); // under ice/water, alpha = 1.0
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
 				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.B)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
