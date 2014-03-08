@@ -102,11 +102,11 @@ void set_ship_texture(int tid) {select_texture(tid);}
 void end_ship_texture()        {end_texture();}
 
 
-void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) {
+void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) const {
 
 	if (qbd.empty()) return;
 	// disabling of the depth mask is not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
-	set_emissive_color(color);
+	set_emissive_color(color, shader);
 	set_additive_blend_mode();
 	qbd.draw_as_flares_and_clear(tid);
 	end_ship_texture();
@@ -115,7 +115,7 @@ void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) {
 }
 
 
-void uobj_draw_data::setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex) {
+void uobj_draw_data::setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex) const {
 
 	qbd.add_xlated_billboard(pos, xlate, get_camera_pos(), up_vector, colorRGBA(0,0,0, color.alpha), xsize, ysize);
 	draw_ship_flares(color, flare_tex);
@@ -345,7 +345,7 @@ void uobj_draw_data::add_light_source(point const &lpos, float lradius, colorRGB
 void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) const {
 
 	if (!symmetric) glPopMatrix();
-	set_emissive_color(color);
+	set_emissive_color(color, shader);
 	if (ndiv > 8) {draw_sphere_vbo(all_zeros, 0.25, get_ndiv(ndiv/3), 0);} // draw central area that shows up when the draw order is incorrect
 	float angle(TWO_PI*time/TICKS_PER_SECOND);
 
@@ -441,7 +441,7 @@ void uobj_draw_data::draw_spherical_shot(colorRGBA const &color) const {
 		emissive_pld.add_pt(make_pt_global(pos), color);
 		return;
 	}
-	set_emissive_color(color);
+	set_emissive_color(color, shader);
 	draw_sphere_vbo(all_zeros, 1.0, min(ndiv, N_SPHERE_DIV/2), 0);
 	clear_emissive_color();
 }
@@ -531,7 +531,7 @@ void uobj_draw_data::draw_usw_rfire() const {
 	// Note: this version is unused
 	float const ctime(CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
 	glEnable(GL_CULL_FACE);
-	set_emissive_color(colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0));
+	set_emissive_color(colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0), shader);
 	select_texture(PLASMA_TEX);
 	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv);
 	end_ship_texture();
@@ -564,7 +564,7 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 									   float rad, float instability, bool lit) const
 {
 	colorRGBA const light_color(1.0, 0.95, 0.9);
-	set_emissive_color(light_color);
+	set_emissive_color(light_color, shader);
 	rotate_about(360.0*rand_float(), signed_rand_vector());
 	select_texture(NOISE_TEX);
 
@@ -1811,12 +1811,10 @@ void uobj_draw_data::draw_supply() const {
 	colorRGBA light_color(BLACK);
 
 	if (powered && ((2*time/TICKS_PER_SECOND) & 1)) { // draw blinky light
-		for (unsigned i = 0; i < 3; ++i) {
-			light_color[i] = ((color_a[i] > 0.8) ? 1.0 : 0.0);
-		}
-		if (light_color == BLACK) light_color = WHITE;
+		for (unsigned i = 0; i < 3; ++i) {light_color[i] = ((color_a[i] > 0.8) ? 1.0 : 0.0);}
+		if (light_color == BLACK) {light_color = WHITE;}
 	}
-	set_emissive_color(light_color);
+	set_emissive_color(light_color, shader);
 	draw_sphere_vbo(point(0.0, 0.0, 1.825), 0.07, get_ndiv(ndiv/4), 0);
 	clear_emissive_color();
 	glPopMatrix(); // undo invert_z()
@@ -1898,7 +1896,7 @@ void uobj_draw_data::draw_juggernaut() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.05, -0.45);
 	glScalef(0.55, 1.5, 1.0);
-	if (powered) {set_emissive_color(color_b);} else {color_b.do_glColor();}
+	if (powered) {set_emissive_color(color_b, shader);} else {color_b.do_glColor();}
 	draw_sphere_vbo(all_zeros, 0.65, ndiv, 0); // back
 	if (powered) clear_emissive_color();
 	glPopMatrix();
@@ -1980,7 +1978,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 		unsigned const nlights(mothership ? 16 : 12);
 
 		for (unsigned is_lit = 0; is_lit < (powered + 1U); ++is_lit) {
-			if (is_lit) {set_emissive_color(RED);} else {color_b.do_glColor();}
+			if (is_lit) {set_emissive_color(RED, shader);} else {color_b.do_glColor();}
 
 			for (unsigned i = 0; i < nlights; ++i) {
 				if ((powered && ((i+(on_time>>2))&3) == 0) != is_lit) continue; // incorrect state

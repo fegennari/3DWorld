@@ -142,7 +142,6 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					  int shooter, float &range, float intensity=1.0, int ignore_cobj=-1);
 float get_projectile_range(point const &pos, vector3d vcf, float dist, float range, point &coll_pos, vector3d &cnorm,
 						   int &coll, int &cindex, int source, int check_splash, int ignore_cobj=-1);
-void draw_plasmaball(point const &pos0, int shooter);
 void init_smiley(int smiley_id);
 int  get_damage_source(int type, int index, int questioner);
 void gen_rubble(int type, int num, point const &pos, int shooter, float const p[7]);

@@ -692,12 +692,7 @@ void ushadow_triangle_mesh::draw(upos_point_type const &pos) const {
 void ushadow_volume::draw_geom(upos_point_type const &pos, bool test) const {
 
 	if (invalid) return;
-
-	if (test) {
-		set_emissive_color(colorRGBA(0.0, 1.0, 0.0, 0.25));
-		draw(pos);
-		return;
-	}
+	if (test) {draw(pos); return;}
 	GLenum const bf[2] = {GL_BACK, GL_FRONT}, zp[2] = {GL_INCR, GL_DECR};
 
 	for (unsigned spass = 0; spass < 2; ++spass) { // GL_STENCIL_TWO_SIDE_EXT?

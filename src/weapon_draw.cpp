@@ -26,7 +26,7 @@ extern player_state *sstates;
 
 
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
-
+void draw_plasmaball(point const &pos0, int shooter, shader_t &shader);
 
 
 void beam3d::draw(line_tquad_draw_t &drawer) const {
@@ -321,14 +321,6 @@ void draw_chaingun_section(float tx, float ty, float radius, int ndiv) {
 }
 
 
-void set_emissive_color_only(colorRGBA const &color) {
-
-	color.do_glColor();
-	set_color_e(color);
-	set_color(BLACK);
-}
-
-
 // Note: shader is passed all the way into here just to set the min_alpha for cblade
 void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid, int wmode, int fframe, int p_loaded,
 				 int ammo, int rot_counter, unsigned delay, int shooter, int sb_tex, float alpha, float dpos,
@@ -586,7 +578,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (shooter == CAMERA_ID && fired) {
 				//beams.push_back(beam3d(0, shooter, (pos0 + dir*0.08), (pos0 + dir*1.08), RED)); // should probably use this instead
 				glPushMatrix();
-				set_emissive_color_only(RED);
+				RED.do_glColor();
+				set_color_e(RED);
 				glTranslatef(0.0, 0.0, 0.148);
 				glRotatef(30.0, -dir.y, dir.x, 0.0);
 				glTranslatef(tx, ty, 0.0);
@@ -623,14 +616,15 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (p_loaded && shooter != NO_SOURCE) {
 				glTranslatef(tx, ty, 0.0);
 				rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera
-				draw_plasmaball(pos, shooter);
+				draw_plasmaball(pos, shooter, shader);
 			}
 			break;
 
 		case W_M16:
 			if (just_fired) {
 				float const size(((wmode&1) == 0) ? 0.02 : 0.0272);
-				set_emissive_color_only(ORANGE);
+				ORANGE.do_glColor();
+				set_color_e(ORANGE);
 				glTranslatef(0.6*tx, 0.6*ty, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
 				set_additive_blend_mode();
@@ -645,7 +639,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (just_fired) {
 				radius = 0.0042;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
-				set_emissive_color_only(ORANGE);
+				ORANGE.do_glColor();
+				set_color_e(ORANGE);
 				set_additive_blend_mode();
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
@@ -768,7 +763,7 @@ void draw_scheduled_weapons() {
 }
 
 
-void draw_plasmaball(point const &pos0, int shooter) { // and shoot lightning
+void draw_plasmaball(point const &pos0, int shooter, shader_t &shader) { // and shoot lightning
 
 	if (shooter == NO_SOURCE) return;
 	assert(sstates != NULL);

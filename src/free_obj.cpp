@@ -707,7 +707,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			if (shader[0].is_setup()) {shader[0].enable(); udd.shader = &shader[0];}
 
 			if (display_mode & 0x10) { // testing
-				set_emissive_color(GREEN); // will be reset
+				set_emissive_color(colorRGBA(GREEN, 0.25), shader);
 				glPushMatrix();
 				global_translate(pos);
 

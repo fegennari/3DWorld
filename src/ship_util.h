@@ -9,9 +9,7 @@
 #include "ship.h"
 #include "obj_sort.h"
 
-
 unsigned const BLOCK_SIZE = 1000;
-
 
 extern unsigned alloced_fobjs[]; // testing
 
@@ -28,6 +26,14 @@ inline bool univ_sphere_vis_dist(point const &pos, float radius) {
 	return (!is_distant(pos, radius) && univ_sphere_vis(pos, radius));
 }
 
+inline void set_emissive_color(colorRGBA const &color, shader_t *shader) {
+	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor();
+	set_color_e(color);
+}
+
+inline void clear_emissive_color() {
+	set_color_e(BLACK);
+}
 
 
 class usw_ray : public line_3dw {
