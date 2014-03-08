@@ -309,6 +309,11 @@ void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_t
 }
 
 
+void shader_t::set_color_e(colorRGBA const &color) {
+	add_uniform_color("emission", color); // cache the loc to make this faster?
+}
+
+
 // *** shader and program setup ***
 
 

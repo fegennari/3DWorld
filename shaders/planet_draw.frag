@@ -2,6 +2,7 @@
 uniform float atmosphere = 1.0; // technically not needed for gas giants since assumed to be 1.0
 uniform vec3 cloud_freq  = vec3(1.0);
 uniform vec3 light_scale = vec3(1.0);
+uniform vec4 emission    = vec4(0,0,0,1);
 uniform vec3 sun_pos, ss_pos, rscale;
 uniform float sun_radius, ss_radius, ring_ri, ring_ro;
 uniform mat4 world_space_mvm;
@@ -109,5 +110,5 @@ void main()
 		float cloud_val = atmosphere*gen_cloud_alpha(cloud_freq*world_space_pos);
 		if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
 	}
-	gl_FragColor = gl_Color * vec4((color + gl_FrontMaterial.emission.rgb), 1.0);
+	gl_FragColor = gl_Color * vec4((color + emission.rgb), 1.0);
 }

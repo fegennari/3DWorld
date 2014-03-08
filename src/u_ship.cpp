@@ -2601,11 +2601,9 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 	float over_temp(CLIP_TO_01(0.005f*get_over_temp_factor()));
 	if (ddata.t_exp > 0.0 && sc.exp_type == ETYPE_FUSION) over_temp = max(over_temp, (1.0f - ddata.t_exp)); // heats up during explosion
 	
-	if (over_temp > 0.5) {
-		set_color_e(colorRGBA(1.0, (over_temp - 0.5), 0.0, 1.0));
-	}
-	else if (over_temp > 0.0) {
-		set_color_e(colorRGBA(2.0*over_temp, 0.0, 0.0, 1.0));
+	if (over_temp > 0.0) {
+		colorRGBA const ecolor((over_temp > 0.5) ? colorRGBA(1.0, (over_temp - 0.5), 0.0, 1.0) : colorRGBA(2.0*over_temp, 0.0, 0.0, 1.0));
+		ddata.shader->set_color_e(ecolor);
 	}
 	if (cloaked < 1.0) {
 		if (sclasses[sclass].exp_disint) {ddata.setup_exp_texture();}
@@ -2657,7 +2655,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		//if (GET_DELTA_TIME > 10) PRINT_TIME(get_name());
 		if (sclasses[sclass].exp_disint) {ddata.end_exp_texture();}
 	}
-	if (over_temp > 0.0) set_color_e(BLACK);
+	if (over_temp > 0.0) {ddata.shader->clear_color_e();}
 
 	if (ddata.final_pass && ddata.phase2) {
 		glDisable(GL_STENCIL_TEST); // disable in case it's enabled
@@ -2698,7 +2696,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			glDisable(GL_CULL_FACE);
 			glDepthFunc(GL_LESS);
 			set_std_blend_mode();
-			if (ddata.shader) {ddata.shader->enable();}
+			ddata.shader->enable();
 			if (has_hit_dir) {end_texture();}
 		} // show shields
 	} // final pass/phase

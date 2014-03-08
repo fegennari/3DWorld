@@ -26,15 +26,6 @@ inline bool univ_sphere_vis_dist(point const &pos, float radius) {
 	return (!is_distant(pos, radius) && univ_sphere_vis(pos, radius));
 }
 
-inline void set_emissive_color(colorRGBA const &color, shader_t *shader) {
-	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor();
-	set_color_e(color);
-}
-
-inline void clear_emissive_color() {
-	set_color_e(BLACK);
-}
-
 
 class usw_ray : public line_3dw {
 
@@ -288,6 +279,7 @@ float get_ship_cost     (unsigned sclass, unsigned align, unsigned reserve_credi
 bool alloc_resources_for(unsigned sclass, unsigned align, unsigned reserve_credits=0, float discount=0.0);
 
 // draw_ship.cpp
+void set_emissive_color(colorRGBA const &color, shader_t *shader);
 void draw_crosshair(upos_point_type const &pos, float dist, colorRGBA const &color);
 void draw_crosshair_from_camera(point const &pos, colorRGBA const &color);
 void add_lightning_wray(float width, point const &p1, point const &p2);

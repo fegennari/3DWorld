@@ -2,6 +2,7 @@ uniform sampler2D tex0, alpha_mask_tex;
 uniform float min_alpha  = 0.0;
 uniform float lum_scale  = 0.0;
 uniform float lum_offset = 0.0;
+uniform vec4  emission   = vec4(0,0,0,1);
 
 varying vec2 tc;
 varying vec4 epos;
@@ -18,7 +19,7 @@ void main()
 	vec4 texel = texture2D(tex0, tc);
 	//if (texel.a <= min_alpha) discard; // slow
 	vec3 n = (gl_FrontFacing ? normalize(normal) : -normalize(normal)); // two-sided lighting
-	vec3 color = gl_FrontMaterial.emission.rgb;
+	vec3 color = emission.rgb;
 #ifdef SHADOW_ONLY_MODE
 	color += add_pt_light_comp(n, epos, 0).rgb; // light 0 is the system light
 #else

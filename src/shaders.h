@@ -91,6 +91,9 @@ public:
 	void set_bool_prefix(char const *const name, bool val, unsigned shader_type);
 	void set_bool_prefixes(char const *const name, bool val, unsigned shaders_enabled=3);
 	void set_int_prefix(char const *const name, int val, unsigned shader_type);
+
+	void set_color_e(colorRGBA const &color);
+	void clear_color_e() {set_color_e(BLACK);}
 };
 
 

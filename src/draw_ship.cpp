@@ -102,6 +102,14 @@ void set_ship_texture(int tid) {select_texture(tid);}
 void end_ship_texture()        {end_texture();}
 
 
+void set_emissive_color(colorRGBA const &color, shader_t *shader) {
+
+	assert(shader);
+	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor();
+	shader->set_color_e(color);
+}
+
+
 void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) const {
 
 	if (qbd.empty()) return;
@@ -110,7 +118,7 @@ void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) const {
 	set_additive_blend_mode();
 	qbd.draw_as_flares_and_clear(tid);
 	end_ship_texture();
-	clear_emissive_color();
+	shader->clear_color_e();
 	set_std_blend_mode();
 }
 
@@ -355,7 +363,7 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 	}
 	qbd.draw_as_flares_and_clear(FLARE1_TEX);
 	end_ship_texture();
-	clear_emissive_color();
+	shader->clear_color_e();
 	if (!symmetric) glPushMatrix();
 	if (ADD_CFLASH_LIGHTS) add_light_source(pos, 4.0*radius, color);
 }
@@ -443,7 +451,7 @@ void uobj_draw_data::draw_spherical_shot(colorRGBA const &color) const {
 	}
 	set_emissive_color(color, shader);
 	draw_sphere_vbo(all_zeros, 1.0, min(ndiv, N_SPHERE_DIV/2), 0);
-	clear_emissive_color();
+	shader->clear_color_e();
 }
 
 
@@ -536,7 +544,7 @@ void uobj_draw_data::draw_usw_rfire() const {
 	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv);
 	end_ship_texture();
 	glDisable(GL_CULL_FACE);
-	clear_emissive_color();
+	shader->clear_color_e();
 }
 
 
@@ -573,7 +581,7 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 	if (instability > 0.0) star_mesh.add_random(instability, -0.5*max(1.0f, instability), instability, 4);
 	star_mesh.draw_perturbed_sphere(all_zeros, rad, ndiv_, 1);
 
-	clear_emissive_color();
+	shader->clear_color_e();
 	glPopMatrix(); // undo transforms
 	draw_engine(ALPHA0, lpos0, 3.0*rad*(1.0 + instability));
 	draw_ship_flares(WHITE);
@@ -1816,7 +1824,7 @@ void uobj_draw_data::draw_supply() const {
 	}
 	set_emissive_color(light_color, shader);
 	draw_sphere_vbo(point(0.0, 0.0, 1.825), 0.07, get_ndiv(ndiv/4), 0);
-	clear_emissive_color();
+	shader->clear_color_e();
 	glPopMatrix(); // undo invert_z()
 
 	if (light_color != BLACK) { // draw blinky light flare
@@ -1898,7 +1906,7 @@ void uobj_draw_data::draw_juggernaut() const {
 	glScalef(0.55, 1.5, 1.0);
 	if (powered) {set_emissive_color(color_b, shader);} else {color_b.do_glColor();}
 	draw_sphere_vbo(all_zeros, 0.65, ndiv, 0); // back
-	if (powered) clear_emissive_color();
+	if (powered) {shader->clear_color_e();}
 	glPopMatrix();
 	color_a.do_glColor();
 
@@ -1992,7 +2000,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 					draw_engine(RED, lpos2, 0.2);
 				}
 			}
-			if (is_lit) clear_emissive_color();
+			if (is_lit) {shader->clear_color_e();}
 		}
 	}
 	end_specular();

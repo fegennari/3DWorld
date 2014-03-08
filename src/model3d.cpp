@@ -833,7 +833,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
 		shader.add_uniform_float("min_alpha", min_alpha);
 		if (ns > 0.0) {set_specular(spec_val, ns);} // ns<=0 is undefined?
-		set_color_e(colorRGBA(ke, alpha));
+		shader.set_color_e(colorRGBA(ke, alpha));
 
 		if (!disable_shader_effects && have_indir_smoke_tex) {
 			set_color_d(get_ad_color());
@@ -844,7 +844,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		}
 		geom.render(shader, 0);
 		geom_tan.render(shader, 0);
-		set_color_e(BLACK);
+		shader.clear_color_e();
 		if (ns > 0.0) {set_specular(0.0, 1.0);}
 		if (alpha_tid >= 0) disable_blend();
 	}

@@ -5,6 +5,7 @@ uniform float min_alpha = 0.0;
 uniform vec3 smoke_color;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
+uniform vec4 emission = vec4(0,0,0,1);
 
 // clipped eye position, clipped vertex position
 varying vec3 eye, lpos0, vposl; // world space
@@ -84,7 +85,7 @@ void main()
 #endif
 
 #ifdef USE_LIGHT_COLORS
-	vec3 lit_color = vec3(0);
+	vec3 lit_color = emission.rgb;
 #else
 	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
 #endif

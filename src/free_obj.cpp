@@ -707,7 +707,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			if (shader[0].is_setup()) {shader[0].enable(); udd.shader = &shader[0];}
 
 			if (display_mode & 0x10) { // testing
-				set_emissive_color(colorRGBA(GREEN, 0.25), shader);
+				set_emissive_color(colorRGBA(GREEN, 0.25), udd.shader);
 				glPushMatrix();
 				global_translate(pos);
 
@@ -715,7 +715,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 					if (sobjs[d] != &player_ship()) draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv, 1);
 				}
 				glPopMatrix();
-				clear_emissive_color();
+				udd.shader->clear_color_e();
 			}
 			glDepthFunc(GL_LESS);
 		} // partial_shadow
@@ -978,7 +978,7 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes G
 	s.add_uniform_float("offset",      hashval); // used as a hash
 	s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
 	draw_quads();
-	if (ddata.shader) {ddata.shader->enable();}
+	ddata.shader->enable();
 }
 
 
