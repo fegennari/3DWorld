@@ -28,13 +28,8 @@ vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float 
 	vec3 light_dir = normalize(gl_LightSource[i].position.xyz - eye_pos);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, eye_pos);
 #ifdef USE_LIGHT_COLORS
-#ifdef USE_COLOR_IN0
-	vec4 color = gl_FrontColorIn[0];
-#else
-	vec4 color = gl_Color;
-#endif
-	vec4 diffuse = color * gl_LightSource[i].diffuse;
-	vec4 ambient = color * gl_LightSource[i].ambient;
+	vec4 diffuse = gl_Color * gl_LightSource[i].diffuse;
+	vec4 ambient = gl_Color * gl_LightSource[i].ambient;
 #else // use light material properties
 	vec4 diffuse = gl_FrontLightProduct[i].diffuse;
 	vec4 ambient = gl_FrontLightProduct[i].ambient;
@@ -51,13 +46,8 @@ vec4 add_light_comp_pos_scaled0(in vec3 normal, in vec4 epos, in float ds_scale,
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
 #ifdef USE_LIGHT_COLORS
-#ifdef USE_COLOR_IN0
-	vec4 color = gl_FrontColorIn[0];
-#else
-	vec4 color = gl_Color;
-#endif
-	vec4 diffuse = color * gl_LightSource[0].diffuse;
-	vec4 ambient = color * gl_LightSource[0].ambient;
+	vec4 diffuse = gl_Color * gl_LightSource[0].diffuse;
+	vec4 ambient = gl_Color * gl_LightSource[0].ambient;
 #else // use light material properties
 	vec4 diffuse = gl_FrontLightProduct[0].diffuse;
 	vec4 ambient = gl_FrontLightProduct[0].ambient;
@@ -74,13 +64,8 @@ vec4 add_light_comp_pos_scaled1(in vec3 normal, in vec4 epos, in float ds_scale,
 	vec3 light_dir = normalize(gl_LightSource[1].position.xyz - epos.xyz);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
 #ifdef USE_LIGHT_COLORS
-#ifdef USE_COLOR_IN0
-	vec4 color = gl_FrontColorIn[0];
-#else
-	vec4 color = gl_Color;
-#endif
-	vec4 diffuse = color * gl_LightSource[1].diffuse;
-	vec4 ambient = color * gl_LightSource[1].ambient;
+	vec4 diffuse = gl_Color * gl_LightSource[1].diffuse;
+	vec4 ambient = gl_Color * gl_LightSource[1].ambient;
 #else // use light material properties
 	vec4 diffuse = gl_FrontLightProduct[1].diffuse;
 	vec4 ambient = gl_FrontLightProduct[1].ambient;
