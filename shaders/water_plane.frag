@@ -75,7 +75,7 @@ void main()
 #ifdef USE_WATER_DEPTH
 	color.a      *= mix(1.0, clamp(20.0*depth, 0.0, 1.0), min(1.0, 2.5*cos_view_angle)); // blend to alpha=0 near the shore
 #endif
-	vec4 lighting = gl_FrontMaterial.emission;
+	vec4 lighting = vec4(0,0,0,1);
 	if (enable_light0) {lighting += add_light_comp_pos0(light_norm, epos);}
 	if (enable_light1) {lighting += add_light_comp_pos1(light_norm, epos);}
 	

@@ -24,18 +24,18 @@ void main()
 #else
 	vec3 normal = normalize(-epos.xyz); // facing the camera
 #endif
-	vec4 color     = gl_FrontMaterial.emission;
+	vec3 color     = vec4(0.0);
 	float atten[2] = {1.0, 1.0};
 #ifdef ENABLE_SHADOWS
 	atten[0] = calc_shadow_atten(world_space_pos);
 #endif
 
 	for (int i = 0; i < 2; ++i) { // sun_diffuse, galaxy_ambient
-		color += atten[i]*add_pt_light_comp(normal, epos, i);
+		color += atten[i]*add_pt_light_comp(normal, epos, i).rgb;
 	}
 #ifdef DRAW_AS_SPHERES
-	color.rgb *= texture2D(tex0, gl_PointCoord).rgb;
+	color *= texture2D(tex0, gl_PointCoord).rgb;
 #endif
-	gl_FragColor = vec4(color.rgb, alpha * gl_Color.a); // use diffuse alpha directly;
+	gl_FragColor = vec4(color, alpha * gl_Color.a); // use diffuse alpha directly;
 }
 

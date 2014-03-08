@@ -23,7 +23,7 @@ void main()
 		lt_atten *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, ss_pos, ss_radius);
 	}
 	// Note: since only moons have a light2 set (from planet reflections), and moons have no atmosphere, light2 is not used here
-	vec4 color  = gl_FrontMaterial.emission;
+	vec4 color  = vec4(0,0,0,1);
 	color.rgb  += lt_atten*light_scale[0]*add_pt_light_comp(normalize(normal), epos, 0).rgb; // sun ADS
 	color.rgb  += light_scale[1]*(gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 	float rg_comp = atmosphere*min(1.6*density, 1.0);

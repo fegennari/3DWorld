@@ -9,23 +9,23 @@ varying vec3 eye_norm;
 
 void main()
 {
-	vec4 lit_color = gl_FrontMaterial.emission;
-	if (enable_light0) lit_color += add_light_comp_pos_smap_light0(eye_norm, epos);
-	if (enable_light1) lit_color += add_light_comp_pos_smap_light1(eye_norm, epos);
+	vec3 lit_color = vec3(0.0);
+	if (enable_light0) lit_color += add_light_comp_pos_smap_light0(eye_norm, epos).rgb;
+	if (enable_light1) lit_color += add_light_comp_pos_smap_light1(eye_norm, epos).rgb;
 	lit_color = clamp(lit_color, 0.0, 1.0);
 	if (enable_dlights) lit_color.rgb += add_dlights(dlpos, normalize(normal), gl_ModelViewMatrixInverse[3].xyz, vec3(1.0)); // dynamic lighting
-	lit_color *= texture2D(tex0, tc);
+	lit_color *= texture2D(tex0, tc).rgb;
 
 #ifdef MULT_DETAIL_TEXTURE // for mesh
-	lit_color *= texture2D(tex1, tc2);
+	lit_color *= texture2D(tex1, tc2).rgb;
 #endif
 #ifdef ADD_DETAIL_TEXTURE // for water
 	float slope_scale = clamp(50.0*(1.0 - normalize(normal).z), 0.0, 1.0); // normal.z is typically in +z
-	lit_color *= vec4(1,1,1,1) + slope_scale*detail_tex_scale*texture2D(tex1, tc2);
+	lit_color *= vec3(1.0) + slope_scale*detail_tex_scale*texture2D(tex1, tc2).rgb;
 	lit_color  = clamp(lit_color, 0.0, 1.0);
 #endif
 
-	vec4 color = vec4(lit_color.rgb, gl_Color.a);
+	vec4 color = vec4(lit_color, gl_Color.a);
 #ifndef NO_FOG
 	color = apply_fog_epos(color, epos);
 #endif

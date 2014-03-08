@@ -32,7 +32,7 @@ void main()
 
 	vec2 tcs   = 16*tc;
 	vec3 norm2 = normalize(normal + vec3(texture2D(noise_tex, tcs).r-0.5, texture2D(noise_tex, tcs+vec2(0.4,0.7)).r-0.5, texture2D(noise_tex, tcs+vec2(0.3,0.8)).r-0.5));
-	vec4 color = gl_FrontMaterial.emission;
+	vec4 color = vec4(0,0,0,1);
 	color.rgb += add_light_rings(norm2, epos).rgb; // ambient, diffuse, and specular
 	color.rgb += (gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 
@@ -42,7 +42,6 @@ void main()
 	alpha      += texture2D(particles_tex, 133*tc).r;
 	if (alpha == 0.0) discard;
 	color.a    *= min(1.0, alpha); // add 4 octaves of random particles
-
-	color.a = min(1.0, 2.0*color.a); // increase alpha to make alpha_to_coverage mode look better
+	color.a     = min(1.0, 2.0*color.a); // increase alpha to make alpha_to_coverage mode look better
 	gl_FragColor = color * texel;
 }

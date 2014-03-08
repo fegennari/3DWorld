@@ -15,10 +15,10 @@ void calc_leaf_lighting()
 	
 	// Compute the globalAmbient term
 	bool shadowed = (sqrt(dot(gl_Normal, gl_Normal)) < 0.4);
-	vec4 color    = gl_FrontMaterial.emission;
-	if (enable_light0) color += add_leaf_light_comp(shadowed, normal,  eye_space_pos, 0);
-	if (enable_light1) color += add_leaf_light_comp(shadowed, normal,  eye_space_pos, 1);
-	if (enable_light2) color += add_pt_light_comp  (normalize(normal), eye_space_pos, 2); // lightning
+	vec4 color    = vec4(0,0,0,1);
+	if (enable_light0) color.rgb += add_leaf_light_comp(shadowed, normal,  eye_space_pos, 0).rgb;
+	if (enable_light1) color.rgb += add_leaf_light_comp(shadowed, normal,  eye_space_pos, 1).rgb;
+	if (enable_light2) color.rgb += add_pt_light_comp  (normalize(normal), eye_space_pos, 2).rgb; // lightning
 
 	if (enable_dlights) {
 		vec3 vpos  = gl_Vertex.xyz + world_space_offset;
