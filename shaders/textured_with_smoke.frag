@@ -84,10 +84,9 @@ void main()
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
 #endif
 
-#ifdef USE_LIGHT_COLORS
 	vec3 lit_color = emission.rgb;
-#else
-	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
+#ifndef USE_LIGHT_COLORS
+	lit_color += gl_Color.rgb; // base color (with some lighting)
 #endif
 	add_indir_lighting(lit_color);
 	//lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction

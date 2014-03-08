@@ -488,21 +488,12 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			draw_cylinder(0.07, 0.005, 0.0, 2*ndiv);
 			//draw_cylinder(0.18, radius, radius, 2*ndiv);
 			{
-				colorRGBA color(0.8, 0.6, 1.0);
-				
-				if (p_loaded) {
-					shader.set_color_e(color);
-					color.alpha = 0.5*alpha;
-					color.do_glColor();
-				}
-				else {
-					set_color_alpha(color, 0.5*alpha);
-				}
+				colorRGBA color(0.8, 0.6, 1.0, 0.5*alpha);
+				if (p_loaded) {color.do_glColor();} else {set_color_alpha(color);} // emissive when loaded
 				glScalef(1.0, 1.0, 0.2);
 				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.25), 0.01, ndiv, 0);
 				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.17), 0.01, ndiv, 0);
 				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.09), 0.01, ndiv, 0);
-				if (p_loaded) {shader.clear_color_e();}
 			}
 			glPopMatrix();
 			set_specular(0.0, 0.0);
@@ -578,13 +569,11 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (shooter == CAMERA_ID && fired) {
 				//beams.push_back(beam3d(0, shooter, (pos0 + dir*0.08), (pos0 + dir*1.08), RED)); // should probably use this instead
 				glPushMatrix();
-				RED.do_glColor();
-				shader.set_color_e(RED);
+				RED.do_glColor(); // emissive
 				glTranslatef(0.0, 0.0, 0.148);
 				glRotatef(30.0, -dir.y, dir.x, 0.0);
 				glTranslatef(tx, ty, 0.0);
 				draw_cylinder(0.103, 0.0007, 0.0007, ndiv);
-				shader.clear_color_e();
 				glPopMatrix();
 			}
 			set_color_alpha(colorRGBA(0.45, 0.45, 0.45), alpha);
@@ -623,15 +612,13 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_M16:
 			if (just_fired) {
 				float const size(((wmode&1) == 0) ? 0.02 : 0.0272);
-				ORANGE.do_glColor();
-				shader.set_color_e(ORANGE);
+				ORANGE.do_glColor(); // emissive
 				glTranslatef(0.6*tx, 0.6*ty, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
 				set_additive_blend_mode();
 				select_texture(FLARE1_TEX);
 				set_std_blend_mode();
 				draw_tquad(size, size, 0.0);
-				shader.clear_color_e();
 			}
 			break;
 
@@ -639,8 +626,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (just_fired) {
 				radius = 0.0042;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
-				ORANGE.do_glColor();
-				shader.set_color_e(ORANGE);
+				ORANGE.do_glColor(); // emissive
 				set_additive_blend_mode();
 				glTranslatef(0.6*tx, 0.6*ty, 0.0);
 				glRotatef(90.0, 0.0, 0.0, 1.0);
@@ -654,7 +640,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					draw_tquad(8.0*radius, 8.0*radius, 0.0); // can't rotate towards camera, already rotated
 					glPopMatrix();
 				}
-				shader.clear_color_e();
 				set_std_blend_mode();
 			}
 			break;
@@ -778,7 +763,7 @@ void draw_plasmaball(point const &pos0, int shooter, shader_t &shader) { // and 
 	float radius(object_types[PLASMA].radius);
 	obj_group &objg(obj_groups[cid]);
 	if (shooter == CAMERA_ID || (objg.get_obj(shooter).flags & CAMERA_VIEW)) ndiv *= 3;
-	draw_plasma(pos, (pos + pos0), radius, psize, ndiv, 0, 1, 0);
+	draw_plasma(pos, (pos + pos0), radius, psize, ndiv, 0, 1, 0, shader);
 	select_texture(WHITE_TEX);
 	glDisable(GL_CULL_FACE);
 	if (psize < 0.9*MAX_PLASMA_SIZE) return;

@@ -376,14 +376,14 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
 	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-	set_color_a(BLACK);
-	set_specular(0.0, 1.0);
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	float burn_offset(-1.0);
 	//if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
 	shader_t s;
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, 0, burn_offset);
+	s.add_uniform_float("ambient_scale", 0.0); // ambient will be added by indirect lighting
+	set_specular(0.0, 1.0);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
 	vector<vert_norm> poly_verts;
@@ -501,6 +501,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		disable_blend();
 		draw_last.resize(0);
 	} // end draw_trans
+	s.add_uniform_float("ambient_scale", 1.0); // reset
 	s.end_shader();
 	set_specular(0.0, 1.0);
 	//if (draw_solid) PRINT_TIME("Final Draw");

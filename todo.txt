@@ -31,3 +31,5 @@ static error check (analysis)
 Better pine tree texture
 Revisit tiled terrain heightmap texture?
 make glow_psd use point sprites
+
+support for specular colors (model3d)
