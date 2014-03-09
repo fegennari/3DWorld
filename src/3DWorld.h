@@ -1279,9 +1279,7 @@ void timing_profiler_stats();
 #endif
 
 
-#define set_color(Color)   glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, (const float *)&(Color))
-#define set_color_a(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,             (const float *)&(Color))
-#define set_color_d(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,             (const float *)&(Color))
+#define set_color(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, (const float *)&(Color))
 
 
 // world modes

@@ -130,9 +130,7 @@ void set_color_alpha(colorRGBA color, float alpha) {
 
 	color.alpha *= alpha;
 	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor(); // sets alpha component
-	set_color_a(BLACK);
-	// FIXME: replace black with near black to fix a color setting bug that sometimes leaves the object as white when black is specified
-	set_color_d((color == BLACK) ? colorRGBA(0.001, 0.001, 0.001, color.alpha) : color);
+	set_color(color);
 }
 
 
@@ -216,23 +214,24 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 }
 
 
-void set_indir_lighting_block(shader_t &s, bool use_smoke_indir) {
+void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 
-	if (use_smoke_indir && smoke_tid) {set_3d_texture_as_current(smoke_tid, 1);}
+	if ((use_smoke || use_indir) && smoke_tid) {set_3d_texture_as_current(smoke_tid, 1);}
 	s.add_uniform_int("smoke_and_indir_tex", 1);
 	s.add_uniform_float("half_dxy", HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
 	colorRGB const indir_color((have_indir_smoke_tex && world_mode == WMODE_GROUND) ? colorRGB(0.0, 0.0, 0.0) : const_indir_color);
 	s.add_uniform_color("const_indir_color", indir_color);
+	s.add_uniform_float("ambient_scale", (use_indir ? 0.0 : 1.0)); // ambient handled by indirect lighting in the shader
 }
 
 
-void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bool use_smoke_indir, float min_alpha) {
+void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bool use_smoke, bool use_indir, float min_alpha) {
 
 	s.setup_scene_bounds();
 	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
 	if (dlights) setup_dlight_textures(s);
-	set_indir_lighting_block(s, use_smoke_indir);
+	set_indir_lighting_block(s, use_smoke, use_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
@@ -288,7 +287,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	}
 	if (use_bmap)     s.add_uniform_int("bump_map", 5);
 	if (use_spec_map) s.add_uniform_int("spec_map", 8);
-	common_shader_block_post(s, dlights, use_smap, (smoke_en || indir_lighting), min_alpha);
+	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
@@ -312,7 +311,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
-	common_shader_block_post(s, dlights, use_smap, 0, 0.0);
+	common_shader_block_post(s, dlights, use_smap, 0, indir_lighting, 0.0);
 	check_gl_error(400);
 }
 
@@ -328,7 +327,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	s.set_vert_shader("procedural_gen");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+procedural_gen");
 	s.begin_shader();
-	common_shader_block_post(s, dlights, use_smap, indir_lighting, min_alpha);
+	common_shader_block_post(s, dlights, use_smap, 0, indir_lighting, min_alpha);
 	s.add_uniform_int("tex1",    8);
 	s.add_uniform_int("tex_top", 15); // not used in all cases
 	s.add_uniform_float("tex_scale", tex_scale);
@@ -388,7 +387,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	//if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
 	shader_t s;
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, 0, burn_offset);
-	s.add_uniform_float("ambient_scale", 0.0); // ambient will be added by indirect lighting
 	set_specular(0.0, 1.0);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
@@ -507,7 +505,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		disable_blend();
 		draw_last.resize(0);
 	} // end draw_trans
-	s.add_uniform_float("ambient_scale", 1.0); // reset
 	s.end_shader();
 	set_specular(0.0, 1.0);
 	//if (draw_solid) PRINT_TIME("Final Draw");
@@ -1127,7 +1124,6 @@ void draw_cracks_and_decals() {
 				bullet_shader.set_prefix("#define TEXTURE_ALPHA_MASK",  1); // FS
 				bullet_shader.set_prefix("#define ENABLE_PARALLAX_MAP", 1); // FS
 				setup_smoke_shaders(bullet_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1); // bump maps enabled
-				bullet_shader.add_uniform_float("ambient_scale", 0.0); // shader is unique, so we don't have to reset this
 				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
 				bullet_shader.add_uniform_float("hole_depth", 0.2);
 				bullet_shader.add_uniform_int("depth_map", 9);
@@ -1143,7 +1139,6 @@ void draw_cracks_and_decals() {
 		else {
 			if (!lighting_shader.is_setup()) {
 				setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1);
-				lighting_shader.add_uniform_float("ambient_scale", 0.0);
 			}
 			lighting_shader.enable();
 		}
@@ -1152,8 +1147,7 @@ void draw_cracks_and_decals() {
 	} // for i
 	disable_blend();
 	glDepthMask(GL_TRUE);
-	if (bullet_shader.is_setup()  ) {bullet_shader.enable();   bullet_shader.add_uniform_float  ("bump_tb_scale", 1.0);} // reset
-	if (lighting_shader.is_setup()) {lighting_shader.enable(); lighting_shader.add_uniform_float("ambient_scale", 1.0);} // reset
+	if (bullet_shader.is_setup()) {bullet_shader.enable(); bullet_shader.add_uniform_float("bump_tb_scale", 1.0);} // reset
 	black_shader.end_shader();
 	lighting_shader.end_shader();
 	bullet_shader.end_shader();

@@ -1569,14 +1569,12 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 		setup_tex_gen_for_rendering(s);
 		BLACK.do_glColor();
 		set_color(params.base_color);
-		s.add_uniform_float("ambient_scale", 0.0); // ambient will be added by indirect lighting in the shader
 		set_specular(params.spec_mag, params.spec_exp);
 	}
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
 	assert(lod_level < pt_to_ix.size());
 	sort(pt_to_ix[lod_level].begin(), pt_to_ix[lod_level].end(), comp_by_dist(get_camera_pos())); // sort near to far
 	core_render((is_shadow_pass ? NULL : &s), lod_level, is_shadow_pass);
-	if (!is_shadow_pass) {s.add_uniform_float("ambient_scale", 1.0);} // reset
 	s.end_shader();
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
 	if (!is_shadow_pass) {set_specular(0.0, 1.0);}

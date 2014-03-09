@@ -1235,7 +1235,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_m
 		if (!is_shadow_pass) {
 			assert(unbound_tid >= 0);
 			select_texture(unbound_tid);
-			set_color_d(unbound_color);
+			set_color(unbound_color);
 			shader.add_uniform_float("min_alpha", 0.0);
 		}
 		unbound_geom.render(shader, is_shadow_pass);
@@ -1399,7 +1399,6 @@ void model3ds::render(bool is_shadow_pass) {
 		else if (shader_effects) {
 			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
 			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
-			s.add_uniform_float("ambient_scale", 0.0); // ambient will be set by indirect lighting in the shader, when enabled
 			BLACK.do_glColor();
 		}
 		else {
@@ -1408,7 +1407,6 @@ void model3ds::render(bool is_shadow_pass) {
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (shader_effects ? (1 << bmap_pass) : 3));
 		}
-		if (!is_shadow_pass && shader_effects) {s.add_uniform_float("ambient_scale", 1.0);} // reset
 		s.end_shader();
 	}
 	set_specular(0.0, 1.0);

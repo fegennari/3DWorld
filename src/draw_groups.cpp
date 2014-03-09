@@ -430,7 +430,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 			if (s.is_setup()) {s.disable();}
 			shader_t ls;
 			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1); // TSL=1, use light colors
-			ls.add_uniform_float("ambient_scale", 0.0);
 			static quad_batch_draw qbd;
 
 			for (unsigned j = 0; j < ordering.size(); ++j) {
@@ -462,7 +461,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], leaf_color, cross_product(dirs[0], dirs[1]).get_norm());
 			} // for j
 			qbd.draw_and_clear();
-			ls.add_uniform_float("ambient_scale", 1.0);
 			ls.end_shader();
 			if (s.is_setup()) {s.enable();} // back to the original shader
 			set_specular(0.0, 1.0);
@@ -1199,6 +1197,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}
 	draw_sphere_vbo(pos, size*radius, ndiv, 1);
 	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) {gen_particles(part_pos, 1);}
+	shader.clear_color_e();
 }
 
 

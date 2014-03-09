@@ -111,7 +111,6 @@ float get_landmine_sensor_height(float radius, int time);
 colorRGBA get_plasma_color(float size);
 void upload_mvm_to_shader(shader_t &s, char const *const var_name);
 void set_dlights_booleans(shader_t &s, bool enable, int shader_type);
-void set_indir_lighting_block(shader_t &s, bool use_smoke_indir);
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
 	bool has_lt_atten=0, bool use_smap=0, int use_bmap=0, bool use_spec_map=0, bool use_mvm=0, bool force_tsl=0, bool use_light_colors=0, float burn_offset=-1.0);
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap);
