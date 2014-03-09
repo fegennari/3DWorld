@@ -146,21 +146,27 @@ void draw_camera_weapon(bool want_has_trans) {
 }
 
 
-void set_specular(float specularity, float shininess) {
+void set_specular_color(colorRGBA specular, float shininess) {
 
-	static float last_shiny(-1.0), last_spec(-1.0);
-	if (is_cloudy && world_mode != WMODE_UNIVERSE) specularity *= 0.5;
+	static colorRGBA last_spec(ALPHA0);
+	static float last_shiny(-1.0);
+	shininess = max(0.0f, min(128.0f, shininess));
+	if (is_cloudy && world_mode != WMODE_UNIVERSE) {specular *= 0.5;}
 
-	if (specularity != last_spec) { // This materialfv stuff seems to take some time, so only set if changed since last call
-		float mat_specular[]  = {specularity, specularity, specularity, 1.0};
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  mat_specular);
-		last_spec = specularity;
+	if (specular != last_spec) { // This materialfv stuff seems to take some time, so only set if changed since last call
+		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  &specular.R);
+		last_spec = specular;
 	}
 	if (shininess != last_shiny) {
-		float mat_shininess[] = {max(0.0f, min(128.0f, shininess))};
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat_shininess);
+		glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, &shininess);
 		last_shiny = shininess;
     }
+}
+
+
+void set_specular(float specularity, float shininess) {
+
+	set_specular_color(colorRGBA(specularity, specularity, specularity, 1.0), shininess);
 }
 
 

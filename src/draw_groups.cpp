@@ -1295,13 +1295,16 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	uniform_scale(radius); // Note: needs 2-sided lighting
 
 	if (type == 0) { // M16 shell casing
+		set_specular_color(GOLD, 50.0);
 		draw_cylinder(4.0, 1.0, 1.0, ndiv);
 	}
 	else { // shotgun shell casing
 		set_color_alpha(RED);
 		draw_fast_cylinder(point(0.0, 0.0, -2.0), point(0.0, 0.0,  2.8), 1.2,  1.2,  ndiv, 0);
 		set_color_alpha(GOLD);
+		set_specular_color(GOLD, 50.0);
 		draw_fast_cylinder(point(0.0, 0.0, -2.8), point(0.0, 0.0, -1.2), 1.28, 1.28, ndiv, 0);
+		set_obj_specular(object_types[SHELLC].flags, 0.5*brightness); // reset
 	}
 	if (point_size > 1.0) {draw_circle_normal(0, ((type == 0) ? 1.0 : 1.28), ndiv, 0, ((type == 0) ? 0.0 : -2.8));}
 	glPopMatrix();

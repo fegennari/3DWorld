@@ -100,6 +100,7 @@ void draw_solid_object_groups();
 void draw_transparent_object_groups();
 void draw_select_groups(int solid);
 colorRGBA get_powerup_color(int powerup);
+void set_specular_color(colorRGBA specular, float shininess);
 void set_specular(float specularity, float shininess);
 bool is_light_enabled(int l);
 void enable_light    (int l);

@@ -829,10 +829,9 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			//shader.add_uniform_float("refract_index", ni); // FIXME: set index of refraction (and reset it at the end)
 		}
 		if (alpha_tid >= 0) enable_blend();
-		float const spec_val((ks.R + ks.G + ks.B)/3.0);
 		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
 		shader.add_uniform_float("min_alpha", min_alpha);
-		if (ns > 0.0) {set_specular(spec_val, ns);} // ns<=0 is undefined?
+		if (ns > 0.0) {set_specular_color(ks, ns);} // ns<=0 is undefined?
 		shader.set_color_e(colorRGBA(ke, alpha));
 
 		if (!disable_shader_effects && have_indir_smoke_tex) {
