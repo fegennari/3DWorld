@@ -225,6 +225,7 @@ void gen_bubble(point const &pos, float r, colorRGBA const &c) {
 void gen_line_of_bubbles(point const &p1, point const &p2, float r, colorRGBA const &c) {
 
 	//RESET_TIME;
+	if (!animate2) return;
 	point cur(p1);
 	vector3d const dir(p2 - p1);
 	float const step_sz(0.02), dist(dir.mag());
