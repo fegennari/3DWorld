@@ -833,15 +833,9 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		shader.add_uniform_float("min_alpha", min_alpha);
 		if (ns > 0.0) {set_specular_color(ks, ns);} // ns<=0 is undefined?
 		shader.set_color_e(colorRGBA(ke, alpha));
-
 		// Note: ka is ignored here because it represents a "fake" lighting model;
 		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material
-		if (!disable_shader_effects && have_indir_smoke_tex) {
-			set_color_d(get_ad_color());
-		}
-		else {
-			set_color(colorRGBA(kd, alpha));
-		}
+		set_color(get_ad_color());
 		geom.render(shader, 0);
 		geom_tan.render(shader, 0);
 		shader.clear_color_e();
@@ -1405,7 +1399,7 @@ void model3ds::render(bool is_shadow_pass) {
 		else if (shader_effects) {
 			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
 			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
-			set_color_a(BLACK); // ambient will be set by indirect lighting in the shader, when enabled
+			s.add_uniform_float("ambient_scale", 0.0); // ambient will be set by indirect lighting in the shader, when enabled
 			BLACK.do_glColor();
 		}
 		else {
@@ -1414,6 +1408,7 @@ void model3ds::render(bool is_shadow_pass) {
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (shader_effects ? (1 << bmap_pass) : 3));
 		}
+		if (!is_shadow_pass && shader_effects) {s.add_uniform_float("ambient_scale", 1.0);} // reset
 		s.end_shader();
 	}
 	set_specular(0.0, 1.0);
