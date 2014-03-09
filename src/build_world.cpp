@@ -1020,13 +1020,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'O': // load *.obj file: <filename> <group_cobjs_level> <recalc_normals> <write_file> <ignore_ambient> [<voxel_xy_spacing>]
+		case 'O': // load *.obj file: <filename> <group_cobjs_level> <recalc_normals> <write_file> [<voxel_xy_spacing>]
 			{
 				string const fn(read_filename(fp));
-				int recalc_normals(0), write_file(0), ignore_ambient(0);
+				int recalc_normals(0), write_file(0);
 				float voxel_xy_spacing(0.0);
 
-				if (fn.empty() || fscanf(fp, "%i%i%i%i%f", &ivals[0], &recalc_normals, &write_file, &ignore_ambient, &voxel_xy_spacing) < 4) {
+				if (fn.empty() || fscanf(fp, "%i%i%i%f", &ivals[0], &recalc_normals, &write_file, &voxel_xy_spacing) < 3) {
 					return read_error(fp, "load object file command", coll_obj_file);
 				}
 				RESET_TIME;
@@ -1042,7 +1042,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				unsigned char const cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
 				
 				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), model_bbox, xf, cobj.cp.tid,
-					cobj.cp.color, voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), (ignore_ambient != 0), 1))
+					cobj.cp.color, voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), 1))
 				{
 					return read_error(fp, "object file data", coll_obj_file);
 				}

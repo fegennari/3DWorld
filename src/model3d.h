@@ -277,7 +277,6 @@ struct material_params_t {
 
 struct material_t : public material_params_t {
 
-	bool ignore_ambient;
 	int a_tid, d_tid, s_tid, alpha_tid, bump_tid, refl_tid;
 	float draw_order_score;
 	string name, filename;
@@ -285,8 +284,8 @@ struct material_t : public material_params_t {
 	geometry_t<vert_norm_tc> geom;
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
-	material_t(string const &name_=string(), string const &fn=string(), bool ia=0)
-		: ignore_ambient(ia), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), draw_order_score(0.0), name(name_), filename(fn) {}
+	material_t(string const &name_=string(), string const &fn=string())
+		: a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), draw_order_score(0.0), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
@@ -315,7 +314,7 @@ class model3d {
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bbox;
-	bool from_model3d_file, ignore_ambient, has_cobjs, needs_alpha_test, needs_bump_maps;
+	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps;
 
 	// materials
 	deque<material_t> materials;
@@ -329,7 +328,7 @@ public:
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0)
 		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube),
-		from_model3d_file(0), ignore_ambient(ignore_a), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0) {}
+		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -390,7 +389,7 @@ void render_models(bool shadow_pass);
 
 bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bbox,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file,
-	bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose);
+	bool recalc_normals, bool write_file, bool verbose);
 
 
 #endif // _MODEL3D_H_

@@ -834,12 +834,13 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (ns > 0.0) {set_specular_color(ks, ns);} // ns<=0 is undefined?
 		shader.set_color_e(colorRGBA(ke, alpha));
 
+		// Note: ka is ignored here because it represents a "fake" lighting model;
+		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material
 		if (!disable_shader_effects && have_indir_smoke_tex) {
 			set_color_d(get_ad_color());
 		}
 		else {
-			set_color_a(colorRGBA((ignore_ambient ? kd : ka), alpha));
-			set_color_d(colorRGBA(kd, alpha));
+			set_color(colorRGBA(kd, alpha));
 		}
 		geom.render(shader, 0);
 		geom_tan.render(shader, 0);
@@ -865,7 +866,6 @@ bool material_t::use_spec_map() const {
 colorRGBA material_t::get_ad_color() const {
 
 	colorRGBA c(kd, alpha);
-	if (!ignore_ambient) c += colorRGBA(ka, 0.0);
 	c.set_valid_color();
 	return c;
 }
@@ -1126,7 +1126,7 @@ int model3d::get_material_ix(string const &material_name, string const &fn) {
 	if (it == mat_map.end()) {
 		mat_id = (unsigned)materials.size();
 		mat_map[material_name] = mat_id;
-		materials.push_back(material_t(material_name, fn, ignore_ambient));
+		materials.push_back(material_t(material_name, fn));
 	}
 	else {
 		if (!from_model3d_file) cerr << "Warning: Redefinition of material " << material_name << " in file " << fn << endl;
@@ -1354,8 +1354,7 @@ bool model3d::read_from_disk(string const &fn) {
 			cerr << "Error reading material" << endl;
 			return 0;
 		}
-		mat_map[m->name]  = (m - materials.begin());
-		m->ignore_ambient = ignore_ambient;
+		mat_map[m->name] = (m - materials.begin());
 	}
 	return in.good();
 }

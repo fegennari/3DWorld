@@ -648,14 +648,14 @@ void check_obj_file_ext(string const &filename, string const &ext) {
 
 bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bbox,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_models,
-	bool recalc_normals, bool write_file, bool ignore_ambient, bool verbose)
+	bool recalc_normals, bool write_file, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
-		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, ignore_ambient));
+		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c));
 		model3d &cur_model(all_models.back());
 		object_file_reader_model reader(filename, cur_model);
 
