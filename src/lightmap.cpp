@@ -9,10 +9,7 @@
 #include "shaders.h"
 
 
-bool const SHOW_STAT_LIGHTS  = 0; // debugging
-bool const SHOW_DYNA_LIGHTS  = 0; // debugging
 unsigned const NUM_RAND_LTS  = 0;
-
 int      const START_LIGHT   = 2;
 int      const END_LIGHT     = 8; // one past the end
 unsigned const MAX_LIGHTS    = unsigned(END_LIGHT - START_LIGHT);
@@ -147,10 +144,10 @@ void light_source::combine_with(light_source const &l) {
 }
 
 
-void light_source::draw(int ndiv) const {
+void light_source::draw(int ndiv) const { // Note: unused
 
 	if (radius == 0.0) return;
-	set_color(color);
+	color.do_glColor();
 	draw_sphere_vbo(pos, 0.05*radius, ndiv, 0);
 	if (pos2 != pos) {draw_sphere_vbo(pos2, 0.05*radius, ndiv, 0);} // line light source, draw both points
 }
@@ -1017,12 +1014,6 @@ void add_dynamic_lights_ground() {
 				ldynamic[y][x].add_light(ix, bounds[0][2], bounds[1][2]); // could do flow clipping here?
 			}
 		}
-	}
-	if (SHOW_STAT_LIGHTS) {
-		for (unsigned i = 0; i < light_sources.size(); ++i) {light_sources[i].draw(16);}
-	}
-	if (SHOW_DYNA_LIGHTS) {
-		for (unsigned i = 0; i < dl_sources.size(); ++i) {dl_sources[i].draw(16);}
 	}
 	//PRINT_TIME("Dynamic Light Add");
 }
