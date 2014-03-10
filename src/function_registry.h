@@ -94,7 +94,6 @@ void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA 
 void clear_colors_and_disable_light(int light);
 void setup_gl_light_atten(int light, float c_a, float l_a, float q_a);
 int get_light();
-void set_color_alpha(colorRGBA color, float alpha=1.0);
 void draw_camera_weapon(bool want_has_trans);
 void draw_solid_object_groups();
 void draw_transparent_object_groups();

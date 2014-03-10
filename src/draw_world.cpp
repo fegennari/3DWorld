@@ -126,13 +126,6 @@ void setup_gl_light_atten(int light, float c_a, float l_a, float q_a) {
 }
 
 
-void set_color_alpha(colorRGBA color, float alpha) {
-
-	color.alpha *= alpha;
-	color.do_glColor();
-}
-
-
 void draw_camera_weapon(bool want_has_trans) {
 
 	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
