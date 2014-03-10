@@ -51,7 +51,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, shader_t &shader);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv);
-void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo);
+void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader);
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time, shader_t &shader);
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv);
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade);
@@ -144,7 +144,7 @@ vector3d get_rotation_dirs_and_normal(vector3d const &o, float angle, vector3d &
 }
 
 
-void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, colorRGBA const &color, vector<vert_norm_color> &verts) {
+void add_rotated_triangle(point const &pos, vector3d const &o, float radius, float angle, colorRGBA const &color, vector<vert_norm_color> &verts) {
 
 	point p1, p2;
 	vector3d const normal(get_rotation_dirs_and_normal(o, angle, p1, p2));
@@ -154,7 +154,7 @@ void draw_rotated_triangle(point const &pos, vector3d const &o, float radius, fl
 }
 
 
-void draw_rotated_textured_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, colorRGBA const &color, vector<vert_norm_tc_color> &verts) {
+void add_rotated_textured_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale, colorRGBA const &color, vector<vert_norm_tc_color> &verts) {
 
 	point p1, p2;
 	vector3d const normal(get_rotation_dirs_and_normal(o, angle, p1, p2));
@@ -165,7 +165,7 @@ void draw_rotated_textured_triangle(point const &pos, vector3d const &o, float r
 }
 
 
-void draw_thick_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
+void add_thick_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
 	vector<vert_norm_color> &verts, float thickness, int tid, colorRGBA const &color)
 {
 	static vector<vert_norm> uncolored_verts;
@@ -212,7 +212,6 @@ void draw_select_groups(int solid) {
 	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
 	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl);
 	select_no_texture();
-	BLACK.do_glColor();
 
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
@@ -223,10 +222,7 @@ void draw_select_groups(int solid) {
 			}
 		}
 	}
-	s.end_shader();
-	
-	if (!puddle_qbd.empty() || !obj_pld.empty()) {
-		setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
+	if (!puddle_qbd.empty() || !obj_pld.empty()) { // use the same shader
 		enable_blend();
 
 		if (!puddle_qbd.verts.empty()) { // draw puddles
@@ -238,8 +234,8 @@ void draw_select_groups(int solid) {
 		select_no_texture();
 		obj_pld.draw_and_clear();
 		disable_blend();
-		s.end_shader();
 	}
+	s.end_shader();
 	indir_vert_offset = orig_ivo; // restore original variable values
 	cobj_z_bias       = orig_czb;
 
@@ -304,7 +300,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_seekd(pos, obj.init_dir, radius, obj.type, ndiv);
 		break;
 	case LANDMINE:
-		draw_landmine(pos, radius, ndiv, obj.time, obj.source, in_ammo);
+		draw_landmine(pos, radius, ndiv, obj.time, obj.source, in_ammo, shader);
 		break;
 	case PLASMA:
 		draw_plasma(pos, pos, radius, (in_ammo ? 1.0 : obj.init_dir.x), ndiv, 1, !in_ammo, obj.time, shader);
@@ -572,7 +568,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 				draw_star(pos, obj.orientation, obj.init_dir, tradius, obj.angle, 1);
 				break;
 			case SHRAPNEL:
-				draw_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, get_glow_color(obj, 1), shrapnel_verts);
+				add_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, get_glow_color(obj, 1), shrapnel_verts);
 				break;
 			case PARTICLE:
 				{
@@ -608,39 +604,34 @@ void draw_group(obj_group &objg, shader_t &s) {
 		sort(tri_fragments.begin(), tri_fragments.end()); // sort by tid
 		vector<vert_norm_color> fragment_vn;
 		vector<vert_norm_tc_color> fragment_vntc;
-		colorRGBA last_color(ALPHA0);
 		int last_tid(-1);
 
 		for (vector<tid_color_to_ix_t>::const_iterator i = tri_fragments.begin(); i != tri_fragments.end(); ++i) { // Note: needs 2-sided lighting
 			dwobject const &obj(objg.get_obj(i->ix));
+			bool const is_emissive(obj.direction > 0); // hot object, add color
 			
-			if (i->tid != last_tid) {
+			if (is_emissive || i->tid != last_tid) { // emit on state change
 				draw_and_clear_tris(fragment_vn, fragment_vntc);
-				select_texture(i->tid);
-				last_tid = i->tid;
+				if (i->tid != last_tid) {select_texture(i->tid); last_tid = i->tid;}
 			}
-			if (i->c != last_color) { // color change requires a new batch (or could put color into fragment_vn[tc])
-				draw_and_clear_tris(fragment_vn, fragment_vntc);
-				i->c.do_glColor();
-				last_color = i->c;
-			}
-			colorRGBA emissive_color(BLACK);
-
-			if (obj.direction > 0) { // hot object, add color
-				emissive_color  = get_glow_color(obj, 1);
-				emissive_color *= 2.0*(obj.direction/255.0); // can be greater than 1.0
-			}
-			emissive_color.alpha = i->c.alpha;
 			float const tradius(obj.get_true_radius());
 
 			if (i->tid < 0) { // not textured, use thick triangle
-				draw_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, fragment_vn, 0.2*tradius, i->tid, emissive_color);
+				add_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, fragment_vn, 0.2*tradius, i->tid, i->c);
 			}
 			else {
-				draw_rotated_textured_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, emissive_color, fragment_vntc); // obj.vdeform.z = tscale
+				add_rotated_textured_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, i->c, fragment_vntc); // obj.vdeform.z = tscale
+			}
+			if (is_emissive) { // hot object, add color
+				colorRGBA emissive_color(get_glow_color(obj, 1));
+				emissive_color *= 2.0*(obj.direction/255.0); // can be greater than 1.0
+				emissive_color.alpha = i->c.alpha;
+				s.add_uniform_color("emission", emissive_color);
+				draw_and_clear_tris(fragment_vn, fragment_vntc); // emit immediately
+				s.add_uniform_color("emission", BLACK); // clear
 			}
 		}
-		draw_and_clear_tris(fragment_vn, fragment_vntc);
+		draw_and_clear_tris(fragment_vn, fragment_vntc); // draw any remaining triangles
 		sort(sphere_fragments.begin(), sphere_fragments.end()); // sort by tid
 
 		for (vector<tid_color_to_ix_t>::const_iterator i = sphere_fragments.begin(); i != sphere_fragments.end(); ++i) {
@@ -648,11 +639,10 @@ void draw_group(obj_group &objg, shader_t &s) {
 			select_texture(i->tid);
 			draw_sized_point(obj, obj.get_true_radius(), cd_scale, i->c, get_textured_color(tid, i->c), (i->tid >= 0), 2);
 		}
-		if (type == SHRAPNEL) {
-			draw_verts(shrapnel_verts, GL_TRIANGLES);
-		}
-		else if (type == PARTICLE) {
-			particle_qbd.draw();
+		if (type == SHRAPNEL || type == PARTICLE) {
+			s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
+			if (type == SHRAPNEL) {draw_verts(shrapnel_verts, GL_TRIANGLES);} else {particle_qbd.draw();}
+			s.add_uniform_float("emissive_scale", 0.0); // reset
 		}
 	} // small object
 	check_drawing_flags(flags, 0);
@@ -1129,7 +1119,7 @@ float get_landmine_sensor_height(float radius, int time) {
 }
 
 
-void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo) {
+void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader) {
 
 	assert(radius > 0.0 && ndiv > 0);
 
@@ -1174,8 +1164,9 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 
 	if (time > 5) {
 		pos.z += 0.15*radius;
-		get_landmine_light_color(time).do_glColor();
+		shader.set_color_e(get_landmine_light_color(time));
 		draw_subdiv_sphere(pos, 0.15*radius, ndiv/2, 0, 0); // warning light
+		shader.clear_color_e();
 	}
 	select_texture(object_types[LANDMINE].tid);
 }
