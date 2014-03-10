@@ -1339,11 +1339,7 @@ void lightning_strike_t::update() {
 void lightning_strike_t::draw() const {
 
 	if (!enabled()) return;
-	shader_t s;
-	s.begin_simple_textured_shader();
-	path.draw_lines(); // disable fog?
-	s.end_shader();
-
+	path.draw_lines(); // uses a custom shader with no fog
 	int const gl_light(GL_LIGHT0 + LIGHTNING_LIGHT);
 	colorRGBA const ambient(path.color*0.2);
 	float const radius(0.4*get_scaled_tile_radius());
