@@ -11,4 +11,5 @@ void main()
 	epos   = gl_ModelViewMatrix * gl_Vertex;
 	proj_pos = ftransform();
 	gl_Position = proj_pos;
+	gl_FrontColor = gl_Color;
 }

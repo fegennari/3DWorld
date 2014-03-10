@@ -27,7 +27,7 @@ void main()
 	// add other emissive term based on texture luminance
 	color = mix(color, vec3(1.0), clamp(lum_scale*(texel.r + texel.g + texel.b + lum_offset), 0.0, 1.0));
 #endif
-	vec4 fin_color = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use diffuse alpha directly
+	vec4 fin_color = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly
 #ifdef BURN_MASK_TEX
 	if (burn_offset > -1.0) {fin_color = apply_burn_mask(fin_color, tc);} // slow, conditional may or may not help
 #endif

@@ -234,8 +234,6 @@ void small_tree_group::translate_by(vector3d const &vd) {
 
 void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, vector<point> *points) const {
 
-	BLACK.do_glColor();
-
 	for (const_iterator i = begin(); i != end(); ++i) {
 		i->draw(1, shadow_only, xlate, points);
 	}
@@ -535,7 +533,7 @@ void draw_small_trees(bool shadow_only) {
 		s.begin_color_only_shader();
 	}
 	else {
-		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, use_bump_map, 0, 1); // dynamic lights, but no smoke
+		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, use_bump_map, 0, 1, 0, 1); // dynamic lights, but no smoke, use light colors
 		s.add_uniform_float("tex_scale_t", 5.0);
 	}
 	if (use_bump_map) {select_multitex(BARK2_NORMAL_TEX, 5, 1);}
@@ -846,7 +844,7 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 					}
 				}
 				else { // draw as cylinder
-					if (world_mode == WMODE_GROUND) {set_color(get_bark_color());}
+					if (world_mode == WMODE_GROUND) {get_bark_color().do_glColor();}
 					if (!shadow_only) {select_texture(stt[type].bark_tid);}
 					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, 1);
@@ -857,7 +855,7 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 	if (mode & 2) { // leaves
 		assert(!is_pine_tree()); // handled through draw_pine_leaves()
 		// palm or decidious
-		set_color(color);
+		color.do_glColor();
 		glPushMatrix();
 		translate_to(pos);
 		if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);

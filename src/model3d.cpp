@@ -835,7 +835,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		shader.set_color_e(colorRGBA(ke, alpha));
 		// Note: ka is ignored here because it represents a "fake" lighting model;
 		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material
-		set_color(get_ad_color());
+		get_ad_color().do_glColor();
 		geom.render(shader, 0);
 		geom_tan.render(shader, 0);
 		shader.clear_color_e();
@@ -1235,7 +1235,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_m
 		if (!is_shadow_pass) {
 			assert(unbound_tid >= 0);
 			select_texture(unbound_tid);
-			set_color(unbound_color);
+			unbound_color.do_glColor();
 			shader.add_uniform_float("min_alpha", 0.0);
 		}
 		unbound_geom.render(shader, is_shadow_pass);
@@ -1398,7 +1398,7 @@ void model3ds::render(bool is_shadow_pass) {
 		}
 		else if (shader_effects) {
 			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
-			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
+			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting, 1);
 			BLACK.do_glColor();
 		}
 		else {

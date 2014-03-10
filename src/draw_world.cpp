@@ -129,8 +129,7 @@ void setup_gl_light_atten(int light, float c_a, float l_a, float q_a) {
 void set_color_alpha(colorRGBA color, float alpha) {
 
 	color.alpha *= alpha;
-	colorRGBA(0.0, 0.0, 0.0, color.alpha).do_glColor(); // sets alpha component
-	set_color(color);
+	color.do_glColor();
 }
 
 
@@ -138,7 +137,7 @@ void draw_camera_weapon(bool want_has_trans) {
 
 	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
 	shader_t s;
-	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1);
+	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1);
 	draw_weapon_in_hand(-1, s);
 	s.end_shader();
 }
@@ -306,6 +305,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap) {
 
 	bool indir_lighting(0);
+	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
@@ -320,6 +320,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
+	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
 	s.set_bool_prefix("z_top_test",     z_top_test,     1); // FS
@@ -386,7 +387,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	float burn_offset(-1.0);
 	//if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
 	shader_t s;
-	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, 0, burn_offset);
+	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, 1, burn_offset);
 	set_specular(0.0, 1.0);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
@@ -589,11 +590,12 @@ void draw_moon() {
 	if (world_mode == WMODE_GROUND && show_fog) return; // don't draw when there is fog
 	point const pos(get_moon_pos());
 	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
-	set_color(WHITE);
+	WHITE.do_glColor();
 	colorRGBA const ambient(0.05, 0.05, 0.05, 1.0), diffuse(1.0*have_sun, 1.0*have_sun, 1.0*have_sun, 1.0);
 	set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
 	set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
 	shader_t s;
+	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 	s.set_vert_shader("ads_lighting.part*+moon_draw");
 	s.set_frag_shader("simple_texture");
 	s.begin_shader();
@@ -1109,7 +1111,6 @@ void draw_cracks_and_decals() {
 		decal_obj const &d(decals[sorted_decals[i].second]);
 		d.draw(batches[(d.tid << 1) + (d.color == BLACK)]);
 	}
-	set_color(BLACK);
 	glDepthMask(GL_FALSE);
 	enable_blend();
 	shader_t black_shader, lighting_shader, bullet_shader;
@@ -1159,7 +1160,6 @@ void draw_smoke_and_fires() {
 	if (part_clouds.empty() && fires.empty()) return; // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1);
-	set_color(BLACK);
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
 		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
@@ -1274,7 +1274,7 @@ struct splash_ring_t {
 		float radius(min(size, 0.025f));
 		float const dr(0.5*radius);
 		unsigned const ndiv(max(3, min(N_CYL_SIDES, int(1000.0*radius/max(TOLERANCE, distance_to_camera(pos))))));
-		set_color(color);
+		color.do_glColor();
 		glPushMatrix();
 		translate_to(pos);
 
@@ -1305,8 +1305,7 @@ void draw_splashes() {
 
 	if (splashes.empty()) return;
 	shader_t s;
-	select_texture(WHITE_TEX); // untextured
-	s.begin_simple_textured_shader(0.0, 1); // lit but not actually textured
+	s.begin_untextured_lit_glcolor_shader();
 	set_fill_mode();
 
 	for (vector<splash_ring_t>::const_iterator i = splashes.begin(); i != splashes.end(); ++i) {

@@ -1015,7 +1015,7 @@ void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pas
 void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass) {
 
 	select_texture(tree_types[type].bark_tex);
-	set_color(bcolor);
+	bcolor.do_glColor();
 	s.set_uniform_vector3d(shader_loc, (tree_center + xlate));
 	glPushMatrix();
 	translate_to(tree_center + xlate);

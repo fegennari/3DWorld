@@ -25,7 +25,7 @@ void main()
 		}
 	}
 	float alpha = gl_Color.a;
-	vec3 lit_color = gl_Color.rgb; // base color (with some lighting)
+	vec3 lit_color = vec3(0.0);
 	add_indir_lighting(lit_color);
 	vec4 epos = gl_ModelViewMatrix * vec4(vpos, 1.0);
 	

@@ -36,6 +36,6 @@ void main()
 #ifdef DRAW_AS_SPHERES
 	color *= texture2D(tex0, gl_PointCoord).rgb;
 #endif
-	gl_FragColor = vec4(color, alpha * gl_Color.a); // use diffuse alpha directly;
+	gl_FragColor = vec4(color, alpha * gl_Color.a); // use gl_Color alpha directly;
 }
 

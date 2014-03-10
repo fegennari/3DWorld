@@ -680,7 +680,8 @@ void shader_t::begin_color_only_shader(colorRGBA const &color) {
 void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen, colorRGBA const *const color) {
 
 	if (include_2_lights) {
-		if (color) {set_color(*color);}
+		if (color) {color->do_glColor();}
+		set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 		setup_enabled_lights(2, 1); // sun and moon VS lighting
 		set_vert_shader(use_texgen ? "ads_lighting.part*+texture_gen.part+two_lights_texture_gen" : "ads_lighting.part*+two_lights_texture");
 	}
@@ -698,7 +699,6 @@ void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_ligh
 
 void shader_t::begin_untextured_lit_glcolor_shader() {
 
-	set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 	begin_simple_textured_shader(0.0, 1); // lighting (not actually textured)
 	select_texture(WHITE_TEX); // untextured
 }

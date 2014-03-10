@@ -746,6 +746,7 @@ void draw_snow() {
 	s.setup_enabled_lights(2, 2); // FS
 	set_dlights_booleans(s, ENABLE_SNOW_DLIGHTS, 1); // FS
 	s.check_for_fog_disabled();
+	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	for (unsigned d = 0; d < 2; ++d) {s.set_bool_prefix("no_normalize", !use_smap, d);} // VS/FS
 	s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
 	s.set_vert_shader("texture_gen.part+snow");
@@ -758,7 +759,7 @@ void draw_snow() {
 	if (use_smap) set_smap_shader_for_all_lights(s);
 
 	set_specular(0.5, 50.0);
-	set_color(SNOW_COLOR);
+	SNOW_COLOR.do_glColor();
 	point const camera(get_camera_pos());
 	select_texture(SNOW_TEX); // detail texture (or could use NOISE_TEX)
 	setup_texgen(50.0, 50.0, 0.0, 0.0);

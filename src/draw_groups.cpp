@@ -203,7 +203,7 @@ void draw_select_groups(int solid) {
 	bool const force_tsl(1);
 	indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl);
+	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl, 1);
 	select_no_texture();
 	BLACK.do_glColor();
 

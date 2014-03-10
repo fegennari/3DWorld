@@ -10,4 +10,5 @@ void main()
 	normal = (no_normalize ? n : normalize(n));
 	dlpos  = gl_Vertex.xyz;
 	gl_Position = ftransform();
+	gl_FrontColor = gl_Color;
 }

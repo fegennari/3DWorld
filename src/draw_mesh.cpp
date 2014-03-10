@@ -669,7 +669,6 @@ void water_renderer::draw_sides(unsigned ix) {
 void water_renderer::draw() { // modifies color
 
 	select_water_ice_texture(color);
-	set_color(color);
 	set_fill_mode();
 	enable_blend();
 	point const camera(get_camera_pos());
@@ -726,6 +725,7 @@ colorRGBA get_tt_water_color() {
 
 void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth, colorRGBA const &color, colorRGBA const &rcolor) {
 
+	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	if (no_specular) {s.set_prefix("#define NO_SPECULAR",     1);} // FS
 	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH", 1);} // FS
 	s.setup_enabled_lights(2, 2); // FS
@@ -800,7 +800,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
 	s.add_uniform_float("normal_z", ((camera.z < zval) ? -1.0 : 1.0));
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-	set_color(WHITE);
+	WHITE.do_glColor();
 	draw_tiled_terrain_water(s, zval);
 	glDepthFunc(GL_LESS);
 	s.end_shader();

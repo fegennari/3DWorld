@@ -1901,11 +1901,11 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 
 	// nearby trunks
 	setup_tt_fog_pre(s);
-	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0);
+	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1);
 	setup_tt_fog_post(s);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 	s.add_uniform_float("tex_scale_t", 5.0);
-	set_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
+	get_tree_trunk_color(T_PINE, 0).do_glColor(); // all a constant color
 	draw_pine_tree_bl(s, 1, 0, 0, reflection_pass); // branches
 	s.add_uniform_float("tex_scale_t", 1.0);
 	s.end_shader();
@@ -1972,6 +1972,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 	}
 	{ // draw branches
 		shader_t bs;
+		bs.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		bs.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
 		setup_tt_fog_pre(bs);
 		bs.set_vert_shader("per_pixel_lighting");

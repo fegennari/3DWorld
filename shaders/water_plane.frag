@@ -93,6 +93,6 @@ void main()
 
 	// determine final color with fog
 	color.rgb += add_color;
-	vec4 frag_color = vec4(color.rgb * lighting.rgb, color.a * gl_FrontMaterial.diffuse.a); // use diffuse alpha directly
+	vec4 frag_color = vec4(color.rgb * lighting.rgb, color.a * gl_Color.a); // use gl_Color alpha directly
 	gl_FragColor = apply_fog_epos(frag_color, epos);
 }

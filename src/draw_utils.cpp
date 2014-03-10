@@ -484,7 +484,6 @@ template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::begin_render() const {
 
 	if (!has_data()) return;
-	set_color(BLACK);
 	bind_cur_vbo();
 	vert_type_t::set_vbo_arrays();
 }

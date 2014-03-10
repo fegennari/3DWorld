@@ -1126,7 +1126,6 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 
 	if (draw_opaque) { // draw stems, rocks, logs, and stumps
 		shader_t s; // unset
-		s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 		s.begin_simple_textured_shader(0.0, 1); // with lighting
 		draw_opaque_objects(NULL, shadow_only, xlate, 1); // shader not passed in here (may be needed later for voxel rocks)
 		s.end_shader();

@@ -1279,9 +1279,6 @@ void timing_profiler_stats();
 #endif
 
 
-#define set_color(Color) glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, (const float *)&(Color))
-
-
 // world modes
 enum {WMODE_GROUND=0, WMODE_UNIVERSE, WMODE_INF_TERRAIN, NUM_WMODE};
 

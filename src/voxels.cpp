@@ -1567,8 +1567,7 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 		bool const use_noise_tex(params.tids[0] != params.tids[1] || params.colors[0] != params.colors[1]);
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, use_noise_tex, params.top_tex_used, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		setup_tex_gen_for_rendering(s);
-		BLACK.do_glColor();
-		set_color(params.base_color);
+		params.base_color.do_glColor();
 		set_specular(params.spec_mag, params.spec_exp);
 	}
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
