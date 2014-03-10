@@ -323,7 +323,6 @@ public:
 
 	bool enable_atmospheric(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {	
 		if (!is_setup()) {
-			set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			set_vert_shader("atmosphere");
 			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+atmosphere");
 			begin_shader();

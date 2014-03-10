@@ -203,7 +203,7 @@ void draw_select_groups(int solid) {
 	bool const force_tsl(1);
 	indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl, 1);
+	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl);
 	select_no_texture();
 	BLACK.do_glColor();
 
@@ -219,7 +219,7 @@ void draw_select_groups(int solid) {
 	s.end_shader();
 	
 	if (!puddle_qbd.empty() || !obj_pld.empty()) {
-		setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1); // light colors
+		setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
 		enable_blend();
 
 		if (!puddle_qbd.verts.empty()) { // draw puddles
@@ -243,7 +243,6 @@ void draw_select_groups(int solid) {
 		glDepthMask(GL_FALSE);
 		shader_t s;
 		s.setup_enabled_lights(2, 1); // VS
-		s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 		s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
 		s.set_frag_shader("simple_texture");
 		s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
@@ -429,7 +428,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			set_specular(0.1, 10.0);
 			if (s.is_setup()) {s.disable();}
 			shader_t ls;
-			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1); // TSL=1, use light colors
+			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1); // TSL=1
 			static quad_batch_draw qbd;
 
 			for (unsigned j = 0; j < ordering.size(); ++j) {

@@ -533,7 +533,7 @@ void draw_small_trees(bool shadow_only) {
 		s.begin_color_only_shader();
 	}
 	else {
-		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, use_bump_map, 0, 1, 0, 1); // dynamic lights, but no smoke, use light colors
+		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, use_bump_map, 0, 1); // dynamic lights, but no smoke
 		s.add_uniform_float("tex_scale_t", 5.0);
 	}
 	if (use_bump_map) {select_multitex(BARK2_NORMAL_TEX, 5, 1);}
@@ -545,7 +545,7 @@ void draw_small_trees(bool shadow_only) {
 	// draw leaves
 	if (small_trees.num_pine_trees > 0) { // pine trees
 		small_trees.vbo_manager[0].upload();
-		setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v, 1); // dynamic lights, but no smoke, use light colors, texgen
+		setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke, texgen
 		small_trees.draw_pine_leaves(shadow_only);
 		s.end_shader();
 	}

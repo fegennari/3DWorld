@@ -350,7 +350,6 @@ void draw_mesh_vbo() {
 
 void setup_mesh_and_water_shader(shader_t &s) {
 
-	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	s.setup_enabled_lights(2, 2); // FS
 	set_dlights_booleans(s, 1, 1); // FS
 	s.check_for_fog_disabled();
@@ -725,7 +724,6 @@ colorRGBA get_tt_water_color() {
 
 void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth, colorRGBA const &color, colorRGBA const &rcolor) {
 
-	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	if (no_specular) {s.set_prefix("#define NO_SPECULAR",     1);} // FS
 	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH", 1);} // FS
 	s.setup_enabled_lights(2, 2); // FS

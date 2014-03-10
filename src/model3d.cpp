@@ -1398,7 +1398,7 @@ void model3ds::render(bool is_shadow_pass) {
 		}
 		else if (shader_effects) {
 			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
-			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting, 1);
+			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
 			BLACK.do_glColor();
 		}
 		else {

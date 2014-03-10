@@ -1494,7 +1494,6 @@ void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_sh
 	s.setup_enabled_lights(3, (1 << lighting_shader)); // sun, moon, and lightning
 	if (!underwater) {s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);} // FS
 	setup_tt_fog_pre(s);
-	s.set_prefix("#define USE_LIGHT_COLORS", lighting_shader);
 }
 
 void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows) {
@@ -1901,7 +1900,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 
 	// nearby trunks
 	setup_tt_fog_pre(s);
-	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1);
+	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1);
 	setup_tt_fog_post(s);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 	s.add_uniform_float("tex_scale_t", 5.0);
@@ -1972,7 +1971,6 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 	}
 	{ // draw branches
 		shader_t bs;
-		bs.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		bs.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
 		setup_tt_fog_pre(bs);
 		bs.set_vert_shader("per_pixel_lighting");

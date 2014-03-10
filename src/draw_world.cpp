@@ -137,7 +137,7 @@ void draw_camera_weapon(bool want_has_trans) {
 
 	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
 	shader_t s;
-	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1);
+	setup_smoke_shaders(s, 0.01, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1);
 	draw_weapon_in_hand(-1, s);
 	s.end_shader();
 }
@@ -267,13 +267,12 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
-void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
-	bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, bool use_light_colors, float burn_offset)
+void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
+	bool smoke_en, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_offset)
 {
 	bool const use_burn_mask(burn_offset > -1.0);
 	smoke_en &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
-	if (use_light_colors) {s.set_prefix("#define USE_LIGHT_COLORS", 1);} // FS
-	if (use_burn_mask   ) {s.set_prefix("#define APPLY_BURN_MASK",  1);} // FS
+	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK", 1);} // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
@@ -305,7 +304,6 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap) {
 
 	bool indir_lighting(0);
-	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
@@ -320,7 +318,6 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
-	s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
 	s.set_bool_prefix("z_top_test",     z_top_test,     1); // FS
@@ -387,7 +384,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	float burn_offset(-1.0);
 	//if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
 	shader_t s;
-	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, 1, burn_offset);
+	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, burn_offset);
 	set_specular(0.0, 1.0);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
@@ -595,7 +592,6 @@ void draw_moon() {
 	set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
 	set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
 	shader_t s;
-	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 	s.set_vert_shader("ads_lighting.part*+moon_draw");
 	s.set_frag_shader("simple_texture");
 	s.begin_shader();
@@ -722,7 +718,6 @@ void draw_sky(int order) {
 	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius)); // GL_EYE_LINEAR
 	if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	shader_t s;
-	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS
 	s.setup_enabled_lights(5, 1); // sun, moon, and L4 VS lighting (L2 and L3 are set but unused)
 	s.set_vert_shader("ads_lighting.part*+texture_gen.part+cloud_sphere");
 	s.set_frag_shader("simple_texture");
@@ -1124,7 +1119,7 @@ void draw_cracks_and_decals() {
 				// see http://cowboyprogramming.com/2007/01/05/parallax-mapped-bullet-holes/
 				bullet_shader.set_prefix("#define TEXTURE_ALPHA_MASK",  1); // FS
 				bullet_shader.set_prefix("#define ENABLE_PARALLAX_MAP", 1); // FS
-				setup_smoke_shaders(bullet_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1); // bump maps enabled
+				setup_smoke_shaders(bullet_shader, 0.05, 0, 1, 1, 1, 1, 1, 0, 1, 1); // bump maps enabled
 				bullet_shader.add_uniform_float("bump_tb_scale", -1.0); // invert the coordinate system (FIXME: something backwards?)
 				bullet_shader.add_uniform_float("hole_depth", 0.2);
 				bullet_shader.add_uniform_int("depth_map", 9);
@@ -1139,7 +1134,7 @@ void draw_cracks_and_decals() {
 		}
 		else {
 			if (!lighting_shader.is_setup()) {
-				setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1);
+				setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
 			}
 			lighting_shader.enable();
 		}
@@ -1160,6 +1155,7 @@ void draw_smoke_and_fires() {
 	if (part_clouds.empty() && fires.empty()) return; // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1);
+	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
 		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
@@ -1177,6 +1173,7 @@ void draw_smoke_and_fires() {
 		set_std_blend_mode();
 		disable_blend();
 	}
+	s.add_uniform_float("emissive_scale", 0.0); // reset
 	s.end_shader();
 }
 

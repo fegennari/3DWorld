@@ -380,7 +380,6 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 		no_dlights = 1;
 		setup_tt_fog_pre(s); // FS
 	}
-	s.set_prefix("#define USE_LIGHT_COLORS", 0); // VS - required for dynamic lighting
 	if (gen_tex_coords) {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	s.setup_enabled_lights(2, 1); // VS
 	s.set_bool_prefix("enable_light2", lightning_enabled(), 0); // VS

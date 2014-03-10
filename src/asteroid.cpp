@@ -108,9 +108,8 @@ public:
 		else {
 			bind_3d_texture(get_noise_tex_3d(64, 1)); // grayscale noise
 			s.set_int_prefix("num_lights", num_lights, 1); // FS
-			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
-			s.set_prefix("#define NO_SPECULAR",      1); // FS (optional/optimization)
-			s.set_prefix("#define NUM_OCTAVES 8",    0); // VS
+			s.set_prefix("#define NO_SPECULAR",   1); // FS (optional/optimization)
+			s.set_prefix("#define NUM_OCTAVES 8", 0); // VS
 			s.set_vert_shader("perlin_clouds_3d.part*+procedural_rock");
 			s.set_frag_shader("ads_lighting.part*+procedural_rock");
 			s.begin_shader();
@@ -342,7 +341,6 @@ public:
 		}
 		else {
 			s.set_int_prefix("num_lights", num_lights, 1); // FS
-			s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 			s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
 			s.set_vert_shader("asteroid");
 			s.set_frag_shader("ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+voxel_asteroid");
@@ -722,7 +720,6 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 
 	if (AB_NUM_PARTS_F > 0 && world_mode == WMODE_UNIVERSE) { // global asteroid dust (points), only in universe mode
 		if (ast_belt_part[0].empty()) {ast_belt_part[0].gen_torus_section(AB_NUM_PARTS_F, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI);}
-		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid_dust");
 		shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
 		shader.begin_shader();
@@ -735,7 +732,6 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 		if (ast_belt_part[1].empty()) {ast_belt_part[1].gen_torus_section(AB_NUM_PARTS_S, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI/AB_NUM_PART_SEG);}
 		for (unsigned i = 0; i < 2; ++i) {shader.set_prefix("#define DRAW_AS_SPHERES", i);} // VS/FS
 		if (ENABLE_SHADOWS && has_sun) {set_shader_prefix_for_shadow_casters(shader, shadow_casters.size());}
-		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid_dust");
 		shader.set_frag_shader("ads_lighting.part*+sphere_shadow.part*+sphere_shadow_casters.part+asteroid_dust"); // +sphere_shadow.part*
 		shader.begin_shader();
@@ -1061,7 +1057,6 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 		set_shader_prefix_for_shadow_casters(shader, num_shadow_casters);
 		if (ENABLE_CRATERS ) {shader.set_prefix("#define HAS_CRATERS",      1);} // FS
 		if (ENABLE_AF_INSTS) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
-		shader.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
 		shader.set_vert_shader("asteroid");
 		string frag_shader_str("ads_lighting.part*+triplanar_texture.part+sphere_shadow.part*+sphere_shadow_casters.part");
 		if (ENABLE_CRATERS) {frag_shader_str += "+rand_gen.part*+craters.part";}

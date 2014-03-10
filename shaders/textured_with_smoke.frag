@@ -2,6 +2,7 @@ uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta;
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
+uniform float emissive_scale = 0.0;
 uniform vec3 smoke_color;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6];
@@ -84,10 +85,7 @@ void main()
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
 #endif
 
-	vec3 lit_color = emission.rgb;
-#ifndef USE_LIGHT_COLORS
-	lit_color += gl_Color.rgb; // base color (with some lighting)
-#endif
+	vec3 lit_color = emission.rgb + emissive_scale*gl_Color.rgb;
 	add_indir_lighting(lit_color);
 	//lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
 
@@ -109,13 +107,7 @@ void main()
 		if (enable_light7) ADD_LIGHT(7);
 	}
 	if (enable_dlights) {
-		vec3 n = normalize(normal_sign*normal);
-#ifdef USE_LIGHT_COLORS
-		vec3 dlight_color = gl_Color.rgb;
-#else
-		vec3 dlight_color = gl_FrontMaterial.diffuse.rgb;
-#endif
-		lit_color += add_dlights(vpos, n, eye, dlight_color); // dynamic lighting
+		lit_color += add_dlights(vpos, normalize(normal_sign*normal), eye, gl_Color.rgb); // dynamic lighting
 	}
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction

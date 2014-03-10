@@ -649,8 +649,7 @@ public:
 		set_dlights_booleans(s, 1, 1); // FS
 		s.check_for_fog_disabled();
 		if (distant) {s.set_prefix("#define NO_GRASS_TEXTURE", 1);} // FS
-		s.set_prefix("#define NO_DL_SPECULAR",   1); // FS ???
-		s.set_prefix("#define USE_LIGHT_COLORS", 1); // FS
+		s.set_prefix("#define NO_DL_SPECULAR", 1); // FS ???
 		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 		s.set_vert_shader("wind.part*+grass_texture.part+grass_pp_dl");
 		s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+ads_lighting.part*+shadow_map.part*+grass_with_dlights");
