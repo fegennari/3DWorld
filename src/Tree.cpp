@@ -363,7 +363,6 @@ void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t 
 	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
 	assert(draw_branches != draw_leaves); // must enable only one
-	BLACK.do_glColor();
 	int const shader_loc(draw_branches ? s.get_uniform_loc("world_space_offset") : -1);
 	tree_data_t::pre_draw(draw_branches, shadow_only);
 
