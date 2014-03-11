@@ -909,7 +909,7 @@ void pos_dir_up::draw_frustum() const {
 		verts.push_back(pts[1][(i+1)&3]);
 		verts.push_back(pts[1][(i+0)&3]);
 	}
-	draw_verts(verts, GL_QUADS);
+	draw_quad_verts_as_tris(verts);
 }
 
 
@@ -956,7 +956,7 @@ void draw_cube(point const &pos, float sx, float sy, float sz, bool texture, boo
 		} // for j
 	} // for i
 	assert(vix <= 24);
-	draw_verts(verts, vix, GL_QUADS);
+	draw_quad_verts_as_tris(verts, vix);
 }
 
 

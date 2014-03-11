@@ -1001,7 +1001,7 @@ void uobj_draw_data::draw_us_carrier() const {
 		vert_norm(point(-0.2,  0.09, 1.1), n[1]), vert_norm(point(-0.4,  0.19, 0.7), n[1]), vert_norm(point(-0.4, -0.19, 0.7), n[1]), vert_norm(point(-0.2, -0.09, 1.1), n[1]),
 		vert_norm(point( 0.2,  0.09, 1.1), n[2]), vert_norm(point( 0.4,  0.19, 0.7), n[2]), vert_norm(point(-0.4,  0.19, 0.7), n[2]), vert_norm(point(-0.2,  0.09, 1.1), n[2]),
 		vert_norm(point(-0.2, -0.09, 1.1), n[3]), vert_norm(point(-0.4, -0.19, 0.7), n[3]), vert_norm(point( 0.4, -0.19, 0.7), n[3]), vert_norm(point( 0.2, -0.09, 1.1), n[3])};
-	draw_verts(verts, 16, GL_QUADS);
+	draw_quad_verts_as_tris(verts, 16);
 	if (t_exp > 0.0) glPopMatrix();
 
 	color_b.do_glColor();

@@ -360,8 +360,7 @@ void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c,
 			p[d1] = c.d[d1][1]; pts[2] = p;
 			p[d0] = c.d[d0][0]; pts[3] = p;
 			if (!j) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
-			unsigned const ixs[6] = {1,2,3,0,1,3}; // convert quads to triangles
-			for (unsigned k = 0; k < 6; ++k) {verts.push_back(pts[ixs[k]]);}
+			for (unsigned k = 0; k < 6; ++k) {verts.push_back(pts[quad_to_tris_ixs[k]]);}
 		}
 	}
 }
@@ -413,8 +412,7 @@ void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point c
 void get_polygon_triangles(vector<vert_wrap_t> &verts, point const *const points, int npoints) {
 
 	assert(npoints == 3 || npoints == 4);
-	unsigned const tp[6] = {0,1,2, 0,2,3};
-	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(points[tp[i]]);} // 1-2 triangles
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(points[quad_to_tris_ixs[i]]);} // 1-2 triangles
 }
 
 
@@ -908,10 +906,9 @@ void obj_draw_group::add_draw_polygon(point const *const points, vector3d const 
 	assert(inside_beg_end);
 	assert(npoints == 3 || npoints == 4);
 	//normal = get_norm_camera_orient(normal, points[0]);
-	unsigned const ixs[6] = {0,1,2,0,2,3};
 		
 	for (unsigned i = 0; i < ((npoints == 3) ? 3U : 6U); ++i) { // triangle or quad (2 tris)
-		verts.push_back(vert_norm(points[ixs[i]], normal));
+		verts.push_back(vert_norm(points[quad_to_tris_ixs[i]], normal));
 	}
 	if (use_vbo) {end_cix = cix+1;}
 }

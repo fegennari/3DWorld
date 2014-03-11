@@ -1209,7 +1209,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 				}
 			}
 		}
-		if (!wverts.empty()) {draw_verts(wverts, GL_QUADS);}
+		if (!wverts.empty()) {draw_quad_verts_as_tris(wverts);}
 	}
 }
 

@@ -13,12 +13,7 @@ void set_array_client_state(bool va, bool tca, bool na, bool ca) {
 	int  const arrays [4] = {GL_VERTEX_ARRAY, GL_TEXTURE_COORD_ARRAY, GL_NORMAL_ARRAY, GL_COLOR_ARRAY};
 
 	for (unsigned i = 0; i < 4; ++i) {
-		if (enables[i]) {
-			glEnableClientState(arrays[i]);
-		}
-		else {
-			glDisableClientState(arrays[i]);
-		}
+		if (enables[i]) {glEnableClientState(arrays[i]);} else {glDisableClientState(arrays[i]);}
 	}
 }
 
@@ -302,7 +297,7 @@ template class point_sprite_drawer_t<vert_norm_color>;
 void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n, tex_range_t const &tr) {
 
 	float const t[4][2] = {{tr.x1,tr.y1}, {tr.x2,tr.y1}, {tr.x2,tr.y2}, {tr.x1,tr.y2}};
-	unsigned const v[6] = {0,2,1, 0,3,2};
+	unsigned const v[6] = {0,2,1, 0,3,2}; // Note: reversed fro quad_to_tris_ixs
 	color_wrapper cw;
 	cw.set_c4(c);
 
@@ -519,5 +514,69 @@ template class vbo_block_manager_t<vert_norm_comp_color>;
 template class vbo_block_manager_t<vert_norm_tc_color>;
 template class vbo_block_manager_t<vert_norm_tc>;
 
+
+class quad_ix_buffer_t {
+
+	unsigned ivbo_16, ivbo_32;
+	unsigned size_16, size_32;
+
+	template< typename T > static void ensure_quad_ixs(unsigned &ivbo, unsigned size) {
+		if (ivbo == 0) {
+			assert((size % 6) == 0); // must be in groups of 2 tris = 1 quad
+			unsigned const num_quads(size/6);
+			vector<T> ixs(size);
+
+			for (unsigned q = 0; q < num_quads; ++q) {
+				for (unsigned i = 0; i < 6; ++i) {ixs[6*q+i] = 4*q + quad_to_tris_ixs[i];}
+			}
+			create_vbo_and_upload(ivbo, ixs, 1);
+		}
+	}
+
+public:
+	quad_ix_buffer_t() : ivbo_16(0), ivbo_32(0), size_16(0), size_32(0) {}
+	
+	void free_context() {
+		delete_and_zero_vbo(ivbo_16);
+		delete_and_zero_vbo(ivbo_32);
+		size_16 = size_32 = 0;
+	}
+	void draw_quads_as_tris(unsigned num_quad_verts) { // # vertices
+		if (num_quad_verts == 0) return; // nothing to do
+		assert((num_quad_verts & 3) == 0); // must be a multiple of 4
+		unsigned const num_tri_verts(6*(num_quad_verts/4)); // # indices
+		unsigned const max_quad_verts = 65532; // largest multiple of 4 and 6 smaller than 2^16
+		bool const use_32_bit(num_quad_verts > max_quad_verts);
+		unsigned &ivbo    (use_32_bit ? ivbo_32 : ivbo_16);
+		unsigned &cur_size(use_32_bit ? size_32 : size_16);
+		
+		if (num_tri_verts > cur_size) { // increase the size
+			delete_vbo(ivbo);
+			ivbo = 0;
+			cout << "resize from " << cur_size << " to "; // testing
+			cur_size = max(96U, max(num_tri_verts, 2U*cur_size)); // at least double
+			if (!use_32_bit) {cur_size = min(cur_size, max_quad_verts);}
+			cout << cur_size << ", use_32_bit: " << use_32_bit << endl; // testing
+		}
+		assert(num_tri_verts <= cur_size);
+
+		if (use_32_bit) { // use 32-bit verts
+			ensure_quad_ixs<unsigned>(ivbo, cur_size);
+		}
+		else { // use 16-bit verts
+			ensure_quad_ixs<unsigned short>(ivbo, cur_size);
+		}
+		assert(ivbo != 0);
+		bind_vbo(ivbo, 1);
+		int const index_type(use_32_bit ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);
+		glDrawRangeElements(GL_TRIANGLES, 0, num_quad_verts, num_tri_verts, index_type, 0);
+		bind_vbo(0, 1);
+	}
+};
+
+quad_ix_buffer_t quad_ix_buffer; // singleton
+
+void clear_quad_ix_buffer_context() {quad_ix_buffer.free_context();}
+void draw_quads_as_tris(unsigned num_quad_verts) {quad_ix_buffer.draw_quads_as_tris(num_quad_verts);}
 
 

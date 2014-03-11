@@ -142,6 +142,7 @@ void init_openal(int &argc, char** argv);
 void clear_sm_tree_vbos();
 void clear_scenery_vbos();
 void clear_asteroid_contexts();
+void clear_quad_ix_buffer_context();
 
 void setup_linear_fog(colorRGBA const &color, float fog_end);
 
@@ -188,6 +189,7 @@ void clear_context() {
 	clear_univ_obj_contexts();
 	clear_asteroid_contexts();
 	invalidate_cached_stars();
+	clear_quad_ix_buffer_context();
 	clear_landscape_vbo = 1;
 }
 

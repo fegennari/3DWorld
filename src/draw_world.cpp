@@ -528,8 +528,7 @@ void portal::post_draw(vector<vert_wrap_t> &verts) {
 
 void portal::draw(vector<vert_wrap_t> &verts) const {
 
-	unsigned const ixs[6] = {0, 1, 2, 0, 2, 3};
-	for (unsigned i = 0; i < 6; ++i) {verts.push_back(pts[ixs[i]]);}
+	for (unsigned i = 0; i < 6; ++i) {verts.push_back(pts[quad_to_tris_ixs[i]]);}
 };
 
 

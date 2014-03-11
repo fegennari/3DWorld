@@ -567,7 +567,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 		}
 		yv += DY_VAL;
 	}
-	draw_verts(verts, GL_QUADS);
+	draw_quad_verts_as_tris(verts);
 	s.end_shader();
 }
 

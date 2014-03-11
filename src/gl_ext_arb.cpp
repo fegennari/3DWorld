@@ -111,8 +111,7 @@ void bind_vbo(unsigned vbo, bool is_index) { // okay if vbo is zero
 }
 
 void delete_vbo(unsigned vbo) {
-	if (vbo == 0) return;
-	glDeleteBuffers(1, &vbo);
+	if (vbo != 0) {glDeleteBuffers(1, &vbo);}
 }
 
 void upload_vbo_data(void const *const data, size_t size, bool is_index) {

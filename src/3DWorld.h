@@ -146,6 +146,8 @@ float const SQRT_ZOOMF_INV  = 1.0/SQRT_ZOOMF;
 
 int const WATER_CLIP_PLANE  = GL_CLIP_PLANE0;
 
+unsigned const quad_to_tris_ixs[6] = {0,1,2, 0,2,3};
+
 
 #define CLIP_TO_01(x)  max( 0.0f, min(1.0f, (x)))
 #define CLIP_TO_pm1(x) max(-1.0f, min(1.0f, (x)))
@@ -926,6 +928,18 @@ template <typename T> void draw_verts(vector<T> const &verts, int gl_type) {
 template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
 	draw_verts(verts, gl_type);
 	verts.resize(0); // clear()?
+}
+
+void draw_quads_as_tris(unsigned num_quad_verts);
+
+template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count) {
+	assert(verts && count > 0);
+	verts[0].set_state();
+	draw_quads_as_tris(count);
+}
+
+template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts) {
+	if (!verts.empty()) {draw_quad_verts_as_tris(&verts.front(), verts.size());}
 }
 
 

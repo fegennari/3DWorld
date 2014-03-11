@@ -497,7 +497,7 @@ void volume_part_cloud::gen_pts(float radius) {
 void volume_part_cloud::draw_quads() const {
 
 	glDepthMask(GL_FALSE); // no depth writing
-	draw_verts(points, GL_QUADS);
+	draw_quad_verts_as_tris(points);
 	glDepthMask(GL_TRUE);
 }
 

@@ -206,6 +206,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 			glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)tex_attrs[d]);
 		}
 	}
+	//draw_quad_verts_as_tris(verts, vix); // works, but slower
 	draw_verts(verts, vix, GL_QUADS);
 	if (use_tcs) {for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}}
 }
@@ -242,8 +243,7 @@ void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d 
 	}
 	if(calc_normal_dir) {normal = get_norm_camera_orient(normal, get_center(points, npoints));}
 	assert(npoints == 3 || npoints == 4);
-	unsigned const tp[6] = {0,1,2, 0,2,3};
-	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(vert_norm(points[tp[i]], normal));} // 1-2 triangles
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(vert_norm(points[quad_to_tris_ixs[i]], normal));} // 1-2 triangles
 }
 
 
