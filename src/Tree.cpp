@@ -201,7 +201,8 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 		if (i->td != last_td) {
 			assert(i->td);
 			last_td = i->td;
-			draw_and_clear_verts(pts, GL_QUADS);
+			draw_quad_verts_as_tris(pts);
+			pts.clear();
 			tree_bb_tex_t const &ttex(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture());
 			assert(ttex.is_valid());
 			ttex.bind_texture();
@@ -217,7 +218,7 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 		pts.push_back(vert_tc_color((pos + v1 - v2), 1.0, 0.0, i->color));
 	}
 	assert(!pts.empty());
-	draw_verts(pts, GL_QUADS);
+	draw_quad_verts_as_tris(pts);
 }
 
 
@@ -822,15 +823,22 @@ void tree_data_t::post_draw(bool branches_or_leaves, bool shadow_only) {
 }
 
 
+void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
+
+	assert(leaf_vbo != 0);
+	bind_vbo(leaf_vbo);
+	leaf_vert_type_t::set_vbo_arrays(0, 0);
+	assert(max_leaves <= leaves.size() && leaf_data.size() >= 4*leaves.size());
+	glDrawArrays(GL_QUADS, 0, 4*max_leaves);
+}
+
+
 bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) {
 
 	if (draw_leaves && !leaves.empty()) { // draw leaves
 		if (leaf_vbo == 0) return 0; // if the leaf_vbo hasn't been allocated we need to go through the regular rendering path to get the leaf data uploaded
 		select_texture(tree_types[tree_type].leaf_tex);
-		bind_vbo(leaf_vbo);
-		leaf_vert_type_t::set_vbo_arrays(0, 0); // could also disable normals and colors, but that doesn't seem to help much
-		assert(leaf_data.size() >= 4*leaves.size());
-		glDrawArrays(GL_QUADS, 0, 4*(unsigned)leaves.size());
+		draw_leaf_quads_from_vbo(leaves.size()); // could also disable normals and colors, but that doesn't seem to help much
 	}
 	if (draw_branches) {draw_branch_vbo(num_branch_quads, 1, 1);} // draw branches (untextured), low_detail=1
 	return 1;
@@ -1043,17 +1051,16 @@ void tree_data_t::reset_leaf_pos_norm() {
 void tree_data_t::draw_leaves(float size_scale) {
 
 	bool const create_leaf_vbo(leaf_vbo == 0);
-	create_bind_vbo_and_upload(leaf_vbo, leaf_data, 0);
+	create_vbo_and_upload(leaf_vbo, leaf_data, 0);
 
 	if (!create_leaf_vbo && leaves_changed) {
+		bind_vbo(leaf_vbo);
 		upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*sizeof(leaf_vert_type_t)); // FIXME: track and update a sub-range?
 	}
 	leaves_changed = 0;
-	leaf_vert_type_t::set_vbo_arrays(0, 0);
 	unsigned nl(leaves.size());
-	assert(leaf_data.size() >= 4*nl);
 	if (ENABLE_CLIP_LEAVES && size_scale > 0.0) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
-	glDrawArrays(GL_QUADS, 0, 4*nl);
+	draw_leaf_quads_from_vbo(nl);
 }
 
 

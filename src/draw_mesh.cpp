@@ -626,7 +626,7 @@ void water_renderer::draw_x_sides(bool neg_edge) {
 		}
 		yv += DY_VAL;
 	}
-	qbd.draw_and_clear(GL_QUADS);
+	qbd.draw_and_clear_quads();
 }
 
 
@@ -649,7 +649,7 @@ void water_renderer::draw_y_sides(bool neg_edge) {
 		}
 		xv += DX_VAL;
 	}
-	qbd.draw_and_clear(GL_QUADS);
+	qbd.draw_and_clear_quads();
 }
 
 

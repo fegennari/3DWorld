@@ -101,8 +101,9 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 	bool empty() const {return verts.empty();}
 	void clear() {verts.clear();}
 	void add_animated_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c, float xsize, float ysize, float timescale);
-	void draw(int prim_type=GL_TRIANGLES) const {draw_verts(verts, prim_type);} // GL_QUADS or GL_TRIANGLES
-	void draw_and_clear(int prim_type=GL_TRIANGLES) {draw(prim_type); clear();}
+	void draw() const {draw_verts(verts, GL_TRIANGLES);}
+	void draw_and_clear() {draw(); clear();}
+	void draw_and_clear_quads() {draw_quad_verts_as_tris(verts); clear();}
 	void draw_as_flares_and_clear(int flare_tex=BLUR_TEX);
 };
 

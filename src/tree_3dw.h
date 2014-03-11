@@ -205,6 +205,7 @@ public:
 	void remove_leaf_ix(unsigned i, bool update_data);
 	bool spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color);
 	void bend_leaf(unsigned i, float angle);
+	void draw_leaf_quads_from_vbo(unsigned max_leaves) const;
 	bool draw_tree_shadow_only(bool draw_branches, bool draw_leaves);
 	void ensure_branch_vbo();
 	void draw_branches(float size_scale, bool reflection_pass);

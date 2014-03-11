@@ -352,7 +352,7 @@ void quad_batch_draw::draw_as_flares_and_clear(int flare_tex) { // Note: used in
 
 	glDepthMask(GL_FALSE);
 	select_texture(flare_tex);
-	draw_and_clear(GL_TRIANGLES);
+	draw_and_clear();
 	glDepthMask(GL_TRUE);
 }
 
@@ -551,12 +551,9 @@ public:
 		unsigned &cur_size(use_32_bit ? size_32 : size_16);
 		
 		if (num_tri_verts > cur_size) { // increase the size
-			delete_vbo(ivbo);
-			ivbo = 0;
-			cout << "resize from " << cur_size << " to "; // testing
+			delete_vbo(ivbo); ivbo = 0;
 			cur_size = max(96U, max(num_tri_verts, 2U*cur_size)); // at least double
 			if (!use_32_bit) {cur_size = min(cur_size, max_quad_verts);}
-			cout << cur_size << ", use_32_bit: " << use_32_bit << endl; // testing
 		}
 		assert(num_tri_verts <= cur_size);
 
