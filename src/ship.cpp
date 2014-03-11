@@ -679,7 +679,7 @@ void draw_wrays(vector<usw_ray> &wrays) {
 	for (unsigned i = 0; i < size; ++i) { // GL_POLYGON_SMOOTH?
 		sorted[i].second->draw(drawer);
 	}
-	drawer.draw(GL_TRIANGLES);
+	drawer.draw();
 	glDepthMask(GL_TRUE);
 }
 

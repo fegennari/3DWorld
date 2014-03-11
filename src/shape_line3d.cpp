@@ -256,7 +256,7 @@ void line3d::draw_lines() const {
 		drawer.add_line_as_tris(points[i-1], points[i], w, w, color, color,
 			((i >= 2) ? &points[i-2] : NULL), ((i+1 < points.size()) ? &points[i+1] : NULL));
 	}
-	drawer.draw(GL_TRIANGLES); // uses a custom shader
+	drawer.draw(); // uses a custom shader
 }
 
 

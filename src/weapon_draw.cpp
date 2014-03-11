@@ -36,7 +36,7 @@ void beam3d::draw(line_tquad_draw_t &drawer) const {
 	float const mag(sqrt(intensity));
 	colorRGBA c(color);
 	c.alpha *= mag;
-	drawer.add_line_tquad(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? ALPHA0 : c));
+	drawer.add_line_as_tris(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? ALPHA0 : c));
 }
 
 
@@ -44,12 +44,9 @@ void draw_beams() {
 
 	if (beams.empty()) return;
 	line_tquad_draw_t drawer;
-
-	for (unsigned i = 0; i < beams.size(); ++i) {
-		beams[i].draw(drawer);
-	}
+	for (unsigned i = 0; i < beams.size(); ++i) {beams[i].draw(drawer);}
 	if (!keep_beams) {beams.clear();}
-	drawer.draw(GL_QUADS);
+	drawer.draw();
 }
 
 

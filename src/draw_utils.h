@@ -112,11 +112,9 @@ class line_tquad_draw_t {
 	vector<vert_tc_color> verts;
 
 public:
-	void add_line_tquad  (point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
-		point const* const prev=NULL, point const *const next=NULL);
 	void add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 		point const* const prev=NULL, point const *const next=NULL, bool make_global=0);
-	void draw(int prim_type) const;
+	void draw() const;
 };
 
 

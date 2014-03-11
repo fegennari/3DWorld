@@ -828,10 +828,12 @@ bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, 
 }
 
 
-bool get_line_segment_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4], point const* const prev, point const *const next) {
-
-	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return 0;
-	point pts2[4];
+void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
+	point const* const prev, point const *const next, bool make_global)
+{
+	assert(w1 > 0.0 && w2 > 0.0 && color1.is_valid() && color2.is_valid()); // validate
+	point pts[5], pts2[4];
+	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
 
 	if (prev && *prev != p1 && get_line_as_quad_pts(*prev, p1, w1, w1, pts2)) {
 		pts[0] = 0.5*(pts[0] + pts2[3]); // average the points
@@ -841,28 +843,6 @@ bool get_line_segment_as_quad_pts(point const &p1, point const &p2, float w1, fl
 		pts[2] = 0.5*(pts[2] + pts2[1]); // average the points
 		pts[3] = 0.5*(pts[3] + pts2[0]); // average the points
 	}
-	return 1;
-}
-
-
-void line_tquad_draw_t::add_line_tquad(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
-	point const* const prev, point const *const next)
-{
-	point pts[4];
-	if (!get_line_segment_as_quad_pts(p1, p2, w1, w2, pts, prev, next)) return;
-	
-	for (unsigned i = 0; i < 4; ++i) {
-		verts.push_back(vert_tc_color(pts[i], ((i == 0 || i == 3) ? 0.0 : 1.0), 0.5, ((i&2) ? color2 : color1))); // tc for 1D blur texture
-	}
-}
-
-
-void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
-	point const* const prev, point const *const next, bool make_global)
-{
-	assert(w1 > 0.0 && w2 > 0.0 && color1.is_valid() && color2.is_valid()); // validate
-	point pts[5];
-	if (!get_line_segment_as_quad_pts(p1, p2, w1, w2, pts, prev, next)) return;
 	pts[4] = p2;
 	int const ptix[9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
 	float const tc[9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
@@ -875,14 +855,14 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 }
 
 
-void line_tquad_draw_t::draw(int prim_type) const { // supports quads and triangles
+void line_tquad_draw_t::draw() const { // supports quads and triangles
 
 	shader_t s;
 	s.begin_simple_textured_shader(0.01);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	enable_blend();
 	select_texture(BLUR_TEX);
-	draw_verts(verts, prim_type);
+	draw_verts(verts, GL_TRIANGLES);
 	disable_blend();
 	s.end_shader();
 }

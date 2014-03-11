@@ -28,7 +28,6 @@ extern shader_t emissive_shader;
 void usw_ray::draw(line_tquad_draw_t &drawer) const { // use single sided cylinder with 1D blur rotated towards camera
 
 	// camera view clip?
-	//drawer.add_line_tquad(p1, p2, w1, w2, color1, color2, &prev, &next);
 	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, &prev, &next, 1);
 }
 
