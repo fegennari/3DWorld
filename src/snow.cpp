@@ -13,6 +13,8 @@ int      const Z_CHECK_RANGE  = 1; // larger = smoother and fewer strips, but lo
 bool     const USE_VBOS       = 1; // faster drawing but more GPU resources
 bool const ENABLE_SNOW_DLIGHTS= 1; // looks nice, but slow
 
+unsigned const PRIMITIVE_RESTART_IX = 0xFFFFFFFF;
+
 bool has_snow(0);
 point vox_delta;
 map<int, unsigned> x_strip_map;
@@ -340,23 +342,25 @@ class snow_renderer {
 
 	indexed_vbo_manager_t vbo_mgr;
 	float last_x;
+	unsigned nquads;
 	vector<vert_norm> data;
 	vector<unsigned> indices, strip_offsets;
 	map<point, unsigned> vmap[2]; // {prev, next} rows
 
 public:
-	snow_renderer() : last_x(0.0) {}
+	snow_renderer() : last_x(0.0), nquads(0) {}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~snow_renderer() {free_vbos();}
 	bool empty() const {return data.empty();}
 
 	void add_all_strips(vector<strip_t> const &strips) {
-		unsigned nquads(0);
+		nquads = 0;
 
 		for (vector<strip_t>::const_iterator i = strips.begin(); i != strips.end(); ++i) {
 			nquads += (i->get_size() - 2)/2;
 		}
-		indices.reserve(4*nquads);
+		unsigned const num_ixs(2*nquads + 3*strips.size()); // 2 per quad, 2 per strip end, 1 per strip restart
+		indices.reserve(num_ixs);
 		data.reserve(5*nquads/4); // 20% extra
 		strip_offsets.reserve(strips.size()+1);
 
@@ -365,7 +369,7 @@ public:
 			add_strip(*i);
 		}
 		strip_offsets.push_back((unsigned)indices.size());
-		assert(indices.size() == 4*nquads);
+		assert(indices.size() == num_ixs);
 	}
 
 	void add_strip(strip_t const &s) {
@@ -378,12 +382,8 @@ public:
 			vmap[0].swap(vmap[1]);
 			last_x = xval;
 		}
-		for (unsigned i = 0; i+2 < size; i += 2) { // iterate as a quad strip
-			add(s.strips[i+0].p, s.strips[i+0].n, 0);
-			add(s.strips[i+1].p, s.strips[i+1].n, 1);
-			add(s.strips[i+3].p, s.strips[i+3].n, 1);
-			add(s.strips[i+2].p, s.strips[i+2].n, 0);
-		}
+		for (unsigned i = 0; i < size; ++i) {add(s.strips[i+0].p, s.strips[i+0].n, (i&1));}
+		indices.push_back(PRIMITIVE_RESTART_IX); // restart the strip
 	}
 
 private:
@@ -448,15 +448,16 @@ public:
 		assert(strip_len >= 4); // at least one quad
 		unsigned const cur_six(strip_offsets[strip_ix]), next_six(strip_offsets[strip_ix+1]);
 		unsigned const num_quads((strip_len-2)/2), quad_ix(min(strip_pos/2, num_quads-1));
-		assert((next_six - cur_six) == 4*num_quads); // error check
-		unsigned const start_index_ix(cur_six + 4*quad_ix); // quad vertex index
+		assert((next_six - cur_six) == (2*num_quads + 3)); // error check: 2 per quad, 2 at end, 1 for restart
+		unsigned const start_index_ix(cur_six + 2*quad_ix); // quad vertex index
 
 		for (unsigned i = 0; i < 4; ++i) { // 4 points on the quad
 			unsigned index_ix(start_index_ix + i);
 			assert(index_ix < indices.size() && index_ix < next_six);
 			unsigned const data_ix(indices[index_ix]);
+			assert(data_ix != PRIMITIVE_RESTART_IX);
 			assert(data_ix < data.size());
-			vector3d const norm(((i < 2) ? 1.0 : -1.0), ((i & 1) ? -1.0 : 1.0), 0.0);
+			vector3d const norm(((i & 1) ? -1.0 : 1.0), ((i < 2) ? 1.0 : -1.0), 0.0);
 			data[data_ix].n   = (data[data_ix].n + norm.get_norm())*0.5; // FIXME: very approximate
 			data[data_ix].v.z = new_z;
 			upload_vbo_sub_data(&data[data_ix], data_ix*sizeof(vert_norm), sizeof(vert_norm), 0);
@@ -466,10 +467,9 @@ public:
 
 	void finalize() { // can only be called once
 		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
-		assert((indices.size() & 3) == 0); // must be a multiple of 4
+		assert((indices.size() & 1) == 0); // must be a multiple of 2
 		upload_ivbo();
-		vmap[0].clear();
-		vmap[1].clear();
+		for (unsigned d = 0; d < 2; ++d) {vmap[d].clear();}
 	}
 
 	void draw() {
@@ -477,13 +477,13 @@ public:
 		upload_ivbo();
 		vbo_mgr.pre_render();
 		vert_norm::set_vbo_arrays();
-		glDrawRangeElements(GL_QUADS, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
+		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
 		vbo_mgr.post_render();
 	}
 
 	void show_stats() const {
-		cout << "verts: " << data.size() << ", quads: " << indices.size()/4 << endl;
-		cout << "mem: " << (data.size()*sizeof(vert_norm) + indices.size()*sizeof(unsigned)) << ", vmem: " << vbo_mgr.gpu_mem << endl;
+		cout << "snow verts: " << data.size() << ", indices: " << indices.size() << ", quads: " << nquads << endl;
+		cout << "snow mem: " << (data.size()*sizeof(vert_norm) + indices.size()*sizeof(unsigned)) << endl;
 	}
 };
 
@@ -762,7 +762,10 @@ void draw_snow() {
 	point const camera(get_camera_pos());
 	select_texture(SNOW_TEX); // detail texture (or could use NOISE_TEX)
 	setup_texgen(50.0, 50.0, 0.0, 0.0);
+	glEnable(GL_PRIMITIVE_RESTART);
+	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
 	snow_draw.draw();
+	glDisable(GL_PRIMITIVE_RESTART);
 	set_specular(0.0, 1.0);
 	s.end_shader();
 	//PRINT_TIME("Snow Draw");
