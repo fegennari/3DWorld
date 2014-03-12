@@ -942,6 +942,10 @@ template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts) {
 	if (!verts.empty()) {draw_quad_verts_as_tris(&verts.front(), verts.size());}
 }
 
+template <typename T> void draw_quad_verts_as_tris_and_clear(vector<T> &verts) {
+	draw_quad_verts_as_tris(verts); verts.clear();
+}
+
 
 template <typename T> void translate_verts(vector<T> &verts, vector3d const &xlate) {
 	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v += xlate;}

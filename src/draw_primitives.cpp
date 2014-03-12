@@ -446,8 +446,12 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 			} // for t
 		}
 	} // for s
-	int const gl_type(use_quads ? GL_QUADS : GL_TRIANGLE_STRIP);
-	if (texture) {draw_and_clear_verts(vntc, gl_type);} else {draw_and_clear_verts(vn, gl_type);}
+	if (use_quads) {
+		if (texture) {draw_quad_verts_as_tris_and_clear(vntc);} else {draw_quad_verts_as_tris_and_clear(vn);}
+	}
+	else {
+		if (texture) {draw_and_clear_verts(vntc, GL_TRIANGLE_STRIP);} else {draw_and_clear_verts(vn, GL_TRIANGLE_STRIP);}
+	}
 }
 
 

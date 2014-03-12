@@ -166,8 +166,8 @@ public:
 		return get_offset_for_last_points_added();
 	}
 	unsigned add_points_with_offset(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {return add_points_with_offset(&v.front(), v.size(), color);}
-	void render_range(int gl_type, unsigned six, unsigned eix, unsigned num_instances=0) const;
-	void render_all(int gl_type, unsigned num_instances=0) const {if (has_data()) {render_range(gl_type, 0, offsets.size()-1, num_instances);}}
+	void render_range(unsigned six, unsigned eix, unsigned num_instances=0) const;
+	void render_all(unsigned num_instances=0) const {if (has_data()) {render_range(0, offsets.size()-1, num_instances);}}
 	void draw_no_vbos(int gl_type) const {draw_verts(pts, gl_type);} // unused
 	bool upload();
 	void update_range(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color, unsigned six, unsigned eix);

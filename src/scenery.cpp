@@ -448,7 +448,7 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, f
 	uniform_scale(scale*get_size_scale(dist, scale_val));
 	rotate_into_plus_z(dir);
 	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
+	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 	glPopMatrix();
 }
 
@@ -824,7 +824,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1);
+	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
 	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
 }
 

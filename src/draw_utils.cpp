@@ -370,15 +370,15 @@ template<typename T> void indexed_mesh_draw<T>::init(unsigned nx_, unsigned ny_)
 	nx = nx_; ny = ny_;
 	assert(nx > 0 && ny > 0);
 	verts.resize((nx+1)*(ny+1));
-	indices.resize(4*nx*ny);
+	indices.resize(6*nx*ny);
 		
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
-			unsigned const iix(4*(y*nx + x)), vix(get_vert_ix(x, y));
-			indices[iix+0] = vix;
-			indices[iix+1] = vix + 1;
-			indices[iix+2] = vix + (nx+1) + 1;
-			indices[iix+3] = vix + (nx+1);
+			unsigned const iix(6*(y*nx + x)), vix(get_vert_ix(x, y)); // 6 verts / 2 tris / 1 quad
+			indices[iix+0] = indices[iix+3] = vix; // 0
+			indices[iix+1] = vix + 1; // 1
+			indices[iix+2] = indices[iix+4] = vix + (nx+1) + 1; // 2
+			indices[iix+5] = vix + (nx+1); // 3
 		}
 	}
 }
@@ -387,7 +387,7 @@ template<typename T> void indexed_mesh_draw<T>::render() const {
 
 	if (verts.empty()) return;
 	verts.front().set_state();
-	glDrawRangeElements(GL_QUADS, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, &indices.front());
+	glDrawRangeElements(GL_TRIANGLES, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, &indices.front());
 }
 
 template<typename T> void indexed_mesh_draw<T>::render_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned nx_, unsigned ny_) {
@@ -438,15 +438,16 @@ void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &des
 }
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::render_range(int gl_type, unsigned six, unsigned eix, unsigned num_instances) const {
+void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, unsigned num_instances) const {
 
 	assert(six < eix && eix < offsets.size());
 
+	// Note: currently always used to render quads, but can be made more general in the future
 	if (num_instances > 0) { // instanced rendering
-		glDrawArraysInstanced(gl_type, offsets[six], offsets[eix]-offsets[six], num_instances);
+		glDrawArraysInstanced(GL_QUADS, offsets[six], offsets[eix]-offsets[six], num_instances);
 	}
 	else { // normal rendering
-		glDrawArrays(gl_type, offsets[six], offsets[eix]-offsets[six]);
+		glDrawArrays(GL_QUADS, offsets[six], offsets[eix]-offsets[six]);
 	}
 }
 

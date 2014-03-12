@@ -288,7 +288,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 		vbomgr.begin_render();
 
 		if (draw_all_pine) {
-			vbomgr.render_all(GL_QUADS);
+			vbomgr.render_all();
 		}
 		else if (sort_front_to_back) {
 			assert(!low_detail);
@@ -802,7 +802,7 @@ void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned 
 
 	assert(is_pine_tree());
 	assert(vbo_mgr_ix >= 0);
-	vbo_manager.render_range(GL_QUADS, vbo_mgr_ix, vbo_mgr_ix+1, num_instances);
+	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1, num_instances);
 }
 
 
