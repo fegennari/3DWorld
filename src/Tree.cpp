@@ -826,7 +826,7 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 
 	assert(leaf_vbo != 0);
 	bind_vbo(leaf_vbo);
-	leaf_vert_type_t::set_vbo_arrays(0, 0);
+	leaf_vert_type_t::set_vbo_arrays(0);
 	assert(max_leaves <= leaves.size() && leaf_data.size() >= 4*leaves.size());
 	glDrawArrays(GL_QUADS, 0, 4*max_leaves);
 }
@@ -1009,7 +1009,7 @@ void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pas
 		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0); // vertices only
 	}
 	else {
-		vert_norm_comp_tc::set_vbo_arrays(0, 0);
+		vert_norm_comp_tc::set_vbo_arrays(0);
 	}
 	unsigned const idata_sz(4*num_branch_quads*sizeof(branch_index_t));
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, ((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT), (void *)(low_detail ? idata_sz : 0));

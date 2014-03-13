@@ -1005,7 +1005,7 @@ void draw_sphere_vbo_raw(int ndiv, bool textured, bool half) {
 	assert(off1 < off2);
 	bind_vbo(predef_sphere_vbo);
 	set_array_client_state(1, textured, 1, 0);
-	sd_sphere_d::vertex_type_t::set_vbo_arrays(0, 0);
+	sd_sphere_d::vertex_type_t::set_vbo_arrays(0);
 	glDrawArrays(GL_QUADS, off1, (off2 - off1)); // FIXME: use index arrays?
 	bind_vbo(0);
 }

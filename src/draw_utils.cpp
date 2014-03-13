@@ -28,92 +28,92 @@ void vert_wrap_t::set_vbo_arrays(bool set_state) {
 	glVertexPointer(3, GL_FLOAT, sizeof(point), (void *)(0));
 }
 
-void vert_tc_t::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_tc_t::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 0, 0);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_tc_t));
+	unsigned const stride(sizeof(vert_tc_t));
 	glVertexPointer(3, GL_FLOAT, sizeof(point), (void *)(0));
 	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_wrap_t)));
 }
 
-void vert_norm::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 0, 1, 0);}
-	set_vn_ptrs((force_stride ? force_stride : sizeof(vert_norm)), 0);
+	set_vn_ptrs(sizeof(vert_norm), 0);
 }
 
-void vert_norm_comp::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_comp::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 0, 1, 0);}
-	set_vn_ptrs(force_stride ? force_stride : sizeof(vert_norm_comp), 1);
+	set_vn_ptrs(sizeof(vert_norm_comp), 1);
 }
 
-void vert_norm_comp_tc::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_comp_tc::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 1, 0);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc));
+	unsigned const stride(sizeof(vert_norm_comp_tc));
 	set_vn_ptrs(stride, 1);
 	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_norm_comp)));
 }
 
-void vert_norm_comp_tc_comp::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_comp_tc_comp::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 1, 0);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc_comp));
+	unsigned const stride(sizeof(vert_norm_comp_tc_comp));
 	set_vn_ptrs(stride, 1);
 	glTexCoordPointer(2, GL_SHORT, stride, (void *)(sizeof(vert_norm_comp)));
 }
 
-void vert_norm_tc::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_tc::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 1, 0);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_tc));
+	unsigned const stride(sizeof(vert_norm_tc));
 	set_vn_ptrs(stride, 0);
 	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_norm)));
 }
 
-void vert_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_color::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 0, 0, 1);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_color));
+	unsigned const stride(sizeof(vert_color));
 	glVertexPointer(3, GL_FLOAT, stride, (void *)(0));
 	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(point)));
 }
 
-void vert_norm_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_color::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 0, 1, 1);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_color));
+	unsigned const stride(sizeof(vert_norm_color));
 	set_vn_ptrs(stride, 0);
 	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm)));
 }
 
-void vert_norm_comp_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_comp_color::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 0, 1, 1);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_color));
+	unsigned const stride(sizeof(vert_norm_comp_color));
 	set_vn_ptrs(stride, 1);
 	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp)));
 }
 
-void vert_norm_tc_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_tc_color::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 1, 1);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_tc_color));
+	unsigned const stride(sizeof(vert_norm_tc_color));
 	set_vn_ptrs(stride, 0);
 	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(vert_norm)));
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_tc)));
 }
 
-void vert_tc_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_tc_color::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 0, 1);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_tc_color));
+	unsigned const stride(sizeof(vert_tc_color));
 	glVertexPointer  (3, GL_FLOAT, stride, (void *)(0));
 	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(point)));
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_tc_t)));
 }
 
-void vert_norm_comp_tc_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_comp_tc_color::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 1, 1);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc_color));
+	unsigned const stride(sizeof(vert_norm_comp_tc_color));
 	set_vn_ptrs(stride, 1);
 	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(vert_norm_comp)));
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc)));
 }
 
-void vert_norm_comp_tc_comp_color::set_vbo_arrays(unsigned force_stride, bool set_state) {
+void vert_norm_comp_tc_comp_color::set_vbo_arrays(bool set_state) {
 	if (set_state) {set_array_client_state(1, 1, 1, 1);}
-	unsigned const stride(force_stride ? force_stride : sizeof(vert_norm_comp_tc_comp_color));
+	unsigned const stride(sizeof(vert_norm_comp_tc_comp_color));
 	set_vn_ptrs(stride, 1);
 	glTexCoordPointer(2, GL_SHORT,         stride, (void *)(sizeof(vert_norm_comp)));
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc_comp)));
