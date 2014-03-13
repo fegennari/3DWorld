@@ -915,14 +915,19 @@ struct vert_norm_color_tangent : public vert_norm_color {
 };
 
 
-template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type) {
-	assert(verts && count > 0);
-	verts[0].set_state();
-	glDrawArrays(gl_type, 0, count);
+template< typename T> void set_ptr_state(T const *const verts) {
+	// if verts is NULL, we assume VBOs are to be used (probably don't even need the case split)
+	if (verts) {verts[0].set_state();} else {T::set_vbo_arrays();}
 }
 
-template <typename T> void draw_verts(vector<T> const &verts, int gl_type) {
-	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type);}
+template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0) {
+	assert(count > 0);
+	set_ptr_state(verts);
+	glDrawArrays(gl_type, start_ix, count);
+}
+
+template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0) {
+	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type, start_ix);}
 }
 
 template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
@@ -933,8 +938,8 @@ template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
 void draw_quads_as_tris(unsigned num_quad_verts);
 
 template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count) {
-	assert(verts && count > 0);
-	verts[0].set_state();
+	assert(count > 0);
+	set_ptr_state(verts);
 	draw_quads_as_tris(count);
 }
 

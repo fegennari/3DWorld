@@ -644,8 +644,7 @@ public:
 	void draw_vbo() const {
 		assert(vbo);
 		bind_vbo(vbo);
-		vert_wrap_t::set_vbo_arrays();
-		glDrawArrays(GL_POINTS, 0, pts.size());
+		draw_verts<vert_wrap_t>(NULL, pts.size(), GL_POINTS);
 		bind_vbo(0);
 	}
 	bool draw(point const &center, vector3d const &rot_axis, float rot_degrees, vector3d const &size) {

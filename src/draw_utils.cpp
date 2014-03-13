@@ -81,6 +81,7 @@ void vert_norm_color::set_vbo_arrays(bool set_state) {
 }
 
 void vert_norm_comp_color::set_vbo_arrays(bool set_state) {
+	//if (set_state) {((vert_norm_comp_color *)0)->set_state(); return;}
 	if (set_state) {set_array_client_state(1, 0, 1, 1);}
 	unsigned const stride(sizeof(vert_norm_comp_color));
 	set_vn_ptrs(stride, 1);
@@ -527,6 +528,7 @@ class quad_ix_buffer_t {
 			unsigned const num_quads(size/6);
 			vector<T> ixs(size);
 
+			// Note: quad is split along a different axis from GL_QUADS, so interpolation is different
 			for (unsigned q = 0; q < num_quads; ++q) {
 				for (unsigned i = 0; i < 6; ++i) {ixs[6*q+i] = 4*q + quad_to_tris_ixs[i];}
 			}

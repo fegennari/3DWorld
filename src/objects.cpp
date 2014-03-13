@@ -856,8 +856,7 @@ void obj_draw_group::draw_vbo() const {
 	if (num_verts == 0) return;
 	assert(vbo);
 	bind_vbo(vbo);
-	vert_norm::set_vbo_arrays();
-	glDrawArrays(GL_TRIANGLES, 0, num_verts);
+	draw_verts<vert_norm>(NULL, num_verts, GL_TRIANGLES);
 	bind_vbo(0);
 }
 

@@ -186,7 +186,7 @@ public:
 		data.front().set_state();
 	}
 
-	bool draw_mesh_vertex_pair(int i, int j, float x, float y) {
+	bool add_mesh_vertex_pair(int i, int j, float x, float y) {
 		if (c > 1) {
 			if (mesh_draw != NULL && (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1))) return 0;
 			if (mesh_z_cutoff > -FAR_CLIP && mesh_z_cutoff > max(mesh_height[i][j], mesh_height[i+1][j])) return 0;
@@ -386,13 +386,13 @@ void draw_mesh_mvd(bool shadow_pass) {
 		mvd.c = 0;
 
 		for (int j = 0; j < MESH_X_SIZE-1; ++j) {
-			if (!mvd.draw_mesh_vertex_pair(i, j, x, y) && mvd.c > 0) {
+			if (!mvd.add_mesh_vertex_pair(i, j, x, y) && mvd.c > 0) {
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
 				mvd.c = 0;
 			}
 			x += DX_VAL;
 		} // for j
-		mvd.draw_mesh_vertex_pair(i, (MESH_X_SIZE - 1), x, y);
+		mvd.add_mesh_vertex_pair(i, (MESH_X_SIZE - 1), x, y);
 		if (mvd.c > 1) glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
 		y += DY_VAL;
 	} // for i

@@ -336,8 +336,7 @@ void rock_shape3d::draw_using_vbo() const {
 	else {
 		bind_vbo(vbo);
 	}
-	vert_norm_tc::set_vbo_arrays();
-	glDrawArrays(GL_TRIANGLES, 0, vert_size);
+	draw_verts<vert_norm_tc>(NULL, vert_size, GL_TRIANGLES);
 	bind_vbo(0);
 }
 

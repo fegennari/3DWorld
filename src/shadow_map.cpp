@@ -66,13 +66,12 @@ public:
 		assert(num_verts1 <= num_verts2);
 		assert(vbo_valid());
 		bind_vbo(vbo);
-		vert_wrap_t::set_vbo_arrays();
-		if (num_verts1 > 0) {glDrawArrays(GL_TRIANGLES, 0, num_verts1);}
+		if (num_verts1 > 0) {draw_verts<vert_wrap_t>(NULL, num_verts1, GL_TRIANGLES);}
 
 		if (num_verts2 > num_verts1) {
 			glEnable(GL_CULL_FACE);
 			//glCullFace(GL_FRONT); // faster, but artifacts at surface intersections such as stairs, especially with more z bias
-			glDrawArrays(GL_TRIANGLES, num_verts1, (num_verts2 - num_verts1));
+			draw_verts<vert_wrap_t>(NULL, (num_verts2 - num_verts1), GL_TRIANGLES, num_verts1);
 			//glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
 		}

@@ -828,7 +828,8 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 	bind_vbo(leaf_vbo);
 	leaf_vert_type_t::set_vbo_arrays(0);
 	assert(max_leaves <= leaves.size() && leaf_data.size() >= 4*leaves.size());
-	glDrawArrays(GL_QUADS, 0, 4*max_leaves);
+	draw_quads_as_tris(4*max_leaves);
+	//glDrawArrays(GL_QUADS, 0, 4*max_leaves);
 }
 
 

@@ -10,7 +10,7 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Material* - set_specular()
  - Light*, LIGHTi
  - Non-sprite points
- - Use triangles instead of quads (Tree billboards/leaves)
+ - Use triangles instead of quads
  - text/glRasterPos
  - Replace GL matrix operations with GLM
    * Remove get of GL matrices
