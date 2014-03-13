@@ -923,7 +923,7 @@ void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xl
 }
 
 
-void tile_t::draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves,
+void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_branches, bool draw_near_leaves,
 	bool draw_far_leaves, bool reflection_pass, int xlate_loc)
 {
 	if (pine_trees.empty()) return;
@@ -1913,9 +1913,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 		assert(!(tree_trunk_pts.size() & 1));
 		select_texture(WHITE_TEX);
 		get_tree_trunk_color(T_PINE, 1).do_glColor();
-		set_array_client_state(1, 0, 0, 0);
-		glVertexPointer(3, GL_FLOAT, sizeof(point), &tree_trunk_pts.front());
-		glDrawArrays(GL_LINES, 0, (unsigned)tree_trunk_pts.size());
+		draw_verts(tree_trunk_pts, GL_LINES);
 		tree_trunk_pts.resize(0);
 		s.end_shader();
 	}

@@ -234,7 +234,7 @@ public:
 	void update_pine_tree_state(bool upload_if_needed);
 	unsigned num_pine_trees() const {return pine_trees.size();}
 	void draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xlate_loc);
-	void draw_pine_trees(shader_t &s, vector<point> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass, int xlate_loc=-1);
+	void draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass, int xlate_loc=-1);
 	unsigned num_decid_trees() const {return decid_trees.size();}
 	void gen_decid_trees_if_needed();
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass);
@@ -265,7 +265,7 @@ class tile_draw_t {
 	unsigned ivbo[NUM_LODS];
 	vector<unsigned> vbo_free_list;
 	draw_vect_t to_draw;
-	vector<point> tree_trunk_pts;
+	vector<vert_wrap_t> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
 	lightning_strike_t lightning_strike;
 	tree_lod_render_t lod_renderer;

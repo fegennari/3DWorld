@@ -42,7 +42,7 @@ public:
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=0) const;
 	bool is_visible_pine(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
-	void draw(int mode, bool shadow_only, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
+	void draw(int mode, bool shadow_only, vector3d const &xlate=zero_vector, vector<vert_wrap_t> *points=NULL) const;
 	void translate_by(vector3d const &vd) {pos += vd;}
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos()     const {return pos;}
@@ -92,7 +92,7 @@ struct small_tree_group : public vector<small_tree> {
 	void calc_trunk_pts();
 	void finalize(bool low_detail);
 	void finalize_upload_and_clear_pts(bool low_detail);
-	void add_trunk_pts(point const &xlate, vector<point> &pts) const;
+	void add_trunk_pts(point const &xlate, vector<vert_wrap_t> &pts) const;
 	void clear_vbos();
 	void clear_vbo_manager(int which=3);
 	void clear_vbo_manager_and_ids(int which=3);
@@ -105,7 +105,7 @@ struct small_tree_group : public vector<small_tree> {
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void translate_by(vector3d const &vd);
 	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
-	void draw_branches(bool shadow_only, vector3d const &xlate=zero_vector, vector<point> *points=NULL) const;
+	void draw_branches(bool shadow_only, vector3d const &xlate=zero_vector, vector<vert_wrap_t> *points=NULL) const;
 	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector, int xlate_loc=-1);
 	void draw_non_pine_leaves(bool shadow_only, vector3d const &xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);

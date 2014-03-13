@@ -126,7 +126,7 @@ void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) {
 }
 
 
-void small_tree_group::add_trunk_pts(point const &xlate, vector<point> &pts) const {
+void small_tree_group::add_trunk_pts(point const &xlate, vector<vert_wrap_t> &pts) const {
 
 	for (vector<point>::const_iterator i = trunk_pts.begin(); i != trunk_pts.end(); ++i) {
 		pts.push_back(*i + xlate);
@@ -232,7 +232,7 @@ void small_tree_group::translate_by(vector3d const &vd) {
 }
 
 
-void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, vector<point> *points) const {
+void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		i->draw(1, shadow_only, xlate, points);
@@ -818,7 +818,7 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<point> *points) const {
+void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
 
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
