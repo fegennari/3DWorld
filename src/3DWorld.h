@@ -935,12 +935,12 @@ template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
 	verts.resize(0); // clear()?
 }
 
-void draw_quads_as_tris(unsigned num_quad_verts);
+void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0);
 
-template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count) {
+template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start=0) {
 	assert(count > 0);
 	set_ptr_state(verts);
-	draw_quads_as_tris(count);
+	draw_quads_as_tris(count, start);
 }
 
 template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts) {

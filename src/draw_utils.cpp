@@ -444,7 +444,7 @@ void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, 
 	assert(six < eix && eix < offsets.size());
 
 	// Note: currently always used to render quads, but can be made more general in the future
-	if (num_instances > 0) { // instanced rendering
+	if (num_instances > 1) { // instanced rendering
 		glDrawArraysInstanced(GL_QUADS, offsets[six], offsets[eix]-offsets[six], num_instances);
 	}
 	else { // normal rendering
@@ -528,7 +528,7 @@ class quad_ix_buffer_t {
 			unsigned const num_quads(size/6);
 			vector<T> ixs(size);
 
-			// Note: quad is split along a different axis from GL_QUADS, so interpolation is different
+			// Note: quad is split along a different axis from GL quads, so interpolation is different
 			for (unsigned q = 0; q < num_quads; ++q) {
 				for (unsigned i = 0; i < 6; ++i) {ixs[6*q+i] = 4*q + quad_to_tris_ixs[i];}
 			}
@@ -544,19 +544,19 @@ public:
 		delete_and_zero_vbo(ivbo_32);
 		size_16 = size_32 = 0;
 	}
-	void draw_quads_as_tris(unsigned num_quad_verts) { // # vertices
+	void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert) { // # vertices
 		if (num_quad_verts == 0) return; // nothing to do
-		assert((num_quad_verts & 3) == 0); // must be a multiple of 4
-		unsigned const num_tri_verts(6*(num_quad_verts/4)); // # indices
+		assert((num_quad_verts & 3) == 0 && (start_quad_vert & 3) == 0); // must be a multiple of 4
+		unsigned const end_quad_vert(start_quad_vert + num_quad_verts);
+		unsigned const num_tri_verts(6*(end_quad_vert/4)), start_tri_vert(6*(start_quad_vert/4)); // # indices
 		unsigned const max_quad_verts = 65532; // largest multiple of 4 and 6 smaller than 2^16
-		bool const use_32_bit(num_quad_verts > max_quad_verts);
+		bool const use_32_bit(end_quad_vert > max_quad_verts);
 		unsigned &ivbo    (use_32_bit ? ivbo_32 : ivbo_16);
 		unsigned &cur_size(use_32_bit ? size_32 : size_16);
 		
 		if (num_tri_verts > cur_size) { // increase the size
 			delete_vbo(ivbo); ivbo = 0;
 			cur_size = max(96U, max(num_tri_verts, 2U*cur_size)); // at least double
-			if (!use_32_bit) {cur_size = min(cur_size, max_quad_verts);}
 		}
 		assert(num_tri_verts <= cur_size);
 
@@ -569,7 +569,8 @@ public:
 		assert(ivbo != 0);
 		bind_vbo(ivbo, 1);
 		int const index_type(use_32_bit ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);
-		glDrawRangeElements(GL_TRIANGLES, 0, num_quad_verts, num_tri_verts, index_type, 0);
+		unsigned const bytes_offset((use_32_bit ? sizeof(unsigned) : sizeof(unsigned short))*start_tri_vert);
+		glDrawRangeElements(GL_TRIANGLES, start_quad_vert, end_quad_vert, (num_tri_verts - start_tri_vert), index_type, (void *)bytes_offset);
 		bind_vbo(0, 1);
 	}
 };
@@ -577,6 +578,6 @@ public:
 quad_ix_buffer_t quad_ix_buffer; // singleton
 
 void clear_quad_ix_buffer_context() {quad_ix_buffer.free_context();}
-void draw_quads_as_tris(unsigned num_quad_verts) {quad_ix_buffer.draw_quads_as_tris(num_quad_verts);}
+void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert) {quad_ix_buffer.draw_quads_as_tris(num_quad_verts, start_quad_vert);}
 
 

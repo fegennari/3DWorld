@@ -717,38 +717,22 @@ void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
 void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void *indices) { // indices can be NULL
 
 	if (inst_xforms.empty()) return;
-
-	if (loc < 0) { // hardware instancing not used, so we iterate
-		assert(0); // this flow is unused
-
-		for (vector<xform_matrix>::const_iterator i = inst_xforms.begin(); i != inst_xforms.end(); ++i) {
-			//i->load_gl(); // replace with shader upload
-			
-			if (index_type != GL_NONE) { // indexed
-				glDrawElements(prim_type, count, index_type, indices);
-			}
-			else {
-				assert(indices == NULL);
-				glDrawArrays(prim_type, 0, count); // hard-coded first=0
-			}
-		}
-	}
-	else { // use hardware instancing
-		// we need to upload the transforms here, but if there is a current vbo associated with the object data
-		// we need to unbind it, upload the transforms, then rebind the original vbo
-		if (cur_vbo) {bind_vbo(0);}
-		shader_float_matrix_uploader<4>::enable(loc, 1, inst_xforms.front().get_ptr());
-		if (cur_vbo) {bind_vbo(cur_vbo);}
+	assert(loc >= 0); // Note: could handle this case
+	// use hardware instancing
+	// we need to upload the transforms here, but if there is a current vbo associated with the object data
+	// we need to unbind it, upload the transforms, then rebind the original vbo
+	if (cur_vbo) {bind_vbo(0);}
+	shader_float_matrix_uploader<4>::enable(loc, 1, inst_xforms.front().get_ptr());
+	if (cur_vbo) {bind_vbo(cur_vbo);}
 	
-		if (index_type != GL_NONE) { // indexed
-			glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());
-		}
-		else {
-			assert(indices == NULL);
-			glDrawArraysInstanced(prim_type, 0, count, inst_xforms.size()); // hard-coded first=0
-		}
-		shader_float_matrix_uploader<4>::disable(loc);
+	if (index_type != GL_NONE) { // indexed
+		glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());
 	}
+	else {
+		assert(indices == NULL);
+		glDrawArraysInstanced(prim_type, 0, count, inst_xforms.size()); // hard-coded first=0
+	}
+	shader_float_matrix_uploader<4>::disable(loc);
 	inst_xforms.clear();
 }
 
