@@ -28,6 +28,8 @@ float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
 float const LITNING_TIME2   = 40.0;
 float const LITNING_DIST    = 1.2;
 
+unsigned const PRIMITIVE_RESTART_IX = 0xFFFFFFFF;
+
 
 bool tt_lightning_enabled(0);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
@@ -1146,7 +1148,7 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	bind_vbo(ivbo[lod_level], 1);
 	unsigned const step(1 << lod_level), isz_ceil((size + step - 1)/step), ptr_stride(sizeof(vert_type_t));
 	glVertexPointer(3, GL_FLOAT, ptr_stride, 0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
-	glDrawRangeElements(GL_QUADS, 0, stride*stride, 4*isz_ceil*isz_ceil, GL_UNSIGNED_INT, 0);
+	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, isz_ceil*(2*isz_ceil + 3), GL_UNSIGNED_INT, 0);
 	bind_vbo(0, 1); // unbind index buffer
 	vector<unsigned> crack_ixs;
 
@@ -1635,19 +1637,18 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		unsigned const size(get_tile_size()), stride(size+1);
 
 		for (unsigned i = 0, step = 1; i < NUM_LODS; ++i, step <<= 1) {
-			unsigned const size_i_ceil((size + step - 1)/step);
-			if (size_i_ceil < 2) continue; // too small, don't create LOD for this level (will never be used during rendering)
-			vector<unsigned> indices(4*size_i_ceil*size_i_ceil);
+			unsigned const isz_ceil((size + step - 1)/step);
+			if (isz_ceil < 2) continue; // too small, don't create LOD for this level (will never be used during rendering)
+			vector<unsigned> indices(isz_ceil*(2*isz_ceil + 3));
 			unsigned iix(0);
 
-			for (unsigned y = 0, ny = 0; ny < size_i_ceil; y += step, ++ny) {
-				for (unsigned x = 0, nx = 0; nx < size_i_ceil; x += step, ++nx) {
-					unsigned const xn(min(x+step, size)), yn(min(y+step, size));
+			for (unsigned y = 0, ny = 0; ny < isz_ceil; y += step, ++ny) {
+				for (unsigned x = 0, nx = 0; nx <= isz_ceil; x += step, ++nx) { // 2 extra to start the strip
+					unsigned const yn(min(y+step, size));
 					indices[iix++] = y *stride + x;
 					indices[iix++] = yn*stride + x;
-					indices[iix++] = yn*stride + xn;
-					indices[iix++] = y *stride + xn;
 				}
+				indices[iix++] = PRIMITIVE_RESTART_IX; // restart the strip
 			}
 			assert(iix == indices.size());
 			assert(ivbo[i] == 0);
@@ -1795,11 +1796,14 @@ void tile_draw_t::draw(bool reflection_pass) {
 	set_fill_mode();
 	set_array_client_state(1, 0, 0, 0);
 	enable_blend(); // for fog transparency
+	glEnable(GL_PRIMITIVE_RESTART);
+	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
 		if (display_mode & 0x01) {to_draw[i].second->draw(s, ivbo, reflection_pass);}
 	}
+	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();
 	s.end_shader();
 	
