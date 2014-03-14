@@ -122,8 +122,6 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
-void get_shadow_cube_triangle_verts(vector<vert_wrap_t> &verts, cube_t const &c, int eflags, vector3d const *const view_dir=NULL);
-
 void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 
 	int const sides((int)cp.surfs);
@@ -158,8 +156,8 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 	}
 	// Note: with some amount of complexity, we can group more cube faces into a single draw call to reduce driver overhead
 	//       however, we tend to be GPU/fill rate limited anyway, especially with smoke/dlights, so it makes little difference
-	vert_norm verts[24];
-	float tex_attrs[2][4*24];
+	vert_norm verts[36];
+	float tex_attrs[2][4*36];
 	unsigned vix(0), tix[2] = {0,0};
 	
 	for (unsigned i = 0; i < 6; ++i) {
@@ -176,7 +174,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		if (!dir) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);
-		for (unsigned i = 0; i < 4; ++i) {verts[vix++] = vert_norm(pts[i], normal);}
+		for (unsigned i = 0; i < 6; ++i) {verts[vix++] = vert_norm(pts[quad_to_tris_ixs[i]], normal);}
 		if (tid < 0 || shader == NULL) continue;
 
 		for (unsigned e = 0; e < 2; ++e) {
@@ -192,7 +190,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 				tg[3]    = texture_offset[tdim]*tscale[e];
 			}
 			bool const s_or_t(cp.swap_txy ^ (e != 0));
-			for (unsigned i = 0; i < 4; ++i) {UNROLL_4X(tex_attrs[s_or_t][tix[s_or_t]++] = tg[i_];)} // one per vertex
+			for (unsigned i = 0; i < 6; ++i) {UNROLL_4X(tex_attrs[s_or_t][tix[s_or_t]++] = tg[i_];)} // one per vertex
 		}
 	} // for i
 	if (vix == 0) return; // no quads to draw
@@ -206,8 +204,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 			glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)tex_attrs[d]);
 		}
 	}
-	//draw_quad_verts_as_tris(verts, vix); // works, but slower
-	draw_verts(verts, vix, GL_QUADS);
+	draw_verts(verts, vix, GL_TRIANGLES);
 	if (use_tcs) {for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}}
 }
 
