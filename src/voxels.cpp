@@ -1547,7 +1547,7 @@ void voxel_model::core_render(shader_t *s, unsigned lod_level, bool is_shadow_pa
 			}
 		}
 		assert(i->ix < tri_data[lod_level].size());
-		tri_data[lod_level][i->ix].render(s, is_shadow_pass, GL_TRIANGLES, no_vfc);
+		tri_data[lod_level][i->ix].render(s, is_shadow_pass, 3, no_vfc); // triangles
 	}
 }
 

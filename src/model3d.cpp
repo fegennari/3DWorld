@@ -328,6 +328,7 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool is_shadow_pass, unsigned npts, bool no_vfc) {
 
 	if (empty()) return;
+	assert(npts == 3 || npts == 4);
 	finalize(npts);
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
 	if (is_shadow_pass && vbo == 0) return; // don't create the vbo on the shadow pass (voxel terrain problems)
