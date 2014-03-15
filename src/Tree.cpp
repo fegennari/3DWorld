@@ -1012,7 +1012,8 @@ void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pas
 		vert_norm_comp_tc::set_vbo_arrays(0);
 	}
 	unsigned const idata_sz(4*num_branch_quads*sizeof(branch_index_t));
-	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, ((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT), (void *)(low_detail ? idata_sz : 0));
+	int const index_type((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
+	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, index_type, (void *)(low_detail ? idata_sz : 0));
 	branch_vbo_manager.post_render();
 }
 

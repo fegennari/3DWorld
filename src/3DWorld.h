@@ -936,6 +936,7 @@ template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
 }
 
 void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0);
+unsigned create_or_bind_ivbo_quads_as_tris(unsigned &ivbo, vector<unsigned> const &indices);
 
 template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start=0) {
 	assert(count > 0);

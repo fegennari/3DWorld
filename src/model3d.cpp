@@ -12,6 +12,7 @@
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const CALC_TANGENT_VECT = 1; // slower and more memory but sometimes better quality/smoother transitions
+bool const DRAW_QUADS_AS_TRIS= 0;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
@@ -358,15 +359,22 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool 
 	if (have_normals)    {glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));}
 	if (have_tex_coords) {glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));}
 	assert(!indices.empty()); // now always using indexed drawing
-	create_bind_vbo_and_upload(ivbo, indices, 1);
 
-	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
-		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
+	if (DRAW_QUADS_AS_TRIS && prim_type == GL_QUADS) {
+		unsigned const num_ixs(create_or_bind_ivbo_quads_as_tris(ivbo, indices));
+		glDrawRangeElements(GL_TRIANGLES, 0, (unsigned)size(), num_ixs, GL_UNSIGNED_INT, 0); // FIXME: VFC?
 	}
-	else { // draw each block independently
-		for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
-			if (camera_pdu.cube_visible(i->bcube)) {
-				glDrawRangeElements(prim_type, 0, (unsigned)size(), i->num, GL_UNSIGNED_INT, (void *)(i->start_ix*sizeof(unsigned)));
+	else {
+		create_bind_vbo_and_upload(ivbo, indices, 1);
+
+		if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
+			glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
+		}
+		else { // draw each block independently
+			for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
+				if (camera_pdu.cube_visible(i->bcube)) {
+					glDrawRangeElements(prim_type, 0, (unsigned)size(), i->num, GL_UNSIGNED_INT, (void *)(i->start_ix*sizeof(unsigned)));
+				}
 			}
 		}
 	}
@@ -396,7 +404,7 @@ template<typename T> void indexed_vntc_vect_t<T>::add_triangle(triangle const &t
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_map_t<T> &vmap) {
+template<typename T> unsigned indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_map_t<T> &vmap) {
 
 	T v2(v);
 	if (vmap.get_average_normals()) {v2.n = zero_vector;}
@@ -418,6 +426,7 @@ template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_
 		}
 	}
 	indices.push_back(ix);
+	return ix;
 }
 
 
@@ -433,6 +442,7 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 	colorRGBA const &color, unsigned npts, bool quads_only) const
 {
 	unsigned const nv(num_verts());
+	if (nv == 0) return;
 	assert((nv % npts) == 0);
 	polygon_t poly(color), quad_poly(color);
 	poly.resize(npts);
@@ -694,8 +704,8 @@ template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_
 
 template<typename T> void geometry_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, bool quads_only) const {
 
-	if (!quads_only) triangles.get_polygons(polygons, color, 3, 0);
-	quads.get_polygons(polygons, color, 4, quads_only);
+	triangles.get_polygons(polygons, color, 3, quads_only); // should be empty in quads_only mode (will be checked)
+	quads.get_polygons    (polygons, color, 4, quads_only);
 }
 
 
