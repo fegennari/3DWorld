@@ -11,7 +11,6 @@
 
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
-bool const USE_INDEXED_VERTS = 1;
 bool const CALC_TANGENT_VECT = 1; // slower and more memory but sometimes better quality/smoother transitions
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
@@ -269,33 +268,10 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
 	if (nverts > 2*BLOCK_SIZE) { // subdivide large buffers
 		//RESET_TIME;
 		vector<unsigned> ixs;
-		ixs.reserve(indices.size());
 		ixs.swap(indices);
 		subdiv_recur(ixs, npts, 0);
 		//PRINT_TIME("Subdiv");
 	}
-
-#if 0
-	vector<pair<unsigned, unsigned> > area_ix_pairs;
-	area_ix_pairs.resize(nverts/npts);
-	point pts[4];
-
-	for (unsigned i = 0, ix = 0; i < nverts; i += npts, ++ix) {
-		for (unsigned j = 0; j < npts; ++j) {pts[j] = get_vert(i+j).v;}
-		//area_ix_pairs[ix] = make_pair(-polygon_area(pts, npts), i); // sort by triangle/quad size, largest to smallest
-		area_ix_pairs[ix] = make_pair(indices[i], i); // sort by first vertex index
-	}
-	sort(area_ix_pairs.begin(), area_ix_pairs.end());
-	vector<unsigned> new_indices;
-	new_indices.resize(nverts);
-	
-	for (unsigned i = 0, ix = 0; i < nverts; i += npts, ++ix) {
-		unsigned const vix(area_ix_pairs[ix].second);
-		assert(vix+npts <= indices.size());
-		for (unsigned j = 0; j < npts; ++j) {new_indices[i+j] = indices[vix+j];}
-	}
-	indices.swap(new_indices);
-#endif
 }
 
 
@@ -324,11 +300,9 @@ template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned np
 		vector4d const tangent((v1*t2 - v2*t1).get_norm(), w);
 		for (unsigned j = i; j < i+npts; ++j) {get_vert(j).tangent += tangent;}
 	}
-	if (!indices.empty()) { // using index array, need to renormalilze tangents
-		for (iterator i = begin(); i != end(); ++i) {
-			i->tangent.normalize();
-			i->tangent.w = ((i->tangent.w < 0.0) ? -1.0 : 1.0);
-		}
+	for (iterator i = begin(); i != end(); ++i) { // need to renormalize tangents
+		i->tangent.normalize();
+		i->tangent.w = ((i->tangent.w < 0.0) ? -1.0 : 1.0);
 	}
 }
 
@@ -383,25 +357,20 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool 
 	glVertexPointer(3, GL_FLOAT, stride, 0);
 	if (have_normals)    {glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));}
 	if (have_tex_coords) {glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));}
+	assert(!indices.empty()); // now always using indexed drawing
+	create_bind_vbo_and_upload(ivbo, indices, 1);
 
-	if (indices.empty()) { // draw regular arrays
-		glDrawArrays(prim_type, 0, (unsigned)size());
+	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
+		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
 	}
-	else { // draw indexed arrays
-		create_bind_vbo_and_upload(ivbo, indices, 1);
-
-		if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
-			glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
-		}
-		else { // draw each block independently
-			for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
-				if (camera_pdu.cube_visible(i->bcube)) {
-					glDrawRangeElements(prim_type, 0, (unsigned)size(), i->num, GL_UNSIGNED_INT, (void *)(i->start_ix*sizeof(unsigned)));
-				}
+	else { // draw each block independently
+		for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
+			if (camera_pdu.cube_visible(i->bcube)) {
+				glDrawRangeElements(prim_type, 0, (unsigned)size(), i->num, GL_UNSIGNED_INT, (void *)(i->start_ix*sizeof(unsigned)));
 			}
 		}
-		bind_vbo(0, 1);
 	}
+	bind_vbo(0, 1);
 	bind_vbo(0);
 	if (loc >= 0) {glDisableVertexAttribArray(loc);}
 }
@@ -409,15 +378,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool 
 
 template<typename T> void indexed_vntc_vect_t<T>::reserve_for_num_verts(unsigned num_verts) {
 
-	if (!empty()) {
-		// do nothing
-	}
-	else if (USE_INDEXED_VERTS) {
-		indices.reserve(num_verts);
-	}
-	else {
-		reserve(num_verts);
-	}
+	if (empty()) {indices.reserve(num_verts);}
 }
 
 
@@ -430,39 +391,33 @@ template<typename T> void indexed_vntc_vect_t<T>::add_poly(polygon_t const &poly
 template<typename T> void indexed_vntc_vect_t<T>::add_triangle(triangle const &t, vertex_map_t<T> &vmap) {
 
 	vector3d const normal(t.get_normal());
-	//vector3d const normal(t.get_normal(!(USE_INDEXED_VERTS && vmap.get_average_normals()))); // weight by triangle area
+	//vector3d const normal(t.get_normal(!vmap.get_average_normals())); // weight by triangle area
 	UNROLL_3X(add_vertex(T(t.pts[i_], normal), vmap);)
 }
 
 
 template<typename T> void indexed_vntc_vect_t<T>::add_vertex(T const &v, vertex_map_t<T> &vmap) {
 
-	if (USE_INDEXED_VERTS) {
-		T v2(v);
-		if (vmap.get_average_normals()) {v2.n = zero_vector;}
-		vertex_map_t<T>::const_iterator it(vmap.find(v2));
-		unsigned ix;
+	T v2(v);
+	if (vmap.get_average_normals()) {v2.n = zero_vector;}
+	vertex_map_t<T>::const_iterator it(vmap.find(v2));
+	unsigned ix;
 
-		if (it == vmap.end()) { // not found
-			ix = (unsigned)size();
-			push_back(v);
-			vmap[v2] = ix;
-		}
-		else { // found
-			ix = it->second;
-			assert(ix < size());
-
-			if (vmap.get_average_normals()) {
-				operator[](ix).n += v.n; // sum the normals
-				need_normalize = 1;
-			}
-		}
-		indices.push_back(ix);
-	}
-	else {
-		assert(vmap.empty());
+	if (it == vmap.end()) { // not found
+		ix = (unsigned)size();
 		push_back(v);
+		vmap[v2] = ix;
 	}
+	else { // found
+		ix = it->second;
+		assert(ix < size());
+
+		if (vmap.get_average_normals()) {
+			operator[](ix).n += v.n; // sum the normals
+			need_normalize = 1;
+		}
+	}
+	indices.push_back(ix);
 }
 
 
