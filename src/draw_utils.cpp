@@ -442,13 +442,14 @@ template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, unsigned num_instances) const {
 
 	assert(six < eix && eix < offsets.size());
+	unsigned const count(offsets[eix] - offsets[six]);
 
 	// Note: currently always used to render quads, but can be made more general in the future
 	if (num_instances > 1) { // instanced rendering
-		glDrawArraysInstanced(GL_QUADS, offsets[six], offsets[eix]-offsets[six], num_instances);
+		glDrawArraysInstanced(GL_QUADS, offsets[six], count, num_instances);
 	}
 	else { // normal rendering
-		glDrawArrays(GL_QUADS, offsets[six], offsets[eix]-offsets[six]);
+		glDrawArrays(GL_QUADS, offsets[six], count);
 	}
 }
 

@@ -253,20 +253,19 @@ template<typename T> void indexed_vntc_vect_t<T>::optimize(unsigned npts) {
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::finalize(int prim_type) {
+template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 
 	if (need_normalize) {
-		for (iterator i = begin(); i != end(); ++i) i->n.normalize();
+		for (iterator i = begin(); i != end(); ++i) {i->n.normalize();}
 		need_normalize = 0;
 	}
 	if (indices.empty() || finalized) return; // nothing to do
 	finalized = 1;
-	//optimize(prim_type); // now optimized in the object file loading phase
-	unsigned const npts((prim_type == GL_TRIANGLES) ? 3 : 4), nverts(num_verts()); // triangles or quads
-	assert((nverts % npts) == 0);
+	//optimize(npts); // now optimized in the object file loading phase
+	assert((num_verts() % npts) == 0); // triangles or quads
 	assert(blocks.empty());
 
-	if (nverts > 2*BLOCK_SIZE) { // subdivide large buffers
+	if (num_verts() > 2*BLOCK_SIZE) { // subdivide large buffers
 		//RESET_TIME;
 		vector<unsigned> ixs;
 		ixs.swap(indices);
@@ -326,10 +325,10 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool is_shadow_pass, int prim_type, bool no_vfc) {
+template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool is_shadow_pass, unsigned npts, bool no_vfc) {
 
 	if (empty()) return;
-	finalize(prim_type);
+	finalize(npts);
 	if (bsphere.radius == 0.0) calc_bounding_volumes();
 	if (is_shadow_pass && vbo == 0) return; // don't create the vbo on the shadow pass (voxel terrain problems)
 
@@ -360,12 +359,13 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool 
 	if (have_tex_coords) {glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));}
 	assert(!indices.empty()); // now always using indexed drawing
 
-	if (DRAW_QUADS_AS_TRIS && prim_type == GL_QUADS) {
+	if (DRAW_QUADS_AS_TRIS && npts == 4) {
 		unsigned const num_ixs(create_or_bind_ivbo_quads_as_tris(ivbo, indices));
 		glDrawRangeElements(GL_TRIANGLES, 0, (unsigned)size(), num_ixs, GL_UNSIGNED_INT, 0); // FIXME: VFC?
 	}
 	else {
 		create_bind_vbo_and_upload(ivbo, indices, 1);
+		int const prim_type((npts == 4) ? GL_QUADS : GL_TRIANGLES);
 
 		if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
 			glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
@@ -661,18 +661,18 @@ template<typename T> void geometry_t<T>::calc_tangents() {
 }
 
 
-template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, int prim_type) {
+template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, unsigned npts) {
 
 	for (vntc_vect_block_t<T>::iterator i = blocks.begin(); i != blocks.end(); ++i) {
-		i->render(&shader, is_shadow_pass, prim_type);
+		i->render(&shader, is_shadow_pass, npts);
 	}
 }
 
 
 template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow_pass) {
 
-	render_blocks(shader, is_shadow_pass, triangles, GL_TRIANGLES);
-	render_blocks(shader, is_shadow_pass, quads,     GL_QUADS);
+	render_blocks(shader, is_shadow_pass, triangles, 3);
+	render_blocks(shader, is_shadow_pass, quads,     4);
 }
 
 

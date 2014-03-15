@@ -150,7 +150,7 @@ public:
 	unsigned obj_id;
 
 	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), vbo(0), ivbo(0), obj_id(obj_id_) {}
-	void render(shader_t &shader, bool is_shadow_pass, int prim_type);
+	void render(shader_t &shader, bool is_shadow_pass, unsigned npts);
 	void clear();
 	void free_vbos();
 	void make_private_copy() {vbo = ivbo = 0;} // Note: to be called *only* after a deep copy
@@ -182,7 +182,7 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 public:
 	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
-	void render(shader_t *shader, bool is_shadow_pass, int prim_type, bool no_vfc=0);
+	void render(shader_t *shader, bool is_shadow_pass, unsigned npts, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
 	void add_triangle(triangle const &t, vertex_map_t<T> &vmap);
@@ -190,7 +190,7 @@ public:
 	void add_index(unsigned ix) {assert(ix < size()); indices.push_back(ix);}
 	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims);
 	void optimize(unsigned npts);
-	void finalize(int prim_type);
+	void finalize(unsigned npts);
 	void clear();
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
@@ -226,7 +226,7 @@ template<typename T> struct geometry_t {
 
 	void calc_tangents_blocks(vntc_vect_block_t<T> &blocks, unsigned npts) {assert(0);}
 	void calc_tangents();
-	void render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, int prim_type);
+	void render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, unsigned npts);
 	void render(shader_t &shader, bool is_shadow_pass);
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
