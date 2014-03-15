@@ -544,13 +544,12 @@ public:
 		delete_and_zero_vbo(ivbo_32);
 		size_16 = size_32 = 0;
 	}
-	void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert) { // # vertices
-		if (num_quad_verts == 0) return; // nothing to do
-		assert((num_quad_verts & 3) == 0 && (start_quad_vert & 3) == 0); // must be a multiple of 4
-		unsigned const end_quad_vert(start_quad_vert + num_quad_verts);
-		unsigned const num_tri_verts(6*(end_quad_vert/4)), start_tri_vert(6*(start_quad_vert/4)); // # indices
+
+	bool bind_quads_as_tris_ivbo(unsigned num_quad_verts) {
+		assert((num_quad_verts & 3) == 0); // must be a multiple of 4
+		unsigned const num_tri_verts(6*(num_quad_verts/4));
 		unsigned const max_quad_verts = 65532; // largest multiple of 4 and 6 smaller than 2^16
-		bool const use_32_bit(end_quad_vert > max_quad_verts);
+		bool const use_32_bit(num_quad_verts > max_quad_verts);
 		unsigned &ivbo    (use_32_bit ? ivbo_32 : ivbo_16);
 		unsigned &cur_size(use_32_bit ? size_32 : size_16);
 		
@@ -568,9 +567,18 @@ public:
 		}
 		assert(ivbo != 0);
 		bind_vbo(ivbo, 1);
+		return use_32_bit;
+	}
+
+	void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert) { // # vertices
+		if (num_quad_verts == 0) return; // nothing to do
+		assert((num_quad_verts & 3) == 0 && (start_quad_vert & 3) == 0); // must be a multiple of 4
+		unsigned const end_quad_vert(start_quad_vert + num_quad_verts);
+		unsigned const num_tri_verts(6*(num_quad_verts/4)), start_tri_vert(6*(start_quad_vert/4)); // # indices
+		bool const use_32_bit(bind_quads_as_tris_ivbo(end_quad_vert));
 		int const index_type(use_32_bit ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);
 		unsigned const bytes_offset((use_32_bit ? sizeof(unsigned) : sizeof(unsigned short))*start_tri_vert);
-		glDrawRangeElements(GL_TRIANGLES, start_quad_vert, end_quad_vert, (num_tri_verts - start_tri_vert), index_type, (void *)bytes_offset);
+		glDrawRangeElements(GL_TRIANGLES, start_quad_vert, end_quad_vert, num_tri_verts, index_type, (void *)bytes_offset);
 		bind_vbo(0, 1);
 	}
 };
@@ -579,6 +587,7 @@ quad_ix_buffer_t quad_ix_buffer; // singleton
 
 void clear_quad_ix_buffer_context() {quad_ix_buffer.free_context();}
 void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert) {quad_ix_buffer.draw_quads_as_tris(num_quad_verts, start_quad_vert);}
+bool bind_quads_as_tris_ivbo(unsigned num_quad_verts) {return quad_ix_buffer.bind_quads_as_tris_ivbo(num_quad_verts);}
 
 
 unsigned create_or_bind_ivbo_quads_as_tris(unsigned &ivbo, vector<unsigned> const &indices) { // what about 16-bit indices?
