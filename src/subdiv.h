@@ -55,8 +55,7 @@ public:
 		float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void get_quad_points(vector<vert_norm_tc> &quad_pts) const;
 	void get_triangles(vector<vert_wrap_t> &verts) const;
-	void get_triangles(vector<vertex_type_t> &verts, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
-	void get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned skip) const;
+	void get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned skip=1, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void get_triangle_vertex_list(vector<vertex_type_t> &verts) const;
 	void get_triangle_index_list_pow2(vector<index_type_t> &indices, unsigned skip) const;
 	void set_data(point const &p, float r, int n, float const *pm, float dp=0.0, upsurface const *const s=NULL);

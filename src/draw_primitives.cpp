@@ -498,45 +498,22 @@ void sd_sphere_d::get_triangles(vector<vert_wrap_t> &verts) const {
 }
 
 
-// Note: returns quads as triangles
-void sd_sphere_d::get_triangles(vector<vertex_type_t> &verts, float s_beg, float s_end, float t_beg, float t_end) const {
+void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned skip, float s_beg, float s_end, float t_beg, float t_end) const {
 
 	unsigned const ndiv(spn.ndiv);
 	assert(ndiv > 0);
 	float const ndiv_inv(1.0/float(ndiv));
-	point **points   = spn.points;
-	vector3d **norms = spn.norms;
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
-	
-	for (unsigned s = s0; s < s1; ++s) {
-		unsigned const sn((s+1)%ndiv), snt(s+1);
 
-		for (unsigned t = t0; t < t1; ++t) {
-			unsigned const ix(s*(ndiv+1)+t), tn(t+1);
-			point          pts[4]     = {points[s][t], points[sn][t], points[sn][tn], points[s][tn]};
-			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][tn], norms [s][tn]};
-			
-			for (unsigned i = 0; i < 4; ++i) {
-				verts.push_back(vertex_type_t(pts[i], normals[i],(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), (1.0f - ((i>>1) ? tn : t)*ndiv_inv) ));
-			}
-		} // for t
-	} // for s
-}
+	for (unsigned s = s0; s < s1; s += skip) {
+		s = min(s, ndiv-1);
+		unsigned const sn((s+skip)%ndiv), snt(min((s+skip), ndiv));
 
-
-void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned skip) const {
-
-	float const ndiv_inv(1.0/float(spn.ndiv));
-
-	for (unsigned s = 0; s < spn.ndiv; s += skip) {
-		s = min(s, spn.ndiv-1);
-		unsigned const sn((s+skip)%spn.ndiv), snt(min((s+skip), spn.ndiv));
-
-		if (s != 0) { // add degenerate triangle to preserve the triangle strip
-			for (unsigned d = 0; d < 2; ++d) {verts.push_back(vertex_type_t(spn.points[s][0], zero_vector, 0, 0));}
+		if (s != s0) { // add degenerate triangle to preserve the triangle strip
+			for (unsigned d = 0; d < 2; ++d) {verts.push_back(vertex_type_t(spn.points[s][d ? t0 : t1], zero_vector, 0, 0));}
 		}
-		for (unsigned t = 0; t <= spn.ndiv; t += skip) {
-			t = min(t, spn.ndiv);
+		for (unsigned t = t0; t <= t1; t += skip) {
+			t = min(t, ndiv);
 			verts.push_back(vertex_type_t(spn.points[s ][t], spn.norms[s ][t], (1.0f - s  *ndiv_inv), (1.0f - t*ndiv_inv)));
 			verts.push_back(vertex_type_t(spn.points[sn][t], spn.norms[sn][t], (1.0f - snt*ndiv_inv), (1.0f - t*ndiv_inv)));
 		}
@@ -988,7 +965,7 @@ void setup_sphere_vbos() {
 			for (unsigned tex = 0; tex < 2; ++tex) {
 				sd_sphere_d sd(all_zeros, 1.0, i);
 				sd.gen_points_norms(spn, 0.0, 1.0, 0.0, (half ? 0.5 : 1.0));
-				sd.get_triangles(verts,  0.0, 1.0, 0.0, (half ? 0.5 : 1.0));
+				sd.get_triangle_strip_pow2(verts, 1, 0.0, 1.0, 0.0, (half ? 0.5 : 1.0));
 				sphere_vbo_offsets[((i-1) << 2) + (half << 1) + tex] = verts.size();
 			}
 		}
@@ -1006,8 +983,7 @@ void draw_sphere_vbo_raw(int ndiv, bool textured, bool half) {
 	bind_vbo(predef_sphere_vbo);
 	set_array_client_state(1, textured, 1, 0);
 	sd_sphere_d::vertex_type_t::set_vbo_arrays(0);
-	//draw_quads_as_tris((off2 - off1), off1); // works, but slower
-	glDrawArrays(GL_QUADS, off1, (off2 - off1)); // FIXME: use index arrays?
+	glDrawArrays(GL_TRIANGLE_STRIP, off1, (off2 - off1)); // uses triangle strips separated by degenerate triangles
 	bind_vbo(0);
 }
 
