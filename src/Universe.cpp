@@ -671,7 +671,7 @@ inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
 }
 
 
-void ucell::draw_all_stars(ushader_group &usg, bool clear_pld0) {
+void ucell::draw_all_stars(ushader_group &usg) {
 
 	if (!star_pld.empty()) {
 		usg.enable_color_only_shader();
@@ -696,9 +696,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		bkg_color == last_bkg_color && star_cache_ix == last_star_cache_ix);
 
 	if (cache_stars && cached_stars_valid) { // should be true in combined_gu mode
-		usg.enable_color_only_shader();
-		star_pld.draw();
-		usg.disable_color_only_shader();
+		draw_all_stars(usg); // star_psd should be empty
 		return; // that's it
 	}
 	last_bkg_color     = bkg_color;
@@ -724,7 +722,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 				}
 			}
 		} // galaxy i
-		draw_all_stars(usg, 0);
+		draw_all_stars(usg);
 		cached_stars_valid = 1;
 		return;
 	}
@@ -959,7 +957,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 			} // system j
 		} // cluster cs
 	} // galaxy i
-	if (!gen_only) {draw_all_stars(usg, 1);}
+	if (!gen_only) {draw_all_stars(usg); star_pld.clear();}
 }
 
 
@@ -2206,15 +2204,14 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 	if (st_prod < 30.0) {blend_color(ocolor, ocolor, bkg_color, 0.00111*st_prod*st_prod, 1);} // small, attenuate (divide by 900)
 
 	if (size < 2.7) { // both point cases below, normal is camera->object vector
-		bool const draw_as_line(distant ? 0 : get_draw_as_line(dist, vcp, vcp_mag));
 		pos_ = make_pt_global(pos_);
 
-		if (draw_as_line) { // lines of light - "warp speed"
+		if (size > 1.5) {
+			star_psd.add_pt(vert_color(pos_, color)); // add size as well?
+		}
+		else if (!distant && get_draw_as_line(dist, vcp, vcp_mag)) { // lines of light - "warp speed"
 			blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
 			star_pld.add_line(pos_, ocolor, (pos_ - get_player_velocity()), ocolor); // lines are always one pixel wide
-		}
-		else if (size > 1.5) {
-			star_psd.add_pt(vert_color(pos_, color)); // add size as well?
 		}
 		else {
 			star_pld.add_pt(pos_, ocolor);

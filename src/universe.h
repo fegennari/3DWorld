@@ -437,7 +437,7 @@ class ucell : public uobj_rgen { // size = 84
 	unsigned last_star_cache_ix;
 	bool cached_stars_valid;
 
-	void draw_all_stars(ushader_group &usg, bool clear_pld0);
+	void draw_all_stars(ushader_group &usg);
 
 public:
 	point rel_center;

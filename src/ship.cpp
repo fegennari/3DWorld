@@ -36,7 +36,6 @@ vector<cached_obj> c_uobjs;
 vector<usw_ray> b_wrays, t_wrays; // beams and engine trails
 vector<temp_source> temp_sources;
 pt_line_drawer particle_pld;
-pt_line_drawer_no_lighting_t emissive_pld;
 point_sprite_drawer glow_psd;
 shader_t emissive_shader;
 
@@ -779,13 +778,6 @@ void draw_univ_objects() {
 		particle_pld.draw_and_clear();
 	}
 	s[0].end_shader();
-
-	if (!emissive_pld.empty()) {
-		shader_t s;
-		s.begin_color_only_shader();
-		emissive_pld.draw_and_clear();
-		s.end_shader();
-	}
 	glDepthMask(GL_FALSE);
 	glow_psd.draw_and_clear(BLUR_TEX); // uses a point sprite shader internally
 	glDepthMask(GL_TRUE);

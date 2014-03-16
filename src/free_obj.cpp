@@ -45,7 +45,6 @@ extern pos_dir_up player_pdu;
 extern vector<us_weapon> us_weapons;
 extern exp_type_params et_params[];
 extern pt_line_drawer particle_pld;
-extern pt_line_drawer_no_lighting_t emissive_pld;
 extern point_sprite_drawer glow_psd;
 
 
@@ -875,10 +874,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 
 	switch (ptype) {
 	case PTYPE_GLOW:
-		if (ddata.draw_as_pt()) {
-			emissive_pld.add_pt(make_pt_global(pos), color); // Note: may not be in correct back to front ordering for alpha blending
-		}
-		else if (60.0*radius < ddata.dist) {
+		if (60.0*radius < ddata.dist) {
 			glow_psd.add_pt(vert_color(make_pt_global(pos), color), 2.0*radius); // Note: may not be in correct back to front ordering for alpha blending
 		}
 		else {
