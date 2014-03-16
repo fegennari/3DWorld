@@ -10,6 +10,7 @@ uniform float caustics_weight= 1.0;
 uniform vec3 cloud_offset    = vec3(0.0);
 uniform vec3 uw_atten_max;
 uniform vec3 uw_atten_scale;
+uniform vec3 snow_cscale = vec3(1.0);
 
 varying vec4 vertex; // world space
 varying vec2 tc, tc2, tc3;
@@ -95,7 +96,7 @@ void main()
 	               cs3*weights.g*texture2D(tex3, ts3*diff_tc).rgb + // dirt
 				   cs4*weights.b*texture2D(tex4, ts4*diff_tc).rgb + // grass
 				   cs5*weights.a*texture2D(tex5, ts5*diff_tc).rgb + // rock
-				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb;  // snow
+				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb*snow_cscale;  // snow
 	vec3 texel1  = texture2D(detail_tex, tc2).rgb; // detail texture
 
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc);

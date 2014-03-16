@@ -1471,6 +1471,7 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
 		s.add_uniform_float(oss2.str().c_str(), tscale);
 		s.add_uniform_float(oss3.str().c_str(), cscale);
 	}
+	s.add_uniform_color("snow_cscale", colorRGB(1.0, 1.0, 1.2)); // increased blue
 }
 
 
