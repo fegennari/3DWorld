@@ -378,6 +378,7 @@
     </ClCompile>
     <ClCompile Include="src\draw_primitives.cpp" />
     <ClCompile Include="src\draw_shapes.cpp" />
+    <ClCompile Include="src\draw_text.cpp" />
     <ClCompile Include="src\draw_utils.cpp" />
     <ClCompile Include="src\draw_world.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
