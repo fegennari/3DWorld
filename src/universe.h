@@ -343,7 +343,7 @@ public:
 	void gen_color();
 	colorRGBA get_ambient_color_val() const;
 	colorRGBA get_light_color() const;
-	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t star_plds[2], bool distant);
+	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t &star_pld, point_sprite_drawer &star_psd, bool distant);
 	void draw_flares(int ndiv, bool texture);
 	float get_energy() const {return (is_ok() ? PLANET_TO_SUN_MAX_SPACING*PLANET_TO_SUN_MAX_SPACING*temp*radius : 0.0);}
 	vector3d get_solar_wind_accel(point const &obj_pos, float obj_mass, float obj_surf_area) const;
@@ -430,7 +430,8 @@ public:
 class ucell : public uobj_rgen { // size = 84
 
 	pt_line_drawer planet_plds[2]; // {1-pixel, 2-pixel}
-	pt_line_drawer_no_lighting_t star_plds[2]; // {1-pixel, 2-pixel}
+	pt_line_drawer_no_lighting_t star_pld; // 1-pixel
+	point_sprite_drawer star_psd; // 2-pixel
 	colorRGBA last_bkg_color;
 	point last_player_pos;
 	unsigned last_star_cache_ix;

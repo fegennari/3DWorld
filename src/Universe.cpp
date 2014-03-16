@@ -655,13 +655,12 @@ inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
 
 void ucell::draw_all_stars(ushader_group &usg, bool clear_pld0) {
 
-	if (star_plds[0].empty() && star_plds[1].empty()) return;
-	usg.enable_color_only_shader();
-	star_plds[0].draw(); // don't clear
-	glPointSize(2.0); // 2 pixel diameter
-	star_plds[1].draw_and_clear();
-	glPointSize(1.0);
-	usg.disable_color_only_shader();
+	if (!star_pld.empty()) {
+		usg.enable_color_only_shader();
+		star_pld.draw(); // don't clear
+		usg.disable_color_only_shader();
+	}
+	star_psd.draw_and_clear(WHITE_TEX, 1.0); // unblended
 }
 
 
@@ -680,7 +679,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 	if (cache_stars && cached_stars_valid) { // should be true in combined_gu mode
 		usg.enable_color_only_shader();
-		star_plds[0].draw();
+		star_pld.draw();
 		usg.disable_color_only_shader();
 		return; // that's it
 	}
@@ -688,7 +687,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 	last_player_pos    = camera;
 	last_star_cache_ix = star_cache_ix;
 	cached_stars_valid = 0;
-	star_plds[0].clear();
+	star_pld.clear();
 	point_d const pos(rel_center);
 
 	if (cache_stars) {
@@ -703,7 +702,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 				point_d const spos(pos + sol.pos);
 
 				if (calc_sphere_size(spos, camera, sol.sun.radius) > 0.1 && sol.sun.is_ok()) {
-					sol.sun.draw(spos, usg, star_plds, 1);
+					sol.sun.draw(spos, usg, star_pld, star_psd, 1);
 				}
 			}
 		} // galaxy i
@@ -772,7 +771,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 				for (unsigned sol_draw_pass = 0; sol_draw_pass < unsigned(1+sel_s); ++sol_draw_pass) { // behind sun, in front of sun
 					if (!gen_only && sun_visible && sol_draw_pass == unsigned(sel_s)) {
-						if (!sol.sun.draw(spos, usg, star_plds, 0)) continue;
+						if (!sol.sun.draw(spos, usg, star_pld, star_psd, 0)) continue;
 					}
 					if (sol_draw_pass == 0 && planets_visible) sol.process();
 					if (sol.planets.empty()) continue;
@@ -2175,7 +2174,7 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 }
 
 
-bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t star_plds[2], bool distant) {
+bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t &star_pld, point_sprite_drawer &star_psd, bool distant) {
 
 	point const &camera(get_player_pos()); // view frustum has already been checked
 	vector3d const vcp(camera, pos_);
@@ -2189,16 +2188,19 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 	colorRGBA ocolor(color);
 	if (st_prod < 30.0) {blend_color(ocolor, ocolor, bkg_color, 0.00111*st_prod*st_prod, 1);} // small, attenuate (divide by 900)
 
-	if (size < 2.5) { // both point cases below, normal is camera->object vector
+	if (size < 2.7) { // both point cases below, normal is camera->object vector
 		bool const draw_as_line(distant ? 0 : get_draw_as_line(dist, vcp, vcp_mag));
 		pos_ = make_pt_global(pos_);
 
 		if (draw_as_line) { // lines of light - "warp speed"
 			blend_color(ocolor, ocolor, bkg_color, 0.5, 1); // half color to make it less bright
-			star_plds[0].add_line(pos_, ocolor, (pos_ - get_player_velocity()), ocolor); // lines are always one pixel wide
+			star_pld.add_line(pos_, ocolor, (pos_ - get_player_velocity()), ocolor); // lines are always one pixel wide
+		}
+		else if (size > 1.5) {
+			star_psd.add_pt(vert_color(pos_, color)); // add size as well?
 		}
 		else {
-			star_plds[size > 1.5].add_pt(pos_, ocolor);
+			star_pld.add_pt(pos_, ocolor);
 		}
 	}
 	else { // sphere
