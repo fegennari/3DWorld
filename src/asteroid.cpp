@@ -740,14 +740,12 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 		shader.add_uniform_color("color", WHITE);
 		select_texture(DEFAULT_AST_TEX);
 		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
-		glEnable(GL_POINT_SPRITE);
-		glEnable(GL_PROGRAM_POINT_SIZE);
+		set_point_sprite_mode(1);
 
 		for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {
 			ast_belt_part[1].draw(afpos, orbital_plane_normal, (360.0*i/AB_NUM_PART_SEG), outer_radius*scale);
 		}
-		glDisable(GL_PROGRAM_POINT_SIZE);
-		glDisable(GL_POINT_SPRITE);
+		set_point_sprite_mode(0);
 		shader.end_shader();
 	}
 	disable_blend();

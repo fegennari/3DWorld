@@ -786,21 +786,10 @@ void draw_univ_objects() {
 		emissive_pld.draw_and_clear();
 		s.end_shader();
 	}
-	if (!glow_psd.empty()) {
-		select_texture(BLUR_TEX);
-		glDepthMask(GL_FALSE);
-		shader_t s;
-		s.set_prefix("#define SIZE_FROM_NORMAL", 2); // GS
-		s.set_vert_shader("particle_draw");
-		s.set_frag_shader("simple_texture");
-		s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
-		s.begin_shader();
-		s.add_uniform_int("tex0", 0);
-		s.add_uniform_float("min_alpha", 0.0);
-		glow_psd.draw_and_clear(s);
-		s.end_shader();
-		glDepthMask(GL_TRUE);
-	}
+	glDepthMask(GL_FALSE);
+	glow_psd.draw_and_clear(); // uses a point sprite shader internally
+	glDepthMask(GL_TRUE);
+
 	disable_blend();
 	set_additive_blend_mode();
 	draw_wrays(b_wrays); // draw beam weapons (where should this be?)

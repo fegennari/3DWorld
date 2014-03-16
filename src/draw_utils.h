@@ -76,9 +76,10 @@ template<class vert_type_t> class point_sprite_drawer_t {
 
 public:
 	void clear() {points.resize(0); sizes.resize(0);}
-	void add_pt(vert_type_t const &v, float s) {points.push_back(v); sizes.push_back(s);}
-	void draw(shader_t &s) const;
-	void draw_and_clear(shader_t &s) {draw(s); clear();}
+	void add_pt(vert_type_t const &v) {points.push_back(v);} // constant size version
+	void add_pt(vert_type_t const &v, float s) {points.push_back(v); sizes.push_back(s);} // variable size version
+	void draw(float const_point_size=0.0) const;
+	void draw_and_clear(float const_point_size=0.0) {draw(const_point_size); clear();}
 	bool empty() const {return points.empty();}
 };
 

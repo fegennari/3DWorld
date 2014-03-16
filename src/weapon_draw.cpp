@@ -864,20 +864,19 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 	shader_t s;
 	s.begin_color_only_shader(color);
 	vert_wrap_t verts[8];
+	unsigned npts(0);
 
 	if (in_zoom) {
 		glScalef(2.0, 2.0, 1.0);
 		for (unsigned i = 0; i < 8; ++i) {verts[i] = point(xy[i], xy[(i+4)&7], zval);}
 		draw_verts(verts, 8, GL_LINES);
-		glPointSize(2.0);
 	}
 	else {
-		glPointSize(2.0);
-		for (unsigned i = 0; i < 4; ++i) {verts[i] = point(xy[2*i], xy[(2*i+4)&7], zval);}
-		draw_verts(verts, 4, GL_POINTS);
+		for (unsigned i = 0; i < 4; ++i) {verts[npts++] = point(xy[2*i], xy[(2*i+4)&7], zval);}
 	}
-	verts[0] = point(0.0, 0.0, zval);
-	draw_verts(verts, 1, GL_POINTS);
+	verts[npts++] = point(0.0, 0.0, zval);
+	glPointSize(2.0);
+	draw_verts(verts, npts, GL_POINTS);
 	glPointSize(1.0);
 	disable_blend();
 	glDisable(GL_LINE_SMOOTH);

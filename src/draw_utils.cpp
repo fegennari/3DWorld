@@ -6,6 +6,8 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 
+extern int window_height;
+
 
 void set_array_client_state(bool va, bool tca, bool na, bool ca) {
 
@@ -279,16 +281,39 @@ void pt_line_drawer_no_lighting_t::draw() const {
 }
 
 
-template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(shader_t &s) const {
+template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(float const_point_size=0.0) const {
 
 	if (empty()) return;
-	assert(points.size() == sizes.size());
-	int const loc(s.get_attrib_loc("point_size"));
-	assert(loc > 0);
-	glEnableVertexAttribArray(loc);
-	glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(float), (void *)(&sizes.front()));
+	shader_t s;
+#if 1 // point sprite variant
+	s.set_vert_shader("point_sprite");
+	s.set_frag_shader("point_sprite_texture");
+	s.begin_shader();
+	s.add_uniform_float("point_scale", ((const_point_size != 0.0) ? const_point_size : 2.0*window_height)); // diameter = 2*radius
+#else // geometry shader variant - doesn't support const_point_size
+	s.set_prefix("#define SIZE_FROM_NORMAL", 2); // GS
+	s.set_vert_shader("particle_draw");
+	s.set_frag_shader("simple_texture");
+	s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
+	s.begin_shader();
+#endif
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_float("min_alpha", 0.0);
+	set_point_sprite_mode(1);
+	select_texture(BLUR_TEX);
+	int loc(-1);
+
+	if (const_point_size == 0.0) { // use variable attribute point size
+		assert(points.size() == sizes.size());
+		loc = s.get_attrib_loc("point_size");
+		assert(loc > 0);
+		glEnableVertexAttribArray(loc);
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(float), (void *)(&sizes.front()));
+	}
 	draw_verts(points, GL_POINTS);
-	glDisableVertexAttribArray(loc);
+	if (const_point_size == 0.0) {glDisableVertexAttribArray(loc);}
+	set_point_sprite_mode(0);
+	s.end_shader();
 }
 
 template class point_sprite_drawer_t<vert_color     >;

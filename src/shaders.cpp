@@ -736,3 +736,16 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 	inst_xforms.clear();
 }
 
+
+void set_point_sprite_mode(bool enabled) {
+
+	if (enabled) {
+		glEnable(GL_POINT_SPRITE);
+		glEnable(GL_PROGRAM_POINT_SIZE);
+	}
+	else {
+		glDisable(GL_POINT_SPRITE);
+		glDisable(GL_PROGRAM_POINT_SIZE);
+	}
+}
+

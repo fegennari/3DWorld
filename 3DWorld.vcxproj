@@ -897,6 +897,8 @@
     <None Include="shaders\planet_draw.vert" />
     <None Include="shaders\planet_draw_distant.frag" />
     <None Include="shaders\planet_rings.frag" />
+    <None Include="shaders\point_sprite.vert" />
+    <None Include="shaders\point_sprite_texture.frag" />
     <None Include="shaders\point_to_quad.geom" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />
