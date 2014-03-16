@@ -281,16 +281,25 @@ void pt_line_drawer_no_lighting_t::draw() const {
 }
 
 
-template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(float const_point_size=0.0) const {
+template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int tid, float const_point_size, bool enable_lighting) const {
 
 	if (empty()) return;
 	shader_t s;
 #if 1 // point sprite variant
-	s.set_vert_shader("point_sprite");
+	if (const_point_size) {s.set_prefix("#define CONSTANT_PT_SIZE", 0);} // VS
+
+	if (enable_lighting) {
+		s.setup_enabled_lights(2, 1); // sun and moon VS lighting
+		s.set_prefix("#define ENABLE_LIGHTING", 0); // VS
+		s.set_vert_shader("ads_lighting.part*+point_sprite"); // no fog
+	}
+	else {
+		s.set_vert_shader("point_sprite");
+	}
 	s.set_frag_shader("point_sprite_texture");
 	s.begin_shader();
-	s.add_uniform_float("point_scale", ((const_point_size != 0.0) ? const_point_size : 2.0*window_height)); // diameter = 2*radius
-#else // geometry shader variant - doesn't support const_point_size
+	s.add_uniform_float("point_scale", 2.0*(const_point_size ? const_point_size : window_height)); // diameter = 2*radius
+#else // geometry shader variant - doesn't support const_point_size or lighting
 	s.set_prefix("#define SIZE_FROM_NORMAL", 2); // GS
 	s.set_vert_shader("particle_draw");
 	s.set_frag_shader("simple_texture");
@@ -300,10 +309,10 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(float 
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", 0.0);
 	set_point_sprite_mode(1);
-	select_texture(BLUR_TEX);
+	select_texture(tid);
 	int loc(-1);
 
-	if (const_point_size == 0.0) { // use variable attribute point size
+	if (!const_point_size) { // use variable attribute point size
 		assert(points.size() == sizes.size());
 		loc = s.get_attrib_loc("point_size");
 		assert(loc > 0);
@@ -311,7 +320,7 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(float 
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(float), (void *)(&sizes.front()));
 	}
 	draw_verts(points, GL_POINTS);
-	if (const_point_size == 0.0) {glDisableVertexAttribArray(loc);}
+	if (!const_point_size) {glDisableVertexAttribArray(loc);}
 	set_point_sprite_mode(0);
 	s.end_shader();
 }

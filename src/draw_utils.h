@@ -76,10 +76,11 @@ template<class vert_type_t> class point_sprite_drawer_t {
 
 public:
 	void clear() {points.resize(0); sizes.resize(0);}
+	void reserve_pts(unsigned sz) {points.reserve(sz);}
 	void add_pt(vert_type_t const &v) {points.push_back(v);} // constant size version
 	void add_pt(vert_type_t const &v, float s) {points.push_back(v); sizes.push_back(s);} // variable size version
-	void draw(float const_point_size=0.0) const;
-	void draw_and_clear(float const_point_size=0.0) {draw(const_point_size); clear();}
+	void draw(int tid, float const_point_size=0.0, bool enable_lighting=0) const;
+	void draw_and_clear(int tid, float const_point_size=0.0, bool enable_lighting=0) {draw(tid, const_point_size, enable_lighting); clear();}
 	bool empty() const {return points.empty();}
 };
 

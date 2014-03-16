@@ -540,12 +540,9 @@ void draw_stars(float alpha) {
 	UNROLL_3X(bkg[i_] = (1.0 - alpha)*bkg_color[i_];)
 	point const xlate((camera_mode == 1) ? surface_pos : all_zeros);
 	enable_blend();
-	glPointSize(2.0);
 	glDisable(GL_DEPTH_TEST);
-	shader_t s;
-	s.begin_color_only_shader();
-	vector<vert_color> pts;
-	pts.reserve(num_stars);
+	point_sprite_drawer psd;
+	psd.reserve_pts(num_stars);
 
 	for (unsigned i = 0; i < num_stars; ++i) {
 		if ((rand()%400) == 0) continue; // flicker out
@@ -554,12 +551,10 @@ void draw_stars(float alpha) {
 			float const c(stars[i].color[j]*stars[i].intensity);
 			color[j] = ((alpha >= 1.0) ? c : (alpha*c + bkg[j]));
 		}
-		pts.push_back(vert_color((stars[i].pos + xlate), color));
+		psd.add_pt(vert_color((stars[i].pos + xlate), color));
 	}
-	draw_verts(pts, GL_POINTS);
-	s.end_shader();
+	psd.draw(BLUR_TEX, 2.0); // draw with points of size 2 pixels
 	glEnable(GL_DEPTH_TEST);
-	glPointSize(1.0);
 	disable_blend();
 }
 
@@ -934,25 +929,17 @@ void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, 
 void water_particle_manager::draw() const {
 
 	if (parts.empty()) return;
-	// use point sprites?
-	// calculate normal in a shader?
 	point const camera(get_camera_pos());
-	vector<vert_norm_color> verts;
-	verts.resize(parts.size());
+	enable_blend();
+	point_sprite_drawer_norm psd;
+	psd.reserve_pts(parts.size());
+	float const radius(0.5*object_types[DROPLET].radius); // constant value, half the size of regular droplets
 
 	for (unsigned i = 0; i < parts.size(); ++i) {
-		vector3d const p2c(camera - parts[i].p);
-		verts[i] = vert_norm_color(parts[i].p, p2c.get_norm(), parts[i].c.c); // normal faces camera
-		verts[i].c[3] *= min(1.0, 2.0/p2c.mag());
+		psd.add_pt(vert_norm_color(parts[i].p, (camera - parts[i].p).get_norm(), parts[i].c.c), radius); // normal faces camera
 	}
-	shader_t s;
-	s.begin_untextured_lit_glcolor_shader();
-	glPointSize(2.0);
-	enable_blend();
-	draw_verts(verts, GL_POINTS);
+	psd.draw(BLUR_CENT_TEX, 0.0, 1); // draw with lighting
 	disable_blend();
-	glPointSize(1.0);
-	s.end_shader();
 }
 
 

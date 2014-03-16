@@ -787,7 +787,7 @@ void draw_univ_objects() {
 		s.end_shader();
 	}
 	glDepthMask(GL_FALSE);
-	glow_psd.draw_and_clear(); // uses a point sprite shader internally
+	glow_psd.draw_and_clear(BLUR_TEX); // uses a point sprite shader internally
 	glDepthMask(GL_TRUE);
 
 	disable_blend();

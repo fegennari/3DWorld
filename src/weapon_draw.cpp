@@ -859,29 +859,23 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 	float const xy1(0.0006*scale), xy2(0.0002*scale), zval(-0.05*scale);
 	float const xy[8] = {-xy1, -xy2, xy1, xy2, 0.0, 0.0, 0.0, 0.0};
 	glDisable(GL_DEPTH_TEST);
-	enable_blend();
-	glEnable(GL_LINE_SMOOTH);
-	shader_t s;
-	s.begin_color_only_shader(color);
-	vert_wrap_t verts[8];
-	unsigned npts(0);
+	point_sprite_drawer psd;
 
 	if (in_zoom) {
+		shader_t s;
+		s.begin_color_only_shader(color);
 		glScalef(2.0, 2.0, 1.0);
+		vert_wrap_t verts[8];
 		for (unsigned i = 0; i < 8; ++i) {verts[i] = point(xy[i], xy[(i+4)&7], zval);}
 		draw_verts(verts, 8, GL_LINES);
+		s.end_shader();
 	}
 	else {
-		for (unsigned i = 0; i < 4; ++i) {verts[npts++] = point(xy[2*i], xy[(2*i+4)&7], zval);}
+		for (unsigned i = 0; i < 4; ++i) {psd.add_pt(vert_color(point(xy[2*i], xy[(2*i+4)&7], zval), color));}
 	}
-	verts[npts++] = point(0.0, 0.0, zval);
-	glPointSize(2.0);
-	draw_verts(verts, npts, GL_POINTS);
-	glPointSize(1.0);
-	disable_blend();
-	glDisable(GL_LINE_SMOOTH);
+	psd.add_pt(vert_color(point(0.0, 0.0, zval), color));
+	psd.draw(WHITE_TEX, 1.0); // draw with points of size 1 pixel, not blended
 	glEnable(GL_DEPTH_TEST);
-	s.end_shader();
 }
 
 

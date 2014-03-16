@@ -3,6 +3,7 @@
 // 10/24/12
 #include "3DWorld.h"
 #include "physics_objects.h"
+#include "draw_utils.h"
 #include "shaders.h"
 
 
@@ -20,17 +21,6 @@ protected:
 	typedef vert_wrap_t vert_type_t;
 	vector<vert_type_t> verts;
 	rand_gen_t rgen;
-
-	void render(int type, colorRGBA const &color) const {
-		if (empty()) return;
-		assert(!(size() % VERTS_PER_PRIM));
-		enable_blend(); // split into point smooth and blend?
-		shader_t s;
-		s.begin_color_only_shader(color);
-		draw_verts(verts, type);
-		s.end_shader();
-		disable_blend();
-	}
 
 public:
 	void clear () {verts.clear();}
@@ -78,10 +68,17 @@ public:
 		//PRINT_TIME("Rain Update");
 	}
 	void render() const { // partially transparent
+		if (empty()) return;
 		colorRGBA color;
 		get_avg_sky_color(color);
 		color.alpha = 0.2;
-		precip_manager_t::render(GL_LINES, color);
+		assert(!(size() & 1));
+		enable_blend(); // split into point smooth and blend?
+		shader_t s;
+		s.begin_color_only_shader(color);
+		draw_verts(verts, GL_LINES);
+		s.end_shader();
+		disable_blend();
 	}
 };
 
@@ -99,9 +96,15 @@ public:
 		}
 	}
 	void render() const {
-		glPointSize(2);
-		precip_manager_t::render(GL_POINTS, colorRGBA(brightness, brightness, brightness, 1.0));
-		glPointSize(1);
+		if (empty()) return;
+		point_sprite_drawer psd;
+		psd.reserve_pts(size());
+		colorRGBA const color(brightness, brightness, brightness, 1.0); // constant
+
+		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {
+			psd.add_pt(vert_color(i->v, color));
+		}
+		psd.draw(WHITE_TEX, 1.0); // unblended pixels
 	}
 };
 
