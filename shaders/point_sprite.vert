@@ -1,5 +1,5 @@
-uniform float point_scale = 1.0;
-attribute float point_size;
+uniform float point_scale = 1.0; // or point size in pixels, for constant size
+attribute float point_size; // world space
 
 void main()
 {

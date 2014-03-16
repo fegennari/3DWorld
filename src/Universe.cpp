@@ -344,7 +344,7 @@ public:
 class ushader_group {
 	universe_shader_t planet_shader[2][2][2]; // {without/with rings}x{rocky vs. gas giant}x{without/with craters (moons)} - not all variations used
 	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
-	shader_t color_only_shader, planet_colored_shader;
+	shader_t color_only_shader, planet_colored_shader, point_sprite_shader;
 
 	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
 		return planet_shader[svars.ring_ro > 0.0][body.gas_giant][body.type == UTYPE_MOON];
@@ -374,17 +374,35 @@ public:
 		else {color_only_shader.enable();}
 	}
 	void disable_color_only_shader() {color_only_shader.disable();}
-	
+
+	void planet_colored_shader_setup(shader_t &s, bool use_light2) { // Note: use_light2 is ignored in the shader
+		s.set_vert_shader("per_pixel_lighting");
+		s.set_frag_shader("ads_lighting.part*+planet_draw_distant");
+		s.begin_shader();
+		set_light_scale(s, use_light2);
+	}
 	void enable_planet_colored_shader(bool use_light2) { // Note: use_light2 is ignored in the shader
-		if (!planet_colored_shader.is_setup()) {
-			planet_colored_shader.set_vert_shader("per_pixel_lighting");
-			planet_colored_shader.set_frag_shader("ads_lighting.part*+planet_draw_distant");
-			planet_colored_shader.begin_shader();
-			set_light_scale(planet_colored_shader, use_light2);
-		}
+		if (!planet_colored_shader.is_setup()) {planet_colored_shader_setup(planet_colored_shader, use_light2);}
 		else {planet_colored_shader.enable();}
 	}
-	void disable_planet_colored_shader() {planet_colored_shader.disable();}
+	void disable_planet_colored_shader() {
+		planet_colored_shader.disable();
+	}
+
+	void enable_point_sprite_shader(float point_size) { // for planets
+		if (!point_sprite_shader.is_setup()) {
+			point_sprite_shader.set_prefix("#define POINT_SPRITE_MODE", 0); // VS
+			planet_colored_shader_setup(point_sprite_shader, 0);
+		}
+		else {point_sprite_shader.enable();}
+		assert(point_size > 0.0);
+		point_sprite_shader.add_uniform_float("point_size_pixels", point_size);
+		set_point_sprite_mode(1); // enable
+	}
+	void disable_point_sprite_shader() {
+		point_sprite_shader.disable();
+		set_point_sprite_mode(0); // disable
+	}
 };
 
 
@@ -897,12 +915,11 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						}
 					} // planet k
 					if (!planet_plds[0].empty() || !planet_plds[1].empty()) {
-						usg.enable_planet_colored_shader(0);
+						usg.enable_point_sprite_shader(1.0);
 						planet_plds[0].draw_and_clear();
-						glPointSize(2.0); // 2 pixel diameter
+						usg.enable_point_sprite_shader(2.0);
 						planet_plds[1].draw_and_clear();
-						glPointSize(1.0);
-						usg.disable_planet_colored_shader();
+						usg.disable_point_sprite_shader();
 					}
 					if (planet_asteroid_belt) { // we normally only get here once per frame, so the overhead is acceptable
 						shader_t asteroid_belt_shader;

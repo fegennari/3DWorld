@@ -9,8 +9,8 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Color/Normal/TexCoord/VertexPointer, Enable/DisableClientState
  - Material* - set_specular()
  - Light*, LIGHTi
- - Non-sprite points, glPointSize()
- - Use triangles instead of quads
+ - Non-sprite points
+ - GL_QUADS
  - text/glRasterPos
  - Replace GL matrix operations with GLM
    * Remove get of GL matrices
