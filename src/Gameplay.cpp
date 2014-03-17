@@ -28,9 +28,8 @@ struct text_message_params {
 	int mtime, priority;
 	float size;
 	colorRGBA color;
-	bool bitmap;
-	text_message_params() : mtime(0), priority(0), size(0.0), color(WHITE), bitmap(0) {}
-	text_message_params(int t, float s, colorRGBA const &c, int p, bool b) : mtime(t), priority(p), size(s), color(c), bitmap(b) {}
+	text_message_params() : mtime(0), priority(0), size(0.0), color(WHITE) {}
+	text_message_params(int t, float s, colorRGBA const &c, int p) : mtime(t), priority(p), size(s), color(c) {}
 };
 
 
@@ -2199,16 +2198,16 @@ void show_user_stats() {
 void show_other_messages() {
 
 	if (msg_params.mtime <= 0) return;
-	draw_text(msg_params.color, -0.008/msg_params.size, 0.005, -0.02/msg_params.size, message.c_str(), 1.0, msg_params.bitmap);
+	draw_text(msg_params.color, -0.008/msg_params.size, 0.005, -0.02/msg_params.size, message.c_str(), 1.0);
 	msg_params.mtime -= iticks;
 }
 
 
-void print_text_onscreen(string const &text, colorRGBA const &color, float size, int time, int priority, bool bitmap) {
+void print_text_onscreen(string const &text, colorRGBA const &color, float size, int time, int priority) {
 
 	if (msg_params.mtime > 0 && msg_params.priority > priority) return; // do this before the strcpy
 	message    = text;
-	msg_params = text_message_params(time, size, color, priority, bitmap);
+	msg_params = text_message_params(time, size, color, priority);
 }
 
 

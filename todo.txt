@@ -11,7 +11,6 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Light*, LIGHTi
  - Non-sprite points
  - GL_QUADS
- - text/glRasterPos
  - Replace GL matrix operations with GLM
    * Remove get of GL matrices
 

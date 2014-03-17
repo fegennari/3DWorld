@@ -9,8 +9,7 @@
 
 using namespace std;
 
-bool  const MENU_BITMAP_TEXT = 0;
-float const MENU_TEXT_SIZE   = 1.0;
+float const MENU_TEXT_SIZE = 1.0;
 
 
 class keyboard_menu_t {
@@ -31,7 +30,7 @@ protected:
 		oss << "+";
 		for (unsigned n = pos+1; n < ndiv; ++n) {oss << "-";}
 		oss << "  " << name << ": " << cur_value;
-		draw_text((selected ? ORANGE : YELLOW), -0.01, 0.01-0.0014*(num_controls - control_ix), -0.02, oss.str().c_str(), MENU_TEXT_SIZE, MENU_BITMAP_TEXT);
+		draw_text((selected ? ORANGE : YELLOW), -0.01, 0.01-0.0014*(num_controls - control_ix), -0.02, oss.str().c_str(), MENU_TEXT_SIZE);
 	}
 	virtual void draw_one_control(unsigned control_ix) const = 0;
 
@@ -44,7 +43,7 @@ public:
 	virtual void change_value(int delta) = 0;
 
 	void draw_controls() const {
-		if (!title.empty()) {draw_text(YELLOW, -0.01, 0.01, -0.02, title.c_str(), MENU_TEXT_SIZE, MENU_BITMAP_TEXT);}
+		if (!title.empty()) {draw_text(YELLOW, -0.01, 0.01, -0.02, title.c_str(), MENU_TEXT_SIZE);}
 		for (unsigned i = 0; i < num_controls; ++i) {draw_one_control(i);}
 	}
 };

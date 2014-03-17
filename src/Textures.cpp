@@ -255,6 +255,7 @@ void load_textures() {
 	gen_blur_cent_texture();
 	gen_gradient_texture();
 	gen_noise_texture();
+	load_font_texture_atlas();
 
 	if (!universe_only) {
 		gen_wind_texture();
@@ -336,6 +337,7 @@ void reset_textures() {
 	free_texture(elem_tid);
 	free_texture(gb_tid);
 	free_texture(reflection_tid);
+	free_font_texture_atlas();
 
 	for (texture_map_t::iterator i = noise_tex_3ds.begin(); i != noise_tex_3ds.end(); ++i) {
 		free_texture(i->second);
@@ -390,7 +392,7 @@ void texture_t::free_mm_data() {
 
 void texture_t::free_data() {
 
-	gl_delete(); // ???
+	gl_delete();
 	if (orig_data    != data) delete [] orig_data;
 	if (colored_data != data) delete [] colored_data;
 	delete [] data;

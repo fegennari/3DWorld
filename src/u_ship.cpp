@@ -1556,7 +1556,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 						else {
 							msg = fobj->get_name() + "\n" + fobj->get_info() + "  Dist: " + make_string(li_data.dist);
 						}
-						print_text_onscreen(msg, PURPLE, 0.8, TICKS_PER_SECOND, 1, 1);
+						print_text_onscreen(msg, PURPLE, 0.5, TICKS_PER_SECOND, 1);
 
 						if (target && fobj->is_target() && target_valid(fobj)) {
 							target_obj = fobj;
@@ -1565,7 +1565,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 					}
 					else if (sobj != NULL) {
 						string const msg(sobj->get_name() + " at distance " + make_string(li_data.dist) + "\n" + sobj->get_info());
-						print_text_onscreen(msg, PURPLE, 0.8, TICKS_PER_SECOND, 1, 1);
+						print_text_onscreen(msg, PURPLE, 0.5, TICKS_PER_SECOND, 1);
 					}
 				}
 				break;
