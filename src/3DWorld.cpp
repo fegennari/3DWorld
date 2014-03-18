@@ -119,7 +119,7 @@ extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
 extern point hmv_pos;
 extern int coll_id[];
 extern float tree_lod_scales[4];
-extern string read_hmap_modmap_fn, write_hmap_modmap_fn, read_voxel_brush_fn, write_voxel_brush_fn;
+extern string read_hmap_modmap_fn, write_hmap_modmap_fn, read_voxel_brush_fn, write_voxel_brush_fn, font_texture_atlas_fn;
 extern vector<bbox> team_starts;
 extern player_state *sstates;
 extern pt_line_drawer obj_pld;
@@ -1679,6 +1679,9 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "write_voxel_brush_filename") {
 			if (!read_string(fp, write_voxel_brush_fn)) cfg_err("write_voxel_brush_filename command", error);
+		}
+		else if (str == "font_texture_atlas_fn") {
+			if (!read_string(fp, font_texture_atlas_fn)) cfg_err("font_texture_atlas_fn command", error);
 		}
 		else if (str == "mesh_file") { // only the first parameter is required
 			float rmz(0.0);

@@ -6,7 +6,8 @@
 #include "shaders.h"
 
 
-string const default_font_texture_atlas = "textures/atlas/text_atlas.png";
+string const default_font_texture_atlas_fn = "textures/atlas/text_atlas.png";
+string font_texture_atlas_fn(default_font_texture_atlas_fn);
 
 extern int window_height, display_mode;
 
@@ -40,14 +41,21 @@ public:
 	// Note: expects to find a square texture with 16x16 tiles, one per ASCII value, starting from the ULC
 	void load(string const &fn) {
 		texture.free_data();
-		texture.name = (fn.empty() ? default_font_texture_atlas : fn);
+		texture.name = (fn.empty() ? font_texture_atlas_fn : fn);
 		texture.load(-1);
 		assert(texture.ncolors == 4); // RGBA (really only need RA though)
 		assert(texture.width == texture.height);
 		assert((texture.width & 15) == 0); // multiple of 16
 		float const duv(1.0/16.0), pw(1.0/texture.width);
 		unsigned const tsize(texture.width >> 4); // tile size
+		unsigned char *data(texture.get_data());
 
+		for (unsigned i = 0; i < texture.num_pixels(); ++i) {
+			unsigned weight(0);
+			UNROLL_3X(weight += data[4*i+i_];)
+			data[4*i+3] = (unsigned char)(weight/3.0); // set alpha equal to luminance
+			UNROLL_3X(data[4*i+i_] = 255;) // set luminance/RGB to 1
+		}
 		for (unsigned ty = 0; ty < 16; ++ty) {
 			for (unsigned tx = 0; tx < 16; ++tx) {
 				// calculate kerning by looking for all black/transparent columns
@@ -111,9 +119,11 @@ void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &te
 		}
 	}
 	shader_t s;
-	s.begin_simple_textured_shader(0.5, 0, 0, &color);
+	s.begin_simple_textured_shader(0.1, 0, 0, &color);
 	font_texture_manager.bind_gl();
+	enable_blend();
 	draw_verts(verts, GL_TRIANGLES);
+	disable_blend();
 	s.end_shader();
 }
 
