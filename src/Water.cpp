@@ -474,9 +474,10 @@ void draw_water() {
 		}
 		if (DEBUG_WATER_TIME) {PRINT_TIME("3 Grass Update");}
 	}
-	s.disable();
-	update_valleys(); // Note: using raw colors, no texture
-	s.enable();
+	select_water_ice_texture(s, color);
+	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
+	enable_blend();
+	update_valleys(); // draws spillover sections using the same shader
 	if (DEBUG_WATER_TIME) {PRINT_TIME("4 Water Valleys Update");}
 
 	// call the function that computes the ripple effect
@@ -500,12 +501,9 @@ void draw_water() {
 		calc_water_normals();
 	}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
-	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
-	enable_blend();
 	unsigned nin(0);
 	int xin[4], yin[4], last_wsi(-1);
 	bool const disp_snow((display_mode & 0x40) && temperature <= SNOW_MAX_TEMP);
-	select_water_ice_texture(s, color);
 	color *= INT_WATER_ATTEN; // attenuate for interior water
 	colorRGBA wcolor(color);
 	wsd.set_big_water(0);
@@ -1235,7 +1233,6 @@ void draw_spillover(vector<vert_norm_color> &verts, int i, int j, int si, int sj
 	float const v_splash(min(10.0f, (float)vol_over));
 	int const xs(nov ? -1 : valleys[index].x), ys(nov ? -1 : valleys[index].y);
 	int count(0);
-	enable_blend();
 
 	if (!point_outside_mesh(sj, si)) {
 		draw_spill_section(verts, sj, si, x1, y1, mesh_height[si][sj], z1, width, vol_over, index, blood_mix, mud_mix);
@@ -1255,7 +1252,6 @@ void draw_spillover(vector<vert_norm_color> &verts, int i, int j, int si, int sj
 	}
 	if (count == XY_SUM_SIZE) cout << "Error: Exceeded iteration limit in draw_spillover()." << endl;
 	draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
-	disable_blend();
 }
 
 
