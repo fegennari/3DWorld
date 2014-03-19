@@ -250,7 +250,8 @@ public:
 	void setup_exp_scale() const;
 	void setup_exp_texture() const;
 	void end_exp_texture() const;
-	void end_specular()    const {if (specular_en) set_specular(0.0, 1.0);}
+	void set_uobj_specular(float spec, float shine) const;
+	void end_specular()    const {set_uobj_specular(0.0, 1.0);}
 	void inverse_rotate()  const;
 	void draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale=1.0,
 		float ar=1.0, vector3d const &stretch_dir=all_zeros) const;

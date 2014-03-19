@@ -17,6 +17,7 @@ string const shaders_dir = "shaders";
 string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
 
 extern bool fog_enabled;
+extern int is_cloudy;
 extern unsigned enabled_lights;
 extern float cur_fog_end;
 extern colorRGBA cur_fog_color;
@@ -311,6 +312,22 @@ void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_t
 
 void shader_t::set_color_e(colorRGBA const &color) {
 	add_uniform_color("emission", color); // cache the loc to make this faster?
+}
+
+
+void shader_t::set_specular_color(colorRGBA specular, float shininess) {
+
+	shininess = max(0.0f, min(128.0f, shininess));
+	if (is_cloudy && world_mode != WMODE_UNIVERSE) {specular *= 0.5;}
+
+	if (specular != last_spec) { // This materialfv stuff seems to take some time, so only set if changed since last call
+		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  &specular.R);
+		last_spec = specular;
+	}
+	if (shininess != last_shiny) {
+		glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, &shininess);
+		last_shiny = shininess;
+    }
 }
 
 

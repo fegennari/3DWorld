@@ -516,12 +516,15 @@ float get_water_z_height() {
 }
 
 
+float get_cur_temperature() {return (combined_gu ? univ_temp : init_temperature);}
+
+
 void update_temperature(bool verbose) {
 
 	if (camera_mode != 1) return; // camera in air, don't use altitude temp
 
 	// keep planet temperatures in combined landscape + universe
-	alt_temp = (combined_gu ? univ_temp : init_temperature);
+	alt_temp = get_cur_temperature();
 
 	if (read_landscape || read_heightmap || do_read_mesh) {
 		temperature = alt_temp;

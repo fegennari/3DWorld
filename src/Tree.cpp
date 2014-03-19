@@ -411,8 +411,6 @@ void tree_cont_t::check_leaf_shadow_change() {
 
 
 void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only) {
-
-	set_specular(0.1, 10.0);
 	
 	if (shader.is_setup()) {
 		shader.enable();
@@ -424,13 +422,14 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);
 		}
 	}
+	shader.set_specular(0.1, 10.0); // small amount of specular
 }
 
 
 void tree_cont_t::post_leaf_draw(shader_t &shader) {
 
+	shader.set_specular(0.0, 1.0);
 	shader.disable();
-	set_specular(0.0, 1.0);
 }
 
 

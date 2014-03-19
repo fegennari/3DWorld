@@ -25,12 +25,15 @@ class shader_t {
 	string shader_names[NUM_SHADER_TYPES];
 	int in_prim, out_prim, verts_out;
 
+	colorRGBA last_spec;
+	float last_shiny;
+
 	unsigned get_shader(string const &name, unsigned type) const;
 	static void print_shader_info_log(unsigned shader);
 	void print_program_info_log() const;
 
 public:
-	shader_t() : program(0), in_prim(0), out_prim(0), verts_out(0) {}
+	shader_t() : program(0), in_prim(0), out_prim(0), verts_out(0), last_spec(ALPHA0), last_shiny(-1.0) {}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
 
 	void set_vert_shader(string const &vs_name_) {shader_names[0] = vs_name_;}
@@ -94,6 +97,8 @@ public:
 
 	void set_color_e(colorRGBA const &color);
 	void clear_color_e() {set_color_e(BLACK);}
+	void set_specular_color(colorRGBA specular, float shininess);
+	void set_specular(float spec, float shine) {set_specular_color(colorRGBA(spec, spec, spec, 1.0), shine);}
 };
 
 

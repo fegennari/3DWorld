@@ -136,30 +136,6 @@ void draw_camera_weapon(bool want_has_trans) {
 }
 
 
-void set_specular_color(colorRGBA specular, float shininess) {
-
-	static colorRGBA last_spec(ALPHA0);
-	static float last_shiny(-1.0);
-	shininess = max(0.0f, min(128.0f, shininess));
-	if (is_cloudy && world_mode != WMODE_UNIVERSE) {specular *= 0.5;}
-
-	if (specular != last_spec) { // This materialfv stuff seems to take some time, so only set if changed since last call
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  &specular.R);
-		last_spec = specular;
-	}
-	if (shininess != last_shiny) {
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, &shininess);
-		last_shiny = shininess;
-    }
-}
-
-
-void set_specular(float specularity, float shininess) {
-
-	set_specular_color(colorRGBA(specularity, specularity, specularity, 1.0), shininess);
-}
-
-
 bool is_light_enabled(int l) {assert(l < 8); return ((enabled_lights & (1<<l)) != 0);}
 void enable_light    (int l) {assert(l < 8); enabled_lights |=  (1<<l);}
 void disable_light   (int l) {assert(l < 8); enabled_lights &= ~(1<<l);}
@@ -228,6 +204,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	s.add_uniform_float("min_alpha", min_alpha);
 	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
 	set_active_texture(0);
+	s.set_specular(0.0, 1.0);
 }
 
 
@@ -378,7 +355,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	//if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
 	shader_t s;
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, burn_offset);
-	set_specular(0.0, 1.0);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
 	vector<vert_norm> poly_verts;
@@ -496,8 +472,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		disable_blend();
 		draw_last.resize(0);
 	} // end draw_trans
+	s.set_specular(0.0, 1.0); // reset (may be unnecessary)
 	s.end_shader();
-	set_specular(0.0, 1.0);
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }
 
@@ -659,7 +635,6 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 void draw_sky(int order) {
 
 	if (atmosphere < 0.01) return; // no atmosphere
-	set_specular(0.0, 1.0);
 	float radius(0.55*(FAR_CLIP+X_SCENE_SIZE));
 	point center((camera_mode == 1) ? surface_pos : mesh_origin);
 	center.z -= 0.727*radius;
@@ -711,6 +686,7 @@ void draw_sky(int order) {
 	s.begin_shader();
 	s.add_uniform_float("min_alpha", 0.0);
 	s.add_uniform_int("tex0", 0);
+	s.set_specular(0.0, 1.0);
 	cloud_color.do_glColor();
 	select_texture(CLOUD_TEX);
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);

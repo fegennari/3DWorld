@@ -60,7 +60,6 @@ void display_inf_terrain(float uw_depth);
 void update_temperature(bool verbose);
 void update_sound_loops();
 bool indir_lighting_updated();
-colorRGBA get_tt_water_color();
 
 
 void glClearColor_rgba(const colorRGBA &color) {

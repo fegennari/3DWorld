@@ -586,7 +586,7 @@ class water_renderer {
 
 public:
 	water_renderer(int ix, int iy, int cz) : check_zvals(cz), tex_scale(W_TEX_SCALE0/Z_SCENE_SIZE) {}
-	void draw();
+	void draw(shader_t &shader);
 };
 
 
@@ -665,9 +665,9 @@ void water_renderer::draw_sides(unsigned ix) {
 }
 
 
-void water_renderer::draw() { // modifies color
+void water_renderer::draw(shader_t &shader) { // modifies color
 
-	select_water_ice_texture(color);
+	select_water_ice_texture(shader, color);
 	set_fill_mode();
 	enable_blend();
 	point const camera(get_camera_pos());
@@ -683,14 +683,14 @@ void water_renderer::draw() { // modifies color
 		draw_sides(sides[i].second); // draw back to front
 	}
 	disable_blend();
-	set_specular(0.0, 1.0);
+	shader.set_specular(0.0, 1.0);
 }
 
 
-void draw_water_sides(int check_zvals) {
+void draw_water_sides(shader_t &shader, int check_zvals) {
 
 	water_renderer wr(resolution, resolution, check_zvals);
-	wr.draw();
+	wr.draw(shader);
 }
 
 
@@ -708,17 +708,6 @@ void set_water_plane_uniforms(shader_t &s) {
 	s.add_uniform_float("wave_time",      wave_time);
 	s.add_uniform_float("wave_amplitude", water_params.wave_amp*min(1.0, 1.5*wind.mag())); // No waves if (temperature < W_FREEZE_POINT)?
 	s.add_uniform_float("water_plane_z",  water_plane_z);
-}
-
-
-colorRGBA get_tt_water_color() {
-
-	colorRGBA color;
-	select_water_ice_texture(color, (combined_gu ? &univ_temp : &init_temperature), 1, 2.0); // 2x specular
-	blend_color(color, colorRGBA(0.15, 0.1, 0.05, 1.0), color, water_params.mud, 0); // blend in mud color
-	color.alpha *= water_params.alpha;
-	color       *= water_params.bright;
-	return color;
 }
 
 
@@ -744,6 +733,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	s.add_uniform_float("mesh_z_scale",     mesh_scale);
 	set_water_plane_uniforms(s);
+	if (no_specular) {s.set_specular(0.0, 1.0);} else {set_tt_water_specular(s);}
 	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
 
 	// waves (as normal maps)
@@ -769,17 +759,15 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const no_specular(light_factor <= 0.4 || (get_sun_pos().z - sun_radius) < water_plane_z); // no sun or it's below the water level
 	colorRGBA const color(get_tt_water_color());
 
-	if (animate2 && (combined_gu ? univ_temp : init_temperature) > W_FREEZE_POINT) {
+	if (animate2 && get_cur_temperature() > W_FREEZE_POINT) {
 		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
 		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
 		wave_time  += fticks;
 	}
-	if (no_specular) {set_specular(0.0, 1.0);}
 	point const camera(get_camera_pos());
 	setup_water_plane_texgen(1.0, 1.0);
 	set_fill_mode();
 	enable_blend();
-	shader_t s;
 	colorRGBA rcolor;
 	set_active_texture(0);
 
@@ -795,6 +783,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);
 	bool const rain_mode(add_waves && is_rain_enabled());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
+	shader_t s;
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
 	s.add_uniform_float("normal_z", ((camera.z < zval) ? -1.0 : 1.0));
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
@@ -812,7 +801,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		s.end_shader();
 	}
 	disable_blend();
-	set_specular(0.0, 1.0);
 }
 
 

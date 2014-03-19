@@ -265,8 +265,8 @@ public:
 	}
 	void disable_planet() {
 		if (is_setup()) {
-			disable();
 			set_specular(0.0, 1.0);
+			disable();
 		}
 	}
 
@@ -316,8 +316,8 @@ public:
 	}
 	void disable_ring() {
 		if (is_setup()) {
-			set_specular(0.0, 1.0);
 			disable();
+			set_specular(0.0, 1.0);
 		}
 	}
 

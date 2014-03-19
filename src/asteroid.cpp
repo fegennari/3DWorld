@@ -1419,9 +1419,9 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 	for (unsigned i = 0; i < 2; ++i) { // mixed rock and ice
 		glPushMatrix();
 		ddata.color_a = (i ? colorRGBA(2.0, 1.2, 1.0, 1.0) : WHITE); // less blue for ice
-		if (i == 1) {set_specular(0.8, 50.0);} // not sure if this actually works
+		if (i == 1) {ddata.set_uobj_specular(0.8, 50.0);} // not sure if this actually works
 		asteroid_model_gen.get_asteroid((inst_ids[i] + i) % NUM_AST_MODELS)->draw_with_texture(ddata, comet_tids[i], 1);
-		if (i == 1) {set_specular(0.0, 1.0);}
+		if (i == 1) {ddata.end_specular();}
 		glPopMatrix();
 	}
 	end_texture();

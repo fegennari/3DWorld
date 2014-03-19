@@ -797,7 +797,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (alpha_tid >= 0) enable_blend();
 		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
 		shader.add_uniform_float("min_alpha", min_alpha);
-		if (ns > 0.0) {set_specular_color(ks, ns);} // ns<=0 is undefined?
+		if (ns > 0.0) {shader.set_specular_color(ks, ns);} else {shader.set_specular(0.0, 1.0);} // ns<=0 is undefined?
 		shader.set_color_e(colorRGBA(ke, alpha));
 		// Note: ka is ignored here because it represents a "fake" lighting model;
 		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material
@@ -805,7 +805,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		geom.render(shader, 0);
 		geom_tan.render(shader, 0);
 		shader.clear_color_e();
-		if (ns > 0.0) {set_specular(0.0, 1.0);}
+		if (ns > 0.0) {shader.set_specular(0.0, 1.0);}
 		if (alpha_tid >= 0) disable_blend();
 	}
 }
@@ -1203,6 +1203,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_m
 			select_texture(unbound_tid);
 			unbound_color.do_glColor();
 			shader.add_uniform_float("min_alpha", 0.0);
+			shader.set_specular(0.0, 1.0);
 		}
 		unbound_geom.render(shader, is_shadow_pass);
 	}
@@ -1346,7 +1347,6 @@ void model3ds::render(bool is_shadow_pass) {
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
 	set_fill_mode();
-	set_specular(0.0, 1.0);
 	bool needs_alpha_test(0), needs_bump_maps(0);
 
 	for (const_iterator m = begin(); m != end(); ++m) {
@@ -1372,9 +1372,9 @@ void model3ds::render(bool is_shadow_pass) {
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (shader_effects ? (1 << bmap_pass) : 3));
 		}
+		s.set_specular(0.0, 1.0); // reset (may be unnecessary)
 		s.end_shader();
 	}
-	set_specular(0.0, 1.0);
 }
 
 

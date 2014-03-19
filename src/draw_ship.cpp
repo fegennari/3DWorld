@@ -209,22 +209,21 @@ void uobj_draw_data::draw_bounding_sphere(colorRGBA const &color) const { // unu
 
 
 void uobj_draw_data::setup_exp_scale() const {
-
 	if (t_exp > 0.0) {uniform_scale(1.0 + 0.25*(1.0 - t_exp));} // t_exp drops from 1.0 to 0.0
 }
 
-
 void uobj_draw_data::setup_exp_texture() const {
-
 	if (shader && t_exp > 0.0) { // drops from 1.0 to 0.0 (burn offset -0.75 to 0.5)
 		shader->add_uniform_float("burn_offset", (-0.75*t_exp + 0.5*(1.0 - t_exp)));
 	}
 }
 
-
 void uobj_draw_data::end_exp_texture() const {
-
 	if (shader && t_exp > 0.0) {shader->add_uniform_float("burn_offset", -1.0);}
+}
+
+void uobj_draw_data::set_uobj_specular(float spec, float shine) const {
+	if (shader && specular_en) {shader->set_specular(spec, shine);}
 }
 
 
@@ -687,7 +686,7 @@ void uobj_draw_data::draw_us_frigate() const {
 	color_b.do_glColor();
 	glPushMatrix();
 	glScalef(0.9, 0.6, 0.8);
-	if (specular_en) set_specular(0.5, 80.0);
+	set_uobj_specular(0.5, 80.0);
 	draw_sphere_vbo(point(0.0, 0.0, 0.1), 1.0, ndiv, 0); // center
 	end_specular();
 	glPopMatrix();
@@ -738,7 +737,7 @@ void uobj_draw_data::draw_us_destroyer() const {
 	set_cloak_color(RED);
 	
 	if (ndiv > 5) { // nose
-		if (specular_en) set_specular(0.5, 80.0);
+		set_uobj_specular(0.5, 80.0);
 		draw_sphere_vbo(point(0.0, 0.0, 1.13), 0.2, ndiv25, 0, 1);
 		end_specular();
 	}
@@ -986,7 +985,7 @@ void uobj_draw_data::draw_us_carrier() const {
 		color_b.do_glColor();
 		set_ship_texture(VSTRIPE_TEX);
 		draw_cylin_fast(0.03, 0.03, 0.1, ndiv, 1, 1.0, 0.18);
-		if (specular_en) set_specular(0.4, 50.0);
+		set_uobj_specular(0.4, 50.0);
 		draw_sphere_vbo(point(0.0, 0.0, 0.28), 0.07, get_ndiv(ndiv/3), 1); // control tower
 		end_specular();
 	}
@@ -1062,7 +1061,7 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 	float const aratio(0.45), xys(aratio*crs);
 	glPushMatrix();
 	glScalef(xys, xys, crs);
-	if (specular_en) set_specular(0.3, 40.0);
+	set_uobj_specular(0.3, 40.0);
 	surface_mesh.draw_perturbed_sphere(all_zeros, 1.0, ndiv, 1); // colors change with stencil shadows when textured???
 	end_specular();
 	glPopMatrix();
@@ -1146,7 +1145,7 @@ void uobj_draw_data::draw_defsat() const {
 
 	// draw solar panels
 	color_b.do_glColor();
-	if (specular_en) set_specular(0.8, 90.0);
+	set_uobj_specular(0.8, 90.0);
 	select_texture(PARTB_TEX);
 	
 	for (unsigned i = 0; i < 2; ++i) {
@@ -1695,7 +1694,7 @@ void uobj_draw_data::draw_abomination() const {
 	float const val(obj->get_state_val()); // 0.0 => fully closed, 1.0 => fully open
 	unsigned const ndiv32(3*ndiv/2), eyelid_ndiv(min(32, 2*ndiv));
 	setup_draw_ship();
-	if (specular_en) set_specular(0.8, 80.0);
+	set_uobj_specular(0.8, 80.0);
 	glTranslatef(0.0, 0.0, 2.0);
 
 	if (val > 0.0) {
@@ -1741,7 +1740,7 @@ void uobj_draw_data::draw_abomination() const {
 
 void uobj_draw_data::draw_reaper() const {
 
-	if (specular_en) set_specular(0.9, 90.0);
+	set_uobj_specular(0.9, 90.0);
 	setup_draw_ship();
 	if (can_have_engine_lights()) setup_point_light(all_zeros, color_b, 5.0*radius, ENGINE_DEF_LIGHT);
 	cobj_vector_t const &cobjs(obj->get_cobjs());
@@ -1769,7 +1768,7 @@ void uobj_draw_data::draw_reaper() const {
 
 void uobj_draw_data::draw_death_orb() const {
 
-	if (specular_en) set_specular(0.9, 90.0);
+	set_uobj_specular(0.9, 90.0);
 	setup_draw_ship();
 	if (ndiv > 3) draw_sphere_vbo(all_zeros, 0.5, ndiv, 0);
 	end_specular();
@@ -1947,7 +1946,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	if (rotated) glRotatef(-90.0, 1.0, 0.0, 0.0); // rotate so that "up" is in +y
 	if (mothership) glScalef(1.0, 1.0, 0.75);
 	color_b.do_glColor(); // WHITE?
-	if (specular_en) set_specular(0.9, 90.0);
+	set_uobj_specular(0.9, 90.0);
 	if (pt_light) setup_point_light(point(0.0, 0.0, -0.5), color_a, 3.0*radius, ENGINE_DEF_LIGHT);
 	set_ship_texture(SPACESHIP2_TEX);
 	glPushMatrix();
@@ -2033,11 +2032,11 @@ void uobj_draw_data::draw_headhunter() const {
 	}
 
 	// draw body
-	if (specular_en) set_specular(0.9, 90.0);
+	set_uobj_specular(0.9, 90.0);
 	color_b.do_glColor();
 	glScalef(0.2, 0.2, 1.7); // Note: push/pop not needed since this is the last draw
 	draw_sphere_vbo(point(0.0, 0.0, 0.03), 1.0, ndiv, 0);
-	if (specular_en) set_specular(0.0, 0.0);
+	set_uobj_specular(0.0, 0.0);
 	glPopMatrix(); // undo invert_z()
 
 	if (is_moving() && !(eflags & 1)) { // draw engine glow

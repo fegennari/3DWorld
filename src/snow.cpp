@@ -757,7 +757,7 @@ void draw_snow() {
 	s.add_uniform_int("tex0", 0);
 	if (use_smap) set_smap_shader_for_all_lights(s);
 
-	set_specular(0.5, 50.0);
+	s.set_specular(0.5, 50.0);
 	SNOW_COLOR.do_glColor();
 	point const camera(get_camera_pos());
 	select_texture(SNOW_TEX); // detail texture (or could use NOISE_TEX)
@@ -766,7 +766,7 @@ void draw_snow() {
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
 	snow_draw.draw();
 	glDisable(GL_PRIMITIVE_RESTART);
-	set_specular(0.0, 1.0);
+	s.set_specular(0.0, 1.0);
 	s.end_shader();
 	//PRINT_TIME("Snow Draw");
 }

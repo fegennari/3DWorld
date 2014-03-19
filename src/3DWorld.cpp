@@ -298,7 +298,6 @@ void set_gl_params() {
 	glDepthFunc(GL_LESS);
 	set_std_blend_mode();
 	glEnable(GL_DEPTH_TEST);
-	set_specular(0.0, 1.0);
 }
 
 

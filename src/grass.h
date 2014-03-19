@@ -50,8 +50,8 @@ public:
 	void add_grass_blade(point const &pos, float cscale, bool on_mesh);
 	void create_new_vbo();
 	void add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const;
-	void begin_draw(float spec_weight) const;
-	void end_draw() const;
+	void begin_draw(shader_t &shader, float spec_weight) const;
+	void end_draw(shader_t &shader) const;
 };
 
 

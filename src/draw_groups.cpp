@@ -57,33 +57,33 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
-					   float angle, float cd_scale, unsigned char type);
+					   float angle, float cd_scale, unsigned char type, shader_t &shader);
 colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale);
 
 int same_team(int source, int target); // gameplay
 
 
 
-void set_obj_specular(unsigned flags, float specular_brightness) {
+void set_obj_specular(unsigned flags, float specular_brightness, shader_t &shader) {
 
 	if (flags & SPECULAR) {
-		set_specular(specular_brightness, 50.0);
+		shader.set_specular(specular_brightness, 50.0);
 	}
 	else if (flags & LOW_SPECULAR) {
-		set_specular(0.4*specular_brightness, 10.0);
+		shader.set_specular(0.4*specular_brightness, 10.0);
 	}
 }
 
 
-void check_drawing_flags(unsigned flags, int init_draw) {
+void check_drawing_flags(unsigned flags, int init_draw, shader_t &shader) {
 
 	if (init_draw) {
-		set_obj_specular(flags, 0.5*brightness);
+		set_obj_specular(flags, 0.5*brightness, shader);
 		if (flags & BLEND) enable_blend();
 	}
 	else {
 		if (flags & BLEND) disable_blend();
-		if (flags & (SPECULAR | LOW_SPECULAR)) set_specular(0.0, 1.0);
+		if (flags & (SPECULAR | LOW_SPECULAR)) {shader.set_specular(0.0, 1.0);}
 	}
 }
 
@@ -240,9 +240,7 @@ void draw_select_groups(int solid) {
 	cobj_z_bias       = orig_czb;
 
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
-		set_specular(0.0, 1.0); // disable
 		select_texture(object_types[SNOW].tid);
-		check_drawing_flags(object_types[SNOW].flags, 1);
 		glDepthMask(GL_FALSE);
 		shader_t s;
 		s.setup_enabled_lights(2, 1); // VS
@@ -254,10 +252,12 @@ void draw_select_groups(int solid) {
 		s.add_uniform_float("size", 2.0*object_types[SNOW].radius);
 		s.add_uniform_int("tex0", 0);
 		s.add_uniform_float("min_alpha", 0.0);
+		check_drawing_flags(object_types[SNOW].flags, 1, s);
+		s.set_specular(0.0, 1.0); // disable
 		snow_pld.draw_and_clear();
+		check_drawing_flags(object_types[SNOW].flags, 0, s);
 		s.end_shader();
 		glDepthMask(GL_TRUE);
-		check_drawing_flags(object_types[SNOW].flags, 0);
 	}
 }
 
@@ -394,7 +394,7 @@ void draw_and_clear_tris(vector<vert_norm_color> &vn, vector<vert_norm_tc_color>
 void draw_group(obj_group &objg, shader_t &s) {
 
 	RESET_TIME;
-	set_specular(0.0, 1.0); // disable
+	s.set_specular(0.0, 1.0); // disable
 	set_fill_mode();
 	int const type(objg.get_ptype());
 	obj_type const &otype(object_types[type]);
@@ -404,7 +404,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 	bool do_texture(select_texture(tid));
 	colorRGBA color(otype.color);
 	color.do_glColor();
-	check_drawing_flags(flags, 1);
+	check_drawing_flags(flags, 1, s);
 	int const clip_level((type == SMILEY || type == LANDMINE || type == ROCKET || type == BALL) ? 2 : 0);
 	unsigned num_drawn(0);
 
@@ -428,10 +428,10 @@ void draw_group(obj_group &objg, shader_t &s) {
 			num_drawn += (unsigned)ordering.size();
 			sort(ordering.begin(), ordering.end()); // sort by texture id
 			int last_tid(-1);
-			set_specular(0.1, 10.0);
 			if (s.is_setup()) {s.disable();}
 			shader_t ls;
 			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1); // TSL=1
+			ls.set_specular(0.1, 10.0);
 			static quad_batch_draw qbd;
 
 			for (unsigned j = 0; j < ordering.size(); ++j) {
@@ -463,9 +463,9 @@ void draw_group(obj_group &objg, shader_t &s) {
 				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], leaf_color, cross_product(dirs[0], dirs[1]).get_norm());
 			} // for j
 			qbd.draw_and_clear();
+			ls.set_specular(0.0, 1.0);
 			ls.end_shader();
 			if (s.is_setup()) {s.enable();} // back to the original shader
-			set_specular(0.0, 1.0);
 		}
 	} // leaf
 	else if (objg.large_radius()) { // large objects
@@ -509,13 +509,13 @@ void draw_group(obj_group &objg, shader_t &s) {
 			draw_ammo(objg, radius, color, wap_vis_objs[1][k].ndiv, j, s);
 		}
 		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {
-			check_drawing_flags(otype.flags, 1);
+			check_drawing_flags(otype.flags, 1, s);
 			select_texture(tid);
 		}
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < wap_vis_objs[j].size(); ++k) {
 				wap_obj const &wa(wap_vis_objs[j][k]);
-				set_obj_specular(flags, 0.5*brightness);
+				set_obj_specular(flags, 0.5*brightness, s);
 				dwobject const &obj(objg.get_obj(wa.id));
 				color.do_glColor();
 				//draw_subdiv_sphere(obj.pos, radius, wa.ndiv, 0, 0);
@@ -561,7 +561,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			switch (type) {
 			case SHELLC:
 				set_color_v2(color2, obj.status);
-				draw_shell_casing(pos, obj.orientation, obj.init_dir, tradius, obj.angle, cd_scale, obj.direction);
+				draw_shell_casing(pos, obj.orientation, obj.init_dir, tradius, obj.angle, cd_scale, obj.direction, s);
 				break;
 			case STAR5:
 				set_color_v2(color2, obj.status);
@@ -645,7 +645,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			s.add_uniform_float("emissive_scale", 0.0); // reset
 		}
 	} // small object
-	check_drawing_flags(flags, 0);
+	check_drawing_flags(flags, 0, s);
 	select_no_texture();
 
 	if (SHOW_DRAW_TIME) {
@@ -754,7 +754,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 	int const atype(get_ammo_or_obj((int)obj.direction));
 
 	if (atype >= 0) {
-		check_drawing_flags(object_types[atype].flags, 1);
+		check_drawing_flags(object_types[atype].flags, 1, shader);
 		object_types[atype].color.do_glColor();
 		bool const textured(select_texture(object_types[atype].tid));
 		bool const cull_face(get_cull_face(atype, color));
@@ -1277,7 +1277,7 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 
 
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
-					   float angle, float cd_scale, unsigned char type)
+					   float angle, float cd_scale, unsigned char type, shader_t &shader)
 {
 	assert(type == 0 || type == 1);
 	float const point_size(cd_scale/distance_to_camera(pos));
@@ -1290,17 +1290,17 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	uniform_scale(radius); // Note: needs 2-sided lighting
 
 	if (type == 0) { // M16 shell casing
-		set_specular_color(GOLD, 50.0);
+		shader.set_specular_color(GOLD, 50.0);
 		draw_cylinder(4.0, 1.0, 1.0, ndiv);
 	}
 	else { // shotgun shell casing
 		RED.do_glColor();
 		draw_fast_cylinder(point(0.0, 0.0, -2.0), point(0.0, 0.0,  2.8), 1.2,  1.2,  ndiv, 0);
 		GOLD.do_glColor();
-		set_specular_color(GOLD, 50.0);
+		shader.set_specular_color(GOLD, 50.0);
 		draw_fast_cylinder(point(0.0, 0.0, -2.8), point(0.0, 0.0, -1.2), 1.28, 1.28, ndiv, 0);
-		set_obj_specular(object_types[SHELLC].flags, 0.5*brightness); // reset
 	}
+	set_obj_specular(object_types[SHELLC].flags, 0.5*brightness, shader); // reset
 	if (point_size > 1.0) {draw_circle_normal(0, ((type == 0) ? 1.0 : 1.28), ndiv, 0, ((type == 0) ? 0.0 : -2.8));}
 	glPopMatrix();
 }

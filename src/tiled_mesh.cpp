@@ -1711,7 +1711,6 @@ void tile_draw_t::draw(bool reflection_pass) {
 
 	//cout << "zmin: " << zmin << ", zmax: " << zmax << ", wpz: " << water_plane_z << endl; // TESTING
 	//RESET_TIME;
-	set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
 	unsigned num_trees(0);
 	unsigned long long mem(0), tree_mem(0);
 	to_draw.clear();
@@ -1794,6 +1793,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 	shader_t s;
 	setup_mesh_draw_shaders(s, reflection_pass);
 	s.add_uniform_float("spec_scale", 1.0);
+	s.set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
 	set_fill_mode();
 	set_array_client_state(1, 0, 0, 0);
 	enable_blend(); // for fog transparency
@@ -1873,8 +1873,9 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
 	s.add_uniform_float("radius_scale", calc_tree_size());
 	s.add_uniform_float("ambient_scale", 1.5);
-	set_specular(0.2, 8.0);
+	s.set_specular(0.2, 8.0);
 	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass);
+	s.set_specular(0.0, 1.0);
 	s.end_shader();
 	disable_blend();
 
@@ -1889,15 +1890,16 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 		glEnableVertexAttribArray(xlate_loc);
 		glVertexAttribDivisor(xlate_loc, 1);
 	}
+	s.set_specular(0.2, 8.0);
 	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass, xlate_loc);
 	assert(tree_trunk_pts.empty());
+	s.set_specular(0.0, 1.0);
 	
 	if (xlate_loc >= 0) {
 		glVertexAttribDivisor(xlate_loc, 0);
 		glDisableVertexAttribArray(xlate_loc);
 	}
 	s.end_shader();
-	set_specular(0.0, 1.0);
 
 	// nearby trunks
 	setup_tt_fog_pre(s);
@@ -1993,9 +1995,9 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 		lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+ads_lighting.part*+noise_dither.part+tree_leaves_billboard");
 		billboard_tree_shader_setup(lrs);
 		lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-		set_specular(0.1, 10.0);
+		lrs.set_specular(0.1, 10.0);
 		lod_renderer.render_billboards(0);
-		set_specular(0.0, 1.0);
+		lrs.set_specular(0.0, 1.0);
 		lrs.end_shader();
 	}
 	if (lod_renderer.has_branches()) { // draw branch billboards
@@ -2040,7 +2042,6 @@ void tile_draw_t::draw_scenery(bool reflection_pass) {
 void tile_draw_t::draw_grass(bool reflection_pass) {
 
 	if (reflection_pass) return; // no grass refletion (yet)
-	grass_tile_manager.begin_draw(0.1);
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 
@@ -2065,6 +2066,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		s.add_uniform_float("dist_const", get_grass_thresh());
 		s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
 		setup_cloud_plane_uniforms(s);
+		grass_tile_manager.begin_draw(s, 0.1);
 		set_tile_xy_vals(s);
 
 		int const lt_loc(s.get_attrib_loc("local_translate"));
@@ -2078,9 +2080,9 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		}
 		glVertexAttribDivisor(lt_loc, 0);
 		glDisableVertexAttribArray(lt_loc);
+		grass_tile_manager.end_draw(s);
 		s.end_shader();
 	}
-	grass_tile_manager.end_draw();
 }
 
 

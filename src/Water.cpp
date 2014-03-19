@@ -104,6 +104,7 @@ extern vector3d up_norm, wind, total_wind;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
+extern water_params_t water_params;
 
 
 void calc_water_normals();
@@ -159,27 +160,32 @@ void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 }
 
 
-void select_water_ice_texture(colorRGBA &color, float *use_this_temp, bool set_avg_color_instead, float specular_scale) {
+void select_water_ice_texture(shader_t &shader, colorRGBA &color) {
 
-	int tid(-1);
-
-	if (((use_this_temp != NULL) ? *use_this_temp : temperature) > W_FREEZE_POINT) { // water
-		tid = WATER_TEX;
-		set_specular(specular_scale*w_spec[0][0], specular_scale*w_spec[0][1]);
-		color = WATER_C;
-	}
-	else { // ice
-		tid = ICE_TEX;
-		set_specular(specular_scale*w_spec[1][0], specular_scale*w_spec[1][1]);
-		color = ICE_C;
-	}
-	if (set_avg_color_instead) {
-		color = color.modulate_with(texture_color(tid));
-	}
-	else {
-		select_texture(tid);
-	}
+	bool const is_ice(temperature <= W_FREEZE_POINT);
+	select_texture(is_ice ? ICE_TEX : WATER_TEX);
+	shader.set_specular(w_spec[is_ice][0], w_spec[is_ice][1]);
+	color  = (is_ice ? ICE_C : WATER_C);
 	color *= DARK_WATER_ATTEN;
+}
+
+
+void set_tt_water_specular(shader_t &shader) {
+
+	bool const is_ice(get_cur_temperature() <= W_FREEZE_POINT);
+	shader.set_specular(2.0*w_spec[is_ice][0], 2.0*w_spec[is_ice][1]); // 2x specular
+}
+
+
+colorRGBA get_tt_water_color() {
+
+	bool const is_ice(get_cur_temperature() <= W_FREEZE_POINT);
+	colorRGBA color((is_ice ? ICE_C : WATER_C).modulate_with(texture_color(is_ice ? ICE_TEX : WATER_TEX)));
+	color *= DARK_WATER_ATTEN;
+	blend_color(color, colorRGBA(0.15, 0.1, 0.05, 1.0), color, water_params.mud, 0); // blend in mud color
+	color.alpha *= water_params.alpha;
+	color       *= water_params.bright;
+	return color;
 }
 
 
@@ -425,10 +431,10 @@ void draw_water() {
 	if (DEBUG_WATER_TIME) {PRINT_TIME("1 WSD Init");}
 
 	// draw exterior water (oceans)
-	if (camera.z >= water_plane_z) {draw_water_sides(1);}
+	if (camera.z >= water_plane_z) {draw_water_sides(s, 1);}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
 	enable_blend();
-	select_water_ice_texture(color);
+	select_water_ice_texture(s, color);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
 	color.alpha *= 0.5;
 	wsd.set_big_water(1);
@@ -454,9 +460,9 @@ void draw_water() {
 	}
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	disable_blend();
-	set_specular(0.0, 1.0);
+	s.set_specular(0.0, 1.0);
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
-	if (camera.z < water_plane_z) {draw_water_sides(1);}
+	if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
 	
 	if (!no_grass()) {
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -499,7 +505,7 @@ void draw_water() {
 	unsigned nin(0);
 	int xin[4], yin[4], last_wsi(-1);
 	bool const disp_snow((display_mode & 0x40) && temperature <= SNOW_MAX_TEMP);
-	select_water_ice_texture(color);
+	select_water_ice_texture(s, color);
 	color *= INT_WATER_ATTEN; // attenuate for interior water
 	colorRGBA wcolor(color);
 	wsd.set_big_water(0);
@@ -550,14 +556,14 @@ void draw_water() {
 								if (last_water != 0) { // snow
 									wsd.flush_triangles();
 									select_texture(SNOW_TEX);
-									set_specular(0.6, 20.0);
+									s.set_specular(0.6, 20.0);
 									last_water = 0;
 									color      = WHITE;
 								}
 							}
 							else if (last_water != 1) {
 								wsd.flush_triangles();
-								select_water_ice_texture(color);
+								select_water_ice_texture(s, color);
 								color *= INT_WATER_ATTEN; // attenuate for interior water
 								last_water = 1;
 							}
@@ -600,7 +606,7 @@ void draw_water() {
 	} // for i
 	wsd.flush_triangles();
 	disable_blend();
-	set_specular(0.0, 1.0);
+	s.set_specular(0.0, 1.0);
 	s.end_shader();
 	update_water_volumes();
 	if (!lc0 && rand()%5 != 0) landscape_changed = 0; // reset, only update landscape 20% of the time
