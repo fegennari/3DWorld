@@ -1992,7 +1992,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 	if (lod_renderer.has_leaves()) { // draw leaf billboards
 		shader_t lrs;
 		lrs.set_vert_shader("tree_leaves_billboard");
-		lrs.set_frag_shader("linear_fog.part+leaf_lighting_comp.part*+ads_lighting.part*+noise_dither.part+tree_leaves_billboard");
+		lrs.set_frag_shader("linear_fog.part+ads_lighting.part*+leaf_lighting_comp.part*+noise_dither.part+tree_leaves_billboard");
 		billboard_tree_shader_setup(lrs);
 		lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 		lrs.set_specular(0.1, 10.0);

@@ -459,8 +459,6 @@ void draw_water() {
 		draw_outside_water_range(wsd, color, 0, 0, xend, yend, 1, 1);
 	}
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
-	disable_blend();
-	s.set_specular(0.0, 1.0);
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 	if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
 	

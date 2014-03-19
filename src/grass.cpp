@@ -652,7 +652,7 @@ public:
 		s.set_prefix("#define NO_DL_SPECULAR", 1); // FS ???
 		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 		s.set_vert_shader("wind.part*+grass_texture.part+grass_pp_dl");
-		s.set_frag_shader("linear_fog.part+dynamic_lighting.part*+ads_lighting.part*+shadow_map.part*+grass_with_dlights");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+grass_with_dlights");
 		//s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass_texture.part+grass");
 		//s.set_frag_shader("linear_fog.part+textured_with_fog");
 		s.begin_shader();

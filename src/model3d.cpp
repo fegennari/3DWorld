@@ -797,7 +797,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (alpha_tid >= 0) enable_blend();
 		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
 		shader.add_uniform_float("min_alpha", min_alpha);
-		if (ns > 0.0) {shader.set_specular_color(ks, ns);} else {shader.set_specular(0.0, 1.0);} // ns<=0 is undefined?
+		if (ns > 0.0) {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
 		shader.set_color_e(colorRGBA(ke, alpha));
 		// Note: ka is ignored here because it represents a "fake" lighting model;
 		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material
@@ -1368,6 +1368,7 @@ void model3ds::render(bool is_shadow_pass) {
 		}
 		else {
 			s.begin_simple_textured_shader(0.0, 1); // with lighting
+			s.set_specular(0.0, 1.0);
 		}
 		for (iterator m = begin(); m != end(); ++m) { // non-const
 			m->render(s, is_shadow_pass, (shader_effects ? (1 << bmap_pass) : 3));

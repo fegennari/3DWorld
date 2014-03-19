@@ -273,7 +273,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 		end_group(last_group_id);
 	}
 	if (!in_group || start_group) { // should be the same across groups
-		shader.set_specular(cp.specular, cp.shine); // Note: cache previous values here?
+		shader.set_specular(cp.specular, cp.shine);
 		cp.color.do_glColor();
 	}
 	if (tid != last_tid) {
