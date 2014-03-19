@@ -31,3 +31,7 @@ static error check (analysis)
 
 Better pine tree texture
 Revisit tiled terrain heightmap texture?
+
+update_valleys() immediate mode?
+Fix asteroid fragment lighting
+Planet ring shadows are wrong
