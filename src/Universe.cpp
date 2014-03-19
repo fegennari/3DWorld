@@ -259,7 +259,8 @@ public:
 			add_uniform_float("water_val",  body.water);
 			add_uniform_float("lava_val",   body.lava);
 		}
-		add_uniform_vector3d("cloud_freq", (body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 1.0)));
+		float const cf_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : UNIV_NCLIP_SCALE);
+		add_uniform_vector3d("cloud_freq", cf_scale*(body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 1.0)));
 		set_planet_uniforms((body.gas_giant ? 0.5 : 1.0)*body.atmos, svars, use_light2);
 		return 1;
 	}
@@ -2297,13 +2298,14 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		ndiv = min(ndiv, (int)SPHERE_MAX_ND); // final clamp
 	}
 	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
+	// Note: the following line *must* be before the local transforms are applied as it captures the current MVM in the call
+	if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);} // always WHITE
 	assert(ndiv > 0);
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
 		
 	if (texture) { // texture map
-		usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2); // always WHITE
 		assert(tid > 0);
 		(gas_giant ? bind_1d_texture(tid) : bind_2d_texture(tid));
 	}

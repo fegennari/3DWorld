@@ -107,7 +107,7 @@ void main()
 	}
 #endif
 	if (atmosphere > 0.0) {
-		float cloud_val = atmosphere*gen_cloud_alpha(cloud_freq*world_space_pos);
+		float cloud_val = atmosphere*gen_cloud_alpha(cloud_freq*vertex);
 		if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
 	}
 	gl_FragColor = gl_Color * vec4((color + emission.rgb), 1.0);
