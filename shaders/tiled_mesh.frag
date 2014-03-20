@@ -25,7 +25,7 @@ float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) 
 	return t*distance(src_pos, targ_pos);
 }
 
-vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in float spec, in float shininess) {
+vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in float spec, in float shininess) {
 	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
 	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0), shininess);
 }
@@ -58,7 +58,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	
 	// compute the ambient and diffuse lighting
 	vec4 color = a_scale*gl_LightSource[i].ambient + ds_scale*max(dot(normal, light_dir), 0.0)*gl_LightSource[i].diffuse;
-	if (enable_light0) {color += get_light_specular(normal, light_dir, epos.xyz, ds_scale*spec, shininess);}
+	if (enable_light0) {color += get_light_specular_comp(normal, light_dir, epos.xyz, ds_scale*spec, shininess);}
 	
 #ifdef HAS_WATER
 	if (vertex.z < water_plane_z) { // underwater

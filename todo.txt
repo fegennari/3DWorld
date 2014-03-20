@@ -7,7 +7,6 @@ Remove deprecated OpenGL calls:
 http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Color*
  - Color/Normal/TexCoord/VertexPointer, Enable/DisableClientState
- - Material* - set_specular()
  - Light*, LIGHTi
  - Non-sprite points
  - GL_QUADS

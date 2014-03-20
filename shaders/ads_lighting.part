@@ -1,11 +1,13 @@
 uniform float ambient_scale = 1.0;
+uniform vec4 specular_color = vec4(0,0,0,1); // enocded as {color.rgb, shininess}
+float get_shininess() {return specular_color.a;}
 
-vec4 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec4 spec_color) {
-	vec3 half_vect  = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
+vec3 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec3 spec_light_color) {
+	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
 #ifdef USE_SPEC_MAP
-	spec_color.rgb *= get_spec_color();
+	spec_light_color *= get_spec_color();
 #endif
-	return spec_color * pow(max(dot(normal, half_vect), 0.0), gl_FrontMaterial.shininess);
+	return spec_light_color * specular_color.rgb * pow(max(dot(normal, half_vect), 0.0), get_shininess());
 }
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later
@@ -24,43 +26,42 @@ void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir,
 vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale)
 {
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
-	vec3 eye_pos   = epos.xyz;
-	vec3 light_dir = normalize(gl_LightSource[i].position.xyz - eye_pos);
-	maybe_apply_bump_map_self_shadowed(normal, light_dir, eye_pos);
-	vec4 diffuse = gl_Color * gl_LightSource[i].diffuse;
-	vec4 ambient = gl_Color * gl_LightSource[i].ambient;
+	vec3 light_dir = normalize(gl_LightSource[i].position.xyz - epos.xyz);
+	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
+	vec3 diffuse = (gl_Color * gl_LightSource[i].diffuse).rgb;
+	vec3 ambient = (gl_Color * gl_LightSource[i].ambient).rgb;
 #ifdef NO_SPECULAR
-	vec4 specular = vec4(0.0);
+	vec3 specular = vec3(0.0);
 #else
-	vec4 specular = get_light_specular(normal, light_dir, eye_pos, gl_FrontLightProduct[i].specular);
+	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, gl_LightSource[i].specular.rgb);
 #endif
-	return (ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
+	return vec4((ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), gl_Color.a);
 }
 
 vec4 add_light_comp_pos_scaled0(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale) {
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
-	vec4 diffuse = gl_Color * gl_LightSource[0].diffuse;
-	vec4 ambient = gl_Color * gl_LightSource[0].ambient;
+	vec3 diffuse = (gl_Color * gl_LightSource[0].diffuse).rgb;
+	vec3 ambient = (gl_Color * gl_LightSource[0].ambient).rgb;
 #ifdef NO_SPECULAR
-	vec4 specular = vec4(0.0);
+	vec3 specular = vec3(0.0);
 #else
-	vec4 specular = get_light_specular(normal, light_dir, epos.xyz, gl_FrontLightProduct[0].specular);
+	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, gl_LightSource[0].specular.rgb);
 #endif
-	return (ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
+	return vec4((ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), gl_Color.a);
 }
 
 vec4 add_light_comp_pos_scaled1(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale) {
 	vec3 light_dir = normalize(gl_LightSource[1].position.xyz - epos.xyz);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
-	vec4 diffuse = gl_Color * gl_LightSource[1].diffuse;
-	vec4 ambient = gl_Color * gl_LightSource[1].ambient;
+	vec3 diffuse = (gl_Color * gl_LightSource[1].diffuse).rgb;
+	vec3 ambient = (gl_Color * gl_LightSource[1].ambient).rgb;
 #ifdef NO_SPECULAR
-	vec4 specular = vec4(0.0);
+	vec3 specular = vec3(0.0);
 #else
-	vec4 specular = get_light_specular(normal, light_dir, epos.xyz, gl_FrontLightProduct[1].specular);
+	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, gl_LightSource[1].specular.rgb);
 #endif
-	return (ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular));
+	return vec4((ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), gl_Color.a);
 }
 
 vec4 add_light_comp_pos (in vec3 normal, in vec4 epos, in int i) {return add_light_comp_pos_scaled (normal, epos, i, 1.0, 1.0);}

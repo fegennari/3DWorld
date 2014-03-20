@@ -93,8 +93,8 @@ void main()
 
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
-	float specval  = pow(max(dot(norm, half_vect), 0.0), gl_FrontMaterial.shininess);
-	color         += ((water_val > 0.0) ? 1.0 : 0.0) * gl_FrontLightProduct[0].specular.rgb * specval * pow(texel.b, 4.0) * sscale;
+	float specval  = pow(max(dot(norm, half_vect), 0.0), get_shininess());
+	color         += ((water_val > 0.0) ? 1.0 : 0.0) * gl_LightSource[0].specular.rgb*specular_color.rgb * specval * pow(texel.b, 4.0) * sscale;
 
 	if (lava_val > 0.0) {
 		float heat = max(0.0, (texel.r - texel.g - texel.b));

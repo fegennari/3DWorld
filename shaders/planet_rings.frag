@@ -7,12 +7,12 @@ varying vec3 normal, world_space_pos, vertex;
 varying vec2 tc;
 
 
-vec4 add_light_rings(in vec3 n, in vec4 epos)
+vec3 add_light_rings(in vec3 n, in vec4 epos)
 {
 	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz); // normalize the light's direction in eye space
-	vec4 diffuse   = gl_Color * gl_LightSource[0].diffuse;
-	vec4 ambient   = gl_Color * gl_LightSource[0].ambient;
-	vec4 specular  = get_light_specular(n, light_dir, epos.xyz, gl_FrontLightProduct[0].specular);
+	vec3 diffuse   = (gl_Color * gl_LightSource[0].diffuse).rgb;
+	vec3 ambient   = (gl_Color * gl_LightSource[0].ambient).rgb;
+	vec3 specular  = get_light_specular(n, light_dir, epos.xyz, gl_LightSource[0].specular.rgb);
 	float atten    = calc_light_atten0(epos);
 	if (sun_radius > 0.0) {atten *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, planet_pos, planet_radius);} // sun exists
 	return (ambient + (abs(dot(n, light_dir))*diffuse + specular)) * atten;
@@ -33,7 +33,7 @@ void main()
 	vec2 tcs   = 16*tc;
 	vec3 norm2 = normalize(normal + vec3(texture2D(noise_tex, tcs).r-0.5, texture2D(noise_tex, tcs+vec2(0.4,0.7)).r-0.5, texture2D(noise_tex, tcs+vec2(0.3,0.8)).r-0.5));
 	vec4 color = vec4(0,0,0,1);
-	color.rgb += add_light_rings(norm2, epos).rgb; // ambient, diffuse, and specular
+	color.rgb += add_light_rings(norm2, epos); // ambient, diffuse, and specular
 	color.rgb += (gl_Color * gl_LightSource[1].ambient).rgb; // ambient only
 
 	float alpha = texture2D(particles_tex, 23 *tc).r;

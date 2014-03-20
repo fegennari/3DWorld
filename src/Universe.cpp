@@ -303,6 +303,7 @@ public:
 		select_multitex(NOISE_GEN_MIPMAP_TEX, 1, 0);
 		select_multitex(SPARSE_NOISE_TEX,     2, 1);
 		enable();
+		set_specular(0.5, 50.0);
 		add_uniform_vector3d("planet_pos", planet_pos);
 		add_uniform_float("planet_radius", planet.radius);
 		add_uniform_float("ring_ri",       planet.ring_ri);
@@ -312,13 +313,12 @@ public:
 		add_uniform_float("bf_draw_sign",  (dir ? -1.0 : 1.0));
 		add_uniform_vector3d("camera_pos", make_pt_global(get_player_pos()));
 		upload_mvm_to_shader(*this, "world_space_mvm");
-		set_specular(0.5, 50.0);
 		return 1;
 	}
 	void disable_ring() {
 		if (is_setup()) {
-			disable();
 			set_specular(0.0, 1.0);
+			disable();
 		}
 	}
 
@@ -936,7 +936,6 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								planet.ensure_rings_texture();
 								planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
 							}
-							usg.disable_ring_shader();
 							disable_blend();
 							glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 						}
@@ -950,7 +949,6 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							}
 							glDisable(GL_CULL_FACE);
 							disable_blend();
-							usg.disable_atmospheric_shader();
 						}
 					} // pass
 				} // sol_draw_pass
@@ -2495,6 +2493,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	scale_by(rscale);
 	draw_tquad(ring_ro, ring_ro, 0.0);
 	glPopMatrix();
+	usg.disable_ring_shader();
 }
 
 
@@ -2507,6 +2506,7 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 	apply_gl_rotate();
 	draw_sphere_vbo(all_zeros, 1.01*cloud_radius, max(4, min(32, int(4.0*size_))), 1);
 	glPopMatrix();
+	usg.disable_atmospheric_shader();
 }
 
 

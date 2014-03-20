@@ -315,19 +315,17 @@ void shader_t::set_color_e(colorRGBA const &color) {
 }
 
 
-void shader_t::set_specular_color(colorRGBA specular, float shininess) {
+void shader_t::set_specular_color(colorRGB const &specular, float shininess) {
 
+	assert(is_setup());
 	shininess = max(0.0f, min(128.0f, shininess));
-	if (is_cloudy && world_mode != WMODE_UNIVERSE) {specular *= 0.5;}
+	colorRGBA spec_shine(specular, shininess); // pack specular.rgb and shininess together
+	if (is_cloudy && world_mode != WMODE_UNIVERSE) {spec_shine *= 0.5;}
 
-	if (specular != last_spec) { // This materialfv stuff seems to take some time, so only set if changed since last call
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  &specular.R);
-		last_spec = specular;
+	if (spec_shine != last_spec) {
+		add_uniform_color("specular_color", spec_shine);
+		last_spec = spec_shine;
 	}
-	if (shininess != last_shiny) {
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, &shininess);
-		last_shiny = shininess;
-    }
 }
 
 
