@@ -87,8 +87,9 @@ int get_universe_ambient_light() {
 void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	glLightfv(light, GL_AMBIENT, &ambient.R);
-	glLightfv(light, GL_DIFFUSE, &diffuse.R);
+	glLightfv(light, GL_AMBIENT,  &ambient.R);
+	glLightfv(light, GL_DIFFUSE,  &diffuse.R);
+	glLightfv(light, GL_SPECULAR, &diffuse.R); // set specular lighting equal to diffuse lighting
 	gl_light_params[light - GL_LIGHT0].ambient = ambient;
 	gl_light_params[light - GL_LIGHT0].diffuse = diffuse;
 }
