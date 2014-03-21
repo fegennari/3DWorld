@@ -103,18 +103,16 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &da
 	assert(ix <= data.size());
 }
 
-void grass_manager_t::begin_draw(shader_t &shader, float spec_weight) const {
+void grass_manager_t::begin_draw() const {
 
 	assert(vbo > 0);
 	bind_vbo(vbo);
 	grass_data_t::set_vbo_arrays();
 	select_texture(GRASS_BLADE_TEX);
-	shader.set_specular(spec_weight, 20.0);
 }
 
-void grass_manager_t::end_draw(shader_t &shader) const {
+void grass_manager_t::end_draw() const {
 
-	shader.set_specular(0.0, 1.0);
 	bind_vbo(0);
 	check_gl_error(40);
 }
@@ -664,6 +662,7 @@ public:
 		s.add_uniform_int("tex0", 0);
 		s.setup_fog_scale();
 		s.add_uniform_float("height", grass_length);
+		s.set_specular(0.2, 20.0);
 	}
 
 	// texture units used: 0: grass texture, 1: wind texture
@@ -685,7 +684,7 @@ public:
 		// check for dynamic light sources
 		shader_t s;
 		setup_shaders(s, 1); // enables lighting and shadows as well
-		begin_draw(s, 0.2);
+		begin_draw();
 
 		// draw the grass
 		bool last_visible(0);
@@ -760,7 +759,7 @@ public:
 				draw_range(mesh_to_grass_map[*i], mesh_to_grass_map[(*i)+1]);
 			}
 		}
-		end_draw(s);
+		end_draw();
 		s.end_shader();
 		//PRINT_TIME("Draw Grass");
 	}

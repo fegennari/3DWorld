@@ -673,6 +673,7 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	}
 	prog_name_prefix.clear();
 	attrib_locs.clear();
+	last_spec = ALPHA0;
 }
 
 

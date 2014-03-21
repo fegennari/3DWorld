@@ -2065,8 +2065,9 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		s.add_uniform_float("height", grass_length);
 		s.add_uniform_float("dist_const", get_grass_thresh());
 		s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
+		s.set_specular(0.1, 20.0);
 		setup_cloud_plane_uniforms(s);
-		grass_tile_manager.begin_draw(s, 0.1);
+		grass_tile_manager.begin_draw();
 		set_tile_xy_vals(s);
 
 		int const lt_loc(s.get_attrib_loc("local_translate"));
@@ -2080,7 +2081,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		}
 		glVertexAttribDivisor(lt_loc, 0);
 		glDisableVertexAttribArray(lt_loc);
-		grass_tile_manager.end_draw(s);
+		grass_tile_manager.end_draw();
 		s.end_shader();
 	}
 }
