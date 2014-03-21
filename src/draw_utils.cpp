@@ -11,12 +11,20 @@ extern int window_height;
 
 void set_array_client_state(bool va, bool tca, bool na, bool ca) {
 
+#if 0
+	bool const enables[4] = {va, na, ca, tca}; // layout is fixed to: fg_Vertex=0, fg_Normal=1, fg_Color=2, fg_TexCoord=3
+
+	for (unsigned i = 0; i < 4; ++i) {
+		if (enables[i]) {glEnableVertexAttribArray(i);} else {glDisableVertexAttribArray(i);}
+	}
+#else
 	bool const enables[4] = {va, tca, na, ca};
 	int  const arrays [4] = {GL_VERTEX_ARRAY, GL_TEXTURE_COORD_ARRAY, GL_NORMAL_ARRAY, GL_COLOR_ARRAY};
 
 	for (unsigned i = 0; i < 4; ++i) {
 		if (enables[i]) {glEnableClientState(arrays[i]);} else {glDisableClientState(arrays[i]);}
 	}
+#endif
 }
 
 
@@ -178,10 +186,17 @@ void vert_norm_tc::set_state() const {
 void vert_norm_tc_color::set_state() const {
 	set_array_client_state(1, 1, 1, 1);
 	unsigned const stride(sizeof(*this));
+#if 0
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, &v); // vertex
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, &n); // normal
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride, &t); // tex coord
+	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, stride, &c); // color
+#else
 	glVertexPointer  (3, GL_FLOAT,         stride, &v);
 	glNormalPointer  (   GL_FLOAT,         stride, &n);
 	glTexCoordPointer(2, GL_FLOAT,         stride, &t);
 	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, &c);
+#endif
 }
 
 void vert_tc_color::set_state() const {

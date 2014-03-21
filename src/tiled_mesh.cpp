@@ -1146,8 +1146,8 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	assert(vbo > 0 && ivbo[lod_level] != 0);
 	bind_vbo(vbo, 0);
 	bind_vbo(ivbo[lod_level], 1);
-	unsigned const step(1 << lod_level), isz_ceil((size + step - 1)/step), ptr_stride(sizeof(vert_type_t));
-	glVertexPointer(3, GL_FLOAT, ptr_stride, 0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
+	unsigned const step(1 << lod_level), isz_ceil((size + step - 1)/step);
+	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
 	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, isz_ceil*(2*isz_ceil + 3), GL_UNSIGNED_INT, 0);
 	bind_vbo(0, 1); // unbind index buffer
 	vector<unsigned> crack_ixs;
