@@ -14,7 +14,8 @@ bool const DEBUG_SHADER = 0; // print final generated shaders
 bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
-string const shader_name_table[NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
+string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
+string const shader_prefix_files[NUM_SHADER_TYPES] = {/*"common_header"*/"", "", "", "", ""}; // always included
 
 extern bool fog_enabled;
 extern int is_cloudy;
@@ -239,13 +240,13 @@ bool shader_t::add_attrib_int(unsigned ix, int val) const {
 void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
 	assert(num <= 8);
-	prog_name_suffix.push_back(',');
-	prog_name_suffix.push_back('L');
+	prog_name_prefix.push_back(',');
+	prog_name_prefix.push_back('L');
 	char name[14] = "enable_light0";
 
 	for (unsigned i = 0; i < num; ++i) { // 0=sun, 1=moon, ...
 		bool const enabled(is_light_enabled(i));
-		prog_name_suffix.push_back(enabled ? '1' : '0');
+		prog_name_prefix.push_back(enabled ? '1' : '0');
 		name[12] = char('0'+i);
 		set_bool_prefixes(name, enabled, shaders_enabled);
 	}
@@ -277,10 +278,10 @@ void shader_t::check_for_fog_disabled() {
 void shader_t::set_prefix(char const *const prefix, unsigned shader_type) {
 
 	assert(shader_type < NUM_SHADER_TYPES);
-	prog_name_suffix.push_back(',');
-	prog_name_suffix.push_back('s');
-	prog_name_suffix.push_back('0'+shader_type);
-	prog_name_suffix += prefix;
+	prog_name_prefix.push_back(',');
+	prog_name_prefix.push_back('s');
+	prog_name_prefix.push_back('0'+shader_type);
+	prog_name_prefix += prefix;
 	prepend_string[shader_type] += prefix;
 	prepend_string[shader_type].push_back('\n');
 }
@@ -440,7 +441,6 @@ public:
 
 	static void get_shader_filenames(string const &name, unsigned type, vector<string> &fns) {
 		assert(type < NUM_SHADER_TYPES);
-		string const shader_prefix_files[NUM_SHADER_TYPES] = {"", "", "", "", ""}; // always included
 		if (!shader_prefix_files[type].empty()) {fns.push_back(shader_prefix_files[type]);} // add first, if nonempty
 		filename_split(name, fns, '+');
 
@@ -586,9 +586,9 @@ bool shader_t::begin_shader(bool do_enable) {
 
 	//RESET_TIME;
 	// get the program
-	string pname(prog_name_suffix);
-	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {pname += shader_names[i] + ",";} // unique program identifier
-	program_t &prog(shader_manager.get_program_by_name(pname));
+	string input_shaders;
+	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {input_shaders += shader_names[i] + ",";} // unique program identifier
+	program_t &prog(shader_manager.get_program_by_name(prog_name_prefix + input_shaders));
 
 	if (prog.valid) { // program already exists
 		program = prog.p;
@@ -620,14 +620,14 @@ bool shader_t::begin_shader(bool do_enable) {
 		glGetProgramiv(program, GL_LINK_STATUS, &status);
 
 		if (status != GL_TRUE) {
-			cerr << "Linking of program " << pname << " failed with status " << status << endl;
+			cerr << "Linking of program " << input_shaders << " failed with status " << status << endl;
 			print_program_info_log();
 			cout << endl;
 			exit(1);
 		}
 		if (PRINT_LOG) print_program_info_log();
 		prog = program_t(program, shader_ixs); // cache the program
-		//PRINT_TIME("Create Program"); // 90ms
+		//PRINT_TIME("Create Program");
 	}
 	if (do_enable) {enable();}
 	return 1;
@@ -671,7 +671,7 @@ void shader_t::end_shader() { // ok to call if not in a shader
 		prepend_string[i].clear();
 		shader_names[i].clear();
 	}
-	prog_name_suffix.clear();
+	prog_name_prefix.clear();
 	attrib_locs.clear();
 }
 

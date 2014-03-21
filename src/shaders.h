@@ -19,7 +19,7 @@ class shader_t {
 
 	unsigned program; // active program
 	string prepend_string[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4
-	string prog_name_suffix;
+	string prog_name_prefix;
 	vector<int> attrib_locs;
 
 	string shader_names[NUM_SHADER_TYPES];
