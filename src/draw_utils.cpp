@@ -214,12 +214,12 @@ void vert_color::set_state() const {
 	glColorPointer (4, GL_UNSIGNED_BYTE, stride, &c);
 }
 
-void vert_norm_color::set_state() const {
+void vert_norm_color::set_state(bool shadow_only) const {
 	unsigned const stride(sizeof(*this));
-	set_array_client_state(1, 0, 1, 1);
+	set_array_client_state(1, 0, !shadow_only, !shadow_only);
 	glVertexPointer(3, GL_FLOAT,         stride, &v);
-	glNormalPointer(   GL_FLOAT,         stride, &n);
-	glColorPointer (4, GL_UNSIGNED_BYTE, stride, &c);
+	if (!shadow_only) {glNormalPointer(   GL_FLOAT,         stride, &n);}
+	if (!shadow_only) {glColorPointer (4, GL_UNSIGNED_BYTE, stride, &c);}
 }
 
 void vert_norm_comp_color::set_state() const {

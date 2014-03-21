@@ -847,7 +847,7 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 					if (world_mode == WMODE_GROUND) {get_bark_color().do_glColor();}
 					if (!shadow_only) {select_texture(stt[type].bark_tid);}
 					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
-					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, 1);
+					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, !shadow_only);
 				}
 			}
 		}
@@ -883,7 +883,7 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 			draw_cube_map_sphere(all_zeros, width, N_SPHERE_DIV/2, 1); // slower, but looks better
 		}
 		else*/ {
-			draw_sphere_vbo(all_zeros, width, nsides, 1, (type == T_PALM));
+			draw_sphere_vbo(all_zeros, width, nsides, !shadow_only, (type == T_PALM));
 		}
 		glPopMatrix();
 	} // end mode
