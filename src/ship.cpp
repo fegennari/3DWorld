@@ -792,7 +792,7 @@ void draw_univ_objects() {
 		shader_t s;
 		s.begin_color_only_shader();
 		draw_crosshair_from_camera(universe_origin, MAGENTA); // starts off as player start marker - world origin
-		if (player_death_pos != universe_origin) draw_crosshair_from_camera(player_death_pos, ORANGE);
+		if (player_death_pos != universe_origin) {draw_crosshair_from_camera(player_death_pos, ORANGE);}
 		s.end_shader();
 	}
 	//PRINT_TIME("Draw");

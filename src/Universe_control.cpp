@@ -883,11 +883,11 @@ void urev_body::check_owner(s_object const &sobj) {
 }
 
 
-void urev_body::set_owner_color() const {
+colorRGBA urev_body::get_owner_color() const {
 
-	if (owner == NO_OWNER) return;
+	if (owner == NO_OWNER) return BLACK;
 	assert(unsigned(owner) < NUM_ALIGNMENT);
-	alignment_colors[owner].do_glColor();
+	return alignment_colors[owner];
 }
 
 

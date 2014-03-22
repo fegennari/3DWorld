@@ -158,19 +158,15 @@ void draw_crosshair_from_camera(point const &pos, colorRGBA const &color) {
 
 void draw_cobjs(cobj_vector_t const &cobjs, unsigned ndiv) {
 
-	colorRGBA(1.0, 1.0, 1.0, 0.25).do_glColor();
-
 	for (unsigned i = 0; i < cobjs.size(); ++i) {
 		assert(cobjs[i]);
 		cobjs[i]->draw(ndiv);
 	}
 }
 
-
 void us_class::draw_bounding_volume(unsigned ndiv) const {
 
 	if (cobjs.empty()) {
-		colorRGBA(1.0, 1.0, 1.0, 0.25).do_glColor();
 		bnd_sphere.draw(ndiv); // no special objects (incorrect for dynamic/growing objects)
 	}
 	else {
@@ -178,9 +174,7 @@ void us_class::draw_bounding_volume(unsigned ndiv) const {
 	}
 }
 
-
 void multipart_ship::draw_bounding_volume(unsigned ndiv) const {
-
 	draw_cobjs(cobjs, ndiv);
 }
 

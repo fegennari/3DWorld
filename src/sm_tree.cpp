@@ -844,7 +844,7 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 					}
 				}
 				else { // draw as cylinder
-					if (world_mode == WMODE_GROUND) {get_bark_color().do_glColor();}
+					if (!shadow_only && world_mode == WMODE_GROUND) {get_bark_color().do_glColor();}
 					if (!shadow_only) {select_texture(stt[type].bark_tid);}
 					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, !shadow_only);
@@ -855,10 +855,10 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 	if (mode & 2) { // leaves
 		assert(!is_pine_tree()); // handled through draw_pine_leaves()
 		// palm or decidious
-		color.do_glColor();
+		if (!shadow_only) {color.do_glColor();}
 		glPushMatrix();
 		translate_to(pos);
-		if (r_angle != 0.0) glRotatef(r_angle, rx, ry, 0.0);
+		if (r_angle != 0.0) {glRotatef(r_angle, rx, ry, 0.0);}
 
 		switch (type) { // draw leaves
 		case T_DECID: // decidious tree

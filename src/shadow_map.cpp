@@ -62,7 +62,7 @@ public:
 	void render() const {
 		if (num_verts2 == 0) return; // empty
 		shader_t s;
-		s.begin_color_only_shader();
+		s.begin_color_only_shader(WHITE); // Note: color is likely unused
 		assert(num_verts1 <= num_verts2);
 		assert(vbo_valid());
 		bind_vbo(vbo);
@@ -289,7 +289,6 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 		unsigned const orig_enabled_lights(enabled_lights);
 		enabled_lights = 0; // disable lighting so that shaders that auto-detect enabled lights don't try to do lighting
-		WHITE.do_glColor();
 		check_gl_error(202);
 
 		// add static objects

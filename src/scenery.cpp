@@ -829,7 +829,6 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 
 void s_plant::draw_berries(vector3d const &xlate) const {
 
-	//if (display_mode & 0x10) return; // TESTING
 	if (berries.empty()) return;
 	if (!sphere_in_camera_view(pos+xlate, (height + radius), 0)) return;
 	float const dist(distance_to_camera(pos+xlate));

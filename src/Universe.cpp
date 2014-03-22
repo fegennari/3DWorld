@@ -2246,8 +2246,8 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 		}
 		usg.enable_star_shader(colorA, colorB);
 		draw_sphere_vbo(all_zeros, radius, ndiv, 0); // small sphere - use vbo
-		usg.disable_star_shader();
 		if (world_mode == WMODE_UNIVERSE && size >= 64) {draw_flares(ndiv, 1);}
+		usg.disable_star_shader();
 		glPopMatrix();
 	} // end sphere draw
 	return 1;
@@ -2267,8 +2267,10 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	if (!univ_sphere_vis(pos_, radius))       return 1; // check if in the view volume
 		
 	if (universe_mode && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
-		set_owner_color(); // lighting is already disabled
+		shader_t s;
+		s.begin_color_only_shader(get_owner_color()); // too slow to set every time?
 		draw_sphere_vbo(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
+		s.end_shader();
 		return 1;
 	}
 	move_in_front_of_far_clip(pos_, camera, size, vcp_mag, 1.35);
@@ -2454,19 +2456,17 @@ void ustar::solar_flare::draw(float size, int ndiv, bool texture) const {
 
 void urev_body::show_colonizable_liveable(point const &pos_, float radius0) const {
 
-	if (liveable()) {
-		GREEN.do_glColor();
-	}
-	else if (colonizable()) {
-		RED.do_glColor();
-	}
-	else {
-		return;
-	}
+	colorRGBA color;
+	if      (liveable())    {color = GREEN;}
+	else if (colonizable()) {color = RED;}
+	else {return;}
+	shader_t s;
+	s.begin_color_only_shader(color); // to inefficient to create the shader every time?
 	glPushMatrix();
 	global_translate(pos_);
 	draw_sphere_vbo(all_zeros, 1.2*radius0, 12, 0);
 	glPopMatrix();
+	s.end_shader();
 }
 
 

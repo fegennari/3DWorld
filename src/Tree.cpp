@@ -162,9 +162,9 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 	render_tree_branches_to_texture_t(unsigned tsize_) : render_tree_to_texture_t(tsize_) {}
 
 	virtual void draw_geom(bool is_normal_pass) {
+		shaders[is_normal_pass].enable();
 		WHITE.do_glColor(); // branch color will be applied to the billboard later
 		select_texture(get_tree_type().bark_tex);
-		shaders[is_normal_pass].enable();
 		tree_data_t::pre_draw(1, 0);
 		cur_tree->draw_branches(0.0, 0);
 		tree_data_t::post_draw(1, 0);

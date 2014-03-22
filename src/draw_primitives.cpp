@@ -765,9 +765,8 @@ void rotate_towards_camera(point const &pos) {
 }
 
 
-void enable_flares(colorRGBA const &color, bool zoomed) { // used for clouds and smoke
+void enable_flares(bool zoomed) { // used for clouds and smoke
 
-	color.do_glColor();
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	enable_blend();
 	if (draw_model == 0) {select_texture(zoomed ? BLUR_CENT_TEX : BLUR_TEX);}

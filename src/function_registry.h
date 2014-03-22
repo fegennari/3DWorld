@@ -174,7 +174,7 @@ void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorR
 void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable_bfc=0);
 void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i=1.0, float tex_scale_o=1.0);
 void rotate_towards_camera(point const &pos);
-void enable_flares(colorRGBA const &color, bool zoomed=0);
+void enable_flares(bool zoomed=0);
 void disable_flares();
 void draw_tquad(float xsize, float ysize, float z);
 void draw_one_tquad(float x1, float y1, float x2, float y2, float z);

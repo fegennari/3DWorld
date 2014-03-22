@@ -551,7 +551,6 @@ void draw_moon() {
 	if (world_mode == WMODE_GROUND && show_fog) return; // don't draw when there is fog
 	point const pos(get_moon_pos());
 	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
-	WHITE.do_glColor();
 	colorRGBA const ambient(0.05, 0.05, 0.05, 1.0), diffuse(1.0*have_sun, 1.0*have_sun, 1.0*have_sun, 1.0);
 	set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
 	set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
@@ -560,6 +559,7 @@ void draw_moon() {
 	s.set_frag_shader("simple_texture");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
+	WHITE.do_glColor();
 	select_texture(MOON_TEX);
 	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
 	s.end_shader();
@@ -891,13 +891,13 @@ void draw_bubbles() {
 }
 
 
-void draw_part_clouds(vector<particle_cloud> const &pc, colorRGBA const &color, bool zoomed) {
+void draw_part_clouds(vector<particle_cloud> const &pc, bool zoomed) {
 
-	enable_flares(color, zoomed); // color will be set per object
+	enable_flares(zoomed);
 	//select_multitex(CLOUD_TEX, 1);
 	quad_batch_draw qbd;
 	draw_objects(pc, qbd);
-	qbd.draw();
+	qbd.draw(); // color will be set per object
 	disable_flares();
 	//set_active_texture(0);
 }
@@ -1114,7 +1114,7 @@ void draw_smoke_and_fires() {
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
-		draw_part_clouds(part_clouds, WHITE, 0); // smoke: slow when a lot of smoke is up close
+		draw_part_clouds(part_clouds, 0); // smoke: slow when a lot of smoke is up close
 	}
 	order_vect_t fire_order;
 	get_draw_order(fires, fire_order);
@@ -1222,7 +1222,7 @@ struct splash_ring_t {
 
 	splash_ring_t(point const &pos_, float size_, colorRGBA const &color_) : pos(pos_), size(size_), color(color_) {}
 
-	void draw() const {
+	void draw(shader_t &shader) const {
 		unsigned const num_rings(min(10U, (unsigned)ceil(size)));
 		float radius(min(size, 0.025f));
 		float const dr(0.5*radius);
@@ -1262,7 +1262,7 @@ void draw_splashes() {
 	set_fill_mode();
 
 	for (vector<splash_ring_t>::const_iterator i = splashes.begin(); i != splashes.end(); ++i) {
-		i->draw();
+		i->draw(s);
 	}
 	s.end_shader();
 	splashes.clear(); // only last one frame

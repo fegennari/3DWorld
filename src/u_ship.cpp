@@ -2659,8 +2659,11 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 
 	if (ddata.final_pass && ddata.phase2) {
 		glDisable(GL_STENCIL_TEST); // disable in case it's enabled
-		if (TEST_SHIP_BOUNDS) draw_bounding_volume(ddata.ndiv);
 
+		if (TEST_SHIP_BOUNDS) {
+			colorRGBA(1.0, 1.0, 1.0, 0.25).do_glColor();
+			draw_bounding_volume(ddata.ndiv);
+		}
 		if (SHOW_SHIELDS && show_shields()) { // draw shields if recently hit
 			glPopMatrix();
 			glPushMatrix();

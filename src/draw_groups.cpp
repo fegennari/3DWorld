@@ -40,21 +40,21 @@ extern int coll_id[];
 
 void draw_group(obj_group &objg, shader_t &s);
 void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, int is_chunky=0);
+					  bool do_texture, shader_t &shader, int is_chunky=0);
 void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader);
 void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type,
-					  int use_orient, int ndiv, float scale=1.0);
+					  int use_orient, int ndiv, shader_t &shader, float scale=1.0);
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
 				 float health, int id, mesh2d const *const mesh, shader_t &shader);
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader);
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix, shader_t &shader);
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, shader_t &shader);
-void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time);
-void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv);
+void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
+void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, shader_t &shader);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader);
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time, shader_t &shader);
-void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv);
-void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade);
+void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader);
+void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade, shader_t &shader);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, unsigned char type, shader_t &shader);
@@ -95,7 +95,7 @@ void set_emissive_only(colorRGBA const &color, shader_t &shader) {
 }
 
 
-void set_color_by_status(int status) {
+void set_color_by_status(int status, shader_t &shader) {
 
 	colorRGBA const colors[6] = {BLACK, RED, WHITE, YELLOW, BLUE, GRAY};
 	assert(status >= 0 && status < 6);
@@ -103,8 +103,8 @@ void set_color_by_status(int status) {
 }
 
 
-void set_color_v2(const colorRGBA &color, int status) {
-	if (DEBUG_COLORCODE) {set_color_by_status(status);} else {color.do_glColor();}
+void set_color_v2(const colorRGBA &color, int status, shader_t &shader) {
+	if (DEBUG_COLORCODE) {set_color_by_status(status, shader);} else {color.do_glColor();}
 }
 
 inline bool is_droplet(int type) {
@@ -285,19 +285,19 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		}
 		break;
 	case SFPART:
-		draw_smiley_part(pos, pos, obj.orientation, obj.direction, 1, ndiv);
+		draw_smiley_part(pos, pos, obj.orientation, obj.direction, 1, ndiv, shader);
 		break;
 	case CHUNK:
-		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), ndiv);
+		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), ndiv, shader);
 		break;
 	case SKULL:
 		draw_skull(pos, obj.orientation, radius, obj.status, ndiv, shader);
 		break;
 	case ROCKET:
-		draw_rocket(pos, obj.init_dir, radius, obj.type, ndiv, obj.time);
+		draw_rocket(pos, obj.init_dir, radius, obj.type, ndiv, obj.time, shader);
 		break;
 	case SEEK_D:
-		draw_seekd(pos, obj.init_dir, radius, obj.type, ndiv);
+		draw_seekd(pos, obj.init_dir, radius, obj.type, ndiv, shader);
 		break;
 	case LANDMINE:
 		draw_landmine(pos, radius, ndiv, obj.time, obj.source, in_ammo, shader);
@@ -306,10 +306,10 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_plasma(pos, pos, radius, (in_ammo ? 1.0 : obj.init_dir.x), ndiv, 1, !in_ammo, obj.time, shader);
 		break;
 	case GRENADE:
-		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), in_ammo, 0);
+		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), in_ammo, 0, shader);
 		break;
 	case CGRENADE:
-		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), in_ammo, 1);
+		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), in_ammo, 1, shader);
 		break;
 	case BALL:
 		// FIXME: this is the only place where drawing an object modifies its physics state, but it's difficult to move the code
@@ -482,7 +482,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			if (type == SMILEY) smiley_weapons_to_draw.push_back(j);
 
 			if (DEBUG_COLORCODE) {
-				set_color_by_status(obj.status);
+				set_color_by_status(obj.status, s);
 			}
 			else if (type != SMILEY && type != SFPART && type != ROCKET && type != CHUNK &&
 				type != LANDMINE && type != PLASMA && type != POWERUP && type != HEALTH && type != SHIELD)
@@ -560,11 +560,11 @@ void draw_group(obj_group &objg, shader_t &s) {
 			}
 			switch (type) {
 			case SHELLC:
-				set_color_v2(color2, obj.status);
+				set_color_v2(color2, obj.status, s);
 				draw_shell_casing(pos, obj.orientation, obj.init_dir, tradius, obj.angle, cd_scale, obj.direction, s);
 				break;
 			case STAR5:
-				set_color_v2(color2, obj.status);
+				set_color_v2(color2, obj.status, s);
 				draw_star(pos, obj.orientation, obj.init_dir, tradius, obj.angle, 1);
 				break;
 			case SHRAPNEL:
@@ -583,7 +583,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 					colorRGBA tcolor(get_textured_color(tid, color2));
 					color2 *= obj.orientation.y;
 					if (do_texture) {tcolor *= obj.orientation.y;}
-					draw_sized_point(obj, tradius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, (type == DIRT || type == ROCK));
+					draw_sized_point(obj, tradius, obj.orientation.x*cd_scale, color2, tcolor, do_texture, s, (type == DIRT || type == ROCK));
 					break;
 				}
 			case FRAGMENT: // draw_fragment()?
@@ -598,7 +598,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 					vert_wrap_t const lines[2] = {pos, pos2};
 					draw_verts(lines, 2, GL_LINES);
 				}
-				draw_sized_point(obj, tradius, cd_scale, color2, get_textured_color(tid, color2), do_texture, 0);
+				draw_sized_point(obj, tradius, cd_scale, color2, get_textured_color(tid, color2), do_texture, s, 0);
 			} // switch (type)
 		} // for j
 		sort(tri_fragments.begin(), tri_fragments.end()); // sort by tid
@@ -637,7 +637,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		for (vector<tid_color_to_ix_t>::const_iterator i = sphere_fragments.begin(); i != sphere_fragments.end(); ++i) {
 			dwobject &obj(objg.get_obj(i->ix));
 			select_texture(i->tid);
-			draw_sized_point(obj, obj.get_true_radius(), cd_scale, i->c, get_textured_color(tid, i->c), (i->tid >= 0), 2);
+			draw_sized_point(obj, obj.get_true_radius(), cd_scale, i->c, get_textured_color(tid, i->c), (i->tid >= 0), s, 2);
 		}
 		if (type == SHRAPNEL || type == PARTICLE) {
 			s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
@@ -656,7 +656,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 
 
 void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
-					  bool do_texture, int is_chunky)
+					  bool do_texture, shader_t &shader, int is_chunky)
 {
 	point pos(obj.pos);
 	point const camera(get_camera_pos());
@@ -699,7 +699,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 		obj_pld.add_pt(pos, n, (do_texture ? tcolor : color));
 		return;
 	}
-	set_color_v2(color, obj.status);
+	set_color_v2(color, obj.status, shader);
 	bool const cull_face(get_cull_face(type, color));
 	glPushMatrix();
 
@@ -819,7 +819,7 @@ inline void rotate_to_dir(vector3d const &dir) { // normalized to +y (for smiley
 }
 
 
-void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type, int use_orient, int ndiv, float scale) {
+void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type, int use_orient, int ndiv, shader_t &shader, float scale) {
 
 	assert(type < NUM_SMILEY_PARTS);
 	float const radius(scale*object_types[SFPART].radius);
@@ -867,7 +867,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		if (health > 10.0) {
 			float const scale((powerup == PU_SPEED) ? 1.5 : 1.0);
 			point const pos3 ((powerup == PU_SPEED) ? (pos2 + point(0.0, 0.2*radius, 0.0)) : pos2);
-			draw_smiley_part(pos3, pos, orient, SF_EYE, 0, ndiv2, scale); // eyes
+			draw_smiley_part(pos3, pos, orient, SF_EYE, 0, ndiv2, shader, scale); // eyes
 		}
 		else {
 			BLACK.do_glColor();
@@ -884,7 +884,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	// draw nose
 	if (powerup != PU_INVISIBILITY || same_team(id, -1)) { // show nose even if invisible if same team as player
 		point pos3(0.0, 1.1*radius, 0.0);
-		draw_smiley_part(pos3, pos, orient, SF_NOSE, 0, ndiv2); // nose
+		draw_smiley_part(pos3, pos, orient, SF_NOSE, 0, ndiv2, shader); // nose
 	}
 	float alpha(1.0);
 
@@ -992,7 +992,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	// draw tongue
 	if (sstates[id].kill_time < int(2*TICKS_PER_SECOND) || powerup == PU_DAMAGE) { // stick your tongue out at a dead enemy
 		point pos4(0.0, 0.8*radius, -0.4*radius);
-		draw_smiley_part(pos4, pos, orient, SF_TONGUE, 0, ndiv2);
+		draw_smiley_part(pos4, pos, orient, SF_TONGUE, 0, ndiv2, shader);
 	}
 	if (game_mode == 2 && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
 		select_texture(select_dodgeball_texture(id));
@@ -1068,7 +1068,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 }
 
 
-void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time) {
+void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader) {
 
 	glPushMatrix();
 	translate_to(pos);
@@ -1086,7 +1086,7 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 }
 
 
-void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv) {
+void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, shader_t &shader) {
 
 	glPushMatrix();
 	translate_to(pos);
@@ -1197,7 +1197,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 }
 
 
-void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv) {
+void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader) {
 
 	ndiv    = min(ndiv, max(3, int(3 + 1.5*(v.x + v.y + v.z))));
 	radius *= (0.5 + fabs(v.x));
@@ -1223,7 +1223,7 @@ void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d cons
 }
 
 
-void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade) {
+void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade, shader_t &shader) {
 
 	glPushMatrix();
 	translate_to(pos);
