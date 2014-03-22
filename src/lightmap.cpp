@@ -144,15 +144,6 @@ void light_source::combine_with(light_source const &l) {
 }
 
 
-void light_source::draw(int ndiv) const { // Note: unused
-
-	if (radius == 0.0) return;
-	color.do_glColor();
-	draw_sphere_vbo(pos, 0.05*radius, ndiv, 0);
-	if (pos2 != pos) {draw_sphere_vbo(pos2, 0.05*radius, ndiv, 0);} // line light source, draw both points
-}
-
-
 void shift_light_sources(vector3d const &vd) {
 
 	for (unsigned i = 0; i < light_sources.size(); ++i) {

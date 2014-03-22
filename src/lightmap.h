@@ -121,7 +121,6 @@ public:
 	bool is_dynamic()     const {return dynamic;}
 	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
 	void combine_with(light_source const &l);
-	void draw(int ndiv) const;
 	void pack_to_floatv(float *data) const;
 	bool try_merge_into(light_source &ls) const;
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
