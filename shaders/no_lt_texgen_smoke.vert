@@ -3,6 +3,7 @@ uniform mat4 world_space_mvm;
 uniform float tex_scale_s  = 1.0;
 uniform float tex_scale_t  = 1.0;
 uniform vec3 world_space_offset = vec3(0.0);
+uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 
 attribute vec4 tex0_s, tex0_t;
 
@@ -47,8 +48,7 @@ void main()
 #endif
 
 #ifdef DYNAMIC_SMOKE_SHADOWS
-	lpos0 = (gl_ModelViewMatrixInverse * gl_LightSource[0].position).xyz;
-	pt_pair res2 = clip_line(vpos, lpos0, smoke_bb);
+	pt_pair res2 = clip_line(vpos, sun_pos, smoke_bb);
 	lpos0 = res2.v1;
 	vposl = res2.v2;
 #endif

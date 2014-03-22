@@ -260,9 +260,12 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
-	if (use_mvm ) {upload_mvm_to_shader(s, "world_space_mvm");}
-	if (smoke_en) {s.add_uniform_color("smoke_color", colorRGB(GRAY));}
-
+	if (use_mvm) {upload_mvm_to_shader(s, "world_space_mvm");}
+	
+	if (smoke_en) {
+		if (DYNAMIC_SMOKE_SHADOWS) {s.add_uniform_vector3d("sun_pos", get_sun_pos());}
+		s.add_uniform_color("smoke_color", colorRGB(GRAY));
+	}
 	if (use_burn_mask) {
 		s.add_uniform_float("burn_tex_scale", 0.05); // FIXME: hard-coded
 		s.add_uniform_float("burn_offset", burn_offset);
