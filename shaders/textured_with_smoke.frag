@@ -20,7 +20,7 @@ const float SMOKE_SCALE = 0.25;
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
 vec3 add_light0(in vec3 n) {
-	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz); // Note: could drop the -epos.xyz for a directional light
+	vec3 light_dir = normalize(fg_LightSource[0].position.xyz - epos.xyz); // Note: could drop the -epos.xyz for a directional light
 	float nscale   = (use_shadow_map ? ((dot(n, light_dir) > 0.0) ? get_shadow_map_weight_light0(epos, n) : 0.0) : 1.0); // back-facing test
 
 #ifdef DYNAMIC_SMOKE_SHADOWS

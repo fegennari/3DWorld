@@ -2,6 +2,25 @@ uniform float ambient_scale = 1.0;
 uniform vec4 specular_color = vec4(0,0,0,1); // enocded as {color.rgb, shininess}
 float get_shininess() {return specular_color.a;}
 
+
+#ifdef USE_LIGHT_SOURCE_UNIFORMS
+struct fg_light_t {
+	vec4 position;
+	vec4 ambient;
+	vec4 diffuse;
+	vec4 specular;
+	float constantAttenuation;
+	float linearAttenuation;
+	float quadraticAttenuation;
+};
+
+const int MAX_LIGHTS = 8;
+uniform fg_light_t fg_LightSource[MAX_LIGHTS];
+#else
+#define fg_LightSource gl_LightSource
+#endif
+
+
 vec3 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec3 spec_light_color) {
 	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
 #ifdef USE_SPEC_MAP
@@ -26,40 +45,40 @@ void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir,
 vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale)
 {
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
-	vec3 light_dir = normalize(gl_LightSource[i].position.xyz - epos.xyz);
+	vec3 light_dir = normalize(fg_LightSource[i].position.xyz - epos.xyz);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
-	vec3 diffuse = (gl_Color * gl_LightSource[i].diffuse).rgb;
-	vec3 ambient = (gl_Color * gl_LightSource[i].ambient).rgb;
+	vec3 diffuse = (gl_Color * fg_LightSource[i].diffuse).rgb;
+	vec3 ambient = (gl_Color * fg_LightSource[i].ambient).rgb;
 #ifdef NO_SPECULAR
 	vec3 specular = vec3(0.0);
 #else
-	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, gl_LightSource[i].specular.rgb);
+	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, fg_LightSource[i].specular.rgb);
 #endif
 	return vec4((ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), gl_Color.a);
 }
 
 vec4 add_light_comp_pos_scaled0(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale) {
-	vec3 light_dir = normalize(gl_LightSource[0].position.xyz - epos.xyz);
+	vec3 light_dir = normalize(fg_LightSource[0].position.xyz - epos.xyz);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
-	vec3 diffuse = (gl_Color * gl_LightSource[0].diffuse).rgb;
-	vec3 ambient = (gl_Color * gl_LightSource[0].ambient).rgb;
+	vec3 diffuse = (gl_Color * fg_LightSource[0].diffuse).rgb;
+	vec3 ambient = (gl_Color * fg_LightSource[0].ambient).rgb;
 #ifdef NO_SPECULAR
 	vec3 specular = vec3(0.0);
 #else
-	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, gl_LightSource[0].specular.rgb);
+	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, fg_LightSource[0].specular.rgb);
 #endif
 	return vec4((ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), gl_Color.a);
 }
 
 vec4 add_light_comp_pos_scaled1(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale) {
-	vec3 light_dir = normalize(gl_LightSource[1].position.xyz - epos.xyz);
+	vec3 light_dir = normalize(fg_LightSource[1].position.xyz - epos.xyz);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
-	vec3 diffuse = (gl_Color * gl_LightSource[1].diffuse).rgb;
-	vec3 ambient = (gl_Color * gl_LightSource[1].ambient).rgb;
+	vec3 diffuse = (gl_Color * fg_LightSource[1].diffuse).rgb;
+	vec3 ambient = (gl_Color * fg_LightSource[1].ambient).rgb;
 #ifdef NO_SPECULAR
 	vec3 specular = vec3(0.0);
 #else
-	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, gl_LightSource[1].specular.rgb);
+	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, fg_LightSource[1].specular.rgb);
 #endif
 	return vec4((ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), gl_Color.a);
 }
@@ -74,13 +93,13 @@ vec4 add_light_comp1(in vec3 normal)           {return add_light_comp_pos1(norma
 
 
 float calc_light_atten(in vec4 epos, in int i) {
-	float dist  = distance(gl_LightSource[i].position, epos);
-	return 1.0 / (gl_LightSource[i].constantAttenuation + gl_LightSource[i].linearAttenuation * dist + gl_LightSource[i].quadraticAttenuation * dist * dist);
+	float dist  = distance(fg_LightSource[i].position, epos);
+	return 1.0 / (fg_LightSource[i].constantAttenuation + fg_LightSource[i].linearAttenuation * dist + fg_LightSource[i].quadraticAttenuation * dist * dist);
 }
 
 float calc_light_atten0(in vec4 epos) {
-	float dist  = distance(gl_LightSource[0].position, epos);
-	return 1.0 / (gl_LightSource[0].constantAttenuation + gl_LightSource[0].linearAttenuation * dist + gl_LightSource[0].quadraticAttenuation * dist * dist);
+	float dist  = distance(fg_LightSource[0].position, epos);
+	return 1.0 / (fg_LightSource[0].constantAttenuation + fg_LightSource[0].linearAttenuation * dist + fg_LightSource[0].quadraticAttenuation * dist * dist);
 }
 
 vec4 add_pt_light_comp(in vec3 normal, in vec4 epos, in int i) {

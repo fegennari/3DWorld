@@ -12,7 +12,7 @@ varying vec2 tc;
 
 vec4 add_light_comp(in vec3 vertex, in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale) {
 	if (apply_cloud_shadows) {
-		vec4 light = gl_ModelViewMatrixInverse * gl_LightSource[i].position; // world space
+		vec4 light = gl_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
 		vec3 cpos  = vertex + cloud_offset;
 		float t    = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
 		ds_scale  *= 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));

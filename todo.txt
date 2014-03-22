@@ -24,9 +24,12 @@ Fog increases in valleys
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
-Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm | use GLM
+Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
+GLM Noise
 Visual Studio profile
 static error check (analysis)
 
 Better pine tree texture
 Revisit tiled terrain heightmap texture?
+
+Auto-advance time (F7) stars + sun flare

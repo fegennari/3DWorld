@@ -72,9 +72,9 @@ void main()
 		}
 	}
 	vec3 norm      = normalize(normal); // renormalize
-	vec3 ldir0     = normalize(gl_LightSource[0].position.xyz - epos.xyz);
-	vec3 ldir2     = normalize(gl_LightSource[2].position.xyz - epos.xyz);
-	vec3 ldir20    = normalize(gl_LightSource[2].position.xyz - gl_LightSource[0].position.xyz);
+	vec3 ldir0     = normalize(fg_LightSource[0].position.xyz - epos.xyz);
+	vec3 ldir2     = normalize(fg_LightSource[2].position.xyz - epos.xyz);
+	vec3 ldir20    = normalize(fg_LightSource[2].position.xyz - fg_LightSource[0].position.xyz);
 	float lscale0  = (dot(norm, ldir0) > 0.0) ? 1.0 : 0.0;
 	float lscale2  = (dot(norm, ldir2) > 0.0) ? 1.0 : 0.0;
 
@@ -86,15 +86,15 @@ void main()
 #endif
 
 	vec3 epos_norm = normalize(epos.xyz);
-	vec3 ambient   = (gl_LightSource[0].ambient.rgb * atten0) + (gl_LightSource[1].ambient.rgb * light_scale[1]);
-	vec3 diffuse   = (gl_LightSource[0].diffuse.rgb * max(dot(norm, ldir0), 0.0) * lscale0 * sscale) +
-	                 (gl_LightSource[2].diffuse.rgb * max(dot(norm, ldir2), 0.0) * lscale2 * atten2 * max(dot(ldir2, ldir20), 0.0));
+	vec3 ambient   = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
+	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * max(dot(norm, ldir0), 0.0) * lscale0 * sscale) +
+	                 (fg_LightSource[2].diffuse.rgb * max(dot(norm, ldir2), 0.0) * lscale2 * atten2 * max(dot(ldir2, ldir20), 0.0));
 	vec3 color     = (texel.rgb * (ambient + diffuse));
 
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
 	float specval  = pow(max(dot(norm, half_vect), 0.0), get_shininess());
-	color         += ((water_val > 0.0) ? 1.0 : 0.0) * gl_LightSource[0].specular.rgb*specular_color.rgb * specval * pow(texel.b, 4.0) * sscale;
+	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * pow(texel.b, 4.0) * sscale;
 
 	if (lava_val > 0.0) {
 		float heat = max(0.0, (texel.r - texel.g - texel.b));
