@@ -8,10 +8,9 @@ varying vec4 color;
 
 // Note: these two functions assume the sun is a directional light
 vec4 apply_fog_colored(in vec4 color, in vec4 vertex, in float cscale) {
-	vec4 epos       = gl_ModelViewMatrix * vertex;
-	vec4 light_pos  = gl_ModelViewMatrix * vec4(sun_pos, 1.0);
+	vec3 eye        = gl_ModelViewMatrixInverse[3].xyz; // world space
 	float fog_scale = gl_FogFragCoord*get_custom_fog_scale(vertex.z);
-	return apply_fog_colored(color, fog_scale, -normalize(epos.xyz), -normalize(light_pos.xyz), cscale);
+	return apply_fog_colored(color, fog_scale, normalize(vertex.xyz - eye), normalize(sun_pos - eye), cscale);
 }
 
 void main()
