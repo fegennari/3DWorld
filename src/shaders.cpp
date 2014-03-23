@@ -253,6 +253,26 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 }
 
 
+void shader_t::upload_light_source(unsigned id) {
+
+/*
+	struct fg_light_t {
+		vec4 position;
+		vec4 ambient;
+		vec4 diffuse;
+		vec4 specular;
+		float constantAttenuation;
+		float linearAttenuation;
+		float quadraticAttenuation;
+	};
+	const int MAX_LIGHTS = 8;
+	uniform fg_light_t fg_LightSource[MAX_LIGHTS];
+*/
+	assert(id < MAX_SHADER_LIGHTS); // only supporting 8 light sources
+	// WRITE
+}
+
+
 void shader_t::setup_scene_bounds() const {
 
 	float const scene_zmin(get_zval_min()), scene_zmax(get_zval_max());

@@ -551,13 +551,6 @@ bool get_universe_sun_pos(point const &pos, point &spos) {
 }
 
 
-void clear_ambient_color() {
-
-	float const uambient[4] = {0.0, 0.0, 0.0, 0.0};
-	glLightfv(GL_LIGHT0+get_universe_ambient_light(), GL_AMBIENT, uambient); // light is not enabled or disabled
-}
-
-
 bool has_sun_lighting(point const &pos) {
 
 	s_object result;
@@ -579,6 +572,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 	point pos2(pos);
 	offset_pos(pos2);
 	float ambient_scale(ambient_scale_no_s);
+	bool ambient_color_set(0);
 
 	if (result.galaxy >= 0) { // close to a galaxy
 		pos2 -= result.get_ucell().pos;
@@ -595,15 +589,13 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 			if (result.cluster >= 0) {color = (color + result.get_cluster().color)*0.5;} // average galaxy and cluster colors
 			//atten_color(color, pos2, galaxy.pos, (galaxy.radius + MAX_SYSTEM_EXTENT), expand);
 		}
-		if (ambient_scale == 0.0) {
-			clear_ambient_color();
-		}
-		else {
+		if (ambient_scale > 0.0) {
 			set_ambient_color(color*ambient_scale);
+			ambient_color_set = 1;
 		}
 	}
-	else { // not near any galaxies
-		clear_ambient_color();
+	if (!ambient_color_set) {
+		set_light_a_color(GL_LIGHT0+get_universe_ambient_light(), BLACK); // light is not enabled or disabled
 	}
 	if (!found && !blend) { // no sun
 		set_light_galaxy_ambient_only();
@@ -3082,14 +3074,11 @@ void set_light_galaxy_ambient_only() {
 
 void set_ambient_color(colorRGBA const &color) {
 
-	float uambient[4];
-	enable_light(get_universe_ambient_light());
-
-	for (unsigned i = 0; i < 3; ++i) {
-		uambient[i] = GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i]);
-	}
-	uambient[3] = 1.0;
-	glLightfv(GL_LIGHT0+get_universe_ambient_light(), GL_AMBIENT, uambient);
+	int const light(get_universe_ambient_light());
+	enable_light(light);
+	colorRGBA ambient(BLACK);
+	UNROLL_3X(ambient[i_] = GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i_]);)
+	set_light_a_color(GL_LIGHT0+light, ambient);
 }
 
 

@@ -506,11 +506,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	setup_current_system(sun_intensity);
 	set_gl_light_pos(GL_LIGHT0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	disable_light(1); // no moonlight (for now)
-	
-	if (!have_sun || light_factor < 0.5) { // sun below horizon
-		glLightfv(GL_LIGHT0, GL_DIFFUSE,  &BLACK.R); // no diffuse
-		glLightfv(GL_LIGHT0, GL_SPECULAR, &BLACK.R); // no specular
-	}
+	if (!have_sun || light_factor < 0.5) {set_light_ds_color(GL_LIGHT0, BLACK);} // sun below horizon: no diffuse or specular
 	check_zoom(); // reset perspective
 	//light_factor = (PI + 2.0*asinf(dot_product(sun_pos.get_norm(), plus_z)))/TWO_PI; // shouldn't change much from previous light_factor
 

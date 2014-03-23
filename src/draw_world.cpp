@@ -27,14 +27,6 @@ struct sky_pos_orient {
 };
 
 
-struct gl_light_params_t {
-
-	point pos;
-	colorRGBA ambient, diffuse;
-	gl_light_params_t() : pos(all_zeros), ambient(BLACK), diffuse(BLACK) {}
-};
-
-
 // Global Variables
 float sun_radius, moon_radius, earth_radius, brightness(1.0);
 colorRGBA cur_ambient(BLACK), cur_diffuse(BLACK);
@@ -84,23 +76,32 @@ int get_universe_ambient_light() {
 }
 
 
-void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse) {
+void set_light_ds_color(int light, colorRGBA const &diffuse) {
+
+	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
+	glLightfv(light, GL_DIFFUSE,  &diffuse.R);
+	glLightfv(light, GL_SPECULAR, &diffuse.R); // set specular lighting equal to diffuse lighting
+	gl_light_params[light - GL_LIGHT0].set_ds(diffuse);
+}
+
+void set_light_a_color(int light, colorRGBA const &ambient) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	glLightfv(light, GL_AMBIENT,  &ambient.R);
-	glLightfv(light, GL_DIFFUSE,  &diffuse.R);
-	glLightfv(light, GL_SPECULAR, &diffuse.R); // set specular lighting equal to diffuse lighting
 	gl_light_params[light - GL_LIGHT0].ambient = ambient;
-	gl_light_params[light - GL_LIGHT0].diffuse = diffuse;
 }
 
+void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse) {
+
+	set_light_ds_color(light, diffuse);
+	set_light_a_color (light, ambient);
+}
 
 void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA const &diffuse) {
 
 	enable_light(light - GL_LIGHT0);
 	set_light_colors(light, ambient, diffuse);
 }
-
 
 void clear_colors_and_disable_light(int light) {
 
@@ -109,21 +110,20 @@ void clear_colors_and_disable_light(int light) {
 	set_light_colors(light, BLACK, BLACK);
 }
 
-
 void set_gl_light_pos(int light, point const &pos, float w) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	float const position[4] = {pos.x, pos.y, pos.z, w};
 	glLightfv(light, GL_POSITION, position);
-	gl_light_params[light - GL_LIGHT0].pos = pos;
+	gl_light_params[light - GL_LIGHT0].set_pos(pos, w);
 }
-
 
 void setup_gl_light_atten(int light, float c_a, float l_a, float q_a) {
 
 	glLightf(light, GL_CONSTANT_ATTENUATION,  c_a);
 	glLightf(light, GL_LINEAR_ATTENUATION,    l_a);
 	glLightf(light, GL_QUADRATIC_ATTENUATION, q_a);
+	gl_light_params[light - GL_LIGHT0].set_atten(c_a, l_a, q_a);
 }
 
 

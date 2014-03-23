@@ -89,6 +89,8 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12);
 void set_fill_mode();
 int get_universe_ambient_light();
 void set_gl_light_pos(int light, point const &pos, float w);
+void set_light_ds_color(int light, colorRGBA const &diffuse);
+void set_light_a_color(int light, colorRGBA const &ambient);
 void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse);
 void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA const &diffuse);
 void clear_colors_and_disable_light(int light);

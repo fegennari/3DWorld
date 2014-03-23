@@ -10,9 +10,10 @@
 using std::string;
 
 
-unsigned const TEX0_S_ATTR = 0;
-unsigned const TEX0_T_ATTR = 1;
-unsigned const NUM_SHADER_TYPES = 5;
+unsigned const TEX0_S_ATTR       = 0;
+unsigned const TEX0_T_ATTR       = 1;
+unsigned const NUM_SHADER_TYPES  = 5;
+unsigned const MAX_SHADER_LIGHTS = 8;
 
 
 class shader_t {
@@ -85,6 +86,7 @@ public:
 	bool add_attrib_int        (unsigned ix, int val) const;
 
 	void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
+	void upload_light_source(unsigned id);
 	void setup_scene_bounds() const;
 	void setup_fog_scale() const;
 	void check_for_fog_disabled();
@@ -120,6 +122,22 @@ template<unsigned N> struct shader_float_matrix_uploader {
 			glDisableVertexAttribArray(loc);
 		}
 	}
+};
+
+
+struct gl_light_params_t {
+
+	point pos;
+	colorRGBA ambient, diffuse, specular;
+	float pos_w;
+	float const_atten;
+	float linear_atten;
+	float quad_atten;
+
+	gl_light_params_t() : pos(all_zeros), ambient(BLACK), diffuse(BLACK), specular(BLACK), pos_w(0.0) {set_atten(1.0, 0.0, 0.0);}
+	void set_ds(colorRGBA const &c) {diffuse = specular = c;}
+	void set_atten(float c, float l, float q) {const_atten = c; linear_atten = l; quad_atten = q;}
+	void set_pos(point const &p, float w) {pos = p; pos_w = w;}
 };
 
 
