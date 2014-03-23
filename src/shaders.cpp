@@ -18,10 +18,11 @@ string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "t
 string const shader_prefix_files[NUM_SHADER_TYPES] = {/*"common_header"*/"", "", "", "", ""}; // always included
 
 extern bool fog_enabled;
-extern int is_cloudy;
+extern int is_cloudy, display_mode;
 extern unsigned enabled_lights;
 extern float cur_fog_end;
 extern colorRGBA cur_fog_color;
+extern gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
 
 
 // *** uniform variables setup ***
@@ -239,7 +240,7 @@ bool shader_t::add_attrib_int(unsigned ix, int val) const {
 
 void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
-	assert(num <= 8);
+	assert(num <= MAX_SHADER_LIGHTS);
 	prog_name_prefix.push_back(',');
 	prog_name_prefix.push_back('L');
 	char name[14] = "enable_light0";
@@ -253,23 +254,39 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 }
 
 
-void shader_t::upload_light_source(unsigned id) {
+void shader_t::upload_light_source(unsigned light_id) {
 
-/*
-	struct fg_light_t {
-		vec4 position;
-		vec4 ambient;
-		vec4 diffuse;
-		vec4 specular;
-		float constantAttenuation;
-		float linearAttenuation;
-		float quadraticAttenuation;
-	};
-	const int MAX_LIGHTS = 8;
-	uniform fg_light_t fg_LightSource[MAX_LIGHTS];
-*/
-	assert(id < MAX_SHADER_LIGHTS); // only supporting 8 light sources
-	// WRITE
+	assert(is_setup());
+	assert(light_id < MAX_SHADER_LIGHTS); // only supporting 8 light sources
+	gl_light_params_t const &lp(gl_light_params[light_id]);
+	// FIXME: only upload if light source has changed since last call?
+	string const lstrs[MAX_SHADER_LIGHTS] = {"fg_LightSource[0]", "fg_LightSource[1]", "fg_LightSource[2]", "fg_LightSource[3]", "fg_LightSource[4]", "fg_LightSource[5]", "fg_LightSource[6]", "fg_LightSource[7]"};
+	string const &ls_str(lstrs[light_id]);
+	int loc;
+	float const pos[4] = {lp.pos.x, lp.pos.y, lp.pos.z, lp.pos_w};
+	// FIXME: pos should be in eye space, but we can't transform into eye space here because the MVM isn't known until the draw call
+	loc = glGetUniformLocation(program, (ls_str+".position").c_str()); // cache?
+	if (loc >= 0) {glUniform4fv(loc, 1, pos);} else {return;} // light is unused in the shader
+	loc = glGetUniformLocation(program, (ls_str+".ambient").c_str());
+	if (loc >= 0) {glUniform4fv(loc, 1, &lp.ambient.R);}
+	loc = glGetUniformLocation(program, (ls_str+".diffuse").c_str());
+	if (loc >= 0) {glUniform4fv(loc, 1, &lp.diffuse.R);}
+	loc = glGetUniformLocation(program, (ls_str+".specular").c_str());
+	if (loc >= 0) {glUniform4fv(loc, 1, &lp.specular.R);}
+	loc = glGetUniformLocation(program, (ls_str+".constantAttenuation").c_str());
+	if (loc >= 0) {glUniform1fv(loc, 1, &lp.const_atten);}
+	loc = glGetUniformLocation(program, (ls_str+".linearAttenuation").c_str());
+	if (loc >= 0) {glUniform1fv(loc, 1, &lp.linear_atten);}
+	loc = glGetUniformLocation(program, (ls_str+".quadraticAttenuation").c_str());
+	if (loc >= 0) {glUniform1fv(loc, 1, &lp.quad_atten);}
+}
+
+
+void shader_t::upload_all_light_sources() {
+
+	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
+		if (is_light_enabled(i)) {upload_light_source(i);}
+	}
 }
 
 
@@ -601,8 +618,16 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 }
 
 
+bool use_light_uniforms() {return ((display_mode & 0x10) != 0);}
+
+
 // See http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/glsl-core-tutorial-create-a-program/
 bool shader_t::begin_shader(bool do_enable) {
+
+	/*if (use_light_uniforms()) { // FIXME: figure out which (if any) shader includes ads_lighting.part
+		set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", 0); // VS
+		set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", 1); // FS
+	}*/
 
 	//RESET_TIME;
 	// get the program
@@ -695,6 +720,16 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	attrib_locs.clear();
 	last_spec = ALPHA0;
 }
+
+
+void shader_t::enable() {
+	
+	assert(program);
+	glUseProgram(program);
+	//if (use_light_uniforms()) {upload_all_light_sources();}
+}
+
+void shader_t::disable() {glUseProgram(0);}
 
 
 // some simple shared shaders

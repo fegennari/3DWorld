@@ -45,8 +45,8 @@ public:
 	void set_tess_eval_shader   (string const &tes_name_) {shader_names[4] = tes_name_;}
 
 	bool is_setup() const {return (program > 0);}
-	void enable () const {assert(program); glUseProgram(program);}
-	static void disable() {glUseProgram(0);}
+	void enable();
+	static void disable();
 	bool begin_shader(bool do_enable=1);
 	void end_shader();
 	void begin_color_only_shader();
@@ -86,7 +86,8 @@ public:
 	bool add_attrib_int        (unsigned ix, int val) const;
 
 	void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
-	void upload_light_source(unsigned id);
+	void upload_light_source(unsigned light_id);
+	void upload_all_light_sources();
 	void setup_scene_bounds() const;
 	void setup_fog_scale() const;
 	void check_for_fog_disabled();

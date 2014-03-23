@@ -31,7 +31,7 @@ struct sky_pos_orient {
 float sun_radius, moon_radius, earth_radius, brightness(1.0);
 colorRGBA cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
-gl_light_params_t gl_light_params[8];
+gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
 point const earth_pos(-15.0, -8.0, 21.0);
 sky_pos_orient cur_spo(point(0,0,0),1,0,0);
 vector3d up_norm(plus_z);
