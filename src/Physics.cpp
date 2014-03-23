@@ -1540,7 +1540,7 @@ void reset_other_objects_status() {
 void auto_advance_time() { // T = 1 hour
 
 	no_sun_lpos_update = 0;
-	if (!auto_time_adv) return;
+	if (!auto_time_adv || !animate2) return;
 	static int last_itime(0), precip_inited(0);
 	static float ftime, precip(0.0), precip_app_rate(0.0), prate(0.0), ccover(0.0);
 	static rand_gen_t rgen;
