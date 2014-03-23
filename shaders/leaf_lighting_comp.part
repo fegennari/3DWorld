@@ -24,8 +24,6 @@ vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos
 	}
 	
 	// compute the specular and diffuse terms if not shadowed
-	float NdotHV  = max(dot(normal, normalize(fg_LightSource[i].halfVector.xyz)), 0.0);
-	vec3 specular = (shadowed ? 0.0 : 1.0) * (specular_color.rgb*fg_LightSource[i].specular.rgb) * pow(NdotHV, get_shininess());
+	vec3 specular = (shadowed ? 0.0 : 1.0) * get_light_specular(normal, dir_to_light, eye_space_pos.xyz, fg_LightSource[i].specular.rgb);
 	return vec4((ambient + specular + max(dot(normal, lightDir), 0.0)*diffuse), gl_Color.a);
 }
-
