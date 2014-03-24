@@ -53,10 +53,8 @@ float    const MIN_WATER_DZ     = 0.045;
 float    const MESH_LOWEST_DZ   = 0.040;
 
 unsigned const TICKS_PER_SECOND = 40;
-
 float    const SMALL_NUMBER     = 0.001;
 float    const MIN_POLY_THICK   = 0.001;
-float    const LARGE_DIST       = 200.0;
 unsigned const MAX_CHARS        = 256;
 
 float    const LIGHT_ROT_AMT    = 0.05;
@@ -66,7 +64,6 @@ float    const DEF_TIMESTEP     = 0.007;
 int      const TIMESCALE        = 1; // (integer) larger makes surface movement faster
 int      const MAX_I_TIMESCALE  = 8; // (integer) larger makes surface movement slower (max inverse of TIMESCALE)
 float    const GRAVITY          = 300.0;
-float    const PIXEL_WIND_VEL   = 10.0;
 
 float    const CLOUD_CEILING0   = 1.5;
 int      const LITNING_TIME     = 50; // in ticks
@@ -87,19 +84,14 @@ float    const SNOW_ACC         = 10.0;
 float    const W_FREEZE_POINT   = -0.1;
 float    const WATER_DENSITY    = 1.0;
 float    const SPLASH_BASE_SZ   = 0.01;
-
 float    const DEF_AMBIENT      = 0.5;
 float    const DEF_DIFFUSE      = 0.9;
-float    const SKY_REPEATS      = 2.0;
-float    const SKY_HEIGHT       = 12.0;
 float    const RAIN_TAIL_MIN_V  = -1.0;
 
 float    const WATER_ALPHA      = 0.75;
 float    const ICE_ALPHA        = 0.88;
 float    const SPLASH_ALPHA     = 1.0;
 float    const SNOW_ALPHA       = 1.0;
-float    const TRANS_AMOUNT     = 0.4;
-float    const SHADOW_COLOR     = 0.5;
 
 int      const N_RAND_GAUSS     = 10;
 int      const N_RAND_DIST      = 10000;
@@ -139,8 +131,6 @@ float const TO_DEG          = 180.0/PI;
 float const TO_RADIANS      = PI/180.0;
 float const SQRT_ZOOMF      = sqrt(ZOOM_FACTOR);
 float const SQRT_ZOOMF_INV  = 1.0/SQRT_ZOOMF;
-
-int const WATER_CLIP_PLANE  = GL_CLIP_PLANE0;
 
 unsigned const quad_to_tris_ixs[6] = {0,1,2, 0,2,3};
 
@@ -1236,7 +1226,7 @@ colorRGBA const CYAN     (0.0,  1.0,  1.0,  1.0);
 colorRGBA const MAGENTA  (1.0,  0.0,  1.0,  1.0);
 colorRGBA const YELLOW   (1.0,  1.0,  0.0,  1.0);
 colorRGBA const PURPLE   (0.5,  0.0,  0.6,  1.0);
-colorRGBA const TRANS    (1.0,  1.0,  1.0,  TRANS_AMOUNT);
+colorRGBA const TRANS    (1.0,  1.0,  1.0,  0.4);
 colorRGBA const ALPHA0   (1.0,  1.0,  1.0,  0.0);
 colorRGBA const RGBA0    (0.0,  0.0,  0.0,  0.0);
 colorRGBA const ALPHA0_5 (1.0,  1.0,  1.0,  0.5);
@@ -1361,9 +1351,6 @@ enum {LIGHT_SUN = 0, LIGHT_MOON, NUM_LIGHT_SRC};
 #define EF_ALL 0x3F
 
 unsigned char const EFLAGS[3][2] = {{EF_X1, EF_X2}, {EF_Y1, EF_Y2}, {EF_Z1, EF_Z2}};
-
-#define PRIM_DISABLED -1
-#define PRIM_UNSET    -2
 
 // forward references
 class  sd_sphere_d;
