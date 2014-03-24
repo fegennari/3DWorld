@@ -1589,4 +1589,3 @@ void gen_star_points() {
 }
 
 
-

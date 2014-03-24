@@ -98,7 +98,7 @@ extern bool using_lightmap, has_snow, fast_water_reflect;
 extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2;
 extern int world_mode, rand_gen_index, begin_motion, animate, animate2, blood_spilled;
 extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll, INIT_DISABLE_WATER;
-extern float temperature, zmax, zmin, zbottom, ztop, light_factor, water_plane_z, fticks, mesh_scale;
+extern float temperature, zmax, zmin, zbottom, ztop, light_factor, water_plane_z, fticks, mesh_scale, water_h_off_rel;
 extern float TIMESTEP, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
 extern vector3d up_norm, wind, total_wind;
 extern int coll_id[];
@@ -1268,6 +1268,15 @@ void float_downstream(point &pos, float radius) {
 	if (dist < SMALL_NUMBER) return; // avoid divide-by-zeros
 	float const vel(5.0E-5*valleys[wsi].spill_integral/(DX_VAL + DY_VAL + dist));
 	pos += (spill_pt - pos)*(min(0.005f, vel)/dist);
+}
+
+
+void change_water_level(float water_level) {
+
+	water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
+	water_h_off_rel = water_level - get_rel_wpz();
+	def_water_level = water_plane_z = get_water_z_height(); // ???
+	calc_watershed();
 }
 
 

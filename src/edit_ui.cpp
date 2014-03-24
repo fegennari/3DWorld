@@ -35,6 +35,7 @@ protected:
 	virtual void draw_one_control(unsigned control_ix) const = 0;
 
 public:
+	// Note: the max number of controls we can fit on the screen is around 13
 	keyboard_menu_t(unsigned num_controls_, string const &title_) : num_controls(num_controls_), cur_control(0), title(title_) {assert(num_controls > 0);}
 	virtual ~keyboard_menu_t() {}
 	virtual bool is_enabled() const = 0;
@@ -336,6 +337,154 @@ public:
 };
 
 
+// ************ Physics and Weather ************
+
+float def_atmosphere(1.0), def_vegetation(1.0);
+
+extern int temp_change;
+extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_velocity, TIMESTEP;
+extern vector3d wind;
+
+enum {PW_GRAVITY=0, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PW_TIMESTEP, PW_WVEL, NUM_PW_CONT};
+string const phys_weather_names[NUM_PW_CONT] = {"Gravity", "Temperature", "Water Level", "Vegetation", "Atmosphere", "Cloudiness", "Precipitation", "Wind X", "Wind Y", "Sun Position", "Moon Position", "Physics Timestep", "Weapon Velocity"};
+
+class phys_weather_kbd_menu_t : public keyboard_menu_t {
+
+	virtual void draw_one_control(unsigned control_ix) const {
+		assert(control_ix < NUM_PW_CONT);
+		ostringstream value;
+		value.precision(2);
+		value << fixed; // fixed precision in units of 0.01
+		float spos(0.0);
+
+		switch (control_ix) {
+		case PW_GRAVITY:
+			value << base_gravity;
+			spos = base_gravity/2.0; // 0.0 to 2.0
+			break;
+		case PW_TEMP: // Note: doesn't update in tiled terrain mode
+			value << temperature;
+			spos = (temperature + 40.0)/160.0; // -40.0 to 120.0
+			break;
+		case PW_WATER:
+			value << get_rel_wpz();
+			spos = get_rel_wpz(); // -1.0 to 1.0
+			break;
+		case PW_VEG:
+			value << def_vegetation;
+			spos = def_vegetation; // 0.0 to 1.0
+			break;
+		case PW_ATMOS:
+			value << def_atmosphere;
+			spos = def_atmosphere; // 0.0 to 1.0
+			break;
+		case PW_CLOUD:
+			value << cloud_cover;
+			spos = cloud_cover; // 0.0 to 1.0
+			break;
+		case PW_PRECIP:
+			value << get_precip_rate();
+			spos = get_precip_rate()/1000.0; // 0.0 to 1.0
+			break;
+		case PW_WIND_X:
+			value << wind.x;
+			spos = 0.25*(wind.x + 2.0); // -2.0 to 2.0
+			break;
+		case PW_WIND_Y:
+			value << wind.y;
+			spos = 0.25*(wind.y + 2.0); // -2.0 to 2.0
+			break;
+		case PW_SUN_POS:
+			value << sun_rot;
+			spos = sun_rot/TWO_PI; // 0 to 2*PI
+			break;
+		case PW_MOON_POS:
+			value << moon_rot;
+			spos = moon_rot/TWO_PI; // 0 to 2*PI
+			break;
+		case PW_TIMESTEP:
+			value << 100.0*TIMESTEP;
+			spos = 100.0*TIMESTEP; // 0.0 to 0.01
+			break;
+		case PW_WVEL:
+			value << ball_velocity;
+			spos = ball_velocity/40.0; // 0.0 to 40.0
+			break;
+		default:
+			assert(0);
+		}
+		draw_one_control_text(control_ix, phys_weather_names[control_ix], value.str(), spos);
+	}
+
+public:
+	phys_weather_kbd_menu_t() : keyboard_menu_t(NUM_PW_CONT, "Physics and Weather") {}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode != WMODE_UNIVERSE);}
+
+	virtual void change_value(int delta) {
+		bool regen_mesh(0);
+
+		switch (cur_control) {
+		case PW_GRAVITY:
+			base_gravity = max(0.0f, (base_gravity + 0.05f*delta)); // >= 0.0 in steps of 0.1
+			break;
+		case PW_TEMP:
+			temperature += TEMP_INCREMENT*delta; // in steps of 10.0
+			temp_change  = 1;
+			//regen_mesh   = 1; // regen texture
+			break;
+		case PW_WATER:
+			{
+				float const water_level(max(-1.0f, min(1.0f, (get_rel_wpz() + 0.05f*delta)))); // -1.0 to 1.0 in steps of 0.05
+				change_water_level(water_level);
+			}
+			regen_mesh = 1; // regen texture
+			break;
+		case PW_VEG:
+			def_vegetation = CLIP_TO_01(def_vegetation + 0.1f*delta); // 0.0 to 1.0 in steps of 0.1
+			regen_mesh     = 1; // regen texture
+			break;
+		case PW_ATMOS:
+			def_atmosphere = CLIP_TO_01(def_atmosphere + 0.1f*delta); // 0.0 to 1.0 in steps of 0.1
+			break;
+		case PW_CLOUD:
+			cloud_cover = CLIP_TO_01(cloud_cover + 0.1f*delta); // 0.0 to 1.0 in steps of 0.1
+			break;
+		case PW_PRECIP:
+			update_precip_rate((delta > 0.0) ? 1.5 : 1.0/1.5);
+			break;
+		case PW_WIND_X:
+			wind.x = (wind.x + WIND_ADJUST*delta); // -2.0 to 2.0 in steps of 0.2
+			break;
+		case PW_WIND_Y:
+			wind.y = (wind.y + WIND_ADJUST*delta); // -2.0 to 2.0 in steps of 0.2
+			break;
+		case PW_SUN_POS:
+			sun_rot += LIGHT_ROT_AMT*delta; // -PI to PI in steps of 0.05
+			if (sun_rot < 0.0) {sun_rot += TWO_PI;} else if (sun_rot > TWO_PI) {sun_rot -= TWO_PI;}
+			update_sun_shadows();
+			break;
+		case PW_MOON_POS:
+			moon_rot += LIGHT_ROT_AMT*delta; // -PI to PI in steps of 0.05
+			if (moon_rot < 0.0) {moon_rot += TWO_PI;} else if (moon_rot > TWO_PI) {moon_rot -= TWO_PI;}
+			calc_visibility(MOON_SHADOW);
+			break;
+		case PW_TIMESTEP:
+			change_timestep((delta > 0.0) ? 1.5 : 1.0/1.5);
+			break;
+		case PW_WVEL:
+			ball_velocity = max(0.0f, (ball_velocity + 2.0f*delta)); // >= 0.0 in steps of 2.0
+			break;
+		default:
+			assert(0);
+		} // end switch
+		if (regen_mesh) {
+			init_terrain_mesh(); // Note: texture not actually regenerated
+			clear_tiled_terrain();
+		}
+	}
+};
+
+
 // ************ Top-Level UI Hooks ************
 
 unsigned selected_menu_ix(0);
@@ -343,9 +492,10 @@ hmap_kbd_menu_t hmap_menu(cur_brush_param);
 voxel_edit_kbd_menu_t voxel_edit_menu(voxel_brush_params);
 leaf_color_kbd_menu_t leaf_color_menu;
 water_color_kbd_menu_t water_color_menu;
+phys_weather_kbd_menu_t phys_weather_kbd_menu;
 
 
-keyboard_menu_t *kbd_menus[] = {&hmap_menu, &voxel_edit_menu, &leaf_color_menu, &water_color_menu};
+keyboard_menu_t *kbd_menus[] = {&hmap_menu, &voxel_edit_menu, &leaf_color_menu, &water_color_menu, &phys_weather_kbd_menu};
 unsigned const NUM_KBD_MENUS = sizeof(kbd_menus)/sizeof(kbd_menus[0]);
 
 

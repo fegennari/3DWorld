@@ -11,14 +11,12 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Non-sprite points
  - GL_QUADS
  - Replace GL matrix operations with GLM
-   * Remove get of GL matrices
 
-* Berries on plants
-Weather/Physics UI
+Berries on plants
 TT mode underwater content
 User-placed teleporter weapon (translocator?)
 * Burning smiley/skull/cobj texture
-Ripper Weapon
+* Ripper Weapon
 
 Fog increases in valleys
 Draw more distant tiles (larger/lower res at high delta-z)
@@ -30,4 +28,5 @@ Visual Studio profile
 static error check (analysis)
 
 Better pine tree texture
-Revisit tiled terrain heightmap texture?
+
+Remove mesh resolution

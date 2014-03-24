@@ -1577,7 +1577,7 @@ void auto_advance_time() { // T = 1 hour
 	}
 
 	// change cloudiness (7 days: dt = 24*7 = 168, every t)
-	ccover = ccover + 0.1*rgen.signed_rand_float();
+	ccover += 0.1*rgen.signed_rand_float();
 	if (ccover < -0.2) ccover = 0.2 - ccover;
 	cloud_cover = CLIP_TO_01(0.5f*max(-0.1f, precip) + 0.5f*min(1.0f, ccover));
 

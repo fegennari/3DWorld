@@ -1025,12 +1025,11 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'N': // decrease precipitation rate by 1.5X
-		obj_groups[coll_id[PRECIP]].update_app_rate(1.0/1.5, 2, 1000);
-		obj_pld.free_mem();
+		update_precip_rate(1.0/1.5);
 		cout << "decrease precip to " << obj_groups[coll_id[PRECIP]].max_objects() << endl;
 		break;
 	case 'M': // increase precipitation rate by 1.5X
-		obj_groups[coll_id[PRECIP]].update_app_rate(1.5, 2, 1000);
+		update_precip_rate(1.5);
 		cout << "increase precip to " << obj_groups[coll_id[PRECIP]].max_objects() << endl;
 		break;
 
@@ -1063,7 +1062,6 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		glReadBuffer(GL_FRONT);
 		screenshot(window_width, window_height, "./");
 		break;
-
 		// *** WHAT ABOUT PNG? ***
 	case 'F': // .jpg
 		cout << "screenshot.jpg: width = " << window_width << ", height = " << window_height << endl;

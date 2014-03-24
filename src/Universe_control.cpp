@@ -27,7 +27,7 @@ float resource_counts[NUM_ALIGNMENT] = {0.0};
 extern bool univ_planet_lod; // smaller near_clip if true?
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
-extern float def_water_level, water_plane_z, water_h_off_rel, tan_term, sin_term, init_temperature, camera_shake;
+extern float water_h_off_rel, tan_term, sin_term, init_temperature, camera_shake;
 extern char **water_enabled;
 extern unsigned team_credits[];
 extern string user_text;
@@ -157,11 +157,8 @@ void setup_current_system(float sun_intensity) {
 
 		if (fabs(water_level - rel_wpz) > 0.001) {
 			cout << "water: " << water << ", water_level: " << water_level << ", rel_wpz: " << rel_wpz << ", water_h_off_rel: " << water_h_off_rel << endl;
-			water_h_off_rel = 0.0; // so that get_rel_wpz() will return the base water level
-			water_h_off_rel = water_level - get_rel_wpz();
-			regen_mesh      = 1; // regen texture (is this needed?)
-			def_water_level = water_plane_z = get_water_z_height(); // ???
-			calc_watershed();
+			change_water_level(water_level);
+			regen_mesh = 1; // regen texture (is this needed?)
 		}
 	}
 	if (clobj0.type >= UTYPE_STAR) { // determine gravity

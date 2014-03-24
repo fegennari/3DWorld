@@ -46,6 +46,7 @@ extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
+extern float def_atmosphere, def_vegetation;
 extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
@@ -356,8 +357,8 @@ void config_bkg_color_and_clear(float depth, bool no_fog) {
 void reset_planet_defaults() {
 
 	have_sun   = 1;
-	atmosphere = 1.0;
-	vegetation = 1.0;
+	atmosphere = def_atmosphere;
+	vegetation = def_vegetation;
 }
 
 
