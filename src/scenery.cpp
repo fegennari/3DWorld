@@ -20,12 +20,12 @@ colorRGBA const leaf_c(0.7, 0.7, 0.7, 1.0);
 
 // tid, stemc, leafc
 plant_type const pltype[NUM_PLANT_TYPES] = {
-	plant_type(MJ_LEAF_TEX, stem_c,   leaf_c, RED),
-	plant_type(PLANT1_TEX,  stem_c,   leaf_c, RED),
-	plant_type(PLANT2_TEX,  stem_c,   leaf_c, RED),
-	plant_type(PLANT3_TEX,  stem_c,   leaf_c, RED),
-	plant_type(PLANT4_TEX,  stem_c,   leaf_c, RED),
-	plant_type(COFFEE_TEX,  LT_BROWN, WHITE,  RED)
+	plant_type(MJ_LEAF_TEX, stem_c,   leaf_c, ALPHA0),
+	plant_type(PLANT1_TEX,  stem_c,   leaf_c, ALPHA0),
+	plant_type(PLANT2_TEX,  stem_c,   leaf_c, PURPLE),
+	plant_type(PLANT3_TEX,  stem_c,   leaf_c, colorRGBA(0.9, 0.1, 0.05)),
+	plant_type(PLANT4_TEX,  stem_c,   leaf_c, ALPHA0),
+	plant_type(COFFEE_TEX,  LT_BROWN, WHITE,  ALPHA0)
 };
 
 
@@ -749,16 +749,26 @@ void s_plant::create_leaf_points(vector<vert_norm> &points) const {
 void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 
 	if (vbo_mgr_ix >= 0) return; // already generated
-	create_leaf_points(vbo_manager.temp_points);
-	vbo_mgr_ix = vbo_manager.add_points_with_offset(vbo_manager.temp_points, pltype[type].leafc);
+	vector<vert_norm> &pts(vbo_manager.temp_points);
+	create_leaf_points(pts);
+	vbo_mgr_ix = vbo_manager.add_points_with_offset(pts, pltype[type].leafc);
 	no_leaves  = 0;
-#if 0
+
 	if (pltype[type].berryc.A != 0.0) { // create berries
-		for (vector<vert_norm>::const_iterator i = vbo_manager.temp_points.begin(); i != vbo_manager.temp_points.end(); ++i) {
-			berries.push_back(i->v); // FIXME: temporary
+		rand_gen_t rgen;
+
+		for (unsigned i = 0; i < pts.size(); i += 4) { // iterate over each leaf quad
+			point const start(0.5*(pts[i+0].v + pts[i+1].v)), end(0.5*(pts[i+2].v + pts[i+3].v)); // along centerline
+			unsigned const num((rgen.rand()&3) + 7);
+			float const t0(rgen.rand_uniform(0.1, 0.2)), dt((rgen.rand_uniform(0.8, 0.9) - t0)/(num-1));
+			float const err(0.1*dt*p2p_dist(start, end));
+			float t(t0);
+
+			for (unsigned n = 0; n < num; ++n, t += dt) {
+				berries.push_back(start + t*(end - start) + rgen.signed_rand_vector(err));
+			}
 		}
 	}
-#endif
 }
 
 // to be called when the plant is translated or zval changes
@@ -833,12 +843,11 @@ void s_plant::draw_berries(vector3d const &xlate) const {
 	if (!sphere_in_camera_view(pos+xlate, (height + radius), 0)) return;
 	float const dist(distance_to_camera(pos+xlate));
 	if (get_pt_line_thresh()*radius < dist) return; // too small/far away
-	float const size_scale(radius/dist);
 	pltype[type].berryc.do_glColor();
 
 	for (vector<vert_wrap_t>::const_iterator i = berries.begin(); i != berries.end(); ++i) {
-		int const ndiv(min(24, max(4, int(500.0*size_scale))));
-		draw_sphere_vbo(i->v, 0.001, ndiv, 0); // use LOD and/or point sprites? (see asteroid dust)
+		int const ndiv(16);
+		draw_sphere_vbo(i->v, 0.25*radius, ndiv, 0); // use LOD and/or point sprites? (see asteroid dust)
 	}
 }
 
@@ -1080,7 +1089,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 }
 
 
-void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val) {
+void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val) {
 
 	set_fill_mode();
 	select_texture(DARK_ROCK_TEX);
@@ -1100,7 +1109,7 @@ void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d 
 	draw_scenery_vector(rocks, sscale, shadow_only, xlate, scale_val);
 
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
-		voxel_rocks[i].draw(sscale, shadow_only, xlate, scale_val, s);
+		voxel_rocks[i].draw(sscale, shadow_only, xlate, scale_val, NULL); // Note: shader not passed here
 	}
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, xlate, scale_val);
@@ -1111,10 +1120,9 @@ void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d 
 	}
 	if (!shadow_only) { // no berry shadows
 		select_texture(WHITE_TEX); // berries are untextured
-
-		for (unsigned i = 0; i < plants.size(); ++i) {
-			plants[i].draw_berries(xlate);
-		}
+		s.set_specular(0.9, 80.0);
+		for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_berries(xlate);}
+		s.set_specular(0.0, 1.0);
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
 }
@@ -1123,9 +1131,9 @@ void scenery_group::draw_opaque_objects(shader_t *s, bool shadow_only, vector3d 
 void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate) {
 
 	if (draw_opaque) { // draw stems, rocks, logs, and stumps
-		shader_t s; // unset
+		shader_t s;
 		s.begin_simple_textured_shader(0.0, !shadow_only); // with lighting, unless shadow_only
-		draw_opaque_objects(NULL, shadow_only, xlate, 1); // shader not passed in here (may be needed later for voxel rocks)
+		draw_opaque_objects(s, shadow_only, xlate, 1);
 		s.end_shader();
 	}
 	if (draw_transparent && !plants.empty()) { // draw leaves
