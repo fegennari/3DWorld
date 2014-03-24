@@ -239,10 +239,10 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
-	bool smoke_en, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_offset)
+	bool smoke_en, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale)
 {
-	bool const use_burn_mask(burn_offset > -1.0);
 	smoke_en &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
+	bool const use_burn_mask(burn_tex_scale > 0.0);
 	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK", 1);} // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
@@ -267,8 +267,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_color("smoke_color", colorRGB(GRAY));
 	}
 	if (use_burn_mask) {
-		s.add_uniform_float("burn_tex_scale", 0.05); // FIXME: hard-coded
-		s.add_uniform_float("burn_offset", burn_offset);
+		s.add_uniform_float("burn_tex_scale", burn_tex_scale);
+		s.add_uniform_float("burn_offset", -1.0); // starts disabled
 		s.add_uniform_int("burn_mask", 10);
 		select_multitex(DISINT_TEX, 10); // PLASMA_TEX?
 	}
@@ -355,10 +355,8 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
-	float burn_offset(-1.0);
-	//if (display_mode & 0x10) {burn_offset = 0.002*(frame_counter%1000) - 1.0;}
 	shader_t s;
-	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting, burn_offset);
+	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
 	vector<vert_norm> poly_verts;

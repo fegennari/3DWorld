@@ -507,11 +507,12 @@ void process_groups() {
 					accumulate_object(pos, type, 1.0);
 				}
 				else if (type == SKULL && obj.status == 0) { // create skull fragments
-					unsigned const num(rand()%8 + 5);
+					unsigned const num((rand()&7) + 12);
+					bool const burned(obj.direction == 1);
 
 					for (unsigned o = 0; o < num; ++o) {
 						point const fpos(obj.pos + signed_rand_vector(radius));
-						gen_fragment(fpos, zero_vector, 0.5, 0.0, LT_GRAY, PLASTER_TEX, 1.0, obj.source, 0);
+						gen_fragment(fpos, zero_vector, 0.5, 0.0, (burned ? GRAY_BLACK : LT_GRAY), PLASTER_TEX, 1.0, obj.source, 0);
 					}
 				}
 				else if ((otype.flags & EXPL_ON_COLL) || (obj.status == 0 && (otype.flags & OBJ_EXPLODES))) {

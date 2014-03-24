@@ -15,7 +15,6 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
 Berries on plants
 TT mode underwater content
 User-placed teleporter weapon (translocator?)
-* Burning smiley/skull/cobj texture
 * Ripper Weapon
 
 Fog increases in valleys

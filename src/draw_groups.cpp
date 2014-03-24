@@ -48,7 +48,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 				 float health, int id, mesh2d const *const mesh, shader_t &shader);
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader);
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix, shader_t &shader);
-void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, shader_t &shader);
+void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int time, shader_t &shader, bool burned);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, shader_t &shader);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader);
@@ -208,9 +208,10 @@ void draw_select_groups(int solid) {
 	shader_t s;
 	s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1); // FS
 	bool const force_tsl(1);
+	float const burn_tex_scale = 0.5;
 	indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
 	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
-	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl);
+	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl, burn_tex_scale);
 	select_no_texture();
 
 	for (int i = 0; i < num_groups; ++i) {
@@ -291,7 +292,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), ndiv, shader);
 		break;
 	case SKULL:
-		draw_skull(pos, obj.orientation, radius, obj.status, ndiv, shader);
+		draw_skull(pos, obj.orientation, radius, obj.status, ndiv, obj.time, shader, (obj.direction == 1));
 		break;
 	case ROCKET:
 		draw_rocket(pos, obj.init_dir, radius, obj.type, ndiv, obj.time, shader);
@@ -1055,8 +1056,10 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 }
 
 
-void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, shader_t &shader) {
+void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int time, shader_t &shader, bool burned) {
 
+	float const burn_val(burned ? 0.5*(2.0*(float)time/((float)object_types[SKULL].lifetime) - 1.0) : -1.0);
+	if (burn_val > -1.0) {shader.add_uniform_float("burn_offset", burn_val);}
 	shader.add_uniform_float("min_alpha", 0.9);
 	glPushMatrix();
 	translate_to(pos);
@@ -1065,6 +1068,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 	draw_sphere_vbo_back_to_front(all_zeros, radius, 2*ndiv, 1);
 	glPopMatrix();
 	shader.add_uniform_float("min_alpha", 0.01);
+	if (burn_val > -1.0) {shader.add_uniform_float("burn_offset", -1.0);} // reset
 }
 
 

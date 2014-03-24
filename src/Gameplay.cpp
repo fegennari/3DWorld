@@ -272,6 +272,7 @@ void gen_dead_smiley(int source, int target, float energy, point const &pos, vec
 		obj_groups[coll_id[SKULL]].create_object_at(target+1, pos);
 		dwobject &obj(obj_groups[coll_id[SKULL]].get_obj(target+1));
 		obj.orientation = orient;
+		obj.direction   = (burned ? 1 : 0); // encode burned state in direction
 		gen_blood_velocity(obj.velocity, velocity, coll_dir, part_v, 0.15, 0.1, damage_type, health);
 	}
 	if (burned) {
