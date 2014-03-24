@@ -763,8 +763,7 @@ void display(void) {
 		if (global_time == 0) global_time = timer_b;
 		
 		if (show_framerate == 2) {
-			cout << used_objs << " objects + " << 2*(MESH_X_SIZE/resolution)*(MESH_Y_SIZE/resolution)
-				 << " triangles, time = " << (timer_b - global_time) << endl;
+			cout << used_objs << " objects, time = " << (timer_b - global_time) << endl;
 			cout << "Elapsed frames = " << (frame_counter - frame_index) << ", elapsed time = " << (timer_b - time_index)
 				 << ", avg framerate = " << 1000.0*float(frame_counter - frame_index)/float(timer_b - time_index) << endl;
 			frame_index    = frame_counter;

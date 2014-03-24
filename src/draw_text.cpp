@@ -130,6 +130,7 @@ void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &te
 
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize) {
 
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // always filled
 	glDisable(GL_DEPTH_TEST);
 	draw_bitmap_text(color, point(x, y, z), text, 0.8*tsize);
 	glEnable(GL_DEPTH_TEST);

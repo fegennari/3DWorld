@@ -48,7 +48,7 @@ ttex lttex_dirt[NTEX_DIRT];
 
 
 extern bool combined_gu;
-extern int xoff, yoff, xoff2, yoff2, world_mode, resolution, rand_gen_index, mesh_scale_change;
+extern int xoff, yoff, xoff2, yoff2, world_mode, rand_gen_index, mesh_scale_change;
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode, invert_mh_image;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
@@ -633,9 +633,8 @@ void reset_offsets() {
 	
 	if (world_mode == WMODE_INF_TERRAIN) { // terrain
 		point camera(get_camera_pos());
-		int const ssize((int)pow(RES_STEP, resolution-1));
-		xoff2 += int(STEP_SIZE*ssize*(get_xpos(camera.x) - MESH_X_SIZE/2));
-		yoff2 += int(STEP_SIZE*ssize*(get_ypos(camera.y) - MESH_Y_SIZE/2));
+		xoff2 += int((get_xpos(camera.x) - MESH_X_SIZE/2));
+		yoff2 += int((get_ypos(camera.y) - MESH_Y_SIZE/2));
 	}
 	else { // normal
 		surface_pos = all_zeros;

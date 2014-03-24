@@ -38,7 +38,7 @@ vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
 extern bool using_lightmap, combined_gu, has_snow;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
-extern int display_mode, frame_counter, resolution, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
+extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, sun_radius;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
@@ -588,7 +588,7 @@ class water_renderer {
 	void draw_sides(unsigned ix);
 
 public:
-	water_renderer(int ix, int iy, int cz) : check_zvals(cz), tex_scale(W_TEX_SCALE0/Z_SCENE_SIZE) {}
+	water_renderer(int cz) : check_zvals(cz), tex_scale(W_TEX_SCALE0/Z_SCENE_SIZE) {}
 	void draw(shader_t &shader);
 };
 
@@ -692,7 +692,7 @@ void water_renderer::draw(shader_t &shader) { // modifies color
 
 void draw_water_sides(shader_t &shader, int check_zvals) {
 
-	water_renderer wr(resolution, resolution, check_zvals);
+	water_renderer wr(check_zvals);
 	wr.draw(shader);
 }
 

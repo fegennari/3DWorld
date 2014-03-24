@@ -120,10 +120,6 @@ float    const PERSP_ANGLE      = 60.0;
 float    const ZOOM_FACTOR      = 5.0;
 float    const UNIV_NCLIP_SCALE = 0.02;
 
-float    const RES_STEP         = 2.0;
-float    const STEP_SIZE        = 1.0;
-float    const PROJ_MAX_DSTEPS  = 2000.0;
-
 float    const MIN_SHADOW_ALPHA = 0.5;
 float    const GET_OCC_EXPAND   = 0.02;
 float    const DEF_Z_BIAS       = 0.0005;

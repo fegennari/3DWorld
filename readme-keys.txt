@@ -97,8 +97,6 @@ C	create new mesh
 }	decrease moon rotation angle
 ;	(semicolon)	decrease simulation physics timestep/speed by 1.5
 '	(quote)	increase simulation physics timestep/speed by 1.5
-,	(comma) decrease mesh resolution by 2 (default = 200x200)
-.	(period) increase mesh resolution by 2 (up to 200x200)
 \	toggle show camera sphere (default = OFF)
 <	decrease ball throw velocity (default is 0.0, drop)
 >	increase ball throw velocity
