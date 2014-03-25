@@ -225,7 +225,7 @@ void grass_tile_manager_t::update() { // to be called once per frame
 
 
 // Note: density won't work if grass is spatially sorted, which is currently the case for tiled terrain grass
-void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float density, unsigned instance_count) {
+void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float density, unsigned num_instances) {
 
 	assert(density > 0.0 && density <= 1.0);
 	assert(lod < NUM_GRASS_LODS);
@@ -234,14 +234,8 @@ void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float d
 	assert(start_ix < end_ix && end_ix <= grass.size());
 	unsigned const num_tris(ceil(density*(end_ix - start_ix)));
 	if (num_tris == 0) return;
-	
-	if (instance_count > 0) {
-		bind_vbo(vbo); // needed because incoming vbo is 0 (so that instance attrib array isn't bound to a vbo)
-		glDrawArraysInstanced(GL_TRIANGLES, 3*start_ix, 3*num_tris, instance_count);
-	}
-	else {
-		glDrawArrays(GL_TRIANGLES, 3*start_ix, 3*num_tris);
-	}
+	bind_vbo(vbo); // needed because incoming vbo is 0 (so that instance attrib array isn't bound to a vbo)
+	glDrawArraysInstanced(GL_TRIANGLES, 3*start_ix, 3*num_tris, num_instances);
 }
 
 

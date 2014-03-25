@@ -6,7 +6,7 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 
-extern int window_height;
+extern int window_height, display_mode;
 
 
 void set_array_client_state(bool va, bool tca, bool na, bool ca) {
@@ -492,14 +492,8 @@ void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, 
 
 	assert(six < eix && eix < offsets.size());
 	unsigned const count(offsets[eix] - offsets[six]);
-
 	// Note: currently always used to render quads, but can be made more general in the future
-	if (num_instances > 1) { // instanced rendering
-		glDrawArraysInstanced(GL_QUADS, offsets[six], count, num_instances);
-	}
-	else { // normal rendering
-		glDrawArrays(GL_QUADS, offsets[six], count);
-	}
+	glDrawArraysInstanced(GL_QUADS, offsets[six], count, num_instances);
 }
 
 template< typename vert_type_t >
