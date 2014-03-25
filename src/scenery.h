@@ -144,7 +144,7 @@ public:
 	bool is_shadowed() const;
 	void draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const;
 	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const;
-	void draw_berries(vector3d const &xlate) const;
+	void draw_berries(shader_t &s, vector3d const &xlate) const;
 	void remove_cobjs();
 	void destroy();
 };

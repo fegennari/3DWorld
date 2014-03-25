@@ -837,18 +837,22 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
 }
 
-void s_plant::draw_berries(vector3d const &xlate) const {
+void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 
 	if (berries.empty()) return;
 	if (!sphere_in_camera_view(pos+xlate, (height + radius), 0)) return;
 	float const dist(distance_to_camera(pos+xlate));
-	if (get_pt_line_thresh()*radius < dist) return; // too small/far away
+	if (get_pt_line_thresh()*radius < 2.0*dist) return; // too small/far away
 	pltype[type].berryc.do_glColor();
-
-	for (vector<vert_wrap_t>::const_iterator i = berries.begin(); i != berries.end(); ++i) {
-		int const ndiv(16);
-		draw_sphere_vbo(i->v, 0.25*radius, ndiv, 0); // use LOD and/or point sprites? (see asteroid dust)
-	}
+	glPushMatrix();
+	uniform_scale(0.25*radius);
+	s.add_uniform_float("vertex_offset_scale", 1.0/(0.25*radius)); // enable
+	int const loc(s.get_attrib_loc("vertex_offset", 0));
+	shader_float_matrix_uploader<3,1>::enable(loc, 1, &berries.front().v.x);
+	draw_sphere_vbo_raw(16, 0, 0, berries.size()); // ndiv=16, untextured
+	shader_float_matrix_uploader<3,1>::disable(loc);
+	s.add_uniform_float("vertex_offset_scale", 0.0); // disable
+	glPopMatrix();
 }
 
 void s_plant::remove_cobjs() {
@@ -1121,7 +1125,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	if (!shadow_only) { // no berry shadows
 		select_texture(WHITE_TEX); // berries are untextured
 		s.set_specular(0.9, 80.0);
-		for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_berries(xlate);}
+		for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_berries(s, xlate);}
 		s.set_specular(0.0, 1.0);
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}

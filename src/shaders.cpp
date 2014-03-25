@@ -793,7 +793,7 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 	// we need to upload the transforms here, but if there is a current vbo associated with the object data
 	// we need to unbind it, upload the transforms, then rebind the original vbo
 	if (cur_vbo) {bind_vbo(0);}
-	shader_float_matrix_uploader<4>::enable(loc, 1, inst_xforms.front().get_ptr());
+	shader_float_matrix_uploader<4,4>::enable(loc, 1, inst_xforms.front().get_ptr());
 	if (cur_vbo) {bind_vbo(cur_vbo);}
 	
 	if (index_type != GL_NONE) { // indexed
@@ -803,7 +803,7 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 		assert(indices == NULL);
 		glDrawArraysInstanced(prim_type, 0, count, inst_xforms.size()); // hard-coded first=0
 	}
-	shader_float_matrix_uploader<4>::disable(loc);
+	shader_float_matrix_uploader<4,4>::disable(loc);
 	inst_xforms.clear();
 }
 

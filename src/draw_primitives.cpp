@@ -973,7 +973,7 @@ void setup_sphere_vbos() {
 }
 
 
-void draw_sphere_vbo_raw(int ndiv, bool textured, bool half) {
+void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instances) {
 
 	assert(ndiv > 0 && ndiv <= N_SPHERE_DIV);
 	assert(predef_sphere_vbo > 0);
@@ -982,7 +982,13 @@ void draw_sphere_vbo_raw(int ndiv, bool textured, bool half) {
 	bind_vbo(predef_sphere_vbo);
 	set_array_client_state(1, textured, 1, 0);
 	sd_sphere_d::vertex_type_t::set_vbo_arrays(0);
-	glDrawArrays(GL_TRIANGLE_STRIP, off1, (off2 - off1)); // uses triangle strips separated by degenerate triangles
+
+	if (num_instances > 1) {
+		glDrawArraysInstanced(GL_TRIANGLE_STRIP, off1, (off2 - off1), num_instances);
+	}
+	else {
+		glDrawArrays(GL_TRIANGLE_STRIP, off1, (off2 - off1)); // uses triangle strips separated by degenerate triangles
+	}
 	bind_vbo(0);
 }
 

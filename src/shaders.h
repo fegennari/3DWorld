@@ -104,7 +104,7 @@ public:
 };
 
 
-template<unsigned N> struct shader_float_matrix_uploader {
+template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 
 	static void enable(int start_loc, int divisor, float const *const data=NULL) {
 		assert(start_loc >= 0 && divisor >= 0);
@@ -112,7 +112,7 @@ template<unsigned N> struct shader_float_matrix_uploader {
 		for (unsigned i = 0; i < N; ++i) {
 			int const loc(start_loc + i);
 			glEnableVertexAttribArray(loc);
-			glVertexAttribPointer(loc, N, GL_FLOAT, GL_FALSE, N*N*sizeof(float), (const void *)(data + N*i));
+			glVertexAttribPointer(loc, M, GL_FLOAT, GL_FALSE, M*N*sizeof(float), (const void *)(data + M*i));
 			glVertexAttribDivisor(loc, divisor);
 		}
 	}

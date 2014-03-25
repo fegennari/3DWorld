@@ -191,7 +191,7 @@ void gen_quad_tri_tex_coords(float *tdata, unsigned num, unsigned stride);
 void free_sphere_vbos();
 void setup_sphere_vbos();
 void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, float tex_scale_len=1.0, float z_offset=0.0);
-void draw_sphere_vbo_raw(int ndiv, bool textured, bool half=0);
+void draw_sphere_vbo_raw(int ndiv, bool textured, bool half=0, unsigned num_instances=1);
 void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half=0, bool bfc=0, int shader_loc=-1);
 void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, bool textured);
 
