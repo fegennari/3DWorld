@@ -809,10 +809,11 @@ bool s_plant::is_shadowed() const {
 
 void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const {
 
-	if (shadow_only ? !is_over_mesh(pos+xlate) : !sphere_in_camera_view(pos+xlate, (height + radius), 0)) return;
+	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
+	if (shadow_only ? !is_over_mesh(pos+xlate) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
-	float const dist(distance_to_camera(pos+xlate));
+	float const dist(distance_to_camera(pos2));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
 		tree_scenery_pld.add_textured_line((pos+xlate - point(0.0, 0.0, 0.1*height)), (pos+xlate + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
@@ -827,8 +828,8 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
 
 	if (no_leaves) return;
-	point const pos2(pos + xlate);
-	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
+	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
+	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, 0.5*(height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
@@ -840,16 +841,18 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 
 	if (berries.empty()) return;
-	if (!sphere_in_camera_view(pos+xlate, (height + radius), 0)) return;
-	float const dist(distance_to_camera(pos+xlate));
-	if (get_pt_line_thresh()*radius < 2.0*dist) return; // too small/far away
+	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
+	if (!sphere_in_camera_view(pos2, 0.5*(height + radius), 0)) return;
+	float const size_scale(get_pt_line_thresh()*radius/distance_to_camera(pos2));
+	if (size_scale < 1.2) return; // too small/far away
+	int const ndiv(max(4, min(16, int(2.0*size_scale))));
 	pltype[type].berryc.do_glColor();
 	glPushMatrix();
 	uniform_scale(0.25*radius);
 	s.add_uniform_float("vertex_offset_scale", 1.0/(0.25*radius)); // enable
 	int const loc(s.get_attrib_loc("vertex_offset", 0));
 	shader_float_matrix_uploader<3,1>::enable(loc, 1, &berries.front().v.x);
-	draw_sphere_vbo_raw(16, 0, 0, berries.size()); // ndiv=16, untextured
+	draw_sphere_vbo_raw(ndiv, 0, 0, berries.size()); // ndiv=16, untextured
 	shader_float_matrix_uploader<3,1>::disable(loc);
 	s.add_uniform_float("vertex_offset_scale", 0.0); // disable
 	glPopMatrix();
