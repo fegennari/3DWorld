@@ -202,19 +202,17 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 			assert(i->td);
 			last_td = i->td;
 			draw_quad_verts_as_tris_and_clear(pts);
-			tree_bb_tex_t const &ttex(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture());
-			assert(ttex.is_valid());
-			ttex.bind_texture();
+			(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture()).bind_texture();
 		}
 		point pos(i->pos);
 		if (!render_branches) {pos += 0.5*i->td->lr_x*(camera - i->pos).get_norm();}
 		vector3d const vdir(camera - pos); // z
 		vector3d const v1((cross_product(vdir, up_vector).get_norm())*(render_branches ? i->td->br_x : i->td->lr_x)); // x (what if colinear?)
 		vector3d const v2((render_branches ? up_vector : cross_product(v1, vdir).get_norm())*(render_branches ? i->td->br_z : i->td->lr_z)); // y
-		pts.push_back(vert_tc_color((pos - v1 - v2), 0.0, 0.0, i->color));
-		pts.push_back(vert_tc_color((pos - v1 + v2), 0.0, 1.0, i->color));
-		pts.push_back(vert_tc_color((pos + v1 + v2), 1.0, 1.0, i->color));
-		pts.push_back(vert_tc_color((pos + v1 - v2), 1.0, 0.0, i->color));
+		pts.push_back(vert_tc_color((pos - v1 - v2), 0.0, 0.0, i->cw.c)); // FIXME: tc_by_vert_id
+		pts.push_back(vert_tc_color((pos - v1 + v2), 0.0, 1.0, i->cw.c));
+		pts.push_back(vert_tc_color((pos + v1 + v2), 1.0, 1.0, i->cw.c));
+		pts.push_back(vert_tc_color((pos + v1 - v2), 1.0, 0.0, i->cw.c));
 	}
 	assert(!pts.empty());
 	draw_quad_verts_as_tris(pts);
@@ -1050,7 +1048,7 @@ void tree_data_t::reset_leaf_pos_norm() {
 void tree_data_t::draw_leaves(float size_scale) {
 
 	bool const create_leaf_vbo(leaf_vbo == 0);
-	create_vbo_and_upload(leaf_vbo, leaf_data, 0);
+	create_vbo_and_upload(leaf_vbo, leaf_data, 0, 0, 1); // dynamic draw, due to wind updates, collision, burn damage, etc.
 
 	if (!create_leaf_vbo && leaves_changed) {
 		bind_vbo(leaf_vbo);

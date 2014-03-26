@@ -114,9 +114,9 @@ void delete_vbo(unsigned vbo) {
 	if (vbo != 0) {glDeleteBuffers(1, &vbo);}
 }
 
-void upload_vbo_data(void const *const data, size_t size, bool is_index) {
+void upload_vbo_data(void const *const data, size_t size, bool is_index, bool is_dynamic) {
 	// hard coded for drawing of static data
-	glBufferData(get_buffer_target(is_index), size, data, GL_STATIC_DRAW);
+	glBufferData(get_buffer_target(is_index), size, data, (is_dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW));
 }
 
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index) {

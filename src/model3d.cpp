@@ -372,6 +372,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool 
 			glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
 		}
 		else { // draw each block independently
+			// FIXME: use glDrawElementsIndirect()?
 			for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
 				if (camera_pdu.cube_visible(i->bcube)) {
 					glDrawRangeElements(prim_type, 0, (unsigned)size(), i->num, GL_UNSIGNED_INT, (void *)(i->start_ix*sizeof(unsigned)));

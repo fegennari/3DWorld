@@ -564,6 +564,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	if (ixv.valid) {return ixv.ix;} // already loaded
 	
 	// create a new shader
+	//string const version_info("#version 400 core\n");
 	string const version_info("#version 400\n");
 	vector<string> fns;
 	shader_manager.get_shader_filenames(name, type, fns);

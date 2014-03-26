@@ -1801,11 +1801,10 @@ void texture_pair_t::free_context() {
 
 void texture_pair_t::bind_texture() const {
 
-	for (unsigned d = 0; d < 2; ++d) {
-		assert(tids[d]);
-		set_active_texture(d);
-		bind_2d_texture(tids[d]);
-	}
+	assert(is_valid());
+	bind_2d_texture(tids[0]);
+	set_active_texture(1);
+	bind_2d_texture(tids[1]);
 	set_active_texture(0);
 }
 

@@ -863,6 +863,7 @@ struct vert_tc_color : public vert_tc_t, public color_wrapper { // size = 24
 	typedef vert_tc_t non_color_class;
 	vert_tc_color() {}
 	vert_tc_color(point const &v_, float ts, float tt, colorRGBA const &c_) : vert_tc_t(v_, ts, tt) {set_c4(c_);}
+	vert_tc_color(point const &v_, float ts, float tt, unsigned char const c_[4]) : vert_tc_t(v_, ts, tt) {UNROLL_4X(c[i_] = c_[i_];)}
 	static void set_vbo_arrays(bool set_state=1);
 	void set_state() const;
 };
