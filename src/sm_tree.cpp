@@ -802,8 +802,7 @@ void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned 
 
 	assert(is_pine_tree());
 	assert(vbo_mgr_ix >= 0);
-	// FIXME: use glDrawArraysIndirect()?
-	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1, num_instances);
+	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1, num_instances); // use glDrawElementsIndirect()?
 }
 
 

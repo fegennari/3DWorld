@@ -2318,7 +2318,8 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	}
 	else {
 		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
-		draw_sphere_vbo(all_zeros, radius, ndiv, texture); // small sphere - use vbo
+		uniform_scale(radius); // no push/pop required
+		draw_sphere_vbo(all_zeros, 1.0, ndiv, texture); // small sphere - use vbo
 	}
 	if (texture) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
 	glPopMatrix();
@@ -2454,10 +2455,7 @@ void urev_body::show_colonizable_liveable(point const &pos_, float radius0) cons
 	else {return;}
 	shader_t s;
 	s.begin_color_only_shader(color); // to inefficient to create the shader every time?
-	glPushMatrix();
-	global_translate(pos_);
-	draw_sphere_vbo(all_zeros, 1.2*radius0, 12, 0);
-	glPopMatrix();
+	draw_sphere_vbo(make_pt_global(pos_), 1.2*radius0, 12, 0);
 	s.end_shader();
 }
 
