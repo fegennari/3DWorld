@@ -192,7 +192,6 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 
 	vector<entry_t> const &data(render_branches ? branch_vect : leaf_vect);
 	if (data.empty()) return;
-	// Note: we can use vert_color with tc_by_vert_id, but it only works when drawing with VBOs and doesn't seem to be any more efficient
 	vector<vert_color> pts;
 	point const camera(get_camera_pos());
 	tree_data_t const *last_td(NULL);
@@ -207,7 +206,7 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 		point pos(i->pos);
 		if (!render_branches) {pos += 0.5*i->td->lr_x*(camera - i->pos).get_norm();}
 		vector3d const vdir(camera - pos); // z
-		vector3d const v1((cross_product(vdir, up_vector).get_norm())*(render_branches ? i->td->br_x : i->td->lr_x)); // x (what if colinear?)
+		vector3d const v1(cross_product(vdir, up_vector).get_norm()*(render_branches ? i->td->br_x : i->td->lr_x)); // x (what if colinear?)
 		vector3d const v2((render_branches ? up_vector : cross_product(v1, vdir).get_norm())*(render_branches ? i->td->br_z : i->td->lr_z)); // y
 		pts.push_back(vert_color((pos - v1 - v2), i->cw.c));
 		pts.push_back(vert_color((pos + v1 - v2), i->cw.c));

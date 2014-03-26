@@ -512,8 +512,8 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float s
 	glPushMatrix();
 	translate_to(pos);
 	rotate_about(angle, dir);
-	scale_by(scale);
-	draw_sphere_vbo(all_zeros, size*get_size_scale(dist, scale_val), ndiv, 1);
+	scale_by(size*get_size_scale(dist, scale_val)*scale);
+	draw_sphere_vbo_raw(ndiv, 1);
 	glPopMatrix();
 }
 

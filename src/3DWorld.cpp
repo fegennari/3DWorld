@@ -210,6 +210,7 @@ void init_window() {
     glutMotionFunc(mouseMotion);
     glutKeyboardFunc(keyboard);
 	glutSpecialFunc(keyboard2);
+	//glutCloseFunc(OnShutdown);
 
 	if (KBD_HANDLER) {
 		glutIgnoreKeyRepeat(1);
@@ -1788,6 +1789,9 @@ int main(int argc, char** argv) {
 	progress();
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
 	//glutInitDisplayString("rgb double depth>=16 samples>=4");
+	//glutInitContextVersion (3, 3);
+	//glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);
+	//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
 	progress();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;
@@ -1798,17 +1802,11 @@ int main(int argc, char** argv) {
 	progress();
 	init_window();
 	cout << ".GL Initialized." << endl;
-	//glutFullScreen();
 	//atexit(&clear_context); // not legal when quit unexpectedly
 	if (argc == 2) read_ueventlist(argv[1]);
 	int rs(1);
-
-	if (srand_param == 1) {
-		rs = GET_TIME_MS();
-	}
-	else if (srand_param != 0) {
-		rs = srand_param;
-	}
+	if      (srand_param == 1) {rs = GET_TIME_MS();}
+	else if (srand_param != 0) {rs = srand_param;}
 	add_uevent_srand(rs);
 	uevent_advance_frame();
 	--frame_counter;

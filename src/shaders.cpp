@@ -516,6 +516,8 @@ bool setup_shaders() {
 		//glPatchParameteri(GL_PATCH_DEFAULT_INNER_LEVEL, v);
 	}
 	cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
+	cout << "Renderer: " << glGetString(GL_RENDERER) << endl;
+	cout << "Vendor: " << glGetString(GL_VENDOR) << endl;
 	cout << "GLSL Shader Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 	if (GLEW_ARB_vertex_shader && GLEW_ARB_fragment_shader && GL_EXT_geometry_shader4) return 1;
 	cerr << "Error setting up vertex and fragment GLSL shaders." << endl;
