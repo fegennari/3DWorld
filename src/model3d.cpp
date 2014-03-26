@@ -1361,7 +1361,7 @@ void model3ds::render(bool is_shadow_pass) {
 		shader_t s;
 
 		if (is_shadow_pass) {
-			s.begin_color_only_shader();
+			s.begin_color_only_shader(); // don't even need colors
 		}
 		else if (shader_effects) {
 			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));

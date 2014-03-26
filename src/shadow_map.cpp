@@ -79,10 +79,7 @@ public:
 		s.end_shader();
 	}
 	void render_dynamic() {
-		shader_t s;
-		s.begin_color_only_shader();
 		draw_and_clear_verts(dverts, GL_TRIANGLES);
-		s.end_shader();
 	}
 	void free() {
 		delete_and_zero_vbo(vbo);
@@ -330,23 +327,26 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		render_models(1);
 		render_voxel_data(1);
 
-		// add dynamic objects
-		vector<vert_wrap_t> &dverts(smap_vertex_cache.dverts);
+		if (!shadow_objs.empty()) { // add dynamic objects
+			vector<vert_wrap_t> &dverts(smap_vertex_cache.dverts);
+			shader_t shader;
+			shader.begin_color_only_shader(); // don't even need colors
 
-		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
-			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
-			int const ndiv(get_smap_ndiv(i->radius));
+			for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
+				if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
+				int const ndiv(get_smap_ndiv(i->radius));
 
-			if (i->ctype != COLL_SPHERE) {
-				assert((unsigned)i->cid < coll_objects.size());
-				coll_objects[i->cid].get_shadow_triangle_verts(dverts, ndiv);
+				if (i->ctype != COLL_SPHERE) {
+					assert((unsigned)i->cid < coll_objects.size());
+					coll_objects[i->cid].get_shadow_triangle_verts(dverts, ndiv);
+				}
+				else {
+					draw_sphere_vbo(i->pos, i->radius, ndiv, 0); // get_sphere_triangles() is too slow
+				}
 			}
-			else {
-				draw_sphere_vbo(i->pos, i->radius, ndiv, 0); // use get_sphere_triangles()?
-			}
+			smap_vertex_cache.render_dynamic();
+			shader.end_shader();
 		}
-		smap_vertex_cache.render_dynamic();
-
 		// add trees, scenery, and mesh
 		draw_trees(1);
 		draw_scenery(1, 1, 1);
