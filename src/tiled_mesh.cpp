@@ -1950,7 +1950,8 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 	s.add_uniform_vector2d("normal_tc_scale", vector2d(1.0, 1.0));
 	s.add_uniform_int("normal_map", 1);
 #endif
-	s.add_uniform_int("color_map",  0);
+	s.add_uniform_int("color_map",   0);
+	s.add_uniform_int("tc_start_ix", 0);
 	set_tree_dither_noise_tex(s, 2); // TU=2
 }
 
@@ -1991,7 +1992,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 
 	if (lod_renderer.has_leaves()) { // draw leaf billboards
 		shader_t lrs;
-		lrs.set_vert_shader("tree_leaves_billboard");
+		lrs.set_vert_shader("texture_gen.part+tree_leaves_billboard");
 		lrs.set_frag_shader("linear_fog.part+ads_lighting.part*+leaf_lighting_comp.part*+noise_dither.part+tree_leaves_billboard");
 		billboard_tree_shader_setup(lrs);
 		lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
@@ -2002,7 +2003,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 	}
 	if (lod_renderer.has_branches()) { // draw branch billboards
 		shader_t brs;
-		brs.set_vert_shader("tree_branches_billboard");
+		brs.set_vert_shader("texture_gen.part+tree_branches_billboard");
 		brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");
 		billboard_tree_shader_setup(brs); // cscale=1.0 ?
 		brs.add_uniform_vector3d("ref_dir", plus_y);
