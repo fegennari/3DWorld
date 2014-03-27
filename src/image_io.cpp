@@ -8,7 +8,9 @@ using std::string;
 using std::cerr;
 
 #ifdef ENABLE_JPEG
+#define INT32 prev_INT32 // fix conflicting typedef used in freeglut
 #include "jpeglib.h"
+#undef prev_INT32
 #endif
 
 #ifdef ENABLE_PNG

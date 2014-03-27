@@ -13,7 +13,9 @@
 #else
 #include <GL/glew.h>
 #include <GL/gl.h>
-#include <GL/glut.h>
+//#include <GL/glut.h> // standard glut
+#include <freeglut.h>
+#undef FAR // undefine conflicting defines picked up from windows headers
 #include <GL/glu.h>
 //#include <GL/glext.h>
 #endif
