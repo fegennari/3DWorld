@@ -77,7 +77,7 @@ int num_trees(0), num_smileys(1), gmww(640), gmwh(480), srand_param(3), left_han
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
 int enable_fsource(0), run_forward(0), advanced(0), passive_motion(P_MOTION_DEF), dynamic_mesh_scroll(0);
-int read_snow_file(0), write_snow_file(0), color_bit_depth(32), refresh_rate(75), mesh_detail_tex(NOISE_TEX);
+int read_snow_file(0), write_snow_file(0), mesh_detail_tex(NOISE_TEX);
 int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_TYPES] = {0};
 unsigned num_snowflakes(0), create_voxel_landscape(0);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
@@ -93,7 +93,7 @@ string user_text;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color;
 set<unsigned char> keys, keyset;
-char game_mode_string[256] = {"640x480:32@85"};
+char game_mode_string[256] = {"640x480"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 vector<cube_t> smoke_bounds;
 
@@ -451,7 +451,7 @@ void change_terrain_zoom(float val) {
 		last_temp         = -100.0; // force update
 		camera_change     = 1;
 		mesh_scale_change = 1;
-		update_mesh(val, 2);
+		update_mesh(val, 1);
 		clear_tiled_terrain();
 		calc_watershed();
 	}
@@ -1474,7 +1474,6 @@ int load_config(string const &config_file) {
 	kwmi.add("shadow_detail", shadow_detail);
 	kwmi.add("tree_coll_level", tree_coll_level);
 	kwmi.add("free_for_all", free_for_all);
-	kwmi.add("color_bit_depth", color_bit_depth);
 	kwmi.add("num_dodgeballs", num_dodgeballs);
 	kwmi.add("ntrees", num_trees);
 	kwmi.add("nsmileys", num_smileys);
@@ -1581,9 +1580,6 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "scene_size") {
 			if (fscanf(fp, "%f%f%f", &X_SCENE_SIZE, &Y_SCENE_SIZE, &Z_SCENE_SIZE) != 3) cfg_err("scene size command", error);
-		}
-		else if (str == "refresh_rate") {
-			if (!read_int(fp, refresh_rate) || refresh_rate < 1) cfg_err("refresh_rate command", error);
 		}
 		else if (str == "load_hmv") {
 			if (!read_int(fp, load_hmv)) cfg_err("load_hmv command", error);
@@ -1751,9 +1747,6 @@ int load_config(string const &config_file) {
 		}
 		if (error) {cout << "Parse error in config file." << endl; break;}
 	} // while read
-	if (color_bit_depth < 1 || (color_bit_depth >= 8 && color_bit_depth%8 != 0)) {
-		cout << "Invalid color_bit_depth command in config file." << endl; error = 1;
-	}
 	if (universe_only && disable_universe) {
 		cout << "Error: universe_only and disable_universe are mutually exclusive" << endl; error = 1;
 	}
@@ -1768,7 +1761,7 @@ int load_config(string const &config_file) {
 	//if (read_heightmap && dynamic_mesh_scroll) cout << "Warning: read_heightmap and dynamic_mesh_scroll are currently incompatible options as the heightmap does not scroll." << endl;
 	DISABLE_WATER = INIT_DISABLE_WATER;
 	XY_MULT_SIZE  = MESH_X_SIZE*MESH_Y_SIZE; // for bmp_to_chars() allocation
-	if (!gms_set) sprintf(game_mode_string, "%ix%i:%i@%i", gmww, gmwh, color_bit_depth, refresh_rate);
+	if (!gms_set) {sprintf(game_mode_string, "%ix%i", gmww, gmwh);}
 	if (strlen(md_fname) > 0) {if (!bmp_to_chars(md_fname, mesh_draw))     error = 1;}
 	if (strlen(we_fname) > 0) {if (!bmp_to_chars(we_fname, water_enabled)) error = 1;}
 	if (error) exit(1);
