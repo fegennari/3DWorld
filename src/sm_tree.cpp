@@ -863,27 +863,27 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 		switch (type) { // draw leaves
 		case T_DECID: // decidious tree
 			glTranslatef(0.0, 0.0, 0.75*height);
-			glScalef(1.2, 1.2, 0.8);
+			scale_by(width*vector3d(1.2, 1.2, 0.8));
 			break;
 		case T_TDECID: // tall decidious tree
 			glTranslatef(0.0, 0.0, 1.0*height);
-			glScalef(0.7, 0.7, 1.6);
+			scale_by(width*vector3d(0.7, 0.7, 1.6));
 			break;
 		case T_BUSH: // bush
-			glScalef((0.1*height+0.8*width)/width, (0.1*height+0.8*width)/width, 1.0);
+			scale_by(vector3d((0.1*height+0.8*width), (0.1*height+0.8*width), width));
 			break;
 		case T_PALM: // palm tree
 			glTranslatef(0.0, 0.0, 0.71*height-0.5*width);
-			glScalef(1.2, 1.2, 0.5);
+			scale_by(width*vector3d(1.2, 1.2, 0.5));
 			break;
 		}
 		int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
 
 		/*if (type == T_BUSH && nsides >= 24) {
-			draw_cube_map_sphere(all_zeros, width, N_SPHERE_DIV/2, 1); // slower, but looks better
+			draw_cube_map_sphere(all_zeros, 1.0, N_SPHERE_DIV/2, 1); // slower, but looks better
 		}
 		else*/ {
-			draw_sphere_vbo(all_zeros, width, nsides, !shadow_only, (type == T_PALM));
+			draw_sphere_vbo(all_zeros, 1.0, nsides, !shadow_only, (type == T_PALM));
 		}
 		glPopMatrix();
 	} // end mode
