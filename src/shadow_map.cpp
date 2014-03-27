@@ -109,7 +109,7 @@ float approx_pixel_width() {
 
 int get_smap_ndiv(float radius) {
 	// dynamic based on distance(camera, line(lpos, scene_center))?
-	return min(N_SPHERE_DIV, max(3, int(radius/approx_pixel_width())));
+	return min(N_SPHERE_DIV, max(4, int(0.5*radius/approx_pixel_width())));
 }
 
 void free_smap_vbo() {
@@ -330,7 +330,12 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		if (!shadow_objs.empty()) { // add dynamic objects
 			vector<vert_wrap_t> &dverts(smap_vertex_cache.dverts);
 			shader_t shader;
-			shader.begin_color_only_shader(); // don't even need colors
+			shader.set_vert_shader("vertex_xlate_scale");
+			shader.set_frag_shader("color_only");
+			shader.begin_shader();
+			int const shader_loc(shader.get_uniform_loc("xlate_scale"));
+			assert(shader_loc >= 0);
+			bind_draw_sphere_vbo(0, 0); // no tex coords or normals
 
 			for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 				if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
@@ -341,9 +346,12 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 					coll_objects[i->cid].get_shadow_triangle_verts(dverts, ndiv);
 				}
 				else {
-					draw_sphere_vbo(i->pos, i->radius, ndiv, 0); // get_sphere_triangles() is too slow
+					shader_t::set_uniform_vector4d(shader_loc, vector4d(i->pos, i->radius));
+					draw_sphere_vbo_pre_bound(ndiv, 0);
 				}
 			}
+			bind_vbo(0); // clear any bound sphere VBOs
+			shader.set_uniform_vector4d(shader_loc, vector4d(all_zeros, 1.0)); // reset to identity transform
 			smap_vertex_cache.render_dynamic();
 			shader.end_shader();
 		}

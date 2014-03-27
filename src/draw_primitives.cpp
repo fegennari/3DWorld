@@ -973,16 +973,28 @@ void setup_sphere_vbos() {
 }
 
 
-void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instances) {
+void bind_draw_sphere_vbo(bool textured, bool normals) {
+
+	assert(predef_sphere_vbo > 0);
+	bind_vbo(predef_sphere_vbo);
+	set_array_client_state(1, textured, normals, 0);
+	sd_sphere_d::vertex_type_t::set_vbo_arrays(0);
+}
+
+
+void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_instances) {
 
 	assert(ndiv > 0 && ndiv <= N_SPHERE_DIV);
-	assert(predef_sphere_vbo > 0);
 	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
 	assert(off1 < off2);
-	bind_vbo(predef_sphere_vbo);
-	set_array_client_state(1, textured, 1, 0);
-	sd_sphere_d::vertex_type_t::set_vbo_arrays(0);
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, off1, (off2 - off1), num_instances); // uses triangle strips separated by degenerate triangles
+}
+
+
+void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instances) {
+
+	bind_draw_sphere_vbo(textured, 1);
+	draw_sphere_vbo_pre_bound(ndiv, textured, half, num_instances);
 	bind_vbo(0);
 }
 
@@ -993,27 +1005,16 @@ void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bo
 		assert(ndiv > 0);
 		bool const has_xform(radius != 1.0 || pos != all_zeros);
 
-		if (has_xform) {
-			if (shader_loc >= 0) { // unused/untested mode
-				vector4d const v(pos, radius);
-				shader_t::set_uniform_vector4d(shader_loc, v);
-			}
-			else {
-				glPushMatrix();
-				if (pos != all_zeros) translate_to(pos);
-				if (radius != 1.0)    uniform_scale(radius);
-			}
+		if (shader_loc >= 0) { // unused/untested mode
+			shader_t::set_uniform_vector4d(shader_loc, vector4d(pos, radius));
+		}
+		else if (has_xform) {
+			glPushMatrix();
+			if (pos != all_zeros) translate_to(pos);
+			if (radius != 1.0)    uniform_scale(radius);
 		}
 		draw_sphere_vbo_raw(ndiv, textured, half);
-		
-		if (has_xform) {
-			if (shader_loc >= 0) {
-				shader_t::set_uniform_color(shader_loc, BLACK); // pos=0,0,0, scale=1.0
-			}
-			else {
-				glPopMatrix();
-			}
-		}
+		if (has_xform && shader_loc < 0) {glPopMatrix();}
 	}
 	else if (half) {
 		draw_subdiv_sphere_section(pos, radius, ndiv, textured, 0.0, 1.0, 0.0, 0.5);

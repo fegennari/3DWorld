@@ -931,6 +931,7 @@
     <None Include="shaders\tree_leaves_billboard.vert" />
     <None Include="shaders\tree_leaves_no_lighting.vert" />
     <None Include="shaders\triplanar_texture.part.frag" />
+    <None Include="shaders\vertex_xlate_scale.vert" />
     <None Include="shaders\vert_xform_color_uniform.vert" />
     <None Include="shaders\vert_xform_only.vert" />
     <None Include="shaders\voxel_asteroid.frag" />
