@@ -17,6 +17,8 @@ string const shaders_dir = "shaders";
 string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
 string const shader_prefix_files[NUM_SHADER_TYPES] = {/*"common_header"*/"", "", "", "", ""}; // always included
 
+shader_t *cur_shader(NULL);
+
 extern bool fog_enabled;
 extern int is_cloudy, display_mode;
 extern unsigned enabled_lights;
@@ -730,9 +732,14 @@ void shader_t::enable() {
 	assert(program);
 	glUseProgram(program);
 	//if (use_light_uniforms()) {upload_all_light_sources();}
+	cur_shader = this;
 }
 
-void shader_t::disable() {glUseProgram(0);}
+void shader_t::disable() {
+	
+	glUseProgram(0);
+	cur_shader = NULL;
+}
 
 
 // some simple shared shaders

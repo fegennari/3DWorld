@@ -7,10 +7,12 @@
 #include "shaders.h"
 
 extern int window_height, display_mode;
+extern shader_t *cur_shader;
 
 
 void set_array_client_state(bool va, bool tca, bool na, bool ca) {
 
+	assert(cur_shader != NULL);
 #if 0
 	bool const enables[4] = {va, na, ca, tca}; // layout is fixed to: fg_Vertex=0, fg_Normal=1, fg_Color=2, fg_TexCoord=3
 
