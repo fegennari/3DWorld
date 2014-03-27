@@ -11,6 +11,7 @@
 #include "physics_objects.h"
 #include "shaders.h"
 #include "draw_utils.h"
+#include "gl_ext_arb.h"
 
 
 bool const DEBUG_COLORCODE   = 0;
@@ -656,6 +657,32 @@ void draw_group(obj_group &objg, shader_t &s) {
 }
 
 
+void draw_low_res_sphere_pair(point const &pos, float radius, vector3d const &v, vector3d const &vdeform,
+	colorRGBA const *c1, colorRGBA const *c2, int ndiv, bool do_texture, shader_t &shader)
+{
+	ndiv = min(ndiv, max(3, int(3 + 1.5*(v.x + v.y + v.z))));
+	translate_to(pos);
+	vector3d scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
+	scale *= radius;
+	
+	if (vdeform != all_ones) { // apply deformation
+		float vdmin(1.0);
+		UNROLL_3X(scale[i_] *= vdeform[i_]; vdmin = min(vdmin, vdeform[i_]);)
+		if (vdmin < 1.0) scale *= pow(1.0/vdmin, 1.0/3.0);
+	}
+	scale_by(scale);
+	glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
+	if (c1) {c1->do_glColor();}
+	bind_draw_sphere_vbo(do_texture, 1);
+	draw_sphere_vbo_pre_bound(ndiv, do_texture);
+	if (c2) {c2->do_glColor();}
+	glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
+	glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
+	draw_sphere_vbo_pre_bound(ndiv, do_texture);
+	bind_vbo(0);
+}
+
+
 void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
 					  bool do_texture, shader_t &shader, int is_chunky)
 {
@@ -713,15 +740,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 	if (is_chunky) {
 		assert(!tail);
 		vector3d const v((is_chunky == 2) ? obj.orientation : obj.init_dir);
-		int const ndiv(max(3, int(3 + 1.5*(v.x + v.y + v.z))));
-		translate_to(pos);
-		vector3d const scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
-		scale_by(scale*radius);
-		glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
-		draw_sphere_vbo_raw(ndiv, do_texture);
-		glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
-		glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-		draw_sphere_vbo_raw(ndiv, do_texture);
+		draw_low_res_sphere_pair(pos, radius, v, all_ones, NULL, NULL, 16, do_texture, shader);
 	}
 	else {
 		int ndiv(int(4.0*sqrt(point_dia)));
@@ -1203,26 +1222,8 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader) {
 
-	ndiv    = min(ndiv, max(3, int(3 + 1.5*(v.x + v.y + v.z))));
-	radius *= (0.5 + fabs(v.x));
 	glPushMatrix();
-	translate_to(pos);
-	vector3d scale((0.8+0.5*fabs(v.x)), (0.8+0.5*fabs(v.y)), (0.8+0.5*fabs(v.z)));
-	scale *= radius;
-	
-	if (vdeform != all_ones) { // apply deformation
-		float vdmin(1.0);
-		UNROLL_3X(scale[i_] *= vdeform[i_]; vdmin = min(vdmin, vdeform[i_]);)
-		if (vdmin < 1.0) scale *= pow(1.0/vdmin, 1.0/3.0);
-	}
-	scale_by(scale);
-	glRotatef(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));
-	(charred ? BLACK : YELLOW).do_glColor();
-	draw_sphere_vbo_raw(ndiv, 0);
-	(charred ? DK_GRAY : BLOOD_C).do_glColor();
-	glTranslatef(0.1*(v.x-v.y), 0.1*(v.y-v.z), 0.1*(v.x-v.z));
-	glRotatef(360.0*(v.z - v.x), v.y, v.z, (v.x+0.01));
-	draw_sphere_vbo_raw(ndiv, 0);
+	draw_low_res_sphere_pair(pos, radius*(0.5 + fabs(v.x)), v, vdeform, &(charred ? BLACK : YELLOW), &(charred ? DK_GRAY : BLOOD_C), ndiv, 0, shader);
 	glPopMatrix();
 }
 
