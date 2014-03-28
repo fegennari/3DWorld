@@ -200,6 +200,22 @@ void init_context() {
 }
 
 
+void quit_3dworld() {
+
+	cout << "quitting" << endl;
+	kill_raytrace = 1;
+	clear_context();
+
+	if (!universe_only) {
+		free_models();
+		free_scenery();
+		delete_matrices();
+	}
+	//_CrtDumpMemoryLeaks();
+	exit(0); // quit
+}
+
+
 void init_window() {
 
 	wglSwapIntervalEXT(vsync_enabled ? 1 : 0);
@@ -210,7 +226,7 @@ void init_window() {
     glutMotionFunc(mouseMotion);
     glutKeyboardFunc(keyboard);
 	glutSpecialFunc(keyboard2);
-	//glutCloseFunc(OnShutdown);
+	glutCloseFunc(quit_3dworld);
 
 	if (KBD_HANDLER) {
 		glutIgnoreKeyRepeat(1);
@@ -674,22 +690,6 @@ void change_tree_mode() {
 		regen_trees(1, 0); // Note: won't regen trees if num_trees == 0, won't reset mesh shadows
 #endif
 	}
-}
-
-
-void quit_3dworld() {
-
-	cout << "quitting" << endl;
-	kill_raytrace = 1;
-	free_textures();
-
-	if (!universe_only) {
-		free_models();
-		free_scenery();
-		delete_matrices();
-	}
-	//_CrtDumpMemoryLeaks();
-	exit(0); // quit
 }
 
 
@@ -1781,10 +1781,12 @@ int main(int argc, char** argv) {
     glutInit(&argc, argv);
 	progress();
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
-	//glutInitDisplayString("rgb double depth>=16 samples>=4");
-	//glutInitContextVersion (3, 3);
-	//glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);
-	//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
+	//glutInitDisplayString("rgb double depth>=16 samples>=8");
+#if 0 // seems to work now; should really enable when deprecated OpenGL features are removed
+	glutInitContextVersion(4, 2);
+	glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);
+	glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
+#endif
 	progress();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;
