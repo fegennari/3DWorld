@@ -11,7 +11,6 @@
 
 
 // predefined sphere VBOs
-bool const USE_SPHERE_VBOS = 1;
 unsigned const NUM_PREDEF_SPHERES(4*N_SPHERE_DIV);
 
 unsigned sphere_vbo_offsets[NUM_PREDEF_SPHERES+1] = {0};
@@ -1001,7 +1000,7 @@ void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instan
 
 void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc, int shader_loc) {
 
-	if (USE_SPHERE_VBOS && ndiv <= N_SPHERE_DIV) { // speedup is highly variable
+	if (ndiv <= N_SPHERE_DIV) { // speedup is highly variable
 		assert(ndiv > 0);
 		bool const has_xform(radius != 1.0 || pos != all_zeros);
 

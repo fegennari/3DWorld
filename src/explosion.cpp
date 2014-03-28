@@ -291,7 +291,8 @@ void draw_blasts() {
 				br.cur_color.do_glColor();
 				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
-				draw_sphere_vbo(all_zeros, br.cur_size, ndiv, 1);
+				uniform_scale(br.cur_size);
+				draw_sphere_vbo_raw(ndiv, 1);
 				//draw_sphere_vbo_back_to_front(all_zeros, br.cur_size, ndiv, 1);
 				glPopMatrix();
 				if (end_type) {/*glEnable(GL_CULL_FACE);*/ s.add_uniform_float("min_alpha", 0.0);}

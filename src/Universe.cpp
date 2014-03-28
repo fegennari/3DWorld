@@ -2237,7 +2237,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 			disable_blend();
 		}
 		usg.enable_star_shader(colorA, colorB);
-		draw_sphere_vbo(all_zeros, radius, ndiv, 0); // small sphere - use vbo
+		draw_sphere_vbo(all_zeros, radius, ndiv, 0); // use vbo if ndiv is small enough
 		if (world_mode == WMODE_UNIVERSE && size >= 64) {draw_flares(ndiv, 1);}
 		usg.disable_star_shader();
 		glPopMatrix();
@@ -2319,7 +2319,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	else {
 		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
 		uniform_scale(radius); // no push/pop required
-		draw_sphere_vbo(all_zeros, 1.0, ndiv, texture); // small sphere - use vbo
+		draw_sphere_vbo_raw(ndiv, texture); // small sphere - use vbo
 	}
 	if (texture) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
 	glPopMatrix();
@@ -2494,7 +2494,8 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 	glPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
-	draw_sphere_vbo(all_zeros, 1.01*cloud_radius, max(4, min(32, int(4.0*size_))), 1);
+	uniform_scale(1.01*cloud_radius);
+	draw_sphere_vbo_raw(max(4, min(N_SPHERE_DIV, int(4.0*size_))), 1);
 	glPopMatrix();
 	usg.disable_atmospheric_shader();
 }

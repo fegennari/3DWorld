@@ -406,7 +406,8 @@ void uobj_draw_data::draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, 
 		cn.do_glColor();
 		glTranslatef(0.0, 0.0, 0.5*length);
 		invert_z(); // draw the correct half
-		draw_sphere_vbo(all_zeros, width, min(ndiv, N_SPHERE_DIV), 0, 1);
+		uniform_scale(width);
+		draw_sphere_vbo_raw(min(ndiv, N_SPHERE_DIV), 0, 1);
 	}
 	glPopMatrix(); // remove the rotations
 	glPushMatrix();
@@ -442,7 +443,7 @@ void uobj_draw_data::draw_spherical_shot(colorRGBA const &color) const {
 		return;
 	}
 	set_emissive_color(color, shader);
-	draw_sphere_vbo(all_zeros, 1.0, min(ndiv, N_SPHERE_DIV/2), 0);
+	draw_sphere_vbo_raw(min(ndiv, N_SPHERE_DIV/2), 0);
 	shader->clear_color_e();
 }
 
@@ -893,8 +894,8 @@ void uobj_draw_data::draw_us_bcruiser() const {
 				draw_fast_cylinder(cur+point(0.0, 0.0, -0.2), cur, 0.6*erad, erad, ndiv3, textured);
 				glPushMatrix();
 				translate_to(cur + vector3d(0.0, 0.0, 0.8));
-				glScalef(1.0, 1.0, 1.6);
-				draw_sphere_vbo(all_zeros, erad, ndiv3, textured, 1);
+				glScalef(erad, erad, 1.6*erad);
+				draw_sphere_vbo_raw(ndiv3, textured, 1);
 				glPopMatrix();
 			} // for j
 		} // for i
@@ -1186,7 +1187,6 @@ void uobj_draw_data::draw_starbase() const {
 
 void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 
-	unsigned const ndiv2(is_cube ? max(1, ndiv/2) : get_ndiv((3*ndiv)/2));
 	vector3d view_dir(pos, get_player_pos());
 	if (is_cube && obj) obj->rotate_point(view_dir);
 
@@ -1198,7 +1198,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 			draw_cube(all_zeros, 1.95, 1.95, 1.95, 1, 0, 1.0, 0, &view_dir);
 		}
 		else {
-			draw_sphere_vbo(all_zeros, 0.97, ndiv2, 1);
+			draw_sphere_vbo(all_zeros, 0.97, get_ndiv((3*ndiv)/2), 1);
 		}
 	}
 	if (phase2) {
@@ -1209,7 +1209,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 			draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, 0, 1.0, 0, &view_dir);
 		}
 		else {
-			draw_sphere_vbo(all_zeros, 1.0, ndiv2, 1);
+			draw_sphere_vbo(all_zeros, 1.0, get_ndiv((3*ndiv)/2), 1);
 		}
 	}
 	end_ship_texture();
@@ -1558,8 +1558,8 @@ void uobj_draw_data::draw_dwexterm() const {
 				if (j) p.x = -p.x;
 				translate_to(p);
 				if (half) glRotatef(-90.0, 1.0, 0.0, 0.0);
-				if (half) glScalef(1.0, 1.0, 0.6);
-				draw_sphere_vbo(all_zeros, size, ndiv3, 0, half);
+				glScalef(size, size, (half ? 0.6 : 1.0)*size);
+				draw_sphere_vbo_raw(ndiv3, 0, half);
 				glPopMatrix();
 			}
 		}
@@ -1875,7 +1875,7 @@ void uobj_draw_data::draw_juggernaut() const {
 
 	glPushMatrix();
 	glScalef(0.85, 1.2, 1.0);
-	draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // main body
+	draw_sphere_vbo_raw(ndiv, 0); // main body
 	glPopMatrix();
 
 	glPushMatrix();
@@ -2052,7 +2052,7 @@ void uobj_draw_data::draw_seige() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, 0.4);
 	glScalef(0.6, 0.2, 1.0);
-	draw_sphere_vbo(all_zeros, 1.0, ndiv, 1);
+	draw_sphere_vbo_raw(ndiv, 1);
 	glTranslatef(0.0, 0.0, -0.3);
 	glScalef(1.0, 1.0, 1.5);
 	colorRGBA c(color_b);
@@ -2062,7 +2062,7 @@ void uobj_draw_data::draw_seige() const {
 		c.do_glColor();
 		glScalef(0.7, 1.35, 0.8);
 		glTranslatef(0.0, 0.05*(7.0 - i), 0.0);
-		draw_sphere_vbo(all_zeros, 1.0, ndiv, 1);
+		draw_sphere_vbo_raw(ndiv, 1);
 	}
 	glPopMatrix();
 
@@ -2071,7 +2071,7 @@ void uobj_draw_data::draw_seige() const {
 	glPushMatrix();
 	glTranslatef(0.0, 0.0, -0.4);
 	glScalef(0.9, 0.25, 0.96);
-	draw_sphere_vbo(all_zeros, 1.0, ndiv, 1);
+	draw_sphere_vbo_raw(ndiv, 1);
 	glPopMatrix();
 
 	// draw engines

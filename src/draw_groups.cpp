@@ -857,8 +857,8 @@ void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orien
 		glPushMatrix();
 		translate_to(pos);
 		if (use_orient) rotate_to_dir(orient);
-		glScalef(1.0, 2.0, 0.25);
-		draw_sphere_vbo(all_zeros, 1.5*radius, ndiv, 0);
+		glScalef(1.5*radius, 3.0*radius, 0.375*radius);
+		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0);
 		glPopMatrix();
 		break;
 	default: assert(0);
@@ -1084,7 +1084,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 	translate_to(pos);
 	rotate_from_v2v(orient, vector3d(0.0, -1.0, 0.0));
 	glRotatef(180.0, 0.0, 1.0, 0.0);
-	draw_sphere_vbo_back_to_front(all_zeros, radius, 2*ndiv, 1);
+	draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
 	glPopMatrix();
 	shader.add_uniform_float("min_alpha", 0.01);
 	if (burn_val > -1.0) {shader.add_uniform_float("burn_offset", -1.0);} // reset

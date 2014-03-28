@@ -489,9 +489,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				colorRGBA color(0.8, 0.6, 1.0, 0.5*alpha);
 				if (p_loaded) {set_emissive_only(color, shader);} else {color.do_glColor();} // emissive when loaded
 				glScalef(1.0, 1.0, 0.2);
-				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.25), 0.01, ndiv, 0);
-				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.17), 0.01, ndiv, 0);
-				draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.09), 0.01, ndiv, 0);
+				for (unsigned i = 0; i < 3; ++i) {draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.25+0.08*i), 0.01, ndiv, 0);}
 				if (p_loaded) {shader.clear_color_e();}
 			}
 			glPopMatrix();
