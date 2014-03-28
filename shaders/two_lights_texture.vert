@@ -1,6 +1,9 @@
 uniform float alpha = 1.0;
 uniform vec4 emission = vec4(0,0,0,1);
 uniform float vertex_offset_scale = 0.0;// hack to make vertex_offset ignored when unused/unset
+uniform vec3 xlate = vec3(0);
+uniform vec3 scale = vec3(1);
+
 attribute vec3 vertex_offset;
 
 varying vec2 tc;
@@ -8,7 +11,8 @@ varying vec2 tc;
 void main()
 {
 	tc          = gl_MultiTexCoord0;
-	vec4 epos   = gl_ModelViewMatrix * (gl_Vertex + vec4(vertex_offset_scale*vertex_offset, 0.0));
+	vec4 vertex = vec4((vertex_offset_scale*vertex_offset + xlate), 0.0) + (vec4(scale, 1.0) * gl_Vertex);
+	vec4 epos   = gl_ModelViewMatrix * vertex;
 	gl_Position = gl_ProjectionMatrix * epos;
 	vec3 normal = normalize(gl_NormalMatrix * gl_Normal); // eye space
 	gl_FogFragCoord = length(epos.xyz); // set standard fog coord

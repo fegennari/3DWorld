@@ -235,7 +235,7 @@ void small_tree_group::translate_by(vector3d const &vd) {
 void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(1, shadow_only, xlate, points);
+		i->draw(1, shadow_only, -1, -1, xlate, points);
 	}
 }
 
@@ -309,14 +309,14 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 }
 
 
-void small_tree_group::draw_non_pine_leaves(bool shadow_only, vector3d const &xlate) const {
+void small_tree_group::draw_non_pine_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate) const {
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		if (i->is_pine_tree()) continue;
 		assert(!instanced); // only pine trees can be instanced
 		int const type(i->get_type());
 		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
-		i->draw(2, shadow_only, xlate);
+		i->draw(2, shadow_only, xlate_loc, scale_loc, xlate);
 	}
 }
 
@@ -552,7 +552,12 @@ void draw_small_trees(bool shadow_only) {
 	if (!all_pine) { // non-pine trees
 		//setup_smoke_shaders(s, 0.75, 0, 0, 0, v, v, 0, 0, v); // dynamic lights, but no smoke (slow, but looks better)
 		s.begin_simple_textured_shader(0.75, !shadow_only); // with lighting, unless shadow_only
-		small_trees.draw_non_pine_leaves(shadow_only);
+		int const xlate_loc(s.get_uniform_loc("xlate")), scale_loc(s.get_uniform_loc("scale"));
+		bind_draw_sphere_vbo(!shadow_only, 1);
+		small_trees.draw_non_pine_leaves(shadow_only, xlate_loc, scale_loc);
+		bind_vbo(0);
+		s.set_uniform_vector3d(xlate_loc, zero_vector);
+		s.set_uniform_vector3d(scale_loc, vector3d(1,1,1));
 		s.end_shader();
 	}
 	if (!tree_scenery_pld.empty()) {
@@ -818,7 +823,7 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
+void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate, vector<vert_wrap_t> *points) const {
 
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
@@ -854,38 +859,40 @@ void small_tree::draw(int mode, bool shadow_only, vector3d const &xlate, vector<
 	}
 	if (mode & 2) { // leaves
 		assert(!is_pine_tree()); // handled through draw_pine_leaves()
-		// palm or decidious
 		if (!shadow_only) {color.do_glColor();}
-		glPushMatrix();
-		translate_to(pos);
-		if (r_angle != 0.0) {glRotatef(r_angle, rx, ry, 0.0);}
+		vector3d scale;
+		point xl(all_zeros);
 
-		switch (type) { // draw leaves
+		switch (type) { // draw leaves (palm or deciduous)
 		case T_DECID: // decidious tree
-			glTranslatef(0.0, 0.0, 0.75*height);
-			scale_by(width*vector3d(1.2, 1.2, 0.8));
+			xl.z  = 0.75*height;
+			scale = width*vector3d(1.2, 1.2, 0.8);
 			break;
 		case T_TDECID: // tall decidious tree
-			glTranslatef(0.0, 0.0, 1.0*height);
-			scale_by(width*vector3d(0.7, 0.7, 1.6));
+			xl.z  = 1.0*height;
+			scale = width*vector3d(0.7, 0.7, 1.6);
 			break;
 		case T_BUSH: // bush
-			scale_by(vector3d((0.1*height+0.8*width), (0.1*height+0.8*width), width));
+			scale = vector3d((0.1*height+0.8*width), (0.1*height+0.8*width), width);
 			break;
 		case T_PALM: // palm tree
-			glTranslatef(0.0, 0.0, 0.71*height-0.5*width);
-			scale_by(width*vector3d(1.2, 1.2, 0.5));
+			xl.z  = 0.71*height-0.5*width;
+			scale = width*vector3d(1.2, 1.2, 0.5);
 			break;
 		}
 		int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
 
-		/*if (type == T_BUSH && nsides >= 24) {
-			draw_cube_map_sphere(all_zeros, 1.0, N_SPHERE_DIV/2, 1); // slower, but looks better
+		if (r_angle != 0.0) {
+			glPushMatrix();
+			translate_to(pos);
+			glRotatef(r_angle, rx, ry, 0.0);
 		}
-		else*/ {
-			draw_sphere_vbo(all_zeros, 1.0, nsides, !shadow_only, (type == T_PALM));
-		}
-		glPopMatrix();
+		else {xl += pos;}
+		assert(xlate_loc >= 0 && scale_loc >= 0);
+		shader_t::set_uniform_vector3d(xlate_loc, xl);
+		shader_t::set_uniform_vector3d(scale_loc, scale);
+		draw_sphere_vbo_pre_bound(nsides, !shadow_only, (type == T_PALM));
+		if (r_angle != 0.0) {glPopMatrix();}
 	} // end mode
 }
 
