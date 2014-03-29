@@ -87,7 +87,8 @@ public:
 
 	void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
 	void upload_light_source(unsigned light_id);
-	void upload_all_light_sources();
+	void upload_light_sources_range(unsigned start, unsigned end);
+	void upload_all_light_sources() {upload_light_sources_range(0, MAX_SHADER_LIGHTS);}
 	void setup_scene_bounds() const;
 	void setup_fog_scale() const;
 	void check_for_fog_disabled();

@@ -26,7 +26,5 @@ Visual Studio profile
 static error check (analysis)
 
 Better pine tree texture
-
 glMapBuffer - persistent
-Sphere drawing instancing: objects (blood, fragments, etc.), small tree leaves
 GS layout(triangles)

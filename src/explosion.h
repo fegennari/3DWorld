@@ -86,8 +86,8 @@ inline float calc_damage_scale(float dist, float radius, float bradius) {
 void register_explosion(point const &pos, float radius, float damage, unsigned eflags, int wclass, uobject *src, free_obj const *parent);
 void add_blastr(point const &pos, vector3d const &dir, float size, float damage, int time, int src,
 				colorRGBA const &color1, colorRGBA const &color2, int type=ETYPE_FIRE, free_obj const *const parent=NULL);
-void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light);
-bool setup_br_light(unsigned index, point const &pos, unsigned gl_light);
+void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light, shader_t &shader);
+bool setup_br_light(unsigned index, point const &pos, unsigned gl_light, shader_t &shader);
 bool higher_priority(unsigned first, unsigned second);
 
 

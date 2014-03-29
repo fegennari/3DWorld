@@ -16,8 +16,11 @@ struct fg_light_t {
 
 const int MAX_LIGHTS = 8;
 uniform fg_light_t fg_LightSource[MAX_LIGHTS];
+// FIXME: light pos is currently in world space, so we multiply by the MVM to put in eye space
+vec4 get_light_pos(int i) {return gl_ModelViewMatrix * fg_LightSource[i].position;}
 #else
 #define fg_LightSource gl_LightSource
+vec4 get_light_pos(int i) {return fg_LightSource[i].position;}
 #endif
 
 
@@ -45,7 +48,7 @@ void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir,
 vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale)
 {
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
-	vec3 light_dir = normalize(fg_LightSource[i].position.xyz - epos.xyz);
+	vec3 light_dir = normalize(get_light_pos(i).xyz - epos.xyz);
 	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
 	vec3 diffuse = (gl_Color * fg_LightSource[i].diffuse).rgb;
 	vec3 ambient = (gl_Color * fg_LightSource[i].ambient).rgb;
@@ -93,12 +96,12 @@ vec4 add_light_comp1(in vec3 normal)           {return add_light_comp_pos1(norma
 
 
 float calc_light_atten(in vec4 epos, in int i) {
-	float dist  = distance(fg_LightSource[i].position, epos);
+	float dist = distance(get_light_pos(i), epos);
 	return 1.0 / (fg_LightSource[i].constantAttenuation + fg_LightSource[i].linearAttenuation * dist + fg_LightSource[i].quadraticAttenuation * dist * dist);
 }
 
 float calc_light_atten0(in vec4 epos) {
-	float dist  = distance(fg_LightSource[0].position, epos);
+	float dist = distance(fg_LightSource[0].position, epos);
 	return 1.0 / (fg_LightSource[0].constantAttenuation + fg_LightSource[0].linearAttenuation * dist + fg_LightSource[0].quadraticAttenuation * dist * dist);
 }
 

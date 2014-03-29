@@ -335,7 +335,7 @@ void draw_blasts() {
 }
 
 
-void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light) {
+void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light, shader_t &shader) {
 
 	if (color.alpha == 0.0 || color == BLACK) return; // shouldn't get here
 	colorRGBA const uambient(color*0.2);
@@ -344,16 +344,17 @@ void setup_point_light(point const &pos, colorRGBA const &color, float radius, u
 	float const atten2(0.1/(EXP_LIGHT_SCALE*radius));
 	setup_gl_light_atten(gl_light, 0.5, 20.0*atten2, 5000.0*atten2);
 	set_gl_light_pos(gl_light, pos, 1.0); // point light source position
+	//if (display_mode & 0x20) {shader.upload_light_source(gl_light - GL_LIGHT0);} // FIXME LIGHTING
 }
 
 
-bool setup_br_light(unsigned index, point const &pos, unsigned gl_light) {
+bool setup_br_light(unsigned index, point const &pos, unsigned gl_light, shader_t &shader) {
 
 	assert(gl_light < MAX_GL_LIGHT);
 	assert(index < blastrs.size());
 	blastr const &br(blastrs[index]);
 	if (br.time == 0) return 0;
-	setup_point_light(make_pt_global(br.pos), br.cur_color, br.size, gl_light);
+	setup_point_light(make_pt_global(br.pos), br.cur_color, br.size, gl_light, shader);
 	return 1;
 }
 

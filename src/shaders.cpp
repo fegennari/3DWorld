@@ -284,9 +284,9 @@ void shader_t::upload_light_source(unsigned light_id) {
 }
 
 
-void shader_t::upload_all_light_sources() {
+void shader_t::upload_light_sources_range(unsigned start, unsigned end) {
 
-	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
+	for (unsigned i = start; i < end; ++i) {
 		if (is_light_enabled(i)) {upload_light_source(i);}
 	}
 }

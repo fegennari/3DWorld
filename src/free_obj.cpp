@@ -655,10 +655,11 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 	bool const specular(!known_shadowed && (light_val == 0 || (!stencil_shadows && light_val == 1))); // less than half shadowed
 	uobj_draw_data udd(this, &shader[0], ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
 		dist, radius, c_radius/radius, (nlights > 0), 1, !partial_shadow, 1, (npasses == 1));
-
+	//if (display_mode & 0x20) {shader[0].upload_light_sources_range(0, 2);} // light 0 (sun) and 1 (ambient) // FIXME LIGHTING
+	
 	if (ndiv > 3) {
 		for (unsigned i = 0; i < nlights; ++i) {
-			setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i));
+			setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i), shader[0]); // only shader[0] has dynamic lights enabled
 		}
 	}
 	for (unsigned pass = 0; pass < npasses; ++pass) {

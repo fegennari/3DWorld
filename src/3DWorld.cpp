@@ -227,6 +227,7 @@ void init_window() {
     glutKeyboardFunc(keyboard);
 	glutSpecialFunc(keyboard2);
 	glutCloseFunc(quit_3dworld);
+	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS); // doesn't work?
 
 	if (KBD_HANDLER) {
 		glutIgnoreKeyRepeat(1);
@@ -1780,8 +1781,8 @@ int main(int argc, char** argv) {
 	progress();
     glutInit(&argc, argv);
 	progress();
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
-	//glutInitDisplayString("rgb double depth>=16 samples>=8");
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
+	//glutInitDisplayString("rgba double depth>=16 samples>=8");
 #if 0 // seems to work now; should really enable when deprecated OpenGL features are removed
 	glutInitContextVersion(4, 2);
 	glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);

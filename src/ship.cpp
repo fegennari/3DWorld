@@ -688,6 +688,7 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
 	if (shadow_mode) {s.set_prefix("#define SHADOW_ONLY_MODE", 1);} // FS
 	if (disint_tex ) {s.set_prefix("#define BURN_MASK_TEX",    1);} // FS
+	//if (!shadow_mode && ((display_mode & 0x20) != 0)) {s.set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", 1);} // FS // FIXME LIGHTING
 	s.set_vert_shader("ship_draw");
 	s.set_frag_shader("ads_lighting.part*+black_body_burn.part+ship_draw");
 	s.begin_shader();
