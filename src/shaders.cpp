@@ -256,39 +256,61 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 }
 
 
+void shader_t::enable_lighting_uniforms(unsigned shader_type) {
+
+	set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", 1);
+	using_light_uniforms = 1;
+}
+
+
 void shader_t::upload_light_source(unsigned light_id) {
 
 	assert(is_setup());
 	assert(light_id < MAX_SHADER_LIGHTS); // only supporting 8 light sources
-	gl_light_params_t const &lp(gl_light_params[light_id]);
+	if (!using_light_uniforms || !is_light_enabled(light_id)) return;
 	// FIXME: only upload if light source has changed since last call?
-	string const lstrs[MAX_SHADER_LIGHTS] = {"fg_LightSource[0]", "fg_LightSource[1]", "fg_LightSource[2]", "fg_LightSource[3]", "fg_LightSource[4]", "fg_LightSource[5]", "fg_LightSource[6]", "fg_LightSource[7]"};
-	string const &ls_str(lstrs[light_id]);
-	int loc;
-	float const pos[4] = {lp.pos.x, lp.pos.y, lp.pos.z, lp.pos_w};
-	// FIXME: pos should be in eye space, but we can't transform into eye space here because the MVM isn't known until the draw call
-	loc = glGetUniformLocation(program, (ls_str+".position").c_str()); // cache?
-	if (loc >= 0) {glUniform4fv(loc, 1, pos);} else {return;} // light is unused in the shader
-	loc = glGetUniformLocation(program, (ls_str+".ambient").c_str());
-	if (loc >= 0) {glUniform4fv(loc, 1, &lp.ambient.R);}
-	loc = glGetUniformLocation(program, (ls_str+".diffuse").c_str());
-	if (loc >= 0) {glUniform4fv(loc, 1, &lp.diffuse.R);}
-	loc = glGetUniformLocation(program, (ls_str+".specular").c_str());
-	if (loc >= 0) {glUniform4fv(loc, 1, &lp.specular.R);}
-	loc = glGetUniformLocation(program, (ls_str+".constantAttenuation").c_str());
-	if (loc >= 0) {glUniform1fv(loc, 1, &lp.const_atten);}
-	loc = glGetUniformLocation(program, (ls_str+".linearAttenuation").c_str());
-	if (loc >= 0) {glUniform1fv(loc, 1, &lp.linear_atten);}
-	loc = glGetUniformLocation(program, (ls_str+".quadraticAttenuation").c_str());
-	if (loc >= 0) {glUniform1fv(loc, 1, &lp.quad_atten);}
+	light_loc_t &lloc(light_locs[light_id]);
+
+	if (!lloc.valid) {
+		static char ls_strs[MAX_SHADER_LIGHTS][7][40] = {0};
+		static bool is_setup(0);
+
+		if (!is_setup) {
+			for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
+				sprintf(ls_strs[i][0], "fg_LightSource[%i].position", i);
+				sprintf(ls_strs[i][1], "fg_LightSource[%i].ambient",  i);
+				sprintf(ls_strs[i][2], "fg_LightSource[%i].diffuse",  i);
+				sprintf(ls_strs[i][3], "fg_LightSource[%i].specular", i);
+				sprintf(ls_strs[i][4], "fg_LightSource[%i].constantAttenuation",  i);
+				sprintf(ls_strs[i][5], "fg_LightSource[%i].linearAttenuation",    i);
+				sprintf(ls_strs[i][6], "fg_LightSource[%i].quadraticAttenuation", i);
+			}
+			is_setup = 1;
+		}
+		lloc.valid = 1;
+		bool disabled(0);
+		
+		for (unsigned i = 0; i < 7; ++i) {
+			lloc.v[i] = (disabled ? -1 : glGetUniformLocation(program, ls_strs[light_id][i]));
+			if (i == 0 && lloc.v[0] < 0) {disabled = 1;} // light is unused in the shader
+		}
+	}
+	gl_light_params_t const &lp(gl_light_params[light_id]);
+	float const pos[4] = {lp.eye_space_pos.x, lp.eye_space_pos.y, lp.eye_space_pos.z, lp.pos_w};
+	if (lloc.v[0] < 0) return;
+	if (lloc.v[0] >= 0) {glUniform4fv(lloc.v[0], 1, pos);} // in eye space, using MVM at the time set_gl_light_pos() was called
+	if (lloc.v[1] >= 0) {glUniform4fv(lloc.v[1], 1, &lp.ambient.R );}
+	if (lloc.v[2] >= 0) {glUniform4fv(lloc.v[2], 1, &lp.diffuse.R );}
+	if (lloc.v[3] >= 0) {glUniform4fv(lloc.v[3], 1, &lp.specular.R);}
+	if (lloc.v[4] >= 0) {glUniform1fv(lloc.v[4], 1, &lp.const_atten );}
+	if (lloc.v[5] >= 0) {glUniform1fv(lloc.v[5], 1, &lp.linear_atten);}
+	if (lloc.v[6] >= 0) {glUniform1fv(lloc.v[6], 1, &lp.quad_atten  );}
 }
 
 
 void shader_t::upload_light_sources_range(unsigned start, unsigned end) {
 
-	for (unsigned i = start; i < end; ++i) {
-		if (is_light_enabled(i)) {upload_light_source(i);}
-	}
+	for (unsigned i = start; i < end; ++i) {upload_light_source(i);}
 }
 
 
@@ -629,10 +651,7 @@ bool use_light_uniforms() {return ((display_mode & 0x10) != 0);}
 // See http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/glsl-core-tutorial-create-a-program/
 bool shader_t::begin_shader(bool do_enable) {
 
-	/*if (use_light_uniforms()) { // FIXME: figure out which (if any) shader includes ads_lighting.part
-		set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", 0); // VS
-		set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", 1); // FS
-	}*/
+	//if (use_light_uniforms()) {enable_lighting_uniforms(0); enable_lighting_uniforms(1);} // FIXME: which (if any) shader includes ads_lighting.part?
 
 	//RESET_TIME;
 	// get the program
@@ -721,9 +740,11 @@ void shader_t::end_shader() { // ok to call if not in a shader
 		prepend_string[i].clear();
 		shader_names[i].clear();
 	}
+	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {light_locs[i].valid = 0;}
 	prog_name_prefix.clear();
 	attrib_locs.clear();
 	last_spec = ALPHA0;
+	using_light_uniforms = 0;
 }
 
 

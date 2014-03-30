@@ -638,7 +638,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 	if (is_player_ship()) return; // don't draw player ship
 	if (light_val > 0 && sobj != NULL) sobjs.push_back(sobj);
 	assert(num_exp_lights <= NUM_EXP_LIGHTS);
-	unsigned const nlights(min((unsigned)dscale, num_exp_lights)); // hack to avoid adding too many lights to tiny objects
+	unsigned const nlights(no_lighting ? 0 : min((unsigned)dscale, num_exp_lights)); // hack to avoid adding too many lights to tiny objects
 
 	if (stencil_shadows && light_val != 3) {
 		if (shadowed) {
@@ -655,7 +655,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 	bool const specular(!known_shadowed && (light_val == 0 || (!stencil_shadows && light_val == 1))); // less than half shadowed
 	uobj_draw_data udd(this, &shader[0], ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
 		dist, radius, c_radius/radius, (nlights > 0), 1, !partial_shadow, 1, (npasses == 1));
-	//if (display_mode & 0x20) {shader[0].upload_light_sources_range(0, 2);} // light 0 (sun) and 1 (ambient) // FIXME LIGHTING
+	if (!no_lighting) {shader[0].upload_light_sources_range(0, 2);} // light 0 (sun) and 1 (ambient)
 	
 	if (ndiv > 3) {
 		for (unsigned i = 0; i < nlights; ++i) {

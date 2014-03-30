@@ -663,7 +663,6 @@ public:
 		rotate_into_plus_z(rot_axis);
 		if (rot_degrees != 0.0) {rotate_about(rot_degrees, plus_z);}
 		scale_by(size);
-		//if (display_mode & 0x20) {draw_sphere_vbo(bsphere.pos, bsphere.radius, 32, 0);}
 		draw_vbo();
 		glPopMatrix();
 		return 1;

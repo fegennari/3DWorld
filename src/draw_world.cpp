@@ -9,6 +9,8 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 #include "draw_utils.h"
+#include "transform_obj.h"
+#include <glm/vec4.hpp>
 
 
 bool const DYNAMIC_SMOKE_SHADOWS = 1; // slower, but looks nice
@@ -76,53 +78,69 @@ int get_universe_ambient_light() {
 }
 
 
-void set_light_ds_color(int light, colorRGBA const &diffuse) {
+void gl_light_params_t::set_pos(point const &p, float w) {
+	
+	pos = p;
+	pos_w = w;
+
+	if (display_mode & 0x20) {
+		xform_matrix xf;
+		xf.assign_mv_from_gl();
+		glm::vec4 const v(xf * glm::vec4(p.x, p.y, p.z, w));
+		eye_space_pos.assign(v.x, v.y, v.z); // v.w ignored?
+	}
+}
+
+
+void set_light_ds_color(int light, colorRGBA const &diffuse, bool call_gl_light) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	glLightfv(light, GL_DIFFUSE,  &diffuse.R);
-	glLightfv(light, GL_SPECULAR, &diffuse.R); // set specular lighting equal to diffuse lighting
+	if (call_gl_light) {glLightfv(light, GL_DIFFUSE,  &diffuse.R);}
+	if (call_gl_light) {glLightfv(light, GL_SPECULAR, &diffuse.R);} // set specular lighting equal to diffuse lighting
 	gl_light_params[light - GL_LIGHT0].set_ds(diffuse);
 }
 
-void set_light_a_color(int light, colorRGBA const &ambient) {
+void set_light_a_color(int light, colorRGBA const &ambient, bool call_gl_light) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	glLightfv(light, GL_AMBIENT,  &ambient.R);
+	if (call_gl_light) {glLightfv(light, GL_AMBIENT,  &ambient.R);}
 	gl_light_params[light - GL_LIGHT0].ambient = ambient;
 }
 
-void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse) {
+void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse, bool call_gl_light) {
 
-	set_light_ds_color(light, diffuse);
-	set_light_a_color (light, ambient);
+	set_light_ds_color(light, diffuse, call_gl_light);
+	set_light_a_color (light, ambient, call_gl_light);
 }
 
-void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA const &diffuse) {
+void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA const &diffuse, bool call_gl_light) {
 
 	enable_light(light - GL_LIGHT0);
-	set_light_colors(light, ambient, diffuse);
+	set_light_colors(light, ambient, diffuse, call_gl_light);
 }
 
-void clear_colors_and_disable_light(int light) {
+void clear_colors_and_disable_light(int light, bool call_gl_light) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	disable_light(light - GL_LIGHT0);
-	set_light_colors(light, BLACK, BLACK);
+	set_light_colors(light, BLACK, BLACK, call_gl_light);
 }
 
-void set_gl_light_pos(int light, point const &pos, float w) {
+void set_gl_light_pos(int light, point const &pos, float w, bool call_gl_light) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	float const position[4] = {pos.x, pos.y, pos.z, w};
-	glLightfv(light, GL_POSITION, position);
+	if (call_gl_light) {glLightfv(light, GL_POSITION, position);}
 	gl_light_params[light - GL_LIGHT0].set_pos(pos, w);
 }
 
-void setup_gl_light_atten(int light, float c_a, float l_a, float q_a) {
+void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, bool call_gl_light) {
 
-	glLightf(light, GL_CONSTANT_ATTENUATION,  c_a);
-	glLightf(light, GL_LINEAR_ATTENUATION,    l_a);
-	glLightf(light, GL_QUADRATIC_ATTENUATION, q_a);
+	if (call_gl_light) {
+		glLightf(light, GL_CONSTANT_ATTENUATION,  c_a);
+		glLightf(light, GL_LINEAR_ATTENUATION,    l_a);
+		glLightf(light, GL_QUADRATIC_ATTENUATION, q_a);
+	}
 	gl_light_params[light - GL_LIGHT0].set_atten(c_a, l_a, q_a);
 }
 
