@@ -286,17 +286,19 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 		lloc.valid = 1;
 	}
 	gl_light_params_t const &lp(gl_light_params[light_id]);
+	gl_light_params_t &plp(prev_lps[light_id]);
 
-	if ((field_filt & 0x01) && lloc.v[0] >= 0) {
+	if ((field_filt & 0x01) && lloc.v[0] >= 0 && (lp.eye_space_pos != plp.eye_space_pos || lp.pos_w != plp.pos_w)) {
 		vector4d const pos(lp.eye_space_pos, lp.pos_w);
 		glUniform4fv(lloc.v[0], 1, &pos.x); // in eye space, using MVM at the time set_gl_light_pos() was called
+		plp.eye_space_pos = lp.eye_space_pos; plp.pos_w = lp.pos_w;
 	}
-	if ((field_filt & 0x02) && lloc.v[1] >= 0) {glUniform4fv(lloc.v[1], 1, &lp.ambient.R );}
-	if ((field_filt & 0x04) && lloc.v[2] >= 0) {glUniform4fv(lloc.v[2], 1, &lp.diffuse.R );}
-	if ((field_filt & 0x08) && lloc.v[3] >= 0) {glUniform4fv(lloc.v[3], 1, &lp.specular.R);}
-	if ((field_filt & 0x10) && lloc.v[4] >= 0) {glUniform1fv(lloc.v[4], 1, &lp.const_atten );}
-	if ((field_filt & 0x20) && lloc.v[5] >= 0) {glUniform1fv(lloc.v[5], 1, &lp.linear_atten);}
-	if ((field_filt & 0x40) && lloc.v[6] >= 0) {glUniform1fv(lloc.v[6], 1, &lp.quad_atten  );}
+	if ((field_filt & 0x02) && lloc.v[1] >= 0 && lp.ambient  != plp.ambient ) {glUniform4fv(lloc.v[1], 1, &lp.ambient.R ); plp.ambient  = lp.ambient;}
+	if ((field_filt & 0x04) && lloc.v[2] >= 0 && lp.diffuse  != plp.diffuse ) {glUniform4fv(lloc.v[2], 1, &lp.diffuse.R ); plp.diffuse  = lp.diffuse;}
+	if ((field_filt & 0x08) && lloc.v[3] >= 0 && lp.specular != plp.specular) {glUniform4fv(lloc.v[3], 1, &lp.specular.R); plp.specular = lp.specular;}
+	if ((field_filt & 0x10) && lloc.v[4] >= 0 && lp.const_atten  != plp.const_atten ) {glUniform1fv(lloc.v[4], 1, &lp.const_atten ); plp.const_atten  = lp.const_atten;}
+	if ((field_filt & 0x20) && lloc.v[5] >= 0 && lp.linear_atten != plp.linear_atten) {glUniform1fv(lloc.v[5], 1, &lp.linear_atten); plp.linear_atten = lp.linear_atten;}
+	if ((field_filt & 0x40) && lloc.v[6] >= 0 && lp.quad_atten   != plp.quad_atten  ) {glUniform1fv(lloc.v[6], 1, &lp.quad_atten  ); plp.quad_atten   = lp.quad_atten;}
 }
 
 
@@ -733,7 +735,10 @@ void shader_t::end_shader() { // ok to call if not in a shader
 		prepend_string[i].clear();
 		shader_names[i].clear();
 	}
-	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {light_locs[i].valid = 0;}
+	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
+		light_locs[i].valid = 0;
+		prev_lps[i] = gl_light_params_t(); // reset
+	}
 	prog_name_prefix.clear();
 	attrib_locs.clear();
 	last_spec = ALPHA0;

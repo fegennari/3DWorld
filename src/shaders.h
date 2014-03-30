@@ -16,6 +16,23 @@ unsigned const NUM_SHADER_TYPES  = 5;
 unsigned const MAX_SHADER_LIGHTS = 8;
 
 
+struct gl_light_params_t {
+
+	point pos, eye_space_pos;
+	colorRGBA ambient, diffuse, specular;
+	float pos_w;
+	float const_atten;
+	float linear_atten;
+	float quad_atten;
+
+	gl_light_params_t() : pos(all_zeros), eye_space_pos(pos), ambient(ALPHA0), diffuse(ALPHA0), specular(ALPHA0), pos_w(-1.0) {set_atten(-1.0, -1.0, -1.0);}
+	void set_a (colorRGBA const &a) {ambient = a;};
+	void set_ds(colorRGBA const &c) {diffuse = specular = c;}
+	void set_atten(float c, float l, float q) {const_atten = c; linear_atten = l; quad_atten = q;}
+	bool set_pos(point const &p, float w, bool force_update);
+};
+
+
 class shader_t {
 
 	unsigned program; // active program
@@ -34,6 +51,7 @@ class shader_t {
 		light_loc_t() : valid(0) {}
 	};
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
+	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
 
 	unsigned get_shader(string const &name, unsigned type) const;
 	static void print_shader_info_log(unsigned shader);
@@ -131,23 +149,6 @@ template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 			glDisableVertexAttribArray(loc);
 		}
 	}
-};
-
-
-struct gl_light_params_t {
-
-	point pos, eye_space_pos;
-	colorRGBA ambient, diffuse, specular;
-	float pos_w;
-	float const_atten;
-	float linear_atten;
-	float quad_atten;
-
-	gl_light_params_t() : pos(all_zeros), eye_space_pos(pos), ambient(ALPHA0), diffuse(ALPHA0), specular(ALPHA0), pos_w(-1.0) {set_atten(1.0, 0.0, 0.0);}
-	bool set_a (colorRGBA const &a) {if (ambient == a) return 0; ambient = a; return 1;};
-	bool set_ds(colorRGBA const &c) {if (diffuse == c && specular == c) return 0; diffuse = specular = c; return 1;}
-	bool set_atten(float c, float l, float q) {if (const_atten == c && linear_atten == l && quad_atten == q) return 0; const_atten = c; linear_atten = l; quad_atten = q; return 1;}
-	bool set_pos(point const &p, float w, bool force_update);
 };
 
 

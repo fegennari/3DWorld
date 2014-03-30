@@ -3079,6 +3079,7 @@ void set_ambient_color(colorRGBA const &color, shader_t *shader) {
 	colorRGBA ambient(BLACK);
 	UNROLL_3X(ambient[i_] = GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i_]);)
 	set_light_a_color(GL_LIGHT0+light, ambient, shader);
+	setup_gl_light_atten(GL_LIGHT0+light, 1.0, 0.0, 0.0, shader);
 }
 
 

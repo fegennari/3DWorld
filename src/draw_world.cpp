@@ -103,16 +103,16 @@ void set_light_ds_color(int light, colorRGBA const &diffuse, shader_t *shader) {
 		glLightfv(light, GL_DIFFUSE,  &diffuse.R);
 		glLightfv(light, GL_SPECULAR, &diffuse.R); // set specular lighting equal to diffuse lighting
 	}
-	bool const updated(gl_light_params[light - GL_LIGHT0].set_ds(diffuse));
-	if (updated && shader) {shader->upload_light_source(light-GL_LIGHT0, 0x0C);}
+	gl_light_params[light - GL_LIGHT0].set_ds(diffuse);
+	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x0C);}
 }
 
 void set_light_a_color(int light, colorRGBA const &ambient, shader_t *shader) {
 
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	if (!new_lighting_mode) {glLightfv(light, GL_AMBIENT,  &ambient.R);}
-	bool const updated(gl_light_params[light - GL_LIGHT0].set_a(ambient));
-	if (updated && shader) {shader->upload_light_source(light-GL_LIGHT0, 0x02);}
+	gl_light_params[light - GL_LIGHT0].set_a(ambient);
+	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x02);}
 }
 
 void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse, shader_t *shader) {
@@ -140,8 +140,8 @@ void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader) {
 	float const position[4] = {pos.x, pos.y, pos.z, w};
 	if (!new_lighting_mode) {glLightfv(light, GL_POSITION, position);}
 	// Note: if no shader is set, we assume this is a global light pos update and force eye_space_pos to be recalculated, since the MVM may have changed
-	bool const updated(gl_light_params[light - GL_LIGHT0].set_pos(pos, w, 0));
-	if (updated && shader) {shader->upload_light_source(light-GL_LIGHT0, 0x01);}
+	gl_light_params[light - GL_LIGHT0].set_pos(pos, w, 0);
+	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x01);}
 }
 
 void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, shader_t *shader) {
@@ -151,8 +151,8 @@ void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, shader_t *
 		glLightf(light, GL_LINEAR_ATTENUATION,    l_a);
 		glLightf(light, GL_QUADRATIC_ATTENUATION, q_a);
 	}
-	bool const updated(gl_light_params[light - GL_LIGHT0].set_atten(c_a, l_a, q_a));
-	if (updated && shader) {shader->upload_light_source(light-GL_LIGHT0, 0x70);}
+	gl_light_params[light - GL_LIGHT0].set_atten(c_a, l_a, q_a);
+	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x70);}
 }
 
 
