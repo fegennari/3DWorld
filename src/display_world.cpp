@@ -10,7 +10,7 @@
 #include <fstream>
 
 
-/* GL_LIGHT<N>:
+/* lights used:
 0: Sun, Universe Star
 1: Moon, Universe Ambient (universe mode)
 2: Lightning, Uobjs
@@ -374,9 +374,9 @@ void setup_lighting(float depth) {
 	
 	// setup light position
 	enabled_lights = 0;
-	set_gl_light_pos(GL_LIGHT0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
-	set_gl_light_pos(GL_LIGHT1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
-	setup_gl_light_atten(GL_LIGHT0, 1.0, 0.0, 0.0); // reset attenuation to 1.0
+	set_gl_light_pos(0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
+	set_gl_light_pos(1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
+	setup_gl_light_atten(0, 1.0, 0.0, 0.0); // reset attenuation to 1.0
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
 	float const mlf(get_moon_light_factor());
@@ -408,7 +408,7 @@ void setup_lighting(float depth) {
 	if (light_factor <= 0.4) { // moon
 		calc_moon_atten(ambient, diffuse, mlf);
 		sm_green_int = diffuse[1];
-		set_colors_and_enable_light(GL_LIGHT1, ambient, diffuse);
+		set_colors_and_enable_light(1, ambient, diffuse);
 	}
 	else if (light_factor >= 0.6) { // sun
 		for (unsigned i = 0; i < 3; ++i) { // add more brightness
@@ -416,7 +416,7 @@ void setup_lighting(float depth) {
 			ambient[i] += 0.1;
 		}
 		sm_green_int = diffuse[1];
-		set_colors_and_enable_light(GL_LIGHT0, ambient, diffuse);
+		set_colors_and_enable_light(0, ambient, diffuse);
 	}
 	else { // sun and moon
 		float const lfd(5.0*(light_factor - 0.4)), lfn(1.0 - lfd);
@@ -426,7 +426,7 @@ void setup_lighting(float depth) {
 			ambient[i] = (ambient[i] + 0.1)*lfd;
 		}
 		sm_green_int = lfd*diffuse[1];
-		set_colors_and_enable_light(GL_LIGHT0, ambient, diffuse); // sun
+		set_colors_and_enable_light(0, ambient, diffuse); // sun
 
 		for (unsigned i = 0; i < 3; ++i) {
 			diffuse[i] = (diffuse[i]/lfd - 0.2)*lfn;
@@ -434,7 +434,7 @@ void setup_lighting(float depth) {
 		}
 		calc_moon_atten(ambient, diffuse, mlf);
 		sm_green_int += lfn*diffuse[1];
-		set_colors_and_enable_light(GL_LIGHT1, ambient, diffuse); // moon
+		set_colors_and_enable_light(1, ambient, diffuse); // moon
 	}
 }
 
@@ -505,9 +505,9 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	// setup sun light source
 	float const sun_intensity(max(0.25f, min(4.0f, 1000.0f*univ_sun_rad/sun_pos.mag())));
 	setup_current_system(sun_intensity);
-	set_gl_light_pos(GL_LIGHT0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
+	set_gl_light_pos(0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	disable_light(1); // no moonlight (for now)
-	if (!have_sun || light_factor < 0.5) {set_light_ds_color(GL_LIGHT0, BLACK);} // sun below horizon: no diffuse or specular
+	if (!have_sun || light_factor < 0.5) {set_light_ds_color(0, BLACK);} // sun below horizon: no diffuse or specular
 	check_zoom(); // reset perspective
 	//light_factor = (PI + 2.0*asinf(dot_product(sun_pos.get_norm(), plus_z)))/TWO_PI; // shouldn't change much from previous light_factor
 
@@ -558,8 +558,8 @@ void atten_uw_fog_color(colorRGBA &color, float depth) {
 
 	colorRGBA light_color(BLACK);
 	float const lf(get_lf_scale(light_factor));
-	if (lf > 0.0) add_uw_light_color_comp(GL_LIGHT0, sun_pos,  lf,           light_color);
-	if (lf < 1.0) add_uw_light_color_comp(GL_LIGHT1, moon_pos, 0.5*(1.0-lf), light_color);
+	if (lf > 0.0) add_uw_light_color_comp(0, sun_pos,  lf,           light_color);
+	if (lf < 1.0) add_uw_light_color_comp(1, moon_pos, 0.5*(1.0-lf), light_color);
 	if (is_cloudy) light_color *= 0.5;
 	color  = color.modulate_with(light_color);
 	atten_by_water_depth(&color.R, depth);

@@ -1068,8 +1068,8 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 
 	if (custom_lighting) {
 		colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
-		set_light_colors(GL_LIGHT0, acolor, BLACK, &shader);
-		setup_gl_light_atten(GL_LIGHT0, 1.0, 0.0, 0.0, &shader);
+		set_light_colors(0, acolor, BLACK, &shader);
+		setup_gl_light_atten(0, 1.0, 0.0, 0.0, &shader);
 	}
 }
 

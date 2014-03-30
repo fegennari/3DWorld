@@ -13,7 +13,6 @@ using std::string;
 unsigned const TEX0_S_ATTR       = 0;
 unsigned const TEX0_T_ATTR       = 1;
 unsigned const NUM_SHADER_TYPES  = 5;
-unsigned const MAX_SHADER_LIGHTS = 8;
 
 
 struct gl_light_params_t {

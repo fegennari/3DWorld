@@ -595,7 +595,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 		}
 	}
 	if (!ambient_color_set) {
-		set_light_a_color(GL_LIGHT0+get_universe_ambient_light(), BLACK, shader); // light is not enabled or disabled
+		set_light_a_color(get_universe_ambient_light(), BLACK, shader); // light is not enabled or disabled
 	}
 	if (!found && !blend) { // no sun
 		set_light_galaxy_ambient_only(shader);
@@ -866,7 +866,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						bool const skip_moons(p_system && sel_planet && !skip_p), sel_moon(sel_p && clobj.type == UTYPE_MOON);
 
 						if (!gen_only && sizep >= 1.0 && !skip_moons && !planet.moons.empty()) {
-							int const p_light(GL_LIGHT2);
+							int const p_light(2);
 
 							if (has_sun && planet.is_ok()) { // setup planet as an additional light source for all moons
 								colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
@@ -3041,7 +3041,7 @@ inline void uobj_solid::set_grav_mass() {
 void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale, shader_t *shader) {
 
 	colorRGBA uambient, udiffuse;
-	int const light(GL_LIGHT0);
+	int const light(0);
 	point const lpos(make_pt_global(pos));
 	float const ambient_scale(a_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA);
 
@@ -3058,8 +3058,6 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	uambient[3] = (no_ambient ? 0.0 : 1.0);
 	udiffuse[3] = (shadowed   ? 0.0 : 1.0);
 	set_colors_and_enable_light(light, uambient, udiffuse, shader);
-	//cout << "UA: "; uambient.print(); cout << endl;
-	//cout << "UD: "; udiffuse.print(); cout << endl;
 
 	// set light attenuation - cache this?
 	set_star_light_atten(light, max(0.25f, min(1.0f, STAR_MAX_SIZE/radius)), shader);
@@ -3067,8 +3065,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 
 
 void set_light_galaxy_ambient_only(shader_t *shader) {
-
-	clear_colors_and_disable_light(GL_LIGHT0, shader); // need to zero it out as well, since shaders ignore light enable state
+	clear_colors_and_disable_light(0, shader); // need to zero it out as well, since shaders ignore light enable state
 }
 
 
@@ -3078,14 +3075,14 @@ void set_ambient_color(colorRGBA const &color, shader_t *shader) {
 	enable_light(light);
 	colorRGBA ambient(BLACK);
 	UNROLL_3X(ambient[i_] = GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i_]);)
-	set_light_a_color(GL_LIGHT0+light, ambient, shader);
-	setup_gl_light_atten(GL_LIGHT0+light, 1.0, 0.0, 0.0, shader);
+	set_light_a_color(light, ambient, shader);
+	setup_gl_light_atten(light, 1.0, 0.0, 0.0, shader);
 }
 
 
 void set_lighting_params() {
 
-	int const a_light(GL_LIGHT0+get_universe_ambient_light()), s_light(GL_LIGHT0);
+	int const a_light(get_universe_ambient_light()), s_light(0);
 	set_colors_and_enable_light(s_light, GRAY, WHITE); // single star diffuse + ambient
 	set_gl_light_pos(s_light, all_zeros, 0.0); // directional light
 	set_colors_and_enable_light(a_light, GRAY, BLACK); // universe + galaxy ambient

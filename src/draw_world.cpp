@@ -94,16 +94,16 @@ void gl_light_params_t::set_pos(point const &p, float w) {
 
 void set_light_ds_color(int light, colorRGBA const &diffuse, shader_t *shader) {
 
-	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	gl_light_params[light - GL_LIGHT0].set_ds(diffuse);
-	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x0C);}
+	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
+	gl_light_params[light].set_ds(diffuse);
+	if (shader) {shader->upload_light_source(light, 0x0C);}
 }
 
 void set_light_a_color(int light, colorRGBA const &ambient, shader_t *shader) {
 
-	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
-	gl_light_params[light - GL_LIGHT0].set_a(ambient);
-	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x02);}
+	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
+	gl_light_params[light].set_a(ambient);
+	if (shader) {shader->upload_light_source(light, 0x02);}
 }
 
 void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diffuse, shader_t *shader) {
@@ -114,29 +114,29 @@ void set_light_colors(int light, colorRGBA const &ambient, colorRGBA const &diff
 
 void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA const &diffuse, shader_t *shader) {
 
-	enable_light(light - GL_LIGHT0);
+	enable_light(light);
 	set_light_colors(light, ambient, diffuse, shader);
 }
 
 void clear_colors_and_disable_light(int light, shader_t *shader) {
 
-	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
+	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
 	set_light_colors(light, BLACK, BLACK, shader);
-	disable_light(light - GL_LIGHT0);
+	disable_light(light);
 }
 
 void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader) {
 
-	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
+	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
 	float const position[4] = {pos.x, pos.y, pos.z, w};
-	gl_light_params[light - GL_LIGHT0].set_pos(pos, w);
-	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x01);}
+	gl_light_params[light].set_pos(pos, w);
+	if (shader) {shader->upload_light_source(light, 0x01);}
 }
 
 void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, shader_t *shader) {
 
-	gl_light_params[light - GL_LIGHT0].set_atten(c_a, l_a, q_a);
-	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x70);}
+	gl_light_params[light].set_atten(c_a, l_a, q_a);
+	if (shader) {shader->upload_light_source(light, 0x70);}
 }
 
 
@@ -566,8 +566,8 @@ void draw_moon() {
 	point const pos(get_moon_pos());
 	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
 	colorRGBA const ambient(0.05, 0.05, 0.05, 1.0), diffuse(1.0*have_sun, 1.0*have_sun, 1.0*have_sun, 1.0);
-	set_gl_light_pos(GL_LIGHT4, get_sun_pos(), 0.0);
-	set_colors_and_enable_light(GL_LIGHT4, ambient, diffuse);
+	set_gl_light_pos(4, get_sun_pos(), 0.0);
+	set_colors_and_enable_light(4, ambient, diffuse);
 	shader_t s;
 	s.set_vert_shader("ads_lighting.part*+moon_draw");
 	s.set_frag_shader("simple_texture");
@@ -684,11 +684,10 @@ void draw_sky(int order) {
 		point lpos(get_sun_pos()), lsint;
 		vector3d const sun_v((get_camera_pos() - lpos).get_norm());
 		if (line_sphere_int(sun_v, lpos, center, radius, lsint, 1)) {lpos = lsint;}
-		int const gl_light(GL_LIGHT0 + light_id);
-		set_gl_light_pos(gl_light, lpos, 1.0); // w=1.0 - point light source
+		set_gl_light_pos(light_id, lpos, 1.0); // w=1.0 - point light source
 		colorRGBA const ambient(sun_color*0.5);
-		set_colors_and_enable_light(gl_light, ambient, sun_color);
-		setup_gl_light_atten(gl_light, 0.0, 0.01, 0.01);
+		set_colors_and_enable_light(light_id, ambient, sun_color);
+		setup_gl_light_atten(light_id, 0.0, 0.01, 0.01);
 	}
 
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
