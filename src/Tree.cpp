@@ -1091,7 +1091,7 @@ void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const 
 }
 
 
-void tree_data_t::bend_leaf(unsigned i, float angle) {
+void tree_data_t::bend_leaf(unsigned i, float angle) { // Note: slow
 
 	assert(i < leaves.size());
 	tree_leaf const &l(leaves[i]);
@@ -1100,7 +1100,7 @@ void tree_data_t::bend_leaf(unsigned i, float angle) {
 	vector3d const orig_dir(p1 - p2); // vector from base to tip
 	vector3d const new_dir(orig_dir*COSF(angle) + l.norm*(orig_dir.mag()*SINF(angle))); // s=orig_dir.get_norm(), t=l.norm
 	vector3d const delta(new_dir - orig_dir);
-	vector3d normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
+	vector3d const normal(cross_product(new_dir, (l.pts[3] - l.pts[0])).get_norm());
 	unsigned const ix(i<<2);
 	leaf_data[ix+1].v = l.pts[1] + delta;
 	leaf_data[ix+2].v = l.pts[2] + delta;
@@ -1132,14 +1132,14 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	tree_data_t &td(tdata());
 	bool const do_update(td.check_if_needs_updated() || !leaf_orients_valid), priv_data(td_is_private());
 	if (!do_update && !physics_enabled()) return;
-	unsigned nleaves(td.get_leaves().size());
+	vector<tree_leaf> const &leaves(td.get_leaves());
+	unsigned nleaves(leaves.size());
 
 	for (unsigned i = 0; i < nleaves; i++) { // process leaf wind and collisions
 		float wscale(0.0), hit_angle(0.0);
 
 		if (do_update) {
-			tree_leaf const &leaf(td.get_leaves()[i]);
-			point p0(leaf.pts[0]);
+			point p0(leaves[i].pts[0]);
 			if (priv_data) {p0 += tree_center;}
 			int const xpos(get_xpos(p0.x)), ypos(get_ypos(p0.y));
 			
@@ -1149,7 +1149,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 				last_xpos  = xpos;
 				last_ypos  = ypos;
 			}
-			wscale = dot_product(local_wind, leaf.norm);
+			wscale = dot_product(local_wind, leaves[i].norm);
 		}
 		if (!leaf_cobjs.empty()) { // rotate leaves when hit by an object
 			coll_obj &cobj(get_leaf_cobj(i));
@@ -1180,14 +1180,16 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			}
 		}
 		if (wscale != 0.0 || hit_angle != 0.0) {
-			float const angle(0.5*PI*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
+			float const angle(PI_TWO*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
 			td.bend_leaf(i, angle); // do we want to update collision objects as well?
 		}
-		float &lcolor(td.get_leaves()[i].color);
+		if (LEAF_HEAL_RATE > 0.0 && do_update && priv_data) { // leaf heal
+			float &lcolor(td.get_leaves()[i].color);
 
-		if (LEAF_HEAL_RATE > 0.0 && lcolor > 0.0 && lcolor < 1.0) { // leaf heal
-			if (do_update) {lcolor = min(1.0f, (lcolor + LEAF_HEAL_RATE*fticks));}
-			copy_color(i);
+			if (lcolor > 0.0 && lcolor < 1.0) {
+				lcolor = min(1.0f, (lcolor + LEAF_HEAL_RATE*fticks));
+				copy_color(i);
+			}
 		}
 	} // for i
 	leaf_orients_valid = 1;
