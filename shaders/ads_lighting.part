@@ -3,7 +3,6 @@ uniform vec4 specular_color = vec4(0,0,0,1); // enocded as {color.rgb, shininess
 float get_shininess() {return specular_color.a;}
 
 
-#ifdef USE_LIGHT_SOURCE_UNIFORMS
 struct fg_light_t {
 	vec4 position;
 	vec4 ambient;
@@ -16,9 +15,6 @@ struct fg_light_t {
 
 const int MAX_LIGHTS = 8;
 uniform fg_light_t fg_LightSource[MAX_LIGHTS];
-#else
-#define fg_LightSource gl_LightSource
-#endif
 
 
 vec3 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec3 spec_light_color) {

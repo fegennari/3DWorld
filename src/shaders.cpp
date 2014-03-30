@@ -19,7 +19,7 @@ string const shader_prefix_files[NUM_SHADER_TYPES] = {/*"common_header"*/"", "",
 
 shader_t *cur_shader(NULL);
 
-extern bool fog_enabled, new_lighting_mode;
+extern bool fog_enabled;
 extern int is_cloudy, display_mode;
 extern unsigned enabled_lights;
 extern float cur_fog_end;
@@ -260,8 +260,7 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 
 	assert(is_setup());
 	assert(light_id < MAX_SHADER_LIGHTS); // only supporting 8 light sources
-	if (field_filt == 0 || !new_lighting_mode || !is_light_enabled(light_id)) return;
-	// FIXME: only upload if light source has changed since last call?
+	if (field_filt == 0 || !is_light_enabled(light_id)) return;
 	light_loc_t &lloc(light_locs[light_id]);
 
 	if (!lloc.valid) {
@@ -280,9 +279,7 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 			}
 			is_setup = 1;
 		}
-		for (unsigned i = 0; i < 7; ++i) {
-			lloc.v[i] = glGetUniformLocation(program, ls_strs[light_id][i]);
-		}
+		for (unsigned i = 0; i < 7; ++i) {lloc.v[i] = glGetUniformLocation(program, ls_strs[light_id][i]);}
 		lloc.valid = 1;
 	}
 	gl_light_params_t const &lp(gl_light_params[light_id]);
@@ -644,10 +641,6 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 // See http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/glsl-core-tutorial-create-a-program/
 bool shader_t::begin_shader(bool do_enable) {
 
-	if (new_lighting_mode) { // FIXME: which (if any) shader includes ads_lighting.part?
-		for (unsigned d = 0; d < 2; ++d) {set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", d);}
-	}
-
 	//RESET_TIME;
 	// get the program
 	string input_shaders;
@@ -749,7 +742,7 @@ void shader_t::enable() {
 	
 	assert(program);
 	glUseProgram(program);
-	if (new_lighting_mode) {upload_all_light_sources();}
+	upload_all_light_sources();
 	cur_shader = this;
 }
 
