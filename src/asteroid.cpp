@@ -701,18 +701,18 @@ void set_shader_prefix_for_shadow_casters(shader_t &shader, unsigned num_shadow_
 }
 
 
-bool set_af_color_from_system(point_d const &afpos, float radius) {
+bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shader) {
 
 	point sun_pos; // unused
 	uobject const *sobj(NULL); // unused
-	return (set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S) >= 0);
+	return (set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader) >= 0);
 }
 
 
 void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera) const {
 
 	point_d const afpos(pos_ + pos);
-	bool const has_sun(set_af_color_from_system(afpos, radius));
+	bool const has_sun(set_af_color_from_system(afpos, radius, NULL));
 	enable_blend();
 	shader_t shader;
 
@@ -1068,8 +1068,8 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 
 	if (custom_lighting) {
 		colorRGBA const acolor(AST_AMBIENT_VAL, AST_AMBIENT_VAL, AST_AMBIENT_VAL, 1.0);
-		set_light_colors(GL_LIGHT0, acolor, BLACK);
-		setup_gl_light_atten(GL_LIGHT0, 1.0, 0.0, 0.0);
+		set_light_colors(GL_LIGHT0, acolor, BLACK, &shader);
+		setup_gl_light_atten(GL_LIGHT0, 1.0, 0.0, 0.0, &shader);
 	}
 }
 
@@ -1112,7 +1112,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
 	point sun_pos; // unused
 	uobject const *sobj(NULL); // unused
-	bool const has_sun(sun_light_already_set || set_af_color_from_system(afpos, radius));
+	bool const has_sun(sun_light_already_set || set_af_color_from_system(afpos, radius, &s));
 
 	// Note: this block and associated variables could be moved to uasteroid_belt, but we may want to use them for asteriod fields near within systems/near stars later
 	if (ENABLE_SHADOWS) { // setup shadow casters

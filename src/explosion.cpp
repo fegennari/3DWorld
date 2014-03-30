@@ -335,21 +335,19 @@ void draw_blasts() {
 }
 
 
-void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light, shader_t &shader) {
+void setup_point_light(point const &pos, colorRGBA const &color, float radius, unsigned gl_light, shader_t *shader) {
 
 	if (color.alpha == 0.0 || color == BLACK) return; // shouldn't get here
-	bool const call_gl_light(!shader.light_uniforms_enabled());
 	colorRGBA const uambient(color*0.2);
-	set_colors_and_enable_light(gl_light, uambient, color, call_gl_light);
+	set_colors_and_enable_light(gl_light, uambient, color, shader);
 	assert(radius > 0.0);
 	float const atten2(0.1/(EXP_LIGHT_SCALE*radius));
-	setup_gl_light_atten(gl_light, 0.5, 20.0*atten2, 5000.0*atten2, call_gl_light);
-	set_gl_light_pos(gl_light, pos, 1.0, call_gl_light); // point light source position
-	shader.upload_light_source(gl_light - GL_LIGHT0);
+	setup_gl_light_atten(gl_light, 0.5, 20.0*atten2, 5000.0*atten2, shader);
+	set_gl_light_pos(gl_light, pos, 1.0, shader); // point light source position
 }
 
 
-bool setup_br_light(unsigned index, point const &pos, unsigned gl_light, shader_t &shader) {
+bool setup_br_light(unsigned index, point const &pos, unsigned gl_light, shader_t *shader) {
 
 	assert(gl_light < MAX_GL_LIGHT);
 	assert(index < blastrs.size());

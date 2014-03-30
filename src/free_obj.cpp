@@ -633,7 +633,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 	}
 	bool const known_shadowed(shadowed == 2 || (stencil_shadows && shadowed));
 	int const shadow_thresh(stencil_shadows ? 0 : 1);
-	int const light_val(no_lighting ? 0 : set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale));
+	int const light_val(no_lighting ? 0 : set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale, &shader[0]));
 	shadow_val = max(shadowed, light_val); // only updated if drawn - close enough?
 	if (is_player_ship()) return; // don't draw player ship
 	if (light_val > 0 && sobj != NULL) sobjs.push_back(sobj);
@@ -655,16 +655,15 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 	bool const specular(!known_shadowed && (light_val == 0 || (!stencil_shadows && light_val == 1))); // less than half shadowed
 	uobj_draw_data udd(this, &shader[0], ndiv, time, powered(), specular, 0, pos, velocity, dir, upv,
 		dist, radius, c_radius/radius, (nlights > 0), 1, !partial_shadow, 1, (npasses == 1));
-	if (!no_lighting) {shader[0].upload_light_sources_range(0, 2);} // light 0 (sun) and 1 (ambient)
 	
 	if (ndiv > 3) {
 		for (unsigned i = 0; i < nlights; ++i) {
-			setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i), shader[0]); // only shader[0] has dynamic lights enabled
+			setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i), udd.shader); // only shader[0] has dynamic lights enabled
 		}
 	}
 	for (unsigned pass = 0; pass < npasses; ++pass) {
 		if (pass > 0) {
-			set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale);
+			set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale, udd.shader);
 			udd.phase1 = 0;
 			udd.phase2 = 1;
 		}
@@ -697,7 +696,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
 
-			set_uobj_color(pos, c_radius, 0, 2, sun_pos, sobj, 0.0, 0.0); // enable diffuse/specular only
+			set_uobj_color(pos, c_radius, 0, 2, sun_pos, sobj, 0.0, 0.0, udd.shader); // enable diffuse/specular only
 			transform_and_draw_obj(udd, 1, 0, 1);
 
 			glDepthMask(GL_TRUE);

@@ -77,9 +77,9 @@ int gen_rand_seed2(point const &center);
 bool is_shadowed(point const &pos, float radius, bool expand, ussystem const &sol, uobject const *&sobj);
 unsigned get_texture_size(float psize);
 bool get_gravity(s_object &result, point pos, vector3d &gravity, int offset);
-void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale);
-void set_light_galaxy_ambient_only();
-void set_ambient_color(colorRGBA const &color);
+void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale, shader_t *shader=NULL);
+void set_light_galaxy_ambient_only(shader_t *shader=NULL);
+void set_ambient_color(colorRGBA const &color, shader_t *shader=NULL);
 void set_lighting_params();
 void get_point_of_collision(s_object const &result, point const &pos, point &cpos);
 
@@ -110,9 +110,9 @@ bool sphere_size_less_than(point const &pos, point const &camera, float radius, 
 }
 
 
-void set_star_light_atten(int light, float atten) {
+void set_star_light_atten(int light, float atten, shader_t *shader=NULL) {
 
-	setup_gl_light_atten(light, STAR_CONST, atten*STAR_LINEAR_SCALED, atten*STAR_QUAD_SCALED);
+	setup_gl_light_atten(light, STAR_CONST, atten*STAR_LINEAR_SCALED, atten*STAR_QUAD_SCALED, shader);
 }
 
 
@@ -561,7 +561,7 @@ bool has_sun_lighting(point const &pos) {
 // return values: -1: no sun, 0: not shadowed, 1: < half shadowed, 2: > half shadowed, 3: fully shadowed
 // caches sobj and only determines if there is a shadow if NULL
 int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shadow_thresh, point &sun_pos,
-				   uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s) // based on current star and current galaxy
+				   uobject const *&sobj, float ambient_scale_s, float ambient_scale_no_s, shader_t *shader) // based on current star and current galaxy
 {
 	assert(radius < CELL_SIZE);
 	float const expand(2.0);
@@ -590,15 +590,15 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 			//atten_color(color, pos2, galaxy.pos, (galaxy.radius + MAX_SYSTEM_EXTENT), expand);
 		}
 		if (ambient_scale > 0.0) {
-			set_ambient_color(color*ambient_scale);
+			set_ambient_color(color*ambient_scale, shader);
 			ambient_color_set = 1;
 		}
 	}
 	if (!ambient_color_set) {
-		set_light_a_color(GL_LIGHT0+get_universe_ambient_light(), BLACK); // light is not enabled or disabled
+		set_light_a_color(GL_LIGHT0+get_universe_ambient_light(), BLACK, shader); // light is not enabled or disabled
 	}
 	if (!found && !blend) { // no sun
-		set_light_galaxy_ambient_only();
+		set_light_galaxy_ambient_only(shader);
 		return -1;
 	}
 	assert(sol);
@@ -606,7 +606,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 	ustar const &sun(sol->sun);
 
 	if (!sun.is_ok()) { // no sun
-		set_light_galaxy_ambient_only();
+		set_light_galaxy_ambient_only(shader);
 		return -1;
 	}
 	point const spos(result.get_ucell().rel_center + sun.pos);
@@ -624,7 +624,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 			if (sr > radius && line_sphere_int_cont(pos2, sun.pos, sobj->get_pos(), (sr - radius))) ++shadow_val;
 		}
 	}
-	set_sun_loc_color(spos, color, sun.radius, (known_shadowed || shadow_val > shadow_thresh), (ambient_scale == 0.0), BASE_AMBIENT, BASE_DIFFUSE); // check for sun
+	set_sun_loc_color(spos, color, sun.radius, (known_shadowed || shadow_val > shadow_thresh), (ambient_scale == 0.0), BASE_AMBIENT, BASE_DIFFUSE, shader); // check for sun
 	return shadow_val;
 }
 
@@ -870,7 +870,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 							if (has_sun && planet.is_ok()) { // setup planet as an additional light source for all moons
 								colorRGBA const pcolor(sol.sun.get_light_color().modulate_with(planet.color)); // very inexact, but maybe close enough
-								set_light_colors(p_light, BLACK, pcolor); // use planet diffuse
+								set_colors_and_enable_light(p_light, BLACK, pcolor); // use planet diffuse
 								set_gl_light_pos(p_light, make_pt_global(ppos), 1.0); // point light at planet center
 								set_star_light_atten(p_light, 5.0*PLANET_MAX_SIZE/planet.radius);
 							}
@@ -888,6 +888,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0);
 								moon.draw(mpos, usg, planet_plds, svars2, planet.is_ok());
 							}
+							if (has_sun && planet.is_ok()) {clear_colors_and_disable_light(p_light);}
 						}
 						if (!gen_only && planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 							float const ring_scale(sizep*planet.get_ring_rscale());
@@ -3037,7 +3038,7 @@ inline void uobj_solid::set_grav_mass() {
 // *** PARAMS CODE ***
 
 
-void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale) {
+void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale, shader_t *shader) {
 
 	colorRGBA uambient, udiffuse;
 	int const light(GL_LIGHT0);
@@ -3045,7 +3046,7 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	float const ambient_scale(a_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA);
 
 	// set position - cache this?
-	set_gl_light_pos(light, lpos, 1.0); // point light source
+	set_gl_light_pos(light, lpos, 1.0, shader); // point light source
 
 	// set color
 	for (unsigned i = 0; i < 3; ++i) {
@@ -3056,28 +3057,28 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	}
 	uambient[3] = (no_ambient ? 0.0 : 1.0);
 	udiffuse[3] = (shadowed   ? 0.0 : 1.0);
-	set_colors_and_enable_light(light, uambient, udiffuse);
+	set_colors_and_enable_light(light, uambient, udiffuse, shader);
 	//cout << "UA: "; uambient.print(); cout << endl;
 	//cout << "UD: "; udiffuse.print(); cout << endl;
 
 	// set light attenuation - cache this?
-	set_star_light_atten(light, max(0.25f, min(1.0f, STAR_MAX_SIZE/radius)));
+	set_star_light_atten(light, max(0.25f, min(1.0f, STAR_MAX_SIZE/radius)), shader);
 }
 
 
-void set_light_galaxy_ambient_only() {
+void set_light_galaxy_ambient_only(shader_t *shader) {
 
-	clear_colors_and_disable_light(GL_LIGHT0); // need to zero it out as well, since shaders ignore light enable state
+	clear_colors_and_disable_light(GL_LIGHT0, shader); // need to zero it out as well, since shaders ignore light enable state
 }
 
 
-void set_ambient_color(colorRGBA const &color) {
+void set_ambient_color(colorRGBA const &color, shader_t *shader) {
 
 	int const light(get_universe_ambient_light());
 	enable_light(light);
 	colorRGBA ambient(BLACK);
 	UNROLL_3X(ambient[i_] = GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i_]);)
-	set_light_a_color(GL_LIGHT0+light, ambient);
+	set_light_a_color(GL_LIGHT0+light, ambient, shader);
 }
 
 

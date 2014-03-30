@@ -323,7 +323,7 @@ void uobj_draw_data::light_engine_pair(colorRGBA const &color, unsigned eflags_o
 		
 	for (unsigned i = 0; i < 2; ++i) {
 		if (!(eflags & (1 << (i + eflags_off)))) { // remember that dx and dz are backwards
-			setup_point_light(point((1.0 - 2.0*i)*-dx, dy, -dz), color, 4.0*escale*radius, (ENGINE_START_LIGHT + i), *shader);
+			setup_point_light(point((1.0 - 2.0*i)*-dx, dy, -dz), color, 4.0*escale*radius, (ENGINE_START_LIGHT + i), shader);
 		}
 	}
 }
@@ -332,7 +332,7 @@ void uobj_draw_data::light_engine_pair(colorRGBA const &color, unsigned eflags_o
 void uobj_draw_data::unlight_engine_pair() const {
 
 	if (!can_have_engine_lights()) return;
-	for (unsigned i = 0; i < 2; ++i) {clear_colors_and_disable_light(ENGINE_START_LIGHT + i);}
+	for (unsigned i = 0; i < 2; ++i) {clear_colors_and_disable_light((ENGINE_START_LIGHT + i), shader);}
 }
 
 
@@ -1361,7 +1361,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 
 	unsigned const ndiv35(get_ndiv(3*ndiv/5)), ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/4));
 	setup_draw_ship();
-	if (powered && first_pass) {setup_point_light(point(0.0, 0.4, 0.8), RED, 2.0*radius, ENGINE_DEF_LIGHT, *shader);}
+	if (powered && first_pass) {setup_point_light(point(0.0, 0.4, 0.8), RED, 2.0*radius, ENGINE_DEF_LIGHT, shader);}
 
 	if (phase1) {
 		if (ndiv > 3) { // command center
@@ -1445,7 +1445,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 		draw_engine_pairs(BLUE, 0, 0.4, 0.32, 0.3, 1.45, point(0.0, -0.3, 0.0), 3);
 		//draw_engine_pairs(BLUE, 0, 0.4, 0.32, 0.0, 1.45, all_zeros, 1, 2.8);
 	}
-	if (powered && first_pass) clear_colors_and_disable_light(ENGINE_DEF_LIGHT);
+	if (powered && first_pass) {clear_colors_and_disable_light(ENGINE_DEF_LIGHT, shader);}
 }
 
 
@@ -1736,7 +1736,7 @@ void uobj_draw_data::draw_reaper() const {
 
 	set_uobj_specular(0.9, 90.0);
 	setup_draw_ship();
-	if (can_have_engine_lights()) {setup_point_light(all_zeros, color_b, 5.0*radius, ENGINE_DEF_LIGHT, *shader);}
+	if (can_have_engine_lights()) {setup_point_light(all_zeros, color_b, 5.0*radius, ENGINE_DEF_LIGHT, shader);}
 	cobj_vector_t const &cobjs(obj->get_cobjs());
 
 	if (cobjs.size() == 2) { // blocking shield is up
@@ -1750,7 +1750,7 @@ void uobj_draw_data::draw_reaper() const {
 	//set_ship_texture(NOISE_TEX);
 	draw_sphere_vbo_back_to_front(all_zeros, 1.0, 3*ndiv/2, 0);
 	//end_ship_texture();
-	if (can_have_engine_lights()) clear_colors_and_disable_light(ENGINE_DEF_LIGHT);
+	if (can_have_engine_lights()) {clear_colors_and_disable_light(ENGINE_DEF_LIGHT, shader);}
 	end_specular();
 	glPopMatrix(); // undo invert_z()
 	glPopMatrix(); // undo rotations
@@ -1871,7 +1871,7 @@ void uobj_draw_data::draw_juggernaut() const {
 
 	unsigned const ndiv2(get_ndiv(ndiv/2));
 	setup_draw_ship();
-	if (powered && first_pass) {setup_point_light(point(0.0, 0.05, -0.95), color_b, 1.0*radius, ENGINE_DEF_LIGHT, *shader);}
+	if (powered && first_pass) {setup_point_light(point(0.0, 0.05, -0.95), color_b, 1.0*radius, ENGINE_DEF_LIGHT, shader);}
 
 	glPushMatrix();
 	glScalef(0.85, 1.2, 1.0);
@@ -1927,7 +1927,7 @@ void uobj_draw_data::draw_juggernaut() const {
 		glPopMatrix();
 	}
 	glPopMatrix();
-	if (powered && first_pass) clear_colors_and_disable_light(ENGINE_DEF_LIGHT);
+	if (powered && first_pass) {clear_colors_and_disable_light(ENGINE_DEF_LIGHT, shader);}
 }
 
 
@@ -1941,7 +1941,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	if (mothership) glScalef(1.0, 1.0, 0.75);
 	color_b.do_glColor(); // WHITE?
 	set_uobj_specular(0.9, 90.0);
-	if (pt_light) {setup_point_light(point(0.0, 0.0, -0.5), color_a, 3.0*radius, ENGINE_DEF_LIGHT, *shader);}
+	if (pt_light) {setup_point_light(point(0.0, 0.0, -0.5), color_a, 3.0*radius, ENGINE_DEF_LIGHT, shader);}
 	set_ship_texture(SPACESHIP2_TEX);
 	glPushMatrix();
 	glScalef(1.0, 1.0, 0.1);
@@ -1950,7 +1950,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	draw_cylin_fast(0.95, 0.15, 0.4, ndiv32, 1); // top
 	draw_cylin_fast(0.2, 0.8, 0.3, ndiv32, 1, 1.0, -0.3); // bottom
 	end_ship_texture();
-	if (pt_light) clear_colors_and_disable_light(ENGINE_DEF_LIGHT);
+	if (pt_light) {clear_colors_and_disable_light(ENGINE_DEF_LIGHT, shader);} // Note: cleared early because there's no line of sight to the engine from here
 
 	if (ndiv > 4) {
 		color_a.do_glColor();

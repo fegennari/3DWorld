@@ -34,14 +34,13 @@ class shader_t {
 		light_loc_t() : valid(0) {}
 	};
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
-	bool using_light_uniforms;
 
 	unsigned get_shader(string const &name, unsigned type) const;
 	static void print_shader_info_log(unsigned shader);
 	void print_program_info_log() const;
 
 public:
-	shader_t() : program(0), in_prim(0), out_prim(0), verts_out(0), last_spec(ALPHA0), using_light_uniforms(0) {}
+	shader_t() : program(0), in_prim(0), out_prim(0), verts_out(0), last_spec(ALPHA0) {}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
 
 	void set_vert_shader(string const &vs_name_) {shader_names[0] = vs_name_;}
@@ -53,7 +52,6 @@ public:
 	void set_tess_eval_shader   (string const &tes_name_) {shader_names[4] = tes_name_;}
 
 	bool is_setup() const {return (program > 0);}
-	bool light_uniforms_enabled() const {return using_light_uniforms;}
 	void enable();
 	static void disable();
 	bool begin_shader(bool do_enable=1);
@@ -95,8 +93,7 @@ public:
 	bool add_attrib_int        (unsigned ix, int val) const;
 
 	void setup_enabled_lights(unsigned num=2, unsigned shaders_enabled=3);
-	void enable_lighting_uniforms(unsigned shader_type);
-	void upload_light_source(unsigned light_id);
+	void upload_light_source(unsigned light_id, unsigned field_filt=0xFF);
 	void upload_light_sources_range(unsigned start, unsigned end);
 	void upload_all_light_sources() {upload_light_sources_range(0, MAX_SHADER_LIGHTS);}
 	void setup_scene_bounds() const;
@@ -146,10 +143,11 @@ struct gl_light_params_t {
 	float linear_atten;
 	float quad_atten;
 
-	gl_light_params_t() : pos(all_zeros), eye_space_pos(pos), ambient(BLACK), diffuse(BLACK), specular(BLACK), pos_w(0.0) {set_atten(1.0, 0.0, 0.0);}
-	void set_ds(colorRGBA const &c) {diffuse = specular = c;}
-	void set_atten(float c, float l, float q) {const_atten = c; linear_atten = l; quad_atten = q;}
-	void set_pos(point const &p, float w);
+	gl_light_params_t() : pos(all_zeros), eye_space_pos(pos), ambient(ALPHA0), diffuse(ALPHA0), specular(ALPHA0), pos_w(-1.0) {set_atten(1.0, 0.0, 0.0);}
+	bool set_a (colorRGBA const &a) {if (ambient == a) return 0; ambient = a; return 1;};
+	bool set_ds(colorRGBA const &c) {if (diffuse == c && specular == c) return 0; diffuse = specular = c; return 1;}
+	bool set_atten(float c, float l, float q) {if (const_atten == c && linear_atten == l && quad_atten == q) return 0; const_atten = c; linear_atten = l; quad_atten = q; return 1;}
+	bool set_pos(point const &p, float w, bool force_update);
 };
 
 

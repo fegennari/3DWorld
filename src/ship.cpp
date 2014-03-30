@@ -688,7 +688,6 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
 	if (shadow_mode) {s.set_prefix("#define SHADOW_ONLY_MODE", 1);} // FS
 	if (disint_tex ) {s.set_prefix("#define BURN_MASK_TEX",    1);} // FS
-	if (!shadow_mode && ((display_mode & 0x20) != 0)) {s.enable_lighting_uniforms(1);} // FS // FIXME LIGHTING
 	s.set_vert_shader("ship_draw");
 	s.set_frag_shader("ads_lighting.part*+black_body_burn.part+ship_draw");
 	s.begin_shader();
@@ -772,10 +771,10 @@ void draw_univ_objects() {
 	enable_blend(); // redundant?
 
 	if (!particle_pld.empty()) {
-		s[0].enable();
 		point sun_pos; // unused
 		uobject const *sobj(NULL); // unused
-		set_uobj_color(camera, 0.0, 0, 1, sun_pos, sobj, 2.0, 2.0); // increased ambient scale
+		set_uobj_color(camera, 0.0, 0, 1, sun_pos, sobj, 2.0, 2.0, NULL); // increased ambient scale
+		s[0].enable();
 		particle_pld.draw_and_clear();
 	}
 	s[0].end_shader();

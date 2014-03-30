@@ -14,5 +14,5 @@ void main()
 	normal = normalize(gl_Normal);
 	dlpos  = gl_Vertex.xyz;
 	epos   = gl_ModelViewMatrix * gl_Vertex;
-	gl_FrontColor   = gl_Color;
+	gl_FrontColor = gl_Color;
 } 

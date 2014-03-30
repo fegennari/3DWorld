@@ -19,7 +19,7 @@ string const shader_prefix_files[NUM_SHADER_TYPES] = {/*"common_header"*/"", "",
 
 shader_t *cur_shader(NULL);
 
-extern bool fog_enabled;
+extern bool fog_enabled, new_lighting_mode;
 extern int is_cloudy, display_mode;
 extern unsigned enabled_lights;
 extern float cur_fog_end;
@@ -256,18 +256,11 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 }
 
 
-void shader_t::enable_lighting_uniforms(unsigned shader_type) {
-
-	set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", 1);
-	using_light_uniforms = 1;
-}
-
-
-void shader_t::upload_light_source(unsigned light_id) {
+void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 
 	assert(is_setup());
 	assert(light_id < MAX_SHADER_LIGHTS); // only supporting 8 light sources
-	if (!using_light_uniforms || !is_light_enabled(light_id)) return;
+	if (field_filt == 0 || !new_lighting_mode || !is_light_enabled(light_id)) return;
 	// FIXME: only upload if light source has changed since last call?
 	light_loc_t &lloc(light_locs[light_id]);
 
@@ -287,30 +280,31 @@ void shader_t::upload_light_source(unsigned light_id) {
 			}
 			is_setup = 1;
 		}
-		lloc.valid = 1;
-		bool disabled(0);
-		
 		for (unsigned i = 0; i < 7; ++i) {
-			lloc.v[i] = (disabled ? -1 : glGetUniformLocation(program, ls_strs[light_id][i]));
-			if (i == 0 && lloc.v[0] < 0) {disabled = 1;} // light is unused in the shader
+			lloc.v[i] = glGetUniformLocation(program, ls_strs[light_id][i]);
 		}
+		lloc.valid = 1;
 	}
 	gl_light_params_t const &lp(gl_light_params[light_id]);
-	float const pos[4] = {lp.eye_space_pos.x, lp.eye_space_pos.y, lp.eye_space_pos.z, lp.pos_w};
-	if (lloc.v[0] < 0) return;
-	if (lloc.v[0] >= 0) {glUniform4fv(lloc.v[0], 1, pos);} // in eye space, using MVM at the time set_gl_light_pos() was called
-	if (lloc.v[1] >= 0) {glUniform4fv(lloc.v[1], 1, &lp.ambient.R );}
-	if (lloc.v[2] >= 0) {glUniform4fv(lloc.v[2], 1, &lp.diffuse.R );}
-	if (lloc.v[3] >= 0) {glUniform4fv(lloc.v[3], 1, &lp.specular.R);}
-	if (lloc.v[4] >= 0) {glUniform1fv(lloc.v[4], 1, &lp.const_atten );}
-	if (lloc.v[5] >= 0) {glUniform1fv(lloc.v[5], 1, &lp.linear_atten);}
-	if (lloc.v[6] >= 0) {glUniform1fv(lloc.v[6], 1, &lp.quad_atten  );}
+
+	if ((field_filt & 0x01) && lloc.v[0] >= 0) {
+		vector4d const pos(lp.eye_space_pos, lp.pos_w);
+		glUniform4fv(lloc.v[0], 1, &pos.x); // in eye space, using MVM at the time set_gl_light_pos() was called
+	}
+	if ((field_filt & 0x02) && lloc.v[1] >= 0) {glUniform4fv(lloc.v[1], 1, &lp.ambient.R );}
+	if ((field_filt & 0x04) && lloc.v[2] >= 0) {glUniform4fv(lloc.v[2], 1, &lp.diffuse.R );}
+	if ((field_filt & 0x08) && lloc.v[3] >= 0) {glUniform4fv(lloc.v[3], 1, &lp.specular.R);}
+	if ((field_filt & 0x10) && lloc.v[4] >= 0) {glUniform1fv(lloc.v[4], 1, &lp.const_atten );}
+	if ((field_filt & 0x20) && lloc.v[5] >= 0) {glUniform1fv(lloc.v[5], 1, &lp.linear_atten);}
+	if ((field_filt & 0x40) && lloc.v[6] >= 0) {glUniform1fv(lloc.v[6], 1, &lp.quad_atten  );}
 }
 
 
 void shader_t::upload_light_sources_range(unsigned start, unsigned end) {
 
-	for (unsigned i = start; i < end; ++i) {upload_light_source(i);}
+	for (unsigned i = start; i < end; ++i) {
+		if (is_light_enabled(i)) {upload_light_source(i);}
+	}
 }
 
 
@@ -645,13 +639,12 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 }
 
 
-bool use_light_uniforms() {return ((display_mode & 0x10) != 0);}
-
-
 // See http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/glsl-core-tutorial-create-a-program/
 bool shader_t::begin_shader(bool do_enable) {
 
-	//if (use_light_uniforms()) {enable_lighting_uniforms(0); enable_lighting_uniforms(1);} // FIXME: which (if any) shader includes ads_lighting.part?
+	if (new_lighting_mode) { // FIXME: which (if any) shader includes ads_lighting.part?
+		for (unsigned d = 0; d < 2; ++d) {set_prefix("#define USE_LIGHT_SOURCE_UNIFORMS", d);}
+	}
 
 	//RESET_TIME;
 	// get the program
@@ -744,7 +737,6 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	prog_name_prefix.clear();
 	attrib_locs.clear();
 	last_spec = ALPHA0;
-	using_light_uniforms = 0;
 }
 
 
@@ -752,7 +744,7 @@ void shader_t::enable() {
 	
 	assert(program);
 	glUseProgram(program);
-	//if (use_light_uniforms()) {upload_all_light_sources();}
+	if (new_lighting_mode) {upload_all_light_sources();}
 	cur_shader = this;
 }
 
