@@ -79,9 +79,11 @@ int get_universe_ambient_light() {
 }
 
 
-bool gl_light_params_t::set_pos(point const &p, float w, bool force_update) {
+void gl_light_params_t::set_pos(point const &p, float w) {
 	
-	if (!force_update && p == pos && w == pos_w) return 0; // already set to this value
+	// Note: it might seem like we can skip the update of eye_space_pos when pos is unchanged;
+	// however, eye_space_pos depends on the MVM, which can change independently (and does for ship engines, etc.)
+	//if (p == pos && w == pos_w) return 0; // already set to this value
 	pos   = p;
 	pos_w = w;
 
@@ -91,7 +93,6 @@ bool gl_light_params_t::set_pos(point const &p, float w, bool force_update) {
 		glm::vec4 const v(xf * glm::vec4(p.x, p.y, p.z, w));
 		eye_space_pos.assign(v.x, v.y, v.z); // v.w ignored?
 	}
-	return 1;
 }
 
 
@@ -139,8 +140,7 @@ void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader) {
 	assert(light >= GL_LIGHT0 && light <= GL_LIGHT7);
 	float const position[4] = {pos.x, pos.y, pos.z, w};
 	if (!new_lighting_mode) {glLightfv(light, GL_POSITION, position);}
-	// Note: if no shader is set, we assume this is a global light pos update and force eye_space_pos to be recalculated, since the MVM may have changed
-	gl_light_params[light - GL_LIGHT0].set_pos(pos, w, 0);
+	gl_light_params[light - GL_LIGHT0].set_pos(pos, w);
 	if (shader) {shader->upload_light_source(light-GL_LIGHT0, 0x01);}
 }
 

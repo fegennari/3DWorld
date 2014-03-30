@@ -29,7 +29,7 @@ struct gl_light_params_t {
 	void set_a (colorRGBA const &a) {ambient = a;};
 	void set_ds(colorRGBA const &c) {diffuse = specular = c;}
 	void set_atten(float c, float l, float q) {const_atten = c; linear_atten = l; quad_atten = q;}
-	bool set_pos(point const &p, float w, bool force_update);
+	void set_pos(point const &p, float w);
 };
 
 
