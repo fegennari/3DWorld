@@ -530,6 +530,7 @@ bool rock_collision(int index, int obj_index, vector3d const &velocity, point co
 bool sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
+bool sawblade_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type);
 
 void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius);
 void gen_landmine_scorch(point const &pos);

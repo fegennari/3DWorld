@@ -124,6 +124,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 	case W_GRENADE:
 	case W_CGRENADE:
 	case W_STAR5:
+	case W_SAWBLADE:
 		{
 			int const oid(weapons[wid].obj_id);
 			radius = 0.4*object_types[oid].radius;
@@ -391,6 +392,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_BLADE:
+		case W_SAWBLADE:
 			{
 				static int lfc(0);
 				static float angle(0.0);
@@ -413,7 +415,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				glPopMatrix();
 				glRotatef(90.0, 1.0, 0.0, 0.0); // into horizontal plane
 				glTranslatef(0.0, -0.028, 0.01);
-				if (fframe > 0) glRotatef((540.0*fframe)/delay, 0.0, 1.0, 0.0);
+				if (fframe > 0 && !(wmode&1)) glRotatef((540.0*fframe)/delay, 0.0, 1.0, 0.0);
 				glRotatef(angle, 0.0, 0.0, 1.0);
 				colorRGBA(WHITE, alpha).do_glColor();
 				shader.add_uniform_float("min_alpha", 0.95*alpha);

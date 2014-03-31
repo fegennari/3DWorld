@@ -77,7 +77,7 @@ float const CBLADE_EXT(0.5*CBLADE_EXT_PT*CBFD);
 
 
 // self_damage use_underwater need_weapon need_ammo def_ammo max_ammo obj_id fire_delay nshots nfragments v_mult v_add blast_damage blast_radius firing_error range1 range2 name
-weapon_t const weapons[NUM_WEAPONS+1] = {
+weapon_t const weapons[NUM_WEAPONS+2] = {
 	weapon_t(0, 1, 0, 0, 0,   0,   UNDEF,    0,   0,  0,   0.0,  0.0, 0.0,    0.0,  0.0,   0.0,  0.0,  "Unarmed"         ),
 	weapon_t(0, 1, 0, 0, 0,   0,   UNDEF,    23,  1,  1,   0.0,  0.0, 500.0,  0.25, 0.0,   0.25, 0.25, "Baseball Bat"    ),
 	weapon_t(0, 0, 0, 1, 1,   3,   BALL,     25,  1,  1,   1.5,  3.0, 0.0,    0.0,  0.0,   3.0,  3.0,  "Dodgeball"       ),
@@ -94,7 +94,8 @@ weapon_t const weapons[NUM_WEAPONS+1] = {
 	weapon_t(0, 1, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, CBLADE_EXT, "Carnage Blade"),
 	weapon_t(0, 0, 1, 1, 60,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  2.8,  "Gasser"),
 	/* non-selectable */
-	weapon_t(1, 0, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.6,  1.6,  "Cluster Grenade" )
+	weapon_t(1, 0, 0, 1, 3,   20,  CGRENADE, 80,  1,  8,   0.9,  1.1, 800.0,  0.45, 0.02,  1.6,  1.6,  "Cluster Grenade" ),
+	weapon_t(0, 1, 1, 1, 1,   10,  SAWBLADE, CBFD,1,  1,   2.0,  4.0, 0.0,    0.0,  0.01,  0.0,  0.0,  "Saw Blade")
 };
 
 int const obj_weapons[NUM_TOT_OBJS] = {
@@ -103,7 +104,7 @@ int const obj_weapons[NUM_TOT_OBJS] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1
+	-1, -1, -1, -1, -1, -1, W_SAWBLADE
 };
 
 bool const damage_done_obj[NUM_TOT_OBJS] = {
@@ -112,7 +113,7 @@ bool const damage_done_obj[NUM_TOT_OBJS] = {
 	0,0,0,0,0,1,1,0,1,1,
 	1,1,1,1,0,0,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,
-	0,0,0,0,0,1
+	0,0,0,0,0,1,1
 };
 
 string const obj_type_names[NUM_TOT_OBJS] = {
@@ -121,7 +122,7 @@ string const obj_type_names[NUM_TOT_OBJS] = {
 	"Projectile Hit", "Droplet", "Water Droplet", "Sand", "Dirt", "Rock", "Fragment", "Particle", "Health", "Shields",
 	"Powerup", "Weapon", "Ammo", "Pack", "Camera", "Precipitation", "Blast Radius", "Projectile", "laser beam", "Impact",
 	"Plasma Lightning Damage", "Laser", "Drowned", "Burned", "Fire", "Fell", "Froze", "Suffocated", "Crushed", "Poison Gas",
-	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleport" // Telefrag?
+	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleport", "Saw Blade" // Telefrag?
 };
 
 string const powerup_names[NUM_POWERUPS] =

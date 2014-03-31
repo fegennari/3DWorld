@@ -200,7 +200,7 @@ bool self_coll_invalid(int type, int obj_index) {
 	if (type == ROCKET || type == SEEK_D || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) {
 		return 1;
 	}
-	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL) &&
+	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL || type == SAWBLADE) &&
 		obj_groups[coll_id[type]].get_obj(obj_index).time < 10)
 	{
 		return 1;
@@ -942,48 +942,34 @@ bool dodgeball_collision(int index, int obj_index, vector3d const &velocity, poi
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, BALL);
 }
 
-
 bool skull_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
 	pushable_collision(index, position, 2000.0, type, SKULL);
 	return 1;
 }
 
-
 bool health_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, HEALTH);
 }
 
 bool shield_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, SHIELD);
 }
 
-
 bool powerup_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, POWERUP);
 }
 
-
 bool weapon_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, WEAPON);
 }
 
-
 bool ammo_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, AMMO);
 }
 
-
 bool pack_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
-
 	return default_obj_coll(index, obj_index, velocity, position, energy, type, WA_PACK);
 }
-
 
 bool sball_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
@@ -991,7 +977,6 @@ bool sball_collision(int index, int obj_index, vector3d const &velocity, point c
 	pushable_collision(index, position, 20.0, type, S_BALL);
 	return 1;
 }
-
 
 bool rock_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
@@ -1004,6 +989,21 @@ bool rock_collision(int index, int obj_index, vector3d const &velocity, point co
 	float const p[7] = {2.5, 5.0, 4.0, 0.2, 1.0, 0.5, 0.5};
 	gen_rubble(ROCK, int(num), position, shooter, p);
 	return 1;
+}
+
+bool sawblade_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
+
+	if (type == CAMERA || type == SMILEY) {
+		dwobject &obj(obj_groups[coll_id[SAWBLADE]].get_obj(index));
+
+		if (obj.source == ((type == CAMERA) ? CAMERA_ID : obj_index)) { // self collision
+			// pick up ammo, no damage?
+		}
+		else { // FIXME: check for valid collision?
+			obj.direction = 1; // flag as bloody
+		}
+	}
+	return default_obj_coll(index, obj_index, velocity, position, energy, type, SAWBLADE);
 }
 
 
@@ -1491,9 +1491,13 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 			else if (weapon == W_GRENADE && fmode2 && (pammo >= int(weapons[W_CGRENADE].def_ammo) || UNLIMITED_WEAPONS)) {
 				pammo -= weapons[W_CGRENADE].def_ammo; // cluster grenade
 			}
-			else if (weapon != W_BLADE) {
-				--pammo;
+			else if (weapon == W_BLADE) {
+				if (wmode&1) { // SAWBLADE
+					--pammo;
+					if (pammo == 0) {p_weapons[weapon] = 0;}
+				}
 			}
+			else {--pammo;}
 		}
 	}
 	//if (frame_counter == fire_frame) return;
@@ -1570,7 +1574,9 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	float damage_scale(1.0), range(0.0);
 	vector3d velocity(zero_vector);
 	assert(UNLIMITED_WEAPONS || !no_weap_or_ammo());
-	int const weapon_id((weapon == W_GRENADE && (wmode&1)) ? W_CGRENADE : weapon);
+	int weapon_id(weapon);
+	if (weapon == W_GRENADE && (wmode&1)) {weapon_id = W_CGRENADE;}
+	if (weapon == W_BLADE   && (wmode&1)) {weapon_id = W_SAWBLADE;}
 	if (weapon_id == W_M16 && (wmode&1) == 1) ++rot_counter;
 	int const dtime(int(get_fspeed_scale()*(frame_counter - timer)*fticks));
 	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1));
@@ -1698,6 +1704,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		return 1;
 
 	case W_BLADE:    gen_sound(SOUND_DRILL,  fpos, 0.5, 0.8); break;
+	case W_SAWBLADE: gen_sound(SOUND_DRILL,  fpos, 0.5, 0.8); break; // bounce?
 	case W_ROCKET:   gen_sound(SOUND_ROCKET, fpos, 1.0, 1.2); break;
 	case W_BALL:     gen_sound(SOUND_SWING,  fpos, 0.7, 1.4); break;
 	case W_SBALL:    gen_sound(SOUND_SWING,  fpos, 0.4, 1.5); break;
@@ -2090,7 +2097,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 	point const shoot_pos(pos);
 	pos.z -= 0.05;
 
-	if (fframe > 0) { // carnage blade extension
+	if (fframe > 0 && !(sstate.wmode&1)) { // carnage blade extension
 		point coll_pos;
 		vector3d coll_norm; // unused
 		int coll, xpos, ypos, cindex;
@@ -2274,7 +2281,7 @@ int get_damage_source(int type, int index, int questioner) {
 	if (type == CAMERA) return -1;
 	assert(type >= 0);
 	
-	if (type < CAMERA) {
+	if (type < CAMERA || type == SAWBLADE) {
 		int cid(coll_id[type]);
 
 		if (cid < 0 || cid >= num_groups) {

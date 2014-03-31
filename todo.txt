@@ -13,7 +13,6 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)
-* Ripper Weapon
 
 Fog increases in valleys
 Draw more distant tiles (larger/lower res at high delta-z)
@@ -27,4 +26,3 @@ static error check (analysis)
 Better pine tree texture
 glMapBuffer - persistent
 GS layout(triangles)
-Faster tree leaf wind

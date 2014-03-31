@@ -474,6 +474,18 @@ void init_objects() {
 
 	object_types[WAYPOINT].radius          = CAMERA_RADIUS;
 
+	object_types[SAWBLADE].air_factor      = 0.01;
+	object_types[SAWBLADE].friction_factor = 0.01;
+	object_types[SAWBLADE].gravity         = 0.01;
+	object_types[SAWBLADE].radius          = 0.04;
+	object_types[SAWBLADE].damage          = 100.0;
+	object_types[SAWBLADE].lifetime        = 400;
+	object_types[SAWBLADE].density         = 0.4; // to reduce damage
+	object_types[SAWBLADE].elasticity      = 2.0; // 100% elastic collisions with any surface that has elasticity >= 0.5
+	object_types[SAWBLADE].health          = 500.0;
+	object_types[SAWBLADE].color           = WHITE;
+	object_types[SAWBLADE].flags           = SPECULAR | SELECTABLE | BLEND; // OBJ_IS_FLAT?
+
 	for (unsigned i = HEALTH; i <= WA_PACK; ++i) { // all other physics are the same
 		object_types[i].air_factor      = 0.05;
 		object_types[i].friction_factor = 0.9;
@@ -795,6 +807,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			velocity *= (stopped ? 0.0 : 0.95); // apply some damping
 		}
 		if (coll) {
+			if (type == SAWBLADE) {destroy_coll_objs(pos, 500.0, source, IMPACT);} // shatterable but not destroyable
 			bool const stat_coll((flags & STATIC_COBJ_COLL) != 0);
 
 			if (!stat_coll || !last_stat_coll) {
@@ -1255,6 +1268,7 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2,
 		elasticity *= elasticity2;
 		assert(norm != zero_vector); // norm must come in correct
 	}
+	elasticity = CLIP_TO_01(elasticity);
 	assert(!is_nan(norm));
 	calc_reflection_angle(delta_v, bounce_v, norm);
 	assert(!is_nan(bounce_v));

@@ -16,7 +16,7 @@ unsigned const NUM_DB_TIDS(sizeof(dodgeball_tids)/sizeof(int));
 
 // weapons
 enum {W_UNARMED = 0, W_BBBAT, W_BALL, W_SBALL, W_ROCKET, W_LANDMINE, W_SEEK_D, W_STAR5, W_M16, W_SHOTGUN, W_GRENADE,
-	W_LASER, W_PLASMA, W_BLADE, W_GASSER, /* non-selectable*/ W_CGRENADE};
+	W_LASER, W_PLASMA, W_BLADE, W_GASSER, /* non-selectable*/ W_CGRENADE, W_SAWBLADE};
 
 enum {SF_EYE = 0, SF_NOSE, SF_TONGUE, NUM_SMILEY_PARTS};
 

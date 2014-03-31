@@ -57,6 +57,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader);
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade, shader_t &shader);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
+void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate, int ndiv, bool bloody);
 void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius,
 					   float angle, float cd_scale, unsigned char type, shader_t &shader);
 colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale);
@@ -331,6 +332,9 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		break;
 	case AMMO:
 		wap_vis_objs[1].push_back(wap_obj(j, ndiv));
+		break;
+	case SAWBLADE:
+		draw_sawblade(pos, obj.orientation, obj.init_dir, radius, obj.angle, 1, ndiv, (obj.direction != 0));
 		break;
 	default:
 		if (obj.vdeform != all_ones) {
@@ -1277,6 +1281,21 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 		points[ix++] = vert_norm(2.0*radius*star_pts[(i<<1)+1], orient);
 	}
 	draw_verts(points, 3*N_STAR_POINTS, GL_TRIANGLES);
+	glPopMatrix();
+}
+
+
+void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate, int ndiv, bool bloody) {
+	
+	glPushMatrix();
+	translate_to(pos);
+
+	if (rotate) {
+		rotate_by_vector(init_dir, -90.0);
+		if (angle != 0.0) rotate_about(angle, orient);
+	}
+	select_texture(bloody ? SAW_B_TEX : SAW_TEX);
+	draw_circle_normal(0.0, radius, ndiv, 0);
 	glPopMatrix();
 }
 

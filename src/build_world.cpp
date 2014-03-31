@@ -97,10 +97,10 @@ void create_object_groups() {
 	coll_id[CHUNK]    = create_group(CHUNK,    SMILEY_NCHUNKS*NUM_CHUNK_BLOCKS*num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[SKULL]    = create_group(SKULL,    num_player_blocks, 0, 0, 0, 0, 0);
 	coll_id[BALL]     = create_group(BALL,     num_dodgeballs, 0, 1, 0, 0, 0);
-	coll_id[S_BALL]   = create_group(S_BALL,   100,   0, 0, 0, 1, 0);
+	coll_id[S_BALL]   = create_group(S_BALL,   200,   0, 0, 0, 1, 0);
 	coll_id[ROCKET]   = create_group(ROCKET,   100,   0, 0, 0, 1, 0);
-	coll_id[LANDMINE] = create_group(LANDMINE, 60,    0, 0, 0, 1, 0);
-	coll_id[SEEK_D]   = create_group(SEEK_D,   25,    0, 0, 0, 1, 0);
+	coll_id[LANDMINE] = create_group(LANDMINE, 100,   0, 0, 0, 1, 0);
+	coll_id[SEEK_D]   = create_group(SEEK_D,   50,    0, 0, 0, 1, 0);
 	coll_id[STAR5]    = create_group(STAR5,    200,   0, 0, 0, 1, 0);
 	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 1, 0);
 	coll_id[GRENADE]  = create_group(GRENADE,  200,   0, 0, 0, 1, 0);
@@ -116,6 +116,7 @@ void create_object_groups() {
 	coll_id[WA_PACK]  = create_group(WA_PACK,  50,    0, 0, 0, 1, 0);
 	coll_id[FRAGMENT] = create_group(FRAGMENT, 1200,  0, 0, 0, 1, 0);
 	coll_id[PARTICLE] = create_group(PARTICLE, 800,   0, 0, 0, 1, 0);
+	coll_id[SAWBLADE] = create_group(SAWBLADE, 50,    0, 0, 0, 1, 0);
 
 	for (int i = 0; i < NUM_TOT_OBJS; ++i) {
 		coll_id[i] -= 1; // offset by -1
@@ -318,6 +319,7 @@ void process_groups() {
 		case S_BALL:   coll_func = sball_collision;     break;
 		case BALL:     coll_func = dodgeball_collision; break;
 		case SKULL:    coll_func = skull_collision;     break;
+		case SAWBLADE: coll_func = sawblade_collision;  break;
 		}
 		//cout << "group %d %d\n", i, GET_DELTA_TIME);
 		RESET_TIME;
@@ -404,7 +406,7 @@ void process_groups() {
 							if (obj.flags & CAMERA_VIEW) { // smaller timesteps if camera view
 								spf = 4*LG_STEPS_PER_FRAME;
 							}
-							else if (type == PLASMA || type == BALL) {
+							else if (type == PLASMA || type == BALL || type == SAWBLADE) {
 								spf = 3*LG_STEPS_PER_FRAME;
 							}
 							else if (type == ROCKET || type == SEEK_D) {
@@ -460,7 +462,7 @@ void process_groups() {
 			if (!obj.disabled()) {
 				update_deformation(obj);
 				
-				if ((otype.flags & OBJ_IS_FLAT) || type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF ||
+				if ((otype.flags & OBJ_IS_FLAT) || type == SHELLC || type == SHRAPNEL || type == STAR5 || type == LEAF || type == SAWBLADE ||
 					(type == FRAGMENT && (obj.flags & TYPE_FLAG))) // shatterable fragments
 				{
 					float const vmag(fabs(obj.velocity.z)); // rotate
