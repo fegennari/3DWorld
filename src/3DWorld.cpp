@@ -226,8 +226,8 @@ void init_window() {
     glutMotionFunc(mouseMotion);
     glutKeyboardFunc(keyboard);
 	glutSpecialFunc(keyboard2);
-	glutCloseFunc(quit_3dworld);
-	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS); // doesn't work?
+	//glutCloseFunc(quit_3dworld); // can't do this because minimize/maximize() close the context, and we don't want to quit
+	//glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS); // doesn't work?
 
 	if (KBD_HANDLER) {
 		glutIgnoreKeyRepeat(1);
