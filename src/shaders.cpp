@@ -15,7 +15,7 @@ bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
 string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
-string const shader_prefix_files[NUM_SHADER_TYPES] = {/*"common_header"*/"", "", "", "", ""}; // always included
+string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "", "", "", ""}; // always included
 
 shader_t *cur_shader(NULL);
 
@@ -687,6 +687,7 @@ bool shader_t::begin_shader(bool do_enable) {
 		//PRINT_TIME("Create Program");
 	}
 	if (do_enable) {enable();}
+	cache_vnct_locs();
 	return 1;
 }
 
@@ -748,8 +749,54 @@ void shader_t::enable() {
 
 void shader_t::disable() {
 	
+	if (is_setup()) {enable_vnct_atribs(0, 0, 0, 0);} // disable all
 	glUseProgram(0);
 	cur_shader = NULL;
+}
+
+
+// built-in attribute setup/enable/binding
+void shader_t::cache_vnct_locs() { // Note: program need not be enabled
+
+	assert(is_setup());
+	const char *loc_strs[4] = {"fg_Vertex", "fg_Normal", "fg_Color", "fg_TexCoord"};
+
+	for (unsigned i = 0; i < 4; ++i) {
+		vnct_locs[i] = get_attrib_loc(loc_strs[i], 1); // okay if fails
+	}
+}
+
+void shader_t::enable_vnct_atribs(bool va, bool tca, bool na, bool ca) const { // Note: program must be enabled
+
+	assert(is_setup());
+	bool const enables[4] = {va, na, ca, tca};
+
+	for (unsigned i = 0; i < 4; ++i) {
+		int const loc(vnct_locs[i]);
+		if (loc < 0) continue; // unused in this shader
+		if (enables[i]) {glEnableVertexAttribArray(loc);} else {glDisableVertexAttribArray(loc);}
+	}
+}
+
+void shader_t::set_vertex_ptr(unsigned stride, void const *const ptr) const {
+	assert(vnct_locs[0] >= 0); // vertex must always be available
+	glVertexAttribPointer(vnct_locs[0], 3, GL_FLOAT, GL_FALSE, stride, ptr);
+}
+
+void shader_t::set_normal_ptr(unsigned stride, void const *const ptr, bool compressed) const {
+	if (vnct_locs[1] >= 0) {glVertexAttribPointer(vnct_locs[1], 3, (compressed ? GL_BYTE          : GL_FLOAT), compressed, stride, ptr);}
+}
+
+void shader_t::set_color4_ptr(unsigned stride, void const *const ptr, bool compressed) const {
+	if (vnct_locs[2] >= 0) {glVertexAttribPointer(vnct_locs[2], 4, (compressed ? GL_UNSIGNED_BYTE : GL_FLOAT), compressed, stride, ptr);}
+}
+
+void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compressed) const {
+	if (vnct_locs[3] >= 0) {glVertexAttribPointer(vnct_locs[3], 2, (compressed ? GL_SHORT         : GL_FLOAT), compressed, stride, ptr);}
+}
+
+void shader_t::set_cur_color(colorRGBA const &color) const {
+	if (vnct_locs[2] >= 0) {glVertexAttrib4fv(vnct_locs[2], &color.R);}
 }
 
 

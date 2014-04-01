@@ -52,9 +52,12 @@ class shader_t {
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
 
+	int vnct_locs[4]; // {vertex, normal, color, tex_coord}
+
 	unsigned get_shader(string const &name, unsigned type) const;
 	static void print_shader_info_log(unsigned shader);
 	void print_program_info_log() const;
+	void cache_vnct_locs();
 
 public:
 	shader_t() : program(0), in_prim(0), out_prim(0), verts_out(0), last_spec(ALPHA0) {}
@@ -70,13 +73,20 @@ public:
 
 	bool is_setup() const {return (program > 0);}
 	void enable();
-	static void disable();
+	void disable();
 	bool begin_shader(bool do_enable=1);
 	void end_shader();
 	void begin_color_only_shader();
 	void begin_color_only_shader(colorRGBA const &color);
 	void begin_simple_textured_shader(float min_alpha=0.0, bool include_2_lights=0, bool use_texgen=0, colorRGBA const *const color=NULL);
 	void begin_untextured_lit_glcolor_shader();
+
+	void enable_vnct_atribs(bool va, bool tca, bool na, bool ca) const;
+	void set_vertex_ptr(unsigned stride, void const *const ptr) const;
+	void set_normal_ptr(unsigned stride, void const *const ptr, bool compressed) const;
+	void set_color4_ptr(unsigned stride, void const *const ptr, bool compressed) const;
+	void set_tcoord_ptr(unsigned stride, void const *const ptr, bool compressed) const;
+	void set_cur_color(colorRGBA const &color) const;
 
 	int get_uniform_loc(char const *const name) const;
 	static bool set_uniform_float_array(int loc, float const *const val, unsigned num);
