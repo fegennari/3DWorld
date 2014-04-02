@@ -289,7 +289,7 @@ public:
 	void proc_pending_updates(bool no_gen_fragments=0);
 	void build(bool verbose, bool do_ao_lighting=1);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
-	void core_render(shader_t *s, unsigned lod_level, bool is_shadow_pass, bool no_vfc=0);
+	void core_render(shader_t &s, unsigned lod_level, bool is_shadow_pass, bool no_vfc=0);
 	void render(unsigned lod_level, bool is_shadow_pass);
 	virtual void free_context();
 	float eval_noise_texture_at(point const &pos) const;

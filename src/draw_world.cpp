@@ -607,6 +607,7 @@ void draw_earth() {
 		glRotatef(180.0, 1.0, 0.0, 0.0);
 		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1);
 		glPopMatrix();
+		s.end_shader();
 	}
 	rot_angle += 0.2*fticks;
 }

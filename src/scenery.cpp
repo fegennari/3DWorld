@@ -536,7 +536,7 @@ void voxel_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, get_tid()));
 }
 
-void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t *s) {
+void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen) {
 
 	assert(radius > 0.0);
 	if (!is_visible(shadow_only, radius, xlate)) return;
@@ -547,8 +547,8 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 	translate_to(pos);
 	uniform_scale(radius*get_size_scale(distance_to_camera(pos+xlate), scale_val));
 	
-	if (s != NULL) {
-		model.setup_tex_gen_for_rendering(*s);
+	if (use_model_texgen) {
+		model.setup_tex_gen_for_rendering(s);
 	}
 	else {
 		select_texture(get_tid());
@@ -1116,7 +1116,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	draw_scenery_vector(rocks, sscale, shadow_only, xlate, scale_val);
 
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
-		voxel_rocks[i].draw(sscale, shadow_only, xlate, scale_val, NULL); // Note: shader not passed here
+		voxel_rocks[i].draw(sscale, shadow_only, xlate, scale_val, s, 0); // Note: no model texgen
 	}
 	draw_scenery_vector(logs,   sscale, shadow_only, xlate, scale_val);
 	draw_scenery_vector(stumps, sscale, shadow_only, xlate, scale_val);

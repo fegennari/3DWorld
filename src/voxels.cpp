@@ -1535,15 +1535,15 @@ void voxel_model_space::setup_tex_gen_for_rendering(shader_t &s) {
 }
 
 
-void voxel_model::core_render(shader_t *s, unsigned lod_level, bool is_shadow_pass, bool no_vfc) {
+void voxel_model::core_render(shader_t &s, unsigned lod_level, bool is_shadow_pass, bool no_vfc) {
 
 	assert(lod_level < tri_data.size() && lod_level < pt_to_ix.size());
 
 	for (vector<pt_ix_t>::const_iterator i = pt_to_ix[lod_level].begin(); i != pt_to_ix[lod_level].end(); ++i) {
-		if (DEBUG_BLOCKS && s != NULL) {
+		if (DEBUG_BLOCKS) {
 			const char *cnames[2] = {"color0", "color1"};
 			for (unsigned d = 0; d < 2; ++d) {
-				s->add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & params.num_blocks) != 0)) ? RED : BLUE));
+				s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & params.num_blocks) != 0)) ? RED : BLUE));
 			}
 		}
 		assert(i->ix < tri_data[lod_level].size());
@@ -1573,7 +1573,7 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	if (group_back_face_cull) glEnable(GL_CULL_FACE);
 	assert(lod_level < pt_to_ix.size());
 	sort(pt_to_ix[lod_level].begin(), pt_to_ix[lod_level].end(), comp_by_dist(get_camera_pos())); // sort near to far
-	core_render((is_shadow_pass ? NULL : &s), lod_level, is_shadow_pass);
+	core_render(s, lod_level, is_shadow_pass);
 	if (group_back_face_cull) glDisable(GL_CULL_FACE);
 	if (!is_shadow_pass) {s.set_specular(0.0, 1.0);}
 	s.end_shader();

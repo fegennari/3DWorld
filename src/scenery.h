@@ -81,7 +81,7 @@ public:
 	void create(int x, int y, int use_xy);
 	void build_model();
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t *s);
+	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen);
 	void free_context() {model.free_context();}
 	void destroy();
 };
