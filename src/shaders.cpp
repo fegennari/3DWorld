@@ -18,6 +18,7 @@ string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "t
 string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "", "", "", ""}; // always included
 
 shader_t *cur_shader(NULL);
+colorRGBA cur_shader_color(BLACK);
 
 extern bool fog_enabled;
 extern int is_cloudy, display_mode;
@@ -686,8 +687,8 @@ bool shader_t::begin_shader(bool do_enable) {
 		prog = program_t(program, shader_ixs); // cache the program
 		//PRINT_TIME("Create Program");
 	}
-	if (do_enable) {enable();}
 	cache_vnct_locs();
+	if (do_enable) {enable();}
 	return 1;
 }
 
@@ -744,6 +745,7 @@ void shader_t::enable() {
 	assert(program);
 	glUseProgram(program);
 	upload_all_light_sources();
+	set_cur_color(cur_shader_color);
 	cur_shader = this;
 }
 
@@ -766,8 +768,6 @@ void shader_t::cache_vnct_locs() { // Note: program need not be enabled
 		vnct_locs[i] = get_attrib_loc(loc_strs[i], 1); // okay if fails
 	}
 }
-
-#if 0
 
 void shader_t::enable_vnct_atribs(bool va, bool tca, bool na, bool ca) const { // Note: program must be enabled
 
@@ -801,40 +801,6 @@ void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compr
 void shader_t::set_cur_color(colorRGBA const &color) const {
 	if (vnct_locs[2] >= 0) {glVertexAttrib4fv(vnct_locs[2], &color.R);}
 }
-
-#else
-
-void shader_t::enable_vnct_atribs(bool va, bool tca, bool na, bool ca) const { // Note: program must be enabled
-
-	bool const enables[4] = {va, tca, na, ca};
-	int  const arrays [4] = {GL_VERTEX_ARRAY, GL_TEXTURE_COORD_ARRAY, GL_NORMAL_ARRAY, GL_COLOR_ARRAY};
-
-	for (unsigned i = 0; i < 4; ++i) {
-		if (enables[i]) {glEnableClientState(arrays[i]);} else {glDisableClientState(arrays[i]);}
-	}
-}
-
-void shader_t::set_vertex_ptr(unsigned stride, void const *const ptr) const {
-	glVertexPointer(3, GL_FLOAT, stride, ptr);
-}
-
-void shader_t::set_normal_ptr(unsigned stride, void const *const ptr, bool compressed) const {
-	glNormalPointer((compressed ? GL_BYTE : GL_FLOAT), stride, ptr);
-}
-
-void shader_t::set_color4_ptr(unsigned stride, void const *const ptr, bool compressed) const {
-	glColorPointer(4, (compressed ? GL_UNSIGNED_BYTE : GL_FLOAT), stride, ptr);
-}
-
-void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compressed) const {
-	glTexCoordPointer(2, (compressed ? GL_SHORT : GL_FLOAT), stride, ptr);
-}
-
-void shader_t::set_cur_color(colorRGBA const &color) const {
-	glColor4fv(&color.R);
-}
-
-#endif
 
 
 // some simple shared shaders
