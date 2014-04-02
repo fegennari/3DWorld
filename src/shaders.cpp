@@ -813,10 +813,10 @@ void shader_t::begin_color_only_shader() {
 
 void shader_t::begin_color_only_shader(colorRGBA const &color) {
 
-	set_vert_shader("vert_xform_color_uniform");
+	set_vert_shader("vert_xform_only");
 	set_frag_shader("color_only");
 	begin_shader();
-	add_uniform_color("color", color);
+	set_cur_color(color);
 }
 
 void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_lights, bool use_texgen, colorRGBA const *const color) {
@@ -828,10 +828,10 @@ void shader_t::begin_simple_textured_shader(float min_alpha, bool include_2_ligh
 	else {
 		set_vert_shader(use_texgen ? "texture_gen.part+no_lighting_texture_gen" : "no_lighting_tex_coord");
 	}
-	if (color) {color->do_glColor();}
 	bool const use_fog(include_2_lights && fog_enabled);
 	set_frag_shader(use_fog ? "linear_fog.part+textured_with_fog" : "simple_texture");
 	begin_shader();
+	if (color) {set_cur_color(*color);}
 	add_uniform_float("min_alpha", min_alpha);
 	add_uniform_int("tex0", 0);
 	if (use_fog) {setup_fog_scale();}
