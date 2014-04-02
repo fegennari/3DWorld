@@ -6,8 +6,5 @@ layout(location = 3) in vec2 fg_TexCoord;
 vec4 fg_ftransform() {return gl_ModelViewProjectionMatrix * fg_Vertex;}
 //vec4 fg_ftransform() {return fg_ProjectionMatrix * fg_ModelViewMatrix * fg_Vertex;}
 
-#define gl_Vertex fg_Vertex
-#define gl_Normal fg_Normal
-#define gl_Color  fg_Color
-#define gl_MultiTexCoord0 fg_TexCoord
-#define ftransform fg_ftransform
+// required because some shared shader parts can be used with either vertex or fragment shaders
+#define gl_Color fg_Color

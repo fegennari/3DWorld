@@ -7,13 +7,13 @@ varying vec2 tc;
 
 void main()
 {
-	tc        = gl_MultiTexCoord0;
-	epos      = gl_ModelViewMatrix * gl_Vertex;
-	normal    = normalize(gl_NormalMatrix * gl_Normal);
+	tc        = fg_TexCoord;
+	epos      = gl_ModelViewMatrix * fg_Vertex;
+	normal    = normalize(gl_NormalMatrix * fg_Normal);
 	dl_normal = normalize((transpose(world_space_mvm) * vec4(normal, 1)).xyz);
 	mat4 mvm_inv = inverse(world_space_mvm);
 	dlpos     = (mvm_inv * epos).xyz;
 	eye       = mvm_inv[3].xyz;
-	gl_Position = ftransform();
+	gl_Position = fg_ftransform();
 	gl_FogFragCoord = length(epos.xyz);
 }

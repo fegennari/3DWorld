@@ -17,20 +17,20 @@ void main()
 		tex_coord = tc;
 	}
 	else if (use_texgen == 2) {
-		tex_coord.s = dot(gl_Vertex, tex0_s);
-		tex_coord.t = dot(gl_Vertex, tex0_t);
+		tex_coord.s = dot(fg_Vertex, tex0_s);
+		tex_coord.t = dot(fg_Vertex, tex0_t);
 	}
 	else if (use_texgen == 3) {
 		set_tc0_from_vert_id();
 		tex_coord = tc;
 	}
 	else {
-		tex_coord = gl_MultiTexCoord0.st * vec2(tex_scale_s, tex_scale_t);
+		tex_coord = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);
 	}
-	gl_Position   = ftransform();
-	gl_FrontColor = gl_Color;
-	eye_norm      = normalize(gl_NormalMatrix * gl_Normal);
-	epos          = gl_ModelViewMatrix * gl_Vertex;
+	gl_Position   = fg_ftransform();
+	gl_FrontColor = fg_Color;
+	eye_norm      = normalize(gl_NormalMatrix * fg_Normal);
+	epos          = gl_ModelViewMatrix * fg_Vertex;
 
 	if (use_world_space_mvm) {
 		normal = normalize((transpose(world_space_mvm) * vec4(eye_norm, 1)).xyz);
@@ -39,9 +39,9 @@ void main()
 		eye    = mvm_inv[3].xyz; // world space
 	}
 	else {
-		vpos   = gl_Vertex.xyz + world_space_offset;
+		vpos   = fg_Vertex.xyz + world_space_offset;
 		eye    = gl_ModelViewMatrixInverse[3].xyz; // world space
-		normal = normalize(gl_Normal);
+		normal = normalize(fg_Normal);
 	}
 #ifdef USE_BUMP_MAP
 	setup_tbn();

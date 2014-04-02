@@ -6,8 +6,8 @@ void main()
 {
 	set_tc0_from_vert_id();
 	vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
-	vec3 dir    = normalize(cross(vec3(0,0,1), (gl_Vertex.xyz - eye.xyz)));
-	vec4 vertex = gl_Vertex + vec4(((2.0*tc.s - 1.0) * radius_scale * gl_Normal.x * dir), 0.0);
+	vec3 dir    = normalize(cross(vec3(0,0,1), (fg_Vertex.xyz - eye.xyz)));
+	vec4 vertex = fg_Vertex + vec4(((2.0*tc.s - 1.0) * radius_scale * fg_Normal.x * dir), 0.0);
 	world_space_zval = vertex.z;
 	gl_Position = gl_ModelViewProjectionMatrix * vertex;
 	gl_FogFragCoord = length((gl_ModelViewMatrix * vertex).xyz); // set standard fog coord
@@ -17,5 +17,5 @@ void main()
 	vec3 color  = vec3(0.0);
 	if (enable_light0) color += add_light_comp0(normal).rgb;
 	if (enable_light1) color += add_light_comp1(normal).rgb;
-	gl_FrontColor = vec4(color, gl_Color.a);
+	gl_FrontColor = vec4(color, fg_Color.a);
 } 

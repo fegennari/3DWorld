@@ -23,7 +23,7 @@ vec4 add_light_comp(in vec3 vertex, in vec3 normal, in vec4 epos, in int i, in f
 void main()
 {
 	tc          = get_grass_tc();
-	vec4 vertex = gl_Vertex;
+	vec4 vertex = fg_Vertex;
 	vertex.xy  += local_translate;
 	float z_val = texture2D(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
 	float ascale= 1.0;
@@ -42,7 +42,7 @@ void main()
 	gl_FogFragCoord = length(epos.xyz);
 	float grass_weight = texture2D(weight_tex, tc2).b;
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
-	float noise_weight = texture2D(noise_tex, 10.0*vec2(gl_Color.r, gl_Color.g)).r; // "hash" the color
+	float noise_weight = texture2D(noise_tex, 10.0*vec2(fg_Color.r, fg_Color.g)).r; // "hash" the color
 	
 	// calculate lighting
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc2);
@@ -51,7 +51,7 @@ void main()
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(gl_NormalMatrix * normal); // eye space
-	vec4 color  = vec4(0,0,0, gl_Color.a);
+	vec4 color  = vec4(0,0,0, fg_Color.a);
 	//if (grass_weight < noise_weight) {
 	if (enable_light0) {color.rgb += add_light_comp(vertex.xyz, normal, epos, 0, diffuse_scale, ambient_scale).rgb;}
 	if (enable_light1) {color.rgb += add_light_comp(vertex.xyz, normal, epos, 1, diffuse_scale, ambient_scale).rgb;}

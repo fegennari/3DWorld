@@ -3,8 +3,8 @@ varying vec2 tc;
 
 void main()
 {
-	tc              = gl_MultiTexCoord0; // needed for flare texture
-	world_space_pos = gl_Vertex.xyz;
-	gl_Position     = ftransform();
-	gl_FrontColor   = gl_Color; // not needed?
+	tc              = fg_TexCoord; // needed for flare texture
+	world_space_pos = fg_Vertex.xyz;
+	gl_Position     = fg_ftransform();
+	gl_FrontColor   = fg_Color; // not needed?
 }

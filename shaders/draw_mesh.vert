@@ -9,10 +9,10 @@ void main()
 #ifdef HAVE_DETAIL_TEXTURE
 	setup_texgen1();
 #endif
-	gl_Position = ftransform();
-	eye_norm = gl_NormalMatrix * gl_Normal; // eye space, not normalized
-	normal = normalize(gl_Normal);
-	dlpos  = gl_Vertex.xyz;
-	epos   = gl_ModelViewMatrix * gl_Vertex;
-	gl_FrontColor = gl_Color;
+	gl_Position = fg_ftransform();
+	eye_norm = gl_NormalMatrix * fg_Normal; // eye space, not normalized
+	normal = normalize(fg_Normal);
+	dlpos  = fg_Vertex.xyz;
+	epos   = gl_ModelViewMatrix * fg_Vertex;
+	gl_FrontColor = fg_Color;
 } 

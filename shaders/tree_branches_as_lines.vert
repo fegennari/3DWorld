@@ -3,8 +3,8 @@ attribute float radius;
 
 void main()
 {
-	gl_Position   = gl_Vertex;
-	gl_FrontColor = gl_Color;
-	// use gl_Normal?
+	gl_Position   = fg_Vertex;
+	gl_FrontColor = fg_Color;
+	// use fg_Normal?
 	gl_TexCoord[7].r = radius;
 } 

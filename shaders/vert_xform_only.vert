@@ -1,5 +1,5 @@
 void main()
 {
-	gl_Position   = ftransform();
-	gl_FrontColor = gl_Color;
+	gl_Position   = fg_ftransform();
+	gl_FrontColor = fg_Color;
 }

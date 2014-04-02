@@ -7,14 +7,14 @@ varying vec4 epos;
 
 void main()
 {
-	epos = gl_ModelViewMatrix * gl_Vertex;
+	epos = gl_ModelViewMatrix * fg_Vertex;
 #ifdef ENABLE_SHADOWS
 	world_space_pos = (inverse(world_space_mvm) * epos).xyz;
 #endif
-	gl_Position   = ftransform();
+	gl_Position   = fg_ftransform();
 	gl_FrontColor = color;
 #ifdef DRAW_AS_SPHERES
-	float radius  = sphere_size*(0.5 + fract(223*gl_Vertex.x + 247*gl_Vertex.y + 262*gl_Vertex.z)); // random radius 0.5-1.5 * sphere_size
+	float radius  = sphere_size*(0.5 + fract(223*fg_Vertex.x + 247*fg_Vertex.y + 262*fg_Vertex.z)); // random radius 0.5-1.5 * sphere_size
 	gl_PointSize  = clamp(radius/length(epos.xyz), 1.0, 64.0);
 #endif
 }

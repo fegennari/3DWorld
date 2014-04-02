@@ -3,10 +3,10 @@ varying vec2 tc;
 void main()
 {
 	tc          = get_grass_tc();
-	vec3 gwdelta= get_grass_wind_delta(gl_Vertex.xyz, tc.s);
-	vec3 n      = gl_NormalMatrix * normalize(normalize(gl_Normal) + gwdelta/height); // eye space (not normalized), height comes from wind.part
-	vec3 normal = n*length(gl_Normal); // convert to original mag (for shadows)
-	vec4 vertex = gl_Vertex + vec4(gwdelta, 0.0);
+	vec3 gwdelta= get_grass_wind_delta(fg_Vertex.xyz, tc.s);
+	vec3 n      = gl_NormalMatrix * normalize(normalize(fg_Normal) + gwdelta/height); // eye space (not normalized), height comes from wind.part
+	vec3 normal = n*length(fg_Normal); // convert to original mag (for shadows)
+	vec4 vertex = fg_Vertex + vec4(gwdelta, 0.0);
 	vec4 epos   = gl_ModelViewMatrix  * vertex;
 	gl_Position = gl_ProjectionMatrix * epos;
 	

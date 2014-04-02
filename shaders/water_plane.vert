@@ -6,10 +6,10 @@ varying vec4 epos, proj_pos;
 void main()
 {
 	setup_texgen0();
-	tc2    = gl_MultiTexCoord0;
+	tc2    = fg_TexCoord;
 	normal = gl_NormalMatrix * vec3(0.0, 0.0, normal_z); // not normalized
-	epos   = gl_ModelViewMatrix * gl_Vertex;
-	proj_pos = ftransform();
+	epos   = gl_ModelViewMatrix * fg_Vertex;
+	proj_pos = fg_ftransform();
 	gl_Position = proj_pos;
-	gl_FrontColor = gl_Color;
+	gl_FrontColor = fg_Color;
 }
