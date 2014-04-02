@@ -744,17 +744,19 @@ public:
 			}
 		}
 		if (last_visible) {draw_range(beg_ix, (unsigned)grass.size());}
+		end_draw();
+		s.end_shader();
 
 		if (!nearby_ixs.empty()) {
-			s.end_shader();
 			setup_shaders(s, 0);
+			begin_draw();
 
 			for (vector<unsigned>::const_iterator i = nearby_ixs.begin(); i != nearby_ixs.end(); ++i) {
 				draw_range(mesh_to_grass_map[*i], mesh_to_grass_map[(*i)+1]);
 			}
+			end_draw();
+			s.end_shader();
 		}
-		end_draw();
-		s.end_shader();
 		//PRINT_TIME("Draw Grass");
 	}
 };
