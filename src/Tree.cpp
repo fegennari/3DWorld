@@ -139,7 +139,7 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 	virtual void draw_geom(bool is_normal_pass) {
 		select_texture(get_tree_type().leaf_tex);
 		shaders[is_normal_pass].enable();
-		tree_data_t::pre_draw(0, 0);
+		tree_data_t::pre_draw(shaders[is_normal_pass], 0, 0);
 		cur_tree->gen_leaf_color();
 		cur_tree->leaf_draw_setup(0);
 		cur_tree->draw_leaves(0.0); // sets color
@@ -165,8 +165,8 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		shaders[is_normal_pass].enable();
 		WHITE.do_glColor(); // branch color will be applied to the billboard later
 		select_texture(get_tree_type().bark_tex);
-		tree_data_t::pre_draw(1, 0);
-		cur_tree->draw_branches(0.0, 0);
+		tree_data_t::pre_draw(shaders[is_normal_pass], 1, 0);
+		cur_tree->draw_branches(shaders[is_normal_pass], 0.0, 0);
 		tree_data_t::post_draw(1, 0);
 		shaders[is_normal_pass].disable();
 	}
@@ -356,12 +356,12 @@ bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
 }
 
 
-void tree_cont_t::draw_branches_and_leaves(shader_t const &s, tree_lod_render_t &lod_renderer,
+void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer,
 	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
 	assert(draw_branches != draw_leaves); // must enable only one
 	int const shader_loc(draw_branches ? s.get_uniform_loc("world_space_offset") : -1);
-	tree_data_t::pre_draw(draw_branches, shadow_only);
+	tree_data_t::pre_draw(s, draw_branches, shadow_only);
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->draw_tree(s, lod_renderer, draw_branches, draw_leaves, shadow_only, reflection_pass, xlate, shader_loc);
@@ -796,14 +796,14 @@ void tree_data_t::check_render_textures() {
 }
 
 
-void tree_data_t::pre_draw(bool branches_or_leaves, bool shadow_only) {
+void tree_data_t::pre_draw(shader_t &s, bool branches_or_leaves, bool shadow_only) {
 
 	if (branches_or_leaves) { // branches
 		glEnable(GL_CULL_FACE);
-		set_array_client_state(1, !shadow_only, !shadow_only, 0); // vertices only in shadow_only mode
+		s.enable_vnct_atribs(1, !shadow_only, !shadow_only, 0); // vertices only in shadow_only mode
 	}
 	else { // leaves
-		set_array_client_state(1, 0, 1, 1);
+		s.enable_vnct_atribs(1, 0, 1, 1);
 	}
 }
 
@@ -828,19 +828,19 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 }
 
 
-bool tree_data_t::draw_tree_shadow_only(bool draw_branches, bool draw_leaves) {
+bool tree_data_t::draw_tree_shadow_only(shader_t &s, bool draw_branches, bool draw_leaves) {
 
 	if (draw_leaves && !leaves.empty()) { // draw leaves
 		if (leaf_vbo == 0) return 0; // if the leaf_vbo hasn't been allocated we need to go through the regular rendering path to get the leaf data uploaded
 		select_texture(tree_types[tree_type].leaf_tex);
 		draw_leaf_quads_from_vbo(leaves.size()); // could also disable normals and colors, but that doesn't seem to help much
 	}
-	if (draw_branches) {draw_branch_vbo(num_branch_quads, 1, 1);} // draw branches (untextured), low_detail=1
+	if (draw_branches) {draw_branch_vbo(s, num_branch_quads, 1, 1);} // draw branches (untextured), low_detail=1
 	return 1;
 }
 
 
-void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
+void tree::draw_tree(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
 	bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc)
 {
 	if (!created) return;
@@ -851,7 +851,7 @@ void tree::draw_tree(shader_t const &s, tree_lod_render_t &lod_renderer, bool dr
 		if (!is_over_mesh()) return;
 		glPushMatrix();
 		translate_to(tree_center + xlate);
-		bool const drawn(td.draw_tree_shadow_only(draw_branches, draw_leaves));
+		bool const drawn(td.draw_tree_shadow_only(s, draw_branches, draw_leaves));
 		glPopMatrix();
 		if (drawn) return;
 		draw_shadow_leaves = draw_leaves;
@@ -985,15 +985,15 @@ void tree_data_t::ensure_branch_vbo() {
 }
 
 
-void tree_data_t::draw_branches(float size_scale, bool reflection_pass) {
+void tree_data_t::draw_branches(shader_t &s, float size_scale, bool reflection_pass) {
 
 	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
 	bool const low_detail(reflection_pass || ((size_scale == 0.0) ? 0 : (size_scale < 2.0)));
-	draw_branch_vbo(num, low_detail, 0);
+	draw_branch_vbo(s, num, low_detail, 0);
 }
 
 
-void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pass) {
+void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail, bool shadow_pass) {
 
 #ifdef TREE_4TH_BRANCHES
 	low_detail = 0; // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
@@ -1002,7 +1002,7 @@ void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pas
 	branch_vbo_manager.pre_render();
 
 	if (shadow_pass) {
-		glVertexPointer(3, GL_FLOAT, sizeof(branch_vert_type_t), 0); // vertices only
+		s.set_vertex_ptr(sizeof(branch_vert_type_t), 0); // vertices only
 	}
 	else {
 		vert_norm_comp_tc::set_vbo_arrays(0);
@@ -1014,14 +1014,14 @@ void tree_data_t::draw_branch_vbo(unsigned num, bool low_detail, bool shadow_pas
 }
 
 
-void tree::draw_tree_branches(shader_t const &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass) {
+void tree::draw_tree_branches(shader_t &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass) {
 
 	select_texture(tree_types[type].bark_tex);
 	bcolor.do_glColor();
 	s.set_uniform_vector3d(shader_loc, (tree_center + xlate));
 	glPushMatrix();
 	translate_to(tree_center + xlate);
-	tdata().draw_branches(size_scale, reflection_pass);
+	tdata().draw_branches(s, size_scale, reflection_pass);
 	glPopMatrix();
 }
 
@@ -1071,7 +1071,7 @@ bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 }
 
 
-void tree::draw_tree_leaves(shader_t const &s, float size_scale, vector3d const &xlate) {
+void tree::draw_tree_leaves(shader_t &s, float size_scale, vector3d const &xlate) {
 
 	tree_data_t &td(tdata());
 	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);

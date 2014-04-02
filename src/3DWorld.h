@@ -605,7 +605,6 @@ struct colorRGB { // size = 12
 		n.z = 2.0*B - 1.0;
 	}
 	void print() const {cout << "R: " << R << ", G: " << G << ", B: " << B;}
-	void do_glColor() const {glColor3fv((float *)this);}
 };
 
 
@@ -672,7 +671,7 @@ struct colorRGBA : public colorRGB { // size = 16
 	float get_luminance() const {return (R + G + B)/3.0;}
 	bool is_valid() const {return (R >= 0 && G >= 0 && B >= 0 && A >= 0 && R <= 1 && G <= 1 && B <= 1 && A <= 1);}
 	void print()    const {cout << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A;}
-	void do_glColor() const {glColor4fv((float *)this);}
+	void do_glColor() const;
 };
 
 
@@ -782,7 +781,6 @@ struct vert_norm_tc : public vert_norm { // size = 32
 
 
 struct color_wrapper { // size = 4
-	static int const gl_type = GL_UNSIGNED_BYTE;
 	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
@@ -790,17 +788,18 @@ struct color_wrapper { // size = 4
 	void add_c4(colorRGBA const &c_) {UNROLL_4X(c[i_] += (unsigned char)(255.0*CLIP_TO_01(c_[i_]));)}
 	colorRGB  get_c3() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	colorRGBA get_c4() const {return colorRGBA(get_c3(), c[3]/255.0);}
+	static bool is_compressed() {return 1;}
 };
 
 
 struct color_wrapper_float { // size = 16
-	static int const gl_type = GL_FLOAT;
 	colorRGBA c; // Note: c[3] (alpha component) is not used in all cases
 
 	template<typename T> void set_c3(T const &c_) {c = c_; c.A = 1.0;}
 	void set_c4(colorRGBA const &c_) {c = c_;}
 	colorRGB  get_c3() const {return colorRGB(c.R, c.G, c.B);}
 	colorRGBA get_c4() const {return c;}
+	static bool is_compressed() {return 0;}
 };
 
 

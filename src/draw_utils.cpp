@@ -10,244 +10,236 @@ extern int window_height, display_mode;
 extern shader_t *cur_shader;
 
 
+void colorRGBA::do_glColor() const {
+	if (cur_shader != NULL) {
+		cur_shader->set_cur_color(*this);
+	}
+	else { // FIXME
+		//assert(0);
+		glColor4fv((float *)this);
+	}
+}
+
+
 void set_array_client_state(bool va, bool tca, bool na, bool ca) {
-
 	assert(cur_shader != NULL);
-#if 0
-	bool const enables[4] = {va, na, ca, tca}; // layout is fixed to: fg_Vertex=0, fg_Normal=1, fg_Color=2, fg_TexCoord=3
-
-	for (unsigned i = 0; i < 4; ++i) {
-		if (enables[i]) {glEnableVertexAttribArray(i);} else {glDisableVertexAttribArray(i);}
-	}
-#else
-	bool const enables[4] = {va, tca, na, ca};
-	int  const arrays [4] = {GL_VERTEX_ARRAY, GL_TEXTURE_COORD_ARRAY, GL_NORMAL_ARRAY, GL_COLOR_ARRAY};
-
-	for (unsigned i = 0; i < 4; ++i) {
-		if (enables[i]) {glEnableClientState(arrays[i]);} else {glDisableClientState(arrays[i]);}
-	}
-#endif
+	cur_shader->enable_vnct_atribs(va, tca, na, ca);
 }
 
 
 void set_vn_ptrs(unsigned stride, bool comp) {
-	glVertexPointer(3, GL_FLOAT, stride, (void *)(0));
-	glNormalPointer((comp ? GL_BYTE : GL_FLOAT), stride, (void *)(sizeof(point)));
+	assert(cur_shader);
+	cur_shader->set_vertex_ptr(stride, (void *)0);
+	cur_shader->set_normal_ptr(stride, (void *)(sizeof(point)), comp);
 }
 
 void vert_wrap_t::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 0, 0);}
-	glVertexPointer(3, GL_FLOAT, sizeof(point), (void *)(0));
+	if (set_state) {set_array_client_state(1, 0, 0, 0);} else {assert(cur_shader);}
+	cur_shader->set_vertex_ptr(sizeof(point), (void *)0);
 }
 
 void vert_tc_t::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 0, 0);}
+	if (set_state) {set_array_client_state(1, 1, 0, 0);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_tc_t));
-	glVertexPointer(3, GL_FLOAT, sizeof(point), (void *)(0));
-	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_wrap_t)));
+	cur_shader->set_vertex_ptr(stride, (void *)0);
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_wrap_t), 0);
 }
 
 void vert_norm::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 1, 0);}
+	if (set_state) {set_array_client_state(1, 0, 1, 0);} else {assert(cur_shader);}
 	set_vn_ptrs(sizeof(vert_norm), 0);
 }
 
 void vert_norm_comp::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 1, 0);}
+	if (set_state) {set_array_client_state(1, 0, 1, 0);} else {assert(cur_shader);}
 	set_vn_ptrs(sizeof(vert_norm_comp), 1);
 }
 
 void vert_norm_comp_tc::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 0);}
+	if (set_state) {set_array_client_state(1, 1, 1, 0);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_norm_comp_tc));
 	set_vn_ptrs(stride, 1);
-	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_norm_comp)));
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 0);
 }
 
 void vert_norm_comp_tc_comp::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 0);}
+	if (set_state) {set_array_client_state(1, 1, 1, 0);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_norm_comp_tc_comp));
 	set_vn_ptrs(stride, 1);
-	glTexCoordPointer(2, GL_SHORT, stride, (void *)(sizeof(vert_norm_comp)));
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 1);
 }
 
 void vert_norm_tc::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 0);}
+	if (set_state) {set_array_client_state(1, 1, 1, 0);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_norm_tc));
 	set_vn_ptrs(stride, 0);
-	glTexCoordPointer(2, GL_FLOAT, stride, (void *)(sizeof(vert_norm)));
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
 }
 
 void vert_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 0, 1);}
+	if (set_state) {set_array_client_state(1, 0, 0, 1);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_color));
-	glVertexPointer(3, GL_FLOAT, stride, (void *)(0));
-	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(point)));
+	cur_shader->set_vertex_ptr(stride, (void *)0);
+	cur_shader->set_color4_ptr(stride, (void *)sizeof(point), 1);
 }
 
 void vert_norm_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 1, 1);}
+	if (set_state) {set_array_client_state(1, 0, 1, 1);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_norm_color));
 	set_vn_ptrs(stride, 0);
-	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm)));
+	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm), 1);
 }
 
 void vert_norm_comp_color::set_vbo_arrays(bool set_state) {
 	//if (set_state) {((vert_norm_comp_color *)0)->set_state(); return;}
-	if (set_state) {set_array_client_state(1, 0, 1, 1);}
+	if (set_state) {set_array_client_state(1, 0, 1, 1);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_norm_comp_color));
 	set_vn_ptrs(stride, 1);
-	glColorPointer(4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp)));
+	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_comp), 1);
 }
 
 void vert_norm_tc_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 1);}
+	if (set_state) {set_array_client_state(1, 1, 1, 1);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_norm_tc_color));
 	set_vn_ptrs(stride, 0);
-	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(vert_norm)));
-	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_tc)));
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
+	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_tc), 1);
 }
 
 void vert_tc_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 0, 1);}
+	if (set_state) {set_array_client_state(1, 1, 0, 1);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_tc_color));
-	glVertexPointer  (3, GL_FLOAT, stride, (void *)(0));
-	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(point)));
-	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_tc_t)));
+	cur_shader->set_vertex_ptr(stride, (void *)0);
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(point), 0);
+	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_tc_t), 1);
 }
 
 void vert_norm_comp_tc_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 1);}
+	if (set_state) {set_array_client_state(1, 1, 1, 1);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_norm_comp_tc_color));
 	set_vn_ptrs(stride, 1);
-	glTexCoordPointer(2, GL_FLOAT,         stride, (void *)(sizeof(vert_norm_comp)));
-	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc)));
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 0);
+	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_comp_tc), 1);
 }
 
 void vert_norm_comp_tc_comp_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 1);}
+	if (set_state) {set_array_client_state(1, 1, 1, 1);} else {assert(cur_shader);}
 	unsigned const stride(sizeof(vert_norm_comp_tc_comp_color));
 	set_vn_ptrs(stride, 1);
-	glTexCoordPointer(2, GL_SHORT,         stride, (void *)(sizeof(vert_norm_comp)));
-	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, (void *)(sizeof(vert_norm_comp_tc_comp)));
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 1);
+	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_comp_tc_comp), 1);
 }
 
 
 // set_state() functions for all vertex classes - typically called on element 0
 void vert_wrap_t::set_state() const {
-	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, 0, 0);
-	glVertexPointer(3, GL_FLOAT, stride, &v);
+	unsigned const stride(sizeof(*this));
+	cur_shader->set_vertex_ptr(stride, &v);
 }
 
 void vert_tc_t::set_state() const {
 	set_array_client_state(1, 1, 0, 0);
 	unsigned const stride(sizeof(*this));
-	glVertexPointer  (3, GL_FLOAT, stride, &v);
-	glTexCoordPointer(2, GL_FLOAT, stride, &t);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_tcoord_ptr(stride, &t, 0);
 }
 
 void vert_norm::set_state() const {
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, 1, 0);
-	glVertexPointer(3, GL_FLOAT, stride, &v);
-	glNormalPointer(   GL_FLOAT, stride, &n);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 0);
 }
 
 void vert_norm_comp::set_state() const {
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, 1, 0);
-	glVertexPointer(3, GL_FLOAT, stride, &v);
-	glNormalPointer(GL_BYTE,     stride, &n);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 1);
 }
 
 void vert_norm_comp_tc::set_state() const {
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 1, 1, 0);
-	glVertexPointer(3, GL_FLOAT,   stride, &v);
-	glNormalPointer(GL_BYTE,       stride, &n);
-	glTexCoordPointer(2, GL_FLOAT, stride, &t);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 1);
+	cur_shader->set_tcoord_ptr(stride, &t, 0);
 }
 
 void vert_norm_comp_tc_comp::set_state() const {
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 1, 1, 0);
-	glVertexPointer(3, GL_FLOAT,   stride, &v);
-	glNormalPointer(GL_BYTE,       stride, &n);
-	glTexCoordPointer(2, GL_SHORT, stride, &t);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 1);
+	cur_shader->set_tcoord_ptr(stride, &t, 1);
 }
 
 void vert_norm_tc::set_state() const {
 	set_array_client_state(1, 1, 1, 0);
 	unsigned const stride(sizeof(*this));
-	glVertexPointer  (3, GL_FLOAT, stride, &v);
-	glNormalPointer  (   GL_FLOAT, stride, &n);
-	glTexCoordPointer(2, GL_FLOAT, stride, &t);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 0);
+	cur_shader->set_tcoord_ptr(stride, &t, 0);
 }
 
 void vert_norm_tc_color::set_state() const {
 	set_array_client_state(1, 1, 1, 1);
 	unsigned const stride(sizeof(*this));
-#if 0
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, &v); // vertex
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, &n); // normal
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride, &t); // tex coord
-	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, stride, &c); // color
-#else
-	glVertexPointer  (3, GL_FLOAT,         stride, &v);
-	glNormalPointer  (   GL_FLOAT,         stride, &n);
-	glTexCoordPointer(2, GL_FLOAT,         stride, &t);
-	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, &c);
-#endif
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 0);
+	cur_shader->set_tcoord_ptr(stride, &t, 0);
+	cur_shader->set_color4_ptr(stride, &c, 1);
 }
 
 void vert_tc_color::set_state() const {
 	set_array_client_state(1, 1, 0, 1);
 	unsigned const stride(sizeof(*this));
-	glVertexPointer  (3, GL_FLOAT,         stride, &v);
-	glTexCoordPointer(2, GL_FLOAT,         stride, &t);
-	glColorPointer   (4, GL_UNSIGNED_BYTE, stride, &c);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_tcoord_ptr(stride, &t, 0);
+	cur_shader->set_color4_ptr(stride, &c, 1);
 }
 
 void vert_color::set_state() const {
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, 0, 1);
-	glVertexPointer(3, GL_FLOAT,         stride, &v);
-	glColorPointer (4, GL_UNSIGNED_BYTE, stride, &c);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_color4_ptr(stride, &c, 1);
 }
 
 void vert_norm_color::set_state(bool shadow_only) const {
+	// FIXME: no need for shadow_only?
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, !shadow_only, !shadow_only);
-	glVertexPointer(3, GL_FLOAT,         stride, &v);
-	if (!shadow_only) {glNormalPointer(   GL_FLOAT,         stride, &n);}
-	if (!shadow_only) {glColorPointer (4, GL_UNSIGNED_BYTE, stride, &c);}
+	cur_shader->set_vertex_ptr(stride, &v);
+	if (!shadow_only) {cur_shader->set_normal_ptr(stride, &n, 0);}
+	if (!shadow_only) {cur_shader->set_color4_ptr(stride, &c, 1);}
 }
 
 void vert_norm_comp_color::set_state() const {
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, 1, 1);
-	glVertexPointer(3, GL_FLOAT,        stride, &v);
-	glNormalPointer(GL_BYTE,            stride, &n);
-	glColorPointer(4, GL_UNSIGNED_BYTE, stride, &c);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 1);
+	cur_shader->set_color4_ptr(stride, &c, 1);
 }
 
 void vert_norm_comp_tc_color::set_state() const {
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 1, 1, 1);
-	glVertexPointer(3, GL_FLOAT,        stride, &v);
-	glNormalPointer(GL_BYTE,            stride, &n);
-	glTexCoordPointer(2, GL_FLOAT,      stride, &t);
-	glColorPointer(4, GL_UNSIGNED_BYTE, stride, &c);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 1);
+	cur_shader->set_tcoord_ptr(stride, &t, 0);
+	cur_shader->set_color4_ptr(stride, &c, 1);
 }
 
 void vert_norm_comp_tc_comp_color::set_state() const {
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 1, 1, 1);
-	glVertexPointer(3, GL_FLOAT,        stride, &v);
-	glNormalPointer(GL_BYTE,            stride, &n);
-	glTexCoordPointer(2, GL_SHORT,      stride, &t);
-	glColorPointer(4, GL_UNSIGNED_BYTE, stride, &c);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 1);
+	cur_shader->set_tcoord_ptr(stride, &t, 1);
+	cur_shader->set_color4_ptr(stride, &c, 1);
 }
 
 
@@ -273,9 +265,10 @@ template<typename cwt> void pt_line_drawer_t<cwt>::add_textured_line(point const
 template<typename cwt> void pt_line_drawer_t<cwt>::vnc_cont::draw(int type) const {
 	
 	if (empty()) return; // nothing to do
-	glVertexPointer(3, GL_FLOAT,     sizeof(vnc), &(front().v));
-	glNormalPointer(   GL_FLOAT,     sizeof(vnc), &(front().n));
-	glColorPointer( 4, cwt::gl_type, sizeof(vnc), &(front().c));
+	assert(cur_shader);
+	cur_shader->set_vertex_ptr(sizeof(vnc), &(front().v));
+	cur_shader->set_normal_ptr(sizeof(vnc), &(front().n), 0);
+	cur_shader->set_color4_ptr(sizeof(vnc), &(front().c), cwt::is_compressed());
 	glDrawArrays(type, 0, (unsigned)size());
 }
 

@@ -759,12 +759,15 @@ void shader_t::disable() {
 void shader_t::cache_vnct_locs() { // Note: program need not be enabled
 
 	assert(is_setup());
+	// Note: locations will generally be {0,1,2,3} as assigned in the vertex shader, but if unused they can be -1
 	const char *loc_strs[4] = {"fg_Vertex", "fg_Normal", "fg_Color", "fg_TexCoord"};
 
 	for (unsigned i = 0; i < 4; ++i) {
 		vnct_locs[i] = get_attrib_loc(loc_strs[i], 1); // okay if fails
 	}
 }
+
+#if 0
 
 void shader_t::enable_vnct_atribs(bool va, bool tca, bool na, bool ca) const { // Note: program must be enabled
 
@@ -798,6 +801,40 @@ void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compr
 void shader_t::set_cur_color(colorRGBA const &color) const {
 	if (vnct_locs[2] >= 0) {glVertexAttrib4fv(vnct_locs[2], &color.R);}
 }
+
+#else
+
+void shader_t::enable_vnct_atribs(bool va, bool tca, bool na, bool ca) const { // Note: program must be enabled
+
+	bool const enables[4] = {va, tca, na, ca};
+	int  const arrays [4] = {GL_VERTEX_ARRAY, GL_TEXTURE_COORD_ARRAY, GL_NORMAL_ARRAY, GL_COLOR_ARRAY};
+
+	for (unsigned i = 0; i < 4; ++i) {
+		if (enables[i]) {glEnableClientState(arrays[i]);} else {glDisableClientState(arrays[i]);}
+	}
+}
+
+void shader_t::set_vertex_ptr(unsigned stride, void const *const ptr) const {
+	glVertexPointer(3, GL_FLOAT, stride, ptr);
+}
+
+void shader_t::set_normal_ptr(unsigned stride, void const *const ptr, bool compressed) const {
+	glNormalPointer((compressed ? GL_BYTE : GL_FLOAT), stride, ptr);
+}
+
+void shader_t::set_color4_ptr(unsigned stride, void const *const ptr, bool compressed) const {
+	glColorPointer(4, (compressed ? GL_UNSIGNED_BYTE : GL_FLOAT), stride, ptr);
+}
+
+void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compressed) const {
+	glTexCoordPointer(2, (compressed ? GL_SHORT : GL_FLOAT), stride, ptr);
+}
+
+void shader_t::set_cur_color(colorRGBA const &color) const {
+	glColor4fv(&color.R);
+}
+
+#endif
 
 
 // some simple shared shaders

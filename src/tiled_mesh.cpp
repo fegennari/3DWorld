@@ -1794,7 +1794,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 	s.add_uniform_float("spec_scale", 1.0);
 	s.set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
 	set_fill_mode();
-	set_array_client_state(1, 0, 0, 0);
+	s.enable_vnct_atribs(1, 0, 0, 0);
 	enable_blend(); // for fog transparency
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);

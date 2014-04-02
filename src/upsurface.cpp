@@ -542,7 +542,7 @@ void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, fl
 										}
 									}
 								}
-								//glTexCoord2f((step*s + step_inner*ss_ix), (step*t + step_inner*tt));
+								//set_tex_coord((step*s + step_inner*ss_ix), (step*t + step_inner*tt));
 								ptc_.add_pt(verts);
 							}
 						} // for tt

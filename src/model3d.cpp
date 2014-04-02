@@ -344,7 +344,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool 
 	}
 	unsigned const stride(sizeof(T));
 	bool const have_normals(stride >= sizeof(vert_norm) && !is_shadow_pass), have_tex_coords(stride >= sizeof(vert_norm_tc) && !is_shadow_pass);
-	set_array_client_state(1, have_tex_coords, have_normals, 0);
+	shader->enable_vnct_atribs(1, have_tex_coords, have_normals, 0);
 	int loc(-1);
 	create_bind_vbo_and_upload(vbo, *this, 0);
 
@@ -355,9 +355,9 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t *shader, bool 
 		glEnableVertexAttribArray(loc);
 		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, (void *)sizeof(vert_norm_tc)); // stuff in at the end
 	}
-	glVertexPointer(3, GL_FLOAT, stride, 0);
-	if (have_normals)    {glNormalPointer(     GL_FLOAT, stride, (void *)sizeof(point));}
-	if (have_tex_coords) {glTexCoordPointer(2, GL_FLOAT, stride, (void *)sizeof(vert_norm));}
+	shader->set_vertex_ptr(stride, 0);
+	if (have_normals)    {shader->set_normal_ptr(stride, (void *)sizeof(point),     0);}
+	if (have_tex_coords) {shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);}
 	assert(!indices.empty()); // now always using indexed drawing
 
 	if (DRAW_QUADS_AS_TRIS && npts == 4) {
