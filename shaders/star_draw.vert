@@ -6,5 +6,4 @@ void main()
 	tc              = fg_TexCoord; // needed for flare texture
 	world_space_pos = fg_Vertex.xyz;
 	gl_Position     = fg_ftransform();
-	gl_FrontColor   = fg_Color; // not needed?
 }

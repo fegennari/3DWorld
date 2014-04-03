@@ -875,7 +875,7 @@ void draw_waypoints() {
 		else if (i->user_placed) color = YELLOW;
 		else if (i->placed_item) color = PURPLE;
 		else                     color = WHITE;
-		color.do_glColor();
+		s.set_cur_color(color);
 		draw_sphere_vbo(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2, 0);
 		if (!SHOW_WAYPOINT_EDGES) continue;
 

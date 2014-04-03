@@ -138,13 +138,14 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 	}
 	virtual void draw_geom(bool is_normal_pass) {
 		select_texture(get_tree_type().leaf_tex);
-		shaders[is_normal_pass].enable();
-		tree_data_t::pre_draw(shaders[is_normal_pass], 0, 0);
+		shader_t &s(shaders[is_normal_pass]);
+		s.enable();
+		tree_data_t::pre_draw(s, 0, 0);
 		cur_tree->gen_leaf_color();
 		cur_tree->leaf_draw_setup(0);
 		cur_tree->draw_leaves(0.0); // sets color
 		tree_data_t::post_draw(0, 0);
-		shaders[is_normal_pass].disable();
+		s.disable();
 	}
 	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
 		if (!shaders[0].is_setup()) {setup_shader("texture_gen.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
@@ -162,13 +163,14 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 	render_tree_branches_to_texture_t(unsigned tsize_) : render_tree_to_texture_t(tsize_) {}
 
 	virtual void draw_geom(bool is_normal_pass) {
-		shaders[is_normal_pass].enable();
-		WHITE.do_glColor(); // branch color will be applied to the billboard later
+		shader_t &s(shaders[is_normal_pass]);
+		s.enable();
+		s.set_cur_color(WHITE); // branch color will be applied to the billboard later
 		select_texture(get_tree_type().bark_tex);
-		tree_data_t::pre_draw(shaders[is_normal_pass], 1, 0);
-		cur_tree->draw_branches(shaders[is_normal_pass], 0.0, 0);
+		tree_data_t::pre_draw(s, 1, 0);
+		cur_tree->draw_branches(s, 0.0, 0);
 		tree_data_t::post_draw(1, 0);
-		shaders[is_normal_pass].disable();
+		s.disable();
 	}
 	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
 		if (!shaders[0].is_setup()) {setup_shader("no_lighting_tex_coord",     "simple_texture",        0);} // colors
@@ -1017,7 +1019,7 @@ void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail, bo
 void tree::draw_tree_branches(shader_t &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass) {
 
 	select_texture(tree_types[type].bark_tex);
-	bcolor.do_glColor();
+	s.set_cur_color(bcolor);
 	s.set_uniform_vector3d(shader_loc, (tree_center + xlate));
 	glPushMatrix();
 	translate_to(tree_center + xlate);

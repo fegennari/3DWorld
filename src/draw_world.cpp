@@ -507,7 +507,7 @@ void portal::pre_draw(vector<vert_wrap_t> &verts) {
 	float const scale[2] = {0.0, 0.0}, xlate[2] = {0.0, 0.0};
 	select_texture(WHITE_TEX);
 	setup_polygon_texgen(plus_z, scale, xlate, zero_vector); // doesn't matter as long as it's set to something
-	ALPHA0.do_glColor();
+	ALPHA0.set_for_cur_shader();
 	assert(verts.empty());
 }
 
@@ -573,7 +573,7 @@ void draw_moon() {
 	s.set_frag_shader("simple_texture");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
-	WHITE.do_glColor();
+	s.set_cur_color(WHITE);
 	select_texture(MOON_TEX);
 	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
 	s.end_shader();
@@ -702,7 +702,7 @@ void draw_sky(int order) {
 	s.add_uniform_float("min_alpha", 0.0);
 	s.add_uniform_int("tex0", 0);
 	s.set_specular(0.0, 1.0);
-	cloud_color.do_glColor();
+	s.set_cur_color(cloud_color);
 	select_texture(CLOUD_TEX);
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
 	s.end_shader();
@@ -757,7 +757,7 @@ void bubble::draw(bool set_liquid_color) const {
 		bubble_pld.add_pt(pos, (get_camera_pos() - pos), color2);
 	}
 	else {
-		color2.do_glColor();
+		color2.set_for_cur_shader();
 		int const ndiv(max(4, min(16, int(4.0*sqrt(point_dia)))));
 		draw_sphere_vbo(pos, radius, ndiv, 0);
 	}
@@ -1164,7 +1164,7 @@ void camera_filter::draw() {
 	float const y(0.5*zval*tan_val), x((y*window_width)/window_height);
 	colorRGBA cur_color(color);
 	if (fades) {cur_color.alpha *= float(time)/float(init_time);}
-	cur_color.do_glColor();
+	cur_color.set_for_cur_shader();
 	draw_tquad(x, y, zval);
 }
 
@@ -1241,7 +1241,7 @@ struct splash_ring_t {
 		float radius(min(size, 0.025f));
 		float const dr(0.5*radius);
 		unsigned const ndiv(max(3, min(N_CYL_SIDES, int(1000.0*radius/max(TOLERANCE, distance_to_camera(pos))))));
-		color.do_glColor();
+		shader.set_cur_color(color);
 		glPushMatrix();
 		translate_to(pos);
 

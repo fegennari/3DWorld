@@ -735,7 +735,8 @@ void draw_univ_objects() {
 				if ((dist_less_than(co.pos, camera, ch_dist) || !(co.flags & (OBJ_FLAGS_DIST | OBJ_FLAGS_NEW_))) &&
 					co.obj->visibility() > 0.1 && co.obj->get_time() > 0)
 				{
-					draw_crosshair_from_camera(co.pos, alignment_colors[co.obj->get_align()]); // draw_crosshair?
+					chs.set_cur_color(alignment_colors[co.obj->get_align()]);
+					draw_crosshair_from_camera(co.pos); // draw_crosshair?
 				}
 			}
 		}
@@ -791,8 +792,9 @@ void draw_univ_objects() {
 	if (onscreen_display) { // draw player death marker
 		shader_t s;
 		s.begin_color_only_shader();
-		draw_crosshair_from_camera(universe_origin, MAGENTA); // starts off as player start marker - world origin
-		if (player_death_pos != universe_origin) {draw_crosshair_from_camera(player_death_pos, ORANGE);}
+		s.set_cur_color(MAGENTA);
+		draw_crosshair_from_camera(universe_origin); // starts off as player start marker - world origin
+		if (player_death_pos != universe_origin) {s.set_cur_color(ORANGE); draw_crosshair_from_camera(player_death_pos);}
 		s.end_shader();
 	}
 	//PRINT_TIME("Draw");

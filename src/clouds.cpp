@@ -408,7 +408,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		setup_texgen(sx*xy_scale, sy*xy_scale, sx*offset2.x, sy*offset2.y, 0.0);
 		colorRGBA cloud_color2(cloud_color);
 		cloud_color2.alpha *= (is_cloudy ? 1.0 : 0.5);
-		cloud_color2.do_glColor();
+		s.set_cur_color(cloud_color2);
 		render_spherical_section(imd, size, rval_inv, z1+z_offset, z2+z_offset);
 		disable_blend();
 		s.end_shader();
@@ -431,7 +431,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		set_cloud_uniforms(s, 0);
 		s.add_uniform_vector3d("cloud_offset", offset);
 		enable_blend();
-		cloud_color.do_glColor();
+		s.set_cur_color(cloud_color);
 		render_spherical_section(imd, size, rval_inv, z1, z2);
 		disable_blend();
 		s.end_shader();
@@ -542,7 +542,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 	s.add_uniform_float("radius",  radius);
 	s.add_uniform_float("offset",  pos.x); // used as a hash
 	s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
-	mod_color[0].do_glColor();
+	s.set_cur_color(mod_color[0]);
 	enable_blend();
 	draw_quads();
 	disable_blend();

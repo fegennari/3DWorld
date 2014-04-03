@@ -274,7 +274,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 	}
 	if (!in_group || start_group) { // should be the same across groups
 		shader.set_specular(cp.specular, cp.shine);
-		cp.color.do_glColor();
+		shader.set_cur_color(cp.color);
 	}
 	if (tid != last_tid) {
 		bool const textured(select_texture(tid));

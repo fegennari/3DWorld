@@ -8,18 +8,12 @@
 
 extern int window_height, display_mode;
 extern shader_t *cur_shader;
-extern colorRGBA cur_shader_color;
 
 
-void colorRGBA::do_glColor() const {
-	if (cur_shader != NULL) {
-		cur_shader->set_cur_color(*this);
-	}
-	else { // FIXME
-		//assert(0);
-		//glColor4fv((float *)this);
-		cur_shader_color = *this;
-	}
+void colorRGBA::set_for_cur_shader() const {
+
+	assert(cur_shader != NULL);
+	cur_shader->set_cur_color(*this);
 }
 
 

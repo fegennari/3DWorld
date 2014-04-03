@@ -849,7 +849,7 @@ void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, 
 					}
 				}
 				else { // draw as cylinder
-					if (!shadow_only && world_mode == WMODE_GROUND) {get_bark_color().do_glColor();}
+					if (!shadow_only && world_mode == WMODE_GROUND) {get_bark_color().set_for_cur_shader();}
 					if (!shadow_only) {select_texture(stt[type].bark_tid);}
 					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, !shadow_only);
@@ -859,7 +859,7 @@ void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, 
 	}
 	if (mode & 2) { // leaves
 		assert(!is_pine_tree()); // handled through draw_pine_leaves()
-		if (!shadow_only) {color.do_glColor();}
+		if (!shadow_only) {color.set_for_cur_shader();}
 		vector3d scale;
 		point xl(all_zeros);
 

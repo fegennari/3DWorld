@@ -53,7 +53,7 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 	// Note: currently, we only support emissive, untextured particles
 	// if we need to support lighting and textures it can be added later by using a different shader
 	assert(lighted && tid < 0);
-	color.do_glColor();
+	color.set_for_cur_shader();
 	int const ndiv(min(N_SPHERE_DIV, max(3, int(3.0f*sqrt(radius*window_width/distance_to_camera(pos))))));
 	draw_subdiv_sphere(pos, radius, ndiv, (tid >= 0), 0); // point if far away?
 }

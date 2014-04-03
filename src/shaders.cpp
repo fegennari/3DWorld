@@ -18,7 +18,6 @@ string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "t
 string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "", "", "", ""}; // always included
 
 shader_t *cur_shader(NULL);
-colorRGBA cur_shader_color(BLACK);
 
 extern bool fog_enabled;
 extern int is_cloudy, display_mode;
@@ -745,7 +744,6 @@ void shader_t::enable() {
 	assert(program);
 	glUseProgram(program);
 	upload_all_light_sources();
-	set_cur_color(cur_shader_color);
 	cur_shader = this;
 }
 

@@ -2596,7 +2596,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		ddata.color_a  = color_a;
 		ddata.color_b  = color_b;
 	}
-	color_a.do_glColor();
+	ddata.set_color(color_a);
 	if (sc.engine_lights && ddata.can_have_engine_lights()) ddata.dlights = 1; // has engine lights (sc.emits_light?)
 	float over_temp(CLIP_TO_01(0.005f*get_over_temp_factor()));
 	if (ddata.t_exp > 0.0 && sc.exp_type == ETYPE_FUSION) over_temp = max(over_temp, (1.0f - ddata.t_exp)); // heats up during explosion
@@ -2661,7 +2661,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		glDisable(GL_STENCIL_TEST); // disable in case it's enabled
 
 		if (TEST_SHIP_BOUNDS) {
-			colorRGBA(1.0, 1.0, 1.0, 0.25).do_glColor();
+			ddata.set_color(colorRGBA(WHITE, 0.25));
 			draw_bounding_volume(ddata.ndiv);
 		}
 		if (SHOW_SHIELDS && show_shields()) { // draw shields if recently hit
@@ -2694,7 +2694,7 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			//if (ssects == 1) {} // scale to create tightly bounding ellipsoid?
 			assert(radius > 0.0);
 			emissive_shader.enable();
-			color_alpha.do_glColor();
+			ddata.set_color(color_alpha);
 			draw_sphere_vbo_back_to_front(all_zeros, ssize, 3*ndiv/2, has_hit_dir); // partial sphere?
 			glDisable(GL_CULL_FACE);
 			glDepthFunc(GL_LESS);

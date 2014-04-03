@@ -758,7 +758,7 @@ void draw_snow() {
 	if (use_smap) set_smap_shader_for_all_lights(s);
 
 	s.set_specular(0.5, 50.0);
-	SNOW_COLOR.do_glColor();
+	s.set_cur_color(SNOW_COLOR);
 	point const camera(get_camera_pos());
 	select_texture(SNOW_TEX); // detail texture (or could use NOISE_TEX)
 	setup_texgen(50.0, 50.0, 0.0, 0.0);

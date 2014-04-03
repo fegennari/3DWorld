@@ -246,6 +246,8 @@ public:
 	void setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex=BLUR_TEX) const;
 
 	colorRGBA apply_cloak(colorRGBA const &color) const;
+	void set_color(colorRGBA const &color) const;
+	void set_cloak_color(colorRGBA const &color) const {set_color(apply_cloak(color));}
 	void draw_bounding_sphere(colorRGBA const &color) const;
 	void setup_exp_scale() const;
 	void setup_exp_texture() const;
@@ -264,7 +266,6 @@ public:
 	void unlight_engine_pair() const;
 	void add_light_source(point const &lpos, float lradius, colorRGBA const &color) const;
 	void draw_colored_flash(colorRGBA const &color, bool symmetric) const;
-	void set_cloak_color(colorRGBA const &color) const;
 	void invert_z()          const;
 	void setup_draw_ship()   const;
 

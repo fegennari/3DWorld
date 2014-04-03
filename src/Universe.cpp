@@ -382,9 +382,10 @@ public:
 		s.begin_shader();
 		set_light_scale(s, use_light2);
 	}
-	void enable_planet_colored_shader(bool use_light2) { // Note: use_light2 is ignored in the shader
+	void enable_planet_colored_shader(bool use_light2, colorRGBA const &color) { // Note: use_light2 is ignored in the shader
 		if (!planet_colored_shader.is_setup()) {planet_colored_shader_setup(planet_colored_shader, use_light2);}
 		else {planet_colored_shader.enable();}
+		planet_colored_shader.set_cur_color(color);
 	}
 	void disable_planet_colored_shader() {
 		planet_colored_shader.disable();
@@ -2303,8 +2304,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		(gas_giant ? bind_1d_texture(tid) : bind_2d_texture(tid));
 	}
 	else {
-		usg.enable_planet_colored_shader(use_light2);
-		ocolor.do_glColor();
+		usg.enable_planet_colored_shader(use_light2, ocolor);
 	}
 	if (ndiv >= N_SPHERE_DIV) {
 		if (surface == NULL || !surface->has_heightmap()) { // gas giant
@@ -2437,10 +2437,6 @@ void ustar::solar_flare::draw(float size, int ndiv, bool texture) const {
 
 	if (lifetime == 0) return;
 	assert(length > 0.0 && radius > 0.0 && size > 0.0);
-	float const t(float(time)/float(lifetime));
-	colorRGBA c;
-	blend_color(c, color2, color1, t, 1);
-	c.do_glColor();
 	glPushMatrix();
 	rotate_about(angle, dir);
 	draw_fast_cylinder(point(0.0, 0.0, 0.9*size), point(0.0, 0.0, (length + 0.9)*size), radius*size, 0.0, ndiv, texture);

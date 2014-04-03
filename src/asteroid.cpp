@@ -81,7 +81,7 @@ public:
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(tex_id); return;}
-		ddata.color_a.do_glColor();
+		ddata.set_color(ddata.color_a);
 		model3d.draw_using_vbo();
 		end_texture();
 		enable_blend();
@@ -118,7 +118,7 @@ public:
 			s.add_uniform_float("noise_scale",  0.1);
 			s.add_uniform_float("height_scale", AST_PROC_HEIGHT);
 		}
-		colorRGBA(0.5, 0.45, 0.4, 1.0).do_glColor(); // Note: ignores color_a
+		s.set_cur_color(colorRGBA(0.5, 0.45, 0.4, 1.0)); // Note: ignores color_a
 		end_texture();
 		draw_sphere_vbo(all_zeros, 1.0, 3*ddata.ndiv/2, 1); // ndiv may be too large to use a vbo
 		s.disable();
@@ -208,7 +208,7 @@ public:
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id, bool no_reset_texture=0) const { // to allow overriding the texture id
 		unsigned const ndiv(3*ddata.ndiv/2); // increase ndiv because we want higher resolution to capture details
 		scale_by(scale_val*xyz_scale);
-		ddata.color_a.do_glColor();
+		ddata.set_color(ddata.color_a);
 		select_texture((force_tex_id >= 0) ? force_tex_id : tex_id);
 		surface.sd.draw_ndiv_pow2_vbo(ndiv); // use a vbo
 		if (!no_reset_texture) {end_texture();}

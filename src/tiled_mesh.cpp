@@ -1906,7 +1906,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	setup_tt_fog_post(s);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 	s.add_uniform_float("tex_scale_t", 5.0);
-	get_tree_trunk_color(T_PINE, 0).do_glColor(); // all a constant color
+	s.set_cur_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
 	draw_pine_tree_bl(s, 1, 0, 0, reflection_pass); // branches
 	s.add_uniform_float("tex_scale_t", 1.0);
 	s.end_shader();
@@ -1918,7 +1918,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 		set_pine_tree_shader(s, "xy_billboard");
 		assert(!(tree_trunk_pts.size() & 1));
 		select_texture(WHITE_TEX);
-		get_tree_trunk_color(T_PINE, 1).do_glColor();
+		s.set_cur_color(get_tree_trunk_color(T_PINE, 1));
 		draw_verts(tree_trunk_pts, GL_LINES);
 		tree_trunk_pts.resize(0);
 		s.end_shader();

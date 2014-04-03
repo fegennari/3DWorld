@@ -790,7 +790,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
 	s.add_uniform_float("normal_z", ((camera.z < zval) ? -1.0 : 1.0));
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
-	WHITE.do_glColor();
+	s.set_cur_color(WHITE);
 	draw_tiled_terrain_water(s, zval);
 	glDepthFunc(GL_LESS);
 	s.end_shader();

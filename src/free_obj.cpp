@@ -888,7 +888,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 			particle_pld.add_pt(make_pt_global(pos), (get_player_pos2() - pos), color);
 		}
 		else {
-			color.do_glColor();
+			ddata.set_color(color);
 			if (texture_id >= 0) select_texture(texture_id);
 			draw_sphere_vbo_raw(min((no_coll() ? ddata.ndiv : max(3, 3*ddata.ndiv/4)), N_SPHERE_DIV/2), (texture_id > 0)); // fewer ndiv/more irregular?
 			if (texture_id >= 0) end_texture();
@@ -904,7 +904,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 		}
 		// medium distance: vector of untextured triangles to draw at end?
 		else {
-			color.do_glColor();
+			ddata.set_color(color);
 			ddata.draw_one_triangle(axis, angle); // rotate around some random axis
 		}
 		break;

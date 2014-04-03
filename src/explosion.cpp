@@ -269,7 +269,7 @@ void draw_blasts() {
 				if (begin_type) {select_texture(PLASMA_TEX); glEnable(GL_CULL_FACE);}
 				// use distance_to_camera() for non-universe mode?
 				//float const sscale(universe ? 2.2/min(0.02f, distance_to_camera(pos)) : 1.0);
-				br.cur_color.do_glColor();
+				s.set_cur_color(br.cur_color);
 				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
 				draw_sphere_vbo(make_pt_global(br.pos), br.cur_size, ndiv, 1);
@@ -288,7 +288,7 @@ void draw_blasts() {
 				glPushMatrix();
 				global_translate(br.pos);
 				rotate_about(90.0*timescale, br.dir);
-				br.cur_color.do_glColor();
+				s.set_cur_color(br.cur_color);
 				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
 				uniform_scale(br.cur_size);

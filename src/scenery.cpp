@@ -319,7 +319,7 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const { // Note: assumes texture is already setup
 
 	if (!is_visible(shadow_only, 0.0, xlate)) return;
-	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius), xlate)).do_glColor();
+	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius), xlate)).set_for_cur_shader();
 	draw_using_vbo();
 }
 
@@ -441,7 +441,7 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, f
 		tree_scenery_pld.add_textured_pt(pos+xlate, color, ROCK_SPHERE_TEX);
 		return;
 	}
-	color.do_glColor();
+	color.set_for_cur_shader();
 	glPushMatrix();
 	translate_to(pos);
 	uniform_scale(scale*get_size_scale(dist, scale_val));
@@ -507,7 +507,7 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float s
 		tree_scenery_pld.add_textured_pt(pos+xlate, color, ROCK_SPHERE_TEX);
 		return;
 	}
-	color.do_glColor();
+	color.set_for_cur_shader();
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	glPushMatrix();
 	translate_to(pos);
@@ -542,7 +542,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 	if (!is_visible(shadow_only, radius, xlate)) return;
 	unsigned const lod_level = 0;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, radius));
-	color.do_glColor();
+	color.set_for_cur_shader();
 	glPushMatrix();
 	translate_to(pos);
 	uniform_scale(radius*get_size_scale(distance_to_camera(pos+xlate), scale_val));
@@ -614,7 +614,7 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 		tree_scenery_pld.add_textured_line(pos+xlate, pt2+xlate, color, get_tid());
 		return;
 	}
-	color.do_glColor();
+	color.set_for_cur_shader();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
 	glPushMatrix();
 	translate_to(pos);
@@ -674,7 +674,7 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 		tree_scenery_pld.add_textured_line((pos+xlate - point(0.0, 0.0, 0.2*height)), (pos+xlate + point(0.0, 0.0, height)), color, get_tid());
 		return;
 	}
-	color.do_glColor();
+	color.set_for_cur_shader();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
 	glPushMatrix();
 	translate_to(pos - point(0.0, 0.0, 0.2*height));
@@ -820,7 +820,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	}
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-		color.do_glColor();
+		color.set_for_cur_shader();
 		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1);
 	}
 }
@@ -846,7 +846,7 @@ void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 	float const size_scale(get_pt_line_thresh()*radius/distance_to_camera(pos2));
 	if (size_scale < 1.2) return; // too small/far away
 	int const ndiv(max(4, min(16, int(2.0*size_scale))));
-	pltype[type].berryc.do_glColor();
+	s.set_cur_color(pltype[type].berryc);
 	glPushMatrix();
 	uniform_scale(0.25*radius);
 	s.add_uniform_float("vertex_offset_scale", 1.0/(0.25*radius)); // enable

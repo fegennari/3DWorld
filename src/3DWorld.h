@@ -671,7 +671,7 @@ struct colorRGBA : public colorRGB { // size = 16
 	float get_luminance() const {return (R + G + B)/3.0;}
 	bool is_valid() const {return (R >= 0 && G >= 0 && B >= 0 && A >= 0 && R <= 1 && G <= 1 && B <= 1 && A <= 1);}
 	void print()    const {cout << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A;}
-	void do_glColor() const;
+	void set_for_cur_shader() const;
 };
 
 

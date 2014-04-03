@@ -5,7 +5,6 @@ Try using Boost in 3DWorld, in particular shared_ptr
 
 Remove deprecated OpenGL calls:
 http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
- - Color*
  - Non-sprite points
  - GL_QUADS
  - Replace GL matrix operations with GLM
