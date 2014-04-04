@@ -882,7 +882,6 @@
     <None Include="shaders\indir_lighting.part.frag" />
     <None Include="shaders\leaf_lighting.part.vert" />
     <None Include="shaders\leaf_lighting_comp.part" />
-    <None Include="shaders\line_to_cylinder.geom" />
     <None Include="shaders\moon_draw.vert" />
     <None Include="shaders\multitex_2.vert" />
     <None Include="shaders\nebula.frag" />
@@ -894,10 +893,8 @@
     <None Include="shaders\perlin_clouds.part" />
     <None Include="shaders\perlin_clouds_3d.part" />
     <None Include="shaders\pine_tree.frag" />
-    <None Include="shaders\pine_tree.geom" />
     <None Include="shaders\pine_tree.vert" />
     <None Include="shaders\pine_tree_billboard_auto_orient.vert" />
-    <None Include="shaders\pine_tree_gs.vert" />
     <None Include="shaders\planet_draw.frag" />
     <None Include="shaders\planet_draw.vert" />
     <None Include="shaders\planet_draw_distant.frag" />
@@ -926,7 +923,6 @@
     <None Include="shaders\textured_with_fog_opacity.frag" />
     <None Include="shaders\tiled_mesh.frag" />
     <None Include="shaders\tiled_tree_branches.frag" />
-    <None Include="shaders\tree_branches_as_lines.vert" />
     <None Include="shaders\tree_branches_billboard.frag" />
     <None Include="shaders\tree_branches_billboard.vert" />
     <None Include="shaders\tree_branches_no_lighting.vert" />

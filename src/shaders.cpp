@@ -660,17 +660,7 @@ bool shader_t::begin_shader(bool do_enable) {
 			if (shader_ixs[i]) {glAttachShader(program, shader_ixs[i]);}
 		}
 		assert(shader_ixs[0] && shader_ixs[1]); // vertex and fragment shaders are required, geometry shader is optional
-
-		if (shader_ixs[2]) { // setup geometry shader
-			assert(GL_EXT_geometry_shader4);
-			glProgramParameteriEXT(program, GL_GEOMETRY_INPUT_TYPE_EXT,  in_prim);
-			glProgramParameteriEXT(program, GL_GEOMETRY_OUTPUT_TYPE_EXT, out_prim);
-			int max_verts_out(0);
-			glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES_EXT, &max_verts_out); // get max
-			if (verts_out == 0) {verts_out = max_verts_out;} else {assert(verts_out <= max_verts_out);}
-			assert(verts_out > 0);
-			glProgramParameteriEXT(program, GL_GEOMETRY_VERTICES_OUT_EXT, verts_out);
-		}
+		if (shader_ixs[2]) {assert(GL_EXT_geometry_shader4);} // geometry shader
 		check_gl_error(300);
 		glLinkProgram(program);
 		int status(0);

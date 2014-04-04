@@ -249,8 +249,8 @@ void draw_select_groups(int solid) {
 		s.setup_enabled_lights(2, 1); // VS
 		s.set_vert_shader("ads_lighting.part*+two_lights_no_xform");
 		s.set_frag_shader("simple_texture");
-		s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
-		//s.set_geom_shader("output_textured_quad.part+pt_billboard", GL_POINTS, GL_TRIANGLE_STRIP, 4);
+		s.set_geom_shader("pt_billboard_tri"); // point => 1 triangle
+		//s.set_geom_shader("output_textured_quad.part+pt_billboard"); // point => 1 quad (2 triangles)
 		s.begin_shader();
 		s.add_uniform_float("size", 2.0*object_types[SNOW].radius);
 		s.add_uniform_int("tex0", 0);

@@ -1,12 +1,19 @@
+layout (points) in;
+layout (triangle_strip, max_vertices=4) out;
+
 // input: point.xyz, normal.xyz, tangent.xyz, color
 // output: textured quad as two triangles
+in VertexData {
+    vec3 normal;
+    vec3 tangent;
+} VertexIn[1]; // from VS
 
 void main()
 {
-	gl_FrontColor = gl_FrontColorIn[0]; // all colors are the same
-	vec4 pos = gl_PositionIn[0]; // center of the quad
-	vec3 normal  = gl_TexCoordIn[0][6].xyz;
-	vec4 tangent = vec4(gl_TexCoordIn[0][7].xyz, 0.0); // not normalized - provides the size of the quad (half-width)
+	gl_FrontColor = gl_in[0].gl_FrontColor; // all colors are the same
+	vec4 pos = gl_in[0].gl_Position; // center of the quad
+	vec3 normal  = vertexIn[0].normal;
+	vec4 tangent = vec4(vertexIn[0].tangent, 0.0); // not normalized - provides the size of the quad (half-width)
 	vec4 binorm  = vec4(cross(tangent.xyz, normal), 0.0);
 	vec4 pts[4];
 	pts[0] = gl_ModelViewProjectionMatrix * (pos);

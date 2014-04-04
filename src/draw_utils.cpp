@@ -306,10 +306,10 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 	s.begin_shader();
 	s.add_uniform_float("point_scale", 2.0*(const_point_size ? const_point_size : window_height)); // diameter = 2*radius
 #else // geometry shader variant - doesn't support const_point_size or lighting
-	s.set_prefix("#define SIZE_FROM_NORMAL", 2); // GS
+	s.set_prefix("#define SIZE_FROM_ATTRIB", 2); // GS
 	s.set_vert_shader("particle_draw");
 	s.set_frag_shader("simple_texture");
-	s.set_geom_shader("pt_billboard_tri", GL_POINTS, GL_TRIANGLE_STRIP, 3);
+	s.set_geom_shader("pt_billboard_tri"); // point => 1 triangle
 	s.begin_shader();
 #endif
 	s.add_uniform_int("tex0", 0);
