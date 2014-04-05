@@ -70,7 +70,6 @@ bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool nonunif_fog_enabled  () {return (show_fog && (display_mode & 0x10) != 0);}
-bool use_hmap_tex         () {return (1 && (display_mode & 0x10));}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
@@ -200,10 +199,10 @@ bool write_default_hmap_modmap() {
 
 // *** tile_t ***
 
-tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0), size(0), stride(0),
+tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), size(0), stride(0),
 	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
 
-tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), vbo(0),
+tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
 	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
 	is_distant(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
@@ -281,9 +280,8 @@ unsigned tile_t::get_gpu_mem() const {
 
 	unsigned mem(pine_trees.get_gpu_mem() + decid_trees.get_gpu_mem() + scenery.get_gpu_mem());
 	unsigned const num_texels(stride*stride);
-	if (vbo > 0) mem += num_texels*sizeof(vert_type_t);
-	if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
-	if (height_tid > 0) mem += 4*num_texels; // 4 bytes per texel (F32)
+	if (weight_tid        > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
+	if (height_tid        > 0) mem += 4*num_texels; // 4 bytes per texel (F32)
 	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	return mem;
 }
@@ -311,27 +309,16 @@ void tile_t::clear_shadows() {
 	invalidate_shadows();
 }
 
-void tile_t::clear_tids() {
+void tile_t::clear_vbo_tid() {
 
-	free_texture(weight_tid);
-	free_texture(height_tid);
-	free_texture(shadow_normal_tid);
-	gen_tsize = 0;
-}
-
-void tile_t::clear_vbo_tid(vector<unsigned> *vbo_free_list) {
-
-	if (vbo_free_list) {
-		if (vbo) {vbo_free_list->push_back(vbo); vbo = 0;}
-	}
-	else {
-		delete_and_zero_vbo(vbo);
-	}
 	clear_shadows();
 	pine_trees.clear_vbos();
 	decid_trees.clear_context(); // only necessary if not using instancing
 	scenery.clear_vbos();
-	clear_tids();
+	free_texture(weight_tid);
+	free_texture(height_tid);
+	free_texture(shadow_normal_tid);
+	gen_tsize = 0;
 }
 
 
@@ -706,19 +693,6 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 // *** mesh creation ***
 
 
-void tile_t::create_data(vector<vert_type_t> &data) {
-
-	assert(zvals.size() == zvsize*zvsize);
-	data.resize(stride*stride);
-
-	for (unsigned y = 0; y <= size; ++y) {
-		for (unsigned x = 0; x <= size; ++x) {
-			data[y*stride + x].assign(x*deltax, y*deltay, zvals[y*zvsize + x]);
-		}
-	}
-}
-
-
 void tile_t::ensure_height_tid() {
 
 	if (height_tid || is_distant) return; // already exists, or tile is distant and height_tid is unnecessary
@@ -877,11 +851,11 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 }
 
 
-bool tile_t::update_range(vector<unsigned> *vbo_free_list) { // if returns 0, tile will be deleted
+bool tile_t::update_range() { // if returns 0, tile will be deleted
 
 	if (pine_trees_enabled()) {update_pine_tree_state(0);} // can free pine tree vbos
 	float const dist(get_rel_dist_to_camera());
-	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid(vbo_free_list);}
+	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid();}
 	return (dist < DELETE_DIST_TILES && !mesh_height_invalid);
 }
 
@@ -1077,29 +1051,13 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 
 // *** rendering ***
 
-void tile_t::ensure_vbo(vector<vert_type_t> &data, vector<unsigned> *vbo_free_list) {
 
-	if (vbo) return; // already allocated
-	create_data(data);
-	if (any_trees_enabled()) {apply_tree_ao_shadows();}
+void tile_t::pre_draw(mesh_xy_grid_cache_t &height_gen) {
 
-	if (vbo_free_list && !vbo_free_list->empty()) {
-		vbo = vbo_free_list->back();
-		vbo_free_list->pop_back();
-		bind_vbo(vbo);
-		upload_vbo_data(&data.front(), data.size()*sizeof(vert_type_t));
-		bind_vbo(0);
-	}
-	else {
-		create_vbo_and_upload(vbo, data, 0, 1);
-	}
-	assert(vbo);
-}
-
-void tile_t::ensure_weights(mesh_xy_grid_cache_t &height_gen) {
-
+	if (tree_map.empty() && any_trees_enabled()) {apply_tree_ao_shadows();}
 	if (weight_tid == 0 || recalc_tree_grass_weights) {create_texture(height_gen);}
 	check_shadow_map_and_normal_texture();
+	ensure_height_tid();
 }
 
 
@@ -1129,23 +1087,21 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 
 void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned const ivbo[NUM_LODS], bool reflection_pass) const {
 
-	assert(vbo);
 	assert(size > 0);
-	assert(weight_tid > 0);
-	bind_2d_texture(weight_tid);
+	assert(weight_tid > 0 && height_tid > 0 && shadow_normal_tid > 0);
 	glPushMatrix();
 	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE);
-	if (use_hmap_tex()) {bind_texture_tu(height_tid, 12);}
+	bind_2d_texture(weight_tid);
+	bind_texture_tu(height_tid, 12);
+	bind_texture_tu(shadow_normal_tid, 7);
 
 	if (!reflection_pass && cloud_shadows_enabled()) {
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
-	bind_texture_tu(shadow_normal_tid, 7);
 	unsigned const lod_level(get_lod_level(reflection_pass));
-	unsigned const cur_vbo(use_hmap_tex() ? mesh_vbo : vbo);
-	assert(cur_vbo > 0 && ivbo[lod_level] != 0);
-	bind_vbo(cur_vbo, 0);
+	assert(mesh_vbo != 0 && ivbo[lod_level] != 0);
+	bind_vbo(mesh_vbo, 0);
 	bind_vbo(ivbo[lod_level], 1);
 	unsigned const step(1 << lod_level), isz_ceil((size + step - 1)/step);
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
@@ -1206,10 +1162,11 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned const ivbo[NUM_LODS],
 				float const dz(water_plane_z - mzmin), zstep(dz/num_steps);
 
 				for (unsigned i = 0; i < num_steps; ++i) {
-					wverts.push_back(vert_wrap_t(point(bcube.d[0][dim ? 0 : dir], bcube.d[1][dim ? dir : 0], mzmin+i*zstep)));
-					wverts.push_back(vert_wrap_t(point(bcube.d[0][dim ? 1 : dir], bcube.d[1][dim ? dir : 1], mzmin+i*zstep)));
-					wverts.push_back(vert_wrap_t(point(bcube.d[0][dim ? 1 : dir], bcube.d[1][dim ? dir : 1], mzmin+(i+1)*zstep)));
-					wverts.push_back(vert_wrap_t(point(bcube.d[0][dim ? 0 : dir], bcube.d[1][dim ? dir : 0], mzmin+(i+1)*zstep)));
+					float const x1(bcube.d[0][dim ? 0 : dir]), x2(bcube.d[0][dim ? 1 : dir]), y1( bcube.d[1][dim ? dir : 0]), y2(bcube.d[1][dim ? dir : 1]);
+					wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+i*zstep)));
+					wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+i*zstep)));
+					wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+(i+1)*zstep)));
+					wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+(i+1)*zstep)));
 				}
 			}
 		}
@@ -1410,7 +1367,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
-		if (!i->second->update_range(&vbo_free_list)) {
+		if (!i->second->update_range()) {
 			to_erase.push_back(i->first);
 			i->second->clear();
 			delete i->second;
@@ -1535,7 +1492,6 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
 	bool const use_normal_map(!reflection_pass && (display_mode & 0x08) != 0); // enabled by default
-	if (use_hmap_tex() ) {s.set_prefix("#define USE_HEIGHT_TEX",  0);} // VS
 	if (has_water      ) {s.set_prefix("#define HAS_WATER",       1);} // FS
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",  1);} // FS
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",  1);} // FS
@@ -1552,11 +1508,9 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	set_noise_tex(s, 8);
 	setup_cloud_plane_uniforms(s);
 	setup_terrain_textures(s, 2);
-
-	if (use_hmap_tex()) {
-		set_tile_xy_vals(s);
-		s.add_uniform_int("height_tex", 12);
-	}
+	set_tile_xy_vals(s);
+	s.add_uniform_int("height_tex", 12);
+	
 	if (use_normal_map) {
 		select_multitex(ROCK_NORMAL_TEX, 11, 1);
 		s.add_uniform_int("detail_normal_tex", 11);
@@ -1637,12 +1591,11 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 
 void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
-	vector<tile_t::vert_type_t> data;
 	vector<tile_t *> to_update, to_gen_trees;
 	
-	if (use_hmap_tex() && mesh_vbo == 0) { // rebuild mesh vbo
+	if (mesh_vbo == 0) { // rebuild mesh vbo
 		unsigned const tile_size(get_tile_size()), stride(tile_size+1);
-		vector<tile_t::vert_type_t> data(stride*stride);
+		vector<point> data(stride*stride);
 
 		for (unsigned y = 0; y <= tile_size; ++y) {
 			for (unsigned x = 0; x <= tile_size; ++x) {
@@ -1697,11 +1650,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		//PRINT_TIME("Gen Trees2");
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
-		(*i)->ensure_vbo(data, &vbo_free_list);
-	}
-	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
-		(*i)->ensure_weights(height_gen);
-		(*i)->ensure_height_tid();
+		(*i)->pre_draw(height_gen);
 		if (pine_trees_enabled ()) {(*i)->update_pine_tree_state(1);}
 		if (decid_trees_enabled()) {(*i)->update_decid_trees();}
 		if (scenery_enabled    ()) {(*i)->update_scenery();}
@@ -1737,7 +1686,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
 			if (ivbo[i] > 0) {mem += 4*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
 		}
-		if (mesh_vbo > 0) {mem += 2*tile_size*(tile_size+1)*sizeof(tile_t::vert_type_t);}
+		if (mesh_vbo > 0) {mem += 2*tile_size*(tile_size+1)*sizeof(point);}
 	}
 
 	// determine potential occluders
@@ -1752,7 +1701,6 @@ void tile_draw_t::draw(bool reflection_pass) {
 			if (tile->get_rel_dist_to_camera() > OCCLUDER_DIST || !tile->is_visible()) continue;
 			occluders.push_back(tile);
 		}
-		mem += 2*(MESH_X_SIZE+1)*MESH_X_SIZE*sizeof(tile_t::vert_type_t)*vbo_free_list.size();
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second);
@@ -1828,9 +1776,9 @@ void tile_draw_t::draw(bool reflection_pass) {
 	
 	if (DEBUG_TILES) {
 		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_pine_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
-		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size() << ", vbo_free_list: " << vbo_free_list.size()
-			<< ", trees drawn: " << num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem)
-			<< ", tree mem: " << in_mb(tree_mem) << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;
+		cout << "tiles drawn: " << to_draw.size() << " of " << tiles.size()
+			 << ", trees drawn: " << num_trees << ", gpu mem: " << in_mb(mem + tree_mem + dtree_mem + ptree_mem + grass_mem)
+			 << ", tree mem: " << in_mb(tree_mem) << ", decid tree mem: " << in_mb(dtree_mem) << ", grass mem: " << in_mb(grass_mem) << endl;
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
@@ -2115,13 +2063,7 @@ void tile_draw_t::update_lightning(bool reflection_pass) {
 
 void tile_draw_t::clear_vbos_tids() {
 
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		i->second->clear_vbo_tid();
-	}
-	for (vector<unsigned>::const_iterator i = vbo_free_list.begin(); i != vbo_free_list.end(); ++i) {
-		delete_vbo(*i);
-	}
-	vbo_free_list.clear();
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_vbo_tid();}
 	delete_and_zero_vbo(mesh_vbo);
 	for (unsigned i = 0; i < NUM_LODS; ++i) {delete_and_zero_vbo(ivbo[i]);}
 }

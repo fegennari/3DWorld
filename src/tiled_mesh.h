@@ -82,7 +82,7 @@ class tile_t {
 	};
 
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
-	unsigned weight_tid, height_tid, shadow_normal_tid, vbo;
+	unsigned weight_tid, height_tid, shadow_normal_tid;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass, is_distant;
@@ -119,8 +119,6 @@ class tile_t {
 	unsigned get_lod_level(bool reflection_pass) const;
 
 public:
-	typedef point vert_type_t;
-
 	tile_t();
 	tile_t(unsigned size_, int x, int y);
 	// can't free in the destructor because the gl context may be destroyed before this point
@@ -174,8 +172,7 @@ public:
 	}
 	void clear();
 	void clear_shadows();
-	void clear_tids();
-	void clear_vbo_tid(vector<unsigned> *vbo_free_list=NULL);
+	void clear_vbo_tid();
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
 
 	vector3d get_norm(unsigned ix) const {
@@ -206,7 +203,6 @@ public:
 	void upload_shadow_map_and_normal_texture(bool tid_is_valid);
 
 	// *** mesh creation ***
-	void create_data(vector<vert_type_t> &data);
 	void ensure_height_tid();
 	unsigned get_grass_block_dim() const {return (1+(size-1)/GRASS_BLOCK_SZ);} // ceil
 	void create_texture(mesh_xy_grid_cache_t &height_gen);
@@ -215,7 +211,7 @@ public:
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();
 	}
 	float get_bsphere_radius_inc_water() const;
-	bool update_range(vector<unsigned> *vbo_free_list);
+	bool update_range();
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), get_bsphere_radius_inc_water(), get_bcube());}
 	float get_dist_to_camera_in_tiles(bool xy_dist=1) const {return get_rel_dist_to_camera(xy_dist)*TILE_RADIUS;}
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
@@ -246,8 +242,7 @@ public:
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 
 	// *** rendering ***
-	void ensure_vbo(vector<vert_type_t> &data, vector<unsigned> *vbo_free_list);
-	void ensure_weights(mesh_xy_grid_cache_t &height_gen);
+	void pre_draw(mesh_xy_grid_cache_t &height_gen);
 	void draw(shader_t &s, unsigned mesh_vbo, unsigned const ivbo[NUM_LODS], bool reflection_pass) const;
 	void draw_water(shader_t &s, float z) const;
 	bool check_player_collision() const;
@@ -263,7 +258,6 @@ class tile_draw_t {
 
 	tile_map tiles;
 	unsigned mesh_vbo, ivbo[NUM_LODS];
-	vector<unsigned> vbo_free_list;
 	draw_vect_t to_draw;
 	vector<vert_wrap_t> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;
