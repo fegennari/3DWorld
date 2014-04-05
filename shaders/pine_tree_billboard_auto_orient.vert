@@ -6,7 +6,7 @@ void main()
 {
 	set_tc0_from_vert_id();
 	vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
-	vec3 dir    = normalize(cross(vec3(0,0,1), (fg_Vertex.xyz - eye.xyz)));
+	vec3 dir    = normalize(vec3(-(fg_Vertex.y - eye.y), (fg_Vertex.x - eye.x), 0.0)); // cross(z, fg_Vertex-eye)
 	vec4 vertex = fg_Vertex + vec4(((2.0*tc.s - 1.0) * radius_scale * fg_Normal.x * dir), 0.0);
 	world_space_zval = vertex.z;
 	gl_Position = gl_ModelViewProjectionMatrix * vertex;

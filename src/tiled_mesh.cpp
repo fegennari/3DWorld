@@ -39,7 +39,7 @@ hmap_brush_param_t cur_brush_param;
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
-extern int invert_mh_image, is_cloudy, camera_surf_collide;
+extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere;
 extern point sun_pos, moon_pos, surface_pos;
@@ -69,8 +69,8 @@ bool gen_grass_map        () {return (GRASS_THRESH > 0.0 && grass_density > 0 &&
 bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());}
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
-bool nonunif_fog_enabled  () {return ((display_mode & 0x10) != 0);}
-bool use_hmap_tex         () {return (0 && (display_mode & 0x10));}
+bool nonunif_fog_enabled  () {return (show_fog && (display_mode & 0x10) != 0);}
+bool use_hmap_tex         () {return (1 && (display_mode & 0x10));}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
@@ -281,9 +281,9 @@ unsigned tile_t::get_gpu_mem() const {
 
 	unsigned mem(pine_trees.get_gpu_mem() + decid_trees.get_gpu_mem() + scenery.get_gpu_mem());
 	unsigned const num_texels(stride*stride);
-	if (vbo > 0) mem += 2*stride*size*sizeof(vert_type_t);
+	if (vbo > 0) mem += num_texels*sizeof(vert_type_t);
 	if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
-	if (height_tid > 0) mem += 4*num_texels; // 2 bytes per texel (F32)
+	if (height_tid > 0) mem += 4*num_texels; // 4 bytes per texel (F32)
 	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	return mem;
 }
@@ -1127,7 +1127,7 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
-void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pass) const {
+void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned const ivbo[NUM_LODS], bool reflection_pass) const {
 
 	assert(vbo);
 	assert(size > 0);
@@ -1143,8 +1143,9 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	}
 	bind_texture_tu(shadow_normal_tid, 7);
 	unsigned const lod_level(get_lod_level(reflection_pass));
-	assert(vbo > 0 && ivbo[lod_level] != 0);
-	bind_vbo(vbo, 0);
+	unsigned const cur_vbo(use_hmap_tex() ? mesh_vbo : vbo);
+	assert(cur_vbo > 0 && ivbo[lod_level] != 0);
+	bind_vbo(cur_vbo, 0);
 	bind_vbo(ivbo[lod_level], 1);
 	unsigned const step(1 << lod_level), isz_ceil((size + step - 1)/step);
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
@@ -1184,7 +1185,8 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 	bind_vbo(0, 0); // unbind vertex buffer
 	glPopMatrix();
 
-	if (!is_distant && has_water()) { // draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
+	// draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
+	if (!is_distant && !reflection_pass && has_water()) {
 		cube_t const bcube(get_mesh_bcube());
 		static vector<vert_wrap_t> wverts;
 		wverts.resize(0);
@@ -1211,7 +1213,12 @@ void tile_t::draw(shader_t &s, unsigned const ivbo[NUM_LODS], bool reflection_pa
 				}
 			}
 		}
-		if (!wverts.empty()) {draw_quad_verts_as_tris(wverts);}
+		if (!wverts.empty()) {
+			int const loc(s.get_uniform_loc("htex_scale"));
+			if (loc >= 0) {s.set_uniform_float(loc, 0.0);} // disable height texture
+			draw_quad_verts_as_tris(wverts);
+			if (loc >= 0) {s.set_uniform_float(loc, 1.0);} // enable height texture
+		}
 	}
 }
 
@@ -1360,7 +1367,7 @@ void lightning_strike_t::end_draw() const {
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), mesh_vbo(0) {
 
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 	for (unsigned i = 0; i < NUM_LODS; ++i) {ivbo[i] = 0;}
@@ -1369,7 +1376,7 @@ tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS) {
 
 void tile_draw_t::clear() {
 
-	clear_vbos_tids(); // needed to clear ivbo and free list
+	clear_vbos_tids(); // needed to clear mesh_vbo, ivbo, and free list
 
 	//cout << "clear with " << tiles.size() << " tiles" << endl;
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -1633,6 +1640,17 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	vector<tile_t::vert_type_t> data;
 	vector<tile_t *> to_update, to_gen_trees;
 	
+	if (use_hmap_tex() && mesh_vbo == 0) { // rebuild mesh vbo
+		unsigned const tile_size(get_tile_size()), stride(tile_size+1);
+		vector<tile_t::vert_type_t> data(stride*stride);
+
+		for (unsigned y = 0; y <= tile_size; ++y) {
+			for (unsigned x = 0; x <= tile_size; ++x) {
+				data[y*stride + x].assign(x*DX_VAL, y*DY_VAL, 0.0); // z=0.0
+			}
+		}
+		create_vbo_and_upload(mesh_vbo, data, 0, 1);
+	}
 	if (ivbo[0] == 0) { // rebuild index vbo
 		unsigned const size(get_tile_size()), stride(size+1);
 
@@ -1715,10 +1733,11 @@ void tile_draw_t::draw(bool reflection_pass) {
 	to_draw.clear();
 
 	if (DEBUG_TILES) {
+		unsigned const tile_size(get_tile_size());
 		for (unsigned i = 0; i < NUM_LODS; ++i) {
-			if (ivbo[i] > 0) {mem += 4*(get_tile_size()>>i)*(get_tile_size()>>i)*sizeof(unsigned);} // approximate
+			if (ivbo[i] > 0) {mem += 4*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
 		}
-
+		if (mesh_vbo > 0) {mem += 2*tile_size*(tile_size+1)*sizeof(tile_t::vert_type_t);}
 	}
 
 	// determine potential occluders
@@ -1801,7 +1820,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
-		if (display_mode & 0x01) {to_draw[i].second->draw(s, ivbo, reflection_pass);}
+		if (display_mode & 0x01) {to_draw[i].second->draw(s, mesh_vbo, ivbo, reflection_pass);}
 	}
 	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();
@@ -2103,6 +2122,7 @@ void tile_draw_t::clear_vbos_tids() {
 		delete_vbo(*i);
 	}
 	vbo_free_list.clear();
+	delete_and_zero_vbo(mesh_vbo);
 	for (unsigned i = 0; i < NUM_LODS; ++i) {delete_and_zero_vbo(ivbo[i]);}
 }
 
