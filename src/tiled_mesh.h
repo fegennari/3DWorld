@@ -243,7 +243,7 @@ public:
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
-	void draw(shader_t &s, unsigned mesh_vbo, unsigned const ivbo[NUM_LODS], bool reflection_pass) const;
+	void draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], bool reflection_pass) const;
 	void draw_water(shader_t &s, float z) const;
 	bool check_player_collision() const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const;
@@ -257,7 +257,7 @@ class tile_draw_t {
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
 	tile_map tiles;
-	unsigned mesh_vbo, ivbo[NUM_LODS];
+	unsigned mesh_vbo, ivbo, ivbo_ixs[NUM_LODS+1];
 	draw_vect_t to_draw;
 	vector<vert_wrap_t> tree_trunk_pts;
 	mesh_xy_grid_cache_t height_gen;

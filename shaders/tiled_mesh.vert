@@ -1,7 +1,8 @@
-varying vec4 vertex;
 uniform float x1, y1, dx_inv, dy_inv;
 uniform float htex_scale = 1.0;
 uniform sampler2D height_tex;
+
+varying vec4 vertex;
 
 void main()
 {

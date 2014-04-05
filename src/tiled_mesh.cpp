@@ -1085,12 +1085,12 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
-void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned const ivbo[NUM_LODS], bool reflection_pass) const {
+void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], bool reflection_pass) const {
 
 	assert(size > 0);
 	assert(weight_tid > 0 && height_tid > 0 && shadow_normal_tid > 0);
 	glPushMatrix();
-	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
+	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0)); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE);
 	bind_2d_texture(weight_tid);
 	bind_texture_tu(height_tid, 12);
@@ -1100,13 +1100,13 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned const ivbo[NUM_LODS],
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
 	unsigned const lod_level(get_lod_level(reflection_pass));
-	assert(mesh_vbo != 0 && ivbo[lod_level] != 0);
+	unsigned const step(1 << lod_level), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
+	assert(mesh_vbo > 0 && ivbo > 0);
 	bind_vbo(mesh_vbo, 0);
-	bind_vbo(ivbo[lod_level], 1);
-	unsigned const step(1 << lod_level), isz_ceil((size + step - 1)/step);
+	bind_vbo(ivbo, 1);
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
-	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, isz_ceil*(2*isz_ceil + 3), GL_UNSIGNED_INT, 0);
-	bind_vbo(0, 1); // unbind index buffer
+	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
+	bind_vbo(0, 1); // unbind index buffer (needed for crack drawing)
 	vector<unsigned> crack_ixs;
 
 	// fill in the cracks
@@ -1324,10 +1324,9 @@ void lightning_strike_t::end_draw() const {
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), mesh_vbo(0) {
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), mesh_vbo(0), ivbo(0) {
 
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
-	for (unsigned i = 0; i < NUM_LODS; ++i) {ivbo[i] = 0;}
 }
 
 
@@ -1335,7 +1334,6 @@ void tile_draw_t::clear() {
 
 	clear_vbos_tids(); // needed to clear mesh_vbo, ivbo, and free list
 
-	//cout << "clear with " << tiles.size() << " tiles" << endl;
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		i->second->clear();
 		delete i->second;
@@ -1604,27 +1602,25 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		}
 		create_vbo_and_upload(mesh_vbo, data, 0, 1);
 	}
-	if (ivbo[0] == 0) { // rebuild index vbo
+	if (ivbo == 0) { // rebuild index vbo
 		unsigned const size(get_tile_size()), stride(size+1);
+		vector<unsigned> indices;
 
 		for (unsigned i = 0, step = 1; i < NUM_LODS; ++i, step <<= 1) {
+			ivbo_ixs[i] = indices.size();
 			unsigned const isz_ceil((size + step - 1)/step);
 			if (isz_ceil < 2) continue; // too small, don't create LOD for this level (will never be used during rendering)
-			vector<unsigned> indices(isz_ceil*(2*isz_ceil + 3));
-			unsigned iix(0);
 
 			for (unsigned y = 0, ny = 0; ny < isz_ceil; y += step, ++ny) {
 				for (unsigned x = 0, nx = 0; nx <= isz_ceil; x += step, ++nx) { // 2 extra to start the strip
-					unsigned const yn(min(y+step, size));
-					indices[iix++] = y *stride + x;
-					indices[iix++] = yn*stride + x;
+					indices.push_back(y*stride + x);
+					indices.push_back(min(y+step, size)*stride + x);
 				}
-				indices[iix++] = PRIMITIVE_RESTART_IX; // restart the strip
+				indices.push_back(PRIMITIVE_RESTART_IX); // restart the strip
 			}
-			assert(iix == indices.size());
-			assert(ivbo[i] == 0);
-			create_vbo_and_upload(ivbo[i], indices, 1, 1);
-		}
+		} // for i
+		ivbo_ixs[NUM_LODS] = indices.size();
+		create_vbo_and_upload(ivbo, indices, 1, 1);
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second);
@@ -1683,8 +1679,11 @@ void tile_draw_t::draw(bool reflection_pass) {
 
 	if (DEBUG_TILES) {
 		unsigned const tile_size(get_tile_size());
-		for (unsigned i = 0; i < NUM_LODS; ++i) {
-			if (ivbo[i] > 0) {mem += 4*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
+		
+		if (ivbo > 0) {
+			for (unsigned i = 0; i < NUM_LODS; ++i) {
+				mem += 4*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned); // approximate
+			}
 		}
 		if (mesh_vbo > 0) {mem += 2*tile_size*(tile_size+1)*sizeof(point);}
 	}
@@ -1768,7 +1767,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
-		if (display_mode & 0x01) {to_draw[i].second->draw(s, mesh_vbo, ivbo, reflection_pass);}
+		if (display_mode & 0x01) {to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, reflection_pass);}
 	}
 	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();
@@ -2065,7 +2064,7 @@ void tile_draw_t::clear_vbos_tids() {
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_vbo_tid();}
 	delete_and_zero_vbo(mesh_vbo);
-	for (unsigned i = 0; i < NUM_LODS; ++i) {delete_and_zero_vbo(ivbo[i]);}
+	delete_and_zero_vbo(ivbo);
 }
 
 
