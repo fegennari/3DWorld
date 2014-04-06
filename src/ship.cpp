@@ -704,10 +704,11 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 }
 
 
-void disable_exp_lights() {
+void disable_exp_lights(shader_t *s=NULL) {
 
 	for (unsigned i = 0; i < NUM_EXP_LIGHTS; ++i) {
-		clear_colors_and_disable_light(EXPLOSION_LIGHT + i);
+		enable_light(EXPLOSION_LIGHT + i); // enable it first to force updating of shader uniforms if it was left disabled but not black
+		clear_colors_and_disable_light((EXPLOSION_LIGHT + i), s);
 	}
 }
 
@@ -751,13 +752,13 @@ void draw_univ_objects() {
 	shader_t s[2];
 	select_texture(WHITE_TEX); // always textured (see end_texture())
 	enable_blend(); // doesn't hurt
-	disable_exp_lights(); // make sure the explosion lights start out cleared
 	emissive_shader.begin_simple_textured_shader(0.001); // textured, no lighting, will be disabled by ship draw shader
 
 	bool disint_tex(0); // this is slow, so only enable if some ship is exploding and needs this mode
 	for (vector<ship_explosion>::const_iterator i = exploding.begin(); i != exploding.end(); ++i) {disint_tex |= i->disint_tex;}
 	setup_ship_draw_shader(s[1], 1, disint_tex); // shadow shader, system lighting only
 	setup_ship_draw_shader(s[0], 0, disint_tex); // normal shader with dynamic lights
+	disable_exp_lights(&s[0]); // make sure the explosion lights start out cleared
 	
 	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
 		free_obj *fobj(sorted[i].second);
