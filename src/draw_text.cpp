@@ -134,5 +134,6 @@ void draw_text(colorRGBA const &color, float x, float y, float z, char const *te
 	glDisable(GL_DEPTH_TEST);
 	draw_bitmap_text(color, point(x, y, z), text, 0.8*tsize);
 	glEnable(GL_DEPTH_TEST);
+	set_fill_mode();
 }
 

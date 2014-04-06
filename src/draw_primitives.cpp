@@ -843,6 +843,7 @@ void line_tquad_draw_t::draw() const { // supports quads and triangles
 	select_texture(BLUR_TEX);
 	draw_verts(verts, GL_TRIANGLES);
 	disable_blend();
+	set_fill_mode();
 	s.end_shader();
 }
 
