@@ -264,7 +264,7 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 	light_loc_t &lloc(light_locs[light_id]);
 
 	if (!lloc.valid) {
-		static char ls_strs[MAX_SHADER_LIGHTS][7][40] = {0};
+		static char ls_strs[MAX_SHADER_LIGHTS][5][40] = {0};
 		static bool is_setup(0);
 
 		if (!is_setup) {
@@ -273,13 +273,11 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 				sprintf(ls_strs[i][1], "fg_LightSource[%i].ambient",  i);
 				sprintf(ls_strs[i][2], "fg_LightSource[%i].diffuse",  i);
 				sprintf(ls_strs[i][3], "fg_LightSource[%i].specular", i);
-				sprintf(ls_strs[i][4], "fg_LightSource[%i].constantAttenuation",  i);
-				sprintf(ls_strs[i][5], "fg_LightSource[%i].linearAttenuation",    i);
-				sprintf(ls_strs[i][6], "fg_LightSource[%i].quadraticAttenuation", i);
+				sprintf(ls_strs[i][4], "fg_LightSource[%i].atten",    i);
 			}
 			is_setup = 1;
 		}
-		for (unsigned i = 0; i < 7; ++i) {lloc.v[i] = glGetUniformLocation(program, ls_strs[light_id][i]);}
+		for (unsigned i = 0; i < 5; ++i) {lloc.v[i] = glGetUniformLocation(program, ls_strs[light_id][i]);}
 		lloc.valid = 1;
 	}
 	gl_light_params_t const &lp(gl_light_params[light_id]);
@@ -290,12 +288,10 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 		glUniform4fv(lloc.v[0], 1, &pos.x); // in eye space, using MVM at the time set_gl_light_pos() was called
 		plp.eye_space_pos = lp.eye_space_pos; plp.pos_w = lp.pos_w;
 	}
-	if ((field_filt & 0x02) && lloc.v[1] >= 0 && lp.ambient  != plp.ambient ) {glUniform4fv(lloc.v[1], 1, &lp.ambient.R ); plp.ambient  = lp.ambient;}
-	if ((field_filt & 0x04) && lloc.v[2] >= 0 && lp.diffuse  != plp.diffuse ) {glUniform4fv(lloc.v[2], 1, &lp.diffuse.R ); plp.diffuse  = lp.diffuse;}
+	if ((field_filt & 0x02) && lloc.v[1] >= 0 && lp.ambient  != plp.ambient ) {glUniform4fv(lloc.v[1], 1, &lp.ambient.R ); plp.ambient  = lp.ambient; }
+	if ((field_filt & 0x04) && lloc.v[2] >= 0 && lp.diffuse  != plp.diffuse ) {glUniform4fv(lloc.v[2], 1, &lp.diffuse.R ); plp.diffuse  = lp.diffuse; }
 	if ((field_filt & 0x08) && lloc.v[3] >= 0 && lp.specular != plp.specular) {glUniform4fv(lloc.v[3], 1, &lp.specular.R); plp.specular = lp.specular;}
-	if ((field_filt & 0x10) && lloc.v[4] >= 0 && lp.const_atten  != plp.const_atten ) {glUniform1fv(lloc.v[4], 1, &lp.const_atten ); plp.const_atten  = lp.const_atten;}
-	if ((field_filt & 0x20) && lloc.v[5] >= 0 && lp.linear_atten != plp.linear_atten) {glUniform1fv(lloc.v[5], 1, &lp.linear_atten); plp.linear_atten = lp.linear_atten;}
-	if ((field_filt & 0x40) && lloc.v[6] >= 0 && lp.quad_atten   != plp.quad_atten  ) {glUniform1fv(lloc.v[6], 1, &lp.quad_atten  ); plp.quad_atten   = lp.quad_atten;}
+	if ((field_filt & 0x10) && lloc.v[4] >= 0 && lp.atten    != plp.atten   ) {glUniform3fv(lloc.v[4], 1, &lp.atten.x   ); plp.atten    = lp.atten;   }
 }
 
 

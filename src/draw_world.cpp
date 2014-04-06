@@ -136,7 +136,7 @@ void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader) {
 void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, shader_t *shader) {
 
 	gl_light_params[light].set_atten(c_a, l_a, q_a);
-	if (shader) {shader->upload_light_source(light, 0x70);}
+	if (shader) {shader->upload_light_source(light, 0x10);}
 }
 
 

@@ -8,9 +8,7 @@ struct fg_light_t {
 	vec4 ambient;
 	vec4 diffuse;
 	vec4 specular;
-	float constantAttenuation;
-	float linearAttenuation;
-	float quadraticAttenuation;
+	vec3 atten; // {constant, linear, quadratic}
 };
 
 const int MAX_LIGHTS = 8;
@@ -90,12 +88,12 @@ vec4 add_light_comp1(in vec3 normal)           {return add_light_comp_pos1(norma
 
 float calc_light_atten(in vec4 epos, in int i) {
 	float dist = distance(fg_LightSource[i].position, epos);
-	return 1.0 / (fg_LightSource[i].constantAttenuation + fg_LightSource[i].linearAttenuation * dist + fg_LightSource[i].quadraticAttenuation * dist * dist);
+	return 1.0 / dot(fg_LightSource[i].atten, vec3(1.0, dist, dist*dist));
 }
 
 float calc_light_atten0(in vec4 epos) {
 	float dist = distance(fg_LightSource[0].position, epos);
-	return 1.0 / (fg_LightSource[0].constantAttenuation + fg_LightSource[0].linearAttenuation * dist + fg_LightSource[0].quadraticAttenuation * dist * dist);
+	return 1.0 / dot(fg_LightSource[0].atten, vec3(1.0, dist, dist*dist));
 }
 
 vec4 add_pt_light_comp(in vec3 normal, in vec4 epos, in int i) {

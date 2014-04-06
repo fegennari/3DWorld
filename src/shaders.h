@@ -20,14 +20,12 @@ struct gl_light_params_t {
 	point pos, eye_space_pos;
 	colorRGBA ambient, diffuse, specular;
 	float pos_w;
-	float const_atten;
-	float linear_atten;
-	float quad_atten;
+	vector3d atten; // {constant, linear, quadratic}
 
 	gl_light_params_t() : pos(all_zeros), eye_space_pos(pos), ambient(ALPHA0), diffuse(ALPHA0), specular(ALPHA0), pos_w(-1.0) {set_atten(-1.0, -1.0, -1.0);}
 	void set_a (colorRGBA const &a) {ambient = a;};
 	void set_ds(colorRGBA const &c) {diffuse = specular = c;}
-	void set_atten(float c, float l, float q) {const_atten = c; linear_atten = l; quad_atten = q;}
+	void set_atten(float c, float l, float q) {atten.assign(c, l, q);}
 	void set_pos(point const &p, float w);
 };
 
@@ -42,7 +40,7 @@ class shader_t {
 	colorRGBA last_spec;
 
 	struct light_loc_t {
-		int v[7];
+		int v[5];
 		bool valid;
 		light_loc_t() : valid(0) {}
 	};
