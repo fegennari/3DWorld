@@ -863,6 +863,7 @@
     <None Include="shaders\cloud_sphere.vert" />
     <None Include="shaders\common_header.frag" />
     <None Include="shaders\common_header.vert" />
+    <None Include="shaders\common_header_shared.part" />
     <None Include="shaders\craters.part.frag" />
     <None Include="shaders\draw_mesh.frag" />
     <None Include="shaders\draw_mesh.vert" />

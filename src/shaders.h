@@ -48,10 +48,13 @@ class shader_t {
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
 	int vnct_locs[4]; // {vertex, normal, color, tex_coord}
 
+	int  pm_loc, mvm_loc, mvmi_loc,mvpm_loc, nm_loc; // matrices
+
 	unsigned get_shader(string const &name, unsigned type) const;
 	static void print_shader_info_log(unsigned shader);
 	void print_program_info_log() const;
 	void cache_vnct_locs();
+	void cache_matrix_locs();
 
 public:
 	shader_t() : program(0), last_spec(ALPHA0) {}
@@ -89,7 +92,8 @@ public:
 	static bool set_uniform_vector4d   (int loc, vector4d const &val);
 	static bool set_uniform_color      (int loc, colorRGBA const &val);
 	static bool set_uniform_color      (int loc, colorRGB  const &val);
-	static bool set_uniform_matrid_4x4 (int loc, float *m, bool transpose);
+	static bool set_uniform_matrix_3x3 (int loc, float const *const m, bool transpose);
+	static bool set_uniform_matrix_4x4 (int loc, float const *const m, bool transpose);
 
 	bool add_uniform_float_array (char const *const name, float const *const val, unsigned num) const;
 	bool add_uniform_float       (char const *const name, float val) const;
@@ -115,6 +119,10 @@ public:
 	void upload_light_source(unsigned light_id, unsigned field_filt=0xFF);
 	void upload_light_sources_range(unsigned start, unsigned end);
 	void upload_all_light_sources() {upload_light_sources_range(0, MAX_SHADER_LIGHTS);}
+
+	void upload_all_matrices();
+	void upload_new_mvm();
+
 	void setup_scene_bounds() const;
 	void setup_fog_scale() const;
 	void check_for_fog_disabled();

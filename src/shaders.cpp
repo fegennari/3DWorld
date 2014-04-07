@@ -7,6 +7,10 @@
 #include "transform_obj.h"
 #include <fstream>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
+
 using namespace std;
 
 bool const PRINT_SHADER = 0; // print shaders loaded from files
@@ -14,6 +18,7 @@ bool const DEBUG_SHADER = 0; // print final generated shaders
 bool const PRINT_LOG    = 0;
 
 string const shaders_dir = "shaders";
+string const shader_prefix_shared_file = "common_header_shared.part*";
 string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
 string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "", "", "", ""}; // always included
 
@@ -82,7 +87,11 @@ bool shader_t::set_uniform_color(int loc, colorRGB  const &val) { // same as vec
 	if (loc >= 0) {glUniform3fv(loc, 1, &val.R); return 1;} else {return 0;}
 }
 
-bool shader_t::set_uniform_matrid_4x4(int loc, float *m, bool transpose) {
+bool shader_t::set_uniform_matrix_3x3(int loc, float const *const m, bool transpose) {
+	if (loc >= 0) {glUniformMatrix3fv(loc, 1, transpose, m); return 1;} else {return 0;}
+}
+
+bool shader_t::set_uniform_matrix_4x4(int loc, float const *const m, bool transpose) {
 	if (loc >= 0) {glUniformMatrix4fv(loc, 1, transpose, m); return 1;} else {return 0;}
 }
 
@@ -116,7 +125,7 @@ bool shader_t::add_uniform_color(char const *const name, colorRGB  const &val) c
 }
 
 bool shader_t::add_uniform_matrix_4x4(char const *const name, float *m, bool transpose) const {
-	return set_uniform_matrid_4x4(get_uniform_loc(name), m, transpose);
+	return set_uniform_matrix_4x4(get_uniform_loc(name), m, transpose);
 }
 
 
@@ -491,7 +500,8 @@ public:
 
 	static void get_shader_filenames(string const &name, unsigned type, vector<string> &fns) {
 		assert(type < NUM_SHADER_TYPES);
-		if (!shader_prefix_files[type].empty()) {fns.push_back(shader_prefix_files[type]);} // add first, if nonempty
+		if (!shader_prefix_shared_file.empty()) {fns.push_back(shader_prefix_shared_file);} // add first, if nonempty
+		if (!shader_prefix_files[type].empty()) {fns.push_back(shader_prefix_files[type]);} // add next, if nonempty
 		filename_split(name, fns, '+');
 
 		for (vector<string>::iterator i = fns.begin(); i != fns.end(); ++i) {
@@ -673,6 +683,7 @@ bool shader_t::begin_shader(bool do_enable) {
 		//PRINT_TIME("Create Program");
 	}
 	cache_vnct_locs();
+	cache_matrix_locs();
 	if (do_enable) {enable();}
 	return 1;
 }
@@ -784,6 +795,50 @@ void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compr
 
 void shader_t::set_cur_color(colorRGBA const &color) const {
 	if (vnct_locs[2] >= 0) {glVertexAttrib4fv(vnct_locs[2], &color.R);}
+}
+
+
+// matrix setup/binding/updating
+
+void shader_t::cache_matrix_locs() {
+
+	pm_loc   = get_attrib_loc("fg_ProjectionMatrix", 1);
+	mvm_loc  = get_attrib_loc("fg_ModelViewMatrix", 1); // okay if fails
+	mvmi_loc = get_attrib_loc("fg_ModelViewMatrixInverse", 1);
+	mvpm_loc = get_attrib_loc("fg_ModelViewProjectionMatrix", 1);
+	nm_loc   = get_attrib_loc("fg_NormalMatrix", 1);
+}
+
+void shader_t::upload_all_matrices() {
+
+	if (pm_loc >= 0) { // projection matrix
+		xform_matrix pm;
+		pm.assign_pj_from_gl();
+		set_uniform_matrix_4x4(pm_loc, pm.get_ptr(), 0); // transpose = 0
+	}
+	upload_new_mvm();
+}
+
+void shader_t::upload_new_mvm() { // and everything that depends on the mvm
+
+	xform_matrix mvm;
+	mvm.assign_mv_from_gl();
+	if (mvm_loc >= 0) {set_uniform_matrix_4x4(mvm_loc, mvm.get_ptr(), 0);} // modelview matrix
+
+	if (mvmi_loc >= 0) { // inverse modelview matrix
+		xform_matrix mvmi(glm::affineInverse((glm::mat4)mvm));
+		set_uniform_matrix_4x4(mvmi_loc, mvmi.get_ptr(), 0);
+	}
+	if (mvpm_loc >= 0) { // modelview-projection matrix
+		xform_matrix pm;
+		pm.assign_pj_from_gl();
+		xform_matrix const mvp(pm * mvm);
+		set_uniform_matrix_4x4(mvpm_loc, mvp.get_ptr(), 0);
+	}
+	if (nm_loc >= 0) { // normal matrix
+		glm::mat3 const nm(glm::inverseTranspose(glm::mat3(mvm)));
+		set_uniform_matrix_3x3(nm_loc, glm::value_ptr(nm), 0);
+	}
 }
 
 

@@ -742,8 +742,27 @@ bool ui_intercept_mouse(int button, int state, int x, int y, bool is_up_down);
 void draw_enabled_ui_menus();
 
 // function prototypes - transform_obj
+void fgMatrixMode(int val);
+void fgPushMatrix();
+void fgPopMatrix();
+void fgLoadIdentity();
+void fgTranslate(float x, float y, float z);
+void fgScale(float x, float y, float z);
+void fgScale(float s);
+void fgRotate(float angle, float x, float y, float z);
+void fgRotateDegrees(float angle, float x, float y, float z);
 void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0);
 void update_deformation(dwobject &obj);
+
+#ifdef USE_FG_TRANSFORMS
+#define glMatrixMode fgMatrixMode
+#define glPushMatrix fgPushMatrix
+#define glPopMatrix fgPopMatrix
+#define glLoadIdentity fgLoadIdentity
+#define glTranslatef fgTranslate
+#define glScalef fgScale
+#define glRotatef fgRotate
+#endif
 
 // function prototypes - draw_text
 void load_font_texture_atlas(std::string const &fn="");

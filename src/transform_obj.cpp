@@ -40,6 +40,38 @@ void xform_matrix::normalize() {
 }
 
 
+matrix_stack_t mvm_stack; // modelview matrix
+matrix_stack_t pjm_stack; // projection matrix
+int matrix_mode(0); // 0 = MVM, 1 = PJM
+
+matrix_stack_t &get_matrix_stack() {return (matrix_mode ? pjm_stack : mvm_stack);}
+
+void fgMatrixMode(int val) {
+	assert(val == 0 || val == 1);
+	matrix_mode = val;
+}
+
+void fgPushMatrix  () {get_matrix_stack().push();}
+void fgPopMatrix   () {get_matrix_stack().pop();}
+void fgLoadIdentity() {get_matrix_stack().identity();}
+
+void fgTranslate(float x, float y, float z) {
+	get_matrix_stack().assign(glm::translate(get_matrix_stack().top(), glm::vec3(x, y, z)));
+}
+void fgScale(float x, float y, float z) {
+	get_matrix_stack().assign(glm::scale(get_matrix_stack().top(), glm::vec3(x, y, z)));
+}
+void fgScale(float s) {fgScale(s, s, s);}
+
+void fgRotate(float angle, float x, float y, float z) {
+	get_matrix_stack().assign(glm::rotate(get_matrix_stack().top(), angle, glm::vec3(x, y, z)));
+}
+void fgRotateDegrees(float angle, float x, float y, float z) {fgRotate(TO_RADIANS*angle, x, y, z);}
+
+xform_matrix fgGetMVM() {return mvm_stack.top();}
+xform_matrix fgGetPJM() {return pjm_stack.top();}
+
+
 // *** mesh2d ***
 
 
