@@ -671,6 +671,7 @@ char const *append_ix(std::string &s, unsigned i, bool as_array);
 bool setup_shaders();
 void clear_shaders();
 void reload_all_shaders();
+void check_mvm_update();
 void upload_mvm_to_shader(shader_t &s, char const *const var_name);
 void set_point_sprite_mode(bool enabled);
 
@@ -751,8 +752,12 @@ void fgScale(float x, float y, float z);
 void fgScale(float s);
 void fgRotate(float angle, float x, float y, float z);
 void fgRotateDegrees(float angle, float x, float y, float z);
+void fgPerspective(float fov_y, float aspect, float near_clip, float far_clip);
+void fgLookAt(float eyex, float eyey, float eyez, float centerx, float centery, float centerz, float upx, float upy, float upz);
 void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0);
 void update_deformation(dwobject &obj);
+
+//#define USE_FG_TRANSFORMS // TESTING
 
 #ifdef USE_FG_TRANSFORMS
 #define glMatrixMode fgMatrixMode
@@ -762,6 +767,8 @@ void update_deformation(dwobject &obj);
 #define glTranslatef fgTranslate
 #define glScalef fgScale
 #define glRotatef fgRotate
+#define gluPerspective fgPerspective
+#define gluLookAt fgLookAt
 #endif
 
 // function prototypes - draw_text

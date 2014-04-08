@@ -43,30 +43,52 @@ void xform_matrix::normalize() {
 matrix_stack_t mvm_stack; // modelview matrix
 matrix_stack_t pjm_stack; // projection matrix
 int matrix_mode(0); // 0 = MVM, 1 = PJM
+bool pjm_changed(0), mvm_changed(0);
+
+void register_mvm_change(); // defined in shaders.cpp
 
 matrix_stack_t &get_matrix_stack() {return (matrix_mode ? pjm_stack : mvm_stack);}
 
-void fgMatrixMode(int val) {
-	assert(val == 0 || val == 1);
-	matrix_mode = val;
+void mark_matrix_changed() {
+	(matrix_mode ? pjm_changed : mvm_changed) = 1;
+	if (!matrix_mode) {register_mvm_change();}
 }
 
-void fgPushMatrix  () {get_matrix_stack().push();}
-void fgPopMatrix   () {get_matrix_stack().pop();}
-void fgLoadIdentity() {get_matrix_stack().identity();}
+void fgMatrixMode(int val) {
+	if      (val == GL_PROJECTION) {matrix_mode = 1;}
+	else if (val == GL_MODELVIEW ) {matrix_mode = 0;}
+	else {assert(0);}
+}
+
+void fgPushMatrix  () {get_matrix_stack().push();} // matrix not change
+void fgPopMatrix   () {get_matrix_stack().pop();      mark_matrix_changed();}
+void fgLoadIdentity() {get_matrix_stack().identity(); mark_matrix_changed();}
 
 void fgTranslate(float x, float y, float z) {
 	get_matrix_stack().assign(glm::translate(get_matrix_stack().top(), glm::vec3(x, y, z)));
+	mark_matrix_changed();
 }
 void fgScale(float x, float y, float z) {
 	get_matrix_stack().assign(glm::scale(get_matrix_stack().top(), glm::vec3(x, y, z)));
+	mark_matrix_changed();
 }
 void fgScale(float s) {fgScale(s, s, s);}
 
 void fgRotate(float angle, float x, float y, float z) {
 	get_matrix_stack().assign(glm::rotate(get_matrix_stack().top(), angle, glm::vec3(x, y, z)));
+	mark_matrix_changed();
 }
 void fgRotateDegrees(float angle, float x, float y, float z) {fgRotate(TO_RADIANS*angle, x, y, z);}
+
+void fgPerspective(float fov_y, float aspect, float near_clip, float far_clip) {
+	get_matrix_stack().assign(glm::perspective(fov_y, aspect, near_clip, far_clip));
+	mark_matrix_changed();
+}
+
+void fgLookAt(float eyex, float eyey, float eyez, float centerx, float centery, float centerz, float upx, float upy, float upz) {
+	get_matrix_stack().assign(glm::lookAt(glm::vec3(eyex, eyey, eyez), glm::vec3(centerx, centery, centerz), glm::vec3(upx, upy, upz)));
+	mark_matrix_changed();
+}
 
 xform_matrix fgGetMVM() {return mvm_stack.top();}
 xform_matrix fgGetPJM() {return pjm_stack.top();}

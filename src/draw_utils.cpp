@@ -484,6 +484,7 @@ void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, 
 	assert(six < eix && eix < offsets.size());
 	unsigned const count(offsets[eix] - offsets[six]);
 	// Note: currently always used to render quads, but can be made more general in the future
+	check_mvm_update();
 	glDrawArraysInstanced(GL_QUADS, offsets[six], count, num_instances);
 }
 

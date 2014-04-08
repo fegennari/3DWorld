@@ -24,7 +24,7 @@ string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "", "", "
 
 shader_t *cur_shader(NULL);
 
-extern bool fog_enabled;
+extern bool fog_enabled, pjm_changed, mvm_changed;
 extern int is_cloudy, display_mode;
 extern unsigned enabled_lights;
 extern float cur_fog_end;
@@ -647,6 +647,10 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 // See http://www.lighthouse3d.com/tutorials/glsl-core-tutorial/glsl-core-tutorial-create-a-program/
 bool shader_t::begin_shader(bool do_enable) {
 
+#ifdef USE_FG_TRANSFORMS
+	for (unsigned n = 0; n < 3; ++n) {set_prefix("#define USE_FG_MATRIX", n);} // VS, GS, FS
+#endif
+
 	//RESET_TIME;
 	// get the program
 	string input_shaders;
@@ -741,6 +745,7 @@ void shader_t::enable() {
 	assert(program);
 	glUseProgram(program);
 	upload_all_light_sources();
+	upload_all_matrices();
 	cur_shader = this;
 }
 
@@ -749,6 +754,69 @@ void shader_t::disable() {
 	if (is_setup()) {enable_vnct_atribs(0, 0, 0, 0);} // disable all
 	glUseProgram(0);
 	cur_shader = NULL;
+}
+
+
+// matrix setup/binding/updating
+xform_matrix fgGetMVM();
+xform_matrix fgGetPJM();
+
+// Note 1: We don't handle the case where the projection matrix is updated while a shader is active because this currently doesn't occur.
+// Note 2: We assume we only need to update the MVM in at most one active shader, and once updated we can clear the changed flag
+void register_mvm_change() {
+	// FIXME: as an optimization, we should really only update cur_shader MVM before a draw call, if mvm_changed==1
+	if (cur_shader) {cur_shader->upload_new_mvm();} else {mvm_changed = 0;}
+}
+
+void check_mvm_update() {
+	if (1 || mvm_changed) {register_mvm_change();}
+}
+
+void shader_t::cache_matrix_locs() {
+
+	pm_loc   = get_uniform_loc("fg_ProjectionMatrix"); // okay if returns -1
+	mvm_loc  = get_uniform_loc("fg_ModelViewMatrix");
+	mvmi_loc = get_uniform_loc("fg_ModelViewMatrixInverse");
+	mvpm_loc = get_uniform_loc("fg_ModelViewProjectionMatrix");
+	nm_loc   = get_uniform_loc("fg_NormalMatrix");
+	//cout << "locs: " << pm_loc << " " << mvm_loc << " " << mvmi_loc << " " << mvpm_loc << " " << nm_loc << endl; // TESTING
+}
+
+void shader_t::upload_all_matrices() {
+
+	if (pm_loc >= 0) { // projection matrix
+		xform_matrix pjm;
+		pjm.assign_pj_from_gl();
+		//pjm = fgGetPJM();
+		set_uniform_matrix_4x4(pm_loc, pjm.get_ptr(), 0); // transpose = 0
+	}
+	pjm_changed = 0;
+	upload_new_mvm();
+}
+
+void shader_t::upload_new_mvm() { // and everything that depends on the mvm
+
+	if (mvm_loc < 0 && mvmi_loc < 0 && mvpm_loc < 0 && nm_loc < 0) {mvm_changed = 1; return;} // nothing to update
+	xform_matrix mvm;
+	mvm.assign_mv_from_gl();
+	//mvm = fgGetMVM();
+	if (mvm_loc >= 0) {set_uniform_matrix_4x4(mvm_loc, mvm.get_ptr(), 0);} // modelview matrix
+
+	if (mvmi_loc >= 0) { // inverse modelview matrix
+		xform_matrix mvmi(glm::affineInverse((glm::mat4)mvm));
+		set_uniform_matrix_4x4(mvmi_loc, mvmi.get_ptr(), 0);
+	}
+	if (mvpm_loc >= 0) { // modelview-projection matrix
+		xform_matrix pjm;
+		pjm.assign_pj_from_gl();
+		xform_matrix const mvp(pjm * mvm);
+		set_uniform_matrix_4x4(mvpm_loc, mvp.get_ptr(), 0);
+	}
+	if (nm_loc >= 0) { // normal matrix
+		glm::mat3 const nm(glm::inverseTranspose(glm::mat3(mvm)));
+		set_uniform_matrix_3x3(nm_loc, glm::value_ptr(nm), 0);
+	}
+	mvm_changed = 0;
 }
 
 
@@ -774,6 +842,7 @@ void shader_t::enable_vnct_atribs(bool va, bool tca, bool na, bool ca) const { /
 		if (loc < 0) continue; // unused in this shader
 		if (enables[i]) {glEnableVertexAttribArray(loc);} else {glDisableVertexAttribArray(loc);}
 	}
+	check_mvm_update();
 }
 
 void shader_t::set_vertex_ptr(unsigned stride, void const *const ptr) const {
@@ -795,50 +864,6 @@ void shader_t::set_tcoord_ptr(unsigned stride, void const *const ptr, bool compr
 
 void shader_t::set_cur_color(colorRGBA const &color) const {
 	if (vnct_locs[2] >= 0) {glVertexAttrib4fv(vnct_locs[2], &color.R);}
-}
-
-
-// matrix setup/binding/updating
-
-void shader_t::cache_matrix_locs() {
-
-	pm_loc   = get_attrib_loc("fg_ProjectionMatrix", 1);
-	mvm_loc  = get_attrib_loc("fg_ModelViewMatrix", 1); // okay if fails
-	mvmi_loc = get_attrib_loc("fg_ModelViewMatrixInverse", 1);
-	mvpm_loc = get_attrib_loc("fg_ModelViewProjectionMatrix", 1);
-	nm_loc   = get_attrib_loc("fg_NormalMatrix", 1);
-}
-
-void shader_t::upload_all_matrices() {
-
-	if (pm_loc >= 0) { // projection matrix
-		xform_matrix pm;
-		pm.assign_pj_from_gl();
-		set_uniform_matrix_4x4(pm_loc, pm.get_ptr(), 0); // transpose = 0
-	}
-	upload_new_mvm();
-}
-
-void shader_t::upload_new_mvm() { // and everything that depends on the mvm
-
-	xform_matrix mvm;
-	mvm.assign_mv_from_gl();
-	if (mvm_loc >= 0) {set_uniform_matrix_4x4(mvm_loc, mvm.get_ptr(), 0);} // modelview matrix
-
-	if (mvmi_loc >= 0) { // inverse modelview matrix
-		xform_matrix mvmi(glm::affineInverse((glm::mat4)mvm));
-		set_uniform_matrix_4x4(mvmi_loc, mvmi.get_ptr(), 0);
-	}
-	if (mvpm_loc >= 0) { // modelview-projection matrix
-		xform_matrix pm;
-		pm.assign_pj_from_gl();
-		xform_matrix const mvp(pm * mvm);
-		set_uniform_matrix_4x4(mvpm_loc, mvp.get_ptr(), 0);
-	}
-	if (nm_loc >= 0) { // normal matrix
-		glm::mat3 const nm(glm::inverseTranspose(glm::mat3(mvm)));
-		set_uniform_matrix_3x3(nm_loc, glm::value_ptr(nm), 0);
-	}
 }
 
 

@@ -1010,6 +1010,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 	point const adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
 	glPushMatrix();
 	glTranslatef(llcx, llcy, 0.0);
+	check_mvm_update();
 
 	for (unsigned y = 0; y < grass_block_dim; ++y) {
 		for (unsigned x = 0; x < grass_block_dim; ++x) {
@@ -1105,6 +1106,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	bind_vbo(mesh_vbo, 0);
 	bind_vbo(ivbo, 1);
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
+	check_mvm_update();
 	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
 	bind_vbo(0, 1); // unbind index buffer (needed for crack drawing)
 	vector<unsigned> crack_ixs;

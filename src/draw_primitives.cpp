@@ -987,6 +987,7 @@ void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_
 	assert(ndiv > 0 && ndiv <= N_SPHERE_DIV);
 	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
 	assert(off1 < off2);
+	check_mvm_update();
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, off1, (off2 - off1), num_instances); // uses triangle strips separated by degenerate triangles
 }
 
