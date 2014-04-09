@@ -765,7 +765,7 @@ void draw_plasmaball(point const &pos0, int shooter, shader_t &shader) { // and 
 	float radius(object_types[PLASMA].radius);
 	obj_group &objg(obj_groups[cid]);
 	if (shooter == CAMERA_ID || (objg.get_obj(shooter).flags & CAMERA_VIEW)) ndiv *= 3;
-	draw_plasma(pos, (pos + pos0), radius, psize, ndiv, 0, 1, 0, shader);
+	draw_plasma(pos, (pos + pos0), radius, psize, ndiv, 1, 0, shader); // should be sphere mapped texgen?
 	select_texture(WHITE_TEX);
 	glDisable(GL_CULL_FACE);
 	if (psize < 0.9*MAX_PLASMA_SIZE) return;

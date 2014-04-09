@@ -364,8 +364,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (!draw_solid && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
 	set_fill_mode();
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
@@ -504,9 +502,7 @@ bool portal::is_visible() const {
 
 void portal::pre_draw(vector<vert_wrap_t> &verts) {
 
-	float const scale[2] = {0.0, 0.0}, xlate[2] = {0.0, 0.0};
 	select_texture(WHITE_TEX);
-	setup_polygon_texgen(plus_z, scale, xlate, zero_vector); // doesn't matter as long as it's set to something
 	ALPHA0.set_for_cur_shader();
 	assert(verts.empty());
 }
@@ -690,9 +686,6 @@ void draw_sky(int order) {
 		set_colors_and_enable_light(light_id, ambient, sun_color);
 		setup_gl_light_atten(light_id, 0.0, 0.01, 0.01);
 	}
-
-	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
-	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius)); // GL_EYE_LINEAR
 	if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	shader_t s;
 	s.setup_enabled_lights(5, 1); // sun, moon, and L4 VS lighting (L2 and L3 are set but unused)
@@ -704,6 +697,8 @@ void draw_sky(int order) {
 	s.set_specular(0.0, 1.0);
 	s.set_cur_color(cloud_color);
 	select_texture(CLOUD_TEX);
+	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
+	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius));
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
 	s.end_shader();
 	disable_blend();

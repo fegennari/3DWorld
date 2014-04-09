@@ -307,6 +307,14 @@ void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, 
 	}
 }
 
+void set_landscape_texture_texgen() {
+
+	if (!DISABLE_TEXTURES) {
+		select_texture(LANDSCAPE_TEX);
+		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
+	}
+}
+
 
 void draw_mesh_vbo() {
 
@@ -316,6 +324,7 @@ void draw_mesh_vbo() {
 	colorRGBA const color(mesh_color_scale*DEF_DIFFUSE);
 	shader_t s;
 	s.begin_simple_textured_shader(0.0, 1, 1, &color); // lighting + texgen
+	set_landscape_texture_texgen();
 	static unsigned mesh_vbo(0);
 		
 	if (clear_landscape_vbo) {
@@ -378,6 +387,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 		s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
 		setup_mesh_and_water_shader(s);
 	}
+	set_landscape_texture_texgen();
 	float y(-Y_SCENE_SIZE);
 	mesh_vertex_draw mvd(shadow_pass);
 
@@ -459,12 +469,6 @@ void display_mesh(bool shadow_pass) { // fast array version
 	set_fill_mode();
 	update_landscape_texture();
 	if (SHOW_MESH_TIME) PRINT_TIME("Landscape Texture");
-
-	if (!DISABLE_TEXTURES) {
-		select_texture(LANDSCAPE_TEX);
-		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
-	}
-	if (SHOW_MESH_TIME) PRINT_TIME("Preprocess");
 
 	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
 		draw_mesh_vbo();
@@ -702,7 +706,7 @@ void setup_water_plane_texgen(float s_scale, float t_scale) {
 	vector3d const wdir(vector3d(wind.x, wind.y, 0.0).get_norm());// wind.z is probably 0.0 anyway (nominal 1,0,0)
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), xscale(tscale*wdir.x), yscale(tscale*wdir.y);
 	float const tdx(tscale*(xoff2 - xoff)*DX_VAL + water_xoff), tdy(tscale*(yoff2 - yoff)*DY_VAL + water_yoff);
-	setup_texgen_full(s_scale*xscale, s_scale*yscale, 0.0, s_scale*(tdx*wdir.x + tdy*wdir.y), -t_scale*yscale, t_scale*xscale, 0.0, t_scale*(-tdx*wdir.y + tdy*wdir.x), GL_EYE_LINEAR);
+	setup_texgen_full(s_scale*xscale, s_scale*yscale, 0.0, s_scale*(tdx*wdir.x + tdy*wdir.y), -t_scale*yscale, t_scale*xscale, 0.0, t_scale*(-tdx*wdir.y + tdy*wdir.x));
 }
 
 
@@ -768,7 +772,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		wave_time  += fticks;
 	}
 	point const camera(get_camera_pos());
-	setup_water_plane_texgen(1.0, 1.0);
 	set_fill_mode();
 	enable_blend();
 	colorRGBA rcolor;
@@ -789,6 +792,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	shader_t s;
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
 	s.add_uniform_float("normal_z", ((camera.z < zval) ? -1.0 : 1.0));
+	setup_water_plane_texgen(1.0, 1.0);
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 	s.set_cur_color(WHITE);
 	draw_tiled_terrain_water(s, zval);

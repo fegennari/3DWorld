@@ -239,8 +239,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 		p2[i] = (i == dim) ? 0.0     : t_scale;
 	}
 	if (swap_st) {swap(p1, p2);}
-	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, offset),
-		              p2.x, p2.y, p2.z, dot_product(p2, offset), GL_EYE_LINEAR, shader);
+	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, offset), p2.x, p2.y, p2.z, dot_product(p2, offset), shader);
 }
 
 

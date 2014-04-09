@@ -1633,31 +1633,30 @@ void gen_tex_height_tables() {
 }
 
 
-void set_texgen_vec4(float const v[4], bool s_or_t, bool enable_and_set_mode, shader_t *shader) {
+void set_texgen_vec4(float const v[4], bool s_or_t, shader_t *shader) {
 
 	if (shader) {
 		shader->add_attrib_float_array((s_or_t ? TEX0_T_ATTR : TEX0_S_ATTR), v, 4);
 	}
 	else {
-		if (enable_and_set_mode) {glTexGeni((s_or_t ? GL_T : GL_S), GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);}
 		glTexGenfv((s_or_t ? GL_T : GL_S), GL_EYE_PLANE, v);
 	}
 }
 
 
-void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, int mode, shader_t *shader) {
+void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, shader_t *shader) {
 
 	float const tex_param_s[4] = {sx, sy, sz, sw};
 	float const tex_param_t[4] = {tx, ty, tz, tw};
-	set_texgen_vec4(tex_param_s, 0, 1, shader);
-	set_texgen_vec4(tex_param_t, 1, 1, shader);
+	set_texgen_vec4(tex_param_s, 0, shader);
+	set_texgen_vec4(tex_param_t, 1, shader);
 }
 
 
-void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off, int mode) {
+void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off) {
 
 	assert(xscale != 0.0 && yscale != 0.0);
-	setup_texgen_full(xscale, 0.0, z_off, tx, 0.0, yscale, z_off, ty, mode);
+	setup_texgen_full(xscale, 0.0, z_off, tx, 0.0, yscale, z_off, ty);
 }
 
 
@@ -1678,7 +1677,7 @@ void setup_polygon_texgen(vector3d const &norm, float const scale[2], float cons
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(offset, v[i]))};
-		set_texgen_vec4(tex_param, ((i != 0) ^ swap_txy), 1, shader);
+		set_texgen_vec4(tex_param, ((i != 0) ^ swap_txy), shader);
 	}
 }
 

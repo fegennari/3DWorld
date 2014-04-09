@@ -53,7 +53,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, shader_t &shader);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader);
-void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time, shader_t &shader);
+void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, int time, shader_t &shader);
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader);
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade, shader_t &shader);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
@@ -168,7 +168,7 @@ void add_rotated_textured_triangle(point const &pos, vector3d const &o, float ra
 
 
 void add_thick_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
-	vector<vert_norm_color> &verts, float thickness, int tid, colorRGBA const &color)
+	vector<vert_norm_color> &verts, float thickness, colorRGBA const &color)
 {
 	static vector<vert_norm> uncolored_verts;
 	uncolored_verts.resize(0);
@@ -179,12 +179,12 @@ void add_thick_triangle(point const &pos, vector3d const &o, float radius, float
 	cobj.thickness = thickness;
 	cobj.npoints   = 3;
 	cobj.cp.color  = color; // doesn't need to be set
-	cobj.cp.tid    = tid; // Note: assumes texgen is used, so texturing may be incorrect
+	cobj.cp.tid    = -1; // untextured
 	cobj.cp.tscale = tscale*radius;
 	cobj.points[0] = (pos + 1.5*radius*p1);
 	cobj.points[1] = (pos - 1.5*radius*p1);
 	cobj.points[2] = (pos + 3.0*radius*p2);
-	cobj.draw_extruded_polygon(tid, NULL, 0, uncolored_verts);
+	cobj.draw_extruded_polygon(-1, NULL, 0, uncolored_verts);
 	for (unsigned i = 0; i < uncolored_verts.size(); ++i) {verts.push_back(vert_norm_color(uncolored_verts[i], color));}
 }
 
@@ -306,7 +306,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_landmine(pos, radius, ndiv, obj.time, obj.source, in_ammo, shader);
 		break;
 	case PLASMA:
-		draw_plasma(pos, pos, radius, (in_ammo ? 1.0 : obj.init_dir.x), ndiv, 1, !in_ammo, obj.time, shader);
+		draw_plasma(pos, pos, radius, (in_ammo ? 1.0 : obj.init_dir.x), ndiv, !in_ammo, obj.time, shader);
 		break;
 	case GRENADE:
 		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), in_ammo, 0, shader);
@@ -623,7 +623,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			float const tradius(obj.get_true_radius());
 
 			if (i->tid < 0) { // not textured, use thick triangle
-				add_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, fragment_vn, 0.2*tradius, i->tid, i->c);
+				add_thick_triangle(obj.pos, obj.orientation, tradius, obj.angle, 0.0, fragment_vn, 0.2*tradius, i->c);
 			}
 			else {
 				add_rotated_textured_triangle(obj.pos, obj.orientation, tradius, obj.angle, obj.vdeform.z, i->c, fragment_vntc); // obj.vdeform.z = tscale
@@ -1205,16 +1205,15 @@ colorRGBA get_plasma_color(float size) {
 }
 
 
-void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, int shpere_tex, bool gen_parts, int time, shader_t &shader) {
+void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, int time, shader_t &shader) {
 
-	int const tmode(shpere_tex ? GL_SPHERE_MAP : GL_EYE_LINEAR);
 	colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));
 
 	if (animate2) {
-		setup_texgen(0.2*rand_uniform(0.95, 1.05)/radius, 0.2*rand_uniform(0.95, 1.05)/radius, rand_float(), rand_float(), 0.0, tmode);
+		setup_texgen(0.2*rand_uniform(0.95, 1.05)/radius, 0.2*rand_uniform(0.95, 1.05)/radius, rand_float(), rand_float(), 0.0);
 	}
 	else {
-		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0, tmode);
+		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0);
 	}
 	set_emissive_only(color, shader);
 	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}
