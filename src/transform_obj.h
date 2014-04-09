@@ -20,8 +20,6 @@ struct xform_matrix : public glm::mat4 {
 
 	xform_matrix() {}
 	xform_matrix(glm::mat4 const &m) : glm::mat4(m) {}
-	void apply() const;
-	void load_gl() const;
 	void assign_mv_from_gl();
 	void assign_pj_from_gl();
 	float *get_ptr();

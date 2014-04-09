@@ -1,4 +1,4 @@
-#ifdef USE_FG_MATRIX
+#if 0
 uniform mat4 fg_ModelViewMatrix;
 uniform mat4 fg_ModelViewMatrixInverse;
 uniform mat4 fg_ProjectionMatrix;

@@ -120,8 +120,8 @@ public:
 	void upload_light_sources_range(unsigned start, unsigned end);
 	void upload_all_light_sources() {upload_light_sources_range(0, MAX_SHADER_LIGHTS);}
 
-	void upload_all_matrices();
-	void upload_new_mvm();
+	void upload_pjm();
+	void upload_mvm();
 
 	void setup_scene_bounds() const;
 	void setup_fog_scale() const;

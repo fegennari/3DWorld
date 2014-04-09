@@ -18,11 +18,6 @@ extern obj_type object_types[];
 // *** xform_matrix ***
 
 
-void xform_matrix::apply  () const {glMultMatrixf(get_ptr());}
-void xform_matrix::load_gl() const {glLoadMatrixf(get_ptr());}
-void xform_matrix::assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  get_ptr());}
-void xform_matrix::assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, get_ptr());}
-
 float       *xform_matrix::get_ptr()       {glm::mat4       &m(*this); return glm::value_ptr(m);}
 float const *xform_matrix::get_ptr() const {glm::mat4 const &m(*this); return glm::value_ptr(m);}
 
@@ -43,15 +38,12 @@ void xform_matrix::normalize() {
 matrix_stack_t mvm_stack; // modelview matrix
 matrix_stack_t pjm_stack; // projection matrix
 int matrix_mode(0); // 0 = MVM, 1 = PJM
-bool pjm_changed(0), mvm_changed(0);
-
-void register_mvm_change(); // defined in shaders.cpp
+bool mvm_changed(0);
 
 matrix_stack_t &get_matrix_stack() {return (matrix_mode ? pjm_stack : mvm_stack);}
 
 void mark_matrix_changed() {
-	(matrix_mode ? pjm_changed : mvm_changed) = 1;
-	if (!matrix_mode) {register_mvm_change();}
+	if (!matrix_mode) {mvm_changed = 1;}
 }
 
 void fgMatrixMode(int val) {
@@ -81,7 +73,7 @@ void fgRotate(float angle, float x, float y, float z) {
 void fgRotateDegrees(float angle, float x, float y, float z) {fgRotate(TO_RADIANS*angle, x, y, z);}
 
 void fgPerspective(float fov_y, float aspect, float near_clip, float far_clip) {
-	get_matrix_stack().assign(glm::perspective(fov_y, aspect, near_clip, far_clip));
+	get_matrix_stack().assign(glm::perspective(TO_RADIANS*fov_y, aspect, near_clip, far_clip));
 	mark_matrix_changed();
 }
 
@@ -90,8 +82,20 @@ void fgLookAt(float eyex, float eyey, float eyez, float centerx, float centery, 
 	mark_matrix_changed();
 }
 
+void fgMultMatrix(xform_matrix const &m) {
+	get_matrix_stack().assign(m * get_matrix_stack().top());
+}
+
 xform_matrix fgGetMVM() {return mvm_stack.top();}
 xform_matrix fgGetPJM() {return pjm_stack.top();}
+
+#ifdef USE_FG_TRANSFORMS
+void xform_matrix::assign_mv_from_gl() {*this = fgGetMVM();}
+void xform_matrix::assign_pj_from_gl() {*this = fgGetPJM();}
+#else
+void xform_matrix::assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  get_ptr());}
+void xform_matrix::assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, get_ptr());}
+#endif
 
 
 // *** mesh2d ***
@@ -252,7 +256,11 @@ void apply_obj_mesh_roll(xform_matrix &matrix, shader_t &shader, point const &po
 		}
 	}
 	// TODO: set some shader uniform from this matrix
-	matrix.apply();
+#ifdef USE_FG_TRANSFORMS
+	fgMultMatrix(matrix);
+#else
+	glMultMatrixf(matrix.get_ptr());
+#endif
 }
 
 
@@ -285,6 +293,21 @@ void update_deformation(dwobject &obj) {
 		obj.vdeform += all_ones*(fticks*object_types[obj.type].def_recover);
 		obj.vdeform *= SQRT3/obj.vdeform.mag(); // normalize the volume
 	}
+}
+
+
+void mirror_about_plane(vector3d const &norm, point const &pt) { // applies to GL state
+
+	float const dp(dot_product(pt, norm));
+	float const m[16] = {1-2*norm.x*norm.x,  -2*norm.x*norm.y,  -2*norm.x*norm.z, 0.0,
+			              -2*norm.x*norm.y, 1-2*norm.y*norm.y,  -2*norm.y*norm.z, 0.0,
+		                  -2*norm.x*norm.z,  -2*norm.y*norm.z, 1-2*norm.z*norm.z, 0.0,
+		                   2*dp*norm.x,       2*dp*norm.y,       2*dp*norm.z,     1.0};
+#ifdef USE_FG_TRANSFORMS
+	fgMultMatrix(glm::make_mat4(m));
+#else
+	glMultMatrixf(m);
+#endif
 }
 
 

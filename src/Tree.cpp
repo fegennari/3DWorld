@@ -825,7 +825,6 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 	assert(leaf_vbo != 0);
 	bind_vbo(leaf_vbo);
 	leaf_vert_type_t::set_vbo_arrays(0);
-	check_mvm_update();
 	assert(max_leaves <= leaves.size() && leaf_data.size() >= 4*leaves.size());
 	draw_quads_as_tris(4*max_leaves);
 }
@@ -1006,13 +1005,13 @@ void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail, bo
 
 	if (shadow_pass) {
 		s.set_vertex_ptr(sizeof(branch_vert_type_t), 0); // vertices only
+		check_mvm_update();
 	}
 	else {
 		vert_norm_comp_tc::set_vbo_arrays(0);
 	}
 	unsigned const idata_sz(4*num_branch_quads*sizeof(branch_index_t));
 	int const index_type((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
-	check_mvm_update();
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, index_type, (void *)(low_detail ? idata_sz : 0));
 	branch_vbo_manager.post_render();
 }

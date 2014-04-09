@@ -17,9 +17,11 @@ void colorRGBA::set_for_cur_shader() const {
 }
 
 
-void set_array_client_state(bool va, bool tca, bool na, bool ca) {
+void set_array_client_state(bool va, bool tca, bool na, bool ca, bool actually_set_state) {
+
 	assert(cur_shader != NULL);
-	cur_shader->enable_vnct_atribs(va, tca, na, ca);
+	if (actually_set_state) {cur_shader->enable_vnct_atribs(va, tca, na, ca);}
+	else {check_mvm_update();}
 }
 
 
@@ -30,72 +32,71 @@ void set_vn_ptrs(unsigned stride, bool comp) {
 }
 
 void vert_wrap_t::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 0, 0);} else {assert(cur_shader);}
+	set_array_client_state(1, 0, 0, 0, set_state);
 	cur_shader->set_vertex_ptr(sizeof(point), (void *)0);
 }
 
 void vert_tc_t::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 0, 0);} else {assert(cur_shader);}
+	set_array_client_state(1, 1, 0, 0, set_state);
 	unsigned const stride(sizeof(vert_tc_t));
 	cur_shader->set_vertex_ptr(stride, (void *)0);
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_wrap_t), 0);
 }
 
 void vert_norm::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 1, 0);} else {assert(cur_shader);}
+	set_array_client_state(1, 0, 1, 0, set_state);
 	set_vn_ptrs(sizeof(vert_norm), 0);
 }
 
 void vert_norm_comp::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 1, 0);} else {assert(cur_shader);}
+	set_array_client_state(1, 0, 1, 0, set_state);
 	set_vn_ptrs(sizeof(vert_norm_comp), 1);
 }
 
 void vert_norm_comp_tc::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 0);} else {assert(cur_shader);}
+	set_array_client_state(1, 1, 1, 0, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_tc));
 	set_vn_ptrs(stride, 1);
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 0);
 }
 
 void vert_norm_comp_tc_comp::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 0);} else {assert(cur_shader);}
+	set_array_client_state(1, 1, 1, 0, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_tc_comp));
 	set_vn_ptrs(stride, 1);
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 1);
 }
 
 void vert_norm_tc::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 0);} else {assert(cur_shader);}
+	set_array_client_state(1, 1, 1, 0, set_state);
 	unsigned const stride(sizeof(vert_norm_tc));
 	set_vn_ptrs(stride, 0);
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
 }
 
 void vert_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 0, 1);} else {assert(cur_shader);}
+	set_array_client_state(1, 0, 0, 1, set_state);
 	unsigned const stride(sizeof(vert_color));
 	cur_shader->set_vertex_ptr(stride, (void *)0);
 	cur_shader->set_color4_ptr(stride, (void *)sizeof(point), 1);
 }
 
 void vert_norm_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 0, 1, 1);} else {assert(cur_shader);}
+	set_array_client_state(1, 0, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_color));
 	set_vn_ptrs(stride, 0);
 	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm), 1);
 }
 
 void vert_norm_comp_color::set_vbo_arrays(bool set_state) {
-	//if (set_state) {((vert_norm_comp_color *)0)->set_state(); return;}
-	if (set_state) {set_array_client_state(1, 0, 1, 1);} else {assert(cur_shader);}
+	set_array_client_state(1, 0, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_color));
 	set_vn_ptrs(stride, 1);
 	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_comp), 1);
 }
 
 void vert_norm_tc_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 1);} else {assert(cur_shader);}
+	set_array_client_state(1, 1, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_tc_color));
 	set_vn_ptrs(stride, 0);
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
@@ -103,7 +104,7 @@ void vert_norm_tc_color::set_vbo_arrays(bool set_state) {
 }
 
 void vert_tc_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 0, 1);} else {assert(cur_shader);}
+	set_array_client_state(1, 1, 0, 1, set_state);
 	unsigned const stride(sizeof(vert_tc_color));
 	cur_shader->set_vertex_ptr(stride, (void *)0);
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(point), 0);
@@ -111,7 +112,7 @@ void vert_tc_color::set_vbo_arrays(bool set_state) {
 }
 
 void vert_norm_comp_tc_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 1);} else {assert(cur_shader);}
+	set_array_client_state(1, 1, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_tc_color));
 	set_vn_ptrs(stride, 1);
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 0);
@@ -119,7 +120,7 @@ void vert_norm_comp_tc_color::set_vbo_arrays(bool set_state) {
 }
 
 void vert_norm_comp_tc_comp_color::set_vbo_arrays(bool set_state) {
-	if (set_state) {set_array_client_state(1, 1, 1, 1);} else {assert(cur_shader);}
+	set_array_client_state(1, 1, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_tc_comp_color));
 	set_vn_ptrs(stride, 1);
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 1);

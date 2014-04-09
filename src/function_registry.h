@@ -14,7 +14,7 @@ void enable_blend();
 void disable_blend();
 void set_std_blend_mode();
 void set_additive_blend_mode();
-void set_array_client_state(bool va, bool tca, bool na, bool ca);
+void set_array_client_state(bool va, bool tca, bool na, bool ca, bool actually_set_state=1);
 void reset_fog();
 void set_perspective_near_far(float near_clip, float far_clip);
 void set_perspective(float fovy, float nc_scale=1.0);
