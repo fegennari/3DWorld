@@ -13,7 +13,7 @@ uniform vec3 uw_atten_scale;
 uniform vec3 snow_cscale = vec3(1.0);
 
 varying vec4 vertex; // world space
-varying vec2 tc, tc2, tc3;
+varying vec2 tc, tc3;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -35,7 +35,7 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal, in
 	mat3 TBN  = transpose(mat3(tan, cross(normal, tan), normalize(normal))); // world space {Y, X, Z} for normal in +Z
 	light_dir = TBN * light_dir;
 	eye_pos   = TBN * eye_pos;
-	return normalize(mix(vec3(0,0,1), (2.0*texture2D(detail_normal_tex, 0.25*tc2).rgb - 1.0), bump_scale)); // scaled detail texture tc
+	return normalize(mix(vec3(0,0,1), (2.0*texture2D(detail_normal_tex, 8.0*tc).rgb - 1.0), bump_scale)); // scaled detail texture 8*tc
 }
 
 vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {
@@ -97,7 +97,7 @@ void main()
 				   cs4*weights.b*texture2D(tex4, ts4*diff_tc).rgb + // grass
 				   cs5*weights.a*texture2D(tex5, ts5*diff_tc).rgb + // rock
 				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb*snow_cscale;  // snow
-	vec3 texel1  = texture2D(detail_tex, tc2).rgb; // detail texture
+	vec3 texel1  = texture2D(detail_tex, 32.0*tc).rgb; // detail texture 32x scale
 
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc);
 	float diffuse_scale = shadow_normal.w;

@@ -412,11 +412,7 @@ void draw_water() {
 	if (DISABLE_WATER) return;
 	water_surface_draw wsd;
 	shader_t s;
-
-	if (USE_SEA_FOAM) {
-		s.set_prefix("#define HAVE_DETAIL_TEXTURE", 0); // VS
-		s.set_prefix("#define ADD_DETAIL_TEXTURE", 1); // FS
-	}
+	if (USE_SEA_FOAM) {s.set_prefix("#define ADD_DETAIL_TEXTURE", 1);} // FS
 	setup_mesh_and_water_shader(s);
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	set_fill_mode();

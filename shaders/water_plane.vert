@@ -2,6 +2,7 @@ uniform float normal_z = 1.0;
 
 varying vec3 normal;
 varying vec4 epos, proj_pos;
+varying vec2 tc2;
 
 void main()
 {

@@ -383,7 +383,6 @@ void draw_mesh_mvd(bool shadow_pass) {
 		s.begin_color_only_shader(); // don't even need colors
 	}
 	else {
-		s.set_prefix("#define HAVE_DETAIL_TEXTURE", 0); // VS
 		s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
 		setup_mesh_and_water_shader(s);
 	}

@@ -1,7 +1,7 @@
 uniform float detail_tex_scale = 1.0;
 uniform sampler2D tex0, tex1;
 
-varying vec2 tc, tc2;
+varying vec2 tc;
 varying vec4 epos;
 varying vec3 dlpos;
 varying vec3 normal; // world space
@@ -17,11 +17,11 @@ void main()
 	lit_color *= texture2D(tex0, tc).rgb;
 
 #ifdef MULT_DETAIL_TEXTURE // for mesh
-	lit_color *= texture2D(tex1, tc2).rgb;
+	lit_color *= texture2D(tex1, 32.0*tc).rgb; // 32x scale
 #endif
 #ifdef ADD_DETAIL_TEXTURE // for water
 	float slope_scale = clamp(50.0*(1.0 - normalize(normal).z), 0.0, 1.0); // normal.z is typically in +z
-	lit_color *= vec3(1.0) + slope_scale*detail_tex_scale*texture2D(tex1, tc2).rgb;
+	lit_color *= vec3(1.0) + slope_scale*detail_tex_scale*texture2D(tex1, 32.0*tc).rgb; // 32x scale
 	lit_color  = clamp(lit_color, 0.0, 1.0);
 #endif
 
