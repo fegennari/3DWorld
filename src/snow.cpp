@@ -759,9 +759,8 @@ void draw_snow() {
 
 	s.set_specular(0.5, 50.0);
 	s.set_cur_color(SNOW_COLOR);
-	point const camera(get_camera_pos());
 	select_texture(SNOW_TEX); // detail texture (or could use NOISE_TEX)
-	setup_texgen(50.0, 50.0, 0.0, 0.0);
+	setup_texgen(50.0, 50.0, 0.0, 0.0, 0.0, s, 0);
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
 	snow_draw.draw();

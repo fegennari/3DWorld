@@ -405,7 +405,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		float const sx(1.0/(1.0 + min(2.0, 0.5*fabs(wind.x))));
 		float const sy(1.0/(1.0 + min(2.0, 0.5*fabs(wind.y))));
 		vector3d const offset2(xy_scale*(-camera + 0.7*cloud_rel_vel*world_pos));
-		setup_texgen(sx*xy_scale, sy*xy_scale, sx*offset2.x, sy*offset2.y, 0.0);
+		setup_texgen(sx*xy_scale, sy*xy_scale, sx*offset2.x, sy*offset2.y, 0.0, s, 0);
 		colorRGBA cloud_color2(cloud_color);
 		cloud_color2.alpha *= (is_cloudy ? 1.0 : 0.5);
 		s.set_cur_color(cloud_color2);

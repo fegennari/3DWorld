@@ -4,7 +4,7 @@ varying vec3 normal;
 
 void main()
 {
-	setup_texgen0();
+	setup_texgen_st();
 	dl_normal = normalize(fg_Normal);
 	vec3 n = gl_NormalMatrix * fg_Normal;
 	normal = (no_normalize ? n : normalize(n));

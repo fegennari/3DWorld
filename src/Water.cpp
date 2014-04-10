@@ -431,14 +431,14 @@ void draw_water() {
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
 	enable_blend();
 	select_water_ice_texture(s, color);
-	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
+	setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
 	color.alpha *= 0.5;
 	wsd.set_big_water(1);
 	int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
 
 	if (USE_SEA_FOAM) { // use sea foam texture
 		select_multitex(FOAM_TEX, 1, 0);
-		setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0);
+		setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0, 0.0, s, 0);
 		set_active_texture(0);
 		s.add_uniform_float("detail_tex_scale", 1.0);
 	}
@@ -469,7 +469,7 @@ void draw_water() {
 		if (DEBUG_WATER_TIME) {PRINT_TIME("3 Grass Update");}
 	}
 	select_water_ice_texture(s, color);
-	setup_texgen(tx_scale, ty_scale, tx_val, ty_val);
+	setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
 	enable_blend();
 	update_valleys(); // draws spillover sections using the same shader
 	if (DEBUG_WATER_TIME) {PRINT_TIME("4 Water Valleys Update");}

@@ -98,8 +98,9 @@ public:
 	bool add_uniform_float_array (char const *const name, float const *const val, unsigned num) const;
 	bool add_uniform_float       (char const *const name, float val) const;
 	bool add_uniform_int         (char const *const name, int val) const;
-	bool add_uniform_vector2d    (char const *const name, vector2d const &val) const;
-	bool add_uniform_vector3d    (char const *const name, vector3d const &val) const;
+	bool add_uniform_vector2d    (char const *const name, vector2d  const &val) const;
+	bool add_uniform_vector3d    (char const *const name, vector3d  const &val) const;
+	bool add_uniform_vector4d    (char const *const name, vector4d  const &val) const;
 	bool add_uniform_color       (char const *const name, colorRGBA const &val) const;
 	bool add_uniform_color       (char const *const name, colorRGB  const &val) const;
 	bool add_uniform_matrix_4x4  (char const *const name, float *m, bool transpose) const;
@@ -126,6 +127,7 @@ public:
 	void setup_scene_bounds() const;
 	void setup_fog_scale() const;
 	void check_for_fog_disabled();
+
 	void set_prefix_str(string const &prefix, unsigned shader_type) {set_prefix(prefix.c_str(), shader_type);}
 	void set_prefix(char const *const prefix, unsigned shader_type);
 	void set_bool_prefix(char const *const name, bool val, unsigned shader_type);

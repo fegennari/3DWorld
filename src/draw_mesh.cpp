@@ -294,24 +294,19 @@ void gen_uw_lighting() {
 
 
 // texture units used: 0: terrain texture, 1: detail texture
-void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, bool use_detail_tex) {
+void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, shader_t &shader) {
 
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
-	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty);
-
-	if (use_detail_tex) { // blend in detail nose texture at 32x scale
-		select_multitex(mesh_detail_tex, 1, 0);
-		setup_texgen(32.0*tex_scale/TWO_XSS, 32.0*tex_scale/TWO_YSS, 0.0, 0.0);
-		set_active_texture(0);
-	}
+	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty, 0.0, shader, 0);
+	select_multitex(mesh_detail_tex, 1, 1); // detail texture
 }
 
-void set_landscape_texture_texgen() {
+void set_landscape_texture_texgen(shader_t &shader) {
 
 	if (!DISABLE_TEXTURES) {
 		select_texture(LANDSCAPE_TEX);
-		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE);
+		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE, shader);
 	}
 }
 
@@ -324,7 +319,7 @@ void draw_mesh_vbo() {
 	colorRGBA const color(mesh_color_scale*DEF_DIFFUSE);
 	shader_t s;
 	s.begin_simple_textured_shader(0.0, 1, 1, &color); // lighting + texgen
-	set_landscape_texture_texgen();
+	set_landscape_texture_texgen(s);
 	static unsigned mesh_vbo(0);
 		
 	if (clear_landscape_vbo) {
@@ -386,7 +381,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 		s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
 		setup_mesh_and_water_shader(s);
 	}
-	set_landscape_texture_texgen();
+	set_landscape_texture_texgen(s);
 	float y(-Y_SCENE_SIZE);
 	mesh_vertex_draw mvd(shadow_pass);
 
@@ -584,6 +579,7 @@ class water_renderer {
 	float tex_scale;
 	colorRGBA color;
 	quad_batch_draw qbd;
+	shader_t &shader;
 
 	void draw_vert(float x, float y, float z, bool in_y, bool neg_edge);
 	void draw_x_sides(bool neg_edge);
@@ -591,8 +587,8 @@ class water_renderer {
 	void draw_sides(unsigned ix);
 
 public:
-	water_renderer(int cz) : check_zvals(cz), tex_scale(W_TEX_SCALE0/Z_SCENE_SIZE) {}
-	void draw(shader_t &shader);
+	water_renderer(int cz, shader_t &shader_) : check_zvals(cz), tex_scale(W_TEX_SCALE0/Z_SCENE_SIZE), shader(shader_) {}
+	void draw();
 };
 
 
@@ -618,7 +614,7 @@ void water_renderer::draw_x_sides(bool neg_edge) {
 	int const end_val(neg_edge ? 0 : MESH_X_SIZE-1);
 	float const limit(neg_edge ? -X_SCENE_SIZE : X_SCENE_SIZE-DX_VAL);
 	float yv(-Y_SCENE_SIZE);
-	setup_texgen_full(0.0, tex_scale, 0.0, 0.0, 0.0, 0.0, tex_scale, 0.0);
+	setup_texgen_full(0.0, tex_scale, 0.0, 0.0, 0.0, 0.0, tex_scale, 0.0, shader, 0);
 
 	for (int i = 1; i < MESH_Y_SIZE; ++i) { // x sides
 		float const mh1(mesh_height[i][end_val]), mh2(mesh_height[i-1][end_val]);
@@ -641,7 +637,7 @@ void water_renderer::draw_y_sides(bool neg_edge) {
 	int const end_val(neg_edge ? 0 : MESH_Y_SIZE-1);
 	float const limit(neg_edge ? -Y_SCENE_SIZE : Y_SCENE_SIZE-DY_VAL);
 	float xv(-X_SCENE_SIZE);
-	setup_texgen_full(tex_scale, 0.0, 0.0, 0.0, 0.0, 0.0, tex_scale, 0.0);
+	setup_texgen_full(tex_scale, 0.0, 0.0, 0.0, 0.0, 0.0, tex_scale, 0.0, shader, 0);
 	
 	for (int i = 1; i < MESH_X_SIZE; ++i) { // y sides
 		float const mh1(mesh_height[end_val][i]), mh2(mesh_height[end_val][i-1]);
@@ -671,7 +667,7 @@ void water_renderer::draw_sides(unsigned ix) {
 }
 
 
-void water_renderer::draw(shader_t &shader) { // modifies color
+void water_renderer::draw() { // modifies color
 
 	select_water_ice_texture(shader, color);
 	set_fill_mode();
@@ -684,10 +680,7 @@ void water_renderer::draw(shader_t &shader) { // modifies color
 		sides[i] = make_pair(-distance_to_camera_sq(point(pts[i][0], pts[i][1], water_plane_z)), i);
 	}
 	sort(sides.begin(), sides.end()); // largest to smallest distance
-
-	for (unsigned i = 0; i < 4; ++i) {
-		draw_sides(sides[i].second); // draw back to front
-	}
+	for (unsigned i = 0; i < 4; ++i) {draw_sides(sides[i].second);} // draw back to front
 	disable_blend();
 	shader.set_specular(0.0, 1.0);
 }
@@ -695,17 +688,17 @@ void water_renderer::draw(shader_t &shader) { // modifies color
 
 void draw_water_sides(shader_t &shader, int check_zvals) {
 
-	water_renderer wr(check_zvals);
-	wr.draw(shader);
+	water_renderer wr(check_zvals, shader);
+	wr.draw();
 }
 
 
-void setup_water_plane_texgen(float s_scale, float t_scale) {
+void setup_water_plane_texgen(float s_scale, float t_scale, shader_t &shader, int mode) {
 
 	vector3d const wdir(vector3d(wind.x, wind.y, 0.0).get_norm());// wind.z is probably 0.0 anyway (nominal 1,0,0)
 	float const tscale(W_TEX_SCALE0/Z_SCENE_SIZE), xscale(tscale*wdir.x), yscale(tscale*wdir.y);
 	float const tdx(tscale*(xoff2 - xoff)*DX_VAL + water_xoff), tdy(tscale*(yoff2 - yoff)*DY_VAL + water_yoff);
-	setup_texgen_full(s_scale*xscale, s_scale*yscale, 0.0, s_scale*(tdx*wdir.x + tdy*wdir.y), -t_scale*yscale, t_scale*xscale, 0.0, t_scale*(-tdx*wdir.y + tdy*wdir.x));
+	setup_texgen_full(s_scale*xscale, s_scale*yscale, 0.0, s_scale*(tdx*wdir.x + tdy*wdir.y), -t_scale*yscale, t_scale*xscale, 0.0, t_scale*(-tdx*wdir.y + tdy*wdir.x), shader, mode);
 }
 
 
@@ -739,6 +732,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	s.add_uniform_float("mesh_z_scale",     mesh_scale);
 	set_water_plane_uniforms(s);
+	setup_water_plane_texgen(1.0, 1.0, s, 0);
 	if (no_specular) {s.set_specular(0.0, 1.0);} else {set_tt_water_specular(s);}
 	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
 
@@ -791,7 +785,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	shader_t s;
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
 	s.add_uniform_float("normal_z", ((camera.z < zval) ? -1.0 : 1.0));
-	setup_water_plane_texgen(1.0, 1.0);
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 	s.set_cur_color(WHITE);
 	draw_tiled_terrain_water(s, zval);

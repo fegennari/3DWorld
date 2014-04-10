@@ -1092,7 +1092,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	assert(weight_tid > 0 && height_tid > 0 && shadow_normal_tid > 0);
 	glPushMatrix();
 	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0)); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
-	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE);
+	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s);
 	bind_2d_texture(weight_tid);
 	bind_texture_tu(height_tid, 12);
 	bind_texture_tu(shadow_normal_tid, 7);
@@ -1516,7 +1516,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	}
 	if (has_water) {
 		set_water_plane_uniforms(s);
-		s.add_uniform_float("water_atten", WATER_COL_ATTEN*mesh_scale);
+		s.add_uniform_float("water_atten",    WATER_COL_ATTEN*mesh_scale);
 		s.add_uniform_color("uw_atten_max",   uw_atten_max);
 		s.add_uniform_color("uw_atten_scale", uw_atten_scale);
 
@@ -1525,9 +1525,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 			s.add_uniform_int("caustic_tex", 10);
 			s.add_uniform_float("caustics_weight", (1.5 - water_params.alpha));
 		}
-		set_active_texture(2);
-		setup_water_plane_texgen(8.0, 2.5); // tu_id=2; increase texture scale and change AR since the caustics texture is sparser than the water texture
-		set_active_texture(0);
+		setup_water_plane_texgen(8.0, 2.5, s, 2); // increase texture scale and change AR since the caustics texture is sparser than the water texture
 	}
 	else { // or just disable water fog calculation in the vertex shader (water_fog.part)?
 		s.add_uniform_float("water_plane_z", (reflection_pass ? water_plane_z : zmin)); // used for fog calculation/clipping

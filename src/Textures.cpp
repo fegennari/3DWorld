@@ -1626,37 +1626,33 @@ int snow_height(point pos) {
 
 void gen_tex_height_tables() {
 
-	for (unsigned i = 0; i < NTEX_DIRT; ++i) {
-		h_dirt[i] = pow(lttex_dirt[i].zval, glaciate_exp);
-	}
+	for (unsigned i = 0; i < NTEX_DIRT; ++i) {h_dirt[i] = pow(lttex_dirt[i].zval, glaciate_exp);}
 	clip_hd1 = (0.90*h_dirt[1] + 0.10*h_dirt[0]);
 }
 
 
-void set_texgen_vec4(float const v[4], bool s_or_t, shader_t *shader) {
+void set_texgen_vec4(vector4d const &v, bool s_or_t, shader_t &shader, int mode) {
 
-	if (shader) {
-		shader->add_attrib_float_array((s_or_t ? TEX0_T_ATTR : TEX0_S_ATTR), v, 4);
-	}
-	else {
-		glTexGenfv((s_or_t ? GL_T : GL_S), GL_EYE_PLANE, v);
+	switch (mode) { // mode: 0 = shader uniform, 1 = shader attrib, 2 = shader uniform #2
+	case 0: shader.add_uniform_vector4d((s_or_t ? "texgen_t"  : "texgen_s" ), v); break;
+	case 2: shader.add_uniform_vector4d((s_or_t ? "texgen2_t" : "texgen2_s"), v); break;
+	case 1: shader.add_attrib_float_array((s_or_t ? TEX0_T_ATTR : TEX0_S_ATTR), &v.x, 4); break;
+	default: assert(0);
 	}
 }
 
 
-void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, shader_t *shader) {
+void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, shader_t &shader, int mode) {
 
-	float const tex_param_s[4] = {sx, sy, sz, sw};
-	float const tex_param_t[4] = {tx, ty, tz, tw};
-	set_texgen_vec4(tex_param_s, 0, shader);
-	set_texgen_vec4(tex_param_t, 1, shader);
+	set_texgen_vec4(vector4d(sx, sy, sz, sw), 0, shader, mode);
+	set_texgen_vec4(vector4d(tx, ty, tz, tw), 1, shader, mode);
 }
 
 
-void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off) {
+void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off, shader_t &shader, int mode) {
 
 	assert(xscale != 0.0 && yscale != 0.0);
-	setup_texgen_full(xscale, 0.0, z_off, tx, 0.0, yscale, z_off, ty);
+	setup_texgen_full(xscale, 0.0, z_off, tx, 0.0, yscale, z_off, ty, shader, mode);
 }
 
 
@@ -1670,14 +1666,14 @@ void get_poly_texgen_dirs(vector3d const &norm, vector3d v[2]) { // similar to g
 
 
 void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2],
-	vector3d const &offset, bool swap_txy, shader_t *shader)
+	vector3d const &offset, bool swap_txy, shader_t &shader, int mode)
 {
 	vector3d v[2];
 	get_poly_texgen_dirs(norm, v);
 	
 	for (unsigned i = 0; i < 2; ++i) {
-		float const tex_param[4] = {scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(offset, v[i]))};
-		set_texgen_vec4(tex_param, ((i != 0) ^ swap_txy), shader);
+		vector4d const v(scale[i]*v[i].x, scale[i]*v[i].y, scale[i]*v[i].z, (xlate[i] + scale[i]*dot_product(offset, v[i])));
+		set_texgen_vec4(v, ((i != 0) ^ swap_txy), shader, mode);
 	}
 }
 

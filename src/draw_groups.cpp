@@ -172,6 +172,7 @@ void add_thick_triangle(point const &pos, vector3d const &o, float radius, float
 {
 	static vector<vert_norm> uncolored_verts;
 	uncolored_verts.resize(0);
+	shader_t unused; // FIXME: we're not doing texturing, so this shader is unused
 	point p1, p2;
 	coll_obj cobj;
 	cobj.norm      = get_rotation_dirs_and_normal(o, angle, p1, p2);
@@ -184,7 +185,7 @@ void add_thick_triangle(point const &pos, vector3d const &o, float radius, float
 	cobj.points[0] = (pos + 1.5*radius*p1);
 	cobj.points[1] = (pos - 1.5*radius*p1);
 	cobj.points[2] = (pos + 3.0*radius*p2);
-	cobj.draw_extruded_polygon(-1, NULL, 0, uncolored_verts);
+	cobj.draw_extruded_polygon(-1, unused, 0, uncolored_verts);
 	for (unsigned i = 0; i < uncolored_verts.size(); ++i) {verts.push_back(vert_norm_color(uncolored_verts[i], color));}
 }
 
@@ -1210,10 +1211,10 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));
 
 	if (animate2) {
-		setup_texgen(0.2*rand_uniform(0.95, 1.05)/radius, 0.2*rand_uniform(0.95, 1.05)/radius, rand_float(), rand_float(), 0.0);
+		setup_texgen(0.2*rand_uniform(0.95, 1.05)/radius, 0.2*rand_uniform(0.95, 1.05)/radius, rand_float(), rand_float(), 0.0, shader, 0);
 	}
 	else {
-		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0);
+		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0, shader, 0);
 	}
 	set_emissive_only(color, shader);
 	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}

@@ -13,7 +13,7 @@ uniform vec3 uw_atten_scale;
 uniform vec3 snow_cscale = vec3(1.0);
 
 varying vec4 vertex; // world space
-varying vec2 tc, tc3;
+varying vec2 tc, tc2;
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -67,7 +67,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 			// apply underwater caustics texture (Note: matches shallow water wave normal map, but not deep water wave normal map)
 			float cweight = ds_scale*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
-			vec3  cval    = 4.0*mix(texture2D(caustic_tex, tc3).rgb, texture2D(caustic_tex, (tc3 + vec2(0.3, 0.6))).rgb, ntime);
+			vec3  cval    = 4.0*mix(texture2D(caustic_tex, tc2).rgb, texture2D(caustic_tex, (tc2 + vec2(0.3, 0.6))).rgb, ntime);
 			color.rgb    *= mix(vec3(1.0), cval, cweight);
 		}
 #endif

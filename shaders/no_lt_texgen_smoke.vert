@@ -13,12 +13,11 @@ varying vec3 eye, vpos, normal, lpos0, vposl; // world space
 void main()
 {
 	if (use_texgen == 1) {
-		setup_texgen0();
+		setup_texgen_st();
 		tex_coord = tc;
 	}
 	else if (use_texgen == 2) {
-		tex_coord.s = dot(fg_Vertex, tex0_s);
-		tex_coord.t = dot(fg_Vertex, tex0_t);
+		tex_coord = vec2(dot(fg_Vertex, tex0_s), dot(fg_Vertex, tex0_t));
 	}
 	else if (use_texgen == 3) {
 		set_tc0_from_vert_id();

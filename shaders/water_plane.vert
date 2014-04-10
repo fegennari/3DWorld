@@ -6,7 +6,7 @@ varying vec2 tc2;
 
 void main()
 {
-	setup_texgen0();
+	setup_texgen_st();
 	tc2    = fg_TexCoord;
 	normal = gl_NormalMatrix * vec3(0.0, 0.0, normal_z); // not normalized
 	epos   = gl_ModelViewMatrix * fg_Vertex;

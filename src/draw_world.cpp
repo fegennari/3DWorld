@@ -267,8 +267,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.register_attrib_name("tex0_s", TEX0_S_ATTR);
 		s.register_attrib_name("tex0_t", TEX0_T_ATTR);
 	}
-	if (use_bmap)     s.add_uniform_int("bump_map", 5);
-	if (use_spec_map) s.add_uniform_int("spec_map", 8);
+	if (use_bmap)     {s.add_uniform_int("bump_map", 5);}
+	if (use_spec_map) {s.add_uniform_int("spec_map", 8);}
 	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
@@ -698,7 +698,7 @@ void draw_sky(int order) {
 	s.set_cur_color(cloud_color);
 	select_texture(CLOUD_TEX);
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
-	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius));
+	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius), 0.0, s, 0);
 	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
 	s.end_shader();
 	disable_blend();

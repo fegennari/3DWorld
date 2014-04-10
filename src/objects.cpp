@@ -229,7 +229,7 @@ void coll_obj::set_from_pts(point const *const pts, unsigned npts) {
 }
 
 
-void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir, vector3d const &offset, shader_t *shader, bool swap_st) { // dir does not need to be normalized
+void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir, vector3d const &offset, shader_t &shader, bool swap_st) { // dir does not need to be normalized
 
 	int const dim(get_max_dim(dir));
 	point p1, p2;
@@ -239,7 +239,7 @@ void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir
 		p2[i] = (i == dim) ? 0.0     : t_scale;
 	}
 	if (swap_st) {swap(p1, p2);}
-	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, offset), p2.x, p2.y, p2.z, dot_product(p2, offset), shader);
+	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, offset), p2.x, p2.y, p2.z, dot_product(p2, offset), shader, 1);
 }
 
 
@@ -287,7 +287,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 		if (group_back_face_cull) glEnable(GL_CULL_FACE);
 		vector3d tex_dir(0,0,0);
 		tex_dir[::get_max_dim(norm)] = 1.0;
-		set_poly_texgen(tid, tex_dir, &shader);
+		set_poly_texgen(tid, tex_dir, shader);
 		assert((unsigned)group_id < obj_draw_groups.size());
 		if (obj_draw_groups[group_id].begin_render(cix)) return; // cix may change here
 	}
@@ -317,11 +317,11 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 			int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 			bool const draw_ends(!(cp.surfs & 1)), draw_sides_ends(draw_ends && tid < 0);
-			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, &shader, cp.swap_txy);}
+			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader, cp.swap_txy);}
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_sides_ends, !draw_ends); // Note: using texgen, not textured
 			
 			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
-				set_poly_texgen(tid, (points[1] - points[0]).get_norm(), &shader);
+				set_poly_texgen(tid, (points[1] - points[0]).get_norm(), shader);
 				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 2); // Note: using texgen, not textured
 			}
 		}
@@ -331,13 +331,13 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 		{
 			float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
-			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, &shader, cp.swap_txy);}
+			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader, cp.swap_txy);}
 			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured
 		}
 		break;
 
 	case COLL_POLYGON:
-		draw_extruded_polygon(tid, &shader, 1, poly_verts);
+		draw_extruded_polygon(tid, shader, 1, poly_verts);
 		draw_and_clear_verts(poly_verts, GL_TRIANGLES);
 		break;
 	}

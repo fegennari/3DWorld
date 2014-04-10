@@ -1,6 +1,6 @@
 void main()
 {
-	setup_texgen0();
+	setup_texgen_st();
 	gl_Position = fg_ftransform();
 	vec3 normal = normalize(gl_NormalMatrix * fg_Normal); // eye space
 	vec4 color  = vec4(0.0, 0.0, 0.0, fg_Color.a); // get alpha directly from fg_Color

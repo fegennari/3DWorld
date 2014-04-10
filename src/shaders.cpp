@@ -116,6 +116,10 @@ bool shader_t::add_uniform_vector3d(char const *const name, vector3d const &val)
 	return set_uniform_vector3d(get_uniform_loc(name), val);
 }
 
+bool shader_t::add_uniform_vector4d(char const *const name, vector4d const &val) const {
+	return set_uniform_vector4d(get_uniform_loc(name), val);
+}
+
 bool shader_t::add_uniform_color(char const *const name, colorRGBA const &val) const {
 	return set_uniform_color(get_uniform_loc(name), val);
 }
@@ -264,7 +268,6 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 	}
 }
 
-
 void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 
 	assert(is_setup());
@@ -303,7 +306,6 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 	if ((field_filt & 0x10) && lloc.v[4] >= 0 && lp.atten    != plp.atten   ) {glUniform3fv(lloc.v[4], 1, &lp.atten.x   ); plp.atten    = lp.atten;   }
 }
 
-
 void shader_t::upload_light_sources_range(unsigned start, unsigned end) {
 
 	for (unsigned i = start; i < end; ++i) {
@@ -319,14 +321,12 @@ void shader_t::setup_scene_bounds() const {
 	add_uniform_vector3d("scene_scale", vector3d(2.0*X_SCENE_SIZE, 2.0*Y_SCENE_SIZE, (scene_zmax - scene_zmin)));
 }
 
-
 void shader_t::setup_fog_scale() const {
 
 	add_uniform_float("fog_scale", (fog_enabled ? 1.0 : 0.0));
 	add_uniform_float("fog_end",   cur_fog_end);
 	add_uniform_color("fog_color", cur_fog_color);
 }
-
 
 void shader_t::check_for_fog_disabled() {
 

@@ -224,15 +224,15 @@ bool camera_behind_polygon(point const *const points, int npoints) {
 }
 
 
-void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t *shader) const {
+void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t &shader) const {
 
 	if (tid < 0) return; // texturing disabled
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
-	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, shader);
+	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, shader, 1);
 }
 
 
-void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d normal, bool calc_normal_dir, shader_t *shader, vector<vert_norm> &verts) const {
+void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d normal, bool calc_normal_dir, shader_t &shader, vector<vert_norm> &verts) const {
 
 	if (tid >= 0) { // textured
 		draw_and_clear_verts(verts, GL_TRIANGLES);
@@ -244,7 +244,7 @@ void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d 
 }
 
 
-void coll_obj::draw_extruded_polygon(int tid, shader_t *shader, bool calc_normal_dir, vector<vert_norm> &verts) const {
+void coll_obj::draw_extruded_polygon(int tid, shader_t &shader, bool calc_normal_dir, vector<vert_norm> &verts) const {
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	float const thick(fabs(thickness));
