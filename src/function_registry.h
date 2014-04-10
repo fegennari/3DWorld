@@ -752,6 +752,7 @@ void fgScale(float s);
 void fgRotate(float angle, float x, float y, float z);
 void fgRotateDegrees(float angle, float x, float y, float z);
 void fgPerspective(float fov_y, float aspect, float near_clip, float far_clip);
+void fgOrtho(float left, float right, float bottom, float top, float zNear, float zFar);
 void fgLookAt(float eyex, float eyey, float eyez, float centerx, float centery, float centerz, float upx, float upy, float upz);
 void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0);
 void update_deformation(dwobject &obj);
@@ -765,8 +766,9 @@ void update_deformation(dwobject &obj);
 #define glLoadIdentity fgLoadIdentity
 #define glTranslatef fgTranslate
 #define glScalef fgScale
-#define glRotatef fgRotate
+#define glRotatef fgRotateDegrees
 #define gluPerspective fgPerspective
+#define glOrtho fgOrtho
 #define gluLookAt fgLookAt
 #endif
 

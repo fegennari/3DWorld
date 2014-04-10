@@ -56,34 +56,38 @@ void fgPushMatrix  () {get_matrix_stack().push();} // matrix not change
 void fgPopMatrix   () {get_matrix_stack().pop();      mark_matrix_changed();}
 void fgLoadIdentity() {get_matrix_stack().identity(); mark_matrix_changed();}
 
-void fgTranslate(float x, float y, float z) {
-	get_matrix_stack().assign(glm::translate(get_matrix_stack().top(), glm::vec3(x, y, z)));
+void assign_cur_matrix(glm::mat4 const &m) {
+	get_matrix_stack().assign(m);
 	mark_matrix_changed();
 }
+
+void fgTranslate(float x, float y, float z) {
+	assign_cur_matrix(glm::translate(get_matrix_stack().top(), glm::vec3(x, y, z)));
+}
 void fgScale(float x, float y, float z) {
-	get_matrix_stack().assign(glm::scale(get_matrix_stack().top(), glm::vec3(x, y, z)));
-	mark_matrix_changed();
+	assign_cur_matrix(glm::scale(get_matrix_stack().top(), glm::vec3(x, y, z)));
 }
 void fgScale(float s) {fgScale(s, s, s);}
 
 void fgRotate(float angle, float x, float y, float z) {
-	get_matrix_stack().assign(glm::rotate(get_matrix_stack().top(), angle, glm::vec3(x, y, z)));
-	mark_matrix_changed();
+	assign_cur_matrix(glm::rotate(get_matrix_stack().top(), angle, glm::vec3(x, y, z)));
 }
 void fgRotateDegrees(float angle, float x, float y, float z) {fgRotate(TO_RADIANS*angle, x, y, z);}
 
 void fgPerspective(float fov_y, float aspect, float near_clip, float far_clip) {
-	get_matrix_stack().assign(glm::perspective(TO_RADIANS*fov_y, aspect, near_clip, far_clip));
-	mark_matrix_changed();
+	assign_cur_matrix(glm::perspective(TO_RADIANS*fov_y, aspect, near_clip, far_clip));
+}
+
+void fgOrtho(float left, float right, float bottom, float top, float zNear, float zFar) {
+	assign_cur_matrix(glm::ortho(left, right, bottom, top, zNear, zFar));
 }
 
 void fgLookAt(float eyex, float eyey, float eyez, float centerx, float centery, float centerz, float upx, float upy, float upz) {
-	get_matrix_stack().assign(glm::lookAt(glm::vec3(eyex, eyey, eyez), glm::vec3(centerx, centery, centerz), glm::vec3(upx, upy, upz)));
-	mark_matrix_changed();
+	assign_cur_matrix(glm::lookAt(glm::vec3(eyex, eyey, eyez), glm::vec3(centerx, centery, centerz), glm::vec3(upx, upy, upz)));
 }
 
 void fgMultMatrix(xform_matrix const &m) {
-	get_matrix_stack().assign(m * get_matrix_stack().top());
+	assign_cur_matrix(get_matrix_stack().top() * m);
 }
 
 xform_matrix fgGetMVM() {return mvm_stack.top();}
