@@ -1448,6 +1448,7 @@ void setup_tt_fog_post(shader_t &s) {
 	s.setup_fog_scale();
 	s.add_uniform_float("fog_bot", get_tt_fog_top());
 	s.add_uniform_float("fog_top", get_tt_fog_bot());
+	s.add_uniform_float("eye_z",   get_camera_pos().z);
 }
 
 void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {
@@ -1837,6 +1838,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
 	s.add_uniform_float("radius_scale", calc_tree_size());
 	s.add_uniform_float("ambient_scale", 1.5);
+	s.add_uniform_vector3d("camera_pos", get_camera_pos());
 	s.set_specular(0.2, 8.0);
 	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass);
 	s.set_specular(0.0, 1.0);
@@ -1971,6 +1973,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 		brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");
 		billboard_tree_shader_setup(brs); // cscale=1.0 ?
 		brs.add_uniform_vector3d("ref_dir", plus_y);
+		brs.add_uniform_vector3d("camera_pos", get_camera_pos());
 		lod_renderer.render_billboards(1);
 		brs.end_shader();
 	}

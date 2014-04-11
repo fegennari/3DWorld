@@ -2,6 +2,7 @@ uniform sampler2D color_map, normal_map;
 uniform vec3 ref_dir         = vec3(0,1,0);
 uniform vec2 normal_tc_off   = vec2(0,0);
 uniform vec2 normal_tc_scale = vec2(1,1);
+uniform vec3 camera_pos;
 
 varying vec4 world_space_pos, eye_space_pos;
 varying vec2 tc;
@@ -16,8 +17,7 @@ void main()
 	// transform normal into billboard orientation 
 	vec3 normal = 2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0);
 	normal.y *= -1.0; // texture is rendered with ybot < ytop
-	vec4 eye  = gl_ModelViewMatrixInverse[3]; // world space
-	vec3 vdir = eye.xyz - world_space_pos.xyz;
+	vec3 vdir = camera_pos - world_space_pos.xyz;
 	vec2 rd_n = normalize(ref_dir.xy);
 	vec2 vd_n = normalize(vdir.xy);
 	float dp  = dot(rd_n, vd_n);

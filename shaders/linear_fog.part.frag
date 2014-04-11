@@ -7,6 +7,7 @@ uniform vec4 fog_color     = vec4(1.0);
 // linear fog from 1.0 at/below fog_bot to 0.0 at/above fog_top
 uniform float fog_bot = 0.0;
 uniform float fog_top = 1.0;
+uniform float eye_z;
 
 float get_nonuniform_fog_scale(in float vert_z, in float eye_z, in float fog_bot, in float fog_top, in float density_exp) {
 	float zmin   = min(vert_z, eye_z);
@@ -20,19 +21,19 @@ float get_nonuniform_fog_scale(in float vert_z, in float eye_z, in float fog_bot
 }
 
 float get_custom_fog_scale(in float vert_z) {
-	float eye_z = gl_ModelViewMatrixInverse[3].z; // world space
 	return get_nonuniform_fog_scale(vert_z, eye_z, fog_bot, fog_top, 1.0); // linear density
 }
 
 //fog *= 1.0 + 10.0*get_nonuniform_fog_scale(vert_z, eye_z, water_plane_z, water_plane_z+2.0, 1.0); // low fog in valleys
 
-#else
-float get_custom_fog_scale(in float vert_z) {return 1.0;}
-#endif
-
 float get_custom_fog_scale_epos(in vec4 epos) {
 	return get_custom_fog_scale((gl_ModelViewMatrixInverse * epos).z);
 }
+
+#else
+float get_custom_fog_scale(in float vert_z)   {return 1.0;}
+float get_custom_fog_scale_epos(in vec4 epos) {return 1.0;}
+#endif
 
 // linear/quadratic fog
 vec4 apply_fog_ffc(in vec4 color, in float ffc, in vec4 fog_color) {

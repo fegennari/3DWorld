@@ -4,11 +4,11 @@ attribute float point_size; // world space
 void main()
 {
 	gl_Position  = fg_ftransform();
-	vec4 eye     = gl_ModelViewMatrixInverse[3]; // world space
 #ifdef CONSTANT_PT_SIZE
 	gl_PointSize = point_scale;
 #else
-	gl_PointSize = clamp(point_scale*point_size/distance(eye.xyz, fg_Vertex.xyz), 1.0, 64.0);
+	vec4 epos    = gl_ModelViewMatrix * fg_Vertex;
+	gl_PointSize = clamp(point_scale*point_size/length(epos.xyz), 1.0, 64.0);
 #endif
 
 #ifdef ENABLE_LIGHTING

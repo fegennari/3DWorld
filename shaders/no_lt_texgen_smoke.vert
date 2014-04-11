@@ -7,7 +7,7 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 
 attribute vec4 tex0_s, tex0_t;
 
-varying vec3 eye, vpos, normal, lpos0, vposl; // world space
+varying vec3 vpos, normal, lpos0, vposl; // world space
 // epos, eye_norm, and tex_coord come from bump_map.vert
 
 void main()
@@ -33,13 +33,10 @@ void main()
 
 	if (use_world_space_mvm) {
 		normal = normalize((transpose(world_space_mvm) * vec4(eye_norm, 1)).xyz);
-		mat4 mvm_inv = inverse(world_space_mvm);
-		vpos   = (mvm_inv * epos).xyz; // world space
-		eye    = mvm_inv[3].xyz; // world space
+		vpos   = (inverse(world_space_mvm) * epos).xyz; // world space
 	}
 	else {
 		vpos   = fg_Vertex.xyz + world_space_offset;
-		eye    = gl_ModelViewMatrixInverse[3].xyz; // world space
 		normal = normalize(fg_Normal);
 	}
 #ifdef USE_BUMP_MAP

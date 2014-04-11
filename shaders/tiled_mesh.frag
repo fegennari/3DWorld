@@ -73,7 +73,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 #endif
 		// apply underwater attenuation
 		// Note: ok if vertex is above the water, dist will come out as 0
-		vec4 eye    = gl_ModelViewMatrixInverse[3]; // world space
+		vec4 eye    = gl_ModelViewMatrixInverse[3]; // local tile space
 		float depth = water_plane_z - vertex.z;
 		float dist  = integrate_water_dist(vertex.xyz, eye.xyz, water_plane_z) + min(4.0*depth, integrate_water_dist(vertex.xyz, light.xyz, water_plane_z)); // clamp light pos dir
 		atten_color(color, dist*water_atten);

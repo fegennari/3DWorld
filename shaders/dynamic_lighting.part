@@ -1,4 +1,5 @@
 uniform vec3 scene_llc, scene_scale; // scene bounds (world space)
+uniform vec3 camera_pos; // world space
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
@@ -25,7 +26,7 @@ float get_line_intensity_at(in vec3 pos, in vec3 lpos1, in vec3 lpos2, in float 
 
 //float get_sphere_intensity_at(in vec3 pos, in vec3 lpos, in float sradius, in float radius) {}
 
-vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye, in vec3 diff_color) {
+vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color) {
 	vec3 color = vec3(0.0);
 #ifndef NO_DYNAMIC_LIGHTS
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
@@ -64,7 +65,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 eye, in vec3 diff_color)
 			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
 #endif
 		}
-		vec3 eye_pos   = eye - dlpos;
+		vec3 eye_pos   = camera_pos - dlpos;
 #ifdef USE_BUMP_MAP
 		vec3 lpos_eye  = (gl_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // convert from world to eye to tangent space
 		vec3 light_dir = normalize(lpos_eye - epos.xyz);

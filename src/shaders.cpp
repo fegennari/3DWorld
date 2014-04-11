@@ -319,6 +319,7 @@ void shader_t::setup_scene_bounds() const {
 	float const scene_zmin(get_zval_min()), scene_zmax(get_zval_max());
 	add_uniform_vector3d("scene_llc",   vector3d(-X_SCENE_SIZE, -Y_SCENE_SIZE, scene_zmin));
 	add_uniform_vector3d("scene_scale", vector3d(2.0*X_SCENE_SIZE, 2.0*Y_SCENE_SIZE, (scene_zmax - scene_zmin)));
+	add_uniform_vector3d("camera_pos",  get_camera_pos());
 }
 
 void shader_t::setup_fog_scale() const {

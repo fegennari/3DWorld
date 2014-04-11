@@ -9,9 +9,10 @@ uniform float cube_bb[6];
 uniform vec4 emission = vec4(0,0,0,1);
 
 // clipped eye position, clipped vertex position
-varying vec3 eye, lpos0, vposl; // world space
+varying vec3 lpos0, vposl; // world space
 //varying vec3 vpos, normal; // world space, come from indir_lighting.part.frag
 // epos, eye_norm, and tex_coord come from bump_map.frag
+// camera_pos comes from dynamic_lighting.part
 
 const float SMOKE_SCALE = 0.25;
 
@@ -66,7 +67,7 @@ void main()
 	float alpha = gl_Color.a;
 
 	if (do_lt_atten) {
-		vec3 v_inc = normalize(eye - vpos);
+		vec3 v_inc = normalize(camera_pos - vpos);
 
 		//if (light_atten > 0.0) { // account for light attenuating/reflecting semi-transparent materials
 			vec3 far_pt   = vpos - 100.0*v_inc; // move it far away
@@ -106,7 +107,7 @@ void main()
 		if (enable_light7) ADD_LIGHT(7);
 	}
 	if (enable_dlights) {
-		lit_color += add_dlights(vpos, normalize(normal_sign*normal), eye, gl_Color.rgb); // dynamic lighting
+		lit_color += add_dlights(vpos, normalize(normal_sign*normal), gl_Color.rgb); // dynamic lighting
 	}
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
@@ -123,7 +124,7 @@ void main()
 	color = apply_fog_epos(color, epos); // apply standard fog
 #endif
 #else
-	pt_pair res = clip_line(vpos, eye, smoke_bb);
+	pt_pair res = clip_line(vpos, camera_pos, smoke_bb);
 	vec3 eye_c  = res.v1;
 	vec3 vpos_c = res.v2;
 	
