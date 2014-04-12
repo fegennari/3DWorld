@@ -8,7 +8,7 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Non-sprite points
  - GL_QUADS
  - Replace GL matrix operations with GLM
-    - replace eye=gl_ModelViewMatrixInverse[3]
+    - world_space_mvm => fg_ViewMatrix
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)

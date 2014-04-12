@@ -9,7 +9,7 @@ void main()
 	vertex          = fg_Vertex.xyz;
 	vec4 epos       = gl_ModelViewMatrix * fg_Vertex;
 	world_space_pos = (inverse(world_space_mvm) * epos).xyz;
-	gl_Position     = fg_ftransform();
+	gl_Position     = gl_ProjectionMatrix * epos;
 	gl_FrontColor   = vec4(1.0); // always white - color will come from the texture
 }
 

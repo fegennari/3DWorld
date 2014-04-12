@@ -757,7 +757,7 @@ void fgLookAt(float eyex, float eyey, float eyez, float centerx, float centery, 
 void deform_obj(dwobject &obj, vector3d const &norm, vector3d const &v0);
 void update_deformation(dwobject &obj);
 
-//#define USE_FG_TRANSFORMS // TESTING
+#define USE_FG_TRANSFORMS // TESTING
 
 #ifdef USE_FG_TRANSFORMS
 #define glMatrixMode fgMatrixMode

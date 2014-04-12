@@ -3,11 +3,12 @@ attribute float point_size; // world space
 
 void main()
 {
-	gl_Position  = fg_ftransform();
 #ifdef CONSTANT_PT_SIZE
+	gl_Position  = fg_ftransform();
 	gl_PointSize = point_scale;
 #else
 	vec4 epos    = gl_ModelViewMatrix * fg_Vertex;
+	gl_Position  = gl_ProjectionMatrix * epos;
 	gl_PointSize = clamp(point_scale*point_size/length(epos.xyz), 1.0, 64.0);
 #endif
 

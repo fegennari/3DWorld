@@ -765,7 +765,7 @@ xform_matrix fgGetPJM();
 void check_mvm_update() {
 
 #ifdef USE_FG_TRANSFORMS
-	//if (!mvm_changed) return; // nothing to update
+	if (!mvm_changed) return; // nothing to update
 #endif
 	if (cur_shader) {cur_shader->upload_mvm();}
 	mvm_changed = 0;
@@ -809,7 +809,11 @@ void shader_t::upload_mvm() { // and everything that depends on the mvm
 	}
 	if (mvpm_loc >= 0) { // modelview-projection matrix
 		xform_matrix pjm;
+#ifdef USE_FG_TRANSFORMS
+		pjm = fgGetPJM();
+#else
 		pjm.assign_pj_from_gl();
+#endif
 		xform_matrix const mvp(pjm * mvm);
 		set_uniform_matrix_4x4(mvpm_loc, mvp.get_ptr(), 0);
 	}

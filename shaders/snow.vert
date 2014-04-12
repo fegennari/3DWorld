@@ -9,6 +9,6 @@ void main()
 	vec3 n = gl_NormalMatrix * fg_Normal;
 	normal = (no_normalize ? n : normalize(n));
 	dlpos  = fg_Vertex.xyz;
-	gl_Position = fg_ftransform();
+	gl_Position   = fg_ftransform();
 	gl_FrontColor = fg_Color;
 }

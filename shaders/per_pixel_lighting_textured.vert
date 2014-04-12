@@ -14,6 +14,6 @@ void main()
 	mat4 mvm_inv = inverse(world_space_mvm);
 	dlpos     = (mvm_inv * epos).xyz;
 	eye       = mvm_inv[3].xyz;
-	gl_Position = fg_ftransform();
+	gl_Position     = gl_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
 }

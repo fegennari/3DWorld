@@ -26,18 +26,19 @@ void main()
 	else {
 		tex_coord = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);
 	}
-	gl_Position   = fg_ftransform();
 	gl_FrontColor = fg_Color;
-	eye_norm      = normalize(gl_NormalMatrix * fg_Normal);
 	epos          = gl_ModelViewMatrix * fg_Vertex;
+	gl_Position   = gl_ProjectionMatrix * epos;
 
 	if (use_world_space_mvm) {
-		normal = normalize((transpose(world_space_mvm) * vec4(eye_norm, 1)).xyz);
-		vpos   = (inverse(world_space_mvm) * epos).xyz; // world space
+		eye_norm = normalize(gl_NormalMatrix * fg_Normal);
+		normal   = normalize((transpose(world_space_mvm) * vec4(eye_norm, 1)).xyz);
+		vpos     = (inverse(world_space_mvm) * epos).xyz; // world space
 	}
 	else {
-		vpos   = fg_Vertex.xyz + world_space_offset;
-		normal = normalize(fg_Normal);
+		eye_norm = normalize(mat3(gl_ModelViewMatrix) * fg_Normal); // Note: avoids the gl_NormalMatrix upload
+		vpos     = fg_Vertex.xyz + world_space_offset;
+		normal   = normalize(fg_Normal);
 	}
 #ifdef USE_BUMP_MAP
 	setup_tbn();
