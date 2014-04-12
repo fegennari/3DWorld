@@ -93,14 +93,6 @@ void fgMultMatrix(xform_matrix const &m) {
 xform_matrix fgGetMVM() {return mvm_stack.top();}
 xform_matrix fgGetPJM() {return pjm_stack.top();}
 
-#ifdef USE_FG_TRANSFORMS
-void xform_matrix::assign_mv_from_gl() {*this = fgGetMVM();}
-void xform_matrix::assign_pj_from_gl() {*this = fgGetPJM();}
-#else
-void xform_matrix::assign_mv_from_gl() {glGetFloatv(GL_MODELVIEW_MATRIX,  get_ptr());}
-void xform_matrix::assign_pj_from_gl() {glGetFloatv(GL_PROJECTION_MATRIX, get_ptr());}
-#endif
-
 
 // *** mesh2d ***
 
@@ -260,11 +252,7 @@ void apply_obj_mesh_roll(xform_matrix &matrix, shader_t &shader, point const &po
 		}
 	}
 	// TODO: set some shader uniform from this matrix
-#ifdef USE_FG_TRANSFORMS
 	fgMultMatrix(matrix);
-#else
-	glMultMatrixf(matrix.get_ptr());
-#endif
 }
 
 
@@ -307,23 +295,9 @@ void mirror_about_plane(vector3d const &norm, point const &pt) { // applies to G
 			              -2*norm.x*norm.y, 1-2*norm.y*norm.y,  -2*norm.y*norm.z, 0.0,
 		                  -2*norm.x*norm.z,  -2*norm.y*norm.z, 1-2*norm.z*norm.z, 0.0,
 		                   2*dp*norm.x,       2*dp*norm.y,       2*dp*norm.z,     1.0};
-#ifdef USE_FG_TRANSFORMS
 	fgMultMatrix(glm::make_mat4(m));
-#else
-	glMultMatrixf(m);
-#endif
 }
 
-
-// **************** INSTANCING ****************
-
-
-void instance_render_t::add_cur_inst() {
-
-	xform_matrix xf;
-	xf.assign_mv_from_gl();
-	add_inst(xf);
-}
 
 // Note: instance_render_t::draw_and_clear() is defined in shaders.cpp
 

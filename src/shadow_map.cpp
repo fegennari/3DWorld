@@ -117,7 +117,7 @@ void free_smap_vbo() {
 }
 
 
-void set_texture_matrix(xform_matrix &camera_mv_matrix, int light) {
+void set_texture_matrix(xform_matrix const &camera_mv_matrix, int light) {
 	
 	// This matrix transforms every coordinate {x,y,z} to {x,y,z}* 0.5 + 0.5 
 	// Moving from unit cube [-1,1] to [0,1]  
@@ -126,12 +126,8 @@ void set_texture_matrix(xform_matrix &camera_mv_matrix, int light) {
 		0.0, 0.5, 0.0, 0.0,
 		0.0, 0.0, 0.5, 0.0,
 		0.5, 0.5, 0.5, 1.0);
-	
-	xform_matrix modelView, projection;
-	modelView.assign_mv_from_gl();
-	projection.assign_pj_from_gl();
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
-	smap_data[light].texture_matrix = (bias * projection * modelView * glm::affineInverse((glm::mat4)camera_mv_matrix));
+	smap_data[light].texture_matrix = (bias * fgGetPJM() * fgGetMVM() * glm::affineInverse((glm::mat4)camera_mv_matrix));
 }
 
 
@@ -268,8 +264,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	}
 
 	// setup render state
-	xform_matrix camera_mv_matrix;
-	camera_mv_matrix.assign_mv_from_gl(); // cache the camera modelview matrix before we change it
+	xform_matrix const camera_mv_matrix(fgGetMVM()); // cache the camera modelview matrix before we change it
 	glViewport(0, 0, shadow_map_sz, shadow_map_sz);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glPushMatrix();

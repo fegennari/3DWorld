@@ -1130,9 +1130,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 
 	if (!pld.empty()) {
 		end_texture();
-		xform_matrix xf;
-		xf.assign_mv_from_gl();
-		s.set_attrib_float_array(loc, xf.get_ptr(), 16);
+		s.set_attrib_float_array(loc, fgGetMVM().get_ptr(), 16);
 		pld.draw();
 	}
 }

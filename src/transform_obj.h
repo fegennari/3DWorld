@@ -20,8 +20,6 @@ struct xform_matrix : public glm::mat4 {
 
 	xform_matrix() {}
 	xform_matrix(glm::mat4 const &m) : glm::mat4(m) {}
-	void assign_mv_from_gl();
-	void assign_pj_from_gl();
 	float *get_ptr();
 	float const *get_ptr() const;
 	void normalize();
@@ -66,6 +64,12 @@ public:
 };
 
 
+// function prototypes
+xform_matrix fgGetMVM();
+xform_matrix fgGetPJM();
+void apply_obj_mesh_roll(xform_matrix &matrix, shader_t &shader, point const &pos, point const &lpos, float radius, float a_add=0.0, float a_mult=1.0);
+
+
 class instance_render_t {
 
 	vector<xform_matrix> inst_xforms;
@@ -74,16 +78,12 @@ class instance_render_t {
 public:
 	instance_render_t(int loc_=-1) : loc(loc_) {}
 	void set_loc(int loc_) {loc = loc_;}
-	void add_cur_inst();
+	void add_cur_inst() {add_inst(fgGetMVM());}
 	void add_inst(xform_matrix const &xf) {inst_xforms.push_back(xf);}
 	void draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void *indices=NULL, unsigned first=0);
 	unsigned size () const {return inst_xforms.size();}
 	bool     empty() const {return inst_xforms.empty();}
 };
-
-
-// function prototypes
-void apply_obj_mesh_roll(xform_matrix &matrix, shader_t &shader, point const &pos, point const &lpos, float radius, float a_add=0.0, float a_mult=1.0);
 
 
 #endif

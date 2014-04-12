@@ -756,17 +756,11 @@ void shader_t::disable() {
 }
 
 
-// matrix setup/binding/updating
-xform_matrix fgGetMVM();
-xform_matrix fgGetPJM();
-
 // Note 1: We don't handle the case where the projection matrix is updated while a shader is active because this currently doesn't occur.
 // Note 2: We assume we only need to update the MVM in at most one active shader, and once updated we can clear the changed flag
 void check_mvm_update() {
 
-#ifdef USE_FG_TRANSFORMS
 	if (!mvm_changed) return; // nothing to update
-#endif
 	if (cur_shader) {cur_shader->upload_mvm();}
 	mvm_changed = 0;
 }
@@ -782,25 +776,13 @@ void shader_t::cache_matrix_locs() {
 
 void shader_t::upload_pjm() { // projection matrix
 
-	if (pm_loc < 0) return;
-	xform_matrix pjm;
-#ifdef USE_FG_TRANSFORMS
-	pjm = fgGetPJM();
-#else
-	pjm.assign_pj_from_gl();
-#endif
-	set_uniform_matrix_4x4(pm_loc, pjm.get_ptr(), 0); // transpose = 0
+	if (pm_loc >= 0) {set_uniform_matrix_4x4(pm_loc, fgGetPJM().get_ptr(), 0);} // transpose = 0
 }
 
 void shader_t::upload_mvm() { // and everything that depends on the mvm
 
 	if (mvm_loc < 0 && mvmi_loc < 0 && mvpm_loc < 0 && nm_loc < 0) return; // nothing to update
-	xform_matrix mvm;
-#ifdef USE_FG_TRANSFORMS
-	mvm = fgGetMVM();
-#else
-	mvm.assign_mv_from_gl();
-#endif
+	xform_matrix const mvm(fgGetMVM());
 	if (mvm_loc >= 0) {set_uniform_matrix_4x4(mvm_loc, mvm.get_ptr(), 0);} // modelview matrix
 
 	if (mvmi_loc >= 0) { // inverse modelview matrix
@@ -808,13 +790,7 @@ void shader_t::upload_mvm() { // and everything that depends on the mvm
 		set_uniform_matrix_4x4(mvmi_loc, mvmi.get_ptr(), 0);
 	}
 	if (mvpm_loc >= 0) { // modelview-projection matrix
-		xform_matrix pjm;
-#ifdef USE_FG_TRANSFORMS
-		pjm = fgGetPJM();
-#else
-		pjm.assign_pj_from_gl();
-#endif
-		xform_matrix const mvp(pjm * mvm);
+		xform_matrix const mvp(fgGetPJM() * mvm);
 		set_uniform_matrix_4x4(mvpm_loc, mvp.get_ptr(), 0);
 	}
 	if (nm_loc >= 0) { // normal matrix
@@ -917,9 +893,7 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 
 void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
 
-	xform_matrix m;
-	m.assign_mv_from_gl();
-	s.add_uniform_matrix_4x4(var_name, m.get_ptr(), 0);
+	s.add_uniform_matrix_4x4(var_name, fgGetMVM().get_ptr(), 0);
 }
 
 

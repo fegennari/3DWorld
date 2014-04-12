@@ -85,9 +85,7 @@ void gl_light_params_t::set_pos(point const &p, float w) {
 	//if (p == pos && w == pos_w) return 0; // already set to this value
 	pos   = p;
 	pos_w = w;
-	xform_matrix xf;
-	xf.assign_mv_from_gl();
-	glm::vec4 const v(xf * glm::vec4(p.x, p.y, p.z, w));
+	glm::vec4 const v(fgGetMVM() * glm::vec4(p.x, p.y, p.z, w));
 	eye_space_pos.assign(v.x, v.y, v.z); // v.w ignored?
 }
 

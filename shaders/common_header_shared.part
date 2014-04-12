@@ -1,4 +1,3 @@
-#if 1
 uniform mat4 fg_ModelViewMatrix;
 uniform mat4 fg_ModelViewMatrixInverse;
 uniform mat4 fg_ProjectionMatrix;
@@ -10,4 +9,3 @@ uniform mat3 fg_NormalMatrix;
 #define gl_ProjectionMatrix fg_ProjectionMatrix
 #define gl_ModelViewProjectionMatrix fg_ModelViewProjectionMatrix
 #define gl_NormalMatrix fg_NormalMatrix
-#endif
