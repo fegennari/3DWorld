@@ -518,8 +518,8 @@ void tree_data_t::gen_leaf_color() {
 inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const {
 
 	float const ilch(1.0 - leaf_color_coherence);
-	return colorRGB(color*(leaf_color.R + ilch*lred  ) + base_color.R*tree_color_coherence,
-		            color*(leaf_color.G + ilch*lgreen) + base_color.G*tree_color_coherence, 0.0);
+	return colorRGB(max(0.0f, (color*(leaf_color.R + ilch*lred  ) + base_color.R*tree_color_coherence)),
+		            max(0.0f, (color*(leaf_color.G + ilch*lgreen) + base_color.G*tree_color_coherence)), 0.0);
 }
 
 
@@ -665,7 +665,6 @@ bool tree::damage_leaf(unsigned i, float damage_done) {
 	vector<tree_leaf> &leaves(tdata().get_leaves());
 	assert(i < leaves.size());
 	float &lcolor(leaves[i].color);
-	colorRGB const black(0.0, 0.0, 0.0);
 
 	if (damage_done > 1.0 || (damage_done > 0.2 && lcolor == 0.0)) {
 		if (lcolor > 0.0) damage += damage_scale;
