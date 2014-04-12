@@ -1008,9 +1008,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 	float const lod_scale(GRASS_LOD_SCALE/get_scaled_tile_radius());
 	float const block_grass_thresh(grass_thresh + (SQRT2*radius)/grass_block_dim);
 	point const adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
-	glPushMatrix();
-	glTranslatef(llcx, llcy, 0.0);
-	check_mvm_update();
+	s.add_uniform_vector2d("xlate", vector2d(llcx, llcy));
 
 	for (unsigned y = 0; y < grass_block_dim; ++y) {
 		for (unsigned x = 0; x < grass_block_dim; ++x) {
@@ -1046,7 +1044,6 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 			v.clear();
 		}
 	}
-	glPopMatrix();
 }
 
 
