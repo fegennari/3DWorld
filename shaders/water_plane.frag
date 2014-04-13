@@ -41,7 +41,7 @@ void main()
 
 	if (add_noise) { // for rain
 		vec3 wave_n = get_wave_normal(fract(4.61*noise_time)*3.0*proj_pos.xy/proj_pos.w);
-		norm        = normalize(norm + 0.06*gl_NormalMatrix*wave_n);
+		norm        = normalize(norm + 0.06*fg_NormalMatrix*wave_n);
 		ripple     += 0.025*wave_n.xy;
 		vec2 wtc    = 20.0*tc2 + vec2(2.7*noise_time, 2.6*noise_time);
 		add_color  += vec3(1) * (1.0 - texture2D(noise_tex, wtc).r); // Note that the texture is white with blue dots
@@ -61,7 +61,7 @@ void main()
 			foam_amt = deep_wave_scale*norm_fa.w;
 		}
 #endif
-		vec3 wave_n_eye = gl_NormalMatrix * wave_n;
+		vec3 wave_n_eye = fg_NormalMatrix * wave_n;
 		if (reflections) {green_scale += 0.8*(1.0 - abs(dot(norm, normalize(wave_n_eye))));} // add green to sides of waves (though this increases shader time)
 		light_norm = normalize(norm + wave_n_eye);
 		norm       = normalize(norm + 0.1*wave_n_eye); // lower scale for fresnel term

@@ -515,7 +515,7 @@ inline colorRGBA blend_color(const colorRGBA &A, const colorRGBA &B, float mix, 
 
 
 inline void translate_to(point const &p) {
-	glTranslatef(p.x, p.y, p.z);
+	fgTranslate(p.x, p.y, p.z);
 }
 
 template<typename T> inline void global_translate(pointT<T> const &pos) {
@@ -523,19 +523,19 @@ template<typename T> inline void global_translate(pointT<T> const &pos) {
 }
 
 inline void rotate_about(float angle, vector3d const &v) {
-	glRotatef(angle, v.x, v.y, v.z);
+	fgRotate(angle, v.x, v.y, v.z);
 }
 
 inline void rotate_by_vector(vector3d const &dir, float vadd=0.0) {
-	glRotatef((-TO_DEG*safe_acosf(-dir.z) + vadd), -dir.y, dir.x, 0.0);
+	fgRotate((-TO_DEG*safe_acosf(-dir.z) + vadd), -dir.y, dir.x, 0.0);
 }
 
 inline void scale_by(vector3d const &scale) {
-	glScalef(scale.x, scale.y, scale.z);
+	fgScale(scale.x, scale.y, scale.z);
 }
 
 inline void uniform_scale(float scale) {
-	glScalef(scale, scale, scale);
+	fgScale(scale, scale, scale);
 }
 
 

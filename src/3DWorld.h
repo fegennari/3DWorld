@@ -146,8 +146,8 @@ unsigned const quad_to_tris_ixs[6] = {0,1,2, 0,2,3};
 #define UNROLL_3X(expr) {UNROLL_2X(expr) {unsigned const i_(2); expr}}
 #define UNROLL_4X(expr) {UNROLL_3X(expr) {unsigned const i_(3); expr}}
 
-
 enum {CAM_FILT_DAMAGE=0, CAM_FILT_FOG, CAM_FILT_BURN, CAMERA_FILT_BKG, CAM_FILT_UWATER, CAM_FILT_TELEPORT};
+enum {FG_PROJECTION=0, FG_MODELVIEW};
 
 
 template<typename T> struct point2d { // size = 8

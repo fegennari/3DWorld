@@ -23,7 +23,7 @@ void main()
 	float dp  = dot(rd_n, vd_n);
 	float s   = length(cross(vec3(rd_n, 0), vec3(vd_n, 0))) * ((cross(vdir, ref_dir).z < 0.0) ? -1.0 : 1.0);
 	mat3 mrot = mat3(dp, -s, 0.0,  s, dp, 0.0,  0.0, 0.0, 1.0);
-	normal    = normalize(gl_NormalMatrix * (mrot * normal)); // convert to eye space
+	normal    = normalize(fg_NormalMatrix * (mrot * normal)); // convert to eye space
 	
 	vec4 color  = vec4(0,0,0,1);
 	if (enable_light0) color.rgb += add_light_comp0(normal).rgb;

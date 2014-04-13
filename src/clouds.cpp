@@ -194,9 +194,9 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	glViewport(0, 0, xsize, ysize);
 	glClearColor(1.0, 1.0, 1.0, 1.0); // white
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
+	fgMatrixMode(FG_PROJECTION);
+	fgPushMatrix();
+	fgLoadIdentity();
 
 	// setup projection matrix
 	cube_t const bcube(get_bcube());
@@ -205,14 +205,14 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	frustum_z = z1 - scene_xy*(cloud_bot - z1)/(cloud_xy - scene_xy);
 	//pos_dir_up const pdu(get_pt_cube_frustum_pdu(get_camera_pos(), bcube, 1));
 	//pos_dir_up const pdu(all_zeros, plus_z, plus_x, tanf(angle)*SQRT2, sinf(angle), NEAR_CLIP, FAR_CLIP, 1.0);
-	//gluPerspective(2.0*angle/TO_RADIANS, 1.0, cloud_bot-frustum_z, cloud_top+(cloud_top - cloud_bot)-frustum_z);
-	gluPerspective(2.0*angle/TO_RADIANS, 1.0, NEAR_CLIP, FAR_CLIP);
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
+	//fgPerspective(2.0*angle/TO_RADIANS, 1.0, cloud_bot-frustum_z, cloud_top+(cloud_top - cloud_bot)-frustum_z);
+	fgPerspective(2.0*angle/TO_RADIANS, 1.0, NEAR_CLIP, FAR_CLIP);
+	fgMatrixMode(FG_MODELVIEW);
+	fgPushMatrix();
+	fgLoadIdentity();
 	vector3d const up_dir(plus_y);
 	point const origin(0.0, 0.0, frustum_z), center(0.0, 0.0, cloud_bot);
-	gluLookAt(origin.x, origin.y, origin.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
+	fgLookAt(origin.x, origin.y, origin.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
 
 	set_red_only(1);
 	point const orig_cpos(camera_pos);
@@ -234,10 +234,10 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	}
 
 	// reset state
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
+	fgMatrixMode(FG_PROJECTION);
+	fgPopMatrix();
+	fgMatrixMode(FG_MODELVIEW);
+	fgPopMatrix();
 	if (USE_CLOUD_FBO) disable_fbo();
 	set_standard_viewport();
 	if (!USE_CLOUD_FBO) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -521,7 +521,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 	if (!univ_sphere_vis(pos_, radius)) return;
 	float size_scale(1.0);
 	move_in_front_of_far_clip(pos_, camera, size_scale, (dist + radius), 1.5); // distance to furthest point
-	glPushMatrix();
+	fgPushMatrix();
 	global_translate(pos_);
 	uniform_scale(size_scale);
 	colorRGBA mod_color[3];
@@ -547,7 +547,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 	draw_quads();
 	disable_blend();
 	s.disable();
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 

@@ -5,7 +5,7 @@ uniform vec3 light_scale = vec3(1.0);
 uniform vec4 emission    = vec4(0,0,0,1);
 uniform vec3 sun_pos, ss_pos, rscale;
 uniform float sun_radius, ss_radius, ring_ri, ring_ro;
-uniform mat4 world_space_mvm;
+uniform mat4 fg_ViewMatrix;
 uniform sampler1D ring_tex;
 
 #ifdef GAS_GIANT
@@ -23,7 +23,7 @@ varying vec2 tc;
 
 void main()
 {
-	vec4 epos = gl_ModelViewMatrix * vec4(vertex, 1.0);
+	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	if (dot(normal, epos.xyz) > 0.0) discard; // back facing
 
 #ifdef GAS_GIANT
@@ -56,7 +56,7 @@ void main()
 			sscale *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, ss_pos, ss_radius);
 		}
 		if (has_rings) { // calculate shadows due to rings
-			vec3 sun_local = (gl_ModelViewMatrixInverse * (world_space_mvm * vec4(sun_pos, 1.0))).xyz;
+			vec3 sun_local = (fg_ModelViewMatrixInverse * (fg_ViewMatrix * vec4(sun_pos, 1.0))).xyz;
 			vec3 line_dir  = sun_local - vertex;
 			float dist     = -vertex.z/line_dir.z; // Note: ring normal is always in z
 

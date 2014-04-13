@@ -13,7 +13,7 @@ varying vec2 tc;
 
 float calc_light_scale(in vec3 vertex, in vec4 light_pos) {
 	if (!apply_cloud_shadows) {return 1.0;}
-	vec4 light = gl_ModelViewMatrixInverse * light_pos; // world space
+	vec4 light = fg_ModelViewMatrixInverse * light_pos; // world space
 	vec3 cpos  = vertex + cloud_offset;
 	float t    = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
 	return 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
@@ -27,7 +27,7 @@ void main()
 	float z_val = texture2D(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
 	float ascale= 1.0;
 #ifdef DEC_HEIGHT_WHEN_FAR
-	float dist  = length((gl_ModelViewMatrix * (vertex + vec4(xlate, z_val, 0))).xyz);
+	float dist  = length((fg_ModelViewMatrix * (vertex + vec4(xlate, z_val, 0))).xyz);
 	float zscale= 1.0 - clamp(dist_slope*(dist - dist_const), 0.0, 1.0);
 	vertex.z   *= zscale; // decrease height far away from camera
 	ascale      = min(1.0, 10.0*zscale);
@@ -36,8 +36,8 @@ void main()
 	vec2 tc2    = vec2(vertex.x*dx_inv, vertex.y*dy_inv); // same as (x2 - x1 - 1.0*DX_VAL)
 	if (enable_grass_wind) {vertex.xyz += get_grass_wind_delta(vertex.xyz, tc.s);}
 
-	vec4 epos   = gl_ModelViewMatrix  * (vertex + vec4(xlate, 0, 0));
-	gl_Position = gl_ProjectionMatrix * epos;
+	vec4 epos   = fg_ModelViewMatrix  * (vertex + vec4(xlate, 0, 0));
+	gl_Position = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
 	float grass_weight = texture2D(weight_tex, tc2).b;
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
@@ -49,7 +49,7 @@ void main()
 	float ambient_scale = 1.5*shadow_normal.z * (1.5 - 0.75*tc.s); // decreased ambient at base, increased ambient at tip
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
-	normal      = normalize(gl_NormalMatrix * normal); // eye space
+	normal      = normalize(fg_NormalMatrix * normal); // eye space
 	vec4 color  = vec4(0,0,0, fg_Color.a);
 	//if (grass_weight < noise_weight) {
 	if (enable_light0) {color.rgb += add_light_comp_pos_scaled0(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale).rgb;}

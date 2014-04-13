@@ -12,9 +12,9 @@ void main()
 {
 	tc          = fg_TexCoord;
 	vec4 vertex = vec4((vertex_offset_scale*vertex_offset + xlate), 0.0) + (vec4(scale, 1.0) * fg_Vertex);
-	vec4 epos   = gl_ModelViewMatrix * vertex;
-	gl_Position = gl_ProjectionMatrix * epos;
-	vec3 normal = normalize(gl_NormalMatrix * fg_Normal); // eye space
+	vec4 epos   = fg_ModelViewMatrix * vertex;
+	gl_Position = fg_ProjectionMatrix * epos;
+	vec3 normal = normalize(fg_NormalMatrix * fg_Normal); // eye space
 	gl_FogFragCoord = length(epos.xyz); // set standard fog coord
 	vec4 color  = vec4(emission.rgb, alpha);
 	if (enable_light0) color.rgb += add_light_comp0(normal).rgb;

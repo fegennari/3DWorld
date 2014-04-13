@@ -4,11 +4,11 @@ void main()
 {
 	tc          = get_grass_tc();
 	vec3 gwdelta= get_grass_wind_delta(fg_Vertex.xyz, tc.s);
-	vec3 n      = gl_NormalMatrix * normalize(normalize(fg_Normal) + gwdelta/height); // eye space (not normalized), height comes from wind.part
+	vec3 n      = fg_NormalMatrix * normalize(normalize(fg_Normal) + gwdelta/height); // eye space (not normalized), height comes from wind.part
 	vec3 normal = n*length(fg_Normal); // convert to original mag (for shadows)
 	vec4 vertex = fg_Vertex + vec4(gwdelta, 0.0);
-	vec4 epos   = gl_ModelViewMatrix  * vertex;
-	gl_Position = gl_ProjectionMatrix * epos;
+	vec4 epos   = fg_ModelViewMatrix  * vertex;
+	gl_Position = fg_ProjectionMatrix * epos;
 	
 	// calculate lighting: L0-L1 is directional, L2-L7 is point
 	vec4 color = vec4(0,0,0,1);

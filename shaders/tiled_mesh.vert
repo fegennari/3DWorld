@@ -12,7 +12,7 @@ void main()
 	tc2       = vec2(dot(fg_Vertex, texgen2_s), dot(fg_Vertex, texgen2_t));
 	vertex    = fg_Vertex;
 	vertex.z += htex_scale*texture2D(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
-	vec4 epos = gl_ModelViewMatrix * vertex;
-	gl_Position = gl_ProjectionMatrix * epos;
-	set_fog_coord(vertex, gl_ModelViewMatrixInverse[3].xyz);
+	vec4 epos = fg_ModelViewMatrix * vertex;
+	gl_Position = fg_ProjectionMatrix * epos;
+	set_fog_coord(vertex, fg_ModelViewMatrixInverse[3].xyz);
 } 

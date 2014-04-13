@@ -11,7 +11,7 @@ void main()
 	vec4 texel = texture2D(tex0, tc);
 	if (texel.a <= min_alpha) discard;
 	
-	vec4 epos    = gl_ModelViewMatrix * vec4(dlpos, 1.0);
+	vec4 epos    = fg_ModelViewMatrix * vec4(dlpos, 1.0);
 	vec3 normal2 = (no_normalize ? normal : normalize(normal)); // renormalize
 	vec3 color   = emission.rgb;
 	if (enable_dlights) color += add_dlights(dlpos, normalize(dl_normal), vec3(1.0)).rgb; // dynamic lighting

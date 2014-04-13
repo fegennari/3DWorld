@@ -217,13 +217,13 @@ void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsi
 
 	// setup matrices
 	glViewport(0, 0, nx*tsize, ny*tsize);
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	glOrtho(-xsize, xsize, -ysize, ysize, -(xsize + ysize), (xsize + ysize));
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
+	fgMatrixMode(FG_PROJECTION);
+	fgPushMatrix();
+	fgLoadIdentity();
+	fgOrtho(-xsize, xsize, -ysize, ysize, -(xsize + ysize), (xsize + ysize));
+	fgMatrixMode(FG_MODELVIEW);
+	fgPushMatrix();
+	fgLoadIdentity();
 	rotate_from_v2v(-plus_z, view_dir);
 	translate_to(-center);
 }
@@ -231,10 +231,10 @@ void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsi
 
 void render_to_texture_t::post_render() {
 
-	glPopMatrix();
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
+	fgPopMatrix();
+	fgMatrixMode(FG_PROJECTION);
+	fgPopMatrix();
+	fgMatrixMode(FG_MODELVIEW);
 	//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	disable_fbo();
 	set_standard_viewport();

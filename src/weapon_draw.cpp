@@ -290,7 +290,7 @@ void update_weapon_cobjs() { // and update cblade and lighting
 
 inline void rotate_to_dir(vector3d const &dir, float vadd, float vmult) {
 
-	glRotatef(TO_DEG*vmult*atan2(dir.y, dir.x) + vadd, 0.0, 0.0, 1.0);
+	fgRotate(TO_DEG*vmult*atan2(dir.y, dir.x) + vadd, 0.0, 0.0, 1.0);
 }
 
 
@@ -314,7 +314,7 @@ void rotate_into_camera_dir(point const &pos, vector3d const &dir) {
 
 void draw_chaingun_section(float tx, float ty, float radius, int ndiv) {
 
-	glTranslatef(tx, ty, 0.0);
+	fgTranslate(tx, ty, 0.0);
 	draw_cylinder(0.11, radius, radius, 2*ndiv);
 	draw_circle_normal(0.0, radius, ndiv, 1, 0.08);
 }
@@ -337,7 +337,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	//glDisable(GL_DEPTH_TEST);
 	enable_blend(); // not always necessary
 	set_fill_mode();
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(scale);
 	rotate_by_vector(dir);
@@ -373,7 +373,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) radius *= 1.2;
 			translate_to(v_trans);
 			if (do_texture) rotate_to_dir(dir, 90.0, 1.0);  // cancel out texture rotation with camera
-			if (do_texture) glRotatef(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
+			if (do_texture) fgRotate(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
 			shader.set_cur_color(colorRGBA(object_types[oid].color, alpha));
 			shader.set_specular(0.8, 40.0);
 			draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);
@@ -384,7 +384,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			radius = object_types[oid].radius;
 			translate_to(v_trans);
 			rotate_to_dir(dir, 90.0, 1.0);  // cancel out texture rotation with camera
-			glRotatef(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
+			fgRotate(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
 			shader.set_cur_color(colorRGBA(object_types[oid].color, alpha));
 			shader.set_specular(0.8, 40.0);
 			draw_star(zero_vector, plus_z, zero_vector, radius, 0.0, 0); // Note: +z may not be the correct normal?
@@ -404,19 +404,19 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				radius = 0.032;
 				translate_to(v_trans);
 				rotate_to_dir(dir, 90.0, 1.0); // cancel out texture rotation with camera
-				glPushMatrix();
-				glTranslatef(0.0, -0.009, -0.025);
-				glScalef(1.0, 1.0, -1.0);
+				fgPushMatrix();
+				fgTranslate(0.0, -0.009, -0.025);
+				fgScale(1.0, 1.0, -1.0);
 				int const ndiv2(max(4, 2*(is_camera ? N_SPHERE_DIV : ndiv)/3));
 				float const len(dpos + radius), dv(4.0*radius/ndiv2);
 				assert(dv > 0.0);
 				shader.set_cur_color(colorRGBA(0.49, 0.51, 0.53, alpha));
 				draw_fast_cylinder(point(0.0, 0.0, len), all_zeros, 0.0025, 0.0025, ndiv2, 0, 0);
-				glPopMatrix();
-				glRotatef(90.0, 1.0, 0.0, 0.0); // into horizontal plane
-				glTranslatef(0.0, -0.028, 0.01);
-				if (fframe > 0 && !(wmode&1)) glRotatef((540.0*fframe)/delay, 0.0, 1.0, 0.0);
-				glRotatef(angle, 0.0, 0.0, 1.0);
+				fgPopMatrix();
+				fgRotate(90.0, 1.0, 0.0, 0.0); // into horizontal plane
+				fgTranslate(0.0, -0.028, 0.01);
+				if (fframe > 0 && !(wmode&1)) fgRotate((540.0*fframe)/delay, 0.0, 1.0, 0.0);
+				fgRotate(angle, 0.0, 0.0, 1.0);
 				shader.set_cur_color(colorRGBA(WHITE, alpha));
 				shader.add_uniform_float("min_alpha", 0.95*alpha);
 				shader.set_specular(0.9, 90.0);
@@ -437,14 +437,14 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(0.15, 0.15, 0.15, alpha));
 			shader.set_specular(0.9, 50.0);
 			rot_angle = max(0.0f, 10.0f*(fire_val - 0.7f)); // recoil
-			if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0); // could probably use rotate_into_plus_z()
-			glTranslatef(tx, ty, 0.0);
+			if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0); // could probably use rotate_into_plus_z()
+			fgTranslate(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0);
 			draw_cylinder(6.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 5.0*radius);
 			// draw the sight
-			glTranslatef(0.8*radius, 0.0, 6.5*radius);
-			glRotatef(90.0, 0.0, 1.0, 0.0);
+			fgTranslate(0.8*radius, 0.0, 6.5*radius);
+			fgRotate(90.0, 0.0, 1.0, 0.0);
 			shader.set_cur_color(colorRGBA((wmode&1) ? BLACK : colorRGBA(0.9, 0.65, 0.05), alpha)); // black/gold
 			draw_cylinder(0.4*radius, 0.15*radius, 0.0, ndiv);
 			shader.set_specular(0.0, 0.0);
@@ -455,8 +455,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(0.05, 0.05, 0.05, alpha));
 			shader.set_specular(0.7, 30.0);
 			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f));
-			if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
-			glTranslatef(tx, ty, 0.0);
+			if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
+			fgTranslate(tx, ty, 0.0);
 			draw_cylinder(5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 4.0*radius);
 			shader.set_specular(0.0, 0.0);
@@ -467,8 +467,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(BLACK, alpha));
 			shader.set_specular(0.8, 10.0);
 			rot_angle = max(0.0f, 2.0f*(fire_val - 0.7f));
-			if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
-			glTranslatef(0.0, 0.0, 0.15);
+			if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
+			fgTranslate(0.0, 0.0, 0.15);
 
 			if (shooter != NO_SOURCE) {
 				draw_circle_normal(0.017, 0.0175, 2*ndiv, 1);
@@ -478,23 +478,23 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			}
 			shader.set_cur_color(colorRGBA(RED, alpha));
 			draw_circle_normal(0.004, 0.0043, ndiv, 1);
-			glTranslatef(tx, ty, -0.15);
+			fgTranslate(tx, ty, -0.15);
 			shader.set_cur_color(colorRGBA(GOLD, alpha));
 			draw_circle_normal(0.0075, 0.009, ndiv, 1, 0.15);
 			shader.set_cur_color(colorRGBA(BLACK, alpha));
-			glPushMatrix();
+			fgPushMatrix();
 			draw_cylinder(0.15, 0.005, 0.005, 2*ndiv);
-			glTranslatef(0.0, 0.0, 0.15);
+			fgTranslate(0.0, 0.0, 0.15);
 			draw_cylinder(0.07, 0.005, 0.0, 2*ndiv);
 			//draw_cylinder(0.18, radius, radius, 2*ndiv);
 			{
 				colorRGBA color(0.8, 0.6, 1.0, 0.5*alpha);
 				if (p_loaded) {set_emissive_only(color, shader);} else {shader.set_cur_color(color);} // emissive when loaded
-				glScalef(1.0, 1.0, 0.2);
+				fgScale(1.0, 1.0, 0.2);
 				for (unsigned i = 0; i < 3; ++i) {draw_sphere_vbo_back_to_front(point(0.0, 0.0, -0.25+0.08*i), 0.01, ndiv, 0);}
 				if (p_loaded) {shader.clear_color_e();}
 			}
-			glPopMatrix();
+			fgPopMatrix();
 			shader.set_specular(0.0, 0.0);
 			break;
 
@@ -504,7 +504,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				shader.set_cur_color(colorRGBA(0.04, 0.04, 0.04, alpha));
 				shader.set_specular(0.8, 50.0);
 				rot_angle = max(0.0, 1.0*fire_val);
-				if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
+				if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 				draw_cylinder(point(0.6*tx, 0.6*ty, 0.076), 0.064,     radius,     radius, 2*ndiv, 1);
 				draw_cylinder(point(0.6*tx, 0.6*ty, 0.000), 0.076, 2.8*radius, 2.0*radius, 2*ndiv, 1);
 				draw_cylinder(point(0.6*tx, 0.6*ty, 0.136), 0.012, 1.5*radius, 1.5*radius, 2*ndiv, 1);
@@ -514,19 +514,19 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				float const rdx(1.4*radius*dir.x/rxy), rdy(1.4*radius*dir.y/rxy);
 				shader.set_cur_color(colorRGBA(0.12, 0.12, 0.12, alpha));
 				shader.set_specular(0.6, 30.0);
-				glTranslatef(0.6*tx, 0.6*ty, 0.0);
-				glPushMatrix();
-				glRotatef(15.0*rot_counter, 0.0, 0.0, 1.0);
+				fgTranslate(0.6*tx, 0.6*ty, 0.0);
+				fgPushMatrix();
+				fgRotate(15.0*rot_counter, 0.0, 0.0, 1.0);
 				draw_chaingun_section(rdx, rdy, radius, ndiv);
 				draw_chaingun_section(-2.0*rdx, -2.0*rdy, radius, ndiv);
-				glTranslatef(rdx, rdy, 0.0);
-				glRotatef(90.0, 0.0, 0.0, 1.0);
+				fgTranslate(rdx, rdy, 0.0);
+				fgRotate(90.0, 0.0, 0.0, 1.0);
 				draw_chaingun_section(rdx, rdy, radius, ndiv);
 				draw_chaingun_section(-2.0*rdx, -2.0*rdy, radius, ndiv);
-				glTranslatef(rdx, rdy, 0.08);
+				fgTranslate(rdx, rdy, 0.08);
 				shader.set_cur_color(colorRGBA(0.3, 0.3, 0.3, alpha));
 				draw_cylinder(0.004, 2.45*radius, 2.45*radius, 2*ndiv, 1); // outer band
-				glPopMatrix();
+				fgPopMatrix();
 			}
 			shader.set_specular(0.0, 0.0);
 			break;
@@ -538,9 +538,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				shader.set_cur_color(colorRGBA(0.2, 0.2, 0.2, alpha));
 				shader.set_specular(0.6, 30.0);
 				rot_angle = max(0.0, 8.0*fire_val);
-				if (rot_angle != 0.0) glRotatef(rot_angle, -dir.y, dir.x, 0.0);
-				glTranslatef(0.6*tx, 0.6*ty, 0.0);
-				glRotatef(90.0, 0.0, 0.0, 1.0);
+				if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
+				fgTranslate(0.6*tx, 0.6*ty, 0.0);
+				fgRotate(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(rdx, rdy, 0.0), point(-1.9*rdx, -1.9*rdy, 0.0)};
 				
 				for (unsigned i = 0; i < 2; ++i) {
@@ -556,10 +556,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			radius = 0.004;
 			shader.set_cur_color(colorRGBA(LT_BROWN, alpha));
 			select_texture(is_camera ? PLAYER_BBB_TEX : WOOD_TEX); // customize the player's baseball bat
-			glRotatef(45.0, -dir.y, dir.x, 0.0);
-			glTranslatef(tx, ty, 0.0);
+			fgRotate(45.0, -dir.y, dir.x, 0.0);
+			fgTranslate(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera
-			glRotatef(get_bbbat_angle(fire_val), (left_handed ? 0.5 : -0.5), 0.5, 0.0);
+			fgRotate(get_bbbat_angle(fire_val), (left_handed ? 0.5 : -0.5), 0.5, 0.0);
 			draw_cylinder(16.0*radius, radius, 1.2*radius, ndiv);
 			draw_sphere_vbo(point(0.0, 0.0, 16.0*radius), 1.2*radius, ndiv, 1);
 			break;
@@ -567,18 +567,18 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_LASER:
 			if (shooter == CAMERA_ID && fired) {
 				//beams.push_back(beam3d(0, shooter, (pos0 + dir*0.08), (pos0 + dir*1.08), RED)); // should probably use this instead
-				glPushMatrix();
+				fgPushMatrix();
 				set_emissive_only(RED, shader);
-				glTranslatef(0.0, 0.0, 0.148);
-				glRotatef(30.0, -dir.y, dir.x, 0.0);
-				glTranslatef(tx, ty, 0.0);
+				fgTranslate(0.0, 0.0, 0.148);
+				fgRotate(30.0, -dir.y, dir.x, 0.0);
+				fgTranslate(tx, ty, 0.0);
 				draw_cylinder(0.103, 0.0007, 0.0007, ndiv);
 				shader.clear_color_e();
-				glPopMatrix();
+				fgPopMatrix();
 			}
 			shader.set_cur_color(colorRGBA(0.45, 0.45, 0.45, alpha));
 			shader.set_specular(0.8, 50.0);
-			glTranslatef(tx, ty, 0.04);
+			fgTranslate(tx, ty, 0.04);
 			draw_cylinder(0.16, 0.006, 0.0015, 2*ndiv);
 			draw_sphere_vbo(point(0.0, 0.0, 0.0), 0.006, ndiv, 0);
 			shader.set_specular(0.0, 1.0);
@@ -588,7 +588,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			radius = 0.14*weapons[W_GASSER].blast_radius;
 			shader.set_cur_color(colorRGBA(OLIVE*0.7, alpha));
 			shader.set_specular(0.7, 30.0);
-			glTranslatef(tx, ty, 0.0);
+			fgTranslate(tx, ty, 0.0);
 			draw_cylinder(16.0*radius, radius, radius, 2*ndiv);
 			draw_circle_normal(0.0, radius, ndiv, 1, 8.0*radius);
 			shader.set_specular(0.0, 0.0);
@@ -603,7 +603,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		switch (wid) {
 		case W_PLASMA:
 			if (p_loaded && shooter != NO_SOURCE) {
-				glTranslatef(tx, ty, 0.0);
+				fgTranslate(tx, ty, 0.0);
 				rotate_to_dir(dir, 0.0, 1.0); // cancel out texture rotation with camera
 				draw_plasmaball(pos, shooter, shader);
 			}
@@ -613,7 +613,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			if (just_fired) {
 				float const size(((wmode&1) == 0) ? 0.02 : 0.0272);
 				set_emissive_only(ORANGE, shader);
-				glTranslatef(0.6*tx, 0.6*ty, (((wmode&1) == 0) ? 0.15 : 0.12));
+				fgTranslate(0.6*tx, 0.6*ty, (((wmode&1) == 0) ? 0.15 : 0.12));
 				if (!is_camera) rotate_into_camera_dir(pos0, dir); // pos0 is approximate
 				set_additive_blend_mode();
 				select_texture(FLARE1_TEX);
@@ -629,17 +629,17 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
 				set_emissive_only(ORANGE, shader);
 				set_additive_blend_mode();
-				glTranslatef(0.6*tx, 0.6*ty, 0.0);
-				glRotatef(90.0, 0.0, 0.0, 1.0);
+				fgTranslate(0.6*tx, 0.6*ty, 0.0);
+				fgRotate(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(-0.9*rdx, -0.9*rdy, 0.124), point(1.9*rdx, 1.9*rdy, -0.002)};
 				select_texture(FLARE2_TEX);
 				
 				for (unsigned i = 0; i < 2; ++i) {
 					translate_to(translates[i]);
-					glPushMatrix();
+					fgPushMatrix();
 					if (!is_camera) {rotate_into_camera_dir(pos0, dir);} // pos0 is approximate
 					draw_tquad(8.0*radius, 8.0*radius, 0.0); // can't rotate towards camera, already rotated
-					glPopMatrix();
+					fgPopMatrix();
 				}
 				set_std_blend_mode();
 				shader.clear_color_e();
@@ -648,7 +648,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		}
 	}
 	select_texture(WHITE_TEX);
-	glPopMatrix();
+	fgPopMatrix();
 	disable_blend();
 	//glEnable(GL_DEPTH_TEST);
 }
@@ -864,7 +864,7 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 	if (in_zoom) {
 		shader_t s;
 		s.begin_color_only_shader(color);
-		glScalef(2.0, 2.0, 1.0);
+		fgScale(2.0, 2.0, 1.0);
 		vert_wrap_t verts[8];
 		for (unsigned i = 0; i < 8; ++i) {verts[i] = point(xy[i], xy[(i+4)&7], zval);}
 		draw_verts(verts, 8, GL_LINES);
@@ -922,10 +922,10 @@ void teleporter::draw(shader_t &s) const {
 		s.add_uniform_float("radius", draw_radius);
 		s.add_uniform_float("offset", (100.0*pos.x + 0.001*tfticks)); // used as a hash
 		s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
-		glPushMatrix();
+		fgPushMatrix();
 		translate_to(pos);
 		draw_quads();
-		glPopMatrix();
+		fgPopMatrix();
 
 		if (use_scale > 0.9) {
 			shader_t cs;

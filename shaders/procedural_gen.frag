@@ -27,7 +27,7 @@ void main()
 	float alpha = gl_Color.a;
 	vec3 lit_color = vec3(0.0);
 	add_indir_lighting(lit_color);
-	vec4 epos = gl_ModelViewMatrix * vec4(vpos, 1.0);
+	vec4 epos = fg_ModelViewMatrix * vec4(vpos, 1.0);
 	
 	// directional light sources with no attenuation (Note: could add other lights later)
 	if (enable_light0)  lit_color += add_light_comp_pos_smap_light0(normalize(eye_norm), epos).rgb;

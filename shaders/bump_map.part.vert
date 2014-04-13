@@ -9,7 +9,7 @@ varying vec4 tangent_v;
 
 void setup_tbn() {
 	// Building the matrix Eye Space -> Tangent Space
-	tangent_v = vec4(normalize(gl_NormalMatrix * tangent.xyz), tangent.w);
+	tangent_v = vec4(normalize(fg_NormalMatrix * tangent.xyz), tangent.w);
 }
 
 #else

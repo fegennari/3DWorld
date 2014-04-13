@@ -120,7 +120,7 @@ void do_look_at() {
 	if (fabs(camera_shake) < 0.1) camera_shake = 0.0;
 	assert(!dist_less_than(eye, center, TOLERANCE));
 	assert(up_vector != zero_vector);
-	gluLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
+	fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 }
 
 
@@ -273,7 +273,7 @@ float get_framerate(int &timer_b) {
 void final_draw(float framerate) {
 
 	fog_enabled = 0;
-	glLoadIdentity();
+	fgLoadIdentity();
 	draw_camera_filters(cfilters);
 	draw_frame_rate(framerate);
 	show_other_messages();
@@ -473,7 +473,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	do_look_at();
 
 	// transform universe coordinate system into current mesh coordinate system
-	glPushMatrix();
+	fgPushMatrix();
 	point camera_r(camera);
 	rotate_from_v2v(new_sp, old_sp);
 	rotate_vector3d_by_vr(new_sp, old_sp, camera_r);
@@ -500,7 +500,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	no_asteroid_dust = 0;
 	if (TIMETEST) PRINT_TIME("0.2");
 	camera_pos = camera_pos_orig;
-	glPopMatrix(); // undo universe transform
+	fgPopMatrix(); // undo universe transform
 
 	// setup sun light source
 	float const sun_intensity(max(0.25f, min(4.0f, 1000.0f*univ_sun_rad/sun_pos.mag())));
@@ -1029,8 +1029,8 @@ void draw_transparent(bool above_water) {
 
 void apply_z_mirror(float zval) {
 
-	glTranslatef(0.0, 0.0, 2*zval); // translate to zval and back
-	glScalef(1.0, 1.0, -1.0); // scale in z
+	fgTranslate(0.0, 0.0, 2*zval); // translate to zval and back
+	fgScale(1.0, 1.0, -1.0); // scale in z
 	//mirror_about_plane(plus_z, point(0.0, 0.0, zval));
 }
 
@@ -1053,14 +1053,14 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	glViewport(0, 0, xsize, ysize);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	if (combined_gu && !is_cloudy) {draw_universe_bkg(0.0, 1);} // infinite universe as background
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
+	fgMatrixMode(FG_PROJECTION);
+	fgPushMatrix();
 	set_perspective(PERSP_ANGLE, 1.0);
 	do_look_at();
 
 	// setup mirror transform
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
+	fgMatrixMode(FG_MODELVIEW);
+	fgPushMatrix();
 	apply_z_mirror(water_plane_z);
 	camera_pdu = refl_camera_pdu; // reset reflected PDU
 
@@ -1072,7 +1072,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 	draw_cloud_planes(zmin, 1, 1, 0); // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	if (get_camera_pos().z <= get_tt_cloud_level()) {draw_tiled_terrain(1);} // camera is below the clouds
-	glPopMatrix(); // end mirror transform
+	fgPopMatrix(); // end mirror transform
 
 	// render reflection to texture
 	bind_2d_texture(tid);
@@ -1082,9 +1082,9 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 
 	// reset state
 	camera_pdu = old_camera_pdu; // restore camera_pdu
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
+	fgMatrixMode(FG_PROJECTION);
+	fgPopMatrix();
+	fgMatrixMode(FG_MODELVIEW);
 	set_standard_viewport();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	//PRINT_TIME("Create Reflection Texture");

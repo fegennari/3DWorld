@@ -547,7 +547,7 @@ public:
 			return;
 		}
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
-		glPushMatrix();
+		fgPushMatrix();
 		global_translate(pos);
 		if (rot_ang != 0.0 && dscale > 2.0) {rotate_about(rot_ang, rot_axis);}
 		scale_by(scale);
@@ -557,7 +557,7 @@ public:
 			uobj_draw_data ddata(asteroids[ix], &s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
 			asteroids[ix]->draw_with_texture(ddata, -1, 1);
 		}
-		glPopMatrix();
+		fgPopMatrix();
 	}
 	void destroy_inst(unsigned ix, point const &pos, vector3d const &scale) {
 		get_asteroid(ix)->gen_fragments(pos, get_eq_vol_scale(scale));
@@ -658,13 +658,13 @@ public:
 		if ((distance_to_camera(spos) - bradius) > 0.8) return 0; // distance/size culling
 		
 		create_vbo_and_upload(vbo, pts); // non-const due to this call
-		glPushMatrix();
+		fgPushMatrix();
 		global_translate(center);
 		rotate_into_plus_z(rot_axis);
 		if (rot_degrees != 0.0) {rotate_about(rot_degrees, plus_z);}
 		scale_by(size);
 		draw_vbo();
-		glPopMatrix();
+		fgPopMatrix();
 		return 1;
 	}
 };
@@ -835,12 +835,12 @@ void uasteroid_belt::draw_bounding_torus(point const &pos_, colorRGBA const &col
 	shader_t s;
 	s.begin_color_only_shader(color);
 	enable_blend();
-	glPushMatrix();
+	fgPushMatrix();
 	global_translate(pos_ + pos);
 	rotate_into_plus_z(orbital_plane_normal);
 	scale_by(scale);
 	draw_torus(inner_radius, outer_radius, 32, 32);
-	glPopMatrix();
+	fgPopMatrix();
 	disable_blend();
 	s.end_shader();
 }
@@ -1098,7 +1098,7 @@ void uasteroid_cont::upload_shader_casters(shader_t &s) const {
 	s.add_uniform_int("num_shadow_casters", shadow_casters.size());
 	s.add_uniform_vector3d("sun_pos", make_pt_global(sun_pos_radius.pos));
 	s.add_uniform_float("sun_radius", sun_pos_radius.radius);
-	upload_mvm_to_shader(s, "world_space_mvm");
+	upload_mvm_to_shader(s, "fg_ViewMatrix");
 }
 
 
@@ -1414,12 +1414,12 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 	ensure_asteroid_models();
 
 	for (unsigned i = 0; i < 2; ++i) { // mixed rock and ice
-		glPushMatrix();
+		fgPushMatrix();
 		ddata.color_a = (i ? colorRGBA(2.0, 1.2, 1.0, 1.0) : WHITE); // less blue for ice
 		if (i == 1) {ddata.set_uobj_specular(0.8, 50.0);} // not sure if this actually works
 		asteroid_model_gen.get_asteroid((inst_ids[i] + i) % NUM_AST_MODELS)->draw_with_texture(ddata, comet_tids[i], 1);
 		if (i == 1) {ddata.end_specular();}
-		glPopMatrix();
+		fgPopMatrix();
 	}
 	end_texture();
 

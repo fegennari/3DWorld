@@ -27,7 +27,7 @@ float get_custom_fog_scale(in float vert_z) {
 //fog *= 1.0 + 10.0*get_nonuniform_fog_scale(vert_z, eye_z, water_plane_z, water_plane_z+2.0, 1.0); // low fog in valleys
 
 float get_custom_fog_scale_epos(in vec4 epos) {
-	return get_custom_fog_scale((gl_ModelViewMatrixInverse * epos).z);
+	return get_custom_fog_scale((fg_ModelViewMatrixInverse * epos).z);
 }
 
 #else

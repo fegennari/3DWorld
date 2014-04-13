@@ -2665,8 +2665,8 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			draw_bounding_volume(ddata.ndiv);
 		}
 		if (SHOW_SHIELDS && show_shields()) { // draw shields if recently hit
-			glPopMatrix();
-			glPushMatrix();
+			fgPopMatrix();
+			fgPushMatrix();
 			set_additive_blend_mode();
 			glDepthFunc(GL_LEQUAL);
 			//ddata.shader.add_uniform_float("min_alpha", -1.0); // FIXME: disable alpha testing to avoid artifacts at the shields boundary?

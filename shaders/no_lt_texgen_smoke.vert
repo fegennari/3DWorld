@@ -1,5 +1,5 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-uniform mat4 world_space_mvm;
+uniform mat4 fg_ViewMatrix;
 uniform float tex_scale_s  = 1.0;
 uniform float tex_scale_t  = 1.0;
 uniform vec3 world_space_offset = vec3(0.0);
@@ -27,16 +27,16 @@ void main()
 		tex_coord = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);
 	}
 	gl_FrontColor = fg_Color;
-	epos          = gl_ModelViewMatrix * fg_Vertex;
-	gl_Position   = gl_ProjectionMatrix * epos;
+	epos          = fg_ModelViewMatrix * fg_Vertex;
+	gl_Position   = fg_ProjectionMatrix * epos;
 
-	if (use_world_space_mvm) {
-		eye_norm = normalize(gl_NormalMatrix * fg_Normal);
-		normal   = normalize((transpose(world_space_mvm) * vec4(eye_norm, 1)).xyz);
-		vpos     = (inverse(world_space_mvm) * epos).xyz; // world space
+	if (use_fg_ViewMatrix) {
+		eye_norm = normalize(fg_NormalMatrix * fg_Normal);
+		normal   = normalize((transpose(fg_ViewMatrix) * vec4(eye_norm, 1)).xyz);
+		vpos     = (inverse(fg_ViewMatrix) * epos).xyz; // world space
 	}
 	else {
-		eye_norm = normalize(mat3(gl_ModelViewMatrix) * fg_Normal); // Note: avoids the gl_NormalMatrix upload
+		eye_norm = normalize(mat3(fg_ModelViewMatrix) * fg_Normal); // Note: avoids the fg_NormalMatrix upload
 		vpos     = fg_Vertex.xyz + world_space_offset;
 		normal   = normalize(fg_Normal);
 	}

@@ -285,7 +285,7 @@ void draw_blasts() {
 					//glEnable(GL_CULL_FACE);
 				}
 				s.add_uniform_float("min_alpha", 0.4*(1.0 - timescale));
-				glPushMatrix();
+				fgPushMatrix();
 				global_translate(br.pos);
 				rotate_about(90.0*timescale, br.dir);
 				s.set_cur_color(br.cur_color);
@@ -294,7 +294,7 @@ void draw_blasts() {
 				uniform_scale(br.cur_size);
 				draw_sphere_vbo_raw(ndiv, 1);
 				//draw_sphere_vbo_back_to_front(all_zeros, br.cur_size, ndiv, 1);
-				glPopMatrix();
+				fgPopMatrix();
 				if (end_type) {/*glEnable(GL_CULL_FACE);*/ s.add_uniform_float("min_alpha", 0.0);}
 			}
 			break;

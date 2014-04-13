@@ -14,10 +14,10 @@ void main()
 	vertex.xyz += xlate;
 #endif
 	world_space_zval = vertex.z;
-	vec4 epos        = gl_ModelViewMatrix  * vertex;
-	gl_Position      = gl_ProjectionMatrix * epos;
+	vec4 epos        = fg_ModelViewMatrix  * vertex;
+	gl_Position      = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord  = length(epos.xyz); // set standard fog coord
-	vec3 normal      = normalize(gl_NormalMatrix * fg_Normal);
+	vec3 normal      = normalize(fg_NormalMatrix * fg_Normal);
 	//normal          *= normal.z/abs(normal.z); // two-sided lighting
 	vec3 color       = vec3(0.0);
 	if (enable_light0) {color += add_light_comp0(normal).rgb;}

@@ -9,8 +9,8 @@ varying vec3 normal; // eye space
 void main()
 {
 	tc = fg_TexCoord*vec2(tscale_s, tscale_t);
-	normal = normalize(gl_NormalMatrix * fg_Normal);
-	epos   = gl_ModelViewMatrix * fg_Vertex;
-	gl_Position   = gl_ProjectionMatrix * epos;
+	normal = normalize(fg_NormalMatrix * fg_Normal);
+	epos   = fg_ModelViewMatrix * fg_Vertex;
+	gl_Position   = fg_ProjectionMatrix * epos;
 	gl_FrontColor = fg_Color;
 }

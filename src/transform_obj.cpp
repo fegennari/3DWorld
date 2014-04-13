@@ -40,16 +40,15 @@ matrix_stack_t pjm_stack; // projection matrix
 int matrix_mode(0); // 0 = MVM, 1 = PJM
 bool mvm_changed(0);
 
-matrix_stack_t &get_matrix_stack() {return (matrix_mode ? pjm_stack : mvm_stack);}
+matrix_stack_t &get_matrix_stack() {return ((matrix_mode == FG_PROJECTION) ? pjm_stack : mvm_stack);}
 
 void mark_matrix_changed() {
-	if (!matrix_mode) {mvm_changed = 1;}
+	if (matrix_mode == FG_MODELVIEW) {mvm_changed = 1;}
 }
 
 void fgMatrixMode(int val) {
-	if      (val == GL_PROJECTION) {matrix_mode = 1;}
-	else if (val == GL_MODELVIEW ) {matrix_mode = 0;}
-	else {assert(0);}
+	assert(val == FG_PROJECTION || val == FG_MODELVIEW);
+	matrix_mode = val;
 }
 
 void fgPushMatrix  () {get_matrix_stack().push();} // matrix not change
@@ -69,10 +68,10 @@ void fgScale(float x, float y, float z) {
 }
 void fgScale(float s) {fgScale(s, s, s);}
 
-void fgRotate(float angle, float x, float y, float z) {
+void fgRotateRadians(float angle, float x, float y, float z) {
 	assign_cur_matrix(glm::rotate(get_matrix_stack().top(), angle, glm::vec3(x, y, z)));
 }
-void fgRotateDegrees(float angle, float x, float y, float z) {fgRotate(TO_RADIANS*angle, x, y, z);}
+void fgRotate(float angle, float x, float y, float z) {fgRotateRadians(TO_RADIANS*angle, x, y, z);}
 
 void fgPerspective(float fov_y, float aspect, float near_clip, float far_clip) {
 	assign_cur_matrix(glm::perspective(TO_RADIANS*fov_y, aspect, near_clip, far_clip));

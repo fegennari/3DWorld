@@ -904,7 +904,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 {
 	if (pine_trees.empty()) return;
 	vector3d const xlate(ptree_off.get_xlate());
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(xlate);
 	
 	if (draw_branches) {
@@ -936,7 +936,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 			draw_tree_leaves_lod(xlate, (weight == 0.0), xlate_loc);
 		}
 	}
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 
@@ -977,13 +977,13 @@ void tile_t::update_scenery() {
 void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass) {
 
 	if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
-	glPushMatrix();
+	fgPushMatrix();
 	vector3d const xlate(scenery_off.get_xlate());
 	translate_to(xlate);
 	float const scale_val(get_scenery_thresh(reflection_pass)*(X_SCENE_SIZE + Y_SCENE_SIZE));
 	if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 0, scale_val);} // shader not passed in here
 	if (draw_leaves) {scenery.draw_plant_leaves  (s, 0, xlate);}
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 
@@ -1087,7 +1087,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 
 	assert(size > 0);
 	assert(weight_tid > 0 && height_tid > 0 && shadow_normal_tid > 0);
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0)); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s);
 	bind_2d_texture(weight_tid);
@@ -1137,7 +1137,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	} // for dim
 	if (!crack_ixs.empty()) {glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_INT, &crack_ixs.front());}
 	bind_vbo(0, 0); // unbind vertex buffer
-	glPopMatrix();
+	fgPopMatrix();
 
 	// draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
 	if (!is_distant && !reflection_pass && has_water()) {

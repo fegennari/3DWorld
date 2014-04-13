@@ -1,4 +1,4 @@
-uniform mat4 world_space_mvm;
+uniform mat4 fg_ViewMatrix;
 
 varying vec4 epos;
 varying vec3 eye, dlpos, normal; // world space
@@ -8,12 +8,12 @@ varying vec2 tc;
 void main()
 {
 	tc        = fg_TexCoord;
-	epos      = gl_ModelViewMatrix * fg_Vertex;
-	normal    = normalize(gl_NormalMatrix * fg_Normal);
-	dl_normal = normalize((transpose(world_space_mvm) * vec4(normal, 1)).xyz);
-	mat4 mvm_inv = inverse(world_space_mvm);
-	dlpos     = (mvm_inv * epos).xyz;
-	eye       = mvm_inv[3].xyz;
-	gl_Position     = gl_ProjectionMatrix * epos;
+	epos      = fg_ModelViewMatrix * fg_Vertex;
+	normal    = normalize(fg_NormalMatrix * fg_Normal);
+	dl_normal = normalize((transpose(fg_ViewMatrix) * vec4(normal, 1)).xyz);
+	mat4 vm_inv = inverse(fg_ViewMatrix);
+	dlpos     = (vm_inv * epos).xyz;
+	eye       = vm_inv[3].xyz;
+	gl_Position     = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
 }

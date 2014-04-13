@@ -573,7 +573,7 @@ void free_obj::inverse_rotate() const {
 
 void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const {
 
-	glPushMatrix();
+	fgPushMatrix();
 	global_translate(pos);
 	uniform_scale(radius);
 
@@ -586,14 +586,14 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 		gscale *= pow(1.0/volume, 1.0/3.0);
 		scale_by(gscale);
 	}
-	if (!is_particle()) glPushMatrix();
+	if (!is_particle()) fgPushMatrix();
 	if (!udd.draw_as_pt() && calc_rvs()) rotate();
 	udd.specular_en = specular;
 	udd.first_pass  = first_pass;
 	udd.final_pass  = final_pass;
 	draw_obj(udd);
-	if (!is_particle()) glPopMatrix();
-	glPopMatrix();
+	if (!is_particle()) fgPopMatrix();
+	fgPopMatrix();
 }
 
 
@@ -673,7 +673,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			// http://www.gamasutra.com/features/20021011/lengyel_05.htm
 			if (shader[1].is_setup()) {shader[1].enable(); udd.shader = &shader[1];}
 			assert(!sobjs.empty());
-			glPushMatrix();
+			fgPushMatrix();
 			global_translate(pos);
 			glClear(GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_STENCIL_TEST);
@@ -687,7 +687,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			for (unsigned d = 0; d < sobjs.size(); ++d) { // *** planet/moon exact shadow? ***
 				draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv, 0);
 			}
-			glPopMatrix();
+			fgPopMatrix();
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			glDepthFunc(GL_EQUAL);
 			glStencilFunc(GL_EQUAL, 0, ~0);
@@ -707,13 +707,13 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 
 			if (display_mode & 0x10) { // testing
 				set_emissive_color(colorRGBA(GREEN, 0.25), udd.shader);
-				glPushMatrix();
+				fgPushMatrix();
 				global_translate(pos);
 
 				for (unsigned d = 0; d < sobjs.size(); ++d) {
 					if (sobjs[d] != &player_ship()) draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv, 1);
 				}
-				glPopMatrix();
+				fgPopMatrix();
 				udd.shader->clear_color_e();
 			}
 			glDepthFunc(GL_LESS);

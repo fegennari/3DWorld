@@ -850,10 +850,10 @@ void tree::draw_tree(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_bra
 
 	if (shadow_only) {
 		if (!is_over_mesh()) return;
-		glPushMatrix();
+		fgPushMatrix();
 		translate_to(tree_center + xlate);
 		bool const drawn(td.draw_tree_shadow_only(s, draw_branches, draw_leaves));
-		glPopMatrix();
+		fgPopMatrix();
 		if (drawn) return;
 		draw_shadow_leaves = draw_leaves;
 	}
@@ -1021,10 +1021,10 @@ void tree::draw_tree_branches(shader_t &s, float size_scale, vector3d const &xla
 	select_texture(tree_types[type].bark_tex);
 	s.set_cur_color(bcolor);
 	s.set_uniform_vector3d(shader_loc, (tree_center + xlate));
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(tree_center + xlate);
 	tdata().draw_branches(s, size_scale, reflection_pass);
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 
@@ -1086,10 +1086,10 @@ void tree::draw_tree_leaves(shader_t &s, float size_scale, vector3d const &xlate
 	if (gen_arrays) {calc_leaf_shadows();}
 	if (has_dl_sources && world_mode == WMODE_GROUND) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
 	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(tree_center + xlate);
 	td.draw_leaves(size_scale);
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 

@@ -883,16 +883,16 @@ void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, 
 		int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
 
 		if (r_angle != 0.0) {
-			glPushMatrix();
+			fgPushMatrix();
 			translate_to(pos);
-			glRotatef(r_angle, rx, ry, 0.0);
+			fgRotate(r_angle, rx, ry, 0.0);
 		}
 		else {xl += pos;}
 		assert(xlate_loc >= 0 && scale_loc >= 0);
 		shader_t::set_uniform_vector3d(xlate_loc, xl);
 		shader_t::set_uniform_vector3d(scale_loc, scale);
 		draw_sphere_vbo_pre_bound(nsides, !shadow_only, (type == T_PALM));
-		if (r_angle != 0.0) {glPopMatrix();}
+		if (r_angle != 0.0) {fgPopMatrix();}
 	} // end mode
 }
 

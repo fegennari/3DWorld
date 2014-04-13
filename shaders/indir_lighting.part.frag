@@ -13,7 +13,7 @@ void add_indir_lighting(inout vec3 lit_color) {
 	if (indir_lighting) {
 #ifdef USE_BUMP_MAP
 		vec3 n_eye = inverse(get_tbn(1.0)) * get_bump_map_normal(); // convert tangent space to eye space
-		vec3 n = normalize(inverse(gl_NormalMatrix) * n_eye); // convert eye space to world space
+		vec3 n = normalize(inverse(fg_NormalMatrix) * n_eye); // convert eye space to world space
 #else
 		vec3 n = normal;
 #endif

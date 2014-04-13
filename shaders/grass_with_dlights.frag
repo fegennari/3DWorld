@@ -8,7 +8,7 @@ varying vec2 tc;
 void main()
 {
 	// calculate lighting: L0-L1 is directional
-	vec4 epos  = gl_ModelViewMatrix * vec4(dlpos, 1.0);
+	vec4 epos  = fg_ModelViewMatrix * vec4(dlpos, 1.0);
 	vec3 color = vec3(0.0);
 	if (enable_light0 ) color += add_light_comp_pos_smap_light0(eye_norm, epos).rgb;
 	if (enable_light1 ) color += add_light_comp_pos_smap_light1(eye_norm, epos).rgb;

@@ -27,7 +27,7 @@ void main()
 	if (texel.a == 0.0) discard;
 
 	// alpha lower when viewing edge
-	vec4 epos = gl_ModelViewMatrix * vec4(vertex, 1.0);
+	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	texel.a *= pow(abs(dot(normal, normalize(epos.xyz))), 0.2); // 5th root
 
 	vec2 tcs   = 16*tc;

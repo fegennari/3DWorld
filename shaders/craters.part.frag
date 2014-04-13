@@ -16,7 +16,7 @@ void adjust_normal_for_craters(inout vec3 norm, in vec3 vertex) {
 		v0         += 4.0;
 		
 		if (dist < rad2) { // at crater (parabola)
-			vec3 cnorm = normalize(gl_NormalMatrix * dir2/dist);
+			vec3 cnorm = normalize(fg_NormalMatrix * dir2/dist);
 			float cwt;
 
 			if (dist < rad1) { // inside crater

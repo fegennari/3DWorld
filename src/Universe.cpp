@@ -222,7 +222,7 @@ class universe_shader_t : public shader_t {
 		add_uniform_float("sun_radius",  svars.sun_radius);
 		add_uniform_vector3d("ss_pos",   svars.ss_pos);
 		add_uniform_float("ss_radius",   svars.ss_radius);
-		upload_mvm_to_shader(*this, "world_space_mvm");
+		upload_mvm_to_shader(*this, "fg_ViewMatrix");
 	}
 
 public:
@@ -312,7 +312,7 @@ public:
 		add_uniform_float("sun_radius",    sun_radius);
 		add_uniform_float("bf_draw_sign",  (dir ? -1.0 : 1.0));
 		add_uniform_vector3d("camera_pos", make_pt_global(get_player_pos()));
-		upload_mvm_to_shader(*this, "world_space_mvm");
+		upload_mvm_to_shader(*this, "fg_ViewMatrix");
 		return 1;
 	}
 	void disable_ring() {
@@ -2215,7 +2215,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 		if (ndiv > 16) {ndiv = ndiv & 0xFFFC;}
 		if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 		assert(ndiv > 0);
-		glPushMatrix();
+		fgPushMatrix();
 		global_translate(pos_);
 
 		if (size > 4.0) { // draw star's flares
@@ -2242,7 +2242,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 		draw_sphere_vbo(all_zeros, radius, ndiv, 0); // use vbo if ndiv is small enough
 		if (world_mode == WMODE_UNIVERSE && size >= 64) {draw_flares(ndiv, 1);}
 		usg.disable_star_shader();
-		glPopMatrix();
+		fgPopMatrix();
 	} // end sphere draw
 	return 1;
 }
@@ -2295,7 +2295,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	// Note: the following line *must* be before the local transforms are applied as it captures the current MVM in the call
 	if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);} // always WHITE
 	assert(ndiv > 0);
-	glPushMatrix();
+	fgPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
 		
@@ -2323,7 +2323,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		draw_sphere_vbo_raw(ndiv, texture); // small sphere - use vbo
 	}
 	if (texture) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
-	glPopMatrix();
+	fgPopMatrix();
 	return 1;
 }
 
@@ -2437,10 +2437,10 @@ void ustar::solar_flare::draw(float size, int ndiv, bool texture) const {
 
 	if (lifetime == 0) return;
 	assert(length > 0.0 && radius > 0.0 && size > 0.0);
-	glPushMatrix();
+	fgPushMatrix();
 	rotate_about(angle, dir);
 	draw_fast_cylinder(point(0.0, 0.0, 0.9*size), point(0.0, 0.0, (length + 0.9)*size), radius*size, 0.0, ndiv, texture);
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 
@@ -2474,12 +2474,12 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
 	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir); // always WHITE
-	glPushMatrix();
+	fgPushMatrix();
 	global_translate(pos_);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
 	scale_by(rscale);
 	draw_tquad(ring_ro, ring_ro, 0.0);
-	glPopMatrix();
+	fgPopMatrix();
 	usg.disable_ring_shader();
 }
 
@@ -2488,12 +2488,12 @@ void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, f
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
 	if (!usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars)) return; // always WHITE
-	glPushMatrix();
+	fgPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
 	uniform_scale(1.01*cloud_radius);
 	draw_sphere_vbo_raw(max(4, min(N_SPHERE_DIV, int(4.0*size_))), 1);
-	glPopMatrix();
+	fgPopMatrix();
 	usg.disable_atmospheric_shader();
 }
 

@@ -442,13 +442,13 @@ void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, f
 		return;
 	}
 	color.set_for_cur_shader();
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(scale*get_size_scale(dist, scale_val));
 	rotate_into_plus_z(dir);
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 void surface_rock::update_points_vbo(vbo_vnt_block_manager_t &vbo_manager) {
@@ -509,12 +509,12 @@ void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float s
 	}
 	color.set_for_cur_shader();
 	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(radius) : int(sscale*radius/dist)))));
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(pos);
 	rotate_about(angle, dir);
 	scale_by(size*get_size_scale(dist, scale_val)*scale);
 	draw_sphere_vbo_raw(ndiv, 1);
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 
@@ -543,7 +543,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 	unsigned const lod_level = 0;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, radius));
 	color.set_for_cur_shader();
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(radius*get_size_scale(distance_to_camera(pos+xlate), scale_val));
 	
@@ -554,7 +554,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, flo
 		select_texture(get_tid());
 	}
 	model.core_render(s, lod_level, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 void voxel_rock::destroy() {
@@ -616,7 +616,7 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 	}
 	color.set_for_cur_shader();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(dir);
 	if (!shadow_only) select_texture(TREE_END_TEX);
@@ -624,7 +624,7 @@ void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float sc
 	draw_circle_normal(0.0, radius2, ndiv, 0, length);
 	if (!shadow_only) select_texture(get_tid());
 	draw_cylin_fast(radius, radius2, length, ndiv, 1);
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 bool s_log::update_zvals(int x1, int y1, int x2, int y2) {
@@ -676,13 +676,13 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 	}
 	color.set_for_cur_shader();
 	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(pos - point(0.0, 0.0, 0.2*height));
 	if (!shadow_only) select_texture(TREE_END_TEX);
 	draw_circle_normal(0.0, radius2, ndiv, 0, 1.2*height);
 	if (!shadow_only) select_texture(get_tid());
 	draw_cylin_fast(radius, radius2, 1.2*height, ndiv, 1);
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 
@@ -847,7 +847,7 @@ void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 	if (size_scale < 1.2) return; // too small/far away
 	int const ndiv(max(4, min(16, int(2.0*size_scale))));
 	s.set_cur_color(pltype[type].berryc);
-	glPushMatrix();
+	fgPushMatrix();
 	uniform_scale(0.25*radius);
 	s.add_uniform_float("vertex_offset_scale", 1.0/(0.25*radius)); // enable
 	int const loc(s.get_attrib_loc("vertex_offset", 0));
@@ -855,7 +855,7 @@ void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 	draw_sphere_vbo_raw(ndiv, 0, 0, berries.size()); // ndiv=16, untextured
 	shader_float_matrix_uploader<3,1>::disable(loc);
 	s.add_uniform_float("vertex_offset_scale", 0.0); // disable
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 void s_plant::remove_cobjs() {

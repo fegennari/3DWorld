@@ -238,8 +238,8 @@ void init_window() {
 	glutPassiveMotionFunc(mousePassiveMotion);
 
     // Initialize GL
-	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
+	fgMatrixMode(FG_PROJECTION);
+    fgLoadIdentity();
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 }
 
@@ -335,11 +335,11 @@ void reset_camera_pos() {
 void set_perspective_near_far(float near_clip, float far_clip) {
 
 	perspective_nclip = near_clip;
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(perspective_fovy, ((double)window_width)/window_height, perspective_nclip, far_clip);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
+	fgMatrixMode(FG_PROJECTION);
+	fgLoadIdentity();
+	fgPerspective(perspective_fovy, ((double)window_width)/window_height, perspective_nclip, far_clip);
+	fgMatrixMode(FG_MODELVIEW);
+	fgLoadIdentity();
 }
 
 

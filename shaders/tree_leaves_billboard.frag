@@ -15,7 +15,7 @@ void main()
 	check_noise_and_maybe_discard(0.0, gl_Color.a);
 
 	// transform the normal into eye space, but don't normalize because it may be scaled for shadows
-	vec3 normal = normalize(gl_NormalMatrix * (2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0)));
+	vec3 normal = normalize(fg_NormalMatrix * (2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0)));
 	if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse (could use faceforward())
 	
 	vec4 color = vec4(0,0,0,1);

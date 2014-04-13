@@ -261,10 +261,10 @@ void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool dr
 
 void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends) {
 
-	glPushMatrix();
+	fgPushMatrix();
 	translate_to(p1);
 	draw_cylinder(length, radius1, radius2, ndiv, draw_ends);
-	glPopMatrix();
+	fgPopMatrix();
 }
 
 
@@ -662,8 +662,8 @@ void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int te
 
 void rotate_sphere_tex_to_dir(vector3d const &dir) { // dir must be normalized
 
-	glRotatef(atan2(-dir.y, -dir.x)*TO_DEG-90.0, 0.0, 0.0, 1.0); // negate because dir was backwards
-	glRotatef(asinf(-dir.z)*TO_DEG, 1.0, 0.0, 0.0);
+	fgRotate(atan2(-dir.y, -dir.x)*TO_DEG-90.0, 0.0, 0.0, 1.0); // negate because dir was backwards
+	fgRotate(asinf(-dir.z)*TO_DEG, 1.0, 0.0, 0.0);
 }
 
 
@@ -1010,12 +1010,12 @@ void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bo
 			shader_t::set_uniform_vector4d(shader_loc, vector4d(pos, radius));
 		}
 		else if (has_xform) {
-			glPushMatrix();
+			fgPushMatrix();
 			if (pos != all_zeros) translate_to(pos);
 			if (radius != 1.0)    uniform_scale(radius);
 		}
 		draw_sphere_vbo_raw(ndiv, textured, half);
-		if (has_xform && shader_loc < 0) {glPopMatrix();}
+		if (has_xform && shader_loc < 0) {fgPopMatrix();}
 	}
 	else if (half) {
 		draw_subdiv_sphere_section(pos, radius, ndiv, textured, 0.0, 1.0, 0.0, 0.5);

@@ -6,9 +6,9 @@ uniform vec3 world_space_offset = vec3(0.0);
 void calc_leaf_lighting()
 {
 	// transform the normal into eye space, but don't normalize because it may be scaled for shadows
-	vec3 normal = gl_NormalMatrix * fg_Normal * normal_scale;
+	vec3 normal = fg_NormalMatrix * fg_Normal * normal_scale;
 	
-	vec4 eye_space_pos = gl_ModelViewMatrix * fg_Vertex;
+	vec4 eye_space_pos = fg_ModelViewMatrix * fg_Vertex;
 	//if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse (could use faceforward())
 	float nscale = ((dot(normal, eye_space_pos.xyz) > 0.0) ? -1.0 : 1.0);
 	normal *= nscale;

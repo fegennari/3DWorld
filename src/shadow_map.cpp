@@ -193,12 +193,12 @@ pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds, bool 
 	pos_dir_up const pdu(pos, light_dir, up_dir, tanf(angle)*SQRT2, sinf(angle), max(NEAR_CLIP, dist-radius), dist+radius, aspect);
 
 	if (set_matrix) {
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		gluPerspective(2.0*angle/TO_RADIANS, aspect, pdu.near_, pdu.far_);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		gluLookAt(pos.x, pos.y, pos.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
+		fgMatrixMode(FG_PROJECTION);
+		fgLoadIdentity();
+		fgPerspective(2.0*angle/TO_RADIANS, aspect, pdu.near_, pdu.far_);
+		fgMatrixMode(FG_MODELVIEW);
+		fgLoadIdentity();
+		fgLookAt(pos.x, pos.y, pos.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
 	}
 	return pdu;
 }
@@ -267,10 +267,10 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	xform_matrix const camera_mv_matrix(fgGetMVM()); // cache the camera modelview matrix before we change it
 	glViewport(0, 0, shadow_map_sz, shadow_map_sz);
 	glClear(GL_DEPTH_BUFFER_BIT);
-	glPushMatrix();
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glMatrixMode(GL_MODELVIEW);
+	fgPushMatrix();
+	fgMatrixMode(FG_PROJECTION);
+	fgPushMatrix();
+	fgMatrixMode(FG_MODELVIEW);
 	camera_pos = lpos;
 	pdu        = camera_pdu = get_pt_cube_frustum_pdu(lpos, get_scene_bounds(), 1);
 	check_gl_error(201);
@@ -355,11 +355,11 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 		draw_scenery(1, 1, 1);
 
 		if ((display_mode & 0x01) && ground_effects_level != 0) { // draw mesh
-			glPushMatrix();
+			fgPushMatrix();
 			float const val(1.0/dot_product(lpos.get_norm(), plus_z));
-			glTranslatef(0.0, 0.0, -val*approx_pixel_width()); // translate down slightly to reduce shadow aliasing problems
+			fgTranslate(0.0, 0.0, -val*approx_pixel_width()); // translate down slightly to reduce shadow aliasing problems
 			display_mesh(1);
-			glPopMatrix();
+			fgPopMatrix();
 		}
 		disable_fbo();
 		voxel_shadows_updated = 0;
@@ -367,10 +367,10 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	} // end update_smap
 	
 	// reset state
-	glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
+	fgMatrixMode(FG_PROJECTION);
+	fgPopMatrix();
+	fgMatrixMode(FG_MODELVIEW);
+	fgPopMatrix();
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
 	// Now rendering from the camera POV, using the FBO to generate shadows

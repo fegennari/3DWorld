@@ -227,8 +227,8 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
 	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
 	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
-	s.set_bool_prefix("two_sided_lighting",  use_tsl,     1); // FS
-	s.set_bool_prefix("use_world_space_mvm", use_mvm,     0); // VS
+	s.set_bool_prefix("two_sided_lighting", use_tsl,      1); // FS
+	s.set_bool_prefix("use_fg_ViewMatrix",  use_mvm,      0); // VS
 	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP", 1);} // FS
 
 	if (smoke_enabled) {
@@ -271,7 +271,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
-	if (use_mvm) {upload_mvm_to_shader(s, "world_space_mvm");}
+	if (use_mvm) {upload_mvm_to_shader(s, "fg_ViewMatrix");}
 	
 	if (smoke_en) {
 		if (DYNAMIC_SMOKE_SHADOWS) {s.add_uniform_vector3d("sun_pos", get_sun_pos());}
@@ -594,13 +594,13 @@ void draw_earth() {
 		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE);
 		set_fill_mode();
 		select_texture(EARTH_TEX);
-		glPushMatrix();
+		fgPushMatrix();
 		translate_to(pos);
-		glRotatef(67.0, 0.6, 0.8, 0.0);
-		glRotatef(rot_angle, 0.0, 0.0, 1.0);
-		glRotatef(180.0, 1.0, 0.0, 0.0);
+		fgRotate(67.0, 0.6, 0.8, 0.0);
+		fgRotate(rot_angle, 0.0, 0.0, 1.0);
+		fgRotate(180.0, 1.0, 0.0, 0.0);
 		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1);
-		glPopMatrix();
+		fgPopMatrix();
 		s.end_shader();
 	}
 	rot_angle += 0.2*fticks;
@@ -1235,14 +1235,14 @@ struct splash_ring_t {
 		float const dr(0.5*radius);
 		unsigned const ndiv(max(3, min(N_CYL_SIDES, int(1000.0*radius/max(TOLERANCE, distance_to_camera(pos))))));
 		shader.set_cur_color(color);
-		glPushMatrix();
+		fgPushMatrix();
 		translate_to(pos);
 
 		for (unsigned i = 0; i < num_rings; ++i) {
 			draw_circle_normal((radius - 0.5*dr), radius, ndiv, 0);
 			radius += dr;
 		}
-		glPopMatrix();
+		fgPopMatrix();
 	}
 };
 

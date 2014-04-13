@@ -31,7 +31,7 @@ vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos,
 }
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal, in float bump_scale) {
-	vec3 tan  = normalize(cross(gl_ModelViewMatrix[0].xyz, normal));
+	vec3 tan  = normalize(cross(fg_ModelViewMatrix[0].xyz, normal));
 	mat3 TBN  = transpose(mat3(tan, cross(normal, tan), normalize(normal))); // world space {Y, X, Z} for normal in +Z
 	light_dir = TBN * light_dir;
 	eye_pos   = TBN * eye_pos;
@@ -48,7 +48,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 		
 	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex
 	float NdotL = dot(normal, light_dir);
-	vec4 light  = gl_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
+	vec4 light  = fg_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
 
 	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) {
 		vec3 cpos = vertex.xyz + cloud_offset;
@@ -73,7 +73,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 #endif
 		// apply underwater attenuation
 		// Note: ok if vertex is above the water, dist will come out as 0
-		vec4 eye    = gl_ModelViewMatrixInverse[3]; // local tile space
+		vec4 eye    = fg_ModelViewMatrixInverse[3]; // local tile space
 		float depth = water_plane_z - vertex.z;
 		float dist  = integrate_water_dist(vertex.xyz, eye.xyz, water_plane_z) + min(4.0*depth, integrate_water_dist(vertex.xyz, light.xyz, water_plane_z)); // clamp light pos dir
 		atten_color(color, dist*water_atten);
@@ -105,10 +105,10 @@ void main()
 	float bump_scale    = 1.0 - weights.b; // bumps on everything but grass
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
-	normal      = normalize(gl_NormalMatrix * normal); // eye space
+	normal      = normalize(fg_NormalMatrix * normal); // eye space
 	//normal     += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5); // add noise
 	vec4 color  = vec4(0,0,0,1);
-	vec4 epos   = (gl_ModelViewMatrix * vertex);
+	vec4 epos   = (fg_ModelViewMatrix * vertex);
 	bump_scale *= clamp((2.5 - 0.1*length(epos.xyz)), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
 	
 	if (enable_light0) { // sun
