@@ -32,8 +32,6 @@ tree_type const tree_types[NUM_TREE_TYPES] = {
 	tree_type(BARK4_TEX, PAPAYA_TEX,   1.0, 1.0, 1.0, 1.00, colorRGBA(0.7, 0.6, 0.5, 1.0), WHITE)
 };
 
-float get_leaf_size();
-
 
 #endif // _TREE_LEAF_H_
 

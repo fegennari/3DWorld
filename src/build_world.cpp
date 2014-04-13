@@ -984,6 +984,8 @@ string read_filename(FILE *fp) {
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
 
 	assert(coll_obj_file != NULL);
+	FILE *fp;
+	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
 	char str[MAX_CHARS];
 	unsigned line_num(1), npoints;
 	int end(0), use_z(0), use_vel(0), ivals[3];
@@ -992,10 +994,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector3d tv0, vel;
 	polygon_t poly;
 	vector<coll_tquad> ppts;
-	FILE *fp;
-	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
+
+	// tree state
+	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
+	bool enable_leaf_wind(1);
 	
-	while (!end) { // available: guz HJKUVXZ
+	while (!end) { // available: uz JKUVXZ
 		assert(fp != NULL);
 		char letter((char)getc(fp));
 		
@@ -1097,7 +1101,14 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'E': // place tree: xpos ypos size type [zpos], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3
+		case 'g': // set tree parameters state: height, branch scale, nleaves scale, enable wind
+			if (fscanf(fp, "%f%f%f%i", &tree_height, &tree_br_scale_mult, &tree_nl_scale, &ivals[0]) != 4 || tree_height <= 0.0 || tree_br_scale_mult <= 0.0 || tree_nl_scale <= 0.0) {
+				return read_error(fp, "tree_params", coll_obj_file);
+			}
+			enable_leaf_wind = (ivals[0] != 0);
+			break;
+
+		case 'E': // place tree: xpos ypos size type [zpos], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
 			if (fscanf(fp, "%f%f%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0]) != 4) {return read_error(fp, "tree", coll_obj_file);}
 			assert(fvals[0] > 0.0);
 			use_z = (fscanf(fp, "%f", &pos.z) == 1);
@@ -1106,10 +1117,31 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				cout << "Must set ntrees to zero in order to add trees through collision objects file." << endl;
 			}
 			else {
-				tree t;
-				t_trees.push_back(t);
 				xf.xform_pos(pos);
-				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1);
+				t_trees.push_back(tree(enable_leaf_wind));
+				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale);
+				tree_mode |= 1; // enable trees
+			}
+			break;
+
+		case 'H': // place hedges: xstart, ystart, dx, dy, nsteps, scale, type
+			if (fscanf(fp, "%f%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &fvals[2], &ivals[1]) != 7 || ivals[0] <= 0) {
+				return read_error(fp, "hedges", coll_obj_file);
+			}
+			if (num_trees > 0) {
+				cout << "Must set ntrees to zero in order to add hedges through collision objects file." << endl;
+			}
+			else {
+				xf.xform_pos(pos);
+				point cur(pos);
+				vector3d delta(fvals[0], fvals[1], 0.0);
+				xf.xform_pos_rms(delta);
+
+				for (int i = 0; i < ivals[0]; ++i) {
+					t_trees.push_back(tree(enable_leaf_wind));
+					t_trees.back().gen_tree(cur, max(1, int(fvals[2]*xf.scale)), ivals[1], 1, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale);
+					cur += delta;
+				}
 				tree_mode |= 1; // enable trees
 			}
 			break;
@@ -1421,9 +1453,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (vel != zero_vector) {
 					switch (cobj.type) {
 					case COLL_CUBE:
-						for (unsigned j = 0; j < 3; ++j) {
-							cobj.d[j][1] += vel[j];
-						}
+						for (unsigned j = 0; j < 3; ++j) {cobj.d[j][1] += vel[j];}
 						break;
 					case COLL_CYLINDER:
 					case COLL_CYLINDER_ROT:

@@ -219,12 +219,6 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 }
 
 
-float get_leaf_size() {
-
-	return REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale);
-}
-
-
 //designed to handle only positive numbers correctly
 //return a random number between start and end
 inline int rand_gen(int start, int end) {
@@ -339,7 +333,7 @@ void tree_cont_t::remove_cobjs() {
 
 bool tree::check_sphere_coll(point &center, float radius) const {
 
-	float const trunk_radius(0.9*branch_radius_scale*tree_types[type].branch_radius*tdata().base_radius);
+	float const trunk_radius(0.9*tdata().br_scale*tdata().base_radius);
 	float const trunk_height(tdata().sphere_center_zoff); // very approximate
 	cylinder_3dw const cylin(tree_center, tree_center+vector3d(0.0, 0.0, trunk_height), trunk_radius, trunk_radius);
 	return sphere_vert_cylin_intersect(center, radius, cylin);
@@ -1067,7 +1061,7 @@ bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 void tree::draw_tree_leaves(shader_t &s, float size_scale, vector3d const &xlate) {
 
 	tree_data_t &td(tdata());
-	bool const leaf_dynamic_en(!has_snow && (display_mode & 0x0100) != 0);
+	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
 	if (!gen_arrays && leaf_dynamic_en && size_scale > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
 
@@ -1262,8 +1256,9 @@ void copy_cylins(tree_cylin *start_cylin, int num, tree_cylin *&cur_cylin) {
 }
 
 
-void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness, vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves) {
-
+void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
+	int tree_type, float deadness, float br_scale, float nl_scale)
+{
 	// compact the cylinders into a contiguous block
 	assert(all_cylins.empty());
 	tree_cylin *cylins(&cylin_cache.front()), *cur_cylin(cylins);
@@ -1288,7 +1283,6 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 	// create the all_cylins vector
 	unsigned const num_total_cylins(cur_cylin - cylins);
 	all_cylins.reserve(num_total_cylins);
-	float const br_scale(branch_radius_scale*tree_types[tree_type].branch_radius);
 
 	for (unsigned i = 0; i < num_total_cylins; ++i) {
 		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
@@ -1300,7 +1294,8 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 
 	// add leaves
 	if (deadness < 1.0) {
-		float const rel_leaf_size(2.0*get_leaf_size()*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
+		float const leaf_size(REL_LEAF_SIZE*TREE_SIZE/(sqrt(nl_scale*nleaves_scale)*tree_scale));
+		float const rel_leaf_size(2.0*leaf_size*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
 		leaves.reserve(nl);
 		coll_obj_group branch_cobjs;
@@ -1417,7 +1412,7 @@ float get_default_tree_depth() {
 
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
 //gen_tree(pos, 0, -1, 1, 1, 0);
-void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed) {
+void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, float height_scale, float br_scale_mult, float nl_scale) {
 
 	assert(calc_z || user_placed);
 	tree_center = pos;
@@ -1450,7 +1445,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
-		td.gen_tree_data(type, size, tree_depth); // create the tree here
+		td.gen_tree_data(type, size, tree_depth, height_scale, br_scale_mult, nl_scale); // create the tree here
 	}
 	assert(type < NUM_TREE_TYPES);
 	unsigned const nleaves(td.get_leaves().size());
@@ -1460,7 +1455,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 }
 
 
-void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
+void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale) {
 
 	tree_type = tree_type_;
 	assert(tree_type < NUM_TREE_TYPES);
@@ -1473,10 +1468,11 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
 	tree_builder_t builder;
-	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color);
 	
 	// create leaves and all_cylins
-	builder.create_all_cylins_and_leaves(tree_type, deadness, all_cylins, leaves);
+	br_scale    = br_scale_mult*branch_radius_scale*tree_types[tree_type].branch_radius;
+	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, height_scale, br_scale, nl_scale);
+	builder.create_all_cylins_and_leaves(all_cylins, leaves, tree_type, deadness, br_scale, nl_scale);
 
 	// set the bounding sphere center
 	assert(!all_cylins.empty());
@@ -1513,7 +1509,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth) {
 }
 
 
-float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color) {
+float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color, float height_scale, float br_scale, float nl_scale) {
 
 	//fixed tree variables
 	ncib                 = 10;
@@ -1536,8 +1532,8 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 #endif
 	if (size <= 0) size  = rand_gen(40, 80); // tree size
 	base_radius            = size * (0.1*TREE_SIZE*tree_types[tree_type].branch_size/tree_scale);
-	num_leaves_per_occ     = 0.01*nleaves_scale*(rand_gen(30, 60) + size);
-	base_length_min        = rand_gen(4, 6) * base_radius;
+	num_leaves_per_occ     = 0.01*nl_scale*nleaves_scale*(rand_gen(30, 60) + size);
+	base_length_min        = rand_gen(4, 6) * height_scale * base_radius;
 	base_length_max        = base_length_min * 1.5;
 	angle_rotate           = 60.0;
 	base_curveness         = 10.0;
@@ -1644,7 +1640,6 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 
 	// FIXME: hack to prevent roots from being generated in scenes where trees are user-placed and affect the lighting voxel sparsity
 	root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
-	float const br_scale(branch_radius_scale*tree_types[tree_type].branch_radius);
 
 	for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) { // add roots
 		tree_cylin &cylin1(roots.cylin[i]), &cylin2(roots.cylin[i+1]), &cylin3(roots.cylin[i+2]);

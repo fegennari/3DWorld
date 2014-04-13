@@ -20,5 +20,4 @@ GLM Noise
 static error check (analysis)
 
 Better pine tree texture
-glMapBuffer - persistent
-Hedges
+Hedges - per-tree shape

@@ -174,8 +174,9 @@ class tree_builder_t : public tree_xform_t {
 
 public:
 	tree_builder_t() : branches(NULL) {branches_34[0] = branches_34[1] = NULL;}
-	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color);
-	void create_all_cylins_and_leaves(int tree_type, float deadness, vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves);
+	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color, float height_scale, float br_scale, float nl_scale);
+	void create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
+		int tree_type, float deadness, float br_scale, float nl_scale);
 };
 
 
@@ -212,17 +213,17 @@ class tree_data_t {
 	void clear_vbo_ixs();
 
 public:
-	float base_radius, sphere_radius, sphere_center_zoff;
+	float base_radius, sphere_radius, sphere_center_zoff, br_scale;
 	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
 
 	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1),
-		last_update_frame(0), leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0),
-		sphere_center_zoff(0.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
+		last_update_frame(0), leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
+		br_scale(1.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void make_private_copy(tree_data_t &dest) const;
-	void gen_tree_data(int tree_type_, int size, float tree_depth);
+	void gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale);
 	void gen_leaf_color();
 	void update_all_leaf_colors();
 	void update_leaf_color(unsigned i, bool no_mark_changed=0);
@@ -267,7 +268,7 @@ class tree {
 	bool td_is_private() const {return (tree_data == NULL);}
 
 	int type, created; // should type be a member of tree_data_t?
-	bool no_delete, not_visible, leaf_orients_valid;
+	bool no_delete, not_visible, leaf_orients_valid, enable_leaf_wind;
 	point tree_center;
 	float damage, damage_scale;
 	colorRGBA tree_color, bcolor;
@@ -294,9 +295,9 @@ class tree {
 	void copy_color(unsigned i, bool no_mark_changed=0);
 
 public:
-	tree() : tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0) {}
+	tree(bool en_lw=1) : tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0), enable_leaf_wind(en_lw) {}
 	void bind_to_td(tree_data_t *td);
-	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed);
+	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0);
 	void calc_leaf_shadows();
 	void gen_tree_shadows(unsigned light_sources) const;
 	void add_tree_collision_objects();

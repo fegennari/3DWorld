@@ -419,12 +419,11 @@ void draw_group(obj_group &objg, shader_t &s) {
 		static vector<pair<unsigned, unsigned> > ordering;
 		ordering.resize(0);
 		ordering.reserve(objg.end_id);
-		float const leaf_size(get_leaf_size());
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject const &obj(objg.get_obj(j));
 			if (obj.disabled()) continue;
-			float const leaf_scale(2.0*leaf_size*obj.init_dir.z);
+			float const leaf_scale(obj.init_dir.z);
 			assert(leaf_scale > 0.0);
 			if (!sphere_in_camera_view(obj.pos, leaf_scale, 0)) continue;
 			int const tree_type(obj.source);
@@ -444,7 +443,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			for (unsigned j = 0; j < ordering.size(); ++j) {
 				dwobject const &obj(objg.get_obj(ordering[j].second));
 				int const tree_type(ordering[j].first), tid(tree_types[tree_type].leaf_tex);
-				float const leaf_scale(2.0*leaf_size*obj.init_dir.z), leaf_x_ar(tree_types[tree_type].leaf_x_ar);
+				float const leaf_scale(obj.init_dir.z), leaf_x_ar(tree_types[tree_type].leaf_x_ar);
 				assert(tid >= 0);
 			
 				if (draw_model == 0 && tid != last_tid) {
