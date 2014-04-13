@@ -1975,7 +1975,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass) {
 		brs.end_shader();
 	}
 	disable_blend();
-	if (!reflection_pass) {leaf_color_changed = 0;} // Note: only visible trees will be updated
+	if (!reflection_pass) {leaf_color_changed = 0;} // Note: only trees in visible tiles will be updated
 }
 
 

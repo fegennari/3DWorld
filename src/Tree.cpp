@@ -470,7 +470,7 @@ void draw_trees(bool shadow_only) {
 		//glFinish(); // testing
 		//PRINT_TIME(((tree_mode & 2) ? "Large + Small Trees" : "Large Trees"));
 	}
-	if (!shadow_only) {leaf_color_changed = 0;} // Note: only visible trees will be updated
+	if (!shadow_only) {leaf_color_changed = 0;}
 }
 
 
@@ -872,7 +872,7 @@ void tree::draw_tree(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_bra
 	if (draw_shadow_leaves) {draw_tree_leaves(s, 0.0, xlate); return;}
 	if (TEST_RTREE_COBJS) return;
 	if (draw_leaves || !draw_branches) {not_visible = !is_visible_to_camera(xlate);} // first pass only
-	if (not_visible) return;
+	if (not_visible && (!leaf_color_changed || !draw_leaves)) return; // if leaf_color_changed=1, we always draw the leaves as that forces the leaf color update
 	point const draw_pos(sphere_center() + xlate);
 	float const dist_to_camera(distance_to_camera(draw_pos));
 	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return; // to far away to draw
