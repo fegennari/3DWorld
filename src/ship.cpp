@@ -675,7 +675,7 @@ void draw_wrays(vector<usw_ray> &wrays) {
 	sort(sorted.begin(), sorted.end());
 	line_tquad_draw_t drawer;
 	
-	for (unsigned i = 0; i < size; ++i) { // GL_POLYGON_SMOOTH?
+	for (unsigned i = 0; i < size; ++i) {
 		sorted[i].second->draw(drawer);
 	}
 	drawer.draw();
