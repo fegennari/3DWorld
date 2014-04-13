@@ -51,7 +51,6 @@ void rotate_all(point const &rotate, float angle, float x, float y, float z);
 // tree_mode: 0 = no trees, 1 = large only, 2 = small only, 3 = both large and small
 unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(TREE_COLL);
-float tree_temp_matrix[3], i_matrix[9], re_matrix[3];
 float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), branch_radius_scale(1.0);
 float tree_lod_scales[4] = {0, 0, 0, 0}; // branch_start, branch_end, leaf_start, leaf_end
 colorRGBA leaf_base_color(BLACK);
@@ -456,19 +455,13 @@ void tree_cont_t::draw(bool shadow_only) {
 
 void draw_trees(bool shadow_only) {
 
-	//glFinish(); // testing
-	//RESET_TIME;
-
 	if (tree_mode & 2) { // small trees
 		draw_small_trees(shadow_only);
-		//PRINT_TIME("Small Trees");
 	}
 	if (tree_mode & 1) { // trees
 		if (!shadow_only) {t_trees.check_leaf_shadow_change();}
 		set_fill_mode();
 		t_trees.draw(shadow_only);
-		//glFinish(); // testing
-		//PRINT_TIME(((tree_mode & 2) ? "Large + Small Trees" : "Large Trees"));
 	}
 	if (!shadow_only) {leaf_color_changed = 0;}
 }
@@ -478,7 +471,6 @@ void tree_data_t::make_private_copy(tree_data_t &dest) const {
 	
 	dest = *this;
 	dest.clear_vbo_ixs();
-	//dest.ref_count = 1;
 }
 
 
@@ -486,7 +478,6 @@ void tree::make_private_tdata_copy() {
 
 	if (!tree_data || td_is_private()) return; // tree pointer is NULL or already private
 	tree_data->make_private_copy(priv_tree_data);
-	//tree_data->dec_ref_count();
 	tree_data = NULL;
 }
 
@@ -1341,40 +1332,14 @@ void tree_builder_t::create_all_cylins_and_leaves(int tree_type, float deadness,
 }
 
 
-inline void add_rotation(point &dest, point const &src, float mult) {
-
-	UNROLL_3X(dest[i_] = src[i_] + mult*re_matrix[i_];)
-}
-
-
-inline void setup_rotate(vector3d &rotate, float rotate_start, float temp_deg) {
-
-	float const angle(rotate_start/TO_DEG + temp_deg);
-	rotate.assign(cosf(angle), sinf(angle), 0.0);
-}
-
-
-inline void rotate_around_axis(tree_cylin const &c) {
-
-	rotate_all(c.rotate, c.deg_rotate/TO_DEG, 0.0, 0.0, c.length);
-}
-
-
-inline void rotate_pts_around_axis(point const &p, point &rotation_v, float deg_rotate) {
-
-	rotate_all(rotation_v, deg_rotate/TO_DEG, p.x, p.y, p.z);
-}
-
-
-inline void rotate_cylin(tree_cylin &c) {
+void tree_xform_t::rotate_cylin(tree_cylin &c) {
 
 	//rotate_around_axis(c);
 	rotate_all(c.rotate, c.deg_rotate/TO_DEG, 0.0, 0.0, c.length);
 	add_rotation(c.p2, c.p1, 1.0);
 }
 
-
-inline void rotate_it() {
+void tree_xform_t::rotate_it() {
 
 	re_matrix[0] = i_matrix[0]*tree_temp_matrix[0] + i_matrix[1]*tree_temp_matrix[1];
 	re_matrix[1] = i_matrix[3]*tree_temp_matrix[0] + i_matrix[4]*tree_temp_matrix[1];
@@ -1383,7 +1348,7 @@ inline void rotate_it() {
 	tree_temp_matrix[1] = re_matrix[1];
 }
 
-inline void rotate_itv2() {
+void tree_xform_t::rotate_itv2() {
 
 	re_matrix[0] = tree_temp_matrix[0];
 	re_matrix[1] = i_matrix[4]*tree_temp_matrix[1] + i_matrix[5]*tree_temp_matrix[2];
@@ -1392,18 +1357,14 @@ inline void rotate_itv2() {
 	tree_temp_matrix[2] = re_matrix[2];
 }
 
-
-inline void turn_into_i(float *m) {
+void tree_xform_t::turn_into_i(float *m) {
 
 	m[0] = 1.0; m[1] = 0.0; m[2] = 0.0;
 	m[3] = 0.0; m[4] = 1.0; m[5] = 0.0;
 	m[6] = 0.0; m[7] = 0.0; m[8] = 1.0;
 }
 
-
-void rotate_all(point const &rotate, float angle, float x, float y, float z) {
-
-	static float langle(0.0), sin_term(0.0), cos_term(1.0);
+void tree_xform_t::rotate_all(point const &rotate, float angle, float x, float y, float z) {
 
 	if (angle != langle) {
 		cos_term = cos(angle);
@@ -1441,8 +1402,7 @@ void rotate_all(point const &rotate, float angle, float x, float y, float z) {
 	rotate_it(); //do matrix multiplication
 }
 
-
-void gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
+void tree_xform_t::gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float rotate_start) {
 
 	float temp_deg(safe_acosf(lrotate.x));
 	if (lrotate.y < 0.0) temp_deg *= -1.0;
