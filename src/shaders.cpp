@@ -921,7 +921,7 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 }
 
 
-void set_point_sprite_mode(bool enabled) {
+void set_point_sprite_mode(bool enabled) { // Note: to be removed when using a core profile
 
 	if (enabled) {
 		glEnable(GL_POINT_SPRITE);

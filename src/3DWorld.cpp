@@ -111,7 +111,7 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, stream_vbo;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
@@ -148,16 +148,18 @@ void setup_linear_fog(colorRGBA const &color, float fog_end);
 
 bool check_gl_error(unsigned loc_id) {
 
-	int const error(glGetError());
+	bool had_error(0);
 
-	if (error) {
+	while (1) {
+		int const error(glGetError());
+		if (!error) break;
 		const GLubyte *const error_str(gluErrorString(error));
 		cout << "GL Error " << error << " at location id " << loc_id << ": ";
 		if (error_str) {cout << error_str << "." << endl;} else {cout << "<NULL>." << endl;}
-		assert(0);
-		return 1;
+		had_error = 1;
 	}
-	return 0;
+	assert(!had_error); // currently fatal
+	return had_error;
 }
 
 
@@ -189,6 +191,7 @@ void clear_context() {
 	clear_asteroid_contexts();
 	invalidate_cached_stars();
 	clear_quad_ix_buffer_context();
+	delete_and_zero_vbo(stream_vbo);
 	clear_landscape_vbo = 1;
 }
 
@@ -281,7 +284,6 @@ void un_maximize() {
 void enable_blend() {
 
 	glEnable(GL_BLEND);
-	glEnable(GL_POINT_SMOOTH);
 	//glEnable(GL_LINE_SMOOTH);
 }
 
@@ -289,7 +291,6 @@ void enable_blend() {
 void disable_blend() {
 
 	glDisable(GL_BLEND);
-	glDisable(GL_POINT_SMOOTH);
 	//glDisable(GL_LINE_SMOOTH);
 }
 
@@ -1783,11 +1784,9 @@ int main(int argc, char** argv) {
 	progress();
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
 	//glutInitDisplayString("rgba double depth>=16 samples>=8");
-#if 0 // seems to work now; should really enable when deprecated OpenGL features are removed
-	glutInitContextVersion(4, 2);
-	glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);
-	glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
-#endif
+	//glutInitContextVersion(4, 2);
+	//glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);
+	//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
 	progress();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;

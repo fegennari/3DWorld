@@ -5,8 +5,9 @@ Try using Boost in 3DWorld, in particular shared_ptr
 
 Remove deprecated OpenGL calls:
 http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
- - Non-sprite points
+ - Non-sprite points - remove set_point_sprite_mode()
  - GL_QUADS
+ - Always use vbos (no set_state())
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)

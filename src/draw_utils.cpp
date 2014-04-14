@@ -6,6 +6,8 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 
+unsigned stream_vbo(0);
+
 extern int window_height, display_mode;
 extern shader_t *cur_shader;
 
@@ -77,8 +79,8 @@ void vert_norm_tc::set_vbo_arrays(bool set_state) {
 void vert_color::set_vbo_arrays(bool set_state) {
 	set_array_client_state(1, 0, 0, 1, set_state);
 	unsigned const stride(sizeof(vert_color));
-	cur_shader->set_vertex_ptr(stride, (void *)0);
-	cur_shader->set_color4_ptr(stride, (void *)sizeof(point), 1);
+	cur_shader->set_vertex_ptr(stride, (void *)sizeof(color_wrapper));
+	cur_shader->set_color4_ptr(stride, (void *)0, 1);
 }
 
 void vert_norm_color::set_vbo_arrays(bool set_state) {
@@ -204,13 +206,13 @@ void vert_color::set_state() const {
 	cur_shader->set_color4_ptr(stride, &c, 1);
 }
 
-void vert_norm_color::set_state(bool shadow_only) const {
+void vert_norm_color::set_state() const {
 	// FIXME: no need for shadow_only?
 	unsigned const stride(sizeof(*this));
-	set_array_client_state(1, 0, !shadow_only, !shadow_only);
+	set_array_client_state(1, 0, 1, 1);
 	cur_shader->set_vertex_ptr(stride, &v);
-	if (!shadow_only) {cur_shader->set_normal_ptr(stride, &n, 0);}
-	if (!shadow_only) {cur_shader->set_color4_ptr(stride, &c, 1);}
+	cur_shader->set_normal_ptr(stride, &n, 0);
+	cur_shader->set_color4_ptr(stride, &c, 1);
 }
 
 void vert_norm_comp_color::set_state() const {
@@ -237,6 +239,28 @@ void vert_norm_comp_tc_comp_color::set_state() const {
 	cur_shader->set_normal_ptr(stride, &n, 1);
 	cur_shader->set_tcoord_ptr(stride, &t, 1);
 	cur_shader->set_color4_ptr(stride, &c, 1);
+}
+
+
+unsigned stream_data_sz(0);
+
+void bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size) {
+
+	assert(verts != NULL && count > 0 && vert_size > 0);
+	if (!stream_vbo) {stream_vbo = create_vbo(); stream_data_sz = 0;}
+	bind_vbo(stream_vbo);
+	unsigned const size(count*vert_size);
+
+	if (size > stream_data_sz) {
+		stream_data_sz = size;
+		glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_STREAM_DRAW);
+	}
+	glBufferSubData(GL_ARRAY_BUFFER, 0, size, verts);
+}
+
+void unbind_temp_vbo() {
+	//delete_and_zero_vbo(stream_vbo);
+	bind_vbo(0);
 }
 
 

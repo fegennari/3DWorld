@@ -183,7 +183,7 @@ public:
 		assert(shadow_mask != NULL);
 		assert(!data.empty());
 		last_rows.resize(MESH_X_SIZE+1);
-		data.front().set_state(shadow_pass);
+		data.front().set_state();
 	}
 
 	bool add_mesh_vertex_pair(int i, int j, float x, float y) {

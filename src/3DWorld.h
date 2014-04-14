@@ -823,7 +823,7 @@ struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 	vert_norm_color(vert_norm const &vn, colorRGBA const &c_) : vert_norm(vn) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const     &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
-	void set_state(bool shadow_only=0) const;
+	void set_state() const;
 	static void set_vbo_arrays(bool set_state=1);
 };
 
@@ -908,11 +908,24 @@ template< typename T> void set_ptr_state(T const *const verts) {
 	if (verts) {verts[0].set_state();} else {T::set_vbo_arrays();}
 }
 
+#if 0
+void bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size);
+void unbind_temp_vbo();
+
+template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0) {
+	assert(count > 0);
+	if (verts) {bind_temp_vbo_from_verts(verts+start_ix, count, sizeof(T));}
+	T::set_vbo_arrays();
+	glDrawArrays(gl_type, (verts ? 0 : start_ix), count);
+	unbind_temp_vbo();
+}
+#else
 template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0) {
 	assert(count > 0);
 	set_ptr_state(verts);
 	glDrawArrays(gl_type, start_ix, count);
 }
+#endif
 
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0) {
 	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type, start_ix);}
