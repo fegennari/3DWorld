@@ -311,6 +311,24 @@ void pt_line_drawer_no_lighting_t::draw() const {
 	draw_verts(lines,  GL_LINES);
 }
 
+void pt_line_drawer_no_lighting_t::draw_vbo() {
+
+	if (!points.empty()) {
+		create_bind_vbo_and_upload(vbo[0], points);
+		draw_verts<vert_color>(NULL, points.size(), GL_POINTS);
+	}
+	if (!lines.empty()) {
+		assert(!(lines.size() & 1));
+		create_bind_vbo_and_upload(vbo[1], lines);
+		draw_verts<vert_color>(NULL, lines.size(), GL_LINES);
+	}
+	bind_vbo(0);
+}
+
+void pt_line_drawer_no_lighting_t::free_vbo() {
+	for (unsigned d = 0; d < 2; ++d) {delete_and_zero_vbo(vbo[d]);}
+}
+
 
 template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int tid, float const_point_size, bool enable_lighting) const {
 

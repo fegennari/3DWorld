@@ -864,7 +864,7 @@ void draw_waypoints() {
 	if (!SHOW_WAYPOINTS) return;
 	shader_t s;
 	s.begin_color_only_shader();
-	pt_line_drawer_no_lighting_t pld;
+	vector<vert_color> verts;
 
 	for (waypoint_vector::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
 		if (i->disabled) continue;
@@ -889,11 +889,12 @@ void draw_waypoints() {
 				bidir = (*k == wix);
 			}
 			if (!bidir || *j < wix) {
-				pld.add_line(i->pos, (bidir ? YELLOW : WHITE), w.pos, (bidir ? YELLOW : ORANGE));
+				verts.push_back(vert_color(i->pos, (bidir ? YELLOW : WHITE)));
+				verts.push_back(vert_color(w.pos,  (bidir ? YELLOW : ORANGE)));
 			}
 		}
 	}
-	pld.draw();
+	draw_verts(verts, GL_LINES);
 	s.end_shader();
 }
 

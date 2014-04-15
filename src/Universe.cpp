@@ -665,11 +665,11 @@ inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
 }
 
 
-void ucell::draw_all_stars(ushader_group &usg) {
+void ucell::draw_all_stars(ushader_group &usg, bool clear_star_pld) {
 
 	if (!star_pld.empty()) {
 		usg.enable_color_only_shader();
-		star_pld.draw(); // don't clear
+		if (clear_star_pld) {star_pld.draw_and_clear();} else {star_pld.draw_vbo();}
 		usg.disable_color_only_shader();
 	}
 	star_psd.draw_and_clear(WHITE_TEX, 1.0); // unblended
@@ -690,7 +690,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		bkg_color == last_bkg_color && star_cache_ix == last_star_cache_ix);
 
 	if (cache_stars && cached_stars_valid) { // should be true in combined_gu mode
-		draw_all_stars(usg); // star_psd should be empty
+		draw_all_stars(usg, 0); // star_psd should be empty
 		return; // that's it
 	}
 	last_bkg_color     = bkg_color;
@@ -716,7 +716,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 				}
 			}
 		} // galaxy i
-		draw_all_stars(usg);
+		draw_all_stars(usg, 0);
 		cached_stars_valid = 1;
 		return;
 	}
@@ -950,7 +950,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 			} // system j
 		} // cluster cs
 	} // galaxy i
-	if (!gen_only) {draw_all_stars(usg); star_pld.clear();}
+	if (!gen_only) {draw_all_stars(usg, 1);}
 }
 
 
@@ -2038,6 +2038,7 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 		for (unsigned y = 0; y < U_BLOCKS; ++y) { // y
 			for (unsigned x = 0; x < U_BLOCKS; ++x) { // x
 				ucell &cell(cells[z][y][x]);
+				cell.free_context();
 				if (cell.galaxies == NULL) continue;
 				
 				for (unsigned i = 0; i < cell.galaxies->size(); ++i) {

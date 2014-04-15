@@ -437,7 +437,7 @@ class ucell : public uobj_rgen { // size = 84
 	unsigned last_star_cache_ix;
 	bool cached_stars_valid;
 
-	void draw_all_stars(ushader_group &usg);
+	void draw_all_stars(ushader_group &usg, bool clear_star_pld);
 
 public:
 	point rel_center;
@@ -450,6 +450,7 @@ public:
 	void free_uobj();
 	bool is_visible() const;
 	string get_name() const {return "Universe Cell";}
+	void free_context() {star_pld.free_vbo();}
 };
 
 

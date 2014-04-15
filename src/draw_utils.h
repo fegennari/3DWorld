@@ -49,12 +49,14 @@ typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
 typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 
 
-class pt_line_drawer_no_lighting_t {
+class pt_line_drawer_no_lighting_t { // uses vbo for static points/lines; used for universe mode stars
 
 	vector<vert_color> points, lines;
+	unsigned vbo[2];
 
 public:
-	void clear() {points.resize(0); lines.resize(0);}
+	pt_line_drawer_no_lighting_t() {vbo[0] = vbo[1] = 0;}
+	void clear() {points.resize(0); lines.resize(0); free_vbo();}
 	void add_pt(point const &v, colorRGBA const &c) {
 		points.push_back(vert_color(v, c));
 	}
@@ -63,8 +65,10 @@ public:
 		lines.push_back(vert_color(v2, c2));
 	}
 	void draw() const;
+	void draw_vbo();
 	void draw_and_clear() {draw(); clear();}
 	bool empty() const {return (points.empty() && lines.empty());}
+	void free_vbo();
 };
 
 
