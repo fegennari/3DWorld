@@ -55,7 +55,7 @@ void dynamic_particle::draw() const { // lights, color, texture, shadowed
 	assert(lighted && tid < 0);
 	color.set_for_cur_shader();
 	int const ndiv(min(N_SPHERE_DIV, max(3, int(3.0f*sqrt(radius*window_width/distance_to_camera(pos))))));
-	draw_subdiv_sphere(pos, radius, ndiv, (tid >= 0), 0); // point if far away?
+	draw_sphere_vbo(pos, radius, ndiv, (tid >= 0)); // point if far away?
 }
 
 

@@ -789,7 +789,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 			pos.z -= 0.5*radius;
 			draw_cylinder(pos, 1.0*radius, 0.2*radius, 0.2*radius, ndiv, 1);
 			pos.z += radius;
-			draw_subdiv_sphere(pos, 0.2*radius, ndiv, 0, 0);
+			draw_sphere_vbo(pos, 0.2*radius, ndiv, 0);
 			break;
 		case PROJECTILE: // shotgun
 			for (unsigned n = 0; n < 2; ++n) { // two shells in one ammo
@@ -812,7 +812,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 			draw_star(pos, obj.orientation, obj.init_dir, 0.4*radius, obj.angle, 0);
 			break;
 		case GASSED:
-			draw_subdiv_sphere(pos, 0.6*radius, ndiv, 1, 0);
+			draw_sphere_vbo(pos, 0.6*radius, ndiv, 1);
 			break;
 		default:
 			draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, 1, shader);
@@ -1056,10 +1056,10 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader) {
 
 	set_emissive_only(((type == -1) ? color : get_powerup_color(type)), shader);
-	draw_subdiv_sphere(pos, 0.7*radius, ndiv, 0, 0); // draw flare/billboard?
+	draw_sphere_vbo(pos, 0.7*radius, ndiv, 0); // draw flare/billboard?
 	shader.clear_color_e();
 	shader.set_cur_color(color);
-	draw_subdiv_sphere(pos, radius, ndiv, 0, 0);
+	draw_sphere_vbo(pos, radius, ndiv, 0);
 }
 
 
@@ -1160,7 +1160,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 		}
 	}
 	if (!DEBUG_COLORCODE) {shader.set_cur_color(WHITE);}
-	draw_subdiv_sphere(pos, radius, ndiv, 1, 0); // main body
+	draw_sphere_vbo(pos, radius, ndiv, 1); // main body
 	select_no_texture();
 	fgPushMatrix();
 	translate_to(pos);
@@ -1192,7 +1192,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 	if (time > 5) {
 		pos.z += 0.15*radius;
 		shader.set_color_e(get_landmine_light_color(time));
-		draw_subdiv_sphere(pos, 0.15*radius, ndiv/2, 0, 0); // warning light
+		draw_sphere_vbo(pos, 0.15*radius, ndiv/2, 0); // warning light
 		shader.clear_color_e();
 	}
 	select_texture(object_types[LANDMINE].tid);

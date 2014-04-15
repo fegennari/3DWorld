@@ -569,7 +569,7 @@ void draw_moon() {
 	s.add_uniform_int("tex0", 0);
 	s.set_cur_color(WHITE);
 	select_texture(MOON_TEX);
-	draw_subdiv_sphere(pos, moon_radius, N_SPHERE_DIV, 1, 0);
+	draw_sphere_vbo(pos, moon_radius, N_SPHERE_DIV, 1);
 	s.end_shader();
 	disable_light(4);
 
@@ -696,8 +696,8 @@ void draw_sky(int order) {
 	s.set_cur_color(cloud_color);
 	select_texture(CLOUD_TEX);
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot
-	setup_texgen(1.0/radius, 1.0/radius, (sky_rot_xy[0] - center.x/radius), (sky_rot_xy[1] - center.y/radius), 0.0, s, 0);
-	draw_subdiv_sphere(center, radius, (3*N_SPHERE_DIV)/2, zero_vector, NULL, 0, 1);
+	setup_texgen(1.0, 1.0, sky_rot_xy[0], sky_rot_xy[1], 0.0, s, 0); // Note: in post-transformed sphere space
+	draw_sphere_vbo(center, radius, (3*N_SPHERE_DIV)/2, 1);
 	s.end_shader();
 	disable_blend();
 	disable_light(light_id);

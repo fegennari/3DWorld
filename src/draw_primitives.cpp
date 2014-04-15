@@ -11,7 +11,8 @@
 
 
 // predefined sphere VBOs
-unsigned const NUM_PREDEF_SPHERES(4*N_SPHERE_DIV);
+unsigned const MAX_SPHERE_VBO_NDIV = 3*N_SPHERE_DIV/2;
+unsigned const NUM_PREDEF_SPHERES  = 4*MAX_SPHERE_VBO_NDIV;
 
 unsigned sphere_vbo_offsets[NUM_PREDEF_SPHERES+1] = {0};
 unsigned predef_sphere_vbo(0);
@@ -671,7 +672,7 @@ void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorR
 
 	shader_t s;
 	s.begin_color_only_shader(color);
-	draw_subdiv_sphere(pos, radius, ndiv, 0, 0);
+	draw_sphere_vbo(pos, radius, ndiv, 0);
 	s.end_shader();
 }
 
@@ -953,13 +954,13 @@ void free_sphere_vbos() {
 
 void setup_sphere_vbos() {
 
-	assert(N_SPHERE_DIV > 0);
+	assert(MAX_SPHERE_VBO_NDIV > 0);
 	if (predef_sphere_vbo > 0) return; // already finished
 	vector<sd_sphere_d::vertex_type_t> verts;
 	sphere_point_norm spn;
 	sphere_vbo_offsets[0] = 0;
 
-	for (unsigned i = 1; i <= N_SPHERE_DIV; ++i) {
+	for (unsigned i = 1; i <= MAX_SPHERE_VBO_NDIV; ++i) {
 		for (unsigned half = 0; half < 2; ++half) {
 			for (unsigned tex = 0; tex < 2; ++tex) {
 				sd_sphere_d sd(all_zeros, 1.0, i);
@@ -969,7 +970,7 @@ void setup_sphere_vbos() {
 			}
 		}
 	}
-	create_vbo_and_upload(predef_sphere_vbo, verts, 0, 1);
+	create_vbo_and_upload(predef_sphere_vbo, verts, 0, 1); // ~8MB
 }
 
 
@@ -984,7 +985,7 @@ void bind_draw_sphere_vbo(bool textured, bool normals) {
 
 void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_instances) {
 
-	assert(ndiv > 0 && ndiv <= N_SPHERE_DIV);
+	assert(ndiv > 0 && ndiv <= MAX_SPHERE_VBO_NDIV);
 	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
 	assert(off1 < off2);
 	check_mvm_update();
@@ -1002,7 +1003,7 @@ void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instan
 
 void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc, int shader_loc) {
 
-	if (ndiv <= N_SPHERE_DIV) { // speedup is highly variable
+	if (ndiv <= MAX_SPHERE_VBO_NDIV) { // speedup is highly variable
 		assert(ndiv > 0);
 		bool const has_xform(radius != 1.0 || pos != all_zeros);
 
