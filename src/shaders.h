@@ -12,6 +12,7 @@ using std::string;
 
 unsigned const TEX0_S_ATTR       = 0;
 unsigned const TEX0_T_ATTR       = 1;
+unsigned const TANGENT_ATTR      = 2;
 unsigned const NUM_SHADER_TYPES  = 5;
 
 
@@ -106,7 +107,7 @@ public:
 	bool add_uniform_matrix_4x4  (char const *const name, float *m, bool transpose) const;
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
-	int attrib_loc_by_ix(unsigned ix) const;
+	int attrib_loc_by_ix(unsigned ix, bool allow_fail=0) const;
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
 	void register_attrib_name(char const *const name, unsigned bind_ix);
 	bool set_attrib_float_array(int loc, float const *const val, unsigned num) const;

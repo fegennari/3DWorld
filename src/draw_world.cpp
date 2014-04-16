@@ -265,8 +265,9 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.register_attrib_name("tex0_s", TEX0_S_ATTR);
 		s.register_attrib_name("tex0_t", TEX0_T_ATTR);
 	}
-	if (use_bmap)     {s.add_uniform_int("bump_map", 5);}
-	if (use_spec_map) {s.add_uniform_int("spec_map", 8);}
+	if (use_bmap == 2) {s.register_attrib_name("tangent", TANGENT_ATTR);}
+	if (use_bmap     ) {s.add_uniform_int("bump_map", 5);}
+	if (use_spec_map ) {s.add_uniform_int("spec_map", 8);}
 	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
 	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);

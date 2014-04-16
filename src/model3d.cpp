@@ -342,22 +342,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	else if (vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
 		if (!camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius) || !camera_pdu.cube_visible(bcube)) return; // view frustum culling
 	}
-	unsigned const stride(sizeof(T));
-	bool const have_normals(stride >= sizeof(vert_norm) && !is_shadow_pass), have_tex_coords(stride >= sizeof(vert_norm_tc) && !is_shadow_pass);
-	int loc(-1);
 	create_bind_vbo_and_upload(vbo, *this, 0);
-
-	if (CALC_TANGENT_VECT && enable_bump_map() && !is_shadow_pass && has_tangents) { // Note: if we get here, T must be a vert_norm_tc_tan
-		assert(stride == sizeof(vert_norm_tc_tan));
-		loc = shader.get_attrib_loc("tangent");
-		assert(loc > 0);
-		glEnableVertexAttribArray(loc);
-		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, (void *)sizeof(vert_norm_tc)); // stuff in at the end
-	}
-	shader.enable_vnct_atribs(1, have_tex_coords, have_normals, 0);
-	shader.set_vertex_ptr(stride, 0);
-	if (have_normals)    {shader.set_normal_ptr(stride, (void *)sizeof(point),     0);}
-	if (have_tex_coords) {shader.set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);}
+	T::set_vbo_arrays();
 	assert(!indices.empty()); // now always using indexed drawing
 
 	if (DRAW_QUADS_AS_TRIS && npts == 4) {
@@ -380,9 +366,9 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 			}
 		}
 	}
+	bind_vbo(0, 0);
 	bind_vbo(0, 1);
-	bind_vbo(0);
-	if (loc >= 0) {glDisableVertexAttribArray(loc);}
+	T::unset_attrs();
 }
 
 

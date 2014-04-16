@@ -198,14 +198,15 @@ int shader_t::get_attrib_loc(char const *const name, bool allow_fail) const {
 void shader_t::register_attrib_name(char const *const name, unsigned bind_ix) {
 
 	assert(bind_ix < 100); // sanity check
-	int const loc(get_attrib_loc(name));
-	if (bind_ix >= attrib_locs.size()) attrib_locs.resize(bind_ix+1);
+	int const loc(get_attrib_loc(name)); // okay if -1
+	if (bind_ix >= attrib_locs.size()) {attrib_locs.resize(bind_ix+1);}
 	attrib_locs[bind_ix] = loc;
 }
 
 
-int shader_t::attrib_loc_by_ix(unsigned ix) const {
+int shader_t::attrib_loc_by_ix(unsigned ix, bool allow_fail) const {
 
+	if (allow_fail && ix >= attrib_locs.size()) return -1; // not set
 	assert(ix < attrib_locs.size());
 	return attrib_locs[ix]; // is it legal for this to return -1?
 }

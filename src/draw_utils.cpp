@@ -76,6 +76,25 @@ void vert_norm_tc::set_vbo_arrays(bool set_state) {
 	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
 }
 
+void vert_norm_tc_tan::set_vbo_arrays(bool set_state) {
+	set_array_client_state(1, 1, 1, 0, set_state);
+	unsigned const stride(sizeof(vert_norm_tc_tan));
+	set_vn_ptrs(stride, 0);
+	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
+	// Note: would be cleaner but less efficient to use cur_shader->get_attrib_loc("tangent")
+	int const loc(cur_shader->attrib_loc_by_ix(TANGENT_ATTR, 1)); // okay if fails
+	if (loc >= 0) {
+		glEnableVertexAttribArray(loc);
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, (void *)sizeof(vert_norm_tc));
+	}
+}
+
+void vert_norm_tc_tan::unset_attrs() {
+	assert(cur_shader);
+	int const loc(cur_shader->attrib_loc_by_ix(TANGENT_ATTR, 1)); // okay if fails
+	if (loc >= 0) {glDisableVertexAttribArray(loc);}
+}
+
 void vert_color::set_vbo_arrays(bool set_state) {
 	set_array_client_state(1, 0, 0, 1, set_state);
 	unsigned const stride(sizeof(vert_color));

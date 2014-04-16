@@ -699,6 +699,7 @@ struct vert_norm { // size = 24
 	bool operator==(vert_norm const &p) const {return (v == p.v && n == p.n);}
 	void set_state() const;
 	static void set_vbo_arrays(bool set_state=1);
+	static void unset_attrs() {}
 };
 
 
@@ -777,6 +778,33 @@ struct vert_norm_tc : public vert_norm { // size = 32
 	bool operator==(vert_norm_tc const &p) const {return (v == p.v && n == p.n && t[0] == p.t[0] && t[1] == p.t[1]);}
 	void set_state() const;
 	static void set_vbo_arrays(bool set_state=1);
+};
+
+
+struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
+	vector4d tangent;
+
+	vert_norm_tc_tan() {}
+	vert_norm_tc_tan(vert_norm_tc const &vntc, vector4d const &tangent_=vector4d(0,0,0,0))
+		: vert_norm_tc(vntc), tangent(tangent_) {}
+	vert_norm_tc_tan(point const &v_, vector3d const &n_, float ts, float tt, vector4d const &tangent_=vector4d(0,0,0,0))
+		: vert_norm_tc(v_, n_, ts, tt), tangent(tangent_) {}
+
+	bool operator<(vert_norm_tc_tan const &p) const {
+		if (v < p.v) return 1;
+		if (p.v < v) return 0;
+		if (n < p.n) return 1;
+		if (p.n < n) return 0;
+		if (t[0] < p.t[0]) return 1;
+		if (p.t[0] < t[0]) return 0;
+		if (t[1] < p.t[1]) return 1;
+		if (p.t[1] < t[1]) return 0;
+		return (tangent < p.tangent);
+	}
+	//bool operator==(vert_norm_tc_tan const &p) const {}
+	void set_state() const {assert(0);}
+	static void set_vbo_arrays(bool set_state=1);
+	static void unset_attrs();
 };
 
 
