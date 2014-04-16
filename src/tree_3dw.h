@@ -238,7 +238,7 @@ public:
 	bool draw_tree_shadow_only(shader_t &s, bool draw_branches, bool draw_leaves);
 	void ensure_branch_vbo();
 	void draw_branches(shader_t &s, float size_scale, bool reflection_pass);
-	void draw_branch_vbo(shader_t &s, unsigned num, bool low_detail, bool shadow_pass);
+	void draw_branch_vbo(shader_t &s, unsigned num, bool low_detail);
 	void draw_leaves(float size_scale);
 	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
 	tree_bb_tex_t const &get_render_branch_texture() const {return render_branch_texture;}

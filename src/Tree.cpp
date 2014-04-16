@@ -821,7 +821,7 @@ bool tree_data_t::draw_tree_shadow_only(shader_t &s, bool draw_branches, bool dr
 		select_texture(tree_types[tree_type].leaf_tex);
 		draw_leaf_quads_from_vbo(leaves.size()); // could also disable normals and colors, but that doesn't seem to help much
 	}
-	if (draw_branches) {draw_branch_vbo(s, num_branch_quads, 1, 1);} // draw branches (untextured), low_detail=1
+	if (draw_branches) {draw_branch_vbo(s, num_branch_quads, 1);} // draw branches (untextured), low_detail=1
 	return 1;
 }
 
@@ -975,25 +975,18 @@ void tree_data_t::draw_branches(shader_t &s, float size_scale, bool reflection_p
 
 	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
 	bool const low_detail(reflection_pass || ((size_scale == 0.0) ? 0 : (size_scale < 2.0)));
-	draw_branch_vbo(s, num, low_detail, 0);
+	draw_branch_vbo(s, num, low_detail);
 }
 
 
-void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail, bool shadow_pass) {
+void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail) {
 
 #ifdef TREE_4TH_BRANCHES
 	low_detail = 0; // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
 #endif
 	ensure_branch_vbo();
 	branch_vbo_manager.pre_render();
-
-	if (shadow_pass) {
-		s.set_vertex_ptr(sizeof(branch_vert_type_t), 0); // vertices only
-		check_mvm_update();
-	}
-	else {
-		vert_norm_comp_tc::set_vbo_arrays(0);
-	}
+	vert_norm_comp_tc::set_vbo_arrays(0);
 	unsigned const idata_sz(4*num_branch_quads*sizeof(branch_index_t));
 	int const index_type((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
 	glDrawRangeElements(GL_QUADS, 0, num_unique_pts, (low_detail ? 2 : 4)*num, index_type, (void *)(low_detail ? idata_sz : 0));
