@@ -283,18 +283,14 @@ void unbind_temp_vbo() {
 }
 
 
-template class pt_line_drawer_t<color_wrapper      >;
-template class pt_line_drawer_t<color_wrapper_float>;
-
-
-template<typename cwt> void pt_line_drawer_t<cwt>::add_textured_pt(point const &v, colorRGBA c, int tid) {
+void pt_line_drawer::add_textured_pt(point const &v, colorRGBA c, int tid) {
 
 	if (tid >= 0) c = c.modulate_with(texture_color(tid));
 	vector3d const view_dir(get_camera_pos(), v);
 	add_pt(v, view_dir, c);
 }
 
-template<typename cwt> void pt_line_drawer_t<cwt>::add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid) {
+void pt_line_drawer::add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid) {
 
 	if (tid >= 0) c = c.modulate_with(texture_color(tid));
 	vector3d view_dir(get_camera_pos(), (v1 + v2)*0.5);
@@ -302,23 +298,11 @@ template<typename cwt> void pt_line_drawer_t<cwt>::add_textured_line(point const
 	add_line(v1, view_dir, c, v2, view_dir, c);
 }
 
-template<typename cwt> void pt_line_drawer_t<cwt>::vnc_cont::draw(int type) const {
+void pt_line_drawer::draw() const {
 	
-	if (empty()) return; // nothing to do
-	assert(cur_shader);
-	cur_shader->set_vertex_ptr(sizeof(vnc), &(front().v));
-	cur_shader->set_normal_ptr(sizeof(vnc), &(front().n), 0);
-	cur_shader->set_color4_ptr(sizeof(vnc), &(front().c), cwt::is_compressed());
-	glDrawArrays(type, 0, (unsigned)size());
-}
-
-template<typename cwt> void pt_line_drawer_t<cwt>::draw() const {
-		
-	if (empty()) return;
 	assert(!(lines.size() & 1));
-	set_array_client_state(1, 0, 1, 1);
-	points.draw(GL_POINTS);
-	lines.draw(GL_LINES);
+	if (!points.empty()) {draw_verts(points, GL_POINTS);}
+	if (!lines.empty ()) {draw_verts(lines,  GL_LINES );}
 	//cout << "mem: " << get_mem() << endl;
 }
 

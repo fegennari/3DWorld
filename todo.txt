@@ -22,3 +22,4 @@ static error check (analysis)
 
 Better pine tree texture
 Hedges - per-tree shape
+Bump map detail texture for voxel terrain

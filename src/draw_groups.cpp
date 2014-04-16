@@ -22,8 +22,7 @@ float const NDIV_SCALE       = 1.6;
 
 // Global Variables
 quad_batch_draw puddle_qbd;
-pt_line_drawer obj_pld;
-pt_line_drawer_hdr snow_pld;
+pt_line_drawer obj_pld, snow_pld;
 
 
 extern bool underwater;
@@ -255,11 +254,13 @@ void draw_select_groups(int solid) {
 		s.begin_shader();
 		s.add_uniform_float("size", 2.0*object_types[SNOW].radius);
 		s.add_uniform_int("tex0", 0);
-		s.add_uniform_float("min_alpha", 0.0);
+		s.add_uniform_float("min_alpha",   0.0);
+		s.add_uniform_float("color_scale", 2.0);
 		check_drawing_flags(object_types[SNOW].flags, 1, s);
 		s.set_specular(0.0, 1.0); // disable
 		snow_pld.draw_and_clear();
 		check_drawing_flags(object_types[SNOW].flags, 0, s);
+		s.add_uniform_float("color_scale", 1.0);
 		s.end_shader();
 		glDepthMask(GL_TRUE);
 	}
@@ -722,7 +723,8 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 	}
 	if (draw_snowflake) { // draw as a point to be converted to a billboard by the geometry shader
 		bool const is_shadowed(is_object_shadowed(obj, cd_scale, radius));
-		snow_pld.add_pt(pos, (is_shadowed ? zero_vector : (get_light_pos() - pos)), (do_texture ? tcolor : color));
+		// Note: color is scaled by 0.5 here (and 2.0 in the shader to cancel) to allow for blue > 1.0
+		snow_pld.add_pt(pos, (is_shadowed ? zero_vector : (get_light_pos() - pos)), (do_texture ? tcolor : color)*0.5);
 		return;
 	}
 	if (!draw_large) { // draw as a point

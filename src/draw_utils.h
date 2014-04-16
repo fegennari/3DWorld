@@ -8,18 +8,9 @@
 #include "3DWorld.h"
 
 
-template<typename cwt> class pt_line_drawer_t {
+class pt_line_drawer {
 
-	struct vnc : public vert_norm, public cwt { // size = 28
-		vnc() {}
-		vnc(point const &v_, vector3d const &n_, colorRGBA const &c_) : vert_norm(v_, n_) {set_c4(c_);}
-	};
-
-	struct vnc_cont : public vector<vnc> {
-		void draw(int type) const;
-	};
-
-	vnc_cont points, lines;
+	vector<vert_norm_color> points, lines;
 
 public:
 	void clear() {
@@ -27,26 +18,23 @@ public:
 		lines.resize(0);
 	}
 	void free_mem() {
-		points.swap(vnc_cont());
-		lines.swap(vnc_cont());
+		points.swap(vector<vert_norm_color>());
+		lines.swap(vector<vert_norm_color>());
 	}
 	void add_pt(point const &v, vector3d const &n, colorRGBA const &c) {
-		points.push_back(vnc(v, n, c));
+		points.push_back(vert_norm_color(v, n, c));
 	}
 	void add_line(point const &v1, vector3d const &n1, colorRGBA const &c1, point const &v2, vector3d const &n2, colorRGBA const &c2) {
-		lines.push_back(vnc(v1, n1, c1));
-		lines.push_back(vnc(v2, n2, c2));
+		lines.push_back(vert_norm_color(v1, n1, c1));
+		lines.push_back(vert_norm_color(v2, n2, c2));
 	}
 	void add_textured_pt(point const &v, colorRGBA c, int tid);
 	void add_textured_line(point const &v1, point const &v2, colorRGBA c, int tid);
 	void draw() const;
 	void draw_and_clear() {draw(); clear();}
-	size_t get_mem() const {return (points.capacity() + lines.capacity())*sizeof(vnc);}
+	size_t get_mem() const {return (points.capacity() + lines.capacity())*sizeof(vert_norm_color);}
 	bool empty() const {return (points.empty() && lines.empty());}
 };
-
-typedef pt_line_drawer_t<color_wrapper      > pt_line_drawer;
-typedef pt_line_drawer_t<color_wrapper_float> pt_line_drawer_hdr;
 
 
 class pt_line_drawer_no_lighting_t { // uses vbo for static points/lines; used for universe mode stars
