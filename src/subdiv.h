@@ -78,7 +78,6 @@ public:
 	sd_sphere_vbo_d() {}
 	sd_sphere_vbo_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL) : sd_sphere_d(p, r, n, pm, dp, s) {}
 	void clear_vbos();
-	void draw_ndiv_pow2(unsigned ndiv);
 	void draw_ndiv_pow2_vbo(unsigned ndiv);
 	void sd_sphere_vbo_d::draw_instances(unsigned ndiv, instance_render_t &inst_render);
 };

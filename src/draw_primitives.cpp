@@ -591,16 +591,6 @@ unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 }
 
 
-void sd_sphere_vbo_d::draw_ndiv_pow2(unsigned ndiv) {
-
-	unsigned const lod(calc_lod_pow2(spn.ndiv, ndiv));
-	static vector<vertex_type_t> verts;
-	verts.resize(0);
-	get_triangle_strip_pow2(verts, (1 << lod));
-	draw_verts(verts, GL_TRIANGLE_STRIP);
-}
-
-
 void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned ndiv) {
 
 	unsigned const lod(calc_lod_pow2(spn.ndiv, ndiv));

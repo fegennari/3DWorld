@@ -431,9 +431,7 @@ void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, f
 			}
 			for (unsigned ss = 1; ss < SUBDIV_SECTS+1; ++ss) { // render heightmap on higher resolution mesh
 				for (unsigned tt = 1; tt <= SUBDIV_SECTS+1; ++tt) {
-					for (unsigned i = 0; i < 2; ++i) {
-						ptc.v[ss + i][tt].add_pt(verts); // texture?
-					}
+					for (unsigned i = 0; i < 2; ++i) {ptc.v[ss + i][tt].add_pt(verts);} // texture?
 				} // for tt
 				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			} // for ss
