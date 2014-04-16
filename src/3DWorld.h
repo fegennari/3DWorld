@@ -931,29 +931,21 @@ struct vert_norm_color_tangent : public vert_norm_color {
 };
 
 
-template< typename T> void set_ptr_state(T const *const verts) {
-	// if verts is NULL, we assume VBOs are to be used (probably don't even need the case split)
-	if (verts) {verts[0].set_state();} else {T::set_vbo_arrays();}
-}
-
-#if 0
-void bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size);
+bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size);
 void unbind_temp_vbo();
 
-template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0) {
-	assert(count > 0);
-	if (verts) {bind_temp_vbo_from_verts(verts+start_ix, count, sizeof(T));}
-	T::set_vbo_arrays();
-	glDrawArrays(gl_type, (verts ? 0 : start_ix), count);
-	unbind_temp_vbo();
+template< typename T> void set_ptr_state(T const *const verts, unsigned count, unsigned start_ix=0) {
+	// if verts is NULL, we assume VBOs are to be used (probably don't even need the case split)
+	if (verts && !bind_temp_vbo_from_verts(verts+start_ix, count, sizeof(T))) {verts[0].set_state();}
+	else {T::set_vbo_arrays();}
 }
-#else
+
 template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0) {
 	assert(count > 0);
-	set_ptr_state(verts);
+	set_ptr_state(verts, count, start_ix);
 	glDrawArrays(gl_type, start_ix, count);
+	if (verts) {unbind_temp_vbo();}
 }
-#endif
 
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0) {
 	if (!verts.empty()) {draw_verts(&verts.front(), verts.size(), gl_type, start_ix);}
@@ -968,10 +960,11 @@ void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0);
 bool bind_quads_as_tris_ivbo(unsigned num_quad_verts);
 unsigned create_or_bind_ivbo_quads_as_tris(unsigned &ivbo, vector<unsigned> const &indices);
 
-template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start=0) {
+template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigned count, unsigned start_ix=0) {
 	assert(count > 0);
-	set_ptr_state(verts);
-	draw_quads_as_tris(count, start);
+	set_ptr_state(verts, count, start_ix);
+	draw_quads_as_tris(count, start_ix);
+	if (verts) {unbind_temp_vbo();}
 }
 
 template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts) {

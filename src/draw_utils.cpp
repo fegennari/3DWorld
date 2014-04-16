@@ -261,9 +261,10 @@ void vert_norm_comp_tc_comp_color::set_state() const {
 }
 
 
+#if 0 // FIXME: required when using a core context, but too slow
 unsigned stream_data_sz(0);
 
-void bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size) {
+bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size) {
 
 	assert(verts != NULL && count > 0 && vert_size > 0);
 	if (!stream_vbo) {stream_vbo = create_vbo(); stream_data_sz = 0;}
@@ -275,12 +276,18 @@ void bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned 
 		glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_STREAM_DRAW);
 	}
 	glBufferSubData(GL_ARRAY_BUFFER, 0, size, verts);
+	return 1;
 }
 
 void unbind_temp_vbo() {
 	//delete_and_zero_vbo(stream_vbo);
 	bind_vbo(0);
 }
+
+#else
+bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size) {return 0;} // do nothing
+void unbind_temp_vbo() {} // do nothing
+#endif
 
 
 void pt_line_drawer::add_textured_pt(point const &v, colorRGBA c, int tid) {
