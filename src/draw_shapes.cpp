@@ -122,6 +122,11 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
+struct texgen_params_t {
+	float st[2][4];
+};
+
+
 void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 
 	int const sides((int)cp.surfs);
@@ -129,7 +134,6 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 	bool const back_face_cull(!is_semi_trans()); // no alpha
 	point const pos(points[0]), camera(get_camera_pos());
 	bool inside(!back_face_cull);
-	//bool const textured(tid >= 0); // Note: we assume the cube is always textured, so always setup texgen
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
 
 	if (!inside) { // check if in the camera's view volume intersects the cube - if so we must render all faces
@@ -157,8 +161,9 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 	// Note: with some amount of complexity, we can group more cube faces into a single draw call to reduce driver overhead
 	//       however, we tend to be GPU/fill rate limited anyway, especially with smoke/dlights, so it makes little difference
 	vert_norm verts[36];
-	float tex_attrs[2][4*36];
-	unsigned vix(0), tix[2] = {0,0};
+	texgen_params_t tex_attrs[36];
+	unsigned vix(0), tix(0);
+	bool const use_tcs(tid >= 0 && shader != NULL);
 	
 	for (unsigned i = 0; i < 6; ++i) {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
@@ -175,7 +180,7 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);
 		for (unsigned i = 0; i < 6; ++i) {verts[vix++] = vert_norm(pts[quad_to_tris_ixs[i]], normal);}
-		if (tid < 0 || shader == NULL) continue;
+		if (!use_tcs) continue;
 
 		for (unsigned e = 0; e < 2; ++e) {
 			unsigned const tdim(e ? t1 : t0);
@@ -190,18 +195,18 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 				tg[3]    = texture_offset[tdim]*tscale[e];
 			}
 			bool const s_or_t(cp.swap_txy ^ (e != 0));
-			for (unsigned i = 0; i < 6; ++i) {UNROLL_4X(tex_attrs[s_or_t][tix[s_or_t]++] = tg[i_];)} // one per vertex
+			for (unsigned i = 0; i < 6; ++i) {UNROLL_4X(tex_attrs[tix+i].st[s_or_t][i_] = tg[i_];)} // one per vertex
 		}
+		tix += 6;
 	} // for i
 	if (vix == 0) return; // no quads to draw
-	bool const use_tcs(tid >= 0 && shader != NULL);
 	int loc[2];
 
 	if (use_tcs) {
 		for (unsigned d = 0; d < 2; ++d) {
 			loc[d] = shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR);
 			glEnableVertexAttribArray(loc[d]);
-			glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void *)tex_attrs[d]);
+			glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, sizeof(texgen_params_t), (void *)tex_attrs[0].st[d]);
 		}
 	}
 	draw_verts(verts, vix, GL_TRIANGLES);
