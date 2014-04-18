@@ -19,9 +19,8 @@ enum {COBJ_TYPE_STD = 0, COBJ_TYPE_MODEL3D, COBJ_TYPE_VOX_TERRAIN};
 unsigned const OBJ_CNT_REM_TJ = 1;
 
 
-class obj_layer { // size = 60
+struct obj_layer { // size = 60
 
-public:
 	bool draw, shadow, swap_txy;
 	unsigned char cobj_type;
 	float elastic, tscale, specular, shine, tdx, tdy, refract_ix, light_atten;
@@ -35,8 +34,9 @@ public:
 		tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), tid(ti), coll_func(cf), color(c) {}
 
 	// assumes obj_layer contained classes are POD with no padding
-	bool operator==(obj_layer const &cobj) const {return (memcmp(this, &cobj, sizeof(obj_layer)) == 0);}
-	bool operator< (obj_layer const &cobj) const {return (memcmp(this, &cobj, sizeof(obj_layer)) <  0);}
+	bool operator==(obj_layer const &layer) const {return (memcmp(this, &layer, sizeof(obj_layer)) == 0);}
+	bool operator< (obj_layer const &layer) const {return (memcmp(this, &layer, sizeof(obj_layer)) <  0);}
+	bool operator!=(obj_layer const &layer) const {return !operator==(layer);}
 	bool no_draw()        const {return (!draw || color.alpha == 0.0);}
 	bool has_alpha_texture() const;
 	bool is_semi_trans()  const {return (color.alpha < 1.0 || has_alpha_texture());}
@@ -45,9 +45,8 @@ public:
 };
 
 
-class cobj_params : public obj_layer { // size = 68
+struct cobj_params : public obj_layer { // size = 68
 
-public:
 	int cf_index;
 	unsigned char surfs;
 	bool is_dynamic, is_destroyable, no_coll;
@@ -57,6 +56,33 @@ public:
 	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf=NULL, int ci=0,
 		int ti=-1, float ts=1.0, int s=0, float spec=0.0, float shi=0.0, bool nc=0) :
 		obj_layer(e, c, d, cf, ti, ts, spec, shi), cf_index(ci), surfs(s), is_dynamic(id), is_destroyable(0), no_coll(nc) {}
+};
+
+
+struct texgen_params_t {
+	float st[2][4];
+	texgen_params_t() {UNROLL_4X(st[0][i_] = st[1][i_] = 0.0;)} // zero initialized
+};
+
+
+class cube_draw_buffer {
+
+	obj_layer last_layer;
+	vector<vert_norm> verts;
+	vector<texgen_params_t> texgens;
+	shader_t &shader;
+
+public:
+	cube_draw_buffer(shader_t &shader_) : shader(shader_) {}
+	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vn); texgens.push_back(tp);}
+
+	void on_new_obj_layer(obj_layer const &layer) {
+		if (layer != last_layer) {flush();}
+		last_layer = layer;
+	}
+	void clear() {verts.clear(); texgens.clear();}
+	void draw() const;
+	void flush() {draw(); clear();}
 };
 
 
@@ -91,7 +117,7 @@ public:
 	void set_from_pts(point const *const pts, unsigned npts);
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vector<vert_norm> &poly_verts, shader_t &shader) const;
+	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vector<vert_norm> &poly_verts, shader_t &shader, cube_draw_buffer &cdb) const;
 	void get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) const;
 	void add_to_vector(coll_obj_group &cobjs, int type_);
 	void check_if_cube();
@@ -151,7 +177,7 @@ public:
 	int contains_point(point const &pos) const {return sphere_intersects(pos, 0.0);} // not efficient/might not be correct in all cases
 
 	// drawing code
-	void draw_coll_cube(int do_fill, int tid, shader_t *shader) const;
+	void draw_coll_cube(int do_fill, int tid, cube_draw_buffer &cdb) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t &shader) const;
 	void draw_polygon(int tid, point const *points, int npoints, vector3d normal, bool calc_normal_dir, shader_t &shader, vector<vert_norm> &verts) const;
 	void draw_extruded_polygon(int tid, shader_t &shader, bool calc_normal_dir, vector<vert_norm> &verts) const;

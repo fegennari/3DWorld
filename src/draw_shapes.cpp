@@ -122,12 +122,23 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
-struct texgen_params_t {
-	float st[2][4];
-};
+void cube_draw_buffer::draw() const {
+
+	if (verts.empty()) return; // nothing to draw
+	assert(verts.size() == texgens.size());
+	int loc[2];
+
+	for (unsigned d = 0; d < 2; ++d) {
+		loc[d] = shader.attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR);
+		glEnableVertexAttribArray(loc[d]);
+		glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, sizeof(texgen_params_t), (void *)texgens.front().st[d]);
+	}
+	draw_verts(verts, GL_TRIANGLES);
+	for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}
+}
 
 
-void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
+void coll_obj::draw_coll_cube(int do_fill, int tid, cube_draw_buffer &cdb) const {
 
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
@@ -158,13 +169,6 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		}
 		sort(faces, (faces+6));
 	}
-	// Note: with some amount of complexity, we can group more cube faces into a single draw call to reduce driver overhead
-	//       however, we tend to be GPU/fill rate limited anyway, especially with smoke/dlights, so it makes little difference
-	vert_norm verts[36];
-	texgen_params_t tex_attrs[36];
-	unsigned vix(0), tix(0);
-	bool const use_tcs(tid >= 0 && shader != NULL);
-	
 	for (unsigned i = 0; i < 6; ++i) {
 		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
 		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue; // side disabled
@@ -179,12 +183,12 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 		if (!dir) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
 		vector3d normal(zero_vector);
 		normal[dim] = (dir ? 1.0 : -1.0);
-		for (unsigned i = 0; i < 6; ++i) {verts[vix++] = vert_norm(pts[quad_to_tris_ixs[i]], normal);}
-		if (!use_tcs) continue;
+		texgen_params_t tp;
 
 		for (unsigned e = 0; e < 2; ++e) {
 			unsigned const tdim(e ? t1 : t0);
-			float tg[4] = {0.0};
+			bool const s_or_t(cp.swap_txy ^ (e != 0));
+			float *tg(tp.st[s_or_t]);
 
 			if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
 				tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
@@ -194,23 +198,11 @@ void coll_obj::draw_coll_cube(int do_fill, int tid, shader_t *shader) const {
 				tg[tdim] = tscale[e];
 				tg[3]    = texture_offset[tdim]*tscale[e];
 			}
-			bool const s_or_t(cp.swap_txy ^ (e != 0));
-			for (unsigned i = 0; i < 6; ++i) {UNROLL_4X(tex_attrs[tix+i].st[s_or_t][i_] = tg[i_];)} // one per vertex
 		}
-		tix += 6;
+		for (unsigned i = 0; i < 6; ++i) { // quads (2 triangles)
+			cdb.add_vert(vert_norm(pts[quad_to_tris_ixs[i]], normal), tp);
+		}
 	} // for i
-	if (vix == 0) return; // no quads to draw
-	int loc[2];
-
-	if (use_tcs) {
-		for (unsigned d = 0; d < 2; ++d) {
-			loc[d] = shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR);
-			glEnableVertexAttribArray(loc[d]);
-			glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, sizeof(texgen_params_t), (void *)tex_attrs[0].st[d]);
-		}
-	}
-	draw_verts(verts, vix, GL_TRIANGLES);
-	if (use_tcs) {for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}}
 }
 
 

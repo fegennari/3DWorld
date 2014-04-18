@@ -1393,7 +1393,7 @@ class  sd_sphere_d;
 struct dwobject;
 class  obj_group;
 struct star;
-class  cobj_params;
+struct cobj_params;
 class  coll_obj;
 class  coll_obj_group;
 class  shape3d;

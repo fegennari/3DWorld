@@ -364,12 +364,12 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	set_fill_mode();
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
-	// Note: enable direct_lighting if processing sun/moon shadows here
 	shader_t s;
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
 	vector<vert_norm> poly_verts;
+	cube_draw_buffer cdb(s);
 	
 	if (draw_solid) {
 		vector<pair<float, int> > large_cobjs;
@@ -402,7 +402,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				draw_last.push_back(make_pair(-dist, cix)); // negative distance
 			}
 			else {
-				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, s); // i may not be valid after this call
+				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, s, cdb); // i may not be valid after this call
 				
 				if (cix != *i) {
 					assert(cix > *i);
@@ -411,12 +411,14 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			}
 		} // for i
 		end_group(last_group_id);
+		cdb.flush();
 		sort(large_cobjs.begin(), large_cobjs.end()); // sort front to back for early z culling
 
 		for (vector<pair<float, int> >::const_iterator i = large_cobjs.begin(); i != large_cobjs.end(); ++i) {
 			unsigned cix(i->second);
-			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, poly_verts, s);
+			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, poly_verts, s, cdb);
 		}
+		cdb.flush();
 	} // end draw solid
 	if (draw_trans) { // called second
 		if (smoke_exists) {
@@ -442,6 +444,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 			if (ix < 0) { // portal
 				end_group(last_group_id);
+				cdb.flush();
 
 				if (has_lt_atten && last_light_atten != 0.0) {
 					s.set_uniform_float(ulocs[0], 0.0);
@@ -461,9 +464,11 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				unsigned cix(ix);
 				assert(cix < coll_objects.size());
 				coll_obj const &c(coll_objects[cix]);
+				float light_atten(0.0);
+				cdb.on_new_obj_layer(c.cp);
 				
 				if (has_lt_atten) { // we only support cubes for now (Note: may not be compatible with groups)
-					float const light_atten((c.type == COLL_CUBE) ? c.cp.light_atten : 0.0);
+					if (c.type == COLL_CUBE) {light_atten = c.cp.light_atten;}
 
 					if (light_atten != last_light_atten) {
 						s.set_uniform_float(ulocs[0], light_atten);
@@ -473,14 +478,16 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 						s.set_uniform_float(ulocs[2], c.cp.refract_ix);
 						last_refract_ix = c.cp.refract_ix;
 					}
-					if (light_atten > 0.0) s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);
+					if (light_atten > 0.0) {s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);} // per-cube data
 				}
-				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, s);
+				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, s, cdb);
+				if (light_atten > 0.0) {cdb.flush();} // must flush because ulocs[1] is per-cube
 				assert(cix == ix); // should not have changed
 			}
 		} // for i
 		if (in_portal) {portal::post_draw(portal_verts);}
 		end_group(last_group_id);
+		cdb.flush();
 		disable_blend();
 		draw_last.resize(0);
 	} // end draw_trans
