@@ -253,25 +253,36 @@ bool coll_obj::is_occluded_from_camera() const {
 }
 
 
+bool coll_obj::is_cobj_visible() const {
+
+	point center;
+	float brad;
+	bounding_sphere(center, brad);
+	if (!camera_pdu.sphere_and_cube_visible_test(center, brad, *this)) return 0;
+	return !is_occluded_from_camera();
+}
+
+
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const {
 
 	if (no_draw()) return;
 	assert(id == cix); // always equal, but cix may be increased in this call
 	assert(!disabled());
+	bool const in_group(group_id >= 0), same_group(group_id == last_group_id), start_group(in_group && !same_group);
+	if (!in_group && !is_cobj_visible()) return;
+
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
 	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
 
 	// process groups
-	bool const in_group(group_id >= 0), same_group(group_id == last_group_id), start_group(in_group && !same_group);
-
 	if (same_group) {
 		assert(!in_group || tid == last_tid); // FIXME: each texture must be in its own group (matching FIXME in build_world.cpp)
 	}
 	else { // group changed
 		end_group(last_group_id);
 	}
-	cdb.on_new_obj_layer(cp); // may draw cubes
+	cdb.on_new_obj_layer(cp); // may flush/draw
 
 	if (!in_group || start_group) { // should be the same across groups
 		shader.set_specular(cp.specular, cp.shine);
@@ -284,24 +295,20 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	}
 	last_group_id = group_id;
 
-	if (start_group) { // start rendering a new group
-		// Note: this can be done between the begin/end of a group and is more efficient in some cases, but less efficient in others
-		if (group_back_face_cull) glEnable(GL_CULL_FACE);
-		vector3d tex_dir(0,0,0);
-		tex_dir[::get_max_dim(norm)] = 1.0;
-		set_poly_texgen(tid, tex_dir, shader);
-		assert((unsigned)group_id < obj_draw_groups.size());
-		if (obj_draw_groups[group_id].begin_render(cix)) return; // cix may change here
-	}
-	if (!in_group || !obj_draw_groups[group_id].vbo_enabled()) { // don't do view frustum culling when creating the vbo
-		if (group_back_face_cull && in_group && dot_product_ptv(norm, get_camera_pos(), points[0]) < 0.0) return;
-		point center;
-		float brad;
-		bounding_sphere(center, brad);
-		if (!camera_pdu.sphere_and_cube_visible_test(center, brad, *this)) return;
-		if (is_occluded_from_camera()) return;
-	}
 	if (in_group) {
+		if (start_group) { // start rendering a new group
+			// Note: this can be done between the begin/end of a group and is more efficient in some cases, but less efficient in others
+			if (group_back_face_cull) glEnable(GL_CULL_FACE);
+			vector3d tex_dir(0,0,0);
+			tex_dir[::get_max_dim(norm)] = 1.0;
+			set_poly_texgen(tid, tex_dir, shader);
+			assert((unsigned)group_id < obj_draw_groups.size());
+			if (obj_draw_groups[group_id].begin_render(cix)) return; // cix may change here
+		}
+		if (!obj_draw_groups[group_id].vbo_enabled()) { // don't do view frustum culling when creating the vbo
+			if (group_back_face_cull && dot_product_ptv(norm, get_camera_pos(), points[0]) < 0.0) return;
+			if (!is_cobj_visible()) return;
+		}
 		assert(is_thin_poly()); // thin triangle/quad
 		obj_draw_groups[group_id].add_draw_polygon(points, norm, npoints, cix);
 		return;
@@ -318,11 +325,11 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera((points[0] + points[1])*0.5),
 				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 			int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
-			bool const draw_ends(!(cp.surfs & 1)), draw_sides_ends(draw_ends && tid < 0);
-			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader, cp.swap_txy);}
-			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, draw_sides_ends, !draw_ends); // Note: using texgen, not textured
+			bool const draw_ends(!(cp.surfs & 1));
+			setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader, cp.swap_txy);
+			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, !draw_ends); // Note: using texgen, not textured
 			
-			if (draw_ends && tid >= 0) { // draw ends with different texture matrix
+			if (draw_ends) { // draw ends with different texture matrix
 				set_poly_texgen(tid, (points[1] - points[0]).get_norm(), shader);
 				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 2); // Note: using texgen, not textured
 			}
@@ -333,7 +340,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		{
 			float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
-			if (tid >= 0) {setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader, cp.swap_txy);}
+			setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader, cp.swap_txy);
 			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured; Note2: *no* transforms, so no draw_sphere_vbo()
 		}
 		break;
