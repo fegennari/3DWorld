@@ -122,6 +122,12 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
+void cobj_draw_buffer::on_new_obj_layer(obj_layer const &layer) {
+
+	if (layer.color!=last_layer.color || layer.tid!=last_layer.tid || layer.specular!=last_layer.specular || layer.shine!=last_layer.shine) {flush();}
+	last_layer = layer;
+}
+
 void cobj_draw_buffer::draw() const {
 
 	if (verts.empty()) return; // nothing to draw

@@ -75,11 +75,7 @@ class cobj_draw_buffer {
 public:
 	cobj_draw_buffer(shader_t &shader_) : shader(shader_) {}
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vn); texgens.push_back(tp);}
-
-	void on_new_obj_layer(obj_layer const &layer) {
-		if (layer != last_layer) {flush();}
-		last_layer = layer;
-	}
+	void on_new_obj_layer(obj_layer const &layer);
 	void clear() {verts.clear(); texgens.clear();}
 	void draw() const;
 	void flush() {draw(); clear();}

@@ -275,6 +275,7 @@ bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned 
 		stream_data_sz = size;
 		glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_STREAM_DRAW);
 	}
+	// FIXME: map-discard?
 	upload_vbo_sub_data(verts, 0, size);
 	return 1;
 }
