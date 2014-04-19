@@ -65,7 +65,7 @@ struct texgen_params_t {
 };
 
 
-class cube_draw_buffer {
+class cobj_draw_buffer {
 
 	obj_layer last_layer;
 	vector<vert_norm> verts;
@@ -73,7 +73,7 @@ class cube_draw_buffer {
 	shader_t &shader;
 
 public:
-	cube_draw_buffer(shader_t &shader_) : shader(shader_) {}
+	cobj_draw_buffer(shader_t &shader_) : shader(shader_) {}
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vn); texgens.push_back(tp);}
 
 	void on_new_obj_layer(obj_layer const &layer) {
@@ -117,7 +117,7 @@ public:
 	void set_from_pts(point const *const pts, unsigned npts);
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
-	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vector<vert_norm> &poly_verts, shader_t &shader, cube_draw_buffer &cdb) const;
+	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const;
 	void get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) const;
 	void add_to_vector(coll_obj_group &cobjs, int type_);
 	void check_if_cube();
@@ -177,10 +177,10 @@ public:
 	int contains_point(point const &pos) const {return sphere_intersects(pos, 0.0);} // not efficient/might not be correct in all cases
 
 	// drawing code
-	void draw_coll_cube(int do_fill, int tid, cube_draw_buffer &cdb) const;
+	void draw_coll_cube(int tid, cobj_draw_buffer &cdb) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t &shader) const;
-	void draw_polygon(int tid, point const *points, int npoints, vector3d normal, bool calc_normal_dir, shader_t &shader, vector<vert_norm> &verts) const;
-	void draw_extruded_polygon(int tid, shader_t &shader, bool calc_normal_dir, vector<vert_norm> &verts) const;
+	void draw_polygon(int tid, point const *points, int npoints, vector3d normal, cobj_draw_buffer &cdb) const;
+	void draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const;
 };
 
 

@@ -368,8 +368,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
-	vector<vert_norm> poly_verts;
-	cube_draw_buffer cdb(s);
+	cobj_draw_buffer cdb(s);
 	
 	if (draw_solid) {
 		vector<pair<float, int> > large_cobjs;
@@ -402,7 +401,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				draw_last.push_back(make_pair(-dist, cix)); // negative distance
 			}
 			else {
-				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, s, cdb); // i may not be valid after this call
+				c.draw_cobj(cix, last_tid, last_group_id, s, cdb); // i may not be valid after this call
 				
 				if (cix != *i) {
 					assert(cix > *i);
@@ -416,7 +415,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
 		for (vector<pair<float, int> >::const_iterator i = large_cobjs.begin(); i != large_cobjs.end(); ++i) {
 			unsigned cix(i->second);
-			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, poly_verts, s, cdb);
+			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, s, cdb);
 		}
 		cdb.flush();
 	} // end draw solid
@@ -480,7 +479,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 					}
 					if (light_atten > 0.0) {s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);} // per-cube data
 				}
-				c.draw_cobj(cix, last_tid, last_group_id, poly_verts, s, cdb);
+				c.draw_cobj(cix, last_tid, last_group_id, s, cdb);
 				if (light_atten > 0.0) {cdb.flush();} // must flush because ulocs[1] is per-cube
 				assert(cix == ix); // should not have changed
 			}

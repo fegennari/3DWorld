@@ -122,7 +122,7 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 }
 
 
-void cube_draw_buffer::draw() const {
+void cobj_draw_buffer::draw() const {
 
 	if (verts.empty()) return; // nothing to draw
 	assert(verts.size() == texgens.size());
@@ -138,7 +138,7 @@ void cube_draw_buffer::draw() const {
 }
 
 
-void coll_obj::draw_coll_cube(int do_fill, int tid, cube_draw_buffer &cdb) const {
+void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 
 	int const sides((int)cp.surfs);
 	if (sides == EF_ALL) return; // all sides hidden
@@ -229,15 +229,23 @@ void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t &shader
 }
 
 
-void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d normal, bool calc_normal_dir, shader_t &shader, vector<vert_norm> &verts) const {
+void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d normal, cobj_draw_buffer &cdb) const {
 
-	if (tid >= 0) { // textured
-		draw_and_clear_verts(verts, GL_TRIANGLES);
-		set_poly_texgen(tid, normal, shader);
-	}
-	if(calc_normal_dir) {normal = get_norm_camera_orient(normal, get_center(points, npoints));}
+	normal = get_norm_camera_orient(normal, get_center(points, npoints));
 	assert(npoints == 3 || npoints == 4);
-	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(vert_norm(points[quad_to_tris_ixs[i]], normal));} // 1-2 triangles
+	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
+	vector3d v[2];
+	get_poly_texgen_dirs(normal, v);
+	texgen_params_t tp;
+	
+	for (unsigned i = 0; i < 2; ++i) {
+		bool const d((i != 0) ^ cp.swap_txy);
+		UNROLL_3X(tp.st[d][i_] = tscale[i]*v[i][i_];)
+		tp.st[d][3] = xlate[i] + tscale[i]*dot_product(texture_offset, v[i]);
+	}
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) { // 1-2 triangles
+		cdb.add_vert(vert_norm(points[quad_to_tris_ixs[i]], normal), tp);
+	}
 }
 
 
@@ -256,7 +264,7 @@ void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], 
 		for (unsigned i = 0; i < 2; ++i) { // front and back
 			centers[i] = get_center(pts[i], npoints);
 		}
-		for (int i = 0; i < npoints; ++i) { // sides
+		for (unsigned i = 0; i < npoints; ++i) { // sides
 			unsigned const ii((i+1)%npoints);
 			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
 			centers[i+2] = get_center(side_pts, 4);
@@ -268,7 +276,7 @@ void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], 
 					++faces[i].first;
 				}
 			}
-			for (int i = 0; i < npoints; ++i) { // sides
+			for (unsigned i = 0; i < npoints; ++i) { // sides
 				unsigned const ii((i+1)%npoints);
 				point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
 				
@@ -283,13 +291,13 @@ void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], 
 }
 
 
-void coll_obj::draw_extruded_polygon(int tid, shader_t &shader, bool calc_normal_dir, vector<vert_norm> &verts) const {
+void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	float const thick(fabs(thickness));
 	
 	if (thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
-		draw_polygon(tid, points, npoints, norm, calc_normal_dir, shader, verts);
+		draw_polygon(tid, points, npoints, norm, cdb);
 	}
 	else {
 		point pts[2][4];
@@ -305,7 +313,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t &shader, bool calc_normal
 			if (s < 2) { // draw front and back
 				if (bfc && (back_facing ^ (s == 0))) continue;
 				if (!s) {std::reverse(pts[s], pts[s]+npoints);}
-				draw_polygon(tid, pts[s], npoints, (s ? norm : -norm), calc_normal_dir, shader, verts); // draw bottom surface
+				draw_polygon(tid, pts[s], npoints, (s ? norm : -norm), cdb); // draw bottom surface
 				if (!s) {std::reverse(pts[s], pts[s]+npoints);}
 			}
 			else { // draw sides
@@ -313,7 +321,7 @@ void coll_obj::draw_extruded_polygon(int tid, shader_t &shader, bool calc_normal
 				point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
 
 				if (!bfc || !camera_behind_polygon(side_pts, 4)) {
-					draw_polygon(tid, side_pts, 4, get_poly_norm(side_pts), calc_normal_dir, shader, verts);
+					draw_polygon(tid, side_pts, 4, get_poly_norm(side_pts), cdb);
 				}
 			}
 		}

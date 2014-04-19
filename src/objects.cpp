@@ -253,7 +253,7 @@ bool coll_obj::is_occluded_from_camera() const {
 }
 
 
-void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vector<vert_norm> &poly_verts, shader_t &shader, cube_draw_buffer &cdb) const {
+void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const {
 
 	if (no_draw()) return;
 	assert(id == cix); // always equal, but cix may be increased in this call
@@ -308,7 +308,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 	}
 	switch (type) {
 	case COLL_CUBE:
-		draw_coll_cube((draw_model == 0), tid, cdb);
+		draw_coll_cube(tid, cdb);
 		break;
 
 	case COLL_CYLINDER:
@@ -339,8 +339,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, vecto
 		break;
 
 	case COLL_POLYGON:
-		draw_extruded_polygon(tid, shader, 1, poly_verts);
-		draw_and_clear_verts(poly_verts, GL_TRIANGLES);
+		draw_extruded_polygon(tid, cdb);
 		break;
 	}
 }
