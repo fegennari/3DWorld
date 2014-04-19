@@ -166,26 +166,41 @@ void add_rotated_textured_triangle(point const &pos, vector3d const &o, float ra
 }
 
 
+void draw_polygon_side(point const *points, int npoints, vector3d const &normal, vector<vert_norm_color> &verts, colorRGBA const &color) {
+
+	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) {verts.push_back(vert_norm_color(points[quad_to_tris_ixs[i]], normal, color));} // 1-2 triangles
+}
+
+void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], point const *points,
+	unsigned npoints, vector3d const &norm, float thick, bool bfc);
+
 void add_thick_triangle(point const &pos, vector3d const &o, float radius, float angle, float tscale,
 	vector<vert_norm_color> &verts, float thickness, colorRGBA const &color)
 {
-	static vector<vert_norm> uncolored_verts;
-	uncolored_verts.resize(0);
-	shader_t unused; // FIXME: we're not doing texturing, so this shader is unused
+	//tscale = tscale*radius
+	unsigned const npoints(3);
 	point p1, p2;
-	coll_obj cobj;
-	cobj.norm      = get_rotation_dirs_and_normal(o, angle, p1, p2);
-	cobj.type      = COLL_POLYGON;
-	cobj.thickness = thickness;
-	cobj.npoints   = 3;
-	cobj.cp.color  = color; // doesn't need to be set
-	cobj.cp.tid    = -1; // untextured
-	cobj.cp.tscale = tscale*radius;
-	cobj.points[0] = (pos + 1.5*radius*p1);
-	cobj.points[1] = (pos - 1.5*radius*p1);
-	cobj.points[2] = (pos + 3.0*radius*p2);
-	cobj.draw_extruded_polygon(-1, unused, 0, uncolored_verts);
-	for (unsigned i = 0; i < uncolored_verts.size(); ++i) {verts.push_back(vert_norm_color(uncolored_verts[i], color));}
+	vector3d const norm(get_rotation_dirs_and_normal(o, angle, p1, p2));
+	point points[3] = {(pos + 1.5*radius*p1), (pos - 1.5*radius*p1), (pos + 3.0*radius*p2)};
+	point pts[2][4];
+	pair<int, unsigned> faces[6];
+	get_sorted_thick_poly_faces(pts, faces, points, npoints, norm, thickness, 0);
+	unsigned const nsides(unsigned(npoints)+2);
+	
+	for (unsigned fi = 0; fi < nsides; ++fi) { // draw back to front
+		unsigned const s(faces[fi].second);
+
+		if (s < 2) { // draw front and back
+			if (!s) {std::reverse(pts[s], pts[s]+npoints);}
+			draw_polygon_side(pts[s], npoints, (s ? norm : -norm), verts, color); // draw bottom surface
+			if (!s) {std::reverse(pts[s], pts[s]+npoints);}
+		}
+		else { // draw sides
+			unsigned const i(s-2), ii((i+1)%npoints);
+			point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
+			draw_polygon_side(side_pts, 4, get_poly_norm(side_pts), verts, color);
+		}
+	}
 }
 
 
