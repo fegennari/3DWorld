@@ -1039,7 +1039,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 			vector<vector2d> &v(insts[lod][bix]);
 			if (v.empty()) continue;
 			bind_vbo(0); // clear any current grass vbo that may be bound
-			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), &v.front());
+			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), &v.front()); // FIXME_VBO
 			grass_tile_manager.render_block(bix, lod, 1.0, v.size());
 			v.clear();
 		}

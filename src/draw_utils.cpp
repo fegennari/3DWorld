@@ -377,7 +377,7 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 		loc = s.get_attrib_loc("point_size");
 		assert(loc > 0);
 		glEnableVertexAttribArray(loc);
-		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(float), (void *)(&sizes.front()));
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(float), (void *)(&sizes.front())); // FIXME_VBO
 	}
 	draw_verts(points, GL_POINTS);
 	if (!const_point_size) {glDisableVertexAttribArray(loc);}

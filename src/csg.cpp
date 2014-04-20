@@ -1073,12 +1073,18 @@ void coll_obj_group::subdiv_cubes() {
 
 
 bool comp_cobjs_by_draw_params(coll_obj const &a, coll_obj const &b) {
-	if (a.cp.tid   < b.cp.tid)   return 1;
-	if (b.cp.tid   < a.cp.tid)   return 0;
-	if (a.group_id < b.group_id) return 1;
-	if (b.group_id < a.group_id) return 0;
-	if (a.type     < b.type)     return 1;
-	if (b.type     < a.type)     return 0;
+	if (a.cp.tid      < b.cp.tid)      return 1;
+	if (b.cp.tid      < a.cp.tid)      return 0;
+	if (a.group_id    < b.group_id)    return 1;
+	if (b.group_id    < a.group_id)    return 0;
+	if (a.cp.color    < b.cp.color)    return 1;
+	if (b.cp.color    < a.cp.color)    return 0;
+	if (a.cp.specular < b.cp.specular) return 1;
+	if (b.cp.specular < a.cp.specular) return 0;
+	if (a.cp.shine    < b.cp.shine)    return 1;
+	if (b.cp.shine    < a.cp.shine)    return 0;
+	if (a.type        < b.type)        return 1;
+	if (b.type        < a.type)        return 0;
 	return (a.points[0] < b.points[0]);
 }
 

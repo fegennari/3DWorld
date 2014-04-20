@@ -270,7 +270,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 		}
 		static vector<point> pts; // class member?
 		pts.resize(insts.size()); // force max possible size so that pts won't be resized later, and the pointer should remain valid
-		glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), &pts.front());
+		glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), &pts.front()); // FIXME_VBO
 		vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail
 		vbomgr.begin_render();
 

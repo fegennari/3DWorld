@@ -137,7 +137,7 @@ void cobj_draw_buffer::draw() const {
 	for (unsigned d = 0; d < 2; ++d) {
 		loc[d] = shader.attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR);
 		glEnableVertexAttribArray(loc[d]);
-		glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, sizeof(texgen_params_t), (void *)texgens.front().st[d]);
+		glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, sizeof(texgen_params_t), (void *)texgens.front().st[d]); // FIXME_VBO
 	}
 	draw_verts(verts, GL_TRIANGLES);
 	for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}

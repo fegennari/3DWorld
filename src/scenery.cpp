@@ -851,7 +851,7 @@ void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 	uniform_scale(0.25*radius);
 	s.add_uniform_float("vertex_offset_scale", 1.0/(0.25*radius)); // enable
 	int const loc(s.get_attrib_loc("vertex_offset", 0));
-	shader_float_matrix_uploader<3,1>::enable(loc, 1, &berries.front().v.x);
+	shader_float_matrix_uploader<3,1>::enable(loc, 1, &berries.front().v.x); // FIXME_VBO
 	draw_sphere_vbo_raw(ndiv, 0, 0, berries.size()); // ndiv=16, untextured
 	shader_float_matrix_uploader<3,1>::disable(loc);
 	s.add_uniform_float("vertex_offset_scale", 0.0); // disable
