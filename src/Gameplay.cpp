@@ -1964,7 +1964,6 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), proj_type);
 
 		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
-			bool const is_glass(cobj.cp.is_glass());
 			float const decal_radius(rand_uniform(0.004, 0.006));
 
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, decal_radius, get_max_dim(coll_norm))) {
@@ -1974,7 +1973,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				if (is_laser) {
 					decal_tid = FLARE3_TEX; dcolor = BLACK;
 				}
-				else if (is_glass) {
+				else if (cobj.cp.is_glass()) {
 					decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
 				}
 				else {
@@ -1984,13 +1983,19 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					dcolor.alpha = 1.0;
 					//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
 				}
-				gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, is_glass, 1); // inherit partial glass color
+				gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, cobj.cp.is_glass(), 1); // inherit partial glass color
 			}
-			if (wtype == W_M16 && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
-				gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player
+		}
+		if (wtype == W_M16 && !cobj.is_tree_leaf() && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
+			gen_sound(SOUND_RICOCHET, coll_pos); // ricochet near player
+		}
+		if (!is_laser) { // projectile case
+			float range_unused(0.0);
+
+			if (cobj.is_tree_leaf()) { // leaf hit, projectile continues
+				projectile_test(coll_pos, vcf, firing_error, damage, shooter, range_unused, 1.0, cindex); // return value is unused
 			}
-			if (is_glass && !is_laser && (rand()&1) == 0) { // projectile, 50% chance of continuing through glass with twice the firing error and 75% the damage
-				float range_unused(0.0);
+			else if (cobj.cp.is_glass() && (rand()&1) == 0) { // projectile, 50% chance of continuing through glass with twice the firing error and 75% the damage
 				projectile_test(coll_pos, vcf, 2.0*firing_error, 0.75*damage, shooter, range_unused, 1.0, cindex); // return value is unused
 			}
 		}
@@ -2066,7 +2071,6 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 }
 
 
-// inefficient and inaccurate - this should be made better using real line/coll_obj intersection
 float get_projectile_range(point const &pos, vector3d vcf, float dist, float range, point &coll_pos, vector3d &coll_norm,
 						   int &coll, int &cindex, int source, int check_splash, int ignore_cobj)
 {

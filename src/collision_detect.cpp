@@ -1076,7 +1076,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) {
 		if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj)) return;
 	}
-	if (type == LEAF && cobj.is_billboard) { // we assume that a billboard cobj is a tree leaf
+	if (type == LEAF && cobj.is_tree_leaf()) {
 		return; // skip leaf-leaf collisions, since they don't really make sense in the real world (leaves will bend to allow another leaf to fall)
 	}
 	vector3d norm(zero_vector), pvel(zero_vector);

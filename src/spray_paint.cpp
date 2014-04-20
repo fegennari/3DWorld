@@ -103,7 +103,7 @@ void spray_paint(bool mode) {
 				gen_decal(coll_pos, radius, coll_norm, BLUR_CENT_TEX, cindex, color, 0, 0, lifetime);
 			}
 		}
-		else if (cobj.is_billboard) { // Note: currently, only tree leaves use billboard cobj
+		else if (cobj.is_tree_leaf()) {
 			spraypaint_tree_leaves(coll_pos, 1.5*radius, cindex, color);
 		}
 	}
