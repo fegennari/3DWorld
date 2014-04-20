@@ -328,11 +328,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			bool const draw_ends(!(cp.surfs & 1));
 			setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader, cp.swap_txy);
 			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, !draw_ends); // Note: using texgen, not textured
-			
-			if (draw_ends) { // draw ends with different texture matrix
-				set_poly_texgen(tid, (points[1] - points[0]).get_norm(), shader);
-				draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 2); // Note: using texgen, not textured
-			}
+			if (draw_ends) {draw_cylin_ends(tid, ndiv, cdb);}
 		}
 		break;
 

@@ -234,21 +234,27 @@ void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t &shader
 	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, shader, 1);
 }
 
+void coll_obj::get_polygon_tparams(int tid, vector3d const &normal, texgen_params_t &tp) const {
 
-void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d normal, cobj_draw_buffer &cdb) const {
-
-	normal = get_norm_camera_orient(normal, get_center(points, npoints));
-	assert(npoints == 3 || npoints == 4);
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
 	vector3d v[2];
 	get_poly_texgen_dirs(normal, v);
-	texgen_params_t tp;
 	
 	for (unsigned i = 0; i < 2; ++i) {
 		bool const d((i != 0) ^ cp.swap_txy);
 		UNROLL_3X(tp.st[d][i_] = tscale[i]*v[i][i_];)
 		tp.st[d][3] = xlate[i] + tscale[i]*dot_product(texture_offset, v[i]);
 	}
+}
+
+
+void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d normal, cobj_draw_buffer &cdb) const {
+
+	normal = get_norm_camera_orient(normal, get_center(points, npoints));
+	assert(npoints == 3 || npoints == 4);
+	texgen_params_t tp;
+	get_polygon_tparams(tid, normal, tp);
+
 	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) { // 1-2 triangles
 		cdb.add_vert(vert_norm(points[quad_to_tris_ixs[i]], normal), tp);
 	}
@@ -332,6 +338,29 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 			}
 		}
 	} // end thick case
+}
+
+
+void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
+
+	float const ndiv_inv(1.0/ndiv);
+	vector3d v12; // (ce[1] - ce[0]).get_norm()
+	vector_point_norm const &vpn(gen_cylinder_data(points, radius, radius2, ndiv, v12));
+	texgen_params_t tp;
+	get_polygon_tparams(tid, v12, tp);
+	float const r[2] = {radius, radius2};
+
+	for (unsigned i = 0; i < 2; ++i) {
+		if (r[i] == 0.0) continue;
+		vector3d const normal(i ? v12 : -v12);
+
+		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
+			unsigned const sn((s+1)%ndiv);
+			cdb.add_vert(vert_norm(points[i],        normal), tp); // center point
+			cdb.add_vert(vert_norm(vpn.p[(s <<1)+i], normal), tp);
+			cdb.add_vert(vert_norm(vpn.p[(sn<<1)+i], normal), tp);
+		}
+	}
 }
 
 

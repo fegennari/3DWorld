@@ -944,7 +944,6 @@
     <None Include="shaders\write_normal.vert" />
     <None Include="shaders\write_normal_textured.frag" />
     <None Include="shaders\xy_billboard.vert" />
-    <None Include="shadow_map_issues.txt" />
     <None Include="sponza\coll_objs_sponza.txt" />
     <None Include="sponza\coll_objs_sponza2.txt" />
     <None Include="sponza\config_sponza.txt" />
@@ -980,9 +979,7 @@
     <None Include="shaders\tri_wind.geom" />
     <None Include="shaders\ads_lighting.part" />
     <None Include="shaders\line_clip.part" />
-    <None Include="VTune\3DWorld.vpj" />
     <None Include="readme-keys.txt" />
-    <None Include="shader_info.txt" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Script1.rc" />
