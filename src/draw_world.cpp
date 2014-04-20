@@ -300,16 +300,17 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 }
 
 
-// texture units used: 0,8,15: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9-14: tree leaf textures | 9: AO texture, 10: voxel shadow texture
-void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap,
+// texture units used: 0,8,15: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9: AO texture, 10: voxel shadow texture, 11: normal map texture
+void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_bmap,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
-	s.set_bool_prefix("use_noise_tex",  use_noise_tex,  1); // FS
-	s.set_bool_prefix("z_top_test",     z_top_test,     1); // FS
+	if (use_bmap) {s.set_prefix("#define USE_BUMP_MAP", 1);} // FS
+	s.set_bool_prefix("use_noise_tex", use_noise_tex, 1); // FS
+	s.set_bool_prefix("z_top_test",    z_top_test,    1); // FS
 	s.setup_enabled_lights(2, 2); // FS; only 2, but could be up to 8 later
 	s.set_vert_shader("procedural_gen");
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+procedural_gen");
+	s.set_frag_shader("linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+procedural_gen");
 	s.begin_shader();
 	common_shader_block_post(s, dlights, use_smap, 0, indir_lighting, min_alpha);
 	s.add_uniform_int("tex1",    8);
@@ -320,6 +321,10 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 		s.add_uniform_int("noise_tex", 5); // does this need an enable option?
 		s.add_uniform_float("noise_scale", noise_scale);
 		s.add_uniform_float("tex_mix_saturate", tex_mix_saturate);
+	}
+	if (use_bmap) {
+		select_multitex(ROCK_NORMAL_TEX, 11, 1);
+		s.add_uniform_int("bump_map", 11);
 	}
 }
 

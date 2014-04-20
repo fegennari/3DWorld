@@ -1,7 +1,7 @@
 uniform float min_alpha = 0.0;
 
 //varying vec3 vpos, normal; // world space, come from indir_lighting.part.frag
-varying vec3 eye_norm;
+//varying vec3 eye_norm; // comes from bump_map.frag
 
 void main()
 {

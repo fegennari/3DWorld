@@ -1565,7 +1565,8 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	else {
 		float const min_alpha(0.0); // not needed (yet)
 		bool const use_noise_tex(params.tids[0] != params.tids[1] || params.colors[0] != params.colors[1]);
-		setup_procedural_shaders(s, min_alpha, 1, 1, 1, use_noise_tex, params.top_tex_used, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
+		bool const use_bmap(display_mode & 0x10); // FIXME: params option
+		setup_procedural_shaders(s, min_alpha, 1, 1, 1, use_bmap, use_noise_tex, params.top_tex_used, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		setup_tex_gen_for_rendering(s);
 		s.set_cur_color(params.base_color); // unnecessary?
 		s.set_specular(params.spec_mag, params.spec_exp);
