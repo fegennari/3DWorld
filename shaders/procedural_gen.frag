@@ -1,7 +1,22 @@
-uniform float min_alpha = 0.0;
+uniform float min_alpha      = 0.0;
+uniform float bump_tex_scale = 1.0;
 
 //varying vec3 vpos, normal; // world space, come from indir_lighting.part.frag
 //varying vec3 eye_norm; // comes from bump_map.frag
+
+vec4 get_epos() {return fg_ModelViewMatrix * vec4(vpos, 1.0);}
+
+#ifdef USE_BUMP_MAP
+vec3 get_bump_map_normal() {
+	return normalize(lookup_triplanar_texture(bump_tex_scale*vpos, normalize(normal), bump_map, bump_map, bump_map).xyz * 2.0 - 1.0);
+}
+vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
+	mat3 TBN  = transpose(cotangent_frame(eye_norm, get_epos().xyz, bump_tex_scale*vpos.xy, 1.0)); // Note: not entirely correct
+	light_dir = TBN * light_dir;
+	eye_pos   = TBN * eye_pos;
+	return get_bump_map_normal();
+}
+#endif // USE_BUMP_MAP
 
 void main()
 {
@@ -27,7 +42,7 @@ void main()
 	float alpha = gl_Color.a;
 	vec3 lit_color = vec3(0.0);
 	add_indir_lighting(lit_color);
-	vec4 epos = fg_ModelViewMatrix * vec4(vpos, 1.0);
+	vec4 epos = get_epos();
 	
 	// directional light sources with no attenuation (Note: could add other lights later)
 	if (enable_light0)  lit_color += add_light_comp_pos_smap_light0(normalize(eye_norm), epos).rgb;

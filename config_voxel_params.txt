@@ -27,6 +27,7 @@ voxel atten_at_edges 1 # 0=no atten, 1=top only, 2=all 5 edges (excludes the bot
 voxel atten_thresh 12.0
 voxel geom_rseed 123
 voxel texture_rseed 321
+voxel detail_normal_map 1
 voxel base_color 1.0 1.0 1.0
 voxel color1 1.0 1.0 1.0 1.0
 voxel color2 1.0 1.0 1.0 1.0

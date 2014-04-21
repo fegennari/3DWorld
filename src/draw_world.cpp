@@ -239,9 +239,13 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 			s.set_prefix("#define SMOKE_ENABLED", d);
 		}
 	}
-	for (unsigned i = 0; i < 2; ++i) {
-		if (use_bmap     ) {s.set_prefix("#define USE_BUMP_MAP",       i);} // VS/FS
-		if (use_bmap == 2) {s.set_prefix("#define USE_TANGENT_VECTOR", i);} // VS/FS
+	if (use_bmap) {
+		for (unsigned i = 0; i < 2; ++i) {
+			s.set_prefix("#define USE_BUMP_MAP", i); // VS/FS
+			if (use_bmap == 2) {s.set_prefix("#define USE_TANGENT_VECTOR", i);} // VS/FS
+		}
+		s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS
+		s.set_prefix("#define USE_BUMP_MAP_DL",    1); // FS
 	}
 	s.setup_enabled_lights(8, 2); // FS
 }
@@ -305,7 +309,12 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
-	if (use_bmap) {s.set_prefix("#define USE_BUMP_MAP", 1);} // FS
+	
+	if (use_bmap) {
+		// FIXME: only looks correct with sun/moon lighting - dynamic and indirect lighting doesn't work with [incorrect] triplanar bump mapping
+		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
+		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
+	}
 	s.set_bool_prefix("use_noise_tex", use_noise_tex, 1); // FS
 	s.set_bool_prefix("z_top_test",    z_top_test,    1); // FS
 	s.setup_enabled_lights(2, 2); // FS; only 2, but could be up to 8 later
@@ -325,6 +334,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	if (use_bmap) {
 		select_multitex(ROCK_NORMAL_TEX, 11, 1);
 		s.add_uniform_int("bump_map", 11);
+		s.add_uniform_float("bump_tex_scale", 4.0);
 	}
 }
 

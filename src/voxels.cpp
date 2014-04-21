@@ -1565,7 +1565,7 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 	else {
 		float const min_alpha(0.0); // not needed (yet)
 		bool const use_noise_tex(params.tids[0] != params.tids[1] || params.colors[0] != params.colors[1]);
-		bool const use_bmap(display_mode & 0x10); // FIXME: params option
+		bool const use_bmap(params.detail_normal_map && (display_mode & 0x08) != 0);
 		setup_procedural_shaders(s, min_alpha, 1, 1, 1, use_bmap, use_noise_tex, params.top_tex_used, params.tex_scale, params.noise_scale, params.tex_mix_saturate);
 		setup_tex_gen_for_rendering(s);
 		s.set_cur_color(params.base_color); // unnecessary?
@@ -1905,6 +1905,9 @@ bool parse_voxel_option(FILE *fp) {
 	}
 	else if (str == "texture_rseed") {
 		if (!read_int(fp, global_voxel_params.texture_rseed)) voxel_file_err("texture_rseed", error);
+	}
+	else if (str == "detail_normal_map") {
+		if (!read_bool(fp, global_voxel_params.detail_normal_map)) voxel_file_err("detail_normal_map", error);
 	}
 	else if (str == "tid1") {
 		if (!read_str(fp, strc)) voxel_file_err("tid1", error);

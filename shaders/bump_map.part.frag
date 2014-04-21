@@ -1,6 +1,6 @@
-varying vec4 epos;
 varying vec3 eye_norm;
-varying vec2 tex_coord;
+varying vec4 epos; // not always used
+varying vec2 tex_coord; // not always used
 
 #ifdef USE_BUMP_MAP
 uniform sampler2D bump_map;
@@ -8,8 +8,11 @@ uniform sampler2D bump_map;
 #ifdef USE_TANGENT_VECTOR
 varying vec4 tangent_v;
 
-#else
+mat3 get_tbn(in float bscale) {
+	return transpose(mat3(tangent_v.xyz*tangent_v.w, bscale*cross(eye_norm, tangent_v.xyz), eye_norm));
+}
 
+#else // !USE_TANGENT_VECTOR
 uniform float bump_tb_scale = 1.0;
 
 // http://www.thetenthplanet.de/archives/1180
@@ -31,16 +34,14 @@ mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale)
     float invmax = bump_tb_scale * inversesqrt(max(dot(T,T), dot(B,B)));
     return mat3((T * invmax), (-B * (bscale * invmax)), N);
 }
-#endif
 
 mat3 get_tbn(in float bscale) {
-#ifdef USE_TANGENT_VECTOR
-	return transpose(mat3(tangent_v.xyz*tangent_v.w, bscale*cross(eye_norm, tangent_v.xyz), eye_norm));
-#else
 	// assume N, the interpolated vertex normal and V, the view vector (vertex to eye / camera pos - vertex pos) from VS
     return transpose(cotangent_frame(eye_norm, epos.xyz, tex_coord, bscale));
-#endif
 }
+
+#endif // USE_TANGENT_VECTOR
+
 
 #ifdef ENABLE_PARALLAX_MAP
 uniform sampler2D depth_map;
@@ -59,8 +60,14 @@ vec2 apply_parallax_map() {
 #endif
     return tex_coord + offset; // offset the uv
 }
-#endif
+#endif // ENABLE_PARALLAX_MAP
 
+
+#ifdef BUMP_MAP_CUSTOM
+vec3 get_bump_map_normal(); // to be defined later
+vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // to be defined later
+
+#else // !BUMP_MAP_CUSTOM
 vec3 get_bump_map_normal() {
 	return normalize(texture2D(bump_map, tex_coord).xyz * 2.0 - 1.0);
 }
@@ -72,4 +79,5 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 	eye_pos   = TBN * eye_pos;
 	return get_bump_map_normal();
 }
-#endif
+#endif // BUMP_MAP_CUSTOM
+#endif // USE_BUMP_MAP

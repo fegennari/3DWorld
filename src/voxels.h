@@ -18,7 +18,7 @@ struct voxel_params_t {
 	unsigned xsize, ysize, zsize, num_blocks; // num_blocks is in x and y
 	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate, z_gradient, height_eval_freq, radius_val;
 	float ao_radius, ao_weight_scale, ao_atten_power, spec_mag, spec_expspec_mag, spec_exp;
-	bool make_closed_surface, invert, remove_under_mesh, add_cobjs, normalize_to_1, top_tex_used;
+	bool make_closed_surface, invert, remove_under_mesh, add_cobjs, normalize_to_1, top_tex_used, detail_normal_map;
 	unsigned remove_unconnected; // 0=never, 1=init only, 2=always, 3=always, including interior holes
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
 	unsigned keep_at_scene_edge; // 0=don't keep, 1=always keep, 2=only when scrolling
@@ -33,8 +33,8 @@ struct voxel_params_t {
 
 	voxel_params_t() : xsize(0), ysize(0), zsize(0), num_blocks(12), isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), tex_scale(1.0), noise_scale(0.1),
 		noise_freq(1.0), tex_mix_saturate(5.0), z_gradient(0.0), height_eval_freq(1.0), radius_val(0.5), ao_radius(1.0), ao_weight_scale(2.0), ao_atten_power(1.0),
-		spec_mag(0.0), spec_exp(1.0), make_closed_surface(1), invert(0), remove_under_mesh(0), add_cobjs(1), normalize_to_1(1), top_tex_used(0), remove_unconnected(1), atten_at_edges(0),
-		keep_at_scene_edge(0), atten_top_mode(0), geom_rseed(123), texture_rseed(321), base_color(WHITE)
+		spec_mag(0.0), spec_exp(1.0), make_closed_surface(1), invert(0), remove_under_mesh(0), add_cobjs(1), normalize_to_1(1), top_tex_used(0), detail_normal_map(1),
+		remove_unconnected(1), atten_at_edges(0), keep_at_scene_edge(0), atten_top_mode(0), geom_rseed(123), texture_rseed(321), base_color(WHITE)
 	{
 			tids[0] = tids[1] = tids[2] = 0; colors[0] = colors[1] = WHITE;
 	}
