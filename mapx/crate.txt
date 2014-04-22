@@ -1,4 +1,4 @@
-# destroyable wooden crate
+# destroyable crate
 a 2 # destroyable/shatterable
 e 0
 #l 0.6 1.0 1.0 1.0 1.0 36 1 # wood

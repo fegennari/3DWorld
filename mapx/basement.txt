@@ -31,6 +31,15 @@ T -5.33 3.37 -0.69  m 0.1  i mapx/crate.txt
 T -5.18 3.42 -0.69  m 0.1  i mapx/crate.txt
 T -4.75 3.11 -0.69  m 0.1  i mapx/crate.txt
 
+# rotated destroyable crate
+a 2 # destroyable/shatterable
+e 0
+l 0.6 1.0 1.0 1.0 1.0 60 1 # borg cube
+T -5.56 3.23 -0.69
+P 4  0.0 0.0 0.0  0.0 0.0 1.0  0.6 0.8 1.0  0.6 0.8 0.0  1.0
+T 0.0 0.0 0.0
+a 1 # destroyable
+
 e 0
 a 0 # non-destroyable
 
