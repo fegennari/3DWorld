@@ -1003,7 +1003,6 @@ void create_and_draw_cracks() { // adds to beams
 			dpos = 2*(cobj.get_center_pt() - i->pos);
 			UNROLL_3X(dpos[i_] *= fabs(i->orient[i_]);)
 		}
-		assert(i->color.is_valid());
 		cpts.push_back(crack_point(pos+dpos, i->pos+dpos, i->cid, face, i->time, i->get_alpha(), i->color));
 	}
 	stable_sort(cpts.begin(), cpts.end());
