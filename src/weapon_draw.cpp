@@ -32,10 +32,11 @@ void draw_plasmaball(point const &pos0, int shooter, shader_t &shader);
 
 void beam3d::draw(line_tquad_draw_t &drawer) const {
 
-	if (shooter == CAMERA_ID) return; // camera (skip for now)
+	if (shooter == CAMERA_ID)  return; // camera (skip for now)
+	if (intensity < TOLERANCE) return; // error?
 	float const mag(sqrt(intensity));
 	colorRGBA c(color);
-	c.alpha *= mag;
+	c.alpha = CLIP_TO_01(color.alpha*mag);
 	drawer.add_line_as_tris(pts[0], pts[1], 0.01*mag, 0.01*mag, c, (distant ? ALPHA0 : c));
 }
 

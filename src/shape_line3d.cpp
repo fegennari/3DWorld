@@ -249,6 +249,7 @@ void line3d::draw_lines() const {
 
 	if (points.empty()) return;
 	assert(points.size() >= 2);
+	assert(width > 0.0);
 	line_tquad_draw_t drawer;
 	float const w(0.01*width);
 

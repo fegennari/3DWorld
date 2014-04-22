@@ -1003,6 +1003,7 @@ void create_and_draw_cracks() { // adds to beams
 			dpos = 2*(cobj.get_center_pt() - i->pos);
 			UNROLL_3X(dpos[i_] *= fabs(i->orient[i_]);)
 		}
+		assert(i->color.is_valid());
 		cpts.push_back(crack_point(pos+dpos, i->pos+dpos, i->cid, face, i->time, i->get_alpha(), i->color));
 	}
 	stable_sort(cpts.begin(), cpts.end());
@@ -1061,7 +1062,7 @@ void create_and_draw_cracks() { // adds to beams
 						min_dist_sq = dist_sq;
 					}
 				} // for attempt
-				beams.push_back(beam3d(0, NO_SOURCE, cpt1.pos, epos, cpt1.color, 0.05*cpt1.alpha));
+				if (cpt1.pos != epos) {beams.push_back(beam3d(0, NO_SOURCE, cpt1.pos, epos, cpt1.color, 0.05*cpt1.alpha));}
 				epts[n] = epos;
 			} // for n
 			for (unsigned n = 0; n < ncracks; ++n) {

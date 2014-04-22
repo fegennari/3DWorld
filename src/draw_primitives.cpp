@@ -801,7 +801,8 @@ bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, 
 void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 	point const* const prev, point const *const next, bool make_global)
 {
-	assert(w1 > 0.0 && w2 > 0.0 && color1.is_valid() && color2.is_valid()); // validate
+	assert(w1 > 0.0 && w2 > 0.0);
+	assert(color1.is_valid() && color2.is_valid()); // validate
 	point pts[5], pts2[4];
 	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
 

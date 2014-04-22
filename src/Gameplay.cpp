@@ -1618,7 +1618,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			if (underwater) firing_error += UWATER_FERR_ADD;
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
 			create_shell_casing(fpos, dir, shooter, radius, 0);
-			if (shooter != CAMERA_ID) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0));} // generate bullet light trail
+			if (shooter != CAMERA_ID && range > 0.1*radius) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0));} // generate bullet light trail
 			return 1;
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
@@ -1662,8 +1662,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	case W_LASER: // line of sight damage
 		{
 			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, -1);
-			beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
-			add_laser_beam(beam); // might not need to actually add laser itself for camera/player
+			if (range > 1.1*radius) {
+				beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
+				add_laser_beam(beam); // might not need to actually add laser itself for camera/player
+			}
 		}
 		break;
 
