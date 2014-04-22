@@ -1938,30 +1938,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			intensity *= visibility;
 		}
 	}
+	bool no_spark(0);
 
-	// use collision point/object for damage, sparks, etc.
-	if (closest_t == CAMERA) {
-		camera_collision(wtype, shooter, zero_vector, coll_pos, damage, proj_type);
-	}
-	else if (closest_t == SMILEY) {
-		smiley_collision(closest, shooter, zero_vector, coll_pos, damage, proj_type);
-		if (is_laser && (rand()%6) == 0) gen_smoke(coll_pos);
-	}
-	else if ((intersect || coll) && dist_less_than(coll_pos, pos, (X_SCENE_SIZE + Y_SCENE_SIZE))) { // spark
-		if (!is_underwater(coll_pos)) {
-			colorRGBA scolor(is_laser ? RED : colorRGBA(1.0, 0.7, 0.0, 1.0));
-			//if (is_laser && coll && cindex >= 0 && closest < 0) {scolor = coll_objects[cindex].get_color_at_point(coll_pos, coll_norm, 0);} // testing
-			float const ssize((is_laser ? ((wmode&1) ? 0.015 : 0.020)*intensity : 0.025)*((closest_t == CAMERA) ? 0.5 : 1.0));
-			sparks.push_back(spark_t(coll_pos, scolor, ssize));
-			point const light_pos(coll_pos - vcf*(0.1*ssize));
-			add_dynamic_light(0.6*CLIP_TO_01(sqrt(intensity)), light_pos, scolor);
-
-			if (coll && hardness >= 0.5 && intensity >= 0.5 && (!is_laser || (alpha == 1.0 && ((rand()&1) == 0)))) {
-				gen_particles(light_pos, 1, 0.5, 1); // particle
-			}
-		}
-	}
-	if (coll && cindex >= 0 && closest < 0) { // hit cobjs (like tree leaves)
+	// hit cobjs (like tree leaves)
+	if (coll && cindex >= 0 && closest < 0) {
 		coll_obj &cobj(coll_objects[cindex]);
 		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), proj_type);
 
@@ -1996,9 +1976,11 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 			if (cobj.is_tree_leaf()) { // leaf hit, projectile continues
 				projectile_test(coll_pos, vcf, firing_error, damage, shooter, range_unused, 1.0, cindex); // return value is unused
+				no_spark = 1;
 			}
 			else if (cobj.cp.is_glass() && (rand()&1) == 0) { // projectile, 50% chance of continuing through glass with twice the firing error and 75% the damage
 				projectile_test(coll_pos, vcf, 2.0*firing_error, 0.75*damage, shooter, range_unused, 1.0, cindex); // return value is unused
+				no_spark = 1;
 			}
 		}
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((rand()%50) == 0)) || (cobj.destroy >= EXPLODEABLE && ((rand()%10) == 0))) {
@@ -2006,6 +1988,29 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		}
 		if (!is_laser && cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && destroy_thresh == 0) {
 			update_voxel_sphere_region(coll_pos, object_types[PROJC].radius, -0.04, shooter, 0);
+		}
+	}
+
+	// use collision point/object for damage, sparks, etc.
+	if (closest_t == CAMERA) {
+		camera_collision(wtype, shooter, zero_vector, coll_pos, damage, proj_type);
+	}
+	else if (closest_t == SMILEY) {
+		smiley_collision(closest, shooter, zero_vector, coll_pos, damage, proj_type);
+		if (is_laser && (rand()%6) == 0) gen_smoke(coll_pos);
+	}
+	else if ((intersect || coll) && dist_less_than(coll_pos, pos, (X_SCENE_SIZE + Y_SCENE_SIZE))) { // spark
+		if (!no_spark && !is_underwater(coll_pos)) {
+			colorRGBA scolor(is_laser ? RED : colorRGBA(1.0, 0.7, 0.0, 1.0));
+			//if (is_laser && coll && cindex >= 0 && closest < 0) {scolor = coll_objects[cindex].get_color_at_point(coll_pos, coll_norm, 0);} // testing
+			float const ssize((is_laser ? ((wmode&1) ? 0.015 : 0.020)*intensity : 0.025)*((closest_t == CAMERA) ? 0.5 : 1.0));
+			sparks.push_back(spark_t(coll_pos, scolor, ssize));
+			point const light_pos(coll_pos - vcf*(0.1*ssize));
+			add_dynamic_light(0.6*CLIP_TO_01(sqrt(intensity)), light_pos, scolor);
+
+			if (coll && hardness >= 0.5 && intensity >= 0.5 && (!is_laser || (alpha == 1.0 && ((rand()&1) == 0)))) {
+				gen_particles(light_pos, 1, 0.5, 1); // particle
+			}
 		}
 	}
 	
