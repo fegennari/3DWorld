@@ -34,7 +34,6 @@ int const ENABLE_CLIP_LEAVES = 1;
 int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 int const TLEAF_START_TUID   = 9;
 bool const FORCE_TREE_TYPE   = 1;
-bool const CHECK_LEAF_BRANCH_COLL  = 0;
 unsigned const CYLINS_PER_ROOT     = 3;
 unsigned const TREE_BILLBOARD_SIZE = 256;
 
@@ -703,7 +702,7 @@ void tree::lightning_damage(point const &ltpos) {
 
 void tree::drop_leaves() {
 
-	if (!physics_enabled()) return;
+	if (!physics_enabled() || !enable_leaf_wind) return;
 	tree_data_t &td(tdata());
 	vector<tree_leaf> &leaves(td.get_leaves());
 	unsigned const nleaves(leaves.size());
@@ -1278,11 +1277,19 @@ void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins
 	all_cylins.reserve(num_total_cylins);
 
 	for (unsigned i = 0; i < num_total_cylins; ++i) {
-		assert(cylins[i].r1 > 0.0 || cylins[i].r2 > 0.0);
-		assert(cylins[i].p1 != cylins[i].p2);
-		cylins[i].r1 *= br_scale;
-		cylins[i].r2 *= br_scale;
-		all_cylins.push_back(cylins[i]);
+		tree_cylin &c(cylins[i]);
+		assert(c.r1 > 0.0 || c.r2 > 0.0);
+		assert(c.p1 != c.p2);
+		c.r1 *= br_scale;
+		c.r2 *= br_scale;
+		
+		if (clip_cube && c.level > 0) { // clip non-trunk non-roots
+			if (!clip_cube->contains_pt(c.p1)) {c.p2 = c.p1; continue;} // stars outside bounds - make invalid and skip it
+			if (!clip_cube->contains_pt(c.p2)) {c.r2 = 0.0;} // ends outside bounds - close off the end with a point
+			clip_cube->clamp_pt(c.p1);
+			clip_cube->clamp_pt(c.p2);
+		}
+		all_cylins.push_back(c);
 	}
 
 	// add leaves
@@ -1291,22 +1298,9 @@ void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins
 		float const rel_leaf_size(2.0*leaf_size*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
 		leaves.reserve(nl);
-		coll_obj_group branch_cobjs;
-		cobj_bvh_tree branch_tree(&branch_cobjs, 0, 0, 0, 0, 0);
-		vector<unsigned> cobjs;
-
-		if (CHECK_LEAF_BRANCH_COLL) {
-			branch_cobjs.resize(num_total_cylins);
-
-			for (unsigned i = 0; i < num_total_cylins; ++i) {
-				cylins[i].calc_bcube(branch_cobjs[i]);
-				branch_cobjs[i].type = COLL_CUBE;
-			}
-			branch_tree.add_cobjs(0);
-		}
 		for (unsigned i = 0; i < num_total_cylins; ++i) {
-			if (cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_LEAVES)) { // leaves will still be allocated
-				add_leaves_to_cylin(i, tree_type, rel_leaf_size, deadness, leaves, all_cylins, branch_tree, cobjs);
+			if (cylins[i].p2 != cylins[i].p1 && cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_LEAVES)) { // leaves will still be allocated
+				add_leaves_to_cylin(i, tree_type, rel_leaf_size, deadness, leaves);
 			}
 		}
 		//remove_excess_cap(leaves);
@@ -1316,7 +1310,7 @@ void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins
 	branches_34[0] = branches_34[1] = NULL;
 	branches = NULL;
 	roots.cylin = base.cylin = NULL;
-	assert(all_cylins.size() == all_cylins.capacity());
+	assert(clip_cube || all_cylins.size() == all_cylins.capacity());
 }
 
 
@@ -1438,7 +1432,9 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
-		td.gen_tree_data(type, size, tree_depth, height_scale, br_scale_mult, nl_scale); // create the tree here
+		cube_t cc(clip_cube);
+		if (use_clip_cube) {cc.translate(-tree_center);}
+		td.gen_tree_data(type, size, tree_depth, height_scale, br_scale_mult, nl_scale, (use_clip_cube ? &cc : NULL)); // create the tree here
 	}
 	assert(type < NUM_TREE_TYPES);
 	unsigned const nleaves(td.get_leaves().size());
@@ -1448,7 +1444,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 }
 
 
-void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale) {
+void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale, cube_t const *clip_cube) {
 
 	tree_type = tree_type_;
 	assert(tree_type < NUM_TREE_TYPES);
@@ -1460,7 +1456,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 		int const num(rand_gen(1, 100));
 		deadness = ((num > 94) ? min(1.0f, float(num - 94)/8.0f) : 0.0);
 	}
-	tree_builder_t builder;
+	tree_builder_t builder(clip_cube);
 	
 	// create leaves and all_cylins
 	br_scale    = br_scale_mult*branch_radius_scale*tree_types[tree_type].branch_radius;
@@ -1754,7 +1750,7 @@ void tree_builder_t::create_1_order_branch(int base_cylin_num, float rotate_star
 		gen_next_cylin(cylin, lcylin, branch_1_var, branch_1_rad_var, 1, branch_num, (j < branch.num_cylins-1));
 		float temp_num2;
 
-		//calculate p1, based on the end point of lasy cylinder--------------------
+		//calculate p1, based on the end point of last cylinder--------------------
 		if (j < 0.5*branch.num_cylins) {
 			temp_num2 = (j+2)*temp_num_big_branches/((num_2_branches_created+1)*(0.5*branch.num_cylins+1));
 		}
@@ -1953,8 +1949,7 @@ void tree_leaf::create_init_color(bool deterministic) {
 }
 
 
-void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves,
-	vector<draw_cylin> &all_cylins, cobj_bvh_tree const &branch_tree, vector<unsigned> &cobjs) {
+void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves) {
 
 	assert(cylin_ix < cylin_cache.size());
 	tree_cylin const &cylin(cylin_cache[cylin_ix]);
@@ -1988,24 +1983,6 @@ void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float
 			point const center(leaf.get_center());
 			vector3d const xlate(cylin.r1*(center - cylin.p1).get_norm());
 			for (unsigned i = 0; i < 4; ++i) {leaf.pts[i] += xlate;} // move away from the branch centerline by radius
-
-			if (CHECK_LEAF_BRANCH_COLL) { // check for collisions with branches
-				bool coll(0);
-				point pts[4]; // inner half of the leaf polygon
-				UNROLL_4X(pts[i_] = center + 0.5*(leaf.pts[i_] - center);)
-				cube_t bcube;
-				bcube.set_from_points(pts, 4);
-				cobjs.resize(0);
-				branch_tree.get_intersecting_cobjs(bcube, cobjs, cylin_ix, 0.0, 0, -1);
-
-				for (vector<unsigned>::const_iterator i = cobjs.begin(); i != cobjs.end() && !coll; ++i) {
-					assert(*i < all_cylins.size());
-					if (*i == cylin_ix || *i == cylin_ix-1 || *i == cylin_ix+1) continue; // don't test the cur cylin or its neighbors
-					coll |= approx_poly_cylin_int(pts, 4, all_cylins[*i]);
-				}
-				if (coll && attempt+1 < max_attempts) continue; // Note: will never fail to generate a leaf
-				//if (coll) {leaf.lred = 1.0; leaf.lgreen = 0.0;}
-			}
 			point lpts(0.0, 1.0, 0.0); // normal starts off in y-direction
 			rotate_pts_around_axis(lpts, rotate, deg_rotate);
 			leaf.create_init_color(1);

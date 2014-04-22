@@ -157,6 +157,7 @@ class tree_builder_t : public tree_xform_t {
 	float branch_1_var, branch_1_rad_var, branch_1_start, branch_2_var, branch_2_rad_var, branch_2_start, branch_4_max_radius, rotate_factor;
 	float angle_rotate, branch_min_angle, branch_max_angle, branch_4_length, leaf_acc;
 	float max_2_angle_rotate, max_3_angle_rotate;  //max angle to rotate 3rd order branches around from the 2nd order branch
+	cube_t const *clip_cube;
 
 	float gen_bc_size(float branch_var);
 	float gen_bc_size2(float branch_var);
@@ -169,11 +170,10 @@ class tree_builder_t : public tree_xform_t {
 	void create_4th_order_branches(int nbranches);
 	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
 	int generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected);
-	void add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves,
-		vector<draw_cylin> &all_cylins, cobj_bvh_tree const &branch_tree, vector<unsigned> &cobjs);
+	void add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves);
 
 public:
-	tree_builder_t() : branches(NULL) {branches_34[0] = branches_34[1] = NULL;}
+	tree_builder_t(cube_t const *clip_cube_) : branches(NULL), clip_cube(clip_cube_) {branches_34[0] = branches_34[1] = NULL;}
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color, float height_scale, float br_scale, float nl_scale);
 	void create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
 		int tree_type, float deadness, float br_scale, float nl_scale);
@@ -223,7 +223,7 @@ public:
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void make_private_copy(tree_data_t &dest) const;
-	void gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale);
+	void gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale, cube_t const *clip_cube);
 	void gen_leaf_color();
 	void update_all_leaf_colors();
 	void update_leaf_color(unsigned i, bool no_mark_changed=0);
@@ -268,11 +268,12 @@ class tree {
 	bool td_is_private() const {return (tree_data == NULL);}
 
 	int type, created; // should type be a member of tree_data_t?
-	bool no_delete, not_visible, leaf_orients_valid, enable_leaf_wind;
+	bool no_delete, not_visible, leaf_orients_valid, enable_leaf_wind, use_clip_cube;
 	point tree_center;
 	float damage, damage_scale;
 	colorRGBA tree_color, bcolor;
 	vector<int> branch_cobjs, leaf_cobjs;
+	cube_t clip_cube;
 
 	coll_obj &get_leaf_cobj(unsigned i) const;
 	void update_leaf_orients();
@@ -295,7 +296,8 @@ class tree {
 	void copy_color(unsigned i, bool no_mark_changed=0);
 
 public:
-	tree(bool en_lw=1) : tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0), enable_leaf_wind(en_lw) {}
+	tree(bool en_lw=1) : tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0), enable_leaf_wind(en_lw), use_clip_cube(0) {}
+	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0);
 	void calc_leaf_shadows();

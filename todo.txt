@@ -21,5 +21,4 @@ GLM Noise
 static error check (analysis)
 
 Better pine tree texture
-Hedges - per-tree shape
 TT tree shadows - shadow map

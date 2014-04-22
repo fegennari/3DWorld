@@ -435,6 +435,9 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (cube.d[i_][0] >= d[i_][1] || cube.d[i_][1] <= d[i_][0]) return 0;)
 		return 1;
 	}
+	void clamp_pt(point &pt) const {
+		UNROLL_3X(pt[i_] = min(d[i_][1], max(d[i_][0], pt[i_]));)
+	}
 	float get_volume() const {
 		return fabs(d[0][1] - d[0][0])*fabs(d[1][1] - d[1][0])*fabs(d[2][1] - d[2][0]);
 	}

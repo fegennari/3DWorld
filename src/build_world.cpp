@@ -1124,7 +1124,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'H': // place hedges: xstart, ystart, dx, dy, nsteps, scale, type
+		case 'H': // place hedges: xstart, ystart, dx, dy, nsteps, scale, type, [cx1, cx2, cy1, cy2, cz1, cz2]
 			if (fscanf(fp, "%f%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &fvals[2], &ivals[1]) != 7 || ivals[0] <= 0) {
 				return read_error(fp, "hedges", coll_obj_file);
 			}
@@ -1132,6 +1132,18 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				cout << "Must set ntrees to zero in order to add hedges through collision objects file." << endl;
 			}
 			else {
+				point ccp[2];
+				bool use_clip_cube(1);
+
+				for (unsigned i = 0; i < 3 && use_clip_cube; ++i) { // x,y,z
+					for (unsigned j = 0; j < 2; ++j) { // hi, lo
+						if (fscanf(fp, "%f", &ccp[j][i]) != 1) {
+							if (i == 0 && j == 0) {use_clip_cube = 0; break;} // no values, not using clip cube
+							return read_error(fp, "hedges bounding cube", coll_obj_file); // partial clip cube, error
+						}
+					}
+				}
+				if (use_clip_cube) {for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(ccp[i]);}}
 				xf.xform_pos(pos);
 				point cur(pos);
 				vector3d delta(fvals[0], fvals[1], 0.0);
@@ -1139,6 +1151,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 				for (int i = 0; i < ivals[0]; ++i) {
 					t_trees.push_back(tree(enable_leaf_wind));
+					if (use_clip_cube) {t_trees.back().enable_clip_cube(cube_t(ccp[0], ccp[1]));}
 					t_trees.back().gen_tree(cur, max(1, int(fvals[2]*xf.scale)), ivals[1], 1, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale);
 					cur += delta;
 				}

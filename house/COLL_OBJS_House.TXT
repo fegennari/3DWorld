@@ -703,18 +703,28 @@ Y 0 0 0 # unswap x and y
 
 # Hedges
 l 0.1 0.3 0.5 0.3 1.0 15 1 # pine tree leaves - hedge texture
-B -2.2 -2.0 -4.8 -2.5 0.0 0.2 # Front Main 1
-B -3.2 -2.0 -4.8 -4.6 0.0 0.2 # Front Main 2
-B -3.3 -3.2 -4.8 -4.6 0.0 0.15
-D -0.1 0.0 0.0  2  0.0 0.0 -0.05
-B -5.5 -2.2 3.4 3.65 -0.3 0.25 # Back
-B -5.6 -5.5 3.4 3.65 -0.3 0.2
-D -0.1 0.0 0.0  3  0.0 0.0 -0.05
+#B -2.2 -2.0 -4.8 -2.5 0.0 0.2 # Front Main 1
+#B -3.2 -2.0 -4.8 -4.6 0.0 0.2 # Front Main 2
+#B -3.3 -3.2 -4.8 -4.6 0.0 0.15
+#D -0.1 0.0 0.0  2  0.0 0.0 -0.05
+#B -5.5 -2.2 3.4 3.65 -0.3 0.25 # Back
+#B -5.6 -5.5 3.4 3.65 -0.3 0.2
+#D -0.1 0.0 0.0  3  0.0 0.0 -0.05
+
+# placeholder cobjs to preserve filled voxels for indir lighting
+e 63 # no sides visible
+B -5.9 -2.2  3.4  3.65 -0.4 -0.3 # Back
+B -2.2 -2.0 -4.8 -2.5  -0.2 -0.1 # Front Main 1
+B -3.5 -2.0 -4.8 -4.6  -0.2 -0.1 # Front Main 2
+e 0
 
 # Hedges as trees
-#g 0.2 0.4 4.0 0 # shorter, thinner branches, more/smaller leaves, no wind
-#H -5.5 3.5 0.165 0.0 20 40.0 2
-#g 1.0 1.0 1.0 1 # reset back to default
+g 0.2 0.35 5.0 0 # shorter, thinner branches, more/smaller leaves, no wind
+# xstart ystart dx dy nsteps scale type cx1 cx2 cy1 cy2 cz1 cz2
+H -5.65 3.525 0.175 0.0  20 45.0 2    -5.8 -2.2  3.42  3.63 -0.3 0.35 # Back
+H -2.1 -4.7   0.0   0.16 12 40.0 2    -2.2 -2.0 -4.8  -2.5   0.0 0.2  # Front Main 1
+H -3.4 -4.7   0.16  0.0  8  40.0 2    -3.5 -2.0 -4.8  -4.6   0.0 0.2  # Front Main 2
+g 1.0 1.0 1.0 1 # reset back to default
 
 # Wall
 y 4.0
