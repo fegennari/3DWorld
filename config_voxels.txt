@@ -10,6 +10,7 @@ dynamic_mesh_scroll 0
 disable_scenery 1
 disable_water 1
 use_waypoints 0
+detail_normal_map 1
 #toggle_mesh_enabled # disable mesh draw by default
 default_ground_tex 13 # dirt texture
 

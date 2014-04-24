@@ -11,7 +11,7 @@ uniform vec4 emission = vec4(0,0,0,1);
 // clipped eye position, clipped vertex position
 varying vec3 lpos0, vposl; // world space
 //varying vec3 vpos, normal; // world space, come from indir_lighting.part.frag
-// epos, eye_norm, and tex_coord come from bump_map.frag
+// epos, eye_norm, and tc come from bump_map.frag
 // camera_pos comes from dynamic_lighting.part
 
 const float SMOKE_SCALE = 0.25;
@@ -53,7 +53,7 @@ void main()
 #ifdef ENABLE_PARALLAX_MAP
 	vec4 texel  = texture2D(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
 #else
-	vec4 texel  = texture2D(tex0, tex_coord);
+	vec4 texel  = texture2D(tex0, tc);
 #endif
 	//texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
 
@@ -113,7 +113,7 @@ void main()
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
 
 #ifdef APPLY_BURN_MASK
-	color = apply_burn_mask(color, tex_coord);
+	color = apply_burn_mask(color, tc);
 #endif
 
 #ifndef SMOKE_ENABLED

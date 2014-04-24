@@ -8,23 +8,23 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 attribute vec4 tex0_s, tex0_t;
 
 varying vec3 vpos, normal, lpos0, vposl; // world space
-// epos, eye_norm, and tex_coord come from bump_map.vert
+varying vec4 epos;
+varying vec3 eye_norm;
+// tc comes from texture_gen.part.vert
 
 void main()
 {
 	if (use_texgen == 1) {
 		setup_texgen_st();
-		tex_coord = tc;
 	}
 	else if (use_texgen == 2) {
-		tex_coord = vec2(dot(fg_Vertex, tex0_s), dot(fg_Vertex, tex0_t));
+		tc = vec2(dot(fg_Vertex, tex0_s), dot(fg_Vertex, tex0_t));
 	}
 	else if (use_texgen == 3) {
 		set_tc0_from_vert_id();
-		tex_coord = tc;
 	}
 	else {
-		tex_coord = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);
+		tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);
 	}
 	gl_FrontColor = fg_Color;
 	epos          = fg_ModelViewMatrix * fg_Vertex;

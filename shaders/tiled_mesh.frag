@@ -1,4 +1,4 @@
-uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, noise_tex, caustic_tex, detail_normal_tex;
+uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, noise_tex, caustic_tex;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
 uniform float water_plane_z, cloud_plane_z, wave_time, wave_amplitude;
@@ -13,7 +13,8 @@ uniform vec3 uw_atten_scale;
 uniform vec3 snow_cscale = vec3(1.0);
 
 varying vec4 vertex; // world space
-varying vec2 tc, tc2;
+varying vec2 tc2;
+//varying vec2 tc; // comes from detail_normal_map.part.frag
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
@@ -28,14 +29,6 @@ float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) 
 vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in float spec, in float shininess) {
 	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
 	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0), shininess);
-}
-
-vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal, in float bump_scale) {
-	vec3 tan  = normalize(cross(fg_ModelViewMatrix[0].xyz, normal));
-	mat3 TBN  = transpose(mat3(tan, cross(normal, tan), normalize(normal))); // world space {Y, X, Z} for normal in +Z
-	light_dir = TBN * light_dir;
-	eye_pos   = TBN * eye_pos;
-	return normalize(mix(vec3(0,0,1), (2.0*texture2D(detail_normal_tex, 8.0*tc).rgb - 1.0), bump_scale)); // scaled detail texture 8*tc
 }
 
 vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {

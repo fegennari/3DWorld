@@ -1481,6 +1481,8 @@ void set_tile_xy_vals(shader_t &s) {
 	s.add_uniform_float("dy_inv", inv_scale*DY_VAL_INV);
 }
 
+void setup_detail_normal_map(shader_t &s);
+
 
 // uses texture units 0-11 (12 if using hmap texture)
 void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
@@ -1495,7 +1497,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	if (reflection_pass) {s.set_prefix("#define REFLECTION_MODE", 1);} // FS
 	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
 	s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
-	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+tiled_mesh");
+	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+detail_normal_map.part+tiled_mesh");
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("weights_tex", 0);
@@ -1507,11 +1509,8 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	setup_terrain_textures(s, 2);
 	set_tile_xy_vals(s);
 	s.add_uniform_int("height_tex", 12);
-	
-	if (use_normal_map) {
-		select_multitex(ROCK_NORMAL_TEX, 11, 1);
-		s.add_uniform_int("detail_normal_tex", 11);
-	}
+	if (use_normal_map) {setup_detail_normal_map(s);}
+
 	if (has_water) {
 		set_water_plane_uniforms(s);
 		s.add_uniform_float("water_atten",    WATER_COL_ATTEN*mesh_scale);

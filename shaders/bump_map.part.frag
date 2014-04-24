@@ -1,6 +1,6 @@
 varying vec3 eye_norm;
 varying vec4 epos; // not always used
-varying vec2 tex_coord; // not always used
+varying vec2 tc; // not always used
 
 #ifdef USE_BUMP_MAP
 uniform sampler2D bump_map;
@@ -37,7 +37,7 @@ mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale)
 
 mat3 get_tbn(in float bscale) {
 	// assume N, the interpolated vertex normal and V, the view vector (vertex to eye / camera pos - vertex pos) from VS
-    return transpose(cotangent_frame(eye_norm, epos.xyz, tex_coord, bscale));
+    return transpose(cotangent_frame(eye_norm, epos.xyz, tc, bscale));
 }
 
 #endif // USE_TANGENT_VECTOR
@@ -51,14 +51,14 @@ vec2 apply_parallax_map() {
     mat3 TBN    = get_tbn(-1.0); // FIXME: why is binormal inverted from bump map case?
 #ifdef PARALLAX_MAP_OFFSET_ADJ
 	vec2 offset = hole_depth * (TBN * -normalize(epos.xyz)).st;
-	float depth_at_1 = texture2D(depth_map, tex_coord+offset).w;
-	//if (depth_at_1 < 0.96f) {offset *= texture2D(depth_map, tex_coord).w;}
-	if (depth_at_1 < 0.96f) {offset *= (depth_at_1 + texture2D(depth_map, tex_coord).w) * 0.5;}
+	float depth_at_1 = texture2D(depth_map, tc+offset).w;
+	//if (depth_at_1 < 0.96f) {offset *= texture2D(depth_map, tc).w;}
+	if (depth_at_1 < 0.96f) {offset *= (depth_at_1 + texture2D(depth_map, tc).w) * 0.5;}
 #else
-	float depth = (texture2D(depth_map, tex_coord).w) * hole_depth; // Get depth from the alpha (w) of the relief map
+	float depth = (texture2D(depth_map, tc).w) * hole_depth; // Get depth from the alpha (w) of the relief map
 	vec2 offset = depth * (TBN * -normalize(epos.xyz)).st; // transform view vector to tangent space
 #endif
-    return tex_coord + offset; // offset the uv
+    return tc + offset; // offset the uv
 }
 #endif // ENABLE_PARALLAX_MAP
 
@@ -69,7 +69,7 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // to be defined 
 
 #else // !BUMP_MAP_CUSTOM
 vec3 get_bump_map_normal() {
-	return normalize(texture2D(bump_map, tex_coord).xyz * 2.0 - 1.0);
+	return normalize(texture2D(bump_map, tc).xyz * 2.0 - 1.0);
 }
 
 // Note: we assume the bump map tex coords are the same as the object diffuse tex coords

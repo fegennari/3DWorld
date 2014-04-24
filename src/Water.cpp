@@ -121,7 +121,7 @@ void update_accumulation(int xpos, int ypos);
 void shift_water_springs(vector3d const &vd);
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend);
-void setup_mesh_and_water_shader(shader_t &s);
+void setup_mesh_and_water_shader(shader_t &s, bool detail_bump_map);
 
 
 
@@ -413,7 +413,7 @@ void draw_water() {
 	water_surface_draw wsd;
 	shader_t s;
 	if (USE_SEA_FOAM) {s.set_prefix("#define ADD_DETAIL_TEXTURE", 1);} // FS
-	setup_mesh_and_water_shader(s);
+	setup_mesh_and_water_shader(s, 0);
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	set_fill_mode();
 	point const camera(get_camera_pos());

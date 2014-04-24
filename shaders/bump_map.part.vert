@@ -1,7 +1,3 @@
-varying vec4 epos;
-varying vec3 eye_norm;
-varying vec2 tex_coord;
-
 #ifdef USE_BUMP_MAP
 #ifdef USE_TANGENT_VECTOR
 attribute vec4 tangent;

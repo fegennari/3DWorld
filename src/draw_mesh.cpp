@@ -36,7 +36,7 @@ bool clear_landscape_vbo;
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow;
+extern bool using_lightmap, combined_gu, has_snow, detail_normal_map;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
@@ -352,14 +352,28 @@ void draw_mesh_vbo() {
 }
 
 
-void setup_mesh_and_water_shader(shader_t &s) {
+void setup_detail_normal_map(shader_t &s) { // also used for tiled terrain mesh
+
+	select_multitex(ROCK_NORMAL_TEX, 11, 1);
+	s.add_uniform_int("detail_normal_tex", 11);
+	s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(2.0*X_SCENE_SIZE, 2.0*Y_SCENE_SIZE));
+}
+
+
+void setup_mesh_and_water_shader(shader_t &s, bool detail_bump_map) {
 
 	s.setup_enabled_lights(2, 2); // FS
 	set_dlights_booleans(s, 1, 1); // FS
 	s.check_for_fog_disabled();
+	
+	if (detail_bump_map) {
+		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
+		s.set_prefix("#define USE_BUMP_MAP_DL", 1); // FS
+	}
+	s.set_prefix("varying vec4 epos;", 1); // FS (needed for dynamic lighting)
 	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 	s.set_vert_shader("texture_gen.part+draw_mesh");
-	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+draw_mesh");
+	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+detail_normal_map.part+draw_mesh");
 	s.begin_shader();
 	if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
 	s.setup_fog_scale();
@@ -367,6 +381,7 @@ void setup_mesh_and_water_shader(shader_t &s) {
 	setup_dlight_textures(s);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 1);
+	if (detail_bump_map) {setup_detail_normal_map(s);}
 }
 
 
@@ -379,7 +394,7 @@ void draw_mesh_mvd(bool shadow_pass) {
 	}
 	else {
 		s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
-		setup_mesh_and_water_shader(s);
+		setup_mesh_and_water_shader(s, (detail_normal_map && (display_mode & 0x08)));
 	}
 	set_landscape_texture_texgen(s);
 	float y(-Y_SCENE_SIZE);

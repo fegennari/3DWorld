@@ -75,7 +75,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color) {
 #else
 		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
 		vec3 lnorm     = normal;
-#endif // USE_BUMP_MAP
+#endif // USE_BUMP_MAP_DL
 
 		float n_dot_l  = dot(lnorm, light_dir);
 		float diff_mag = max(0.0, n_dot_l); // diffuse

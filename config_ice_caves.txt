@@ -1,7 +1,6 @@
 include config_voxels.txt
 
 rand_seed 0
-disable_water 1
 default_ground_tex snow2.jpg # snow texture
 mesh_detail_tex snow2.jpg # snow texture
 #voxel tid_top snow2.jpg # snow texure
