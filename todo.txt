@@ -23,4 +23,3 @@ static error check (analysis)
 Better pine tree texture
 TT tree shadows - shadow map
 Mesh use vbo
-Max dynamic light index in Berkeley map

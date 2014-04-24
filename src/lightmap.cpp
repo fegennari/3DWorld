@@ -689,6 +689,7 @@ void setup_2d_texture(unsigned &tid) {
 // 6: reserved for shadow map sun
 // 7: reserved for shadow map moon
 // 8: reserved for specular maps
+// 11: reserved for detail normal map
 void upload_dlights_textures(cube_t const &bounds) {
 
 	//RESET_TIME;
@@ -700,7 +701,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 	
 	if (supports_tex_int == 2) {
 		supports_tex_int = has_extension("GL_EXT_texture_integer");
-		if (!supports_tex_int) cout << "Error: GL_EXT_texture_integer extension not supported. Dynamic lighting will not work correctly." << endl;
+		if (!supports_tex_int) cout << "Error: GL_EXT_texture_integer extension not supported. Dynamic lighting will be disabled." << endl;
 	}
 	if (!supports_tex_int) {
 		dl_tid = elem_tid = gb_tid = 0; // should already be 0
@@ -762,7 +763,6 @@ void upload_dlights_textures(cube_t const &bounds) {
 	}
 	if (elix > 0.9*max_gb_entries) {
 		if (elix >= max_gb_entries) {std::cerr << "Warning: Exceeded max number of indexes in dynamic light texture upload" << endl;}
-		//cout << "elix: " << elix << ", dlight_add_thresh: " << dlight_add_thresh << endl;
 		dlight_add_thresh = min(0.25, (dlight_add_thresh + 0.005)); // increase thresh to clip the dynamic lights to a smaller radius
 	}
 	if (elem_tid == 0) {
@@ -860,6 +860,7 @@ void add_camera_flashlight() {
 void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d const &d, float bw, point *line_end_pos) {
 
 	if (!animate2) return;
+	if (XY_MULT_SIZE >= 512*512) return; // mesh is too large for dynamic lighting
 	float const sz_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : sqrt(0.1*XY_SCENE_SIZE));
 	dl_sources2.push_back(light_source(sz_scale*sz, p, (line_end_pos ? *line_end_pos : p), c, 1, d, bw));
 }
