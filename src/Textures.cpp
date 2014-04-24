@@ -23,7 +23,6 @@ float const ADJ_VALUE             = 1.0;
 bool const RELOAD_TEX_ON_HOLE  = 0;
 bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update doesn't recompute the mipmaps
 bool const SHOW_TEXTURE_MEMORY = 0;
-bool const INSTANT_LTEX_COL    = 1;
 bool const COMPRESS_TEXTURES   = 1;
 bool const CHECK_FOR_LUM       = 1;
 float const SMOOTH_SKY_POLES   = 0.2;
@@ -1376,8 +1375,9 @@ void regrow_landscape_texture_amt0() {
 
 float add_crater_to_landscape_texture(float xval, float yval, float radius) {
 
+	if (using_custom_landscape_texture()) return 0.0;
 	int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
-	if (point_outside_mesh(xpos, ypos)) return 0.0; // off the terrain area
+	if (point_outside_mesh(xpos, ypos))   return 0.0; // off the terrain area
 	texture_t const &t1(textures[get_bare_ls_tid(mesh_height[ypos][xpos])]);
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	unsigned char const *data(t1.get_data());
@@ -1409,6 +1409,7 @@ float add_crater_to_landscape_texture(float xval, float yval, float radius) {
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend) { // for water damage
 
+	if (using_custom_landscape_texture()) return;
 	if (blend <= 0.0 || point_outside_mesh(xpos, ypos)) return; // off the terrain area
 	blend = max(0.01f, min(1.0f, blend));
 	texture_t const &t1(textures[get_bare_ls_tid(mesh_height[ypos][xpos])]);
@@ -1443,6 +1444,7 @@ void add_hole_in_landscape_texture(int xpos, int ypos, float blend) { // for wat
 
 void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yval, float radius) {
 
+	if (using_custom_landscape_texture()) return;
 	int const xpos0(get_xpos(xval)), ypos0(get_ypos(yval));
 	if (point_outside_mesh(xpos0, ypos0)) return; // off the terrain area
 	if ((display_mode & 0x04) && mesh_is_underwater(xpos0, ypos0)) return; // underwater + water enabled
@@ -1479,18 +1481,13 @@ void add_color_to_landscape_texture(colorRGBA const &color, float xval, float yv
 			}
 		}
 	}
-	if (INSTANT_LTEX_COL) {
-		update_lt_section(x1, y1, x2+1, y2+1); // slow on certain hardware
-	}
-	else {
-		lchanged0 = 1;
-	}
+	update_lt_section(x1, y1, x2+1, y2+1); // can be slow
 }
 
 
 void add_snow_to_landscape_texture(point const &pos, float acc) {
 
-	if (acc <= 0.0) return;
+	if (acc <= 0.0 || using_custom_landscape_texture()) return;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return; // off the terrain area
 	if (wminside[ypos][xpos] && water_matrix[ypos][xpos] > mesh_height[ypos][xpos]) return; // underwater
@@ -1570,6 +1567,7 @@ void update_lt_section(int x1, int y1, int x2, int y2) {
 
 	//RESET_TIME;
 	if (x1 == x2 || y1 == y2) return;
+	assert(!using_custom_landscape_texture());
 	texture_t const &t1(textures[LANDSCAPE_TEX]);
 	unsigned const nc(t1.ncolors);
 	int const width(t1.width), height(t1.height);
