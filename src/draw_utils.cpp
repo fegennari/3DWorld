@@ -276,7 +276,7 @@ class vbo_ring_buffer_t {
 		if (vbo) return; // done
 		vbo = create_vbo();
 		bind_vbo(vbo);
-		glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_STREAM_DRAW); // rserve the space but don't use it
+		upload_vbo_data(NULL, size); // reserve the space but don't use it
 		pos = 0;
 	}
 public:
@@ -318,7 +318,7 @@ bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned 
 
 	if (size > stream_data_sz) {
 		stream_data_sz = size;
-		glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_STREAM_DRAW);
+		upload_vbo_data(NULL, size);
 	}
 	// FIXME: map-discard?
 	upload_vbo_sub_data(verts, 0, size);

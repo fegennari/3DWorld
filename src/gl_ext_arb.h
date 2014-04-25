@@ -36,7 +36,7 @@ void set_3d_texture_as_current(unsigned tid, unsigned tu_id);
 unsigned create_vbo();
 void bind_vbo(unsigned vbo, bool is_index=0);
 void delete_vbo(unsigned vbo);
-void upload_vbo_data(void const *const data, size_t size, bool is_index=0, bool is_dynamic=0);
+void upload_vbo_data(void const *const data, size_t size, bool is_index=0, int dynamic_level=0);
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index=0);
 unsigned create_vao();
 void bind_vao(unsigned vao);
@@ -54,22 +54,22 @@ inline void delete_and_zero_vbo(unsigned &id) {delete_vbo(id); id = 0;}
 
 // templated vbo management utility functions/classes
 
-template<typename T> void upload_to_vbo(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0, bool is_dynamic=0) {
+template<typename T> void upload_to_vbo(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0, int dynamic_level=0) {
 	assert(vbo > 0);
 	bind_vbo(vbo, is_index);
-	upload_vbo_data(&data.front(), data.size()*sizeof(T), is_index, is_dynamic);
+	upload_vbo_data(&data.front(), data.size()*sizeof(T), is_index, dynamic_level);
 	if (end_with_bind0) {bind_vbo(0, is_index);}
 }
 
-template<typename T> bool create_vbo_and_upload(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0, bool is_dynamic=0) {
+template<typename T> bool create_vbo_and_upload(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0, int dynamic_level=0) {
 	if (vbo) return 0; // already uploaded
 	vbo = create_vbo();
-	upload_to_vbo(vbo, data, is_index, end_with_bind0, is_dynamic);
+	upload_to_vbo(vbo, data, is_index, end_with_bind0, dynamic_level);
 	return 1;
 }
 
-template<typename T> void create_bind_vbo_and_upload(unsigned &vbo, vector<T> const &data, bool is_index=0, bool is_dynamic=0) {
-	if (!create_vbo_and_upload(vbo, data, is_index, 0, is_dynamic)) {bind_vbo(vbo, is_index);}
+template<typename T> void create_bind_vbo_and_upload(unsigned &vbo, vector<T> const &data, bool is_index=0, int dynamic_level=0) {
+	if (!create_vbo_and_upload(vbo, data, is_index, 0, dynamic_level)) {bind_vbo(vbo, is_index);}
 }
 
 
