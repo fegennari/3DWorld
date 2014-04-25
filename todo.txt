@@ -8,6 +8,11 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Non-sprite points - remove set_point_sprite_mode()
  - GL_QUADS
  - Always use vbos (no set_state())
+   - draw_verts()
+   - mesh
+   - indexed_mesh_draw
+   - cobj_draw_buffer
+   - point_sprite_drawer
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)
@@ -22,4 +27,3 @@ static error check (analysis)
 
 Better pine tree texture
 TT tree shadows - shadow map
-Mesh use vbo

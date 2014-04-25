@@ -24,7 +24,7 @@ string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "", "", "
 
 shader_t *cur_shader(NULL);
 
-extern bool fog_enabled, mvm_changed;
+extern bool fog_enabled, mvm_changed, use_core_context;
 extern int is_cloudy, display_mode;
 extern unsigned enabled_lights;
 extern float cur_fog_end;
@@ -923,6 +923,8 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 
 
 void set_point_sprite_mode(bool enabled) { // Note: to be removed when using a core profile
+
+	if (use_core_context) return; // point sprite mode is always enabled
 
 	if (enabled) {
 		glEnable(GL_POINT_SPRITE);

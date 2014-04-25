@@ -63,7 +63,7 @@ bool univ_planet_lod(0), show_lightning(0), disable_shader_effects(0), use_waypo
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
 bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0);
-bool detail_normal_map(0);
+bool detail_normal_map(0), use_core_context(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -1456,6 +1456,7 @@ int load_config(string const &config_file) {
 	kwmb.add("start_maximized", start_maximized);
 	kwmb.add("enable_depth_clamp", enable_depth_clamp);
 	kwmb.add("detail_normal_map", detail_normal_map);
+	kwmb.add("use_core_context", use_core_context);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
@@ -1778,7 +1779,18 @@ void progress() {cout << "."; cout.flush();}
 
 int main(int argc, char** argv) {
 
-	cout << "Starting 3DWorld."; cout.flush();
+	cout << "Starting 3DWorld" << endl;
+	if (argc == 2) read_ueventlist(argv[1]);
+	int rs(1);
+	if      (srand_param == 1) {rs = GET_TIME_MS();}
+	else if (srand_param != 0) {rs = srand_param;}
+	add_uevent_srand(rs);
+	create_sin_table();
+	gen_gauss_rand_arr();
+	set_scene_constants();
+	load_texture_names(); // needs to be before config file load
+	load_top_level_config(defaults_file);
+	cout << "Loading."; cout.flush();
 	
     // Initialize GLUT
 	progress();
@@ -1786,9 +1798,12 @@ int main(int argc, char** argv) {
 	progress();
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
 	//glutInitDisplayString("rgba double depth>=16 samples>=8");
-	//glutInitContextVersion(4, 2);
-	//glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);
-	//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
+
+	if (use_core_context) {
+		glutInitContextVersion(4, 2);
+		glutInitContextFlags(GLUT_CORE_PROFILE | GLUT_DEBUG);
+		//glutInitContextProfile(GLUT_FORWARD_COMPATIBLE);
+	}
 	progress();
 	orig_window = glutCreateWindow("3D World");
 	curr_window = orig_window;
@@ -1800,19 +1815,8 @@ int main(int argc, char** argv) {
 	init_window();
 	cout << ".GL Initialized." << endl;
 	//atexit(&clear_context); // not legal when quit unexpectedly
-	if (argc == 2) read_ueventlist(argv[1]);
-	int rs(1);
-	if      (srand_param == 1) {rs = GET_TIME_MS();}
-	else if (srand_param != 0) {rs = srand_param;}
-	add_uevent_srand(rs);
 	uevent_advance_frame();
 	--frame_counter;
-
-	create_sin_table();
-	gen_gauss_rand_arr();
-	set_scene_constants();
-	load_texture_names(); // needs to be before config file load
-	load_top_level_config(defaults_file);
 	if (start_maximized) {maximize();}
 	load_textures();
 	load_flare_textures(); // Sun Flare
