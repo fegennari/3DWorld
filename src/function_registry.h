@@ -43,6 +43,7 @@ int  get_light_pos(point &lpos, int light);
 void update_sun_shadows();
 void update_sun_and_moon();
 bool light_valid(unsigned light_sources, int l, point &lpos);
+bool light_valid_and_enabled(int l, point &lpos);
 
 // function prototypes - shadows
 void add_cobj_shadows(unsigned light_sources);

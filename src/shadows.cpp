@@ -60,6 +60,11 @@ bool light_valid(unsigned light_sources, int l, point &lpos) {
 	return 1;
 }
 
+bool light_valid_and_enabled(int l, point &lpos) {
+
+	return (light_valid(0xFF, l, lpos) && is_light_enabled(l));
+}
+
 
 void coll_obj::add_shadow(unsigned light_sources, bool dynamic) const {
 

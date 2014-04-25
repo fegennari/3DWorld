@@ -401,8 +401,7 @@ void create_shadow_map() {
 	point lpos;
 	
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		if (!light_valid(0xFF, l, lpos) || !is_light_enabled(l)) continue;
-		smap_data[l].create_shadow_map_for_light(l, lpos);
+		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(l, lpos);}
 	}
 	scene_smap_vbo_invalid = 0;
 
