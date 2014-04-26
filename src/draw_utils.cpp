@@ -536,7 +536,13 @@ void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, 
 	unsigned const count(offsets[eix] - offsets[six]);
 	// Note: currently always used to render quads, but can be made more general in the future
 	check_mvm_update();
-	glDrawArraysInstanced(GL_QUADS, offsets[six], count, num_instances);
+
+	if (use_core_context) {
+		draw_quads_as_tris(count, offsets[six], num_instances);
+	}
+	else {
+		glDrawArraysInstanced(GL_QUADS, offsets[six], count, num_instances);
+	}
 }
 
 template< typename vert_type_t >
@@ -657,7 +663,7 @@ public:
 		return use_32_bit;
 	}
 
-	void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert) { // # vertices
+	void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert, unsigned num_instances) { // # vertices
 		if (num_quad_verts == 0) return; // nothing to do
 		assert((num_quad_verts & 3) == 0 && (start_quad_vert & 3) == 0); // must be a multiple of 4
 		unsigned const end_quad_vert(start_quad_vert + num_quad_verts);
@@ -665,7 +671,7 @@ public:
 		bool const use_32_bit(bind_quads_as_tris_ivbo(end_quad_vert));
 		int const index_type(use_32_bit ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);
 		unsigned const bytes_offset((use_32_bit ? sizeof(unsigned) : sizeof(unsigned short))*start_tri_vert);
-		glDrawRangeElements(GL_TRIANGLES, start_quad_vert, end_quad_vert, num_tri_verts, index_type, (void *)bytes_offset);
+		glDrawElementsInstanced(GL_TRIANGLES, num_tri_verts, index_type, (void *)bytes_offset, num_instances);
 		bind_vbo(0, 1);
 	}
 };
@@ -673,7 +679,9 @@ public:
 quad_ix_buffer_t quad_ix_buffer; // singleton
 
 void clear_quad_ix_buffer_context() {quad_ix_buffer.free_context();}
-void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert) {quad_ix_buffer.draw_quads_as_tris(num_quad_verts, start_quad_vert);}
+void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert, unsigned num_instances) {
+	quad_ix_buffer.draw_quads_as_tris(num_quad_verts, start_quad_vert, num_instances);
+}
 bool bind_quads_as_tris_ivbo(unsigned num_quad_verts) {return quad_ix_buffer.bind_quads_as_tris_ivbo(num_quad_verts);}
 
 

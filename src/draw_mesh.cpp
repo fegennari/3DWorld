@@ -225,7 +225,12 @@ public:
 		if (c >= 3) { // at least one triangle
 			if (vbo) {upload_vbo_sub_data_no_sync(&data.front(), vbo_pos*sizeof(vert_norm_color), c*sizeof(vert_norm_color));}
 			glDrawArrays(GL_TRIANGLE_STRIP, vbo_pos, c);
-			if (vbo) {vbo_pos += c;}
+			if (vbo) {
+				// Note: vbo_pos should only require alignment when a partial strip is drawn, since the mesh will be a power of 2,
+				//       so we don't have to worry about the alignment exceeding the vbo allocation size
+				//while ((c*sizeof(vert_norm_color)) & 15) {++c;} // force 16-byte alignment
+				vbo_pos += c;
+			}
 		}
 		c = 0;
 	}

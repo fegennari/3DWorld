@@ -959,7 +959,7 @@ template <typename T> void draw_and_clear_verts(vector<T> &verts, int gl_type) {
 	verts.resize(0); // clear()?
 }
 
-void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0);
+void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert=0, unsigned num_instances=1);
 bool bind_quads_as_tris_ivbo(unsigned num_quad_verts);
 unsigned create_or_bind_ivbo_quads_as_tris(unsigned &ivbo, vector<unsigned> const &indices);
 
