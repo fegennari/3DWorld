@@ -344,24 +344,25 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	create_bind_vbo_and_upload(vbo, *this, 0);
 	T::set_vbo_arrays();
 	assert(!indices.empty()); // now always using indexed drawing
+	int prim_type(GL_TRIANGLES);
+	unsigned ixn(1), ixd(1);
 
-	if (use_core_context && npts == 4) { // draw quads as triangles
-		unsigned const num_ixs(create_or_bind_ivbo_quads_as_tris(ivbo, indices));
-		glDrawRangeElements(GL_TRIANGLES, 0, (unsigned)size(), num_ixs, GL_UNSIGNED_INT, 0); // FIXME: VFC?
+	if (use_core_context && npts == 4) {
+		create_or_bind_ivbo_quads_as_tris(ivbo, indices);
+		ixn = 6; ixd = 4; // convert quads to 2 triangles
 	}
 	else {
+		if (npts == 4) {prim_type = GL_QUADS;}
 		create_bind_vbo_and_upload(ivbo, indices, 1);
-		int const prim_type((npts == 4) ? GL_QUADS : GL_TRIANGLES);
-
-		if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
-			glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
-		}
-		else { // draw each block independently
-			// could use glDrawElementsIndirect(), but the draw calls don't seem to add any significant overhead for the current set of models
-			for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
-				if (camera_pdu.cube_visible(i->bcube)) {
-					glDrawRangeElements(prim_type, 0, (unsigned)size(), i->num, GL_UNSIGNED_INT, (void *)(i->start_ix*sizeof(unsigned)));
-				}
+	}
+	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
+		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)(ixn*indices.size()/ixd), GL_UNSIGNED_INT, 0);
+	}
+	else { // draw each block independently
+		// could use glDrawElementsIndirect(), but the draw calls don't seem to add any significant overhead for the current set of models
+		for (vector<geom_block_t>::const_iterator i = blocks.begin(); i != blocks.end(); ++i) {
+			if (camera_pdu.cube_visible(i->bcube)) {
+				glDrawRangeElements(prim_type, 0, (unsigned)size(), ixn*i->num/ixd, GL_UNSIGNED_INT, (void *)((ixn*i->start_ix/ixd)*sizeof(unsigned)));
 			}
 		}
 	}
