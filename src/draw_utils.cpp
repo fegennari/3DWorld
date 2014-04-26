@@ -275,7 +275,7 @@ bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned 
 
 	if (size > stream_data_sz) {
 		stream_data_sz = size;
-		upload_vbo_data(NULL, size);
+		upload_vbo_data(NULL, size, 0, 2); // streaming
 	}
 	upload_vbo_sub_data(verts, 0, size);
 	return 1;

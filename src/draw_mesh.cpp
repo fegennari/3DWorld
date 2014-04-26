@@ -36,7 +36,7 @@ bool clear_landscape_vbo;
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow, detail_normal_map;
+extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
@@ -111,8 +111,9 @@ float get_cloud_shadow_atten(int x, int y) {
 class mesh_vertex_draw {
 
 	float const healr;
+	bool shadow_pass, use_vbo;
+	unsigned vbo, vbo_pos;
 	vector<vert_norm_color> data;
-	bool shadow_pass;
 
 	struct norm_color_ix {
 		vector3d n;
@@ -179,11 +180,22 @@ class mesh_vertex_draw {
 public:
 	unsigned c;
 
-	mesh_vertex_draw(bool shadow_pass_) : healr(fticks*SURF_HEAL_RATE), data(2*(MAX_XY_SIZE+1)), shadow_pass(shadow_pass_), c(0) {
+	mesh_vertex_draw(bool shadow_pass_, bool use_vbo_)
+		: healr(fticks*SURF_HEAL_RATE), shadow_pass(shadow_pass_), use_vbo(use_vbo_), vbo(0), vbo_pos(0), data(2*(MAX_XY_SIZE+1)), c(0)
+	{
 		assert(shadow_mask != NULL);
 		assert(!data.empty());
 		last_rows.resize(MESH_X_SIZE+1);
-		data.front().set_state();
+
+		if (use_vbo) {
+			vbo = create_vbo();
+			bind_vbo(vbo);
+			upload_vbo_data(NULL, 2*MESH_X_SIZE*(MESH_Y_SIZE-1)*sizeof(vert_norm_color), 0, 2); // streaming
+			vert_norm_color::set_vbo_arrays();
+		}
+		else {
+			data.front().set_state();
+		}
 	}
 
 	bool add_mesh_vertex_pair(int i, int j, float x, float y) {
@@ -207,6 +219,19 @@ public:
 			}
 		}
 		return 1;
+	}
+
+	void emit_strip() {
+		if (c >= 3) { // at least one triangle
+			if (vbo) {upload_vbo_sub_data_no_sync(&data.front(), vbo_pos*sizeof(vert_norm_color), c*sizeof(vert_norm_color));}
+			glDrawArrays(GL_TRIANGLE_STRIP, vbo_pos, c);
+			if (vbo) {vbo_pos += c;}
+		}
+		c = 0;
+	}
+
+	void final_draw() {
+		if (use_vbo) {bind_vbo(0); delete_and_zero_vbo(vbo);}
 	}
 };
 
@@ -398,23 +423,20 @@ void draw_mesh_mvd(bool shadow_pass) {
 	}
 	set_landscape_texture_texgen(s);
 	float y(-Y_SCENE_SIZE);
-	mesh_vertex_draw mvd(shadow_pass);
+	mesh_vertex_draw mvd(shadow_pass, use_core_context);
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 		float x(-X_SCENE_SIZE);
-		mvd.c = 0;
 
 		for (int j = 0; j < MESH_X_SIZE-1; ++j) {
-			if (!mvd.add_mesh_vertex_pair(i, j, x, y) && mvd.c > 0) {
-				glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
-				mvd.c = 0;
-			}
+			if (!mvd.add_mesh_vertex_pair(i, j, x, y)) {mvd.emit_strip();}
 			x += DX_VAL;
 		} // for j
 		mvd.add_mesh_vertex_pair(i, (MESH_X_SIZE - 1), x, y);
-		if (mvd.c > 1) glDrawArrays(GL_TRIANGLE_STRIP, 0, mvd.c);
+		mvd.emit_strip();
 		y += DY_VAL;
 	} // for i
+	mvd.final_draw();
 	s.end_shader();
 }
 

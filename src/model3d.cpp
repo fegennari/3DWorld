@@ -12,12 +12,11 @@
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
 bool const CALC_TANGENT_VECT = 1; // slower and more memory but sometimes better quality/smoother transitions
-bool const DRAW_QUADS_AS_TRIS= 0;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
-extern bool two_sided_lighting, have_indir_smoke_tex;
+extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context;
 extern int display_mode;
 extern float model3d_alpha_thresh;
 extern pos_dir_up orig_camera_pdu;
@@ -346,7 +345,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	T::set_vbo_arrays();
 	assert(!indices.empty()); // now always using indexed drawing
 
-	if (DRAW_QUADS_AS_TRIS && npts == 4) {
+	if (use_core_context && npts == 4) { // draw quads as triangles
 		unsigned const num_ixs(create_or_bind_ivbo_quads_as_tris(ivbo, indices));
 		glDrawRangeElements(GL_TRIANGLES, 0, (unsigned)size(), num_ixs, GL_UNSIGNED_INT, 0); // FIXME: VFC?
 	}

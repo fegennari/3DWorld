@@ -150,7 +150,7 @@ void setup_linear_fog(colorRGBA const &color, float fog_end);
 bool check_gl_error(unsigned loc_id) {
 
 	bool had_error(0);
-
+#ifdef _DEBUG
 	while (1) {
 		int const error(glGetError());
 		if (!error) break;
@@ -160,6 +160,7 @@ bool check_gl_error(unsigned loc_id) {
 		had_error = 1;
 	}
 	assert(!had_error); // currently fatal
+#endif
 	return had_error;
 }
 
