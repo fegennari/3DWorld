@@ -38,6 +38,7 @@ void bind_vbo(unsigned vbo, bool is_index=0);
 void delete_vbo(unsigned vbo);
 void upload_vbo_data(void const *const data, size_t size, bool is_index=0, int dynamic_level=0);
 void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool is_index=0);
+void upload_vbo_sub_data_no_sync(void const *data, unsigned start_byte, unsigned size_bytes, bool is_index=0);
 unsigned create_vao();
 void bind_vao(unsigned vao);
 void delete_vao(unsigned vao);
@@ -99,6 +100,24 @@ struct indexed_vbo_manager_t {
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 	}
+};
+
+
+class vbo_ring_buffer_t {
+
+	unsigned vbo;
+	unsigned size, pos;
+
+	void ensure_vbo(unsigned min_size);
+public:
+	vbo_ring_buffer_t(unsigned init_size) : size(init_size) {}
+
+	template<typename T> void *add_verts_bind_vbo(vector<T> const &v) {
+		assert(!v.empty());
+		return add_verts_bind_vbo(&v.front(), v.size()*sizeof(T));
+	}
+	void *add_verts_bind_vbo(void const *const v, unsigned size_bytes);
+	void free_vbo() {delete_and_zero_vbo(vbo);}
 };
 
 

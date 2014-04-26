@@ -123,6 +123,15 @@ void upload_vbo_sub_data(void const *const data, int offset, size_t size, bool i
 	glBufferSubData(get_buffer_target(is_index), offset, size, data);
 }
 
+void upload_vbo_sub_data_no_sync(void const *data, unsigned start_byte, unsigned size_bytes, bool is_index) {
+
+	assert(data && size_bytes > 0);
+	int const target(get_buffer_target(is_index));
+	void *buffer(glMapBufferRange(target, start_byte, size_bytes, (GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT)));
+	memcpy(buffer, data, size_bytes);
+	glUnmapBuffer(target);
+}
+
 
 unsigned create_vao() {
 	unsigned vao;
@@ -139,6 +148,39 @@ void bind_vao(unsigned vao) { // okay if vao is zero
 void delete_vao(unsigned vao) {
 	if (vao == 0) return;
 	glDeleteVertexArrays(1, &vao);
+}
+
+
+void vbo_ring_buffer_t::ensure_vbo(unsigned min_size) {
+
+	if (size < min_size) {
+		free_vbo(); // allocate a larger vbo
+		size = max(2*size, min_size); // at least double
+	}
+	if (vbo) return; // done
+	vbo = create_vbo();
+	bind_vbo(vbo);
+	upload_vbo_data(NULL, size); // reserve the space but don't use it
+	pos = 0;
+}
+
+void *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned size_bytes) {
+
+	assert(v != NULL);
+	assert(size_bytes > 0);
+	ensure_vbo(4*size_bytes); // at least 4x the current data size
+	bind_vbo(vbo);
+
+	if (pos + size_bytes > size) { // end of buffer space
+		upload_vbo_data(NULL, size); // orphan the buffer
+		pos = 0; // wraparound to the beginning
+	}
+	assert(pos + size_bytes <= size);
+	upload_vbo_sub_data_no_sync(v, pos, size_bytes);
+	void *ret((unsigned char *)pos);
+	pos += size_bytes; // data allocated
+	if (pos & 15) {pos = (pos + 16) & 15;} // align to the nearest 16 byte boundary
+	return ret;
 }
 
 

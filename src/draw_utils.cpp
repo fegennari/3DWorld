@@ -262,49 +262,6 @@ void vert_norm_comp_tc_comp_color::set_state() const {
 }
 
 
-#if 0
-class vbo_ring_buffer_t {
-
-	unsigned vbo;
-	unsigned size, pos;
-
-	void ensure_vbo(unsigned min_size) {
-		if (size < min_size) {
-			free_vbo(); // allocate a larger vbo
-			size = max(2*size, min_size); // at least double
-		}
-		if (vbo) return; // done
-		vbo = create_vbo();
-		bind_vbo(vbo);
-		upload_vbo_data(NULL, size); // reserve the space but don't use it
-		pos = 0;
-	}
-public:
-	vbo_ring_buffer_t(unsigned init_size) : size(init_size) {}
-
-	template<typename T> void *add_verts_bind_vbo(vector<T> const &v) {
-		assert(!v.empty());
-		return add_verts_bind_vbo(&v.front(), v.size());
-	}
-	template<typename T> void *add_verts_bind_vbo(T const *const v, unsigned v_len) {
-		assert(v != NULL);
-		assert(v_len > 0);
-		unsigned const v_size(v_len*sizeof(T)); // in bytes
-		ensure_vbo(4*v_size); // at least 4x the current data size
-		if (pos + v_size > size) {pos = 0;} // end of buffer space, wraparound
-		assert(pos + v_size <= size);
-		bind_vbo(vbo);
-		upload_vbo_sub_data(v, pos, v_size);
-		void *ret((unsigned char *)pos);
-		pos += v_size; // data allocated
-		if (pos & 15) {pos = (pos + 16) & 15;} // align to the nearest 16 byte boundary
-		return ret;
-	}
-	void free_vbo() {delete_and_zero_vbo(vbo);}
-};
-#endif
-
-
 // FIXME: required when using a core context, but too slow
 unsigned stream_data_sz(0);
 
@@ -320,7 +277,6 @@ bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned 
 		stream_data_sz = size;
 		upload_vbo_data(NULL, size);
 	}
-	// FIXME: map-discard?
 	upload_vbo_sub_data(verts, 0, size);
 	return 1;
 }
