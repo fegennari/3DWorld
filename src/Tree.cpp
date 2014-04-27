@@ -57,7 +57,7 @@ tree_data_manager_t tree_data_manager;
 tree_cont_t t_trees(tree_data_manager);
 
 
-extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled, use_core_context;
+extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled;
 extern int shadow_detail, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
@@ -730,7 +730,7 @@ inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
 
 void tree_data_t::clear_vbo_ixs() {
 
-	leaf_vbo = num_branch_quads = num_unique_pts = branch_nv_hi = branch_nv_low = 0;
+	leaf_vbo = num_branch_quads = num_unique_pts = 0;
 	branch_vbo_manager.reset_vbos_to_zero();
 }
 
@@ -901,48 +901,12 @@ void tree::draw_tree(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_bra
 }
 
 
-//#define BRANCH_TRI_STRIPS
-
-#ifdef TREE_4TH_BRANCHES
-	unsigned const BRANCH_TS_RESTART_IX = 0xFFFFFFFF;
-#else
-	unsigned const BRANCH_TS_RESTART_IX = 0xFFFF;
-#endif
-
-template <typename T> void add_cylin_indices_ts(vector<T> &idata, unsigned ndiv, unsigned ix_start, unsigned &idix, unsigned step) {
-
-	for (unsigned S = 0; S < ndiv; S += step) {
-		idata[idix++] = ix_start + S;
-		idata[idix++] = ix_start + S + ndiv;
-	}
-	idata[idix++] = ix_start;
-	idata[idix++] = ix_start + ndiv;
-	idata[idix++] = BRANCH_TS_RESTART_IX;
-}
-
-template <typename T> void add_cylin_indices_quads(vector<T> &idata, unsigned ndiv, unsigned ix_start, unsigned &idix, unsigned step) {
-
-	for (unsigned S = 0; S < ndiv; S += step) {
-		bool const last_edge(S == ndiv-step);
-		unsigned const ix(ix_start+S);
-		idata[idix++] = ix;
-		idata[idix++] = ix+ndiv;
-		idata[idix++] = last_edge ? ix+step : ix+step+ndiv;
-		idata[idix++] = last_edge ? ix+step-ndiv : ix+step;
-	}
-}
-
 template <typename T> void add_cylin_indices_tris(vector<T> &idata, unsigned ndiv, unsigned ix_start, unsigned &idix, unsigned step) {
 
 	for (unsigned S = 0; S < ndiv; S += step) {
 		bool const last_edge(S == ndiv-step);
-		unsigned const ix(ix_start+S);
-		idata[idix++] = ix; // 0
-		idata[idix++] = ix+ndiv; // 1
-		idata[idix++] = last_edge ? ix+step : ix+step+ndiv; // 2
-		idata[idix++] = ix; // 0
-		idata[idix++] = last_edge ? ix+step : ix+step+ndiv; // 2
-		idata[idix++] = last_edge ? ix+step-ndiv : ix+step; // 3
+		unsigned const ixs[4] = {0, ndiv, (last_edge ? step : step+ndiv), (last_edge ? step-ndiv : step)};
+		for (unsigned i = 0; i < 6; ++i) {idata[idix++] = ix_start + S + ixs[quad_to_tris_ixs[i]];}
 	}
 }
 
@@ -954,57 +918,19 @@ void tree_data_t::ensure_branch_vbo() {
 	vector<branch_vert_type_t> data; // static/reused?
 	vector<branch_index_t> idata;
 	unsigned const numcylin((unsigned)all_cylins.size());
-	unsigned num_quads(0), cylin_id(0), data_pos(0), quad_id(0), dix(0), idix(0);
+	unsigned cylin_id(0), data_pos(0), quad_id(0), dix(0), idix(0);
+	num_branch_quads = 0;
 
 	for (unsigned i = 0; i < numcylin; ++i) { // determine required data size
 		bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
 		unsigned const ndiv(all_cylins[i].get_num_div());
-		num_quads      += ndiv;
-		num_unique_pts += (prev_connect ? 1 : 2)*ndiv;
+		num_branch_quads += ndiv;
+		num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
 	}
 	assert(num_unique_pts < (1ULL << 8*sizeof(branch_index_t)));
 	data.resize(num_unique_pts);
-
-#ifdef BRANCH_TRI_STRIPS
-	branch_nv_hi  = 2*num_quads + 3*numcylin; // tri strip + s start verts + primitive restart ix
-	branch_nv_low = num_quads + 3*numcylin;
-	idata.resize(branch_nv_hi + branch_nv_low);
-	unsigned idix2(branch_nv_hi);
-
-	for (unsigned i = 0; i < numcylin; i++) {
-		draw_cylin const &cylin(all_cylins[i]);
-		unsigned const ndiv(cylin.get_num_div());//, ndiv2(ndiv/2);
-		point const ce[2] = {cylin.p1, cylin.p2};
-		float const ndiv_inv(1.0/ndiv);
-		vector3d v12; // (ce[1] - ce[0]).get_norm()
-		vector_point_norm const &vpn(gen_cylinder_data(ce, cylin.r1, cylin.r2, ndiv, v12, NULL, 0.0, 1.0, 0));
-		bool const prev_connect(i > 0 && cylin.can_merge(all_cylins[i-1]));
-
-		if (!prev_connect) { // new cylinder section
-			data_pos = dix;
-			quad_id  = cylin_id = 0;
-		}
-		for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
-			for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
-				float const tx(2.0*fabs(S*ndiv_inv - 0.5));
-				// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
-				vector3d const n(0.5*vpn.n[S] + 0.5*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
-				data[dix++] = branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, float(cylin_id + j));
-			}
-		}
-		add_cylin_indices_ts(idata, ndiv, (data_pos + quad_id), idix,  1); // create index data
-		add_cylin_indices_ts(idata, ndiv, (data_pos + quad_id), idix2, 2); // create index data for next LOD level
-		quad_id += ndiv;
-		++cylin_id;
-	} // for i
-	assert(idix  == branch_nv_hi);
-	assert(dix   == data.size());
-	assert(idix2 == idata.size());
-	num_branch_quads = branch_nv_hi; // FIXME: new meaning, rename
-	//cout << "hi: " << branch_nv_hi << ", lo: " << branch_nv_low << ", orig: " << 4*num_quads << endl;
-#else
-	idata.resize(9*num_quads); // quads + quads/2 for LOD
-	unsigned idix2(6*num_quads);
+	idata.resize(9*num_branch_quads); // quads + quads/2 for LOD
+	unsigned idix2(6*num_branch_quads);
 
 	for (unsigned i = 0; i < numcylin; i++) {
 		draw_cylin const &cylin(all_cylins[i]);
@@ -1032,12 +958,9 @@ void tree_data_t::ensure_branch_vbo() {
 		quad_id += ndiv;
 		++cylin_id;
 	} // for i
-	assert(idix  == 6*num_quads);
+	assert(idix  == 6*num_branch_quads);
 	assert(dix   == data.size());
 	assert(idix2 == idata.size());
-	num_branch_quads = idata.size()/9; // quads + quads/2 for LOD = num_quads
-	assert(num_branch_quads == num_quads);
-#endif
 	branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 }
 
@@ -1045,12 +968,7 @@ void tree_data_t::ensure_branch_vbo() {
 void tree_data_t::draw_branches(shader_t &s, float size_scale, bool reflection_pass) {
 
 	bool const low_detail(reflection_pass || ((size_scale == 0.0) ? 0 : (size_scale < 2.0)));
-#ifdef BRANCH_TRI_STRIPS
-	unsigned const npts(low_detail ? branch_nv_low : branch_nv_hi);
-	unsigned const num((size_scale == 0.0) ? npts : min(npts, max((npts/40), unsigned(1.5*npts*size_scale)))); // branch LOD
-#else
 	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
-#endif
 	draw_branch_vbo(s, num, low_detail);
 }
 
@@ -1064,17 +982,8 @@ void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail) {
 	branch_vbo_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0);
 	int const index_type((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
-
-#ifdef BRANCH_TRI_STRIPS
-	glEnable(GL_PRIMITIVE_RESTART); // move to setup code?
-	glPrimitiveRestartIndex(BRANCH_TS_RESTART_IX);
-	unsigned const idata_sz(branch_nv_hi*sizeof(branch_index_t));
-	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, num_unique_pts, num, index_type, (void *)(low_detail ? idata_sz : 0));
-	glDisable(GL_PRIMITIVE_RESTART);
-#else
 	unsigned const idata_sz(6*num_branch_quads*sizeof(branch_index_t));
 	glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, (low_detail ? 3 : 6)*num, index_type, (void *)(low_detail ? idata_sz : 0));
-#endif
 	branch_vbo_manager.post_render();
 }
 

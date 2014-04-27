@@ -200,7 +200,7 @@ class tree_data_t {
 #endif
 
 	indexed_vbo_manager_t branch_vbo_manager;
-	unsigned leaf_vbo, num_branch_quads, num_unique_pts, branch_nv_hi, branch_nv_low;
+	unsigned leaf_vbo, num_branch_quads, num_unique_pts;
 	int tree_type;
 	colorRGBA base_color, leaf_color;
 	vector<leaf_vert_type_t> leaf_data;
