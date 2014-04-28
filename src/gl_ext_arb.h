@@ -120,7 +120,7 @@ public:
 	void free_vbo() {delete_and_zero_vbo(vbo);}
 };
 
-inline void align_vbo_ptr(unsigned &pos) {if (pos & 15) {pos = (pos + 16) & 15;}}
+inline void align_vbo_ptr(unsigned &pos) {if (pos & 15) {pos = (pos + 16) & (~15);}}
 
 
 void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest);

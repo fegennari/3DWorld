@@ -27,3 +27,4 @@ static error check (analysis)
 Better pine tree texture
 TT tree shadows - shadow map
 Snow detail normal map
+TT cloud density slider

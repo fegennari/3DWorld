@@ -701,7 +701,7 @@ struct vert_norm { // size = 24
 	bool operator< (vert_norm const &p) const {return ((v == p.v) ? (n < p.n) : (v < p.v));}
 	bool operator==(vert_norm const &p) const {return (v == p.v && n == p.n);}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 	static void unset_attrs() {}
 };
 
@@ -719,7 +719,7 @@ struct vert_wrap_t { // size = 12; so we can put the vertex first
 	vert_wrap_t() {}
 	vert_wrap_t(point const &v_) : v(v_) {}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -728,7 +728,7 @@ struct vert_tc_t : public vert_wrap_t { // size = 20
 	vert_tc_t() {}
 	vert_tc_t(point const &v_, float ts, float tt) : vert_wrap_t(v_) {t[0] = ts; t[1] = tt;}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -738,7 +738,7 @@ struct vert_norm_comp : public vert_wrap_t, public norm_comp { // size = 16
 	vert_norm_comp(point const &v_, vector3d  const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 	vert_norm_comp(point const &v_, norm_comp const &n_) : vert_wrap_t(v_), norm_comp(n_) {}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -748,7 +748,7 @@ struct vert_norm_comp_tc : public vert_norm_comp { // size = 24
 	vert_norm_comp_tc(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = ts; t[1] = tt;}
 	vert_norm_comp_tc(point const &v_, vector3d const &n_, float tc[2]) : vert_norm_comp(v_, n_) {t[0] = tc[0]; t[1] = tc[1];}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -757,7 +757,7 @@ struct vert_norm_comp_tc_comp : public vert_norm_comp { // size = 20
 	vert_norm_comp_tc_comp() {}
 	vert_norm_comp_tc_comp(point const &v_, vector3d const &n_, float ts, float tt) : vert_norm_comp(v_, n_) {t[0] = 32767*ts; t[1] = 32767*tt;}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -780,7 +780,7 @@ struct vert_norm_tc : public vert_norm { // size = 32
 	}
 	bool operator==(vert_norm_tc const &p) const {return (v == p.v && n == p.n && t[0] == p.t[0] && t[1] == p.t[1]);}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -806,7 +806,7 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 	}
 	//bool operator==(vert_norm_tc_tan const &p) const {}
 	void set_state() const {assert(0);}
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 	static void unset_attrs();
 };
 
@@ -843,7 +843,7 @@ struct vert_color : public color_wrapper { // size = 16
 	vert_color(point const &v_, colorRGBA const &c_)     : v(v_) {set_c4(c_);}
 	vert_color(point const &v_, unsigned char const *c_) : v(v_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -855,7 +855,7 @@ struct vert_norm_color : public vert_norm, public color_wrapper { // size = 28
 	vert_norm_color(point const &v_, vector3d const &n_, colorRGBA const     &c_) : vert_norm(v_, n_) {set_c4(c_);}
 	vert_norm_color(point const &v_, vector3d const &n_, unsigned char const *c_) : vert_norm(v_, n_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -869,7 +869,7 @@ struct vert_norm_comp_color : public vert_norm_comp, public color_wrapper { // s
 		v = v_; set_norm(n_); c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -886,7 +886,7 @@ struct vert_norm_tc_color : public vert_norm_tc, public color_wrapper { // size 
 	void assign(point const &v_, vector3d const &n_, float ts, float tt, unsigned char const *const c_, bool has_alpha=0) {
 		v = v_; n = n_; t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = (has_alpha ? c_[3] : 255);
 	}
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 	void set_state() const;
 };
 
@@ -896,7 +896,7 @@ struct vert_tc_color : public vert_tc_t, public color_wrapper { // size = 24
 	vert_tc_color() {}
 	vert_tc_color(point const &v_, float ts, float tt, colorRGBA const &c_) : vert_tc_t(v_, ts, tt) {set_c4(c_);}
 	vert_tc_color(point const &v_, float ts, float tt, unsigned char const c_[4]) : vert_tc_t(v_, ts, tt) {UNROLL_4X(c[i_] = c_[i_];)}
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 	void set_state() const;
 };
 
@@ -909,7 +909,7 @@ struct vert_norm_comp_tc_color : public vert_norm_comp_tc, public color_wrapper 
 		v = v_; set_norm(n_); t[0] = ts; t[1] = tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -921,7 +921,7 @@ struct vert_norm_comp_tc_comp_color : public vert_norm_comp_tc_comp, public colo
 		v = v_; set_norm(n_); t[0] = 32767*ts; t[1] = 32767*tt; c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2]; c[3] = 255;
 	}
 	void set_state() const;
-	static void set_vbo_arrays(bool set_state=1);
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
 };
 
 
@@ -934,13 +934,14 @@ struct vert_norm_color_tangent : public vert_norm_color {
 };
 
 
-bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size);
+bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void *&vbo_ptr_offset);
 void unbind_temp_vbo();
 
 template< typename T> void set_ptr_state(T const *const verts, unsigned count, unsigned start_ix=0) {
 	// if verts is NULL, we assume VBOs are to be used (probably don't even need the case split)
-	if (verts && !bind_temp_vbo_from_verts(verts+start_ix, count, sizeof(T))) {verts[0].set_state();}
-	else {T::set_vbo_arrays();}
+	void *vbo_ptr_offset = NULL;
+	if (verts && !bind_temp_vbo_from_verts(verts+start_ix, count, sizeof(T), vbo_ptr_offset)) {verts[0].set_state();}
+	else {T::set_vbo_arrays(1, vbo_ptr_offset);}
 }
 
 template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0) {

@@ -112,7 +112,7 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, stream_vbo;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
@@ -143,6 +143,7 @@ void clear_sm_tree_vbos();
 void clear_scenery_vbos();
 void clear_asteroid_contexts();
 void clear_quad_ix_buffer_context();
+void clear_vbo_ring_buffer();
 
 void setup_linear_fog(colorRGBA const &color, float fog_end);
 
@@ -193,7 +194,7 @@ void clear_context() {
 	clear_asteroid_contexts();
 	invalidate_cached_stars();
 	clear_quad_ix_buffer_context();
-	delete_and_zero_vbo(stream_vbo);
+	clear_vbo_ring_buffer();
 	clear_landscape_vbo = 1;
 }
 

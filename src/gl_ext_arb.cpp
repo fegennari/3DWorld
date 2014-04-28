@@ -179,7 +179,7 @@ void *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned size_b
 	upload_vbo_sub_data_no_sync(v, pos, size_bytes);
 	void *ret((unsigned char *)pos);
 	pos += size_bytes; // data allocated
-	align_vbo_ptr(pos);
+	align_vbo_ptr(pos); // 16-byte alignment - makes no difference?
 	return ret;
 }
 

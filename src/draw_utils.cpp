@@ -6,7 +6,6 @@
 #include "gl_ext_arb.h"
 #include "shaders.h"
 
-unsigned stream_vbo(0);
 
 extern int window_height, display_mode;
 extern bool use_core_context;
@@ -28,65 +27,67 @@ void set_array_client_state(bool va, bool tca, bool na, bool ca, bool actually_s
 }
 
 
-void set_vn_ptrs(unsigned stride, bool comp) {
+void *ptr_add(void *p, unsigned off) {return (unsigned char *)(unsigned(p) + off);}
+
+void set_vn_ptrs(unsigned stride, bool comp, void *vbo_ptr_offset) {
 	assert(cur_shader);
-	cur_shader->set_vertex_ptr(stride, (void *)0);
-	cur_shader->set_normal_ptr(stride, (void *)(sizeof(point)), comp);
+	cur_shader->set_vertex_ptr(stride, vbo_ptr_offset);
+	cur_shader->set_normal_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(point)), comp);
 }
 
-void vert_wrap_t::set_vbo_arrays(bool set_state) {
+void vert_wrap_t::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 0, 0, 0, set_state);
-	cur_shader->set_vertex_ptr(sizeof(point), (void *)0);
+	cur_shader->set_vertex_ptr(sizeof(point), vbo_ptr_offset);
 }
 
-void vert_tc_t::set_vbo_arrays(bool set_state) {
+void vert_tc_t::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 0, 0, set_state);
 	unsigned const stride(sizeof(vert_tc_t));
-	cur_shader->set_vertex_ptr(stride, (void *)0);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_wrap_t), 0);
+	cur_shader->set_vertex_ptr(stride, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_wrap_t)), 0);
 }
 
-void vert_norm::set_vbo_arrays(bool set_state) {
+void vert_norm::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 0, 1, 0, set_state);
-	set_vn_ptrs(sizeof(vert_norm), 0);
+	set_vn_ptrs(sizeof(vert_norm), 0, vbo_ptr_offset);
 }
 
-void vert_norm_comp::set_vbo_arrays(bool set_state) {
+void vert_norm_comp::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 0, 1, 0, set_state);
-	set_vn_ptrs(sizeof(vert_norm_comp), 1);
+	set_vn_ptrs(sizeof(vert_norm_comp), 1, vbo_ptr_offset);
 }
 
-void vert_norm_comp_tc::set_vbo_arrays(bool set_state) {
+void vert_norm_comp_tc::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 0, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_tc));
-	set_vn_ptrs(stride, 1);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 0);
+	set_vn_ptrs(stride, 1, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp)), 0);
 }
 
-void vert_norm_comp_tc_comp::set_vbo_arrays(bool set_state) {
+void vert_norm_comp_tc_comp::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 0, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_tc_comp));
-	set_vn_ptrs(stride, 1);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 1);
+	set_vn_ptrs(stride, 1, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp)), 1);
 }
 
-void vert_norm_tc::set_vbo_arrays(bool set_state) {
+void vert_norm_tc::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 0, set_state);
 	unsigned const stride(sizeof(vert_norm_tc));
-	set_vn_ptrs(stride, 0);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
+	set_vn_ptrs(stride, 0, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm)), 0);
 }
 
-void vert_norm_tc_tan::set_vbo_arrays(bool set_state) {
+void vert_norm_tc_tan::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 0, set_state);
 	unsigned const stride(sizeof(vert_norm_tc_tan));
-	set_vn_ptrs(stride, 0);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
+	set_vn_ptrs(stride, 0, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm)), 0);
 	// Note: would be cleaner but less efficient to use cur_shader->get_attrib_loc("tangent")
 	int const loc(cur_shader->attrib_loc_by_ix(TANGENT_ATTR, 1)); // okay if fails
 	if (loc >= 0) {
 		glEnableVertexAttribArray(loc);
-		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, (void *)sizeof(vert_norm_tc));
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_tc)));
 	}
 }
 
@@ -96,57 +97,57 @@ void vert_norm_tc_tan::unset_attrs() {
 	if (loc >= 0) {glDisableVertexAttribArray(loc);}
 }
 
-void vert_color::set_vbo_arrays(bool set_state) {
+void vert_color::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 0, 0, 1, set_state);
 	unsigned const stride(sizeof(vert_color));
-	cur_shader->set_vertex_ptr(stride, (void *)sizeof(color_wrapper));
-	cur_shader->set_color4_ptr(stride, (void *)0, 1);
+	cur_shader->set_vertex_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(color_wrapper)));
+	cur_shader->set_color4_ptr(stride, vbo_ptr_offset, 1);
 }
 
-void vert_norm_color::set_vbo_arrays(bool set_state) {
+void vert_norm_color::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 0, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_color));
-	set_vn_ptrs(stride, 0);
-	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm), 1);
+	set_vn_ptrs(stride, 0, vbo_ptr_offset);
+	cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm)), 1);
 }
 
-void vert_norm_comp_color::set_vbo_arrays(bool set_state) {
+void vert_norm_comp_color::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 0, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_color));
-	set_vn_ptrs(stride, 1);
-	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_comp), 1);
+	set_vn_ptrs(stride, 1, vbo_ptr_offset);
+	cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp)), 1);
 }
 
-void vert_norm_tc_color::set_vbo_arrays(bool set_state) {
+void vert_norm_tc_color::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_tc_color));
-	set_vn_ptrs(stride, 0);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm), 0);
-	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_tc), 1);
+	set_vn_ptrs(stride, 0, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm)), 0);
+	cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_tc)), 1);
 }
 
-void vert_tc_color::set_vbo_arrays(bool set_state) {
+void vert_tc_color::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 0, 1, set_state);
 	unsigned const stride(sizeof(vert_tc_color));
-	cur_shader->set_vertex_ptr(stride, (void *)0);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(point), 0);
-	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_tc_t), 1);
+	cur_shader->set_vertex_ptr(stride, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(point)), 0);
+	cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_tc_t)), 1);
 }
 
-void vert_norm_comp_tc_color::set_vbo_arrays(bool set_state) {
+void vert_norm_comp_tc_color::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_tc_color));
-	set_vn_ptrs(stride, 1);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 0);
-	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_comp_tc), 1);
+	set_vn_ptrs(stride, 1, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp)), 0);
+	cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp_tc)), 1);
 }
 
-void vert_norm_comp_tc_comp_color::set_vbo_arrays(bool set_state) {
+void vert_norm_comp_tc_comp_color::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
 	set_array_client_state(1, 1, 1, 1, set_state);
 	unsigned const stride(sizeof(vert_norm_comp_tc_comp_color));
-	set_vn_ptrs(stride, 1);
-	cur_shader->set_tcoord_ptr(stride, (void *)sizeof(vert_norm_comp), 1);
-	cur_shader->set_color4_ptr(stride, (void *)sizeof(vert_norm_comp_tc_comp), 1);
+	set_vn_ptrs(stride, 1, vbo_ptr_offset);
+	cur_shader->set_tcoord_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp)), 1);
+	cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp_tc_comp)), 1);
 }
 
 
@@ -262,28 +263,21 @@ void vert_norm_comp_tc_comp_color::set_state() const {
 }
 
 
-// FIXME: required when using a core context, but too slow
-unsigned stream_data_sz(0);
+// required when using a core context, but slow
+vbo_ring_buffer_t vbo_ring_buffer(1 << 24); // 16MB
 
-bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size) {
+void clear_vbo_ring_buffer() {vbo_ring_buffer.free_vbo();}
+
+bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void *&vbo_ptr_offset) {
 
 	if (!use_core_context) return 0; // not needed
 	assert(verts != NULL && count > 0 && vert_size > 0);
-	if (!stream_vbo) {stream_vbo = create_vbo(); stream_data_sz = 0;}
-	bind_vbo(stream_vbo);
-	unsigned const size(count*vert_size);
-
-	if (size > stream_data_sz) {
-		stream_data_sz = size;
-		upload_vbo_data(NULL, size, 0, 2); // streaming
-	}
-	upload_vbo_sub_data(verts, 0, size);
+	vbo_ptr_offset = vbo_ring_buffer.add_verts_bind_vbo(verts, count*vert_size);
 	return 1;
 }
 
 void unbind_temp_vbo() {
 	if (!use_core_context) return; // not needed
-	//delete_and_zero_vbo(stream_vbo);
 	bind_vbo(0);
 }
 
