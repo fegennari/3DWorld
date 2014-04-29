@@ -246,7 +246,6 @@ void vert_color::set_state() const {
 }
 
 void vert_norm_color::set_state() const {
-	// FIXME: no need for shadow_only?
 	unsigned const stride(sizeof(*this));
 	set_array_client_state(1, 0, 1, 1);
 	cur_shader->set_vertex_ptr(stride, &v);
@@ -363,6 +362,42 @@ void pt_line_drawer_no_lighting_t::free_vbo() {
 }
 
 
+struct vert_norm_color_size : public vert_norm_color { // size = 32
+	float size;
+
+	vert_norm_color_size() {}
+	vert_norm_color_size(vert_norm_color const &vnc, float size_) : vert_norm_color(vnc), size(size_) {}
+	vert_norm_color_size(vert_color const &vc, float size_) : vert_norm_color(vc.v, zero_vector, vc.c), size(size_) {}
+	
+	void set_state() const {
+		unsigned const stride(sizeof(*this));
+		set_array_client_state(1, 0, 1, 1);
+		cur_shader->set_vertex_ptr(stride, &v);
+		cur_shader->set_normal_ptr(stride, &n, 0);
+		cur_shader->set_color4_ptr(stride, &c, 1);
+		int const loc(cur_shader->get_attrib_loc("point_size"));
+		assert(loc > 0);
+		glEnableVertexAttribArray(loc);
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, &size);
+	}
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL) {
+		set_array_client_state(1, 0, 1, 1, set_state);
+		unsigned const stride(sizeof(vert_norm_color_size));
+		set_vn_ptrs(stride, 0, vbo_ptr_offset);
+		cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm)), 1);
+		int const loc(cur_shader->get_attrib_loc("point_size"));
+		assert(loc > 0);
+		glEnableVertexAttribArray(loc);
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_color)));
+	}
+	static void unset_attrs() {
+		int const loc(cur_shader->get_attrib_loc("point_size"));
+		assert(loc > 0);
+		glDisableVertexAttribArray(loc);
+	}
+};
+
+
 template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int tid, float const_point_size, bool enable_lighting) const {
 
 	if (empty()) return;
@@ -392,17 +427,16 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 	s.add_uniform_float("min_alpha", 0.0);
 	set_point_sprite_mode(1);
 	select_texture(tid);
-	int loc(-1);
 
 	if (!const_point_size) { // use variable attribute point size
 		assert(points.size() == sizes.size());
-		loc = s.get_attrib_loc("point_size");
-		assert(loc > 0);
-		glEnableVertexAttribArray(loc);
-		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, sizeof(float), (void *)(&sizes.front())); // FIXME_VBO
+		vector<vert_norm_color_size> verts(points.size());
+		for (unsigned i = 0; i < points.size(); ++i) {verts[i] = vert_norm_color_size(points[i], sizes[i]);}
+		draw_verts(verts, GL_POINTS);
 	}
-	draw_verts(points, GL_POINTS);
-	if (!const_point_size) {glDisableVertexAttribArray(loc);}
+	else {
+		draw_verts(points, GL_POINTS);
+	}
 	set_point_sprite_mode(0);
 	s.end_shader();
 }

@@ -10,7 +10,6 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Always use vbos (no set_state())
    - draw_verts()
    - indexed_mesh_draw
-   - point_sprite_drawer
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)
