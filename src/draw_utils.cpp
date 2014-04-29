@@ -150,6 +150,24 @@ void vert_norm_comp_tc_comp_color::set_vbo_arrays(bool set_state, void *vbo_ptr_
 	cur_shader->set_color4_ptr(stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm_comp_tc_comp)), 1);
 }
 
+void vert_norm_texp::set_vbo_arrays(bool set_state, void *vbo_ptr_offset) {
+	set_array_client_state(1, 0, 1, 0, set_state);
+	unsigned const stride(sizeof(vert_norm_texp));
+	set_vn_ptrs(stride, 0, vbo_ptr_offset);
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		unsigned const loc(cur_shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR));
+		glEnableVertexAttribArray(loc);
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_norm)+4*d*sizeof(float)));
+	}
+}
+void vert_norm_texp::unset_attrs() {
+	for (unsigned d = 0; d < 2; ++d) {
+		unsigned const loc(cur_shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR));
+		glDisableVertexAttribArray(loc);
+	}
+}
+
 
 // set_state() functions for all vertex classes - typically called on element 0
 void vert_wrap_t::set_state() const {
@@ -260,6 +278,19 @@ void vert_norm_comp_tc_comp_color::set_state() const {
 	cur_shader->set_normal_ptr(stride, &n, 1);
 	cur_shader->set_tcoord_ptr(stride, &t, 1);
 	cur_shader->set_color4_ptr(stride, &c, 1);
+}
+
+void vert_norm_texp::set_state() const {
+	unsigned const stride(sizeof(*this));
+	set_array_client_state(1, 0, 1, 0);
+	cur_shader->set_vertex_ptr(stride, &v);
+	cur_shader->set_normal_ptr(stride, &n, 0);
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		unsigned const loc(cur_shader->attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR));
+		glEnableVertexAttribArray(loc);
+		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, st[d]);
+	}
 }
 
 
@@ -472,8 +503,9 @@ template<typename T> void indexed_mesh_draw<T>::init(unsigned nx_, unsigned ny_)
 template<typename T> void indexed_mesh_draw<T>::render() const {
 
 	if (verts.empty()) return;
-	verts.front().set_state();
+	set_ptr_state(&verts.front(), verts.size());
 	glDrawRangeElements(GL_TRIANGLES, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, &indices.front());
+	unset_ptr_state(&verts.front());
 }
 
 template<typename T> void indexed_mesh_draw<T>::render_z_plane(float x1, float y1, float x2, float y2, float zval, unsigned nx_, unsigned ny_) {

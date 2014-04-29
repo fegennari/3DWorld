@@ -59,25 +59,16 @@ struct cobj_params : public obj_layer { // size = 68
 };
 
 
-struct texgen_params_t {
-	float st[2][4];
-	texgen_params_t() {UNROLL_4X(st[0][i_] = st[1][i_] = 0.0;)} // zero initialized
-};
-
-
 class cobj_draw_buffer {
 
 	obj_layer last_layer;
-	vector<vert_norm> verts;
-	vector<texgen_params_t> texgens;
-	shader_t &shader;
+	vector<vert_norm_texp> verts;
 
 public:
-	cobj_draw_buffer(shader_t &shader_) : shader(shader_) {}
-	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vn); texgens.push_back(tp);}
+	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vert_norm_texp(vn, tp));}
 	void on_new_obj_layer(obj_layer const &layer);
-	void clear() {verts.clear(); texgens.clear();}
-	void draw() const;
+	void clear() {verts.clear();}
+	void draw() const {draw_verts(verts, GL_TRIANGLES);}
 	void flush() {draw(); clear();}
 };
 

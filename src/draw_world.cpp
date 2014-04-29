@@ -383,7 +383,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
-	cobj_draw_buffer cdb(s);
+	cobj_draw_buffer cdb;
 	
 	if (draw_solid) {
 		vector<pair<float, int> > large_cobjs;

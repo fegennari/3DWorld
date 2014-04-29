@@ -720,6 +720,7 @@ struct vert_wrap_t { // size = 12; so we can put the vertex first
 	vert_wrap_t(point const &v_) : v(v_) {}
 	void set_state() const;
 	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
+	static void unset_attrs() {}
 };
 
 
@@ -844,6 +845,7 @@ struct vert_color : public color_wrapper { // size = 16
 	vert_color(point const &v_, unsigned char const *c_) : v(v_) {c[0]=c_[0]; c[1]=c_[1]; c[2]=c_[2]; c[3]=c_[3];}
 	void set_state() const;
 	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
+	static void unset_attrs() {}
 };
 
 
@@ -934,6 +936,20 @@ struct vert_norm_color_tangent : public vert_norm_color {
 };
 
 
+struct texgen_params_t { // sie = 32
+	float st[2][4];
+	texgen_params_t() {UNROLL_4X(st[0][i_] = st[1][i_] = 0.0;)} // zero initialized
+};
+
+struct vert_norm_texp : public vert_norm, public texgen_params_t { // size = 76
+	vert_norm_texp() {}
+	vert_norm_texp(vert_norm const &vn, texgen_params_t const &tp) : vert_norm(vn), texgen_params_t(tp) {}
+	void set_state() const;
+	static void set_vbo_arrays(bool set_state=1, void *vbo_ptr_offset=NULL);
+	static void unset_attrs();
+};
+
+
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void *&vbo_ptr_offset);
 void unbind_temp_vbo();
 
@@ -944,11 +960,16 @@ template< typename T> void set_ptr_state(T const *const verts, unsigned count, u
 	else {T::set_vbo_arrays(1, vbo_ptr_offset);}
 }
 
+template <typename T> void unset_ptr_state(T const *const verts) {
+	T::unset_attrs();
+	if (verts) {unbind_temp_vbo();}
+}
+
 template <typename T> void draw_verts(T const *const verts, unsigned count, int gl_type, unsigned start_ix=0) {
 	assert(count > 0);
 	set_ptr_state(verts, count, start_ix);
 	glDrawArrays(gl_type, start_ix, count);
-	if (verts) {unbind_temp_vbo();}
+	unset_ptr_state(verts);
 }
 
 template <typename T> void draw_verts(vector<T> const &verts, int gl_type, unsigned start_ix=0) {
@@ -968,7 +989,7 @@ template <typename T> void draw_quad_verts_as_tris(T const *const verts, unsigne
 	assert(count > 0);
 	set_ptr_state(verts, count, start_ix);
 	draw_quads_as_tris(count, start_ix);
-	if (verts) {unbind_temp_vbo();}
+	unset_ptr_state(verts);
 }
 
 template <typename T> void draw_quad_verts_as_tris(vector<T> const &verts) {

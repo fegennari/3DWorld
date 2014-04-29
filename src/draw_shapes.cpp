@@ -128,21 +128,6 @@ void cobj_draw_buffer::on_new_obj_layer(obj_layer const &layer) {
 	last_layer = layer;
 }
 
-void cobj_draw_buffer::draw() const {
-
-	if (verts.empty()) return; // nothing to draw
-	assert(verts.size() == texgens.size());
-	int loc[2];
-
-	for (unsigned d = 0; d < 2; ++d) {
-		loc[d] = shader.attrib_loc_by_ix(d ? TEX0_T_ATTR : TEX0_S_ATTR);
-		glEnableVertexAttribArray(loc[d]);
-		glVertexAttribPointer(loc[d], 4, GL_FLOAT, GL_FALSE, sizeof(texgen_params_t), (void *)texgens.front().st[d]); // FIXME_VBO
-	}
-	draw_verts(verts, GL_TRIANGLES);
-	for (unsigned d = 0; d < 2; ++d) {glDisableVertexAttribArray(loc[d]);}
-}
-
 
 void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 
