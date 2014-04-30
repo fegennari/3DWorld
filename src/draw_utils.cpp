@@ -386,17 +386,18 @@ void quad_batch_draw::draw_as_flares_and_clear(int flare_tex) { // Note: used in
 template<typename T> void indexed_mesh_draw<T>::clear() {
 
 	verts.clear();
-	indices.clear();
-	nx = ny = 0;
+	free_context();
+	nx = ny = ivbo_size = 0;
 }
 
 template<typename T> void indexed_mesh_draw<T>::init(unsigned nx_, unsigned ny_) {
 
-	if (nx == nx_ && ny == ny_) return; // already setup
+	if (nx == nx_ && ny == ny_ && ivbo) return; // already setup
 	nx = nx_; ny = ny_;
 	assert(nx > 0 && ny > 0);
 	verts.resize((nx+1)*(ny+1));
-	indices.resize(6*nx*ny);
+	vector<unsigned> indices(6*nx*ny);
+	ivbo_size = indices.size();
 		
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
@@ -407,13 +408,18 @@ template<typename T> void indexed_mesh_draw<T>::init(unsigned nx_, unsigned ny_)
 			indices[iix+5] = vix + (nx+1); // 3
 		}
 	}
+	free_context();
+	create_vbo_and_upload(ivbo, indices, 1, 1);
 }
 
 template<typename T> void indexed_mesh_draw<T>::render() const {
 
 	if (verts.empty()) return;
+	assert(ivbo && ivbo_size > 0);
+	bind_vbo(ivbo, 1);
 	set_ptr_state(&verts.front(), verts.size());
-	glDrawRangeElements(GL_TRIANGLES, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, &indices.front());
+	glDrawRangeElements(GL_TRIANGLES, 0, verts.size(), ivbo_size, GL_UNSIGNED_INT, NULL);
+	bind_vbo(0, 1);
 	unset_ptr_state(&verts.front());
 }
 

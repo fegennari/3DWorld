@@ -9,7 +9,7 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - GL_QUADS cleanup
  - Always use vbos
    - index data
-     - indexed_mesh_draw
+     - TT mesh cracks
    - instance data?
 
 TT mode underwater content
@@ -27,3 +27,4 @@ Better pine tree texture
 TT tree shadows - shadow map
 Snow detail normal map
 TT cloud density slider
+Fix draw_water_plane extended water

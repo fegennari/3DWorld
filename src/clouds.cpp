@@ -362,18 +362,22 @@ void render_spherical_section(indexed_mesh_draw<vert_wrap_t> &imd, float size, f
 }
 
 
+indexed_mesh_draw<vert_wrap_t> cloud_imd;
+
+void free_cloud_context() {cloud_imd.free_context();}
+
+
 // not a plane, but a spherical section
 void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil, bool draw_floor) {
 
 	shader_t s;
-	static indexed_mesh_draw<vert_wrap_t> imd;
 	float const size(camera_pdu.far_);
 
 	// draw a plane at terrain_zmin to properly blend the fog (needs to be first when camera is above the clouds)
 	if (draw_floor && !reflection_pass && fog_enabled) {
 		glDepthMask(GL_FALSE);
 		s.begin_color_only_shader(cur_fog_color);
-		imd.render_z_plane(-size, -size, size, size, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
+		cloud_imd.render_z_plane(-size, -size, size, size, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
 		glDepthMask(GL_TRUE);
 	}
@@ -409,7 +413,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		colorRGBA cloud_color2(cloud_color);
 		cloud_color2.alpha *= (is_cloudy ? 1.0 : 0.5);
 		s.set_cur_color(cloud_color2);
-		render_spherical_section(imd, size, rval_inv, z1+z_offset, z2+z_offset);
+		render_spherical_section(cloud_imd, size, rval_inv, z1+z_offset, z2+z_offset);
 		disable_blend();
 		s.end_shader();
 	}
@@ -432,7 +436,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		s.add_uniform_vector3d("cloud_offset", offset);
 		enable_blend();
 		s.set_cur_color(cloud_color);
-		render_spherical_section(imd, size, rval_inv, z1, z2);
+		render_spherical_section(cloud_imd, size, rval_inv, z1, z2);
 		disable_blend();
 		s.end_shader();
 	}

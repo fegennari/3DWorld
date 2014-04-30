@@ -839,6 +839,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		indexed_mesh_draw<vert_wrap_t> imd;
 		float const size(camera_pdu.far_*SQRT2);
 		imd.render_z_plane(-size, -size, size, size, (zval - SMALL_NUMBER), 8, 8); // 8x8 grid
+		imd.free_context();
 		s.end_shader();
 	}
 	disable_blend();
