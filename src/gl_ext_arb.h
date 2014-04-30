@@ -107,10 +107,11 @@ class vbo_ring_buffer_t {
 
 	unsigned vbo;
 	unsigned size, pos;
+	bool is_index;
 
 	void ensure_vbo(unsigned min_size);
 public:
-	vbo_ring_buffer_t(unsigned init_size) : size(init_size) {}
+	vbo_ring_buffer_t(unsigned init_size, bool is_index_=0) : size(init_size), is_index(is_index_) {}
 
 	template<typename T> void *add_verts_bind_vbo(vector<T> const &v) {
 		assert(!v.empty());

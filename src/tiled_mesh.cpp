@@ -1083,7 +1083,7 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
-void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], bool reflection_pass) const {
+void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const {
 
 	assert(size > 0);
 	assert(weight_tid > 0 && height_tid > 0 && shadow_normal_tid > 0);
@@ -1104,7 +1104,6 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	bind_vbo(ivbo, 1);
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
 	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
-	bind_vbo(0, 1); // unbind index buffer (needed for crack drawing)
 	vector<unsigned> crack_ixs;
 
 	// fill in the cracks
@@ -1135,7 +1134,11 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 			} // for adj_lod
 		} // for dir
 	} // for dim
-	if (!crack_ixs.empty()) {glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_INT, &crack_ixs.front());}
+	if (!crack_ixs.empty()) {
+		void const *ptr(vbo_ring_ibuf.add_verts_bind_vbo(&crack_ixs.front(), crack_ixs.size()*sizeof(unsigned)));
+		glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_INT, ptr);
+		bind_vbo(ivbo, 1); // back to normal ivbo
+	}
 	bind_vbo(0, 0); // unbind vertex buffer
 	fgPopMatrix();
 
@@ -1757,14 +1760,16 @@ void tile_draw_t::draw(bool reflection_pass) {
 	s.set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
 	set_fill_mode();
 	s.enable_vnct_atribs(1, 0, 0, 0);
+	vbo_ring_buffer_t vbo_ring_ibuf(0, 1);
 	enable_blend(); // for fog transparency
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
-		if (display_mode & 0x01) {to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, reflection_pass);}
+		if (display_mode & 0x01) {to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, vbo_ring_ibuf, reflection_pass);}
 	}
+	bind_vbo(0, 1); // unbind index buffer
 	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();
 	s.end_shader();

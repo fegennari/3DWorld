@@ -159,8 +159,8 @@ void vbo_ring_buffer_t::ensure_vbo(unsigned min_size) {
 	}
 	if (vbo) return; // done
 	vbo = create_vbo();
-	bind_vbo(vbo);
-	upload_vbo_data(NULL, size); // reserve the space but don't use it
+	bind_vbo(vbo, is_index);
+	upload_vbo_data(NULL, size, is_index); // reserve the space but don't use it
 	pos = 0;
 }
 
@@ -169,14 +169,14 @@ void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned 
 	assert(v != NULL);
 	assert(size_bytes > 0);
 	ensure_vbo(4*size_bytes); // at least 4x the current data size
-	bind_vbo(vbo);
+	bind_vbo(vbo, is_index);
 
 	if (pos + size_bytes > size) { // end of buffer space
-		upload_vbo_data(NULL, size); // orphan the buffer
+		upload_vbo_data(NULL, size, is_index); // orphan the buffer
 		pos = 0; // wraparound to the beginning
 	}
 	assert(pos + size_bytes <= size);
-	upload_vbo_sub_data_no_sync(v, pos, size_bytes);
+	upload_vbo_sub_data_no_sync(v, pos, size_bytes, is_index);
 	void const *ret((unsigned char const *)pos);
 	pos += size_bytes; // data allocated
 	align_vbo_ptr(pos); // 16-byte alignment - makes no difference?

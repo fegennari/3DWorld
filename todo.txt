@@ -9,8 +9,11 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - GL_QUADS cleanup
  - Always use vbos
    - index data
-     - TT mesh cracks
-   - instance data?
+     - instance_render_t::draw_and_clear()
+   - instance data
+     - shader_float_matrix_uploader
+     - small_tree_group::draw_pine_leaves()
+     - tile_t::draw_grass()
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)
