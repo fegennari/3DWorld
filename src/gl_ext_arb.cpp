@@ -164,7 +164,7 @@ void vbo_ring_buffer_t::ensure_vbo(unsigned min_size) {
 	pos = 0;
 }
 
-void *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned size_bytes) {
+void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned size_bytes) {
 
 	assert(v != NULL);
 	assert(size_bytes > 0);
@@ -177,7 +177,7 @@ void *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned size_b
 	}
 	assert(pos + size_bytes <= size);
 	upload_vbo_sub_data_no_sync(v, pos, size_bytes);
-	void *ret((unsigned char *)pos);
+	void const *ret((unsigned char const *)pos);
 	pos += size_bytes; // data allocated
 	align_vbo_ptr(pos); // 16-byte alignment - makes no difference?
 	return ret;

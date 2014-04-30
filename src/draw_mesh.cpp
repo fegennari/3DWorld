@@ -194,7 +194,7 @@ public:
 			vert_norm_color::set_vbo_arrays();
 		}
 		else {
-			data.front().set_state();
+			vert_norm_color::set_vbo_arrays(1, &data.front());
 		}
 	}
 

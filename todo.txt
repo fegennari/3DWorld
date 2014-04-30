@@ -7,9 +7,10 @@ Remove deprecated OpenGL calls:
 http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Non-sprite points - remove set_point_sprite_mode()
  - GL_QUADS cleanup
- - Always use vbos (no set_state())
-   - draw_verts()
-   - indexed_mesh_draw
+ - Always use vbos
+   - index data
+     - indexed_mesh_draw
+   - instance data?
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)

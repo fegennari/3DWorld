@@ -116,7 +116,7 @@ public:
 		assert(!v.empty());
 		return add_verts_bind_vbo(&v.front(), v.size()*sizeof(T));
 	}
-	void *add_verts_bind_vbo(void const *const v, unsigned size_bytes);
+	void const *add_verts_bind_vbo(void const *const v, unsigned size_bytes);
 	void free_vbo() {delete_and_zero_vbo(vbo);}
 };
 
