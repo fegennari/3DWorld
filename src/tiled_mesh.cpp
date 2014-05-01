@@ -1032,18 +1032,17 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 			unsigned const bix(gb.ix - 1);
 			assert(bix < NUM_RND_GRASS_BLOCKS);
 			insts[lod_level][bix].push_back(vector2d(x*dx_step, y*dy_step));
-		}
-	}
+		} // for x
+	} // for y
 	for (unsigned lod = 0; lod < NUM_GRASS_LODS; ++lod) {
 		for (unsigned bix = 0; bix < insts[lod].size(); ++bix) {
 			vector<vector2d> &v(insts[lod][bix]);
 			if (v.empty()) continue;
-			bind_vbo(0); // clear any current grass vbo that may be bound
-			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), &v.front()); // FIXME_VBO
+			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(vector2d)));
 			grass_tile_manager.render_block(bix, lod, 1.0, v.size());
 			v.clear();
-		}
-	}
+		} // for bix
+	} // for lod
 }
 
 

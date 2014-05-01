@@ -174,10 +174,14 @@ vbo_ring_buffer_t vbo_ring_buffer(1 << 20); // 1MB
 
 void clear_vbo_ring_buffer() {vbo_ring_buffer.free_vbo();}
 
+void const *get_dynamic_vbo_ptr(void const *const verts, unsigned size_bytes) {
+	assert(verts != NULL && size_bytes > 0);
+	return vbo_ring_buffer.add_verts_bind_vbo(verts, size_bytes);
+}
+
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void const *&vbo_ptr_offset) {
 	if (!use_core_context) return 0; // not needed
-	assert(verts != NULL && count > 0 && vert_size > 0);
-	vbo_ptr_offset = vbo_ring_buffer.add_verts_bind_vbo(verts, count*vert_size);
+	vbo_ptr_offset = get_dynamic_vbo_ptr(verts, count*vert_size);
 	return 1;
 }
 

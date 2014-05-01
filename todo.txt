@@ -13,7 +13,6 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
    - instance data
      - shader_float_matrix_uploader
      - small_tree_group::draw_pine_leaves()
-     - tile_t::draw_grass()
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)

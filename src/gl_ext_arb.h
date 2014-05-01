@@ -124,6 +124,7 @@ public:
 inline void align_vbo_ptr(unsigned &pos) {if (pos & 15) {pos = (pos + 16) & (~15);}}
 
 
+void const *get_dynamic_vbo_ptr(void const *const verts, unsigned size_bytes);
 void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest);
 void build_texture_mipmaps(unsigned tid, unsigned dim);
 
