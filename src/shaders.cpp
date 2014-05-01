@@ -903,11 +903,8 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 
 	if (inst_xforms.empty()) return;
 	assert(loc >= 0); // Note: could handle this case
-	// use hardware instancing
-	// we need to upload the transforms here, but if there is a current vbo associated with the object data
-	// we need to unbind it, upload the transforms, then rebind the original vbo
-	if (cur_vbo) {bind_vbo(0);}
-	shader_float_matrix_uploader<4,4>::enable(loc, 1, inst_xforms.front().get_ptr()); // FIXME_VBO
+	void const *vbo_ptr(get_dynamic_vbo_ptr(inst_xforms.front().get_ptr(), inst_xforms.size()*sizeof(xform_matrix)));
+	shader_float_matrix_uploader<4,4>::enable(loc, 1, (float const *)vbo_ptr); // use hardware instancing
 	if (cur_vbo) {bind_vbo(cur_vbo);}
 	
 	if (index_type != GL_NONE) { // indexed
@@ -924,14 +921,12 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 
 void set_point_sprite_mode(bool enabled) { // Note: to be removed when using a core profile
 
-	if (use_core_context) return; // point sprite mode is always enabled
-
 	if (enabled) {
-		glEnable(GL_POINT_SPRITE);
+		if (!use_core_context) {glEnable(GL_POINT_SPRITE);}
 		glEnable(GL_PROGRAM_POINT_SIZE);
 	}
 	else {
-		glDisable(GL_POINT_SPRITE);
+		if (!use_core_context) {glDisable(GL_POINT_SPRITE);}
 		glDisable(GL_PROGRAM_POINT_SIZE);
 	}
 }
