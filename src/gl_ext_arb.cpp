@@ -14,6 +14,7 @@ void init_glew() {
 	// nothing
 #else
 	GLenum const err(glewInit());
+	glGetError(); // get and discard error flags (can get core context errors here)
 
 	if (GLEW_OK != err) {
 		std::cerr << "Error: " << glewGetErrorString(err) << endl;
