@@ -268,18 +268,20 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 			if (insts.empty()) return; // nothing to draw
 			sort(insts.begin(), insts.end());
 		}
-		static vector<point> pts; // class member?
-		pts.resize(insts.size()); // force max possible size so that pts won't be resized later, and the pointer should remain valid
-		glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), &pts.front()); // FIXME_VBO
 		vbo_vnc_block_manager_t const &vbomgr(tree_instances.vbo_manager[0]); // high detail
 		vbomgr.begin_render();
+		inst_pts.resize(insts.size());
+		for (vector<pine_tree_inst_t>::const_iterator i = insts.begin(); i != insts.end(); ++i) {inst_pts[i-insts.begin()] = i->pt;}
+		void const *vbo_ptr(get_dynamic_vbo_ptr(&inst_pts.front(), inst_pts.size()*sizeof(point)));
+		unsigned ptr_offset(0), ix(0);
 
 		for (vector<pine_tree_inst_t>::const_iterator i = insts.begin(); i != insts.end();) { // Note: no increment
 			unsigned const inst_id(i->id);
-			unsigned ix(0);
-			for (; i != insts.end() && i->id == inst_id; ++i) {pts[ix++] = i->pt;}
 			assert(inst_id < tree_instances.size());
+			for (ix = 0; i != insts.end() && i->id == inst_id; ++i, ++ix) {}
+			glVertexAttribPointer(xlate_loc, 3, GL_FLOAT, GL_FALSE, sizeof(point), (void const *)((point const *)vbo_ptr + ptr_offset));
 			tree_instances[inst_id].draw_pine(vbomgr, ix);
+			ptr_offset += ix;
 		}
 		vbomgr.end_render();
 	}

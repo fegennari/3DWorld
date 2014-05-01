@@ -8,11 +8,9 @@ http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
  - Non-sprite points - remove set_point_sprite_mode()
  - GL_QUADS cleanup
  - Always use vbos
-   - index data
      - instance_render_t::draw_and_clear()
-   - instance data
      - shader_float_matrix_uploader
-     - small_tree_group::draw_pine_leaves()
+     - pine tree trunk cylinder draw overhead?
 
 TT mode underwater content
 User-placed teleporter weapon (translocator?)

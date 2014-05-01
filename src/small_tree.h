@@ -67,7 +67,7 @@ public:
 struct small_tree_group : public vector<small_tree> {
 
 	vbo_vnc_block_manager_t vbo_manager[2]; // {high, low} detail
-	vector<point> trunk_pts;
+	vector<point> trunk_pts, inst_pts;
 	rand_gen_t rgen;
 	bool generated, instanced;
 	unsigned num_pine_trees;
