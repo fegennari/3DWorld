@@ -1879,9 +1879,8 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	s.end_shader();
 
 	// distant trunks
-	enable_blend(); // for fog transparency
-		
 	if (!tree_trunk_pts.empty()) { // color/texture already set above
+		enable_blend(); // for fog transparency
 		set_pine_tree_shader(s, "xy_billboard");
 		assert(!(tree_trunk_pts.size() & 1));
 		select_texture(WHITE_TEX);
@@ -1889,8 +1888,8 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 		draw_verts(tree_trunk_pts, GL_LINES);
 		tree_trunk_pts.resize(0);
 		s.end_shader();
+		disable_blend();
 	}
-	disable_blend();
 }
 
 

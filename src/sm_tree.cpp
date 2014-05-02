@@ -234,9 +234,14 @@ void small_tree_group::translate_by(vector3d const &vd) {
 
 void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
 
+	static vector<vert_norm_tc> cylin_verts;
+
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(1, shadow_only, -1, -1, xlate, points);
+		i->draw(1, shadow_only, -1, -1, xlate, points, ((world_mode == WMODE_INF_TERRAIN) ? &cylin_verts : NULL));
 	}
+	// FIXME: make this work in ground mode, when trunk color varies per-tree
+	// FIXME: make this work for non-pine trees
+	draw_and_clear_verts(cylin_verts, GL_TRIANGLES); // inf terrain mode pine tree trunks
 }
 
 
@@ -825,8 +830,9 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate, vector<vert_wrap_t> *points) const {
-
+void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate,
+	vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const
+{
 	if (!(tree_mode & 2)) return; // disabled
 	if (type == T_BUSH && !(mode & 2)) return; // no bark
 	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_visible_pine(xlate)) return;
@@ -853,8 +859,17 @@ void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, 
 				else { // draw as cylinder
 					if (!shadow_only && world_mode == WMODE_GROUND) {get_bark_color().set_for_cur_shader();}
 					if (!shadow_only) {select_texture(stt[type].bark_tid);}
-					int const nsides2(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
-					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides2, !shadow_only);
+					int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
+
+					if (cylin_verts && is_pine_tree()) {
+						assert(cylin.r2 == 0.0); // cone
+						point const ce[2] = {cylin.p1, cylin.p2};
+						vector3d v12;
+						gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12), nsides);
+					}
+					else {
+						draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides, !shadow_only);
+					}
 				}
 			}
 		}

@@ -274,6 +274,35 @@ vert_norm_tc create_vert(point const &p, vector3d const &n, float ts, float tt, 
 	return vert_norm_tc(p, ((two_sided_lighting && dot_product_ptv(n, get_camera_pos(), p) < 0.0) ? -n : n), ts, tt);
 }
 
+void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, int ndiv, bool two_sided_lighting, float tex_scale_len) {
+	
+	float const ndiv_inv(1.0/ndiv);
+	unsigned const ixoff(verts.size());
+	verts.resize(3*ndiv + ixoff);
+
+	for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
+		unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
+		//verts[vix+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
+		verts[vix+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], 0.5, tex_scale_len, two_sided_lighting); // one big discontinuity at one position
+		verts[vix+1] = create_vert(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), 0.0, two_sided_lighting); // normalize?
+		verts[vix+2] = create_vert(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), 0.0, two_sided_lighting); // normalize?
+	}
+}
+
+void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, int ndiv, bool two_sided_lighting, float tex_scale_len) {
+
+	float const ndiv_inv(1.0/ndiv);
+	unsigned const ixoff(verts.size());
+	verts.resize(2*(ndiv+1) + ixoff); // FIXME: add degenerate points when combining with an existing triangle strip?
+
+	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) { // Note: always has tex coords
+		unsigned const s(S%ndiv), vix(2*S + ixoff);
+		vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
+		verts[vix+0] = create_vert(vpn.p[(s<<1)+0], normal, (1.0 - S*ndiv_inv), 0.0, two_sided_lighting);
+		verts[vix+1] = create_vert(vpn.p[(s<<1)+1], normal, (1.0 - S*ndiv_inv), tex_scale_len, two_sided_lighting);
+	}
+}
+
 
 // draw_sides_ends: 0 = draw sides only, 1 = draw sides and ends, 2 = draw ends only, 3 = pt1 end, 4 = pt2 end
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
@@ -281,7 +310,6 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 {
 	assert(radius1 > 0.0 || radius2 > 0.0);
 	point const ce[2] = {p1, p2};
-	float const ndiv_inv(1.0/ndiv);
 	vector3d v12; // (ce[1] - ce[0]).get_norm()
 	vector_point_norm const &vpn(gen_cylinder_data(ce, radius1, radius2, ndiv, v12, perturb_map));
 	static vector<vert_norm_tc> verts;
@@ -290,29 +318,15 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 		// draw ends only - nothing to do here
 	}
 	else if (radius2 == 0.0) { // cone (Note: still not perfect for pine tree trunks and enforcer ships)
-		verts.resize(3*ndiv);
-
-		for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
-			unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv);
-			//verts[3*s+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
-			verts[3*s+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], 0.5, tex_scale_len, two_sided_lighting); // one big discontinuity at one position
-			verts[3*s+1] = create_vert(vpn.p[(sn<<1)+0], (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), 0.0, two_sided_lighting); // normalize?
-			verts[3*s+2] = create_vert(vpn.p[(s <<1)+0], (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), 0.0, two_sided_lighting); // normalize?
-		}
+		gen_cone_triangles(verts, vpn, ndiv, two_sided_lighting, tex_scale_len);
 		draw_and_clear_verts(verts, GL_TRIANGLES);
 	}
 	else {
-		verts.resize(2*(ndiv+1));
-
-		for (unsigned S = 0; S <= (unsigned)ndiv; ++S) { // Note: always has tex coords
-			unsigned const s(S%ndiv);
-			vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-			verts[2*S+0] = create_vert(vpn.p[(s<<1)+0], normal, (1.0 - S*ndiv_inv), 0.0, two_sided_lighting);
-			verts[2*S+1] = create_vert(vpn.p[(s<<1)+1], normal, (1.0 - S*ndiv_inv), tex_scale_len, two_sided_lighting);
-		}
+		gen_cylinder_triangle_strip(verts, vpn, ndiv, two_sided_lighting, tex_scale_len);
 		draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 	}
 	if (draw_sides_ends != 0) { // Note: two_sided_lighting doesn't apply here
+		float const ndiv_inv(1.0/ndiv);
 		float const r[2] = {radius1, radius2};
 
 		for (unsigned i = 0; i < 2; ++i) {
