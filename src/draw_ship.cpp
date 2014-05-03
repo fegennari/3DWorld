@@ -75,7 +75,7 @@ void ship_bounded_cylinder::draw(unsigned ndiv) const {
 }
 
 
-void ship_triangle_list::draw(unsigned ndiv) const { // unused
+void ship_triangle_list::draw(unsigned ndiv) const { // used for fighters
 
 	vector<vert_norm> verts;
 	verts.reserve(3*triangles.size());

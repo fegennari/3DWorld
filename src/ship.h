@@ -944,7 +944,7 @@ public:
 	float get_max_t()  const {return ((ptype == PTYPE_GLOW) ? 1000.0 : ((ptype == PTYPE_TRIANGLE) ? 40.0 : 200.0));} // arbitrary?
 	float offense()    const {return damage_v;}
 	bool hostile_explode() const {return 1;}
-	bool calc_rvs()    const {return (ptype == PTYPE_TRIANGLE);} // maybe always return 0?
+	bool calc_rvs()    const {return 0;} // was (ptype == PTYPE_TRIANGLE)
 	bool need_blend()  const {return (ptype == PTYPE_GLOW);}
 	bool can_move()    const {return 1;}
 	string get_name()  const {return "Particle";}

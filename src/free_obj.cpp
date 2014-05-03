@@ -586,13 +586,13 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 		gscale *= pow(1.0/volume, 1.0/3.0);
 		scale_by(gscale);
 	}
-	if (!is_particle()) fgPushMatrix();
-	if (!udd.draw_as_pt() && calc_rvs()) rotate();
+	if (!is_particle()) {fgPushMatrix();}
+	if (!udd.draw_as_pt() && calc_rvs()) {rotate();}
 	udd.specular_en = specular;
 	udd.first_pass  = first_pass;
 	udd.final_pass  = final_pass;
 	draw_obj(udd);
-	if (!is_particle()) fgPopMatrix();
+	if (!is_particle()) {fgPopMatrix();}
 	fgPopMatrix();
 }
 

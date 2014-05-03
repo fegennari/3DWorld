@@ -263,7 +263,7 @@ void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool dr
 void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends) {
 
 	fgPushMatrix();
-	translate_to(p1);
+	translate_to(p1); // even if we can pass p1 into draw_fast_cylinder() we need to handle draw_circle_normal()
 	draw_cylinder(length, radius1, radius2, ndiv, draw_ends);
 	fgPopMatrix();
 }
