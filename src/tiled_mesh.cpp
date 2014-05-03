@@ -1873,7 +1873,6 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	setup_tt_fog_post(s);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 	s.add_uniform_float("tex_scale_t", 5.0);
-	s.set_cur_color(get_tree_trunk_color(T_PINE, 0)); // all a constant color
 	draw_pine_tree_bl(s, 1, 0, 0, reflection_pass); // branches
 	s.add_uniform_float("tex_scale_t", 1.0);
 	s.end_shader();

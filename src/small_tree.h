@@ -17,9 +17,9 @@ class small_tree { // size = 85 (88)
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
 	int vbo_mgr_ix; // high detail
 	int inst_id; // for instancing
-	float height, width, r_angle, rx, ry, rv[3];
+	float height, width, r_angle, rx, ry;
 	point pos;
-	colorRGBA color;
+	colorRGBA color, bark_color;
 	vector<int> coll_id;
 
 public:
@@ -38,7 +38,6 @@ public:
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_leaf_color() const {return color;}
-	colorRGBA get_bark_color() const;
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=1) const;
 	bool is_visible_pine(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;

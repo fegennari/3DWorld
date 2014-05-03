@@ -234,14 +234,19 @@ void small_tree_group::translate_by(vector3d const &vd) {
 
 void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
 
-	static vector<vert_norm_tc> cylin_verts;
+	static vector<vert_norm_tc> cylin_verts; // class member?
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(1, shadow_only, -1, -1, xlate, points, ((world_mode == WMODE_INF_TERRAIN) ? &cylin_verts : NULL));
+		i->draw(1, shadow_only, -1, -1, xlate, points, &cylin_verts);
 	}
-	// FIXME: make this work in ground mode, when trunk color varies per-tree
-	// FIXME: make this work for non-pine trees
-	draw_and_clear_verts(cylin_verts, GL_TRIANGLES); // inf terrain mode pine tree trunks
+	if (!cylin_verts.empty()) {
+		if (!shadow_only) {
+			get_tree_trunk_color(T_PINE, 0).set_for_cur_shader(); // all a constant color
+			select_texture(get_bark_tex_for_tree_type(T_PINE));
+		}
+		// make this work for non-pine trees (where we have to deal with colors, texture changes, degenerate tris, and tris vs. strips)?
+		draw_and_clear_verts(cylin_verts, GL_TRIANGLES); // inf terrain mode pine tree trunks
+	}
 }
 
 
@@ -595,7 +600,8 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 	type(t), inst_id(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
 	clear_vbo_mgr_ix();
-	for (unsigned i = 0; i < 3; ++i) {rv[i] = rgen.randd();} // for bark color
+	bark_color = stt[type].c;
+	if (!is_pine_tree()) {UNROLL_3X(bark_color[i_] = min(1.0, bark_color[i_]*(0.85 + 0.3f*rgen.randd()));)} // gen bark color for decid trees
 	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1) - 0.1*height;}
 
 	switch (type) {
@@ -802,14 +808,6 @@ void small_tree::add_trunk_as_line(vector<point> &points) const {
 }
 
 
-colorRGBA small_tree::get_bark_color() const {
-
-	colorRGBA tcolor(stt[type].c);
-	UNROLL_3X(tcolor[i_] = min(1.0f, tcolor[i_]*(0.85f + 0.3f*rv[i_]));)
-	return tcolor;
-}
-
-
 void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances) const { // 30 quads per tree
 
 	assert(is_pine_tree());
@@ -853,12 +851,10 @@ void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, 
 						points->push_back(p2 + xlate);
 					}
 					else {
-						tree_scenery_pld.add_textured_line(cylin.p1+xlate, p2+xlate, get_bark_color(), stt[type].bark_tid);
+						tree_scenery_pld.add_textured_line(cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
 					}
 				}
 				else { // draw as cylinder
-					if (!shadow_only && world_mode == WMODE_GROUND) {get_bark_color().set_for_cur_shader();}
-					if (!shadow_only) {select_texture(stt[type].bark_tid);}
 					int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 
 					if (cylin_verts && is_pine_tree()) {
@@ -868,6 +864,10 @@ void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, 
 						gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12), nsides);
 					}
 					else {
+						if (!shadow_only) {
+							bark_color.set_for_cur_shader();
+							select_texture(stt[type].bark_tid);
+						}
 						draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides, !shadow_only);
 					}
 				}
