@@ -56,6 +56,8 @@ void set_water_plane_uniforms(shader_t &s);
 void create_pine_tree_instances();
 unsigned get_pine_tree_inst_gpu_mem();
 
+void setup_detail_normal_map(shader_t &s, float tscale);
+
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
@@ -1483,8 +1485,6 @@ void set_tile_xy_vals(shader_t &s) {
 	s.add_uniform_float("dy_inv", inv_scale*DY_VAL_INV);
 }
 
-void setup_detail_normal_map(shader_t &s);
-
 
 // uses texture units 0-11 (12 if using hmap texture)
 void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
@@ -1511,7 +1511,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	setup_terrain_textures(s, 2);
 	set_tile_xy_vals(s);
 	s.add_uniform_int("height_tex", 12);
-	if (use_normal_map) {setup_detail_normal_map(s);}
+	if (use_normal_map) {setup_detail_normal_map(s, 2.0);}
 
 	if (has_water) {
 		set_water_plane_uniforms(s);

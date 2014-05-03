@@ -382,36 +382,40 @@ void draw_mesh_vbo() {
 }
 
 
-void setup_detail_normal_map(shader_t &s) { // also used for tiled terrain mesh
+void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
 
-	select_multitex(ROCK_NORMAL_TEX, 11, 1);
-	s.add_uniform_int("detail_normal_tex", 11);
-	s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(2.0*X_SCENE_SIZE, 2.0*Y_SCENE_SIZE));
-}
-
-
-void setup_mesh_and_water_shader(shader_t &s, bool detail_bump_map) {
-
-	s.setup_enabled_lights(2, 2); // FS
-	set_dlights_booleans(s, 1, 1); // FS
-	s.check_for_fog_disabled();
-	
-	if (detail_bump_map) {
+	if (enable) {
 		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_DL", 1); // FS
 	}
 	s.set_prefix("varying vec4 epos;", 1); // FS (needed for dynamic lighting)
+}
+
+void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled terrain mesh
+
+	select_multitex(ROCK_NORMAL_TEX, 11, 1);
+	s.add_uniform_int("detail_normal_tex", 11);
+	s.add_uniform_vector2d("detail_normal_tex_scale", vector2d(tscale*X_SCENE_SIZE, tscale*Y_SCENE_SIZE));
+}
+
+
+void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
+
+	s.setup_enabled_lights(2, 2); // FS
+	set_dlights_booleans(s, 1, 1); // FS
+	s.check_for_fog_disabled();
+	setup_detail_normal_map_prefix(s, detail_normal_map);
 	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 	s.set_vert_shader("texture_gen.part+draw_mesh");
 	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+detail_normal_map.part+draw_mesh");
 	s.begin_shader();
-	if (shadow_map_enabled()) set_smap_shader_for_all_lights(s);
+	if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
 	s.setup_fog_scale();
 	s.setup_scene_bounds();
 	setup_dlight_textures(s);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 1);
-	if (detail_bump_map) {setup_detail_normal_map(s);}
+	if (detail_normal_map) {setup_detail_normal_map(s, 2.0);}
 }
 
 
