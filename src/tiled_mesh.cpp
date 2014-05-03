@@ -1768,6 +1768,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
 		if (display_mode & 0x01) {to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, vbo_ring_ibuf, reflection_pass);}
 	}
+	vbo_ring_ibuf.free_vbo();
 	bind_vbo(0, 1); // unbind index buffer
 	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();
