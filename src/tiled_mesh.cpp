@@ -41,7 +41,7 @@ extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
-extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere;
+extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover;
 extern point sun_pos, moon_pos, surface_pos;
 extern water_params_t water_params;
 extern char *mh_filename_tt;
@@ -1469,7 +1469,7 @@ void tile_draw_t::setup_cloud_plane_uniforms(shader_t &s) {
 	//float const cloud_zmax(get_cloud_zmax()); // follows the camera zval - matches the drawn cloud layer but moves clouds on the terrain
 	float const cloud_zmax(0.5*(zmin + zmax) + max(zmax, CLOUD_CEILING)); // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
 	set_cloud_uniforms(s, 9);
-	s.add_uniform_float("cloud_scale",   (is_cloudy ? 1.0 : 0.535));
+	s.add_uniform_float("cloud_scale",   (is_cloudy ? 1.0 : (cloud_cover + 0.535*(1.0 - cloud_cover))));
 	s.add_uniform_float("cloud_alpha",   (is_cloudy ? 0.8 : 0.75)*atmosphere);
 	s.add_uniform_float("cloud_plane_z", cloud_zmax);
 }

@@ -218,7 +218,7 @@ void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int l
 
 void gen_bubble(point const &pos, float r, colorRGBA const &c) {
 
-	if (animate2) {bubbles[bubbles.choose_element()].gen(pos, r, c);}
+	if (animate2 && begin_motion) {bubbles[bubbles.choose_element()].gen(pos, r, c);}
 }
 
 

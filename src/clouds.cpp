@@ -19,7 +19,7 @@ cloud_manager_t cloud_manager;
 
 extern bool have_sun, no_sun_lpos_update, fog_enabled;
 extern int window_width, window_height, cloud_model, draw_model, display_mode, xoff, yoff, animate2, is_cloudy;
-extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, zmin, zmax;
+extern float CLOUD_CEILING, atmosphere, sun_rot, fticks, water_plane_z, cloud_cover, zmin, zmax;
 extern vector3d wind;
 extern colorRGBA sun_color, cur_fog_color;
 
@@ -428,7 +428,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		s.begin_shader();
 		setup_tt_fog_post(s);
 		s.add_uniform_float("water_plane_z", zmin);
-		s.add_uniform_float("cloud_scale", (is_cloudy ? 1.0 : 0.5));
+		s.add_uniform_float("cloud_scale", (is_cloudy ? 1.0 : (cloud_cover + 0.5*(1.0 - cloud_cover))));
 		s.add_uniform_vector3d("camera_pos", camera);
 		s.add_uniform_vector3d("sun_pos", get_sun_pos());
 		s.add_uniform_color("sun_color", sun_color);

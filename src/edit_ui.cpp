@@ -368,7 +368,7 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 			break;
 		case PW_WATER:
 			value << get_rel_wpz();
-			spos = get_rel_wpz(); // -1.0 to 1.0
+			spos = get_rel_wpz(); // 0.0 to 1.0
 			break;
 		case PW_VEG:
 			value << def_vegetation;
@@ -380,7 +380,7 @@ class phys_weather_kbd_menu_t : public keyboard_menu_t {
 			break;
 		case PW_CLOUD:
 			value << cloud_cover;
-			spos = cloud_cover; // 0.0 to 1.0
+			spos = (cloud_cover + 0.5)/1.5; // -0.5 to 1.0
 			break;
 		case PW_PRECIP:
 			value << get_precip_rate();
@@ -435,7 +435,7 @@ public:
 		case PW_WATER:
 			{
 				float const water_level(max(-1.0f, min(1.0f, (get_rel_wpz() + 0.05f*delta)))); // -1.0 to 1.0 in steps of 0.05
-				change_water_level(water_level);
+				change_water_level(water_level); // 0.0 to 1.0
 			}
 			regen_mesh = 1; // regen texture
 			break;
@@ -447,7 +447,7 @@ public:
 			def_atmosphere = CLIP_TO_01(def_atmosphere + 0.1f*delta); // 0.0 to 1.0 in steps of 0.1
 			break;
 		case PW_CLOUD:
-			cloud_cover = CLIP_TO_01(cloud_cover + 0.1f*delta); // 0.0 to 1.0 in steps of 0.1
+			cloud_cover = max(-0.5f, min(1.0f, (cloud_cover + 0.1f*delta))); // -0.5 to 1.0 in steps of 0.1
 			break;
 		case PW_PRECIP:
 			update_precip_rate((delta > 0.0) ? 1.5 : 1.0/1.5);
