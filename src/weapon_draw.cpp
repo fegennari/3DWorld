@@ -506,9 +506,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				shader.set_specular(0.8, 50.0);
 				rot_angle = max(0.0, 1.0*fire_val);
 				if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
-				draw_cylinder(point(0.6*tx, 0.6*ty, 0.076), 0.064,     radius,     radius, 2*ndiv, 1);
-				draw_cylinder(point(0.6*tx, 0.6*ty, 0.000), 0.076, 2.8*radius, 2.0*radius, 2*ndiv, 1);
-				draw_cylinder(point(0.6*tx, 0.6*ty, 0.136), 0.012, 1.5*radius, 1.5*radius, 2*ndiv, 1);
+				draw_cylinder_at(point(0.6*tx, 0.6*ty, 0.076), 0.064,     radius,     radius, 2*ndiv, 1);
+				draw_cylinder_at(point(0.6*tx, 0.6*ty, 0.000), 0.076, 2.8*radius, 2.0*radius, 2*ndiv, 1);
+				draw_cylinder_at(point(0.6*tx, 0.6*ty, 0.136), 0.012, 1.5*radius, 1.5*radius, 2*ndiv, 1);
 			}
 			else { // shrapnel chaingun
 				radius = 0.004;

@@ -280,16 +280,14 @@ void uobj_draw_data::draw_ehousing_pairs(float length, float r1, float r2, float
 	unsigned const ndiv2(get_ndiv(ndiv/2));
 
 	for (unsigned p = 0; p < num_pairs; ++p) {
-		fgPushMatrix();
-		translate_to(offset + p*per_pair_off);
+		point p1(offset + p*per_pair_off);
 
 		for (unsigned i = 0; i < 2; ++i) { // draw engine housings
-			draw_cylin_fast(r1, r2, length, ndiv2, texture);
-			if (lcone > 0.0 && r1 > 0.0) {draw_cylin_fast(r1, 0.0, lcone, ndiv2, texture);}
-			if (lcone > 0.0 && r2 > 0.0) {draw_cylin_fast(r2, 0.0, lcone, ndiv2, texture, 1.0, length);} // change color?
-			if (i == 0) fgTranslate(dx, dy, 0.0);
+			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, length), r1, r2, ndiv2, texture);
+			if (lcone > 0.0 && r1 > 0.0) {draw_fast_cylinder(p1,                         p1+vector3d(0.0, 0.0,        lcone), r1, 0.0, ndiv2, texture);}
+			if (lcone > 0.0 && r2 > 0.0) {draw_fast_cylinder(p1+point(0.0, 0.0, length), p1+vector3d(0.0, 0.0, length+lcone), r2, 0.0, ndiv2, texture);} // change color?
+			p1.x += dx; p1.y += dy;
 		}
-		fgPopMatrix();
 	}
 }
 
@@ -629,11 +627,11 @@ void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 	if (ndiv > 6) {
 		unsigned const ndiv2(get_ndiv(ndiv/2));
 		set_color(color_b);
-		fgTranslate(0.0, -0.75, -2.0);
+		point p1(0.0, -0.75, -2.0);
 
 		for (unsigned i = 0; i < nengines; ++i) {
-			draw_cylin_fast(0.3, 0.25, 0.25, ndiv2, 0);
-			if (i+1 < nengines) {fgTranslate(0.0, edy, 0.0);}
+			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, 0.25), 0.3, 0.25, ndiv2, 0);
+			p1.y += edy;
 		}
 	}
 	fgPopMatrix(); // undo invert_z()
@@ -669,35 +667,37 @@ void uobj_draw_data::draw_us_frigate() const {
 
 	assert(nengines > 1);
 	setup_draw_ship();
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
 
-	fgPushMatrix();
-	fgScale(1.6, 0.28, 1.2);
-	draw_sphere_vbo(all_zeros, 1.0, 3*ndiv/2, textured);
-	fgPopMatrix();
 	set_color(color_b);
 	fgPushMatrix();
 	fgScale(0.9, 0.6, 0.8);
 	set_uobj_specular(0.5, 80.0);
-	draw_sphere_vbo(point(0.0, 0.0, 0.1), 1.0, ndiv, 0); // center
+	draw_sphere_vbo(point(0.0, 0.0, 0.1), 1.0, ndiv, 0); // center, untextured
 	end_specular();
+	fgPopMatrix();
+
+	bool const textured(1);
+	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	fgPushMatrix();
+	fgScale(1.6, 0.28, 1.2);
+	set_color(color_a);
+	draw_sphere_vbo(all_zeros, 1.0, 3*ndiv/2, textured);
 	fgPopMatrix();
 	float const edx(1.5/(nengines-1));
 
 	if (ndiv > 3) { // draw engines
 		unsigned const ndiv2(get_ndiv(ndiv/2));
-		fgTranslate(-0.75, 0.0, -1.5);
+		point p1(-0.75, 0.0, -1.5);
 
 		for (unsigned i = 0; i < nengines; ++i) {
 			set_color(color_b);
-			draw_cylin_fast(0.2, 0.22, 1.1, ndiv2, textured);
+			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, 1.1), 0.2, 0.22, ndiv2, textured);
 			
 			if (ndiv > 10) {
 				set_color(color_b*0.2);
-				draw_circle_normal(0.0, 0.202, ndiv2, 1, 0.1);
+				draw_circle_normal(0.0, 0.202, ndiv2, 1, p1+vector3d(0.0, 0.0, 0.1));
 			}
-			if (i+1 < nengines) {fgTranslate(edx, 0.0, 0.0);}
+			p1.x += edx;
 		}
 	}
 	if (textured) end_ship_texture();
@@ -926,11 +926,9 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 	if (ndiv > 6) { // draw engines
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
-			fgPushMatrix();
-			fgTranslate(epos*sinf(theta), epos*cosf(theta), -0.06);
-			draw_cylin_fast(0.12, 0.10, 0.06, ndiv2, 0);
-			if (ndiv > 8) {draw_circle_normal(0.0, 0.11, ndiv2, 0, 0.03);}
-			fgPopMatrix();
+			point const p1(epos*sinf(theta), epos*cosf(theta), -0.06);
+			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, 0.06), 0.12, 0.10, ndiv2, 0);
+			if (ndiv > 8) {draw_circle_normal(0.0, 0.11, ndiv2, 0, p1+vector3d(0.0, 0.0, 0.03));}
 		}
 	}
 	fgPopMatrix(); // undo invert_z()
@@ -1307,11 +1305,9 @@ void uobj_draw_data::draw_gunship() const {
 		set_color(GRAY);
 
 		for (unsigned i = 0; i < 4; ++i) {
-			fgPushMatrix();
-			fgTranslate(0.35*dxy[0][i], 0.35*dxy[1][i], -1.1);
-			draw_cylinder(0.25, 0.05, 0.05, ndiv2);
-			if (ndiv > 12) {draw_circle_normal(0.0, 0.05, ndiv2, 0, 0.05);}
-			fgPopMatrix();
+			point const p1(0.35*dxy[0][i], 0.35*dxy[1][i], -1.1);
+			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, 0.25), 0.05, 0.05, ndiv2, 0);
+			if (ndiv > 12) {draw_circle_normal(0.0, 0.05, ndiv2, 0, p1+vector3d(0.0, 0.0, 0.05));}
 		}
 	}
 	fgPopMatrix(); // undo invert_z()
@@ -1369,12 +1365,12 @@ void uobj_draw_data::draw_dwcarrier() const {
 			fgPopMatrix();
 		}
 		set_color(color_b);
-		fgPushMatrix();
-		fgTranslate(0.0, 0.0, -1.1);
+		float zval(-1.1);
 		
 		for (unsigned i = 0; i < 4; ++i) { // draw body
 			if (ndiv < 16 && i == 1) i = 3;
 			fgPushMatrix();
+			fgTranslate(0.0, 0.0, zval);
 			fgScale((1.0 - 0.18*i), (0.16 + 0.1*i), 1.0);
 
 			if (ndiv < 10) { // approximate low-detail version with only one cylinder and no ends
@@ -1393,18 +1389,14 @@ void uobj_draw_data::draw_dwcarrier() const {
 			invert_z();
 			draw_sphere_vbo(all_zeros, 0.72, ndiv35, 0, 1); // rear
 			fgPopMatrix();
-			if (i < 3) fgTranslate(0.0, 0.0, 0.01);
+			zval += 0.01;
 		}
-		fgPopMatrix();
-
 		if (ndiv > 4) { // engine housings
 			fgPushMatrix();
 			fgScale(0.32, 1.0, 1.0);
-			fgTranslate(1.0, 0.0, -1.35);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				draw_cylinder(1.0, 0.38, 0.1, ndiv2, (ndiv >= 8), 1, 0);
-				if (i == 0) fgTranslate(-2.0, 0.0, 0.0);
+				draw_cylinder_at(point((i ? -1.0 : 1.0), 0.0, -1.35), 1.0, 0.38, 0.1, ndiv2, (ndiv >= 8), 1, 0);
 			}
 			fgPopMatrix();
 		}
@@ -1424,18 +1416,19 @@ void uobj_draw_data::draw_dwcarrier() const {
 			set_color(ALPHA0);
 			fgPushMatrix();
 			fgRotate(90.0, 0.0, 1.0, 0.0);
-			fgTranslate(0.84, 0.44, -0.01);
+			point p1(0.84, 0.44, -0.01);
 
 			for (unsigned i = 0; i < 5; ++i) {
-				draw_cylinder(0.02, 0.05, 0.05, ndiv4, 1);
-				if (i < 4) fgTranslate(-0.3, -0.04, 0.0);
+				draw_cylinder_at(p1, 0.02, 0.05, 0.05, ndiv4, 1);
+				p1 += vector3d(-0.3, -0.04, 0.0);
 			}
 			fgPopMatrix();
 		}
 		set_color(color_b);
 		fgRotate(10.0, 1.0, 0.0, 0.0); // Note: push/pop not needed since this is the last draw
 		fgScale(0.01, 0.2, 1.0);
-		draw_sphere_vbo(point(0.0, 0.7, -0.1), 1.0, ndiv4, 0);
+		fgTranslate(0.0, 0.7, -0.1);
+		draw_sphere_vbo(all_zeros, 1.0, ndiv2, 0);
 	}
 	fgPopMatrix(); // undo invert_z()
 
@@ -1568,10 +1561,7 @@ void uobj_draw_data::draw_dwexterm() const {
 
 			for (unsigned i = 0; i < 8; ++i) { // weapon barrels
 				float const theta(TWO_PI*i/8.0), x(0.028*sinf(theta)), y(0.028*cosf(theta)); // are x and y backwards?
-				fgPushMatrix();
-				fgTranslate(x, y, 1.28);
-				draw_cylinder(0.06, 0.006, 0.006, ndiv4, (ndiv > 8));
-				fgPopMatrix();
+				draw_cylinder_at(point(x, y, 1.28), 0.06, 0.006, 0.006, ndiv4, (ndiv > 8));
 			}
 			for (unsigned i = 0; i < 2; ++i) { // connectors
 				draw_cube(point((i ? 0.18 : -0.18), 0.10, -0.15), 0.02, 0.02, 0.30, 0);
@@ -1788,7 +1778,7 @@ void uobj_draw_data::draw_supply() const {
 	bool const textured(1);
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 
-	draw_cylinder(point(0.0, 0.0, 1.0), 0.4, 0.5, 0.5, ndiv, 1); // front ring
+	draw_cylinder_at(point(0.0, 0.0, 1.0), 0.4, 0.5, 0.5, ndiv, 1); // front ring
 	set_color(color_b);
 	draw_cylin_fast(0.45, 0.45, 0.8, ndiv, textured, 1.0, 0.8); // front cylinder
 	draw_cylin_fast(0.00, 0.45, 0.6, ndiv, textured, 1.0, 0.2);
@@ -2119,15 +2109,13 @@ void uobj_draw_data::draw_seige() const {
 		}
 		for (unsigned i = 0; i < 2; ++i) {
 			float comp((wpt == i && ftime >= 0.0 && ftime < 1.0) ? (0.5 + 0.5*ftime) : 1.0);
-			fgPushMatrix();
-			fgTranslate(0.13*(i ? -1.0 : 1.0), 0.6, 0.5);
-			draw_cylinder(0.32, 0.032, 0.032, ndiv4, 1);
+			point const p1(0.13*(i ? -1.0 : 1.0), 0.6, 0.5);
+			draw_cylinder_at(p1, 0.32, 0.032, 0.032, ndiv4, 1);
 
 			for (unsigned j = 0; j < 4; ++j) {
 				float const r(0.028 - 0.004*j);
-				draw_cylin_fast(r, r, 0.32, ndiv4, 0, 1.0, 0.24*comp*j);
+				draw_cylinder_at(p1, 0.24*comp*j, r, r, ndiv4, (j < 3), 0, 1);
 			}
-			fgPopMatrix();
 		}
 	}
 	fgPopMatrix(); // undo transformations
@@ -2179,12 +2167,9 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 	if (hw && ndiv > 3) {
 		for (unsigned i = 0; i < 3; ++i) {
 			float const theta(TWO_PI*i/3.0), x(1.05*cosf(theta)), y(1.05*sinf(theta));
-			fgPushMatrix();
-			fgTranslate(x, y, -0.6);
-			draw_cylinder(1.1, 0.2, 0.2, ndiv2, 1, 1, 0);
-			draw_sphere_vbo(point(0.0, 0.0, 0.0), 0.2, ndiv2, textured);
-			draw_sphere_vbo(point(0.0, 0.0, 1.1), 0.2, ndiv2, textured);
-			fgPopMatrix();
+			draw_cylinder_at(point(x, y, -0.6), 1.1, 0.2, 0.2, ndiv2, 1, 1, 0);
+			draw_sphere_vbo( point(x, y, -0.6), 0.2, ndiv2, textured);
+			draw_sphere_vbo( point(x, y,  0.5), 0.2, ndiv2, textured);
 		}
 	}
 	if (starport && ndiv > 3) {

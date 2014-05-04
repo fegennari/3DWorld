@@ -228,7 +228,7 @@ void sphere_point_norm::free_data() {
 // ******************** CYLINDER ********************
 
 
-void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, float zval) {
+void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, point const &pos) {
 
 	assert(r_outer > 0.0);
 	bool const disk(r_inner > 0.0);
@@ -237,35 +237,34 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 	float const inner_tscale(r_inner/r_outer);
 	float sin_s(0.0), cos_s(1.0);
 	static vector<vert_norm_tc> verts;
-	if (!disk) {verts.push_back(vert_norm_tc(point(0.0, 0.0, zval), n, 0.5, 0.5));}
+	if (!disk) {verts.push_back(vert_norm_tc(pos, n, 0.5, 0.5));}
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) {
 		float const s(sin_s), c(cos_s);
-		if (disk) {verts.push_back(vert_norm_tc(point(r_inner*s, r_inner*c, zval), n, 0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c))));}
-		verts.push_back(vert_norm_tc(point(r_outer*s, r_outer*c, zval), n, 0.5*(1.0 + s), (0.5*(1.0 + c))));
+		if (disk) {verts.push_back(vert_norm_tc((pos + point(r_inner*s, r_inner*c, 0.0)), n, 0.5*(1.0 + inner_tscale*s), (0.5*(1.0 + inner_tscale*c))));}
+		verts.push_back(vert_norm_tc((pos + point(r_outer*s, r_outer*c, 0.0)), n, 0.5*(1.0 + s), (0.5*(1.0 + c))));
 		sin_s = s*cos_ds + c*sin_ds;
 		cos_s = c*cos_ds - s*sin_ds;
 	}
 	draw_and_clear_verts(verts, (disk ? GL_TRIANGLE_STRIP : GL_TRIANGLE_FAN));
 }
 
-
-// length can be negative
-void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only, float z_offset) {
-	
-	assert(ndiv > 0 );
-	draw_cylin_fast(radius1, radius2, length, ndiv, 1, 1.0, z_offset); // tex coords?
-	if (draw_ends && !last_end_only  && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1, z_offset);}
-	if (draw_ends && !first_end_only && radius2 > 0.0) {draw_circle_normal(0.0, radius2, ndiv, 0, z_offset+length);}
+void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, float zval) {
+	draw_circle_normal(r_inner, r_outer, ndiv, invert_normals, point(0.0, 0.0, zval));
 }
 
 
-void draw_cylinder(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends) {
+// length can be negative
+void draw_cylinder_at(point const &p1, float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only) {
 
-	fgPushMatrix();
-	translate_to(p1); // even if we can pass p1 into draw_fast_cylinder() we need to handle draw_circle_normal()
-	draw_cylinder(length, radius1, radius2, ndiv, draw_ends);
-	fgPopMatrix();
+	assert(ndiv > 0 );
+	draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, length), radius1, radius2, ndiv, 1); // tex coords?
+	if (draw_ends && !last_end_only  && radius1 > 0.0) {draw_circle_normal(0.0, radius1, ndiv, 1, p1);}
+	if (draw_ends && !first_end_only && radius2 > 0.0) {draw_circle_normal(0.0, radius2, ndiv, 0, p1+vector3d(0.0, 0.0, length));}
+}
+
+void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool draw_ends, bool first_end_only, bool last_end_only, float z_offset) {
+	draw_cylinder_at(point(0.0, 0.0, z_offset), length, radius1, radius2, ndiv, draw_ends, first_end_only, last_end_only);
 }
 
 
@@ -352,7 +351,6 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 
 
 void draw_cylin_fast(float r1, float r2, float l, int ndiv, bool texture, float tex_scale_len, float z_offset) {
-
 	draw_fast_cylinder(point(0.0, 0.0, z_offset), point(0.0, 0.0, z_offset+l), r1, r2, ndiv, texture, 0, 0, NULL, tex_scale_len);
 }
 

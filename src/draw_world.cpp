@@ -1257,14 +1257,11 @@ struct splash_ring_t {
 		float const dr(0.5*radius);
 		unsigned const ndiv(max(3, min(N_CYL_SIDES, int(1000.0*radius/max(TOLERANCE, distance_to_camera(pos))))));
 		shader.set_cur_color(color);
-		fgPushMatrix();
-		translate_to(pos);
 
 		for (unsigned i = 0; i < num_rings; ++i) {
-			draw_circle_normal((radius - 0.5*dr), radius, ndiv, 0);
+			draw_circle_normal((radius - 0.5*dr), radius, ndiv, 0, pos);
 			radius += dr;
 		}
-		fgPopMatrix();
 	}
 };
 

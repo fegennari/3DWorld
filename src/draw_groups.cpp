@@ -804,7 +804,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 		switch (atype) {
 		case SHELLC: // M16
 			pos.z -= 0.5*radius;
-			draw_cylinder(pos, 1.0*radius, 0.2*radius, 0.2*radius, ndiv, 1);
+			draw_cylinder_at(pos, 1.0*radius, 0.2*radius, 0.2*radius, ndiv, 1);
 			pos.z += radius;
 			draw_sphere_vbo(pos, 0.2*radius, ndiv, 0);
 			break;
@@ -814,16 +814,16 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 				pos2.x += (1.0 - 2.0*n)*0.3*radius;
 				shader.set_cur_color(RED);
 				pos2.z -= 0.5*radius;
-				draw_cylinder(pos2, 1.2*radius, 0.3*radius, 0.3*radius, ndiv, 1);
+				draw_cylinder_at(pos2, 1.2*radius, 0.3*radius, 0.3*radius, ndiv, 1);
 				shader.set_cur_color(GOLD);
 				pos2.z -= 0.2*radius;
-				draw_cylinder(pos2, 0.4*radius, 0.32*radius, 0.32*radius, ndiv, 1);
+				draw_cylinder_at(pos2, 0.4*radius, 0.32*radius, 0.32*radius, ndiv, 1);
 			}
 			break;
 		case BEAM: // laser
 			shader.set_cur_color(RED);
 			pos.z -= 0.5*radius;
-			draw_cylinder(pos, 1.0*radius, 0.1*radius, 0.1*radius, ndiv, 1);
+			draw_cylinder_at(pos, 1.0*radius, 0.1*radius, 0.1*radius, ndiv, 1);
 			break;
 		case STAR5: // throwing star
 			draw_star(pos, obj.orientation, obj.init_dir, 0.4*radius, obj.angle, 0);
@@ -932,8 +932,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	switch (powerup) {
 		case PU_DAMAGE: // devil horns
 			shader.set_cur_color(RED);
-			draw_cylinder(point( 0.3*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
-			draw_cylinder(point(-0.3*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
+			draw_cylinder_at(point( 0.3*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
+			draw_cylinder_at(point(-0.3*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
 			break;
 
 		case PU_REGEN: // raindrops
@@ -954,8 +954,8 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 
 		case PU_FLIGHT: // propeller or wings?
 			shader.set_cur_color(BLACK);
-			fgPushMatrix();
 			draw_cylinder(0.5*radius, 0.05*radius, 0.05*radius, ndiv2, 0, 0, 0, 0.9*radius);
+			fgPushMatrix();
 			fgTranslate(0.0, 0.0, 1.4*radius);
 			fgRotate(float((30*time)%360), 0.0, 0.0, 1.0);
 			fgScale(1.0, 0.25, 0.05);
