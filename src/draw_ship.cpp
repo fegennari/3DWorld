@@ -278,6 +278,7 @@ void uobj_draw_data::draw_ehousing_pairs(float length, float r1, float r2, float
 {
 	assert(length > 0.0 && (r1 > 0.0 || r2 > 0.0));
 	unsigned const ndiv2(get_ndiv(ndiv/2));
+	begin_cylin_vertex_buffering();
 
 	for (unsigned p = 0; p < num_pairs; ++p) {
 		point p1(offset + p*per_pair_off);
@@ -285,10 +286,11 @@ void uobj_draw_data::draw_ehousing_pairs(float length, float r1, float r2, float
 		for (unsigned i = 0; i < 2; ++i) { // draw engine housings
 			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, length), r1, r2, ndiv2, texture);
 			if (lcone > 0.0 && r1 > 0.0) {draw_fast_cylinder(p1,                         p1+vector3d(0.0, 0.0,        lcone), r1, 0.0, ndiv2, texture);}
-			if (lcone > 0.0 && r2 > 0.0) {draw_fast_cylinder(p1+point(0.0, 0.0, length), p1+vector3d(0.0, 0.0, length+lcone), r2, 0.0, ndiv2, texture);} // change color?
+			if (lcone > 0.0 && r2 > 0.0) {draw_fast_cylinder(p1+point(0.0, 0.0, length), p1+vector3d(0.0, 0.0, length+lcone), r2, 0.0, ndiv2, texture);}
 			p1.x += dx; p1.y += dy;
 		}
 	}
+	flush_cylin_vertex_buffer();
 }
 
 
@@ -627,12 +629,10 @@ void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 	if (ndiv > 6) {
 		unsigned const ndiv2(get_ndiv(ndiv/2));
 		set_color(color_b);
-		point p1(0.0, -0.75, -2.0);
-
-		for (unsigned i = 0; i < nengines; ++i) {
-			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, 0.25), 0.3, 0.25, ndiv2, 0);
-			p1.y += edy;
-		}
+		point const p1(0.0, -0.75, -2.0);
+		point inst_pts[3] = {p1, p1, p1}; // Note: nengines assumed to be 3 here
+		for (unsigned i = 0; i < nengines; ++i) {inst_pts[i].y += i*edy;}
+		draw_fast_cylinder(all_zeros, vector3d(0.0, 0.0, 0.25), 0.3, 0.25, ndiv2, 0, 0, 0, NULL, 1.0, inst_pts, 3);
 	}
 	fgPopMatrix(); // undo invert_z()
 
@@ -750,12 +750,14 @@ void uobj_draw_data::draw_us_destroyer() const {
 	}
 	if (ndiv > 8) { // draw engines
 		set_cloak_color(GRAY);
+		begin_cylin_vertex_buffering();
 
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
 			point const pt(sinf(theta), cosf(theta), -0.2);
 			draw_fast_cylinder(pt, pt+point(0.0, 0.0, 0.14), 0.12, 0.1, ndiv25, textured);
 		}
+		flush_cylin_vertex_buffer();
 	}
 	fgPopMatrix(); // undo invert_z()
 
@@ -796,18 +798,21 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 4.0);
 	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3));
+	begin_cylin_vertex_buffering();
 
 	for (unsigned i = 0; i < nengines; ++i) { // draw engine housings
 		pos2 += epos[i];
 		draw_sphere_vbo(pos2, 0.16, ndiv2, textured);
 		if (ndiv > 8) {draw_fast_cylinder(pos2+point(0.0, 0.0, -0.165), pos2+point(0.0, 0.0, -0.135), 0.06, 0.08, ndiv3, textured);} // draw engines
 	}
+	flush_cylin_vertex_buffer();
 	fgPopMatrix();
 
 	if (ndiv > 5) { // draw engine struts
 		fgPushMatrix();
 		point pos0(0.0, 0.0, 0.24);
 		fgScale(1.0, 1.0, 2.0);
+		begin_cylin_vertex_buffering();
 
 		for (unsigned i = 0; i < nengines; ++i) {
 			pos0   += epos[i];
@@ -815,6 +820,7 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 			pos2.x *= 0.2; pos2.y *= 0.2;
 			draw_fast_cylinder(pos0, pos2, 0.1, 0.1, ndiv2, textured);
 		}
+		flush_cylin_vertex_buffer();
 		fgPopMatrix();
 	}
 	if (heavy && ndiv >= 4) { // Note: push/pop not needed since this is the last draw
@@ -1082,12 +1088,14 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 				set_color(lcgray);
 				unsigned const ndiv_s(get_ndiv(ndiv/8));
 				float const radius2(1.2*(radius + 0.15*xys)), s_width(0.032*(radius + 0.25*xys));
+				begin_cylin_vertex_buffering();
 
 				for (unsigned j = 0; j < nspikes; ++j) {
 					float const theta(TWO_PI*j/((float)nspikes)), x(sinf(theta)), y(cosf(theta));
 					point const start(radius*x, radius*y, 0.5*w+zval), end(radius2*x, radius2*y, 0.5*w+zval);
 					draw_fast_cylinder(start, end, s_width, 0.0, ndiv_s, 0);
 				}
+				flush_cylin_vertex_buffer();
 			}
 			zval += z_step;
 		} // for i

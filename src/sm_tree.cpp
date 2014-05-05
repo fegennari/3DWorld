@@ -244,7 +244,7 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, ve
 			get_tree_trunk_color(T_PINE, 0).set_for_cur_shader(); // all a constant color
 			select_texture(get_bark_tex_for_tree_type(T_PINE));
 		}
-		// make this work for non-pine trees (where we have to deal with colors, texture changes, degenerate tris, and tris vs. strips)?
+		// make this work for non-pine trees (where we have to deal with colors, texture changes, and tris vs. strips)?
 		draw_and_clear_verts(cylin_verts, GL_TRIANGLES); // inf terrain mode pine tree trunks
 	}
 }
@@ -861,7 +861,7 @@ void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, 
 						assert(cylin.r2 == 0.0); // cone
 						point const ce[2] = {cylin.p1, cylin.p2};
 						vector3d v12;
-						gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12), nsides);
+						gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12));
 					}
 					else {
 						if (!shadow_only) {

@@ -3,11 +3,6 @@ Hardware tessellation
 Vertex Array Objects
 Try using Boost in 3DWorld, in particular shared_ptr
 
-Remove deprecated OpenGL calls:
-http://www.opengl.org/registry/doc/glspec40.core.20100311.pdf page 412
- - GL_QUADS cleanup
- - ship draw overhead - static small triangle batches
-
 TT mode underwater content
 User-placed teleporter weapon (translocator?)
 
