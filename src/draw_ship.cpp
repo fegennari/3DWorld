@@ -796,30 +796,36 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 	draw_sphere_vbo(all_zeros, 0.26, ndiv, textured, 1); // front
 	fgPopMatrix();
 	float const escale(0.4), sz(2.0*escale);
-	point epos[4] = {point(sz, 0, 0.0), point(-2*sz, 0, 0), point(sz, sz, 0), point(0, -2*sz, 0)};
+	point epos[4] = {point(sz, 0, 0.0), point(-sz, 0, 0), point(0, sz, 0), point(0, -sz, 0)};
 	set_color(color_b);
-	point pos2(0.0, 0.0, 0.12);
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 4.0);
 	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3));
-	begin_cylin_vertex_buffering();
+	begin_sphere_draw(textured);
 
 	for (unsigned i = 0; i < nengines; ++i) { // draw engine housings
-		pos2 += epos[i];
-		draw_sphere_vbo(pos2, 0.16, ndiv2, textured);
-		if (ndiv > 8) {draw_fast_cylinder(pos2+point(0.0, 0.0, -0.165), pos2+point(0.0, 0.0, -0.135), 0.06, 0.08, ndiv3, textured);} // draw engines
+		draw_sphere_vbo(epos[i]+vector3d(0.0, 0.0, 0.12), 0.16, ndiv2, textured);
 	}
-	flush_cylin_vertex_buffer();
+	end_sphere_draw();
+
+	if (ndiv > 8) {
+		begin_cylin_vertex_buffering();
+
+		for (unsigned i = 0; i < nengines; ++i) { // draw engine housings
+			point const pos2(epos[i]+vector3d(0.0, 0.0, 0.12));
+			draw_fast_cylinder(pos2+point(0.0, 0.0, -0.165), pos2+point(0.0, 0.0, -0.135), 0.06, 0.08, ndiv3, textured);
+		}
+		flush_cylin_vertex_buffer();
+	}
 	fgPopMatrix();
 
 	if (ndiv > 5) { // draw engine struts
 		fgPushMatrix();
-		point pos0(0.0, 0.0, 0.24);
 		fgScale(1.0, 1.0, 2.0);
 		begin_cylin_vertex_buffering();
 
 		for (unsigned i = 0; i < nengines; ++i) {
-			pos0   += epos[i];
+			point const pos0(epos[i]+vector3d(0.0, 0.0, 0.24));
 			point pos2(pos0);
 			pos2.x *= 0.2; pos2.y *= 0.2;
 			draw_fast_cylinder(pos0, pos2, 0.1, 0.1, ndiv2, textured);
@@ -829,26 +835,20 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 	}
 	if (heavy && ndiv >= 4) { // Note: push/pop not needed since this is the last draw
 		float const sz(0.32);
-		point const epos[4] = {point(sz, 0, sz), point(-2*sz, 0, 0), point(sz, sz, 0), point(0, -2*sz, 0)};
-		point pos2(all_zeros);
+		point const epos2[4] = {point(sz, 0, sz), point(-sz, 0, sz), point(0, sz, sz), point(0, -sz, sz)};
 		fgRotate(45.0, 0.0, 0.0, 1.0);
 		fgScale(1.0, 1.0, 5.0);
 		unsigned const ndiv25(get_ndiv((2*ndiv)/5));
-
-		for (unsigned i = 0; i < 4; ++i) { // draw weapon housings
-			pos2 += epos[i];
-			draw_sphere_vbo(pos2, 0.1, ndiv25, textured);
-		}
+		begin_sphere_draw(textured);
+		for (unsigned i = 0; i < 4; ++i) {draw_sphere_vbo(epos2[i], 0.1, ndiv25, textured);} // draw weapon housings
+		end_sphere_draw();
 	}
 	if (textured) end_ship_texture();
 	fgPopMatrix(); // undo invert_z()
 
 	if (is_moving()) { // draw engine glow
-		point pos2(0.0, 0.0, 0.46/escale);
-		
 		for (unsigned i = 0; i < nengines; ++i) {
-			pos2 += epos[i];
-			if (!(eflags & (1 << i))) draw_engine(LT_BLUE, pos2, escale);
+			if (!(eflags & (1 << i))) {draw_engine(LT_BLUE, epos[i]+vector3d(0.0, 0.0, 0.46/escale), escale);}
 		}
 		draw_ship_flares(LT_BLUE);
 	}
@@ -1416,10 +1416,12 @@ void uobj_draw_data::draw_dwcarrier() const {
 			set_color(RED);
 			fgPushMatrix();
 			fgScale(1.0, 1.0, 2.0);
+			begin_sphere_draw(0);
 
 			for (unsigned i = 0; i < 2; ++i) {
 				draw_sphere_vbo(point(0.06*(1.0 - 2.0*i), 0.1, 0.4), 0.025, ndiv4, 0);
 			}
+			end_sphere_draw();
 			fgPopMatrix();
 		}
 	} // end phase1
@@ -1614,13 +1616,15 @@ void uobj_draw_data::draw_wraith_tail(float r, int ndiv2, float rscale) const {
 
 	rscale = 0.75*fabs(rscale) + 0.25;
 	point last_pos;
+	begin_sphere_draw(1);
 
 	for (unsigned i = 0; i < 26; ++i) { // default is a semicircle in the yz plane
 		float const val(i/25.0), iscale(val*rscale + (1.0 - val)), iscal_inv(1.2/iscale);
 		float const theta(iscale*TWO_PI*(i + 4.0)/36.0), rs(r*(1.0 - 0.02*i));
 		point const pos(0.0, iscal_inv*(sinf(theta)-0.5), iscal_inv*(cosf(theta)-0.75));
 
-		if (i == 25) {
+		if (i == 25) { // last segment
+			end_sphere_draw();
 			vector3d const dir(pos, last_pos);
 			draw_fast_cylinder(last_pos, (pos + dir*4.0), rs, 0.0, ndiv2, 1);
 		}
@@ -1888,10 +1892,12 @@ void uobj_draw_data::draw_juggernaut() const {
 		set_color(RED);
 		unsigned const ndiv4(get_ndiv(ndiv/4));
 		point eyes[3] = {point(0.0, 0.76, 0.96), point(-0.08, 0.6, 0.98), point(0.08, 0.6, 0.98)};
+		begin_sphere_draw(0);
 
 		for (unsigned i = 0; i < 3; ++i) { // eyes
 			draw_sphere_vbo(eyes[i], 0.04, ndiv4, 0); // head
 		}
+		end_sphere_draw();
 	}
 	fgPushMatrix();
 	fgTranslate(0.0, 0.05, -0.45);
@@ -1967,18 +1973,21 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	}
 	if (ndiv > 6) {
 		unsigned const nwpts(mothership ? 10 : 6);
+		begin_sphere_draw(0);
 
 		for (unsigned i = 0; i < nwpts; ++i) {
 			set_color((i&1) ? colorRGBA(0.5, 0.3, 0.3, 1.0) : (mothership ? colorRGBA(0.8, 0.5, 0.2, 1.0) : colorRGBA(0.3, 0.3, 0.5, 1.0)));
 			float const theta(TWO_PI*i/float(nwpts));
 			draw_sphere_vbo(point(0.6*cosf(theta), 0.6*sinf(theta), 0.16), 0.065, ndiv2, 0);
 		}
+		end_sphere_draw();
 	}
 	if (ndiv > 8) {
 		unsigned const nlights(mothership ? 16 : 12);
 
 		for (unsigned is_lit = 0; is_lit < (powered + 1U); ++is_lit) {
-			if (is_lit) {set_emissive_color(RED, shader);} else {set_color(color_b);}
+			if (is_lit) {set_emissive_color(RED, shader);}
+			else {set_color(color_b); begin_sphere_draw(0);}
 
 			for (unsigned i = 0; i < nlights; ++i) {
 				if ((powered && ((i+(on_time>>2))&3) == 0) != is_lit) continue; // incorrect state
@@ -1992,7 +2001,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 					draw_engine(RED, lpos2, 0.2);
 				}
 			}
-			if (is_lit) {shader->clear_color_e();}
+			if (is_lit) {shader->clear_color_e();} else {end_sphere_draw();}
 		}
 	}
 	end_specular();
@@ -2056,6 +2065,7 @@ void uobj_draw_data::draw_seige() const {
 	fgTranslate(0.0, 0.0, -0.3);
 	fgScale(1.0, 1.0, 1.5);
 	colorRGBA c(color_b);
+	begin_sphere_draw(0);
 
 	for (unsigned i = 0; i < 4; ++i) {
 		c *= 0.9;
@@ -2064,6 +2074,7 @@ void uobj_draw_data::draw_seige() const {
 		fgTranslate(0.0, 0.05*(7.0 - i), 0.0);
 		draw_sphere_vbo(all_zeros, 1.0, ndiv, 1);
 	}
+	end_sphere_draw();
 	fgPopMatrix();
 
 	// draw rear
