@@ -838,6 +838,7 @@ void us_class::setup(unsigned sclass_) {
 		for (vector<triangle>::const_iterator i = cobj_triangles.begin(); i != cobj_triangles.end(); ++i) {
 			tlist->add_triangle(*i);
 		}
+		tlist->finalize();
 		cobjs.push_back(tlist);
 	}
 	if (!dynamic_cobjs) { // check to make sure none of the turretted weapon points are within a bounding collision shape

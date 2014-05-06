@@ -487,12 +487,14 @@ public:
 class ship_triangle_list : public ship_sphere {
 
 	vector<triangle> triangles;
+	vector<vert_norm> verts; // for drawing
 
 public:
 	ship_triangle_list(ship_sphere const &ss) : ship_sphere(ss) {}
 	ship_triangle_list* clone() const {return new ship_triangle_list(*this);}
 	void add_triangle(triangle const &tri) {triangles.push_back(tri);}
 	void translate(point const &p);
+	void finalize();
 	void draw(unsigned ndiv) const;
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;

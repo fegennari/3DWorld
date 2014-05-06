@@ -75,16 +75,20 @@ void ship_bounded_cylinder::draw(unsigned ndiv) const {
 }
 
 
-void ship_triangle_list::draw(unsigned ndiv) const { // used for fighters
+void ship_triangle_list::finalize() {
 
-	vector<vert_norm> verts;
 	verts.reserve(3*triangles.size());
 
 	for (vector<triangle>::const_iterator i = triangles.begin(); i != triangles.end(); ++i) {
 		vector3d const normal(i->get_normal());
 		UNROLL_3X(verts.push_back(vert_norm(i->pts[i_], normal));)
 	}
-	draw_verts(verts, GL_TRIANGLES);
+}
+
+void ship_triangle_list::draw(unsigned ndiv) const { // used for fighters
+
+	assert(!verts.empty()); // must be finalized
+	draw_verts(verts, GL_TRIANGLES); // ndiv is unused
 }
 
 
