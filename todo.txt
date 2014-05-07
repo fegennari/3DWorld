@@ -1,12 +1,10 @@
-More grass/plant types: Yellow and white flowers
 Hardware tessellation
 Vertex Array Objects
-Try using Boost in 3DWorld, in particular shared_ptr
 
+More grass/plant types: Yellow and white flowers
 TT mode underwater content
 User-placed teleporter weapon (translocator?)
 
-Fog increases in valleys
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
@@ -16,3 +14,4 @@ static error check (analysis)
 
 Better pine tree texture
 TT tree shadows - shadow map
+Multithreaded universe physics/collision/AI

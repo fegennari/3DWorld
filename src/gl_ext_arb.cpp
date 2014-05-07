@@ -25,7 +25,6 @@ void init_glew() {
 		std::cerr << "Error: GL version 3.3 not found" << endl;
 		assert(0);
     }
-	glEnable(GL_MULTISAMPLE); // only works when using a multisampling graphics context
 }
 
 

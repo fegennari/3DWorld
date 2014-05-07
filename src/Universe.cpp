@@ -64,7 +64,7 @@ s_object current;
 universe_t universe; // the top level universe
 
 
-extern bool univ_planet_lod;
+extern bool univ_planet_lod, enable_multisample;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
 extern unsigned enabled_lights;
 extern float tan_term, sin_term, fticks, tfticks;
@@ -667,12 +667,15 @@ inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
 
 void ucell::draw_all_stars(ushader_group &usg, bool clear_star_pld) {
 
+	if (enable_multisample) {glDisable(GL_MULTISAMPLE);}
+
 	if (!star_pld.empty()) {
 		usg.enable_color_only_shader();
 		if (clear_star_pld) {star_pld.draw_and_clear();} else {star_pld.draw_vbo();}
 		usg.disable_color_only_shader();
 	}
 	star_psd.draw_and_clear(WHITE_TEX, 1.0); // unblended
+	if (enable_multisample) {glEnable(GL_MULTISAMPLE);}
 }
 
 
