@@ -150,7 +150,9 @@ void dynamic_particle_system::draw() const {
 
 	shader_t s;
 	s.begin_color_only_shader();
+	begin_sphere_draw(0);
 	for (unsigned i = 0; i < size(); ++i) {particles[i].draw();}
+	end_sphere_draw();
 	s.end_shader();
 }
 

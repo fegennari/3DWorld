@@ -533,6 +533,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {
 			check_drawing_flags(otype.flags, 1, s);
 			select_texture(tid);
+			begin_sphere_draw(0);
 		}
 		for (unsigned j = 0; j < 2; ++j) {
 			for (unsigned k = 0; k < wap_vis_objs[j].size(); ++k) {
@@ -540,10 +541,11 @@ void draw_group(obj_group &objg, shader_t &s) {
 				set_obj_specular(flags, 0.5*brightness, s);
 				dwobject const &obj(objg.get_obj(wa.id));
 				s.set_cur_color(color);
-				//draw_subdiv_sphere(obj.pos, radius, wa.ndiv, 0, 0);
 				draw_sphere_vbo_back_to_front(obj.pos, radius, wa.ndiv, 0);
 			}
 		}
+		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {end_sphere_draw();}
+
 		if (!smiley_weapons_to_draw.empty()) {
 			for (vector<unsigned>::const_iterator i = smiley_weapons_to_draw.begin(); i != smiley_weapons_to_draw.end(); ++i) {
 				draw_weapon_in_hand(*i, s); // Note: view culling doesn't use correct bounding sphere for all weapons

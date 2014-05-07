@@ -865,6 +865,7 @@ void draw_waypoints() {
 	shader_t s;
 	s.begin_color_only_shader();
 	vector<vert_color> verts;
+	begin_sphere_draw(0);
 
 	for (waypoint_vector::const_iterator i = waypoints.begin(); i != waypoints.end(); ++i) {
 		if (i->disabled) continue;
@@ -894,6 +895,7 @@ void draw_waypoints() {
 			}
 		}
 	}
+	end_sphere_draw();
 	draw_verts(verts, GL_LINES);
 	s.end_shader();
 }

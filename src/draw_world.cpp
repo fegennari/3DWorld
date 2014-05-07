@@ -912,7 +912,9 @@ void draw_bubbles() {
 	glEnable(GL_CULL_FACE);
 	enable_blend();
 	bool const set_liquid_color(world_mode == WMODE_GROUND);
+	begin_sphere_draw(0);
 	draw_objects(bubbles, set_liquid_color);
+	end_sphere_draw();
 	bubble_pld.draw_and_clear();
 	disable_blend();
 	glDisable(GL_CULL_FACE);
