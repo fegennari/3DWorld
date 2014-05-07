@@ -315,9 +315,8 @@ void rotate_into_camera_dir(point const &pos, vector3d const &dir) {
 
 void draw_chaingun_section(float tx, float ty, float radius, int ndiv) {
 
-	fgTranslate(tx, ty, 0.0);
-	draw_cylinder(0.11, radius, radius, 2*ndiv);
-	draw_circle_normal(0.0, radius, ndiv, 1, 0.08);
+	draw_cylinder_at(point(tx, ty, 0.0), 0.11, radius, radius, 2*ndiv);
+	draw_circle_normal(0.0, radius, ndiv, 1, point(tx, ty, 0.08));
 }
 
 
@@ -457,9 +456,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_specular(0.7, 30.0);
 			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f));
 			if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
-			fgTranslate(tx, ty, 0.0);
-			draw_cylinder(5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
-			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, 4.0*radius);
+			draw_cylinder_at(point(tx, ty, 0.0), 5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
+			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, point(tx, ty, 4.0*radius));
 			shader.set_specular(0.0, 0.0);
 			break;
 
@@ -483,8 +481,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(GOLD, alpha));
 			draw_circle_normal(0.0075, 0.009, ndiv, 1, 0.15);
 			shader.set_cur_color(colorRGBA(BLACK, alpha));
-			fgPushMatrix();
 			draw_cylinder(0.15, 0.005, 0.005, 2*ndiv);
+			fgPushMatrix();
 			fgTranslate(0.0, 0.0, 0.15);
 			draw_cylinder(0.07, 0.005, 0.0, 2*ndiv);
 			//draw_cylinder(0.18, radius, radius, 2*ndiv);
@@ -518,15 +516,13 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				fgTranslate(0.6*tx, 0.6*ty, 0.0);
 				fgPushMatrix();
 				fgRotate(15.0*rot_counter, 0.0, 0.0, 1.0);
-				draw_chaingun_section(rdx, rdy, radius, ndiv);
-				draw_chaingun_section(-2.0*rdx, -2.0*rdy, radius, ndiv);
-				fgTranslate(rdx, rdy, 0.0);
+				draw_chaingun_section( rdx,  rdy, radius, ndiv);
+				draw_chaingun_section(-rdx, -rdy, radius, ndiv);
 				fgRotate(90.0, 0.0, 0.0, 1.0);
-				draw_chaingun_section(rdx, rdy, radius, ndiv);
-				draw_chaingun_section(-2.0*rdx, -2.0*rdy, radius, ndiv);
-				fgTranslate(rdx, rdy, 0.08);
+				draw_chaingun_section( rdx,  rdy, radius, ndiv);
+				draw_chaingun_section(-rdx, -rdy, radius, ndiv);
 				shader.set_cur_color(colorRGBA(0.3, 0.3, 0.3, alpha));
-				draw_cylinder(0.004, 2.45*radius, 2.45*radius, 2*ndiv, 1); // outer band
+				draw_cylinder_at(point(0.0, 0.0, 0.08), 0.004, 2.45*radius, 2.45*radius, 2*ndiv, 1); // outer band
 				fgPopMatrix();
 			}
 			shader.set_specular(0.0, 0.0);
@@ -542,12 +538,11 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 				fgTranslate(0.6*tx, 0.6*ty, 0.0);
 				fgRotate(90.0, 0.0, 0.0, 1.0);
-				point const translates[2] = {point(rdx, rdy, 0.0), point(-1.9*rdx, -1.9*rdy, 0.0)};
+				point const translates[2] = {point(rdx, rdy, 0.0), point(-0.9*rdx, -0.9*rdy, 0.0)};
 				
 				for (unsigned i = 0; i < 2; ++i) {
-					translate_to(translates[i]);
-					draw_cylinder(0.12, radius, radius, 2*ndiv);
-					draw_circle_normal(0.0, radius, ndiv, 1, 0.09);
+					draw_cylinder_at(translates[i], 0.12, radius, radius, 2*ndiv);
+					draw_circle_normal(0.0, radius, ndiv, 1, translates[i]+vector3d(0.0, 0.0, 0.09));
 				}
 				shader.set_specular(0.0, 0.0);
 			}
@@ -572,16 +567,14 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				set_emissive_only(RED, shader);
 				fgTranslate(0.0, 0.0, 0.148);
 				fgRotate(30.0, -dir.y, dir.x, 0.0);
-				fgTranslate(tx, ty, 0.0);
-				draw_cylinder(0.103, 0.0007, 0.0007, ndiv);
+				draw_cylinder_at(point(tx, ty, 0.0), 0.103, 0.0007, 0.0007, ndiv);
 				shader.clear_color_e();
 				fgPopMatrix();
 			}
 			shader.set_cur_color(colorRGBA(0.45, 0.45, 0.45, alpha));
 			shader.set_specular(0.8, 50.0);
-			fgTranslate(tx, ty, 0.04);
-			draw_cylinder(0.16, 0.006, 0.0015, 2*ndiv);
-			draw_sphere_vbo(point(0.0, 0.0, 0.0), 0.006, ndiv, 0);
+			draw_cylinder_at(point(tx, ty, 0.04), 0.16, 0.006, 0.0015, 2*ndiv);
+			draw_sphere_vbo(point(tx, ty, 0.04), 0.006, ndiv, 0);
 			shader.set_specular(0.0, 1.0);
 			break;
 
@@ -589,9 +582,8 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			radius = 0.14*weapons[W_GASSER].blast_radius;
 			shader.set_cur_color(colorRGBA(OLIVE*0.7, alpha));
 			shader.set_specular(0.7, 30.0);
-			fgTranslate(tx, ty, 0.0);
-			draw_cylinder(16.0*radius, radius, radius, 2*ndiv);
-			draw_circle_normal(0.0, radius, ndiv, 1, 8.0*radius);
+			draw_cylinder_at(point(tx, ty, 0.0), 16.0*radius, radius, radius, 2*ndiv);
+			draw_circle_normal(0.0, radius, ndiv, 1, point(tx, ty, 8.0*radius));
 			shader.set_specular(0.0, 0.0);
 			break;
 
