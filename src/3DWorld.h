@@ -1163,8 +1163,8 @@ struct camera_filter {
 	bool fades;
 	colorRGBA color;
 
-	camera_filter() : time(0) {}
-	camera_filter(colorRGBA const &c, unsigned t, int tid_, bool fades_) : tid(tid_), time(t), init_time(t), color(c), fades(fades_) {}
+	camera_filter() : tid(-1), time(0), init_time(0), fades(0) {}
+	camera_filter(colorRGBA const &c, unsigned t, int tid_, bool fades_) : tid(tid_), time(t), init_time(t), fades(fades_), color(c) {}
 	void draw();
 };
 

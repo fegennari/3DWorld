@@ -1056,7 +1056,7 @@ void ucell::gen_cell(int const ii[3]) {
 }
 
 
-ugalaxy::ugalaxy() : color(BLACK) {} // not really necessary
+ugalaxy::ugalaxy() : lrq_rad(0.0), lrq_pos(all_zeros), color(BLACK) {}
 
 
 // fix fp resolution/shifting?

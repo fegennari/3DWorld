@@ -1680,7 +1680,7 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "mh_filename") { // only the first parameter is required
 			alloc_if_req(mh_filename, NULL);
-			if (fscanf(fp, "%s%f%f%i", mh_filename, &mesh_file_scale, &mesh_file_tz, &invert_mh_image) < 1) cfg_err("mh_filename command", error);
+			if (fscanf(fp, "%255s%f%f%i", mh_filename, &mesh_file_scale, &mesh_file_tz, &invert_mh_image) < 1) cfg_err("mh_filename command", error);
 		}
 		else if (str == "mh_filename_tiled_terrain") {
 			alloc_if_req(mh_filename_tt, NULL);
