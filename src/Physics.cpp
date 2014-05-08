@@ -796,7 +796,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (val == 2 && !coll) { // collision with mesh surface but not vertical surface
 			if (iter == 0) {surf_collide_obj();} // only supports blood and chunks for now
 			
-			if (object_bounce(0, cnorm, 0.0, 0.0, radius)) {
+			if (object_bounce(0, cnorm, 0.0, radius)) {
 				if (radius >= LARGE_OBJ_RAD) {modify_grass_at(pos, 2.0*radius, 1);} // crush grass a lot
 				status = 1;
 				return; // objects bounce on mesh but not on collision objects
@@ -1072,7 +1072,7 @@ int dwobject::check_water_collision(float vz_old) {
 				if (surf_coll) splash = 1; // first time
 				vector3d norm(wat_vert_normals[ypos][xpos]);
 				
-				if (coll_angle < CRITICAL_ANGLE/den_ratio || (zpos - pos.z) > 6.0*radius || !object_bounce(2, norm, 0.0, 0.0, 0.0)) {
+				if (coll_angle < CRITICAL_ANGLE/den_ratio || (zpos - pos.z) > 6.0*radius || !object_bounce(2, norm, 0.0, 0.0)) {
 					// object enters water
 					velocity *= (1.0 - WATER_DAMPING*den_ratio);
 			
@@ -1122,7 +1122,7 @@ int dwobject::check_water_collision(float vz_old) {
 		}
 		vector3d norm(plus_z);
 
-		if (otype.elasticity < ICE_BOUNCE_ELAS || !object_bounce(1, norm, 0.0, 0.0, 0.0)) {
+		if (otype.elasticity < ICE_BOUNCE_ELAS || !object_bounce(1, norm, 0.0, 0.0)) {
 			velocity = zero_vector; // stuck to ice
 			flags   |= (XYZ_STOPPED | IS_ON_ICE);
 			status   = 4;
@@ -1227,9 +1227,8 @@ void accumulate_object(point const &pos, int type, float amount) {
 }
 
 
-int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2,
-							float zval, float z_offset, vector3d const &obj_vel)
-{
+int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2, float z_offset, vector3d const &obj_vel) {
+
 	float elasticity(object_types[type].elasticity);
 	if (elasticity == 0.0)      return 0;
 	vector3d const delta_v(velocity - obj_vel);
@@ -1244,25 +1243,22 @@ int dwobject::object_bounce(int coll_type, vector3d &norm, float elasticity2,
 	}
 	switch (coll_type) {
 	case 0: // mesh surface
-		zval = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0);
-		if ((pos.z - z_offset) < zval) pos.z = zval + z_offset;
-		norm = surface_normals[ypos][xpos];
-		elasticity *= LAND_ELASTICITY*(1.0 - 0.5*get_grass_density(pos)); // half elastic in dense grass
-		if (spillway_matrix[ypos][xpos] >= short(frame_counter-1)) elasticity *= SPILL_ELASTIC;
+		{
+			float const zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
+			if ((pos.z - z_offset) < zval) pos.z = zval + z_offset;
+			norm = surface_normals[ypos][xpos];
+			elasticity *= LAND_ELASTICITY*(1.0 - 0.5*get_grass_density(pos)); // half elastic in dense grass
+			if (spillway_matrix[ypos][xpos] >= short(frame_counter-1)) elasticity *= SPILL_ELASTIC;
+		}
 		break;
-
 	case 1: // ice
-		zval = water_matrix[ypos][xpos];
 		norm.assign(0.0, 0.0, -1.0);
 		elasticity *= ICE_ELASTICITY;
 		break;
-
 	case 2: // water
-		zval = water_matrix[ypos][xpos];
 		norm.assign(0.0, 0.0, -1.0);
 		elasticity *= WATER_ELASTIC;
 		break;
-
 	case 3:
 	default: // horizontal/vertical surface or other
 		elasticity *= elasticity2;
@@ -1650,7 +1646,7 @@ void auto_advance_time() { // T = 1 hour
 		else {
 			cout << "Time = " << (hrtime24==12 ? 12 : hrtime24-12) << ":" << (((itime&1) == 0) ? "00" : "30") << " PM";
 		}
-		printf(", Day=%i, Temp=%.3f, Clouds=%.3f, Precip=%.3f/%i/%.3f.\n",
+		printf(", Day=%i, Temp=%.3f, Clouds=%.3f, Precip=%.3f/%u/%.3f.\n",
 			date, temperature, cloud_cover, precip, obj_groups[cid].app_rate, prate);
 		cout << "Wind = " << wind.x << ", " << wind.y << ", " << wind.z << "." << endl;
 	}

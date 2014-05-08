@@ -589,7 +589,6 @@ void build_lightmap(bool verbose) {
 			calc_flow_profile(flow_prof, i, j, proc_cobjs, zstep);
 		}
 	}
-	int const bnds[2][2] = {{0, MESH_X_SIZE-1}, {0, MESH_Y_SIZE-1}};
 
 	// add in static light sources
 	if (!raytrace_lights[LIGHTING_LOCAL]) {
@@ -600,8 +599,7 @@ void build_lightmap(bool verbose) {
 			if (!is_over_mesh(lpos)) continue;
 			colorRGBA const &lcolor(ls.get_color());
 			point bounds[2];
-			int bnds[3][2], cobj(-1), last_cobj(-1);
-			CELL_LOC_T cent[3];
+			int bnds[3][2], cent[3], cobj(-1), last_cobj(-1);
 			
 			for (unsigned i = 0; i < 3; ++i) {
 				cent[i] = max(0, min(MESH_SIZE[i]-1, get_dim_pos(lpos[i], i))); // clamp to mesh bounds
@@ -1078,7 +1076,6 @@ void get_indir_light(colorRGBA &a, point const &p) { // Note: return value is un
 		
 			if (ldv.check_z(p[2])) {
 				unsigned const lsz((unsigned)ldv.size());
-				CELL_LOC_T const cl[3] = {x, y, z};
 
 				for (unsigned l = 0; l < lsz; ++l) {
 					unsigned const ls_ix(ldv.get(l));

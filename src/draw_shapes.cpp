@@ -328,7 +328,6 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 
 void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
 
-	float const ndiv_inv(1.0/ndiv);
 	vector3d v12; // (ce[1] - ce[0]).get_norm()
 	vector_point_norm const &vpn(gen_cylinder_data(points, radius, radius2, ndiv, v12));
 	texgen_params_t tp;

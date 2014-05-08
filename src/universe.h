@@ -153,7 +153,7 @@ public:
 	char gen;
 	int urseed1, urseed2;
 
-	uobj_rgen() : gen(0) {}
+	uobj_rgen() : gen(0), urseed1(1), urseed2(1) {}
 	void gen_rseeds();
 	void get_rseeds();
 	void set_rseeds() const;
@@ -169,7 +169,7 @@ public:
 	float temp, density, mass, gravity;
 	colorRGBA color, colorA, colorB;
 
-	uobj_solid(char type_) : type(type_), num_satellites(0) {set_defaults();}
+	uobj_solid(char type_) : type(type_), num_satellites(0), temp(0.0), density(0.0), mass(0.0), gravity(0.0) {set_defaults();}
 	virtual ~uobj_solid() {}
 	void set_defaults() {status = 0; gen = 0;}
 	void get_colors(unsigned char ca[3], unsigned char cb[3]) const;
@@ -217,8 +217,8 @@ public:
 	upsurface *surface;
 	string comment;
 
-	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0),
-		tid(0), tsize(0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), surface(NULL) {}
+	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0), tid(0), tsize(0), orbit(0.0), rot_rate(0.0),
+		rev_rate(0.0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), surface(NULL) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
@@ -414,6 +414,7 @@ public:
 	unebula nebula;
 	colorRGBA color;
 
+	ugalaxy();
 	void calc_color();
 	void calc_bounding_sphere();
 	bool create(ucell const &cell, int index);

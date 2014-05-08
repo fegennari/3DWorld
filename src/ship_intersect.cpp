@@ -225,8 +225,8 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 		}
 		for (unsigned i = 1; i < 4; ++i) {
 			for (unsigned j = 0; j < i; ++j) {
-				double const d(fabs(d[i] - d[j])); // tangent lines have equal lengths
-				if (i == 1 || d < dmin) {dmin = d; pmin[0] = i; pmin[1] = j;}
+				double const dist(fabs(d[i] - d[j])); // tangent lines have equal lengths
+				if (i == 1 || dist < dmin) {dmin = dist; pmin[0] = i; pmin[1] = j;}
 			}
 		}
 		for (unsigned i = 0; i < 2; ++i) {

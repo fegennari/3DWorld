@@ -50,7 +50,6 @@ void vert_optimizer::run(bool full_opt, bool verbose) {
 	}
 	else { // full optimization
 		assert((indices.size() % 3) == 0); // must be triangles
-		unsigned const num_tris(indices.size()/3);
 		vector<unsigned> out_indices(indices.size());
 		TriListOpt::OptimizeTriangleOrdering(num_verts, indices.size(), &indices.front(), &out_indices.front());
 		indices.swap(out_indices);

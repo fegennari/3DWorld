@@ -22,7 +22,6 @@ unsigned const SINE_DATA_SIZE  = NUM_SINE_PARAMS*TOT_NUM_SINES;
 unsigned const SUBDIV_SECTS    = 8;
 
 
-
 class color_gen_class {
 
 public:
@@ -96,7 +95,7 @@ public:
 	sphere_point_norm spn;
 	sd_sphere_vbo_d sd;
 
-	upsurface(int type_=0) : type(type_), ssize(0) {}
+	upsurface(int type_=0) : type(type_), ssize(0), max_mag(0.0), rmax(0.0), min_cutoff(0.0) {}
 	~upsurface();
 	void gen(float mag, float freq, unsigned ntests=N_RAND_MAG_TESTS, float mm_scale=1.0);
 	void setup(unsigned size, float mcut, bool alloc_hmap);

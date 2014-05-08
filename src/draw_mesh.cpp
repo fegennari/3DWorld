@@ -643,7 +643,7 @@ void water_renderer::draw_vert(float x, float y, float z, bool in_y, bool neg_ed
 	colorRGBA c(color);
 	point p(x, y, z), v(get_camera_pos());
 
-	if ((v[!in_y] - p[!in_y] < 0.0) ^ neg_edge) { // camera viewing the inside face of the water side
+	if (bool((v[!in_y] - p[!in_y]) < 0.0) ^ neg_edge) { // camera viewing the inside face of the water side
 		do_line_clip_scene(p, v, zbottom, z);
 		float const atten(WATER_COL_ATTEN*p2p_dist(p, v));
 		atten_by_water_depth(&c.R, atten);

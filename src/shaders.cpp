@@ -282,11 +282,11 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 
 		if (!is_setup) {
 			for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
-				sprintf(ls_strs[i][0], "fg_LightSource[%i].position", i);
-				sprintf(ls_strs[i][1], "fg_LightSource[%i].ambient",  i);
-				sprintf(ls_strs[i][2], "fg_LightSource[%i].diffuse",  i);
-				sprintf(ls_strs[i][3], "fg_LightSource[%i].specular", i);
-				sprintf(ls_strs[i][4], "fg_LightSource[%i].atten",    i);
+				sprintf(ls_strs[i][0], "fg_LightSource[%u].position", i);
+				sprintf(ls_strs[i][1], "fg_LightSource[%u].ambient",  i);
+				sprintf(ls_strs[i][2], "fg_LightSource[%u].diffuse",  i);
+				sprintf(ls_strs[i][3], "fg_LightSource[%u].specular", i);
+				sprintf(ls_strs[i][4], "fg_LightSource[%u].atten",    i);
 			}
 			is_setup = 1;
 		}

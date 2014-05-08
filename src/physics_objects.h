@@ -190,7 +190,7 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 	int check_water_collision(float vz_old);
 	void surf_collide_obj() const;
 	void elastic_collision(point const &obj_pos, float energy, int obj_type);
-	int object_bounce(int coll_type, vector3d &norm, float elasticity2, float zval, float z_offset, vector3d const &obj_vel=zero_vector);
+	int object_bounce(int coll_type, vector3d &norm, float elasticity2, float z_offset, vector3d const &obj_vel=zero_vector);
 	int object_still_stopped(int obj_index);
 	void do_coll_damage();
 	int check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm=NULL,
@@ -231,8 +231,8 @@ public:
 		vector3d const &mdir=zero_vector, bool skip_dynamic_=0, bool only_drawn_=0, int only_cobj_=-1) :
 	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT),
 	already_bounced(0), skip_dynamic(skip_dynamic_), only_drawn(only_drawn_), coll(0), obj_index(obj_index_),
-	do_coll_funcs(do_coll_funcs_), only_cobj(only_cobj_), cdir(0), lcoll(0), z_old(obj.pos.z), cnorm(cnorm_),
-	pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity) {}
+	do_coll_funcs(do_coll_funcs_), only_cobj(only_cobj_), cdir(0), lcoll(0), z_old(obj.pos.z), o_radius(0.0),
+	z1(0.0), z2(0.0), cnorm(cnorm_), pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity) {}
 
 	void check_cobj(int index);
 	int check_coll();
@@ -372,7 +372,7 @@ public:
 	short type;
 	unsigned char flags;
 
-	obj_group() : td(NULL) {}
+	obj_group() : td(NULL), init_objects(0), max_objs(0), app_rate(0), end_id(0), new_id(0), enabled(0), reorderable(0), type(0), flags(0) {}
 	void create(int obj_type_, unsigned max_objects_, unsigned init_objects_,
 		unsigned app_rate_, bool init_enabled_, bool reorderable_, bool auto_max);
 	unsigned get_updated_max_objs() const;

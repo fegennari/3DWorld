@@ -1423,14 +1423,15 @@ bool has_invisibility(int id) {
 }
 
 
+void player_state::init_wa() {
+	for (int i = 0; i < NUM_WEAPONS; ++i) {p_weapons[i] = p_ammo[i] = 0;}
+}
+
 void player_state::init(bool w_start) {
 
 	assert(balls.empty());
+	init_wa();
 	
-	for (int i = 0; i < NUM_WEAPONS; ++i) {
-		p_weapons[i] = 0;
-		p_ammo[i]    = 0;
-	}
 	if (!UNLIMITED_WEAPONS) {
 		if (w_start) {
 			p_weapons[W_UNARMED] = 2;

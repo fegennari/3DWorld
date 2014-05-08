@@ -17,35 +17,34 @@ vector<uevent> eventlist;
 bool open_file(FILE *&fp, char const *const fn, std::string const &file_type, char const *const mode="r");
 
 
-
 int read_ueventlist(char *arg) {
 
 	if (strcmp(arg, "-uel") == 0) { // record user event list
 		make_eventlist = 1;
 		return 2;
 	}
-	uevent event;
+	uevent cur_event;
 	FILE *fp;
 	if (!open_file(fp, arg, "input user eventlist")) return 0;
 
-	if (fscanf(fp, "%u%u", &n_events, &n_frames) != 2) {
+	if (fscanf(fp, "%i%i", &n_events, &n_frames) != 2 || n_events < 0 || n_frames < 0) {
 		cout << "Error reading user event list header." << endl;
 		fclose(fp);
 		return 0;
 	}
-	while (fscanf(fp, "%i %i", &(event.type), &(event.frame)) == 2) {
-		if (event.type < (int)NUM_UE_TYPES) {
-			unsigned const nparams(std::min((unsigned)ue_nparams[event.type], UE_MAX_PARAMS));
+	while (fscanf(fp, "%i %i", &(cur_event.type), &(cur_event.frame)) == 2) {
+		if (cur_event.type < (int)NUM_UE_TYPES) {
+			unsigned const nparams(std::min((unsigned)ue_nparams[cur_event.type], UE_MAX_PARAMS));
 
 			for (unsigned i = 0; i < nparams; ++i) {
-				if (fscanf(fp, "%u", &(event.params[i])) != 1) {
-					cout << "Error reading user event file: event # " << eventlist.size() << ", type " << event.type << ", param " << i << endl;
+				if (fscanf(fp, "%u", &(cur_event.params[i])) != 1) {
+					cout << "Error reading user event file: event # " << eventlist.size() << ", type " << cur_event.type << ", param " << i << endl;
 					eventlist.clear();
 					fclose(fp);
 					return 0;
 				}
 			}
-			eventlist.push_back(event);
+			eventlist.push_back(cur_event);
 		}
 	}
 	read_eventlist = 1;
@@ -60,7 +59,7 @@ int save_ueventlist() {
 	FILE *fp;
 	if (!open_file(fp, UEL_SAVE_NAME, "output user eventlist"), "w") return 0;
 
-	if (!fprintf(fp, "%zi %u\n", eventlist.size(), frame_counter)) {
+	if (!fprintf(fp, "%zi %i\n", eventlist.size(), frame_counter)) {
 		cout << "Error writing user event list header." << endl;
 		fclose(fp);
 		return 0;

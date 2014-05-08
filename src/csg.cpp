@@ -746,13 +746,13 @@ void csg_cube::unset_intersecting_edge_flags(coll_obj &cobj) const {
 
 	for (unsigned i = 0; i < 3; ++i) {
 		for (unsigned j = 0; j < 2; ++j) {
-			if (cobj.d[i][!j] >= d[i][0]-TOLER && cobj.d[i][!j] <= d[i][1]+TOLER) { // cobj edge contained in cube in this dim
+			if ((cobj.d[i][!j] >= d[i][0]-TOLER) && (cobj.d[i][!j] <= d[i][1]+TOLER)) { // cobj edge contained in cube in this dim
 				bool overlaps(1);
 
 				for (unsigned k = 0; k < 3 && !overlaps; ++k) {
 					if (k != i && (d[k][0] >= cobj.d[k][1] || d[k][1] <= cobj.d[k][0])) overlaps = 0;
 				}
-				if (overlaps) cobj.cp.surfs &= ~EFLAGS[i][!j];
+				if (overlaps) {cobj.cp.surfs &= ~EFLAGS[i][!j];}
 			}
 		}
 	}

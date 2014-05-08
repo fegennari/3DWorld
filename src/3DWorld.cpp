@@ -94,7 +94,7 @@ string user_text;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color;
 set<unsigned char> keys, keyset;
-char game_mode_string[256] = {"640x480"};
+char game_mode_string[MAX_CHARS] = {"640x480"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 vector<cube_t> smoke_bounds;
 
@@ -1402,7 +1402,7 @@ void read_write_lighting_setup(FILE *fp, unsigned ltype, int &error) {
 	assert(ltype < NUM_LIGHTING_TYPES);
 	alloc_if_req(lighting_file[ltype], NULL);
 	int write_mode(0);
-	if (fscanf(fp, "%s%i%f", lighting_file[ltype], &write_mode, &light_int_scale[ltype]) != 3) {cfg_err("lighting_file command", error);}
+	if (fscanf(fp, "%255s%i%f", lighting_file[ltype], &write_mode, &light_int_scale[ltype]) != 3) {cfg_err("lighting_file command", error);}
 	if (ltype == LIGHTING_GLOBAL) {fscanf(fp, "%f", &first_ray_weight);} // ok if fails
 	(write_mode ? write_light_files[ltype] : read_light_files[ltype]) = 1;
 }
@@ -1542,7 +1542,7 @@ int load_config(string const &config_file) {
 		if (kwmf.maybe_set_from_fp(str, fp)) continue;
 
 		if (str[0] == '#') { // comment
-			char letter(getc(fp));
+			int letter(getc(fp));
 			while (letter != '\n' && letter != EOF && letter != 0) letter = getc(fp);
 		}
 		else if (str == "voxel") { // voxel option
@@ -1577,7 +1577,7 @@ int load_config(string const &config_file) {
 			}
 		}
 		else if (str == "game_mode_string") {
-			if (fscanf(fp, "%s%i%i", game_mode_string, &gmww, &gmwh) != 3 || gmww <= 0 || gmwh <= 0) cfg_err("game mode string", error);
+			if (fscanf(fp, "%255s%i%i", game_mode_string, &gmww, &gmwh) != 3 || gmww <= 0 || gmwh <= 0) cfg_err("game mode string", error);
 			gms_set = 1;
 		}
 		else if (str == "window_width") {
@@ -1675,7 +1675,7 @@ int load_config(string const &config_file) {
 		else if (str == "mesh_file") { // only the first parameter is required
 			float rmz(0.0);
 			alloc_if_req(mesh_file, dmesh_file);
-			if (fscanf(fp, "%s%f%f%i", mesh_file, &mesh_file_scale, &mesh_file_tz, &do_read_mesh) < 1) cfg_err("mesh_file command", error);
+			if (fscanf(fp, "%255s%f%f%i", mesh_file, &mesh_file_scale, &mesh_file_tz, &do_read_mesh) < 1) cfg_err("mesh_file command", error);
 			if (read_float(fp, rmz)) read_mesh_zmm = rmz;
 		}
 		else if (str == "mh_filename") { // only the first parameter is required
@@ -1684,11 +1684,11 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "mh_filename_tiled_terrain") {
 			alloc_if_req(mh_filename_tt, NULL);
-			if (fscanf(fp, "%s", mh_filename_tt) != 1) cfg_err("mh_filename_tiled_terrain command", error);
+			if (fscanf(fp, "%255s", mh_filename_tt) != 1) cfg_err("mh_filename_tiled_terrain command", error);
 		}
 		else if (str == "mesh_diffuse_tex_fn") {
 			alloc_if_req(mesh_diffuse_tex_fn, NULL);
-			if (fscanf(fp, "%s", mesh_diffuse_tex_fn) != 1) cfg_err("mesh_diffuse_tex_fn command", error);
+			if (fscanf(fp, "%255s", mesh_diffuse_tex_fn) != 1) cfg_err("mesh_diffuse_tex_fn command", error);
 			read_bool(fp, mesh_difuse_tex_comp); // okay if fails
 		}
 		else if (str == "default_ground_tex") {
@@ -1739,7 +1739,7 @@ int load_config(string const &config_file) {
 		else if (str == "snow_file") {
 			alloc_if_req(snow_file, NULL);
 			int write_mode(0);
-			if (fscanf(fp, "%s%i", snow_file, &write_mode) != 2) cfg_err("snow_file command", error);
+			if (fscanf(fp, "%255s%i", snow_file, &write_mode) != 2) cfg_err("snow_file command", error);
 			(write_mode ? write_snow_file : read_snow_file) = 1;
 		}
 		// image files

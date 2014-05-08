@@ -89,8 +89,8 @@ struct query_data {
 	bool exit_query;
 
 	query_data(vector<cached_obj> const *const objs_, point const &pos_, float radius_, float urm_)
-		: objs(objs_), pos(pos_), urm(urm_), radius(radius_), damage(0.0), dist(0.0),
-		fobj(NULL), parent(NULL), ptr(NULL), exit_query(0) {}
+		: objs(objs_), pos(pos_), urm(urm_), radius(radius_), damage(0.0), dist(0.0), eflags(0), index(0),
+		wclass(-1), align(-1), fobj(NULL), parent(NULL), ptr(NULL), exit_query(0) {}
 };
 
 
@@ -213,7 +213,7 @@ public:
 		return ptr;
 	}
 
-	~free_obj_allocator() {
+	~free_obj_allocator() { // Note: last should free itself when its reference count drops to zero
 	  //delete last; // what about the other pointers?
 	}
 };

@@ -17,7 +17,7 @@ struct voxel_params_t {
 	// generation parameters
 	unsigned xsize, ysize, zsize, num_blocks; // num_blocks is in x and y
 	float isolevel, elasticity, mag, freq, atten_thresh, tex_scale, noise_scale, noise_freq, tex_mix_saturate, z_gradient, height_eval_freq, radius_val;
-	float ao_radius, ao_weight_scale, ao_atten_power, spec_mag, spec_expspec_mag, spec_exp;
+	float ao_radius, ao_weight_scale, ao_atten_power, spec_mag, spec_exp;
 	bool make_closed_surface, invert, remove_under_mesh, add_cobjs, normalize_to_1, top_tex_used, detail_normal_map;
 	unsigned remove_unconnected; // 0=never, 1=init only, 2=always, 3=always, including interior holes
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
@@ -247,7 +247,7 @@ protected:
 		unsigned num;
 		vector3d normal;
 
-		merge_vn_t() : num(0), normal(zero_vector) {}
+		merge_vn_t() : num(0), normal(zero_vector) {vn[0] = vn[1] = vn[2] = vn[3] = NULL;}
 		void add   (vertex_type_t &v) {assert(num < 4); vn[num++] = &v;}
 		void update(vertex_type_t &v) {if (normal == zero_vector) {normal = v.n;} else {v.n = normal;}}
 		void finalize();

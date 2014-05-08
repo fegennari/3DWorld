@@ -287,15 +287,14 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		csg_cube const cube2(cobjs[i], 1);
 		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
 		float volume(cobjs[i].volume);
-		float const min_volume(0.01*min(volume, clip_cube_volume));
-		float const int_volume(cube2.get_overlap_volume(cube));
-		bool no_new_cobjs(shatter || volume < TOLERANCE);
+		float const min_volume(0.01*min(volume, clip_cube_volume)), int_volume(cube2.get_overlap_volume(cube));
 
 		if (is_cube && !shatter && int_volume < min_volume) { // don't remove tiny bits from cobjs
 			cube.unset_intersecting_edge_flags(cobjs[i]);
 			continue;
 		}
 		if (shatter || cobjs[i].subtract_from_cobj(new_cobjs, cube, 1)) {
+			bool no_new_cobjs(shatter || volume < TOLERANCE);
 			if (no_new_cobjs) new_cobjs.clear(); // completely destroyed
 			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
 			if (D == SHATTER_TO_PORTAL) cobjs[i].create_portal();

@@ -68,7 +68,7 @@ struct tree_leaf { // size = 28 + 48 = 76
 	vector3d norm;
 	point pts[4];
 
-	tree_leaf() : shadow_bits(0) {}
+	tree_leaf() : shadow_bits(0), color(0.0), lred(0.0), lgreen(0.0) {}
 	void create_init_color(bool deterministic);
 	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
 	float get_norm_scale(unsigned pt_ix) const;
@@ -296,7 +296,8 @@ class tree {
 	void copy_color(unsigned i, bool no_mark_changed=0);
 
 public:
-	tree(bool en_lw=1) : tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0), enable_leaf_wind(en_lw), use_clip_cube(0) {}
+	tree(bool en_lw=1) : type(-1), tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0),
+		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0) {}
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0);

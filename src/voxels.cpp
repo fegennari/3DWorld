@@ -309,8 +309,10 @@ void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 						}
 					}
 				}
-				float &v(get_ref(x, y, z));
-				if (val > 0.0) {v = max(v, val*filled_val);}
+				if (val > 0.0) {
+					float &v(get_ref(x, y, z));
+					v = max(v, val*filled_val);
+				}
 			}
 		}
 	}

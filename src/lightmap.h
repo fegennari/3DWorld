@@ -7,8 +7,6 @@
 
 #include "3DWorld.h"
 
-typedef short CELL_LOC_T;
-
 extern int MESH_SIZE[3];
 
 #define ADD_LIGHT_CONTRIB(c, C) {C[0] += c[0]; C[1] += c[1]; C[2] += c[2];}

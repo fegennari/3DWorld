@@ -858,7 +858,6 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 void uobj_draw_data::draw_us_bcruiser() const {
 
 	assert(nengines == 4);
-	unsigned const ndiv2(get_ndiv(ndiv/2));
 	setup_draw_ship();
 	float const escale(0.35), dy(0.05), erad(0.1);
 	colorRGBA const ecolor(1.0, 0.9, 0.2);

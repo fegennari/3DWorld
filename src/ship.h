@@ -648,7 +648,7 @@ private:
 
 public:
 	free_obj(point const &init_pos=all_zeros) : flags(OBJ_FLAGS_TARG), speed_factor(1.0), max_sfactor(1.0),
-		reset_pos(init_pos), alignment(ALIGN_NEUTRAL) {reset();}
+		reset_pos(init_pos), alignment(ALIGN_NEUTRAL), c_radius(0.0) {reset();}
 	
 	void fix_upv();
 	void accelerate(float speed, float accel);
@@ -1333,7 +1333,7 @@ private:
 
 public:
 	attached_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient) :
-	  u_ship(sclass_, pos0, align, ai_type_, target_mode_, rand_orient) {}
+	  u_ship(sclass_, pos0, align, ai_type_, target_mode_, rand_orient), att_pos(all_zeros), attached_to(NULL) {}
 	void attach(free_obj *obj);
 	void unattach();
 	void apply_physics();

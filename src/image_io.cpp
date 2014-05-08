@@ -297,6 +297,7 @@ int texture_t::write_to_bmp(string const &fn) const { // or RAW format?
 
 	if (fwrite(&header, 14, 1, fp) != 1 || fwrite(&infoheader, 40, 1, fp) != 1) {
 		cerr << "Error writing bitmap header/infoheader for file " << fn << endl;
+		fclose(fp);
 		return 0;
 	}
 	if (ncolors == 1) { // add color index table
@@ -307,6 +308,7 @@ int texture_t::write_to_bmp(string const &fn) const { // or RAW format?
 		}
 		if (fwrite(color_table, 1024, 1, fp) != 1) {
 			cerr << "Error writing bitmap color table for file " << fn << endl;
+			fclose(fp);
 			return 0;
 		}
 	}

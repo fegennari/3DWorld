@@ -68,7 +68,7 @@ struct explosion {
 	uobject *source;
 	free_obj const *parent;
 
-	explosion() : flags(0), time(0), radius(0.0), intensity(0.0), pos(all_zeros), source(NULL), parent(NULL) {}
+	explosion() : flags(0), time(0), wclass(-1), radius(0.0), intensity(0.0), pos(all_zeros), source(NULL), parent(NULL) {}
 	explosion(point const &pos_, float radius_, float intensity_, unsigned flags_, int wclass_, uobject *src=NULL, free_obj const *parent_=NULL)
 		: flags(flags_), time(0), wclass(wclass_), radius(radius_), intensity(intensity_), pos(pos_), source(src), parent(parent_) {}
 	void check_pointers();

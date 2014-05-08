@@ -799,7 +799,6 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 	if (atype >= 0) {
 		check_drawing_flags(object_types[atype].flags, 1, shader);
 		shader.set_cur_color(object_types[atype].color);
-		bool const textured(select_texture(object_types[atype].tid));
 		bool const cull_face(get_cull_face(atype, color));
 		if (cull_face) glEnable(GL_CULL_FACE);
 
@@ -899,7 +898,6 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 {
 	colorRGBA color;
 	int const powerup(sstates[id].powerup), ndiv2(max(3, (ndiv>>1)));
-	float const dist(distance_to_camera(pos));
 	fgPushMatrix();
 	translate_to(pos);
 	rotate_to_dir(orient);

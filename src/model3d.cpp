@@ -421,7 +421,7 @@ template<typename T> unsigned indexed_vntc_vect_t<T>::add_vertex(T const &v, ver
 struct shared_vertex_t {
 	unsigned ai, bi;
 	bool shared;
-	shared_vertex_t() : shared(0) {}
+	shared_vertex_t() : ai(0), bi(0), shared(0) {}
 	shared_vertex_t(unsigned ai_, unsigned bi_) : ai(ai_), bi(bi_), shared(1) {}
 };
 

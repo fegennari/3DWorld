@@ -212,7 +212,7 @@ class water_surface_draw {
 		colorRGBA c;
 		float s;
 		int ix;
-		color_scale_ix() : ix(-1) {}
+		color_scale_ix() : c(BLACK), s(0.0), ix(-1) {}
 		color_scale_ix(colorRGBA const &c_, float s_, int ix_) : c(c_), s(s_), ix(ix_) {}
 	};
 

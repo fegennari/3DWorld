@@ -583,7 +583,7 @@ public:
 						}
 					}
 					if (add_color && !underwater) {
-						UNROLL_3X(updated |= (g.c[0] != cw.c[0] || g.c[1] != cw.c[1] || g.c[2] != cw.c[2]);) // not already red
+						UNROLL_3X(updated |= (g.c[i_] != cw.c[i_]);) // not already this color
 						
 						if (updated) {
 							float const atten_val(1.0 - color.alpha*(1.0 - reld)*(1.0 - reld));

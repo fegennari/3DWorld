@@ -49,7 +49,7 @@ class shader_t {
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
 	int vnct_locs[4]; // {vertex, normal, color, tex_coord}
 
-	int  pm_loc, mvm_loc, mvmi_loc,mvpm_loc, nm_loc; // matrices
+	int pm_loc, mvm_loc, mvmi_loc, mvpm_loc, nm_loc; // matrices
 
 	unsigned get_shader(string const &name, unsigned type) const;
 	static void print_shader_info_log(unsigned shader);
@@ -58,7 +58,9 @@ class shader_t {
 	void cache_matrix_locs();
 
 public:
-	shader_t() : program(0), last_spec(ALPHA0) {}
+	shader_t() : program(0), last_spec(ALPHA0), pm_loc(-1), mvm_loc(-1), mvmi_loc(-1), mvpm_loc(-1), nm_loc(-1) {
+		vnct_locs[0] = vnct_locs[1] = vnct_locs[2] = vnct_locs[3] = -1;
+	}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
 
 	void set_vert_shader(string const &vs_name_) {shader_names[0] = vs_name_;}

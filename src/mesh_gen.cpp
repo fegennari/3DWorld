@@ -684,7 +684,7 @@ bool read_mesh(const char *filename, float zmm) {
 	int xsize, ysize;
 	float height;
 
-	if (fscanf(fp, "%u%u", &xsize, &ysize) != 2) {
+	if (fscanf(fp, "%i%i", &xsize, &ysize) != 2) {
 		cout << "Error reading size header in input file '" << filename << "'." << endl;
 		fclose(fp);
 		return 0;
@@ -725,7 +725,7 @@ bool write_mesh(const char *filename) {
 	FILE *fp;
 	if (!open_file(fp, filename, "mesh output", "w")) return 0;
 
-	if (!fprintf(fp, "%u %u\n", MESH_X_SIZE, MESH_Y_SIZE)) {
+	if (!fprintf(fp, "%i %i\n", MESH_X_SIZE, MESH_Y_SIZE)) {
 		cout << "Error writing size header for mesh file '" << filename << "'." << endl;
 		fclose(fp);
 		return 0;
@@ -757,7 +757,7 @@ bool load_state(const char *filename) {
 	int v1, v2, v3, v4;
 	++cache_counter;
 
-	if (fscanf(fp, "%lf%lf%lf%f%f%f%f%f%f%i%i%i%i%i%li%li%u%u%u%u", &c_radius, &c_phi, &c_theta, &camera_origin.x,
+	if (fscanf(fp, "%lf%lf%lf%f%f%f%f%f%f%i%i%i%i%i%li%li%i%i%i%i", &c_radius, &c_phi, &c_theta, &camera_origin.x,
 		&camera_origin.y, &camera_origin.z, &surface_pos.x, &surface_pos.y, &surface_pos.z, &xoff, &yoff, &xoff2, &yoff2,
 		&rand_gen_index, &global_rand_gen.rseed1, &global_rand_gen.rseed2, &v1, &v2, &v3, &v4) != 20)
 	{
@@ -796,7 +796,7 @@ bool save_state(const char *filename) {
 	FILE *fp;
 	if (!open_file(fp, filename, "output state", "w")) return 0;
 
-	if (!fprintf(fp, "%lf %lf %lf %f %f %f %f %f %f %i %i %i %i %i %li %li\n%u %u %u %u\n",
+	if (!fprintf(fp, "%lf %lf %lf %f %f %f %f %f %f %i %i %i %i %i %li %li\n%i %i %i %i\n",
 		c_radius, c_phi, c_theta, camera_origin.x, camera_origin.y, camera_origin.z, surface_pos.x, surface_pos.y, surface_pos.z,
 		xoff, yoff, xoff2, yoff2, rand_gen_index, global_rand_gen.rseed1, global_rand_gen.rseed2, MESH_X_SIZE, MESH_Y_SIZE, NUM_FREQ_COMP, N_RAND_SIN2))
 	{

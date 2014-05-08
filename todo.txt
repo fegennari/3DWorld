@@ -10,7 +10,6 @@ Draw more distant tiles (larger/lower res at high delta-z)
 
 Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 GLM Noise
-static error check (analysis)
 
 Better pine tree texture
 TT tree shadows - shadow map

@@ -1001,7 +1001,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	
 	while (!end) { // available: uz JKUVXZ
 		assert(fp != NULL);
-		char letter((char)getc(fp));
+		int letter(getc(fp));
 		
 		switch (letter) {
 		case 0:
@@ -1225,7 +1225,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				point p1, p2;
 				cube_light_src cls;
 				
-				if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%u%i%i", &p1.x, &p2.x, &p1.y, &p2.y, &p1.z, &p2.z,
+				if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%u%i%u", &p1.x, &p2.x, &p1.y, &p2.y, &p1.z, &p2.z,
 					&cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays, &ivals[0], &cls.disabled_edges) < 12)
 				{
 					return read_error(fp, "cube volume global light", coll_obj_file);
@@ -1490,7 +1490,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			return 0;
 
 		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name draw [refract_ix [light_atten]]
-			if (fscanf(fp, "%f%f%f%f%f%s%i", &cobj.cp.elastic, &cobj.cp.color.R, &cobj.cp.color.G,
+			if (fscanf(fp, "%f%f%f%f%f%255s%i", &cobj.cp.elastic, &cobj.cp.color.R, &cobj.cp.color.G,
 				&cobj.cp.color.B, &cobj.cp.color.A, str, &ivals[0]) != 7)
 			{
 				return read_error(fp, "layer/material properties", coll_obj_file);
@@ -1579,7 +1579,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		default:
-			cout << "Ignoring unrecognized symbol in collision object file line " << line_num << ": " << letter << " (ASCII " << int(letter) << ")." << endl;
+			cout << "Ignoring unrecognized symbol in collision object file line " << line_num << ": " << char(letter) << " (ASCII " << letter << ")." << endl;
 			fclose(fp);
 			exit(1);
 			return 0;

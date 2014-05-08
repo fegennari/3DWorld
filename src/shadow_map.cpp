@@ -31,7 +31,7 @@ struct smap_data_t {
 	bool last_has_dynamic;
 	xform_matrix texture_matrix;
 
-	smap_data_t() : tid(0), tu_id(0), fbo_id(0), last_has_dynamic(0) {last_lpos = all_zeros;}
+	smap_data_t() : tid(0), tu_id(0), fbo_id(0), last_lpos(all_zeros), last_has_dynamic(0) {}
 
 	void free_gl_state() {
 		free_texture(tid);

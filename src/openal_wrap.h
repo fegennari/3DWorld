@@ -38,7 +38,7 @@ struct delayed_sound_t : public sound_params_t {
 
 	int id, time;
 
-	delayed_sound_t() : time(0) {}
+	delayed_sound_t() : id(-1), time(0) {}
 	delayed_sound_t(sound_params_t const &p, int i, int t) : sound_params_t(p), id(i), time(t) {}
 };
 

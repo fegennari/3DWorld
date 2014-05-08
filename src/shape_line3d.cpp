@@ -38,7 +38,7 @@ bool shape3d::read_from_file(char *filename) {
 	if (!open_file(fp, filename, "shape3d")) return 0;
 
 	if (fscanf(fp, "%c", &letter) == 1 && letter == 'n') {	
-		if (fscanf(fp, "%i%i%i\n", &ncolors, &nverts, &nfaces) != 3) {
+		if (fscanf(fp, "%u%u%u\n", &ncolors, &nverts, &nfaces) != 3) {
 			cout << "Error reading number of vertices and faces from file '" << filename << "'." << endl;
 			fclose(fp);
 			return 0;

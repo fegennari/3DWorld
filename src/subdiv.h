@@ -45,7 +45,7 @@ public:
 	//typedef vert_norm_comp_tc vertex_type_t; // lower resolution but less memory used, seems to make no real difference
 	typedef unsigned index_type_t;
 
-	sd_sphere_d() : pos(all_zeros), radius(0.0), perturb_map(NULL), surf(NULL) {}
+	sd_sphere_d() : pos(all_zeros), radius(0.0), def_pert(0.0), perturb_map(NULL), surf(NULL) {}
 	sd_sphere_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL) {set_data(p, r, n, pm, dp, s);}
 	void gen_points_norms_static(float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
 	void gen_points_norms(sphere_point_norm &cur_spn, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
@@ -79,7 +79,7 @@ public:
 	sd_sphere_vbo_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL) : sd_sphere_d(p, r, n, pm, dp, s) {}
 	void clear_vbos();
 	void draw_ndiv_pow2_vbo(unsigned ndiv);
-	void sd_sphere_vbo_d::draw_instances(unsigned ndiv, instance_render_t &inst_render);
+	void draw_instances(unsigned ndiv, instance_render_t &inst_render);
 };
 
 

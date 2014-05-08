@@ -1288,7 +1288,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	if (is_moving || friction < STICK_THRESHOLD) {
 		v_old = obj.velocity;
 
-		if (otype.elasticity == 0.0 || cobj.cp.elastic == 0.0 || !obj.object_bounce(3, norm, cobj.cp.elastic, pos.z, 0.0, pvel)) {
+		if (otype.elasticity == 0.0 || cobj.cp.elastic == 0.0 || !obj.object_bounce(3, norm, cobj.cp.elastic, 0.0, pvel)) {
 			if (static_top_coll) {
 				obj.flags |= STATIC_COBJ_COLL; // collision with top
 				if (otype.flags & OBJ_IS_DROP) obj.velocity = zero_vector;

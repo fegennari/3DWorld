@@ -1002,7 +1002,6 @@ void u_ship::ai_action() {
 			thrust(MOVE_STOP, (is_fighter() ? 0.12 : 0.6), 0); // return to parent slowly
 		}
 	}
-	free_obj *fobj(NULL);
 	free_obj const *cur_targ(target_obj);
 	bool targ_friend(cur_targ != NULL && cur_targ == parent), o_dock_close(0);
 
@@ -1049,6 +1048,7 @@ void u_ship::ai_action() {
 			if (cur_targ == NULL && sc.decel > 0.0) {
 				bool const use_high_speed(max_sfactor >= FAST_SPEED_FACTOR); // no hope of avoiding a collision
 				float tdist; // value unused
+				free_obj *fobj(NULL);
 
 				if (vmag > TOLERANCE) {
 					vector3d const vnorm(velocity/vmag);
@@ -1633,7 +1633,6 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 	unsigned const check_parent(weap.no_ffire ? 2 : 1);
 	float const wscale(sqrt((float)num_shots)), beamwidth(weap.radius*wscale), blastwidth(weap.c_radius*wscale);
 	beam_weap_params const &bwp(weap.get_beam_params());
-	float dscale((weap.is_beam && !bwp.paralyze && !bwp.temp_src) ? min(4.0f, fticks) : 1.0);
 	float range(weap.range + c_radius);
 	assert(beamwidth > 0.0 && blastwidth > 0.0);
 	point p1(fpos), p2(fpos);
@@ -1647,6 +1646,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 		float const hradius(hit_obj->get_bounding_radius());
 		point const hpos(hit_obj->get_pos());
 		if (!line_sphere_int(fdir, fpos, hpos, hradius, p2, 0)) return; // no intersection (more robust test) (Note: inexact for asteroids)
+		float dscale((weap.is_beam && !bwp.paralyze && !bwp.temp_src) ? min(4.0f, fticks) : 1.0);
 
 		if (fobj != NULL) { // update p2 if we have more accurate data
 			float cobj_dscale(1.0);

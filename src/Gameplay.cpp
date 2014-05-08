@@ -2170,10 +2170,10 @@ void show_user_stats() {
 
 	bool const is_smiley0(spectate && num_smileys > 0 && obj_groups[coll_id[SMILEY]].enabled);
 	player_state &sstate(sstates[is_smiley0 ? 0 : CAMERA_ID]);
-	float chealth(is_smiley0 ? obj_groups[coll_id[SMILEY]].get_obj(0).health : camera_health);
 	static char text[MAX_CHARS];
 	
 	if (camera_mode == 1 && camera_surf_collide) {
+		float chealth(is_smiley0 ? obj_groups[coll_id[SMILEY]].get_obj(0).health : camera_health);
 		int const ammo((UNLIMITED_WEAPONS && weapons[sstate.weapon].need_ammo) ? -666 : sstate.p_ammo[sstate.weapon]);
 		sprintf(text, "%s %d  %s %d  %s %d  Frags %d  Best %d  Total %d  Deaths %d",
 			((chealth < 25.0) ? "HEALTH" : "Health"), int(chealth + 0.5),
@@ -2202,7 +2202,7 @@ void show_user_stats() {
 			for (int i = CAMERA_ID; i < num_smileys; ++i) {
 				team_stats[(i+teams)%teams].add(sstates[i]);
 			}
-			for (int i = 0; i < teams; ++i) {
+			for (unsigned i = 0; i < (unsigned)teams; ++i) {
 				sprintf(text, "Team %u: Kills: %i Deaths: %i Score: %i\n",
 					i, team_stats[i].kills, team_stats[i].deaths, team_stats[i].score);
 				draw_text(get_smiley_team_color(i), -0.008, 0.01-0.0014*(i+num_smileys+1)-0.0008, -0.02, text);

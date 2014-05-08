@@ -1049,6 +1049,7 @@ public:
 	vector<point> points;
 	colorRGBA color;
 
+	line3d() : width(0.0) {}
 	void draw_lines() const;
 	bool empty() const {return points.empty();}
 };
@@ -1198,7 +1199,7 @@ class rand_gen_t {
 public:
 	long rseed1, rseed2;
 
-	rand_gen_t() {set_state(1,1);}
+	rand_gen_t() : cur_pos(0) {set_state(1,1);}
 	void set_state(long rs1, long rs2) {rseed1 = rs1; rseed2 = rs2;}
 	void pregen_floats(unsigned num);
 	double randd();

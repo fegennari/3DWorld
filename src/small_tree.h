@@ -23,7 +23,7 @@ class small_tree { // size = 85 (88)
 	vector<int> coll_id;
 
 public:
-	small_tree() : type(-1), inst_id(-1) {clear_vbo_mgr_ix();}
+	small_tree() : type(-1), inst_id(-1), height(0.0), width(0.0), r_angle(0.0), rx(0.0), ry(0.0) {clear_vbo_mgr_ix();}
 	small_tree(point const &p, unsigned instance_id);
 	small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen);
 	void setup_rotation(rand_gen_t &rgen);

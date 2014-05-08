@@ -94,7 +94,7 @@ class uobj_asteroid_shader : public uobj_asteroid { // unused
 
 public:
 	uobj_asteroid_shader(point const &pos_, float radius_, int rseed_ix_, int tid, unsigned lt)
-		: uobj_asteroid(pos_, radius_, tid, lt)
+		: uobj_asteroid(pos_, radius_, tid, lt), rseed_ix(rseed_ix_)
 	{
 		c_radius = (1.0 + AST_PROC_HEIGHT)*radius;
 	}
@@ -1110,8 +1110,6 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	if (empty()) {gen_asteroids();}
 
 	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
-	point sun_pos; // unused
-	uobject const *sobj(NULL); // unused
 	bool const has_sun(sun_light_already_set || set_af_color_from_system(afpos, radius, &s));
 
 	// Note: this block and associated variables could be moved to uasteroid_belt, but we may want to use them for asteriod fields near within systems/near stars later

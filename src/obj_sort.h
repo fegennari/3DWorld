@@ -15,7 +15,7 @@ struct cached_obj : public sphere_t {
 	free_obj *obj;
 	unsigned flags;
 
-	cached_obj() : obj(NULL) {}
+	cached_obj() : obj(NULL), flags(0) {}
 	cached_obj(free_obj *ptr) {set_obj(ptr);}
 
 	void set_obj(free_obj *ptr) {

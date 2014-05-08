@@ -126,7 +126,6 @@ void clear_colors_and_disable_light(int light, shader_t *shader) {
 void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader) {
 
 	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
-	float const position[4] = {pos.x, pos.y, pos.z, w};
 	gl_light_params[light].set_pos(pos, w);
 	if (shader) {shader->upload_light_source(light, 0x01);}
 }

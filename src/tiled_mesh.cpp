@@ -131,12 +131,13 @@ class tiled_terrain_hmap_manager_t : public terrain_hmap_manager_t {
 	bool modified[3][3];
 
 public:
-	tiled_terrain_hmap_manager_t() : cur_tile(NULL) {}
+	tiled_terrain_hmap_manager_t() : cur_tile(NULL) {clear_modified();}
+	void clear_modified() {for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(modified[i][i_] = 0;)}}
 
 	void apply_brush(tex_mod_map_manager_t::hmap_brush_t brush, tile_t *tile, bool cache) { // Note: brush is copied and may be modified
 		cur_tile = tile;
 		assert(brush.radius <= get_tile_size()); // only allow for a single adjacent tile
-		for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(modified[i][i_] = 0;)}
+		clear_modified();
 
 		if (brush.is_flatten_brush()) { // use heightmap value at brush center instead of a delta
 			brush.delta = get_clamped_pixel_value(brush.x, brush.y); // Note: original delta is overwritten/unused in this case
@@ -1121,8 +1122,6 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 				unsigned const size_lo_ceil((size + step - 1)/lo_step);
 
 				for (unsigned xy = 0, nxy = 0; nxy < size_lo_ceil; xy += lo_step, ++nxy) {
-					unsigned const xyn(min(xy+lo_step, size));
-				
 					for (unsigned n = 0; n < 3; ++n) { // one triangle
 						if (dim == 0) { // adjacent in x, step in y
 							crack_ixs.push_back(min((xy + n*hi_step), size)*stride + dir*size);
