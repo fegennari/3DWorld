@@ -2,12 +2,12 @@
 // by Frank Gennari
 // 9/1/02
 
-
 #include "3DWorld.h"
 #include "mesh.h"
 #include "textures_3dw.h"
 #include "sinf.h"
 #include "heightmap.h"
+//#include <glm/gtc/noise.hpp>
 
 
 int      const NUM_FREQ_COMP      = 9;

@@ -402,7 +402,7 @@ void apply_univ_physics() {
 		}
 		if (!(flags & OBJ_FLAGS_PARC)) {uobj_rmax = max(uobj_rmax, radius);}
 	}
-	if (TIMETEST) cout << "  nobj: " << nobjs << " ship: " << nsh << " proj: " << npr << " part: " << npa << endl;
+	//if (TIMETEST) cout << "  nobj: " << nobjs << " ship: " << nsh << " proj: " << npr << " part: " << npa << endl;
 	if (TIMETEST) PRINT_TIME("  Rmax + Ship Vector Creation");
 
 	if (animate2) {

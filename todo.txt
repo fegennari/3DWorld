@@ -1,9 +1,10 @@
 Hardware tessellation
 Vertex Array Objects
 
+Better pine tree texture
 More grass/plant types: Yellow and white flowers
 TT mode underwater content
-User-placed teleporter weapon (translocator?)
+  - seaweed
 
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
@@ -11,6 +12,5 @@ Draw more distant tiles (larger/lower res at high delta-z)
 Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 GLM Noise
 
-Better pine tree texture
 TT tree shadows - shadow map
 Multithreaded universe physics/collision/AI
