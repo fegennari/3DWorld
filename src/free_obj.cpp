@@ -682,20 +682,18 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			glDepthFunc(GL_LESS);
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			glDepthMask(GL_FALSE);
-			glEnable(GL_CULL_FACE);
+			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
+			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
 
-			for (unsigned d = 0; d < sobjs.size(); ++d) { // *** planet/moon exact shadow? ***
-				draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv, 0);
+			for (unsigned d = 0; d < sobjs.size(); ++d) {
+				draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);
 			}
 			fgPopMatrix();
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			glDepthFunc(GL_EQUAL);
 			glStencilFunc(GL_EQUAL, 0, ~0);
-			glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 			set_additive_blend_mode(); //glBlendFunc(GL_ONE, GL_ONE);
-			glCullFace(GL_BACK);
-			glDisable(GL_CULL_FACE);
-
 			set_uobj_color(pos, c_radius, 0, 2, sun_pos, sobj, 0.0, 0.0, udd.shader); // enable diffuse/specular only
 			transform_and_draw_obj(udd, 1, 0, 1);
 
@@ -711,7 +709,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 				global_translate(pos);
 
 				for (unsigned d = 0; d < sobjs.size(); ++d) {
-					if (sobjs[d] != &player_ship()) draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv, 1);
+					if (sobjs[d] != &player_ship()) {draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);}
 				}
 				fgPopMatrix();
 				udd.shader->clear_color_e();

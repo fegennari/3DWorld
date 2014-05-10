@@ -457,8 +457,8 @@ public:
 		return 1;
 	}
 
-	virtual void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool test) const {
-		ushadow_triangle_mesh(model.get_shadow_edge_tris(), targ_pos, cur_radius, sun_pos, radius, pos, this).draw_geom(targ_pos, test);
+	virtual void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv) const {
+		ushadow_triangle_mesh(model.get_shadow_edge_tris(), targ_pos, cur_radius, sun_pos, radius, pos, this).draw_geom(targ_pos);
 	}
 	virtual bool casts_detailed_shadow() const {return !model.get_shadow_edge_tris().empty();}
 	virtual void clear_context() {model.free_context();}

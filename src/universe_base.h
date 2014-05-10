@@ -79,7 +79,7 @@ public:
 	virtual int  get_owner() const {assert(0); return 0;}
 	virtual cobj_vector_t const &get_cobjs() const;
 	virtual bool casts_detailed_shadow() const {return !get_cobjs().empty();}
-	virtual void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool test) const {assert(0);}
+	virtual void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv) const {assert(0);}
 	virtual float get_radius_at(point const &p, bool exact=0) const {return radius;}
 	virtual bool has_custom_shadow_profile() const {return 0;}
 	virtual int get_fragment_tid(point const &hit_pos) const {return ROCK_SPHERE_TEX;}

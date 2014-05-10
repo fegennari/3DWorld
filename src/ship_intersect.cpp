@@ -25,24 +25,20 @@ point ship_coll_obj::get_center() const { // inefficient
 
 
 bool ship_cylinder::line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const {
-
 	return (line_int_cylinder(lp1, lp2, p1, p2, r1, r2, check_ends, t) != 0);
 }
 
 bool ship_cylinder::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
-
 	return sphere_intersect_cylinder_ipt(sc, sr, p1, p2, r1, r2, check_ends, p_int, norm, calc_int);
 }
 
 void ship_cylinder::get_bounding_sphere(point &c, float &r) const {
-	
 	point const p[2] = {p1, p2};
 	cylinder_bounding_sphere(p, r1, r2, c, r);
 }
 
-void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv,
-							  bool player, bool test, free_obj const *const obj) const
-{
+void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj) const {
+
 	assert(obj);
 	int npts;
 	point pts_[4];
@@ -54,11 +50,11 @@ void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &
 	cylinder_quad_projection(pts_, *this, v1, v2, npts);
 	upos_point_type pts[4]; // 3 or 4
 	for (int i = 0; i < npts; ++i) pts[i] = pts_[i];
-	ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj).draw_geom(tpos, test);
+	ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj).draw_geom(tpos);
 	
 	if (check_ends) {
 		point const pos((r1 == r2) ? 0.5*(p1 + p2) : ((r1 < r2) ? p2 : p1)); // center if equal, otherwise end with largest radius
-		ushadow_triangle_mesh(pos, max(r1, r2), (p2 - p1), ndiv, tpos, cur_radius, spos, obj).draw_geom(tpos, test);
+		ushadow_triangle_mesh(pos, max(r1, r2), (p2 - p1), ndiv, tpos, cur_radius, spos, obj).draw_geom(tpos);
 	}
 }
 
@@ -88,14 +84,12 @@ void ship_cube::translate(point const &p) {
 }
 
 void ship_cube::get_bounding_sphere(point &c, float &r) const {
-	
 	c = get_cube_center();
 	r = get_bsphere_radius();
 }
 
-void ship_cube::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv,
-						  bool player, bool test, free_obj const *const obj) const
-{
+void ship_cube::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj) const {
+
 	assert(obj);
 	point spos_xf(spos);
 	obj->xform_point(spos_xf);
@@ -113,7 +107,7 @@ void ship_cube::draw_svol(point const &tpos, float cur_radius, point const &spos
 				pts[i][d0]  = d[d0][i==1||i==2];
 				pts[i][d1]  = d[d1][i==2||i==3];
 			}
-			ushadow_polygon(pts, 4, tpos, cur_radius, spos, player, obj).draw_geom(tpos, test);
+			ushadow_polygon(pts, 4, tpos, cur_radius, spos, player, obj).draw_geom(tpos);
 		}
 	}
 }
@@ -150,37 +144,30 @@ bool ship_sphere::sphere_intersect(point const &sc, float sr, point const &p_las
 }
 
 void ship_sphere::get_bounding_sphere(point &c, float &r) const {
-	
 	c = pos;
 	r = radius;
 }
 
-void ship_sphere::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv,
-							bool player, bool test, free_obj const *const obj) const
-{
-	ushadow_sphere(pos, radius, tpos, cur_radius, spos, ndiv, player, obj).draw_geom(tpos, test);
+void ship_sphere::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj) const {
+	ushadow_sphere(pos, radius, tpos, cur_radius, spos, ndiv, player, obj).draw_geom(tpos);
 }
 
 
 bool ship_torus::line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const {
-
 	return line_torus_intersect(lp1, lp2, center, ri, ro, t);
 }
 
 bool ship_torus::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
-
 	return sphere_torus_intersect(sc, sr, center, ri, ro, p_int, norm, calc_int);
 }
 
 void ship_torus::get_bounding_sphere(point &c, float &r) const {
-	
 	c = center;
 	r = ri + ro;
 }
 
-void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv,
-						   bool player, bool test, free_obj const *const obj) const
-{
+void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj) const {
+
 	assert(obj);
 	assert(ro > 0.0 && ri > 0.0);
 	int npts;
@@ -200,7 +187,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 		cylinder_quad_projection(pts_, cylinder_3dw(p-delta, p+delta, ri_mod, ri_mod), (p - spos_xf), v2, npts);
 		upos_point_type pts[4]; // 3 or 4
 		for (int i = 0; i < npts; ++i) pts[i] = pts_[i];
-		ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj, min_sdist).draw_geom(tpos, test);
+		ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj, min_sdist).draw_geom(tpos);
 	}
 
 	// determine the tangent points from spos to center with radius ro
@@ -230,7 +217,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 			}
 		}
 		for (unsigned i = 0; i < 2; ++i) {
-			ushadow_sphere(tpts[pmin[i]], ri_mod, tpos, cur_radius, spos, ndiv, player, obj, min_sdist).draw_geom(tpos, test);
+			ushadow_sphere(tpts[pmin[i]], ri_mod, tpos, cur_radius, spos, ndiv, player, obj, min_sdist).draw_geom(tpos);
 		}
 	}
 }
@@ -275,12 +262,11 @@ void ship_bounded_cylinder::get_bounding_sphere(point &c, float &r) const {
 	r = radius[rmin];
 }
 
-void ship_bounded_cylinder::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv,
-									  bool player, bool test, free_obj const *const obj) const
-{
+void ship_bounded_cylinder::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj) const {
+
 	// should really be an AND
-	ship_cylinder::draw_svol(tpos, cur_radius, spos, ndiv, player, test, obj);
-	//bcube.draw_svol(tpos, cur_radius, spos, ndiv, player, test, obj);
+	ship_cylinder::draw_svol(tpos, cur_radius, spos, ndiv, player, obj);
+	//bcube.draw_svol(tpos, cur_radius, spos, ndiv, player, obj);
 }
 
 
@@ -306,13 +292,11 @@ bool ship_triangle_list::line_intersect(point const &lp1, point const &lp2, floa
 }
 
 bool ship_triangle_list::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
-
 	return ship_sphere::sphere_intersect(sc, sr, p_last, p_int, norm, calc_int);
 }
 
-void ship_triangle_list::draw_svol(point const &tpos, float cur_radius, point const &spos,
-	int ndiv, bool player, bool test, free_obj const *const obj) const
-{
+void ship_triangle_list::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj) const {
+
 	point spos_xf(spos);
 	obj->xform_point(spos_xf);
 	vector3d const shadow_dir(pos - spos_xf);
@@ -321,7 +305,7 @@ void ship_triangle_list::draw_svol(point const &tpos, float cur_radius, point co
 		if (dot_product(i->get_normal(), shadow_dir) > 0.0) continue; // back facing
 		upos_point_type pts[3];
 		UNROLL_3X(pts[i_] = i->pts[i_];)
-		ushadow_polygon(pts, 3, tpos, cur_radius, spos, player, obj).draw_geom(tpos, test);
+		ushadow_polygon(pts, 3, tpos, cur_radius, spos, player, obj).draw_geom(tpos);
 	}
 }
 
@@ -409,11 +393,9 @@ bool u_ship::sphere_int_obj(point const &c, float r, intersect_params &ip) const
 
 
 bool free_obj::ship_int_obj(u_ship const *const ship, intersect_params &ip) const {
-
 	assert(ship);
 	return ship->sphere_int_obj(pos, c_radius, ip);
 }
-
 
 bool free_obj::obj_int_obj(free_obj const *const obj, intersect_params &ip) const {
 
@@ -423,11 +405,9 @@ bool free_obj::obj_int_obj(free_obj const *const obj, intersect_params &ip) cons
 
 
 bool u_ship::obj_int_obj(free_obj const *const obj, intersect_params &ip) const {
-
 	assert(obj);
 	return obj->ship_int_obj(this, ip);
 }
-
 
 bool u_ship::ship_int_obj(u_ship const *const ship, intersect_params &ip) const {
 
@@ -689,27 +669,13 @@ void ushadow_triangle_mesh::draw(upos_point_type const &pos) const {
 }
 
 
-void ushadow_volume::draw_geom(upos_point_type const &pos, bool test) const {
-
-	if (invalid) return;
-	if (test) {draw(pos); return;}
-	GLenum const bf[2] = {GL_BACK, GL_FRONT}, zp[2] = {GL_INCR, GL_DECR};
-
-	for (unsigned spass = 0; spass < 2; ++spass) { // GL_STENCIL_TWO_SIDE_EXT?
-		glCullFace(bf[spass == 0]);
-		glStencilOp(zp[spass], zp[spass], GL_KEEP);
-		draw(pos);
-	}
-}
-
-
-void free_obj::draw_shadow_volumes_from(uobject const *sobj, point const &sun_pos, float dscale, int ndiv, bool test) const {
+void free_obj::draw_shadow_volumes_from(uobject const *sobj, point const &sun_pos, float dscale, int ndiv) const {
 
 	assert(sobj);
 	assert(radius > TOLERANCE);
 	
 	if (COBJ_SHADOWS && sobj->casts_detailed_shadow()) {
-		sobj->draw_shadow_volumes(pos, c_radius, sun_pos, ndiv, test);
+		sobj->draw_shadow_volumes(pos, c_radius, sun_pos, ndiv);
 		return;
 	}
 	// insert custom drawn-from-sun's-point-of-view code in here...
@@ -721,11 +687,11 @@ void free_obj::draw_shadow_volumes_from(uobject const *sobj, point const &sun_po
 	ushadow_sphere uss(sobj->get_pos(), sobj_radius, pos, c_radius, sun_pos, nsides, player, NULL);
 	float const *const pmap(sobj->get_sphere_shadow_pmap(sun_pos, pos, nsides));
 	if (pmap) uss.set_pmap(pmap);
-	uss.draw_geom(pos, test);
+	uss.draw_geom(pos);
 }
 
 
-void u_ship::draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool test) const {
+void u_ship::draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv) const {
 
 	cobj_vector_t const &cobjs(get_cobjs());
 	if (cobjs.empty()) return; // should never get here
@@ -733,7 +699,7 @@ void u_ship::draw_shadow_volumes(point const &targ_pos, float cur_radius, point 
 
 	for (unsigned i = 0; i < cobjs.size(); ++i) {
 		assert(cobjs[i]);
-		cobjs[i]->draw_svol(targ_pos, cur_radius, sun_pos, ndiv, player, test, this);
+		cobjs[i]->draw_svol(targ_pos, cur_radius, sun_pos, ndiv, player, this);
 	}
 }
 

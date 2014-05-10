@@ -169,7 +169,7 @@ public:
 	ushadow_volume() : invalid(0) {}
 	virtual ~ushadow_volume() {}
 	virtual void draw(upos_point_type const &pos) const = 0;
-	void draw_geom(upos_point_type const &pos, bool test) const;
+	void draw_geom(upos_point_type const &pos) const {if (!invalid) {draw(pos);}}
 };
 
 class ushadow_sphere : public ushadow_volume { // currently only supports spheres/cylinder shadow projections
@@ -371,8 +371,7 @@ public:
 	virtual void draw_cylin(unsigned ndiv, bool textured, float tex_scale_len=1.0) const {assert(0);}
 	virtual bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const = 0;
 	virtual bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const = 0;
-	virtual void draw_svol(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool player, bool test,
-		free_obj const *const obj=NULL) const = 0;
+	virtual void draw_svol(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool player, free_obj const *const obj=NULL) const = 0;
 	virtual bool is_concave() const {return 0;}
 	virtual void get_bounding_sphere(point &c, float &r) const = 0;
 	point get_center() const;
@@ -396,8 +395,7 @@ public:
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const;
-	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, bool test,
-		free_obj const *const obj=NULL) const;
+	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Cylinder";}
 	float get_length() const {return p2p_dist(p1, p2);}
 	float get_volume() const {return PI*(r1*r1 + r1*r2 + r2*r2)*get_length()/3.0;}
@@ -415,8 +413,7 @@ public:
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const;
-	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, bool test,
-		free_obj const *const obj=NULL) const;
+	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player,  free_obj const *const obj=NULL) const;
 	string get_name()   const {return "Cube";}
 	float const delta(unsigned i) const {return fabs(d[i][1] - d[i][0]);}
 	float get_volume() const {return cube_t::get_volume();}
@@ -433,8 +430,7 @@ public:
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const;
-	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, bool test,
-		free_obj const *const obj=NULL) const;
+	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Sphere";}
 	float get_volume() const {return (4.0/3.0)*PI*radius*radius*radius;}
 	float get_s_area() const {return 4.0*PI*radius*radius;}
@@ -453,8 +449,7 @@ public:
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const;
-	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, bool test,
-		free_obj const *const obj=NULL) const;
+	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	bool is_concave()  const {return 1;}
 	string get_name()  const {return "Torus";}
 	float get_volume() const {return 2.0*PI*PI*ri*ri*ro;}
@@ -476,8 +471,7 @@ public:
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const;
-	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, bool test,
-		free_obj const *const obj=NULL) const;
+	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Bounded Cylinder";}
 	float get_volume() const {return min(ship_cylinder::get_volume(),   bcube.get_volume());} // ???
 	float get_s_area() const {return 0.5*(ship_cylinder::get_s_area() + bcube.get_s_area());} // ???
@@ -499,8 +493,7 @@ public:
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
 	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
 	void get_bounding_sphere(point &c, float &r) const {return ship_sphere::get_bounding_sphere(c, r);}
-	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, bool test,
-		free_obj const *const obj=NULL) const;
+	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Triangle List";}
 	float get_volume() const {return ship_sphere::get_volume();}
 	float get_s_area() const {return ship_sphere::get_s_area();}
@@ -683,7 +676,7 @@ public:
 	void large_obj_visibility_test(point const &lpos, float exp_radius, vector<uobject const*> &sobjs, bool get_all) const;
 	void rotate() const;
 	void inverse_rotate() const;
-	void draw_shadow_volumes_from(uobject const *sobj, point const &sun_pos, float dscale, int ndiv, bool test) const;
+	void draw_shadow_volumes_from(uobject const *sobj, point const &sun_pos, float dscale, int ndiv) const;
 	void transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const;
 	void draw(shader_t shader[2]) const;
 
@@ -1167,7 +1160,7 @@ public:
 	void move_by(point const &pos_);
 	bool has_detailed_coll(free_obj const *const other_obj) const {return (!get_cobjs().empty());}
 	virtual cobj_vector_t const &get_cobjs() const {return specs().cobjs;}
-	void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv, bool test) const;
+	void draw_shadow_volumes(point const &targ_pos, float cur_radius, point const &sun_pos, int ndiv) const;
 	void no_ai_wait();
 	virtual void check_size_scale();
 	void check_ref_objs();
