@@ -41,7 +41,7 @@ upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample;
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
@@ -717,6 +717,7 @@ void display(void) {
 	tstep        = TIMESTEP*fticks;
 	reset_timing = 0;
 	check_gl_error(1);
+	if (enable_multisample) {glEnable(GL_MULTISAMPLE);} else {glDisable(GL_MULTISAMPLE);}
 
 	if (map_mode && world_mode != WMODE_UNIVERSE) {
 		draw_overhead_map();

@@ -713,7 +713,7 @@ void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera
 
 	point_d const afpos(pos_ + pos);
 	bool const has_sun(set_af_color_from_system(afpos, radius, NULL));
-	enable_blend();
+	enable_blend(); // disable multisample?
 	shader_t shader;
 
 	if (AB_NUM_PARTS_F > 0 && world_mode == WMODE_UNIVERSE) { // global asteroid dust (points), only in universe mode

@@ -226,7 +226,6 @@ void quit_3dworld() {
 
 void init_window() {
 
-	if (enable_multisample) {glEnable(GL_MULTISAMPLE);} // only works when using a multisampling graphics context
 	wglSwapIntervalEXT(vsync_enabled ? 1 : 0);
 	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	glutDisplayFunc(display);
@@ -717,12 +716,16 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	int mtime2;
 
-    switch (key) { // available: AOP,. somtimes SZi
+    switch (key) { // available: OP,. somtimes SZi
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
 	case 'Q':
 		reload_all_shaders();
+		break;
+
+	case 'A':
+		enable_multisample ^= 1;
 		break;
 
 	case 'X': // change selected UI menu
