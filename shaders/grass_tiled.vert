@@ -50,12 +50,13 @@ void main()
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(fg_NormalMatrix * normal); // eye space
-	vec4 color  = vec4(0,0,0, fg_Color.a);
+	vec3 color  = vec3(0.0);
 	//if (grass_weight < noise_weight) {
-	if (enable_light0) {color.rgb += add_light_comp_pos_scaled0(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale).rgb;}
-	if (enable_light1) {color.rgb += add_light_comp_pos_scaled1(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale).rgb;}
-	if (enable_light2) {color.rgb += add_pt_light_comp(normal, epos, 2).rgb;}
+	if (enable_light0) {color += add_light_comp_pos_scaled0(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale).rgb;}
+	if (enable_light1) {color += add_light_comp_pos_scaled1(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale).rgb;}
+	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2).rgb;}
 	//}
-	color.a *= ascale*((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
-	gl_FrontColor = color;
+	float alpha = fg_Color.a;
+	alpha *= ascale*((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
+	gl_FrontColor = vec4(color, alpha);
 } 

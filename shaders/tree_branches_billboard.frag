@@ -25,9 +25,9 @@ void main()
 	mat3 mrot = mat3(dp, -s, 0.0,  s, dp, 0.0,  0.0, 0.0, 1.0);
 	normal    = normalize(fg_NormalMatrix * (mrot * normal)); // convert to eye space
 	
-	vec4 color  = vec4(0,0,0,1);
-	if (enable_light0) color.rgb += add_light_comp0(normal).rgb;
-	if (enable_light1) color.rgb += add_light_comp1(normal).rgb;
-	if (enable_light2) color.rgb += add_light_comp (normal, 2).rgb * calc_light_atten(eye_space_pos, 2);
-	gl_FragColor = apply_fog_epos(clamp(color, 0.0, 1.0)*vec4(texel.rgb, 1.0), eye_space_pos);
+	vec3 color  = vec3(0.0);
+	if (enable_light0) color += add_light_comp0(normal).rgb;
+	if (enable_light1) color += add_light_comp1(normal).rgb;
+	if (enable_light2) color += add_light_comp (normal, 2).rgb * calc_light_atten(eye_space_pos, 2);
+	gl_FragColor = apply_fog_epos(vec4(clamp(color, 0.0, 1.0)*texel.rgb, 1.0), eye_space_pos);
 }

@@ -16,8 +16,8 @@ void main()
 	gl_Position = fg_ProjectionMatrix * epos;
 	vec3 normal = normalize(fg_NormalMatrix * fg_Normal); // eye space
 	gl_FogFragCoord = length(epos.xyz); // set standard fog coord
-	vec4 color  = vec4(emission.rgb, alpha);
-	if (enable_light0) color.rgb += add_light_comp0(normal).rgb;
-	if (enable_light1) color.rgb += add_light_comp1(normal).rgb;
-	gl_FrontColor = color;
+	vec3 color  = emission.rgb;
+	if (enable_light0) color += add_light_comp0(normal).rgb;
+	if (enable_light1) color += add_light_comp1(normal).rgb;
+	gl_FrontColor = vec4(color, alpha);
 }

@@ -18,10 +18,10 @@ void main()
 	vec3 normal = normalize(fg_NormalMatrix * (2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0)));
 	if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse (could use faceforward())
 	
-	vec4 color = vec4(0,0,0,1);
+	vec3 color = vec3(0.0);
 	const bool shadowed = false;
-	if (enable_light0) color.rgb += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0).rgb;
-	if (enable_light1) color.rgb += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1).rgb;
-	if (enable_light2) color.rgb += add_leaf_light_comp(shadowed, normal, eye_space_pos, 2).rgb * calc_light_atten(eye_space_pos, 2);
-	gl_FragColor = apply_fog_epos(clamp(color*color_scale, 0.0, 1.0)*vec4(texel.rgb, 1.0), eye_space_pos);
+	if (enable_light0) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0).rgb;
+	if (enable_light1) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1).rgb;
+	if (enable_light2) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 2).rgb * calc_light_atten(eye_space_pos, 2);
+	gl_FragColor = apply_fog_epos(vec4(clamp(color*color_scale, 0.0, 1.0)*texel.rgb, 1.0), eye_space_pos);
 }
