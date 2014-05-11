@@ -291,7 +291,6 @@ int get_texture_by_name(string const &name) {
 void check_init_texture(int id) {
 
 	textures[id].check_init();
-	//assert(glIsTexture(textures[id].tid)); // glIsTexture is slow on some machines???
 }
 
 
@@ -356,7 +355,7 @@ void setup_landscape_tex_colors(colorRGBA const &c1, colorRGBA const &c2) { // c
 void free_texture(unsigned &tid) {
 
 	if (tid == 0) return; // avoid GL calls
-	if (glIsTexture(tid)) glDeleteTextures(1, &tid);
+	if (glIsTexture(tid)) {glDeleteTextures(1, &tid);}
 	tid = 0;
 }
 
@@ -377,8 +376,7 @@ void texture_t::alloc() {
 void texture_t::bind_gl() const {
 	
 	assert(tid > 0);
-	//assert(glIsTexture(tid));
-	glBindTexture(GL_TEXTURE_2D, tid);
+	bind_2d_texture(tid);
 }
 
 
@@ -833,14 +831,14 @@ void texture_t::load_from_gl() { // also set tid?
 void bind_1d_texture(unsigned tid) {
 
 	glBindTexture(GL_TEXTURE_1D, tid);
-	assert(glIsTexture(tid));
+	assert(glIsTexture(tid)); // too slow?
 }
 
 
 void bind_2d_texture(unsigned tid) {
 
 	glBindTexture(GL_TEXTURE_2D, tid);
-	assert(glIsTexture(tid));
+	assert(glIsTexture(tid)); // too slow?
 }
 
 

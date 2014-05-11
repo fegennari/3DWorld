@@ -205,6 +205,22 @@ void set_light_scale(shader_t &s, bool use_light2) {
 
 
 class universe_shader_t : public shader_t {
+
+	typedef map<const char *, int> name_loc_map; // key is a pointer? use a string?
+	name_loc_map name_to_loc;
+
+	int get_loc(char const *const name) {
+#if 1
+		return get_uniform_loc(name);
+#else
+		name_loc_map::const_iterator it(name_to_loc.find(name));
+		if (it != name_to_loc.end()) {return it->second;}
+		int const loc(get_uniform_loc(name));
+		name_to_loc[name] = loc;
+		return loc;
+#endif
+	}
+
 	void shared_setup(const char *texture_name="tex0") {
 		begin_shader();
 		add_uniform_int(texture_name, 0);
@@ -217,11 +233,11 @@ class universe_shader_t : public shader_t {
 	}
 	void set_planet_uniforms(float atmosphere, shadow_vars_t const &svars, bool use_light2) {
 		set_light_scale(*this, use_light2);
-		add_uniform_float("atmosphere",  atmosphere);
-		add_uniform_vector3d("sun_pos",  svars.sun_pos);
-		add_uniform_float("sun_radius",  svars.sun_radius);
-		add_uniform_vector3d("ss_pos",   svars.ss_pos);
-		add_uniform_float("ss_radius",   svars.ss_radius);
+		set_uniform_float(get_loc("atmosphere"), atmosphere);
+		set_uniform_vector3d(get_loc("sun_pos"), svars.sun_pos);
+		set_uniform_float(get_loc("sun_radius"), svars.sun_radius);
+		set_uniform_vector3d(get_loc("ss_pos"),  svars.ss_pos);
+		set_uniform_float(get_loc("ss_radius"),  svars.ss_radius);
 		upload_mvm_to_shader(*this, "fg_ViewMatrix");
 	}
 
@@ -250,17 +266,17 @@ public:
 		}
 		enable();
 		set_specular(1.0, 80.0);
-		add_uniform_vector3d("rscale",   svars.rscale);
-		add_uniform_float("ring_ri",     svars.ring_ri);
-		add_uniform_float("ring_ro",     svars.ring_ro);
-		add_uniform_float("noise_scale", 4.0*body.cloud_scale); // clouds / gas giant noise
+		set_uniform_vector3d(get_loc("rscale"),   svars.rscale);
+		set_uniform_float(get_loc("ring_ri"),     svars.ring_ri);
+		set_uniform_float(get_loc("ring_ro"),     svars.ring_ro);
+		set_uniform_float(get_loc("noise_scale"), 4.0*body.cloud_scale); // clouds / gas giant noise
 		
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
-			add_uniform_float("water_val",  body.water);
-			add_uniform_float("lava_val",   body.lava);
+			set_uniform_float(get_loc("water_val"), body.water);
+			set_uniform_float(get_loc("lava_val"),  body.lava);
 		}
 		float const cf_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : UNIV_NCLIP_SCALE);
-		add_uniform_vector3d("cloud_freq", cf_scale*(body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 1.0)));
+		set_uniform_vector3d(get_loc("cloud_freq"), cf_scale*(body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 1.0)));
 		set_planet_uniforms((body.gas_giant ? 0.5 : 1.0)*body.atmos, svars, use_light2);
 		return 1;
 	}
@@ -284,8 +300,8 @@ public:
 			add_uniform_float("noise_scale", 3.5);
 		}
 		enable();
-		add_uniform_color("colorA", colorA);
-		add_uniform_color("colorB", colorB);
+		set_uniform_color(get_loc("colorA"), colorA);
+		set_uniform_color(get_loc("colorB"), colorB);
 		return 1;
 	}
 	void disable_star() {
@@ -304,14 +320,14 @@ public:
 		select_multitex(SPARSE_NOISE_TEX,     2, 1);
 		enable();
 		set_specular(0.5, 50.0);
-		add_uniform_vector3d("planet_pos", planet_pos);
-		add_uniform_float("planet_radius", planet.radius);
-		add_uniform_float("ring_ri",       planet.ring_ri);
-		add_uniform_float("ring_ro",       planet.ring_ro);
-		add_uniform_vector3d("sun_pos",    sun_pos);
-		add_uniform_float("sun_radius",    sun_radius);
-		add_uniform_float("bf_draw_sign",  (dir ? -1.0 : 1.0));
-		add_uniform_vector3d("camera_pos", make_pt_global(get_player_pos()));
+		set_uniform_vector3d(get_loc("planet_pos"), planet_pos);
+		set_uniform_float(get_loc("planet_radius"), planet.radius);
+		set_uniform_float(get_loc("ring_ri"),       planet.ring_ri);
+		set_uniform_float(get_loc("ring_ro"),       planet.ring_ro);
+		set_uniform_vector3d(get_loc("sun_pos"),    sun_pos);
+		set_uniform_float(get_loc("sun_radius"),    sun_radius);
+		set_uniform_float(get_loc("bf_draw_sign"),  (dir ? -1.0 : 1.0));
+		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
 		upload_mvm_to_shader(*this, "fg_ViewMatrix");
 		return 1;
 	}
@@ -329,10 +345,10 @@ public:
 			begin_shader();
 		}
 		enable();
-		add_uniform_vector3d("camera_pos", make_pt_global(get_player_pos()));
-		add_uniform_vector3d("planet_pos", planet_pos);
-		add_uniform_float("planet_radius", planet.radius/PLANET_ATM_RSCALE);
-		add_uniform_float("atmos_radius",  planet.radius*PLANET_ATM_RSCALE);
+		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
+		set_uniform_vector3d(get_loc("planet_pos"), planet_pos);
+		set_uniform_float(get_loc("planet_radius"), planet.radius/PLANET_ATM_RSCALE);
+		set_uniform_float(get_loc("atmos_radius"),  planet.radius*PLANET_ATM_RSCALE);
 		set_planet_uniforms(planet.atmos, svars, 0); // atmosphere has no planet reflection light (light2)
 		return 1;
 	}

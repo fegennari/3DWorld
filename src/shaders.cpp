@@ -290,7 +290,7 @@ void shader_t::upload_light_source(unsigned light_id, unsigned field_filt) {
 			}
 			is_setup = 1;
 		}
-		for (unsigned i = 0; i < 5; ++i) {lloc.v[i] = glGetUniformLocation(program, ls_strs[light_id][i]);}
+		for (unsigned i = 0; i < 5; ++i) {lloc.v[i] = get_uniform_loc(ls_strs[light_id][i]);}
 		lloc.valid = 1;
 	}
 	gl_light_params_t const &lp(gl_light_params[light_id]);

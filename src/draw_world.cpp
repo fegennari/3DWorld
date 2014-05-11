@@ -446,10 +446,12 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		bool in_portal(0);
 
 		if (has_lt_atten) {
-			ulocs[0] = s.get_uniform_loc("light_atten");
-			ulocs[1] = s.get_uniform_loc("cube_bb"    );
-			ulocs[2] = s.get_uniform_loc("refract_ix" );
-			assert(ulocs[0] && ulocs[1] && ulocs[2]);
+			const char *lt_atten_uniform_strs[3] = {"light_atten", "cube_bb", "refract_ix"};
+
+			for (unsigned i = 0; i < 3; ++i) {
+				ulocs[i] = s.get_uniform_loc(lt_atten_uniform_strs[i]);
+				assert(ulocs[i] >= 0);
+			}
 		}
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
 			int const ix(draw_last[i].second);

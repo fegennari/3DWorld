@@ -223,9 +223,10 @@ void draw_blasts() {
 	s.set_vert_shader("multitex_2");
 	s.set_frag_shader("multitex_2");
 	s.begin_shader();
+	int const min_alpha_loc(s.get_uniform_loc("min_alpha"));
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 1);
-	//s.add_uniform_float("min_alpha", 0.05);
+	//s.set_uniform_float(min_alpha_loc, 0.05);
 	select_multitex(WHITE_TEX, 1);
 	vector<ix_type_pair> to_draw;
 
@@ -281,7 +282,7 @@ void draw_blasts() {
 		case ETYPE_ATOMIC:
 			{
 				if (begin_type) {select_texture(CLOUD_TEX); /*glEnable(GL_CULL_FACE);*/ begin_sphere_draw(1);}
-				s.add_uniform_float("min_alpha", 0.4*(1.0 - timescale));
+				s.set_uniform_float(min_alpha_loc, 0.4*(1.0 - timescale));
 				fgPushMatrix();
 				global_translate(br.pos);
 				rotate_about(90.0*timescale, br.dir);
@@ -292,7 +293,7 @@ void draw_blasts() {
 				draw_sphere_vbo_raw(ndiv, 1);
 				//draw_sphere_vbo_back_to_front(all_zeros, br.cur_size, ndiv, 1);
 				fgPopMatrix();
-				if (end_type) {/*glEnable(GL_CULL_FACE);*/ end_sphere_draw(); s.add_uniform_float("min_alpha", 0.0);}
+				if (end_type) {/*glEnable(GL_CULL_FACE);*/ end_sphere_draw(); s.set_uniform_float(min_alpha_loc, 0.0);}
 			}
 			break;
 

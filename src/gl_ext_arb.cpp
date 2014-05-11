@@ -78,7 +78,6 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data)
 {
-	assert(glIsTexture(tid));
 	bind_3d_texture(tid);
 	glTexSubImage3D(GL_TEXTURE_3D, 0, xoff, yoff, zoff, xsz, ysz, zsz, get_texture_format(ncomp), GL_UNSIGNED_BYTE, data);
 }
@@ -86,7 +85,6 @@ void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff
 
 void set_3d_texture_as_current(unsigned tid, unsigned tu_id) {
 
-	assert(glIsTexture(tid));
 	set_active_texture(tu_id);
 	bind_3d_texture(tid);
 	set_active_texture(0);
@@ -214,7 +212,7 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
 void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
 
 	assert(glIsTexture(tid));
-	if (!fbo_id) create_fbo(fbo_id, tid, is_depth_fbo);
+	if (!fbo_id) {create_fbo(fbo_id, tid, is_depth_fbo);}
 	assert(fbo_id > 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
 }

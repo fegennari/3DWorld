@@ -188,7 +188,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	}
 	assert(glIsTexture(cloud_tid));
 	check_gl_error(800);
-	if (USE_CLOUD_FBO) enable_fbo(fbo_id, cloud_tid, 0);
+	if (USE_CLOUD_FBO) {enable_fbo(fbo_id, cloud_tid, 0);}
 	check_gl_error(801);
 
 	glViewport(0, 0, xsize, ysize);

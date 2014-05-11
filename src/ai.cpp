@@ -1363,13 +1363,14 @@ int gen_smiley_or_player_pos(point &pos, int index) {
 void select_smiley_texture(int smiley_id) {
 
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
+	unsigned &tid(sstates[smiley_id].tid);
 
-	if (!glIsTexture(sstates[smiley_id].tid)) {
-		free_texture(sstates[smiley_id].tid);
+	if (!glIsTexture(tid)) {
+		free_texture(tid);
 		init_smiley_texture(smiley_id);
+		assert(glIsTexture(tid));
 	}
-	assert(glIsTexture(sstates[smiley_id].tid));
-	bind_2d_texture(sstates[smiley_id].tid);
+	bind_2d_texture(tid);
 }
 
 
