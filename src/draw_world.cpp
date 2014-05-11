@@ -1142,6 +1142,7 @@ void draw_smoke_and_fires() {
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1);
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
+	set_multisample(0);
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
 		draw_part_clouds(part_clouds, 0); // smoke: slow when a lot of smoke is up close
@@ -1161,6 +1162,7 @@ void draw_smoke_and_fires() {
 	}
 	s.add_uniform_float("emissive_scale", 0.0); // reset
 	s.end_shader();
+	set_multisample(1);
 }
 
 

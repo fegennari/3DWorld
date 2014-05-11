@@ -665,6 +665,13 @@ void draw_sun_flare() {
 }
 
 
+void set_multisample(bool enable) {
+
+	if (!enable_multisample) return;
+	if (enable) {glEnable(GL_MULTISAMPLE);} else {glDisable(GL_MULTISAMPLE);}
+}
+
+
 // The display function. It is called whenever the window needs
 // redrawing (ie: overlapping window moves, resize, maximize)
 // display() is also called every so many milliseconds to provide a decent framerate
@@ -717,7 +724,6 @@ void display(void) {
 	tstep        = TIMESTEP*fticks;
 	reset_timing = 0;
 	check_gl_error(1);
-	if (enable_multisample) {glEnable(GL_MULTISAMPLE);} else {glDisable(GL_MULTISAMPLE);}
 
 	if (map_mode && world_mode != WMODE_UNIVERSE) {
 		draw_overhead_map();
@@ -740,6 +746,7 @@ void display(void) {
 	setup_sphere_vbos();
 	check_gl_error(2);
 	update_sound_loops();
+	set_multisample(1);
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} else {glDisable(GL_DEPTH_CLAMP);}
 
 	if (world_mode == WMODE_UNIVERSE) {

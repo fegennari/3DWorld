@@ -268,7 +268,6 @@ void cloud_manager_t::draw() {
 	create_clouds();
 	if (empty()) return;
 	//RESET_TIME;
-	glDisable(GL_DEPTH_TEST);
 
 	// WRITE: wind moves clouds
 
@@ -276,6 +275,8 @@ void cloud_manager_t::draw() {
 	static bool had_sun(0);
 	static float last_sun_rot(0.0);
 	bool const need_update(!no_sun_lpos_update && (sun_rot != last_sun_rot || have_sun != had_sun));
+	set_multisample(0);
+	glDisable(GL_DEPTH_TEST);
 	shader_t s;
 
 	if (need_update) {
@@ -311,6 +312,7 @@ void cloud_manager_t::draw() {
 	}
 	s.end_shader();
 	glEnable(GL_DEPTH_TEST);
+	set_multisample(1);
 	//PRINT_TIME("Clouds");
 }
 

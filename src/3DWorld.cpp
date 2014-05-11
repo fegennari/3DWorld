@@ -726,6 +726,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case 'A':
 		enable_multisample ^= 1;
+		if (!enable_multisample) {glDisable(GL_MULTISAMPLE);}
 		break;
 
 	case 'X': // change selected UI menu

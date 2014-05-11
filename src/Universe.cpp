@@ -667,7 +667,7 @@ inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
 
 void ucell::draw_all_stars(ushader_group &usg, bool clear_star_pld) {
 
-	if (enable_multisample) {glDisable(GL_MULTISAMPLE);}
+	set_multisample(0);
 
 	if (!star_pld.empty()) {
 		usg.enable_color_only_shader();
@@ -675,7 +675,7 @@ void ucell::draw_all_stars(ushader_group &usg, bool clear_star_pld) {
 		usg.disable_color_only_shader();
 	}
 	star_psd.draw_and_clear(WHITE_TEX, 1.0); // unblended
-	if (enable_multisample) {glEnable(GL_MULTISAMPLE);}
+	set_multisample(1);
 }
 
 

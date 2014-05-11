@@ -678,7 +678,6 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			glClear(GL_STENCIL_BUFFER_BIT);
 			glEnable(GL_STENCIL_TEST);
 			glStencilFunc(GL_ALWAYS, 0, ~0);
-			glEnable(GL_DEPTH_TEST);
 			glDepthFunc(GL_LESS);
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			glDepthMask(GL_FALSE);
