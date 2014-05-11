@@ -1027,9 +1027,9 @@ void uobj_draw_data::draw_us_carrier() const {
 		draw_cylin_fast(0.008, 0.005, 0.3, ndiv4, 0);
 		fgScale(2.0, 1.0, 0.4);
 		invert_z();
-		if (ndiv > 24) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe
+		if (ndiv > 24) {glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);} // wireframe
 		draw_sphere_vbo(point(0.0, 0.0, -0.75), 0.06, get_ndiv(ndiv/3), 0, 1);
-		if (ndiv > 24) set_fill_mode();
+		if (ndiv > 24) {set_fill_mode();}
 		fgPopMatrix();
 
 		// draw energy beam turret

@@ -336,7 +336,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	float radius, rxy;
 	//glDisable(GL_DEPTH_TEST);
 	enable_blend(); // not always necessary
-	set_fill_mode();
 	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(scale);

@@ -415,7 +415,6 @@ void draw_water() {
 	if (USE_SEA_FOAM) {s.set_prefix("#define ADD_DETAIL_TEXTURE", 1);} // FS
 	setup_mesh_and_water_shader(s, 0);
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
-	set_fill_mode();
 	point const camera(get_camera_pos());
 	bool const is_ice(temperature <= W_FREEZE_POINT);
 

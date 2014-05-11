@@ -453,7 +453,6 @@ void draw_trees(bool shadow_only) {
 	}
 	if (tree_mode & 1) { // trees
 		if (!shadow_only) {t_trees.check_leaf_shadow_change();}
-		set_fill_mode();
 		t_trees.draw(shadow_only);
 	}
 	if (!shadow_only) {leaf_color_changed = 0;}

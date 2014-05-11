@@ -724,6 +724,7 @@ void display(void) {
 	tstep        = TIMESTEP*fticks;
 	reset_timing = 0;
 	check_gl_error(1);
+	set_fill_mode();
 
 	if (map_mode && world_mode != WMODE_UNIVERSE) {
 		draw_overhead_map();

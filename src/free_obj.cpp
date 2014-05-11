@@ -649,7 +649,6 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			partial_shadow = 1;
 		}
 	}
-	set_fill_mode();
 	calc_rotation_vectors();
 	unsigned const npasses(partial_shadow ? get_num_draw_passes() : 1); // will be slow if > 1
 	bool const specular(!known_shadowed && (light_val == 0 || (!stencil_shadows && light_val == 1))); // less than half shadowed

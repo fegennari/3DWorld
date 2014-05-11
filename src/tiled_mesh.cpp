@@ -1756,7 +1756,6 @@ void tile_draw_t::draw(bool reflection_pass) {
 	setup_mesh_draw_shaders(s, reflection_pass);
 	s.add_uniform_float("spec_scale", 1.0);
 	s.set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
-	set_fill_mode();
 	s.enable_vnct_atribs(1, 0, 0, 0);
 	vbo_ring_buffer_t vbo_ring_ibuf((1 << 16), 1);
 	enable_blend(); // for fog transparency

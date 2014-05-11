@@ -691,20 +691,10 @@ void setup_2d_texture(unsigned &tid) {
 void upload_dlights_textures(cube_t const &bounds) {
 
 	//RESET_TIME;
-	static int supports_tex_int(2); // starts at unknown
 	static bool last_dlights_empty(0);
 	bool const cur_dlights_empty(dl_sources.empty());
 	if (cur_dlights_empty && last_dlights_empty && dl_tid != 0 && elem_tid != 0 && gb_tid != 0) return; // no updates
 	last_dlights_empty = cur_dlights_empty;
-	
-	if (supports_tex_int == 2) {
-		supports_tex_int = has_extension("GL_EXT_texture_integer");
-		if (!supports_tex_int) cout << "Error: GL_EXT_texture_integer extension not supported. Dynamic lighting will be disabled." << endl;
-	}
-	if (!supports_tex_int) {
-		dl_tid = elem_tid = gb_tid = 0; // should already be 0
-		return;
-	}
 
 	// step 1: the light sources themselves
 	unsigned const max_dlights      = 1024; // must agree with value in shader

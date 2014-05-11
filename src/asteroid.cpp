@@ -1063,7 +1063,6 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 		shader.add_uniform_color("color", WHITE);
 	}
 	shader.enable();
-	set_fill_mode();
 	glEnable(GL_CULL_FACE);
 
 	if (custom_lighting) {

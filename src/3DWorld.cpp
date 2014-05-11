@@ -786,13 +786,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'k': // change drawing model for mesh (filled polygons vs. wireframe)
-		if (map_mode) {
-			map_color = !map_color;
-		}
-		else {
-			draw_model = !draw_model;
-			set_fill_mode();
-		}
+		if (map_mode) {map_color = !map_color;} else {draw_model = !draw_model;}
 		break;
 
 	case 'i': // toggle autopilot

@@ -375,7 +375,6 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	static vector<pair<float, int> > draw_last;
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (!draw_solid && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
-	set_fill_mode();
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
 	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	shader_t s;
@@ -613,7 +612,6 @@ void draw_earth() {
 	if (sphere_in_camera_view(pos, earth_radius, 1)) {
 		shader_t s;
 		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE);
-		set_fill_mode();
 		select_texture(EARTH_TEX);
 		fgPushMatrix();
 		translate_to(pos);
@@ -682,7 +680,6 @@ void draw_sky(int order) {
 	}
 	cur_spo = sky_pos_orient(center, radius, sky_rot_xy[0], sky_rot_xy[1]);
 	int const light_id(4);
-	set_fill_mode();
 	enable_blend();
 
 	if (have_sun && light_factor > 0.4) { // sun lighting of clouds
@@ -1288,7 +1285,6 @@ void draw_splashes() {
 	if (splashes.empty()) return;
 	shader_t s;
 	s.begin_untextured_lit_glcolor_shader();
-	set_fill_mode();
 
 	for (vector<splash_ring_t>::const_iterator i = splashes.begin(); i != splashes.end(); ++i) {
 		i->draw(s);

@@ -632,7 +632,6 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 
 void ucell::draw_nebulas(ushader_group &usg) const {
 
-	set_fill_mode();
 	point const &camera(get_player_pos());
 
 	for (unsigned i = 0; i < galaxies->size(); ++i) { // back-to-front sort not needed?

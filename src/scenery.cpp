@@ -1095,7 +1095,6 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 
 void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val) {
 
-	set_fill_mode();
 	select_texture(DARK_ROCK_TEX);
 
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
@@ -1172,7 +1171,6 @@ void add_plant(point const &pos, float height, float radius, int type, int calc_
 
 void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 	if (!has_scenery && !has_scenery2) return;
-	set_fill_mode();
 	all_scenery.draw(draw_opaque, draw_transparent, shadow_only);
 }
 

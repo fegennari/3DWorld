@@ -414,11 +414,9 @@ void texture_t::init() {
 
 GLenum texture_t::calc_internal_format() const {
 
-	static int has_comp(2); // starts unknown
-	if (has_comp == 2) has_comp = has_extension("GL_ARB_texture_compression"); // unknown, calculate it
 	assert(ncolors >= 1 && ncolors <= 4);
 	if (is_16_bit_gray) {return GL_R16;} // compressed?
-	return get_internal_texture_format(ncolors, (COMPRESS_TEXTURES && has_comp && do_compress && type != 2));
+	return get_internal_texture_format(ncolors, (COMPRESS_TEXTURES && do_compress && type != 2));
 }
 
 GLenum texture_t::calc_format() const {

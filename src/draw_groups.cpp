@@ -418,7 +418,6 @@ void draw_group(obj_group &objg, shader_t &s) {
 
 	RESET_TIME;
 	s.set_specular(0.0, 1.0); // disable
-	set_fill_mode();
 	int const type(objg.get_ptype());
 	obj_type const &otype(object_types[type]);
 	int tid(otype.tid);

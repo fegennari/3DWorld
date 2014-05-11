@@ -503,10 +503,10 @@ void display_mesh(bool shadow_pass) { // fast array version
 				}
 				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
 			}
+			set_fill_mode();
 		}
 		s.end_shader();
 	}
-	set_fill_mode();
 	update_landscape_texture();
 	if (SHOW_MESH_TIME) PRINT_TIME("Landscape Texture");
 
@@ -554,7 +554,6 @@ void draw_sides_and_bottom(bool shadow_pass) {
 	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? ROCK_TEX : DIRT_TEX);
 	float xv(x1), yv(y1);
 	shader_t s;
-	set_fill_mode();
 
 	if (shadow_pass) {
 		s.begin_color_only_shader();
@@ -716,7 +715,6 @@ void water_renderer::draw_sides(unsigned ix) {
 void water_renderer::draw() { // modifies color
 
 	select_water_ice_texture(shader, color);
-	set_fill_mode();
 	enable_blend();
 	point const camera(get_camera_pos());
 	float const pts[4][2] = {{-X_SCENE_SIZE, 0.0}, {X_SCENE_SIZE, 0.0}, {0.0, -Y_SCENE_SIZE}, {0.0, Y_SCENE_SIZE}};
@@ -811,7 +809,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		wave_time  += fticks;
 	}
 	point const camera(get_camera_pos());
-	set_fill_mode();
 	enable_blend();
 	colorRGBA rcolor;
 	set_active_texture(0);
