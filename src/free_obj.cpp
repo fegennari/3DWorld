@@ -913,7 +913,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 // ************ UPARTICLE_CLOUD ************
 
 
-shader_t upc_shader; // FIXME: some way to pass this through uobj_draw_data so it's not a global?
+vpc_shader_t upc_shader; // FIXME: some way to pass this through uobj_draw_data so it's not a global?
 
 void end_part_cloud_draw() {upc_shader.end_shader();}
 
@@ -960,15 +960,15 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes G
 	float const lt_scale(get_lt_scale());
 	colorRGBA cur_colors[2]; // {inner, outer}
 	for (unsigned d = 0; d < 2; ++d) {blend_color(cur_colors[d], colors[d][1], colors[d][0], lt_scale, 1);}
-	shader_t &s(upc_shader);
+	vpc_shader_t &s(upc_shader);
 	shader_setup(s, 1); // grayscale noise
 	s.enable();
-	s.add_uniform_float("noise_scale", noise_scale);
-	s.add_uniform_color("color1i",     cur_colors[0]);
-	s.add_uniform_color("color1o",     cur_colors[1]);
-	s.add_uniform_float("radius",      1.0); // vertex will be scaled by radius
-	s.add_uniform_float("offset",      hashval); // used as a hash
-	s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
+	s.set_uniform_float(s.ns_loc,  noise_scale);
+	s.set_uniform_color(s.c1i_loc, cur_colors[0]);
+	s.set_uniform_color(s.c1o_loc, cur_colors[1]);
+	s.set_uniform_float(s.rad_loc, 1.0); // vertex will be scaled by radius
+	s.set_uniform_float(s.off_loc, hashval); // used as a hash
+	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - pos).get_norm()); // local object space
 	draw_quads();
 	ddata.shader->enable();
 }

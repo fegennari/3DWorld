@@ -874,7 +874,7 @@ void show_crosshair(colorRGBA const &color, int in_zoom) {
 // not sure where this belongs
 void draw_teleporters() {
 
-	shader_t s;
+	vpc_shader_t s;
 	teleporter::shader_setup(s, 4); // RGBA noise
 	s.enable();
 	s.add_uniform_float("noise_scale", 1.2);
@@ -888,7 +888,7 @@ void draw_teleporters() {
 }
 
 
-void teleporter::draw(shader_t &s) const {
+void teleporter::draw(vpc_shader_t &s) const {
 
 	float const ACTIVATE_DELAY = 1.0; // in seconds
 	float const use_scale(CLIP_TO_01(ACTIVATE_DELAY - (tfticks - last_used_tfticks)/TICKS_PER_SECOND));
@@ -905,15 +905,15 @@ void teleporter::draw(shader_t &s) const {
 		add_dynamic_light(light_radius, pos, lt_color);
 	}
 	if (camera_pdu.sphere_visible_test(pos, draw_radius)) { // draw pos
-		s.add_uniform_color("color1i", c1);
-		s.add_uniform_color("color1o", c1);
-		s.add_uniform_color("color2i", c2);
-		s.add_uniform_color("color2o", c2);
-		s.add_uniform_color("color3i", c3);
-		s.add_uniform_color("color3o", c3);
-		s.add_uniform_float("radius", draw_radius);
-		s.add_uniform_float("offset", (100.0*pos.x + 0.001*tfticks)); // used as a hash
-		s.add_uniform_vector3d("view_dir", (get_camera_pos() - pos).get_norm()); // local object space
+		s.set_uniform_color(s.c1i_loc, c1);
+		s.set_uniform_color(s.c1o_loc, c1);
+		s.set_uniform_color(s.c2i_loc, c2);
+		s.set_uniform_color(s.c2o_loc, c2);
+		s.set_uniform_color(s.c3i_loc, c3);
+		s.set_uniform_color(s.c3o_loc, c3);
+		s.set_uniform_float(s.rad_loc, draw_radius);
+		s.set_uniform_float(s.off_loc, (100.0*pos.x + 0.001*tfticks)); // used as a hash
+		s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - pos).get_norm()); // local object space
 		fgPushMatrix();
 		translate_to(pos);
 		draw_quads();

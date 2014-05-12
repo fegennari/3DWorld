@@ -1238,6 +1238,7 @@ public:
 
 
 class shader_t;
+class vpc_shader_t;
 
 
 class volume_part_cloud {
@@ -1249,7 +1250,7 @@ protected:
 public:
 	static colorRGBA gen_color(rand_gen_t &rgen);
 	void gen_pts(float radius);
-	static void shader_setup(shader_t &s, unsigned noise_ncomp);
+	static void shader_setup(vpc_shader_t &s, unsigned noise_ncomp);
 	void draw_quads() const;
 };
 

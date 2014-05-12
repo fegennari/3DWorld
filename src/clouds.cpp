@@ -485,7 +485,22 @@ void volume_part_cloud::gen_pts(float radius) {
 }
 
 
-/*static*/ void volume_part_cloud::shader_setup(shader_t &s, unsigned noise_ncomp) {
+void vpc_shader_t::cache_locs() {
+
+	ns_loc  = get_uniform_loc("noise_scale");
+	c1i_loc = get_uniform_loc("color1i");
+	c1o_loc = get_uniform_loc("color1o");
+	c2i_loc = get_uniform_loc("color2i");
+	c2o_loc = get_uniform_loc("color2o");
+	c3i_loc = get_uniform_loc("color3i");
+	c3o_loc = get_uniform_loc("color3o");
+	rad_loc = get_uniform_loc("radius");
+	off_loc = get_uniform_loc("offset");
+	vd_loc  = get_uniform_loc("view_dir");
+}
+
+
+/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp) {
 
 	assert(noise_ncomp == 1 || noise_ncomp == 4);
 	bind_3d_texture(get_noise_tex_3d(32, noise_ncomp));
@@ -497,6 +512,7 @@ void volume_part_cloud::gen_pts(float radius) {
 	s.set_frag_shader("nebula");
 	s.begin_shader();
 	s.add_uniform_int("noise_tex", 0);
+	s.cache_locs();
 }
 
 
@@ -519,7 +535,7 @@ void unebula::gen(float range, ellipsoid_t const &bounds) {
 }
 
 
-void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &s) const { // Note: new VFC here
+void unebula::draw(point_d pos_, point const &camera, float max_dist, vpc_shader_t &s) const { // Note: new VFC here
 
 	pos_ += pos;
 	float const dist(p2p_dist(camera, pos_)), dist_scale(CLIP_TO_01(1.0f - 1.6f*(dist - radius)/max_dist));
@@ -538,16 +554,16 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, shader_t &
 	}
 	shader_setup(s, 4); // RGBA noise
 	s.enable();
-	s.add_uniform_float("noise_scale", 0.01);
-	s.add_uniform_color("color1i", mod_color[0]);
-	s.add_uniform_color("color1o", mod_color[0]);
-	s.add_uniform_color("color2i", mod_color[1]);
-	s.add_uniform_color("color2o", mod_color[1]);
-	s.add_uniform_color("color3i", mod_color[2]);
-	s.add_uniform_color("color3o", mod_color[2]);
-	s.add_uniform_float("radius",  radius);
-	s.add_uniform_float("offset",  pos.x); // used as a hash
-	s.add_uniform_vector3d("view_dir", (camera - pos_).get_norm()); // local object space
+	s.set_uniform_float(s.ns_loc, 0.01);
+	s.set_uniform_color(s.c1i_loc, mod_color[0]);
+	s.set_uniform_color(s.c1o_loc, mod_color[0]);
+	s.set_uniform_color(s.c2i_loc, mod_color[1]);
+	s.set_uniform_color(s.c2o_loc, mod_color[1]);
+	s.set_uniform_color(s.c3i_loc, mod_color[2]);
+	s.set_uniform_color(s.c3o_loc, mod_color[2]);
+	s.set_uniform_float(s.rad_loc, radius);
+	s.set_uniform_float(s.off_loc, pos.x); // used as a hash
+	s.set_uniform_vector3d(s.vd_loc, (camera - pos_).get_norm()); // local object space
 	s.set_cur_color(mod_color[0]);
 	enable_blend();
 	draw_quads();

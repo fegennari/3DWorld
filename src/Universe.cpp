@@ -368,7 +368,8 @@ class ushader_group {
 	}
 
 public:
-	shader_t nebula_shader, asteroid_shader;
+	vpc_shader_t nebula_shader;
+	shader_t asteroid_shader;
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
 
 	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) {
