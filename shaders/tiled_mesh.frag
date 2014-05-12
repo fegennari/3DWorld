@@ -111,6 +111,6 @@ void main()
 	}
 	if (enable_light1) {color += add_light_comp(normal, epos, 1, diffuse_scale, ambient_scale, 0.0, 1.0, bump_scale);} // moon
 	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
-	gl_FragColor = apply_fog_scaled(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a), vertex.z); // add fog
-	//gl_FragColor = apply_fog(color); // untextured (white) for debugging
+	fg_FragColor = apply_fog_scaled(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a), vertex.z); // add fog
+	//fg_FragColor = apply_fog(color); // untextured (white) for debugging
 }

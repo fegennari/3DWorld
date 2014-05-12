@@ -42,5 +42,5 @@ void main()
 	alpha      += texture2D(particles_tex, 133*tc).r;
 	if (alpha == 0.0) discard;
 	alpha       = min(1.0, 2.0*alpha); // increase alpha to make alpha_to_coverage mode look better
-	gl_FragColor = vec4(color, alpha) * texel;
+	fg_FragColor = vec4(color, alpha) * texel;
 }

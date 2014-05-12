@@ -23,5 +23,5 @@ void main()
 	if (enable_light0) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0).rgb;
 	if (enable_light1) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1).rgb;
 	if (enable_light2) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 2).rgb * calc_light_atten(eye_space_pos, 2);
-	gl_FragColor = apply_fog_epos(vec4(clamp(color*color_scale, 0.0, 1.0)*texel.rgb, 1.0), eye_space_pos);
+	fg_FragColor = apply_fog_epos(vec4(clamp(color*color_scale, 0.0, 1.0)*texel.rgb, 1.0), eye_space_pos);
 }

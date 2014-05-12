@@ -5,5 +5,5 @@ void main()
 {
 	vec4 texel = texture2D(tex0, gl_PointCoord);
 	if (texel.a <= min_alpha) discard;
-	gl_FragColor = gl_Color*texel;
+	fg_FragColor = gl_Color*texel;
 }

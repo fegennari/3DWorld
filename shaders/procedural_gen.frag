@@ -48,12 +48,11 @@ void main()
 	if (enable_light0)  lit_color += add_light_comp_pos_smap_light0(normalize(eye_norm), epos).rgb;
 	if (enable_light1)  lit_color += add_light_comp_pos_smap_light1(normalize(eye_norm), epos).rgb;
 	if (enable_dlights) lit_color += add_dlights(vpos, norm_normal, gl_Color.rgb); // dynamic lighting
-	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
+	fg_FragColor = vec4((texel.rgb * lit_color), (texel.a * alpha));
 #ifndef NO_ALPHA_TEST
-	if (color.a <= min_alpha) discard;
+	if (fg_FragColor.a <= min_alpha) discard;
 #endif
 #ifndef NO_FOG
-	color = apply_fog_epos(color, epos); // apply standard fog
+	fg_FragColor = apply_fog_epos(fg_FragColor, epos); // apply standard fog
 #endif
-	gl_FragColor = color;
 }

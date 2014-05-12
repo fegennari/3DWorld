@@ -7,5 +7,5 @@ varying vec2 tc;
 void main()
 {
 	if (texture2D(tex0, tc).a <= min_alpha) discard; // transparent
-	gl_FragColor = vec4(0.5*(normal + 1.0), 1.0); // Note: normal not normalized
+	fg_FragColor = vec4(0.5*(normal + 1.0), 1.0); // Note: normal not normalized
 }

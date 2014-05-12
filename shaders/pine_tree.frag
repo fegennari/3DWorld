@@ -11,5 +11,5 @@ void main()
 	vec4 texel = texture2D(branch_tex, tc);
 	if (texel.a <= min_alpha) discard;
 	check_noise_and_maybe_discard(min_noise, max_noise);
-	gl_FragColor = apply_fog_scaled(vec4(texel.rgb * gl_Color.rgb, 1.0), world_space_zval);
+	fg_FragColor = apply_fog_scaled(vec4(texel.rgb * gl_Color.rgb, 1.0), world_space_zval);
 }

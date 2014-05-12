@@ -21,9 +21,8 @@ void main()
 	if (enable_dlights) color += add_dlights(dlpos, normalize(dl_normal), vec3(1.0)).rgb; // dynamic lighting
 	if (enable_light0 ) color += add_light_comp_pos_smap_light0(normal2, epos).rgb;
 	if (enable_light1 ) color += add_light_comp_pos_smap_light1(normal2, epos).rgb;
-	vec4 frag_color = vec4(texel.rgb * color, texel.a * gl_Color.a); // use gl_Color alpha directly
+	fg_FragColor = vec4(texel.rgb * color, texel.a * gl_Color.a); // use gl_Color alpha directly
 #ifndef NO_FOG
-	frag_color = apply_fog_epos(frag_color, epos);
+	fg_FragColor = apply_fog_epos(fg_FragColor, epos);
 #endif
-	gl_FragColor = frag_color;
 }

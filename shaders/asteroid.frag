@@ -21,6 +21,6 @@ void main()
 	for (int i = 0; i < 2; ++i) { // sun_diffuse, galaxy_ambient
 		color += atten[i]*add_pt_light_comp(norm_normal, epos, i).rgb;
 	}
-	gl_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly;
+	fg_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly;
 }
 

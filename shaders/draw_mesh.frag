@@ -29,9 +29,8 @@ void main()
 	lit_color  = clamp(lit_color, 0.0, 1.0);
 #endif
 
-	vec4 color = vec4(lit_color, gl_Color.a);
+	fg_FragColor = vec4(lit_color, gl_Color.a);
 #ifndef NO_FOG
-	color = apply_fog_epos(color, epos);
+	fg_FragColor = apply_fog_epos(fg_FragColor, epos);
 #endif
-	gl_FragColor = color;
 }

@@ -155,5 +155,5 @@ void main()
 #endif
 #endif
 	//color = vec4(pow(color.r, 0.45), pow(color.g, 0.45), pow(color.b, 0.45), color.a); // gamma correction, doesn't really look right
-	gl_FragColor = color;
+	fg_FragColor = color;
 }

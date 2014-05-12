@@ -36,5 +36,5 @@ void main()
 		color.a *= clamp((1.0 - dist), 0.0, 1.0); // attenuate near edges to create a spherical shape
 	}
 	color.a *= clamp((1.5*abs(dot(normal, view_dir)) - 0.5), 0.0, 1.0); // attenuate billboards not facing the camera
-	gl_FragColor = color;
+	fg_FragColor = color;
 }

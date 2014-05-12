@@ -32,6 +32,6 @@ void main()
 	lcolor *= 1.0 - 0.05*shadow;
 #endif
 	vec4 cscale     = mix(vec4(lcolor, lcolor, lcolor, clamp(alpha, 0.0, 1.0)), vec4(0,0,0,1), black_mix);
-	//gl_FragColor    = apply_fog_scaled(color2*cscale, vertex.z);
-	gl_FragColor    = apply_fog_colored(color2*cscale, vertex, clamp((1.0 + 0.05*(vertex.z - eye_z)), 0.0, 1.0));
+	//fg_FragColor    = apply_fog_scaled(color2*cscale, vertex.z);
+	fg_FragColor    = apply_fog_colored(color2*cscale, vertex, clamp((1.0 + 0.05*(vertex.z - eye_z)), 0.0, 1.0));
 }
