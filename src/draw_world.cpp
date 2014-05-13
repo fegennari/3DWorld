@@ -1218,7 +1218,7 @@ void spark_t::draw(quad_batch_draw &qbd) const {
 void draw_sparks() {
 
 	if (sparks.empty()) return;
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);}
 	enable_blend();
 	set_additive_blend_mode();
 	shader_t s;
@@ -1230,7 +1230,7 @@ void draw_sparks() {
 	s.end_shader();
 	set_std_blend_mode();
 	disable_blend();
-	set_fill_mode();
+	if (draw_model != 0) {set_fill_mode();}
 	sparks.clear();
 }
 

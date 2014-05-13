@@ -9,7 +9,7 @@ TT mode underwater content
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
-Perlin noise function experiments: http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
+http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 GLM Noise
 
 TT tree shadows - shadow map

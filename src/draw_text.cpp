@@ -9,7 +9,7 @@
 string const default_font_texture_atlas_fn = "textures/atlas/text_atlas.png";
 string font_texture_atlas_fn(default_font_texture_atlas_fn);
 
-extern int window_height, display_mode;
+extern int window_height, display_mode, draw_model;
 
 
 struct per_char_data_t {
@@ -130,10 +130,10 @@ void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &te
 
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize) {
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // always filled
+	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);} // always filled
 	glDisable(GL_DEPTH_TEST);
 	draw_bitmap_text(color, point(x, y, z), text, 0.8*tsize);
 	glEnable(GL_DEPTH_TEST);
-	set_fill_mode();
+	if (draw_model != 0) {set_fill_mode();}
 }
 
