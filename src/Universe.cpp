@@ -2419,7 +2419,7 @@ void ustar::draw_flares(int ndiv, bool texture) {
 	enable_blend();
 	
 	for (unsigned i = 0; i < solar_flares.size(); ++i) {
-		solar_flares[i].update(color);
+		if (animate2) {solar_flares[i].update(color);}
 		solar_flares[i].draw(radius, max(3, ndiv/4), texture);
 	}
 	disable_blend();

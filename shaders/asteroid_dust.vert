@@ -16,5 +16,7 @@ void main()
 #ifdef DRAW_AS_SPHERES
 	float radius  = sphere_size*(0.5 + fract(223*fg_Vertex.x + 247*fg_Vertex.y + 262*fg_Vertex.z)); // random radius 0.5-1.5 * sphere_size
 	gl_PointSize  = clamp(radius/length(epos.xyz), 1.0, 64.0);
+#else
+	gl_PointSize  = 1.0;
 #endif
 }
