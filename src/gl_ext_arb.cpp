@@ -7,6 +7,9 @@
 #include "inlines.h" // for render_to_texture_t::render() stuff
 
 
+extern bool use_core_context;
+
+
 void init_glew() {
 
 // MacOSX check here, placeholder for eventual cross-platform porting
@@ -105,6 +108,7 @@ unsigned create_vbo() {
 int get_buffer_target(bool is_index) {return (is_index ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER);}
 
 void bind_vbo(unsigned vbo, bool is_index) { // okay if vbo is zero
+	if (use_core_context && vbo == 0) return; // no point in binding 0
 	glBindBuffer(get_buffer_target(is_index), vbo);
 }
 
