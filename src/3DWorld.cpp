@@ -516,6 +516,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 	camera_change = 1;
 	reset_fog();
 	clear_tiled_terrain();
+	update_grass_vbos();
 	obj_pld.free_mem();
 	glDrawBuffer(GL_BACK);
 	post_window_redisplay();
