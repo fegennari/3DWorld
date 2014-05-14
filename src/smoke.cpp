@@ -246,17 +246,11 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 	lmcell default_lmc;
 	default_lmc.set_outside_colors();
 	default_lmc.get_final_color(const_indir_color, 1.0);
+	bool const no_parallel(lmap_manager.was_updated || !update_lighting); // if running with multiple threads, don't use openmp
 	
-	if (lmap_manager.was_updated || !update_lighting) { // running with multiple threads, don't use openmp
-		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
-			update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
-		}
-	}
-	else { // use openmp here
-		#pragma omp parallel for schedule(static,1)
-		for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
-			update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
-		}
+	#pragma omp parallel for schedule(static,1) if (!no_parallel)
+	for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
+		update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
 	}
 	if (smoke_tid == 0) { // create texture
 		cout << "Allocating " << MESH_SIZE[2] << " by " << MESH_X_SIZE << " by " << MESH_Y_SIZE << " smoke texture of " << smoke_tex_data.size() << " bytes." << endl;

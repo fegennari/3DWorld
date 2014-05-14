@@ -194,6 +194,37 @@ void proc_uobjs_first_frame() {
 }
 
 
+void process_ships(int timer1) {
+
+	u_ship &ps(player_ship());
+
+	if (fire_key) {
+		fire_key = 0;
+		ps.try_fire_weapon(); // has to be before process_univ_objects()
+	}
+	process_univ_objects();
+	if (TIMETEST) PRINT_TIME(" Proc Univ Objs");
+	apply_explosions();
+	if (TIMETEST) PRINT_TIME(" Explosion");
+	//camera_origin = get_player_pos2();
+	bool burning(ps.is_burning()), damaged(ps.was_damaged());
+	ps.clear_damaged();
+
+	if (!ps.is_ok()) {
+		damaged = 1; // adds a red filter to the player's view while dying
+		destroy_player_ship(0);
+	}
+	if (damaged) {
+		if (camera_shake == 0.0) camera_shake = 1.0;
+		add_camera_filter(colorRGBA(1.0, 0.0, 0.0, 0.04), 5, -1, CAM_FILT_DAMAGE);
+	}
+	if (burning) {
+		float const tratio(ps.get_temp()/ps.specs().max_t);
+		add_camera_filter(colorRGBA(1.0, 0.0, 0.0, min(0.5, max(0.1, 0.1*tratio))), 3, -1, CAM_FILT_BURN); // NOISE_TEX
+	}
+}
+
+
 void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen_only) { // should be process_universe()
 
 	RESET_TIME;
@@ -203,41 +234,13 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 
 	// clobj0 will not be set - need to draw cells before there are any sobjs
 	if (!inited) {static_only = 0;} // force full universe init the first time
-	
-	if (!static_only) {
-		u_ship &ps(player_ship());
-
-		if (fire_key) {
-			fire_key = 0;
-			ps.try_fire_weapon(); // has to be before process_univ_objects()
-		}
-		process_univ_objects();
-		if (TIMETEST) PRINT_TIME(" Proc Univ Objs");
-		apply_explosions();
-		if (TIMETEST) PRINT_TIME(" Explosion");
-		//camera_origin = get_player_pos2();
-		bool burning(ps.is_burning()), damaged(ps.was_damaged());
-		ps.clear_damaged();
-
-		if (!ps.is_ok()) {
-			damaged = 1; // adds a red filter to the player's view while dying
-			destroy_player_ship(0);
-		}
-		if (damaged) {
-			if (camera_shake == 0.0) camera_shake = 1.0;
-			add_camera_filter(colorRGBA(1.0, 0.0, 0.0, 0.04), 5, -1, CAM_FILT_DAMAGE);
-		}
-		if (burning) {
-			float const tratio(ps.get_temp()/ps.specs().max_t);
-			add_camera_filter(colorRGBA(1.0, 0.0, 0.0, min(0.5, max(0.1, 0.1*tratio))), 3, -1, CAM_FILT_BURN); // NOISE_TEX
-		}
-	}
+	if (!static_only) {process_ships(timer1);}
 	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
 	if (!static_only) {setup_universe_fog(clobj0);}
 	check_gl_error(120);
 	universe.draw_all_cells(clobj0, skip_closest, skip_closest, no_distant, gen_only);
 	check_gl_error(121);
-	
+
 	if (!gen_only && !first_frame_drawn) {
 		proc_uobjs_first_frame();
 		first_frame_drawn = 1;
