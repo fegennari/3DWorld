@@ -487,6 +487,7 @@ void uobj_asteroid::explode(float damage, float bradius, int etype, vector3d con
 {
 	gen_fragments();
 	uobject::explode(damage, bradius, etype, edir, exp_time, wclass, align, eflags, parent_);
+	//assert(omp_get_thread_num() == 0);
 	clear_context();
 }
 

@@ -443,7 +443,6 @@ void tile_t::calc_mesh_ao_lighting() {
 				}
 			}
 		}
-		#pragma omp barrier
 
 		// calculate ao_lighting values by casting rays through the mesh zvals
 		#pragma omp for schedule(static,1)

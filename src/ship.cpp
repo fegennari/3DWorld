@@ -408,7 +408,7 @@ void apply_univ_physics() {
 	if (animate2) {
 		// before or after advance time and collision detection?
 		for (unsigned i = 0; i < nobjs; ++i) { // can create new objects here
-			if (c_uobjs[i].flags & (OBJ_FLAGS_SHIP | OBJ_FLAGS_PROJ)) c_uobjs[i].obj->ai_action();
+			if (c_uobjs[i].flags & (OBJ_FLAGS_SHIP | OBJ_FLAGS_PROJ)) {c_uobjs[i].obj->ai_action();}
 		}
 		if (player_autopilot) update_cpos();
 		if (TIMETEST) PRINT_TIME("  AI Action");

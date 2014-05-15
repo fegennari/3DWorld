@@ -1105,7 +1105,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x10;   break;
 	case '6': // toggle water reflections and bump maps
 		display_mode ^= 0x20;   break;
-	case '7': // toggle snow accumulation and clouds
+	case '7': // toggle snow accumulation, clouds, and universe mode multithreading
 		display_mode ^= 0x40;   break;
 	case '8': // toggle water caustics/smoke (change text draw mode - stroke vs. bitmap - disabled)
 		display_mode ^= 0x80;   break;

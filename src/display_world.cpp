@@ -1006,11 +1006,9 @@ void display_universe() { // infinite universe
 	c_radius            = C_RADIUS0;
 	camera_origin       = get_player_pos();
 	update_cpos();
-	if (!pause_frame) uevent_advance_frame();
+	if (!pause_frame) {uevent_advance_frame();}
 	do_look_at();
-	if (b2down) fire_weapon();
-	update_blasts();
-	if (TIMETEST) PRINT_TIME("Process BRs");
+	if (b2down) {fire_weapon();}
 	check_gl_error(31);
 	draw_universe();
 	check_gl_error(32);

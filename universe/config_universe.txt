@@ -3,6 +3,7 @@ rand_seed 0
 universe_only 1
 disable_universe 0
 enable_depth_clamp 1
+num_threads 8 # enable multithreading
 include config_gameplay.txt
 player_damage 0.5
 unlimited_weapons 0

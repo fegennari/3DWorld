@@ -8,6 +8,7 @@
 #include "asteroid.h"
 #include "timetest.h"
 #include "openal_wrap.h"
+#include <omp.h>
 
 
 bool const TIMETEST           = (GLOBAL_TIMETEST || 0);
@@ -26,6 +27,7 @@ float resource_counts[NUM_ALIGNMENT] = {0.0};
 
 extern bool univ_planet_lod; // smaller near_clip if true?
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
+extern unsigned NUM_THREADS;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
 extern float water_h_off_rel, tan_term, sin_term, init_temperature, camera_shake;
 extern char **water_enabled;
@@ -196,16 +198,13 @@ void proc_uobjs_first_frame() {
 
 void process_ships(int timer1) {
 
-	u_ship &ps(player_ship());
-
-	if (fire_key) {
-		fire_key = 0;
-		ps.try_fire_weapon(); // has to be before process_univ_objects()
-	}
+	update_blasts();
+	if (TIMETEST) PRINT_TIME(" Process BRs");
 	process_univ_objects();
 	if (TIMETEST) PRINT_TIME(" Proc Univ Objs");
 	apply_explosions();
 	if (TIMETEST) PRINT_TIME(" Explosion");
+	u_ship &ps(player_ship());
 	//camera_origin = get_player_pos2();
 	bool burning(ps.is_burning()), damaged(ps.was_damaged());
 	ps.clear_damaged();
@@ -225,22 +224,46 @@ void process_ships(int timer1) {
 }
 
 
+void draw_universe_all(bool static_only, bool skip_closest, int no_distant, bool gen_only) {
+
+	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
+	if (!static_only) {setup_universe_fog(clobj0);}
+	check_gl_error(120);
+	universe.draw_all_cells(clobj0, skip_closest, skip_closest, no_distant, gen_only);
+	check_gl_error(121);
+}
+
+
 void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen_only) { // should be process_universe()
 
 	RESET_TIME;
 	static int inited(0), first_frame_drawn(0);
 	set_lighting_params();
 	do_univ_init();
-
-	// clobj0 will not be set - need to draw cells before there are any sobjs
 	if (!inited) {static_only = 0;} // force full universe init the first time
-	if (!static_only) {process_ships(timer1);}
-	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
-	if (!static_only) {setup_universe_fog(clobj0);}
-	check_gl_error(120);
-	universe.draw_all_cells(clobj0, skip_closest, skip_closest, no_distant, gen_only);
-	check_gl_error(121);
 
+	if (!static_only && fire_key) {
+		fire_key = 0;
+		player_ship().try_fire_weapon(); // must be before process_univ_objects(), on master thread, since this can destroy objects and free VBOs
+	}
+	// clobj0 will not be set - need to draw cells before there are any sobjs
+#ifdef _OPENMP
+	if (inited && !static_only && NUM_THREADS > 1 && !(display_mode & 0x40)) {
+		// FIXME: this isn't entirely thread safe, since some rare occurances can cause crashes, including
+		// * ships that explode inside process_ships() and destroy and asteroid
+		// * a query object that tries to access a planet/moon/star as the uobject is being deleted
+		#pragma omp parallel num_threads(2)
+		{
+			if (omp_get_thread_num() == 1) {process_ships(timer1);}
+			if (omp_get_thread_num() == 0) {draw_universe_all(static_only, skip_closest, no_distant, gen_only);} // *must* be done by master thread
+		}
+	}
+	else
+#endif
+	{
+		if (!static_only) {process_ships(timer1);}
+		draw_universe_all(static_only, skip_closest, no_distant, gen_only);
+	}
 	if (!gen_only && !first_frame_drawn) {
 		proc_uobjs_first_frame();
 		first_frame_drawn = 1;
