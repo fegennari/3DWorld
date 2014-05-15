@@ -421,58 +421,61 @@ void tile_t::calc_mesh_ao_lighting() {
 	mesh_xy_grid_cache_t height_gen;
 	bool const using_hmap(using_tiled_terrain_hmap_tex());
 	if (!using_hmap) {height_gen.build_arrays(get_xval(x1 - ray_len), get_yval(y1 - ray_len), deltax, deltay, context_sz, context_sz);}
-
-	#pragma omp parallel for schedule(static,1)
-	for (int y = 0; y < (int)context_sz; ++y) {
-		for (int x = 0; x < (int)context_sz; ++x) {
-			int const xv(x - ray_len), yv(y - ray_len);
-			float &zv(czv[y*context_sz + x]);
-
-			if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {
-				zv = zvals[yv*zvsize + xv];
-			}
-			else if (using_hmap) {
-				zv = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
-			}
-			else {
-				zv = height_gen.eval_index(x, y); // Note: not using hoff/hscale here since they are undefined outside the tile bounds
-			}
-		}
-	}
-
-	// calculate ao_lighting values by casting rays through the mesh zvals
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);
 
-	#pragma omp parallel for schedule(static,1)
-	for (int y = 0; y < (int)stride; ++y) {
-		for (int x = 0; x < (int)stride; ++x) {
-			unsigned atten(0);
+	#pragma omp parallel
+	{
+		#pragma omp for schedule(static,1)
+		for (int y = 0; y < (int)context_sz; ++y) {
+			for (int x = 0; x < (int)context_sz; ++x) {
+				int const xv(x - ray_len), yv(y - ray_len);
+				float &zv(czv[y*context_sz + x]);
 
-			for (unsigned d = 0; d < NUM_DIRS; ++d) {
-				float z0(zvals[y*zvsize + x]);
-				tile_xy_pair step(ao_dirs[d]);
-				tile_xy_pair v(x, y);
+				if (xv >= 0 && yv >= 0 && xv < (int)zvsize && yv < (int)zvsize) {
+					zv = zvals[yv*zvsize + xv];
+				}
+				else if (using_hmap) {
+					zv = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
+				}
+				else {
+					zv = height_gen.eval_index(x, y); // Note: not using hoff/hscale here since they are undefined outside the tile bounds
+				}
+			}
+		}
+		#pragma omp barrier
 
-				for (unsigned s = 0; s < NUM_STEPS; ++s) {
-					v    += step;
-					z0   += dz;
-					//step += step; // multiply by 2 for exponential step size
-					step += ao_dirs[d]; // linear increase (Note: must agree with max_ray_length)
-					int const xv(v.x + ray_len), yv(v.y + ray_len);
-					assert(xv >= 0 && yv >= 0 && xv < (int)context_sz && yv < (int)context_sz);
+		// calculate ao_lighting values by casting rays through the mesh zvals
+		#pragma omp for schedule(static,1)
+		for (int y = 0; y < (int)stride; ++y) {
+			for (int x = 0; x < (int)stride; ++x) {
+				unsigned atten(0);
+
+				for (unsigned d = 0; d < NUM_DIRS; ++d) {
+					float z0(zvals[y*zvsize + x]);
+					tile_xy_pair step(ao_dirs[d]);
+					tile_xy_pair v(x, y);
+
+					for (unsigned s = 0; s < NUM_STEPS; ++s) {
+						v    += step;
+						z0   += dz;
+						//step += step; // multiply by 2 for exponential step size
+						step += ao_dirs[d]; // linear increase (Note: must agree with max_ray_length)
+						int const xv(v.x + ray_len), yv(v.y + ray_len);
+						assert(xv >= 0 && yv >= 0 && xv < (int)context_sz && yv < (int)context_sz);
 						
-					if (czv[yv*context_sz + xv] > z0) { // hit a higher point
-						atten += (NUM_STEPS - s);
-						break;
-					}
-				} // for s
-			} // for d
-			assert(atten <= NUM_DIRS*NUM_STEPS);
-			float const ao_scale(1.0 - float(atten)/float(NUM_DIRS*NUM_STEPS));
-			ao_lighting[y*stride + x] = (unsigned char)(255.0*ao_scale);
-		} // for x
-	} // for y
+						if (czv[yv*context_sz + xv] > z0) { // hit a higher point
+							atten += (NUM_STEPS - s);
+							break;
+						}
+					} // for s
+				} // for d
+				assert(atten <= NUM_DIRS*NUM_STEPS);
+				float const ao_scale(1.0 - float(atten)/float(NUM_DIRS*NUM_STEPS));
+				ao_lighting[y*stride + x] = (unsigned char)(255.0*ao_scale);
+			} // for x
+		} // for y
+	}
 	//PRINT_TIME("AO Lighting");
 }
 
