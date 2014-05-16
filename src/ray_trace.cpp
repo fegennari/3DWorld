@@ -383,6 +383,7 @@ bool indir_lighting_updated() {return (lmap_manager.was_updated || thread_temp_l
 void kill_current_raytrace_threads() {
 
 	if (thread_manager.is_active()) { // can't have two running at once, so kill the existing one
+		// use pthread_cancel(thread); ?
 		kill_raytrace = 1;
 		thread_manager.join();
 		assert(!thread_manager.is_active());

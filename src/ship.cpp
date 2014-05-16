@@ -361,10 +361,7 @@ void apply_univ_physics() {
 	for (unsigned i = 0; i < NUM_ALIGNMENT; ++i) {
 		ships[i].resize(0);
 		ind_ships_used[i] = 0;
-		
-		if ((unsigned(tfticks)&7) == 0) { // every 8 frames
-			team_credits[i] += unsigned(fticks*resource_counts[i]);
-		}
+		if ((unsigned(tfticks)&7) == 0) {team_credits[i] += unsigned(fticks*resource_counts[i]);} // every 8 frames
 	}
 	for (unsigned i = 0; i < nobjs; ++i) { // must be after purge_old_objs() while pointers are all valid
 		unsigned const flags(c_uobjs[i].flags);
@@ -410,13 +407,12 @@ void apply_univ_physics() {
 		for (unsigned i = 0; i < nobjs; ++i) { // can create new objects here
 			if (c_uobjs[i].flags & (OBJ_FLAGS_SHIP | OBJ_FLAGS_PROJ)) {c_uobjs[i].obj->ai_action();}
 		}
-		if (player_autopilot) update_cpos();
+		if (player_autopilot) {update_cpos();}
 		if (TIMETEST) PRINT_TIME("  AI Action");
 
 		// c_uobjs is invalid at this point
-		for (unsigned i = 0; i < nobjs; ++i) { // don't update nobjs - delay first physics event for new objects until next frame
-			uobjs[i]->apply_physics();
-		}
+		// don't update nobjs - delay first physics event for new objects until next frame
+		for (unsigned i = 0; i < nobjs; ++i) {uobjs[i]->apply_physics();}
 		if (TIMETEST) PRINT_TIME("  Apply Physics");
 		float const timestep(fticks/NUM_TIMESTEPS);
 
@@ -424,9 +420,10 @@ void apply_univ_physics() {
 			collision_detect_objects(coll_objs, t);
 
 			for (unsigned i = 0; i < nobjs; ++i) {
-				if (!uobjs[i]->is_ok()) continue;
-				
-				if (uobjs[i]->get_flags() & (OBJ_FLAGS_DIST | OBJ_FLAGS_ORBT)) {
+				if (!uobjs[i]->is_ok()) {
+					// nothing
+				}
+				else if (uobjs[i]->get_flags() & (OBJ_FLAGS_DIST | OBJ_FLAGS_ORBT)) {
 					if (t == 0) uobjs[i]->advance_time(fticks);
 				}
 				else {
@@ -441,15 +438,17 @@ void apply_univ_physics() {
 		player_ship().advance_time(fticks);
 		player_ship().ai_action();
 	}
+}
+
+
+void sort_uobjects() { // originally part of apply_univ_physics()
+
 	get_cached_objs(uobjs, c_uobjs); // re-validate since new objects may have been added and old ones may have moved
 	sort(c_uobjs.begin(), c_uobjs.end(), comp_co_fast_x()); // re-sort
 	unsigned const ncuo((unsigned)c_uobjs.size());
 
-	for (unsigned i = 0; i < ncuo; ++i) { // update uobjs to have the same sort order
-		uobjs[i] = c_uobjs[i].obj; // what about objects with time == 0? exclude them?
-	}
-	if (TIMETEST) PRINT_TIME("  Object Update");
-	//if (uobjs.size() > 4000) exit(0); // testing
+	// update uobjs to have the same sort order
+	for (unsigned i = 0; i < ncuo; ++i) {uobjs[i] = c_uobjs[i].obj;} // what about objects with time == 0? exclude them?
 }
 
 

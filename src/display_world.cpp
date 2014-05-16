@@ -1008,7 +1008,7 @@ void display_universe() { // infinite universe
 	update_cpos();
 	if (!pause_frame) {uevent_advance_frame();}
 	do_look_at();
-	if (b2down) {fire_weapon();}
+	if (b2down) {fire_weapon();} // just sets fire_key=1
 	check_gl_error(31);
 	draw_universe();
 	check_gl_error(32);

@@ -42,7 +42,7 @@ extern universe_t universe;
 void process_univ_objects();
 void check_shift_universe();
 void draw_universe_sun_flare();
-
+void sort_uobjects();
 
 void setup_universe_fog(s_object const &closest);
 void set_current_system_light(s_object const &clobj, point const &pspos, float a_scale, float d_scale);
@@ -198,6 +198,8 @@ void proc_uobjs_first_frame() {
 
 void process_ships(int timer1) {
 
+	sort_uobjects();
+	if (TIMETEST) PRINT_TIME(" Sort uobjs");
 	update_blasts();
 	if (TIMETEST) PRINT_TIME(" Process BRs");
 	process_univ_objects();
@@ -226,6 +228,7 @@ void process_ships(int timer1) {
 
 void draw_universe_all(bool static_only, bool skip_closest, int no_distant, bool gen_only) {
 
+	set_lighting_params();
 	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
 	if (!static_only) {setup_universe_fog(clobj0);}
 	check_gl_error(120);
@@ -238,7 +241,6 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 
 	RESET_TIME;
 	static int inited(0), first_frame_drawn(0);
-	set_lighting_params();
 	do_univ_init();
 	if (!inited) {static_only = 0;} // force full universe init the first time
 
@@ -250,8 +252,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 #ifdef _OPENMP
 	if (inited && !static_only && NUM_THREADS > 1 && !(display_mode & 0x40)) {
 		// FIXME: this isn't entirely thread safe, since some rare occurances can cause crashes, including
-		// * ships that explode inside process_ships() and destroy and asteroid
-		// * a query object that tries to access a planet/moon/star as the uobject is being deleted
+		// * a query object that tries to access a planet/moon/star through clobj as the uobject is being deleted
 		#pragma omp parallel num_threads(2)
 		{
 			if (omp_get_thread_num() == 1) {process_ships(timer1);}
