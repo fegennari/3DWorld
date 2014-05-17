@@ -845,7 +845,8 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	float const size_scale(calc_size_scale(draw_pos));
 	if (size_scale < 0.05) return; // if too far away, don't draw any branches
 	bcolor = tree_types[type].barkc;
-	UNROLL_3X(bcolor[i_] *= min(1.0f, (1.0f - 0.95f*damage)*tree_color[i_]);)
+	float const dval(1.0f - 0.95f*damage);
+	UNROLL_3X(bcolor[i_] *= min(1.0f, dval*tree_color[i_]);)
 
 	if (lod_renderer.is_enabled()) {
 		float const lod_start(tree_lod_scales[0]), lod_end(tree_lod_scales[1]), lod_denom(lod_start - lod_end);
@@ -1103,10 +1104,9 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	vector3d local_wind;
 	tree_data_t &td(tdata());
 	bool const do_update(td.check_if_needs_updated() || !leaf_orients_valid), priv_data(td_is_private());
-	if (!do_update && !physics_enabled()) return;
+	if (!do_update && leaf_cobjs.empty()) return;
 	vector<tree_leaf> const &leaves(td.get_leaves());
 
-//#pragma omp parallel for firstprivate(local_wind, last_xpos, last_ypos) schedule(static) if ((display_mode & 0x10) && do_update && leaf_cobjs.empty())
 	for (unsigned i = 0; i < leaves.size(); i++) { // process leaf wind and collisions
 		float wscale(0.0), hit_angle(0.0);
 
@@ -1152,7 +1152,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			float const angle(PI_TWO*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
 			td.bend_leaf(i, angle); // do we want to update collision objects as well?
 		}
-		if (LEAF_HEAL_RATE > 0.0 && do_update && priv_data) { // leaf heal
+		if (LEAF_HEAL_RATE > 0.0 && do_update && priv_data && world_mode == WMODE_GROUND) { // leaf heal
 			float &lcolor(td.get_leaves()[i].color);
 
 			if (lcolor > 0.0 && lcolor < 1.0) {
