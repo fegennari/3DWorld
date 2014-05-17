@@ -230,15 +230,17 @@ public:
 	colorRGB get_leaf_color(unsigned i) const;
 	bool leaf_data_allocated() const {return !leaf_data.empty();}
 	bool is_created() const {return !all_cylins.empty();} // as good a check as any
+	bool leaf_vbo_valid() const {return (leaf_vbo > 0);}
 	bool check_if_needs_updated();
 	void remove_leaf_ix(unsigned i, bool update_data);
 	bool spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color);
 	void bend_leaf(unsigned i, float angle);
 	void draw_leaf_quads_from_vbo(unsigned max_leaves) const;
-	bool draw_tree_shadow_only(shader_t &s, bool draw_branches, bool draw_leaves);
+	void draw_tree_shadow_only(shader_t &s, bool draw_branches, bool draw_leaves);
 	void ensure_branch_vbo();
 	void draw_branches(shader_t &s, float size_scale, bool reflection_pass);
 	void draw_branch_vbo(shader_t &s, unsigned num, bool low_detail);
+	void ensure_leaf_vbo();
 	void draw_leaves(float size_scale);
 	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
 	tree_bb_tex_t const &get_render_branch_texture() const {return render_branch_texture;}

@@ -812,15 +812,13 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 }
 
 
-bool tree_data_t::draw_tree_shadow_only(shader_t &s, bool draw_branches, bool draw_leaves) {
+void tree_data_t::draw_tree_shadow_only(shader_t &s, bool draw_branches, bool draw_leaves) {
 
 	if (draw_leaves && !leaves.empty()) { // draw leaves
-		if (leaf_vbo == 0) return 0; // if the leaf_vbo hasn't been allocated we need to go through the regular rendering path to get the leaf data uploaded
 		select_texture(tree_types[tree_type].leaf_tex);
 		draw_leaf_quads_from_vbo(leaves.size()); // could also disable normals and colors, but that doesn't seem to help much
 	}
 	if (draw_branches) {draw_branch_vbo(s, num_branch_quads, 1);} // draw branches (untextured), low_detail=1
-	return 1;
 }
 
 
@@ -829,16 +827,14 @@ void tree::draw_tree(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_bra
 {
 	if (!created) return;
 	tree_data_t &td(tdata());
-	bool draw_shadow_leaves(0);
 
-	if (shadow_only) {
+	if (shadow_only && (!draw_leaves || td.leaf_vbo_valid())) {
 		if (!is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
-		bool const drawn(td.draw_tree_shadow_only(s, draw_branches, draw_leaves));
+		td.draw_tree_shadow_only(s, draw_branches, draw_leaves);
 		fgPopMatrix();
-		if (drawn) return;
-		draw_shadow_leaves = draw_leaves;
+		return;
 	}
 	float dc_scale(1.0 - 0.95*damage);
 	bcolor = tree_types[type].barkc;
@@ -852,7 +848,6 @@ void tree::draw_tree(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_bra
 		if (game_mode && gm_blast) {blast_damage(&latest_blastr);}
 		if (begin_motion && animate2) {drop_leaves();}
 	}
-	if (draw_shadow_leaves) {draw_tree_leaves(s, 0.0, xlate); return;}
 	if (TEST_RTREE_COBJS) return;
 	if (draw_leaves || !draw_branches) {not_visible = !is_visible_to_camera(xlate);} // first pass only
 	if (not_visible && (!leaf_color_changed || !draw_leaves)) return; // if leaf_color_changed=1, we always draw the leaves as that forces the leaf color update
@@ -1017,7 +1012,7 @@ void tree_data_t::reset_leaf_pos_norm() {
 }
 
 
-void tree_data_t::draw_leaves(float size_scale) {
+void tree_data_t::ensure_leaf_vbo() {
 
 	bool const create_leaf_vbo(leaf_vbo == 0);
 	create_vbo_and_upload(leaf_vbo, leaf_data, 0, 0, 1); // dynamic draw, due to wind updates, collision, burn damage, etc.
@@ -1027,6 +1022,12 @@ void tree_data_t::draw_leaves(float size_scale) {
 		upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*sizeof(leaf_vert_type_t)); // FIXME: track and update a sub-range?
 	}
 	leaves_changed = 0;
+}
+
+
+void tree_data_t::draw_leaves(float size_scale) {
+
+	ensure_leaf_vbo();
 	unsigned nl(leaves.size());
 	if (ENABLE_CLIP_LEAVES && size_scale > 0.0) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
 	draw_leaf_quads_from_vbo(nl);
@@ -1106,9 +1107,9 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	bool const do_update(td.check_if_needs_updated() || !leaf_orients_valid), priv_data(td_is_private());
 	if (!do_update && !physics_enabled()) return;
 	vector<tree_leaf> const &leaves(td.get_leaves());
-	unsigned nleaves(leaves.size());
 
-	for (unsigned i = 0; i < nleaves; i++) { // process leaf wind and collisions
+//#pragma omp parallel for firstprivate(local_wind, last_xpos, last_ypos) schedule(static) if ((display_mode & 0x10) && do_update && leaf_cobjs.empty())
+	for (unsigned i = 0; i < leaves.size(); i++) { // process leaf wind and collisions
 		float wscale(0.0), hit_angle(0.0);
 
 		if (do_update) {
@@ -1145,10 +1146,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 					}
 					hit_angle += PI_TWO*cobj.last_coll/TICKS_PER_SECOND; // 90 degree max rotate
 				}
-				if (removed) {
-					--i; --nleaves;
-					continue;
-				}
+				if (removed) {--i; continue;}
 				cobj.last_coll = ((cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
 			}
 		}
