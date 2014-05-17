@@ -31,7 +31,6 @@ int const TREE_4TH_LEAVES    = 0;
 int const TREE_COLL          = 2;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
-int const TEST_RTREE_COBJS   = 0; // draw cobjs instead of tree (slow)
 int const TLEAF_START_TUID   = 9;
 bool const FORCE_TREE_TYPE   = 1;
 unsigned const CYLINS_PER_ROOT     = 3;
@@ -138,11 +137,11 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		select_texture(get_tree_type().leaf_tex);
 		shader_t &s(shaders[is_normal_pass]);
 		s.enable();
-		tree_data_t::pre_draw(s, 0, 0);
+		tree_data_t::pre_leaf_draw(s);
 		cur_tree->gen_leaf_color();
 		cur_tree->leaf_draw_setup(0);
 		cur_tree->draw_leaves(0.0); // sets color
-		tree_data_t::post_draw(0, 0);
+		tree_data_t::post_leaf_draw();
 		s.disable();
 	}
 	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
@@ -165,9 +164,9 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		s.enable();
 		s.set_cur_color(WHITE); // branch color will be applied to the billboard later
 		select_texture(get_tree_type().bark_tex);
-		tree_data_t::pre_draw(s, 1, 0);
+		tree_data_t::pre_branch_draw(s, 0);
 		cur_tree->draw_branches(s, 0.0, 0);
-		tree_data_t::post_draw(1, 0);
+		tree_data_t::post_branch_draw(0);
 		s.disable();
 	}
 	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
@@ -274,7 +273,7 @@ void tree::add_tree_collision_objects() {
 	if (!is_over_mesh()) return; // optimization
 	assert(type < NUM_TREE_TYPES);
 	int const btid(tree_types[type].bark_tex), branch_coll_level(min(tree_coll_level, 4));
-	cobj_params cp(0.8, tree_types[type].barkc, TEST_RTREE_COBJS, 0, NULL, 0, btid, 4.0, 1, 0);
+	cobj_params cp(0.8, tree_types[type].barkc, 0, 0, NULL, 0, btid, 4.0, 1, 0);
 	cp.shadow = 0; // will be handled by gen_tree_shadows()
 	assert(branch_cobjs.empty());
 	vector<draw_cylin> const &cylins(tdata().get_all_cylins());
@@ -289,7 +288,7 @@ void tree::add_tree_collision_objects() {
 	if (tree_coll_level >= 4) {
 		int const ltid(tree_types[type].leaf_tex);
 		colorRGBA const lcolor(get_avg_leaf_color(type)); // will be reset in update_leaf_cobj_color()
-		cobj_params cpl(0.3, lcolor, TEST_RTREE_COBJS, 0, NULL, 0, (TEST_RTREE_COBJS ? -1 : ltid), 1.0, 0, 0);
+		cobj_params cpl(0.3, lcolor, 0, 0, NULL, 0, ltid, 1.0, 0, 0);
 		cpl.shadow         = 0;
 		cpl.is_destroyable = 1; // so that truly_static() returns false
 		point const xlate(all_zeros); // for now
@@ -342,10 +341,7 @@ bool tree::check_sphere_coll(point &center, float radius) const {
 bool tree_cont_t::check_sphere_coll(point &center, float radius) const {
 
 	bool coll(0);
-
-	for (const_iterator i = begin(); i != end(); ++i) {
-		coll |= i->check_sphere_coll(center, radius);
-	}
+	for (const_iterator i = begin(); i != end(); ++i) {coll |= i->check_sphere_coll(center, radius);}
 	return coll;
 }
 
@@ -354,13 +350,18 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
 	assert(draw_branches != draw_leaves); // must enable only one
-	int const shader_loc(draw_branches ? s.get_uniform_loc("world_space_offset") : -1);
-	tree_data_t::pre_draw(s, draw_branches, shadow_only);
 
-	for (iterator i = begin(); i != end(); ++i) {
-		i->draw_tree(s, lod_renderer, draw_branches, draw_leaves, shadow_only, reflection_pass, xlate, shader_loc);
+	if (draw_branches) {
+		int const shader_loc(s.get_uniform_loc("world_space_offset"));
+		tree_data_t::pre_branch_draw(s, shadow_only);
+		for (iterator i = begin(); i != end(); ++i) {i->draw_branches_top(s, lod_renderer, shadow_only, reflection_pass, xlate, shader_loc);}
+		tree_data_t::post_branch_draw(shadow_only);
 	}
-	tree_data_t::post_draw(draw_branches, shadow_only);
+	else { // draw_leaves
+		tree_data_t::pre_leaf_draw(s);
+		for (iterator i = begin(); i != end(); ++i) {i->draw_leaves_top(s, lod_renderer, shadow_only, xlate);}
+		tree_data_t::post_leaf_draw();
+	}
 }
 
 
@@ -780,24 +781,19 @@ void tree_data_t::check_render_textures() {
 }
 
 
-void tree_data_t::pre_draw(shader_t &s, bool branches_or_leaves, bool shadow_only) {
-
-	if (branches_or_leaves) { // branches
-		glEnable(GL_CULL_FACE);
-		s.enable_vnct_atribs(1, !shadow_only, !shadow_only, 0); // vertices only in shadow_only mode
-	}
-	else { // leaves
-		s.enable_vnct_atribs(1, 0, 1, 1);
-	}
+void tree_data_t::pre_branch_draw(shader_t &s, bool shadow_only) {
+	glEnable(GL_CULL_FACE);
+	s.enable_vnct_atribs(1, !shadow_only, !shadow_only, 0); // vertices only in shadow_only mode
 }
-
-
-void tree_data_t::post_draw(bool branches_or_leaves, bool shadow_only) {
-
-	if (branches_or_leaves) {
-		glDisable(GL_CULL_FACE);
-		if (!shadow_only) {bind_vbo(0, 1);} // branch index vbo
-	}
+void tree_data_t::pre_leaf_draw(shader_t &s) {
+	s.enable_vnct_atribs(1, 0, 1, 1);
+}
+void tree_data_t::post_branch_draw(bool shadow_only) {
+	glDisable(GL_CULL_FACE);
+	if (!shadow_only) {bind_vbo(0, 1);} // branch index vbo
+	bind_vbo(0, 0);
+}
+void tree_data_t::post_leaf_draw() {
 	bind_vbo(0, 0);
 }
 
@@ -812,86 +808,120 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 }
 
 
-void tree_data_t::draw_tree_shadow_only(shader_t &s, bool draw_branches, bool draw_leaves) {
+void tree_data_t::draw_leaves_shadow_only() {
 
-	if (draw_leaves && !leaves.empty()) { // draw leaves
-		select_texture(tree_types[tree_type].leaf_tex);
-		draw_leaf_quads_from_vbo(leaves.size()); // could also disable normals and colors, but that doesn't seem to help much
-	}
-	if (draw_branches) {draw_branch_vbo(s, num_branch_quads, 1);} // draw branches (untextured), low_detail=1
+	if (leaves.empty()) return;
+	select_texture(tree_types[tree_type].leaf_tex);
+	draw_leaf_quads_from_vbo(leaves.size()); // could also disable normals and colors, but that doesn't seem to help much
+}
+
+void tree_data_t::draw_branches_shadow_only(shader_t &s) {
+	draw_branch_vbo(s, num_branch_quads, 1); // draw branches (untextured), low_detail=1
 }
 
 
-void tree::draw_tree(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
-	bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc)
-{
-	if (!created) return;
+float tree::calc_size_scale(point const &draw_pos) const {
+
+	float const dist_to_camera(distance_to_camera(draw_pos));
+	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return 0.0; // to far away to draw
+	return (do_zoom ? ZOOM_FACTOR : 1.0)*tdata().base_radius/(dist_to_camera*DIST_C_SCALE);
+}
+
+
+void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc) {
+
+	if (!created || not_visible) return;
 	tree_data_t &td(tdata());
 
-	if (shadow_only && (!draw_leaves || td.leaf_vbo_valid())) {
+	if (shadow_only) {
 		if (!is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
-		td.draw_tree_shadow_only(s, draw_branches, draw_leaves);
+		td.draw_branches_shadow_only(s);
 		fgPopMatrix();
 		return;
 	}
-	float dc_scale(1.0 - 0.95*damage);
+	point const draw_pos(sphere_center() + xlate);
+	float const size_scale(calc_size_scale(draw_pos));
+	if (size_scale < 0.05) return; // if too far away, don't draw any branches
 	bcolor = tree_types[type].barkc;
-	UNROLL_3X(bcolor[i_] *= min(1.0f, dc_scale*tree_color[i_]);)
+	UNROLL_3X(bcolor[i_] *= min(1.0f, (1.0f - 0.95f*damage)*tree_color[i_]);)
+
+	if (lod_renderer.is_enabled()) {
+		float const lod_start(tree_lod_scales[0]), lod_end(tree_lod_scales[1]), lod_denom(lod_start - lod_end);
+		float geom_opacity(1.0);
+
+		if (td.get_render_branch_texture().is_valid() && size_scale < lod_start) {
+			geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
+			lod_renderer.add_branches(&td, draw_pos, (1.0 - geom_opacity), bcolor);
+		}
+		if (geom_opacity == 0.0) return;
+		s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity);
+	}
+	select_texture(tree_types[type].bark_tex);
+	s.set_cur_color(bcolor);
+	s.set_uniform_vector3d(shader_loc, (tree_center + xlate));
+	fgPushMatrix();
+	translate_to(tree_center + xlate);
+	td.draw_branches(s, size_scale, reflection_pass);
+	fgPopMatrix();
+}
+
+
+void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate) {
+
+	if (!created) return;
+	tree_data_t &td(tdata());
+
+	if (shadow_only && td.leaf_vbo_valid()) {
+		if (!is_over_mesh()) return;
+		fgPushMatrix();
+		translate_to(tree_center + xlate);
+		td.draw_leaves_shadow_only();
+		fgPopMatrix();
+		return;
+	}
 	td.gen_leaf_color();
 	bool const has_leaves(!td.get_leaves().empty());
 	
-	if (draw_leaves && has_leaves) {
+	if (has_leaves && world_mode == WMODE_GROUND) {
 		burn_leaves();
 		if (l_strike.enabled == 1 && animate2) {lightning_damage(l_strike.end);}
 		if (game_mode && gm_blast) {blast_damage(&latest_blastr);}
 		if (begin_motion && animate2) {drop_leaves();}
 	}
-	if (TEST_RTREE_COBJS) return;
-	if (draw_leaves || !draw_branches) {not_visible = !is_visible_to_camera(xlate);} // first pass only
-	if (not_visible && (!leaf_color_changed || !draw_leaves)) return; // if leaf_color_changed=1, we always draw the leaves as that forces the leaf color update
+	not_visible = !is_visible_to_camera(xlate); // first pass only
+	if (not_visible && !leaf_color_changed) return; // if leaf_color_changed=1, we always draw the leaves as that forces the leaf color update
+	if (!has_leaves) return; // only after not_visible is calculated
 	point const draw_pos(sphere_center() + xlate);
-	float const dist_to_camera(distance_to_camera(draw_pos));
-	if (world_mode == WMODE_INF_TERRAIN && dist_to_camera > get_draw_tile_dist()) return; // to far away to draw
-	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*td.base_radius/(dist_to_camera*DIST_C_SCALE));
-	
-	if (draw_branches && size_scale > 0.05) { // if too far away, don't draw any branches
-		if (lod_renderer.is_enabled()) {
-			float const lod_start(tree_lod_scales[0]), lod_end(tree_lod_scales[1]), lod_denom(lod_start - lod_end);
-			float geom_opacity(1.0);
+	float const size_scale(calc_size_scale(draw_pos));
+	if (size_scale == 0.0) return;
 
-			if (td.get_render_branch_texture().is_valid() && size_scale < lod_start) {
-				geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
-				lod_renderer.add_branches(&td, draw_pos, (1.0 - geom_opacity), bcolor);
-			}
-			if (geom_opacity > 0.0) {
-				s.set_uniform_float(lod_renderer.branch_opacity_loc, geom_opacity);
-				draw_tree_branches(s, size_scale, xlate, shader_loc, reflection_pass);
-			}
-		}
-		else {
-			draw_tree_branches(s, size_scale, xlate, shader_loc, reflection_pass);
-		}
-	}
-	if (draw_leaves && has_leaves) {
-		if (lod_renderer.is_enabled()) {
-			float const lod_start(tree_lod_scales[2]), lod_end(tree_lod_scales[3]), lod_denom(lod_start - lod_end);
-			float geom_opacity(1.0);
+	if (lod_renderer.is_enabled()) {
+		float const lod_start(tree_lod_scales[2]), lod_end(tree_lod_scales[3]), lod_denom(lod_start - lod_end);
+		float geom_opacity(1.0);
 
-			if (td.get_render_leaf_texture().is_valid() && size_scale < lod_start) {
-				geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
-				lod_renderer.add_leaves(&td, (draw_pos + vector3d(0.0, 0.0, (td.lr_z_cent - td.sphere_center_zoff))), (1.0 - geom_opacity));
-			}
-			if (geom_opacity > 0.0) {
-				s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
-				draw_tree_leaves(s, size_scale, xlate);
-			}
+		if (td.get_render_leaf_texture().is_valid() && size_scale < lod_start) {
+			geom_opacity = ((lod_denom == 0.0) ? 0.0 : CLIP_TO_01((size_scale - lod_end)/lod_denom));
+			lod_renderer.add_leaves(&td, (draw_pos + vector3d(0.0, 0.0, (td.lr_z_cent - td.sphere_center_zoff))), (1.0 - geom_opacity));
 		}
-		else {
-			draw_tree_leaves(s, size_scale, xlate);
-		}
+		if (geom_opacity == 0.0) return;
+		s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
 	}
+	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && (display_mode & 0x0100) != 0);
+	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
+	if (!gen_arrays && leaf_dynamic_en && size_scale > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
+
+	if (gen_arrays || leaf_color_changed) {
+		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
+	}
+	if (gen_arrays) {calc_leaf_shadows();}
+	if (has_dl_sources && world_mode == WMODE_GROUND) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
+	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
+	fgPushMatrix();
+	translate_to(tree_center + xlate);
+	td.draw_leaves(size_scale);
+	fgPopMatrix();
 }
 
 
@@ -982,18 +1012,6 @@ void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail) {
 }
 
 
-void tree::draw_tree_branches(shader_t &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass) {
-
-	select_texture(tree_types[type].bark_tex);
-	s.set_cur_color(bcolor);
-	s.set_uniform_vector3d(shader_loc, (tree_center + xlate));
-	fgPushMatrix();
-	translate_to(tree_center + xlate);
-	tdata().draw_branches(s, size_scale, reflection_pass);
-	fgPopMatrix();
-}
-
-
 void tree_data_t::update_normal_for_leaf(unsigned i) {
 
 	assert(i < leaves.size());
@@ -1042,26 +1060,6 @@ bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
 	// may do duplicate work, but should at least keep the cobj colors in sync
 	if (gen_arrays || leaf_color_changed) {update_all_leaf_colors();}
 	return gen_arrays;
-}
-
-
-void tree::draw_tree_leaves(shader_t &s, float size_scale, vector3d const &xlate) {
-
-	tree_data_t &td(tdata());
-	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && (display_mode & 0x0100) != 0);
-	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
-	if (!gen_arrays && leaf_dynamic_en && size_scale > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
-
-	if (gen_arrays || leaf_color_changed) {
-		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
-	}
-	if (gen_arrays) {calc_leaf_shadows();}
-	if (has_dl_sources && world_mode == WMODE_GROUND) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
-	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
-	fgPushMatrix();
-	translate_to(tree_center + xlate);
-	td.draw_leaves(size_scale);
-	fgPopMatrix();
 }
 
 

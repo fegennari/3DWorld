@@ -236,7 +236,8 @@ public:
 	bool spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color);
 	void bend_leaf(unsigned i, float angle);
 	void draw_leaf_quads_from_vbo(unsigned max_leaves) const;
-	void draw_tree_shadow_only(shader_t &s, bool draw_branches, bool draw_leaves);
+	void draw_leaves_shadow_only();
+	void draw_branches_shadow_only(shader_t &s);
 	void ensure_branch_vbo();
 	void draw_branches(shader_t &s, float size_scale, bool reflection_pass);
 	void draw_branch_vbo(shader_t &s, unsigned num, bool low_detail);
@@ -255,8 +256,10 @@ public:
 	int get_tree_type() const {return tree_type;}
 	point get_center() const {return point(0.0, 0.0, sphere_center_zoff);}
 
-	static void pre_draw (shader_t &s, bool branches_or_leaves, bool shadow_only);
-	static void post_draw(bool branches_or_leaves, bool shadow_only);
+	static void pre_branch_draw(shader_t &s, bool shadow_only);
+	static void pre_leaf_draw(shader_t &s);
+	static void post_branch_draw(bool shadow_only);
+	static void post_leaf_draw();
 };
 
 
@@ -292,8 +295,6 @@ class tree {
 	void drop_leaves();
 	void remove_leaf(unsigned i, bool update_data);
 	bool damage_leaf(unsigned i, float damage_done);
-	void draw_tree_branches(shader_t &s, float size_scale, vector3d const &xlate, int shader_loc, bool reflection_pass);
-	void draw_tree_leaves(shader_t &s, float size_scale, vector3d const &xlate);
 	void update_leaf_cobj_color(unsigned i);
 	void copy_color(unsigned i, bool no_mark_changed=0);
 
@@ -308,8 +309,9 @@ public:
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
-	void draw_tree(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
-		bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc);
+	float calc_size_scale(point const &draw_pos) const;
+	void draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc);
+	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	void clear_context();
 	int delete_tree();
