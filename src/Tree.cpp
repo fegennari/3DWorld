@@ -1101,13 +1101,15 @@ bool tree_data_t::check_if_needs_updated() {
 void tree::update_leaf_orients() { // leaves move in wind or when struck by an object (somewhat slow)
 
 	int last_xpos(0), last_ypos(0);
-	vector3d local_wind;
+	vector3d local_wind(zero_vector);
 	tree_data_t &td(tdata());
 	bool const do_update(td.check_if_needs_updated() || !leaf_orients_valid), priv_data(td_is_private());
 	if (!do_update && leaf_cobjs.empty()) return;
 	vector<tree_leaf> const &leaves(td.get_leaves());
 
-	for (unsigned i = 0; i < leaves.size(); i++) { // process leaf wind and collisions
+	#pragma omp parallel for num_threads(2) schedule(static) firstprivate(last_xpos, last_ypos, local_wind) if (leaf_cobjs.empty())
+	for (int i = 0; i < (int)leaves.size(); i++) { // process leaf wind and collisions
+		if (i >= (int)leaves.size()) continue; // hack to work around OpenMP not checking the loop bounds on each iteration
 		float wscale(0.0), hit_angle(0.0);
 
 		if (do_update) {
@@ -1129,7 +1131,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			if (cobj.last_coll > 0) {
 				bool removed(0);
 
-				// Note: the code below can cause the tree_data_t to be deep copied, invalidating any iterators
+				// Note: the code below can cause the tree_data_t to be deep copied, invalidating any iterators, so not thread safe
 				if (cobj.coll_type == BEAM) { // do burn damage
 					removed = damage_leaf(i, BEAM_DAMAGE);
 				}
@@ -1144,7 +1146,10 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 					}
 					hit_angle += PI_TWO*cobj.last_coll/TICKS_PER_SECOND; // 90 degree max rotate
 				}
-				if (removed) {--i; continue;}
+				if (removed) {
+					//--i; // not legal for OpenMP, so I guess we have to skip updating a leaf
+					continue;
+				}
 				cobj.last_coll = ((cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
 			}
 		}
