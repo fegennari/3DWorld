@@ -206,118 +206,73 @@ void get_object_color(int cindex, colorRGBA &color) {
 }
 
 
-class water_surface_draw {
+struct water_vertex_calc_t {
 
-	struct color_scale_ix {
-		colorRGBA c;
-		float s;
-		int ix;
-		color_scale_ix() : c(BLACK), s(0.0), ix(-1) {}
-		color_scale_ix(colorRGBA const &c_, float s_, int ix_) : c(c_), s(s_), ix(ix_) {}
-	};
+	float zval1, zval2;
 
-	vector<color_scale_ix> last_row_colors;
-	bool big_water;
-	unsigned const bs, nx, ny;
-	vector<unsigned char> underwater;
-	vector<vert_norm_color> verts;
+	water_vertex_calc_t() : zval1(def_water_level), zval2(def_water_level) {}
 
-public:
-	water_surface_draw() : big_water(0), bs(5), nx(BITSHIFT_CEIL(MESH_X_SIZE, bs)), ny(BITSHIFT_CEIL(MESH_Y_SIZE, bs)) {
+	void calc_zvals(int i, int j, int wsi, int dx, int dy, bool outside_water) {
+		float const water_zmin(zbottom - MIN_WATER_DZ);
+		zval1 = max(water_matrix[i][j], water_zmin) - SMALL_NUMBER; // never go below water_zmin, what if wminside[i][j]==0 ?
 
-		last_row_colors.resize(MESH_X_SIZE);
-		if (fast_water_reflect) return;
-		underwater.resize(nx*ny, 1);
-
-		for (int y = 0; y < MESH_Y_SIZE; ++y) {
-			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				if (max(v_collision_matrix[y][x].zmax, mesh_height[y][x]) > (water_matrix[y][x] - SMALL_NUMBER)) {
-					unsigned const index((x >> bs) + nx*(y >> bs));
-					assert(index < underwater.size());
-					underwater[index] = 0; // not underwater
-				}
+		if (i+dy >= 0 && i+dy < MESH_Y_SIZE) {
+			if (outside_water || watershed_matrix[i+dy][j].wsi == wsi ||
+				(wminside[i+dy][j] == 1 && cont_surf(wsi, watershed_matrix[i+dy][j].wsi, valleys[wsi].zval)))
+			{
+				zval2 = max(water_matrix[i+dy][j], water_zmin) - SMALL_NUMBER; // never go below water_zmin
 			}
 		}
 	}
-	void set_big_water(bool bw) {big_water = bw;}
-	vector<vert_norm_color> &get_verts() {return verts;}
 
-	void blend_reflection_color(point const &v, colorRGBA &color, vector3d const &n, point const &camera) const {
-
+	void blend_reflection_color(point const &v, colorRGBA &color, vector3d const &n, point const &camera) {
 		vector3d const view_dir((v - camera).get_norm());
 		float const view_dp(dot_product(view_dir, n));
-		//if (view_dp >= 0.0) {color = ALPHA0;return;} // back facing water - not valid (need to check all connected vertices/faces?)
+		//if (view_dp >= 0.0) {color = ALPHA0; return;} // back facing water - not valid (need to check all connected vertices/faces?)
 
 		// add some green at shallow view angles
 		blend_color(color, colorRGBA(0.0, 1.0, 0.5, 1.0), color, 0.25*(1.0 - fabs(view_dp)), 0);
-
 		vector3d dir;
 		calc_reflection_angle(view_dir, dir, n);
 		point vs(v), ve(v + dir*(4.0*XY_SCENE_SIZE/dir.mag()));
-		point vs0(vs), ve0(ve);
 		colorRGBA rcolor(ALPHA0);
 		bool mesh_int(0), cobj_int(0);
 
 		if (!fast_water_reflect) {
 			bool skip_mesh(!do_line_clip_scene(vs, ve, zbottom, max(ztop, czmax)));
-			vs0 = vs; ve0 = ve;
-			float const dval[2] = {DX_VAL, DY_VAL};
-			int        uwv  [2] = {(get_xpos(vs.x) >> bs), (get_ypos(vs.y) >> bs)};
-			int const  ve_xy[2] = {(get_xpos(ve.x) >> bs), (get_ypos(ve.y) >> bs)};
-
-			// clip out regions of the ray that are entirely over the water
-			// not entirely correct for dynamic objects since it uses czmin/czmax and skips regions over water
-			while (!skip_mesh) {
-				if (uwv[0] < 0 || uwv[0] >= int(nx) || uwv[1] < 0 || uwv[1] >= int(ny)) {skip_mesh = 1; break;} // all clipped
-				if (!underwater[uwv[0] + nx*uwv[1]]) break;
-				float tmin(1.0);
-				unsigned dim0(0), dir0(0);
-
-				for (unsigned dim = 0; dim < 2; ++dim) {
-					float const delta(ve[dim] - vs[dim]);
-					if (delta == 0.0) continue;
-					bool const d(delta > 0.0);
-					float const t((-SCENE_SIZE[dim] + dval[dim]*((uwv[dim] + d) << bs) - vs[dim])/delta);
-					if (t < tmin) {tmin = t; dim0 = dim; dir0 = d;}
-				}
-				if (tmin == 1.0) break; // can this happen?
-				if (uwv[0] == ve_xy[0] && uwv[1] == ve_xy[1]) {skip_mesh = 1; break;} // reached the end
-				vs        += (ve - vs)*tmin;
-				uwv[dim0] += (dir0 ? 1 : -1);
-			} // while (1)
 			int xpos, ypos;
 			float mesh_zval;
 			int const fast(2); // less accurate but faster
 
 			if (!skip_mesh && line_intersect_mesh(vs, ve, xpos, ypos, mesh_zval, fast, 1) /*&& mesh_zval > vs.z*/) { // not sure about this last test
-				float const t((fabs(ve0.z - vs0.z) < TOLERANCE) ? 0.0 : (mesh_zval - vs0.z)/(ve0.z - vs0.z));
-				ve0      = (vs0 + (ve0 - vs0)*t);
+				float const t((fabs(ve.z - vs.z) < TOLERANCE) ? 0.0 : (mesh_zval - vs.z)/(ve.z - vs.z));
+				ve       = (vs + (ve - vs)*t);
 				rcolor   = get_landscape_color(xpos, ypos);
 				mesh_int = 1;
 			
-				if (dir.z < 0.0 && is_underwater(ve0)) {
+				if (dir.z < 0.0 && is_underwater(ve)) {
 					// if mesh int point is underwater, attenuate along light path and blend like we do when drawing the mesh
 					// could calculate approx water intersection and call recursively, but there are too many problems with that approach
-					water_color_atten_pt(&rcolor.R, xpos, ypos, ve0, v, get_light_pos());
-					float const t2((fabs(v.z - ve0.z) < TOLERANCE) ? 0.0 : (water_matrix[ypos][xpos] - ve0.z)/(v.z - ve0.z));
-					ve0 = (ve0 + (v - ve0)*t2); // updated approx water collision point
+					water_color_atten_pt(&rcolor.R, xpos, ypos, ve, v, get_light_pos());
+					float const t2((fabs(v.z - ve.z) < TOLERANCE) ? 0.0 : (water_matrix[ypos][xpos] - ve.z)/(v.z - ve.z));
+					ve = (ve + (v - ve)*t2); // updated approx water collision point
 					blend_color(rcolor, color, rcolor, 0.5, 1); // add in a watery color
 				}
 			}
 			int cindex;
 			point cpos; // unused
 			vector3d cnorm; // unused
-			assert(!is_nan(vs0) && !is_nan(ve0));
+			assert(!is_nan(vs) && !is_nan(ve));
 
-			if (check_coll_line_exact(vs0, ve0, cpos, cnorm, cindex, 0.0, -1, 1, 0, 0)) {
+			if (check_coll_line_exact(vs, ve, cpos, cnorm, cindex, 0.0, -1, 1, 0, 0)) {
 				get_object_color(cindex, rcolor);
 				cobj_int = 1;
 			}
 		}
 		if (!mesh_int && !cobj_int) { // no mesh intersect and no cobj intersect
-			vector3d const vdir((ve0 - vs0).get_norm());
-			float const cloud_density(get_cloud_density(vs0, vdir)); // cloud_color vs. bkg_color
-			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs0, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
+			vector3d const vdir((ve - vs).get_norm());
+			float const cloud_density(get_cloud_density(vs, vdir)); // cloud_color vs. bkg_color
+			blend_color(rcolor, get_cloud_color(), get_bkg_color(vs, vdir), CLIP_TO_01(2.0f*cloud_density), 1);
 		}
 		if (rcolor.alpha > 0.0) {
 			float r(CLIP_TO_01(get_fresnel_reflection(-view_dir, n, 1.0, WATER_INDEX_REFRACT))); // maybe incorrect if out of the [0.0, 1.0] range?
@@ -326,52 +281,134 @@ public:
 		}
 	}
 
-	void draw_water_surface(int i, int j, colorRGBA const &color_in, int wsi, int dx=1, int dy=1) {
+	void calc_vertex_cn(vert_norm_color &vnc, int i, int j, colorRGBA const &color_in) {
+		assert(!point_outside_mesh(j, i));
+		vector3d const &n(wat_vert_normals[i][j]);
+		vnc.n = n*(0.5 + 0.5*get_cloud_shadow_atten(j, i)); // shadows on water are less strong (due to high specular - not that it really helps)
+		colorRGBA color(color_in); // note that the texture is blue, so that's why the color is more whiteish
 
-		assert(unsigned(j) < last_row_colors.size());
-		float const x(get_xval(j)), y(get_yval(i)), water_zmin(zbottom - MIN_WATER_DZ);
-		static float zval2(def_water_level);
-		float const zval1(max(water_matrix[i][j], water_zmin) - SMALL_NUMBER); // never go below water_zmin, what if wminside[i][j]==0 ?
-		color_scale_ix next_color_ix;
-
-		if (i+dy >= 0 && i+dy < MESH_Y_SIZE) {
-			if (big_water || watershed_matrix[i+dy][j].wsi == wsi ||
-				(wminside[i+dy][j] == 1 && cont_surf(wsi, watershed_matrix[i+dy][j].wsi, valleys[wsi].zval)))
-			{
-				zval2 = max(water_matrix[i+dy][j], water_zmin) - SMALL_NUMBER; // never go below water_zmin
-			}
+		if (!(display_mode & 0x20) && !has_snow && vnc.v.z > mesh_height[i][j]) { // calculate water reflection and blend into color
+			point const camera(get_camera_pos());
+			if (camera.z > vnc.v.z) {blend_reflection_color(vnc.v, color, n, camera);} // below the camera
 		}
-		for (int d = 0; d < 2; ++d) {
-			bool const dd((d != 0) ^ (dx < 0) ^ (dy < 0));
-			int const ii(i+dd*dy);
-			point const v(x, y+dd*dy*DY_VAL, (dd ? zval2 : zval1));
-			vector3d const &n(wat_vert_normals[ii][j]);
-			colorRGBA color(last_row_colors[j].c); // note that the texture is blue, so that's why the color is more whiteish
-			float nscale(last_row_colors[j].s);
-		
-			if (last_row_colors[j].ix != ii) { // gets here about half the time
-				color  = color_in;
-				nscale = 0.5 + 0.5*get_cloud_shadow_atten(j, i); // shadows on water are less strong (due to high specular - not that it really helps)
-
-				if (!(display_mode & 0x20) && !has_snow && v.z > mesh_height[ii][j]) { // calculate water reflection and blend into color
-					point const camera(get_camera_pos());
-					if (camera.z > v.z) {blend_reflection_color(v, color, n, camera);} // below the camera
-				}
-				if (using_lightmap) {get_sd_light(j, ii, get_zpos(v.z), (float *)&color);}
-				if (dd) {next_color_ix = color_scale_ix(color, nscale, ii);}
-			}
-			verts.push_back(vert_norm_color(v, n*nscale, color));
-		}
-		last_row_colors[j] = next_color_ix;
-	}
-
-	void flush_triangles() {
-		draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
+		if (using_lightmap) {get_sd_light(j, i, get_zpos(vnc.v.z), (float *)&color);}
+		vnc.set_c4(color);
 	}
 };
 
 
-void draw_outside_water_range(water_surface_draw &wsd, colorRGBA const &color, int x1, int y1, int x2, int y2, int dx, int dy) {
+unsigned const RESERVED_IX = 0xFFFFFFFF;
+
+class mesh_strip_drawer {
+
+protected:
+	vector<vert_norm_color> verts; // vertex data
+private:
+	vector<unsigned> pt_to_ix; // maps mesh {x,y} values to vertex index
+	vector<unsigned> indices; // indexes into verts
+
+public:
+	mesh_strip_drawer() {pt_to_ix.resize(XY_MULT_SIZE, RESERVED_IX);}
+
+	bool add_vertex(int x, int y, float zval=0.0) {
+		unsigned const pos(y*MESH_X_SIZE + x);
+		assert(pos < pt_to_ix.size());
+		unsigned &ix(pt_to_ix[pos]);
+		bool const is_new_vertex(ix == RESERVED_IX);
+		
+		if (is_new_vertex) {
+			ix = verts.size();
+			vert_norm_color vnc; // zval/color/normal not filled in here - up to the caller to do this
+			vnc.v.assign(get_xval(x), get_yval(y), zval);
+			verts.push_back(vnc);
+		}
+		indices.push_back(ix);
+		return is_new_vertex;
+	}
+	void end_strip() {
+		indices.push_back(RESERVED_IX);
+	}
+	void draw() const {
+		if (verts.empty()) {assert(indices.empty()); return;} // nothing to do
+		unsigned vbo[2] = {0, 0}; // vertex, index
+		create_bind_vbo_and_upload(vbo[0], verts,   0, 2);
+		create_bind_vbo_and_upload(vbo[1], indices, 1, 2);
+		vert_norm_color::set_vbo_arrays();
+		glEnable(GL_PRIMITIVE_RESTART);
+		glPrimitiveRestartIndex(RESERVED_IX);
+		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, NULL);
+		glDisable(GL_PRIMITIVE_RESTART);
+		
+		for (unsigned d = 0; d < 2; ++d) {
+			bind_vbo(0, (d != 0));
+			delete_vbo(vbo[d]);
+		}
+	}
+};
+
+
+class water_strip_drawer : public mesh_strip_drawer, public water_vertex_calc_t {
+
+public:
+	void add_segment(int i, int j, int wsi, int dx, int dy) {
+		calc_zvals(i, j, wsi, dx, dy, 1); // outside_water=1
+
+		for (int d = 0; d < 2; ++d) {
+			bool const dd((d != 0) ^ (dx < 0) ^ (dy < 0));
+			add_vertex(j, i+dd*dy, (dd ? zval2 : zval1));
+		}
+	}
+	void calc_vertex_colors_normals(colorRGBA const &color_in) {
+		if (verts.empty()) return;
+
+		// run on two threads when we have the slow ray-traced per-vertex water reflections enabled
+		#pragma omp parallel for num_threads(2) schedule(dynamic) if (!fast_water_reflect && !(display_mode & 0x20))
+		for (int i = 0; i < (int)verts.size(); ++i) {
+			vert_norm_color &vnc(verts[i]);
+			calc_vertex_cn(vnc, get_ypos(vnc.v.y), get_xpos(vnc.v.x), color_in);
+		}
+	}
+};
+
+
+class water_surface_draw : public water_vertex_calc_t {
+
+	struct color_scale_ix {
+		vector3d n;
+		color_wrapper cw;
+		int ix;
+		color_scale_ix() : n(zero_vector), ix(-1) {}
+		color_scale_ix(color_wrapper const &cw_, vector3d const &n_, int ix_) : cw(cw_), n(n_), ix(ix_) {}
+	};
+
+	vector<color_scale_ix> last_row_colors;
+	vector<vert_norm_color> verts;
+
+public:
+	water_surface_draw() {last_row_colors.resize(MESH_X_SIZE);}
+	vector<vert_norm_color> &get_verts() {return verts;}
+
+	void draw_water_surface(int i, int j, colorRGBA const &color_in, int wsi) {
+		assert(unsigned(j) < last_row_colors.size());
+		calc_zvals(i, j, wsi, 1, 1, 0); // outside_water=0
+		float const x(get_xval(j)), y(get_yval(i));
+
+		for (int d = 0; d < 2; ++d) {
+			point const v(x, y+d*DY_VAL, (d ? zval2 : zval1));
+			vert_norm_color vnc(v, last_row_colors[j].n, last_row_colors[j].cw.c); // note that the texture is blue, so that's why the color is more whiteish
+			
+			if (last_row_colors[j].ix != (i+d)) { // gets here about half the time
+				calc_vertex_cn(vnc, (i+d), j, color_in);
+				if (d) {last_row_colors[j] = color_scale_ix(vnc, vnc.n, (i+d));}
+			}
+			verts.push_back(vnc);
+		}
+	}
+	void end_strip() {draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);}
+};
+
+
+void draw_outside_water_range(water_strip_drawer &wsdraw, int x1, int y1, int x2, int y2, int dx, int dy) {
 
 	if (x1 == x2 || y1 == y2) return; // empty range
 	int last_draw(0);
@@ -384,16 +421,16 @@ void draw_outside_water_range(water_surface_draw &wsd, colorRGBA const &color, i
 				(wminside[i][j+dx]    == 2 && water_matrix[i][j+dx]    > mesh_height[i][j+dx]) ||
 				(wminside[i+dy][j+dx] == 2 && water_matrix[i+dy][j+dx] > mesh_height[i+dy][j+dx])))
 			{
-				wsd.draw_water_surface(i, j, color, 0, dx, dy);
+				wsdraw.add_segment(i, j, 0, dx, dy);
 				last_draw = 1;
 			}
 			else if (last_draw) {
-				wsd.draw_water_surface(i, j, color, 0, dx, dy);
-				wsd.flush_triangles();
+				wsdraw.add_segment(i, j, 0, dx, dy);
+				wsdraw.end_strip();
 				last_draw = 0;
 			}
-		}
-	}
+		} // for j
+	} // for i
 	assert(!last_draw);
 }
 
@@ -410,7 +447,6 @@ void draw_water() {
 	add_waves();
 	if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
 	if (DISABLE_WATER) return;
-	water_surface_draw wsd;
 	shader_t s;
 	if (USE_SEA_FOAM) {s.set_prefix("#define ADD_DETAIL_TEXTURE", 1);} // FS
 	setup_mesh_and_water_shader(s, 0);
@@ -423,7 +459,7 @@ void draw_water() {
 		tdy -= WATER_WIND_EFF2*wind.y*fticks;
 	}
 	float const tx_val(tx_scale*xoff2*DX_VAL + tdx), ty_val(ty_scale*yoff2*DX_VAL + tdy);
-	if (DEBUG_WATER_TIME) {PRINT_TIME("1 WSD Init");}
+	if (DEBUG_WATER_TIME) {PRINT_TIME("1 Init");}
 
 	// draw exterior water (oceans)
 	if (camera.z >= water_plane_z) {draw_water_sides(s, 1);}
@@ -432,7 +468,6 @@ void draw_water() {
 	select_water_ice_texture(s, color);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
 	color.alpha *= 0.5;
-	wsd.set_big_water(1);
 	int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
 
 	if (USE_SEA_FOAM) { // use sea foam texture
@@ -441,17 +476,17 @@ void draw_water() {
 		set_active_texture(0);
 		s.add_uniform_float("detail_tex_scale", 1.0);
 	}
-	if (1) {
+	{ // outside water
+		water_strip_drawer wsdraw;
 		// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
 		point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
 		int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
-		draw_outside_water_range(wsd, color, cxpos, cypos, xend, yend,  1,  1);
-		draw_outside_water_range(wsd, color, cxpos, cypos, xend, 0,     1, -1);
-		draw_outside_water_range(wsd, color, cxpos, cypos, 0,    yend, -1,  1);
-		draw_outside_water_range(wsd, color, cxpos, cypos, 0,    0,    -1, -1);
-	}
-	else {
-		draw_outside_water_range(wsd, color, 0, 0, xend, yend, 1, 1);
+		draw_outside_water_range(wsdraw, cxpos, cypos, xend, yend,  1,  1);
+		draw_outside_water_range(wsdraw, cxpos, cypos, xend, 0,     1, -1);
+		draw_outside_water_range(wsdraw, cxpos, cypos, 0,    yend, -1,  1);
+		draw_outside_water_range(wsdraw, cxpos, cypos, 0,    0,    -1, -1);
+		wsdraw.calc_vertex_colors_normals(color);
+		wsdraw.draw();
 	}
 	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
@@ -475,7 +510,6 @@ void draw_water() {
 
 	// call the function that computes the ripple effect
 	assert(fticks != 0.0);
-	//int const time_mod(int(((float)TIMESCALE2)/max(1.0f, fticks)));
 	int const time_mod(1);
 
 	if (animate2 && (time_mod <= 1 || (wcounter%time_mod) == 0)) {
@@ -499,7 +533,7 @@ void draw_water() {
 	bool const disp_snow((display_mode & 0x40) && temperature <= SNOW_MAX_TEMP);
 	color *= INT_WATER_ATTEN; // attenuate for interior water
 	colorRGBA wcolor(color);
-	wsd.set_big_water(0);
+	water_surface_draw wsd;
 	
 	// draw interior water (ponds)
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
@@ -523,7 +557,7 @@ void draw_water() {
 
 						for (int y = -1; y <= 1; ++y) {
 							for (int x = -1; x <= 1; ++x) {
-								if (zval >= mesh_height[i+y][j+x]) delta_area += 1.0;
+								if (zval >= mesh_height[i+y][j+x]) {delta_area += 1.0;}
 							}
 						}
 						delta_area /= 9.0;
@@ -545,7 +579,7 @@ void draw_water() {
 								(mesh_height[i][j] <= zval || (i > 0 && j > 0 && mesh_height[i-1][j-1] <= zval)))
 							{
 								if (last_water != 0) { // snow
-									wsd.flush_triangles();
+									wsd.end_strip();
 									select_texture(SNOW_TEX);
 									s.set_specular(0.6, 20.0);
 									last_water = 0;
@@ -553,9 +587,9 @@ void draw_water() {
 								}
 							}
 							else if (last_water != 1) {
-								wsd.flush_triangles();
+								wsd.end_strip();
 								select_water_ice_texture(s, color);
-								color *= INT_WATER_ATTEN; // attenuate for interior water
+								color     *= INT_WATER_ATTEN; // attenuate for interior water
 								last_water = 1;
 							}
 							if (wsi != last_wsi) {
@@ -567,8 +601,8 @@ void draw_water() {
 								}
 								else {
 									wcolor.alpha *= 0.5;
-									if (mud_mix   > 0.0) blend_color(wcolor, (!is_ice ? MUD_S_C : LT_BROWN), wcolor, mud_mix, 1);
-									if (blood_mix > 0.0) blend_color(wcolor, RED, wcolor, blood_mix, 1);
+									if (mud_mix   > 0.0) {blend_color(wcolor, (!is_ice ? MUD_S_C : LT_BROWN), wcolor, mud_mix, 1);}
+									if (blood_mix > 0.0) {blend_color(wcolor, RED, wcolor, blood_mix, 1);}
 								}
 								last_wsi = wsi;
 							}
@@ -590,12 +624,12 @@ void draw_water() {
 						verts.push_back(vert_norm_color(pt, wat_vert_normals[yin[p]][xin[p]], prev_color));
 					}
 				}
-				if (last_draw || nin == 3) {wsd.flush_triangles();}
+				if (last_draw || nin == 3) {wsd.end_strip();}
 				last_draw = 0;
 			}
 		} // for j
 	} // for i
-	wsd.flush_triangles();
+	wsd.end_strip();
 	disable_blend();
 	s.set_specular(0.0, 1.0);
 	s.end_shader();

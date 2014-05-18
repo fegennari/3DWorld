@@ -713,7 +713,6 @@ void compute_ray_trace_lighting(unsigned ltype) {
 	else {
 		if (ltype != LIGHTING_LOCAL) cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;
 		all_models.build_cobj_trees(1);
-		get_landscape_texture_color(0, 0); // hack to force creation of the cached_ls_colors vector in the master thread
 		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1, 0, 0);
 	}
 	if (write_light_files[ltype]) {
