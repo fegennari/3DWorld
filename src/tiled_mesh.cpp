@@ -171,17 +171,10 @@ public:
 tiled_terrain_hmap_manager_t terrain_hmap_manager;
 
 
-bool using_tiled_terrain_hmap_tex() {
-	return (world_mode == WMODE_INF_TERRAIN && terrain_hmap_manager.enabled());
-}
-
-float get_tiled_terrain_height_tex(float xval, float yval) {
-	return terrain_hmap_manager.interpolate_height(xval, yval);
-}
-
-vector3d get_tiled_terrain_height_tex_norm(int x, int y) {
-	return terrain_hmap_manager.get_norm(x, y);
-}
+bool using_tiled_terrain_hmap_tex() {return (world_mode == WMODE_INF_TERRAIN && terrain_hmap_manager.enabled());}
+bool using_hmap_with_detail      () {return (using_tiled_terrain_hmap_tex() && mesh_scale < 0.75);}
+float get_tiled_terrain_height_tex(float xval, float yval) {return terrain_hmap_manager.interpolate_height(xval, yval);}
+vector3d get_tiled_terrain_height_tex_norm(int x, int y)   {return terrain_hmap_manager.get_norm(x, y);}
 
 bool read_default_hmap_modmap() {
 
@@ -325,6 +318,17 @@ void tile_t::clear_vbo_tid() {
 }
 
 
+void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
+
+	bool const add_detail(using_hmap_with_detail());
+
+	if (add_detail || !using_tiled_terrain_hmap_tex()) {
+		float const xy_scale(add_detail ? HMAP_DETAIL_SCALE : 1.0);
+		height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny);
+	}
+}
+
+
 void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 
 	//RESET_TIME;
@@ -334,24 +338,20 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	mzmax = -FAR_CLIP;
 	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
 	unsigned const block_size(zvsize/4);
+	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail()); // add procedural detail to heightmap
+	setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize);
 
-	if (using_tiled_terrain_hmap_tex()) {
-		#pragma omp parallel for schedule(static,1) // may not be necessary, but helps
-		for (int y = 0; y < (int)zvsize; ++y) {
-			for (unsigned x = 0; x < zvsize; ++x) {
+	#pragma omp parallel for schedule(static,1)
+	for (int y = 0; y < (int)zvsize; ++y) {
+		for (unsigned x = 0; x < zvsize; ++x) {
+			if (using_hmap) {
 				zvals[y*zvsize + x] = terrain_hmap_manager.get_clamped_height((x1 + x), (y1 + y));
+				if (add_detail) {zvals[y*zvsize + x] += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);} // less hard-coded - scale by delta between adjacent zvals?
 			}
-		}
-	}
-	else {
-		height_gen.build_arrays(get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize);
-
-		#pragma omp parallel for schedule(static,1)
-		for (int y = 0; y < (int)zvsize; ++y) {
-			for (unsigned x = 0; x < zvsize; ++x) {
+			else {
 				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
 				float const hoff(BILINEAR_INTERP(params, hoff, xv, yv)), hscale(BILINEAR_INTERP(params, hscale, xv, yv));
-				zvals[y*zvsize + x] = hoff + hscale*height_gen.eval_index(x, y);
+				zvals[y*zvsize + x] = hoff + hscale*height_gen.eval_index(x, y, 1);
 			}
 		}
 	}
@@ -419,8 +419,8 @@ void tile_t::calc_mesh_ao_lighting() {
 	unsigned const context_sz(stride + 2*ray_len);
 	vector<float> czv(context_sz*context_sz);
 	mesh_xy_grid_cache_t height_gen;
-	bool const using_hmap(using_tiled_terrain_hmap_tex());
-	if (!using_hmap) {height_gen.build_arrays(get_xval(x1 - ray_len), get_yval(y1 - ray_len), deltax, deltay, context_sz, context_sz);}
+	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail());
+	setup_height_gen(height_gen, get_xval(x1 - ray_len), get_yval(y1 - ray_len), deltax, deltay, context_sz, context_sz);
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);
 
@@ -437,9 +437,10 @@ void tile_t::calc_mesh_ao_lighting() {
 				}
 				else if (using_hmap) {
 					zv = terrain_hmap_manager.get_clamped_height((x1 + xv), (y1 + yv));
+					if (add_detail) {zv += HMAP_DETAIL_MAG*height_gen.eval_index(x, y, 0);}
 				}
 				else {
-					zv = height_gen.eval_index(x, y); // Note: not using hoff/hscale here since they are undefined outside the tile bounds
+					zv = height_gen.eval_index(x, y, 1); // Note: not using hoff/hscale here since they are undefined outside the tile bounds
 				}
 			}
 		}

@@ -65,6 +65,8 @@ void set_zvals();
 void update_temperature(bool verbose);
 void compute_scale();
 
+bool using_hmap_with_detail();
+
 
 
 void create_sin_table() {
@@ -610,6 +612,10 @@ float eval_mesh_sin_terms(float xv, float yv) {
 	return zval;
 }
 
+float eval_mesh_sin_terms_scaled(float xval, float yval, float xy_scale) {
+	return eval_mesh_sin_terms(xy_scale*mesh_scale*(xval - (MESH_X_SIZE >> 1)), xy_scale*mesh_scale*(yval - (MESH_Y_SIZE >> 1)))/mesh_scale_z;
+}
+
 
 float get_exact_zval(float xval, float yval) {
 
@@ -623,8 +629,13 @@ float get_exact_zval(float xval, float yval) {
 	}
 	xval += xoff2; // offset by current mesh transform
 	yval += yoff2;
-	if (using_tiled_terrain_hmap_tex()) {return get_tiled_terrain_height_tex(xval, yval);}
-	float const zval(eval_mesh_sin_terms(mesh_scale*(xval - (MESH_X_SIZE >> 1)), mesh_scale*(yval - (MESH_Y_SIZE >> 1)))/mesh_scale_z);
+
+	if (using_tiled_terrain_hmap_tex()) {
+		float zval(get_tiled_terrain_height_tex(xval, yval));
+		if (using_hmap_with_detail()) {zval += HMAP_DETAIL_MAG*eval_mesh_sin_terms_scaled(xval, yval, HMAP_DETAIL_SCALE);} // Note: agrees with tile_t::create_zvals()
+		return zval;
+	}
+	float const zval(eval_mesh_sin_terms_scaled(xval, yval, 1.0));
 	return (GLACIATE ? get_glaciated_zval(zval) : zval);
 }
 

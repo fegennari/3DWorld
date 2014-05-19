@@ -8,6 +8,9 @@
 #include "3DWorld.h"
 
 
+float const HMAP_DETAIL_SCALE = 16.0;
+float const HMAP_DETAIL_MAG   = 0.01;
+
 enum {BSHAPE_CONST_SQ=0, BSHAPE_CNST_CIR, BSHAPE_LINEAR, BSHAPE_QUADRATIC, BSHAPE_COSINE, BSHAPE_SINE, BSHAPE_FLAT_SQ, BSHAPE_FLAT_CIR, NUM_BSHAPES};
 
 float scale_mh_texture_val(float val);
