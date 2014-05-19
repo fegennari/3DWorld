@@ -533,7 +533,7 @@ bool ui_intercept_keyboard(unsigned char key, bool is_special) {
 	if (!is_special) return 0; // only using special keys right now
 	keyboard_menu_t *const kbd_menu(get_enabled_menu());
 	if (kbd_menu == NULL) return 0; // no keyboard menu enabled
-	int const change_mag((glutGetModifiers() & GLUT_ACTIVE_SHIFT) ? 10 : 1); // move 10x if shift is set
+	int const change_mag(is_shift_key_pressed() ? 10 : 1); // move 10x if shift is set
 	
 	switch (key) {
 	case GLUT_KEY_UP:    kbd_menu->next_control(); return 1;

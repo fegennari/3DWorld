@@ -28,6 +28,7 @@ void advance_camera(int dir);
 bool open_file(FILE *&fp, char const *const fn, std::string const &file_type, char const *const mode="r");
 void fire_weapon();
 bool has_extension(std::string const &ext);
+bool is_shift_key_pressed();
 
 // function prototypes - visibility
 void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, unsigned char *smask, int xsize, int ysize,

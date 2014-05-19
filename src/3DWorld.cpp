@@ -34,7 +34,7 @@ float const DEF_CTHETA     = -1.0;
 float const DEF_CPHI       = 1.5;
 float const DEF_UPTHETA    = 0.0;
 float const DEF_CAMY       = 1.0;
-float const MAP_SHIFT      = 8.0;
+float const MAP_SHIFT      = 20.0;
 float const MAP_ZOOM       = 1.5;
 float const D_TIMESTEP     = 1.5;
 float const MOUSE_R_ADJ    = 0.01;   // mouse zoom radius adjustment
@@ -710,6 +710,9 @@ void switch_weapon_mode() {
 }
 
 
+bool is_shift_key_pressed() {return (glutGetModifiers() & GLUT_ACTIVE_SHIFT);}
+
+
 // This function is called whenever there is a keyboard input
 // key is the ASCII value of the key pressed (esc = 27, enter = 13, backspace = 8, tab = 9, del = 127)
 // x and y are the location of the mouse
@@ -1125,9 +1128,11 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 
 void print_wind() {
-
 	cout << "wind: "; wind.print(); cout << endl;
 }
+
+
+int get_map_shift_val() {return int(map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1));}
 
 
 void keyboard2(int key, int x, int y) {
@@ -1137,41 +1142,23 @@ void keyboard2(int key, int x, int y) {
 
 	switch (key) {
 	case GLUT_KEY_UP:
-		if (map_mode) {
-			map_y += int(map_zoom*MAP_SHIFT) + 1;
-		}
-		else {
-			wind.y += WIND_ADJUST;
-			print_wind();
-		}
-		break;
-
 	case GLUT_KEY_DOWN:
 		if (map_mode) {
-			map_y -= int(map_zoom*MAP_SHIFT) + 1;
+			map_y  += ((key == GLUT_KEY_UP) ? 1 : -1)*(get_map_shift_val() + 1);
 		}
 		else {
-			wind.y -= WIND_ADJUST;
+			wind.y += ((key == GLUT_KEY_UP) ? 1 : -1)*WIND_ADJUST;
 			print_wind();
 		}
 		break;
 
 	case GLUT_KEY_LEFT:
-		if (map_mode) {
-			map_x -= int(map_zoom*MAP_SHIFT) + 1;
-		}
-		else {
-			wind.x -= WIND_ADJUST;
-			print_wind();
-		}
-		break;
-
 	case GLUT_KEY_RIGHT:
 		if (map_mode) {
-			map_x += int(map_zoom*MAP_SHIFT) + 1;
+			map_x  += ((key == GLUT_KEY_RIGHT) ? 1 : -1)*(get_map_shift_val() + 1);
 		}
 		else {
-			wind.x += WIND_ADJUST;
+			wind.x += ((key == GLUT_KEY_RIGHT) ? 1 : -1)*WIND_ADJUST;
 			print_wind();
 		}
 		break;
