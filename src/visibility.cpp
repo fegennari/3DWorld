@@ -386,16 +386,22 @@ public:
 
 	void run(point const &lpos) { // assumes light source directional/at infinity
 		dir = (all_zeros - lpos).get_norm();
-		float const xval(get_xval((dir.x > 0) ? 0 : xsize)), yval(get_yval((dir.y > 0) ? 0 : ysize));
-		float xv(-X_SCENE_SIZE), yv(-Y_SCENE_SIZE);
-
-		for (int y = 0; y < 2*ysize; ++y) { // half increments
-			trace_shadow_path(point(xval, yv, 0.0));
-			yv += 0.5*DY_VAL;
-		}
-		for (int x = 0; x < 2*xsize; ++x) { // half increments
-			trace_shadow_path(point(xv, yval, 0.0));
-			xv += 0.5*DX_VAL;
+		#pragma omp parallel sections num_threads(2)
+		{
+			#pragma omp section
+			{
+				float const xval(get_xval((dir.x > 0) ? 0 : xsize));
+				for (int y = 0; y < 2*ysize; ++y) { // half increments
+					trace_shadow_path(point(xval, (-Y_SCENE_SIZE + 0.5*DY_VAL*y), 0.0));
+				}
+			}
+			#pragma omp section
+			{
+				float const yval(get_yval((dir.y > 0) ? 0 : ysize));
+				for (int x = 0; x < 2*xsize; ++x) { // half increments
+					trace_shadow_path(point((-X_SCENE_SIZE + 0.5*DX_VAL*x), yval, 0.0));
+				}
+			}
 		}
 	}
 };

@@ -650,7 +650,7 @@ void tile_t::check_shadow_map_and_normal_texture() {
 	if (enable_tiled_mesh_ao && ao_lighting.empty()) {calc_mesh_ao_lighting();}
 	upload_shadow_map_and_normal_texture(tid_is_valid);
 	shadows_invalid = 0;
-	//PRINT_TIME("Calc and Upload Shadows");
+	//PRINT_TIME("Calc and Upload Shadows + AO");
 }
 
 
