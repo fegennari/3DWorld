@@ -66,14 +66,14 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color) {
 #endif
 		}
 		vec3 eye_pos   = camera_pos - dlpos;
+		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
 #ifdef USE_BUMP_MAP_DL
 		vec3 lpos_eye  = (fg_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // convert from world to eye to tangent space
-		vec3 light_dir = normalize(lpos_eye - epos.xyz);
-		float nscale   = clamp(10.0*dot(normal, normalize(lpos_r.xyz - dlpos)), 0.0, 1.0); // fix self-shadowing
+		float nscale   = clamp(10.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
+		light_dir      = normalize(lpos_eye - epos.xyz);
 		vec3 lnorm     = nscale*apply_bump_map(light_dir, eye_pos);
 		eye_pos        = -eye_pos; // ???
 #else
-		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
 		vec3 lnorm     = normal;
 #endif // USE_BUMP_MAP_DL
 

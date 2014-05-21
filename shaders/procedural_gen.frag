@@ -11,7 +11,9 @@ vec3 get_bump_map_normal() {
 	return normalize(lookup_triplanar_texture(bump_tex_scale*vpos, normalize(normal), bump_map, bump_map, bump_map).xyz * 2.0 - 1.0);
 }
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
-	mat3 TBN  = transpose(cotangent_frame(eye_norm, get_epos().xyz, bump_tex_scale*vpos.xy, 1.0)); // Note: not entirely correct
+	vec3 binormal = normalize(cross(vec3(1,0,0), eye_norm));
+	vec3 tangent  = normalize(cross(eye_norm, binormal));
+	mat3 TBN  = transpose(mat3(tangent, binormal, eye_norm));
 	light_dir = TBN * light_dir;
 	eye_pos   = TBN * eye_pos;
 	return get_bump_map_normal();

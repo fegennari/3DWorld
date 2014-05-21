@@ -313,6 +313,8 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 		// FIXME: only looks correct with sun/moon lighting - dynamic and indirect lighting doesn't work with [incorrect] triplanar bump mapping
 		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
 		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
+		//s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS
+		//s.set_prefix("#define USE_BUMP_MAP_DL",    1); // FS
 	}
 	s.set_bool_prefix("use_noise_tex", use_noise_tex, 1); // FS
 	s.set_bool_prefix("z_top_test",    z_top_test,    1); // FS
