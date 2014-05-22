@@ -95,12 +95,14 @@ void cloud_manager_t::update_lighting() {
 
 		for (unsigned i = 0; i < clouds.size(); ++i) {
 			cloud_t &c(clouds[i]);
-			for (unsigned j = c.b; j < c.e; ++j) c.p += (*this)[j].pos;
+			for (unsigned j = c.b; j < c.e; ++j) {c.p += (*this)[j].pos;}
 			c.p /= (c.e - c.b);
-			for (unsigned j = c.b; j < c.e; ++j) c.r = max(c.r, (p2p_dist(c.p, (*this)[j].pos) + (*this)[j].radius));
+			for (unsigned j = c.b; j < c.e; ++j) {c.r = max(c.r, (p2p_dist(c.p, (*this)[j].pos) + (*this)[j].radius));}
 		}
 	}
-	for (unsigned i = 0; i < num_clouds; ++i) {
+
+#pragma omp parallel for schedule(static) num_threads(2)
+	for (int i = 0; i < (int)num_clouds; ++i) {
 		particle_cloud &pc((*this)[i]);
 		float light(0.25); // night time sky
 
@@ -137,7 +139,7 @@ void cloud_manager_t::update_lighting() {
 		pc.darkness   = 1.0 - 2.0*light;
 		pc.base_color = WHITE;
 		apply_red_sky(pc.base_color);
-	}
+	} // for i
 	PRINT_TIME("Cloud Lighting");
 }
 

@@ -253,7 +253,7 @@ void gen_uw_lighting() {
 	for (vector<fp_ratio>::iterator i = uw_mesh_lighting.begin(); i != uw_mesh_lighting.end(); ++i) {
 		i->n = i->d = 0.0; // initialize
 	}
-	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+	for (int y = 0; y < MESH_Y_SIZE; ++y) { // openmp?
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			if (!mesh_is_underwater(x, y)) continue;
 			point const p1(get_xval(x), get_yval(y), water_matrix[y][x]); // point on water surface

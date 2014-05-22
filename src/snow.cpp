@@ -413,19 +413,20 @@ private:
 		int index(-1);
 		point const lpos(get_light_pos());
 
-		for (vector<vert_norm>::iterator i = data.begin(); i != data.end(); ++i) {
-			i->n.normalize();
+#pragma omp parallel for schedule(dynamic) firstprivate(index)
+		for (int i = 0; i < (int)data.size(); ++i) {
+			data[i].n.normalize();
 			bool shadowed(0);
 
-			if (index >= 0 && coll_objects[index].line_intersect(i->v, lpos)) {
+			if (index >= 0 && coll_objects[index].line_intersect(data[i].v, lpos)) {
 				shadowed = 1;
 			}
 			else {
 				index = -1;
-				shadowed = !is_visible_to_light_cobj(i->v, get_light(), 0.0, -1, 1, &index);
+				shadowed = !is_visible_to_light_cobj(data[i].v, get_light(), 0.0, -1, 1, &index);
 				if (index >= 0) assert(index < (int)coll_objects.size());
 			}
-			if (shadowed) i->n *= 0.001; // scale to a small (zero-ish) value
+			if (shadowed) {data[i].n *= 0.001;} // scale to a small (zero-ish) value
 		}
 	}
 

@@ -939,12 +939,13 @@ void add_waves() { // add waves due to wind
 	static float wave_time(0.0);
 	wave_time += fticks_clamped;
 	
+#pragma omp parallel for schedule(static) num_threads(2)
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			if (!wminside[y][x] || !get_water_enabled(x, y)) continue; // only in water
-			float const depth(water_matrix[y][x] - mesh_height[y][x]);
+			float const wh(water_matrix[y][x]), depth(wh - mesh_height[y][x]);
 			if (depth < SMALL_NUMBER) continue; // not deep enough for waves
-			point const p(get_xval(x), get_yval(y), water_matrix[y][x]);
+			point const p(get_xval(x), get_yval(y), wh);
 			vector3d const local_wind(get_local_wind(p));
 			float const lwmag(local_wind.mag());
 			float const tx(min(0.2f, fabs(local_wind.y))*wind_freq*(x + xoff2)/lwmag - wxoff);

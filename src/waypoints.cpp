@@ -503,17 +503,6 @@ public:
 			cout << "Waypoints: " << waypoints.size() << ", vis edges: " << visible << ", cand edges: " << cand_edges
 				 << ", true edges: " << num_edges << ", tot steps: " << tot_steps << endl;
 		}
-#if 0
-		RESET_TIME; // performance test
-		for (unsigned iter = 0; iter < 10; ++iter) {
-			for (unsigned from = 0; from < waypoints.size(); from += 10) {
-				for (unsigned to = 0; to < waypoints.size(); to += 10) {
-					find_optimal_next_waypoint(from, wpt_goal(4, to, all_zeros));
-				}
-			}
-		}
-		PRINT_TIME("Waypoint Perf");
-#endif
 	}
 
 

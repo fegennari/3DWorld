@@ -321,7 +321,8 @@ void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 
 void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
-	for (unsigned y = 0; y < ny; ++y) {
+#pragma omp parallel for schedule(static)
+	for (int y = 0; y < (int)ny; ++y) {
 		float const vy(1.0 - 2.0*fabs(y - 0.5*ny)/float(ny)); // 0 at edges, 1 at center
 
 		for (unsigned x = 0; x < nx; ++x) {
@@ -338,7 +339,8 @@ void voxel_manager::atten_at_edges(float val) { // and top (5 edges)
 
 void voxel_manager::atten_at_top_only(float val) {
 
-	for (unsigned y = 0; y < ny; ++y) {
+#pragma omp parallel for schedule(static)
+	for (int y = 0; y < (int)ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			float top_atten_val(0.0);
 
@@ -372,7 +374,10 @@ void voxel_manager::atten_at_top_only(float val) {
 
 void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_inner, bool no_atten_zbot) {
 
-	for (unsigned y = 0; y < ny; ++y) {
+	float const two_nz_inv(2.0/float(nz));
+
+#pragma omp parallel for schedule(static)
+	for (int y = 0; y < (int)ny; ++y) {
 		float const vy(2.0*fabs(y - 0.5*ny)/float(ny)); // 1 at edges, 0 at center
 
 		for (unsigned x = 0; x < nx; ++x) {
@@ -380,15 +385,14 @@ void voxel_manager::atten_to_sphere(float val, float inner_radius, bool atten_in
 
 			for (unsigned z = 0; z < nz; ++z) {
 				float const deltaz(z - 0.5*nz), zval(no_atten_zbot ? max(0.0f, deltaz) : fabs(deltaz));
-				float const vz(2.0*zval/float(nz)); // 1 at edges, 0 at center
-				float const radius(sqrt(vx*vx + vy*vy + vz*vz));
+				float const vz(zval*two_nz_inv), radius(sqrt(vx*vx + vy*vy + vz*vz)); // vz: 1 at edges, 0 at center
 				float adj(0.0);
 				
 				if (radius > inner_radius) {
 					adj = (radius - inner_radius)/(1.0 - inner_radius);
 				}
 				else if (atten_inner) {
-					adj = -(inner_radius - radius)/inner_radius;
+					adj = (radius - inner_radius)/inner_radius;
 				}
 				get_ref(x, y, z) += val*adj;
 			}
@@ -494,16 +498,14 @@ void voxel_manager::determine_voxels_outside() { // determine inside/outside poi
 	outside.init(nx, ny, nz, vsz, center, 0, params.num_blocks);
 	bool const sphere_mode(params.atten_sphere_mode());
 
-	for (unsigned y = 0; y < ny; ++y) {
+#pragma omp parallel for schedule(static)
+	for (int y = 0; y < (int)ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
 			point const pos(get_pt_at(x, y, 0));
 			int const xpos(get_xpos(pos.x)), ypos(get_xpos(pos.y));
 			bool const no_zix(sphere_mode || !use_mesh || point_outside_mesh(xpos, ypos));
 			unsigned const zix(no_zix ? 0 : max(0, int((z_min_matrix[ypos][xpos] - lo_pos.z)/vsz.z)));
-			
-			for (unsigned z = 0; z < nz; ++z) {
-				calc_outside_val(x, y, z, (z < zix));
-			}
+			for (unsigned z = 0; z < nz; ++z) {calc_outside_val(x, y, z, (z < zix));}
 		}
 	}
 }

@@ -608,11 +608,10 @@ void scroll_scene() {
 	shift_all_objs(vd);
 	//PRINT_TIME("*** Top Level: Shift All Objects");
 	reset_shadows(SHADOWED_ALL);
-	//PRINT_TIME("*** Top Level: Shift All Objects + Reset Shadows");
 	gen_scene(1, 1, 1, 0, 0);
 	//PRINT_TIME("*** Top Level: Gen Scene");
 	regen_lightmap(); // not shiftable
-	if (display_mode & 0x04) water_plane_z = get_water_z_height();
+	if (display_mode & 0x04) {water_plane_z = get_water_z_height();}
 	update_temperature(0);
 	recreated = 1;
 	scrolling = 0;
