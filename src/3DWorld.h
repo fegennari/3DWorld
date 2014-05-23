@@ -1245,10 +1245,12 @@ class volume_part_cloud {
 
 protected:
 	typedef vert_norm_comp vert_type_t;
+	static vector<vert_type_t> unscaled_points;
 	vector<vert_type_t> points;
 
 public:
 	static colorRGBA gen_color(rand_gen_t &rgen);
+	static void cacl_unscaled_points();
 	void gen_pts(float radius);
 	static void shader_setup(vpc_shader_t &s, unsigned noise_ncomp);
 	void draw_quads() const;

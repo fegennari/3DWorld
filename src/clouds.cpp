@@ -460,10 +460,12 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 }
 
 
-void volume_part_cloud::gen_pts(float radius) {
+/*static*/ vector<volume_part_cloud::vert_type_t> volume_part_cloud::unscaled_points;
+
+/*static*/ void volume_part_cloud::cacl_unscaled_points() {
 
 	unsigned ix(0);
-	points.resize(4*13);
+	unscaled_points.resize(4*13);
 
 	for (int z = -1; z <= 1; ++z) {
 		for (int y = -1; y <= 1; ++y) {
@@ -476,14 +478,22 @@ void volume_part_cloud::gen_pts(float radius) {
 				get_ortho_vectors(normal, vab);
 
 				for (unsigned j = 0; j < 4; ++j) { // Note: quads will extend beyond radius, but will be rendered as alpha=0 outside radius
-					points[ix+j].v = radius*(((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1]);
-					points[ix+j].set_norm(normal);
+					unscaled_points[ix+j].v = ((j>>1) ? 1.0 : -1.0)*vab[0] + (((j&1)^(j>>1)) ? 1.0 : -1.0)*vab[1];
+					unscaled_points[ix+j].set_norm(normal);
 				}
 				ix += 4;
 			}
 		}
 	}
-	assert(ix == points.size());
+	assert(ix == unscaled_points.size());
+}
+
+
+void volume_part_cloud::gen_pts(float radius) {
+
+	if (unscaled_points.empty()) {cacl_unscaled_points();}
+	points = unscaled_points;
+	for (unsigned i = 0; i < points.size(); ++i) {points[i].v *= radius;}
 }
 
 

@@ -978,7 +978,6 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 void universe_t::init() {
 
-	//RESET_TIME;
 	assert(U_BLOCKS & 1); // U_BLOCKS is odd
 
 	for (unsigned i = 0; i < U_BLOCKS; ++i) { // z
@@ -989,13 +988,11 @@ void universe_t::init() {
 			}
 		}
 	}
-	//PRINT_TIME("Init Cells");
 }
 
 
 void universe_t::shift_cells(int dx, int dy, int dz) {
 
-	//RESET_TIME;
 	assert((abs(dx) + abs(dy) + abs(dz)) == 1);
 	vector3d const vxyz((float)dx, (float)dy, (float)dz);
 	cell_block temp;
@@ -1030,7 +1027,6 @@ void universe_t::shift_cells(int dx, int dy, int dz) {
 			}
 		}
 	}
-	//PRINT_TIME("Shift Cells");
 }
 
 
@@ -2403,7 +2399,6 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 				perturb_map[j + offset] = radius_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5); // duplicated with urev_body::surface_test()
 			}
 		}
-		//if (SD_TIMETEST) PRINT_TIME("Sphere Setup");
 		surface->setup_draw_sphere(all_zeros, radius0, -0.5*hmap_scale*radius, ndiv, &perturb_map.front());
 	}
 	surface->sd.draw_ndiv_pow2_vbo(ndiv);

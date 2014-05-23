@@ -965,7 +965,7 @@ void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point con
 		i->apply_belt_physics(pos, opn, colliders);
 	}
 	calc_shadowers();
-	//PRINT_TIME("Physics");
+	//PRINT_TIME("Physics"); // < 1ms
 	// no collision detection between asteroids as it's rare and too slow
 }
 
