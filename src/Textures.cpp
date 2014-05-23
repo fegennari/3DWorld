@@ -137,7 +137,7 @@ texture_t(1, 9, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
 texture_t(1, 9, 400,  400,  1, 3, 1, "@player_bbb_tex"), // not real file (Note: must match bark texture size)
 texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves.jpg", 1, 0, 1.0, 0.28), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare1.jpg"), // 384x384
-texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Nte: low resolution)
+texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Note: low resolution)
 texture_t(0, 5, 0,    0,    0, 4, 1, "Flare3.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare4.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare5.jpg"), // 256x256
@@ -152,6 +152,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "raindrop_dots.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship1.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship2.jpg"),
 texture_t(0, 6, 0,    0,    0, 4, 1, "atlas/blood.png"),
+texture_t(0, 5, 0,    0,    1, 3, 1, "lichen.jpg", 0, 0), // 1500x1500, compression is probably slow
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
