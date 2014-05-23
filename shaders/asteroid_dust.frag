@@ -11,7 +11,10 @@ vec3 get_sphere_point_sprite_normal() {
 	float mag = dot(normal.xy, normal.xy);
 	if (mag > 1.0) discard; // outside circle/sphere radius
 	normal.z  = sqrt(1.0 - mag);
-	return normal;
+	vec3 zv = normalize(-epos.xyz);
+	vec3 yv = normalize(cross(vec3(1,0,0), zv));
+	vec3 xv = normalize(cross(zv, yv));
+	return normalize(xv*normal.x + yv*normal.y + zv*normal.z);
 }
 
 void main()
