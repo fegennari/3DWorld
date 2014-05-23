@@ -1035,8 +1035,14 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			bool const veg((global_rand_gen.rseed1&127)/128.0 < vegetation_);
 			
 			if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants
-				plants.push_back(s_plant()); // 35%
-				if (!plants.back().create(j, i, 1, min_plant_z, plant_vbo_manager)) plants.pop_back();
+				s_plant plant; // 35%
+				
+				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {
+					plants.push_back(plant);
+				}
+				else if (plant.get_pos().z < water_plane_z) {
+					// create seaweed instead
+				}
 			}
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
@@ -1055,12 +1061,12 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 				rocks.back().create(j, i, 1);
 			}
 			else if (veg && val < 85) { // 24.5%
-				logs.push_back(s_log());
-				if (!logs.back().create(j, i, 1, min_log_z)) logs.pop_back();
+				s_log log;
+				if (log.create(j, i, 1, min_log_z)) {logs.push_back(log);}
 			}
-			else if (veg) {
-				stumps.push_back(s_stump()); // 10.5%
-				if (!stumps.back().create(j, i, 1, min_stump_z)) stumps.pop_back();
+			else if (veg) { // 10.5%
+				s_stump stump;
+				if (stump.create(j, i, 1, min_stump_z)) {stumps.push_back(stump);}
 			}
 		}
 	}
