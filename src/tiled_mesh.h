@@ -13,6 +13,7 @@
 #include "scenery.h"
 #include "grass.h"
 #include "tree_3dw.h"
+#include "shadow_map.h"
 
 
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts
@@ -48,6 +49,14 @@ public:
 	void update();
 	void draw() const;
 	void end_draw() const;
+};
+
+
+struct tile_smap_data_t : public smap_data_t {
+
+	tile_smap_data_t() : smap_data_t(13) {}
+	virtual void render_scene_shadow_pass(point const &lpos);
+	//virtual bool needs_update(int light, point const &lpos);
 };
 
 
@@ -92,6 +101,7 @@ class tile_t {
 	vector<unsigned char> tree_map, weight_data, ao_lighting;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
+	vector<tile_smap_data_t> smap_data; // one per light source (sun, moon)
 	small_tree_group pine_trees;
 	scenery_group scenery;
 	tree_cont_t decid_trees;
@@ -123,7 +133,7 @@ public:
 	tile_t(unsigned size_, int x, int y);
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~tile_t() {clear_vbo_tid();}
-	void invalidate_shadows() {shadows_invalid = 1;}
+	void invalidate_shadows();
 	float calc_radius() const {return 0.5*sqrt(deltax*deltax + deltay*deltay)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
@@ -201,6 +211,7 @@ public:
 	void apply_tree_ao_shadows();
 	void check_shadow_map_and_normal_texture();
 	void upload_shadow_map_and_normal_texture(bool tid_is_valid);
+	void setup_shadow_maps();
 
 	// *** mesh creation ***
 	void ensure_height_tid();
@@ -283,6 +294,7 @@ public:
 	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set);
 	void pre_draw();
 	void draw(bool reflection_pass);
+	void draw_shadow_pass(point const &lpos) const;
 	void draw_water(shader_t &s, float zval) const;
 	static void set_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);

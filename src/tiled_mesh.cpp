@@ -125,6 +125,9 @@ void bind_texture_tu(unsigned tid, unsigned tu_id) {
 #define BILINEAR_INTERP(arr, var, x, y) (y*(x*arr[1][1].var + (1.0-x)*arr[1][0].var) + (1.0-y)*(x*arr[0][1].var + (1.0-x)*arr[0][0].var))
 
 
+// *** heightmap management ***
+
+
 class tiled_terrain_hmap_manager_t : public terrain_hmap_manager_t {
 
 	tile_t *cur_tile;
@@ -294,6 +297,7 @@ void tile_t::clear() {
 	decid_trees.clear();
 	scenery.clear();
 	grass_blocks.clear();
+	smap_data.clear();
 }
 
 void tile_t::clear_shadows() {
@@ -303,6 +307,13 @@ void tile_t::clear_shadows() {
 		for (unsigned d = 0; d < 2; ++d) sh_out[l][d].clear();
 	}
 	invalidate_shadows();
+}
+
+void tile_t::invalidate_shadows() {
+	
+	shadows_invalid = 1;
+	for (unsigned i = 0; i < smap_data.size(); ++i) {smap_data[i].free_gl_state();}
+	smap_data.clear();
 }
 
 void tile_t::clear_vbo_tid() {
@@ -692,6 +703,19 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 	}
 	else { // allocate and write
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
+	}
+}
+
+
+void tile_t::setup_shadow_maps() {
+
+	if (!shadow_map_enabled()) return; // disabled
+	if (smap_data.empty()) {smap_data.resize(NUM_LIGHT_SRC);} // ???
+
+	for (unsigned i = 0; i < smap_data.size(); ++i) {
+		point lpos;
+		if (!light_valid_and_enabled(i, lpos)) continue;
+		smap_data[i].create_shadow_map_for_light(i, lpos, get_bcube());
 	}
 }
 
@@ -1101,6 +1125,9 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 
 	if (!reflection_pass && cloud_shadows_enabled()) {
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
+	}
+	for (unsigned i = 0; i < smap_data.size(); ++i) {
+		smap_data[i].set_smap_shader_for_light(s, i, DEF_Z_BIAS);
 	}
 	unsigned const lod_level(get_lod_level(reflection_pass));
 	unsigned const step(1 << lod_level), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
@@ -1790,6 +1817,14 @@ void tile_draw_t::draw(bool reflection_pass) {
 }
 
 
+void tile_draw_t::draw_shadow_pass(point const &lpos) const {
+
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		// FIXME: WRITE
+	}
+}
+
+
 void tile_draw_t::draw_water(shader_t &s, float zval) const {
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -2134,11 +2169,17 @@ void draw_tiled_terrain(bool reflection_pass) {
 	}
 }
 
+void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {terrain_tile_draw.draw_shadow_pass(lpos);}
+
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
 void clear_tiled_terrain() {terrain_tile_draw.clear();}
 void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids();}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
+
+
+// *** heightmap modification and queries ***
+
 
 bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
 

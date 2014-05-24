@@ -34,9 +34,8 @@ struct ground_mode_smap_data_t : public smap_data_t {
 	bool last_has_dynamic;
 
 	ground_mode_smap_data_t() : smap_data_t(6), last_has_dynamic(0) {}
-	void render_scene_shadow_pass(point const &lpos);
+	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(int light, point const &lpos);
-	virtual cube_t get_shadow_map_bounds() const {return get_scene_bounds();}
 };
 
 ground_mode_smap_data_t smap_data[NUM_LIGHT_SRC];
@@ -236,7 +235,7 @@ bool ground_mode_smap_data_t::needs_update(int light, point const &lpos) {
 }
 
 
-void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
+void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube_t const &bounds) {
 
 	assert(light >= 0 && light < NUM_LIGHT_SRC);
 	tu_id = base_tu_id + light; // Note: currently used with 2 lights
@@ -247,7 +246,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos) {
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
-	pdu = get_pt_cube_frustum_pdu(lpos, get_shadow_map_bounds(), 1);
+	pdu = get_pt_cube_frustum_pdu(lpos, bounds, 1);
 	texture_matrix = get_texture_matrix(camera_mv_matrix, light);
 	check_gl_error(201);
 
@@ -397,10 +396,10 @@ void create_shadow_map() {
 
 	// render shadow maps to textures
 	add_coll_shadow_objs();
-	point lpos;
 	
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(l, lpos);}
+		point lpos;
+		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(l, lpos, get_scene_bounds());}
 	}
 	scene_smap_vbo_invalid = 0;
 

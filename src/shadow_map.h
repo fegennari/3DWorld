@@ -10,8 +10,7 @@
 
 struct smap_data_t {
 
-	unsigned tid, tu_id, fbo_id;
-	unsigned const base_tu_id;
+	unsigned tid, tu_id, fbo_id, base_tu_id;
 	pos_dir_up pdu;
 	point last_lpos;
 	xform_matrix texture_matrix;
@@ -24,10 +23,9 @@ struct smap_data_t {
 		free_fbo(fbo_id);
 	}
 	bool set_smap_shader_for_light(shader_t &s, int light, float z_bias) const;
-	void create_shadow_map_for_light(int light, point const &lpos);
+	void create_shadow_map_for_light(int light, point const &lpos, cube_t const &bounds);
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(int light, point const &lpos);
-	virtual cube_t get_shadow_map_bounds() const = 0;
 };
 
 
