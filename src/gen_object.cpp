@@ -17,8 +17,7 @@ unsigned const MAX_DECALS      = 2500;
 
 
 // Global Variables
-unsigned num_stars(0);
-vector<star> stars(NUM_STARS);
+vector<star> stars;
 obj_vector_t<bubble> bubbles(MAX_BUBBLES);
 obj_vector_t<particle_cloud> part_clouds(MAX_PART_CLOUDS);
 obj_vector_t<fire> fires(MAX_FIRES);
@@ -28,7 +27,7 @@ float gauss_rand_arr[N_RAND_DIST+2];
 rand_gen_t global_rand_gen;
 
 
-extern int star_init, begin_motion, animate2, show_fog;
+extern int begin_motion, animate2, show_fog;
 extern float zmax_est, zmax, ztop, water_plane_z;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -39,42 +38,28 @@ extern obj_type object_types[];
 void gen_stars(float alpha, int half_sphere) {
 
 	if (world_mode == WMODE_GROUND && show_fog) return;
-	unsigned const cur_num_stars((unsigned)stars.size());
 
-	if (!star_init) {
-		num_stars = cur_num_stars - rand()%max(1U, cur_num_stars/4);
-		star_init = 1;
-
-		for (unsigned i = 0; i < num_stars; ++i) {
-			gen_star(stars[i], half_sphere);
-		}
+	if (stars.empty()) {
+		stars.resize(NUM_STARS);
+		for (unsigned i = 0; i < stars.size(); ++i) {gen_star(stars[i], half_sphere);}
 	}
-	else {
-		num_stars += rand()%max(1U, cur_num_stars/200);
-		int const old_num(num_stars);
-		num_stars  = min(num_stars, cur_num_stars);
+	if ((rand()&15) == 0) {
+		float const cmin[3] = {0.7, 0.9, 0.6};
 
-		for (unsigned i = old_num; i < num_stars; ++i) {
-			gen_star(stars[i], half_sphere);
-		}
-		if ((rand()&15) == 0) {
-			float const cmin[3] = {0.7, 0.9, 0.6};
+		for (unsigned i = 0; i < stars.size(); ++i) {
+			int const rnum(rand());
 
-			for (unsigned i = 0; i < num_stars; ++i) {
-				int const rnum(rand());
-
-				if (rnum%10 == 0) { // change intensity
-					stars[i].intensity *= 1.0 + 0.1*signed_rand_float();
-					stars[i].intensity  = min(stars[i].intensity, 1.0f);
-				}
-				if (rnum%20 == 0) { // change color
-					for (unsigned j = 0; j < 3; ++j) {
-						stars[i].color[j] *= 1.0 + 0.1*signed_rand_float();
-						stars[i].color[j]  = min(max(stars[i].color[j], cmin[j]), 1.0f);
-					}
-				}
-				if (rnum%2000 == 0) gen_star(stars[i], half_sphere); // create a new star and destroy the old
+			if ((rnum & 15) == 0) { // change intensity
+				stars[i].intensity *= 1.0 + 0.1*signed_rand_float();
+				stars[i].intensity  = min(stars[i].intensity, 1.0f);
 			}
+			if ((rnum & 31) == 0) { // change color
+				for (unsigned j = 0; j < 3; ++j) {
+					stars[i].color[j] *= 1.0 + 0.1*signed_rand_float();
+					stars[i].color[j]  = min(max(stars[i].color[j], cmin[j]), 1.0f);
+				}
+			}
+			if (rnum%2000 == 0) {gen_star(stars[i], half_sphere);} // create a new star and destroy the old
 		}
 	}
 	draw_stars(alpha);

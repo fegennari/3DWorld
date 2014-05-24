@@ -44,7 +44,7 @@ extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_l
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER;
-extern unsigned smoke_tid, dl_tid, num_stars, create_voxel_landscape, enabled_lights;
+extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
@@ -543,7 +543,6 @@ void portal::draw(vector<vert_wrap_t> &verts) const {
 
 void draw_stars(float alpha) {
 
-	assert(num_stars <= stars.size());
 	if (alpha <= 0.0) return;
 	colorRGBA color(BLACK), bkg;
 	UNROLL_3X(bkg[i_] = (1.0 - alpha)*bkg_color[i_];)
@@ -551,9 +550,9 @@ void draw_stars(float alpha) {
 	enable_blend();
 	glDisable(GL_DEPTH_TEST);
 	point_sprite_drawer psd;
-	psd.reserve_pts(num_stars);
+	psd.reserve_pts(stars.size());
 
-	for (unsigned i = 0; i < num_stars; ++i) {
+	for (unsigned i = 0; i < stars.size(); ++i) {
 		if ((rand()%400) == 0) continue; // flicker out
 
 		for (unsigned j = 0; j < 3; ++j) {

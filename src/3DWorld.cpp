@@ -67,7 +67,7 @@ bool detail_normal_map(0), use_core_context(0), enable_multisample(1);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
-int display_framerate(1), init_resize(1), temp_change(0), is_cloudy(0), star_init(0), recreated(1), cloud_model(0), force_tree_class(-1);
+int display_framerate(1), init_resize(1), temp_change(0), is_cloudy(0), recreated(1), cloud_model(0), force_tree_class(-1);
 int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framerate(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0);
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
@@ -512,7 +512,6 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = n
 	}
 	if (!map_mode) reset_offsets(); // ???
 	init_x        = 1;
-	star_init     = 0;
 	camera_change = 1;
 	reset_fog();
 	clear_tiled_terrain();
