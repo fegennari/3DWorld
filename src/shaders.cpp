@@ -128,7 +128,7 @@ bool shader_t::add_uniform_color(char const *const name, colorRGB  const &val) c
 	return set_uniform_color(get_uniform_loc(name), val);
 }
 
-bool shader_t::add_uniform_matrix_4x4(char const *const name, float *m, bool transpose) const {
+bool shader_t::add_uniform_matrix_4x4(char const *const name, float const *m, bool transpose) const {
 	return set_uniform_matrix_4x4(get_uniform_loc(name), m, transpose);
 }
 

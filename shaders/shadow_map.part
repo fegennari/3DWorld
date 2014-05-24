@@ -1,7 +1,6 @@
 uniform float z_bias = 0.0;
 uniform float norm_bias_scale = 10.0;
 uniform float sm_scale0, sm_scale1;
-uniform int sm_tu_id0, sm_tu_id1;
 uniform sampler2DShadow sm_tex0, sm_tex1;
 uniform mat4 smap_matrix0, smap_matrix1;
 
