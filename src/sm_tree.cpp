@@ -557,7 +557,7 @@ void draw_small_trees(bool shadow_only) {
 		//setup_smoke_shaders(s, 0.75, 0, 0, 0, v, v, 0, 0, v); // dynamic lights, but no smoke (slow, but looks better)
 		s.begin_simple_textured_shader(0.75, !shadow_only); // with lighting, unless shadow_only
 		int const xlate_loc(s.get_uniform_loc("xlate")), scale_loc(s.get_uniform_loc("scale"));
-		bind_draw_sphere_vbo(!shadow_only, 1);
+		bind_draw_sphere_vbo(1, 1); // texture, even in shadow pass, to handle alpha masking of some tree types
 		small_trees.draw_non_pine_leaves(shadow_only, xlate_loc, scale_loc);
 		bind_vbo(0);
 		s.set_uniform_vector3d(xlate_loc, zero_vector);
