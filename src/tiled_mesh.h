@@ -52,11 +52,15 @@ public:
 };
 
 
+class tile_t;
+
 struct tile_smap_data_t : public smap_data_t {
 
-	tile_smap_data_t() : smap_data_t(13) {}
+	tile_t *tile;
+
+	tile_smap_data_t(unsigned tu_id_, tile_t *tile_) : smap_data_t(tu_id_), tile(tile_) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
-	//virtual bool needs_update(int light, point const &lpos);
+	//virtual bool needs_update(point const &lpos);
 };
 
 
@@ -75,7 +79,6 @@ struct tile_xy_pair {
 	tile_xy_pair operator-(tile_xy_pair const &tp) const {return tile_xy_pair(x-tp.x, y-tp.y);}
 };
 
-class tile_t;
 tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 
@@ -133,7 +136,6 @@ public:
 	tile_t(unsigned size_, int x, int y);
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~tile_t() {clear_vbo_tid();}
-	void invalidate_shadows();
 	float calc_radius() const {return 0.5*sqrt(deltax*deltax + deltay*deltay)*size;} // approximate (lower bound)
 	float get_zmin() const {return mzmin;}
 	float get_zmax() const {return mzmax;}
@@ -182,7 +184,9 @@ public:
 	}
 	void clear();
 	void clear_shadows();
+	void clear_shadow_map();
 	void clear_vbo_tid();
+	void invalidate_shadows() {shadows_invalid = 1; clear_shadow_map();}
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
 
 	vector3d get_norm(unsigned ix) const {
@@ -212,6 +216,7 @@ public:
 	void check_shadow_map_and_normal_texture();
 	void upload_shadow_map_and_normal_texture(bool tid_is_valid);
 	void setup_shadow_maps();
+	bool using_shadow_maps() const {return !smap_data.empty();}
 
 	// *** mesh creation ***
 	void ensure_height_tid();
@@ -289,12 +294,13 @@ public:
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader);
 	static void lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows);
 	static void setup_cloud_plane_uniforms(shader_t &s);
-	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass);
+	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map);
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix);
 	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set);
 	void pre_draw();
 	void draw(bool reflection_pass);
-	void draw_shadow_pass(point const &lpos) const;
+	void draw_tiles(bool reflection_pass, bool enable_shadow_map) const;
+	void draw_shadow_pass(point const &lpos, tile_t *tile);
 	void draw_water(shader_t &s, float zval) const;
 	static void set_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);

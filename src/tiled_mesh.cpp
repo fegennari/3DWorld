@@ -36,7 +36,7 @@ unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 
-extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater;
+extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog;
@@ -282,6 +282,7 @@ unsigned tile_t::get_gpu_mem() const {
 	if (weight_tid        > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	if (height_tid        > 0) mem += 4*num_texels; // 4 bytes per texel (F32)
 	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
+	for (unsigned i = 0; i < smap_data.size(); ++i) {} // FIXME: add smap_data memory
 	return mem;
 }
 
@@ -309,9 +310,8 @@ void tile_t::clear_shadows() {
 	invalidate_shadows();
 }
 
-void tile_t::invalidate_shadows() {
+void tile_t::clear_shadow_map() {
 	
-	shadows_invalid = 1;
 	for (unsigned i = 0; i < smap_data.size(); ++i) {smap_data[i].free_gl_state();}
 	smap_data.clear();
 }
@@ -710,8 +710,11 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 void tile_t::setup_shadow_maps() {
 
 	if (!shadow_map_enabled()) return; // disabled
-	if (smap_data.empty()) {smap_data.resize(NUM_LIGHT_SRC);} // ???
 
+	if (contains_camera() && smap_data.empty()) {
+		tile_xy_pair const tp(get_tile_xy_pair());
+		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_data.push_back(tile_smap_data_t(13+i, this));} // uses tu_id 13 and 14
+	}
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
 		point lpos;
 		if (!light_valid_and_enabled(i, lpos)) continue;
@@ -1127,7 +1130,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
-		smap_data[i].set_smap_shader_for_light(s, i, DEF_Z_BIAS);
+		smap_data[i].set_smap_shader_for_light(s, i); // FIXME: factor out a shared part of this so we don't have to do it for every shadowed tile?
 	}
 	unsigned const lod_level(get_lod_level(reflection_pass));
 	unsigned const step(1 << lod_level), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
@@ -1515,8 +1518,8 @@ void set_tile_xy_vals(shader_t &s) {
 }
 
 
-// uses texture units 0-11 (12 if using hmap texture)
-void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
+// uses texture units 0-11 (12 if using hmap texture, 13-14 if using shadow maps)
+void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) {
 
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
@@ -1526,9 +1529,10 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",  1);} // FS
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",  1);} // FS
 	if (reflection_pass) {s.set_prefix("#define REFLECTION_MODE", 1);} // FS
+	s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
 	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
 	s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
-	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+detail_normal_map.part+tiled_mesh");
+	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+tiled_mesh");
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("weights_tex", 0);
@@ -1541,6 +1545,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass) {
 	set_tile_xy_vals(s);
 	s.add_uniform_int("height_tex", 12);
 	if (use_normal_map) {setup_detail_normal_map(s, 2.0);}
+	if (enable_shadow_map) {s.add_uniform_float("z_bias", DEF_Z_BIAS);}
 
 	if (has_water) {
 		set_water_plane_uniforms(s);
@@ -1678,6 +1683,11 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		if (decid_trees_enabled()) {(*i)->update_decid_trees();}
 		if (scenery_enabled    ()) {(*i)->update_scenery();}
 	}
+	if (shadow_map_enabled()) { // after everything has been setup
+		for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
+			(*i)->setup_shadow_maps();
+		}
+	}
 }
 
 
@@ -1778,29 +1788,14 @@ void tile_draw_t::draw(bool reflection_pass) {
 			if (tile_occluded) {continue;}
 		} // check_occlusion
 		to_draw.push_back(make_pair(dist, tile));
+		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
 	} // for i
-
-	// draw visible tiles
 	sort(to_draw.begin(), to_draw.end()); // sort front to back to improve draw time through depth culling
-	shader_t s;
-	setup_mesh_draw_shaders(s, reflection_pass);
-	s.add_uniform_float("spec_scale", 1.0);
-	s.set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
-	s.enable_vnct_atribs(1, 0, 0, 0);
-	vbo_ring_buffer_t vbo_ring_ibuf((1 << 16), 1);
-	enable_blend(); // for fog transparency
-	glEnable(GL_PRIMITIVE_RESTART);
-	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
 
-	for (unsigned i = 0; i < to_draw.size(); ++i) {
-		num_trees += to_draw[i].second->num_pine_trees() + to_draw[i].second->num_decid_trees();
-		if (display_mode & 0x01) {to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, vbo_ring_ibuf, reflection_pass);}
+	if (display_mode & 0x01) { // draw visible tiles
+		if (shadow_map_enabled()) {draw_tiles(reflection_pass, 1);} // shadow map pass
+		draw_tiles(reflection_pass, 0); // non-shadow map pass
 	}
-	vbo_ring_ibuf.free_vbo();
-	bind_vbo(0, 1); // unbind index buffer
-	glDisable(GL_PRIMITIVE_RESTART);
-	disable_blend();
-	s.end_shader();
 	
 	if (DEBUG_TILES) {
 		unsigned const dtree_mem(tree_data_manager.get_gpu_mem()), ptree_mem(get_pine_tree_inst_gpu_mem()), grass_mem(grass_tile_manager.get_gpu_mem());
@@ -1817,11 +1812,47 @@ void tile_draw_t::draw(bool reflection_pass) {
 }
 
 
-void tile_draw_t::draw_shadow_pass(point const &lpos) const {
+void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const {
 
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		// FIXME: WRITE
+	shader_t s;
+	setup_mesh_draw_shaders(s, reflection_pass, enable_shadow_map);
+	s.add_uniform_float("spec_scale", 1.0);
+	s.set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
+	s.enable_vnct_atribs(1, 0, 0, 0);
+	vbo_ring_buffer_t vbo_ring_ibuf((1 << 16), 1);
+	enable_blend(); // for fog transparency
+	glEnable(GL_PRIMITIVE_RESTART);
+	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
+
+	for (unsigned i = 0; i < to_draw.size(); ++i) {
+		if (to_draw[i].second->using_shadow_maps() != enable_shadow_map) continue; // draw in another pass
+		to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, vbo_ring_ibuf, reflection_pass);
 	}
+	vbo_ring_ibuf.free_vbo();
+	bind_vbo(0, 1); // unbind index buffer
+	glDisable(GL_PRIMITIVE_RESTART);
+	disable_blend();
+	s.end_shader();
+}
+
+
+void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
+
+	bool const reflection_pass = 0; // does this make things more correct and efficient when enabled?
+	bool const orig_fog_enabled(fog_enabled);
+	fog_enabled = 0; // optimization?
+	to_draw.clear();
+
+	if (tile) { // have a current tile
+		to_draw.push_back(make_pair(0.0, tile)); // draw this tile (distance is unused so set to 0.0)
+	}
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		// FIXME: WRITE - note that we must only add tiles that are both setup and visible to the light's frustum (camera_pdu)
+	}
+	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
+	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
+	if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
+	fog_enabled = orig_fog_enabled;
 }
 
 
@@ -2169,7 +2200,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 	}
 }
 
-void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {terrain_tile_draw.draw_shadow_pass(lpos);}
+void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {terrain_tile_draw.draw_shadow_pass(lpos, tile);}
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
 void clear_tiled_terrain() {terrain_tile_draw.clear();}

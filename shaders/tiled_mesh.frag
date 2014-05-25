@@ -107,10 +107,17 @@ void main()
 	if (enable_light0) { // sun
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 20.0*weights.b + 40.0*weights4;
-		color += add_light_comp(normal, epos, 0, diffuse_scale, ambient_scale, spec, shininess, bump_scale);
+		float dscale    = diffuse_scale;
+		if (use_shadow_map) {dscale *= get_shadow_map_weight_light0(epos, normal);}
+		color += add_light_comp(normal, epos, 0, dscale, ambient_scale, spec, shininess, bump_scale);
 	}
-	if (enable_light1) {color += add_light_comp(normal, epos, 1, diffuse_scale, ambient_scale, 0.0, 1.0, bump_scale);} // moon
+	if (enable_light1) { // moon
+		float dscale = diffuse_scale;
+		if (use_shadow_map) {dscale *= get_shadow_map_weight_light1(epos, normal);}
+		color += add_light_comp(normal, epos, 1, dscale, ambient_scale, 0.0, 1.0, bump_scale);
+	}
 	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
+
 	fg_FragColor = apply_fog_scaled(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a), vertex.z); // add fog
 	//fg_FragColor = apply_fog(color); // untextured (white) for debugging
 }

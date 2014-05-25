@@ -33,12 +33,12 @@ struct ground_mode_smap_data_t : public smap_data_t {
 
 	bool last_has_dynamic;
 
-	ground_mode_smap_data_t() : smap_data_t(6), last_has_dynamic(0) {}
+	ground_mode_smap_data_t(unsigned tu_id_) : smap_data_t(tu_id_), last_has_dynamic(0) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
-	virtual bool needs_update(int light, point const &lpos);
+	virtual bool needs_update(point const &lpos);
 };
 
-ground_mode_smap_data_t smap_data[NUM_LIGHT_SRC];
+ground_mode_smap_data_t smap_data[NUM_LIGHT_SRC] = {ground_mode_smap_data_t(6), ground_mode_smap_data_t(7)};
 
 
 class smap_vertex_cache_t {
@@ -103,7 +103,7 @@ int get_smap_ndiv(float radius) {
 void free_smap_vbo() {smap_vertex_cache.free();}
 
 
-xform_matrix get_texture_matrix(xform_matrix const &camera_mv_matrix, int light) {
+xform_matrix get_texture_matrix(xform_matrix const &camera_mv_matrix) {
 	
 	// This matrix transforms every coordinate {x,y,z} to {x,y,z}* 0.5 + 0.5 
 	// Moving from unit cube [-1,1] to [0,1]  
@@ -116,12 +116,11 @@ xform_matrix get_texture_matrix(xform_matrix const &camera_mv_matrix, int light)
 }
 
 
-bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, float z_bias) const {
+bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light) const {
 
 	if (!shadow_map_enabled() || !is_light_enabled(light)) return 0;
 	point lpos; // unused
 	bool const light_valid(light_valid(0xFF, light, lpos));
-	s.add_uniform_float("z_bias", z_bias);
 	s.add_uniform_int  (append_ix(string("sm_tex"),   light, 0), tu_id);
 	s.add_uniform_float(append_ix(string("sm_scale"), light, 0), (light_valid ? 1.0 : 0.0));
 	s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), texture_matrix.get_ptr(), 0);
@@ -132,7 +131,7 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, float z_bias
 		bind_2d_texture(tid);
 	}
 	else {
-		select_texture(WHITE_TEX); // default wite texture
+		select_texture(WHITE_TEX); // default white texture
 	}
 	set_active_texture(0);
 	return 1;
@@ -141,8 +140,10 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, float z_bias
 
 void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 
+	s.add_uniform_float("z_bias", z_bias);
+
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
-		smap_data[l].set_smap_shader_for_light(s, l, z_bias);
+		smap_data[l].set_smap_shader_for_light(s, l);
 	}
 }
 
@@ -219,26 +220,23 @@ bool no_sparse_smap_update() {
 }
 
 
-bool smap_data_t::needs_update(int light, point const &lpos) {
+bool smap_data_t::needs_update(point const &lpos) {
 
 	bool const ret(lpos != last_lpos);
 	last_lpos = lpos;
 	return ret;
 }
 
-bool ground_mode_smap_data_t::needs_update(int light, point const &lpos) {
+bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 
 	bool const has_dynamic(!tid || scene_smap_vbo_invalid || no_sparse_smap_update()); // Note: force two frames of updates the first time the smap is created by setting has_dynamic
-	bool const ret(smap_data_t::needs_update(light, lpos) || has_dynamic || last_has_dynamic || voxel_shadows_updated); // Note: see view clipping in indexed_vntc_vect_t<T>::render()
+	bool const ret(smap_data_t::needs_update(lpos) || has_dynamic || last_has_dynamic || voxel_shadows_updated); // Note: see view clipping in indexed_vntc_vect_t<T>::render()
 	last_has_dynamic = has_dynamic;
 	return ret;
 }
 
 
-void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube_t const &bounds) {
-
-	assert(light >= 0 && light < NUM_LIGHT_SRC);
-	tu_id = base_tu_id + light; // Note: currently used with 2 lights
+void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube_t const &bounds) { // Note: light is unused
 
 	// setup render state
 	xform_matrix const camera_mv_matrix(fgGetMVM()); // cache the camera modelview matrix before we change it
@@ -247,10 +245,10 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
 	pdu = get_pt_cube_frustum_pdu(lpos, bounds, 1);
-	texture_matrix = get_texture_matrix(camera_mv_matrix, light);
+	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
 
-	if (needs_update(light, lpos)) {
+	if (needs_update(lpos)) {
 		// setup textures and framebuffer
 		if (!tid) {
 			bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
@@ -265,17 +263,14 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 		// save state and update variables for fast rendering with correct clipping
 		unsigned const orig_enabled_lights(enabled_lights);
-		point const camera_pos_(camera_pos);
 		pos_dir_up const camera_pdu_(camera_pdu);
-		camera_pos = lpos;
-		camera_pdu = pdu;
+		camera_pdu     = pdu;
 		enabled_lights = 0; // disable lighting so that shaders that auto-detect enabled lights don't try to do lighting
 		// render the scene
 		check_gl_error(202);
 		render_scene_shadow_pass(lpos);
 		// restore state variables
-		camera_pos = camera_pos_;
-		camera_pdu = camera_pdu_;
+		camera_pdu     = camera_pdu_;
 		enabled_lights = orig_enabled_lights;
 		disable_fbo();
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -294,6 +289,9 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube
 
 
 void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
+
+	point const camera_pos_(camera_pos);
+	camera_pos = lpos;
 
 	// add static objects
 	if (coll_objects.drawn_ids.empty()) {
@@ -374,6 +372,7 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 		fgPopMatrix();
 	}
 	voxel_shadows_updated = 0;
+	camera_pos = camera_pos_;
 }
 
 
