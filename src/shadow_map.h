@@ -17,6 +17,7 @@ struct smap_data_t {
 
 	smap_data_t(unsigned tu_id_) : tid(0), tu_id(tu_id_), fbo_id(0), last_lpos(all_zeros) {}
 	virtual ~smap_data_t() {} // free_gl_state()?
+	bool is_allocated() const {return (tid > 0);}
 
 	void free_gl_state() {
 		free_texture(tid);

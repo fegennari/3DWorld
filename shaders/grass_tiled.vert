@@ -52,8 +52,8 @@ void main()
 	normal      = normalize(fg_NormalMatrix * normal); // eye space
 	vec3 color  = vec3(0.0);
 	//if (grass_weight < noise_weight) {
-	if (enable_light0) {color += add_light_comp_pos_scaled0(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale).rgb;}
-	if (enable_light1) {color += add_light_comp_pos_scaled1(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale).rgb;}
+	if (enable_light0) {color += add_light_comp_pos_scaled_smap_light0(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale).rgb;}
+	if (enable_light1) {color += add_light_comp_pos_scaled_smap_light1(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale).rgb;}
 	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2).rgb;}
 	//}
 	float alpha = fg_Color.a;

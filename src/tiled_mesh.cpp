@@ -37,7 +37,7 @@ string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled;
-extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode;
+extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
@@ -282,7 +282,10 @@ unsigned tile_t::get_gpu_mem() const {
 	if (weight_tid        > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	if (height_tid        > 0) mem += 4*num_texels; // 4 bytes per texel (F32)
 	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
-	for (unsigned i = 0; i < smap_data.size(); ++i) {} // FIXME: add smap_data memory
+	
+	for (unsigned i = 0; i < smap_data.size(); ++i) {
+		if (smap_data[i].is_allocated()) {mem += 4*shadow_map_sz*shadow_map_sz;} // approximate (may be 3x for 24-bit depth, or 8x for texture + FBO)
+	}
 	return mem;
 }
 
@@ -718,7 +721,10 @@ void tile_t::setup_shadow_maps() {
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
 		point lpos;
 		if (!light_valid_and_enabled(i, lpos)) continue;
+		//fgPushMatrix();
+		//translate_to(mesh_off.get_xlate());
 		smap_data[i].create_shadow_map_for_light(i, lpos, get_bcube());
+		//fgPopMatrix();
 	}
 }
 
@@ -1034,6 +1040,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 		vector3d const offset(get_xval(x1), get_yval(y1), 0.0);
 		s.add_uniform_vector3d("cloud_offset", offset);
 	}
+	shader_shadow_map_setup(s);
 	unsigned const grass_block_dim(get_grass_block_dim());
 	assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
 	int const dx(xoff - xoff2), dy(yoff - yoff2);
@@ -1115,6 +1122,14 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
+void tile_t::shader_shadow_map_setup(shader_t &s) const {
+
+	for (unsigned i = 0; i < smap_data.size(); ++i) {
+		smap_data[i].set_smap_shader_for_light(s, i); // FIXME: factor out a shared part of this so we don't have to do it for every shadowed tile?
+	}
+}
+
+
 void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const {
 
 	assert(size > 0);
@@ -1129,9 +1144,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	if (!reflection_pass && cloud_shadows_enabled()) {
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
-	for (unsigned i = 0; i < smap_data.size(); ++i) {
-		smap_data[i].set_smap_shader_for_light(s, i); // FIXME: factor out a shared part of this so we don't have to do it for every shadowed tile?
-	}
+	shader_shadow_map_setup(s);
 	unsigned const lod_level(get_lod_level(reflection_pass));
 	unsigned const step(1 << lod_level), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
 	assert(mesh_vbo > 0 && ivbo > 0);
@@ -1838,7 +1851,6 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 
 void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
-	bool const reflection_pass = 0; // does this make things more correct and efficient when enabled?
 	bool const orig_fog_enabled(fog_enabled);
 	fog_enabled = 0; // optimization?
 	to_draw.clear();
@@ -1849,9 +1861,9 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		// FIXME: WRITE - note that we must only add tiles that are both setup and visible to the light's frustum (camera_pdu)
 	}
-	if (pine_trees_enabled ()) {draw_pine_trees (reflection_pass);}
-	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
-	if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
+	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
+	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
+	if (scenery_enabled    ()) {draw_scenery    (0);}
 	fog_enabled = orig_fog_enabled;
 }
 
@@ -1898,22 +1910,24 @@ void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves
 }
 
 
-void tile_draw_t::draw_pine_trees(bool reflection_pass) {
+void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 
 	// far leaves
-	enable_blend(); // for fog transparency
-	shader_t s;
-	set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
-	s.add_uniform_float("radius_scale", calc_tree_size());
-	s.add_uniform_float("ambient_scale", 1.5);
-	s.add_uniform_vector3d("camera_pos", get_camera_pos());
-	s.set_specular(0.2, 8.0);
-	draw_pine_tree_bl(s, 0, 0, 1, reflection_pass);
-	s.set_specular(0.0, 1.0);
-	s.end_shader();
-	disable_blend();
-
+	if (!shadow_pass) {
+		enable_blend(); // for fog transparency
+		shader_t s;
+		set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
+		s.add_uniform_float("radius_scale", calc_tree_size());
+		s.add_uniform_float("ambient_scale", 1.5);
+		s.add_uniform_vector3d("camera_pos", get_camera_pos());
+		s.set_specular(0.2, 8.0);
+		draw_pine_tree_bl(s, 0, 0, 1, reflection_pass);
+		s.set_specular(0.0, 1.0);
+		s.end_shader();
+		disable_blend();
+	}
 	// near leaves
+	shader_t s;
 	int xlate_loc(-1);
 	if (enable_instanced_pine_trees()) {s.set_prefix("#define ENABLE_INSTANCING", 0);} // VS
 	set_pine_tree_shader(s, "pine_tree");
@@ -1937,7 +1951,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 
 	// nearby trunks
 	setup_tt_fog_pre(s);
-	setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1);
+	setup_smoke_shaders(s, 0.0, 0, 0, 0, !shadow_pass, 0, 0, 0, 0, 0, 0, 1);
 	setup_tt_fog_post(s);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 	s.add_uniform_float("tex_scale_t", 5.0);
@@ -1946,17 +1960,17 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass) {
 	s.end_shader();
 
 	// distant trunks
-	if (!tree_trunk_pts.empty()) { // color/texture already set above
+	if (!shadow_pass && !tree_trunk_pts.empty()) { // color/texture already set above
 		enable_blend(); // for fog transparency
 		set_pine_tree_shader(s, "xy_billboard");
 		assert(!(tree_trunk_pts.size() & 1));
 		select_texture(WHITE_TEX);
 		s.set_cur_color(get_tree_trunk_color(T_PINE, 1));
 		draw_verts(tree_trunk_pts, GL_LINES);
-		tree_trunk_pts.resize(0);
 		s.end_shader();
 		disable_blend();
 	}
+	tree_trunk_pts.resize(0);
 }
 
 
@@ -1988,7 +2002,7 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 }
 
 
-void tile_draw_t::draw_decid_trees(bool reflection_pass) {
+void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
 	lod_renderer.resize_zero();
@@ -2079,45 +2093,49 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 
-	for (unsigned pass = 0; pass < 2; ++pass) { // wind, no wind
-		shader_t s;
-		bool const enable_wind((display_mode & 0x0100) && pass == 0);
-		lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
-		if (pass == 1) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
-		s.set_bool_prefix("enable_grass_wind", enable_wind, 0); // VS
-		s.set_vert_shader("ads_lighting.part*+wind.part*+perlin_clouds.part*+grass_texture.part+grass_tiled");
-		s.set_frag_shader("linear_fog.part+grass_tiled");
-		//s.set_geom_shader("ads_lighting.part*+grass_tiled");  // triangle => triangle - too slow
-		s.begin_shader();
-		if (enable_wind) {setup_wind_for_shader(s, 1);}
-		s.add_uniform_int("tex0", 0);
-		s.add_uniform_int("height_tex", 2);
-		s.add_uniform_int("weight_tex", 3);
-		s.add_uniform_int("shadow_normal_tex", 4);
-		set_noise_tex(s, 5);
-		setup_tt_fog_post(s);
-		s.add_uniform_float("height", grass_length);
-		s.add_uniform_float("dist_const", get_grass_thresh());
-		s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
-		s.set_specular(0.1, 20.0);
-		setup_cloud_plane_uniforms(s);
-		grass_tile_manager.begin_draw();
-		set_tile_xy_vals(s);
+	for (unsigned wpass = 0; wpass < 2; ++wpass) { // wind, no wind
+		for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps
+			if (spass == 0 && !shadow_map_enabled()) continue;
+			shader_t s;
+			bool const enable_wind((display_mode & 0x0100) && wpass == 0);
+			lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
+			if (wpass == 1) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
+			s.set_bool_prefix("enable_grass_wind", enable_wind, 0); // VS
+			s.set_bool_prefix("use_shadow_map", (spass == 0), 0); // VS
+			s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+perlin_clouds.part*+grass_texture.part+grass_tiled");
+			s.set_frag_shader("linear_fog.part+grass_tiled");
+			//s.set_geom_shader("ads_lighting.part*+grass_tiled");  // triangle => triangle - too slow
+			s.begin_shader();
+			if (enable_wind) {setup_wind_for_shader(s, 1);}
+			s.add_uniform_int("tex0", 0);
+			s.add_uniform_int("height_tex", 2);
+			s.add_uniform_int("weight_tex", 3);
+			s.add_uniform_int("shadow_normal_tex", 4);
+			set_noise_tex(s, 5);
+			setup_tt_fog_post(s);
+			s.add_uniform_float("height", grass_length);
+			s.add_uniform_float("dist_const", get_grass_thresh());
+			s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
+			s.set_specular(0.1, 20.0);
+			setup_cloud_plane_uniforms(s);
+			grass_tile_manager.begin_draw();
+			set_tile_xy_vals(s);
 
-		int const lt_loc(s.get_attrib_loc("local_translate"));
-		glEnableVertexAttribArray(lt_loc);
-		glVertexAttribDivisor(lt_loc, 1);
+			int const lt_loc(s.get_attrib_loc("local_translate"));
+			glEnableVertexAttribArray(lt_loc);
+			glVertexAttribDivisor(lt_loc, 1);
 
-		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5) == pass) { // xyz dist
+			for (unsigned i = 0; i < to_draw.size(); ++i) {
+				if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
+				if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5) != wpass) continue; // xyz dist
 				to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
 			}
-		}
-		glVertexAttribDivisor(lt_loc, 0);
-		glDisableVertexAttribArray(lt_loc);
-		grass_tile_manager.end_draw();
-		s.end_shader();
-	}
+			glVertexAttribDivisor(lt_loc, 0);
+			glDisableVertexAttribArray(lt_loc);
+			grass_tile_manager.end_draw();
+			s.end_shader();
+		} // for spass
+	} // for wpass
 }
 
 
@@ -2183,6 +2201,20 @@ bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t
 tile_draw_t terrain_tile_draw;
 
 
+void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {
+	terrain_tile_draw.draw_shadow_pass(lpos, tile);
+}
+
+bool tile_smap_data_t::needs_update(point const &lpos) {
+
+	// FIXME: it would be better if we could just translate the shadow map when the scene shifts, but this seems fairly complex to track and get right
+	int const new_dxoff(xoff - xoff2), new_dyoff(yoff - yoff2);
+	bool const new_off(new_dxoff != dxoff || new_dyoff != dyoff);
+	dxoff = new_dxoff; dyoff = new_dyoff;
+	return (smap_data_t::needs_update(lpos) || new_off);
+}
+
+
 tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get_tile_from_xy(tp);}
 float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
 void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
@@ -2199,8 +2231,6 @@ void draw_tiled_terrain(bool reflection_pass) {
 		if (line_intersect_tiled_mesh(v1, v2, hit_pos)) {draw_single_colored_sphere(hit_pos, 0.1, N_SPHERE_DIV, RED);}
 	}
 }
-
-void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {terrain_tile_draw.draw_shadow_pass(lpos, tile);}
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
 void clear_tiled_terrain() {terrain_tile_draw.clear();}

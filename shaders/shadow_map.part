@@ -29,3 +29,12 @@ vec4 add_light_comp_pos_smap_light1(in vec3 normal, in vec4 epos) {
 	if (use_shadow_map) {normal *= get_shadow_map_weight_light1(epos, normal);}
 	return add_light_comp_pos1(normal, epos);
 }
+
+vec4 add_light_comp_pos_scaled_smap_light0(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale) {
+	if (use_shadow_map) {normal *= get_shadow_map_weight_light0(epos, normal);}
+	return add_light_comp_pos_scaled0(normal, epos, ds_scale, a_scale);
+}
+vec4 add_light_comp_pos_scaled_smap_light1(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale) {
+	if (use_shadow_map) {normal *= get_shadow_map_weight_light1(epos, normal);}
+	return add_light_comp_pos_scaled1(normal, epos, ds_scale, a_scale);
+}

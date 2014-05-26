@@ -56,11 +56,12 @@ class tile_t;
 
 struct tile_smap_data_t : public smap_data_t {
 
+	int dxoff, dyoff;
 	tile_t *tile;
 
-	tile_smap_data_t(unsigned tu_id_, tile_t *tile_) : smap_data_t(tu_id_), tile(tile_) {}
+	tile_smap_data_t(unsigned tu_id_, tile_t *tile_) : smap_data_t(tu_id_), dxoff(0), dyoff(0), tile(tile_) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
-	//virtual bool needs_update(point const &lpos);
+	virtual bool needs_update(point const &lpos);
 };
 
 
@@ -259,6 +260,7 @@ public:
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
+	void shader_shadow_map_setup(shader_t &s) const;
 	void draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const;
 	void draw_water(shader_t &s, float z) const;
 	bool check_player_collision() const;
@@ -306,10 +308,10 @@ public:
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_pine_tree_shader(shader_t &s, string const &vs);
 	void draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass, int xlate_loc=-1);
-	void draw_pine_trees(bool reflection_pass);
+	void draw_pine_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass);
 	static void billboard_tree_shader_setup(shader_t &s);
-	void draw_decid_trees(bool reflection_pass);
+	void draw_decid_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_scenery(bool reflection_pass);
 	void draw_grass(bool reflection_pass);
 	void update_lightning(bool reflection_pass);
