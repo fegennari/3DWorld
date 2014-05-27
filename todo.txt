@@ -11,6 +11,5 @@ Draw more distant tiles (larger/lower res at high delta-z)
 
 http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 GLM Noise
-
-TT tree shadows - shadow map
+TT shadow map fade
 Openmp Cobj draw during groups physics

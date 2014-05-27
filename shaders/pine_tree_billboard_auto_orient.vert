@@ -1,12 +1,12 @@
 uniform float radius_scale = 1.0;
-uniform vec3 camera_pos;
+uniform vec2 xlate;
 
 varying float world_space_zval;
 
 void main()
 {
 	set_tc0_from_vert_id();
-	vec3 dir    = normalize(vec3(-(fg_Vertex.y - camera_pos.y), (fg_Vertex.x - camera_pos.x), 0.0)); // cross(z, fg_Vertex-camera_pos)
+	vec3 dir    = normalize(vec3(-(fg_Vertex.y + xlate.y), (fg_Vertex.x + xlate.x), 0.0)); // cross(z, fg_Vertex-camera_pos)
 	vec4 vertex = fg_Vertex + vec4(((2.0*tc.s - 1.0) * radius_scale * fg_Normal.x * dir), 0.0);
 	world_space_zval = vertex.z;
 	vec4 epos   = fg_ModelViewMatrix * vertex;

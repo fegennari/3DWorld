@@ -27,6 +27,8 @@ float const GEOMORPH_THRESH   = 5.0;
 float const SCENERY_THRESH_REF= 1.7;
 float const SCENERY_THRESH    = 4.2;
 float const GRASS_THRESH      = 1.5;
+float const SMAP_NEW_THRESH   = 1.0;
+float const SMAP_DEL_THRESH   = 1.2;
 float const BCUBE_ZTOLER      = 1.0E-6;
 
 
@@ -187,7 +189,7 @@ public:
 	void clear_shadows();
 	void clear_shadow_map();
 	void clear_vbo_tid();
-	void invalidate_shadows() {shadows_invalid = 1; clear_shadow_map();}
+	void invalidate_shadows() {shadows_invalid = 1;}
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
 
 	vector3d get_norm(unsigned ix) const {

@@ -284,7 +284,7 @@ unsigned tile_t::get_gpu_mem() const {
 	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
-		if (smap_data[i].is_allocated()) {mem += 4*shadow_map_sz*shadow_map_sz;} // approximate (may be 3x for 24-bit depth, or 8x for texture + FBO)
+		if (smap_data[i].is_allocated()) {mem += 4*shadow_map_sz*shadow_map_sz;} // FBO textures
 	}
 	return mem;
 }
@@ -297,11 +297,11 @@ void tile_t::clear() {
 	weight_data.clear();
 	zvals.clear();
 	clear_shadows();
+	clear_shadow_map();
 	pine_trees.clear_all();
 	decid_trees.clear();
 	scenery.clear();
 	grass_blocks.clear();
-	smap_data.clear();
 }
 
 void tile_t::clear_shadows() {
@@ -322,6 +322,7 @@ void tile_t::clear_shadow_map() {
 void tile_t::clear_vbo_tid() {
 
 	clear_shadows();
+	clear_shadow_map();
 	pine_trees.clear_vbos();
 	decid_trees.clear_context(); // only necessary if not using instancing
 	scenery.clear_vbos();
@@ -714,7 +715,7 @@ void tile_t::setup_shadow_maps() {
 
 	if (!shadow_map_enabled()) return; // disabled
 
-	if (contains_camera() && smap_data.empty()) {
+	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH && smap_data.empty()) { // allocate new shadow maps
 		tile_xy_pair const tp(get_tile_xy_pair());
 		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_data.push_back(tile_smap_data_t(13+i, this));} // uses tu_id 13 and 14
 	}
@@ -895,6 +896,7 @@ bool tile_t::update_range() { // if returns 0, tile will be deleted
 	if (pine_trees_enabled()) {update_pine_tree_state(0);} // can free pine tree vbos
 	float const dist(get_rel_dist_to_camera());
 	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid();}
+	if (dist*TILE_RADIUS > SMAP_DEL_THRESH) {clear_shadow_map();} // too far, delete old shadow maps
 	return (dist < DELETE_DIST_TILES && !mesh_height_invalid);
 }
 
@@ -938,11 +940,14 @@ void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xl
 }
 
 
+// Note: xlate has different meanings here: for near leaves, it's a vec3 attribute; for far leaves, it's a vec2 uniform; for branches, it's -1
 void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_branches, bool draw_near_leaves,
 	bool draw_far_leaves, bool reflection_pass, int xlate_loc)
 {
 	if (pine_trees.empty()) return;
+	point const camera(get_camera_pos());
 	vector3d const xlate(ptree_off.get_xlate());
+	vector2d const camera_xlate(xlate.x-camera.x, xlate.y-camera.y);
 	fgPushMatrix();
 	translate_to(xlate);
 	
@@ -958,17 +963,23 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 	}
 	if (draw_near_leaves || draw_far_leaves) { // could use reflection_pass as an optimization
 		float const weight(1.0 - get_tree_far_weight()); // 0 => low detail, 1 => high detail
-
-		if (weight > 0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
+		
+		if (draw_far_leaves && weight < 1.0) {
+			assert(xlate_loc >= 0);
+			s.set_uniform_vector2d(xlate_loc, camera_xlate);
+		}
+		if (weight > 0.0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
 			if (draw_near_leaves) {
-				s.add_uniform_float("max_noise", weight);
+				int const loc(s.get_uniform_loc("max_noise"));
+				s.set_uniform_float(loc, weight);
 				draw_tree_leaves_lod(xlate, 0, xlate_loc); // near leaves
-				s.add_uniform_float("max_noise", 1.0);
+				s.set_uniform_float(loc, 1.0);
 			}
 			if (draw_far_leaves) {
-				s.add_uniform_float("min_noise", weight);
+				int const loc(s.get_uniform_loc("min_noise"));
+				s.set_uniform_float(loc, weight);
 				draw_tree_leaves_lod(xlate, 1, xlate_loc); // far leaves
-				s.add_uniform_float("min_noise", 0.0);
+				s.set_uniform_float(loc, 0.0);
 			}
 		}
 		else if ((weight == 0.0) ? draw_far_leaves : draw_near_leaves) {
@@ -1696,10 +1707,8 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		if (decid_trees_enabled()) {(*i)->update_decid_trees();}
 		if (scenery_enabled    ()) {(*i)->update_scenery();}
 	}
-	if (shadow_map_enabled()) { // after everything has been setup
-		for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
-			(*i)->setup_shadow_maps();
-		}
+	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) { // after everything has been setup
+		(*i)->setup_shadow_maps();
 	}
 }
 
@@ -1851,20 +1860,21 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 
 void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
+	//RESET_TIME;
 	bool const orig_fog_enabled(fog_enabled);
 	fog_enabled = 0; // optimization?
 	to_draw.clear();
+	//if (tile) {}
 
-	if (tile) { // have a current tile
-		to_draw.push_back(make_pair(0.0, tile)); // draw this tile (distance is unused so set to 0.0)
-	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		// FIXME: WRITE - note that we must only add tiles that are both setup and visible to the light's frustum (camera_pdu)
+		// FIXME: what about tiles that aren't yet setup?
+		if (i->second->is_visible()) {to_draw.push_back(make_pair(0.0, i->second));} // distance is unused so set to 0.0
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0);}
 	fog_enabled = orig_fog_enabled;
+	//PRINT_TIME("Draw Shadow Pass");
 }
 
 
@@ -1919,9 +1929,8 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
 		s.add_uniform_float("radius_scale", calc_tree_size());
 		s.add_uniform_float("ambient_scale", 1.5);
-		s.add_uniform_vector3d("camera_pos", get_camera_pos());
 		s.set_specular(0.2, 8.0);
-		draw_pine_tree_bl(s, 0, 0, 1, reflection_pass);
+		draw_pine_tree_bl(s, 0, 0, 1, reflection_pass, s.get_uniform_loc("xlate"));
 		s.set_specular(0.0, 1.0);
 		s.end_shader();
 		disable_blend();
@@ -2211,7 +2220,7 @@ bool tile_smap_data_t::needs_update(point const &lpos) {
 	int const new_dxoff(xoff - xoff2), new_dyoff(yoff - yoff2);
 	bool const new_off(new_dxoff != dxoff || new_dyoff != dyoff);
 	dxoff = new_dxoff; dyoff = new_dyoff;
-	return (smap_data_t::needs_update(lpos) || new_off);
+	return (smap_data_t::needs_update(lpos) || new_off || (display_mode & 0x10)); // FIXME
 }
 
 
