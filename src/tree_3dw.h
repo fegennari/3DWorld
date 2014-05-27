@@ -43,6 +43,7 @@ public:
 	int leaf_opacity_loc, branch_opacity_loc;
 
 	tree_lod_render_t(bool enabled_) : enabled(enabled_), leaf_opacity_loc(-1), branch_opacity_loc(-1) {}
+	void set_enabled(bool enabled_) {enabled = enabled_;} // to be called before use, not during rendering
 	bool is_enabled()   const {return enabled;}
 	bool has_leaves()   const {return !leaf_vect.empty();}
 	bool has_branches() const {return !branch_vect.empty();}

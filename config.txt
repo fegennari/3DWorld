@@ -60,7 +60,7 @@ mesh_mag_mult 2.0
 mesh_freq_mult 0.5
 
 include config_resolution.txt
-#shadow_map_sz 2048
+shadow_map_sz 2048
 
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0

@@ -2021,6 +2021,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
 	lod_renderer.resize_zero();
+	lod_renderer.set_enabled(!shadow_pass); // need full detail rendering in shadow pass, since billboards project poor shadows
 
 	{ // draw leaves
 		shader_t ls;
@@ -2226,7 +2227,7 @@ bool tile_smap_data_t::needs_update(point const &lpos) {
 	int const new_dxoff(xoff - xoff2), new_dyoff(yoff - yoff2);
 	bool const new_off(new_dxoff != dxoff || new_dyoff != dyoff);
 	dxoff = new_dxoff; dyoff = new_dyoff;
-	return (smap_data_t::needs_update(lpos) || new_off || (display_mode & 0x10)); // FIXME
+	return (smap_data_t::needs_update(lpos) || new_off);
 }
 
 
