@@ -893,7 +893,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
 bool tile_t::update_range() { // if returns 0, tile will be deleted
 
-	if (pine_trees_enabled()) {update_pine_tree_state(0);} // can free pine tree vbos
+	update_pine_tree_state(0); // can free pine tree vbos
 	float const dist(get_rel_dist_to_camera());
 	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid();}
 	if (dist*TILE_RADIUS > SMAP_DEL_THRESH) {clear_shadow_map();} // too far, delete old shadow maps
@@ -917,7 +917,7 @@ void tile_t::init_pine_tree_draw() {
 
 void tile_t::update_pine_tree_state(bool upload_if_needed) {
 
-	if (pine_trees.empty()) return;
+	if (!pine_trees_enabled() || pine_trees.empty()) return;
 	float const weight(get_tree_far_weight());
 	float const weights[2] = {1.0-weight, weight}; // {high, low} detail
 
@@ -1004,6 +1004,11 @@ void tile_t::gen_decid_trees_if_needed() {
 }
 
 
+void tile_t::update_decid_trees() {
+	if (decid_trees_enabled()) {decid_trees.check_render_textures();}
+}
+
+
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass) {
 
 	if (decid_trees.empty()) return;
@@ -1015,7 +1020,7 @@ void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool
 
 void tile_t::update_scenery() {
 
-	if (is_distant) return; // no scenery
+	if (!scenery_enabled() || is_distant) return; // no scenery
 	float const dist_scale(get_scenery_dist_scale(0)); // tree_dist_scale should correlate with mesh scale
 	if (scenery.generated && dist_scale > 1.2) {scenery.clear();} // too far away
 	if (scenery.generated || dist_scale > 1.0 || !is_visible()) return; // already generated, too far away, or not visible
@@ -1703,9 +1708,9 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		(*i)->pre_draw(height_gen);
-		if (pine_trees_enabled ()) {(*i)->update_pine_tree_state(1);}
-		if (decid_trees_enabled()) {(*i)->update_decid_trees();}
-		if (scenery_enabled    ()) {(*i)->update_scenery();}
+		(*i)->update_pine_tree_state(1);
+		(*i)->update_decid_trees();
+		(*i)->update_scenery();
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) { // after everything has been setup
 		(*i)->setup_shadow_maps();
@@ -1864,11 +1869,12 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 	bool const orig_fog_enabled(fog_enabled);
 	fog_enabled = 0; // optimization?
 	to_draw.clear();
-	//if (tile) {}
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		// FIXME: what about tiles that aren't yet setup?
-		if (i->second->is_visible()) {to_draw.push_back(make_pair(0.0, i->second));} // distance is unused so set to 0.0
+		if (!i->second->is_visible()) continue;
+		i->second->update_pine_tree_state(1);
+		//i->second->update_decid_trees(); // not legal
+		to_draw.push_back(make_pair(0.0, i->second)); // distance is unused so set to 0.0
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}

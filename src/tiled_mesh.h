@@ -253,7 +253,7 @@ public:
 	unsigned num_decid_trees() const {return decid_trees.size();}
 	void gen_decid_trees_if_needed();
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass);
-	void update_decid_trees() {decid_trees.check_render_textures();}
+	void update_decid_trees();
 
 	// *** scenery/grass ***
 	void update_scenery();
