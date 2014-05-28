@@ -375,7 +375,7 @@ void check_xy_offsets() {
 
 	if (camera_view) return;
 
-	while (xoff >= MAX_RUN_DIST) {
+	while (xoff >= MAX_RUN_DIST) { // increase distance in tiled terrain mode to reduce shadow map updates?
 		xoff          -= MAX_RUN_DIST;
 		surface_pos.x -= MAX_RUN_DIST*DX_VAL;
 	}

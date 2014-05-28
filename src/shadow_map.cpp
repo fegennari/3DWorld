@@ -239,6 +239,7 @@ bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube_t const &bounds) { // Note: light is unused
 
 	// setup render state
+	bool const do_update(needs_update(lpos)); // must be called first, because this may indirectly update bounds
 	xform_matrix const camera_mv_matrix(fgGetMVM()); // cache the camera modelview matrix before we change it
 	fgPushMatrix();
 	fgMatrixMode(FG_PROJECTION);
@@ -248,7 +249,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube
 	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
 
-	if (needs_update(lpos)) {
+	if (do_update) {
 		// setup textures and framebuffer
 		if (!tid) {
 			bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing

@@ -67,7 +67,8 @@ struct tile_smap_data_t : public smap_data_t {
 };
 
 
-inline float get_scaled_tile_radius() {return TILE_RADIUS*(X_SCENE_SIZE + Y_SCENE_SIZE);}
+inline float get_tile_width        () {return (X_SCENE_SIZE + Y_SCENE_SIZE);}
+inline float get_scaled_tile_radius() {return TILE_RADIUS*get_tile_width();}
 inline float get_tree_scale_denom  () {return max(1.0f, TREE_LOD_THRESH*calc_tree_size());}
 
 

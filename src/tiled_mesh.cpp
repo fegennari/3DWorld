@@ -22,6 +22,7 @@ float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 1.7;
 float const GRASS_LOD_SCALE   = 16.0;
 float const GRASS_DIST_SLOPE  = 0.25;
+float const SMAP_FADE_THRESH  = 1.3;
 
 int   const LIGHTNING_LIGHT = 2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
@@ -61,7 +62,7 @@ void setup_detail_normal_map(shader_t &s, float tscale);
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
 float get_draw_tile_dist  () {return DRAW_DIST_TILES*get_scaled_tile_radius();}
-float get_grass_thresh    () {return (X_SCENE_SIZE + Y_SCENE_SIZE)*GRASS_THRESH;}
+float get_grass_thresh    () {return GRASS_THRESH*get_tile_width();}
 bool is_water_enabled     () {return (!DISABLE_WATER && (display_mode & 0x04) != 0);}
 bool pine_trees_enabled   () {return ((tree_mode & 2) && vegetation > 0.0);}
 bool decid_trees_enabled  () {return ((tree_mode & 1) && vegetation > 0.0);}
@@ -76,6 +77,7 @@ float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
+float get_smap_atten_val  () {return SMAP_FADE_THRESH*get_tile_width();}
 unsigned get_tile_size    () {return MESH_X_SIZE;}
 
 bool enable_instanced_pine_trees() {
@@ -722,10 +724,7 @@ void tile_t::setup_shadow_maps() {
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
 		point lpos;
 		if (!light_valid_and_enabled(i, lpos)) continue;
-		//fgPushMatrix();
-		//translate_to(mesh_off.get_xlate());
 		smap_data[i].create_shadow_map_for_light(i, lpos, get_bcube());
-		//fgPopMatrix();
 	}
 }
 
@@ -1035,7 +1034,7 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 	fgPushMatrix();
 	vector3d const xlate(scenery_off.get_xlate());
 	translate_to(xlate);
-	float const scale_val(get_scenery_thresh(reflection_pass)*(X_SCENE_SIZE + Y_SCENE_SIZE));
+	float const scale_val(get_scenery_thresh(reflection_pass)*get_tile_width());
 	if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 0, scale_val);} // shader not passed in here
 	if (draw_leaves) {scenery.draw_plant_leaves  (s, 0, xlate);}
 	fgPopMatrix();
@@ -1568,6 +1567,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	s.add_uniform_int("detail_tex",  1);
 	s.add_uniform_int("shadow_normal_tex", 7);
 	s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
+	if (enable_shadow_map) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());}
 	set_noise_tex(s, 8);
 	setup_cloud_plane_uniforms(s);
 	setup_terrain_textures(s, 2);
@@ -2123,6 +2123,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			//s.set_geom_shader("ads_lighting.part*+grass_tiled");  // triangle => triangle - too slow
 			s.begin_shader();
 			if (enable_wind) {setup_wind_for_shader(s, 1);}
+			if (spass == 0) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());} // Note: unused in shader
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_int("height_tex", 2);
 			s.add_uniform_int("weight_tex", 3);
@@ -2223,6 +2224,7 @@ void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 
 bool tile_smap_data_t::needs_update(point const &lpos) {
 
+	//return smap_data_t::needs_update(lpos);
 	// FIXME: it would be better if we could just translate the shadow map when the scene shifts, but this seems fairly complex to track and get right
 	int const new_dxoff(xoff - xoff2), new_dyoff(yoff - yoff2);
 	bool const new_off(new_dxoff != dxoff || new_dyoff != dyoff);
