@@ -820,7 +820,7 @@ void uparticle::set_params(unsigned ptype_, point const &pos_, vector3d const &v
 bool uparticle::dec_ref() {
 	
 	if (alloc_block == NULL) return 0;
-	alloc_block->free_obj();
+	alloc_block->free_object();
 	return 1;
 }
 
@@ -1003,7 +1003,7 @@ void us_projectile::set_type(unsigned type) {
 bool us_projectile::dec_ref() {
 	
 	if (alloc_block == NULL) return 0;
-	alloc_block->free_obj();
+	alloc_block->free_object();
 	return 1;
 }
 

@@ -166,7 +166,7 @@ public:
 		if (VERIFY_REFS) objs[used].verify_status();
 		return &objs[used++];
 	}
-	bool free_obj() {
+	bool free_object() {
 		assert(valid);
 		if (++freed == BLOCK_SIZE) {
 			if (in_use) {
