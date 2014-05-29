@@ -1011,6 +1011,7 @@ void tile_t::update_decid_trees() {
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass) {
 
 	if (decid_trees.empty()) return;
+	// Note: shadow_only is always zero here since it's not really correct and doesn't help performance
 	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, 0, reflection_pass, dtree_off.get_xlate());
 }
 
@@ -1943,9 +1944,10 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	}
 	// near leaves
 	shader_t s;
-	int xlate_loc(-1);
+	if (shadow_pass) {s.set_prefix("#define NO_NOISE", 1);} // FS
 	if (enable_instanced_pine_trees()) {s.set_prefix("#define ENABLE_INSTANCING", 0);} // VS
 	set_pine_tree_shader(s, "pine_tree");
+	int xlate_loc(-1);
 	
 	if (enable_instanced_pine_trees()) {
 		s.add_uniform_float("vertex_scale", calc_tree_size()); // default is 0.8
@@ -2020,13 +2022,14 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
+	bool const enable_billboards(USE_TREE_BILLBOARDS && !shadow_pass);
 	lod_renderer.resize_zero();
-	lod_renderer.set_enabled(!shadow_pass); // need full detail rendering in shadow pass, since billboards project poor shadows
+	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
 
 	{ // draw leaves
 		shader_t ls;
-		tree_cont_t::pre_leaf_draw(ls, USE_TREE_BILLBOARDS);
-		if (USE_TREE_BILLBOARDS) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
+		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass);
+		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 		set_tree_dither_noise_tex(ls, 1); // TU=1
 		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass);
@@ -2040,7 +2043,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		bs.set_vert_shader("per_pixel_lighting");
 		bs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tiled_tree_branches");
 		bs.begin_shader();
-		if (USE_TREE_BILLBOARDS) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
+		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
 		setup_tt_fog_post(bs);
 		set_tree_dither_noise_tex(bs, 1); // TU=1
 		bs.add_uniform_int("tex0", 0);

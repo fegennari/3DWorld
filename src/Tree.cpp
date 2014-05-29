@@ -834,7 +834,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	tree_data_t &td(tdata());
 
 	if (shadow_only) {
-		if (!is_over_mesh()) return;
+		if (world_mode == WMODE_GROUND && !is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
 		td.draw_branches_shadow_only(s);
@@ -875,7 +875,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	tree_data_t &td(tdata());
 
 	if (shadow_only && td.leaf_vbo_valid()) {
-		if (!is_over_mesh()) return;
+		if (world_mode == WMODE_GROUND && !is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
 		td.draw_leaves_shadow_only();

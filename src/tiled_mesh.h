@@ -28,7 +28,7 @@ float const SCENERY_THRESH_REF= 1.7;
 float const SCENERY_THRESH    = 4.2;
 float const GRASS_THRESH      = 1.5;
 float const SMAP_NEW_THRESH   = 1.0;
-float const SMAP_DEL_THRESH   = 1.2;
+float const SMAP_DEL_THRESH   = 1.1;
 float const BCUBE_ZTOLER      = 1.0E-6;
 
 
