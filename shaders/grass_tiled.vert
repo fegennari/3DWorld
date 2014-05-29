@@ -1,6 +1,8 @@
 uniform float dist_const  = 10.0;
 uniform float dist_slope  = 0.5;
 uniform float cloud_alpha = 1.0;
+uniform float smap_atten_cutoff = 10.0;
+uniform float smap_atten_slope  = 0.5;
 uniform float x1, y1, dx_inv, dy_inv;
 uniform sampler2D height_tex, shadow_normal_tex, weight_tex, noise_tex;
 uniform float cloud_plane_z;
@@ -51,9 +53,19 @@ void main()
 	vec3 normal = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(fg_NormalMatrix * normal); // eye space
 	vec3 color  = vec3(0.0);
+
+	float smap_scale = 0.0;
+	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - length(epos.xyz)), 0.0, 1.0);}
+
 	//if (grass_weight < noise_weight) {
-	if (enable_light0) {color += add_light_comp_pos_scaled_smap_light0(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale).rgb;}
-	if (enable_light1) {color += add_light_comp_pos_scaled_smap_light1(normal, epos, diffuse_scale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale).rgb;}
+	if (enable_light0) {
+		float dscale = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light0(epos, normal), smap_scale) : diffuse_scale);
+		color += add_light_comp_pos_scaled0(normal, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale).rgb;
+	}
+	if (enable_light1) {
+		float dscale = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light1(epos, normal), smap_scale) : diffuse_scale);
+		color += add_light_comp_pos_scaled1(normal, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale).rgb;
+	}
 	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2).rgb;}
 	//}
 	float alpha = fg_Color.a;

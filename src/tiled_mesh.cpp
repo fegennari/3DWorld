@@ -22,7 +22,7 @@ float const CLEAR_DIST_TILES  = 1.5;
 float const DELETE_DIST_TILES = 1.7;
 float const GRASS_LOD_SCALE   = 16.0;
 float const GRASS_DIST_SLOPE  = 0.25;
-float const SMAP_FADE_THRESH  = 1.3;
+float const SMAP_FADE_THRESH  = 1.4;
 
 int   const LIGHTNING_LIGHT = 2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
@@ -2126,7 +2126,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			//s.set_geom_shader("ads_lighting.part*+grass_tiled");  // triangle => triangle - too slow
 			s.begin_shader();
 			if (enable_wind) {setup_wind_for_shader(s, 1);}
-			if (spass == 0) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());} // Note: unused in shader
+			if (spass == 0) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());}
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_int("height_tex", 2);
 			s.add_uniform_int("weight_tex", 3);

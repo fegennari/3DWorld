@@ -95,29 +95,27 @@ void main()
 	vec3 texel1  = texture2D(detail_tex, 32.0*tc).rgb; // detail texture 32x scale
 
 	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc);
-	float diffuse_scale = shadow_normal.w; // set to 1.0 when shadow maps are enabled?
-	float ambient_scale = 1.5*shadow_normal.z; // multiply by shadow_normal.w when shadow maps are enabled?
+	float diffuse_scale = shadow_normal.w;
+	float ambient_scale = 1.5*shadow_normal.z;
 	float bump_scale    = 1.0 - weights.b; // bumps on everything but grass
 	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
 	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
 	normal      = normalize(fg_NormalMatrix * normal); // eye space
-	//normal     += 0.05*weights4*vec3(texture2D(noise_tex, 571.0*tc).r-0.5, texture2D(noise_tex, 714.0*tc).r-0.5, texture2D(noise_tex, 863.0*tc).r-0.5); // add noise
 	vec4 color  = vec4(0,0,0,1);
 	vec4 epos   = fg_ModelViewMatrix * vertex;
-	bump_scale *= clamp((2.5 - 0.1*length(epos.xyz)), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
-	float smap_scale;
-	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - distance(vertex.xy, fg_ModelViewMatrixInverse[3].xy)), 0.0, 1.0);}
+	float vdist = length(epos.xyz);
+	bump_scale *= clamp((2.5 - 0.1*vdist), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
+	float smap_scale = 0.0;
+	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - vdist), 0.0, 1.0);}
 	
 	if (enable_light0) { // sun
 		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 20.0*weights.b + 40.0*weights4;
-		float dscale    = diffuse_scale;
-		if (use_shadow_map) {dscale *= mix(1.0, get_shadow_map_weight_light0(epos, normal), smap_scale);}
+		float dscale    = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light0(epos, normal), smap_scale) : diffuse_scale);
 		color += add_light_comp(normal, epos, 0, dscale, ambient_scale, spec, shininess, bump_scale);
 	}
 	if (enable_light1) { // moon
-		float dscale = diffuse_scale;
-		if (use_shadow_map) {dscale *= mix(1.0, get_shadow_map_weight_light1(epos, normal), smap_scale);}
+		float dscale    = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light1(epos, normal), smap_scale) : diffuse_scale);
 		color += add_light_comp(normal, epos, 1, dscale, ambient_scale, 0.0, 1.0, bump_scale);
 	}
 	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
