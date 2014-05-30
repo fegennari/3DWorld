@@ -306,15 +306,16 @@ mesh_bsp_tree::mesh_bsp_tree() {
 	dir0    = (MESH_X_SIZE < MESH_Y_SIZE);
 	nlevels = unsigned(floor(log(double(XY_MULT_SIZE))/log(2.0)));
 	unsigned const tot_alloc(XY_MULT_SIZE << 1);
-	bsp_tree_node *bsp_data(new bsp_tree_node[tot_alloc]), *cur(bsp_data);
-	tree = new bsp_tree_node *[nlevels+1];
+	bsp_data.resize(tot_alloc);
+	tree.resize(nlevels+1);
+	unsigned cur(0);
 
 	for (unsigned i = 0; i <= nlevels; ++i) {
-		tree[i] = cur;
+		tree[i] = &bsp_data[cur];
 		cur    += (XY_MULT_SIZE >> (nlevels - i));
 	}
-	assert(cur < (bsp_data + tot_alloc));
-	if (is_pow_2(MESH_X_SIZE) && is_pow_2(MESH_Y_SIZE)) assert((cur - bsp_data) == (tot_alloc-1));
+	assert(cur < tot_alloc);
+	if (is_pow_2(MESH_X_SIZE) && is_pow_2(MESH_Y_SIZE)) {assert(cur == (tot_alloc-1));}
 
 	// fill in bottom level (individual mesh quads)
 	bsp_tree_node *leaves(tree[nlevels]);
@@ -357,14 +358,6 @@ mesh_bsp_tree::mesh_bsp_tree() {
 			}
 		}
 	}
-}
-
-
-mesh_bsp_tree::~mesh_bsp_tree() {
-
-	assert(tree);
-	delete [] tree[0];
-	delete [] tree;
 }
 
 

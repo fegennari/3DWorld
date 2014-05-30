@@ -43,7 +43,7 @@ text_message_params msg_params;
 string message;
 blood_spot blood_spots[NUM_BS];
 player_state *sstates = NULL;
-team_info *teaminfo = NULL;
+vector<team_info> teaminfo;
 vector<bbox> team_starts;
 
 
@@ -2245,7 +2245,7 @@ void init_game_state() {
 
 	if (sstates != NULL) return; // make sure this isn't called more than once
 	sstates  = new player_state[num_smileys+1]; // most of the parameters are initialized in the constructor
-	teaminfo = new team_info[teams];
+	teaminfo.resize(teams);
 	++sstates; // advance pointer so that camera/player can be sstates[-1]
 	sstates[CAMERA_ID].name = player_name;
 	vector<string> avail_smiley_names;
@@ -2463,10 +2463,7 @@ void player_state::free_balls() {
 void free_dodgeballs(bool camera, bool smileys) {
 
 	if (sstates == NULL) return;
-
-	for (int i = (camera ? CAMERA_ID : 0); i < (smileys ? num_smileys : 0); ++i) {
-		sstates[i].free_balls();
-	}
+	for (int i = (camera ? CAMERA_ID : 0); i < (smileys ? num_smileys : 0); ++i) {sstates[i].free_balls();}
 }
 
 

@@ -64,7 +64,8 @@ class mesh_bsp_tree {
 
 	bool dir0; // first subdivision direction
 	unsigned nlevels; // inclusive
-	bsp_tree_node **tree; // {level, y/x}
+	vector<bsp_tree_node> bsp_data;
+	vector<bsp_tree_node *> tree; // {level, y/x}
 
 	mesh_bsp_tree(mesh_bsp_tree const &); // forbidden
 	void operator=(mesh_bsp_tree const &); // forbidden
@@ -73,9 +74,8 @@ class mesh_bsp_tree {
 
 public:
 	mesh_bsp_tree();
-	~mesh_bsp_tree();
 	bool search(point const &v1, point const &v2, mesh_query_ret &ret) const {return search_recur(v1, v2, 0, 0, 0, ret);} // Note: thread safe
-	bsp_tree_node const &get_root() const {assert(tree && tree[0]); return tree[0][0];}
+	bsp_tree_node const &get_root() const {assert(!tree.empty()); return tree[0][0];}
 };
 
 

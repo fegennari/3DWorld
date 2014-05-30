@@ -421,7 +421,6 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
 	unsigned const step_size(3*width);
-	JSAMPLE *rgb_row(new JSAMPLE[step_size]);
 	cinfo.err = jpeg_std_error(&jerr);
 	jpeg_create_compress(&cinfo);
 	jpeg_stdio_dest(&cinfo, fp);
@@ -440,7 +439,6 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	}
 	jpeg_finish_compress(&cinfo);
 	jpeg_destroy_compress(&cinfo);
-	delete [] rgb_row;
 	fclose(fp);
 	return 1;
 #else

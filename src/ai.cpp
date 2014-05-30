@@ -38,7 +38,7 @@ extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern player_state *sstates;
-extern team_info *teaminfo;
+extern vector<team_info> teaminfo;
 extern vector<string> avail_smiley_names;
 extern waypoint_vector waypoints;
 extern vector<teleporter> teleporters;
@@ -1376,20 +1376,14 @@ void select_smiley_texture(int smiley_id) {
 void free_smiley_textures() {
 
 	if (sstates == NULL) return;
-
-	for (int i = 0; i < num_smileys; ++i) {
-		free_texture(sstates[i].tid);
-	}
+	for (int i = 0; i < num_smileys; ++i) {free_texture(sstates[i].tid);}
 }
 
 
 void clear_cached_waypoints() {
 
 	if (sstates == NULL) return;
-
-	for (int i = 0; i < num_smileys; ++i) {
-		sstates[i].last_waypoint = -1;
-	}
+	for (int i = 0; i < num_smileys; ++i) {sstates[i].last_waypoint = -1;}
 }
 
 

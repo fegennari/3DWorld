@@ -38,7 +38,7 @@ int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE)
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
-float *sin_table(NULL), *cos_table(NULL);
+vector<float> sin_table;
 float sinTable[F_TABLE_SIZE][5];
 
 int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX,   GROUND_TEX, ROCK_TEX, SNOW_TEX};
@@ -71,13 +71,12 @@ bool using_hmap_with_detail();
 
 void create_sin_table() {
 
-	if (sin_table != NULL) return; // already setup
-	sin_table = new float[2*TSIZE];
-	cos_table = sin_table + TSIZE;
+	if (!sin_table.empty()) return; // already setup
+	sin_table.resize(2*TSIZE);
 
 	for (unsigned i = 0; i < TSIZE; ++i) {
-		sin_table[i] = sinf(i/sscale);
-		cos_table[i] = cosf(i/sscale);
+		sin_table[i]       = sinf(i/sscale);
+		sin_table[i+TSIZE] = cosf(i/sscale);
 	}
 }
 
