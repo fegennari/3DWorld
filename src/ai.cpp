@@ -1070,8 +1070,8 @@ void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id
 	assert(size > 0.0);
 	colorRGBA color;
 	vector3d sdir(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).orientation);
-	unsigned char *tdata(sstates[smiley_id].tdata);
-	assert(tdata != NULL);
+	assert(!sstates[smiley_id].tdata.empty());
+	unsigned char *tdata(&sstates[smiley_id].tdata.front());
 	int const tsize(int(size*SMILEY_TEX_SIZE/100.0 + 0.5)), radsq(4*tsize*tsize);
 	int const tex_size(SMILEY_TEX_SIZE*SMILEY_TEX_SIZE);
 	int tx, ty;
@@ -1150,9 +1150,8 @@ void init_smiley_texture(int smiley_id) {
 
 	assert(sstates != NULL);
 	int const texels(SMILEY_TEX_SIZE*SMILEY_TEX_SIZE), tbytes(3*texels);
-	if (sstates[smiley_id].tdata == NULL) sstates[smiley_id].tdata = new unsigned char[tbytes];
-	unsigned char *const tdata(sstates[smiley_id].tdata);
-	memset(tdata, 255, tbytes*sizeof(unsigned char));
+	if (sstates[smiley_id].tdata.empty()) {sstates[smiley_id].tdata.resize(tbytes, 255);}
+	unsigned char *const tdata(&sstates[smiley_id].tdata.front());
 
 	if (SMILEY_BUTT) {
 		for (unsigned y = SMILEY_TEX_SIZE/4; y < SMILEY_TEX_SIZE/2; ++y) {

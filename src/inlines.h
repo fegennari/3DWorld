@@ -640,19 +640,13 @@ inline void gen_cylin_pts(point *pts, int &npts, point const &p, float radius, v
 
 
 template<typename T> void matrix_base_alloc_2d(T **&data, unsigned nx, unsigned ny) {
-
 	data    = new T*[ny];
 	data[0] = new T[nx*ny];
 }
 
-
 template<typename T> void matrix_ptr_fill_2d(T **&data, unsigned nx, unsigned ny) {
-
-	for (unsigned i = 0; i < ny; ++i) {
-		data[i] = data[0] + i*nx;
-	}
+	for (unsigned i = 0; i < ny; ++i) {data[i] = data[0] + i*nx;}
 }
-
 
 template<typename T> void matrix_gen_2d(T **&data, unsigned nx, unsigned ny) {
 
@@ -661,22 +655,14 @@ template<typename T> void matrix_gen_2d(T **&data, unsigned nx, unsigned ny) {
 	matrix_ptr_fill_2d(data, nx, ny);
 }
 
-
 template<typename T> void matrix_gen_2d(T **&data) {
-
 	matrix_gen_2d(data, MESH_X_SIZE, MESH_Y_SIZE);
 }
 
-
 template<typename T> void matrix_gen_3d(T ***&data, unsigned nz) {
-
 	data = new T**[nz];
-
-	for (unsigned i = 0; i < nz; ++i) {
-		matrix_gen_2d(data[i]);
-	}
+	for (unsigned i = 0; i < nz; ++i) {matrix_gen_2d(data[i]);}
 }
-
 
 template<typename T> void matrix_delete_2d(T **&data) {
 
@@ -687,41 +673,30 @@ template<typename T> void matrix_delete_2d(T **&data) {
 	}
 }
 
-
 template<typename T> void matrix_delete_3d(T ***&data, unsigned nz) {
 
 	if (data) {
-		for (unsigned i = 0; i < nz; ++i) {
-			matrix_delete_2d(data[i]);
-		}
+		for (unsigned i = 0; i < nz; ++i) {matrix_delete_2d(data[i]);}
 		delete [] data;
 	}
 }
 
-
 template<typename T> void delete_2d_array(T **vals, unsigned size) {
 
 	assert(size == 0 || vals != NULL);
-
-	for (unsigned i = 0; i < size; ++i) {
-		delete [] vals[i];
-	}
+	for (unsigned i = 0; i < size; ++i) {delete [] vals[i];}
 	delete [] vals;
 }
 
-
 template<typename T> void matrix_clear_1d(T *data) {
-
 	memset(data, 0, XY_MULT_SIZE*sizeof(T));
 }
-
 
 template<typename T> void matrix_clear_2d(T **data) {
 
 	assert(data);
 	matrix_clear_1d(data[0]);
 }
-
 
 template<typename T> void remove_excess_cap(vector<T> &v) {
 	if (v.size() < v.capacity()) {vector<T>(v).swap(v);}
