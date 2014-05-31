@@ -659,7 +659,7 @@ void ucell::draw_nebulas(ushader_group &usg) const {
 
 bool ucell::is_visible() const {
 
-	if (galaxies == NULL) return 0; // galaxies not yet allocated
+	if (galaxies == nullptr) return 0; // galaxies not yet allocated
 	if (!univ_sphere_vis(rel_center, CELL_SPHERE_RAD)) return 0;
 	cube_t bcube(rel_center, rel_center);
 	bcube.expand_by(CELL_SPHERE_RAD);
@@ -1056,7 +1056,7 @@ void ucell::gen_cell(int const ii[3]) {
 	set_rand2_state(gen_rand_seed1(pos), gen_rand_seed2(pos));
 	get_rseeds();
 	gen      = 1;
-	galaxies = new vector<ugalaxy>;
+	galaxies.reset(new vector<ugalaxy>);
 	galaxies->resize(rand_uniform_uint2(MIN_GALAXIES_PER_CELL, MAX_GALAXIES_PER_CELL));
 
 	for (unsigned l = 0; l < galaxies->size(); ++l) { // gen galaxies
@@ -1069,6 +1069,7 @@ void ucell::gen_cell(int const ii[3]) {
 
 
 ugalaxy::ugalaxy() : lrq_rad(0.0), lrq_pos(all_zeros), color(BLACK) {}
+ugalaxy::~ugalaxy() {}
 
 
 // fix fp resolution/shifting?
@@ -2095,10 +2096,9 @@ template<typename T> void free_vector_ptr(vector<T> *&v) {
 
 void ucell::free_uobj() {
 
-	if (galaxies != NULL) {
+	if (galaxies != nullptr) {
 		for (vector<ugalaxy>::iterator i = galaxies->begin(); i != galaxies->end(); ++i) {i->free_uobj();}
-		delete galaxies;
-		galaxies = NULL;
+		galaxies.reset();
 	}
 	gen = 0;
 }
@@ -2575,7 +2575,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 		result.val = 1;
 		return 1;
 	}
-	if (cell.galaxies == NULL) return 0; // not yet allocated
+	if (cell.galaxies == nullptr) return 0; // not yet allocated
 	pos -= cell.pos;
 	float const planet_thresh(expand*4.0*MAX_PLANET_EXTENT), moon_thresh(expand*2.0*MAX_PLANET_EXTENT);
 	float const pt_sq(planet_thresh*planet_thresh), mt_sq(moon_thresh*moon_thresh);
@@ -2805,7 +2805,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 			cell = &get_cell(result);
 			curr = p0 - cell->pos;
 		}
-		if (cell->galaxies == NULL) return 0; // galaxies not yet allocated
+		if (cell->galaxies == nullptr) return 0; // galaxies not yet allocated
 		cell_status   = 0;
 		result.galaxy = result.cluster = result.system = result.planet = result.moon = -1;
 		vector<ugalaxy> &galaxies(*cell->galaxies);

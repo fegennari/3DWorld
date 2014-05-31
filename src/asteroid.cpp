@@ -513,12 +513,13 @@ float get_eq_vol_scale(vector3d const &scale) {return pow(scale.x*scale.y*scale.
 
 class asteroid_model_gen_t {
 
-	vector<uobj_asteroid *> asteroids; // FIXME: a case for boost::shared_ptr<>?
+	typedef shared_ptr<uobj_asteroid> p_uobj_asteroid;
+	vector<p_uobj_asteroid> asteroids;
 	colorRGBA tex_color;
 
 public:
-	//~asteroid_model_gen_t() {clear();} // can't free after GL context has been destroyed
 	bool empty() const {return asteroids.empty();}
+	void clear() {asteroids.clear();}
 	
 	void gen(unsigned num, unsigned model) {
 		RESET_TIME;
@@ -527,11 +528,11 @@ public:
 		tex_color = texture_color(DEFAULT_AST_TEX);
 
 		for (unsigned i = 0; i < num; ++i) { // create at the origin with radius=1
-			asteroids[i] = uobj_asteroid::create(all_zeros, 1.0, model, DEFAULT_AST_TEX, i);
+			asteroids[i].reset(uobj_asteroid::create(all_zeros, 1.0, model, DEFAULT_AST_TEX, i));
 		}
 		PRINT_TIME("Asteroid Model Gen");
 	}
-	uobj_asteroid const *get_asteroid(unsigned ix) const {
+	shared_ptr<uobj_asteroid const> get_asteroid(unsigned ix) const {
 		assert(ix < asteroids.size());
 		assert(asteroids[ix]);
 		return asteroids[ix];
@@ -555,7 +556,7 @@ public:
 
 		// try to draw instanced if enabled, but do a normal draw without resetting the texture if that fails
 		if (!asteroids[ix]->draw_instanced(ndiv)) { // maybe this case shouldn't exist and we can only create instanceable asteroids?
-			uobj_draw_data ddata(asteroids[ix], &s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
+			uobj_draw_data ddata(asteroids[ix].get(), &s, ndiv, 0, 0, 0, 0, pos, zero_vector, plus_z, plus_y, dist, radius, 1.0, 0, 1, 1, 1, 1);
 			asteroids[ix]->draw_with_texture(ddata, -1, 1);
 		}
 		fgPopMatrix();
@@ -567,20 +568,14 @@ public:
 		return get_asteroid(ix)->get_fragment_tid(hit_pos);
 	}
 	void final_draw(int loc) {
-		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
+		for (vector<p_uobj_asteroid>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
 			(*i)->final_draw(loc); // could call only on asteroids that have been rendered at least once, but probably okay to always call
 		}
 	}
 	void clear_contexts() {
-		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
+		for (vector<p_uobj_asteroid>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
 			(*i)->clear_context();
 		}
-	}
-	void clear() {
-		for (vector<uobj_asteroid *>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
-			delete *i;
-		}
-		asteroids.clear();
 	}
 };
 

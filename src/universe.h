@@ -415,6 +415,7 @@ public:
 	colorRGBA color;
 
 	ugalaxy();
+	~ugalaxy();
 	void calc_color();
 	void calc_bounding_sphere();
 	bool create(ucell const &cell, int index);
@@ -442,9 +443,9 @@ class ucell : public uobj_rgen { // size = 84
 
 public:
 	point rel_center;
-	vector<ugalaxy> *galaxies; // must be a pointer to a vector to avoid deep copies
+	std::shared_ptr<vector<ugalaxy> > galaxies; // must be a pointer to a vector to avoid deep copies
 
-	ucell() : last_bkg_color(BLACK), last_player_pos(all_zeros), last_star_cache_ix(0), cached_stars_valid(0), galaxies(NULL) {}
+	ucell() : last_bkg_color(BLACK), last_player_pos(all_zeros), last_star_cache_ix(0), cached_stars_valid(0) {}
 	void gen_cell(int const ii[3]);
 	void draw_nebulas(ushader_group &usg) const;
 	void draw_systems(ushader_group &usg, s_object const &clobj, unsigned pass, bool no_move, bool skip_closest, bool sel_cell, bool gen_only);
