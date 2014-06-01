@@ -58,11 +58,11 @@ void u_ship_base::create_from(u_ship const *const ship) { // related to u_ship::
 void u_ship_base::free_weapons() { // recursive
 
 	for (unsigned i = 0; i < weapons.size(); ++i) {
-		if (weapons[i].docked != NULL) {
+		if (weapons[i].docked != nullptr) {
 			for (unsigned j = 0; j < weapons[i].docked->size(); ++j) { // free docked ships of the docked ships
 				(*weapons[i].docked)[j].free_weapons();
 			}
-			delete weapons[i].docked;
+			weapons[i].docked.reset();
 		}
 	}
 	weapons.clear();
@@ -500,7 +500,7 @@ void ship_weapon::regen_ammo(float rate, u_ship_base *dock) {
 	assert(dock != NULL);
 	assert(rate > 0.0);
 
-	if (docked != NULL) {
+	if (docked != nullptr) {
 		for (unsigned i = 0; i < docked->size(); ++i) { // for docked fighters
 			(*docked)[i].regen(max(rate, DOCKED_REGEN_RATE), dock);
 		}
@@ -555,7 +555,7 @@ void ship_weapon::dock_ship(u_ship *ship, u_ship *dock) { // can't copy fighters
 void ship_weapon::release_ship(u_ship *ship, u_ship *dock) {
 
 	assert(ship != NULL);
-	if (docked == NULL || docked->empty()) return; // no docked ships - OK
+	if (docked == nullptr || docked->empty()) return; // no docked ships - OK
 	assert(us_weapons[wclass].is_fighter && us_weapons[wclass].ammo_type == ship->get_sclass());
 	float min_damage(1.0);
 	unsigned min_damaged(0);
@@ -590,7 +590,7 @@ bool ship_weapon::space_for_fighter() const {
 
 float ship_weapon::min_damage() const {
 
-	if (docked == NULL || docked->empty()) return 0.0; // no docked ships - OK
+	if (docked == nullptr || docked->empty()) return 0.0; // no docked ships - OK
 	assert(us_weapons[wclass].is_fighter);
 	float min_damage(1.0);
 

@@ -807,7 +807,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 
 					if (planets_visible) { // asteroid fields may also be visible
 						// Note: asteroid belts aren't drawn in the first frame because sel_s won't be set, since clobj isn't valid before the first frame is drawn (universe not yet created)
-						if (!gen_only && sol.asteroid_belt && sel_s && sol_draw_pass == 0 && pass == 1) {
+						if (!gen_only && sol.asteroid_belt != nullptr && sel_s && sol_draw_pass == 0 && pass == 1) {
 							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
 							shader_t asteroid_belt_shader;
 							sol.asteroid_belt->begin_render(asteroid_belt_shader, 0);
@@ -829,7 +829,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					}
 					usg.atmos_to_draw.resize(0);
 					usg.rings_to_draw.resize(0);
-					uasteroid_belt_planet *planet_asteroid_belt(NULL);
+					std::shared_ptr<uasteroid_belt_planet> planet_asteroid_belt;
 
 					for (unsigned k = 0; k < sol.planets.size(); ++k) {
 						bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
@@ -913,7 +913,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						if (!gen_only && planet.is_ok() && ((!skip_p && !sel_moon) || (skip_p && sel_moon))) {
 							float const ring_scale(sizep*planet.get_ring_rscale());
 
-							if (planet.asteroid_belt && sel_p && ring_scale > 10.0) {
+							if (planet.asteroid_belt != nullptr && sel_p && ring_scale > 10.0) {
 								if (animate2) {planet.asteroid_belt->apply_physics(pos, camera);}
 								assert(!planet_asteroid_belt);
 								planet_asteroid_belt = planet.asteroid_belt;
@@ -933,7 +933,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						planet_plds[1].draw_and_clear();
 						usg.disable_point_sprite_shader();
 					}
-					if (planet_asteroid_belt) { // we normally only get here once per frame, so the overhead is acceptable
+					if (planet_asteroid_belt != nullptr) { // we normally only get here once per frame, so the overhead is acceptable
 						shader_t asteroid_belt_shader;
 						planet_asteroid_belt->begin_render(asteroid_belt_shader, 0);
 						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader, 1);
@@ -1422,12 +1422,12 @@ void ussystem::process() {
 		radius = max(radius, dmax); // too bad we can't use p.mosize
 	}
 	sun.num_satellites = planets.size();
-	assert(!asteroid_belt);
+	assert(asteroid_belt == nullptr);
 
 	if (planets.size() > 1 && !(rand2() & 1)) {
 		unsigned const inner_planet(rand2() % (planets.size()-1)); // between two planet orbits, so won't increase system radius
 		float const ab_radius(0.5*(planets[inner_planet].orbit + planets[inner_planet+1].orbit));
-		asteroid_belt = new uasteroid_belt_system(sun.rot_axis, this);
+		asteroid_belt.reset(new uasteroid_belt_system(sun.rot_axis, this));
 		asteroid_belt->init(pos, ab_radius); // gen_asteroids() will be called when drawing
 	}
 	radius = max(radius, 0.5f*(PLANET_TO_SUN_MIN_SPACING + PLANET_TO_SUN_MAX_SPACING)); // set min radius so that hyperspeed coll works
@@ -1639,8 +1639,8 @@ void uplanet::gen_prings() {
 	UNROLL_3X(max_rs = max(max_rs, rscale[i_]);)
 	mosize = max(mosize, max_rs*lastr); // extend planet effective size
 	
-	assert(!asteroid_belt);
-	asteroid_belt = new uasteroid_belt_planet(rot_axis, this);
+	assert(asteroid_belt == nullptr);
+	asteroid_belt.reset(new uasteroid_belt_planet(rot_axis, this));
 	asteroid_belt->init_rings(pos); // gen_asteroids() will be called when drawing
 }
 
@@ -2085,15 +2085,6 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 // *** MEMORY - FREE CODE ***
 
 
-template<typename T> void free_vector_ptr(vector<T> *&v) {
-
-	if (v != NULL) {
-		for (vector<T>::iterator i = v->begin(); i != v->end(); ++i) {i->free_uobj();}
-		delete v;
-		v = NULL;
-	}
-}
-
 void ucell::free_uobj() {
 
 	if (galaxies != nullptr) {
@@ -2132,8 +2123,7 @@ void ussystem::free_uobj() {
 	
 	if (asteroid_belt) {
 		asteroid_belt->free_uobj();
-		delete asteroid_belt;
-		asteroid_belt = NULL;
+		asteroid_belt.reset();
 	}
 	planets.clear();
 	sun.free_uobj();
@@ -2148,8 +2138,7 @@ void uplanet::free_uobj() {
 
 	if (asteroid_belt) {
 		asteroid_belt->free_uobj();
-		delete asteroid_belt;
-		asteroid_belt = NULL;
+		asteroid_belt.reset();
 	}
 	moons.clear();
 	ring_data.clear();
@@ -2160,8 +2149,7 @@ void uplanet::free_uobj() {
 void urev_body::free_uobj() {
 
 	if (gen) free_texture();
-	delete surface; // OK if already NULL
-	surface = NULL;
+	surface.reset(); // OK if already NULL
 	//unset_owner();
 	uobj_solid::free_uobj();
 }
@@ -2326,7 +2314,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		usg.enable_planet_colored_shader(use_light2, ocolor);
 	}
 	if (ndiv >= N_SPHERE_DIV) {
-		if (surface == NULL || !surface->has_heightmap()) { // gas giant
+		if (surface == nullptr || !surface->has_heightmap()) { // gas giant
 			ndiv /= 2; // don't need high resolution for gas giants since they have no heightmap
 			point viewed_from(vcp);
 			rotate_vector(viewed_from);
@@ -2337,7 +2325,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		}
 	}
 	else {
-		if (surface != NULL) {surface->clear_cache();} // only gets here when the object is visible
+		if (surface != nullptr) {surface->clear_cache();} // only gets here when the object is visible
 		uniform_scale(radius); // no push/pop required
 		draw_sphere_vbo_raw(ndiv, texture); // small sphere - use vbo
 	}
@@ -2359,7 +2347,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 
 	RESET_TIME;
 	assert(ndiv > 0);
-	assert(surface != NULL);
+	assert(surface != nullptr);
 	bool const SD_TIMETEST(SHOW_SPHERE_TIME && size >= 256.0);
 
 	// sphere heightmap for rocky planet or moon
@@ -2652,7 +2640,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				}
 				if (max_level == UTYPE_SYSTEM || max_level == UTYPE_STAR) continue; // system/star
 
-				if (include_asteroids && system.asteroid_belt) { // check for asteroid belt collisions
+				if (include_asteroids && system.asteroid_belt != nullptr) { // check for asteroid belt collisions
 					if (system.asteroid_belt->sphere_might_intersect(pos, expand*system.asteroid_belt->get_max_asteroid_radius())) {
 						// FIXME: asteroid positions are dynamic, so spatial subdivision is difficult - we just do a linear iteration here
 						for (uasteroid_field::const_iterator j = system.asteroid_belt->begin(); j != system.asteroid_belt->end(); ++j) {
@@ -2670,7 +2658,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 					float distp_sq(p2p_dist_sq(pos, planet.pos));
 					if (distp_sq > pt_sq) continue;
 					float const distp(sqrt(distp_sq) - planet.radius);
-					//if (include_asteroids && planet.asteroid_belt) {}
+					//if (include_asteroids && planet.asteroid_belt != nullptr) {}
 					
 					if (planet.is_ok() || get_destroyed) {
 						if (distp < result.dist) {
@@ -2878,7 +2866,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 			for (unsigned sc = 0; sc < sv.size(); ++sc) {
 				ussystem &system(galaxy.sols[sv[sc].index]);
 				
-				if (system.asteroid_belt) {
+				if (system.asteroid_belt != nullptr) {
 					if (system.asteroid_belt->line_might_intersect(curr, (curr + dist*dir), line_radius)) {
 						for (vector<uasteroid>::const_iterator a = system.asteroid_belt->begin(); a != system.asteroid_belt->end(); ++a) {
 							if (a->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
@@ -2906,7 +2894,7 @@ bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector
 					float const p_radius(planet.mosize);
 					if (!dist_less_than(curr, planet.pos, (p_radius + dist))) continue;
 					
-					if (planet.asteroid_belt) {
+					if (planet.asteroid_belt != nullptr) {
 						if (planet.asteroid_belt->line_might_intersect(curr, (curr + dist*dir), line_radius)) {
 							for (vector<uasteroid>::const_iterator a = planet.asteroid_belt->begin(); a != planet.asteroid_belt->end(); ++a) {
 								if (a->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
@@ -3150,7 +3138,7 @@ vector3d ustar::get_solar_wind_accel(point const &obj_pos, float obj_mass, float
 
 void urev_body::free_texture() { // and also free vbos
 
-	if (surface != NULL) surface->free_context();
+	if (surface != nullptr) {surface->free_context();}
 	::free_texture(tid);
 	tsize = 0;
 }
@@ -3282,13 +3270,13 @@ uasteroid_belt &s_object::get_asteroid_belt() const {
 	
 	if (planet >= 0) { // planet asteroid belt
 		uplanet &planet(get_planet());
-		assert(planet.asteroid_belt);
+		assert(planet.asteroid_belt != nullptr);
 		assert((unsigned)asteroid < planet.asteroid_belt->size());
 		return *planet.asteroid_belt;
 	}
 	else { // system asteroid belt
 		ussystem &system(get_system());
-		assert(system.asteroid_belt);
+		assert(system.asteroid_belt != nullptr);
 		assert((unsigned)asteroid < system.asteroid_belt->size());
 		return *system.asteroid_belt;
 	}

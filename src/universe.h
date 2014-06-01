@@ -214,11 +214,11 @@ public:
 	unsigned orbiting_refs, tid, tsize;
 	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale, wr_scale, snow_thresh;
 	vector3d rev_axis, v_orbit;
-	upsurface *surface;
+	std::shared_ptr<upsurface> surface;
 	string comment;
 
 	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0), tid(0), tsize(0), orbit(0.0), rot_rate(0.0),
-		rev_rate(0.0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), surface(NULL) {}
+		rev_rate(0.0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
@@ -231,7 +231,7 @@ public:
 	bool surface_test(float rad, point const &p, float &coll_r, bool simple) const;
 	float get_radius_at(point const &p, bool exact=0) const;
 	float get_dheight_at(point const &p, bool exact=0) const;
-	virtual bool has_custom_shadow_profile() const {return (surface != NULL);}
+	virtual bool has_custom_shadow_profile() const {return (surface != nullptr);}
 	bool pt_over_land(point const &p) const;
 	bool can_land() const;
 	bool can_land_at(point const &p) const {return (can_land() && pt_over_land(p));}
@@ -275,11 +275,11 @@ public:
 	vector<umoon> moons;
 	vector<color_wrapper> ring_data;
 	ussystem *system;
-	uasteroid_belt_planet *asteroid_belt;
+	std::shared_ptr<uasteroid_belt_planet> asteroid_belt;
 	unsigned ring_tid;
 	// trade items?
 
-	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), ring_ri(0.0), ring_ro(0.0), system(NULL), asteroid_belt(NULL), ring_tid(0) {}
+	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), ring_ri(0.0), ring_ro(0.0), system(NULL), ring_tid(0) {}
 	void create(bool phase);
 	void process();
 	point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -361,11 +361,11 @@ public:
 	unsigned cluster_id;
 	ustar sun;
 	vector<uplanet> planets;
-	uasteroid_belt_system *asteroid_belt;
+	std::shared_ptr<uasteroid_belt_system> asteroid_belt;
 	ugalaxy *galaxy;
 	colorRGBA galaxy_color;
 	
-	ussystem() : cluster_id(0), asteroid_belt(NULL), galaxy(NULL), galaxy_color(ALPHA0) {}
+	ussystem() : cluster_id(0), galaxy(NULL), galaxy_color(ALPHA0) {}
 	void create(point const &pos_);
 	void calc_color();
 	void process();

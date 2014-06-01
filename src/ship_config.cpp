@@ -1072,7 +1072,7 @@ void merge_weapons(vector<ship_weapon> &weapons, ship_weapon const &w) {
 			weapons[i].wcount    += w.wcount;
 			weapons[i].nregen    += w.nregen;
 			
-			if (w.docked != NULL) {
+			if (w.docked != nullptr) {
 				weapons[i].check_docked();
 
 				for (unsigned j = 0; j < w.docked->size(); ++j) {

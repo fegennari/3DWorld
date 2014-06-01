@@ -225,8 +225,7 @@ upsurface::~upsurface() {
 void urev_body::gen_surface() {
 
 	set_rseeds();
-	delete surface;
-	surface = new upsurface(type);
+	surface.reset(new upsurface(type)); // may delete a previous surface
 	float mag(SURFACE_HEIGHT*radius), freq(((type == UTYPE_MOON) ? 1.5 : 1.0)*INITIAL_FREQ*TWO_PI);
 	surface->set_rand_seeds(urseed1, urseed2);
 	surface->gen(mag, freq);
@@ -244,7 +243,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 	unsigned size_p2(0);
 	for (unsigned sz = size; sz > 1; sz >>= 1, ++size_p2);
 	assert((1U<<size_p2) == size); // size must be a power of 2
-	assert(surface);
+	assert(surface != nullptr);
 	unsigned const table_size(MAX_TEXTURE_SIZE << 1); // larger is more accurate
 	static float xtable[TOT_NUM_SINES*table_size], ytable[TOT_NUM_SINES*table_size];
 	surface->setup(size, max(water, lava), 1); // use_heightmap=1

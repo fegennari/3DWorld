@@ -1086,7 +1086,7 @@ class ship_weapon {
 public:
 	unsigned wclass, init_ammo, ammo, wcount, rtime, nregen, ndamaged, cur_wpt;
 	int last_fframe;
-	deque<u_ship_base> *docked;
+	std::shared_ptr<deque<u_ship_base> > docked;
 	vector<point> weap_pts;
 
 	ship_weapon(unsigned weapon, unsigned num=1, unsigned ammo0=0, vector<point> const &weap_pts_=vector<point>());
@@ -1094,7 +1094,7 @@ public:
 	void regen_ammo(float rate, u_ship_base *dock);
 	void dock_ship(u_ship *ship, u_ship *dock);
 	void release_ship(u_ship *ship, u_ship *dock);
-	void check_docked() {if (docked == NULL) docked = new deque<u_ship_base>;}
+	void check_docked() {if (docked == nullptr) {docked.reset(new deque<u_ship_base>);}}
 	bool space_for_fighter() const;
 	bool can_lead_shot() const {return (!no_ammo() && get_usw().can_lead_shot());}
 	float min_damage() const;
