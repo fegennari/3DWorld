@@ -354,7 +354,7 @@ void rock_shape3d::clear_vbo() {
 }
 
 
-upsurface *surface_cache::get_surface(bool fixed_sz_rock_cache) {
+p_upsurface surface_cache::get_surface(bool fixed_sz_rock_cache) {
 
 	seed_pair sp;
 	
@@ -371,20 +371,12 @@ upsurface *surface_cache::get_surface(bool fixed_sz_rock_cache) {
 		it->second->inc_ref();
 		return it->second;
 	}
-	upsurface *surface(new upsurface);
+	p_upsurface surface(new upsurface);
 	scache[sp] = surface;
 	surface->inc_ref();
 	return surface;
 }
 
-void surface_cache::clear() {
-
-	for (surface_map::const_iterator i = scache.begin(); i != scache.end(); ++i) {
-		assert(i->second);
-		delete i->second;
-	}
-	scache.clear();
-}
 
 void surface_cache::clear_unref() {
 
@@ -392,15 +384,9 @@ void surface_cache::clear_unref() {
 
 	for (surface_map::iterator i = scache.begin(); i != scache.end(); ++i) {
 		assert(i->second);
-			
-		if (i->second->unrefed()) {
-			delete i->second;
-			to_erase.push_back(i->first);
-		}
+		if (i->second->unrefed()) {to_erase.push_back(i->first);}
 	}
-	for (vector<seed_pair>::const_iterator i = to_erase.begin(); i != to_erase.end(); ++i) {
-		scache.erase(*i);
-	}
+	for (vector<seed_pair>::const_iterator i = to_erase.begin(); i != to_erase.end(); ++i) {scache.erase(*i);}
 }
 
 

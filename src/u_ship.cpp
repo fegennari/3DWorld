@@ -2773,7 +2773,7 @@ multipart_ship::multipart_ship(unsigned sclass_, point const &pos0, unsigned ali
 	cobjs.reserve(sc_cobjs.size());
 
 	for (unsigned i = 0; i < sc_cobjs.size(); ++i) {
-		cobjs.push_back(sc_cobjs[i]->clone()); // will create the correct ship_coll_obj type
+		cobjs.add(sc_cobjs[i]->clone()); // will create the correct ship_coll_obj type
 		assert(cobjs[i]);
 	}
 }
@@ -2798,8 +2798,8 @@ void multipart_ship::apply_physics() {
 			float const z_start(-2.5), dz(0.2*state_val);
 			c_radius = max((z_start + 1.0f - 2.0f*dz), specs().cr_scale);
 			cobjs.clear(); // could update or use a custom allocator (37us per abomination)
-			cobjs.push_back(new ship_sphere(point(0.0, 0.0, (z_start + dz)), (1.0 - dz), 0.5)); // main sphere, eye armor
-			cobjs.push_back(new ship_sphere(point(0.0, 0.0, z_start), 0.8, 5.0)); // white part of the eye, more damage
+			cobjs.add(new ship_sphere(point(0.0, 0.0, (z_start + dz)), (1.0 - dz), 0.5)); // main sphere, eye armor
+			cobjs.add(new ship_sphere(point(0.0, 0.0, z_start), 0.8, 5.0)); // white part of the eye, more damage
 			point tpos[2] = {point(0.0, 0.0, (z_start + 0.15)), all_zeros};
 
 			for (unsigned i = 0; i < 16; ++i) { // add tail cylinders
@@ -2808,7 +2808,7 @@ void multipart_ship::apply_physics() {
 				point delta(i*fabs(val2)*cv3, i*fabs(val2)*sv3, (1.0 - 0.01*i*i*fabs(val2)));
 				delta *= 0.5/delta.mag();
 				tpos[1] = tpos[0] + delta*1.25;
-				cobjs.push_back(new ship_cylinder(tpos[0], tpos[1], r1, r2, 0, 0.25)); // half damage
+				cobjs.add(new ship_cylinder(tpos[0], tpos[1], r1, r2, 0, 0.25)); // half damage
 				c_radius = max(c_radius, max((tpos[0].mag() + SQRT2*r1), (tpos[1].mag() + SQRT2*r2)));
 				tpos[0] += delta;
 			}
@@ -2848,8 +2848,8 @@ void multipart_ship::apply_physics() {
 				}
 			}
 			cobjs.clear();
-			cobjs.push_back(new ship_sphere(all_zeros, 1.0, 1.0)); // main sphere
-			cobjs.push_back(new ship_cylinder(p_int*0.9, p_int*0.7, 0.0, 0.45, 1, 0.0)); // takes no damage
+			cobjs.add(new ship_sphere(all_zeros, 1.0, 1.0)); // main sphere
+			cobjs.add(new ship_cylinder(p_int*0.9, p_int*0.7, 0.0, 0.45, 1, 0.0)); // takes no damage
 			//weapons[1].weap_pts.resize(0);
 			//weapons[1].weap_pts.push_back(p_int*0.9); // lightning
 		}

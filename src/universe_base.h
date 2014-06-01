@@ -30,13 +30,15 @@ float const MAX_SOBJ_GRAVITY = 5.0;
 class free_obj;
 class ship_coll_obj;
 
+typedef std::shared_ptr<ship_coll_obj const> p_const_ship_coll_obj;
 
-class cobj_vector_t : public vector<ship_coll_obj const *const> {
 
-	void resize(size_t sz) {vector<ship_coll_obj const *const>::resize(sz, NULL);} // prohibited unless called from within this class
+class cobj_vector_t : public vector<p_const_ship_coll_obj> {
+
+	void resize(size_t sz); // prohibited unless called from within this class
 public:
 	void clear();
-	~cobj_vector_t() {clear();}
+	void add(ship_coll_obj const *const o);
 };
 
 

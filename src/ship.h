@@ -518,7 +518,7 @@ public:
 	unsigned cost, ncrew, nengines, engine_lights;
 	colorRGBA base_color;
 	ship_sphere bnd_sphere;
-	cobj_vector_t cobjs; // never really gets freed
+	cobj_vector_t cobjs;
 	vector<triangle> cobj_triangles;
 	vector<ship_weapon> weapons;
 

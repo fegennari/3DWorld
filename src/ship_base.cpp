@@ -620,7 +620,7 @@ void us_class::add_bcube(float x1, float x2, float y1, float y2, float z1, float
 
 	assert(inited);
 	assert(x1 < x2 && y1 < y2 && z1 < z2);
-	cobjs.push_back(new ship_cube(x1, x2, y1, y2, z1, z2, dscale));
+	cobjs.add(new ship_cube(x1, x2, y1, y2, z1, z2, dscale));
 }
 
 
@@ -628,7 +628,7 @@ void us_class::add_bcylinder(ship_cylinder const &c) {
 	
 	assert(inited);
 	assert(c.r1 >= 0.0 && c.r2 >= 0.0 && (c.r1 > 0.0 || c.r2 > 0.0));
-	cobjs.push_back(new ship_cylinder(c));
+	cobjs.add(new ship_cylinder(c));
 }
 
 
@@ -636,7 +636,7 @@ void us_class::add_bsphere(point const &center, float r, float dscale) {
 
 	assert(inited);
 	assert(r > 0.0);
-	cobjs.push_back(new ship_sphere(center, r, dscale));
+	cobjs.add(new ship_sphere(center, r, dscale));
 }
 
 
@@ -644,7 +644,7 @@ void us_class::add_btorus(point const &center, float ri, float ro, float dscale)
 
 	assert(inited);
 	assert(ri > 0.0 && ro > 0.0 && ri <= ro);
-	cobjs.push_back(new ship_torus(center, ri, ro, dscale));
+	cobjs.add(new ship_torus(center, ri, ro, dscale));
 }
 
 
@@ -653,7 +653,7 @@ void us_class::add_bcylin_cube(ship_cylinder const &c, float x1, float x2, float
 	assert(inited);
 	assert(c.r1 >= 0.0 && c.r2 >= 0.0 && (c.r1 > 0.0 || c.r2 > 0.0));
 	assert(x1 < x2 && y1 < y2 && z1 < z2);
-	cobjs.push_back(new ship_bounded_cylinder(c, ship_cube(x1, x2, y1, y2, z1, z2, c.get_dscale())));
+	cobjs.add(new ship_bounded_cylinder(c, ship_cube(x1, x2, y1, y2, z1, z2, c.get_dscale())));
 }
 
 

@@ -681,13 +681,6 @@ template<typename T> void matrix_delete_3d(T ***&data, unsigned nz) {
 	}
 }
 
-template<typename T> void delete_2d_array(T **vals, unsigned size) {
-
-	assert(size == 0 || vals != NULL);
-	for (unsigned i = 0; i < size; ++i) {delete [] vals[i];}
-	delete [] vals;
-}
-
 template<typename T> void matrix_clear_1d(T *data) {
 	memset(data, 0, XY_MULT_SIZE*sizeof(T));
 }

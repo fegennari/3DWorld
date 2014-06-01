@@ -347,6 +347,7 @@ public:
 
 
 struct transform_data; // forward reference
+typedef std::shared_ptr<transform_data> p_transform_data;
 
 
 struct predef_obj { // size = 28
@@ -364,7 +365,7 @@ class obj_group { // size = 36
 
 	obj_vector_t<dwobject> objects;
 	vector<predef_obj> predef_objs;
-	transform_data *td;
+	p_transform_data td;
 
 public:
 	unsigned init_objects, max_objs, app_rate, end_id, new_id;
@@ -372,7 +373,7 @@ public:
 	short type;
 	unsigned char flags;
 
-	obj_group() : td(NULL), init_objects(0), max_objs(0), app_rate(0), end_id(0), new_id(0), enabled(0), reorderable(0), type(0), flags(0) {}
+	obj_group() : init_objects(0), max_objs(0), app_rate(0), end_id(0), new_id(0), enabled(0), reorderable(0), type(0), flags(0) {}
 	void create(int obj_type_, unsigned max_objects_, unsigned init_objects_,
 		unsigned app_rate_, bool init_enabled_, bool reorderable_, bool auto_max);
 	unsigned get_updated_max_objs() const;
@@ -391,7 +392,7 @@ public:
 	void toggle_enable() {set_enable(!enabled);}
 	void free_objects();
 	void shift(vector3d const &vd);
-	transform_data *get_td() {assert(td); return td;}
+	p_transform_data get_td() {assert(td); return td;}
 	dwobject       &get_obj(unsigned i)       {assert(enabled && i < objects.size()); return objects[i];}
 	dwobject const &get_obj(unsigned i) const {assert(enabled && i < objects.size()); return objects[i];}
 	bool obj_within_dist(unsigned i, point const &pos, float dist) const;

@@ -29,11 +29,11 @@ struct plant_type {
 struct surface_cache {
 
 	typedef pair<long, long> seed_pair;
-	typedef map<seed_pair, upsurface *> surface_map;
+	typedef map<seed_pair, p_upsurface> surface_map;
 	surface_map scache;
 
-	upsurface *get_surface(bool fixed_sz_rock_cache);
-	void clear();
+	p_upsurface get_surface(bool fixed_sz_rock_cache);
+	void clear() {scache.clear();}
 	void clear_unref();
 };
 
@@ -43,10 +43,10 @@ class surface_rock : public scenery_obj { // size = 1456+
 	int vbo_mgr_ix;
 	float scale;
 	vector3d dir;
-	upsurface *surface;
+	p_upsurface surface;
 
 public:
-	surface_rock() : vbo_mgr_ix(-1), scale(0.0), surface(NULL) {}
+	surface_rock() : vbo_mgr_ix(-1), scale(0.0) {}
 	void create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager, bool fixed_sz_rock_cache);
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const;

@@ -839,7 +839,7 @@ void us_class::setup(unsigned sclass_) {
 			tlist->add_triangle(*i);
 		}
 		tlist->finalize();
-		cobjs.push_back(tlist);
+		cobjs.add(tlist);
 	}
 	if (!dynamic_cobjs) { // check to make sure none of the turretted weapon points are within a bounding collision shape
 		u_ship test_ship(sclass, all_zeros, ALIGN_NEUTRAL, AI_IGNORE, TARGET_CLOSEST, 0);
@@ -858,9 +858,6 @@ void us_class::setup(unsigned sclass_) {
 
 void us_class::clear_cobjs() {
 
-	for (unsigned i = 0; i < cobjs.size(); ++i) {
-		delete cobjs[i];
-	}
 	cobjs.clear();
 	cobj_triangles.clear();
 }

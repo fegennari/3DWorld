@@ -766,9 +766,9 @@ void obj_group::enable() {
 	unsigned const tflags(object_types[type].flags);
 
 	if (tflags & (OBJ_ROLLS | VERTEX_DEFORM)) {
-		if (!td) td = new transform_data;
-		if (tflags & OBJ_ROLLS)     td->matrices.resize(max_objs);
-		if (tflags & VERTEX_DEFORM) td->perturb_maps.resize(max_objs);
+		if (!td) td.reset(new transform_data);
+		if (tflags & OBJ_ROLLS)     {td->matrices.resize(max_objs);}
+		if (tflags & VERTEX_DEFORM) {td->perturb_maps.resize(max_objs);}
 	}
 	enabled = 1;
 }
@@ -780,14 +780,8 @@ void obj_group::disable() {
 	remove_reset_cobjs();
 	objects.clear();
 	if (!large_radius()) remove_excess_cap(objects); // free
-
-	if ((object_types[type].flags & (OBJ_ROLLS | VERTEX_DEFORM))) {
-		delete td;
-		td = NULL;
-	}
-	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {
-		i->obj_used = -1;
-	}
+	if ((object_types[type].flags & (OBJ_ROLLS | VERTEX_DEFORM))) {td.reset();}
+	for (vector<predef_obj>::iterator i = predef_objs.begin(); i != predef_objs.end(); ++i) {i->obj_used = -1;}
 	enabled = 0;
 }
 
@@ -796,11 +790,7 @@ void obj_group::free_objects() {
 
 	remove_reset_cobjs();
 	if (!objects.empty()) reset_status(objects);
-
-	if (td) {
-		delete td;
-		td = NULL;
-	}
+	td.reset();
 }
 
 

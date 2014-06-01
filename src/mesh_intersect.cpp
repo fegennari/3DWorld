@@ -12,7 +12,7 @@ bool const USE_BSP_TREE  = 1;
 
 
 bool last_int(0);
-mesh_bsp_tree *bspt = NULL;
+std::shared_ptr<mesh_bsp_tree> bspt;
 
 
 extern int display_mode;
@@ -407,8 +407,7 @@ void gen_mesh_bsp_tree() {
 
 	if (!USE_BSP_TREE || !mesh_size_ok_for_bsp_tree()) return;
 	//RESET_TIME;
-	delete bspt;
-	bspt = new mesh_bsp_tree(); // must be created after mesh size is read from config file
+	bspt.reset(new mesh_bsp_tree()); // must be created after mesh size is read from config file
 	//PRINT_TIME("BSP Tree");
 }
 

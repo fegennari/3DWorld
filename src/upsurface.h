@@ -113,6 +113,8 @@ public:
 	void draw_cube_mapped_sphere (pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const;
 };
 
+typedef std::shared_ptr<upsurface> p_upsurface;
+
 
 #endif // _UPSURFACE_H_
 

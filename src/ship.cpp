@@ -855,13 +855,10 @@ us_class const &get_sclass_obj(unsigned sclass) {
 }
 
 
-void cobj_vector_t::clear() {
-
-	for (iterator i = begin(); i != end(); ++i) {
-		delete *i;
-	}
-	resize(0);
-}
+// Note: must be here where all ship_coll_obj derived classes have complete types
+void cobj_vector_t::resize(size_t sz) {vector<p_const_ship_coll_obj>::resize(sz);}
+void cobj_vector_t::clear() {vector<p_const_ship_coll_obj>::clear();}
+void cobj_vector_t::add(ship_coll_obj const *const o) {push_back(p_const_ship_coll_obj(o));}
 
 
 float get_ship_cost(unsigned sclass, unsigned align, unsigned reserve_credits, float discount) {

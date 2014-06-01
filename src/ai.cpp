@@ -1116,7 +1116,7 @@ void add_damage_to_smiley_texture(vector3d const &dir, float size, int smiley_id
 void add_damage_to_smiley_surface(vector3d const &dir, float size, int smiley_id) {
 
 	float const radius(object_types[SMILEY].radius);
-	transform_data *td(obj_groups[coll_id[SMILEY]].get_td());
+	p_transform_data td(obj_groups[coll_id[SMILEY]].get_td());
 	td->set_perturb_size(smiley_id, PMAP_SIZE);
 	vector3d sdir(obj_groups[coll_id[SMILEY]].get_obj(smiley_id).orientation);
 	int const tsize(int(size*PMAP_SIZE/60.0 + 0.5)), radsq(4*tsize*tsize);
@@ -1189,7 +1189,7 @@ void init_smiley(int smiley_id) {
 	objg.get_td()->reset_perturb_if_set(smiley_id);
 
 	/*if (SMILEY_BUTT) {
-		transform_data *td(obj_groups[coll_id[SMILEY]].get_td());
+		p_transform_data td(obj_groups[coll_id[SMILEY]].get_td());
 		td->set_perturb_size(smiley_id, PMAP_SIZE);
 		float const radius(object_types[SMILEY].radius);
 		td->add_perturb_at(PMAP_SIZE/2, 14, smiley_id, -0.3*radius, -0.5*radius, 0.5*radius);
