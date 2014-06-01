@@ -403,7 +403,7 @@ void draw_cylindrical_section(float length, float r_inner, float r_outer, int nd
 
 
 // back face culling requires the sphere to be untransformed (or the vertices to be per-transformed)
-void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, bool const *const render_map,
+void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, unsigned char const *const render_map,
 									 float const *const exp_map, point const *const pt_shift, float expand,
 									 float s_beg, float s_end, float t_beg, float t_end) const
 {
@@ -672,7 +672,7 @@ void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float ra
 
 // non-collision object version
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
-						int texture, bool disable_bfc, bool const *const render_map, float const *const exp_map,
+						int texture, bool disable_bfc, unsigned char const *const render_map, float const *const exp_map,
 						point const *const pt_shift, float expand, float s_beg, float s_end, float t_beg, float t_end)
 {
 	sd_sphere_d sd(pos, radius, ndiv, perturb_map);

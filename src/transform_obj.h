@@ -46,7 +46,6 @@ struct transform_data {
 	void set_perturb_size(unsigned i, unsigned sz);
 	void add_perturb_at(unsigned s, unsigned t, unsigned i, float val, float min_mag, float max_mag);
 	void reset_perturb_if_set(unsigned i);
-	~transform_data();
 };
 
 

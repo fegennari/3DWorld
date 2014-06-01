@@ -98,12 +98,9 @@ xform_matrix fgGetPJM() {return pjm_stack.top();}
 
 void mesh2d::clear() {
 	
-	delete [] pmap;
-	delete [] rmap;
-	delete [] ptsh;
-	pmap = NULL;
-	rmap = NULL;
-	ptsh = NULL;
+	pmap.clear();
+	rmap.clear();
+	ptsh.clear();
 	size = 0;
 }
 
@@ -117,32 +114,9 @@ void mesh2d::set_size(unsigned sz) {
 }
 
 
-template<typename T> void mesh2d::alloc_ptr(T *&p, T const val) {
-
-	unsigned const num(get_num());
-	delete [] p;
-	p = new T[num];
-	for (unsigned i = 0; i < num; ++i) p[i] = val;
-}
-
-
-void mesh2d::alloc_pmap() {alloc_ptr(pmap, 0.0f);}
-void mesh2d::alloc_rmap() {alloc_ptr(rmap, bool(1));}
-void mesh2d::alloc_emap() {alloc_ptr(emap, 0.0f);}
-void mesh2d::alloc_ptsh() {alloc_ptr(ptsh, all_zeros);}
-
-
-void mesh2d::reset_pmap() {
-
-	if (!pmap) {alloc_pmap(); return;} // will be reset
-	unsigned const num(get_num());
-	for (unsigned i = 0; i < num; ++i) pmap[i] = 0.0;
-}
-
-
 void mesh2d::add_random(float mag, float min_mag, float max_mag, unsigned skipval) {
 
-	if (!pmap) alloc_pmap();
+	if (pmap.empty()) {alloc_pmap();}
 	unsigned const num(get_num());
 
 	for (unsigned i = (rand()%(skipval+1)); i < num; i += (skipval+1)) {
@@ -153,43 +127,44 @@ void mesh2d::add_random(float mag, float min_mag, float max_mag, unsigned skipva
 
 void mesh2d::mult_by(float val) {
 
-	if (!pmap) return;
+	if (pmap.empty()) return;
 	unsigned const num(get_num());
-	for (unsigned i = 0; i < num; ++i) pmap[i] *= val;
+	for (unsigned i = 0; i < num; ++i) {pmap[i] *= val;}
 }
 
 
 void mesh2d::unset_rand_rmap(unsigned num_remove) {
 
-	if (!rmap) alloc_rmap();
-	for (unsigned i = 0; i < num_remove; ++i) rmap[choose_rand()] = 0; // doesn't check for already removed elements
+	if (rmap.empty()) {rmap.resize(get_num(), 1);}
+	for (unsigned i = 0; i < num_remove; ++i) {rmap[choose_rand()] = 0;} // doesn't check for already removed elements
 }
 
 
 void mesh2d::set_rand_expand(float mag, unsigned num_exp) {
 
-	if (!emap) alloc_emap();
-	for (unsigned i = 0; i < num_exp; ++i) emap[choose_rand()] += mag; // doesn't check for already removed elements
+	if (emap.empty()) {emap.resize(get_num(), 0.0);}
+	for (unsigned i = 0; i < num_exp; ++i) {emap[choose_rand()] += mag;} // doesn't check for already removed elements
 }
 
 
 void mesh2d::set_rand_translate(point const &tp, unsigned num_trans) {
 
 	if (tp == all_zeros) return;
-	if (!ptsh) alloc_ptsh();
-	for (unsigned i = 0; i < num_trans; ++i) ptsh[choose_rand()] += tp; // doesn't check for already translated elements
+	if (ptsh.empty()) {ptsh.resize(get_num(), all_zeros);}
+	for (unsigned i = 0; i < num_trans; ++i) {ptsh[choose_rand()] += tp;} // doesn't check for already translated elements
 }
 
 
 void mesh2d::draw_perturbed_sphere(point const &pos, float radius, int ndiv, bool tex_coord) const {
 
-	if (!pmap && !rmap && !emap && !ptsh && expand == 0.0) {
+	if (pmap.empty() && rmap.empty() && emap.empty() && ptsh.empty() && expand == 0.0) {
 		draw_sphere_vbo(pos, radius, ndiv, 1);
 	}
 	else { // ndiv unused
-		if (pmap || rmap || ptsh || emap) assert(size > 0);
+		if (!pmap.empty() || !rmap.empty() || !emap.empty() || !ptsh.empty()) {assert(size > 0);}
 		point const camera(get_camera_all());
-		draw_subdiv_sphere(pos, radius, size, camera, pmap, tex_coord, 1, rmap, emap, ptsh, expand);
+		draw_subdiv_sphere(pos, radius, size, camera, (pmap.empty() ? nullptr : &pmap.front()), tex_coord, 1,
+			(rmap.empty() ? nullptr : &rmap.front()), (emap.empty() ? nullptr : &emap.front()), (ptsh.empty() ? nullptr : &ptsh.front()), expand);
 	}
 }
 
@@ -201,7 +176,7 @@ void transform_data::set_perturb_size(unsigned i, unsigned sz) {
 
 	assert(i < perturb_maps.size());
 
-	if (perturb_maps[i].pmap) {
+	if (!perturb_maps[i].pmap.empty()) {
 		assert(perturb_maps[i].get_size() == sz);
 	}
 	else {
@@ -221,13 +196,11 @@ void transform_data::add_perturb_at(unsigned s, unsigned t, unsigned i, float va
 void transform_data::reset_perturb_if_set(unsigned i) {
 	
 	assert(i < perturb_maps.size());
-	if (perturb_maps[i].pmap) perturb_maps[i].reset_pmap();
-}
 
-
-transform_data::~transform_data() {
-		
-	for (unsigned i = 0; i < perturb_maps.size(); ++i) {perturb_maps[i].clear();}
+	if (!perturb_maps[i].pmap.empty()) { // reset pmap
+		perturb_maps[i].pmap.clear();
+		perturb_maps[i].alloc_pmap();
+	}
 }
 
 

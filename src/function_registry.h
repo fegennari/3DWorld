@@ -176,7 +176,7 @@ void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float r
 void draw_cylindrical_section(float length, float r_inner, float r_outer, int ndiv, bool texture=0, float tex_scale_len=1.0, float z_offset=0.0);
 void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv);
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, point const &vfrom, float const *perturb_map,
-						int texture, bool disable_bfc, bool const *const render_map=NULL, float const *const exp_map=NULL,
+						int texture, bool disable_bfc, unsigned char const *const render_map=NULL, float const *const exp_map=NULL,
 						point const *const pt_shift=NULL, float expand=0.0, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
 void draw_subdiv_sphere(point const &pos, float radius, int ndiv, int texture, bool disable_bfc);
 void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int texture,

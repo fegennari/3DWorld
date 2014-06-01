@@ -50,7 +50,7 @@ public:
 	void gen_points_norms_static(float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
 	void gen_points_norms(sphere_point_norm &cur_spn, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0);
 	float get_rmax() const;
-	void draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, bool const *const render_map=NULL,
+	void draw_subdiv_sphere(point const &vfrom, int texture, bool disable_bfc, unsigned char const *const render_map=NULL,
 		float const *const exp_map=NULL, point const *const pt_shift=NULL, float expand=0.0,
 		float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void get_quad_points(vector<vert_norm_tc> &quad_pts) const;
