@@ -513,7 +513,7 @@ float get_eq_vol_scale(vector3d const &scale) {return pow(scale.x*scale.y*scale.
 
 class asteroid_model_gen_t {
 
-	typedef shared_ptr<uobj_asteroid> p_uobj_asteroid;
+	typedef unique_ptr<uobj_asteroid> p_uobj_asteroid;
 	vector<p_uobj_asteroid> asteroids;
 	colorRGBA tex_color;
 
@@ -532,10 +532,10 @@ public:
 		}
 		PRINT_TIME("Asteroid Model Gen");
 	}
-	shared_ptr<uobj_asteroid const> get_asteroid(unsigned ix) const {
+	uobj_asteroid const *get_asteroid(unsigned ix) const {
 		assert(ix < asteroids.size());
 		assert(asteroids[ix]);
-		return asteroids[ix];
+		return asteroids[ix].get();
 	}
 	void draw(unsigned ix, point_d const &pos, vector3d const &scale, point const &camera, vector3d const &rot_axis, float rot_ang, shader_t &s, pt_line_drawer &pld) {
 		assert(ix < asteroids.size());

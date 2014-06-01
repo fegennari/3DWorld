@@ -12,7 +12,7 @@ bool const USE_BSP_TREE  = 1;
 
 
 bool last_int(0);
-std::shared_ptr<mesh_bsp_tree> bspt;
+std::unique_ptr<mesh_bsp_tree> bspt;
 
 
 extern int display_mode;

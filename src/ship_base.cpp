@@ -479,7 +479,7 @@ float u_ship_base::get_true_rel_mass_scale() const {
 
 
 ship_weapon::ship_weapon(unsigned weapon, unsigned num, unsigned ammo0, vector<point> const &weap_pts_)
-	: wclass(weapon), init_ammo(ammo0), wcount(num), rtime(0), nregen(0), ndamaged(0), last_fframe(0), cur_wpt(0), docked(NULL)
+	: wclass(weapon), init_ammo(ammo0), wcount(num), rtime(0), nregen(0), ndamaged(0), last_fframe(0), cur_wpt(0)
 {
 	assert(wclass < us_weapons.size());
 	if (init_ammo == 0) init_ammo = wcount*us_weapons[wclass].def_ammo; // get the default for that weapon
