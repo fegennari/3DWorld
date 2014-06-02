@@ -23,6 +23,7 @@ float const DELETE_DIST_TILES = 1.7;
 float const GRASS_LOD_SCALE   = 16.0;
 float const GRASS_DIST_SLOPE  = 0.25;
 float const SMAP_FADE_THRESH  = 1.4;
+float const OCCLUDER_DIST     = 0.2;
 
 int   const LIGHTNING_LIGHT = 2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
@@ -1396,11 +1397,7 @@ tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), mesh_vbo(0), ivb
 void tile_draw_t::clear() {
 
 	clear_vbos_tids(); // needed to clear mesh_vbo, ivbo, and free list
-
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		i->second->clear();
-		delete i->second;
-	}
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear();} // may not be necessary
 	to_draw.clear();
 	tiles.clear();
 	tree_trunk_pts.clear();
@@ -1423,19 +1420,17 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	int const x1(-tile_radius + toffx), y1(-tile_radius + toffy);
 	int const x2( tile_radius + toffx), y2( tile_radius + toffy);
 	unsigned const init_tiles((unsigned)tiles.size());
-	vector<tile_xy_pair> to_erase;
+	unsigned num_erased(0);
 	min_camera_dist = FAR_CLIP;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // update tiles and free old tiles
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)
 		if (!i->second->update_range()) {
-			to_erase.push_back(i->first);
 			i->second->clear();
-			delete i->second;
+			tiles.erase(i++);
+			++num_erased;
 		}
-	}
-	for (vector<tile_xy_pair>::const_iterator i = to_erase.begin(); i != to_erase.end(); ++i) {
-		tiles.erase(*i);
+		else {++i;}
 	}
 	for (int y = y1; y <= y2; ++y ) { // create new tiles
 		for (int x = x1; x <= x2; ++x ) {
@@ -1445,7 +1440,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			if (tile.get_rel_dist_to_camera() >= CREATE_DIST_TILES) continue; // too far away to create
 			tile_t *new_tile(new tile_t(tile));
 			new_tile->create_zvals(height_gen);
-			tiles[txy] = new_tile;
+			tiles[txy].reset(new_tile);
 		}
 	}
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) { // calculate terrain_zmin
@@ -1454,8 +1449,8 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 			if (!camera_surf_collide) {min_camera_dist = min(min_camera_dist, i->second->get_min_dist_to_pt(cpos, 0, 0));}
 		}
 	}
-	if (DEBUG_TILES && (tiles.size() != init_tiles || !to_erase.empty())) {
-		cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << to_erase.size() << endl;
+	if (DEBUG_TILES && (tiles.size() != init_tiles || num_erased > 0)) {
+		cout << "update: tiles: " << init_tiles << " to " << tiles.size() << ", erased: " << num_erased << endl;
 	}
 	// Note: could skip shadow computation (but not weight calc/texture upload) if (max(sun_pos.z,  last_sun.z) > zbottom) or (sun.get_norm().z > 0.9) or something like that
 	static point last_sun(all_zeros), last_moon(all_zeros);
@@ -1685,7 +1680,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		create_vbo_and_upload(ivbo, indices, 1, 1);
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		tile_t *const tile(i->second);
+		tile_t *const tile(i->second.get());
 		assert(tile);
 		if (tile->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue; // too far to draw
 		if (!tile->is_visible()) continue; // Note: using current camera view frustum
@@ -1754,20 +1749,19 @@ void tile_draw_t::draw(bool reflection_pass) {
 	}
 
 	// determine potential occluders
-	float const OCCLUDER_DIST = 0.2;
 	vector<tile_t *> occluders;
 	vector<cube_t> test_cubes;
 	point const camera(get_camera_pos());
 
 	if ((display_mode & 0x08) && (display_mode & 0x01)) { // check occlusion when occlusion culling and mesh are enabled
 		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-			tile_t *const tile(i->second);
+			tile_t *const tile(i->second.get());
 			if (tile->get_rel_dist_to_camera() > OCCLUDER_DIST || !tile->is_visible()) continue;
 			occluders.push_back(tile);
 		}
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		tile_t *const tile(i->second);
+		tile_t *const tile(i->second.get());
 		if (DEBUG_TILES) {mem      += tile->get_gpu_mem ();}
 		if (DEBUG_TILES) {tree_mem += tile->get_tree_mem();}
 		float const dist(tile->get_rel_dist_to_camera());
@@ -1875,7 +1869,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 		if (!i->second->is_visible()) continue;
 		i->second->update_pine_tree_state(1);
 		//i->second->update_decid_trees(); // not legal
-		to_draw.push_back(make_pair(0.0, i->second)); // distance is unused so set to 0.0
+		to_draw.push_back(make_pair(0.0, i->second.get())); // distance is unused so set to 0.0
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
@@ -2177,8 +2171,8 @@ void tile_draw_t::clear_vbos_tids() {
 tile_t *tile_draw_t::get_tile_from_xy(tile_xy_pair const &tp) {
 
 	tile_map::iterator it(tiles.find(tp));
-	if (it != tiles.end()) return it->second;
-	return NULL;
+	if (it != tiles.end()) {return it->second.get();}
+	return nullptr;
 }
 
 
@@ -2197,7 +2191,7 @@ bool tile_draw_t::check_player_collision() const {
 bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const {
 
 	t = 2.0; // > 1.0
-	intersected_tile = NULL;
+	intersected_tile = nullptr;
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		float tn(1.0);
@@ -2207,10 +2201,10 @@ bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t
 		// but this code is plenty fast enough to do a single query each frame as it is
 		if (i->second->line_intersect_mesh(v1, v2, tn, new_xpos, new_ypos) && tn < t) {
 			t = tn; xpos = new_xpos; ypos = new_ypos;
-			intersected_tile = i->second; // constness?
+			intersected_tile = i->second.get(); // constness?
 		}
 	}
-	if (intersected_tile != NULL) {
+	if (intersected_tile != nullptr) {
 		assert(t >= 0 && t <= 1.0); // okay even with fp error?
 		return 1;
 	}

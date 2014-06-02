@@ -273,7 +273,7 @@ public:
 
 class tile_draw_t {
 
-	typedef map<tile_xy_pair, tile_t*> tile_map;
+	typedef map<tile_xy_pair, std::unique_ptr<tile_t> > tile_map;
 	typedef set<tile_xy_pair> tile_set_t;
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 

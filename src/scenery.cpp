@@ -380,13 +380,10 @@ p_upsurface surface_cache::get_surface(bool fixed_sz_rock_cache) {
 
 void surface_cache::clear_unref() {
 
-	vector<seed_pair> to_erase;
-
-	for (surface_map::iterator i = scache.begin(); i != scache.end(); ++i) {
+	for (surface_map::iterator i = scache.begin(); i != scache.end(); ) { // Note: no ++i
 		assert(i->second);
-		if (i->second->unrefed()) {to_erase.push_back(i->first);}
+		if (i->second->unrefed()) {scache.erase(i++);} else {++i;}
 	}
-	for (vector<seed_pair>::const_iterator i = to_erase.begin(); i != to_erase.end(); ++i) {scache.erase(*i);}
 }
 
 
