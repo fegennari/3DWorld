@@ -1281,7 +1281,7 @@ void uobj_draw_data::draw_gunship() const {
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 2.0);
-	draw_sphere_vbo(point(0.0, 0.0, 0.325), 0.25, 2*ndiv/3, textured);
+	draw_sphere_vbo(point(0.0, 0.0, 0.325), 0.25, get_ndiv(2*ndiv/3), textured);
 	fgPopMatrix();
 
 	// body

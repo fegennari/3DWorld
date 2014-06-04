@@ -113,7 +113,7 @@ void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg,
 void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, float s_end, float t_beg, float t_end) {
 
 	unsigned const ndiv(spn.ndiv);
-	assert(ndiv > 0 && ndiv < 1000); // FIXME: should we refuse to accept (ndiv < 3) ?
+	assert(ndiv >= 3 && ndiv <= 512); // sanity check
 
 	if (cur_spn.points == NULL || ndiv > cur_spn.ndiv) { // allocate all memory
 		if (cur_spn.points != NULL) cur_spn.free_data(); // already allocated at least once
@@ -994,7 +994,7 @@ void setup_sphere_vbos() {
 	sphere_point_norm spn;
 	sphere_vbo_offsets[0] = 0;
 
-	for (unsigned i = 1; i <= MAX_SPHERE_VBO_NDIV; ++i) {
+	for (unsigned i = 3; i <= MAX_SPHERE_VBO_NDIV; ++i) {
 		for (unsigned half = 0; half < 2; ++half) {
 			for (unsigned tex = 0; tex < 2; ++tex) {
 				sd_sphere_d sd(all_zeros, 1.0, i);
@@ -1019,7 +1019,7 @@ void bind_draw_sphere_vbo(bool textured, bool normals) {
 
 void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_instances) {
 
-	assert(ndiv > 0 && ndiv <= MAX_SPHERE_VBO_NDIV);
+	assert(ndiv >= 3 && ndiv <= MAX_SPHERE_VBO_NDIV);
 	unsigned const ix(((ndiv-1) << 2) + (half << 1) + textured), off1(sphere_vbo_offsets[ix-1]), off2(sphere_vbo_offsets[ix]);
 	assert(off1 < off2);
 	check_mvm_update();
@@ -1030,12 +1030,12 @@ void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half, unsigned num_
 bool sphere_vbo_bound(0);
 
 void begin_sphere_draw(bool textured) {
-	assert (!sphere_vbo_bound); sphere_vbo_bound = 1;
+	assert(!sphere_vbo_bound); sphere_vbo_bound = 1;
 	bind_draw_sphere_vbo(textured, 1);
 }
 
 void end_sphere_draw() {
-	assert (sphere_vbo_bound); sphere_vbo_bound = 0;
+	assert(sphere_vbo_bound); sphere_vbo_bound = 0;
 	bind_vbo(0);
 }
 
