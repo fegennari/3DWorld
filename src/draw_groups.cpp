@@ -221,14 +221,13 @@ void draw_transparent_object_groups() {
 void draw_select_groups(int solid) {
 
 	if (!begin_motion) return;
-	float const orig_ivo(indir_vert_offset), orig_czb(cobj_z_bias); // store original variable values FIXME: pass into setup_smoke_shaders?
 	shader_t s;
 	s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1); // FS
 	bool const force_tsl(1);
 	float const burn_tex_scale = 0.5;
-	indir_vert_offset = min(0.1f, indir_vert_offset); // smaller
-	cobj_z_bias       = max(0.002f, cobj_z_bias); // larger
 	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl, burn_tex_scale);
+	if (cobj_z_bias < 0.002)     {s.add_uniform_float("z_bias", 0.002);} // reset larger
+	if (indir_vert_offset > 0.1) {s.add_uniform_float("indir_vert_offset", 0.1);} // reset smaller
 	select_no_texture();
 
 	for (int i = 0; i < num_groups; ++i) {
@@ -254,8 +253,6 @@ void draw_select_groups(int solid) {
 		disable_blend();
 	}
 	s.end_shader();
-	indir_vert_offset = orig_ivo; // restore original variable values
-	cobj_z_bias       = orig_czb;
 
 	if (!snow_pld.empty()) { // draw snowflakes from points in a custom geometry shader
 		select_texture(object_types[SNOW].tid);
@@ -1208,7 +1205,7 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 	if (time > 5) {
 		pos.z += 0.15*radius;
 		shader.set_color_e(get_landmine_light_color(time));
-		draw_sphere_vbo(pos, 0.15*radius, ndiv/2, 0); // warning light
+		draw_sphere_vbo(pos, 0.15*radius, max(3, ndiv/2), 0); // warning light
 		shader.clear_color_e();
 	}
 	select_texture(object_types[LANDMINE].tid);
