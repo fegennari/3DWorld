@@ -1125,7 +1125,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			}
 			wscale = dot_product(local_wind, leaves[i].norm);
 		}
-		if (!leaf_cobjs.empty()) { // rotate leaves when hit by an object
+		if (i < leaf_cobjs.size()) { // rotate leaves when hit by an object (plus another i update hack)
 			coll_obj &cobj(get_leaf_cobj(i));
 				
 			if (cobj.last_coll > 0) {
