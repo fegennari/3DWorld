@@ -66,7 +66,7 @@ public:
 // function prototypes
 xform_matrix fgGetMVM();
 xform_matrix fgGetPJM();
-void apply_obj_mesh_roll(xform_matrix &matrix, shader_t &shader, point const &pos, point const &lpos, float radius, float a_add=0.0, float a_mult=1.0);
+void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add=0.0, float a_mult=1.0);
 
 
 class instance_render_t {

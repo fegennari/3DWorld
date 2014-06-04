@@ -207,7 +207,7 @@ void transform_data::reset_perturb_if_set(unsigned i) {
 // *** deformation code ***
 
 
-void apply_obj_mesh_roll(xform_matrix &matrix, shader_t &shader, point const &pos, point const &lpos, float radius, float a_add, float a_mult) {
+void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add, float a_mult) {
 
 	if (pos != lpos) {
 		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
@@ -223,7 +223,6 @@ void apply_obj_mesh_roll(xform_matrix &matrix, shader_t &shader, point const &po
 			}
 		}
 	}
-	// TODO: set some shader uniform from this matrix
 	fgMultMatrix(matrix);
 }
 

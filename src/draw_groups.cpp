@@ -1087,7 +1087,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 	
 	if (matrix) {
 		if (on_platform) lpos = pos; // reset now so there's no rotation
-		apply_obj_mesh_roll(*matrix, shader, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
+		apply_obj_mesh_roll(*matrix, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
 	}
 	draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
 	fgPopMatrix();

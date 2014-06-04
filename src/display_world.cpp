@@ -197,25 +197,25 @@ void draw_stuff(int draw_uw, int timer1) {
 		draw_splashes();
 		draw_snow();
 		draw_trees();
+		render_voxel_data(0);
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("O");
-		draw_scenery(0, 1);
-		draw_teleporters();
+		render_models(0);
 		check_gl_error(21);
 		if (TIMETEST) PRINT_TIME("P");
-		draw_coll_surfaces(0, 1);
 		check_gl_error(22);
 		if (TIMETEST) PRINT_TIME("Q");
-		render_models(0); // FIXME: should be earlier?
-		check_gl_error(24);
+		draw_scenery(0, 1);
+		draw_teleporters();
+		check_gl_error(23);
 		if (TIMETEST) PRINT_TIME("R");
-		render_voxel_data(0); // FIXME: should be earlier?
-		check_gl_error(25);
+		draw_coll_surfaces(0, 1);
+		check_gl_error(24);
 		if (TIMETEST) PRINT_TIME("S");
 		draw_cracks_and_decals();
 		if (TIMETEST) PRINT_TIME("S2");
 		draw_transparent_object_groups();
-		check_gl_error(26);
+		check_gl_error(25);
 	}
 }
 
