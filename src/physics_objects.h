@@ -178,7 +178,8 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 	float health, angle;
 	vector3d velocity, orientation, init_dir, vdeform;
 
-	dwobject() : coll_id(-1) {}
+	dwobject() : coll_id(-1), type(0), source(NO_SOURCE), flags(0), direction(0), health(0.0), angle(0.0),
+		velocity(zero_vector), orientation(plus_z), init_dir(plus_z), vdeform(zero_vector) {}
 	dwobject(int type_, point const &pos_, vector3d const &vel_=all_zeros, int status_=0, float health_=0.0)
 		: basic_physics_obj(pos_, status_), coll_id(-1), type(type_), source(-2), flags(0),
 		direction(0), health(health_), angle(0.0), velocity(vel_), orientation(0.0, 0.0, -1.0),

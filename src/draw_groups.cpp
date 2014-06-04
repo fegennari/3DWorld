@@ -113,7 +113,7 @@ inline bool is_droplet(int type) {
 }
 
 inline bool get_cull_face(int type, colorRGBA const &color) {
-	return (color.alpha < 1.0 && type != ROCKET && type != STAR5);
+	return (color.alpha < 1.0 && type != ROCKET && type != STAR5 && type != GRENADE && type != LANDMINE);
 }
 
 void select_no_texture() {
@@ -791,48 +791,49 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 	point pos(obj.pos);
 	vector<wap_obj> wap_vis_objs[2]; // not actually used
 	int const atype(get_ammo_or_obj((int)obj.direction));
+	if (atype < 0) return; // can this happen?
+	obj_type const &otype(object_types[atype]);
+	check_drawing_flags(otype.flags, 1, shader);
+	shader.set_cur_color(otype.color);
+	if (otype.tid >= 0) {select_texture(otype.tid);}
+	bool const cull_face(get_cull_face(atype, color));
+	if (cull_face) {glEnable(GL_CULL_FACE);}
 
-	if (atype >= 0) {
-		check_drawing_flags(object_types[atype].flags, 1, shader);
-		shader.set_cur_color(object_types[atype].color);
-		bool const cull_face(get_cull_face(atype, color));
-		if (cull_face) glEnable(GL_CULL_FACE);
-
-		switch (atype) {
-		case SHELLC: // M16
-			pos.z -= 0.5*radius;
-			draw_cylinder_at(pos, 1.0*radius, 0.2*radius, 0.2*radius, ndiv, 1);
-			pos.z += radius;
-			draw_sphere_vbo(pos, 0.2*radius, ndiv, 0);
-			break;
-		case PROJECTILE: // shotgun
-			for (unsigned n = 0; n < 2; ++n) { // two shells in one ammo
-				point pos2(pos);
-				pos2.x += (1.0 - 2.0*n)*0.3*radius;
-				shader.set_cur_color(RED);
-				pos2.z -= 0.5*radius;
-				draw_cylinder_at(pos2, 1.2*radius, 0.3*radius, 0.3*radius, ndiv, 1);
-				shader.set_cur_color(GOLD);
-				pos2.z -= 0.2*radius;
-				draw_cylinder_at(pos2, 0.4*radius, 0.32*radius, 0.32*radius, ndiv, 1);
-			}
-			break;
-		case BEAM: // laser
+	switch (atype) {
+	case SHELLC: // M16
+		pos.z -= 0.5*radius;
+		draw_cylinder_at(pos, 1.0*radius, 0.2*radius, 0.2*radius, ndiv, 1);
+		pos.z += radius;
+		draw_sphere_vbo(pos, 0.2*radius, ndiv, 0);
+		break;
+	case PROJECTILE: // shotgun
+		for (unsigned n = 0; n < 2; ++n) { // two shells in one ammo
+			point pos2(pos);
+			pos2.x += (1.0 - 2.0*n)*0.3*radius;
 			shader.set_cur_color(RED);
-			pos.z -= 0.5*radius;
-			draw_cylinder_at(pos, 1.0*radius, 0.1*radius, 0.1*radius, ndiv, 1);
-			break;
-		case STAR5: // throwing star
-			draw_star(pos, obj.orientation, obj.init_dir, 0.4*radius, obj.angle, 0);
-			break;
-		case GASSED:
-			draw_sphere_vbo(pos, 0.6*radius, ndiv, 1);
-			break;
-		default:
-			draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, 1, shader);
+			pos2.z -= 0.5*radius;
+			draw_cylinder_at(pos2, 1.2*radius, 0.3*radius, 0.3*radius, ndiv, 1);
+			shader.set_cur_color(GOLD);
+			pos2.z -= 0.2*radius;
+			draw_cylinder_at(pos2, 0.4*radius, 0.32*radius, 0.32*radius, ndiv, 1);
 		}
-		if (cull_face) glDisable(GL_CULL_FACE);
+		break;
+	case BEAM: // laser
+		shader.set_cur_color(RED);
+		pos.z -= 0.5*radius;
+		draw_cylinder_at(pos, 1.0*radius, 0.1*radius, 0.1*radius, ndiv, 1);
+		break;
+	case STAR5: // throwing star
+		draw_star(pos, obj.orientation, obj.init_dir, 0.4*radius, obj.angle, 0);
+		break;
+	case GASSED:
+		draw_sphere_vbo(pos, 0.6*radius, ndiv, 1);
+		break;
+	default:
+		draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, 1, shader);
 	}
+	if (cull_face) {glDisable(GL_CULL_FACE);}
+	if (otype.tid >= 0) {select_no_texture();}
 }
 
 
@@ -1118,9 +1119,9 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 	vert_wrap_t const verts[6] = {point(0.0, 0.0, 0.0), point(1.8, 0.0, -2.0), point(-1.8, 0.0, -2.0), point(0.0, 0.0, 0.0), point( 0.0, 1.8, -2.0), point(0.0, -1.8, -2.0)};
 	draw_verts(verts, 6, GL_TRIANGLES);
 	shader.set_cur_color(object_types[ROCKET].color);
-	fgScale(1.0, 1.0, -2.0);
+	fgScale(1.0, 1.0, 2.0);
 	draw_sphere_vbo_raw(ndiv, 0);
-	draw_cylinder(1.1, 1.0, 1.0, ndiv);
+	draw_cylinder(-1.1, 1.0, 1.0, ndiv);
 	fgPopMatrix();
 	if (type == ROCKET) gen_rocket_smoke(pos, orient, radius);
 }
@@ -1304,7 +1305,7 @@ void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &ini
 
 	if (rotate) {
 		rotate_by_vector(init_dir, -90.0);
-		if (angle != 0.0) rotate_about(angle, orient);
+		if (angle != 0.0 && orient != zero_vector) {rotate_about(angle, orient);}
 	}
 	select_texture(bloody ? SAW_B_TEX : SAW_TEX);
 	draw_circle_normal(0.0, radius, ndiv, 0);

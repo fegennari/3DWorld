@@ -1285,6 +1285,7 @@ void player_state::smiley_action(int smiley_id) {
 
 colorRGBA get_smiley_team_color(int smiley_id, bool ignore_teams) {
 
+	if (smiley_id == NO_SOURCE) {smiley_id = 0;} // for example landmine in ammo
 	colorRGBA const tcolors[] = {RED, BLUE, GREEN, MAGENTA, CYAN, BROWN, PINK, GRAY, LT_BLUE, ORANGE, WHITE};
 	if (teams <= 1) return tcolors[0];
 	int const max_colors(sizeof(tcolors)/sizeof(colorRGBA)-1);

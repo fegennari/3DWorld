@@ -375,7 +375,7 @@ void process_groups() {
 					obj.init_dir = signed_rand_vector_norm();
 					obj.angle    = signed_rand_float();
 				}
-				if (type == SNOW) obj.angle = rand_uniform(0.7, 1.3); // used as radius
+				if (type == SNOW) {obj.angle = rand_uniform(0.7, 1.3);} // used as radius
 			}
 			if (precip) obj.update_precip_type();
 			unsigned char const obj_flags(obj.flags);
