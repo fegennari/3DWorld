@@ -69,6 +69,7 @@ void fgScale(float x, float y, float z) {
 void fgScale(float s) {fgScale(s, s, s);}
 
 void fgRotateRadians(float angle, float x, float y, float z) {
+	if (x == 0.0 && y == 0.0 && z == 0.0) return; // degenerate rotate, glm doesn't handle this well
 	assign_cur_matrix(glm::rotate(get_matrix_stack().top(), angle, glm::vec3(x, y, z)));
 }
 void fgRotate(float angle, float x, float y, float z) {fgRotateRadians(TO_RADIANS*angle, x, y, z);}
