@@ -37,7 +37,7 @@ lmap_manager_t lmap_manager;
 extern int animate2, display_mode, frame_counter, camera_coll_id, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
-extern colorRGBA cur_ambient, cur_diffuse;
+extern colorRGB cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
 extern vector<light_source> enabled_lights;
 

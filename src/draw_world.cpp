@@ -31,7 +31,7 @@ struct sky_pos_orient {
 
 // Global Variables
 float sun_radius, moon_radius, earth_radius, brightness(1.0);
-colorRGBA cur_ambient(BLACK), cur_diffuse(BLACK);
+colorRGB cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
 gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
 point const earth_pos(-15.0, -8.0, 21.0);
@@ -155,7 +155,7 @@ void disable_light   (int l) {assert(l < 8); enabled_lights &= ~(1<<l);}
 void calc_cur_ambient_diffuse() {
 
 	unsigned ncomp(0);
-	cur_ambient = cur_diffuse = BLACK; // FIXME: alpha unused, should be colorRGB?
+	cur_ambient = cur_diffuse = BLACK;
 
 	for (unsigned i = 0; i < 2; ++i) { // sun, moon
 		if (!is_light_enabled(i)) continue;
@@ -310,7 +310,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	
 	if (use_bmap) {
-		// FIXME: only looks correct with sun/moon lighting - dynamic and indirect lighting doesn't work with [incorrect] triplanar bump mapping
+		// FIXME: only looks correct with sun/moon lighting - dynamic and indirect lighting doesn't work with triplanar bump mapping for some reason, but it's too slow anyway
 		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
 		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
 		//s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS

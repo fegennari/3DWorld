@@ -591,6 +591,7 @@ struct colorRGB { // size = 12
 	void     operator+=(colorRGB const &c)       {R += c.R; G += c.G; B += c.B;}
 	colorRGB operator*(float val) const {return colorRGB(R*val, G*val, B*val);}
 	void operator*=(float val) {R *= val; G *= val; B *= val;}
+	colorRGB modulate_with(colorRGB const &c) const {return colorRGB(R*c.R, G*c.G, B*c.B);}
 
 	void set_valid_color() {
 		R = CLIP_TO_01(R);
