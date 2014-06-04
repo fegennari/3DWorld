@@ -1694,7 +1694,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				if (firing_error != 0.0) vadd_rand(dir2, firing_error);
 				bool const is_fire(wmode & 1);
 				vector3d const gas_vel(dir2*vel + vector3d(0.0, 0.0, 0.2));
-				colorRGBA const color(is_fire ? colorRGBA(1.0, 0.75, 0.0) : DK_GREEN);
+				colorRGBA const color(is_fire ? colorRGBA(1.0, 0.75, 0.0) : GREEN);
 				int const smoke_type (is_fire ? FIRE : GASSED);
 				float const density(0.5*rand_uniform(0.5, 1.0));
 				float const darkness(0.6*rand_uniform(0.7, 1.0));
@@ -2436,7 +2436,7 @@ void player_state::update_sstate_game_frame(int i) {
 	if (SMILEY_GAS && game_mode == 1 && obj_enabled && powerup == PU_SHIELD && powerup_time > INIT_PU_SH_TIME && !(rand()&31)) {
 		vector3d const dir(get_sstate_dir(i)), vel(velocity*0.5 - dir*1.2);
 		point const spos(pos - dir*get_sstate_radius(i)); // generate gas
-		gen_arb_smoke(spos, DK_GREEN, vel, rand_uniform(0.01, 0.05), rand_uniform(0.3, 0.7), rand_uniform(0.2, 0.6), 10.0, i, GASSED, 0);
+		gen_arb_smoke(spos, GREEN, vel, rand_uniform(0.01, 0.05), rand_uniform(0.3, 0.7), rand_uniform(0.2, 0.6), 10.0, i, GASSED, 0);
 	}
 }
 
