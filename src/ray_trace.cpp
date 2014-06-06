@@ -22,7 +22,7 @@ unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1}; // sky, global, local
 unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1}; // sky, global, local
 
-extern bool has_snow, global_lighting_update, lighting_update_offline;
+extern bool has_snow, combined_gu, global_lighting_update, lighting_update_offline;
 extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
 extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight;
 extern char *lighting_file[];
@@ -551,11 +551,10 @@ void trace_ray_block_global_light(void *ptr, point const &pos, colorRGBA const &
 void *trace_ray_block_global(void *ptr) {
 
 	if (GLOBAL_RAYS == 0 && global_cube_lights.empty()) return 0; // nothing to do
-	// FIXME: what about universe mode/combined_gu?
-	// Note1: The light color here is white because it will be multiplied by the ambient color later,
-	//        and the moon color is generally similar to the sun color so they can be approximated as equal
+	// Note: The light color here is white because it will be multiplied by the ambient color later,
+	//       and the moon color is generally similar to the sun color so they can be approximated as equal
 	float const lfn(CLIP_TO_01(1.0f - 5.0f*(light_factor - 0.4f)));
-	if (light_factor >= 0.4) trace_ray_block_global_light(ptr, sun_pos,  WHITE, 1.0-lfn);
+	if (light_factor >= 0.4 && !combined_gu) trace_ray_block_global_light(ptr, sun_pos,  WHITE, 1.0-lfn);
 	if (light_factor <= 0.6) trace_ray_block_global_light(ptr, moon_pos, WHITE, lfn);
 	return 0;
 }
