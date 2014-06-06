@@ -35,7 +35,7 @@ unlimited_weapons 1
 
 group_back_face_cull 0
 enable_model3d_tex_comp 0
-disable_shader_effects 1
+disable_shader_effects 0
 two_sided_lighting 1
 
 mesh_height 0.05
@@ -44,7 +44,7 @@ scene_size 4.0 4.0 4.0
 set_czmax 4.0
 
 include config_resolution.txt
-#shadow_map_sz 4096
+shadow_map_sz 4096
 
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0

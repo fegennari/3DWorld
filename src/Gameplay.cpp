@@ -197,7 +197,7 @@ int compute_damage(float &energy, int type, int obj_index, int source, int targe
 
 bool self_coll_invalid(int type, int obj_index) {
 
-	if (type == ROCKET || type == SEEK_D || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) {
+	if (type == ROCKET || type == SEEK_D || type == PROJECTILE || type == LASER || type == STAR5 || type == GASSED || type == TELEPORTER) { // || type == SAWBLADE
 		return 1;
 	}
 	if ((type == GRENADE || type == CGRENADE || type == S_BALL || type == BALL || type == PLASMA || type == SHRAPNEL || type == SAWBLADE) &&
@@ -994,16 +994,13 @@ bool rock_collision(int index, int obj_index, vector3d const &velocity, point co
 bool sawblade_collision(int index, int obj_index, vector3d const &velocity, point const &position, float energy, int type) {
 
 	if (type == CAMERA || type == SMILEY) {
-		dwobject &obj(obj_groups[coll_id[SAWBLADE]].get_obj(index));
-
-		if (obj.source == ((type == CAMERA) ? CAMERA_ID : obj_index)) { // self collision
+		if (obj_groups[coll_id[SAWBLADE]].get_obj(index).source == ((type == CAMERA) ? CAMERA_ID : obj_index)) { // self collision
 			// pick up ammo, no damage?
 		}
-		else { // FIXME: check for valid collision?
-			obj.direction = 1; // flag as bloody
-		}
 	}
-	return default_obj_coll(index, obj_index, velocity, position, energy, type, SAWBLADE);
+	if (!default_obj_coll(index, obj_index, velocity, position, energy, type, SAWBLADE)) return 0;
+	if (type == CAMERA || type == SMILEY) {obj_groups[coll_id[SAWBLADE]].get_obj(index).direction = 1;} // flag as bloody
+	return 1;
 }
 
 

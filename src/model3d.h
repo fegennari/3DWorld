@@ -271,7 +271,7 @@ struct material_t : public material_params_t {
 	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
-	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass);
+	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool enable_alpha_mask);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
 	bool write(ostream &out) const;
@@ -327,7 +327,7 @@ public:
 	void free_context();
 	void load_all_used_tids();
 	void bind_all_used_tids();
-	void render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_mask);
+	void render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask);
 	cube_t const &get_bbox() const {return bbox;}
 	void build_cobj_tree(bool verbose);
 	

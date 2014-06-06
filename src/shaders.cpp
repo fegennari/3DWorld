@@ -858,9 +858,7 @@ void shader_t::begin_color_only_shader() {
 
 void shader_t::begin_color_only_shader(colorRGBA const &color) {
 
-	set_vert_shader("vert_xform_only");
-	set_frag_shader("color_only");
-	begin_shader();
+	begin_color_only_shader();
 	set_cur_color(color);
 }
 

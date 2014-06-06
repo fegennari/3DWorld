@@ -1010,12 +1010,12 @@ void light_source::pack_to_floatv(float *data) const {
 	UNROLL_3X(*(data++) = 0.5*(1.0 + color[i_]);) // map [-1,1] => [0,1] for negative light support
 	*(data++) = color[3];
 
-	if (is_line_light()) { // FIXME: cache this value in light_source for efficiency?
+	if (is_line_light()) {
 		UNROLL_3X(*(data++) = pos2[i_];)
 		*(data++) = 0.0; // pack bwidth as 0 to indicate a line light
 	}
 	else {
-		UNROLL_3X(*(data++) = 0.5*(1.0 + dir  [i_]);) // map [-1,1] to [0,1]
+		UNROLL_3X(*(data++) = 0.5*(1.0 + dir[i_]);) // map [-1,1] to [0,1]
 		*(data++) = bwidth; // [0,1]
 	}
 }

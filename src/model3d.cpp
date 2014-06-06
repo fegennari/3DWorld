@@ -739,7 +739,7 @@ template<typename T> void update_score(vntc_vect_block_t<T> const &v, float &sco
 }
 
 
-void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass) {
+void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool enable_alpha_mask) {
 
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
@@ -753,12 +753,17 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		assert(num_nonempty > 0);
 		draw_order_score /= num_nonempty; // take the average
 	}
+	int const tex_id(get_render_texture());
+
 	if (is_shadow_pass) {
+		bool const has_alpha_mask(tex_id >= 0 && alpha_tid >= 0);
+		if (has_alpha_mask != enable_alpha_mask) return; // incorrect pass
+		if (has_alpha_mask) {tmgr.bind_texture(tex_id);} // enable alpha mask texture
 		geom.render(shader, 1);
 		geom_tan.render(shader, 1);
+		if (has_alpha_mask) {select_texture(WHITE_TEX);} // back to a default white texture
 	}
 	else {
-		int const tex_id(get_render_texture());
 		bool has_binary_alpha(1);
 		
 		if (tex_id >= 0) {
@@ -778,10 +783,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX);}
 			set_active_texture(0);
 		}
-		if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {
-			//shader.add_uniform_float("refract_index", ni); // FIXME: set index of refraction (and reset it at the end)
-		}
-		if (alpha_tid >= 0) enable_blend();
+		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_index", ni);} // FIXME: set index of refraction
+		if (alpha_tid >= 0) {enable_blend();}
 		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
 		shader.add_uniform_float("min_alpha", min_alpha);
 		if (ns > 0.0) {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
@@ -793,7 +796,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		geom_tan.render(shader, 0);
 		shader.clear_color_e();
 		if (ns > 0.0) {shader.set_specular(0.0, 1.0);}
-		if (alpha_tid >= 0) disable_blend();
+		if (alpha_tid >= 0) {disable_blend();}
+		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_index", 1.0);}
 	}
 }
 
@@ -1176,23 +1180,26 @@ void model3d::bind_all_used_tids() {
 }
 
 
-void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_mask) { // const?
+void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask) { // const?
 
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
-	if (group_back_face_cull || is_shadow_pass) glEnable(GL_CULL_FACE);
+	// FIXME: should we really enable back face culling during the shadow pass?
+	if (group_back_face_cull || is_shadow_pass) {glEnable(GL_CULL_FACE);}
 
 	// render geom that was not bound to a material
 	if ((bmap_pass_mask & 1) && unbound_color.alpha > 0.0) { // enabled, not in bump map only pass
-		if (!is_shadow_pass) {
+		if (!is_shadow_pass) { // the unbound texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
 			assert(unbound_tid >= 0);
 			select_texture(unbound_tid);
 			shader.set_cur_color(unbound_color);
 			shader.add_uniform_float("min_alpha", 0.0);
 			shader.set_specular(0.0, 1.0);
 		}
-		unbound_geom.render(shader, is_shadow_pass);
+		if (!is_shadow_pass || !enable_alpha_mask) { // skip shadow + alpha mask pass
+			unbound_geom.render(shader, is_shadow_pass);
+		}
 	}
 	
 	// render all materials (opaque then transparent)
@@ -1207,10 +1214,10 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, unsigned bmap_pass_m
 		sort(to_draw.begin(), to_draw.end());
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			materials[to_draw[i].second].render(shader, tmgr, unbound_tid, is_shadow_pass);
+			materials[to_draw[i].second].render(shader, tmgr, unbound_tid, is_shadow_pass, enable_alpha_mask);
 		}
 	}
-	if (group_back_face_cull || is_shadow_pass) glDisable(GL_CULL_FACE);
+	if (group_back_face_cull || is_shadow_pass) {glDisable(GL_CULL_FACE);}
 }
 
 
@@ -1342,27 +1349,34 @@ void model3ds::render(bool is_shadow_pass) {
 	}
 	float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 
-	// FIXME: in shadow pass, textuing is disabled, so alpha mask textures won't work
 	for (unsigned bmap_pass = 0; bmap_pass < (needs_bump_maps ? 2U : 1U); ++bmap_pass) {
-		shader_t s;
+		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
+			shader_t s;
 
-		if (is_shadow_pass) {
-			s.begin_color_only_shader(); // don't even need colors
-		}
-		else if (shader_effects) {
-			int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
-			setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
-		}
-		else {
-			s.begin_simple_textured_shader(0.0, 1); // with lighting
-			s.set_specular(0.0, 1.0);
-		}
-		for (iterator m = begin(); m != end(); ++m) { // non-const
-			m->render(s, is_shadow_pass, (shader_effects ? (1 << bmap_pass) : 3));
-		}
-		s.set_specular(0.0, 1.0); // reset (may be unnecessary)
-		s.end_shader();
-	}
+			if (is_shadow_pass) {
+				if (sam_pass == 1) {
+					s.begin_simple_textured_shader(MIN_SHADOW_ALPHA);
+					select_texture(WHITE_TEX);
+				}
+				else {
+					s.begin_color_only_shader(); // really don't even need colors
+				}
+			}
+			else if (shader_effects) {
+				int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
+				setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
+			}
+			else {
+				s.begin_simple_textured_shader(0.0, 1); // with lighting
+				s.set_specular(0.0, 1.0);
+			}
+			for (iterator m = begin(); m != end(); ++m) { // non-const
+				m->render(s, is_shadow_pass, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3));
+			}
+			s.set_specular(0.0, 1.0); // reset (may be unnecessary)
+			s.end_shader();
+		} // sam_pass
+	} // bmap_pass
 }
 
 
