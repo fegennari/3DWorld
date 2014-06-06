@@ -45,7 +45,7 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
 	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // HEDGE_TEX?
 	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_TDECID
 	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   HEDGE_TEX,     BARK4_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
-	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX,      BARK1_TEX), // T_PALM FIXME: PALM_BARK_TEX?
+	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX,      PALM_BARK_TEX), // T_PALM
 	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
 
@@ -832,36 +832,34 @@ void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, 
 		float const dist(distance_to_camera(pos + xlate));
 
 		if (shadow_only || size_scale > dist) {
-			if (is_pine_tree() || dist < 0.2 || (1.0 - ((camera_origin.z - cview_radius*cview_dir.z) - pos.z)/dist)*stt[type].h >= 0.2*width) { // if trunk not obscured by leaves
-				cylinder_3dw const cylin(get_trunk_cylin()); // cache in the tree?
+			cylinder_3dw const cylin(get_trunk_cylin()); // cache in the tree?
 
-				if (!shadow_only && LINE_THRESH*zoom_f*(cylin.r1 + cylin.r2) < dist) { // draw as line
-					point const p2((cylin.r2 == 0.0) ? (0.2*cylin.p1 + 0.8*cylin.p2) : cylin.p2);
+			if (!shadow_only && LINE_THRESH*zoom_f*(cylin.r1 + cylin.r2) < dist) { // draw as line
+				point const p2((cylin.r2 == 0.0) ? (0.2*cylin.p1 + 0.8*cylin.p2) : cylin.p2);
 				
-					if (points) {
-						points->push_back(cylin.p1 + xlate);
-						points->push_back(p2 + xlate);
-					}
-					else {
-						tree_scenery_pld.add_textured_line(cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
-					}
+				if (points) {
+					points->push_back(cylin.p1 + xlate);
+					points->push_back(p2 + xlate);
 				}
-				else { // draw as cylinder
-					int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
+				else {
+					tree_scenery_pld.add_textured_line(cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
+				}
+			}
+			else { // draw as cylinder
+				int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 
-					if (cylin_verts && is_pine_tree()) {
-						assert(cylin.r2 == 0.0); // cone
-						point const ce[2] = {cylin.p1, cylin.p2};
-						vector3d v12;
-						gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12));
+				if (cylin_verts && is_pine_tree()) {
+					assert(cylin.r2 == 0.0); // cone
+					point const ce[2] = {cylin.p1, cylin.p2};
+					vector3d v12;
+					gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12));
+				}
+				else {
+					if (!shadow_only) {
+						bark_color.set_for_cur_shader();
+						select_texture(stt[type].bark_tid);
 					}
-					else {
-						if (!shadow_only) {
-							bark_color.set_for_cur_shader();
-							select_texture(stt[type].bark_tid);
-						}
-						draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides, !shadow_only);
-					}
+					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides, !shadow_only);
 				}
 			}
 		}
