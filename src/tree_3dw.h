@@ -234,7 +234,7 @@ public:
 	bool leaf_vbo_valid() const {return (leaf_vbo > 0);}
 	bool check_if_needs_updated();
 	void remove_leaf_ix(unsigned i, bool update_data);
-	bool spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color);
+	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color, bool check_only);
 	void bend_leaf(unsigned i, float angle);
 	void draw_leaf_quads_from_vbo(unsigned max_leaves) const;
 	void draw_leaves_shadow_only();
@@ -325,10 +325,7 @@ public:
 	void set_no_delete(bool no_delete_) {no_delete = no_delete_;}
 	bool operator<(tree const &t) const {return ((type != t.type) ? (type < t.type) : (tree_data < t.tree_data));}
 	void check_render_textures() {tdata().check_render_textures();}
-
-	bool spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color) {
-		return tdata().spraypaint_leaves((pos - tree_center), radius, cindex, color);
-	}
+	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 };
 
 
@@ -373,7 +370,7 @@ public:
 	float get_rmax() const;
 	void update_zmax(float &tzmax) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
-	void spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color);
+	void spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void check_render_textures();
 };
 
@@ -387,7 +384,7 @@ void regen_trees(bool recalc_shadows, bool keep_old);
 void shift_trees(vector3d const &vd);
 void add_tree_cobjs();
 void clear_tree_context();
-void spraypaint_tree_leaves(point const &pos, float radius, int cindex, colorRGBA const &color);
+void spraypaint_tree_leaves(point const &pos, float radius, colorRGBA const &color);
 
 // function prototypes - small trees
 int add_small_tree(point const &pos, float height, float width, int tree_type, bool calc_z);

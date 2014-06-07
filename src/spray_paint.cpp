@@ -19,6 +19,7 @@ colorRGBA const paint_colors  [NUM_PAINT_COLORS] = {WHITE, RED, GREEN, BLUE, YEL
 bool spraypaint_mode(0);
 unsigned paint_color_ix(0);
 
+extern int display_mode;
 extern float CAMERA_RADIUS;
 extern coll_obj_group coll_objects;
 
@@ -78,7 +79,6 @@ float get_spray_radius(point const &pos, float &alpha) {
 void spray_paint(bool mode) {
 
 	// spray paint affects flat cobjs (cubes and polygons), mesh, grass, and tree leaves - also adds/removes volume to voxels
-	// play sound?
 	point const pos(get_camera_pos());
 	colorRGBA color(get_cur_paint_color());
 	int xpos(0), ypos(0), cindex(-1);
@@ -103,14 +103,14 @@ void spray_paint(bool mode) {
 				gen_decal(coll_pos, radius, coll_norm, BLUR_CENT_TEX, cindex, color, 0, 0, lifetime);
 			}
 		}
-		else if (cobj.is_tree_leaf()) {
-			spraypaint_tree_leaves(coll_pos, 1.5*radius, cindex, color);
+		else if (cobj.is_tree_leaf()) { // don't need to pass cindex because we spray paint all nearby leaves, not just the one that the line hit
+			spraypaint_tree_leaves(coll_pos, 1.5*radius, color);
 		}
 	}
 	else if (mesh_int) { // mesh intersection
 		float const radius(get_spray_radius(coll_pos, color.alpha));
-		add_color_to_landscape_texture(color, coll_pos.x, coll_pos.y, 1.5*radius);
-		modify_grass_at(coll_pos, 1.5*radius, 0, 0, 0, 1, 1, 0, color);
+		if (display_mode & 0x01) {add_color_to_landscape_texture(color, coll_pos.x, coll_pos.y, 1.5*radius);}
+		if (display_mode & 0x02) {modify_grass_at(coll_pos, 1.5*radius, 0, 0, 0, 1, 1, 0, color);}
 	}
 	gen_sound(SOUND_SPRAY, (pos + CAMERA_RADIUS*cview_dir), 0.2, 1.0);
 }

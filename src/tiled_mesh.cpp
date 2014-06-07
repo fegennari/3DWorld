@@ -1141,8 +1141,10 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 
 void tile_t::shader_shadow_map_setup(shader_t &s) const {
 
+	// Note: some part of this call is shared across all tiles; however, in the case where more than one smap light is enabled,
+	// the tu_id and enables may alternate between values for each tile, requiring every uniform to be reset per tile anyway
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
-		smap_data[i].set_smap_shader_for_light(s, i); // FIXME: factor out a shared part of this so we don't have to do it for every shadowed tile?
+		smap_data[i].set_smap_shader_for_light(s, i);
 	}
 }
 

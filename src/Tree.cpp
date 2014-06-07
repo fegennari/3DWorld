@@ -576,7 +576,17 @@ void tree::remove_leaf(unsigned i, bool update_data) {
 }
 
 
-bool tree_data_t::spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color) {
+bool tree::spraypaint_leaves(point const &pos, float radius, colorRGBA const &color) {
+
+	if (!td_is_private()) { // using shared tdata, can't just modify the leaves, need to make a private copy if any leaf colors will be modified
+		if (!tdata().spraypaint_leaves((pos - tree_center), radius, color, 1)) return 0; // check returns false, we're done
+		make_private_tdata_copy(); // check returned true, make a private copy then go back and modify the leaf colors
+	}
+	return tdata().spraypaint_leaves((pos - tree_center), radius, color, 0); // only this call actually changes leaf colors
+}
+
+
+bool tree_data_t::spraypaint_leaves(point const &pos, float radius, colorRGBA const &color, bool check_only) {
 
 	if (leaf_data.empty()) return 0;
 	bool changed(0);
@@ -588,7 +598,7 @@ bool tree_data_t::spraypaint_leaves(point const &pos, float radius, int cindex, 
 
 		for (unsigned j = 0; j < 4; ++j) { // use closest point - leaf corner or center
 			if (!dist_less_than(pos, leaves[i].pts[j], radius) && !center_close) continue;
-			//make_private_tdata_copy(); // FIXME: do we want to make this a tree member function and make a private copy if leaf colors are changed?
+			if (check_only) return 1; // leaf color will be changed
 			float const blend_val(color.alpha*(1.0 - min(p2p_dist(pos, leaves[i].pts[j]), p2p_dist(pos, center))/radius));
 			unsigned const ix((i<<2)+j);
 			assert(ix < leaf_data.size());
@@ -2193,11 +2203,11 @@ bool tree_cont_t::update_zvals(int x1, int y1, int x2, int y2) {
 }
 
 
-void tree_cont_t::spraypaint_leaves(point const &pos, float radius, int cindex, colorRGBA const &color) {
+void tree_cont_t::spraypaint_leaves(point const &pos, float radius, colorRGBA const &color) {
 
 	for (iterator i = begin(); i != end(); ++i) {
 		if (dist_less_than(pos, i->sphere_center(), (radius + i->get_radius()))) {
-			i->spraypaint_leaves(pos, radius, cindex, color);
+			i->spraypaint_leaves(pos, radius, color);
 		}
 	}
 }
@@ -2268,8 +2278,8 @@ bool update_decid_tree_zvals(int x1, int y1, int x2, int y2) {
 	return t_trees.update_zvals(x1, y1, x2, y2);
 }
 
-void spraypaint_tree_leaves(point const &pos, float radius, int cindex, colorRGBA const &color) {
-	t_trees.spraypaint_leaves(pos, radius, cindex, color);
+void spraypaint_tree_leaves(point const &pos, float radius, colorRGBA const &color) {
+	t_trees.spraypaint_leaves(pos, radius, color);
 }
 
 void add_tree_cobjs   () {t_trees.add_cobjs();}
