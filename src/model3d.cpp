@@ -1185,8 +1185,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
-	// FIXME: should we really enable back face culling during the shadow pass?
-	if (group_back_face_cull || is_shadow_pass) {glEnable(GL_CULL_FACE);}
+	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
 
 	// render geom that was not bound to a material
 	if ((bmap_pass_mask & 1) && unbound_color.alpha > 0.0) { // enabled, not in bump map only pass
@@ -1217,7 +1216,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 			materials[to_draw[i].second].render(shader, tmgr, unbound_tid, is_shadow_pass, enable_alpha_mask);
 		}
 	}
-	if (group_back_face_cull || is_shadow_pass) {glDisable(GL_CULL_FACE);}
+	if (group_back_face_cull) {glDisable(GL_CULL_FACE);}
 }
 
 

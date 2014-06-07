@@ -14,7 +14,7 @@ preproc_cube_cobjs 1 # slower load time but slightly fewer cubes
 
 group_back_face_cull 1
 disable_shader_effects 1
-#shadow_map_sz 4096
+shadow_map_sz 0 # 4096
 coll_obj_file coll_objs_minecraft.txt
 
 end

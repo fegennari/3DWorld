@@ -444,8 +444,8 @@ public:
 		if (vbo_mgr.vbo) {upload_to_vbo(vbo_mgr.vbo, data, 0, 1);}
 	}
 
-	void update_region(unsigned strip_ix, unsigned strip_pos, unsigned strip_len, float new_z) {
-		// FIXME: update a range at a time?
+	void update_region(unsigned strip_ix, unsigned strip_pos, unsigned strip_len, float new_z) { // Note: could use ranges/blocks optimization
+		
 		if (!vbo_mgr.vbo) return; // vbo not allocated, so all will be updated when it gets allocated during drawing
 		bind_vbo(vbo_mgr.vbo, 0);
 		assert(strip_ix+1 < strip_offsets.size());
