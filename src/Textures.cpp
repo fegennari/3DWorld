@@ -611,6 +611,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 	unsigned const size(num_pixels());
 	bool const is_alpha_mask(index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX || (index >= FLARE1_TEX && index <= FLARE5_TEX));
 	bool const is_alpha_tex(index == EXPLOSION_TEX || index == FIRE_TEX || is_alpha_mask);
+	bool has_zero_alpha(0);
 	assert(is_allocated());
 
 	for (unsigned i = 0; i < size; ++i) {
@@ -647,13 +648,22 @@ void texture_t::auto_insert_alpha_channel(int index) {
 				else {
 					alpha = ((val < ((index == PINE_TEX || index == PINE_TREE_TEX) ? 65 : 32)) ? 0 : 255);
 				}
-				if (alpha == 0) {
-					// FIXME: fill with the color of nearby pixels so that mipmap generation will work correctly
-				}
+				has_zero_alpha |= (alpha == 0);
 			}
 		}
-		data[i4+3] = alpha;
+		buf[3] = alpha;
 	} // for i
+	if (has_zero_alpha && !no_avg_color_alpha_fill) {
+		calc_color(); // needed to ensure color is correct (may be recalculated later)
+		unsigned char avg_rgb[3];
+		UNROLL_3X(avg_rgb[i_] = (unsigned char)(255*color[i_]);)
+
+		// set all alpha=0 texels to the average non-transparent color to improve mipmap quality
+		for (unsigned i = 0; i < size; ++i) {
+			int const i4(i << 2);
+			if (data[i4+3] == 0) {RGB_BLOCK_COPY((data+i4), avg_rgb);} // alpha == 0
+		}
+	}
 }
 
 

@@ -42,6 +42,7 @@ public:
 	void load(string const &fn) {
 		texture.free_data();
 		texture.name = (fn.empty() ? font_texture_atlas_fn : fn);
+		texture.no_avg_color_alpha_fill = 1; // since we set alpha equal to luminance
 		texture.load(-1);
 		assert(texture.ncolors == 4); // RGBA (really only need RA though)
 		assert(texture.width == texture.height);
