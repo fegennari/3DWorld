@@ -114,9 +114,11 @@ void add_cobj_shadows(unsigned light_sources) {
 		}
 	}
 #else
-	#pragma omp parallel for schedule(dynamic,1) // only ~2x faster
-	for (int i = 0; i < (int)t_trees.size(); ++i) {
-		t_trees[i].gen_tree_shadows(light_sources);
+	if (!shadow_map_enabled() || t_trees.size() <= 10) { // if using a shadow map, skip the tree shadows since they can be slow
+		#pragma omp parallel for schedule(dynamic,1) // only ~2x faster
+		for (int i = 0; i < (int)t_trees.size(); ++i) {
+			t_trees[i].gen_tree_shadows(light_sources);
+		}
 	}
 	for (unsigned i = 0; i < coll_objects.size(); ++i) {
 		coll_objects[i].add_shadow(light_sources, 0);
