@@ -114,7 +114,7 @@ void add_weapon_cobj(point const &pos, vector3d const &dir, float cradius, float
 	point const pos0(get_final_pos(pos, -dir, cradius, 1.0, rxy, v_trans));
 	bool const has_xy_comp(dir.x != 0.0 || dir.y != 0.0);
 
-	// FIXME: animate some of these based on fire_val?
+	// Note: a few weapon's cobj(s) depend on fire_val, but we could add more
 	switch (wid) {
 	case W_UNARMED:
 		break;
@@ -919,10 +919,19 @@ void teleporter::draw(vpc_shader_t &s) const {
 		draw_quads();
 		fgPopMatrix();
 
-		if (use_scale > 0.9) {
+		if (use_scale > 0.5) {
 			shader_t cs;
-			cs.begin_color_only_shader(colorRGBA(1.0, 1.0, 1.0, 0.5*(use_scale - 0.9)));
-			draw_sphere_vbo_back_to_front(pos, draw_radius, N_SPHERE_DIV, 0); // FIXME: use random dissolve texture like exploding starbase
+			cs.set_vert_shader("no_lighting_tex_coord");
+			cs.set_frag_shader("alpha_mask");
+			cs.begin_shader();
+			cs.add_uniform_float("min_alpha", (1.5 - use_scale));
+			cs.add_uniform_int("tex0", 0);
+			cs.set_cur_color(colorRGBA(0.6, 1.0, 1.0, 0.25));
+			select_texture(NOISE_GEN_TEX);
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
+			draw_subdiv_sphere(pos, draw_radius, N_SPHERE_DIV, 8, 1); // tscale=8
+			glDisable(GL_CULL_FACE);
 			s.enable();
 		}
 	}

@@ -1650,7 +1650,7 @@ void make_outside_water(int x, int y) {
 void update_water_zval(int x, int y, float old_mh) {
 
 	assert(!point_outside_mesh(x, y));
-	// FIXME: check water_enabled?
+	if (!get_water_enabled(x, y)) return; // ???
 
 	if (mesh_height[y][x] < water_plane_z) { // check if this pos is under the mesh
 		make_outside_water(x, y); // previously above the mesh

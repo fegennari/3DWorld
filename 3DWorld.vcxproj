@@ -849,6 +849,7 @@
     <None Include="house\placements.TXT" />
     <None Include="model_data\coll_objs_soda.txt" />
     <None Include="model_data\config_soda.txt" />
+    <None Include="shaders\alpha_mask.frag" />
     <None Include="shaders\asteroid.frag" />
     <None Include="shaders\asteroid.vert" />
     <None Include="shaders\asteroid_dust.frag" />
