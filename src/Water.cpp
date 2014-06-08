@@ -191,6 +191,7 @@ colorRGBA get_tt_water_color() {
 
 colorRGBA get_landscape_color(int xpos, int ypos) {
 
+	// shadow_mask may not be completely valid (at least in the many trees case) if shadow maps are being used
 	assert(!point_outside_mesh(xpos, ypos));
 	float const diffuse((shadow_mask[get_light()][ypos][xpos] & SHADOWED_ALL) ? 0.0 : get_cloud_shadow_atten(xpos, ypos));
 	return get_landscape_texture_color(xpos, ypos)*(0.5*(1.0 + diffuse)); // half ambient and half diffuse
@@ -1733,7 +1734,7 @@ void update_accumulation(int xpos, int ypos) {
 	if (acc <= 0.0) return;
 	has_accumulation = 1; // melt snow
 	float melted(((temperature - W_FREEZE_POINT)/MELT_RATE)*(NIGHT_MELT + (1.0 - NIGHT_MELT)*light_factor));
-	// FIXME: shadow_mask may not be valid if shadow maps are being used
+	// shadow_mask may not be completely valid (at least in the many trees case) if shadow maps are being used
 	if (light_factor >= 0.5 && shadow_mask != NULL && (shadow_mask[LIGHT_SUN][ypos][xpos] & SHADOWED_ALL)) {melted *= SHADE_MELT;}
 	accumulation_matrix[ypos][xpos] = max(0.0f, (acc - melted));
 

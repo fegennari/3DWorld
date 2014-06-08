@@ -54,7 +54,7 @@ struct blastr { // size = 73 (76)
 	void check_pointers();
 	void update();
 	void add_as_dynamic_light() const;
-	void process(int &ltime) const;
+	void process() const;
 	float priority() const {return size*(time/st_time);} // times start off large and decrement to 0
 };
 

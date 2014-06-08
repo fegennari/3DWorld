@@ -291,7 +291,6 @@ class tree {
 	bool is_over_mesh() const;
 	bool is_visible_to_camera(vector3d const &xlate) const;
 	void burn_leaves();
-	void blast_damage(blastr const *const blast_radius);
 	void lightning_damage(point const &ltpos);
 	void drop_leaves();
 	void remove_leaf(unsigned i, bool update_data);
@@ -326,6 +325,7 @@ public:
 	bool operator<(tree const &t) const {return ((type != t.type) ? (type < t.type) : (tree_data < t.tree_data));}
 	void check_render_textures() {tdata().check_render_textures();}
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
+	void blast_damage(blastr const *const blast_radius);
 };
 
 
@@ -372,6 +372,7 @@ public:
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void check_render_textures();
+	void apply_exp_damage(point const &epos, float damage, float bradius, int type);
 };
 
 

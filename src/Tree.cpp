@@ -14,9 +14,9 @@
 
 
 float const BURN_RADIUS      = 0.2;
-float const BURN_DAMAGE      = 400.0;
+float const BURN_DAMAGE      = 80.0;
 float const BEAM_DAMAGE      = 0.06;
-float const LEAF_DAM_SCALE   = 0.00002;
+float const LEAF_DAM_SCALE   = 0.0001;
 float const LEAF_HEAL_RATE   = 0.00001;
 float const TREE_SIZE        = 0.005; // 0.0015
 float const REL_LEAF_SIZE    = 3.5;
@@ -58,10 +58,9 @@ tree_cont_t t_trees(tree_data_manager);
 
 extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled;
 extern int shadow_detail, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
-extern int xoff2, yoff2, rand_gen_index, gm_blast, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
+extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
 extern lightning l_strike;
-extern blastr latest_blastr;
 extern texture_t textures[];
 extern coll_obj_group coll_objects;
 extern rand_gen_t global_rand_gen;
@@ -660,8 +659,8 @@ bool tree::damage_leaf(unsigned i, float damage_done) {
 	assert(i < leaves.size());
 	float &lcolor(leaves[i].color);
 
-	if (damage_done > 1.0 || (damage_done > 0.2 && lcolor == 0.0)) {
-		if (lcolor > 0.0) damage += damage_scale;
+	if (damage_done > 4.0 || (damage_done > 0.4 && lcolor == 0.0)) {
+		if (lcolor > 0.0) {damage += damage_scale;}
 		lcolor = -1.0;
 		if ((rand()&3) == 0) {create_leaf_obj(i);} // 50/50 chance of the burned leaf falling
 		
@@ -673,7 +672,7 @@ bool tree::damage_leaf(unsigned i, float damage_done) {
 	else {
 		float const llc(lcolor);
 		lcolor = max(0.0, (lcolor - 0.3*damage_done));
-		if (lcolor == 0.0 && llc > 0.0) damage += damage_scale;
+		if (lcolor == 0.0 && llc > 0.0) {damage += damage_scale;}
 		copy_color(i);
 	}
 	return 0;
@@ -690,22 +689,22 @@ void tree::blast_damage(blastr const *const blast_radius) {
 	float const radius(bradius + tdata().sphere_radius), bradius_sq(bradius*bradius);
 	if (p2p_dist_sq(bpos, sphere_center()) > radius*radius) return;
 	unsigned nleaves(tdata().get_leaves().size());
+	point const rel_pos(bpos - tree_center);
 
 	for (unsigned i = 0; i < nleaves; i++) {
 		tree_leaf const &l(tdata().get_leaves()[i]);
 		if (l.color < 0.0) continue;
-		float const dist(p2p_dist_sq(bpos, l.pts[0]+tree_center));
-		if (dist < TOLERANCE || dist > bradius_sq) continue;
-		float const blast_damage(bdamage*InvSqrt(dist));
-		if (damage_leaf(i, blast_damage)) {--i; --nleaves;} // force reprocess of this leaf, wraparound to -1 is OK
-	} // for i
+		float const dist_sq(p2p_dist_sq(rel_pos, l.pts[0]));
+		if (dist_sq < TOLERANCE || dist_sq > bradius_sq) continue;
+		if (damage_leaf(i, bdamage*InvSqrt(dist_sq))) {--i; --nleaves;} // force reprocess of this leaf, wraparound to -1 is OK
+	}
 	damage = min(1.0f, damage);
 }
 
 
 void tree::lightning_damage(point const &ltpos) {
 
-	blastr const br(0, ETYPE_FIRE, -2, BURN_RADIUS, BURN_DAMAGE, ltpos, plus_z, LITN_C, LITN_C);
+	blastr const br(0, ETYPE_FIRE, NO_SOURCE, BURN_RADIUS, BURN_DAMAGE, ltpos, plus_z, LITN_C, LITN_C);
 	blast_damage(&br);
 }
 
@@ -898,7 +897,6 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (has_leaves && world_mode == WMODE_GROUND) {
 		burn_leaves();
 		if (l_strike.enabled == 1 && animate2) {lightning_damage(l_strike.end);}
-		if (game_mode && gm_blast) {blast_damage(&latest_blastr);}
 		if (begin_motion && animate2) {drop_leaves();}
 	}
 	not_visible = !is_visible_to_camera(xlate); // first pass only
@@ -1632,7 +1630,6 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	create_4th_order_branches(nbranches);
 #endif
 
-	// FIXME: hack to prevent roots from being generated in scenes where trees are user-placed and affect the lighting voxel sparsity
 	root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
 
 	for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) { // add roots
@@ -2187,7 +2184,6 @@ bool tree_cont_t::update_zvals(int x1, int y1, int x2, int y2) {
 
 	bool updated(0);
 
-	// FIXME: explosions will be applied *after* the tree is moved, which isn't quite correct
 	for (iterator i = begin(); i != end(); ++i) {
 		point const &pos(i->get_center());
 		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
@@ -2268,6 +2264,11 @@ void tree_cont_t::check_render_textures() {
 	for (iterator i = begin(); i != end(); ++i) {i->check_render_textures();}
 }
 
+void tree_cont_t::apply_exp_damage(point const &epos, float damage, float bradius, int type) {
+	blastr const br(0, ETYPE_FIRE, NO_SOURCE, bradius, damage, epos, plus_z, YELLOW, RED);
+	for (iterator i = begin(); i != end(); ++i) {i->blast_damage(&br);}
+}
+
 
 void shift_trees(vector3d const &vd) {
 	if (num_trees > 0) return; // dynamically created, not placed
@@ -2280,6 +2281,10 @@ bool update_decid_tree_zvals(int x1, int y1, int x2, int y2) {
 
 void spraypaint_tree_leaves(point const &pos, float radius, colorRGBA const &color) {
 	t_trees.spraypaint_leaves(pos, radius, color);
+}
+
+void exp_damage_trees(point const &epos, float damage, float bradius, int type) {
+	t_trees.apply_exp_damage(epos, damage, bradius, type);
 }
 
 void add_tree_cobjs   () {t_trees.add_cobjs();}

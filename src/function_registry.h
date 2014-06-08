@@ -623,6 +623,7 @@ int get_tree_type_from_height(float zpos, rand_gen_t &rgen);
 void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords=0, unsigned tc_start_ix=0, bool enable_opacity=0, bool no_dlights=0);
 bool update_decid_tree_zvals(int x1, int y1, int x2, int y2);
 bool update_small_tree_zvals(int x1, int y1, int x2, int y2);
+void exp_damage_trees(point const &epos, float damage, float bradius, int type);
 
 // function prototypes - csg
 void get_cube_points(const float d[3][2], point pts[8]);

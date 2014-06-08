@@ -16,8 +16,6 @@
 bool  const NO_NONETYPE_BRS = 0; // faster but fewer lights
 float const EXP_LIGHT_SCALE = 2.0;
 
-int gm_blast(0);
-blastr latest_blastr;
 vector<blastr> blastrs;
 vector<unsigned> available;
 vector<explosion> explosions;
@@ -130,44 +128,34 @@ void blastr::add_as_dynamic_light() const {
 }
 
 
-void blastr::process(int &ltime) const { // land mode
+void blastr::process() const { // land mode
 
 	int const x0(get_xpos(pos.x)), y0(get_ypos(pos.y));
 	if (!point_interior_to_mesh(x0, y0)) return;
 	add_as_dynamic_light();
-	if (!animate2) return;
+	if (!animate2 || damage == 0.0) return;
+	float rad(3.0*cur_size/(DX_VAL + DY_VAL));
+	int const x1(max(x0 - (int)rad, 1)), x2(min(x0 + (int)rad, MESH_X_SIZE-1));
+	int const y1(max(y0 - (int)rad, 1)), y2(min(y0 + (int)rad, MESH_Y_SIZE-1));
+	rad *= (DX_VAL + DY_VAL)/SQRT2;
+	float const radsq(rad*rad/SQRT2), dscale(2.0E-6*min(2000.0f, damage));
 
-	if (damage > 0.0) {
-		float rad(3.0*cur_size/(DX_VAL + DY_VAL));
-		int const x1(max(x0 - (int)rad, 1)), x2(min(x0 + (int)rad, MESH_X_SIZE-1));
-		int const y1(max(y0 - (int)rad, 1)), y2(min(y0 + (int)rad, MESH_Y_SIZE-1));
-		rad *= (DX_VAL + DY_VAL)/SQRT2;
-		float const radsq(rad*rad/SQRT2), dscale(2.0E-6*min(2000.0f, damage));
-
-		for (int j = y1; j < y2; ++j) {
-			for (int k = x1; k < x2; ++k) {
-				point const mpt(get_xval(k), get_yval(j), mesh_height[j][k]);
-				float const dist_sq(p2p_dist_sq(pos, mpt));
-				if (dist_sq < radsq) surface_damage[j][k] += dscale/(dist_sq + 0.01); // do mesh damage
-			}
+	for (int j = y1; j < y2; ++j) {
+		for (int k = x1; k < x2; ++k) {
+			point const mpt(get_xval(k), get_yval(j), mesh_height[j][k]);
+			float const dist_sq(p2p_dist_sq(pos, mpt));
+			if (dist_sq < radsq) surface_damage[j][k] += dscale/(dist_sq + 0.01); // do mesh damage
 		}
-		//if (time == st_time) // only update grass on the first blast?
-		modify_grass_at(pos, 0.5*cur_size, 1, 1); // crush and burn grass Note: calling this every time looks better, but is slower
 	}
-	if (gm_blast == 0 || time < ltime) { // used for object damage
-		ltime         = time;
-		latest_blastr = *this; // only most recent blast does object damage
-	}
-	gm_blast = 1;
+	//if (time == st_time) // only update grass on the first blast?
+	modify_grass_at(pos, 0.5*cur_size, 1, 1); // crush and burn grass Note: calling this every time looks better, but is slower
 }
 
 
 void update_blasts() {
 
 	//RESET_TIME;
-	gm_blast = 0;
 	unsigned const nbr((unsigned)blastrs.size());
-	int ltime(0);
 	if (world_mode == WMODE_UNIVERSE) {calc_lit_uobjects();}
 
 	for (unsigned i = 0; i < nbr; ++i) {
@@ -198,7 +186,7 @@ void update_blasts() {
 			}
 		}
 		else if (world_mode == WMODE_GROUND && game_mode && br.damage > 0.0) {
-			br.process(ltime);
+			br.process();
 		}
 	} // for i
 	//PRINT_TIME("Update Blasts");

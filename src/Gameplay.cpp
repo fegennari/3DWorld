@@ -1201,18 +1201,22 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	assert(damage >= 0.0 && size >= 0.0);
 	assert(type != SMILEY);
 	if (!game_mode || damage < TOLERANCE || size < TOLERANCE) return;
+	float bradius;
 	//RESET_TIME;
 	
 	if (type == GRENADE || type == CGRENADE) {
-		add_blastr(pos, (pos - get_camera_pos()), 0.9*size, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB);
+		bradius = 0.9*size;
+		add_blastr(pos, (pos - get_camera_pos()), bradius, damage, int(1.5*BLAST_TIME), shooter, YELLOW, RED, ETYPE_STARB);
 	}
 	else {
+		bradius = 0.7*size;
 		int const time(((type == BLAST_RADIUS) ? 2 : 1)*BLAST_TIME);
-		add_blastr(pos, signed_rand_vector_norm(), 0.7*size, damage, int(1.5*time), shooter, WHITE, WHITE, ETYPE_ANIM_FIRE);
-		//add_blastr(pos, signed_rand_vector_norm(), 0.7*size, damage, time, shooter, YELLOW, RED, ETYPE_FIRE);
+		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, WHITE, WHITE, ETYPE_ANIM_FIRE);
+		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE);
 	}
 	//exp_cobjs.push_back(add_coll_sphere(pos, size, cobj_params(0.0, WHITE, 0, 1, explosion_coll, exp_cobjs.size()))); // cobj for next frame
 	exp_damage_groups(pos, shooter, chain_level, damage, size, type, cview);
+	exp_damage_trees(pos, damage, bradius, type);
 
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	float depth(0.0);
