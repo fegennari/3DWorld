@@ -1272,7 +1272,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			else if ((coll_bot && pf.get_last_delta().z < 0.0) /*|| (coll_top && pf.get_last_delta().z > 0.0)*/) {
 				if (player) {
 					int const ix((type == CAMERA) ? CAMERA_ID : obj_index);
-					smiley_collision(ix, -2, vector3d(0.0, 0.0, -1.0), pos, 2000.0, CRUSHED); // lots of damage
+					smiley_collision(ix, NO_SOURCE, vector3d(0.0, 0.0, -1.0), pos, 2000.0, CRUSHED); // lots of damage
 				} // other objects?
 			}
 		}

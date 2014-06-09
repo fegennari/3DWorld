@@ -916,7 +916,7 @@ void display(void) {
 
 				if (l_strike.enabled == 1 && animate2) {
 					if ((rand()&1) == 0) gen_smoke(l_strike.end);
-					if ((rand()&7) == 0) gen_fire(l_strike.end, 1.0, -2);
+					if ((rand()&7) == 0) gen_fire(l_strike.end, 1.0, NO_SOURCE);
 				}
 			}
 			if (TIMETEST) PRINT_TIME("M");

@@ -244,7 +244,7 @@ bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 void gen_smoke(point const &pos, float zvel_scale) {
 
 	gen_arb_smoke(pos, WHITE, vector3d(0.0, 0.0, SMOKE_ZVEL*zvel_scale),
-		rand_uniform(0.01, 0.025), rand_uniform(0.7, 0.9), rand_uniform(0.75, 0.95), 0.0, -2, SMOKE, 1);
+		rand_uniform(0.01, 0.025), rand_uniform(0.7, 0.9), rand_uniform(0.75, 0.95), 0.0, NO_SOURCE, SMOKE, 1);
 }
 
 

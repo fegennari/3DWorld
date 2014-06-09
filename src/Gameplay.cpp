@@ -2420,16 +2420,16 @@ void player_state::update_sstate_game_frame(int i) {
 
 	if (temperature < 0.75*objt.min_t) {
 		float const damage(1.0*fticks/max(0.001f, (objt.min_t - temperature)/objt.min_t));
-		smiley_collision(i, -2, zero_vector, pos, damage, FROZEN);
+		smiley_collision(i, NO_SOURCE, zero_vector, pos, damage, FROZEN);
 	}
 	if (temperature > 0.75*objt.max_t) {
 		float const damage(2.0*fticks/max(0.001f, (objt.max_t - temperature)/objt.max_t));
-		smiley_collision(i, -2, zero_vector, pos, damage, BURNED);
+		smiley_collision(i, NO_SOURCE, zero_vector, pos, damage, BURNED);
 		if (obj_enabled && (rand()&3) == 0) gen_smoke(pos);
 	}
 	if (atmosphere < 0.2) {
 		float const damage(1.0*fticks/max(atmosphere, 0.01f));
-		smiley_collision(i, -2, zero_vector, pos, damage, SUFFOCATED);
+		smiley_collision(i, NO_SOURCE, zero_vector, pos, damage, SUFFOCATED);
 	}
 	if (powerup >= 0 && powerup_time > 0 && obj_enabled) {
 		add_dynamic_light(1.3, pos, get_powerup_color(powerup));

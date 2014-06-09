@@ -322,7 +322,7 @@ void process_univ_objects() {
 					
 					if (nmag < rsum) {
 						// FIXME: detailed collision?
-						if (projectile) {} // FIXME: projectile explosions damage the asteroid (reduce its radius?)
+						if (projectile) {} // projectile explosions damage the asteroid (reduce its radius? what if it's instanced?)
 						point const cpos(asteroid.pos + norm*(rsum/nmag)); // normalize, multiply, and add
 						uobj->set_sobj_coll_tid(asteroid.get_fragment_tid(obj_pos));
 						uobj->move_to(cpos); // setup correct position for explode?

@@ -1247,7 +1247,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				return read_error(fp, "place fire", coll_obj_file);
 			}
 			xf.xform_pos(pos);
-			gen_fire(pos, fvals[0], -2, 1, 1, fvals[1], fvals[2]);
+			gen_fire(pos, fvals[0], NO_SOURCE, 1, 1, fvals[1], fvals[2]);
 			break;
 
 		case 'p': // smiley path waypoint: type xpos ypos [zpos]

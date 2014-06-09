@@ -79,7 +79,7 @@ void init_objects() {
 	obj.flags       = 0;
 	obj.coll_id     = -1;
 	obj.direction   = 0;
-	obj.source      = -2; // undefined/natural
+	obj.source      = NO_SOURCE; // undefined/natural
 	obj.angle       = 0.0;
 	obj.orientation = up_norm; // up (+z) needed for spin, not yet used
 	obj.init_dir    = up_norm;

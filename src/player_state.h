@@ -180,7 +180,7 @@ struct player_state { // size = big
 
 	player_state() : plasma_loaded(0), on_waypt_path(0), timer(0), target(-1), objective(-1), weapon(0), wmode(0), powerup(0), powerup_time(0),
 		 cb_hurt(0),kills(0), deaths(0), suicides(0), team_kills(0), max_kills(0), tot_kills(0), killer(NO_SOURCE), init_frame(0), fire_frame(0), was_hit(0),
-		hitter(-2), target_visible(0), kill_time(0), rot_counter(0), uw_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0),
+		hitter(NO_SOURCE), target_visible(0), kill_time(0), rot_counter(0), uw_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0),
 		fall_counter(0), chunk_index(0), shields(0.0), plasma_size(0.0), zvel(0.0), dpos(0.0), last_dz(0.0), last_zvel(0.0), last_wpt_dist(0.0),
 		target_pos(all_zeros), objective_pos(all_zeros), cb_pos(all_zeros), hit_dir(all_zeros), velocity(all_zeros) {init_wa();}
 
