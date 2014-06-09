@@ -61,6 +61,7 @@ void display_inf_terrain(float uw_depth);
 void update_temperature(bool verbose);
 void update_sound_loops();
 bool indir_lighting_updated();
+point get_universe_display_camera_pos();
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -237,7 +238,7 @@ void log_location(point const &pos) {
 void draw_frame_rate(float framerate) {
 
 	if (show_framerate) {
-		point const camera(get_camera_pos());
+		point const camera((world_mode == WMODE_UNIVERSE) ? get_universe_display_camera_pos() : get_camera_pos());
 		cout << "FPS: " << framerate << "  loc: (";
 		camera.print();
 		cout << ") @ frame " << frame_counter << endl;
@@ -371,17 +372,12 @@ void setup_lighting(float depth) {
 	
 	// background color code
 	config_bkg_color_and_clear(depth, (world_mode == WMODE_INF_TERRAIN));
-	
-	// setup light position
-	enabled_lights = 0;
-	set_gl_light_pos(0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
-	set_gl_light_pos(1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
-	setup_gl_light_atten(0, 1.0, 0.0, 0.0); // reset attenuation to 1.0
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
 	float const mlf(get_moon_light_factor());
 	colorRGBA ambient, diffuse;
 	ambient[3] = diffuse[3] = 1.0;
+	enabled_lights = 0;
 
 	// Note: should this be set in universe lighting?
 	colorRGBA ambient_c;
@@ -436,6 +432,11 @@ void setup_lighting(float depth) {
 		sm_green_int += lfn*diffuse[1];
 		set_colors_and_enable_light(1, ambient, diffuse); // moon
 	}
+
+	// setup light position (after enabling lights)
+	set_gl_light_pos(0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
+	set_gl_light_pos(1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
+	setup_gl_light_atten(0, 1.0, 0.0, 0.0); // reset attenuation to 1.0
 }
 
 

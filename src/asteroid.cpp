@@ -294,7 +294,6 @@ public:
 };
 
 
-// FIXME: sphere collision normal / pos
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model_space model; // FIXME: const problems with draw()
@@ -305,11 +304,9 @@ public:
 	uobj_asteroid_voxel(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
 		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), model(&global_asteroid_ntg, NUM_VOX_AST_LODS), have_sun_pos(0)
 	{
-		//RESET_TIME;
 		float const gen_radius(gen_voxel_rock(model, all_zeros, 1.0, ASTEROID_VOX_SZ, AST_VOX_NUM_BLK, rseed_ix)); // will be translated to pos and scaled by radius during rendering
 		assert(gen_radius > 0.0);
 		radius /= gen_radius;
-		//PRINT_TIME("Create Asteroid");
 	}
 
 	virtual void first_frame_hook() {
@@ -441,7 +438,7 @@ public:
 			return 0;
 		}
 		if (ip.calc_int) {
-			ip.norm = (p - pos).get_norm(); // we can't actually calculate the normal, so we use the direction from asteroid center to object center
+			ip.norm = (p - pos).get_norm(); // FIXME: we can't actually calculate the normal, so we use the direction from asteroid center to object center
 			if (ip.p_int == p) {ip.p_int = p - ip.norm*r;} // intersecting at the center, determine actual pos based on normal
 			xform_point_inv(ip.p_int);
 			rotate_point_inv(ip.norm); // ip.norm will be normalized
@@ -934,10 +931,10 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 						UNROLL_3X(norm_dir[i_] /= (i->get_scale()[i_]*j.get_scale()[i_]);)
 						if (norm_dir.mag_sq() < dmin*dmin) continue;
 						// see free_obj::coll_physics(): v1' = v1*(m1 - m2)/(m1 + m2) + v2*2*m2/(m1 + m2)
-						float const mi(i->get_rel_mass()), mj(j.get_rel_mass());
+						float const mi(i->get_rel_mass()), mj(j.get_rel_mass()), m_sum_inv(1.0/(mi + mj));
 						vector3d const &vi(i->get_velocity()), &vj(j.get_velocity());
-						vector3d const vin(vi*(mi - mj)/(mi + mj) + vj*2*mj/(mi + mj));
-						vector3d const vjn(vj*(mj - mi)/(mj + mi) + vi*2*mi/(mj + mi));
+						vector3d const vin(vi*(mi - mj)*m_sum_inv + vj*2*mj*m_sum_inv);
+						vector3d const vjn(vj*(mj - mi)*m_sum_inv + vi*2*mi*m_sum_inv);
 						i->set_velocity(vin); i->last_coll_id = *g;
 						j.set_velocity (vjn); j.last_coll_id  = ix; // FIXME: move so they don't collide?
 					}

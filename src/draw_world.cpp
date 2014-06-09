@@ -583,8 +583,8 @@ void draw_moon() {
 	point const pos(get_moon_pos());
 	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
 	colorRGBA const ambient(0.05, 0.05, 0.05, 1.0), diffuse(1.0*have_sun, 1.0*have_sun, 1.0*have_sun, 1.0);
-	set_gl_light_pos(4, get_sun_pos(), 0.0);
 	set_colors_and_enable_light(4, ambient, diffuse);
+	set_gl_light_pos(4, get_sun_pos(), 0.0);
 	shader_t s;
 	s.set_vert_shader("ads_lighting.part*+moon_draw");
 	s.set_frag_shader("simple_texture");
@@ -700,9 +700,9 @@ void draw_sky(int order) {
 		point lpos(get_sun_pos()), lsint;
 		vector3d const sun_v((get_camera_pos() - lpos).get_norm());
 		if (line_sphere_int(sun_v, lpos, center, radius, lsint, 1)) {lpos = lsint;}
-		set_gl_light_pos(light_id, lpos, 1.0); // w=1.0 - point light source
 		colorRGBA const ambient(sun_color*0.5);
 		set_colors_and_enable_light(light_id, ambient, sun_color);
+		set_gl_light_pos(light_id, lpos, 1.0); // w=1.0 - point light source
 		setup_gl_light_atten(light_id, 0.0, 0.01, 0.01);
 	}
 	if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}

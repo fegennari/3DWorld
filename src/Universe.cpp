@@ -630,7 +630,7 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 	point const spos(result.get_ucell().rel_center + sun.pos);
 	sun_pos = sun.pos; // spos?
 	colorRGBA color(sun.get_light_color());
-	if (blend) atten_color(color, pos2, sun.pos, (sol->radius + MAX_PLANET_EXTENT), expand);
+	if (blend) {atten_color(color, pos2, sun.pos, (sol->radius + MAX_PLANET_EXTENT), expand);}
 	
 	if (sun.is_ok() && (sobj != NULL || is_shadowed(pos2, radius, 1, *sol, sobj))) { // check for planet/moon shadowing
 		++shadow_val;
@@ -3047,9 +3047,6 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	point const lpos(make_pt_global(pos));
 	float const ambient_scale(a_scale*GLOBAL_AMBIENT*ATTEN_AMB_VAL*OM_WCA);
 
-	// set position - cache this?
-	set_gl_light_pos(light, lpos, 1.0, shader); // point light source
-
 	// set color
 	for (unsigned i = 0; i < 3; ++i) {
 		float const ci(WHITE_COMP_D + OM_WCD*color[i]);
@@ -3060,7 +3057,8 @@ void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, b
 	uambient[3] = (no_ambient ? 0.0 : 1.0);
 	udiffuse[3] = (shadowed   ? 0.0 : 1.0);
 	set_colors_and_enable_light(light, uambient, udiffuse, shader);
-
+	// set position
+	set_gl_light_pos(light, lpos, 1.0, shader); // point light source
 	// set light attenuation - cache this?
 	set_star_light_atten(light, max(0.25f, min(1.0f, STAR_MAX_SIZE/radius)), shader);
 }

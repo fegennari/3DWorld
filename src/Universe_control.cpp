@@ -583,6 +583,13 @@ void destroy_player_ship(bool captured) {
 }
 
 
+point get_universe_display_camera_pos() {
+
+	point const camera(player_ship().get_pos()), camera_scaled(camera/CELL_SIZE);
+	return point(uxyz[0]+camera_scaled.x, uxyz[1]+camera_scaled.y, uxyz[2]+camera_scaled.z);
+}
+
+
 void draw_universe_stats() {
 
 	char text[128];
@@ -590,12 +597,11 @@ void draw_universe_stats() {
 	u_ship const &ps(player_ship());
 
 	// draw position and orientation
-	point const camera(ps.get_pos()), camera_scaled(camera/CELL_SIZE);
+	point const cpos(get_universe_display_camera_pos());
 	vector3d const dir(ps.get_dir().get_norm());
 	float const player_temp(player_ship().get_true_temp());
 	//sprintf(text, "Loc: (%i: %3.3f, %i: %3.3f, %i: %3.3f)  Dir: (%1.3f, %1.3f, %1.3f)", uxyz[0], camera_scaled.x, uxyz[1], camera_scaled.y, uxyz[2], camera_scaled.z, dir.x, dir.y, dir.z);
-	sprintf(text, "Loc: (%3.4f, %3.4f, %3.4f)  Dir: (%1.3f, %1.3f, %1.3f)  T: %3.1f",
-		uxyz[0]+camera_scaled.x, uxyz[1]+camera_scaled.y, uxyz[2]+camera_scaled.z, dir.x, dir.y, dir.z, player_temp);
+	sprintf(text, "Loc: (%3.4f, %3.4f, %3.4f)  Dir: (%1.3f, %1.3f, %1.3f)  T: %3.1f", cpos.x, cpos.y, cpos.z, dir.x, dir.y, dir.z, player_temp);
 	draw_text(YELLOW, -0.009*aspect_ratio, -0.014, -0.028, text);
 
 	// draw shields, armor, weapon status, etc.
