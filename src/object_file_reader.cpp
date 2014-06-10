@@ -396,7 +396,7 @@ public:
 		model.load_all_used_tids();
 
 		if (verbose) {
-			cout << "bbox: "; model.get_bbox().print(); cout << endl;
+			cout << "bcube: "; model.get_bcube().print(); cout << endl;
 			cout << "model stats: "; model.show_stats();
 		}
 		PRINT_TIME("Model3d Load");
@@ -630,7 +630,7 @@ public:
 			size_t const nn(recalc_normals ? vn.size() : n.size());
 			cout << "verts: " << v.size() << ", normals: " << nn << ", tcs: " << tc.size() << ", faces: " << num_faces << ", objects: " << num_objects
 				 << ", groups: " << num_groups << ", blocks: " << num_blocks << endl;
-			cout << "bbox: "; model.get_bbox().print(); cout << endl;
+			cout << "bcube: "; model.get_bcube().print(); cout << endl;
 			cout << "model stats: "; model.show_stats();
 		}
 		return 1;
@@ -646,7 +646,7 @@ void check_obj_file_ext(string const &filename, string const &ext) {
 }
 
 
-bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bbox,
+bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_models,
 	bool recalc_normals, bool write_file, bool verbose)
 {
@@ -693,7 +693,7 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 			//cur_model.set_has_cobjs(); // billboard cobjs are not added, and the colors/textures are missing
 			PRINT_TIME("Create Model3d Cubes");
 		}
-		model_bbox = cur_model.get_bbox();
+		model_bcube = cur_model.get_bcube();
 		return 1;
 	}
 	else {

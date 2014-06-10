@@ -1045,10 +1045,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				bool const use_cubes  (ivals[0] == 5);
 				ppts.resize(0);
 				vector<cube_t> cubes;
-				cube_t model_bbox(0,0,0,0,0,0);
+				cube_t model_bcube(0,0,0,0,0,0);
 				unsigned char const cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
 				
-				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), model_bbox, xf, cobj.cp.tid,
+				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), model_bcube, xf, cobj.cp.tid,
 					cobj.cp.color, voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), 1))
 				{
 					return read_error(fp, "object file data", coll_obj_file);
@@ -1078,8 +1078,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					}
 				}
 				else if (use_model3d) {
-					model_czmin = min(czmin, model_bbox.d[2][0]);
-					model_czmax = max(czmax, model_bbox.d[2][1]);
+					model_czmin = min(czmin, model_bcube.d[2][0]);
+					model_czmax = max(czmax, model_bcube.d[2][1]);
 					czmin = min(czmin, model_czmin);
 					czmax = max(czmax, model_czmax);
 				}

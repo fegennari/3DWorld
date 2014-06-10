@@ -568,12 +568,12 @@ template<typename T> void vntc_vect_block_t<T>::free_vbos() {
 }
 
 
-template<typename T> cube_t vntc_vect_block_t<T>::get_bbox() const {
+template<typename T> cube_t vntc_vect_block_t<T>::get_bcube() const {
 
 	if (empty()) return all_zeros_cube;
-	cube_t bbox(front().get_bbox());
-	for (const_iterator i = begin()+1; i != end(); ++i) {bbox.union_with_cube(i->get_bbox());}
-	return bbox;
+	cube_t bcube(front().get_bcube());
+	for (const_iterator i = begin()+1; i != end(); ++i) {bcube.union_with_cube(i->get_bcube());}
+	return bcube;
 }
 
 
@@ -697,18 +697,18 @@ template<typename T> void geometry_t<T>::get_polygons(vector<coll_tquad> &polygo
 }
 
 
-template<typename T> cube_t geometry_t<T>::get_bbox() const {
+template<typename T> cube_t geometry_t<T>::get_bcube() const {
 
-	cube_t bbox(all_zeros_cube); // will return this if empty
+	cube_t bcube(all_zeros_cube); // will return this if empty
 
 	if (!triangles.empty()) {
-		bbox = triangles.get_bbox();
-		if (!quads.empty()) bbox.union_with_cube(quads.get_bbox());
+		bcube = triangles.get_bcube();
+		if (!quads.empty()) bcube.union_with_cube(quads.get_bcube());
 	}
 	else if (!quads.empty()) {
-		bbox = quads.get_bbox();
+		bcube = quads.get_bcube();
 	}
-	return bbox;
+	return bcube;
 }
 
 
@@ -915,7 +915,7 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 		}
 	}
 	cube_t const bb(get_polygon_bbox(poly));
-	if (bbox == all_zeros_cube) {bbox = bb;} else {bbox.union_with_cube(bb);}
+	if (bcube == all_zeros_cube) {bcube = bb;} else {bcube.union_with_cube(bb);}
 	return (unsigned)split_polygons_buffer.size();
 }
 
@@ -996,7 +996,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
 
 	// calculate scene voxel bounds
 	int bounds[2][2], num_xy[2]; // {x,y}x{lo,hi}
-	calc_bounds(bbox, bounds, spacing);
+	calc_bounds(bcube, bounds, spacing);
 	cout << "bounds: ";
 
 	for (unsigned d = 0; d < 2; ++d) {
@@ -1180,7 +1180,9 @@ void model3d::bind_all_used_tids() {
 }
 
 
-void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask) { // const?
+void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask) { // non-const due to vbo caching, normal computation, etc.
+
+	if (!camera_pdu.cube_visible(bcube)) return;
 
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
@@ -1268,7 +1270,7 @@ bool model3d::write_to_disk(string const &fn) const {
 	}
 	cout << "Writing model3d file " << fn << endl;
 	write_uint(out, MAGIC_NUMBER);
-	out.write((char const *)&bbox, sizeof(cube_t));
+	out.write((char const *)&bcube, sizeof(cube_t));
 	if (!unbound_geom.write(out)) return 0;
 	write_uint(out, (unsigned)materials.size());
 	
@@ -1299,7 +1301,7 @@ bool model3d::read_from_disk(string const &fn) {
 	}
 	cout << "Reading model3d file " << fn << endl;
 	from_model3d_file = 1;
-	in.read((char *)&bbox, sizeof(cube_t));
+	in.read((char *)&bcube, sizeof(cube_t));
 	if (!unbound_geom.read(in)) return 0;
 	materials.resize(read_uint(in));
 	
@@ -1379,15 +1381,15 @@ void model3ds::render(bool is_shadow_pass) {
 }
 
 
-cube_t model3ds::get_bbox() const {
+cube_t model3ds::get_bcube() const {
 
-	cube_t bbox(all_zeros_cube); // will return this if empty()
+	cube_t bcube(all_zeros_cube); // will return this if empty()
 
 	for (const_iterator m = begin(); m != end(); ++m) {
-		cube_t const &bb(m->get_bbox());
-		if (m == begin()) {bbox = bb;} else {bbox.union_with_cube(bb);}
+		cube_t const &bb(m->get_bcube());
+		if (m == begin()) {bcube = bb;} else {bcube.union_with_cube(bb);}
 	}
-	return bbox;
+	return bcube;
 }
 
 

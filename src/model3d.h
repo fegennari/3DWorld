@@ -132,7 +132,7 @@ public:
 	void make_private_copy() {vbo = ivbo = 0;} // Note: to be called *only* after a deep copy
 	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_volumes();
-	cube_t get_bbox  () const {return get_polygon_bbox(*this);}
+	cube_t get_bcube () const {return get_polygon_bbox(*this);}
 	point get_center () const {return bsphere.pos;}
 	float get_bradius() const {return bsphere.radius;}
 	void optimize(unsigned npts) {remove_excess_cap();}
@@ -185,7 +185,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	void optimize(unsigned npts);
 	void clear() {free_vbos(); deque<indexed_vntc_vect_t<T> >::clear();}
 	void free_vbos();
-	cube_t get_bbox() const;
+	cube_t get_bcube() const;
 	float calc_draw_order_score() const;
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
@@ -208,7 +208,7 @@ template<typename T> struct geometry_t {
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, bool quads_only) const;
-	cube_t get_bbox() const;
+	cube_t get_bcube() const;
 	void optimize()  {triangles.optimize(3); quads.optimize(4);}
 	void free_vbos() {triangles.free_vbos(); quads.free_vbos();}
 	void clear();
@@ -289,7 +289,7 @@ class model3d {
 	int unbound_tid;
 	colorRGBA unbound_color;
 	vector<polygon_t> split_polygons_buffer;
-	cube_t bbox;
+	cube_t bcube;
 	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps;
 
 	// materials
@@ -303,7 +303,7 @@ public:
 	texture_manager &tmgr;
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0)
-		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bbox(all_zeros_cube),
+		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bcube(all_zeros_cube),
 		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
@@ -328,7 +328,7 @@ public:
 	void load_all_used_tids();
 	void bind_all_used_tids();
 	void render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask);
-	cube_t const &get_bbox() const {return bbox;}
+	cube_t const &get_bcube() const {return bcube;}
 	void build_cobj_tree(bool verbose);
 	
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
@@ -351,7 +351,7 @@ struct model3ds : public deque<model3d> {
 	void clear();
 	void free_context();
 	void render(bool is_shadow_pass); // const?
-	cube_t get_bbox() const;
+	cube_t get_bcube() const;
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 };
@@ -363,7 +363,7 @@ void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_t
 void free_model_context();
 void render_models(bool shadow_pass);
 
-bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bbox,
+bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file,
 	bool recalc_normals, bool write_file, bool verbose);
 

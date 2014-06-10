@@ -294,7 +294,7 @@ public:
 	virtual void free_context();
 	float eval_noise_texture_at(point const &pos) const;
 	float get_ao_lighting_val(point const &pos) const;
-	cube_t get_bcube() const {return ((tri_data[0].empty()) ? cube_t(center, center) : tri_data[0].get_bbox());}
+	cube_t get_bcube() const {return ((tri_data[0].empty()) ? cube_t(center, center) : tri_data[0].get_bcube());}
 	sphere_t get_bsphere() const;
 	bool has_triangles() const;
 	bool has_filled_at_edges() const;
