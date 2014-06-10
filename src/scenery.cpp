@@ -26,6 +26,7 @@ plant_type const pltype[NUM_PLANT_TYPES] = {
 	plant_type(PLANT3_TEX,  stem_c,   leaf_c, colorRGBA(0.9, 0.1, 0.05)),
 	plant_type(PLANT4_TEX,  stem_c,   leaf_c, ALPHA0),
 	plant_type(COFFEE_TEX,  LT_BROWN, WHITE,  ALPHA0)
+	//plant_type(GRASS_BLADE_TEX, DK_GREEN, WHITE,  ALPHA0), // seaweed
 };
 
 
@@ -41,14 +42,15 @@ extern rand_gen_t global_rand_gen;
 int get_bark_tex_for_tree_type(int type);
 
 
-inline float get_pt_line_thresh() {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
+inline float get_pt_line_thresh   () {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
+inline float get_min_water_plane_z() {return (get_water_z_height() - ocean_wave_height);}
 
 
 bool skip_uw_draw(point const &pos, float radius) {
 
 	// used in tiled terrain mode to skip underwater rocks - otherwise, the fog calculation is incorrect (needs special air/water fog transition handling)
 	if (world_mode != WMODE_INF_TERRAIN || DISABLE_WATER || !(display_mode & 0x04)) return 0;
-	return (get_camera_pos().z > water_plane_z && (pos.z + radius) < (get_water_z_height() - ocean_wave_height)); // water_plane_z
+	return (get_camera_pos().z > water_plane_z && (pos.z + radius) < get_min_water_plane_z());
 }
 
 
@@ -316,9 +318,10 @@ bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
 	return 1;
 }
 
-void rock_shape3d::draw(bool shadow_only, vector3d const &xlate) const { // Note: assumes texture is already setup
+void rock_shape3d::draw(bool shadow_only, bool reflection_pass, vector3d const &xlate) const { // Note: assumes texture is already setup
 
-	if (!is_visible(shadow_only, 0.0, xlate)) return;
+	if (!is_visible(shadow_only, 0.0, xlate))     return;
+	if (reflection_pass && pos.z < water_plane_z) return;
 	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius), xlate)).set_for_cur_shader();
 	draw_using_vbo();
 }
@@ -413,10 +416,12 @@ void surface_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void surface_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const {
-
+void surface_rock::draw(float sscale, bool shadow_only, bool reflection_pass,
+	vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const
+{
 	assert(surface);
-	if (!is_visible(shadow_only, 0.0, xlate)) return;
+	if (!is_visible(shadow_only, 0.0, xlate))     return;
+	if (reflection_pass && pos.z < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, radius));
 	float const dist(distance_to_camera(pos+xlate));
 
@@ -463,9 +468,7 @@ void surface_rock::destroy() {
 
 void s_rock::create(int x, int y, int use_xy) {
 
-	for (unsigned i = 0; i < 3; ++i) {
-		scale[i] = rand_uniform2(0.8, 1.3);
-	}
+	UNROLL_3X(scale[i_] = rand_uniform2(0.8, 1.3);)
 	gen_spos(x, y, use_xy);
 	size   = 0.02*rand_uniform2(0.2, 0.8)/tree_scale;
 	if ((rand2()&3) == 0) size *= rand_uniform2(1.2, 8.0);
@@ -479,10 +482,11 @@ void s_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
-void s_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const {
+void s_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
 	float const rmax(1.3*radius);
-	if (!is_visible(shadow_only, rmax, xlate)) return;
+	if (!is_visible(shadow_only, rmax, xlate))    return;
+	if (reflection_pass && pos.z < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, rmax));
 	float const dist(distance_to_camera(pos+xlate));
 
@@ -519,10 +523,11 @@ void voxel_rock::add_cobjs() {
 	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, get_tid()));
 }
 
-void voxel_rock::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen) {
+void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen) {
 
 	assert(radius > 0.0);
-	if (!is_visible(shadow_only, radius, xlate)) return;
+	if (!is_visible(shadow_only, radius, xlate))  return;
+	if (reflection_pass && pos.z < water_plane_z) return;
 	unsigned const lod_level = 0;
 	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, radius));
 	color.set_for_cur_shader();
@@ -585,11 +590,12 @@ void s_log::add_cobjs() {
 	coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
 }
 
-void s_log::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const {
+void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
 	float const sz(max(length, max(radius, radius2)));
 	point const center((pos + pt2)*0.5 + xlate);
 	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz, xlate))) return;
+	if (reflection_pass && 0.5*(pos.z + pt2.z) < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
 	float const dist(distance_to_camera(center));
 
@@ -622,10 +628,10 @@ bool s_log::update_zvals(int x1, int y1, int x2, int y2) {
 int s_stump::create(int x, int y, int use_xy, float minz) {
 
 	gen_spos(x, y, use_xy);
+	if (pos.z < minz) return 0;
 	radius  = rand_uniform2(0.005, 0.01)/tree_scale;
 	radius2 = rand_uniform2(0.8*radius, radius);
 	pos.z  -= 2.0*radius;
-	if (pos.z < minz) return 0;
 	height  = rand_uniform2(0.01/tree_scale, min(0.05/tree_scale, 4.0*radius)) + 0.015;
 		
 	if ((rand2()&3) == 0) {
@@ -645,11 +651,12 @@ bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {
 	return sphere_vert_cylin_intersect(center, sphere_radius, cylinder_3dw(pos-point(0.0, 0.0, 0.2*height), pos+point(0.0, 0.0, height), radius, radius));
 }
 
-void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const {
+void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
 	float const sz(max(height, max(radius, radius2)));
 	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
 	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz, xlate))) return;
+	if (reflection_pass && pos.z < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
 	float const dist(distance_to_camera(center));
 
@@ -669,10 +676,20 @@ void s_stump::draw(float sscale, bool shadow_only, vector3d const &xlate, float 
 int s_plant::create(int x, int y, int use_xy, float minz, vbo_vnc_block_manager_t &vbo_manager) {
 
 	vbo_mgr_ix = -1;
-	type   = rand2()%NUM_PLANT_TYPES;
 	gen_spos(x, y, use_xy);
-	if (pos.z < minz) return 0;
-	if (get_rel_height(pos.z, -zmax_est, zmax_est) > 0.62) return 0; // altitude too high for plants
+
+	if (pos.z < minz) {
+		if (pos.z + (0.4/tree_scale + 0.025) > get_min_water_plane_z()) return 0; // max plant height above min water plane zval
+		if (NUM_WATER_PLANT_TYPES == 0) return 0; // no water plant types
+		type = NUM_LAND_PLANT_TYPES + (rand2() % NUM_WATER_PLANT_TYPES);
+	}
+	else if (get_rel_height(pos.z, -zmax_est, zmax_est) > 0.62) {
+		return 0; // altitude too high for plants
+	}
+	else {
+		if (NUM_LAND_PLANT_TYPES == 0) return 0; // no land plant types
+		type = rand2() % NUM_LAND_PLANT_TYPES;
+	}
 	radius = rand_uniform2(0.0025, 0.0045)/tree_scale;
 	height = rand_uniform2(0.2, 0.4)/tree_scale + 0.025;
 	gen_points(vbo_manager);
@@ -686,7 +703,7 @@ void s_plant::create2(point const &pos_, float height_, float radius_, int type_
 	pos    = pos_;
 	radius = radius_;
 	height = height_;
-	if (calc_z) pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
+	if (calc_z) {pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);}
 	gen_points(vbo_manager);
 }
 
@@ -792,7 +809,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (shadow_only ? !is_over_mesh(pos+xlate) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
-	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
+	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0)); // call get_atten_color() for underwater seaweed
 	float const dist(distance_to_camera(pos2));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
@@ -855,8 +872,8 @@ void s_plant::destroy() {
 // ************ SCENERY OBJECT INTERFACE/WRAPPERS/DRIVERS ************
 
 
-template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, vector3d const &xlate, float scale_val) {
-	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw(sscale, shadow_only, xlate, scale_val);}
+template<typename T> void draw_scenery_vector(vector<T> &v, float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) {
+	for (unsigned i = 0; i < v.size(); ++i) {v[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val);}
 }
 
 template<typename T> void add_scenery_vector_cobjs(vector<T> &v) {
@@ -1019,13 +1036,7 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 			
 			if (veg && rand2()%100 < 35) { // Note: numbers below were based on 30% plants
 				s_plant plant; // 35%
-				
-				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {
-					plants.push_back(plant);
-				}
-				else if (plant.get_pos().z < water_plane_z) {
-					// create seaweed instead
-				}
+				if (plant.create(j, i, 1, min_plant_z, plant_vbo_manager)) {plants.push_back(plant);}
 			}
 			else if (val < 5) { // 3.5%
 				rock_shapes.push_back(rock_shape3d());
@@ -1082,12 +1093,12 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 }
 
 
-void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val) {
+void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val, bool reflection_pass) {
 
 	select_texture(DARK_ROCK_TEX);
 
 	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-		rock_shapes[i].draw(shadow_only, xlate);
+		rock_shapes[i].draw(shadow_only, reflection_pass, xlate);
 	}
 	int const sscale(int((do_zoom ? ZOOM_FACTOR : 1.0)*window_width));
 	rock_vbo_manager.upload();
@@ -1095,16 +1106,16 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	if (!shadow_only) {select_texture(ROCK_SPHERE_TEX);}
 
 	for (unsigned i = 0; i < surface_rocks.size(); ++i) {
-		surface_rocks[i].draw(sscale, shadow_only, xlate, scale_val, rock_vbo_manager);
+		surface_rocks[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val, rock_vbo_manager);
 	}
 	rock_vbo_manager.end_render();
-	draw_scenery_vector(rocks, sscale, shadow_only, xlate, scale_val);
+	draw_scenery_vector(rocks, sscale, shadow_only, reflection_pass, xlate, scale_val);
 
 	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
-		voxel_rocks[i].draw(sscale, shadow_only, xlate, scale_val, s, 0); // Note: no model texgen
+		voxel_rocks[i].draw(sscale, shadow_only, reflection_pass, xlate, scale_val, s, 0); // Note: no model texgen
 	}
-	draw_scenery_vector(logs,   sscale, shadow_only, xlate, scale_val);
-	draw_scenery_vector(stumps, sscale, shadow_only, xlate, scale_val);
+	draw_scenery_vector(logs,   sscale, shadow_only, reflection_pass, xlate, scale_val);
+	draw_scenery_vector(stumps, sscale, shadow_only, reflection_pass, xlate, scale_val);
 	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
 
 	for (unsigned i = 0; i < plants.size(); ++i) {

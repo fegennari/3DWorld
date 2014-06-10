@@ -1037,7 +1037,7 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 	vector3d const xlate(scenery_off.get_xlate());
 	translate_to(xlate);
 	float const scale_val(get_scenery_thresh(reflection_pass)*get_tile_width());
-	if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 0, scale_val);} // shader not passed in here
+	if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 0, scale_val, reflection_pass);} // shader not passed in here
 	if (draw_leaves) {scenery.draw_plant_leaves  (s, 0, xlate);}
 	fgPopMatrix();
 }

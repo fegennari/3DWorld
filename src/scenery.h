@@ -16,6 +16,8 @@ int get_bark_tex_for_tree_type(int type);
 
 
 enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, NUM_PLANT_TYPES};
+unsigned const NUM_LAND_PLANT_TYPES  = 6;
+unsigned const NUM_WATER_PLANT_TYPES = NUM_PLANT_TYPES - NUM_LAND_PLANT_TYPES;
 
 struct plant_type {
 
@@ -49,7 +51,7 @@ public:
 	surface_rock() : vbo_mgr_ix(-1), scale(0.0) {}
 	void create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo_manager, bool fixed_sz_rock_cache);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const;
+	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, vbo_vnt_block_manager_t &vbo_manager) const;
 	void update_points_vbo(vbo_vnt_block_manager_t &vbo_manager);
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_manager_t &vbo_manager);
 	void destroy();
@@ -65,7 +67,7 @@ public:
 	s_rock() : size(0.0), angle(0.0) {}
 	void create(int x, int y, int use_xy);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const;
+	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
 };
 
 
@@ -81,7 +83,7 @@ public:
 	void create(int x, int y, int use_xy);
 	void build_model();
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen);
+	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen);
 	void free_context() {model.free_context();}
 	void destroy();
 };
@@ -101,7 +103,7 @@ public:
 	void shift_by(vector3d const &vd);
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const;
+	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
 };
 
@@ -117,7 +119,7 @@ public:
 	int create(int x, int y, int use_xy, float minz);
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float sphere_radius) const;
-	void draw(float sscale, bool shadow_only, vector3d const &xlate, float scale_val) const;
+	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const;
 };
 
 
@@ -178,7 +180,7 @@ public:
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 	void gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache);
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate);
-	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0);
+	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };

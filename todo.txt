@@ -12,3 +12,4 @@ Draw more distant tiles (larger/lower res at high delta-z)
 http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 GLM Noise
 Openmp Cobj draw during groups physics
+Load/display model3d models in tiled terrain mode

@@ -88,7 +88,7 @@ public:
 	void gen_rock(unsigned nverts, float size, int rand_seed, int type);
 	void add_cobjs();
 	bool do_impact_damage(point const &pos_, float radius_);
-	void draw(bool shadow_only=0, vector3d const &xlate=zero_vector) const;
+	void draw(bool shadow_only=0, bool reflection_pass=0, vector3d const &xlate=zero_vector) const;
 	void draw_using_vbo() const;
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	void clear_vbo();
