@@ -1180,14 +1180,7 @@ void model3d::bind_all_used_tids() {
 }
 
 
-void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask) { // non-const due to vbo caching, normal computation, etc.
-
-	if (!camera_pdu.cube_visible(bcube)) return;
-
-	// we need the vbo to be created here even in the shadow pass,
-	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
-	bind_all_used_tids();
-	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask) {
 
 	// render geom that was not bound to a material
 	if ((bmap_pass_mask & 1) && unbound_color.alpha > 0.0) { // enabled, not in bump map only pass
@@ -1217,6 +1210,33 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			materials[to_draw[i].second].render(shader, tmgr, unbound_tid, is_shadow_pass, enable_alpha_mask);
 		}
+	}
+}
+
+
+void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask) { // non-const due to vbo caching, normal computation, etc.
+
+	if (transforms.empty() && !camera_pdu.cube_visible(bcube)) return;
+
+	// we need the vbo to be created here even in the shadow pass,
+	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
+	bind_all_used_tids();
+	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
+	if (transforms.empty()) {render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask);} // no transforms case
+	
+	for (vector<geom_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
+		if (!camera_pdu.cube_visible(bcube + xf->tv)) continue; // VFC
+		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
+		// Note: currently, only translate is supported (and somewhat scale)
+		// FIXME: incorrect shadow map?
+		pos_dir_up const prev_pdu(camera_pdu), prev_orig_pdu(orig_camera_pdu);
+		camera_pdu.pos -= xf->tv; orig_camera_pdu.pos -= xf->tv;
+		fgPushMatrix();
+		translate_to(xf->tv);
+		uniform_scale(xf->scale);
+		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask);
+		fgPopMatrix();
+		camera_pdu = prev_pdu; orig_camera_pdu = prev_orig_pdu;
 	}
 	if (group_back_face_cull) {glDisable(GL_CULL_FACE);}
 }
@@ -1425,6 +1445,11 @@ void free_model_context() {
 
 void render_models(bool shadow_pass) {
 	all_models.render(shadow_pass);
+}
+
+void add_transform_for_cur_model(geom_xform_t const &xf) {
+	assert(!all_models.empty());
+	all_models.back().add_transform(xf);
 }
 
 

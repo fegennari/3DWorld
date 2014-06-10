@@ -22,7 +22,7 @@ struct geom_xform_t {
 	float scale;
 	bool mirror[3], swap_dim[3][3];
 
-	geom_xform_t() : tv(zero_vector), scale(1.0) {
+	geom_xform_t(vector3d const &tv_=zero_vector, float const scale_=1.0) : tv(tv_), scale(scale_) {
 		for (unsigned i = 0; i < 3; ++i) {
 			UNROLL_3X(swap_dim[i][i_] = 0;)
 			mirror[i] = 0;
@@ -298,6 +298,9 @@ class model3d {
 	set<string> undef_materials; // to reduce warning messages
 	cobj_tree_tquads_t coll_tree;
 
+	// transforms
+	vector<geom_xform_t> transforms;
+
 public:
 	// textures
 	texture_manager &tmgr;
@@ -315,6 +318,7 @@ public:
 
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}
+	void add_transform(geom_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
@@ -327,6 +331,7 @@ public:
 	void free_context();
 	void load_all_used_tids();
 	void bind_all_used_tids();
+	void render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask);
 	void render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask);
 	cube_t const &get_bcube() const {return bcube;}
 	void build_cobj_tree(bool verbose);
@@ -362,6 +367,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
 void render_models(bool shadow_pass);
+void add_transform_for_cur_model(geom_xform_t const &xf);
 
 bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file,

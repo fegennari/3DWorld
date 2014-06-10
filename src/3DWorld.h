@@ -385,6 +385,11 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (d[i_][1] != c.d[i_][1]) return 0;)
 		return 1;
 	}
+	cube_t operator+ (vector3d const &p) const {cube_t c(*this); c += p; return c;}
+	cube_t operator- (vector3d const &p) const {cube_t c(*this); c -= p; return c;}
+	void   operator+=(vector3d const &p) {translate( p);}
+	void   operator-=(vector3d const &p) {translate(-p);}
+
 	void translate(point const &p) {
 		UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)
 	}

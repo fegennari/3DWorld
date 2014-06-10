@@ -1435,8 +1435,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			tree_center.z = interpolate_mesh_zval(tree_center.x, tree_center.y, 0.0, 1, 1);
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
-		cube_t cc(clip_cube);
-		if (use_clip_cube) {cc.translate(-tree_center);}
+		cube_t const cc(clip_cube - tree_center);
 		td.gen_tree_data(type, size, tree_depth, height_scale, br_scale_mult, nl_scale, (use_clip_cube ? &cc : NULL)); // create the tree here
 	}
 	assert(type < NUM_TREE_TYPES);
