@@ -610,7 +610,7 @@ bool csg_cube::subtract_from_thick_polygon(coll_obj_group &new_cobjs, coll_obj c
 	assert(cobj.npoints == 3 || cobj.npoints == 4); // quad or triangle
 	if (contains_cube(cobj)) return 1; // contained - remove the entire cobj
 
-	if (is_axis_aligned(cobj.norm)) {
+	if (is_axis_aligned(cobj.norm)) { // surprisingly not a common case, considering many axis aligned shapes can be represented with cubes
 		// FIXME: special case where we can be more efficient or do a better job?
 	}
 	coll_obj polys[6]; // top, bot, and up to 4 sides

@@ -2669,7 +2669,8 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 			fgPushMatrix();
 			set_additive_blend_mode();
 			glDepthFunc(GL_LEQUAL);
-			//ddata.shader.add_uniform_float("min_alpha", -1.0); // FIXME: disable alpha testing to avoid artifacts at the shields boundary?
+			// FIXME: disable alpha testing to avoid artifacts at the shields boundary? but then we have potential alpha sort order problems
+			//ddata.shader.add_uniform_float("min_alpha", -1.0);
 			assert(last_hit <= SHIELDS_TIME);
 			colorRGBA color_alpha(disabled() ? YELLOW : GREEN);
 			color_alpha.alpha = (0.5*last_hit)*min(1.0, 2.5*shields/get_max_shields())/SHIELDS_TIME; // decrease at 40% shields
@@ -2996,7 +2997,7 @@ void rand_spawn_ship::apply_physics() {
 			destroy_or_respawn();
 		}
 		else {
-			// FIXME: what to do here? We have a ship far from the player, but the player is in hyperspeed or has left the system/galaxy
+			// what to do here? We have a ship far from the player, but the player is in hyperspeed or has left the system/galaxy
 			// for now, just let our ship continue on its course
 		}
 	}

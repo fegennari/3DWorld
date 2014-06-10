@@ -1271,6 +1271,16 @@ bool uasteroid::line_intersection(point const &p1, vector3d const &v12, float li
 }
 
 
+bool uasteroid::sphere_intersection(point const &c, float r) const { // Note: may be untested
+
+	if (!uobject::sphere_intersection(c, r)) return 0; // test bounding sphere
+	vector3d dir((c - pos).get_norm());
+	UNROLL_3X(dir[i_] = fabs(dir[i_]);)
+	float const cp_dist(r + radius*dot_product(dir, scale)); // taking into account nonuniform scale
+	return dist_less_than(c, pos, cp_dist);
+}
+
+
 // *** rand_spawn_mixin / uobject_rand_spawn_t / ucomet ***
 
 

@@ -167,7 +167,7 @@ void setup_current_system(float sun_intensity) {
 		assert(clobj0.object != NULL);
 		base_gravity = 70.0*clobj0.object->gravity;
 	}
-	float const a_scale(0.5 + 1.0*atmosphere); // higher atmosphere = more clouds = more ambient lighting (FIXME: cloud color for ambient?)
+	float const a_scale(0.5 + 1.0*atmosphere); // higher atmosphere = more clouds = more ambient lighting
 	set_current_system_light(clobj0, pos, a_scale*sun_intensity, 0.5*sun_intensity);
 
 	if (fabs(univ_temp - last_temp) > 0.1) { // update temperature
@@ -252,7 +252,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 #ifdef _OPENMP
 	if (inited && !static_only && NUM_THREADS > 1 && !(display_mode & 0x40)) {
 		// FIXME: this isn't entirely thread safe, since some rare occurances can cause crashes, including
-		// * a query object that tries to access a planet/moon/star through clobj as the uobject is being deleted
+		// when a query object that tries to access a planet/moon/star through clobj as the uobject is being deleted
 		#pragma omp parallel num_threads(2)
 		{
 			if (omp_get_thread_num() == 1) {process_ships(timer1);}
@@ -282,6 +282,16 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 	//draw_universe_sun_flare(); // doesn't look right
 	inited = 1;
 	if (TIMETEST) PRINT_TIME(" Final Universe");
+}
+
+
+void proc_collision(free_obj *const uobj, point const &cpos, point const &coll_pos, float radius, vector3d const &velocity, float mass, float elastic, int coll_tid) {
+
+	assert(mass > 0.0);
+	uobj->set_sobj_coll_tid(coll_tid);
+	uobj->move_to(cpos); // setup correct position for explode?
+	uobj->collision(coll_pos, velocity, S_BODY_DENSITY*mass, radius, NULL, elastic); // large mass
+	uobj->move_to(cpos); // more accurate since this takes into account the terrain
 }
 
 
@@ -315,7 +325,6 @@ void process_univ_objects() {
 				uobj->set_sobj_dist(dist_to_cobj);
 
 				if (dist_to_cobj < 0.0) { // possible collision
-					float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
 					vector3d const norm(obj_pos, asteroid.pos);
 					vector3d const &ascale(asteroid.get_scale());
 					double const nmag(norm.mag()), rsum(asteroid.radius*(norm*ascale).mag()/nmag + radius);
@@ -323,11 +332,9 @@ void process_univ_objects() {
 					if (nmag < rsum) {
 						// FIXME: detailed collision?
 						if (projectile) {} // projectile explosions damage the asteroid (reduce its radius? what if it's instanced?)
+						float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
 						point const cpos(asteroid.pos + norm*(rsum/nmag)); // normalize, multiply, and add
-						uobj->set_sobj_coll_tid(asteroid.get_fragment_tid(obj_pos));
-						uobj->move_to(cpos); // setup correct position for explode?
-						uobj->collision(asteroid.pos, asteroid.get_velocity(), S_BODY_DENSITY, asteroid.radius, NULL, elastic); // large mass
-						uobj->move_to(cpos); // more accurate since this takes into account the terrain
+						proc_collision(uobj, cpos, asteroid.pos, asteroid.radius, asteroid.get_velocity(), 1.0, elastic, asteroid.get_fragment_tid(obj_pos));
 
 						if (is_ship && clobj.asteroid_field == AST_BELT_ID) { // ship collision with asteroid belt
 							//clobj.get_asteroid_belt().detatch_asteroid(clobj.asteroid); // incomplete
@@ -371,11 +378,7 @@ void process_univ_objects() {
 						float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
 
 						if (clobj.object->collision(obj_pos, radius_coll, uobj->get_velocity(), cpos, coll_r, simple_coll)) {
-							assert(clobj.object->mass > 0.0);
-							uobj->set_sobj_coll_tid(clobj.object->get_fragment_tid(obj_pos));
-							uobj->move_to(cpos); // setup correct position for explode?
-							uobj->collision(clobj_pos, zero_vector, S_BODY_DENSITY*clobj.object->mass, coll_r, NULL, elastic);
-							uobj->move_to(cpos); // more accurate since this takes into account the terrain
+							proc_collision(uobj, cpos, clobj_pos, coll_r, zero_vector, clobj.object->mass, elastic, clobj.object->get_fragment_tid(obj_pos));
 							coll = 2;
 						}
 					} // collision

@@ -351,7 +351,7 @@ bool gen_mipmaps(unsigned dim) {
 	assert(dim >= 1 && dim <= 3);
 	if (!glGenerateMipmap) return 0;
 	int const tex_dims[3] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D};
-	glGenerateMipmap(tex_dims[dim-1]); // FIXME: occasionally crashes?
+	glGenerateMipmap(tex_dims[dim-1]);
 	return 1;
 }
 

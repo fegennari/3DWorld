@@ -35,6 +35,7 @@ public:
 	float get_rel_mass()           const {return scale.x*scale.y*scale.z*radius*radius*radius;} // mass is proportional to volume which is proportional to radius^3
 	bool operator<(uasteroid const &a) const {return (inst_id < a.inst_id);} // for sorting by inst_id
 	bool line_intersection(point const &p1, vector3d const &v12, float line_length, float line_radius, float &ldist) const;
+	virtual bool sphere_intersection(point const &c, float r) const;
 
 	virtual std::string get_name() const {return "Asteroid";}
 	virtual bool rename(std::string const &name_) {return 0;} // not renaemable
