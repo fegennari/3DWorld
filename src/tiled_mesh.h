@@ -88,6 +88,7 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 class tile_t {
 
+public:
 	struct offset_t {
 		int dxoff, dyoff;
 
@@ -97,6 +98,7 @@ class tile_t {
 		vector3d subtract_from(offset_t const &o) const {return vector3d((o.dxoff - dxoff)*DX_VAL, (o.dyoff - dyoff)*DY_VAL, 0.0);}
 	};
 
+private:
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
 	unsigned weight_tid, height_tid, shadow_normal_tid;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;

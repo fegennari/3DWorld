@@ -83,9 +83,9 @@ struct poly_data_block {
 
 
 struct model3d_stats_t {
-	unsigned verts, quads, tris, blocks, mats;
-	model3d_stats_t() : verts(0), quads(0), tris(0), blocks(0), mats(0) {}
-	void print() const {cout << "verts: " << verts << ", quads: " << quads << ", tris: " << tris << ", blocks: " << blocks << ", mats: " << mats << endl;}
+	unsigned verts, quads, tris, blocks, mats, transforms;
+	model3d_stats_t() : verts(0), quads(0), tris(0), blocks(0), mats(0), transforms(0) {}
+	void print() const;
 };
 
 
@@ -332,13 +332,11 @@ public:
 	void load_all_used_tids();
 	void bind_all_used_tids();
 	void render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask);
-	void render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask);
+	void render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate);
+	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
 	void build_cobj_tree(bool verbose);
-	
-	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
-		return coll_tree.check_coll_line(p1, p2, cpos, cnorm, color, exact);
-	}
+	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
 	bool get_needs_bump_maps () const {return needs_bump_maps;}
 	void get_stats(model3d_stats_t &stats) const;
@@ -355,7 +353,8 @@ struct model3ds : public deque<model3d> {
 
 	void clear();
 	void free_context();
-	void render(bool is_shadow_pass); // const?
+	void render(bool is_shadow_pass, vector3d const &xlate); // non-const
+	bool has_any_transforms() const;
 	cube_t get_bcube() const;
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
@@ -366,7 +365,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
-void render_models(bool shadow_pass);
+void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
 void add_transform_for_cur_model(geom_xform_t const &xf);
 
 bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,

@@ -1214,8 +1214,35 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 }
 
 
-void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask) { // non-const due to vbo caching, normal computation, etc.
+struct camera_pdu_transform_wrapper {
 
+	pos_dir_up prev_pdu, prev_orig_pdu;
+	bool active;
+
+	camera_pdu_transform_wrapper(vector3d const &tv, float scale=1.0) : active(tv != zero_vector || scale != 1.0) {
+		if (!active) return;
+		prev_pdu = camera_pdu;
+		prev_orig_pdu = orig_camera_pdu;
+		// FIXME: handle scale? will be incorrect for scale > 1.0 and inefficient for scale < 1.0
+		camera_pdu.pos -= tv;
+		orig_camera_pdu.pos -= tv;
+		fgPushMatrix();
+		translate_to(tv);
+		uniform_scale(scale);
+	}
+	~camera_pdu_transform_wrapper() {
+		if (!active) return;
+		fgPopMatrix();
+		camera_pdu = prev_pdu;
+		orig_camera_pdu = prev_orig_pdu;
+	}
+};
+
+
+// non-const due to vbo caching, normal computation, etc.
+void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate) {
+
+	camera_pdu_transform_wrapper cptw(xlate);
 	if (transforms.empty() && !camera_pdu.cube_visible(bcube)) return;
 
 	// we need the vbo to be created here even in the shadow pass,
@@ -1228,17 +1255,12 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 		if (!camera_pdu.cube_visible(bcube + xf->tv)) continue; // VFC
 		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 		// Note: currently, only translate is supported (and somewhat scale)
-		// FIXME: incorrect shadow map?
-		pos_dir_up const prev_pdu(camera_pdu), prev_orig_pdu(orig_camera_pdu);
-		camera_pdu.pos -= xf->tv; orig_camera_pdu.pos -= xf->tv;
-		fgPushMatrix();
-		translate_to(xf->tv);
-		uniform_scale(xf->scale);
+		camera_pdu_transform_wrapper cptw2(xf->tv, xf->scale);
 		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask);
-		fgPopMatrix();
-		camera_pdu = prev_pdu; orig_camera_pdu = prev_orig_pdu;
+		// cptw2 dtor called here
 	}
 	if (group_back_face_cull) {glDisable(GL_CULL_FACE);}
+	// cptw dtor called here
 }
 
 
@@ -1252,6 +1274,17 @@ void model3d::build_cobj_tree(bool verbose) {
 }
 
 
+bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
+
+	if (transforms.empty()) {return coll_tree.check_coll_line(p1, p2, cpos, cnorm, color, exact);}
+
+	for (vector<geom_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
+		// FIXME: WRITE
+	}
+	return 0;
+}
+
+
 void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
@@ -1262,6 +1295,7 @@ void model3d::get_all_mat_lib_fns(set<string> &mat_lib_fns) const {
 
 void model3d::get_stats(model3d_stats_t &stats) const {
 
+	stats.transforms += transforms.size();
 	unbound_geom.get_stats(stats);
 	
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
@@ -1280,7 +1314,7 @@ void model3d::show_stats() const {
 }
 
 
-bool model3d::write_to_disk(string const &fn) const {
+bool model3d::write_to_disk(string const &fn) const { // Note: transforms not written
 
 	ofstream out(fn, ios::out | ios::binary);
 	
@@ -1304,7 +1338,7 @@ bool model3d::write_to_disk(string const &fn) const {
 }
 
 
-bool model3d::read_from_disk(string const &fn) {
+bool model3d::read_from_disk(string const &fn) { // Note: transforms not read
 
 	ifstream in(fn, ios::in | ios::binary);
 	
@@ -1357,7 +1391,7 @@ void model3ds::free_context() {
 }
 
 
-void model3ds::render(bool is_shadow_pass) {
+void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 	
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
@@ -1368,8 +1402,6 @@ void model3ds::render(bool is_shadow_pass) {
 		needs_alpha_test |= m->get_needs_alpha_test();
 		if (shader_effects) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 	}
-	float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
-
 	for (unsigned bmap_pass = 0; bmap_pass < (needs_bump_maps ? 2U : 1U); ++bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
 			shader_t s;
@@ -1385,19 +1417,30 @@ void model3ds::render(bool is_shadow_pass) {
 			}
 			else if (shader_effects) {
 				int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
-				setup_smoke_shaders(s, min_alpha, 0, 0, 1, 1, 1, 1, 0, 1, use_bmap, enable_spec_map(), 0, two_sided_lighting);
+				bool const v(world_mode == WMODE_GROUND), use_mvm(has_any_transforms());
+				float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
+				setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, v, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting);
 			}
 			else {
 				s.begin_simple_textured_shader(0.0, 1); // with lighting
 				s.set_specular(0.0, 1.0);
 			}
 			for (iterator m = begin(); m != end(); ++m) { // non-const
-				m->render(s, is_shadow_pass, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3));
+				m->render(s, is_shadow_pass, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), xlate);
 			}
 			s.set_specular(0.0, 1.0); // reset (may be unnecessary)
 			s.end_shader();
 		} // sam_pass
 	} // bmap_pass
+}
+
+
+bool model3ds::has_any_transforms() const {
+
+	for (const_iterator m = begin(); m != end(); ++m) {
+		if (m->has_any_transforms()) return 1;
+	}
+	return 0;
 }
 
 
@@ -1415,9 +1458,7 @@ cube_t model3ds::get_bcube() const {
 
 void model3ds::build_cobj_trees(bool verbose) {
 
-	for (iterator m = begin(); m != end(); ++m) {
-		m->build_cobj_tree(verbose);
-	}
+	for (iterator m = begin(); m != end(); ++m) {m->build_cobj_tree(verbose);}
 }
 
 
@@ -1436,6 +1477,14 @@ bool model3ds::check_coll_line(point const &p1, point const &p2, point &cpos, ve
 }
 
 
+void model3d_stats_t::print() const {
+	
+	cout << "verts: " << verts << ", quads: " << quads << ", tris: " << tris << ", blocks: " << blocks << ", mats: " << mats;
+	if (transforms) {cout << ", transforms: " << transforms;}
+	cout << endl;
+}
+
+
 // ************ Free Functions ************
 
 
@@ -1443,8 +1492,8 @@ void free_model_context() {
 	all_models.free_context();
 }
 
-void render_models(bool shadow_pass) {
-	all_models.render(shadow_pass);
+void render_models(bool shadow_pass, vector3d const &xlate) {
+	all_models.render(shadow_pass, xlate);
 }
 
 void add_transform_for_cur_model(geom_xform_t const &xf) {

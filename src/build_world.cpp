@@ -990,7 +990,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	unsigned line_num(1), npoints;
 	int end(0), use_z(0), use_vel(0), ivals[3];
 	float fvals[3];
-	point pos(0.0, 0.0, 0.0);
+	point pos(all_zeros);
 	vector3d tv0, vel;
 	polygon_t poly;
 	vector<coll_tquad> ppts;
@@ -999,7 +999,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
 	bool enable_leaf_wind(1);
 	
-	while (!end) { // available: uz JKUVXZ
+	while (!end) { // available: uz JKUVX
 		assert(fp != NULL);
 		int letter(getc(fp));
 		
@@ -1055,7 +1055,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				if (!no_cobjs) {
 					int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
-					if (group_cobjs) create_xyz_groups(group_ids, use_vbo);
+					if (group_cobjs) {create_xyz_groups(group_ids, use_vbo);}
 					check_layer(has_layer);
 					cobj.thickness *= xf.scale;
 					if (cobj.thickness == 0.0) cobj.thickness = MIN_POLY_THICK; // optional - will be set to this value later anyway
@@ -1068,7 +1068,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					coll_obj cur_cube(cobj); // color and tid left as-is for now
 					cur_cube.type         = COLL_CUBE;
 					cur_cube.cp.cobj_type = cobj_type;
-					if (cobj_type != COBJ_TYPE_STD) cur_cube.cp.draw = 0;
+					if (cobj_type != COBJ_TYPE_STD) {cur_cube.cp.draw = 0;}
 					maybe_reserve_fixed_cobjs(cubes.size());
 
 					for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
@@ -1086,6 +1086,16 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				PRINT_TIME("Obj File Load/Process");
 				break;
 			}
+
+		case 'Z': // add model3d transform: tx ty tz scale
+			{
+				geom_xform_t model_xf;
+				if (fscanf(fp, "%f%f%f%f", &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale) != 4) {
+					return read_error(fp, "model3d transform", coll_obj_file);
+				}
+				add_transform_for_cur_model(model_xf);
+			}
+			break;
 
 		case 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
 			if (fscanf(fp, "%i", &ivals[0]) != 1) return read_error(fp, "platform", coll_obj_file);

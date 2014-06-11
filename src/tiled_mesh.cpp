@@ -2236,8 +2236,11 @@ tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get
 float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
 void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
 
+tile_t::offset_t model3d_offset;
+
 void draw_tiled_terrain(bool reflection_pass) {
 
+	render_models(0, model3d_offset.get_xlate()); // not sure where this goes
 	//RESET_TIME;
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);
