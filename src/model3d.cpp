@@ -927,8 +927,9 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only) const 
 		get_stats(stats);
 		polygons.reserve((quads_only ? stats.quads : (stats.tris + 1.5*stats.quads)));
 	}
+	// transforms?
 	colorRGBA unbound_color(WHITE);
-	if (unbound_tid >= 0) unbound_color.modulate_with(texture_color(unbound_tid));
+	if (unbound_tid >= 0) {unbound_color.modulate_with(texture_color(unbound_tid));}
 	unbound_geom.get_polygons(polygons, unbound_color, quads_only);
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
@@ -990,7 +991,7 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 }
 
 
-void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const {
+void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const { // Note: ignores transforms
 
 	assert(spacing > 0.0);
 
@@ -1114,9 +1115,7 @@ void model3d::mark_mat_as_used(int mat_id) {
 
 void model3d::optimize() {
 
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->optimize();
-	}
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->optimize();}
 	unbound_geom.optimize();
 }
 
@@ -1214,6 +1213,12 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 }
 
 
+void apply_inv_xform_to_pdu(vector3d const &tv, float scale, pos_dir_up &pdu) {
+	pdu.scale(1.0/scale);
+	pdu.translate(-tv);
+}
+
+
 struct camera_pdu_transform_wrapper {
 
 	pos_dir_up prev_pdu, prev_orig_pdu;
@@ -1221,11 +1226,11 @@ struct camera_pdu_transform_wrapper {
 
 	camera_pdu_transform_wrapper(vector3d const &tv, float scale=1.0) : active(tv != zero_vector || scale != 1.0) {
 		if (!active) return;
+		assert(scale != 0.0);
 		prev_pdu = camera_pdu;
 		prev_orig_pdu = orig_camera_pdu;
-		// FIXME: handle scale? will be incorrect for scale > 1.0 and inefficient for scale < 1.0
-		camera_pdu.pos -= tv;
-		orig_camera_pdu.pos -= tv;
+		apply_inv_xform_to_pdu(tv, scale, camera_pdu);
+		apply_inv_xform_to_pdu(tv, scale, orig_camera_pdu);
 		fgPushMatrix();
 		translate_to(tv);
 		uniform_scale(scale);
@@ -1277,11 +1282,23 @@ void model3d::build_cobj_tree(bool verbose) {
 bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
 
 	if (transforms.empty()) {return coll_tree.check_coll_line(p1, p2, cpos, cnorm, color, exact);}
+	bool coll(0);
+	point cur(p2);
 
+	// Note: this case unused/untested
 	for (vector<geom_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		// FIXME: WRITE
+		point p1x(p1), p2x(cur);
+		xf->inv_xform_pos(p1x);
+		xf->inv_xform_pos(p2x);
+
+		if (coll_tree.check_coll_line(p1x, p2x, cpos, cnorm, color, exact)) { // Note: only modifies cnorm and color if a collision is found
+			xf->xform_pos(cpos);
+			xf->xform_pos_rm(cnorm);
+			coll = 1;
+			cur  = cpos; // closer intersection point - shorten the segment
+		}
 	}
-	return 0;
+	return coll;
 }
 
 

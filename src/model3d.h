@@ -17,7 +17,7 @@ unsigned const MAX_VMAP_SIZE     = (1 << 18); // 256K
 float const POLY_COPLANAR_THRESH = 0.98;
 
 
-struct geom_xform_t {
+struct geom_xform_t { // should be packed, can read/write as POD
 	vector3d tv;
 	float scale;
 	bool mirror[3], swap_dim[3][3];
@@ -29,24 +29,37 @@ struct geom_xform_t {
 		}
 	}
 	void xform_pos_rm(point &pos) const {
-		UNROLL_3X(if (mirror[i_]) pos[i_] = -pos[i_];)
+		UNROLL_3X(if (mirror[i_]) {pos[i_] = -pos[i_];})
 		
 		for (unsigned i = 0; i < 3; ++i) {
-			UNROLL_3X(if (swap_dim[i][i_]) swap(pos[i], pos[i_]);)
+			UNROLL_3X(if (swap_dim[i][i_]) {swap(pos[i], pos[i_]);})
 		}
+	}
+	void inv_xform_pos_rm(point &pos) const { // Note: unused/untested
+		for (unsigned i = 0; i < 3; ++i) {
+			UNROLL_3X(if (swap_dim[2-i][2-i_]) {swap(pos[2-i], pos[2-i_]);})
+		}
+		UNROLL_3X(if (mirror[2-i_]) {pos[2-i_] = -pos[2-i_];})
 	}
 	void xform_pos_rms(point &pos) const {
 		xform_pos_rm(pos);
 		pos *= scale;
 	}
+	void inv_xform_pos_rms(point &pos) const {
+		assert(scale != 0.0);
+		pos /= scale;
+		inv_xform_pos_rm(pos);
+	}
 	void xform_pos(point &pos) const {
 		xform_pos_rms(pos);
 		pos += tv;
 	}
+	void inv_xform_pos(point &pos) const {
+		pos -= tv;
+		inv_xform_pos_rms(pos);
+	}
 	void xform_vect(vector<point> &v) const {
-		for (vector<point>::iterator i = v.begin(); i != v.end(); ++i) {
-			xform_pos(*i);
-		}
+		for (vector<point>::iterator i = v.begin(); i != v.end(); ++i) {xform_pos(*i);}
 	}
 	bool operator==(geom_xform_t const &x) const {
 		if (tv != x.tv || scale != x.scale) return 0;
