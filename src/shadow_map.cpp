@@ -116,14 +116,26 @@ xform_matrix get_texture_matrix(xform_matrix const &camera_mv_matrix) {
 }
 
 
-bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light) const {
+void smap_data_t::free_gl_state() {
+	free_texture(tid);
+	free_fbo(fbo_id);
+}
+
+bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm) const {
 
 	if (!shadow_map_enabled() || !is_light_enabled(light)) return 0;
 	point lpos; // unused
 	bool const light_valid(light_valid(0xFF, light, lpos));
 	s.add_uniform_int  (append_ix(string("sm_tex"),   light, 0), tu_id);
 	s.add_uniform_float(append_ix(string("sm_scale"), light, 0), (light_valid ? 1.0 : 0.0));
-	s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), texture_matrix.get_ptr(), 0);
+
+	if (mvm) {
+		xform_matrix const tm(texture_matrix * (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM()));
+		s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), tm.get_ptr(), 0);
+	}
+	else {
+		s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), texture_matrix.get_ptr(), 0);
+	}
 	set_active_texture(tu_id);
 
 	if (light_valid) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
@@ -215,6 +227,7 @@ bool is_only_camera_shadow() {
 }
 
 bool no_sparse_smap_update() {
+	if (world_mode != WMODE_GROUND) return 0;
 	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0);
 	return (leaf_wind || !coll_objects.drawn_ids.empty() || !is_only_camera_shadow());
 }

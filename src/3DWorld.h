@@ -387,8 +387,10 @@ struct cube_t { // size = 24
 	}
 	cube_t operator+ (vector3d const &p) const {cube_t c(*this); c += p; return c;}
 	cube_t operator- (vector3d const &p) const {cube_t c(*this); c -= p; return c;}
+	cube_t operator* (float scale      ) const {cube_t c(*this); c *= scale; return c;}
 	void   operator+=(vector3d const &p) {translate( p);}
 	void   operator-=(vector3d const &p) {translate(-p);}
+	void   operator*=(float scale      ) {UNROLL_3X(d[i_][0] *= scale; d[i_][1] *= scale;)}
 
 	void translate(point const &p) {
 		UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)

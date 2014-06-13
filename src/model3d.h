@@ -8,6 +8,7 @@
 #include "3DWorld.h"
 #include "collision_detect.h" // for polygon_t
 #include "cobj_bsp_tree.h" // for cobj_tree_tquads_t
+#include "shadow_map.h" // for smap_data_t
 
 using namespace std;
 
@@ -58,6 +59,7 @@ struct geom_xform_t { // should be packed, can read/write as POD
 		pos -= tv;
 		inv_xform_pos_rms(pos);
 	}
+	cube_t get_xformed_cube_ts(cube_t const &cube) const {return cube*scale + tv;}
 	void xform_vect(vector<point> &v) const {
 		for (vector<point>::iterator i = v.begin(); i != v.end(); ++i) {xform_pos(*i);}
 	}
@@ -314,6 +316,16 @@ class model3d {
 	// transforms
 	vector<geom_xform_t> transforms;
 
+	// shadows
+	struct model_smap_data_t : public smap_data_t {
+		model3d *model;
+
+		model_smap_data_t(unsigned tu_id_, model3d *model_) : smap_data_t(tu_id_), model(model_) {assert(model);}
+		virtual void render_scene_shadow_pass(point const &lpos);
+		//virtual bool needs_update(point const &lpos);
+	};
+	vector<model_smap_data_t> smap_data;
+
 public:
 	// textures
 	texture_manager &tmgr;
@@ -342,10 +354,12 @@ public:
 	void optimize();
 	void clear();
 	void free_context();
+	void clear_smaps();
 	void load_all_used_tids();
 	void bind_all_used_tids();
-	void render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask);
+	void render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm=nullptr);
 	void render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate);
+	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
 	void build_cobj_tree(bool verbose);

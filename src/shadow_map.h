@@ -18,12 +18,8 @@ struct smap_data_t {
 	smap_data_t(unsigned tu_id_) : tid(0), tu_id(tu_id_), fbo_id(0), last_lpos(all_zeros) {}
 	virtual ~smap_data_t() {} // free_gl_state()?
 	bool is_allocated() const {return (tid > 0);}
-
-	void free_gl_state() {
-		free_texture(tid);
-		free_fbo(fbo_id);
-	}
-	bool set_smap_shader_for_light(shader_t &s, int light) const;
+	void free_gl_state();
+	bool set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm=nullptr) const;
 	void create_shadow_map_for_light(int light, point const &lpos, cube_t const &bounds);
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(point const &lpos);

@@ -18,7 +18,7 @@ unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context;
 extern int display_mode;
-extern float model3d_alpha_thresh;
+extern float model3d_alpha_thresh, cobj_z_bias;
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
 
@@ -329,8 +329,8 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (empty()) return;
 	assert(npts == 3 || npts == 4);
 	finalize(npts);
-	if (bsphere.radius == 0.0) calc_bounding_volumes();
-	if (is_shadow_pass && vbo == 0) return; // don't create the vbo on the shadow pass (voxel terrain problems)
+	if (bsphere.radius == 0.0) {calc_bounding_volumes();}
+	if (is_shadow_pass && vbo == 0 && world_mode == WMODE_GROUND) return; // don't create the vbo on the shadow pass (voxel terrain problems)
 
 	if (no_vfc) {
 		// do nothing
@@ -1128,6 +1128,7 @@ void model3d::clear() {
 	undef_materials.clear();
 	mat_map.clear();
 	coll_tree.clear();
+	smap_data.clear();
 }
 
 
@@ -1138,6 +1139,14 @@ void model3d::free_context() {
 		m->geom_tan.free_vbos();
 	}
 	unbound_geom.free_vbos();
+	clear_smaps();
+}
+
+
+void model3d::clear_smaps() {
+
+	for (auto i = smap_data.begin(); i != smap_data.end(); ++i) {i->free_gl_state();}
+	smap_data.clear();
 }
 
 
@@ -1179,7 +1188,14 @@ void model3d::bind_all_used_tids() {
 }
 
 
-void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask) {
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm) {
+
+	if (!is_shadow_pass) {
+		for (unsigned i = 0; i < smap_data.size(); ++i) {
+			smap_data[i].set_smap_shader_for_light(shader, i, mvm);
+		}
+	}
+	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
 
 	// render geom that was not bound to a material
 	if ((bmap_pass_mask & 1) && unbound_color.alpha > 0.0) { // enabled, not in bump map only pass
@@ -1210,6 +1226,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 			materials[to_draw[i].second].render(shader, tmgr, unbound_tid, is_shadow_pass, enable_alpha_mask);
 		}
 	}
+	if (group_back_face_cull) {glDisable(GL_CULL_FACE);}
 }
 
 
@@ -1247,25 +1264,64 @@ struct camera_pdu_transform_wrapper {
 // non-const due to vbo caching, normal computation, etc.
 void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate) {
 
+	if (transforms.empty() && !camera_pdu.cube_visible(bcube + xlate)) return;
+	xform_matrix const mvm(fgGetMVM());
 	camera_pdu_transform_wrapper cptw(xlate);
-	if (transforms.empty() && !camera_pdu.cube_visible(bcube)) return;
 
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
-	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
-	if (transforms.empty()) {render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask);} // no transforms case
+	if (transforms.empty()) {render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);} // no transforms case
 	
 	for (vector<geom_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		if (!camera_pdu.cube_visible(bcube + xf->tv)) continue; // VFC
+		if (!camera_pdu.cube_visible(xf->get_xformed_cube_ts(bcube))) continue; // Note: xlate has already been applied to camera_pdu
 		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 		// Note: currently, only translate is supported (and somewhat scale)
 		camera_pdu_transform_wrapper cptw2(xf->tv, xf->scale);
-		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask);
+		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
 		// cptw2 dtor called here
 	}
-	if (group_back_face_cull) {glDisable(GL_CULL_FACE);}
 	// cptw dtor called here
+}
+
+
+void setup_smap_shader(shader_t &s, bool sam_pass) {
+
+	if (sam_pass == 1) {
+		s.begin_simple_textured_shader(MIN_SHADOW_ALPHA);
+		select_texture(WHITE_TEX);
+	}
+	else {
+		s.begin_color_only_shader(); // really don't even need colors
+	}
+}
+
+
+void model3d::model_smap_data_t::render_scene_shadow_pass(point const &lpos) {
+
+	model->bind_all_used_tids();
+
+	for (unsigned sam_pass = 0; sam_pass < 2U; ++sam_pass) {
+		shader_t s;
+		setup_smap_shader(s, (sam_pass != 0));
+		model->render_materials(s, 1, (sam_pass == 1), 3); // no transforms
+		s.end_shader();
+	}
+}
+
+
+void model3d::setup_shadow_maps() {
+
+	if (!shadow_map_enabled()) return; // disabled
+
+	if (smap_data.empty()) { // allocate new shadow maps
+		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_data.push_back(model_smap_data_t(6+i, this));} // uses tu_id 6 and 7
+	}
+	for (unsigned i = 0; i < smap_data.size(); ++i) {
+		point lpos;
+		if (!light_valid_and_enabled(i, lpos)) continue;
+		smap_data[i].create_shadow_map_for_light(i, lpos, get_bcube());
+	}
 }
 
 
@@ -1391,9 +1447,7 @@ bool model3d::read_from_disk(string const &fn) { // Note: transforms not read
 
 void model3ds::clear() {
 
-	for (iterator m = begin(); m != end(); ++m) {
-		m->clear();
-	}
+	for (iterator m = begin(); m != end(); ++m) {m->clear();}
 	deque<model3d>::clear();
 	tmgr.clear();
 }
@@ -1401,9 +1455,7 @@ void model3ds::clear() {
 
 void model3ds::free_context() {
 
-	for (iterator m = begin(); m != end(); ++m) {
-		m->free_context();
-	}
+	for (iterator m = begin(); m != end(); ++m) {m->free_context();}
 	tmgr.free_tids();
 }
 
@@ -1414,29 +1466,26 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
 	set_fill_mode();
 	bool needs_alpha_test(0), needs_bump_maps(0);
+	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
 
-	for (const_iterator m = begin(); m != end(); ++m) {
+	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
-		if (shader_effects) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
+		if (shader_effects  ) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
+		if (use_custom_smaps) {m->setup_shadow_maps();} else if (!is_shadow_pass) {m->clear_smaps();}
 	}
 	for (unsigned bmap_pass = 0; bmap_pass < (needs_bump_maps ? 2U : 1U); ++bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
 			shader_t s;
 
 			if (is_shadow_pass) {
-				if (sam_pass == 1) {
-					s.begin_simple_textured_shader(MIN_SHADOW_ALPHA);
-					select_texture(WHITE_TEX);
-				}
-				else {
-					s.begin_color_only_shader(); // really don't even need colors
-				}
+				setup_smap_shader(s, (sam_pass != 0));
 			}
 			else if (shader_effects) {
 				int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
-				bool const v(world_mode == WMODE_GROUND), use_mvm(has_any_transforms());
+				bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
 				float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
-				setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, v, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting);
+				setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting);
+				if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);}
 			}
 			else {
 				s.begin_simple_textured_shader(0.0, 1); // with lighting

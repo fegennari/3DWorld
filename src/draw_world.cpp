@@ -213,7 +213,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	set_indir_lighting_block(s, use_smoke, use_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
-	if (use_shadow_map) set_smap_shader_for_all_lights(s, cobj_z_bias);
+	if (use_shadow_map && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
 	set_active_texture(0);
 	s.set_specular(0.0, 1.0);
 }

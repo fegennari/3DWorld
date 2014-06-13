@@ -719,7 +719,6 @@ void tile_t::setup_shadow_maps() {
 	if (!shadow_map_enabled()) return; // disabled
 
 	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH && smap_data.empty()) { // allocate new shadow maps
-		tile_xy_pair const tp(get_tile_xy_pair());
 		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_data.push_back(tile_smap_data_t(13+i, this));} // uses tu_id 13 and 14
 	}
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
