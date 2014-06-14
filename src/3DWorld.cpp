@@ -553,7 +553,6 @@ void resize(int x, int y) {
     window_height = y;
 	set_perspective(PERSP_ANGLE, 1.0);
 	set_gl_params();
-	calc_viewing_cone();
 	post_window_redisplay();
 	display_window_resized();
 }
@@ -820,9 +819,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		else if (world_mode == WMODE_UNIVERSE) {
 			onscreen_display = !onscreen_display;
 		}
-		else {
-			do_zoom = !do_zoom;
-			calc_viewing_cone();
+		else if (world_mode == WMODE_GROUND) {
+			do_zoom = !do_zoom; // Note: tiled mesh reflections are incompatible with zoom
 		}
 		break;
 

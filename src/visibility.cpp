@@ -14,7 +14,6 @@ int const FAST_LIGHT_VIS    = 1;
 float const NORM_VIS_EXTEND = 0.02;
 
 
-float tan_term(1.0), sin_term(1.0);
 point ocean;
 pos_dir_up camera_pdu;
 
@@ -59,44 +58,24 @@ bool coll_pt_vis_test(point pos, point pos2, float dist, int &index, int cobj, i
 }
 
 
-float calc_half_angle(int is_zoomed) {
-
-	return 0.5*TO_RADIANS*PERSP_ANGLE*(is_zoomed ? 1.0/ZOOM_FACTOR : 1.0);
-}
-
-
-// this is not completely correct, approximating perspective view volume as cone
-void calc_view_test_terms(float &tterm, float &sterm, bool is_zoomed) {
-
-	float const angle(calc_half_angle(is_zoomed));
-	float const A((float)window_width/(float)window_height); // aspect ratio
-	tterm = tanf(angle)*sqrt(1.0 + A*A);
-	sterm = sinf(angle);
-}
-
-
-void calc_viewing_cone() {
-
-	calc_view_test_terms(tan_term, sin_term, (do_zoom != 0));
-}
-
-
 void set_camera_pdu() {
-
-	camera_pdu = pos_dir_up(get_camera_pos(), cview_dir, up_vector, tan_term, sin_term, NEAR_CLIP, FAR_CLIP);
+	camera_pdu = pos_dir_up(get_camera_pos(), cview_dir, up_vector, 0.0, NEAR_CLIP, FAR_CLIP);
 }
-
 
 // Note: near and far clip aren't flat planes like a true frustum - they're curved like a spherical section
 // this is close enough to a frustum in practice, and makes sphere intersection much easier and faster
-pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float t, float s, float n, float f, float a)
-		: pos(p), dir(d), upv(u), tterm(t), sterm(s), tterm_sq2_inv(2.0/(tterm*tterm)),
-		near_(n), far_(f), A((a == 0.0) ? double(window_width)/double(window_height) : a), valid(1)
+pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float angle, float n, float f, float a, bool no_zoom)
+		: pos(p), dir(d), upv(u), near_(n), far_(f), A(a), valid(1)
 {
 	assert(near_ >= 0.0 && far_ > 0.0 && far_ > near_);
+	if (A == 0.0) {A = double(window_width)/double(window_height);} // not yet cacluated, use default window
+	if (angle == 0.0) {angle = 0.5*TO_RADIANS*PERSP_ANGLE*((do_zoom && !no_zoom) ? 1.0/ZOOM_FACTOR : 1.0);} // not yet cacluated
+	tterm   = tanf(angle);
+	sterm   = sinf(angle);
+	x_sterm = (atanf(A*tterm)/angle)*sterm; // ratio of X-angle to Y-angle
+	tterm_sq2_inv = 2.0/(tterm*tterm*(1.0 + A*A));
 	orthogonalize_up_dir();
 }
-
 
 void pos_dir_up::orthogonalize_up_dir() {
 
@@ -105,18 +84,16 @@ void pos_dir_up::orthogonalize_up_dir() {
 	cross_product(dir, upv_, cp);
 }
 
-
 bool pos_dir_up::point_visible_test(point const &pos_) const { // simplified/optimized version of sphere_visible_test()
 
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	vector3d const pv(pos_, pos);
 	if (dot_product(dir, pv) < 0.0) return 0; // point behind - optimization
 	float const dist(pv.mag());
-	if (fabs(dot_product(upv_, pv)) >   dist*sterm) return 0; // y-direction (up)
-	if (fabs(dot_product(cp,   pv)) > A*dist*sterm) return 0; // x-direction
+	if (fabs(dot_product(upv_, pv)) > dist*  sterm) return 0; // y-direction (up)
+	if (fabs(dot_product(cp,   pv)) > dist*x_sterm) return 0; // x-direction
 	return (dist > near_ && dist < far_); // Note: approximate/conservative but fast
 }
-
 
 // view frustum check: dir and upv must be normalized - checks view frustum
 bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
@@ -125,11 +102,10 @@ bool pos_dir_up::sphere_visible_test(point const &pos_, float radius) const {
 	vector3d const pv(pos_, pos);
 	if (dot_product(dir, pv) < 0.0) return (radius > 0.0 && pv.mag_sq() < max(1.0, A*A)*radius*radius*tterm_sq2_inv); // sphere behind - optimization
 	float const dist(pv.mag());
-	if (fabs(dot_product(upv_, pv)) > (  dist*sterm + radius)) return 0; // y-direction (up)
-	if (fabs(dot_product(cp,   pv)) > (A*dist*sterm + radius)) return 0; // x-direction
+	if (fabs(dot_product(upv_, pv)) > (dist*  sterm + radius)) return 0; // y-direction (up)
+	if (fabs(dot_product(cp,   pv)) > (dist*x_sterm + radius)) return 0; // x-direction
 	return ((dist + radius) > near_ && (dist - radius) < far_); // Note: approximate/conservative but fast
 }
-
 
 template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) const {
 
@@ -145,9 +121,9 @@ template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) con
 	}
 	if (!fpass) return 0;
 	vector3d const v[2] = {upv_,  cp};
-	float    const a[2] = {sterm, A*sterm};
+	float    const a[2] = {sterm, x_sterm};
 
-	for (unsigned xy = 0; xy < 2; ++xy) { // x, y
+	for (unsigned xy = 0; xy < 2; ++xy) { // y, x
 		for (unsigned d = 0; d < 2; ++d) { // lo, hi
 			float const w(d ? -1.0 : 1.0);
 			bool pass(0);
@@ -163,7 +139,6 @@ template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) con
 	return 1;
 }
 
-
 bool pos_dir_up::cube_visible(cube_t const &cube) const {
 
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
@@ -172,7 +147,6 @@ bool pos_dir_up::cube_visible(cube_t const &cube) const {
 	return pt_set_visible<8>(cube_pts);
 	// Note: if the above call returns true, we could perform a further check for the frustum (all points) to the outside of each plane of the cube
 }
-
 
 // approximate
 bool pos_dir_up::projected_cube_visible(cube_t const &cube, point const &proj_pt) const {
@@ -190,7 +164,6 @@ bool pos_dir_up::projected_cube_visible(cube_t const &cube, point const &proj_pt
 	}
 	return pt_set_visible<16>(cube_pts);
 }
-
 
 bool pos_dir_up::sphere_and_cube_visible_test(point const &pos_, float radius, cube_t const &cube) const {
 

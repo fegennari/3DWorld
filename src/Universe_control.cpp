@@ -29,7 +29,7 @@ extern bool univ_planet_lod; // smaller near_clip if true?
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern unsigned NUM_THREADS;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
-extern float water_h_off_rel, tan_term, sin_term, init_temperature, camera_shake;
+extern float water_h_off_rel, init_temperature, camera_shake;
 extern char **water_enabled;
 extern unsigned team_credits[];
 extern string user_text;
@@ -64,7 +64,7 @@ void init_universe_display() {
 void set_univ_pdu() {
 
 	u_ship const &player(player_ship());
-	player_pdu = pos_dir_up(player.get_pos(), player.get_dir(), player.get_up(), tan_term, sin_term, 0.0, U_VIEW_DIST);
+	player_pdu = pos_dir_up(player.get_pos(), player.get_dir(), player.get_up(), 0.0, 0.0, U_VIEW_DIST);
 }
 
 

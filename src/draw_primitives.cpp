@@ -891,7 +891,7 @@ void pos_dir_up::draw_frustum() const {
 
 	for (unsigned d = 0; d < 2; ++d) {
 		point const center(pos + dir*nf_val[d]); // plane center
-		float const dy(nf_val[d]*tterm/sqrt(1.0 + A*A)), dx(A*dy); // d*sin(theta)
+		float const dy(nf_val[d]*tterm), dx(A*dy); // d*sin(theta)
 		pts[d][0] = center - cp*dx - upv_*dy;
 		pts[d][1] = center + cp*dx - upv_*dy;
 		pts[d][2] = center + cp*dx + upv_*dy;

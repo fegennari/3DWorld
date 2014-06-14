@@ -144,10 +144,7 @@ bool proj_coll_test(point const &pos, point const &target_pos, vector3d const &o
 
 
 pos_dir_up get_smiley_pdu(point const &pos, vector3d const &orient) {
-	
-	float tterm, sterm;
-	calc_view_test_terms(tterm, sterm, 0);
-	return pos_dir_up(pos, orient, plus_z, tterm, sterm, NEAR_CLIP, FAR_CLIP);
+	return pos_dir_up(pos, orient, plus_z, 0.0, NEAR_CLIP, FAR_CLIP, 0.0, 1); // no_zoom=1
 }
 
 

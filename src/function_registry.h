@@ -36,8 +36,6 @@ void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, uns
 void calc_visibility(unsigned light_sources);
 bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cobj, int skip_dynamic, int *cobj_ix=NULL);
 bool coll_pt_vis_test(point pos, point pos2, float dist, int &index, int cobj, int skip_dynamic, int test_alpha);
-void calc_view_test_terms(float &tterm, float &sterm, bool is_zoomed);
-void calc_viewing_cone();
 void set_camera_pdu();
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius);
 bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level, bool no_frustum_test=0);

@@ -67,7 +67,7 @@ universe_t universe; // the top level universe
 extern bool univ_planet_lod, enable_multisample;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
 extern unsigned enabled_lights;
-extern float tan_term, sin_term, fticks, tfticks;
+extern float fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
 extern rand_gen_t global_rand_gen;
@@ -2358,7 +2358,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 		rotate_vector(dir);
 		rotate_vector(upv);
 		rotate_vector(viewed_from);
-		pos_dir_up const pdu(viewed_from, dir, upv, tan_term, sin_term, NEAR_CLIP_SCALED, FAR_CLIP);
+		pos_dir_up const pdu(viewed_from, dir, upv, 0.0, NEAR_CLIP_SCALED, FAR_CLIP);
 			
 		if (display_mode & 0x20) {
 			surface->draw_view_clipped_sphere(pdu, radius0, hmap_scale, this);
