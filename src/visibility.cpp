@@ -143,7 +143,7 @@ bool pos_dir_up::cube_visible(cube_t const &cube) const {
 
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	point cube_pts[8];
-	get_cube_points(cube.d, cube_pts);
+	cube.get_points(cube_pts);
 	return pt_set_visible<8>(cube_pts);
 	// Note: if the above call returns true, we could perform a further check for the frustum (all points) to the outside of each plane of the cube
 }
@@ -153,7 +153,7 @@ bool pos_dir_up::projected_cube_visible(cube_t const &cube, point const &proj_pt
 
 	if (!valid) return 1; // invalid - the only reasonable thing to do is return true for safety
 	point cube_pts[16];
-	get_cube_points(cube.d, cube_pts);
+	cube.get_points(cube_pts);
 	float dmax(0.0);
 	for (unsigned i = 0; i < 8; ++i) dmax = max(dmax, p2p_dist_sq(cube_pts[i], pos));
 	dmax = sqrt(dmax) + far_; // upper bound: (max_dist_to_furstum_origin + far_clip_dist) usually > max_dist_to_frustum_corner
@@ -170,6 +170,15 @@ bool pos_dir_up::sphere_and_cube_visible_test(point const &pos_, float radius, c
 	if (!sphere_visible_test(pos_,  radius)) return 0; // none of the sphere is visible
 	if ( sphere_visible_test(pos_, -radius)) return 1; // all  of the sphere is visible
 	return cube_visible(cube);
+}
+
+void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused
+
+	if (angle == 0.0) return;
+	rotate_vector3d(axis, TO_RADIANS*angle, dir); // renormalize?
+	rotate_vector3d(axis, TO_RADIANS*angle, upv);
+	orthogonalize_up_dir();
+	// FIXME: what about pos?
 }
 
 

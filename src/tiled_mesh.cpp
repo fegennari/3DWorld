@@ -1703,7 +1703,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 }
 
 
-void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { // copied from get_cube_points
+void tile_draw_t::occluder_pts_t::calc_cube_top_points(cube_t const &bcube) { // copied from cube_t::get_points()
 
 	unsigned i[3] = {0,0,1};
 

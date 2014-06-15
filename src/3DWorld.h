@@ -372,6 +372,7 @@ struct cube_t { // size = 24
 	cube_t(point const &p1, point const &p2) {
 		UNROLL_3X(d[i_][0] = min(p1[i_], p2[i_]); d[i_][1] = max(p1[i_], p2[i_]);)
 	}
+	cube_t(point const *const pts, unsigned npts) {set_from_points(pts, npts);}
 	void copy_from(cube_t const &c) {
 		UNROLL_3X(d[i_][0] = c.d[i_][0];)
 		UNROLL_3X(d[i_][1] = c.d[i_][1];)
@@ -486,6 +487,7 @@ struct cube_t { // size = 24
 	point gen_rand_pt_in_cube() const;
 	int closest_face(point const &pos) const;
 	bool cube_merge(cube_t const &cube);
+	void get_points(point pts[8]) const;
 };
 
 cube_t const all_zeros_cube(0,0,0,0,0,0);
@@ -555,6 +557,7 @@ struct pos_dir_up { // defines a view frustum
 	void draw_frustum() const;
 	void translate(vector3d const &tv) {pos += tv;}
 	void scale(float s) {pos *= s; near_ *= s; far_ *= s;}
+	void rotate(vector3d const &axis, float angle);
 };
 
 

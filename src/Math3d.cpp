@@ -853,10 +853,9 @@ void cylinder_3dw::calc_bcube(cube_t &bcube) const {
 // Note: assumes a planar convex polygon, and assumes the cylinder is closed
 bool approx_poly_cylin_int(point const *const pts, unsigned npts, cylinder_3dw const &cylin) {
 
-	cube_t pbcube, cbcube;
-	pbcube.set_from_points(pts, npts);
+	cube_t cbcube;
 	cylin.calc_bcube(cbcube);
-	if (!pbcube.intersects(cbcube)) return 0; // optimization
+	if (!cube_t(pts, npts).intersects(cbcube)) return 0; // optimization
 	float t;
 	vector3d const poly_norm(get_poly_norm(pts)); // could factor out and pass in
 	if (line_poly_intersect(cylin.p1, cylin.p2, pts, npts, poly_norm, t)) return 1;

@@ -1230,10 +1230,20 @@ bool geom_xform_t::operator==(geom_xform_t const &x) const {
 	return 1;
 }
 
-void geom_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM ignored
+void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM ignored
 	assert(scale != 0.0);
 	pdu.scale(1.0/fabs(scale)); // FIXME: what to do about negative scales?
+	//pdu.rotate(axis, -angle); // incorrect - we want to rotate about the model's origin, not the frustum/camera origin
+	if (angle != 0.0) {pdu.valid = 0;} // since we can't transform the pdu correctly, we give up and disable using it for VFC
 	pdu.translate(-tv);
+}
+
+cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const {
+	if (angle == 0.0) {return cube*scale + tv;} // optimization
+	point pts[8];
+	(cube*scale).get_points(pts);
+	for (unsigned i = 0; i < 8; ++i) {rotate_vector3d(axis, TO_RADIANS*angle, pts[i]);}
+	return cube_t(pts, 8) + tv;
 }
 
 void model3d_xform_t::apply_gl() const {
@@ -1285,7 +1295,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 		render_materials_def(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
 	}
 	for (vector<model3d_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		if (!camera_pdu.cube_visible(xf->get_xformed_cube_ts(bcube))) continue; // Note: xlate has already been applied to camera_pdu
+		if (!camera_pdu.cube_visible(xf->get_xformed_cube(bcube))) continue; // Note: xlate has already been applied to camera_pdu
 		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 		// Note: currently, only translate is supported (and somewhat scale)
 		camera_pdu_transform_wrapper cptw2(*xf);

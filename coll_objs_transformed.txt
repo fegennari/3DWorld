@@ -3,18 +3,20 @@ l 0.8 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw
 y 4.0
 
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
+# Z tx ty tz [scale [rx ry rz angle]]
+
 t 0 0 1.0  s 1 2  M 0  m 4.0  O ../models/dragon.model3d 4 0 0
-#Z  0.0  0.0  0.0  1.0 # identity transform
+#Z  0.0  0.0  0.0 # identity transform
 #Z  0.0  0.0  -4.6  1.0 # model3d test
 l 0.8 1.0 0.0 0.0 1.0 -1 1
 Z -2.0 -1.0  0.0  1.0
 l 0.8 0.0 1.0 0.0 1.0 -1 1
-Z  2.0  1.0  1.0  1.0
+Z  2.0  1.0  1.0  1.0  0.0 0.0 1.0 90.0
 l 0.8 0.0 0.0 1.0 1.0 -1 1
 Z  0.0  0.0  0.0  0.5
 l 0.8 1.0 1.0 1.0 1.0 -1 1
 Z  100.0  0.0  0.0  1.0 # far away
 
 t 0 0 2.4  s 1 2  M 0  m 0.18  O ../models/sibenik/sibenik.model3d 4 1 0
-#Z  0.0  0.0  0.0  1.0 # identity transform
-Z  0.0  0.0 -4.5  1.0
+#Z  0.0  0.0  0.0 # identity transform
+Z  0.0  0.0 -4.5

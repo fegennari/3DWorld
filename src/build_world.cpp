@@ -845,8 +845,7 @@ void coll_obj::add_to_vector(coll_obj_group &cobjs, int type_) {
 void coll_obj::check_if_cube() {
 
 	if (type != COLL_POLYGON || thickness == 0.0 || npoints != 4) return;
-	cube_t bb;
-	bb.set_from_points(points, 4);
+	cube_t bb(points, 4);
 	unsigned zdim(0), nz(0);
 	float const smax(bb.max_len());
 	float const tolerance(1.0E-6*smax);
@@ -1087,12 +1086,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				break;
 			}
 
-		case 'Z': // add model3d transform: tx ty tz scale
+		case 'Z': // add model3d transform: tx ty tz [scale [rx ry rz angle]]
 			{
 				model3d_xform_t model_xf;
-				if (fscanf(fp, "%f%f%f%f", &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale) != 4) {
-					return read_error(fp, "model3d transform", coll_obj_file);
-				}
+				int const num_args(fscanf(fp, "%f%f%f%f%f%f%f%f", &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
+					&model_xf.axis.x, &model_xf.axis.y, &model_xf.axis.z, &model_xf.angle));
+				if (num_args != 3 && num_args != 4 && num_args != 8) {return read_error(fp, "model3d transform", coll_obj_file);}
+				if (model_xf.scale == 0.0) {return read_error(fp, "model3d transform scale", coll_obj_file);} // what about negative scales?
 				model_xf.color = cobj.cp.color;
 				model_xf.tid   = cobj.cp.tid;
 				add_transform_for_cur_model(model_xf);

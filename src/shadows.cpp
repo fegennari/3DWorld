@@ -424,7 +424,7 @@ int cube_shadow(cube_t const &cube, unsigned light_sources, int is_dynamic, int 
 	int xmin, xmax, ymin, ymax, ret_val(0);
 	unsigned char const SHADOW_TYPE(is_dynamic ? DYNAMIC_SHADOW : OBJECT_SHADOW);
 	point lpos, pts[8];
-	get_cube_points(c.d, pts);
+	c.get_points(pts);
 
 	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
 		if (!light_valid(light_sources, l, lpos)) continue;

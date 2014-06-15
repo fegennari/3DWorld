@@ -150,10 +150,7 @@ void cube_t::set_from_points(point const *const pts, unsigned npts) {
 
 	assert(npts > 0);
 	UNROLL_3X(d[i_][0] = d[i_][1] = pts[0][i_];)
-	
-	for (unsigned i = 1; i < npts; ++i) { // get bounding xy rectangle
-		union_with_pt(pts[i]);
-	}
+	for (unsigned i = 1; i < npts; ++i) {union_with_pt(pts[i]);} // get bounding xy rectangle
 }
 
 
@@ -296,6 +293,20 @@ bool cube_t::cube_merge(cube_t const &cube) { // simplified version of csg_cube:
 		}
 	}
 	return 0;
+}
+
+
+void cube_t::get_points(point pts[8]) const {
+
+	unsigned i[3];
+
+	for (i[0] = 0; i[0] < 2; ++i[0]) {
+		for (i[1] = 0; i[1] < 2; ++i[1]) {
+			for (i[2] = 0; i[2] < 2; ++i[2]) {
+				UNROLL_3X(pts[(((i[0]<<1)+i[1])<<1)+i[2]][i_] = d[i_][i[i_]];)
+			}
+		}
+	}
 }
 
 
@@ -760,20 +771,6 @@ void csg_cube::unset_intersecting_edge_flags(coll_obj &cobj) const {
 
 
 // *** CSG ALGORITHM CODE ***
-
-
-void get_cube_points(const float d[3][2], point pts[8]) {
-
-	unsigned i[3];
-
-	for (i[0] = 0; i[0] < 2; ++i[0]) {
-		for (i[1] = 0; i[1] < 2; ++i[1]) {
-			for (i[2] = 0; i[2] < 2; ++i[2]) {
-				UNROLL_3X(pts[(((i[0]<<1)+i[1])<<1)+i[2]][i_] = d[i_][i[i_]];)
-			}
-		}
-	}
-}
 
 
 void coll_obj_group::remove_invalid_cobjs() {

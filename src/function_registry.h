@@ -623,9 +623,6 @@ bool update_decid_tree_zvals(int x1, int y1, int x2, int y2);
 bool update_small_tree_zvals(int x1, int y1, int x2, int y2);
 void exp_damage_trees(point const &epos, float damage, float bradius, int type);
 
-// function prototypes - csg
-void get_cube_points(const float d[3][2], point pts[8]);
-
 // function prototypes - ship
 upos_point_type const &get_player_pos();
 vector3d const &get_player_dir();

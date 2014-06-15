@@ -19,6 +19,7 @@ float const POLY_COPLANAR_THRESH = 0.98;
 
 
 struct geom_xform_t { // should be packed, can read/write as POD
+
 	vector3d tv;
 	float scale;
 	bool mirror[3], swap_dim[3][3];
@@ -66,19 +67,21 @@ struct geom_xform_t { // should be packed, can read/write as POD
 	void xform_vect(vector<point> &v) const {
 		for (vector<point>::iterator i = v.begin(); i != v.end(); ++i) {xform_pos(*i);}
 	}
-	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
 	bool operator==(geom_xform_t const &x) const;
 	bool operator!=(geom_xform_t const &x) const {return !operator==(x);}
 };
 
 
 struct model3d_xform_t : public geom_xform_t { // should be packed, can read/write as POD
+
 	vector3d axis;
 	float angle;
 	colorRGBA color;
 	int tid;
 
 	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), axis(zero_vector), angle(0.0), color(ALPHA0), tid(-1) {}
+	cube_t get_xformed_cube(cube_t const &cube) const;
+	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
 	void apply_gl() const;
 
 	bool eq_xforms(model3d_xform_t const &x) const {

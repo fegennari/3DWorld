@@ -1088,23 +1088,18 @@ bool ugalaxy::create(ucell const &cell, int index) {
 	gen_name(current);
 	cube_t const cube(-radius*scale, radius*scale);
 	point galaxy_ext(all_zeros), pts[8];
-	get_cube_points(cube.d, pts);
+	cube.get_points(pts);
 
 	for (unsigned p = 0; p < 8; ++p) {
 		rotate_vector3d(axis, -xy_angle, pts[p]);
-
-		for (unsigned j = 0; j < 3; ++j) {
-			galaxy_ext[j] = max(galaxy_ext[j], fabs(pts[p][j]));
-		}
+		for (unsigned j = 0; j < 3; ++j) {galaxy_ext[j] = max(galaxy_ext[j], fabs(pts[p][j]));}
 	}
 	for (unsigned j = 0; j < 3; ++j) {
 		galaxy_ext[j] = (CELL_SIZEo2 - MAX_SYSTEM_EXTENT - min(GALAXY_OVERLAP*radius, galaxy_ext[j]));
 		assert(galaxy_ext[j] >= 0.0);
 	}
 	for (unsigned i = 0; i < MAX_TRIES; ++i) {
-		for (unsigned j = 0; j < 3; ++j) {
-			pos[j] = galaxy_ext[j]*signed_rand_float2();
-		}
+		for (unsigned j = 0; j < 3; ++j) {pos[j] = galaxy_ext[j]*signed_rand_float2();}
 		bool too_close(0);
 
 		for (int j = 0; j < index && !too_close; ++j) {
