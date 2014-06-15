@@ -175,8 +175,9 @@ bool pos_dir_up::sphere_and_cube_visible_test(point const &pos_, float radius, c
 void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused
 
 	if (angle == 0.0) return;
-	rotate_vector3d(axis, TO_RADIANS*angle, dir); // renormalize?
-	rotate_vector3d(axis, TO_RADIANS*angle, upv);
+	vector3d v[2] = {dir, upv};
+	rotate_vector3d_multi(axis, TO_RADIANS*angle, v, 2);
+	dir = v[0]; upv = v[1]; // renormalize?
 	orthogonalize_up_dir();
 	// FIXME: what about pos?
 }

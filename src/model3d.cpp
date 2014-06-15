@@ -1242,7 +1242,7 @@ cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const {
 	if (angle == 0.0) {return cube*scale + tv;} // optimization
 	point pts[8];
 	(cube*scale).get_points(pts);
-	for (unsigned i = 0; i < 8; ++i) {rotate_vector3d(axis, TO_RADIANS*angle, pts[i]);}
+	rotate_vector3d_multi(axis, angle, pts, 8);
 	return cube_t(pts, 8) + tv;
 }
 
