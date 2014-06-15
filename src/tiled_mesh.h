@@ -110,7 +110,7 @@ private:
 	vector<unsigned char> tree_map, weight_data, ao_lighting;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
-	vector<tile_smap_data_t> smap_data; // one per light source (sun, moon)
+	vect_smap_t<tile_smap_data_t> smap_data;
 	small_tree_group pine_trees;
 	scenery_group scenery;
 	tree_cont_t decid_trees;
@@ -190,7 +190,7 @@ public:
 	}
 	void clear();
 	void clear_shadows();
-	void clear_shadow_map();
+	void clear_shadow_map() {smap_data.clear();} // frees GL state
 	void clear_vbo_tid();
 	void invalidate_shadows() {shadows_invalid = 1;}
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
@@ -265,7 +265,7 @@ public:
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
-	void shader_shadow_map_setup(shader_t &s) const;
+	void shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
 	void draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const;
 	void draw_water(shader_t &s, float z) const;
 	bool check_player_collision() const;

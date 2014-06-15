@@ -26,6 +26,24 @@ struct smap_data_t {
 };
 
 
+template<class SD> struct vect_smap_t : public vector<SD> { // one per light source (sun, moon)
+	void set_for_all_lights(shader_t &s, xform_matrix const *const mvm) const {
+		for (unsigned i = 0; i < size(); ++i) {operator[](i).set_smap_shader_for_light(s, i, mvm);}
+	}
+	void clear() {
+		for (iterator i = begin(); i != end(); ++i) {i->free_gl_state();}
+		vector<SD>::clear();
+	}
+	void create_if_needed(cube_t const &bcube) {
+		for (unsigned i = 0; i < size(); ++i) {
+			point lpos;
+			if (!light_valid_and_enabled(i, lpos)) continue;
+			operator[](i).create_shadow_map_for_light(i, lpos, bcube);
+		}
+	}
+};
+
+
 #endif // _SHADOW_MAP_H_
 
 

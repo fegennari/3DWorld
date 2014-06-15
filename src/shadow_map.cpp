@@ -9,6 +9,7 @@
 #include "shadow_map.h"
 
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 
 
@@ -128,14 +129,9 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 	bool const light_valid(light_valid(0xFF, light, lpos));
 	s.add_uniform_int  (append_ix(string("sm_tex"),   light, 0), tu_id);
 	s.add_uniform_float(append_ix(string("sm_scale"), light, 0), (light_valid ? 1.0 : 0.0));
-
-	if (mvm) {
-		xform_matrix const tm(texture_matrix * (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM()));
-		s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), tm.get_ptr(), 0);
-	}
-	else {
-		s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), texture_matrix.get_ptr(), 0);
-	}
+	xform_matrix tm(texture_matrix);
+	if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // Note: works for translate, but not scale?
+	s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), tm.get_ptr(), 0);
 	set_active_texture(tu_id);
 
 	if (light_valid) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup

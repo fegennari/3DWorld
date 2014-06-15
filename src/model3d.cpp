@@ -1128,7 +1128,7 @@ void model3d::clear() {
 	undef_materials.clear();
 	mat_map.clear();
 	coll_tree.clear();
-	smap_data.clear();
+	smap_data.clear(); // unnecessary
 }
 
 
@@ -1140,13 +1140,6 @@ void model3d::free_context() {
 	}
 	unbound_geom.free_vbos();
 	clear_smaps();
-}
-
-
-void model3d::clear_smaps() {
-
-	for (auto i = smap_data.begin(); i != smap_data.end(); ++i) {i->free_gl_state();}
-	smap_data.clear();
 }
 
 
@@ -1190,11 +1183,7 @@ void model3d::bind_all_used_tids() {
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm) {
 
-	if (!is_shadow_pass) {
-		for (unsigned i = 0; i < smap_data.size(); ++i) {
-			smap_data[i].set_smap_shader_for_light(shader, i, mvm);
-		}
-	}
+	if (!is_shadow_pass) {smap_data.set_for_all_lights(shader, mvm);}
 	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
 
 	// render geom that was not bound to a material
@@ -1317,11 +1306,7 @@ void model3d::setup_shadow_maps() {
 	if (smap_data.empty()) { // allocate new shadow maps
 		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_data.push_back(model_smap_data_t(6+i, this));} // uses tu_id 6 and 7
 	}
-	for (unsigned i = 0; i < smap_data.size(); ++i) {
-		point lpos;
-		if (!light_valid_and_enabled(i, lpos)) continue;
-		smap_data[i].create_shadow_map_for_light(i, lpos, get_bcube());
-	}
+	smap_data.create_if_needed(get_bcube());
 }
 
 

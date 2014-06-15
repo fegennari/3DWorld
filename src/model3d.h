@@ -324,7 +324,7 @@ class model3d {
 		virtual void render_scene_shadow_pass(point const &lpos);
 		//virtual bool needs_update(point const &lpos);
 	};
-	vector<model_smap_data_t> smap_data;
+	vect_smap_t<model_smap_data_t> smap_data;
 
 public:
 	// textures
@@ -354,7 +354,7 @@ public:
 	void optimize();
 	void clear();
 	void free_context();
-	void clear_smaps();
+	void clear_smaps() {smap_data.clear();} // frees GL state
 	void load_all_used_tids();
 	void bind_all_used_tids();
 	void render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm=nullptr);

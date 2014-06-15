@@ -316,12 +316,6 @@ void tile_t::clear_shadows() {
 	invalidate_shadows();
 }
 
-void tile_t::clear_shadow_map() {
-	
-	for (unsigned i = 0; i < smap_data.size(); ++i) {smap_data[i].free_gl_state();}
-	smap_data.clear();
-}
-
 void tile_t::clear_vbo_tid() {
 
 	clear_shadows();
@@ -721,11 +715,7 @@ void tile_t::setup_shadow_maps() {
 	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH && smap_data.empty()) { // allocate new shadow maps
 		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_data.push_back(tile_smap_data_t(13+i, this));} // uses tu_id 13 and 14
 	}
-	for (unsigned i = 0; i < smap_data.size(); ++i) {
-		point lpos;
-		if (!light_valid_and_enabled(i, lpos)) continue;
-		smap_data[i].create_shadow_map_for_light(i, lpos, get_bcube());
-	}
+	smap_data.create_if_needed(get_bcube());
 }
 
 
@@ -1138,13 +1128,11 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 }
 
 
-void tile_t::shader_shadow_map_setup(shader_t &s) const {
+void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {
 
 	// Note: some part of this call is shared across all tiles; however, in the case where more than one smap light is enabled,
 	// the tu_id and enables may alternate between values for each tile, requiring every uniform to be reset per tile anyway
-	for (unsigned i = 0; i < smap_data.size(); ++i) {
-		smap_data[i].set_smap_shader_for_light(s, i);
-	}
+	smap_data.set_for_all_lights(s, mvm);
 }
 
 
