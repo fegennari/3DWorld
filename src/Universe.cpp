@@ -2286,7 +2286,6 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		return 1;
 	}
 	// draw as sphere
-	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0);
 	int ndiv(NDIV_SIZE_SCALE*sqrt(size));
 		
 	if (size < 64.0) {
@@ -2299,6 +2298,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		ndiv = min(ndiv, (int)SPHERE_MAX_ND); // final clamp
 	}
 	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
+	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0 && !(univ_planet_lod && ndiv == SPHERE_MAX_ND && !gas_giant));
 	// Note: the following line *must* be before the local transforms are applied as it captures the current MVM in the call
 	if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);} // always WHITE
 	assert(ndiv > 0);
@@ -2353,7 +2353,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 	// sphere heightmap for rocky planet or moon
 	float const hmap_scale(get_hmap_scale());
 
-	if (univ_planet_lod && ndiv == SPHERE_MAX_ND) {
+	if (univ_planet_lod && ndiv == SPHERE_MAX_ND && !gas_giant) {
 		vector3d dir(get_player_dir()), upv(get_player_up()), viewed_from(get_player_pos() - pos_);
 		rotate_vector(dir);
 		rotate_vector(upv);
