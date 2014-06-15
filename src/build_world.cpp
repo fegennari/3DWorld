@@ -1089,10 +1089,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'Z': // add model3d transform: tx ty tz scale
 			{
-				geom_xform_t model_xf;
+				model3d_xform_t model_xf;
 				if (fscanf(fp, "%f%f%f%f", &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale) != 4) {
 					return read_error(fp, "model3d transform", coll_obj_file);
 				}
+				model_xf.color = cobj.cp.color;
+				model_xf.tid   = cobj.cp.tid;
 				add_transform_for_cur_model(model_xf);
 			}
 			break;

@@ -928,9 +928,9 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only) const 
 		polygons.reserve((quads_only ? stats.quads : (stats.tris + 1.5*stats.quads)));
 	}
 	// transforms?
-	colorRGBA unbound_color(WHITE);
-	if (unbound_tid >= 0) {unbound_color.modulate_with(texture_color(unbound_tid));}
-	unbound_geom.get_polygons(polygons, unbound_color, quads_only);
+	colorRGBA def_color(WHITE);
+	if (unbound_tid >= 0) {def_color.modulate_with(texture_color(unbound_tid));}
+	unbound_geom.get_polygons(polygons, def_color, quads_only);
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
 		colorRGBA const color(m->get_avg_color(tmgr, unbound_tid));
@@ -1181,17 +1181,18 @@ void model3d::bind_all_used_tids() {
 }
 
 
-void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm) {
-
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask,
+	colorRGBA const &cur_ub_color, int cur_ub_tid, xform_matrix const *const mvm)
+{
 	if (!is_shadow_pass) {smap_data.set_for_all_lights(shader, mvm);}
 	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
 
 	// render geom that was not bound to a material
-	if ((bmap_pass_mask & 1) && unbound_color.alpha > 0.0) { // enabled, not in bump map only pass
-		if (!is_shadow_pass) { // the unbound texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
-			assert(unbound_tid >= 0);
-			select_texture(unbound_tid);
-			shader.set_cur_color(unbound_color);
+	if ((bmap_pass_mask & 1) && cur_ub_color.alpha > 0.0) { // enabled, not in bump map only pass
+		if (!is_shadow_pass) { // cur_ub_tid texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
+			assert(cur_ub_tid >= 0);
+			select_texture(cur_ub_tid);
+			shader.set_cur_color(cur_ub_color);
 			shader.add_uniform_float("min_alpha", 0.0);
 			shader.set_specular(0.0, 1.0);
 		}
@@ -1212,7 +1213,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 		sort(to_draw.begin(), to_draw.end());
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			materials[to_draw[i].second].render(shader, tmgr, unbound_tid, is_shadow_pass, enable_alpha_mask);
+			materials[to_draw[i].second].render(shader, tmgr, cur_ub_tid, is_shadow_pass, enable_alpha_mask);
 		}
 	}
 	if (group_back_face_cull) {glDisable(GL_CULL_FACE);}
@@ -1220,7 +1221,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 
 
 bool geom_xform_t::operator==(geom_xform_t const &x) const {
-	if (tv != x.tv || scale != x.scale || axis != x.axis || angle != x.angle) return 0;
+	if (tv != x.tv || scale != x.scale) return 0;
 	UNROLL_3X(if (mirror[i_] != x.mirror[i_]) return 0;)
 
 	for (unsigned i = 0; i < 3; ++i) {
@@ -1235,7 +1236,7 @@ void geom_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM i
 	pdu.translate(-tv);
 }
 
-void geom_xform_t::apply_gl() const {
+void model3d_xform_t::apply_gl() const {
 	assert(scale != 0.0);
 	translate_to(tv);
 	rotate_about(angle, axis);
@@ -1250,7 +1251,7 @@ struct camera_pdu_transform_wrapper {
 	pos_dir_up prev_pdu, prev_orig_pdu;
 	bool active;
 
-	camera_pdu_transform_wrapper(geom_xform_t const &xf) : active(!xf.is_identity()) {
+	camera_pdu_transform_wrapper(model3d_xform_t const &xf) : active(!xf.is_identity()) {
 		if (!active) return;
 		prev_pdu      = camera_pdu;
 		prev_orig_pdu = orig_camera_pdu;
@@ -1273,20 +1274,24 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 
 	if (transforms.empty() && !camera_pdu.cube_visible(bcube + xlate)) return;
 	xform_matrix const mvm(fgGetMVM());
-	geom_xform_t const xf(xlate);
+	model3d_xform_t const xf(xlate);
 	camera_pdu_transform_wrapper cptw(xf);
 
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
-	if (transforms.empty()) {render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);} // no transforms case
-	
-	for (vector<geom_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
+
+	if (transforms.empty()) { // no transforms case
+		render_materials_def(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
+	}
+	for (vector<model3d_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		if (!camera_pdu.cube_visible(xf->get_xformed_cube_ts(bcube))) continue; // Note: xlate has already been applied to camera_pdu
 		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 		// Note: currently, only translate is supported (and somewhat scale)
 		camera_pdu_transform_wrapper cptw2(*xf);
-		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
+		colorRGBA const &color((xf->color != ALPHA0) ? xf->color : unbound_color);
+		int const tid((xf->tid >= 0) ? xf->tid : unbound_tid);
+		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, color, tid, &mvm);
 		// cptw2 dtor called here
 	}
 	// cptw dtor called here
@@ -1312,7 +1317,7 @@ void model3d::model_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	for (unsigned sam_pass = 0; sam_pass < 2U; ++sam_pass) {
 		shader_t s;
 		setup_smap_shader(s, (sam_pass != 0));
-		model->render_materials(s, 1, (sam_pass == 1), 3); // no transforms
+		model->render_materials_def(s, 1, (sam_pass == 1), 3); // no transforms
 		s.end_shader();
 	}
 }
@@ -1346,7 +1351,7 @@ bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vec
 	point cur(p2);
 
 	// Note: this case unused/untested
-	for (vector<geom_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
+	for (vector<model3d_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		point p1x(p1), p2x(cur);
 		xf->inv_xform_pos(p1x);
 		xf->inv_xform_pos(p2x);
@@ -1566,7 +1571,7 @@ void render_models(bool shadow_pass, vector3d const &xlate) {
 	all_models.render(shadow_pass, xlate);
 }
 
-void add_transform_for_cur_model(geom_xform_t const &xf) {
+void add_transform_for_cur_model(model3d_xform_t const &xf) {
 	assert(!all_models.empty());
 	all_models.back().add_transform(xf);
 }

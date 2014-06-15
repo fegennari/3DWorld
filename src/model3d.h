@@ -19,11 +19,11 @@ float const POLY_COPLANAR_THRESH = 0.98;
 
 
 struct geom_xform_t { // should be packed, can read/write as POD
-	vector3d tv, axis;
-	float scale, angle;
+	vector3d tv;
+	float scale;
 	bool mirror[3], swap_dim[3][3];
 
-	geom_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : tv(tv_), axis(zero_vector), scale(scale_), angle(0.0) {
+	geom_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : tv(tv_), scale(scale_) {
 		restore_mirror_and_swap();
 	}
 	void restore_mirror_and_swap() {
@@ -33,7 +33,6 @@ struct geom_xform_t { // should be packed, can read/write as POD
 		}
 	}
 	void xform_pos_rm(point &pos) const {
-		assert(angle == 0.0); // not supported
 		UNROLL_3X(if (mirror[i_]) {pos[i_] = -pos[i_];})
 		
 		for (unsigned i = 0; i < 3; ++i) {
@@ -41,7 +40,6 @@ struct geom_xform_t { // should be packed, can read/write as POD
 		}
 	}
 	void inv_xform_pos_rm(point &pos) const { // Note: unused/untested
-		assert(angle == 0.0); // not supported
 		for (unsigned i = 0; i < 3; ++i) {
 			UNROLL_3X(if (swap_dim[2-i][2-i_]) {swap(pos[2-i], pos[2-i_]);})
 		}
@@ -69,10 +67,28 @@ struct geom_xform_t { // should be packed, can read/write as POD
 		for (vector<point>::iterator i = v.begin(); i != v.end(); ++i) {xform_pos(*i);}
 	}
 	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
-	void apply_gl() const;
 	bool operator==(geom_xform_t const &x) const;
 	bool operator!=(geom_xform_t const &x) const {return !operator==(x);}
-	bool is_identity() const {return operator==(geom_xform_t());}
+};
+
+
+struct model3d_xform_t : public geom_xform_t { // should be packed, can read/write as POD
+	vector3d axis;
+	float angle;
+	colorRGBA color;
+	int tid;
+
+	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), axis(zero_vector), angle(0.0), color(ALPHA0), tid(-1) {}
+	void apply_gl() const;
+
+	bool eq_xforms(model3d_xform_t const &x) const {
+		return (axis == x.axis && angle == x.angle && geom_xform_t::operator==(x));
+	}
+	bool operator==(model3d_xform_t const &x) const {
+		return (eq_xforms(x) && x.color == color && x.tid == tid);
+	}
+	bool operator!=(model3d_xform_t const &x) const {return !operator==(x);}
+	bool is_identity() const {return eq_xforms(model3d_xform_t());}
 };
 
 
@@ -314,7 +330,7 @@ class model3d {
 	cobj_tree_tquads_t coll_tree;
 
 	// transforms
-	vector<geom_xform_t> transforms;
+	vector<model3d_xform_t> transforms;
 
 	// shadows
 	struct model_smap_data_t : public smap_data_t {
@@ -343,7 +359,7 @@ public:
 
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}
-	void add_transform(geom_xform_t const &xf) {transforms.push_back(xf);}
+	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
@@ -357,7 +373,11 @@ public:
 	void clear_smaps() {smap_data.clear();} // frees GL state
 	void load_all_used_tids();
 	void bind_all_used_tids();
-	void render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm=nullptr);
+	void render_materials_def(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm=nullptr) {
+		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, unbound_color, unbound_tid, mvm);
+	}
+	void render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask,
+		colorRGBA const &cur_ub_color, int cur_ub_tid, xform_matrix const *const mvm=nullptr);
 	void render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate);
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
@@ -393,7 +413,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
 void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
-void add_transform_for_cur_model(geom_xform_t const &xf);
+void add_transform_for_cur_model(model3d_xform_t const &xf);
 
 bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file,
