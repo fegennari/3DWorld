@@ -885,7 +885,7 @@ void decal_obj::draw(quad_batch_draw &qbd) const {
 	float const alpha_val(get_alpha());
 	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return; // distance culling
 	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
-	if (rot_angle != 0.0) {rotate_vector3d(orient, rot_angle, upv);}
+	rotate_vector3d(orient, rot_angle, upv);
 	// move slightly away from the object to blend properly with cracks
 	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, colorRGBA(color, alpha_val), radius, radius, tex_range);
 }

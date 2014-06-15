@@ -19,17 +19,21 @@ float const POLY_COPLANAR_THRESH = 0.98;
 
 
 struct geom_xform_t { // should be packed, can read/write as POD
-	vector3d tv;
-	float scale;
+	vector3d tv, axis;
+	float scale, angle;
 	bool mirror[3], swap_dim[3][3];
 
-	geom_xform_t(vector3d const &tv_=zero_vector, float const scale_=1.0) : tv(tv_), scale(scale_) {
+	geom_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : tv(tv_), axis(zero_vector), scale(scale_), angle(0.0) {
+		restore_mirror_and_swap();
+	}
+	void restore_mirror_and_swap() {
 		for (unsigned i = 0; i < 3; ++i) {
 			UNROLL_3X(swap_dim[i][i_] = 0;)
 			mirror[i] = 0;
 		}
 	}
 	void xform_pos_rm(point &pos) const {
+		assert(angle == 0.0); // not supported
 		UNROLL_3X(if (mirror[i_]) {pos[i_] = -pos[i_];})
 		
 		for (unsigned i = 0; i < 3; ++i) {
@@ -37,10 +41,11 @@ struct geom_xform_t { // should be packed, can read/write as POD
 		}
 	}
 	void inv_xform_pos_rm(point &pos) const { // Note: unused/untested
+		assert(angle == 0.0); // not supported
 		for (unsigned i = 0; i < 3; ++i) {
 			UNROLL_3X(if (swap_dim[2-i][2-i_]) {swap(pos[2-i], pos[2-i_]);})
 		}
-		UNROLL_3X(if (mirror[2-i_]) {pos[2-i_] = -pos[2-i_];})
+		UNROLL_3X(if (mirror[i_]) {pos[i_] = -pos[i_];}) // order-independent, inverse has no effect
 	}
 	void xform_pos_rms(point &pos) const {
 		xform_pos_rm(pos);
@@ -59,20 +64,15 @@ struct geom_xform_t { // should be packed, can read/write as POD
 		pos -= tv;
 		inv_xform_pos_rms(pos);
 	}
-	cube_t get_xformed_cube_ts(cube_t const &cube) const {return cube*scale + tv;}
+	cube_t get_xformed_cube_ts(cube_t const &cube) const {return cube*scale + tv;} // Note: RM ignored
 	void xform_vect(vector<point> &v) const {
 		for (vector<point>::iterator i = v.begin(); i != v.end(); ++i) {xform_pos(*i);}
 	}
-	bool operator==(geom_xform_t const &x) const {
-		if (tv != x.tv || scale != x.scale) return 0;
-		UNROLL_3X(if (mirror[i_] != x.mirror[i_]) return 0;)
-
-		for (unsigned i = 0; i < 3; ++i) {
-			UNROLL_3X(if (swap_dim[i][i_] != x.swap_dim[i][i_]) return 0;)
-		}
-		return 1;
-	}
+	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
+	void apply_gl() const;
+	bool operator==(geom_xform_t const &x) const;
 	bool operator!=(geom_xform_t const &x) const {return !operator==(x);}
+	bool is_identity() const {return operator==(geom_xform_t());}
 };
 
 

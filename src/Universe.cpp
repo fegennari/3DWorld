@@ -2161,20 +2161,20 @@ void urev_body::free_uobj() {
 void rotated_obj::apply_gl_rotate() const {
 
 	rotate_from_v2v(rot_axis, plus_z);
-	if (rot_ang != 0.0) rotate_about(rot_ang, plus_z); // in degrees
+	rotate_about(rot_ang, plus_z); // in degrees
 }
 
 
 void rotated_obj::rotate_vector(vector3d &v) const {
 
 	rotate_vector3d_by_vr(rot_axis, plus_z, v);
-	if (rot_ang != 0.0) rotate_vector3d(plus_z, rot_ang/TO_DEG, v); // in radians
+	rotate_vector3d(plus_z, rot_ang/TO_DEG, v); // in radians
 }
 
 
 void rotated_obj::rotate_vector_inv(vector3d &v) const {
 
-	if (rot_ang != 0.0) rotate_vector3d(plus_z, -rot_ang/TO_DEG, v); // in radians
+	rotate_vector3d(plus_z, -rot_ang/TO_DEG, v); // in radians
 	rotate_vector3d_by_vr(plus_z, rot_axis, v);
 }
 

@@ -436,7 +436,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(0.15, 0.15, 0.15, alpha));
 			shader.set_specular(0.9, 50.0);
 			rot_angle = max(0.0f, 10.0f*(fire_val - 0.7f)); // recoil
-			if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0); // could probably use rotate_into_plus_z()
+			fgRotate(rot_angle, -dir.y, dir.x, 0.0); // could probably use rotate_into_plus_z()
 			fgTranslate(tx, ty, 0.0);
 			rotate_to_dir(dir, 0.0, 1.0);
 			draw_cylinder(6.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
@@ -454,7 +454,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(0.05, 0.05, 0.05, alpha));
 			shader.set_specular(0.7, 30.0);
 			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f));
-			if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
+			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 			draw_cylinder_at(point(tx, ty, 0.0), 5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, point(tx, ty, 4.0*radius));
 			shader.set_specular(0.0, 0.0);
@@ -465,7 +465,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(BLACK, alpha));
 			shader.set_specular(0.8, 10.0);
 			rot_angle = max(0.0f, 2.0f*(fire_val - 0.7f));
-			if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
+			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 			fgTranslate(0.0, 0.0, 0.15);
 
 			if (shooter != NO_SOURCE) {
@@ -502,7 +502,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				shader.set_cur_color(colorRGBA(0.04, 0.04, 0.04, alpha));
 				shader.set_specular(0.8, 50.0);
 				rot_angle = max(0.0, 1.0*fire_val);
-				if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
+				fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 				draw_cylinder_at(point(0.6*tx, 0.6*ty, 0.076), 0.064,     radius,     radius, 2*ndiv, 1);
 				draw_cylinder_at(point(0.6*tx, 0.6*ty, 0.000), 0.076, 2.8*radius, 2.0*radius, 2*ndiv, 1);
 				draw_cylinder_at(point(0.6*tx, 0.6*ty, 0.136), 0.012, 1.5*radius, 1.5*radius, 2*ndiv, 1);
@@ -534,7 +534,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				shader.set_cur_color(colorRGBA(0.2, 0.2, 0.2, alpha));
 				shader.set_specular(0.6, 30.0);
 				rot_angle = max(0.0, 8.0*fire_val);
-				if (rot_angle != 0.0) fgRotate(rot_angle, -dir.y, dir.x, 0.0);
+				fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 				fgTranslate(0.6*tx, 0.6*ty, 0.0);
 				fgRotate(90.0, 0.0, 0.0, 1.0);
 				point const translates[2] = {point(rdx, rdy, 0.0), point(-0.9*rdx, -0.9*rdy, 0.0)};

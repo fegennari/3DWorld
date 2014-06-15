@@ -1550,10 +1550,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			xf.swap_dim[ivals[0]][ivals[1]] ^= 1;
 			break;
 		case 'R': // restore mirrors and swaps to default
-			for (unsigned i = 0; i < 3; ++i) {
-				UNROLL_3X(xf.swap_dim[i][i_] = 0;)
-				xf.mirror[i] = 0;
-			}
+			xf.restore_mirror_and_swap();
 			break;
 
 		case 'y': // texture scale

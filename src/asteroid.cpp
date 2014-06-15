@@ -548,7 +548,7 @@ public:
 		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
 		fgPushMatrix();
 		global_translate(pos);
-		if (rot_ang != 0.0 && dscale > 2.0) {rotate_about(rot_ang, rot_axis);}
+		if (dscale > 2.0) {rotate_about(rot_ang, rot_axis);}
 		scale_by(scale);
 
 		// try to draw instanced if enabled, but do a normal draw without resetting the texture if that fails
@@ -644,7 +644,7 @@ public:
 		if (empty()) return 0;
 		float const bradius(bsphere.radius*max(max(size.x, size.y), size.z));
 		point spos(bsphere.pos*size);
-		if (rot_degrees != 0.0) {rotate_vector3d(plus_z, -TO_RADIANS*rot_degrees, spos);} // rotation is backwards from GL
+		rotate_vector3d(plus_z, -TO_RADIANS*rot_degrees, spos); // rotation is backwards from GL
 		rotate_vector3d_by_vr(plus_z, rot_axis, spos);
 		spos += center;
 		if (!univ_sphere_vis(spos, bradius)) return 0; // VFC
@@ -654,7 +654,7 @@ public:
 		fgPushMatrix();
 		global_translate(center);
 		rotate_into_plus_z(rot_axis);
-		if (rot_degrees != 0.0) {rotate_about(rot_degrees, plus_z);}
+		rotate_about(rot_degrees, plus_z);
 		scale_by(size);
 		draw_vbo();
 		fgPopMatrix();

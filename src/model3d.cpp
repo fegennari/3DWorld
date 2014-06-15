@@ -1219,32 +1219,50 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 }
 
 
-void apply_inv_xform_to_pdu(vector3d const &tv, float scale, pos_dir_up &pdu) {
-	pdu.scale(1.0/scale);
+bool geom_xform_t::operator==(geom_xform_t const &x) const {
+	if (tv != x.tv || scale != x.scale || axis != x.axis || angle != x.angle) return 0;
+	UNROLL_3X(if (mirror[i_] != x.mirror[i_]) return 0;)
+
+	for (unsigned i = 0; i < 3; ++i) {
+		UNROLL_3X(if (swap_dim[i][i_] != x.swap_dim[i][i_]) return 0;)
+	}
+	return 1;
+}
+
+void geom_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM ignored
+	assert(scale != 0.0);
+	pdu.scale(1.0/fabs(scale)); // FIXME: what to do about negative scales?
 	pdu.translate(-tv);
 }
 
+void geom_xform_t::apply_gl() const {
+	assert(scale != 0.0);
+	translate_to(tv);
+	rotate_about(angle, axis);
+	for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(assert(!swap_dim[i][i_]);)} // swap not supported
+	vector3d scale_xyz(scale, scale, scale);
+	UNROLL_3X(if (mirror[i_]) {scale_xyz[i_] = -scale_xyz[i_];}) // Note: untested
+	scale_by(scale_xyz);
+}
 
 struct camera_pdu_transform_wrapper {
 
 	pos_dir_up prev_pdu, prev_orig_pdu;
 	bool active;
 
-	camera_pdu_transform_wrapper(vector3d const &tv, float scale=1.0) : active(tv != zero_vector || scale != 1.0) {
+	camera_pdu_transform_wrapper(geom_xform_t const &xf) : active(!xf.is_identity()) {
 		if (!active) return;
-		assert(scale != 0.0);
-		prev_pdu = camera_pdu;
+		prev_pdu      = camera_pdu;
 		prev_orig_pdu = orig_camera_pdu;
-		apply_inv_xform_to_pdu(tv, scale, camera_pdu);
-		apply_inv_xform_to_pdu(tv, scale, orig_camera_pdu);
+		xf.apply_inv_xform_to_pdu(camera_pdu);
+		xf.apply_inv_xform_to_pdu(orig_camera_pdu);
 		fgPushMatrix();
-		translate_to(tv);
-		uniform_scale(scale);
+		xf.apply_gl();
 	}
 	~camera_pdu_transform_wrapper() {
 		if (!active) return;
 		fgPopMatrix();
-		camera_pdu = prev_pdu;
+		camera_pdu      = prev_pdu;
 		orig_camera_pdu = prev_orig_pdu;
 	}
 };
@@ -1255,7 +1273,8 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 
 	if (transforms.empty() && !camera_pdu.cube_visible(bcube + xlate)) return;
 	xform_matrix const mvm(fgGetMVM());
-	camera_pdu_transform_wrapper cptw(xlate);
+	geom_xform_t const xf(xlate);
+	camera_pdu_transform_wrapper cptw(xf);
 
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
@@ -1266,7 +1285,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 		if (!camera_pdu.cube_visible(xf->get_xformed_cube_ts(bcube))) continue; // Note: xlate has already been applied to camera_pdu
 		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 		// Note: currently, only translate is supported (and somewhat scale)
-		camera_pdu_transform_wrapper cptw2(xf->tv, xf->scale);
+		camera_pdu_transform_wrapper cptw2(*xf);
 		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
 		// cptw2 dtor called here
 	}

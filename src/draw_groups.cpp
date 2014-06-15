@@ -1284,7 +1284,7 @@ void draw_star(point const &pos, vector3d const &orient, vector3d const &init_di
 
 	if (rotate) {
 		rotate_by_vector(init_dir, -90.0);
-		if (angle != 0.0) rotate_about(angle, orient);
+		rotate_about(angle, orient);
 	}
 	vert_norm points[3*N_STAR_POINTS];
 
@@ -1305,7 +1305,7 @@ void draw_sawblade(point const &pos, vector3d const &orient, vector3d const &ini
 
 	if (rotate) {
 		rotate_by_vector(init_dir, -90.0);
-		if (angle != 0.0 && orient != zero_vector) {rotate_about(angle, orient);}
+		rotate_about(angle, orient);
 	}
 	select_texture(bloody ? SAW_B_TEX : SAW_TEX);
 	draw_circle_normal(0.0, radius, ndiv, 0);

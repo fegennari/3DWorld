@@ -61,14 +61,17 @@ void assign_cur_matrix(glm::mat4 const &m) {
 }
 
 void fgTranslate(float x, float y, float z) {
+	if (x == 0.0 && y == 0.0 && z == 0.0) return; // zero translate optimization
 	assign_cur_matrix(glm::translate(get_matrix_stack().top(), glm::vec3(x, y, z)));
 }
 void fgScale(float x, float y, float z) {
+	if (x == 1.0 && y == 1.0 && z == 1.0) return; // identity scale optimization
 	assign_cur_matrix(glm::scale(get_matrix_stack().top(), glm::vec3(x, y, z)));
 }
 void fgScale(float s) {fgScale(s, s, s);}
 
 void fgRotateRadians(float angle, float x, float y, float z) {
+	if (angle == 0.0) return; // zero rotate optimization
 	if (x == 0.0 && y == 0.0 && z == 0.0) return; // degenerate rotate, glm doesn't handle this well
 	assign_cur_matrix(glm::rotate(get_matrix_stack().top(), angle, glm::vec3(x, y, z)));
 }

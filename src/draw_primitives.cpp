@@ -1058,8 +1058,8 @@ void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bo
 		}
 		else if (has_xform) {
 			fgPushMatrix();
-			if (pos != all_zeros) translate_to(pos);
-			if (radius != 1.0)    uniform_scale(radius);
+			translate_to(pos);
+			uniform_scale(radius);
 		}
 		draw_sphere_vbo_raw(ndiv, textured, half);
 		if (has_xform && shader_loc < 0) {fgPopMatrix();}
