@@ -243,6 +243,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	for (set<pair<int, int> >::const_iterator i = grass_update.begin(); i != grass_update.end(); ++i) {
 		grass_mesh_height_change(i->first, i->second, (is_large_change && 0));
 	}
+	if (mode == 0) {update_smoke_indir_tex_range(x1, x2, y1, y2, 1);} // update lmap lighting for crater
 	// update waypoints?
 	mesh_invalidated = 1;
 	//PRINT_TIME("Mesh Height Update");

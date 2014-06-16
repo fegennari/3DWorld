@@ -13,5 +13,4 @@ http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 GLM Noise
 Load/display model3d models in tiled terrain mode
   - Object Shadow Maps
-    - Fix Scale
-  - Rotations
+    - Fix Scale and Rotations
