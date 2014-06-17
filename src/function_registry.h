@@ -559,7 +559,7 @@ void add_weapon_lights(int shooter);
 void show_crosshair(colorRGBA const &color, int do_zoom);
 void show_user_stats();
 void show_other_messages();
-void print_text_onscreen(std::string const &text, colorRGBA const &color, float size, int time, int priority=0);
+void print_text_onscreen(std::string const &text, colorRGBA const &color, float size, int time, int priority=0, float yval=0.0);
 void print_weapon(int weapon_id);
 bool check_underwater(int who, float &depth);
 void player_fall(int id);

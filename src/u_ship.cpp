@@ -1882,7 +1882,7 @@ void u_ship::show_weapon_name() const {
 
 	unsigned const weapon_id(get_weapon_id());
 	assert(us_weapons.size() == NUM_UWEAP && weapon_id < us_weapons.size());
-	print_text_onscreen(us_weapons[weapon_id].name.c_str(), WHITE, 1.0, TICKS_PER_SECOND);
+	print_text_onscreen(us_weapons[weapon_id].name.c_str(), WHITE, 1.0, TICKS_PER_SECOND, 10); // higher priority to override enemy ship detected
 }
 
 

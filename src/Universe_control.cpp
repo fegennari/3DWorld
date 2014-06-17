@@ -560,9 +560,12 @@ void draw_universe_sun_flare() {
 
 void send_warning_message(string const &msg) {
 
-	print_text_onscreen(msg.c_str(), RED, 1.0, 3*TICKS_PER_SECOND/2, 1);
 	static int last_warning_frame(0);
-	if ((frame_counter - last_warning_frame) > 5.0*TICKS_PER_SECOND) gen_sound(SOUND_ALERT, get_player_pos2());
+	
+	if ((frame_counter - last_warning_frame) > 5.0*TICKS_PER_SECOND) {
+		print_text_onscreen(msg.c_str(), RED, 1.0, TICKS_PER_SECOND, 1);
+		gen_sound(SOUND_ALERT, get_player_pos2());
+	}
 	last_warning_frame = frame_counter;
 }
 
@@ -629,7 +632,7 @@ void draw_universe_stats() {
 	draw_text(WHITE, 0.0086*aspect_ratio, 0.0117, -0.025, text);
 
 	// draw message text (user typed)
-	if (!user_text.empty()) draw_text(WHITE, -0.010*aspect_ratio, 0.010, -0.02, user_text.c_str()); // x and z are scaled
+	if (!user_text.empty()) {draw_text(WHITE, -0.010*aspect_ratio, 0.010, -0.02, user_text.c_str());} // x and z are scaled
 }
 
 
