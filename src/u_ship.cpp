@@ -1618,8 +1618,32 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 		} // switch (weapon_id)
 		fired = 1;
 	} // for o
-	if (fired) partial_uncloak(0.25); // must de-cloak partially when firing
-	if (used_ammo > 0) dec_ammo(used_ammo);
+	if (fired) {partial_uncloak(0.25);} // must de-cloak partially when firing
+	if (used_ammo > 0) {dec_ammo(used_ammo);}
+
+	// generate weapon fire sounds
+	if (fired && (is_player_ship() || dist_less_than(get_camera_pos(), pos, 0.1))) {
+		float const gain(is_player_ship() ? 1.0 : 0.1);
+		switch (weapon_id) {
+		//case UWEAP_PBEAM: case UWEAP_EBEAM: case UWEAP_REPULSER: case UWEAP_TRACTORB: case UWEAP_FUSCUT: case UWEAP_LITNING: case UWEAP_PARALYZE: case UWEAP_MIND_C: case UWEAP_ESTEAL
+		case UWEAP_DESTROY: break;
+		case UWEAP_LRCPA:   break;
+		case UWEAP_ENERGY:  break;
+		case UWEAP_ATOMIC:  gen_sound(SOUND_GUNSHOT,  pos, gain, 1.0); break;
+		case UWEAP_SHIELDD: gen_sound(SOUND_GUNSHOT,  pos, gain, 1.5); break;
+		case UWEAP_ROCKET:  gen_sound(SOUND_ROCKET,   pos, gain, 1.0); break;
+		case UWEAP_NUKEDEV: gen_sound(SOUND_ROCKET,   pos, gain, 0.75); break;
+		case UWEAP_TORPEDO: gen_sound(SOUND_ITEM,     pos, gain, 1.0); break;
+		case UWEAP_THUNDER: gen_sound(SOUND_ITEM,     pos, gain, 0.75); break;
+		case UWEAP_EMP:     gen_sound(SOUND_POWERUP,  pos, gain, 1.0); break;
+		case UWEAP_SEIGEC:  gen_sound(SOUND_SHOTGUN,  pos, gain, 1.0); break;
+		case UWEAP_RFIRE:   gen_sound(SOUND_FIREBALL, pos, gain, 1.0); break;
+		case UWEAP_INFERNO: gen_sound(SOUND_FIREBALL, pos, gain, 1.5); break;
+
+		case UWEAP_FIGHTER: case UWEAP_B_BAY: case UWEAP_CRU_BAY: case UWEAP_SOD_BAY: case UWEAP_BOARDING: case UWEAP_NM_BAY: // fallthrough
+		case UWEAP_WRAI_BAY: case UWEAP_HUNTER: case UWEAP_DEATHORB: case UWEAP_SAUC_BAY: gen_sound(SOUND_HISS, pos, gain, 1.0); break;
+		}
+	}
 	return 1;
 }
 
