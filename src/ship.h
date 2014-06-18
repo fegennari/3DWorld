@@ -275,7 +275,7 @@ public:
 	void draw_usw_rocket()   const;
 	void draw_usw_nukedev()  const;
 	void draw_usw_torpedo()  const;
-	void draw_spherical_shot(colorRGBA const &color) const;
+	void draw_spherical_shot(colorRGBA const &color, bool glow=1) const;
 	void draw_usw_energy()   const;
 	void draw_usw_atomic()   const;
 	void draw_usw_emp()      const;

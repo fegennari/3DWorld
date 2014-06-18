@@ -266,11 +266,11 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 void uobj_draw_data::draw_engine_trail(point const &offset, float width, float w2s, float len, colorRGBA const &color) const {
 
 	if (!animate2) return;
-	if (len < TOLERANCE || (len <= 1.5 && ndiv <= 3) || time < 4) return; // too small/far away to draw
+	if (len < TOLERANCE || (len <= 1.5 && ndiv <= 3) || time < 3) return; // too small/far away to draw
 	if (vel.mag_sq() < TOLERANCE*TOLERANCE) return; // not moving
 	assert(radius > 0.0 && width > 0.0 && w2s > 0.0 && len > 0.0);
 	point const pos2(pos + offset*radius);
-	vector3d const delta(len*(TRAIL_FOLLOWS_VEL ? vel : dir*vel.mag())); // 1 tick (not times fticks)
+	vector3d const delta(len*((TRAIL_FOLLOWS_VEL || dir == zero_vector) ? vel : dir*vel.mag())); // 1 tick (not times fticks)
 	float const beamwidth(width*radius);
 	if (delta.mag_sq() < beamwidth*beamwidth) return; // rarely occurs, but will assertion fail if too small
 	t_wrays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, (pos2 - delta), color, ALPHA0));
@@ -438,7 +438,7 @@ void uobj_draw_data::draw_usw_torpedo() const {
 }
 
 
-void uobj_draw_data::draw_spherical_shot(colorRGBA const &color) const {
+void uobj_draw_data::draw_spherical_shot(colorRGBA const &color, bool glow) const {
 
 	if (ndiv <= 3) {
 		glow_psd.add_pt(vert_color(make_pt_global(pos), color), 2.0*radius);
@@ -446,6 +446,14 @@ void uobj_draw_data::draw_spherical_shot(colorRGBA const &color) const {
 	}
 	set_emissive_color(color, shader);
 	draw_sphere_vbo_raw(min(ndiv, N_SPHERE_DIV/2), 0);
+	
+	if (glow && ndiv >= 5) { // optimized version of setup_colors_draw_flare(pos, all_zeros, 3.0, 3.0, color);
+		qbd.add_xlated_billboard(pos, all_zeros, get_camera_pos(), up_vector, BLACK, 3.2, 3.2);
+		set_additive_blend_mode();
+		qbd.draw_as_flares_and_clear(BLUR_TEX);
+		end_ship_texture();
+		set_std_blend_mode();
+	}
 	shader->clear_color_e();
 }
 
