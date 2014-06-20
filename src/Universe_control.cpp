@@ -221,7 +221,7 @@ void process_ships(int timer1) {
 	}
 	if (burning) {
 		float const tratio(ps.get_temp()/ps.specs().max_t);
-		add_camera_filter(colorRGBA(1.0, 0.0, 0.0, min(0.5, max(0.1, 0.1*tratio))), 3, -1, CAM_FILT_BURN); // NOISE_TEX
+		if (tratio > 1.2) {add_camera_filter(colorRGBA(1.0, 0.0, 0.0, min(0.5, max(0.1, 0.1*tratio))), 3, -1, CAM_FILT_BURN);} // NOISE_TEX
 	}
 }
 
@@ -722,7 +722,7 @@ bool line_intersect_sun(point const &p1, point const &p2, s_object const &result
 }
 
 
-uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned align) {
+uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned align, float tmax) {
 
 	s_object result;
 	float const g_expand(CELL_SIZE/GALAXY_MIN_SIZE); // Note: can be in more than one galaxy, but should be OK
@@ -743,7 +743,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 
 			for (unsigned j = 0; j < system.planets.size(); ++j) {
 				uplanet const &planet(system.planets[j]);
-				bool const planet_acceptable(planet.colonizable() && planet.get_id() != exclude_id);
+				bool const planet_acceptable(planet.colonizable() && planet.get_id() != exclude_id && planet.temp < tmax);
 				if (!planet_acceptable && planet.moons.empty()) continue;
 				float const pvalue(planet.get_land_value(align, pos, sradius));
 
@@ -755,7 +755,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 					}
 					for (unsigned k = 0; k < planet.moons.size(); ++k) {
 						umoon const &moon(planet.moons[k]);
-						if (!moon.colonizable() || moon.get_id() == exclude_id) continue;
+						if (!moon.colonizable() || moon.get_id() == exclude_id && moon.temp < tmax) continue;
 						float const mvalue(moon.get_land_value(align, pos, sradius));
 
 						if ((max_pvalue == 0.0 || mvalue > max_pvalue) && !line_intersect_sun(pos, moon.pos, result, 2.0)) {
@@ -768,7 +768,7 @@ uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned alig
 			}
 		}
 	}
-	if (!dest) cout << "no dest" << endl; // testing
+	if (!dest) {cout << "no dest" << endl;} // testing
 	return dest;
 }
 
@@ -1061,7 +1061,7 @@ void orbiting_ship::update_state() {
 			else if (!is_exploding() && world.get_owner() == NO_OWNER) {
 				world.set_owner(result, alignment); // have to reset - world must have been regenerated
 			}
-			if (world.temp > get_temp()) set_temp(FOBJ_TEMP_SCALE*world.temp, world.get_pos(), NULL);
+			if (world.temp > get_temp()) {set_temp(FOBJ_TEMP_SCALE*world.temp, world.get_pos(), NULL);}
 		}
 	}
 	if (!has_sobj) velocity = zero_vector; // stopped

@@ -31,7 +31,7 @@ float const OBJ_COLL_ELASTIC   = 0.7;
 float const EXP_COLL_ELASTIC   = 1.0;
 float const VISIBLE_THRESH     = 0.25;
 float const SHIP_REQ_CREW      = 0.5;
-float const TEMP_FACTOR        = 2.0; // damage temperature factor
+float const TEMP_FACTOR        = 2.0; // damage temperature factor (ratio of damage to warning temperature)
 float const FOBJ_TEMP_SCALE    = 5.0;
 float const NDIV_SCALE_U       = 1200.0;
 
@@ -1115,7 +1115,7 @@ public:
 	int get_owner()    const {return owner;}
 	bool is_cur_obj(int uid) const {return (uobj_id != -1 && uid == uobj_id);}
 	void set_object(uobject const *obj);
-	void choose_dest(point const &p, unsigned align);
+	void choose_dest(point const &p, unsigned align, float tmax);
 	bool update_pos_if_close(uobject const *obj);
 	bool update_pos();
 	void at_dest() {old_uobj_id = uobj_id; uobj_id = -1;}

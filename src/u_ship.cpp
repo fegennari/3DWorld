@@ -737,9 +737,9 @@ void sobj_manager::set_object(uobject const *obj) {
 }
 
 
-void sobj_manager::choose_dest(point const &p, unsigned align) {
+void sobj_manager::choose_dest(point const &p, unsigned align, float tmax) {
 
-	uobject const *dest(choose_dest_world(p, old_uobj_id, align));
+	uobject const *dest(choose_dest_world(p, old_uobj_id, align, tmax));
 
 	if (dest != NULL) {
 		set_object(dest);
@@ -787,7 +787,7 @@ bool u_ship::choose_destination() {
 			if (!renew_dest) return 1; // already chosen - change it?
 		}
 	}
-	dest_mgr.choose_dest(pos, alignment);
+	dest_mgr.choose_dest(pos, alignment, 1.5*get_max_t()/FOBJ_TEMP_SCALE); // allow higher than tmax, since ships can approach in the shade of the planet/moon
 	
 	if (!dest_mgr.is_valid()) { // delete the ship? move towards the player?
 		if (specs().has_fast_speed) set_max_sf(FAST_SPEED_FACTOR);
@@ -958,11 +958,26 @@ void u_ship::ai_action() {
 	o_docked = 0;
 
 	// too close to the sun or a hot object, or too much gravity from a black hole, move away at full speed
-	if (can_move_ && (is_burning() || (near_b_hole && gvect.mag() > SHIP_GMAX))) {
-		vector3d const orient((is_burning() ? vector3d(pos - tcent) : -gvect).get_norm());
-		if (max_turn > TOLERANCE) do_turn(orient); // a little unstable
-		if (dot_product(dir, orient) > 0.0) thrust(MOVE_FRONT, 1.0, 0);
-		return;
+	if (can_move_) {
+		vector3d orient(zero_vector);
+
+		if (is_burning()) {
+			if (get_over_temp_factor() > 0.0) { // actually taking damage
+				orient = pos - tcent; // fly directly away from star
+			}
+			else { // fly on a tangent
+				orthogonalize_dir(dir, (pos - tcent), orient, 0);
+			}
+		}
+		else if (near_b_hole && gvect.mag() > SHIP_GMAX) { // gravity too high
+			orient = -gvect; // fly directly away from black hole
+		}
+		if (orient != zero_vector) {
+			orient.normalize();
+			if (max_turn > TOLERANCE) do_turn(orient); // a little unstable
+			if (dot_product(dir, orient) > 0.0) thrust(MOVE_FRONT, 1.0, 0);
+			return;
+		}
 	}
 	int move_dir(get_move_dir());
 	if (!move_dir) return;
@@ -1318,8 +1333,8 @@ void u_ship::ai_fire(vector3d const &targ_dir, float target_dist, float min_dist
 
 		if (uw.is_beam) {
 			beam_weap_params const &bwp(uw.get_beam_params());
-			if (bwp.temp_src) value += 5.0*TEMP_FACTOR*uw.damage*get_max_t();
-			if (bwp.temp_src) value *= 0.5*(1.0 + get_max_t()/target_obj->get_max_t());
+			if (bwp.temp_src) {value += 5.0*TEMP_FACTOR*uw.damage*get_max_t();}
+			if (bwp.temp_src) {value *= 0.5*(1.0 + get_max_t()/target_obj->get_max_t());}
 			
 			if (bwp.mind_control) { // prefers a mostly undamaged target
 				value += 40.0*(1.0 - target_obj->get_damage())*(target_obj->get_cost() +
@@ -1629,16 +1644,16 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 		case UWEAP_DESTROY: break;
 		case UWEAP_LRCPA:   break;
 		case UWEAP_ENERGY:  break;
-		case UWEAP_ATOMIC:  gen_sound(SOUND_GUNSHOT,  pos, gain, 1.0); break;
-		case UWEAP_SHIELDD: gen_sound(SOUND_GUNSHOT,  pos, gain, 1.5); break;
-		case UWEAP_ROCKET:  gen_sound(SOUND_ROCKET,   pos, gain, 1.0); break;
+		case UWEAP_ATOMIC:  gen_sound(SOUND_GUNSHOT,  pos, gain, 1.0);  break;
+		case UWEAP_SHIELDD: gen_sound(SOUND_GUNSHOT,  pos, gain, 1.5);  break;
+		case UWEAP_ROCKET:  gen_sound(SOUND_ROCKET,   pos, gain, 1.0);  break;
 		case UWEAP_NUKEDEV: gen_sound(SOUND_ROCKET,   pos, gain, 0.75); break;
-		case UWEAP_TORPEDO: gen_sound(SOUND_ITEM,     pos, gain, 1.0); break;
+		case UWEAP_TORPEDO: gen_sound(SOUND_ITEM,     pos, gain, 1.0);  break;
 		case UWEAP_THUNDER: gen_sound(SOUND_ITEM,     pos, gain, 0.75); break;
-		case UWEAP_EMP:     gen_sound(SOUND_POWERUP,  pos, gain, 1.0); break;
-		case UWEAP_SEIGEC:  gen_sound(SOUND_SHOTGUN,  pos, gain, 1.0); break;
-		case UWEAP_RFIRE:   gen_sound(SOUND_FIREBALL, pos, gain, 1.0); break;
-		case UWEAP_INFERNO: gen_sound(SOUND_FIREBALL, pos, gain, 1.5); break;
+		case UWEAP_EMP:     gen_sound(SOUND_POWERUP,  pos, gain, 1.0);  break;
+		case UWEAP_SEIGEC:  gen_sound(SOUND_SHOTGUN,  pos, gain, 1.0);  break;
+		case UWEAP_RFIRE:   gen_sound(SOUND_FIREBALL, pos, gain, 1.0);  break;
+		case UWEAP_INFERNO: gen_sound(SOUND_FIREBALL, pos, gain, 1.5);  break;
 
 		case UWEAP_FIGHTER: case UWEAP_B_BAY: case UWEAP_CRU_BAY: case UWEAP_SOD_BAY: case UWEAP_BOARDING: case UWEAP_NM_BAY: // fallthrough
 		case UWEAP_WRAI_BAY: case UWEAP_HUNTER: case UWEAP_DEATHORB: case UWEAP_SAUC_BAY: gen_sound(SOUND_HISS, pos, gain, 1.0); break;
@@ -2621,9 +2636,9 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		ddata.color_b  = color_b;
 	}
 	ddata.set_color(color_a);
-	if (sc.engine_lights && ddata.can_have_engine_lights()) ddata.dlights = 1; // has engine lights (sc.emits_light?)
+	if (sc.engine_lights && ddata.can_have_engine_lights()) {ddata.dlights = 1;} // has engine lights (sc.emits_light?)
 	float over_temp(CLIP_TO_01(0.005f*get_over_temp_factor()));
-	if (ddata.t_exp > 0.0 && sc.exp_type == ETYPE_FUSION) over_temp = max(over_temp, (1.0f - ddata.t_exp)); // heats up during explosion
+	if (ddata.t_exp > 0.0 && sc.exp_type == ETYPE_FUSION) {over_temp = max(over_temp, (1.0f - ddata.t_exp));} // heats up during explosion
 	
 	if (over_temp > 0.0) {
 		colorRGBA const ecolor((over_temp > 0.5) ? colorRGBA(1.0, (over_temp - 0.5), 0.0, 1.0) : colorRGBA(2.0*over_temp, 0.0, 0.0, 1.0));

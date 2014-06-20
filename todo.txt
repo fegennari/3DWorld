@@ -17,6 +17,4 @@ Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD
 
-Better explosion flare texture (higher resolution)
 Asteroid belt particles variable size
-Better star temperature avoid
