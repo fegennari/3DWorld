@@ -140,7 +140,8 @@ texture_t(0, 5, 0,    0,    0, 4, 1, "flare1.jpg"), // 384x384
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Note: low resolution)
 texture_t(0, 5, 0,    0,    0, 4, 1, "Flare3.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare4.jpg"), // 256x256
-texture_t(0, 5, 0,    0,    0, 4, 1, "flare5.jpg"), // 256x256
+//texture_t(0, 5, 0,    0,    0, 4, 1, "flare5.jpg"), // 256x256
+texture_t(0, 5, 0,    0,    0, 4, 1, "flare5b.jpg"), // 416x416
 texture_t(0, 5, 0,    0,    1, 3, 1, "foam1.jpg"), // 512x512
 
 texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_diffuse.jpg"), // 256x256
