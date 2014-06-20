@@ -4,13 +4,19 @@ Vertex Array Objects
 Better pine tree texture
 More grass/plant types: Yellow and white flowers
 TT mode underwater content
-  - seaweed
+  - seaweed plants/scenery
+  - seaweed grass
 
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
 http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 GLM Noise
+
 Load/display model3d models in tiled terrain mode
-  - Object Shadow Maps
-    - Fix Scale and Rotations
+  - Model Shadow Maps - Fix Scale and Rotations
+  - Model LOD
+
+Better explosion flare texture (higher resolution)
+Asteroid belt particles variable size
+Better star temperature avoid

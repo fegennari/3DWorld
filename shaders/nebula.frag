@@ -36,5 +36,6 @@ void main()
 		color.a *= clamp((1.0 - dist), 0.0, 1.0); // attenuate near edges to create a spherical shape
 	}
 	color.a *= clamp((1.5*abs(dot(normal, view_dir)) - 0.5), 0.0, 1.0); // attenuate billboards not facing the camera
+	//color.a *= min(1.0, 10.0*length((fg_ModelViewMatrix * vec4(vertex, 1.0)).xyz)/radius); // atten when very close to a plane (based on calculated epos)
 	fg_FragColor = color;
 }

@@ -7,7 +7,7 @@ void adjust_normal_for_craters(inout vec3 norm, in vec3 vertex) {
 	float v0 = 1.0; // using a variable here is slow
 	vec3 dir = normalize(vertex); // world space normal
 
-	for (int i = 0; i < 50; ++i) { // Note: inefficient, but fast enough for a single object render
+	for (int i = 0; i < 50; ++i) { // Note: inefficient, but fast enough for a single object render (depth complexity=1)
 		vec3 center = rand_vec3(v0);
 		vec3 dir2   = dir - normalize(center);
 		float dist  = length(dir2);
