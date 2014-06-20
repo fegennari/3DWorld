@@ -8,6 +8,7 @@
 #include "voxels.h"
 #include "vertex_opt.h"
 #include <fstream>
+#include <queue>
 
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
@@ -231,7 +232,7 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 			if (bins[0].empty() || bins[1].empty()) {skip_dims |= (1 << dim);}
 
 			for (unsigned i = 0; i < 2; ++i) {
-				if (!bins[i].empty()) subdiv_recur(bins[i], npts, skip_dims);
+				if (!bins[i].empty()) {subdiv_recur(bins[i], npts, skip_dims);}
 			}
 			return;
 		}
@@ -259,18 +260,106 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 		need_normalize = 0;
 	}
 	if (indices.empty() || finalized) return; // nothing to do
+	//if (npts == 3) {vector<unsigned> v; simplify(v, 0.5);} // TESTING
 	finalized = 1;
 	//optimize(npts); // now optimized in the object file loading phase
 	assert((num_verts() % npts) == 0); // triangles or quads
 	assert(blocks.empty());
 
 	if (num_verts() > 2*BLOCK_SIZE) { // subdivide large buffers
-		//RESET_TIME;
 		vector<unsigned> ixs;
 		ixs.swap(indices);
 		subdiv_recur(ixs, npts, 0);
-		//PRINT_TIME("Subdiv");
 	}
+}
+
+
+template<unsigned N> struct vert_to_tri_t {
+
+	unsigned t[N], n; // if this vertex is used in more than N triangles we give up and never remove it
+
+	vert_to_tri_t() : n(0) {}
+	void add(unsigned ix) {if (n < N) {t[n] = ix;} ++n;} // only add if it fits, but always increment n
+	void remove(unsigned tix) {assert(tix < min(n, N)); t[tix] = t[n-1]; --n;} // move last element to position tix
+	unsigned get_first_index_ix(unsigned tix) const {assert(tix < min(n, N)); return 3*t[tix];} // multiply by 3 to convert from triangle to index
+	bool ix_overflow() const {return (n > N);}
+};
+
+struct merge_entry_t {
+
+	unsigned vix;
+	float val;
+
+	merge_entry_t(unsigned vix_=0, float val_=0.0) : vix(vix_), val(val_) {}
+	bool operator<(merge_entry_t const &e) const {return (val < e.val);}
+};
+
+
+// target = ratio of output to input vertices in (0.0, 1.0)
+// Note: works on triangles only (not quads)
+template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out, float target) const {
+
+	RESET_TIME;
+	assert(target < 1.0 && target > 0.0);
+	out.clear();
+	unsigned const num_verts(size()), num_ixs(indices.size()), target_num_ixs(unsigned(target*num_ixs));
+	if (target_num_ixs < 3) return; // can't simplify
+
+	// build vertex to face/triangle mapping
+	assert((num_ixs % 3) == 0); // must be triangles
+	unsigned const num_tris(num_ixs/3);
+	vector<vert_to_tri_t<8>> vert_to_tri(num_verts);
+
+	for (unsigned i = 0; i < num_ixs; ++i) {
+		assert(indices[i] < num_verts);
+		vert_to_tri[indices[i]].add(i);
+	}
+	unsigned hist[10] = {0};
+	for (unsigned i = 0; i < num_verts; ++i) {assert(vert_to_tri[i].n > 0); ++hist[min(9U, vert_to_tri[i].n)];}
+	cout << "nv: " << num_verts << ", ni: " << num_ixs << ", tni: " << target_num_ixs << ", hist: ";
+	for (unsigned i = 1; i < 10; ++i) {cout << hist[i] << " ";}
+	cout << endl;
+
+	// determine which verts/tris/ixs can be removed
+	vector<unsigned char> to_remove(num_ixs, 0);
+	std::priority_queue<merge_entry_t> merge_queue; // of vertices
+
+	for (unsigned i = 0; i < num_verts; ++i) {
+		if (vert_to_tri[i].ix_overflow()) continue; // don't remove this vertex
+		float const val(0.0); // FIXME - based on num, tri size, normals, etc.
+		merge_queue.push(merge_entry_t(i, val));
+	}
+	unsigned num_valid_ixs(num_ixs);
+
+	while (!merge_queue.empty() && num_valid_ixs > target_num_ixs) {
+		unsigned const to_rem(merge_queue.top().vix); // remove this one
+		merge_queue.pop();
+		assert(to_rem < num_verts);
+		vert_to_tri_t<8> const &v2t(vert_to_tri[to_rem]);
+		
+		for (unsigned i = 0; i < v2t.n; ++i) { // get triangle indices for this vertex
+			assert(v2t.t[i] < num_ixs);
+			unsigned const tix(v2t.t[i]/3), start_ix(3*tix);
+			assert(start_ix+3 <= to_remove.size());
+
+			for (unsigned j = 0; j < 3; ++j) {
+				if (to_remove[start_ix+j]) continue; // already marked for removal
+				to_remove[start_ix+j] = 1; // invalidate/remove these indices
+				assert(num_valid_ixs > 0);
+				--num_valid_ixs;
+			}
+		}
+	}
+
+	// generate output
+	out.reserve(num_valid_ixs);
+
+	for (unsigned i = 0; i < num_ixs; ++i) {
+		if (!to_remove[i]) {out.push_back(indices[i]);}
+	}
+	assert(out.size() == num_valid_ixs);
+	cout << "output: " << num_valid_ixs << endl;
+	PRINT_TIME("Simplify");
 }
 
 

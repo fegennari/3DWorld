@@ -201,6 +201,7 @@ public:
 	void subdiv_recur(vector<unsigned> const &ixs, unsigned npts, unsigned skip_dims);
 	void optimize(unsigned npts);
 	void finalize(unsigned npts);
+	void simplify(vector<unsigned> &out, float target) const;
 	void clear();
 	unsigned num_verts() const {return unsigned(indices.empty() ? size() : indices.size());}
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
