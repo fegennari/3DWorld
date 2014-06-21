@@ -41,6 +41,7 @@ shadow_detail 7
 tree_coll_level 4
 default_ground_tex -1
 # mesh_seed 1
+#mesh_gen_mode 1 # 0 = sine table, 1 = GLM simplex, 2 = GLM perlin
 
 #snow_depth 0.05
 snow_random 0.0
@@ -65,6 +66,7 @@ shadow_map_sz 2048
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0
 coll_obj_file coll_objs/COLL_OBJS_Test.TXT
+#coll_obj_file coll_objs_transformed.txt
 ship_def_file universe/ship_defs.txt
 
 end

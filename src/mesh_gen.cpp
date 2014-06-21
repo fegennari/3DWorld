@@ -7,7 +7,7 @@
 #include "textures_3dw.h"
 #include "sinf.h"
 #include "heightmap.h"
-//#include <glm/gtc/noise.hpp>
+#include <glm/gtc/noise.hpp>
 
 
 int      const NUM_FREQ_COMP      = 9;
@@ -34,7 +34,7 @@ int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
 
 // Global Variables
 float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FREQ_MULT(0.5);
-int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE);
+int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(0);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
@@ -48,7 +48,7 @@ ttex lttex_dirt[NTEX_DIRT];
 
 
 extern bool combined_gu;
-extern int xoff, yoff, xoff2, yoff2, world_mode, rand_gen_index, mesh_scale_change;
+extern int xoff, yoff, xoff2, yoff2, world_mode, rand_gen_index, mesh_scale_change, display_mode;
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode, invert_mh_image;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
@@ -490,6 +490,7 @@ void estimate_zminmax(bool using_eq) {
 				zmax_est = max(zmax_est, float(fabs(height_gen.eval_index(j, i, 0))));
 			}
 		}
+		if (mesh_gen_mode > 0) {zmax_est *= 1.2;}
 	}
 	set_zmax_est(1.1*zmax_est);
 	set_zvals();
@@ -557,6 +558,7 @@ void compute_scale() {
 
 void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
 
+	mx0 = x0; my0 = y0; mdx = dx; mdy = dy;
 	assert(nx >= 0 && ny >= 0);
 	assert(start_eval_sin <= end_eval_sin && end_eval_sin <= F_TABLE_SIZE);
 	cur_nx = nx; cur_ny = ny;
@@ -588,14 +590,35 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 }
 
 
+float get_noise_zval(float xval, float yval, bool mode) { // mode: 0=simplex, 1=perlin
+
+	float const xy_scale(0.0007*mesh_scale), xv(xy_scale*xval), yv(xy_scale*yval);
+	float zval(0.0), mag(1.0), freq(1.0);
+
+	for (unsigned i = 0; i < NUM_FREQ_COMP; ++i) { // FIXME: max(start_eval_sin, min_start_sin) to end_eval_sin
+		glm::vec2 const pos(freq*xv, freq*yv);
+		zval += mag*((mode == 0) ? glm::simplex(pos) : glm::perlin(pos));
+		mag *= 0.5; freq *= 2.0;
+	}
+	return ((mode == 0) ? 4.0 : 8.0)*zval/mesh_scale_z;
+}
+
+
 float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin) const {
 
-	assert(x < cur_nx && y < cur_ny);
-	float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
-	float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
-	float zval(hoff);
-	for (int i = max(start_eval_sin, min_start_sin); i < end_eval_sin; ++i) {zval += xptr[i]*yptr[i];} // performance critical
-	if (GLACIATE && glaciate) zval = get_glaciated_zval(zval);
+	float zval(0.0);
+
+	if (mesh_gen_mode > 0) {
+		zval += get_noise_zval((x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV, (mesh_gen_mode == 2));
+	}
+	else {
+		assert(x < cur_nx && y < cur_ny);
+		float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
+		float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
+		for (int i = max(start_eval_sin, min_start_sin); i < end_eval_sin; ++i) {zval += xptr[i]*yptr[i];} // performance critical
+		zval += hoff;
+	}
+	if (GLACIATE && glaciate) {zval = get_glaciated_zval(zval);}
 	return zval;
 }
 
@@ -612,7 +635,10 @@ float eval_mesh_sin_terms(float xv, float yv) {
 }
 
 float eval_mesh_sin_terms_scaled(float xval, float yval, float xy_scale) {
-	return eval_mesh_sin_terms(xy_scale*mesh_scale*(xval - (MESH_X_SIZE >> 1)), xy_scale*mesh_scale*(yval - (MESH_Y_SIZE >> 1)))/mesh_scale_z;
+
+	float const xv(xy_scale*(xval - (MESH_X_SIZE >> 1))), yv(xy_scale*(yval - (MESH_Y_SIZE >> 1)));
+	if (mesh_gen_mode) {return get_noise_zval(xv, yv, (mesh_gen_mode == 2));}
+	return eval_mesh_sin_terms(mesh_scale*xv, mesh_scale*yv)/mesh_scale_z;
 }
 
 
