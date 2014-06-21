@@ -110,7 +110,7 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, scene_smap_vbo_invalid;
-extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display;
+extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
@@ -1473,6 +1473,7 @@ int load_config(string const &config_file) {
 	kwmi.add("teams", teams);
 	kwmi.add("init_tree_mode", tree_mode);
 	kwmi.add("mesh_gen_mode", mesh_gen_mode);
+	kwmi.add("mesh_freq_filter", mesh_freq_filter);
 
 	kw_to_val_map_t<unsigned> kwmu(error);
 	kwmu.add("grass_density", grass_density);

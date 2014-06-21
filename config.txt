@@ -40,8 +40,9 @@ sun_rot 0.4
 shadow_detail 7
 tree_coll_level 4
 default_ground_tex -1
-# mesh_seed 1
+#mesh_seed 1
 #mesh_gen_mode 1 # 0 = sine table, 1 = GLM simplex, 2 = GLM perlin
+mesh_freq_filter 0 # rougher landscape
 
 #snow_depth 0.05
 snow_random 0.0

@@ -15,3 +15,5 @@ http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD - mesh simplification
+
+remove sine table repeating patterns

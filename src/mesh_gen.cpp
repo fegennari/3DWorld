@@ -15,7 +15,6 @@ float    const MESH_SCALE_Z_EXP   = 0.7;
 int      const N_RAND_SIN2        = 10;
 int      const FREQ_FILTER        = 2; // higher = smoother landscape
 int      const MIN_FREQS          = 3;
-int      const FREQ_RANGE         = 80; // higher for more accurate mesh - should be 80
 int      const NUM_LOW_FREQ       = 2;
 float    const W_PLANE_Z          = 0.42;
 float    const HEIGHT_SCALE       = 0.01;
@@ -34,7 +33,7 @@ int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
 
 // Global Variables
 float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FREQ_MULT(0.5);
-int cache_counter(1), start_eval_sin(0), end_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(0);
+int cache_counter(1), start_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(0), mesh_freq_filter(FREQ_FILTER);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
@@ -163,11 +162,9 @@ void update_disabled_mesh_height() {
 }
 
 
-inline void clamp_to_mesh(int xy[2]) {
+void clamp_to_mesh(int xy[2]) {
 
-	for (unsigned i = 0; i < 2; ++i) {
-		xy[i] = max(0, min(MESH_SIZE[i]-1, xy[i]));
-	}
+	for (unsigned i = 0; i < 2; ++i) {xy[i] = max(0, min(MESH_SIZE[i]-1, xy[i]));}
 }
 
 
@@ -185,49 +182,17 @@ void gen_mesh_random(float height) {
 }
 
 
-
 void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, int ysize) {
 
 	assert(matrix);
-	int const nsines(NUM_FREQ_COMP*N_RAND_SIN2);
-	float hoff(0.0);
-	int i2(y_offset - ysize/2), j2(x_offset - xsize/2);
-	vector<float> jTerms(xsize*(end_eval_sin - start_eval_sin));
+	mesh_xy_grid_cache_t height_gen;
+	height_gen.build_arrays((x_offset - xsize/2)*DX_VAL, (y_offset - ysize/2)*DY_VAL, DX_VAL, DY_VAL, xsize, ysize);
 
-	if (end_eval_sin < nsines) {
-		float const iscale(mesh_scale*i2), jscale(mesh_scale*j2);
-
-		for (int k = end_eval_sin; k < nsines; ++k) { // approximate low frequencies as constant
-			float const *stk(sinTable[k]);
-			hoff += stk[0]*sinf(stk[3]*iscale + stk[1])*sinf(stk[4]*jscale + stk[2]);
-		}
-		hoff /= mesh_scale_z;
-	}
-	for (int k = start_eval_sin, ix = 0; k < end_eval_sin; ++k) {
-		float const *stk(sinTable[k]);
-
-		for (int j = 0; j < xsize; ++j) {
-			jTerms[ix++] = sinf(mesh_scale*stk[4]*(j+j2) + stk[2]);
-		}
-	}
 	for (int i = 0; i < ysize; ++i) {
-		++i2;
-		float const si2(mesh_scale*i2);
-
-		for (int k = start_eval_sin, ix = 0; k < end_eval_sin; ++k) {
-			float const *stk(sinTable[k]);
-			float const val((stk[0]/mesh_scale_z)*sinf(stk[3]*si2 + stk[1]));
-
-			for (int j = 0; j < xsize; ++j) {
-				matrix[i][j] += val*jTerms[ix++]; // performance critical
-			}
+		for (int j = 0; j < xsize; ++j) {
+			matrix[i][j] = height_gen.eval_index(j, i, 0);
 		}
-		if (hoff != 0.0) { // add in low frequency terms
-			for (int j = 0; j < xsize; ++j) {
-				matrix[i][j] += hoff; // the earth "appears" flat when you're standing on it
-			}
-		}
-	} // for i
+	}
 }
 
 
@@ -262,8 +227,8 @@ void gen_rand_sine_table_entries(float scaled_height) {
 			sinTable[index][0] = rgen.rand_uniform(0.2, 1.0)*mheight; // magnitude
 			sinTable[index][1] = rgen.rand_float()*TWO_PI; // y phase
 			sinTable[index][2] = rgen.rand_float()*TWO_PI; // x phase
-			sinTable[index][3] = rgen.rand_uniform(0.01, 1.0)*x_freq*yf_scale; // y frequency
-			sinTable[index][4] = rgen.rand_uniform(0.01, 1.0)*y_freq*xf_scale; // x frequency
+			sinTable[index][3] = rgen.rand_uniform(0.1, 1.0)*x_freq*yf_scale; // y frequency
+			sinTable[index][4] = rgen.rand_uniform(0.1, 1.0)*y_freq*xf_scale; // x frequency
 		}
 	}
 }
@@ -275,16 +240,7 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 	vector<float> atten_table(MESH_X_SIZE);
 	assert((read_landscape != 0) + (read_heightmap != 0) + (do_read_mesh != 0) <= 1);
 	assert(surface_type != 2); // random+sin surface is no longer supported
-
-	if (read_landscape) {
-		surface_type = 3;
-	}
-	else if (read_heightmap) {
-		surface_type = 4;
-	}
-	else if (do_read_mesh) {
-		surface_type = 5;
-	}
+	if (read_landscape) {surface_type = 3;} else if (read_heightmap) {surface_type = 4;} else if (do_read_mesh) {surface_type = 5;}
 	bool surface_generated(0);
 	bool const loaded_surface(surface_type >= 3);
 	bool const gen_scroll_surface(GEN_SCROLLING_MESH && scrolling && loaded_surface);
@@ -551,32 +507,20 @@ void update_temperature(bool verbose) {
 void compute_scale() {
 
 	int const iscale(int(log(mesh_scale)/log(2.0)));
-	start_eval_sin = N_RAND_SIN2*max(0, min(NUM_FREQ_COMP-MIN_FREQS, (iscale+FREQ_FILTER)));
-	end_eval_sin   = N_RAND_SIN2*min(NUM_FREQ_COMP, (start_eval_sin+FREQ_RANGE));
+	start_eval_sin = N_RAND_SIN2*max(0, min(NUM_FREQ_COMP-MIN_FREQS, (iscale+mesh_freq_filter)));
 }
 
 
 void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
 
-	mx0 = x0; my0 = y0; mdx = dx; mdy = dy;
 	assert(nx >= 0 && ny >= 0);
-	assert(start_eval_sin <= end_eval_sin && end_eval_sin <= F_TABLE_SIZE);
-	cur_nx = nx; cur_ny = ny;
+	assert(start_eval_sin <= F_TABLE_SIZE);
+	cur_nx = nx; cur_ny = ny; mx0 = x0; my0 = y0; mdx = dx; mdy = dy;
 	xterms.resize(nx*F_TABLE_SIZE, 0.0);
 	yterms.resize(ny*F_TABLE_SIZE, 0.0);
-	hoff = 0.0;
 	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale), msz_inv(1.0/mesh_scale_z);
 
-	if (end_eval_sin < F_TABLE_SIZE) {
-		float const xval(msx*(x0 + 0.5*(nx-1)*dx)), yval(msy*(y0 + 0.5*(ny-1)*dy)); // center points
-
-		for (int k = end_eval_sin; k < F_TABLE_SIZE; ++k) {
-			hoff += sinTable[k][0]*SINF(sinTable[k][3]*yval + ms2*sinTable[k][3] + sinTable[k][1])
-				                  *SINF(sinTable[k][4]*xval + ms2*sinTable[k][4] + sinTable[k][2]);
-		}
-		hoff *= msz_inv;
-	}
-	for (int k = start_eval_sin; k < end_eval_sin; ++k) {
+	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
 		float const x_const(ms2*sinTable[k][4] + sinTable[k][2]), y_const(ms2*sinTable[k][3] + sinTable[k][1]);
 		float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(msz_inv*sinTable[k][0]);
 
@@ -594,11 +538,13 @@ float get_noise_zval(float xval, float yval, bool mode) { // mode: 0=simplex, 1=
 
 	float const xy_scale(0.0007*mesh_scale), xv(xy_scale*xval), yv(xy_scale*yval);
 	float zval(0.0), mag(1.0), freq(1.0);
+	unsigned const end_octave(NUM_FREQ_COMP - start_eval_sin/N_RAND_SIN2);
 
-	for (unsigned i = 0; i < NUM_FREQ_COMP; ++i) { // FIXME: max(start_eval_sin, min_start_sin) to end_eval_sin
+	for (unsigned i = 0; i < end_octave; ++i) {
 		glm::vec2 const pos(freq*xv, freq*yv);
 		zval += mag*((mode == 0) ? glm::simplex(pos) : glm::perlin(pos));
-		mag *= 0.5; freq *= 2.0;
+		mag  *= 0.5;
+		freq *= 2.0;
 	}
 	return ((mode == 0) ? 4.0 : 8.0)*zval/mesh_scale_z;
 }
@@ -615,19 +561,20 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 		assert(x < cur_nx && y < cur_ny);
 		float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
 		float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
-		for (int i = max(start_eval_sin, min_start_sin); i < end_eval_sin; ++i) {zval += xptr[i]*yptr[i];} // performance critical
-		zval += hoff;
+		for (int i = max(start_eval_sin, min_start_sin); i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
 	}
 	if (GLACIATE && glaciate) {zval = get_glaciated_zval(zval);}
 	return zval;
 }
 
 
+// Note: called directly in tiled mesh and voxel code as a random number generator (not for mesh height);
+// we always use sine tables here because get_noise_zval() is too slow
 float eval_mesh_sin_terms(float xv, float yv) {
 
 	float zval(0.0);
 
-	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) { // could use end_eval_sin?
+	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
 		float const *stk(sinTable[k]);
 		zval += stk[0]*SINF(stk[3]*yv + stk[1])*SINF(stk[4]*xv + stk[2]); // performance critical
 	}
