@@ -109,11 +109,11 @@ bool sphere_size_less_than(point const &pos, point const &camera, float radius, 
 	return (window_width*radius < num_pixels*p2p_dist(pos, camera));
 }
 
-
 void set_star_light_atten(int light, float atten, shader_t *shader=NULL) {
-
 	setup_gl_light_atten(light, STAR_CONST, atten*STAR_LINEAR_SCALED, atten*STAR_QUAD_SCALED, shader);
 }
+
+bool new_planet_shader() {return ((display_mode & 0x20) != 0);}
 
 
 s_object get_shifted_sobj(s_object const &sobj) {
@@ -253,6 +253,10 @@ public:
 				set_prefix("#define GAS_GIANT", 1); // FS
 				if (!(display_mode & 0x20)) {set_prefix("#define ANIMATE_STORMS", 1);} // FS
 			}
+			else if (new_planet_shader()) {
+				set_prefix("#define PROCEDURAL_DETAIL", 1); // FS
+				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
+			}
 			if (has_craters) {set_prefix("#define HAS_CRATERS", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			string frag_shader_str("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+rand_gen.part*");
@@ -274,6 +278,7 @@ public:
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
 			set_uniform_float(get_loc("water_val"), body.water);
 			set_uniform_float(get_loc("lava_val"),  body.lava);
+			if (new_planet_shader()) {body.upload_colors_to_shader(*this);}
 		}
 		float const cf_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : UNIV_NCLIP_SCALE);
 		set_uniform_vector3d(get_loc("cloud_freq"), cf_scale*(body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 1.0)));
@@ -359,12 +364,13 @@ public:
 
 
 class ushader_group {
-	universe_shader_t planet_shader[2][2][2]; // {without/with rings}x{rocky vs. gas giant}x{without/with craters (moons)} - not all variations used
+	universe_shader_t planet_shader[2][4][2]; // {without/with rings}x{rocky, procedural, all water, gas giant}x{without/with craters (moons)} - not all variations used
 	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
 	shader_t color_only_shader, planet_colored_shader, point_sprite_shader;
 
 	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
-		return planet_shader[svars.ring_ro > 0.0][body.gas_giant][body.type == UTYPE_MOON];
+		unsigned const type(body.gas_giant ? 3 : (new_planet_shader() ? ((body.water >= 1.0) ? 2 : 1) : 0));
+		return planet_shader[svars.ring_ro > 0.0][type][body.type == UTYPE_MOON];
 	}
 
 public:
@@ -1944,18 +1950,29 @@ void urev_body::create_gas_giant_texture() {
 }
 
 
+void urev_body::upload_colors_to_shader(shader_t &s) const {
+
+	bool const frozen(temp < FREEZE_TEMP);
+	s.add_uniform_color("water_color", (frozen ? P_ICE_C : P_WATER_C));
+	s.add_uniform_color("color_a",     colorA);
+	s.add_uniform_color("color_b",     colorB);
+	s.add_uniform_float("snow_thresh", snow_thresh);
+	s.add_uniform_float("cold_scale",  (frozen ? 0.0 : 1.0)); // frozen ice planets don't use coldness
+}
+
+
 void urev_body::get_surface_color(unsigned char *data, float val, float phi) const { // val in [0,1]
 
 	bool const frozen(temp < FREEZE_TEMP);
 	unsigned char const white[3] = {255, 255, 255};
 	unsigned char const gray[3]  = {100, 100, 100};
-	float const coldness(fabs(phi - PI_TWO)*2.0*PI_INV); // phi=PI/2 => equator, phi=0.0 => north pole, phi=PI => south pole
+	float const coldness(frozen ? 0.0 : fabs(phi - PI_TWO)*2.0*PI_INV); // phi=PI/2 => equator, phi=0.0 => north pole, phi=PI => south pole
 
 	if (water >= 1.0 || val < water) { // underwater
 		RGB_BLOCK_COPY(data, wic[frozen]);
 
 		if (coldness > 0.8) { // ice
-			float const blend_val(CLIP_TO_01(5.0f*(coldness - 0.8f) + 2.0f*(val - water)));
+			float const blend_val(CLIP_TO_01(5.0f*(coldness - 0.8f) + 1.0f*(val - water)));
 			BLEND_COLOR(data, white, data, blend_val);
 		}
 		return;
@@ -1963,21 +1980,11 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 	float const water_adj(0.07), val_ws((water > 0.0) ? wr_scale*(val - water) : val); // rescale for water
 
 	if (water > 0.2 && atmos > 0.1) { // Earthlike planet
-		if (val_ws < 0.1) { // low ground
-			RGB_BLOCK_COPY(data, b);
-		}
-		else if (val_ws < 0.4) {
-			BLEND_COLOR(data, a, b, 3.3333*(val_ws - 0.1));
-		}
-		else if (val_ws < 0.45) { // medium ground
-			RGB_BLOCK_COPY(data, a);
-		}
-		else if (val_ws < 0.6) {
-			BLEND_COLOR(data, gray, a, 6.6667*(val_ws - 0.45));
-		}
-		else { // high ground
-			RGB_BLOCK_COPY(data, gray);
-		}
+		if      (val_ws < 0.1)  {RGB_BLOCK_COPY(data, b);} // low ground
+		else if (val_ws < 0.4)  {BLEND_COLOR(data, a, b, 3.3333*(val_ws - 0.1));}
+		else if (val_ws < 0.45) {RGB_BLOCK_COPY(data, a);} // medium ground
+		else if (val_ws < 0.6)  {BLEND_COLOR(data, gray, a, 6.6667*(val_ws - 0.45));}
+		else                    {RGB_BLOCK_COPY(data, gray);} // high ground
 	}
 	else { // alien-like planet
 		BLEND_COLOR(data, a, b, val_ws);
@@ -1985,25 +1992,21 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 	if (lava > 0.0) { // hot lava planet
 		float const lava_adj(0.07);
 		unsigned char const lavac[3] = {255, 0, 0}; // red
-
-		if (val < lava) {
-			RGB_BLOCK_COPY(data, lavac); // move up?
-		}
-		else if (val < lava + lava_adj) { // close to lava line
-			BLEND_COLOR(data, data, lavac, (val - lava)/lava_adj);
-		}
+		if      (val < lava)            {RGB_BLOCK_COPY(data, lavac);} // move up?
+		else if (val < lava + lava_adj) {BLEND_COLOR(data, data, lavac, (val - lava)/lava_adj);} // close to lava line
 	}
 	else if (temp < BOIL_TEMP) { // handle water/ice/snow
 		if (val < water + water_adj) { // close to water line (can have a little water even if water == 0)
 			BLEND_COLOR(data, data, wic[frozen], (val - water)/water_adj);
-			if (coldness > 0.9) {BLEND_COLOR(data, white, data, 10.0*(coldness - 0.9));} // ice
-			return;
+			
+			if (coldness > 0.8) { // ice
+				float const blend_val(CLIP_TO_01(5.0f*(coldness - 0.8f) + 1.0f*(val - water)));
+				BLEND_COLOR(data, white, data, blend_val);
+			}
 		}
-		float const st((1.0 - coldness*coldness)*snow_thresh);
-
-		if (val > (st + 1.0E-6)) { // blend in some snow
-			BLEND_COLOR(data, white, data, (val - st)/(1.0 - st));
-			return;
+		else {
+			float const st((1.0 - coldness*coldness)*snow_thresh);
+			if (val > (st + 1.0E-6)) {BLEND_COLOR(data, white, data, (val - st)/(1.0 - st));} // blend in some snow
 		}
 	}
 }
@@ -2303,13 +2306,13 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		
 	if (texture) { // texture map
 		assert(tid > 0);
-		(gas_giant ? bind_1d_texture(tid) : bind_2d_texture(tid));
+		(gas_giant ? bind_1d_texture(tid) : (new_planet_shader() ? select_texture(WHITE_TEX) : bind_2d_texture(tid)));
 	}
 	else {
 		usg.enable_planet_colored_shader(use_light2, ocolor);
 	}
 	if (ndiv >= N_SPHERE_DIV) {
-		if (surface == nullptr || !surface->has_heightmap()) { // gas giant
+		if (surface == nullptr || !surface->has_heightmap() || new_planet_shader()) { // gas giant
 			ndiv /= 2; // don't need high resolution for gas giants since they have no heightmap
 			point viewed_from(vcp);
 			rotate_vector(viewed_from);

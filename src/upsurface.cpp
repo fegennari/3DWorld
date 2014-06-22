@@ -292,9 +292,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 			else {
 				// Note: chooses the closest precomputed grid point for efficiency -
 				// no interpolation, so has artifacts closer to the poles
-				for (unsigned k = 0; k < num_sines; ++k) {
-					val += ztable[k]*xtable[ox1+k]*ytable[oy1+k];
-				}
+				for (unsigned k = 0; k < num_sines; ++k) {val += ztable[k]*xtable[ox1+k]*ytable[oy1+k];}
 			}
 			val = 0.5*(max(-1.0f, min(1.0f, scale*val)) + 1.0);
 			surface->heightmap[hmoff + j] = val;

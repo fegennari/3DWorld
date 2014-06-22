@@ -15,7 +15,11 @@ uniform float water_val  = 0.0;
 uniform float lava_val   = 0.0;
 uniform float crater_val = 0.0;
 uniform sampler2D tex0;
-#endif
+#ifdef PROCEDURAL_DETAIL
+uniform float snow_thresh, cold_scale;
+uniform vec4 water_color, color_a, color_b;
+#endif // PROCEDURAL_DETAIL
+#endif // not GAS_GIANT
 
 varying vec3 normal, world_space_pos, vertex;
 varying vec2 tc;
@@ -38,15 +42,71 @@ void main()
 		float st    = sin(angle);
 		float ct    = cos(angle);
 		center.xy   = vec2((center.x*ct - center.y*st), (center.y*ct + center.x*st)); // rotation
-#endif
+#endif // ANIMATE_STORMS
 		float dist  = (0.25 + 0.75*rand_01(v0+3.0))*length(vec3(1.0, 1.0, 2.0)*(dir - normalize(center)));
 		tc_adj     += 0.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
 		v0         += 4.0;
 	}
 	vec4 texel   = texture1D(tex0, tc_adj);
+#else // not GAS_GIANT
+
+#ifdef PROCEDURAL_DETAIL
+	float coldness = cold_scale*pow(abs(normalize(vertex).z), 2.0); // 0 at equator and 1 at the poles
+#ifdef ALL_WATER_ICE
+	vec4 texel = water_color;
+	if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp(4.0*(coldness - 0.75f), 0.0, 1.0));} // ice/snow
+#else // not ALL_WATER_ICE
+	float height = 0.0;
+	float freq   = 1.0;
+
+	for (int i = 0; i < 8; ++i) { // similar to gen_cloud_alpha_time()
+		height += texture3D(cloud_noise_tex, 5.0*freq*vertex).r/freq;
+		freq   *= 2.0;
+	}
+	height = max(0.0, 1.8*(height-0.7)); // can go outside the [0,1] range
+	vec4 texel;
+
+	if (height < water_val) {
+		texel = water_color;
+		if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp((4.0*(coldness - 0.75f) + 0.5*(height - water_val)), 0.0, 1.0));} // ice/snow
+	}
+	else {
+		float height_ws = (height - water_val)/(1.0 - water_val); // rescale to [0,1] above water
+
+		if (water_val > 0.2 && atmosphere > 0.1) { // Earthlike planet
+			vec4 gray = vec4(0.4, 0.4, 0.4, 1.0); // gray rock
+			if      (height_ws < 0.1) {texel = color_b;} // low ground
+			else if (height_ws < 0.4) {texel = mix(color_b, color_a, 3.3333*(height_ws - 0.1));}
+			else if (height_ws < 0.5) {texel = color_a;} // medium ground
+			else if (height_ws < 1.0) {texel = mix(color_a, gray, 2.0*(height_ws - 0.5));}
+			else                      {texel = gray;} // high ground
+		}
+		else { // alien-like planet
+			texel = mix(color_b, color_a, min(1.0, height_ws));
+		}
+		if (lava_val > 0.0) { // hot lava planet
+			if      (height < lava_val)        {texel = vec4(1,0,0,1);} // red
+			else if (height < lava_val + 0.07) {texel = mix(vec4(1,0,0,1), texel, (height - lava_val)/0.07);} // close to lava line
+		}
+		else if (water_val > 0.0) { // handle water/ice/snow (FIXME: temperature?)
+			if (height < water_val + 0.07) { // close to water line (can have a little water even if water == 0)
+				texel = mix(water_color, texel, (height - water_val)/0.07);
+				if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp((4.0*(coldness - 0.75f) + 0.5*(height - water_val)), 0.0, 1.0));} // ice/snow
+			}
+			else {
+				float st = (1.0 - coldness)*snow_thresh;
+				if (0.8*height > (st + 1.0E-6)) {texel = mix(texel, vec4(1,1,1,1), clamp((0.8*height - st)/(1.0 - st), 0.0, 1.0));} // blend in some snow
+			}
+		}
+	}
+#endif // ALL_WATER_ICE
+
 #else
-	vec4 texel   = texture2D(tex0, tc);
-#endif
+	vec4 texel = texture2D(tex0, tc);
+#endif // PROCEDURAL_DETAIL
+
+#endif // GAS_GIANT
+
 	float atten0 = light_scale[0] * calc_light_atten0(epos);
 	float atten2 = light_scale[2] * calc_light_atten(epos, 2);
 	float sscale = atten0;
@@ -83,7 +143,7 @@ void main()
 	if ((lscale0 > 0.0 || lscale2 > 0.0) && (texel.b - texel.r - texel.g) < 0.0) { // smoother transition?
 		adjust_normal_for_craters(norm, vertex); // add craters by modifying the normal
 	}
-#endif
+#endif // HAS_CRATERS
 
 	vec3 epos_norm = normalize(epos.xyz);
 	vec3 ambient   = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
@@ -105,7 +165,7 @@ void main()
 			color += heat*vec3(1.0, 0.25*heat, 0.0); // add lava
 		}
 	}
-#endif
+#endif // GAS_GIANT
 	if (atmosphere > 0.0) {
 		float cloud_val = atmosphere*gen_cloud_alpha(cloud_freq*vertex);
 		if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
