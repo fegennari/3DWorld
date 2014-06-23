@@ -18,8 +18,8 @@ Load/display model3d models in tiled terrain mode
 
 Planet shader model:
   - Compute normals in shader using height derivative
-  - Remove old subdiv sphere code
   - Disable check_gen_texture()
   - Better atmosphere
   - Ice cap size depends on temperature
   - Ice caps not perfect circles when water level is low
+  - Fix pt_over_land() and related functions

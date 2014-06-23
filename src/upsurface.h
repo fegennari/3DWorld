@@ -58,23 +58,6 @@ public:
 
 class upsurface : public ref_counted_obj, public noise_gen_3d { // size = 104 + 4*336 = 1784 (+cache)
 
-public:
-	struct pt_color {
-		point p;
-		vector3d n;
-		unsigned char c[3];
-		
-		void interpolate_from(pt_color const &A, pt_color const &B, float A_wt);
-		void add_pt(vector<vert_norm_color> &verts) const {verts.push_back(vert_norm_color(p, n, c));}
-	};
-
-	struct ptc_block {
-		unsigned char state, ndiv; // state: 0 = invalid, 1 = sphere map, 2 = cube map
-		pt_color v[SUBDIV_SECTS+3][SUBDIV_SECTS+3];
-		
-		ptc_block() : state(0), ndiv(0) {}
-	};
-
 private:
 	struct cache_entry {
 		point p;
@@ -85,7 +68,6 @@ private:
 	};
 
 	mutable vector<cache_entry> val_cache;
-	mutable vector<ptc_block> ptc_cache;
 
 public:
 	int type;
@@ -104,13 +86,8 @@ public:
 	void setup_draw_sphere(point const &pos, float radius, float dp, int ndiv, float const *const pmap);
 	void calc_rmax() {rmax = sd.get_rmax();}
 	void free_context() {sd.clear_vbos();}
-	void clear_cache();
+	void clear_cache() {vector<cache_entry>().swap(val_cache);}
 	bool has_heightmap() const {return (!heightmap.empty());}
-	void init_ptc_cache() const;
-	ptc_block &get_ptc(unsigned s, unsigned t) const; // sphere
-	ptc_block &get_ptc(unsigned s, unsigned t, unsigned f) const; // cube
-	void draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const;
-	void draw_cube_mapped_sphere (pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const;
 };
 
 typedef std::shared_ptr<upsurface> p_upsurface;

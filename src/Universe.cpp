@@ -64,7 +64,7 @@ s_object current;
 universe_t universe; // the top level universe
 
 
-extern bool univ_planet_lod, enable_multisample;
+extern bool enable_multisample;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
 extern unsigned enabled_lights;
 extern float fticks, tfticks;
@@ -2305,8 +2305,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		ndiv = min(ndiv, (int)SPHERE_MAX_ND); // final clamp
 	}
 	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
-	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0 && !(univ_planet_lod && ndiv == SPHERE_MAX_ND && !gas_giant));
-	bool const procedural(use_procedural_shader());
+	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0), procedural(use_procedural_shader());
 	// Note: the following line *must* be before the local transforms are applied as it captures the current MVM in the call
 	if (texture || procedural) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);} // always WHITE
 	assert(ndiv > 0);
@@ -2360,26 +2359,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 	assert(ndiv > 0);
 	assert(surface != nullptr);
 	bool const SD_TIMETEST(SHOW_SPHERE_TIME && size >= 256.0);
-
-	// sphere heightmap for rocky planet or moon
 	float const hmap_scale(get_hmap_scale());
-
-	if (univ_planet_lod && ndiv == SPHERE_MAX_ND && !gas_giant) {
-		vector3d dir(get_player_dir()), upv(get_player_up()), viewed_from(get_player_pos() - pos_);
-		rotate_vector(dir);
-		rotate_vector(upv);
-		rotate_vector(viewed_from);
-		pos_dir_up const pdu(viewed_from, dir, upv, 0.0, NEAR_CLIP_SCALED, FAR_CLIP);
-			
-		if (display_mode & 0x20) {
-			surface->draw_view_clipped_sphere(pdu, radius0, hmap_scale, this);
-		}
-		else {
-			surface->draw_cube_mapped_sphere(pdu, radius0, hmap_scale, this);
-		}
-		if (SHOW_SPHERE_TIME) PRINT_TIME("Draw VCS");
-		return;
-	}
 	vector<float> &perturb_map(get_empty_perturb_map(ndiv));
 
 	if (!surface->sd.equal(all_zeros, radius0, ndiv)) {
@@ -2400,7 +2380,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 		}
 		surface->setup_draw_sphere(all_zeros, radius0, -0.5*hmap_scale*radius, ndiv, &perturb_map.front());
 	}
-	surface->sd.draw_ndiv_pow2_vbo(ndiv);
+	surface->sd.draw_ndiv_pow2_vbo(ndiv); // sphere heightmap for rocky planet or moon
 	if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast");
 }
 

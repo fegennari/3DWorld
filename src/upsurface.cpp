@@ -90,15 +90,6 @@ float noise_gen_3d::get_val(point const &pt) const {
 }
 
 
-void upsurface::pt_color::interpolate_from(pt_color const &A, pt_color const &B, float A_wt) {
-			
-	float const B_wt(1.0 - A_wt);
-	p = A.p*A_wt + B.p*B_wt;
-	n = A.n*A_wt + B.n*B_wt;
-	BLEND_COLOR(c, A.c, B.c, A_wt);
-}
-
-
 void upsurface::gen(float mag, float freq, unsigned ntests, float mm_scale) {
 
 	max_mag = 0.0;
@@ -159,10 +150,10 @@ float upsurface::get_height_at(point const &pt, bool use_cache) const {
 	cache_entry ce(pt);
 
 	if (use_cache) {
-		if (val_cache.empty()) val_cache.resize(CACHE_SIZE);
+		if (val_cache.empty()) {val_cache.resize(CACHE_SIZE);}
 		assert(val_cache.size() == CACHE_SIZE);
 		cache_index = ce.hash()%CACHE_SIZE;
-		if (val_cache[cache_index].p == pt) return val_cache[cache_index].val;
+		if (val_cache[cache_index].p == pt) {return val_cache[cache_index].val;}
 	}
 	float val(get_val(pt)); // performance critical
 	val = 0.5*(max(-1.0f, min(1.0f, (1.5f/max_mag)*val)) + 1.0); // duplicate code
@@ -179,39 +170,6 @@ void upsurface::setup_draw_sphere(point const &pos, float radius, float dp, int 
 
 	sd.set_data(pos, radius, ndiv, pmap, dp, (pmap ? NULL : this));
 	sd.gen_points_norms(spn);
-}
-
-
-void upsurface::clear_cache() { // make sure the memory is deleted
-
-	vector<cache_entry>().swap(val_cache);
-	vector<ptc_block>().swap(ptc_cache);
-}
-
-
-void upsurface::init_ptc_cache() const {
-	
-	if (ptc_cache.empty()) {
-		ptc_cache.resize(max(ND_TEST*ND_TEST, 6*ND_CUBE*ND_CUBE));
-	}
-}
-
-
-upsurface::ptc_block &upsurface::get_ptc(unsigned s, unsigned t) const { // sphere
-
-	init_ptc_cache();
-	unsigned const index(s + t*ND_TEST);
-	assert(s < ND_TEST && t < ND_TEST && index < ptc_cache.size());
-	return ptc_cache[index];
-}
-
-
-upsurface::ptc_block &upsurface::get_ptc(unsigned s, unsigned t, unsigned f) const { // cube
-
-	init_ptc_cache();
-	unsigned const index(s + t*ND_CUBE + f*ND_CUBE*ND_CUBE);
-	assert(s < ND_CUBE && t < ND_CUBE && f < 6 && index < ptc_cache.size());
-	return ptc_cache[index];
 }
 
 
@@ -345,209 +303,4 @@ bool urev_body::pt_over_land(point const &p) const {
 	if (surface == NULL || !surface->has_heightmap()) return 1;
 	return (get_dheight_at(p, 1) > surface->min_cutoff);
 }
-
-
-inline bool back_facing_approx(point const &pt, vector3d const &norm, point const &vfrom) {
-
-	return (dot_product_ptv(norm, vfrom, pt) < -0.3*p2p_dist(vfrom, pt));
-}
-
-
-// pos is all_zeros (already translated)
-void upsurface::draw_view_clipped_sphere(pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const {
-
-	assert(cgc != NULL);
-	assert(radius0 > 0.0);
-	init_ptc_cache();
-	sd_sphere_d sd(all_zeros, radius0, ND_TEST, NULL);
-	sd.gen_points_norms_static();
-	point **points   = sd.get_points();
-	vector3d **norms = sd.get_norms();
-	float const omcinv(get_one_minus_cutoff()), rscale(hmap_scale*radius0), cscale(1.0/255.0);
-	float const multval(1.0/SUBDIV_SECTS), pi_over_nd(PI/ND_TEST), delta(multval*pi_over_nd);
-	float const sin_ds(sin(2.0*delta)), cos_ds(cos(2.0*delta)), sin_dt(sin(delta)), cos_dt(cos(delta));
-	vector<vert_norm_color> verts;
-
-	for (unsigned s = 0; s < ND_TEST; ++s) {
-		unsigned const sn((s+1)%ND_TEST);
-	
-		for (unsigned t = 0; t < ND_TEST; ++t) {
-			unsigned const tn(t+1);
-			point          pts[4]     = {points[s][t], points[sn][t], points[sn][tn], points[s][tn]};
-			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][tn], norms [s][tn]};
-			bool back_facing(1);
-
-			for (unsigned i = 0; i < 4 && back_facing; ++i) {
-				if (!back_facing_approx(pts[i], normals[i], pdu.pos)) back_facing = 0;
-			}
-			if (back_facing) continue;
-			point center;
-			float rad;
-			polygon_bounding_sphere(pts, 4, 0.0, center, rad);
-			if (!pdu.sphere_visible_test(center, (rad + max_mag))) continue;
-			ptc_block &ptc(get_ptc(s, t));
-
-			if (ptc.state != 1) {
-				float const theta(2.0*pi_over_nd*(s - multval)), phi(pi_over_nd*(t - multval));
-				float sin_s(sinf(theta)), cos_s(cosf(theta)), sin_t0(sinf(phi)), cos_t0(cosf(phi));
-
-				for (unsigned ss = 0; ss <= SUBDIV_SECTS+2; ++ss) {
-					float const sin_s2(sin_s), cos_s2(cos_s);
-					float sin_t(sin_t0), cos_t(cos_t0);
-
-					for (unsigned tt = 0; tt <= SUBDIV_SECTS+2; ++tt) {
-						float const sin_t2(sin_t), cos_t2(cos_t);
-						point &pt(ptc.v[ss][tt].p);
-						pt.assign(sin_t*sin_s, sin_t*cos_s, cos_t);
-						ptc.v[ss][tt].n = pt;
-						float const val(get_height_at(pt, 1));
-						pt *= radius0;
-						pt += ptc.v[ss][tt].n*(rscale*(omcinv*(max(min_cutoff, val) - min_cutoff) - 0.5));
-						cgc->get_surface_color(ptc.v[ss][tt].c, val, (t + tt*multval)*pi_over_nd);
-						sin_t = sin_t2*cos_dt + cos_t2*sin_dt;
-						cos_t = cos_t2*cos_dt - sin_t2*sin_dt;
-					} // for tt
-					sin_s = sin_s2*cos_ds + cos_s2*sin_ds;
-					cos_s = cos_s2*cos_ds - sin_s2*sin_ds;
-				} // for ss
-				for (unsigned ss = 1; ss <= SUBDIV_SECTS+1; ++ss) { // calculate normals
-					for (unsigned tt = 1; tt <= SUBDIV_SECTS+1; ++tt) {
-						if ((t == 0 && tt == 1) || (t == ND_TEST-1 && tt == SUBDIV_SECTS+1)) continue; // skip the poles
-						int const ds[4] = {1,1,-1,-1}, dt[4] = {1,-1,-1,1};
-						vector3d &norm(ptc.v[ss][tt].n);
-						norm = zero_vector;
-
-						for (unsigned d = 0; d < 4; ++d) { // s+,t+  t-,s+  s-,t-  t+,s-
-							vector3d const nst(cross_product((ptc.v[ss+ds[d]][tt].p - ptc.v[ss][tt].p),
-															 (ptc.v[ss][tt+dt[d]].p - ptc.v[ss][tt].p)));
-							norm += nst*(((d&1) ? -0.25 : 0.25)/nst.mag());
-						}
-					} // for tt
-				} // for ss
-				ptc.state = 1;
-			}
-			for (unsigned ss = 1; ss < SUBDIV_SECTS+1; ++ss) { // render heightmap on higher resolution mesh
-				for (unsigned tt = 1; tt <= SUBDIV_SECTS+1; ++tt) {
-					for (unsigned i = 0; i < 2; ++i) {ptc.v[ss + i][tt].add_pt(verts);} // texture?
-				} // for tt
-				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
-			} // for ss
-		} // for t
-	} // for s
-}
-
-
-void upsurface::draw_cube_mapped_sphere(pos_dir_up const &pdu, float radius0, float hmap_scale, color_gen_class const *const cgc) const {
-
-	assert(cgc != NULL);
-	assert(!(SUBDIV_SECTS&1)); // must be even
-	assert(radius0 > 0.0);
-	unsigned const nsubdiv(SUBDIV_SECTS >> unsigned(pdu.pos.mag() > 1.5*radius0));
-	init_ptc_cache();
-	float const step(1.0/(float)ND_CUBE), step_inner(step/nsubdiv);
-	float const omcinv(get_one_minus_cutoff()), rscale(hmap_scale*radius0), cscale(1.0/255.0);
-	point pt;
-	vector<vert_norm_color> verts;
-
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
-
-		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			unsigned const face((i<<1)+j);
-			pt[n] = (float)j - 0.5;
-
-			for (unsigned s = 0; s < ND_CUBE; ++s) {
-				for (unsigned t = 0; t < ND_CUBE; ++t) {
-					bool back_facing(1);
-					point pts[4];
-
-					for (unsigned k = 0; k < 4; ++k) {
-						pts[k][n]    = pt[n];
-						pts[k][d[0]] = step*(s + (k>>1)) - 0.5;
-						pts[k][d[1]] = step*(t + (k& 1)) - 0.5;
-						pts[k].normalize();
-						vector3d const norm(pts[k]);
-						pts[k] *= radius0;
-						if (back_facing && !back_facing_approx(pts[k], norm, pdu.pos)) back_facing = 0;
-					}
-					if (back_facing) continue;
-					point center;
-					float rad;
-					polygon_bounding_sphere(pts, 4, 0.0, center, rad);
-					if (!pdu.sphere_visible_test(center, (rad + max_mag))) continue;
-					ptc_block &ptc(get_ptc(s, t, face));
-
-					if (ptc.state != 2 || ptc.ndiv != nsubdiv) {
-						for (unsigned ss = 0; ss <= nsubdiv+2; ++ss) {
-							pt[d[0]] = step*s + step_inner*ss - step_inner - 0.5;
-
-							for (unsigned tt = 0; tt <= nsubdiv+2; ++tt) {
-								pt[d[1]] = step*t + step_inner*tt - step_inner - 0.5;
-								point &pt_(ptc.v[ss][tt].p);
-								ptc.v[ss][tt].n = pt_ = pt.get_norm();
-								float const val(get_height_at(pt_, 1));
-								pt_ *= radius0;
-								pt_ += ptc.v[ss][tt].n*(rscale*(omcinv*(max(min_cutoff, val) - min_cutoff) - 0.5));
-								cgc->get_surface_color(ptc.v[ss][tt].c, val, safe_acosf(ptc.v[ss][tt].n.z));
-							} // for tt
-						} // for ss
-						for (unsigned ss = 1; ss <= nsubdiv+1; ++ss) { // calculate normals
-							for (unsigned tt = 1; tt <= nsubdiv+1; ++tt) {
-								int const ds[4] = {1,1,-1,-1}, dt[4] = {1,-1,-1,1};
-								ptc.v[ss][tt].n = zero_vector;
-
-								for (unsigned k = 0; k < 4; ++k) { // s+,t+  t-,s+  s-,t-  t+,s-
-									vector3d const nst(cross_product((ptc.v[ss+ds[k]][tt].p - ptc.v[ss][tt].p),
-																	 (ptc.v[ss][tt+dt[k]].p - ptc.v[ss][tt].p)));
-									ptc.v[ss][tt].n += nst*((((k&1)^j^1) ? -0.25 : 0.25)/nst.mag());
-								}
-							} // for tt
-						} // for ss
-						ptc.state = 2;
-						ptc.ndiv  = nsubdiv;
-					}
-					unsigned const MOD_VAL(1);
-					unsigned const inc(1<<((s+t)%MOD_VAL)); // power of two
-
-					for (unsigned ss = 1; ss < nsubdiv+1; ss += inc) {
-						for (unsigned tt = 1; tt <= nsubdiv+1; tt += inc) {
-							for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-								unsigned const ss_ix(ss + k*inc);
-								pt_color ptc_(ptc.v[ss_ix][tt]); // copy
-
-								// use interpolate_from() along edges of tiles with differing LODs to remove cracks
-								if (MOD_VAL > 1 && (ss_ix == 1 || ss_ix == nsubdiv+1 || tt == 1 || tt == nsubdiv+1)) {
-									unsigned const sstt[2] = {ss_ix, tt};
-
-									for (unsigned dim = 0; dim < 2; ++dim) {
-										for (unsigned dir = 0; dir < 2; ++dir) {
-											if (sstt[dim] != (1+dir*nsubdiv)) continue; // not at the edge
-											unsigned const s2((s+(!dim)*(dir ? 1 : ND_CUBE-1))&(ND_CUBE-1));
-											unsigned const t2((t+  dim *(dir ? 1 : ND_CUBE-1))&(ND_CUBE-1));
-											// test for wraparound to another cube face???
-											unsigned const inc2(1<<((s2+t2)%MOD_VAL));
-											if (inc2 <= inc) continue; // no lower-res neighbor
-											unsigned const modval((sstt[!dim]-1)&(inc2-1));
-											if (modval == 0) continue;
-											unsigned sstt2[2][2] = {{ss_ix, tt}, {ss_ix, tt}};
-											sstt2[0][!dim] -= modval;
-											sstt2[1][!dim]  = sstt2[0][!dim] + inc2;
-											ptc_.interpolate_from(ptc.v[sstt2[0][0]][sstt2[0][1]],
-												ptc.v[sstt2[1][0]][sstt2[1][1]], (1.0-float(modval)/float(inc2)));
-										}
-									}
-								}
-								//set_tex_coord((step*s + step_inner*ss_ix), (step*t + step_inner*tt));
-								ptc_.add_pt(verts);
-							}
-						} // for tt
-						draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
-					} // for ss
-				} // for t
-			} // for s
-		} // for j
-	} // for i
-}
-
-
 

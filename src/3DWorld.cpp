@@ -59,7 +59,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0);
-bool univ_planet_lod(0), show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0);
+bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
 bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0);
@@ -853,11 +853,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (camera_mode == 1) camera_invincible = 1; // in air (else on ground)
 		break;
 
-	case 'h': // change camera surface collision detection / toggle universe planet LOD
-		if (world_mode == WMODE_UNIVERSE) {
-			univ_planet_lod = !univ_planet_lod;
-			break;
-		}
+	case 'h': // change camera surface collision detection
+		if (world_mode == WMODE_UNIVERSE) break; // option not used in universe mode (could rebind...)
 		camera_surf_collide = !camera_surf_collide;
 		camera_change       = 1;
 		break;
@@ -1106,7 +1103,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation, clouds, and universe mode multithreading
 		display_mode ^= 0x40;   break;
-	case '8': // toggle water caustics/smoke (change text draw mode - stroke vs. bitmap - disabled)
+	case '8': // toggle water caustics/smoke
 		display_mode ^= 0x80;   break;
 	case '9': // toggle leaf wind
 		display_mode ^= 0x0100; break;

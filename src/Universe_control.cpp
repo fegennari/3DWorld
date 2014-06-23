@@ -25,7 +25,6 @@ unsigned owner_counts[NUM_ALIGNMENT] = {0};
 float resource_counts[NUM_ALIGNMENT] = {0.0};
 
 
-extern bool univ_planet_lod; // smaller near_clip if true?
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern unsigned NUM_THREADS;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
@@ -56,7 +55,7 @@ point get_scaled_upt();
 void init_universe_display() {
 
 	setup_ships();
-	set_perspective(PERSP_ANGLE, UNIV_NCLIP_SCALE); // that's all (closer near_clip for univ_planet_lod?)
+	set_perspective(PERSP_ANGLE, UNIV_NCLIP_SCALE); // that's all
 	check_shift_universe();
 }
 
@@ -306,7 +305,7 @@ void process_univ_objects() {
 		if (uobj->is_stationary()) continue;
 		bool const is_ship(uobj->is_ship()), orbiting(uobj->is_orbiting());
 		bool const calc_gravity(((uobj->get_time() + (unsigned(uobj)>>8)) & (GRAV_CHECK_MOD-1)) == 0);
-		bool const lod_coll(univ_planet_lod && is_ship && uobj->is_player_ship());
+		bool const lod_coll(0 && is_ship && uobj->is_player_ship()); // unused - enable if we want to do close planet flyby
 		float const radius(uobj->get_c_radius()*(no_coll ? 0.5 : 1.0));
 		upos_point_type const &obj_pos(uobj->get_pos());
 		vector3d gravity(zero_vector); // sum of gravity from sun, planets, possibly some moons, and possibly asteroids
@@ -424,7 +423,7 @@ void process_univ_objects() {
 			}
 			if (!orbiting) {
 				float speed_factor(uobj->get_max_sf()), speed_factor2(1.0);
-				if (clobj.val > 0) speed_factor2 = max((lod_coll ? 0.002f : 0.01f), min(1.0f, 0.7f*clobj.dist)); // clip to [0.01, 1.0]
+				if (clobj.val > 0) {speed_factor2 = max((lod_coll ? 0.002f : 0.01f), min(1.0f, 0.7f*clobj.dist));} // clip to [0.01, 1.0]
 				uobj->set_speed_factor(min(speed_factor, speed_factor2));
 			}
 		}
@@ -947,7 +946,7 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 	assert(clobj.object != NULL);
 
 	if (is_player_ship()) {
-		if (!univ_planet_lod && coll == 2) {
+		if (coll == 2) {
 			bool const homeworld(clobj.type == UTYPE_PLANET && !has_homeworld());
 
 			if (check_dest_ownership(clobj.object->get_id(), pos, this, 1, homeworld)) {
