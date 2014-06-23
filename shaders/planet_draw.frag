@@ -16,7 +16,7 @@ uniform float lava_val   = 0.0;
 uniform float crater_val = 0.0;
 uniform sampler2D tex0;
 #ifdef PROCEDURAL_DETAIL
-uniform float snow_thresh, cold_scale;
+uniform float obj_radius, snow_thresh, cold_scale, noise_offset, terrain_scale, temperature;
 uniform vec4 water_color, color_a, color_b;
 #endif // PROCEDURAL_DETAIL
 #endif // not GAS_GIANT
@@ -29,6 +29,7 @@ void main()
 {
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	if (dot(normal, epos.xyz) > 0.0) discard; // back facing
+	vec3 norm = normal;
 
 #ifdef GAS_GIANT
 	float tc_adj = tc.t + 0.04*(gen_cloud_alpha_static_non_norm(5.0*vertex) - 0.5);
@@ -58,9 +59,10 @@ void main()
 #else // not ALL_WATER_ICE
 	float height = 0.0;
 	float freq   = 1.0;
+	vec3 npos    = vertex*(terrain_scale/obj_radius) + vec3(noise_offset);
 
 	for (int i = 0; i < 8; ++i) { // similar to gen_cloud_alpha_time()
-		height += texture3D(cloud_noise_tex, 5.0*freq*vertex).r/freq;
+		height += texture3D(cloud_noise_tex, freq*npos).r/freq;
 		freq   *= 2.0;
 	}
 	height = max(0.0, 1.8*(height-0.7)); // can go outside the [0,1] range
@@ -68,7 +70,6 @@ void main()
 
 	if (height < water_val) {
 		texel = water_color;
-		if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp((4.0*(coldness - 0.75f) + 0.5*(height - water_val)), 0.0, 1.0));} // ice/snow
 	}
 	else {
 		float height_ws = (height - water_val)/(1.0 - water_val); // rescale to [0,1] above water
@@ -88,17 +89,33 @@ void main()
 			if      (height < lava_val)        {texel = vec4(1,0,0,1);} // red
 			else if (height < lava_val + 0.07) {texel = mix(vec4(1,0,0,1), texel, (height - lava_val)/0.07);} // close to lava line
 		}
-		else if (water_val > 0.0) { // handle water/ice/snow (FIXME: temperature?)
+		else if (water_val > 0.0 && temperature < 30.0) { // handle water/ice/snow
 			if (height < water_val + 0.07) { // close to water line (can have a little water even if water == 0)
 				texel = mix(water_color, texel, (height - water_val)/0.07);
-				if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp((4.0*(coldness - 0.75f) + 0.5*(height - water_val)), 0.0, 1.0));} // ice/snow
 			}
 			else {
 				float st = (1.0 - coldness)*snow_thresh;
-				if (0.8*height > (st + 1.0E-6)) {texel = mix(texel, vec4(1,1,1,1), clamp((0.8*height - st)/(1.0 - st), 0.0, 1.0));} // blend in some snow
+
+				if (0.8*height > st) {
+					float freq = 1.0;
+					float val  = 0.0;
+
+					for (int i = 0; i < 4; ++i) { // scample high frequencies from the above iteration?
+						val  += texture3D(cloud_noise_tex, 20.0*freq*npos).r/freq;
+						freq *= 2.0;
+					}
+					float mv = clamp(((0.8*height * (0.5*val + 0.5)) - st)/(1.0 - st), 0.0, 1.0);
+					texel    = mix(texel, vec4(1,1,1,1), clamp((1.5*mv*mv - 0.25), 0.0, 1.0)); // blend in some snow on peaks
+				}
 			}
 		}
 	}
+	if (snow_thresh > 0.1 && water_val > 0.25 && coldness > 0.9) { // add polar ice caps
+		float val = (10.0*(coldness - 0.9) + 1.0*(height - water_val));
+		texel     = mix(texel, vec4(1,1,1,1), clamp(3*val-1, 0.0, 1.0)); // ice/snow
+	}
+	norm = fg_NormalMatrix * vertex; // recompute
+	// FIXME: perturb the normal by looking at derivative of normal at this point
 #endif // ALL_WATER_ICE
 
 #else
@@ -131,12 +148,12 @@ void main()
 			}
 		}
 	}
-	vec3 norm      = normalize(normal); // renormalize
-	vec3 ldir0     = normalize(fg_LightSource[0].position.xyz - epos.xyz);
-	vec3 ldir2     = normalize(fg_LightSource[2].position.xyz - epos.xyz);
-	vec3 ldir20    = normalize(fg_LightSource[2].position.xyz - fg_LightSource[0].position.xyz);
-	float lscale0  = (dot(norm, ldir0) > 0.0) ? 1.0 : 0.0;
-	float lscale2  = (dot(norm, ldir2) > 0.0) ? 1.0 : 0.0;
+	norm          = normalize(norm); // renormalize
+	vec3 ldir0    = normalize(fg_LightSource[0].position.xyz - epos.xyz);
+	vec3 ldir2    = normalize(fg_LightSource[2].position.xyz - epos.xyz);
+	vec3 ldir20   = normalize(fg_LightSource[2].position.xyz - fg_LightSource[0].position.xyz);
+	float lscale0 = (dot(norm, ldir0) > 0.0) ? 1.0 : 0.0;
+	float lscale2 = (dot(norm, ldir2) > 0.0) ? 1.0 : 0.0;
 
 #ifdef HAS_CRATERS
 	// facing the sun or planet (reflected light), and not over water (blue)

@@ -113,8 +113,6 @@ void set_star_light_atten(int light, float atten, shader_t *shader=NULL) {
 	setup_gl_light_atten(light, STAR_CONST, atten*STAR_LINEAR_SCALED, atten*STAR_QUAD_SCALED, shader);
 }
 
-bool new_planet_shader() {return ((display_mode & 0x20) != 0);}
-
 
 s_object get_shifted_sobj(s_object const &sobj) {
 
@@ -253,7 +251,7 @@ public:
 				set_prefix("#define GAS_GIANT", 1); // FS
 				if (!(display_mode & 0x20)) {set_prefix("#define ANIMATE_STORMS", 1);} // FS
 			}
-			else if (new_planet_shader()) {
+			else if (body.use_procedural_shader()) {
 				set_prefix("#define PROCEDURAL_DETAIL", 1); // FS
 				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
 			}
@@ -278,7 +276,7 @@ public:
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
 			set_uniform_float(get_loc("water_val"), body.water);
 			set_uniform_float(get_loc("lava_val"),  body.lava);
-			if (new_planet_shader()) {body.upload_colors_to_shader(*this);}
+			body.upload_colors_to_shader(*this);
 		}
 		float const cf_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : UNIV_NCLIP_SCALE);
 		set_uniform_vector3d(get_loc("cloud_freq"), cf_scale*(body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 1.0)));
@@ -343,19 +341,19 @@ public:
 		}
 	}
 
-	bool enable_atmospheric(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {	
+	void enable_atmospheric(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {	
 		if (!is_setup()) {
 			set_vert_shader("atmosphere");
 			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+atmosphere");
 			begin_shader();
 		}
 		enable();
+		bool const uses_hmap(!planet.gas_giant && !planet.use_procedural_shader());
 		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
 		set_uniform_vector3d(get_loc("planet_pos"), planet_pos);
-		set_uniform_float(get_loc("planet_radius"), planet.radius/PLANET_ATM_RSCALE);
+		set_uniform_float(get_loc("planet_radius"), planet.radius/(uses_hmap ? PLANET_ATM_RSCALE : (0.5 + 0.5*PLANET_ATM_RSCALE)));
 		set_uniform_float(get_loc("atmos_radius"),  planet.radius*PLANET_ATM_RSCALE);
 		set_planet_uniforms(planet.atmos, svars, 0); // atmosphere has no planet reflection light (light2)
-		return 1;
 	}
 	void disable_atmospheric() {
 		if (is_setup()) {disable();}
@@ -369,7 +367,7 @@ class ushader_group {
 	shader_t color_only_shader, planet_colored_shader, point_sprite_shader;
 
 	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
-		unsigned const type(body.gas_giant ? 3 : (new_planet_shader() ? ((body.water >= 1.0) ? 2 : 1) : 0));
+		unsigned const type(body.gas_giant ? 3 : (body.use_procedural_shader() ? ((body.water >= 1.0) ? 2 : 1) : 0));
 		return planet_shader[svars.ring_ro > 0.0][type][body.type == UTYPE_MOON];
 	}
 
@@ -388,8 +386,8 @@ public:
 		return ring_shader.enable_ring(planet, planet_pos, sun_pos, sun_radius, dir);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
-	bool enable_atmospheric_shader(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
-		return atmospheric_shader.enable_atmospheric(planet, planet_pos, svars);
+	void enable_atmospheric_shader(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
+		atmospheric_shader.enable_atmospheric(planet, planet_pos, svars);
 	}
 	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
 	
@@ -1895,7 +1893,8 @@ void uobj_solid::gen_colorAB(float delta) {
 
 void urev_body::check_gen_texture(unsigned size) {
 
-	if (size <= MIN_TEX_OBJ_SZ) return; // too small to be textured
+	//if (use_procedural_shader()) return; // no texture used
+	if (size <= MIN_TEX_OBJ_SZ)  return; // too small to be textured
 
 	if (gas_giant) { // perfectly spherical, no surface used
 		if (!glIsTexture(tid)) {create_gas_giant_texture();} // texture has not been generated
@@ -1950,14 +1949,24 @@ void urev_body::create_gas_giant_texture() {
 }
 
 
+bool urev_body::use_procedural_shader() const {
+	return (!gas_giant && type == UTYPE_PLANET && (display_mode & 0x20) != 0); // only for planets
+}
+
+
 void urev_body::upload_colors_to_shader(shader_t &s) const {
 
+	if (!use_procedural_shader()) return;
 	bool const frozen(temp < FREEZE_TEMP);
-	s.add_uniform_color("water_color", (frozen ? P_ICE_C : P_WATER_C));
-	s.add_uniform_color("color_a",     colorA);
-	s.add_uniform_color("color_b",     colorB);
-	s.add_uniform_float("snow_thresh", snow_thresh);
-	s.add_uniform_float("cold_scale",  (frozen ? 0.0 : 1.0)); // frozen ice planets don't use coldness
+	s.add_uniform_color("water_color",  (frozen ? P_ICE_C : P_WATER_C));
+	s.add_uniform_color("color_a",      colorA);
+	s.add_uniform_color("color_b",      colorB);
+	s.add_uniform_float("obj_radius",   radius); // divide terrain_scale by this value instead?
+	s.add_uniform_float("temperature",  temp); // unused?
+	s.add_uniform_float("snow_thresh",  snow_thresh);
+	s.add_uniform_float("cold_scale",   (frozen ? 0.0 : 1.0)); // frozen ice planets don't use coldness
+	s.add_uniform_float("noise_offset", orbit); // use as a random seed
+	s.add_uniform_float("terrain_scale",0.05);
 }
 
 
@@ -2297,22 +2306,26 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	}
 	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0 && !(univ_planet_lod && ndiv == SPHERE_MAX_ND && !gas_giant));
+	bool const procedural(use_procedural_shader());
 	// Note: the following line *must* be before the local transforms are applied as it captures the current MVM in the call
-	if (texture) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);} // always WHITE
+	if (texture || procedural) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);} // always WHITE
 	assert(ndiv > 0);
 	fgPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
-		
-	if (texture) { // texture map
+	
+	if (procedural) {
+		// nothing to do here
+	}
+	else if (texture) { // texture map
 		assert(tid > 0);
-		(gas_giant ? bind_1d_texture(tid) : (new_planet_shader() ? select_texture(WHITE_TEX) : bind_2d_texture(tid)));
+		if (gas_giant) {bind_1d_texture(tid);} else {bind_2d_texture(tid);}
 	}
 	else {
 		usg.enable_planet_colored_shader(use_light2, ocolor);
 	}
 	if (ndiv >= N_SPHERE_DIV) {
-		if (surface == nullptr || !surface->has_heightmap() || new_planet_shader()) { // gas giant
+		if (surface == nullptr || !surface->has_heightmap() || procedural) { // gas giant or procedural
 			ndiv /= 2; // don't need high resolution for gas giants since they have no heightmap
 			point viewed_from(vcp);
 			rotate_vector(viewed_from);
@@ -2327,7 +2340,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		uniform_scale(radius); // no push/pop required
 		draw_sphere_vbo_raw(ndiv, texture); // small sphere - use vbo
 	}
-	if (texture) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
+	if (texture || procedural) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
 	fgPopMatrix();
 	return 1;
 }
@@ -2491,7 +2504,7 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 void uplanet::draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const {
 
 	float const cloud_radius(PLANET_ATM_RSCALE*radius);
-	if (!usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars)) return; // always WHITE
+	usg.enable_atmospheric_shader(*this, make_pt_global(pos_), svars); // always WHITE
 	fgPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
