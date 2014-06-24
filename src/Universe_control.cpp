@@ -25,6 +25,7 @@ unsigned owner_counts[NUM_ALIGNMENT] = {0};
 float resource_counts[NUM_ALIGNMENT] = {0.0};
 
 
+extern bool claim_planet;
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern unsigned NUM_THREADS;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
@@ -427,7 +428,8 @@ void process_univ_objects() {
 				uobj->set_speed_factor(min(speed_factor, speed_factor2));
 			}
 		}
-	}
+	} // for i
+	claim_planet = 0; // unset the flag - should have been used by this point
 }
 
 
@@ -946,7 +948,8 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 	assert(clobj.object != NULL);
 
 	if (is_player_ship()) {
-		if (coll == 2) {
+		//if (coll == 2) {
+		if (claim_planet && (coll || dist_less_than(pos, clobj.object->get_pos(), 2.0*radius))) {
 			bool const homeworld(clobj.type == UTYPE_PLANET && !has_homeworld());
 
 			if (check_dest_ownership(clobj.object->get_id(), pos, this, 1, homeworld)) {

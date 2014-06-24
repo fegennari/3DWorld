@@ -266,7 +266,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 bool urev_body::surface_test(float rad, point const &p, float &coll_r, bool simple) const {
 
 	// not quite right - should take into consideration peaks in surrounding geometry that also intersect the sphere
-	if (surface != NULL && surface->has_heightmap()) {
+	if (has_heightmap()) {
 		if (p2p_dist(p, pos) > radius*(1.0 + get_hmap_scale()*0.5) + rad) return 0; // test rmax
 		coll_r = get_radius_at(p, !simple);
 	}
@@ -284,7 +284,7 @@ float urev_body::get_radius_at(point const &p, bool exact) const {
 
 float urev_body::get_dheight_at(point const &p, bool exact) const {
 
-	if (surface == NULL || !surface->has_heightmap()) return 0.0;
+	if (!has_heightmap()) return 0.0;
 	point coll_from(p - pos);
 	rotate_vector(coll_from); // in radians
 	coll_from.normalize();
@@ -300,7 +300,7 @@ float urev_body::get_dheight_at(point const &p, bool exact) const {
 
 bool urev_body::pt_over_land(point const &p) const {
 
-	if (surface == NULL || !surface->has_heightmap()) return 1;
+	if (water < 0.1 || !has_heightmap()) return 1;
 	return (get_dheight_at(p, 1) > surface->min_cutoff);
 }
 

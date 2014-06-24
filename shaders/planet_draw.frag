@@ -57,15 +57,15 @@ void main()
 	vec4 texel = water_color;
 	if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp(4.0*(coldness - 0.75f), 0.0, 1.0));} // ice/snow
 #else // not ALL_WATER_ICE
-	float height = 0.0;
-	float freq   = 1.0;
-	vec3 npos    = vertex*(terrain_scale/obj_radius) + vec3(noise_offset);
+	float hval = 0.0;
+	float freq = 1.0;
+	vec3 npos  = vertex*(terrain_scale/obj_radius) + vec3(noise_offset);
 
 	for (int i = 0; i < 8; ++i) { // similar to gen_cloud_alpha_time()
-		height += texture3D(cloud_noise_tex, freq*npos).r/freq;
-		freq   *= 2.0;
+		hval += texture3D(cloud_noise_tex, freq*npos).r/freq;
+		freq *= 2.0;
 	}
-	height = max(0.0, 1.8*(height-0.7)); // can go outside the [0,1] range
+	float height = max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
 	vec4 texel;
 
 	if (height < water_val) {
@@ -110,8 +110,9 @@ void main()
 			}
 		}
 	}
-	if (snow_thresh > 0.1 && water_val > 0.25 && coldness > 0.9) { // add polar ice caps
-		float val = (10.0*(coldness - 0.9) + 1.0*(height - water_val));
+	if (snow_thresh > 0.1 && water_val > 0.2 && temperature < 30.0) { // add polar ice caps
+		float icv = 0.7 + 0.01*temperature; // 1.0 @ T=30, 0.9 @ T=20, 0.7 @ T=0
+		float val = (coldness - icv)/(1.0 - icv) + 1.0*(height - water_val);
 		texel     = mix(texel, vec4(1,1,1,1), clamp(3*val-1, 0.0, 1.0)); // ice/snow
 	}
 	norm = fg_NormalMatrix * vertex; // recompute

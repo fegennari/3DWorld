@@ -106,7 +106,7 @@ float const TEX_H_SCALE      = TEX_HEIGHT_SCALE/(SURFACE_HEIGHT*sqrt((double)SIN
 float const NEAR_CLIP_SCALED = NEAR_CLIP_SCALE*UNIV_NCLIP_SCALE*NEAR_CLIP;
 
 colorRGBA const P_WATER_C(0.2, 0.2, 0.8, 1.0);
-colorRGBA const P_ICE_C(  0.5, 0.5, 0.9, 1.0);
+colorRGBA const P_ICE_C(  0.5, 0.7, 0.9, 1.0);
 
 
 // forward references
@@ -228,6 +228,7 @@ public:
 	void create_rocky_texture(unsigned size);
 	void create_gas_giant_texture();
 	void gen_texture_data_and_heightmap(unsigned char *data, unsigned size);
+	bool has_heightmap() const {return (surface != nullptr && surface->has_heightmap() && !use_procedural_shader());}
 	bool surface_test(float rad, point const &p, float &coll_r, bool simple) const;
 	float get_radius_at(point const &p, bool exact=0) const;
 	float get_dheight_at(point const &p, bool exact=0) const;

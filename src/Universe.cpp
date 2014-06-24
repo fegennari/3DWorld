@@ -2324,7 +2324,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		usg.enable_planet_colored_shader(use_light2, ocolor);
 	}
 	if (ndiv >= N_SPHERE_DIV) {
-		if (surface == nullptr || !surface->has_heightmap() || procedural) { // gas giant or procedural
+		if (!has_heightmap() || procedural) { // gas giant or procedural
 			ndiv /= 2; // don't need high resolution for gas giants since they have no heightmap
 			point viewed_from(vcp);
 			rotate_vector(viewed_from);
