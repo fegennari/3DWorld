@@ -206,6 +206,7 @@ class urev_body : public uobj_solid, public color_gen_class, public rotated_obj 
 	// for textures/colors
 	unsigned char a[3], b[3];
 	
+protected:
 	void calc_snow_thresh();
 
 public:

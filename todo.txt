@@ -18,5 +18,4 @@ Load/display model3d models in tiled terrain mode
 
 Planet shader model:
   - Compute normals in shader using height derivative
-  - Disable check_gen_texture()
   - Better atmosphere

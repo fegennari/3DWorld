@@ -122,7 +122,7 @@ s_object get_shifted_sobj(s_object const &sobj) {
 }
 
 
-// not very useful, but could be after planets and ships are scaled to do better planet approaches and planet surface subdivision
+// not very useful, but could be after planets and ships are scaled to do better/closer planet approaches
 void setup_universe_fog(s_object const &closest) {
 
 	if (closest.type != UTYPE_PLANET) return;
@@ -925,7 +925,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							if (!planet.ring_data.empty() && ring_scale > 2.5) {
 								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 							}
-							if (planet_visible && !skip_planet_draw && !planet.gas_giant && planet.atmos > 0.05 && sizep > 5.0 && planet.tsize > PLANET_ATM_TEX_SZ) {
+							if (planet_visible && !skip_planet_draw && !planet.gas_giant && planet.atmos > 0.05 && sizep > 5.0) {
 								usg.atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
 							}
 						}
@@ -1435,19 +1435,14 @@ void ussystem::process() {
 
 
 bool urev_body::can_land() const {
-
 	return (!gas_giant && temp >= MIN_LAND_TEMP && temp <= MAX_LAND_TEMP);
 }
 
-
 bool urev_body::colonizable() const {
-
 	return (is_ok() && temp >= MIN_COLONY_TEMP && temp <= MAX_COLONY_TEMP && colonizable_int());
 }
 
-
 bool urev_body::liveable() const { // only planets are liveable
-
 	return (is_ok() && !gas_giant && water > 0.15 && atmos > 0.25 && temp >= MIN_LIVE_TEMP && temp <= MAX_LIVE_TEMP);
 }
 
@@ -1512,9 +1507,10 @@ void uplanet::create(bool phase) {
 	check_owner(current); // must be after setting of resources
 	gen_color();
 	gen_name(current);
+	calc_snow_thresh();
 	cloud_scale  = rand_uniform2(1.0, 2.0);
 	current.type = UTYPE_PLANET;
-	if (current.is_destroyed()) status = 1;
+	if (current.is_destroyed()) {status = 1;}
 }
 
 
@@ -1696,7 +1692,8 @@ void umoon::create(bool phase) { // no rotation due to satellites
 		if ((rand2()&3) == 0) {water = rand_uniform2(0.0, 0.2);} // some moons have a small amount of water
 		check_owner(current); // must be after setting of resources
 		calc_temperature(); // has to be after setting of resources - resources must be independent of moon position/temperature
-		gen       = 1;
+		calc_snow_thresh();
+		gen = 1;
 	}
 	current.type = UTYPE_MOON;
 	if (current.is_destroyed()) status = 1;
@@ -1893,7 +1890,7 @@ void uobj_solid::gen_colorAB(float delta) {
 
 void urev_body::check_gen_texture(unsigned size) {
 
-	//if (use_procedural_shader()) return; // no texture used
+	if (use_procedural_shader()) return; // no texture used
 	if (size <= MIN_TEX_OBJ_SZ)  return; // too small to be textured
 
 	if (gas_giant) { // perfectly spherical, no surface used

@@ -197,7 +197,6 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 
 	//RESET_TIME;
 	get_colors(a, b);
-	calc_snow_thresh();
 	unsigned size_p2(0);
 	for (unsigned sz = size; sz > 1; sz >>= 1, ++size_p2);
 	assert((1U<<size_p2) == size); // size must be a power of 2
@@ -267,7 +266,7 @@ bool urev_body::surface_test(float rad, point const &p, float &coll_r, bool simp
 
 	// not quite right - should take into consideration peaks in surrounding geometry that also intersect the sphere
 	if (has_heightmap()) {
-		if (p2p_dist(p, pos) > radius*(1.0 + get_hmap_scale()*0.5) + rad) return 0; // test rmax
+		if (!dist_less_than(p, pos, (radius*(1.0 + get_hmap_scale()*0.5) + rad))) return 0; // test rmax
 		coll_r = get_radius_at(p, !simple);
 	}
 	return 1;
@@ -288,7 +287,7 @@ float urev_body::get_dheight_at(point const &p, bool exact) const {
 	point coll_from(p - pos);
 	rotate_vector(coll_from); // in radians
 	coll_from.normalize();
-	if (exact) return surface->get_height_at(coll_from, 0); // slower but more accurate
+	if (exact) {return surface->get_height_at(coll_from, 0);} // slower but more accurate
 
 	unsigned const tsize(surface->ssize);
 	unsigned const tx(unsigned(tsize*((atan2(coll_from.y, coll_from.x)/TWO_PI) + 0.5) + 0.25*tsize)%tsize);

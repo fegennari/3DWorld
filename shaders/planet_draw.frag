@@ -93,20 +93,16 @@ void main()
 			if (height < water_val + 0.07) { // close to water line (can have a little water even if water == 0)
 				texel = mix(water_color, texel, (height - water_val)/0.07);
 			}
-			else {
-				float st = (1.0 - coldness)*snow_thresh;
+			else if (height_ws > 1.0) {
+				float freq = 1.0;
+				float val  = 0.0;
 
-				if (0.8*height > st) {
-					float freq = 1.0;
-					float val  = 0.0;
-
-					for (int i = 0; i < 4; ++i) { // scample high frequencies from the above iteration?
-						val  += texture3D(cloud_noise_tex, 20.0*freq*npos).r/freq;
-						freq *= 2.0;
-					}
-					float mv = clamp(((0.8*height * (0.5*val + 0.5)) - st)/(1.0 - st), 0.0, 1.0);
-					texel    = mix(texel, vec4(1,1,1,1), clamp((1.5*mv*mv - 0.25), 0.0, 1.0)); // blend in some snow on peaks
+				for (int i = 0; i < 4; ++i) { // scample high frequencies from the above iteration?
+					val  += texture3D(cloud_noise_tex, 32.0*freq*npos).r/freq;
+					freq *= 2.0;
 				}
+				float mv = val * (0.6 + 0.2*snow_thresh) * sqrt(height_ws - 1.0);
+				texel    = mix(texel, vec4(1,1,1,1), clamp((1.5*mv*mv - 0.25), 0.0, 1.0)); // blend in some snow on peaks
 			}
 		}
 	}
