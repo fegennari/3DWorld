@@ -18,4 +18,5 @@ Load/display model3d models in tiled terrain mode
 
 Planet shader model:
   - Compute normals in shader using height derivative
-  - Better atmosphere
+
+High rate of fire ship weapons?

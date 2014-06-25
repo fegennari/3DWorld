@@ -1,22 +1,31 @@
 uniform vec3 camera_pos, planet_pos, sun_pos, ss_pos;
 uniform float planet_radius, atmos_radius, sun_radius, ss_radius;
-uniform float atmosphere = 1.0;
-uniform vec3 light_scale = vec3(1.0);
+uniform vec3 light_scale   = vec3(1.0);
+uniform vec3 atmos_density = vec3(1.0, 0.0, 0.0); // {constant, linear, quadratic}
+
 varying vec4 epos;
 varying vec3 normal, world_space_pos;
+
+float get_density_at(vec3 pos) {
+	float dist = distance(pos, planet_pos);
+	float v = 1.0 - clamp((dist - planet_radius)/(atmos_radius - planet_radius), 0.0, 1.0);
+	return dot(atmos_density, vec3(1.0, v, v*v));
+}
 
 void main()
 {
 	// alpha is calculated from distance between sphere intersection points
-	float wpdist   = length(world_space_pos - planet_pos);
-	float dp       = dot(normalize(world_space_pos - camera_pos), (world_space_pos - planet_pos));
+	float wpdist   = distance(world_space_pos, planet_pos);
+	vec3 ldir      = normalize(world_space_pos - camera_pos);
+	float dp       = dot(ldir, (world_space_pos - planet_pos));
 	float adist_sq = dp*dp - wpdist*wpdist + atmos_radius*atmos_radius;
 	if (adist_sq <= 0.0) discard; // no sphere intersection
 	float dist     = sqrt(adist_sq);
 	float pdist_sq = dp*dp - wpdist*wpdist + planet_radius*planet_radius;
 	if (pdist_sq > 0.0) {dist -= sqrt(pdist_sq);} // ray intersects planet, adjust distance
-	float density  = dist/atmos_radius;
-	float alpha    = atmosphere*clamp(4.0*density, 0.0, 1.0);
+	vec3 pos       = world_space_pos - ldir*(dp + 0.5*dist); // midpoint of ray in atmosphere
+	float density  = get_density_at(pos)*dist/atmos_radius;
+	float alpha    = clamp(4.0*density, 0.0, 1.0);
 	float lt_atten = 1.0;
 
 	if (sun_radius > 0.0 && ss_radius > 0.0) {
@@ -26,7 +35,7 @@ void main()
 	vec3 color = vec3(0.0);
 	color += lt_atten*light_scale[0]*add_pt_light_comp(normalize(normal), epos, 0).rgb; // sun ADS
 	color += light_scale[1]*(gl_Color * fg_LightSource[1].ambient).rgb; // ambient only
-	float rg_comp = atmosphere*min(1.6*density, 1.0);
+	float rg_comp = min(1.6*density, 1.0);
 	vec3 scatter_color = vec3(rg_comp, rg_comp, 1.0); // precomputed texture lookup or something else better?
 	fg_FragColor = vec4(color*scatter_color, alpha);
 }

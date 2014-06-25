@@ -29,7 +29,8 @@ void main()
 {
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	if (dot(normal, epos.xyz) > 0.0) discard; // back facing
-	vec3 norm = normal;
+	vec3 norm      = normal;
+	float spec_mag = 0.0;
 
 #ifdef GAS_GIANT
 	float tc_adj = tc.t + 0.04*(gen_cloud_alpha_static_non_norm(5.0*vertex) - 0.5);
@@ -56,6 +57,7 @@ void main()
 #ifdef ALL_WATER_ICE
 	vec4 texel = water_color;
 	if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp(4.0*(coldness - 0.75f), 0.0, 1.0));} // ice/snow
+	spec_mag = 1.0; // always specular
 #else // not ALL_WATER_ICE
 	float hval = 0.0;
 	float freq = 1.0;
@@ -69,9 +71,11 @@ void main()
 	vec4 texel;
 
 	if (height < water_val) {
-		texel = water_color;
+		texel    = water_color;
+		spec_mag = 1.0;
 	}
 	else {
+		spec_mag = 0.0;
 		float height_ws = (height - water_val)/(1.0 - water_val); // rescale to [0,1] above water
 
 		if (water_val > 0.2 && atmosphere > 0.1) { // Earthlike planet
@@ -91,7 +95,9 @@ void main()
 		}
 		else if (water_val > 0.0 && temperature < 30.0) { // handle water/ice/snow
 			if (height < water_val + 0.07) { // close to water line (can have a little water even if water == 0)
-				texel = mix(water_color, texel, (height - water_val)/0.07);
+				float val = (height - water_val)/0.07;
+				texel     = mix(water_color, texel, val);
+				spec_mag  = 1.0 - val;
 			}
 			else if (height_ws > 1.0) {
 				float freq = 1.0;
@@ -102,14 +108,17 @@ void main()
 					freq *= 2.0;
 				}
 				float mv = val * (0.6 + 0.2*snow_thresh) * sqrt(height_ws - 1.0);
-				texel    = mix(texel, vec4(1,1,1,1), clamp((1.5*mv*mv - 0.25), 0.0, 1.0)); // blend in some snow on peaks
+				spec_mag = clamp((1.5*mv*mv - 0.25), 0.0, 1.0);
+				texel    = mix(texel, vec4(1,1,1,1), spec_mag); // blend in some snow on peaks
 			}
 		}
 	}
 	if (snow_thresh > 0.1 && water_val > 0.2 && temperature < 30.0) { // add polar ice caps
 		float icv = 0.7 + 0.01*temperature; // 1.0 @ T=30, 0.9 @ T=20, 0.7 @ T=0
 		float val = (coldness - icv)/(1.0 - icv) + 1.0*(height - water_val);
-		texel     = mix(texel, vec4(1,1,1,1), clamp(3*val-1, 0.0, 1.0)); // ice/snow
+		val       = clamp(3*val-1, 0.0, 1.0); // sharpen edges
+		spec_mag  = mix(spec_mag, 1.0, val);
+		texel     = mix(texel, vec4(1,1,1,1), val); // ice/snow
 	}
 	norm = fg_NormalMatrix * vertex; // recompute
 	// FIXME: perturb the normal by looking at derivative of normal at this point
@@ -117,6 +126,7 @@ void main()
 
 #else
 	vec4 texel = texture2D(tex0, tc);
+	spec_mag   = pow(texel.b, 4.0);
 #endif // PROCEDURAL_DETAIL
 
 #endif // GAS_GIANT
@@ -168,7 +178,7 @@ void main()
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
 	float specval  = pow(max(dot(norm, half_vect), 0.0), get_shininess());
-	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * pow(texel.b, 4.0) * sscale;
+	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * spec_mag * sscale;
 
 	if (lava_val > 0.0) {
 		float heat = max(0.0, (texel.r - texel.g - texel.b));

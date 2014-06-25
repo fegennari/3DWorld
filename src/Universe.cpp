@@ -351,7 +351,8 @@ public:
 		bool const uses_hmap(!planet.gas_giant && !planet.use_procedural_shader());
 		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
 		set_uniform_vector3d(get_loc("planet_pos"), planet_pos);
-		set_uniform_float(get_loc("planet_radius"), planet.radius/(uses_hmap ? PLANET_ATM_RSCALE : (0.5 + 0.5*PLANET_ATM_RSCALE)));
+		set_uniform_vector3d(get_loc("atmos_density"), planet.atmos*vector3d(0.0, (uses_hmap ? 1.8 : 3.2), 0.0)); // linear atmospheric density
+		set_uniform_float(get_loc("planet_radius"), planet.radius/(uses_hmap ? PLANET_ATM_RSCALE : 1.0));
 		set_uniform_float(get_loc("atmos_radius"),  planet.radius*PLANET_ATM_RSCALE);
 		set_planet_uniforms(planet.atmos, svars, 0); // atmosphere has no planet reflection light (light2)
 	}
