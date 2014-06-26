@@ -99,7 +99,7 @@ void main()
 				texel     = mix(water_color, texel, val);
 				spec_mag  = 1.0 - val;
 			}
-			else if (height_ws > 1.0) {
+			else if (height_ws > 1.0 && snow_thresh < 1.0) {
 				float freq = 1.0;
 				float val  = 0.0;
 
@@ -107,13 +107,14 @@ void main()
 					val  += texture3D(cloud_noise_tex, 32.0*freq*npos).r/freq;
 					freq *= 2.0;
 				}
-				float mv = val * (0.6 + 0.2*snow_thresh) * sqrt(height_ws - 1.0);
+				float sv = 0.5 + 0.5*clamp(20.0*(1.0 - snow_thresh), 0.0, 1.0); // snow_thresh 1.0 => no snow, 0.95 => lots of snow
+				float mv = val * sv * sqrt(height_ws - 1.0);
 				spec_mag = clamp((1.5*mv*mv - 0.25), 0.0, 1.0);
 				texel    = mix(texel, vec4(1,1,1,1), spec_mag); // blend in some snow on peaks
 			}
 		}
 	}
-	if (snow_thresh > 0.1 && water_val > 0.2 && temperature < 30.0) { // add polar ice caps
+	if (/*snow_thresh < 1.0 &&*/ water_val > 0.2 && temperature < 30.0) { // add polar ice caps
 		float icv = 0.7 + 0.01*temperature; // 1.0 @ T=30, 0.9 @ T=20, 0.7 @ T=0
 		float val = (coldness - icv)/(1.0 - icv) + 1.0*(height - water_val);
 		val       = clamp(3*val-1, 0.0, 1.0); // sharpen edges

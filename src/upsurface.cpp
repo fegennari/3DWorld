@@ -266,7 +266,7 @@ bool urev_body::surface_test(float rad, point const &p, float &coll_r, bool simp
 
 	// not quite right - should take into consideration peaks in surrounding geometry that also intersect the sphere
 	if (has_heightmap()) {
-		if (!dist_less_than(p, pos, (radius*(1.0 + get_hmap_scale()*0.5) + rad))) return 0; // test rmax
+		if (!dist_less_than(p, pos, (radius*(1.0 + 0.5*get_hmap_scale()) + rad))) return 0; // test rmax
 		coll_r = get_radius_at(p, !simple);
 	}
 	return 1;

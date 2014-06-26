@@ -352,7 +352,7 @@ public:
 		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
 		set_uniform_vector3d(get_loc("planet_pos"), planet_pos);
 		set_uniform_vector3d(get_loc("atmos_density"), planet.atmos*vector3d(0.0, (uses_hmap ? 1.8 : 3.2), 0.0)); // linear atmospheric density
-		set_uniform_float(get_loc("planet_radius"), planet.radius/(uses_hmap ? PLANET_ATM_RSCALE : 1.0));
+		set_uniform_float(get_loc("planet_radius"), planet.radius*(uses_hmap ? (1.0 - 0.25*planet.get_hmap_scale()) : 1.0)); // average between ravg and rmin
 		set_uniform_float(get_loc("atmos_radius"),  planet.radius*PLANET_ATM_RSCALE);
 		set_planet_uniforms(planet.atmos, svars, 0); // atmosphere has no planet reflection light (light2)
 	}
@@ -2022,8 +2022,8 @@ void urev_body::get_surface_color(unsigned char *data, float val, float phi) con
 void urev_body::calc_snow_thresh() {
 
 	float const snow_temp(CLIP_TO_01(2.0f*((0.5f*FREEZE_TEMP + 0.5f*BOIL_TEMP) - temp))/(BOIL_TEMP - FREEZE_TEMP));
-	float const snow_val(CLIP_TO_01(2.0f*(water - 0.1f))*snow_temp);
-	snow_thresh = max(water, (1.0f - snow_val));
+	float const snow_val(CLIP_TO_01(2.0f*(water - 0.05f))*snow_temp);
+	snow_thresh = max(water, (1.0f - snow_val)); // ~0.9 to 1.0, where lower is more snow
 }
 
 
@@ -2376,7 +2376,7 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 				perturb_map[j + offset] = radius_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5); // duplicated with urev_body::surface_test()
 			}
 		}
-		surface->setup_draw_sphere(all_zeros, radius0, -0.5*hmap_scale*radius, ndiv, &perturb_map.front());
+		surface->setup_draw_sphere(all_zeros, radius0, -0.5*radius_scale, ndiv, &perturb_map.front());
 	}
 	surface->sd.draw_ndiv_pow2_vbo(ndiv); // sphere heightmap for rocky planet or moon
 	if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast");

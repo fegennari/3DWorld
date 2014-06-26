@@ -352,7 +352,7 @@ void process_univ_objects() {
 				float hmap_scale(0.0);
 				if (clobj.type == UTYPE_MOON  ) {hmap_scale = MOON_HMAP_SCALE;  }
 				if (clobj.type == UTYPE_PLANET) {hmap_scale = PLANET_HMAP_SCALE;}
-				float dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + HMAP_SCALE)*radius?
+				float dist_to_cobj(clobj.dist - (hmap_scale*clobj_radius + radius)); // (1.0 + hmap_scale)*radius?
 				
 				if (dist_to_cobj > 0.0 && is_ship && clobj.has_valid_system()) {
 					ussystem const &system(clobj.get_system());
