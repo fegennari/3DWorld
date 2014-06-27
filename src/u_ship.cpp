@@ -53,7 +53,7 @@ float const SHIP_GMAX          = 10.0*MAX_SOBJ_GRAVITY;
 
 
 extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits, respawn_req_hw, hold_fighters, dock_fighters, build_any;
-extern int frame_counter, iticks, begin_motion, onscreen_display, display_mode;
+extern int frame_counter, iticks, begin_motion, onscreen_display, display_mode, animate2;
 extern float fticks, urm_proj, global_regen, hyperspeed_mult, player_turn_rate, rand_spawn_ship_dmax;
 extern unsigned alloced_fobjs[], team_credits[], init_credits[], ind_ships_used[];
 extern exp_type_params et_params[];
@@ -2248,7 +2248,7 @@ void u_ship::apply_physics() {
 	if (is_powered) elapsed_on_t += iticks;
 
 	// rand() mod should be f(fticks), but leave as is for improved performance when framerate is low
-	if (ENABLE_PARTS && is_powered && sc.nengines > 0 && cloaked < 0.5 && (rand()%6) == 0 &&
+	if (ENABLE_PARTS && animate2 && is_powered && sc.nengines > 0 && cloaked < 0.5 && (rand()%6) == 0 &&
 		fticks*velocity.mag() > 0.1*radius && univ_sphere_vis(pos, 2.0*c_radius))
 	{ 
 		float const pscale(0.1*min(5.0f*MAX_PARTICLE_SIZE, radius));

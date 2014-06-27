@@ -25,6 +25,20 @@ varying vec3 normal, world_space_pos, vertex;
 varying vec2 tc;
 
 
+#ifdef PROCEDURAL_DETAIL
+float eval_terrain_noise(in vec3 npos, const int num_octaves) {
+	float val  = 0.0;
+	float freq = 1.0;
+
+	for (int i = 0; i < num_octaves; ++i) { // similar to gen_cloud_alpha_time()
+		val  += texture3D(cloud_noise_tex, freq*npos).r/freq;
+		freq *= 2.0;
+	}
+	return val;
+}
+#endif
+
+
 void main()
 {
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
@@ -59,15 +73,12 @@ void main()
 	if (coldness > 0.75) {texel = mix(texel, vec4(1,1,1,1), clamp(4.0*(coldness - 0.75f), 0.0, 1.0));} // ice/snow
 	spec_mag = 1.0; // always specular
 #else // not ALL_WATER_ICE
-	float hval = 0.0;
-	float freq = 1.0;
-	vec3 npos  = vertex*(terrain_scale/obj_radius) + vec3(noise_offset);
 
-	for (int i = 0; i < 8; ++i) { // similar to gen_cloud_alpha_time()
-		hval += texture3D(cloud_noise_tex, freq*npos).r/freq;
-		freq *= 2.0;
-	}
+	vec3 spos    = vertex*(terrain_scale/obj_radius);
+	vec3 npos    = spos + vec3(noise_offset);
+	float hval   = eval_terrain_noise(npos, 8);
 	float height = max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
+	float nscale = 0.0;
 	vec4 texel;
 
 	if (height < water_val) {
@@ -76,6 +87,7 @@ void main()
 	}
 	else {
 		spec_mag = 0.0;
+		nscale   = 1.0;
 		float height_ws = (height - water_val)/(1.0 - water_val); // rescale to [0,1] above water
 
 		if (water_val > 0.2 && atmosphere > 0.1) { // Earthlike planet
@@ -90,23 +102,27 @@ void main()
 			texel = mix(color_b, color_a, min(1.0, height_ws));
 		}
 		if (lava_val > 0.0) { // hot lava planet
-			if      (height < lava_val)        {texel = vec4(1,0,0,1);} // red
-			else if (height < lava_val + 0.07) {texel = mix(vec4(1,0,0,1), texel, (height - lava_val)/0.07);} // close to lava line
+			if (height < lava_val) {
+				texel    = vec4(1,0,0,1); // red
+				spec_mag = 0.75;
+				nscale   = 0.2;
+			}
+			else if (height < lava_val + 0.07) {
+				float val= (height - lava_val)/0.07;
+				texel    = mix(vec4(1,0,0,1), texel, val); // close to lava line
+				spec_mag = mix(0.75, spec_mag, val);
+				nscale   = mix(0.2,  nscale,   val);
+			}
 		}
 		else if (water_val > 0.0 && temperature < 30.0) { // handle water/ice/snow
 			if (height < water_val + 0.07) { // close to water line (can have a little water even if water == 0)
 				float val = (height - water_val)/0.07;
 				texel     = mix(water_color, texel, val);
 				spec_mag  = 1.0 - val;
+				nscale    = val*val; // faster falloff
 			}
 			else if (height_ws > 1.0 && snow_thresh < 1.0) {
-				float freq = 1.0;
-				float val  = 0.0;
-
-				for (int i = 0; i < 4; ++i) { // scample high frequencies from the above iteration?
-					val  += texture3D(cloud_noise_tex, 32.0*freq*npos).r/freq;
-					freq *= 2.0;
-				}
+				float val= eval_terrain_noise(32.0*npos, 4);
 				float sv = 0.5 + 0.5*clamp(20.0*(1.0 - snow_thresh), 0.0, 1.0); // snow_thresh 1.0 => no snow, 0.95 => lots of snow
 				float mv = val * sv * sqrt(height_ws - 1.0);
 				spec_mag = clamp((1.5*mv*mv - 0.25), 0.0, 1.0);
@@ -120,9 +136,19 @@ void main()
 		val       = clamp(3*val-1, 0.0, 1.0); // sharpen edges
 		spec_mag  = mix(spec_mag, 1.0, val);
 		texel     = mix(texel, vec4(1,1,1,1), val); // ice/snow
+		nscale   *= mix(1.0, 0.25, val);
 	}
 	norm = fg_NormalMatrix * vertex; // recompute
-	// FIXME: perturb the normal by looking at derivative of normal at this point
+
+	if (nscale > 0.0) { // compute normal + bump map
+		float delta = 0.001;
+		vec3 bpos   = 16.0*spos;
+		float hval0 = eval_terrain_noise(bpos, 6);
+		float hdx   = hval0 - eval_terrain_noise(bpos + vec3(delta, 0.0, 0.0), 6);
+		float hdy   = hval0 - eval_terrain_noise(bpos + vec3(0.0, delta, 0.0), 6);
+		float hdz   = hval0 - eval_terrain_noise(bpos + vec3(0.0, 0.0, delta), 6);
+		norm = normalize(norm) + 0.05*nscale*normalize(fg_NormalMatrix * vec3(hdx, hdy, hdz));
+	}
 #endif // ALL_WATER_ICE
 
 #else
