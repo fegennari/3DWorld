@@ -20,3 +20,6 @@ Planet shader model:
   - Compute normals in shader using height derivative
 
 High rate of fire ship weapons?
+Particles in high speed mode
+Engine lights
+Revisit triplanar bump mapping

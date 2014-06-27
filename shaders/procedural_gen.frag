@@ -9,6 +9,7 @@ vec4 get_epos() {return fg_ModelViewMatrix * vec4(vpos, 1.0);}
 #ifdef USE_BUMP_MAP
 vec3 get_bump_map_normal() {
 	return normalize(lookup_triplanar_texture(bump_tex_scale*vpos, normalize(normal), bump_map, bump_map, bump_map).xyz * 2.0 - 1.0);
+	//return lookup_triplanar_texture_bump(bump_tex_scale*vpos, normalize(normal), bump_map);
 }
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 	vec3 binormal = normalize(cross(vec3(1,0,0), eye_norm));
