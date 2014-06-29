@@ -95,6 +95,9 @@ void do_univ_init() {
 }
 
 
+bool player_near_system() {return (clobj0.system >= 0);}
+
+
 void setup_current_system(float sun_intensity) {
 	
 	bool regen_mesh(0);

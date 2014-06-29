@@ -11,13 +11,12 @@ Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
 http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
+abs() of offset noise to get sharp valleys
 
 Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD - mesh simplification
 
-
-High rate of fire ship weapons?
+Procedural planet shader FP resolution
 Particles in high speed mode
 Engine lights
-Revisit triplanar bump mapping

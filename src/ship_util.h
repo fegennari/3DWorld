@@ -226,6 +226,7 @@ u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, po
 
 // universe_control.cpp
 void send_warning_message(string const &msg);
+bool player_near_system();
 void disable_player_ship();
 void destroy_player_ship(bool captured);
 bool rename_obj(uobject *obj, unsigned alignment);

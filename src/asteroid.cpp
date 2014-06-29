@@ -32,7 +32,6 @@ extern bool no_asteroid_dust;
 extern int animate2, display_mode, frame_counter, window_width, window_height;
 extern float fticks;
 extern colorRGBA sun_color;
-extern s_object clobj0;
 extern vector<us_weapon> us_weapons;
 extern vector<usw_ray> t_wrays;
 
@@ -1298,7 +1297,7 @@ void rand_spawn_mixin::gen_rand_pos() {
 
 bool rand_spawn_mixin::okay_to_respawn() const {
 
-	if (clobj0.system < 0) return 0; // player not near a system, so don't respawn
+	if (!player_near_system()) return 0; // player not near a system, so don't respawn
 	if (player_ship().get_velocity().mag() > 0.2) return 0; // player ship moving too quickly, don't respawn
 	return 1;
 }

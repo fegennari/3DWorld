@@ -1948,7 +1948,7 @@ void urev_body::create_gas_giant_texture() {
 
 
 bool urev_body::use_procedural_shader() const {
-	return (!gas_giant && type == UTYPE_PLANET && (display_mode & 0x20) != 0); // only for planets
+	return (!gas_giant && type == UTYPE_PLANET && (display_mode & 0x20) == 0); // only for planets
 }
 
 

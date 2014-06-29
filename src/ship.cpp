@@ -222,7 +222,7 @@ void change_speed_mode(int val) {
 	if (world_mode != WMODE_UNIVERSE) return;
 	if (!player_ship().specs().has_fast_speed)        val = 0;
 	if (!player_ship().specs().has_hyper && val == 2) val = 3;
-	player_ship().set_max_sf((val == 0) ? SLOW_SPEED_FACTOR : 1.0);
+	player_ship().set_max_sf((val == 0) ? SLOW_SPEED_FACTOR : FAST_SPEED_FACTOR);
 	assert(val >= 0 && val <= 3);
 	char const *const strs[4] = {"Low Speed", "High Speed", "Hyperspeed", "High Speed"};
 	print_text_onscreen(strs[val], GREEN, 1.0, ((3*TICKS_PER_SECOND)/2));
@@ -682,6 +682,31 @@ void draw_wrays(vector<usw_ray> &wrays) {
 }
 
 
+void maybe_draw_motion_dust() {
+
+	// draw particles around ship showing motion
+	u_ship const &pship(player_ship());
+	vector3d const &pvel(pship.get_velocity());
+	float const pvmag(pvel.mag()), vmax(SLOW_SPEED_FACTOR*pship.specs().max_speed);
+	if (!player_near_system()) return;
+	//if (!pship.powered()) return;
+	if (pvmag < 0.8*vmax) return; // too slow
+	point const &ppos(pship.get_pos());
+	vector3d const &pdir(pship.get_dir());
+	vector3d const vnorm(pvel.get_norm());
+	float const length(5.0*min(100.0f*vmax, pvmag));
+	float const width = 0.00005;
+	static rand_gen_t rgen; // ???
+		
+	for (unsigned n = 0; n < 60; ++n) {
+		point pos;
+		do {pos = (ppos + rgen.signed_rand_vector_spherical(0.1));}
+		while (!dist_less_than(pos, ppos, 0.01) && !camera_pdu.point_visible_test(pos));
+		t_wrays.push_back(usw_ray(width, width, pos, (pos - length*vnorm), LT_GRAY, GRAY));
+	}
+}
+
+
 void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
@@ -785,6 +810,7 @@ void draw_univ_objects() {
 
 	disable_blend();
 	set_additive_blend_mode();
+	maybe_draw_motion_dust();
 	draw_wrays(b_wrays); // draw beam weapons (where should this be?)
 	draw_wrays(t_wrays); // draw engine trails and lightning
 	set_std_blend_mode();

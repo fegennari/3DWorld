@@ -294,7 +294,7 @@ void u_ship::thrust(int tdir, float speed, bool hyperspeed) {
 	if (tdir == MOVE_FRONT) use_fuel((hyperspeed ? 10.0 : 1.0)*speed);
 	speed *= cached_rsv;
 	if (!hyperspeed && lhyper && velocity.mag() > sc.max_speed) hyperspeed = 1; // can't switch out of hyperspeed until speed is low
-	if (speed_factor < 1.0) hyperspeed = 0; // can't do hyperspeed speed if speed is limited
+	if (speed_factor < FAST_SPEED_FACTOR) hyperspeed = 0; // can't do hyperspeed speed if speed is limited
 	lhyper = hyperspeed;
 	
 	if (tdir == MOVE_STOP && !sc.stoppable) {
