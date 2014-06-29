@@ -2220,13 +2220,14 @@ void u_ship::apply_physics() {
 			else if (sc.cont_frag && (rand() & 7) == 0) {
 				fragment(dir, 0.05, 1);
 			}
+			set_ship_max_speed(2.0); // allow it to move faster than it normally could (due to explosions), but still cap it
 		}
-		if (!invalid_priv()) {
+		else if (!invalid_priv()) {
 			if (!fighters.empty()) get_fighter_target(this); // see if a fighter of yours has a target
 			if (last_hit    > (unsigned)iticks) last_hit    -= iticks; else last_hit    = 0;
 			if (retarg_time > (unsigned)iticks) retarg_time -= iticks; else retarg_time = 0;
 			if (target_obj == NULL)             last_targ_t += iticks; else last_targ_t = 0;
-			set_ship_max_speed();
+			set_ship_max_speed(1.0);
 			regen(1.0, NULL);
 			check_size_scale();
 		}
@@ -2282,10 +2283,10 @@ void u_ship::next_frame() {
 }
 
 
-void u_ship::set_ship_max_speed() {
+void u_ship::set_ship_max_speed(float ms_scale) {
 
-	float max_speed(get_max_speed()); // *fticks
-	if (lhyper) max_speed *= hyperspeed_mult;
+	float max_speed(ms_scale*get_max_speed()); // *fticks
+	if (lhyper) {max_speed *= hyperspeed_mult;}
 	set_max_speed(max_speed);
 }
 

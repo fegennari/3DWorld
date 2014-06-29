@@ -1201,7 +1201,7 @@ public:
 	void get_fighter_target(u_ship const *ship);
 	void set_temp(float temp, point const &tcenter, free_obj const *source);
 	virtual void apply_physics();
-	void set_ship_max_speed();
+	void set_ship_max_speed(float ms_scale=1.0);
 	float get_max_speed() const {return speed_factor*specs().max_speed;}
 	void disable(unsigned dtime) {disable_t = max(disable_t, time + dtime);}
 	free_obj const *get_src() const {return this;} // a ship is its own source
