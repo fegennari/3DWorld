@@ -682,28 +682,44 @@ void draw_wrays(vector<usw_ray> &wrays) {
 }
 
 
+class motion_particles_t {
+
+	rand_gen_t rgen;
+	vector<point> pts;
+
+	bool is_valid_pos(point const &pos, point const &camera) const {
+		return (dist_less_than(pos, camera, 0.04) && camera_pdu.point_visible_test(pos));
+	}
+	void gen_pos(point &pos, point const &camera, vector3d const &vnorm) {
+		do {pos = (camera + 0.02*vnorm + rgen.signed_rand_vector_spherical(0.02));} while (!is_valid_pos(pos, camera));
+	}
+public:
+	void update_and_draw(point const &camera, vector3d const &vnorm, float length, float width) {
+		if (pts.empty()) {
+			pts.resize(50); // npts
+			for (unsigned i = 0; i < pts.size(); ++i) {gen_pos(pts[i], camera, vnorm);}
+		}
+		for (unsigned i = 0; i < pts.size(); ++i) {
+			if (!is_valid_pos(pts[i], camera)) {gen_pos(pts[i], camera, vnorm);}
+			t_wrays.push_back(usw_ray(width, width, pts[i], (pts[i] - length*vnorm), GRAY, GRAY));
+		}
+	}
+};
+
+motion_particles_t motion_particles;
+
+
 void maybe_draw_motion_dust() {
 
 	// draw particles around ship showing motion
+	if (!player_near_system()) return;
 	u_ship const &pship(player_ship());
+	//if (!pship.powered()) return;
 	vector3d const &pvel(pship.get_velocity());
 	float const pvmag(pvel.mag()), vmax(SLOW_SPEED_FACTOR*pship.specs().max_speed);
-	if (!player_near_system()) return;
-	//if (!pship.powered()) return;
 	if (pvmag < 0.8*vmax) return; // too slow
-	point const &ppos(pship.get_pos());
-	vector3d const &pdir(pship.get_dir());
-	vector3d const vnorm(pvel.get_norm());
-	float const length(5.0*min(100.0f*vmax, pvmag));
-	float const width = 0.00005;
-	static rand_gen_t rgen; // ???
-		
-	for (unsigned n = 0; n < 60; ++n) {
-		point pos;
-		do {pos = (ppos + rgen.signed_rand_vector_spherical(0.1));}
-		while (!dist_less_than(pos, ppos, 0.01) && !camera_pdu.point_visible_test(pos));
-		t_wrays.push_back(usw_ray(width, width, pos, (pos - length*vnorm), LT_GRAY, GRAY));
-	}
+	float const length(1.0*min(4.0f*vmax, pvmag));
+	motion_particles.update_and_draw(pship.get_pos(), pvel.get_norm(), length, 0.00002);
 }
 
 

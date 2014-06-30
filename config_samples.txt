@@ -49,6 +49,7 @@ shadow_map_sz 4096
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0
 coll_obj_file coll_objs_samples.txt
+#coll_obj_file coll_objs_transformed.txt
 
 num_threads 8
 num_light_rays 1000 1000 0 0

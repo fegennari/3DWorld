@@ -18,5 +18,4 @@ Load/display model3d models in tiled terrain mode
   - Model LOD - mesh simplification
 
 Procedural planet shader FP resolution
-Particles in high speed mode
 Engine lights

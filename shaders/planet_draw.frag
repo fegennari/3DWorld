@@ -141,6 +141,7 @@ void main()
 	norm = fg_NormalMatrix * vertex; // recompute
 
 	if (nscale > 0.0) { // compute normal + bump map
+		// Note: using doubles/dvec3 has better precision/quality, but is much slower
 		float delta = 0.001;
 		vec3 bpos   = 16.0*spos;
 		float hval0 = eval_terrain_noise(bpos, 6);
