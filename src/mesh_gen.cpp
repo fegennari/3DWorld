@@ -33,7 +33,7 @@ int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
 
 // Global Variables
 float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FREQ_MULT(0.5);
-int cache_counter(1), start_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(0), mesh_freq_filter(FREQ_FILTER);
+int cache_counter(1), start_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(0), mesh_gen_shape(0), mesh_freq_filter(FREQ_FILTER);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
@@ -196,6 +196,11 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 }
 
 
+void apply_mesh_rand_seed(rand_gen_t &rgen) {
+	if (mesh_seed != 0) {rgen.set_state(mesh_seed, 12345);}
+}
+
+
 void gen_rand_sine_table_entries(float scaled_height) {
 
 	float xf_scale((float)MESH_Y_SIZE/(float)MESH_X_SIZE), yf_scale(1.0/xf_scale);
@@ -215,7 +220,7 @@ void gen_rand_sine_table_entries(float scaled_height) {
 	float const mesh_h(scaled_height/sqrt(0.1*N_RAND_SIN2));
 	h_sum *= N_RAND_SIN2*scaled_height*HEIGHT_SCALE;
 	static rand_gen_t rgen; // static so that later calls to this function will generate different values
-	if (mesh_seed != 0) {rgen.set_state(mesh_seed, 12345);}
+	apply_mesh_rand_seed(rgen);
 
 	for (int l = 0; l < NUM_FREQ_COMP; ++l) {
 		int const offset(l*N_RAND_SIN2);
@@ -446,7 +451,7 @@ void estimate_zminmax(bool using_eq) {
 				zmax_est = max(zmax_est, float(fabs(height_gen.eval_index(j, i, 0))));
 			}
 		}
-		if (mesh_gen_mode > 0) {zmax_est *= 1.2;}
+		if (mesh_gen_mode > 0) {zmax_est *= 1.2;} // perlin/simplex
 	}
 	set_zmax_est(1.1*zmax_est);
 	set_zvals();
@@ -511,6 +516,23 @@ void compute_scale() {
 }
 
 
+void apply_noise_shape_final(float &noise, int shape) {
+	switch (mesh_gen_shape) {
+	case 0: break; // linear - do nothing
+	case 1: noise = fabs(noise) - 2.0; break; // billowy
+	case 2: noise = 3.5 - fabs(noise); break; // ridged
+	}
+}
+
+void apply_noise_shape_per_term(float &noise, int shape) { // inputs and outputs [-1, 1]
+	switch (mesh_gen_shape) {
+	case 0: break; // linear - do nothing
+	case 1: noise = 2.0*fabs(noise) - 1.0; break; // billowy
+	case 2: noise = 1.0 - 2.0*fabs(noise); break; // ridged
+	}
+}
+
+
 void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
 
 	assert(nx >= 0 && ny >= 0);
@@ -525,28 +547,45 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 		float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(msz_inv*sinTable[k][0]);
 
 		for (unsigned i = 0; i < nx; ++i) {
-			xterms[i*F_TABLE_SIZE+k] = SINF(x_mult*(x0 + i*dx) + x_const);
+			float sin_val(SINF(x_mult*(x0 + i*dx) + x_const));
+			//apply_noise_shape_per_term(sin_val, mesh_gen_shape);
+			xterms[i*F_TABLE_SIZE+k] = sin_val;
 		}
 		for (unsigned i = 0; i < ny; ++i) {
-			yterms[i*F_TABLE_SIZE+k] = y_scale*SINF(y_mult*(y0 + i*dy) + y_const);
+			float sin_val(SINF(y_mult*(y0 + i*dy) + y_const));
+			//apply_noise_shape_per_term(sin_val, mesh_gen_shape);
+			yterms[i*F_TABLE_SIZE+k] = y_scale*sin_val;
 		}
 	}
 }
 
 
-float get_noise_zval(float xval, float yval, bool mode) { // mode: 0=simplex, 1=perlin
+// mode: 0=sine tables, 1=simplex, 2=perlin
+// shape: 0=linear, 1=billowy, 2=ridged
+float get_noise_zval(float xval, float yval, int mode, int shape) {
 
+	assert(mode > 0); // mode 0 not supported by this function
 	float const xy_scale(0.0007*mesh_scale), xv(xy_scale*xval), yv(xy_scale*yval);
 	float zval(0.0), mag(1.0), freq(1.0);
 	unsigned const end_octave(NUM_FREQ_COMP - start_eval_sin/N_RAND_SIN2);
+	float const lacunarity(1.92);
+	float const gain(0.5);
+	rand_gen_t rgen;
+	apply_mesh_rand_seed(rgen);
 
 	for (unsigned i = 0; i < end_octave; ++i) {
-		glm::vec2 const pos(freq*xv, freq*yv);
-		zval += mag*((mode == 0) ? glm::simplex(pos) : glm::perlin(pos));
-		mag  *= 0.5;
-		freq *= 2.0;
+		glm::vec2 const pos((freq*xv + rgen.rand_float()), (freq*yv + rgen.rand_float()));
+		float noise((mode == 1) ? glm::simplex(pos) : glm::perlin(pos));
+		switch (shape) {
+		case 0: break; // linear - do nothing
+		case 1: noise = fabs(noise) - 0.40; break; // billowy
+		case 2: noise = 0.45 - fabs(noise); break; // ridged
+		}
+		zval += mag*noise;
+		mag  *= gain;
+		freq *= lacunarity;
 	}
-	return ((mode == 0) ? 4.0 : 8.0)*zval/mesh_scale_z;
+	return ((mode == 1) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale*zval/mesh_scale_z;
 }
 
 
@@ -554,14 +593,15 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 
 	float zval(0.0);
 
-	if (mesh_gen_mode > 0) {
-		zval += get_noise_zval((x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV, (mesh_gen_mode == 2));
+	if (mesh_gen_mode > 0) { // perlin/simplex
+		zval += get_noise_zval((x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV, mesh_gen_mode, mesh_gen_shape);
 	}
-	else {
+	else { // sine tables
 		assert(x < cur_nx && y < cur_ny);
 		float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
 		float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
 		for (int i = max(start_eval_sin, min_start_sin); i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
+		apply_noise_shape_final(zval, mesh_gen_shape);
 	}
 	if (GLACIATE && glaciate) {zval = get_glaciated_zval(zval);}
 	return zval;
@@ -584,8 +624,10 @@ float eval_mesh_sin_terms(float xv, float yv) {
 float eval_mesh_sin_terms_scaled(float xval, float yval, float xy_scale) {
 
 	float const xv(xy_scale*(xval - (MESH_X_SIZE >> 1))), yv(xy_scale*(yval - (MESH_Y_SIZE >> 1)));
-	if (mesh_gen_mode) {return get_noise_zval(xv, yv, (mesh_gen_mode == 2));}
-	return eval_mesh_sin_terms(mesh_scale*xv, mesh_scale*yv)/mesh_scale_z;
+	if (mesh_gen_mode) {return get_noise_zval(xv, yv, mesh_gen_mode, mesh_gen_shape);}
+	float val(eval_mesh_sin_terms(mesh_scale*xv, mesh_scale*yv)/mesh_scale_z);
+	apply_noise_shape_final(val, mesh_gen_shape);
+	return val;
 }
 
 
