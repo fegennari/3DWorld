@@ -712,7 +712,7 @@ motion_particles_t motion_particles;
 void maybe_draw_motion_dust() {
 
 	// draw particles around ship showing motion
-	if (!player_near_system()) return;
+	if (!animate2 || !player_near_system()) return;
 	u_ship const &pship(player_ship());
 	//if (!pship.powered()) return;
 	vector3d const &pvel(pship.get_velocity());

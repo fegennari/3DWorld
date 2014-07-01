@@ -28,11 +28,16 @@ varying vec2 tc;
 #ifdef PROCEDURAL_DETAIL
 float eval_terrain_noise(in vec3 npos, const int num_octaves) {
 	float val  = 0.0;
-	float freq = 1.0;
+	float mag  = 1.0;
+	float freq = 0.5; // lower freq for ridged noise
 
 	for (int i = 0; i < num_octaves; ++i) { // similar to gen_cloud_alpha_time()
-		val  += texture3D(cloud_noise_tex, freq*npos).r/freq;
-		freq *= 2.0;
+		float v = texture3D(cloud_noise_tex, freq*npos).r;
+		v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
+		v = max(0.0, (0.75 - abs(v))); // ridged noise
+		val  += v*mag;
+		freq *= 1.92;
+		mag  *= 0.5;
 	}
 	return val;
 }
@@ -143,7 +148,7 @@ void main()
 	if (nscale > 0.0) { // compute normal + bump map
 		// Note: using doubles/dvec3 has better precision/quality, but is much slower
 		float delta = 0.001;
-		vec3 bpos   = 16.0*spos;
+		vec3 bpos   = 32.0*spos;
 		float hval0 = eval_terrain_noise(bpos, 6);
 		float hdx   = hval0 - eval_terrain_noise(bpos + vec3(delta, 0.0, 0.0), 6);
 		float hdy   = hval0 - eval_terrain_noise(bpos + vec3(0.0, delta, 0.0), 6);
