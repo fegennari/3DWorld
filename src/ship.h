@@ -227,7 +227,7 @@ public:
 	float t_exp, dist, radius, crs, cloakval;
 	upos_point_type pos;
 	vector3d vel, dir, upv, tdir;
-	colorRGBA color_a, color_b;
+	colorRGBA color_a, color_b, engine_color;
 	free_obj const *obj;
 	shader_t *shader;
 	static quad_batch_draw qbd;
@@ -237,7 +237,8 @@ public:
 		float radius_, float crs_, bool dlights_, bool first, bool final, bool p1, bool p2)
 		: ndiv(ndiv_), time(t), on_time(t), lifetime(0), eflags(0), nengines(0), powered(power), specular_en(spec_en),
 		dlights(dlights_), final_pass(final), first_pass(first), phase1(p1), phase2(p2), t_exp(texp), dist(dist_), radius(radius_),
-		crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir), color_a(WHITE), color_b(WHITE), obj(obj_), shader(shader_) {}
+		crs(crs_), cloakval(0.0), pos(pos_), vel(vel_), dir(dir_), upv(upv_), tdir(dir),
+		color_a(WHITE), color_b(WHITE), engine_color(BLACK), obj(obj_), shader(shader_) {}
 
 	inline bool is_moving() const {return (powered && (vel.mag_sq() > TOLERANCE));}
 	bool can_have_engine_lights() const;
@@ -293,7 +294,6 @@ public:
 	void draw_base_fighter(vector3d const &scale) const;
 	void draw_us_fighter()   const {draw_base_fighter(vector3d(1.0, 1.0, 1.0));}
 	void draw_x1_extreme()   const {draw_base_fighter(vector3d(1.3, 1.1, 0.7));}
-	void draw_xwing()        const;
 	void draw_us_frigate()   const;
 	void draw_us_destroyer() const;
 	void draw_us_cruiser(bool heavy) const;
@@ -523,7 +523,7 @@ public:
 	vector<triangle> cobj_triangles;
 	vector<ship_weapon> weapons;
 
-	us_class() : inited(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW), engine_color(BLACK) {}
+	us_class() : inited(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW) {}
 	void clear_cobjs();
 	bool read_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color);
 	void setup(unsigned sclass_);

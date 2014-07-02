@@ -2634,6 +2634,8 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 		ddata.color_a  = color_a;
 		ddata.color_b  = color_b;
 	}
+	ddata.engine_color = blend_color(sc.engine_color, color_a, sc.engine_color.alpha, 0); // use alignment color when alpha < 1.0
+	ddata.engine_color.alpha = 1.0;
 	ddata.set_color(color_a);
 	if (sc.engine_lights && ddata.can_have_engine_lights()) {ddata.dlights = 1;} // has engine lights (sc.emits_light?)
 	float over_temp(CLIP_TO_01(0.005f*get_over_temp_factor()));

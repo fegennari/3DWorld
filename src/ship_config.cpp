@@ -111,15 +111,15 @@ u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, po
 struct string_to_color_map_t : public map<string, colorRGBA> {
 
 	void populate() {
-		unsigned const NUM_COLORS = 34;
+		unsigned const NUM_COLORS = 36;
 		string const strs[NUM_COLORS] =
 		{"RED", "GREEN", "BLUE", "BLACK", "WHITE", "CYAN", "MAGENTA", "YELLOW", "LT_RED", "DK_RED", "LT_GREEN", "MED_GREEN", "DK_GREEN", "LT_BLUE", "DK_BLUE",
 		 "BROWN", "DK_BROWN", "LT_BROWN", "GRAY", "LT_GRAY", "DK_GRAY", "GRAY_BLACK", "BKGRAY", "OLIVE", "PURPLE", "ORANGE", "PINK", "GOLD", "BRASS", "BRONZE",
-		 "ALPHA0", "DKER_GRAY", "GRAY06", "ORG_YEL"};
+		 "ALPHA0", "WHITE05", "DKER_GRAY", "GRAY06", "ORG_YEL", "BT_BLUE"};
 		colorRGBA const colors[NUM_COLORS] =
 		{RED, GREEN, BLUE, BLACK, WHITE, CYAN, MAGENTA, YELLOW, LT_RED, DK_RED, LT_GREEN, MED_GREEN, DK_GREEN, LT_BLUE, DK_BLUE,
 		 BROWN, DK_BROWN, LT_BROWN, GRAY, LT_GRAY, DK_GRAY, GRAY_BLACK, BKGRAY, OLIVE, PURPLE, ORANGE, PINK, GOLD, BRASS_C, BRONZE_C,
-		 ALPHA0, colorRGBA(0.18, 0.18, 0.18, 1.0), colorRGBA(0.6, 0.6, 0.6, 1.0), colorRGBA(1.0, 0.9, 0.0, 1.0)};
+		 ALPHA0, colorRGBA(1,1,1,0.5), colorRGBA(0.18,0.18,0.18), colorRGBA(0.6,0.6,0.6), colorRGBA(1,0.9,0), colorRGBA(0.7,0.7,1)};
 		for (unsigned i = 0; i < NUM_COLORS; ++i) {insert(make_pair(strs[i], colors[i]));}
 	}
 	void ensure_populated() {if (empty()) {populate();}}
@@ -130,7 +130,9 @@ struct string_to_color_map_t : public map<string, colorRGBA> {
 		return it->second;
 	}
 	bool read_color(ifstream &in, colorRGBA &color) const {
-		if ((in >> color.R >> color.G >> color.B >> color.A) != 0) return 1; // color read as FP RGBA
+		if ((in >> color.R) != 0) { // color assumed to be floating-point RGBA
+			return ((in >> color.G >> color.B >> color.A) != 0); // read the rest: GBA
+		}
 		in.clear(); // clear error bits
 		string str;
 		if (!(in >> str)) return 0; // try to read color as a string
@@ -824,7 +826,8 @@ bool us_class::read_from_ifstream(ifstream &in, string_to_color_map_t const &str
 		>> parallel_fire >> symmetric >> self_shadow >> cont_frag >> for_boarding >> can_board >> orbiting_dock
 		>> dynamic_cobjs >> uses_tdir >> emits_light >> engine_lights >> suicides >> kamikaze >> no_disable >> uses_mesh2d
 		>> turreted >> weap_spread >> shield_sects >> draw_passes >> exp_disint >> ddelay >> rdelay)) return 0;
-	if (!string_to_color.read_color(in, base_color)) return 0;
+	if (!string_to_color.read_color(in, base_color  )) return 0;
+	if (!string_to_color.read_color(in, engine_color)) return 0;
 	death_delay = unsigned(TICKS_PER_SECOND*ddelay);
 	regen_delay = ((rdelay > 0.0 || global_regen > 0.0) ? (death_delay + unsigned(TICKS_PER_SECOND*(rdelay + global_regen))) : 0);
 	mesh_deform = mesh_remove = mesh_expand = mu_expand = mesh_trans = 0;

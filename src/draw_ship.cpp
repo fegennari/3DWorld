@@ -655,25 +655,17 @@ void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 		
 		if (ndiv > 4) {
 			for (unsigned i = 0; i < nengines; ++i) {
-				if (!(eflags & (1 << i))) draw_engine(YELLOW, pos2, 1.0); // this dominates the draw time
+				if (!(eflags & (1 << i))) {draw_engine(engine_color, pos2, 1.0);} // this dominates the draw time
 				pos2.y += edy;
 			}
 		}
 		else {
 			pos2.y += edy;
-			if (eflags != 7) draw_engine(YELLOW, pos2, 1.7);
+			if (eflags != 7) {draw_engine(engine_color, pos2, 1.7);}
 		}
-		draw_ship_flares(YELLOW);
+		draw_ship_flares(engine_color);
 	}
-	if (is_scaled) fgPopMatrix();
-}
-
-
-void uobj_draw_data::draw_xwing() const {
-
-	setup_draw_ship();
-	// *** WRITE ***
-	fgPopMatrix(); // undo invert_z()
+	if (is_scaled) {fgPopMatrix();}
 }
 
 
@@ -721,10 +713,10 @@ void uobj_draw_data::draw_us_frigate() const {
 		point pos2(-0.75, 0.0, 1.7);
 		
 		for (unsigned i = 0; i < nengines; ++i) {
-			if (!(eflags & (1 << i))) draw_engine(YELLOW, pos2, 1.0);
+			if (!(eflags & (1 << i))) {draw_engine(engine_color, pos2, 1.0);}
 			pos2.x += edx;
 		}
-		draw_ship_flares(YELLOW);
+		draw_ship_flares(engine_color);
 	}
 }
 
@@ -780,9 +772,9 @@ void uobj_draw_data::draw_us_destroyer() const {
 
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
-			if (!(eflags & (1 << i))) draw_engine(YELLOW, point(sinf(theta), cosf(theta), 1.3), escale);
+			if (!(eflags & (1 << i))) {draw_engine(engine_color, point(sinf(theta), cosf(theta), 1.3), escale);}
 		}
-		draw_ship_flares(YELLOW);
+		draw_ship_flares(engine_color);
 	}
 }
 
@@ -858,9 +850,9 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 
 	if (is_moving()) { // draw engine glow
 		for (unsigned i = 0; i < nengines; ++i) {
-			if (!(eflags & (1 << i))) {draw_engine(LT_BLUE, epos[i]+vector3d(0.0, 0.0, 0.46/escale), escale);}
+			if (!(eflags & (1 << i))) {draw_engine(engine_color, epos[i]+vector3d(0.0, 0.0, 0.46/escale), escale);}
 		}
-		draw_ship_flares(LT_BLUE);
+		draw_ship_flares(engine_color);
 	}
 }
 
@@ -870,8 +862,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	assert(nengines == 4);
 	setup_draw_ship();
 	float const escale(0.35), dy(0.05), erad(0.1);
-	colorRGBA const ecolor(1.0, 0.9, 0.2);
-	light_engine_pair(ecolor, 0, escale, 0.4, dy, (1.0 + 0.2*escale)); // average of two engines, eflags isn't quite right
+	light_engine_pair(engine_color, 0, escale, 0.4, dy, (1.0 + 0.2*escale)); // average of two engines, eflags isn't quite right
 	bool const textured(1);
 	if (textured) set_ship_texture(SHIP_HULL_TEX);
 
@@ -921,7 +912,7 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	fgPopMatrix(); // undo invert_z()
 
 	// draw engine glow (bottom, top)
-	draw_engine_pairs(ecolor, 0, escale, 0.4, (dy - 1.5*erad), (1.0 + 0.2*escale), point(0.0, 3.0*erad, 0.0), 2);
+	draw_engine_pairs(engine_color, 0, escale, 0.4, (dy - 1.5*erad), (1.0 + 0.2*escale), point(0.0, 3.0*erad, 0.0), 2);
 	unlight_engine_pair();
 }
 
@@ -954,14 +945,13 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 
 	if (is_moving()) { // draw engine glow
 		float const escale(0.3);
-		colorRGBA const color(1.0, 0.9, 0.2);
-		if (!(eflags & 1)) draw_engine(color, point(0.0, 0.0, 1.26), 2.0*escale); // center engine
+		if (!(eflags & 1)) {draw_engine(engine_color, point(0.0, 0.0, 1.26), 2.0*escale);} // center engine
 		
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
-			if (!(eflags & (1 << (i+1)))) draw_engine(color, point(epos*sinf(theta), epos*cosf(theta), 1.21), escale);
+			if (!(eflags & (1 << (i+1)))) {draw_engine(engine_color, point(epos*sinf(theta), epos*cosf(theta), 1.21), escale);}
 		}
-		draw_ship_flares(color);
+		draw_ship_flares(engine_color);
 	}
 }
 
@@ -972,8 +962,7 @@ void uobj_draw_data::draw_us_carrier() const {
 	assert(nengines == 2);
 	setup_draw_ship();
 	set_ship_texture(PLASTER_TEX);
-	colorRGBA const ecolor(0.2, 0.2, 1.0, 1.0);
-	light_engine_pair(ecolor, 0, 0.5, 0.7, 0.0, 1.3);
+	light_engine_pair(engine_color, 0, 0.5, 0.7, 0.0, 1.3);
 	draw_cube(point(0.0, 0.0, -0.32), 0.8, 0.38, 2.04, 1, 1, 1.0, 1); // main body
 
 	if (t_exp > 0.0) { // while exploding, the front section breaks off and floats away
@@ -1051,9 +1040,9 @@ void uobj_draw_data::draw_us_carrier() const {
 		draw_cylin_fast(0.015, 0.012, 0.4, ndiv4, 0);
 		fgPopMatrix();
 	}
-	if (ndiv > 5) draw_cube(point(0.0, 0.0, -0.6), 1.6, 0.09, 0.26, 0); // draw engines support
+	if (ndiv > 5) {draw_cube(point(0.0, 0.0, -0.6), 1.6, 0.09, 0.26, 0);} // draw engines support
 	fgPopMatrix(); // undo invert_z()
-	draw_engine_pairs(ecolor, 0, 0.5, 0.7, 0.0, 1.3, all_zeros, 1, 1.5, vector3d(0.0, 1.0, 0.0)); // medium blue, high aspect ratio
+	draw_engine_pairs(engine_color, 0, 0.5, 0.7, 0.0, 1.3, all_zeros, 1, 1.5, vector3d(0.0, 1.0, 0.0)); // medium blue, high aspect ratio
 	unlight_engine_pair();
 }
 
@@ -1062,8 +1051,7 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 
 	assert(nengines == 2);
 	setup_draw_ship();
-	colorRGBA const ecolor(0.7, 0.7, 1.0, 1.0); // lighter blue
-	light_engine_pair(ecolor, 0, 0.45, 0.42, -0.62, 0.86);
+	light_engine_pair(engine_color, 0, 0.45, 0.42, -0.62, 0.86);
 	
 	// main body, with perturb_map and render_map
 	set_color(color_a*0.7); // helps to reduce light differences when shadowing
@@ -1118,7 +1106,7 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 	draw_ehousing_pairs(0.9, 0.12, 0.12, 0.15, -0.84, 0.0, 1, point(0.42, -0.62, -0.75));
 	end_ship_texture();
 	fgPopMatrix(); // undo invert_z()
-	draw_engine_pairs(ecolor, 0, 0.45, 0.42, -0.62, 0.86);
+	draw_engine_pairs(engine_color, 0, 0.45, 0.42, -0.62, 0.86);
 	unlight_engine_pair();
 }
 
@@ -1137,7 +1125,7 @@ void uobj_draw_data::draw_us_shadow() const { // could be improved
 	fgScale(0.9, 0.4, 0.8);
 	draw_sphere_vbo(point(0.0, 0.0, -0.6/0.8), 1.0, ndiv, 1);
 	end_ship_texture();
-	if (cloakval > 0.0) glDisable(GL_CULL_FACE);
+	if (cloakval > 0.0) {glDisable(GL_CULL_FACE);}
 	fgPopMatrix(); // undo invert_z()
 }
 
@@ -1232,7 +1220,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 	end_ship_texture();
 	
 	if (powered && animate2 && final_pass && phase1) {
-		add_colored_lights(pos, radius, GREEN, 0.2, (rand() & (is_small ? 3 : 7)), obj); // add eerie green light sources
+		add_colored_lights(pos, radius, engine_color, 0.2, (rand() & (is_small ? 3 : 7)), obj); // add eerie green light sources
 	}
 }
 
@@ -1259,7 +1247,7 @@ void uobj_draw_data::draw_bshuttle() const {
 	draw_ehousing_pairs(1.0, 0.18, 0.18, 0.22, 1.6, 0.0, 1, point(-0.8, 0.0, -0.8)); // length r1 r2 lcone dx dy
 	end_ship_texture();
 	fgPopMatrix(); // undo invert_z()
-	draw_engine_pairs(LT_BLUE, 0, 0.8, 0.8, 0.0, 1.0); // escale dx dy dz
+	draw_engine_pairs(engine_color, 0, 0.8, 0.8, 0.0, 1.0); // escale dx dy dz
 }
 
 
@@ -1276,7 +1264,7 @@ void uobj_draw_data::draw_tractor() const { // could be better
 	set_cloak_color(colorRGBA(1.0, 1.0, 1.0, 0.5));
 	draw_cube(point(0.0, 0.0, 1.1), 0.8, 0.4, 0.65, 0);
 	fgPopMatrix(); // undo invert_z()
-	draw_engine_pairs(WHITE, 0, 0.9, 1.0, 0.25, 1.0, point(0.0, -0.5, 0.0), 2); // escale dx dy dz
+	draw_engine_pairs(engine_color, 0, 0.9, 1.0, 0.25, 1.0, point(0.0, -0.5, 0.0), 2); // escale dx dy dz
 }
 
 
@@ -1336,9 +1324,9 @@ void uobj_draw_data::draw_gunship() const {
 	if (is_moving()) { // draw engine glow
 		for (unsigned i = 0; i < 4; ++i) {
 			point const epos(0.35*dxy[0][i], 0.35*dxy[1][i], 1.15);
-			if (!(eflags & (1 << i))) draw_engine(GOLD, epos*1.125, 0.5);
+			if (!(eflags & (1 << i))) {draw_engine(engine_color, epos*1.125, 0.5);}
 		}
-		draw_ship_flares(GOLD);
+		draw_ship_flares(engine_color);
 	}
 }
 
@@ -1366,8 +1354,8 @@ void uobj_draw_data::draw_nightmare() const {
 	fgPopMatrix(); // undo invert_z()
 
 	if (is_moving() && !(eflags & 1)) { // draw engine glow
-		draw_engine(RED, point(0.0, 0.0, 1.3), 1.5);
-		draw_ship_flares(RED);
+		draw_engine(engine_color, point(0.0, 0.0, 1.3), 1.5);
+		draw_ship_flares(engine_color);
 	}
 }
 
@@ -1456,8 +1444,8 @@ void uobj_draw_data::draw_dwcarrier() const {
 	fgPopMatrix(); // undo invert_z()
 
 	if (phase2) { // draw engine glow
-		draw_engine_pairs(BLUE, 0, 0.4, 0.32, 0.3, 1.45, point(0.0, -0.3, 0.0), 3);
-		//draw_engine_pairs(BLUE, 0, 0.4, 0.32, 0.0, 1.45, all_zeros, 1, 2.8);
+		draw_engine_pairs(engine_color, 0, 0.4, 0.32, 0.3, 1.45, point(0.0, -0.3, 0.0), 3);
+		//draw_engine_pairs(engine_color, 0, 0.4, 0.32, 0.0, 1.45, all_zeros, 1, 2.8);
 	}
 	if (powered && first_pass) {clear_colors_and_disable_light(ENGINE_DEF_LIGHT, shader);}
 }
@@ -1617,7 +1605,7 @@ void uobj_draw_data::draw_dwexterm() const {
 	}
 
 	// draw engine glow
-	draw_engine_pairs(BLUE, 0, 0.24, 0.36, 0.07, 1.96, point(0.1, -0.1, -0.03), 4);
+	draw_engine_pairs(engine_color, 0, 0.24, 0.36, 0.07, 1.96, point(0.1, -0.1, -0.03), 4);
 }
 
 
@@ -1685,13 +1673,13 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 	float const tail_speed(0.005), rscale(cosf(tail_speed*TWO_PI*(on_time%unsigned(1.0/tail_speed)))); // -1.0 to 1.0
 
 	if (ndiv > 6) {
-		if (phase1) draw_wraith_tail(0.19, ndiv_tail, rscale);
+		if (phase1) {draw_wraith_tail(0.19, ndiv_tail, rscale);}
 		set_color(color_b);
 	}
-	if (phase2) draw_wraith_tail(0.27, ndiv_tail, rscale);
+	if (phase2) {draw_wraith_tail(0.27, ndiv_tail, rscale);}
 	end_ship_texture();
 	fgPopMatrix();
-	if (is_moving() && phase1) add_light_source(pos, 4.0*radius, color_b); // radius = f(health)?
+	if (is_moving() && phase1) {add_light_source(pos, 4.0*radius, engine_color);} // radius = f(health)?
 }
 
 
@@ -1736,12 +1724,7 @@ void uobj_draw_data::draw_abomination() const {
 		cobjs[i]->draw(max(3, ((i == 2) ? 2*ndiv : (int(ndiv32) - int(i)))));
 	}
 	end_specular();
-	
-	if (powered && val > 0.1) {
-		colorRGBA color;
-		blend_color(color, WHITE, color_a, 0.5, 1);
-		add_light_source((pos + dir*(3.5*radius)), 3.5*val*radius, color); // eye light
-	}
+	if (powered && val > 0.1) {add_light_source((pos + dir*(3.5*radius)), 3.5*val*radius, engine_color);} // eye light
 }
 
 
@@ -1749,7 +1732,7 @@ void uobj_draw_data::draw_reaper() const {
 
 	set_uobj_specular(0.9, 90.0);
 	setup_draw_ship();
-	if (can_have_engine_lights()) {setup_point_light(all_zeros, color_b, 5.0*radius, ENGINE_DEF_LIGHT, shader);}
+	if (can_have_engine_lights()) {setup_point_light(all_zeros, engine_color, 5.0*radius, ENGINE_DEF_LIGHT, shader);}
 	cobj_vector_t const &cobjs(obj->get_cobjs());
 
 	if (cobjs.size() == 2) { // blocking shield is up
@@ -1767,7 +1750,7 @@ void uobj_draw_data::draw_reaper() const {
 	end_specular();
 	fgPopMatrix(); // undo invert_z()
 	fgPopMatrix(); // undo rotations
-	if (powered) setup_colors_draw_flare(pos, all_zeros, 3.0, 3.0, color_b);
+	if (powered) {setup_colors_draw_flare(pos, all_zeros, 3.0, 3.0, engine_color);}
 	fgPushMatrix();
 	//if (powered && animate2 && final_pass && phase1) add_colored_lights(pos, radius, color_a, 0.25, 4, obj);
 }
@@ -1777,20 +1760,19 @@ void uobj_draw_data::draw_death_orb() const {
 
 	set_uobj_specular(0.9, 90.0);
 	setup_draw_ship();
-	if (ndiv > 3) draw_sphere_vbo(all_zeros, 0.5, ndiv, 0);
+	if (ndiv > 3) {draw_sphere_vbo(all_zeros, 0.5, ndiv, 0);}
 	end_specular();
 	fgPopMatrix(); // undo transformations
 
 	if (powered) {
-		setup_colors_draw_flare(pos, all_zeros, 2.1, 2.1, color_a, FLARE2_TEX);
-		if (ndiv > 3) add_light_source(pos, 6.0*radius, color_a);
+		setup_colors_draw_flare(pos, all_zeros, 2.1, 2.1, engine_color, FLARE2_TEX);
+		if (ndiv > 3) {add_light_source(pos, 6.0*radius, engine_color);}
 	}
 	if (is_moving() && animate2 && first_pass && ndiv > 4) {
 		bool const two_parts((time%5)==0);
 
 		for (unsigned i = 0; i < unsigned(1+two_parts); ++i) {
-			gen_particle(PTYPE_GLOW, color_a, ALPHA0, TICKS_PER_SECOND, pos, zero_vector,
-				0.15*radius, 0.0, obj->get_align(), (i > 0));
+			gen_particle(PTYPE_GLOW, color_a, ALPHA0, TICKS_PER_SECOND, pos, zero_vector, 0.15*radius, 0.0, obj->get_align(), (i > 0));
 		}
 	}
 }
@@ -1837,7 +1819,7 @@ void uobj_draw_data::draw_supply() const {
 		draw_ship_flares(light_color);
 	}
 	for (unsigned i = 0; i < 3; ++i) {
-		draw_engine_pairs(LT_BLUE, (i<<1), 0.5, 0.25, (-0.4 + 0.4*i), 1.75);
+		draw_engine_pairs(engine_color, (i<<1), 0.5, 0.25, (-0.4 + 0.4*i), 1.75);
 	}
 }
 
@@ -1884,7 +1866,7 @@ void uobj_draw_data::draw_juggernaut() const {
 
 	unsigned const ndiv2(get_ndiv(ndiv/2));
 	setup_draw_ship();
-	if (powered && first_pass) {setup_point_light(point(0.0, 0.05, -0.95), color_b, 1.0*radius, ENGINE_DEF_LIGHT, shader);}
+	if (powered && first_pass) {setup_point_light(point(0.0, 0.05, -0.95), engine_color, 1.0*radius, ENGINE_DEF_LIGHT, shader);}
 
 	fgPushMatrix();
 	fgScale(0.85, 1.2, 1.0);
@@ -1911,7 +1893,7 @@ void uobj_draw_data::draw_juggernaut() const {
 	fgPushMatrix();
 	fgTranslate(0.0, 0.05, -0.45);
 	fgScale(0.55, 1.5, 1.0);
-	if (powered) {set_emissive_color(color_b, shader);} else {set_color(color_b);}
+	if (powered) {set_emissive_color(engine_color, shader);} else {set_color(engine_color);}
 	draw_sphere_vbo(all_zeros, 0.65, ndiv, 0); // back
 	if (powered) {shader->clear_color_e();}
 	fgPopMatrix();
@@ -1952,11 +1934,11 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	bool const pt_light(can_have_engine_lights() && !(eflags & 1));
 	setup_draw_ship();
 	uniform_scale(1.5);
-	if (rotated) fgRotate(-90.0, 1.0, 0.0, 0.0); // rotate so that "up" is in +y
-	if (mothership) fgScale(1.0, 1.0, 0.75);
+	if (rotated) {fgRotate(-90.0, 1.0, 0.0, 0.0);} // rotate so that "up" is in +y
+	if (mothership) {fgScale(1.0, 1.0, 0.75);}
 	set_color(color_b); // WHITE?
 	set_uobj_specular(0.9, 90.0);
-	if (pt_light) {setup_point_light(point(0.0, 0.0, -0.5), color_a, 3.0*radius, ENGINE_DEF_LIGHT, shader);}
+	if (pt_light) {setup_point_light(point(0.0, 0.0, -0.5), engine_color, 3.0*radius, ENGINE_DEF_LIGHT, shader);}
 	set_ship_texture(SPACESHIP2_TEX);
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 0.1);
@@ -2018,8 +2000,8 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	draw_ship_flares(RED);
 
 	if (ndiv > 4 && is_moving() && !(eflags & 1) && vel.mag_sq() > 1.0E-7) { // draw engine glow
-		draw_engine(color_a, (rotated ? point(0.0, -0.5, 0.0) : point(0.0, 0.0, 0.5)), 1.0);
-		draw_ship_flares(color_a);
+		draw_engine(engine_color, (rotated ? point(0.0, -0.5, 0.0) : point(0.0, 0.0, 0.5)), 1.0);
+		draw_ship_flares(engine_color);
 	}
 }
 
@@ -2052,9 +2034,8 @@ void uobj_draw_data::draw_headhunter() const {
 	fgPopMatrix(); // undo invert_z()
 
 	if (is_moving() && !(eflags & 1)) { // draw engine glow
-		colorRGBA const color(0.75, 0.75, 1.0, 1.0);
-		draw_engine(color, point(0.0, 0.0, 1.8), 0.8);
-		draw_ship_flares(color);
+		draw_engine(engine_color, point(0.0, 0.0, 1.8), 0.8);
+		draw_ship_flares(engine_color);
 	}
 }
 
@@ -2153,17 +2134,15 @@ void uobj_draw_data::draw_seige() const {
 	fgPopMatrix(); // undo transformations
 
 	if (is_moving()) { // draw engine glow
-		colorRGBA const color(blend_color(color_a, WHITE, 0.5, 1));
-
 		for (unsigned i = 0; i < 3; ++i) {
 			if (eflags & (1 << i)) continue;
 			vector3d edir(cross_product(epts[i], vector3d(0.0, 1.0, 0.0)).get_norm());
 			point ept(epts[i]*1.05);
 			edir.z *= -1.0;
 			ept.z   = -ept.z + 0.4;
-			draw_engine(color, ept, 0.3, 2.5, edir);
+			draw_engine(engine_color, ept, 0.3, 2.5, edir);
 		}
-		draw_ship_flares(color);
+		draw_ship_flares(engine_color);
 	}
 }
 

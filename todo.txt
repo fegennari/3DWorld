@@ -18,5 +18,4 @@ Load/display model3d models in tiled terrain mode
   - Model LOD - mesh simplification
 
 Procedural planet shader FP resolution
-Ship Engine Color (from config file or hard-coded?)
 Ship/asteroid full shadow bug
