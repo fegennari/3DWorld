@@ -1326,7 +1326,7 @@ colorRGBA const MUD_C    (0.3,  0.18, 0.09, 1.0);
 colorRGBA const MUD_S_C  (0.7,  0.35, 0.25, 1.0);
 colorRGBA const BRASS_C  (1.0,  1.0,  0.8,  1.0);
 colorRGBA const BRONZE_C (1.0,  1.0,  0.6,  1.0);
-colorRGBA const MED_GREEN(0.1,  0.7,  0.1,  1.0);
+colorRGBA const MED_GREEN(0.2,  0.7,  0.2,  1.0);
 colorRGBA const SNOW_COLOR(1.0, 1.0,  1.4,  1.0); // slightly bluish (saturated)
 colorRGBA const BACKGROUND_DAY(0.2, 0.3, 0.8, 1.0);
 colorRGBA const BACKGROUND_NIGHT(BLACK);

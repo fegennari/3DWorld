@@ -105,6 +105,43 @@ u_ship *add_ship(unsigned sclass, unsigned align, unsigned ai, unsigned targ, po
 }
 
 
+// ************ color string reader ************
+
+
+struct string_to_color_map_t : public map<string, colorRGBA> {
+
+	void populate() {
+		unsigned const NUM_COLORS = 34;
+		string const strs[NUM_COLORS] =
+		{"RED", "GREEN", "BLUE", "BLACK", "WHITE", "CYAN", "MAGENTA", "YELLOW", "LT_RED", "DK_RED", "LT_GREEN", "MED_GREEN", "DK_GREEN", "LT_BLUE", "DK_BLUE",
+		 "BROWN", "DK_BROWN", "LT_BROWN", "GRAY", "LT_GRAY", "DK_GRAY", "GRAY_BLACK", "BKGRAY", "OLIVE", "PURPLE", "ORANGE", "PINK", "GOLD", "BRASS", "BRONZE",
+		 "ALPHA0", "DKER_GRAY", "GRAY06", "ORG_YEL"};
+		colorRGBA const colors[NUM_COLORS] =
+		{RED, GREEN, BLUE, BLACK, WHITE, CYAN, MAGENTA, YELLOW, LT_RED, DK_RED, LT_GREEN, MED_GREEN, DK_GREEN, LT_BLUE, DK_BLUE,
+		 BROWN, DK_BROWN, LT_BROWN, GRAY, LT_GRAY, DK_GRAY, GRAY_BLACK, BKGRAY, OLIVE, PURPLE, ORANGE, PINK, GOLD, BRASS_C, BRONZE_C,
+		 ALPHA0, colorRGBA(0.18, 0.18, 0.18, 1.0), colorRGBA(0.6, 0.6, 0.6, 1.0), colorRGBA(1.0, 0.9, 0.0, 1.0)};
+		for (unsigned i = 0; i < NUM_COLORS; ++i) {insert(make_pair(strs[i], colors[i]));}
+	}
+	void ensure_populated() {if (empty()) {populate();}}
+
+	colorRGBA const &get(string const &str) const {
+		const_iterator it(find(str));
+		if (it == end()) {cerr << "Error: Color '" << str << "' not recognized." << endl; exit(1);}
+		return it->second;
+	}
+	bool read_color(ifstream &in, colorRGBA &color) const {
+		if ((in >> color.R >> color.G >> color.B >> color.A) != 0) return 1; // color read as FP RGBA
+		in.clear(); // clear error bits
+		string str;
+		if (!(in >> str)) return 0; // try to read color as a string
+		const_iterator it(find(str));
+		if (it == end()) {cerr << "Error: Color '" << str << "' not recognized." << endl; return 0;}
+		color = it->second;
+		return 1;
+	}
+};
+
+
 // ************ ship_defs_file_reader ************
 
 
@@ -115,8 +152,10 @@ class ship_defs_file_reader {
 		CMD_ADD, CMD_WEAP_PT, CMD_PLAYER_WEAP, CMD_MESH_PARAMS, CMD_SHIP_CYLINDER, CMD_SHIP_CUBE, CMD_SHIP_SPHERE, CMD_SHIP_TORUS,
 		CMD_SHIP_BCYLIN, CMD_SHIP_TRIANGLE, CMD_FLEET, CMD_SHIP_ADD_INIT, CMD_SHIP_ADD_GEN, SHIP_ADD_RAND_SPAWN, CMD_SHIP_BUILD, CMD_ALIGN,
 		CMD_SHIP_NAMES, CMD_ADD_SHIP, CMD_ADD_ASTEROID, CMD_ADD_COMETS, CMD_BLACK_HOLE, CMD_PLAYER, CMD_LAST_PARENT, CMD_END};
+
 	ifstream cfg;
 	kw_map command_m, ship_m, weap_m, explosion_m, align_m, ai_m, target_m, asteroid_m;
+	string_to_color_map_t string_to_color;
 	u_ship *last_ship;
 	vector<point> weap_pts;
 	unsigned cur_ship_type, ship_add_mode;
@@ -273,7 +312,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 		case CMD_SHIP: // <enum ship_id> <string name> {params...} <enum explosion_t>
 			if (!read_ship_type(type)) return 0;
 			assert(!sclasses[type].inited);
-			if (!sclasses[type].read_from_ifstream(cfg)) return 0; // make this function take the reader (*this)?
+			if (!sclasses[type].read_from_ifstream(cfg, string_to_color)) return 0; // make this function take the reader (*this)?
 			if (!read_enum(explosion_m, sclasses[type].exp_type,    "explosion"    )) return 0;
 			if (!read_enum(explosion_m, sclasses[type].exp_subtype, "sub_explosion")) return 0;
 			break;
@@ -293,7 +332,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
 		case CMD_WBEAM: // <enum weap_id> <color brc1> <color brc2> <color beamc1> <color beamc2> <float bw_escale> <bool drains energy> <bool temperature source> <bool paralyzes> <bool mind control> <bool multi-segment>
 			if (!read_weap_type(type)) return 0;
-			if (!us_weapons[type].read_beam_params_from_ifstream(cfg)) return 0;
+			if (!us_weapons[type].read_beam_params_from_ifstream(cfg, string_to_color)) return 0;
 			break;
 
 		case CMD_SHIP_WEAP: // <enum ship_id> {[$WEAP_PT] $ADD}*
@@ -721,6 +760,7 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 	sclasses.resize(NUM_US_CLASS);
 	us_weapons.resize(NUM_UWEAP);
 	setup_keywords();
+	string_to_color.populate();
 
 	// parse the file
 	string str;
@@ -773,13 +813,7 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 // ************ us_class ************
 
 
-bool read_color(ifstream &in, colorRGBA &color) {
-
-	return ((in >> color.R >> color.G >> color.B >> color.A) != 0);
-}
-
-
-bool us_class::read_from_ifstream(ifstream &in) {
+bool us_class::read_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color) {
 
 	if (!ship_defs_file_reader::read_string(in, name)) return 0;
 	float ddelay, rdelay, kcost;
@@ -790,7 +824,7 @@ bool us_class::read_from_ifstream(ifstream &in) {
 		>> parallel_fire >> symmetric >> self_shadow >> cont_frag >> for_boarding >> can_board >> orbiting_dock
 		>> dynamic_cobjs >> uses_tdir >> emits_light >> engine_lights >> suicides >> kamikaze >> no_disable >> uses_mesh2d
 		>> turreted >> weap_spread >> shield_sects >> draw_passes >> exp_disint >> ddelay >> rdelay)) return 0;
-	if (!read_color(in, base_color)) return 0;
+	if (!string_to_color.read_color(in, base_color)) return 0;
 	death_delay = unsigned(TICKS_PER_SECOND*ddelay);
 	regen_delay = ((rdelay > 0.0 || global_regen > 0.0) ? (death_delay + unsigned(TICKS_PER_SECOND*(rdelay + global_regen))) : 0);
 	mesh_deform = mesh_remove = mesh_expand = mu_expand = mesh_trans = 0;
@@ -892,20 +926,20 @@ bool us_weapon::read_from_ifstream(ifstream &in) {
 }
 
 
-bool us_weapon::read_beam_params_from_ifstream(ifstream &in) {
+bool us_weapon::read_beam_params_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color) {
 
 	assert(inited);
-	return bwp.read(in);
+	return bwp.read(in, string_to_color);
 }
 
 
-bool beam_weap_params::read(ifstream &in) {
+bool beam_weap_params::read(ifstream &in, string_to_color_map_t const &string_to_color) {
 
 	for (unsigned i = 0; i < 2; ++i) {
-		if (!read_color(in,brc[i]))   return 0;
+		if (!string_to_color.read_color(in, brc[i])) return 0;
 	}
 	for (unsigned i = 0; i < 2; ++i) {
-		if (!read_color(in, beamc[i])) return 0;
+		if (!string_to_color.read_color(in, beamc[i])) return 0;
 	}
 	return ((in >> bw_escale >> energy_drain >> temp_src >> paralyze >> mind_control >> multi_segment) != 0);
 }

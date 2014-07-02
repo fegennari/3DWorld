@@ -67,9 +67,10 @@ float noise_gen_3d::get_val(unsigned x, unsigned y, unsigned z, vector<float> co
 	float val(0.0);
 	unsigned const xyz[3] = {x, y, z};
 	UNROLL_3X(assert(num_sines*xyz[i_]+num_sines <= xyz_vals[i_].size()););
+	unsigned const xs(x*num_sines), ys(y*num_sines), zs(z*num_sines);
 
 	for (unsigned k = 0; k < num_sines; ++k) { // performance critical
-		val += rdata[NUM_SINE_PARAMS*k]*(xyz_vals[0][x*num_sines + k])*(xyz_vals[1][y*num_sines + k])*(xyz_vals[2][z*num_sines + k]);
+		val += rdata[NUM_SINE_PARAMS*k]*(xyz_vals[0][xs + k])*(xyz_vals[1][ys + k])*(xyz_vals[2][zs + k]);
 	}
 	return val;
 }

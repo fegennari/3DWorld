@@ -19,6 +19,7 @@ using std::ifstream;
 using std::cerr;
 
 typedef map<string, unsigned> kw_map;
+struct string_to_color_map_t;
 
 
 bool const VERIFY_REFS         = 0;
@@ -524,7 +525,7 @@ public:
 
 	us_class() : inited(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW), engine_color(BLACK) {}
 	void clear_cobjs();
-	bool read_from_ifstream(ifstream &in);
+	bool read_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color);
 	void setup(unsigned sclass_);
 	void add_weapon(ship_weapon const &w) {assert(inited); merge_weapons(weapons, w);}
 	void set_mesh_params(bool deform, bool remove, bool expand, bool mu_exp, bool trans);
@@ -559,7 +560,7 @@ struct beam_weap_params {
 
 	beam_weap_params() : bw_escale(0.0), energy_drain(0), temp_src(0),
 		paralyze(0), mind_control(0), multi_segment(0) {} // start at an invalid value
-	bool read(ifstream &in);
+	bool read(ifstream &in, string_to_color_map_t const &string_to_color);
 };
 
 
@@ -581,7 +582,7 @@ public:
 
 	us_weapon() : inited(0) {}
 	bool read_from_ifstream(ifstream &in);
-	bool read_beam_params_from_ifstream(ifstream &in);
+	bool read_beam_params_from_ifstream(ifstream &in, string_to_color_map_t const &string_to_color);
 	void setup(unsigned wclass_);
 	void calc_preference();
 	bool need_ammo()       const {return (is_fighter || def_ammo > 0);}
