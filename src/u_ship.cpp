@@ -2112,8 +2112,7 @@ bool u_ship::try_paralyze(u_ship const *source, float intensity, point const &pp
 	}
 	if (ptime == 0) return 0;
 	disable(ptime);
-	add_blastr(ppos, dir, 3.0*radius, 0.0, min(max(iticks, 1), int(ptime)), source->get_align(),
-		YELLOW, ORANGE, ETYPE_NONE, source); // colored light
+	add_blastr(ppos, dir, 3.0*radius, 0.0, min(max(iticks, 1), int(ptime)), source->get_align(), YELLOW, ORANGE, ETYPE_NONE, source); // colored light
 	return 1;
 }
 
@@ -2129,8 +2128,7 @@ bool u_ship::try_mind_control(u_ship *source, unsigned num_tries) { // source mi
 	if (rval <= 1 || (rand()%rval) == 0) {
 		colorRGBA const color_b(alignment_colors[get_align()]);
 		colorRGBA const color_a(alignment_colors[source->get_align()]);
-		add_blastr(pos, dir, 5.0*radius, 0.0, TICKS_PER_SECOND/4, source->get_align(),
-			color_a, color_a, ETYPE_NONE, source); // colored light
+		add_blastr(pos, dir, 5.0*radius, 0.0, TICKS_PER_SECOND/4, source->get_align(), color_a, color_a, ETYPE_NONE, source); // colored light
 
 		for (unsigned i = 0; i < 50; ++i) {
 			float const psize(radius*rand_uniform(0.1, 0.25));

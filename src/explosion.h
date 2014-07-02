@@ -37,7 +37,7 @@ struct exp_type_params {
 };
 
 
-struct blastr { // size = 73 (76)
+struct blastr { // size = 118 (120)
 
 	int time, st_time, type, src;
 	float size, cur_size, damage;
@@ -45,15 +45,17 @@ struct blastr { // size = 73 (76)
 	vector3d dir, up_vector;
 	colorRGBA color1, color2, cur_color;
 	free_obj const *parent;
+	bool one_frame_only, one_frame_seen;
 
 	blastr() {}
 	blastr(int tm, int ty, int sr, float sz, float dam, point const &p, vector3d const &d,
-		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL)
+		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL, bool ofo=0)
 		: time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), pos(p), dir(d.get_norm()),
-		up_vector(plus_y), color1(c1), color2(c2), cur_color(c1), parent(pa) {}
+		up_vector(plus_y), color1(c1), color2(c2), cur_color(c1), parent(pa), one_frame_only(ofo), one_frame_seen(0) {}
 	void check_pointers();
 	void update();
 	void add_as_dynamic_light() const;
+	bool next_frame(unsigned i);
 	void process() const;
 	float priority() const {return size*(time/st_time);} // times start off large and decrement to 0
 };

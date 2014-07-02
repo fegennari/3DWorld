@@ -857,7 +857,7 @@ void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { 
 		if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {
 			gen_smoke((pos + orient.get_norm()*(2.0*radius)), 0.2);
 		}
-		add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, WHITE, WHITE, ETYPE_ANIM_FIRE);
+		add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);
 	}
 }
 
@@ -1211,7 +1211,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	else {
 		bradius = 0.7*size;
 		int const time(((type == BLAST_RADIUS) ? 2 : 1)*BLAST_TIME);
-		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, WHITE, WHITE, ETYPE_ANIM_FIRE);
+		add_blastr(pos, signed_rand_vector_norm(), bradius, damage, int(1.5*time), shooter, YELLOW, RED, ETYPE_ANIM_FIRE);
 		//add_blastr(pos, signed_rand_vector_norm(), bradius, damage, time, shooter, YELLOW, RED, ETYPE_FIRE);
 	}
 	//exp_cobjs.push_back(add_coll_sphere(pos, size, cobj_params(0.0, WHITE, 0, 1, explosion_coll, exp_cobjs.size()))); // cobj for next frame

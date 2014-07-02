@@ -753,6 +753,15 @@ void disable_exp_lights(shader_t *s=NULL) {
 }
 
 
+void add_player_ship_engine_light() {
+
+	if (!animate2) return;
+	u_ship const &ps(player_ship());
+	if (!ps.powered()) return; // check if player is providing thrust?
+	add_blastr(ps.pos, ps.get_dir(), 2.0*ps.get_radius(), 0.0, 0, -1, YELLOW, YELLOW, ETYPE_NONE, &ps); // FIXME: hard-coded for fighter yellow engine color
+}
+
+
 void draw_univ_objects() {
 
 	//RESET_TIME;

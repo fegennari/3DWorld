@@ -50,6 +50,7 @@ void destroy_sobj(s_object const &target);
 bool get_gravity(s_object &result, point pos, vector3d &gravity, int offset);
 void set_lighting_params();
 point get_scaled_upt();
+void add_player_ship_engine_light();
 
 
 
@@ -203,6 +204,7 @@ void process_ships(int timer1) {
 
 	sort_uobjects();
 	if (TIMETEST) PRINT_TIME(" Sort uobjs");
+	add_player_ship_engine_light();
 	update_blasts();
 	if (TIMETEST) PRINT_TIME(" Process BRs");
 	process_univ_objects();

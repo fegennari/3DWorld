@@ -89,8 +89,10 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 				colorRGBA const &color1, colorRGBA const &color2, int type, free_obj const *const parent)
 {
 	if (NO_NONETYPE_BRS && type == ETYPE_NONE) return;
-	assert(size > 0.0 && time > 0);
-	blastr br(time, type, src, size, damage, pos, dir, color1, color2, parent);
+	bool const one_frame_only(time == 0);
+	if (one_frame_only) {time = 1;}
+	assert(size > 0.0 && time >= 0);
+	blastr br(time, type, src, size, damage, pos, dir, color1, color2, parent, one_frame_only);
 	if (type == ETYPE_ANIM_FIRE) {br.up_vector = signed_rand_vector_norm();}
 	br.update();
 
@@ -104,7 +106,7 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 		blastrs[ix] = br;
 	}
 	if (type == ETYPE_NUCLEAR && damage > 0.0) { // add flash
-		add_blastr(pos, (get_camera_pos() - pos), 1.2*size, 0.0, 2, src, WHITE, WHITE, ETYPE_FUSION, parent);
+		add_blastr(pos, (get_camera_pos() - pos), 1.2*size, 0.0, 0, src, WHITE, WHITE, ETYPE_FUSION, parent);
 	}
 }
 
@@ -112,19 +114,16 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 void blastr::update() {
 
 	assert(time > 0 && st_time > 0);
-	if (type == ETYPE_ANIM_FIRE) return; // size/color stays constant
 	float const cscale(float(time)/float(st_time));
-	cur_size = size*(0.3 + 0.5/float(time) + 0.2*(1.0 - cscale));
+	if (type != ETYPE_ANIM_FIRE) {cur_size = size*(0.3 + 0.5/float(time) + 0.2*(1.0 - cscale));} // size doesn't increase for anim_fire
 	blend_color(cur_color, color1, color2, cscale, 1);
-	cur_color.alpha *= (0.5 + 0.5*cscale);
+	if (type != ETYPE_ANIM_FIRE) {cur_color.alpha *= (0.5 + 0.5*cscale);}
 }
 
 
 void blastr::add_as_dynamic_light() const {
 
-	colorRGBA light_color(cur_color);
-	if (type == ETYPE_ANIM_FIRE) blend_color(light_color, YELLOW, RED, float(time)/float(st_time), 1);
-	add_dynamic_light(min(3.5, 4.0*size), pos, light_color); // Note: 3.5 meant for ground mode, but also acceptable for universe mode (lights are never this large)
+	add_dynamic_light(min(3.5, 4.0*size), pos, cur_color); // Note: 3.5 meant for ground mode, but also acceptable for universe mode (lights are never this large)
 }
 
 
@@ -152,43 +151,47 @@ void blastr::process() const { // land mode
 }
 
 
+bool blastr::next_frame(unsigned i) {
+
+	if (time == 0) return 0; // blastr not in use
+
+	if (animate2) {
+		int const decrement(one_frame_only ? (one_frame_seen ? time : 0) : min(iticks, max(1, (st_time >> 1)))); // force it to exist for at least one frame
+
+		if (time <= decrement) { // just expired
+			time = 0;
+			available.push_back(i);
+			return 0;
+		}
+		update();
+		time -= decrement;
+		assert(time > 0);
+	}
+	if (world_mode == WMODE_UNIVERSE) { // universe mode
+		float const size(4.0*EXP_LIGHT_SCALE*cur_size);
+		float const scale(size*size/distance_to_camera_sq(pos));
+
+		if (scale > 2.5E-5) {
+			if (cur_color.alpha > 0.01 /*&& br.type != ETYPE_NONE*/ && !is_distant(pos, 0.2*size) && univ_sphere_vis(pos, size)) {
+				add_br_light(i, pos, size, parent);
+			}
+			if (animate2) {add_parts_projs(pos, cur_size, dir, cur_color, type, src, parent);}
+		}
+	}
+	else if (world_mode == WMODE_GROUND && game_mode && damage > 0.0) {
+		process();
+	}
+	one_frame_seen = 1;
+	return 1;
+}
+
+
 void update_blasts() {
 
 	//RESET_TIME;
 	unsigned const nbr((unsigned)blastrs.size());
 	if (world_mode == WMODE_UNIVERSE) {calc_lit_uobjects();}
-
-	for (unsigned i = 0; i < nbr; ++i) {
-		blastr &br(blastrs[i]);
-		if (br.time == 0) continue; // blastr not in use
-
-		if (animate2) {
-			int const decrement(min(iticks, max(1, (br.st_time >> 1)))); // force it to exist for at least one frame
-
-			if (br.time <= decrement) { // just expired
-				br.time = 0;
-				available.push_back(i);
-				continue;
-			}
-			br.update();
-			br.time -= decrement;
-			assert(br.time > 0);
-		}
-		if (world_mode == WMODE_UNIVERSE) { // universe mode
-			float const size(4.0*EXP_LIGHT_SCALE*br.cur_size);
-			float const scale(size*size/distance_to_camera_sq(br.pos));
-
-			if (scale > 2.5E-5) {
-				if (br.cur_color.alpha > 0.01 /*&& br.type != ETYPE_NONE*/ && !is_distant(br.pos, 0.2*size) && univ_sphere_vis(br.pos, size)) {
-					add_br_light(i, br.pos, size, br.parent);
-				}
-				if (animate2) {add_parts_projs(br.pos, br.cur_size, br.dir, br.cur_color, br.type, br.src, br.parent);}
-			}
-		}
-		else if (world_mode == WMODE_GROUND && game_mode && br.damage > 0.0) {
-			br.process();
-		}
-	} // for i
+	for (unsigned i = 0; i < nbr; ++i) {blastrs[i].next_frame(i);}
 	//PRINT_TIME("Update Blasts");
 }
 
@@ -240,7 +243,7 @@ void draw_blasts() {
 				glDepthMask(GL_FALSE);
 				select_texture(EXPLOSION_TEX);
 			}
-			qbd.add_animated_billboard(br.pos, get_camera_pos(), br.up_vector, br.cur_color, br.cur_size, br.cur_size, timescale);
+			qbd.add_animated_billboard(br.pos, get_camera_pos(), br.up_vector, WHITE, br.cur_size, br.cur_size, timescale); // Note: *not* using cur_color
 			
 			if (end_type) {
 				qbd.draw_and_clear();

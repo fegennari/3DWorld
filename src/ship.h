@@ -516,13 +516,13 @@ public:
 	int turreted;
 	unsigned sclass, weap_spread, shield_sects, draw_passes, fire_speed, exp_type, exp_subtype, death_delay, regen_delay;
 	unsigned cost, ncrew, nengines, engine_lights;
-	colorRGBA base_color;
+	colorRGBA base_color, engine_color;
 	ship_sphere bnd_sphere;
 	cobj_vector_t cobjs;
 	vector<triangle> cobj_triangles;
 	vector<ship_weapon> weapons;
 
-	us_class() : inited(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW) {}
+	us_class() : inited(0), offense(-1.0), defense(-1.0), weap_range(-1.0), fire_speed(FSPEED_SLOW), engine_color(BLACK) {}
 	void clear_cobjs();
 	bool read_from_ifstream(ifstream &in);
 	void setup(unsigned sclass_);

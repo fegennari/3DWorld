@@ -184,6 +184,7 @@ void apply_one_light(query_data &qdata, unsigned ix) {
 
 	cached_obj const &cobj((*qdata.objs)[ix]);
 	assert(cobj.obj != NULL);
+	if (qdata.skip_self && cobj.obj == qdata.parent) return; // skip self lighting
 	
 	if (cobj.flags & OBJ_FLAGS_SHIP) { // need a more exact intersection test (for light-emitting ships)
 		if (!is_distant(cobj.pos, 0.1*cobj.radius) && !is_distant(qdata.pos, 0.05*qdata.radius)) { // both the ship and light are large/close
@@ -395,7 +396,7 @@ void calc_lit_uobjects() {
 }
 
 
-void add_br_light(unsigned index, point const &pos, float radius, free_obj const *const parent) { // is parent necessary?
+void add_br_light(unsigned index, point const &pos, float radius, free_obj const *const parent) {
 
 	assert((EXPLOSION_LIGHT + (int)NUM_EXP_LIGHTS) <= MAX_SHADER_LIGHTS);
 	if (!EXPLODE_LIGHTING || NUM_EXP_LIGHTS == 0) return;

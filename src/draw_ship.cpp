@@ -331,7 +331,9 @@ void uobj_draw_data::light_engine_pair(colorRGBA const &color, unsigned eflags_o
 		
 	for (unsigned i = 0; i < 2; ++i) {
 		if (!(eflags & (1 << (i + eflags_off)))) { // remember that dx and dz are backwards
-			setup_point_light(point((1.0 - 2.0*i)*-dx, dy, -dz), color, 4.0*escale*radius, (ENGINE_START_LIGHT + i), shader);
+			point const pt((1.0 - 2.0*i)*-dx, dy, -dz);
+			//if (ndiv >= 8) {add_light_source((pos + radius*pt), 4.0*escale*radius, color);} // transforms are wrong
+			setup_point_light(pt, color, 4.0*escale*radius, (ENGINE_START_LIGHT + i), shader);
 		}
 	}
 }
@@ -346,7 +348,7 @@ void uobj_draw_data::unlight_engine_pair() const {
 
 void uobj_draw_data::add_light_source(point const &lpos, float lradius, colorRGBA const &color) const {
 
-	if (animate2 && first_pass) add_blastr(lpos, dir, lradius, 0.0, 2, -1, color, color, ETYPE_NONE, obj);
+	if (animate2 && first_pass) {add_blastr(lpos, dir, lradius, 0.0, 0, -1, color, color, ETYPE_NONE, obj);}
 }
 
 
@@ -364,8 +366,8 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 	qbd.draw_as_flares_and_clear(FLARE1_TEX);
 	end_ship_texture();
 	shader->clear_color_e();
-	if (!symmetric) fgPushMatrix();
-	if (ADD_CFLASH_LIGHTS) add_light_source(pos, 4.0*radius, color);
+	if (!symmetric) {fgPushMatrix();}
+	if (ADD_CFLASH_LIGHTS) {add_light_source(pos, 4.0*radius, color);}
 }
 
 
@@ -536,7 +538,7 @@ void uobj_draw_data::draw_usw_chaff() const {
 void uobj_draw_data::draw_usw_rfire() const {
 
 	if (1) {
-		if (animate2 && first_pass && (time & 1)) {add_blastr(pos, dir, 1.5*radius, 0.0, 16, -1, WHITE, WHITE, ETYPE_ANIM_FIRE, obj);}
+		if (animate2 && first_pass && (time & 1)) {add_blastr(pos, dir, 1.5*radius, 0.0, int(0.4*TICKS_PER_SECOND), -1, YELLOW, ORANGE, ETYPE_ANIM_FIRE, obj);}
 		return;
 	}
 	// Note: this version is unused
@@ -567,7 +569,7 @@ void uobj_draw_data::draw_usw_thunder() const {
 	float const val2(0.001*(int(100000.0*val) % 999));
 	colorRGBA const color(0.1, (0.5 + 0.5*val2), (1.0 - 0.5*val2), 1.0);
 	setup_colors_draw_flare(pos, all_zeros, 10.0*val, 10.0*val, color);
-	if (ADD_CFLASH_LIGHTS) add_light_source(pos, 4.0*radius, color);
+	if (ADD_CFLASH_LIGHTS) {add_light_source(pos, 4.0*radius, color);}
 }
 
 
@@ -616,7 +618,7 @@ void uobj_draw_data::draw_usw_seige() const {
 	else {
 		draw_engine_trail(all_zeros, 1.0, 0.1, min(time, 16U), color);
 	}
-	if (ADD_CFLASH_LIGHTS) add_light_source(pos, 4.0*radius, color);
+	if (ADD_CFLASH_LIGHTS) {add_light_source(pos, 4.0*radius, color);}
 }
 
 

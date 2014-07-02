@@ -86,11 +86,11 @@ struct query_data {
 	point ipos;
 	free_obj const *parent, *fobj;
 	uobject *ptr;
-	bool exit_query;
+	bool exit_query, skip_self;
 
 	query_data(vector<cached_obj> const *const objs_, point const &pos_, float radius_, float urm_)
 		: objs(objs_), pos(pos_), urm(urm_), radius(radius_), damage(0.0), dist(0.0), eflags(0), index(0),
-		wclass(-1), align(-1), fobj(NULL), parent(NULL), ptr(NULL), exit_query(0) {}
+		wclass(-1), align(-1), fobj(NULL), parent(NULL), ptr(NULL), exit_query(0), skip_self(0) {}
 };
 
 
