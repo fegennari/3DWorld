@@ -2,6 +2,7 @@ float pt_line_dist(in vec3 P, in vec3 L1, in vec3 L2) {
 	return length(cross((L2 - L1), (L1 - P)))/distance(L2, L1);
 }
 
+// analytical soft sphere shadow with spherical light source
 float calc_sphere_shadow_atten(in vec3 pos, in vec3 lpos, in float lradius, in vec3 spos, in float sradius) {
 	float atten = 1.0;
 	float ldist = length(lpos - pos);

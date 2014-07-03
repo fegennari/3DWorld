@@ -22,7 +22,7 @@ extern int coll_id[];
 extern obj_group obj_groups[];
 
 
-void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny);
+void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values);
 bool using_hmap_with_detail();
 
 
@@ -91,7 +91,7 @@ void draw_overhead_map() {
 	int const xx(cx + int(4*dir.x)), yy(cy + int(4*dir.y));
 	float const xstart(x0 - nx2*scale), ystart(y0 - ny2*scale);
 	mesh_xy_grid_cache_t height_gen;
-	setup_height_gen(height_gen, xstart, ystart, scale, scale, nx, ny);
+	setup_height_gen(height_gen, xstart, ystart, scale, scale, nx, ny, 1); // cache_values=1
 	vector<unsigned char> buf(nx*ny*3*sizeof(unsigned char));
 	vector3d const light_dir(get_light_pos().get_norm()); // assume directional lighting to origin
 

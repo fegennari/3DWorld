@@ -330,13 +330,13 @@ void tile_t::clear_vbo_tid() {
 }
 
 
-void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
+void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values) {
 
 	bool const add_detail(using_hmap_with_detail());
 
 	if (add_detail || !using_tiled_terrain_hmap_tex()) {
 		float const xy_scale(add_detail ? HMAP_DETAIL_SCALE : 1.0);
-		height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny);
+		height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, cache_values);
 	}
 }
 
@@ -351,7 +351,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
 	unsigned const block_size(zvsize/4);
 	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail()); // add procedural detail to heightmap
-	setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize);
+	setup_height_gen(height_gen, get_xval(x1), get_yval(y1), deltax, deltay, zvsize, zvsize, 0); // cache_values=0
 
 	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)zvsize; ++y) {
@@ -432,7 +432,7 @@ void tile_t::calc_mesh_ao_lighting() {
 	vector<float> czv(context_sz*context_sz);
 	mesh_xy_grid_cache_t height_gen;
 	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail());
-	setup_height_gen(height_gen, get_xval(x1 - ray_len), get_yval(y1 - ray_len), deltax, deltay, context_sz, context_sz);
+	setup_height_gen(height_gen, get_xval(x1 - ray_len), get_yval(y1 - ray_len), deltax, deltay, context_sz, context_sz, 0); // cache_values=0
 	float const dz(0.5*HALF_DXY);
 	ao_lighting.resize(stride*stride);
 

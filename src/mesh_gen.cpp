@@ -533,7 +533,7 @@ void apply_noise_shape_per_term(float &noise, int shape) { // inputs and outputs
 }
 
 
-void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny) {
+void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values) {
 
 	assert(nx >= 0 && ny >= 0);
 	assert(start_eval_sin <= F_TABLE_SIZE);
@@ -555,6 +555,16 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 			float sin_val(SINF(y_mult*(y0 + i*dy) + y_const));
 			//apply_noise_shape_per_term(sin_val, mesh_gen_shape);
 			yterms[i*F_TABLE_SIZE+k] = y_scale*sin_val;
+		}
+	}
+	if (cache_values) {
+		cached_vals.resize(nx*ny);
+		
+		#pragma omp parallel for schedule(static,1)
+		for (int y = 0; y < (int)cur_ny; ++y) {
+			for (unsigned x = 0; x < cur_nx; ++x) {
+				cached_vals[y*cur_nx + x] = eval_index(x, y, 1, 0, 0); // Note: glaciate=1, num_start_sin=1
+			}
 		}
 	}
 }
@@ -589,15 +599,16 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 }
 
 
-float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin) const {
+float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin, bool use_cache) const {
 
+	assert(x < cur_nx && y < cur_ny);
+	if (use_cache && !cached_vals.empty()) {return cached_vals[y*cur_nx + x];}
 	float zval(0.0);
 
 	if (mesh_gen_mode > 0) { // perlin/simplex
 		zval += get_noise_zval((x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV, mesh_gen_mode, mesh_gen_shape);
 	}
 	else { // sine tables
-		assert(x < cur_nx && y < cur_ny);
 		float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
 		float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
 		for (int i = max(start_eval_sin, min_start_sin); i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
