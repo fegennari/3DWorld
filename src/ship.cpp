@@ -56,7 +56,7 @@ float align_t_kills[NUM_ALIGNMENT]    = {0};
 float friendly_kills[NUM_ALIGNMENT]   = {0};
 
 
-extern int show_framerate, frame_counter, display_mode, animate2;
+extern int show_framerate, frame_counter, display_mode, animate2, do_run;
 extern float fticks, tfticks;
 extern unsigned owner_counts[];
 extern float resource_counts[];
@@ -712,7 +712,7 @@ motion_particles_t motion_particles;
 void maybe_draw_motion_dust() {
 
 	// draw particles around ship showing motion
-	if (!animate2 || !player_near_system()) return;
+	if (!animate2 || !player_near_system() || do_run == 2) return; // not in hyperspeed
 	u_ship const &pship(player_ship());
 	//if (!pship.powered()) return;
 	vector3d const &pvel(pship.get_velocity());

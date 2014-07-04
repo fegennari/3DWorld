@@ -518,6 +518,7 @@ void vpc_shader_t::cache_locs() {
 	bind_3d_texture(get_noise_tex_3d(32, noise_ncomp));
 	if (s.is_setup()) return; // nothing else to do
 	s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
+	s.set_prefix("#define RIDGED_NOISE",  1); // FS
 	s.set_int_prefix("noise_ncomp", noise_ncomp, 1); // FS
 	s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
 	s.set_vert_shader("nebula");

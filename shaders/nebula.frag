@@ -20,7 +20,13 @@ void main()
 		float freq = 1.0;
 
 		for (int i = 0; i < NUM_OCTAVES; ++i) {
-			val  += texture3D(noise_tex, noise_scale*(freq*pos))/freq;
+			vec4 v = texture3D(noise_tex, noise_scale*(freq*pos));
+#ifdef RIDGED_NOISE
+			v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
+			v = clamp((1.0 - abs(v)), 0.0, 1.0); // ridged noise
+			v = v*v;
+#endif
+			val  += v/freq;
 			freq *= 2.0;
 		}
 		val = clamp(2.0*(0.5*val-0.4), 0.0, 1.0);
