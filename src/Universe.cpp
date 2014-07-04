@@ -253,6 +253,7 @@ public:
 			}
 			else if (body.use_procedural_shader()) {
 				set_prefix("#define PROCEDURAL_DETAIL", 1); // FS
+				if (body.use_vert_shader_offset()) {set_prefix("#define PROCEDURAL_DETAIL", 0);} // VS
 				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
 			}
 			if (has_craters) {set_prefix("#define HAS_CRATERS", 1);} // FS
@@ -363,12 +364,12 @@ public:
 
 
 class ushader_group {
-	universe_shader_t planet_shader[2][4][2]; // {without/with rings}x{rocky, procedural, all water, gas giant}x{without/with craters (moons)} - not all variations used
+	universe_shader_t planet_shader[2][5][2]; // {without/with rings}x{rocky, procedural, all water, gas giant, proc + vert hmap}x{without/with craters (moons)} - not all variations used
 	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
 	shader_t color_only_shader, planet_colored_shader, point_sprite_shader;
 
 	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
-		unsigned const type(body.gas_giant ? 3 : (body.use_procedural_shader() ? ((body.water >= 1.0) ? 2 : 1) : 0));
+		unsigned const type(body.gas_giant ? 3 : (body.use_procedural_shader() ? ((body.water >= 1.0) ? 2 : (body.use_vert_shader_offset() ? 4 : 1)) : 0));
 		return planet_shader[svars.ring_ro > 0.0][type][body.type == UTYPE_MOON];
 	}
 
@@ -2323,7 +2324,9 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	}
 	if (ndiv >= N_SPHERE_DIV) {
 		if (!has_heightmap() || procedural) { // gas giant or procedural
-			ndiv /= 2; // don't need high resolution for gas giants since they have no heightmap
+			if (!has_heightmap() || !use_vert_shader_offset()) { // gas giants or planets with atmosphere or water
+				ndiv /= 2; // don't need high resolution since they have no heightmap or vertex offset
+			}
 			point viewed_from(vcp);
 			rotate_vector(viewed_from);
 			draw_subdiv_sphere(all_zeros, radius, ndiv, viewed_from, NULL, 1, 0); // with back-face culling

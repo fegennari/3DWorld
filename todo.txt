@@ -20,6 +20,5 @@ Load/display model3d models in tiled terrain mode
 
 Procedural planet shader:
   - FP resolution
-  - Calculate height in vertex shader
 
 Ship/asteroid full shadow bug
