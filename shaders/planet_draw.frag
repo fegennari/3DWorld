@@ -225,6 +225,7 @@ void main()
 #endif // GAS_GIANT
 	if (atmosphere > 0.0) {
 		float cloud_val = atmosphere*gen_cloud_alpha(cloud_freq*vertex);
+		cloud_val = min(1.4*cloud_val, 1.0);
 		if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
 	}
 	fg_FragColor = gl_Color * vec4((color + emission.rgb), 1.0);

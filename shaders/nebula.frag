@@ -23,7 +23,7 @@ void main()
 			vec4 v = texture3D(noise_tex, noise_scale*(freq*pos));
 #ifdef RIDGED_NOISE
 			v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
-			v = clamp((1.0 - abs(v)), 0.0, 1.0); // ridged noise
+			v = 1.0 - abs(v); // ridged noise
 			v = v*v;
 #endif
 			val  += v/freq;
