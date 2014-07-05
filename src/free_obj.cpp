@@ -574,7 +574,7 @@ void free_obj::inverse_rotate() const {
 void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const {
 
 	fgPushMatrix();
-	global_translate(pos);
+	//global_translate(pos); // no longer translated here
 	uniform_scale(radius);
 
 	if (near_b_hole && gvect.mag() > 0.05*BLACK_HOLE_GRAV) { // stretch the object
@@ -599,7 +599,6 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 
 void free_obj::draw(shader_t shader[2]) const { // view culling has already been performed
 
-	//RESET_TIME;
 	if (!is_ok()) return; // dead
 	bool const lg_obj_type(is_ship() || is_stationary());
 	float const dist(p2p_dist(pos, get_player_pos2())), type_scale(lg_obj_type ? 0.75 : (is_particle() ? 1.2 : 1.0));
@@ -660,6 +659,9 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i), udd.shader); // only shader[0] has dynamic lights enabled
 		}
 	}
+	fgPushMatrix();
+	global_translate(pos);
+
 	for (unsigned pass = 0; pass < npasses; ++pass) {
 		if (pass > 0) {
 			set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale, udd.shader);
@@ -671,51 +673,48 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 		if (partial_shadow) { // partially shadowed - draw the sun's light with a stencil pass
 			// http://www.gamasutra.com/features/20021011/lengyel_05.htm
 			if (shader[1].is_setup()) {shader[1].enable(); udd.shader = &shader[1];}
-			assert(!sobjs.empty());
-			fgPushMatrix();
-			global_translate(pos);
+
+			// draw shadow volume
 			glClear(GL_STENCIL_BUFFER_BIT);
+			glDepthMask(GL_FALSE);
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			glEnable(GL_STENCIL_TEST);
 			glStencilFunc(GL_ALWAYS, 0, ~0);
-			glDepthFunc(GL_LESS);
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-			glDepthMask(GL_FALSE);
 			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
+			assert(!sobjs.empty());
 
 			for (unsigned d = 0; d < sobjs.size(); ++d) {
 				draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);
 			}
-			fgPopMatrix();
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			glDepthFunc(GL_EQUAL);
 			glStencilFunc(GL_EQUAL, 0, ~0);
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
-			set_additive_blend_mode(); //glBlendFunc(GL_ONE, GL_ONE);
+			glDepthFunc(GL_LEQUAL); // GL_EQUAL should be used, but there are more issues with z-fighting in this mode
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+			// draw second pass using stencil test
+			set_additive_blend_mode();
 			set_uobj_color(pos, c_radius, 0, 2, sun_pos, sobj, 0.0, 0.0, udd.shader); // enable diffuse/specular only
 			transform_and_draw_obj(udd, 1, 0, 1);
 
+			// reset state
 			glDepthMask(GL_TRUE);
-			glDepthFunc(GL_LEQUAL);
 			glDisable(GL_STENCIL_TEST);
 			set_std_blend_mode();
 			if (shader[0].is_setup()) {shader[0].enable(); udd.shader = &shader[0];}
 
 			if (display_mode & 0x10) { // testing
 				set_emissive_color(colorRGBA(GREEN, 0.25), udd.shader);
-				fgPushMatrix();
-				global_translate(pos);
 
 				for (unsigned d = 0; d < sobjs.size(); ++d) {
 					if (sobjs[d] != &player_ship()) {draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);}
 				}
-				fgPopMatrix();
 				udd.shader->clear_color_e();
 			}
 			glDepthFunc(GL_LESS);
 		} // partial_shadow
 	} // pass
-	//if (GET_DELTA_TIME > 10) cout << get_name() << ": " << GET_DELTA_TIME << endl;
+	fgPopMatrix();
 }
 
 

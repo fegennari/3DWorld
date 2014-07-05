@@ -351,11 +351,13 @@ public:
 			s.add_uniform_float("tex_mix_saturate", 5.0);
 			s.add_uniform_vector3d("tex_eval_offset", zero_vector);
 		}
-		if (ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
+		if ( ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
+		if (!ddata.first_pass) {s.add_uniform_float("depth_bias", -1.0E-6);} // depth bias hack (other asteroid types?)
 		s.add_uniform_color("color", ddata.color_a);
 		glEnable(GL_CULL_FACE);
 		model.core_render(s, lod_level, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 		glDisable(GL_CULL_FACE);
+		if (!ddata.first_pass) {s.add_uniform_float("depth_bias", 0.0);}
 		s.disable();
 
 		if (ddata.final_pass) {

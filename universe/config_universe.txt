@@ -8,6 +8,7 @@ include config_gameplay.txt
 player_damage 0.5
 unlimited_weapons 0
 disable_sound 0
+use_core_context 0
 include config_resolution.txt
 ship_def_file universe/ship_defs.txt
 font_texture_atlas_fn textures/atlas/text_atlas.png
