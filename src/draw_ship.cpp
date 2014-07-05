@@ -1030,7 +1030,7 @@ void uobj_draw_data::draw_us_carrier() const {
 		draw_sphere_vbo(point(0.0, 0.0, -0.75), 0.06, get_ndiv(ndiv/3), 0, 1);
 		if (ndiv > 24) {set_fill_mode();}
 		fgPopMatrix();
-
+		
 		// draw energy beam turret
 		fgTranslate(0.0, 0.14, 0.0);
 		invert_z();
@@ -1654,7 +1654,7 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 	select_texture(NOISE_TEX);
 	set_color(colorRGBA(color_b, 0.8)); // bluegreen, alpha=0.8
 
-	if (phase1) {
+	if (phase1 || ndiv > 10) {
 		fgPushMatrix();
 		fgScale(1.3, 0.5, 1.0);
 
@@ -1662,12 +1662,12 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 			draw_sphere_vbo(point(0.0, 0.0, 0.75), 0.75, ndiv, 1);
 		}
 		else {
-			draw_sphere_vbo_back_to_front(point(0.0, 0.0, 0.75), 0.75, ndiv, 1);
+			draw_sphere_vbo_back_to_front(point(0.0, 0.0, 0.75), 0.75, ndiv, 1, phase2, phase1);
 		}
 		fgPopMatrix();
 	}
 	//vector3d vel_orient(0.0, 0.0, 1.0);
-	//if (vel != zero_vector) rotate_vector3d_by_vr(dir, vel.get_norm(), vel_orient);
+	//if (vel != zero_vector) {rotate_vector3d_by_vr(dir, vel.get_norm(), vel_orient);}
 	
 	// draw tail
 	float const tail_speed(0.005), rscale(cosf(tail_speed*TWO_PI*(on_time%unsigned(1.0/tail_speed)))); // -1.0 to 1.0
@@ -1679,7 +1679,7 @@ void uobj_draw_data::draw_wraith() const { // use time and vel_orient, fix bound
 	if (phase2) {draw_wraith_tail(0.27, ndiv_tail, rscale);}
 	end_ship_texture();
 	fgPopMatrix();
-	if (is_moving() && phase1) {add_light_source(pos, 4.0*radius, engine_color);} // radius = f(health)?
+	if (is_moving() && phase1 && final_pass) {add_light_source(pos, 4.0*radius, engine_color);} // radius = f(health)?
 }
 
 
@@ -1724,7 +1724,7 @@ void uobj_draw_data::draw_abomination() const {
 		cobjs[i]->draw(max(3, ((i == 2) ? 2*ndiv : (int(ndiv32) - int(i)))));
 	}
 	end_specular();
-	if (powered && val > 0.1) {add_light_source((pos + dir*(3.5*radius)), 3.5*val*radius, engine_color);} // eye light
+	if (powered && final_pass && val > 0.1) {add_light_source((pos + dir*(3.5*radius)), 5.0*val*radius, engine_color);} // eye light
 }
 
 
@@ -1733,26 +1733,32 @@ void uobj_draw_data::draw_reaper() const {
 	set_uobj_specular(0.9, 90.0);
 	setup_draw_ship();
 	if (can_have_engine_lights()) {setup_point_light(all_zeros, engine_color, 5.0*radius, ENGINE_DEF_LIGHT, shader);}
-	cobj_vector_t const &cobjs(obj->get_cobjs());
 
-	if (cobjs.size() == 2) { // blocking shield is up
-		set_color(color_a); // never cloaked (semi-transparent? have to deal with draw order)
-		fgPushMatrix();
-		invert_z(); // invert back to original orientation
-		cobjs[1]->draw(ndiv);
-		fgPopMatrix();
+	if (phase1) {
+		cobj_vector_t const &cobjs(obj->get_cobjs());
+
+		if (cobjs.size() == 2) { // blocking shield is up
+			set_color(color_a); // never cloaked (semi-transparent? have to deal with draw order)
+			fgPushMatrix();
+			invert_z(); // invert back to original orientation
+			cobjs[1]->draw(ndiv);
+			fgPopMatrix();
+		}
 	}
 	set_color(color_b);
 	//set_ship_texture(NOISE_TEX);
-	draw_sphere_vbo_back_to_front(all_zeros, 1.0, 3*ndiv/2, 0);
+	draw_sphere_vbo_back_to_front(all_zeros, 1.0, 3*ndiv/2, 0, phase2, phase1);
 	//end_ship_texture();
 	if (can_have_engine_lights()) {clear_colors_and_disable_light(ENGINE_DEF_LIGHT, shader);}
 	end_specular();
 	fgPopMatrix(); // undo invert_z()
-	fgPopMatrix(); // undo rotations
-	if (powered) {setup_colors_draw_flare(pos, all_zeros, 3.0, 3.0, engine_color);}
-	fgPushMatrix();
-	//if (powered && animate2 && final_pass && phase1) add_colored_lights(pos, radius, color_a, 0.25, 4, obj);
+
+	if (phase2 && final_pass) {
+		fgPopMatrix(); // undo rotations
+		if (powered) {setup_colors_draw_flare(pos, all_zeros, 3.0, 3.0, engine_color);}
+		fgPushMatrix();
+		//if (powered && animate2 && final_pass && phase1) {add_colored_lights(pos, radius, color_a, 0.25, 4, obj);}
+	}
 }
 
 
@@ -1764,7 +1770,7 @@ void uobj_draw_data::draw_death_orb() const {
 	end_specular();
 	fgPopMatrix(); // undo transformations
 
-	if (powered) {
+	if (powered && final_pass) {
 		setup_colors_draw_flare(pos, all_zeros, 2.1, 2.1, engine_color, FLARE2_TEX);
 		if (ndiv > 3) {add_light_source(pos, 6.0*radius, engine_color);}
 	}

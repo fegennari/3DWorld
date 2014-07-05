@@ -21,5 +21,4 @@ Load/display model3d models in tiled terrain mode
 Procedural planet shader:
   - FP resolution
 
-Reaper two pass rendering for shadows
 Carrier wireframe shadows?

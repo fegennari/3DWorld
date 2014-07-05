@@ -1073,11 +1073,11 @@ void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bo
 }
 
 
-void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, bool textured) {
+void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, bool textured, bool enable_front, bool enable_back) {
 
 	glEnable(GL_CULL_FACE);
 
-	for (unsigned i = 0; i < 2; ++i) { // kind of slow
+	for (unsigned i = unsigned(!enable_back); i < unsigned(1+enable_front); ++i) { // kind of slow
 		glCullFace(i ? GL_BACK : GL_FRONT);
 		draw_sphere_vbo(pos, radius, ndiv, textured); // cull?, partial sphere?
 	}
