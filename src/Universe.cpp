@@ -1078,7 +1078,6 @@ ugalaxy::ugalaxy() : lrq_rad(0.0), lrq_pos(all_zeros), color(BLACK) {}
 ugalaxy::~ugalaxy() {}
 
 
-// fix fp resolution/shifting?
 bool ugalaxy::create(ucell const &cell, int index) {
 
 	current.type = UTYPE_GALAXY;
@@ -1190,7 +1189,7 @@ void ugalaxy::process(ucell const &cell) {
 	set_rseeds();
 
 	// gen systems
-	unsigned num_systems(rand2()%(MAX_SYSTEMS_PER_GALAXY+1));
+	unsigned num_systems(max(MAX_SYSTEMS_PER_GALAXY/10, rand2()%(MAX_SYSTEMS_PER_GALAXY+1)));
 	vector<point> placed;
 	vector<ugalaxy> const &galaxies(*cell.galaxies);
 
@@ -1254,7 +1253,7 @@ void ugalaxy::process(ucell const &cell) {
 	lrq_rad = 0.0;
 	//PRINT_TIME("Gen Galaxy");
 
-	if (rand_float2() < NEBULA_PROB) { // gen nebula
+	if (num_systems > MAX_SYSTEMS_PER_GALAXY/4 && rand_float2() < NEBULA_PROB) { // gen nebula
 		nebula.pos = gen_valid_system_pos();
 		nebula.gen(radius, *this);
 	}
@@ -1269,7 +1268,6 @@ void ugalaxy::process(ucell const &cell) {
 	}
 	//PRINT_TIME("Gen Asteroid Fields");
 	gen = 1;
-	//if (num_systems > 480) PRINT_TIME("Galaxy Process");
 }
 
 
