@@ -13,6 +13,7 @@ using namespace std;
 
 unsigned const TEX_EDGE_MODE = 2; // 0 = clamp, 1 = cliff/underwater, 2 = mirror
 
+extern unsigned hmap_filter_width;
 extern int display_mode;
 extern float mesh_scale, dxdy;
 
@@ -75,8 +76,20 @@ unsigned heightmap_t::get_pixel_value(unsigned x, unsigned y) const {
 float heightmap_t::get_heightmap_value(unsigned x, unsigned y) const { // returns values from 0 to 256
 
 	unsigned const ix(get_pixel_ix(x, y));
-	if (ncolors == 1) {return data[ix];}
-	return (data[ix<<1]/256.0 + data[(ix<<1)+1]);
+	if (ncolors == 2) {return (data[ix<<1]/256.0 + data[(ix<<1)+1]);} // already high precision
+	assert(ncolors == 1);
+	if (hmap_filter_width == 0) {return data[ix];} // return raw low-precision value
+	int const N(hmap_filter_width); // 2N+1 x 2N+1 box filter smoothing
+	float v(0.0), tot(0.0);
+
+	for (int yy = max(0, int(y)-N); yy <= min(height-1, int(y)+N); ++yy) {
+		for (int xx = max(0, int(x)-N); xx <= min(width-1, int(x)+N); ++xx) {
+			v   += data[width*yy + xx];
+			tot += 1.0;
+		}
+	}
+	assert(tot > 0.0);
+	return v/tot;
 }
 
 

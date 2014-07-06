@@ -12,7 +12,6 @@ Draw more distant tiles (larger/lower res at high delta-z)
 
 http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 Create terrain heightmap tiles and map view heights directly on GPU
-Erosion filter for 8-bit heightmaps
 
 Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
