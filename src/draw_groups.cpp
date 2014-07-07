@@ -1088,6 +1088,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 		apply_obj_mesh_roll(*matrix, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
 	}
 	draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
+	//draw_cube_mapped_sphere(all_zeros, radius, ndiv, 1);
 	fgPopMatrix();
 	lpos = pos;
 }

@@ -498,6 +498,41 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 }
 
 
+void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, bool texture) {
+
+	assert(radius > 0.0 && ndiv > 0);
+	float const tstep(1.0/ndiv), vstep(2.0*tstep);
+	vector<vert_norm> verts;
+	vector<vert_norm_tc> tverts;
+
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d1(i), d2((i+1)%3), dn((i+2)%3);
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			point pt;
+			pt[dn] = (j ? 1.0 : -1.0);
+
+			for (unsigned s = 0; s < ndiv; ++s) {
+				pt[d1] = -1.0 + s*vstep;
+
+				for (unsigned t = 0; t <= ndiv; ++t) {
+					pt[d2] = -1.0 + t*vstep;
+					point pt2(pt);
+
+					for (unsigned k = 0; k < 2; ++k) {
+						vector3d const n(pt2.get_norm());
+						point const pos(center + n*radius);
+						if (texture) {tverts.push_back(vert_norm_tc(pos, n, (s+k)*tstep, t*tstep));} else {verts.push_back(vert_norm(pos, n));}
+						pt2[d1] += vstep;
+					}
+				} // for t
+				if (texture) {draw_and_clear_verts(tverts, GL_TRIANGLE_STRIP);} else {draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);}
+			} // for s
+		} // for j
+	} // for i
+}
+
+
 void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const { // used for scenery, not using vertex_type_t here
 
 	assert(spn.ndiv > 0);

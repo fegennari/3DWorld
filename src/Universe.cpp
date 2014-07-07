@@ -2327,7 +2327,8 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 			}
 			point viewed_from(vcp);
 			rotate_vector(viewed_from);
-			draw_subdiv_sphere(all_zeros, radius, ndiv, viewed_from, NULL, 1, 0); // with back-face culling
+			//draw_cube_mapped_sphere(all_zeros, radius, ndiv/2); // not for gas giant
+			draw_subdiv_sphere(all_zeros, radius, ndiv, viewed_from, NULL, int(gas_giant), 0); // with back-face culling
 		}
 		else {
 			draw_surface(pos_, radius, size, ndiv);
