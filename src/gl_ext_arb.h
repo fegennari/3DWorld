@@ -177,6 +177,8 @@ public:
 	virtual void draw_geom(bool is_normal_pass) = 0;
 };
 
+void set_temp_clear_color(colorRGBA const &clear_color);
+
 
 #endif // _GL_EXT_ARB_H_
 

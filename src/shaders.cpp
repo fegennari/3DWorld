@@ -887,6 +887,77 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 }
 
 
+// compute shader
+class compute_shader_t : public shader_t {
+
+	unsigned tsize, fbo_id;
+
+	void draw_geom() const { // factored out so that we can make it virtual and override it in the future
+		vert_wrap_t verts[4] = {point(0,0,1), point(0,1,1), point(1,1,1), point(1,0,1)};
+		draw_verts(verts, 4, GL_TRIANGLE_FAN); // one quad from [0,0] to [1,1] that exactly covers the viewport
+	}
+
+public:
+	compute_shader_t(string const &frag_shader_str, unsigned tsize_) : tsize(tsize_), fbo_id(0) {
+		assert(tsize > 0);
+		set_vert_shader("vert_xform_only");
+		set_frag_shader(frag_shader_str);
+	}
+	void pre_run() { // call once before run() calls
+		// setup matrices
+		glViewport(0, 0, tsize, tsize);
+		fgMatrixMode(FG_PROJECTION);
+		fgPushMatrix();
+		fgLoadIdentity();
+		fgOrtho(0.0, 1.0, 0.0, 1.0, 0.0, 2.0); // [0,0] to [1,1]
+		fgMatrixMode(FG_MODELVIEW);
+		fgPushMatrix();
+		fgLoadIdentity();
+		// first-time setup
+		begin_shader();
+	}
+	void post_run() { // call once after run() calls
+		end_shader();
+		free_fbo(fbo_id);
+		disable_fbo();
+		// restore state
+		fgPopMatrix();
+		fgMatrixMode(FG_PROJECTION);
+		fgPopMatrix();
+		fgMatrixMode(FG_MODELVIEW);
+		set_standard_viewport();
+	}
+	void run(unsigned &tid) { // call N times between pre_run() and post_run() calls
+		// setup fbo and draw geometry
+		enable_fbo(fbo_id, tid, 0);
+		set_temp_clear_color(BLACK);
+		draw_geom();
+	}
+	void gen_matrix(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1) { // tid may or may not be setup prior to this call
+		// FIXME: special floating-point texture format? One channel?
+		if (tid == 0) {setup_texture(tid, 0, 0, 0, 0, 0, 1);} // nearest, clamp, no mipmaps
+		if (is_first) {pre_run();}
+		run(tid);
+		vals.resize(tsize*tsize);
+		vector<unsigned char> data(4*tsize*tsize);
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glReadPixels(0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // GL_BGRA?
+		float mult[4];
+		UNROLL_4X(mult[i_] = 1.0/float(1ULL << ((i_+1)<<8));)
+
+		for (unsigned y = 0; y < tsize; ++y) {
+			for (unsigned x = 0; x < tsize; ++x) {
+				unsigned const ix(y*tsize + x);
+				float v(0.0);
+				UNROLL_4X(v += data[(ix<<2)+i_]*mult[i_];) // packed RGBA
+				vals[ix] = v; // [0.0, 1.0)
+			}
+		}
+		if (is_last) {post_run();}
+	}
+};
+
+
 // **************** INSTANCING + TRANSFORMS ****************
 
 

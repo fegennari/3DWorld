@@ -872,7 +872,7 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mi
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
 
 	// enable anisotropic filtering (slower but higher quality)
-	if (anisotropy > 1.0) glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
+	if (anisotropy > 1.0) {glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);}
 
 	// if wrap is true,  the texture wraps over at the edges (repeat) or is mirrored
 	// if wrap is false, the texture ends at the edges (clamp)
