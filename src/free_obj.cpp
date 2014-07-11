@@ -51,10 +51,14 @@ extern point_sprite_drawer glow_psd;
 // ************ FREE_OBJ ************
 
 
+unsigned free_obj::next_obj_id = 0;
+
+
 void free_obj::reset() {
 
 	status      = 0; // no longer destroyed
 	time        = 0;
+	obj_id      = next_obj_id++;
 	reset_timer = 0;
 	shadow_val  = 0;
 	sobj_coll_tid = -1;

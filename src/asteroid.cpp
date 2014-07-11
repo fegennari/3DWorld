@@ -1427,7 +1427,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 	if (temperature > 1.0) {
 		float const glow_weight(CLIP_TO_01(get_true_temp()/40.0f)); // 1.0 if camera is facing the lit side?
 		colorRGBA color(sun_color, glow_weight), color2(color, 0.0);
-		ddata.draw_engine(color, all_zeros, 4.0, 1.0, all_zeros); // coma
+		ddata.draw_engine(-1, color, all_zeros, 4.0, 1.0, all_zeros); // coma
 		ddata.draw_ship_flares(color);
 
 		if (animate2) { // create tails

@@ -257,9 +257,9 @@ public:
 	void set_uobj_specular(float spec, float shine) const;
 	void end_specular()    const {set_uobj_specular(0.0, 1.0);}
 	void inverse_rotate()  const;
-	void draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale=1.0,
+	void draw_engine(int eix, colorRGBA const &trail_color, point const &draw_pos, float escale=1.0,
 		float ar=1.0, vector3d const &stretch_dir=all_zeros) const;
-	void draw_engine_trail(point const &offset, float width, float w2s, float len, colorRGBA const &color) const;
+	void draw_engine_trail(int eix, point const &offset, float width, float w2s, float len, colorRGBA const &color) const;
 	void draw_ehousing_pairs(float length, float r1, float r2, float lcone, float dx, float dy, bool texture,
 		point const &offset, point const &per_pair_off=zero_vector, unsigned num_pairs=1) const;
 	void draw_engine_pairs(colorRGBA const &color, unsigned eflags_ix, float escale, float dx, float dy, float dz,
@@ -616,7 +616,7 @@ public:
 
 protected:
 	bool near_b_hole;
-	unsigned flags, reset_timer, time;
+	unsigned flags, reset_timer, time, obj_id;
 	int sobj_coll_tid;
 	mutable int shadow_val;
 	float speed_factor, max_sfactor, temperature, extra_mass, rot_rate, sobj_dist, draw_rscale, ambient_scale;
@@ -626,6 +626,8 @@ protected:
 	unsigned exp_lights[6], num_exp_lights; // NUM_EXP_LIGHTS=6 (explosion.h not included)
 	unsigned alignment;
 	float c_radius;
+
+	static unsigned next_obj_id;
 
 	// no virtual function call for efficiency
 	bool invalid_priv() const {return (!is_ok() || is_resetting());}
@@ -736,6 +738,7 @@ public:
 	float get_over_temp_factor() const {return max(0.0f, (temperature - TEMP_FACTOR*get_max_t()));}
 	free_obj *get_closest_ship(point const &pos, float min_dist, float max_dist, bool enemy,
 		bool attack_all, bool req_shields=0, bool decoy_tricked=0, bool dir_pref=0) const;
+	unsigned get_obj_id() const {return obj_id;}
 
 	virtual ~free_obj() {verify_status(); invalidate_permanently();}
 	virtual void reset();

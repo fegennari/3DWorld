@@ -67,6 +67,7 @@ extern vector<us_weapon> us_weapons;
 
 void collision_detect_objects(vector<cached_obj> &objs0, unsigned t);
 void end_part_cloud_draw();
+void draw_and_update_engine_trails();
 
 
 // ************ STATISTICS GATHERING ************
@@ -837,6 +838,7 @@ void draw_univ_objects() {
 	disable_blend();
 	set_additive_blend_mode();
 	maybe_draw_motion_dust();
+	draw_and_update_engine_trails();
 	draw_wrays(b_wrays); // draw beam weapons (where should this be?)
 	draw_wrays(t_wrays); // draw engine trails and lightning
 	set_std_blend_mode();

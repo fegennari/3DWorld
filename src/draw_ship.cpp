@@ -10,9 +10,11 @@
 #include "shaders.h"
 
 
-bool const TRAIL_FOLLOWS_VEL = 0;
-bool const ADD_ENGINE_LIGHTS = 1; // slower and uses lights but looks cool
-bool const ADD_CFLASH_LIGHTS = 1; // slower and uses lights but looks cool
+bool const TRAIL_FOLLOWS_VEL    = 0;
+bool const ADD_ENGINE_LIGHTS    = 1; // slower and uses lights but looks cool
+bool const ADD_CFLASH_LIGHTS    = 1; // slower and uses lights but looks cool
+bool const ENABLE_ENGINE_TRAILS = 1; // slower but looks cool
+float const ET_ATTEN_CONST      = 0.15;
 
 
 extern int display_mode, animate2, frame_counter; // for testing, etc.
@@ -229,14 +231,76 @@ void uobj_draw_data::set_uobj_specular(float spec, float shine) const {
 }
 
 
+class engine_trail_drawer_t {
+
+	struct trail_pt {
+		point pos;
+		float radius;
+		colorRGBA color;
+
+		trail_pt() {}
+		trail_pt(point const &p, float r, colorRGBA const &c) : pos(p), radius(r), color(c) {assert(radius > 0.0 && color.A > 0.0);}
+	};
+
+	struct trail_t : public deque<trail_pt> {
+		bool update() {
+			// attenuate color alpha based on elapsed time since last frame using exponential decay (pos and radius are unchanged)
+			for (iterator i = begin(); i != end(); ++i) {i->color.A *= exp(-ET_ATTEN_CONST*fticks);}
+			// remove old/expired segments from the beginning of the line
+			while (!empty() && front().color.A < 0.01) {pop_front();}
+			return !empty();
+		}
+		void draw() const {
+			for (const_iterator i = begin(); i+1 != end(); ++i) { // draw as a line connecting the trail points
+				// FIXME: attenuate alpha when direction is along camera view vector?
+				t_wrays.push_back(usw_ray(i->radius, (i+1)->radius, i->pos, (i+1)->pos, i->color, (i+1)->color));
+			}
+		}
+	};
+
+	typedef pair<unsigned, int> trail_map_key;
+	map<trail_map_key, trail_t> trail_map;
+
+public:
+	void add_trail_pt(free_obj const *const fobj, int eix, point const &pos, float radius, colorRGBA const &color, float alpha_scale=1.0) {
+		if (!animate2 || color.A < 0.01) return; // alpha too low to draw (error?)
+		assert(fobj != nullptr);
+		trail_t &trail(trail_map[trail_map_key(fobj->get_obj_id(), eix)]);
+		
+		if (trail.empty() || !dist_less_than(trail.back().pos, pos, 0.5*radius)) {
+			trail.push_back(trail_pt(pos, radius, colorRGBA(color, color.A*alpha_scale))); // skip short segments
+		}
+	}
+	void update() {
+		if (!animate2) return;
+		for (auto i = trail_map.begin(); i != trail_map.end(); ) { // Note: no increment
+			if (!i->second.update()) {trail_map.erase(i++);} else {++i;} // update and remove if empty
+		}
+	}
+	void draw() const {
+		if (!animate2) return;
+		for (auto i = trail_map.begin(); i != trail_map.end(); ++i) {i->second.draw();}
+	}
+};
+
+engine_trail_drawer_t engine_trail_drawer;
+
+void draw_and_update_engine_trails() {
+	engine_trail_drawer.draw();
+	engine_trail_drawer.update();
+}
+
+
 quad_batch_draw uobj_draw_data::qbd;
 
 
-void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw_pos, float escale, float ar, vector3d const &stretch_dir) const {
-
+void uobj_draw_data::draw_engine(int eix, colorRGBA const &trail_color, point const &draw_pos,
+	float escale, float ar, vector3d const &stretch_dir) const
+{
+	if (eix >= 0 && (eflags & (1 << eix))) return; // engine disabled, skip
 	assert(obj != NULL);
 	point viewer(get_player_pos());
-	if (ndiv > 3) obj->xform_point(viewer);
+	if (ndiv > 3) {obj->xform_point(viewer);}
 	vector3d const orient((viewer - draw_pos).get_norm());
 	vector3d up_dir;
 	float mod_ar(1.0);
@@ -251,19 +315,26 @@ void uobj_draw_data::draw_engine(colorRGBA const &trail_color, point const &draw
 	}
 	qbd.add_billboard(draw_pos, viewer, up_dir, colorRGBA(0.0, 0.0, 0.0, trail_color.alpha), escale, mod_ar*escale); // color is all emissive
 
-	if (ndiv > 3 && trail_color.alpha != 0.0 && vel.mag_sq() > 1.5E-6) {
-		float const dp(dot_product(vel, dir)/vel.mag());
+	if (ndiv > 3 && eix >= 0 && trail_color.alpha != 0.0) {
+		if (vel.mag_sq() > 1.5E-6) { // high speed
+			float const dp(dot_product(vel, dir));
 		
-		if (dp > 0.0) {
+			if (dp > 0.0) {
+				point epos(draw_pos);
+				obj->rotate_point_inv(epos);
+				draw_engine_trail(eix, epos, 0.7*escale*sqrt(ar), 0.7, 3.0*dp/vel.mag(), trail_color);
+			}
+		}
+		else if (ENABLE_ENGINE_TRAILS) { // low speed
 			point epos(draw_pos);
-			obj->rotate_point_inv(epos);
-			draw_engine_trail(epos, 0.7*escale*sqrt(ar), 0.7, 3.0*dp, trail_color);
+			obj->xform_point_inv(epos);
+			engine_trail_drawer.add_trail_pt(obj, eix, epos, 0.7*escale*sqrt(ar)*radius, trail_color, 0.2);
 		}
 	}
 }
 
 
-void uobj_draw_data::draw_engine_trail(point const &offset, float width, float w2s, float len, colorRGBA const &color) const {
+void uobj_draw_data::draw_engine_trail(int eix, point const &offset, float width, float w2s, float len, colorRGBA const &color) const {
 
 	if (!animate2) return;
 	if (len < TOLERANCE || (len <= 1.5 && ndiv <= 3) || time < 3) return; // too small/far away to draw
@@ -273,7 +344,13 @@ void uobj_draw_data::draw_engine_trail(point const &offset, float width, float w
 	vector3d const delta(len*((TRAIL_FOLLOWS_VEL || dir == zero_vector) ? vel : dir*vel.mag())); // 1 tick (not times fticks)
 	float const beamwidth(width*radius);
 	if (delta.mag_sq() < beamwidth*beamwidth) return; // rarely occurs, but will assertion fail if too small
-	t_wrays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, (pos2 - delta), color, ALPHA0));
+	
+	if (ENABLE_ENGINE_TRAILS) {
+		if (ndiv > 3) {engine_trail_drawer.add_trail_pt(obj, eix, pos2, beamwidth, color, 0.5);}
+	}
+	else {
+		t_wrays.push_back(usw_ray(beamwidth, w2s*beamwidth, pos2, (pos2 - delta), color, ALPHA0));
+	}
 }
 
 
@@ -305,9 +382,7 @@ void uobj_draw_data::draw_engine_pairs(colorRGBA const &color, unsigned eflags_i
 
 	for (unsigned p = 0; p < num_pairs; ++p) {
 		for (unsigned i = 0; i < 2; ++i) {
-			if (!(eflags & (1 << eflags_ix))) {
-				draw_engine(color, point((1.0 - 2.0*i)*dx, dy, dz), escale, ar, stretch_dir);
-			}
+			draw_engine(eflags_ix, color, point((1.0 - 2.0*i)*dx, dy, dz), escale, ar, stretch_dir);
 			++eflags_ix;
 		}
 		dx += per_pair_off.x;
@@ -417,7 +492,7 @@ void uobj_draw_data::draw_rocket_base(colorRGBA const &cb, colorRGBA const &cn, 
 	fgPushMatrix();
 	vector3d engine_pos(dir*-(1.5*length + 0.1*esize)); // should already be normalized
 	setup_colors_draw_flare(pos, engine_pos, esize, esize, ce, FLARE4_TEX);
-	draw_engine_trail(engine_pos, tailw, 0.8, 1.5, ce);
+	draw_engine_trail(0, engine_pos, tailw, 0.8, 1.5, ce);
 }
 
 
@@ -436,7 +511,7 @@ void uobj_draw_data::draw_usw_nukedev() const {
 void uobj_draw_data::draw_usw_torpedo() const {
 
 	draw_colored_flash(GREEN, 1);
-	draw_engine_trail(all_zeros, 1.0, 1.0, 1.5, GREEN);
+	draw_engine_trail(0, all_zeros, 1.0, 1.0, 1.5, GREEN);
 }
 
 
@@ -556,7 +631,7 @@ void uobj_draw_data::draw_usw_rfire() const {
 void uobj_draw_data::draw_usw_shieldd() const {
 
 	draw_spherical_shot(BLUE);
-	draw_engine_trail(all_zeros, 1.5, 1.0, 1.65, BLUE);
+	draw_engine_trail(0, all_zeros, 1.5, 1.0, 1.65, BLUE);
 }
 
 
@@ -588,7 +663,7 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 
 	shader->clear_color_e();
 	fgPopMatrix(); // undo transforms
-	draw_engine(ALPHA0, lpos0, 3.0*rad*(1.0 + instability));
+	draw_engine(0, ALPHA0, lpos0, 3.0*rad*(1.0 + instability));
 	draw_ship_flares(WHITE);
 
 	if (lit && animate2 && first_pass) {
@@ -616,7 +691,7 @@ void uobj_draw_data::draw_usw_seige() const {
 		add_blastr(pos, dir, 10.0*radius, 0.0, int(0.2*TICKS_PER_SECOND), -1, color, color, ETYPE_NONE, obj);
 	}
 	else {
-		draw_engine_trail(all_zeros, 1.0, 0.1, min(time, 16U), color);
+		draw_engine_trail(0, all_zeros, 1.0, 0.1, min(time, 16U), color);
 	}
 	if (ADD_CFLASH_LIGHTS) {add_light_source(pos, 4.0*radius, color);}
 }
@@ -655,13 +730,13 @@ void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 		
 		if (ndiv > 4) {
 			for (unsigned i = 0; i < nengines; ++i) {
-				if (!(eflags & (1 << i))) {draw_engine(engine_color, pos2, 1.0);} // this dominates the draw time
+				draw_engine(i, engine_color, pos2, 1.0); // this dominates the draw time
 				pos2.y += edy;
 			}
 		}
 		else {
 			pos2.y += edy;
-			if (eflags != 7) {draw_engine(engine_color, pos2, 1.7);}
+			if (eflags != 7) {draw_engine(3, engine_color, pos2, 1.7);} // combine into one engine as an optimization
 		}
 		draw_ship_flares(engine_color);
 	}
@@ -713,7 +788,7 @@ void uobj_draw_data::draw_us_frigate() const {
 		point pos2(-0.75, 0.0, 1.7);
 		
 		for (unsigned i = 0; i < nengines; ++i) {
-			if (!(eflags & (1 << i))) {draw_engine(engine_color, pos2, 1.0);}
+			draw_engine(i, engine_color, pos2, 1.0);
 			pos2.x += edx;
 		}
 		draw_ship_flares(engine_color);
@@ -772,7 +847,7 @@ void uobj_draw_data::draw_us_destroyer() const {
 
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
-			if (!(eflags & (1 << i))) {draw_engine(engine_color, point(sinf(theta), cosf(theta), 1.3), escale);}
+			draw_engine(i, engine_color, point(sinf(theta), cosf(theta), 1.3), escale);
 		}
 		draw_ship_flares(engine_color);
 	}
@@ -850,7 +925,7 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 
 	if (is_moving()) { // draw engine glow
 		for (unsigned i = 0; i < nengines; ++i) {
-			if (!(eflags & (1 << i))) {draw_engine(engine_color, epos[i]+vector3d(0.0, 0.0, 0.46/escale), escale);}
+			draw_engine(i, engine_color, epos[i]+vector3d(0.0, 0.0, 0.46/escale), escale);
 		}
 		draw_ship_flares(engine_color);
 	}
@@ -945,11 +1020,11 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 
 	if (is_moving()) { // draw engine glow
 		float const escale(0.3);
-		if (!(eflags & 1)) {draw_engine(engine_color, point(0.0, 0.0, 1.26), 2.0*escale);} // center engine
+		draw_engine(0, engine_color, point(0.0, 0.0, 1.26), 2.0*escale); // center engine
 		
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
-			if (!(eflags & (1 << (i+1)))) {draw_engine(engine_color, point(epos*sinf(theta), epos*cosf(theta), 1.21), escale);}
+			draw_engine(i+1, engine_color, point(epos*sinf(theta), epos*cosf(theta), 1.21), escale);
 		}
 		draw_ship_flares(engine_color);
 	}
@@ -1323,8 +1398,7 @@ void uobj_draw_data::draw_gunship() const {
 
 	if (is_moving()) { // draw engine glow
 		for (unsigned i = 0; i < 4; ++i) {
-			point const epos(0.35*dxy[0][i], 0.35*dxy[1][i], 1.15);
-			if (!(eflags & (1 << i))) {draw_engine(engine_color, epos*1.125, 0.5);}
+			draw_engine(i, engine_color, point(0.35*dxy[0][i], 0.35*dxy[1][i], 1.15)*1.125, 0.5);
 		}
 		draw_ship_flares(engine_color);
 	}
@@ -1353,8 +1427,8 @@ void uobj_draw_data::draw_nightmare() const {
 	}
 	fgPopMatrix(); // undo invert_z()
 
-	if (is_moving() && !(eflags & 1)) { // draw engine glow
-		draw_engine(engine_color, point(0.0, 0.0, 1.3), 1.5);
+	if (is_moving()) { // draw engine glow
+		draw_engine(0, engine_color, point(0.0, 0.0, 1.3), 1.5);
 		draw_ship_flares(engine_color);
 	}
 }
@@ -1821,7 +1895,7 @@ void uobj_draw_data::draw_supply() const {
 	fgPopMatrix(); // undo invert_z()
 
 	if (light_color != BLACK) { // draw blinky light flare
-		draw_engine(light_color, point(0.0, 0.0, -1.825), 0.2);
+		draw_engine(-1, light_color, point(0.0, 0.0, -1.825), 0.2);
 		draw_ship_flares(light_color);
 	}
 	for (unsigned i = 0; i < 3; ++i) {
@@ -1995,7 +2069,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 					float const theta2(TWO_PI*(nlights-i)/float(nlights));
 					point lpos2(-1.5*cosf(theta2), -1.5*sinf(theta2), 0.0); // account for scaling
 					if (rotated) {swap(lpos2.y, lpos2.z);} // account for rotation
-					draw_engine(RED, lpos2, 0.2);
+					draw_engine(-1, RED, lpos2, 0.2);
 				}
 			}
 			if (is_lit) {shader->clear_color_e();} else {end_sphere_draw();}
@@ -2005,8 +2079,8 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	fgPopMatrix(); // undo invert_z(), scale, and possible rotate
 	draw_ship_flares(RED);
 
-	if (ndiv > 4 && is_moving() && !(eflags & 1) && vel.mag_sq() > 1.0E-7) { // draw engine glow
-		draw_engine(engine_color, (rotated ? point(0.0, -0.5, 0.0) : point(0.0, 0.0, 0.5)), 1.0);
+	if (ndiv > 4 && is_moving() && vel.mag_sq() > 1.0E-7) { // draw engine glow
+		draw_engine(0, engine_color, (rotated ? point(0.0, -0.5, 0.0) : point(0.0, 0.0, 0.5)), 1.0);
 		draw_ship_flares(engine_color);
 	}
 }
@@ -2039,8 +2113,8 @@ void uobj_draw_data::draw_headhunter() const {
 	set_uobj_specular(0.0, 0.0);
 	fgPopMatrix(); // undo invert_z()
 
-	if (is_moving() && !(eflags & 1)) { // draw engine glow
-		draw_engine(engine_color, point(0.0, 0.0, 1.8), 0.8);
+	if (is_moving()) { // draw engine glow
+		draw_engine(0, engine_color, point(0.0, 0.0, 1.8), 0.8);
 		draw_ship_flares(engine_color);
 	}
 }
@@ -2141,12 +2215,11 @@ void uobj_draw_data::draw_seige() const {
 
 	if (is_moving()) { // draw engine glow
 		for (unsigned i = 0; i < 3; ++i) {
-			if (eflags & (1 << i)) continue;
 			vector3d edir(cross_product(epts[i], vector3d(0.0, 1.0, 0.0)).get_norm());
 			point ept(epts[i]*1.05);
 			edir.z *= -1.0;
 			ept.z   = -ept.z + 0.4;
-			draw_engine(engine_color, ept, 0.3, 2.5, edir);
+			draw_engine(i, engine_color, ept, 0.3, 2.5, edir);
 		}
 		draw_ship_flares(engine_color);
 	}
