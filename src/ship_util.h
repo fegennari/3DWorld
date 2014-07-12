@@ -33,16 +33,21 @@ class usw_ray : public line_3dw {
 	colorRGBA color1, color2;
 
 public:
-	point prev, next;
-
 	usw_ray() {}
 	usw_ray(float w1_, float w2_, point const &p1_, point const &p2_, colorRGBA const &c1, colorRGBA const &c2)
-		: line_3dw(p1_, p2_), w1(w1_), w2(w2_), color1(c1), color2(c2), prev(p1), next(p2)
+		: line_3dw(p1_, p2_), w1(w1_), w2(w2_), color1(c1), color2(c2)
 	{
 		assert(w1 > 0.0 && w2 > 0.0);
 	}
 	point const &get_pos() const {return p1;}
-	void draw(line_tquad_draw_t &drawer) const;
+	void draw(line_tquad_draw_t &drawer, point const *prev=nullptr, point const *next=nullptr) const;
+	bool either_end_visible() const;
+};
+
+
+struct usw_ray_group : public vector<usw_ray> {
+	void add(usw_ray const &ray) {push_back(ray);}
+	void draw() const;
 };
 
 

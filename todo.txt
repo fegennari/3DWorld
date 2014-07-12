@@ -17,5 +17,6 @@ Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD - mesh simplification
 
-Procedural planet shader:
-  - FP resolution
+Terrain edit size marker
+TT foam at shoreline
+TT grass color more variety of brown

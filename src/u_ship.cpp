@@ -61,7 +61,7 @@ extern vector<free_obj const *> a_targets, attackers;
 extern vector<ship_explosion> exploding;
 extern vector<us_class> sclasses;
 extern vector<us_weapon> us_weapons;
-extern vector<usw_ray> b_wrays;
+extern usw_ray_group t_wrays;
 extern vector<temp_source> temp_sources;
 extern vector<unsigned> build_types[];
 extern shader_t emissive_shader;
@@ -1748,13 +1748,12 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 	float const sscale(is_player_ship() ? 0.2 : 1.0);
 
 	if (!bwp.multi_segment) {
-		b_wrays.push_back(usw_ray(sscale*beamwidth, bwp.bw_escale*beamwidth, p1, p2, bwp.beamc[0], bwp.beamc[1]));
+		t_wrays.push_back(usw_ray(sscale*beamwidth, bwp.bw_escale*beamwidth, p1, p2, bwp.beamc[0], bwp.beamc[1]));
 	}
 	else {
 		unsigned const segments((rand()&7)+4);
 		float const step(length/segments);
 		vector3d deltas[12];
-		point prev(p1);
 		deltas[0] = deltas[segments] = zero_vector; // first and last segments are zero
 
 		for (unsigned i = 1; i < segments; ++i) {
@@ -1773,12 +1772,7 @@ void u_ship::fire_beam(point const &fpos, vector3d const &fdir, unsigned weapon_
 				pt[d] = (p2*val + p1*(1.0 - val)) + deltas[i+d];
 				blend_color(c[d], bwp.beamc[1], bwp.beamc[0], val, 1);
 			}
-			if (pt[0] != pt[1]) {
-				if (i > 0) {b_wrays.back().next = pt[1];}
-				b_wrays.push_back(usw_ray(bw[0], bw[1], pt[0], pt[1], c[0], c[1]));
-				if (i > 0) {b_wrays.back().prev = prev;}
-				prev = pt[0];
-			}
+			if (pt[0] != pt[1]) {t_wrays.push_back(usw_ray(bw[0], bw[1], pt[0], pt[1], c[0], c[1]));}
 		}
 	}
 }

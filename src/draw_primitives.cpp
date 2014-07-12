@@ -867,10 +867,10 @@ bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, 
 
 	int npts(0);
 	vector3d const v1(get_camera_pos(), (p1 + p2)*0.5);
-	vector3d v2;
-	float const v1_mag(v1.mag());
-	if (v1_mag > 1.0E5*min(w1, w2)) return 0; // too far away
-	cylinder_quad_projection(pts, cylinder_3dw(p1, p2, w1, w2), v1/v1_mag, v2, npts);
+	float const dmax(1.0E5*min(w1, w2));
+	if (v1.mag_sq() > dmax*dmax) return 0; // too far away
+	vector3d v2; // unused
+	cylinder_quad_projection(pts, cylinder_3dw(p1, p2, w1, w2), v1, v2, npts);
 	assert(npts == 4);
 	return 1;
 }
@@ -879,27 +879,31 @@ bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, 
 void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 	point const* const prev, point const *const next, bool make_global)
 {
+	point pts[5];
+	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
 	assert(w1 > 0.0 && w2 > 0.0);
 	assert(color1.is_valid() && color2.is_valid()); // validate
-	point pts[5], pts2[4];
-	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
 
-	if (prev && *prev != p1 && get_line_as_quad_pts(*prev, p1, w1, w1, pts2)) {
-		pts[0] = 0.5*(pts[0] + pts2[3]); // average the points
-		pts[1] = 0.5*(pts[1] + pts2[2]); // average the points
+	if (prev && *prev != p1) {
+		vector3d const dv(w1*cross_product((get_camera_pos() - (*prev + p1)*0.5), (p1 - *prev)).get_norm());
+		pts[0] = 0.5*(pts[0] + (p1 + dv)); // average the points
+		pts[1] = 0.5*(pts[1] + (p1 - dv)); // average the points
 	}
-	if (next && *next != p2 && get_line_as_quad_pts(p2, *next, w2, w2, pts2)) {
-		pts[2] = 0.5*(pts[2] + pts2[1]); // average the points
-		pts[3] = 0.5*(pts[3] + pts2[0]); // average the points
+	if (next && *next != p2) {
+		vector3d const dv(w2*cross_product((get_camera_pos() - (p2 + *next)*0.5), (*next - p2)).get_norm());
+		pts[2] = 0.5*(pts[2] + (p2 - dv)); // average the points
+		pts[3] = 0.5*(pts[3] + (p2 + dv)); // average the points
 	}
 	pts[4] = p2;
-	int const ptix[9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
-	float const tc[9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
-	colorRGBA const color[9] = {color2, color1, color2, color2, color1, color1, color2, color1, color2};
+	int const ptix   [9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
+	float const tc   [9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
+	bool const colors[9] = {1, 0, 1, 1, 0, 0, 1, 0, 1};
 
+	if (make_global) {
+		for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}
+	}
 	for (unsigned i = 0; i < 9; ++i) { // draw as 3 triangles
-		point const pt(make_global ? make_pt_global(pts[ptix[i]]) : pts[ptix[i]]);
-		verts.push_back(vert_tc_color(pt, tc[i], 0.5, color[i])); // tc for 1D blur texture
+		verts.push_back(vert_tc_color(pts[ptix[i]], tc[i], 0.5, (colors[i] ? color2 : color1))); // tc for 1D blur texture
 	}
 }
 

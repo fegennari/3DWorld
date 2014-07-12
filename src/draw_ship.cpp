@@ -15,27 +15,119 @@ bool const ADD_ENGINE_LIGHTS    = 1; // slower and uses lights but looks cool
 bool const ADD_CFLASH_LIGHTS    = 1; // slower and uses lights but looks cool
 bool const ENABLE_ENGINE_TRAILS = 1; // slower but looks cool
 float const ET_ATTEN_CONST      = 0.15;
+float const MIN_ETRAIL_ALPHA    = 0.02;
 
 
 extern int display_mode, animate2, frame_counter; // for testing, etc.
 extern float fticks;
-extern vector<usw_ray> t_wrays;
+extern usw_ray_group t_wrays;
 extern point_sprite_drawer glow_psd;
 extern shader_t emissive_shader;
+
+
+// ******************* engine_trail_drawer_t *******************
+
+
+class engine_trail_drawer_t {
+
+	struct trail_pt {
+		point pos;
+		float radius;
+		colorRGBA color;
+
+		trail_pt() {}
+		trail_pt(point const &p, float r, colorRGBA const &c) : pos(p), radius(r), color(c) {assert(radius > 0.0 && color.A > 0.0);}
+	};
+
+	struct trail_t : public deque<trail_pt> {
+		bool update() {
+			// attenuate color alpha based on elapsed time since last frame using exponential decay (pos and radius are unchanged)
+			for (iterator i = begin(); i != end(); ++i) {i->color.A *= exp(-ET_ATTEN_CONST*fticks);}
+			// remove old/expired segments from the beginning of the line
+			// FIXME: also remove when too far from player
+			while (!empty() && front().color.A < MIN_ETRAIL_ALPHA) {pop_front();}
+			return !empty();
+		}
+		void draw() const {
+			for (const_iterator i = begin(); i+1 != end(); ++i) { // draw as a line connecting the trail points
+				// FIXME: attenuate alpha when direction is along camera view vector?
+				usw_ray const ray(i->radius, (i+1)->radius, i->pos, (i+1)->pos, i->color, (i+1)->color);
+				if (ray.either_end_visible()) {t_wrays.push_back(ray);}
+			}
+		}
+	};
+
+	typedef pair<unsigned, int> trail_map_key;
+	map<trail_map_key, trail_t> trail_map;
+
+public:
+	void add_trail_pt(free_obj const *const fobj, int eix, point const &pos, float radius, colorRGBA const &color, float alpha_scale=1.0) {
+		if (!animate2 || color.A < MIN_ETRAIL_ALPHA) return; // alpha too low to draw
+		assert(fobj != nullptr);
+		trail_t &trail(trail_map[trail_map_key(fobj->get_obj_id(), eix)]);
+		
+		if (trail.empty() || !dist_less_than(trail.back().pos, pos, 0.75*radius)) {
+			trail.push_back(trail_pt(pos, radius, colorRGBA(color, color.A*alpha_scale))); // skip short segments
+		}
+	}
+	void update() {
+		if (!animate2) return;
+		for (auto i = trail_map.begin(); i != trail_map.end(); ) { // Note: no increment
+			if (!i->second.update()) {trail_map.erase(i++);} else {++i;} // update and remove if empty
+		}
+	}
+	void draw() const {
+		if (!animate2) return;
+		for (auto i = trail_map.begin(); i != trail_map.end(); ++i) {i->second.draw();}
+	}
+};
+
+engine_trail_drawer_t engine_trail_drawer;
+
+void draw_and_update_engine_trails() {
+	//if (display_mode & 0x80) return; // TESTING
+	//RESET_TIME;
+	engine_trail_drawer.draw();
+	engine_trail_drawer.update();
+	//PRINT_TIME("ETD Draw");
+}
 
 
 // ******************* USW_RAY, and SHIP_COLL_OBJ classes *******************
 
 
-void usw_ray::draw(line_tquad_draw_t &drawer) const { // use single sided cylinder with 1D blur rotated towards camera
+void usw_ray::draw(line_tquad_draw_t &drawer, point const *prev, point const *next) const {
+	// use single sided cylinder with 1D blur rotated towards camera
+	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, prev, next, 1);
+}
 
-	// camera view clip?
-	drawer.add_line_as_tris(p1, p2, w1, w2, color1, color2, &prev, &next, 1);
+bool usw_ray::either_end_visible() const {
+	return (player_pdu.point_visible_test(p1) || player_pdu.point_visible_test(p2));
+	//return (player_pdu.sphere_visible_test(p1, w1) || player_pdu.sphere_visible_test(p2, w2));
+}
+
+void usw_ray_group::draw() const {
+
+	//if (display_mode & 0x80) return; // TESTING
+	if (empty()) return;
+	//RESET_TIME;
+	line_tquad_draw_t drawer;
+	drawer.reserve_verts(9*size()); // 3 triangles per ray
+	glDepthMask(GL_FALSE);
+
+	for (const_iterator i = begin(); i != end(); ++i) {
+		point const *prev((i != begin() && (i-1)->p2 == i->p1) ? &(i-1)->p1 : nullptr);
+		point const *next((i+1 != end() && (i+1)->p1 == i->p2) ? &(i+1)->p2 : nullptr);
+		i->draw(drawer, prev, next);
+	}
+	//PRINT_TIME("Draw1");
+	drawer.draw();
+	glDepthMask(GL_TRUE);
+	//PRINT_TIME("Draw2");
 }
 
 
 void ship_cylinder::draw_cylin(unsigned ndiv, bool textured, float tex_scale_len) const {
-
 	draw_fast_cylinder(p1, p2, r1, r2, ndiv, textured, check_ends, 0, NULL, tex_scale_len);
 }
 
@@ -231,66 +323,6 @@ void uobj_draw_data::set_uobj_specular(float spec, float shine) const {
 }
 
 
-class engine_trail_drawer_t {
-
-	struct trail_pt {
-		point pos;
-		float radius;
-		colorRGBA color;
-
-		trail_pt() {}
-		trail_pt(point const &p, float r, colorRGBA const &c) : pos(p), radius(r), color(c) {assert(radius > 0.0 && color.A > 0.0);}
-	};
-
-	struct trail_t : public deque<trail_pt> {
-		bool update() {
-			// attenuate color alpha based on elapsed time since last frame using exponential decay (pos and radius are unchanged)
-			for (iterator i = begin(); i != end(); ++i) {i->color.A *= exp(-ET_ATTEN_CONST*fticks);}
-			// remove old/expired segments from the beginning of the line
-			while (!empty() && front().color.A < 0.01) {pop_front();}
-			return !empty();
-		}
-		void draw() const {
-			for (const_iterator i = begin(); i+1 != end(); ++i) { // draw as a line connecting the trail points
-				// FIXME: attenuate alpha when direction is along camera view vector?
-				t_wrays.push_back(usw_ray(i->radius, (i+1)->radius, i->pos, (i+1)->pos, i->color, (i+1)->color));
-			}
-		}
-	};
-
-	typedef pair<unsigned, int> trail_map_key;
-	map<trail_map_key, trail_t> trail_map;
-
-public:
-	void add_trail_pt(free_obj const *const fobj, int eix, point const &pos, float radius, colorRGBA const &color, float alpha_scale=1.0) {
-		if (!animate2 || color.A < 0.01) return; // alpha too low to draw (error?)
-		assert(fobj != nullptr);
-		trail_t &trail(trail_map[trail_map_key(fobj->get_obj_id(), eix)]);
-		
-		if (trail.empty() || !dist_less_than(trail.back().pos, pos, 0.5*radius)) {
-			trail.push_back(trail_pt(pos, radius, colorRGBA(color, color.A*alpha_scale))); // skip short segments
-		}
-	}
-	void update() {
-		if (!animate2) return;
-		for (auto i = trail_map.begin(); i != trail_map.end(); ) { // Note: no increment
-			if (!i->second.update()) {trail_map.erase(i++);} else {++i;} // update and remove if empty
-		}
-	}
-	void draw() const {
-		if (!animate2) return;
-		for (auto i = trail_map.begin(); i != trail_map.end(); ++i) {i->second.draw();}
-	}
-};
-
-engine_trail_drawer_t engine_trail_drawer;
-
-void draw_and_update_engine_trails() {
-	engine_trail_drawer.draw();
-	engine_trail_drawer.update();
-}
-
-
 quad_batch_draw uobj_draw_data::qbd;
 
 
@@ -328,7 +360,7 @@ void uobj_draw_data::draw_engine(int eix, colorRGBA const &trail_color, point co
 		else if (ENABLE_ENGINE_TRAILS) { // low speed
 			point epos(draw_pos);
 			obj->xform_point_inv(epos);
-			engine_trail_drawer.add_trail_pt(obj, eix, epos, 0.7*escale*sqrt(ar)*radius, trail_color, 0.2);
+			engine_trail_drawer.add_trail_pt(obj, eix, epos, 0.6*escale*sqrt(ar)*radius, trail_color, 0.25);
 		}
 	}
 }
@@ -570,7 +602,7 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 	//t_wrays.push_back(usw_ray(width, width, p1, p2, LITN_C, ALPHA0));
 	unsigned const num_segments((rand()&7)+1);
 	float const ns_inv(1.0/num_segments);
-	point cur(p1), prev(p1);
+	point cur(p1);
 	vector3d delta((p2 - p1)*ns_inv);
 	float const dmag(delta.mag());
 	if (dmag < TOLERANCE) return; // shouldn't happen?
@@ -587,11 +619,8 @@ void add_lightning_wray(float width, point const &p1, point const &p2) {
 			w[d] = (1.0 - 0.5*(i+d)*ns_inv)*width;
 		}
 		point const next(cur + delta);
-		if (i > 0) {t_wrays.back().next = next;}
 		t_wrays.push_back(usw_ray(w[0], w[1], cur, next, c[0], c[1]));
-		if (i > 0) {t_wrays.back().prev = prev;}
-		prev = cur;
-		cur  = next;
+		cur = next;
 		// create recursive forks?
 	}
 }
@@ -726,17 +755,16 @@ void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 	fgPopMatrix(); // undo invert_z()
 
 	if (is_moving()) { // draw engine glow
-		point pos2(0.0, -0.75, 2.3);
-		
 		if (ndiv > 4) {
+			point pos2(0.0, -0.75, 2.3);
+
 			for (unsigned i = 0; i < nengines; ++i) {
 				draw_engine(i, engine_color, pos2, 1.0); // this dominates the draw time
 				pos2.y += edy;
 			}
 		}
-		else {
-			pos2.y += edy;
-			if (eflags != 7) {draw_engine(3, engine_color, pos2, 1.7);} // combine into one engine as an optimization
+		else { // combine into one engine as an optimization
+			draw_engine(1, engine_color, point(0.0, 0.0, 2.3), 1.7); // use engine 1 (center), though eflags test isn't really correct
 		}
 		draw_ship_flares(engine_color);
 	}

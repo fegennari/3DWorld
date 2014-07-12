@@ -16,7 +16,7 @@ float uobjs_lit_rmax(0.0);
 extern int display_mode;
 extern float uobj_rmax, urm_ship, urm_static, urm_proj;
 extern vector<cached_obj> ships[], all_ships, stat_objs, coll_proj, decoys, c_uobjs, c_uobjs_lit;
-extern vector<usw_ray> t_wrays;
+extern usw_ray_group t_wrays;
 extern vector<us_weapon> us_weapons;
 
 

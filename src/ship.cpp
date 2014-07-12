@@ -33,7 +33,7 @@ vector<cached_obj> c_uobjs_lit; // lit objects, used for lighting
 vector<ship_explosion> exploding;
 vector<free_obj const *> a_targets(NUM_ALIGNMENT, NULL), attackers(NUM_ALIGNMENT, NULL);
 vector<cached_obj> c_uobjs;
-vector<usw_ray> b_wrays, t_wrays; // beams and engine trails
+usw_ray_group t_wrays; // beams and engine trails
 vector<temp_source> temp_sources;
 pt_line_drawer particle_pld;
 point_sprite_drawer glow_psd;
@@ -338,11 +338,7 @@ void apply_univ_physics() {
 	if (show_framerate) show_stats();
 	unsigned nsh(0), npr(0), npa(0); // testing
 	RESET_TIME;
-	
-	if (animate2) {
-		t_wrays.resize(0);
-		b_wrays.resize(0);
-	}
+	if (animate2) {t_wrays.resize(0);}
 	player_ship().fix_upv();
 	purge_old_objs();
 	if (TIMETEST) PRINT_TIME("  Purge");
@@ -660,39 +656,21 @@ void clear_univ_obj_contexts() {
 }
 
 
-void draw_wrays(vector<usw_ray> &wrays) {
-
-	if (wrays.empty()) return;
-	glDepthMask(GL_FALSE); // ???
-	unsigned const size((unsigned)wrays.size());
-	point const &pspos(get_player_pos2());
-	vector<pair<float, usw_ray const *> > sorted(size);
-
-	for (unsigned i = 0; i < size; ++i) { // make negative so it's sorted largest to smallest
-		sorted[i].first  = -p2p_dist_sq(wrays[i].get_pos(), pspos);
-		sorted[i].second = &wrays[i];
-	}
-	sort(sorted.begin(), sorted.end());
-	line_tquad_draw_t drawer;
-	
-	for (unsigned i = 0; i < size; ++i) {
-		sorted[i].second->draw(drawer);
-	}
-	drawer.draw();
-	glDepthMask(GL_TRUE);
-}
-
-
 class motion_particles_t {
 
 	rand_gen_t rgen;
 	vector<point> pts;
 
 	bool is_valid_pos(point const &pos, point const &camera) const {
-		return (dist_less_than(pos, camera, 0.04) && camera_pdu.point_visible_test(pos));
+		return (dist_less_than(pos, camera, 0.04) && player_pdu.point_visible_test(pos));
 	}
 	void gen_pos(point &pos, point const &camera, vector3d const &vnorm) {
-		do {pos = (camera + 0.02*vnorm + rgen.signed_rand_vector_spherical(0.02));} while (!is_valid_pos(pos, camera));
+		float const vdist(max(0.0, 0.02*dot_product(vnorm, player_pdu.dir)));
+
+		for (unsigned n = 0; n < 20; ++n) { // make up to 20 attemps to generate an onscreen particle
+			pos = camera + vdist*vnorm + rgen.signed_rand_vector_spherical(0.02);
+			if (is_valid_pos(pos, camera)) break;
+		}
 	}
 public:
 	void update_and_draw(point const &camera, vector3d const &vnorm, float length, float width) {
@@ -839,8 +817,7 @@ void draw_univ_objects() {
 	set_additive_blend_mode();
 	maybe_draw_motion_dust();
 	draw_and_update_engine_trails();
-	draw_wrays(b_wrays); // draw beam weapons (where should this be?)
-	draw_wrays(t_wrays); // draw engine trails and lightning
+	t_wrays.draw(); // draw beam weapons, engine trails, and lightning
 	set_std_blend_mode();
 
 	if (onscreen_display) { // draw player death marker

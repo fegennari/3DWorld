@@ -33,7 +33,7 @@ extern int animate2, display_mode, frame_counter, window_width, window_height;
 extern float fticks;
 extern colorRGBA sun_color;
 extern vector<us_weapon> us_weapons;
-extern vector<usw_ray> t_wrays;
+extern usw_ray_group t_wrays;
 
 shader_t cached_voxel_shaders[9]; // one for each value of num_lights (0-8)
 shader_t cached_proc_shaders [9];
