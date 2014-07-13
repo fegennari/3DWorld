@@ -515,7 +515,8 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 			for (unsigned s = 0; s < ndiv; ++s) {
 				pt[d1] = -1.0 + s*vstep;
 
-				for (unsigned t = 0; t <= ndiv; ++t) {
+				for (unsigned T = 0; T <= ndiv; ++T) {
+					unsigned const t(j ? T : ndiv-T); // reverse between sides
 					pt[d2] = -1.0 + t*vstep;
 					point pt2(pt);
 
@@ -526,7 +527,8 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 						pt2[d1] += vstep;
 					}
 				} // for t
-				if (texture) {draw_and_clear_verts(tverts, GL_TRIANGLE_STRIP);} else {draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);}
+				if (texture) {draw_and_clear_verts(tverts, GL_TRIANGLE_STRIP);}
+				else {draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);}
 			} // for s
 		} // for j
 	} // for i

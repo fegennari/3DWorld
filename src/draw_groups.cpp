@@ -1087,8 +1087,8 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 		if (on_platform) lpos = pos; // reset now so there's no rotation
 		apply_obj_mesh_roll(*matrix, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
 	}
-	draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
-	//draw_cube_mapped_sphere(all_zeros, radius, ndiv, 1);
+	//draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);
+	draw_cube_mapped_sphere(all_zeros, radius, ndiv, 1);
 	fgPopMatrix();
 	lpos = pos;
 }
@@ -1215,7 +1215,6 @@ void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool
 
 
 colorRGBA get_plasma_color(float size) {
-
 	return colorRGBA(1.0, size/5.0, max(0.0f, 0.5f*(size-3.0f)), 0.9);
 }
 
@@ -1223,16 +1222,10 @@ colorRGBA get_plasma_color(float size) {
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, int time, shader_t &shader) {
 
 	colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));
-
-	if (animate2) {
-		setup_texgen(0.2*rand_uniform(0.95, 1.05)/radius, 0.2*rand_uniform(0.95, 1.05)/radius, rand_float(), rand_float(), 0.0, shader, 0);
-	}
-	else {
-		setup_texgen(0.2/radius, 0.2/radius, 0.0, 0.0, 0.0, shader, 0);
-	}
 	set_emissive_only(color, shader);
 	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}
-	draw_sphere_vbo(pos, size*radius, ndiv, 1);
+	//draw_sphere_vbo(pos, size*radius, ndiv, 1);
+	draw_cube_mapped_sphere(pos, size*radius, ndiv/2, 1);
 	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) {gen_particles(part_pos, 1);}
 	shader.clear_color_e();
 }
