@@ -62,6 +62,7 @@ void update_temperature(bool verbose);
 void update_sound_loops();
 bool indir_lighting_updated();
 point get_universe_display_camera_pos();
+colorRGBA get_inf_terrain_mod_color();
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -946,7 +947,7 @@ void display(void) {
 			show_crosshair(WHITE, do_zoom);
 		}
 		else if (world_mode == WMODE_INF_TERRAIN && inf_terrain_fire_mode) {
-			show_crosshair(((inf_terrain_fire_mode == 2) ? RED : ((inf_terrain_fire_mode == 3) ? BLUE : GREEN)), do_zoom);
+			show_crosshair(get_inf_terrain_mod_color(), do_zoom);
 		}
 		else if (world_mode == WMODE_GROUND && voxel_editing) {
 			show_crosshair(((voxel_editing == 2) ? RED : GREEN), do_zoom);

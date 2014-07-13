@@ -15,6 +15,7 @@ bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
+unsigned const NUM_FIRE_MODES = 4;
 float const FOG_DIST_TILES    = 1.4;
 float const DRAW_DIST_TILES   = 1.45;
 float const CREATE_DIST_TILES = 1.5;
@@ -2223,6 +2224,22 @@ tile_t *get_tile_from_xy  (tile_xy_pair const &tp) {return terrain_tile_draw.get
 float update_tiled_terrain(float &min_camera_dist) {return terrain_tile_draw.update(min_camera_dist);}
 void pre_draw_tiled_terrain() {terrain_tile_draw.pre_draw();}
 
+colorRGBA get_inf_terrain_mod_color() {
+
+	colorRGBA const colors[NUM_FIRE_MODES] = {WHITE, GREEN, RED, BLUE};
+	assert(inf_terrain_fire_mode < NUM_FIRE_MODES);
+	return colors[inf_terrain_fire_mode];
+}
+
+bool line_intersect_tiled_mesh_get_tile(point const &v1, point const &v2, point &p_int, tile_t *&tile) {
+
+	float t(0.0);
+	int xpos(0), ypos(0); // unused
+	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return 0;
+	p_int = v1 + t*(v2 - v1);
+	return 1;
+}
+
 tile_t::offset_t model3d_offset;
 
 void draw_tiled_terrain(bool reflection_pass) {
@@ -2235,7 +2252,37 @@ void draw_tiled_terrain(bool reflection_pass) {
 	if (inf_terrain_fire_mode != 0 && !reflection_pass) { // use a bool instead?
 		point const v1(get_camera_pos()), v2(v1 + cview_dir*FAR_CLIP);
 		point hit_pos;
-		if (line_intersect_tiled_mesh(v1, v2, hit_pos)) {draw_single_colored_sphere(hit_pos, 0.1, N_SPHERE_DIV, RED);}
+		tile_t *tile(nullptr);
+
+		if (line_intersect_tiled_mesh_get_tile(v1, v2, hit_pos, tile)) {
+			draw_single_colored_sphere(hit_pos, 0.1, N_SPHERE_DIV, RED);
+
+			// modification marker area rendered with a cylinder + stencil test to mask to mesh surface
+			assert(tile != nullptr);
+			float const tzmin(min(hit_pos.z, tile->get_zmin())), tzmax(max(hit_pos.z, tile->get_zmax())), dz(tzmax - tzmin);
+			float const z1(tzmin - dz - SMALL_NUMBER), z2(tzmax + dz + SMALL_NUMBER);
+			float const radius((cur_brush_param.get_radius() + 0.5)*HALF_DXY); // do we need a nonuniform x/y scale for non-square meshes?
+			point const p1(hit_pos.x, hit_pos.y, z1);
+			enable_blend();
+			shader_t s;
+			s.begin_color_only_shader(colorRGBA(get_inf_terrain_mod_color(), 0.2)); // make mostly transparent (wireframe?)
+			glClear(GL_STENCIL_BUFFER_BIT);
+			glDepthMask(GL_FALSE);
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+			glEnable(GL_STENCIL_TEST);
+			glStencilFunc(GL_ALWAYS, 0, ~0);
+			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
+			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
+			draw_cylinder_at(p1, z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends
+			glStencilFunc(GL_NOTEQUAL, -1, ~0); // one front face only
+			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			draw_cylinder_at(p1, z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends
+			glDepthMask(GL_TRUE);
+			glDisable(GL_STENCIL_TEST);
+			disable_blend();
+			s.end_shader();
+		}
 	}
 }
 
@@ -2251,12 +2298,8 @@ bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_play
 
 bool line_intersect_tiled_mesh(point const &v1, point const &v2, point &p_int) {
 
-	float t(0.0);
-	tile_t *tile(NULL); // unused
-	int xpos(0), ypos(0); // unused
-	if (!terrain_tile_draw.line_intersect_mesh(v1, v2, t, tile, xpos, ypos)) return 0;
-	p_int = v1 + t*(v2 - v1);
-	return 1;
+	tile_t *tile(nullptr); // unused
+	return line_intersect_tiled_mesh_get_tile(v1, v2, p_int, tile);
 }
 
 
@@ -2265,9 +2308,8 @@ bool hmap_mod_enabled() {return (inf_terrain_fire_mode && using_tiled_terrain_hm
 void change_inf_terrain_fire_mode(int val) {
 
 	if (!using_tiled_terrain_hmap_tex()) return; // ignore
-	unsigned const NUM_MODES = 4;
-	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_MODES + val) % NUM_MODES;
-	string const modes[NUM_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh"};
+	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
+	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
 

@@ -2103,6 +2103,7 @@ void undo_voxel_brush() {brush_manager.undo_last_brush();}
 
 void modify_voxels() {
 
+	// add a marker for where voxels will be modified before a fire/key press?
 	if (!coll_objects.has_voxel_cobjs) return; // no voxels to modify
 	static float last_tfticks(0.0);
 	if ((tfticks - last_tfticks) <= voxel_brush_params.delay) return; // limit firing rate
