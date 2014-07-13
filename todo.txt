@@ -20,5 +20,4 @@ Load/display model3d models in tiled terrain mode
 Engine trail length function of curvature/dot_product()
 Ship draw order - opaque first, not sorted
 TT foam at shoreline
-TT grass brown near sand
 Cube mapped sphere for rocks, etc.

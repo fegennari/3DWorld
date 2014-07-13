@@ -41,7 +41,8 @@ void main()
 	vec4 epos   = fg_ModelViewMatrix  * (vertex + vec4(xlate, 0, 0));
 	gl_Position = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
-	float grass_weight = texture2D(weight_tex, tc2).b;
+	vec4 weights = texture2D(weight_tex, tc2);
+	float grass_weight = weights.b; // grass weight in weights {sand, dirt, grass, rock, [snow]}
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
 	float noise_weight = texture2D(noise_tex, 10.0*vec2(fg_Color.r, fg_Color.g)).r; // "hash" the color
 	
@@ -56,17 +57,18 @@ void main()
 
 	float smap_scale = 0.0;
 	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - length(epos.xyz)), 0.0, 1.0);}
+	vec4 ad_color = mix(gl_Color, vec4(1.0, 0.7, 0.4, 1.0), weights.r); // mix in yellow-brown grass color to match sand
 
 	//if (grass_weight < noise_weight) {
 	if (enable_light0) {
 		float dscale = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light0(epos, normal), smap_scale) : diffuse_scale);
-		color += add_light_comp_pos_scaled0(normal, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale).rgb;
+		color += add_light_comp_pos_scaled0(normal, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale, ad_color).rgb;
 	}
 	if (enable_light1) {
 		float dscale = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light1(epos, normal), smap_scale) : diffuse_scale);
-		color += add_light_comp_pos_scaled1(normal, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale).rgb;
+		color += add_light_comp_pos_scaled1(normal, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale, ad_color).rgb;
 	}
-	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2).rgb;}
+	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2).rgb;} // Note: can't override color
 	//}
 	float alpha = fg_Color.a;
 	alpha *= ascale*((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
