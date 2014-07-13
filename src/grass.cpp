@@ -70,7 +70,7 @@ void grass_manager_t::add_grass_blade(point const &pos, float cscale, bool on_me
 	vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
 	float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
 	float const base_color[3] = {0.25, 0.6, 0.08};
-	float const mod_color [3] = {0.2,  0.2, 0.08};
+	float const mod_color [3] = {0.3,  0.3, 0.12};
 	float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
 	float const dead_color[3] = {0.75, 0.6, 0.0 };
 	unsigned char color[3];
