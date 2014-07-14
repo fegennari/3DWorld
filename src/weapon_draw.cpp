@@ -367,15 +367,18 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_LANDMINE:
 		case W_GRENADE: // draw_grenade()?
 		case W_CGRENADE:
-			if (do_texture) {select_texture((wid == W_BALL) ? select_dodgeball_texture(shooter) : object_types[oid].tid);}
 			radius = 0.4*object_types[oid].radius;
-			if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) radius *= 1.2;
+			if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) {radius *= 1.2;}
 			translate_to(v_trans);
-			if (do_texture) rotate_to_dir(dir, 90.0, 1.0);  // cancel out texture rotation with camera
-			if (do_texture) fgRotate(45.0, 1.0, 0.0, 0.0); // rotate the texture to face the player
+			
+			if (do_texture) {
+				select_texture((wid == W_BALL) ? select_dodgeball_texture(shooter) : object_types[oid].tid);
+				rotate_to_dir(dir, 90.0, 1.0); // cancel out texture rotation with camera
+				fgRotate(((wid == W_BALL) ? 135.0 : 45.0), 1.0, 0.0, 0.0); // rotate the texture to face the player
+			}
 			shader.set_cur_color(colorRGBA(object_types[oid].color, alpha));
 			shader.set_specular(0.8, 40.0);
-			draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);
+			if (wid == W_BALL) {draw_cube_mapped_sphere(all_zeros, radius, ndiv, do_texture);} else {draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);}
 			shader.set_specular(0.0, 0.0);
 			break;
 

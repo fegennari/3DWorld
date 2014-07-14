@@ -592,7 +592,7 @@ void draw_moon() {
 	s.add_uniform_int("tex0", 0);
 	s.set_cur_color(WHITE);
 	select_texture(MOON_TEX);
-	draw_sphere_vbo(pos, moon_radius, N_SPHERE_DIV, 1);
+	draw_cube_mapped_sphere(pos, moon_radius, N_SPHERE_DIV/2, 1);
 	s.end_shader();
 	disable_light(4);
 
@@ -621,7 +621,7 @@ void draw_earth() {
 		fgRotate(67.0, 0.6, 0.8, 0.0);
 		fgRotate(rot_angle, 0.0, 0.0, 1.0);
 		fgRotate(180.0, 1.0, 0.0, 0.0);
-		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1);
+		draw_sphere_vbo(all_zeros, earth_radius, N_SPHERE_DIV, 1); // Note: texture is pre-distorted for sphere mapping
 		fgPopMatrix();
 		s.end_shader();
 	}

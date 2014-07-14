@@ -1035,7 +1035,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	if (game_mode == 2 && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
 		select_texture(select_dodgeball_texture(id));
 		shader.set_cur_color(mult_alpha(object_types[BALL].color, alpha));
-		draw_sphere_vbo(point(0.0, 1.3*radius, 0.0), 0.8*object_types[BALL].radius, ndiv, 1);
+		draw_cube_mapped_sphere(point(0.0, 1.3*radius, 0.0), 0.8*object_types[BALL].radius, ndiv/2, 1);
 		select_no_texture();
 	}
 	fgPopMatrix();

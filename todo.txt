@@ -18,4 +18,3 @@ Load/display model3d models in tiled terrain mode
   - Model LOD - mesh simplification
 
 TT foam at shoreline
-Cube mapped sphere for rocks, etc.

@@ -264,7 +264,7 @@ void draw_blasts() {
 				s.set_cur_color(br.cur_color);
 				float const sscale(universe ? 0.4/sqrt(br.cur_size*distance_to_camera(br.pos)) : 1.0);
 				int const ndiv(max(4, min(N_SPHERE_DIV, int(250.0*br.cur_size*sscale))));
-				draw_sphere_vbo(make_pt_global(br.pos), br.cur_size, ndiv, 1);
+				draw_sphere_vbo(make_pt_global(br.pos), br.cur_size, ndiv, 1); // cube mapped sphere? too slow?
 				if (end_type) {glDisable(GL_CULL_FACE); end_sphere_draw();}
 			}
 			break;

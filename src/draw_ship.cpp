@@ -1315,7 +1315,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 			draw_cube(all_zeros, 1.95, 1.95, 1.95, 1, 0, 1.0, 0, &view_dir);
 		}
 		else {
-			draw_sphere_vbo(all_zeros, 0.97, get_ndiv((3*ndiv)/2), 1);
+			draw_sphere_vbo(all_zeros, 0.97, get_ndiv((3*ndiv)/2), 1); // cube mapped sphere?
 		}
 	}
 	if (phase2) {
@@ -1326,7 +1326,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 			draw_cube(all_zeros, 2.0, 2.0, 2.0, 1, 0, 1.0, 0, &view_dir);
 		}
 		else {
-			draw_sphere_vbo(all_zeros, 1.0, get_ndiv((3*ndiv)/2), 1);
+			draw_sphere_vbo(all_zeros, 1.0, get_ndiv((3*ndiv)/2), 1); // cube mapped sphere?
 		}
 	}
 	end_ship_texture();
