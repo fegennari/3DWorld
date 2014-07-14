@@ -1155,7 +1155,9 @@ float us_projectile::damage(float val, int type, point const &hit_pos, free_obj 
 
 void us_projectile::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 
-	if (dist_less_than(pos, get_camera_pos(), 10.0*UNIV_NCLIP_SCALE*NEAR_CLIP)) return; // too close to the camera (mostly for shots fired by the player)
+	if (parent != nullptr && parent->is_player_ship()) {
+		if (dist_less_than(pos, get_camera_pos(), 10.0*UNIV_NCLIP_SCALE*NEAR_CLIP)) return; // too close to the camera (mostly for shots fired by the player)
+	}
 	if (specs().auto_orient != 0) {ddata.dir = get_orient();}
 	ddata.lifetime = (unsigned)specs().lifetime; // why is lifetime a float?
 

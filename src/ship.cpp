@@ -747,7 +747,9 @@ void draw_univ_objects() {
 	//RESET_TIME;
 	unsigned const nobjs((unsigned)c_uobjs.size());
 	static vector<pair<float, free_obj *> > sorted;
+	static vector<free_obj *> unsorted;
 	sorted.resize(0);
+	unsorted.resize(0);
 	point const &camera(get_player_pos2());
 	float const ch_dist(100.0*player_ship().specs().sensor_dist);
 	shader_t chs;
@@ -755,12 +757,19 @@ void draw_univ_objects() {
 
 	for (unsigned i = 0; i < nobjs; ++i) { // make negative so it's sorted largest to smallest
 		cached_obj const &co(c_uobjs[i]);
+		assert(co.obj != nullptr);
 		bool const is_bad((co.flags & OBJ_FLAGS_BAD_) != 0);
 		float const radius_scaled(co.obj->get_draw_radius());
 
 		if (!is_bad && !is_distant(co.pos, radius_scaled) && univ_sphere_vis(co.pos, max(radius_scaled, co.radius))) { // Note: VFC must be conservative, so use larger radius
-			sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));
-
+			// make static objects (such as asteroids) have a large distance so that they're drawn first;
+			// this is okay as they should be opaque, and will make good occluders
+			if (co.flags & OBJ_FLAGS_STAT) { // add other cases (sphere/tri particles, etc.)?
+				unsorted.push_back(co.obj);
+			}
+			else {
+				sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));
+			}
 			if (onscreen_display && (co.flags & OBJ_FLAGS_SHIP) && !co.obj->is_player_ship()) {		
 				if ((dist_less_than(co.pos, camera, ch_dist) || !(co.flags & (OBJ_FLAGS_DIST | OBJ_FLAGS_NEW_))) &&
 					co.obj->visibility() > 0.1 && co.obj->get_time() > 0)
@@ -776,26 +785,20 @@ void draw_univ_objects() {
 	}
 	chs.end_shader();
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
-	unsigned const nobjs2((unsigned)sorted.size());
 	//PRINT_TIME("Sort");
 	shader_t s[2];
 	select_texture(WHITE_TEX); // always textured (see end_texture())
 	enable_blend(); // doesn't hurt
 	emissive_shader.begin_simple_textured_shader(0.001); // textured, no lighting, will be disabled by ship draw shader
 
+	// draw ubojs
 	bool disint_tex(0); // this is slow, so only enable if some ship is exploding and needs this mode
 	for (vector<ship_explosion>::const_iterator i = exploding.begin(); i != exploding.end(); ++i) {disint_tex |= i->disint_tex;}
 	setup_ship_draw_shader(s[1], 1, disint_tex); // shadow shader, system lighting only
 	setup_ship_draw_shader(s[0], 0, disint_tex); // normal shader with dynamic lights
 	disable_exp_lights(&s[0]); // make sure the explosion lights start out cleared
-	
-	for (unsigned i = 0; i < nobjs2; ++i) { // draw ubojs
-		free_obj *fobj(sorted[i].second);
-		assert(fobj != NULL);
-		if (!fobj->is_ok()) continue;
-		fobj->draw(s);
-		fobj->reset_lights(); // reset for next frame
-	}
+	for (auto i = unsorted.begin(); i != unsorted.end(); ++i) {(*i)->draw_and_reset_lights(s);}
+	for (auto i = sorted.begin();   i != sorted.end();   ++i) {i->second->draw_and_reset_lights(s);}
 	emissive_shader.end_shader();
 	end_part_cloud_draw(); // leaves program==0
 	disable_exp_lights(); // make sure the explosion lights end cleared
