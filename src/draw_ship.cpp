@@ -40,17 +40,19 @@ class engine_trail_drawer_t {
 	};
 
 	struct trail_t : public deque<trail_pt> {
+		bool extended;
+		trail_t() : extended(0) {}
+
 		bool update() {
 			// attenuate color alpha based on elapsed time since last frame using exponential decay (pos and radius are unchanged)
 			for (iterator i = begin(); i != end(); ++i) {i->color.A *= exp(-ET_ATTEN_CONST*fticks);}
-			// remove old/expired segments from the beginning of the line
-			// FIXME: also remove when too far from player
-			while (!empty() && front().color.A < MIN_ETRAIL_ALPHA) {pop_front();}
+			// remove old/expired segments from the beginning of the line, if both end points have alpha near 0
+			while (size() >= 2 && max(begin()->color.A, (begin()+1)->color.A) < MIN_ETRAIL_ALPHA) {pop_front();}
+			if (size() == 1 && begin()->color.A < MIN_ETRAIL_ALPHA) {pop_front();} // remove last point
 			return !empty();
 		}
 		void draw() const {
 			for (const_iterator i = begin(); i+1 != end(); ++i) { // draw as a line connecting the trail points
-				// FIXME: attenuate alpha when direction is along camera view vector?
 				usw_ray const ray(i->radius, (i+1)->radius, i->pos, (i+1)->pos, i->color, (i+1)->color);
 				if (ray.either_end_visible()) {t_wrays.push_back(ray);}
 			}
@@ -65,10 +67,20 @@ public:
 		if (!animate2 || color.A < MIN_ETRAIL_ALPHA) return; // alpha too low to draw
 		assert(fobj != nullptr);
 		trail_t &trail(trail_map[trail_map_key(fobj->get_obj_id(), eix)]);
-		
-		if (trail.empty() || !dist_less_than(trail.back().pos, pos, 0.75*radius)) {
-			trail.push_back(trail_pt(pos, radius, colorRGBA(color, color.A*alpha_scale))); // skip short segments
+		if (trail.extended && !trail.empty()) {trail.pop_back(); trail.extended = 0;} // remove extension
+
+		if (!trail.empty()) { // at least one previous point
+			point const &prev(trail.back().pos);
+			float const dist(p2p_dist(prev, pos));
+			if (dist < 0.5*radius) return; // too close (short segment)
+
+			if (trail.size() >= 2 && dist < 4.0*radius) { // at least two previous points (one previous segment) + not too far
+				point const preprev(trail[trail.size()-2].pos);
+				float const dp(dot_product(prev-preprev, pos-prev)/(p2p_dist(preprev, prev)*p2p_dist(prev, pos)));
+				trail.extended = (dp > 0.5 && dist < 4.0*radius*pow(dp, 16.0f)); // extend short straight segments
+			}
 		}
+		trail.push_back(trail_pt(pos, radius, colorRGBA(color, color.A*alpha_scale))); // add another segment
 	}
 	void update() {
 		if (!animate2) return;
@@ -86,10 +98,8 @@ engine_trail_drawer_t engine_trail_drawer;
 
 void draw_and_update_engine_trails() {
 	//if (display_mode & 0x80) return; // TESTING
-	//RESET_TIME;
 	engine_trail_drawer.draw();
 	engine_trail_drawer.update();
-	//PRINT_TIME("ETD Draw");
 }
 
 
@@ -120,10 +130,9 @@ void usw_ray_group::draw() const {
 		point const *next((i+1 != end() && (i+1)->p1 == i->p2) ? &(i+1)->p2 : nullptr);
 		i->draw(drawer, prev, next);
 	}
-	//PRINT_TIME("Draw1");
 	drawer.draw();
 	glDepthMask(GL_TRUE);
-	//PRINT_TIME("Draw2");
+	//PRINT_TIME("Ray Draw");
 }
 
 

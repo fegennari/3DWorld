@@ -914,12 +914,10 @@ void line_tquad_draw_t::draw() const { // supports quads and triangles
 
 	shader_t s;
 	s.begin_simple_textured_shader(0.01);
-	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);}
 	enable_blend();
-	select_texture(BLUR_TEX);
+	select_texture((draw_model != 0) ? WHITE_TEX : BLUR_TEX);
 	draw_verts(verts, GL_TRIANGLES);
 	disable_blend();
-	if (draw_model != 0) {set_fill_mode();}
 	s.end_shader();
 }
 
