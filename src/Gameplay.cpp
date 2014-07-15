@@ -20,7 +20,7 @@ float const LASER_REFL_ATTEN = 0.95;
 
 // should put these in a file
 string const all_smiley_names[] =
-{"0-ZERO-0", "Biotch", "Grim Reaper", "Left Nut", "Psycho", "Yomamma", "Mr. Awesome", "IownU", "Fragmaster", "Archangel", "Smiley:)"};
+{"0-ZERO-0", "Kodiak", "Grim Reaper", "Cannon fodder", "Psycho", "Yomamma", "Mr. Awesome", "IownU", "Fragmaster", "Archangel", "Smiley:)", "Mr Shootey"};
 
 
 struct text_message_params {
