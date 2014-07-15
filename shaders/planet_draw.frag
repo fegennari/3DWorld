@@ -223,10 +223,11 @@ void main()
 		}
 	}
 #endif // GAS_GIANT
-	if (atmosphere > 0.0) {
-		float cloud_val = atmosphere*gen_cloud_alpha(cloud_freq*vertex);
-		cloud_val = min(1.4*cloud_val, 1.0);
-		if (cloud_val > 0.0) {color = cloud_val*(ambient + diffuse) + (1.0 - cloud_val)*color;} // no clouds over high mountains?
+	if (atmosphere > 0.0) { // add clouds
+		float cval = atmosphere*gen_cloud_alpha(cloud_freq*vertex);
+		cval       = min(1.4*cval, 1.0); // increase contrast/sharpen edges
+		float v    = texture3D(cloud_noise_tex, 3.0*noise_scale*cloud_freq*vertex).r;
+		color      = mix(color, (0.75 + 0.25*v)*(ambient + diffuse), cval); // no clouds over high mountains?
 	}
 	fg_FragColor = gl_Color * vec4((color + emission.rgb), 1.0);
 }
