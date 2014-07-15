@@ -909,6 +909,7 @@
     <None Include="shaders\point_to_quad.geom" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />
+    <None Include="shaders\procedural_height_gen.frag" />
     <None Include="shaders\procedural_rock.frag" />
     <None Include="shaders\procedural_rock.vert" />
     <None Include="shaders\procedural_texture.part.frag" />
@@ -937,6 +938,7 @@
     <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vertex_xlate_scale.vert" />
     <None Include="shaders\vert_xform_only.vert" />
+    <None Include="shaders\vert_xform_vpos.vert" />
     <None Include="shaders\voxel_asteroid.frag" />
     <None Include="shaders\voxel_texture.part.frag" />
     <None Include="shaders\water_fog.part.vert" />

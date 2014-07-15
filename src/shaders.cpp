@@ -890,34 +890,37 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 // compute shader
 class compute_shader_t : public shader_t {
 
-	unsigned tsize, fbo_id;
+	unsigned xsize, ysize, fbo_id;
+	string frag_shader_str;
 
 	void draw_geom() const { // factored out so that we can make it virtual and override it in the future
-		vert_wrap_t verts[4] = {point(0,0,1), point(0,1,1), point(1,1,1), point(1,0,1)};
+		float const z = 0.0;
+		vert_wrap_t verts[4] = {point(0,0,z), point(0,1,z), point(1,1,z), point(1,0,z)};
 		draw_verts(verts, 4, GL_TRIANGLE_FAN); // one quad from [0,0] to [1,1] that exactly covers the viewport
 	}
 
 public:
-	compute_shader_t(string const &frag_shader_str, unsigned tsize_) : tsize(tsize_), fbo_id(0) {
-		assert(tsize > 0);
-		set_vert_shader("vert_xform_only");
+	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
+	  xsize(xsize_), ysize(ysize_), fbo_id(0), frag_shader_str(fstr) {
+		assert(xsize > 0 && ysize > 0);
+	}
+	void begin() {
+		set_vert_shader("vert_xform_vpos");
 		set_frag_shader(frag_shader_str);
+		begin_shader();
 	}
 	void pre_run() { // call once before run() calls
 		// setup matrices
-		glViewport(0, 0, tsize, tsize);
+		glViewport(0, 0, xsize, ysize);
 		fgMatrixMode(FG_PROJECTION);
 		fgPushMatrix();
 		fgLoadIdentity();
-		fgOrtho(0.0, 1.0, 0.0, 1.0, 0.0, 2.0); // [0,0] to [1,1]
+		fgOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0); // [0,0] to [1,1]
 		fgMatrixMode(FG_MODELVIEW);
 		fgPushMatrix();
 		fgLoadIdentity();
-		// first-time setup
-		begin_shader();
 	}
 	void post_run() { // call once after run() calls
-		end_shader();
 		free_fbo(fbo_id);
 		disable_fbo();
 		// restore state
@@ -935,27 +938,51 @@ public:
 	}
 	void gen_matrix(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1) { // tid may or may not be setup prior to this call
 		// FIXME: special floating-point texture format? One channel?
-		if (tid == 0) {setup_texture(tid, 0, 0, 0, 0, 0, 1);} // nearest, clamp, no mipmaps
+		if (tid == 0) {
+			setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		}
 		if (is_first) {pre_run();}
 		run(tid);
-		vals.resize(tsize*tsize);
-		vector<unsigned char> data(4*tsize*tsize);
+		vals.resize(xsize*ysize);
+		vector<unsigned char> data(4*vals.size());
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
-		glReadPixels(0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // GL_BGRA?
+		glReadPixels(0, 0, xsize, ysize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // GL_BGRA?
 		float mult[4];
-		UNROLL_4X(mult[i_] = 1.0/float(1ULL << ((i_+1)<<8));)
+		UNROLL_4X(mult[i_] = 1.0/float(1ULL << (8*(i_+1)));)
 
-		for (unsigned y = 0; y < tsize; ++y) {
-			for (unsigned x = 0; x < tsize; ++x) {
-				unsigned const ix(y*tsize + x);
+		/*for (unsigned i = 0; i < xsize*ysize; i += 125) {
+			UNROLL_4X(cout << unsigned(data[4*i+i_]) << " ";) // testing
+			cout << endl;
+		}*/
+		for (unsigned y = 0; y < ysize; ++y) {
+			for (unsigned x = 0; x < xsize; ++x) {
+				unsigned const ix(y*xsize + x);
 				float v(0.0);
-				UNROLL_4X(v += data[(ix<<2)+i_]*mult[i_];) // packed RGBA
+				//UNROLL_4X(v += data[(ix<<2)+i_]*mult[i_];) // packed RGBA
+				v = data[ix<<2]/256.0; // use red channel
 				vals[ix] = v; // [0.0, 1.0)
 			}
 		}
 		if (is_last) {post_run();}
 	}
 };
+
+
+// returns heights in [0,1] range
+void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, unsigned xsize, unsigned ysize) {
+
+	unsigned tid(0);
+	compute_shader_t cshader("procedural_height_gen", xsize, ysize);
+	cshader.begin();
+	cshader.add_uniform_float("x0", x0);
+	cshader.add_uniform_float("y0", y0);
+	cshader.add_uniform_float("dx", dx);
+	cshader.add_uniform_float("dy", dy);
+	cshader.gen_matrix(vals, tid, 1, 1);
+	cshader.end_shader();
+	free_texture(tid);
+}
 
 
 // **************** INSTANCING + TRANSFORMS ****************
