@@ -198,6 +198,7 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 
 void apply_mesh_rand_seed(rand_gen_t &rgen) {
 	if (mesh_seed != 0) {rgen.set_state(mesh_seed, 12345);}
+	else if (mesh_gen_mode > 0) {rgen.set_state(rand_gen_index+1, 12345);}
 }
 
 
@@ -532,6 +533,19 @@ void apply_noise_shape_per_term(float &noise, int shape) { // inputs and outputs
 	}
 }
 
+float get_hmap_scale(int mode) {
+	return ((mode == 1) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale/mesh_scale_z;
+}
+
+void gen_rx_ry(float &rx, float &ry) {
+	rand_gen_t rgen;
+	apply_mesh_rand_seed(rgen);
+	rx = rgen.rand_float() + 1.0;
+	ry = rgen.rand_float() + 1.0;
+}
+
+
+void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float rx, float ry, unsigned xsize, unsigned ysize, int shape);
 
 void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values) {
 
@@ -558,13 +572,31 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 		}
 	}
 	if (cache_values) {
-		cached_vals.resize(nx*ny);
-		
-		#pragma omp parallel for schedule(static,1)
-		for (int y = 0; y < (int)cur_ny; ++y) {
-			for (unsigned x = 0; x < cur_nx; ++x) {
-				cached_vals[y*cur_nx + x] = eval_index(x, y, 1, 0, 0); // Note: glaciate=1, num_start_sin=1
+		//RESET_TIME;
+
+		if (mesh_gen_mode == 1 && (display_mode & 0x10)) { // only for simplex noise
+			float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
+			float const zscale(get_hmap_scale(mesh_gen_mode));
+			float rx, ry;
+			gen_rx_ry(rx, ry);
+			gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, rx, ry, cur_nx, cur_ny, mesh_gen_shape);
+			
+			for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {
+				*i *= zscale;
+				if (GLACIATE) {*i = get_glaciated_zval(*i);} // Note: glaciate=1
 			}
+			//PRINT_TIME("GPU Height");
+		}
+		else {
+			cached_vals.resize(cur_nx*cur_ny);
+		
+			#pragma omp parallel for schedule(static,1)
+			for (int y = 0; y < (int)cur_ny; ++y) {
+				for (unsigned x = 0; x < cur_nx; ++x) {
+					cached_vals[y*cur_nx + x] = eval_index(x, y, 1, 0, 0); // Note: glaciate=1, num_start_sin=1
+				}
+			}
+			//PRINT_TIME("CPU Height");
 		}
 	}
 }
@@ -578,24 +610,26 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 	float const xy_scale(0.0007*mesh_scale), xv(xy_scale*xval), yv(xy_scale*yval);
 	float zval(0.0), mag(1.0), freq(1.0);
 	unsigned const end_octave(NUM_FREQ_COMP - start_eval_sin/N_RAND_SIN2);
-	float const lacunarity(1.92);
-	float const gain(0.5);
-	rand_gen_t rgen;
-	apply_mesh_rand_seed(rgen);
+	float const lacunarity(1.92), gain(0.5);
+	float rx, ry;
+	gen_rx_ry(rx, ry);
 
 	for (unsigned i = 0; i < end_octave; ++i) {
-		glm::vec2 const pos((freq*xv + rgen.rand_float()), (freq*yv + rgen.rand_float()));
+		glm::vec2 const pos((freq*xv + rx), (freq*yv + ry));
 		float noise((mode == 1) ? glm::simplex(pos) : glm::perlin(pos));
 		switch (shape) {
 		case 0: break; // linear - do nothing
 		case 1: noise = fabs(noise) - 0.40; break; // billowy
 		case 2: noise = 0.45 - fabs(noise); break; // ridged
+		//abs(0.5-abs(noise)*2.0)*2.0-0.5
 		}
 		zval += mag*noise;
 		mag  *= gain;
 		freq *= lacunarity;
+		rx   *= 1.5;
+		ry   *= 1.5;
 	}
-	return ((mode == 1) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale*zval/mesh_scale_z;
+	return get_hmap_scale(mode)*zval;
 }
 
 

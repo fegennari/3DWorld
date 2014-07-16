@@ -936,11 +936,10 @@ public:
 		set_temp_clear_color(BLACK);
 		draw_geom();
 	}
-	void gen_matrix(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1) { // tid may or may not be setup prior to this call
-		// FIXME: special floating-point texture format? One channel?
+	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1) { // tid may or may not be setup prior to this call
 		if (tid == 0) {
 			setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, xsize, ysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		}
 		if (is_first) {pre_run();}
 		run(tid);
@@ -948,38 +947,45 @@ public:
 		vector<unsigned char> data(4*vals.size());
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
 		glReadPixels(0, 0, xsize, ysize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // GL_BGRA?
-		float mult[4];
-		UNROLL_4X(mult[i_] = 1.0/float(1ULL << (8*(i_+1)));)
 
-		/*for (unsigned i = 0; i < xsize*ysize; i += 125) {
-			UNROLL_4X(cout << unsigned(data[4*i+i_]) << " ";) // testing
-			cout << endl;
-		}*/
 		for (unsigned y = 0; y < ysize; ++y) {
 			for (unsigned x = 0; x < xsize; ++x) {
 				unsigned const ix(y*xsize + x);
-				float v(0.0);
-				//UNROLL_4X(v += data[(ix<<2)+i_]*mult[i_];) // packed RGBA
-				v = data[ix<<2]/256.0; // use red channel
-				vals[ix] = v; // [0.0, 1.0)
+				vals[ix] = data[ix<<2]; // red component [0.0, 1.0)
 			}
 		}
+		if (is_last) {post_run();}
+	}
+	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1) { // tid may or may not be setup prior to this call
+		if (tid == 0) {
+			setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, xsize, ysize, 0, GL_RED, GL_FLOAT, NULL);
+		}
+		if (is_first) {pre_run();}
+		run(tid);
+		vals.resize(xsize*ysize);
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
 		if (is_last) {post_run();}
 	}
 };
 
 
-// returns heights in [0,1] range
-void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, unsigned xsize, unsigned ysize) {
+// returns heights in approximately [-1,1] range
+void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float rx, float ry, unsigned xsize, unsigned ysize, int shape) {
 
 	unsigned tid(0);
 	compute_shader_t cshader("procedural_height_gen", xsize, ysize);
+	if (shape == 1) {cshader.set_prefix("#define BILLOWY", 1);} // FS
+	if (shape == 2) {cshader.set_prefix("#define RIDGED" , 1);} // FS
 	cshader.begin();
 	cshader.add_uniform_float("x0", x0);
 	cshader.add_uniform_float("y0", y0);
 	cshader.add_uniform_float("dx", dx);
 	cshader.add_uniform_float("dy", dy);
-	cshader.gen_matrix(vals, tid, 1, 1);
+	cshader.add_uniform_float("rx", rx);
+	cshader.add_uniform_float("ry", ry);
+	cshader.gen_matrix_R32F(vals, tid, 1, 1);
 	cshader.end_shader();
 	free_texture(tid);
 }

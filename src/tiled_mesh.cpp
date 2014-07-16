@@ -42,7 +42,7 @@ hmap_brush_param_t cur_brush_param;
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
-extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog;
+extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover;
 extern point sun_pos, moon_pos, surface_pos;
@@ -337,6 +337,7 @@ void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, floa
 
 	if (add_detail || !using_tiled_terrain_hmap_tex()) {
 		float const xy_scale(add_detail ? HMAP_DETAIL_SCALE : 1.0);
+		cache_values |= (mesh_gen_mode == 1 && (display_mode & 0x10));
 		height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, cache_values);
 	}
 }
