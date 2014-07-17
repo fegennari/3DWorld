@@ -25,10 +25,11 @@ class mesh_xy_grid_cache_t {
 	vector<float> xterms, yterms, cached_vals;
 	unsigned cur_nx, cur_ny;
 	float mx0, my0, mdx, mdy;
+	int gen_mode, gen_shape;
 
 public:
-	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0) {}
-	void build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values=0);
+	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0), gen_mode(0), gen_shape(0) {}
+	void build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values=0, bool force_sine_mode=0);
 	float eval_index(unsigned x, unsigned y, bool glaciate=1, int min_start_sin=0, bool use_cache=1) const;
 };
 

@@ -358,7 +358,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 	float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
 	float const zval_adj((world_mode == WMODE_INF_TERRAIN) ? 0.0 : -0.1);
 	mesh_xy_grid_cache_t density_gen, height_gen; // random tree generation based on transformed mesh height function
-	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1));
+	density_gen.build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, (x2-x1), (y2-y1), 0, 1); // force_sine_mode=1
 	if (approx_zval) {height_gen.build_arrays(DX_VAL*(x1 + xoff2 - (MESH_X_SIZE >> 1) + 0.5), DY_VAL*(y1 + yoff2 - (MESH_Y_SIZE >> 1) + 0.5), DX_VAL, DY_VAL, (x2-x1), (y2-y1));}
 	float const dxv(skip_val/(x2 - x1 - 1.0)), dyv(skip_val/(y2 - y1 - 1.0));
 	float xv(0.0), yv(0.0);

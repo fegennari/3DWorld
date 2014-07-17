@@ -2081,7 +2081,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 	if (NONUNIFORM_TREE_DEN) { // i==0 is the coverage density map, i>0 are the per-tree type coverage maps
 		for (int i = 0; i <= NUM_TREE_TYPES; ++i) { // Note: i should be signed
 			float const tds(TREE_DIST_SCALE*(XY_MULT_SIZE/16384.0)*(i==0 ? 1.0 : 0.1)), xscale(tds*DX_VAL*DX_VAL), yscale(tds*DY_VAL*DY_VAL);
-			density_gen[i].build_arrays(xscale*(x1 + xoff2 + 1000*i), yscale*(y1 + yoff2 - 1500*i), xscale, yscale, (x2-x1), (y2-y1));
+			density_gen[i].build_arrays(xscale*(x1 + xoff2 + 1000*i), yscale*(y1 + yoff2 - 1500*i), xscale, yscale, (x2-x1), (y2-y1), 0, 1); // force_sine_mode=1
 		}
 	}
 	for (int i = y1; i < y2; i += skip_val) {

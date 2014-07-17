@@ -42,7 +42,7 @@ hmap_brush_param_t cur_brush_param;
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
-extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode;
+extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover;
 extern point sun_pos, moon_pos, surface_pos;
@@ -337,7 +337,6 @@ void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, floa
 
 	if (add_detail || !using_tiled_terrain_hmap_tex()) {
 		float const xy_scale(add_detail ? HMAP_DETAIL_SCALE : 1.0);
-		cache_values |= (mesh_gen_mode == 1 && (display_mode & 0x10));
 		height_gen.build_arrays(xy_scale*x0, xy_scale*y0, xy_scale*dx, xy_scale*dy, nx, ny, cache_values);
 	}
 }
@@ -767,9 +766,11 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const xy_mult(1.0/float(size)), water_level(get_water_z_height());
 		float const MESH_NOISE_SCALE = 0.003;
 		float const MESH_NOISE_FREQ  = 80.0;
-		float const dz_inv(1.0/(zmax - zmin)), noise_scale(MESH_NOISE_SCALE*mesh_scale_z);
+		float const dz_inv(1.0/(zmax - zmin));
+		float const noise_scale(((mesh_gen_shape == 2) ? 2.0 : 1.0)*MESH_NOISE_SCALE*mesh_scale_z); // add more noise for ridged
 		int k1, k2, k3, k4;
-		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax, MESH_NOISE_FREQ*deltay, zvsize, zvsize);
+		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
+			MESH_NOISE_FREQ*deltay, zvsize, zvsize, 0, 1); // force_sine_mode=1
 
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
@@ -1682,17 +1683,12 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {
 		create_pine_tree_instances();
 	}
-	if (to_gen_trees.size() == 1) { // common case, no need for multiple threads
-		to_gen_trees[0]->init_pine_tree_draw();
-	}
-	else if (!to_gen_trees.empty()) {
-		//RESET_TIME;
-		#pragma omp parallel for schedule(dynamic,1)
-		for (int i = 0; i < (int)to_gen_trees.size(); ++i) {
-			to_gen_trees[i]->init_pine_tree_draw();
-		}
-		//PRINT_TIME("Gen Trees2");
-	}
+	//RESET_TIME;
+	// don't use parallel tree gen for a single tile, or when GPU heightmaps are enabled
+	#pragma omp parallel for schedule(dynamic,1) if (mesh_gen_mode != 3 && to_gen_trees.size() > 1)
+	for (int i = 0; i < (int)to_gen_trees.size(); ++i) {to_gen_trees[i]->init_pine_tree_draw();}
+	//PRINT_TIME("Gen Trees2");
+	
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		(*i)->pre_draw(height_gen);
 		(*i)->update_pine_tree_state(1);

@@ -189,9 +189,7 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 	height_gen.build_arrays((x_offset - xsize/2)*DX_VAL, (y_offset - ysize/2)*DY_VAL, DX_VAL, DY_VAL, xsize, ysize);
 
 	for (int i = 0; i < ysize; ++i) {
-		for (int j = 0; j < xsize; ++j) {
-			matrix[i][j] = height_gen.eval_index(j, i, 0);
-		}
+		for (int j = 0; j < xsize; ++j) {matrix[i][j] = height_gen.eval_index(j, i, 0);}
 	}
 }
 
@@ -518,7 +516,7 @@ void compute_scale() {
 
 
 void apply_noise_shape_final(float &noise, int shape) {
-	switch (mesh_gen_shape) {
+	switch (shape) {
 	case 0: break; // linear - do nothing
 	case 1: noise = fabs(noise) - 2.0; break; // billowy
 	case 2: noise = 3.5 - fabs(noise); break; // ridged
@@ -526,7 +524,7 @@ void apply_noise_shape_final(float &noise, int shape) {
 }
 
 void apply_noise_shape_per_term(float &noise, int shape) { // inputs and outputs [-1, 1]
-	switch (mesh_gen_shape) {
+	switch (shape) {
 	case 0: break; // linear - do nothing
 	case 1: noise = 2.0*fabs(noise) - 1.0; break; // billowy
 	case 2: noise = 1.0 - 2.0*fabs(noise); break; // ridged
@@ -534,7 +532,7 @@ void apply_noise_shape_per_term(float &noise, int shape) { // inputs and outputs
 }
 
 float get_hmap_scale(int mode) {
-	return ((mode == 1) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale/mesh_scale_z;
+	return ((mode == 1 || mode == 3) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale/mesh_scale_z; // simplex vs. perlin
 }
 
 void gen_rx_ry(float &rx, float &ry) {
@@ -545,13 +543,18 @@ void gen_rx_ry(float &rx, float &ry) {
 }
 
 
-void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float rx, float ry, unsigned xsize, unsigned ysize, int shape);
+void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy,
+	float rx, float ry, unsigned xsize, unsigned ysize, int shape);
 
-void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values) {
-
+void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
+	unsigned nx, unsigned ny, bool cache_values, bool force_sine_mode)
+{
 	assert(nx >= 0 && ny >= 0);
 	assert(start_eval_sin <= F_TABLE_SIZE);
 	cur_nx = nx; cur_ny = ny; mx0 = x0; my0 = y0; mdx = dx; mdy = dy;
+	gen_mode  = (force_sine_mode ? 0 : mesh_gen_mode );
+	gen_shape = (force_sine_mode ? 0 : mesh_gen_shape);
+	cached_vals.clear();
 	xterms.resize(nx*F_TABLE_SIZE, 0.0);
 	yterms.resize(ny*F_TABLE_SIZE, 0.0);
 	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale), msz_inv(1.0/mesh_scale_z);
@@ -562,47 +565,39 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy, 
 
 		for (unsigned i = 0; i < nx; ++i) {
 			float sin_val(SINF(x_mult*(x0 + i*dx) + x_const));
-			//apply_noise_shape_per_term(sin_val, mesh_gen_shape);
+			//apply_noise_shape_per_term(sin_val, gen_shape);
 			xterms[i*F_TABLE_SIZE+k] = sin_val;
 		}
 		for (unsigned i = 0; i < ny; ++i) {
 			float sin_val(SINF(y_mult*(y0 + i*dy) + y_const));
-			//apply_noise_shape_per_term(sin_val, mesh_gen_shape);
+			//apply_noise_shape_per_term(sin_val, gen_shape);
 			yterms[i*F_TABLE_SIZE+k] = y_scale*sin_val;
 		}
 	}
-	if (cache_values) {
+	if (gen_mode == 3) { // GPU simplex noise - always cache values
 		//RESET_TIME;
-
-		if (mesh_gen_mode == 1 && (display_mode & 0x10)) { // only for simplex noise
-			float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
-			float const zscale(get_hmap_scale(mesh_gen_mode));
-			float rx, ry;
-			gen_rx_ry(rx, ry);
-			gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, rx, ry, cur_nx, cur_ny, mesh_gen_shape);
-			
-			for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {
-				*i *= zscale;
-				if (GLACIATE) {*i = get_glaciated_zval(*i);} // Note: glaciate=1
-			}
-			//PRINT_TIME("GPU Height");
-		}
-		else {
-			cached_vals.resize(cur_nx*cur_ny);
+		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
+		float const zscale(get_hmap_scale(gen_mode));
+		float rx, ry;
+		gen_rx_ry(rx, ry);
+		gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, rx, ry, cur_nx, cur_ny, gen_shape);
+		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {*i *= zscale;}
+		//PRINT_TIME("GPU Height");
+	}
+	else if (cache_values) {
+		cached_vals.resize(cur_nx*cur_ny);
 		
-			#pragma omp parallel for schedule(static,1)
-			for (int y = 0; y < (int)cur_ny; ++y) {
-				for (unsigned x = 0; x < cur_nx; ++x) {
-					cached_vals[y*cur_nx + x] = eval_index(x, y, 1, 0, 0); // Note: glaciate=1, num_start_sin=1
-				}
+		#pragma omp parallel for schedule(static,1)
+		for (int y = 0; y < (int)cur_ny; ++y) {
+			for (unsigned x = 0; x < cur_nx; ++x) {
+				cached_vals[y*cur_nx + x] = eval_index(x, y, 1, 0, 0); // Note: glaciate=1, num_start_sin=1
 			}
-			//PRINT_TIME("CPU Height");
 		}
 	}
 }
 
 
-// mode: 0=sine tables, 1=simplex, 2=perlin
+// mode: 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex
 // shape: 0=linear, 1=billowy, 2=ridged
 float get_noise_zval(float xval, float yval, int mode, int shape) {
 
@@ -616,7 +611,7 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 
 	for (unsigned i = 0; i < end_octave; ++i) {
 		glm::vec2 const pos((freq*xv + rx), (freq*yv + ry));
-		float noise((mode == 1) ? glm::simplex(pos) : glm::perlin(pos));
+		float noise((mode == 1 || mode == 3) ? glm::simplex(pos) : glm::perlin(pos));
 		switch (shape) {
 		case 0: break; // linear - do nothing
 		case 1: noise = fabs(noise) - 0.40; break; // billowy
@@ -636,17 +631,19 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin, bool use_cache) const {
 
 	assert(x < cur_nx && y < cur_ny);
-	if (use_cache && !cached_vals.empty()) {return cached_vals[y*cur_nx + x];}
 	float zval(0.0);
 
-	if (mesh_gen_mode > 0) { // perlin/simplex
-		zval += get_noise_zval((x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV, mesh_gen_mode, mesh_gen_shape);
+	if ((use_cache || gen_mode == 3) && !cached_vals.empty()) {
+		zval += cached_vals[y*cur_nx + x];
+	}
+	else if (gen_mode > 0) { // perlin/simplex
+		zval += get_noise_zval((x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV, gen_mode, gen_shape);
 	}
 	else { // sine tables
 		float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
 		float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
 		for (int i = max(start_eval_sin, min_start_sin); i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
-		apply_noise_shape_final(zval, mesh_gen_shape);
+		apply_noise_shape_final(zval, gen_shape);
 	}
 	if (GLACIATE && glaciate) {zval = get_glaciated_zval(zval);}
 	return zval;

@@ -972,8 +972,9 @@ public:
 
 
 // returns heights in approximately [-1,1] range
-void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float rx, float ry, unsigned xsize, unsigned ysize, int shape) {
-
+void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy,
+	float rx, float ry, unsigned xsize, unsigned ysize, int shape)
+{
 	unsigned tid(0);
 	compute_shader_t cshader("procedural_height_gen", xsize, ysize);
 	if (shape == 1) {cshader.set_prefix("#define BILLOWY", 1);} // FS

@@ -1,5 +1,4 @@
 Hardware tessellation
-Vertex Array Objects
 
 Better pine tree texture
 More grass/plant types: Yellow and white flowers
@@ -11,7 +10,6 @@ Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
 http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
-Create terrain heightmap tiles and map view heights directly on GPU
 
 Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
