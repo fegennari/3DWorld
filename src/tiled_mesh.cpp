@@ -770,7 +770,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const noise_scale(((mesh_gen_shape == 2) ? 2.0 : 1.0)*MESH_NOISE_SCALE*mesh_scale_z); // add more noise for ridged
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
-			MESH_NOISE_FREQ*deltay, zvsize, zvsize, 0, 1); // force_sine_mode=1
+			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {

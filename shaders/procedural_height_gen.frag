@@ -1,4 +1,4 @@
-uniform float x0, y0, dx, dy, rx, ry;
+uniform float x0, y0, dx, dy, rx, ry, zscale;
 
 varying vec3 vpos;
 
@@ -48,7 +48,6 @@ float simplex(in vec2 v)
 	// Permutations
 	i = mod(i, vec2(289)); // Avoid truncation effects in permutation
 	vec3 p = permute(permute(i.y + vec3(0, i1.y, 1)) + i.x + vec3(0, i1.x, 1));
-
 	vec3 m = max(vec3(0.5) - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), vec3(0));
 	m = m * m;
 	m = m * m;
@@ -98,8 +97,7 @@ void main()
 		crx  *= 1.5;
 		cry  *= 1.5;
 	}
-	//zval = clamp((0.5*zval + 0.5), 0.0, 1.0); // map [-1,1] range to [0,1]
-	fg_FragColor = vec4(zval, 0.0, 0.0, 1.0); // only red channel is used
+	fg_FragColor = vec4(zscale*zval, 0.0, 0.0, 1.0); // only red channel is used
 }
 
 

@@ -543,7 +543,7 @@ void gen_rx_ry(float &rx, float &ry) {
 }
 
 
-void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy,
+void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float zscale,
 	float rx, float ry, unsigned xsize, unsigned ysize, int shape);
 
 void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
@@ -576,12 +576,10 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	}
 	if (gen_mode == 3) { // GPU simplex noise - always cache values
 		//RESET_TIME;
-		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV);
-		float const zscale(get_hmap_scale(gen_mode));
+		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
 		float rx, ry;
 		gen_rx_ry(rx, ry);
-		gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, rx, ry, cur_nx, cur_ny, gen_shape);
-		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {*i *= zscale;}
+		gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, zscale, rx, ry, cur_nx, cur_ny, gen_shape);
 		//PRINT_TIME("GPU Height");
 	}
 	else if (cache_values) {

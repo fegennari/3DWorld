@@ -972,7 +972,7 @@ public:
 
 
 // returns heights in approximately [-1,1] range
-void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy,
+void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float zscale,
 	float rx, float ry, unsigned xsize, unsigned ysize, int shape)
 {
 	unsigned tid(0);
@@ -986,6 +986,7 @@ void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx
 	cshader.add_uniform_float("dy", dy);
 	cshader.add_uniform_float("rx", rx);
 	cshader.add_uniform_float("ry", ry);
+	cshader.add_uniform_float("zscale", zscale);
 	cshader.gen_matrix_R32F(vals, tid, 1, 1);
 	cshader.end_shader();
 	free_texture(tid);
