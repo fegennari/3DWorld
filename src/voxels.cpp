@@ -11,6 +11,7 @@
 #include "file_utils.h"
 #include "openal_wrap.h"
 #include "cobj_bsp_tree.h"
+#include <glm/gtc/noise.hpp>
 
 
 bool const DEBUG_BLOCKS    = 0;
@@ -27,7 +28,7 @@ voxel_model_ground terrain_voxel_model(1); // one LOD level
 voxel_brush_params_t voxel_brush_params;
 
 extern bool group_back_face_cull, voxel_shadows_updated;
-extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing;
+extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing, mesh_gen_mode;
 extern float tfticks;
 extern coll_obj_group coll_objects;
 
@@ -237,26 +238,48 @@ void voxel_manager::clear() {
 
 void voxel_manager::create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2) {
 
-	noise_gen_3d ngen;
-	ngen.set_rand_seeds(rseed1, rseed2);
-	ngen.gen_sines(mag, freq); // create sine table
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];
-	ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
+	noise_gen_3d ngen;
+
+	if (mesh_gen_mode == 0) {
+		ngen.set_rand_seeds(rseed1, rseed2);
+		ngen.gen_sines(mag, freq); // create sine table
+		ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
+	}
 	float const zscale((params.invert ? -1.0 : 1.0)*params.z_gradient/(nz-1));
 
 	#pragma omp parallel for schedule(dynamic,1)
 	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {
+				float val(0.0);
+
+				switch (mesh_gen_mode) {
+				case 0: // sines
 #if 1
-				float val(ngen.get_val(x, y, z, xyz_vals) + z*zscale);
+					val = ngen.get_val(x, y, z, xyz_vals);
 #else
-				point pos(get_pt_at(x, y, z));
-				pos += 20.0*fabs(ngen.get_val(0.01*pos))*vector3d(1,1,1); // warp
-				float val(ngen.get_val(pos));
+					point pos(get_pt_at(x, y, z));
+					pos += 20.0*fabs(ngen.get_val(0.01*pos))*vector3d(1,1,1); // warp
+					float val(ngen.get_val(pos));
 #endif
-				if (normalize_to_1) val = CLIP_TO_pm1(val);
+					break;
+				case 1: { // simplex
+						vector3d const v((lo_pos + offset) + vector3d(x, y, z)*vsz);
+						val = mag*glm::simplex(glm::vec3(v.x, v.y, v.z));
+					}
+					break;
+				case 2: { // perlin
+						vector3d const v((lo_pos + offset) + vector3d(x, y, z)*vsz);
+						val = mag*glm::perlin(glm::vec3(v.x, v.y, v.z));
+					}
+					break;
+				default:
+					assert(0); // GPU simplex not supported
+				}
+				val += z*zscale;
+				if (normalize_to_1) {val = CLIP_TO_pm1(val);}
 				set(x, y, z, val); // scale value?
 			}
 		}

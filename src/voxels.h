@@ -248,7 +248,8 @@ protected:
 		vector3d normal;
 
 		merge_vn_t() : num(0), normal(zero_vector) {vn[0] = vn[1] = vn[2] = vn[3] = NULL;}
-		void add   (vertex_type_t &v) {assert(num < 4); vn[num++] = &v;}
+		//void add   (vertex_type_t &v) {assert(num < 4); vn[num++] = &v;}
+		void add   (vertex_type_t &v) {if (num < 4) {vn[num++] = &v;}} // allow degenerate vertices where more than 4 quads meet
 		void update(vertex_type_t &v) {if (normal == zero_vector) {normal = v.n;} else {v.n = normal;}}
 		void finalize();
 	};
