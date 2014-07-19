@@ -5,6 +5,16 @@
 #define _DYNAMIC_PARTICLE_H_
 
 
+struct dpart_params_t {
+	float rmin, rmax, vmin, vmax, imin, imax; // {min, max}x{radius, velocity, intensity}
+	vector3d sdist[2]; // low, high spawn distances
+
+	dpart_params_t() : rmin(0.03), rmax(0.07), vmin(0.6), vmax(3.0), imin(0.12), imax(0.26) {
+		sdist[0] = sdist[1] = vector3d(1,1,1);
+	}
+};
+
+
 class dynamic_particle : public sphere_t { // size = 60
 
 	bool moves, lighted, collides, chdir, gravity;

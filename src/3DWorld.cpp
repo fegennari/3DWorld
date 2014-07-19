@@ -124,6 +124,7 @@ extern vector<bbox> team_starts;
 extern player_state *sstates;
 extern pt_line_drawer obj_pld;
 extern tree_cont_t t_trees;
+extern dpart_params_t dp_params;
 
 
 void init_keyset();
@@ -1606,7 +1607,17 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "leaf_color") {
 			if (fscanf(fp, "%f%f%f%f%f", &leaf_base_color.R, &leaf_base_color.G, &leaf_base_color.B, &leaf_color_coherence, &tree_color_coherence) != 5) {
-				cfg_err("leaf color command", error);
+				cfg_err("leaf_color command", error);
+			}
+		}
+		else if (str == "floating_light_params") { // rmin, rmax, vmin, vmax, imin, imax
+			if (fscanf(fp, "%f%f%f%f%f%f", &dp_params.rmin, &dp_params.rmax, &dp_params.vmin, &dp_params.vmax, &dp_params.imin, &dp_params.imax) != 6) {
+				cfg_err("floating_light_params command", error);
+			}
+		}
+		else if (str == "floating_light_range") { // x1 x2 y1 y2 z1 z2
+			if (fscanf(fp, "%f%f%f%f%f%f", &dp_params.sdist[0].x, &dp_params.sdist[1].x, &dp_params.sdist[0].y, &dp_params.sdist[1].y, &dp_params.sdist[0].z, &dp_params.sdist[1].z) != 6) {
+				cfg_err("floating_light_range command", error);
 			}
 		}
 		else if (str == "toggle_mesh_enabled") {

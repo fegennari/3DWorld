@@ -17,6 +17,7 @@ float    const MAX_D_HEIGHT   = 0.1;
 
 
 dynamic_particle_system d_part_sys;
+dpart_params_t dp_params;
 
 
 extern int window_width, iticks, begin_motion, animate2, display_mode, frame_counter;
@@ -29,11 +30,10 @@ extern obj_type object_types[];
 // ************ dynamic_particle ************
 
 
-dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(0.03, 0.07)), moves(1), lighted(1),
-	collides(1), chdir(0), gravity(0), tid(-1), cid(-1), intensity(rand_uniform(0.6, 1.3)*0.2*XY_SCENE_SIZE),
-	bwidth(1.0), velocity(signed_rand_vector(rand_uniform(0.6, 3.0)))
+dynamic_particle::dynamic_particle() : sphere_t(all_zeros, rand_uniform(dp_params.rmin, dp_params.rmax)), moves(1), lighted(1),
+	collides(1), chdir(0), gravity(0), tid(-1), cid(-1), intensity(rand_uniform(dp_params.imin, dp_params.imax)*XY_SCENE_SIZE),
+	bwidth(1.0), velocity(signed_rand_vector(rand_uniform(dp_params.vmin, dp_params.vmax)))
 {
-	//radius = 24.0*HALF_DXY*intensity*intensity;
 	colorRGBA const colors[] = {WHITE, RED, GREEN, BLUE, YELLOW};
 	color = colors[rand() % (sizeof(colors)/sizeof(colorRGBA))];
 	gen_pos();
@@ -44,6 +44,7 @@ void dynamic_particle::gen_pos() {
 	
 	do {
 		rand_xy_point(rand_uniform(zbottom, (MAX_D_HEIGHT + max(ztop, czmax))), pos, 0);
+		UNROLL_3X(pos[i_] *= dp_params.sdist[pos[i_] >= 0.0][i_];)
 	} while (point_inside_voxel_terrain(pos));
 }
 
@@ -107,7 +108,7 @@ void dynamic_particle::apply_physics(float stepsize, int index) { // begin_motio
 		obj.check_vert_collision(index, 0, 0); // ignoring return value
 		pos = obj.pos;
 		float const vmag(obj.velocity.mag());
-		if (vmag > TOLERANCE) velocity = obj.velocity*(velocity.mag()/vmag); // same magnitude
+		if (vmag > TOLERANCE) {velocity = obj.velocity*(velocity.mag()/vmag);} // same magnitude
 	}
 }
 

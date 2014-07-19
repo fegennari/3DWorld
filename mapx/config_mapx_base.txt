@@ -53,6 +53,8 @@ snow_random 0.0
 num_test_snowflakes 100 # in M
 snow_file mapx/snow.map 0
 
+floating_light_range  0.75 0.75  0.75 0.75  1.0 1.0 # x1 x2 y1 y2 z1 z2
+
 mesh_size  128 128 64
 # mesh_size  256 256 128
 scene_size 10.0 10.0 5.0 # about 300 feet
