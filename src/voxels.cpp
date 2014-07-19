@@ -28,7 +28,7 @@ voxel_model_ground terrain_voxel_model(1); // one LOD level
 voxel_brush_params_t voxel_brush_params;
 
 extern bool group_back_face_cull, voxel_shadows_updated;
-extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing, mesh_gen_mode;
+extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing, mesh_gen_mode, mesh_freq_filter;
 extern float tfticks;
 extern coll_obj_group coll_objects;
 
@@ -37,6 +37,7 @@ template class voxel_grid<float>; // explicit instantiation
 
 int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos);
 bool read_voxel_brushes();
+void gen_rx_ry(float &rx, float &ry);
 
 
 // if size==old_size, we do nothing;  if size==0, we only free the texture
@@ -241,11 +242,15 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];
 	noise_gen_3d ngen;
+	float rx, ry;
 
 	if (mesh_gen_mode == 0) {
 		ngen.set_rand_seeds(rseed1, rseed2);
 		ngen.gen_sines(mag, freq); // create sine table
 		ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
+	}
+	else {
+		gen_rx_ry(rx, ry);
 	}
 	float const zscale((params.invert ? -1.0 : 1.0)*params.z_gradient/(nz-1));
 
@@ -255,28 +260,27 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 			for (unsigned z = 0; z < nz; ++z) {
 				float val(0.0);
 
-				switch (mesh_gen_mode) {
-				case 0: // sines
+				if (mesh_gen_mode == 0) { // sines
 #if 1
 					val = ngen.get_val(x, y, z, xyz_vals);
 #else
 					point pos(get_pt_at(x, y, z));
 					pos += 20.0*fabs(ngen.get_val(0.01*pos))*vector3d(1,1,1); // warp
-					float val(ngen.get_val(pos));
+					val = ngen.get_val(pos);
 #endif
-					break;
-				case 1: { // simplex
-						vector3d const v((lo_pos + offset) + vector3d(x, y, z)*vsz);
-						val = mag*glm::simplex(glm::vec3(v.x, v.y, v.z));
+				}
+				else { // GLM perlin/simplex (GPU simplex not needed/supported)
+					point const pos(get_pt_at(x, y, z) + offset);
+					glm::vec3 const v(pos.x, pos.y, pos.z);
+					float nmag(mag), nfreq(0.25*freq);
+					float const lacunarity(1.92), gain(0.5);
+
+					for (int n = 0; n < max(1, ((int)MAX_FREQ_BINS - mesh_freq_filter)); ++n) {
+						glm::vec3 const nv(nfreq*v + glm::vec3(rx, ry, rx-ry));
+						val   += nmag*((mesh_gen_mode == 2) ? glm::perlin(nv) : glm::simplex(nv));
+						nmag  *= gain;
+						nfreq *= lacunarity;
 					}
-					break;
-				case 2: { // perlin
-						vector3d const v((lo_pos + offset) + vector3d(x, y, z)*vsz);
-						val = mag*glm::perlin(glm::vec3(v.x, v.y, v.z));
-					}
-					break;
-				default:
-					assert(0); // GPU simplex not supported
 				}
 				val += z*zscale;
 				if (normalize_to_1) {val = CLIP_TO_pm1(val);}
