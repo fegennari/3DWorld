@@ -1144,15 +1144,17 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	assert(size > 0);
 	assert(weight_tid > 0 && height_tid > 0 && shadow_normal_tid > 0);
 	fgPushMatrix();
-	translate_to(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0)); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
-	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s);
+	vector3d const xlate(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
+	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
 	bind_2d_texture(weight_tid);
 	bind_texture_tu(height_tid, 12);
 	bind_texture_tu(shadow_normal_tid, 7);
+	bool const draw_near_water(!is_distant && !reflection_pass && has_water());
 
 	if (!reflection_pass && cloud_shadows_enabled()) {
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
+	if (draw_near_water) {s.add_uniform_vector3d("tc_xlate", xlate);} // for underwater caustics texture
 	shader_shadow_map_setup(s);
 	unsigned const lod_level(get_lod_level(reflection_pass));
 	unsigned const step(1 << lod_level), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
@@ -1198,7 +1200,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	fgPopMatrix();
 
 	// draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
-	if (!is_distant && !reflection_pass && has_water()) {
+	if (draw_near_water) {
 		cube_t const bcube(get_mesh_bcube());
 		static vector<vert_wrap_t> wverts;
 		wverts.resize(0);
@@ -1547,7 +1549,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	if (reflection_pass) {s.set_prefix("#define REFLECTION_MODE", 1);} // FS
 	s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
 	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
-	s.set_vert_shader("texture_gen.part+water_fog.part+tiled_mesh");
+	s.set_vert_shader("water_fog.part+tiled_mesh");
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+tiled_mesh");
 	s.begin_shader();
 	setup_tt_fog_post(s);
@@ -1580,6 +1582,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	else { // or just disable water fog calculation in the vertex shader (water_fog.part)?
 		s.add_uniform_float("water_plane_z", (reflection_pass ? water_plane_z : zmin)); // used for fog calculation/clipping
 	}
+	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s);
 }
 
 

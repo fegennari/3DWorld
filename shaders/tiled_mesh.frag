@@ -15,7 +15,7 @@ uniform vec3 uw_atten_scale;
 uniform vec3 snow_cscale = vec3(1.0);
 
 varying vec4 vertex; // world space
-varying vec2 tc2;
+varying vec2 tc2; // for water caustics
 //varying vec2 tc; // comes from detail_normal_map.part.frag
 
 // underwater attenuation code
