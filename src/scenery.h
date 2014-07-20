@@ -15,16 +15,18 @@
 int get_bark_tex_for_tree_type(int type);
 
 
-enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, NUM_PLANT_TYPES};
+enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, SEAWEED, NUM_PLANT_TYPES};
 unsigned const NUM_LAND_PLANT_TYPES  = 6;
 unsigned const NUM_WATER_PLANT_TYPES = NUM_PLANT_TYPES - NUM_LAND_PLANT_TYPES;
 
 struct plant_type {
 
 	int tid;
+	float leaf_length, leaf_width_base, leaf_width_end;
 	colorRGBA stemc, leafc, berryc;
 
-	plant_type(int tid_, colorRGBA const &sc, colorRGBA const &lc, colorRGBA const &bc) : tid(tid_), stemc(sc), leafc(lc), berryc(bc) {}
+	plant_type(int tid_, colorRGBA const &sc, colorRGBA const &lc, colorRGBA const &bc, float leaf_length_=1.0, float leaf_width_base_=1.0, float leaf_width_end_=1.0)
+		: tid(tid_), stemc(sc), leafc(lc), berryc(bc), leaf_length(leaf_length_), leaf_width_base(leaf_width_base_), leaf_width_end(leaf_width_end_) {}
 };
 
 
@@ -144,8 +146,8 @@ public:
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager);
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
-	void draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const;
-	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const;
+	void draw_stem(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate) const;
+	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate) const;
 	void draw_berries(shader_t &s, vector3d const &xlate) const;
 	void remove_cobjs();
 	void destroy();
@@ -179,7 +181,7 @@ public:
 	void do_rock_damage(point const &pos, float radius, float damage);
 	void add_plant(point const &pos, float height, float radius, int type, int calc_z);
 	void gen(int x1, int y1, int x2, int y2, float vegetation_, bool fixed_sz_rock_cache);
-	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate);
+	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass=0);
 	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem());} // only accounts for part of the memory

@@ -439,7 +439,7 @@ unsigned get_cube_corners(float const d[3][2], point corners[8], point const &vi
 void get_closest_cube_norm(float const d[3][2], point const &p, vector3d &norm);
 void cylinder_bounding_sphere(point const *const pts, float r1, float r2, point &center, float &radius);
 void polygon_bounding_sphere(const point *pts, int npts, float thick, point &center, float &radius);
-void add_rotated_quad_pts(vert_norm *points, unsigned &ix, float theta, float z, point const &pos, float xy_scale, float z_scale);
+void add_rotated_quad_pts(vert_norm *points, unsigned &ix, float theta, float z, point const &pos, float xscale1, float xscale2, float yscale, float zscale);
 void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout);
 template<typename T> void rotate_vector3d(pointT<T> vin, pointT<T> const &vrot, double angle, pointT<T> &vout);
 template<typename T> void rotate_vector3d_multi(pointT<T> const &vrot, double angle, pointT<T> *vout, unsigned nv);

@@ -1083,14 +1083,14 @@ void polygon_bounding_sphere(const point *pts, int npts, float thick, point &cen
 }
 
 
-void add_rotated_quad_pts(vert_norm *points, unsigned &ix, float theta, float z, point const &pos, float xy_scale, float z_scale) {
+void add_rotated_quad_pts(vert_norm *points, unsigned &ix, float theta, float z, point const &pos, float xscale1, float xscale2, float yscale, float zscale) {
 
 	point pts[4];
 	vector3d const v1(SINF(theta), COSF(theta), 0.0), v2(cross_product(v1, plus_z)); // should be normalized
-	pts[0] = xy_scale*(2*v1 + v2); pts[0].z += z - z_scale;
-	pts[1] = xy_scale*(2*v1 - v2); pts[1].z += z - z_scale;
-	pts[2] = xy_scale*(-v2); pts[2].z += z + z_scale;
-	pts[3] = xy_scale*( v2); pts[3].z += z + z_scale;
+	pts[0] = 2.0*yscale*v1 + xscale2*v2; pts[0].z += z - zscale;
+	pts[1] = 2.0*yscale*v1 - xscale2*v2; pts[1].z += z - zscale;
+	pts[2] = -xscale1*v2; pts[2].z += z + zscale;
+	pts[3] =  xscale1*v2; pts[3].z += z + zscale;
 	vector3d const norm(cross_product((pts[1] - pts[0]), (pts[2] - pts[1])).get_norm());
 	for (unsigned i = 0; i < 4; ++i) {points[ix++] = vert_norm((pts[i] + pos), norm);}
 }

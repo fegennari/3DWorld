@@ -607,6 +607,7 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 	float rx, ry;
 	gen_rx_ry(rx, ry);
 
+	//#pragma omp parallel for schedule(static,1)
 	for (unsigned i = 0; i < end_octave; ++i) {
 		glm::vec2 const pos((freq*xv + rx), (freq*yv + ry));
 		float noise((mode == 1 || mode == 3) ? glm::simplex(pos) : glm::perlin(pos));

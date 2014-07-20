@@ -18,15 +18,15 @@ float    const PT_LINE_THRESH  = 800.0;
 colorRGBA const stem_c(0.4, 0.6, 0.2, 1.0);
 colorRGBA const leaf_c(0.7, 0.7, 0.7, 1.0);
 
-// tid, stemc, leafc
+// tid, stemc, leafc, berryc, leaf_length, leaf_width_base, leaf_width_end
 plant_type const pltype[NUM_PLANT_TYPES] = {
 	plant_type(MJ_LEAF_TEX, stem_c,   leaf_c, ALPHA0),
 	plant_type(PLANT1_TEX,  stem_c,   leaf_c, ALPHA0),
 	plant_type(PLANT2_TEX,  stem_c,   leaf_c, PURPLE),
 	plant_type(PLANT3_TEX,  stem_c,   leaf_c, colorRGBA(0.9, 0.1, 0.05)),
 	plant_type(PLANT4_TEX,  stem_c,   leaf_c, ALPHA0),
-	plant_type(COFFEE_TEX,  LT_BROWN, WHITE,  ALPHA0)
-	//plant_type(GRASS_BLADE_TEX, DK_GREEN, WHITE,  ALPHA0), // seaweed
+	plant_type(COFFEE_TEX,  LT_BROWN, WHITE,  ALPHA0),
+	plant_type(GRASS_BLADE_TEX, DK_GREEN, DK_GREEN, ALPHA0, 2.0, 0.2, 0.0) // seaweed
 };
 
 
@@ -109,39 +109,29 @@ bool scenery_obj::update_zvals(int x1, int y1, int x2, int y2) {
 
 
 bool scenery_obj::in_camera_view(float brad, vector3d const &xlate) const {
-
 	return sphere_in_camera_view(pos+xlate, ((brad == 0.0) ? radius : brad), 0);
 }
 
-
 bool scenery_obj::is_visible(bool shadow_only, float bradius, vector3d const &xlate) const {
-
 	if (shadow_only ? !is_over_mesh(pos+xlate) : !in_camera_view(bradius, xlate)) return 0;
 	return (shadow_only || !skip_uw_draw(pos+xlate, radius));
 }
 
-
 float scenery_obj::get_shadowed_color(point const &p, float eff_radius) const { // not used on rock_shapes
-
 	if (world_mode != WMODE_GROUND) return 1.0;
 	return (is_visible_to_light_cobj(p, get_light(), eff_radius, coll_id, 0) ? 1.0 : SHADOW_VAL);
 }
-
 
 float scenery_obj::get_size_scale(float dist_to_camera, float scale_val, float scale_exp) const {
 	return ((scale_val == 0.0) ? 1.0 : min(1.0f, pow(scale_val/dist_to_camera, scale_exp)));
 }
 
-
 colorRGBA scenery_obj::get_atten_color(colorRGBA c, vector3d const &xlate) const {
-
 	water_color_atten_at_pos(c, (pos + xlate + point(0.0, 0.0, radius)));
 	return c;
 }
 
-
 void scenery_obj::remove_cobjs() {
-
 	remove_reset_coll_obj(coll_id);
 }
 
@@ -723,9 +713,10 @@ bool s_plant::check_sphere_coll(point &center, float sphere_radius) const { // u
 }
 
 void s_plant::create_leaf_points(vector<vert_norm> &points) const {
-
+	
 	// Note: could scale leaves for different plant types differently in x vs. y to allow for non-square textures (tighter bounds = lower fillrate)
 	float const wscale(250.0*radius*tree_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
+	float const llen(wscale*pltype[type].leaf_length), blwidth(wscale*pltype[type].leaf_width_base), elwidth(wscale*pltype[type].leaf_width_end);
 	unsigned const nlevels(unsigned(36.0*height*tree_scale)), nrings(3);
 	float rdeg(30.0);
 	points.resize(4*nlevels*nrings);
@@ -738,7 +729,7 @@ void s_plant::create_leaf_points(vector<vert_norm> &points) const {
 			float const theta(TWO_PI*(3.3*j + 0.2*k) + theta0);
 			int const val(int(((int(1.0E6*height))*(5463*j + 537879*k))%301));
 			rdeg += 0.01*(val - 150);
-			add_rotated_quad_pts(&points.front(), ix, theta, z, pos, sz*wscale, sz*rdeg/45.0);
+			add_rotated_quad_pts(&points.front(), ix, theta, z, pos, sz*blwidth, sz*elwidth, sz*llen, sz*rdeg/45.0);
 		}
 	}
 }
@@ -804,12 +795,15 @@ bool s_plant::is_shadowed() const {
 	return 1;
 }
 
-void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) const {
+void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
 
+	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
+	if (is_water_plant && (reflection_pass || (pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (shadow_only ? !is_over_mesh(pos+xlate) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
-	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0)); // call get_atten_color() for underwater seaweed
+	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
+	if (is_water_plant) {water_color_atten_at_pos(color, pos2);}
 	float const dist(distance_to_camera(pos2));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
@@ -822,16 +816,21 @@ void s_plant::draw_stem(float sscale, bool shadow_only, vector3d const &xlate) c
 	}
 }
 
-void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, vector3d const &xlate) const {
+void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
 
 	if (no_leaves) return;
-	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
+	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
+	if (is_water_plant && (reflection_pass || (pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
+	vector3d const rel_xlate(xlate + point(0.0, 0.0, 0.5*height));
+	point const pos2(pos + rel_xlate);
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, 0.5*(height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
+	if (is_water_plant) {s.add_uniform_color("color_scale", get_atten_color(WHITE, rel_xlate));}
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
+	if (is_water_plant) {s.add_uniform_color("color_scale", WHITE);}
 	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
 }
 
@@ -1079,14 +1078,14 @@ void scenery_group::gen(int x1, int y1, int x2, int y2, float vegetation_, bool 
 	//PRINT_TIME("Gen Scenery");
 }
 
-void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate) {
+void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass) {
 
 	s.set_specular(0.25, 20.0); // a small amount of specular
 	plant_vbo_manager.upload();
 	plant_vbo_manager.begin_render();
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
-		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, xlate);
+		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate);
 	}
 	plant_vbo_manager.end_render();
 	s.set_specular(0.0, 1.0);
@@ -1119,7 +1118,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 	if (!shadow_only) {select_texture(WOOD_TEX);} // plant stems use wood texture
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
-		plants[i].draw_stem(sscale, shadow_only, xlate);
+		plants[i].draw_stem(sscale, shadow_only, reflection_pass, xlate);
 	}
 	if (!shadow_only) { // no berry shadows
 		select_texture(WHITE_TEX); // berries are untextured

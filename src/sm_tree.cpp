@@ -759,7 +759,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 
 			for (unsigned k = 0; k < N_PT_RINGS; ++k) {
 				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
-				add_rotated_quad_pts(points, ix, theta, z, center, sz, rd*sz); // bounds are (sz, sz, rd*sz+z)
+				add_rotated_quad_pts(points, ix, theta, z, center, sz, sz, sz, rd*sz); // bounds are (sz, sz, rd*sz+z)
 			}
 		}
 		if (update_mode) {
