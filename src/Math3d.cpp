@@ -1078,10 +1078,7 @@ void polygon_bounding_sphere(const point *pts, int npts, float thick, point &cen
 
 	center = get_center(pts, npts);
 	radius = 0.0;
-
-	for (int i = 0; i < npts; ++i) {
-		radius = max(radius, p2p_dist_sq(center, pts[i]));
-	}
+	for (int i = 0; i < npts; ++i) {radius = max(radius, p2p_dist_sq(center, pts[i]));}
 	radius = sqrt(radius) + thick*SQRT3; // not sure this thickness thing is quite right...
 }
 
@@ -1089,17 +1086,13 @@ void polygon_bounding_sphere(const point *pts, int npts, float thick, point &cen
 void add_rotated_quad_pts(vert_norm *points, unsigned &ix, float theta, float z, point const &pos, float xy_scale, float z_scale) {
 
 	point pts[4];
-	float const tv(theta-0.5*PI_TWO), s(SINF(tv)*SQRTOFTWOINV), c(COSF(tv)*SQRTOFTWOINV);
-
-	for (unsigned i = 0; i < 4; ++i) {
-		pts[i].assign(xy_scale*(SINF(theta)+s), xy_scale*(COSF(theta)+c), z_scale*(-1.0+2.0*(i>>1))+z);
-		theta -= PI_TWO;
-	}
+	vector3d const v1(SINF(theta), COSF(theta), 0.0), v2(cross_product(v1, plus_z)); // should be normalized
+	pts[0] = xy_scale*(2*v1 + v2); pts[0].z += z - z_scale;
+	pts[1] = xy_scale*(2*v1 - v2); pts[1].z += z - z_scale;
+	pts[2] = xy_scale*(-v2); pts[2].z += z + z_scale;
+	pts[3] = xy_scale*( v2); pts[3].z += z + z_scale;
 	vector3d const norm(cross_product((pts[1] - pts[0]), (pts[2] - pts[1])).get_norm());
-
-	for (unsigned i = 0; i < 4; ++i) {
-		points[ix++] = vert_norm((pts[i] + pos), norm);
-	}
+	for (unsigned i = 0; i < 4; ++i) {points[ix++] = vert_norm((pts[i] + pos), norm);}
 }
 
 
