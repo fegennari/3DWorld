@@ -26,7 +26,7 @@ plant_type const pltype[NUM_PLANT_TYPES] = {
 	plant_type(PLANT3_TEX,  stem_c,   leaf_c, colorRGBA(0.9, 0.1, 0.05)),
 	plant_type(PLANT4_TEX,  stem_c,   leaf_c, ALPHA0),
 	plant_type(COFFEE_TEX,  LT_BROWN, WHITE,  ALPHA0),
-	plant_type(GRASS_BLADE_TEX, DK_GREEN, DK_GREEN, ALPHA0, 2.0, 0.2, 0.0) // seaweed
+	plant_type(GRASS_BLADE_TEX, GREEN, DK_GREEN, ALPHA0, 2.0, 0.2, 0.0) // seaweed
 };
 
 
@@ -803,7 +803,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	if (shadow_only ? !is_over_mesh(pos+xlate) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
-	if (is_water_plant) {water_color_atten_at_pos(color, pos2);}
+	if (is_water_plant) {water_color_atten_at_pos(color, pos+xlate);}
 	float const dist(distance_to_camera(pos2));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as line
@@ -821,11 +821,10 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (no_leaves) return;
 	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
 	if (is_water_plant && (reflection_pass || (pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
-	vector3d const rel_xlate(xlate + point(0.0, 0.0, 0.5*height));
-	point const pos2(pos + rel_xlate);
+	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, 0.5*(height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
-	if (is_water_plant) {s.add_uniform_color("color_scale", get_atten_color(WHITE, rel_xlate));}
+	if (is_water_plant) {s.add_uniform_color("color_scale", get_atten_color(WHITE, xlate));}
 	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
