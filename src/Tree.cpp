@@ -395,7 +395,8 @@ void tree_cont_t::check_leaf_shadow_change() {
 	point const lpos(get_light_pos());
 		
 	if (!no_sun_lpos_update && lpos != last_lpos) {
-		for (iterator i = begin(); i != end(); ++i) {i->calc_leaf_shadows();}
+		#pragma omp parallel for schedule(dynamic,1)
+		for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_leaf_shadows();}
 	}
 	last_lpos = lpos;
 }
