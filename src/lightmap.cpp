@@ -697,7 +697,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 	last_dlights_empty = cur_dlights_empty;
 
 	// step 1: the light sources themselves
-	unsigned const max_dlights      = 1024; // must agree with value in shader
+	unsigned const max_dlights      = 1024;
 	unsigned const floats_per_light = 12;
 	float dl_data[max_dlights*floats_per_light] = {0.0};
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
@@ -729,38 +729,42 @@ void upload_dlights_textures(cube_t const &bounds) {
 
 	// step 2: grid bag entries
 	static vector<unsigned> gb_data;
+	static vector<unsigned short> elem_data;
 	gb_data.resize(XY_MULT_SIZE, 0);
-	unsigned const elem_tex_sz = 256; // must agree with value in shader
-	unsigned const max_gb_entries(elem_tex_sz*elem_tex_sz);
-	unsigned short elem_data[max_gb_entries] = {0};
-	unsigned elix(0);
+	elem_data.resize(0);
+	unsigned const elem_tex_x = (1<<8); // must agree with value in shader
+	unsigned const elem_tex_y = (1<<10); // larger = slower, but more lights/higher quality
+	unsigned const max_gb_entries(elem_tex_x*elem_tex_y);
+	assert(max_gb_entries <= (1<<24)); // gb_data low bits allocation
 
-	for (int y = 0; y < MESH_Y_SIZE && elix < max_gb_entries; ++y) {
-		for (int x = 0; x < MESH_X_SIZE && elix < max_gb_entries; ++x) {
+	for (int y = 0; y < MESH_Y_SIZE && elem_data.size() < max_gb_entries; ++y) {
+		for (int x = 0; x < MESH_X_SIZE && elem_data.size() < max_gb_entries; ++x) {
 			unsigned const gb_ix(x + y*MESH_X_SIZE); // {start, end, unused}
-			gb_data[gb_ix] = elix; // start_ix
+			gb_data[gb_ix] = elem_data.size(); // 24 low bits = start_ix
 			vector<unsigned short> const &ixs(ldynamic[y][x].get_src_ixs());
-			unsigned const num_ixs(min((unsigned)ixs.size(), 256U)); // max of 256 lights per bin
+			unsigned const num_ixs(min((unsigned)ixs.size(), 255U)); // max of 255 lights per bin
 			
-			for (unsigned i = 0; i < num_ixs && elix < max_gb_entries; ++i) { // end if exceed max entries
+			for (unsigned i = 0; i < num_ixs && elem_data.size() < max_gb_entries; ++i) { // end if exceed max entries
 				if (ixs[i] >= ndl) continue; // dlight index is too high, skip
-				elem_data[elix++] = (unsigned short)ixs[i];
+				elem_data.push_back((unsigned short)ixs[i]);
 			}
-			gb_data[gb_ix] += (elix << 16); // end_ix
+			unsigned const num_ix(elem_data.size() - gb_data[gb_ix]);
+			assert(num_ix < (1<<8));
+			gb_data[gb_ix] += (num_ix << 24); // 8 high bits = num_ix
 		}
 	}
-	if (elix > 0.9*max_gb_entries) {
-		if (elix >= max_gb_entries) {std::cerr << "Warning: Exceeded max number of indexes in dynamic light texture upload" << endl;}
+	if (elem_data.size() > 0.9*max_gb_entries) {
+		if (elem_data.size() >= max_gb_entries) {std::cerr << "Warning: Exceeded max number of indexes in dynamic light texture upload" << endl;}
 		dlight_add_thresh = min(0.25, (dlight_add_thresh + 0.005)); // increase thresh to clip the dynamic lights to a smaller radius
 	}
 	if (elem_tid == 0) {
 		setup_2d_texture(elem_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, elem_tex_sz, elem_tex_sz, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, elem_data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, elem_tex_x, elem_tex_y, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, &elem_data.front());
 	}
 	else {
 		bind_2d_texture(elem_tid);
-		unsigned const height(min(elem_tex_sz, (elix/elem_tex_sz+1))); // approximate ceiling
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_sz, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, elem_data);
+		unsigned const height(min(elem_tex_y, (elem_data.size()/elem_tex_x+1U))); // approximate ceiling
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_x, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, &elem_data.front());
 	}
 
 	// step 3: grid bag(s)
@@ -773,7 +777,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, MESH_X_SIZE, MESH_Y_SIZE, GL_RED_INTEGER, GL_UNSIGNED_INT, &gb_data.front());
 	}
 	//PRINT_TIME("Dlight Texture Upload");
-	//cout << "ndl: " << ndl << ", elix: " << elix << ", gb_sz: " << XY_MULT_SIZE << endl;
+	//cout << "ndl: " << ndl << ", elix: " << elem_data.size() << ", gb_sz: " << XY_MULT_SIZE << endl;
 }
 
 
