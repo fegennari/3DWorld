@@ -792,6 +792,8 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 		s.add_uniform_int  ("noise_tex", 3);
 		s.add_uniform_float("noise_time", frame_counter); // rain ripples
 	}
+	select_multitex(FOAM_TEX, 5);
+	s.add_uniform_int("foam_tex", 5);
 }
 
 

@@ -2,7 +2,7 @@ varying vec3 normal;
 varying vec4 epos, proj_pos;
 varying vec2 tc, tc2;
 
-uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex;
+uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
 
@@ -82,7 +82,6 @@ void main()
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);
 	color = mix(color, vec4(0.0, 1.0, 0.5, color.a), water_green_comp*min(1.0, green_scale));
-	color = mix(color, vec4(1.0), foam_amt);
 
 	if (reflections) { // calculate reflections
 		float reflect_w  = reflect_scale*get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
@@ -90,6 +89,10 @@ void main()
 		vec4 reflect_tex = vec4(texture2D(reflection_tex, ref_tex_st).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
+
+	// foam texture near shore
+	foam_amt += 0.5*clamp(10.0*depth-0.2, 0.0, 1.0)*(1.0 - clamp(5.0*depth, 0.0, 1.0));
+	color = mix(color, texture2D(foam_tex, 25.0*tc), foam_amt);
 
 	// determine final color with fog
 	color.rgb += add_color;
