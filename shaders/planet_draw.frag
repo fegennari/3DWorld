@@ -16,32 +16,13 @@ uniform float lava_val   = 0.0;
 uniform float crater_val = 0.0;
 uniform sampler2D tex0;
 #ifdef PROCEDURAL_DETAIL
-uniform float obj_radius, snow_thresh, cold_scale, noise_offset, terrain_scale, temperature;
+uniform float snow_thresh, cold_scale, temperature;
 uniform vec4 water_color, color_a, color_b;
 #endif // PROCEDURAL_DETAIL
 #endif // not GAS_GIANT
 
 varying vec3 normal, world_space_pos, vertex;
 varying vec2 tc;
-
-
-#ifdef PROCEDURAL_DETAIL
-float eval_terrain_noise(in vec3 npos, const int num_octaves) {
-	float val  = 0.0;
-	float mag  = 1.0;
-	float freq = 0.5; // lower freq for ridged noise
-
-	for (int i = 0; i < num_octaves; ++i) { // similar to gen_cloud_alpha_time()
-		float v = texture3D(cloud_noise_tex, freq*npos).r;
-		v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
-		v = max(0.0, (0.75 - abs(v))); // ridged noise
-		val  += v*mag;
-		freq *= 1.92;
-		mag  *= 0.5;
-	}
-	return val;
-}
-#endif
 
 
 void main()

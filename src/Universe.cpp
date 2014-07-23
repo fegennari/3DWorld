@@ -253,6 +253,7 @@ public:
 			}
 			else if (body.use_procedural_shader()) {
 				set_prefix("#define PROCEDURAL_DETAIL", 1); // FS
+				set_prefix("uniform sampler3D cloud_noise_tex;", 0); // VS
 				if (body.use_vert_shader_offset()) {set_prefix("#define PROCEDURAL_DETAIL", 0);} // VS
 				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
 			}
@@ -260,8 +261,8 @@ public:
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			string frag_shader_str("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+rand_gen.part*");
 			if (has_craters) {frag_shader_str += "+craters.part";}
-			set_vert_shader("planet_draw");
-			set_frag_shader(frag_shader_str+"+planet_draw");
+			set_vert_shader("procedural_planet.part*+planet_draw");
+			set_frag_shader(frag_shader_str+"+procedural_planet.part*+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", 1);
 			add_uniform_int("ring_tex",        2);

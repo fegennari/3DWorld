@@ -910,6 +910,7 @@
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />
     <None Include="shaders\procedural_height_gen.frag" />
+    <None Include="shaders\procedural_planet.part" />
     <None Include="shaders\procedural_rock.frag" />
     <None Include="shaders\procedural_rock.vert" />
     <None Include="shaders\procedural_texture.part.frag" />
