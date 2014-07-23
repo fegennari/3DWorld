@@ -11,9 +11,9 @@ float eval_terrain_noise(in vec3 npos, const int num_octaves) {
 		v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
 		v = max(0.0, (0.75 - abs(v))); // ridged noise
 		val  += v*mag;
-		freq *= 1.92;
-		mag  *= 0.5;
+		freq *= 2.0; // lacunarity
+		mag  *= 0.65;
 	}
-	return val;
+	return 0.8*val;
 }
 #endif

@@ -17,7 +17,7 @@ void main()
 	float height = max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
 	float cutoff = max(water_val, lava_val);
 	float omcinv = 1.0/max(0.01, (1.0 - cutoff)); // avoid div-by-zero
-	vertex2.xyz += 0.02*(omcinv*(max(cutoff, height) - cutoff) - 0.5)*obj_radius*fg_Normal;
+	vertex2.xyz += 0.015*(omcinv*(max(cutoff, height) - cutoff) - 0.5)*obj_radius*fg_Normal;
 #endif
 	vertex       = vertex2.xyz;
 	vec4 epos    = fg_ModelViewMatrix * vertex2;
