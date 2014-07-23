@@ -2261,6 +2261,9 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 }
 
 
+bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15);}
+
+
 bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2) {
 
 	point const &camera(get_player_pos());
@@ -2324,13 +2327,15 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	}
 	if (ndiv >= N_SPHERE_DIV) {
 		if (!has_heightmap() || procedural) { // gas giant or procedural
-			if (!has_heightmap() || !use_vert_shader_offset()) { // gas giants or planets with atmosphere or water
+			bool const use_vso(use_vert_shader_offset());
+
+			if (!has_heightmap() || !use_vso) { // gas giants or planets with atmosphere
 				ndiv /= 2; // don't need high resolution since they have no heightmap or vertex offset
 			}
 			point viewed_from(vcp);
-			rotate_vector(viewed_from);
+			if (!use_vso) {rotate_vector(viewed_from);}
 			//draw_cube_mapped_sphere(all_zeros, radius, ndiv/2); // not for gas giant
-			draw_subdiv_sphere(all_zeros, radius, ndiv, viewed_from, NULL, int(gas_giant), 0); // with back-face culling
+			draw_subdiv_sphere(all_zeros, radius, ndiv, viewed_from, NULL, int(gas_giant), use_vso); // with back-face culling (unless use_vso)
 		}
 		else {
 			draw_surface(pos_, radius, size, ndiv);

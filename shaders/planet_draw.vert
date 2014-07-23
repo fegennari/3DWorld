@@ -2,6 +2,9 @@ uniform mat4 fg_ViewMatrix;
 varying vec3 normal, world_space_pos, vertex;
 varying vec2 tc;
 
+uniform float water_val = 0.0;
+uniform float lava_val  = 0.0;
+
 void main()
 {
 	tc           = fg_TexCoord;
@@ -12,7 +15,9 @@ void main()
 	vec3 npos    = spos + vec3(noise_offset);
 	float hval   = eval_terrain_noise(npos, 8);
 	float height = max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
-	vertex2.xyz += (0.02*height - 0.01)*obj_radius*fg_Normal;
+	float cutoff = max(water_val, lava_val);
+	float omcinv = 1.0/max(0.01, (1.0 - cutoff)); // avoid div-by-zero
+	vertex2.xyz += 0.02*(omcinv*(max(cutoff, height) - cutoff) - 0.5)*obj_radius*fg_Normal;
 #endif
 	vertex       = vertex2.xyz;
 	vec4 epos    = fg_ModelViewMatrix * vertex2;
