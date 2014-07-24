@@ -747,52 +747,6 @@ void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorR
 }
 
 
-// unused
-// less efficient than regular sphere
-// textures must tile along all edges for this to look correct
-void draw_cube_map_sphere(point const &pos, float radius, int ndiv, bool disable_bfc) {
-
-	point pt;
-	float const step(1.0/ndiv);
-	point const camera(get_camera_all());
-	vector<vert_norm_tc> verts;
-
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		unsigned const d[2] = {i, ((i+1)%3)}, n((i+2)%3);
-
-		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			pt[n] = (float)j - 0.5;
-
-			for (int s = 0; s < ndiv; ++s) {
-				float const va[2] = {(step*(s+1)-0.5), (step*s-0.5)};
-
-				for (int t = 0; t <= ndiv; ++t) {
-					float tc[2];
-					pt[d[1]] = tc[1] = step*t - 0.5;
-
-					if (!disable_bfc) {
-						bool back_facing(1);
-
-						for (unsigned k = 0; k < 2 && back_facing; ++k) {
-							point pt2(pt);
-							pt2[d[0]] = va[k];
-							if (dot_product_ptv(pt2, camera, (pt2.get_norm()*radius + pos)) > 0.0) back_facing = 0;
-						}
-						if (back_facing) continue;
-					}
-					for (unsigned k = 0; k < 2; ++k) { // iterate over vertices
-						pt[d[0]] = tc[0] = va[k^j]; // need to orient the vertices differently for each side
-						vector3d const norm(pt.get_norm());
-						verts.push_back(vert_norm_tc((norm*radius + pos), norm, tc));
-					}
-				}
-				draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
-			} // for s
-		} // for j
-	} // for i
-}
-
-
 // ******************** TORUS ********************
 
 
