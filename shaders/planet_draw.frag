@@ -4,7 +4,7 @@ uniform vec3 cloud_freq  = vec3(1.0);
 uniform vec3 light_scale = vec3(1.0);
 uniform vec4 emission    = vec4(0,0,0,1);
 uniform vec3 sun_pos, ss_pos, rscale;
-uniform float sun_radius, ss_radius, ring_ri, ring_ro;
+uniform float obj_radius, sun_radius, ss_radius, ring_ri, ring_ro;
 uniform mat4 fg_ViewMatrix;
 uniform sampler1D ring_tex;
 
@@ -130,10 +130,10 @@ void main()
 		// Note: using doubles/dvec3 has better precision/quality, but is much slower
 		float delta = 0.001;
 		vec3 bpos   = 32.0*spos;
-		float hval0 = eval_terrain_noise(bpos, 6);
-		float hdx   = hval0 - eval_terrain_noise(bpos + vec3(delta, 0.0, 0.0), 6);
-		float hdy   = hval0 - eval_terrain_noise(bpos + vec3(0.0, delta, 0.0), 6);
-		float hdz   = hval0 - eval_terrain_noise(bpos + vec3(0.0, 0.0, delta), 6);
+		float hval0 = eval_terrain_noise_normal(bpos, 6);
+		float hdx   = hval0 - eval_terrain_noise_normal(bpos + vec3(delta, 0.0, 0.0), 6);
+		float hdy   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, delta, 0.0), 6);
+		float hdz   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, 0.0, delta), 6);
 		norm = normalize(norm) + 0.05*nscale*normalize(fg_NormalMatrix * vec3(hdx, hdy, hdz));
 	}
 #endif // ALL_WATER_ICE

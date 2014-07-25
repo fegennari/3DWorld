@@ -1,7 +1,7 @@
 #ifdef PROCEDURAL_DETAIL
-uniform float terrain_scale, obj_radius, noise_offset;
+uniform float terrain_scale, noise_offset;
 
-float eval_terrain_noise(in vec3 npos, const int num_octaves) {
+float eval_terrain_noise_base(in vec3 npos, const int num_octaves, const in float gain, const in float lacunarity) {
 	float val  = 0.0;
 	float mag  = 1.0;
 	float freq = 0.5; // lower freq for ridged noise
@@ -11,9 +11,16 @@ float eval_terrain_noise(in vec3 npos, const int num_octaves) {
 		v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
 		v = max(0.0, (0.75 - abs(v))); // ridged noise
 		val  += v*mag;
-		freq *= 2.0; // lacunarity
-		mag  *= 0.65;
+		freq *= lacunarity;
+		mag  *= gain;
 	}
-	return 0.8*val;
+	return val;
+}
+
+float eval_terrain_noise(in vec3 npos, const int num_octaves) {
+	return 0.7*eval_terrain_noise_base(npos, num_octaves, 0.7, 2.0);
+}
+float eval_terrain_noise_normal(in vec3 npos, const int num_octaves) {
+	return eval_terrain_noise_base(npos, num_octaves, 0.5, 1.92);
 }
 #endif

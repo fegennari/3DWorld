@@ -271,6 +271,7 @@ public:
 		enable();
 		set_specular(1.0, 80.0);
 		set_uniform_vector3d(get_loc("rscale"),   svars.rscale);
+		set_uniform_float(get_loc("obj_radius"),  body.radius);
 		set_uniform_float(get_loc("ring_ri"),     svars.ring_ri);
 		set_uniform_float(get_loc("ring_ro"),     svars.ring_ro);
 		set_uniform_float(get_loc("noise_scale"), 4.0*body.cloud_scale); // clouds / gas giant noise
@@ -321,6 +322,7 @@ public:
 			shared_setup("ring_tex");
 			add_uniform_int("noise_tex",     1);
 			add_uniform_int("particles_tex", 2);
+			add_uniform_float("obj_radius", 1.0); // so that vertex scaling within the planet shader does nothing
 		}
 		select_multitex(NOISE_GEN_MIPMAP_TEX, 1, 0);
 		select_multitex(SPARSE_NOISE_TEX,     2, 1);
@@ -1960,12 +1962,11 @@ void urev_body::upload_colors_to_shader(shader_t &s) const {
 	s.add_uniform_color("water_color",  (frozen ? P_ICE_C : P_WATER_C));
 	s.add_uniform_color("color_a",      colorA);
 	s.add_uniform_color("color_b",      colorB);
-	s.add_uniform_float("obj_radius",   radius); // divide terrain_scale by this value instead?
 	s.add_uniform_float("temperature",  temp); // unused?
 	s.add_uniform_float("snow_thresh",  snow_thresh);
 	s.add_uniform_float("cold_scale",   (frozen ? 0.0 : 1.0)); // frozen ice planets don't use coldness
 	s.add_uniform_float("noise_offset", orbit); // use as a random seed
-	s.add_uniform_float("terrain_scale",0.05);
+	s.add_uniform_float("terrain_scale",0.05); // divide terrain_scale by radius instead?
 }
 
 
@@ -2264,6 +2265,38 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15);}
 
 
+// simplified and optimized version of draw_cube_mapped_sphere() (no center, tex coords, or normals, and radius=1.0)
+void draw_cube_mapped_planet(unsigned ndiv) {
+
+	assert(ndiv > 0);
+	float const vstep(2.0/ndiv);
+	vector<vert_wrap_t> verts(2*(ndiv+1));
+
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		unsigned const d1(i), d2((i+1)%3), dn((i+2)%3);
+		point off(all_zeros);
+		off[d1] = vstep;
+
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			point pt;
+			pt[dn] = (j ? 1.0 : -1.0);
+
+			for (unsigned s = 0; s < ndiv; ++s) {
+				pt[d1] = -1.0 + s*vstep;
+				unsigned ix(0);
+
+				for (unsigned T = 0; T <= ndiv; ++T) {
+					pt[d2] = -1.0 + (j ? T : ndiv-T)*vstep; // reverse between sides
+					verts[ix++].v = pt.get_norm(); // Note: could normalize in the shader if that was more efficient
+					verts[ix++].v = (pt + off).get_norm();
+				}
+				draw_verts(verts, GL_TRIANGLE_STRIP);
+			} // for s
+		} // for j
+	} // for i
+}
+
+
 bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2) {
 
 	point const &camera(get_player_pos());
@@ -2294,23 +2327,27 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		planet_plds[size > 1.5].add_pt(make_pt_global(pos_), vcp/vcp_mag, ocolor); // orient towards camera
 		return 1;
 	}
-	// draw as sphere
-	int ndiv(NDIV_SIZE_SCALE*sqrt(size));
+
+	// calculate ndiv
+	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0), procedural(use_procedural_shader()), heightmap(has_heightmap());
+	int ndiv((heightmap ? 1.0 : 0.25)*NDIV_SIZE_SCALE*sqrt(size));
 		
 	if (size < 64.0) {
 		ndiv = max(4, min(48, ndiv));
 		if (ndiv > 16) {ndiv = ndiv & 0xFFFC;}
 	}
 	else {
-		int const pref_ndiv(min((int)SPHERE_MAX_ND, ndiv));
+		int const ndiv_max(SPHERE_MAX_ND/(heightmap ? 1 : 2));
+		int const pref_ndiv(min(ndiv_max, ndiv));
 		for (ndiv = 1; ndiv < pref_ndiv; ndiv <<= 1) {} // make a power of 2
-		ndiv = min(ndiv, (int)SPHERE_MAX_ND); // final clamp
+		ndiv = min(ndiv, ndiv_max); // final clamp
 	}
 	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
-	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0), procedural(use_procedural_shader());
+	assert(ndiv > 0);
+
+	// draw as sphere
 	// Note: the following line *must* be before the local transforms are applied as it captures the current MVM in the call
 	if (texture || procedural) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);} // always WHITE
-	assert(ndiv > 0);
 	fgPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();
@@ -2325,25 +2362,25 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	else {
 		usg.enable_planet_colored_shader(use_light2, ocolor);
 	}
-	if (ndiv >= N_SPHERE_DIV) {
-		if (!has_heightmap() || procedural) { // gas giant or procedural
-			bool const use_vso(use_vert_shader_offset());
+	if (ndiv > N_SPHERE_DIV) {
+		assert(texture || procedural);
+		glEnable(GL_CULL_FACE);
 
-			if (!has_heightmap() || !use_vso) { // gas giants or planets with atmosphere
-				ndiv /= 2; // don't need high resolution since they have no heightmap or vertex offset
-			}
-			point viewed_from(vcp);
-			if (!use_vso) {rotate_vector(viewed_from);}
-			//draw_cube_mapped_sphere(all_zeros, radius, ndiv/2); // not for gas giant
-			draw_subdiv_sphere(all_zeros, radius, ndiv, viewed_from, NULL, int(gas_giant), use_vso); // with back-face culling (unless use_vso)
+		if (heightmap) {
+			draw_surface(pos_, size, ndiv);
 		}
-		else {
-			draw_surface(pos_, radius, size, ndiv);
+		else if (use_vert_shader_offset()) {
+			assert(!gas_giant);
+			draw_cube_mapped_planet(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
 		}
+		else { // gas giant or atmosphere: don't need high resolution since they have no heightmaps
+			draw_subdiv_sphere(all_zeros, 1.0, ndiv, zero_vector, NULL, int(gas_giant), 1); // no back-face culling
+		}
+		glDisable(GL_CULL_FACE);
 	}
 	else {
 		if (surface != nullptr) {surface->clear_cache();} // only gets here when the object is visible
-		uniform_scale(radius); // no push/pop required
+		if (!(texture || procedural)) {uniform_scale(radius);} // no push/pop required
 		draw_sphere_vbo_raw(ndiv, texture); // small sphere - use vbo
 	}
 	if (texture || procedural) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
@@ -2360,7 +2397,7 @@ vector<float> &get_empty_perturb_map(int ndiv) {
 }
 
 
-void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int ndiv) {
+void urev_body::draw_surface(point_d const &pos_, float size, int ndiv) {
 
 	RESET_TIME;
 	assert(ndiv > 0);
@@ -2369,9 +2406,9 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 	float const hmap_scale(get_hmap_scale());
 	vector<float> &perturb_map(get_empty_perturb_map(ndiv));
 
-	if (!surface->sd.equal(all_zeros, radius0, ndiv)) {
+	if (!surface->sd.equal(all_zeros, 1.0, ndiv)) {
 		surface->free_context();
-		float const cutoff(surface->min_cutoff), omcinv(surface->get_one_minus_cutoff()), radius_scale(hmap_scale*radius);
+		float const cutoff(surface->min_cutoff), omcinv(surface->get_one_minus_cutoff());
 		unsigned const ssize(surface->ssize);
 		assert(ssize > 0 && tsize > 0);
 
@@ -2382,10 +2419,10 @@ void urev_body::draw_surface(point_d const &pos_, float radius0, float size, int
 				//unsigned const ix((j*ssize)/(ndiv+1));
 				unsigned const ix((j == ndiv) ? (ssize-1) : (j*ssize)/ndiv);
 				float const val(surface->heightmap[iy + ssize*ix]); // x and y are swapped
-				perturb_map[j + offset] = radius_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5); // duplicated with urev_body::surface_test()
+				perturb_map[j + offset] = hmap_scale*(omcinv*(max(cutoff, val) - cutoff) - 0.5); // duplicated with urev_body::surface_test()
 			}
 		}
-		surface->setup_draw_sphere(all_zeros, radius0, -0.5*radius_scale, ndiv, &perturb_map.front());
+		surface->setup_draw_sphere(all_zeros, 1.0, -0.5*hmap_scale, ndiv, &perturb_map.front());
 	}
 	surface->sd.draw_ndiv_pow2_vbo(ndiv); // sphere heightmap for rocky planet or moon
 	if (SD_TIMETEST) PRINT_TIME("Sphere Draw Fast");

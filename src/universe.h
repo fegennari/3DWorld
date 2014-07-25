@@ -253,7 +253,7 @@ public:
 	void upload_colors_to_shader(shader_t &s) const;
 	void get_surface_color(unsigned char *data, float val, float phi) const;
 	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2);
-	void draw_surface(point_d const &pos_, float radius0, float size, int ndiv);
+	void draw_surface(point_d const &pos_, float size, int ndiv);
 	void show_colonizable_liveable(point const &pos_, float radius0) const;
 	void inc_orbiting_refs() {++orbiting_refs;}
 	void dec_orbiting_refs(s_object const &sobj);
