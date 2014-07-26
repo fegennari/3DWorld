@@ -1962,11 +1962,12 @@ void urev_body::upload_colors_to_shader(shader_t &s) const {
 	s.add_uniform_color("water_color",  (frozen ? P_ICE_C : P_WATER_C));
 	s.add_uniform_color("color_a",      colorA);
 	s.add_uniform_color("color_b",      colorB);
-	s.add_uniform_float("temperature",  temp); // unused?
+	s.add_uniform_float("temperature",  temp);
 	s.add_uniform_float("snow_thresh",  snow_thresh);
-	s.add_uniform_float("cold_scale",   (frozen ? 0.0 : 1.0)); // frozen ice planets don't use coldness
+	s.add_uniform_float("cold_scale",   (frozen ? 0.0 : 1.0)); // frozen ice planets don't use coldness (they're always cold)
 	s.add_uniform_float("noise_offset", orbit); // use as a random seed
 	s.add_uniform_float("terrain_scale",0.05); // divide terrain_scale by radius instead?
+	s.add_uniform_float("nmap_mag",     CLIP_TO_01(2.0f - 0.2f*p2p_dist(pos, get_player_pos())/radius)); // 1.0 at dist < 5R, 0.0 at dist > 10R
 }
 
 
@@ -2269,7 +2270,7 @@ bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15);}
 void draw_cube_mapped_planet(unsigned ndiv) {
 
 	assert(ndiv > 0);
-	float const vstep(2.0/ndiv);
+	float const vstep(2.001/ndiv); // overlap slightly to reduce the effect of tiny cracks due to FP precision problems
 	vector<vert_wrap_t> verts(2*(ndiv+1));
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
@@ -2369,12 +2370,12 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		if (heightmap) {
 			draw_surface(pos_, size, ndiv);
 		}
-		else if (use_vert_shader_offset()) {
+		else if (use_vert_shader_offset()) { // minor issues face alignment cracks, but better triangle distribution
 			assert(!gas_giant);
 			draw_cube_mapped_planet(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
 		}
 		else { // gas giant or atmosphere: don't need high resolution since they have no heightmaps
-			draw_subdiv_sphere(all_zeros, 1.0, ndiv, zero_vector, NULL, int(gas_giant), 1); // no back-face culling
+			draw_subdiv_sphere(all_zeros, 1.0, (use_vert_shader_offset() ? 2 : 1)*ndiv, zero_vector, NULL, int(gas_giant), 1); // no back-face culling
 		}
 		glDisable(GL_CULL_FACE);
 	}

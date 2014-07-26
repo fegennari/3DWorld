@@ -16,7 +16,8 @@ uniform float lava_val   = 0.0;
 uniform float crater_val = 0.0;
 uniform sampler2D tex0;
 #ifdef PROCEDURAL_DETAIL
-uniform float snow_thresh, cold_scale, temperature;
+const int NORMAL_OCTAVES = 6;
+uniform float snow_thresh, cold_scale, temperature, nmap_mag;
 uniform vec4 water_color, color_a, color_b;
 #endif // PROCEDURAL_DETAIL
 #endif // not GAS_GIANT
@@ -110,7 +111,7 @@ void main()
 				nscale    = val*val; // faster falloff
 			}
 			else if (height_ws > 1.0 && snow_thresh < 1.0) {
-				dnval    = eval_terrain_noise_normal(bpos, 6);
+				dnval    = eval_terrain_noise_normal(bpos, NORMAL_OCTAVES);
 				float sv = 0.5 + 0.5*clamp(20.0*(1.0 - snow_thresh), 0.0, 1.0); // snow_thresh 1.0 => no snow, 0.95 => lots of snow
 				float mv = dnval * sv * sqrt(height_ws - 1.0);
 				spec_mag = 0.5*clamp((1.5*mv*mv - 0.25), 0.0, 1.0);
@@ -126,15 +127,16 @@ void main()
 		texel     = mix(texel, vec4(1,1,1,1), val); // ice/snow
 		nscale   *= mix(1.0, 0.25, val);
 	}
-	norm = fg_NormalMatrix * vertex; // recompute
+	norm    = fg_NormalMatrix * vertex; // recompute
+	nscale *= nmap_mag;
 
 	if (nscale > 0.0) { // compute normal + bump map
 		// Note: using doubles/dvec3 has better precision/quality, but is much slower
 		float delta = 0.001;
-		float hval0 = ((dnval == 0.0) ? eval_terrain_noise_normal(bpos, 6) : dnval);
-		float hdx   = hval0 - eval_terrain_noise_normal(bpos + vec3(delta, 0.0, 0.0), 6);
-		float hdy   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, delta, 0.0), 6);
-		float hdz   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, 0.0, delta), 6);
+		float hval0 = ((dnval == 0.0) ? eval_terrain_noise_normal(bpos, NORMAL_OCTAVES) : dnval);
+		float hdx   = hval0 - eval_terrain_noise_normal(bpos + vec3(delta, 0.0, 0.0), NORMAL_OCTAVES);
+		float hdy   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, delta, 0.0), NORMAL_OCTAVES);
+		float hdz   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, 0.0, delta), NORMAL_OCTAVES);
 		norm = normalize(norm) + 0.05*nscale*normalize(fg_NormalMatrix * vec3(hdx, hdy, hdz));
 	}
 #endif // ALL_WATER_ICE
