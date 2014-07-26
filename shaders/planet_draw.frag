@@ -62,9 +62,11 @@ void main()
 
 	vec3 spos    = vertex*(terrain_scale/obj_radius);
 	vec3 npos    = spos + vec3(noise_offset);
+	vec3 bpos    = 32.0*spos;
 	float hval   = eval_terrain_noise(npos, 8);
 	float height = max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
 	float nscale = 0.0;
+	float dnval  = 0.0;
 	vec4 texel;
 
 	if (height < water_val) {
@@ -108,10 +110,10 @@ void main()
 				nscale    = val*val; // faster falloff
 			}
 			else if (height_ws > 1.0 && snow_thresh < 1.0) {
-				float val= eval_terrain_noise(32.0*npos, 4);
+				dnval    = eval_terrain_noise_normal(bpos, 6);
 				float sv = 0.5 + 0.5*clamp(20.0*(1.0 - snow_thresh), 0.0, 1.0); // snow_thresh 1.0 => no snow, 0.95 => lots of snow
-				float mv = val * sv * sqrt(height_ws - 1.0);
-				spec_mag = clamp((1.5*mv*mv - 0.25), 0.0, 1.0);
+				float mv = dnval * sv * sqrt(height_ws - 1.0);
+				spec_mag = 0.5*clamp((1.5*mv*mv - 0.25), 0.0, 1.0);
 				texel    = mix(texel, vec4(1,1,1,1), spec_mag); // blend in some snow on peaks
 			}
 		}
@@ -120,7 +122,7 @@ void main()
 		float icv = 0.7 + 0.01*temperature; // 1.0 @ T=30, 0.9 @ T=20, 0.7 @ T=0
 		float val = (coldness - icv)/(1.0 - icv) + 1.0*(height - water_val);
 		val       = clamp(3*val-1, 0.0, 1.0); // sharpen edges
-		spec_mag  = mix(spec_mag, 1.0, val);
+		spec_mag  = mix(spec_mag, 0.7, val);
 		texel     = mix(texel, vec4(1,1,1,1), val); // ice/snow
 		nscale   *= mix(1.0, 0.25, val);
 	}
@@ -129,8 +131,7 @@ void main()
 	if (nscale > 0.0) { // compute normal + bump map
 		// Note: using doubles/dvec3 has better precision/quality, but is much slower
 		float delta = 0.001;
-		vec3 bpos   = 32.0*spos;
-		float hval0 = eval_terrain_noise_normal(bpos, 6);
+		float hval0 = ((dnval == 0.0) ? eval_terrain_noise_normal(bpos, 6) : dnval);
 		float hdx   = hval0 - eval_terrain_noise_normal(bpos + vec3(delta, 0.0, 0.0), 6);
 		float hdy   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, delta, 0.0), 6);
 		float hdz   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, 0.0, delta), 6);
