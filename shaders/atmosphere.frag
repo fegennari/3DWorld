@@ -2,6 +2,7 @@ uniform vec3 camera_pos, planet_pos, sun_pos, ss_pos;
 uniform float planet_radius, atmos_radius, sun_radius, ss_radius;
 uniform vec3 light_scale   = vec3(1.0);
 uniform vec3 atmos_density = vec3(1.0, 0.0, 0.0); // {constant, linear, quadratic}
+uniform vec3 inner_color, outer_color;
 
 varying vec4 epos;
 varying vec3 normal, world_space_pos;
@@ -35,7 +36,6 @@ void main()
 	vec3 color = vec3(0.0);
 	color += lt_atten*light_scale[0]*add_pt_light_comp(normalize(normal), epos, 0).rgb; // sun ADS
 	color += light_scale[1]*(gl_Color * fg_LightSource[1].ambient).rgb; // ambient only
-	float rg_comp = min(1.6*density, 1.0);
-	vec3 scatter_color = vec3(rg_comp, rg_comp, 1.0); // precomputed texture lookup or something else better?
+	vec3 scatter_color = mix(outer_color, inner_color, min(1.6*density, 1.0)); // precomputed texture lookup
 	fg_FragColor = vec4(color*scatter_color, alpha);
 }

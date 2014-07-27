@@ -266,6 +266,7 @@ public:
 	virtual void get_valid_orbit_r(float &orbit_r, float obj_r) const = 0;
 	virtual bool colonizable_int() const = 0;
 	virtual float get_vegetation() const = 0;
+	virtual string get_atmos_string() const = 0;
 	virtual point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
 	virtual void free_texture();
 	virtual void free_uobj();
@@ -276,6 +277,7 @@ class uplanet : public urev_body { // size = 324
 public:
 	unsigned population; // unused
 	float mosize, ring_ri, ring_ro;
+	colorRGBA ai_color, ao_color; // atmosphere colors
 	vector3d rscale;
 	vector<umoon> moons;
 	vector<color_wrapper> ring_data;
@@ -302,6 +304,7 @@ public:
 	void free_uobj();
 	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}
 	float get_ring_rscale() const {return max(rscale.x, rscale.y)*ring_ro/radius;}
+	string get_atmos_string() const;
 	string get_name() const {return "Planet " + getname();}
 };
 
@@ -320,6 +323,7 @@ public:
 	bool colonizable_int() const {return (radius > 1.5*MOON_MIN_SIZE && planet && planet->colonizable());}
 	float get_vegetation() const {return 0;}
 	float get_hmap_scale() const {return MOON_HMAP_SCALE;}
+	string get_atmos_string() const {return "None";}
 	string get_name() const {return "Moon " + getname();}
 };
 

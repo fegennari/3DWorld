@@ -358,7 +358,9 @@ public:
 		set_uniform_vector3d(get_loc("planet_pos"), planet_pos);
 		set_uniform_vector3d(get_loc("atmos_density"), planet.atmos*vector3d(0.0, (uses_hmap ? 1.8 : 3.2), 0.0)); // linear atmospheric density
 		set_uniform_float(get_loc("planet_radius"), planet.radius*(uses_hmap ? (1.0 - 0.25*planet.get_hmap_scale()) : 1.0)); // average between ravg and rmin
-		set_uniform_float(get_loc("atmos_radius"),  planet.radius*PLANET_ATM_RSCALE);
+		set_uniform_float(get_loc("atmos_radius" ), planet.radius*PLANET_ATM_RSCALE);
+		set_uniform_color(get_loc("inner_color"  ), (colorRGB)planet.ai_color);
+		set_uniform_color(get_loc("outer_color"  ), (colorRGB)planet.ao_color);
 		set_planet_uniforms(planet.atmos, svars, 0); // atmosphere has no planet reflection light (light2)
 	}
 	void disable_atmospheric() {
@@ -1471,7 +1473,7 @@ void uplanet::create(bool phase) {
 	// atmosphere, water, temperature, gravity
 	calc_temperature();
 	density = rand_uniform2(0.8, 1.2);
-	if (temp < CGAS_TEMP) density *= 0.5 + 0.5*(temp/CGAS_TEMP); // cold gas
+	if (temp < CGAS_TEMP) {density *= 0.5 + 0.5*(temp/CGAS_TEMP);} // cold gas
 	set_grav_mass();
 	
 	if (temp < FREEZE_TEMP) { // cold
@@ -1485,7 +1487,8 @@ void uplanet::create(bool phase) {
 	}
 	else if (temp > NO_AIR_TEMP) { // very hot
 		gas_giant = (rel_radius > GAS_GIANT_MIN_REL_SZ);
-		atmos     = (gas_giant ? 1.0 : 0.0);
+		atmos     = (gas_giant ? 1.0 : sinf(100.0*density)); // FIXME: hack to generate a random number without changing the rgen seed
+		//atmos     = (gas_giant ? 1.0 : rand_uniform2(-2.0, 1.0));
 		water     = 0.0;
 		lava      = (gas_giant ? 0.0 : max(0.0f, rand_uniform2(-0.4, 0.4)));
 		comment   = " (Very Hot)";
@@ -1493,7 +1496,7 @@ void uplanet::create(bool phase) {
 		else if (lava > 0.1) {comment += " Volcanic Planet";}
 		else                 {comment += " Rocky Planet";}
 	}
-	else if (temp > BOIL_TEMP) { // hot
+	else if (temp > BOIL_TEMP) { // hot (rare)
 		atmos   = rand_uniform2(-0.9, 0.5);
 		water   = 0.0;
 		comment = " (Hot) Rocky Planet";
@@ -1844,9 +1847,13 @@ void uplanet::gen_color() {
 		colorB = colorRGBA(0.60, 0.45, 0.25, 1.0);
 		adjust_colorAB(0.25*MP_COLOR_VAR);
 		blend_color(color, colorA, colorB, 0.5, 0); // average the two colors
+		ai_color = WHITE; // earth-like atmosphere colors
+		ao_color = BLUE;
 	}
 	else {
 		gen_colorAB(MP_COLOR_VAR);
+		ai_color = colorA; // alien/toxic atmosphere colors
+		ao_color = colorB;
 	}
 	if (!gas_giant) {
 		if (water > 0.0) { // blend water with land for distant views?
@@ -1880,7 +1887,6 @@ void uobj_solid::adjust_colorAB(float delta) {
 	colorA.set_valid_color();
 	colorB.set_valid_color();
 }
-
 
 void uobj_solid::gen_colorAB(float delta) {
 
@@ -2556,11 +2562,22 @@ bool umoon::shadowed_by_planet() {
 }
 
 
+string uplanet::get_atmos_string() const {
+
+	if (atmos == 0.0    ) {return "None";}
+	if (gas_giant       ) {return "Dense Toxic";}
+	if (atmos < 0.25    ) {return "Trace";}
+	if (has_vegetation()) {return "Breathable";}
+	return "Toxic";
+}
+
+
 string urev_body::get_info() const {
 
 	ostringstream oss;
 	oss << "Radius: " << radius << ", Temp: " << temp << ", Resources: " << resources << ", Water: " << water
-		<< ", Atmos: " << atmos << ", Vegetation: " << get_vegetation() << endl << "Can Land: " << can_land() << ", Colonizable: " << colonizable()
+		<< ", Atmos: " << atmos << " (" << get_atmos_string() << "), Vegetation: " << get_vegetation() << endl
+		<< "Can Land: " << can_land() << ", Colonizable: " << colonizable()
 		<< ", Liveable: " << liveable() << ", Satellites: " << num_satellites << comment;
 	get_owner_info(oss);
 	return oss.str();
