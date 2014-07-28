@@ -1177,7 +1177,6 @@ void uasteroid::gen_spherical(upos_point_type const &pos_offset, float max_dist,
 }
 
 
-// returns the distance from the asteroid to the asteroid belt center line (torus inner radius)
 void uasteroid::gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2],
 	float belt_radius, float belt_width, float belt_thickness, float max_radius, float &ri_max, float &plane_dmax)
 {

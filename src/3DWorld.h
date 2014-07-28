@@ -1199,7 +1199,8 @@ struct portal {
 
 extern float gauss_rand_arr[];
 
-class rand_gen_t {
+class rgen_core_t {
+protected:
 	// this is a good random number generator written by Stephen E. Derenzo
 	template<typename T> inline void randome_int(T &ranptr) {
 		if ((rseed1 = 40014*(rseed1%53668) - 12211*(rseed1/53668)) < 0) rseed1 += 2147483563;
@@ -1207,17 +1208,28 @@ class rand_gen_t {
 		if ((ranptr = rseed1 - rseed2) < 1) ranptr += 2147483562;
 	}
 
+public:
+	long rseed1, rseed2;
+
+	rgen_core_t() {set_state(1,1);}
+	void set_state(long rs1, long rs2) {rseed1 = rs1; rseed2 = rs2;}
+	double randd();
+};
+
+class rgen_pregen_t : public rgen_core_t {
+
 	vector<double> pregen_rand_reals;
 	unsigned cur_pos;
 
 public:
-	long rseed1, rseed2;
-
-	rand_gen_t() : cur_pos(0) {set_state(1,1);}
-	void set_state(long rs1, long rs2) {rseed1 = rs1; rseed2 = rs2;}
+	rgen_pregen_t() : cur_pos(0) {}
 	void pregen_floats(unsigned num);
 	double randd();
+};
 
+template<typename base> class rand_gen_template_t : public base {
+
+public:
 	int rand() {
 		int rand_num;
 		randome_int(rand_num);
@@ -1249,6 +1261,9 @@ public:
 	vector3d signed_rand_vector_spherical(float scale=1.0);
 	point gen_rand_cube_point(cube_t const &c);
 };
+
+typedef rand_gen_template_t<rgen_core_t> rand_gen_t;
+typedef rand_gen_template_t<rgen_pregen_t> rand_gen_pregen_t;
 
 
 class shader_t;

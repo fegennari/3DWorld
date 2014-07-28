@@ -63,7 +63,6 @@ extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, ft
 extern lightning l_strike;
 extern texture_t textures[];
 extern coll_obj_group coll_objects;
-extern rand_gen_t global_rand_gen;
 
 float get_draw_tile_dist();
 

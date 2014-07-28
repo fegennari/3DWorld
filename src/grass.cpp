@@ -272,7 +272,7 @@ public:
 
 	bool ao_lighting_too_low(point const &pos) {
 		float const keep_prob(5.0*(get_voxel_terrain_ao_lighting_val(pos) - 0.8));
-		return (keep_prob < 0.0 || (keep_prob < 1.0 && rgen.rand_float() > keep_prob)); // too dark
+		return (keep_prob < 0.0 || (keep_prob < 1.0 && rgen.randd() > keep_prob)); // too dark
 	}
 
 	void gen_grass() {
@@ -310,7 +310,7 @@ public:
 						++num_voxel_polys;
 
 						for (unsigned n = 0; n < num_blades; ++n) {
-							float const r1(rgen.rand_float()), r2(rgen.rand_float()), sqrt_r1(sqrt(r1));
+							float const r1(rgen.randd()), r2(rgen.randd()), sqrt_r1(sqrt(r1));
 							unsigned const ptix((cobj.npoints == 4 && n < num_blades/2) ? 3 : 1); // handle both triangles and quads
 							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[ptix] + (sqrt_r1*r2)*cobj.points[2]);
 							if (!test_cube.contains_pt(pos)) continue; // bbox test
@@ -352,7 +352,7 @@ public:
 						float density(1.0);
 						if (id1 != GROUND_TEX) {density = t;}
 						if (id2 != GROUND_TEX) {density = 1.0 - t;}
-						if (rgen.rand_float() >= slope_scale*density) continue; // skip - density too low
+						if (rgen.randd() >= slope_scale*density) continue; // skip - density too low
 					}
 					// skip grass intersecting cobjs
 					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection

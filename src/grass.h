@@ -34,7 +34,7 @@ protected:
 	vector<grass_t> grass;
 	unsigned vbo;
 	bool data_valid;
-	rand_gen_t rgen;
+	rand_gen_pregen_t rgen;
 	typedef vert_norm_comp_color grass_data_t;
 
 	vector3d interpolate_mesh_normal(point const &pos) const;

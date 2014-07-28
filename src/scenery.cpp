@@ -36,7 +36,6 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, draw_model, DISABLE_WATER;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
-extern rand_gen_t global_rand_gen;
 
 
 int get_bark_tex_for_tree_type(int type);

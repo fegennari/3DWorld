@@ -54,7 +54,6 @@ extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEI
 extern float water_h_off, water_h_off_rel, disabled_mesh_z, read_mesh_zmm, init_temperature, univ_temp;
 extern point mesh_origin, surface_pos;
 extern char *mh_filename, *mesh_file;
-extern rand_gen_t global_rand_gen;
 
 
 void glaciate();

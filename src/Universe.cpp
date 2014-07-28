@@ -70,7 +70,6 @@ extern unsigned enabled_lights;
 extern float fticks, tfticks;
 extern colorRGBA bkg_color;
 extern exp_type_params et_params[];
-extern rand_gen_t global_rand_gen;
 
 int gen_rand_seed1(point const &center);
 int gen_rand_seed2(point const &center);
