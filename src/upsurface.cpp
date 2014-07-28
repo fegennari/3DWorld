@@ -186,7 +186,7 @@ void urev_body::gen_surface() {
 	set_rseeds();
 	surface.reset(new upsurface(type)); // may delete a previous surface
 	float mag(SURFACE_HEIGHT*radius), freq(((type == UTYPE_MOON) ? 1.5 : 1.0)*INITIAL_FREQ*TWO_PI);
-	surface->set_rand_seeds(urseed1, urseed2);
+	surface->rgen = rgen; // just copy it?
 	surface->gen(mag, freq);
 }
 

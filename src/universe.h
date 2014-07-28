@@ -151,13 +151,13 @@ class uobj_rgen: public uobject { // size = 56
 
 public:
 	char gen;
-	int urseed1, urseed2;
+	rand_gen_t rgen;
 
-	uobj_rgen() : gen(0), urseed1(1), urseed2(1) {}
+	uobj_rgen() : gen(0) {}
 	void gen_rseeds();
 	void get_rseeds();
 	void set_rseeds() const;
-	int get_id() const {return urseed1;} // not complete id, but should be good enough
+	int get_id() const {return rgen.rseed1;} // not complete id, but should be good enough
 };
 
 

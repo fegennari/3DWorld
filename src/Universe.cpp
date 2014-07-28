@@ -3209,23 +3209,14 @@ void urev_body::explode(float damage, float bradius, int etype, vector3d const &
 }
 
 
-void uobj_rgen::gen_rseeds() { // is this really OS/machine independent (even 32-bit vs. 64-bit)?
-
-	urseed1 = rand2();
-	urseed2 = rand2();
+// is this really OS/machine independent (even 32-bit vs. 64-bit)?
+void uobj_rgen::gen_rseeds() {
+	rgen.rseed1 = rand2();
+	rgen.rseed2 = rand2();
 }
 
-void uobj_rgen::get_rseeds() {
-
-	urseed1 = global_rand_gen.rseed1;
-	urseed2 = global_rand_gen.rseed2;
-}
-
-void uobj_rgen::set_rseeds() const {
-
-	global_rand_gen.rseed1 = urseed1;
-	global_rand_gen.rseed2 = urseed2;
-}
+void uobj_rgen::get_rseeds() {rgen = global_rand_gen;}
+void uobj_rgen::set_rseeds() const {global_rand_gen = rgen;}
 
 
 // s_object
