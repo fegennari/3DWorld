@@ -479,7 +479,7 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 	point coll; // unused
 	s_object target;
 
-	// test for collisions with sloid stellar objects
+	// test for collisions with solid stellar objects
 	bool const sobj_coll((obj_types & OBJ_TYPE_UOBJ) ? universe.get_trajectory_collisions(target, coll, fire_dir, ship_pos, fire_range, 0.0) : 0);
 	bool sobjc(sobj_coll && target.is_solid());
 
@@ -515,12 +515,12 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 }
 
 
-// test for intersections with sloid stellar objects (unused)
-bool universe_intersection_test(point const &pos, vector3d const &dir, float range) {
+// test for intersections with solid stellar objects
+bool universe_intersection_test(point const &pos, vector3d const &dir, float range, bool include_asteroids) {
 
 	point coll; // unused
 	s_object target;
-	return (universe.get_trajectory_collisions(target, coll, dir, pos, range, 0.0) && target.is_solid());
+	return (universe.get_trajectory_collisions(target, coll, dir, pos, range, 0.0, include_asteroids) && target.is_solid());
 }
 
 
