@@ -50,7 +50,7 @@ void main()
 		tc_adj     += 0.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
 		v0         += 4.0;
 	}
-	vec4 texel   = texture1D(tex0, tc_adj);
+	vec4 texel = texture1D(tex0, tc_adj);
 #else // not GAS_GIANT
 
 #ifdef PROCEDURAL_DETAIL
@@ -208,9 +208,25 @@ void main()
 	}
 #endif // GAS_GIANT
 	if (atmosphere > 0.0) { // add clouds
-		float cval = atmosphere*gen_cloud_alpha(cloud_freq*vertex);
-		cval       = min(1.4*cval, 1.0); // increase contrast/sharpen edges
-		float v    = texture3D(cloud_noise_tex, 3.0*noise_scale*cloud_freq*vertex).r;
+		vec3 lv = cloud_freq*vertex;
+
+#ifndef GAS_GIANT
+		if (atmosphere > 0.6) { // add swirls
+			float v_adj = 0.0;
+			float v0    = 1.0;
+			vec3 dir    = normalize(vertex); // world space normal
+
+			for (int i = 0; i < 40; ++i) { // slow when close to the planet
+				float dist = (0.4 + 0.25*rand_01(v0+3.0))*length(dir - normalize(rand_vec3(v0)));
+				v_adj     += max(0.0, (0.1 - dist))*sin(0.1/max(dist, 1.0));
+				v0        += 4.0;
+			}
+			lv.z += 0.4*v_adj;
+		}
+#endif // GAS_GIANT
+		float cval = atmosphere*gen_cloud_alpha(lv);
+		cval       = pow(clamp(1.4*(cval - 0.1), 0.0, 1.0), 0.7); // increase contrast/sharpen edges
+		float v    = texture3D(cloud_noise_tex, 3.0*noise_scale*lv).r; // add in some brightness variation for fake shadows
 		color      = mix(color, (0.75 + 0.25*v)*(ambient + diffuse), cval); // no clouds over high mountains?
 	}
 	fg_FragColor = gl_Color * vec4((color + emission.rgb), 1.0);
