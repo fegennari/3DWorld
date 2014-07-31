@@ -2773,7 +2773,17 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 
 
 bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector3d dir, point start,
-										   float dist, float line_radius, bool include_asteroids) const
+	float dist, float line_radius, bool include_asteroids) const
+{
+	bool ret;
+#pragma omp critical(get_trajectory_coll)
+	ret = get_trajectory_collisions_non_threadsafe(result, coll, dir, start, dist, line_radius, include_asteroids);
+	return ret;
+}
+
+
+bool universe_t::get_trajectory_collisions_non_threadsafe(s_object &result, point &coll, vector3d dir, point start,
+	float dist, float line_radius, bool include_asteroids) const
 {
 	int cell_status(1), cs[3];
 	float rdist, ldist, t;
