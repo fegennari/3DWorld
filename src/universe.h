@@ -529,8 +529,18 @@ public:
 
 
 struct cell_block {
-
 	ucell cells[U_BLOCKS][U_BLOCKS][U_BLOCKS];
+};
+
+struct coll_test { // size = 16
+
+	int index;
+	float dist, rad, t;
+	bool operator<(const coll_test &A) const {return dist < A.dist;}
+};
+
+struct line_query_state {
+	vector<coll_test> gv, sv, pv, av;
 };
 
 
@@ -542,8 +552,7 @@ public:
 	void free_textures();
 	void draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only=0);
 	int get_closest_object(s_object &result, point pos, int max_level, bool include_asteroids, bool offset, float expand, bool get_destroyed=0, float g_expand=1.0) const;
-	bool get_trajectory_collisions(s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius, bool include_asteroids=1) const;
-	bool get_trajectory_collisions_non_threadsafe(s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius, bool include_asteroids=1) const;
+	bool get_trajectory_collisions(line_query_state &lqs, s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius, bool include_asteroids=1) const;
 	float get_point_temperature(s_object const &clobj, point const &pos, point &sun_pos) const;
 
 	int get_object_closest_to_pos(s_object &result, point const &pos, bool include_asteroids, float expand=1.0) const {
@@ -573,14 +582,6 @@ public:
 
 typedef string modmap_val_t;
 typedef map<s_object, modmap_val_t> modmap;
-
-
-struct coll_test { // size = 16
-
-	int index;
-	float dist, rad, t;
-	bool operator<(const coll_test &A) const {return dist < A.dist;}
-};
 
 
 inline uplanet const &get_planet(s_object const &so) {return so.get_planet();}

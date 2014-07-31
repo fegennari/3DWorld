@@ -480,7 +480,8 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 	s_object target;
 
 	// test for collisions with solid stellar objects
-	bool const sobj_coll((obj_types & OBJ_TYPE_UOBJ) ? universe.get_trajectory_collisions(target, coll, fire_dir, ship_pos, fire_range, 0.0) : 0);
+	line_query_state lqs;
+	bool const sobj_coll((obj_types & OBJ_TYPE_UOBJ) ? universe.get_trajectory_collisions(lqs, target, coll, fire_dir, ship_pos, fire_range, 0.0) : 0);
 	bool sobjc(sobj_coll && target.is_solid());
 
 	// test for other ship collisions
@@ -516,11 +517,11 @@ void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3
 
 
 // test for intersections with solid stellar objects
-bool universe_intersection_test(point const &pos, vector3d const &dir, float range, bool include_asteroids) {
+bool universe_intersection_test(line_query_state &lqs, point const &pos, vector3d const &dir, float range, bool include_asteroids) {
 
 	point coll; // unused
 	s_object target;
-	return (universe.get_trajectory_collisions(target, coll, dir, pos, range, 0.0, include_asteroids) && target.is_solid());
+	return (universe.get_trajectory_collisions(lqs, target, coll, dir, pos, range, 0.0, include_asteroids) && target.is_solid());
 }
 
 
@@ -528,7 +529,7 @@ bool universe_ray_intersect(point const &start, point const &end, int obj_types,
 
 	vector3d const dir((end - start).get_norm());
 	float const range(p2p_dist(start, end));
-	//if ((obj_types & OBJ_TYPE_UOBJ) && universe_intersection_test(start, dir, range)) return 1;
+	//if ((obj_types & OBJ_TYPE_UOBJ) && universe_intersection_test(lqs, start, dir, range)) return 1;
 	line_int_data li_data(start, dir, range, cur, ignore, 0, 0); // not sure how cur and ignore are used, or if it makes sense to pass them in here
 	li_data.even_ncoll = 1;
 	free_obj *fobj = NULL; // unused

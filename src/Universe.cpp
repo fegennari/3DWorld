@@ -81,7 +81,7 @@ void set_light_galaxy_ambient_only(shader_t *shader=NULL);
 void set_ambient_color(colorRGBA const &color, shader_t *shader=NULL);
 void set_lighting_params();
 void get_point_of_collision(s_object const &result, point const &pos, point &cpos);
-bool universe_intersection_test(point const &pos, vector3d const &dir, float range, bool include_asteroids);
+bool universe_intersection_test(line_query_state &lqs, point const &pos, vector3d const &dir, float range, bool include_asteroids);
 
 
 
@@ -140,12 +140,14 @@ void setup_universe_fog(s_object const &closest) {
 }
 
 
+// Note: not threadsafe
 uobject *line_intersect_universe(point const &start, vector3d const &dir, float length, float line_radius, float &dist) {
 
 	point coll;
 	s_object target;
+	static line_query_state lqs;
 
-	if (universe.get_trajectory_collisions(target, coll, dir, start, length, line_radius)) { // destroy, query, beams
+	if (universe.get_trajectory_collisions(lqs, target, coll, dir, start, length, line_radius)) { // destroy, query, beams
 		if (target.is_solid()) {
 			dist = p2p_dist(start, coll);
 			if (target.type == UTYPE_ASTEROID) {return &target.get_asteroid();}
@@ -2245,12 +2247,13 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 			static point pts[npts];
 			static bool pts_valid(0);
 			unsigned nvis(0);
+			line_query_state lqs;
 		
 			for (unsigned i = 0; i < npts; ++i) {
 				if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
 				vector3d const tdir((pos_ + pts[i]*radius) - camera);
 				float const tdist(tdir.mag());
-				if (!universe_intersection_test(camera, tdir, 0.95*tdist, 0)) {++nvis;} // excludes asteroids
+				if (!universe_intersection_test(lqs, camera, tdir, 0.95*tdist, 0)) {++nvis;} // excludes asteroids
 			}
 			pts_valid = 1;
 			flare_intensity = ((nvis == 0) ? 0 : (0.2 + 0.8*float(nvis)/float(npts)));
@@ -2772,24 +2775,12 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 }
 
 
-bool universe_t::get_trajectory_collisions(s_object &result, point &coll, vector3d dir, point start,
-	float dist, float line_radius, bool include_asteroids) const
-{
-	bool ret;
-#pragma omp critical(get_trajectory_coll)
-	ret = get_trajectory_collisions_non_threadsafe(result, coll, dir, start, dist, line_radius, include_asteroids);
-	return ret;
-}
-
-
-bool universe_t::get_trajectory_collisions_non_threadsafe(s_object &result, point &coll, vector3d dir, point start,
+bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &result, point &coll, vector3d dir, point start,
 	float dist, float line_radius, bool include_asteroids) const
 {
 	int cell_status(1), cs[3];
 	float rdist, ldist, t;
 	vector3d c1, c2, val, tv, step;
-	coll_test ctest;
-	static vector<coll_test> gv, sv, pv, av;
 
 	// check for simple point
 	if (dist <= 0.0) {
@@ -2851,6 +2842,8 @@ bool universe_t::get_trajectory_collisions_non_threadsafe(s_object &result, poin
 		if (dir[d] > 0.0) {cs[d] = 1; val[d] = c2[d];} else {cs[d] = -1; val[d] = c1[d];} // determine cell step direction
 		step[d] = CELL_SIZE*((float)cs[d]); // determine line distance parameters
 	}
+	coll_test ctest;
+	vector<coll_test> &gv(lqs.gv), &sv(lqs.sv), &pv(lqs.pv), &av(lqs.av);
 	gv.resize(0);
 	sv.resize(0);
 	pv.resize(0);
@@ -2904,22 +2897,22 @@ bool universe_t::get_trajectory_collisions_non_threadsafe(s_object &result, poin
 						av.push_back(ctest); // line passes through asteroid field
 					}
 				}
+				std::sort(av.begin(), av.end());
+				ctest.dist = 0.0;
+
+				for (unsigned ac = 0; ac < av.size(); ++ac) {
+					uasteroid_field const &af(galaxy.asteroid_fields[av[ac].index]);
+
+					for (vector<uasteroid>::const_iterator i = af.begin(); i != af.end(); ++i) {
+						if (i->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
+							result.assign_asteroid(ldist, (i - af.begin()), av[ac].index);
+							ctest.dist = ldist;
+							coll       = i->pos;
+						}
+					} // for i
+				} // for ac
+				av.resize(0);
 			}
-			std::sort(av.begin(), av.end());
-			ctest.dist = 0.0;
-
-			for (unsigned ac = 0; ac < av.size(); ++ac) {
-				uasteroid_field const &af(galaxy.asteroid_fields[av[ac].index]);
-
-				for (vector<uasteroid>::const_iterator i = af.begin(); i != af.end(); ++i) {
-					if (i->line_intersection(curr, dir, ((ctest.dist == 0.0) ? dist : ctest.dist), line_radius, ldist)) {
-						result.assign_asteroid(ldist, (i - af.begin()), av[ac].index);
-						ctest.dist = ldist;
-						coll       = i->pos;
-					}
-				} // for i
-			} // for ac
-			av.resize(0);
 			float asteroid_dist(ctest.dist);
 
 			// systems
