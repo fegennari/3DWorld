@@ -15,6 +15,11 @@ float get_density_at(vec3 pos) {
 
 void main()
 {
+	vec3 norm_norm = normalize(normal);
+	vec3 light_dir = normalize(fg_LightSource[0].position.xyz - epos.xyz);
+	float ascale   = min(4.0*(dot(norm_norm, light_dir) + 0.25), 1.0);
+	if (ascale <= 0.0) discard;
+
 	// alpha is calculated from distance between sphere intersection points
 	float wpdist   = distance(world_space_pos, planet_pos);
 	vec3 ldir      = normalize(world_space_pos - camera_pos);
@@ -26,7 +31,7 @@ void main()
 	if (pdist_sq > 0.0) {dist -= sqrt(pdist_sq);} // ray intersects planet, adjust distance
 	vec3 pos       = world_space_pos - ldir*(dp + 0.5*dist); // midpoint of ray in atmosphere
 	float density  = get_density_at(pos)*dist/atmos_radius;
-	float alpha    = clamp(4.0*density, 0.0, 1.0);
+	float alpha    = ascale*clamp(4.0*density, 0.0, 1.0);
 	float lt_atten = 1.0;
 
 	if (sun_radius > 0.0 && ss_radius > 0.0) {
@@ -34,7 +39,7 @@ void main()
 	}
 	// Note: since only moons have a light2 set (from planet reflections), and moons have no atmosphere, light2 is not used here
 	vec3 color = vec3(0.0);
-	color += lt_atten*light_scale[0]*add_pt_light_comp(normalize(normal), epos, 0).rgb; // sun ADS
+	color += lt_atten*light_scale[0]*add_pt_light_comp(norm_norm, epos, 0).rgb; // sun ADS
 	color += light_scale[1]*(gl_Color * fg_LightSource[1].ambient).rgb; // ambient only
 	vec3 scatter_color = mix(outer_color, inner_color, min(1.6*density, 1.0)); // precomputed texture lookup
 	fg_FragColor = vec4(color*scatter_color, alpha);
