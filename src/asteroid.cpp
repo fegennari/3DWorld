@@ -223,8 +223,8 @@ public:
 		inst_render.max_ndiv = max(inst_render.max_ndiv, ndiv);
 		return 1;
 	}
-	virtual void final_draw(int xfm_shader_loc) { // non-const because it clears instance transforms
-		select_texture(tex_id);
+	virtual void final_draw(int xfm_shader_loc, int force_tid_to=-1) { // non-const because it clears instance transforms
+		select_texture((force_tid_to >= 0) ? force_tid_to : tex_id);
 		inst_render.set_loc(xfm_shader_loc);
 		surface.sd.draw_instances(inst_render.max_ndiv, inst_render);
 		inst_render.max_ndiv = 0;
@@ -565,9 +565,9 @@ public:
 	int get_fragment_tid(unsigned ix, point const &hit_pos) const {
 		return get_asteroid(ix)->get_fragment_tid(hit_pos);
 	}
-	void final_draw(int loc) {
+	void final_draw(int loc, int force_tid_to) {
 		for (vector<p_uobj_asteroid>::iterator i = asteroids.begin(); i != asteroids.end(); ++i) {
-			(*i)->final_draw(loc); // could call only on asteroids that have been rendered at least once, but probably okay to always call
+			(*i)->final_draw(loc, force_tid_to); // could call only on asteroids that have been rendered at least once, but probably okay to always call
 		}
 	}
 	void clear_contexts() {
@@ -1054,7 +1054,6 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 		shader.begin_shader();
 		shader.add_uniform_int("tex0", 0);
 		shader.add_uniform_float("tex_scale", 0.5);
-		shader.add_uniform_color("color", WHITE);
 	}
 	shader.enable();
 	glEnable(GL_CULL_FACE);
@@ -1095,7 +1094,7 @@ void uasteroid_cont::upload_shader_casters(shader_t &s) const {
 }
 
 
-void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set) {
+void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set, bool is_ice) {
 
 	point_d const afpos(pos + pos_);
 	if (!univ_sphere_vis(afpos, radius)) return;
@@ -1110,14 +1109,18 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 		if (!has_sun) {shadow_casters.clear();} // optional, may never get here/not make a difference
 		upload_shader_casters(s);
 	}
-	s.add_uniform_float("crater_scale", (has_sun ? 1.0 : 0.0));
+	int const force_tid_to(is_ice ? MARBLE_TEX : -1); // Note: currently only applies to instanced drawing
+	if (is_ice) {s.set_specular(1.0, 80.0);} // very specular
+	s.add_uniform_color("color", (is_ice ? colorRGBA(0.6, 0.9, 1.2) : WHITE));
+	s.add_uniform_float("crater_scale", ((has_sun && !is_ice) ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
 	pt_line_drawer pld;
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		i->draw(pos_, camera, s, pld); // move in front of far clipping plane?
 	}
-	asteroid_model_gen.final_draw(loc); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
+	asteroid_model_gen.final_draw(loc, force_tid_to); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
+	if (is_ice) {s.set_specular(0.0, 1.0);} // reset specular
 
 	if (!pld.empty()) {
 		end_texture();

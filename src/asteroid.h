@@ -59,7 +59,7 @@ public:
 	uasteroid_cont() : rseed(0) {}
 	void init(point const &pos, float radius);
 	void gen_asteroids();
-	void draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set);
+	void draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set, bool is_ice=0);
 	void detatch_asteroid(unsigned ix);
 	void destroy_asteroid(unsigned ix);
 	void free_uobj() {clear();}

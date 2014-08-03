@@ -853,7 +853,7 @@ public:
 	virtual int get_fragment_tid(point const &hit_pos) const {return tex_id;}
 	virtual void draw_with_texture(uobj_draw_data &ddata, int force_tex_id, bool no_reset_texture=0) const {draw_obj(ddata);} // default is to ignore force_tex_id
 	virtual bool draw_instanced(unsigned ndiv) {return 0;}
-	virtual void final_draw(int xfm_shader_loc) {}
+	virtual void final_draw(int xfm_shader_loc, int force_tid_to=-1) {}
 	virtual void set_scale(vector3d const &scale) {} // default implementation has no scale so is ignored
 };
 

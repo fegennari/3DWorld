@@ -845,6 +845,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					usg.atmos_to_draw.resize(0);
 					usg.rings_to_draw.resize(0);
 					std::shared_ptr<uasteroid_belt_planet> planet_asteroid_belt;
+					bool is_ice_belt(0);
 
 					for (unsigned k = 0; k < sol.planets.size(); ++k) {
 						bool const sel_p(sel_s && (clobj.type == UTYPE_PLANET || clobj.type == UTYPE_MOON) && (int)k == clobj.planet);
@@ -932,6 +933,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								if (animate2) {planet.asteroid_belt->apply_physics(pos, camera);}
 								assert(!planet_asteroid_belt);
 								planet_asteroid_belt = planet.asteroid_belt;
+								is_ice_belt          = planet.has_ice_debris();
 							}
 							if (!planet.ring_data.empty() && ring_scale > 2.5) {
 								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
@@ -951,7 +953,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					if (planet_asteroid_belt != nullptr) { // we normally only get here once per frame, so the overhead is acceptable
 						shader_t asteroid_belt_shader;
 						planet_asteroid_belt->begin_render(asteroid_belt_shader, 0);
-						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader, 1);
+						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader, 1, is_ice_belt);
 						uasteroid_field::end_render(asteroid_belt_shader);
 					}
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
@@ -1525,8 +1527,11 @@ void uplanet::create(bool phase) {
 
 
 float uplanet::get_vegetation() const {
-
 	return ((has_vegetation() && temp > MIN_PLANT_TEMP && temp < MAX_PLANT_TEMP) ? sqrt(atmos*water) : 0.0);
+}
+
+bool uplanet::has_ice_debris() const {
+	return (temp < 0.75*FREEZE_TEMP && water > 0.3); // only for ice planets
 }
 
 
