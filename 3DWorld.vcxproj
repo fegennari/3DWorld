@@ -955,6 +955,7 @@
     <None Include="sponza\coll_objs_sponza2.txt" />
     <None Include="sponza\config_sponza.txt" />
     <None Include="sponza\config_sponza2.txt" />
+    <None Include="todo.txt" />
     <None Include="universe\config_universe.txt" />
     <None Include="universe\formatting.txt" />
     <None Include="universe\ship_defs.txt" />
