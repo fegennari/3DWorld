@@ -701,24 +701,42 @@ void maybe_draw_motion_dust() { // if moving, even if unpowered
 }
 
 
-void draw_ship_crosshair(pt_line_drawer &pld, point const &pos, colorRGBA const &color) { // for onscreen targeting
+void draw_ship_crosshair(pt_line_drawer &pld, point const &pos, colorRGBA const &color, float radius=0.0) { // for onscreen targeting
 
 	double const dist_extend(0.1);
 	upos_point_type const &camera(get_player_pos2());
-	vector3d_d dir(pos, camera);
-	float const dist(dir.mag());
+	vector3d_d dir(camera, pos);
+	double const dist(dir.mag());
 	if (dist < TOLERANCE) return;
 	dir /= dist; // normalize
-	point_d const chpos(camera + dir*dist_extend);
-	point verts[3] = {point(0.0, 0.7, 0.0), point(-0.7, -0.3, 0.0), point(0.7, -0.3, 0.0)}; // z = 0.0
-
-	for (unsigned i = 0; i < 3; ++i) { // transform 3 triangle points
-		rotate_vector3d_by_vr(plus_z, (camera - chpos), verts[i]);
-		verts[i] *= 0.01*dist_extend; // resize
-		verts[i] += make_pt_global(chpos);
+	vector3d_d const delta(dir*dist_extend);
+	point_d const chpos(make_pt_global(camera - delta));
+	double sz(0.004*dist_extend), slen(1.0);
+	point verts[4];
+	
+	if (radius > 0.0) { // sized object
+		float const min_sz(radius*dist_extend/dist);
+		
+		if (sz < min_sz) { // object size larger than min targeting size
+			slen = max(0.1, 0.5*sz/min_sz);
+			sz   = min_sz;
+		}
 	}
-	for (unsigned i = 0; i < 3; ++i) { // 3 line segments
-		pld.add_line(verts[i], -dir, color, verts[(i+1)%3], -dir, color);
+	for (unsigned i = 0; i < 4; ++i) { // transform 4 quad points
+		verts[i].assign((((i&1)^(i>>1)) ? sz : -sz), ((i>>1) ? sz : -sz), 0.0); // z = 0.0
+		rotate_vector3d_by_vr(plus_z, delta, verts[i]);
+		verts[i] += chpos;
+	}
+	for (unsigned i = 0; i < 4; ++i) { // 4 line segments
+		point const &p1(verts[i]), &p2(verts[(i+1)&3]);
+
+		if (slen < 0.5) { // split up into 2 sections like [-  -]
+			pld.add_line(p1, dir, color, (p1 + slen*(p2 - p1)), dir, color);
+			pld.add_line(p2, dir, color, (p2 - slen*(p2 - p1)), dir, color);
+		}
+		else { // leave as a single full segment
+			pld.add_line(p1, dir, color, p2, dir, color);
+		}
 	}
 }
 
@@ -727,9 +745,11 @@ void draw_all_crosshairs(pt_line_drawer &pld) {
 
 	if (pld.empty()) return;
 	glDisable(GL_DEPTH_TEST); // always draw on top
+	glEnable(GL_LINE_SMOOTH);
 	enable_blend(); // is this needed?
 	pld.draw();
 	disable_blend();
+	glDisable(GL_LINE_SMOOTH);
 	glEnable(GL_DEPTH_TEST);
 }
 
@@ -790,9 +810,9 @@ void draw_univ_objects() {
 		cached_obj const &co(c_uobjs[i]);
 		assert(co.obj != nullptr);
 		bool const is_bad((co.flags & OBJ_FLAGS_BAD_) != 0);
-		float const radius_scaled(co.obj->get_draw_radius());
+		float const radius_scaled(co.obj->get_draw_radius()), max_radius(max(radius_scaled, co.radius));
 
-		if (!is_bad && !is_distant(co.pos, radius_scaled) && univ_sphere_vis(co.pos, max(radius_scaled, co.radius))) { // Note: VFC must be conservative, so use larger radius
+		if (!is_bad && !is_distant(co.pos, radius_scaled) && univ_sphere_vis(co.pos, max_radius)) { // Note: VFC must be conservative, so use larger radius
 			// make static objects (such as asteroids) have a large distance so that they're drawn first;
 			// this is okay as they should be opaque, and will make good occluders
 			if (co.flags & OBJ_FLAGS_STAT) { // add other cases (sphere/tri particles, etc.)?
@@ -805,9 +825,9 @@ void draw_univ_objects() {
 		else if (co.obj->has_lights()) {
 			co.obj->reset_lights(); // reset for next frame
 		}
-		if (onscreen_display && !is_bad && (co.flags & OBJ_FLAGS_SHIP) && univ_sphere_vis(co.pos, co.radius) && !co.obj->is_player_ship()) {		
+		if (onscreen_display && !is_bad && (co.flags & OBJ_FLAGS_SHIP) && univ_sphere_vis(co.pos, max_radius) && !co.obj->is_player_ship()) {		
 			if ((!(co.flags & OBJ_FLAGS_DIST) || dist_less_than(co.pos, camera, ch_dist)) && co.obj->visibility() > 0.1 && co.obj->get_time() > 0) {
-				draw_ship_crosshair(ch_pld, co.pos, alignment_colors[co.obj->get_align()]);
+				draw_ship_crosshair(ch_pld, co.pos, alignment_colors[co.obj->get_align()], max_radius);
 			}
 		}
 	}
