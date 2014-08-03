@@ -225,11 +225,10 @@ class universe_shader_t : public shader_t {
 		begin_shader();
 		add_uniform_int(texture_name, 0);
 	}
-	void setup_planet_star_shader() {
+	void setup_planet_star_noise_tex() {
 		set_active_texture(1);
 		bind_3d_texture(get_noise_tex_3d(64, 1)); // grayscale noise
 		set_active_texture(0);
-		set_prefix("#define NUM_OCTAVES 8", 1); // FS
 	}
 	void set_planet_uniforms(float atmosphere, shadow_vars_t const &svars, bool use_light2) {
 		set_light_scale(*this, use_light2);
@@ -247,8 +246,6 @@ public:
 		assert(!has_craters || !body.gas_giant);
 
 		if (!is_setup()) {
-			setup_planet_star_shader();
-			
 			if (body.gas_giant) {
 				set_prefix("#define GAS_GIANT", 1); // FS
 				if (!(display_mode & 0x20)) {set_prefix("#define ANIMATE_STORMS", 1);} // FS
@@ -259,6 +256,7 @@ public:
 				if (body.use_vert_shader_offset()) {set_prefix("#define PROCEDURAL_DETAIL", 0);} // VS
 				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
 			}
+			set_prefix("#define NUM_OCTAVES 8", 1); // FS
 			if (has_craters) {set_prefix("#define HAS_CRATERS", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			string frag_shader_str("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+rand_gen.part*");
@@ -287,6 +285,7 @@ public:
 		// increase cloud frequency in z to add a coriolis effect
 		set_uniform_vector3d(get_loc("cloud_freq"), cf_scale*(body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 2.0)));
 		set_planet_uniforms((body.gas_giant ? 0.5 : 1.0)*body.atmos, svars, use_light2);
+		setup_planet_star_noise_tex();
 		return 1;
 	}
 	void disable_planet() {
@@ -296,9 +295,9 @@ public:
 		}
 	}
 
-	bool enable_star(colorRGBA const &colorA, colorRGBA const &colorB) { // no lighting
+	bool enable_star(colorRGBA const &colorA, colorRGBA const &colorB, float radius) { // no lighting
 		if (!is_setup()) {
-			setup_planet_star_shader();
+			set_prefix("#define NUM_OCTAVES 8", 1); // FS
 			set_vert_shader("star_draw");
 			set_frag_shader("perlin_clouds_3d.part*+star_draw");
 			//set_frag_shader("star_draw_iq");
@@ -311,6 +310,8 @@ public:
 		enable();
 		set_uniform_color(get_loc("colorA"), colorA);
 		set_uniform_color(get_loc("colorB"), colorB);
+		set_uniform_float(get_loc("radius"), radius);
+		setup_planet_star_noise_tex();
 		return 1;
 	}
 	void disable_star() {
@@ -390,7 +391,7 @@ public:
 		return get_planet_shader(body, svars).enable_planet(body, svars, planet_pos, use_light2);
 	}
 	void disable_planet_shader(urev_body const &body, shadow_vars_t const &svars) {get_planet_shader(body, svars).disable_planet();}
-	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB) {return star_shader.enable_star(colorA, colorB);}
+	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius) {return star_shader.enable_star(colorA, colorB, radius);}
 	void disable_star_shader() {star_shader.disable_star();}
 	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {
 		return ring_shader.enable_ring(planet, planet_pos, sun_pos, sun_radius, dir);
@@ -2240,6 +2241,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 		assert(ndiv > 0);
 		fgPushMatrix();
 		global_translate(pos_);
+		uniform_scale(radius);
 		float flare_intensity((size > 4.0) ? 1.0 : 0.0);
 
 		if (flare_intensity > 0.0 && closest) { // determine occlusion from planets
@@ -2262,26 +2264,26 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 			float const cfr(max(1.0, 60.0/size)), alpha(flare_intensity*CLIP_TO_01(0.5f*(size - 4.0f)));
 			colorRGBA ca(colorA), cb(colorB);
 			ca.A *= alpha; cb.A *= alpha;
-			usg.enable_star_shader(ca, cb);
+			usg.enable_star_shader(ca, cb, radius);
 			enable_blend();
 			set_additive_blend_mode();
 			static quad_batch_draw qbd; // probably doesn't need to be static
 
-			if (cfr > 2.4) {
-				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 0.4*cfr*radius, 0.4*cfr*radius);
+			if (cfr > 1.5) {
+				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 0.4*cfr, 0.4*cfr);
 				qbd.draw_as_flares_and_clear(FLARE1_TEX);
-				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 0.5*radius, cfr*radius);
-				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, cfr*radius, 0.5*radius);
+				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 0.5, cfr);
+				qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, cfr, 0.5);
 			}
-			if (size > 6.0) {qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 4.0*radius, 4.0*radius);}
+			if (size > 6.0) {qbd.add_xlated_billboard(pos_, all_zeros, camera, up_vector, WHITE, 4.0, 4.0);}
 			qbd.draw_as_flares_and_clear(BLUR_TEX);
 			set_std_blend_mode();
 			disable_blend();
 		}
-		usg.enable_star_shader(colorA, colorB);
+		usg.enable_star_shader(colorA, colorB, radius);
 		select_texture(WHITE_TEX);
-		draw_sphere_vbo(all_zeros, radius, ndiv, 0); // use vbo if ndiv is small enough
-		if (world_mode == WMODE_UNIVERSE && size >= 64) {draw_flares(ndiv, 1);}
+		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // use vbo if ndiv is small enough
+		if (world_mode == WMODE_UNIVERSE && size >= 64) {select_texture(BLUR_TEX); draw_flares(ndiv, 1);}
 		usg.disable_star_shader();
 		fgPopMatrix();
 	} // end sphere draw
@@ -2465,7 +2467,7 @@ void ustar::draw_flares(int ndiv, bool texture) {
 	
 	for (unsigned i = 0; i < solar_flares.size(); ++i) {
 		if (animate2) {solar_flares[i].update(color);}
-		solar_flares[i].draw(radius, max(3, ndiv/4), texture);
+		solar_flares[i].draw(1.0, max(3, ndiv/4), texture); // Note: already translated by pos and scaled by radius
 	}
 	disable_blend();
 	glDisable(GL_CULL_FACE);
@@ -2507,7 +2509,7 @@ void ustar::solar_flare::draw(float size, int ndiv, bool texture) const {
 	assert(length > 0.0 && radius > 0.0 && size > 0.0);
 	fgPushMatrix();
 	rotate_about(angle, dir);
-	draw_fast_cylinder(point(0.0, 0.0, 0.9*size), point(0.0, 0.0, (length + 0.9)*size), radius*size, 0.0, ndiv, texture);
+	draw_fast_cylinder(point(0.0, 0.0, 0.9*size), point(0.0, 0.0, (length + 0.9)*size), 0.1*size, 0.0, ndiv, texture);
 	fgPopMatrix();
 }
 
