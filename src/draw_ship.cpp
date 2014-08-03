@@ -236,32 +236,6 @@ void uobj_draw_data::setup_colors_draw_flare(point const &pos, point const &xlat
 }
 
 
-void draw_crosshair(upos_point_type const &pos, float dist) { // for onscreen targeting
-
-	glDisable(GL_DEPTH_TEST);
-	enable_blend();
-	fgPushMatrix();
-	global_translate(pos);
-	rotate_towards_camera(pos);
-	double const size(0.01*dist);
-	vert_wrap_t const verts[3] = {point(0.0, 1.0*size, 0.0), point(-0.7*size, 0.0, 0.0), point( 0.7*size, 0.0, 0.0)}; // z = 0.0
-	draw_verts(verts, 3, GL_LINE_LOOP);
-	fgPopMatrix();
-	disable_blend();
-	glEnable(GL_DEPTH_TEST);
-}
-
-
-void draw_crosshair_from_camera(point const &pos) {
-
-	float const dist_extend(0.1);
-	upos_point_type const &camera(get_player_pos2());
-	vector3d_d const v(pos, camera);
-	float const vm(v.mag());
-	if (vm > TOLERANCE) draw_crosshair((camera + v*(dist_extend/vm)), dist_extend);
-}
-
-
 void draw_cobjs(cobj_vector_t const &cobjs, unsigned ndiv) {
 
 	for (unsigned i = 0; i < cobjs.size(); ++i) {
@@ -2340,7 +2314,4 @@ void uobj_draw_data::draw_black_hole() const { // should be non-rotated
 		qbd.draw_as_flares_and_clear(BLUR_TEX);
 	}
 }
-
-
-
 

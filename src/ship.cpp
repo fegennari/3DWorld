@@ -688,17 +688,49 @@ public:
 motion_particles_t motion_particles;
 
 
-void maybe_draw_motion_dust() {
+void maybe_draw_motion_dust() { // if moving, even if unpowered
 
 	// draw particles around ship showing motion
 	if (!animate2 || !player_near_system() || do_run == 2) return; // not in hyperspeed
 	u_ship const &pship(player_ship());
-	//if (!pship.powered()) return;
 	vector3d const &pvel(pship.get_velocity());
 	float const pvmag(pvel.mag()), vmax(SLOW_SPEED_FACTOR*pship.specs().max_speed);
 	if (pvmag < 0.8*vmax) return; // too slow
 	float const length(1.0*min(4.0f*vmax, pvmag));
 	motion_particles.update_and_draw(pship.get_pos(), pvel.get_norm(), length, 0.00002);
+}
+
+
+void draw_ship_crosshair(pt_line_drawer &pld, point const &pos, colorRGBA const &color) { // for onscreen targeting
+
+	double const dist_extend(0.1);
+	upos_point_type const &camera(get_player_pos2());
+	vector3d_d dir(pos, camera);
+	float const dist(dir.mag());
+	if (dist < TOLERANCE) return;
+	dir /= dist; // normalize
+	point_d const chpos(camera + dir*dist_extend);
+	point verts[3] = {point(0.0, 0.7, 0.0), point(-0.7, -0.3, 0.0), point(0.7, -0.3, 0.0)}; // z = 0.0
+
+	for (unsigned i = 0; i < 3; ++i) { // transform 3 triangle points
+		rotate_vector3d_by_vr(plus_z, (camera - chpos), verts[i]);
+		verts[i] *= 0.01*dist_extend; // resize
+		verts[i] += make_pt_global(chpos);
+	}
+	for (unsigned i = 0; i < 3; ++i) { // 3 line segments
+		pld.add_line(verts[i], -dir, color, verts[(i+1)%3], -dir, color);
+	}
+}
+
+
+void draw_all_crosshairs(pt_line_drawer &pld) {
+
+	if (pld.empty()) return;
+	glDisable(GL_DEPTH_TEST); // always draw on top
+	enable_blend(); // is this needed?
+	pld.draw();
+	disable_blend();
+	glEnable(GL_DEPTH_TEST);
 }
 
 
@@ -751,9 +783,8 @@ void draw_univ_objects() {
 	sorted.resize(0);
 	unsorted.resize(0);
 	point const &camera(get_player_pos2());
-	float const ch_dist(100.0*player_ship().specs().sensor_dist);
-	shader_t chs;
-	if (onscreen_display) {chs.begin_color_only_shader();} // for crosshairs
+	float const ch_dist(player_ship().specs().sensor_dist);
+	pt_line_drawer ch_pld;
 
 	for (unsigned i = 0; i < nobjs; ++i) { // make negative so it's sorted largest to smallest
 		cached_obj const &co(c_uobjs[i]);
@@ -770,20 +801,16 @@ void draw_univ_objects() {
 			else {
 				sorted.push_back(make_pair(-(p2p_dist(co.pos, camera) - radius_scaled), co.obj));
 			}
-			if (onscreen_display && (co.flags & OBJ_FLAGS_SHIP) && !co.obj->is_player_ship()) {		
-				if ((dist_less_than(co.pos, camera, ch_dist) || !(co.flags & (OBJ_FLAGS_DIST | OBJ_FLAGS_NEW_))) &&
-					co.obj->visibility() > 0.1 && co.obj->get_time() > 0)
-				{
-					chs.set_cur_color(alignment_colors[co.obj->get_align()]);
-					draw_crosshair_from_camera(co.pos); // draw_crosshair?
-				}
-			}
 		}
 		else if (co.obj->has_lights()) {
 			co.obj->reset_lights(); // reset for next frame
 		}
+		if (onscreen_display && !is_bad && (co.flags & OBJ_FLAGS_SHIP) && univ_sphere_vis(co.pos, co.radius) && !co.obj->is_player_ship()) {		
+			if ((!(co.flags & OBJ_FLAGS_DIST) || dist_less_than(co.pos, camera, ch_dist)) && co.obj->visibility() > 0.1 && co.obj->get_time() > 0) {
+				draw_ship_crosshair(ch_pld, co.pos, alignment_colors[co.obj->get_align()]);
+			}
+		}
 	}
-	chs.end_shader();
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	//PRINT_TIME("Sort");
 	shader_t s[2];
@@ -823,13 +850,13 @@ void draw_univ_objects() {
 	t_wrays.draw(); // draw beam weapons, engine trails, and lightning
 	set_std_blend_mode();
 
-	if (onscreen_display) { // draw player death marker
-		shader_t s;
-		s.begin_color_only_shader();
-		s.set_cur_color(MAGENTA);
-		draw_crosshair_from_camera(universe_origin); // starts off as player start marker - world origin
-		if (player_death_pos != universe_origin) {s.set_cur_color(ORANGE); draw_crosshair_from_camera(player_death_pos);}
-		s.end_shader();
+	if (onscreen_display) { // for crosshairs
+		draw_ship_crosshair(ch_pld, universe_origin, MAGENTA); // starts off as player start marker - world origin
+		if (player_death_pos != universe_origin) {draw_ship_crosshair(ch_pld, player_death_pos, ORANGE);} // player death marker
+		shader_t chs;
+		chs.begin_color_only_shader();
+		draw_all_crosshairs(ch_pld);
+		chs.end_shader();
 	}
 	//PRINT_TIME("Draw");
 }

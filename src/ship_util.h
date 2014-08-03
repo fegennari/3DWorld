@@ -286,8 +286,6 @@ bool alloc_resources_for(unsigned sclass, unsigned align, unsigned reserve_credi
 
 // draw_ship.cpp
 void set_emissive_color(colorRGBA const &color, shader_t *shader);
-void draw_crosshair(upos_point_type const &pos, float dist);
-void draw_crosshair_from_camera(point const &pos);
 void add_lightning_wray(float width, point const &p1, point const &p2);
 
 // free_obj.cpp
