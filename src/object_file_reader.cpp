@@ -272,6 +272,7 @@ public:
 
 		while (mat_in.good() && (mat_in >> s)) {
 			assert(!s.empty());
+			transform(s.begin(), s.end(), s.begin(), tolower); // convert all characters to lowercase
 
 			if (s[0] == '#') { // comment - can we have comments here?
 				read_to_newline(mat_in); // ignore
@@ -287,27 +288,27 @@ public:
 				cur_mat_id =  model.get_material_ix(material_name, fn);
 				cur_mat    = &model.get_material(cur_mat_id);
 			}
-			else if (s == "Ka") {
+			else if (s == "ka") {
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ka.R >> cur_mat->ka.G >> cur_mat->ka.B)) {cerr << "Error reading material Ka" << endl; return 0;}
 			}
-			else if (s == "Kd") {
+			else if (s == "kd") {
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->kd.R >> cur_mat->kd.G >> cur_mat->kd.B)) {cerr << "Error reading material Kd" << endl; return 0;}
 			}
-			else if (s == "Ks") {
+			else if (s == "ks") {
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ks.R >> cur_mat->ks.G >> cur_mat->ks.B)) {cerr << "Error reading material Ks" << endl; return 0;}
 			}
-			else if (s == "Ke") {
+			else if (s == "ke") {
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ke.R >> cur_mat->ke.G >> cur_mat->ke.B)) {cerr << "Error reading material Ke" << endl; return 0;}
 			}
-			else if (s == "Ns") { // specular exponent
+			else if (s == "ns") { // specular exponent
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ns)) {cerr << "Error reading material Ns" << endl; return 0;}
 			}
-			else if (s == "Ni") { // index of refraction
+			else if (s == "ni") { // index of refraction
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ni)) {cerr << "Error reading material Ni" << endl; return 0;}
 			}
@@ -315,11 +316,11 @@ public:
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->alpha)) {cerr << "Error reading material d" << endl; return 0;}
 			}
-			else if (s == "Tr") { // transmittance
+			else if (s == "tr") { // transmittance
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->tr)) {cerr << "Error reading material Tr" << endl; return 0;}
 			}
-			else if (s == "Tf") { // transmittion filter
+			else if (s == "tf") { // transmittion filter
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->tf.R >> cur_mat->tf.G >> cur_mat->tf.B)) {cerr << "Error reading material Tf" << endl; return 0;}
 			}
@@ -327,17 +328,17 @@ public:
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->illum)) {cerr << "Error reading material Tr" << endl; return 0;}
 			}
-			else if (s == "map_Ka") {
+			else if (s == "map_ka") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
 				check_and_bind(cur_mat->a_tid, tfn, 0);
 			}
-			else if (s == "map_Kd") {
+			else if (s == "map_kd") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Kd" << endl; return 0;}
 				check_and_bind(cur_mat->d_tid, tfn, 0);
 			}
-			else if (s == "map_Ks") {
+			else if (s == "map_ks") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
 				check_and_bind(cur_mat->s_tid, tfn, 0);
