@@ -1293,6 +1293,24 @@ struct water_params_t {
 };
 
 
+struct text_string_t {
+
+	std::string str;
+	point pos;
+	float size;
+	colorRGBA color;
+
+	text_string_t() {}
+	text_string_t(std::string const &s, point const &p, float sz, colorRGBA const &c) : str(s), pos(p), size(sz), color(c) {}
+};
+
+struct text_drawer_t {
+
+	vector<text_string_t> strs;
+	void draw() const;
+};
+
+
 // colors
 colorRGBA const RED      (1.0,  0.0,  0.0,  1.0);
 colorRGBA const GREEN    (0.0,  1.0,  0.0,  1.0);

@@ -56,7 +56,7 @@ float align_t_kills[NUM_ALIGNMENT]    = {0};
 float friendly_kills[NUM_ALIGNMENT]   = {0};
 
 
-extern int show_framerate, frame_counter, display_mode, animate2, do_run;
+extern int show_framerate, frame_counter, display_mode, animate2, do_run, show_scores;
 extern float fticks, tfticks;
 extern unsigned owner_counts[];
 extern float resource_counts[];
@@ -804,6 +804,7 @@ void draw_univ_objects() {
 	point const &camera(get_player_pos2());
 	float const ch_dist(player_ship().specs().sensor_dist);
 	pt_line_drawer ch_pld;
+	text_drawer_t text_drawer;
 
 	for (unsigned i = 0; i < nobjs; ++i) { // make negative so it's sorted largest to smallest
 		cached_obj const &co(c_uobjs[i]);
@@ -824,9 +825,15 @@ void draw_univ_objects() {
 		else if (co.obj->has_lights()) {
 			co.obj->reset_lights(); // reset for next frame
 		}
-		if (onscreen_display && !is_bad && (co.flags & OBJ_FLAGS_SHIP) && univ_sphere_vis(co.pos, max_radius) && !co.obj->is_player_ship()) {		
+		if ((onscreen_display || show_scores) && !is_bad && (co.flags & OBJ_FLAGS_SHIP) && univ_sphere_vis(co.pos, max_radius) && !co.obj->is_player_ship()) {		
 			if ((!(co.flags & OBJ_FLAGS_DIST) || dist_less_than(co.pos, camera, ch_dist)) && co.obj->visibility() > 0.1 && co.obj->get_time() > 0) {
-				draw_ship_crosshair(ch_pld, co.pos, alignment_colors[co.obj->get_align()], max_radius);
+				colorRGBA const &color(alignment_colors[co.obj->get_align()]);
+				if (onscreen_display) {draw_ship_crosshair(ch_pld, co.pos, color, max_radius);}
+
+				if (show_scores && dist_less_than(co.pos, camera, 0.4)) { // tab key
+					string const str(co.obj->get_name() + "\n" + co.obj->get_info());
+					text_drawer.strs.push_back(text_string_t(str, make_pt_global(co.pos), 2.0, color));
+				}
 			}
 		}
 	}
@@ -868,6 +875,7 @@ void draw_univ_objects() {
 	draw_and_update_engine_trails();
 	t_wrays.draw(); // draw beam weapons, engine trails, and lightning
 	set_std_blend_mode();
+	text_drawer.draw();
 
 	if (onscreen_display) { // for crosshairs
 		draw_ship_crosshair(ch_pld, universe_origin, MAGENTA); // starts off as player start marker - world origin

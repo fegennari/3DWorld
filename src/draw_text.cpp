@@ -88,19 +88,18 @@ void load_font_texture_atlas(string const &fn) {font_texture_manager.load(fn);}
 void free_font_texture_atlas() {font_texture_manager.free_gl_state();}
 
 
-void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &text, float tsize) {
+void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &text, float tsize, vector3d const &column_dir, vector3d const &line_dir) {
 
-	if (text.empty()) return; // error?
 	float const line_spacing = 1.25;
 	float const char_spacing = 0.06;
 	float const char_sz(0.001*tsize);
-	point cursor(pos);
-	vector<vert_tc_t> verts;
+	vector3d const line_delta(-line_dir*line_spacing*char_sz);
+	point cursor(pos), line_start(cursor);
 
 	for (string::const_iterator i = text.begin(); i != text.end(); ++i) {
 		if (*i == '\n') { // newline (CR/LF)
-			cursor.x  = pos.x; // CR
-			cursor.y -= line_spacing*char_sz; // LF
+			line_start += line_delta; // LF
+			cursor      = line_start; // CR
 		}
 		else {
 			per_char_data_t const &pcd(font_texture_manager.lookup_ascii(*i));
@@ -112,29 +111,67 @@ void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &te
 
 			for (unsigned i = 0; i < 6; ++i) {
 				unsigned const ix(quad_to_tris_ixs[i]);
-				point p(cursor);
-				p.x += dx[ix]; p.y += dy[ix];
-				verts.push_back(vert_tc_t(p, t[ix][0], t[ix][1]));
+				verts.push_back(vert_tc_t((cursor + column_dir*dx[ix] + line_dir*dy[ix]), t[ix][0], t[ix][1]));
 			}
-			cursor.x += char_width + char_sz*char_spacing;
+			cursor += column_dir*(char_width + char_sz*char_spacing);
 		}
 	}
-	shader_t s;
-	s.begin_simple_textured_shader(0.1, 0, 0, &color);
-	font_texture_manager.bind_gl();
+}
+
+
+void begin_text_draw(shader_t &s, colorRGBA const *const color=nullptr) {
+
+	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);} // always filled
+	glDisable(GL_DEPTH_TEST);
 	enable_blend();
-	draw_verts(verts, GL_TRIANGLES);
-	disable_blend();
+	s.begin_simple_textured_shader(0.1, 0, 0, color);
+	font_texture_manager.bind_gl();
+}
+
+void end_text_draw(shader_t &s) {
+
 	s.end_shader();
+	disable_blend();
+	glEnable(GL_DEPTH_TEST);
+	if (draw_model != 0) {set_fill_mode();}
+}
+
+
+void draw_bitmap_text(colorRGBA const &color, point const &pos, string const &text, float tsize) {
+
+	if (text.empty()) return; // error?
+	shader_t s;
+	begin_text_draw(s, &color);
+	vector<vert_tc_t> verts;
+	gen_text_verts(verts, pos, text, tsize, plus_x, plus_y);
+	draw_verts(verts, GL_TRIANGLES);
+	end_text_draw(s);
 }
 
 
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize) {
-
-	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);} // always filled
-	glDisable(GL_DEPTH_TEST);
 	draw_bitmap_text(color, point(x, y, z), text, 0.8*tsize);
-	glEnable(GL_DEPTH_TEST);
-	if (draw_model != 0) {set_fill_mode();}
+}
+
+
+void text_drawer_t::draw() const {
+
+	if (strs.empty()) return;
+	shader_t s;
+	begin_text_draw(s);
+	vector<vert_tc_t> verts;
+	vector3d const tdir(cross_product(get_vdir_all(), get_upv_all())); // screen space x
+	colorRGBA last_color(ALPHA0);
+
+	for (auto i = strs.begin(); i != strs.end(); ++i) {
+		if (i->color != last_color) {
+			draw_and_clear_verts(verts, GL_TRIANGLES);
+			s.set_cur_color(i->color);
+			last_color = i->color;
+		}
+		gen_text_verts(verts, i->pos, i->str, i->size, tdir, up_vector);
+	}
+	draw_and_clear_verts(verts, GL_TRIANGLES);
+	end_text_draw(s);
 }
 

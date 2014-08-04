@@ -189,24 +189,25 @@ bool u_ship::player_controlled() const {
 
 string u_ship::get_name() const {
 	
-	return name + " [" + align_names[get_align()] + " " + specs().name + "]";
+	string const desc("[" + align_names[get_align()] + " " + specs().name + "]");
+	return (name.empty() ? desc : (name + " " + desc));
 }
 
 
 string u_ship::get_info() const { // destination, homeworld?
 	
 	std::ostringstream oss;
-	if (specs().max_shields > 0.0) oss << "  Shields: " << unsigned(100.0*shields/specs().max_shields) << "%";
-	if (specs().max_armor   > 0.0) oss << "  Armor: "   << unsigned(100.0*armor/specs().max_armor)     << "%";
-	if (specs().ncrew       > 0  ) oss << "  Crew: "    << ncrew;
-	if ((ai_type & AI_BASE_TYPE) == AI_ATT_ALL) oss << " (Pirate)";
-	if (ai_type & AI_GUARDIAN) oss << " (Guardian)";
-	if (is_flagship)           oss << " (Flagship)";
-	if (is_exploding())        oss << " (Exploding)";
-	else if (disabled_priv())  oss << " (Disabled)";
-	if (target_obj)            oss << endl << " (Target: "      << target_obj->get_name() << ")";
-	if (parent)                oss << endl << " (Parent: "      << parent->get_name()     << ")";
-	if (dest_mgr.is_valid())   oss << endl << " (Destination: " << dest_mgr.get_name()    << ")";
+	if (specs().max_shields > 0.0) oss << "Shields: " << unsigned(100.0*shields/specs().max_shields) << "%  ";
+	if (specs().max_armor   > 0.0) oss << "Armor: "   << unsigned(100.0*armor/specs().max_armor)     << "%  ";
+	if (specs().ncrew       > 0  ) oss << "Crew: "    << ncrew << "  ";
+	if ((ai_type & AI_BASE_TYPE) == AI_ATT_ALL) oss << "(Pirate) ";
+	if (ai_type & AI_GUARDIAN) oss << "(Guardian) ";
+	if (is_flagship)           oss << "(Flagship) ";
+	if (is_exploding())        oss << "(Exploding) ";
+	else if (disabled_priv())  oss << "(Disabled) ";
+	if (target_obj)            oss << endl << "(Target: "      << target_obj->get_name() << ") ";
+	if (parent)                oss << endl << "(Parent: "      << parent->get_name()     << ") ";
+	if (dest_mgr.is_valid())   oss << endl << "(Destination: " << dest_mgr.get_name()    << ") ";
 	return oss.str();
 }
 
