@@ -482,17 +482,17 @@ void texture_t::copy_alpha_from_texture(texture_t const &at, bool alpha_in_red_c
 	assert(at.is_allocated() && is_allocated()); // check that data is allocated in both textures
 	assert(ncolors == 4); // check for alpha channel
 	assert(!is_bound());  // check that texture isn't already bound
-	assert(at.ncolors == 1 || at.ncolors == 4);
+	assert(at.ncolors == 1 || at.ncolors == 3 || at.ncolors == 4);
 	
 	if (at.width != width || at.height != height) {
 		resize(at.width, at.height);
 		assert(at.width == width && at.height == height);
 	}
-	unsigned const npixels(num_pixels()), alpha_offset(alpha_in_red_comp ? 0 : 3);
-	bool const is_lum(at.ncolors == 1);
+	// alpha channel comes from either R or A in an RGBA texture, R in RGB texture, or R in grayscale texture
+	unsigned const npixels(num_pixels()), alpha_offset((at.ncolors < 4 || alpha_in_red_comp) ? 0 : 3);
 
 	for (unsigned i = 0; i < npixels; ++i) {
-		data[4*i+3] = (is_lum ? at.data[i] : at.data[4*i+alpha_offset]); // copy alpha values
+		data[4*i+3] = at.data[at.ncolors*i+alpha_offset]; // copy alpha values
 	}
 }
 
