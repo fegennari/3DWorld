@@ -711,6 +711,7 @@ void draw_ship_crosshair(pt_line_drawer &pld, point const &pos, colorRGBA const 
 	dir /= dist; // normalize
 	vector3d_d const delta(dir*dist_extend);
 	point_d const chpos(make_pt_global(camera - delta));
+	vector3d const vortho(cross_product(up_vector, vector3d(dir)));
 	double sz(0.004*dist_extend), slen(1.0);
 	point verts[4];
 	
@@ -723,9 +724,7 @@ void draw_ship_crosshair(pt_line_drawer &pld, point const &pos, colorRGBA const 
 		}
 	}
 	for (unsigned i = 0; i < 4; ++i) { // transform 4 quad points
-		verts[i].assign((((i&1)^(i>>1)) ? sz : -sz), ((i>>1) ? sz : -sz), 0.0); // z = 0.0
-		rotate_vector3d_by_vr(plus_z, delta, verts[i]);
-		verts[i] += chpos;
+		verts[i] = chpos + up_vector*((i>>1) ? sz : -sz) + vortho*(((i&1)^(i>>1)) ? sz : -sz);
 	}
 	for (unsigned i = 0; i < 4; ++i) { // 4 line segments
 		point const &p1(verts[i]), &p2(verts[(i+1)&3]);
