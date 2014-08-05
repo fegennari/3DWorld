@@ -131,7 +131,7 @@ void main()
 	nscale *= nmap_mag;
 
 	if (nscale > 0.0) { // compute normal + bump map
-		// Note: using doubles/dvec3 has better precision/quality, but is much slower
+		// Note: using doubles/dvec3 has better precision/quality, but is much slower (what about making them precise?)
 		float delta = 0.001;
 		float hval0 = ((dnval == 0.0) ? eval_terrain_noise_normal(bpos, NORMAL_OCTAVES) : dnval);
 		float hdx   = hval0 - eval_terrain_noise_normal(bpos + vec3(delta, 0.0, 0.0), NORMAL_OCTAVES);

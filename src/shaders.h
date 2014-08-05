@@ -109,6 +109,11 @@ public:
 	bool add_uniform_matrix_4x4  (char const *const name, float const *m, bool transpose) const;
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
+	unsigned get_subroutine_index(int shader_type, char const *const name) const;
+	void set_subroutines(int shader_type, unsigned count, unsigned const *const indices);
+	void set_subroutines(int shader_type, vector<unsigned> const &indices) {set_subroutines(shader_type, indices.size(), &indices.front());}
+	void set_subroutine (int shader_type, unsigned index) {set_subroutines(shader_type, 1, &index);}
+
 	int attrib_loc_by_ix(unsigned ix, bool allow_fail=0) const;
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
 	void register_attrib_name(char const *const name, unsigned bind_ix);

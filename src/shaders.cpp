@@ -21,6 +21,7 @@ string const shaders_dir = "shaders";
 string const shader_prefix_shared_file = "common_header_shared.part*";
 string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tess_control", "tess_eval"};
 string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "common_header", "", "", ""}; // always included
+int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER};
 
 shader_t *cur_shader(NULL);
 
@@ -180,6 +181,27 @@ bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsi
 	glBufferSubData(GL_UNIFORM_BUFFER, offset, size, data);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0); // unbind
 	return 1;
+}
+
+
+// *** subroutines ***
+
+
+unsigned shader_t::get_subroutine_index(int shader_type, char const *const name) const {
+
+	assert(program && name);
+	assert(shader_type < NUM_SHADER_TYPES);
+	unsigned const ret(glGetSubroutineIndex(program, shader_type_table[shader_type], name));
+	assert(ret != GL_INVALID_INDEX); // check that name exists
+	return ret;
+}
+
+void shader_t::set_subroutines(int shader_type, unsigned count, unsigned const *const indices) {
+
+	assert(shader_type < NUM_SHADER_TYPES && count > 0 && indices != nullptr);
+	int const stype(shader_type_table[shader_type]);
+	//assert(count == glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, v) && all_indices < glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINES, v));
+	glUniformSubroutinesuiv(stype, count, indices);
 }
 
 
@@ -584,7 +606,6 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	
 	//RESET_TIME;
 	if (name.empty()) return 0; // none selected
-	int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER};
 	assert(type < NUM_SHADER_TYPES);
 	string const lookup_name(name + prepend_string[type]);
 	ix_valid_t &ixv(shader_manager.get_shader_by_name(lookup_name, type));
