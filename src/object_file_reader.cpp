@@ -417,12 +417,16 @@ public:
 		vector<counted_normal> vn; // vertex normals
 		vector<point2d<float> > tc; // texture coords
 		deque<poly_data_block> pblocks;
+		set<string> loaded_mat_libs;
 		char s[MAX_CHARS];
 		string material_name, mat_lib, group_name, object_name;
 		tc.push_back(point2d<float>(0.0, 0.0)); // default tex coords
 		n.push_back(zero_vector); // default normal
+		unsigned approx_line(0);
 
 		while (read_string(s, MAX_CHARS)) {
+			++approx_line;
+
 			if (s[0] == 0) {
 				cout << "empty/unparseable line?" << endl;
 				continue;
@@ -500,7 +504,7 @@ public:
 				if (recalc_normals) vn.push_back(counted_normal()); // vertex normal
 			
 				if (!read_point(v.back())) {
-					cerr << "Error reading vertex from object file " << filename << endl;
+					cerr << "Error reading vertex from object file " << filename << " near line " << approx_line << endl;
 					return 0;
 				}
 				xf.xform_pos(v.back());
@@ -509,7 +513,7 @@ public:
 				point tc3d;
 			
 				if (!read_point(tc3d, 2)) {
-					cerr << "Error reading texture coord from object file " << filename << endl;
+					cerr << "Error reading texture coord from object file " << filename << " near line " << approx_line << endl;
 					return 0;
 				}
 				tc.push_back(point2d<float>(tc3d.x, tc3d.y)); // discard tc3d.z
@@ -518,7 +522,7 @@ public:
 				vector3d normal;
 			
 				if (!read_point(normal)) {
-					cerr << "Error reading normal from object file " << filename << endl;
+					cerr << "Error reading normal from object file " << filename << " near line " << approx_line << endl;
 					return 0;
 				}
 				if (!recalc_normals) {
@@ -542,7 +546,7 @@ public:
 			else if (strcmp(s, "s") == 0) { // smoothing/shading (off/on or 0/1)
 				if (fscanf(fp, "%u", &smoothing_group) != 1) {
 					if (!read_string(s, MAX_CHARS) || strcmp(s, "off") != 0) {
-						cerr << "Error reading smoothing group from object file " << filename << endl;
+						cerr << "Error reading smoothing group from object file " << filename << " near line " << approx_line << endl;
 						return 0;
 					}
 					smoothing_group = 0;
@@ -552,7 +556,7 @@ public:
 				read_str_to_newline(fp, material_name);
 
 				if (material_name.empty()) {
-					cerr << "Error reading material from object file " << filename << endl;
+					cerr << "Error reading material from object file " << filename << " near line " << approx_line << endl;
 					return 0;
 				}
 				cur_mat_id = model.find_material(material_name);
@@ -561,16 +565,19 @@ public:
 				read_str_to_newline(fp, mat_lib);
 
 				if (mat_lib.empty()) {
-					cerr << "Error reading material library from object file " << filename << endl;
+					cerr << "Error reading material library from object file " << filename << " near line " << approx_line << endl;
 					return 0;
 				}
-				if (!load_mat_lib(mat_lib)) { // could cache loaded files, but they tend to not be reloaded and loading is fast anyway (since textures are cached)
-					cerr << "Error reading material library file " << mat_lib << endl;
-					//return 0;
+				if (loaded_mat_libs.find(mat_lib) == loaded_mat_libs.end()) { // mtllib not yet loaded
+					if (load_mat_lib(mat_lib)) { // could cache loaded files, but they tend to not be reloaded and loading is fast anyway (since textures are cached)
+						cerr << "Error reading material library file " << mat_lib << " near line " << approx_line << endl;
+						//return 0;
+					}
+					loaded_mat_libs.insert(mat_lib);
 				}
 			}
 			else {
-				cerr << "Error: Undefined entry '" << s << "' in object file " << filename << endl;
+				cerr << "Error: Undefined entry '" << s << "' in object file " << filename << " near line " << approx_line << endl;
 				read_to_newline(fp); // ignore this line
 				//return 0;
 			}
