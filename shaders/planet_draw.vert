@@ -17,8 +17,8 @@ void main()
 	vec3 spos    = terrain_scale*fg_Vertex.xyz;
 	vec3 npos    = spos + vec3(noise_offset);
 	float hval   = eval_terrain_noise(npos, 8);
-	float height = max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
 	float cutoff = max(water_val, lava_val);
+	float height = pow((1.0 - cutoff), 0.1)*max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
 	float omcinv = 1.0/max(0.01, (1.0 - cutoff)); // avoid div-by-zero
 	vertex      *= 1.0 + 0.01*(omcinv*(max(cutoff, height) - cutoff) - 0.5);
 #else

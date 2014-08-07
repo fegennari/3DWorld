@@ -49,7 +49,7 @@ float const STAR_BRIGHTNESS  = 1.4;
 float const MIN_TEX_OBJ_SZ   = 4.0;
 float const MAX_WATER        = 0.75;
 float const GLOBAL_AMBIENT   = 0.25;
-float const GAS_GIANT_MIN_REL_SZ = 0.38;
+float const GAS_GIANT_MIN_REL_SZ = 0.34;
 
 
 bool have_sun(1);
@@ -247,7 +247,8 @@ public:
 
 		if (!is_setup()) {
 			if (body.gas_giant) {
-				set_prefix("#define GAS_GIANT", 1); // FS
+				set_prefix("#define GAS_GIANT",    1); // FS
+				set_prefix("#define RIDGED_NOISE", 1); // FS
 				if (!(display_mode & 0x20)) {set_prefix("#define ANIMATE_STORMS", 1);} // FS
 			}
 			else if (body.use_procedural_shader()) {
@@ -283,7 +284,7 @@ public:
 		}
 		float const cf_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : UNIV_NCLIP_SCALE);
 		// increase cloud frequency in z to add a coriolis effect
-		set_uniform_vector3d(get_loc("cloud_freq"), cf_scale*(body.gas_giant ? vector3d(2.0, 2.0, 16.0) : vector3d(1.0, 1.0, 2.0)));
+		set_uniform_vector3d(get_loc("cloud_freq"), cf_scale*(body.gas_giant ? vector3d(1.2, 1.2, 6.0) : vector3d(1.0, 1.0, 2.0)));
 		set_planet_uniforms((body.gas_giant ? 0.5 : 1.0)*body.atmos, svars, use_light2);
 		setup_planet_star_noise_tex();
 		return 1;
@@ -1965,7 +1966,7 @@ void urev_body::create_gas_giant_texture() {
 
 
 bool urev_body::use_procedural_shader() const {
-	return (!gas_giant && type == UTYPE_PLANET && (display_mode & 0x20) == 0); // only for planets
+	return (!gas_giant && type == UTYPE_PLANET && water < 1.0 && (display_mode & 0x20) == 0); // only for planets
 }
 
 

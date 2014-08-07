@@ -34,7 +34,10 @@ void main()
 	float spec_mag = 0.0;
 
 #ifdef GAS_GIANT
-	float tc_adj = tc.t + 0.04*(gen_cloud_alpha_static_non_norm(5.0*vertex) - 0.5);
+	float tc_adj = tc.t;
+	float noise  = gen_cloud_alpha_static_non_norm(5.0*vertex);
+	tc_adj += 0.2*sin(20.0*normalize(vertex).z + 1.0*noise);
+	//tc_adj += 0.04*(noise - 0.5);
 	float v0 = 1.0; // using a variable here is slow
 	vec3 dir = normalize(vertex); // world space normal
 
@@ -46,8 +49,8 @@ void main()
 		float ct    = cos(angle);
 		center.xy   = vec2((center.x*ct - center.y*st), (center.y*ct + center.x*st)); // rotation
 #endif // ANIMATE_STORMS
-		float dist  = (0.25 + 0.75*rand_01(v0+3.0))*length(vec3(1.0, 1.0, 2.0)*(dir - normalize(center)));
-		tc_adj     += 0.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
+		float dist  = 1.0*(0.25 + 0.75*rand_01(v0+3.0))*length(vec3(1.0, 1.0, 2.0)*(dir - normalize(center)));
+		tc_adj     += 1.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
 		v0         += 4.0;
 	}
 	vec4 texel = texture1D(tex0, tc_adj);
@@ -70,7 +73,7 @@ void main()
 	float dnval  = 0.0;
 	vec4 texel;
 
-	if (height < water_val) {
+	if (height <= water_val) {
 		texel    = water_color;
 		spec_mag = 1.0;
 	}

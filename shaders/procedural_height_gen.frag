@@ -80,9 +80,10 @@ void main()
 	float crx  = rx;
 	float cry  = ry;
 	const float lacunarity = 1.92;
-	const float gain = 0.5;
+	const float gain       = 0.5;
+	const int NUM_OCTAVES  = 9;
 
-	for (int i = 0; i < 9; ++i) {
+	for (int i = 0; i < NUM_OCTAVES; ++i) {
 		vec2 pos    = vec2((freq*x + crx), (freq*y + cry));
 		float noise = simplex(pos);
 #ifdef RIDGED
