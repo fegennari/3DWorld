@@ -1140,6 +1140,7 @@ public:
 	void load_jpeg(int index, bool allow_diff_width_height);
 	void load_png(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
 	void load_tiff(int index, bool allow_diff_width_height, bool allow_two_byte_grayscale);
+	void load_dds(int index);
 	void auto_insert_alpha_channel(int index);
 	void do_invert_y();
 	void fix_word_alignment();

@@ -81,7 +81,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 	}
 	else {
 		if (format == 7) { // auto
-			// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff
+			// format: 0 = RAW, 1 = BMP, 2 = RAW (upside down), 3 = RAW (alpha channel), 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 10: DDS
 			string const ext(get_file_extension(name, 0, 1));
 		
 			if (0) {}
@@ -103,6 +103,9 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			else if (ext == "tif" || ext == "tiff") {
 				format = 8;
 			}
+			else if (ext == "dds") {
+				format = 10;
+			}
 			else {
 				cerr << "Error: Unidentified image file format for autodetect: " << ext << " in filename " << name << endl;
 				exit(1);
@@ -116,6 +119,7 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		case 5: load_jpeg (index, allow_diff_width_height); break;
 		case 6: load_png  (index, allow_diff_width_height, allow_two_byte_grayscale); break;
 		case 8: load_tiff (index, allow_diff_width_height, allow_two_byte_grayscale); break;
+		case 10: load_dds (index); break;
 		default:
 			cerr << "Unsupported image format: " << format << endl;
 			exit(1);
@@ -647,6 +651,92 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 	TIFFClose(tif);
 #else
 	cerr << "Error loading texture image file " << name << ": tiff support has not been enabled." << endl;
+	exit(1);
+#endif
+}
+
+
+//#include <ddraw.h>
+#define FOURCC_DXT1 0x31545844
+#define FOURCC_DXT2 0x32545844
+#define FOURCC_DXT3 0x33545844
+#define FOURCC_DXT4 0x34545844
+#define FOURCC_DXT5 0x35545844
+
+void texture_t::load_dds(int index) {
+	
+#if 0
+	cout << "Loading DDS image " << name << endl;
+	FILE *fp(open_texture_file(name));
+
+	if (fp == NULL) {
+		cerr << "Failed to load Image: could not open the file" << endl;
+		exit(1);
+	}
+ 
+	// verify the type of file
+	char filecode[4];
+	fread(filecode, 1, 4, fp);
+
+	if (strncmp(filecode, "DDS ", 4) != 0) {
+		fclose(fp);
+		cerr << name << " is not a DDS file" << endl;
+		exit(1);
+	}
+ 
+	// get the surface desc
+	//DDSURFACEDESC2 ddsd;
+	unsigned header[31];
+	fread(&header, 31, sizeof(unsigned), fp); 
+	height = header[2];
+	width  = header[3];
+	unsigned const linearSize(header[4]), mipMapCount(header[6]), dwFlags(header[16]), fourCC(header[20]);
+	unsigned tformat;
+	cout << "w: " << width << " h: " << height << " ls: " << linearSize << " mc: " << mipMapCount << " flags: " << dwFlags << " fc: " << fourCC << endl;
+
+	switch(fourCC) {
+		case FOURCC_DXT1:
+			tformat = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+			break;
+		case FOURCC_DXT3:
+			tformat = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+			break;
+		case FOURCC_DXT5:
+			tformat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			break;
+		default:
+			cerr << "DDS file format " << fourCC << " is not supported" << endl;
+			exit(1);
+	}
+
+	// how big is it going to be including all mipmaps?
+	unsigned const bufsize((mipMapCount > 1) ? linearSize*2 : linearSize);
+	data = new unsigned char[bufsize];
+	fread(data, 1, bufsize, fp);
+	fclose(fp);
+	ncolors = ((fourCC == FOURCC_DXT1) ? 3 : 4);
+
+#if 0
+	// Create one OpenGL texture
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+ 
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);  
+	unsigned const blockSize((tformat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16);
+ 
+	// load the mipmaps
+	for (unsigned level = 0, w = width, h = height, offset = 0; level < mipMapCount && (width || height); ++level) {
+		unsigned size = ((width+3)/4)*((height+3)/4)*blockSize;
+		glCompressedTexImage2D(GL_TEXTURE_2D, level, tformat, w, h, 0, size, (data + offset));
+		offset += size;
+		w = max(w/2, 1U);
+		h = max(h/2, 1U);
+	}
+#endif
+#else
+	cerr << "Error loading texture image file " << name << ": DDS support has not been enabled." << endl;
 	exit(1);
 #endif
 }
