@@ -685,6 +685,9 @@ void texture_t::deferred_load_and_bind() {
 		{
 			//cout << "Loading DDS image " << name << endl;
 			gli::texture2D Texture(gli::load_dds(name.c_str()));
+			bool const compressed(gli::is_compressed(Texture.format()));
+			// here we assume the texture is upside down and flip it, if it's uncompressed and flippable
+			if (!compressed) {Texture = flip(Texture);}
 			assert(!Texture.empty());
 			width  = Texture.dimensions().x;
 			height = Texture.dimensions().y;
@@ -694,14 +697,12 @@ void texture_t::deferred_load_and_bind() {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, GLint(Texture.levels() - 1));
 			glTexStorage2D(GL_TEXTURE_2D, Texture.levels(), gli::internal_format(Texture.format()), width, height);
 
-			if (gli::is_compressed(Texture.format())) {
-				for (gli::texture2D::size_type Level = 0; Level < Texture.levels(); ++Level) {
+			for (gli::texture2D::size_type Level = 0; Level < Texture.levels(); ++Level) {
+				if (compressed) {
 					glCompressedTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, Texture[Level].dimensions().x, Texture[Level].dimensions().y,
 						gli::internal_format(Texture.format()), Texture[Level].size(), Texture[Level].data());
 				}
-			}
-			else {
-				for(gli::texture2D::size_type Level = 0; Level < Texture.levels(); ++Level) {
+				else {
 					glTexSubImage2D(GL_TEXTURE_2D, Level, 0, 0, Texture[Level].dimensions().x, Texture[Level].dimensions().y,
 						gli::external_format(Texture.format()), gli::type_format(Texture.format()), Texture[Level].data());
 				}
