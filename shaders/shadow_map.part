@@ -5,20 +5,24 @@ uniform sampler2DShadow sm_tex0, sm_tex1;
 uniform mat4 smap_matrix0, smap_matrix1;
 
 // pos and normal are in eye space
-float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in mat4 matrix, in sampler2DShadow sm_tex) {
+float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in mat4 matrix, in sampler2DShadow sm_tex, in vec3 lpos) {
 #ifndef NO_SMAP_NORMAL_OFFSET
+#ifdef NEW_SMAP_NORMAL_OFFSET
+	pos.xyz += norm_bias_scale*tan(acos(dot(normal, normalize(lpos))))*z_bias*normal;
+#else
 	pos.xyz += norm_bias_scale*z_bias*normal;
 	//pos.xyz += norm_bias_scale*z_bias*normalize(fg_ModelViewMatrixInverse[3].xyz - pos.xyz); // world space view vector
+#endif
 #endif
 	vec4 shadow_coord = matrix * pos;
 	return sm_scale*shadow2DProj(sm_tex, shadow_coord + vec4(0, 0, -z_bias*shadow_coord.w, 0)).r;
 }
 
 float get_shadow_map_weight_light0(in vec4 pos, in vec3 normal) {
-	return get_shadow_map_weight(pos, normal, sm_scale0, smap_matrix0, sm_tex0);
+	return get_shadow_map_weight(pos, normal, sm_scale0, smap_matrix0, sm_tex0, fg_LightSource[0].position.xyz);
 }
 float get_shadow_map_weight_light1(in vec4 pos, in vec3 normal) {
-	return get_shadow_map_weight(pos, normal, sm_scale1, smap_matrix1, sm_tex1);
+	return get_shadow_map_weight(pos, normal, sm_scale1, smap_matrix1, sm_tex1, fg_LightSource[1].position.xyz);
 }
 
 vec4 add_light_comp_pos_smap_light0(in vec3 normal, in vec4 epos) {

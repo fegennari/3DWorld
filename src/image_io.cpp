@@ -658,8 +658,6 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 }
 
 
-#define ENABLE_DDS
-
 #ifdef ENABLE_DDS
 #include <gli.hpp>
 #endif

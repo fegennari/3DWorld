@@ -13,5 +13,4 @@ Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD - mesh simplification
 
-Reduce texture tiling by sampling twice at different resolutions and blending based on distance
-float bias = 0.005*tan(acos(cosTheta)); cosTheta = dot(n, l);
+GLSL subroutine
