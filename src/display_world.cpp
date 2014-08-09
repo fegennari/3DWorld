@@ -636,7 +636,7 @@ void draw_sun_flare() {
 	//RESET_TIME;
 	point const sun_pos(get_sun_pos());
 
-	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, 4.0*sun_radius, 2)) { // use larger radius to include the flare/halo
+	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, 4.0*sun_radius, 0)) { // use larger radius to include the flare/halo
 		point const viewer(get_camera_pos());
 		float intensity(1.0);
 
@@ -650,7 +650,7 @@ void draw_sun_flare() {
 				int index; // unused
 				if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
 				point const pos(sun_pos + pts[i]*sun_radius);
-				if (coll_pt_vis_test(pos, viewer, 0.0, index, camera_coll_id, 0, 1) && !line_intersect_mesh(pos, viewer, 0)) {++nvis;}
+				if (coll_pt_vis_test(pos, viewer, 0.0, index, camera_coll_id, 0, 1) && (!(display_mode & 0x01) || !line_intersect_mesh(pos, viewer, 0))) {++nvis;}
 			}
 			pts_valid = 1;
 			if (nvis == 0) return;
