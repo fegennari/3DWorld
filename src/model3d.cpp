@@ -77,7 +77,7 @@ void texture_manager::free_textures() {
 
 void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump) {
 
-	if (!t.is_allocated()) {
+	if (!t.is_loaded()) {
 		t.load(-1);
 		
 		if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
@@ -85,10 +85,10 @@ void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump)
 			assert((unsigned)t.alpha_tid < textures.size());
 			t.copy_alpha_from_texture(textures[t.alpha_tid], texture_alpha_in_red_comp);
 		}
-		if (is_bump) t.make_normal_map();
+		if (is_bump) {t.make_normal_map();}
 		t.init(); // must be after alpha copy
 	}
-	assert(t.is_allocated());
+	assert(t.is_loaded());
 }
 
 
@@ -103,7 +103,7 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 	assert(!t.is_allocated()); // must not yet be loaded
 	t.alpha_tid = alpha_tid;
 	t.ncolors   = 4; // add alpha channel
-	if (t.use_mipmaps) t.use_mipmaps = 3; // generate custom alpha mipmaps
+	if (t.use_mipmaps) {t.use_mipmaps = 3;} // generate custom alpha mipmaps
 }
 
 

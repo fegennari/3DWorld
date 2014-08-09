@@ -1094,7 +1094,7 @@ colorRGBA const DEF_TEX_COLOR(0.0, 0.0, 0.0, 0.0); // black with alpha of 0.0
 class texture_t { // size >= 116
 
 public:
-	char type, format, use_mipmaps;
+	char type, format, use_mipmaps, defer_load_type;
 	bool wrap, invert_y, do_compress, has_binary_alpha, is_16_bit_gray, no_avg_color_alpha_fill;
 	int width, height, ncolors, bump_tid, alpha_tid;
 	float anisotropy, mipmap_alpha_weight;
@@ -1106,10 +1106,12 @@ protected:
 	colorRGBA color;
 	vector<unsigned> mm_offsets;
 
+	enum {DEFER_TYPE_NONE=0, DEFER_TYPE_DDS, NUM_DEFER_TYPE};
+
 	void maybe_swap_rb(unsigned char *ptr) const;
 
 public:
-	texture_t() : type(0), format(0), use_mipmaps(0), wrap(0), invert_y(0), do_compress(0), has_binary_alpha(0),
+	texture_t() : type(0), format(0), use_mipmaps(0), defer_load_type(DEFER_TYPE_NONE), wrap(0), invert_y(0), do_compress(0), has_binary_alpha(0),
 		is_16_bit_gray(0), no_avg_color_alpha_fill(0), width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1), anisotropy(1.0),
 		mipmap_alpha_weight(1.0), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
@@ -1150,6 +1152,7 @@ public:
 	void make_normal_map();
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	void load_from_gl();
+	void deferred_load_and_bind();
 	int write_to_jpg(std::string const &fn) const;
 	int write_to_bmp(std::string const &fn) const;
 	int write_to_png(std::string const &fn) const;
@@ -1164,7 +1167,9 @@ public:
 	void set_color_alpha_to_one() {color.alpha = 1.0;} // to make has_alpha() return 0
 	bool has_alpha()    const {return (color.alpha < 1.0 || alpha_tid >= 0);}
 	bool is_bound()     const {return (tid > 0);}
-	bool is_allocated() const {return (data != 0);}
+	bool is_allocated() const {return (data != nullptr);}
+	bool defer_load()   const {return (defer_load_type != DEFER_TYPE_NONE);}
+	bool is_loaded()    const {return (is_allocated() || defer_load());}
 	colorRGBA get_avg_color() const {return color;}
 	unsigned char *get_data() {assert(data); return data;}
 	unsigned char const *get_data() const {assert(data); return data;}

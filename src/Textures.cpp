@@ -436,11 +436,17 @@ void texture_t::do_gl_init() {
 	}
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//RESET_TIME;
-	assert(is_allocated() && width > 0 && height > 0);
-	setup_texture(tid, (use_mipmaps != 0), wrap, wrap, 0, 0, 0, anisotropy);
-	glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
-	if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
-	if (use_mipmaps == 3) create_custom_mipmaps();
+	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, 0, 0, 0, anisotropy);
+
+	if (defer_load()) {
+		deferred_load_and_bind(); // FIXME: mipmaps?
+	}
+	else {
+		assert(is_allocated() && width > 0 && height > 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
+		if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
+		if (use_mipmaps == 3) create_custom_mipmaps();
+	}
 	assert(glIsTexture(tid));
 	//PRINT_TIME("Texture Init");
 }
@@ -448,6 +454,10 @@ void texture_t::do_gl_init() {
 
 void texture_t::calc_color() { // incorrect in is_16_bit_gray mode
 
+	if (defer_load() && !is_allocated()) {
+		color = WHITE; // FIXME: can we do any better than this?
+		return;
+	}
 	assert(is_allocated());
 	float colors[4] = {0.0}, weight(0.0);
 	unsigned const size(num_pixels());
@@ -670,6 +680,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 
 void texture_t::do_invert_y() {
 
+	assert(is_allocated());
 	unsigned const h2(height >> 1), wc(ncolors*width);
 		
 	for(unsigned i = 0; i < h2; ++i) {
@@ -684,9 +695,9 @@ void texture_t::do_invert_y() {
 
 void texture_t::fix_word_alignment() {
 
-	assert(is_allocated());
 	unsigned const byte_align = 4;
 	if ((ncolors*width & (byte_align-1)) == 0) return; // nothing to do
+	assert(is_allocated());
 	float const ar(float(width)/float(height));
 	int const new_w(width - (width&(byte_align-1)) + byte_align); // round up to next highest multiple of byte_align
 	int const new_h(int(new_w/ar + 0.5)); // preserve aspect ratio
@@ -696,8 +707,8 @@ void texture_t::fix_word_alignment() {
 
 void texture_t::add_alpha_channel() {
 
-	assert(is_allocated());
 	if (ncolors == 4) return; // alread has an alpha channel
+	assert(is_allocated());
 	assert(ncolors == 1 || ncolors == 3); // only supported for RGB => RGBA for now
 	bool const luminance(ncolors == 1);
 	ncolors = 4; // add alpha channel
@@ -715,9 +726,9 @@ void texture_t::add_alpha_channel() {
 
 void texture_t::resize(int new_w, int new_h) {
 
-	assert(is_allocated());
 	if (new_w == width && new_h == height) return; // already correct size
-	assert(data != NULL && width > 0 && height > 0 && new_w > 0 && new_h > 0);
+	assert(is_allocated());
+	assert(width > 0 && height > 0 && new_w > 0 && new_h > 0);
 	unsigned char *new_data(new unsigned char[new_w*new_h*ncolors]);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // required to handle calls from from fix_word_alignment()
 	int const ret(gluScaleImage(calc_format(), width, height, get_data_format(), data, new_w, new_h, get_data_format(), new_data));
@@ -732,8 +743,8 @@ void texture_t::resize(int new_w, int new_h) {
 
 bool texture_t::try_compact_to_lum() {
 
-	assert(is_allocated());
 	if (!CHECK_FOR_LUM || ncolors != 3) return 0;
+	assert(is_allocated());
 	// determine if it's really a luminance texture
 	unsigned const npixels(num_pixels());
 	bool is_lum(1);
@@ -755,13 +766,13 @@ bool texture_t::try_compact_to_lum() {
 
 void texture_t::make_normal_map() {
 
-	assert(is_allocated());
 	if (ncolors == 3) return; // already a normal map
 	
 	if (ncolors == 4) { // better not have an alpha component
 		cout << "Error: Skipping RGBA Bump/Normal map " << name << "." << endl;
 		return;
 	}
+	assert(is_allocated());
 	assert(ncolors == 1 && !is_16_bit_gray); // 8-bit grayscale heightmap
 	ncolors = 3; // convert to RGB
 	unsigned char *new_data(new unsigned char[num_bytes()]);
