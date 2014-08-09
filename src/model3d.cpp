@@ -82,8 +82,7 @@ void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump)
 		
 		if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
 			ensure_tid_loaded(t.alpha_tid, 0);
-			assert((unsigned)t.alpha_tid < textures.size());
-			t.copy_alpha_from_texture(textures[t.alpha_tid], texture_alpha_in_red_comp);
+			t.copy_alpha_from_texture(get_texture(t.alpha_tid), texture_alpha_in_red_comp);
 		}
 		if (is_bump) {t.make_normal_map();}
 		t.init(); // must be after alpha copy
@@ -95,8 +94,8 @@ void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump)
 void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 
 	if (tid < 0 || alpha_tid < 0) return; // no texture
-	assert((unsigned)tid < textures.size() && (unsigned)alpha_tid < textures.size());
-	texture_t &t(textures[tid]);
+	assert((unsigned)alpha_tid < textures.size());
+	texture_t &t(get_texture(tid));
 	assert(t.ncolors == 3 || t.ncolors == 4);
 	if (t.alpha_tid == alpha_tid) return; // already bound
 	assert(t.alpha_tid < 0); // can't rebind to a different value
@@ -104,43 +103,6 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 	t.alpha_tid = alpha_tid;
 	t.ncolors   = 4; // add alpha channel
 	if (t.use_mipmaps) {t.use_mipmaps = 3;} // generate custom alpha mipmaps
-}
-
-
-void texture_manager::ensure_tid_loaded(int tid, bool is_bump) {
-
-	if (tid < 0) return; // not allocated
-	assert((unsigned)tid < textures.size());
-	ensure_texture_loaded(textures[tid], tid, is_bump);
-}
-
-
-void texture_manager::ensure_tid_bound(int tid) {
-
-	if (tid < 0) return; // not allocated
-	assert((unsigned)tid < textures.size());
-	textures[tid].check_init();
-}
-
-
-void texture_manager::bind_texture(int tid) const {
-
-	assert((unsigned)tid < textures.size());
-	textures[tid].bind_gl();
-}
-
-
-colorRGBA texture_manager::get_tex_avg_color(int tid) const {
-
-	assert((unsigned)tid < textures.size());
-	return textures[tid].get_avg_color();
-}
-
-
-bool texture_manager::has_binary_alpha(int tid) const {
-
-	assert((unsigned)tid < textures.size());
-	return textures[tid].has_binary_alpha;
 }
 
 
@@ -828,6 +790,18 @@ template<typename T> void update_score(vntc_vect_block_t<T> const &v, float &sco
 }
 
 
+void material_t::init_textures(texture_manager &tmgr) {
+
+	if (!mat_is_used()) return;
+	int const tid(get_render_texture());
+	tmgr.bind_alpha_channel_to_texture(tid, alpha_tid);
+	tmgr.ensure_tid_loaded(tid, 0); // only one tid for now
+	if (use_bump_map()) tmgr.ensure_tid_loaded(bump_tid, 1);
+	if (use_spec_map()) tmgr.ensure_tid_loaded(s_tid, 0);
+	might_have_alpha_comp |= tmgr.might_have_alpha_comp(tid);
+}
+
+
 void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool enable_alpha_mask) {
 
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
@@ -873,8 +847,9 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			set_active_texture(0);
 		}
 		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_index", ni);} // FIXME: set index of refraction
-		if (alpha_tid >= 0) {enable_blend();}
-		float const min_alpha((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0);
+		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
+		if (need_blend) {enable_blend();}
+		float const min_alpha(min(0.99*alpha, ((alpha_tid >= 0) ? (has_binary_alpha ? 0.9 : model3d_alpha_thresh) : 0.0)));
 		shader.add_uniform_float("min_alpha", min_alpha);
 		if (ns > 0.0) {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
 		shader.set_color_e(colorRGBA(ke, alpha));
@@ -885,7 +860,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		geom_tan.render(shader, 0);
 		shader.clear_color_e();
 		if (ns > 0.0) {shader.set_specular(0.0, 1.0);}
-		if (alpha_tid >= 0) {disable_blend();}
+		if (need_blend) {disable_blend();}
 		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_index", 1.0);}
 	}
 }
@@ -1234,13 +1209,8 @@ void model3d::free_context() {
 
 void model3d::load_all_used_tids() {
 
-	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		if (!m->mat_is_used()) continue;
-		int const tid(m->get_render_texture());
-		tmgr.bind_alpha_channel_to_texture(tid, m->alpha_tid);
-		tmgr.ensure_tid_loaded(tid, 0); // only one tid for now
-		if (m->use_bump_map()) tmgr.ensure_tid_loaded(m->bump_tid, 1);
-		if (m->use_spec_map()) tmgr.ensure_tid_loaded(m->s_tid, 0);
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
+		m->init_textures(tmgr);
 	}
 }
 

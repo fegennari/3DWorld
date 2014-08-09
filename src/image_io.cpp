@@ -689,8 +689,9 @@ void texture_t::deferred_load_and_bind() {
 			// here we assume the texture is upside down and flip it, if it's uncompressed and flippable
 			if (!compressed) {Texture = flip(Texture);}
 			assert(!Texture.empty());
-			width  = Texture.dimensions().x;
-			height = Texture.dimensions().y;
+			width   = Texture.dimensions().x;
+			height  = Texture.dimensions().y;
+			ncolors = component_count(Texture.format());
 			assert(width > 0 && height > 0);
 			glBindTexture(GL_TEXTURE_2D, tid);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);

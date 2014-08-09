@@ -266,11 +266,21 @@ public:
 	void free_textures();
 	void ensure_texture_loaded(texture_t &t, int tid, bool is_bump);
 	void bind_alpha_channel_to_texture(int tid, int alpha_tid);
-	void ensure_tid_loaded(int tid, bool is_bump);
-	void ensure_tid_bound(int tid);
-	void bind_texture(int tid) const;
-	colorRGBA get_tex_avg_color(int tid) const;
-	bool has_binary_alpha(int tid) const;
+	void ensure_tid_loaded(int tid, bool is_bump) {if (tid >= 0) {ensure_texture_loaded(get_texture(tid), tid, is_bump);}}
+	void ensure_tid_bound(int tid) {if (tid >= 0) {get_texture(tid).check_init();}} // if allocated
+	void bind_texture(int tid) const {get_texture(tid).bind_gl();}
+	colorRGBA get_tex_avg_color(int tid) const {return get_texture(tid).get_avg_color();}
+	bool has_binary_alpha(int tid) const {return get_texture(tid).has_binary_alpha;}
+	bool might_have_alpha_comp(int tid) const {return (tid >= 0 && get_texture(tid).ncolors == 4);}
+
+	texture_t const &get_texture(int tid) const {
+		assert((unsigned)tid < textures.size());
+		return textures[tid];
+	}
+	texture_t &get_texture(int tid) {
+		assert((unsigned)tid < textures.size());
+		return textures[tid];
+	}
 };
 
 
@@ -288,6 +298,7 @@ struct material_params_t {
 
 struct material_t : public material_params_t {
 
+	bool might_have_alpha_comp;
 	int a_tid, d_tid, s_tid, alpha_tid, bump_tid, refl_tid;
 	float draw_order_score;
 	string name, filename;
@@ -296,7 +307,8 @@ struct material_t : public material_params_t {
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
 	material_t(string const &name_=string(), string const &fn=string())
-		: a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1), draw_order_score(0.0), name(name_), filename(fn) {}
+		: might_have_alpha_comp(0), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
+		draw_order_score(0.0), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
 	bool mat_is_used () const {return is_used;}
@@ -304,8 +316,9 @@ struct material_t : public material_params_t {
 	bool use_spec_map() const;
 	void optimize() {geom.optimize(); geom_tan.optimize();}
 	int get_render_texture() const {return ((d_tid >= 0) ? d_tid : a_tid);}
-	bool get_needs_alpha_test() const {return (alpha_tid >= 0);}
-	bool is_partial_transparent() const {return (alpha < 1.0 || alpha_tid >= 0);}
+	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
+	bool is_partial_transparent() const {return (alpha < 1.0 || get_needs_alpha_test());}
+	void init_textures(texture_manager &tmgr);
 	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool enable_alpha_mask);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
