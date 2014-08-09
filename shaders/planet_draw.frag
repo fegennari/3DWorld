@@ -29,7 +29,7 @@ varying vec2 tc;
 void main()
 {
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
-	if (dot(normal, epos.xyz) > 0.0) discard; // back facing
+	//if (dot(normal, epos.xyz) > 0.0) discard; // back facing (unnecessary and incorrect for procedural vertex height planets)
 	vec3 norm      = normal;
 	float spec_mag = 0.0;
 

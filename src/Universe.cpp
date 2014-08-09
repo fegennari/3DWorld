@@ -2304,7 +2304,7 @@ bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15);}
 void draw_cube_mapped_planet(unsigned ndiv) {
 
 	assert(ndiv > 0);
-	float const vstep(2.001/ndiv); // overlap slightly to reduce the effect of tiny cracks due to FP precision problems
+	float const vstep(2.0/ndiv);
 	vector<vert_wrap_t> verts(2*(ndiv+1));
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
@@ -2406,7 +2406,9 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		}
 		else if (use_vert_shader_offset()) { // minor issues face alignment cracks, but better triangle distribution
 			assert(!gas_giant);
+			set_multisample(0); // prevent artifacts at face boundaries
 			draw_cube_mapped_planet(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
+			set_multisample(1);
 		}
 		else { // gas giant or atmosphere: don't need high resolution since they have no heightmaps
 			draw_subdiv_sphere(all_zeros, 1.0, (use_vert_shader_offset() ? 2 : 1)*ndiv, zero_vector, NULL, int(gas_giant), 1); // no back-face culling
