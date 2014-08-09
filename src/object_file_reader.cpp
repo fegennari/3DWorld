@@ -569,7 +569,7 @@ public:
 					return 0;
 				}
 				if (loaded_mat_libs.find(mat_lib) == loaded_mat_libs.end()) { // mtllib not yet loaded
-					if (load_mat_lib(mat_lib)) { // could cache loaded files, but they tend to not be reloaded and loading is fast anyway (since textures are cached)
+					if (!load_mat_lib(mat_lib)) { // can materials be redefined with different mat_libs?
 						cerr << "Error reading material library file " << mat_lib << " near line " << approx_line << endl;
 						//return 0;
 					}
