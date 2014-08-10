@@ -5,6 +5,7 @@ uniform float water_plane_z, cloud_plane_z, wave_time, wave_amplitude;
 uniform float water_atten    = 1.0;
 uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
+uniform float spec_offset    = 0.0;
 uniform float cloud_alpha    = 1.0;
 uniform float caustics_weight= 1.0;
 uniform float smap_atten_cutoff = 10.0;
@@ -109,8 +110,8 @@ void main()
 	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - vdist), 0.0, 1.0);}
 	
 	if (enable_light0) { // sun
-		float spec      = spec_scale*(0.2*weights.b + 0.25*weights4); // grass and snow
-		float shininess = 20.0*weights.b + 40.0*weights4;
+		float spec      = spec_scale*(spec_offset + 0.2*weights.b + 0.25*weights4); // grass and snow
+		float shininess = 80.0*spec_offset + 20.0*weights.b + 40.0*weights4;
 		float dscale    = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light0(epos, normal), smap_scale) : diffuse_scale);
 		color += add_light_comp(normal, epos, 0, dscale, ambient_scale, spec, shininess, bump_scale);
 	}

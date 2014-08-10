@@ -44,7 +44,7 @@ extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_m
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
-extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover;
+extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature;
 extern point sun_pos, moon_pos, surface_pos;
 extern water_params_t water_params;
 extern char *mh_filename_tt;
@@ -1548,7 +1548,6 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",  1);} // FS
 	if (reflection_pass) {s.set_prefix("#define REFLECTION_MODE", 1);} // FS
 	s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
-	s.set_prefix("#define NO_SPECULAR", 1); // FS (makes little difference)
 	s.set_vert_shader("water_fog.part+tiled_mesh");
 	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+tiled_mesh");
 	s.begin_shader();
@@ -1557,6 +1556,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	s.add_uniform_int("detail_tex",  1);
 	s.add_uniform_int("shadow_normal_tex", 7);
 	s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
+	s.add_uniform_float("spec_offset", ((is_precip_enabled() && temperature > W_FREEZE_POINT) ? 0.5 : 0.0)); // increase specular during rain
 	if (enable_shadow_map) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());}
 	set_noise_tex(s, 8);
 	setup_cloud_plane_uniforms(s);
