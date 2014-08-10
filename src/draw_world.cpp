@@ -41,7 +41,7 @@ vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp;
+extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
@@ -186,7 +186,8 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	indir_lighting &= have_indir_smoke_tex;
 	dlights        &= (dl_tid > 0 && has_dl_sources);
 	s.check_for_fog_disabled();
-	if (min_alpha == 0.0) {s.set_prefix("#define NO_ALPHA_TEST", 1);} // FS
+	if (min_alpha == 0.0)  {s.set_prefix("#define NO_ALPHA_TEST",     1);} // FS
+	if (dynamic_smap_bias) {s.set_prefix("#define DYNAMIC_SMAP_BIAS", 1);} // FS
 	s.set_bool_prefixes("indir_lighting", indir_lighting, 3); // VS/FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
 	set_dlights_booleans(s, dlights, 1); // FS
