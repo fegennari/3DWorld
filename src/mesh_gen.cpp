@@ -40,7 +40,7 @@ float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
 vector<float> sin_table;
 float sinTable[F_TABLE_SIZE][5];
 
-int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX,   GROUND_TEX, ROCK_TEX, SNOW_TEX};
+int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX, GROUND_TEX, ROCK_TEX, SNOW_TEX};
 float const mesh_rh_dirt[NTEX_DIRT] = {0.40, 0.44, 0.60, 0.75, 1.0};
 float sthresh[2][2] = {{0.68, 0.86}, {0.48, 0.72}}; // {grass, snow}, {lo, hi}
 ttex lttex_dirt[NTEX_DIRT];

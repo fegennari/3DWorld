@@ -19,6 +19,7 @@ int   const LANDSCAPE_REGEN_MOD   = 32;   // ticks for entire mesh regen pass
 int   const LANDSCAPE_REGEN_RATE  = 400;  // ticks per landscape texture update (slow)
 int   const MAX_UPDATE_SIZE       = 16;
 float const ADJ_VALUE             = 1.0;
+float const LS_TEX_ANISO          = 2.0; // value of anisotropic texture filtering for landscape source textures
 
 bool const RELOAD_TEX_ON_HOLE  = 0;
 bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update doesn't recompute the mipmaps
@@ -38,7 +39,7 @@ texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a ba
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 //texture_t(0, 6, 512,  512,  1, 3, 0, "ground.png"),
-texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png"), // mipmap for small trees?
+texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png", 0, 1, LS_TEX_ANISO), // mipmap for small trees?
 texture_t(0, 6, 256,  256,  1, 3, 1, "rock.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg", 0, 0), // compression is slow
@@ -47,11 +48,11 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "brick1.jpg"), // brick2?
 texture_t(0, 5, 0,    0,    1, 3, 1, "moon.jpg"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg", 0, 0), // or marble2.jpg, compression is slow
-texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg"),
+texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg", 0, 1, LS_TEX_ANISO),
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1, 1, 4.0), // 128x128
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark2.jpg"), // bark.jpg: 224x224, bark2.jpg: 400x400 (Note: must match baseball bat texture size)
-texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg"),
-texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png"),
+texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg", 0, 1, LS_TEX_ANISO),
+texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png", 0, 1, LS_TEX_ANISO),
 texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg", 0, 0), // 1024x1024, compression is slow
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
@@ -108,7 +109,7 @@ texture_t(0, 6, 0,    0,    0, 4, 3, "papaya_leaf.png", 1, 1, 4.0), // 256x256
 texture_t(0, 6, 0,    0,    0, 4, 3, "coffee_leaf.png", 1), // 256x256
 texture_t(0, 6, 256,  256,  1, 4, 0, "smiley_skull.png", 1),
 texture_t(0, 5, 512,  512,  1, 3, 1, "ice.2.jpg"),
-texture_t(0, 6, 256,  256,  1, 3, 2, "rock.03.png"),
+texture_t(0, 6, 256,  256,  1, 3, 2, "rock.03.png", 0, 1, LS_TEX_ANISO),
 texture_t(0, 6, 16,   16,   1, 3, 0, "black.png"),
 texture_t(0, 6, 16,   16,   1, 3, 0, "white.png"),
 texture_t(0, 6, 0  ,  0  ,  0, 4, 0, "atlas/fire.png"),
