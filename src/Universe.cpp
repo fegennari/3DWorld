@@ -403,9 +403,10 @@ public:
 	}
 	void disable_atmospheric_shader() {atmospheric_shader.disable_atmospheric();}
 	
-	void enable_color_only_shader() {
+	void enable_color_only_shader(colorRGBA const *const color=nullptr) {
 		if (!color_only_shader.is_setup()) {color_only_shader.begin_color_only_shader();}
 		else {color_only_shader.enable();}
+		if (color) {color_only_shader.set_cur_color(*color);}
 	}
 	void disable_color_only_shader() {color_only_shader.disable();}
 
@@ -2345,17 +2346,16 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	if (!univ_sphere_vis(pos_, radius))       return 1; // check if in the view volume
 		
 	if (universe_mode && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
-		shader_t s;
-		s.begin_color_only_shader(get_owner_color()); // too slow to set every time?
+		usg.enable_color_only_shader(&get_owner_color());
 		draw_sphere_vbo(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
-		s.end_shader();
+		usg.disable_color_only_shader();
 		return 1;
 	}
 	move_in_front_of_far_clip(pos_, camera, size, vcp_mag, 1.35);
 	colorRGBA ocolor(color);
 
 	if (universe_mode && !(display_mode & 0x02)) {
-		show_colonizable_liveable(pos_, radius); // show liveable/colonizable planets/moons
+		show_colonizable_liveable(pos_, radius, usg); // show liveable/colonizable planets/moons
 	}
 	if (size < 2.5) { // both point cases below, normal is camera->object vector
 		if (size < 1.0) {blend_color(ocolor, ocolor, bkg_color, size*size, 1);} // small, attenuate
@@ -2522,16 +2522,15 @@ void ustar::solar_flare::draw(float size, int ndiv, bool texture) const {
 }
 
 
-void urev_body::show_colonizable_liveable(point const &pos_, float radius0) const {
+void urev_body::show_colonizable_liveable(point const &pos_, float radius0, ushader_group &usg) const {
 
 	colorRGBA color;
 	if      (liveable())    {color = GREEN;}
 	else if (colonizable()) {color = RED;}
 	else {return;}
-	shader_t s;
-	s.begin_color_only_shader(color); // to inefficient to create the shader every time?
+	usg.enable_color_only_shader(&color);
 	draw_sphere_vbo(make_pt_global(pos_), 1.2*radius0, 12, 0);
-	s.end_shader();
+	usg.disable_color_only_shader();
 }
 
 

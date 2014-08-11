@@ -952,7 +952,7 @@ void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point con
 	if (empty()) return;
 	//RESET_TIME;
 	calc_colliders();
-	upos_point_type opn(orbital_plane_normal);
+	upos_point_type const opn(orbital_plane_normal);
 
 	for (iterator i = begin(); i != end(); ++i) {
 		i->apply_belt_physics(pos, opn, colliders);

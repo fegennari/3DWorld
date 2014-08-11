@@ -188,7 +188,7 @@ public:
 };
 
 
-struct rotated_obj { // size = 20
+struct rotated_obj { // size = 44
 
 	vector3d rot_axis;
 	double rev_ang, rev_ang0, rot_ang, rot_ang0; // Note: rev_ang here to preserve rand() call order
@@ -254,7 +254,7 @@ public:
 	void get_surface_color(unsigned char *data, float val, float phi) const;
 	bool draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2);
 	void draw_surface(point_d const &pos_, float size, int ndiv);
-	void show_colonizable_liveable(point const &pos_, float radius0) const;
+	void show_colonizable_liveable(point const &pos_, float radius0, ushader_group &usg) const;
 	void inc_orbiting_refs() {++orbiting_refs;}
 	void dec_orbiting_refs(s_object const &sobj);
 	void explode(float damage, float bradius, int etype, vector3d const &edir, int exp_time, int wclass,
