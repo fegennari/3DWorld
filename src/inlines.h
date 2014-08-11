@@ -166,6 +166,10 @@ inline bool pt_line_dist_less_than(point const &P, point const &L1, point const 
 	return (cp.mag_sq() < dist*dist*L.mag_sq());
 }
 
+inline bool pt_line_dir_dist_less_than(point const &P, point const &L1, vector3d const &Ldir, float dist) { // Ldir is normalized
+	return (cross_product(Ldir, (L1 - P)).mag_sq() < dist*dist);
+}
+
 template<typename T, typename S> inline float p2p_dist_sq(const pointT<T> &pt1, const pointT<S> &pt2) {
 	return (pt1.x-pt2.x)*(pt1.x-pt2.x) + (pt1.y-pt2.y)*(pt1.y-pt2.y) + (pt1.z-pt2.z)*(pt1.z-pt2.z);
 }

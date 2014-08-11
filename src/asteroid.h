@@ -87,13 +87,14 @@ protected:
 	float max_asteroid_radius, inner_radius, outer_radius;
 
 	void xform_to_local_torus_coord_space(point &pt) const;
+	void xform_from_local_torus_coord_space(point &pt) const;
 	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius);
 
 public:
 	uasteroid_belt(vector3d const &opn, vector3d const &scale_) :
 	  orbital_plane_normal(opn), inner_radius(0.0), outer_radius(0.0), max_asteroid_radius(0.0), scale(scale_) {}
 	virtual void apply_physics(point_d const &pos_, point const &camera) = 0;
-	bool line_might_intersect(point const &p1, point const &p2, float line_radius) const;
+	bool line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int=nullptr) const;
 	bool sphere_might_intersect(point const &sc, float sr) const;
 	float get_dist_to_boundary(point const &pt) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}

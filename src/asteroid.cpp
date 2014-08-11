@@ -847,22 +847,32 @@ void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
 	UNROLL_3X(pt[i_] /= scale[i_];) // account for squished/elliptical torus in orbital plane
 }
 
+void uasteroid_belt::xform_from_local_torus_coord_space(point &pt) const { // unused
 
-bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, float line_radius) const {
+	UNROLL_3X(pt[i_] *= scale[i_];) // account for squished/elliptical torus in orbital plane
+	rotate_vector3d_by_vr(plus_z, orbital_plane_normal, pt);
+	pt += pos;
+}
+
+
+bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, float line_radius, point *p_int) const {
 
 	if (empty()) return 0;
 	if (!line_sphere_intersect(p1, p2, pos, (radius + line_radius))) return 0; // optional optimization, may not be useful
-	if (sphere_might_intersect(p1, line_radius)) return 1; // first point inside torus
-	point pt[2] = {p1, p2};
-
-	for (unsigned d = 0; d < 2; ++d) {
-		xform_to_local_torus_coord_space(pt[d]);
+	
+	if (sphere_might_intersect(p1, line_radius)) { // first point inside torus
+		if (p_int) {*p_int = p1;}
+		return 1;
 	}
-	float t(0.0); // unused
+	point pt[2] = {p1, p2};
+	for (unsigned d = 0; d < 2; ++d) {xform_to_local_torus_coord_space(pt[d]);}
+	float t(0.0);
 	// FIXME: line_radius is incorrect in the z-dimension, should scale by <scale> to compensate for torus elliptical scaling
 	float const ri(min((inner_radius + line_radius), outer_radius)), scale(1.0/outer_radius);
 	// line_intersect_torus() seems to have some bug where small ro causes it to always return false, so we rescale so that ro == 1.0
-	return line_torus_intersect(scale*pt[0], scale*pt[1], all_zeros, scale*ri, 1.0, t);
+	if (!line_torus_intersect(scale*pt[0], scale*pt[1], all_zeros, scale*ri, 1.0, t)) {return 0;}
+	if (p_int) {*p_int = p1 + t*(p2 - p1);} // t is independent of [affine] coordinate space, so we don't need to transform p_int
+	return 1;
 }
 
 
@@ -1260,9 +1270,10 @@ int uasteroid::get_fragment_tid(point const &hit_pos) const {
 
 bool uasteroid::line_intersection(point const &p1, vector3d const &v12, float line_length, float line_radius, float &ldist) const {
 
+	//if (!pt_line_dir_dist_less_than(pos, p1, v12, (radius + line_radius))) return 0; // Note: this is tested in the calling functions as an optimization
 	if (!dist_less_than(p1, pos, (radius + line_length))) return 0;
 	float t, rdist;
-	if (!line_intersect_sphere(p1, v12, pos, (radius+line_radius), rdist, ldist, t)) return 0; // line intersects asteroid bounding sphere
+	if (!line_intersect_sphere(p1, v12, pos, (radius+line_radius), rdist, ldist, t)) return 0; // line doesn't intersect asteroid bounding sphere
 	// transform line into asteroid's translated and scaled coord space
 	point p1b;
 	vector3d v12b;
