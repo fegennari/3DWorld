@@ -218,14 +218,11 @@ void set_shadow_tex_params() {
 }
 
 
-bool is_only_camera_shadow() {
-	return (shadow_objs.empty() || (shadow_objs.size() == 1 && shadow_objs[0].cid == camera_coll_id));
-}
-
 bool no_sparse_smap_update() {
+
 	if (world_mode != WMODE_GROUND) return 0;
 	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0);
-	return (leaf_wind || !coll_objects.drawn_ids.empty() || !is_only_camera_shadow());
+	return (leaf_wind || !coll_objects.drawn_ids.empty() || !shadow_objs.empty());
 }
 
 

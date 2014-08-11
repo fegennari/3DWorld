@@ -21,8 +21,9 @@ extern platform_cont platforms;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
 
-
 vector<shadow_sphere> shadow_objs;
+
+bool no_sparse_smap_update();
 
 
 shadow_sphere::shadow_sphere(point const &pos0, float radius0, int cid0) : sphere_t(pos0, radius0), cid(cid0) {
@@ -373,7 +374,7 @@ void add_coll_shadow_objs() {
 	if (!shadow_map_enabled()) return;
 	point const camera(get_camera_pos());
 
-	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID)) { // shadow the camera even when in the air (but not when dead)
+	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID) && no_sparse_smap_update()) { // shadow the camera even when in the air (but not when dead)
 		point camera_pos(camera);
 		if (camera_mode == 1 && !spectate) {camera_pos.z -= 0.5*camera_zh;} // cancel out the z height that was previously added
 		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id);
