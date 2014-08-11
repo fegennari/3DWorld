@@ -36,7 +36,7 @@ bool clear_landscape_vbo;
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context;
+extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
@@ -825,7 +825,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 	}
 	bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);
-	bool const rain_mode(add_waves && is_rain_enabled());
+	bool const rain_mode(add_waves && is_rain_enabled() /*&& !underwater*/);
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	shader_t s;
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
