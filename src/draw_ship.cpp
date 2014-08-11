@@ -670,7 +670,7 @@ void uobj_draw_data::draw_usw_star_int(unsigned ndiv_, point const &lpos, point 
 
 	mesh2d star_mesh;
 	star_mesh.set_size(ndiv_);
-	if (instability > 0.0) star_mesh.add_random(instability, -0.5*max(1.0f, instability), instability, 4);
+	if (instability > 0.0) {star_mesh.add_random(instability, -0.5*max(1.0f, instability), instability, 4);}
 	star_mesh.draw_perturbed_sphere(all_zeros, rad, ndiv_, 1);
 
 	shader->clear_color_e();

@@ -568,6 +568,7 @@ void add_parts_projs(point const &pos, float radius, vector3d const &dir, colorR
 
 	switch (type) {
 		case ETYPE_FUSION:
+		case ETYPE_FUSION_ROT:
 		case ETYPE_ESTEAL:
 		case ETYPE_SIEGE:
 			{

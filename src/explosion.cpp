@@ -40,6 +40,7 @@ exp_type_params et_params[NUM_ETYPES] = {
 	exp_type_params(0.8, GREEN,   WHITE),   // ETYPE_ESTEAL
 	exp_type_params(1.2, WHITE,   WHITE),   // ETYPE_ANIM_FIRE
 	exp_type_params(0.8, PURPLE,  LT_BLUE), // ETYPE_SIEGE
+	exp_type_params(1.7, LT_BLUE, WHITE)    // ETYPE_FUSION_ROT
 };
 
 
@@ -289,18 +290,20 @@ void draw_blasts() {
 			break;
 
 		case ETYPE_FUSION:
+		case ETYPE_FUSION_ROT:
 		case ETYPE_ESTEAL:
 		case ETYPE_STARB:
 		case ETYPE_NUCLEAR:
 		case ETYPE_SIEGE:
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_multitex(((br.type == ETYPE_FUSION) ? FLARE5_TEX : BLUR_TEX), 0);
+				select_multitex(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? FLARE5_TEX : BLUR_TEX), 0);
 				if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1);}
 			}
 			if (universe) {
-				vector3d const dx(2.0*br.cur_size*cross_product(plus_z, br.dir).get_norm());
-				vector3d const dy(2.0*br.cur_size*cross_product(dx,     br.dir).get_norm());
+				vector3d const dir((br.type == ETYPE_FUSION_ROT) ? (get_camera_pos() - br.pos) : br.dir); // only ETYPE_FUSION_ROT aligns to the camera
+				vector3d const dx(2.0*br.cur_size*cross_product(plus_z, dir).get_norm());
+				vector3d const dy(2.0*br.cur_size*cross_product(dx,     dir).get_norm());
 				qbd.add_quad_dirs(make_pt_global(br.pos), dx, dy, br.cur_color);
 			}
 			else {
