@@ -18,8 +18,9 @@ class uasteroid : public uobject, public rotated_obj {
 
 public:
 	int last_coll_id;
+	bool is_ice;
 
-	uasteroid() : inst_id(0), orbital_dist(0.0), last_coll_id(-1) {}
+	uasteroid() : inst_id(0), orbital_dist(0.0), last_coll_id(-1), is_ice(0) {}
 	void gen_base(float max_radius);
 	void gen_spherical(upos_point_type const &pos_offset, float max_dist, float max_radius);
 	void gen_belt(upos_point_type const &pos_offset, vector3d const &orbital_plane_normal, vector3d const vxy[2],
@@ -37,8 +38,8 @@ public:
 	bool line_intersection(point const &p1, vector3d const &v12, float line_length, float line_radius, float &ldist) const;
 	virtual bool sphere_intersection(point const &c, float r) const;
 
-	virtual std::string get_name() const {return "Asteroid";}
-	virtual bool rename(std::string const &name_) {return 0;} // not renaemable
+	virtual std::string get_name() const {return (is_ice ? "Ice Fragment" : "Asteroid");}
+	virtual bool rename(std::string const &name_) {return 0;} // not renameable
 	virtual int  get_owner() const {return NO_OWNER;}
 	virtual int  get_fragment_tid(point const &hit_pos) const;
 };
@@ -51,14 +52,14 @@ protected:
 	vector<sphere_t> shadow_casters;
 	sphere_t sun_pos_radius;
 
-	virtual void gen_asteroid_placements() = 0;
+	virtual void gen_asteroid_placements(bool is_ice) = 0;
 	void remove_asteroid(unsigned ix);
 	void upload_shader_casters(shader_t &s) const;
 
 public:
 	uasteroid_cont() : rseed(0) {}
 	void init(point const &pos, float radius);
-	void gen_asteroids();
+	void gen_asteroids(bool is_ice);
 	void draw(point_d const &pos_, point const &camera, shader_t &s, bool sun_light_already_set, bool is_ice=0);
 	void detatch_asteroid(unsigned ix);
 	void destroy_asteroid(unsigned ix);
@@ -76,7 +77,7 @@ class uasteroid_field : public uasteroid_cont {
 
 public:
 	void apply_physics(point_d const &pos_, point const &camera);
-	virtual void gen_asteroid_placements();
+	virtual void gen_asteroid_placements(bool is_ice);
 };
 
 
@@ -88,7 +89,7 @@ protected:
 
 	void xform_to_local_torus_coord_space(point &pt) const;
 	void xform_from_local_torus_coord_space(point &pt) const;
-	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius);
+	void gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius, bool is_ice);
 
 public:
 	uasteroid_belt(vector3d const &opn, vector3d const &scale_) :
@@ -107,7 +108,7 @@ class uasteroid_belt_system : public uasteroid_belt {
 	ussystem *system;
 	vector<sphere_t> colliders;
 
-	virtual void gen_asteroid_placements();
+	virtual void gen_asteroid_placements(bool is_ice);
 	bool is_potential_collider(uobject const &uobj) const;
 	bool might_cast_shadow(uobject const &uobj) const;
 	void calc_colliders();
@@ -126,7 +127,7 @@ class uasteroid_belt_planet : public uasteroid_belt {
 	float bwidth;
 	uplanet *planet;
 
-	virtual void gen_asteroid_placements();
+	virtual void gen_asteroid_placements(bool is_ice);
 	void calc_shadowers();
 
 public:

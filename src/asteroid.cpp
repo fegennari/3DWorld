@@ -753,17 +753,17 @@ void uasteroid_cont::init(point const &pos_, float radius_) {
 }
 
 
-void uasteroid_cont::gen_asteroids() {
+void uasteroid_cont::gen_asteroids(bool is_ice) {
 
 	global_rand_gen.set_state(rseed, 123);
 	ensure_asteroid_models();
 	clear();
-	gen_asteroid_placements();
+	gen_asteroid_placements(is_ice);
 	sort(begin(), end()); // sort by inst_id to help reduce rendering context switch time (probably irrelevant when instancing is enabled)
 }
 
 
-void uasteroid_field::gen_asteroid_placements() {
+void uasteroid_field::gen_asteroid_placements(bool is_ice) {
 
 	resize((rand2() % AST_FLD_MAX_NUM) + 1);
 
@@ -773,7 +773,7 @@ void uasteroid_field::gen_asteroid_placements() {
 }
 
 
-void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius) {
+void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, float belt_thickness, float max_ast_radius, bool is_ice) {
 
 	float rmax(0.0), plane_dmax(0.0);
 	inner_radius = 0.0;
@@ -788,6 +788,7 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 	}
 	for (iterator i = begin(); i != end(); ++i) {
 		i->gen_belt(pos, orbital_plane_normal, vxy, outer_radius, belt_width, belt_thickness, max_ast_radius, inner_radius, plane_dmax);
+		i->is_ice = is_ice;
 		rmax = max(rmax, (p2p_dist(pos, i->pos) + i->radius));
 		max_asteroid_radius = max(max_asteroid_radius, i->radius);
 	}
@@ -796,21 +797,21 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 }
 
 
-void uasteroid_belt_system::gen_asteroid_placements() { // radius is the asteroid belt distance from the sun
+void uasteroid_belt_system::gen_asteroid_placements(bool is_ice) { // radius is the asteroid belt distance from the sun
 
 	//RESET_TIME;
 	float const belt_width(AB_WIDTH_TO_RADIUS*rand_uniform2(0.9, 1.1)*radius);
 	float const belt_thickness(AB_THICK_TO_WIDTH*rand_uniform2(0.9, 1.1)*belt_width);
-	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius); // circular orbit, animated
+	gen_belt_placements(AST_BELT_MAX_NS, belt_width, belt_thickness, 0.002*radius, is_ice); // circular orbit, animated
 	//PRINT_TIME("Asteroid Belt"); // 4ms
 }
 
 
-void uasteroid_belt_planet::gen_asteroid_placements() { // radius is the asteroid belt distance from the planet
+void uasteroid_belt_planet::gen_asteroid_placements(bool is_ice) { // radius is the asteroid belt distance from the planet
 
 	assert(planet);
 	float const belt_thickness(rand_uniform2(0.08, 0.10)*bwidth);
-	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.005*radius); // elliptical orbit, static
+	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.005*radius, is_ice); // elliptical orbit, static
 }
 
 
@@ -1109,7 +1110,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	point_d const afpos(pos + pos_);
 	if (!univ_sphere_vis(afpos, radius)) return;
 	if (sphere_size_less_than(afpos, camera, AST_RADIUS_SCALE*radius, 1.0)) return; // asteroids are too small/far away
-	if (empty()) {gen_asteroids();}
+	if (empty()) {gen_asteroids(is_ice);}
 
 	// Note: can be made more efficient for asteroid_belt, since we know what the current star is, but probably not worth the complexity
 	bool const has_sun(sun_light_already_set || set_af_color_from_system(afpos, radius, &s));
@@ -1121,7 +1122,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	}
 	int const force_tid_to(is_ice ? MARBLE_TEX : -1); // Note: currently only applies to instanced drawing
 	if (is_ice) {s.set_specular(1.0, 80.0);} // very specular
-	s.add_uniform_color("color", (is_ice ? colorRGBA(0.6, 0.9, 1.2) : WHITE));
+	s.add_uniform_color("color", (is_ice ? colorRGBA(0.6, 1.0, 1.2) : WHITE));
 	s.add_uniform_float("crater_scale", ((has_sun && !is_ice) ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
 	pt_line_drawer pld;
