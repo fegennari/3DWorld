@@ -2225,8 +2225,14 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 	if (st_prod < 2.0 || st_prod*temp < 4.0) return 0; // too dim
 	move_in_front_of_far_clip(pos_, camera, size, vcp_mag, 1.35);
 	colorRGBA ocolor(color);
-	if (st_prod < 30.0) {blend_color(ocolor, ocolor, bkg_color, 0.00111*st_prod*st_prod, 1);} // small, attenuate (divide by 900)
 
+	if (st_prod < 30.0) {
+		float const red_shift(0.03*(30.0 - st_prod));
+		ocolor.R = min(1.0, ocolor.R*(1.0 + 1.0*red_shift));
+		ocolor.G = max(0.0, ocolor.G*(1.0 - 0.3*red_shift));
+		ocolor.B = max(0.0, ocolor.B*(1.0 - 0.7*red_shift));
+		blend_color(ocolor, ocolor, bkg_color, 0.00111*st_prod*st_prod, 1); // small, attenuate (divide by 900)
+	}
 	if (size < 2.7) { // both point cases below, normal is camera->object vector
 		pos_ = make_pt_global(pos_);
 
