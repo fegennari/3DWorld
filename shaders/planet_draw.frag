@@ -4,7 +4,7 @@ uniform vec3 cloud_freq  = vec3(1.0);
 uniform vec3 light_scale = vec3(1.0);
 uniform vec4 emission    = vec4(0,0,0,1);
 uniform vec3 sun_pos, ss_pos, rscale;
-uniform float obj_radius, sun_radius, ss_radius, ring_ri, ring_ro;
+uniform float obj_radius, sun_radius, ss_radius, ring_ri, ring_ro, population;
 uniform mat4 fg_ViewMatrix;
 uniform sampler1D ring_tex;
 
@@ -30,8 +30,9 @@ void main()
 {
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	//if (dot(normal, epos.xyz) > 0.0) discard; // back facing (unnecessary and incorrect for procedural vertex height planets)
-	vec3 norm      = normal;
-	float spec_mag = 0.0;
+	vec3 norm        = normal;
+	float city_light = 0.0;
+	float spec_mag   = 0.0;
 
 #ifdef GAS_GIANT
 	float tc_adj = tc.t;
@@ -142,6 +143,11 @@ void main()
 		float hdz   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, 0.0, delta), NORMAL_OCTAVES);
 		norm = normalize(norm) + 0.05*nscale*normalize(fg_NormalMatrix * vec3(hdx, hdy, hdz));
 	}
+	if (population > 0.0) {
+		float thresh = texture3D(cloud_noise_tex, 4.5*spos).r;
+		city_light   = clamp(8.0*(texture3D(cloud_noise_tex, 200.0*spos).r + 0.6*population - 0.75*thresh - 1.0), 0.0, 1.0);
+		city_light  *= max((0.5 - spec_mag), 0.0);// * population; // colonized and not over water/snow/ice
+	}
 #endif // ALL_WATER_ICE
 
 #else
@@ -189,10 +195,12 @@ void main()
 	}
 #endif // HAS_CRATERS
 
+	float dterm0   = max(dot(norm, ldir0), 0.0);
+	float dterm2   = max(dot(norm, ldir2), 0.0);
 	vec3 epos_norm = normalize(epos.xyz);
 	vec3 ambient   = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
-	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * max(dot(norm, ldir0), 0.0) * lscale0 * sscale) +
-	                 (fg_LightSource[2].diffuse.rgb * max(dot(norm, ldir2), 0.0) * lscale2 * atten2 * max(dot(ldir2, ldir20), 0.0));
+	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * dterm0 * lscale0 * sscale) +
+	                 (fg_LightSource[2].diffuse.rgb * dterm2 * lscale2 * atten2 * max(dot(ldir2, ldir20), 0.0));
 	vec3 color     = (texel.rgb * (ambient + diffuse));
 
 #ifndef GAS_GIANT
@@ -232,5 +240,6 @@ void main()
 		float v    = texture3D(cloud_noise_tex, 3.0*noise_scale*lv).r; // add in some brightness variation for fake shadows
 		color      = mix(color, (0.75 + 0.25*v)*(ambient + diffuse), cval); // no clouds over high mountains?
 	}
-	fg_FragColor = gl_Color * vec4((color + emission.rgb), 1.0);
+	vec3 tot_emiss = emission.rgb + city_light*max(0.0, (0.2 - dterm0))*vec3(1.0, 0.8, 0.5);
+	fg_FragColor   = gl_Color * vec4((color + tot_emiss), 1.0);
 }

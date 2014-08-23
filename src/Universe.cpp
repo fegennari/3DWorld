@@ -277,6 +277,7 @@ public:
 		set_uniform_float(get_loc("ring_ri"),     svars.ring_ri);
 		set_uniform_float(get_loc("ring_ro"),     svars.ring_ro);
 		set_uniform_float(get_loc("noise_scale"), 4.0*body.cloud_scale); // clouds / gas giant noise
+		set_uniform_float(get_loc("population"),  (body.is_owned() ? 1.0 : 0.0));
 		
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
 			set_uniform_float(get_loc("water_val"), body.water);
@@ -2369,7 +2370,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	if (size < 2.5 && !universe_mode)         return 0; // don't draw distant planets in combined_gu mode
 	if (!univ_sphere_vis(pos_, radius))       return 1; // check if in the view volume
 		
-	if (universe_mode && !(display_mode & 0x01) && dist < FAR_CLIP && get_owner() != NO_OWNER) { // owner color
+	if (universe_mode && !(display_mode & 0x01) && dist < FAR_CLIP && is_owned()) { // owner color
 		usg.enable_color_only_shader(&get_owner_color());
 		draw_sphere_vbo(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		usg.disable_color_only_shader();

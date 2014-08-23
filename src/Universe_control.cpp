@@ -701,7 +701,7 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 
 	float owner_val(0.5);
 	
-	if (owner == NO_OWNER) {
+	if (!is_owned()) {
 		unsigned const res_c(sclasses[USC_COLONY].cost + max(sclasses[USC_DEFSAT].cost, sclasses[USC_ANTI_MISS].cost));
 		owner_val = ((team_credits[align] >= res_c) ? 2.5 : 0.75);
 	}
@@ -798,7 +798,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 		if (!get_closest_object(pos, result, world_types[t], 0)) continue;
 		if (result.object->get_id() != uobj_id)                  continue;
 		urev_body &world(result.get_world());
-		if (world.owner != NO_OWNER || !world.colonizable())     continue;
+		if (world.is_owned() || !world.colonizable())            continue;
 		if (check_for_land && !world.can_land_at(pos))           continue; // currently player only
 		if (PRINT_OWNERSHIP) cout << world.get_name() << " is claimed by " << get_owner_name(owner) << "." << endl;
 		float defend(world.resources);
@@ -835,7 +835,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 			world.set_owner(result, owner); // only if inhabitable?
 		}
 		else {
-			assert(world.get_owner() == NO_OWNER);
+			assert(!world.is_owned());
 		}
 		return 1;
 	}
@@ -868,13 +868,11 @@ bool uobj_solid::collision(point const &p, float rad, vector3d const &v, point &
 
 void urev_body::get_owner_info(ostringstream &oss, bool show_uninhabited) const {
 
-	if (owner == NO_OWNER) {
-		if (show_uninhabited) {oss << endl << "Uninhabited";}
-	}
-	else {
+	if (is_owned()) {
 		assert(unsigned(owner) < NUM_ALIGNMENT);
 		oss << endl << "Owned by " << get_owner_name(owner);
 	}
+	else if (show_uninhabited) {oss << endl << "Uninhabited";}
 }
 
 
@@ -902,7 +900,7 @@ void urev_body::set_owner_int(unsigned owner_) {
 
 void urev_body::unset_owner() {
 
-	if (owner != NO_OWNER) {
+	if (is_owned()) {
 		assert(unsigned(owner) < NUM_ALIGNMENT);
 		assert(owner_counts[owner] > 0); // testing
 		--owner_counts[owner]; // shouldn't go negative even if read from a modmap
@@ -928,7 +926,7 @@ void urev_body::check_owner(s_object const &sobj) {
 
 colorRGBA urev_body::get_owner_color() const {
 
-	if (owner == NO_OWNER) return BLACK;
+	if (!is_owned()) return BLACK;
 	assert(unsigned(owner) < NUM_ALIGNMENT);
 	return alignment_colors[owner];
 }
@@ -1066,7 +1064,7 @@ void orbiting_ship::update_state() {
 			if (!ORBITAL_REGEN && exploding_now && world.get_owner() == alignment) { // is this correct?
 				world.dec_orbiting_refs(result); // will die this frame
 			}
-			else if (!is_exploding() && world.get_owner() == NO_OWNER) {
+			else if (!is_exploding() && !world.is_owned()) {
 				world.set_owner(result, alignment); // have to reset - world must have been regenerated
 			}
 			if (world.temp > get_temp()) {set_temp(FOBJ_TEMP_SCALE*world.temp, world.get_pos(), NULL);}

@@ -247,6 +247,7 @@ public:
 	void check_owner(s_object const &sobj);
 	void get_owner_info(ostringstream &oss, bool show_uninhabited) const;
 	int  get_owner() const {return owner;}
+	bool is_owned () const {return (owner != NO_OWNER);}
 	colorRGBA get_owner_color() const;
 	bool use_procedural_shader() const;
 	bool use_vert_shader_offset() const;
