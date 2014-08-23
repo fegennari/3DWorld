@@ -195,13 +195,36 @@ void main()
 	}
 #endif // HAS_CRATERS
 
+	// add clouds
+	float cloud_den = 0.0;
+	vec3 lv = 1.2*cloud_freq*vertex;
+
+#ifndef GAS_GIANT
+	if (atmosphere > 0.6) { // add swirls
+		float v_adj = 0.0;
+		float v0    = 1.0;
+		vec3 dir    = normalize(vertex); // world space normal
+
+		for (int i = 0; i < 40; ++i) { // slow when close to the planet
+			float dist = (0.5 + 0.25*rand_01(v0+3.0))*length(dir - normalize(rand_vec3(v0)));
+			v_adj     += max(0.0, (0.1 - dist))*sin(0.1/max(dist, 1.0));
+			v0        += 4.0;
+		}
+		lv.z += 0.4*v_adj;
+	}
+#endif // GAS_GIANT
+	if (atmosphere > 0.0) {
+		cloud_den = atmosphere*gen_cloud_alpha(lv);
+		cloud_den = pow(clamp(1.4*(cloud_den - 0.1), 0.0, 1.0), 0.7); // increase contrast/sharpen edges
+	}
+
 	float dterm0   = max(dot(norm, ldir0), 0.0);
 	float dterm2   = max(dot(norm, ldir2), 0.0);
 	vec3 epos_norm = normalize(epos.xyz);
 	vec3 ambient   = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
 	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * dterm0 * lscale0 * sscale) +
 	                 (fg_LightSource[2].diffuse.rgb * dterm2 * lscale2 * atten2 * max(dot(ldir2, ldir20), 0.0));
-	vec3 color     = (texel.rgb * (ambient + diffuse));
+	vec3 color     = (texel.rgb * (ambient + diffuse*(1.0 - 0.25*cloud_den))); // add light cloud shadows
 
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
@@ -217,28 +240,11 @@ void main()
 			color += heat*vec3(1.0, 0.25*heat, 0.0); // add lava
 		}
 	}
-#endif // GAS_GIANT
-	if (atmosphere > 0.0) { // add clouds
-		vec3 lv = cloud_freq*vertex;
+#endif // not GAS_GIANT
 
-#ifndef GAS_GIANT
-		if (atmosphere > 0.6) { // add swirls
-			float v_adj = 0.0;
-			float v0    = 1.0;
-			vec3 dir    = normalize(vertex); // world space normal
-
-			for (int i = 0; i < 40; ++i) { // slow when close to the planet
-				float dist = (0.4 + 0.25*rand_01(v0+3.0))*length(dir - normalize(rand_vec3(v0)));
-				v_adj     += max(0.0, (0.1 - dist))*sin(0.1/max(dist, 1.0));
-				v0        += 4.0;
-			}
-			lv.z += 0.4*v_adj;
-		}
-#endif // GAS_GIANT
-		float cval = atmosphere*gen_cloud_alpha(lv);
-		cval       = pow(clamp(1.4*(cval - 0.1), 0.0, 1.0), 0.7); // increase contrast/sharpen edges
-		float v    = texture3D(cloud_noise_tex, 3.0*noise_scale*lv).r; // add in some brightness variation for fake shadows
-		color      = mix(color, (0.75 + 0.25*v)*(ambient + diffuse), cval); // no clouds over high mountains?
+	if (cloud_den > 0.0) { // add cloud color
+		float v = texture3D(cloud_noise_tex, 3.0*noise_scale*lv).r; // add in some brightness variation for fake shadows
+		color   = mix(color, (1.2*ambient + (0.75 + 0.25*v)*diffuse), cloud_den); // no clouds over high mountains?
 	}
 	vec3 tot_emiss = emission.rgb + city_light*max(0.0, (0.2 - dterm0))*vec3(1.0, 0.8, 0.5);
 	fg_FragColor   = gl_Color * vec4((color + tot_emiss), 1.0);
