@@ -899,7 +899,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 									set_active_texture(0);
 								}
 								planet.check_gen_texture(int(sizep));
-								planet.draw(ppos, usg, planet_plds, svars, 0); // ignore return value?
+								planet.draw(ppos, usg, planet_plds, svars, 0, sel_s); // ignore return value?
 							}
 						} // planet visible
 						planet.process();
@@ -926,7 +926,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								current.moon = l;
 								moon.check_gen_texture(int(sizem));
 								shadow_vars_t const svars2(svars.sun_pos, svars.sun_radius, make_pt_global(ppos), planet.radius, vector3d(1,1,1), 0.0, 0.0);
-								moon.draw(mpos, usg, planet_plds, svars2, planet.is_ok());
+								moon.draw(mpos, usg, planet_plds, svars2, planet.is_ok(), sel_p);
 							}
 							if (has_sun && planet.is_ok()) {clear_colors_and_disable_light(p_light);}
 						}
@@ -2358,7 +2358,7 @@ void draw_cube_mapped_planet(unsigned ndiv) {
 }
 
 
-bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2) {
+bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2, bool enable_text_tag) {
 
 	point const &camera(get_player_pos());
 	vector3d const vcp(camera, pos_);
@@ -2447,7 +2447,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	}
 	if (texture || procedural) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
 	fgPopMatrix();
-	if (size > 8.0) {maybe_show_uobj_info(this);}
+	if (enable_text_tag && size > 4.0) {maybe_show_uobj_info(this);}
 	return 1;
 }
 
