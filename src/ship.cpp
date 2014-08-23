@@ -68,6 +68,7 @@ extern vector<us_weapon> us_weapons;
 void collision_detect_objects(vector<cached_obj> &objs0, unsigned t);
 void end_part_cloud_draw();
 void draw_and_update_engine_trails();
+void add_nearby_uobj_text(text_drawer_t &text_drawer);
 
 
 // ************ STATISTICS GATHERING ************
@@ -876,6 +877,7 @@ void draw_univ_objects() {
 	draw_and_update_engine_trails();
 	t_wrays.draw(); // draw beam weapons, engine trails, and lightning
 	set_std_blend_mode();
+	add_nearby_uobj_text(text_drawer); // only if show_scores?
 	text_drawer.draw();
 
 	if (onscreen_display) { // for crosshairs

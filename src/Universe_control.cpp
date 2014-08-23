@@ -866,10 +866,10 @@ bool uobj_solid::collision(point const &p, float rad, vector3d const &v, point &
 }
 
 
-void urev_body::get_owner_info(ostringstream &oss) const {
+void urev_body::get_owner_info(ostringstream &oss, bool show_uninhabited) const {
 
 	if (owner == NO_OWNER) {
-		oss << endl << "Uninhabited";
+		if (show_uninhabited) {oss << endl << "Uninhabited";}
 	}
 	else {
 		assert(unsigned(owner) < NUM_ALIGNMENT);

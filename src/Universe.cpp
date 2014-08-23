@@ -62,10 +62,11 @@ point univ_sun_pos(all_zeros);
 colorRGBA sun_color(SUN_LT_C);
 s_object current;
 universe_t universe; // the top level universe
+vector<uobject const *> show_info_uobjs;
 
 
 extern bool enable_multisample;
-extern int window_width, window_height, animate2, display_mode, onscreen_display, iticks;
+extern int window_width, window_height, animate2, display_mode, onscreen_display, show_scores, iticks;
 extern unsigned enabled_lights;
 extern float fticks, tfticks;
 extern colorRGBA bkg_color;
@@ -989,6 +990,22 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		} // cluster cs
 	} // galaxy i
 	if (!gen_only) {draw_all_stars(usg, 1);}
+}
+
+
+void maybe_show_uobj_info(uobject const *const uobj) {
+	if (show_scores) {show_info_uobjs.push_back(uobj);}
+}
+
+void add_nearby_uobj_text(text_drawer_t &text_drawer) {
+
+	for (auto i = show_info_uobjs.begin(); i != show_info_uobjs.end(); ++i) {
+		assert(*i != nullptr);
+		string const str((*i)->get_name() + ": " + (*i)->get_info());
+		float const size(0.2 + 12.0*p2p_dist((*i)->pos, get_camera_pos()));
+		text_drawer.strs.push_back(text_string_t(str, make_pt_global((*i)->pos), size, CYAN));
+	}
+	show_info_uobjs.clear(); // reset for next frame
 }
 
 
@@ -2299,6 +2316,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 		if (world_mode == WMODE_UNIVERSE && size >= 64) {select_texture(BLUR_TEX); draw_flares(ndiv, 1);}
 		usg.disable_star_shader();
 		fgPopMatrix();
+		if (size > 4.0) {maybe_show_uobj_info(this);}
 	} // end sphere draw
 	return 1;
 }
@@ -2428,6 +2446,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	}
 	if (texture || procedural) {usg.disable_planet_shader(*this, svars);} else {usg.disable_planet_colored_shader();}
 	fgPopMatrix();
+	if (size > 8.0) {maybe_show_uobj_info(this);}
 	return 1;
 }
 
@@ -2614,7 +2633,7 @@ string urev_body::get_info() const {
 		<< ", Atmos: " << atmos << " (" << get_atmos_string() << "), Vegetation: " << get_vegetation() << endl
 		<< "Can Land: " << can_land() << ", Colonizable: " << colonizable()
 		<< ", Liveable: " << liveable() << ", Satellites: " << num_satellites << comment;
-	get_owner_info(oss);
+	get_owner_info(oss, 0); // show_uninhabited=0 to reduce clutter
 	return oss.str();
 }
 
