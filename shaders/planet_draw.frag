@@ -143,10 +143,15 @@ void main()
 		float hdz   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, 0.0, delta), NORMAL_OCTAVES);
 		norm = normalize(norm) + 0.05*nscale*normalize(fg_NormalMatrix * vec3(hdx, hdy, hdz));
 	}
-	if (population > 0.0) {
-		float thresh = texture3D(cloud_noise_tex, 4.5*spos).r;
-		city_light   = clamp(8.0*(texture3D(cloud_noise_tex, 200.0*spos).r + 0.6*population - 0.75*thresh - 1.0), 0.0, 1.0);
-		city_light  *= max((0.5 - spec_mag), 0.0);// * population; // colonized and not over water/snow/ice
+	if (population > 0.0 && spec_mag < 0.5) {
+		float thresh = 0.38*population - 0.42*texture3D(cloud_noise_tex, 4.5*spos).r - 1.0;
+		float freq   = 50.0;
+
+		for (int i = 0; i < 4; ++i) {
+			city_light = max(city_light, clamp(4.0*(texture3D(cloud_noise_tex, freq*spos).r + thresh), 0.0, 1.0));
+			freq       *= 1.93;
+		}
+		city_light *= max((0.5 - spec_mag), 0.0) * population; // colonized and not over water/snow/ice
 	}
 #endif // ALL_WATER_ICE
 
@@ -241,11 +246,11 @@ void main()
 		}
 	}
 #endif // not GAS_GIANT
+	color += emission.rgb + clamp(4.0*city_light*(0.2 - dterm0), 0.0, 1.0)*vec3(1.0, 0.8, 0.5);
 
 	if (cloud_den > 0.0) { // add cloud color
 		float v = texture3D(cloud_noise_tex, 3.0*noise_scale*lv).r; // add in some brightness variation for fake shadows
 		color   = mix(color, (1.2*ambient + (0.75 + 0.25*v)*diffuse), cloud_den); // no clouds over high mountains?
 	}
-	vec3 tot_emiss = emission.rgb + city_light*max(0.0, (0.2 - dterm0))*vec3(1.0, 0.8, 0.5);
-	fg_FragColor   = gl_Color * vec4((color + tot_emiss), 1.0);
+	fg_FragColor   = gl_Color * vec4(color, 1.0);
 }
