@@ -867,9 +867,17 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 void line_tquad_draw_t::draw() const { // supports quads and triangles
 
 	shader_t s;
-	s.begin_simple_textured_shader(0.01);
+
+	if (0) { // probably more efficient, and preserves sharp/bright lines
+		s.set_vert_shader("no_lighting_tex_coord");
+		s.set_frag_shader("line_draw_halo");
+		s.begin_shader();
+	}
+	else { // texture mipmaps perform antialiasing on distant lines, which looks nice
+		s.begin_simple_textured_shader(0.01);
+		select_texture((draw_model != 0) ? WHITE_TEX : BLUR_TEX);
+	}
 	enable_blend();
-	select_texture((draw_model != 0) ? WHITE_TEX : BLUR_TEX);
 	draw_verts(verts, GL_TRIANGLES);
 	disable_blend();
 	s.end_shader();
