@@ -66,7 +66,7 @@ vector<uobject const *> show_info_uobjs;
 
 
 extern bool enable_multisample;
-extern int window_width, window_height, animate2, display_mode, onscreen_display, show_scores, iticks;
+extern int window_width, window_height, animate2, display_mode, onscreen_display, show_scores, iticks, frame_counter;
 extern unsigned enabled_lights;
 extern float fticks, tfticks;
 extern colorRGBA bkg_color;
@@ -442,6 +442,30 @@ public:
 		set_point_sprite_mode(0); // disable
 	}
 };
+
+
+// not meant to be used in universe mode; expected to be called while in blend mode
+void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const &pos, float radius, int ndiv, bool add_halo) {
+
+	static int lfc(0);
+	if (animate2 && frame_counter > lfc) {cloud_time += 8.0*fticks; lfc = frame_counter;} // at most once per frame
+	ushader_group usg;
+	usg.enable_star_shader(colorA, colorB, radius);
+	set_additive_blend_mode();
+	fgPushMatrix();
+	translate_to(pos);
+	uniform_scale(radius);
+	draw_sphere_vbo_raw(ndiv, 0);
+
+	if (add_halo) {
+		quad_batch_draw qbd;
+		qbd.add_xlated_billboard(pos, all_zeros, get_camera_pos(), up_vector, WHITE, 4.0, 4.0); // halo
+		qbd.draw_as_flares_and_clear(BLUR_TEX);
+	}
+	fgPopMatrix();
+	set_std_blend_mode();
+	usg.disable_star_shader();
+}
 
 
 void invalidate_cached_stars() {++star_cache_ix;}

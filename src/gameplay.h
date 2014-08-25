@@ -148,7 +148,7 @@ int  get_damage_source(int type, int index, int questioner);
 void gen_rubble(int type, int num, point const &pos, int shooter, float const p[7]);
 
 void add_damage_to_smiley(vector3d const &dir, float size, int smiley_id, int type);
-void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, int time, shader_t &shader);
+void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader);
 void do_cblade_damage_and_update_pos(point &pos, int shooter);
 
 

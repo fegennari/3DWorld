@@ -52,7 +52,7 @@ void draw_skull(point const &pos, vector3d const &orient, float radius, int stat
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, shader_t &shader);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader);
-void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, int time, shader_t &shader);
+void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader);
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader);
 void draw_grenade(point const &pos, vector3d const &orient, float radius, int ndiv, int time, bool in_ammo, bool is_cgrenade, shader_t &shader);
 void draw_star(point const &pos, vector3d const &orient, vector3d const &init_dir, float radius, float angle, int rotate);
@@ -62,6 +62,7 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale);
 
 int same_team(int source, int target); // gameplay
+void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const &pos, float radius, int ndiv, bool add_halo); // universe
 
 
 
@@ -320,7 +321,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_landmine(pos, radius, ndiv, obj.time, obj.source, in_ammo, shader);
 		break;
 	case PLASMA:
-		draw_plasma(pos, pos, radius, (in_ammo ? 1.0 : obj.init_dir.x), ndiv, !in_ammo, obj.time, shader);
+		draw_plasma(pos, pos, radius, (in_ammo ? 1.0 : obj.init_dir.x), ndiv, !in_ammo, 1, obj.time, shader);
 		break;
 	case GRENADE:
 		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), in_ammo, 0, shader);
@@ -1219,15 +1220,23 @@ colorRGBA get_plasma_color(float size) {
 }
 
 
-void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, int time, shader_t &shader) {
+void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader) {
 
-	colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));
-	set_emissive_only(color, shader);
 	if (animate2) {radius *= rand_uniform(0.99, 1.01) + 0.1*(0.5 + 0.1*(abs((time % 20) - 10)));}
-	//draw_sphere_vbo(pos, size*radius, ndiv, 1);
-	draw_cube_mapped_sphere(pos, size*radius, ndiv/2, 1);
+
+	if (1) { // slower, but looks much nicer
+		select_texture(WHITE_TEX); // texture is procedural
+		draw_one_star(RED, YELLOW, pos, size*radius, ndiv, add_halo);
+		shader.enable();
+	}
+	else {
+		colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));
+		set_emissive_only(color, shader);
+		//draw_sphere_vbo(pos, size*radius, ndiv, 1);
+		draw_cube_mapped_sphere(pos, size*radius, ndiv/2, 1);
+		shader.clear_color_e();
+	}
 	if (gen_parts && animate2 && !is_underwater(part_pos, 1) && (rand()&15) == 0) {gen_particles(part_pos, 1);}
-	shader.clear_color_e();
 }
 
 
