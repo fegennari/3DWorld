@@ -79,10 +79,8 @@ void create_object_groups() {
 	if (inited) return; // prevent multiple inits
 	inited = 1;
 	unsigned const num_player_blocks(num_smileys + 1); // camera + smileys
-
-	for (int i = 0; i < NUM_TOT_OBJS; ++i) {
-		coll_id[i] = 0; // will be offset to -1 at the end
-	}
+	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] = 0;} // will be offset to -1 at the end
+	
 	// type, max, init, rate, enabled, reorderable, auto_max
 	coll_id[SMILEY]   = create_group(SMILEY,   num_smileys, 0, 1, 1, 0, 0);
 	coll_id[PRECIP]   = create_group(PRECIP,   0, 0,  40, 0, 0, 1);
@@ -102,7 +100,6 @@ void create_object_groups() {
 	coll_id[LANDMINE] = create_group(LANDMINE, 100,   0, 0, 0, 1, 0);
 	coll_id[SEEK_D]   = create_group(SEEK_D,   50,    0, 0, 0, 1, 0);
 	coll_id[STAR5]    = create_group(STAR5,    200,   0, 0, 0, 1, 0);
-	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 1, 0);
 	coll_id[GRENADE]  = create_group(GRENADE,  200,   0, 0, 0, 1, 0);
 	coll_id[CGRENADE] = create_group(CGRENADE, 20,    0, 0, 0, 1, 0);
 	coll_id[SHRAPNEL] = create_group(SHRAPNEL, 8000,  0, 0, 0, 1, 0);
@@ -117,10 +114,8 @@ void create_object_groups() {
 	coll_id[FRAGMENT] = create_group(FRAGMENT, 1200,  0, 0, 0, 1, 0);
 	coll_id[PARTICLE] = create_group(PARTICLE, 800,   0, 0, 0, 1, 0);
 	coll_id[SAWBLADE] = create_group(SAWBLADE, 50,    0, 0, 0, 1, 0);
-
-	for (int i = 0; i < NUM_TOT_OBJS; ++i) {
-		coll_id[i] -= 1; // offset by -1
-	}
+	coll_id[PLASMA]   = create_group(PLASMA,   150,   0, 0, 0, 1, 0); // Note: create plasma group last since it uses a special shader during drawing
+	for (int i = 0; i < NUM_TOT_OBJS; ++i) {coll_id[i] -= 1;} // offset by -1
 }
 
 
