@@ -117,6 +117,7 @@ public:
 	bool is_directional() const {return (bwidth < 1.0);}
 	bool is_line_light()  const {return (pos != pos2);} // technically cylinder light
 	bool is_dynamic()     const {return dynamic;}
+	bool is_neg_light()   const {return (color.R < 0.0 || color.G < 0.0 || color.B < 0.0);}
 	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
 	void combine_with(light_source const &l);
 	void pack_to_floatv(float *data) const;

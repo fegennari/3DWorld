@@ -914,10 +914,11 @@ bool dls_cell::check_add_light(unsigned ix) const {
 bool light_source::try_merge_into(light_source &ls) const {
 
 	if (ls.radius < radius) return 0; // shouldn't get here because of radius sort
-	if (!dist_less_than(pos, ls.pos, 0.2*max(HALF_DXY, radius))) return 0;
+	if (!dist_less_than(pos, ls.pos, 0.2*min(HALF_DXY, radius))) return 0;
 	if (ls.bwidth != bwidth || ls.r_inner != r_inner || ls.dynamic != dynamic) return 0;
 	if (bwidth < 1.0 && dot_product(dir, ls.dir) < 0.95) return 0;
-	if (pos != pos2 || ls.pos != ls.pos2) return 0; // don't merge line lights
+	if (pos != pos2 || ls.pos != ls.pos2)    return 0; // don't merge line lights
+	if (is_neg_light() != ls.is_neg_light()) return 0; // don't merge neg lights (looks bad)
 	colorRGBA lcolor(color);
 	float const rr(radius/ls.radius);
 	lcolor.alpha *= rr*rr; // scale by radius ratio squared
@@ -952,7 +953,7 @@ void add_dynamic_lights_ground() {
 		dl_sources.push_back(light_source(0.94, pos, pos, BLUE, 1));
 	}
 	// Note: do we want to sort by y/x position to minimize cache misses?
-	sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
+	stable_sort(dl_sources.begin(), dl_sources.end(), std::greater<light_source>()); // sort by largest to smallest radius
 	unsigned const ndl((unsigned)dl_sources.size());
 	has_dl_sources = (ndl > 0);
 	dlight_add_thresh *= 0.99;
