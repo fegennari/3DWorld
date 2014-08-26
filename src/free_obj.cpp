@@ -973,7 +973,7 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes G
 	s.set_uniform_float(s.off_loc, hashval); // used as a hash
 	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - pos).get_norm()); // local object space
 	draw_quads();
-	ddata.shader->enable();
+	ddata.shader->make_current();
 }
 
 

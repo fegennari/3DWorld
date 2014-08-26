@@ -759,15 +759,20 @@ void shader_t::end_shader() { // ok to call if not in a shader
 }
 
 
-void shader_t::enable() {
-	
+void shader_t::make_current() {
+
 	assert(program);
 	glUseProgram(program);
+	cur_shader = this;
+}
+
+void shader_t::enable() {
+	
+	make_current();
 	upload_all_light_sources();
 	upload_pjm();
 	upload_mvm();
 	mvm_changed = 0;
-	cur_shader  = this;
 }
 
 void shader_t::disable() {
