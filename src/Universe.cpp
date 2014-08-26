@@ -51,6 +51,8 @@ float const MAX_WATER        = 0.75;
 float const GLOBAL_AMBIENT   = 0.25;
 float const GAS_GIANT_MIN_REL_SZ = 0.34;
 
+unsigned const noise_tu_id = 11; // so as not to conflict with other ground mode textures when drawing plasma
+
 
 bool have_sun(1);
 unsigned star_cache_ix(0);
@@ -227,7 +229,7 @@ class universe_shader_t : public shader_t {
 		add_uniform_int(texture_name, 0);
 	}
 	void setup_planet_star_noise_tex() {
-		set_active_texture(1);
+		set_active_texture(noise_tu_id);
 		bind_3d_texture(get_noise_tex_3d(64, 1)); // grayscale noise
 		set_active_texture(0);
 	}
@@ -266,7 +268,7 @@ public:
 			set_vert_shader("procedural_planet.part*+planet_draw");
 			set_frag_shader(frag_shader_str+"+procedural_planet.part*+planet_draw");
 			shared_setup();
-			add_uniform_int("cloud_noise_tex", 1);
+			add_uniform_int("cloud_noise_tex", noise_tu_id);
 			add_uniform_int("ring_tex",        2);
 			add_uniform_float("time", 5.0E-6*cloud_time);
 		}
@@ -306,7 +308,7 @@ public:
 			//set_frag_shader("star_draw_iq");
 			begin_shader();
 			add_uniform_int("tex0", 0);
-			add_uniform_int("cloud_noise_tex", 1);
+			add_uniform_int("cloud_noise_tex", noise_tu_id);
 			add_uniform_float("time", 1.2E-4*cloud_time);
 			add_uniform_float("noise_scale", 3.5);
 		}
