@@ -38,15 +38,15 @@ extern player_state *sstates;
 extern int coll_id[];
 
 
-void draw_group(obj_group &objg, shader_t &s);
+void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manager);
 void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
 					  bool do_texture, shader_t &shader, int is_chunky=0);
-void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader);
+void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader, lt_atten_manager_t &lt_atten_manager);
 void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type,
 					  int use_orient, int ndiv, shader_t &shader, float scale=1.0);
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
 				 float health, int id, mesh2d const *const mesh, shader_t &shader);
-void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader);
+void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader, lt_atten_manager_t &lt_atten_manager);
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix, shader_t &shader);
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int time, shader_t &shader, bool burned);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
@@ -224,11 +224,14 @@ void draw_select_groups(int solid) {
 	if (!begin_motion) return;
 	shader_t s;
 	s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1); // FS
-	bool const force_tsl(1);
+	bool const force_tsl = 1;
+	int const lt_atten(solid ? 0 : 2); // sphere light atten
 	float const burn_tex_scale = 0.5;
-	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, force_tsl, burn_tex_scale);
+	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, lt_atten, 1, 0, 0, 1, force_tsl, burn_tex_scale);
 	if (cobj_z_bias < 0.002)     {s.add_uniform_float("z_bias", 0.002);} // reset larger
 	if (indir_vert_offset > 0.1) {s.add_uniform_float("indir_vert_offset", 0.1);} // reset smaller
+	lt_atten_manager_t lt_atten_manager(s);
+	if (!solid) {lt_atten_manager.enable();}
 	select_no_texture();
 
 	for (int i = 0; i < num_groups; ++i) {
@@ -236,7 +239,7 @@ void draw_select_groups(int solid) {
 
 		if (objg.enabled && objg.temperature_ok() && objg.end_id > 0) { // should leaves be marked as solid or semi-transparent?
 			if (((objg.large_radius() || objg.type == LEAF) && !(object_types[objg.type].flags & SEMI_TRANSPARENT)) == solid) {
-				draw_group(objg, s);
+				draw_group(objg, s, lt_atten_manager);
 			}
 		}
 	}
@@ -288,7 +291,7 @@ struct wap_obj {
 
 
 void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float radius,
-	const colorRGBA &color, int ndiv, int j, bool in_ammo, shader_t &shader)
+	const colorRGBA &color, int ndiv, int j, bool in_ammo, shader_t &shader, lt_atten_manager_t &lt_atten_manager)
 {
 	dwobject const &obj(objg.get_obj(j));
 	point const &pos(obj.pos);
@@ -337,7 +340,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	case POWERUP:
 	case HEALTH:
 	case SHIELD:
-		draw_powerup(pos, radius, ndiv, ((type == POWERUP) ? (int)obj.direction : -1), color, shader);
+		draw_powerup(pos, radius, ndiv, ((type == POWERUP) ? (int)obj.direction : -1), color, shader, lt_atten_manager);
 		break;
 	case WA_PACK:
 		wap_vis_objs[!wid_need_weapon((int)obj.direction)].push_back(wap_obj(j, ndiv));
@@ -412,7 +415,7 @@ void draw_and_clear_tris(vector<vert_norm_color> &vn, vector<vert_norm_tc_color>
 }
 
 
-void draw_group(obj_group &objg, shader_t &s) {
+void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manager) {
 
 	RESET_TIME;
 	s.set_specular(0.0, 1.0); // disable
@@ -513,7 +516,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 			++num_drawn;
 			float const pt_size(cd_scale/distance_to_camera(pos));
 			int const ndiv(min(N_SPHERE_DIV, max(3, int(min(pt_size, 3.0f*sqrt(pt_size))))));
-			draw_obj(objg, wap_vis_objs, type, radius, color, ndiv, j, 0, s);
+			draw_obj(objg, wap_vis_objs, type, radius, color, ndiv, j, 0, s, lt_atten_manager);
 		} // for j
 		for (unsigned k = 0; k < wap_vis_objs[0].size(); ++k) { // draw weapons
 			dwobject const &obj(objg.get_obj(wap_vis_objs[0][k].id));
@@ -525,7 +528,7 @@ void draw_group(obj_group &objg, shader_t &s) {
 		for (unsigned k = 0; k < wap_vis_objs[1].size(); ++k) { // draw ammo
 			unsigned const j(wap_vis_objs[1][k].id);
 			assert(j < objg.max_objects());
-			draw_ammo(objg, radius, color, wap_vis_objs[1][k].ndiv, j, s);
+			draw_ammo(objg, radius, color, wap_vis_objs[1][k].ndiv, j, s, lt_atten_manager);
 		}
 		if (!wap_vis_objs[0].empty() || !wap_vis_objs[1].empty()) {
 			check_drawing_flags(otype.flags, 1, s);
@@ -786,7 +789,7 @@ void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRG
 }
 
 
-void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader) {
+void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader, lt_atten_manager_t &lt_atten_manager) {
 
 	dwobject const &obj(objg.get_obj(j));
 	point pos(obj.pos);
@@ -831,7 +834,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 		draw_sphere_vbo(pos, 0.6*radius, ndiv, 1);
 		break;
 	default:
-		draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, 1, shader);
+		draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, 1, shader, lt_atten_manager);
 	}
 	if (cull_face) {glDisable(GL_CULL_FACE);}
 	if (otype.tid >= 0) {select_no_texture();}
@@ -1068,12 +1071,16 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 }
 
 
-void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader) {
+void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader, lt_atten_manager_t &lt_atten_manager) {
 
-	set_emissive_only(((type == -1) ? color : get_powerup_color(type)), shader);
+	ndiv = 3*ndiv/2; // increase ndiv for better transparency effect
+	colorRGBA const ecolor(((type == -1) ? color : get_powerup_color(type)), 0.02); // low alpha
+	set_emissive_only(ecolor, shader);
+	lt_atten_manager.next_sphere(40.0, 1.0, pos, 0.7*radius); // dense gas
 	draw_sphere_vbo(pos, 0.7*radius, ndiv, 0); // draw flare/billboard?
 	shader.clear_color_e();
-	shader.set_cur_color(color);
+	shader.set_cur_color(colorRGBA(color, 0.05)); // low alpha
+	lt_atten_manager.next_sphere(20.0, 1.6, pos, radius); // light glass
 	draw_sphere_vbo(pos, radius, ndiv, 0);
 }
 
@@ -1227,7 +1234,7 @@ void draw_plasma(point const &pos, point const &part_pos, float radius, float si
 	if (1) { // slower, but looks much nicer
 		select_texture(WHITE_TEX); // texture is procedural
 		draw_one_star(RED, YELLOW, pos, size*radius, ndiv, add_halo);
-		shader.enable();
+		shader.make_current();
 	}
 	else {
 		colorRGBA const color(get_plasma_color(size + 0.5*(0.5 + 0.16*abs((time % 12) - 6))));

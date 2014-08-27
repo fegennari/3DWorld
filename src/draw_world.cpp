@@ -221,14 +221,15 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 
 
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
-	bool smoke_enabled, bool has_lt_atten, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
+	bool smoke_enabled, int has_lt_atten, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
 {
-	s.set_int_prefix ("use_texgen",      use_texgen,      0); // VS
-	s.set_bool_prefix("keep_alpha",      keep_alpha,      1); // FS
-	s.set_bool_prefix("direct_lighting", direct_lighting, 1); // FS
-	s.set_bool_prefix("do_lt_atten",     has_lt_atten,    1); // FS
-	s.set_bool_prefix("two_sided_lighting", use_tsl,      1); // FS
-	s.set_bool_prefix("use_fg_ViewMatrix",  use_mvm,      0); // VS
+	s.set_int_prefix ("use_texgen",         use_texgen,      0); // VS
+	s.set_bool_prefix("keep_alpha",         keep_alpha,      1); // FS
+	s.set_bool_prefix("direct_lighting",    direct_lighting, 1); // FS
+	s.set_bool_prefix("do_cube_lt_atten",   ((has_lt_atten & 1) != 0), 1); // FS
+	s.set_bool_prefix("do_sphere_lt_atten", ((has_lt_atten & 2) != 0), 1); // FS
+	s.set_bool_prefix("two_sided_lighting", use_tsl,         1); // FS
+	s.set_bool_prefix("use_fg_ViewMatrix",  use_mvm,         0); // VS
 	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP", 1);} // FS
 
 	if (smoke_enabled) {
@@ -254,7 +255,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
-	bool smoke_en, bool has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale)
+	bool smoke_en, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale)
 {
 	smoke_en &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
@@ -370,6 +371,7 @@ void end_group(int &last_group_id) {
 }
 
 
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 
@@ -379,8 +381,9 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (!draw_solid && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	bool has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
+	bool const has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
 	shader_t s;
+	// Note: pass in 3 when has_lt_atten to enable sphere atten
 	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
 	int last_tid(-1), last_group_id(-1);
 	vector<vert_wrap_t> portal_verts;
@@ -444,33 +447,17 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 		sort(draw_last.begin(), draw_last.end()); // sort back to front for alpha blending
 		enable_blend();
-		int ulocs[3] = {0};
-		float last_light_atten(-1.0), last_refract_ix(0.0); // set to invalid values to start
+		lt_atten_manager_t lt_atten_manager(s);
+		if (has_lt_atten) {lt_atten_manager.enable();}
 		bool in_portal(0);
 
-		if (has_lt_atten) {
-			const char *lt_atten_uniform_strs[3] = {"light_atten", "cube_bb", "refract_ix"};
-
-			for (unsigned i = 0; i < 3; ++i) {
-				ulocs[i] = s.get_uniform_loc(lt_atten_uniform_strs[i]);
-				assert(ulocs[i] >= 0);
-			}
-		}
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
 			int const ix(draw_last[i].second);
 
 			if (ix < 0) { // portal
 				end_group(last_group_id);
 				cdb.flush();
-
-				if (has_lt_atten && last_light_atten != 0.0) {
-					s.set_uniform_float(ulocs[0], 0.0);
-					last_light_atten = 0.0;
-				}
-				if (has_lt_atten && last_refract_ix != 1.0) {
-					s.set_uniform_float(ulocs[2], 1.0);
-					last_refract_ix = 1.0;
-				}
+				lt_atten_manager.next_object(0.0, 1.0);
 				if (!in_portal) {portal::pre_draw(portal_verts); in_portal = 1;}
 				unsigned const pix(-(ix+1));
 				assert(pix < portals.size());
@@ -481,24 +468,24 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 				unsigned cix(ix);
 				assert(cix < coll_objects.size());
 				coll_obj const &c(coll_objects[cix]);
-				float light_atten(0.0);
 				cdb.on_new_obj_layer(c.cp);
+				bool using_lt_atten(0);
 				
-				if (has_lt_atten) { // we only support cubes for now (Note: may not be compatible with groups)
-					if (c.type == COLL_CUBE) {light_atten = c.cp.light_atten;}
-
-					if (light_atten != last_light_atten) {
-						s.set_uniform_float(ulocs[0], light_atten);
-						last_light_atten = light_atten;
+				if (has_lt_atten) { // we only support cubes and spheres for now (Note: may not be compatible with groups)
+					if (c.type == COLL_CUBE) {
+						lt_atten_manager.next_cube(c.cp.light_atten, c.cp.refract_ix, c);
+						using_lt_atten = (c.cp.light_atten > 0.0);
 					}
-					if (c.cp.refract_ix != last_refract_ix) {
-						s.set_uniform_float(ulocs[2], c.cp.refract_ix);
-						last_refract_ix = c.cp.refract_ix;
+					else if (c.type == COLL_SPHERE) {
+						lt_atten_manager.next_sphere(c.cp.light_atten, c.cp.refract_ix, c.points[0], c.radius);
+						using_lt_atten = (c.cp.light_atten > 0.0);
 					}
-					if (light_atten > 0.0) {s.set_uniform_float_array(ulocs[1], (float const *)c.d, 6);} // per-cube data
+					else {
+						lt_atten_manager.next_object(0.0, c.cp.refract_ix); // reset
+					}
 				}
 				c.draw_cobj(cix, last_tid, last_group_id, s, cdb);
-				if (light_atten > 0.0) {cdb.flush();} // must flush because ulocs[1] is per-cube
+				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[1] is per-cube
 				assert(cix == ix); // should not have changed
 			}
 		} // for i

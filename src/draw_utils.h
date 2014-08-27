@@ -184,5 +184,21 @@ typedef vbo_block_manager_t<vert_norm_tc_color  > vbo_vntc_block_manager_t;
 typedef vbo_block_manager_t<vert_norm_tc        > vbo_vnt_block_manager_t;
 
 
+class lt_atten_manager_t {
+
+	shader_t &shader;
+	int ulocs[5];
+	float last_light_atten, last_refract_ix;
+
+public:
+	lt_atten_manager_t(shader_t &shader_) : shader(shader_), last_light_atten(-1.0), last_refract_ix(0.0) // set to invalid values to start
+	{for (unsigned i = 0; i < 5; ++i) {ulocs[i] = -1;}}
+	void enable();
+	void next_object(float light_atten, float refract_ix);
+	void next_cube(float light_atten, float refract_ix, cube_t const &cube);
+	void next_sphere(float light_atten, float refract_ix, point const &pos, float radius);
+};
+
+
 #endif // _DRAW_UTILS_H_
 

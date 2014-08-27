@@ -3,9 +3,9 @@ uniform float step_delta;
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform float emissive_scale = 0.0;
-uniform vec3 smoke_color;
+uniform vec3 smoke_color, sphere_center;
 uniform float light_atten = 0.0, refract_ix = 1.0;
-uniform float cube_bb[6];
+uniform float cube_bb[6], sphere_radius;
 uniform vec4 emission = vec4(0,0,0,1);
 
 // clipped eye position, clipped vertex position
@@ -66,16 +66,23 @@ void main()
 #endif
 	float alpha = gl_Color.a;
 
-	if (do_lt_atten) {
+	if (do_cube_lt_atten || do_sphere_lt_atten) { // && light_atten > 0.0
 		vec3 v_inc = normalize(camera_pos - vpos);
+		float dist = 0.0;
 
-		//if (light_atten > 0.0) { // account for light attenuating/reflecting semi-transparent materials
-			vec3 far_pt   = vpos - 100.0*v_inc; // move it far away
-			pt_pair res   = clip_line(vpos, far_pt, cube_bb);
-			float dist    = length(res.v1 - res.v2);
-			float atten   = exp(-light_atten*dist);
-			alpha += (1.0 - alpha)*(1.0 - atten);
-		//}
+		if (do_cube_lt_atten) { // account for light attenuating/reflecting semi-transparent materials
+			vec3 far_pt = vpos - 100.0*v_inc; // move it far away
+			pt_pair res = clip_line(vpos, far_pt, cube_bb);
+			dist        = length(res.v1 - res.v2);
+		}
+		if (do_sphere_lt_atten) { // alpha is calculated from distance between sphere intersection points
+			float wpdist = distance(vpos, sphere_center);
+			float dp     = dot(v_inc, (vpos - sphere_center));
+			float adsq   = dp*dp - wpdist*wpdist + sphere_radius*sphere_radius;
+			dist         = sqrt(max(adsq, 0.0)); // should always intersect
+		}
+		alpha += (1.0 - alpha)*(1.0 - exp(-light_atten*dist));
+
 		if (refract_ix != 1.0 && dot(normal, v_inc) > 0.0) { // entering ray in front surface
 			float reflect_w = get_fresnel_reflection(v_inc, normalize(normal), 1.0, refract_ix);
 			alpha = reflect_w + alpha*(1.0 - reflect_w); // don't have a reflection color/texture, so just modify alpha

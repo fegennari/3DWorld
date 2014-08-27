@@ -651,3 +651,37 @@ unsigned create_or_bind_ivbo_quads_as_tris(unsigned &ivbo, vector<unsigned> cons
 }
 
 
+void lt_atten_manager_t::enable() {
+	const char *lt_atten_uniform_strs[5] = {"light_atten", "refract_ix", "cube_bb", "sphere_center", "sphere_radius"};
+
+	for (unsigned i = 0; i < 5; ++i) {
+		ulocs[i] = shader.get_uniform_loc(lt_atten_uniform_strs[i]);
+		//assert(ulocs[i] >= 0); // not all need to be available
+	}
+}
+
+void lt_atten_manager_t::next_object(float light_atten, float refract_ix) {
+	if (ulocs[0] >= 0 && light_atten != last_light_atten) {
+		shader.set_uniform_float(ulocs[0], light_atten);
+		last_light_atten = light_atten;
+	}
+	if (ulocs[1] >= 0 && refract_ix != last_refract_ix) {
+		shader.set_uniform_float(ulocs[1], refract_ix);
+		last_refract_ix = refract_ix;
+	}
+}
+
+void lt_atten_manager_t::next_cube(float light_atten, float refract_ix, cube_t const &cube) {
+	if (light_atten > 0.0) {shader.set_uniform_float_array(ulocs[2], (float const *)cube.d, 6);} // per-cube data
+	next_object(light_atten, refract_ix);
+}
+
+void lt_atten_manager_t::next_sphere(float light_atten, float refract_ix, point const &pos, float radius) {
+	if (light_atten > 0.0) {
+		shader.set_uniform_vector3d(ulocs[3], pos);
+		shader.set_uniform_float(ulocs[4], radius);
+	}
+	next_object(light_atten, refract_ix);
+}
+
+
