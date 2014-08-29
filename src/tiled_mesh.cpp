@@ -682,7 +682,8 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
 			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
 			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]);
-			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.5 + 0.5*shadow_val/255.0)); // add ambient occlusion from trees
+			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*shadow_val/255.0)); // add ambient occlusion from trees
+			shadow_val    = 128 + shadow_val/2; // divide tree shadow effect by 2x to offset for shadow map effect
 
 			if (!mesh_shadows) {
 				// do nothing
@@ -768,6 +769,9 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 		float const MESH_NOISE_FREQ  = 80.0;
 		float const dz_inv(1.0/(zmax - zmin));
 		float const noise_scale(((mesh_gen_shape == 2) ? 2.0 : 1.0)*MESH_NOISE_SCALE*mesh_scale_z); // add more noise for ridged
+		float const steep_mult_grass(1.0/(sthresh[0][1] - sthresh[0][0]));
+		float const steep_mult_snow (1.0/(sthresh[1][1] - sthresh[1][0]));
+		float const steep_mult_rock (1.0/(0.8f*sthresh[0][0] - 0.5f*sthresh[0][0]));
 		int k1, k2, k3, k4;
 		height_gen.build_arrays(MESH_NOISE_FREQ*get_xval(x1), MESH_NOISE_FREQ*get_yval(y1), MESH_NOISE_FREQ*deltax,
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
@@ -801,13 +805,15 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
 					if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
 						if (grass) { // ground/grass
-							float const rock_weight((lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == ROCK_TEX) ? t : 0.0);
-							weight_scale = CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0]));
+							float rock_weight((lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == ROCK_TEX) ? t : 0.0);
+							float const steepness(1.0 - CLIP_TO_01((vnz - 0.5f*sti[0])*steep_mult_rock));
+							rock_weight  = rock_weight*(1.0 - steepness) + steepness;
+							weight_scale = CLIP_TO_01((vnz - sti[0])*steep_mult_grass);
 							weights[rock_tex_ix] += (1.0 - weight_scale)*rock_weight;
 							weights[dirt_tex_ix] += (1.0 - weight_scale)*(1.0 - rock_weight);
 						}
 						else { // snow
-							weight_scale = CLIP_TO_01(2.0f*(vnz - sti[0])/(sti[1] - sti[0]));
+							weight_scale = CLIP_TO_01(2.0f*(vnz - sti[0])*steep_mult_snow);
 							weights[rock_tex_ix] += 1.0 - weight_scale;
 						}
 					}
@@ -819,7 +825,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv));
 
 				if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand
-					weights[sand_tex_ix ] += (1.0 - dirt_scale )*weights[dirt_tex_ix];
+					weights[sand_tex_ix ] += (1.0 - dirt_scale)*weights[dirt_tex_ix];
 					weights[dirt_tex_ix ] *= dirt_scale;
 				}
 				if (grass) {
