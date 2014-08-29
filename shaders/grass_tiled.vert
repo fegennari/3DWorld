@@ -61,11 +61,13 @@ void main()
 
 	//if (grass_weight < noise_weight) {
 	if (enable_light0) {
-		float dscale = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light0(epos, normal), smap_scale) : diffuse_scale);
+		float dscale = diffuse_scale;
+		if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, normal), smap_scale));}
 		color += add_light_comp_pos_scaled0(normal, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale, ad_color).rgb;
 	}
 	if (enable_light1) {
-		float dscale = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light1(epos, normal), smap_scale) : diffuse_scale);
+		float dscale = diffuse_scale;
+		if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, normal), smap_scale));}
 		color += add_light_comp_pos_scaled1(normal, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale, ad_color).rgb;
 	}
 	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2).rgb;} // Note: can't override color

@@ -112,11 +112,13 @@ void main()
 	if (enable_light0) { // sun
 		float spec      = spec_scale*(spec_offset + 0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 80.0*spec_offset + 20.0*weights.b + 40.0*weights4;
-		float dscale    = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light0(epos, normal), smap_scale) : diffuse_scale);
+		float dscale    = diffuse_scale;
+		if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, normal), smap_scale));}
 		color += add_light_comp(normal, epos, 0, dscale, ambient_scale, spec, shininess, bump_scale);
 	}
 	if (enable_light1) { // moon
-		float dscale    = (use_shadow_map ? mix(diffuse_scale, get_shadow_map_weight_light1(epos, normal), smap_scale) : diffuse_scale);
+		float dscale    = diffuse_scale;
+		if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, normal), smap_scale));}
 		color += add_light_comp(normal, epos, 1, dscale, ambient_scale, 0.0, 1.0, bump_scale);
 	}
 	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
