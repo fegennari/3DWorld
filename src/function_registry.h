@@ -88,6 +88,8 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12);
 
 // function prototypes - draw_world
 void set_fill_mode();
+void ensure_filled_polygons();
+void reset_fill_mode();
 int get_universe_ambient_light();
 void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader=NULL);
 void set_light_ds_color(int light, colorRGBA const &diffuse, shader_t *shader=NULL);

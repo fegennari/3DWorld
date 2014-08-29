@@ -73,6 +73,14 @@ void set_fill_mode() {
 	glPolygonMode(GL_FRONT_AND_BACK, ((draw_model == 0) ? GL_FILL : GL_LINE));
 }
 
+void ensure_filled_polygons() {
+	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);} // always filled
+}
+
+void reset_fill_mode() {
+	if (draw_model != 0) {set_fill_mode();}
+}
+
 int get_universe_ambient_light() {
 	return ((world_mode == WMODE_UNIVERSE) ? 1 : 3);
 }
@@ -1207,7 +1215,7 @@ void spark_t::draw(quad_batch_draw &qbd) const {
 void draw_sparks() {
 
 	if (sparks.empty()) return;
-	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);}
+	ensure_filled_polygons();
 	enable_blend();
 	set_additive_blend_mode();
 	shader_t s;
@@ -1219,7 +1227,7 @@ void draw_sparks() {
 	s.end_shader();
 	set_std_blend_mode();
 	disable_blend();
-	if (draw_model != 0) {set_fill_mode();}
+	reset_fill_mode();
 	sparks.clear();
 }
 

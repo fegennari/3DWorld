@@ -960,7 +960,9 @@ public:
 		// setup fbo and draw geometry
 		enable_fbo(fbo_id, tid, 0);
 		set_temp_clear_color(BLACK);
+		ensure_filled_polygons();
 		draw_geom();
+		reset_fill_mode();
 	}
 	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1) { // tid may or may not be setup prior to this call
 		if (tid == 0) {

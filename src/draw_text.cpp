@@ -121,7 +121,7 @@ void gen_text_verts(vector<vert_tc_t> &verts, point const &pos, string const &te
 
 void begin_text_draw(shader_t &s, colorRGBA const *const color=nullptr) {
 
-	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);} // always filled
+	ensure_filled_polygons();
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
 	s.begin_simple_textured_shader(0.1, 0, 0, color);
@@ -133,7 +133,7 @@ void end_text_draw(shader_t &s) {
 	s.end_shader();
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
-	if (draw_model != 0) {set_fill_mode();}
+	reset_fill_mode();
 }
 
 
