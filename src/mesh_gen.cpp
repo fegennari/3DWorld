@@ -598,7 +598,7 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 		#pragma omp parallel for schedule(static,1)
 		for (int y = 0; y < (int)cur_ny; ++y) {
 			for (unsigned x = 0; x < cur_nx; ++x) {
-				cached_vals[y*cur_nx + x] = eval_index(x, y, 1, 0, 0); // Note: glaciate=1, num_start_sin=1
+				cached_vals[y*cur_nx + x] = eval_index(x, y, 0, 0, 0); // Note: glaciate=0, min_start_sin=0, use_cache=0
 			}
 		}
 	}
