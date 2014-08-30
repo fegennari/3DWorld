@@ -44,6 +44,7 @@ int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX, GROUND_TEX, ROCK_TEX,
 float const mesh_rh_dirt[NTEX_DIRT] = {0.40, 0.44, 0.60, 0.75, 1.0};
 float sthresh[2][2] = {{0.68, 0.86}, {0.48, 0.72}}; // {grass, snow}, {lo, hi}
 ttex lttex_dirt[NTEX_DIRT];
+hmap_params_t hmap_params;
 
 
 extern bool combined_gu;
@@ -513,6 +514,18 @@ void compute_scale() {
 	start_eval_sin = N_RAND_SIN2*max(0, min(NUM_FREQ_COMP-MIN_FREQS, (iscale+mesh_freq_filter)));
 }
 
+float get_hmap_scale(int mode) {
+	return ((mode == 1 || mode == 3) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale/mesh_scale_z; // simplex vs. perlin
+}
+
+void postproc_noise_zval(float &zval) {
+
+	// Note: this applies to tree distributions as well, which is odd...
+	hmap_params_t const &h(hmap_params);
+	if (zval > h.plat_bot) {zval = h.plat_bot + h.plat_h*(zval - h.plat_bot) + min(h.plat_max, h.plat_s*(zval - h.plat_bot));} // plateau
+	if (zval > h.crat_h  ) {zval = h.crat_h - h.crat_s*(zval - h.crat_h);} // craters
+	if (zval > h.crack_lo && zval < h.crack_hi) {zval -= h.crack_d*min(zval-h.crack_lo, h.crack_hi-zval);} // cracks
+}
 
 void apply_noise_shape_final(float &noise, int shape) {
 	switch (shape) {
@@ -520,6 +533,7 @@ void apply_noise_shape_final(float &noise, int shape) {
 	case 1: noise = fabs(noise) - 2.0; break; // billowy
 	case 2: noise = 3.5 - fabs(noise); break; // ridged
 	}
+	postproc_noise_zval(noise);
 }
 
 void apply_noise_shape_per_term(float &noise, int shape) { // inputs and outputs [-1, 1]
@@ -528,10 +542,6 @@ void apply_noise_shape_per_term(float &noise, int shape) { // inputs and outputs
 	case 1: noise = 2.0*fabs(noise) - 1.0; break; // billowy
 	case 2: noise = 1.0 - 2.0*fabs(noise); break; // ridged
 	}
-}
-
-float get_hmap_scale(int mode) {
-	return ((mode == 1 || mode == 3) ? 16.0 : 32.0)*MESH_HEIGHT*mesh_height_scale/mesh_scale_z; // simplex vs. perlin
 }
 
 void gen_rx_ry(float &rx, float &ry) {
@@ -578,7 +588,8 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
 		float rx, ry;
 		gen_rx_ry(rx, ry);
-		gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, zscale, rx, ry, cur_nx, cur_ny, gen_shape);
+		gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, /*zscale*/1.0, rx, ry, cur_nx, cur_ny, gen_shape);
+		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
 		//PRINT_TIME("GPU Height");
 	}
 	else if (cache_values) {
@@ -622,7 +633,8 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 		rx   *= 1.5;
 		ry   *= 1.5;
 	}
-	return get_hmap_scale(mode)*zval;
+	postproc_noise_zval(zval);
+	return zval*get_hmap_scale(mode);
 }
 
 

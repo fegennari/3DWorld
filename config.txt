@@ -40,10 +40,14 @@ sun_rot 0.4
 shadow_detail 7
 tree_coll_level 4
 default_ground_tex -1
+
 #mesh_seed 1
 mesh_gen_mode 3 # 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex
 mesh_gen_shape 2 # 0=linear, 1=billowy, 2=ridged
 mesh_freq_filter 0 # rougher landscape
+#hmap_plat_bot 0.2  hmap_plat_height 0.5  hmap_plat_slope 2.0  hmap_plat_max 0.2
+#hmap_crat_height 0.5  hmap_crat_slope 2.0
+#hmap_crack_lo 0  hmap_crack_hi 0.05  hmap_crack_depth 4.0
 
 #snow_depth 0.05
 snow_random 0.0

@@ -125,6 +125,7 @@ extern player_state *sstates;
 extern pt_line_drawer obj_pld;
 extern tree_cont_t t_trees;
 extern dpart_params_t dp_params;
+extern hmap_params_t hmap_params;
 
 
 void init_keyset();
@@ -1518,6 +1519,16 @@ int load_config(string const &config_file) {
 	kwmf.add("mesh_freq_mult", MESH_FREQ_MULT);
 	kwmf.add("sm_tree_density", sm_tree_density);
 	kwmf.add("ocean_wave_height", ocean_wave_height);
+
+	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
+	kwmf.add("hmap_plat_height", hmap_params.plat_h);
+	kwmf.add("hmap_plat_slope",  hmap_params.plat_s);
+	kwmf.add("hmap_plat_max",    hmap_params.plat_max);
+	kwmf.add("hmap_crat_height", hmap_params.crat_h);
+	kwmf.add("hmap_crat_slope",  hmap_params.crat_s);
+	kwmf.add("hmap_crack_lo",    hmap_params.crack_lo);
+	kwmf.add("hmap_crack_hi",    hmap_params.crack_hi);
+	kwmf.add("hmap_crack_depth", hmap_params.crack_d);
 
 	while (read_str(fp, strc)) { // slow but should be OK
 		string const str(strc);

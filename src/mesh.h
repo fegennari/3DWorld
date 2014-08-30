@@ -77,6 +77,14 @@ struct mesh_height_gen_t { // unused
 };
 
 
+struct hmap_params_t {
+	//int mode, shape;
+	float plat_bot, plat_h, plat_s, plat_max, crat_h, crat_s, crack_lo, crack_hi, crack_d;
+	//hmap_params_t() : plat_bot(0.2), plat_h(0.5), plat_s(2.0), plat_max(0.2), crat_h(0.5), crat_s(2.0), crack_lo(0), crack_hi(0.05), crack_d(4.0) {}
+	hmap_params_t() : plat_bot(1000), plat_h(0), plat_s(0), plat_max(0), crat_h(1000), crat_s(0), crack_lo(0), crack_hi(0), crack_d(0) {}
+};
+
+
 // should be const, but depend on mesh size
 extern int MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE, MAX_XY_SIZE, XY_MULT_SIZE, XY_SUM_SIZE, I_TIMESCALE;
 extern int MESH_SIZE[];
