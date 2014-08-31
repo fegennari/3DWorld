@@ -1044,7 +1044,7 @@ void apply_z_mirror(float zval) {
 
 
 // render scene reflection to texture
-void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
+void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float terrain_zmin) {
 
 	//RESET_TIME;
 	// setup reflected camera frustum
@@ -1077,7 +1077,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 		draw_sun_moon_stars();
 		draw_sun_flare();
 	}
-	draw_cloud_planes(zmin, 1, 1, 0); // slower but a nice effect
+	draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	if (get_camera_pos().z <= get_tt_cloud_level()) {draw_tiled_terrain(1);} // camera is below the clouds
 	fgPopMatrix(); // end mirror transform
@@ -1099,7 +1099,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize) {
 }
 
 
-unsigned create_reflection() {
+unsigned create_reflection(float terrain_zmin) {
 
 	if (display_mode & 0x20) return 0; // reflections not enabled
 	static unsigned last_xsize(0), last_ysize(0);
@@ -1115,7 +1115,7 @@ unsigned create_reflection() {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(reflection_tid));
-	create_reflection_texture(reflection_tid, xsize, ysize);
+	create_reflection_texture(reflection_tid, xsize, ysize, terrain_zmin);
 	check_gl_error(999);
 	return reflection_tid;
 }
@@ -1147,12 +1147,12 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_CLIP);
 	camera_mode   = 1; // walking on ground
 	float min_camera_dist(0.0);
-	float const zmin2(update_tiled_terrain(min_camera_dist));
+	float const terrain_zmin(update_tiled_terrain(min_camera_dist));
 	bool const change_near_far_clip(!camera_surf_collide && min_camera_dist > 0.0);
-	bool const draw_water(water_enabled && water_plane_z >= zmin2);
-	if (show_fog || underwater) {set_inf_terrain_fog(underwater, zmin2);}
+	bool const draw_water(water_enabled && water_plane_z >= terrain_zmin);
+	if (show_fog || underwater) {set_inf_terrain_fog(underwater, terrain_zmin);}
 	unsigned reflection_tid(0);
-	if (draw_water && !underwater) reflection_tid = create_reflection();
+	if (draw_water && !underwater) {reflection_tid = create_reflection(terrain_zmin);}
 
 	if (combined_gu) {
 		draw_universe_bkg(uw_depth, 0); // infinite universe as background
@@ -1171,7 +1171,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		camera_pdu.far_  = far_clip;
 	}
 	bool const camera_above_clouds(camera.z > get_tt_cloud_level());
-	draw_cloud_planes(zmin2, 0, !camera_above_clouds, 1); // these two lines could go in either order
+	draw_cloud_planes(terrain_zmin, 0, !camera_above_clouds, 1); // these two lines could go in either order
 	draw_sun_flare();
 	if (TIMETEST) PRINT_TIME("3.2");
 	if (show_lightning) {draw_tiled_terrain_lightning(0);}
@@ -1182,7 +1182,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	//if (underwater ) {draw_tiled_terrain_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, reflection_tid);}
 	if (!underwater) {draw_tiled_terrain_precipitation();}
-	draw_cloud_planes(zmin2, 0, camera_above_clouds, 0);
+	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)
 	check_xy_offsets();
 	init_x = 0;
