@@ -1529,6 +1529,9 @@ int load_config(string const &config_file) {
 	kwmf.add("hmap_crack_lo",    hmap_params.crack_lo);
 	kwmf.add("hmap_crack_hi",    hmap_params.crack_hi);
 	kwmf.add("hmap_crack_depth", hmap_params.crack_d);
+	kwmf.add("hmap_sine_mag",    hmap_params.sine_mag);
+	kwmf.add("hmap_sine_freq",   hmap_params.sine_freq);
+	kwmf.add("hmap_sine_bias",   hmap_params.sine_bias);
 
 	while (read_str(fp, strc)) { // slow but should be OK
 		string const str(strc);

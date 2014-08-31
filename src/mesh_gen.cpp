@@ -447,7 +447,7 @@ void estimate_zminmax(bool using_eq) {
 
 		for (unsigned i = 0; i < EST_RAND_PARAM; ++i) {
 			for (unsigned j = 0; j < EST_RAND_PARAM; ++j) {
-				zmax_est = max(zmax_est, float(fabs(height_gen.eval_index(j, i, 0))));
+				zmax_est = max(zmax_est, float(fabs(height_gen.eval_index(j, i, 0, 0, 1, 0)))); // no sine
 			}
 		}
 		if (mesh_gen_mode > 0) {zmax_est *= 1.2;} // perlin/simplex
@@ -497,7 +497,7 @@ void update_temperature(bool verbose) {
 	//cout << "z: " << cur_z << ", rh: " << rel_h << ", wpz: " << water_plane_z << ", zmin: " << zmin << ", zmax: " << zmax << ", ztop: " << ztop << ", zbot: " << zbottom << endl;
 
 	if (cur_z < water_plane_z) {
-		float const znorm((water_plane_z - cur_z)/(water_plane_z - zmin));
+		float const znorm(min(1.0f, (water_plane_z - cur_z)/(water_plane_z - zmin)));
 		alt_temp *= (1.0 - 0.9*znorm); // underwater
 	}
 	else if (rel_h > 0.2) {
@@ -525,6 +525,11 @@ void postproc_noise_zval(float &zval) {
 	if (zval > h.plat_bot) {zval = h.plat_bot + h.plat_h*(zval - h.plat_bot) + min(h.plat_max, h.plat_s*(zval - h.plat_bot));} // plateau
 	if (zval > h.crat_h  ) {zval = h.crat_h - h.crat_s*(zval - h.crat_h);} // craters
 	if (zval > h.crack_lo && zval < h.crack_hi) {zval -= h.crack_d*min(zval-h.crack_lo, h.crack_hi-zval);} // cracks
+}
+
+void apply_mesh_sine(float &zval, float x, float y) {
+	hmap_params_t const &h(hmap_params);
+	if (h.sine_mag > 0.0) {zval += h.sine_mag*COSF(x*h.sine_freq)*COSF(y*h.sine_freq) + h.sine_bias;}
 }
 
 void apply_noise_shape_final(float &noise, int shape) {
@@ -638,7 +643,7 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 }
 
 
-float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin, bool use_cache) const {
+float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin, bool use_cache, bool apply_sine) const {
 
 	assert(x < cur_nx && y < cur_ny);
 	float zval(0.0);
@@ -656,6 +661,7 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 		apply_noise_shape_final(zval, gen_shape);
 	}
 	if (GLACIATE && glaciate) {zval = get_glaciated_zval(zval);}
+	if (apply_sine && hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, (x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV);}
 	return zval;
 }
 
@@ -683,10 +689,10 @@ float eval_mesh_sin_terms_scaled(float xval, float yval, float xy_scale) {
 }
 
 
-float get_exact_zval(float xval, float yval) {
+float get_exact_zval(float xval_in, float yval_in) {
 
-	xval = (xval + X_SCENE_SIZE)*DX_VAL_INV + 0.5; // convert from real to index space, as in get_xpos()/get_ypos() but as FP
-	yval = (yval + Y_SCENE_SIZE)*DY_VAL_INV + 0.5;
+	float xval((xval_in + X_SCENE_SIZE)*DX_VAL_INV + 0.5); // convert from real to index space, as in get_xpos()/get_ypos() but as FP
+	float yval((yval_in + Y_SCENE_SIZE)*DY_VAL_INV + 0.5);
 
 	if ((read_landscape || read_heightmap) && world_mode == WMODE_GROUND) { // interpolate from provided coords
 		int xy[2] = {int(xval + 0.5), int(yval + 0.5)};
@@ -701,8 +707,10 @@ float get_exact_zval(float xval, float yval) {
 		if (using_hmap_with_detail()) {zval += HMAP_DETAIL_MAG*eval_mesh_sin_terms_scaled(xval, yval, HMAP_DETAIL_SCALE);} // Note: agrees with tile_t::create_zvals()
 		return zval;
 	}
-	float const zval(eval_mesh_sin_terms_scaled(xval, yval, 1.0));
-	return (GLACIATE ? get_glaciated_zval(zval) : zval);
+	float zval(eval_mesh_sin_terms_scaled(xval, yval, 1.0));
+	if (GLACIATE) {zval = get_glaciated_zval(zval);}
+	if (hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, xval, yval);}
+	return zval;
 }
 
 

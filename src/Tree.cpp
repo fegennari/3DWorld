@@ -2105,12 +2105,11 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			int ttype(-1), tree_id(-1);
 
 			if (NONUNIFORM_TREE_DEN) {
-				float const dist_test(get_rel_height(density_gen[0].eval_index(j-x1, i-y1, 1), -zmax_est, zmax_est));
-				if (dist_test > TREE_DEN_THRESH) continue; // density function test
+				if (get_rel_height(density_gen[0].eval_index(j-x1, i-y1, 1, 0, 1, 0), -zmax_est, zmax_est) > TREE_DEN_THRESH) continue; // density function test (FIXME: glaciate)
 				float max_val(0.0);
 
 				for (unsigned tt = 0; tt < NUM_TREE_TYPES; ++tt) {
-					float const den_val(density_gen[tt+1].eval_index(j-x1, i-y1, 0)); // no glaciate
+					float const den_val(density_gen[tt+1].eval_index(j-x1, i-y1, 0, 0, 1, 0)); // no glaciate
 					if (max_val == 0.0 || den_val > max_val) {max_val = den_val; ttype = tt;}
 				}
 			}

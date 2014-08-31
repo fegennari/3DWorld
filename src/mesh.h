@@ -30,7 +30,7 @@ class mesh_xy_grid_cache_t {
 public:
 	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0), gen_mode(0), gen_shape(0) {}
 	void build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values=0, bool force_sine_mode=0);
-	float eval_index(unsigned x, unsigned y, bool glaciate=1, int min_start_sin=0, bool use_cache=1) const;
+	float eval_index(unsigned x, unsigned y, bool glaciate=1, int min_start_sin=0, bool use_cache=1, bool apply_sine=1) const;
 };
 
 
@@ -79,9 +79,8 @@ struct mesh_height_gen_t { // unused
 
 struct hmap_params_t {
 	//int mode, shape;
-	float plat_bot, plat_h, plat_s, plat_max, crat_h, crat_s, crack_lo, crack_hi, crack_d;
-	//hmap_params_t() : plat_bot(0.2), plat_h(0.5), plat_s(2.0), plat_max(0.2), crat_h(0.5), crat_s(2.0), crack_lo(0), crack_hi(0.05), crack_d(4.0) {}
-	hmap_params_t() : plat_bot(1000), plat_h(0), plat_s(0), plat_max(0), crat_h(1000), crat_s(0), crack_lo(0), crack_hi(0), crack_d(0) {}
+	float plat_bot, plat_h, plat_s, plat_max, crat_h, crat_s, crack_lo, crack_hi, crack_d, sine_mag, sine_freq, sine_bias;
+	hmap_params_t() : plat_bot(1000), plat_h(0), plat_s(0), plat_max(0), crat_h(1000), crat_s(0), crack_lo(0), crack_hi(0), crack_d(0), sine_mag(0), sine_freq(0), sine_bias(0) {}
 };
 
 
