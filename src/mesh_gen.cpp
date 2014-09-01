@@ -720,7 +720,7 @@ float get_exact_zval(float xval_in, float yval_in) {
 	}
 	float zval(eval_mesh_sin_terms_scaled(xval, yval, 1.0));
 	if (GLACIATE) {zval = get_glaciated_zval(zval);}
-	if (hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, xval, yval);}
+	if (hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, (xval - (MESH_X_SIZE >> 1)), (yval - (MESH_Y_SIZE >> 1)));}
 	return zval;
 }
 
