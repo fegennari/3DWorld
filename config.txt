@@ -3,6 +3,7 @@ max_unique_trees 100
 nleaves_scale 2.0
 tree_branch_radius 0.5
 tree_lod_scale 0.55 0.45 0.45 0.35
+tree_density_thresh 0.4
 nsmileys 6
 verbose 0
 rand_seed 0
@@ -48,6 +49,7 @@ mesh_freq_filter 0 # rougher landscape
 #hmap_plat_bot 0.2  hmap_plat_height 0.5  hmap_plat_slope 2.0  hmap_plat_max 0.2
 #hmap_crat_height 0.5  hmap_crat_slope 2.0
 #hmap_crack_lo 0  hmap_crack_hi 0.05  hmap_crack_depth 4.0
+hmap_sine_mag 5.0  hmap_sine_freq 0.001  hmap_sine_bias -4.0
 
 #snow_depth 0.05
 snow_random 0.0

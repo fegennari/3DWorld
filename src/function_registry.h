@@ -279,6 +279,7 @@ void init_terrain_mesh();
 float eval_mesh_sin_terms(float xv, float yv);
 float get_exact_zval(float xval, float yval);
 void reset_offsets();
+float get_median_height(float distribution_pos);
 float get_water_z_height();
 float get_cur_temperature();
 void update_mesh(float dms, bool do_regen_trees);

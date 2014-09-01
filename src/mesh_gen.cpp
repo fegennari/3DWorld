@@ -44,6 +44,7 @@ int const mesh_tids_dirt[NTEX_DIRT] = {SAND_TEX, DIRT_TEX, GROUND_TEX, ROCK_TEX,
 float const mesh_rh_dirt[NTEX_DIRT] = {0.40, 0.44, 0.60, 0.75, 1.0};
 float sthresh[2][2] = {{0.68, 0.86}, {0.48, 0.72}}; // {grass, snow}, {lo, hi}
 ttex lttex_dirt[NTEX_DIRT];
+vector<float> height_histogram;
 hmap_params_t hmap_params;
 
 
@@ -444,16 +445,26 @@ void estimate_zminmax(bool using_eq) {
 		float const rm_scale(1000.0*XY_SCENE_SIZE/mesh_scale);
 		mesh_xy_grid_cache_t height_gen;
 		height_gen.build_arrays(0.0, 0.0, rm_scale, rm_scale, EST_RAND_PARAM, EST_RAND_PARAM);
+		height_histogram.reserve(EST_RAND_PARAM*EST_RAND_PARAM/16); // 1024 values
 
 		for (unsigned i = 0; i < EST_RAND_PARAM; ++i) {
 			for (unsigned j = 0; j < EST_RAND_PARAM; ++j) {
-				zmax_est = max(zmax_est, float(fabs(height_gen.eval_index(j, i, 0, 0, 1, 0)))); // no sine
+				float const height(height_gen.eval_index(j, i, 0, 0, 1, 0)); // no sine
+				zmax_est = max(zmax_est, float(fabs(height)));
+				if (!(i&3) && !(j&3)) {height_histogram.push_back(height);} // only 1/16 of the values
 			}
 		}
+		sort(height_histogram.begin(), height_histogram.end());
 		if (mesh_gen_mode > 0) {zmax_est *= 1.2;} // perlin/simplex
 	}
 	set_zmax_est(1.1*zmax_est);
 	set_zvals();
+}
+
+float get_median_height(float distribution_pos) {
+
+	if (height_histogram.empty()) {return distribution_pos;} // ???
+	return height_histogram[max(0, min((int)height_histogram.size()-1, int(height_histogram.size()*distribution_pos)))];
 }
 
 

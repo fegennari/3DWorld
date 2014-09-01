@@ -59,7 +59,7 @@ tree_cont_t t_trees(tree_data_manager);
 extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled;
 extern int shadow_detail, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
-extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation;
+extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh;
 extern lightning l_strike;
 extern texture_t textures[];
 extern coll_obj_group coll_objects;
@@ -2065,14 +2065,14 @@ void tree_cont_t::post_scroll_remove() {
 void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_) {
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
-	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? TREE_DEN_THRESH : 1.0));
+	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? tree_density_thresh : 1.0));
 	
 	if (mod_num_trees == 0) { // no trees
 		generated = 1;
 		return;
 	}
-	float const min_tree_h(water_plane_z + 0.01*zmax_est);
-	float const max_tree_h(1.8*zmax_est);
+	float const min_tree_h(water_plane_z + 0.01*zmax_est), max_tree_h(1.8*zmax_est);
+	float const height_thresh(get_median_height(tree_density_thresh));
 	unsigned const smod(3.321*XY_MULT_SIZE+1), tree_prob(max(1U, XY_MULT_SIZE/mod_num_trees));
 	unsigned const skip_val(max(1, int(1.0/sqrt(tree_scale)))); // similar to deterministic gen in scenery.cpp
 	shared_tree_data.ensure_init();
@@ -2105,7 +2105,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			int ttype(-1), tree_id(-1);
 
 			if (NONUNIFORM_TREE_DEN) {
-				if (get_rel_height(density_gen[0].eval_index(j-x1, i-y1, 1, 0, 1, 0), -zmax_est, zmax_est) > TREE_DEN_THRESH) continue; // density function test (FIXME: glaciate)
+				if (density_gen[0].eval_index(j-x1, i-y1, 0, 0, 1, 0) > height_thresh) continue; // density function test
 				float max_val(0.0);
 
 				for (unsigned tt = 0; tt < NUM_TREE_TYPES; ++tt) {

@@ -10,7 +10,7 @@
 
 
 float const SM_TREE_SIZE    = 0.05;
-float const TREE_DIST_RAND  = 0.2;
+float const TREE_DIST_RAND  = 0.125;
 float const LINE_THRESH     = 700.0;
 bool const SMALL_TREE_COLL  = 1;
 bool const DRAW_COBJS       = 0; // for debugging
@@ -27,7 +27,7 @@ pt_line_drawer tree_scenery_pld;
 extern int window_width, shadow_detail, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern unsigned max_unique_trees;
-extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation;
+extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh;
 
 
 struct sm_tree_type {
@@ -376,8 +376,10 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 			float const dist_test(get_rel_height(density_gen.eval_index(j-x1, i-y1, 1, 0, 1, 0), -zmax_est, zmax_est)); // tree density function test (FIXME: glaciate?)
 			int const trees_per_block(max(1, ntrees/XY_MULT_SIZE));
 
+			float const hval(density_gen.eval_index(j-x1, i-y1, 0, 0, 1, 0));
+
 			for (int n = 0; n < trees_per_block; ++n) {
-				if (dist_test > (TREE_DEN_THRESH*(1.0 - TREE_DIST_RAND) + TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
+				if (hval > get_median_height(tree_density_thresh - TREE_DIST_RAND*rgen.rand_float())) continue; // tree density function test
 				rgen.rand_mix();
 				float const xval(get_xval(j) + 0.5*skip_val*DX_VAL*rgen.signed_rand_float());
 				float const yval(get_yval(i) + 0.5*skip_val*DY_VAL*rgen.signed_rand_float());
