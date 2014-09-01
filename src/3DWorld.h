@@ -1381,6 +1381,7 @@ void timing_profiler_stats();
 #define RESET_TIME       int const timer1(GET_TIME_MS());
 #define GET_DELTA_TIME   (GET_TIME_MS() - timer1)
 #define PRINT_TIME(str) {register_timing_value(str, GET_DELTA_TIME);}
+#define TXT(x) #x"=" << x << " "
 
 #if 0 // still only ms accuracy in windows
 #include <time.h>
