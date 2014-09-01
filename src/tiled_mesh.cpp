@@ -1145,16 +1145,22 @@ void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm)
 }
 
 
-void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const {
+void tile_t::bind_textures() const {
 
-	assert(size > 0);
 	assert(weight_tid > 0 && height_tid > 0 && shadow_normal_tid > 0);
-	fgPushMatrix();
-	vector3d const xlate(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
-	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
 	bind_2d_texture(weight_tid);
 	bind_texture_tu(height_tid, 12);
 	bind_texture_tu(shadow_normal_tid, 7);
+}
+
+
+void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const {
+
+	assert(size > 0);
+	fgPushMatrix();
+	vector3d const xlate(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
+	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
+	bind_textures();
 	bool const draw_near_water(!is_distant && !reflection_pass && has_water());
 
 	if (!reflection_pass && cloud_shadows_enabled()) {
@@ -1205,41 +1211,46 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	bind_vbo(0, 0); // unbind vertex buffer
 	fgPopMatrix();
 
+	if (draw_near_water) {draw_water_cap(s, 1);}
+}
+
+
+void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
+
+	cube_t const bcube(get_mesh_bcube());
+	static vector<vert_wrap_t> wverts;
+	wverts.resize(0);
+
 	// draw vertical edges that cap the water volume and will be blended between underwater black and fog colors
-	if (draw_near_water) {
-		cube_t const bcube(get_mesh_bcube());
-		static vector<vert_wrap_t> wverts;
-		wverts.resize(0);
-
-		for (unsigned dim = 0; dim < 2; ++dim) {
-			for (unsigned dir = 0; dir < 2; ++dir) {
-				int dxy[2] = {0,0};
-				dxy[dim] = (dir ? 1 : -1);
-				tile_t const *const adj_tile(get_adj_tile(dxy[0], dxy[1]));
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			int dxy[2] = {0,0};
+			dxy[dim] = (dir ? 1 : -1);
+			tile_t const *const adj_tile(get_adj_tile(dxy[0], dxy[1]));
 				
-				if (adj_tile && !adj_tile->is_distant) {
-					if (adj_tile->get_rel_dist_to_camera() < DRAW_DIST_TILES && !adj_tile->was_last_occluded()) continue;
-					if (!adj_tile->has_water ()) continue; // adj tile has no water, so we can't have any uncapped water on this edge
-					if (!adj_tile->is_visible()) continue; // adj tile not visible,  so we can't see this edge
-				}
-				unsigned const num_steps = 10;
-				float const dz(water_plane_z - mzmin), zstep(dz/num_steps);
+			if (adj_tile && !adj_tile->is_distant) {
+				if (adj_tile->get_rel_dist_to_camera() < DRAW_DIST_TILES) continue;
+				if (!adj_tile->has_water ()) continue; // adj tile has no water, so we can't have any uncapped water on this edge
+				if (!adj_tile->is_visible()) continue; // adj tile not visible,  so we can't see this edge
+			}
+			unsigned const num_steps = 10;
+			float const dz(water_plane_z - mzmin), zstep(dz/num_steps);
 
-				for (unsigned i = 0; i < num_steps; ++i) {
-					float const x1(bcube.d[0][dim ? 0 : dir]), x2(bcube.d[0][dim ? 1 : dir]), y1( bcube.d[1][dim ? dir : 0]), y2(bcube.d[1][dim ? dir : 1]);
-					wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+i*zstep)));
-					wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+i*zstep)));
-					wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+(i+1)*zstep)));
-					wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+(i+1)*zstep)));
-				}
+			for (unsigned i = 0; i < num_steps; ++i) {
+				float const x1(bcube.d[0][dim ? 0 : dir]), x2(bcube.d[0][dim ? 1 : dir]), y1(bcube.d[1][dim ? dir : 0]), y2(bcube.d[1][dim ? dir : 1]);
+				wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+i*zstep)));
+				wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+i*zstep)));
+				wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+(i+1)*zstep)));
+				wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+(i+1)*zstep)));
 			}
 		}
-		if (!wverts.empty()) {
-			int const loc(s.get_uniform_loc("htex_scale"));
-			if (loc >= 0) {s.set_uniform_float(loc, 0.0);} // disable height texture
-			draw_quad_verts_as_tris(wverts);
-			if (loc >= 0) {s.set_uniform_float(loc, 1.0);} // enable height texture
-		}
+	}
+	if (!wverts.empty()) {
+		if (!textures_already_set) {bind_textures();}
+		int const loc(s.get_uniform_loc("htex_scale"));
+		if (loc >= 0) {s.set_uniform_float(loc, 0.0);} // disable height texture
+		draw_quad_verts_as_tris(wverts);
+		if (loc >= 0) {s.set_uniform_float(loc, 1.0);} // enable height texture
 	}
 }
 
@@ -1732,6 +1743,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 	unsigned num_trees(0);
 	unsigned long long mem(0), tree_mem(0);
 	to_draw.clear();
+	occluded_tiles.clear();
 
 	if (DEBUG_TILES) {
 		unsigned const tile_size(get_tile_size());
@@ -1803,7 +1815,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 				if (!sub_tile_occluded) {tile_occluded = 0; break;}
 			} // for t
 			tile->set_last_occluded(tile_occluded);
-			if (tile_occluded) {continue;}
+			if (tile_occluded) {occluded_tiles.push_back(tile); continue;}
 		} // check_occlusion
 		to_draw.push_back(make_pair(dist, tile));
 		num_trees += tile->num_pine_trees() + tile->num_decid_trees();
@@ -1845,6 +1857,9 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		if (to_draw[i].second->using_shadow_maps() != enable_shadow_map) continue; // draw in another pass
 		to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, vbo_ring_ibuf, reflection_pass);
+	}
+	if (!enable_shadow_map) { // draw all water caps (required, even for occluded tiles)
+		for (auto i = occluded_tiles.begin(); i != occluded_tiles.end(); ++i) {(*i)->draw_water_cap(s, 0);}
 	}
 	vbo_ring_ibuf.free_vbo();
 	bind_vbo(0, 1); // unbind index buffer
