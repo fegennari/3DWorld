@@ -1291,6 +1291,25 @@ bool tile_t::check_player_collision() const {
 }
 
 
+int tile_t::get_tid_under_point(point const &pos) const {
+
+	if (is_distant || !get_bcube().contains_pt_xy(pos)) return -1;
+	int const xpos(max(0, min((int)size, (get_xpos(pos.x) - x1 - xoff + xoff2)))); // min/max not needed?
+	int const ypos(max(0, min((int)size, (get_ypos(pos.y) - y1 - yoff + yoff2))));
+	unsigned const ix(4*(ypos*stride + xpos));
+	assert(ix < weight_data.size());
+	unsigned max_weight(0), max_weight_ix(0), weight_sum(0);
+
+	for (unsigned i = 0; i < 4; ++i) {
+		unsigned const w(weight_data[ix + i]);
+		weight_sum += w;
+		if (w > max_weight) {max_weight = w; max_weight_ix = i;}
+	}
+	if ((255 - weight_sum) > max_weight) {max_weight_ix = 4;} // 5th weight (255 - sum(w)) is max
+	return lttex_dirt[max_weight_ix].id;
+}
+
+
 bool tile_t::line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const {
 
 	if (is_distant) return 0; // Note: this can be made to work, but won't work as-is
@@ -2199,6 +2218,17 @@ bool tile_draw_t::check_player_collision() const {
 }
 
 
+int tile_draw_t::get_tid_under_point(point const &pos) const {
+
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		assert(i->second);
+		int const tid(i->second->get_tid_under_point(pos));
+		if (tid >= 0) return tid;
+	}
+	return 0;
+}
+
+
 bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const {
 
 	t = 2.0; // > 1.0
@@ -2261,6 +2291,10 @@ bool line_intersect_tiled_mesh_get_tile(point const &v1, point const &v2, point 
 	return 1;
 }
 
+int get_tiled_terrain_tid_under_point(point const &pos) {
+	return terrain_tile_draw.get_tid_under_point(pos);
+}
+
 tile_t::offset_t model3d_offset;
 
 void draw_tiled_terrain(bool reflection_pass) {
@@ -2304,6 +2338,9 @@ void draw_tiled_terrain(bool reflection_pass) {
 			disable_blend();
 			s.end_shader();
 		}
+	}
+	if (!reflection_pass && camera_surf_collide) {
+		//int const tid(get_tiled_terrain_tid_under_point(get_camera_pos())); // TESTING
 	}
 }
 

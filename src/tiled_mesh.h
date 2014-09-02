@@ -271,6 +271,7 @@ public:
 	void draw_water_cap(shader_t &s, bool textures_already_set) const;
 	void draw_water(shader_t &s, float z) const;
 	bool check_player_collision() const;
+	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const;
 }; // tile_t
 
@@ -326,6 +327,7 @@ public:
 	void clear_vbos_tids();
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 	bool check_player_collision() const;
+	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;
 }; // tile_draw_t
 
