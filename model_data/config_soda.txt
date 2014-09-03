@@ -25,7 +25,7 @@ mesh_scale 1.0
 camera_height 0.2
 camera_radius 0.06
 camera_step_height 0.9
-wapypoint_sz_thresh 1.0
+waypoint_sz_thresh 1.0
 tree_size 1.0
 sun_rot 0.4
 cobj_z_bias 0.001

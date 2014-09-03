@@ -24,7 +24,7 @@ waypoint_vector waypoints;
 
 extern bool use_waypoints;
 extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups, display_mode;
-extern float temperature, zmin, tfticks, water_plane_z, wapypoint_sz_thresh;
+extern float temperature, zmin, tfticks, water_plane_z, waypoint_sz_thresh;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -235,7 +235,7 @@ class waypoint_builder {
 	}
 
 public:
-	waypoint_builder(void) : radius(object_types[WAYPOINT].radius), size_thresh(wapypoint_sz_thresh*radius) {assert(radius > 0.0);}
+	waypoint_builder(void) : radius(object_types[WAYPOINT].radius), size_thresh(waypoint_sz_thresh*radius) {assert(radius > 0.0);}
 
 	void add_one_cobj_wpt(coll_obj &c, bool connect) {
 		if (c.status != COLL_STATIC || c.platform_id >= 0) return; // only static objects (not platforms) - use c.truly_static()?
