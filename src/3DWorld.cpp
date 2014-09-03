@@ -17,6 +17,7 @@
 #include "draw_utils.h"
 #include <set>
 #include <GL/wglew.h> // for wglSwapIntervalEXT
+#include <GLConsole/GLConsole.h>
 
 using namespace std;
 typedef set<unsigned char>::iterator keyset_it;
@@ -97,6 +98,7 @@ set<unsigned char> keys, keyset;
 char game_mode_string[MAX_CHARS] = {"640x480"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 vector<cube_t> smoke_bounds;
+GLConsole gl_console;
 
 // camera variables
 double c_radius(DEF_CRADIUS), c_theta(DEF_CTHETA), c_phi(DEF_CPHI), up_theta(DEF_UPTHETA), camera_y(DEF_CAMY);
@@ -1122,16 +1124,17 @@ void keyboard_proc(unsigned char key, int x, int y) {
 }
 
 
-void print_wind() {
-	cout << "wind: "; wind.print(); cout << endl;
-}
-
-
+void print_wind() {cout << "wind: "; wind.print(); cout << endl;}
+void draw_gl_console() {gl_console.RenderConsole();}
 int get_map_shift_val() {return int(map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1));}
 
 
 void keyboard2(int key, int x, int y) {
 
+	if (gl_console.IsOpen()) {
+		gl_console.SpecialFunc(key); // pass all key strokes to the console
+		return;
+	}
 	add_uevent_keyboard_special(key, x, y);
 	if (ui_intercept_keyboard(key, 1)) return; // already handled
 
@@ -1212,10 +1215,7 @@ void keyboard2(int key, int x, int y) {
 void init_keyset() {
 
 	string keyvals = "wsad "; // movement
-
-	for (unsigned i = 0; i < keyvals.size(); ++i) {
-		keyset.insert(keyvals[i]);
-	}
+	for (unsigned i = 0; i < keyvals.size(); ++i) {keyset.insert(keyvals[i]);}
 }
 
 
@@ -1230,8 +1230,8 @@ unsigned char get_key_other_case(unsigned char key) {
 
 void keyboard_up(unsigned char key, int x, int y) {
 
-	if (!KBD_HANDLER || kbd_text_mode || key == 13) return; // ignore text mode and enter keys
-	if (keyset.find(key) != keyset.end()) add_uevent_keyboard_up(key, x, y);
+	if (gl_console.IsOpen() || !KBD_HANDLER || kbd_text_mode || key == 13) return; // ignore text mode and enter keys
+	if (keyset.find(key) != keyset.end()) {add_uevent_keyboard_up(key, x, y);}
 	keyset_it it(keys.find(key));
 
 	if (it == keys.end()) {
@@ -1268,18 +1268,26 @@ void exec_text(string const &text) {
 
 void keyboard(unsigned char key, int x, int y) {
 
+	if (key == GLCONSOLE_KEY && !use_core_context) { // ~ or ` key opens console on US keyboards.
+		gl_console.ToggleConsole(); // not available in core context mode
+		return;
+	}
+	if (gl_console.IsOpen()) {
+		gl_console.KeyboardFunc(key); // send keystroke to console - not logged by uevent system
+		return;
+    }
 	add_uevent_keyboard(key, x, y);
 	if (ui_intercept_keyboard(key, 0)) return; // already handled (should this go into keyboard_proc()?)
 
 	if (key == 13) { // enter key - toggle text mode
-		if (kbd_text_mode) exec_text(user_text);
+		if (kbd_text_mode) {exec_text(user_text);}
 		user_text.clear();
 		kbd_text_mode = !kbd_text_mode;
 		return;
 	}
 	if (kbd_text_mode) {
 		if (key == 8) { // delete key
-			if (!user_text.empty()) user_text.erase(user_text.begin()+user_text.size()-1); // pop_back() for string
+			if (!user_text.empty()) {user_text.erase(user_text.begin()+user_text.size()-1);} // pop_back() for string
 			return;
 		}
 		user_text.push_back(key);
@@ -1295,7 +1303,7 @@ void keyboard(unsigned char key, int x, int y) {
 		return;
 	}
 	keys.insert(key);
-	if (keyset.find(key) == keyset.end()) keyboard_proc(key, x, y);
+	if (keyset.find(key) == keyset.end()) {keyboard_proc(key, x, y);}
 }
 
 
@@ -1304,7 +1312,7 @@ void proc_kbd_events() {
 	if (!KBD_HANDLER) return;
 
 	for (keyset_it it = keys.begin(); it != keys.end(); ++it) {
-		if (keyset.find(*it) != keyset.end()) keyboard_proc(*it, 0, 0); // x and y = ?
+		if (keyset.find(*it) != keyset.end()) {keyboard_proc(*it, 0, 0);} // x and y = ?
 	}
 }
 

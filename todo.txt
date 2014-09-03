@@ -15,3 +15,4 @@ Load/display model3d models in tiled terrain mode
 
 GLSL subroutine: http://www.g-truc.net/post-0269.html
 Perlin Fire
+Erosion for terrain blocks - drop water at a location and move height downhill
