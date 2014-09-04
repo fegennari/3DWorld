@@ -224,6 +224,9 @@ void quit_3dworld() {
 		delete_matrices();
 	}
 	//_CrtDumpMemoryLeaks();
+	//glutLeaveMainLoop();
+	//glutExit();
+	//throw exit_except();
 	exit(0); // quit
 }
 
