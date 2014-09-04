@@ -26,6 +26,30 @@ varying vec3 normal, world_space_pos, vertex;
 varying vec2 tc;
 
 
+float calc_cloud_density(in vec3 lv) {
+	float cloud_den = atmosphere*gen_cloud_alpha(lv);
+	return pow(clamp(1.4*(cloud_den - 0.1), 0.0, 1.0), 0.7); // increase contrast/sharpen edges
+}
+
+vec3 calc_cloud_coord(in vec3 cloud_vertex) {
+	vec3 lv = 1.2*cloud_freq*cloud_vertex;
+#ifndef GAS_GIANT
+	if (atmosphere > 0.6) { // add swirls
+		float v_adj = 0.0;
+		float v0    = 1.0;
+		vec3 dir    = normalize(vertex); // world space normal
+
+		for (int i = 0; i < 30; ++i) { // slow when close to the planet
+			float dist = (0.5 + 0.25*rand_01(v0+3.0))*length(dir - normalize(rand_vec3(v0)));
+			v_adj     += max(0.0, (0.1 - dist))*sin(0.1/max(dist, 1.0));
+			v0        += 4.0;
+		}
+		lv.z += 0.4*v_adj;
+	}
+#endif // GAS_GIANT
+	return lv;
+}
+
 void main()
 {
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
@@ -37,10 +61,10 @@ void main()
 #ifdef GAS_GIANT
 	float tc_adj = tc.t;
 	float noise  = gen_cloud_alpha_static_non_norm(5.0*vertex);
-	tc_adj += 0.2*sin(20.0*normalize(vertex).z + 1.0*noise);
-	//tc_adj += 0.04*(noise - 0.5);
-	float v0 = 1.0; // using a variable here is slow
-	vec3 dir = normalize(vertex); // world space normal
+	vec3 dir     = normalize(vertex); // world space normal
+	tc_adj      += 0.2*sin(20.0*dir.z + 1.0*noise);
+	//tc_adj      += 0.04*(noise - 0.5);
+	float v0     = 1.0; // using a variable here is slow
 
 	for (int i = 0; i < 50; ++i) { // Note: inefficient, but fast enough for a single gas giant render
 		vec3 center = vec3(1.0, 1.0, 0.5)*rand_vec3(v0);
@@ -201,26 +225,20 @@ void main()
 #endif // HAS_CRATERS
 
 	// add clouds
-	float cloud_den = 0.0;
-	vec3 lv = 1.2*cloud_freq*vertex;
+	float cloud_den    = 0.0;
+	float cloud_shadow = 0.0;
+	vec3 lv = calc_cloud_coord(vertex);
 
-#ifndef GAS_GIANT
-	if (atmosphere > 0.6) { // add swirls
-		float v_adj = 0.0;
-		float v0    = 1.0;
-		vec3 dir    = normalize(vertex); // world space normal
-
-		for (int i = 0; i < 40; ++i) { // slow when close to the planet
-			float dist = (0.5 + 0.25*rand_01(v0+3.0))*length(dir - normalize(rand_vec3(v0)));
-			v_adj     += max(0.0, (0.1 - dist))*sin(0.1/max(dist, 1.0));
-			v0        += 4.0;
-		}
-		lv.z += 0.4*v_adj;
-	}
-#endif // GAS_GIANT
 	if (atmosphere > 0.0) {
-		cloud_den = atmosphere*gen_cloud_alpha(lv);
-		cloud_den = pow(clamp(1.4*(cloud_den - 0.1), 0.0, 1.0), 0.7); // increase contrast/sharpen edges
+		cloud_den = calc_cloud_density(lv);
+#ifndef NO_CLOUD_SHADOWS
+		const float cloud_alt = 0.01*obj_radius; // 1% of planet radius
+		vec3 obj_space_ldir = inverse(fg_NormalMatrix) * ldir0; // no normalization needed
+		vec3 vertex_adj = obj_radius*normalize(vertex + obj_radius*obj_space_ldir*cloud_alt/dot(obj_space_ldir, vertex)); // approximate
+		cloud_shadow = 0.75*calc_cloud_density(calc_cloud_coord(vertex_adj));
+#else
+		cloud_shadow = 0.25*cloud_den;
+#endif
 	}
 
 	float dterm0   = max(dot(norm, ldir0), 0.0);
@@ -229,7 +247,7 @@ void main()
 	vec3 ambient   = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
 	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * dterm0 * lscale0 * sscale) +
 	                 (fg_LightSource[2].diffuse.rgb * dterm2 * lscale2 * atten2 * max(dot(ldir2, ldir20), 0.0));
-	vec3 color     = (texel.rgb * (ambient + diffuse*(1.0 - 0.25*cloud_den))); // add light cloud shadows
+	vec3 color     = (texel.rgb * (ambient + diffuse*(1.0 - cloud_shadow))); // add light cloud shadows
 
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
@@ -250,7 +268,7 @@ void main()
 
 	if (cloud_den > 0.0) { // add cloud color
 		float v = texture3D(cloud_noise_tex, 3.0*noise_scale*lv).r; // add in some brightness variation for fake shadows
-		color   = mix(color, (1.2*ambient + (0.75 + 0.25*v)*diffuse), cloud_den); // no clouds over high mountains?
+		color   = mix(color, (ambient + (0.75 + 0.25*v)*diffuse), cloud_den); // no clouds over high mountains?
 	}
 	fg_FragColor   = gl_Color * vec4(color, 1.0);
 }
