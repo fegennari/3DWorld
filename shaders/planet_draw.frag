@@ -223,6 +223,8 @@ void main()
 		adjust_normal_for_craters(norm, vertex); // add craters by modifying the normal
 	}
 #endif // HAS_CRATERS
+	float dterm0 = max(dot(norm, ldir0), 0.0);
+	float dterm2 = max(dot(norm, ldir2), 0.0);
 
 	// add clouds
 	float cloud_den    = 0.0;
@@ -232,17 +234,16 @@ void main()
 	if (atmosphere > 0.0) {
 		cloud_den = calc_cloud_density(lv);
 #ifndef NO_CLOUD_SHADOWS
-		const float cloud_alt = 0.01*obj_radius; // 1% of planet radius
-		vec3 obj_space_ldir = inverse(fg_NormalMatrix) * ldir0; // no normalization needed
-		vec3 vertex_adj = obj_radius*normalize(vertex + obj_radius*obj_space_ldir*cloud_alt/dot(obj_space_ldir, vertex)); // approximate
-		cloud_shadow = 0.75*calc_cloud_density(calc_cloud_coord(vertex_adj));
+		if (dterm0 > 0.0) {
+			const float cloud_alt = 0.01*obj_radius; // 1% of planet radius
+			vec3 obj_space_ldir = inverse(fg_NormalMatrix) * ldir0; // no normalization needed
+			vec3 vertex_adj = obj_radius*normalize(vertex + obj_radius*obj_space_ldir*cloud_alt/dot(obj_space_ldir, vertex)); // approximate
+			cloud_shadow = 0.75*calc_cloud_density(calc_cloud_coord(vertex_adj));
+		}
 #else
 		cloud_shadow = 0.25*cloud_den;
 #endif
 	}
-
-	float dterm0   = max(dot(norm, ldir0), 0.0);
-	float dterm2   = max(dot(norm, ldir2), 0.0);
 	vec3 epos_norm = normalize(epos.xyz);
 	vec3 ambient   = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
 	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * dterm0 * lscale0 * sscale) +
