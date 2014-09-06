@@ -190,15 +190,17 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 	ast_instance_render_t inst_render; // could be per-LOD level (4)
 
 public:
-	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt)
+	uobj_asteroid_hmap(point const &pos_, float radius_, unsigned rseed_ix, int tid, unsigned lt, bool is_ice=0)
 		: uobj_asteroid_destroyable(pos_, radius_, tid, lt), xyz_scale(1.0, 1.0, 1.0)
 	{
 		surface.rgen.set_state(rseed_ix, 1);
-		surface.gen(0.15, 2.0, 10, 1.0);
-		surface.setup(ASTEROID_NDIV, 0.0, 0);
-		surface.setup_draw_sphere(all_zeros, 1.0, 0.0, ASTEROID_NDIV, NULL);
+		unsigned const ndiv(is_ice ? max(3U, surface.rgen.rand_uniform_uint(2, 5)) : ASTEROID_NDIV);
+		surface.gen((is_ice ? 0.4 : 0.15), (is_ice ? 5.0 : 2.0), 10, 1.0);
+		surface.setup(ndiv, 0.0, 0);
+		surface.setup_draw_sphere(all_zeros, 1.0, 0.0, ndiv, NULL);
 		surface.calc_rmax();
 		scale_val = 1.0/surface.rmax;
+		if (is_ice) {surface.make_faceted();}
 	}
 	virtual void set_scale(vector3d const &scale) {xyz_scale = scale;}
 	virtual bool has_custom_shadow_profile() const {return 1;}
@@ -1121,8 +1123,8 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 		upload_shader_casters(s);
 	}
 	int const force_tid_to(is_ice ? MARBLE_TEX : -1); // Note: currently only applies to instanced drawing
-	if (is_ice) {s.set_specular(1.0, 80.0);} // very specular
-	s.add_uniform_color("color", (is_ice ? colorRGBA(0.6, 1.0, 1.2) : WHITE));
+	if (is_ice) {s.set_specular(1.2, 50.0);} // very specular
+	s.add_uniform_color("color", (is_ice ? colorRGBA(0.6, 1.2, 1.5) : WHITE));
 	s.add_uniform_float("crater_scale", ((has_sun && !is_ice) ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
 	pt_line_drawer pld;
