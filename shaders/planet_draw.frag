@@ -98,7 +98,7 @@ void main()
 	float dnval  = 0.0;
 	vec4 texel;
 
-	if (height <= water_val) {
+	if (height < water_val) {
 		texel    = water_color;
 		spec_mag = 1.0;
 	}

@@ -812,6 +812,7 @@ void uasteroid_belt_system::gen_asteroid_placements(bool is_ice) { // radius is 
 void uasteroid_belt_planet::gen_asteroid_placements(bool is_ice) { // radius is the asteroid belt distance from the planet
 
 	assert(planet);
+	pos = planet->get_pos(); // update to current planet pos (necessary if physics is paused)
 	float const belt_thickness(rand_uniform2(0.08, 0.10)*bwidth);
 	gen_belt_placements(AST_BELT_MAX_NP, bwidth, belt_thickness, 0.005*radius, is_ice); // elliptical orbit, static
 }
