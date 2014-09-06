@@ -1047,7 +1047,7 @@ void upload_mvm_to_shader(shader_t &s, char const *const var_name) {
 
 
 // Note: assumes cur_vbo is currently bound by the caller, and will leave it bound after the call
-void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void *indices, unsigned first) { // indices can be NULL
+void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo, int index_type, void const *const indices, unsigned first) { // indices can be NULL
 
 	if (inst_xforms.empty()) return;
 	assert(loc >= 0); // Note: could handle this case
@@ -1059,7 +1059,7 @@ void instance_render_t::draw_and_clear(int prim_type, unsigned count, unsigned c
 		glDrawElementsInstanced(prim_type, count, index_type, indices, inst_xforms.size());
 	}
 	else {
-		assert(indices == NULL);
+		assert(indices == nullptr);
 		glDrawArraysInstanced(prim_type, first, count, inst_xforms.size());
 	}
 	shader_float_matrix_uploader<4,4>::disable(loc);

@@ -79,7 +79,7 @@ public:
 	void set_loc(int loc_) {loc = loc_;}
 	void add_cur_inst() {add_inst(fgGetMVM());}
 	void add_inst(xform_matrix const &xf) {inst_xforms.push_back(xf);}
-	void draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void *indices=NULL, unsigned first=0);
+	void draw_and_clear(int prim_type, unsigned count, unsigned cur_vbo=0, int index_type=GL_NONE, void const *const indices=NULL, unsigned first=0);
 	unsigned size () const {return inst_xforms.size();}
 	bool     empty() const {return inst_xforms.empty();}
 };
