@@ -561,7 +561,7 @@ void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const { // use
 void sd_sphere_d::get_triangles(vector<vert_wrap_t> &verts) const {
 
 	assert(spn.ndiv > 0);
-	point **points = spn.points;
+	point **const points = spn.points;
 	
 	for (unsigned s = 0; s < spn.ndiv; ++s) {
 		unsigned const sn((s+1)%spn.ndiv);
@@ -633,14 +633,36 @@ void sd_sphere_d::get_triangle_index_list_pow2(vector<index_type_t> &indices, un
 }
 
 
+void sd_sphere_d::get_faceted_triangles(vector<vertex_type_t> &verts) const {
+
+	assert(spn.ndiv > 0);
+	point **const points = spn.points;
+	float const ndiv_inv(1.0/float(spn.ndiv));
+	
+	for (unsigned s = 0; s < spn.ndiv; ++s) {
+		unsigned const sn((s+1)%spn.ndiv);
+
+		for (unsigned t = 0; t < spn.ndiv; ++t) {
+			unsigned const sixs[2][3] = {{s, sn, sn}, {s, sn, s}}, tixs[2][3] = {{t, t, t+1}, {t, t+t, t+1}};
+			triangle const tris[2] = {triangle(points[s][t], points[sn][t  ], points[sn][t+1]),
+				                      triangle(points[s][t], points[sn][t+1], points[s ][t+1])};
+			for (unsigned d = 0; d < 2; ++d) {
+				vector3d const normal(tris[d].get_normal()); // face normal
+				UNROLL_3X(verts.push_back(vertex_type_t(tris[d].pts[i_], normal, (1.0f - sixs[d][i_]*ndiv_inv), (1.0f - tixs[d][i_]*ndiv_inv))););
+			}
+		}
+	}
+}
+
+
 void sd_sphere_vbo_d::ensure_vbos() {
 
 	if (!vbo) {
 		vector<vertex_type_t> verts;
-		get_triangle_vertex_list(verts);
+		if (faceted) {get_faceted_triangles(verts);} else {get_triangle_vertex_list(verts);}
 		create_vbo_and_upload(vbo, verts, 0, 1);
 	}
-	if (!ivbo) {
+	if (!faceted && !ivbo) {
 		assert(ix_offsets.empty());
 		vector<index_type_t> indices;
 		ix_offsets.push_back(0);
@@ -651,7 +673,7 @@ void sd_sphere_vbo_d::ensure_vbos() {
 		}
 		create_vbo_and_upload(ivbo, indices, 1, 1);
 	}
-	assert(!ix_offsets.empty());
+	assert(faceted || !ix_offsets.empty());
 }
 
 
@@ -671,30 +693,39 @@ unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 }
 
 
+unsigned sd_sphere_vbo_d::draw_setup(unsigned ndiv) {
+
+	ensure_vbos();
+	pre_render(!faceted);
+	vertex_type_t::set_vbo_arrays();
+	return (faceted ? 0 : calc_lod_pow2(spn.ndiv, ndiv));
+}
+
+
 void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned ndiv) {
 
-	unsigned const lod(calc_lod_pow2(spn.ndiv, ndiv));
-	ensure_vbos();
-	assert(lod+1 < ix_offsets.size());
-	pre_render();
-	vertex_type_t::set_vbo_arrays();
-	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (spn.ndiv+1)*(spn.ndiv+1), (ix_offsets[lod+1] - ix_offsets[lod]),
-		((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT),
-		(void *)(ix_offsets[lod]*sizeof(index_type_t)));
+	unsigned const lod(draw_setup(ndiv));
+
+	if (faceted) { // ndiv is ignored
+		glDrawArrays(GL_TRIANGLES, 0, 6*spn.ndiv*spn.ndiv);
+	}
+	else {
+		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (spn.ndiv+1)*(spn.ndiv+1), get_count(lod), get_index_type_enum(), get_index_ptr(lod));
+	}
 	post_render();
 }
 
 
 void sd_sphere_vbo_d::draw_instances(unsigned ndiv, instance_render_t &inst_render) {
 
-	unsigned const lod(calc_lod_pow2(spn.ndiv, ndiv));
-	ensure_vbos();
-	assert(lod+1 < ix_offsets.size());
-	pre_render();
-	vertex_type_t::set_vbo_arrays();
-	inst_render.draw_and_clear(GL_TRIANGLE_STRIP, (ix_offsets[lod+1] - ix_offsets[lod]), vbo,
-		((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT),
-		(void *)(ix_offsets[lod]*sizeof(index_type_t)));
+	unsigned const lod(draw_setup(ndiv));
+
+	if (faceted) { // ndiv is ignored
+		inst_render.draw_and_clear(GL_TRIANGLES, 6*spn.ndiv*spn.ndiv, vbo);
+	}
+	else {
+		inst_render.draw_and_clear(GL_TRIANGLE_STRIP, get_count(lod), vbo, get_index_type_enum(), get_index_ptr(lod));
+	}
 	post_render();
 }
 

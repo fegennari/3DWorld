@@ -58,6 +58,7 @@ public:
 	void get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned skip=1, float s_beg=0.0, float s_end=1.0, float t_beg=0.0, float t_end=1.0) const;
 	void get_triangle_vertex_list(vector<vertex_type_t> &verts) const;
 	void get_triangle_index_list_pow2(vector<index_type_t> &indices, unsigned skip) const;
+	void get_faceted_triangles(vector<vertex_type_t> &verts) const;
 	void set_data(point const &p, float r, int n, float const *pm, float dp=0.0, upsurface const *const s=NULL);
 	point    **get_points() const {return spn.points;}
 	vector3d **get_norms()  const {return spn.norms; }
@@ -71,15 +72,22 @@ public:
 class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vbo_manager_t {
 
 	vector<unsigned> ix_offsets;
+	bool faceted;
 
 	void ensure_vbos();
 
 public:
-	sd_sphere_vbo_d() {}
-	sd_sphere_vbo_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL) : sd_sphere_d(p, r, n, pm, dp, s) {}
+	sd_sphere_vbo_d() : faceted(0) {}
+	sd_sphere_vbo_d(point const &p, float r, int n, float const *pm=NULL, float dp=0.0, upsurface const *const s=NULL)
+		: sd_sphere_d(p, r, n, pm, dp, s), faceted(0) {}
+	void make_faceted() {faceted = 1;}
 	void clear_vbos();
+	unsigned draw_setup(unsigned ndiv);
 	void draw_ndiv_pow2_vbo(unsigned ndiv);
 	void draw_instances(unsigned ndiv, instance_render_t &inst_render);
+	unsigned get_index_type_enum()          const {return ((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);}
+	unsigned get_count       (unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (ix_offsets[lod+1] - ix_offsets[lod]);}
+	void *const get_index_ptr(unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (void *const)(ix_offsets[lod]*sizeof(index_type_t));}
 };
 
 

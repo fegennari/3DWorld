@@ -91,8 +91,8 @@ struct indexed_vbo_manager_t {
 		if (!vbo ) {create_vbo_and_upload(vbo,  data,  0, 0); gpu_mem += data.size() *sizeof(vert_type_t );}
 		if (!ivbo) {create_vbo_and_upload(ivbo, idata, 1, 0); gpu_mem += idata.size()*sizeof(index_type_t);}
 	}
-	void pre_render() const {
-		assert(vbo && ivbo);
+	void pre_render(bool using_index=1) const {
+		assert(vbo && (ivbo || !using_index));
 		bind_vbo(vbo,  0);
 		bind_vbo(ivbo, 1);
 	}

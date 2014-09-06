@@ -86,6 +86,7 @@ public:
 	void free_context() {sd.clear_vbos();}
 	void clear_cache() {vector<cache_entry>().swap(val_cache);}
 	bool has_heightmap() const {return (!heightmap.empty());}
+	void make_faceted() {sd.make_faceted();}
 };
 
 typedef std::shared_ptr<upsurface> p_upsurface;
