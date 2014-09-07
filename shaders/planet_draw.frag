@@ -229,6 +229,7 @@ void main()
 	// add clouds
 	float cloud_den    = 0.0;
 	float cloud_shadow = 0.0;
+	float cloud_diff   = 1.0;
 	vec3 lv = calc_cloud_coord(vertex);
 
 	if (atmosphere > 0.0) {
@@ -239,6 +240,7 @@ void main()
 			vec3 obj_space_ldir = inverse(fg_NormalMatrix) * ldir0; // no normalization needed
 			vec3 vertex_adj = obj_radius*normalize(vertex + obj_radius*obj_space_ldir*cloud_alt/dot(obj_space_ldir, vertex)); // approximate
 			cloud_shadow = 0.75*calc_cloud_density(calc_cloud_coord(vertex_adj));
+			cloud_diff   = 0.8 + 0.2*(1.0 - cloud_shadow);
 		}
 #else
 		cloud_shadow = 0.25*cloud_den;
@@ -268,8 +270,7 @@ void main()
 	color += emission.rgb + clamp(4.0*city_light*(0.2 - dterm0), 0.0, 1.0)*vec3(1.0, 0.8, 0.5);
 
 	if (cloud_den > 0.0) { // add cloud color
-		float v = texture3D(cloud_noise_tex, 3.0*noise_scale*lv).r; // add in some brightness variation for fake shadows
-		color   = mix(color, (ambient + (0.75 + 0.25*v)*diffuse), cloud_den); // no clouds over high mountains?
+		color = mix(color, (ambient + cloud_diff*diffuse), cloud_den); // no clouds over high mountains?
 	}
 	fg_FragColor   = gl_Color * vec4(color, 1.0);
 }
