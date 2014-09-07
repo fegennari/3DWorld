@@ -578,7 +578,7 @@ void free_obj::inverse_rotate() const {
 void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool first_pass, bool final_pass) const {
 
 	fgPushMatrix();
-	//global_translate(pos); // no longer translated here
+	global_translate(pos);
 	uniform_scale(radius);
 
 	if (near_b_hole && gvect.mag() > 0.05*BLACK_HOLE_GRAV) { // stretch the object
@@ -663,9 +663,6 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			setup_br_light(exp_lights[i], pos, (EXPLOSION_LIGHT + i), udd.shader); // only shader[0] has dynamic lights enabled
 		}
 	}
-	fgPushMatrix();
-	global_translate(pos);
-
 	for (unsigned pass = 0; pass < npasses; ++pass) {
 		if (pass > 0) {
 			set_uobj_color(pos, c_radius, known_shadowed, shadow_thresh, sun_pos, sobj, ambient_scale, ambient_scale, udd.shader);
@@ -677,6 +674,8 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 		if (partial_shadow) { // partially shadowed - draw the sun's light with a stencil pass
 			// http://www.gamasutra.com/features/20021011/lengyel_05.htm
 			shader[1].enable(); udd.shader = &shader[1];
+			fgPushMatrix();
+			global_translate(pos);
 
 			// draw shadow volume
 			glClear(GL_STENCIL_BUFFER_BIT);
@@ -691,6 +690,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 			for (unsigned d = 0; d < sobjs.size(); ++d) {
 				draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);
 			}
+			fgPopMatrix();
 			glStencilFunc(GL_EQUAL, 0, ~0);
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 			glDepthFunc(GL_LEQUAL); // GL_EQUAL should be used, but there are more issues with z-fighting in this mode
@@ -709,16 +709,18 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 
 			if (display_mode & 0x10) { // testing
 				set_emissive_color(colorRGBA(GREEN, 0.25), udd.shader);
+				fgPushMatrix();
+				global_translate(pos);
 
 				for (unsigned d = 0; d < sobjs.size(); ++d) {
 					if (sobjs[d] != &player_ship()) {draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);}
 				}
+				fgPopMatrix();
 				udd.shader->clear_color_e();
 			}
 			glDepthFunc(GL_LESS);
 		} // partial_shadow
 	} // pass
-	fgPopMatrix();
 }
 
 
