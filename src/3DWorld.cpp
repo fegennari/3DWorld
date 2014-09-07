@@ -960,10 +960,12 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			else {
 				reset_planet_defaults(); // have to do this so that regen_trees gets correct vegetation
 			}
-			remove_tree_cobjs();
-			regen_trees(1, 0);
-			build_cobj_tree();
-			gen_grass(1);
+			if (world_mode == WMODE_GROUND) { // not TT
+				remove_tree_cobjs();
+				regen_trees(1, 0);
+				build_cobj_tree();
+				gen_grass(1);
+			}
 			clear_tiled_terrain();
 			
 			if (!combined_gu) {

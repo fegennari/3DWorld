@@ -788,7 +788,7 @@ void gen_grass(bool full_regen) {
 		return;
 	}
 	grass_manager.clear();
-	if (no_grass()) return;
+	if (no_grass() || world_mode != WMODE_GROUND) return;
 	grass_manager.gen_grass();
 	cout << "grass: " << grass_manager.size() << " out of " << XY_MULT_SIZE*grass_density << endl;
 }
