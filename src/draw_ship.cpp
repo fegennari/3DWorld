@@ -231,7 +231,7 @@ void uobj_draw_data::draw_ship_flares(colorRGBA const &color, int tid) const {
 
 void uobj_draw_data::setup_colors_draw_flare(point const &pos, point const &xlate, float xsize, float ysize, colorRGBA const &color, int flare_tex) const {
 
-	qbd.add_xlated_billboard(pos, xlate, get_camera_pos(), up_vector, colorRGBA(0,0,0, color.alpha), xsize, ysize);
+	qbd.add_xlated_billboard(pos, xlate, get_camera_pos(), up_vector, colorRGBA(0,0,0, color.alpha), xsize, ysize, tex_range_t(), 1);
 	draw_ship_flares(color, flare_tex);
 }
 
