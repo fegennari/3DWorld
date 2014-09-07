@@ -99,7 +99,7 @@ void do_univ_init() {
 bool player_near_system() {return (clobj0.system >= 0);}
 
 
-void setup_current_system(float sun_intensity) {
+void setup_current_system(float sun_intensity, bool reflection_mode) {
 	
 	bool regen_mesh(0);
 	static int inited(0);
@@ -111,7 +111,7 @@ void setup_current_system(float sun_intensity) {
 		set_univ_pdu();
 		universe.draw_all_cells(clobj0, 1, 1, 2); // required to gen galaxies/systems
 	}
-	point const &pos(get_player_pos2());
+	upos_point_type const &pos(get_player_pos2());
 	universe.get_object_closest_to_pos(clobj0, pos, 0, 4.0);
 	colorRGBA c1(ALPHA0), c2(ALPHA0);
 	float water(0.0);

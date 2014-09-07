@@ -490,7 +490,7 @@ void change_terrain_zoom(float val) {
 }
 
 
-void change_world_mode() { // switch terrain mode: 0 = normal, 1 = planet, 2 = no redraw, 3 = dynamic terrain
+void change_world_mode() { // switch terrain mode: 0 = normal, 1 = universe, 3 = tiled terrain
 
 	if (map_mode || universe_only || (disable_universe && disable_inf_terrain)) return;
 	static int xoff_(0), yoff_(0), xoff2_(0), yoff2_(0);

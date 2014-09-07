@@ -508,7 +508,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 
 	// setup sun light source
 	float const sun_intensity(max(0.25f, min(4.0f, 1000.0f*univ_sun_rad/sun_pos.mag())));
-	setup_current_system(sun_intensity);
+	setup_current_system(sun_intensity, reflection_mode);
 	set_gl_light_pos(0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	disable_light(1); // no moonlight (for now)
 	if (!have_sun || light_factor < 0.5) {set_light_ds_color(0, BLACK);} // sun below horizon: no diffuse or specular
