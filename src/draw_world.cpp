@@ -1141,7 +1141,7 @@ void draw_smoke_and_fires() {
 	set_multisample(0);
 
 	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
-		draw_part_clouds(part_clouds, 0); // smoke: slow when a lot of smoke is up close
+		draw_part_clouds(part_clouds, 1); // smoke: slow when a lot of smoke is up close
 	}
 	order_vect_t fire_order;
 	get_draw_order(fires, fire_order);

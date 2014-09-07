@@ -235,8 +235,8 @@ bool gen_arb_smoke(point const &pos, colorRGBA const &bc, vector3d const &iv,
 				   float r, float den, float dark, float dam, int src, int dt, bool as)
 {
 	if (!animate2 || is_underwater(pos) || is_under_mesh(pos)) return 0;
-	unsigned const chosen();
-	part_clouds[part_clouds.choose_element()].gen(pos, bc, iv, r, den, dark, dam, src, dt, as);
+	// Note: we scale by 0.62 since we're using BLUR_CENT_TEX rather than BLUR_TEX to draw smoke (to reduce fill rate)
+	part_clouds[part_clouds.choose_element()].gen(pos, bc, iv, 0.62*r, den, dark, dam, src, dt, as);
 	return 1;
 }
 
