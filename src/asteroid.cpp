@@ -1469,7 +1469,7 @@ void ucomet::draw_obj(uobj_draw_data &ddata) const {
 				for (unsigned i = 0; i < num; ++i) {
 					vector3d const delta(signed_rand_vector()), pvel(0.2*vmag*delta);
 					gen_particle(PTYPE_GLOW, color, color2, unsigned(2.0*(2.5 - delta.mag())*TICKS_PER_SECOND),
-						(pos + 0.75*delta*radius), pvel, 0.25*radius, 0.0, ALIGN_NEUTRAL, 0);
+						(pos + 0.75*delta*radius), pvel, 0.13*radius, 0.0, ALIGN_NEUTRAL, 0, BLUR_CENT_TEX);
 				}
 			}
 		}

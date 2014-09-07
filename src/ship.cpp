@@ -556,7 +556,7 @@ uparticle *gen_particle(unsigned type, colorRGBA const &c1, colorRGBA const &c2,
 	static free_obj_allocator<uparticle> allocator;
 	uparticle *part = allocator.alloc(type);
 	part->set_params(type, pos, vel, signed_rand_vector_norm(), size, c1, c2, lt, damage, align, coll, texture_id);
-	if (type == PTYPE_GLOW) part->add_flag(OBJ_FLAGS_NOLT); // no lights on a glow particle
+	if (type == PTYPE_GLOW) {part->add_flag(OBJ_FLAGS_NOLT);} // no lights on a glow particle
 	uobjs.push_back(part);
 	return part;
 }

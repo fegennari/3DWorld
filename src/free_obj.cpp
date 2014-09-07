@@ -816,6 +816,7 @@ void uparticle::set_params(unsigned ptype_, point const &pos_, vector3d const &v
 	rrate     = 2.0*rand_float();
 	axis      = signed_rand_vector_norm();
 	draw_rscale = ((ptype == PTYPE_GLOW) ? 1.5 : 1.0);
+	if (ptype == PTYPE_GLOW && texture_id < 0) {texture_id = BLUR_TEX;} // glow default
 	invalidate_rotv();
 }
 
@@ -873,11 +874,13 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 
 	switch (ptype) {
 	case PTYPE_GLOW:
-		if (60.0*radius < ddata.dist) {
-			glow_psd.add_pt(vert_color(make_pt_global(pos), color), 2.0*radius); // Note: may not be in correct back to front ordering for alpha blending
+		if ((texture_id == BLUR_TEX || texture_id == BLUR_CENT_TEX) && ((texture_id == BLUR_TEX) ? 60.0 : 90.0)*radius < ddata.dist) {
+			// Note: may not be in correct back to front ordering for alpha blending
+			glow_psd.add_pt(vert_color(make_pt_global(pos), color), ((texture_id == BLUR_TEX) ? 2.0 : 3.0)*radius);
 		}
 		else {
-			ddata.setup_colors_draw_flare(pos, all_zeros, 2.0, 2.0, color);
+			assert(texture_id >= 0);
+			ddata.setup_colors_draw_flare(pos, all_zeros, 2.0, 2.0, color, texture_id);
 		}
 		break;
 
