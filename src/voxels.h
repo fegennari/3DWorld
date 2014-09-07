@@ -184,7 +184,7 @@ public:
 	voxel_manager(bool use_mesh_=0) : use_mesh(use_mesh_) {}
 	void set_params(voxel_params_t const &p) {params = p;}
 	void clear();
-	void create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2);
+	void create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2, int gen_mode);
 	void create_from_cobjs(coll_obj_group &cobjs, float filled_val=1.0);
 	void atten_at_edges(float val);
 	void atten_at_top_only(float val);

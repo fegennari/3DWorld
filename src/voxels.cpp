@@ -40,7 +40,7 @@ bool read_voxel_brushes();
 void gen_rx_ry(float &rx, float &ry);
 
 
-// if size==old_size, we do nothing;  if size==0, we only free the texture
+// if size==old_size, we do nothing; if size==0, we only free the texture
 void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag, float freq, vector3d const &offset) {
 
 	if (size == tsize) return; // nothing to do (check mag, freq, etc.?)
@@ -49,7 +49,7 @@ void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag
 	if (size == 0) return; // nothing else to do
 	voxels.clear();
 	voxels.init(tsize, tsize, tsize, vector3d(1,1,1), all_zeros, 0.0, 1);
-	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index);
+	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index, 0); // always use sines
 }
 
 
@@ -237,14 +237,14 @@ void voxel_manager::clear() {
 }
 
 
-void voxel_manager::create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2) {
+void voxel_manager::create_procedural(float mag, float freq, vector3d const &offset, bool normalize_to_1, int rseed1, int rseed2, int gen_mode) {
 
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];
 	noise_gen_3d ngen;
 	float rx, ry;
 
-	if (mesh_gen_mode == 0) {
+	if (gen_mode == 0) {
 		ngen.set_rand_seeds(rseed1, rseed2);
 		ngen.gen_sines(mag, freq); // create sine table
 		ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
@@ -260,7 +260,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 			for (unsigned z = 0; z < nz; ++z) {
 				float val(0.0);
 
-				if (mesh_gen_mode == 0) { // sines
+				if (gen_mode == 0) { // sines
 #if 1
 					val = ngen.get_val(x, y, z, xyz_vals);
 #else
@@ -269,7 +269,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 					val = ngen.get_val(pos);
 #endif
 				}
-				else { // GLM perlin/simplex (GPU simplex not needed/supported)
+				else { // GLM perlin/simplex (slow; GPU simplex not needed/supported)
 					point const pos(get_pt_at(x, y, z) + offset);
 					glm::vec3 const v(pos.x, pos.y, pos.z);
 					float nmag(mag), nfreq(0.25*freq);
@@ -277,7 +277,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 
 					for (int n = 0; n < max(1, ((int)MAX_FREQ_BINS - mesh_freq_filter)); ++n) {
 						glm::vec3 const nv(nfreq*v + glm::vec3(rx, ry, rx-ry));
-						val   += nmag*((mesh_gen_mode == 2) ? glm::perlin(nv) : glm::simplex(nv));
+						val   += nmag*((gen_mode == 2) ? glm::perlin(nv) : glm::simplex(nv));
 						nmag  *= gain;
 						nfreq *= lacunarity;
 					}
@@ -1756,7 +1756,7 @@ void gen_voxel_landscape() {
 	setup_voxel_landscape(global_voxel_params, 0.0);
 	vector3d const gen_offset(DX_VAL*xoff2, DY_VAL*yoff2, 0.0);
 	terrain_voxel_model.create_procedural(global_voxel_params.mag, global_voxel_params.freq, gen_offset,
-		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index);
+		global_voxel_params.normalize_to_1, global_voxel_params.geom_rseed, 456+rand_gen_index, mesh_gen_mode);
 	PRINT_TIME(" Voxel Gen");
 	terrain_voxel_model.build(global_voxel_params.add_cobjs, 0, 1);
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
@@ -1789,7 +1789,7 @@ bool gen_voxels_from_cobjs(coll_obj_group &cobjs) {
 }
 
 
-void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const &center, float radius, unsigned size, int rseed) {
+void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const &center, float radius, unsigned size, int rseed, int gen_mode) {
 
 	params.remove_unconnected = 2; // always, but not holes
 	params.normalize_to_1 = 0;
@@ -1804,7 +1804,7 @@ void gen_voxel_spherical(voxel_model &model, voxel_params_t &params, point const
 	assert(model.empty());
 	model.set_params(params);
 	model.init(size, size, size, vector3d(vsz, vsz, vsz), center, -1.0, params.num_blocks);
-	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed);
+	model.create_procedural(params.mag, params.freq, zero_vector, params.normalize_to_1, params.geom_rseed, rseed, gen_mode);
 }
 
 
@@ -1818,7 +1818,7 @@ float gen_voxel_rock(voxel_model &model, point const &center, float radius, unsi
 	while (1) { // loop until we get a valid asteroid
 		rseed = 27751*rseed + 123; // make unique for each iteration
 		model.clear();
-		gen_voxel_spherical(model, params, center, radius, size, rseed);
+		gen_voxel_spherical(model, params, center, radius, size, rseed, 0); // always use sines
 		model.build(0);
 		if (model.has_filled_at_edges()) continue; // discard and recreate
 		float const gen_radius(model.get_bsphere().radius);
