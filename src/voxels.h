@@ -171,14 +171,22 @@ protected:
 
 	typedef voxel_grid<vert_ix_cache_entry> voxel_ix_cache;
 
+	struct pt_ix_t {
+		point pt;
+		unsigned ix;
+		pt_ix_t(point const &pt_=all_zeros, unsigned const ix_=0) : pt(pt_), ix(ix_) {}
+	};
+
 	point interpolate_pt(float isolevel, point const &pt1, point const &pt2, float const val1, float const val2) const;
 	void calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh);
 	void flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsigned y2, vector<unsigned> &work, unsigned char fill_val, unsigned char bit_mask);
 	void remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
-		vector<unsigned> *xy_updated, vector<point> *updated_pts);
+		vector<unsigned> *xy_updated, vector<pt_ix_t> *updated_pts, bool mark_only=0);
 	unsigned add_triangles_for_voxel(tri_data_t::value_type &tri_verts, voxel_ix_cache &vix_cache,
 		unsigned x, unsigned y, unsigned z, unsigned block_x0, unsigned block_y0, bool count_only, unsigned lod_level) const;
 	void add_cobj_voxels(coll_obj &cobj, float filled_val);
+	void make_voxel_outside(unsigned ix);
+	void make_voxel_inside(unsigned ix);
 
 public:
 	voxel_manager(bool use_mesh_=0) : use_mesh(use_mesh_) {}
@@ -224,7 +232,7 @@ protected:
 	bool volume_added;
 	vector<tri_data_t> tri_data; // one per LOD level
 	noise_texture_manager_t *noise_tex_gen;
-	std::set<unsigned> modified_blocks;
+	std::set<unsigned> modified_blocks, next_frame_modified_blocks;
 	voxel_grid<unsigned char> ao_lighting;
 
 	struct step_dir_t {
@@ -233,13 +241,6 @@ protected:
 		step_dir_t(int x, int y, int z, unsigned n, int d) : nsteps(n), dist_per_step(d) {dir[0] = x; dir[1] = y; dir[2] = z;}
 	};
 	vector<step_dir_t> ao_dirs;
-
-	struct pt_ix_t {
-		point pt;
-		unsigned ix;
-		pt_ix_t(point const &pt_=all_zeros, unsigned const ix_=0) : pt(pt_), ix(ix_) {}
-	};
-
 	vector<vector<pt_ix_t> > pt_to_ix;
 
 	struct merge_vn_t {

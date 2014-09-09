@@ -513,7 +513,7 @@ void voxel_manager::calc_outside_val(unsigned x, unsigned y, unsigned z, bool is
 
 	bool const on_edge(params.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
 	unsigned char ival(on_edge? ON_EDGE_BIT : (((get(x, y, z) < params.isolevel) ^ params.invert) ? 1 : 0)); // on_edge is considered outside
-	if (is_under_mesh) ival |= UNDER_MESH_BIT;
+	if (is_under_mesh) {ival |= UNDER_MESH_BIT;}
 	outside.set(x, y, z, ival);
 }
 
@@ -566,9 +566,10 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool no_gen_fragmen
 	int const pad = 1;
 	vector<unsigned> to_proc(modified_blocks.begin(), modified_blocks.end());
 	vector<unsigned> xy_updated;
-	vector<point> updated_pts;
+	vector<pt_ix_t> updated_pts;
 	vector<block_group_t> groups;
 	unsigned const indiv_cost((2*pad+1)*(2*pad+1)), num_blocks(params.num_blocks);
+	bool const falling_voxels_shift_down(voxel_editing && !no_gen_fragments);
 	//unsigned group_work(0);
 
 	for (unsigned i = 0; i < to_proc.size(); ++i) {
@@ -597,7 +598,8 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool no_gen_fragmen
 		groups.push_back(group);
 	}
 	for (vector<block_group_t>::const_iterator i = groups.begin(); i != groups.end(); ++i) {
-		remove_unconnected_outside_range(1, i->v[0][0]*xblocks, i->v[1][0]*yblocks, min(nx, i->v[0][1]*xblocks), min(ny, i->v[1][1]*yblocks), &xy_updated, &updated_pts);
+		remove_unconnected_outside_range(1, i->v[0][0]*xblocks, i->v[1][0]*yblocks,
+			min(nx, i->v[0][1]*xblocks), min(ny, i->v[1][1]*yblocks), &xy_updated, &updated_pts, falling_voxels_shift_down);
 		//group_work += i->area();
 
 		for (vector<unsigned>::const_iterator i = xy_updated.begin(); i != xy_updated.end(); ++i) {
@@ -611,19 +613,33 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool no_gen_fragmen
 					unsigned const bix(by*num_blocks + bx);
 					assert(bix < tri_data[0].size());
 					modified_blocks.insert(bix);
+					if (falling_voxels_shift_down) {next_frame_modified_blocks.insert(bix);} // make sure we continue to update these blocks next frame
 				}
 			}
 		}
 	}
 	//cout << "blocks out " << modified_blocks.size() << " groups " << groups.size() << " group work " << group_work << " updated " << updated_pts.size() << " xy_up " << xy_updated.size() << endl;
 	if (updated_pts.empty()) return;
+	// do something with removed voxels in updated_pts here; drop any objects embedded in these voxels
+
+	if (falling_voxels_shift_down) {
+		for (vector<pt_ix_t>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
+			unsigned ix(i->ix);
+			float const val(operator[](ix));
+			make_voxel_outside(ix);
+			assert(ix > 0); --ix; // move down one z step (FIXME: multiple steps depending on fticks?)
+			operator[](ix) = val;
+			outside[ix]    = (is_under_mesh(i->pt - point(0.0, 0.0, vsz.z)) ? UNDER_MESH_BIT : 0); // make inside or under mesh
+		}
+		return; // no fragments
+	}
 	if (no_gen_fragments) return;
 	float const fragment_radius(0.5*vsz.mag());
 	point center(all_zeros);
 
-	for (vector<point>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
-		maybe_create_fragments(*i, fragment_radius, NO_SOURCE, 1, 0);
-		center += *i;
+	for (vector<pt_ix_t>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
+		maybe_create_fragments(i->pt, fragment_radius, NO_SOURCE, 1, 0);
+		center += i->pt; // center of mass
 	}
 	center /= updated_pts.size();
 	gen_sound(SOUND_ROCK_FALL, center, CLIP_TO_01(0.05f*updated_pts.size()), 2.0);
@@ -663,7 +679,7 @@ void voxel_manager::flood_fill_range(unsigned x1, unsigned y1, unsigned x2, unsi
 // outside: 0=inside, 1=outside, 2=on_edge, 4-bit set=anchored, 8-bit set=under mesh
 // NOTE: not thread safe due to class member <work>
 void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned x1, unsigned y1, unsigned x2, unsigned y2,
-	vector<unsigned> *xy_updated, vector<point> *updated_pts)
+	vector<unsigned> *xy_updated, vector<pt_ix_t> *updated_pts, bool mark_only)
 {
 	assert(!outside.empty());
 	vector<unsigned> &work(temp_work); // stack of voxels to process
@@ -721,10 +737,9 @@ void voxel_manager::remove_unconnected_outside_range(bool keep_at_edge, unsigned
 					outside[ix] &= ~ANCHORED_BIT; // remove anchored bit
 				}
 				else if (outside[ix] != 1) { // inside and non-anchored
-					if (updated_pts) {updated_pts->push_back(get_pt_at(x, y, z));}
-					outside[ix] = 1; // make outside
-					had_update  = 1;
-					operator[](ix) = params.isolevel - (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
+					if (updated_pts) {updated_pts->push_back(pt_ix_t(get_pt_at(x, y, z), ix));}
+					if (!mark_only ) {make_voxel_outside(ix);}
+					had_update = 1;
 				}
 			}
 			if (had_update && xy_updated) {xy_updated->push_back(y*nx + x);}
@@ -757,10 +772,19 @@ void voxel_manager::remove_interior_holes() {
 			outside[ix] &= ~ANCHORED_BIT; // remove anchored bit
 		}
 		else if (outside[ix] == 1) { // outside, not on edge or under mesh, and non-anchored
-			outside[ix] = 0; // make inside
-			operator[](ix) = params.isolevel + (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
+			make_voxel_inside(ix);
 		}
 	}
+}
+
+
+void voxel_manager::make_voxel_outside(unsigned ix) {
+	outside[ix] = 1; // make outside
+	operator[](ix) = params.isolevel - (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be outside
+}
+void voxel_manager::make_voxel_inside(unsigned ix) {
+	outside[ix] = 0; // make inside
+	operator[](ix) = params.isolevel + (params.invert ? -TOLERANCE : TOLERANCE); // change voxel value to be inside
 }
 
 
@@ -928,6 +952,7 @@ void voxel_model::clear() {
 		boundary_vnmap[i].clear();
 	}
 	modified_blocks.clear();
+	next_frame_modified_blocks.clear();
 	ao_lighting.clear();
 	voxel_manager::clear();
 	volume_added = 0;
@@ -1283,28 +1308,27 @@ void voxel_model::proc_pending_updates(bool no_gen_fragments) {
 	for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
 		something_removed |= clear_block(blocks_to_update[i]);
 	}
-	if (something_removed) purge_coll_freed(0); // unecessary?
+	if (something_removed) {purge_coll_freed(0);} // unecessary?
 
 	#pragma omp parallel for schedule(dynamic,1)
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
 		num_added += (create_block_all_lods(blocks_to_update[i], 0, 0) > 0);
 	}
-	if (!(num_added > 0 || something_removed)) { // nothing updated
-		modified_blocks.clear();
-		return;
-	}
-	if (!boundary_vnmap[0].empty()) { // fix block boundary vertex normals
-		for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
-			update_boundary_normals_for_block(blocks_to_update[i], 0);
+	if (num_added > 0 || something_removed) { // something was added or removed
+		if (!boundary_vnmap[0].empty()) { // fix block boundary vertex normals
+			for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
+				update_boundary_normals_for_block(blocks_to_update[i], 0);
+			}
 		}
+		for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
+			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
+		}
+		update_blocks_hook(blocks_to_update, num_added);
+		PRINT_TIME("Process Voxel Updates");
 	}
-	for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
-		calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
-	}
-	update_blocks_hook(blocks_to_update, num_added);
-	modified_blocks.clear();
+	modified_blocks = next_frame_modified_blocks;
+	next_frame_modified_blocks.clear();
 	volume_added = 0;
-	PRINT_TIME("Process Voxel Updates");
 }
 
 
