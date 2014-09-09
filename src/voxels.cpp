@@ -568,9 +568,14 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool no_gen_fragmen
 	vector<unsigned> xy_updated;
 	vector<pt_ix_t> updated_pts;
 	vector<block_group_t> groups;
-	unsigned const indiv_cost((2*pad+1)*(2*pad+1)), num_blocks(params.num_blocks);
-	bool const falling_voxels_shift_down(voxel_editing && !no_gen_fragments);
 	//unsigned group_work(0);
+	unsigned const indiv_cost((2*pad+1)*(2*pad+1)), num_blocks(params.num_blocks);
+
+	// Note: if we allow falling voxels during editing but not when applying saved brushes,
+	// they won't reproduce a scene created in editing mode when falling voxels were enabled;
+	// however, falling voxels from save brushes increase load time, and won't match up with legacy fragmented voxel save files;
+	// so, short of adding another config/save file option for falling voxels, we can't make it generally work in all cases
+	bool const falling_voxels_shift_down(voxel_editing && !no_gen_fragments);
 
 	for (unsigned i = 0; i < to_proc.size(); ++i) {
 		int const xbix(to_proc[i] % num_blocks), ybix(to_proc[i] / num_blocks);
