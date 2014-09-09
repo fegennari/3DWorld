@@ -872,6 +872,7 @@ void display(void) {
 			if (b2down) fire_weapon();
 			update_weapon_cobjs(); // and update cblade
 			check_gl_error(6);
+			proc_voxel_updates(); // with the update here, we avoid making the voxels and shadows out of sync
 			if (TIMETEST) PRINT_TIME("F");
 
 			// create shadow map
@@ -879,7 +880,7 @@ void display(void) {
 			create_shadow_map(); // where should this go?
 			if (TIMETEST) PRINT_TIME("G");
 
-			proc_voxel_updates();
+			//proc_voxel_updates(); // with the update here, we avoid uploading the modified voxel VBOs during shadow map rendering
 
 			// send data to GPU
 			setup_object_render_data();
