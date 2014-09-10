@@ -26,6 +26,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 voxel_params_t global_voxel_params;
 voxel_model_ground terrain_voxel_model(1); // one LOD level
 voxel_brush_params_t voxel_brush_params;
+bool voxel_ppb_enable_falling(0);
 
 extern bool group_back_face_cull, voxel_shadows_updated;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing, mesh_gen_mode, mesh_freq_filter;
@@ -560,7 +561,7 @@ struct block_group_t {
 };
 
 
-void voxel_model::remove_unconnected_outside_modified_blocks(bool no_gen_fragments) {
+void voxel_model::remove_unconnected_outside_modified_blocks(bool postproc_brushes_mode) {
 
 	if (modified_blocks.empty()) return;
 	int const pad = 1;
@@ -572,10 +573,10 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool no_gen_fragmen
 	unsigned const indiv_cost((2*pad+1)*(2*pad+1)), num_blocks(params.num_blocks);
 
 	// Note: if we allow falling voxels during editing but not when applying saved brushes,
-	// they won't reproduce a scene created in editing mode when falling voxels were enabled;
-	// however, falling voxels from save brushes increase load time, and won't match up with legacy fragmented voxel save files;
-	// so, short of adding another config/save file option for falling voxels, we can't make it generally work in all cases
-	bool const falling_voxels_shift_down(voxel_editing && !no_gen_fragments);
+	// they won't reproduce a scene created in editing mode when falling voxels were enabled; therefore we save this info in the voxel brush file
+	// Note: if we allow voxels to fall during brush processing, they will fall after all brushes are applied,
+	// instead of during brush application, which may disagree with how the brushes were applied originally
+	bool const falling_voxels_shift_down(postproc_brushes_mode ? voxel_ppb_enable_falling : ((global_voxel_params.enable_falling & (voxel_editing ? 1 : 2)) != 0));
 
 	for (unsigned i = 0; i < to_proc.size(); ++i) {
 		int const xbix(to_proc[i] % num_blocks), ybix(to_proc[i] / num_blocks);
@@ -636,14 +637,14 @@ void voxel_model::remove_unconnected_outside_modified_blocks(bool no_gen_fragmen
 			operator[](ix) = val;
 			outside[ix]    = (is_under_mesh(i->pt - point(0.0, 0.0, vsz.z)) ? UNDER_MESH_BIT : 0); // make inside or under mesh
 		}
-		return; // no fragments
+		return; // no fragments or sound (of could add sounds when falling begins?)
 	}
-	if (no_gen_fragments) return;
+	if (postproc_brushes_mode) return; // no fragments or sound
 	float const fragment_radius(0.5*vsz.mag());
 	point center(all_zeros);
 
 	for (vector<pt_ix_t>::const_iterator i = updated_pts.begin(); i != updated_pts.end(); ++i) {
-		maybe_create_fragments(i->pt, fragment_radius, NO_SOURCE, 1, 0);
+		if (!falling_voxels_shift_down) {maybe_create_fragments(i->pt, fragment_radius, NO_SOURCE, 1, 0);}
 		center += i->pt; // center of mass
 	}
 	center /= updated_pts.size();
@@ -1299,13 +1300,29 @@ unsigned voxel_model::get_texture_at(point const &pos) const {
 }
 
 
-void voxel_model::proc_pending_updates(bool no_gen_fragments) {
+void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 
-	RESET_TIME;
 	if (modified_blocks.empty()) return;
+	RESET_TIME;
+
+	if (params.remove_unconnected >= 2) {
+		if (postproc_brushes_mode) { // iterate until all blocks stop falling
+			std::set<unsigned> orig_modified_blocks(modified_blocks);
+
+			while (!modified_blocks.empty()) { // modified_blocks should decrease in size during iteration
+				remove_unconnected_outside_modified_blocks(1);
+				modified_blocks = next_frame_modified_blocks;
+				next_frame_modified_blocks.clear();
+			}
+			modified_blocks.swap(orig_modified_blocks); // restore so we can update all the original blocks that were modified
+			PRINT_TIME("  Process Brush Updates");
+		}
+		else { // only call once (fall one step)
+			remove_unconnected_outside_modified_blocks(0);
+		}
+	}
 	bool something_removed(0);
 	unsigned num_added(0);
-	if (params.remove_unconnected >= 2) {remove_unconnected_outside_modified_blocks(no_gen_fragments);}
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	
 	// FIXME: can we only remove/add voxels within the modified region of each block?
@@ -1319,6 +1336,8 @@ void voxel_model::proc_pending_updates(bool no_gen_fragments) {
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
 		num_added += (create_block_all_lods(blocks_to_update[i], 0, 0) > 0);
 	}
+
+	// Note: this part only needs to be done once per block at the end of the while loop, but in practice is fast anyway
 	if (num_added > 0 || something_removed) { // something was added or removed
 		if (!boundary_vnmap[0].empty()) { // fix block boundary vertex normals
 			for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
@@ -1329,7 +1348,7 @@ void voxel_model::proc_pending_updates(bool no_gen_fragments) {
 			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
 		}
 		update_blocks_hook(blocks_to_update, num_added);
-		PRINT_TIME("Process Voxel Updates");
+		PRINT_TIME(postproc_brushes_mode ? "  Process Voxel Updates" : "Process Voxel Updates");
 	}
 	modified_blocks = next_frame_modified_blocks;
 	next_frame_modified_blocks.clear();
@@ -1791,8 +1810,9 @@ void gen_voxel_landscape() {
 	PRINT_TIME(" Voxels to Triangles/Cobjs");
 	
 	if (read_voxel_brushes()) {
-		terrain_voxel_model.proc_pending_updates(1); // no_gen_fragments=1
-		PRINT_TIME(" Load Voxel Brushes");
+		PRINT_TIME(" Read Voxel Brushes");
+		terrain_voxel_model.proc_pending_updates(1); // postproc_brushes_mode=1
+		PRINT_TIME(" Apply Voxel Brushes");
 	}
 }
 
@@ -1961,6 +1981,9 @@ bool parse_voxel_option(FILE *fp) {
 	else if (str == "atten_thresh") {
 		if (!read_float(fp, global_voxel_params.atten_thresh) || global_voxel_params.atten_thresh <= 0.0) voxel_file_err("atten_thresh", error);
 	}
+	else if (str == "enable_falling") {
+		if (!read_uint(fp, global_voxel_params.enable_falling) || global_voxel_params.enable_falling > 3) voxel_file_err("enable_falling", error);
+	}
 	else if (str == "geom_rseed") {
 		if (!read_int(fp, global_voxel_params.geom_rseed)) voxel_file_err("geom_rseed", error);
 	}
@@ -2050,6 +2073,7 @@ unsigned const vtrailer_sig = 0xdeadbeef;
 
 class voxel_brush_manager_t {
 
+	static unsigned const FLAG_FALLING = 0x01;
 	vector<voxel_brush_t> brush_vect;
 
 public:
@@ -2091,6 +2115,8 @@ public:
 			cerr << "Error: incorrect header found in voxel brush file " << fn << "." << endl;
 			return 0;
 		}
+		unsigned const flags(read_binary_uint(fp)); // read global flags
+		voxel_ppb_enable_falling = ((flags & FLAG_FALLING) != 0);
 		unsigned const bsz(read_binary_uint(fp));
 		brush_vect.resize(bsz);
 
@@ -2112,7 +2138,10 @@ public:
 			cerr << "Error opening voxel brush file " << fn << " for write" << endl;
 			return 0;
 		}
+		unsigned flags(0);
+		if (global_voxel_params.enable_falling & 1) {flags |= FLAG_FALLING;}
 		write_binary_uint(fp, vheader_sig);
+		write_binary_uint(fp, flags); // write global flags
 		write_binary_uint(fp, brush_vect.size());
 
 		if (!brush_vect.empty()) { // write brushes

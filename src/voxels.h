@@ -23,6 +23,7 @@ struct voxel_params_t {
 	unsigned atten_at_edges; // 0=no atten, 1=top only, 2=all 5 edges (excludes the bottom), 3=sphere (outer), 4=sphere (inner and outer), 5=sphere (inner and outer, excludes the bottom)
 	unsigned keep_at_scene_edge; // 0=don't keep, 1=always keep, 2=only when scrolling
 	unsigned atten_top_mode; // 0=constant, 1=current mesh, 2=2d surface mesh
+	unsigned enable_falling; // 0=never, 1=edit mode only, 2=game mode only, 3=always
 	int geom_rseed;
 	
 	// rendering parameters
@@ -34,7 +35,7 @@ struct voxel_params_t {
 	voxel_params_t() : xsize(0), ysize(0), zsize(0), num_blocks(12), isolevel(0.0), elasticity(0.5), mag(1.0), freq(1.0), atten_thresh(1.0), tex_scale(1.0), noise_scale(0.1),
 		noise_freq(1.0), tex_mix_saturate(5.0), z_gradient(0.0), height_eval_freq(1.0), radius_val(0.5), ao_radius(1.0), ao_weight_scale(2.0), ao_atten_power(1.0),
 		spec_mag(0.0), spec_exp(1.0), make_closed_surface(1), invert(0), remove_under_mesh(0), add_cobjs(1), normalize_to_1(1), top_tex_used(0), detail_normal_map(1),
-		remove_unconnected(1), atten_at_edges(0), keep_at_scene_edge(0), atten_top_mode(0), geom_rseed(123), texture_rseed(321), base_color(WHITE)
+		remove_unconnected(1), atten_at_edges(0), keep_at_scene_edge(0), atten_top_mode(0), enable_falling(1), geom_rseed(123), texture_rseed(321), base_color(WHITE)
 	{
 			tids[0] = tids[1] = tids[2] = 0; colors[0] = colors[1] = WHITE;
 	}
@@ -264,7 +265,7 @@ protected:
 		bool operator()(pt_ix_t const &a, pt_ix_t const &b) const {return (p2p_dist_sq(a.pt, p) < p2p_dist_sq(b.pt, p));}
 	};
 
-	void remove_unconnected_outside_modified_blocks(bool no_gen_fragments);
+	void remove_unconnected_outside_modified_blocks(bool postproc_brushes_mode);
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	virtual bool clear_block(unsigned block_ix);
 	unsigned create_block(unsigned block_ix, bool first_create, bool count_only, unsigned lod_level);
@@ -288,7 +289,7 @@ public:
 	bool update_voxel_sphere_region(point const &center, float radius, float val_at_center, bool spherical, int falloff_exp,
 		point *damage_pos=NULL, int shooter=-1, unsigned num_fragments=0);
 	unsigned get_texture_at(point const &pos) const;
-	void proc_pending_updates(bool no_gen_fragments=0);
+	void proc_pending_updates(bool postproc_brushes_mode=0);
 	void build(bool verbose, bool do_ao_lighting=1);
 	virtual void setup_tex_gen_for_rendering(shader_t &s);
 	void core_render(shader_t &s, unsigned lod_level, bool is_shadow_pass, bool no_vfc=0);
@@ -302,6 +303,7 @@ public:
 	bool has_filled_at_edges() const;
 	bool from_file(string const &fn);
 	bool to_file(string const &fn) const;
+	bool has_modified_blocks() const {return !modified_blocks.empty();}
 };
 
 
