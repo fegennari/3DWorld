@@ -22,6 +22,9 @@ disable_universe 1
 ground_effects_level 9
 #init_tree_mode 2 # small trees
 
+#remap_key 0x08 w
+#remap_key w null
+
 grass_density 100
 grass_size 0.03 0.002
 

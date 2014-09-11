@@ -211,25 +211,18 @@ void add_uevent_keyboard_def(unsigned char key, int x, int y, int type) {
 
 
 void add_uevent_keyboard(unsigned char key, int x, int y) {
-
 	add_uevent_keyboard_def(key, x, y, UE_KEYBOARD);
 }
 
-
 void add_uevent_keyboard_up(unsigned char key, int x, int y) {
-
 	add_uevent_keyboard_def(key, x, y, UE_KEYBOARD_UP);
 }
 
-
 void add_uevent_keyboard_special(int key, int x, int y) {
-
 	add_uevent_keyboard_def(key, x, y, UE_KEYBOARD_SPECIAL);
 }
 
-
 int check_event_ok() {
-
 	return (make_eventlist && frame_counter <= (int)MAX_EVENT_FRAMES && eventlist.size() <= (size_t)MAX_U_EVENTS);
 }
 

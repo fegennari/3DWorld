@@ -1134,14 +1134,82 @@ void draw_gl_console() {gl_console.RenderConsole();}
 int get_map_shift_val() {return int(map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1));}
 
 
+class keyboard_remap_t {
+
+	map<int, int> key_map;
+	set<int> key_null;
+
+	static int get_numeric_char(char c) {
+		if (c >= '0' && c <= '9') {return (c - '0');}
+		if (c >= 'a' && c <= 'f') {return (c - 'a' + 10);}
+		if (c >= 'A' && c <= 'F') {return (c - 'A' + 10);}
+		cerr << "Error extracting hex value from character '" << c << "'" << endl;
+		return -1;
+	}
+	static int extract_char_or_hex_number(string const &str) {
+		if (str.size() == 1) { // single character
+			return int(str[0]);
+		}
+		if (str.size() >= 3 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) { // hex number
+			if (str.size() == 3) { // 1-digit
+				return get_numeric_char(str[2]);
+			}
+			else if (str.size() == 4) { // 2-digit
+				int const hi(get_numeric_char(str[2])), lo(get_numeric_char(str[3]));
+				return ((hi < 0 || lo < 0) ? -1 : (16*hi + lo));
+			}
+		}
+		cerr << "Error extracting char or hex number from string '" << str << "'" << endl;
+		return -1;
+	}
+
+public:
+	void add_key_null(int key) {
+		assert(key >= 0);
+		key_null.insert(key);
+		key_map.erase(key); // just in case
+	}
+	void add_key_remap(int key_from, int key_to) {
+		assert(key_from >= 0 && key_to >= 0);
+		// okay to map a key to itself, remap a key that was already remapped, or remap multiple keys to the same value
+		key_map[key_from] = key_to;
+	}
+	bool parse_remap_command(string const &sfrom, string const &sto) {
+		assert(!sfrom.empty() && !sto.empty());
+		int const kfrom(extract_char_or_hex_number(sfrom));
+		if (kfrom < 0) return 0;
+
+		if (sto == "null" || sto == "NULL") {
+			add_key_null(kfrom);
+		}
+		else {
+			int const kto(extract_char_or_hex_number(sto));
+			if (kto < 0) return 0;
+			add_key_remap(kfrom, kto);
+		}
+		return 1;
+	}
+	template<typename key_t> bool remap_key(key_t &key, bool special, bool up) const { // unsigned char and int (up is ignored)
+		if (special) return 1; // special keys can't be remapped yet
+		if (key_null.find(key) != key_null.end()) return 0; // null key, ignore
+		auto it(key_map.find(key));
+		if (it != key_map.end()) {key = key_t(it->second);}
+		return 1;
+	}
+};
+
+keyboard_remap_t kbd_remap;
+
+
 void keyboard2(int key, int x, int y) {
 
 	if (gl_console.IsOpen()) {
 		gl_console.SpecialFunc(key); // pass all key strokes to the console
 		return;
 	}
+	if (ui_intercept_keyboard(key, 1))   return; // already handled
+	if (!kbd_remap.remap_key(key, 1, 0)) return;
 	add_uevent_keyboard_special(key, x, y);
-	if (ui_intercept_keyboard(key, 1)) return; // already handled
 
 	switch (key) {
 	case GLUT_KEY_UP:
@@ -1235,7 +1303,8 @@ unsigned char get_key_other_case(unsigned char key) {
 
 void keyboard_up(unsigned char key, int x, int y) {
 
-	if (gl_console.IsOpen() || !KBD_HANDLER || kbd_text_mode || key == 13) return; // ignore text mode and enter keys
+	if (gl_console.IsOpen() || kbd_text_mode || !KBD_HANDLER || key == 13) return; // ignore text mode and enter key
+	if (!kbd_remap.remap_key(key, 0, 1)) return;
 	if (keyset.find(key) != keyset.end()) {add_uevent_keyboard_up(key, x, y);}
 	keyset_it it(keys.find(key));
 
@@ -1256,6 +1325,7 @@ void keyboard_up(unsigned char key, int x, int y) {
 
 void keyboard2_up(int key, int x, int y) {
 
+	if (!kbd_remap.remap_key(key, 1, 1)) return;
 	// nothing
 }
 
@@ -1281,7 +1351,6 @@ void keyboard(unsigned char key, int x, int y) {
 		gl_console.KeyboardFunc(key); // send keystroke to console - not logged by uevent system
 		return;
     }
-	add_uevent_keyboard(key, x, y);
 	if (ui_intercept_keyboard(key, 0)) return; // already handled (should this go into keyboard_proc()?)
 
 	if (key == 13) { // enter key - toggle text mode
@@ -1298,6 +1367,9 @@ void keyboard(unsigned char key, int x, int y) {
 		user_text.push_back(key);
 		return;
 	}
+	if (!kbd_remap.remap_key(key, 0, 0)) return;
+	add_uevent_keyboard(key, x, y);
+
 	if (!KBD_HANDLER) {
 		keyboard_proc(key, x, y);
 		return;
@@ -1557,6 +1629,11 @@ int load_config(string const &config_file) {
 		if (str[0] == '#') { // comment
 			int letter(getc(fp));
 			while (letter != '\n' && letter != EOF && letter != 0) letter = getc(fp);
+		}
+		else if (str == "remap_key") {
+			string sfrom, sto;
+			if (!read_string(fp, sfrom) || !read_string(fp, sto)) cfg_err("remap_key", error);
+			if (!kbd_remap.parse_remap_command(sfrom, sto)) cfg_err("remap_key", error);
 		}
 		else if (str == "voxel") { // voxel option
 			if (!parse_voxel_option(fp)) cfg_err("voxel option", error);
