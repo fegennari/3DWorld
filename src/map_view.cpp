@@ -18,7 +18,7 @@ float map_zoom(0.25);
 extern bool water_is_lava;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, begin_motion;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter;
-extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex;
+extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex, temperature;
 extern int coll_id[];
 extern obj_group obj_groups[];
 
@@ -48,11 +48,11 @@ void draw_overhead_map() {
 		map_mode = 1;
 		return;
 	}
-	bool const no_water((DISABLE_WATER == 2) || !(display_mode & 0x04));
 	int bx1(0), by1(0), bx2(0), by2(0), nx(1);
 	while (min(window_width, window_height) > 2*nx) nx *= 2;
 	if (nx < 4) return;
 	int const ny(nx), nx2(nx/2), ny2(ny/2);
+	bool const no_water((DISABLE_WATER == 2) || !(display_mode & 0x04)), is_ice(temperature <= W_FREEZE_POINT);
 	float const zmax2(zmax_est*((map_color || no_water) ? 1.0 : 0.855)), hscale(0.5/zmax2);
 	float const scale(2.0*map_zoom*X_SCENE_SIZE*DX_VAL), scale_val(scale/64);
 	float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
@@ -72,7 +72,7 @@ void draw_overhead_map() {
 		((vegetation == 0.0) ? colorRGBA(0.55,0.45,0.35,1.0) : GREEN),
 		LT_BROWN,
 		(no_water ? BROWN    : (water_is_lava ? RED        : colorRGBA(0.3,0.2,0.6))),
-		(no_water ? DK_BROWN : (water_is_lava ? LAVA_COLOR : BLUE))};
+		(no_water ? DK_BROWN : (water_is_lava ? LAVA_COLOR : (is_ice ? LT_BLUE : BLUE)))};
 
 	for (unsigned i = 0; i < 6; ++i) {
 		map_heights[i] = pow(map_heights[i], glaciate_exp);
