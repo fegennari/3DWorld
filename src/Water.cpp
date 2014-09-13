@@ -87,6 +87,7 @@ struct water_section {
 
 
 // Global Variables
+bool water_is_lava(0);
 int total_watershed(0), has_accumulation(0), start_ripple(0), DISABLE_WATER(0), first_water_run(0), has_snow_accum(0), added_wsprings(0);
 float max_water_height, min_water_height, def_water_level;
 vector<valley> valleys;
@@ -155,6 +156,7 @@ void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 	int const x(get_xpos(pos.x)), y(get_ypos(pos.y));
 		
 	if (world_mode != WMODE_GROUND || (has_water(x, y) && pos.z < water_matrix[y][x])) {
+		if (water_is_lava) {c = LAVA_COLOR; return;} // placeholder
 		water_color_atten((float *)&(c.R), x, y, pos);
 	}
 }
@@ -162,6 +164,12 @@ void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 
 void select_water_ice_texture(shader_t &shader, colorRGBA &color) {
 
+	if (water_is_lava) {
+		select_texture(WATER_TEX); // FIXME: LAVA_TEX
+		shader.set_specular(0.1, 10.0); // low specular
+		color = LAVA_COLOR;
+		return;
+	}
 	bool const is_ice(temperature <= W_FREEZE_POINT);
 	select_texture(is_ice ? ICE_TEX : WATER_TEX);
 	shader.set_specular(w_spec[is_ice][0], w_spec[is_ice][1]);
@@ -172,6 +180,7 @@ void select_water_ice_texture(shader_t &shader, colorRGBA &color) {
 
 void set_tt_water_specular(shader_t &shader) {
 
+	if (water_is_lava) {shader.set_specular(0.2, 20.0); return;} // 2x low specular
 	bool const is_ice(get_cur_temperature() <= W_FREEZE_POINT);
 	shader.set_specular(2.0*w_spec[is_ice][0], 2.0*w_spec[is_ice][1]); // 2x specular
 }
@@ -179,6 +188,7 @@ void set_tt_water_specular(shader_t &shader) {
 
 colorRGBA get_tt_water_color() {
 
+	if (water_is_lava) {return LAVA_COLOR;}
 	bool const is_ice(get_cur_temperature() <= W_FREEZE_POINT);
 	colorRGBA color((is_ice ? ICE_C : WATER_C).modulate_with(texture_color(is_ice ? ICE_TEX : WATER_TEX)));
 	color *= DARK_WATER_ATTEN;
@@ -1758,6 +1768,7 @@ void select_liquid_color(colorRGBA &color, int xpos, int ypos) {
 
 	int const wsi(get_water_wsi(xpos, ypos));
 	if (wsi < 0) return;
+	if (water_is_lava) {color = LAVA_COLOR; return;}
 	float const blood_mix(valleys[wsi].blood_mix);
 	float const mud_mix(valleys[wsi].mud_mix);
 	blend_color(color, MUD_C, color, mud_mix, 1);

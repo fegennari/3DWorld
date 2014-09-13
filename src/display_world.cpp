@@ -38,7 +38,7 @@ int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0), enabled_lights(0); // 8 bit flags
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0);
 upos_point_type cur_origin(all_zeros);
-colorRGBA cur_fog_color(GRAY);
+colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BLUE);
 
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample;
@@ -50,7 +50,7 @@ extern float def_atmosphere, def_vegetation;
 extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
-extern colorRGBA sun_color, bkg_color;
+extern colorRGBA sun_color, bkg_color, base_sky_color;
 extern water_params_t water_params;
 extern vector<camera_filter> cfilters;
 
@@ -294,15 +294,16 @@ void swap_buffers_and_redraw() {
 void calc_bkg_color() {
 
 	float const lfn(1.0 - 5.0*(light_factor - 0.4));
+	colorRGBA const &day_color((base_sky_color == BLUE) ? BACKGROUND_DAY : base_sky_color); // FIXME: default base_sky_color = BACKGROUND_DAY?
 
 	if (!have_sun || light_factor <= 0.4) {
 		bkg_color = BACKGROUND_NIGHT;
 	}
 	else if (light_factor >= 0.6) {
-		bkg_color = BACKGROUND_DAY;
+		bkg_color = day_color;
 	}
 	else {
-		blend_color(bkg_color, BACKGROUND_NIGHT, BACKGROUND_DAY, lfn, 1);
+		blend_color(bkg_color, BACKGROUND_NIGHT, day_color, lfn, 1);
 	}
 	if (is_cloudy) {
 		colorRGBA const orig_bkgc(bkg_color);

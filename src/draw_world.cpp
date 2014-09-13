@@ -50,7 +50,7 @@ extern float temperature, atmosphere, zbottom, indir_vert_offset;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
-extern colorRGBA bkg_color, sun_color;
+extern colorRGBA bkg_color, sun_color, base_cloud_color;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
 extern vector<beam3d> beams;
@@ -640,7 +640,7 @@ colorRGBA get_cloud_color() {
 
 	colorRGBA color(brightness, brightness, brightness, atmosphere);
 	apply_red_sky(color);
-	return color;
+	return color.modulate_with(base_cloud_color);
 }
 
 
@@ -687,6 +687,7 @@ void draw_sky(int order) {
 		blend_color(horizon_color, WHITE, ALPHA0, blend_val, 1);
 		horizon_color.alpha *= 0.5;
 		apply_red_sky(horizon_color);
+		horizon_color = horizon_color.modulate_with(base_cloud_color);
 		shader_t s;
 		s.begin_simple_textured_shader(0.0, 0, 0, &horizon_color);
 		select_texture(GRADIENT_TEX);

@@ -15,6 +15,7 @@ bool const MAP_VIEW_LIGHTING = 1;
 int map_x(0), map_y(0);
 float map_zoom(0.25);
 
+extern bool water_is_lava;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, begin_motion;
 extern int world_mode, game_mode, display_mode, num_smileys, DISABLE_WATER, cache_counter;
 extern float zmax_est, water_plane_z, glaciate_exp, glaciate_exp_inv, vegetation, relh_adj_tex;
@@ -66,12 +67,12 @@ void draw_overhead_map() {
 	map_heights[5] = 0.5*map_heights[4];
 
 	colorRGBA const map_colors[6] = {
-		((DISABLE_WATER == 2) ? DK_GRAY : WHITE),
+		((water_is_lava || DISABLE_WATER == 2) ? DK_GRAY : WHITE),
 		GRAY,
 		((vegetation == 0.0) ? colorRGBA(0.55,0.45,0.35,1.0) : GREEN),
 		LT_BROWN,
-		(no_water ? BROWN    : colorRGBA(0.3,0.2,0.6)),
-		(no_water ? DK_BROWN : BLUE)};
+		(no_water ? BROWN    : (water_is_lava ? RED        : colorRGBA(0.3,0.2,0.6))),
+		(no_water ? DK_BROWN : (water_is_lava ? LAVA_COLOR : BLUE))};
 
 	for (unsigned i = 0; i < 6; ++i) {
 		map_heights[i] = pow(map_heights[i], glaciate_exp);

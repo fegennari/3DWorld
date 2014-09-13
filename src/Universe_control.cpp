@@ -25,13 +25,14 @@ unsigned owner_counts[NUM_ALIGNMENT] = {0};
 float resource_counts[NUM_ALIGNMENT] = {0.0};
 
 
-extern bool claim_planet;
+extern bool claim_planet, water_is_lava;
 extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, DISABLE_WATER, frame_counter;
 extern unsigned NUM_THREADS;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
 extern float water_h_off_rel, init_temperature, camera_shake;
 extern char **water_enabled;
 extern unsigned team_credits[];
+extern colorRGBA base_cloud_color, base_sky_color;
 extern string user_text;
 extern vector<free_obj *> uobjs;
 extern vector<cached_obj> stat_objs;
@@ -115,8 +116,11 @@ void setup_current_system(float sun_intensity, bool reflection_mode) {
 	universe.get_object_closest_to_pos(clobj0, pos, 0, 4.0);
 	colorRGBA c1(ALPHA0), c2(ALPHA0);
 	float water(0.0);
-	atmosphere = 0.0;
-	vegetation = 0.0;
+	atmosphere    = 0.0;
+	vegetation    = 0.0;
+	water_is_lava = 0;
+	base_cloud_color = WHITE;
+	base_sky_color   = BLUE;
 
 	if (clobj0.type == UTYPE_PLANET || clobj0.type == UTYPE_MOON) { // planet or moon
 		point const &opos(clobj0.object->get_pos());
@@ -138,7 +142,14 @@ void setup_current_system(float sun_intensity, bool reflection_mode) {
 		atmosphere = planet.atmos;
 		water      = planet.water;
 		vegetation = planet.get_vegetation();
+		base_cloud_color = planet.ai_color;
+		base_sky_color   = planet.ao_color;
 
+		if (planet.lava > 0.0) {
+			assert(water == 0.0);
+			water = planet.lava;
+			water_is_lava = 1;
+		}
 		if (!planet.has_vegetation()) {
 			c1 = planet.colorA;
 			c2 = planet.colorB;

@@ -176,7 +176,7 @@ int landscape_changed(0), lchanged0(0), skip_regrow(0), ltx1(0), lty1(0), ltx2(0
 unsigned char *landscape0 = NULL;
 
 
-extern bool mesh_difuse_tex_comp;
+extern bool mesh_difuse_tex_comp, water_is_lava;
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid;
 extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only;
@@ -1165,8 +1165,8 @@ inline int get_bare_ls_tid(float zval) {
 
 void update_lttex_ix(int &ix) { // note: assumes lttex_dirt
 
-	if (DISABLE_WATER == 2 && lttex_dirt[ix].id == SNOW_TEX  ) --ix;
-	if (vegetation == 0.0  && lttex_dirt[ix].id == GROUND_TEX) ++ix;
+	if ((water_is_lava || DISABLE_WATER == 2) && lttex_dirt[ix].id == SNOW_TEX) {--ix;}
+	if (vegetation == 0.0  && lttex_dirt[ix].id == GROUND_TEX) {++ix;}
 }
 
 

@@ -36,7 +36,7 @@ bool clear_landscape_vbo;
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater;
+extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
@@ -465,7 +465,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 	}
 	RESET_TIME;
 
-	if ((display_mode & 0x80) && !DISABLE_WATER && zmin < max_water_height && ground_effects_level != 0) {
+	if ((display_mode & 0x80) && !water_is_lava && !DISABLE_WATER && zmin < max_water_height && ground_effects_level != 0) {
 		gen_uw_lighting();
 		if (SHOW_MESH_TIME) PRINT_TIME("Underwater Lighting");
 	}
