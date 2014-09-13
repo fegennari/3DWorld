@@ -764,6 +764,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.set_bool_prefix("add_waves",        add_waves,   1); // FS
 	s.set_bool_prefix("add_noise",        rain_mode,   1); // FS
 	s.set_bool_prefix("deep_water_waves", add_waves,   1); // FS (always enabled with waves for now)
+	s.set_bool_prefix("is_lava",          water_is_lava, 1); // FS
 	s.set_vert_shader("texture_gen.part+water_plane");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
 	s.begin_shader();
@@ -806,9 +807,10 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	colorRGBA const color(get_tt_water_color());
 
 	if (animate2 && get_cur_temperature() > W_FREEZE_POINT) {
-		water_xoff -= WATER_WIND_EFF*wind.x*fticks;
-		water_yoff -= WATER_WIND_EFF*wind.y*fticks;
-		wave_time  += fticks;
+		float const wwspeed(WATER_WIND_EFF*fticks*(water_is_lava ? 0.25 : 1.0));
+		water_xoff -= wind.x*wwspeed;
+		water_yoff -= wind.y*wwspeed;
+		wave_time  += fticks*(water_is_lava ? 0.75 : 1.0);
 	}
 	point const camera(get_camera_pos());
 	enable_blend();
@@ -825,7 +827,7 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 	}
 	bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);
-	bool const rain_mode(add_waves && is_rain_enabled() /*&& !underwater*/);
+	bool const rain_mode(add_waves && !water_is_lava && is_rain_enabled() /*&& !underwater*/);
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	shader_t s;
 	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1

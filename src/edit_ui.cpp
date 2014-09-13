@@ -255,6 +255,9 @@ public:
 colorRGB uw_atten_max(WHITE), uw_atten_scale(BLACK);
 water_params_t water_params;
 
+void water_params_t::set_def_water() {alpha=0.5; mud=0.0; bright=1.0; reflect=1.0; green=0.16; wave_amp=1.0;}
+void water_params_t::set_def_lava () {alpha=1.5; mud=0.0; bright=1.0; reflect=0.5; green=0.02; wave_amp=1.5;}
+
 void calc_uw_atten_colors() {
 
 	blend_color(uw_atten_scale, colorRGB(0.9, 1.0, 1.5), colorRGB(1.5, 0.9, 0.5), water_params.mud); // blend in mud color

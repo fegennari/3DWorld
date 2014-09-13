@@ -458,10 +458,11 @@ void draw_water() {
 	add_waves();
 	if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
 	if (DISABLE_WATER) return;
+	bool const use_foam(USE_SEA_FOAM && !water_is_lava);
 	shader_t s;
-	if (USE_SEA_FOAM) {s.set_prefix("#define ADD_DETAIL_TEXTURE", 1);} // FS
+	if (use_foam) {s.set_prefix("#define ADD_DETAIL_TEXTURE", 1);} // FS
 	setup_mesh_and_water_shader(s, 0);
-	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
+	if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	point const camera(get_camera_pos());
 	bool const is_ice(temperature <= W_FREEZE_POINT);
 
@@ -481,7 +482,7 @@ void draw_water() {
 	color.alpha *= 0.5;
 	int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
 
-	if (USE_SEA_FOAM) { // use sea foam texture
+	if (use_foam) { // use sea foam texture
 		select_multitex(FOAM_TEX, 1, 0);
 		setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0, 0.0, s, 0);
 		set_active_texture(0);
@@ -499,7 +500,7 @@ void draw_water() {
 		wsdraw.calc_vertex_colors_normals(color);
 		wsdraw.draw();
 	}
-	if (USE_SEA_FOAM) {s.add_uniform_float("detail_tex_scale", 0.0);}
+	if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 	if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
 	

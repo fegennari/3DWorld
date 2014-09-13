@@ -73,9 +73,10 @@ void main()
 	float cos_view_angle = abs(dot(epos_n, norm));
 	vec4 color    = water_color;
 #ifdef USE_WATER_DEPTH
-	color.a      *= mix(1.0, clamp(20.0*depth, 0.0, 1.0), min(1.0, 2.5*cos_view_angle)); // blend to alpha=0 near the shore
+	if (!is_lava) {color.a *= mix(1.0, clamp(20.0*depth, 0.0, 1.0), min(1.0, 2.5*cos_view_angle));} // blend to alpha=0 near the shore
 #endif
 	vec4 lighting = vec4(0,0,0,1);
+	if (is_lava) {lighting += vec4(0.3, 0.05, 0.0, 0.0);} // add emissive light
 	if (enable_light0) {lighting += add_light_comp_pos0(light_norm, epos);}
 	if (enable_light1) {lighting += add_light_comp_pos1(light_norm, epos);}
 	
@@ -90,7 +91,7 @@ void main()
 		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
 
-	// foam texture near shore
+	// foam texture near shore (what about is_lava?)
 	foam_amt += 0.5*clamp(10.0*depth-0.2, 0.0, 1.0)*(1.0 - clamp(5.0*depth, 0.0, 1.0));
 	color = mix(color, texture2D(foam_tex, 25.0*tc), foam_amt);
 

@@ -41,7 +41,7 @@ upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BLUE);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
@@ -627,7 +627,7 @@ void scroll_scene() {
 
 float get_ocean_wave_height() {
 
-	if (!(display_mode & 0x0100)) return 0.0;
+	if (water_is_lava || !(display_mode & 0x0100)) return 0.0;
 	static float time(0.0);
 	if (animate2 && temperature > W_FREEZE_POINT) time += fticks;
 	return ocean_wave_height*sin(1.0*time/TICKS_PER_SECOND); // add small waves

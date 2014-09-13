@@ -34,6 +34,7 @@ extern char **water_enabled;
 extern unsigned team_credits[];
 extern colorRGBA base_cloud_color, base_sky_color;
 extern string user_text;
+extern water_params_t water_params;
 extern vector<free_obj *> uobjs;
 extern vector<cached_obj> stat_objs;
 extern vector<temp_source> temp_sources;
@@ -103,6 +104,7 @@ bool player_near_system() {return (clobj0.system >= 0);}
 void setup_current_system(float sun_intensity, bool reflection_mode) {
 	
 	bool regen_mesh(0);
+	static bool last_is_lava(0);
 	static int inited(0);
 	static float last_water(-1.0);
 	do_univ_init();
@@ -173,10 +175,14 @@ void setup_current_system(float sun_intensity, bool reflection_mode) {
 		float const water_level(0.5 + 0.5*(water - 0.5)), rel_wpz(get_rel_wpz());
 
 		if (fabs(water_level - rel_wpz) > 0.001) {
-			cout << "water: " << water << ", water_level: " << water_level << ", rel_wpz: " << rel_wpz << ", water_h_off_rel: " << water_h_off_rel << endl;
+			cout << TXT(water) << TXT(water_level) << TXT(rel_wpz) << TXT(water_h_off_rel) << TXT(water_is_lava) << endl;
 			change_water_level(water_level);
 			regen_mesh = 1; // regen texture (is this needed?)
 		}
+	}
+	if (water_is_lava != last_is_lava) {
+		last_is_lava = water_is_lava;
+		if (water_is_lava) {water_params.set_def_lava();} else {water_params.set_def_water();}
 	}
 	if (clobj0.type >= UTYPE_STAR) { // determine gravity
 		assert(clobj0.object != NULL);
