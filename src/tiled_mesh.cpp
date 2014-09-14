@@ -1161,7 +1161,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	vector3d const xlate(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
 	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
 	bind_textures();
-	bool const draw_near_water(!is_distant && !reflection_pass && has_water());
+	bool const draw_near_water(!is_distant && !reflection_pass && is_water_enabled() && has_water());
 
 	if (!reflection_pass && cloud_shadows_enabled()) {
 		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
@@ -1873,7 +1873,7 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 		if (to_draw[i].second->using_shadow_maps() != enable_shadow_map) continue; // draw in another pass
 		to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, vbo_ring_ibuf, reflection_pass);
 	}
-	if (!enable_shadow_map) { // draw all water caps (required, even for occluded tiles)
+	if (!enable_shadow_map && !reflection_pass && is_water_enabled()) { // draw all water caps (required, even for occluded tiles)
 		for (auto i = occluded_tiles.begin(); i != occluded_tiles.end(); ++i) {(*i)->draw_water_cap(s, 0);}
 	}
 	vbo_ring_ibuf.free_vbo();
