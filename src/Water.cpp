@@ -479,7 +479,7 @@ void draw_water() {
 	enable_blend();
 	select_water_ice_texture(s, color);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
-	color.alpha *= 0.5;
+	if (!water_is_lava) {color.alpha *= 0.5;} // increase alpha for water
 	int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
 
 	if (use_foam) { // use sea foam texture
@@ -543,7 +543,7 @@ void draw_water() {
 	unsigned nin(0);
 	int xin[4], yin[4], last_wsi(-1);
 	bool const disp_snow((display_mode & 0x40) && temperature <= SNOW_MAX_TEMP);
-	color *= INT_WATER_ATTEN; // attenuate for interior water
+	if (!water_is_lava) {color *= INT_WATER_ATTEN;} // attenuate for interior water
 	colorRGBA wcolor(color);
 	water_surface_draw wsd;
 	
@@ -941,7 +941,7 @@ void add_splash(point const &pos, int xpos, int ypos, float energy, float radius
 void add_waves() { // add waves due to wind
 
 	//RESET_TIME;
-	if (DISABLE_WATER || !(display_mode & 0x04) || !(display_mode & 0x0100)) return;
+	if (DISABLE_WATER || !(display_mode & 0x04) || !(display_mode & 0x0100) || water_is_lava) return;
 	if (temperature <= W_FREEZE_POINT || !animate2) return;
 	float const wave_amplitude(0.006/mesh_scale), wave_freq(0.06), depth_scale(20.0);
 	float const wind_freq(0.02), wind_amplitude(0.15/mesh_scale), wind_resist(0.75);
@@ -1201,7 +1201,7 @@ int draw_spill_section(vector<vert_norm_color> &verts, int x1, int y1, int x2, i
 	vector3d const &norm(vertex_normals[y1][x1]);
 
 	if (x1 == x2 && y1 == y2) { // end at a point
-		colorRGBA const color(verts.empty() ? WATER_C : verts.back().get_c4()); // assert that verts is nonempty?
+		colorRGBA const color(verts.empty() ? (water_is_lava ? LAVA_COLOR : WATER_C) : verts.back().get_c4()); // assert that verts is nonempty?
 		for (unsigned i = 0; i < 2; ++i) {verts.push_back(vert_norm_color(point(xa, ya, z1), norm, color));}
 		return 0;
 	}

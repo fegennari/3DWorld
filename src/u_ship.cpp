@@ -948,7 +948,7 @@ void u_ship::ai_action() {
 		fire_point_defenses(); // always, even player's ship
 	}
 	if (player_controlled() && specs().stoppable) {
-		if (player_auto_stop) thrust(MOVE_STOP, 1.0, 0);
+		if (player_auto_stop) thrust(MOVE_STOP, 1.0, 0); // Note: doesn't guarantee player will stop, if gravity or momentum is high enough
 		return;
 	}
 	if (!begin_motion) return;

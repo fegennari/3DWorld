@@ -888,7 +888,7 @@ void display(void) {
 			check_gl_error(101);
 
 			if (underwater) {
-				colorRGBA fog_color(((temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C), 1.0); // under ice/water, alpha = 1.0
+				colorRGBA fog_color(((water_is_lava ? LAVA_COLOR : (temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C)), 1.0); // under ice/water, alpha = 1.0
 				select_liquid_color(fog_color, camera);
 				atten_uw_fog_color(fog_color, depth);
 				float const fog_dist(0.2 + (0.25 + 0.75*fog_color.B)*(1.5*Z_SCENE_SIZE)*(camera.z - zmin)/((camera.z + depth) - zmin));
