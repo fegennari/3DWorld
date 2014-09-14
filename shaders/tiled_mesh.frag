@@ -1,7 +1,7 @@
 uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, noise_tex, caustic_tex;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
-uniform float water_plane_z, cloud_plane_z, wave_time, wave_amplitude;
+uniform float cloud_plane_z, wave_time, wave_amplitude; // water_plane_z comes from water_fog.part
 uniform float water_atten    = 1.0;
 uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
@@ -123,6 +123,8 @@ void main()
 	}
 	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
 
-	fg_FragColor = apply_fog_scaled(vec4((texel0.rgb * texel1.rgb * color.rgb), color.a), vertex.z); // add fog
-	//fg_FragColor = apply_fog(color); // untextured (white) for debugging
+	vec4 mesh_color = vec4((texel0.rgb * texel1.rgb * color.rgb), color.a);
+	float fog_coord = get_water_fog_coord(vertex, fg_ModelViewMatrixInverse[3].xyz)*get_custom_fog_scale(vertex.z);
+	fg_FragColor    = apply_fog_ffc(mesh_color, fog_coord, fog_color);
+	//fg_FragColor    = color; // untextured (white) for debugging
 }

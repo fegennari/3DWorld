@@ -943,6 +943,7 @@
     <None Include="shaders\vert_xform_vpos.vert" />
     <None Include="shaders\voxel_asteroid.frag" />
     <None Include="shaders\voxel_texture.part.frag" />
+    <None Include="shaders\water_fog.part" />
     <None Include="shaders\water_fog.part.vert" />
     <None Include="shaders\water_plane.frag" />
     <None Include="shaders\water_plane.vert" />

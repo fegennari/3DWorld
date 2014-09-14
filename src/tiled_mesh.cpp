@@ -1233,16 +1233,12 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 				if (!adj_tile->has_water ()) continue; // adj tile has no water, so we can't have any uncapped water on this edge
 				if (!adj_tile->is_visible()) continue; // adj tile not visible,  so we can't see this edge
 			}
-			unsigned const num_steps = 10;
-			float const dz(water_plane_z - mzmin), zstep(dz/num_steps);
-
-			for (unsigned i = 0; i < num_steps; ++i) {
-				float const x1(bcube.d[0][dim ? 0 : dir]), x2(bcube.d[0][dim ? 1 : dir]), y1(bcube.d[1][dim ? dir : 0]), y2(bcube.d[1][dim ? dir : 1]);
-				wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+i*zstep)));
-				wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+i*zstep)));
-				wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+(i+1)*zstep)));
-				wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+(i+1)*zstep)));
-			}
+			float const dz(water_plane_z - mzmin);
+			float const x1(bcube.d[0][dim ? 0 : dir]), x2(bcube.d[0][dim ? 1 : dir]), y1(bcube.d[1][dim ? dir : 0]), y2(bcube.d[1][dim ? dir : 1]);
+			wverts.push_back(vert_wrap_t(point(x1, y1, mzmin)));
+			wverts.push_back(vert_wrap_t(point(x2, y2, mzmin)));
+			wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+dz)));
+			wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+dz)));
 		}
 	}
 	if (!wverts.empty()) {
@@ -1584,8 +1580,8 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",  1);} // FS
 	if (reflection_pass) {s.set_prefix("#define REFLECTION_MODE", 1);} // FS
 	s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
-	s.set_vert_shader("water_fog.part+tiled_mesh");
-	s.set_frag_shader("linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+tiled_mesh");
+	s.set_vert_shader("tiled_mesh");
+	s.set_frag_shader("water_fog.part*+linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+tiled_mesh");
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("weights_tex", 0);

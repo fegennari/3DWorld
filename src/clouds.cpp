@@ -427,8 +427,8 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		setup_tt_fog_pre(s);
 		s.set_prefix("#define NUM_OCTAVES 8", 1); // FS
 		s.set_bool_prefix("underwater_atten", fog_enabled, 1); // FS
-		s.set_vert_shader("water_fog.part+clouds");
-		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds");
+		s.set_vert_shader("water_fog.part*+clouds");
+		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds"); // Note: could also apply water fog in fragment shader
 		s.begin_shader();
 		setup_tt_fog_post(s);
 		s.add_uniform_float("water_plane_z", z1);
