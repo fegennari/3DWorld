@@ -16,9 +16,10 @@ varying vec2 tc;
 float calc_light_scale(in vec3 vertex, in vec4 light_pos) {
 	if (!apply_cloud_shadows) {return 1.0;}
 	vec4 light = fg_ModelViewMatrixInverse * light_pos; // world space
-	vec3 cpos  = vertex + cloud_offset;
-	float t    = (cloud_plane_z - cpos.z)/(light.z - cpos.z); // sky intersection position along vertex->light vector
-	return 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
+	vec3 ldir  = normalize(light.xyz);
+	vec3 cpos  = vertex.xyz + cloud_offset;
+	float d    = max(0.0, (cloud_plane_z - cpos.z)/ldir.z); // sky intersection position along vertex->light vector
+	return 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + d*ldir.xy);
 }
 
 void main()

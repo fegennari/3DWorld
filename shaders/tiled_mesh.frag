@@ -47,9 +47,10 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	vec4 light  = fg_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
 
 	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) {
+		vec3 ldir = normalize(light.xyz);
 		vec3 cpos = vertex.xyz + cloud_offset;
-		float t = clamp((cloud_plane_z - cpos.z)/(light.z - cpos.z), 0.0, 1.0); // sky intersection position along vertex->light vector
-		normal *= 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + t*(light.xy - cpos.xy));
+		float d   = max(0.0, (cloud_plane_z - cpos.z)/ldir.z); // sky intersection position along vertex->light vector
+		normal   *= 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + d*ldir.xy);
 	}
 	
 	// compute the ambient and diffuse lighting
