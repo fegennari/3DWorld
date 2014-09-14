@@ -91,12 +91,14 @@ void main()
 		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
 
+#ifdef USE_WATER_DEPTH
 	// foam texture near shore (what about is_lava?)
 	foam_amt += 0.5*clamp(10.0*depth-0.2, 0.0, 1.0)*(1.0 - clamp(5.0*depth, 0.0, 1.0));
 	color = mix(color, texture2D(foam_tex, 25.0*tc), foam_amt);
+#endif
 
 	// determine final color with fog
-	color.rgb += add_color;
+	color.rgb   += add_color;
 	fg_FragColor = vec4(color.rgb * lighting.rgb, color.a * gl_Color.a); // use gl_Color alpha directly
 	fg_FragColor = apply_fog_epos(fg_FragColor, epos);
 }
