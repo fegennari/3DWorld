@@ -2416,7 +2416,8 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 
 	// calculate ndiv
 	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0), procedural(use_procedural_shader()), heightmap(has_heightmap());
-	int ndiv((heightmap ? 1.0 : 0.25)*NDIV_SIZE_SCALE*sqrt(size));
+	float const ndiv_factor(heightmap ? ((world_mode == WMODE_UNIVERSE) ? 1.0 : 0.5) : 0.25); // lower res when in background
+	int ndiv(ndiv_factor*NDIV_SIZE_SCALE*sqrt(size));
 		
 	if (size < 64.0) {
 		ndiv = max(4, min(48, ndiv));
@@ -2428,7 +2429,6 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		for (ndiv = 1; ndiv < pref_ndiv; ndiv <<= 1) {} // make a power of 2
 		ndiv = min(ndiv, ndiv_max); // final clamp
 	}
-	if (world_mode != WMODE_UNIVERSE) {ndiv = max(4, ndiv/2);} // lower res when in background
 	assert(ndiv > 0);
 
 	// draw as sphere
