@@ -540,7 +540,11 @@ void postproc_noise_zval(float &zval) {
 
 void apply_mesh_sine(float &zval, float x, float y) {
 	hmap_params_t const &h(hmap_params);
-	if (h.sine_mag > 0.0) {zval += h.sine_mag*COSF(x*h.sine_freq)*COSF(y*h.sine_freq) + h.sine_bias;}
+
+	if (h.sine_mag > 0.0) { // Note: snow thresh is still off when highly zoomed in
+		float const freq(mesh_scale*h.sine_freq);
+		zval += (h.sine_mag*COSF(x*freq)*COSF(y*freq) + h.sine_bias)/mesh_scale_z;
+	}
 }
 
 void apply_noise_shape_final(float &noise, int shape) {
