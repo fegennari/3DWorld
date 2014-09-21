@@ -241,25 +241,17 @@ void pt_line_drawer_no_lighting_t::free_vbo() {
 }
 
 
-template<class vert_type_t> struct sized_vert_t : public vert_type_t { // size = 20-32
-	float size;
-
-	sized_vert_t() {}
-	sized_vert_t(vert_type_t const &v, float size_) : vert_type_t(v), size(size_) {}
-	
-	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
-	static void set_size_attr(unsigned stride, void const *vbo_ptr_offset) {
-		int const loc(cur_shader->get_attrib_loc("point_size"));
-		assert(loc > 0);
-		glEnableVertexAttribArray(loc);
-		glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_type_t)));
-	}
-	static void unset_attrs() {
-		int const loc(cur_shader->get_attrib_loc("point_size"));
-		assert(loc > 0);
-		glDisableVertexAttribArray(loc);
-	}
-};
+template<class vert_type_t> void sized_vert_t<vert_type_t>::set_size_attr(unsigned stride, void const *vbo_ptr_offset) {
+	int const loc(cur_shader->get_attrib_loc("point_size"));
+	assert(loc > 0);
+	glEnableVertexAttribArray(loc);
+	glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, stride, ptr_add(vbo_ptr_offset, sizeof(vert_type_t)));
+}
+template<class vert_type_t> void sized_vert_t<vert_type_t>::unset_attrs() {
+	int const loc(cur_shader->get_attrib_loc("point_size"));
+	assert(loc > 0);
+	glDisableVertexAttribArray(loc);
+}
 
 template<> void sized_vert_t<vert_norm_color>::set_vbo_arrays(bool set_state, void const *vbo_ptr_offset) {
 	set_array_client_state(1, 0, 1, 1, set_state);

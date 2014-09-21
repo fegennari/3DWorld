@@ -8,6 +8,17 @@
 #include "3DWorld.h"
 
 
+template<class vert_type_t> struct sized_vert_t : public vert_type_t { // size = 20-32
+	float size;
+
+	sized_vert_t() {}
+	sized_vert_t(vert_type_t const &v, float size_) : vert_type_t(v), size(size_) {}
+	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
+	static void set_size_attr(unsigned stride, void const *vbo_ptr_offset);
+	static void unset_attrs();
+};
+
+
 class pt_line_drawer {
 
 	vector<vert_norm_color> points, lines;
