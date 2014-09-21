@@ -34,6 +34,7 @@ int   const F_TABLE_SIZE = NUM_FREQ_COMP*N_RAND_SIN2;
 // Global Variables
 float MESH_START_MAG(0.02), MESH_START_FREQ(240.0), MESH_MAG_MULT(2.0), MESH_FREQ_MULT(0.5);
 int cache_counter(1), start_eval_sin(0), GLACIATE(DEF_GLACIATE), mesh_gen_mode(0), mesh_gen_shape(0), mesh_freq_filter(FREQ_FILTER);
+unsigned erosion_iters(0);
 float zmax, zmin, zmax_est, zcenter(0.0), zbottom(0.0), ztop(0.0), h_sum(0.0), alt_temp(DEF_TEMPERATURE);
 float mesh_scale(1.0), tree_scale(1.0), mesh_scale_z(1.0), glaciate_exp(1.0), glaciate_exp_inv(1.0);
 float mesh_height_scale(1.0), zmax_est2(1.0), zmax_est2_inv(1.0);
@@ -387,6 +388,134 @@ void glaciate() {
 }
 
 
+// see http://ranmantaru.com/blog/2011/10/08/water-erosion-on-heightmap-terrain/
+void apply_erosion() {
+
+	if (erosion_iters == 0) return; // erosion disabled
+	RESET_TIME;
+	float const Kq=10, Kw=0.001f, Kr=0.9f, Kd=0.02f, Ki=0.1f, minSlope=0.05f, g=20, Kg=g*2;
+	vector<vector2d> erosion(XY_MULT_SIZE, vector2d(0.0, 0.0));
+	const unsigned MAX_PATH_LEN=XY_MULT_SIZE*4;
+
+#define HMAP(x, y) mesh_height[max(min(y, MESH_Y_SIZE-1), 0)][max(min(x, MESH_X_SIZE-1), 0)]
+#define HMAP_INDEX(x, y) (MESH_Y_SIZE*max(min(x, MESH_X_SIZE-1), 0) + max(min(y, MESH_Y_SIZE-1), 0))
+
+#define DEPOSIT_AT(X, Z, W) { \
+	float delta = ds*(W); \
+	erosion[HMAP_INDEX((X), (Z))].y += delta; \
+	if (!point_outside_mesh(X, Z)) {HMAP(X, Z) +=delta;} \
+}
+
+#define DEPOSIT(H) \
+	DEPOSIT_AT(xi  , zi  , (1-xf)*(1-zf)) \
+	DEPOSIT_AT(xi+1, zi  ,    xf *(1-zf)) \
+	DEPOSIT_AT(xi  , zi+1, (1-xf)*   zf ) \
+	DEPOSIT_AT(xi+1, zi+1,    xf *   zf ) \
+	(H)+=ds;
+
+#define ERODE(X, Z, W) { \
+	float delta=ds*(W); \
+	HMAP(X, Z)-=delta; \
+	vector2d &e=erosion[HMAP_INDEX((X), (Z))]; \
+	float r=e.x, d=e.y; \
+	if (delta<=d) {d-=delta;} else { r+=delta-d; d=0; } \
+	e.x=r; e.y=d; \
+}
+
+	for (unsigned iter=0; iter < erosion_iters; ++iter) {
+		int xi=rand()&(MESH_X_SIZE-1);
+		int zi=rand()&(MESH_Y_SIZE-1);
+		float xp=xi, zp=zi, xf=0, zf=0, s=0, v=0, w=1, dx=0, dz=0;
+		float h=HMAP(xi, zi), h00=h, h10=HMAP(xi+1, zi), h01=HMAP(xi, zi+1), h11=HMAP(xi+1, zi+1);
+
+		unsigned numMoves=0;
+		for (; numMoves<MAX_PATH_LEN; ++numMoves) {
+			// calc gradient
+			float gx=h00+h01-h10-h11, gz=h00+h10-h01-h11;
+			// calc next pos
+			dx=(dx-gx)*Ki+gx;
+			dz=(dz-gz)*Ki+gz;
+
+			float dl=sqrtf(dx*dx+dz*dz);
+			if (dl<=FLT_EPSILON) { // pick random dir
+				float a=rand_float()*TWO_PI;
+				dx=cosf(a); dz=sinf(a);
+			}
+			else {
+				dx/=dl; dz/=dl;
+			}
+			float nxp=xp+dx, nzp=zp+dz;
+			// sample next height
+			int nxi=floor(nxp), nzi=floor(nzp);
+			float nxf=nxp-nxi, nzf=nzp-nzi;
+			float nh00=HMAP(nxi, nzi), nh10=HMAP(nxi+1, nzi), nh01=HMAP(nxi, nzi+1), nh11=HMAP(nxi+1, nzi+1);
+			float nh=(nh00*(1-nxf)+nh10*nxf)*(1-nzf)+(nh01*(1-nxf)+nh11*nxf)*nzf;
+
+			// if higher than current, try to deposit sediment up to neighbour height
+			if (nh>=h || point_outside_mesh(xi, zi)) {
+				float ds=(nh-h)+0.001f;
+
+				if (ds>=s || point_outside_mesh(xi, zi)) {
+					ds=s;
+					DEPOSIT(h) // deposit all sediment
+					s=0;
+					break; // stop
+				}
+				DEPOSIT(h)
+				s-=ds;
+				v=0;
+			}
+			// compute transport capacity
+			float dh=h-nh;
+			float slope=dh;
+			//float slope=dh/sqrtf(dh*dh+1);
+			float q=max(slope, minSlope)*v*w*Kq;
+
+			// deposit/erode (don't erode more than dh)
+			float ds=s-q;
+			if (ds>=0) { // deposit
+				ds*=Kd;
+				//ds=minval(ds, 1.0f);
+				DEPOSIT(dh)
+				s-=ds;
+			}
+			else { // erode
+				ds*=-Kr;
+				ds=min(ds, dh*0.99f);
+
+				for (int z=zi-1; z<=zi+2; ++z) {
+					float zo=z-zp, zo2=zo*zo;
+
+					for (int x=xi-1; x<=xi+2; ++x) {
+						float xo=x-xp;
+						float w=1-(xo*xo+zo2)*0.25f;
+						if (w<=0) continue;
+						w*=0.1591549430918953f;
+						ERODE(x, z, w)
+					}
+				}
+				dh-=ds;
+				s+=ds;
+			}
+			// move to the neighbor
+			v=sqrtf(v*v+Kg*dh);
+			w*=1-Kw;
+			xp=nxp; zp=nzp; xi=nxi; zi=nzi; xf=nxf; zf=nzf;
+			h=nh; h00=nh00; h10=nh10; h01=nh01; h11=nh11;
+		} // for numMoves
+		if (numMoves>=MAX_PATH_LEN) {cout << "droplet path is too long: " << iter << endl;}
+	} // for iter
+
+	// clamp to zbottom
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			mesh_height[y][x] = max(zbottom, mesh_height[y][x]);
+		}
+	}
+	PRINT_TIME("Erosion");
+}
+
+
 // should be named setup_lltex_sand_dirt() or something like that?
 void init_terrain_mesh() {
 
@@ -424,6 +553,7 @@ void gen_terrain_map() {
 		glaciate_exp     = 1.0;
 		glaciate_exp_inv = 1.0;
 	}
+	apply_erosion();
 }
 
 

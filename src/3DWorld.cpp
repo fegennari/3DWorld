@@ -114,7 +114,7 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, scene_smap_vbo_invalid;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
@@ -1568,6 +1568,7 @@ int load_config(string const &config_file) {
 	kwmu.add("max_ray_bounces", MAX_RAY_BOUNCES);
 	kwmu.add("num_test_snowflakes", num_snowflakes);
 	kwmu.add("hmap_filter_width", hmap_filter_width);
+	kwmu.add("erosion_iters", erosion_iters);
 
 	kw_to_val_map_t<float> kwmf(error);
 	kwmf.add("gravity", base_gravity);

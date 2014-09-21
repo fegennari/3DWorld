@@ -54,6 +54,7 @@ mesh_freq_filter 0 # rougher landscape
 #hmap_crat_height 0.5  hmap_crat_slope 2.0
 #hmap_crack_lo 0  hmap_crack_hi 0.05  hmap_crack_depth 4.0
 hmap_sine_mag 5.0  hmap_sine_freq 0.001  hmap_sine_bias -4.0
+#erosion_iters 5000
 
 #snow_depth 0.05
 snow_random 0.0
