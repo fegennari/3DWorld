@@ -560,7 +560,13 @@ void gen_terrain_map() {
 void estimate_zminmax(bool using_eq) {
 
 	if (mesh_scale_change) {
-		set_zmax_est(max(max(-zmin, zmax), zmax_est));
+		// don't include max() with -zmin or zmax when sine_bias has been set, as this creates sharp transitions in zmax_est
+		// when the initial estimation doesn't include points that fall within the full range of sine values
+		// FIXME: better way to handle sine_bias? never max() with -zmin/zmax and just let height values fall outside the estimation?
+		float zp(zmax_est);
+		if (hmap_params.sine_bias >= 0.0) {zp = max(zp, -zmin);}
+		if (hmap_params.sine_bias <= 0.0) {zp = max(zp,  zmax);}
+		set_zmax_est(zp);
 		mesh_scale_change = 0;
 		set_zvals();
 		return;

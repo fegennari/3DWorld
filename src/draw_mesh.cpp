@@ -39,7 +39,7 @@ vector<fp_ratio> uw_mesh_lighting; // for water caustics
 extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
-extern float zmax, zmin, zmax_est, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
+extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, sun_radius;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;

@@ -180,7 +180,7 @@ extern bool mesh_difuse_tex_comp, water_is_lava;
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid;
 extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only;
-extern float zmax, zmin, zmax_est, glaciate_exp, relh_adj_tex, vegetation, fticks;
+extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation, fticks;
 extern char *mesh_diffuse_tex_fn;
 
 
