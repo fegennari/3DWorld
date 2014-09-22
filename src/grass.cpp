@@ -785,17 +785,21 @@ public:
 		assert(empty()); // or clear
 		if (no_grass()) return; // no grass, no flowers
 		RESET_TIME;
-		unsigned const num(grass_density*XY_MULT_SIZE/100); // one flower per 100 grass blades
+		unsigned const num(grass_density*XY_MULT_SIZE/64); // one flower per 64 grass blades
+		float const fds(1000.0), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
 		rand_gen_t rgen;
+		mesh_xy_grid_cache_t density_gen;
+		density_gen.build_arrays(xscale*xoff2, yscale*yoff2, xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
 		
 		for (unsigned i = 0; i < num; ++i) {
 			float const xv(X_SCENE_SIZE*rgen.signed_rand_float()), yv(Y_SCENE_SIZE*rgen.signed_rand_float());
 			float const grass_density(get_grass_density(point(xv, yv, 0.0))); // pos.z is unused
 			if (grass_density == 0.0 || grass_density < rgen.rand_float()) continue; // no flower
+			if (density_gen.eval_index(get_xpos(xv), get_ypos(yv), 0, 0, 1, 0) > get_median_height(0.5)) continue; // density function test
 			float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
-			point const pos(xv, yv, (mh + grass_length*rgen.rand_uniform(0.8, 1.2)));
+			point const pos(xv, yv, (mh + grass_length*rgen.rand_uniform(0.8, 1.0)));
 			vector3d const normal((plus_z + rgen.signed_rand_vector(0.2)).get_norm()); // facing mostly up (or face toward sun?)
-			float const radius(grass_width*rgen.rand_uniform(1.5, 3.0));
+			float const radius(grass_width*rgen.rand_uniform(1.5, 2.5));
 			colorRGBA const color(WHITE); // FIXME: white, yellow, etc.
 			flowers.push_back(flower_t(pos, normal, radius, color));
 		}
