@@ -156,6 +156,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship2.jpg"),
 texture_t(0, 6, 0,    0,    0, 4, 1, "atlas/blood.png"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "lichen.jpg", 0, 0), // 1500x1500, compression is probably slow
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/palm_bark.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    0, 4, 3, "daisy.jpg", 0, 1, 4.0), // 1024x1024
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
@@ -445,8 +446,8 @@ void texture_t::do_gl_init() {
 	else {
 		assert(is_allocated() && width > 0 && height > 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
-		if (use_mipmaps == 1 || use_mipmaps == 2) gen_mipmaps();
-		if (use_mipmaps == 3) create_custom_mipmaps();
+		if (use_mipmaps == 1 || use_mipmaps == 2) {gen_mipmaps();}
+		if (use_mipmaps == 3) {create_custom_mipmaps();}
 	}
 	assert(glIsTexture(tid));
 	//PRINT_TIME("Texture Init");
@@ -653,7 +654,10 @@ void texture_t::auto_insert_alpha_channel(int index) {
 				if (i == 0) { // key off of first (llc) pixel
 					alpha_white = (index == SMILEY_SKULL_TEX) ? 0 : ((int)buf[0] + (int)buf[1] + (int)buf[2] > 400);
 				}
-				if (alpha_white) {
+				if (index == DAISY_TEX) {
+					alpha = ((buf[0] == 255 && buf[1] == 255 && buf[2] == 255) ? 0 : 255); // all white = transparent
+				}
+				else if (alpha_white) {
 					float const thresh((index == LEAF3_TEX) ? 700.0 : 600.0);
 					alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55*(thresh - val))));
 				}
@@ -834,9 +838,16 @@ void texture_t::create_custom_mipmaps() {
 				else { // custom alpha mipmaps
 					assert(ncolors == 4);
 					unsigned const a1(idata[ix2+3]), a2(idata[ix2+xinc+3]), a3(idata[ix2+yinc+3]), a4(idata[ix2+yinc+xinc+3]);
-					unsigned const a_sum(max(1U, (a1 + a2 + a3 + a4))); // no div by 0
-					UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_]) / a_sum);)
-					odata[ix1+3] = min(255U, min(max(max(a1, a2), max(a3, a4)), unsigned(mipmap_alpha_weight*a_sum)));
+					unsigned const a_sum(a1 + a2 + a3 + a4);
+
+					if (a_sum == 0) { // fully transparent - color is average of all 4 values
+						UNROLL_3X(odata[ix1+i_] = (unsigned char)((idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) / 4);)
+						odata[ix1+3] = 0;
+					}
+					else {
+						UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_]) / a_sum);)
+						odata[ix1+3] = min(255U, min(max(max(a1, a2), max(a3, a4)), unsigned(mipmap_alpha_weight*a_sum)));
+					}
 				}
 			}
 		}

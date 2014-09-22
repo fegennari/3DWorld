@@ -9,7 +9,7 @@
 #include "3DWorld.h"
 
 int const NTEX_DIRT    = 5;
-int const NUM_TEXTURES = 107;
+int const NUM_TEXTURES = 108;
 
 struct ttex {
 
