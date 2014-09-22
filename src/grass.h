@@ -74,4 +74,34 @@ public:
 };
 
 
+class flower_manager_t {
+
+protected:
+	struct flower_t { // size = 44
+		point pos;
+		vector3d normal;
+		float radius;
+		colorRGBA color;
+
+		flower_t() {}
+		flower_t(point const &p, vector3d const &n, float r, colorRGBA const &c) : pos(p), normal(n), radius(r), color(c) {}
+	};
+
+	vector<flower_t> flowers;
+	unsigned vbo;
+
+public:
+	flower_manager_t() : vbo(0) {}
+	unsigned get_vertex_count() const {return 6*flowers.size();} // 2 triangles (6 verts) per flower
+	size_t size() const {return flowers.size ();}
+	bool empty () const {return flowers.empty();}
+	void clear() {free_vbo(); flowers.clear();}
+	void free_vbo();
+};
+
+class flower_tile_manager_t : public flower_manager_t {
+	// TODO
+};
+
+
 #endif // _GRASS_H_
