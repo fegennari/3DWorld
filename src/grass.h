@@ -14,7 +14,19 @@ unsigned const GRASS_BLOCK_SZ       = 4;
 float const TT_GRASS_COLOR_SCALE    = 0.5;
 
 
-class grass_manager_t {
+class detail_scenery_t {
+protected:
+	unsigned vbo;
+
+public:
+	detail_scenery_t() : vbo(0) {}
+	void free_vbo();
+	static void setup_shaders_pre(shader_t &s);
+	static void setup_shaders_post(shader_t &s);
+};
+
+
+class grass_manager_t : public detail_scenery_t {
 
 protected:
 	struct grass_t { // size = 44
@@ -32,7 +44,6 @@ protected:
 	};
 
 	vector<grass_t> grass;
-	unsigned vbo;
 	bool data_valid;
 	rand_gen_pregen_t rgen;
 	typedef vert_norm_comp_color grass_data_t;
@@ -40,12 +51,11 @@ protected:
 	vector3d interpolate_mesh_normal(point const &pos) const;
 
 public:
-	grass_manager_t() : vbo(0), data_valid(0) {}
+	grass_manager_t() : data_valid(0) {}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~grass_manager_t() {clear();}
 	size_t size() const {return grass.size ();} // 2 points per grass blade
 	bool empty()  const {return grass.empty();}
-	void free_vbo();
 	void clear();
 	void add_grass_blade(point const &pos, float cscale, bool on_mesh);
 	void create_new_vbo();
@@ -74,7 +84,7 @@ public:
 };
 
 
-class flower_manager_t {
+class flower_manager_t : public detail_scenery_t {
 
 protected:
 	struct flower_t { // size = 44
@@ -88,15 +98,14 @@ protected:
 	};
 
 	vector<flower_t> flowers;
-	unsigned vbo;
 
 public:
-	flower_manager_t() : vbo(0) {}
 	unsigned get_vertex_count() const {return 6*flowers.size();} // 2 triangles (6 verts) per flower
 	size_t size() const {return flowers.size ();}
 	bool empty () const {return flowers.empty();}
 	void clear() {free_vbo(); flowers.clear();}
-	void free_vbo();
+	void check_vbo();
+	void draw_triangles(shader_t &shader) const;
 };
 
 class flower_tile_manager_t : public flower_manager_t {

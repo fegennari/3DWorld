@@ -32,6 +32,31 @@ extern coll_obj_group coll_objects;
 bool is_grass_enabled();
 
 
+// *** detail scenery (shared with grass and flowers)
+
+void detail_scenery_t::free_vbo() {
+	delete_and_zero_vbo(vbo);
+}
+
+void detail_scenery_t::setup_shaders_pre(shader_t &s) { // used for grass and flowers
+	s.setup_enabled_lights(2, 2); // FS; L0-L1: static directional
+	set_dlights_booleans(s, 1, 1); // FS
+	s.check_for_fog_disabled();
+	s.set_prefix("#define NO_DL_SPECULAR", 1); // FS ???
+	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
+}
+
+void detail_scenery_t::setup_shaders_post(shader_t &s) { // used for grass and flowers
+	s.begin_shader();
+	s.setup_scene_bounds();
+	setup_dlight_textures(s);
+	if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
+	setup_wind_for_shader(s, 1);
+	s.add_uniform_int("tex0", 0);
+	s.setup_fog_scale();
+}
+
+
 // *** grass ***
 
 void grass_manager_t::grass_t::merge(grass_t const &g) {
@@ -43,10 +68,6 @@ void grass_manager_t::grass_t::merge(grass_t const &g) {
 	//UNROLL_3X(c[i_] = (unsigned char)(unsigned(c[i_]) + unsigned(g.c[i_]))/2;) // don't average colors because they're used for the density filtering hash
 	// keep original shadowed bit
 	w  += g.w; // add widths to preserve surface area
-}
-
-void grass_manager_t::free_vbo() {
-	delete_and_zero_vbo(vbo);
 }
 
 void grass_manager_t::clear() {
@@ -639,22 +660,6 @@ public:
 		if (beg_ix < end_ix) {glDrawArrays(GL_TRIANGLES, 3*beg_ix, 3*(end_ix - beg_ix));} // nonempty segment
 	}
 
-	static void setup_shaders_pre(shader_t &s) { // used for grass and flowers
-		s.setup_enabled_lights(2, 2); // FS; L0-L1: static directional
-		set_dlights_booleans(s, 1, 1); // FS
-		s.check_for_fog_disabled();
-		s.set_prefix("#define NO_DL_SPECULAR", 1); // FS ???
-		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
-	}
-	static void setup_shaders_post(shader_t &s) { // used for grass and flowers
-		s.begin_shader();
-		s.setup_scene_bounds();
-		setup_dlight_textures(s);
-		if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
-		setup_wind_for_shader(s, 1);
-		s.add_uniform_int("tex0", 0);
-		s.setup_fog_scale();
-	}
 	static void setup_shaders(shader_t &s, bool distant) { // per-pixel dynamic lighting
 		setup_shaders_pre(s);
 		if (distant) {s.set_prefix("#define NO_GRASS_TEXTURE", 1);} // FS
@@ -774,8 +779,31 @@ grass_manager_dynamic_t grass_manager;
 
 // *** flowers ***
 
-void flower_manager_t::free_vbo() {
-	delete_and_zero_vbo(vbo);
+
+void flower_manager_t::check_vbo() {
+
+	if (vbo != 0 || empty()) return; // nothing to update
+	quad_batch_draw qbd;
+	qbd.verts.reserve(get_vertex_count());
+
+	for (auto i = flowers.begin(); i != flowers.end(); ++i) {
+		vector3d v1(zero_vector), v2;
+		v1[get_min_dim(i->normal)] = 1.0;
+		v2 = cross_product(i->normal, v1).get_norm();
+		v1 = cross_product(i->normal, v2).get_norm();
+		qbd.add_quad_dirs(i->pos, i->radius*v1, i->radius*v2, i->color, i->normal);
+	}
+	create_vbo_and_upload(vbo, qbd.verts);
+}
+
+void flower_manager_t::draw_triangles(shader_t &shader) const {
+
+	assert(vbo > 0);
+	bind_vbo(vbo);
+	vert_norm_tc_color::set_vbo_arrays();
+	select_texture(DAISY_TEX);
+	glDrawArrays(GL_TRIANGLES, 0, get_vertex_count());
+	bind_vbo(0);
 }
 
 
@@ -785,63 +813,46 @@ public:
 		assert(empty()); // or clear
 		if (no_grass()) return; // no grass, no flowers
 		RESET_TIME;
-		unsigned const num(grass_density*XY_MULT_SIZE/64); // one flower per 64 grass blades
-		float const fds(1000.0), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
+		unsigned const num(grass_density*XY_MULT_SIZE/50); // one flower per 50 grass blades
+		unsigned const NUM_COLORS = 3;
+		colorRGBA const colors[NUM_COLORS] = {WHITE, YELLOW, LT_BLUE};
 		rand_gen_t rgen;
-		mesh_xy_grid_cache_t density_gen;
-		density_gen.build_arrays(xscale*xoff2, yscale*yoff2, xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
-		
+		mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
+
+		for (unsigned i = 0; i < 2; ++i) {
+			float const fds(1000.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
+			density_gen[i].build_arrays(xscale*xoff2, yscale*yoff2, xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
+		}
 		for (unsigned i = 0; i < num; ++i) {
 			float const xv(X_SCENE_SIZE*rgen.signed_rand_float()), yv(Y_SCENE_SIZE*rgen.signed_rand_float());
 			float const grass_density(get_grass_density(point(xv, yv, 0.0))); // pos.z is unused
 			if (grass_density == 0.0 || grass_density < rgen.rand_float()) continue; // no flower
-			if (density_gen.eval_index(get_xpos(xv), get_ypos(yv), 0, 0, 1, 0) > get_median_height(0.5)) continue; // density function test
+			int const xpos(get_xpos(xv)), ypos(get_ypos(yv));
+			if (density_gen[0].eval_index(xpos, ypos, 0, 0, 1, 0) > get_median_height(0.5)) continue; // density function test
 			float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
-			point const pos(xv, yv, (mh + grass_length*rgen.rand_uniform(0.8, 1.0)));
+			point const pos(xv, yv, (mh + grass_length*rgen.rand_uniform(0.85, 1.0)));
 			vector3d const normal((plus_z + rgen.signed_rand_vector(0.2)).get_norm()); // facing mostly up (or face toward sun?)
 			float const radius(grass_width*rgen.rand_uniform(1.5, 2.5));
-			colorRGBA const color(WHITE); // FIXME: white, yellow, etc.
+			colorRGBA const &color(colors[int(0.5*NUM_COLORS*density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0))%NUM_COLORS]);
 			flowers.push_back(flower_t(pos, normal, radius, color));
 		}
 		PRINT_TIME("Gen Flowers");
-	}
-
-	void check_vbo_and_draw() {
-		if (vbo == 0 && !empty()) {
-			quad_batch_draw qbd;
-			qbd.verts.reserve(get_vertex_count());
-
-			for (auto i = flowers.begin(); i != flowers.end(); ++i) {
-				vector3d v1(zero_vector), v2;
-				v1[get_min_dim(i->normal)] = 1.0;
-				v2 = cross_product(i->normal, v1).get_norm();
-				v1 = cross_product(i->normal, v2).get_norm();
-				qbd.add_quad_dirs(i->pos, i->radius*v1, i->radius*v2, i->color, i->normal);
-			}
-			create_vbo_and_upload(vbo, qbd.verts);
-		}
-		draw();
 	}
 
 	void draw() const {
 		if (empty()) return; // nothing to draw
 		if (display_mode & 0x10) return;
 		shader_t s;
-		grass_manager_dynamic_t::setup_shaders_pre(s);
-		s.set_prefix("#define ENABLE_ALPHA_TEST", 1); // FS
+		setup_shaders_pre(s);
 		s.set_vert_shader("wind.part*+flowers_pp_dl");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+grass_with_dlights");
-		grass_manager_dynamic_t::setup_shaders_post(s);
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+flowers");
+		setup_shaders_post(s);
 		s.add_uniform_float("height", grass_length);
+		s.add_uniform_float("min_alpha", 0.9);
 		s.set_specular(0.0, 1.0);
-		assert(vbo > 0);
-		bind_vbo(vbo);
-		vert_norm_tc_color::set_vbo_arrays();
-		select_texture(DAISY_TEX);
-		enable_blend();
-		glDrawArrays(GL_TRIANGLES, 0, get_vertex_count());
-		disable_blend();
-		bind_vbo(0);
+		//enable_blend();
+		draw_triangles(s);
+		//disable_blend();
 		s.end_shader();
 	}
 };
@@ -894,7 +905,8 @@ void update_grass_vbos() {
 void draw_grass() { // and flowers
 	if (!no_grass() && (display_mode & 0x02)) {
 		grass_manager.draw();
-		flower_manager.check_vbo_and_draw();
+		flower_manager.check_vbo();
+		flower_manager.draw();
 	}
 }
 
