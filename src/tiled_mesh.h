@@ -114,6 +114,7 @@ private:
 	small_tree_group pine_trees;
 	scenery_group scenery;
 	tree_cont_t decid_trees;
+	flower_tile_manager_t flowers;
 
 	struct grass_block_t {
 		unsigned ix; // 0 is unused
@@ -262,6 +263,7 @@ public:
 	void update_scenery();
 	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass);
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
+	void draw_flowers(shader_t &s, bool use_cloud_shadows, int lt_loc);
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);

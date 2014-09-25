@@ -98,6 +98,7 @@ protected:
 	};
 
 	vector<flower_t> flowers;
+	rand_gen_t rgen;
 
 public:
 	unsigned get_vertex_count() const {return 6*flowers.size();} // 2 triangles (6 verts) per flower
@@ -105,11 +106,16 @@ public:
 	bool empty () const {return flowers.empty();}
 	void clear() {free_vbo(); flowers.clear();}
 	void check_vbo();
+	static void setup_flower_shader_post(shader_t &shader);
 	void draw_triangles(shader_t &shader) const;
+	void add_flower(point pos, float color_val);
+	point gen_flower_loc();
 };
 
+
 class flower_tile_manager_t : public flower_manager_t {
-	// TODO
+public:
+	void gen_flowers();
 };
 
 

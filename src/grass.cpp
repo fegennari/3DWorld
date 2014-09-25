@@ -18,7 +18,7 @@
 
 bool grass_enabled(1);
 unsigned grass_density(0);
-float grass_length(0.02), grass_width(0.002);
+float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 
 extern bool no_sun_lpos_update;
 extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
@@ -779,6 +779,7 @@ grass_manager_dynamic_t grass_manager;
 
 // *** flowers ***
 
+float const FLOWER_DIST_THRESH = 0.5;
 
 void flower_manager_t::check_vbo() {
 
@@ -796,6 +797,13 @@ void flower_manager_t::check_vbo() {
 	create_vbo_and_upload(vbo, qbd.verts);
 }
 
+void flower_manager_t::setup_flower_shader_post(shader_t &shader) {
+
+	shader.add_uniform_float("height", grass_length);
+	shader.add_uniform_float("min_alpha", 0.9);
+	shader.set_specular(0.0, 1.0);
+}
+
 void flower_manager_t::draw_triangles(shader_t &shader) const {
 
 	assert(vbo > 0);
@@ -806,35 +814,74 @@ void flower_manager_t::draw_triangles(shader_t &shader) const {
 	bind_vbo(0);
 }
 
+unsigned get_num_flowers() {
+	return (no_grass() ? 0 : unsigned(flower_density*XY_MULT_SIZE));
+}
+
+void flower_manager_t::add_flower(point pos, float color_val) {
+
+	unsigned const NUM_COLORS = 3;
+	colorRGBA const colors[NUM_COLORS] = {WHITE, YELLOW, LT_BLUE};
+	pos.z += grass_length*rgen.rand_uniform(0.85, 1.0);
+	vector3d const normal((plus_z + rgen.signed_rand_vector(0.2)).get_norm()); // facing mostly up (or face toward sun?)
+	float const radius(grass_width*rgen.rand_uniform(1.5, 2.5));
+	colorRGBA const &color(colors[int(0.5*NUM_COLORS*color_val)%NUM_COLORS]);
+	flowers.push_back(flower_t(pos, normal, radius, color));
+}
+
+point flower_manager_t::gen_flower_loc() { // only x and y
+	return point(X_SCENE_SIZE*rgen.signed_rand_float(), Y_SCENE_SIZE*rgen.signed_rand_float(), 0.0);
+}
+
+
+void flower_tile_manager_t::gen_flowers() {
+
+	// FIXME: duplicate code
+	return; // FIXME: not ready
+	assert(empty()); // or call clear()?
+	unsigned const num(get_num_flowers());
+	if (num == 0) return; // no grass, no flowers
+	mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
+
+	for (unsigned i = 0; i < 2; ++i) {
+		float const fds(1000.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
+		density_gen[i].build_arrays(xscale*xoff2, yscale*yoff2, xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
+	}
+	for (unsigned i = 0; i < num; ++i) {
+		point pos(gen_flower_loc());
+		//float const grass_density(???); // pos.z is unused
+		//if (grass_density == 0.0 || (grass_density < 1.0 && grass_density < rgen.rand_float())) continue; // no flower
+		int const xpos(get_xpos_clamp(pos.x)), ypos(get_ypos_clamp(pos.y));
+		// FIXME: interpolate density function across 4 corners
+		if (density_gen[0].eval_index(xpos, ypos, 0, 0, 1, 0) > get_median_height(FLOWER_DIST_THRESH)) continue; // density function test
+		pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
+		add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0));
+	}
+}
+
 
 class flower_manager_dynamic_t : public flower_manager_t {
 public:
 	void gen_flowers() {
-		assert(empty()); // or clear
-		if (no_grass()) return; // no grass, no flowers
-		RESET_TIME;
-		unsigned const num(grass_density*XY_MULT_SIZE/50); // one flower per 50 grass blades
-		unsigned const NUM_COLORS = 3;
-		colorRGBA const colors[NUM_COLORS] = {WHITE, YELLOW, LT_BLUE};
-		rand_gen_t rgen;
+		assert(empty()); // or call clear()?
+		unsigned const num(get_num_flowers());
+		if (num == 0) return; // no grass, no flowers
 		mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
+		RESET_TIME;
 
 		for (unsigned i = 0; i < 2; ++i) {
 			float const fds(1000.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
 			density_gen[i].build_arrays(xscale*xoff2, yscale*yoff2, xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
 		}
 		for (unsigned i = 0; i < num; ++i) {
-			float const xv(X_SCENE_SIZE*rgen.signed_rand_float()), yv(Y_SCENE_SIZE*rgen.signed_rand_float());
-			float const grass_density(get_grass_density(point(xv, yv, 0.0))); // pos.z is unused
-			if (grass_density == 0.0 || grass_density < rgen.rand_float()) continue; // no flower
-			int const xpos(get_xpos(xv)), ypos(get_ypos(yv));
-			if (density_gen[0].eval_index(xpos, ypos, 0, 0, 1, 0) > get_median_height(0.5)) continue; // density function test
-			float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
-			point const pos(xv, yv, (mh + grass_length*rgen.rand_uniform(0.85, 1.0)));
-			vector3d const normal((plus_z + rgen.signed_rand_vector(0.2)).get_norm()); // facing mostly up (or face toward sun?)
-			float const radius(grass_width*rgen.rand_uniform(1.5, 2.5));
-			colorRGBA const &color(colors[int(0.5*NUM_COLORS*density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0))%NUM_COLORS]);
-			flowers.push_back(flower_t(pos, normal, radius, color));
+			point pos(gen_flower_loc());
+			float const grass_density(get_grass_density(pos)); // pos.z is unused
+			if (grass_density == 0.0 || (grass_density < 1.0 && grass_density < rgen.rand_float())) continue; // no flower
+			int const xpos(get_xpos_clamp(pos.x)), ypos(get_ypos_clamp(pos.y));
+			// FIXME: interpolate density function across 4 corners
+			if (density_gen[0].eval_index(xpos, ypos, 0, 0, 1, 0) > get_median_height(FLOWER_DIST_THRESH)) continue; // density function test
+			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
+			add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0));
 		}
 		PRINT_TIME("Gen Flowers");
 	}
@@ -847,12 +894,8 @@ public:
 		s.set_vert_shader("wind.part*+flowers_pp_dl");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+flowers");
 		setup_shaders_post(s);
-		s.add_uniform_float("height", grass_length);
-		s.add_uniform_float("min_alpha", 0.9);
-		s.set_specular(0.0, 1.0);
-		//enable_blend();
+		setup_flower_shader_post(s);
 		draw_triangles(s);
-		//disable_blend();
 		s.end_shader();
 	}
 };
