@@ -1,5 +1,4 @@
-#define TEST_CLIP_T(va, vb, vd, vc) {float t = ((va) - (vb))/(vd); if ((vc) > 0.0) \
-                                          {if (t > tmin) tmin = t;} else {if (t < tmax) tmax = t;}}
+#define TEST_CLIP_T(va, vb, vd, vc) {float t = ((va) - (vb))/(vd); if ((vc) > 0.0) {if (t > tmin) tmin = t;} else {if (t < tmax) tmax = t;}}
 
 struct pt_pair {
 	vec3 v1, v2;

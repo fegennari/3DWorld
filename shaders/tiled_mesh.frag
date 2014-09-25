@@ -37,9 +37,10 @@ vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos,
 vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 light_dir = normalize(fg_LightSource[i].position.xyz);
+	vec3 epos_final = epos.xyz;
 #ifdef USE_NORMAL_MAP
 	ds_scale *= clamp(5.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
-	normal    = apply_bump_map(light_dir, epos, normal, bump_scale);
+	normal    = apply_bump_map(light_dir, epos_final, normal, bump_scale);
 #endif
 		
 	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex
@@ -55,7 +56,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	
 	// compute the ambient and diffuse lighting
 	vec4 color = a_scale*fg_LightSource[i].ambient + ds_scale*max(dot(normal, light_dir), 0.0)*fg_LightSource[i].diffuse;
-	if (enable_light0) {color += get_light_specular_comp(normal, light_dir, epos.xyz, ds_scale*spec, shininess);}
+	if (enable_light0) {color += get_light_specular_comp(normal, light_dir, epos_final, ds_scale*spec, shininess);}
 	
 #ifdef HAS_WATER
 	if (vertex.z < water_plane_z) { // underwater
