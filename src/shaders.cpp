@@ -16,6 +16,7 @@ using namespace std;
 bool const PRINT_SHADER = 0; // print shaders loaded from files
 bool const DEBUG_SHADER = 0; // print final generated shaders
 bool const PRINT_LOG    = 0;
+bool const GEN_FINAL_SHADER_FILES = 0;
 
 string const shaders_dir = "shaders";
 string const shader_prefix_shared_file = "common_header_shared.part*";
@@ -640,6 +641,21 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		}
 		if (failed) continue;
 		if (DEBUG_SHADER) {cout << "final shader data for <" << name << ">:" << endl << data << endl;}
+
+		if (GEN_FINAL_SHADER_FILES) {
+			string const out_dir("shaders/generated");
+			string filename;
+
+			for (auto i = name.begin(); i != name.end(); ++i) {
+				if (*i != '*') {filename.push_back(*i);} // skip special character
+				if (filename.size() > 160) break; // limit filename length
+			}
+			string const out_fn(out_dir + "/" + filename + "." + shader_name_table[type]);
+			cout << "writing shader file " << out_fn << endl;
+			ofstream out(out_fn);
+			assert(out.good());
+			out << data << endl;
+		}
 		shader = glCreateShader(shader_type_table[type]);
 	
 		if (!shader) {

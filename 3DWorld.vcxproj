@@ -875,6 +875,7 @@
     <None Include="shaders\exponential_fog.part.frag" />
     <None Include="shaders\flowers.frag" />
     <None Include="shaders\flowers_pp_dl.vert" />
+    <None Include="shaders\flowers_tiled.frag" />
     <None Include="shaders\fog_epos_only.frag" />
     <None Include="shaders\fog_epos_only.vert" />
     <None Include="shaders\fog_only.frag" />
