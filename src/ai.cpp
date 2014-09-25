@@ -1400,9 +1400,7 @@ void init_sstate(int id, bool w_start) {
 
 void init_smileys() {
 
-	for (int i = 0; i < num_smileys; ++i) {
-		init_smiley(i);
-	}
+	for (int i = 0; i < num_smileys; ++i) {init_smiley(i);}
 }
 
 

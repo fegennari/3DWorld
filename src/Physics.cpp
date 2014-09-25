@@ -1166,6 +1166,7 @@ void reanimate_objects() {
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
 		if (!objg.enabled) continue;
+		if (objg.type == SMILEY) continue; // doesn't apply to smileys, since they move independently from the physics system
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
