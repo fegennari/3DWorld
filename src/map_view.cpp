@@ -52,7 +52,8 @@ void draw_overhead_map() {
 	while (min(window_width, window_height) > 2*nx) nx *= 2;
 	if (nx < 4) return;
 	int const ny(nx), nx2(nx/2), ny2(ny/2);
-	bool const no_water((DISABLE_WATER == 2) || !(display_mode & 0x04)), is_ice(temperature <= W_FREEZE_POINT);
+	bool const no_water((DISABLE_WATER == 2) || !(display_mode & 0x04));
+	bool const is_ice(((world_mode == WMODE_GROUND) ? temperature : get_cur_temperature()) <= W_FREEZE_POINT);
 	float const zmax2(zmax_est*((map_color || no_water) ? 1.0 : 0.855)), hscale(0.5/zmax2);
 	float const scale(2.0*map_zoom*X_SCENE_SIZE*DX_VAL), scale_val(scale/64);
 	float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
