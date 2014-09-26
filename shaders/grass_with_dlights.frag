@@ -1,9 +1,9 @@
 uniform vec4 color_scale = vec4(1.0);
 uniform sampler2D tex0;
 
-varying vec3 dlpos, normal; // world space
-varying vec3 eye_norm;
-varying vec2 tc;
+in vec3 dlpos, normal; // world space
+in vec3 eye_norm;
+in vec2 tc;
 
 void main()
 {

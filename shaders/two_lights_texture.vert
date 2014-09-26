@@ -4,9 +4,9 @@ uniform float vertex_offset_scale = 0.0;// hack to make vertex_offset ignored wh
 uniform vec3 xlate = vec3(0);
 uniform vec3 scale = vec3(1);
 
-attribute vec3 vertex_offset;
+in vec3 vertex_offset;
 
-varying vec2 tc;
+out vec2 tc;
 
 void main()
 {

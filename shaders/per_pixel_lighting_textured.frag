@@ -2,9 +2,9 @@ uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform vec4  emission  = vec4(0,0,0,1);
 
-varying vec3 dlpos, dl_normal; // world space
-varying vec3 normal;
-//varying vec2 tc; // comes from detail_normal_map.part.frag
+in vec3 dlpos, dl_normal; // world space
+in vec3 normal;
+//in vec2 tc; // comes from detail_normal_map.part.frag
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 	return apply_bump_map(light_dir, eye_pos, normal, 1.0);

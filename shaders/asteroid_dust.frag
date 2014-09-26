@@ -1,8 +1,8 @@
 uniform float alpha_scale = 1.0;
 uniform sampler2D tex0;
 
-varying vec3 world_space_pos;
-varying vec4 epos;
+in vec3 world_space_pos;
+in vec4 epos;
 
 vec3 get_sphere_point_sprite_normal() {
 
@@ -27,15 +27,13 @@ void main()
 #else
 	vec3 normal = normalize(-epos.xyz); // facing the camera
 #endif
-	vec3 color     = vec4(0.0);
-	float atten[2] = {1.0, 1.0};
+	vec3 color   = vec3(0.0);
+	float atten0 = 1.0;
 #ifdef ENABLE_SHADOWS
-	atten[0] = calc_shadow_atten(world_space_pos);
+	atten0 = calc_shadow_atten(world_space_pos);
 #endif
-
-	for (int i = 0; i < 2; ++i) { // sun_diffuse, galaxy_ambient
-		color += atten[i]*add_pt_light_comp(normal, epos, i).rgb;
-	}
+	color += atten0*add_pt_light_comp(normal, epos, 0).rgb; // sun_diffuse
+	color += add_pt_light_comp(normal, epos, 1).rgb; // galaxy_ambient
 #ifdef DRAW_AS_SPHERES
 	color *= texture2D(tex0, gl_PointCoord).rgb;
 #endif

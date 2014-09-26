@@ -1,9 +1,9 @@
 uniform mat4 fg_ViewMatrix;
 
-varying vec4 epos;
-varying vec3 eye, dlpos, normal; // world space
-varying vec3 dl_normal;
-varying vec2 tc;
+out vec4 epos;
+out vec3 eye, dlpos, normal; // world space
+out vec3 dl_normal;
+out vec2 tc;
 
 void main()
 {

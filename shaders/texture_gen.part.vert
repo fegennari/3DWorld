@@ -1,5 +1,5 @@
 uniform vec4 texgen_s, texgen_t;
-varying vec2 tc;
+out vec2 tc;
 
 void setup_texgen_st() {
 	tc = vec2(dot(fg_Vertex, texgen_s), dot(fg_Vertex, texgen_t));

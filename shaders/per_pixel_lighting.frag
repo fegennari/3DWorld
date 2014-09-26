@@ -1,5 +1,5 @@
 uniform vec4 emission = vec4(0,0,0,1);
-varying vec3 normal;
+in vec3 normal;
 
 void main()
 {

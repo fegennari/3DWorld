@@ -1,11 +1,12 @@
 layout (triangles) in;
 layout (triangle_strip, max_vertices=3) out;
 
-varying vec2 out tc;
+in vec4 color[3]; // from VS
+out vec2 tc;
 
 void main()
 {
-	gl_FrontColor = gl_in[0].gl_FrontColor; // all colors are the same
+	gl_FrontColor = color[0]; // all colors are the same
 	vec4 p0 = gl_in[0].gl_Position;
 	vec4 p1 = gl_in[1].gl_Position;
 	vec4 p2 = gl_in[2].gl_Position;

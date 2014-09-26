@@ -1,4 +1,4 @@
-varying out vec2 tc;
+out vec2 tc;
 
 void output_textured_quad(in vec4 pts[4])
 {

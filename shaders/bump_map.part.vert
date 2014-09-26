@@ -1,7 +1,7 @@
 #ifdef USE_BUMP_MAP
 #ifdef USE_TANGENT_VECTOR
-attribute vec4 tangent;
-varying vec4 tangent_v;
+in vec4 tangent;
+out vec4 tangent_v;
 
 void setup_tbn() {
 	// Building the matrix Eye Space -> Tangent Space

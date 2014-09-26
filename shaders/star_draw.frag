@@ -2,8 +2,8 @@ uniform float radius = 1.0;
 uniform sampler2D tex0;
 uniform vec4 colorA, colorB;
 
-varying vec3 world_space_pos;
-varying vec2 tc;
+in vec3 world_space_pos;
+in vec2 tc;
 
 void main()
 {

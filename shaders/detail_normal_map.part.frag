@@ -1,7 +1,7 @@
 uniform vec2 detail_normal_tex_scale = vec2(8.0);
 uniform sampler2D detail_normal_tex;
 
-varying vec2 tc;
+in vec2 tc;
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal, in float bump_scale) {
 	vec3 tan  = normalize(cross(fg_ModelViewMatrix[0].xyz, normal));

@@ -4,8 +4,8 @@ uniform vec2 normal_tc_off   = vec2(0,0);
 uniform vec2 normal_tc_scale = vec2(1,1);
 uniform vec3 camera_pos;
 
-varying vec4 world_space_pos, eye_space_pos;
-varying vec2 tc;
+in vec4 world_space_pos, eye_space_pos;
+in vec2 tc;
 
 void main()
 {

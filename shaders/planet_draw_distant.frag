@@ -1,7 +1,7 @@
 uniform vec3 light_scale = vec3(1.0);
 
-varying vec4 epos;
-varying vec3 normal;
+in vec4 epos;
+in vec3 normal;
 
 // lighting, but no textures and no specular, and light2 indirect contribution is ignored
 // Note: most of this is copied from planet_draw.frag

@@ -5,7 +5,7 @@ uniform float indir_vert_offset = 0.25;
 uniform sampler3D smoke_and_indir_tex;
 uniform vec3 const_indir_color = vec3(0.0);
 
-varying vec3 vpos, normal; // world space
+in vec3 vpos, normal; // world space
 
 void add_indir_lighting(inout vec3 lit_color) {
 	lit_color += gl_Color.rgb * const_indir_color; // add constant indir

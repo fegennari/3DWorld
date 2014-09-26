@@ -2,9 +2,9 @@
 uniform float tscale_s = 1.0;
 uniform float tscale_t = 1.0;
 
-varying vec2 tc;
-varying vec4 epos;
-varying vec3 normal; // eye space
+out vec2 tc;
+out vec4 epos;
+out vec3 normal; // eye space
 
 invariant gl_Position;
 

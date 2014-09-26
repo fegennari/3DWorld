@@ -1,8 +1,8 @@
 uniform float min_alpha      = 0.0;
 uniform float bump_tex_scale = 1.0;
 
-//varying vec3 vpos, normal; // world space, come from indir_lighting.part.frag
-//varying vec3 eye_norm; // comes from bump_map.frag
+//in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
+//in vec3 eye_norm; // comes from bump_map.frag
 
 vec4 get_epos() {return fg_ModelViewMatrix * vec4(vpos, 1.0);}
 

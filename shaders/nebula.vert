@@ -1,4 +1,4 @@
-varying vec3 normal, vertex; // local object space
+out vec3 normal, vertex; // local object space
 
 void main()
 {

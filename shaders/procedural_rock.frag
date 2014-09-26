@@ -1,5 +1,5 @@
-varying vec3 normal;
-varying vec4 epos;
+in vec3 normal;
+in vec4 epos;
 
 void main()
 {

@@ -1,4 +1,4 @@
-varying vec3 vpos;
+out vec3 vpos;
 
 void main()
 {

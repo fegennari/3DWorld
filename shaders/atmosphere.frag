@@ -4,8 +4,8 @@ uniform vec3 light_scale   = vec3(1.0);
 uniform vec3 atmos_density = vec3(1.0, 0.0, 0.0); // {constant, linear, quadratic}
 uniform vec3 inner_color, outer_color;
 
-varying vec4 epos;
-varying vec3 normal, world_space_pos;
+in vec4 epos;
+in vec3 normal, world_space_pos;
 
 float get_density_at(vec3 pos) {
 	float dist = distance(pos, planet_pos);

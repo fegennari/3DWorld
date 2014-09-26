@@ -4,8 +4,8 @@ uniform vec3 tc_xlate    = vec3(0);
 uniform vec4 texgen_s, texgen_t, texgen2_s, texgen2_t;
 uniform sampler2D height_tex;
 
-varying vec4 vertex;
-varying vec2 tc, tc2;
+out vec4 vertex;
+out vec2 tc, tc2;
 
 void main()
 {

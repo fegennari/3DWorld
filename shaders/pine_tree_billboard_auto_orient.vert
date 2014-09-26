@@ -1,7 +1,7 @@
 uniform float radius_scale = 1.0;
 uniform vec2 xlate;
 
-varying float world_space_zval;
+out float world_space_zval;
 
 void main()
 {

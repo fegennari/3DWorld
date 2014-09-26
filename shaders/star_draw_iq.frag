@@ -6,7 +6,7 @@
 uniform sampler2D texture, freq_tex;
 uniform float time;
 
-varying vec2 tc;
+in vec2 tc;
 
 float snoise(vec3 uv, float res)	// by trisomie21
 {

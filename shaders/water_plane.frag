@@ -1,10 +1,10 @@
-varying vec3 normal;
-varying vec4 epos, proj_pos;
-varying vec2 tc, tc2;
-
 uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
+
+in vec3 normal;
+in vec4 epos, proj_pos;
+in vec2 tc, tc2;
 
 vec3 water_normal_lookup(in vec2 wtc) {
 	return 2.0*(texture2D(water_normal_tex, 0.5*wtc).rgb - 0.5);

@@ -22,8 +22,8 @@ uniform vec4 water_color, color_a, color_b;
 #endif // PROCEDURAL_DETAIL
 #endif // not GAS_GIANT
 
-varying vec3 normal, world_space_pos, vertex;
-varying vec2 tc;
+in vec3 normal, world_space_pos, vertex;
+in vec2 tc;
 
 
 float calc_cloud_density(in vec3 lv) {
@@ -236,7 +236,7 @@ void main()
 		cloud_den = calc_cloud_density(lv);
 #ifndef NO_CLOUD_SHADOWS
 		if (dterm0 > 0.0) {
-			const float cloud_alt = 0.01*obj_radius; // 1% of planet radius
+			float cloud_alt = 0.01*obj_radius; // 1% of planet radius
 			vec3 obj_space_ldir = inverse(fg_NormalMatrix) * ldir0; // no normalization needed
 			vec3 vertex_adj = obj_radius*normalize(vertex + obj_radius*obj_space_ldir*cloud_alt/dot(obj_space_ldir, vertex)); // approximate
 			cloud_shadow = 0.75*calc_cloud_density(calc_cloud_coord(vertex_adj));

@@ -2,7 +2,7 @@ uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform float opacity   = 1.0;
 
-varying vec2 tc;
+in vec2 tc;
 
 void main()
 {

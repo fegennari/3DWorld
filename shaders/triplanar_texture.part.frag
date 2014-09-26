@@ -4,7 +4,7 @@ vec3 get_blend_weights(in vec3 normal) {
 	vec3 blend_weights = abs(normal); // Tighten up the blending zone:
 	blend_weights = (blend_weights - 0.2) * 7;
 	blend_weights = max(blend_weights, 0); // Force weights to sum to 1.0 (very important!)
-	blend_weights /= (blend_weights.x + blend_weights.y + blend_weights.z ).xxx;
+	blend_weights /= (blend_weights.x + blend_weights.y + blend_weights.z);
 	return blend_weights;
 }
 

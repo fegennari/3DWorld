@@ -6,15 +6,16 @@ in float size_val[1]; // from VS
 #else
 uniform float size = 1.0;
 #endif
+in vec4 color[1]; // from VS
 
-varying out vec2 tc;
+out vec2 tc;
 
 void main()
 {
 #ifdef SIZE_FROM_ATTRIB
 	float size = size_val[0];
 #endif
-	gl_FrontColor = gl_in[0].gl_FrontColor; // all colors are the same
+	gl_FrontColor = color[0]; // all colors are the same (FIXME: gl_FrontColor is deprecated, but we need to change some fragment shaders to use custom color input/output)
 	vec4 pos = fg_ModelViewMatrix * gl_in[0].gl_Position;
 	
 	gl_Position = fg_ProjectionMatrix * (pos + vec4(-2.0*size, -size, 0.0, 0.0));

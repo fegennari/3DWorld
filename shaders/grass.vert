@@ -1,4 +1,4 @@
-varying vec2 tc;
+out vec2 tc;
 
 void main()
 {

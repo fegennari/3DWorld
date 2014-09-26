@@ -1,10 +1,10 @@
 uniform mat4 fg_ViewMatrix;
-varying vec3 normal, world_space_pos, vertex;
-varying vec2 tc;
-
 uniform float water_val = 0.0;
 uniform float lava_val  = 0.0;
 uniform float obj_radius;
+
+out vec3 normal, world_space_pos, vertex;
+out vec2 tc;
 
 void main()
 {

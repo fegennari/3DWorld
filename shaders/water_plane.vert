@@ -1,8 +1,8 @@
 uniform float normal_z = 1.0;
 
-varying vec3 normal;
-varying vec4 epos, proj_pos;
-varying vec2 tc2;
+out vec3 normal;
+out vec4 epos, proj_pos;
+out vec2 tc2;
 
 void main()
 {

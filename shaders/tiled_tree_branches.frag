@@ -1,9 +1,9 @@
 uniform sampler2D tex0;
 uniform float opacity = 1.0;
 
-varying vec4 epos;
-varying vec3 normal;
-varying vec2 tc;
+in vec4 epos;
+in vec3 normal;
+in vec2 tc;
 
 void main()
 {

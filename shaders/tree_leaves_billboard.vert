@@ -1,4 +1,4 @@
-varying vec4 eye_space_pos;
+out vec4 eye_space_pos;
 
 void main()
 {

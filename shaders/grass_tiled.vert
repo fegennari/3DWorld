@@ -9,9 +9,9 @@ uniform float cloud_plane_z;
 uniform vec3 cloud_offset = vec3(0.0);
 uniform vec2 xlate = vec2(0.0);
 
-attribute vec2 local_translate;
+in vec2 local_translate;
 
-varying vec2 tc;
+out vec2 tc;
 
 float calc_light_scale(in vec3 vertex, in vec4 light_pos) {
 	if (!apply_cloud_shadows) {return 1.0;}

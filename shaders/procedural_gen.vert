@@ -1,5 +1,5 @@
-varying vec3 vpos, normal; // world space
-varying vec3 eye_norm;
+out vec3 vpos, normal; // world space
+out vec3 eye_norm;
 
 void main()
 {

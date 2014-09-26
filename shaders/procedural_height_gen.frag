@@ -1,6 +1,6 @@
 uniform float x0, y0, dx, dy, rx, ry, zscale;
 
-varying vec3 vpos;
+in vec3 vpos;
 
 #if 0
 float swissTurbulence(float2 p, float seed, int octaves, float lacunarity=2.0, float gain=0.5, float warp=0.15)

@@ -1,6 +1,6 @@
-varying vec3 dlpos, dl_normal; // world space
-varying vec3 normal;
-varying vec4 epos; // needed for detail normal map
+out vec3 dlpos, dl_normal; // world space
+out vec3 normal;
+out vec4 epos; // needed for detail normal map
 
 void main()
 {

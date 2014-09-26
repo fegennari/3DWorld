@@ -1,5 +1,5 @@
-varying vec3 normal;
-varying vec2 tc;
+out vec3 normal;
+out vec2 tc;
 
 void main()
 {

@@ -3,8 +3,8 @@ uniform float planet_radius, ring_ri, ring_ro, sun_radius, bf_draw_sign;
 uniform sampler2D noise_tex, particles_tex;
 uniform sampler1D ring_tex;
 
-varying vec3 normal, world_space_pos, vertex;
-varying vec2 tc;
+in vec3 normal, world_space_pos, vertex;
+in vec2 tc;
 
 
 vec3 add_light_rings(in vec3 n, in vec4 epos)

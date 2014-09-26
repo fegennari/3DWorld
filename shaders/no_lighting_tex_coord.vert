@@ -1,7 +1,7 @@
 uniform vec3 xlate = vec3(0);
 uniform vec3 scale = vec3(1);
 
-varying vec2 tc;
+out vec2 tc;
 
 void main()
 {

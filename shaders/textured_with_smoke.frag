@@ -9,8 +9,8 @@ uniform float cube_bb[6], sphere_radius;
 uniform vec4 emission = vec4(0,0,0,1);
 
 // clipped eye position, clipped vertex position
-varying vec3 lpos0, vposl; // world space
-//varying vec3 vpos, normal; // world space, come from indir_lighting.part.frag
+in vec3 lpos0, vposl; // world space
+//in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
 // epos, eye_norm, and tc come from bump_map.frag
 // camera_pos comes from dynamic_lighting.part
 

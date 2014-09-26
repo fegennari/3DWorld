@@ -4,9 +4,9 @@ uniform float lum_scale  = 0.0;
 uniform float lum_offset = 0.0;
 uniform vec4  emission   = vec4(0,0,0,1);
 
-varying vec2 tc;
-varying vec4 epos;
-varying vec3 normal; // eye space
+in vec2 tc;
+in vec4 epos;
+in vec3 normal; // eye space
 
 void main()
 {

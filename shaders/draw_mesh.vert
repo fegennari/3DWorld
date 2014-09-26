@@ -1,7 +1,6 @@
-varying vec4 epos;
-varying vec3 dlpos;
-varying vec3 normal; // world space
-varying vec3 eye_norm;
+out vec4 epos;
+out vec3 dlpos, normal; // world space
+out vec3 eye_norm;
 
 void main()
 {

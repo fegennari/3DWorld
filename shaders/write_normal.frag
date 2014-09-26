@@ -1,4 +1,4 @@
-varying vec3 normal;
+in vec3 normal;
 
 void main()
 {

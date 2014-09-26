@@ -1,6 +1,6 @@
 uniform mat4 fg_ViewMatrix;
-varying vec4 epos;
-varying vec3 normal, world_space_pos;
+out vec4 epos;
+out vec3 normal, world_space_pos;
 
 void main()
 {

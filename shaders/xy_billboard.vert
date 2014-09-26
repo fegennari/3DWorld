@@ -1,4 +1,4 @@
-varying float world_space_zval;
+out float world_space_zval;
 
 void main()
 {

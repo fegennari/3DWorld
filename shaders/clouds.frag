@@ -3,8 +3,8 @@ uniform vec3 cloud_offset = vec3(0.0);
 uniform vec4 sun_color;
 uniform vec3 sun_pos, camera_pos;
 
-varying vec3 vertex;
-varying vec4 color;
+in vec3 vertex;
+in vec4 color;
 
 // Note: these two functions assume the sun is a directional light
 vec4 apply_fog_colored(in vec4 color, in vec3 vertex, in float cscale) {

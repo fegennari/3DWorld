@@ -4,7 +4,7 @@ uniform vec4 color1i, color2i, color3i, color1o, color2o, color3o;
 uniform vec3 view_dir;
 uniform float radius;
 uniform float offset = 0.0;
-varying vec3 normal, vertex; // local object space
+in vec3 normal, vertex; // local object space
 
 // Note: the nebula center is always assumed to be at 0,0,0 in local object space
 void main()

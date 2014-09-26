@@ -1,7 +1,7 @@
 uniform sampler3D ao_tex, shadow_tex;
 
-varying vec3 vpos, normal, world_normal;
-varying vec4 epos;
+in vec3 vpos, normal, world_normal;
+in vec4 epos;
 
 void main()
 {

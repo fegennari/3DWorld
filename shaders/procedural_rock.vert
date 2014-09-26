@@ -1,6 +1,6 @@
 uniform float height_scale = 1.0;
-varying vec3 normal;
-varying vec4 epos;
+out vec3 normal;
+out vec4 epos;
 
 void main()
 {

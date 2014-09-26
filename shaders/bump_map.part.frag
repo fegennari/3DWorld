@@ -1,12 +1,12 @@
-varying vec3 eye_norm;
-varying vec4 epos; // not always used
-varying vec2 tc; // not always used
+in vec3 eye_norm;
+in vec4 epos; // not always used
+in vec2 tc; // not always used
 
 #ifdef USE_BUMP_MAP
 uniform sampler2D bump_map;
 
 #ifdef USE_TANGENT_VECTOR
-varying vec4 tangent_v;
+in vec4 tangent_v;
 
 mat3 get_tbn(in float bscale) {
 	return transpose(mat3(tangent_v.xyz*tangent_v.w, bscale*cross(eye_norm, tangent_v.xyz), eye_norm));

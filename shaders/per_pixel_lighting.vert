@@ -1,8 +1,8 @@
 uniform float point_size_pixels = 1.0; // for point sprite mode
 
-varying vec4 epos;
-varying vec3 normal;
-varying vec2 tc;
+out vec4 epos;
+out vec3 normal;
+out vec2 tc;
 
 void main()
 {

@@ -1,7 +1,7 @@
 uniform sampler2D tex0, tex1;
 uniform float min_alpha = 0.0;
 
-varying vec2 tc;
+in vec2 tc;
 
 void main()
 {

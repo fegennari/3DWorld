@@ -3,8 +3,8 @@ uniform vec4 color_scale     = vec4(1.0);
 uniform vec2 normal_tc_off   = vec2(0.0);
 uniform vec2 normal_tc_scale = vec2(1.0);
 
-varying vec4 eye_space_pos;
-varying vec2 tc;
+in vec4 eye_space_pos;
+in vec2 tc;
 
 void main()
 {

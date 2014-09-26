@@ -1,4 +1,4 @@
-varying vec4 epos;
+in vec4 epos;
 
 void main()
 {

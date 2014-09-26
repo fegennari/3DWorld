@@ -1,9 +1,9 @@
 #ifdef ENABLE_INSTANCING
-attribute vec3 xlate;
+in vec3 xlate;
 uniform float vertex_scale = 1.0;
 #endif
 
-varying float world_space_zval;
+out float world_space_zval;
 
 void main()
 {

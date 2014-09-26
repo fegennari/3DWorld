@@ -1,6 +1,6 @@
 uniform vec3 camera_pos;
-varying vec3 vertex;
-varying vec4 color;
+out vec3 vertex;
+out vec4 color;
 
 void main()
 {

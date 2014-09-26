@@ -15,9 +15,9 @@ uniform vec3 uw_atten_max;
 uniform vec3 uw_atten_scale;
 uniform vec3 snow_cscale = vec3(1.0);
 
-varying vec4 vertex; // world space
-varying vec2 tc2; // for water caustics
-//varying vec2 tc; // comes from detail_normal_map.part.frag
+in vec4 vertex; // world space
+in vec2 tc2; // for water caustics
+//in vec2 tc; // comes from detail_normal_map.part.frag
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {

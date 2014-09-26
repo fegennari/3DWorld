@@ -1,5 +1,5 @@
-varying vec4 pos;
 uniform float far_clip = 100.0; // far clipping plane
+in vec4 pos;
 
 void main()
 {

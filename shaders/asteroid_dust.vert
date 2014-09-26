@@ -2,8 +2,8 @@ uniform mat4 fg_ViewMatrix;
 uniform float sphere_size = 1.0;
 uniform vec4 color = vec4(1.0);
 
-varying vec3 world_space_pos;
-varying vec4 epos;
+out vec3 world_space_pos;
+out vec4 epos;
 
 void main()
 {

@@ -1,5 +1,5 @@
-varying vec3 world_space_pos;
-varying vec2 tc;
+out vec3 world_space_pos;
+out vec2 tc;
 
 void main()
 {
