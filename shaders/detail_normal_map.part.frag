@@ -5,7 +5,7 @@ in vec2 tc;
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos, in vec3 normal, in float bump_scale) {
 	vec3 tan  = normalize(cross(fg_ModelViewMatrix[0].xyz, normal));
-	mat3 TBN  = transpose(mat3(tan, cross(normal, tan), normalize(normal))); // world space {Y, X, Z} for normal in +Z
+	mat3 TBN  = transpose(mat3(cross(normal, tan), -tan, normalize(normal))); // world space {X, -Y, Z} for normal in +Z
 	light_dir = TBN * light_dir;
 	eye_pos   = TBN * eye_pos;
 	vec3 nmap = texture2D(detail_normal_tex, detail_normal_tex_scale*tc).rgb; // scaled detail texture

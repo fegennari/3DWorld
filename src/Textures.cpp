@@ -149,6 +149,7 @@ texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_diffuse.jpg"), // 256x2
 texture_t(0, 5, 0,    0,    0, 1, 0, "bullet_hole/bullet_alpha.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_normal.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 0, 2.0), // (Note: compression disabled as it causes artifacts)
+//texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/test_normal.jpg", 0, 0, 2.0),
 
 texture_t(0, 5, 0,    0,    1, 3, 1, "raindrop_dots.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship1.jpg"),
