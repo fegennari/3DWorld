@@ -1053,11 +1053,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(weight_tid, 3);
 	bind_texture_tu(shadow_normal_tid, 4);
-	
-	if (use_cloud_shadows) {
-		vector3d const offset(get_xval(x1), get_yval(y1), 0.0);
-		s.add_uniform_vector3d("cloud_offset", offset);
-	}
+	if (use_cloud_shadows) {s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));}
 	shader_shadow_map_setup(s);
 	unsigned const grass_block_dim(get_grass_block_dim());
 	assert(grass_blocks.size() == grass_block_dim*grass_block_dim);
@@ -1104,15 +1100,20 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 }
 
 
-void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows, int lt_loc) {
+void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
 	if (grass_blocks.empty()) return; // no grass, no flowers
 	float const grass_thresh(get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > grass_thresh) return; // too far away to draw
-	if (flowers.empty()) {flowers.gen_flowers();}
+	if (flowers.empty()) {flowers.gen_flowers(weight_data, stride, x1, y1);}
 	if (flowers.empty()) return; // no flowers generated
+	bind_texture_tu(height_tid, 2);
+	//bind_texture_tu(shadow_normal_tid, 4);
+	//shader_shadow_map_setup(s);
+	//if (use_cloud_shadows) {s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));}
+	float const llcx(get_xval(x1 + xoff - xoff2)), llcy(get_yval(y1 + yoff - yoff2));
+	s.add_uniform_vector2d("xlate", vector2d(llcx, llcy));
 	flowers.check_vbo();
-	// FIXME: use use_cloud_shadows and maybe lt_loc
 	flowers.draw_triangles(s);
 }
 
@@ -2194,20 +2195,33 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	} // for wpass
 
 	// draw flowers
+	// FIXME: shadow map
+	// FIXME: cloud shadows
+	// FIXME: fade out with distance
+	// FIXME: share more code with grass
+	// FIXME: optimize (culling, instancing?, Openmp generation?)
 	for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps
 		if (flower_density == 0.0 || (display_mode & 0x10)) continue; // no flowers
 		if (spass == 0 && !shadow_map_enabled()) continue;
 		shader_t s;
-		detail_scenery_t::setup_shaders_pre(s); // FIXME
-		s.set_vert_shader("wind.part*+flowers_pp_dl");
+		lighting_with_cloud_shadows_setup(s, 1, use_cloud_shadows);
+		s.set_bool_prefix("use_shadow_map", (spass == 0), 1); // FS
+		s.set_vert_shader("wind.part*+flowers_tiled");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+flowers_tiled");
-		detail_scenery_t::setup_shaders_post(s); // FIXME
+		s.begin_shader();
+		setup_wind_for_shader(s, 1);
+		//if (spass == 0) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());}
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_int("height_tex", 2);
+		//s.add_uniform_int("shadow_normal_tex", 4);
+		setup_tt_fog_post(s);
+		//setup_cloud_plane_uniforms(s);
 		flower_manager_t::setup_flower_shader_post(s);
-		int const lt_loc(-1); // FIXME
+		set_tile_xy_vals(s);
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
-			to_draw[i].second->draw_flowers(s, use_cloud_shadows, lt_loc);
+			to_draw[i].second->draw_flowers(s, use_cloud_shadows);
 		}
 		s.end_shader();
 	}

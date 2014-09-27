@@ -84,6 +84,8 @@ public:
 };
 
 
+class mesh_xy_grid_cache_t;
+
 class flower_manager_t : public detail_scenery_t {
 
 protected:
@@ -110,12 +112,14 @@ public:
 	void draw_triangles(shader_t &shader) const;
 	void add_flower(point pos, float color_val);
 	point gen_flower_loc();
+	void gen_density_cache(mesh_xy_grid_cache_t density_gen[2], int x1, int y1);
+	bool check_density_func(mesh_xy_grid_cache_t const &density_gen, float grass_density, int xpos, int ypos);
 };
 
 
 class flower_tile_manager_t : public flower_manager_t {
 public:
-	void gen_flowers();
+	void gen_flowers(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1);
 };
 
 

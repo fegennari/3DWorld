@@ -833,30 +833,42 @@ point flower_manager_t::gen_flower_loc() { // only x and y
 	return point(X_SCENE_SIZE*rgen.signed_rand_float(), Y_SCENE_SIZE*rgen.signed_rand_float(), 0.0);
 }
 
+void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], int x1, int y1) {
+	for (unsigned i = 0; i < 2; ++i) {
+		float const fds(1000.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
+		density_gen[i].build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
+	}
+}
 
-void flower_tile_manager_t::gen_flowers() {
+bool flower_manager_t::check_density_func(mesh_xy_grid_cache_t const &density_gen, float grass_density, int xpos, int ypos) {
+	if (grass_density < 0.25 || (grass_density < 0.95 && grass_density < rgen.rand_float())) return 0; // no flower
+	// FIXME: interpolate density function across 4 corners
+	if (density_gen.eval_index(xpos, ypos, 0, 0, 1, 0) > get_median_height(FLOWER_DIST_THRESH)) return 0; // density function test
+	return 1;
+}
 
-	// FIXME: duplicate code
-	return; // FIXME: not ready
+
+void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1) {
+
 	assert(empty()); // or call clear()?
 	unsigned const num(get_num_flowers());
 	if (num == 0) return; // no grass, no flowers
+	RESET_TIME;
 	mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
-
-	for (unsigned i = 0; i < 2; ++i) {
-		float const fds(1000.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
-		density_gen[i].build_arrays(xscale*xoff2, yscale*yoff2, xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
-	}
+	gen_density_cache(density_gen, x1, y1);
+	
 	for (unsigned i = 0; i < num; ++i) {
 		point pos(gen_flower_loc());
-		//float const grass_density(???); // pos.z is unused
-		//if (grass_density == 0.0 || (grass_density < 1.0 && grass_density < rgen.rand_float())) continue; // no flower
 		int const xpos(get_xpos_clamp(pos.x)), ypos(get_ypos_clamp(pos.y));
-		// FIXME: interpolate density function across 4 corners
-		if (density_gen[0].eval_index(xpos, ypos, 0, 0, 1, 0) > get_median_height(FLOWER_DIST_THRESH)) continue; // density function test
-		pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
-		add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0));
+		// assumes weight_data is at least MESH_X_SIZExMESH_Y_SIZE, square, and is 4 components, where the second component is grass
+		assert((unsigned)xpos < wd_stride && (unsigned)ypos < wd_stride);
+		unsigned const wd_ix(4*(ypos*wd_stride + xpos) + 2);
+		assert(wd_ix < weight_data.size());
+		if (!check_density_func(density_gen[0], (weight_data[wd_ix]/255.0), xpos, ypos)) continue;
+		pos.x += X_SCENE_SIZE; pos.y += Y_SCENE_SIZE; // move to origin
+		add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0)); // pos.z stays at 0.0
 	}
+	PRINT_TIME("Gen Flowers TT"); // FIXME: remove later
 }
 
 
@@ -866,20 +878,14 @@ public:
 		assert(empty()); // or call clear()?
 		unsigned const num(get_num_flowers());
 		if (num == 0) return; // no grass, no flowers
-		mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
 		RESET_TIME;
+		mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
+		gen_density_cache(density_gen, 0, 0);
 
-		for (unsigned i = 0; i < 2; ++i) {
-			float const fds(1000.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
-			density_gen[i].build_arrays(xscale*xoff2, yscale*yoff2, xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
-		}
 		for (unsigned i = 0; i < num; ++i) {
 			point pos(gen_flower_loc());
-			float const grass_density(get_grass_density(pos)); // pos.z is unused
-			if (grass_density == 0.0 || (grass_density < 1.0 && grass_density < rgen.rand_float())) continue; // no flower
 			int const xpos(get_xpos_clamp(pos.x)), ypos(get_ypos_clamp(pos.y));
-			// FIXME: interpolate density function across 4 corners
-			if (density_gen[0].eval_index(xpos, ypos, 0, 0, 1, 0) > get_median_height(FLOWER_DIST_THRESH)) continue; // density function test
+			if (!check_density_func(density_gen[0], get_grass_density(pos), xpos, ypos)) continue;
 			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
 			add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0));
 		}
