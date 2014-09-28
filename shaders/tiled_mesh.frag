@@ -1,16 +1,14 @@
 uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, noise_tex, caustic_tex;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
-uniform float cloud_plane_z, wave_time, wave_amplitude; // water_plane_z comes from water_fog.part
+uniform float wave_time, wave_amplitude; // water_plane_z comes from water_fog.part
 uniform float water_atten    = 1.0;
 uniform float normal_z_scale = 1.0;
 uniform float spec_scale     = 1.0;
 uniform float spec_offset    = 0.0;
-uniform float cloud_alpha    = 1.0;
 uniform float caustics_weight= 1.0;
 uniform float smap_atten_cutoff = 10.0;
 uniform float smap_atten_slope  = 0.5;
-uniform vec3 cloud_offset    = vec3(0.0);
 uniform vec3 uw_atten_max;
 uniform vec3 uw_atten_scale;
 uniform vec3 snow_cscale = vec3(1.0);
@@ -48,10 +46,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	vec4 light  = fg_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
 
 	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) {
-		vec3 ldir = normalize(light.xyz);
-		vec3 cpos = vertex.xyz + cloud_offset;
-		float d   = max(0.0, (cloud_plane_z - cpos.z)/ldir.z); // sky intersection position along vertex->light vector
-		normal   *= 1.0 - cloud_alpha*gen_cloud_alpha(cpos.xy + d*ldir.xy);
+		normal *= 1.0 - get_cloud_plane_alpha(vertex, light);
 	}
 	
 	// compute the ambient and diffuse lighting

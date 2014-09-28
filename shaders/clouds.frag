@@ -1,5 +1,4 @@
 uniform float water_plane_z;
-uniform vec3 cloud_offset = vec3(0.0);
 uniform vec4 sun_color;
 uniform vec3 sun_pos, camera_pos;
 

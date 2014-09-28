@@ -3,6 +3,10 @@ uniform vec2 dxy = vec2(0,0);
 uniform float cloud_scale = 0.5;
 uniform float noise_scale = 0.0012;
 
+uniform float cloud_alpha   = 1.0;
+uniform float cloud_plane_z = 0.0;
+uniform vec3 cloud_offset   = vec3(0.0);
+
 float gen_cloud_alpha_raw(in vec2 pos) {
 	float alpha = 0.0;
 	
@@ -25,4 +29,11 @@ float gen_cloud_alpha_norm(in vec2 pos) {
 
 float gen_cloud_alpha(in vec2 pos) {
 	return clamp(gen_cloud_alpha_norm(pos), 0.0, 1.0);
+}
+
+float get_cloud_plane_alpha(in vec3 vertex, in vec4 light_pos) {
+	vec3 ldir = normalize(light_pos.xyz);
+	vec3 cpos = vertex.xyz + cloud_offset;
+	float d   = max(0.0, (cloud_plane_z - cpos.z)/ldir.z); // sky intersection position along vertex->light vector
+	return cloud_alpha*gen_cloud_alpha(cpos.xy + d*ldir.xy);
 }
