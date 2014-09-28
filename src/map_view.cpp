@@ -38,9 +38,6 @@ float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, floa
 }
 
 
-float smoothstep(float t) {return (3*t*t - 2*t*t*t);}
-
-
 void draw_overhead_map() {
 
 	//RESET_TIME
@@ -141,14 +138,14 @@ void draw_overhead_map() {
 					else {
 						for (unsigned k = 0; k < 4; ++k) { // mixed
 							if (height > map_heights[k+1]) {
-								float const h((height - map_heights[k+1])/(map_heights[k] - map_heights[k+1])), v(smoothstep(h));
+								float const h((height - map_heights[k+1])/(map_heights[k] - map_heights[k+1])), v(cubic_interpolate(h));
 								UNROLL_3X(rgb[i_] = (unsigned char)(255.0*(v*map_colors[k][i_] + (1.0 - v)*map_colors[k+1][i_]));)
 								break;
 							}
 						}
 					}
 					if (height <= map_heights[4] && height > map_heights[5]) { // shallow water
-						float const h(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5])), v(smoothstep(h));
+						float const h(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5])), v(cubic_interpolate(h));
 						UNROLL_3X(rgb[i_] = (unsigned char)(255.0*(1.0 - v)*map_colors[5][i_] + v*rgb[i_]);)
 					}
 					if (MAP_VIEW_LIGHTING) {
