@@ -23,7 +23,7 @@ float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 extern bool no_sun_lpos_update;
 extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
 extern unsigned create_voxel_landscape;
-extern float vegetation, zmin, zmax, fticks, tfticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex;
+extern float vegetation, zmin, zmax, fticks, tfticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex, zmax_est;
 extern colorRGBA leaf_base_color;
 extern vector3d wind;
 extern obj_type object_types[];
@@ -835,7 +835,7 @@ point flower_manager_t::gen_flower_loc() { // only x and y
 
 void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], int x1, int y1) {
 	for (unsigned i = 0; i < 2; ++i) {
-		float const fds(1000.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
+		float const fds(500.0*(1.0 + 0.3*i)), xscale(fds*DX_VAL*DX_VAL), yscale(fds*DY_VAL*DY_VAL);
 		density_gen[i].build_arrays(xscale*(x1 + xoff2), yscale*(y1 + yoff2), xscale, yscale, MESH_X_SIZE, MESH_Y_SIZE, 0, 1); // force_sine_mode=1
 	}
 }
@@ -843,7 +843,8 @@ void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], in
 bool flower_manager_t::check_density_func(mesh_xy_grid_cache_t const &density_gen, float grass_density, int xpos, int ypos) {
 	if (grass_density < 0.25 || (grass_density < 0.95 && grass_density < rgen.rand_float())) return 0; // no flower
 	// FIXME: interpolate density function across 4 corners
-	if (density_gen.eval_index(xpos, ypos, 0, 0, 1, 0) > get_median_height(FLOWER_DIST_THRESH)) return 0; // density function test
+	float const dval(density_gen.eval_index(xpos, ypos, 0, 0, 1, 0) + 0.2*zmax_est*rgen.signed_rand_float());
+	if (dval > get_median_height(FLOWER_DIST_THRESH)) return 0; // density function test
 	return 1;
 }
 
