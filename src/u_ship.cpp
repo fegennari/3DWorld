@@ -348,9 +348,9 @@ void u_ship::turn(vector3d delta) {
 
 	if (player_controlled()) {
 		delta *= player_turn_rate; // turn into angular velocity
-		mult  *= fticks;
+		mult  *= 0.5; // not fticks
 	}
-	if (cached_rsv == 0.0) cached_rsv = get_real_speed_val();
+	if (cached_rsv == 0.0) {cached_rsv = get_real_speed_val();}
 	delta *= mult*cached_rsv;
 	delta.set_max_mag(specs().max_turn); // limit turning speed
 	pitch_r = delta.y;
@@ -663,7 +663,7 @@ void u_ship::do_turn(vector3d const &orient) {
 		rotate_vector3d_norm(rv2, ra2, orient2);
 		vector3d const delta(-orient2.y, -orient2.x, 0.0); // AI doesn't have that problem with screen Y-values being backwards
 		float const dmag(delta.mag());
-		if (dmag > TOLERANCE) turn(delta*(turn_angle/dmag)); // delta is the actual turn angle broken up into x and y components
+		if (dmag > TOLERANCE) {turn(delta*(turn_angle/dmag));} // delta is the actual turn angle broken up into x and y components
 	}
 }
 
