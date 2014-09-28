@@ -271,8 +271,6 @@ void gen_gauss_rand_arr();
 // function prototypes - mesh_gen
 bool bmp_to_chars(char *fname, char **&data);
 void gen_mesh(int surface_type, int keep_sin_table, int update_zvals);
-float get_glaciated_zval(float zval);
-float calc_glaciated_rel_value(float value);
 float do_glaciate_exp(float value);
 float get_rel_wpz();
 void init_terrain_mesh();

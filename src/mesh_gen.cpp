@@ -165,7 +165,6 @@ void update_disabled_mesh_height() {
 
 
 void clamp_to_mesh(int xy[2]) {
-
 	for (unsigned i = 0; i < 2; ++i) {xy[i] = max(0, min(MESH_SIZE[i]-1, xy[i]));}
 }
 
@@ -266,9 +265,7 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 		gen_rand_sine_table_entries(scaled_height);
 	}
 	if (surface_type == 0 || gen_scroll_surface) { // sine waves
-		if (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN) {
-			gen_mesh_sine_table(mesh_height, xoff2, yoff2, MESH_X_SIZE, MESH_Y_SIZE);
-		}
+		gen_mesh_sine_table(mesh_height, xoff2, yoff2, MESH_X_SIZE, MESH_Y_SIZE);
 	}
 	if (surface_type == 1) { // random
 		zmax = -LARGE_ZVAL;
@@ -327,10 +324,7 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 	if (surface_type != 5) {
 		if (!keep_sin_table || !init || update_zvals) {
 			if (AUTOSCALE_HEIGHT && world_mode == WMODE_GROUND) {
-				float const zval(0.5*(zmin + zmax));
-				mesh_origin.z   = zval;
-				camera_origin.z = zval;
-				surface_pos.z   = zval;
+				mesh_origin.z = camera_origin.z = surface_pos.z = 0.5*(zmin + zmax);
 			}
 			estimate_zminmax(surface_type < 3);
 		}
@@ -342,24 +336,11 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 	gen_terrain_map();
 
 	if (GLACIATE && world_mode == WMODE_GROUND && (!keep_sin_table || !init || update_zvals) && AUTOSCALE_HEIGHT) {
-		float const zval(0.5*(zbottom + ztop)); // readjust camera height
-		mesh_origin.z   = zval;
-		camera_origin.z = zval;
-		surface_pos.z   = zval;
+		mesh_origin.z = camera_origin.z = surface_pos.z = 0.5*(zbottom + ztop); // readjust camera height
 	}
-	//glaciate();
 	if (surface_generated) init = 1;
 }
 
-
-float get_glaciated_zval(float zval) {
-	float const relh((zval + zmax_est)*zmax_est2_inv);
-	return DO_GLACIATE_EXP(relh)*zmax_est2 - zmax_est;
-}
-
-float calc_glaciated_rel_value(float value) {
-	return zmin + DO_GLACIATE_EXP(value)*(zmax - zmin);
-}
 
 float do_glaciate_exp(float value) {
 	return DO_GLACIATE_EXP(value);
@@ -367,6 +348,23 @@ float do_glaciate_exp(float value) {
 
 float get_rel_wpz() {
 	return CLIP_TO_01(W_PLANE_Z + water_h_off_rel);
+}
+
+void apply_mesh_sine(float &zval, float x, float y) {
+	hmap_params_t const &h(hmap_params);
+
+	if (h.sine_mag > 0.0) { // Note: snow thresh is still off when highly zoomed in
+		float const freq(mesh_scale*h.sine_freq);
+		zval += (h.sine_mag*COSF(x*freq)*COSF(y*freq) + h.sine_bias)/mesh_scale_z;
+	}
+}
+
+void apply_glaciate_and_sine(float &zval, float xval, float yval) {
+	if (GLACIATE) {
+		float const relh((zval + zmax_est)*zmax_est2_inv);
+		zval = DO_GLACIATE_EXP(relh)*zmax_est2 - zmax_est;
+	}
+	if (hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, xval, yval);}
 }
 
 
@@ -379,10 +377,10 @@ void glaciate() {
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			float const zval(get_glaciated_zval(mesh_height[i][j]));
+			float &zval(mesh_height[i][j]);
+			apply_glaciate_and_sine(zval, (j + xoff2 - MESH_X_SIZE/2), (i + yoff2 - MESH_Y_SIZE/2));
 			zbottom = min(zbottom, zval);
 			ztop    = max(ztop, zval);
-			mesh_height[i][j] = zval;
 		}
 	}
 }
@@ -585,7 +583,7 @@ void estimate_zminmax(bool using_eq) {
 
 		for (unsigned i = 0; i < EST_RAND_PARAM; ++i) {
 			for (unsigned j = 0; j < EST_RAND_PARAM; ++j) {
-				float const height(height_gen.eval_index(j, i, 0, 0, 1, 0)); // no sine
+				float const height(height_gen.eval_index(j, i, 0)); // no sine
 				zmax_est = max(zmax_est, float(fabs(height)));
 				if (!(i&3) && !(j&3)) {height_histogram.push_back(height);} // only 1/16 of the values
 			}
@@ -672,15 +670,6 @@ void postproc_noise_zval(float &zval) {
 	if (zval > h.plat_bot) {zval = h.plat_bot + h.plat_h*(zval - h.plat_bot) + min(h.plat_max, h.plat_s*(zval - h.plat_bot));} // plateau
 	if (zval > h.crat_h  ) {zval = h.crat_h - h.crat_s*(zval - h.crat_h);} // craters
 	if (zval > h.crack_lo && zval < h.crack_hi) {zval -= h.crack_d*min(zval-h.crack_lo, h.crack_hi-zval);} // cracks
-}
-
-void apply_mesh_sine(float &zval, float x, float y) {
-	hmap_params_t const &h(hmap_params);
-
-	if (h.sine_mag > 0.0) { // Note: snow thresh is still off when highly zoomed in
-		float const freq(mesh_scale*h.sine_freq);
-		zval += (h.sine_mag*COSF(x*freq)*COSF(y*freq) + h.sine_bias)/mesh_scale_z;
-	}
 }
 
 void apply_noise_shape_final(float &noise, int shape) {
@@ -794,16 +783,17 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 }
 
 
-float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin, bool use_cache, bool apply_sine) const {
+float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin, bool use_cache) const {
 
 	assert(x < cur_nx && y < cur_ny);
+	float const xval((x*mdx + mx0)*DX_VAL_INV), yval((y*mdy + my0)*DY_VAL_INV); // Note: is it okay to always calculate these?
 	float zval(0.0);
 
 	if ((use_cache || gen_mode == 3) && !cached_vals.empty()) {
 		zval += cached_vals[y*cur_nx + x];
 	}
 	else if (gen_mode > 0) { // perlin/simplex
-		zval += get_noise_zval((x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV, gen_mode, gen_shape);
+		zval += get_noise_zval(xval, yval, gen_mode, gen_shape);
 	}
 	else { // sine tables
 		float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
@@ -811,8 +801,7 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 		for (int i = max(start_eval_sin, min_start_sin); i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
 		apply_noise_shape_final(zval, gen_shape);
 	}
-	if (GLACIATE && glaciate) {zval = get_glaciated_zval(zval);}
-	if (apply_sine && hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, (x*mdx + mx0)*DX_VAL_INV, (y*mdy + my0)*DY_VAL_INV);}
+	if (glaciate) {apply_glaciate_and_sine(zval, xval, yval);}
 	return zval;
 }
 
@@ -859,8 +848,7 @@ float get_exact_zval(float xval_in, float yval_in) {
 		return zval;
 	}
 	float zval(eval_mesh_sin_terms_scaled(xval, yval, 1.0));
-	if (GLACIATE) {zval = get_glaciated_zval(zval);}
-	if (hmap_params.sine_mag > 0.0) {apply_mesh_sine(zval, (xval - (MESH_X_SIZE >> 1)), (yval - (MESH_Y_SIZE >> 1)));}
+	apply_glaciate_and_sine(zval, (xval - float(MESH_X_SIZE >> 1)), (yval - float(MESH_Y_SIZE >> 1)));
 	return zval;
 }
 

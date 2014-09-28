@@ -841,9 +841,9 @@ void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], in
 }
 
 bool flower_manager_t::check_density_func(mesh_xy_grid_cache_t const &density_gen, float grass_density, int xpos, int ypos) {
-	if (grass_density < 0.25 || (grass_density < 0.95 && grass_density < rgen.rand_float())) return 0; // no flower
+	if (grass_density < 0.5 || (grass_density < 0.95 && grass_density < rgen.rand_float())) return 0; // no flower
 	// FIXME: interpolate density function across 4 corners
-	float const dval(density_gen.eval_index(xpos, ypos, 0, 0, 1, 0) + 0.2*zmax_est*rgen.signed_rand_float());
+	float const dval(density_gen.eval_index(xpos, ypos, 0) + 0.2*zmax_est*rgen.signed_rand_float());
 	if (dval > get_median_height(FLOWER_DIST_THRESH)) return 0; // density function test
 	return 1;
 }
@@ -867,7 +867,7 @@ void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data
 		assert(wd_ix < weight_data.size());
 		if (!check_density_func(density_gen[0], (weight_data[wd_ix]/255.0), xpos, ypos)) continue;
 		pos.x += X_SCENE_SIZE; pos.y += Y_SCENE_SIZE; // move to origin
-		add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0)); // pos.z stays at 0.0
+		add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0)); // pos.z stays at 0.0
 	}
 	PRINT_TIME("Gen Flowers TT"); // FIXME: remove later
 }
@@ -888,7 +888,7 @@ public:
 			int const xpos(get_xpos_clamp(pos.x)), ypos(get_ypos_clamp(pos.y));
 			if (!check_density_func(density_gen[0], get_grass_density(pos), xpos, ypos)) continue;
 			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);
-			add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0, 0, 1, 0));
+			add_flower(pos, density_gen[1].eval_index(xpos, ypos, 0));
 		}
 		PRINT_TIME("Gen Flowers");
 	}

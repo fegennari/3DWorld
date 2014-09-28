@@ -337,9 +337,9 @@ float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equa
 	if (rad > 0.0 && !xy0_bad) {
 		float hcm(min(h_collision_matrix[y0][x0], h_collision_matrix[y0+1][x0+1]));
 		hcm = min(hcm, min(h_collision_matrix[y0][x0+1], h_collision_matrix[y0+1][x0]));
-		if (zval + 0.5*rad + SMALL_NUMBER < hcm) return h_collision_matrix[ypos][xpos];
+		if (zval + 0.5*rad + SMALL_NUMBER < hcm) {return h_collision_matrix[ypos][xpos];}
 	}
-	if (!ignore_ice && is_in_ice(xpos, ypos)) zval = max(zval, water_matrix[ypos][xpos]); // on ice
+	if (!ignore_ice && is_in_ice(xpos, ypos)) {zval = max(zval, water_matrix[ypos][xpos]);} // on ice
 	return zval;
 }
 
