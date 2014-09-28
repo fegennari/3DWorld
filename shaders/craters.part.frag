@@ -26,7 +26,7 @@ void adjust_normal_for_craters(inout vec3 norm, in vec3 vertex) {
 			else { // on rim of crater
 				cwt  = 0.5*sqrt(1.0 - (dist - rad1)/(rad2 - rad1));
 			}
-			norm = normalize((1.0 - cwt)*norm + cwt*cnorm);
+			norm = normalize(mix(norm, cnorm, smoothstep(0.0, 1.0, cwt)));
 		}
 	}
 }
