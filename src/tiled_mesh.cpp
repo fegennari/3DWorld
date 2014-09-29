@@ -25,6 +25,7 @@ float const GRASS_LOD_SCALE   = 16.0;
 float const GRASS_DIST_SLOPE  = 0.25;
 float const SMAP_FADE_THRESH  = 1.4;
 float const OCCLUDER_DIST     = 0.2;
+float const FLOWER_REL_DIST   = 0.8; // flower view distance relative to grass view distance
 
 int   const LIGHTNING_LIGHT = 2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
@@ -1109,7 +1110,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
 	if (grass_blocks.empty()) return; // no grass, no flowers
-	float const flower_thresh(0.8*get_grass_thresh_pad());
+	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return; // too far away to draw
 	if (flowers.empty()) {flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2);}
 	if (flowers.empty()) return; // no flowers generated
@@ -2143,7 +2144,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass) {
 }
 
 
-void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap) {
+void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult) {
 
 	s.begin_shader();
 	if (enable_wind) {setup_wind_for_shader(s, 1);}
@@ -2151,6 +2152,8 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("height_tex", 2);
 	s.add_uniform_int("shadow_normal_tex", 4);
+	s.add_uniform_float("dist_const", dist_const_mult*get_grass_thresh());
+	s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
 	setup_tt_fog_post(s);
 	setup_cloud_plane_uniforms(s);
 	set_tile_xy_vals(s);
@@ -2176,12 +2179,10 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
 			//s.set_geom_shader("ads_lighting.part*+grass_tiled");  // triangle => triangle - too slow
-			setup_grass_flower_shader(s, enable_wind, (spass == 0));
+			setup_grass_flower_shader(s, enable_wind, (spass == 0), 1.0);
 			s.add_uniform_int("weight_tex", 3);
 			set_noise_tex(s, 5);
 			s.add_uniform_float("height", grass_length);
-			s.add_uniform_float("dist_const", get_grass_thresh());
-			s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
 			s.set_specular(0.1, 20.0);
 			grass_tile_manager.begin_draw();
 
@@ -2202,7 +2203,6 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	} // for wpass
 
 	// draw flowers
-	// FIXME: fade out with distance
 	// FIXME: optimize (culling, instancing?, Openmp generation?)
 	for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps
 		if (flower_density == 0.0 || (display_mode & 0x10)) continue; // no flowers
@@ -2212,13 +2212,15 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		s.set_bool_prefix("use_shadow_map", (spass == 0), 1); // FS
 		s.set_vert_shader("wind.part*+flowers_tiled");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+flowers_tiled");
-		setup_grass_flower_shader(s, 1, (spass == 0));
+		setup_grass_flower_shader(s, 1, (spass == 0), FLOWER_REL_DIST);
 		flower_manager_t::setup_flower_shader_post(s);
+		enable_blend(); // required for distant flower transition to alpha=0
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
 			to_draw[i].second->draw_flowers(s, use_cloud_shadows);
 		}
+		disable_blend();
 		s.end_shader();
 	}
 }

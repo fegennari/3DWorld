@@ -325,7 +325,7 @@ public:
 	static void billboard_tree_shader_setup(shader_t &s);
 	void draw_decid_trees(bool reflection_pass, bool shadow_pass=0);
 	void draw_scenery(bool reflection_pass);
-	static void setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap);
+	static void setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult);
 	void draw_grass(bool reflection_pass);
 	void update_lightning(bool reflection_pass);
 	void clear_vbos_tids();
