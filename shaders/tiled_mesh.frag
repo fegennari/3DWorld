@@ -81,10 +81,12 @@ void main()
 	if (vertex.z < water_plane_z) {discard;}
 #endif
 	// sand, dirt, grass, rock, snow
-	vec2 diff_tc = tc; // separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
-	//diff_tc.s += 0.1*vertex.z; // we really need something like triplanar texturing here to deal with stretching on steep slopes
-	vec4 weights = texture2D(weights_tex, tc);
+	vec2 diff_tc   = tc; // separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
+	//diff_tc.s   += 0.1*vertex.z; // we really need something like triplanar texturing here to deal with stretching on steep slopes
+	vec4 weights   = texture2D(weights_tex, tc);
 	float weights4 = clamp((1.0 - weights.r - weights.g - weights.b - weights.a), 0.0, 1.0);
+	weights  = smoothstep(0.0, 1.0, weights);
+	weights4 = smoothstep(0.0, 1.0, weights4);
 	vec3 texel0  = cs2*weights.r*texture2D(tex2, ts2*diff_tc).rgb + // sand
 	               cs3*weights.g*texture2D(tex3, ts3*diff_tc).rgb + // dirt
 				   cs4*weights.b*texture2D(tex4, ts4*diff_tc).rgb + // grass
