@@ -118,7 +118,7 @@ extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNC
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale, flower_density;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
-extern point hmv_pos;
+extern point hmv_pos, camera_last_pos;
 extern int coll_id[];
 extern float tree_lod_scales[4];
 extern string read_hmap_modmap_fn, write_hmap_modmap_fn, read_voxel_brush_fn, write_voxel_brush_fn, font_texture_atlas_fn;
@@ -864,6 +864,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (world_mode == WMODE_UNIVERSE) {claim_planet = 1; break;} // player claim nearby planet
 		camera_surf_collide = !camera_surf_collide;
 		camera_change       = 1;
+		// reset last_pos so that the camera doesn't snap back to the old pos when clipping is re-enabled
+		if (camera_surf_collide) {camera_last_pos = surface_pos;}
 		break;
 
 	case 'j': // smooth camera collision detection / hold fighters
