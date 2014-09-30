@@ -110,10 +110,8 @@ public:
 	void check_vbo();
 	static void setup_flower_shader_post(shader_t &shader);
 	void draw_triangles(shader_t &shader) const;
-	void add_flower(point pos, float color_val);
-	point gen_flower_loc();
+	void add_flowers(mesh_xy_grid_cache_t const density_gen[2], float grass_den, float hthresh, float dx, float dy, int xpos, int ypos, bool gen_zval);
 	void gen_density_cache(mesh_xy_grid_cache_t density_gen[2], int x1, int y1);
-	bool check_density_func(mesh_xy_grid_cache_t const &density_gen, float grass_density, int xpos, int ypos);
 };
 
 
