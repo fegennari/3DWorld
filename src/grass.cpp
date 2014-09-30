@@ -21,7 +21,7 @@ unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 
 extern bool no_sun_lpos_update;
-extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter;
+extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter, draw_model;
 extern unsigned create_voxel_landscape;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex, zmax_est;
 extern colorRGBA leaf_base_color;
@@ -781,22 +781,31 @@ grass_manager_dynamic_t grass_manager;
 
 float const FLOWER_DIST_THRESH = 0.5;
 
+bool flower_manager_t::skip_generate() const {
+	return (generated || no_grass() || flower_density == 0.0); // no grass, no flowers
+}
+
 void flower_manager_t::check_vbo() {
 
 	if (vbo != 0 || empty()) return; // nothing to update
-	RESET_TIME;
-	quad_batch_draw qbd;
-	qbd.verts.reserve(get_vertex_count());
+	//RESET_TIME;
+	vector<vert_norm_comp_color> verts(get_vertex_count());
+	unsigned ix(0);
 
 	for (auto i = flowers.begin(); i != flowers.end(); ++i) {
 		vector3d v1(zero_vector), v2;
 		v1[get_min_dim(i->normal)] = 1.0;
-		v2 = cross_product(i->normal, v1).get_norm();
-		v1 = cross_product(i->normal, v2).get_norm();
-		qbd.add_quad_dirs(i->pos, i->radius*v1, i->radius*v2, i->color, i->normal);
+		v2 = i->radius*cross_product(i->normal, v1).get_norm();
+		v1 = i->radius*cross_product(i->normal, v2).get_norm();
+		color_wrapper cw;
+		cw.set_c4(i->color);
+		norm_comp const n(i->normal);
+		point const pts[4] = {(i->pos - v1 - v2), (i->pos + v1 - v2), (i->pos + v1 + v2), (i->pos - v1 + v2)};
+		UNROLL_4X(verts[ix++] = vert_norm_comp_color(vert_norm_comp(pts[i_], n), cw);)
 	}
-	create_vbo_and_upload(vbo, qbd.verts);
-	PRINT_TIME("Flowers VBO"); // FIXME: remove later
+	assert(ix == verts.size());
+	create_vbo_and_upload(vbo, verts);
+	//PRINT_TIME("Flowers VBO");
 }
 
 void flower_manager_t::setup_flower_shader_post(shader_t &shader) {
@@ -810,9 +819,9 @@ void flower_manager_t::draw_triangles(shader_t &shader) const {
 
 	assert(vbo > 0);
 	bind_vbo(vbo);
-	vert_norm_tc_color::set_vbo_arrays();
-	select_texture(DAISY_TEX);
-	glDrawArrays(GL_TRIANGLES, 0, get_vertex_count());
+	vert_norm_comp_color::set_vbo_arrays();
+	select_texture((draw_model == 1) ? WHITE_TEX : DAISY_TEX);
+	draw_quads_as_tris(get_vertex_count());
 	bind_vbo(0);
 }
 
@@ -848,9 +857,9 @@ void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], in
 
 void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1) {
 
+	if (skip_generate()) return;
+	//RESET_TIME;
 	assert(empty()); // or call clear()?
-	if (no_grass() || flower_density == 0.0) return; // no grass, no flowers
-	RESET_TIME;
 	mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
 	gen_density_cache(density_gen, x1, y1);
 	assert(wd_stride >= (unsigned)MESH_X_SIZE && wd_stride >= (unsigned)MESH_Y_SIZE);
@@ -863,16 +872,16 @@ void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data
 			add_flowers(density_gen, weight_data[wd_ix]/255.0, hthresh, 0.0, 0.0, x, y, 0);
 		}
 	}
-	PRINT_TIME("Gen Flowers TT"); // FIXME: remove later
+	generated = 1;
+	//PRINT_TIME("Gen Flowers TT");
 }
 
 
 class flower_manager_dynamic_t : public flower_manager_t {
 public:
 	void gen_flowers() {
+		if (skip_generate()) return;
 		assert(empty()); // or call clear()?
-		if (no_grass() || flower_density == 0.0) return; // no grass, no flowers
-		RESET_TIME;
 		mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
 		gen_density_cache(density_gen, 0, 0);
 		float const hthresh(get_median_height(FLOWER_DIST_THRESH));
@@ -882,7 +891,7 @@ public:
 				add_flowers(density_gen, get_grass_density(point(get_xval(x), get_yval(y), 0.0)), hthresh, -X_SCENE_SIZE, -Y_SCENE_SIZE, x, y, 1);
 			}
 		}
-		PRINT_TIME("Gen Flowers");
+		generated = 1;
 	}
 
 	void draw() const {
@@ -890,7 +899,7 @@ public:
 		if (display_mode & 0x10) return;
 		shader_t s;
 		setup_shaders_pre(s);
-		s.set_vert_shader("wind.part*+flowers_pp_dl");
+		s.set_vert_shader("texture_gen.part+wind.part*+flowers_pp_dl");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+flowers");
 		setup_shaders_post(s);
 		setup_flower_shader_post(s);

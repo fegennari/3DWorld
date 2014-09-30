@@ -101,12 +101,15 @@ protected:
 
 	vector<flower_t> flowers;
 	rand_gen_t rgen;
+	bool generated;
 
 public:
-	unsigned get_vertex_count() const {return 6*flowers.size();} // 2 triangles (6 verts) per flower
+	flower_manager_t() : generated(0) {}
+	unsigned get_vertex_count() const {return 4*flowers.size();} // one quad (4 verts) per flower
 	size_t size() const {return flowers.size ();}
 	bool empty () const {return flowers.empty();}
-	void clear() {free_vbo(); flowers.clear();}
+	bool skip_generate() const;
+	void clear() {free_vbo(); flowers.clear(); generated = 0;}
 	void check_vbo();
 	static void setup_flower_shader_post(shader_t &shader);
 	void draw_triangles(shader_t &shader) const;

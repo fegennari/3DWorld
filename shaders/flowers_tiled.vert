@@ -4,11 +4,10 @@ uniform sampler2D height_tex;
 
 out vec4 vertex, epos;
 out vec3 eye_norm;
-out vec2 tc;
 
 void main()
 {
-	tc            = fg_TexCoord;
+	set_tc0_from_vert_id();
 	vec3 gwdelta  = get_grass_wind_delta(fg_Vertex.xyz, 0.5); // wind_amt=0.5
 	eye_norm      = fg_NormalMatrix * normalize(normalize(fg_Normal) + gwdelta/height); // eye space, height comes from wind.part
 	vertex        = fg_Vertex + vec4(gwdelta, 0.0);

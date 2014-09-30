@@ -1112,7 +1112,7 @@ void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 	if (grass_blocks.empty()) return; // no grass, no flowers
 	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return; // too far away to draw
-	if (flowers.empty()) {flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2);}
+	flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2);
 	if (flowers.empty()) return; // no flowers generated
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	flowers.check_vbo();
@@ -2210,7 +2210,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		shader_t s;
 		lighting_with_cloud_shadows_setup(s, 1, use_cloud_shadows);
 		s.set_bool_prefix("use_shadow_map", (spass == 0), 1); // FS
-		s.set_vert_shader("wind.part*+flowers_tiled");
+		s.set_vert_shader("texture_gen.part+wind.part*+flowers_tiled");
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+flowers_tiled");
 		setup_grass_flower_shader(s, 1, (spass == 0), FLOWER_REL_DIST);
 		flower_manager_t::setup_flower_shader_post(s);
