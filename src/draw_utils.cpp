@@ -319,7 +319,7 @@ template class point_sprite_drawer_t<vert_norm_color>;
 void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n, tex_range_t const &tr) {
 
 	float const t[4][2] = {{tr.x1,tr.y1}, {tr.x2,tr.y1}, {tr.x2,tr.y2}, {tr.x1,tr.y2}};
-	unsigned const v[6] = {0,2,1, 0,3,2}; // Note: reversed fro quad_to_tris_ixs
+	unsigned const v[6] = {0,2,1, 0,3,2}; // Note: reversed from quad_to_tris_ixs
 	color_wrapper cw;
 	cw.set_c4(c);
 
@@ -333,6 +333,17 @@ void quad_batch_draw::add_quad_dirs(point const &pos, vector3d const &dx, vector
 {
 	point const pts[4] = {(pos - dx - dy), (pos + dx - dy), (pos + dx + dy), (pos - dx + dy)};
 	add_quad_pts(pts, c, n, tr);
+}
+
+// unused
+void quad_batch_draw::add_quad_dirs_single_tri(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n) {
+
+	// add a single triangle with an inscribed square, using tex coords outside the [0,1] range
+	color_wrapper cw;
+	cw.set_c4(c);
+	verts.push_back(vert_norm_tc_color(pos-2*dx-dy, n, -0.5, 0.0, cw.c, 1));
+	verts.push_back(vert_norm_tc_color(pos+2*dx-dy, n,  1.5, 0.0, cw.c, 1));
+	verts.push_back(vert_norm_tc_color(pos+3*dy,    n,  0.0, 2.0, cw.c, 1));
 }
 
 void quad_batch_draw::add_xlated_billboard(point const &pos, point const &xlate, point const &viewer, vector3d const &up_dir,

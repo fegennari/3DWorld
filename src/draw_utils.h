@@ -97,6 +97,7 @@ struct quad_batch_draw { // Note: might want an indexed version of this
 
 	void add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t());
 	void add_quad_dirs(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n=plus_z, tex_range_t const &tr=tex_range_t());
+	void add_quad_dirs_single_tri(point const &pos, vector3d const &dx, vector3d const &dy, colorRGBA const &c, vector3d const &n);
 	void add_xlated_billboard(point const &pos, point const &xlate, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
 		float xsize, float ysize, tex_range_t const &tr=tex_range_t(), bool minimize_fill=0);
 	void add_billboard(point const &pos, point const &viewer, vector3d const &up_dir, colorRGBA const &c,
