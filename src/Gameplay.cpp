@@ -13,6 +13,7 @@
 
 bool const SELF_LASER_DAMAGE = 1;
 bool const SMILEY_GAS        = 1;
+bool const FADE_MESSAGE_ALPHA= 1;
 float const SHADOW_COL_VAL   = 0.5;
 float const UWATER_FERR_ADD  = 0.05;
 float const UWATER_FERR_MUL  = 2.0;
@@ -25,11 +26,13 @@ string const all_smiley_names[] =
 
 struct text_message_params {
 
-	int mtime, priority;
+	bool fade;
+	int itime, mtime, priority;
 	float size, yval;
 	colorRGBA color;
-	text_message_params() : mtime(0), priority(0), size(0.0), color(WHITE) {}
-	text_message_params(int t, float s, colorRGBA const &c, int p, float y=0.0) : mtime(t), priority(p), size(s), yval(0.0), color(c) {}
+	text_message_params() : fade(0), itime(0), mtime(0), priority(0), size(0.0), color(WHITE) {}
+	text_message_params(int t, float s, colorRGBA const &c, int p, float y=0.0, bool fade_=0)
+		: fade(fade_), itime(fade ? 3*t/2 : t), mtime(itime), priority(p), size(s), yval(0.0), color(c) {}
 };
 
 
@@ -2218,22 +2221,21 @@ void show_user_stats() {
 void show_other_messages() {
 
 	if (msg_params.mtime <= 0) return;
+	colorRGBA color(msg_params.color);
+	if (msg_params.fade) {color.A *= min(1.0, msg_params.mtime/(0.4*msg_params.itime));}
 	point const p(point(-0.008, msg_params.yval, -0.02)/msg_params.size);
-	draw_text(msg_params.color, p.x, 0.005+p.y, p.z, message.c_str(), 1.0);
+	draw_text(color, p.x, 0.005+p.y, p.z, message.c_str(), 1.0);
 	msg_params.mtime -= iticks;
 }
-
 
 void print_text_onscreen(string const &text, colorRGBA const &color, float size, int time, int priority, float yval) {
 
 	if (msg_params.mtime > 0 && msg_params.priority > priority) return; // do this before the strcpy
 	message    = text;
-	msg_params = text_message_params(time, size, color, priority, yval);
+	msg_params = text_message_params(time, size, color, priority, yval, FADE_MESSAGE_ALPHA);
 }
 
-
 void print_weapon(int weapon_id) {
-
 	print_text_onscreen(weapons[weapon_id].name, WHITE, 1.0, MESSAGE_TIME/4, 1);
 }
 
