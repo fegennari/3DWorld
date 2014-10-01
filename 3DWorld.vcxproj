@@ -877,6 +877,8 @@
     <None Include="shaders\flowers_pp_dl.vert" />
     <None Include="shaders\flowers_tiled.frag" />
     <None Include="shaders\flowers_tiled.vert" />
+    <None Include="shaders\flowers_tiled_gs.vert" />
+    <None Include="shaders\flower_from_pt.geom" />
     <None Include="shaders\fog_epos_only.frag" />
     <None Include="shaders\fog_epos_only.vert" />
     <None Include="shaders\fog_only.frag" />

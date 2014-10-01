@@ -789,22 +789,33 @@ void flower_manager_t::check_vbo() {
 
 	if (vbo != 0 || empty()) return; // nothing to update
 	//RESET_TIME;
-	vector<vert_norm_comp_color> verts(get_vertex_count());
-	unsigned ix(0);
 
-	for (auto i = flowers.begin(); i != flowers.end(); ++i) {
-		vector3d v1(zero_vector), v2;
-		v1[get_min_dim(i->normal)] = 1.0;
-		v2 = i->radius*cross_product(i->normal, v1).get_norm();
-		v1 = i->radius*cross_product(i->normal, v2).get_norm();
-		color_wrapper cw;
-		cw.set_c4(i->color);
-		norm_comp const n(i->normal);
-		point const pts[4] = {(i->pos - v1 - v2), (i->pos + v1 - v2), (i->pos + v1 + v2), (i->pos - v1 + v2)};
-		UNROLL_4X(verts[ix++] = vert_norm_comp_color(vert_norm_comp(pts[i_], n), cw);)
+	if (0 && world_mode == WMODE_INF_TERRAIN) {
+		vector<sized_vert_t<vert_norm_color> > verts(flowers.size());
+
+		for (auto i = flowers.begin(); i != flowers.end(); ++i) {
+			verts[i-flowers.begin()] = sized_vert_t<vert_norm_color>(vert_norm_color(i->pos, i->normal, i->color), i->radius);
+		}
+		create_vbo_and_upload(vbo, verts);
 	}
-	assert(ix == verts.size());
-	create_vbo_and_upload(vbo, verts);
+	else {
+		vector<vert_norm_comp_color> verts(get_vertex_count());
+		unsigned ix(0);
+
+		for (auto i = flowers.begin(); i != flowers.end(); ++i) {
+			vector3d v1(zero_vector), v2;
+			v1[get_min_dim(i->normal)] = 1.0;
+			v2 = i->radius*cross_product(i->normal, v1).get_norm();
+			v1 = i->radius*cross_product(i->normal, v2).get_norm();
+			color_wrapper cw;
+			cw.set_c4(i->color);
+			norm_comp const n(i->normal);
+			point const pts[4] = {(i->pos - v1 - v2), (i->pos + v1 - v2), (i->pos + v1 + v2), (i->pos - v1 + v2)};
+			UNROLL_4X(verts[ix++] = vert_norm_comp_color(vert_norm_comp(pts[i_], n), cw);)
+		}
+		assert(ix == verts.size());
+		create_vbo_and_upload(vbo, verts);
+	}
 	//PRINT_TIME("Flowers VBO");
 }
 
@@ -819,9 +830,16 @@ void flower_manager_t::draw_triangles(shader_t &shader) const {
 
 	assert(vbo > 0);
 	bind_vbo(vbo);
-	vert_norm_comp_color::set_vbo_arrays();
 	select_texture((draw_model == 1) ? WHITE_TEX : DAISY_TEX);
-	draw_quads_as_tris(get_vertex_count());
+
+	if (0 && world_mode == WMODE_INF_TERRAIN) {
+		sized_vert_t<vert_norm_color>::set_vbo_arrays();
+		glDrawArrays(GL_POINTS, 0, flowers.size());
+	}
+	else {
+		vert_norm_comp_color::set_vbo_arrays();
+		draw_quads_as_tris(get_vertex_count());
+	}
 	bind_vbo(0);
 }
 

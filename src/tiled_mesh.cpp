@@ -2203,7 +2203,6 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	} // for wpass
 
 	// draw flowers
-	// FIXME: optimize (culling, instancing?, Openmp generation?)
 	for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps
 		if (flower_density == 0.0 || (display_mode & 0x10)) continue; // no flowers
 		if (spass == 0 && !shadow_map_enabled()) continue;
@@ -2211,6 +2210,8 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		lighting_with_cloud_shadows_setup(s, 1, use_cloud_shadows);
 		s.set_bool_prefix("use_shadow_map", (spass == 0), 1); // FS
 		s.set_vert_shader("texture_gen.part+wind.part*+flowers_tiled");
+		//s.set_vert_shader("texture_gen.part+wind.part*+flowers_tiled_gs");
+		//s.set_geom_shader("flower_from_pt"); // point => 1 quad
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+flowers_tiled");
 		setup_grass_flower_shader(s, 1, (spass == 0), FLOWER_REL_DIST);
 		flower_manager_t::setup_flower_shader_post(s);

@@ -15,4 +15,4 @@ void main()
 	epos          = fg_ModelViewMatrix * (vertex + vec4(xlate, 0.0, 0.0));
 	gl_Position   = fg_ProjectionMatrix * epos;
 	gl_FrontColor = fg_Color;
-} 
+}
