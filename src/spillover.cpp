@@ -12,6 +12,7 @@ void spillover::init(unsigned max_index) {
 
 	clear();
 	data.resize(max_index);
+	seen.resize(max_index, 0);
 }
 
 void spillover::insert(unsigned index1, unsigned index2) { // insert index2 into index1 (source, dest)
@@ -53,14 +54,15 @@ bool spillover::member(unsigned index1, unsigned index2) const { // index2 is a 
 
 bool spillover::member_recur(unsigned index1, unsigned index2, unsigned level) const { // index2 is a member of index1
 
+	assert(seen.size() == data.size());
 	assert(index1 < data.size() && index2 < data.size());
 	assert(index1 != index2);
-	if (level == 0) seen.clear();
-	seen.insert(index1);
+	if (level == 0) {++cur_seen_ix;} // invalidate seen values
+	seen[index1] = cur_seen_ix;
 	if (data[index1].find(index2) != data[index1].end()) return 1;
 
 	for (set<unsigned>::const_iterator i = data[index1].begin(); i != data[index1].end(); ++i) {
-		if (seen.find(*i) != seen.end())       continue; // already seen
+		if (seen[*i] == cur_seen_ix)           continue; // already seen
 		if (member_recur(*i, index2, level+1)) return 1;
 	}
 	return 0;

@@ -5,13 +5,14 @@
 #ifndef _SPILLOVER_H_
 #define _SPILLOVER_H_
 
-#include "3DWorld.h" // need iterater #defs
+#include "3DWorld.h" // need iterator #defs
 
 
 class spillover {
 
 public:
-	void clear() {data.resize(0);}
+	spillover() : cur_seen_ix(1) {}
+	void clear() {data.clear(); seen.clear(); cur_seen_ix = 1;}
 	void init(unsigned max_index);
 	void insert(unsigned index1, unsigned index2);
 	void remove(unsigned index1, unsigned index2);
@@ -25,7 +26,8 @@ public:
 
 private:
 	vector<set<unsigned> > data;
-	mutable set<unsigned> seen;
+	mutable vector<unsigned> seen;
+	mutable unsigned cur_seen_ix;
 };
 
 
