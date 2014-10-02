@@ -128,7 +128,7 @@ void main()
 	if (color.a <= min_alpha) discard;
 #endif
 #ifndef NO_FOG
-	color = apply_fog_epos(color, epos); // apply standard fog
+	color = (keep_alpha ? vec4(apply_fog_epos(color, epos).rgb, color.a) : apply_fog_epos(color, epos)); // apply standard fog
 #endif
 #else
 	pt_pair res = clip_line(vpos, camera_pos, smoke_bb);
