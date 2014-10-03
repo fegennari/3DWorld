@@ -21,7 +21,7 @@ public:
 	bool member(unsigned index1, unsigned index2) const;
 	bool member_recur(unsigned index1, unsigned index2, unsigned level=0) const;
 	bool member2way(unsigned index1, unsigned index2) const;
-	void get_fanout(unsigned index1, set<unsigned> &fanout) const;
+	void get_fanout(unsigned index1, vector<unsigned> &fanout) const;
 	void get_connected_components(unsigned index1, vector<unsigned> &cc) const;
 
 private:

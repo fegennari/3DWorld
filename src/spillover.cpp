@@ -41,7 +41,7 @@ void spillover::remove_connected(unsigned index1) { // remove incoming edges
 	set<unsigned> const sdata(data[index1]); // have to copy the set so that we can modify the original
 
 	for (set<unsigned>::const_iterator j = sdata.begin(); j != sdata.end(); ++j) {
-		if (member(*j, index1)) remove(index1, *j);
+		if (member(*j, index1)) {remove(index1, *j);}
 	}
 }
 
@@ -69,17 +69,17 @@ bool spillover::member_recur(unsigned index1, unsigned index2, unsigned level) c
 }
 
 bool spillover::member2way(unsigned index1, unsigned index2) const {
-	
 	return (member_recur(index1, index2) && member_recur(index2, index1));
 }
 
-void spillover::get_fanout(unsigned index1, set<unsigned> &fanout) const { // recursive
+void spillover::get_fanout(unsigned index1, vector<unsigned> &fanout) const {
 
 	assert(index1 < data.size());
-	fanout.insert(index1);
+	seen[index1] = cur_seen_ix;
+	fanout.push_back(index1);
 	
 	for (set<unsigned>::const_iterator i = data[index1].begin(); i != data[index1].end(); ++i) {
-		if (fanout.find(*i) == fanout.end()) get_fanout(*i, fanout);
+		if (seen[*i] != cur_seen_ix) {get_fanout(*i, fanout);}
 	}
 }
 
@@ -88,11 +88,12 @@ void spillover::get_connected_components(unsigned index1, vector<unsigned> &cc) 
 	cc.resize(0);
 	assert(index1 < data.size());
 	if (data[index1].empty()) return;
-	set<unsigned> fanout;
+	vector<unsigned> fanout;
+	++cur_seen_ix; // invalidate seen values
 	get_fanout(index1, fanout);
 
-	for (set<unsigned>::const_iterator i = fanout.begin(); i != fanout.end(); ++i) {
-		if (*i != index1 && member_recur(*i, index1)) cc.push_back(*i);
+	for (vector<unsigned>::const_iterator i = fanout.begin(); i != fanout.end(); ++i) {
+		if (*i != index1 && member_recur(*i, index1)) {cc.push_back(*i);}
 	}
 }
 
