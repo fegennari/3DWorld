@@ -392,16 +392,26 @@ void apply_erosion() {
 	if (erosion_iters == 0) return; // erosion disabled
 	RESET_TIME;
 	float const Kq=10, Kw=0.001f, Kr=0.9f, Kd=0.02f, Ki=0.1f, minSlope=0.05f, g=20, Kg=g*2;
-	vector<vector2d> erosion(XY_MULT_SIZE, vector2d(0.0, 0.0));
-	const unsigned MAX_PATH_LEN=XY_MULT_SIZE*4;
+	int const PAD(4), NX(MESH_X_SIZE+2*PAD), NY(MESH_Y_SIZE+2*PAD);
+	unsigned const MAX_PATH_LEN(4*NX*NY);
+	vector<vector2d> erosion(NX*NY, vector2d(0.0, 0.0));
+	vector<float> mh_padded(NX*NY);
+	rand_gen_t rgen;
 
-#define HMAP(x, y) mesh_height[max(min(y, MESH_Y_SIZE-1), 0)][max(min(x, MESH_X_SIZE-1), 0)]
-#define HMAP_INDEX(x, y) (MESH_Y_SIZE*max(min(x, MESH_X_SIZE-1), 0) + max(min(y, MESH_Y_SIZE-1), 0))
+	// pad mesh by 1 unit on each side to create a buffer of trash around the edges that can be discarded
+	for (int y = 0; y < NY; ++y) {
+		for (int x = 0; x < NX; ++x) {
+			mh_padded[y*NX + x] = mesh_height[max(min(y-PAD, MESH_Y_SIZE-1), 0)][max(min(x-PAD, MESH_X_SIZE-1), 0)];
+		}
+	}
+
+#define HMAP_INDEX(x, y) (NX*max(min(y, NY-1), 0) + max(min(x, NX-1), 0))
+#define HMAP(x, y) mh_padded[HMAP_INDEX(x, y)]
 
 #define DEPOSIT_AT(X, Z, W) { \
 	float delta = ds*(W); \
 	erosion[HMAP_INDEX((X), (Z))].y += delta; \
-	if (!point_outside_mesh(X, Z)) {HMAP(X, Z) +=delta;} \
+	if (!(X < 0 || Z < 0 || X >= NX || Z >= NY)) {HMAP(X, Z) += delta;} \
 }
 
 #define DEPOSIT(H) \
@@ -416,13 +426,13 @@ void apply_erosion() {
 	HMAP(X, Z)-=delta; \
 	vector2d &e=erosion[HMAP_INDEX((X), (Z))]; \
 	float r=e.x, d=e.y; \
-	if (delta<=d) {d-=delta;} else { r+=delta-d; d=0; } \
+	if (delta<=d) {d-=delta;} else {r+=delta-d; d=0;} \
 	e.x=r; e.y=d; \
 }
 
 	for (unsigned iter=0; iter < erosion_iters; ++iter) {
-		int xi=rand()&(MESH_X_SIZE-1);
-		int zi=rand()&(MESH_Y_SIZE-1);
+		int xi = PAD + (rgen.rand()%MESH_X_SIZE);
+		int zi = PAD + (rgen.rand()%MESH_Y_SIZE);
 		float xp=xi, zp=zi, xf=0, zf=0, s=0, v=0, w=1, dx=0, dz=0;
 		float h=HMAP(xi, zi), h00=h, h10=HMAP(xi+1, zi), h01=HMAP(xi, zi+1), h11=HMAP(xi+1, zi+1);
 
@@ -436,7 +446,7 @@ void apply_erosion() {
 
 			float dl=sqrtf(dx*dx+dz*dz);
 			if (dl<=FLT_EPSILON) { // pick random dir
-				float a=rand_float()*TWO_PI;
+				float a=rgen.rand_float()*TWO_PI;
 				dx=cosf(a); dz=sinf(a);
 			}
 			else {
@@ -450,10 +460,11 @@ void apply_erosion() {
 			float nh=(nh00*(1-nxf)+nh10*nxf)*(1-nzf)+(nh01*(1-nxf)+nh11*nxf)*nzf;
 
 			// if higher than current, try to deposit sediment up to neighbour height
-			if (nh>=h || point_outside_mesh(xi, zi)) {
+			bool const outside(xi < 0 || zi < 0 || xi >= NX || zi >= NY);
+			if (nh>=h || outside) {
 				float ds=(nh-h)+0.001f;
 
-				if (ds>=s || point_outside_mesh(xi, zi)) {
+				if (ds>=s || outside) {
 					ds=s;
 					DEPOSIT(h) // deposit all sediment
 					s=0;
@@ -504,10 +515,10 @@ void apply_erosion() {
 		if (numMoves>=MAX_PATH_LEN) {cout << "droplet path is too long: " << iter << endl;}
 	} // for iter
 
-	// clamp to zbottom
+	// remove padding and clamp to zbottom
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
-			mesh_height[y][x] = max(zbottom, mesh_height[y][x]);
+			mesh_height[y][x] = max(zbottom, mh_padded[(y+PAD)*NX + x+PAD]);
 		}
 	}
 	PRINT_TIME("Erosion");
