@@ -1000,9 +1000,8 @@ void check_spillover(int i, int j, int ii, int jj, int si, int sj, float zval, i
 }
 
 
-void sync_water_height(int wsi, int skip_ix, float zval, float z_over) {
+void sync_water_height(int wsi, int skip_ix, float zval, float z_over, vector<unsigned> &cc) {
 
-	vector<unsigned> cc;
 	spill.get_connected_components(wsi, cc);
 
 	for (unsigned k = 0; k < cc.size(); ++k) {
@@ -1018,8 +1017,6 @@ void sync_water_height(int wsi, int skip_ix, float zval, float z_over) {
 
 
 void update_valleys() {
-
-	vector<unsigned> cc;
 
 	for (unsigned i = 0; i < valleys.size(); ++i) {
 		valley &v(valleys[i]);
@@ -1037,13 +1034,14 @@ void update_valleys() {
 		v.dz    = delta_z;
 		v.zval += v.dz;
 		v.spill_integral = 0.9*v.spill_integral + 0.1*v.spill_vol;
-		if (v.w_volume == 0.0) spill.remove_connected(i);
-	}
-	vector<bool> used(valleys.size(), 0);
+		if (v.w_volume == 0.0) {spill.remove_connected(i);}
+	} // for i
+	vector<unsigned> cc;
+	vector<unsigned char> used(valleys.size(), 0);
 
 	for (unsigned i = 0; i < valleys.size(); ++i) {
 		if (used[i]) continue; // already processed
-		spill.get_connected_components(i, cc);
+		spill.get_connected_components(i, cc, &used);
 		
 		if (cc.empty()) { // unconnected (optimization)
 			used[i] = 1;
@@ -1052,7 +1050,7 @@ void update_valleys() {
 		cc.push_back(i); // add current v to the combined set
 		valley combined;
 
-		for (vector<unsigned>::const_iterator j = cc.begin(); j != cc.end(); ++j) { // calculate sums
+		for (auto j = cc.begin(); j != cc.end(); ++j) { // calculate sums
 			assert(*j < valleys.size());
 			assert(!used[*j]);
 			used[*j] = 1;
@@ -1069,7 +1067,7 @@ void update_valleys() {
 		combined.blood_mix = CLIP_TO_01(combined.blood_mix/combined.w_volume); // do we have to clip these?
 		combined.mud_mix   = CLIP_TO_01(combined.mud_mix  /combined.w_volume);
 
-		for (vector<unsigned>::const_iterator j = cc.begin(); j != cc.end(); ++j) { // update all connected valleys
+		for (auto j = cc.begin(); j != cc.end(); ++j) { // update all connected valleys
 			valley &v(valleys[*j]);
 			float const delta_z(combined.zval - v.zval); // new - old
 			v.w_volume  = max(TOLERANCE, (v.w_volume + delta_z*v.area/v.get_volume())); // not sure about this???
@@ -1078,9 +1076,7 @@ void update_valleys() {
 			v.blood_mix = combined.blood_mix;
 			v.mud_mix   = combined.mud_mix;
 		}
-	}
-	assert(used.size() == valleys.size());
-
+	} // for i
 	for (unsigned i = 0; i < valleys.size(); ++i) { // reset for next iteration
 		valley &v(valleys[i]);
 		v.area        = 0.0;
@@ -1090,7 +1086,7 @@ void update_valleys() {
 		v.sf.z_over   = 0.0;
 		v.spill_index = -1;
 		v.depth       = v.zval - mesh_height[v.y][v.x];
-	}
+	} // for i
 
 	// check for spillover offscreen or into another pool
 	int const ijd[4][4] = {{0,1,0,1}, {0,-1,0,0}, {1,0,1,0}, {-1,0,0,0}};
@@ -1109,7 +1105,7 @@ void update_valleys() {
 	}
 	vector<vert_norm_color> verts;
 
-	for (unsigned i = 0; i < valleys.size(); ++i) {
+	for (unsigned i = 0; i < valleys.size(); ++i) { // update spill graph and other data
 		valley &v(valleys[i]); // pool that may be spilling (source)
 		valley::spill_func const &sf(v.sf);
 
@@ -1133,7 +1129,7 @@ void update_valleys() {
 			v.w_volume    = max(0.0f, (v.w_volume - vol_over)); // ???
 			v.has_spilled = 1;
 			float const zval(max((v.zval - sf.z_over), v.min_zval)); // zval at spill point (local minima)
-			sync_water_height(i, sf.index, zval, sf.z_over);
+			sync_water_height(i, sf.index, zval, sf.z_over, cc);
 			draw_spillover(verts, sf.i, sf.j, sf.si, sf.sj, sf.index, int(vol_over), v.blood_mix, v.mud_mix);
 			v.zval = zval;
 		}
@@ -1144,7 +1140,7 @@ void update_valleys() {
 			if (v.zval + TOLERANCE < mesh_height[sf.si][sf.sj]) spill.remove_all_i(i); // water is below min point => no spill
 		}*/
 		max_water_height = max(max_water_height, valleys[i].zval);
-	}
+	} // for i
 }
 
 
@@ -1179,7 +1175,7 @@ void update_water_volumes() {
 				v.lwv = 1.0;
 			}
 			v.has_spilled = 0;
-			spill.remove_all_i(i); //spill.remove_all_i_2way(i); // reset connectivity graph entry
+			spill.remove_all_i(i); // reset connectivity graph entry
 		}
 	}
 }
