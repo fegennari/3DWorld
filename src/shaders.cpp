@@ -389,9 +389,14 @@ void shader_t::set_bool_prefixes(char const *const name, bool val, unsigned shad
 
 void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_type) {
 	
-	ostringstream oss;
-	oss << val;
-	set_prefix_str((string("const int ") + name + " = " + oss.str() + ";"), shader_type);
+	if (val >= 0 && val <= 9) { // faster single character optimization
+		set_prefix_str((string("const int ") + name + '=' + char('0' + val) + ';'), shader_type);
+	}
+	else {
+		ostringstream oss;
+		oss << val;
+		set_prefix_str((string("const int ") + name + '=' + oss.str() + ';'), shader_type);
+	}
 }
 
 
@@ -479,6 +484,7 @@ class shader_manager_t {
 	string_prog_map loaded_programs;
 	string_shad_map loaded_shaders[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4
 	map<string, string> loaded_files;
+	string shader_id_str; // here to avoid constant reallocation
 
 public:
 	void clear() {
@@ -545,6 +551,13 @@ public:
 
 	ix_valid_t &get_shader_by_name(string const &name, unsigned type) {return loaded_shaders[type][name];}
 	program_t &get_program_by_name(string const &name) {return loaded_programs[name];}
+
+	program_t &get_program_by_shader_names(string const shader_names[NUM_SHADER_TYPES], string const &prefix) {
+		shader_id_str.clear();
+		shader_id_str += prefix;
+		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {shader_id_str += shader_names[i] + ',';} // unique program identifier
+		return get_program_by_name(shader_id_str);
+	}
 };
 
 shader_manager_t shader_manager;
@@ -688,9 +701,7 @@ bool shader_t::begin_shader(bool do_enable) {
 
 	//RESET_TIME;
 	// get the program
-	string input_shaders;
-	for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {input_shaders += shader_names[i] + ",";} // unique program identifier
-	program_t &prog(shader_manager.get_program_by_name(prog_name_prefix + input_shaders));
+	program_t &prog(shader_manager.get_program_by_shader_names(shader_names, prog_name_prefix));
 
 	if (prog.valid) { // program already exists
 		program = prog.p;
@@ -712,7 +723,9 @@ bool shader_t::begin_shader(bool do_enable) {
 		glGetProgramiv(program, GL_LINK_STATUS, &status);
 
 		if (status != GL_TRUE) {
-			cerr << "Linking of program " << input_shaders << " failed with status " << status << endl;
+			cerr << "Linking of program ";
+			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {cout << shader_names[i] + " ";}
+			cerr << "failed with status " << status << endl;
 			print_program_info_log();
 			cout << endl;
 			exit(1);
