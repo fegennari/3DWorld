@@ -18,7 +18,7 @@ float calc_sphere_shadow_atten(in vec3 pos, in vec3 lpos, in float lradius, in v
 			atten *= 1.0 - PI*min(r,R)*min(r,R)/tot_area;
 		}
 		else if (d < (r + R)) { // partially overlapped
-			float shadowed_area = r*r*acos((d*d+r*r-R*R)/(2*d*r)) + R*R*acos((d*d+R*R-r*r)/(2*d*R)) - 0.5*sqrt((-d+r+R)*(d+r-R)*(d-r+R)*(d+r+R));
+			float shadowed_area = r*r*acos((d*d+r*r-R*R)/(2.0*d*r)) + R*R*acos((d*d+R*R-r*r)/(2.0*d*R)) - 0.5*sqrt((-d+r+R)*(d+r-R)*(d-r+R)*(d+r+R));
 			atten *= 1.0 - clamp(shadowed_area/tot_area, 0.0, 1.0);
 		}
 	}

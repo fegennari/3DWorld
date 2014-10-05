@@ -25,7 +25,7 @@ vec3 mod289(in vec3 x) {
 	return x - floor(x * 1.0 / 289.0) * 289.0;
 }
 vec3 permute(in vec3 x) {
-	return mod289(((x * 34) + 1) * x);
+	return mod289(((x * 34.0) + 1.0) * x);
 }
 
 float simplex(in vec2 v)
@@ -54,7 +54,7 @@ float simplex(in vec2 v)
 
 	// Gradients: 41 points uniformly over a line, mapped onto a diamond.
 	// The ring size 17*17 = 289 is close to a multiple of 41 (41*7 = 287)
-	vec3 x = 2 * fract(p * C.w) - 1;
+	vec3 x = 2.0 * fract(p * C.w) - 1.0;
 	vec3 h = abs(x) - 0.5;
 	vec3 ox = floor(x + 0.5);
 	vec3 a0 = x - ox;
