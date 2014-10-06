@@ -379,7 +379,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				fgRotate(((wid == W_BALL) ? 135.0 : 45.0), 1.0, 0.0, 0.0); // rotate the texture to face the player
 			}
 			if (wid == W_BALL) {draw_cube_mapped_sphere(all_zeros, radius, ndiv, do_texture);} else {draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);}
-			shader.set_specular(0.0, 0.0);
+			shader.clear_specular();
 			break;
 
 		case W_STAR5:
@@ -390,7 +390,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(object_types[oid].color, alpha));
 			shader.set_specular(0.8, 40.0);
 			draw_star(zero_vector, plus_z, zero_vector, radius, 0.0, 0); // Note: +z may not be the correct normal?
-			shader.set_specular(0.0, 0.0);
+			shader.clear_specular();
 			break;
 
 		case W_BLADE:
@@ -429,7 +429,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					draw_tquad(radius, radius, dz);
 					dz += 0.05*radius;
 				}
-				shader.set_specular(0.0, 0.0);
+				shader.clear_specular();
 				shader.add_uniform_float("min_alpha", 0.01);
 			}
 			break;
@@ -448,7 +448,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			fgRotate(90.0, 0.0, 1.0, 0.0);
 			if (wmode&1) {shader.set_cur_color(colorRGBA(BLACK, alpha));} else {set_gold_material(shader, alpha);} // black/gold
 			draw_cylinder(0.4*radius, 0.15*radius, 0.0, ndiv);
-			shader.set_specular(0.0, 0.0);
+			shader.clear_specular();
 			break;
 
 		case W_SEEK_D: // similar to rocket
@@ -458,7 +458,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 			draw_cylinder_at(point(tx, ty, 0.0), 5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
 			draw_circle_normal(0.0, 0.8*radius, ndiv, 1, point(tx, ty, 4.0*radius));
-			shader.set_specular(0.0, 0.0);
+			shader.clear_specular();
 			break;
 
 		case W_PLASMA:
@@ -495,7 +495,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				if (p_loaded) {shader.clear_color_e();}
 			}
 			fgPopMatrix();
-			shader.set_specular(0.0, 0.0);
+			shader.clear_specular();
 			break;
 
 		case W_M16:
@@ -525,7 +525,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				draw_cylinder_at(point(0.0, 0.0, 0.08), 0.004, 2.45*radius, 2.45*radius, 2*ndiv, 1); // outer band
 				fgPopMatrix();
 			}
-			shader.set_specular(0.0, 0.0);
+			shader.clear_specular();
 			break;
 
 		case W_SHOTGUN:
@@ -543,7 +543,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 					draw_cylinder_at(translates[i], 0.12, radius, radius, 2*ndiv);
 					draw_circle_normal(0.0, radius, ndiv, 1, translates[i]+vector3d(0.0, 0.0, 0.09));
 				}
-				shader.set_specular(0.0, 0.0);
+				shader.clear_specular();
 			}
 			break;
 			
@@ -574,7 +574,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_specular(0.8, 50.0);
 			draw_cylinder_at(point(tx, ty, 0.04), 0.16, 0.006, 0.0015, 2*ndiv);
 			draw_sphere_vbo(point(tx, ty, 0.04), 0.006, ndiv, 0);
-			shader.set_specular(0.0, 1.0);
+			shader.clear_specular();
 			break;
 
 		case W_GASSER:
@@ -583,7 +583,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_specular(0.7, 30.0);
 			draw_cylinder_at(point(tx, ty, 0.0), 16.0*radius, radius, radius, 2*ndiv);
 			draw_circle_normal(0.0, radius, ndiv, 1, point(tx, ty, 8.0*radius));
-			shader.set_specular(0.0, 0.0);
+			shader.clear_specular();
 			break;
 
 		default:

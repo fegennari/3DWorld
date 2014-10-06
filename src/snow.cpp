@@ -772,7 +772,7 @@ void draw_snow() {
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
 	snow_draw.draw();
 	glDisable(GL_PRIMITIVE_RESTART);
-	s.set_specular(0.0, 1.0);
+	s.clear_specular();
 	s.end_shader();
 	//PRINT_TIME("Snow Draw");
 }

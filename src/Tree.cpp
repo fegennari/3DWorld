@@ -419,7 +419,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 
 void tree_cont_t::post_leaf_draw(shader_t &shader) {
 
-	shader.set_specular(0.0, 1.0);
+	shader.clear_specular();
 	shader.disable();
 }
 

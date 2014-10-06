@@ -243,7 +243,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	s.add_uniform_float("min_alpha", min_alpha);
 	if (use_shadow_map && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
 	set_active_texture(0);
-	s.set_specular(0.0, 1.0);
+	s.clear_specular();
 }
 
 
@@ -522,7 +522,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		disable_blend();
 		draw_last.resize(0);
 	} // end draw_trans
-	s.set_specular(0.0, 1.0); // reset (may be unnecessary)
+	s.clear_specular(); // may be unnecessary
 	s.end_shader();
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }
@@ -729,7 +729,7 @@ void draw_sky(int order) {
 	s.begin_shader();
 	s.add_uniform_float("min_alpha", 0.0);
 	s.add_uniform_int("tex0", 0);
-	s.set_specular(0.0, 1.0);
+	s.clear_specular();
 	s.set_cur_color(cloud_color);
 	select_texture(CLOUD_TEX);
 	// change S and T parameters to map sky texture into the x/y plane with translation based on wind/rot

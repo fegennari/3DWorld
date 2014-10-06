@@ -1881,7 +1881,7 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	shader_t s;
 	setup_mesh_draw_shaders(s, reflection_pass, enable_shadow_map);
 	s.add_uniform_float("spec_scale", 1.0);
-	s.set_specular(0.0, 1.0); // in case we failed to clear it somewhere ahead
+	s.clear_specular(); // in case we failed to clear it somewhere ahead
 	s.enable_vnct_atribs(1, 0, 0, 0);
 	vbo_ring_buffer_t vbo_ring_ibuf((1 << 16), 1);
 	enable_blend(); // for fog transparency
@@ -1977,7 +1977,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		s.add_uniform_float("ambient_scale", 1.5);
 		s.set_specular(0.2, 8.0);
 		draw_pine_tree_bl(s, 0, 0, 1, reflection_pass, s.get_uniform_loc("xlate"));
-		s.set_specular(0.0, 1.0);
+		s.clear_specular();
 		s.end_shader();
 		disable_blend();
 	}
@@ -1997,7 +1997,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	s.set_specular(0.2, 8.0);
 	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass, xlate_loc);
 	assert(tree_trunk_pts.empty());
-	s.set_specular(0.0, 1.0);
+	s.clear_specular();
 	
 	if (xlate_loc >= 0) {
 		glVertexAttribDivisor(xlate_loc, 0);
@@ -2102,7 +2102,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 		lrs.set_specular(0.1, 10.0);
 		lod_renderer.render_billboards(0);
-		lrs.set_specular(0.0, 1.0);
+		lrs.clear_specular();
 		lrs.end_shader();
 	}
 	if (lod_renderer.has_branches()) { // draw branch billboards

@@ -823,7 +823,7 @@ void flower_manager_t::setup_flower_shader_post(shader_t &shader) {
 
 	shader.add_uniform_float("height", grass_length);
 	shader.add_uniform_float("min_alpha", 0.9);
-	shader.set_specular(0.0, 1.0);
+	shader.clear_specular();
 }
 
 void flower_manager_t::draw_triangles(shader_t &shader) const {

@@ -726,7 +726,7 @@ void water_renderer::draw() { // modifies color
 	sort(sides.begin(), sides.end()); // largest to smallest distance
 	for (unsigned i = 0; i < 4; ++i) {draw_sides(sides[i].second);} // draw back to front
 	disable_blend();
-	shader.set_specular(0.0, 1.0);
+	shader.clear_specular();
 }
 
 
@@ -778,7 +778,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.add_uniform_float("mesh_z_scale",     mesh_scale);
 	set_water_plane_uniforms(s);
 	setup_water_plane_texgen(1.0, 1.0, s, 0);
-	if (no_specular) {s.set_specular(0.0, 1.0);} else {set_tt_water_specular(s);}
+	if (no_specular) {s.clear_specular();} else {set_tt_water_specular(s);}
 	// Note: we could add procedural cloud soft shadows like in tiled terrain mesh and grass, but it's probably not worth the added complexity and runtime
 
 	// waves (as normal maps)

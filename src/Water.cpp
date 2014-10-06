@@ -643,7 +643,7 @@ void draw_water() {
 	} // for i
 	wsd.end_strip();
 	disable_blend();
-	s.set_specular(0.0, 1.0);
+	s.clear_specular();
 	s.end_shader();
 	update_water_volumes();
 	if (!lc0 && rand()%5 != 0) landscape_changed = 0; // reset, only update landscape 20% of the time

@@ -85,7 +85,7 @@ void check_drawing_flags(unsigned flags, int init_draw, shader_t &shader) {
 	}
 	else {
 		if (flags & BLEND) disable_blend();
-		if (flags & (SPECULAR | LOW_SPECULAR)) {shader.set_specular(0.0, 1.0);}
+		if (flags & (SPECULAR | LOW_SPECULAR)) {shader.clear_specular();}
 	}
 }
 
@@ -273,7 +273,7 @@ void draw_select_groups(int solid) {
 		s.add_uniform_float("min_alpha",   0.0);
 		s.add_uniform_float("color_scale", 2.0);
 		check_drawing_flags(object_types[SNOW].flags, 1, s);
-		s.set_specular(0.0, 1.0); // disable
+		s.clear_specular();
 		snow_pld.draw_and_clear();
 		check_drawing_flags(object_types[SNOW].flags, 0, s);
 		s.add_uniform_float("color_scale", 1.0);
@@ -418,7 +418,7 @@ void draw_and_clear_tris(vector<vert_norm_color> &vn, vector<vert_norm_tc_color>
 void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manager) {
 
 	RESET_TIME;
-	s.set_specular(0.0, 1.0); // disable
+	s.clear_specular();
 	int const type(objg.get_ptype());
 	obj_type const &otype(object_types[type]);
 	int tid(otype.tid);
@@ -485,7 +485,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], leaf_color, cross_product(dirs[0], dirs[1]).get_norm());
 			} // for j
 			qbd.draw_and_clear();
-			ls.set_specular(0.0, 1.0);
+			ls.clear_specular();
 			ls.end_shader();
 			if (s.is_setup()) {s.enable();} // back to the original shader
 		}

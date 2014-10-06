@@ -1134,7 +1134,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 		i->draw(pos_, camera, s, pld); // move in front of far clipping plane?
 	}
 	asteroid_model_gen.final_draw(loc, force_tid_to); // flush and drawing buffers/state (will do the actual rendering here in instanced mode)
-	if (is_ice) {s.set_specular(0.0, 1.0);} // reset specular
+	if (is_ice) {s.clear_specular();} // reset specular
 
 	if (!pld.empty()) {
 		end_texture();

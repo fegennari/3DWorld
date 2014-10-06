@@ -294,10 +294,7 @@ public:
 		return 1;
 	}
 	void disable_planet() {
-		if (is_setup()) {
-			set_specular(0.0, 1.0);
-			disable();
-		}
+		if (is_setup()) {clear_specular(); disable();}
 	}
 
 	bool enable_star(colorRGBA const &colorA, colorRGBA const &colorB, float radius) { // no lighting
@@ -348,10 +345,7 @@ public:
 		return 1;
 	}
 	void disable_ring() {
-		if (is_setup()) {
-			set_specular(0.0, 1.0);
-			disable();
-		}
+		if (is_setup()) {clear_specular(); disable();}
 	}
 
 	void enable_atmospheric(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {	

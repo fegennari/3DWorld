@@ -1086,7 +1086,7 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate);
 	}
 	plant_vbo_manager.end_render();
-	s.set_specular(0.0, 1.0);
+	s.clear_specular();
 }
 
 
@@ -1122,7 +1122,7 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 		select_texture(WHITE_TEX); // berries are untextured
 		s.set_specular(0.9, 80.0);
 		for (unsigned i = 0; i < plants.size(); ++i) {plants[i].draw_berries(s, xlate);}
-		s.set_specular(0.0, 1.0);
+		s.clear_specular();
 	}
 	if (draw_pld) {tree_scenery_pld.draw_and_clear();}
 }

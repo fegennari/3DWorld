@@ -859,7 +859,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		geom.render(shader, 0);
 		geom_tan.render(shader, 0);
 		shader.clear_color_e();
-		if (ns > 0.0) {shader.set_specular(0.0, 1.0);}
+		if (ns > 0.0) {shader.clear_specular();}
 		if (need_blend) {disable_blend();}
 		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_index", 1.0);}
 	}
@@ -1253,7 +1253,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 			select_texture(cur_ub_tid);
 			shader.set_cur_color(cur_ub_color);
 			shader.add_uniform_float("min_alpha", 0.0);
-			shader.set_specular(0.0, 1.0);
+			shader.clear_specular();
 		}
 		if (!is_shadow_pass || !enable_alpha_mask) { // skip shadow + alpha mask pass
 			unbound_geom.render(shader, is_shadow_pass);
@@ -1567,12 +1567,12 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 			}
 			else {
 				s.begin_simple_textured_shader(0.0, 1); // with lighting
-				s.set_specular(0.0, 1.0);
+				s.clear_specular();
 			}
 			for (iterator m = begin(); m != end(); ++m) { // non-const
 				m->render(s, is_shadow_pass, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), xlate);
 			}
-			s.set_specular(0.0, 1.0); // reset (may be unnecessary)
+			s.clear_specular(); // may be unnecessary
 			s.end_shader();
 		} // sam_pass
 	} // bmap_pass
