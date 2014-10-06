@@ -1147,8 +1147,9 @@ void init_smiley_texture(int smiley_id) {
 
 	assert(sstates != NULL);
 	int const texels(SMILEY_TEX_SIZE*SMILEY_TEX_SIZE), tbytes(3*texels);
-	if (sstates[smiley_id].tdata.empty()) {sstates[smiley_id].tdata.resize(tbytes, 255);}
-	unsigned char *const tdata(&sstates[smiley_id].tdata.front());
+	vector<unsigned char> &tdata(sstates[smiley_id].tdata);
+	tdata.resize(tbytes);
+	for (auto i = tdata.begin(); i != tdata.end(); ++i) {*i = 255;} // reset to all white
 
 	if (SMILEY_BUTT) {
 		for (unsigned y = SMILEY_TEX_SIZE/4; y < SMILEY_TEX_SIZE/2; ++y) {
@@ -1163,7 +1164,7 @@ void init_smiley_texture(int smiley_id) {
 	else {
 		bind_2d_texture(sstates[smiley_id].tid);
 	}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SMILEY_TEX_SIZE, SMILEY_TEX_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, tdata);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, SMILEY_TEX_SIZE, SMILEY_TEX_SIZE, 0, GL_RGB, GL_UNSIGNED_BYTE, &tdata.front());
 }
 
 
