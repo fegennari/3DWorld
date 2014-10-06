@@ -1363,11 +1363,12 @@ colorRGBA const BLOOD_C  (0.4,  0.0,  0.0,  1.0);
 colorRGBA const CLOUD_C  (0.9,  0.9,  0.9,  1.0);
 colorRGBA const TREE_C   (0.7,  0.4,  0.2,  1.0);
 colorRGBA const PTREE_C  (0.8,  0.6,  0.5,  1.0);
-colorRGBA const GOLD     (0.9,  0.65, 0.05, 1.0); // more like yellow
 colorRGBA const MUD_C    (0.3,  0.18, 0.09, 1.0);
 colorRGBA const MUD_S_C  (0.7,  0.35, 0.25, 1.0);
-colorRGBA const BRASS_C  (1.0,  1.0,  0.8,  1.0);
-colorRGBA const BRONZE_C (1.0,  1.0,  0.6,  1.0);
+colorRGBA const GOLD     (0.7,  0.45, 0.05, 1.0);
+colorRGBA const BRASS_C  (0.7,  0.65, 0.25, 1.0);
+colorRGBA const BRONZE_C (0.52, 0.23, 0.17, 1.0);
+colorRGBA const COPPER_C (0.7,  0.3,  0.05,  1.0);
 colorRGBA const MED_GREEN(0.2,  0.7,  0.2,  1.0);
 colorRGBA const SNOW_COLOR(1.0, 1.0,  1.4,  1.0); // slightly bluish (saturated)
 colorRGBA const LAVA_COLOR(1.0, 0.1,  0.0,  1.0); // red-orange

@@ -145,6 +145,25 @@ void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, shader_t *
 }
 
 
+// metal material properties - low diffuse color but very high specular of a similar color to diffuse
+void set_silver_material(shader_t &shader, float alpha) {
+	shader.set_cur_color(colorRGBA(WHITE*0.5, alpha));
+	shader.set_specular_color(colorRGBA(0.8, 0.8, 0.8)*2.0, 50.0);
+}
+void set_gold_material(shader_t &shader, float alpha) {
+	shader.set_cur_color(colorRGBA(GOLD*0.5, alpha));
+	shader.set_specular_color(colorRGBA(0.9, 0.6, 0.1)*2.0, 40.0);
+}
+void set_copper_material(shader_t &shader, float alpha) {
+	shader.set_cur_color(colorRGBA(COPPER_C*0.5, alpha));
+	shader.set_specular_color(colorRGBA(0.8, 0.4, 0.25)*2.0, 30.0);
+}
+void set_brass_material(shader_t &shader, float alpha) {
+	shader.set_cur_color(colorRGBA(BRASS_C*0.5, alpha));
+	shader.set_specular_color(colorRGBA(0.85, 0.85, 0.25)*2.0, 25.0);
+}
+
+
 void draw_camera_weapon(bool want_has_trans) {
 
 	if (!game_mode || weap_has_transparent(CAMERA_ID) != want_has_trans) return;
@@ -1317,6 +1336,4 @@ void draw_compass_and_alt() { // and temperature
 	sprintf(text, "Temp: %iC", int(temperature));
 	draw_text(YELLOW, 0.007*aspect_ratio, -0.01, -0.02, text);
 }
-
-
 

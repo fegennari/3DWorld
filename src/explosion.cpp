@@ -34,7 +34,7 @@ exp_type_params et_params[NUM_ETYPES] = {
 	exp_type_params(0.7, colorRGBA(0.75, 0.2, 0.4, 1.0), colorRGBA(0.2, 0.0, 0.7, 1.0)), // ETYPE_ATOMIC
 	exp_type_params(0.8, GREEN,  LT_GREEN), // ETYPE_PLASMA
 	exp_type_params(1.5, colorRGBA(1.0,  0.9, 0.7, 0.4), colorRGBA(0.9, 0.7, 0.3, 0.4)), // ETYPE_EMP
-	exp_type_params(2.5, BRONZE_C, DK_RED), // ETYPE_STARB
+	exp_type_params(2.5, colorRGBA(1.0,  1.0, 0.6, 1.0), DK_RED), // ETYPE_STARB
 	exp_type_params(1.7, LT_BLUE, WHITE),   // ETYPE_FUSION
 	exp_type_params(1.2, WHITE,   CYAN),    // ETYPE_EBURST
 	exp_type_params(0.8, GREEN,   WHITE),   // ETYPE_ESTEAL

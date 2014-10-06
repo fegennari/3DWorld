@@ -368,7 +368,9 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 		case W_GRENADE: // draw_grenade()?
 		case W_CGRENADE:
 			radius = 0.4*object_types[oid].radius;
-			if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) {radius *= 1.2;}
+			if (wid == W_CGRENADE || (wid == W_GRENADE && (wmode & 1))) {set_gold_material(shader, alpha); radius *= 1.2;} // cgrenade
+			else if (wid == W_GRENADE ) {set_copper_material(shader, alpha);} // grenade
+			else {shader.set_cur_color(colorRGBA(object_types[oid].color, alpha)); shader.set_specular(0.8, 40.0);}
 			translate_to(v_trans);
 			
 			if (do_texture) {
@@ -376,8 +378,6 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 				rotate_to_dir(dir, 90.0, 1.0); // cancel out texture rotation with camera
 				fgRotate(((wid == W_BALL) ? 135.0 : 45.0), 1.0, 0.0, 0.0); // rotate the texture to face the player
 			}
-			shader.set_cur_color(colorRGBA(object_types[oid].color, alpha));
-			shader.set_specular(0.8, 40.0);
 			if (wid == W_BALL) {draw_cube_mapped_sphere(all_zeros, radius, ndiv, do_texture);} else {draw_sphere_vbo(all_zeros, radius, ndiv, do_texture);}
 			shader.set_specular(0.0, 0.0);
 			break;
@@ -436,8 +436,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 
 		case W_ROCKET:
 			radius = 0.95*object_types[ROCKET].radius;
-			shader.set_cur_color(colorRGBA(0.15, 0.15, 0.15, alpha));
-			shader.set_specular(0.9, 50.0);
+			set_copper_material(shader, alpha);
 			rot_angle = max(0.0f, 10.0f*(fire_val - 0.7f)); // recoil
 			fgRotate(rot_angle, -dir.y, dir.x, 0.0); // could probably use rotate_into_plus_z()
 			fgTranslate(tx, ty, 0.0);
@@ -447,15 +446,14 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			// draw the sight
 			fgTranslate(0.8*radius, 0.0, 6.5*radius);
 			fgRotate(90.0, 0.0, 1.0, 0.0);
-			shader.set_cur_color(colorRGBA((wmode&1) ? BLACK : colorRGBA(0.9, 0.65, 0.05), alpha)); // black/gold
+			if (wmode&1) {shader.set_cur_color(colorRGBA(BLACK, alpha));} else {set_gold_material(shader, alpha);} // black/gold
 			draw_cylinder(0.4*radius, 0.15*radius, 0.0, ndiv);
 			shader.set_specular(0.0, 0.0);
 			break;
 
 		case W_SEEK_D: // similar to rocket
 			radius = 0.95*object_types[SEEK_D].radius;
-			shader.set_cur_color(colorRGBA(0.05, 0.05, 0.05, alpha));
-			shader.set_specular(0.7, 30.0);
+			set_brass_material(shader, alpha);
 			rot_angle = max(0.0f, 15.0f*(fire_val - 0.8f));
 			fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 			draw_cylinder_at(point(tx, ty, 0.0), 5.8*radius, 0.8*radius, 0.8*radius, 2*ndiv);
@@ -480,9 +478,10 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			shader.set_cur_color(colorRGBA(RED, alpha));
 			draw_circle_normal(0.004, 0.0043, ndiv, 1);
 			fgTranslate(tx, ty, -0.15);
-			shader.set_cur_color(colorRGBA(GOLD, alpha));
+			set_gold_material(shader, alpha);
 			draw_circle_normal(0.0075, 0.009, ndiv, 1, 0.15);
 			shader.set_cur_color(colorRGBA(BLACK, alpha));
+			shader.set_specular(0.8, 10.0);
 			draw_cylinder(0.15, 0.005, 0.005, 2*ndiv);
 			fgPushMatrix();
 			fgTranslate(0.0, 0.0, 0.15);
@@ -513,8 +512,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			else { // shrapnel chaingun
 				radius = 0.004;
 				float const rdx(1.4*radius*dir.x/rxy), rdy(1.4*radius*dir.y/rxy);
-				shader.set_cur_color(colorRGBA(0.12, 0.12, 0.12, alpha));
-				shader.set_specular(0.6, 30.0);
+				set_silver_material(shader, alpha);
 				fgTranslate(0.6*tx, 0.6*ty, 0.0);
 				fgPushMatrix();
 				fgRotate(15.0*rot_counter, 0.0, 0.0, 1.0);
@@ -534,8 +532,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			{
 				radius = 0.0045;
 				float const rdx(radius*dir.x/rxy), rdy(radius*dir.y/rxy);
-				shader.set_cur_color(colorRGBA(0.2, 0.2, 0.2, alpha));
-				shader.set_specular(0.6, 30.0);
+				set_gold_material(shader, alpha);
 				rot_angle = max(0.0, 8.0*fire_val);
 				fgRotate(rot_angle, -dir.y, dir.x, 0.0);
 				fgTranslate(0.6*tx, 0.6*ty, 0.0);

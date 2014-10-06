@@ -794,11 +794,10 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 	dwobject const &obj(objg.get_obj(j));
 	point pos(obj.pos);
 	vector<wap_obj> wap_vis_objs[2]; // not actually used
-	int const atype(get_ammo_or_obj((int)obj.direction));
+	int const atype(BEAM);//get_ammo_or_obj((int)obj.direction));
 	if (atype < 0) return; // can this happen?
 	obj_type const &otype(object_types[atype]);
 	check_drawing_flags(otype.flags, 1, shader);
-	shader.set_cur_color(otype.color);
 	if (otype.tid >= 0) {select_texture(otype.tid);}
 	bool const cull_face(get_cull_face(atype, color));
 	if (cull_face) {glEnable(GL_CULL_FACE);}
@@ -806,6 +805,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 	switch (atype) {
 	case SHELLC: // M16
 		pos.z -= 0.5*radius;
+		set_brass_material(shader); // looks gray through the blue ammo shell
 		draw_cylinder_at(pos, 1.0*radius, 0.2*radius, 0.2*radius, ndiv, 1);
 		pos.z += radius;
 		draw_sphere_vbo(pos, 0.2*radius, ndiv, 0);
@@ -817,23 +817,28 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 			shader.set_cur_color(RED);
 			pos2.z -= 0.5*radius;
 			draw_cylinder_at(pos2, 1.2*radius, 0.3*radius, 0.3*radius, ndiv, 1);
-			shader.set_cur_color(GOLD);
+			set_brass_material(shader); // looks gray through the blue ammo shell
 			pos2.z -= 0.2*radius;
 			draw_cylinder_at(pos2, 0.4*radius, 0.32*radius, 0.32*radius, ndiv, 1);
+			check_drawing_flags(otype.flags, 1, shader);
 		}
 		break;
 	case BEAM: // laser
-		shader.set_cur_color(RED);
+		set_emissive_only(RED, shader);
 		pos.z -= 0.5*radius;
 		draw_cylinder_at(pos, 1.0*radius, 0.1*radius, 0.1*radius, ndiv, 1);
+		shader.clear_color_e();
 		break;
 	case STAR5: // throwing star
+		shader.set_cur_color(otype.color);
 		draw_star(pos, obj.orientation, obj.init_dir, 0.4*radius, obj.angle, 0);
 		break;
 	case GASSED:
+		shader.set_cur_color(otype.color);
 		draw_sphere_vbo(pos, 0.6*radius, ndiv, 1);
 		break;
 	default:
+		shader.set_cur_color(otype.color);
 		draw_obj(objg, wap_vis_objs, atype, 0.4*radius, color, ndiv, j, 1, shader, lt_atten_manager);
 	}
 	if (cull_face) {glDisable(GL_CULL_FACE);}
@@ -1261,9 +1266,11 @@ void draw_grenade(point const &pos, vector3d const &orient, float radius, int nd
 	translate_to(pos);
 	uniform_scale(radius);
 	fgPushMatrix();
-	if (!is_cgrenade) fgScale(0.8, 0.8, 1.2); // rotate also?
-	shader.set_cur_color(BLACK);
+	if (!is_cgrenade) {fgScale(0.8, 0.8, 1.2);} // rotate also?
+	//shader.set_cur_color(BLACK);
+	(is_cgrenade ? set_gold_material(shader) : set_copper_material(shader));
 	draw_sphere_vbo_raw(ndiv, 0);
+	set_obj_specular(object_types[GRENADE].flags, brightness, shader);
 	fgPopMatrix();
 
 	float const stime(1.0 - float(time)/float(object_types[is_cgrenade ? CGRENADE : GRENADE].lifetime)), sval(0.2 + 0.8*stime);
@@ -1337,14 +1344,13 @@ void draw_shell_casing(point const &pos, vector3d const &orient, vector3d const 
 	uniform_scale(radius); // Note: needs 2-sided lighting
 
 	if (type == 0) { // M16 shell casing
-		shader.set_specular_color(GOLD, 50.0);
+		set_brass_material(shader);
 		draw_cylinder(4.0, 1.0, 1.0, ndiv);
 	}
 	else { // shotgun shell casing
 		shader.set_cur_color(RED);
 		draw_fast_cylinder(point(0.0, 0.0, -2.0), point(0.0, 0.0,  2.8), 1.2,  1.2,  ndiv, 0);
-		shader.set_cur_color(GOLD);
-		shader.set_specular_color(GOLD, 50.0);
+		set_brass_material(shader);
 		draw_fast_cylinder(point(0.0, 0.0, -2.8), point(0.0, 0.0, -1.2), 1.28, 1.28, ndiv, 0);
 	}
 	set_obj_specular(object_types[SHELLC].flags, 0.5*brightness, shader); // reset

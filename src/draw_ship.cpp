@@ -1379,10 +1379,10 @@ void uobj_draw_data::draw_gunship() const {
 	fgScale(0.25, 4.0, 1.0);
 	draw_cylinder(0.2, 0.00, 0.45, ndiv2, 0, 0, 0, -1.15); // rear
 	fgPopMatrix();
-	if (textured) end_ship_texture();
+	if (textured) {end_ship_texture();}
 
 	// rings
-	set_color(GOLD);
+	if (shader) {set_gold_material(*shader);}
 	fgPushMatrix();
 	fgScale(3.0, 1.0, 1.0);
 	fgTranslate(0.0, 0.0, -0.7);
@@ -1392,6 +1392,7 @@ void uobj_draw_data::draw_gunship() const {
 		if (i < 4) {fgTranslate(0.0, 0.0, 0.3);}
 	}
 	fgPopMatrix();
+	set_uobj_specular(0.0, 1.0);
 
 	// engines
 	float const dxy[2][4] = {{-1.0, 1.0, 0.0, 0.0}, {0.0, 0.0, -1.0, 1.0}};

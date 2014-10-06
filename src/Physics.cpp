@@ -371,7 +371,7 @@ void init_objects() {
 	object_types[STAR5].density            = 1.8;
 	object_types[STAR5].elasticity         = 0.1;
 	object_types[STAR5].health             = 600.0;
-	object_types[STAR5].color              = GRAY;
+	object_types[STAR5].color              = GRAY; // silver?
 	object_types[STAR5].flags              = SPECULAR | SELECTABLE; // OBJ_IS_FLAT?
 
 	object_types[PLASMA].air_factor        = 0.012;
@@ -399,7 +399,7 @@ void init_objects() {
 	object_types[GRENADE].density          = 1.2;
 	object_types[GRENADE].elasticity       = 0.6;
 	object_types[GRENADE].health           = 70.0;
-	object_types[GRENADE].color            = BLACK;
+	object_types[GRENADE].color            = COPPER_C;
 	object_types[GRENADE].flags            = SPECULAR | SELECTABLE | OBJ_EXPLODES;
 
 	object_types[CGRENADE].air_factor      = 0.06; // cluster of 10 grenades
@@ -411,7 +411,7 @@ void init_objects() {
 	object_types[CGRENADE].density         = 1.2;
 	object_types[CGRENADE].elasticity      = 0.6;
 	object_types[CGRENADE].health          = 50.0;
-	object_types[CGRENADE].color           = BLACK;
+	object_types[CGRENADE].color           = GOLD;
 	object_types[CGRENADE].flags           = SPECULAR | SELECTABLE | OBJ_EXPLODES;
 
 	object_types[SHRAPNEL].air_factor      = 0.05;
@@ -433,7 +433,7 @@ void init_objects() {
 	object_types[SHELLC].density           = 1.8;
 	object_types[SHELLC].elasticity        = 0.8;
 	object_types[SHELLC].health            = 1000.0;
-	object_types[SHELLC].color             = GOLD;
+	object_types[SHELLC].color             = BRASS_C;
 	object_types[SHELLC].flags             = SPECULAR | OBJ_IS_CYLIN;
 
 	object_types[PROJC].air_factor         = 0.0;
