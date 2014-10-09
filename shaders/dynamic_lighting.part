@@ -83,7 +83,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color) {
 
 #ifndef NO_DL_SPECULAR
 		vec3 half_vect = normalize(normalize(eye_pos) + light_dir); // Eye + L (in world space)
-		float spec_mag = (n_dot_l > 0.0 ? 1.0 : 0.0)*pow(max(dot(lnorm, half_vect), 0.0), get_shininess());
+		float spec_mag = clamp(10.0*n_dot_l, 0.0, 1.0)*pow(max(dot(lnorm, half_vect), 0.0), get_shininess());
 #else
 		float spec_mag = 0.0;
 #endif // NO_DL_SPECULAR

@@ -20,9 +20,13 @@ const float SMOKE_SCALE = 0.25;
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
+float maybe_get_smap_nscale(in vec3 n, in float n_dot_l) {
+	return ((n_dot_l > 0.0) ? min(1.0, 10.0*n_dot_l)*get_shadow_map_weight_light0(epos, n) : 0.0); // back-facing test
+}
+
 vec3 add_light0(in vec3 n) {
 	vec3 light_dir = normalize(fg_LightSource[0].position.xyz - epos.xyz); // Note: could drop the -epos.xyz for a directional light
-	float nscale   = (use_shadow_map ? ((dot(n, light_dir) > 0.0) ? get_shadow_map_weight_light0(epos, n) : 0.0) : 1.0); // back-facing test
+	float nscale   = (use_shadow_map ? maybe_get_smap_nscale(n, dot(n, light_dir)) : 1.0);
 
 #ifdef DYNAMIC_SMOKE_SHADOWS
 	if (lpos0 != vposl && nscale > 0.0) {
