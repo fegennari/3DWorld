@@ -1576,7 +1576,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	}
 	float const radius(object_types[type].radius), step(step_height*radius), mh(int_mesh_zval_pt_off(pos, 1, 0)); // *** step height determined by fticks? ***
 	int no_jump_placeholder(0);
-	int &jump_time((sstates == nullptr) ? no_jump_placeholder : sstates[id].jump_time);
+	int &jump_time((sstates == nullptr || !is_player) ? no_jump_placeholder : sstates[id].jump_time);
 	pos.z = max(pos.z, (mh + radius));
 	bool jumping(0);
 
@@ -1728,7 +1728,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				else { // stuck against side of surface
 					if (jumping || pos.z > zb) { // head inside the object
 						if (is_player) {sstates[id].fall_counter = 0;}
-						if (jumping  ) {jump_time = (JUMP_COOL - JUMP_TIME)*TICKS_PER_SECOND;} // end jump time
+						jump_time = min(jump_time, (jumping ? int((JUMP_COOL - JUMP_TIME)*TICKS_PER_SECOND) : 1)); // end jump time / prevent starting a new jump
 						pos  = lpos; // reset to last known good position
 						zvel = 0.0;
 						return 3;
@@ -1741,7 +1741,6 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			any_coll = 1;
 		} // if coll
 	} // for k
-	float const g_acc(base_gravity*GRAVITY*tstep*object_types[type].gravity), terminal_v(object_types[type].terminal_vel);
 	bool falling(0);
 	
 	if (jumping) {
@@ -1750,7 +1749,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	else if (!any_coll || z2 < zfloor) {
 		pos.z = mh;
 		bool const on_ice(is_camera && (camera_coll_smooth || game_mode) && temperature <= W_FREEZE_POINT && is_underwater(pos));
-		if (on_ice) pos.z = water_matrix[ypos][xpos]; // standing on ice
+		if (on_ice) {pos.z = water_matrix[ypos][xpos];} // standing on ice
 		pos.z += radius;
 		if (!on_ice && type != WAYPOINT) {modify_grass_at(pos, radius, (type != FIRE), (type == FIRE));} // crush or burn grass
 	}
@@ -1761,7 +1760,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			pos.z = zceil + radius; // object falls to the floor
 		}
 		else {
-			pos.z = zmu + radius;
+			pos.z = zmu + radius; // on mesh or top surface of cobj
 		}
 	}
 	if ((is_camera && camera_change) || mesh_scale_change || on_snow) {
@@ -1775,8 +1774,8 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		zvel = 0.0;
 	}
 	if (is_camera) {
-		if (falling)        camera_in_air     = 1;
-		if (!camera_in_air) camera_invincible = 0;
+		if (falling)        {camera_in_air     = 1;}
+		if (!camera_in_air) {camera_invincible = 0;}
 	}
 	if (type == WAYPOINT) {
 		// do nothing
@@ -1786,7 +1785,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (is_player) {sstates[id].fall_counter = 0;}
 	}
 	else if (falling) {
-		zvel  = max(-terminal_v, (zvel - g_acc));
+		zvel  = max(-object_types[type].terminal_vel, (zvel - base_gravity*GRAVITY*tstep*object_types[type].gravity));
 		pos.z = max(pos.z, (lpos.z + tstep*zvel));
 		
 		if (is_player) {

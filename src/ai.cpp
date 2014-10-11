@@ -839,7 +839,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	bool stuck(0), in_ice(0), no_up(0), no_down(0), using_dest_mark(0);
 
 	if ((rand() % (is_jumping ? 1000 : 4000)) == 0) {is_jumping ^= 1;}
-	if (is_jumping) {jump(obj.pos);}
+	if (is_jumping && powerup != PU_FLIGHT) {jump(obj.pos);}
 	
 	// check for stuck underwater
 	if (is_water_temp && underwater && !on_waypt_path) { // ok if on a waypoint path
@@ -1517,10 +1517,9 @@ float player_state::weapon_range(bool use_far_clip) const {
 
 void player_state::jump(point const &pos) {
 	
-	if (jump_time == 0) {
-		jump_time = JUMP_COOL*TICKS_PER_SECOND;
-		gen_sound(SOUND_BOING, pos, 0.2, 0.6);
-	}
+	if (jump_time > 0) return; // can't start a new jump
+	jump_time = JUMP_COOL*TICKS_PER_SECOND;
+	if (powerup != PU_FLIGHT) {gen_sound(SOUND_BOING, pos, 0.2, 0.6);}
 }
 
 
