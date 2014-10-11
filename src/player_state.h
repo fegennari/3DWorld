@@ -164,10 +164,10 @@ struct player_state { // size = big
 		count_t(unsigned c_=0) : c(c_) {}
 	};
 
-	bool plasma_loaded, on_waypt_path;
+	bool plasma_loaded, on_waypt_path, is_jumping;
 	int timer, target, objective, weapon, wmode, powerup, powerup_time, cb_hurt;
 	int kills, deaths, suicides, team_kills, max_kills, tot_kills, killer;
-	int init_frame, fire_frame, was_hit, hitter, target_visible, kill_time, rot_counter, uw_time;
+	int init_frame, fire_frame, was_hit, hitter, target_visible, kill_time, rot_counter, uw_time, jump_time;
 	int target_type, stopped_time, last_waypoint;
 	unsigned tid, fall_counter, chunk_index;
 	float shields, plasma_size, zvel, dpos, last_dz, last_zvel, last_wpt_dist;
@@ -182,9 +182,9 @@ struct player_state { // size = big
 	unreachable_pts unreachable[2]; // {objects, waypoints}
 	destination_marker dest_mark;
 
-	player_state() : plasma_loaded(0), on_waypt_path(0), timer(0), target(-1), objective(-1), weapon(0), wmode(0), powerup(0), powerup_time(0),
-		 cb_hurt(0),kills(0), deaths(0), suicides(0), team_kills(0), max_kills(0), tot_kills(0), killer(NO_SOURCE), init_frame(0), fire_frame(0), was_hit(0),
-		hitter(NO_SOURCE), target_visible(0), kill_time(0), rot_counter(0), uw_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0),
+	player_state() : plasma_loaded(0), on_waypt_path(0), is_jumping(0), timer(0), target(-1), objective(-1), weapon(0), wmode(0), powerup(0), powerup_time(0),
+		 cb_hurt(0), kills(0), deaths(0), suicides(0), team_kills(0), max_kills(0), tot_kills(0), killer(NO_SOURCE), init_frame(0), fire_frame(0), was_hit(0),
+		hitter(NO_SOURCE), target_visible(0), kill_time(0), rot_counter(0), uw_time(0), jump_time(0), target_type(0), stopped_time(0), last_waypoint(-1), tid(0),
 		fall_counter(0), chunk_index(0), shields(0.0), plasma_size(0.0), zvel(0.0), dpos(0.0), last_dz(0.0), last_zvel(0.0), last_wpt_dist(0.0),
 		target_pos(all_zeros), objective_pos(all_zeros), cb_pos(all_zeros), hit_dir(all_zeros), velocity(all_zeros) {init_wa();}
 
@@ -194,6 +194,7 @@ struct player_state { // size = big
 	bool no_weap() const;
 	bool no_ammo() const;
 	float weapon_range(bool use_far_clip) const;
+	void jump(point const &pos);
 	void verify_wmode();
 	bool no_weap_or_ammo()   const {return (no_weap() || no_ammo());}
 	float get_damage_scale() const {return ((powerup == PU_DAMAGE) ? 4.0 : 1.0);}

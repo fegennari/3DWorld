@@ -837,6 +837,9 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 	bool const has_flight(powerup == PU_FLIGHT), is_water_temp(temperature > W_FREEZE_POINT), underwater(is_underwater(opos));
 	assert(!point_outside_mesh(xpos, ypos));
 	bool stuck(0), in_ice(0), no_up(0), no_down(0), using_dest_mark(0);
+
+	if ((rand() % (is_jumping ? 1000 : 4000)) == 0) {is_jumping ^= 1;}
+	if (is_jumping) {jump(obj.pos);}
 	
 	// check for stuck underwater
 	if (is_water_temp && underwater && !on_waypt_path) { // ok if on a waypoint path
@@ -992,6 +995,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 		obj.orientation = vector3d(1,0,0);
 	}
 	else if ((stuck || ohval == 3) && !in_ice && target_type != 3 && !dist_less_than(obj.pos, target_pos, 2.1*radius)) { // not on a waypoint
+		jump(obj.pos); // try jumping
 		obj.orientation.negate(); // turn around - will this fix it or just oscillate orient when really stuck?
 		add_rand_dir_change(obj.orientation, 0.25);
 	}
@@ -1443,6 +1447,8 @@ void player_state::init(bool w_start) {
 	rot_counter   = 0;
 	plasma_loaded = 0;
 	uw_time       = 0;
+	jump_time     = 0;
+	is_jumping    = 0;
 	cb_hurt       = 0;
 	target_visible= 0;
 	target_type   = 0;
@@ -1506,6 +1512,15 @@ float player_state::weapon_range(bool use_far_clip) const {
 	assert(weapon >= 0 && weapon <= NUM_WEAPONS);
 	float const range(weapons[weapon].range[wmode&1]);
 	return ((use_far_clip && range == 0.0) ? FAR_CLIP : range);
+}
+
+
+void player_state::jump(point const &pos) {
+	
+	if (jump_time == 0) {
+		jump_time = JUMP_COOL*TICKS_PER_SECOND;
+		gen_sound(SOUND_BOING, pos, 0.2, 0.6);
+	}
 }
 
 

@@ -74,7 +74,7 @@ int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), cam
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
 int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), verbose_mode(0), leaf_color_changed(0);
-int shadow_detail(DEF_SD), do_zoom(0), disable_universe(0), disable_inf_terrain(0), jump_time(0);
+int shadow_detail(DEF_SD), do_zoom(0), disable_universe(0), disable_inf_terrain(0);
 int num_trees(0), num_smileys(1), gmww(640), gmwh(480), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
@@ -1088,7 +1088,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	case ' ': // fire key
 		if (world_mode == WMODE_GROUND) {
-			if (camera_mode == 1 && camera_surf_collide && !spectate && jump_time == 0) {jump_time = JUMP_COOL*TICKS_PER_SECOND;}
+			if (camera_mode == 1 && camera_surf_collide && !spectate && sstates != nullptr) {sstates[CAMERA_ID].jump(get_camera_pos());}
 			break;
 		}
 		fire_weapon();
