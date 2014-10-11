@@ -1585,7 +1585,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		vector3d norm;
 		if (get_snow_height(pos, radius, zval, norm, 1)) {pos.z = zval + radius;}
 	}
-	else if (jump_time > 0) {
+	if (jump_time > 0) {
 		float const jump_val((float(jump_time)/TICKS_PER_SECOND - (JUMP_COOL - JUMP_TIME))/JUMP_TIME); // jt == JC => 1.0; jt == JC-JT => 0.0
 
 		if (jump_val > 0.0) { // in the first half of the jump (acceleration)
