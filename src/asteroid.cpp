@@ -643,7 +643,7 @@ public:
 		draw_verts<vert_wrap_t>(NULL, pts.size(), GL_POINTS);
 		bind_vbo(0);
 	}
-	bool draw(point const &center, vector3d const &rot_axis, float rot_degrees, vector3d const &size) {
+	bool draw(point_d const &center, vector3d const &rot_axis, float rot_degrees, vector3d const &size) {
 		if (empty()) return 0;
 		float const bradius(bsphere.radius*max(max(size.x, size.y), size.z));
 		point spos(bsphere.pos*size);
@@ -657,8 +657,8 @@ public:
 		fgPushMatrix();
 		global_translate(center);
 		rotate_into_plus_z(rot_axis);
-		rotate_about(rot_degrees, plus_z);
 		scale_by(size);
+		rotate_about(rot_degrees, plus_z);
 		draw_vbo();
 		fgPopMatrix();
 		return 1;
@@ -705,7 +705,7 @@ bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shad
 }
 
 
-void uasteroid_belt_system::draw_detail(point_d const &pos_, point const &camera) const {
+void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera) const {
 
 	point_d const afpos(pos_ + pos);
 	bool const has_sun(set_af_color_from_system(afpos, radius, NULL));

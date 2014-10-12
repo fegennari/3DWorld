@@ -100,6 +100,7 @@ public:
 	float get_dist_to_boundary(point const &pt) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}
 	void draw_bounding_torus(point const &pos_, colorRGBA const &color=GREEN) const;
+	void draw_detail(point_d const &pos_, point const &camera) const;
 };
 
 
@@ -118,7 +119,6 @@ public:
 	uasteroid_belt_system(vector3d const &opn, ussystem *system_) :
 	  uasteroid_belt(opn, vector3d(1,1,1)), system(system_) {}
 	virtual void apply_physics(upos_point_type const &pos_, point const &camera);
-	void draw_detail(point_d const &pos_, point const &camera) const;
 };
 
 
