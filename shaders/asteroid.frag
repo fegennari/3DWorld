@@ -18,6 +18,6 @@ void main()
 	vec3 color = vec3(0.0);
 	color += calc_shadow_atten(world_space_pos)*add_pt_light_comp(norm_normal, epos, 0).rgb; // sun_diffuse
 	color += add_pt_light_comp(norm_normal, epos, 1).rgb; // galaxy_ambient
-	fg_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly;
+	fg_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly
 }
 

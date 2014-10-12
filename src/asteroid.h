@@ -100,7 +100,7 @@ public:
 	float get_dist_to_boundary(point const &pt) const;
 	float get_max_asteroid_radius() const {return max_asteroid_radius;}
 	void draw_bounding_torus(point const &pos_, colorRGBA const &color=GREEN) const;
-	void draw_detail(point_d const &pos_, point const &camera) const;
+	void draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density=1.0) const;
 };
 
 

@@ -27,6 +27,8 @@ float    const AST_PROC_HEIGHT  = 0.1; // height values of procedural shader ast
 unsigned const DEFAULT_AST_TEX  = MOON_TEX; // ROCK_TEX or MOON_TEX
 unsigned const comet_tids[2]    = {ROCK_SPHERE_TEX, ICE_TEX};
 
+colorRGBA const ICE_ROCK_COLOR(0.6, 1.2, 1.5);
+
 
 extern bool no_asteroid_dust;
 extern int animate2, display_mode, frame_counter, window_width, window_height;
@@ -637,21 +639,24 @@ public:
 		delete_vbo(vbo);
 		vbo = 0;
 	}
-	void draw_vbo() const {
+	void draw_vbo(float density=1.0) const {
+		unsigned const count(unsigned(density*pts.size()));
+		if (count == 0) return;
 		assert(vbo);
 		bind_vbo(vbo);
-		draw_verts<vert_wrap_t>(NULL, pts.size(), GL_POINTS);
+		draw_verts<vert_wrap_t>(NULL, count, GL_POINTS);
 		bind_vbo(0);
 	}
-	bool draw(point_d const &center, vector3d const &rot_axis, float rot_degrees, vector3d const &size) {
-		if (empty()) return 0;
+	bool draw(point_d const &center, vector3d const &rot_axis, float rot_degrees, vector3d const &size, float density) {
+		if (empty() || density == 0) return 0;
 		float const bradius(bsphere.radius*max(max(size.x, size.y), size.z));
-		point spos(bsphere.pos*size);
+		point spos(bsphere.pos);
 		rotate_vector3d(plus_z, -TO_RADIANS*rot_degrees, spos); // rotation is backwards from GL
+		spos  = spos*size;
 		rotate_vector3d_by_vr(plus_z, rot_axis, spos);
 		spos += center;
-		if (!univ_sphere_vis(spos, bradius)) return 0; // VFC
-		if ((distance_to_camera(spos) - bradius) > 0.8) return 0; // distance/size culling
+		if (!univ_sphere_vis(spos, bradius))          return 0; // VFC
+		if (distance_to_camera(spos) - bradius > 1.0) return 0; // distance/size culling
 		
 		create_vbo_and_upload(vbo, pts); // non-const due to this call
 		fgPushMatrix();
@@ -659,7 +664,7 @@ public:
 		rotate_into_plus_z(rot_axis);
 		scale_by(size);
 		rotate_about(rot_degrees, plus_z);
-		draw_vbo();
+		draw_vbo(density);
 		fgPopMatrix();
 		return 1;
 	}
@@ -705,21 +710,23 @@ bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shad
 }
 
 
-void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera) const {
+void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool is_ice, bool draw_dust, float density) const {
 
 	point_d const afpos(pos_ + pos);
 	bool const has_sun(set_af_color_from_system(afpos, radius, NULL));
+	int const tid(is_ice ? MARBLE_TEX : DEFAULT_AST_TEX);
+	colorRGBA const base_color(is_ice ? ICE_ROCK_COLOR*0.7 : WHITE);
 	enable_blend(); // disable multisample?
 	shader_t shader;
 
-	if (AB_NUM_PARTS_F > 0 && world_mode == WMODE_UNIVERSE) { // global asteroid dust (points), only in universe mode
+	if (AB_NUM_PARTS_F > 0 && draw_dust && world_mode == WMODE_UNIVERSE) { // global asteroid dust (points), only in universe mode
 		if (ast_belt_part[0].empty()) {ast_belt_part[0].gen_torus_section(AB_NUM_PARTS_F, 1.0, AB_WIDTH_TO_RADIUS, TWO_PI);}
 		shader.set_vert_shader("asteroid_dust");
 		shader.set_frag_shader("ads_lighting.part*+asteroid_dust"); // +sphere_shadow.part*
 		shader.begin_shader();
 		shader.add_uniform_float("alpha_scale", 2.0);
-		shader.add_uniform_color("color", texture_color(DEFAULT_AST_TEX));
-		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*scale); // full/sparse
+		shader.add_uniform_color("color", base_color.modulate_with(texture_color(tid)));
+		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*scale, density); // full/sparse
 		shader.end_shader();
 	}
 	if (AB_NUM_PARTS_S > 0 && !no_asteroid_dust) { // local small asteroid bits (spheres)
@@ -732,15 +739,17 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera) const
 		shader.add_uniform_float("alpha_scale", 5.0);
 		shader.add_uniform_float("sphere_size", AST_PARTICLE_SIZE*window_height*max_asteroid_radius);
 		shader.add_uniform_int("tex0", 0);
-		shader.add_uniform_color("color", WHITE);
-		select_texture(DEFAULT_AST_TEX);
+		shader.add_uniform_color("color", base_color);
+		select_texture(tid);
+		if (is_ice) {shader.set_specular(1.2, 50.0);} // very specular
 		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
 		set_point_sprite_mode(1);
 
 		for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {
-			ast_belt_part[1].draw(afpos, orbital_plane_normal, (360.0*i/AB_NUM_PART_SEG), outer_radius*scale);
+			ast_belt_part[1].draw(afpos, orbital_plane_normal, (360.0*i/AB_NUM_PART_SEG), outer_radius*scale, density);
 		}
 		set_point_sprite_mode(0);
+		if (is_ice) {shader.clear_specular();} // reset specular
 		shader.end_shader();
 	}
 	disable_blend();
@@ -1125,7 +1134,7 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	}
 	int const force_tid_to(is_ice ? MARBLE_TEX : -1); // Note: currently only applies to instanced drawing
 	if (is_ice) {s.set_specular(1.2, 50.0);} // very specular
-	s.add_uniform_color("color", (is_ice ? colorRGBA(0.6, 1.2, 1.5) : WHITE));
+	s.add_uniform_color("color", (is_ice ? ICE_ROCK_COLOR : WHITE));
 	s.add_uniform_float("crater_scale", ((has_sun && !is_ice) ? 1.0 : 0.0));
 	int const loc(s.get_attrib_loc("inst_xform_matrix", 1)); // shader should include: attribute mat4 inst_xform_matrix;
 	pt_line_drawer pld;

@@ -968,9 +968,9 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						}
 					} // planet k
 					if (!planet_plds[0].empty() || !planet_plds[1].empty()) {
-						usg.enable_point_sprite_shader(1.0);
+						if (!planet_plds[0].empty()) {usg.enable_point_sprite_shader(1.0);}
 						planet_plds[0].draw_and_clear();
-						usg.enable_point_sprite_shader(2.0);
+						if (!planet_plds[1].empty()) {usg.enable_point_sprite_shader(2.0);}
 						planet_plds[1].draw_and_clear();
 						usg.disable_point_sprite_shader();
 					}
@@ -1005,8 +1005,13 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							disable_blend();
 						}
 					} // pass
+					if (planet_asteroid_belt != nullptr) { // changes lighting, draw last
+						planet_asteroid_belt->draw_detail(pos, camera, is_ice_belt, 0, 0.1); // low density, no dust
+					}
 				} // sol_draw_pass
-				if (draw_asteroid_belt) {sol.asteroid_belt->draw_detail(pos, camera);}
+				if (draw_asteroid_belt) { // changes lighting, draw last
+					sol.asteroid_belt->draw_detail(pos, camera, 0, 1);
+				}
 			} // system j
 		} // cluster cs
 	} // galaxy i
@@ -2602,8 +2607,8 @@ void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z
 	scale_by(rscale);
 	draw_tquad(ring_ro, ring_ro, 0.0);
-	fgPopMatrix();
 	usg.disable_ring_shader();
+	fgPopMatrix();
 }
 
 
