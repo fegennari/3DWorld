@@ -339,6 +339,7 @@ void process_univ_objects() {
 		bool const include_asteroids(!particle); // disable particle-asteroid collisions because they're too slow
 		int const found_close(orbiting ? 0 : universe.get_object_closest_to_pos(clobj, obj_pos, include_asteroids));
 		bool temp_known(0);
+		float limit_speed_dist(clobj.dist);
 
 		if (found_close) {
 			if (clobj.type == UTYPE_ASTEROID) {
@@ -407,6 +408,12 @@ void process_univ_objects() {
 					if (is_ship) uobj->near_sobj(clobj, coll);
 				} // planet or moon
 				if (calc_gravity) get_gravity(clobj, obj_pos, gravity, 1);
+
+				if (clobj.type == UTYPE_PLANET) {
+					// when near a planet with rings, use the dist to the outer rings to limit speed so that we don't fly through the rings too quickly
+					uplanet const &planet(clobj.get_planet());
+					if (planet.ring_ro > 0.0) {limit_speed_dist = clobj.dist - (planet.ring_ro - planet.radius);} // can be negative
+				}
 			}
 		} // found_close
 		if (!temp_known) {
@@ -436,7 +443,7 @@ void process_univ_objects() {
 				temp_source const &ts(temp_sources[t]);
 				if (ts.source == uobj) continue; // no self damage
 				float const dist_sq(p2p_dist_sq(obj_pos, ts.pos)), rval(ts.radius + radius);
-				if (dist_sq > rval*rval)   continue;
+				if (dist_sq > rval*rval) continue;
 				assert(ts.radius > TOLERANCE);
 				float const temp(ts.temp*min(1.0f, (rval - sqrt(dist_sq))/ts.radius)*min(1.0, 0.5*max(1.0f, ts.radius/radius)));
 				
@@ -446,7 +453,7 @@ void process_univ_objects() {
 			}
 			if (!orbiting) {
 				float speed_factor(uobj->get_max_sf()), speed_factor2(1.0);
-				if (clobj.val > 0) {speed_factor2 = max((lod_coll ? 0.002f : 0.01f), min(1.0f, 0.7f*clobj.dist));} // clip to [0.01, 1.0]
+				if (clobj.val > 0) {speed_factor2 = max((lod_coll ? 0.002f : 0.01f), min(1.0f, 0.7f*limit_speed_dist));} // clip to [0.01, 1.0]
 				uobj->set_speed_factor(min(speed_factor, speed_factor2));
 			}
 		}
