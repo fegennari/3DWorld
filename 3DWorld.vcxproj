@@ -901,6 +901,7 @@
     <None Include="shaders\nebula.vert" />
     <None Include="shaders\noise_dither.part.frag" />
     <None Include="shaders\no_lighting_tex_coord.vert" />
+    <None Include="shaders\ocean.frag" />
     <None Include="shaders\output_textured_quad.part.geom" />
     <None Include="shaders\particle_draw.vert" />
     <None Include="shaders\perlin_clouds.part" />

@@ -150,7 +150,7 @@ void main()
 	if (/*snow_thresh < 1.0 &&*/ water_val > 0.2 && temperature < 30.0) { // add polar ice caps
 		float icv = 0.7 + 0.01*temperature; // 1.0 @ T=30, 0.9 @ T=20, 0.7 @ T=0
 		float val = (coldness - icv)/(1.0 - icv) + 1.0*(height - water_val);
-		val       = clamp(3*val-1, 0.0, 1.0); // sharpen edges
+		val       = clamp(3.0*val-1.0, 0.0, 1.0); // sharpen edges
 		spec_mag  = mix(spec_mag, 0.7, val);
 		texel     = mix(texel, vec4(1,1,1,1), val); // ice/snow
 		nscale   *= mix(1.0, 0.25, val);
