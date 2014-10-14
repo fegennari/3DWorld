@@ -71,13 +71,13 @@ vec3 ray_hit_dir(in vec2 screen_pos) {
 	return normalize(line_sphere_int(vec3(0,0,1), p1));
 }
 
-vec3 draw_planet(in vec3 color, in vec3 normal, in vec3 sun_dir, in float diffuse_scale);
+vec3 draw_simple_planet(in vec3 color, in vec3 normal, in vec3 sun_dir, in float diffuse_scale);
 void apply_atmosphere(inout vec3 cur_color, in vec3 sun_pos, in vec3 moon_pos, in vec3 light_dir,
 		      in vec3 normal, in vec3 position, in vec3 camera_pos);
 float simplex(in vec2 v);
 float calc_sphere_shadow_atten(in vec3 pos, in vec3 lpos, in float lradius, in vec3 spos, in float sradius);
 void adjust_normal_for_craters(inout vec3 norm, in vec3 vertex);
-vec3 draw_simple_planet(in vec3 vertex, in vec3 normal, in vec3 light_dir, in vec3 sun_pos, in vec3 ss_pos, in float ss_radius)
+vec3 draw_planet(in vec3 vertex, in vec3 normal, in vec3 light_dir, in vec3 sun_pos, in vec3 ss_pos, in float ss_radius);
 
 void main(void) {
 	float rmin = min(resolution.x, resolution.y);
@@ -203,8 +203,23 @@ vec4 permute(in vec4 x) {
 	return mod289(((x * 34.0) + 1.0) * x);
 }
 
+float hash( vec2 p ) {
+	float h = dot(p,vec2(127.1,311.7));	
+    return fract(sin(h)*43758.5453123);
+}
+float noise( in vec2 p ) {
+    vec2 i = floor( p );
+    vec2 f = fract( p );	
+	vec2 u = f*f*(3.0-2.0*f);
+    return -1.0+2.0*mix( mix( hash( i + vec2(0.0,0.0) ), hash( i + vec2(1.0,0.0) ), u.x),
+                         mix( hash( i + vec2(0.0,1.0) ), hash( i + vec2(1.0,1.0) ), u.x), u.y);
+}
+
 float simplex(in vec2 v)
 {
+#if 0
+	return noise(v);
+#else
 	vec4 C = vec4(
 		 0.211324865405187,  // (3.0 -  sqrt(3.0)) / 6.0
 		 0.366025403784439,  //  0.5 * (sqrt(3.0)  - 1.0)
@@ -243,6 +258,7 @@ float simplex(in vec2 v)
 	g.x  = a0.x  * x0.x   + h.x  * x0.y;
 	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
 	return 130.0 * dot(m, g);
+#endif
 }
 
 float simplex(in vec3 v)
