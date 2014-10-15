@@ -1,7 +1,5 @@
 Better pine tree texture
-Flowers in TT mode
-TT mode underwater content
-  - seaweed grass
+TT mode underwater seaweed/grass
 
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
@@ -15,8 +13,10 @@ Load/display model3d models in tiled terrain mode
 
 GLSL subroutine: http://www.g-truc.net/post-0269.html
 Perlin Fire
-Better Erosion for terrain in ground mode - fix mesh boundary noise
 Use asteroids for rocks in terrain mode
 Embed rocks, ice, and/or gold spheres into voxels
-Update libraries (OpenAL, SDL, pthreads, etc.)
-Planet shader on GLSL Sandbox or Shadertoy
+Update libraries
+Player weapon impact force
+
+Planet asteroid belts draw detail points:
+  - Wider/flatter torus
