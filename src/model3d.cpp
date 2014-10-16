@@ -19,7 +19,7 @@ unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context;
 extern int display_mode;
-extern float model3d_alpha_thresh, cobj_z_bias;
+extern float model3d_alpha_thresh, model3d_texture_anisotropy, cobj_z_bias;
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
 
@@ -47,7 +47,8 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
 	// type=read_from_file format=auto width height wrap ncolors use_mipmaps name [do_compress]
-	textures.push_back(texture_t(0, 7, 0, 0, 1, (is_alpha_mask ? 1 : 3), (use_model2d_tex_mipmaps && !is_alpha_mask), fn, 0, compress)); // always RGB wrapped+mipmap
+	textures.push_back(texture_t(0, 7, 0, 0, 1, (is_alpha_mask ? 1 : 3), (use_model2d_tex_mipmaps && !is_alpha_mask),
+		fn, 0, compress, model3d_texture_anisotropy)); // always RGB wrapped+mipmap
 	return tid; // can't fail
 }
 

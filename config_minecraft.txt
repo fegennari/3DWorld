@@ -9,6 +9,7 @@ smiley_speed 0.4
 # needed for minecraft models
 texture_alpha_in_red_comp 1
 model3d_alpha_thresh 0.01
+model3d_texture_anisotropy 4.0
 use_model2d_tex_mipmaps 1
 preproc_cube_cobjs 1 # slower load time but slightly fewer cubes
 
