@@ -914,7 +914,7 @@ float uasteroid_belt::get_dist_to_boundary(point const &pt) const {
 
 void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { // only needs to be called when visible
 
-	if (empty()) return;
+	if (!animate2 || empty()) return;
 	float const sphere_size(calc_sphere_size((pos + pos_), camera, AST_RADIUS_SCALE*radius));
 	if (sphere_size < 2.0) return; // asteroids are too small/far away
 
@@ -972,7 +972,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 
 void uasteroid_belt_system::apply_physics(upos_point_type const &pos_, point const &camera) { // only needs to be called when visible
 
-	if (empty()) return;
+	if (!animate2 || empty()) return;
 	//RESET_TIME;
 	calc_colliders();
 	upos_point_type const opn(orbital_plane_normal);
@@ -995,8 +995,8 @@ void uasteroid_belt_planet::apply_physics(upos_point_type const &pos_, point con
 		pos = planet->pos;
 
 		for (iterator i = begin(); i != end(); ++i) {
-			i->rot_ang += fticks*i->rot_ang0; // rotation
-			i->pos     += delta_pos;
+			if (animate2) {i->rot_ang += fticks*i->rot_ang0;} // rotation
+			i->pos += delta_pos; // must always update pos, even when physics are disabled
 		}
 	}
 	calc_shadowers();

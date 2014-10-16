@@ -798,7 +798,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 			uasteroid_field::begin_render(usg.asteroid_shader, 0, 1);
 
 			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
-				if (animate2) {i->apply_physics(pos, camera);}
+				i->apply_physics(pos, camera);
 				i->draw(pos, camera, usg.asteroid_shader, 0);
 			}
 			uasteroid_field::end_render(usg.asteroid_shader);
@@ -847,7 +847,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					if (planets_visible) { // asteroid fields may also be visible
 						// Note: asteroid belts aren't drawn in the first frame because sel_s won't be set, since clobj isn't valid before the first frame is drawn (universe not yet created)
 						if (!gen_only && sol.asteroid_belt != nullptr && sel_s && sol_draw_pass == 0 && pass == 1) {
-							if (animate2) {sol.asteroid_belt->apply_physics(pos, camera);}
+							sol.asteroid_belt->apply_physics(pos, camera);
 							shader_t asteroid_belt_shader;
 							sol.asteroid_belt->begin_render(asteroid_belt_shader, 0);
 							sol.asteroid_belt->draw(pos, camera, asteroid_belt_shader, 0);
@@ -954,7 +954,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 							float const ring_scale(sizep*planet.get_ring_rscale());
 
 							if (planet.asteroid_belt != nullptr && sel_p && ring_scale > 10.0) {
-								if (animate2) {planet.asteroid_belt->apply_physics(pos, camera);}
+								planet.asteroid_belt->apply_physics(pos, camera);
 								assert(!planet_asteroid_belt);
 								planet_asteroid_belt = planet.asteroid_belt;
 								is_ice_belt          = planet.has_ice_debris();
@@ -982,16 +982,17 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 					}
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
 						if (!usg.rings_to_draw.empty()) {
-							glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 							enable_blend();
 
 							for (vector<planet_draw_data_t>::const_iterator k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
+								bool const use_alpha_to_coverage(k->size < 30.0); // only for distant rings (looks bad when up close)
+								if (use_alpha_to_coverage) {glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 								uplanet &planet(sol.planets[k->ix]);
 								planet.ensure_rings_texture();
 								planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
+								if (use_alpha_to_coverage) {glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 							}
 							disable_blend();
-							glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
 						}
 						if (pass == 0 && !usg.atmos_to_draw.empty()) {
 							enable_blend();
