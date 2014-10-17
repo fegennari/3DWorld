@@ -1,5 +1,6 @@
 uniform vec3 planet_pos, sun_pos, camera_pos;
 uniform float planet_radius, ring_ri, ring_ro, sun_radius, bf_draw_sign;
+uniform float alpha_scale = 1.0;
 uniform sampler2D noise_tex, particles_tex;
 uniform sampler1D ring_tex;
 
@@ -24,7 +25,8 @@ void main()
 
 	float rval = clamp((length(vertex) - ring_ri)/(ring_ro - ring_ri), 0.0, 1.0);
 	vec4 texel = texture1D(ring_tex, rval);
-	if (texel.a == 0.0) discard;
+	texel.a   *= alpha_scale;
+	if (texel.a < 0.01) discard;
 
 	// alpha lower when viewing edge
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);

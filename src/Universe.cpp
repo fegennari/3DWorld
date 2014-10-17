@@ -192,9 +192,10 @@ void destroy_sobj(s_object const &target) {
 struct planet_draw_data_t {
 	unsigned ix;
 	float size;
+	bool selected;
 	shadow_vars_t svars;
-	planet_draw_data_t() : ix(0), size(0.0) {}
-	planet_draw_data_t(unsigned ix_, float size_, shadow_vars_t const &svars_) : ix(ix_), size(size_), svars(svars_) {}
+	planet_draw_data_t() : ix(0), size(0.0), selected(0) {}
+	planet_draw_data_t(unsigned ix_, float size_, shadow_vars_t const &svars_, bool sel) : ix(ix_), size(size_), svars(svars_), selected(sel) {}
 };
 
 
@@ -320,7 +321,7 @@ public:
 		if (is_setup()) {disable();}
 	}
 
-	bool enable_ring(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {	
+	bool enable_ring(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir, bool c2a) {	
 		if (!is_setup()) {
 			set_vert_shader("planet_draw");
 			set_frag_shader("ads_lighting.part*+sphere_shadow.part*+planet_rings");
@@ -340,6 +341,7 @@ public:
 		set_uniform_vector3d(get_loc("sun_pos"),    sun_pos);
 		set_uniform_float(get_loc("sun_radius"),    sun_radius);
 		set_uniform_float(get_loc("bf_draw_sign"),  (dir ? -1.0 : 1.0));
+		set_uniform_float(get_loc("alpha_scale"),   (c2a ?  1.0 : 0.6));
 		set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));
 		upload_mvm_to_shader(*this, "fg_ViewMatrix");
 		return 1;
@@ -392,8 +394,8 @@ public:
 	void disable_planet_shader(urev_body const &body, shadow_vars_t const &svars) {get_planet_shader(body, svars).disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius) {return star_shader.enable_star(colorA, colorB, radius);}
 	void disable_star_shader() {star_shader.disable_star();}
-	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir) {
-		return ring_shader.enable_ring(planet, planet_pos, sun_pos, sun_radius, dir);
+	bool enable_ring_shader(uplanet const &planet, point const &planet_pos, point const &sun_pos, float sun_radius, bool dir, bool c2a) {
+		return ring_shader.enable_ring(planet, planet_pos, sun_pos, sun_radius, dir, c2a);
 	}
 	void disable_ring_shader() {ring_shader.disable_ring();}
 	void enable_atmospheric_shader(uplanet const &planet, point const &planet_pos, shadow_vars_t const &svars) {
@@ -960,10 +962,10 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								is_ice_belt          = planet.has_ice_debris();
 							}
 							if (!planet.ring_data.empty() && ring_scale > 2.5) {
-								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
+								usg.rings_to_draw.push_back(planet_draw_data_t(k, sizep, svars, sel_p));
 							}
 							if (planet_visible && !skip_planet_draw && !planet.gas_giant && planet.atmos > 0.05 && sizep > 5.0) {
-								usg.atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars));
+								usg.atmos_to_draw.push_back(planet_draw_data_t(k, sizep, svars, sel_p));
 							}
 						}
 					} // planet k
@@ -980,22 +982,20 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						planet_asteroid_belt->draw(pos, camera, asteroid_belt_shader, 1, is_ice_belt);
 						uasteroid_field::end_render(asteroid_belt_shader);
 					}
+					enable_blend();
+
 					for (unsigned pass = 0; pass < 2; ++pass) { // draw rings behind planets, then atmosphere, then rings in front of planet
 						if (!usg.rings_to_draw.empty()) {
-							enable_blend();
-
-							for (vector<planet_draw_data_t>::const_iterator k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
-								bool const use_alpha_to_coverage(k->size < 30.0); // only for distant rings (looks bad when up close)
-								if (use_alpha_to_coverage) {glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
+							for (auto k = usg.rings_to_draw.begin(); k != usg.rings_to_draw.end(); ++k) {
+								bool const use_c2a(!k->selected); // only for distant rings (looks bad when up close)
+								if (use_c2a) {glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 								uplanet &planet(sol.planets[k->ix]);
 								planet.ensure_rings_texture();
-								planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1));
-								if (use_alpha_to_coverage) {glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
+								planet.draw_prings(usg, (pos + planet.pos), k->size, spos, (has_sun ? sradius : 0.0), (pass == 1), use_c2a);
+								if (use_c2a) {glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);}
 							}
-							disable_blend();
 						}
 						if (pass == 0 && !usg.atmos_to_draw.empty()) {
-							enable_blend();
 							glEnable(GL_CULL_FACE);
 
 							for (vector<planet_draw_data_t>::const_iterator k = usg.atmos_to_draw.begin(); k != usg.atmos_to_draw.end(); ++k) {
@@ -1003,9 +1003,10 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 								planet.draw_atmosphere(usg, (pos + planet.pos), k->size, k->svars);
 							}
 							glDisable(GL_CULL_FACE);
-							disable_blend();
 						}
 					} // pass
+					disable_blend();
+
 					if (planet_asteroid_belt != nullptr) { // changes lighting, draw last
 						planet_asteroid_belt->draw_detail(pos, camera, is_ice_belt, 0, 0.1); // low density, no dust
 					}
@@ -2596,13 +2597,13 @@ void uplanet::ensure_rings_texture() {
 }
 
 
-void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir) const {
+void uplanet::draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir, bool c2a) const {
 
 	if (ring_data.empty()) return;
 	assert(ring_ri > 0.0 && ring_ri < ring_ro);
 	assert(ring_tid > 0);
 	bind_1d_texture(ring_tid);
-	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir); // always WHITE
+	usg.enable_ring_shader(*this, make_pt_global(pos_), make_pt_global(sun_pos), sun_radius, dir, c2a); // always WHITE
 	fgPushMatrix();
 	global_translate(pos_);
 	rotate_into_plus_z(rot_axis); // rotate so that rot_axis is in +z

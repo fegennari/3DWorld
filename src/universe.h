@@ -300,7 +300,7 @@ public:
 	bool has_ice_debris()  const;
 	float get_vegetation() const;
 	void ensure_rings_texture();
-	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir) const;
+	void draw_prings(ushader_group &usg, upos_point_type const &pos_, float size_, point const &sun_pos, float sun_radius, bool dir, bool c2a) const;
 	void draw_atmosphere(ushader_group &usg, upos_point_type const &pos_, float size_, shadow_vars_t const &svars) const;
 	void free_texture();
 	void free_uobj();
