@@ -92,7 +92,7 @@ bool enable_instanced_pine_trees() {
 
 float get_tt_fog_based_far_clip(float min_camera_dist) {
 
-	float const uniform_fog_far_clip(FAR_CLIP + min_camera_dist);
+	float const uniform_fog_far_clip(FAR_CLIP + 2.0*min_camera_dist);
 	if (!nonunif_fog_enabled()) {return uniform_fog_far_clip;}
 	float const zf(get_tt_fog_bot()), z0(get_tt_fog_top()), zc(get_camera_pos().z), zm(zmax);
 	assert(zm <= zf && zf <= z0); // we currently only support these cases

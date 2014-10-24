@@ -14,7 +14,8 @@ vec4 apply_fog_colored(in vec4 color, in vec3 vertex, in float cscale) {
 void main()
 {
 	vec3 light_dir = normalize(sun_pos - vertex);
-	float dp    = max(0.0, dot(normalize(vertex - camera_pos), light_dir));
+	// Note: only apply sun glow if vertex is above the camera (player looking up into the clouds)
+	float dp    = max(0.0, ((vertex.z > camera_pos.z) ? 1.0 : 0.0)*dot(normalize(vertex - camera_pos), light_dir));
 	vec4 color2 = 0.75*color + vec4(0.5*sun_color.rgb*pow(dp, 8.0), 0.0); // add sun glow
 	vec3 pos    = vertex + cloud_offset;
 	float eye_z = camera_pos.z; // world space

@@ -15,8 +15,5 @@ GLSL subroutine: http://www.g-truc.net/post-0269.html
 Perlin Fire
 Use asteroids for rocks in terrain mode
 Embed rocks, ice, and/or gold spheres into voxels
-Update libraries
 Player weapon impact force
-
-Planet asteroid belts draw detail points:
-  - Wider/flatter torus
+Space colonization for trees

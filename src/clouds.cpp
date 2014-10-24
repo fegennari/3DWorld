@@ -388,7 +388,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 	if (!draw_ceil) return;
 	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity (0: clouds follow the camera, 1: clouds are stationary)
 	float const rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
-	float const cloud_z(get_tt_cloud_level()); // halfway between the to of the mountains and the end of the atmosphere
+	float const cloud_z(get_tt_cloud_level()); // halfway between the top of the mountains and the end of the atmosphere
 	float const z1(min(zmin, terrain_zmin)), z2(min(cloud_z, get_cloud_zmax())), ndiv_inv(1.0/CLOUD_NUM_DIV);
 	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
 	vector3d const offset(-camera + cloud_rel_vel*world_pos);
@@ -434,7 +434,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		s.add_uniform_float("water_plane_z", z1);
 		s.add_uniform_float("cloud_scale", (is_cloudy ? 1.0 : (cloud_cover + 0.5*(1.0 - cloud_cover))));
 		s.add_uniform_vector3d("camera_pos", camera);
-		s.add_uniform_vector3d("sun_pos", get_sun_pos());
+		s.add_uniform_vector3d("sun_pos", get_sun_pos()); // no sun at night?
 		s.add_uniform_color("sun_color", sun_color);
 		set_cloud_uniforms(s, 0);
 		s.add_uniform_vector3d("cloud_offset", offset);

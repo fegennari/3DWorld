@@ -30,4 +30,5 @@ y 4.0
 #t 0 0 0  s 1 2  M 0  m 0.5  O "../models/cathedral/cathedral.obj" 3 1 0
 #t 0 -8.0 -1.5  s 1 2  M 0  m 0.2  O "../models/LARA BEDROOM/LARA.obj" 3 1 0
 t -0.5 -1.5 1.0  s 1 2  M 0  m 0.3  O "../models/Spencer_Mansion_ItalianUtent/frame_11.04.2011_18.18.36.obj" 3 0 0
+#t 0 0 0  s 1 2  M 0  m 0.1  O "C:\Users\Frank E. Gennari\Desktop\Graphics\sketchup_models\lighthouse.obj" 3 0 0
 
