@@ -132,7 +132,26 @@ void main()
 	if (color.a <= min_alpha) discard;
 #endif
 #ifndef NO_FOG
-	color = (keep_alpha ? vec4(apply_fog_epos(color, epos).rgb, color.a) : apply_fog_epos(color, epos)); // apply standard fog
+	vec4 fog_out;
+	
+	if (indir_lighting) {
+		vec3 scene_urc    = scene_llc + scene_scale;
+		float scene_bb[6] = {scene_llc.x, scene_urc.x, scene_llc.y, scene_urc.y, scene_llc.z, scene_urc.z};
+		float view_dist   = distance(vpos, camera_pos);
+		vec3 end_pos      = camera_pos + (vpos - camera_pos)*(min(fog_end, view_dist)/view_dist);
+		pt_pair cres      = clip_line(end_pos, camera_pos, scene_bb);
+		float scene_len   = distance(cres.v2, cres.v1)/distance(end_pos, camera_pos);
+		float pixel_lum;
+		if (indir_lighting) {pixel_lum = mix(get_luminance(indir_lookup(cres.v1)), get_luminance(indir_lookup(cres.v2)), 0.75);}
+		else {pixel_lum = get_luminance(lit_color.rgb)/max(0.01, get_luminance(gl_Color.rgb));}
+		vec4 fcolor  = fog_color;
+		fcolor.rgb  *= mix(1.0, min(2.0*pixel_lum, 1.0), scene_len);
+		fog_out = apply_fog_ffc(color, length(epos.xyz)*get_custom_fog_scale_epos(epos), fcolor); // apply standard fog
+	}
+	else {
+		fog_out = apply_fog_epos(color, epos); // apply standard fog
+	}
+	color = (keep_alpha ? vec4(fog_out.rgb, color.a) : fog_out);
 #endif
 #else
 	pt_pair res = clip_line(vpos, camera_pos, smoke_bb);

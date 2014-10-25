@@ -100,3 +100,5 @@ vec4 add_pt_light_comp(in vec3 normal, in vec4 epos, in int i) {
 	return add_light_comp_pos(normal, epos, i) * calc_light_atten(epos, i);
 }
 
+float get_luminance(in vec3 c) {return 0.333*(c.r + c.g + c.b);}
+

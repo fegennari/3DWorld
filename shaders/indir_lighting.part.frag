@@ -7,6 +7,11 @@ uniform vec3 const_indir_color = vec3(0.0);
 
 in vec3 vpos, normal; // world space
 
+vec3 indir_lookup(in vec3 pos) {
+	vec3 spos = clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+	return texture3D(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
+}
+
 void add_indir_lighting(inout vec3 lit_color) {
 	lit_color += gl_Color.rgb * const_indir_color; // add constant indir
 	
@@ -18,8 +23,7 @@ void add_indir_lighting(inout vec3 lit_color) {
 		vec3 n = normal;
 #endif
 		vec3 spos = vpos + (indir_vert_offset*half_dxy)*n; // move slightly away from the vertex
-		spos = clamp((spos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
-		vec3 indir_light = texture3D(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
+		vec3 indir_light = indir_lookup(spos);
 		//indir_light = pow(indir_light, vec3(0.45)); // gamma correction
 		lit_color += gl_Color.rgb * indir_light; // indirect lighting
 	}
