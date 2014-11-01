@@ -5,7 +5,7 @@
 
 #include "3DWorld.h"
 #include "model3d.h"
-#include <fstream>
+#include "file_reader.h"
 #include <stdint.h>
 #include "fast_atof.h"
 
@@ -19,56 +19,71 @@ extern model3ds all_models;
 #endif
 
 
-class object_file_reader {
+bool base_file_reader::open_file() {
+	assert(!filename.empty());
+	assert(!fp); // must call close_file() before reusing
+	fp = fopen(filename.c_str(), "r");
+	if (!fp) cerr << "Error: Could not open object file " << filename << endl;
+	return (fp != 0);
+}
+
+void base_file_reader::close_file() {
+	if (fp) fclose(fp);
+	fp = NULL;
+}
+
+void base_file_reader::unget_last_char(int c) {assert(fp); _ungetc_nolock(c, fp);}
+int base_file_reader::get_char(FILE *fp_) const {return _getc_nolock(fp_);}
+
+int base_file_reader::fast_atoi(char *str) const {
+	//return atoi(str);
+	assert(str && str[0] != 0);
+	int v(0);
+	bool is_neg(0);
+	if (*str == '-') {is_neg = 1; ++str;} // negative
+
+	for (; *str; ++str) {
+		if (!fast_isdigit(*str)) return 0; // error
+		v = 10*v + unsigned(*str - '0');
+	}
+	return (is_neg ? -v : v);
+}
+
+bool base_file_reader::read_int(int &v) {
+	//return (fscanf(fp, "%i", &v) == 1);
+	unsigned ix(0);
+			
+	while (1) {
+		if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
+		char const c(get_next_char());
+		if (ix == 0 && fast_isspace(c)) continue; // skip leading whitespace
+		if (!fast_isdigit(c) && !(ix == 0 && c == '-')) {unget_last_char(c); break;} // non-integer character, unget it and finish
+		buffer[ix++] = c;
+	}
+	if (ix == 0) return 0; // no integer characters were read
+	buffer[ix] = 0; // add null terminator
+	v = fast_atoi(buffer);
+	return 1;
+}
+
+bool base_file_reader::read_string(char *s, unsigned max_len) {
+	//return (fscanf(fp, "%s", s) == 1);
+	unsigned ix(0);
+			
+	while (1) {
+		if (ix+1 >= max_len) return 0; // buffer overrun
+		char const c(get_next_char());
+		if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
+		s[ix++] = c;
+	}
+	s[ix] = 0; // add null terminator
+	return 1;
+}
+
+
+class object_file_reader : public base_file_reader {
 
 protected:
-	string filename;
-	FILE *fp; // Note: we use a FILE* here instead of an ifstream because it's ~2.2x faster in MSVS
-	static unsigned const MAX_CHARS = 1024;
-	char buffer[MAX_CHARS];
-	bool verbose;
-
-	bool open_file() {
-		assert(!filename.empty());
-		assert(!fp); // must call close_file() before reusing
-		fp = fopen(filename.c_str(), "r");
-		if (!fp) cerr << "Error: Could not open object file " << filename << endl;
-		return (fp != 0);
-	}
-	void close_file() {
-		if (fp) fclose(fp);
-		fp = NULL;
-	}
-	int get_next_char() {assert(fp); return _getc_nolock(fp);}
-	void unget_last_char(int c) {assert(fp); _ungetc_nolock(c, fp);}
-	bool fast_isspace(char c)  const {return (c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '/r');}
-	bool fast_isdigit(char c)  const {return (c >= '0' && c <= '9');}
-	int get_char(FILE *fp_)    const {return _getc_nolock(fp_);}
-	int get_char(ifstream &in) const {return in.get();}
-
-	template<typename T> void read_to_newline(T &stream, string *str=NULL) const {
-		bool prev_was_escape(0);
-
-		while (1) {
-			int const c(get_char(stream));
-			if ((!prev_was_escape && c == '\n') || c == '\0' || c == EOF) return;
-			prev_was_escape = (c == '\\'); // handle escape character at end of line
-			if (str && !prev_was_escape) {str->push_back(char(c));}
-		}
-		assert(0); // never gets here
-	}
-
-	template<typename T> void read_str_to_newline(T &stream, string &str) const {
-		str.resize(0);
-
-		while (1) {
-			int const c(get_char(stream));
-			if (c == '\n' || c == '\0' || c == EOF) break; // end of file or line
-			if (!fast_isspace(c) || !str.empty()) str.push_back(c);
-		}
-		return;
-	}
-
 	void normalize_index(int &ix, unsigned vect_sz) const {
 		assert(ix != 0);
 
@@ -103,54 +118,8 @@ protected:
 		return 1;
 	}
 
-	int fast_atoi(char *str) const {
-		//return atoi(str);
-		assert(str && str[0] != 0);
-		int v(0);
-		bool is_neg(0);
-		if (*str == '-') {is_neg = 1; ++str;} // negative
-
-		for (; *str; ++str) {
-			if (!fast_isdigit(*str)) return 0; // error
-			v = 10*v + unsigned(*str - '0');
-		}
-		return (is_neg ? -v : v);
-	}
-
-	bool read_int(int &v) {
-		//return (fscanf(fp, "%i", &v) == 1);
-		unsigned ix(0);
-			
-		while (1) {
-			if (ix+1 >= MAX_CHARS) return 0; // buffer overrun
-			char const c(get_next_char());
-			if (ix == 0 && fast_isspace(c)) continue; // skip leading whitespace
-			if (!fast_isdigit(c) && !(ix == 0 && c == '-')) {unget_last_char(c); break;} // non-integer character, unget it and finish
-			buffer[ix++] = c;
-		}
-		if (ix == 0) return 0; // no integer characters were read
-		buffer[ix] = 0; // add null terminator
-		v = fast_atoi(buffer);
-		return 1;
-	}
-
-	bool read_string(char *s, unsigned max_len) {
-		//return (fscanf(fp, "%s", s) == 1);
-		unsigned ix(0);
-			
-		while (1) {
-			if (ix+1 >= max_len) return 0; // buffer overrun
-			char const c(get_next_char());
-			if (fast_isspace(c)) {if (ix == 0) continue; else break;} // leading/trailing whitespace
-			s[ix++] = c;
-		}
-		s[ix] = 0; // add null terminator
-		return 1;
-	}
-
 public:
-	object_file_reader(string const &fn) : filename(fn), fp(NULL), verbose(0) {assert(!fn.empty());}
-	~object_file_reader() {close_file();}
+	object_file_reader(string const &fn) : base_file_reader(fn) {}
 
 	bool read(vector<coll_tquad> *ppts, geom_xform_t const &xf, bool verbose) {
 		RESET_TIME;
@@ -199,7 +168,7 @@ public:
 			else {
 				read_to_newline(fp); // ignore everything else
 			}
-		}
+		} // while
 		PRINT_TIME("Polygons Load");
 		if (verbose) cout << "v: " << v.size() << ", f: " << (ppts ? ppts->size() : 0) << endl;
 		return 1;
@@ -372,7 +341,7 @@ public:
 				read_to_newline(mat_in); // ignore
 				//return 0;
 			}
-		}
+		} // while
 		return 1;
 	}
 
@@ -581,7 +550,7 @@ public:
 				read_to_newline(fp); // ignore this line
 				//return 0;
 			}
-		}
+		} // while
 		remove_excess_cap(v);
 		remove_excess_cap(n);
 		remove_excess_cap(tc);
@@ -647,14 +616,32 @@ public:
 
 
 void check_obj_file_ext(string const &filename, string const &ext) {
-
-	if (ext != "obj") {
-		cout << "Warning: Attempting to read file '" << filename << "' with extension '" << ext << "' as an object file." << endl;
-	}
+	if (ext != "obj") {cout << "Warning: Attempting to read file '" << filename << "' with extension '" << ext << "' as an object file." << endl;}
 }
 
 
-bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
+bool write_model3d_file(string const &base_fn, model3d &cur_model) {
+
+	RESET_TIME;
+	assert(base_fn.size() > 4);
+	string out_fn(base_fn.begin(), base_fn.end()-4); // strip off the '.obj'
+	out_fn += ".model3d";
+	cur_model.bind_all_used_tids(); // need to force tangent vector calculation
+				
+	if (!cur_model.write_to_disk(out_fn)) {
+		cerr << "Error writing model3d file " << out_fn << endl;
+		return 0;
+	}
+	PRINT_TIME("Model3d Write");
+	return 1;
+}
+
+
+bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool recalc_normals, bool verbose);
+bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, bool verbose);
+
+
+bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_models,
 	bool recalc_normals, bool write_file, bool verbose)
 {
@@ -665,28 +652,21 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 	if (load_models) {
 		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c));
 		model3d &cur_model(all_models.back());
-		object_file_reader_model reader(filename, cur_model);
 
-		if (ext == "model3d") {
-			//assert(xf == geom_xform_t()); // xf is ignored, assumed to be already applied; use transforms with loaded model3d files
-			if (!reader.load_from_model3d_file(verbose)) return 0;
+		if (ext == "3ds") {
+			if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) return 0;
 		}
-		else {
-			check_obj_file_ext(filename, ext);
-			if (!reader.read(xf, recalc_normals, verbose)) return 0;
-			
-			if (write_file) {
-				RESET_TIME;
-				assert(filename.size() > 4);
-				string out_fn(filename.begin(), filename.end()-4); // strip off the '.obj'
-				out_fn += ".model3d";
-				cur_model.bind_all_used_tids(); // need to force tangent vector calculation
-				
-				if (!cur_model.write_to_disk(out_fn)) {
-					cerr << "Error writing model3d file " << out_fn << endl;
-					return 0;
-				}
-				PRINT_TIME("Model3d Write");
+		else { // object/model3d file
+			object_file_reader_model reader(filename, cur_model);
+
+			if (ext == "model3d") {
+				//assert(xf == geom_xform_t()); // xf is ignored, assumed to be already applied; use transforms with loaded model3d files
+				if (!reader.load_from_model3d_file(verbose)) return 0;
+			}
+			else {
+				check_obj_file_ext(filename, ext);
+				if (!reader.read(xf, recalc_normals, verbose)) return 0;
+				if (write_file && !write_model3d_file(filename, cur_model)) return 0;
 			}
 		}
 		if (ppts) { // if adding as cobjs
@@ -705,9 +685,14 @@ bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<c
 		return 1;
 	}
 	else {
-		check_obj_file_ext(filename, ext);
-		object_file_reader reader(filename);
-		return reader.read(ppts, xf, verbose);
+		if (ext == "3ds") {
+			return read_3ds_file_pts(filename, ppts, xf, verbose);
+		}
+		else {
+			check_obj_file_ext(filename, ext);
+			object_file_reader reader(filename);
+			return reader.read(ppts, xf, verbose);
+		}
 	}
 }
 

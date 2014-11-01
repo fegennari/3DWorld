@@ -66,10 +66,7 @@ string get_file_extension(string const &filename, unsigned level, bool make_lowe
 		}
 	}
 	unsigned const len((unsigned)ext.length());
-
-	for (unsigned i = 0; i < len; ++i) { // convert upper case ext letters to lower case
-		ext[i] = tolower(ext[i]);
-	}
+	for (unsigned i = 0; i < len; ++i) {ext[i] = tolower(ext[i]);} // convert upper case ext letters to lower case
 	return ext;
 }
 

@@ -432,7 +432,7 @@ void free_model_context();
 void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
 
-bool read_object_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
+bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
 	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file,
 	bool recalc_normals, bool write_file, bool verbose);
 

@@ -1042,7 +1042,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				cube_t model_bcube(0,0,0,0,0,0);
 				unsigned char const cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
 				
-				if (!read_object_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), model_bcube, xf, cobj.cp.tid,
+				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), model_bcube, xf, cobj.cp.tid,
 					cobj.cp.color, voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), 1))
 				{
 					return read_error(fp, "object file data", coll_obj_file);

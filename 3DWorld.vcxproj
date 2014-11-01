@@ -542,6 +542,7 @@
     <ClCompile Include="src\precipitation.cpp" />
     <ClCompile Include="src\profiler.cpp" />
     <ClCompile Include="src\ray_trace.cpp" />
+    <ClCompile Include="src\read_3ds.cpp" />
     <ClCompile Include="src\scenery.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
@@ -745,6 +746,7 @@
     <ClInclude Include="src\draw_utils.h" />
     <ClInclude Include="src\dynamic_particle.h" />
     <ClInclude Include="src\fast_atof.h" />
+    <ClInclude Include="src\file_reader.h" />
     <ClInclude Include="src\file_utils.h" />
     <ClInclude Include="src\function_registry.h" />
     <ClInclude Include="src\gameplay.h" />
