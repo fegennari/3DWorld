@@ -151,16 +151,17 @@ public:
 
 class file_reader_3ds_model : public file_reader_3ds {
 
+	bool use_vertex_normals;
 	model3d &model;
-	vntc_map_t vmap;
 
 	virtual bool proc_other_chunks(unsigned chunk_id, unsigned chunk_len) {
-		unsigned short num;
 
 		switch (chunk_id) {
 			// TRI_FACEL1: Polygons (faces) list
 			// Chunk Length: 1 x unsigned short (# polygons) + 3 x unsigned short (polygon points) x (# polygons) + sub chunks
 		case 0x4120:
+		{
+			unsigned short num;
 			fread(&num, sizeof(unsigned short), 1, fp);
 			if (verbose) {printf("Number of polygons: %d\n", num);}
 			polygon_t tri;
@@ -168,40 +169,51 @@ class file_reader_3ds_model : public file_reader_3ds {
 			int const mat_id(-1); // undefined
 			unsigned const obj_id(0); // default
 			vector<unsigned short> ixs(3*num);
-			vector<counted_normal> normals(verts.size());
+			vector<counted_normal> normals;
+			if (use_vertex_normals) {normals.resize(verts.size());}
 
 			// read faces, build vertex lists, and compute face normals
 			for (int i = 0; i < num; i++) {
 				unsigned short *ix(&ixs.front() + 3*i);
 				read_one_face(ix);
+				swap(ix[0], ix[2]); // reverse triangle vertex ordering to agree with 3DWorld coordinate system
 				point pts[3];
 				UNROLL_3X(pts[i_] = verts[ix[i_]].v;)
-				vector3d const normal(get_poly_norm(pts));
-				UNROLL_3X(normals[ix[i_]].add_normal(normal);)
+
+				if (use_vertex_normals) {
+					vector3d const normal(get_poly_norm(pts));
+					UNROLL_3X(normals[ix[i_]].add_normal(normal);)
+				}
 			}
-			model3d::proc_counted_normals(normals, 0.9); // FIXME: nmag_thresh different from object file reader
+			model3d::proc_counted_normals(normals); // if use_vertex_normals
 
 			// compute vertex normals and add triangles to the model
+			vntc_map_t vmap(0);
+
 			for (int i = 0; i < num; i++) {
 				point pts[3];
 				UNROLL_3X(pts[i_] = verts[ixs[3*i + i_]].v;)
-				vector3d const face_normal(get_poly_norm(pts));
+				vector3d const face_n(get_poly_norm(pts));
 
 				for (unsigned j = 0; j < 3; ++j) {
 					unsigned const ix(ixs[3*i + j]);
-					vector3d const normal((face_normal != zero_vector && !normals[ix].is_valid()) ? face_normal : normals[ix]);
+					vector3d const normal((!use_vertex_normals || (face_n != zero_vector && !normals[ix].is_valid())) ? face_n : normals[ix]);
 					tri[j] = vert_norm_tc(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
 				}
 				model.add_triangle(tri, vmap, mat_id, obj_id);
 			}
-			vmap.clear();
 			return 1;
+		}
+			// material
+		case 0xAFFF:
+			return 0; // FIXME: WRITE
 		} // end switch
 		return 0;
 	}
 
 public:
-	file_reader_3ds_model(string const &fn, model3d &model_) : file_reader_3ds(fn), model(model_), vmap(0) {}
+	file_reader_3ds_model(string const &fn, bool use_vertex_normals_, model3d &model_) :
+	  file_reader_3ds(fn), use_vertex_normals(use_vertex_normals_), model(model_) {}
 
 	bool read(geom_xform_t const &xf, bool verbose) {
 		if (!file_reader_3ds::read(xf, verbose)) return 0;
@@ -216,8 +228,8 @@ public:
 };
 
 
-bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool verbose) {
-	file_reader_3ds_model reader(filename, model);
+bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool use_vertex_normals, bool verbose) {
+	file_reader_3ds_model reader(filename, use_vertex_normals, model);
 	return reader.read(xf, verbose);
 }
 

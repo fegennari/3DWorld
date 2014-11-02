@@ -17,7 +17,7 @@ unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
-extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context;
+extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, cobj_z_bias;
 extern pos_dir_up orig_camera_pdu;
@@ -1598,6 +1598,7 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 				int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
 				bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
 				float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
+				if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
 				setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting);
 				if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);}
 			}

@@ -411,7 +411,7 @@ public:
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
 	bool write_to_disk (string const &fn) const;
 	bool read_from_disk(string const &fn);
-	static void proc_counted_normals(vector<counted_normal> &cn, float nmag_thresh);
+	static void proc_counted_normals(vector<counted_normal> &cn, float nmag_thresh=0.7);
 };
 
 

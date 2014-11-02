@@ -559,7 +559,7 @@ public:
 		model.load_all_used_tids(); // need to load the textures here to get the colors
 		PRINT_TIME("Model Texture Load");
 		size_t const num_blocks(pblocks.size());
-		model3d::proc_counted_normals(vn, 0.7); // if recalc_normals
+		model3d::proc_counted_normals(vn); // if recalc_normals
 
 		while (!pblocks.empty()) {
 			poly_data_block const &pd(pblocks.back());
@@ -629,7 +629,7 @@ bool write_model3d_file(string const &base_fn, model3d &cur_model) {
 }
 
 
-bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool verbose);
+bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool use_vertex_normals, bool verbose);
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 
 
@@ -646,7 +646,7 @@ bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cu
 		model3d &cur_model(all_models.back());
 
 		if (ext == "3ds") {
-			if (!read_3ds_file_model(filename, cur_model, xf, verbose)) return 0; // recalc_normals is always true
+			if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) return 0; // recalc_normals is always true
 		}
 		else { // object/model3d file
 			object_file_reader_model reader(filename, cur_model);

@@ -1021,7 +1021,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'O': // load *.obj file: <filename> <group_cobjs_level> <recalc_normals> <write_file> [<voxel_xy_spacing>]
+		case 'O': // load *.obj file: <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]
 			{
 				string const fn(read_filename(fp));
 				int recalc_normals(0), write_file(0);

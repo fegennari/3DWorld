@@ -37,6 +37,7 @@ group_back_face_cull 0
 enable_model3d_tex_comp 0
 disable_shader_effects 0
 two_sided_lighting 1
+model3d_winding_number_normal 0 # enable for DDS files?
 
 mesh_height 0.05
 mesh_size  128 128 0
