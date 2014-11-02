@@ -17,7 +17,7 @@ protected:
 	void read_vertex_block(geom_xform_t const &xf) {
 		unsigned short num;
 		fread(&num, sizeof(unsigned short), 1, fp);
-		assert(verts.empty()); // can only get here once
+		//assert(verts.empty()); // can only get here once?
 		verts.resize(num);
 		if (verbose) {printf("Number of vertices: %d\n", num);}
 		for (int i = 0; i < num; i++) {
@@ -30,8 +30,16 @@ protected:
 		unsigned short num;
 		fread(&num, sizeof(unsigned short), 1, fp);
 		assert(num == verts.size()); // must be one for each vertex
-		if (verbose) {printf("Number of tcs: %d\n", num);}
+		if (verbose) {printf("Number of tex coords: %d\n", num);}
 		for (int i = 0; i < num; i++) {fread(verts[i].t, sizeof(float), 2, fp);}
+	}
+
+	unsigned short read_one_face(unsigned short ix[3]) {
+		fread(ix, sizeof(unsigned short), 3, fp);
+		UNROLL_3X(assert(ix[i_] < verts.size());)
+		unsigned short l_face_flags; // ignored?
+		fread(&l_face_flags, sizeof(unsigned short), 1, fp);
+		return l_face_flags;
 	}
 
 	virtual bool proc_other_chunks(unsigned chunk_id, unsigned chunk_len) {
@@ -116,15 +124,9 @@ class file_reader_3ds_triangles : public file_reader_3ds {
 
 			for (int i = 0; i < num; i++) {
 				unsigned short ix[3];
-				fread(ix, sizeof(unsigned short), 3, fp);
-				unsigned short l_face_flags; // ignored
-				fread(&l_face_flags, sizeof(unsigned short), 1, fp);
+				read_one_face(ix);
 				triangle tri;
-				
-				for (unsigned j = 0; j < 3; ++j) {
-					assert(ix[j] < verts.size());
-					tri.pts[j] = verts[ix[j]].v;
-				}
+				UNROLL_3X(tri.pts[i_] = verts[ix[i_]].v;)
 				ppts->push_back(coll_tquad(tri, def_color));
 			}
 			return 1;
@@ -166,33 +168,33 @@ class file_reader_3ds_model : public file_reader_3ds {
 			int const mat_id(-1); // undefined
 			unsigned const obj_id(0); // default
 			vector<unsigned short> ixs(3*num);
-			vector<vector3d> normals(verts.size());
-			// FIXME: recalc_normals
+			vector<counted_normal> normals(verts.size());
 
+			// read faces, build vertex lists, and compute face normals
 			for (int i = 0; i < num; i++) {
 				unsigned short *ix(&ixs.front() + 3*i);
-				fread(ix, sizeof(unsigned short), 3, fp);
-				unsigned short l_face_flags; // ignored
-				fread(&l_face_flags, sizeof(unsigned short), 1, fp);
+				read_one_face(ix);
 				point pts[3];
+				UNROLL_3X(pts[i_] = verts[ix[i_]].v;)
+				vector3d const normal(get_poly_norm(pts));
+				UNROLL_3X(normals[ix[i_]].add_normal(normal);)
+			}
+			model3d::proc_counted_normals(normals, 0.9); // FIXME: nmag_thresh different from object file reader
+
+			// compute vertex normals and add triangles to the model
+			for (int i = 0; i < num; i++) {
+				point pts[3];
+				UNROLL_3X(pts[i_] = verts[ixs[3*i + i_]].v;)
+				vector3d const face_normal(get_poly_norm(pts));
 
 				for (unsigned j = 0; j < 3; ++j) {
-					assert(ix[j] < verts.size());
-					pts[j] = verts[ix[j]].v;
-				}
-				vector3d const normal(get_poly_norm(pts));
-				UNROLL_3X(normals[ix[i_]] += normal;)
-			}
-			for (vector<vector3d>::iterator i = normals.begin(); i != normals.end(); ++i) {
-				i->normalize();
-			}
-			for (int i = 0; i < num; i++) {
-				for (unsigned j = 0; j < 3; ++j) {
 					unsigned const ix(ixs[3*i + j]);
-					tri[j] = vert_norm_tc(verts[ix].v, normals[ix], verts[ix].t[0], verts[ix].t[1]);
+					vector3d const normal((face_normal != zero_vector && !normals[ix].is_valid()) ? face_normal : normals[ix]);
+					tri[j] = vert_norm_tc(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
 				}
 				model.add_triangle(tri, vmap, mat_id, obj_id);
 			}
+			vmap.clear();
 			return 1;
 		} // end switch
 		return 0;

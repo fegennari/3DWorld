@@ -1543,6 +1543,20 @@ bool model3d::read_from_disk(string const &fn) { // Note: transforms not read
 }
 
 
+void model3d::proc_counted_normals(vector<counted_normal> &cn, float nmag_thresh) {
+
+	for (vector<counted_normal>::iterator i = cn.begin(); i != cn.end(); ++i) { // if recalc_normals
+		if (!i->is_valid()) continue; // invalid, remains invalid
+		*i /= (float)i->count;
+		float const mag(i->mag());
+		if (mag < 1E-6) {i->count = 0; continue;} // invalid
+		assert(mag < 1.001);
+		*i /= mag; // normalize
+		i->count = (mag > nmag_thresh); // stores the 'valid' state of the normal
+	}
+}
+
+
 // ************ model3ds ************
 
 void model3ds::clear() {

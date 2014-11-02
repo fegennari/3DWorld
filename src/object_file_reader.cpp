@@ -559,16 +559,8 @@ public:
 		model.load_all_used_tids(); // need to load the textures here to get the colors
 		PRINT_TIME("Model Texture Load");
 		size_t const num_blocks(pblocks.size());
+		model3d::proc_counted_normals(vn, 0.7); // if recalc_normals
 
-		for (vector<counted_normal>::iterator i = vn.begin(); i != vn.end(); ++i) { // if recalc_normals
-			if (!i->is_valid()) continue; // invalid, remains invalid
-			*i /= (float)i->count;
-			float const mag(i->mag());
-			if (mag < 1E-6) {i->count = 0; continue;} // invalid
-			assert(mag < 1.001);
-			*i /= mag; // normalize
-			i->count = (mag > 0.7); // stores the 'valid' state of the normal
-		}
 		while (!pblocks.empty()) {
 			poly_data_block const &pd(pblocks.back());
 			unsigned pix(0);
