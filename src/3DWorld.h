@@ -1022,10 +1022,18 @@ template<typename T> struct triangle_t {
 	triangle_t(T const *const p) {pts[0] = p[0]; pts[1] = p[1]; pts[2] = p[2];}
 	vector3d get_normal(bool normalize=1) const {return get_poly_norm(pts, normalize);}
 	void operator+=(T const &p) {pts[0] += p; pts[1] += p; pts[2] += p;}
+
+	cube_t get_bbox(vector<T> const &p) const { // Note: only works on some types of triangles
+		cube_t bbox(pts[0], pts[0]);
+		bbox.union_with_pt(pts[1]);
+		bbox.union_with_pt(pts[2]);
+		return bbox;
+	}
 };
 
 typedef triangle_t<point>        triangle;
 typedef triangle_t<point_d>      triangle_d;
+typedef triangle_t<vert_tc_t>    triangle_vtc; // unused
 typedef triangle_t<vert_norm_tc> triangle_vntc;
 
 

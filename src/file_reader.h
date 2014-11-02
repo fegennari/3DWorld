@@ -18,7 +18,7 @@ protected:
 	char buffer[MAX_CHARS];
 	bool verbose;
 
-	bool open_file();
+	bool open_file(bool binary=0);
 	void close_file();
 	int get_next_char() {assert(fp); return get_char(fp);}
 	void unget_last_char(int c);

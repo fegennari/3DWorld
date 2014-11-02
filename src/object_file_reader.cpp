@@ -19,16 +19,16 @@ extern model3ds all_models;
 #endif
 
 
-bool base_file_reader::open_file() {
+bool base_file_reader::open_file(bool binary) {
 	assert(!filename.empty());
 	assert(!fp); // must call close_file() before reusing
-	fp = fopen(filename.c_str(), "r");
-	if (!fp) cerr << "Error: Could not open object file " << filename << endl;
+	fp = fopen(filename.c_str(), (binary ? "rb" : "r"));
+	if (!fp) {cerr << "Error: Could not open object file " << filename << endl;}
 	return (fp != 0);
 }
 
 void base_file_reader::close_file() {
-	if (fp) fclose(fp);
+	if (fp) {fclose(fp);}
 	fp = NULL;
 }
 
@@ -149,7 +149,7 @@ public:
 				while (read_int(ix)) { // read vertex index
 					normalize_index(ix, (unsigned)v.size());
 					// only fill in the vertex (norm and tc will be unused)
-					if (ppts) poly.push_back(vert_norm_tc(v[ix], zero_vector, 0.0, 0.0));
+					if (ppts) {poly.push_back(vert_norm_tc(v[ix], zero_vector, 0.0, 0.0));}
 					int const c(get_next_char());
 
 					if (c == '/') {
@@ -163,7 +163,7 @@ public:
 					}
 					else unget_last_char(c);
 				}
-				if (ppts) split_polygon(poly, *ppts, POLY_COPLANAR_THRESH);
+				if (ppts) {split_polygon(poly, *ppts, POLY_COPLANAR_THRESH);}
 			}
 			else {
 				read_to_newline(fp); // ignore everything else
@@ -637,8 +637,8 @@ bool write_model3d_file(string const &base_fn, model3d &cur_model) {
 }
 
 
-bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool recalc_normals, bool verbose);
-bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, bool verbose);
+bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t const &xf, bool verbose);
+bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
@@ -654,7 +654,7 @@ bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cu
 		model3d &cur_model(all_models.back());
 
 		if (ext == "3ds") {
-			if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) return 0;
+			if (!read_3ds_file_model(filename, cur_model, xf, verbose)) return 0; // recalc_normals is always true
 		}
 		else { // object/model3d file
 			object_file_reader_model reader(filename, cur_model);
@@ -686,7 +686,7 @@ bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cu
 	}
 	else {
 		if (ext == "3ds") {
-			return read_3ds_file_pts(filename, ppts, xf, verbose);
+			return read_3ds_file_pts(filename, ppts, xf, def_c, verbose);
 		}
 		else {
 			check_obj_file_ext(filename, ext);

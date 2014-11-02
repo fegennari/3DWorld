@@ -979,9 +979,30 @@ unsigned model3d::add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_m
 			materials[mat_id].add_poly(*i, vmap, vmap_tan, obj_id);
 		}
 	}
+	update_bbox(poly);
+	return (unsigned)split_polygons_buffer.size();
+}
+
+
+void model3d::add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id, unsigned obj_id) {
+
+	assert(tri.size() == 3);
+	vmap.check_for_clear(mat_id);
+
+	if (mat_id < 0) {
+		unbound_geom.add_poly_to_polys(tri, unbound_geom.triangles, vmap, obj_id);
+	}
+	else {
+		assert((unsigned)mat_id < materials.size());
+		materials[mat_id].geom.add_poly_to_polys(tri, materials[mat_id].geom.triangles, vmap, obj_id);
+	}
+	update_bbox(tri);
+}
+
+
+void model3d::update_bbox(polygon_t const &poly) {
 	cube_t const bb(get_polygon_bbox(poly));
 	if (bcube == all_zeros_cube) {bcube = bb;} else {bcube.union_with_cube(bb);}
-	return (unsigned)split_polygons_buffer.size();
 }
 
 

@@ -359,6 +359,8 @@ class model3d {
 	};
 	vect_smap_t<model_smap_data_t> smap_data;
 
+	void update_bbox(polygon_t const &poly);
+
 public:
 	// textures
 	texture_manager &tmgr;
@@ -379,6 +381,7 @@ public:
 	void add_transform(model3d_xform_t const &xf) {transforms.push_back(xf);}
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
+	void add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
 	void get_cubes(vector<cube_t> &cubes, float spacing) const;
 	int get_material_ix(string const &material_name, string const &fn);
