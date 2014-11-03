@@ -17,15 +17,17 @@ protected:
 	bool read_data(void *dest, size_t sz, size_t count, char const *const str) {
 		size_t const nread(fread(dest, sz, count, fp));
 		if (nread == count) return 1;
-		cerr << "Error reading 3DS file " << str << " data: expected " << count << " elements of size " << sz << " but got " << nread << endl;
+		if (str != nullptr) {cerr << "Error reading 3DS file " << str << " data: expected " << count << " elements of size " << sz << " but got " << nread << endl;}
 		return 0;
 	}
 
-	bool read_chunk_header(unsigned short &chunk_id, unsigned &chunk_len) {
-		if (!read_data(&chunk_id, 2, 1, "chunk id")) return 0;
+	bool read_chunk_header(unsigned short &chunk_id, unsigned &chunk_len, bool top_level=0) {
+		// Note: we pass null at the top level to suppress the error message during EOF checking
+		if (!read_data(&chunk_id, 2, 1, (top_level ? nullptr : "chunk id"))) return 0;
 		if (verbose) {printf("ChunkID: %x\n", chunk_id);}
 		if (!read_data(&chunk_len, 4, 1, "chunk length")) return 0;
-		if (verbose) {printf("ChunkLength: %d\n", chunk_len);}
+		assert(chunk_len < (1<<31)); // sanity check
+		if (verbose) {printf("ChunkLength: %u\n", chunk_len);}
 		return 1;
 	}
 
@@ -34,7 +36,7 @@ protected:
 		if (!read_data(&num, sizeof(unsigned short), 1, "vertex size")) return 0;
 		//assert(verts.empty()); // can only get here once?
 		verts.resize(num);
-		if (verbose) {printf("Number of vertices: %d\n", num);}
+		if (verbose) {printf("Number of vertices: %u\n", num);}
 
 		for (int i = 0; i < num; i++) {
 			if (!read_data(&verts[i].v.x, sizeof(float), 3, "vertex xyz")) return 0;
@@ -47,7 +49,7 @@ protected:
 		unsigned short num;
 		if (!read_data(&num, sizeof(unsigned short), 1, "mapping size")) return 0;
 		assert(num == verts.size()); // must be one for each vertex
-		if (verbose) {printf("Number of tex coords: %d\n", num);}
+		if (verbose) {printf("Number of tex coords: %u\n", num);}
 
 		for (int i = 0; i < num; i++) {
 			if (!read_data(verts[i].t, sizeof(float), 2, "mapping uv")) return 0;
@@ -93,6 +95,8 @@ protected:
 		return 0; // invalid chunk_id
 	}
 
+	void skip_chunk(unsigned chunk_len) {fseek(fp, chunk_len-6, SEEK_CUR);}
+
 	virtual bool proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {return 0;}
 
 public:
@@ -107,7 +111,8 @@ public:
 		unsigned short chunk_id;
 		unsigned chunk_len;
 
-		while (read_chunk_header(chunk_id, chunk_len)) { // read each chunk from the file 
+		// FIXME: allow vertex, mapcoords, and faces to be in any order
+		while (read_chunk_header(chunk_id, chunk_len, 1)) { // read each chunk from the file 
 			switch (chunk_id) {
 				// MAIN3DS: Main chunk, contains all the other chunks; length: 0 + sub chunks
 			case 0x4d4d:
@@ -134,7 +139,7 @@ public:
 				break;
 
 			default: // send to derived class reader, and skip chunk if it isn't handled
-				if (!proc_other_chunks(chunk_id, chunk_len)) {fseek(fp, chunk_len-6, SEEK_CUR);}
+				if (!proc_other_chunks(chunk_id, chunk_len)) {skip_chunk(chunk_len);}
 			} // end switch
 		}
 		return 1;
@@ -159,7 +164,7 @@ class file_reader_3ds_triangles : public file_reader_3ds {
 			// Chunk Length: 1 x unsigned short (# polygons) + 3 x unsigned short (polygon points) x (# polygons) + sub chunks
 		case 0x4120:
 			if (!read_data(&num, sizeof(unsigned short), 1, "number of faces")) return 0;
-			if (verbose) {printf("Number of polygons: %d\n", num);}
+			if (verbose) {printf("Number of polygons: %u\n", num);}
 
 			for (int i = 0; i < num; i++) {
 				unsigned short ix[3];
@@ -202,7 +207,7 @@ class file_reader_3ds_model : public file_reader_3ds {
 		{
 			unsigned short num;
 			if (!read_data(&num, sizeof(unsigned short), 1, "number of faces")) return 0;
-			if (verbose) {printf("Number of polygons: %d\n", num);}
+			if (verbose) {printf("Number of polygons: %u\n", num);}
 			polygon_t tri;
 			tri.resize(3);
 			int const mat_id(-1); // undefined
@@ -253,9 +258,9 @@ class file_reader_3ds_model : public file_reader_3ds {
 
 		case 0xAFFF: // material
 			{
-				return 0; // FIXME - incomplete
-				//material_t cur_mat; // FIXME
-				//return read_material(chunk_len, cur_mat); // handled
+				//return 0;
+				material_t cur_mat; // FIXME
+				return read_material(chunk_len, cur_mat); // handled
 			}
 		} // end switch
 		return 0;
@@ -266,16 +271,22 @@ class file_reader_3ds_model : public file_reader_3ds {
 		return 0;
 	}
 
+	long get_end_pos(unsigned read_len) {return (ftell(fp) + read_len - 6);}
+
 	bool read_material(unsigned read_len, material_t &cur_mat) {
 		unsigned short chunk_id;
 		unsigned chunk_len;
 		string tex_fn;
+		if (verbose) {cout << "Reading material" << endl;}
+		long const end_pos(get_end_pos(read_len));
 
-		// FIXME: exit loop using read_len and ftell()
-		while (read_chunk_header(chunk_id, chunk_len)) { // read each chunk from the file 
+		while (ftell(fp) < end_pos) { // read each chunk from the file 
+			if (!read_chunk_header(chunk_id, chunk_len)) return 0;
+
 			switch (chunk_id) {
 			case 0xA000: // material name
 				if (!read_null_term_string(cur_mat.name)) return 0;
+				break;
 			case 0xA010: // material ambient color
 				if (!read_color(cur_mat.ka)) return 0;
 				break;
@@ -285,6 +296,7 @@ class file_reader_3ds_model : public file_reader_3ds {
 			case 0xA030: // material specular color
 				if (!read_color(cur_mat.ks)) return 0;
 				break;
+#if 0 // broken
 			case 0xA200: // texture map 1
 				if (!read_texture(chunk_len, tex_fn)) return 0;
 				if (!proc_texture(tex_fn, cur_mat.d_tid)) return 0;
@@ -297,28 +309,37 @@ class file_reader_3ds_model : public file_reader_3ds {
 				if (!read_texture(chunk_len, tex_fn)) return 0;
 				if (!proc_texture(tex_fn, cur_mat.refl_tid)) return 0;
 				break;
-			default: return 0;
+#endif
+			default:
+				skip_chunk(chunk_len);
 			} // end switch
 		} // end while
+		assert(ftell(fp) == end_pos);
+		if (verbose) {cout << "Read material " << cur_mat.name << endl;}
 		return 1;
 	}
 
 	bool read_texture(unsigned read_len, string &tex_name) {
 		unsigned short chunk_id;
 		unsigned chunk_len;
+		long const end_pos(get_end_pos(read_len));
 
-		// FIXME: exit loop using read_len and ftell()
-		while (read_chunk_header(chunk_id, chunk_len)) { // read each chunk from the file 
+		while (ftell(fp) < end_pos) { // read each chunk from the file 
+			if (!read_chunk_header(chunk_id, chunk_len)) return 0;
+
 			switch (chunk_id) {
 			case 0xA300: // mapping filename
 				if (!read_null_term_string(tex_name)) return 0;
 				break;
 			case 0xA351: // mapping parameters
-				// FIXME: WRITE
+				skip_chunk(chunk_len); // FIXME: WRITE
 				break;
-			default: return 0;
+			default:
+				skip_chunk(chunk_len);
 			} // end switch
 		} // end while
+		assert(ftell(fp) == end_pos);
+		if (verbose) {cout << "Read texture " << tex_name << endl;}
 		return 1;
 	}
 
