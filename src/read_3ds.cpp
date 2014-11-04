@@ -14,6 +14,8 @@ protected:
 	string name; // unused?
 	vector<vert_tc_t> verts;
 
+	long get_end_pos(unsigned read_len) {return (ftell(fp) + read_len - 6);}
+
 	bool read_data(void *dest, size_t sz, size_t count, char const *const str) {
 		size_t const nread(fread(dest, sz, count, fp));
 		if (nread == count) return 1;
@@ -31,7 +33,7 @@ protected:
 		return 1;
 	}
 
-	bool read_vertex_block(geom_xform_t const &xf) {
+	bool read_vertex_block(geom_xform_t const &xf, float scale) {
 		unsigned short num;
 		if (!read_data(&num, sizeof(unsigned short), 1, "vertex size")) return 0;
 		//assert(verts.empty()); // can only get here once?
@@ -40,6 +42,7 @@ protected:
 
 		for (int i = 0; i < num; i++) {
 			if (!read_data(&verts[i].v.x, sizeof(float), 3, "vertex xyz")) return 0;
+			verts[i].v *= scale;
 			xf.xform_pos(verts[i].v);
 		}
 		return 1;
@@ -70,8 +73,8 @@ protected:
 		while (1) {
 			char l_char;
 			if (!read_data(&l_char, 1, 1, "string char")) return 0;
-			str.push_back(l_char); // add the null terminator or not?
 			if (l_char == '\0') return 1;
+			str.push_back(l_char); // add the null terminator or not?
 		}
 		return 0; // never gets here
 	}
@@ -95,9 +98,31 @@ protected:
 		return 0; // invalid chunk_id
 	}
 
+	bool read_percentage(unsigned read_len, float &val) {
+		unsigned short chunk_id, ival;
+		unsigned chunk_len;
+		long const end_pos(get_end_pos(read_len));
+		if (!read_chunk_header(chunk_id, chunk_len)) return 0;
+		
+		switch (chunk_id) {
+		case 0x0030: // short percentage
+			if (!read_data(&ival, sizeof(unsigned short), 1, "short percentage")) return 0;
+			val = ival/65535.0;
+			break;
+		case 0x0031: // float percentage
+			if (!read_data(&val, sizeof(float), 1, "float percentage")) return 0;
+			break;
+		default:
+			assert(0);
+		} // end switch
+		assert(ftell(fp) == end_pos);
+		return 1;
+	}
+
 	void skip_chunk(unsigned chunk_len) {fseek(fp, chunk_len-6, SEEK_CUR);}
 
-	virtual bool proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {return 0;}
+	// return value: 0 = error, 1 = processed, 2 = can't handle/skip
+	virtual int proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {return 2;}
 
 public:
 	file_reader_3ds(string const &fn) : base_file_reader(fn) {}
@@ -110,8 +135,9 @@ public:
 		cout << "Reading 3DS file " << filename << endl;
 		unsigned short chunk_id;
 		unsigned chunk_len;
+		float scale(1.0);
 
-		// FIXME: allow vertex, mapcoords, and faces to be in any order
+		// FIXME: allow vertex, mapcoords, faces, face materials, and scale to be in any order
 		while (read_chunk_header(chunk_id, chunk_len, 1)) { // read each chunk from the file 
 			switch (chunk_id) {
 				// MAIN3DS: Main chunk, contains all the other chunks; length: 0 + sub chunks
@@ -130,16 +156,24 @@ public:
 				// TRI_VERTEXL: Vertices list
 				// Chunk Length: 1 x unsigned short (# vertices) + 3 x float (vertex coordinates) x (# vertices) + sub chunks
 			case 0x4110:
-				if (!read_vertex_block(xf)) return 0;
+				if (!read_vertex_block(xf, scale)) return 0;
 				break;
 				// TRI_MAPPINGCOORS: Vertices list
 				// Chunk Length: 1 x unsigned short (# mapping points) + 2 x float (mapping coordinates) x (# mapping points) + sub chunks
 			case 0x4140:
 				if (!read_mapping_block()) return 0;
 				break;
+				// master scale factor
+			case 0x0100:
+				if (!read_data(&scale, sizeof(float), 1, "master scale")) return 0;
+				break;
 
 			default: // send to derived class reader, and skip chunk if it isn't handled
-				if (!proc_other_chunks(chunk_id, chunk_len)) {skip_chunk(chunk_len);}
+				{
+					int const ret(proc_other_chunks(chunk_id, chunk_len));
+					if (ret == 0) return 0; // error
+					else if (ret == 2) {skip_chunk(chunk_len);} // skip
+				}
 			} // end switch
 		}
 		return 1;
@@ -155,7 +189,7 @@ class file_reader_3ds_triangles : public file_reader_3ds {
 	colorRGBA def_color;
 	vector<coll_tquad> *ppts;
 
-	virtual bool proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {
+	virtual int proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {
 		assert(ppts != nullptr);
 		unsigned short num;
 
@@ -168,14 +202,14 @@ class file_reader_3ds_triangles : public file_reader_3ds {
 
 			for (int i = 0; i < num; i++) {
 				unsigned short ix[3];
-				read_one_face(ix);
+				if (!read_one_face(ix)) return 0;
 				triangle tri;
 				UNROLL_3X(tri.pts[i_] = verts[ix[i_]].v;)
 				ppts->push_back(coll_tquad(tri, def_color));
 			}
 			return 1; // handled
 		} // end switch
-		return 0;
+		return 2; // skip
 	}
 
 public:
@@ -193,13 +227,15 @@ public:
 // ************************************************
 
 
-class file_reader_3ds_model : public file_reader_3ds {
+class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 
 	bool use_vertex_normals;
-	model3d &model;
+	vector<unsigned short> face_ixs;
+	vector<counted_normal> normals;
 
-	virtual bool proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {
+	virtual int proc_other_chunks(unsigned short chunk_id, unsigned chunk_len) {
 
+		// TODO: smoothing groups and shininess
 		switch (chunk_id) {
 			// TRI_FACEL1: Polygons (faces) list
 			// Chunk Length: 1 x unsigned short (# polygons) + 3 x unsigned short (polygon points) x (# polygons) + sub chunks
@@ -208,18 +244,14 @@ class file_reader_3ds_model : public file_reader_3ds {
 			unsigned short num;
 			if (!read_data(&num, sizeof(unsigned short), 1, "number of faces")) return 0;
 			if (verbose) {printf("Number of polygons: %u\n", num);}
-			polygon_t tri;
-			tri.resize(3);
-			int const mat_id(-1); // undefined
-			unsigned const obj_id(0); // default
-			vector<unsigned short> ixs(3*num);
-			vector<counted_normal> normals;
+			face_ixs.resize(3*num);
 			if (use_vertex_normals) {normals.resize(verts.size());}
 
 			// read faces, build vertex lists, and compute face normals
+			// Note: we don't support vertices that are shared between faces of different materials
 			for (int i = 0; i < num; i++) {
-				unsigned short *ix(&ixs.front() + 3*i);
-				read_one_face(ix);
+				unsigned short *ix(&face_ixs.front() + 3*i);
+				if (!read_one_face(ix)) return 0;
 				swap(ix[0], ix[2]); // reverse triangle vertex ordering to agree with 3DWorld coordinate system
 				point pts[3];
 				UNROLL_3X(pts[i_] = verts[ix[i_]].v;)
@@ -230,54 +262,72 @@ class file_reader_3ds_model : public file_reader_3ds {
 				}
 			}
 			model3d::proc_counted_normals(normals); // if use_vertex_normals
-
-			// compute vertex normals and add triangles to the model
-			vntc_map_t vmap(0);
-
-			for (int i = 0; i < num; i++) {
-				point pts[3];
-				UNROLL_3X(pts[i_] = verts[ixs[3*i + i_]].v;)
-				vector3d const face_n(get_poly_norm(pts));
-
-				for (unsigned j = 0; j < 3; ++j) {
-					unsigned const ix(ixs[3*i + j]);
-					vector3d const normal((!use_vertex_normals || (face_n != zero_vector && !normals[ix].is_valid())) ? face_n : normals[ix]);
-					tri[j] = vert_norm_tc(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
-				}
-				model.add_triangle(tri, vmap, mat_id, obj_id);
-			}
 			return 1; // handled
 		}
 
 		// faces data
-		case 0x4130: // Faces Material
-			break;
+		case 0x4130: // Faces Material: asciiz name, short nfaces, short face_ids
+			{
+				string mat_name;
+				unsigned short num;
+				if (!read_null_term_string(mat_name)) return 0;
+				if (!read_data(&num, sizeof(unsigned short), 1, "number of faces for material")) return 0;
+				vector<unsigned short> faces(num);
+				if (!read_data(&faces.front(), sizeof(unsigned short), num, "faces for material")) return 0;
+				if (verbose) {cout << "Material " << mat_name << " is used for " << num << " faces" << endl;}
+				assert(num > 0); // too strong?
+				vntc_map_t vmap(0);
+				int const mat_id(model.get_material_ix(mat_name, filename, 1));
+				model.mark_mat_as_used(mat_id);
+				unsigned const obj_id(0); // default
+				polygon_t tri;
+				tri.resize(3);
+
+				// FIXME: track unused faces and emit on default material
+				for (vector<unsigned short>::const_iterator i = faces.begin(); i != faces.end(); ++i) {
+					unsigned const fix(*i);
+					assert(3*fix < face_ixs.size());
+					point pts[3];
+					UNROLL_3X(pts[i_] = verts[face_ixs[3*fix + i_]].v;)
+					vector3d const face_n(get_poly_norm(pts));
+
+					for (unsigned j = 0; j < 3; ++j) {
+						unsigned const ix(face_ixs[3*fix + j]);
+						vector3d const normal((!use_vertex_normals || (face_n != zero_vector && !normals[ix].is_valid())) ? face_n : normals[ix]);
+						tri[j] = vert_norm_tc(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
+					}
+					model.add_triangle(tri, vmap, mat_id, obj_id);
+				}
+				break;
+			}
 		case 0x4150: // Smoothing Group List
 			// nfaces*4bytes: Long int where the nth bit indicates if the face belongs to the nth smoothing group
 			break;
 
 		case 0xAFFF: // material
 			{
-				//return 0;
-				material_t cur_mat; // FIXME
-				return read_material(chunk_len, cur_mat); // handled
+				// since the material properties may be defined before its name, we can't get the material by name and fill it in;
+				// instead, we create a temporary material, fill it in, then look it up by name and overwrite the material in the model with cur_mat
+				material_t cur_mat("", filename);
+				if (!read_material(chunk_len, cur_mat)) {cerr << "Error reading material " << cur_mat.name << endl; return 0;}
+				int const cur_mat_id(model.get_material_ix(cur_mat.name, filename, 0)); // FIXME: okay_if_exists???
+				model.get_material(cur_mat_id) = cur_mat;
+				return 1; // handled
 			}
 		} // end switch
-		return 0;
+		return 2; // skip
 	}
 
-	bool proc_texture(string const &filename, int &tid) {
-		// FIXME
-		return 0;
+	bool read_and_proc_texture(unsigned chunk_len, int &tid, char const *const name) {
+		string tex_fn;
+		if (!read_texture(chunk_len, tex_fn)) {cerr << "Error reading texture " << name << endl; return 0;}
+		check_and_bind(tid, tex_fn, 0, verbose);
+		return 1;
 	}
-
-	long get_end_pos(unsigned read_len) {return (ftell(fp) + read_len - 6);}
 
 	bool read_material(unsigned read_len, material_t &cur_mat) {
 		unsigned short chunk_id;
 		unsigned chunk_len;
-		string tex_fn;
-		if (verbose) {cout << "Reading material" << endl;}
 		long const end_pos(get_end_pos(read_len));
 
 		while (ftell(fp) < end_pos) { // read each chunk from the file 
@@ -296,20 +346,23 @@ class file_reader_3ds_model : public file_reader_3ds {
 			case 0xA030: // material specular color
 				if (!read_color(cur_mat.ks)) return 0;
 				break;
-#if 0 // broken
+			case 0xA040: // material shininess
+				if (!read_percentage(chunk_len, cur_mat.ns)) return 0;
+				// FIXME: wrong (0.0003)?
+				break;
+			case 0xA050: // material transparency
+				if (!read_percentage(chunk_len, cur_mat.alpha)) return 0;
+				cur_mat.alpha = 1.0 - cur_mat.alpha; // convert from transparency to opacity
+				break;
 			case 0xA200: // texture map 1
-				if (!read_texture(chunk_len, tex_fn)) return 0;
-				if (!proc_texture(tex_fn, cur_mat.d_tid)) return 0;
+				if (!read_and_proc_texture(chunk_len, cur_mat.d_tid, "texture map 1")) return 0;
 				break;
 			case 0xA230: // bump map
-				if (!read_texture(chunk_len, tex_fn)) return 0;
-				if (!proc_texture(tex_fn, cur_mat.bump_tid)) return 0;
+				if (!read_and_proc_texture(chunk_len, cur_mat.bump_tid, "bump map")) return 0;
 				break;
 			case 0xA220: // reflection map
-				if (!read_texture(chunk_len, tex_fn)) return 0;
-				if (!proc_texture(tex_fn, cur_mat.refl_tid)) return 0;
+				if (!read_and_proc_texture(chunk_len, cur_mat.refl_tid, "reflection map")) return 0;
 				break;
-#endif
 			default:
 				skip_chunk(chunk_len);
 			} // end switch
@@ -320,7 +373,7 @@ class file_reader_3ds_model : public file_reader_3ds {
 	}
 
 	bool read_texture(unsigned read_len, string &tex_name) {
-		unsigned short chunk_id;
+		unsigned short chunk_id, map_tiling;
 		unsigned chunk_len;
 		long const end_pos(get_end_pos(read_len));
 
@@ -332,20 +385,20 @@ class file_reader_3ds_model : public file_reader_3ds {
 				if (!read_null_term_string(tex_name)) return 0;
 				break;
 			case 0xA351: // mapping parameters
-				skip_chunk(chunk_len); // FIXME: WRITE
+				if (!read_data(&map_tiling, sizeof(unsigned short), 1, "texture map tiling flags")) return 0;
 				break;
 			default:
 				skip_chunk(chunk_len);
 			} // end switch
 		} // end while
 		assert(ftell(fp) == end_pos);
-		if (verbose) {cout << "Read texture " << tex_name << endl;}
+		// FIXME: use or return map_tiling?
 		return 1;
 	}
 
 public:
 	file_reader_3ds_model(string const &fn, bool use_vertex_normals_, model3d &model_) :
-	  file_reader_3ds(fn), use_vertex_normals(use_vertex_normals_), model(model_) {}
+	  file_reader_3ds(fn), use_vertex_normals(use_vertex_normals_), model_from_file_t(fn, model_) {}
 
 	bool read(geom_xform_t const &xf, bool verbose) {
 		if (!file_reader_3ds::read(xf, verbose)) return 0;

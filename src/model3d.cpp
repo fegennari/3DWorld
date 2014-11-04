@@ -1156,7 +1156,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const { // Note: i
 }
 
 
-int model3d::get_material_ix(string const &material_name, string const &fn) {
+int model3d::get_material_ix(string const &material_name, string const &fn, bool okay_if_exists) {
 
 	unsigned mat_id(0);
 	string_map_t::const_iterator it(mat_map.find(material_name));
@@ -1167,7 +1167,7 @@ int model3d::get_material_ix(string const &material_name, string const &fn) {
 		materials.push_back(material_t(material_name, fn));
 	}
 	else {
-		if (!from_model3d_file) cerr << "Warning: Redefinition of material " << material_name << " in file " << fn << endl;
+		if (!from_model3d_file && !okay_if_exists) {cerr << "Warning: Redefinition of material " << material_name << " in file " << fn << endl;}
 		mat_id = it->second;
 	}
 	assert(mat_id < materials.size());

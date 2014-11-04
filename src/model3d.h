@@ -384,7 +384,7 @@ public:
 	void add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
 	void get_cubes(vector<cube_t> &cubes, float spacing) const;
-	int get_material_ix(string const &material_name, string const &fn);
+	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
 	void optimize();
@@ -426,6 +426,25 @@ struct model3ds : public deque<model3d> {
 	cube_t get_bcube() const;
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
+};
+
+
+class model_from_file_t {
+
+	string rel_path;
+protected:
+	model3d &model;
+
+public:
+	model_from_file_t(string const &fn, model3d &model_) : model(model_) {rel_path = get_path(fn);}
+	string open_include_file(string const &fn, string const &type, ifstream &in_inc) const ;
+	string get_path(string const &fn) const;
+	int get_texture(string const &fn, bool is_alpha_mask, bool verbose);
+
+	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose) {
+		assert(tid < 0);
+		tid = get_texture(tfn, is_alpha_mask, verbose);
+	}
 };
 
 

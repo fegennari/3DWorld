@@ -179,44 +179,36 @@ public:
 // ************************************************
 
 
-class object_file_reader_model : public object_file_reader {
+string model_from_file_t::open_include_file(string const &fn, string const &type, ifstream &in_inc) const {
+	assert(!fn.empty());
+	in_inc.open(fn); // try absolute path
+	if (in_inc.good()) return fn;
+	in_inc.clear();
+	string const rel_fn(rel_path + fn);
+	in_inc.open(rel_fn); // try relative path
+	if (in_inc.good()) return rel_fn;
+	cerr << "Error: Could not open " << type << " file " << fn << " or " << rel_fn << endl;
+	return string();
+}
 
-	string rel_path;
-	model3d &model;
-
-	string open_include_file(string const &fn, string const &type, ifstream &in_inc) const {
-		assert(!fn.empty());
-		in_inc.open(fn); // try absolute path
-		if (in_inc.good()) return fn;
-		in_inc.clear();
-		string const rel_fn(rel_path + fn);
-		in_inc.open(rel_fn); // try relative path
-		if (in_inc.good()) return rel_fn;
-		cerr << "Error: Could not open " << type << " file " << fn << " or " << rel_fn << endl;
-		return string();
+string model_from_file_t::get_path(string const &fn) const {
+	for (unsigned pos = (unsigned)fn.size(); pos > 0; --pos) {
+		if (fn[pos-1] == '\\' || fn[pos-1] == '/') {return string(fn.begin(), fn.begin()+pos);}
 	}
+	return string();
+}
 
-	string get_path(string const &fn) const {
-		for (unsigned pos = (unsigned)fn.size(); pos > 0; --pos) {
-			if (fn[pos-1] == '\\' || fn[pos-1] == '/') {
-				return string(fn.begin(), fn.begin()+pos);
-			}
-		}
-		return string();
-	}
+int model_from_file_t::get_texture(string const &fn, bool is_alpha_mask, bool verbose) {
+	ifstream tex_in; // used only for determining file location
+	string const fn_used(open_include_file(fn, "texture", tex_in));
+	if (fn_used.empty()) return -1;
+	tex_in.close();
+	return model.tmgr.create_texture(fn_used, is_alpha_mask, verbose);
+}
 
-	int get_texture(string const &fn, bool is_alpha_mask) {
-		ifstream tex_in; // used only for determining file location
-		string const fn_used(open_include_file(fn, "texture", tex_in));
-		if (fn_used.empty()) return -1;
-		tex_in.close();
-		return model.tmgr.create_texture(fn_used, is_alpha_mask, verbose);
-	}
 
-	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask) {
-		assert(tid < 0);
-		tid = get_texture(tfn, is_alpha_mask);
-	}
+
+class object_file_reader_model : public object_file_reader, public model_from_file_t {
 
 	bool read_map_name(ifstream &in, string &name) const {
 		if (!(in >> name))  {return 0;}
@@ -227,9 +219,7 @@ class object_file_reader_model : public object_file_reader {
 	}
 
 public:
-	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model(model_) {
-		rel_path = get_path(fn);
-	}
+	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model_from_file_t(fn, model_) {}
 
 	bool load_mat_lib(string const &fn) { // Note: could cache filename, but seems to never be included more than once
 		ifstream mat_in;
@@ -300,22 +290,22 @@ public:
 			else if (s == "map_ka") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
-				check_and_bind(cur_mat->a_tid, tfn, 0);
+				check_and_bind(cur_mat->a_tid, tfn, 0, verbose);
 			}
 			else if (s == "map_kd") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Kd" << endl; return 0;}
-				check_and_bind(cur_mat->d_tid, tfn, 0);
+				check_and_bind(cur_mat->d_tid, tfn, 0, verbose);
 			}
 			else if (s == "map_ks") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
-				check_and_bind(cur_mat->s_tid, tfn, 0);
+				check_and_bind(cur_mat->s_tid, tfn, 0, verbose);
 			}
 			else if (s == "map_d") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
-				check_and_bind(cur_mat->alpha_tid, tfn, 1);
+				check_and_bind(cur_mat->alpha_tid, tfn, 1, verbose);
 			}
 			else if (s == "map_bump" || s == "bump") { // should be ok if both are set
 				assert(cur_mat);
@@ -325,12 +315,12 @@ public:
 					float scale(1.0);
 					if (!(mat_in >> scale) || !read_map_name(mat_in, tfn)) {cerr << "Error reading material " << s << " with -bm" << endl; return 0;}
 				}
-				cur_mat->bump_tid = get_texture(tfn, 0); // can be set from both map_bump and bump
+				cur_mat->bump_tid = get_texture(tfn, 0, verbose); // can be set from both map_bump and bump
 			}
 			else if (s == "map_refl") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_refl" << endl; return 0;}
-				check_and_bind(cur_mat->refl_tid, tfn, 0);
+				check_and_bind(cur_mat->refl_tid, tfn, 0, verbose);
 			}
 			else if (s == "skip") { // skip this material
 				assert(cur_mat);
