@@ -385,7 +385,8 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		tri.resize(3);
 
 		for (face_mat_map_t::const_iterator i = face_materials.begin(); i != face_materials.end(); ++i) {
-			vntc_map_t vmap(0);
+			vntc_map_t vmap[2]; // average_normals=0
+			vntct_map_t vmap_tan[2]; // average_normals=0
 
 			for (vector<unsigned short>::const_iterator f = i->second.begin(); f != i->second.end(); ++f) {
 				unsigned short *ixs(faces[*f].ix);
@@ -398,7 +399,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 					vector3d const normal((!use_vertex_normals || (face_n != zero_vector && !normals[ix].is_valid())) ? face_n : normals[ix]);
 					tri[j] = vert_norm_tc(pts[j], normal, verts[ix].t[0], verts[ix].t[1]);
 				}
-				model.add_triangle(tri, vmap, i->first, obj_id);
+				model.add_polygon(tri, vmap, vmap_tan, i->first, obj_id);
 			}
 		} // for i
 		++obj_id;
