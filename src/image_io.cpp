@@ -133,6 +133,19 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 			try_compact_to_lum();
 		}
 		if (!ignore_word_alignment) {fix_word_alignment();}
+
+		if (invert_alpha) {
+			if (ncolors == 1 || ncolors == 3) { // if 3 colors, assume all are duplicate alpha channels
+				assert(!is_16_bit_gray);
+				unsigned const nbytes(num_bytes());
+				for (unsigned i = 0; i < nbytes; ++i) {data[i] = (255 - data[i]);}
+			}
+			else {
+				assert(ncolors == 4);
+				unsigned const npixels(num_pixels());
+				for (unsigned i = 0; i < npixels; ++i) {data[4*i+3] = (255 - data[4*i+3]);}
+			}
+		}
 	}
 #if 0
 	if (name.size() > 4 && name.front() != '@') {

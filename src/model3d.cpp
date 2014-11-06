@@ -34,13 +34,13 @@ bool no_sparse_smap_update();
 
 // ************ texture_manager ************
 
-unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose) {
+unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha) {
 
 	string_map_t::const_iterator it(tex_map.find(fn));
 
 	if (it != tex_map.end()) { // found (already loaded)
 		assert(it->second < textures.size());
-		return it->second;
+		return it->second; // check invert_alpha?
 	}
 	unsigned const tid((unsigned)textures.size());
 	tex_map[fn] = tid;
@@ -49,6 +49,7 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	// type=read_from_file format=auto width height wrap ncolors use_mipmaps name [do_compress]
 	textures.push_back(texture_t(0, 7, 0, 0, 1, (is_alpha_mask ? 1 : 3), (use_model2d_tex_mipmaps && !is_alpha_mask),
 		fn, 0, compress, model3d_texture_anisotropy)); // always RGB wrapped+mipmap
+	textures.back().invert_alpha = invert_alpha;
 	return tid; // can't fail
 }
 

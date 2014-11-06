@@ -123,10 +123,11 @@ protected:
 		switch (chunk_id) {
 		case 0x0030: // short percentage
 			if (!read_data(&ival, sizeof(unsigned short), 1, "short percentage")) return 0;
-			val = ival/65535.0;
+			val = ival/100.0;
 			break;
 		case 0x0031: // float percentage
 			if (!read_data(&val, sizeof(float), 1, "float percentage")) return 0;
+			val /= 100.0;
 			break;
 		default:
 			assert(0);
@@ -293,6 +294,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		long const end_pos(get_end_pos(read_len));
 		vector<vert_tc_t> verts;
 		vector<face_t> faces;
+		vector<unsigned> sgroups;
 		typedef map<int, vector<unsigned short> > face_mat_map_t;
 		face_mat_map_t face_materials;
 
@@ -306,7 +308,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				if (!read_faces(faces)) return 0;
 				break;
 			// faces data
-			case 0x4130: // Faces Material: asciiz name, short nfaces, short face_ids
+			case 0x4130: // Faces Material: asciiz name, short nfaces, short face_ids (after faces)
 				{
 					// read and process material name
 					string mat_name;
@@ -318,15 +320,16 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 					// read and process face materials
 					unsigned short num;
 					if (!read_data(&num, sizeof(unsigned short), 1, "number of faces for material")) return 0;
-					assert(num > 0); // too strong?
 					faces_mat.resize(num);
-					if (!read_data(&faces_mat.front(), sizeof(unsigned short), num, "faces for material")) return 0;
+					if (num > 0 && !read_data(&faces_mat.front(), sizeof(unsigned short), num, "faces for material")) return 0;
 					if (verbose) {cout << "Material " << mat_name << " is used for " << num << " faces" << endl;}
 					break;
 				}
-			case 0x4150: // Smoothing Group List
+			case 0x4150: // Smoothing Group List (after mapping coords)
 				// nfaces*4bytes: Long int where the nth bit indicates if the face belongs to the nth smoothing group
-				skip_chunk(chunk_len); // FIXME
+				assert(chunk_len == sizeof(unsigned)*faces.size() + 6);
+				sgroups.resize(faces.size());
+				if (!read_data(&sgroups.front(), sizeof(unsigned), faces.size(), "smoothing groups")) return 0;
 				break;
 				// TRI_VERTEXL: Vertices list
 				// Chunk Length: 1 x unsigned short (# vertices) + 3 x float (vertex coordinates) x (# vertices) + sub chunks
@@ -347,7 +350,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		if (use_vertex_normals) {normals.resize(verts.size());}
 
 		// build vertex lists and compute face normals
-		// Note: we don't support vertices that are shared between faces of different materials
+		// FIXME: use sgroups
 		for (vector<face_t>::const_iterator i = faces.begin(); i != faces.end(); ++i) {
 			point pts[3];
 			
@@ -402,10 +405,10 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		return 1;
 	}
 
-	bool read_and_proc_texture(unsigned chunk_len, int &tid, char const *const name) {
+	bool read_and_proc_texture(unsigned chunk_len, int &tid, char const *const name, bool invert_alpha=0) {
 		string tex_fn;
 		if (!read_texture(chunk_len, tex_fn)) {cerr << "Error reading texture " << name << endl; return 0;}
-		check_and_bind(tid, tex_fn, 0, verbose);
+		check_and_bind(tid, tex_fn, 0, verbose, invert_alpha);
 		return 1;
 	}
 
@@ -432,7 +435,8 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				break;
 			case 0xA040: // material shininess
 				if (!read_percentage(chunk_len, cur_mat.ns)) return 0;
-				// FIXME: wrong (0.0003)?
+				//cur_mat.ns = 1.0 - cur_mat.ns;
+				cur_mat.ns *= 100.0;
 				break;
 			case 0xA050: // material transparency
 				if (!read_percentage(chunk_len, cur_mat.alpha)) return 0;
@@ -440,6 +444,12 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 				break;
 			case 0xA200: // texture map 1
 				if (!read_and_proc_texture(chunk_len, cur_mat.d_tid, "texture map 1")) return 0;
+				break;
+			case 0xA204: // specular map
+				if (!read_and_proc_texture(chunk_len, cur_mat.s_tid, "specular map")) return 0;
+				break;
+			case 0xA210: // opacity map
+				if (!read_and_proc_texture(chunk_len, cur_mat.alpha_tid, "opacity map", 1)) return 0; // invert alpha values
 				break;
 			case 0xA230: // bump map
 				if (!read_and_proc_texture(chunk_len, cur_mat.bump_tid, "bump map")) return 0;

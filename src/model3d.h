@@ -260,7 +260,7 @@ protected:
 	string_map_t tex_map; // maps texture filenames to texture indexes
 
 public:
-	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose);
+	unsigned create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0);
 	void clear();
 	void free_tids();
 	void free_textures();
@@ -439,11 +439,11 @@ public:
 	model_from_file_t(string const &fn, model3d &model_) : model(model_) {rel_path = get_path(fn);}
 	string open_include_file(string const &fn, string const &type, ifstream &in_inc) const ;
 	string get_path(string const &fn) const;
-	int get_texture(string const &fn, bool is_alpha_mask, bool verbose);
+	int get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha=0);
 
-	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose) {
+	void check_and_bind(int &tid, string const &tfn, bool is_alpha_mask, bool verbose, bool invert_alpha=0) {
 		assert(tid < 0);
-		tid = get_texture(tfn, is_alpha_mask, verbose);
+		tid = get_texture(tfn, is_alpha_mask, verbose, invert_alpha);
 	}
 };
 

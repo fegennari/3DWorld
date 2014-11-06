@@ -33,5 +33,6 @@ y 4.0
 #t 0 0 0  s 1 2  M 0  m 0.1  O "C:\Users\Frank E. Gennari\Desktop\Graphics\sketchup_models\lighthouse.obj" 3 0 0
 
 l 0.8 1.0 1.0 1.0 1.0 102 1 # 27 = cblock texture, 102 = spaceship texture
-t 0 -2.0 0.2  M 0  m 0.002  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\stealth\stealth.3ds" 3 0 0 # flat face normals
+#t 0 -2.0 0.2  M 0  m 0.002  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\stealth\stealth.3ds" 3 0 0 # flat face normals
+t 0 0 -0.5  M 0  m 0.2  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\tree1_3ds\Tree1.3ds" 3 0 0
 
