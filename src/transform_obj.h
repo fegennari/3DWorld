@@ -13,7 +13,8 @@
 #include <glm/vec3.hpp>
 
 
-inline glm::vec3 vec3_from_vector3d(vector3d const &v) {return glm::vec3(v.x, v.y, v.z);}
+inline glm::vec3 vec3_from_vector3d (vector3d const &v) {return glm::vec3(v.x, v.y, v.z);}
+inline vector3d  vector3d_from_vec3(glm::vec3 const &v) {return vector3d (v.x, v.y, v.z);}
 
 
 struct xform_matrix : public glm::mat4 {
@@ -23,6 +24,7 @@ struct xform_matrix : public glm::mat4 {
 	float *get_ptr();
 	float const *get_ptr() const;
 	void normalize();
+	void apply_to_vector3d(vector3d &v) const;
 };
 
 

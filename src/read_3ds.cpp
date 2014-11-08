@@ -52,10 +52,16 @@ protected:
 
 		for (int i = 0; i < num; i++) {
 			if (!read_data(&verts[i].v.x, sizeof(float), 3, "vertex xyz")) return 0;
-			verts[i].v *= master_scale;
-			cur_xf.xform_pos(verts[i].v);
 		}
 		return 1;
+	}
+
+	void transform_vertices(vector<vert_tc_t> &verts, xform_matrix &matrix) {
+		for (vector<vert_tc_t>::iterator i = verts.begin(); i != verts.end(); ++i) {
+			matrix.apply_to_vector3d(i->v);
+			i->v *= master_scale;
+			cur_xf.xform_pos(i->v);
+		}
 	}
 
 	bool read_mapping_block(vector<vert_tc_t> &verts) {
@@ -136,6 +142,24 @@ protected:
 		return 1;
 	}
 
+	bool read_matrix(xform_matrix &matrix, unsigned short chunk_len) {
+		assert(chunk_len == 54); // header + 4*3 floats
+		float *mp(matrix.get_ptr());
+		float m[12];
+		if (!read_data(m, sizeof(float), 12, "transform matrix")) return 0;
+		for (unsigned i = 0; i < 4; ++i) {
+			for (unsigned j = 0; j < 3; ++j) {mp[4*i+j] = m[3*i+j];}
+		}
+#if 0
+		cout << "matrix final" << endl;
+		for (unsigned i = 0; i < 4; ++i) {
+			for (unsigned j = 0; j < 4; ++j) {cout << mp[4*j+i] << " ";}
+			cout << endl;
+		}
+#endif
+		return 1;
+	}
+
 	void skip_chunk(unsigned chunk_len) {fseek(fp, chunk_len-6, SEEK_CUR);}
 
 	// return value: 0 = error, 1 = processed, 2 = can't handle/skip
@@ -208,6 +232,7 @@ class file_reader_3ds_triangles : public file_reader_3ds {
 		long const end_pos(get_end_pos(read_len));
 		vector<vert_tc_t> verts;
 		vector<face_t> faces;
+		xform_matrix matrix;
 
 		while (ftell(fp) < end_pos) { // read each chunk from the file 
 			if (!read_chunk_header(chunk_id, chunk_len)) return 0;
@@ -228,11 +253,16 @@ class file_reader_3ds_triangles : public file_reader_3ds {
 			case 0x4140:
 				if (!read_mapping_block(verts)) return 0;
 				break;
+				// mesh matrix
+			case 0x4160:
+				read_matrix(matrix, chunk_len);
+				break;
 			default:
 				skip_chunk(chunk_len);
 			} // end switch
 		} // end while
 		assert(ftell(fp) == end_pos);
+		transform_vertices(verts, matrix);
 		triangle tri;
 
 		for (vector<face_t>::const_iterator i = faces.begin(); i != faces.end(); ++i) {
@@ -297,6 +327,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		vector<unsigned> sgroups;
 		typedef map<int, vector<unsigned short> > face_mat_map_t;
 		face_mat_map_t face_materials;
+		xform_matrix matrix;
 
 		while (ftell(fp) < end_pos) { // read each chunk from the file 
 			if (!read_chunk_header(chunk_id, chunk_len)) return 0;
@@ -341,6 +372,10 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 			case 0x4140:
 				if (!read_mapping_block(verts)) return 0;
 				break;
+				// mesh matrix
+			case 0x4160:
+				read_matrix(matrix, chunk_len);
+				break;
 			default:
 				skip_chunk(chunk_len);
 			} // end switch
@@ -348,6 +383,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		assert(ftell(fp) == end_pos);
 		vector<counted_normal> normals;
 		if (use_vertex_normals) {normals.resize(verts.size());}
+		transform_vertices(verts, matrix);
 
 		// build vertex lists and compute face normals
 		// FIXME: use sgroups
@@ -409,6 +445,7 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 	bool read_and_proc_texture(unsigned chunk_len, int &tid, char const *const name, bool invert_alpha=0) {
 		string tex_fn;
 		if (!read_texture(chunk_len, tex_fn)) {cerr << "Error reading texture " << name << endl; return 0;}
+		if (verbose) {cout << name << ": " << tex_fn << endl;}
 		check_and_bind(tid, tex_fn, 0, verbose, invert_alpha);
 		return 1;
 	}

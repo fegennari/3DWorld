@@ -34,6 +34,12 @@ void xform_matrix::normalize() {
 	}
 }
 
+// Note: ignores w component
+void xform_matrix::apply_to_vector3d(vector3d &v) const {
+	glm::vec4 const vx(*this * (glm::vec4(vec3_from_vector3d(v), 1.0)));
+	v = vector3d_from_vec3(glm::vec3(vx));
+}
+
 
 matrix_stack_t mvm_stack; // modelview matrix
 matrix_stack_t pjm_stack; // projection matrix

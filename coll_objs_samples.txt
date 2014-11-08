@@ -31,8 +31,11 @@ y 4.0
 #t 0 -8.0 -1.5  s 1 2  M 0  m 0.2  O "../models/LARA BEDROOM/LARA.obj" 3 1 0
 #t -0.5 -1.5 1.0  s 1 2  M 0  m 0.3  O "../models/Spencer_Mansion_ItalianUtent/frame_11.04.2011_18.18.36.obj" 3 0 0
 #t 0 0 0  s 1 2  M 0  m 0.1  O "C:\Users\Frank E. Gennari\Desktop\Graphics\sketchup_models\lighthouse.obj" 3 0 0
+#t 0 0 0  s 1 2  M 0  m 0.07  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\street_environment\Street environment_V01.obj" 3 0 0
+#t 1.00 0.0 -0.4  M 0  m 0.001  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\building_model\building.obj" 3 1 0
 
-l 0.8 1.0 1.0 1.0 1.0 102 1 # 27 = cblock texture, 102 = spaceship texture
+l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = white texture
 #t 0 -2.0 0.2  M 0  m 0.002  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\stealth\stealth.3ds" 3 0 0 # flat face normals
 t 0 0 -0.5  M 0  m 0.2  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\tree1_3ds\Tree1.3ds" 3 0 0
+#t 1.00 0.0 -0.4  M 0  m 0.001  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\building_model\building.3ds" 3 0 0 # Note: incorrect transforms
 
