@@ -273,15 +273,15 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	if (weight < WEIGHT_THRESH*weight0) return;
 
 	// create reflected ray and make recursive call(s)
-	vector3d v_ref;
-	calc_reflection_angle(dir, v_ref, cnorm);
-	v_ref.normalize();
 	unsigned const num_splits((depth == 0) ? INIT_RAY_SPLITS[ltype] : NUM_RAY_SPLITS[ltype]);
-	
-	for (unsigned n = 0; n < num_splits; ++n) {
-		vector3d v_new;
+	vector3d v_new, v_ref(zero_vector);
 
-		if (specular > 0 && specular >= rgen.rand_float()) { // specular reflection
+	for (unsigned n = 0; n < num_splits; ++n) {
+		if (specular > 0.0 && specular >= rgen.rand_float()) { // specular reflection
+			if (v_ref == zero_vector) {
+				calc_reflection_angle(dir, v_ref, cnorm);
+				v_ref.normalize();
+			}
 			v_new = v_ref; // perfect specular reflection (infinite shininess)
 			// FIXME: use shine somehow (cosine distribution)
 		}

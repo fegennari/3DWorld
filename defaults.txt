@@ -1,7 +1,7 @@
 #universe/config_universe.txt
 #house/config_house.txt
 #house/config_house_winter.txt
-mapx/config_mapx.txt
+#mapx/config_mapx.txt
 #mapx/config_mapx_voxels.txt
 #cornell_box/config_box.txt
 #config_scrolling.txt
@@ -22,6 +22,6 @@ mapx/config_mapx.txt
 #config_hetch.txt
 #sponza/config_sponza2.txt
 #model_data/config_soda.txt
-#config_samples.txt
+config_samples.txt
 #config_minecraft.txt
 
