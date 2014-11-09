@@ -34,8 +34,9 @@ bool no_sparse_smap_update();
 
 // ************ texture_manager ************
 
-unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha) {
+unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror) {
 
+	assert(!(wrap && mirror)); // can't both be set
 	string_map_t::const_iterator it(tex_map.find(fn));
 
 	if (it != tex_map.end()) { // found (already loaded)
@@ -47,9 +48,10 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	if (verbose) cout << "creating texture " << fn << endl;
 	bool const compress(!is_alpha_mask && enable_model3d_tex_comp);
 	// type=read_from_file format=auto width height wrap ncolors use_mipmaps name [do_compress]
-	textures.push_back(texture_t(0, 7, 0, 0, 1, (is_alpha_mask ? 1 : 3), (use_model2d_tex_mipmaps && !is_alpha_mask),
+	textures.push_back(texture_t(0, 7, 0, 0, wrap, (is_alpha_mask ? 1 : 3), (use_model2d_tex_mipmaps && !is_alpha_mask),
 		fn, 0, compress, model3d_texture_anisotropy)); // always RGB wrapped+mipmap
 	textures.back().invert_alpha = invert_alpha;
+	textures.back().mirror = mirror;
 	return tid; // can't fail
 }
 
@@ -996,6 +998,7 @@ void model3d::add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id, u
 	else {
 		assert((unsigned)mat_id < materials.size());
 		materials[mat_id].geom.add_poly_to_polys(tri, materials[mat_id].geom.triangles, vmap, obj_id);
+		materials[mat_id].mark_as_used();
 	}
 	update_bbox(tri);
 }

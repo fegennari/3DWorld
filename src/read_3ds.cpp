@@ -350,7 +350,6 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 					string mat_name;
 					if (!read_null_term_string(mat_name)) return 0;
 					int const mat_id(model.get_material_ix(mat_name, filename, 1));
-					model.mark_mat_as_used(mat_id);
 					vector<unsigned short> &faces_mat(face_materials[mat_id]);
 					assert(faces_mat.empty());
 					// read and process face materials
@@ -452,8 +451,8 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 		unsigned short map_tiling;
 		if (!read_texture(chunk_len, tex_fn, map_tiling)) {cerr << "Error reading texture " << name << endl; return 0;}
 		if (verbose) {cout << name << ": " << tex_fn << ", map_tiling: " << map_tiling << endl;}
-		// FIXME: use map_tiling: 0x2 bit for mirrored, 0x10 bit for decal, otherwise wrap
-		check_and_bind(tid, tex_fn, 0, verbose, invert_alpha);
+		bool const mirror((map_tiling & 0x2) != 0), wrap(map_tiling == 0); // 0x10 for decal (not mirrored or wrapped)
+		check_and_bind(tid, tex_fn, 0, verbose, invert_alpha, wrap, mirror);
 		return 1;
 	}
 

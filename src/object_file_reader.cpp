@@ -205,12 +205,12 @@ string model_from_file_t::get_path(string const &fn) const {
 	return string();
 }
 
-int model_from_file_t::get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha) {
+int model_from_file_t::get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror) {
 	ifstream tex_in; // used only for determining file location
 	string const fn_used(open_include_file(fn, "texture", tex_in));
 	if (fn_used.empty()) return -1;
 	tex_in.close();
-	return model.tmgr.create_texture(fn_used, is_alpha_mask, verbose, invert_alpha);
+	return model.tmgr.create_texture(fn_used, is_alpha_mask, verbose, invert_alpha, wrap, mirror);
 }
 
 

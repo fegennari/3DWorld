@@ -448,7 +448,7 @@ void texture_t::do_gl_init() {
 	}
 	//cout << "bind texture " << name << " size " << width << "x" << height << endl;
 	//RESET_TIME;
-	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, 0, 0, 0, anisotropy);
+	setup_texture(tid, (use_mipmaps != 0 && !defer_load()), wrap, wrap, mirror, mirror, 0, anisotropy);
 
 	if (defer_load()) {
 		deferred_load_and_bind(); // FIXME: mipmaps?
