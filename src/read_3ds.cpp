@@ -7,6 +7,8 @@
 #include "model3d.h"
 #include "file_reader.h"
 
+bool const EXTRA_VERBOSE = 0;
+
 
 class file_reader_3ds : public base_file_reader {
 
@@ -33,10 +35,10 @@ protected:
 	bool read_chunk_header(unsigned short &chunk_id, unsigned &chunk_len, bool top_level=0) {
 		// Note: we pass null at the top level to suppress the error message during EOF checking
 		if (!read_data(&chunk_id, 2, 1, (top_level ? nullptr : "chunk id"))) return 0;
-		if (verbose) {printf("ChunkID: %x\n", chunk_id);}
+		if (EXTRA_VERBOSE && verbose) {printf("ChunkID: %x\n", chunk_id);}
 		if (!read_data(&chunk_len, 4, 1, "chunk length")) return 0;
 		assert(chunk_len < (1<<31)); // sanity check
-		if (verbose) {printf("ChunkLength: %u\n", chunk_len);}
+		if (EXTRA_VERBOSE && verbose) {printf("ChunkLength: %u\n", chunk_len);}
 		return 1;
 	}
 
@@ -147,15 +149,18 @@ protected:
 		float *mp(matrix.get_ptr());
 		float m[12];
 		if (!read_data(m, sizeof(float), 12, "transform matrix")) return 0;
+#if 0
 		for (unsigned i = 0; i < 4; ++i) {
 			for (unsigned j = 0; j < 3; ++j) {mp[4*i+j] = m[3*i+j];}
 		}
+		//UNROLL_3X(mp[12+i_] = m[9+i_];) // copy translate only
 #if 0
 		cout << "matrix final" << endl;
 		for (unsigned i = 0; i < 4; ++i) {
 			for (unsigned j = 0; j < 4; ++j) {cout << mp[4*j+i] << " ";}
 			cout << endl;
 		}
+#endif
 #endif
 		return 1;
 	}
@@ -444,8 +449,10 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 
 	bool read_and_proc_texture(unsigned chunk_len, int &tid, char const *const name, bool invert_alpha=0) {
 		string tex_fn;
-		if (!read_texture(chunk_len, tex_fn)) {cerr << "Error reading texture " << name << endl; return 0;}
-		if (verbose) {cout << name << ": " << tex_fn << endl;}
+		unsigned short map_tiling;
+		if (!read_texture(chunk_len, tex_fn, map_tiling)) {cerr << "Error reading texture " << name << endl; return 0;}
+		if (verbose) {cout << name << ": " << tex_fn << ", map_tiling: " << map_tiling << endl;}
+		// FIXME: use map_tiling: 0x2 bit for mirrored, 0x10 bit for decal, otherwise wrap
 		check_and_bind(tid, tex_fn, 0, verbose, invert_alpha);
 		return 1;
 	}
@@ -500,14 +507,20 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 			} // end switch
 		} // end while
 		assert(ftell(fp) == end_pos);
+
+		if (cur_mat.bump_tid >= 0 && cur_mat.bump_tid == cur_mat.d_tid) {
+			cout << "Bump map texture is the same as the diffuse texture; ignoring." << endl;
+			cur_mat.bump_tid = -1; // why are so many of the files I find online wrong?
+		}
 		if (verbose) {cout << "Read material " << cur_mat.name << endl;}
 		return 1;
 	}
 
-	bool read_texture(unsigned read_len, string &tex_name) {
-		unsigned short chunk_id, map_tiling;
+	bool read_texture(unsigned read_len, string &tex_name, unsigned short &map_tiling) {
+		unsigned short chunk_id;
 		unsigned chunk_len;
 		long const end_pos(get_end_pos(read_len));
+		map_tiling = 0; // in case it's not specified
 
 		while (ftell(fp) < end_pos) { // read each chunk from the file 
 			if (!read_chunk_header(chunk_id, chunk_len)) return 0;
@@ -524,7 +537,6 @@ class file_reader_3ds_model : public file_reader_3ds, public model_from_file_t {
 			} // end switch
 		} // end while
 		assert(ftell(fp) == end_pos);
-		// FIXME: use or return map_tiling?
 		return 1;
 	}
 

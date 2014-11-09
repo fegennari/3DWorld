@@ -181,13 +181,20 @@ public:
 
 string model_from_file_t::open_include_file(string const &fn, string const &type, ifstream &in_inc) const {
 	assert(!fn.empty());
-	in_inc.open(fn); // try absolute path
+	// try absolute path
+	in_inc.open(fn);
 	if (in_inc.good()) return fn;
+	// try relative path
 	in_inc.clear();
 	string const rel_fn(rel_path + fn);
-	in_inc.open(rel_fn); // try relative path
+	in_inc.open(rel_fn);
 	if (in_inc.good()) return rel_fn;
-	cerr << "Error: Could not open " << type << " file " << fn << " or " << rel_fn << endl;
+	// try texture directory
+	in_inc.clear();
+	string const tex_fn("textures/" + fn);
+	in_inc.open(tex_fn);
+	if (in_inc.good()) return tex_fn;
+	cerr << "Error: Could not open " << type << " file " << fn << ", " << rel_fn << ", or " << tex_fn << endl;
 	return string();
 }
 
