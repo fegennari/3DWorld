@@ -14,4 +14,3 @@ GLSL subroutine: http://www.g-truc.net/post-0269.html
 Use asteroids for rocks in terrain mode (or just use instancing even in ground mode)
 Space colonization for trees
 Planet lightning
-Ray Tracing diffuse/specular reflection dir/distribution

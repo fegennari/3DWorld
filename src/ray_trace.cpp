@@ -154,7 +154,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	}
 	point p_end(p2);
 	if ( coll) p2 = cpos;
-	if (keep_beams && p1 != p2) beams.push_back(beam3d(!coll, 1, p1, p2, color, 0.1*weight)); // testing
+	if (keep_beams && p1 != p2) {beams.push_back(beam3d(!coll, 1, p1, p2, color, 0.1*weight));} // testing
 	if (!coll) return; // more efficient to do this up here and let a reverse ray from the sky light this path
 
 	// walk from p1 to p2, adding light to all lightmap cells encountered
@@ -277,17 +277,19 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	vector3d v_new, v_ref(zero_vector);
 
 	for (unsigned n = 0; n < num_splits; ++n) {
-		if (specular > 0.0 && specular >= rgen.rand_float()) { // specular reflection
+		vector3d const rand_dir(rgen.signed_rand_vector().get_norm());
+
+		if (specular > 0.0 && shine > 1.0 && specular >= rgen.rand_float()) { // specular reflection
 			if (v_ref == zero_vector) {
 				calc_reflection_angle(dir, v_ref, cnorm);
 				v_ref.normalize();
 			}
-			v_new = v_ref; // perfect specular reflection (infinite shininess)
-			// FIXME: use shine somehow (cosine distribution)
+			v_new = (v_ref + rand_dir/sqrt(shine)).get_norm(); // Note: not physically correct
+			if (dot_product(v_new, cnorm) < 0.0) continue; // rarely happens?
 		}
-		else { // diffuse reflection
-			v_new = rgen.signed_rand_vector().get_norm(); // add random diffuse scatter (use cosine distribution?)
-			if (dot_product(v_new, cnorm) < 0.0) {v_new.negate();} // make in same direction as normal
+		else { // random diffuse/Lambertian scatter (cosine distribution using normal-offset sphere)
+			v_new = (cnorm + rand_dir).get_norm();
+			//assert(dot_product(v_new, cnorm) >= 0.0); // too strong - may fail due to FP rounding
 		}
 		p2 = p1 + v_new*line_length; // ending point: effectively at infinity
 		cast_light_ray(lmgr, cpos, p2, weight/num_splits, weight0, color, line_length, cindex, ltype, depth+1, rgen);
