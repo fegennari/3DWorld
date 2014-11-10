@@ -601,8 +601,8 @@ void draw_moon() {
 	set_colors_and_enable_light(4, ambient, diffuse);
 	set_gl_light_pos(4, get_sun_pos(), 0.0);
 	shader_t s;
-	s.set_vert_shader("ads_lighting.part*+moon_draw");
-	s.set_frag_shader("simple_texture");
+	s.set_vert_shader("moon_draw");
+	s.set_frag_shader("ads_lighting.part*+moon_draw");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.set_cur_color(WHITE);
