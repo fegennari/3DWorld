@@ -230,9 +230,7 @@ class universe_shader_t : public shader_t {
 		add_uniform_int(texture_name, 0);
 	}
 	void setup_planet_star_noise_tex() {
-		set_active_texture(noise_tu_id);
-		bind_3d_texture(get_noise_tex_3d(64, 1)); // grayscale noise
-		set_active_texture(0);
+		set_3d_texture_as_current(get_noise_tex_3d(64, 1), noise_tu_id); // grayscale noise
 	}
 	void set_planet_uniforms(float atmosphere, shadow_vars_t const &svars, bool use_light2) {
 		set_light_scale(*this, use_light2);

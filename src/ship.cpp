@@ -844,7 +844,19 @@ void draw_univ_objects() {
 	shader_t s[2];
 	select_texture(WHITE_TEX); // always textured (see end_texture())
 	enable_blend(); // doesn't hurt
-	emissive_shader.begin_simple_textured_shader(0.001); // textured, no lighting, will be disabled by ship draw shader
+
+	// setup emissive shader, which is used for ship shields and EMP (will be disabled by ship draw shader)
+	//emissive_shader.begin_simple_textured_shader(0.001); // textured, no lighting
+	emissive_shader.set_vert_shader("no_lighting_pos_tc");
+	emissive_shader.set_frag_shader("ship_shields");
+	emissive_shader.begin_shader();
+	emissive_shader.add_uniform_float("min_alpha", 0.001);
+	emissive_shader.add_uniform_int("tex0", 0);
+	emissive_shader.add_uniform_int("noise_tex", 1);
+	set_3d_texture_as_current(get_noise_tex_3d(64, 1), 1); // grayscale noise
+	static float emissive_time(0.0);
+	if (animate2) {emissive_time += fticks; if (emissive_time > 1.0E4) {emissive_time = 0.0;}}
+	emissive_shader.add_uniform_float("time", emissive_time);
 
 	// draw ubojs
 	bool disint_tex(0); // this is slow, so only enable if some ship is exploding and needs this mode

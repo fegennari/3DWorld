@@ -86,11 +86,11 @@ void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff
 }
 
 
-void set_3d_texture_as_current(unsigned tid, unsigned tu_id) {
+void set_3d_texture_as_current(unsigned tid, unsigned tu_id) { // end with active tu_id = 0
 
 	set_active_texture(tu_id);
 	bind_3d_texture(tid);
-	set_active_texture(0);
+	if (tu_id != 0) {set_active_texture(0);}
 }
 
 

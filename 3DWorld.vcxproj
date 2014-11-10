@@ -904,6 +904,7 @@
     <None Include="shaders\nebula.frag" />
     <None Include="shaders\nebula.vert" />
     <None Include="shaders\noise_dither.part.frag" />
+    <None Include="shaders\no_lighting_pos_tc.vert" />
     <None Include="shaders\no_lighting_tex_coord.vert" />
     <None Include="shaders\ocean.frag" />
     <None Include="shaders\output_textured_quad.part.geom" />
@@ -931,6 +932,7 @@
     <None Include="shaders\shadow_map.part" />
     <None Include="shaders\ship_draw.frag" />
     <None Include="shaders\ship_draw.vert" />
+    <None Include="shaders\ship_shields.frag" />
     <None Include="shaders\simple_texture_luminance.frag" />
     <None Include="shaders\snow.vert" />
     <None Include="shaders\spec_map.part.frag" />
