@@ -140,6 +140,7 @@ public:
 	cobj_bvh_tree(coll_obj_group const *cobjs_, bool s, bool d, bool o, bool c, bool v)
 		: cobjs(cobjs_), is_static(s), is_dynamic(d), occluders_only(o), cubes_only(c), inc_voxel_cobjs(v) {assert(cobjs);}
 
+	unsigned get_num_objs() const {return cixs.size();}
 	void clear();
 	void add_cobj_ids(vector<unsigned> const &cids) {assert(cixs.empty() && !cids.empty()); cixs = cids;}
 	void add_cobjs(bool verbose);

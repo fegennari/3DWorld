@@ -835,6 +835,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 		if (mi > 0) { // cube has changed
 			cube.write_to_cobj((*this)[i]);
 			merged += mi;
+			--i; // force this cube to be processed again
 		}
 	}
 	if (merged > 0) remove_invalid_cobjs();
@@ -847,10 +848,7 @@ void coll_obj_group::remove_overlapping_cubes(int min_split_destroy_thresh) { //
 
 	if (!UNOVERLAP_COBJS || empty()) return;
 	RESET_TIME;
-	float const tolerance(X_SCENE_SIZE*1.0E-6); // tiny tolerance to prevent adjacencies
 	unsigned const ncobjs((unsigned)size());
-	cobj_bvh_tree cube_tree(this, 0, 0, 0, 1, 0); // cubes only
-	cube_tree.add_cobjs(0);
 	vector<pair<unsigned, unsigned> > proc_order;
 		
 	for (unsigned i = 0; i < ncobjs; ++i) {
@@ -858,7 +856,11 @@ void coll_obj_group::remove_overlapping_cubes(int min_split_destroy_thresh) { //
 			proc_order.push_back(make_pair((*this)[i].id, i));
 		}
 	}
+	if (proc_order.empty()) return; // nothing to do
 	sort(proc_order.begin(), proc_order.end());
+	float const tolerance(X_SCENE_SIZE*1.0E-6); // tiny tolerance to prevent adjacencies
+	cobj_bvh_tree cube_tree(this, 0, 0, 0, 1, 0); // cubes only
+	cube_tree.add_cobjs(0);
 	bool overlaps(0);
 	coll_obj_group cur_cobjs, next_cobjs;
 	vector<unsigned> cids;
@@ -878,8 +880,8 @@ void coll_obj_group::remove_overlapping_cubes(int min_split_destroy_thresh) { //
 		for (vector<unsigned>::const_iterator it = cids.begin(); it != cids.end(); ++it) {
 			unsigned const j(*it);
 			assert(j < size());
-			assert((*this)[j].type == COLL_CUBE);
-			if (j == i || (*this)[i].id < (*this)[j].id)    continue; // enforce ordering
+			assert((*this)[j].type == COLL_CUBE && j != i);
+			if ((*this)[i].id < (*this)[j].id)              continue; // enforce ordering
 			if (neg ^ ((*this)[j].status == COLL_NEGATIVE)) continue; // sign must be the same
 			csg_cube sub_cube((*this)[j]);
 

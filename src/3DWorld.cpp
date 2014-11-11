@@ -63,13 +63,13 @@ bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil
 bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0), claim_planet(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
-bool gen_tree_roots(1), preproc_cube_cobjs(0), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0);
+bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0);
 bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
 int display_framerate(1), init_resize(1), temp_change(0), is_cloudy(0), recreated(1), cloud_model(0), force_tree_class(-1);
-int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framerate(0);
+int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framerate(0), preproc_cube_cobjs(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0);
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
@@ -1525,7 +1525,6 @@ int load_config(string const &config_file) {
 	kwmb.add("use_dense_voxels", use_dense_voxels);
 	kwmb.add("use_voxel_cobjs", use_voxel_cobjs);
 	kwmb.add("mt_cobj_tree_build", mt_cobj_tree_build);
-	kwmb.add("preproc_cube_cobjs", preproc_cube_cobjs);
 	kwmb.add("global_lighting_update", global_lighting_update);
 	kwmb.add("lighting_update_offline", lighting_update_offline);
 	kwmb.add("two_sided_lighting", two_sided_lighting);
@@ -1567,6 +1566,7 @@ int load_config(string const &config_file) {
 	kwmi.add("mesh_gen_mode", mesh_gen_mode);
 	kwmi.add("mesh_gen_shape", mesh_gen_shape);
 	kwmi.add("mesh_freq_filter", mesh_freq_filter);
+	kwmi.add("preproc_cube_cobjs", preproc_cube_cobjs);
 
 	kw_to_val_map_t<unsigned> kwmu(error);
 	kwmu.add("grass_density", grass_density);

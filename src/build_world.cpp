@@ -43,8 +43,8 @@ vector<teleporter> teleporters;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, preproc_cube_cobjs, scene_smap_vbo_invalid, use_voxel_cobjs;
-extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change;
+extern bool clear_landscape_vbo, scene_smap_vbo_invalid, use_voxel_cobjs;
+extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, model_czmin, model_czmax;
@@ -751,13 +751,11 @@ void coll_obj_group::finalize() {
 		any_drawn |= i->cp.draw;
 	}
 	if (has_cubes) { // Note: important to do this test on large polygon-only models
+		remove_overlapping_cubes((preproc_cube_cobjs == 1) ? NON_DEST : SHATTERABLE); // always remove overlaps with >= shatterable cobjs
+
 		if (preproc_cube_cobjs) {
-			remove_overlapping_cubes(NON_DEST);
 			merge_cubes(); // and alpha sort
 			subdiv_cubes();
-		}
-		else {
-			remove_overlapping_cubes(SHATTERABLE); // always remove overlaps with shatterable or higher cobjs
 		}
 		check_cubes(); // sanity check, should be last
 	}
