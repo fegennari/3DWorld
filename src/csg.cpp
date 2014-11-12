@@ -814,7 +814,7 @@ void coll_obj_group::merge_cubes() { // only merge compatible cubes
 
 	for (unsigned i = 0; i < ncobjs; ++i) { // choose merge candidates
 		if ((*this)[i].type != COLL_CUBE) continue;
-		csg_cube cube((*this)[i]); // remove all other cobjs from cobjs[i] with lower id
+		csg_cube cube((*this)[i]);
 		if (cube.is_zero_area()) continue;
 		cids.resize(0);
 		cube_tree.get_intersecting_cobjs(cube, cids, i, tolerance, 0, -1);

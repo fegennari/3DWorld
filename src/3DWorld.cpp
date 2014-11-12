@@ -1087,8 +1087,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case ' ': // fire key
-		if (world_mode == WMODE_GROUND) {
-			if (camera_mode == 1 && camera_surf_collide && !spectate && sstates != nullptr) {sstates[CAMERA_ID].jump(get_camera_pos());}
+		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide && passive_motion) {
+			if (!spectate && sstates != nullptr) {sstates[CAMERA_ID].jump(get_camera_pos());}
 			break;
 		}
 		fire_weapon();
