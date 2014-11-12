@@ -17,6 +17,7 @@
 bool const DEBUG_BLOCKS    = 0;
 bool const PRE_ALLOC_COBJS = 1;
 unsigned const NOISE_TSIZE = 64;
+unsigned const GROUND_NUM_LOD = 1; // >= 1
 
 unsigned char const ON_EDGE_BIT    = 0x02;
 unsigned char const ANCHORED_BIT   = 0x04;
@@ -24,7 +25,7 @@ unsigned char const UNDER_MESH_BIT = 0x08;
 
 
 voxel_params_t global_voxel_params;
-voxel_model_ground terrain_voxel_model(1); // one LOD level
+voxel_model_ground terrain_voxel_model(GROUND_NUM_LOD);
 voxel_brush_params_t voxel_brush_params;
 bool voxel_ppb_enable_falling(0);
 
@@ -447,14 +448,16 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 	unsigned cix(0);
 	unsigned const step(1 << lod_level);
 	bool all_under_mesh(params.remove_under_mesh && (display_mode & 0x01)); // if mesh draw is enabled
+	unsigned const x2(min(x+step, nx-1)), y2(min(y+step, ny-1)), z2(min(z+step, nz-1));
+	unsigned const xv[2] = {x, x2}, yv[2] = {y, y2}, zv[2] = {z, z2};
 
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
-			unsigned const ix(get_ix(x+step*xhi, y+step*yhi, z));
+			unsigned const ix(get_ix(xv[xhi], yv[yhi], z));
 			if (all_under_mesh) {all_under_mesh = ((outside[ix] & UNDER_MESH_BIT) != 0);}
 			
 			for (unsigned zhi = 0; zhi < 2; ++zhi) {
-				if (outside[ix + step*zhi] & 7) {cix |= 1 << ((xhi^yhi) + 2*yhi + 4*zhi);} // outside or on edge
+				if (outside[ix + zv[zhi]-z] & 7) {cix |= 1 << ((xhi^yhi) + 2*yhi + 4*zhi);} // outside or on edge
 			}
 		}
 	}
@@ -466,7 +469,7 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 	unsigned count(0);
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {++count;}
 	if (count_only) {return count;}
-	cube_t const cube(get_xv(x), get_xv(x+step), get_yv(y), get_yv(y+step), get_zv(z), get_zv(z+step));
+	cube_t const cube(get_xv(x), get_xv(x2), get_yv(y), get_yv(y2), get_zv(z), get_zv(z2));
 	unsigned const edge_to_dim_map[12] = {0, 2, 0, 2, 0, 2, 0, 2, 1, 1, 1, 1};
 	point vlist[12];
 	int *vixs[12] = {0};
@@ -480,13 +483,13 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 
 		for (unsigned d = 0; d < 2; ++d) {
 			unsigned const yhi((eix[d] & 2) >> 1), xhi(yhi ^ (eix[d] & 1)), zhi(eix[d] >> 2);
-			unsigned const ix(get_ix(x+step*xhi, y+step*yhi, z+step*zhi));
+			unsigned const ix(get_ix(xv[xhi], yv[yhi], zv[zhi]));
 			xhv &= xhi; yhv &= yhi; zhv &= zhi;
 			vals[d] = ((outside[ix] & 7) == ON_EDGE_BIT) ? params.isolevel : operator[](ix);
 			pts[d].assign(cube.d[0][xhi], cube.d[1][yhi], cube.d[2][zhi]);
 		}
 		vlist[i] = interpolate_pt(params.isolevel, pts[0], pts[1], vals[0], vals[1]);
-		vixs [i] = &(vix_cache.get_ref((x-block_x0)+step*xhv, (y-block_y0)+step*yhv, z+step*zhv).ix[edge_to_dim_map[i]]);
+		vixs [i] = &(vix_cache.get_ref(xv[xhv]-block_x0, yv[yhv]-block_y0, zv[zhv]).ix[edge_to_dim_map[i]]);
 	}
 	for (unsigned i = 0; tris[i] >= 0; i += 3) {
 		triangle const tri(vlist[tris[i]], vlist[tris[i+1]], vlist[tris[i+2]]);
@@ -1015,10 +1018,10 @@ unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool co
 	vix_cache.init(xblocks+1, yblocks+1, nz, vsz, zero_vector, vert_ix_cache_entry(), 1);
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks), step(1 << lod_level);
 	unsigned count(0);
-	
-	for (unsigned y = ybix*yblocks; y < min(ny-step, (ybix+1)*yblocks); y += step) {
-		for (unsigned x = xbix*xblocks; x < min(nx-step, (xbix+1)*xblocks); x += step) {
-			for (unsigned z = 0; z < nz-step; z += step) {
+
+	for (unsigned y = ybix*yblocks; y < (ybix+1)*yblocks; y += step) {
+		for (unsigned x = xbix*xblocks; x < (xbix+1)*xblocks; x += step) {
+			for (unsigned z = 0; z < nz; z += step) {
 				count += add_triangles_for_voxel(td[block_ix], vix_cache, x, y, z, xbix*xblocks, ybix*yblocks, count_only, lod_level);
 			}
 		}
@@ -1625,6 +1628,8 @@ void voxel_model::core_render(shader_t &s, unsigned lod_level, bool is_shadow_pa
 				s.add_uniform_color(cnames[d], ((((i->ix & 1) != 0) ^ ((i->ix & params.num_blocks) != 0)) ? RED : BLUE));
 			}
 		}
+		// Note: it's possible to do per-block LOD, but the sorting is wrong, shadows look bad, and there are popping and cracks
+		//unsigned const lod_level2(min(unsigned(0.3*sqrt(distance_to_camera(i->pt))), tri_data.size()-1));
 		assert(i->ix < tri_data[lod_level].size());
 		tri_data[lod_level][i->ix].render(s, is_shadow_pass, 3, no_vfc); // triangles
 	}
