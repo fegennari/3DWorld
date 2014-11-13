@@ -162,16 +162,32 @@ template<typename V> void voxel_grid<V>::downsample_2x() { // modify in place, p
 }
 
 
-template<typename V> bool voxel_grid<V>::read(FILE *fp) {
-
-	// FIXME: what about nx, ny, nz, xblocks, yblocks, vsz, center, lo_pos
-	assert(fp);
-	unsigned sz(0);
-
-	if (fread(&sz, sizeof(unsigned), 1, fp) != 1) {
-		cerr << "Error reading voxel_grid size" << endl;
+// Note: voxel read/write is unused
+template<typename T> bool read_pod(T &v, FILE *fp, char const *const name) {
+	if (fread(&v, sizeof(T), 1, fp) != 1) {
+		cerr << "Error reading " << name << endl;
 		return 0;
 	}
+	return 1;
+}
+template<typename T> bool write_pod(T const &v, FILE *fp, char const *const name) {
+	if (fwrite(&v, sizeof(T), 1, fp) != 1) {
+		cerr << "Error writing " << name << endl;
+		return 0;
+	}
+	return 1;
+}
+
+
+template<typename V> bool voxel_grid<V>::read(FILE *fp) {
+
+	assert(fp);
+	unsigned sz(0);
+	if (!read_pod(nx, fp, "voxel nx") || !read_pod(nx, fp, "voxel ny") || !read_pod(nx, fp, "voxel nz")) return 0;
+	if (!read_pod(xblocks, fp, "voxel xblocks") || !read_pod(yblocks, fp, "voxel yblocks")) return 0;
+	if (!read_pod(vsz, fp, "voxel vsz") || !read_pod(center, fp, "voxel center") || !read_pod(lo_pos, fp, "voxel lo_pos")) return 0;
+	if (!read_pod(sz, fp, "voxel_grid size")) return 0;
+	
 	if (empty()) {
 		resize(sz);
 	}
@@ -191,11 +207,11 @@ template<typename V> bool voxel_grid<V>::write(FILE *fp) const {
 
 	assert(fp);
 	unsigned const sz(size());
+	if (!write_pod(nx, fp, "voxel nx") || !write_pod(nx, fp, "voxel ny") || !write_pod(nx, fp, "voxel nz")) return 0;
+	if (!write_pod(xblocks, fp, "voxel xblocks") || !write_pod(yblocks, fp, "voxel yblocks")) return 0;
+	if (!write_pod(vsz, fp, "voxel vsz") || !write_pod(center, fp, "voxel center") || !write_pod(lo_pos, fp, "voxel lo_pos")) return 0;
+	if (!write_pod(sz, fp, "voxel_grid size")) return 0;
 	
-	if (fwrite(&sz, sizeof(unsigned), 1, fp) != 1) {
-		cerr << "Error writing voxel_grid size" << endl;
-		return 0;
-	}
 	if (fwrite(&front(), sizeof(V), size(), fp) != size()) {
 		cerr << "Error writing voxel_grid data" << endl;
 		return 0;

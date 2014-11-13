@@ -320,7 +320,7 @@ bool voxel_map::write(char const *const fn) const {
 	FILE *fp;
 	assert(fn != NULL);
 	if (!open_file(fp, fn, "snow map", "wb")) return 0;
-	cout << "Writing lighting file to " << fn << endl;
+	cout << "Writing snow file to " << fn << endl;
 	size_t const n(fwrite(&vox_delta, sizeof(float), 3, fp));
 	assert(n == 3);
 	unsigned const map_size((unsigned)size()); // should be size_t?
