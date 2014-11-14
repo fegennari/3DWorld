@@ -77,7 +77,6 @@ bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool nonunif_fog_enabled  () {return (show_fog && (display_mode & 0x10) != 0);}
-float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : zmin);}
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
@@ -1433,7 +1432,7 @@ void lightning_strike_t::end_draw() const {
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), mesh_vbo(0), ivbo(0) {
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), mesh_vbo(0), ivbo(0), terrain_zmin(0.0) {
 
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
@@ -1456,7 +1455,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		read_default_hmap_modmap();
 	}
 	to_draw.clear();
-	float terrain_zmin(FAR_CLIP);
+	terrain_zmin = FAR_CLIP;
 	grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
 	assert(MESH_X_SIZE == MESH_Y_SIZE); // limitation, for now
 	point const cpos(get_camera_pos()), camera(cpos - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
@@ -1513,6 +1512,8 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Tiled Terrain Update");}
 	return terrain_zmin;
 }
+
+float tile_draw_t::get_actual_zmin() const {return min(zmin, terrain_zmin);}
 
 
 void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
@@ -1588,7 +1589,8 @@ void set_tile_xy_vals(shader_t &s) {
 
 
 // uses texture units 0-11 (12 if using hmap texture, 13-14 if using shadow maps)
-void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) {
+// Note: could be static, except uses get_actual_zmin()
+void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const {
 
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
@@ -1631,7 +1633,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 		setup_water_plane_texgen(8.0, 2.5, s, 2); // increase texture scale and change AR since the caustics texture is sparser than the water texture
 	}
 	else { // or just disable water fog calculation in the vertex shader (water_fog.part)?
-		s.add_uniform_float("water_plane_z", (reflection_pass ? water_plane_z : zmin)); // used for fog calculation/clipping
+		s.add_uniform_float("water_plane_z", (reflection_pass ? water_plane_z : get_actual_zmin())); // used for fog calculation/clipping
 	}
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s);
 }
@@ -2393,6 +2395,7 @@ void clear_tiled_terrain() {terrain_tile_draw.clear();}
 void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids();}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
+float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}
 
 
 // *** heightmap modification and queries ***

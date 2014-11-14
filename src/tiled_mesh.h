@@ -287,6 +287,7 @@ class tile_draw_t {
 
 	tile_map tiles;
 	unsigned mesh_vbo, ivbo, ivbo_ixs[NUM_LODS+1];
+	float terrain_zmin;
 	draw_vect_t to_draw;
 	vector<tile_t *> occluded_tiles;
 	vector<vert_wrap_t> tree_trunk_pts;
@@ -308,7 +309,7 @@ public:
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader);
 	static void lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows);
 	static void setup_cloud_plane_uniforms(shader_t &s);
-	static void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map);
+	void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const;
 	bool can_have_reflection_recur(tile_t const *const tile, point const corners[3], tile_set_t &tile_set, unsigned dim_ix);
 	bool can_have_reflection(tile_t const *const tile, tile_set_t &tile_set);
 	void pre_draw();
@@ -333,6 +334,7 @@ public:
 	bool check_player_collision() const;
 	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;
+	float get_actual_zmin() const;
 }; // tile_draw_t
 
 
