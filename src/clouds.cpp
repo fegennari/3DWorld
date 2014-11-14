@@ -386,10 +386,16 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		glDepthMask(GL_TRUE);
 	}
 	if (!draw_ceil) return;
+
+	// track the min values of terrain_zmin seen and reset when zmin changes (mesh change)
+	static float prev_zmin(0.0), min_terrain_zmin(0.0);
+	if (zmin != prev_zmin) {prev_zmin = zmin; min_terrain_zmin = terrain_zmin;}
+	else {min_terrain_zmin = min(min_terrain_zmin, terrain_zmin);}
+
 	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity (0: clouds follow the camera, 1: clouds are stationary)
 	float const rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
 	float const cloud_z(get_tt_cloud_level()); // halfway between the top of the mountains and the end of the atmosphere
-	float const z1(min(zmin, terrain_zmin)), z2(min(cloud_z, get_cloud_zmax())), ndiv_inv(1.0/CLOUD_NUM_DIV);
+	float const z1(min(zmin, min_terrain_zmin)), z2(min(cloud_z, get_cloud_zmax())), ndiv_inv(1.0/CLOUD_NUM_DIV);
 	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
 	vector3d const offset(-camera + cloud_rel_vel*world_pos);
 	colorRGBA const cloud_color(get_cloud_color());
