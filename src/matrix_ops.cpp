@@ -381,16 +381,13 @@ void update_motion_zmin_matrices(int xpos, int ypos) {
 	else { // force flat areas to still have flow: default flow is NE
 		w_motion_matrix[ypos][xpos].assign(xlevel, ylevel);
 	}
-	float z_min(zmin);
+	float z_min(zmax);
 
 	// this part used to calculate water height/surface intersection in draw_water()
-	if (point_interior_to_mesh(xpos, ypos)) {
-		z_min = zmax;
-
-		for (int y = -1; y <= 1; ++y) {
-			for (int x = ((y == -1) ? 0 : -1); x <= 1; ++x) {
-				z_min = min(z_min, mesh_height[ypos+y][xpos+x]); // (-1,-1) intentionally skipped
-			}
+	for (int y = -1; y <= 1; ++y) {
+		for (int x = ((y == -1) ? 0 : -1); x <= 1; ++x) {
+			if (point_outside_mesh(xpos+x, ypos+y)) continue;
+			z_min = min(z_min, mesh_height[ypos+y][xpos+x]); // (-1,-1) intentionally skipped
 		}
 	}
 	z_min_matrix[ypos][xpos] = z_min;
