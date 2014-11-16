@@ -471,7 +471,6 @@ public:
 
 	void finalize() { // can only be called once
 		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
-		assert((indices.size() & 1) == 0); // must be a multiple of 2
 		upload_ivbo();
 		for (unsigned d = 0; d < 2; ++d) {vmap[d].clear();}
 	}
