@@ -7,7 +7,7 @@ in vec4 epos, proj_pos;
 in vec2 tc, tc2;
 
 vec3 water_normal_lookup(in vec2 wtc) {
-	return 2.0*(texture2D(water_normal_tex, 0.5*wtc).rgb - 0.5);
+	return 2.0*(texture(water_normal_tex, 0.5*wtc).rgb - 0.5);
 }
 vec3 get_wave_normal(in vec2 wtc) {
 	float ntime = 2.0*abs(fract(0.005*wave_time) - 0.5);
@@ -15,7 +15,7 @@ vec3 get_wave_normal(in vec2 wtc) {
 }
 
 vec3 deep_water_normal_lookup(in vec2 wtc) {
-	return 2.0*(texture2D(deep_water_normal_tex, 1.04*wtc).rgb - 0.5);
+	return 2.0*(texture(deep_water_normal_tex, 1.04*wtc).rgb - 0.5);
 }
 vec4 get_norm_foam_val(vec3 n) {
 	return vec4(n, clamp(3.0*(0.5 - dot(n, vec3(0,0,1))), 0.0, 1.0)); // use dot product with +z
@@ -30,7 +30,7 @@ vec4 get_deep_wave_normal(in vec2 wtc) {
 void main()
 {
 #ifdef USE_WATER_DEPTH // else we assume water is neither too shallow nor too deep
-	float mesh_z = texture2D(height_tex, tc2).r;
+	float mesh_z = texture(height_tex, tc2).r;
 	float depth  = water_plane_z - mesh_z;
 	if (depth <= 0.0) discard;
 #endif
@@ -44,7 +44,7 @@ void main()
 		norm        = normalize(norm + 0.06*fg_NormalMatrix*wave_n);
 		ripple     += 0.025*wave_n.xy;
 		vec2 wtc    = 20.0*tc2 + vec2(2.7*noise_time, 2.6*noise_time);
-		add_color  += vec3(1) * (1.0 - texture2D(noise_tex, wtc).r); // Note that the texture is white with blue dots
+		add_color  += vec3(1) * (1.0 - texture(noise_tex, wtc).r); // Note that the texture is white with blue dots
 	}
 	vec3 light_norm = norm;
 	float green_scale = 0.0;
@@ -87,14 +87,14 @@ void main()
 	if (reflections) { // calculate reflections
 		float reflect_w  = reflect_scale*get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
 		vec2 ref_tex_st  = clamp(0.5*proj_pos.xy/proj_pos.w + 0.3*ripple + vec2(0.5, 0.5), 0.0, 1.0);
-		vec4 reflect_tex = vec4(texture2D(reflection_tex, ref_tex_st).rgb, 1.0);
+		vec4 reflect_tex = vec4(texture(reflection_tex, ref_tex_st).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
 
 #ifdef USE_WATER_DEPTH
 	// foam texture near shore (what about is_lava?)
 	foam_amt += 0.5*clamp(10.0*depth-0.2, 0.0, 1.0)*(1.0 - clamp(5.0*depth, 0.0, 1.0));
-	color = mix(color, texture2D(foam_tex, 25.0*tc), foam_amt);
+	color = mix(color, texture(foam_tex, 25.0*tc), foam_amt);
 #endif
 
 	// determine final color with fog

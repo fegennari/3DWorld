@@ -8,7 +8,7 @@ in vec2 tc;
 void main()
 {
 	check_noise_and_maybe_discard((1.0 - opacity), 1.0); // inverted value
-	vec4 texel   = texture2D(tex0, tc);
+	vec4 texel   = texture(tex0, tc);
 	vec3 normal2 = normalize(normal); // renormalize
 	vec3 color   = vec3(0.0);
 	if (enable_light0) color += add_light_comp_pos0(normal2, epos).rgb; // sun

@@ -60,7 +60,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 			// apply underwater caustics texture (Note: matches shallow water wave normal map, but not deep water wave normal map)
 			float cweight = ds_scale*wave_amplitude*caustics_weight*min(8.0*(water_plane_z - vertex.z), 0.5);
 			float ntime   = 2.0*abs(fract(0.005*wave_time) - 0.5);
-			vec3  cval    = 4.0*mix(texture2D(caustic_tex, tc2).rgb, texture2D(caustic_tex, (tc2 + vec2(0.3, 0.6))).rgb, ntime);
+			vec3  cval    = 4.0*mix(texture(caustic_tex, tc2).rgb, texture(caustic_tex, (tc2 + vec2(0.3, 0.6))).rgb, ntime);
 			color.rgb    *= mix(vec3(1.0), cval, cweight);
 		}
 #endif
@@ -83,18 +83,18 @@ void main()
 	// sand, dirt, grass, rock, snow
 	vec2 diff_tc   = tc; // separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
 	//diff_tc.s   += 0.1*vertex.z; // we really need something like triplanar texturing here to deal with stretching on steep slopes
-	vec4 weights   = texture2D(weights_tex, tc);
+	vec4 weights   = texture(weights_tex, tc);
 	float weights4 = clamp((1.0 - weights.r - weights.g - weights.b - weights.a), 0.0, 1.0);
 	weights  = smoothstep(0.0, 1.0, weights);
 	weights4 = smoothstep(0.0, 1.0, weights4);
-	vec3 texel0  = cs2*weights.r*texture2D(tex2, ts2*diff_tc).rgb + // sand
-	               cs3*weights.g*texture2D(tex3, ts3*diff_tc).rgb + // dirt
-				   cs4*weights.b*texture2D(tex4, ts4*diff_tc).rgb + // grass
-				   cs5*weights.a*texture2D(tex5, ts5*diff_tc).rgb + // rock
-				   cs6*weights4 *texture2D(tex6, ts6*diff_tc).rgb*snow_cscale;  // snow
-	vec3 texel1  = texture2D(detail_tex, 32.0*tc).rgb; // detail texture 32x scale
+	vec3 texel0  = cs2*weights.r*texture(tex2, ts2*diff_tc).rgb + // sand
+	               cs3*weights.g*texture(tex3, ts3*diff_tc).rgb + // dirt
+				   cs4*weights.b*texture(tex4, ts4*diff_tc).rgb + // grass
+				   cs5*weights.a*texture(tex5, ts5*diff_tc).rgb + // rock
+				   cs6*weights4 *texture(tex6, ts6*diff_tc).rgb*snow_cscale;  // snow
+	vec3 texel1  = texture(detail_tex, 32.0*tc).rgb; // detail texture 32x scale
 
-	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc);
+	vec4 shadow_normal  = texture(shadow_normal_tex, tc);
 	float diffuse_scale = shadow_normal.w;
 	float ambient_scale = 1.5*shadow_normal.z;
 	float bump_scale    = 1.0 - weights.b; // bumps on everything but grass

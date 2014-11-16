@@ -10,14 +10,14 @@ in vec3 vertex;
 
 void main()
 {
-	vec4 texel = texture2D(tex0, tc);
+	vec4 texel = texture(tex0, tc);
 	if (texel.a <= min_alpha) discard;
 	vec3 time_v = 0.04*time*vec3(1.0, 1.2, 1.3);
 	float val  = 0.0;
 	float freq = 1.0;
 
 	for (int i = 0; i < NUM_OCTAVES; ++i) { // use highly ridged noise
-		float v = texture3D(noise_tex, noise_scale*(freq*vertex + time_v)).r;
+		float v = texture(noise_tex, noise_scale*(freq*vertex + time_v)).r;
 		v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
 		v = 1.0 - abs(v); // ridged noise
 		val  += pow(v, 5.0)/freq;

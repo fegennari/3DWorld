@@ -8,7 +8,7 @@ in vec2 tc;
 
 void main()
 {
-	vec4 texel = texture2D(branch_tex, tc);
+	vec4 texel = texture(branch_tex, tc);
 	if (texel.a <= min_alpha) discard;
 #ifndef NO_NOISE
 	check_noise_and_maybe_discard(min_noise, max_noise);

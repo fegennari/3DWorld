@@ -15,7 +15,7 @@ void main()
 	if (enable_dlights) color += gl_Color.rgb * add_dlights(dlpos, normal, vec3(1.0)); // dynamic lighting
 	fg_FragColor = color_scale*vec4(color, gl_Color.a);
 #ifndef NO_GRASS_TEXTURE
-	fg_FragColor *= texture2D(tex0, tc);
+	fg_FragColor *= texture(tex0, tc);
 #endif
 #ifndef NO_FOG
 	fg_FragColor = apply_fog_epos(fg_FragColor, epos);

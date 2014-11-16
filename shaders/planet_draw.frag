@@ -78,7 +78,7 @@ void main()
 		tc_adj     += 1.5*max(0.0, (0.1 - dist))*sin(0.1/max(dist, 0.01));
 		v0         += 4.0;
 	}
-	vec4 texel = texture1D(tex0, tc_adj);
+	vec4 texel = texture(tex0, tc_adj);
 #else // not GAS_GIANT
 
 #ifdef PROCEDURAL_DETAIL
@@ -168,11 +168,11 @@ void main()
 		norm = normalize(norm) + 0.05*nscale*normalize(fg_NormalMatrix * vec3(hdx, hdy, hdz));
 	}
 	if (population > 0.0 && spec_mag < 0.5) {
-		float thresh = 0.38*population - 0.42*texture3D(cloud_noise_tex, 4.5*spos).r - 1.0;
+		float thresh = 0.38*population - 0.42*texture(cloud_noise_tex, 4.5*spos).r - 1.0;
 		float freq   = 50.0;
 
 		for (int i = 0; i < 4; ++i) {
-			city_light = max(city_light, clamp(4.0*(texture3D(cloud_noise_tex, freq*spos).r + thresh), 0.0, 1.0));
+			city_light = max(city_light, clamp(4.0*(texture(cloud_noise_tex, freq*spos).r + thresh), 0.0, 1.0));
 			freq       *= 1.93;
 		}
 		city_light *= max((0.5 - spec_mag), 0.0) * population; // colonized and not over water/snow/ice
@@ -180,7 +180,7 @@ void main()
 #endif // ALL_WATER_ICE
 
 #else
-	vec4 texel = texture2D(tex0, tc);
+	vec4 texel = texture(tex0, tc);
 	spec_mag   = pow(texel.b, 4.0);
 #endif // PROCEDURAL_DETAIL
 
@@ -205,7 +205,7 @@ void main()
 				
 				if (rval > 0.0 && rval < 1.0) {
 					float dscale = length(vertex)/length(ring_ipt); // fake penumbra
-					sscale      *= 1.0 - dscale*texture1D(ring_tex, rval).a;
+					sscale      *= 1.0 - dscale*texture(ring_tex, rval).a;
 				}
 			}
 		}

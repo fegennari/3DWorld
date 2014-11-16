@@ -40,7 +40,7 @@ vec3 add_light0(in vec3 n) {
 	
 		// smoke volume iteration using 3D texture, light0 to vposl
 		for (int i = 0; i < num_steps; ++i) {
-			float smoke = smoke_sscale*texture3D(smoke_and_indir_tex, pos.zxy).a*step_weight;
+			float smoke = smoke_sscale*texture(smoke_and_indir_tex, pos.zxy).a*step_weight;
 			nscale     *= (1.0 - smoke);
 			pos        += delta*step_weight; // should be in [0.0, 1.0] range
 			step_weight = 1.0;
@@ -55,9 +55,9 @@ vec3 add_light0(in vec3 n) {
 void main()
 {
 #ifdef ENABLE_PARALLAX_MAP
-	vec4 texel  = texture2D(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
+	vec4 texel  = texture(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
 #else
-	vec4 texel  = texture2D(tex0, tc);
+	vec4 texel  = texture(tex0, tc);
 #endif
 	//texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
 
@@ -170,7 +170,7 @@ void main()
 		// smoke volume iteration using 3D texture, pos to eye
 		for (int i = 0; i < num_steps; ++i) {
 			// Note: we could also lookup dynamic lighting here, which would be very slow but would also look really nice
-			vec4 tex_val = texture3D(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
+			vec4 tex_val = texture(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
 			float smoke  = smoke_sscale*tex_val.a*step_weight;
 			float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
 			float mval   = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);

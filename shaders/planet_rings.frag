@@ -24,7 +24,7 @@ void main()
 	if (bf_draw_sign*(length(world_space_pos - camera_pos) - length(planet_pos - camera_pos)) < 0.0) discard; // on the wrong side of the planet
 
 	float rval = clamp((length(vertex) - ring_ri)/(ring_ro - ring_ri), 0.0, 1.0);
-	vec4 texel = texture1D(ring_tex, rval);
+	vec4 texel = texture(ring_tex, rval);
 	texel.a   *= alpha_scale;
 	if (texel.a < 0.01) discard;
 
@@ -33,15 +33,15 @@ void main()
 	texel.a *= pow(abs(dot(normal, normalize(epos.xyz))), 0.2); // 5th root
 
 	vec2 tcs   = 16*tc;
-	vec3 norm2 = normalize(normal + vec3(texture2D(noise_tex, tcs).r-0.5, texture2D(noise_tex, tcs+vec2(0.4,0.7)).r-0.5, texture2D(noise_tex, tcs+vec2(0.3,0.8)).r-0.5));
+	vec3 norm2 = normalize(normal + vec3(texture(noise_tex, tcs).r-0.5, texture(noise_tex, tcs+vec2(0.4,0.7)).r-0.5, texture(noise_tex, tcs+vec2(0.3,0.8)).r-0.5));
 	vec3 color = vec3(0.0);
 	color     += add_light_rings(norm2, epos); // ambient, diffuse, and specular
 	color     += (gl_Color * fg_LightSource[1].ambient).rgb; // ambient only
 
-	float alpha = texture2D(particles_tex, 23 *tc).r; // add 4 octaves of random particles
-	alpha      += texture2D(particles_tex, 42 *tc).r;
-	alpha      += texture2D(particles_tex, 75 *tc).r;
-	alpha      += texture2D(particles_tex, 133*tc).r;
+	float alpha = texture(particles_tex, 23 *tc).r; // add 4 octaves of random particles
+	alpha      += texture(particles_tex, 42 *tc).r;
+	alpha      += texture(particles_tex, 75 *tc).r;
+	alpha      += texture(particles_tex, 133*tc).r;
 	if (alpha == 0.0) discard;
 	alpha       = min(1.0, 2.0*alpha); // increase alpha to make alpha_to_coverage mode look better
 	fg_FragColor = vec4(color, alpha) * texel;

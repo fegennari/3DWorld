@@ -35,7 +35,7 @@ void main()
 	color += atten0*add_pt_light_comp(normal, epos, 0).rgb; // sun_diffuse
 	color += add_pt_light_comp(normal, epos, 1).rgb; // galaxy_ambient
 #ifdef DRAW_AS_SPHERES
-	color *= texture2D(tex0, gl_PointCoord).rgb;
+	color *= texture(tex0, gl_PointCoord).rgb;
 #endif
 	fg_FragColor = vec4(color, alpha * gl_Color.a); // use gl_Color alpha directly
 }

@@ -10,12 +10,12 @@ in vec2 tc;
 void main()
 {
 	vec2 tc_scaled = normal_tc_scale*tc;
-	vec4 texel = texture2D(color_map, tc_scaled);
+	vec4 texel = texture(color_map, tc_scaled);
 	if (texel.a < 0.5) discard; // transparent
 	check_noise_and_maybe_discard(0.0, gl_Color.a);
 
 	// transform normal into billboard orientation 
-	vec3 normal = 2.0*texture2D(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0);
+	vec3 normal = 2.0*texture(normal_map, (tc_scaled + normal_tc_off)).xyz - vec3(1.0);
 	normal.y *= -1.0; // texture is rendered with ybot < ytop
 	vec3 vdir = camera_pos - world_space_pos.xyz;
 	vec2 rd_n = normalize(ref_dir.xy);

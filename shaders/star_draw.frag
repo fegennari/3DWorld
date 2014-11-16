@@ -8,5 +8,5 @@ in vec2 tc;
 void main()
 {
 	vec3 spos    = world_space_pos*radius/sqrt(length(world_space_pos));
-	fg_FragColor = texture2D(tex0, tc) * mix(colorA, colorB, gen_cloud_alpha(spos));
+	fg_FragColor = texture(tex0, tc) * mix(colorA, colorB, gen_cloud_alpha(spos));
 }

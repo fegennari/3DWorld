@@ -30,7 +30,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color) {
 	vec3 color = vec3(0.0);
 #ifndef NO_DYNAMIC_LIGHTS
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
-	uint gb_ix  = texture2D(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
+	uint gb_ix  = texture(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFFFU); // 24 low bits
 	uint num_ix = ((gb_ix >> 24U) & 0xFFFFFFU); // 8 high bits
 	uint end_ix = st_ix + num_ix;

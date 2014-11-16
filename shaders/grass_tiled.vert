@@ -13,7 +13,7 @@ void main()
 	tc          = get_grass_tc();
 	vec4 vertex = fg_Vertex;
 	vertex.xy  += local_translate;
-	float z_val = texture2D(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
+	float z_val = texture(height_tex, vec2((vertex.x - x1)*dx_inv, (vertex.y - y1)*dy_inv)).r;
 	float ascale= 1.0;
 #ifdef DEC_HEIGHT_WHEN_FAR
 	float dist  = length((fg_ModelViewMatrix * (vertex + vec4(xlate, z_val, 0))).xyz);
@@ -28,13 +28,13 @@ void main()
 	vec4 epos   = fg_ModelViewMatrix  * (vertex + vec4(xlate, 0, 0));
 	gl_Position = fg_ProjectionMatrix * epos;
 	gl_FogFragCoord = length(epos.xyz);
-	vec4 weights = texture2D(weight_tex, tc2);
+	vec4 weights = texture(weight_tex, tc2);
 	float grass_weight = weights.b; // grass weight in weights {sand, dirt, grass, rock, [snow]}
 	//grass_weight = ((grass_weight < 0.2) ? 0.0 : grass_weight);
-	float noise_weight = texture2D(noise_tex, 10.0*vec2(fg_Color.r, fg_Color.g)).r; // "hash" the color
+	float noise_weight = texture(noise_tex, 10.0*vec2(fg_Color.r, fg_Color.g)).r; // "hash" the color
 	
 	// calculate lighting
-	vec4 shadow_normal  = texture2D(shadow_normal_tex, tc2);
+	vec4 shadow_normal  = texture(shadow_normal_tex, tc2);
 	float ambient_scale = 1.5*shadow_normal.z * (1.5 - 0.75*tc.s); // decreased ambient at base, increased ambient at tip
 	vec2 nxy      = (2.0*shadow_normal.xy - 1.0);
 	vec3 eye_norm = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)

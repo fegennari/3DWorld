@@ -4,5 +4,5 @@ in vec2 tc;
 
 void main()
 {
-	fg_FragColor = gl_Color*vec4(texture2D(tex0, tc).rrr, 1.0);
+	fg_FragColor = gl_Color*vec4(texture(tex0, tc).rrr, 1.0);
 }

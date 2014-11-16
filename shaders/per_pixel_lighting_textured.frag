@@ -12,7 +12,7 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 
 void main()
 {
-	vec4 texel = texture2D(tex0, tc);
+	vec4 texel = texture(tex0, tc);
 	if (texel.a <= min_alpha) discard;
 	
 	vec4 epos    = fg_ModelViewMatrix * vec4(dlpos, 1.0);

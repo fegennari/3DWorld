@@ -8,7 +8,7 @@ vec4 get_black_body_color(in vec4 base_color, in float burn_level) {
 }
 
 vec4 apply_burn_mask(in vec4 base_color, in vec2 tc) {
-	float burn_level = texture2D(burn_mask, burn_tex_scale*tc).r + burn_offset;
+	float burn_level = texture(burn_mask, burn_tex_scale*tc).r + burn_offset;
 	if (burn_level >= 1.0) discard; // optional?
 	return get_black_body_color(base_color, burn_level);
 }

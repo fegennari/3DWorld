@@ -20,9 +20,9 @@ vec4 lookup_triplanar_texture(in vec3 pos, in vec3 normal, in sampler2D tex_x, i
 	vec2 coord_z = pos.xy * tex_scale;
 
 	// Sample color maps for each projection, at those UV coords.
-	vec4 col_x = texture2D(tex_x, coord_x);
-	vec4 col_y = texture2D(tex_y, coord_y);
-	vec4 col_z = texture2D(tex_z, coord_z);
+	vec4 col_x = texture(tex_x, coord_x);
+	vec4 col_y = texture(tex_y, coord_y);
+	vec4 col_z = texture(tex_z, coord_z);
 
 	// Finally, blend the results of the 3 planar projections.
 	return (col_x*blend_weights.xxxx + col_y*blend_weights.yyyy + col_z*blend_weights.zzzz);
@@ -33,19 +33,19 @@ vec4 lookup_triplanar_texture_2sz(in vec3 pos, in vec3 normal, in sampler2D tex_
 	vec2 coord_x = pos.yz * tex_scale;
 	vec2 coord_y = pos.zx * tex_scale;
 	vec2 coord_z = pos.xy * tex_scale;
-	vec4 col_x   = texture2D(tex_x, coord_x);
-	vec4 col_y   = texture2D(tex_y, coord_y);
-	vec4 col_z1  = texture2D(tex_z1, coord_z);
-	vec4 col_z2  = texture2D(tex_z2, coord_z);
+	vec4 col_x   = texture(tex_x, coord_x);
+	vec4 col_y   = texture(tex_y, coord_y);
+	vec4 col_z1  = texture(tex_z1, coord_z);
+	vec4 col_z2  = texture(tex_z2, coord_z);
 	vec4 col_z   = mix(col_z1, col_z2, clamp(1000*normal.z, 0.0, 1.0));
 	return (col_x*blend_weights.xxxx + col_y*blend_weights.yyyy + col_z*blend_weights.zzzz);
 }
 
 vec3 lookup_triplanar_texture_bump(in vec3 pos, in vec3 normal, in sampler2D bump_tex) {
 	vec3 blend_weights = get_blend_weights(normal);
-	vec2 bump_tx = texture2D(bump_tex, pos.yz).xy - 0.5;
-	vec2 bump_ty = texture2D(bump_tex, pos.zx).xy - 0.5;
-	vec2 bump_tz = texture2D(bump_tex, pos.xy).xy - 0.5;
+	vec2 bump_tx = texture(bump_tex, pos.yz).xy - 0.5;
+	vec2 bump_ty = texture(bump_tex, pos.zx).xy - 0.5;
+	vec2 bump_tz = texture(bump_tex, pos.xy).xy - 0.5;
 	vec3 bump_x  = vec3(0.0, bump_tx.x, bump_tx.y);
 	vec3 bump_y  = vec3(bump_ty.y, 0.0, bump_ty.x);
 	vec3 bump_z  = vec3(bump_tz.x, bump_tz.y, 0.0);

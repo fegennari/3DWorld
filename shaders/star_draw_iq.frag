@@ -28,10 +28,10 @@ float freqs[4];
 
 void main(void)
 {
-	freqs[0] = texture2D( freq_tex, vec2( 0.01, 0.25 ) ).x;
-	freqs[1] = texture2D( freq_tex, vec2( 0.07, 0.25 ) ).x;
-	freqs[2] = texture2D( freq_tex, vec2( 0.15, 0.25 ) ).x;
-	freqs[3] = texture2D( freq_tex, vec2( 0.30, 0.25 ) ).x;
+	freqs[0] = texture( freq_tex, vec2( 0.01, 0.25 ) ).x;
+	freqs[1] = texture( freq_tex, vec2( 0.07, 0.25 ) ).x;
+	freqs[2] = texture( freq_tex, vec2( 0.15, 0.25 ) ).x;
+	freqs[3] = texture( freq_tex, vec2( 0.30, 0.25 ) ).x;
 
 	float brightness	= freqs[1] * 0.25 + freqs[2] * 0.25;
 	float radius		= 0.24 + brightness * 0.2;
@@ -82,10 +82,10 @@ void main(void)
   		newUv.y = sp.y*f;
 		newUv += vec2( time, 0.0 );
 		
-		vec3 texSample 	= texture2D( texture, newUv ).rgb;
+		vec3 texSample 	= texture( texture, newUv ).rgb;
 		float uOff		= ( texSample.g * brightness * 4.5 + time );
 		vec2 starUV		= newUv + vec2( uOff, 0.0 );
-		starSphere		= texture2D( texture, starUV ).rgb;
+		starSphere		= texture( texture, starUV ).rgb;
 	}
 	float starGlow	= min( max( 1.0 - dist * ( 1.0 - brightness ), 0.0 ), 1.0 );
 	//fg_FragColor.rgb	= vec3( r );

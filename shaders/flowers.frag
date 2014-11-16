@@ -8,7 +8,7 @@ in vec2 tc;
 void main()
 {
 	//if (tc.s <= 0.0 || tc.s >= 1.0 || tc.t <= 0.0 || tc.t >= 1.0) discard;
-	vec4 texel = texture2D(tex0, tc);
+	vec4 texel = texture(tex0, tc);
 	if (texel.a <= min_alpha) discard;
 
 	// calculate lighting: L0-L1 is directional

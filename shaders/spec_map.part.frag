@@ -3,6 +3,6 @@ uniform sampler2D spec_map;
 // tc comes from bump_map.part.frag
 
 vec3 get_spec_color() {
-	return texture2D(spec_map, tc).rgb;
+	return texture(spec_map, tc).rgb;
 }
 #endif

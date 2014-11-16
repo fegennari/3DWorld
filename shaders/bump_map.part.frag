@@ -51,11 +51,11 @@ vec2 apply_parallax_map() {
     mat3 TBN    = get_tbn(-1.0); // FIXME: why is binormal inverted from bump map case?
 #ifdef PARALLAX_MAP_OFFSET_ADJ
 	vec2 offset = hole_depth * (TBN * -normalize(epos.xyz)).st;
-	float depth_at_1 = texture2D(depth_map, tc+offset).w;
-	//if (depth_at_1 < 0.96f) {offset *= texture2D(depth_map, tc).w;}
-	if (depth_at_1 < 0.96f) {offset *= (depth_at_1 + texture2D(depth_map, tc).w) * 0.5;}
+	float depth_at_1 = texture(depth_map, tc+offset).w;
+	//if (depth_at_1 < 0.96f) {offset *= texture(depth_map, tc).w;}
+	if (depth_at_1 < 0.96f) {offset *= (depth_at_1 + texture(depth_map, tc).w) * 0.5;}
 #else
-	float depth = (texture2D(depth_map, tc).w) * hole_depth; // Get depth from the alpha (w) of the relief map
+	float depth = (texture(depth_map, tc).w) * hole_depth; // Get depth from the alpha (w) of the relief map
 	vec2 offset = depth * (TBN * -normalize(epos.xyz)).st; // transform view vector to tangent space
 #endif
     return tc + offset; // offset the uv
@@ -69,7 +69,7 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // to be defined 
 
 #else // !BUMP_MAP_CUSTOM
 vec3 get_bump_map_normal() {
-	return normalize(texture2D(bump_map, tc).xyz * 2.0 - 1.0);
+	return normalize(texture(bump_map, tc).xyz * 2.0 - 1.0);
 }
 
 // Note: we assume the bump map tex coords are the same as the object diffuse tex coords

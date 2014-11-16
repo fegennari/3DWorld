@@ -9,7 +9,7 @@ in vec3 vpos, normal; // world space
 
 vec3 indir_lookup(in vec3 pos) {
 	vec3 spos = clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
-	return texture3D(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
+	return texture(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
 }
 
 void add_indir_lighting(inout vec3 lit_color) {

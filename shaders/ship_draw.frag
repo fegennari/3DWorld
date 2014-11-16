@@ -12,11 +12,11 @@ void main()
 {
 #ifdef ALPHA_MASK_TEX
 	if (min_alpha != 0.0) { // this test may or may not help performance
-		float alpha_mask = texture2D(alpha_mask_tex, tc).r;
+		float alpha_mask = texture(alpha_mask_tex, tc).r;
 		if (alpha_mask < min_alpha) discard; // slow
 	}
 #endif
-	vec4 texel = texture2D(tex0, tc);
+	vec4 texel = texture(tex0, tc);
 	//if (texel.a <= min_alpha) discard; // slow
 	vec3 n = (gl_FrontFacing ? normalize(normal) : -normalize(normal)); // two-sided lighting
 	vec3 color = emission.rgb;
