@@ -1,9 +1,7 @@
 TT mode underwater seaweed/grass
-
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
-http://www.iquilezles.org/www/articles/morenoise/morenoise.htm
 http://www.decarpentier.nl/scape-procedural-extensions
 
 Load/display model3d models in tiled terrain mode
@@ -12,5 +10,8 @@ Load/display model3d models in tiled terrain mode
 
 GLSL subroutine: http://www.g-truc.net/post-0269.html
 Use asteroids for rocks in terrain mode (or just use instancing even in ground mode)
-Space colonization for trees
 Planet lightning
+
+Static + Dynamic shadow maps
+Share planet sphere VBOs when applying heightmap in the vertex shader
+Planet vertex shader heightmap correct normals
