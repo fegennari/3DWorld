@@ -1672,11 +1672,11 @@ void voxel_model::render(unsigned lod_level, bool is_shadow_pass) { // not const
 		s.set_cur_color(params.base_color); // unnecessary?
 		s.set_specular(params.spec_mag, params.spec_exp);
 	}
-	if (group_back_face_cull) glEnable(GL_CULL_FACE);
+	if (is_shadow_pass || group_back_face_cull) {glEnable(GL_CULL_FACE);}
 	assert(lod_level < pt_to_ix.size());
 	sort(pt_to_ix[lod_level].begin(), pt_to_ix[lod_level].end(), comp_by_dist(get_camera_pos())); // sort near to far
 	core_render(s, lod_level, is_shadow_pass);
-	if (group_back_face_cull) glDisable(GL_CULL_FACE);
+	if (is_shadow_pass || group_back_face_cull) {glDisable(GL_CULL_FACE);}
 	if (!is_shadow_pass) {s.clear_specular();}
 	s.end_shader();
 }

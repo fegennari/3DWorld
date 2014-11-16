@@ -2454,7 +2454,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		if (heightmap) {
 			draw_surface(pos_, size, ndiv);
 		}
-		else if (use_vert_shader_offset()) { // minor issues face alignment cracks, but better triangle distribution
+		else if (use_vert_shader_offset()) { // minor issue of face alignment cracks, but better triangle distribution
 			assert(!gas_giant);
 			set_multisample(0); // prevent artifacts at face boundaries
 			draw_cube_mapped_planet(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
