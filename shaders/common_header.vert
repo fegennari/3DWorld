@@ -7,3 +7,6 @@ vec4 fg_ftransform() {return fg_ModelViewProjectionMatrix * fg_Vertex;}
 
 // required because some shared shader parts can be used with either vertex or fragment shaders
 #define gl_Color fg_Color
+
+out vec4 fg_Color_vf;
+#define gl_FrontColor fg_Color_vf
