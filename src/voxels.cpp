@@ -2054,6 +2054,7 @@ void free_voxel_context() {
 }
 
 bool point_inside_voxel_terrain(point const &pos) {
+	if (world_mode != WMODE_GROUND) return 0;
 	return terrain_voxel_model.point_inside_volume(pos);
 }
 

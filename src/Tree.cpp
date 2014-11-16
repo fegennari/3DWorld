@@ -2102,6 +2102,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			pos.z = interpolate_mesh_zval(pos.x, pos.y, 0.0, 1, 1);
 			if (pos.z > max_tree_h || pos.z < min_tree_h) continue;
 			if (tree_mode == 3 && get_tree_class_from_height(pos.z, 0) != TREE_CLASS_DECID) continue; // use a pine tree here (or no tree)
+			if (point_inside_voxel_terrain(pos)) continue; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
 			int ttype(-1), tree_id(-1);
 
 			if (NONUNIFORM_TREE_DEN) {

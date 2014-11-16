@@ -384,9 +384,9 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 				float const zpos(approx_zval ? height_gen.eval_index(j-x1, i-y1, 1) : interpolate_mesh_zval(xval, yval, 0.0, 1, 1));
 				int const ttype(get_tree_type_from_height(zpos, rgen));
 				if (ttype == TREE_NONE) continue;
-				if (use_hmap_tex && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) {continue;}
+				if (use_hmap_tex && get_tiled_terrain_height_tex_norm(j+xoff2, i+yoff2).z < 0.8) continue;
 
-				if (instanced) {
+				if (instanced) { // check voxel terrain? or does this mode only get used for tiled terrain?
 					assert(ttype == T_SH_PINE || ttype == T_PINE);
 					assert(zval_adj == 0.0); // must be inf terrain mode
 					assert(max_unique_trees > 0);
@@ -394,7 +394,9 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 				}
 				else {
 					float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));
-					small_tree st(point(xval, yval, zpos+zval_adj*height), height, width, ttype, 0, rgen);
+					point const pos(xval, yval, zpos+zval_adj*height);
+					if (point_inside_voxel_terrain(pos)) continue; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
+					small_tree st(pos, height, width, ttype, 0, rgen);
 					st.setup_rotation(rgen);
 					add_tree(st);
 				}

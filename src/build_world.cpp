@@ -578,6 +578,10 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	calc_motion_direction();
 	PRINT_TIME("Volume+Motion matrix generation");
 	
+	if (generate_mesh && !inf_terrain && create_voxel_landscape == 1) {
+		gen_voxel_landscape();
+		PRINT_TIME("Voxel Landscape Generation");
+	}
 	if (num_trees > 0) {
 		if (!inf_terrain && gen_trees) {
 			regen_trees((gen_trees == 2), 1);
@@ -590,11 +594,6 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	if (!inf_terrain) {
 		gen_scenery();
 		PRINT_TIME("Scenery generation");
-
-		if (create_voxel_landscape == 1) {
-			gen_voxel_landscape();
-			PRINT_TIME("Voxel Landscape Generation");
-		}
 	}
 	add_all_coll_objects(coll_obj_file, (num_trees == 0));
 	PRINT_TIME("Collision object addition");
