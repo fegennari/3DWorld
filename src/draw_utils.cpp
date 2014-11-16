@@ -619,7 +619,13 @@ public:
 		bool const use_32_bit(bind_quads_as_tris_ivbo(end_quad_vert));
 		int const index_type(use_32_bit ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);
 		unsigned const bytes_offset((use_32_bit ? sizeof(unsigned) : sizeof(unsigned short))*start_tri_vert);
-		glDrawElementsInstanced(GL_TRIANGLES, num_tri_verts, index_type, (void *)bytes_offset, num_instances);
+
+		if (num_instances > 1) { // instanced drawing not supported/efficient on some cards, so only enabled it when needed
+			glDrawElementsInstanced(GL_TRIANGLES, num_tri_verts, index_type, (void *)bytes_offset, num_instances);
+		}
+		else {
+			glDrawElements(GL_TRIANGLES, num_tri_verts, index_type, (void *)bytes_offset);
+		}
 		bind_vbo(0, 1);
 	}
 };

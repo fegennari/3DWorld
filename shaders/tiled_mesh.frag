@@ -46,7 +46,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	vec4 light  = fg_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
 
 	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) {
-		normal *= 1.0 - get_cloud_plane_alpha(vertex, light);
+		normal *= 1.0 - get_cloud_plane_alpha(vertex.xyz, light);
 	}
 	
 	// compute the ambient and diffuse lighting

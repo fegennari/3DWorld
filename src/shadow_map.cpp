@@ -212,7 +212,7 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
 void set_shadow_tex_params() {
 
-	// This is to allow usage of shadow2DProj function in the shader
+	// This is to allow usage of textureProj function in the shader
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 }

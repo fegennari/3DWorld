@@ -8,7 +8,7 @@ float get_wind_delta(in vec3 vertex, in float flex_comp) {
 	float tx = (-time*wind_x + 1.2*vertex.x);
 	float ty = (-time*wind_y + 1.2*vertex.y);
 	float flexibility = 0.75*flex_comp + 0.25; // burned grass/leaves are less flexible
-	return flexibility * texture2DLod(wind_noise_tex, vec2(tx, ty), 1).r;
+	return flexibility * textureLod(wind_noise_tex, vec2(tx, ty), 1).r;
 }
 
 vec3 get_grass_wind_delta(in vec3 vertex, in float grass_s_tc) {

@@ -136,7 +136,7 @@ void main()
 	
 	if (indir_lighting) {
 		vec3 scene_urc    = scene_llc + scene_scale;
-		float scene_bb[6] = {scene_llc.x, scene_urc.x, scene_llc.y, scene_urc.y, scene_llc.z, scene_urc.z};
+		float scene_bb[6]; scene_bb[0]=scene_llc.x; scene_bb[1]=scene_urc.x; scene_bb[2]=scene_llc.y; scene_bb[3]=scene_urc.y; scene_bb[4]=scene_llc.z; scene_bb[5]=scene_urc.z;
 		float view_dist   = distance(vpos, camera_pos);
 		vec3 end_pos      = camera_pos + (vpos - camera_pos)*(min(fog_end, view_dist)/view_dist);
 		pt_pair cres      = clip_line(end_pos, camera_pos, scene_bb);
