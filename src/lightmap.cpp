@@ -759,13 +759,12 @@ void upload_dlights_textures(cube_t const &bounds) {
 	}
 	if (elem_tid == 0) {
 		setup_2d_texture(elem_tid);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, elem_tex_x, elem_tex_y, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, &elem_data.front());
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R16UI, elem_tex_x, elem_tex_y, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, nullptr);
 	}
-	else {
-		bind_2d_texture(elem_tid);
-		unsigned const height(min(elem_tex_y, (elem_data.size()/elem_tex_x+1U))); // approximate ceiling
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_x, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, &elem_data.front());
-	}
+	bind_2d_texture(elem_tid);
+	unsigned const height(min(elem_tex_y, (elem_data.size()/elem_tex_x+1U))); // approximate ceiling
+	elem_data.reserve(elem_tex_x*height); // ensure it's large enough for the padded upload
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, elem_tex_x, height, GL_RED_INTEGER, GL_UNSIGNED_SHORT, &elem_data.front());
 
 	// step 3: grid bag(s)
 	if (gb_tid == 0) {
