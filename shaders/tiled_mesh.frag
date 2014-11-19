@@ -29,7 +29,7 @@ float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) 
 
 vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in float spec, in float shininess) {
 	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
-	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0), shininess);
+	return vec4(spec, spec, spec, 1.0) * pow(max(dot(normal, half_vect), 0.0001), shininess);
 }
 
 vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {

@@ -254,7 +254,7 @@ void main()
 
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
-	float specval  = pow(max(dot(norm, half_vect), 0.0), get_shininess());
+	float specval  = pow(max(dot(norm, half_vect), 0.0001), get_shininess());
 	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * spec_mag * sscale;
 
 	if (lava_val > 0.0) {
