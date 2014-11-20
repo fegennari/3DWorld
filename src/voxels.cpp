@@ -466,6 +466,7 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 	bool all_under_mesh(params.remove_under_mesh && (display_mode & 0x01)); // if mesh draw is enabled
 	unsigned const x2(min(x+step, nx-1)), y2(min(y+step, ny-1)), z2(min(z+step, nz-1));
 	unsigned const xv[2] = {x, x2}, yv[2] = {y, y2}, zv[2] = {z, z2};
+	if (x2 <= x || y2 <= y || z2 <= z) {return 0;} // invalid (empty) range
 
 	for (unsigned yhi = 0; yhi < 2; ++yhi) {
 		for (unsigned xhi = 0; xhi < 2; ++xhi) {
