@@ -755,6 +755,17 @@ void draw_all_crosshairs(pt_line_drawer &pld) {
 }
 
 
+void set_sane_light_atten(shader_t *shader=nullptr) {
+
+	// force all lights to be enabled temporarily so that we can set them to constant atten to avoid div-by-zero if we don't set them later
+	for (unsigned i = 0; i < MAX_SHADER_LIGHTS; ++i) {
+		bool const enabled(is_light_enabled(i));
+		if (!enabled) {enable_light(i);}
+		setup_gl_light_atten(i, 1.0, 0.0, 0.0, shader);
+		if (!enabled) {disable_light(i);}
+	}
+}
+
 void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
@@ -766,6 +777,7 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("lum_scale",  0.0);
 	s.add_uniform_float("lum_offset", 0.0);
+	set_sane_light_atten(&s);
 
 	if (disint_tex) {
 		select_multitex(DISINT_TEX, 1);

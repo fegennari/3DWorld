@@ -187,7 +187,6 @@ void main()
 #endif // GAS_GIANT
 
 	float atten0 = light_scale[0] * calc_light_atten0(epos);
-	float atten2 = light_scale[2] * calc_light_atten(epos, 2);
 	float sscale = atten0;
 
 	if (sun_radius > 0.0) {
@@ -213,7 +212,6 @@ void main()
 	norm          = normalize(norm); // renormalize
 	vec3 ldir0    = normalize(fg_LightSource[0].position.xyz - epos.xyz);
 	vec3 ldir2    = normalize(fg_LightSource[2].position.xyz - epos.xyz);
-	vec3 ldir20   = normalize(fg_LightSource[2].position.xyz - fg_LightSource[0].position.xyz);
 	float lscale0 = (dot(norm, ldir0) > 0.0) ? 1.0 : 0.0;
 	float lscale2 = (dot(norm, ldir2) > 0.0) ? 1.0 : 0.0;
 
@@ -224,7 +222,6 @@ void main()
 	}
 #endif // HAS_CRATERS
 	float dterm0 = max(dot(norm, ldir0), 0.0);
-	float dterm2 = max(dot(norm, ldir2), 0.0);
 
 	// add clouds
 	float cloud_den    = 0.0;
@@ -248,13 +245,18 @@ void main()
 	}
 	vec3 epos_norm = normalize(epos.xyz);
 	vec3 ambient   = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
-	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * dterm0 * lscale0 * sscale) +
-	                 (fg_LightSource[2].diffuse.rgb * dterm2 * lscale2 * atten2 * max(dot(ldir2, ldir20), 0.0));
+	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * dterm0 * lscale0 * sscale);
+	
+	if (light_scale[2] > 0.0) {
+		float dterm2 = max(dot(norm, ldir2), 0.0);
+		vec3 ldir20  = normalize(fg_LightSource[2].position.xyz - fg_LightSource[0].position.xyz);
+		diffuse += (fg_LightSource[2].diffuse.rgb * dterm2 * lscale2 * light_scale[2] * calc_light_atten(epos, 2) * max(dot(ldir2, ldir20), 0.0));
+	}
 	vec3 color     = (texel.rgb * (ambient + diffuse*(1.0 - cloud_shadow))); // add light cloud shadows
 
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
-	float specval  = pow(max(dot(norm, half_vect), 0.0001), get_shininess());
+	float specval  = pow(max(dot(norm, half_vect), 0.0), get_shininess());
 	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * spec_mag * sscale;
 
 	if (lava_val > 0.0) {
