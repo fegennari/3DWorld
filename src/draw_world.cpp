@@ -248,7 +248,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 
 
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
-	bool smoke_enabled, int has_lt_atten, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
+	bool smoke_enabled, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
 {
 	s.set_int_prefix ("use_texgen",         use_texgen,      0); // VS
 	s.set_bool_prefix("keep_alpha",         keep_alpha,      1); // FS
@@ -257,7 +257,8 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 	s.set_bool_prefix("do_sphere_lt_atten", ((has_lt_atten & 2) != 0), 1); // FS
 	s.set_bool_prefix("two_sided_lighting", use_tsl,         1); // FS
 	s.set_bool_prefix("use_fg_ViewMatrix",  use_mvm,         0); // VS
-	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP", 1);} // FS
+	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP",   1);} // FS
+	if (use_smap)     {s.set_prefix("#define USE_SHADOW_MAP", 1);} // FS
 
 	if (smoke_enabled) {
 		// Note: dynamic_smoke_shadows applies to light0 only
@@ -288,7 +289,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	bool const use_burn_mask(burn_tex_scale > 0.0);
 	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK", 1);} // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
-	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_bmap, use_spec_map, use_mvm, force_tsl);
+	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+textured_with_smoke");
 	s.begin_shader();
@@ -323,7 +324,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 
 	bool indir_lighting(0);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
-	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, 0, 0, 0, 0);
+	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, 0, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
