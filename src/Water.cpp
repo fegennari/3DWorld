@@ -379,6 +379,30 @@ public:
 			calc_vertex_cn(vnc, get_ypos(vnc.v.y), get_xpos(vnc.v.x), color_in);
 		}
 	}
+	void draw_outside_water_range(int x1, int y1, int x2, int y2, int dx, int dy) {
+		if (x1 == x2 || y1 == y2) return; // empty range
+		int last_draw(0);
+
+		for (int i = y1; i != y2; i += dy) {
+			for (int j = x1; j != x2+dx; j += dx) {
+				if (j != x2 && (
+					(wminside[i][j]       == 2 && water_matrix[i][j]       > mesh_height[i][j])    ||
+					(wminside[i+dy][j]    == 2 && water_matrix[i+dy][j]    > mesh_height[i+dy][j]) ||
+					(wminside[i][j+dx]    == 2 && water_matrix[i][j+dx]    > mesh_height[i][j+dx]) ||
+					(wminside[i+dy][j+dx] == 2 && water_matrix[i+dy][j+dx] > mesh_height[i+dy][j+dx])))
+				{
+					add_segment(i, j, 0, dx, dy);
+					last_draw = 1;
+				}
+				else if (last_draw) {
+					add_segment(i, j, 0, dx, dy);
+					end_strip();
+					last_draw = 0;
+				}
+			} // for j
+		} // for i
+		assert(!last_draw);
+	}
 };
 
 
@@ -417,33 +441,6 @@ public:
 	}
 	void end_strip() {draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);}
 };
-
-
-void draw_outside_water_range(water_strip_drawer &wsdraw, int x1, int y1, int x2, int y2, int dx, int dy) {
-
-	if (x1 == x2 || y1 == y2) return; // empty range
-	int last_draw(0);
-
-	for (int i = y1; i != y2; i += dy) {
-		for (int j = x1; j != x2+dx; j += dx) {
-			if (j != x2 && (
-				(wminside[i][j]       == 2 && water_matrix[i][j]       > mesh_height[i][j])    ||
-				(wminside[i+dy][j]    == 2 && water_matrix[i+dy][j]    > mesh_height[i+dy][j]) ||
-				(wminside[i][j+dx]    == 2 && water_matrix[i][j+dx]    > mesh_height[i][j+dx]) ||
-				(wminside[i+dy][j+dx] == 2 && water_matrix[i+dy][j+dx] > mesh_height[i+dy][j+dx])))
-			{
-				wsdraw.add_segment(i, j, 0, dx, dy);
-				last_draw = 1;
-			}
-			else if (last_draw) {
-				wsdraw.add_segment(i, j, 0, dx, dy);
-				wsdraw.end_strip();
-				last_draw = 0;
-			}
-		} // for j
-	} // for i
-	assert(!last_draw);
-}
 
 
 void draw_water() {
@@ -493,10 +490,10 @@ void draw_water() {
 		// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
 		point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
 		int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
-		draw_outside_water_range(wsdraw, cxpos, cypos, xend, yend,  1,  1);
-		draw_outside_water_range(wsdraw, cxpos, cypos, xend, 0,     1, -1);
-		draw_outside_water_range(wsdraw, cxpos, cypos, 0,    yend, -1,  1);
-		draw_outside_water_range(wsdraw, cxpos, cypos, 0,    0,    -1, -1);
+		wsdraw.draw_outside_water_range(cxpos, cypos, xend, yend,  1,  1);
+		wsdraw.draw_outside_water_range(cxpos, cypos, xend, 0,     1, -1);
+		wsdraw.draw_outside_water_range(cxpos, cypos, 0,    yend, -1,  1);
+		wsdraw.draw_outside_water_range(cxpos, cypos, 0,    0,    -1, -1);
 		wsdraw.calc_vertex_colors_normals(color);
 		wsdraw.draw();
 	}
