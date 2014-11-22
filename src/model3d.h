@@ -9,6 +9,7 @@
 #include "collision_detect.h" // for polygon_t
 #include "cobj_bsp_tree.h" // for cobj_tree_tquads_t
 #include "shadow_map.h" // for smap_data_t
+#include "gl_ext_arb.h"
 
 using namespace std;
 
@@ -148,21 +149,19 @@ typedef vertex_map_t<vert_norm_tc_tan> vntct_map_t;
 template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 
 
-template<typename T> class vntc_vect_t : public vector<T> {
+template<typename T> class vntc_vect_t : public vector<T>, public indexed_vbo_manager_t {
 
 protected:
 	bool has_tangents, finalized;
-	unsigned vbo, ivbo;
 	sphere_t bsphere;
 	cube_t bcube;
 
 public:
 	unsigned obj_id;
 
-	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), vbo(0), ivbo(0), obj_id(obj_id_) {}
+	vntc_vect_t(unsigned obj_id_=0) : has_tangents(0), finalized(0), obj_id(obj_id_) {}
 	void render(shader_t &shader, bool is_shadow_pass, unsigned npts);
 	void clear();
-	void free_vbos();
 	void make_private_copy() {vbo = ivbo = 0;} // Note: to be called *only* after a deep copy
 	void add_poly(vntc_vect_t const &poly);
 	void calc_bounding_volumes();

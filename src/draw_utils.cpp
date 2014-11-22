@@ -695,24 +695,15 @@ void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert, unsig
 bool bind_quads_as_tris_ivbo(unsigned num_quad_verts) {return quad_ix_buffer.bind_quads_as_tris_ivbo(num_quad_verts);}
 
 
-unsigned create_or_bind_ivbo_quads_as_tris(unsigned &ivbo, vector<unsigned> const &indices) { // what about 16-bit indices?
+void convert_quad_ixs_to_tri_ixs(vector<unsigned> const &qixs, vector<unsigned> &tixs) { // what about 16-bit indices?
 
-	unsigned const num_ixs(6*indices.size()/4);
+	tixs.resize(6*qixs.size()/4);
 
-	if (ivbo == 0) {
-		vector<unsigned> ixs(num_ixs);
-
-		for (unsigned i = 0, j = 0; i < indices.size(); i += 4) { // step a quad at a time
-			UNROLL_4X(ixs[j++] = indices[i+i_];) // copy quad verts
-			ixs[j++] = indices[i+0];
-			ixs[j++] = indices[i+2];
-		}
-		create_bind_vbo_and_upload(ivbo, ixs, 1);
+	for (unsigned i = 0, j = 0; i < qixs.size(); i += 4) { // step a quad at a time
+		UNROLL_4X(tixs[j++] = qixs[i+i_];) // copy quad verts
+		tixs[j++] = qixs[i+0];
+		tixs[j++] = qixs[i+2];
 	}
-	else {
-		bind_vbo(ivbo, 1);
-	}
-	return num_ixs;
 }
 
 

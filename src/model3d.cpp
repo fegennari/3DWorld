@@ -142,17 +142,10 @@ template class indexed_vntc_vect_t<vert_norm>;
 
 template<typename T> void vntc_vect_t<T>::clear() {
 	
-	free_vbos();
+	clear_vbos();
 	vector<T>::clear();
 	finalized = has_tangents = 0;
 	bsphere.radius = 0.0;
-}
-
-
-template<typename T> void vntc_vect_t<T>::free_vbos() {
-
-	delete_and_zero_vbo(vbo);
-	delete_and_zero_vbo(ivbo);
 }
 
 
@@ -396,20 +389,25 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	else if (vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
 		if (!camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius) || !camera_pdu.cube_visible(bcube)) return; // view frustum culling
 	}
-	create_bind_vbo_and_upload(vbo, *this, 0);
-	T::set_vbo_arrays();
 	assert(!indices.empty()); // now always using indexed drawing
 	int prim_type(GL_TRIANGLES);
 	unsigned ixn(1), ixd(1);
 
 	if (use_core_context && npts == 4) {
-		create_or_bind_ivbo_quads_as_tris(ivbo, indices);
+		if (!ivbo) {
+			vector<unsigned> tixs;
+			convert_quad_ixs_to_tri_ixs(indices, tixs);
+			create_and_upload(*this, tixs);
+		}
 		ixn = 6; ixd = 4; // convert quads to 2 triangles
 	}
 	else {
 		if (npts == 4) {prim_type = GL_QUADS;}
-		create_bind_vbo_and_upload(ivbo, indices, 1);
+		create_and_upload(*this, indices);
 	}
+	pre_render();
+	T::set_vbo_arrays();
+
 	if (is_shadow_pass || blocks.empty() || no_vfc || camera_pdu.sphere_completely_visible_test(bsphere.pos, bsphere.radius)) { // draw the entire range
 		glDrawRangeElements(prim_type, 0, (unsigned)size(), (unsigned)(ixn*indices.size()/ixd), GL_UNSIGNED_INT, 0);
 	}
@@ -421,8 +419,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 			}
 		}
 	}
-	bind_vbo(0, 0);
-	bind_vbo(0, 1);
+	post_render();
 	T::unset_attrs();
 }
 
@@ -612,14 +609,11 @@ template struct vntc_vect_block_t<vert_norm_tc_tan>;
 
 
 template<typename T> void vntc_vect_block_t<T>::optimize(unsigned npts) {
-
 	for (iterator i = begin(); i != end(); ++i) {i->optimize(npts);}
 }
 
-
 template<typename T> void vntc_vect_block_t<T>::free_vbos() {
-
-	for (iterator i = begin(); i != end(); ++i) {i->free_vbos();}
+	for (iterator i = begin(); i != end(); ++i) {i->clear_vbos();}
 }
 
 
