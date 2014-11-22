@@ -1075,8 +1075,8 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 			grass_block_t const &gb(grass_blocks[y*grass_block_dim+x]);
 			if (gb.ix == 0) continue; // empty block
 			cube_t const bcube(llcx+x*dx_step, llcx+(x+1)*dx_step, llcy+y*dy_step, llcy+(y+1)*dy_step, gb.zmin, (gb.zmax + grass_length));
-			point const center(bcube.get_cube_center());
-			if (!dist_less_than(camera, center, block_grass_thresh) || !camera_pdu.cube_visible(bcube)) continue;
+			point const close_pt(bcube.closest_pt(camera));
+			if (!dist_less_than(camera, close_pt, block_grass_thresh) || !camera_pdu.cube_visible(bcube)) continue;
 			bool back_facing(1);
 
 			for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) {
@@ -1086,7 +1086,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 				}
 			}
 			if (back_facing) continue;
-			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(lod_scale*distance_to_camera(center))));
+			unsigned const lod_level(min(NUM_GRASS_LODS-1, unsigned(lod_scale*distance_to_camera(close_pt))));
 			assert(insts != NULL);
 			insts[lod_level].resize(NUM_RND_GRASS_BLOCKS); // may already be the correct size
 			unsigned const bix(gb.ix - 1);
