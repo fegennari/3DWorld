@@ -310,17 +310,17 @@ struct water_vertex_calc_t {
 
 unsigned const RESERVED_IX = 0xFFFFFFFF;
 
-class mesh_strip_drawer {
-
+class mesh_strip_drawer : public indexed_vbo_manager_t {
+ 
 protected:
 	vector<vert_norm_color> verts; // vertex data
 private:
 	vector<unsigned> pt_to_ix; // maps mesh {x,y} values to vertex index
 	vector<unsigned> indices; // indexes into verts
-
+ 
 public:
 	mesh_strip_drawer() {pt_to_ix.resize(XY_MULT_SIZE, RESERVED_IX);}
-
+ 
 	bool add_vertex(int x, int y, float zval=0.0) {
 		unsigned const pos(y*MESH_X_SIZE + x);
 		assert(pos < pt_to_ix.size());
@@ -339,22 +339,17 @@ public:
 	void end_strip() {
 		indices.push_back(RESERVED_IX);
 	}
-	void draw() const {
+	void draw() {
 		if (verts.empty()) {assert(indices.empty()); return;} // nothing to do
-		unsigned vbo[2] = {0, 0}; // vertex, index
-		create_bind_vbo_and_upload(vbo[0], verts,   0, 2);
-		create_bind_vbo_and_upload(vbo[1], indices, 1, 2);
+		create_and_upload(verts, indices, 2);
 		vert_norm_color::set_vbo_arrays();
 		glEnable(GL_PRIMITIVE_RESTART);
 		glPrimitiveRestartIndex(RESERVED_IX);
 		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, verts.size(), indices.size(), GL_UNSIGNED_INT, NULL);
 		glDisable(GL_PRIMITIVE_RESTART);
-		
-		for (unsigned d = 0; d < 2; ++d) {
-			bind_vbo(0, (d != 0));
-			delete_vbo(vbo[d]);
-		}
+		post_render();
 	}
+	~mesh_strip_drawer() {clear_vbos();}
 };
 
 
@@ -485,18 +480,17 @@ void draw_water() {
 		set_active_texture(0);
 		s.add_uniform_float("detail_tex_scale", 1.0);
 	}
-	{ // outside water
-		water_strip_drawer wsdraw;
-		// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
-		point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
-		int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
-		wsdraw.draw_outside_water_range(cxpos, cypos, xend, yend,  1,  1);
-		wsdraw.draw_outside_water_range(cxpos, cypos, xend, 0,     1, -1);
-		wsdraw.draw_outside_water_range(cxpos, cypos, 0,    yend, -1,  1);
-		wsdraw.draw_outside_water_range(cxpos, cypos, 0,    0,    -1, -1);
-		wsdraw.calc_vertex_colors_normals(color);
-		wsdraw.draw();
-	}
+	// outside water
+	water_strip_drawer wsdraw;
+	// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
+	point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
+	int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
+	wsdraw.draw_outside_water_range(cxpos, cypos, xend, yend,  1,  1);
+	wsdraw.draw_outside_water_range(cxpos, cypos, xend, 0,     1, -1);
+	wsdraw.draw_outside_water_range(cxpos, cypos, 0,    yend, -1,  1);
+	wsdraw.draw_outside_water_range(cxpos, cypos, 0,    0,    -1, -1);
+	wsdraw.calc_vertex_colors_normals(color);
+	wsdraw.draw();
 	if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 	if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
@@ -531,9 +525,7 @@ void draw_water() {
 			assert(I_TIMESCALE2 > 0);
 			num_steps = max(1U, min(MAX_RIPPLE_STEPS, unsigned(min(3.0f, fticks)*min(MAX_I_TIMESCALE, I_TIMESCALE2))));
 		}
-		for (unsigned i = 0; i < num_steps; ++i) {
-			compute_ripples();
-		}
+		for (unsigned i = 0; i < num_steps; ++i) {compute_ripples();}
 		calc_water_normals();
 	}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
