@@ -149,6 +149,7 @@ void clear_asteroid_contexts();
 void clear_quad_ix_buffer_context();
 void clear_vbo_ring_buffer();
 void free_cloud_context();
+void free_universe_context();
 
 void setup_linear_fog(colorRGBA const &color, float fog_end);
 
@@ -183,6 +184,7 @@ void post_window_redisplay() {
 void clear_context() {
 
 	reset_textures();
+	free_universe_context();
 	free_model_context();
 	free_voxel_context();
 	free_sphere_vbos();

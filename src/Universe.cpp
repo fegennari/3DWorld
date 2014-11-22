@@ -385,7 +385,9 @@ public:
 	vpc_shader_t nebula_shader;
 	shader_t asteroid_shader;
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
+	cube_map_sphere_manager_t *cube_map_planet_manager;
 
+	ushader_group(cube_map_sphere_manager_t *cmpm=nullptr) : cube_map_planet_manager(cmpm) {}
 	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) {
 		return get_planet_shader(body, svars).enable_planet(body, svars, planet_pos, use_light2);
 	}
@@ -474,7 +476,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	if (animate2) {cloud_time += fticks;}
 	unpack_color(water_c, P_WATER_C); // recalculate every time
 	unpack_color(ice_c,   P_ICE_C  );
-	ushader_group usg;
+	ushader_group usg(&cube_map_planet_manager);
 
 	if (no_distant < 2 || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
 		// gather together the set of cells that are visible and need to be drawn
@@ -2112,13 +2114,9 @@ unsigned get_texture_size(float psize) {
 }
 
 
-void free_universe_textures() {
+void free_universe_context() {universe.free_context();}
 
-	universe.free_textures();
-}
-
-
-void universe_t::free_textures() { // should be OK even if universe isn't setup
+void universe_t::free_context() { // should be OK even if universe isn't setup
 
 	for (unsigned z = 0; z < U_BLOCKS; ++z) { // z
 		for (unsigned y = 0; y < U_BLOCKS; ++y) { // y
@@ -2146,6 +2144,7 @@ void universe_t::free_textures() { // should be OK even if universe isn't setup
 			}
 		}
 	}
+	cube_map_planet_manager.clear();
 }
 
 
@@ -2351,38 +2350,6 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15);}
 
 
-// simplified and optimized version of draw_cube_mapped_sphere() (no center, tex coords, or normals, and radius=1.0)
-void draw_cube_mapped_planet(unsigned ndiv) {
-
-	assert(ndiv > 0);
-	float const vstep(2.0/ndiv);
-	vector<vert_wrap_t> verts(2*(ndiv+1));
-
-	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
-		unsigned const d1(i), d2((i+1)%3), dn((i+2)%3);
-		point off(all_zeros);
-		off[d1] = vstep;
-
-		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
-			point pt;
-			pt[dn] = (j ? 1.0 : -1.0);
-
-			for (unsigned s = 0; s < ndiv; ++s) {
-				pt[d1] = -1.0 + s*vstep;
-				unsigned ix(0);
-
-				for (unsigned T = 0; T <= ndiv; ++T) {
-					pt[d2] = -1.0 + (j ? T : ndiv-T)*vstep; // reverse between sides
-					verts[ix++].v = pt.get_norm(); // Note: could normalize in the shader if that was more efficient
-					verts[ix++].v = (pt + off).get_norm();
-				}
-				draw_verts(verts, GL_TRIANGLE_STRIP);
-			} // for s
-		} // for j
-	} // for i
-}
-
-
 bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2, bool enable_text_tag) {
 
 	point const &camera(get_player_pos());
@@ -2457,7 +2424,8 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		else if (use_vert_shader_offset()) { // minor issue of face alignment cracks, but better triangle distribution
 			assert(!gas_giant);
 			set_multisample(0); // prevent artifacts at face boundaries
-			draw_cube_mapped_planet(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
+			assert(usg.cube_map_planet_manager);
+			usg.cube_map_planet_manager->draw_sphere(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
 			set_multisample(1);
 		}
 		else { // gas giant or atmosphere: don't need high resolution since they have no heightmaps

@@ -9,6 +9,7 @@
 #include "universe_base.h"
 #include "upsurface.h"
 #include "draw_utils.h"
+#include "gl_ext_arb.h"
 #include <map>
 #include <sstream>
 
@@ -548,10 +549,12 @@ struct line_query_state {
 
 class universe_t : protected cell_block {
 
+	cube_map_sphere_manager_t cube_map_planet_manager;
+
 public:
 	void init();
 	void shift_cells(int dx, int dy, int dz);
-	void free_textures();
+	void free_context();
 	void draw_all_cells(s_object const &clobj, bool skip_closest, bool no_move, int no_distant, bool gen_only=0);
 	int get_closest_object(s_object &result, point pos, int max_level, bool include_asteroids, bool offset, float expand, bool get_destroyed=0, float g_expand=1.0) const;
 	bool get_trajectory_collisions(line_query_state &lqs, s_object &result, point &coll, vector3d dir, point start, float dist, float line_radius, bool include_asteroids=1) const;

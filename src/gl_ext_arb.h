@@ -5,6 +5,8 @@
 #ifndef _GL_EXT_ARB_H_
 #define _GL_EXT_ARB_H_
 
+unsigned const PRIMITIVE_RESTART_IX = 0xFFFFFFFF;
+
 
 inline GLenum get_internal_texture_format(int ncolors, bool compressed=0) { // Note: ncolors=2 is unused
 	GLenum const cformats[4] = {GL_COMPRESSED_RED, GL_COMPRESSED_RG, GL_COMPRESSED_RGB, GL_COMPRESSED_RGBA};
@@ -51,13 +53,13 @@ void disable_and_free_render_buffer(unsigned &render_buffer);
 bool gen_mipmaps(unsigned dim=2);
 
 inline void delete_and_zero_vbo(unsigned &id) {delete_vbo(id); id = 0;}
+inline void check_bind_vbo(unsigned vbo, bool is_index=0) {assert(vbo); bind_vbo(vbo, is_index);}
 
 
 // templated vbo management utility functions/classes
 
 template<typename T> void upload_to_vbo(unsigned &vbo, vector<T> const &data, bool is_index=0, bool end_with_bind0=0, int dynamic_level=0) {
-	assert(vbo > 0);
-	bind_vbo(vbo, is_index);
+	check_bind_vbo(vbo, is_index);
 	upload_vbo_data(&data.front(), data.size()*sizeof(T), is_index, dynamic_level);
 	if (end_with_bind0) {bind_vbo(0, is_index);}
 }
@@ -100,6 +102,24 @@ struct indexed_vbo_manager_t {
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 	}
+};
+
+
+class cube_map_sphere_drawer_t : public indexed_vbo_manager_t {
+	unsigned nverts, nindices;
+
+public:
+	cube_map_sphere_drawer_t(unsigned ndiv);
+	void draw() const;
+};
+
+class cube_map_sphere_manager_t {
+	typedef map<unsigned, cube_map_sphere_drawer_t> ndiv_sphere_map_t;
+	ndiv_sphere_map_t cached;
+
+public:
+	void draw_sphere(unsigned ndiv);
+	void clear();
 };
 
 

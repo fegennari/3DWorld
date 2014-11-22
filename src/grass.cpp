@@ -128,15 +128,12 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &da
 }
 
 void grass_manager_t::begin_draw() const {
-
-	assert(vbo > 0);
-	bind_vbo(vbo);
+	check_bind_vbo(vbo);
 	grass_data_t::set_vbo_arrays();
 	select_texture(GRASS_BLADE_TEX);
 }
 
 void grass_manager_t::end_draw() const {
-
 	bind_vbo(0);
 	check_gl_error(40);
 }
@@ -828,8 +825,7 @@ void flower_manager_t::setup_flower_shader_post(shader_t &shader) {
 
 void flower_manager_t::draw_triangles(shader_t &shader) const {
 
-	assert(vbo > 0);
-	bind_vbo(vbo);
+	check_bind_vbo(vbo);
 	select_texture((draw_model == 1) ? WHITE_TEX : DAISY_TEX);
 
 	if (0 && world_mode == WMODE_INF_TERRAIN) {

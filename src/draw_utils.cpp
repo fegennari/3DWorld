@@ -452,6 +452,69 @@ template<typename T> void indexed_mesh_draw<T>::render_z_plane(float x1, float y
 template class indexed_mesh_draw<vert_wrap_t>;
 
 
+// Note: these classes are actually declared in gl_ext_arb.h
+// simplified and optimized version of draw_cube_mapped_sphere() (no center, tex coords, or normals, and radius=1.0)
+cube_map_sphere_drawer_t::cube_map_sphere_drawer_t(unsigned ndiv) {
+
+	assert(!vbo);
+	assert(ndiv > 0);
+	nverts   = 6*(ndiv+1)*(ndiv+1);
+	nindices = 6*ndiv*(2*(ndiv+1)+1);
+	vector<vert_wrap_t> verts; verts.reserve(nverts);
+	vector<unsigned> indices; indices.reserve(nindices);
+	float const vstep(2.0/ndiv);
+
+	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
+		for (unsigned j = 0; j < 2; ++j) { // iterate over opposing sides, min then max
+			unsigned const d1(i), d2((i+1)%3), dn((i+2)%3), start_vix(verts.size());
+			point pt;
+			pt[dn] = (j ? 1.0 : -1.0);
+				
+			for (unsigned s = 0; s <= ndiv; ++s) { // create vertex data
+				pt[d1] = -1.0 + s*vstep;
+
+				for (unsigned T = 0; T <= ndiv; ++T) {
+					pt[d2] = -1.0 + T*vstep;
+					verts.push_back(pt.get_norm()); // Note: could also normalize in the shader
+				}
+			} // for s
+			for (unsigned s = 0; s < ndiv; ++s) { // create indices
+				for (unsigned T = 0; T <= ndiv; ++T) {
+					unsigned const ix_off(start_vix + s*(ndiv+1) + (j ? T : ndiv-T)); // reverse between sides
+					indices.push_back(ix_off); // current s row
+					indices.push_back(ix_off + ndiv+1); // next s row
+				}
+				indices.push_back(PRIMITIVE_RESTART_IX); // restart the strip
+			} // for s
+		} // for j
+	} // for i
+	assert(verts.size()   == nverts);
+	assert(indices.size() == nindices);
+	create_and_upload(verts, indices);
+}
+
+void cube_map_sphere_drawer_t::draw() const {
+
+	pre_render();
+	vert_wrap_t::set_vbo_arrays();
+	glEnable(GL_PRIMITIVE_RESTART);
+	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
+	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
+	glDisable(GL_PRIMITIVE_RESTART);
+	post_render();
+}
+
+void cube_map_sphere_manager_t::draw_sphere(unsigned ndiv) {
+	ndiv_sphere_map_t::iterator it(cached.find(ndiv));
+	if (it == cached.end()) {it = cached.insert(make_pair(ndiv, cube_map_sphere_drawer_t(ndiv))).first;} // create a new one
+	it->second.draw();
+}
+void cube_map_sphere_manager_t::clear() {
+	for (ndiv_sphere_map_t::iterator i = cached.begin(); i != cached.end(); ++i) {i->second.clear_vbos();}
+	cached.clear();
+}
+
+
 template< typename vert_type_t >
 unsigned vbo_block_manager_t<vert_type_t>::get_offset_for_last_points_added() {
 
@@ -520,26 +583,19 @@ void vbo_block_manager_t<vert_type_t>::update_range(typename vert_type_t::non_co
 
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::begin_render() const {
-
 	if (!has_data()) return;
 	bind_cur_vbo();
 	vert_type_t::set_vbo_arrays();
 }
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::end_render() const {
-	bind_vbo(0);
-}
+void vbo_block_manager_t<vert_type_t>::end_render() const {bind_vbo(0);}
 
 template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::bind_cur_vbo() const {
-	assert(vbo);
-	bind_vbo(vbo);
-}
+void vbo_block_manager_t<vert_type_t>::bind_cur_vbo() const {check_bind_vbo(vbo);}
 
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::clear() {
-
 	clear_points();
 	temp_points.clear();
 	offsets.clear();

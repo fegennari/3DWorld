@@ -148,8 +148,7 @@ void bind_vao(unsigned vao) { // okay if vao is zero
 }
 
 void delete_vao(unsigned vao) {
-	if (vao == 0) return;
-	glDeleteVertexArrays(1, &vao);
+	if (vao != 0) {glDeleteVertexArrays(1, &vao);}
 }
 
 

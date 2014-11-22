@@ -202,11 +202,8 @@ void regrow_landscape_texture_amt0();
 void update_lt_section(int x1, int y1, int x2, int y2);
 int get_bare_ls_tid(float zval);
 
-void free_universe_textures();
-
 
 bool is_tex_disabled(int i) {
-
 	return (universe_only && (i == CLOUD_RAW_TEX || i == WIND_TEX || i == LANDSCAPE_TEX || i == TREE_END_TEX || i == TREE_HEMI_TEX));
 }
 
@@ -329,10 +326,7 @@ float get_tex_ar(int id) {
 
 
 void free_textures() {
-
-	for (int i = 0; i < NUM_TEXTURES; ++i) {
-		textures[i].gl_delete();
-	}
+	for (int i = 0; i < NUM_TEXTURES; ++i) {textures[i].gl_delete();}
 }
 
 
@@ -341,7 +335,6 @@ void reset_textures() {
 	cout << "Freeing textures..." << endl; // only print if something was loaded?
 	free_textures();
 	free_smiley_textures(); // should this be guarded by a conditional?
-	free_universe_textures();
 	free_flare_textures();
 	free_shadow_map_textures();
 	free_cloud_textures();

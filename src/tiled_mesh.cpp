@@ -32,8 +32,6 @@ float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
 float const LITNING_TIME2   = 40.0;
 float const LITNING_DIST    = 1.2;
 
-unsigned const PRIMITIVE_RESTART_IX = 0xFFFFFFFF;
-
 
 bool tt_lightning_enabled(0);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height

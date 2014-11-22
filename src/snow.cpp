@@ -13,7 +13,6 @@ int      const Z_CHECK_RANGE  = 1; // larger = smoother and fewer strips, but lo
 bool     const USE_VBOS       = 1; // faster drawing but more GPU resources
 bool const ENABLE_SNOW_DLIGHTS= 1; // looks nice, but slow
 
-unsigned const PRIMITIVE_RESTART_IX = 0xFFFFFFFF;
 
 bool has_snow(0);
 point vox_delta;

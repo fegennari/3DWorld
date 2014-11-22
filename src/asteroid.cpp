@@ -642,8 +642,7 @@ public:
 	void draw_vbo(float density=1.0) const {
 		unsigned const count(unsigned(density*pts.size()));
 		if (count == 0) return;
-		assert(vbo);
-		bind_vbo(vbo);
+		check_bind_vbo(vbo);
 		draw_verts<vert_wrap_t>(NULL, count, GL_POINTS);
 		bind_vbo(0);
 	}
