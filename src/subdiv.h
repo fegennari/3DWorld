@@ -69,7 +69,7 @@ public:
 };
 
 
-class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vbo_manager_t {
+class sd_sphere_vbo_d : public sd_sphere_d, public indexed_vao_manager_t {
 
 	vector<unsigned> ix_offsets;
 	bool faceted;

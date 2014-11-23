@@ -114,24 +114,25 @@ struct indexed_vao_manager_t : public indexed_vbo_manager_t {
 	indexed_vao_manager_t() : vao(0) {}
 	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vao = 0;} // virtual?
 	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); delete_and_zero_vao(vao);}
-
+	
+	void ensure_vao_bound() {
+		if (!vao) {vao = create_vao();}
+		check_bind_vao(vao);
+	}
 	template<typename vert_type_t, typename index_type_t>
 	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool using_index=1) {
 		if (vao) return; // already set
-		vao = create_vao();
-		check_bind_vao(vao);
+		ensure_vao_bound();
 		indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);
-		//indexed_vbo_manager_t::pre_render(using_index);
+		//indexed_vbo_manager_t::pre_render(using_index); // binds vbo/ivbo - may not be necessary
 		//vert_type_t::set_vbo_arrays();
-		//vert_type_t::unset_attrs();
-		//indexed_vbo_manager_t::post_render();
 	}
 	void pre_render(bool using_index=1) const {check_bind_vao(vao); indexed_vbo_manager_t::pre_render(using_index);}
 	static void post_render() {bind_vao(0); indexed_vbo_manager_t::post_render();}
 };
 
 
-class cube_map_sphere_drawer_t : public indexed_vbo_manager_t {
+class cube_map_sphere_drawer_t : public indexed_vao_manager_t {
 	unsigned nverts, nindices;
 
 public:
