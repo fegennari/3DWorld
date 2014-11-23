@@ -342,7 +342,7 @@ bool voxel_map::write(char const *const fn) const {
 
 class snow_renderer {
 
-	indexed_vbo_manager_t vbo_mgr;
+	indexed_vao_manager_t vbo_mgr;
 	float last_x;
 	unsigned nquads;
 	vector<vert_norm> data;
@@ -429,11 +429,6 @@ private:
 		}
 	}
 
-	void upload_ivbo() {
-		assert(!indices.empty());
-		create_vbo_and_upload(vbo_mgr.ivbo, indices, 1, 0);
-	}
-
 public:
 	void free_vbos() {vbo_mgr.clear_vbos();}
 
@@ -468,19 +463,18 @@ public:
 		bind_vbo(0, 0);
 	}
 
-	void finalize() { // can only be called once
+	void finalize() {
 		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
-		upload_ivbo();
+		assert(!indices.empty());
 		for (unsigned d = 0; d < 2; ++d) {vmap[d].clear();}
 	}
 
 	void draw() {
-		create_vbo_and_upload(vbo_mgr.vbo, data, 0, 0);
-		upload_ivbo();
-		vbo_mgr.pre_render();
-		vert_norm::set_vbo_arrays();
+		assert(!indices.empty());
+		vbo_mgr.create_and_upload(data, indices, 0, 1); // set_vbo_arrays() is called internally
+		vbo_mgr.enable_vao();
 		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
-		vbo_mgr.post_render();
+		vbo_mgr.disable_vao();
 	}
 
 	void show_stats() const {
