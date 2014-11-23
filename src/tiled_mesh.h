@@ -270,7 +270,7 @@ public:
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
 	void shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
 	void bind_textures() const;
-	void draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const;
+	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const;
 	void draw_water_cap(shader_t &s, bool textures_already_set) const;
 	void draw_water(shader_t &s, float z) const;
 	bool check_player_collision() const;
@@ -279,14 +279,14 @@ public:
 }; // tile_t
 
 
-class tile_draw_t {
+class tile_draw_t : public indexed_vbo_manager_t {
 
 	typedef map<tile_xy_pair, std::unique_ptr<tile_t> > tile_map;
 	typedef set<tile_xy_pair> tile_set_t;
 	typedef vector<pair<float, tile_t *> > draw_vect_t;
 
 	tile_map tiles;
-	unsigned mesh_vbo, ivbo, ivbo_ixs[NUM_LODS+1];
+	unsigned ivbo_ixs[NUM_LODS+1];
 	float terrain_zmin;
 	draw_vect_t to_draw;
 	vector<tile_t *> occluded_tiles;

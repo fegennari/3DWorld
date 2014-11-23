@@ -91,9 +91,9 @@ struct indexed_vbo_manager_t {
 		reset_vbos_to_zero();
 	}
 	template<typename vert_type_t, typename index_type_t>
-	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0) {
-		if (!vbo ) {create_vbo_and_upload(vbo,  data,  0, 0, dynamic_level); gpu_mem += data.size() *sizeof(vert_type_t );}
-		if (!ivbo) {create_vbo_and_upload(ivbo, idata, 1, 0, dynamic_level); gpu_mem += idata.size()*sizeof(index_type_t);}
+	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool end_with_bind0=0) {
+		if (!vbo ) {create_vbo_and_upload(vbo,  data,  0, end_with_bind0, dynamic_level); gpu_mem += data.size() *sizeof(vert_type_t );}
+		if (!ivbo) {create_vbo_and_upload(ivbo, idata, 1, end_with_bind0, dynamic_level); gpu_mem += idata.size()*sizeof(index_type_t);}
 	}
 	void pre_render(bool using_index=1) const {
 		assert(vbo && (ivbo || !using_index));

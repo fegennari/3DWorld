@@ -658,13 +658,13 @@ void sd_sphere_d::get_faceted_triangles(vector<vertex_type_t> &verts) const {
 void sd_sphere_vbo_d::ensure_vbos() {
 
 	if (!vbo) {
+		assert(!ivbo);
 		ensure_vao_bound();
 		vector<vertex_type_t> verts;
 		if (faceted) {get_faceted_triangles(verts);} else {get_triangle_vertex_list(verts);}
 		create_vbo_and_upload(vbo, verts, 0, 1);
 	}
 	if (!faceted && !ivbo) {
-		ensure_vao_bound();
 		assert(ix_offsets.empty());
 		vector<index_type_t> indices;
 		ix_offsets.push_back(0);

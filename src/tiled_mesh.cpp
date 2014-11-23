@@ -1170,7 +1170,7 @@ void tile_t::bind_textures() const {
 }
 
 
-void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const {
+void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const {
 
 	assert(size > 0);
 	fgPushMatrix();
@@ -1186,9 +1186,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	shader_shadow_map_setup(s);
 	unsigned const lod_level(get_lod_level(reflection_pass));
 	unsigned const step(1 << lod_level), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
-	assert(mesh_vbo > 0 && ivbo > 0);
-	bind_vbo(mesh_vbo, 0);
-	bind_vbo(ivbo, 1);
+	vbo_mgr.pre_render();
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
 	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
 	vector<unsigned> crack_ixs;
@@ -1222,7 +1220,7 @@ void tile_t::draw(shader_t &s, unsigned mesh_vbo, unsigned ivbo, unsigned const 
 	if (!crack_ixs.empty()) {
 		void const *ptr(vbo_ring_ibuf.add_verts_bind_vbo(&crack_ixs.front(), crack_ixs.size()*sizeof(unsigned)));
 		glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_INT, ptr);
-		bind_vbo(ivbo, 1); // back to normal ivbo
+		bind_vbo(vbo_mgr.ivbo, 1); // back to normal ivbo
 	}
 	bind_vbo(0, 0); // unbind vertex buffer
 	fgPopMatrix();
@@ -1430,7 +1428,7 @@ void lightning_strike_t::end_draw() const {
 // *** tile_draw_t ***
 
 
-tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), mesh_vbo(0), ivbo(0), terrain_zmin(0.0) {
+tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), terrain_zmin(0.0) {
 
 	assert(MESH_X_SIZE == MESH_Y_SIZE && X_SCENE_SIZE == Y_SCENE_SIZE);
 }
@@ -1438,7 +1436,7 @@ tile_draw_t::tile_draw_t() : lod_renderer(USE_TREE_BILLBOARDS), mesh_vbo(0), ivb
 
 void tile_draw_t::clear() {
 
-	clear_vbos_tids(); // needed to clear mesh_vbo, ivbo, and free list
+	clear_vbos_tids(); // needed to clear vbo, ivbo, and free list
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear();} // may not be necessary
 	to_draw.clear();
 	tiles.clear();
@@ -1693,37 +1691,33 @@ bool tile_draw_t::can_have_reflection(tile_t const *const tile, tile_set_t &tile
 void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 
 	vector<tile_t *> to_update, to_gen_trees;
+	assert((vbo == 0) == (ivbo == 0)); // either neither or both are valid
 	
-	if (mesh_vbo == 0) { // rebuild mesh vbo
+	if (vbo == 0) { // build mesh vbo/ivbo
 		unsigned const tile_size(get_tile_size()), stride(tile_size+1);
 		vector<point> data(stride*stride);
+		vector<unsigned> indices;
 
 		for (unsigned y = 0; y <= tile_size; ++y) {
 			for (unsigned x = 0; x <= tile_size; ++x) {
 				data[y*stride + x].assign(x*DX_VAL, y*DY_VAL, 0.0); // z=0.0
 			}
 		}
-		create_vbo_and_upload(mesh_vbo, data, 0, 1);
-	}
-	if (ivbo == 0) { // rebuild index vbo
-		unsigned const size(get_tile_size()), stride(size+1);
-		vector<unsigned> indices;
-
 		for (unsigned i = 0, step = 1; i < NUM_LODS; ++i, step <<= 1) {
 			ivbo_ixs[i] = indices.size();
-			unsigned const isz_ceil((size + step - 1)/step);
+			unsigned const isz_ceil((tile_size + step - 1)/step);
 			if (isz_ceil < 2) continue; // too small, don't create LOD for this level (will never be used during rendering)
 
 			for (unsigned y = 0, ny = 0; ny < isz_ceil; y += step, ++ny) {
 				for (unsigned x = 0, nx = 0; nx <= isz_ceil; x += step, ++nx) { // 2 extra to start the strip
 					indices.push_back(y*stride + x);
-					indices.push_back(min(y+step, size)*stride + x);
+					indices.push_back(min(y+step, tile_size)*stride + x);
 				}
 				indices.push_back(PRIMITIVE_RESTART_IX); // restart the strip
 			}
 		} // for i
 		ivbo_ixs[NUM_LODS] = indices.size();
-		create_vbo_and_upload(ivbo, indices, 1, 1);
+		create_and_upload(data, indices, 0, 1); // unbind at end
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		tile_t *const tile(i->second.get());
@@ -1779,15 +1773,10 @@ void tile_draw_t::draw(bool reflection_pass) {
 	to_draw.clear();
 	occluded_tiles.clear();
 
-	if (DEBUG_TILES) {
+	if (DEBUG_TILES && vbo) {
 		unsigned const tile_size(get_tile_size());
-		
-		if (ivbo > 0) {
-			for (unsigned i = 0; i < NUM_LODS; ++i) {
-				mem += 4*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned); // approximate
-			}
-		}
-		if (mesh_vbo > 0) {mem += 2*tile_size*(tile_size+1)*sizeof(point);}
+		mem += 2*tile_size*(tile_size+1)*sizeof(point);
+		for (unsigned i = 0; i < NUM_LODS; ++i) {mem += 4*(tile_size>>i)*(tile_size>>i)*sizeof(unsigned);} // approximate
 	}
 
 	// determine potential occluders
@@ -1890,7 +1879,7 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		if (to_draw[i].second->using_shadow_maps() != enable_shadow_map) continue; // draw in another pass
-		to_draw[i].second->draw(s, mesh_vbo, ivbo, ivbo_ixs, vbo_ring_ibuf, reflection_pass);
+		to_draw[i].second->draw(s, *this, ivbo_ixs, vbo_ring_ibuf, reflection_pass);
 	}
 	if (!enable_shadow_map && !reflection_pass && is_water_enabled()) { // draw all water caps (required, even for occluded tiles)
 		for (auto i = occluded_tiles.begin(); i != occluded_tiles.end(); ++i) {(*i)->draw_water_cap(s, 0);}
@@ -2237,8 +2226,7 @@ void tile_draw_t::update_lightning(bool reflection_pass) {
 void tile_draw_t::clear_vbos_tids() {
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_vbo_tid();}
-	delete_and_zero_vbo(mesh_vbo);
-	delete_and_zero_vbo(ivbo);
+	clear_vbos();
 }
 
 
