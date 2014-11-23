@@ -754,6 +754,7 @@ void display(void) {
 	update_sound_loops();
 	set_multisample(1);
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} else {glDisable(GL_DEPTH_CLAMP);}
+	bind_vao(0); // set to default VAO
 
 	if (world_mode == WMODE_UNIVERSE) {
 		display_universe(); // infinite universe

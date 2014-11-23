@@ -137,6 +137,7 @@ int load_config(string const &config_file);
 bool export_modmap(string const &filename);
 void reset_planet_defaults();
 void invalidate_cached_stars();
+void clear_default_vao();
 
 void verify_wmode(player_state &sstate);
 
@@ -203,6 +204,7 @@ void clear_context() {
 	invalidate_cached_stars();
 	clear_quad_ix_buffer_context();
 	clear_vbo_ring_buffer();
+	clear_default_vao();
 	free_cloud_context();
 	clear_landscape_vbo = 1;
 }
