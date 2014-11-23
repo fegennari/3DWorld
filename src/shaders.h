@@ -62,6 +62,7 @@ public:
 		vnct_locs[0] = vnct_locs[1] = vnct_locs[2] = vnct_locs[3] = -1;
 	}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
+	unsigned get_program() const {return program;} // semi-private, for internal use as map key in vao_cache_t
 
 	void set_vert_shader(string const &vs_name_) {shader_names[0] = vs_name_;}
 	void set_frag_shader(string const &fs_name_) {shader_names[1] = fs_name_;}
@@ -180,6 +181,10 @@ template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 		}
 	}
 };
+
+
+unsigned get_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
+void bind_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
 
 
 #endif // _SHADERS_H_

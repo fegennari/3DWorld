@@ -563,6 +563,37 @@ public:
 shader_manager_t shader_manager;
 
 
+class vao_cache_t {
+
+	typedef map<pair<unsigned, unsigned>, unsigned> vao_map_t;
+	vao_map_t vao_map; // maps {VBO, program} to VAO
+
+public:
+	unsigned get_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr) {
+		assert(vbo); // vbo must be valid
+		if (shader == nullptr) {shader = cur_shader;} // if shader is left as null, we use the current shader
+		pair<unsigned, unsigned> const key(make_pair(vbo, shader->get_program()));
+		vao_map_t::const_iterator it(vao_map.find(key));
+		if (it != vao_map.end()) {return it->second;}
+		unsigned const vao(create_vao());
+		vao_map[key] = vao;
+		return vao;
+	}
+	void bind_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr) {
+		check_bind_vao(get_vao_for_vbo(vbo, shader));
+	}
+	void clear() {
+		for (vao_map_t::iterator i = vao_map.begin(); i != vao_map.end(); ++i) {delete_vao(i->second);}
+		vao_map.clear();
+	}
+};
+
+vao_cache_t vao_cache;
+
+unsigned get_vao_for_vbo(unsigned vbo, shader_t const *shader) {return vao_cache.get_vao_for_vbo(vbo, shader);}
+void bind_vao_for_vbo(unsigned vbo, shader_t const *shader) {vao_cache.bind_vao_for_vbo(vbo, shader);}
+
+
 bool setup_shaders() {
 
 	if (0) {
@@ -590,6 +621,7 @@ void clear_shaders() {
 
 	clear_cached_shaders();
 	shader_manager.clear();
+	vao_cache.clear();
 }
 
 
@@ -599,6 +631,7 @@ void reload_all_shaders() { // clears and reloads *everything*
 	cout << "Reloading all shaders" << endl;
 	clear_cached_shaders();
 	shader_manager.clear_and_reload();
+	vao_cache.clear();
 }
 
 
