@@ -149,7 +149,7 @@ typedef vertex_map_t<vert_norm_tc_tan> vntct_map_t;
 template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 
 
-template<typename T> class vntc_vect_t : public vector<T>, public indexed_vbo_manager_t {
+template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_t {
 
 protected:
 	bool has_tangents, finalized;

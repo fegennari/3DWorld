@@ -52,8 +52,10 @@ unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize);
 void disable_and_free_render_buffer(unsigned &render_buffer);
 bool gen_mipmaps(unsigned dim=2);
 
-inline void delete_and_zero_vbo(unsigned &id) {delete_vbo(id); id = 0;}
+inline void delete_and_zero_vbo(unsigned &vbo) {delete_vbo(vbo); vbo = 0;}
+inline void delete_and_zero_vao(unsigned &vao) {delete_vao(vao); vao = 0;}
 inline void check_bind_vbo(unsigned vbo, bool is_index=0) {assert(vbo); bind_vbo(vbo, is_index);}
+inline void check_bind_vao(unsigned vao) {assert(vao); bind_vao(vao);}
 
 
 // templated vbo management utility functions/classes
@@ -81,7 +83,7 @@ struct indexed_vbo_manager_t {
 	unsigned vbo, ivbo, gpu_mem;
 
 	indexed_vbo_manager_t() : vbo(0), ivbo(0), gpu_mem(0) {}
-	void reset_vbos_to_zero() {vbo = ivbo = gpu_mem = 0;};
+	void reset_vbos_to_zero() {vbo = ivbo = gpu_mem = 0;}
 
 	void clear_vbos() {
 		delete_vbo(vbo);
@@ -102,6 +104,30 @@ struct indexed_vbo_manager_t {
 		bind_vbo(0, 0);
 		bind_vbo(0, 1);
 	}
+};
+
+
+struct indexed_vao_manager_t : public indexed_vbo_manager_t {
+
+	unsigned vao;
+
+	indexed_vao_manager_t() : vao(0) {}
+	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vao = 0;} // virtual?
+	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); delete_and_zero_vao(vao);}
+
+	template<typename vert_type_t, typename index_type_t>
+	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool using_index=1) {
+		if (vao) return; // already set
+		vao = create_vao();
+		check_bind_vao(vao);
+		indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);
+		//indexed_vbo_manager_t::pre_render(using_index);
+		//vert_type_t::set_vbo_arrays();
+		//vert_type_t::unset_attrs();
+		//indexed_vbo_manager_t::post_render();
+	}
+	void pre_render(bool using_index=1) const {check_bind_vao(vao); indexed_vbo_manager_t::pre_render(using_index);}
+	static void post_render() {bind_vao(0); indexed_vbo_manager_t::post_render();}
 };
 
 
