@@ -199,7 +199,7 @@ class tree_data_t {
 	typedef unsigned short branch_index_t;
 #endif
 
-	indexed_vbo_manager_t branch_vbo_manager;
+	indexed_vbo_manager_t branch_manager;
 	unsigned leaf_vbo, num_branch_quads, num_unique_pts;
 	int tree_type;
 	colorRGBA base_color, leaf_color;

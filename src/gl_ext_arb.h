@@ -120,11 +120,11 @@ struct indexed_vao_manager_t : public indexed_vbo_manager_t {
 		check_bind_vao(vao);
 	}
 	template<typename vert_type_t, typename index_type_t>
-	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0, bool using_index=1) {
+	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
 		if (vao) return; // already set
 		ensure_vao_bound();
 		indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);
-		//indexed_vbo_manager_t::pre_render(using_index); // binds vbo/ivbo - may not be necessary
+		//indexed_vbo_manager_t::pre_render(1); // binds vbo/ivbo - may not be necessary
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
 	}
 	void enable_vao() const {check_bind_vao(vao);}

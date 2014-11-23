@@ -740,7 +740,7 @@ inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
 void tree_data_t::clear_vbo_ixs() {
 
 	leaf_vbo = num_branch_quads = num_unique_pts = 0;
-	branch_vbo_manager.reset_vbos_to_zero();
+	branch_manager.reset_vbos_to_zero();
 }
 
 
@@ -748,7 +748,7 @@ void tree_data_t::clear_context() {
 
 	render_leaf_texture.free_context();
 	render_branch_texture.free_context();
-	branch_vbo_manager.clear_vbos();
+	branch_manager.clear_vbos();
 	delete_vbo(leaf_vbo);
 	clear_vbo_ixs();
 }
@@ -756,7 +756,7 @@ void tree_data_t::clear_context() {
 
 unsigned tree_data_t::get_gpu_mem() const {
 
-	unsigned mem(branch_vbo_manager.gpu_mem + (leaf_vbo ? leaf_data.size()*sizeof(leaf_vert_type_t) : 0));
+	unsigned mem(branch_manager.gpu_mem + (leaf_vbo ? leaf_data.size()*sizeof(leaf_vert_type_t) : 0));
 	unsigned const bbsz(TREE_BILLBOARD_SIZE*TREE_BILLBOARD_SIZE*8); // 8 bytes per pixel
 	if (render_leaf_texture.is_valid  ()) {mem += bbsz;}
 	if (render_branch_texture.is_valid()) {mem += bbsz;}
@@ -945,8 +945,8 @@ template <typename T> void add_cylin_indices_tris(vector<T> &idata, unsigned ndi
 
 void tree_data_t::ensure_branch_vbo() {
 
-	if (branch_vbo_manager.vbo != 0) return; // vbos already created
-	assert(branch_vbo_manager.ivbo == 0);
+	if (branch_manager.vbo != 0) return; // vbos already created
+	assert(branch_manager.ivbo == 0);
 	assert(num_branch_quads == 0 && num_unique_pts == 0);
 	vector<branch_vert_type_t> data; // static/reused?
 	vector<branch_index_t> idata;
@@ -994,7 +994,7 @@ void tree_data_t::ensure_branch_vbo() {
 	assert(idix  == 6*num_branch_quads);
 	assert(dix   == data.size());
 	assert(idix2 == idata.size());
-	branch_vbo_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
+	branch_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 }
 
 
@@ -1012,12 +1012,12 @@ void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail) {
 	low_detail = 0; // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
 #endif
 	ensure_branch_vbo();
-	branch_vbo_manager.pre_render();
+	branch_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0);
 	int const index_type((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
 	unsigned const idata_sz(6*num_branch_quads*sizeof(branch_index_t));
 	glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, (low_detail ? 3 : 6)*num, index_type, (void *)(low_detail ? idata_sz : 0));
-	branch_vbo_manager.post_render();
+	branch_manager.post_render();
 }
 
 
