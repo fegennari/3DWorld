@@ -225,7 +225,7 @@ void init_objects() {
 
 	object_types[SFPART].air_factor        = 0.1; // eye, nose, tongue
 	object_types[SFPART].friction_factor   = 0.06;
-	object_types[SFPART].radius            = 0.01;
+	object_types[SFPART].radius            = CAMERA_RADIUS/6.0;
 	object_types[SFPART].lifetime          = 1000;
 	object_types[SFPART].density           = 0.5;
 	object_types[SFPART].elasticity        = 0.9;
