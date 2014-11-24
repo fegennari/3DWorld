@@ -17,7 +17,6 @@
 #include "draw_utils.h"
 #include <set>
 #include <GL/wglew.h> // for wglSwapIntervalEXT
-#include <GLConsole/GLConsole.h>
 
 using namespace std;
 typedef set<unsigned char>::iterator keyset_it;
@@ -99,7 +98,6 @@ set<unsigned char> keys, keyset;
 char game_mode_string[MAX_CHARS] = {"640x480"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 vector<cube_t> smoke_bounds;
-GLConsole gl_console;
 
 // camera variables
 double c_radius(DEF_CRADIUS), c_theta(DEF_CTHETA), c_phi(DEF_CPHI), up_theta(DEF_UPTHETA), camera_y(DEF_CAMY);
@@ -1141,7 +1139,6 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 
 void print_wind() {cout << "wind: "; wind.print(); cout << endl;}
-void draw_gl_console() {gl_console.RenderConsole();}
 int get_map_shift_val() {return int(map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1));}
 
 
@@ -1214,10 +1211,6 @@ keyboard_remap_t kbd_remap;
 
 void keyboard2(int key, int x, int y) {
 
-	if (gl_console.IsOpen()) {
-		gl_console.SpecialFunc(key); // pass all key strokes to the console
-		return;
-	}
 	if (ui_intercept_keyboard(key, 1))   return; // already handled
 	if (!kbd_remap.remap_key(key, 1, 0)) return;
 	add_uevent_keyboard_special(key, x, y);
@@ -1314,7 +1307,7 @@ unsigned char get_key_other_case(unsigned char key) {
 
 void keyboard_up(unsigned char key, int x, int y) {
 
-	if (gl_console.IsOpen() || kbd_text_mode || !KBD_HANDLER || key == 13) return; // ignore text mode and enter key
+	if (kbd_text_mode || !KBD_HANDLER || key == 13) return; // ignore text mode and enter key
 	if (!kbd_remap.remap_key(key, 0, 1)) return;
 	if (keyset.find(key) != keyset.end()) {add_uevent_keyboard_up(key, x, y);}
 	keyset_it it(keys.find(key));
@@ -1354,14 +1347,6 @@ void exec_text(string const &text) {
 
 void keyboard(unsigned char key, int x, int y) {
 
-	if (key == GLCONSOLE_KEY && !use_core_context) { // ~ or ` key opens console on US keyboards.
-		gl_console.ToggleConsole(); // not available in core context mode
-		return;
-	}
-	if (gl_console.IsOpen()) {
-		gl_console.KeyboardFunc(key); // send keystroke to console - not logged by uevent system
-		return;
-    }
 	if (ui_intercept_keyboard(key, 0)) return; // already handled (should this go into keyboard_proc()?)
 
 	if (key == 13) { // enter key - toggle text mode

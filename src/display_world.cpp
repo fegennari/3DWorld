@@ -63,7 +63,6 @@ void update_sound_loops();
 bool indir_lighting_updated();
 point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
-void draw_gl_console();
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -285,7 +284,6 @@ void final_draw(float framerate) {
 
 void swap_buffers_and_redraw() {
 
-	draw_gl_console();
 	glutSwapBuffers();
 	if (animate) {post_window_redisplay();} // before glutSwapBuffers()?
 }
