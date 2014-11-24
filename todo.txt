@@ -13,5 +13,5 @@ Use asteroids for rocks in terrain mode (or just use instancing even in ground m
 Planet lightning
 
 Static + Dynamic shadow maps
-Share planet sphere VBOs when applying heightmap in the vertex shader
 Planet vertex shader heightmap correct normals
+Use more VAOs
