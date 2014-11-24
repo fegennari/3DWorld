@@ -53,7 +53,6 @@ vec3 calc_cloud_coord(in vec3 cloud_vertex) {
 void main()
 {
 	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
-	//if (dot(normal, epos.xyz) > 0.0) discard; // back facing (unnecessary and incorrect for procedural vertex height planets)
 	vec3 norm        = normal;
 	float city_light = 0.0;
 	float spec_mag   = 0.0;
@@ -155,7 +154,6 @@ void main()
 		texel     = mix(texel, vec4(1,1,1,1), val); // ice/snow
 		nscale   *= mix(1.0, 0.25, val);
 	}
-	norm    = fg_NormalMatrix * vertex; // recompute
 	nscale *= nmap_mag;
 
 	if (nscale > 0.0) { // compute normal + bump map
@@ -165,7 +163,7 @@ void main()
 		float hdx   = hval0 - eval_terrain_noise_normal(bpos + vec3(delta, 0.0, 0.0), NORMAL_OCTAVES);
 		float hdy   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, delta, 0.0), NORMAL_OCTAVES);
 		float hdz   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, 0.0, delta), NORMAL_OCTAVES);
-		norm = normalize(norm) + 0.05*nscale*normalize(fg_NormalMatrix * vec3(hdx, hdy, hdz));
+		norm = normalize(norm) + 1.0*nscale*(fg_NormalMatrix * vec3(hdx, hdy, hdz));
 	}
 	if (population > 0.0 && spec_mag < 0.5) {
 		float thresh = 0.38*population - 0.42*texture(cloud_noise_tex, 4.5*spos).r - 1.0;
@@ -179,7 +177,7 @@ void main()
 	}
 #endif // ALL_WATER_ICE
 
-#else
+#else // not PROCEDURAL_DETAIL
 	vec4 texel = texture(tex0, tc);
 	spec_mag   = pow(texel.b, 4.0);
 #endif // PROCEDURAL_DETAIL
@@ -252,7 +250,7 @@ void main()
 		vec3 ldir20  = normalize(fg_LightSource[2].position.xyz - fg_LightSource[0].position.xyz);
 		diffuse += (fg_LightSource[2].diffuse.rgb * dterm2 * lscale2 * light_scale[2] * calc_light_atten(epos, 2) * max(dot(ldir2, ldir20), 0.0));
 	}
-	vec3 color     = (texel.rgb * (ambient + diffuse*(1.0 - cloud_shadow))); // add light cloud shadows
+	vec3 color = (texel.rgb * (ambient + diffuse*(1.0 - cloud_shadow))); // add light cloud shadows
 
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L

@@ -13,5 +13,6 @@ Use asteroids for rocks in terrain mode (or just use instancing even in ground m
 Planet lightning
 
 Static + Dynamic shadow maps
-Planet vertex shader heightmap correct normals
 Use more VAOs
+Static cobjs use vbo
+Use SDL?
