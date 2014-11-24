@@ -27,7 +27,7 @@ void main()
 	float hval = get_delta_h(npos);
 	vertex    *= 1.0 + 0.01*hval;
 	normal     = normalize(fg_NormalMatrix * vertex);
-#if 1 # use derivative at this vertex to get a better quality (but slower) vertex normal
+#if 1 // use derivative at this vertex to get a better quality (but slower) vertex normal
 	float delta = 0.001;
 	float hdx   = hval - get_delta_h(npos + vec3(delta, 0.0, 0.0));
 	float hdy   = hval - get_delta_h(npos + vec3(0.0, delta, 0.0));
