@@ -185,19 +185,24 @@ void tree_lod_render_t::finalize() {
 }
 
 
+void upload_draw_and_clear(vector<vert_color> &pts) {
+	if (!pts.empty()) {upload_to_dynamic_vbo(pts); draw_quads_as_tris(pts.size());}
+	pts.clear();
+}
+
 void tree_lod_render_t::render_billboards(bool render_branches) const {
 
 	vector<entry_t> const &data(render_branches ? branch_vect : leaf_vect);
 	if (data.empty()) return;
 	vector<vert_color> pts;
 	point const camera(get_camera_pos());
-	tree_data_t const *last_td(NULL);
+	tree_data_t const *last_td(nullptr);
 
 	for (vector<entry_t>::const_iterator i = data.begin(); i != data.end(); ++i) {
 		if (i->td != last_td) {
 			assert(i->td);
 			last_td = i->td;
-			draw_quad_verts_as_tris_and_clear(pts);
+			upload_draw_and_clear(pts);
 			(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture()).bind_texture();
 		}
 		point pos(i->pos);
@@ -209,9 +214,10 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 		pts.push_back(vert_color((pos + v1 - v2), i->cw.c));
 		pts.push_back(vert_color((pos + v1 + v2), i->cw.c));
 		pts.push_back(vert_color((pos - v1 + v2), i->cw.c));
-	}
+	} // for i
 	assert(!pts.empty());
-	draw_quad_verts_as_tris(pts);
+	upload_draw_and_clear(pts);
+	bind_vbo(0);
 }
 
 

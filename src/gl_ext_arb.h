@@ -228,6 +228,10 @@ public:
 
 void set_temp_clear_color(colorRGBA const &clear_color);
 
+template< typename T > void upload_to_dynamic_vbo(vector<T> const &v) {
+	T::set_vbo_arrays(1, get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(T)));
+}
+
 
 #endif // _GL_EXT_ARB_H_
 
