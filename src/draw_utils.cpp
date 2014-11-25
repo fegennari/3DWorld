@@ -170,7 +170,7 @@ void vert_norm_texp::unset_attrs() {
 
 
 // required when using a core context, but slow
-vbo_ring_buffer_t vbo_ring_buffer(1 << 20); // 1MB
+vbo_ring_buffer_t vbo_ring_buffer(1 << 23); // 8MB
 
 void clear_vbo_ring_buffer() {vbo_ring_buffer.free_vbo();}
 
