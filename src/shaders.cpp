@@ -983,6 +983,7 @@ class compute_shader_t : public shader_t {
 
 	void draw_geom() const { // factored out so that we can make it virtual and override it in the future
 		float const z = 0.0;
+		bind_vao(0); // bind default VBO in core_context mode - required since this is called outside the display() loop
 		vert_wrap_t verts[4] = {point(0,0,z), point(0,1,z), point(1,1,z), point(1,0,z)};
 		draw_verts(verts, 4, GL_TRIANGLE_FAN); // one quad from [0,0] to [1,1] that exactly covers the viewport
 	}
