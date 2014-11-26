@@ -1170,7 +1170,49 @@ void tile_t::bind_textures() const {
 }
 
 
-void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const {
+void crack_ibuf_t::gen_offsets(vector<unsigned> &indices, unsigned size) {
+
+	offsets.clear();
+	offsets.resize(4*NUM_LODS*NUM_LODS);
+
+	for (unsigned dim = 0; dim < 2; ++dim) { // x,y
+		for (unsigned dir = 0; dir < 2; ++dir) { // lo, hi
+			for (unsigned cur_lod = 0; cur_lod < NUM_LODS; ++cur_lod) {
+				for (unsigned adj_lod = 0; adj_lod < NUM_LODS; ++adj_lod) {
+					ix_sz_pair &ixsz(offsets[get_index(dim, dir, cur_lod, adj_lod)]);
+					ixsz.ix = indices.size();
+					unsigned const step(1 << cur_lod), stride(size+1);
+
+					for (unsigned lod = adj_lod; lod > cur_lod; --lod) { // for all levels of high=>low LOD transitions
+						unsigned const lo_step(1 << lod), hi_step(1 << (lod - 1));
+						unsigned const size_lo_ceil((size + step - 1)/lo_step);
+
+						for (unsigned xy = 0, nxy = 0; nxy < size_lo_ceil; xy += lo_step, ++nxy) {
+							for (unsigned n = 0; n < 3; ++n) { // one triangle
+								if (dim == 0) { // adjacent in x, step in y
+									indices.push_back(min((xy + n*hi_step), size)*stride + dir*size);
+								}
+								else { // adjacent in y, step in x
+									indices.push_back(dir*size*stride + min((xy + n*hi_step), size));
+								}
+							} // for n
+						} // for xy
+					} // for lod
+					ixsz.sz = indices.size() - ixsz.ix; // often 0
+				} // for adj_lod
+			} // for cur_lod
+		} // for dir
+	} // for dim
+}
+
+
+unsigned crack_ibuf_t::get_index(unsigned dim, unsigned dir, unsigned cur_lod, unsigned adj_lod) const {
+	assert(dim < 2 && dir < 2 && cur_lod < NUM_LODS && adj_lod < NUM_LODS);
+	return (NUM_LODS*(NUM_LODS*(2*dim + dir) + cur_lod) + adj_lod);
+}
+
+
+void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass) const {
 
 	assert(size > 0);
 	fgPushMatrix();
@@ -1184,14 +1226,12 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	}
 	if (draw_near_water) {s.add_uniform_vector3d("tc_xlate", xlate);} // for underwater caustics texture
 	shader_shadow_map_setup(s);
-	unsigned const lod_level(get_lod_level(reflection_pass));
-	unsigned const step(1 << lod_level), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
+	unsigned const lod_level(get_lod_level(reflection_pass)), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
 	vbo_mgr.pre_render();
 	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
 	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
-	vector<unsigned> crack_ixs;
-
-	// fill in the cracks
+	
+	// draw cracks
 	for (unsigned dim = 0; dim < 2; ++dim) { // x,y
 		for (unsigned dir = 0; dir < 2; ++dir) { // lo, hi
 			int dx(0), dy(0);
@@ -1199,32 +1239,13 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 			tile_t *adj(get_adj_tile(dx, dy)); // FIXME: handle (is_distant != adj->is_distant)
 			if (adj == NULL) continue; // no adjacent tile
 			//if (!adj->is_visible() || adj->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue;
-
-			for (unsigned adj_lod = adj->get_lod_level(reflection_pass); adj_lod > lod_level; --adj_lod) { // for all levels of high=>low LOD transitions
-				unsigned const lo_step(1 << adj_lod), hi_step(1 << (adj_lod - 1));
-				unsigned const size_lo_ceil((size + step - 1)/lo_step);
-
-				for (unsigned xy = 0, nxy = 0; nxy < size_lo_ceil; xy += lo_step, ++nxy) {
-					for (unsigned n = 0; n < 3; ++n) { // one triangle
-						if (dim == 0) { // adjacent in x, step in y
-							crack_ixs.push_back(min((xy + n*hi_step), size)*stride + dir*size);
-						}
-						else { // adjacent in y, step in x
-							crack_ixs.push_back(dir*size*stride + min((xy + n*hi_step), size));
-						}
-					}
-				}
-			} // for adj_lod
+			ix_sz_pair const &ixsz(crack_ibuf.lookup(crack_ibuf.get_index(dim, dir, lod_level, adj->get_lod_level(reflection_pass))));
+			if (ixsz.sz == 0) continue;
+			glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, ixsz.sz, GL_UNSIGNED_INT, (void *)(ixsz.ix*sizeof(unsigned)));
 		} // for dir
 	} // for dim
-	if (!crack_ixs.empty()) {
-		void const *ptr(vbo_ring_ibuf.add_verts_bind_vbo(&crack_ixs.front(), crack_ixs.size()*sizeof(unsigned)));
-		glDrawRangeElements(GL_TRIANGLES, 0, stride*stride, crack_ixs.size(), GL_UNSIGNED_INT, ptr);
-		bind_vbo(vbo_mgr.ivbo, 1); // back to normal ivbo
-	}
 	bind_vbo(0, 0); // unbind vertex buffer
 	fgPopMatrix();
-
 	if (draw_near_water) {draw_water_cap(s, 1);}
 }
 
@@ -1717,6 +1738,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 			}
 		} // for i
 		ivbo_ixs[NUM_LODS] = indices.size();
+		crack_ibuf.gen_offsets(indices, tile_size);
 		create_and_upload(data, indices, 0, 1); // unbind at end
 	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
@@ -1872,19 +1894,17 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	s.add_uniform_float("spec_scale", 1.0);
 	s.clear_specular(); // in case we failed to clear it somewhere ahead
 	s.enable_vnct_atribs(1, 0, 0, 0);
-	vbo_ring_buffer_t vbo_ring_ibuf((1 << 16), 1);
 	enable_blend(); // for fog transparency
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		if (to_draw[i].second->using_shadow_maps() != enable_shadow_map) continue; // draw in another pass
-		to_draw[i].second->draw(s, *this, ivbo_ixs, vbo_ring_ibuf, reflection_pass);
+		to_draw[i].second->draw(s, *this, ivbo_ixs, crack_ibuf, reflection_pass);
 	}
 	if (!enable_shadow_map && !reflection_pass && is_water_enabled()) { // draw all water caps (required, even for occluded tiles)
 		for (auto i = occluded_tiles.begin(); i != occluded_tiles.end(); ++i) {(*i)->draw_water_cap(s, 0);}
 	}
-	vbo_ring_ibuf.free_vbo();
 	bind_vbo(0, 1); // unbind index buffer
 	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();

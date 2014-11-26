@@ -399,7 +399,6 @@ void end_group(int &last_group_id) {
 }
 
 
-
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 

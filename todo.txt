@@ -13,6 +13,6 @@ Use asteroids for rocks in terrain mode (or just use instancing even in ground m
 Planet lightning
 
 Static + Dynamic shadow maps
-Use more VAOs
 Static cobjs use vbo
+Use more VAOs
 Use SDL?

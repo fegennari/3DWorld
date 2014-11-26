@@ -54,6 +54,21 @@ public:
 };
 
 
+struct ix_sz_pair {
+	unsigned short ix, sz;
+	ix_sz_pair() : ix(0), sz(0) {}
+};
+
+class crack_ibuf_t {
+	vector<ix_sz_pair> offsets;
+
+public:
+	void gen_offsets(vector<unsigned> &indices, unsigned size);
+	unsigned get_index(unsigned dim, unsigned dir, unsigned cur_lod, unsigned adj_lod) const;
+	ix_sz_pair const &lookup(unsigned ix) const {assert(ix < offsets.size()); return offsets[ix];}
+};
+
+
 class tile_t;
 
 struct tile_smap_data_t : public smap_data_t {
@@ -270,7 +285,7 @@ public:
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
 	void shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
 	void bind_textures() const;
-	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], vbo_ring_buffer_t &vbo_ring_ibuf, bool reflection_pass) const;
+	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass) const;
 	void draw_water_cap(shader_t &s, bool textures_already_set) const;
 	void draw_water(shader_t &s, float z) const;
 	bool check_player_collision() const;
@@ -294,6 +309,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	mesh_xy_grid_cache_t height_gen;
 	lightning_strike_t lightning_strike;
 	tree_lod_render_t lod_renderer;
+	crack_ibuf_t crack_ibuf;
 
 	struct occluder_pts_t {
 		point cube_pts[4];
