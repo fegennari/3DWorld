@@ -16,11 +16,11 @@ uniform fg_light_t fg_LightSource[MAX_LIGHTS];
 
 
 vec3 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec3 spec_light_color) {
-	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + L
+	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + Lq
 #ifdef USE_SPEC_MAP
 	spec_light_color *= get_spec_color();
 #endif
-	return spec_light_color * specular_color.rgb * pow(max(dot(normal, half_vect), 0.0001), get_shininess());
+	return spec_light_color * specular_color.rgb * pow(clamp(dot(normal, half_vect), 0.0001, 1.0), get_shininess());
 }
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later
