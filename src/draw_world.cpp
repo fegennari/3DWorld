@@ -921,7 +921,7 @@ template<typename T, typename ARG> void draw_objects(vector<T> const &objs, ARG 
 
 void draw_bubbles() {
 
-	if (bubbles.empty()) return;
+	if (!bubbles.any_active()) return;
 	shader_t s;
 	s.begin_untextured_lit_glcolor_shader();
 	glEnable(GL_CULL_FACE);
@@ -996,7 +996,6 @@ struct ray2d {
 
 void create_and_draw_cracks() { // adds to beams
 
-	if (decals.empty()) return;
 	vector<crack_point> cpts;  // static?
 	vector<ray2d> crack_lines; // static?
 	int last_cobj(-1);
@@ -1091,7 +1090,7 @@ void create_and_draw_cracks() { // adds to beams
 
 void draw_cracks_and_decals() {
 
-	if (decals.empty()) return;
+	if (!decals.any_active()) return;
 	create_and_draw_cracks(); // adds to beams
 	map<int, quad_batch_draw> batches; // maps from {tid, is_black} to quad batches
 	vector<pair<int, unsigned> > sorted_decals;
@@ -1154,13 +1153,14 @@ void draw_cracks_and_decals() {
 
 void draw_smoke_and_fires() {
 
-	if (part_clouds.empty() && fires.empty()) return; // nothing to draw
+	bool const have_part_clouds(part_clouds.any_active());
+	if (!have_part_clouds && !fires.any_active()) return; // nothing to draw
 	shader_t s;
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1);
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
 	set_multisample(0);
 
-	if (!part_clouds.empty()) { // Note: just because part_clouds is nonempty doesn't mean there is any enabled smoke
+	if (have_part_clouds) {
 		draw_part_clouds(part_clouds, 1); // smoke: slow when a lot of smoke is up close
 	}
 	order_vect_t fire_order;

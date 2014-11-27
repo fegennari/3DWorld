@@ -322,6 +322,13 @@ public:
 			ixs.push_back(time_ixs[i].u);
 		}
 	}
+
+	bool any_active() const {
+		for (unsigned i = 0; i < size(); ++i) {
+			if (operator[](i).status) return 1;
+		}
+		return 0;
+	}
 };
 
 
