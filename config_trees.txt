@@ -47,7 +47,7 @@ unlimited_weapons 0
 
 mesh_size  128 128 64
 scene_size 4.0 4.0 4.0
-#shadow_map_sz 4096
+shadow_map_sz 2048
 
 include config_resolution.txt
 

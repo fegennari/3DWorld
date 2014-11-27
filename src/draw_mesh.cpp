@@ -136,21 +136,6 @@ class mesh_vertex_draw {
 		colorRGB color(mesh_color_scale*color_scale);
 		if (using_lightmap) {get_sd_light(j, i, get_zpos(data[c].v.z), &color.R);}
 
-		if (shadow_map_enabled()) {
-			// nothing to do here
-		}
-		else if (light_factor >= 0.6) { // sun shadows
-			light_scale = ((shadow_mask[LIGHT_SUN ][i][j] & SHADOWED_ALL) ? 0.0 : 1.0);
-		}
-		else if (light_factor <= 0.4) { // moon shadows
-			light_scale = ((shadow_mask[LIGHT_MOON][i][j] & SHADOWED_ALL) ? 0.0 : 1.0);
-		}
-		else { // combined sun and moon shadows
-			bool const no_sun ((shadow_mask[LIGHT_SUN ][i][j] & SHADOWED_ALL) != 0);
-			bool const no_moon((shadow_mask[LIGHT_MOON][i][j] & SHADOWED_ALL) != 0);
-			light_scale = blend_light(light_factor, !no_sun, !no_moon);
-		}
-
 		// water light attenuation: total distance from sun/moon, reflected off bottom, to viewer
 		if (!DISABLE_WATER && data[c].v.z < max_water_height && data[c].v.z < water_matrix[i][j]) {
 			point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
@@ -161,17 +146,13 @@ class mesh_vertex_draw {
 				select_liquid_color(wc, j, i);
 				UNROLL_3X(color[i_] *= wc[i_];)
 			}
-			
-			// water caustics: slow and low resolution, but conceptually interesting
-			if (light_scale > 0.0 && !uw_mesh_lighting.empty()) {
+			if (!uw_mesh_lighting.empty()) { // water caustics: slow and low resolution, but conceptually interesting
 				float const val(uw_mesh_lighting[i*MESH_X_SIZE + j].get_val());
 				//light_scale *= val*val; // square to enhance the caustics effect
 				light_scale = pow(val, 8);
 			}
 		}
-		if (!has_snow && light_scale > 0.0 && atmosphere > 0.0) {
-			light_scale *= get_cloud_shadow_atten(j, i);
-		}
+		if (!has_snow && atmosphere > 0.0) {light_scale *= get_cloud_shadow_atten(j, i);}
 		// Note: normal is never set to zero because we need it for dynamic light sources
 		data[c].n = vertex_normals[i][j]*max(light_scale, 0.01f);
 		data[c].set_c3(color);
@@ -183,7 +164,6 @@ public:
 	mesh_vertex_draw(bool shadow_pass_, bool use_vbo_)
 		: healr(fticks*SURF_HEAL_RATE), shadow_pass(shadow_pass_), use_vbo(use_vbo_), vbo(0), vbo_pos(0), data(2*(MAX_XY_SIZE+1)), c(0)
 	{
-		assert(shadow_mask != NULL);
 		assert(!data.empty());
 		last_rows.resize(MESH_X_SIZE+1);
 

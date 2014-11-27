@@ -95,35 +95,11 @@ void add_cobj_shadows(unsigned light_sources) {
 
 	if (ground_effects_level == 0) return; // disabled
 	//RESET_TIME;
-#if 0
-	// two problems with this approach, though this is *much* simpler
-	// 1. tree shadows are only added if tree cobjs are created
-	// 2. the test line will not hit very small cobjs, so shadows will be missed
-	point lpos;
-
-	for (int l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if (!light_valid(light_sources, l, lpos)) continue;
-		
-		for (int y = 0; y < MESH_Y_SIZE; ++y) {
-			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				if (shadow_mask[l][y][x] & OBJECT_SHADOW) continue;
-				point const pos(get_xval(x), get_yval(y), mesh_height[y][x]);
-				int cindex; // unused
-				if (!coll_pt_vis_test(pos, lpos, 0.0, cindex, -1, 1, 3)) shadow_mask[l][y][x] |= OBJECT_SHADOW;
-			}
-		}
-	}
-#else
 	if (!shadow_map_enabled() || t_trees.size() <= 10) { // if using a shadow map, skip the tree shadows since they can be slow
 		#pragma omp parallel for schedule(dynamic,1) // only ~2x faster
-		for (int i = 0; i < (int)t_trees.size(); ++i) {
-			t_trees[i].gen_tree_shadows(light_sources);
-		}
+		for (int i = 0; i < (int)t_trees.size(); ++i) {t_trees[i].gen_tree_shadows(light_sources);}
 	}
-	for (unsigned i = 0; i < coll_objects.size(); ++i) {
-		coll_objects[i].add_shadow(light_sources, 0);
-	}
-#endif
+	for (unsigned i = 0; i < coll_objects.size(); ++i) {coll_objects[i].add_shadow(light_sources, 0);}
 	//PRINT_TIME("Cobj Shadows");
 }
 

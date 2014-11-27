@@ -41,7 +41,7 @@ scene_size 4.0 4.0 4.0
 # scene_size 6.0 6.0 6.0
 
 include config_resolution.txt
-#shadow_map_sz 2048
+shadow_map_sz 2048
 
 state_file state.txt
 mesh_file mesh.txt 1.0 1.0 0
