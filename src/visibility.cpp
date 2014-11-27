@@ -17,7 +17,7 @@ float const NORM_VIS_EXTEND = 0.02;
 point ocean;
 pos_dir_up camera_pdu;
 
-extern bool combined_gu, fast_water_reflect;
+extern bool combined_gu;
 extern int window_width, window_height, do_zoom, display_mode, shadow_detail, ground_effects_level, camera_coll_id, DISABLE_WATER;
 extern float zmin, zmax, czmin, czmax, zbottom, ztop, sun_rot, moon_rot;
 extern point sun_pos, moon_pos, litning_pos;
@@ -414,11 +414,7 @@ void calc_visibility(unsigned light_sources) {
 	}
 	check_update_global_lighting(light_sources);
 	update_sun_and_moon();
-	if (world_mode == WMODE_INF_TERRAIN || DISABLE_SHADOWS || ground_effects_level == 0) return;
-	
-	if (shadow_map_enabled()) { // almost correct, but shadow_mask is still needed for mesh shadow in water reflections
-		if (DISABLE_WATER || fast_water_reflect) return;
-	}
+	if (world_mode == WMODE_INF_TERRAIN || DISABLE_SHADOWS || ground_effects_level == 0 || shadow_map_enabled()) return;
 	point const lpos[NUM_LIGHT_SRC] = {sun_pos, moon_pos};
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
