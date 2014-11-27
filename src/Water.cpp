@@ -495,11 +495,12 @@ void draw_water() {
 	if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 	if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
+	static rand_gen_t rgen;
 	
 	if (!no_grass()) {
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				if (wminside[i][j] == 1 && (rand()&255) == 0 && get_water_enabled(j, i) && !is_mesh_disabled(j, i)) {
+				if (wminside[i][j] == 1 && (rgen.rand()&255) == 0 && get_water_enabled(j, i) && !is_mesh_disabled(j, i)) {
 					modify_grass_at(get_mesh_xyz_pos(j, i), HALF_DXY, 0, 0, 0, 1); // check underwater
 				}
 			}
@@ -549,7 +550,7 @@ void draw_water() {
 				float const z_min(z_min_matrix[i][j]), zval(valleys[wsi].zval), wzval(water_matrix[i][j]), wzmax(max(zval, wzval));
 
 				if (wzmax >= z_min - G_W_STOP_DEPTH) {
-					if (!is_ice && UPDATE_UW_LANDSCAPE && (rand()&63) == 0) {
+					if (!is_ice && UPDATE_UW_LANDSCAPE && (rgen.rand()&63) == 0) {
 						add_hole_in_landscape_texture(j, i, 1.2*fticks*(0.02 + wzmax - z_min));
 					}
 					float delta_area(1.0);
@@ -636,7 +637,7 @@ void draw_water() {
 	s.clear_specular();
 	s.end_shader();
 	update_water_volumes();
-	if (!lc0 && rand()%5 != 0) landscape_changed = 0; // reset, only update landscape 20% of the time
+	if (!lc0 && rgen.rand()%5 != 0) landscape_changed = 0; // reset, only update landscape 20% of the time
 	++wcounter;
 	first_water_run = 0;
 	if (DEBUG_WATER_TIME) {PRINT_TIME("6 Water Draw");}

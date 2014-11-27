@@ -532,12 +532,14 @@ void draw_sides_and_bottom(bool shadow_pass) {
 	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
 	float const x1(-X_SCENE_SIZE), y1(-Y_SCENE_SIZE), x2(X_SCENE_SIZE-DX_VAL), y2(Y_SCENE_SIZE-DY_VAL);
 	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? ROCK_TEX : DIRT_TEX);
+	unsigned const nverts(8*(MESH_X_SIZE + MESH_Y_SIZE - 2) + 4);
 	float xv(x1), yv(y1);
 	shader_t s;
 
 	if (shadow_pass) {
 		s.begin_color_only_shader();
 		vector<vert_wrap_t> verts;
+		verts.reserve(nverts);
 		verts.push_back(point(x1, y1, botz));
 		verts.push_back(point(x1, y2, botz));
 		verts.push_back(point(x2, y2, botz));
@@ -567,6 +569,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE); // with lighting
 		select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
 		vector<vert_norm_tc> verts;
+		verts.reserve(nverts);
 		verts.push_back(vert_norm_tc(point(x1, y1, botz), -plus_z, ts*x1, ts*y1));
 		verts.push_back(vert_norm_tc(point(x1, y2, botz), -plus_z, ts*x1, ts*y2));
 		verts.push_back(vert_norm_tc(point(x2, y2, botz), -plus_z, ts*x2, ts*y2));
