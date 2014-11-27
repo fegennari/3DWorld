@@ -45,20 +45,6 @@ void update_sun_and_moon();
 bool light_valid(unsigned light_sources, int l, point &lpos);
 bool light_valid_and_enabled(int l, point &lpos);
 
-// function prototypes - shadows
-void add_cobj_shadows(unsigned light_sources);
-void camera_shadow(point const &camera);
-int  get_shape_shadow_bb(point const *points, int npoints, int l, int quality, point const &lpos,
-	int &xmin, int &ymin, int &xmax, int &ymax, int &ret_val, unsigned char stype);
-void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir);
-void dynamic_sphere_shadow(point const &pos, float radius, unsigned light_sources, int quality);
-int  sphere_shadow(point const &pos, float radius, unsigned light_sources, int is_dynamic, int quality);
-int  cylinder_shadow(point p1, point p2, float radius1, float radius2, unsigned light_sources, int shadow_ends, int is_dynamic, int quality);
-int  polygon_shadow(point const *points, vector3d const &norm, int npoints, float thick, unsigned light_sources,
-					int is_dynamic, int quality, int is_cube, int tid=-1);
-int  cube_shadow(cube_t const &cube, unsigned light_sources, int is_dynamic, int quality);
-void reset_shadows(unsigned char type);
-
 // function prototypes - mesh_intersect
 bool sphere_visible_to_pt(point const &pt, point const &center, float radius);
 bool is_visible_from_light(point const &pos, point const &lpos, int fast);
@@ -415,6 +401,7 @@ bool line_sphere_int(vector3d const &v1, point const &p1, point const &center, f
 bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc, float radius, float &rad, float &dist, float &t);
 bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const &c);
 void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from, float radius, unsigned num_pts);
+void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir);
 bool line_torus_intersect(point const &p1, point const &p2, point const &tc, float ri, float ro, float &t);
 bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro, point &p_int, vector3d &norm, bool calc_int);
 bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube);

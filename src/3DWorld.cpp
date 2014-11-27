@@ -22,7 +22,6 @@ using namespace std;
 typedef set<unsigned char>::iterator keyset_it;
 
 
-int const DEF_SD           = 0; // shadow detail, max is 6
 int const INIT_DMODE       = 0x010F;
 int const P_MOTION_DEF     = 0;
 int const KBD_HANDLER      = 1;
@@ -74,7 +73,7 @@ int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), cam
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
 int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), verbose_mode(0), leaf_color_changed(0);
-int shadow_detail(DEF_SD), do_zoom(0), disable_universe(0), disable_inf_terrain(0);
+int do_zoom(0), disable_universe(0), disable_inf_terrain(0);
 int num_trees(0), num_smileys(1), gmww(640), gmwh(480), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
@@ -475,7 +474,7 @@ void change_terrain_zoom(float val) {
 
 	if (!(display_mode & 0x01)) { // mesh not enabled - only scale trees
 		tree_scale /= val;
-		regen_trees(1, 0);
+		regen_trees(0);
 		build_cobj_tree();
 		gen_grass(0);
 		clear_tiled_terrain();
@@ -530,7 +529,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = universe, 3 =
 	obj_pld.free_mem();
 	glDrawBuffer(GL_BACK);
 	post_window_redisplay();
-	if (world_mode == WMODE_GROUND && combined_gu) {regen_trees(1, 0);}
+	if (world_mode == WMODE_GROUND && combined_gu) {regen_trees(0);}
 }
 
 
@@ -704,7 +703,7 @@ void change_tree_mode() {
 #else
 		remove_small_tree_cobjs();
 		remove_tree_cobjs();
-		regen_trees(1, 0); // Note: won't regen trees if num_trees == 0, won't reset mesh shadows
+		regen_trees(0); // Note: won't regen trees if num_trees == 0, won't reset mesh shadows
 #endif
 	}
 }
@@ -933,7 +932,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 			if (world_mode == WMODE_GROUND) {
 				//gen_scenery();
-				//regen_trees(1, 0);
+				//regen_trees(0);
 				//compute_volume_matrix(); // make lightning strike the new tree(s)
 				gen_scene(0, 1, 1, 0, 1);
 			}
@@ -967,7 +966,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			}
 			if (world_mode == WMODE_GROUND) { // not TT
 				remove_tree_cobjs();
-				regen_trees(1, 0);
+				regen_trees(0);
 				build_cobj_tree();
 				gen_grass(1);
 			}
@@ -1545,7 +1544,6 @@ int load_config(string const &config_file) {
 	kwmi.add("read_landscape", read_landscape);
 	kwmi.add("read_heightmap", read_heightmap);
 	kwmi.add("ground_effects_level", ground_effects_level);
-	kwmi.add("shadow_detail", shadow_detail);
 	kwmi.add("tree_coll_level", tree_coll_level);
 	kwmi.add("free_for_all", free_for_all);
 	kwmi.add("num_dodgeballs", num_dodgeballs);

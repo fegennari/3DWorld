@@ -445,12 +445,20 @@ void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from
 	for (unsigned i = 0; i < num_pts; ++i) { // center, z+, xy-, xy+, z-
 		qp[i] = pos;
 		
-		if (i == 1 || i == 4) {
-			qp[i].z += ((i == 1) ? radius : -radius);
-		}
-		else if (i == 2 || i == 3) {
-			qp[i] += vortho*((i == 2) ? radius : -radius);
-		}
+		if      (i == 1 || i == 4) {qp[i].z += ((i == 1) ? radius : -radius);}
+		else if (i == 2 || i == 3) {qp[i] += vortho*((i == 2) ? radius : -radius);}
+	}
+}
+
+
+void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir) {
+
+	vector3d const v1(cross_product(plus_z, dir).get_norm());
+	vector3d const v2(cross_product(v1,     dir).get_norm());
+
+	for (unsigned i = 0; i < npts; ++i) {
+		float const theta(TWO_PI*i/npts);
+		pts[i] = pos + v1*(sinf(theta)*radius) + v2*(cosf(theta)*radius);
 	}
 }
 

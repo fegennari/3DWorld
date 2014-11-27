@@ -113,7 +113,6 @@ extern ripple_state **ripples;
 extern char      **mesh_draw;
 extern char      **water_enabled;
 extern short     ***volume_matrix;
-extern unsigned char ***shadow_mask;
 
 
 inline float get_xval(int xpos)  {return -X_SCENE_SIZE + DX_VAL*xpos;}

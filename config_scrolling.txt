@@ -22,7 +22,6 @@ mesh_scale 1.0
 camera_height 0.0
 tree_size 1.0
 sun_rot 0.4
-shadow_detail 6
 tree_coll_level 2
 default_ground_tex -1
 ground_effects_level 9

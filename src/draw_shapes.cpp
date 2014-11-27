@@ -350,7 +350,6 @@ void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
 
 
 void add_shadow_obj(point const &pos, float radius, int coll_id) {
-
 	shadow_objs.push_back(shadow_sphere(pos, radius, coll_id));
 }
 

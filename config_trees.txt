@@ -30,7 +30,6 @@ mesh_scale 1.0
 camera_height 0.0
 tree_size 1.0
 sun_rot 0.4
-shadow_detail 7
 tree_coll_level 0
 default_ground_tex -1
 # mesh_seed 1

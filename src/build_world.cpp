@@ -220,7 +220,6 @@ void process_platforms() {
 			assert(*i < coll_objects.size());
 			coll_obj const &cobj(coll_objects[*i]);
 			assert(cobj.platform_id >= 0);
-			if (cobj.dynamic_shadows_only()) cobj.add_shadow((SUN_SHADOW | MOON_SHADOW), 1);
 		}
 	}
 }
@@ -259,7 +258,6 @@ void process_groups() {
 	if (display_mode & 0x0200) {
 		d_part_sys.create_particles(NUM_DYNAM_PARTS, 1);
 		d_part_sys.apply_physics();
-		d_part_sys.add_mesh_shadows();
 		d_part_sys.add_light();
 	}
 	set_global_state();
@@ -476,9 +474,6 @@ void process_groups() {
 						cp.cf_index = j;
 						obj.coll_id = add_coll_sphere(pos, radius, cp);
 					}
-					if (type != CHUNK && (type != S_BALL || obj.status == 1) && objg.obj_has_shadow(j)) { // too slow for all chunks and small balls
-						dynamic_sphere_shadow(pos, radius, CHECK_ALL_SHADOW, 0);
-					}
 				}
 				if (obj_flags & CAMERA_VIEW) {
 					if (camera_reset) {
@@ -584,7 +579,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	}
 	if (num_trees > 0) {
 		if (!inf_terrain && gen_trees) {
-			regen_trees((gen_trees == 2), 1);
+			regen_trees(1);
 			PRINT_TIME("Tree generation");
 		}
 		else {

@@ -24,7 +24,7 @@ small_tree_group small_trees;
 small_tree_group tree_instances;
 pt_line_drawer tree_scenery_pld;
 
-extern int window_width, shadow_detail, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
+extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern unsigned max_unique_trees;
 extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh;
@@ -174,20 +174,15 @@ void small_tree_group::add_cobjs_range(iterator b, iterator e) {
 	assert(b < e && e <= end());
 	cobj_params cp      (0.65, GREEN, DRAW_COBJS, 0, NULL, 0, -1);
 	cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, -1);
-	cp.shadow       = (shadow_detail >= 5);
-	cp_trunk.shadow = (shadow_detail >= 6);
-
-	for (iterator i = b; i < e; ++i) {
-		i->add_cobjs(cp, cp_trunk);
-	}
+	cp.shadow       = 0;
+	cp_trunk.shadow = 0;
+	for (iterator i = b; i < e; ++i) {i->add_cobjs(cp, cp_trunk);}
 }
 
 
 void small_tree_group::remove_cobjs() {
 
-	for (iterator i = begin(); i != end(); ++i) {
-		i->remove_cobjs();
-	}
+	for (iterator i = begin(); i != end(); ++i) {i->remove_cobjs();}
 }
 
 

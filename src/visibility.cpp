@@ -18,7 +18,7 @@ point ocean;
 pos_dir_up camera_pdu;
 
 extern bool combined_gu;
-extern int window_width, window_height, do_zoom, display_mode, shadow_detail, ground_effects_level, camera_coll_id, DISABLE_WATER;
+extern int window_width, window_height, do_zoom, display_mode, camera_coll_id, DISABLE_WATER;
 extern float zmin, zmax, czmin, czmax, zbottom, ztop, sun_rot, moon_rot;
 extern point sun_pos, moon_pos, litning_pos;
 extern obj_type object_types[];
@@ -397,7 +397,7 @@ void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, uns
 	bool const all_shadowed(!no_shadow && lpos.z < zmin);
 	unsigned char const val(all_shadowed ? MESH_SHADOW : 0);
 	for (int i = 0; i < xsize*ysize; ++i) {smask[i] = val;}
-	if (shadow_detail == 0 || no_shadow || FAST_VISIBILITY_CALC == 3) return;
+	if (no_shadow || FAST_VISIBILITY_CALC == 3) return;
 	if (lpos.x == 0.0 && lpos.y == 0.0) return; // straight down = no mesh shadows
 	mesh_shadow_gen(mh, smask, xsize, ysize, sh_in_x, sh_in_y, sh_out_x, sh_out_y).run(lpos);
 }
@@ -406,24 +406,8 @@ void calc_mesh_shadows(unsigned l, point const &lpos, float const *const mh, uns
 void calc_visibility(unsigned light_sources) {
 
 	if (world_mode == WMODE_UNIVERSE) return;
-	RESET_TIME;
-
-	if (light_sources & TREE_ONLY) {
-		add_cobj_shadows(light_sources);
-		return;
-	}
 	check_update_global_lighting(light_sources);
 	update_sun_and_moon();
-	if (world_mode == WMODE_INF_TERRAIN || DISABLE_SHADOWS || ground_effects_level == 0 || shadow_map_enabled()) return;
-	point const lpos[NUM_LIGHT_SRC] = {sun_pos, moon_pos};
-
-	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
-		if (!(light_sources & (1 << l))) continue;
-		// we use the first element of mesh_height and shadow_mask assuming they are allocated as one large array
-		calc_mesh_shadows(l, lpos[l], mesh_height[0], shadow_mask[l][0], MESH_X_SIZE, MESH_Y_SIZE);
-	}
-	add_cobj_shadows(light_sources);
-	PRINT_TIME(" Shadow");
 }
 
 

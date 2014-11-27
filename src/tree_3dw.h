@@ -304,7 +304,6 @@ public:
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0);
 	void calc_leaf_shadows();
-	void gen_tree_shadows(unsigned light_sources) const;
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
@@ -380,7 +379,7 @@ float get_tree_z_bottom(float z, point const &pos);
 void remove_tree_cobjs();
 void draw_trees(bool shadow_only=0);
 void delete_trees();
-void regen_trees(bool recalc_shadows, bool keep_old);
+void regen_trees(bool keep_old);
 void shift_trees(vector3d const &vd);
 void add_tree_cobjs();
 void clear_tree_context();

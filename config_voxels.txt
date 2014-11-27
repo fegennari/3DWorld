@@ -26,7 +26,6 @@ mesh_height 1.0
 mesh_scale 2.0
 camera_height 0.0
 sun_rot 0.4
-shadow_detail 7
 destroy_thresh 0
 cobj_z_bias 0.001
 

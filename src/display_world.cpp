@@ -611,7 +611,6 @@ void scroll_scene() {
 	yoff2        += dy_scroll;
 	shift_all_objs(vd);
 	//PRINT_TIME("*** Top Level: Shift All Objects");
-	reset_shadows(SHADOWED_ALL);
 	gen_scene(1, 1, 1, 0, 0);
 	//PRINT_TIME("*** Top Level: Gen Scene");
 	regen_lightmap(); // not shiftable
@@ -866,7 +865,6 @@ void display(void) {
 			if (TIMETEST) PRINT_TIME("D");
 
 			// run physics and collision detection
-			reset_shadows(DYNAMIC_SHADOW);
 			process_groups();
 			check_gl_error(12);
 			if (TIMETEST) PRINT_TIME("E");
@@ -877,7 +875,6 @@ void display(void) {
 			if (TIMETEST) PRINT_TIME("F");
 
 			// create shadow map
-			if (!camera_view) {camera_shadow(camera);}
 			create_shadow_map(); // where should this go?
 			if (TIMETEST) PRINT_TIME("G");
 

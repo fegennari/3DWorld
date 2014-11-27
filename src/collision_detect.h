@@ -117,8 +117,6 @@ public:
 	int  is_anchored() const;
 	void shift_by(vector3d const &vd, bool force=0, bool no_texture_offset=0);
 	void add_to_platform() const;
-	bool dynamic_shadows_only() const;
-	void add_shadow(unsigned light_sources, bool dynamic) const;
 	bool cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const;
 	bool operator<(const coll_obj &cobj) const {return (volume < cobj.volume);} // sort by size
 	bool equal_params(const coll_obj &c) const {return (type == c.type && status == c.status &&

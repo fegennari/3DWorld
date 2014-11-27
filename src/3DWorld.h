@@ -1442,19 +1442,13 @@ enum {LIGHTING_SKY=0, LIGHTING_GLOBAL, LIGHTING_LOCAL, NUM_LIGHTING_TYPES};
 
 // shadow mask bits
 #define MESH_SHADOW      0x02
-#define DYNAMIC_SHADOW   0x04 // such as objects
-#define OBJECT_SHADOW    0x40
-
 #define SHADOWED_ALL     0xCF
 
 // light sources
 enum {LIGHT_SUN = 0, LIGHT_MOON, NUM_LIGHT_SRC};
 
-#define SUN_SHADOW       0x01
-#define MOON_SHADOW      0x02
-#define TREE_ONLY        0x08
-#define CHECK_ALL_SHADOW 0x03
-
+#define SUN_SHADOW  0x01
+#define MOON_SHADOW 0x02
 
 #define EF_Z1  0x01
 #define EF_Z2  0x02

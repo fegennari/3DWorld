@@ -31,7 +31,6 @@ tree_size 1.0
 sun_rot 0.4
 cobj_z_bias 0.001
 indir_vert_offset 0.8
-shadow_detail 7
 tree_coll_level 4
 default_ground_tex -1
 # mesh_seed 1

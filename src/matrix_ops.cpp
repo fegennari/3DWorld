@@ -45,7 +45,6 @@ ripple_state **ripples = NULL;
 char      **mesh_draw = NULL;
 char      **water_enabled = NULL;
 short     ***volume_matrix = NULL;
-unsigned char ***shadow_mask = NULL;
 
 extern bool last_int, mesh_invalidated;
 extern int world_mode, MAX_RUN_DIST, xoff, yoff, I_TIMESCALE2, DISABLE_WATER;
@@ -112,7 +111,6 @@ void alloc_matrices() { // called at the beginning of main()
 	matrix_gen_2d(surface_damage);
 	matrix_gen_2d(ripples);
 	matrix_gen_3d(volume_matrix, MESH_Z_SIZE);
-	matrix_gen_3d(shadow_mask,   NUM_LIGHT_SRC);
 	matrix_gen_2d(wat_surf_normals, MESH_X_SIZE, 2); // only two rows
 	matrix_alloced = 1;
 }
@@ -139,7 +137,6 @@ void delete_matrices() { // called at the end of main()
 	matrix_delete_2d(surface_damage);
 	matrix_delete_2d(ripples);
 	matrix_delete_3d(volume_matrix, MESH_Z_SIZE);
-	matrix_delete_3d(shadow_mask,   NUM_LIGHT_SRC);
 	matrix_alloced = 0;
 }
 
@@ -154,10 +151,6 @@ void compute_matrices() {
 	matrix_clear_2d(surface_damage);
 	matrix_clear_2d(ripples);
 	matrix_clear_2d(spillway_matrix);
-	
-	for (int i = 0; i < NUM_LIGHT_SRC; ++i) {
-		matrix_clear_2d(shadow_mask[i]);
-	}
 	remove_all_coll_obj();
 
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {

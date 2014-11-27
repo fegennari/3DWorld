@@ -57,7 +57,7 @@ tree_cont_t t_trees(tree_data_manager);
 
 
 extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled;
-extern int shadow_detail, num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
+extern int num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh;
 extern lightning l_strike;
@@ -244,31 +244,6 @@ bool tree::is_over_mesh() const {
 }
 
 
-void tree::gen_tree_shadows(unsigned light_sources) const {
-
-	if (shadow_detail < 2 || !physics_enabled()) return;
-	// Note: not entirely correct since an off mesh tree can still cast a shadow on the mesh
-	if (!is_over_mesh()) return; // optimization
-	tree_data_t const &td(tdata());
-	vector<draw_cylin> const &cylins(td.get_all_cylins());
-
-	for (unsigned i = 0; i < cylins.size(); i++) {
-		draw_cylin const &c(cylins[i]);
-		if ((c.level + 2) > shadow_detail) return;
-		cylinder_shadow(c.p1+tree_center, c.p2+tree_center, c.r1, c.r2, light_sources, 0, 0, (c.level < 2));
-	}
-	if (shadow_detail < 6) return;
-	int const ltid(tree_types[type].leaf_tex);
-	vector<tree_leaf> const &leaves(td.get_leaves());
-	
-	for (unsigned i = 0; i < leaves.size(); i++) { // loop through leaves
-		point pts[4];
-		get_abs_leaf_pts(pts, i);
-		polygon_shadow(pts, leaves[i].norm, 4, 0.0, light_sources, 0, 0, 0, ltid);
-	}
-}
-
-
 void tree::add_tree_collision_objects() {
 
 	//RESET_TIME;
@@ -278,7 +253,7 @@ void tree::add_tree_collision_objects() {
 	assert(type < NUM_TREE_TYPES);
 	int const btid(tree_types[type].bark_tex), branch_coll_level(min(tree_coll_level, 4));
 	cobj_params cp(0.8, tree_types[type].barkc, 0, 0, NULL, 0, btid, 4.0, 1, 0);
-	cp.shadow = 0; // will be handled by gen_tree_shadows()
+	cp.shadow = 0;
 	assert(branch_cobjs.empty());
 	vector<draw_cylin> const &cylins(tdata().get_all_cylins());
 
@@ -2141,13 +2116,12 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 }
 
 
-void regen_trees(bool recalc_shadows, bool keep_old) {
+void regen_trees(bool keep_old) {
 
 	cout << "vegetation: " << vegetation << endl;
 	RESET_TIME;
 	static int init(0), last_rgi(0), last_xoff2(0), last_yoff2(0);
 	static float last_ts(0.0);
-	if (tree_mode && recalc_shadows) {reset_shadows(OBJECT_SHADOW);}
 	
 	if (tree_mode & 2) {
 		gen_small_trees();
@@ -2158,7 +2132,6 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 	if ((tree_mode & 1) && num_trees > 0) {
 		if (keep_old && init && last_rgi == rand_gen_index && last_xoff2 == xoff2 && last_yoff2 == yoff2 && last_ts == tree_scale)
 		{ // keep old trees
-			if (recalc_shadows) calc_visibility(SUN_SHADOW | MOON_SHADOW | TREE_ONLY);
 			add_tree_cobjs();
 			PRINT_TIME(" gen tree fast");
 			return;
@@ -2180,7 +2153,6 @@ void regen_trees(bool recalc_shadows, bool keep_old) {
 		last_ts    = tree_scale;
 		init       = 1;
 	}
-	if (recalc_shadows) calc_visibility(SUN_SHADOW | MOON_SHADOW | TREE_ONLY);
 	PRINT_TIME(" Gen Trees");
 }
 

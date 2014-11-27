@@ -121,10 +121,6 @@ void dynamic_particle::add_cobj_shadows() const { // cobjs, dynamic objects
 	add_shadow_obj(pos, radius, -1);
 }
 
-void dynamic_particle::add_mesh_shadows() const {
-	dynamic_sphere_shadow(pos, radius, CHECK_ALL_SHADOW, 0); // sphere_shadow? quality?
-}
-
 void dynamic_particle::add_cobj() {
 	if (ADD_DP_COBJS) {cid = add_coll_sphere(pos, radius, cobj_params(0.7, color, 0, 1));}
 }
@@ -172,20 +168,11 @@ void dynamic_particle_system::apply_physics(float stepsize) {
 
 
 void dynamic_particle_system::add_light() const {
-	
 	for (unsigned i = 0; i < size(); ++i) {particles[i].add_light();}
 }
 
-
 void dynamic_particle_system::add_cobj_shadows() const {
-	
 	for (unsigned i = 0; i < size(); ++i) {particles[i].add_cobj_shadows();}
-}
-
-
-void dynamic_particle_system::add_mesh_shadows() const {
-	
-	for (unsigned i = 0; i < size(); ++i) {particles[i].add_mesh_shadows();}
 }
 
 
