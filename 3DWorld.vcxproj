@@ -866,6 +866,7 @@
     <None Include="shaders\clouds.vert" />
     <None Include="shaders\cloud_billboard.frag" />
     <None Include="shaders\cloud_sphere.vert" />
+    <None Include="shaders\cloud_sphere_shadow.part.frag" />
     <None Include="shaders\common_header.frag" />
     <None Include="shaders\common_header.geom" />
     <None Include="shaders\common_header.vert" />

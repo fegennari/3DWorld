@@ -295,13 +295,12 @@ struct water_vertex_calc_t {
 
 	void calc_vertex_cn(vert_norm_color &vnc, int i, int j, colorRGBA const &color_in) {
 		assert(!point_outside_mesh(j, i));
-		vector3d const &n(wat_vert_normals[i][j]);
-		vnc.n = n*(0.5 + 0.5*get_cloud_shadow_atten(j, i)); // shadows on water are less strong (due to high specular - not that it really helps)
+		vnc.n = wat_vert_normals[i][j];
 		colorRGBA color(color_in); // note that the texture is blue, so that's why the color is more whiteish
 
 		if (!(display_mode & 0x20) && !has_snow && vnc.v.z > mesh_height[i][j]) { // calculate water reflection and blend into color
 			point const camera(get_camera_pos());
-			if (camera.z > vnc.v.z) {blend_reflection_color(vnc.v, color, n, camera);} // below the camera
+			if (camera.z > vnc.v.z) {blend_reflection_color(vnc.v, color, vnc.n, camera);} // below the camera
 		}
 		if (using_lightmap) {get_sd_light(j, i, get_zpos(vnc.v.z), (float *)&color);}
 		vnc.set_c4(color);

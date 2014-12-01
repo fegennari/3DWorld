@@ -537,7 +537,7 @@ vec3 draw_planet(in vec3 vertex, in vec3 normal, in vec3 light_dir, in vec3 sun_
 		float hdx   = hval0 - eval_terrain_noise_normal(bpos + vec3(delta, 0.0, 0.0));
 		float hdy   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, delta, 0.0));
 		float hdz   = hval0 - eval_terrain_noise_normal(bpos + vec3(0.0, 0.0, delta));
-		norm = normalize(norm) + 0.05*nscale*normalize(vec3(hdx, hdy, hdz));
+		norm        = normalize(norm) + 1.0*nscale*vec3(hdx, hdy, hdz);
 	}
 	if (population > 0.0 && spec_mag < 0.5) {
 		float thresh = 0.38*population - 0.42*simplex(4.5*spos) - 1.0;

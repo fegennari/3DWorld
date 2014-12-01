@@ -34,6 +34,7 @@ mesh_size  128 128 64
 scene_size 4.0 4.0 4.0
 # mesh_size  192 192 64
 # scene_size 6.0 6.0 6.0
+shadow_map_sz 2048
 
 include config_resolution.txt
 

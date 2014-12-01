@@ -664,8 +664,21 @@ colorRGBA get_cloud_color() {
 
 
 void get_avg_sky_color(colorRGBA &avg_color) {
-
 	blend_color(avg_color, colorRGBA(get_cloud_color(), 1.0), bkg_color, 0.5, 1);
+}
+
+
+void set_cloud_intersection_shader(shader_t &s) {
+
+	s.add_uniform_vector3d("sun_pos",  sun_pos);
+	s.add_uniform_vector3d("moon_pos", moon_pos);
+	s.add_uniform_vector3d("sphere_center", cur_spo.center);
+	s.add_uniform_float   ("sphere_radius", cur_spo.radius);
+	s.add_uniform_float   ("atmosphere", atmosphere);
+	s.add_uniform_float   ("dx", cur_spo.dx);
+	s.add_uniform_float   ("dy", cur_spo.dy);
+	s.add_uniform_int("cloud_tex", 2);
+	select_multitex(CLOUD_TEX, 2, 1);
 }
 
 

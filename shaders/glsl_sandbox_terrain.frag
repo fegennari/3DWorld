@@ -197,7 +197,8 @@ vec3 draw_terrain(in vec2 vertex, in vec3 light_dir) {
 	float delta = 0.001;
 	float hdx   = hval - eval_terrain_noise(spos + vec2(delta, 0.0));
 	float hdy   = hval - eval_terrain_noise(spos + vec2(0.0, delta));
-	vec3 norm   = normalize(mix(vec3(0.0, 0.0, 1.0), normalize(vec3(hdx, hdy, 0.1)), nscale));
+	//vec3 norm   = normalize(mix(vec3(0.0, 0.0, 1.0), normalize(vec3(hdx, hdy, 0.1)), nscale));
+	vec3 norm   = normalize(mix(vec3(0.0, 0.0, 1.0), vec3(hdx, hdy, 0.1), nscale));
 
 	// cloud shadows
 	vec2 cloud_pos = vertex + cloud_height*light_dir.xy;

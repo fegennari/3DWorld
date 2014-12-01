@@ -50,6 +50,7 @@ extern water_params_t water_params;
 
 
 void draw_sides_and_bottom(bool shadow_pass);
+void set_cloud_intersection_shader(shader_t &s);
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -152,7 +153,6 @@ class mesh_vertex_draw {
 				light_scale = pow(val, 8);
 			}
 		}
-		if (!has_snow && atmosphere > 0.0) {light_scale *= get_cloud_shadow_atten(j, i);}
 		// Note: normal is never set to zero because we need it for dynamic light sources
 		data[c].n = vertex_normals[i][j]*max(light_scale, 0.01f);
 		data[c].set_c3(color);
@@ -379,15 +379,18 @@ void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled
 }
 
 
+// tu_ids used: 0 = diffuse map, 1 = detail map, 2 = cloud shadow texture, 11 = detail normal map
 void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 
+	bool const cloud_shadows(!has_snow && atmosphere > 0.0 && ground_effects_level >= 2);
 	s.setup_enabled_lights(2, 2); // FS
 	set_dlights_booleans(s, 1, 1); // FS
 	s.check_for_fog_disabled();
+	if (cloud_shadows) {s.set_prefix("#define ENABLE_CLOUD_SHADOWS", 1);} // FS
 	setup_detail_normal_map_prefix(s, detail_normal_map);
 	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 	s.set_vert_shader("texture_gen.part+draw_mesh");
-	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+detail_normal_map.part+draw_mesh");
+	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+detail_normal_map.part+cloud_sphere_shadow.part+draw_mesh");
 	s.begin_shader();
 	if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
 	s.setup_fog_scale();
@@ -396,6 +399,7 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 1);
 	if (detail_normal_map) {setup_detail_normal_map(s, 2.0);}
+	if (cloud_shadows    ) {set_cloud_intersection_shader(s);}
 }
 
 

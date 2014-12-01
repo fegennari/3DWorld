@@ -14,10 +14,22 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 void main()
 {
 	vec3 lit_color = vec3(0.0);
-	if (enable_light0) lit_color += add_light_comp_pos_smap_light0(eye_norm, epos).rgb;
-	if (enable_light1) lit_color += add_light_comp_pos_smap_light1(eye_norm, epos).rgb;
-	lit_color = clamp(lit_color, 0.0, 1.0);
-	if (enable_dlights) lit_color.rgb += add_dlights(dlpos, normalize(normal), vec3(1.0)); // dynamic lighting
+	float nscale   = 1.0;
+
+	if (enable_light0) {
+#ifdef ENABLE_CLOUD_SHADOWS
+		nscale = get_cloud_transparency(dlpos, sun_pos);
+#endif
+		lit_color += add_light_comp_pos_smap_light0(eye_norm*nscale, epos).rgb;
+	}
+	if (enable_light1) {
+#ifdef ENABLE_CLOUD_SHADOWS
+		nscale = get_cloud_transparency(dlpos, moon_pos);
+#endif
+		lit_color += add_light_comp_pos_smap_light1(eye_norm*nscale, epos).rgb;
+	}
+	lit_color  = clamp(lit_color, 0.0, 1.0);
+	if (enable_dlights) {lit_color.rgb += add_dlights(dlpos, normalize(normal), vec3(1.0));} // dynamic lighting
 	lit_color *= texture(tex0, tc).rgb;
 
 #ifdef MULT_DETAIL_TEXTURE // for mesh
