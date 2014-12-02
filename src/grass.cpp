@@ -13,9 +13,6 @@
 #include "draw_utils.h"
 
 
-#define MOD_GEOM 0x01
-
-
 bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002), flower_density(0.0);
@@ -65,9 +62,8 @@ void grass_manager_t::grass_t::merge(grass_t const &g) {
 	float const dmag1(dir.mag()), dmag2(g.dir.mag());
 	dir = (dir/dmag1 + g.dir/dmag2).get_norm() * (0.5*(dmag1 + dmag2)); // average directions and lengths independently
 	n   = (n + g.n).get_norm(); // average normals
-	//UNROLL_3X(c[i_] = (unsigned char)(unsigned(c[i_]) + unsigned(g.c[i_]))/2;) // don't average colors because they're used for the density filtering hash
-	// keep original shadowed bit
 	w  += g.w; // add widths to preserve surface area
+	//UNROLL_3X(c[i_] = (unsigned char)(unsigned(c[i_]) + unsigned(g.c[i_]))/2;) // don't average colors because they're used for the density filtering hash
 }
 
 void grass_manager_t::clear() {
@@ -120,7 +116,6 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &da
 	point const p1(g.p), p2(p1 + g.dir + point(0.0, 0.0, 0.05*grass_length));
 	vector3d const binorm(cross_product(g.dir, g.n).get_norm());
 	vector3d const delta(binorm*(0.5*g.w));
-	norm *= (g.shadowed ? 0.001 : 1.0);
 	data[ix++].assign(p1-delta, norm, g.c);
 	data[ix++].assign(p1+delta, norm, g.c);
 	data[ix++].assign(p2,       norm, g.c);
@@ -235,10 +230,7 @@ void grass_tile_manager_t::gen_grass() {
 
 void grass_tile_manager_t::update() { // to be called once per frame
 
-	if (!is_grass_enabled()) {
-		clear();
-		return;
-	}
+	if (!is_grass_enabled()) {clear(); return;}
 	if (empty()    ) {gen_grass();}
 	if (vbo == 0   ) {create_new_vbo();}
 	if (!data_valid) {upload_data();}
@@ -263,10 +255,9 @@ void grass_tile_manager_t::render_block(unsigned block_ix, unsigned lod, float d
 class grass_manager_dynamic_t : public grass_manager_t {
 	
 	vector<unsigned> mesh_to_grass_map; // maps mesh x,y index to starting index in grass vector
-	vector<unsigned char> modified; // only used for shadows
 	vector<int> last_occluder;
 	mutable vector<grass_data_t> vertex_data_buffer;
-	bool shadows_valid, has_voxel_grass;
+	bool has_voxel_grass;
 	int last_light;
 	point last_lpos;
 
@@ -275,20 +266,17 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	}
 	void check_and_update_grass(unsigned ix, unsigned min_up, unsigned max_up) {
 		if (min_up > max_up) return; // nothing updated
-		modified[ix] |= MOD_GEOM; // usually few duplicates each frame, except for cluster grenade explosions
+		//modified[ix] = 1; // usually few duplicates each frame, except for cluster grenade explosions
 		if (vbo > 0) {upload_data_to_vbo(min_up, max_up+1, 0);}
 		//data_valid = 0;
 	}
 
 public:
-	grass_manager_dynamic_t() : shadows_valid(0), has_voxel_grass(0), last_light(-1), last_lpos(all_zeros) {}
-	void invalidate_shadows()  {shadows_valid = 0;}
+	grass_manager_dynamic_t() : has_voxel_grass(0), last_light(-1), last_lpos(all_zeros) {}
 	
 	void clear() {
 		grass_manager_t::clear();
-		invalidate_shadows();
 		mesh_to_grass_map.clear();
-		modified.clear();
 	}
 
 	bool ao_lighting_too_low(point const &pos) {
@@ -300,7 +288,6 @@ public:
 		RESET_TIME;
 		float const dz_inv(1.0/(zmax - zmin));
 		mesh_to_grass_map.resize(XY_MULT_SIZE+1, 0);
-		modified.resize(XY_MULT_SIZE, 0);
 		object_types[GRASS].radius = 0.0;
 		rgen.pregen_floats(10000);
 		unsigned num_voxel_polys(0), num_voxel_blades(0);
@@ -392,35 +379,6 @@ public:
 		PRINT_TIME("Grass Generation");
 	}
 
-	bool is_pt_shadowed(point const &pos, int &last_cobj, bool skip_dynamic) {
-		int const light(get_light());
-
-		if (last_cobj >= 0) { // check to see if last cobj still intersects
-			assert((unsigned)last_cobj < coll_objects.size());
-			point lpos;
-			if (get_light_pos(lpos, light) && coll_objects[last_cobj].line_intersect(pos, lpos)) return 1;
-		}
-		if (is_visible_to_light_cobj(pos, light, 0.0, -1, skip_dynamic, &last_cobj)) return 0;
-		return 1;
-	}
-
-	void find_shadows() {
-		if (empty()) return;
-		RESET_TIME;
-		assert(!mesh_to_grass_map.empty());
-		shadows_valid = 1;
-		data_valid    = 0;
-
-		#pragma omp parallel for schedule(dynamic,1) // 4-5x faster
-		for (int i = 0; i < (int)mesh_to_grass_map.size()-1; ++i) {
-			int last_cobj(-1);
-			for (unsigned j = mesh_to_grass_map[i]; j < mesh_to_grass_map[i+1]; ++j) {
-				grass[j].shadowed = is_pt_shadowed((grass[j].p + grass[j].dir*0.5), last_cobj, 1); // per vertex shadows?
-			}
-		}
-		PRINT_TIME("Grass Find Shadows");
-	}
-
 	void upload_data_to_vbo(unsigned start, unsigned end, bool alloc_data) const {
 		if (start == end) return; // nothing to update
 		assert(start < end && end <= grass.size());
@@ -509,13 +467,12 @@ public:
 		return ((float)num_grass)/((float)grass_density);
 	}
 
-	void mesh_height_change(int x, int y, bool recalc_shadows) {
+	void mesh_height_change(int x, int y) {
 		assert(!point_outside_mesh(x, y));
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
 		unsigned min_up(end+1), max_up(start);
 		int last_cobj(-1);
-		if (shadow_map_enabled()) {recalc_shadows = 0;}
 
 		for (unsigned i = start; i < end; ++i) { // will do nothing if there's no grass here
 			grass_t &g(grass[i]);
@@ -526,9 +483,6 @@ public:
 				g.p.z  = mh;
 				min_up = min(min_up, i);
 				max_up = max(max_up, i);
-				// not entirely correct, since the mesh shadow data won't necessarily have been updated when this is called
-				// it may be more correct to defer this processing, or recalculate all grass lighting, but that's both complex and very expensive
-				if (recalc_shadows) {g.shadowed = is_pt_shadowed((g.p + g.dir*0.5), last_cobj, 1);} 
 			}
 		} // for i
 		check_and_update_grass(ix, min_up, max_up);
@@ -628,7 +582,6 @@ public:
 
 	void check_for_updates() {
 		bool const vbo_invalid(vbo == 0);
-		if (!shadows_valid && !shadow_map_enabled()) {find_shadows();}
 		if (vbo_invalid) {create_new_vbo();}
 		if (!data_valid) {upload_data(vbo_invalid);}
 	}
@@ -655,18 +608,7 @@ public:
 	void draw() {
 		if (empty()) return;
 		//RESET_TIME;
-
-		// determine if ligthing has changed and possibly calculate shadows/upload VBO data
-		int const light(get_light());
-		point const lpos(get_light_pos());
-
-		if (light != last_light || (!no_sun_lpos_update && lpos != last_lpos)) {
-			invalidate_shadows();
-			last_light = light;
-			last_lpos  = lpos;
-		}
 		check_for_updates();
-
 		shader_t s;
 		setup_shaders(s, 1); // enables lighting and shadows as well
 		begin_draw();
@@ -925,13 +867,8 @@ bool no_grass() {
 }
 
 
-void gen_grass(bool full_regen) { // and flowers
+void gen_grass() { // and flowers
 
-	if (!full_regen) { // update shadows only
-		grass_manager.invalidate_shadows();
-		//flower_manager.invalidate_shadows();
-		return;
-	}
 	grass_manager.clear();
 	flower_manager.clear();
 	if (no_grass() || world_mode != WMODE_GROUND) return;
@@ -960,8 +897,8 @@ void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool
 	if (!no_grass()) {grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_color, remove, color);}
 }
 
-void grass_mesh_height_change(int xpos, int ypos, bool recalc_shadows) {
-	if (!no_grass()) {grass_manager.mesh_height_change(xpos, ypos, recalc_shadows);}
+void grass_mesh_height_change(int xpos, int ypos) {
+	if (!no_grass()) {grass_manager.mesh_height_change(xpos, ypos);}
 }
 
 bool place_obj_on_grass(point &pos, float radius) {

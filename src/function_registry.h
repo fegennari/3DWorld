@@ -591,11 +591,11 @@ void add_plant(point const &pos, float height, float radius, int type, int calc_
 // function prototypes - grass
 void setup_wind_for_shader(shader_t &s, unsigned tu_id);
 bool no_grass();
-void gen_grass(bool full_regen);
+void gen_grass();
 void update_grass_vbos();
 void draw_grass();
 void modify_grass_at(point const &pos, float radius, bool crush=0, bool burn=0, bool cut=0, bool check_uw=0, bool add_color=0, bool remove=0, colorRGBA const &color=BLACK);
-void grass_mesh_height_change(int xpos, int ypos, bool recalc_shadows);
+void grass_mesh_height_change(int xpos, int ypos);
 bool place_obj_on_grass(point &pos, float radius);
 float get_grass_density(point const &pos);
 

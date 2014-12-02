@@ -33,13 +33,12 @@ protected:
 		point p;
 		vector3d dir, n;
 		unsigned char c[3];
-		unsigned char shadowed : 1;
-		unsigned char on_mesh  : 1;
+		unsigned char on_mesh : 1;
 		float w;
 
 		grass_t() {} // optimization
 		grass_t(point const &p_, vector3d const &dir_, vector3d const &n_, unsigned char const *const c_, float w_, bool on_mesh_)
-			: p(p_), dir(dir_), n(n_), shadowed(0), on_mesh(on_mesh_), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
+			: p(p_), dir(dir_), n(n_), on_mesh(on_mesh_), w(w_) {c[0] = c_[0]; c[1] = c_[1]; c[2] = c_[2];}
 		void merge(grass_t const &g);
 	};
 

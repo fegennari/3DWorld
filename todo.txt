@@ -19,4 +19,3 @@ Use more VAOs
 Use SDL?
 
 Fix jpeg link warning/command line
-Remove grass shadows and reflection mesh cloud shadows?

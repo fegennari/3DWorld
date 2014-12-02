@@ -477,7 +477,6 @@ void change_terrain_zoom(float val) {
 		tree_scale /= val;
 		regen_trees(0);
 		build_cobj_tree();
-		gen_grass(0);
 		clear_tiled_terrain();
 	}
 	else {
@@ -969,7 +968,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 				remove_tree_cobjs();
 				regen_trees(0);
 				build_cobj_tree();
-				gen_grass(1);
+				gen_grass();
 			}
 			clear_tiled_terrain();
 			

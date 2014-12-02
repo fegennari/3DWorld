@@ -4,8 +4,7 @@ void main()
 {
 	tc          = get_grass_tc();
 	vec3 gwdelta= get_grass_wind_delta(fg_Vertex.xyz, tc.s);
-	vec3 n      = fg_NormalMatrix * normalize(normalize(fg_Normal) + gwdelta/height); // eye space (not normalized), height comes from wind.part
-	vec3 normal = n*length(fg_Normal); // convert to original mag (for shadows)
+	vec3 normal = normalize(fg_NormalMatrix * (normalize(fg_Normal) + gwdelta/height)); // eye space, height comes from wind.part
 	vec4 vertex = fg_Vertex + vec4(gwdelta, 0.0);
 	vec4 epos   = fg_ModelViewMatrix  * vertex;
 	gl_Position = fg_ProjectionMatrix * epos;
