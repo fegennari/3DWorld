@@ -204,7 +204,7 @@ colorRGBA get_landscape_color(int xpos, int ypos) {
 	int cindex; // unused
 	assert(!point_outside_mesh(xpos, ypos));
 	point const pos(get_xval(xpos), get_yval(ypos), mesh_height[ypos][xpos]);
-	float const diffuse(coll_pt_vis_test(pos, get_light_pos(), 0.0, cindex, -1, 0, 3) ? get_cloud_shadow_atten(xpos, ypos) : 0.0);
+	float const diffuse(coll_pt_vis_test(pos, get_light_pos(), 0.0, cindex, -1, 0, 3) ? 1.0 : 0.0); // Note: ignoring cloud shadows on mesh
 	return get_landscape_texture_color(xpos, ypos)*(0.5*(1.0 + diffuse)); // half ambient and half diffuse
 }
 

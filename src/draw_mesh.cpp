@@ -90,25 +90,6 @@ void water_color_atten_pt(float *c, int x, int y, point const &pos, point const 
 }
 
 
-float get_cloud_shadow_atten(int x, int y) {
-
-	if (ground_effects_level < 2) return 1.0;
-	point const pos(get_xval(x), get_yval(y), mesh_height[y][x]);
-	float sval(0.0);
-	
-	// use the original sun/moon pos - it's wrong, but not too wrong and at least it's independent of the camera pos
-	if (light_factor > 0.4) { // sun
-		float const cloud_density(get_cloud_density(pos, (sun_pos - pos).get_norm()));
-		sval += min(1.0,  5.0*(light_factor - 0.4))*(1.0 - CLIP_TO_01(1.7f*cloud_density));
-	}
-	if (light_factor < 0.6 && !combined_gu) { // moon
-		float const cloud_density(get_cloud_density(pos, (moon_pos - pos).get_norm()));
-		sval += min(1.0, -5.0*(light_factor - 0.6))*(1.0 - CLIP_TO_01(1.7f*cloud_density));
-	}
-	return sval;
-};
-
-
 class mesh_vertex_draw {
 
 	float const healr;
