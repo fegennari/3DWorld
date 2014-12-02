@@ -677,8 +677,8 @@ void set_cloud_intersection_shader(shader_t &s) {
 	s.add_uniform_float   ("atmosphere", atmosphere);
 	s.add_uniform_float   ("dx", cur_spo.dx);
 	s.add_uniform_float   ("dy", cur_spo.dy);
-	s.add_uniform_int("cloud_tex", 2);
-	select_multitex(CLOUD_TEX, 2, 1);
+	s.add_uniform_int("cloud_tex", 8);
+	select_multitex(CLOUD_TEX, 8, 1);
 }
 
 

@@ -379,7 +379,7 @@ void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled
 }
 
 
-// tu_ids used: 0 = diffuse map, 1 = detail map, 2 = cloud shadow texture, 11 = detail normal map
+// tu_ids used: 0: diffuse map, 1: detail map, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: cloud shadow texture, 11 = detail normal map
 void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 
 	bool const cloud_shadows(!has_snow && atmosphere > 0.0 && ground_effects_level >= 2);
