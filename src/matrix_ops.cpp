@@ -229,7 +229,6 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 		cobjs_updated |= update_decid_tree_zvals(x1, y1, x2, y2);
 		cobjs_updated |= update_small_tree_zvals(x1, y1, x2, y2);
 		if (cobjs_updated) {build_cobj_tree(0, 0);} // slow, but probably necessary
-		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // too slow
 	}
 
 	// fourth pass to update grass, after cobjs/shadows have been updated

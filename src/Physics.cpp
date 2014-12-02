@@ -1631,15 +1631,9 @@ void auto_advance_time() { // T = 1 hour
 
 	// change leaf color (seasonal, dt = 24*365.25 = 8766, every 168t)
 	if (hrtime%168 == 0) {} // *** WRITE ***
-	
-	if (vis_recalc) {
-		if (shadow_map_enabled()) {
-			check_update_global_lighting(vis_recalc);
-		}
-		else {
-			calc_visibility(vis_recalc);
-		}
-	}
+
+	if (vis_recalc) {check_update_global_lighting(vis_recalc);}
+
 	if (PRINT_TIME_OF_DAY) {
 		if (hrtime24 < 12) {
 			cout << "Time = " << (hrtime24==0  ? 12 : hrtime24   ) << ":" << (((itime&1) == 0) ? "00" : "30") << " AM";

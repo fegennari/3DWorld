@@ -215,13 +215,6 @@ void process_platforms() {
 		}
 		platforms.advance_timestep();
 	}
-	if (!platforms.empty() && ground_effects_level > 0 && !shadow_map_enabled()) { // add mesh shadows for dynamic platforms
-		for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
-			assert(*i < coll_objects.size());
-			coll_obj const &cobj(coll_objects[*i]);
-			assert(cobj.platform_id >= 0);
-		}
-	}
 }
 
 
@@ -605,8 +598,8 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 
 	unsigned char sflags(0);
 	float const lf(fabs(sun_rot/PI - 1.0)); // light_factor
-	if (!scrolling || lf >= 0.4) sflags |= SUN_SHADOW;
-	if (!scrolling || lf <= 0.6) sflags |= MOON_SHADOW;
+	if (!scrolling || lf >= 0.4) {sflags |= SUN_SHADOW;}
+	if (!scrolling || lf <= 0.6) {sflags |= MOON_SHADOW;}
 	calc_visibility(sflags);
 	PRINT_TIME("Visibility calculation");
 

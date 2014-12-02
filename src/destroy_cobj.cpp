@@ -371,10 +371,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		}
 		//PRINT_TIME("Check Anchored");
 	}
-	if (!to_remove.empty()) {
-		//calc_visibility(SUN_SHADOW | MOON_SHADOW); // FIXME: what about updating (removing) mesh shadows?
-		cdir.normalize();
-	}
+	if (!to_remove.empty()) {cdir.normalize();}
 	//PRINT_TIME("Subtract Cube");
 	return (unsigned)to_remove.size();
 }
