@@ -133,7 +133,7 @@ class dls_cell {
 	vector<unsigned short> lsrc;
 
 public:
-	dls_cell() : z1(FAR_CLIP), z2(-FAR_CLIP) {}
+	dls_cell() : z1(FAR_DISTANCE), z2(-FAR_DISTANCE) {}
 
 	void clear();
 	void add_light(unsigned ix, float zmin, float zmax);

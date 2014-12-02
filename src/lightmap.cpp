@@ -879,15 +879,15 @@ void add_line_light(point const &p1, point const &p2, colorRGBA const &color, fl
 inline void dls_cell::clear() {
 
 	if (lsrc.empty()) return;
-	if (lsrc.capacity() > INIT_CCELL_SIZE) lsrc.clear(); else lsrc.resize(0);
-	z1 =  FAR_CLIP;
-	z2 = -FAR_CLIP;
+	lsrc.clear();
+	z1 =  FAR_DISTANCE;
+	z2 = -FAR_DISTANCE;
 }
 
 
 inline void dls_cell::add_light(unsigned ix, float zmin, float zmax) {
 	
-	if (lsrc.capacity() == 0) lsrc.reserve(INIT_CCELL_SIZE);
+	if (lsrc.capacity() == 0) {lsrc.reserve(INIT_CCELL_SIZE);}
 	lsrc.push_back(ix);
 	z1 = min(z1, zmin);
 	z2 = max(z2, zmax);

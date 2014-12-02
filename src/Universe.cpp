@@ -2247,8 +2247,8 @@ void rotated_obj::rotate_vector_inv(vector3d &v) const {
 
 void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, float dist, float dscale) {
 
-	if (dist > 0.75*FAR_CLIP) { // behind far clipping plane - move closer and scale
-		float const pscale(FAR_CLIP/(dscale*dist));
+	if (dist > 0.75*UNIV_FAR_CLIP) { // behind far clipping plane - move closer and scale
+		float const pscale(UNIV_FAR_CLIP/(dscale*dist));
 		size *= pscale;
 		pos   = camera - (camera - pos)*pscale;
 	}
@@ -2362,7 +2362,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	if (size < 2.5 && !universe_mode)         return 0; // don't draw distant planets in combined_gu mode
 	if (!univ_sphere_vis(pos_, radius))       return 1; // check if in the view volume
 		
-	if (universe_mode && !(display_mode & 0x01) && dist < FAR_CLIP && is_owned()) { // owner color
+	if (universe_mode && !(display_mode & 0x01) && dist < UNIV_FAR_CLIP && is_owned()) { // owner color
 		usg.enable_color_only_shader(&get_owner_color());
 		draw_sphere_vbo(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		usg.disable_color_only_shader();

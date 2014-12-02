@@ -19,6 +19,7 @@ pos_dir_up orig_camera_pdu;
 
 extern int window_width, window_height, animate2, display_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
+extern float NEAR_CLIP;
 extern vector<shadow_sphere> shadow_objs;
 extern coll_obj_group coll_objects;
 

@@ -418,12 +418,11 @@ void get_occluders() {
 	static unsigned startval(0), stopped_count(0);
 	static bool first_run(1);
 	unsigned const skipval(first_run ? 0 : 8); // spread update across many frames
-	first_run = 0;
 	if (++startval >= skipval) startval = 0;
-	static point last_camera(FAR_CLIP, FAR_CLIP, FAR_CLIP);
+	static point last_camera(all_zeros);
 	point const camera(get_camera_pos());
 	
-	if (p2p_dist(camera, last_camera) < 0.1*HALF_DXY) { // camera hasn't moved much
+	if (!first_run && p2p_dist(camera, last_camera) < 0.1*HALF_DXY) { // camera hasn't moved much
 		if (skipval == 0 || stopped_count == skipval) return;
 		++stopped_count;
 	}
@@ -431,6 +430,7 @@ void get_occluders() {
 		stopped_count = 0;
 		last_camera   = camera;
 	}
+	first_run = 0;
 	unsigned const ncobjs((unsigned)coll_objects.size());
 
 	//#pragma omp parallel for num_threads(2) schedule(static) // helps in some cases and hurts in others

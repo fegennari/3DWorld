@@ -5,7 +5,6 @@
 #ifndef _UNIVERSE_H_
 #define _UNIVERSE_H_
 
-#include "3DWorld.h"
 #include "universe_base.h"
 #include "upsurface.h"
 #include "draw_utils.h"
@@ -104,7 +103,7 @@ float const U_VIEW_DIST      = U_BLOCKS*CELL_SIZEo2;
 float const CELL_SIZE_INV    = 1.0/CELL_SIZE;
 float const RS_SCALE         = 7.0*CELL_SIZE_INV;
 float const TEX_H_SCALE      = TEX_HEIGHT_SCALE/(SURFACE_HEIGHT*sqrt((double)SINES_PER_FREQ));
-float const NEAR_CLIP_SCALED = NEAR_CLIP_SCALE*UNIV_NCLIP_SCALE*NEAR_CLIP;
+float const NEAR_CLIP_SCALED = NEAR_CLIP_SCALE*UNIV_NCLIP_SCALE*UNIV_NEAR_CLIP;
 
 colorRGBA const P_WATER_C(0.2, 0.2, 0.8, 1.0);
 colorRGBA const P_ICE_C(  0.5, 0.7, 0.9, 1.0);

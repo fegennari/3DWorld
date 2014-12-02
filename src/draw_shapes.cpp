@@ -12,7 +12,7 @@ float const TOLER_ = 1.0E-6;
 
 
 extern int begin_motion, num_groups, camera_coll_id, spectate, display_mode, camera_mode, camera_view;
-extern float zmin;
+extern float zmin, NEAR_CLIP;
 extern double camera_zh;
 extern vector<int> weap_cobjs;
 extern vector<unsigned> falling_cobjs;

@@ -45,7 +45,7 @@ extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightnin
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
-extern float TIMESTEP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
+extern float TIMESTEP, NEAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation;
 extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
@@ -1145,7 +1145,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (b2down) fire_weapon();
 
 	bool const water_enabled((display_mode & 0x04) && !DISABLE_WATER);
-	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_CLIP);
+	water_plane_z = (water_enabled ? (get_water_z_height() + get_ocean_wave_height()) : -10*FAR_DISTANCE);
 	camera_mode   = 1; // walking on ground
 	float min_camera_dist(0.0);
 	float const terrain_zmin(update_tiled_terrain(min_camera_dist));

@@ -19,7 +19,7 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 // Global Variables
 bool camera_on_snow(0);
 int camera_coll_id(-1);
-float czmin(FAR_CLIP), czmax(-FAR_CLIP), coll_rmax(0.0), model_czmin(czmin), model_czmax(czmax);
+float czmin(FAR_DISTANCE), czmax(-FAR_DISTANCE), coll_rmax(0.0), model_czmin(czmin), model_czmax(czmax);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 coll_obj_group coll_objects;
 
@@ -575,10 +575,10 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 void coll_cell::clear(bool clear_vectors) {
 
 	if (clear_vectors) {
-		if (cvals.capacity() > INIT_CCELL_SIZE) cvals.clear(); else cvals.resize(0);
+		if (cvals.capacity() > INIT_CCELL_SIZE) {cvals.clear();} else {cvals.resize(0);}
 	}
-	zmin = occ_zmin =  FAR_CLIP;
-	zmax = occ_zmax = -FAR_CLIP;
+	zmin = occ_zmin =  FAR_DISTANCE;
+	zmax = occ_zmax = -FAR_DISTANCE;
 }
 
 

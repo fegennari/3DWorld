@@ -43,7 +43,7 @@ extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_m
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
-extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature, flower_density;
+extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP;
 extern point sun_pos, moon_pos, surface_pos;
 extern water_params_t water_params;
 extern char *mh_filename_tt;
@@ -348,8 +348,8 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	//RESET_TIME;
 	if (enable_terrain_env) {update_terrain_params();}
 	zvals.resize(zvsize*zvsize);
-	mzmin =  FAR_CLIP;
-	mzmax = -FAR_CLIP;
+	mzmin =  FAR_DISTANCE;
+	mzmax = -FAR_DISTANCE;
 	float const xy_mult(1.0/float(size)), wpz_max(get_water_z_height() + ocean_wave_height);
 	unsigned const block_size(zvsize/4);
 	bool const using_hmap(using_tiled_terrain_hmap_tex()), add_detail(using_hmap_with_detail()); // add procedural detail to heightmap
@@ -371,8 +371,8 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	}
 	for (unsigned yy = 0; yy < 4; ++yy) {
 		for (unsigned xx = 0; xx < 4; ++xx) {
-			sub_zmin[yy][xx] =  FAR_CLIP;
-			sub_zmax[yy][xx] = -FAR_CLIP;
+			sub_zmin[yy][xx] =  FAR_DISTANCE;
+			sub_zmax[yy][xx] = -FAR_DISTANCE;
 			unsigned const x_end((xx+1)*block_size), y_end((yy+1)*block_size); // last row/column is skipped because it's not rendered
 			assert(x_end < zvsize && y_end < zvsize);
 
@@ -1472,7 +1472,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 		read_default_hmap_modmap();
 	}
 	to_draw.clear();
-	terrain_zmin = FAR_CLIP;
+	terrain_zmin = FAR_DISTANCE;
 	grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
 	assert(MESH_X_SIZE == MESH_Y_SIZE); // limitation, for now
 	point const cpos(get_camera_pos()), camera(cpos - point((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
@@ -1482,7 +1482,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	int const x2( tile_radius + toffx), y2( tile_radius + toffy);
 	unsigned const init_tiles((unsigned)tiles.size());
 	unsigned num_erased(0);
-	min_camera_dist = FAR_CLIP;
+	min_camera_dist = FAR_DISTANCE;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)

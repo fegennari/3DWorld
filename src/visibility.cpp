@@ -19,7 +19,7 @@ pos_dir_up camera_pdu;
 
 extern bool combined_gu;
 extern int window_width, window_height, do_zoom, display_mode, camera_coll_id, DISABLE_WATER;
-extern float zmin, zmax, czmin, czmax, zbottom, ztop, sun_rot, moon_rot;
+extern float zmin, zmax, czmin, czmax, zbottom, ztop, sun_rot, moon_rot, NEAR_CLIP, FAR_CLIP;
 extern point sun_pos, moon_pos, litning_pos;
 extern obj_type object_types[];
 

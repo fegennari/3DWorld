@@ -31,7 +31,7 @@ extern bool has_wpt_goal, use_waypoint_app_spots;
 extern int iticks, num_smileys, free_for_all, teams, frame_counter, display_mode;
 extern int DISABLE_WATER, xoff, yoff, world_mode, spectate, camera_reset, camera_mode, following, game_mode;
 extern int recreated, mesh_scale_change, UNLIMITED_WEAPONS, camera_coll_id;
-extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage, base_gravity;
+extern float fticks, tfticks, temperature, zmax, ztop, XY_SCENE_SIZE, TIMESTEP, self_damage, base_gravity, NEAR_CLIP, FAR_CLIP;
 extern double camera_zh;
 extern point orig_camera, orig_cdir;
 extern int coll_id[];

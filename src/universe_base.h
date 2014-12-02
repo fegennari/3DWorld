@@ -24,6 +24,8 @@ float const S_BODY_DENSITY   = 1.0E5;
 float const EXPLOSION_DAMAGE = 50000.0;
 float const MASS_SCALE       = 40000.0;
 float const MAX_SOBJ_GRAVITY = 5.0;
+float const UNIV_NEAR_CLIP   = DEF_NEAR_CLIP;
+float const UNIV_FAR_CLIP    = DEF_FAR_CLIP;
 
 
 // forward references

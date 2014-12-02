@@ -56,8 +56,8 @@ extern int camera_reset, frame_counter, camera_mode, camera_coll_id, camera_surf
 extern int num_groups, num_smileys, left_handed, iticks, DISABLE_WATER, voxel_editing;
 extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mode, destroy_thresh;
 extern unsigned create_voxel_landscape;
-extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, fticks, crater_depth, crater_radius;
-extern float max_water_height, XY_SCENE_SIZE, czmax, TIMESTEP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
+extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, czmax, fticks, crater_depth, crater_radius;
+extern float max_water_height, XY_SCENE_SIZE, TIMESTEP, FAR_CLIP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
 extern double camera_zh;
 extern point surface_pos, camera_last_pos;
 extern int coll_id[];

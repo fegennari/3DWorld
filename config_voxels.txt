@@ -37,6 +37,7 @@ group_back_face_cull 1
 
 mesh_size  128 128 64
 scene_size 16.0 16.0 4.0
+far_clip_dist 200.0
 
 include config_resolution.txt
 shadow_map_sz 2048 # 4096?

@@ -20,7 +20,7 @@ bool spraypaint_mode(0);
 unsigned paint_color_ix(0);
 
 extern int display_mode;
-extern float CAMERA_RADIUS;
+extern float CAMERA_RADIUS, FAR_CLIP;
 extern coll_obj_group coll_objects;
 
 

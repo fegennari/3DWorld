@@ -31,7 +31,7 @@ bool voxel_ppb_enable_falling(0);
 
 extern bool group_back_face_cull, voxel_shadows_updated;
 extern int dynamic_mesh_scroll, rand_gen_index, scrolling, display_mode, display_framerate, voxel_editing, mesh_gen_mode, mesh_freq_filter;
-extern float tfticks;
+extern float tfticks, FAR_CLIP;
 extern coll_obj_group coll_objects;
 
 

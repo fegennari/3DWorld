@@ -7,6 +7,7 @@ mesh_detail_tex snow2.jpg # snow texture
 
 mesh_size  128 128 64
 scene_size 16.0 16.0 4.0
+far_clip_dist 200.0
 
 voxel color1 1.0 1.0 1.0 1.0
 voxel color2 1.0 1.0 1.1 1.0

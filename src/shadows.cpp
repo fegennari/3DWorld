@@ -12,7 +12,7 @@ float const MOON_THETA = 0.3;
 point light_pos;
 
 extern bool combined_gu;
-extern float sun_rot, moon_rot, zmin, zmax;
+extern float sun_rot, moon_rot, zmin, zmax, FAR_CLIP;
 extern point sun_pos, moon_pos, mesh_origin;
 extern vector3d up_norm;
 

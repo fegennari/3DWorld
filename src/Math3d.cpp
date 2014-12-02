@@ -297,19 +297,21 @@ bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &n
 
 bool sphere_intersect_poly_sides(vector<tquad_t> const &pts, point const &center, float radius, float &dist, vector3d &norm, bool strict) {
 
-	dist = FAR_CLIP;
+	bool found(0);
+	dist = FAR_DISTANCE;
 
 	for (unsigned i = 0; i < pts.size(); ++i) { // test the <npoints> sides
 		vector3d const side_norm(pts[i].get_norm());
 		float tdist(radius - dot_product_ptv(side_norm, center, pts[i][0]));
 		if (strict && tdist < 0.0) return 0; // outside of the shape
 		
-		if (fabs(tdist) < fabs(dist)) {
-			dist = tdist;
-			norm = side_norm;
+		if (!found || fabs(tdist) < fabs(dist)) {
+			dist  = tdist;
+			norm  = side_norm;
+			found = 1;
 		}
 	}
-	return (dist < FAR_CLIP);
+	return found;
 }
 
 

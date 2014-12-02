@@ -154,7 +154,7 @@ void set_zmax_est(float zval) {
 
 void update_disabled_mesh_height() {
 
-	if (disabled_mesh_z == FAR_CLIP || mesh_draw == NULL) return;
+	if (disabled_mesh_z == FAR_DISTANCE || mesh_draw == NULL) return;
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {

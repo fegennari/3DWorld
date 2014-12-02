@@ -46,7 +46,7 @@ extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups,
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
-extern float temperature, atmosphere, zbottom, indir_vert_offset;
+extern float temperature, atmosphere, zbottom, indir_vert_offset, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;

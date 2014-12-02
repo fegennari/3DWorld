@@ -28,7 +28,7 @@ rand_gen_t global_rand_gen;
 
 
 extern int begin_motion, animate2, show_fog;
-extern float zmax, ztop, water_plane_z;
+extern float zmax, ztop, water_plane_z, FAR_CLIP;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
