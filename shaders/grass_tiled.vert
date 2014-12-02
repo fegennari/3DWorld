@@ -42,5 +42,5 @@ void main()
 	vec4 ad_color = mix(gl_Color, vec4(1.0, 0.7, 0.4, 1.0), weights.r); // mix in yellow-brown grass color to match sand
 	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, shadow_normal.w);
 	float alpha   = fg_Color.a * ascale * ((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
-	gl_FrontColor = vec4(color, alpha);
+	fg_Color_vf   = vec4(color, alpha);
 } 

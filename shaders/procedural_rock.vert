@@ -10,5 +10,5 @@ void main()
 	normal       = normalize(fg_NormalMatrix * fg_Normal);
 	epos         = fg_ModelViewMatrix * vertex;
 	gl_Position  = fg_ProjectionMatrix * epos;
-	gl_FrontColor= fg_Color;
+	fg_Color_vf  = fg_Color;
 } 

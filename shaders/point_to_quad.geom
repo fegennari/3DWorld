@@ -11,7 +11,7 @@ in VertexData {
 
 void main()
 {
-	gl_FrontColor = vertexIn[0].color; // all colors are the same
+	fg_Color_vf  = vertexIn[0].color; // all colors are the same
 	vec4 pos     = gl_in[0].gl_Position; // center of the quad
 	vec3 normal  = vertexIn[0].normal;
 	vec4 tangent = vec4(vertexIn[0].tangent, 0.0); // not normalized - provides the size of the quad (half-width)

@@ -25,7 +25,7 @@ void main()
 #endif
 	gl_Position   = fg_ProjectionMatrix * epos;
 	gl_Position.z += depth_bias;
-	gl_FrontColor = color;
+	fg_Color_vf   = color;
 	world_normal  = fg_Normal; // for triplanar texturing
 	vpos          = fg_Vertex.xyz;
 } 

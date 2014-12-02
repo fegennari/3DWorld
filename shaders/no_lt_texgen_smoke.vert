@@ -26,9 +26,9 @@ void main()
 	else {
 		tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);
 	}
-	gl_FrontColor = fg_Color;
-	epos          = fg_ModelViewMatrix * fg_Vertex;
-	gl_Position   = fg_ProjectionMatrix * epos;
+	fg_Color_vf = fg_Color;
+	epos        = fg_ModelViewMatrix * fg_Vertex;
+	gl_Position = fg_ProjectionMatrix * epos;
 
 	if (use_fg_ViewMatrix) {
 		eye_norm = normalize(fg_NormalMatrix * fg_Normal);

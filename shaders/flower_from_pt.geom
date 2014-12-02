@@ -23,11 +23,11 @@ void gen_vertex(in vec4 v, in float ts, in float tt) {
 
 void main()
 {
-	gl_FrontColor = color_vs [0]; // shared between vertices
-	vec3 normal   = normal_vs[0];
-	eye_norm      = fg_NormalMatrix * normal;
-	vec4 pos      = vertex_vs[0];
-	vec3 va = vec3(0.0); // orthogonal vectors
+	fg_Color_vf = color_vs [0]; // shared between vertices
+	vec3 normal = normal_vs[0];
+	eye_norm    = fg_NormalMatrix * normal;
+	vec4 pos    = vertex_vs[0];
+	vec3 va     = vec3(0.0); // orthogonal vectors
 	va[dmin_vs[0]] = 1.0;
 	vec4 v2 = vec4(size_vs[0]*normalize(cross(normal, va.xyz)), 0.0);
 	vec4 v1 = vec4(size_vs[0]*normalize(cross(normal, v2.xyz)), 0.0);

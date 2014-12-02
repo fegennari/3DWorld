@@ -10,5 +10,5 @@ void main()
 	vec4 color = emission;
 	if (enable_light0) color.rgb += add_light_comp0(normal).rgb;
 	if (enable_light1) color.rgb += add_light_comp1(normal).rgb;
-	gl_FrontColor = color;
+	fg_Color_vf = color;
 } 

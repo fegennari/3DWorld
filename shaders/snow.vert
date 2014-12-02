@@ -10,6 +10,6 @@ void main()
 	normal = (no_normalize ? n : normalize(n));
 	dlpos  = fg_Vertex.xyz;
 	epos   = fg_ModelViewMatrix * fg_Vertex; // needed for detail normal map
-	gl_Position   = fg_ftransform();
-	gl_FrontColor = fg_Color;
+	gl_Position = fg_ftransform();
+	fg_Color_vf = fg_Color;
 }

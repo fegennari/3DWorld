@@ -7,5 +7,5 @@ void main()
 	if (enable_light0) color += add_light_comp0(normal).rgb;
 	if (enable_light1) color += add_light_comp1(normal).rgb;
 	if (enable_light4) color += add_pt_light_comp(normal, (fg_ModelViewMatrix * fg_Vertex), 4).rgb;
-	gl_FrontColor = vec4(min(vec3(1.0), color), fg_Color.a);
+	fg_Color_vf = vec4(min(vec3(1.0), color), fg_Color.a);
 } 

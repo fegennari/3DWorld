@@ -36,11 +36,11 @@ void main()
 #endif
 
 #else
-	normal       = normalize(fg_NormalMatrix * fg_Normal);
+	normal      = normalize(fg_NormalMatrix * fg_Normal);
 #endif
-	vec4 epos    = fg_ModelViewMatrix * vec4(vertex, 1.0);
+	vec4 epos   = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	world_space_pos = (inverse(fg_ViewMatrix) * epos).xyz;
-	gl_Position  = fg_ProjectionMatrix * epos;
-	gl_FrontColor= vec4(1.0); // always white - color will come from the texture
+	gl_Position = fg_ProjectionMatrix * epos;
+	fg_Color_vf = vec4(1.0); // always white - color will come from the texture
 }
 

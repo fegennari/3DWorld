@@ -10,7 +10,7 @@ void main()
 	tc2    = fg_TexCoord;
 	normal = fg_NormalMatrix * vec3(0.0, 0.0, normal_z); // not normalized
 	epos   = fg_ModelViewMatrix * fg_Vertex;
-	proj_pos      = fg_ProjectionMatrix * epos;
-	gl_Position   = proj_pos;
-	gl_FrontColor = fg_Color;
+	proj_pos    = fg_ProjectionMatrix * epos;
+	gl_Position = proj_pos;
+	fg_Color_vf = fg_Color;
 }

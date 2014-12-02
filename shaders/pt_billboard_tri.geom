@@ -15,8 +15,8 @@ void main()
 #ifdef SIZE_FROM_ATTRIB
 	float size = size_val[0];
 #endif
-	gl_FrontColor = color[0]; // all colors are the same (FIXME: gl_FrontColor is deprecated, but we need to change some fragment shaders to use custom color input/output)
-	vec4 pos = fg_ModelViewMatrix * gl_in[0].gl_Position;
+	fg_Color_vf = color[0]; // all colors are the same
+	vec4 pos    = fg_ModelViewMatrix * gl_in[0].gl_Position;
 	
 	gl_Position = fg_ProjectionMatrix * (pos + vec4(-2.0*size, -size, 0.0, 0.0));
 	tc = vec2(-0.5, 0.0);

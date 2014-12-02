@@ -23,5 +23,5 @@ void main()
 	if (enable_light0) {color += add_light_comp0(normal).rgb;}
 	if (enable_light1) {color += add_light_comp1(normal).rgb;}
 	if (enable_light2) {color += add_pt_light_comp(normal, epos, 2).rgb;}
-	gl_FrontColor = vec4(color, fg_Color.a);
+	fg_Color_vf = vec4(color, fg_Color.a);
 }

@@ -9,7 +9,7 @@ out vec2 tc;
 void main()
 {
 	for (int i = 0; i < 3; ++i) {
-		gl_FrontColor = color[i];
+		fg_Color_vf = color[i];
 		gl_Position = gl_in[i].gl_Position;
 		tc = tc_in[i];
 		EmitVertex();
