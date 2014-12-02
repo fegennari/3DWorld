@@ -8,7 +8,7 @@ const float PI	 	= 3.1415;
 const float EPSILON	= 1e-3;
 float EPSILON_NRM	= 0.1 / resolution.x;
 
-varying vec2 surfacePosition;
+in vec2 surfacePosition;
 
 // sea
 const int ITER_GEOMETRY = 3;

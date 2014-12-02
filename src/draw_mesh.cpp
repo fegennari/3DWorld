@@ -368,7 +368,7 @@ void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
 		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_DL", 1); // FS
 	}
-	s.set_prefix("varying vec4 epos;", 1); // FS (needed for dynamic lighting)
+	s.set_prefix("in vec4 epos;", 1); // FS (needed for dynamic lighting)
 }
 
 void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled terrain mesh
