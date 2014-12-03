@@ -851,7 +851,8 @@ void display(void) {
 
 			if (mesh_invalidated) {
 				gen_mesh_bsp_tree();
-				mesh_invalidated = 0;
+				clear_landscape_vbo = 1;
+				mesh_invalidated    = 0;
 			}
 			// draw background
 			if (!combined_gu) {draw_sun_moon_stars();}

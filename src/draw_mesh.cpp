@@ -93,7 +93,7 @@ void water_color_atten_pt(float *c, int x, int y, point const &pos, point const 
 class mesh_vertex_draw {
 
 	float const healr;
-	bool shadow_pass, use_vbo;
+	bool use_vbo;
 	unsigned vbo, vbo_pos;
 	vector<vert_norm_color> data;
 
@@ -140,8 +140,7 @@ class mesh_vertex_draw {
 public:
 	unsigned c;
 
-	mesh_vertex_draw(bool shadow_pass_, bool use_vbo_)
-		: healr(fticks*SURF_HEAL_RATE), shadow_pass(shadow_pass_), use_vbo(use_vbo_), vbo(0), vbo_pos(0), data(2*(MAX_XY_SIZE+1)), c(0)
+	mesh_vertex_draw(bool use_vbo_) : healr(fticks*SURF_HEAL_RATE), use_vbo(use_vbo_), vbo(0), vbo_pos(0), data(2*(MAX_XY_SIZE+1)), c(0)
 	{
 		assert(!data.empty());
 		last_rows.resize(MESH_X_SIZE+1);
@@ -173,7 +172,7 @@ public:
 				UNROLL_4X(data[c].c[i_] = last_rows[j].c.c[i_];)
 			}
 			else {
-				if (!shadow_pass) {update_vertex(iinc, j);}
+				update_vertex(iinc, j);
 				last_rows[j] = norm_color_ix(data[c], iinc);
 			}
 		}
@@ -300,17 +299,16 @@ void set_landscape_texture_texgen(shader_t &shader) {
 }
 
 
-void draw_mesh_vbo() {
+void draw_mesh_vbo(bool shadow_pass) {
 
 	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
 	// Note: ignores detail texture
-	// Note: doesn't work correctly for the shadow pass if the vbo hasn't been created
 	colorRGBA const color(mesh_color_scale*DEF_DIFFUSE);
 	shader_t s;
-	s.begin_simple_textured_shader(0.0, 1, 1, &color); // lighting + texgen
+	s.begin_simple_textured_shader(0.0, !shadow_pass, 1, &color); // lighting + texgen
 	set_landscape_texture_texgen(s);
 	static unsigned mesh_vbo(0);
-		
+	
 	if (clear_landscape_vbo) {
 		delete_and_zero_vbo(mesh_vbo);
 		clear_landscape_vbo = 0;
@@ -382,20 +380,14 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 }
 
 
-void draw_mesh_mvd(bool shadow_pass) {
+void draw_mesh_mvd() {
 
 	shader_t s;
-
-	if (shadow_pass) {
-		s.begin_color_only_shader(); // don't even need colors
-	}
-	else {
-		s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
-		setup_mesh_and_water_shader(s, (detail_normal_map && (display_mode & 0x08)));
-	}
+	s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
+	setup_mesh_and_water_shader(s, (detail_normal_map && (display_mode & 0x08)));
 	set_landscape_texture_texgen(s);
 	float y(-Y_SCENE_SIZE);
-	mesh_vertex_draw mvd(shadow_pass, use_core_context);
+	mesh_vertex_draw mvd(use_core_context);
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 		float x(-X_SCENE_SIZE);
@@ -418,7 +410,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 	if (mesh_height == NULL) return; // no mesh to display
 
 	if (shadow_pass) {
-		draw_mesh_mvd(1);
+		draw_mesh_vbo(1);
 		float lzmin(0.0);
 		if (light_factor <= 0.4)      {lzmin = moon_pos.z;}
 		else if (light_factor >= 0.6) {lzmin = sun_pos.z;}
@@ -474,10 +466,10 @@ void display_mesh(bool shadow_pass) { // fast array version
 	if (SHOW_MESH_TIME) PRINT_TIME("Landscape Texture");
 
 	if (ground_effects_level == 0) { // simpler, more efficient mesh draw
-		draw_mesh_vbo();
+		draw_mesh_vbo(0);
 	}
 	else { // slower mesh draw with more features
-		draw_mesh_mvd(0);
+		draw_mesh_mvd();
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	set_active_texture(0);
