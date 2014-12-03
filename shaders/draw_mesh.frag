@@ -11,23 +11,28 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 	return apply_bump_map(light_dir, eye_pos, eye_norm, 1.0);
 }
 
+vec4 add_mesh_light0(in vec3 normal, in vec4 epos) {
+	float ds_scale = 1.0;
+#ifdef ENABLE_CLOUD_SHADOWS
+	ds_scale = get_cloud_transparency(dlpos, sun_pos);
+#endif
+	if (use_shadow_map) {normal *= get_shadow_map_weight_light0(epos, normal);}
+	return add_light_comp_pos_scaled0(normal, epos, ds_scale, 1.0, gl_Color);
+}
+vec4 add_mesh_light1(in vec3 normal, in vec4 epos) {
+	float ds_scale = 1.0;
+#ifdef ENABLE_CLOUD_SHADOWS
+	ds_scale = get_cloud_transparency(dlpos, moon_pos);
+#endif
+	if (use_shadow_map) {normal *= get_shadow_map_weight_light1(epos, normal);}
+	return add_light_comp_pos_scaled1(normal, epos, ds_scale, 1.0, gl_Color);
+}
+
 void main()
 {
 	vec3 lit_color = vec3(0.0);
-	float nscale   = 1.0;
-
-	if (enable_light0) {
-#ifdef ENABLE_CLOUD_SHADOWS
-		nscale = get_cloud_transparency(dlpos, sun_pos);
-#endif
-		lit_color += add_light_comp_pos_smap_light0(eye_norm*nscale, epos).rgb;
-	}
-	if (enable_light1) {
-#ifdef ENABLE_CLOUD_SHADOWS
-		nscale = get_cloud_transparency(dlpos, moon_pos);
-#endif
-		lit_color += add_light_comp_pos_smap_light1(eye_norm*nscale, epos).rgb;
-	}
+	if (enable_light0) {lit_color += add_mesh_light0(eye_norm, epos).rgb;}
+	if (enable_light1) {lit_color += add_mesh_light1(eye_norm, epos).rgb;}
 	lit_color  = clamp(lit_color, 0.0, 1.0);
 	if (enable_dlights) {lit_color.rgb += add_dlights(dlpos, normalize(normal), vec3(1.0));} // dynamic lighting
 	lit_color *= texture(tex0, tc).rgb;
