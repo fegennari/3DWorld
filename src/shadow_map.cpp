@@ -18,7 +18,7 @@ unsigned shadow_map_sz(0);
 pos_dir_up orig_camera_pdu;
 
 extern bool snow_shadows;
-extern int window_width, window_height, animate2, display_mode, ground_effects_level, num_trees, camera_coll_id;
+extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
 extern float NEAR_CLIP, tree_deadness, vegetation;
 extern vector<shadow_sphere> shadow_objs;
@@ -223,7 +223,7 @@ void set_shadow_tex_params() {
 bool no_sparse_smap_update() {
 
 	if (world_mode != WMODE_GROUND) return 0;
-	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0 && tree_deadness < 1.0 && vegetation > 0.0);
+	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0 && (tree_mode & 1) != 0 && tree_deadness < 1.0 && vegetation > 0.0);
 	return (leaf_wind || !coll_objects.drawn_ids.empty() || !shadow_objs.empty());
 }
 
@@ -398,7 +398,7 @@ void create_shadow_map() {
 	// set to shadow map state
 	do_zoom  = 0;
 	animate2 = 0; // disable any animations or generated effects
-	display_mode &= ~(0x08 | 0x0100); // disable occlusion culling and leaf wind
+	display_mode &= ~0x08; // disable occlusion culling
 
 	// check VBO
 	if (scene_smap_vbo_invalid) {free_smap_vbo();}

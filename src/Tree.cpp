@@ -898,7 +898,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		if (geom_opacity == 0.0) return;
 		s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
 	}
-	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && (display_mode & 0x0100) != 0);
+	bool const leaf_dynamic_en(!shadow_only && !has_snow && enable_leaf_wind && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
 	if (!gen_arrays && leaf_dynamic_en && size_scale > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
 
