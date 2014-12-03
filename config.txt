@@ -25,7 +25,7 @@ ground_effects_level 9
 #remap_key 0x08 w
 #remap_key w null
 
-grass_density 100
+grass_density 120
 grass_size 0.03 0.002
 flower_density 2.0
 

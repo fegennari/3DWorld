@@ -12,10 +12,8 @@ GLSL subroutine: http://www.g-truc.net/post-0269.html
 Use asteroids for rocks in terrain mode (or just use instancing even in ground mode)
 Planet lightning
 
-Better flare5b texture borders
 Static + Dynamic shadow maps
 Static cobjs use vbo
 Use more VAOs
 Use SDL?
-
-Fix jpeg link warning/command line
+* Global LOD thresh + TT dist thresh

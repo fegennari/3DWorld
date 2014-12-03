@@ -36,7 +36,7 @@ destroy_thresh 0
 ground_effects_level 1
 tree_deadness 1.0
 
-#grass_density 150
+#grass_density 200
 #grass_size 0.02 0.002
 
 use_waypoints 1
