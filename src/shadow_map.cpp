@@ -17,9 +17,10 @@ bool scene_smap_vbo_invalid(0), voxel_shadows_updated(0);
 unsigned shadow_map_sz(0);
 pos_dir_up orig_camera_pdu;
 
+extern bool snow_shadows;
 extern int window_width, window_height, animate2, display_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
-extern float NEAR_CLIP;
+extern float NEAR_CLIP, tree_deadness, vegetation;
 extern vector<shadow_sphere> shadow_objs;
 extern coll_obj_group coll_objects;
 
@@ -222,7 +223,7 @@ void set_shadow_tex_params() {
 bool no_sparse_smap_update() {
 
 	if (world_mode != WMODE_GROUND) return 0;
-	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0);
+	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0 && tree_deadness < 1.0 && vegetation > 0.0);
 	return (leaf_wind || !coll_objects.drawn_ids.empty() || !shadow_objs.empty());
 }
 
@@ -368,7 +369,8 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 		smap_vertex_cache.render_dynamic();
 		shader.end_shader();
 	}
-	// add trees, scenery, and mesh
+	// add snow, trees, scenery, and mesh
+	if (snow_shadows) {draw_snow(1);} // slow, and causes problems
 	draw_trees(1);
 	draw_scenery(1, 1, 1);
 

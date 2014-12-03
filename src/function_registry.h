@@ -675,7 +675,7 @@ void set_point_sprite_mode(bool enabled);
 bool snow_enabled();
 void gen_snow_coverage();
 void reset_snow_vbos();
-void draw_snow();
+void draw_snow(bool shadow_only=0);
 bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow);
 
 // function prototypes - waypoints

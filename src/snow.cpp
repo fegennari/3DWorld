@@ -342,7 +342,7 @@ bool voxel_map::write(char const *const fn) const {
 
 class snow_renderer {
 
-	indexed_vao_manager_t vbo_mgr;
+	indexed_vao_manager_t vao_mgr;
 	float last_x;
 	unsigned nquads;
 	vector<vert_norm> data;
@@ -390,7 +390,7 @@ public:
 
 private:
 	unsigned add(point const &v, vector3d const &n, unsigned map_ix) { // can't be called after finalize()
-		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
+		assert(vao_mgr.vbo == 0 && vao_mgr.ivbo == 0);
 		map<point, unsigned>::const_iterator it(vmap[map_ix].find(v));
 		unsigned ix(0);
 
@@ -430,18 +430,18 @@ private:
 	}
 
 public:
-	void free_vbos() {vbo_mgr.clear_vbos();}
+	void free_vbos() {vao_mgr.clear_vbos();}
 
 	void update_shadows() {
 		calc_shadows();
 		assert(!data.empty());
-		if (vbo_mgr.vbo) {upload_to_vbo(vbo_mgr.vbo, data, 0, 1);}
+		if (vao_mgr.vbo) {upload_to_vbo(vao_mgr.vbo, data, 0, 1);}
 	}
 
 	void update_region(unsigned strip_ix, unsigned strip_pos, unsigned strip_len, float new_z) { // Note: could use ranges/blocks optimization
 		
-		if (!vbo_mgr.vbo) return; // vbo not allocated, so all will be updated when it gets allocated during drawing
-		bind_vbo(vbo_mgr.vbo, 0);
+		if (!vao_mgr.vbo) return; // vbo not allocated, so all will be updated when it gets allocated during drawing
+		bind_vbo(vao_mgr.vbo, 0);
 		assert(strip_ix+1 < strip_offsets.size());
 		assert(strip_len >= 4); // at least one quad
 		unsigned const cur_six(strip_offsets[strip_ix]), next_six(strip_offsets[strip_ix+1]);
@@ -464,17 +464,18 @@ public:
 	}
 
 	void finalize() {
-		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
+		assert(vao_mgr.vbo == 0 && vao_mgr.ivbo == 0);
 		assert(!indices.empty());
 		for (unsigned d = 0; d < 2; ++d) {vmap[d].clear();}
 	}
 
-	void draw() {
+	void draw(bool shadow_only) {
+		if (shadow_only && !vao_mgr.vbo) return; // hack to avoid creating the VBO on the shadow pass
 		assert(!indices.empty());
-		vbo_mgr.create_and_upload(data, indices, 0, 1); // set_vbo_arrays() is called internally
-		vbo_mgr.enable_vao();
+		vao_mgr.create_and_upload(data, indices, 0, 1); // set_vbo_arrays() is called internally
+		vao_mgr.enable_vao();
 		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
-		vbo_mgr.disable_vao();
+		vao_mgr.disable_vao();
 	}
 
 	void show_stats() const {
@@ -680,7 +681,6 @@ void create_snow_strips(voxel_map &vmap) {
 
 
 bool snow_enabled() {
-
 	return (temperature < W_FREEZE_POINT && !snow_draw.empty() && (display_mode & 0x02));
 }
 
@@ -718,19 +718,18 @@ void gen_snow_coverage() {
 
 
 void reset_snow_vbos() {
-
 	snow_draw.free_vbos();
 }
 
 
-void draw_snow() {
+void draw_snow(bool shadow_only) {
 
 	has_snow = snow_enabled();
 	if (!has_snow) return;
 	static point last_lpos(all_zeros);
 	point const lpos(get_light_pos());
 
-	if (!shadow_map_enabled() && (!no_sun_lpos_update && lpos != last_lpos)) {
+	if (!shadow_only && !shadow_map_enabled() && (!no_sun_lpos_update && lpos != last_lpos)) {
 		RESET_TIME;
 		snow_draw.update_shadows();
 		last_lpos = lpos;
@@ -738,11 +737,12 @@ void draw_snow() {
 	}
 	//RESET_TIME;
 	shader_t s;
-	bool const use_smap(shadow_map_enabled());
-	bool const detail_normal_map(camera_mode == 1 && (display_mode & 0x08) != 0); // aliasing when viewed from above, so only use for ground camera
+	bool const use_smap(!shadow_only && shadow_map_enabled());
+	bool const detail_normal_map(!shadow_only && camera_mode == 1 && (display_mode & 0x08) != 0); // aliasing when viewed from above, so only use for ground camera
+	bool const enable_dlights(!shadow_only && ENABLE_SNOW_DLIGHTS);
 	s.setup_enabled_lights(2, 2); // FS
 	s.set_prefix("#define BLEND_DIST_DETAIL_NMAP", 1); // FS
-	set_dlights_booleans(s, ENABLE_SNOW_DLIGHTS, 1); // FS
+	set_dlights_booleans(s, enable_dlights, 1); // FS
 	s.check_for_fog_disabled();
 	setup_detail_normal_map_prefix(s, detail_normal_map);
 	for (unsigned d = 0; d < 2; ++d) {s.set_bool_prefix("no_normalize", !use_smap, d);} // VS/FS
@@ -751,9 +751,9 @@ void draw_snow() {
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+detail_normal_map.part+per_pixel_lighting_textured");
 	s.begin_shader();
 	s.setup_scene_bounds();
-	setup_dlight_textures(s);
 	s.setup_fog_scale();
 	s.add_uniform_int("tex0", 0);
+	if (enable_dlights) {setup_dlight_textures(s);}
 	if (use_smap) {set_smap_shader_for_all_lights(s);}
 	if (detail_normal_map) {setup_detail_normal_map(s, 0.047);}
 	s.set_specular(0.5, 50.0);
@@ -762,7 +762,7 @@ void draw_snow() {
 	setup_texgen(50.0, 50.0, 0.0, 0.0, 0.0, s, 0);
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
-	snow_draw.draw();
+	snow_draw.draw(shadow_only);
 	glDisable(GL_PRIMITIVE_RESTART);
 	s.clear_specular();
 	s.end_shader();
