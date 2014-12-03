@@ -9,11 +9,11 @@
 
 
 float    const SMOKE_ZVEL      = 3.0;
-unsigned const NUM_STARS       = 4000;
-unsigned const MAX_BUBBLES     = 2000;
-unsigned const MAX_PART_CLOUDS = 200;
-unsigned const MAX_FIRES       = 50;
-unsigned const MAX_DECALS      = 2500;
+unsigned const NUM_STARS       = 5000;
+unsigned const MAX_BUBBLES     = 2500;
+unsigned const MAX_PART_CLOUDS = 250;
+unsigned const MAX_FIRES       = 75;
+unsigned const MAX_DECALS      = 3000;
 
 
 // Global Variables
