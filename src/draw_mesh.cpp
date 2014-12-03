@@ -108,7 +108,7 @@ class mesh_vertex_draw {
 	vector<norm_color_ix> last_rows;
 
 	void update_vertex(int i, int j) {
-		float color_scale(DEF_DIFFUSE), light_scale(1.0);
+		float color_scale(DEF_DIFFUSE);
 		float &sd(surface_damage[i][j]);
 
 		if (sd > 0.0) {
@@ -117,25 +117,23 @@ class mesh_vertex_draw {
 		}
 		colorRGB color(mesh_color_scale*color_scale);
 		if (using_lightmap) {get_sd_light(j, i, get_zpos(data[c].v.z), &color.R);}
+		data[c].n = vertex_normals[i][j];
 
 		// water light attenuation: total distance from sun/moon, reflected off bottom, to viewer
 		if (!DISABLE_WATER && data[c].v.z < max_water_height && data[c].v.z < water_matrix[i][j]) {
 			point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
 			water_color_atten(&color.R, j, i, pos);
 
-			if (wminside[i][j] == 1) { // too slow?
+			if (wminside[i][j] == 1) {
 				colorRGBA wc(WHITE);
 				select_liquid_color(wc, j, i);
 				UNROLL_3X(color[i_] *= wc[i_];)
 			}
 			if (!uw_mesh_lighting.empty()) { // water caustics: slow and low resolution, but conceptually interesting
-				float const val(uw_mesh_lighting[i*MESH_X_SIZE + j].get_val());
-				//light_scale *= val*val; // square to enhance the caustics effect
-				light_scale = pow(val, 8);
+				// Note: normal is never set to zero because we need it for dynamic light sources
+				data[c].n *= max(pow(uw_mesh_lighting[i*MESH_X_SIZE + j].get_val(), 8), 0.01f); // enhance the contrast (can be > 1.0)
 			}
 		}
-		// Note: normal is never set to zero because we need it for dynamic light sources
-		data[c].n = vertex_normals[i][j]*max(light_scale, 0.01f);
 		data[c].set_c3(color);
 	}
 
