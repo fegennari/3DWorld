@@ -134,6 +134,38 @@ struct indexed_vao_manager_t : public indexed_vbo_manager_t {
 };
 
 
+template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_manager_t {
+
+	unsigned vao[N];
+
+	indexed_vao_multi_manager_t() {reset_vbos_to_zero();}
+
+	void reset_vbos_to_zero() { // virtual?
+		indexed_vbo_manager_t::reset_vbos_to_zero();
+		for (unsigned i = 0; i < N; ++i) {vao[i] = 0;}
+	}
+	void clear_vbos() {
+		indexed_vbo_manager_t::clear_vbos();
+		for (unsigned i = 0; i < N; ++i) {delete_and_zero_vao(vao[i]);}
+	}
+	void ensure_vao_bound(unsigned ix) {
+		assert(ix < N);
+		if (!vao[ix]) {vao[ix] = create_vao();}
+		check_bind_vao(vao[ix]);
+	}
+	template<typename vert_type_t, typename index_type_t>
+	void create_and_upload(unsigned ix, vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
+		assert(ix < N);
+		if (vao[ix]) return; // already set
+		ensure_vao_bound(ix);
+		indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);
+		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
+	}
+	void enable_vao(unsigned ix) const {assert(ix < N); check_bind_vao(vao[ix]);}
+	void pre_render(unsigned ix, bool using_index=1) const {enable_vao(ix); indexed_vbo_manager_t::pre_render(using_index);}
+};
+
+
 class cube_map_sphere_drawer_t : public indexed_vao_manager_t {
 	unsigned nverts, nindices;
 
