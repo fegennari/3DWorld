@@ -550,7 +550,7 @@ public:
 			pld.add_pt(global_pos, (get_player_pos() - global_pos).get_norm(), tex_color);
 			return;
 		}
-		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(4.0*dscale)))));
+		int ndiv(max(3, min((int)ASTEROID_NDIV, int(sqrt(5.0*dscale)))));
 		fgPushMatrix();
 		global_translate(pos);
 		if (dscale > 2.0) {rotate_about(rot_ang, rot_axis);}

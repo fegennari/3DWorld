@@ -608,7 +608,7 @@ void free_obj::draw(shader_t shader[2]) const { // view culling has already been
 	float const dist(p2p_dist(pos, get_player_pos2())), type_scale(lg_obj_type ? 0.75 : (is_particle() ? 1.2 : 1.0));
 	float const dscale(type_scale*NDIV_SCALE_U*(get_draw_radius()/(dist + 0.1*radius + TOLERANCE)));
 	if (dscale < 0.5 || (is_particle() && dscale < 1.0)) return; // too far/small - clip it
-	int ndiv(max(3, min((int)FREE_OBJ_MAX_NDIV, int(sqrt(10.0*dscale)))));
+	int ndiv(max(3, min((int)FREE_OBJ_MAX_NDIV, int(4.0*sqrt(dscale)))));
 	if (ndiv > 8 && (ndiv&1)) ++ndiv; // an even size is divisible by 2, so hemispheres can be created exactly
 	bool const stencil_shadows(STENCIL_SHADOWS && univ_stencil_shadows && lg_obj_type), no_lighting(no_light());
 	uobject const *sobj(NULL);

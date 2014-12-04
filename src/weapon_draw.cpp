@@ -347,7 +347,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 	select_texture(WHITE_TEX);
 	
 	if (draw_pass == 0) { // draw solid objects
-		int ndiv(int(get_zoom_scale()*280.0*cradius/(distance_to_camera(pos) + SMALL_NUMBER)));
+		int ndiv(int(get_zoom_scale()*300.0*cradius/(distance_to_camera(pos) + SMALL_NUMBER)));
 		ndiv = min(N_SPHERE_DIV, max(3, ndiv));
 		unsigned const oid(weapons[wid].obj_id);
 		//int const cobj(weapons[wid].need_weapon ? cid : -1);

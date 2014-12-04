@@ -23,7 +23,7 @@ float const MAX_COLONY_TEMP  = 28.0;
 float const MAX_LAND_TEMP    = 29.0;
 float const BOIL_TEMP        = 30.0;
 float const NO_AIR_TEMP      = 32.0;
-float const NDIV_SIZE_SCALE  = 12.0;
+float const NDIV_SIZE_SCALE  = 15.0;
 float const NEBULA_PROB      = 0.65;
 
 bool const SHOW_SPHERE_TIME  = 0; // debugging
