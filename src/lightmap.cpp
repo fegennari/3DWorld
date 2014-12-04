@@ -1038,17 +1038,6 @@ bool is_in_darkness(point const &pos, float radius, int cobj) {
 }
 
 
-// used on mesh and water
-void get_sd_light(int x, int y, int z, float *ls) {
-
-	if (lm_alloc && using_lightmap && !light_sources.empty() && lmap_manager.is_valid_cell(x, y, z)) {
-		assert(lmap_manager.is_allocated());
-		float const *const lcolor(lmap_manager.get_lmcell(x, y, z).lc);
-		ADD_LIGHT_CONTRIB(lcolor, ls);
-	}
-}
-
-
 void get_indir_light(colorRGBA &a, point const &p) { // Note: return value is unused
 
 	if (!lm_alloc) return;

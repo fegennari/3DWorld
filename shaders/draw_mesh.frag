@@ -3,8 +3,7 @@ uniform sampler2D tex0, tex1;
 
 //in vec2 tc; // comes from detail_normal_map.part.frag
 //in vec4 epos; // predeclared earlier for dynamic lighting to work
-in vec3 dlpos;
-in vec3 normal; // world space
+//in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
 in vec3 eye_norm;
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
@@ -14,7 +13,7 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 vec4 add_mesh_light0(in vec3 normal, in vec4 epos) {
 	float ds_scale = 1.0;
 #ifdef ENABLE_CLOUD_SHADOWS
-	ds_scale = get_cloud_transparency(dlpos, sun_pos);
+	ds_scale = get_cloud_transparency(vpos, sun_pos);
 #endif
 	if (use_shadow_map) {normal *= get_shadow_map_weight_light0(epos, normal);}
 	return add_light_comp_pos_scaled0(normal, epos, ds_scale, 1.0, gl_Color);
@@ -22,7 +21,7 @@ vec4 add_mesh_light0(in vec3 normal, in vec4 epos) {
 vec4 add_mesh_light1(in vec3 normal, in vec4 epos) {
 	float ds_scale = 1.0;
 #ifdef ENABLE_CLOUD_SHADOWS
-	ds_scale = get_cloud_transparency(dlpos, moon_pos);
+	ds_scale = get_cloud_transparency(vpos, moon_pos);
 #endif
 	if (use_shadow_map) {normal *= get_shadow_map_weight_light1(epos, normal);}
 	return add_light_comp_pos_scaled1(normal, epos, ds_scale, 1.0, gl_Color);
@@ -34,7 +33,8 @@ void main()
 	if (enable_light0) {lit_color += add_mesh_light0(eye_norm, epos).rgb;}
 	if (enable_light1) {lit_color += add_mesh_light1(eye_norm, epos).rgb;}
 	lit_color  = clamp(lit_color, 0.0, 1.0);
-	if (enable_dlights) {lit_color.rgb += add_dlights(dlpos, normalize(normal), vec3(1.0));} // dynamic lighting
+	add_indir_lighting(lit_color);
+	if (enable_dlights) {lit_color.rgb += add_dlights(vpos, normalize(normal), vec3(1.0));} // dynamic lighting
 	lit_color *= texture(tex0, tc).rgb;
 
 #ifdef MULT_DETAIL_TEXTURE // for mesh

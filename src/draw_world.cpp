@@ -215,7 +215,7 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	s.check_for_fog_disabled();
 	if (min_alpha == 0.0)  {s.set_prefix("#define NO_ALPHA_TEST",     1);} // FS
 	if (dynamic_smap_bias) {s.set_prefix("#define DYNAMIC_SMAP_BIAS", 1);} // FS
-	s.set_bool_prefixes("indir_lighting", indir_lighting, 3); // VS/FS
+	s.set_bool_prefix("indir_lighting", indir_lighting, 1); // FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
 	set_dlights_booleans(s, dlights, 1); // FS
 }
@@ -223,6 +223,7 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 
+	s.setup_scene_bounds();
 	if ((use_smoke || use_indir) && smoke_tid) {set_3d_texture_as_current(smoke_tid, 1);}
 	s.add_uniform_int("smoke_and_indir_tex", 1);
 	s.add_uniform_float("half_dxy", HALF_DXY);
@@ -235,9 +236,8 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 
 void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bool use_smoke, bool use_indir, float min_alpha) {
 
-	s.setup_scene_bounds();
 	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
-	if (dlights) setup_dlight_textures(s);
+	if (dlights) {setup_dlight_textures(s);}
 	set_indir_lighting_block(s, use_smoke, use_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);

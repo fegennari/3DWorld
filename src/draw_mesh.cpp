@@ -36,7 +36,7 @@ bool clear_landscape_vbo;
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava;
+extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere;
@@ -51,6 +51,7 @@ extern water_params_t water_params;
 
 void draw_sides_and_bottom(bool shadow_pass);
 void set_cloud_intersection_shader(shader_t &s);
+void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -116,7 +117,6 @@ class mesh_vertex_draw {
 			color_scale *= max(0.0f, (1.0f - sd));
 		}
 		colorRGB color(mesh_color_scale*color_scale);
-		if (using_lightmap) {get_sd_light(j, i, get_zpos(data[c].v.z), &color.R);}
 		data[c].n = vertex_normals[i][j];
 
 		// water light attenuation: total distance from sun/moon, reflected off bottom, to viewer
@@ -281,20 +281,20 @@ void gen_uw_lighting() {
 }
 
 
-// texture units used: 0: terrain texture, 1: detail texture
-void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, shader_t &shader) {
+// texture units used: 0: terrain texture, 1/10: detail texture
+void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, shader_t &shader, unsigned detail_tu_id) {
 
 	float const tx(tex_scale*(((float)xoffset)/((float)xsize) + 0.5));
 	float const ty(tex_scale*(((float)yoffset)/((float)ysize) + 0.5));
 	setup_texgen(tex_scale/TWO_XSS, tex_scale/TWO_YSS, tx, ty, 0.0, shader, 0);
-	select_multitex(mesh_detail_tex, 1, 1); // detail texture
+	select_multitex(mesh_detail_tex, detail_tu_id, 1); // detail texture
 }
 
 void set_landscape_texture_texgen(shader_t &shader) {
 
 	if (!DISABLE_TEXTURES) {
 		select_texture(LANDSCAPE_TEX);
-		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE, shader);
+		set_landscape_texgen(1.0, xoff, yoff, MESH_X_SIZE, MESH_Y_SIZE, shader, 10);
 	}
 }
 
@@ -356,25 +356,28 @@ void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled
 }
 
 
-// tu_ids used: 0: diffuse map, 1: detail map, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: cloud shadow texture, 11 = detail normal map
+// tu_ids used: 0: diffuse map, 1: indir lighting, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: cloud shadow texture, 10: detail map, 11: detail normal map
 void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 
 	bool const cloud_shadows(!has_snow && atmosphere > 0.0 && ground_effects_level >= 2);
+	bool const indir_lighting(using_lightmap && have_indir_smoke_tex && (display_mode & 0x10));
 	s.setup_enabled_lights(2, 2); // FS
 	set_dlights_booleans(s, 1, 1); // FS
 	s.check_for_fog_disabled();
 	if (cloud_shadows) {s.set_prefix("#define ENABLE_CLOUD_SHADOWS", 1);} // FS
 	setup_detail_normal_map_prefix(s, detail_normal_map);
+	s.set_bool_prefix("indir_lighting", indir_lighting, 1); // FS
 	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 	s.set_vert_shader("texture_gen.part+draw_mesh");
-	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+linear_fog.part+detail_normal_map.part+cloud_sphere_shadow.part+draw_mesh");
+	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+indir_lighting.part+linear_fog.part+detail_normal_map.part+cloud_sphere_shadow.part+draw_mesh");
 	s.begin_shader();
 	if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
+	set_indir_lighting_block(s, 0, indir_lighting);
 	s.setup_fog_scale();
 	s.setup_scene_bounds();
 	setup_dlight_textures(s);
 	s.add_uniform_int("tex0", 0);
-	s.add_uniform_int("tex1", 1);
+	s.add_uniform_int("tex1", 10);
 	if (detail_normal_map) {setup_detail_normal_map(s, 2.0);}
 	if (cloud_shadows    ) {set_cloud_intersection_shader(s);}
 }

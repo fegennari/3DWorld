@@ -1652,7 +1652,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	else { // or just disable water fog calculation in the vertex shader (water_fog.part)?
 		s.add_uniform_float("water_plane_z", (reflection_pass ? water_plane_z : get_actual_zmin())); // used for fog calculation/clipping
 	}
-	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s);
+	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s, 1);
 }
 
 

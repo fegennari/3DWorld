@@ -302,7 +302,6 @@ struct water_vertex_calc_t {
 			point const camera(get_camera_pos());
 			if (camera.z > vnc.v.z) {blend_reflection_color(vnc.v, color, vnc.n, camera);} // below the camera
 		}
-		if (using_lightmap) {get_sd_light(j, i, get_zpos(vnc.v.z), (float *)&color);}
 		vnc.set_c4(color);
 	}
 };
