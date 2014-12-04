@@ -360,7 +360,7 @@ void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled
 void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 
 	bool const cloud_shadows(!has_snow && atmosphere > 0.0 && ground_effects_level >= 2);
-	bool const indir_lighting(using_lightmap && have_indir_smoke_tex && (display_mode & 0x10));
+	bool const indir_lighting(using_lightmap && have_indir_smoke_tex);
 	s.setup_enabled_lights(2, 2); // FS
 	set_dlights_booleans(s, 1, 1); // FS
 	s.check_for_fog_disabled();
