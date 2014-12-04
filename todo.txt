@@ -16,4 +16,3 @@ Static + Dynamic shadow maps
 Static cobjs use vbo
 Use more VAOs
 Use SDL?
-* Global LOD thresh + TT dist thresh

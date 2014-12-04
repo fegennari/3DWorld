@@ -22,13 +22,13 @@ bool const GRASS_CLOUD_SHADOWS= 1; // slow, but looks nice
 bool const USE_TREE_BILLBOARDS= 1; // decidious trees: faster but lower quality
 int  const TILE_RADIUS        = 6; // in mesh sizes
 unsigned const NUM_LODS       = 5; // > 0
-float const TREE_LOD_THRESH   = 5.0;
-float const GEOMORPH_THRESH   = 5.0;
-float const SCENERY_THRESH_REF= 1.7;
-float const SCENERY_THRESH    = 4.2;
-float const GRASS_THRESH      = 1.5;
-float const SMAP_NEW_THRESH   = 1.0;
-float const SMAP_DEL_THRESH   = 1.1;
+float const TREE_LOD_THRESH   = 6.0;
+float const GEOMORPH_THRESH   = 6.0;
+float const SCENERY_THRESH_REF= 2.0;
+float const SCENERY_THRESH    = 5.0;
+float const GRASS_THRESH      = 1.6;
+float const SMAP_NEW_THRESH   = 1.2;
+float const SMAP_DEL_THRESH   = 1.3;
 float const BCUBE_ZTOLER      = 1.0E-6;
 
 

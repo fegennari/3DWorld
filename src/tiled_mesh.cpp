@@ -16,16 +16,16 @@ bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slowe
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const NUM_FIRE_MODES = 4;
-float const FOG_DIST_TILES    = 1.4;
-float const DRAW_DIST_TILES   = 1.45;
-float const CREATE_DIST_TILES = 1.5;
-float const CLEAR_DIST_TILES  = 1.5;
-float const DELETE_DIST_TILES = 1.7;
-float const GRASS_LOD_SCALE   = 16.0;
+float const FOG_DIST_TILES    = 1.45;
+float const DRAW_DIST_TILES   = 1.5;
+float const CREATE_DIST_TILES = 1.6;
+float const CLEAR_DIST_TILES  = 1.6;
+float const DELETE_DIST_TILES = 1.8;
+float const GRASS_LOD_SCALE   = 15.0; // smaller = more grass detail
 float const GRASS_DIST_SLOPE  = 0.25;
-float const SMAP_FADE_THRESH  = 1.4;
+float const SMAP_FADE_THRESH  = 1.5;
 float const OCCLUDER_DIST     = 0.2;
-float const FLOWER_REL_DIST   = 0.8; // flower view distance relative to grass view distance
+float const FLOWER_REL_DIST   = 0.9; // flower view distance relative to grass view distance
 
 int   const LIGHTNING_LIGHT = 2;
 float const LIGHTNING_FREQ  = 200.0; // in ticks (1/40 s)
