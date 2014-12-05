@@ -15,7 +15,7 @@ vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 	vec3 binormal = normalize(cross(vec3(1,0,0), eye_norm));
 	vec3 tangent  = normalize(cross(eye_norm, binormal));
 	mat3 TBN  = transpose(mat3(tangent, binormal, eye_norm));
-	light_dir = TBN * light_dir;
+	light_dir = normalize(TBN * light_dir);
 	eye_pos   = TBN * eye_pos;
 	return get_bump_map_normal();
 }
