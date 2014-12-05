@@ -10,7 +10,6 @@
 unsigned const VOXELS_PER_DIV = 8; // 1024 for 128 vertex mesh
 unsigned const MAX_STRIP_LEN  = 200; // larger = faster, less overhead; smaller = smaller edge strips, better culling
 int      const Z_CHECK_RANGE  = 1; // larger = smoother and fewer strips, but longer preprocessing
-bool     const USE_VBOS       = 1; // faster drawing but more GPU resources
 bool const ENABLE_SNOW_DLIGHTS= 1; // looks nice, but slow
 
 
@@ -18,13 +17,10 @@ bool has_snow(0);
 point vox_delta;
 map<int, unsigned> x_strip_map;
 
-extern bool no_sun_lpos_update;
 extern int display_mode, camera_mode, read_snow_file, write_snow_file;
 extern unsigned num_snowflakes;
 extern float ztop, zbottom, temperature, snow_depth, snow_random;
-extern vector3d cview_dir;
 extern char *snow_file;
-extern coll_obj_group coll_objects;
 
 
 typedef short coord_type;
@@ -408,35 +404,8 @@ private:
 		return ix;
 	}
 
-	void calc_shadows() {
-		int index(-1);
-		point const lpos(get_light_pos());
-
-#pragma omp parallel for schedule(dynamic) firstprivate(index)
-		for (int i = 0; i < (int)data.size(); ++i) {
-			data[i].n.normalize();
-			bool shadowed(0);
-
-			if (index >= 0 && coll_objects[index].line_intersect(data[i].v, lpos)) {
-				shadowed = 1;
-			}
-			else {
-				index = -1;
-				shadowed = !is_visible_to_light_cobj(data[i].v, get_light(), 0.0, -1, 1, &index);
-				if (index >= 0) assert(index < (int)coll_objects.size());
-			}
-			if (shadowed) {data[i].n *= 0.001;} // scale to a small (zero-ish) value
-		}
-	}
-
 public:
 	void free_vbos() {vao_mgr.clear_vbos();}
-
-	void update_shadows() {
-		calc_shadows();
-		assert(!data.empty());
-		if (vao_mgr.vbo) {upload_to_vbo(vao_mgr.vbo, data, 0, 1);}
-	}
 
 	void update_region(unsigned strip_ix, unsigned strip_pos, unsigned strip_len, float new_z) { // Note: could use ranges/blocks optimization
 		
@@ -717,24 +686,13 @@ void gen_snow_coverage() {
 }
 
 
-void reset_snow_vbos() {
-	snow_draw.free_vbos();
-}
+void reset_snow_vbos() {snow_draw.free_vbos();}
 
 
 void draw_snow(bool shadow_only) {
 
 	has_snow = snow_enabled();
 	if (!has_snow) return;
-	static point last_lpos(all_zeros);
-	point const lpos(get_light_pos());
-
-	if (!shadow_only && !shadow_map_enabled() && (!no_sun_lpos_update && lpos != last_lpos)) {
-		RESET_TIME;
-		snow_draw.update_shadows();
-		last_lpos = lpos;
-		PRINT_TIME("Snow Shadow Calculation");
-	}
 	//RESET_TIME;
 	shader_t s;
 	bool const use_smap(!shadow_only && shadow_map_enabled());

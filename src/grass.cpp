@@ -17,7 +17,6 @@ bool grass_enabled(1);
 unsigned grass_density(0);
 float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 
-extern bool no_sun_lpos_update;
 extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter, draw_model;
 extern unsigned create_voxel_landscape;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex, zmax_est;
