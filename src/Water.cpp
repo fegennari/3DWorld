@@ -946,8 +946,7 @@ void add_waves() { // add waves due to wind
 			if (!wminside[y][x] || !get_water_enabled(x, y)) continue; // only in water
 			float const wh(water_matrix[y][x]), depth(wh - mesh_height[y][x]);
 			if (depth < SMALL_NUMBER) continue; // not deep enough for waves
-			point const p(get_xval(x), get_yval(y), wh);
-			vector3d const local_wind(get_local_wind(p));
+			vector3d const local_wind(get_local_wind(x, y, wh));
 			float const lwmag(local_wind.mag());
 			float const tx(min(0.2f, fabs(local_wind.y))*wind_freq*(x + xoff2)/lwmag - wxoff);
 			float const ty(min(0.2f, fabs(local_wind.x))*wind_freq*(y + yoff2)/lwmag - wyoff);

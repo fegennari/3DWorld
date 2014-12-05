@@ -589,9 +589,8 @@ vector3d get_flow_velocity(point pos) { // has same effect as wind
 }
 
 
-vector3d get_local_wind(point const &pt, bool no_use_mesh) {
+vector3d get_local_wind(int xpos, int ypos, float zval, bool no_use_mesh) {
 
-	int const xpos(get_xpos(pt.x)), ypos(get_ypos(pt.y));
 	float pressure(1.0), hval(0.5);
 	vector3d local_wind(wind);
 
@@ -599,10 +598,10 @@ vector3d get_local_wind(point const &pt, bool no_use_mesh) {
 		if (point_outside_mesh(xpos, ypos)) return wind;
 		// calculate direction of wind based on mesh orientation
 		float const mh(mesh_height[ypos][xpos]);
-		if (pt.z < mh)    return all_zeros; // under the mesh - no wind
+		if (zval < mh)    return all_zeros; // under the mesh - no wind
 		float const szmax(max(ztop, czmax)); // scene zmax
-		if (pt.z > szmax) return wind; // above the top of the mesh
-		float const rel_height((pt.z - mh)/(szmax - mh)); // 0 at mesh level, 1 at scene_ztop
+		if (zval > szmax) return wind; // above the top of the mesh
+		float const rel_height((zval - mh)/(szmax - mh)); // 0 at mesh level, 1 at scene_ztop
 		vector3d v_ortho;
 		orthogonalize_dir(wind, vertex_normals[ypos][xpos], v_ortho, 0);
 		v_ortho.z *= 0.1; // z component of velocity is much smaller
@@ -615,6 +614,10 @@ vector3d get_local_wind(point const &pt, bool no_use_mesh) {
 	float const ty((ypos + yoff2 - total_wind.y/TWO_YSS)/MESH_Y_SIZE);
 	float const wind_intensity(CLIP_TO_01(1.0f - 2.0f*get_texture_component(WIND_TEX, tx, ty, 0))); // roughly (0.0, 0.5)
 	return local_wind*(pressure*(hval*wind_intensity + (1.0 - hval)));
+}
+
+vector3d get_local_wind(point const &pt, bool no_use_mesh) {
+	return get_local_wind(get_xpos(pt.x), get_ypos(pt.y), pt.z, no_use_mesh);
 }
 
 

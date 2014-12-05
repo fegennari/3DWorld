@@ -1108,7 +1108,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			
 			// Note: should check for similar z-value, but z is usually similar within the leaves of a single tree
 			if (i == 0 || xpos != last_xpos || ypos != last_ypos) {
-				local_wind = get_local_wind(p0, !priv_data); // slow
+				local_wind = get_local_wind(xpos, ypos, p0.y, !priv_data); // slow
 				last_xpos  = xpos;
 				last_ypos  = ypos;
 			}

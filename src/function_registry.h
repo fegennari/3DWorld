@@ -281,6 +281,7 @@ float get_max_t(int obj_type);
 void init_objects();
 void set_coll_rmax(float rmax);
 void change_timestep(float mult_factor);
+vector3d get_local_wind(int xpos, int ypos, float zval, bool no_use_mesh=0);
 vector3d get_local_wind(point const &pt, bool no_use_mesh=0);
 void reanimate_objects();
 void seed_water_on_mesh(float amount);
