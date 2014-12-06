@@ -175,7 +175,7 @@ bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsi
 	glBindBuffer(GL_UNIFORM_BUFFER, buffer_id);
 	
 	// We can use BufferData to upload our data to the shader, since we know it's in the std140 layout
-	glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize, NULL, GL_DYNAMIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize, NULL, GL_DYNAMIC_DRAW); // glBufferSubData() after buffer is created?
 
 	// Bind constants to UBO binding point 0
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, buffer_id);
@@ -1057,7 +1057,7 @@ public:
 		vals.resize(xsize*ysize);
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
 
-		if (0) { // Note: slower
+		if (1) { // Note: slower on old cards, faster on new ones
 			unsigned const pbo_size(xsize*ysize*sizeof(float));
 			unsigned pbo(0);
 			glGenBuffers(1, &pbo);

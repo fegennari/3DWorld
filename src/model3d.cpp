@@ -1546,6 +1546,7 @@ void model3d::proc_counted_normals(vector<counted_normal> &cn, float nmag_thresh
 
 	for (vector<counted_normal>::iterator i = cn.begin(); i != cn.end(); ++i) { // if recalc_normals
 		if (!i->is_valid()) continue; // invalid, remains invalid
+		// Note: could assign higher weights to triangles with smaller area
 		*i /= (float)i->count;
 		float const mag(i->mag());
 		if (mag < 1E-6) {i->count = 0; continue;} // invalid
