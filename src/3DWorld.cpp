@@ -24,7 +24,6 @@ typedef set<unsigned char>::iterator keyset_it;
 
 int const INIT_DMODE       = 0x010F;
 int const P_MOTION_DEF     = 0;
-int const KBD_HANDLER      = 1;
 int const STARTING_INIT_X  = 0; // setting to 1 seems safer but less efficient
 int const MIN_TIME_MS      = 100;
 
@@ -247,12 +246,11 @@ void init_window() {
 	//glutCloseFunc(quit_3dworld); // can't do this because minimize/maximize() close the context, and we don't want to quit
 	//glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS); // doesn't work?
 
-	if (KBD_HANDLER) {
-		glutIgnoreKeyRepeat(1);
-		glutKeyboardUpFunc(keyboard_up);
-		glutSpecialUpFunc(keyboard2_up);
-		init_keyset();
-	}
+	// init keyboard and mouse callbacks
+	glutIgnoreKeyRepeat(1);
+	glutKeyboardUpFunc(keyboard_up);
+	glutSpecialUpFunc(keyboard2_up);
+	init_keyset();
 	glutPassiveMotionFunc(mousePassiveMotion);
 
     // Initialize GL
@@ -407,8 +405,7 @@ void check_xy_offsets() {
 float calc_speed() {
 
 	float speed(pow(3.0f, min(((world_mode == WMODE_INF_TERRAIN) ? 3 : 2), do_run)));
-	if (camera_in_air) speed *= CAMERA_AIR_CONT; // what about smileys?
-	if (!KBD_HANDLER)  speed /= 0.75;
+	if (camera_in_air) {speed *= CAMERA_AIR_CONT;} // what about smileys?
 	return speed;
 }
 
@@ -1141,10 +1138,11 @@ void print_wind() {cout << "wind: "; wind.print(); cout << endl;}
 int get_map_shift_val() {return int(map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1));}
 
 
+// handles user key remapping and disabling of keys in gameplay mode
 class keyboard_remap_t {
 
 	map<int, int> key_map;
-	set<int> key_null;
+	set<int> key_null, enabled_keys, disabled_keys;
 
 	static int get_numeric_char(char c) {
 		if (c >= '0' && c <= '9') {return (c - '0');}
@@ -1168,6 +1166,9 @@ class keyboard_remap_t {
 		}
 		cerr << "Error extracting char or hex number from string '" << str << "'" << endl;
 		return -1;
+	}
+	static void add_keys_to_set(string const &keys, set<int> &key_set) { // char vs. int?
+		for (string::const_iterator i = keys.begin(); i != keys.end(); ++i) {key_set.insert(*i);}
 	}
 
 public:
@@ -1201,7 +1202,23 @@ public:
 		if (key_null.find(key) != key_null.end()) return 0; // null key, ignore
 		auto it(key_map.find(key));
 		if (it != key_map.end()) {key = key_t(it->second);}
-		return 1;
+		return is_key_enabled(key);
+	}
+
+	// key enabling/disabling code (doesn't apply to special or modifier keys)
+	bool is_key_enabled(int key) const {
+		if (key == 0x1B) return 1; // we always enable the escape/quit key
+		if (disabled_keys.find(key) != disabled_keys.end()) return 0; // key explicitly disabled
+		if (enabled_keys.empty()) return 1; // no enabled keys => all keys are enabled
+		return (enabled_keys.find(key) != enabled_keys.end()); // check enabled set
+	}
+	void enable_only_keys(string const &keys) { // empty keys = all
+		enabled_keys.clear();
+		add_keys_to_set(keys, enabled_keys);
+	}
+	void set_disabled_keys(string const &keys) {
+		disabled_keys.clear();
+		add_keys_to_set(keys, disabled_keys);
 	}
 };
 
@@ -1250,13 +1267,18 @@ void keyboard2(int key, int x, int y) {
 	case GLUT_KEY_F4: // switch weapon mode
 		switch_weapon_mode();
 		break;
-
 	case GLUT_KEY_F5: // toggle large/small trees
 		change_tree_mode();
 		break;
 
-	case GLUT_KEY_F6: // unused
-		// UNUSED
+	case GLUT_KEY_F6: // enable/disable gameplay mode keys
+		{
+			static bool gameplay_key_mode(0);
+			gameplay_key_mode ^= 1;
+			// empty string enables all keys when not in gameplay_key_mode
+			kbd_remap.enable_only_keys(gameplay_key_mode ? "asdwqev " : "");
+			print_text_onscreen((gameplay_key_mode ? "Disabling Non-Gameplay Keys" : "Enabling All Keys"), PURPLE, 1.0, TICKS_PER_SECOND, 10);
+		}
 		break;
 
 	case GLUT_KEY_F7: // toggle auto time advance
@@ -1274,11 +1296,9 @@ void keyboard2(int key, int x, int y) {
 	case GLUT_KEY_F9: // switch to fullscreen mode
 		glutFullScreen();
 		break;
-
 	case GLUT_KEY_F10: // switch cloud model
 		cloud_model = !cloud_model;
 		break;
-
 	case GLUT_KEY_F11: // unused
 		break;
 	case GLUT_KEY_F12: // unused
@@ -1306,7 +1326,7 @@ unsigned char get_key_other_case(unsigned char key) {
 
 void keyboard_up(unsigned char key, int x, int y) {
 
-	if (kbd_text_mode || !KBD_HANDLER || key == 13) return; // ignore text mode and enter key
+	if (kbd_text_mode || key == 13) return; // ignore text mode and enter key
 	if (!kbd_remap.remap_key(key, 0, 1)) return;
 	if (keyset.find(key) != keyset.end()) {add_uevent_keyboard_up(key, x, y);}
 	keyset_it it(keys.find(key));
@@ -1365,10 +1385,6 @@ void keyboard(unsigned char key, int x, int y) {
 	if (!kbd_remap.remap_key(key, 0, 0)) return;
 	add_uevent_keyboard(key, x, y);
 
-	if (!KBD_HANDLER) {
-		keyboard_proc(key, x, y);
-		return;
-	}
 	if (keys.find(key) != keys.end()) { // can happen with control clicks
 		cout << "Warning: Keyboard event for key " << key << " (" << int(key) << ") which has alredy been pressed." << endl;
 		//assert(0); // too strong?
@@ -1380,8 +1396,6 @@ void keyboard(unsigned char key, int x, int y) {
 
 
 void proc_kbd_events() {
-
-	if (!KBD_HANDLER) return;
 
 	for (keyset_it it = keys.begin(); it != keys.end(); ++it) {
 		if (keyset.find(*it) != keyset.end()) {keyboard_proc(*it, 0, 0);} // x and y = ?
