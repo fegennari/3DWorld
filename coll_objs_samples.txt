@@ -12,7 +12,7 @@ y 4.0
 #t 0 0 1.0  s 1 2  M 0  m 4.0  O ../models/dragon.model3d 4 0 0
 #t 0 0 1.5  s 1 2  M 0  m 4.0  O ../models/buddha.model3d 4 0 0
 #t 0 0 2.0  M 0  m 0.5  O ../models/hairball.model3d 4 0 0
-#t 0 0 0  s 1 2  M 0  m 0.002  O ../models/conference/conference.model3d 3 1 0
+t 0 0 0  s 1 2  M 0  m 0.002  O ../models/conference/conference.model3d 3 1 0
 #t 0 0 0  s 1 2  M 0  m 0.2  O ../models/sponza/sponza.obj 4 1 0
 #t 0 0 0.0  s 1 2  M 0  m 0.002  O ../models/sponza2/sponza.model3d 4 0 0
 #t 0 0 2.4  s 1 2  M 0  m 0.18  O ../models/sibenik/sibenik.model3d 4 1 0
@@ -30,15 +30,15 @@ y 4.0
 #t 0 0 0  s 1 2  M 0  m 0.5  O "../models/cathedral/cathedral.obj" 3 1 0
 #t 0 -8.0 -1.5  s 1 2  M 0  m 0.2  O "../models/LARA BEDROOM/LARA.obj" 3 1 0
 #t -0.5 -1.5 1.0  s 1 2  M 0  m 0.3  O "../models/Spencer_Mansion_ItalianUtent/frame_11.04.2011_18.18.36.obj" 3 0 0
-#t 0 0 0  s 1 2  M 0  m 0.1  O "C:\Users\Frank E. Gennari\Desktop\Graphics\sketchup_models\lighthouse.obj" 3 0 0
-#t 0 0 0  s 1 2  M 0  m 0.07  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\street_environment\Street environment_V01.obj" 3 0 0
-#t 1.00 0.0 -0.4  M 0  m 0.001  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\building_model\building.obj" 3 1 0
-#t 0 0 0  s 1 2  M 0  m 0.0002  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\Castle\Castle01.obj" 3 1 0
+#t 0 0 0  s 1 2  M 0  m 0.1  O "..\..\..\Graphics\sketchup_models\lighthouse.obj" 3 0 0
+#t 0 0 0  s 1 2  M 0  m 0.07  O "..\models\street_environment\Street environment_V01.obj" 3 0 0
+#t 1.00 0.0 -0.4  M 0  m 0.001  O "..\models\building_model\building.obj" 3 1 0
+#t 0 0 0  s 1 2  M 0  m 0.0002  O "..\models\Castle\Castle01.obj" 3 1 0
 
 l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = white texture
-#t 0 -2.0 0.2  M 0  m 0.002  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\stealth\stealth.3ds" 3 0 0 # flat face normals
-#t 0 0 -0.5  M 0  m 0.4  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\tree1_3ds\Tree1.3ds" 3 0 0 # Note: textures should not be wrapped
-#t 1.00 0.0 -0.4  M 0  m 0.001  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\building_model\building.3ds" 3 0 0 # Note: incorrect transforms
-#t 0 0 -0.4  M 0  m 0.03  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\old_house\house.3ds" 3 0 0 # Note: incorrect bump maps (== texture maps)
-t 0 0 0  M 0  m 0.02  O "C:\Users\Frank E. Gennari\Desktop\Frank\CS184\models\lighthouse\lighthouse.3ds" 3 0 0 # Note: incorrect bump maps (== texture maps)
+#t 0 -2.0 0.2  M 0  m 0.002  O "..\models\stealth\stealth.3ds" 3 0 0 # flat face normals
+#t 0 0 -0.5  M 0  m 0.4  O "..\models\tree1_3ds\Tree1.3ds" 3 0 0 # Note: textures should not be wrapped
+#t 1.00 0.0 -0.4  M 0  m 0.001  O "..\models\building_model\building.3ds" 3 0 0 # Note: incorrect transforms
+#t 0 0 -0.4  M 0  m 0.03  O "..\models\old_house\house.3ds" 3 0 0 # Note: incorrect bump maps (== texture maps)
+#t 0 0 0  M 0  m 0.02  O "..\models\lighthouse\lighthouse.3ds" 3 0 0 # Note: incorrect bump maps (== texture maps)
 
