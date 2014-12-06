@@ -158,7 +158,7 @@ public:
 
 	bool add_mesh_vertex_pair(int i, int j, float x, float y) {
 		if (c > 1) {
-			if (mesh_draw != NULL && (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1))) return 0;
+			if (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1)) return 0;
 			if (mesh_z_cutoff > -FAR_DISTANCE && mesh_z_cutoff > max(mesh_height[i][j], mesh_height[i+1][j])) return 0;
 		}
 		for (unsigned p = 0; p < 2; ++p, ++c) {
@@ -211,7 +211,7 @@ void gen_uw_lighting() {
 	for (vector<fp_ratio>::iterator i = uw_mesh_lighting.begin(); i != uw_mesh_lighting.end(); ++i) {
 		i->n = i->d = 0.0; // initialize
 	}
-	for (int y = 0; y < MESH_Y_SIZE; ++y) { // openmp?
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			if (!mesh_is_underwater(x, y)) continue;
 			point const p1(get_xval(x), get_yval(y), water_matrix[y][x]); // point on water surface

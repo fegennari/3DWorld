@@ -127,11 +127,9 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map);
 
 
 inline bool cont_surf(int wsi, int wsi2, float zval) {
-
 	assert(size_t(wsi) < valleys.size() && size_t(wsi2) < valleys.size());
 	return (wsi == wsi2 || fabs(zval - valleys[wsi2].zval) < SMALL_DZ || spill.member2way(wsi, wsi2));
 }
-
 
 bool get_water_enabled(int x, int y) {
 
@@ -139,7 +137,6 @@ bool get_water_enabled(int x, int y) {
 	int const xx(x + xoff2), yy(y + yoff2);
 	return (point_outside_mesh(xx, yy) || water_enabled[yy][xx]);
 }
-
 
 bool has_water(int x, int y) {
 	return (world_mode == WMODE_GROUND && !point_outside_mesh(x, y) && wminside[y][x] && get_water_enabled(x, y));
@@ -539,7 +536,7 @@ void draw_water() {
 	// draw interior water (ponds)
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			if (!is_ice && has_snow_accum) {update_accumulation(i, j);}
+			if (!is_ice && has_snow_accum) {update_accumulation(j, i);}
 			nin = 0;
 
 			if (wminside[i][j] == 1) {
