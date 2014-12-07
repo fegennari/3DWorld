@@ -90,9 +90,10 @@ struct vbo_wrap_t {
 
 	vbo_wrap_t() : vbo(0) {}
 	void clear() {delete_and_zero_vbo(vbo);}
+	void clear_vbo() {clear();} // alias for clear()
 	template<typename vert_type_t>
 	void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool end_with_bind0=0) {
-		if (!vbo ) {create_vbo_and_upload(vbo, data, 0, end_with_bind0, dynamic_level);}
+		if (!vbo) {create_vbo_and_upload(vbo, data, 0, end_with_bind0, dynamic_level);}
 	}
 	void pre_render() const {check_bind_vbo(vbo);}
 	static void post_render() {bind_vbo(0);}

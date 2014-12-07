@@ -372,6 +372,7 @@ public:
 
 	void final_draw() {
 		if (!vbo) { // create new vbo
+			data.resize(c); // resize smaller if possible (in cases where mesh_enable reduces the vertex count)
 			create_vbo_and_upload(vbo, data, 0, 0, 2); // streaming
 		}
 		else {
@@ -415,7 +416,7 @@ void draw_mesh_mvd() {
 
 	if (use_core_context) {
 		static mesh_vertex_draw_vbo mvd;
-		if (clear_mvd_vbo) {mvd.clear(); clear_mvd_vbo = 0;}
+		if (clear_mvd_vbo) {mvd.clear_vbo(); clear_mvd_vbo = 0;}
 		mvd.begin_draw();
 		draw_mesh_mvd_core(mvd);
 		mvd.final_draw();

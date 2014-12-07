@@ -148,11 +148,10 @@ public:
 };
 
 
-template< typename vert_type_t > class vbo_block_manager_t {
+template< typename vert_type_t > class vbo_block_manager_t : public vbo_wrap_t {
 
 	vector<vert_type_t> pts;
 	vector<unsigned> offsets;
-	unsigned vbo;
 
 	bool has_data() const {return (!pts.empty() || offsets.size() > 1);}
 	void add_points_int(vector<vert_type_t> &dest, typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color);
@@ -160,7 +159,6 @@ template< typename vert_type_t > class vbo_block_manager_t {
 public:
 	vector<vert_norm> temp_points;
 
-	vbo_block_manager_t() : vbo(0) {clear();}
 	// can't free in the destructor because the gl context may be destroyed before this point
 	//~vbo_block_manager_t() {clear_vbo();}
 	bool is_uploaded() const {return (vbo != 0);}
@@ -179,11 +177,9 @@ public:
 	void update_range(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color, unsigned six, unsigned eix);
 	void update_range(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color, unsigned six, unsigned eix) {update_range(&v.front(), v.size(), color, six, eix);}
 	void begin_render() const;
-	void end_render() const;
-	void bind_cur_vbo() const;
+	void end_render() const {post_render();}
 	void clear_points() {pts.swap(vector<vert_type_t>());}
 	vector<vert_type_t> &get_pts_vector_for_adding() {return pts;}
-	void clear_vbo();
 	void clear();
 	void upload_and_clear_points() {upload(); clear_points();}
 	unsigned get_gpu_mem() const {return ((vbo && has_data()) ? offsets.back()*sizeof(vert_type_t) : 0);}

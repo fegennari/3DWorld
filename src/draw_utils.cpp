@@ -535,7 +535,6 @@ void vbo_block_manager_t<vert_type_t>::add_points_int(vector<vert_type_t> &dest,
 
 template<>
 void vbo_block_manager_t<vert_norm_tc>::add_points_int(vector<vert_norm_tc> &dest, vert_norm_tc const *const p, unsigned npts, colorRGBA const &color) { // color is ignored
-
 	assert(p != NULL && npts > 0);
 	copy(p, p+npts, back_inserter(dest));
 }
@@ -576,23 +575,17 @@ void vbo_block_manager_t<vert_type_t>::update_range(typename vert_type_t::non_co
 	assert(npts == update_size);
 	vector<vert_type_t> update_verts;
 	add_points_int(update_verts, p, npts, color);
-	bind_cur_vbo();
+	pre_render();
 	upload_vbo_sub_data(&update_verts.front(), start*sizeof(vert_type_t), update_size*sizeof(vert_type_t));
-	bind_vbo(0);
+	post_render();
 }
 
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::begin_render() const {
 	if (!has_data()) return;
-	bind_cur_vbo();
+	pre_render();
 	vert_type_t::set_vbo_arrays();
 }
-
-template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::end_render() const {bind_vbo(0);}
-
-template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::bind_cur_vbo() const {check_bind_vbo(vbo);}
 
 template< typename vert_type_t >
 void vbo_block_manager_t<vert_type_t>::clear() {
@@ -600,11 +593,6 @@ void vbo_block_manager_t<vert_type_t>::clear() {
 	temp_points.clear();
 	offsets.clear();
 	clear_vbo();
-}
-
-template< typename vert_type_t >
-void vbo_block_manager_t<vert_type_t>::clear_vbo() {
-	delete_and_zero_vbo(vbo);
 }
 
 // explicit template instantiations
