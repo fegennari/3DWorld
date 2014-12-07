@@ -168,9 +168,7 @@ void vbo_ring_buffer_t::ensure_vbo(unsigned min_size) {
 		size = max(2*size, min_size); // at least double
 	}
 	if (vbo) return; // done
-	vbo = create_vbo();
-	bind_vbo(vbo, is_index);
-	upload_vbo_data(NULL, size, is_index); // reserve the space but don't use it
+	create_vbo_with_null_data(vbo, size, is_index); // reserve the space but don't use it
 	pos = 0;
 }
 

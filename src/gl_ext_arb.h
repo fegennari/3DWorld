@@ -77,48 +77,94 @@ template<typename T> void create_bind_vbo_and_upload(unsigned &vbo, vector<T> co
 	if (!create_vbo_and_upload(vbo, data, is_index, 0, dynamic_level)) {bind_vbo(vbo, is_index);}
 }
 
+inline void create_vbo_with_null_data(unsigned &vbo, size_t size, bool is_index=0, int dynamic_level=0) {
+	vbo = create_vbo();
+	bind_vbo(vbo, is_index);
+	upload_vbo_data(NULL, size, is_index);
+}
 
-struct indexed_vbo_manager_t {
 
-	unsigned vbo, ivbo, gpu_mem;
+struct vbo_wrap_t {
 
-	indexed_vbo_manager_t() : vbo(0), ivbo(0), gpu_mem(0) {}
+	unsigned vbo;
+
+	vbo_wrap_t() : vbo(0) {}
+	void clear() {delete_and_zero_vbo(vbo);}
+	template<typename vert_type_t>
+	void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool end_with_bind0=0) {
+		if (!vbo ) {create_vbo_and_upload(vbo, data, 0, end_with_bind0, dynamic_level);}
+	}
+	void pre_render() const {check_bind_vbo(vbo);}
+	static void post_render() {bind_vbo(0);}
+};
+
+
+struct indexed_vbo_manager_t : public vbo_wrap_t {
+
+	unsigned ivbo, gpu_mem;
+
+	indexed_vbo_manager_t() : ivbo(0), gpu_mem(0) {}
 	void reset_vbos_to_zero() {vbo = ivbo = gpu_mem = 0;}
 
+	template<typename vert_type_t, typename index_type_t>
+	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool end_with_bind0=0) {
+		vbo_wrap_t::create_and_upload(data, dynamic_level, end_with_bind0);
+		if (!vbo ) {gpu_mem += data.size() *sizeof(vert_type_t );}
+		if (!ivbo) {create_vbo_and_upload(ivbo, idata, 1, end_with_bind0, dynamic_level); gpu_mem += idata.size()*sizeof(index_type_t);}
+	}
 	void clear_vbos() {
-		delete_vbo(vbo);
+		vbo_wrap_t::clear();
 		delete_vbo(ivbo);
 		reset_vbos_to_zero();
 	}
-	template<typename vert_type_t, typename index_type_t>
-	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool end_with_bind0=0) {
-		if (!vbo ) {create_vbo_and_upload(vbo,  data,  0, end_with_bind0, dynamic_level); gpu_mem += data.size() *sizeof(vert_type_t );}
-		if (!ivbo) {create_vbo_and_upload(ivbo, idata, 1, end_with_bind0, dynamic_level); gpu_mem += idata.size()*sizeof(index_type_t);}
-	}
 	void pre_render(bool using_index=1) const {
-		assert(vbo && (ivbo || !using_index));
-		bind_vbo(vbo,  0);
+		assert(ivbo || !using_index);
+		vbo_wrap_t::pre_render();
 		bind_vbo(ivbo, 1);
 	}
 	static void post_render() {
-		bind_vbo(0, 0);
+		vbo_wrap_t::post_render();
 		bind_vbo(0, 1);
 	}
 };
 
 
-struct indexed_vao_manager_t : public indexed_vbo_manager_t {
+struct vao_wrap_t {
 
 	unsigned vao;
 
-	indexed_vao_manager_t() : vao(0) {}
-	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vao = 0;} // virtual?
-	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); delete_and_zero_vao(vao);}
+	vao_wrap_t() : vao(0) {}
+	void clear() {delete_and_zero_vao(vao);}
 	
 	void ensure_vao_bound() {
 		if (!vao) {vao = create_vao();}
-		check_bind_vao(vao);
+		enable_vao();
 	}
+	void enable_vao() const {check_bind_vao(vao);}
+	static void disable_vao() {bind_vao(0);}
+};
+
+
+struct vao_manager_t : public vbo_wrap_t, public vao_wrap_t {
+
+	template<typename vert_type_t>
+	void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool setup_pointers=0) {
+		if (vao) return; // already set
+		ensure_vao_bound();
+		vbo_wrap_t::create_and_upload(data, dynamic_level);
+		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
+	}
+	void clear() {vbo_wrap_t::clear(); vao_wrap_t::clear();}
+	void pre_render() const {enable_vao(); vbo_wrap_t::pre_render();}
+	static void post_render() {disable_vao(); indexed_vbo_manager_t::post_render();}
+};
+
+
+struct indexed_vao_manager_t : public indexed_vbo_manager_t, public vao_wrap_t {
+
+	void reset_vbos_to_zero() {indexed_vbo_manager_t::reset_vbos_to_zero(); vao = 0;} // virtual?
+	void clear_vbos() {indexed_vbo_manager_t::clear_vbos(); vao_wrap_t::clear();}
+
 	template<typename vert_type_t, typename index_type_t>
 	void create_and_upload(vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
 		if (vao) return; // already set
@@ -127,31 +173,22 @@ struct indexed_vao_manager_t : public indexed_vbo_manager_t {
 		//indexed_vbo_manager_t::pre_render(1); // binds vbo/ivbo - may not be necessary
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
 	}
-	void enable_vao() const {check_bind_vao(vao);}
 	void pre_render(bool using_index=1) const {enable_vao(); indexed_vbo_manager_t::pre_render(using_index);}
-	static void disable_vao() {bind_vao(0);}
 	static void post_render() {disable_vao(); indexed_vbo_manager_t::post_render();}
 };
 
 
 template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_manager_t {
 
-	unsigned vao[N];
+	vao_wrap_t vaos[N];
 
-	indexed_vao_multi_manager_t() {reset_vbos_to_zero();}
-
-	void reset_vbos_to_zero() { // virtual?
-		indexed_vbo_manager_t::reset_vbos_to_zero();
-		for (unsigned i = 0; i < N; ++i) {vao[i] = 0;}
-	}
 	void clear_vbos() {
 		indexed_vbo_manager_t::clear_vbos();
-		for (unsigned i = 0; i < N; ++i) {delete_and_zero_vao(vao[i]);}
+		for (unsigned i = 0; i < N; ++i) {vaos[i].clear();}
 	}
 	void ensure_vao_bound(unsigned ix) {
 		assert(ix < N);
-		if (!vao[ix]) {vao[ix] = create_vao();}
-		check_bind_vao(vao[ix]);
+		vaos[ix].ensure_vao_bound();
 	}
 	template<typename vert_type_t, typename index_type_t>
 	void create_and_upload(unsigned ix, vector<vert_type_t> const &data, vector<index_type_t> const &idata, int dynamic_level=0, bool setup_pointers=0) {
@@ -161,7 +198,7 @@ template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_man
 		indexed_vbo_manager_t::create_and_upload(data, idata, dynamic_level);
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}
 	}
-	void enable_vao(unsigned ix) const {assert(ix < N); check_bind_vao(vao[ix]);}
+	void enable_vao(unsigned ix) const {assert(ix < N); vaos[ix].enable_vao();}
 	void pre_render(unsigned ix, bool using_index=1) const {enable_vao(ix); indexed_vbo_manager_t::pre_render(using_index);}
 };
 

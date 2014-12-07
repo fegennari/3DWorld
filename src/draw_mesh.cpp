@@ -146,9 +146,7 @@ public:
 		last_rows.resize(MESH_X_SIZE+1);
 
 		if (use_vbo) {
-			vbo = create_vbo();
-			bind_vbo(vbo);
-			upload_vbo_data(NULL, 2*MESH_X_SIZE*(MESH_Y_SIZE-1)*sizeof(vert_norm_color), 0, 2); // streaming
+			create_vbo_with_null_data(vbo, 2*MESH_X_SIZE*(MESH_Y_SIZE-1)*sizeof(vert_norm_color), 0, 2); // streaming
 			vert_norm_color::set_vbo_arrays();
 		}
 		else {
@@ -299,6 +297,7 @@ void set_landscape_texture_texgen(shader_t &shader) {
 }
 
 
+// Note: currently we never calls this with shadow_pass set to both 0 and 1 in the same frame
 void draw_mesh_vbo(bool shadow_pass) {
 
 	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
@@ -307,13 +306,13 @@ void draw_mesh_vbo(bool shadow_pass) {
 	shader_t s;
 	s.begin_simple_textured_shader(0.0, !shadow_pass, 1, &color); // lighting + texgen
 	set_landscape_texture_texgen(s);
-	static unsigned mesh_vbo(0);
+	static vao_manager_t mesh_data;
 	
 	if (clear_landscape_vbo) {
-		delete_and_zero_vbo(mesh_vbo);
+		mesh_data.clear();
 		clear_landscape_vbo = 0;
 	}
-	if (mesh_vbo == 0) {
+	if (mesh_data.vbo == 0) {
 		vector<vert_norm_comp> data; // vertex and normals
 		data.reserve(2*MESH_X_SIZE*(MESH_Y_SIZE-1));
 
@@ -324,17 +323,14 @@ void draw_mesh_vbo(bool shadow_pass) {
 				}
 			}
 		}
-		create_vbo_and_upload(mesh_vbo, data, 0, 0);
+		mesh_data.create_and_upload(data, 0, 1); // and setup pointers
 	}
-	else {
-		bind_vbo(mesh_vbo);
-	}
-	vert_norm_comp::set_vbo_arrays();
+	mesh_data.enable_vao();
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) { // use glMultiDrawArrays()?
 		glDrawArrays(GL_TRIANGLE_STRIP, 2*i*MESH_X_SIZE, 2*MESH_X_SIZE);
 	}
-	bind_vbo(0);
+	mesh_data.disable_vao();
 	s.end_shader();
 }
 
