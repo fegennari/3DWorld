@@ -708,14 +708,22 @@ void change_tree_mode() {
 
 void switch_weapon_mode() {
 
-	if (sstates != NULL) {
-		++sstates[CAMERA_ID].wmode;
-		sstates[CAMERA_ID].verify_wmode();
-	}
+	if (sstates == NULL) return;
+	++sstates[CAMERA_ID].wmode;
+	sstates[CAMERA_ID].verify_wmode();
 }
 
 
 bool is_shift_key_pressed() {return (glutGetModifiers() & GLUT_ACTIVE_SHIFT);}
+
+
+void toggle_camera_mode() {
+
+	camera_mode   = !camera_mode;
+	camera_reset  = 1;
+	camera_change = 1;
+	if (camera_mode == 1) {camera_invincible = 1;} // in air (else on ground)
+}
 
 
 // This function is called whenever there is a keyboard input
@@ -853,10 +861,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		reset_camera_pos();
 		if (world_mode != WMODE_GROUND) break; // universe/inf terrain mode
 		gamemode_rand_appear();
-		camera_mode   = !camera_mode;
-		camera_reset  = 1;
-		camera_change = 1;
-		if (camera_mode == 1) camera_invincible = 1; // in air (else on ground)
+		toggle_camera_mode();
 		break;
 
 	case 'h': // change camera surface collision detection
@@ -1085,12 +1090,18 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		calc_visibility(MOON_SHADOW);
 		break;
 
-	case ' ': // fire key
-		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide && passive_motion) {
+	case ' ': // fire/jump/respawn key
+		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide && passive_motion) { // jump
 			if (!spectate && sstates != nullptr) {sstates[CAMERA_ID].jump(get_camera_pos());}
-			break;
 		}
-		fire_weapon();
+		else if (world_mode == WMODE_GROUND && game_mode && camera_mode == 0 && !spectate) { // respawn
+			gamemode_rand_appear();
+			toggle_camera_mode();
+			if (sstates != nullptr) {sstates[CAMERA_ID].jump_time = 0.25*TICKS_PER_SECOND;} // suppress extra jump if space is held down too long
+		}
+		else { // fire
+			fire_weapon();
+		}
 		break;
 	case '<': // decrease weapon velocity
 		ball_velocity = max(0.0, ball_velocity-5.0);
@@ -1276,7 +1287,7 @@ void keyboard2(int key, int x, int y) {
 			static bool gameplay_key_mode(0);
 			gameplay_key_mode ^= 1;
 			// empty string enables all keys when not in gameplay_key_mode
-			kbd_remap.enable_only_keys(gameplay_key_mode ? "asdwqev " : "");
+			kbd_remap.enable_only_keys(gameplay_key_mode ? "asdwqe " : "");
 			print_text_onscreen((gameplay_key_mode ? "Disabling Non-Gameplay Keys" : "Enabling All Keys"), PURPLE, 1.0, TICKS_PER_SECOND, 10);
 		}
 		break;
