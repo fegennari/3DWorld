@@ -95,7 +95,7 @@ class mesh_vertex_draw {
 
 	float const healr;
 	bool use_vbo;
-	unsigned vbo, vbo_pos;
+	unsigned vbo;
 	vector<vert_norm_color> data;
 
 	struct norm_color_ix {
@@ -140,13 +140,13 @@ class mesh_vertex_draw {
 public:
 	unsigned c;
 
-	mesh_vertex_draw(bool use_vbo_) : healr(fticks*SURF_HEAL_RATE), use_vbo(use_vbo_), vbo(0), vbo_pos(0), data(2*(MAX_XY_SIZE+1)), c(0)
+	mesh_vertex_draw(bool use_vbo_) : healr(fticks*SURF_HEAL_RATE), use_vbo(use_vbo_), vbo(0), data(2*(MAX_XY_SIZE+1)), c(0)
 	{
 		assert(!data.empty());
 		last_rows.resize(MESH_X_SIZE+1);
 
 		if (use_vbo) {
-			create_vbo_with_null_data(vbo, 2*MESH_X_SIZE*(MESH_Y_SIZE-1)*sizeof(vert_norm_color), 0, 2); // streaming
+			create_vbo_with_null_data(vbo, data.size()*sizeof(vert_norm_color), 0, 2); // streaming
 			vert_norm_color::set_vbo_arrays();
 		}
 		else {
@@ -179,14 +179,8 @@ public:
 
 	void emit_strip() {
 		if (c >= 3) { // at least one triangle
-			if (vbo) {upload_vbo_sub_data_no_sync(&data.front(), vbo_pos*sizeof(vert_norm_color), c*sizeof(vert_norm_color));}
-			glDrawArrays(GL_TRIANGLE_STRIP, vbo_pos, c);
-			if (vbo) {
-				// Note: vbo_pos should only require alignment when a partial strip is drawn, since the mesh will be a power of 2,
-				//       so we don't have to worry about the alignment exceeding the vbo allocation size
-				//while ((c*sizeof(vert_norm_color)) & 15) {++c;} // force 16-byte alignment
-				vbo_pos += c;
-			}
+			if (vbo) {upload_vbo_sub_data(&data.front(), 0, c*sizeof(vert_norm_color));}
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, c);
 		}
 		c = 0;
 	}
