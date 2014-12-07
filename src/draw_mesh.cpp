@@ -32,7 +32,7 @@ struct fp_ratio {
 
 
 // Global Variables
-bool clear_landscape_vbo;
+bool clear_landscape_vbo(0), clear_mvd_vbo(0);
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
@@ -89,106 +89,6 @@ void water_color_atten_pt(float *c, int x, int y, point const &pos, point const 
 	float const dist(scale*(integrate_water_dist(pos, p1, wh) + integrate_water_dist(pos, p2, wh)));
 	atten_by_water_depth(c, dist);
 }
-
-
-class mesh_vertex_draw {
-
-	float const healr;
-	bool use_vbo;
-	unsigned vbo;
-	vector<vert_norm_color> data;
-
-	struct norm_color_ix {
-		vector3d n;
-		color_wrapper c;
-		int ix;
-		norm_color_ix() : ix(-1) {}
-		norm_color_ix(vert_norm_color const &vnc, int ix_) : n(vnc.n), c(vnc), ix(ix_) {}
-	};
-
-	vector<norm_color_ix> last_rows;
-
-	void update_vertex(int i, int j) {
-		float color_scale(DEF_DIFFUSE);
-		float &sd(surface_damage[i][j]);
-
-		if (sd > 0.0) {
-			sd = min(MAX_SURFD, max(0.0f, (sd - healr)));
-			color_scale *= max(0.0f, (1.0f - sd));
-		}
-		colorRGB color(mesh_color_scale*color_scale);
-		data[c].n = vertex_normals[i][j];
-
-		// water light attenuation: total distance from sun/moon, reflected off bottom, to viewer
-		if (!DISABLE_WATER && data[c].v.z < max_water_height && data[c].v.z < water_matrix[i][j]) {
-			point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
-			water_color_atten(&color.R, j, i, pos);
-
-			if (wminside[i][j] == 1) {
-				colorRGBA wc(WHITE);
-				select_liquid_color(wc, j, i);
-				UNROLL_3X(color[i_] *= wc[i_];)
-			}
-			if (!uw_mesh_lighting.empty()) { // water caustics: slow and low resolution, but conceptually interesting
-				// Note: normal is never set to zero because we need it for dynamic light sources
-				data[c].n *= max(pow(uw_mesh_lighting[i*MESH_X_SIZE + j].get_val(), 8), 0.01f); // enhance the contrast (can be > 1.0)
-			}
-		}
-		data[c].set_c3(color);
-	}
-
-public:
-	unsigned c;
-
-	mesh_vertex_draw(bool use_vbo_) : healr(fticks*SURF_HEAL_RATE), use_vbo(use_vbo_), vbo(0), data(2*(MAX_XY_SIZE+1)), c(0)
-	{
-		assert(!data.empty());
-		last_rows.resize(MESH_X_SIZE+1);
-
-		if (use_vbo) {
-			create_vbo_with_null_data(vbo, data.size()*sizeof(vert_norm_color), 0, 2); // streaming
-			vert_norm_color::set_vbo_arrays();
-		}
-		else {
-			vert_norm_color::set_vbo_arrays(1, &data.front());
-		}
-	}
-
-	bool add_mesh_vertex_pair(int i, int j, float x, float y) {
-		if (c > 1) {
-			if (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1)) return 0;
-			if (mesh_z_cutoff > -FAR_DISTANCE && mesh_z_cutoff > max(mesh_height[i][j], mesh_height[i+1][j])) return 0;
-		}
-		for (unsigned p = 0; p < 2; ++p, ++c) {
-			int const iinc(min((MESH_Y_SIZE-1), int(i+p)));
-			assert(c < data.size());
-			data[c].v.assign(x, (y + p*DY_VAL), mesh_height[iinc][j]);
-			assert(unsigned(j) < last_rows.size());
-		
-			if (last_rows[j].ix == iinc) { // gets here nearly half the time
-				data[c].n = last_rows[j].n;
-				UNROLL_4X(data[c].c[i_] = last_rows[j].c.c[i_];)
-			}
-			else {
-				update_vertex(iinc, j);
-				last_rows[j] = norm_color_ix(data[c], iinc);
-			}
-		}
-		return 1;
-	}
-
-	void emit_strip() {
-		if (c >= 3) { // at least one triangle
-			if (vbo) {upload_vbo_sub_data(&data.front(), 0, c*sizeof(vert_norm_color));}
-			glDrawArrays(GL_TRIANGLE_STRIP, 0, c);
-		}
-		c = 0;
-	}
-
-	void final_draw() {
-		if (use_vbo) {bind_vbo(0); delete_and_zero_vbo(vbo);}
-	}
-};
 
 
 void gen_uw_lighting() {
@@ -373,14 +273,124 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 }
 
 
-void draw_mesh_mvd() {
+class mesh_data_store {
+protected:
+	struct norm_color_ix {
+		vector3d n;
+		color_wrapper c;
+		int ix;
+		norm_color_ix() : ix(-1) {}
+		norm_color_ix(vert_norm_color const &vnc, int ix_) : n(vnc.n), c(vnc), ix(ix_) {}
+	};
 
-	shader_t s;
-	s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
-	setup_mesh_and_water_shader(s, (detail_normal_map && (display_mode & 0x08)));
-	set_landscape_texture_texgen(s);
+	vector<vert_norm_color> data;
+	vector<norm_color_ix> last_rows;
+
+	void update_vertex(int i, int j) {
+		float color_scale(DEF_DIFFUSE);
+		float &sd(surface_damage[i][j]);
+
+		if (sd > 0.0) {
+			sd = min(MAX_SURFD, max(0.0f, (sd - fticks*SURF_HEAL_RATE)));
+			color_scale *= max(0.0f, (1.0f - sd));
+		}
+		colorRGB color(mesh_color_scale*color_scale);
+		data[c].n = vertex_normals[i][j];
+
+		// water light attenuation: total distance from sun/moon, reflected off bottom, to viewer
+		if (!DISABLE_WATER && data[c].v.z < max_water_height && data[c].v.z < water_matrix[i][j]) {
+			point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
+			water_color_atten(&color.R, j, i, pos);
+
+			if (wminside[i][j] == 1) {
+				colorRGBA wc(WHITE);
+				select_liquid_color(wc, j, i);
+				UNROLL_3X(color[i_] *= wc[i_];)
+			}
+			if (!uw_mesh_lighting.empty()) { // water caustics: slow and low resolution, but conceptually interesting
+				// Note: normal is never set to zero because we need it for dynamic light sources
+				data[c].n *= max(pow(uw_mesh_lighting[i*MESH_X_SIZE + j].get_val(), 8), 0.01f); // enhance the contrast (can be > 1.0)
+			}
+		}
+		data[c].set_c3(color);
+	}
+
+public:
+	unsigned c;
+
+	mesh_data_store() : c(0) {last_rows.resize(MESH_X_SIZE+1);}
+
+	bool add_mesh_vertex_pair(int i, int j, float x, float y) {
+		if (c > 1) {
+			if (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1)) return 0;
+			if (mesh_z_cutoff > -FAR_DISTANCE && mesh_z_cutoff > max(mesh_height[i][j], mesh_height[i+1][j])) return 0;
+		}
+		for (unsigned p = 0; p < 2; ++p, ++c) {
+			int const iinc(min((MESH_Y_SIZE-1), int(i+p)));
+			assert(c < data.size());
+			data[c].v.assign(x, (y + p*DY_VAL), mesh_height[iinc][j]);
+			assert(unsigned(j) < last_rows.size());
+		
+			if (last_rows[j].ix == iinc) { // gets here nearly half the time
+				data[c].n = last_rows[j].n;
+				UNROLL_4X(data[c].c[i_] = last_rows[j].c.c[i_];)
+			}
+			else {
+				update_vertex(iinc, j);
+				last_rows[j] = norm_color_ix(data[c], iinc);
+			}
+		}
+		return 1;
+	}
+};
+
+
+class mesh_vertex_draw : public mesh_data_store {
+public:
+	mesh_vertex_draw() {
+		data.resize(2*(MESH_X_SIZE+1));
+		vert_norm_color::set_vbo_arrays(1, &data.front());
+	}
+	void emit_strip() {
+		if (c >= 3) {glDrawArrays(GL_TRIANGLE_STRIP, 0, c);} // at least one triangle
+		c = 0;
+	}
+};
+
+
+class mesh_vertex_draw_vbo : public vbo_wrap_t, public mesh_data_store {
+
+	vector<unsigned> strip_ixs;
+
+public:
+	mesh_vertex_draw_vbo() {
+		data.resize(2*(MESH_X_SIZE+1)*MESH_Y_SIZE);
+		strip_ixs.reserve(MESH_Y_SIZE+1);
+	}
+	void begin_draw() {strip_ixs.resize(1, 0); c = 0;}
+	void emit_strip() {strip_ixs.push_back(c);}
+
+	void final_draw() {
+		if (!vbo) { // create new vbo
+			create_vbo_and_upload(vbo, data, 0, 0, 2); // streaming
+		}
+		else {
+			bind_vbo(vbo);
+			upload_vbo_sub_data(&data.front(), 0, c*sizeof(vert_norm_color));
+		}
+		vert_norm_color::set_vbo_arrays(); // VAO?
+
+		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) {
+			glDrawArrays(GL_TRIANGLE_STRIP, *i, (*(i+1) - *i));
+		}
+		bind_vbo(0);
+	}
+};
+
+
+template<typename T> void draw_mesh_mvd_core(T &mvd) {
+
 	float y(-Y_SCENE_SIZE);
-	mesh_vertex_draw mvd(use_core_context);
 
 	for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
 		float x(-X_SCENE_SIZE);
@@ -388,12 +398,32 @@ void draw_mesh_mvd() {
 		for (int j = 0; j < MESH_X_SIZE-1; ++j) {
 			if (!mvd.add_mesh_vertex_pair(i, j, x, y)) {mvd.emit_strip();}
 			x += DX_VAL;
-		} // for j
+		}
 		mvd.add_mesh_vertex_pair(i, (MESH_X_SIZE - 1), x, y);
 		mvd.emit_strip();
 		y += DY_VAL;
 	} // for i
-	mvd.final_draw();
+}
+
+
+void draw_mesh_mvd() {
+
+	shader_t s;
+	s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
+	setup_mesh_and_water_shader(s, (detail_normal_map && (display_mode & 0x08)));
+	set_landscape_texture_texgen(s);
+
+	if (use_core_context) {
+		static mesh_vertex_draw_vbo mvd;
+		if (clear_mvd_vbo) {mvd.clear(); clear_mvd_vbo = 0;}
+		mvd.begin_draw();
+		draw_mesh_mvd_core(mvd);
+		mvd.final_draw();
+	}
+	else {
+		mesh_vertex_draw mvd;
+		draw_mesh_mvd_core(mvd);
+	}
 	s.end_shader();
 }
 
@@ -401,6 +431,7 @@ void draw_mesh_mvd() {
 void display_mesh(bool shadow_pass) { // fast array version
 
 	if (mesh_height == NULL) return; // no mesh to display
+	if (clear_landscape_vbo) {clear_mvd_vbo = 1;}
 
 	if (shadow_pass) {
 		draw_mesh_vbo(1);

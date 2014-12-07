@@ -1310,7 +1310,8 @@ void keyboard2(int key, int x, int y) {
 	case GLUT_KEY_F10: // switch cloud model
 		cloud_model = !cloud_model;
 		break;
-	case GLUT_KEY_F11: // unused
+	case GLUT_KEY_F11: // temporary toggle of core context mode
+		use_core_context ^= 1;
 		break;
 	case GLUT_KEY_F12: // unused
 		break;
