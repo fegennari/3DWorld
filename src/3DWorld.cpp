@@ -568,7 +568,6 @@ void resize(int x, int y) {
 // button is a number 0 to 2 designating the button
 // state is 1 for release 0 for press event
 // x and y are the location of the mouse (in window-relative coordinates)
-// Note: Function variables are copied to global versions.
 void mouseButton(int button, int state, int x, int y) {
 
 	bool const fire_button((button == GLUT_RIGHT_BUTTON || (passive_motion && button == GLUT_LEFT_BUTTON)));
@@ -586,7 +585,7 @@ void mouseButton(int button, int state, int x, int y) {
 }
 
 
-//This function is called whenever the mouse is moved with a mouse button held down.
+// This function is called whenever the mouse is moved with a mouse button held down.
 // x and y are the location of the mouse (in window-relative coordinates)
 void mouseMotion(int x, int y) {
 
@@ -1094,10 +1093,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide && passive_motion) { // jump
 			if (!spectate && sstates != nullptr) {sstates[CAMERA_ID].jump(get_camera_pos());}
 		}
-		else if (world_mode == WMODE_GROUND && game_mode && camera_mode == 0 && !spectate) { // respawn
+		else if (world_mode == WMODE_GROUND && game_mode && camera_mode == 0 && !spectate && sstates != nullptr && sstates[CAMERA_ID].deaths > 0) { // respawn
 			gamemode_rand_appear();
 			toggle_camera_mode();
-			if (sstates != nullptr) {sstates[CAMERA_ID].jump_time = 0.25*TICKS_PER_SECOND;} // suppress extra jump if space is held down too long
+			sstates[CAMERA_ID].jump_time = 0.25*TICKS_PER_SECOND; // suppress extra jump if space is held down too long
 		}
 		else { // fire
 			fire_weapon();
