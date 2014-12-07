@@ -8,7 +8,6 @@
 #include "physics_objects.h"
 #include "textures_3dw.h"
 #include "lightmap.h"
-#include "gl_ext_arb.h"
 #include "shaders.h"
 #include "draw_utils.h"
 
@@ -29,10 +28,6 @@ bool is_grass_enabled();
 
 
 // *** detail scenery (shared with grass and flowers)
-
-void detail_scenery_t::free_vbo() {
-	delete_and_zero_vbo(vbo);
-}
 
 void detail_scenery_t::setup_shaders_pre(shader_t &s) { // used for grass and flowers
 	s.setup_enabled_lights(2, 2); // FS; L0-L1: static directional
@@ -66,7 +61,7 @@ void grass_manager_t::grass_t::merge(grass_t const &g) {
 }
 
 void grass_manager_t::clear() {
-	free_vbo();
+	clear_vbo();
 	grass.clear();
 }
 
@@ -122,13 +117,13 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &da
 }
 
 void grass_manager_t::begin_draw() const {
-	check_bind_vbo(vbo);
+	pre_render();
 	grass_data_t::set_vbo_arrays();
 	select_texture(GRASS_BLADE_TEX);
 }
 
 void grass_manager_t::end_draw() const {
-	bind_vbo(0);
+	post_render();
 	check_gl_error(40);
 }
 
@@ -747,7 +742,7 @@ void flower_manager_t::setup_flower_shader_post(shader_t &shader) {
 
 void flower_manager_t::draw_triangles(shader_t &shader) const {
 
-	check_bind_vbo(vbo);
+	pre_render();
 	select_texture((draw_model == 1) ? WHITE_TEX : DAISY_TEX);
 
 	if (0 && world_mode == WMODE_INF_TERRAIN) {
@@ -758,7 +753,7 @@ void flower_manager_t::draw_triangles(shader_t &shader) const {
 		vert_norm_comp_color::set_vbo_arrays();
 		draw_quads_as_tris(get_vertex_count());
 	}
-	bind_vbo(0);
+	post_render();
 }
 
 void flower_manager_t::add_flowers(mesh_xy_grid_cache_t const density_gen[2],
@@ -880,8 +875,8 @@ void gen_grass() { // and flowers
 
 
 void update_grass_vbos() {
-	grass_manager.free_vbo();
-	flower_manager.free_vbo();
+	grass_manager.clear_vbo();
+	flower_manager.clear_vbo();
 }
 
 void draw_grass() { // and flowers

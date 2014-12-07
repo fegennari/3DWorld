@@ -4,7 +4,6 @@
 
 #include "tiled_mesh.h"
 #include "textures_3dw.h"
-#include "gl_ext_arb.h"
 #include "shaders.h"
 #include "openal_wrap.h"
 #include "heightmap.h"
@@ -112,7 +111,7 @@ float get_tt_fog_based_far_clip(float min_camera_dist) {
 grass_tile_manager_t grass_tile_manager;
 
 void update_tiled_terrain_grass_vbos() {
-	grass_tile_manager.free_vbo();
+	grass_tile_manager.clear_vbo();
 }
 
 
@@ -324,7 +323,7 @@ void tile_t::clear_vbo_tid() {
 	pine_trees.clear_vbos();
 	decid_trees.clear_context(); // only necessary if not using instancing
 	scenery.clear_vbos();
-	flowers.free_vbo();
+	flowers.clear_vbo();
 	free_texture(weight_tid);
 	free_texture(height_tid);
 	free_texture(shadow_normal_tid);

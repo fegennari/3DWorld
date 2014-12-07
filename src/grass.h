@@ -6,6 +6,7 @@
 #define _GRASS_H_
 
 #include "3DWorld.h"
+#include "gl_ext_arb.h"
 
 
 unsigned const NUM_GRASS_LODS       = 6;
@@ -14,13 +15,7 @@ unsigned const GRASS_BLOCK_SZ       = 4;
 float const TT_GRASS_COLOR_SCALE    = 0.5;
 
 
-class detail_scenery_t {
-protected:
-	unsigned vbo;
-
-public:
-	detail_scenery_t() : vbo(0) {}
-	void free_vbo();
+struct detail_scenery_t : public vbo_wrap_t {
 	static void setup_shaders_pre(shader_t &s);
 	static void setup_shaders_post(shader_t &s);
 };
@@ -108,7 +103,7 @@ public:
 	size_t size() const {return flowers.size ();}
 	bool empty () const {return flowers.empty();}
 	bool skip_generate() const;
-	void clear() {free_vbo(); flowers.clear(); generated = 0;}
+	void clear() {clear_vbo(); flowers.clear(); generated = 0;}
 	void check_vbo();
 	static void setup_flower_shader_post(shader_t &shader);
 	void draw_triangles(shader_t &shader) const;
