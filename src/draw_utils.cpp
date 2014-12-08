@@ -657,17 +657,15 @@ public:
 	void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert, unsigned num_instances) { // # vertices
 		if (num_quad_verts == 0) return; // nothing to do
 		assert((num_quad_verts & 3) == 0 && (start_quad_vert & 3) == 0); // must be a multiple of 4
-		unsigned const end_quad_vert(start_quad_vert + num_quad_verts);
 		unsigned const num_tri_verts(6*(num_quad_verts/4)), start_tri_vert(6*(start_quad_vert/4)); // # indices
-		bool const use_32_bit(bind_quads_as_tris_ivbo(end_quad_vert));
+		bool const use_32_bit(bind_quads_as_tris_ivbo(num_quad_verts));
 		int const index_type(use_32_bit ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);
-		unsigned const bytes_offset((use_32_bit ? sizeof(unsigned) : sizeof(unsigned short))*start_tri_vert);
 
 		if (num_instances > 1) { // instanced drawing not supported/efficient on some cards, so only enabled it when needed
-			glDrawElementsInstanced(GL_TRIANGLES, num_tri_verts, index_type, (void *)bytes_offset, num_instances);
+			glDrawElementsInstancedBaseVertex(GL_TRIANGLES, num_tri_verts, index_type, nullptr, num_instances, start_quad_vert);
 		}
 		else {
-			glDrawElements(GL_TRIANGLES, num_tri_verts, index_type, (void *)bytes_offset);
+			glDrawElementsBaseVertex(GL_TRIANGLES, num_tri_verts, index_type, nullptr, start_quad_vert);
 		}
 		bind_vbo(0, 1);
 	}
