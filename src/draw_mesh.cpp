@@ -218,6 +218,7 @@ void draw_mesh_vbo(bool shadow_pass) {
 			}
 		}
 		mesh_data.create_and_upload(data, 0, 1); // and setup pointers
+		bind_vbo(0); // unbind mesh vbo
 	}
 	mesh_data.enable_vao();
 
