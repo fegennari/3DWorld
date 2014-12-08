@@ -720,6 +720,7 @@ void flower_manager_t::check_vbo() {
 }
 
 void flower_manager_t::create_verts_range(vector<vert_norm_comp_color> &verts, unsigned start, unsigned end) const {
+
 	assert(start < end && end <= size());
 	verts.resize(4*(end - start));
 	unsigned ix(0);
@@ -739,6 +740,8 @@ void flower_manager_t::create_verts_range(vector<vert_norm_comp_color> &verts, u
 }
 
 void flower_manager_t::upload_range(unsigned start, unsigned end) const {
+
+	if (!vbo) return; // can we ever get here? assert vbo?
 	vector<vert_norm_comp_color> verts;
 	create_verts_range(verts, start, end);
 	pre_render();
@@ -873,11 +876,16 @@ public:
 				flower.radius = 0.0;
 				modified      = 1;
 			}
-			if (crush) {
+			if (crush) { // less wind effect as well?
 				if (flower.height > 0.05*grass_length) { // not already crushed
 					float const reld(sqrt(dsq)/radius), delta(flower.height*min(1.0, 2.0*(1.0 - reld)*(1.0 - reld)));
 					flower.pos.z  -= delta;
 					flower.height -= delta;
+
+					if (flower.height < 0.1*grass_length) { // when flattened, flowers conform to the mesh surface normal
+						int const xpos(get_xpos(flower.pos.x)), ypos(get_ypos(flower.pos.y));
+						if (!point_outside_mesh(xpos, ypos)) {flower.normal = surface_normals[ypos][xpos];}
+					}
 					modified = 1;
 				}
 			}
@@ -899,7 +907,6 @@ public:
 
 	void draw() const {
 		if (empty()) return; // nothing to draw
-		if (display_mode & 0x10) return;
 		shader_t s;
 		setup_shaders_pre(s);
 		s.set_vert_shader("texture_gen.part+wind.part*+flowers_pp_dl");
