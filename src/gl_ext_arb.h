@@ -150,7 +150,7 @@ struct vao_manager_t : public vbo_wrap_t, public vao_wrap_t {
 
 	template<typename vert_type_t>
 	void create_and_upload(vector<vert_type_t> const &data, int dynamic_level=0, bool setup_pointers=0) {
-		if (vao) return; // already set
+		if (vao) {assert(vbo); return;} // already set
 		ensure_vao_bound();
 		vbo_wrap_t::create_and_upload(data, dynamic_level);
 		if (setup_pointers) {vert_type_t::set_vbo_arrays();}

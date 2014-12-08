@@ -130,6 +130,8 @@ void upload_vbo_sub_data_no_sync(void const *data, unsigned start_byte, unsigned
 	assert(data && size_bytes > 0);
 	int const target(get_buffer_target(is_index));
 	void *buffer(glMapBufferRange(target, start_byte, size_bytes, (GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT)));
+	if (buffer == nullptr) {check_gl_error(132);}
+	assert(buffer != nullptr);
 	memcpy(buffer, data, size_bytes);
 	glUnmapBuffer(target);
 }

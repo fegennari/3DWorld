@@ -608,17 +608,16 @@ class quad_ix_buffer_t {
 	unsigned size_16, size_32;
 
 	template< typename T > static void ensure_quad_ixs(unsigned &ivbo, unsigned size) {
-		if (ivbo == 0) {
-			assert((size % 6) == 0); // must be in groups of 2 tris = 1 quad
-			unsigned const num_quads(size/6);
-			vector<T> ixs(size);
+		if (ivbo != 0) return; // vbo already valid
+		assert((size % 6) == 0); // must be in groups of 2 tris = 1 quad
+		unsigned const num_quads(size/6);
+		vector<T> ixs(size);
 
-			// Note: quad is split along a different axis from GL quads, so interpolation is different
-			for (unsigned q = 0; q < num_quads; ++q) {
-				for (unsigned i = 0; i < 6; ++i) {ixs[6*q+i] = 4*q + quad_to_tris_ixs[i];}
-			}
-			create_vbo_and_upload(ivbo, ixs, 1);
+		// Note: quad is split along a different axis from GL quads, so interpolation is different
+		for (unsigned q = 0; q < num_quads; ++q) {
+			for (unsigned i = 0; i < 6; ++i) {ixs[6*q+i] = 4*q + quad_to_tris_ixs[i];}
 		}
+		create_vbo_and_upload(ivbo, ixs, 1);
 	}
 
 public:
