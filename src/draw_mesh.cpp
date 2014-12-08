@@ -525,78 +525,69 @@ void add_vertex(vector<vert_norm_tc> &verts, vector3d const &n, float x, float y
 	verts.push_back(vert_norm_tc(point(x, y, z), n, tscale*(in_y ? z : x), tscale*(in_y ? y : z)));
 }
 
-
-// NOTE: There is a buffer of one unit around the drawn area
 void draw_sides_and_bottom(bool shadow_pass) {
 
 	int const lx(MESH_X_SIZE-1), ly(MESH_Y_SIZE-1);
 	float const botz(zbottom - MESH_BOT_QUAD_DZ), z_avg(0.5*(zbottom + ztop)), ts(4.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
 	float const x1(-X_SCENE_SIZE), y1(-Y_SCENE_SIZE), x2(X_SCENE_SIZE-DX_VAL), y2(Y_SCENE_SIZE-DY_VAL);
 	int const texture((!read_landscape && get_rel_height(z_avg, zmin, zmax) > lttex_dirt[2].zval) ? ROCK_TEX : DIRT_TEX);
-	unsigned const nverts(8*(MESH_X_SIZE + MESH_Y_SIZE - 2) + 4);
-	float xv(x1), yv(y1);
 	shader_t s;
 
 	if (shadow_pass) {
 		s.begin_color_only_shader();
+		vert_wrap_t const bverts[4] = {point(x1, y1, botz), point(x1, y2, botz), point(x2, y2, botz), point(x2, y1, botz)};
+		draw_verts(bverts, 4, GL_TRIANGLE_FAN); // bottom
 		vector<vert_wrap_t> verts;
-		verts.reserve(nverts);
-		verts.push_back(point(x1, y1, botz));
-		verts.push_back(point(x1, y2, botz));
-		verts.push_back(point(x2, y2, botz));
-		verts.push_back(point(x2, y1, botz));
 
-		for (int i = 1; i < MESH_X_SIZE; ++i, xv += DX_VAL) { // y sides
-			for (unsigned d = 0; d < 2; ++d) {
-				float const limit(d ? y2 : y1);
-				verts.push_back(point(xv,        limit, botz));
-				verts.push_back(point(xv+DX_VAL, limit, botz));
-				verts.push_back(point(xv+DX_VAL, limit, mesh_height[d?ly:0][i  ]));
-				verts.push_back(point(xv,        limit, mesh_height[d?ly:0][i-1]));
+		for (unsigned d = 0; d < 2; ++d) {
+			float const xlimit(d ? x2 : x1), ylimit(d ? y2 : y1);
+
+			for (int i = 0; i < MESH_X_SIZE; ++i) { // y sides
+				float const xv(get_xval(i));
+				verts.push_back(point(xv, ylimit, botz));
+				verts.push_back(point(xv, ylimit, mesh_height[d?ly:0][i]));
 			}
-		}
-		for (int i = 1; i < MESH_Y_SIZE; ++i, yv += DY_VAL) { // x sides
-			for (unsigned d = 0; d < 2; ++d) {
-				float const limit(d ? x2 : x1);
-				verts.push_back(point(limit, yv,        botz));
-				verts.push_back(point(limit, yv+DY_VAL, botz));
-				verts.push_back(point(limit, yv+DY_VAL, mesh_height[i  ][d?lx:0]));
-				verts.push_back(point(limit, yv,        mesh_height[i-1][d?lx:0]));
+			draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
+
+			for (int i = 0; i < MESH_Y_SIZE; ++i) { // x sides
+				float const yv(get_yval(i));
+				verts.push_back(point(xlimit, yv, botz));
+				verts.push_back(point(xlimit, yv, mesh_height[i][d?lx:0]));
 			}
-		}
-		draw_quad_verts_as_tris(verts);
+			draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
+		} // for d
 	}
 	else {
 		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE); // with lighting
 		select_texture(DISABLE_TEXTURES ? WHITE_TEX : texture);
+		
+		vert_norm_tc const bverts[4] = {
+			vert_norm_tc(point(x1, y1, botz), -plus_z, ts*x1, ts*y1),
+			vert_norm_tc(point(x1, y2, botz), -plus_z, ts*x1, ts*y2),
+			vert_norm_tc(point(x2, y2, botz), -plus_z, ts*x2, ts*y2),
+			vert_norm_tc(point(x2, y1, botz), -plus_z, ts*x2, ts*y1)
+		};
+		draw_verts(bverts, 4, GL_TRIANGLE_FAN); // bottom
 		vector<vert_norm_tc> verts;
-		verts.reserve(nverts);
-		verts.push_back(vert_norm_tc(point(x1, y1, botz), -plus_z, ts*x1, ts*y1));
-		verts.push_back(vert_norm_tc(point(x1, y2, botz), -plus_z, ts*x1, ts*y2));
-		verts.push_back(vert_norm_tc(point(x2, y2, botz), -plus_z, ts*x2, ts*y2));
-		verts.push_back(vert_norm_tc(point(x2, y1, botz), -plus_z, ts*x2, ts*y1));
 
-		for (int i = 1; i < MESH_X_SIZE; ++i, xv += DX_VAL) { // y sides
-			for (unsigned d = 0; d < 2; ++d) {
-				float const limit(d ? y2 : y1);
-				vector3d const &n(d ? plus_y : -plus_y);
-				add_vertex(verts, n, xv,        limit, botz, 0, ts);
-				add_vertex(verts, n, xv+DX_VAL, limit, botz, 0, ts);
-				add_vertex(verts, n, xv+DX_VAL, limit, mesh_height[d?ly:0][i  ], 0, ts);
-				add_vertex(verts, n, xv,        limit, mesh_height[d?ly:0][i-1], 0, ts);
+		for (unsigned d = 0; d < 2; ++d) {
+			float const xlimit(d ? x2 : x1), ylimit(d ? y2 : y1);
+			vector3d const &n1(d ? plus_y : -plus_y), &n2(d ? plus_x : -plus_x);
+
+			for (int i = 0; i < MESH_X_SIZE; ++i) { // y sides
+				float const xv(get_xval(i));
+				add_vertex(verts, n1, xv, ylimit, botz, 0, ts);
+				add_vertex(verts, n1, xv, ylimit, mesh_height[d?ly:0][i], 0, ts);
 			}
-		}
-		for (int i = 1; i < MESH_Y_SIZE; ++i, yv += DY_VAL) { // x sides
-			for (unsigned d = 0; d < 2; ++d) {
-				float const limit(d ? x2 : x1);
-				vector3d const &n(d ? plus_x : -plus_x);
-				add_vertex(verts, n, limit, yv,        botz, 1, ts);
-				add_vertex(verts, n, limit, yv+DY_VAL, botz, 1, ts);
-				add_vertex(verts, n, limit, yv+DY_VAL, mesh_height[i  ][d?lx:0], 1, ts);
-				add_vertex(verts, n, limit, yv,        mesh_height[i-1][d?lx:0], 1, ts);
+			draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
+
+			for (int i = 0; i < MESH_Y_SIZE; ++i) { // x sides
+				float const yv(get_yval(i));
+				add_vertex(verts, n2, xlimit, yv, botz, 1, ts);
+				add_vertex(verts, n2, xlimit, yv, mesh_height[i][d?lx:0], 1, ts);
 			}
-		}
-		draw_quad_verts_as_tris(verts);
+			draw_and_clear_verts(verts, GL_TRIANGLE_STRIP);
+		} // for d
 	}
 	s.end_shader();
 }
