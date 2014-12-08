@@ -110,6 +110,7 @@ int get_buffer_target(bool is_index) {return (is_index ? GL_ELEMENT_ARRAY_BUFFER
 void bind_vbo(unsigned vbo, bool is_index) { // okay if vbo is zero
 	if (use_core_context && vbo == 0) return; // no point in binding 0
 	glBindBuffer(get_buffer_target(is_index), vbo);
+	//if (vbo) {assert(glIsBuffer(vbo));}
 }
 
 void delete_vbo(unsigned vbo) {
@@ -224,7 +225,6 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
 
 void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
 
-	assert(glIsTexture(tid));
 	if (!fbo_id) {create_fbo(fbo_id, tid, is_depth_fbo);}
 	assert(fbo_id > 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
