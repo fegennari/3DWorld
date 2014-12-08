@@ -1143,7 +1143,7 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 			dist /= -log(2.0*min_normal_z)/log(2.0);
 		}
 	}
-    while (dist > (reflection_pass ? 1.0 : 2.0) && lod_level+1 < NUM_LODS && (size>>(lod_level+1)) >= 4) { // never divide smaller than 4x4 quads
+    while (dist > (reflection_pass ? 1.8 : 2.0) && lod_level+1 < NUM_LODS && (size>>(lod_level+1)) >= 4) { // never divide smaller than 4x4 quads
         dist /= 2;
         ++lod_level;
     }
