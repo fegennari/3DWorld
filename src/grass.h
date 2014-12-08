@@ -83,23 +83,25 @@ class mesh_xy_grid_cache_t;
 class flower_manager_t : public detail_scenery_t {
 
 protected:
-	struct flower_t { // size = 44
+	struct flower_t { // size = 48
 		point pos;
 		vector3d normal;
-		float radius;
+		float radius, height;
 		colorRGBA color;
 
 		flower_t() {}
-		flower_t(point const &p, vector3d const &n, float r, colorRGBA const &c) : pos(p), normal(n), radius(r), color(c) {}
+		flower_t(point const &p, vector3d const &n, float r, float h, colorRGBA const &c) : pos(p), normal(n), radius(r), height(h), color(c) {}
 	};
 
 	vector<flower_t> flowers;
 	rand_gen_t rgen;
 	bool generated;
 
+	void create_verts_range(vector<vert_norm_comp_color> &verts, unsigned start, unsigned end) const;
+	void upload_range(unsigned start, unsigned end) const;
+
 public:
 	flower_manager_t() : generated(0) {}
-	unsigned get_vertex_count() const {return 4*flowers.size();} // one quad (4 verts) per flower
 	size_t size() const {return flowers.size ();}
 	bool empty () const {return flowers.empty();}
 	bool skip_generate() const;

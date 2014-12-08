@@ -483,7 +483,6 @@ public:
 	}
 
 	void modify_grass(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
-		if (burn && is_underwater(pos)) burn = 0;
 		if (!burn && !crush && !cut && !check_uw && !add_color && !remove) return; // nothing left to do
 		int x1, y1, x2, y2;
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
@@ -713,24 +712,39 @@ void flower_manager_t::check_vbo() {
 		create_vbo_and_upload(vbo, verts);
 	}
 	else {
-		vector<vert_norm_comp_color> verts(get_vertex_count());
-		unsigned ix(0);
-
-		for (auto i = flowers.begin(); i != flowers.end(); ++i) {
-			vector3d v1(zero_vector), v2;
-			v1[get_min_dim(i->normal)] = 1.0;
-			v2 = i->radius*cross_product(i->normal, v1).get_norm();
-			v1 = i->radius*cross_product(i->normal, v2).get_norm();
-			color_wrapper cw;
-			cw.set_c4(i->color);
-			norm_comp const n(i->normal);
-			point const pts[4] = {(i->pos - v1 - v2), (i->pos + v1 - v2), (i->pos + v1 + v2), (i->pos - v1 + v2)};
-			UNROLL_4X(verts[ix++] = vert_norm_comp_color(vert_norm_comp(pts[i_], n), cw);)
-		}
-		assert(ix == verts.size());
+		vector<vert_norm_comp_color> verts;
+		create_verts_range(verts, 0, size());
 		create_vbo_and_upload(vbo, verts);
 	}
 	//PRINT_TIME("Flowers VBO");
+}
+
+void flower_manager_t::create_verts_range(vector<vert_norm_comp_color> &verts, unsigned start, unsigned end) const {
+	assert(start < end && end <= size());
+	verts.resize(4*(end - start));
+	unsigned ix(0);
+
+	for (auto i = flowers.begin()+start; i != flowers.begin()+end; ++i) {
+		vector3d v1(zero_vector), v2;
+		v1[get_min_dim(i->normal)] = 1.0;
+		v2 = i->radius*cross_product(i->normal, v1).get_norm();
+		v1 = i->radius*cross_product(i->normal, v2).get_norm();
+		color_wrapper cw;
+		cw.set_c4(i->color);
+		norm_comp const n(i->normal);
+		point const pts[4] = {(i->pos - v1 - v2), (i->pos + v1 - v2), (i->pos + v1 + v2), (i->pos - v1 + v2)};
+		UNROLL_4X(verts[ix++] = vert_norm_comp_color(vert_norm_comp(pts[i_], n), cw);)
+	}
+	assert(ix == verts.size());
+}
+
+void flower_manager_t::upload_range(unsigned start, unsigned end) const {
+	vector<vert_norm_comp_color> verts;
+	create_verts_range(verts, start, end);
+	pre_render();
+	unsigned const flower_sz(4*sizeof(vert_norm_comp_color));
+	upload_vbo_sub_data(&verts.front(), start*flower_sz, (end - start)*flower_sz);
+	post_render();
 }
 
 void flower_manager_t::setup_flower_shader_post(shader_t &shader) {
@@ -751,7 +765,7 @@ void flower_manager_t::draw_triangles(shader_t &shader) const {
 	}
 	else {
 		vert_norm_comp_color::set_vbo_arrays();
-		draw_quads_as_tris(get_vertex_count());
+		draw_quads_as_tris(4*flowers.size());
 	}
 	post_render();
 }
@@ -768,13 +782,14 @@ void flower_manager_t::add_flowers(mesh_xy_grid_cache_t const density_gen[2],
 
 	for (unsigned n = 0; n < num_per_bin; ++n) {
 		if ((dval + 0.2*zmax_est*rgen.signed_rand_float()) > hthresh) continue; // density function test
-		point pos((dx + DX_VAL*(xpos + rgen.rand_float())), (dy + DY_VAL*(ypos + rgen.rand_float())), grass_length*rgen.rand_uniform(0.85, 1.0));
+		float const height(grass_length*rgen.rand_uniform(0.85, 1.0));
+		point pos((dx + DX_VAL*(xpos + rgen.rand_float())), (dy + DY_VAL*(ypos + rgen.rand_float())), height);
 		if (gen_zval) {pos.z += interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);}
 		vector3d const normal((plus_z + rgen.signed_rand_vector(0.2)).get_norm()); // facing mostly up (or face toward sun?)
 		float const radius(grass_width*rgen.rand_uniform(1.5, 2.5));
 		float const color_val(cval + 0.25*rgen.signed_rand_float());
 		colorRGBA const &color(colors[int(0.5*NUM_COLORS*color_val)%NUM_COLORS]);
-		flowers.push_back(flower_t(pos, normal, radius, color));
+		flowers.push_back(flower_t(pos, normal, radius, height, color));
 	}
 }
 
@@ -823,6 +838,63 @@ public:
 			}
 		}
 		generated = 1;
+	}
+
+	void flower_height_change(int x, int y, int rad) {
+		if (empty()) return;
+		unsigned mod_start(flowers.size()), mod_end(0);
+		
+		for (unsigned i = 0; i < flowers.size(); ++i) {
+			point &pos(flowers[i].pos);
+			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
+			if ((y - ypos)*(y - ypos) + (x - xpos)*(x - xpos) > rad*rad) continue;
+			pos.z     = interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1) + flowers[i].height;
+			mod_start = min(mod_start, i);
+			mod_end   = max(mod_end,   i+1); // one past the end
+		}
+		if (mod_start < mod_end) {upload_range(mod_start, mod_end);}
+	}
+
+	void modify_flowers(point const &pos, float radius, bool crush, bool burn, bool remove) {
+		if (!(crush || burn || remove) || empty()) return; // nothing to modify
+		if (get_grass_density(pos) == 0.0) return; // optimization - if there's no grass, there are no flowers
+		float const radius_sq(radius*radius), y_end(pos.y + radius + DY_VAL);
+		unsigned mod_start(flowers.size()), mod_end(0);
+
+		for (unsigned i = 0; i < flowers.size(); ++i) {
+			flower_t &flower(flowers[i]);
+			if (flower.pos.y > y_end) break; // since flowers are created in blocks increasing in y, we can early terminate when y is large enough
+			float const dsq(p2p_dist_sq(flower.pos, pos));
+			if (dsq > radius_sq) continue;
+			bool modified(0);
+
+			if (remove) {
+				if (flower.radius == 0.0) continue; // already removed
+				flower.radius = 0.0;
+				modified      = 1;
+			}
+			if (crush) {
+				if (flower.height > 0.05*grass_length) { // not already crushed
+					float const reld(sqrt(dsq)/radius), delta(flower.height*min(1.0, 2.0*(1.0 - reld)*(1.0 - reld)));
+					flower.pos.z  -= delta;
+					flower.height -= delta;
+					modified = 1;
+				}
+			}
+			if (burn) {
+				if (flower.color != BLACK) { // not already black (max burned)
+					float const reld(sqrt(dsq)/radius);
+					flower.color *= 1.0 - (1.0 - reld)*(1.0 - reld);
+					if (flower.color.get_luminance() < 0.05) {flower.color = BLACK;}
+					modified = 1;
+				}
+			}
+			if (modified) {
+				mod_start = min(mod_start, i);
+				mod_end   = max(mod_end,   i+1); // one past the end
+			}
+		}
+		if (mod_start < mod_end) {upload_range(mod_start, mod_end);}
 	}
 
 	void draw() const {
@@ -888,11 +960,18 @@ void draw_grass() { // and flowers
 }
 
 void modify_grass_at(point const &pos, float radius, bool crush, bool burn, bool cut, bool check_uw, bool add_color, bool remove, colorRGBA const &color) {
-	if (!no_grass()) {grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_color, remove, color);}
+	if (no_grass()) return;
+	if (burn && is_underwater(pos)) {burn = 0;}
+	grass_manager.modify_grass(pos, radius, crush, burn, cut, check_uw, add_color, remove, color);
+	flower_manager.modify_flowers(pos, radius, crush, burn, (cut || remove));
 }
 
 void grass_mesh_height_change(int xpos, int ypos) {
 	if (!no_grass()) {grass_manager.mesh_height_change(xpos, ypos);}
+}
+
+void flower_mesh_height_change(int xpos, int ypos, int rad) {
+	flower_manager.flower_height_change(xpos, ypos, rad);
 }
 
 bool place_obj_on_grass(point &pos, float radius) {

@@ -193,10 +193,11 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	// first pass to update mesh
 	for (int i = y1; i <= y2; ++i) {
 		for (int j = x1; j <= x2; ++j) {
-			float const dh(sqrt(float((i - ypos)*(i - ypos) + (j - xpos)*(j - xpos))));
-			if (dh > rad)     continue;
+			int const dh_sq((i - ypos)*(i - ypos) + (j - xpos)*(j - xpos));
+			if (dh_sq > rad*rad) continue;
 			float const mh(mesh_height[i][j]);
-			if (mh < zbottom) continue;
+			if (mh < zbottom)    continue;
+			float const dh(sqrt(float(dh_sq)));
 			float delta_h;
 
 			if (mode == 0) { // crater
@@ -235,6 +236,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 	for (set<pair<int, int> >::const_iterator i = grass_update.begin(); i != grass_update.end(); ++i) {
 		grass_mesh_height_change(i->first, i->second);
 	}
+	if (!grass_update.empty()) {flower_mesh_height_change(xpos, ypos, rad);}
 	if (mode == 0) {update_smoke_indir_tex_range(x1, x2+1, y1, y2+1, 1);} // update lmap lighting for crater
 	// update waypoints?
 	mesh_invalidated = 1;
