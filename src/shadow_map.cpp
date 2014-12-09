@@ -44,19 +44,18 @@ struct ground_mode_smap_data_t : public smap_data_t {
 ground_mode_smap_data_t smap_data[NUM_LIGHT_SRC] = {ground_mode_smap_data_t(6), ground_mode_smap_data_t(7)};
 
 
-class smap_vertex_cache_t {
+class smap_vertex_cache_t : public vbo_wrap_t {
 
-	unsigned vbo, num_verts1, num_verts2;
+	unsigned num_verts1, num_verts2;
 
 public:
 	vector<vert_wrap_t> dverts;
 
-	smap_vertex_cache_t() : vbo(0), num_verts1(0), num_verts2(0) {}
-	bool vbo_valid() const {return (vbo > 0);}
+	smap_vertex_cache_t() : num_verts1(0), num_verts2(0) {}
 	void end_block1(unsigned size) {num_verts1 = size;}
 
 	void upload(vector<vert_wrap_t> const &verts) {
-		if (!verts.empty()) {create_vbo_and_upload(vbo, verts, 0, 0);}
+		if (!verts.empty()) {create_and_upload(verts);}
 		assert(vbo_valid());
 		num_verts2 = verts.size();
 	}
@@ -65,8 +64,7 @@ public:
 		shader_t s;
 		s.begin_color_only_shader(WHITE); // Note: color is likely unused
 		assert(num_verts1 <= num_verts2);
-		assert(vbo_valid());
-		bind_vbo(vbo);
+		pre_render();
 		if (num_verts1 > 0) {draw_verts<vert_wrap_t>(NULL, num_verts1, GL_TRIANGLES);}
 
 		if (num_verts2 > num_verts1) {
@@ -76,14 +74,14 @@ public:
 			//glCullFace(GL_BACK);
 			glDisable(GL_CULL_FACE);
 		}
-		bind_vbo(0);
+		post_render();
 		s.end_shader();
 	}
 	void render_dynamic() {
 		draw_and_clear_verts(dverts, GL_TRIANGLES);
 	}
 	void free() {
-		delete_and_zero_vbo(vbo);
+		clear_vbo();
 		num_verts1 = num_verts2 = 0;
 		dverts.clear();
 	}

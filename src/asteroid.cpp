@@ -602,15 +602,13 @@ float rand_gaussian_limited(rand_gen_t &rgen, float mean, float std_dev, float m
 }
 
 
-class ast_belt_part_manager_t {
+class ast_belt_part_manager_t : public vbo_wrap_t {
 
 	vector<point> pts;
-	unsigned vbo;
 	sphere_t bsphere;
 
 public:
-	ast_belt_part_manager_t() : vbo(0) {}
-	void clear() {pts.clear(); clear_context();}
+	void clear() {pts.clear(); clear_vbo();}
 	unsigned size () const {return pts.size();}
 	bool     empty() const {return pts.empty();}
 
@@ -635,16 +633,12 @@ public:
 			bsphere.radius = max(bsphere.radius, p2p_dist(bsphere.pos, pts[i])); // no point radius
 		}
 	}
-	void clear_context() {
-		delete_vbo(vbo);
-		vbo = 0;
-	}
 	void draw_vbo(float density=1.0) const {
 		unsigned const count(unsigned(density*pts.size()));
 		if (count == 0) return;
-		check_bind_vbo(vbo);
+		pre_render();
 		draw_verts<vert_wrap_t>(NULL, count, GL_POINTS);
-		bind_vbo(0);
+		post_render();
 	}
 	bool draw(point_d const &center, vector3d const &rot_axis, float rot_degrees, vector3d const &size, float density) {
 		if (empty() || density == 0) return 0;
@@ -657,7 +651,7 @@ public:
 		if (!univ_sphere_vis(spos, bradius))          return 0; // VFC
 		if (distance_to_camera(spos) - bradius > 1.0) return 0; // distance/size culling
 		
-		create_vbo_and_upload(vbo, pts); // non-const due to this call
+		create_and_upload(pts); // non-const due to this call
 		fgPushMatrix();
 		global_translate(center);
 		rotate_into_plus_z(rot_axis);
@@ -675,7 +669,7 @@ ast_belt_part_manager_t ast_belt_part[2]; // full, partial segment
 void clear_asteroid_contexts() {
 
 	asteroid_model_gen.clear_contexts();
-	for (unsigned d = 0; d < 2; ++d) {ast_belt_part[d].clear_context();}
+	for (unsigned d = 0; d < 2; ++d) {ast_belt_part[d].clear_vbo();}
 }
 
 

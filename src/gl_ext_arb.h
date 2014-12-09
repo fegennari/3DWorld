@@ -84,11 +84,12 @@ inline void create_vbo_with_null_data(unsigned &vbo, size_t size, bool is_index=
 }
 
 
-struct vbo_wrap_t {
+struct vbo_wrap_t { // Note: not for use with index vbo
 
 	unsigned vbo;
 
 	vbo_wrap_t() : vbo(0) {}
+	bool vbo_valid() const {return (vbo > 0);}
 	void clear() {delete_and_zero_vbo(vbo);}
 	void clear_vbo() {clear();} // alias for clear()
 	template<typename vert_type_t>
