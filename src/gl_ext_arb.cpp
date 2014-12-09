@@ -167,7 +167,7 @@ void delete_vao(unsigned vao) {
 void vbo_ring_buffer_t::ensure_vbo(unsigned min_size) {
 
 	if (size < min_size) {
-		free_vbo(); // allocate a larger vbo
+		clear_vbo(); // allocate a larger vbo
 		size = max(2*size, min_size); // at least double
 	}
 	if (vbo) return; // done

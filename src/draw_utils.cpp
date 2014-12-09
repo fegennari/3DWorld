@@ -172,7 +172,7 @@ void vert_norm_texp::unset_attrs() {
 // required when using a core context, but slow
 vbo_ring_buffer_t vbo_ring_buffer(1 << 23); // 8MB
 
-void clear_vbo_ring_buffer() {vbo_ring_buffer.free_vbo();}
+void clear_vbo_ring_buffer() {vbo_ring_buffer.clear();}
 
 void const *get_dynamic_vbo_ptr(void const *const verts, unsigned size_bytes) {
 	assert(verts != NULL && size_bytes > 0);

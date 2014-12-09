@@ -222,22 +222,21 @@ public:
 };
 
 
-class vbo_ring_buffer_t {
+class vbo_ring_buffer_t : public vbo_wrap_t {
 
-	unsigned vbo;
-	unsigned size, pos;
+	unsigned init_size, size, pos;
 	bool is_index;
 
 	void ensure_vbo(unsigned min_size);
 public:
-	vbo_ring_buffer_t(unsigned init_size, bool is_index_=0) : vbo(0), size(init_size), pos(0), is_index(is_index_) {}
+	vbo_ring_buffer_t(unsigned init_size_, bool is_index_=0) : init_size(init_size_), size(init_size), pos(0), is_index(is_index_) {}
+	void clear() {vbo_wrap_t::clear(); size = init_size; pos = 0;}
 
 	template<typename T> void *add_verts_bind_vbo(vector<T> const &v) {
 		assert(!v.empty());
 		return add_verts_bind_vbo(&v.front(), v.size()*sizeof(T));
 	}
 	void const *add_verts_bind_vbo(void const *const v, unsigned size_bytes);
-	void free_vbo() {delete_and_zero_vbo(vbo);}
 };
 
 inline void align_vbo_ptr(unsigned &pos) {if (pos & 15) {pos = (pos + 16) & (~15);}}
