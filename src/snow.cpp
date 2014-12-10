@@ -338,7 +338,7 @@ bool voxel_map::write(char const *const fn) const {
 
 class snow_renderer {
 
-	indexed_vao_manager_t vao_mgr;
+	indexed_vbo_manager_t vbo_mgr;
 	float last_x;
 	unsigned nquads;
 	vector<vert_norm> data;
@@ -386,7 +386,7 @@ public:
 
 private:
 	unsigned add(point const &v, vector3d const &n, unsigned map_ix) { // can't be called after finalize()
-		assert(vao_mgr.vbo == 0 && vao_mgr.ivbo == 0);
+		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
 		map<point, unsigned>::const_iterator it(vmap[map_ix].find(v));
 		unsigned ix(0);
 
@@ -405,12 +405,12 @@ private:
 	}
 
 public:
-	void free_vbos() {vao_mgr.clear_vbos();}
+	void free_vbos() {vbo_mgr.clear_vbos();}
 
 	void update_region(unsigned strip_ix, unsigned strip_pos, unsigned strip_len, float new_z) { // Note: could use ranges/blocks optimization
 		
-		if (!vao_mgr.vbo) return; // vbo not allocated, so all will be updated when it gets allocated during drawing
-		bind_vbo(vao_mgr.vbo, 0);
+		if (!vbo_mgr.vbo) return; // vbo not allocated, so all will be updated when it gets allocated during drawing
+		bind_vbo(vbo_mgr.vbo, 0);
 		assert(strip_ix+1 < strip_offsets.size());
 		assert(strip_len >= 4); // at least one quad
 		unsigned const cur_six(strip_offsets[strip_ix]), next_six(strip_offsets[strip_ix+1]);
@@ -433,18 +433,18 @@ public:
 	}
 
 	void finalize() {
-		assert(vao_mgr.vbo == 0 && vao_mgr.ivbo == 0);
+		assert(vbo_mgr.vbo == 0 && vbo_mgr.ivbo == 0);
 		assert(!indices.empty());
 		for (unsigned d = 0; d < 2; ++d) {vmap[d].clear();}
 	}
 
-	void draw(bool shadow_only) {
-		if (shadow_only && !vao_mgr.vbo) return; // hack to avoid creating the VBO on the shadow pass
+	void draw() {
 		assert(!indices.empty());
-		vao_mgr.create_and_upload(data, indices, 0, 1); // set_vbo_arrays() is called internally
-		vao_mgr.enable_vao();
+		vbo_mgr.create_and_upload(data, indices, 0, 1); // set_vbo_arrays() is called internally
+		vbo_mgr.pre_render();
+		vert_norm::set_vbo_arrays();
 		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (unsigned)data.size(), (unsigned)indices.size(), GL_UNSIGNED_INT, 0);
-		vao_mgr.disable_vao();
+		vbo_mgr.post_render();
 	}
 
 	void show_stats() const {
@@ -720,7 +720,7 @@ void draw_snow(bool shadow_only) {
 	setup_texgen(50.0, 50.0, 0.0, 0.0, 0.0, s, 0);
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
-	snow_draw.draw(shadow_only);
+	snow_draw.draw();
 	glDisable(GL_PRIMITIVE_RESTART);
 	s.clear_specular();
 	s.end_shader();

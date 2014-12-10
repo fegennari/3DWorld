@@ -38,7 +38,7 @@ public:
 		for (map<string, entry_t>::const_iterator i = entries.begin(); i != entries.end(); ++i) {max_name = max(max_name, i->first.size());}
 
 		for (map<string, entry_t>::const_iterator i = entries.begin(); i != entries.end(); ++i) {
-			string spaces((max_name - i->first.size()), ' ');
+			string const spaces((max_name - i->first.size()), ' ');
 			cout << i->first << spaces << ": " << i->second.count << "\t" << i->second.time << "\t"
 					<< i->second.tmax << "\t" << float(i->second.time)/float(i->second.count) << endl;
 		}

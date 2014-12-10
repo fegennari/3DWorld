@@ -638,7 +638,7 @@ public:
 		unsigned &cur_size(use_32_bit ? size_32 : size_16);
 		
 		if (num_tri_verts > cur_size) { // increase the size
-			delete_vbo(ivbo); ivbo = 0;
+			delete_and_zero_vbo(ivbo);
 			cur_size = max(96U, max(num_tri_verts, 2U*cur_size)); // at least double
 		}
 		assert(num_tri_verts <= cur_size);

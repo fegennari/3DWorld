@@ -368,7 +368,7 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 		shader.end_shader();
 	}
 	// add snow, trees, scenery, and mesh
-	if (snow_shadows) {draw_snow(1);} // slow, and causes problems
+	if (snow_shadows) {draw_snow(1);} // slow
 	draw_trees(1);
 	draw_scenery(1, 1, 1);
 
