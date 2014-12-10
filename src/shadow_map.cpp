@@ -23,6 +23,7 @@ extern unsigned enabled_lights;
 extern float NEAR_CLIP, tree_deadness, vegetation;
 extern vector<shadow_sphere> shadow_objs;
 extern coll_obj_group coll_objects;
+extern platform_cont platforms;
 
 void draw_trees(bool shadow_only=0);
 
@@ -222,7 +223,10 @@ bool no_sparse_smap_update() {
 
 	if (world_mode != WMODE_GROUND) return 0;
 	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0 && (tree_mode & 1) != 0 && tree_deadness < 1.0 && vegetation > 0.0);
-	return (leaf_wind || !coll_objects.drawn_ids.empty() || !shadow_objs.empty());
+	if (leaf_wind || !shadow_objs.empty() || !platforms.empty()) return 1;
+	//return !coll_objects.drawn_ids.empty();
+	//return !coll_objects.dynamic_ids.empty();
+	return 0;
 }
 
 

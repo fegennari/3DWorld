@@ -16,7 +16,7 @@ disable_scenery 1
 read_landscape 0
 read_heightmap 1
 preproc_cube_cobjs 1
-snow_shadows 0
+snow_shadows 1
 
 gravity 1.0
 temperature -10.0
