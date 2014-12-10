@@ -790,8 +790,7 @@ void tree_data_t::post_leaf_draw() {
 
 void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 
-	assert(leaf_vbo != 0);
-	bind_vbo(leaf_vbo);
+	check_bind_vbo(leaf_vbo);
 	leaf_vert_type_t::set_vbo_arrays(0);
 	assert(max_leaves <= leaves.size() && leaf_data.size() >= 4*leaves.size());
 	draw_quads_as_tris(4*max_leaves);
@@ -801,6 +800,7 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 void tree_data_t::draw_leaves_shadow_only() {
 
 	if (leaves.empty()) return;
+	ensure_leaf_vbo();
 	select_texture(tree_types[tree_type].leaf_tex);
 	draw_leaf_quads_from_vbo(leaves.size()); // could also disable normals and colors, but that doesn't seem to help much
 }
@@ -863,16 +863,17 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 
 	if (!created) return;
 	tree_data_t &td(tdata());
+	td.gen_leaf_color();
 
-	if (shadow_only && td.leaf_vbo_valid()) {
+	if (shadow_only) {
 		if (world_mode == WMODE_GROUND && !is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
+		td.leaf_draw_setup(0);
 		td.draw_leaves_shadow_only();
 		fgPopMatrix();
 		return;
 	}
-	td.gen_leaf_color();
 	bool const has_leaves(!td.get_leaves().empty());
 	
 	if (has_leaves && world_mode == WMODE_GROUND) {

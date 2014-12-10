@@ -324,7 +324,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 
 	bool indir_lighting(0);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
-	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, 0, 0, 0, 0, 0);
+	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
