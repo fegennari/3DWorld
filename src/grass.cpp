@@ -100,7 +100,7 @@ void grass_manager_t::add_grass_blade(point const &pos, float cscale, bool on_me
 
 void grass_manager_t::create_new_vbo() {
 
-	delete_vbo(vbo);
+	delete_vbo(vbo); // unnecessary since vbo is always 0 here?
 	vbo        = create_vbo();
 	data_valid = 0;
 }

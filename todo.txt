@@ -15,5 +15,3 @@ Planet lightning
 Static + Dynamic shadow maps
 Static cobjs use vbo
 Use SDL?
-
-Use more VAOs: grass, obj_draw_group?, rock_shape3d?, smap_vertex_cache?, asteroid belt particles?, sd_sphere_vbo_d?

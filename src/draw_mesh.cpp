@@ -359,7 +359,7 @@ public:
 };
 
 
-class mesh_vertex_draw_vbo : public vbo_wrap_t, public mesh_data_store {
+class mesh_vertex_draw_vbo : public vao_manager_t, public mesh_data_store {
 
 	vector<unsigned> strip_ixs;
 
@@ -374,18 +374,16 @@ public:
 	void final_draw() {
 		if (!vbo) { // create new vbo
 			data.resize(c); // resize smaller if possible (in cases where mesh_enable reduces the vertex count)
-			create_vbo_and_upload(vbo, data, 0, 0, 2); // streaming
+			create_and_upload(data, 2, 1); // streaming
 		}
 		else {
-			bind_vbo(vbo);
+			pre_render();
 			upload_vbo_sub_data(&data.front(), 0, c*sizeof(vert_norm_color));
 		}
-		vert_norm_color::set_vbo_arrays(); // VAO?
-
 		for (vector<unsigned>::const_iterator i = strip_ixs.begin(); i+1 != strip_ixs.end(); ++i) {
 			glDrawArrays(GL_TRIANGLE_STRIP, *i, (*(i+1) - *i));
 		}
-		bind_vbo(0);
+		post_render();
 	}
 };
 
