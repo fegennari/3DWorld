@@ -358,7 +358,7 @@ public:
 };
 
 
-class obj_draw_group {
+class obj_draw_group { // vbo_wrap_t?
 
 	unsigned start_cix, end_cix, vbo, num_verts;
 	bool use_vbo, inside_beg_end;

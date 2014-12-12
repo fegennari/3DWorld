@@ -1639,13 +1639,22 @@ void uplanet::process() {
 point_d uplanet::do_update(point_d const &p0, bool update_rev, bool update_rot) {
 
 	bool const has_sun(system->sun.is_ok());
-	if (!has_sun) temp = 0.0;
+	if (!has_sun) {temp = 0.0;}
 	point_d const planet_pos(urev_body::do_update(p0, (has_sun && update_rev), (has_sun && update_rot)));
 	bool const ok(is_ok());
 	
 	for (unsigned i = 0; i < moons.size(); ++i) {
 		moons[i].do_update(planet_pos, ok, ok);
-		if (!has_sun) moons[i].temp = 0.0;
+		if (!has_sun) {moons[i].temp = 0.0;}
+	}
+	if (ok && has_sun && is_owned()) {
+		float const pop_rate((population == 0) ? 1.0 : 0.0001); // init + growth
+		float const pop_scale(2.0E6*(liveable() ? 1.0 : 0.25)*radius*radius*(1.1 - water)*((water > 0.05) ? 1.0 : 0.1)*(atmos + 0.1)); // based on land area
+		population += pop_scale*pop_rate; // Note: for now, planet population only increases when the planet is visible
+		population  = min(population, 5.0f*pop_scale);
+	}
+	else {
+		population = 0;
 	}
 	return planet_pos;
 }
@@ -2607,6 +2616,14 @@ bool umoon::shadowed_by_planet() {
 	assert(orbit > TOLERANCE && dps > TOLERANCE);
 	float const dx(orbit*sin(safe_acosf(dotp/(orbit*dps)))), rx(rp - (orbit/dps)*(rs - rp));
 	return (dx < rx);
+}
+
+
+string uplanet::get_info() const {
+
+	ostringstream oss;
+	if (population > 0) {oss << ", Population: " << unsigned(population) << "M";}
+	return urev_body::get_info() + oss.str();
 }
 
 

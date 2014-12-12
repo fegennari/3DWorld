@@ -276,8 +276,7 @@ public:
 
 class uplanet : public urev_body { // size = 324
 public:
-	unsigned population; // unused
-	float mosize, ring_ri, ring_ro;
+	float mosize, ring_ri, ring_ro, population;
 	colorRGBA ai_color, ao_color; // atmosphere colors
 	vector3d rscale;
 	vector<umoon> moons;
@@ -287,7 +286,7 @@ public:
 	unsigned ring_tid;
 	// trade items?
 
-	uplanet() : urev_body(UTYPE_PLANET), population(0), mosize(0.0), ring_ri(0.0), ring_ro(0.0), system(NULL), ring_tid(0) {}
+	uplanet() : urev_body(UTYPE_PLANET), mosize(0.0), ring_ri(0.0), ring_ro(0.0), population(0), system(NULL), ring_tid(0) {}
 	void create(bool phase);
 	void process();
 	point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -306,6 +305,7 @@ public:
 	void free_uobj();
 	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}
 	float get_ring_rscale() const {return max(rscale.x, rscale.y)*ring_ro/radius;}
+	string get_info() const;
 	string get_atmos_string() const;
 	string get_name() const {return "Planet " + getname();}
 };
