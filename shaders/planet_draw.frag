@@ -272,5 +272,11 @@ void main()
 	if (cloud_den > 0.0) { // add cloud color
 		color = mix(color, (ambient + cloud_diff*diffuse), cloud_den); // no clouds over high mountains?
 	}
-	fg_FragColor   = gl_Color * vec4(color, 1.0);
+	if (cloud_den > 0.5) { // maybe add lightning
+		float v0   = float(int(4.0E4*time))/4.0E4;
+		float dist = (10.0 + 10.0*rand_01(v0+3.0))*length(normalize(vertex) - normalize(rand_vec3(v0)));
+		float val  = max(0.0, (1.0 - dist));
+		color     += 2.5*(cloud_den - 0.5)*val*vec3(0.6, 0.8, 1.0); // lightning color
+	}
+	fg_FragColor = gl_Color * vec4(color, 1.0);
 }
