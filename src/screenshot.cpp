@@ -9,6 +9,8 @@
 #include <assert.h>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <sstream>
 #include "gl_includes.h"
 
 using namespace std;
@@ -16,17 +18,20 @@ using namespace std;
 int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char const *const data, bool invert_y);
 
 
-FILE *open_screenshot_file(char *file_path, char *basename) {
+FILE *open_screenshot_file(char *file_path, string const &extension, unsigned &id) {
 
 	FILE *fp;
-	if (basename == NULL) return NULL;
+	ostringstream oss;
+	oss << "screenshot" << id++ << "." << extension;
+	string const basename(oss.str());
+	cout << "Writing screenshot image " << basename << endl;
 
 	if (file_path != NULL) {
 		string const filename(string(file_path) + basename);
 		fp = fopen(filename.c_str(), "wb");
 	}
 	else {
-		fp = fopen(basename, "wb");
+		fp = fopen(basename.c_str(), "wb");
 	}
 	if (fp == NULL) {
 		printf("Error writing screenshot '%s'.\n", basename);
@@ -46,7 +51,8 @@ void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned 
 
 int screenshot(unsigned window_width, unsigned window_height, char *file_path) {
 
-	FILE *fp = open_screenshot_file(file_path, "screenshot.raw");
+	static unsigned ss_id(0);
+	FILE *fp = open_screenshot_file(file_path, "raw", ss_id);
 	if (fp == NULL) return 0;
 	vector<unsigned char> buf(window_width*window_height*3);
 	read_pixels(window_width, window_height, buf);
@@ -63,7 +69,8 @@ int screenshot(unsigned window_width, unsigned window_height, char *file_path) {
 
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path) {
 
-	FILE *fp = open_screenshot_file(file_path, "screenshot.jpg");
+	static unsigned ss_id(0);
+	FILE *fp = open_screenshot_file(file_path, "jpg", ss_id);
 	if (fp == NULL) return 0;
 	vector<unsigned char> buf((window_width+1)*(window_height+1)*3);
 	read_pixels(window_width, window_height, buf);

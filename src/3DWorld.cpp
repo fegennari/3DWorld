@@ -1063,12 +1063,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	// screenshots
 	case 'D': // .raw
-		cout << "screenshot.raw: width = " << window_width << ", height = " << window_height << endl;
 		screenshot(window_width, window_height, "./");
 		break;
 		// *** WHAT ABOUT PNG? ***
 	case 'F': // .jpg
-		cout << "screenshot.jpg: width = " << window_width << ", height = " << window_height << endl;
 		write_jpeg(window_width, window_height, "./");
 		break;
 
