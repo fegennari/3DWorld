@@ -278,7 +278,7 @@ public:
 		set_uniform_float(get_loc("ring_ri"),     svars.ring_ri);
 		set_uniform_float(get_loc("ring_ro"),     svars.ring_ro);
 		set_uniform_float(get_loc("noise_scale"), 4.0*body.cloud_scale); // clouds / gas giant noise
-		set_uniform_float(get_loc("population"),  (body.is_owned() ? 1.0 : 0.0));
+		set_uniform_float(get_loc("population"),  ((body.population >= 10.0) ? 1.0 : 0.0));
 		
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
 			set_uniform_float(get_loc("water_val"), body.water);
@@ -2619,14 +2619,6 @@ bool umoon::shadowed_by_planet() {
 }
 
 
-string uplanet::get_info() const {
-
-	ostringstream oss;
-	if (population > 0) {oss << ", Population: " << unsigned(population) << "M";}
-	return urev_body::get_info() + oss.str();
-}
-
-
 string uplanet::get_atmos_string() const {
 
 	if (atmos == 0.0    ) {return "None";}
@@ -2645,6 +2637,7 @@ string urev_body::get_info() const {
 		<< "Can Land: " << can_land() << ", Colonizable: " << colonizable()
 		<< ", Liveable: " << liveable() << ", Satellites: " << num_satellites << comment;
 	get_owner_info(oss, 0); // show_uninhabited=0 to reduce clutter
+	if (population > 0) {oss << ", Population: " << unsigned(population) << "M";}
 	return oss.str();
 }
 

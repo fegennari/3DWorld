@@ -213,13 +213,13 @@ public:
 	bool gas_giant; // planets only?
 	int owner;
 	unsigned orbiting_refs, tid, tsize;
-	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale, wr_scale, snow_thresh;
+	float orbit, rot_rate, rev_rate, atmos, water, lava, resources, cloud_scale, wr_scale, snow_thresh, population;
 	vector3d rev_axis, v_orbit;
 	std::shared_ptr<upsurface> surface;
 	string comment;
 
 	urev_body(char type_) : uobj_solid(type_), gas_giant(0), owner(NO_OWNER), orbiting_refs(0), tid(0), tsize(0), orbit(0.0), rot_rate(0.0),
-		rev_rate(0.0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0) {}
+		rev_rate(0.0), atmos(0.0), water(0.0), lava(0.0), resources(0.0), cloud_scale(1.0), wr_scale(1.0), snow_thresh(0.0), population(0.0) {}
 	virtual ~urev_body() {unset_owner();}
 	void gen_rotrev();
 	template<typename T> bool create_orbit(vector<T> const &objs, int i, point const &pos0, vector3d const &raxis,
@@ -276,7 +276,7 @@ public:
 
 class uplanet : public urev_body { // size = 324
 public:
-	float mosize, ring_ri, ring_ro, population;
+	float mosize, ring_ri, ring_ro;
 	colorRGBA ai_color, ao_color; // atmosphere colors
 	vector3d rscale;
 	vector<umoon> moons;
@@ -286,7 +286,7 @@ public:
 	unsigned ring_tid;
 	// trade items?
 
-	uplanet() : urev_body(UTYPE_PLANET), mosize(0.0), ring_ri(0.0), ring_ro(0.0), population(0), system(NULL), ring_tid(0) {}
+	uplanet() : urev_body(UTYPE_PLANET), mosize(0.0), ring_ri(0.0), ring_ro(0.0), system(NULL), ring_tid(0) {}
 	void create(bool phase);
 	void process();
 	point_d do_update(point_d const &p0, bool update_rev=1, bool update_rot=1);
@@ -305,7 +305,6 @@ public:
 	void free_uobj();
 	float get_hmap_scale () const {return PLANET_HMAP_SCALE;}
 	float get_ring_rscale() const {return max(rscale.x, rscale.y)*ring_ro/radius;}
-	string get_info() const;
 	string get_atmos_string() const;
 	string get_name() const {return "Planet " + getname();}
 };
