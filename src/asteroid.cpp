@@ -443,7 +443,7 @@ public:
 			return 0;
 		}
 		if (ip.calc_int) {
-			ip.norm = (p - pos).get_norm(); // FIXME: we can't actually calculate the normal, so we use the direction from asteroid center to object center
+			ip.norm = (p - pos).get_norm(); // we can't actually calculate the normal, so we use the direction from asteroid center to object center
 			if (ip.p_int == p) {ip.p_int = p - ip.norm*r;} // intersecting at the center, determine actual pos based on normal
 			xform_point_inv(ip.p_int);
 			rotate_point_inv(ip.norm); // ip.norm will be normalized

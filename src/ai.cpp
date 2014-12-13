@@ -907,7 +907,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 				for (unsigned i = 0; i < ndirs; ++i) {
 					vector3d dir(stepv);
 					rotate_vector3d_norm(plus_z, TWO_PI*i/ndirs, dir);
-					float const cost(get_pos_cost(smiley_id, (opos + step_dist_scale(obj, dir)*step_dist), opos, pdu, radius, step_height, 1)); // FIXME: zval has not been set
+					float const cost(get_pos_cost(smiley_id, (opos + step_dist_scale(obj, dir)*step_dist), opos, pdu, radius, step_height, 1));
 					dir_cost_t const cur(cost, dir, stepv);
 					if (i == 0 || cur < best) best = cur;
 				}

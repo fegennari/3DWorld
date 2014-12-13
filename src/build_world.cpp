@@ -1033,11 +1033,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					return read_error(fp, "model file data", coll_obj_file);
 				}
 				if (!no_cobjs) {
-					int group_ids[3] = {-1, -1, -1}; // one for each primary dim (FIXME: use one for each texture?)
+					int group_ids[3] = {-1, -1, -1}; // one for each primary dim
 					if (group_cobjs) {create_xyz_groups(group_ids, use_vbo);}
 					check_layer(has_layer);
 					cobj.thickness *= xf.scale;
-					if (cobj.thickness == 0.0) cobj.thickness = MIN_POLY_THICK; // optional - will be set to this value later anyway
+					if (cobj.thickness == 0.0) {cobj.thickness = MIN_POLY_THICK;} // optional - will be set to this value later anyway
 					add_polygons_to_cobj_vector(ppts, cobj, group_ids, cobj_type);
 					cobj.group_id   = -1; // reset
 				}

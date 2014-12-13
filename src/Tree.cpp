@@ -706,7 +706,7 @@ void tree::drop_leaves() {
 		
 		if (td_is_private()) { // create a new leaf with a different color (and orient?)
 			leaves[i].create_init_color(0);
-			copy_color(i, 1); // don't set leaves_changed (too slow)
+			copy_color(i, 1); // don't set td.leaves_changed (too slow)
 		}
 	}
 }

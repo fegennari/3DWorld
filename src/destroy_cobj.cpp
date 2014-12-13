@@ -305,7 +305,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 				just_added.push_back(index);
 				volume -= cobjs[index].volume;
 			}
-			if (is_polygon) volume = max(0.0f, volume); // FIXME: remove this when polygon splitting is correct
+			if (is_polygon) {volume = max(0.0f, volume);} // FIXME: remove this when polygon splitting is correct
 			assert(volume >= -TOLERANCE); // usually > 0.0
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
 			cobjs[i].clear_internal_data();
@@ -511,7 +511,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			return sphere_cube_intersect(c.points[0], c.radius, *this);
 		case COLL_CYLINDER_ROT:
 			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
-			return 2; // FIXME
+			return 2; // FIXME: finish
 		case COLL_POLYGON:
 			for (int i = 0; i < c.npoints; ++i) {
 				if (contains_pt(c.points[i])) return 1; // definite intersection

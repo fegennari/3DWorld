@@ -172,7 +172,7 @@ bool pos_dir_up::sphere_and_cube_visible_test(point const &pos_, float radius, c
 	return cube_visible(cube);
 }
 
-void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused
+void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but could use in model3d_xform_t::apply_inv_xform_to_pdu()
 
 	if (angle == 0.0) return;
 	vector3d v[2] = {dir, upv};

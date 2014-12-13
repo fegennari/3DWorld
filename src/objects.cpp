@@ -277,7 +277,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 
 	// process groups
 	if (same_group) {
-		assert(!in_group || tid == last_tid); // FIXME: each texture must be in its own group (matching FIXME in build_world.cpp)
+		assert(!in_group || tid == last_tid); // FIXME: each texture must be in its own group (see where group_ids are set in build_world.cpp)
 	}
 	else { // group changed
 		end_group(last_group_id);
