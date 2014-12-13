@@ -384,7 +384,7 @@ bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, uns
 		assert(x < unsigned(MESH_X_SIZE) && y < unsigned(MESH_Y_SIZE));
 		mesh_intersector intersector(v1, v2, 0);
 		if (!intersector.intersect_mesh_quad(x, y)) return 0; // use the intersector's line-plane intersection function
-		ret.zval = intersector.ret.zval;
+		ret.zval = intersector.get_ret().zval;
 		ret.xpos = x;
 		ret.ypos = y;
 		return 1;

@@ -179,12 +179,12 @@ class strip_t {
 	unsigned size, block_id, block_pos;
 
 public:
-	friend class snow_renderer;
 	bool is_edge;
 	int xval, y_start;
 
 	strip_t(bool edge=0) : strips(NULL), size(0), block_id(0), block_pos(0), is_edge(edge), xval(0), y_start(0) {}
 	unsigned get_size() const {return size;}
+	strip_entry const *get_strips() const {return strips;}
 
 	point get_pos(unsigned pos) const {
 		assert(strips && pos < size);
@@ -373,14 +373,15 @@ public:
 	void add_strip(strip_t const &s) {
 		unsigned const size(s.get_size());
 		assert(size >= 4 && !(size & 1)); // must be even
-		float const xval(s.strips[0].p.x);
+		strip_entry const *strips(s.get_strips());
+		float const xval(strips[0].p.x);
 
 		if (xval != last_x) {
 			vmap[0].clear();
 			vmap[0].swap(vmap[1]);
 			last_x = xval;
 		}
-		for (unsigned i = 0; i < size; ++i) {add(s.strips[i+0].p, s.strips[i+0].n, (i&1));}
+		for (unsigned i = 0; i < size; ++i) {add(strips[i+0].p, strips[i+0].n, (i&1));}
 		indices.push_back(PRIMITIVE_RESTART_IX); // restart the strip
 	}
 

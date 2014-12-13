@@ -112,7 +112,6 @@ void sd_sphere_d::gen_points_norms_static(float s_beg, float s_end, float t_beg,
 
 void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, float s_end, float t_beg, float t_end) {
 
-	unsigned const ndiv(spn.ndiv);
 	assert(ndiv >= 3 && ndiv <= 512); // sanity check
 
 	if (cur_spn.points == NULL || ndiv > cur_spn.ndiv) { // allocate all memory
@@ -164,19 +163,19 @@ void sd_sphere_d::gen_points_norms(sphere_point_norm &cur_spn, float s_beg, floa
 			}
 		}
 	}
-	spn.points = cur_spn.points;
-	spn.norms  = cur_spn.norms;
+	points = cur_spn.points;
+	norms  = cur_spn.norms;
 }
 
 
 float sd_sphere_d::get_rmax() const { // could calculate this during gen_points_norms
 
-	assert(spn.points);
+	assert(points);
 	float rmax_sq(0.0);
 
-	for (unsigned y = 0; y < spn.ndiv; ++y) {
-		for (unsigned x = 0; x <= spn.ndiv; ++x) {
-			rmax_sq = max(rmax_sq, p2p_dist_sq(pos, spn.points[y][x]));
+	for (unsigned y = 0; y < ndiv; ++y) {
+		for (unsigned x = 0; x <= ndiv; ++x) {
+			rmax_sq = max(rmax_sq, p2p_dist_sq(pos, points[y][x]));
 		}
 	}
 	return sqrt(rmax_sq);
@@ -190,7 +189,7 @@ void sd_sphere_d::set_data(point const &p, float r, int n, float const *pm, floa
 	def_pert    = dp;
 	perturb_map = pm;
 	surf        = s;
-	spn.ndiv    = n;
+	ndiv        = n;
 	assert(radius > 0.0);
 }
 
@@ -408,12 +407,9 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 									 float s_beg, float s_end, float t_beg, float t_end) const
 {
 	assert(!render_map || disable_bfc);
-	unsigned const ndiv(spn.ndiv);
 	assert(ndiv > 0);
 	float const ndiv_inv(1.0/float(ndiv)), rv(def_pert + radius), rv_sq(rv*rv), tscale(texture);
 	float const toler(1.0E-6*radius*radius + rv_sq), dmax(rv + 0.1*radius), dmax_sq(dmax*dmax);
-	point **points   = spn.points;
-	vector3d **norms = spn.norms;
 	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
 	if (expand != 0.0) expand *= 0.25; // 1/4, for normalization
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
@@ -537,16 +533,14 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 
 void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const { // used for scenery, not using vertex_type_t here
 
-	assert(spn.ndiv > 0);
-	float const ndiv_inv(1.0/float(spn.ndiv));
-	point **points   = spn.points;
-	vector3d **norms = spn.norms;
-	if (quad_pts.empty()) {quad_pts.reserve(4*spn.ndiv*spn.ndiv);}
+	assert(ndiv > 0);
+	float const ndiv_inv(1.0/float(ndiv));
+	if (quad_pts.empty()) {quad_pts.reserve(4*ndiv*ndiv);}
 	
-	for (unsigned s = 0; s < spn.ndiv; ++s) {
-		unsigned const sn((s+1)%spn.ndiv), snt(min((s+1), spn.ndiv));
+	for (unsigned s = 0; s < ndiv; ++s) {
+		unsigned const sn((s+1)%ndiv), snt(min((s+1), ndiv));
 
-		for (unsigned t = 0; t < spn.ndiv; ++t) {
+		for (unsigned t = 0; t < ndiv; ++t) {
 			point          pts[4]     = {points[s][t], points[sn][t], points[sn][t+1], points[s][t+1]};
 			vector3d const normals[4] = {norms [s][t], norms [sn][t], norms [sn][t+1], norms [s][t+1]};
 
@@ -560,13 +554,12 @@ void sd_sphere_d::get_quad_points(vector<vert_norm_tc> &quad_pts) const { // use
 
 void sd_sphere_d::get_triangles(vector<vert_wrap_t> &verts) const {
 
-	assert(spn.ndiv > 0);
-	point **const points = spn.points;
+	assert(ndiv > 0);
 	
-	for (unsigned s = 0; s < spn.ndiv; ++s) {
-		unsigned const sn((s+1)%spn.ndiv);
+	for (unsigned s = 0; s < ndiv; ++s) {
+		unsigned const sn((s+1)%ndiv);
 
-		for (unsigned t = 0; t < spn.ndiv; ++t) {
+		for (unsigned t = 0; t < ndiv; ++t) {
 			verts.push_back(points[s ][t  ]); // 0
 			verts.push_back(points[sn][t  ]); // 1
 			verts.push_back(points[sn][t+1]); // 2
@@ -580,7 +573,6 @@ void sd_sphere_d::get_triangles(vector<vert_wrap_t> &verts) const {
 
 void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned skip, float s_beg, float s_end, float t_beg, float t_end) const {
 
-	unsigned const ndiv(spn.ndiv);
 	assert(ndiv > 0);
 	float const ndiv_inv(1.0/float(ndiv));
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
@@ -590,12 +582,12 @@ void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned
 		unsigned const sn((s+skip)%ndiv), snt(min((s+skip), ndiv));
 
 		if (s != s0) { // add degenerate triangle to preserve the triangle strip
-			for (unsigned d = 0; d < 2; ++d) {verts.push_back(vertex_type_t(spn.points[s][d ? t0 : t1], zero_vector, 0, 0));}
+			for (unsigned d = 0; d < 2; ++d) {verts.push_back(vertex_type_t(points[s][d ? t0 : t1], zero_vector, 0, 0));}
 		}
 		for (unsigned t = t0; t <= t1; t += skip) {
 			t = min(t, ndiv);
-			verts.push_back(vertex_type_t(spn.points[s ][t], spn.norms[s ][t], (1.0f - s  *ndiv_inv), (1.0f - t*ndiv_inv)));
-			verts.push_back(vertex_type_t(spn.points[sn][t], spn.norms[sn][t], (1.0f - snt*ndiv_inv), (1.0f - t*ndiv_inv)));
+			verts.push_back(vertex_type_t(points[s ][t], norms[s ][t], (1.0f - s  *ndiv_inv), (1.0f - t*ndiv_inv)));
+			verts.push_back(vertex_type_t(points[sn][t], norms[sn][t], (1.0f - snt*ndiv_inv), (1.0f - t*ndiv_inv)));
 		}
 	} // for s
 }
@@ -603,13 +595,13 @@ void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned
 
 void sd_sphere_d::get_triangle_vertex_list(vector<vertex_type_t> &verts) const {
 
-	float const ndiv_inv(1.0/float(spn.ndiv));
+	float const ndiv_inv(1.0/float(ndiv));
 
-	for (unsigned s = 0; s <= spn.ndiv; ++s) {
-		unsigned const six(s%spn.ndiv);
+	for (unsigned s = 0; s <= ndiv; ++s) {
+		unsigned const six(s%ndiv);
 
-		for (unsigned t = 0; t <= spn.ndiv; ++t) {
-			verts.push_back(vertex_type_t(spn.points[six][t], spn.norms[six][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv)));
+		for (unsigned t = 0; t <= ndiv; ++t) {
+			verts.push_back(vertex_type_t(points[six][t], norms[six][t], (1.0f - s*ndiv_inv), (1.0f - t*ndiv_inv)));
 		}
 	}
 	assert(verts.size() < (1ULL << 8*sizeof(index_type_t)));
@@ -618,14 +610,14 @@ void sd_sphere_d::get_triangle_vertex_list(vector<vertex_type_t> &verts) const {
 
 void sd_sphere_d::get_triangle_index_list_pow2(vector<index_type_t> &indices, unsigned skip) const {
 
-	unsigned const stride(spn.ndiv + 1);
+	unsigned const stride(ndiv + 1);
 
-	for (unsigned s = 0; s < spn.ndiv; s += skip) {
+	for (unsigned s = 0; s < ndiv; s += skip) {
 		if (s != 0) { // add degenerate triangle to preserve the triangle strip
 			for (unsigned d = 0; d < 2; ++d) {indices.push_back(s*stride);}
 		}
-		for (unsigned t = 0; t <= spn.ndiv; t += skip) {
-			t = min(t, spn.ndiv);
+		for (unsigned t = 0; t <= ndiv; t += skip) {
+			t = min(t, ndiv);
 			indices.push_back((s+0)   *stride + t);
 			indices.push_back((s+skip)*stride + t);
 		}
@@ -635,14 +627,13 @@ void sd_sphere_d::get_triangle_index_list_pow2(vector<index_type_t> &indices, un
 
 void sd_sphere_d::get_faceted_triangles(vector<vertex_type_t> &verts) const {
 
-	assert(spn.ndiv > 0);
-	point **const points = spn.points;
-	float const ndiv_inv(1.0/float(spn.ndiv));
+	assert(ndiv > 0);
+	float const ndiv_inv(1.0/float(ndiv));
 	
-	for (unsigned s = 0; s < spn.ndiv; ++s) {
-		unsigned const sn((s+1)%spn.ndiv);
+	for (unsigned s = 0; s < ndiv; ++s) {
+		unsigned const sn((s+1)%ndiv);
 
-		for (unsigned t = 0; t < spn.ndiv; ++t) {
+		for (unsigned t = 0; t < ndiv; ++t) {
 			unsigned const sixs[2][3] = {{s, sn, sn}, {s, sn, s}}, tixs[2][3] = {{t, t, t+1}, {t, t+t, t+1}};
 			triangle const tris[2] = {triangle(points[s][t], points[sn][t  ], points[sn][t+1]),
 				                      triangle(points[s][t], points[sn][t+1], points[s ][t+1])};
@@ -669,7 +660,7 @@ void sd_sphere_vbo_d::ensure_vbos() {
 		vector<index_type_t> indices;
 		ix_offsets.push_back(0);
 		
-		for (unsigned n = spn.ndiv, skip = 1, ix_ix = 0; n >= 4; n >>= 1, skip <<= 1, ++ix_ix) {
+		for (unsigned n = ndiv, skip = 1, ix_ix = 0; n >= 4; n >>= 1, skip <<= 1, ++ix_ix) {
 			get_triangle_index_list_pow2(indices, skip);
 			ix_offsets.push_back(indices.size());
 		}
@@ -695,35 +686,35 @@ unsigned calc_lod_pow2(unsigned max_ndiv, unsigned ndiv) {
 }
 
 
-unsigned sd_sphere_vbo_d::draw_setup(unsigned ndiv) {
+unsigned sd_sphere_vbo_d::draw_setup(unsigned draw_ndiv) {
 
 	ensure_vbos();
 	pre_render(!faceted);
 	vertex_type_t::set_vbo_arrays();
-	return (faceted ? 0 : calc_lod_pow2(spn.ndiv, ndiv));
+	return (faceted ? 0 : calc_lod_pow2(ndiv, draw_ndiv));
 }
 
 
-void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned ndiv) {
+void sd_sphere_vbo_d::draw_ndiv_pow2_vbo(unsigned draw_ndiv) {
 
-	unsigned const lod(draw_setup(ndiv));
+	unsigned const lod(draw_setup(draw_ndiv));
 
 	if (faceted) { // ndiv is ignored
-		glDrawArrays(GL_TRIANGLES, 0, 6*spn.ndiv*spn.ndiv);
+		glDrawArrays(GL_TRIANGLES, 0, 6*ndiv*ndiv);
 	}
 	else {
-		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (spn.ndiv+1)*(spn.ndiv+1), get_count(lod), get_index_type_enum(), get_index_ptr(lod));
+		glDrawRangeElements(GL_TRIANGLE_STRIP, 0, (ndiv+1)*(ndiv+1), get_count(lod), get_index_type_enum(), get_index_ptr(lod));
 	}
 	post_render();
 }
 
 
-void sd_sphere_vbo_d::draw_instances(unsigned ndiv, instance_render_t &inst_render) {
+void sd_sphere_vbo_d::draw_instances(unsigned draw_ndiv, instance_render_t &inst_render) {
 
-	unsigned const lod(draw_setup(ndiv));
+	unsigned const lod(draw_setup(draw_ndiv));
 
 	if (faceted) { // ndiv is ignored
-		inst_render.draw_and_clear(GL_TRIANGLES, 6*spn.ndiv*spn.ndiv, vbo);
+		inst_render.draw_and_clear(GL_TRIANGLES, 6*ndiv*ndiv, vbo);
 	}
 	else {
 		inst_render.draw_and_clear(GL_TRIANGLE_STRIP, get_count(lod), vbo, get_index_type_enum(), get_index_ptr(lod));

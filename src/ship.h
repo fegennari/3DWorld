@@ -1030,8 +1030,6 @@ public:
 class u_ship_base { // Note: Can be created on the stack and copied
 
 public:
-	friend class u_ship;
-
 	unsigned sclass, ncrew, ncredits, kills, tot_kills, deaths;
 	bool docked, regened, o_docked;
 	float shields, armor, energy, fuel, used_cargo, size_scale;
@@ -1078,7 +1076,7 @@ public:
 	bool weap_turret(unsigned weapon_id) const;
 	void print_ammo() const;
 
-private:
+protected:
 	bool out_of_ammo_for(unsigned wix, bool current_only) const;
 	bool check_fire_delay(unsigned wix) const;
 	bool bad_angle(float const angle, float target_dist, unsigned weapon_id) const;

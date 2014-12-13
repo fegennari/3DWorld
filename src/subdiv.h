@@ -17,28 +17,29 @@ class instance_render_t;
 
 class sphere_point_norm { // size = 12
 
+protected:
 	unsigned ndiv;
 	point **points;
 	vector3d **norms;
 
 public:
 	friend class sd_sphere_d;
-	friend class sd_sphere_vbo_d;
 	sphere_point_norm() : ndiv(0), points(NULL), norms(NULL) {}
 	void alloc(unsigned ndiv_);
 	void set_pointer_stride(unsigned ndiv_);
 	void free_data();
+	point    **get_points() const {return points;}
+	vector3d **get_norms()  const {return norms; }
 };
 
 
-class sd_sphere_d { // size = 40
+class sd_sphere_d : public sphere_point_norm { // size = 40
 
 protected:
 	point pos;
 	float radius, def_pert;
 	float const *perturb_map;
 	upsurface const *surf;
-	sphere_point_norm spn;
 
 public:
 	typedef vert_norm_tc vertex_type_t;
@@ -60,11 +61,9 @@ public:
 	void get_triangle_index_list_pow2(vector<index_type_t> &indices, unsigned skip) const;
 	void get_faceted_triangles(vector<vertex_type_t> &verts) const;
 	void set_data(point const &p, float r, int n, float const *pm, float dp=0.0, upsurface const *const s=NULL);
-	point    **get_points() const {return spn.points;}
-	vector3d **get_norms()  const {return spn.norms; }
 
 	bool equal(point const &p, float r, int n) const {
-		return (p == pos && r == radius && n == spn.ndiv && spn.points != NULL);
+		return (p == pos && r == radius && n == ndiv && points != NULL);
 	}
 };
 
@@ -82,9 +81,9 @@ public:
 		: sd_sphere_d(p, r, n, pm, dp, s), faceted(0) {}
 	void make_faceted() {faceted = 1;}
 	void clear_vbos();
-	unsigned draw_setup(unsigned ndiv);
-	void draw_ndiv_pow2_vbo(unsigned ndiv);
-	void draw_instances(unsigned ndiv, instance_render_t &inst_render);
+	unsigned draw_setup(unsigned draw_ndiv);
+	void draw_ndiv_pow2_vbo(unsigned draw_ndiv);
+	void draw_instances(unsigned draw_ndiv, instance_render_t &inst_render);
 	unsigned get_index_type_enum()          const {return ((sizeof(index_type_t) == 4) ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);}
 	unsigned get_count       (unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (ix_offsets[lod+1] - ix_offsets[lod]);}
 	void *const get_index_ptr(unsigned lod) const {assert(lod+1 < ix_offsets.size()); return (void *const)(ix_offsets[lod]*sizeof(index_type_t));}

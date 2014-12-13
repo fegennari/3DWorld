@@ -47,16 +47,16 @@ class mesh_intersector {
 	bool line_intersect_surface_fast();
 	bool check_iter_clip(int fast2);
 	bool line_intersect_plane(int x1, int x2, int y1, int y2);
-	bool intersect_mesh_quad(int x, int y);
 	bool intersect_plane(point const &mesh_pt, vector3d const &norm, bool sign);
 
 public:
-	friend class mesh_bsp_tree;
 	mesh_intersector(point const &v1_, point const &v2_, int fast_) :
 		v1(v1_), v2(v2_), v2_v1(v2 - v1), fast(fast_) {}
 	bool get_intersection(int &xpos_, int &ypos_, float &zval_, bool cached);
 	bool get_intersection();
 	bool get_any_non_intersection(point const *const pts, unsigned npts);
+	bool intersect_mesh_quad(int x, int y);
+	mesh_query_ret const &get_ret() const {return ret;}
 };
 
 
