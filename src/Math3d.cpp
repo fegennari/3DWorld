@@ -829,16 +829,13 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri
 					   else if (pos[i] > cube.d[i][1]) {float const dist(pos[i] - cube.d[i][1]); dmin += dist*dist;} \
 					   if (dmin > r2) return 0;}
 
-
-bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube) {
+bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube, int dim) {
 
 	float dmin(0.0);
 	float const r2(radius*radius);
-	DMIN_CHECK(0);
-	DMIN_CHECK(1);
+	UNROLL_3X(if (dim != i_) {DMIN_CHECK(i_);})
 	return 1;
 }
-
 
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) {
 

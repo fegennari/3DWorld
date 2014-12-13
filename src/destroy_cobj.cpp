@@ -506,11 +506,20 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CUBE:
 			return 1; // as simple as that
 		case COLL_CYLINDER:
-			return circle_rect_intersect(c.points[0], c.radius, *this);
+			return circle_rect_intersect(c.points[0], c.radius, *this, 2); // in z
 		case COLL_SPHERE:
 			return sphere_cube_intersect(c.points[0], c.radius, *this);
 		case COLL_CYLINDER_ROT:
-			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
+			{
+				if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
+				bool deq[3];
+				UNROLL_3X(deq[i_] = (c.points[0][i_] == c.points[1][i_]);)
+
+				for (unsigned d = 0; d < 3; ++d) { // approximate projected circle test for x/y/z oriented cylinders
+					unsigned const d1((d+1)%3), d2((d+2)%3);
+					if (deq[d1] && deq[d2] && circle_rect_intersect(c.points[0], min(c.radius, c.radius2), *this, d)) return 1;
+				}
+			}
 			return 2; // FIXME: finish
 		case COLL_POLYGON:
 			for (int i = 0; i < c.npoints; ++i) {

@@ -404,7 +404,7 @@ void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from
 void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir);
 bool line_torus_intersect(point const &p1, point const &p2, point const &tc, float ri, float ro, float &t);
 bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro, point &p_int, vector3d &norm, bool calc_int);
-bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube);
+bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube, int dim);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last,
 						   point &p_int, vector3d &norm, unsigned &cdir, bool check_int, bool skip_z=0);
