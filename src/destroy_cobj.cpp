@@ -516,8 +516,9 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 				UNROLL_3X(deq[i_] = (c.points[0][i_] == c.points[1][i_]);)
 
 				for (unsigned d = 0; d < 3; ++d) { // approximate projected circle test for x/y/z oriented cylinders
-					unsigned const d1((d+1)%3), d2((d+2)%3);
-					if (deq[d1] && deq[d2] && circle_rect_intersect(c.points[0], min(c.radius, c.radius2), *this, d)) return 1;
+					if (!deq[(d+1)%3] || !deq[(d+2)%3]) continue; // not oriented in direction d
+					if (circle_rect_intersect(c.points[0], min(c.radius, c.radius2), *this, d)) return 1;
+					if (c.radius == c.radius2) return 0; // no intersection
 				}
 			}
 			return 2; // FIXME: finish
