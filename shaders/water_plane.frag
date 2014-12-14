@@ -58,7 +58,7 @@ void main()
 			vec4 norm_fa = get_deep_wave_normal(tc);
 			float deep_wave_scale = clamp((0.8*depth*mesh_z_scale - 0.2), 0.0, 1.0);
 			wave_n   = mix(wave_n, 1.25*wave_amplitude*normalize(norm_fa.xyz), deep_wave_scale);
-			foam_amt = deep_wave_scale*norm_fa.w;
+			if (use_foam) {foam_amt = deep_wave_scale*norm_fa.w;}
 		}
 #endif
 		vec3 wave_n_eye = fg_NormalMatrix * wave_n;
@@ -92,9 +92,11 @@ void main()
 	}
 
 #ifdef USE_WATER_DEPTH
-	// foam texture near shore (what about is_lava?)
-	foam_amt += 0.5*clamp(10.0*depth-0.2, 0.0, 1.0)*(1.0 - clamp(5.0*depth, 0.0, 1.0));
-	color = mix(color, texture(foam_tex, 25.0*tc), foam_amt);
+	if (use_foam) {
+		// foam texture near shore (what about is_lava?)
+		foam_amt += 0.5*clamp(10.0*depth-0.2, 0.0, 1.0)*(1.0 - clamp(5.0*depth, 0.0, 1.0));
+		color = mix(color, texture(foam_tex, 25.0*tc), foam_amt);
+	}
 #endif
 
 	// determine final color with fog

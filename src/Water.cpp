@@ -162,7 +162,7 @@ void water_color_atten_at_pos(colorRGBA &c, point const &pos) {
 void select_water_ice_texture(shader_t &shader, colorRGBA &color) {
 
 	if (water_is_lava) {
-		select_texture(WATER_TEX); // FIXME: LAVA_TEX
+		select_texture(LAVA_TEX);
 		shader.set_specular(0.1, 10.0); // low specular
 		color = LAVA_COLOR;
 		return;

@@ -36,7 +36,7 @@ bool clear_landscape_vbo(0), clear_mvd_vbo(0);
 float lt_green_int(1.0), sm_green_int(1.0), water_xoff(0.0), water_yoff(0.0), wave_time(0.0);
 vector<fp_ratio> uw_mesh_lighting; // for water caustics
 
-extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex;
+extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
 extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere;
@@ -733,6 +733,8 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH", 1);} // FS
 	s.setup_enabled_lights(2, 2); // FS
 	setup_tt_fog_pre(s);
+	bool const use_foam(!water_is_lava);
+	s.set_bool_prefix("use_foam",         use_foam, 1); // FS
 	s.set_bool_prefix("reflections",      reflections, 1); // FS
 	s.set_bool_prefix("add_waves",        add_waves,   1); // FS
 	s.set_bool_prefix("add_noise",        rain_mode,   1); // FS
