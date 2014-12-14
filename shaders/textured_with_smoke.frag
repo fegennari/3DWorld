@@ -171,6 +171,12 @@ void main()
 		for (int i = 0; i < num_steps; ++i) {
 			// Note: we could also lookup dynamic lighting here, which would be very slow but would also look really nice
 			vec4 tex_val = texture(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
+#ifdef SMOKE_DLIGHTS
+			if (enable_dlights) { // dynamic lighting
+				vec3 dl_pos = pos*scene_scale + scene_llc;
+				tex_val.rgb += add_dlights(dl_pos, normalize(dir), smoke_color); // normal points from vertex to eye
+			}
+#endif
 			float smoke  = smoke_sscale*tex_val.a*step_weight;
 			float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
 			float mval   = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
