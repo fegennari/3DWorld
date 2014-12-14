@@ -17,7 +17,7 @@ float const BURN_RADIUS      = 0.2;
 float const BURN_DAMAGE      = 80.0;
 float const BEAM_DAMAGE      = 0.06;
 float const LEAF_DAM_SCALE   = 0.0001;
-float const LEAF_HEAL_RATE   = 0.00001;
+float const LEAF_HEAL_RATE   = 0.00005;
 float const TREE_SIZE        = 0.005; // 0.0015
 float const REL_LEAF_SIZE    = 3.5;
 int   const LEAF_GEN_RAND1   = 10; //500
@@ -473,11 +473,17 @@ coll_obj &tree::get_leaf_cobj(unsigned i) const {
 }
 
 
-void tree_data_t::gen_leaf_color() {
+void tree_data_t::mark_leaf_changed(unsigned ix) {
 
-	leaf_color = get_leaf_base_color(tree_type) * leaf_color_coherence;
+	assert(ix < leaves.size());
+	leaf_change_start = min(ix,   leaf_change_start);
+	leaf_change_end   = max(ix+1, leaf_change_end);
 }
 
+
+void tree_data_t::gen_leaf_color() {
+	leaf_color = get_leaf_base_color(tree_type) * leaf_color_coherence;
+}
 
 inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const {
 
@@ -485,7 +491,6 @@ inline colorRGB tree_leaf::calc_leaf_color(colorRGBA const &leaf_color, colorRGB
 	return colorRGB(max(0.0f, (color*(leaf_color.R + ilch*lred  ) + base_color.R*tree_color_coherence)),
 		            max(0.0f, (color*(leaf_color.G + ilch*lgreen) + base_color.G*tree_color_coherence)), 0.0);
 }
-
 
 colorRGB tree_data_t::get_leaf_color(unsigned i) const {
 
@@ -497,18 +502,15 @@ colorRGB tree_data_t::get_leaf_color(unsigned i) const {
 	return leaves[i].calc_leaf_color(leaf_color, base_color);
 }
 
-
 void tree_data_t::update_leaf_color(unsigned i, bool no_mark_changed) {
 
 	assert(i < leaves.size());
 	colorRGB const color(leaves[i].calc_leaf_color(leaf_color, base_color));
 	UNROLL_4X(leaf_data[i_+(i<<2)].set_c3(color);)
-	if (!no_mark_changed) {leaves_changed = 1;}
+	if (!no_mark_changed) {mark_leaf_changed(i);}
 }
 
-
 void tree_data_t::update_all_leaf_colors() {
-
 	for (unsigned i = 0; i < leaves.size(); i++) {update_leaf_color(i);}
 }
 
@@ -538,7 +540,7 @@ void tree_data_t::remove_leaf_ix(unsigned i, bool update_data) {
 	assert(4*leaves.size() <= leaf_data.size());
 	// shift vertex array (last one is now invalid)
 	UNROLL_4X(leaf_data[i_+i4] = leaf_data[i_+tnl4];)
-	leaves_changed = 1;
+	if (i < leaves.size()) {mark_leaf_changed(i);} // not the last leaf
 }
 
 
@@ -583,7 +585,8 @@ bool tree_data_t::spraypaint_leaves(point const &pos, float radius, colorRGBA co
 			unsigned const ix((i<<2)+j);
 			assert(ix < leaf_data.size());
 			UNROLL_3X(leaf_data[ix].c[i_] = (unsigned char)((1.0 - blend_val)*leaf_data[ix].c[i_] + 255.0*blend_val*CLIP_TO_01(color[i_]));)
-			changed = leaves_changed = 1; // update a sub-range?
+			mark_leaf_changed(i);
+			changed = 1;
 		}
 	}
 	return changed;
@@ -706,7 +709,7 @@ void tree::drop_leaves() {
 		
 		if (td_is_private()) { // create a new leaf with a different color (and orient?)
 			leaves[i].create_init_color(0);
-			copy_color(i, 1); // don't set td.leaves_changed (too slow)
+			copy_color(i, 1); // don't call td.mark_leaf_changed(i) (too slow)
 		}
 	}
 }
@@ -1007,7 +1010,7 @@ void tree_data_t::update_normal_for_leaf(unsigned i) {
 
 	assert(i < leaves.size());
 	UNROLL_4X(leaf_data[i_+(i<<2)].set_norm(leaves[i].norm*leaves[i].get_norm_scale(i_));)
-	leaves_changed = 1;
+	mark_leaf_changed(i);
 }
 
 
@@ -1023,14 +1026,20 @@ void tree_data_t::reset_leaf_pos_norm() {
 
 void tree_data_t::ensure_leaf_vbo() {
 
-	bool const create_leaf_vbo(leaf_vbo == 0);
-	create_vbo_and_upload(leaf_vbo, leaf_data, 0, 0, 1); // dynamic draw, due to wind updates, collision, burn damage, etc.
+	leaf_change_end = min(leaf_change_end, leaves.size()); // in case a leaf was removed after a previous update this frame
 
-	if (!create_leaf_vbo && leaves_changed) {
-		bind_vbo(leaf_vbo);
-		upload_vbo_sub_data(&leaf_data.front(), 0, leaf_data.size()*sizeof(leaf_vert_type_t)); // FIXME: track and update a sub-range?
+	if (leaf_vbo == 0) {
+		create_vbo_and_upload(leaf_vbo, leaf_data, 0, 0, 1); // dynamic draw, due to wind updates, collision, burn damage, etc.
 	}
-	leaves_changed = 0;
+	else if (leaf_change_start < leaf_change_end) {
+		assert(leaf_change_end <= leaves.size());
+		bind_vbo(leaf_vbo);
+		unsigned const per_leaf_stride(4*sizeof(leaf_vert_type_t));
+		upload_vbo_sub_data((&leaf_data.front() + 4*leaf_change_start), leaf_change_start*per_leaf_stride,
+			(leaf_change_end - leaf_change_start)*per_leaf_stride);
+	}
+	leaf_change_start = leaves.size();
+	leaf_change_end   = 0;
 }
 
 
@@ -1075,8 +1084,8 @@ void tree_data_t::bend_leaf(unsigned i, float angle) { // Note: slow
 	else { // update the normals, even though this slows the algorithm down
 		UNROLL_4X(leaf_data[i_+ix].set_norm(normal*l.get_norm_scale(i_));) // almost update_normal_for_leaf(i);
 	}
-	leaves_changed = 1;
-	reset_leaves   = 1; // do we want to update the normals as well?
+	mark_leaf_changed(i);
+	reset_leaves = 1; // do we want to update the normals as well?
 }
 
 
@@ -1096,6 +1105,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	bool const do_update(td.check_if_needs_updated() || !leaf_orients_valid), priv_data(td_is_private());
 	if (!do_update && leaf_cobjs.empty()) return;
 	vector<tree_leaf> const &leaves(td.get_leaves());
+	bool const heal_pass((rand()&7) == 0); // only update healed color every 8 frames
 
 	#pragma omp parallel for num_threads(2) schedule(static) firstprivate(last_xpos, last_ypos, local_wind) if (leaf_cobjs.empty())
 	for (int i = 0; i < (int)leaves.size(); i++) { // process leaf wind and collisions
@@ -1140,18 +1150,18 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 					//--i; // not legal for OpenMP, so I guess we have to skip updating a leaf
 					continue;
 				}
-				cobj.last_coll = ((cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
+				cobj.last_coll = ((hit_angle == 0.0 || cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
 			}
 		}
 		if (wscale != 0.0 || hit_angle != 0.0) {
 			float const angle(PI_TWO*max(-1.0f, min(1.0f, wscale)) + hit_angle); // not physically correct, but it looks good
 			td.bend_leaf(i, angle); // do we want to update collision objects as well?
 		}
-		if (LEAF_HEAL_RATE > 0.0 && do_update && priv_data && world_mode == WMODE_GROUND) { // leaf heal
+		if (heal_pass && LEAF_HEAL_RATE > 0.0 && do_update && priv_data && world_mode == WMODE_GROUND) { // leaf heal
 			float &lcolor(td.get_leaves()[i].color);
 
 			if (lcolor > 0.0 && lcolor < 1.0) {
-				lcolor = min(1.0f, (lcolor + LEAF_HEAL_RATE*fticks));
+				lcolor = min(1.0, (lcolor + 8.0*LEAF_HEAL_RATE*fticks));
 				copy_color(i);
 			}
 		}

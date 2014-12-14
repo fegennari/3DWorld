@@ -208,7 +208,8 @@ class tree_data_t {
 	vector<tree_leaf> leaves;
 	tree_bb_tex_t render_leaf_texture, render_branch_texture;
 	int last_update_frame;
-	bool leaves_changed, reset_leaves;
+	unsigned leaf_change_start, leaf_change_end;
+	bool reset_leaves;
 
 	void clear_vbo_ixs();
 
@@ -216,14 +217,15 @@ public:
 	float base_radius, sphere_radius, sphere_center_zoff, br_scale;
 	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
 
-	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1),
-		last_update_frame(0), leaves_changed(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
+	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1), last_update_frame(0),
+		leaf_change_start(0), leaf_change_end(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
 		br_scale(1.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void make_private_copy(tree_data_t &dest) const;
 	void gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale, cube_t const *clip_cube);
+	void mark_leaf_changed(unsigned ix);
 	void gen_leaf_color();
 	void update_all_leaf_colors();
 	void update_leaf_color(unsigned i, bool no_mark_changed=0);
