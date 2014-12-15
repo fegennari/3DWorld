@@ -358,6 +358,7 @@ public:
 		if ( ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
 		if (!ddata.first_pass) {s.add_uniform_float("depth_bias", -1.0E-6);} // depth bias hack (other asteroid types?)
 		s.add_uniform_color("color", ddata.color_a);
+		if (!is_light_enabled(0)) {clear_colors_and_disable_light(0, &s);} // if there's no sun, make sure this shader knows it
 		glEnable(GL_CULL_FACE);
 		model.core_render(s, lod_level, 0, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 		glDisable(GL_CULL_FACE);
@@ -719,6 +720,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		shader.begin_shader();
 		shader.add_uniform_float("alpha_scale", 2.0);
 		shader.add_uniform_color("color", base_color.modulate_with(texture_color(tid)));
+		if (!has_sun) {clear_colors_and_disable_light(0, &shader);} // if there's no sun, make sure this shader knows it
 		ast_belt_part[0].draw(afpos, orbital_plane_normal, 0.0, outer_radius*scale, density); // full/sparse
 		shader.end_shader();
 	}
@@ -736,6 +738,7 @@ void uasteroid_belt::draw_detail(point_d const &pos_, point const &camera, bool 
 		select_texture(tid);
 		if (is_ice) {shader.set_specular(1.2, 50.0);} // very specular
 		if (ENABLE_SHADOWS && has_sun) {upload_shader_casters(shader);}
+		if (!has_sun) {clear_colors_and_disable_light(0, &shader);} // if there's no sun, make sure this shader knows it
 		set_point_sprite_mode(1);
 
 		for (unsigned i = 0; i < AB_NUM_PART_SEG; ++i) {

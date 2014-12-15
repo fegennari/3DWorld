@@ -126,6 +126,7 @@ void set_colors_and_enable_light(int light, colorRGBA const &ambient, colorRGBA 
 
 void clear_colors_and_disable_light(int light, shader_t *shader) {
 
+	enable_light(light); // enable temporarily so that we can update the shader colors for shaders that don't check the enabled state
 	assert(light >= 0 && light < MAX_SHADER_LIGHTS);
 	set_light_colors(light, BLACK, BLACK, shader);
 	disable_light(light);
