@@ -363,8 +363,8 @@ public:
 	void calc_vertex_colors_normals(colorRGBA const &color_in) {
 		if (verts.empty()) return;
 
-		// run on two threads when we have the slow ray-traced per-vertex water reflections enabled
-		#pragma omp parallel for num_threads(2) schedule(dynamic) if (!fast_water_reflect && !(display_mode & 0x20))
+		// run on multiple threads when we have the slow ray-traced per-vertex water reflections enabled (assumes a quad core machine)
+		#pragma omp parallel for num_threads(4) schedule(dynamic) if (!fast_water_reflect && !(display_mode & 0x20))
 		for (int i = 0; i < (int)verts.size(); ++i) {
 			vert_norm_color &vnc(verts[i]);
 			calc_vertex_cn(vnc, get_ypos(vnc.v.y), get_xpos(vnc.v.x), color_in);
