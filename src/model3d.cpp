@@ -219,7 +219,13 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 		need_normalize = 0;
 	}
 	if (indices.empty() || finalized) return; // nothing to do
-	//if (npts == 3) {vector<unsigned> v; simplify(v, 0.5);} // TESTING
+
+	bool const do_simplify = 0; // TESTING
+	if (do_simplify && npts == 3) {
+		vector<unsigned> v;
+		simplify(v, 0.5);
+		indices.swap(v);
+	}
 	finalized = 1;
 	//optimize(npts); // now optimized in the object file loading phase
 	assert((num_verts() % npts) == 0); // triangles or quads
@@ -253,6 +259,28 @@ struct merge_entry_t {
 	bool operator<(merge_entry_t const &e) const {return (val < e.val);}
 };
 
+struct vertex_remap_t {
+
+	vector<unsigned> remap;
+
+	vertex_remap_t(unsigned num_verts) {
+		remap.resize(num_verts);
+		for (unsigned i = 0; i < num_verts; ++i) {remap[i] = i;}
+	}
+	unsigned get_remapped_val(unsigned ix) { // union find with path compression
+		if (is_remapped(ix)) {remap[ix] = get_remapped_val(remap[ix]);} // follow the chain
+		return remap[ix];
+	}
+	bool is_remapped(unsigned ix) const {assert(ix < remap.size()); return (remap[ix] != ix);}
+	void remap_vertex(unsigned from, unsigned to) {assert(!is_remapped(from)); remap[from] = to;}
+};
+
+struct mesh_edge_t {
+	unsigned a, b; // a < b
+	mesh_edge_t(unsigned a_=0, unsigned b_=0) : a(min(a_, b_)), b(max(a_, b_)) {assert(a != b);}
+	bool operator==(mesh_edge_t const &e) const {return (a == e.a && b == e.b);}
+};
+
 
 // target = ratio of output to input vertices in (0.0, 1.0)
 // Note: works on triangles only (not quads)
@@ -261,8 +289,8 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 	RESET_TIME;
 	assert(target < 1.0 && target > 0.0);
 	out.clear();
-	unsigned const num_verts(size()), num_ixs(indices.size()), target_num_ixs(unsigned(target*num_ixs));
-	if (target_num_ixs < 3) return; // can't simplify
+	unsigned const num_verts(size()), num_ixs(indices.size()), target_num_verts(unsigned(target*num_verts));
+	if (target_num_verts <= 3) {out = indices; return;} // can't simplify
 
 	// build vertex to face/triangle mapping
 	assert((num_ixs % 3) == 0); // must be triangles
@@ -273,51 +301,74 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 		assert(indices[i] < num_verts);
 		vert_to_tri[indices[i]].add(i);
 	}
-	unsigned hist[10] = {0};
-	for (unsigned i = 0; i < num_verts; ++i) {assert(vert_to_tri[i].n > 0); ++hist[min(9U, vert_to_tri[i].n)];}
-	cout << "nv: " << num_verts << ", ni: " << num_ixs << ", tni: " << target_num_ixs << ", hist: ";
-	for (unsigned i = 1; i < 10; ++i) {cout << hist[i] << " ";}
-	cout << endl;
 
-	// determine which verts/tris/ixs can be removed
-	vector<unsigned char> to_remove(num_ixs, 0);
+	// determine which verts/edges can be removed
 	std::priority_queue<merge_entry_t> merge_queue; // of vertices
+	rand_gen_t rgen;
 
 	for (unsigned i = 0; i < num_verts; ++i) {
 		if (vert_to_tri[i].ix_overflow()) continue; // don't remove this vertex
-		float const val(0.0); // FIXME - based on num, tri size, normals, etc.
+		bool on_mesh_edge(0);
+
+		for (unsigned t = 0; t < vert_to_tri[i].n && !on_mesh_edge; ++t) { // iterate over triangles at this vertex
+			assert(vert_to_tri[i].t[t] < num_ixs);
+			unsigned const tix(vert_to_tri[i].t[t]/3), six(3*tix);
+			assert(six+3 <= num_ixs);
+			
+			for (unsigned j = 0; j < 3; ++j) {
+				mesh_edge_t const e1(indices[six+j], indices[six+((j+1)%3)]);
+				if (e1.a != i && e1.b != i) continue; // edge doesn't contain the vertex of interest
+				bool found(0);
+
+				for (unsigned t2 = 0; t2 < vert_to_tri[i].n && !found; ++t2) {
+					if (t2 == t) continue; // same triangle
+					unsigned const tix2(vert_to_tri[i].t[t2]/3), six2(3*tix2);
+					if (e1 == mesh_edge_t(indices[six2+0], indices[six2+1]) ||
+						e1 == mesh_edge_t(indices[six2+1], indices[six2+2]) ||
+						e1 == mesh_edge_t(indices[six2+2], indices[six2+0])) {found = 1; break;}
+				} // for t2
+				if (!found) {on_mesh_edge = 1; break;}
+			} // for j
+		} // for t
+		if (on_mesh_edge) continue; // can't remove this vertex
+		float const val(rgen.rand_float()); // FIXME - based on num, tri size, normals, etc.
 		merge_queue.push(merge_entry_t(i, val));
 	}
-	unsigned num_valid_ixs(num_ixs);
 
-	while (!merge_queue.empty() && num_valid_ixs > target_num_ixs) {
-		unsigned const to_rem(merge_queue.top().vix); // remove this one
+	// mapping from orig vertex to collapsed (new) vertex
+	unsigned const cand_verts(merge_queue.size());
+	vertex_remap_t remap(num_verts);
+	unsigned num_valid_verts(num_verts);
+
+	while (!merge_queue.empty() && num_valid_verts > target_num_verts) {
+		unsigned const src_ix(merge_queue.top().vix); // remove this one
 		merge_queue.pop();
-		assert(to_rem < num_verts);
-		vert_to_tri_t<8> const &v2t(vert_to_tri[to_rem]);
+		assert(src_ix < num_verts);
+		unsigned dest_ix(src_ix);
 		
-		for (unsigned i = 0; i < v2t.n; ++i) { // get triangle indices for this vertex
-			assert(v2t.t[i] < num_ixs);
-			unsigned const tix(v2t.t[i]/3), start_ix(3*tix);
-			assert(start_ix+3 <= to_remove.size());
+		for (unsigned t = 0; t < vert_to_tri[src_ix].n && dest_ix == src_ix; ++t) { // iterate over triangles at this vertex
+			unsigned const tix(vert_to_tri[src_ix].t[t]/3), six(3*tix);
 
 			for (unsigned j = 0; j < 3; ++j) {
-				if (to_remove[start_ix+j]) continue; // already marked for removal
-				to_remove[start_ix+j] = 1; // invalidate/remove these indices
-				assert(num_valid_ixs > 0);
-				--num_valid_ixs;
+				if (remap.is_remapped(indices[six+j])) continue; // already remapped
+				dest_ix = indices[six+j]; // new vertes
+				break; // FIXME: find shortest edge?
 			}
-		}
-	}
+		} // for i
+		if (dest_ix == src_ix) continue; // can't remove this one
+		remap.remap_vertex(src_ix, dest_ix);
+		assert(num_valid_verts > 0);
+		--num_valid_verts;
+	} // while
 
 	// generate output
-	out.reserve(num_valid_ixs);
-
-	for (unsigned i = 0; i < num_ixs; ++i) {
-		if (!to_remove[i]) {out.push_back(indices[i]);}
+	for (unsigned i = 0; i < num_ixs; i += 3) { // iterate by triangle
+		unsigned new_ixs[3];
+		for (unsigned n = 0; n < 3; ++n) {new_ixs[n] = remap.get_remapped_val(indices[i+n]);}
+		if (new_ixs[0] == new_ixs[1] || new_ixs[1] == new_ixs[2] || new_ixs[2] == new_ixs[0]) continue; // duplicate vertices, degenerate triangle, skip
+		UNROLL_3X(out.push_back(new_ixs[i_]);)
 	}
-	assert(out.size() == num_valid_ixs);
-	cout << "output: " << num_valid_ixs << endl;
+	cout << TXT(num_verts) << TXT(num_ixs) << TXT(target_num_verts) << TXT(cand_verts) << TXT(num_valid_verts) << TXT(out.size()) << endl;
 	PRINT_TIME("Simplify");
 }
 
@@ -716,9 +767,7 @@ template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow
 
 template<typename T> void geometry_t<T>::add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id) const {
 
-	unsigned const max_entries(1 << 18); // 256K
-
-	if (v.empty() || v.back().size() > max_entries || obj_id > v.back().obj_id) {
+	if (v.empty() || v.back().size() > MAX_VMAP_SIZE || obj_id > v.back().obj_id) {
 		vmap.clear();
 		v.push_back(indexed_vntc_vect_t<T>(obj_id));
 	}
