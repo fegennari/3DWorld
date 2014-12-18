@@ -272,7 +272,7 @@ struct vertex_remap_t {
 		return remap[ix];
 	}
 	bool is_remapped(unsigned ix) const {assert(ix < remap.size()); return (remap[ix] != ix);}
-	void remap_vertex(unsigned from, unsigned to) {assert(!is_remapped(from)); remap[from] = to;}
+	void remap_vertex(unsigned from, unsigned to) {assert(from != to); assert(!is_remapped(from)); remap[from] = to;}
 };
 
 struct mesh_edge_t {
@@ -283,7 +283,7 @@ struct mesh_edge_t {
 
 
 // target = ratio of output to input vertices in (0.0, 1.0)
-// Note: works on triangles only (not quads)
+// Note: works on triangles only (not quads), intended for 2-manifold meshes
 template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out, float target) const {
 
 	RESET_TIME;
@@ -304,25 +304,27 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 
 	// determine which verts/edges can be removed
 	std::priority_queue<merge_entry_t> merge_queue; // of vertices
-	rand_gen_t rgen;
 
 	for (unsigned i = 0; i < num_verts; ++i) {
-		if (vert_to_tri[i].ix_overflow()) continue; // don't remove this vertex
+		auto const &vt(vert_to_tri[i]);
+		if (vt.ix_overflow()) continue; // don't remove this vertex
 		bool on_mesh_edge(0);
+		counted_normal normal_sum;
 
-		for (unsigned t = 0; t < vert_to_tri[i].n && !on_mesh_edge; ++t) { // iterate over triangles at this vertex
-			assert(vert_to_tri[i].t[t] < num_ixs);
-			unsigned const tix(vert_to_tri[i].t[t]/3), six(3*tix);
+		for (unsigned t = 0; t < vt.n && !on_mesh_edge; ++t) { // iterate over triangles at this vertex
+			assert(vt.t[t] < num_ixs);
+			unsigned const tix(vt.t[t]/3), six(3*tix);
 			assert(six+3 <= num_ixs);
 			
 			for (unsigned j = 0; j < 3; ++j) {
+				normal_sum.add_normal(operator[](indices[six+j]).n);
 				mesh_edge_t const e1(indices[six+j], indices[six+((j+1)%3)]);
 				if (e1.a != i && e1.b != i) continue; // edge doesn't contain the vertex of interest
 				bool found(0);
 
-				for (unsigned t2 = 0; t2 < vert_to_tri[i].n && !found; ++t2) {
+				for (unsigned t2 = 0; t2 < vt.n && !found; ++t2) {
 					if (t2 == t) continue; // same triangle
-					unsigned const tix2(vert_to_tri[i].t[t2]/3), six2(3*tix2);
+					unsigned const tix2(vt.t[t2]/3), six2(3*tix2);
 					if (e1 == mesh_edge_t(indices[six2+0], indices[six2+1]) ||
 						e1 == mesh_edge_t(indices[six2+1], indices[six2+2]) ||
 						e1 == mesh_edge_t(indices[six2+2], indices[six2+0])) {found = 1; break;}
@@ -331,7 +333,7 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 			} // for j
 		} // for t
 		if (on_mesh_edge) continue; // can't remove this vertex
-		float const val(rgen.rand_float()); // FIXME - based on num, tri size, normals, etc.
+		float const val(normal_sum.mag()/normal_sum.count);
 		merge_queue.push(merge_entry_t(i, val));
 	}
 
@@ -341,21 +343,26 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 	unsigned num_valid_verts(num_verts);
 
 	while (!merge_queue.empty() && num_valid_verts > target_num_verts) {
-		unsigned const src_ix(merge_queue.top().vix); // remove this one
+		unsigned const src_ix(merge_queue.top().vix); // remove this one (half edge collapse)
 		merge_queue.pop();
 		assert(src_ix < num_verts);
 		unsigned dest_ix(src_ix);
+		float min_edge_len_sq(0.0);
 		
-		for (unsigned t = 0; t < vert_to_tri[src_ix].n && dest_ix == src_ix; ++t) { // iterate over triangles at this vertex
+		for (unsigned t = 0; t < vert_to_tri[src_ix].n; ++t) { // iterate over triangles at this vertex
 			unsigned const tix(vert_to_tri[src_ix].t[t]/3), six(3*tix);
 
 			for (unsigned j = 0; j < 3; ++j) {
 				if (remap.is_remapped(indices[six+j])) continue; // already remapped
-				dest_ix = indices[six+j]; // new vertes
-				break; // FIXME: find shortest edge?
+				float const edge_len_sq(p2p_dist_sq(operator[](src_ix).v, operator[](indices[six+j]).v));
+
+				if (min_edge_len_sq == 0.0 || edge_len_sq < min_edge_len_sq) { // first or shortest edge
+					dest_ix = indices[six+j]; // new vertex
+					min_edge_len_sq = edge_len_sq;
+				}
 			}
 		} // for i
-		if (dest_ix == src_ix) continue; // can't remove this one
+		if (min_edge_len_sq == 0.0) continue; // can't remove this one
 		remap.remap_vertex(src_ix, dest_ix);
 		assert(num_valid_verts > 0);
 		--num_valid_verts;
