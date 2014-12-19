@@ -6,10 +6,8 @@ http://www.decarpentier.nl/scape-procedural-extensions
 
 Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
-  - Model LOD - mesh simplification
+  - Model LOD - use mesh simplification
 
 GLSL subroutine: http://www.g-truc.net/post-0269.html
-Use asteroids for rocks in terrain mode (or just use instancing even in ground mode)
-
-Static + Dynamic shadow maps
+Instanced rocks in ground mode - similar to asteroids
 Use SDL?

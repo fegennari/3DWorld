@@ -220,7 +220,7 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 	}
 	if (indices.empty() || finalized) return; // nothing to do
 
-	bool const do_simplify = 0; // TESTING
+	bool const do_simplify = 0; // TESTING, maybe this doesn't really go here
 	if (do_simplify && npts == 3) {
 		vector<unsigned> v;
 		simplify(v, 0.5);
@@ -369,6 +369,8 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 	} // while
 
 	// generate output
+	out.reserve(unsigned(target*num_ixs));
+
 	for (unsigned i = 0; i < num_ixs; i += 3) { // iterate by triangle
 		unsigned new_ixs[3];
 		for (unsigned n = 0; n < 3; ++n) {new_ixs[n] = remap.get_remapped_val(indices[i+n]);}
