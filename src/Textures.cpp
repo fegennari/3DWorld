@@ -159,6 +159,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "lichen.jpg", 0, 0), // 1500x1500, compress
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/palm_bark.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 3, "daisy.jpg", 0, 1, 4.0), // 1024x1024
 texture_t(0, 5, 0,    0,    1, 3, 1, "lava.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "brickwork.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/brickwork_normal.jpg"), // 512x512
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
@@ -284,6 +286,7 @@ int get_texture_by_name(string const &name) {
 
 	int const ix(atoi(name.c_str()));
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
+	if (name == "none" || name == "null")  return -1; // no texture
 	name_map_t::const_iterator it(texture_name_map.find(name));
 
 	if (it == texture_name_map.end()) {

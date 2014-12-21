@@ -284,6 +284,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
+// use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
 	bool smoke_en, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale)
 {
@@ -401,24 +402,28 @@ void end_group(int &last_group_id) {
 }
 
 
+void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps) {
+	// Note: pass in 3 when has_lt_atten to enable sphere atten
+	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, 0, two_sided_lighting);
+}
+
+
 // should always have draw_solid enabled on the first call for each frame
-void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
+void draw_coll_surfaces(bool draw_trans) {
 
 	//RESET_TIME;
-	assert(draw_solid || draw_trans);
 	static vector<pair<float, int> > draw_last;
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
-	if (!draw_solid && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
+	if (draw_trans && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	bool const has_lt_atten(draw_trans && !draw_solid && coll_objects.has_lt_atten);
+	bool const has_lt_atten(draw_trans && draw_trans && coll_objects.has_lt_atten);
 	shader_t s;
-	// Note: pass in 3 when has_lt_atten to enable sphere atten
-	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, 0, 0, 0, two_sided_lighting);
+	setup_cobj_shader(s, has_lt_atten, 0);
 	int last_tid(-1), last_group_id(-1);
-	vector<vert_wrap_t> portal_verts;
 	cobj_draw_buffer cdb;
+	vector<unsigned> normal_map_cobjs;
 	
-	if (draw_solid) {
+	if (!draw_trans) { // draw solid
 		vector<pair<float, int> > large_cobjs;
 		draw_last.resize(0);
 
@@ -429,6 +434,12 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
 
+			if (c.cp.normal_map >= 0) {
+				assert(c.group_id < 0);
+				assert(!c.is_semi_trans());
+				normal_map_cobjs.push_back(cix);
+				continue;
+			}
 			if (c.is_big_occluder() && c.group_id < 0) {
 				float const dist(distance_to_camera(c.get_center_pt()));
 
@@ -467,7 +478,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		}
 		cdb.flush();
 	} // end draw solid
-	if (draw_trans) { // called second
+	else { // draw transparent
 		if (smoke_exists) {
 			for (unsigned i = 0; i < portals.size(); ++i) {
 				if (!portals[i].is_visible()) continue;
@@ -478,6 +489,7 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 		enable_blend();
 		lt_atten_manager_t lt_atten_manager(s);
 		if (has_lt_atten) {lt_atten_manager.enable();}
+		vector<vert_wrap_t> portal_verts;
 		bool in_portal(0);
 
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
@@ -526,6 +538,29 @@ void draw_coll_surfaces(bool draw_solid, bool draw_trans) {
 	} // end draw_trans
 	s.clear_specular(); // may be unnecessary
 	s.end_shader();
+	
+	if (!normal_map_cobjs.empty()) { // draw all cobjs that use normal maps with a different shader
+		shader_t nms;
+		setup_cobj_shader(nms, has_lt_atten, 1);
+		// we use generated tangent and binormal vectors, but set the binormal scale to 1.0, which seems correct for cubes
+		// FIXME: calculate tangent and binormal using texgen parameters instead, with new shader bump map mode
+		nms.add_uniform_float("bump_b_scale", 1.0);
+		int nm_tid(-1);
+
+		for (auto i = normal_map_cobjs.begin(); i != normal_map_cobjs.end(); ++i) {
+			coll_obj const &c(coll_objects[*i]);
+
+			if (c.cp.normal_map != nm_tid) {
+				nm_tid = c.cp.normal_map;
+				select_multitex(nm_tid, 5);
+			}
+			c.draw_cobj(*i, last_tid, last_group_id, nms, cdb);
+		}
+		cdb.flush();
+		nms.clear_specular(); // may be unnecessary
+		nms.add_uniform_float("bump_b_scale", -1.0); // reset, may be unnecessary
+		nms.end_shader();
+	}
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }
 

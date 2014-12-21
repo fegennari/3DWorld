@@ -13,7 +13,8 @@ mat3 get_tbn(in float bscale) {
 }
 
 #else // !USE_TANGENT_VECTOR
-uniform float bump_tb_scale = 1.0;
+uniform float bump_tb_scale =  1.0;
+uniform float bump_b_scale  = -1.0;
 
 // http://www.thetenthplanet.de/archives/1180
 mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale)
@@ -32,7 +33,7 @@ mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale)
  
     // construct a scale-invariant frame 
     float invmax = bump_tb_scale * inversesqrt(max(dot(T,T), dot(B,B)));
-    return mat3((T * invmax), (-B * (bscale * invmax)), N);
+    return mat3((T * invmax), (bump_b_scale * B * (bscale * invmax)), N);
 }
 
 mat3 get_tbn(in float bscale) {

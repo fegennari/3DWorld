@@ -19,19 +19,19 @@ enum {COBJ_TYPE_STD = 0, COBJ_TYPE_MODEL3D, COBJ_TYPE_VOX_TERRAIN};
 unsigned const OBJ_CNT_REM_TJ = 1;
 
 
-struct obj_layer { // size = 60
+struct obj_layer { // size = 64
 
 	bool draw, shadow, swap_txy;
 	unsigned char cobj_type;
 	float elastic, tscale, specular, shine, tdx, tdy, refract_ix, light_atten;
-	int tid;
+	int tid, normal_map;
 	collision_func coll_func;
 	colorRGBA color;
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1,
 		float ts=1.0, float spec=0.0, float shi=0.0) :
 		draw(d), shadow(1), swap_txy(0), cobj_type(COBJ_TYPE_STD), elastic(e), tscale(ts), specular(spec), shine(shi),
-		tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), tid(ti), coll_func(cf), color(c) {}
+		tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), tid(ti), normal_map(-1), coll_func(cf), color(c) {}
 
 	// assumes obj_layer contained classes are POD with no padding
 	bool operator==(obj_layer const &layer) const {return (memcmp(this, &layer, sizeof(obj_layer)) == 0);}
@@ -45,7 +45,7 @@ struct obj_layer { // size = 60
 };
 
 
-struct cobj_params : public obj_layer { // size = 68
+struct cobj_params : public obj_layer { // size = 72
 
 	int cf_index;
 	unsigned char surfs;
@@ -77,7 +77,7 @@ class coll_obj_group;
 class csg_cube;
 
 
-class coll_obj : public cube_t { // size = 224
+class coll_obj : public cube_t { // size = 228
 
 public:
 	char type, destroy, status;

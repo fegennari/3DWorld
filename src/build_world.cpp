@@ -960,6 +960,14 @@ string read_filename(FILE *fp) {
 }
 
 
+int read_texture(char const *const str, unsigned line_num) {
+
+	int const tid(get_texture_by_name(std::string(str)));
+	if (tid >= NUM_TEXTURES) {cout << "Illegal texture on line " << line_num << ": " << tid << ", max is " << NUM_TEXTURES-1 << endl;}
+	return tid;
+}
+
+
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
 
 	assert(coll_obj_file != NULL);
@@ -978,7 +986,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
 	bool enable_leaf_wind(1);
 	
-	while (!end) { // available: uz JKUVX
+	while (!end) { // available: uz JKUV
 		assert(fp != NULL);
 		int letter(getc(fp));
 		
@@ -1487,19 +1495,20 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			{
 				return read_error(fp, "layer/material properties", coll_obj_file);
 			}
-			cobj.cp.tid = get_texture_by_name(std::string(str));
-
-			if (cobj.cp.tid >= NUM_TEXTURES) {
-				cout << "Illegal texture on line " << line_num << ": " << cobj.cp.tid << ", max is " << NUM_TEXTURES-1 << endl;
-				fclose(fp);
-				return 0;
-			}
+			cobj.cp.tid = read_texture(str, line_num);
+			if (cobj.cp.tid >= NUM_TEXTURES) {fclose(fp); return 0;}
 			has_layer           = 1;
 			cobj.cp.draw        = (ivals[0] != 0);
 			cobj.cp.refract_ix  = 1.0; // default
 			cobj.cp.light_atten = 0.0; // default
 			fscanf(fp, "%f", &cobj.cp.refract_ix ); // optional
 			fscanf(fp, "%f", &cobj.cp.light_atten); // optional
+			break;
+
+		case 'X': // normal map texture id/name
+			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "normal map texture", coll_obj_file);}
+			cobj.cp.normal_map = read_texture(str, line_num);
+			if (cobj.cp.normal_map >= NUM_TEXTURES) {fclose(fp); return 0;}
 			break;
 
 		case 'r': // set specular

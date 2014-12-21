@@ -211,7 +211,7 @@ void draw_stuff(int draw_uw, int timer1) {
 		draw_teleporters();
 		check_gl_error(23);
 		if (TIMETEST) PRINT_TIME("R");
-		draw_coll_surfaces(0, 1);
+		draw_coll_surfaces(1);
 		check_gl_error(24);
 		if (TIMETEST) PRINT_TIME("S");
 		draw_cracks_and_decals();
@@ -897,7 +897,7 @@ void display(void) {
 			draw_camera_weapon(0);
 			if (TIMETEST) PRINT_TIME("H");
 
-			draw_coll_surfaces(1, 0);
+			draw_coll_surfaces(0);
 			if (TIMETEST) PRINT_TIME("I");
 			
 			if (display_mode & 0x01) {display_mesh();} // draw mesh
