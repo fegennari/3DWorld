@@ -213,10 +213,7 @@ bool small_tree_group::line_intersect(point const &p1, point const &p2, float *t
 
 
 void small_tree_group::translate_by(vector3d const &vd) {
-
-	for (iterator i = begin(); i != end(); ++i) {
-		i->translate_by(vd);
-	}
+	for (iterator i = begin(); i != end(); ++i) {i->translate_by(vd);}
 }
 
 
@@ -225,7 +222,7 @@ void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, ve
 	static vector<vert_norm_tc> cylin_verts; // class member?
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw(1, shadow_only, -1, -1, xlate, points, &cylin_verts);
+		i->draw_branches(shadow_only, xlate, points, &cylin_verts);
 	}
 	if (!cylin_verts.empty()) {
 		if (!shadow_only) {
@@ -316,7 +313,7 @@ void small_tree_group::draw_non_pine_leaves(bool shadow_only, int xlate_loc, int
 		assert(!instanced); // only pine trees can be instanced
 		int const type(i->get_type());
 		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
-		i->draw(2, shadow_only, xlate_loc, scale_loc, xlate);
+		i->draw_leaves(shadow_only, xlate_loc, scale_loc, xlate);
 	}
 }
 
@@ -806,97 +803,94 @@ void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned 
 
 
 bool small_tree::is_visible_pine(vector3d const &xlate) const {
-
 	return camera_pdu.sphere_visible_test((pos + xlate + point(0.0, 0.0, 0.5*height)), max(1.5*width, 0.5*height));
 }
 
 
 void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const {
-
 	if (is_pine_tree() && is_visible_pine(xlate)) {draw_pine(vbo_manager);}
 }
 
 
-void small_tree::draw(int mode, bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate,
-	vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const
-{
-	if (!(tree_mode & 2)) return; // disabled
-	if (type == T_BUSH && !(mode & 2)) return; // no bark
+void small_tree::draw_branches(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const {
+
+	if (!(tree_mode & 2) || type == T_BUSH) return; // disabled, or no trunk/bark
 	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_visible_pine(xlate)) return;
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size_scale(zoom_f*stt[type].ss*width*window_width);
+	float const dist(distance_to_camera(pos + xlate));
+	if (!shadow_only && size_scale < dist) return; // too small/far
+	cylinder_3dw const cylin(get_trunk_cylin()); // cache in the tree?
 
-	if ((mode & 1) && type != T_BUSH) { // trunk
-		float const dist(distance_to_camera(pos + xlate));
-
-		if (shadow_only || size_scale > dist) {
-			cylinder_3dw const cylin(get_trunk_cylin()); // cache in the tree?
-
-			if (!shadow_only && LINE_THRESH*zoom_f*(cylin.r1 + cylin.r2) < dist) { // draw as line
-				point const p2((cylin.r2 == 0.0) ? (0.2*cylin.p1 + 0.8*cylin.p2) : cylin.p2);
+	if (!shadow_only && LINE_THRESH*zoom_f*(cylin.r1 + cylin.r2) < dist) { // draw as line
+		point const p2((cylin.r2 == 0.0) ? (0.2*cylin.p1 + 0.8*cylin.p2) : cylin.p2);
 				
-				if (points) {
-					points->push_back(cylin.p1 + xlate);
-					points->push_back(p2 + xlate);
-				}
-				else {
-					tree_scenery_pld.add_textured_line(cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
-				}
-			}
-			else { // draw as cylinder
-				int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
-
-				if (cylin_verts && is_pine_tree()) {
-					assert(cylin.r2 == 0.0); // cone
-					point const ce[2] = {cylin.p1, cylin.p2};
-					vector3d v12;
-					gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12));
-				}
-				else {
-					if (!shadow_only) {
-						bark_color.set_for_cur_shader();
-						select_texture(stt[type].bark_tid);
-					}
-					draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides, !shadow_only);
-				}
-			}
+		if (points) {
+			points->push_back(cylin.p1 + xlate);
+			points->push_back(p2 + xlate);
+		}
+		else {
+			tree_scenery_pld.add_textured_line(cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
 		}
 	}
-	if (mode & 2) { // leaves
-		assert(!is_pine_tree()); // handled through draw_pine_leaves()
-		if (!shadow_only) {color.set_for_cur_shader();}
-		vector3d scale;
-		point xl(all_zeros);
+	else { // draw as cylinder
+		int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 
-		switch (type) { // draw leaves (palm or deciduous)
-		case T_DECID: // decidious tree
-			xl.z  = 0.75*height;
-			scale = width*vector3d(1.2, 1.2, 0.8);
-			break;
-		case T_TDECID: // tall decidious tree
-			xl.z  = 1.0*height;
-			scale = width*vector3d(0.7, 0.7, 1.6);
-			break;
-		case T_BUSH: // bush
-			scale = vector3d((0.1*height+0.8*width), (0.1*height+0.8*width), width);
-			break;
-		case T_PALM: // palm tree
-			xl.z  = 0.71*height-0.5*width;
-			scale = width*vector3d(1.2, 1.2, 0.5);
-			break;
+		if (cylin_verts && is_pine_tree()) {
+			assert(cylin.r2 == 0.0); // cone
+			point const ce[2] = {cylin.p1, cylin.p2};
+			vector3d v12;
+			gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12));
 		}
-		int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
+		else {
+			if (!shadow_only) {
+				bark_color.set_for_cur_shader();
+				select_texture(stt[type].bark_tid);
+			}
+			draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides, !shadow_only);
+		}
+	}
+}
 
-		if (r_angle != 0.0) {
-			fgPushMatrix();
-			translate_to(pos);
-			fgRotate(r_angle, rx, ry, 0.0);
-		}
-		else {xl += pos;}
-		assert(xlate_loc >= 0 && scale_loc >= 0);
-		shader_t::set_uniform_vector3d(xlate_loc, xl);
-		shader_t::set_uniform_vector3d(scale_loc, scale);
-		draw_sphere_vbo_pre_bound(nsides, !shadow_only, (type == T_PALM));
-		if (r_angle != 0.0) {fgPopMatrix();}
-	} // end mode
+
+void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate) const {
+
+	if (!(tree_mode & 2)) return; // disabled
+	assert(!is_pine_tree()); // handled through draw_pine_leaves()
+	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_visible_pine(xlate)) return;
+	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*stt[type].ss*width*window_width);
+	if (!shadow_only) {color.set_for_cur_shader();}
+	vector3d scale;
+	point xl(all_zeros);
+
+	switch (type) { // draw leaves (palm or deciduous)
+	case T_DECID: // decidious tree
+		xl.z  = 0.75*height;
+		scale = width*vector3d(1.2, 1.2, 0.8);
+		break;
+	case T_TDECID: // tall decidious tree
+		xl.z  = 1.0*height;
+		scale = width*vector3d(0.7, 0.7, 1.6);
+		break;
+	case T_BUSH: // bush
+		scale = vector3d((0.1*height+0.8*width), (0.1*height+0.8*width), width);
+		break;
+	case T_PALM: // palm tree
+		xl.z  = 0.71*height-0.5*width;
+		scale = width*vector3d(1.2, 1.2, 0.5);
+		break;
+	}
+	int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
+
+	if (r_angle != 0.0) {
+		fgPushMatrix();
+		translate_to(pos);
+		fgRotate(r_angle, rx, ry, 0.0);
+	}
+	else {xl += pos;}
+	assert(xlate_loc >= 0 && scale_loc >= 0);
+	shader_t::set_uniform_vector3d(xlate_loc, xl);
+	shader_t::set_uniform_vector3d(scale_loc, scale);
+	draw_sphere_vbo_pre_bound(nsides, !shadow_only, (type == T_PALM));
+	if (r_angle != 0.0) {fgPopMatrix();}
 }
 

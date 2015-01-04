@@ -58,8 +58,10 @@ void main()
 	vec4 texel  = texture(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
 #else
 	vec4 texel  = texture(tex0, tc);
+	//vec4 texel  = texture(tex0, vec2(atan(normal.y, normal.x)/(2.0*3.14159), tc.t)); // cylinders (small tree trunks) - no better, need ws pos relative to center line
 #endif
 	//texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
+	//texel.rgb /= texel.a; // better for edges of alpha mask texture on black background?
 
 #ifdef TEXTURE_ALPHA_MASK
 	if (texel.a < 0.99) discard;
