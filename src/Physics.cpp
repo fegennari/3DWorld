@@ -185,7 +185,7 @@ void init_objects() {
 	object_types[SMILEY].elasticity        = 0.4;
 	object_types[SMILEY].health            = 100.0;
 	object_types[SMILEY].color             = YELLOW;
-	object_types[SMILEY].flags             = SELECTABLE | NO_FALL | VERTEX_DEFORM | NO_WATER_DAMAGE;
+	object_types[SMILEY].flags             = SELECTABLE | NO_FALL | VERTEX_DEFORM | NO_WATER_DAMAGE | SPECULAR;
 	object_types[SMILEY].min_t             = -50.0;
 	object_types[SMILEY].max_t             = 100.0;
 

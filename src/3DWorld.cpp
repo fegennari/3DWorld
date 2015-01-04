@@ -700,7 +700,7 @@ void change_tree_mode() {
 #else
 		remove_small_tree_cobjs();
 		remove_tree_cobjs();
-		regen_trees(0); // Note: won't regen trees if num_trees == 0, won't reset mesh shadows
+		regen_trees(0); // Note: won't regen trees if num_trees == 0
 #endif
 	}
 }

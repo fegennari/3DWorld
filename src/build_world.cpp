@@ -605,7 +605,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 
 	if (!inf_terrain) {
 		if (generate_mesh) {gen_grass();}
-		if (generate_mesh || gen_trees) reset_smoke_tex_data();
+		if (generate_mesh || gen_trees) {reset_smoke_tex_data();}
 	}
 	//triangle_counter(1).proc_cobjs(coll_objects);
 }
