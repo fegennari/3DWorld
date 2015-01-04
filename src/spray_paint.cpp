@@ -13,26 +13,41 @@ using namespace std;
 
 colorRGBA const NEAR_BLACK(0.01, 0.01, 0.01, 1.0); // not quite black, so that it uses the regular lighting shader, and draw order is correct
 unsigned const NUM_PAINT_COLORS = 10;
-string const paint_color_names[NUM_PAINT_COLORS] = {"WHITE", "RED", "GREEN", "BLUE", "YELLOW", "PINK", "ORANGE", "PURPLE", "BROWN", "BLACK"};
+unsigned const TOT_PAINT_COLORS = NUM_PAINT_COLORS+2;
+string const paint_color_names[TOT_PAINT_COLORS] = {"WHITE", "RED", "GREEN", "BLUE", "YELLOW", "PINK", "ORANGE", "PURPLE", "BROWN", "BLACK", "Custom", "Set Custom"};
 colorRGBA const paint_colors  [NUM_PAINT_COLORS] = {WHITE, RED, GREEN, BLUE, YELLOW, PINK, ORANGE, PURPLE, BROWN, NEAR_BLACK};
 
 bool spraypaint_mode(0);
 unsigned paint_color_ix(0);
+colorRGBA custom_color(WHITE);
 
-extern int display_mode;
+extern int display_mode, camera_coll_id;
 extern float CAMERA_RADIUS, FAR_CLIP;
 extern coll_obj_group coll_objects;
 
 
 colorRGBA get_cur_paint_color() {
+	assert(paint_color_ix < TOT_PAINT_COLORS);
+	return ((paint_color_ix < NUM_PAINT_COLORS) ? paint_colors[paint_color_ix] : custom_color);
+}
 
-	assert(paint_color_ix < NUM_PAINT_COLORS);
-	return paint_colors[paint_color_ix];
+
+colorRGBA sample_cobj_color(point const &p1, point const &p2, colorRGBA const &def_color) {
+
+	point cpos;
+	vector3d cnorm;
+	int cindex;
+	if (!check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, camera_coll_id, 0, 0, 0)) {return def_color;}
+	assert(cindex >= 0 && cindex < (int)coll_objects.size());
+	return coll_objects[cindex].get_color_at_point(cpos, cnorm, 0); // return true color
+}
+
+colorRGBA sample_cview_cobj_color() {
+	return sample_cobj_color(get_camera_pos(), (get_camera_pos() + FAR_CLIP*cview_dir), get_cur_paint_color());
 }
 
 
 void show_cur_spraypaint_mode() {
-
 	string const str(paint_color_names[paint_color_ix] + " Spray Paint");
 	print_text_onscreen(str, get_cur_paint_color(), 1.0, TICKS_PER_SECOND, 1); // 1 second
 }
@@ -49,7 +64,7 @@ void toggle_spraypaint_mode() {
 void change_spraypaint_color(int val) {
 
 	if (world_mode != WMODE_GROUND) return;
-	paint_color_ix = (paint_color_ix + NUM_PAINT_COLORS + val) % NUM_PAINT_COLORS;
+	paint_color_ix = (paint_color_ix + TOT_PAINT_COLORS + val) % TOT_PAINT_COLORS;
 	show_cur_spraypaint_mode();
 }
 
@@ -78,6 +93,10 @@ float get_spray_radius(point const &pos, float &alpha) {
 
 void spray_paint(bool mode) {
 
+	if (paint_color_ix == NUM_PAINT_COLORS+1) { // set color
+		custom_color = sample_cview_cobj_color();
+		return;
+	}
 	// spray paint affects flat cobjs (cubes and polygons), mesh, grass, and tree leaves - also adds/removes volume to voxels
 	point const pos(get_camera_pos());
 	colorRGBA color(get_cur_paint_color());

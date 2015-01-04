@@ -8,6 +8,7 @@
 #include "model3d.h"
 
 
+bool const COLOR_FROM_COBJ_TEX = 0; // 0 = fast/average color, 1 = true color
 float const RAY_WEIGHT    = 4.0E5;
 float const WEIGHT_THRESH = 0.01;
 float const DIFFUSE_REFL  = 0.9; // 90%  diffuse  reflectivity
@@ -216,7 +217,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	else { // collision with cobj
 		assert(cindex >= 0);
 		coll_obj const &cobj(coll_objects[cindex]);
-		colorRGBA const cobj_color(cobj.get_color_at_point(cpos, cnorm, 1)); // fast/average color
+		colorRGBA const cobj_color(cobj.get_color_at_point(cpos, cnorm, !COLOR_FROM_COBJ_TEX));
 		float const alpha(cobj_color.alpha);
 		specular = cobj.cp.specular;
 		shine    = cobj.cp.shine;
