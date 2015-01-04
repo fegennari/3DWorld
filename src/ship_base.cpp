@@ -657,6 +657,12 @@ void us_class::add_bcylin_cube(ship_cylinder const &c, float x1, float x2, float
 }
 
 
+void us_class::add_bcapsule(point const &p1, point const &p2, float r, float dscale) {
+
+	cobjs.add(new ship_capsule(p1, p2, r, dscale));
+}
+
+
 void us_class::add_triangle(triangle const &tri) {
 
 	assert(inited);

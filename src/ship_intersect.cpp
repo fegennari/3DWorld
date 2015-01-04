@@ -270,6 +270,46 @@ void ship_bounded_cylinder::draw_svol(point const &tpos, float cur_radius, point
 }
 
 
+bool ship_capsule::line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const {
+
+	t = 2.0; // start out of range
+	float t0(1.0);
+	bool intersected(0);
+	if (line_int_cylinder(lp1, lp2, p1, p2, r1, r2, 0, t0)) {if (!calc_t) return 1; t = min(t, t0); intersected = 1;}
+	ship_sphere const ss[2] = {ship_sphere(p1, r1), ship_sphere(p2, r2)};
+	
+	for (unsigned d = 0; d < 2; ++d) {
+		if (ss[d].line_intersect(lp1, lp2, t0, calc_t)) {if (!calc_t) return 1; t = min(t, t0); intersected = 1;}
+	}
+	return intersected;
+}
+
+// Note: doesn't always calculate first/nearest intersection point
+bool ship_capsule::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {
+
+	if (sphere_intersect_cylinder_ipt(sc, sr, p1, p2, r1, r2, 0, p_int, norm, calc_int)) {return 1;}
+	ship_sphere const ss[2] = {ship_sphere(p1, r1), ship_sphere(p2, r2)};
+
+	for (unsigned d = 0; d < 2; ++d) {
+		if (ss[d].sphere_intersect(sc, sr, p_last, p_int, norm, calc_int)) {return 1;}
+	}
+	return 0;
+}
+
+void ship_capsule::get_bounding_sphere(point &c, float &r) const {
+	
+	point const p[2] = {p1, p2};
+	cylinder_bounding_sphere(p, r1, r2, c, r); // same as a cylinder?
+}
+
+void ship_capsule::draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj) const {
+
+	ship_cylinder(*this, 0).draw_svol(tpos, cur_radius, spos, ndiv, player, obj);
+	ship_sphere const ss[2] = {ship_sphere(p1, r1), ship_sphere(p2, r2)};
+	for (unsigned d = 0; d < 2; ++d) {ss[d].draw_svol(tpos, cur_radius, spos, ndiv, player, obj);}
+}
+
+
 void ship_triangle_list::translate(point const &p) {
 
 	ship_sphere::translate(p);

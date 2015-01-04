@@ -357,6 +357,8 @@ struct sphere_t {
 	bool operator!=(sphere_t const &s) const {return (pos != s.pos || radius != s.radius);}
 	point const &get_pos() const {return pos;}
 	float get_radius()     const {return radius;}
+	float get_volume()     const {return (4.0/3.0)*PI*radius*radius*radius;}
+	float get_surf_area()  const {return 4.0*PI*radius*radius;}
 };
 
 
@@ -521,6 +523,8 @@ struct tquad_t { // size = 52
 };
 
 
+template<typename T, typename S> inline float p2p_dist(const pointT<T> &pt1, const pointT<S> &pt2);
+
 struct line_3dw {
 
 	point p1, p2;
@@ -528,6 +532,8 @@ struct line_3dw {
 	line_3dw() : p1(all_zeros), p2(all_zeros) {}
 	line_3dw(point const &p1_, point const &p2_) : p1(p1_), p2(p2_) {assert(p1 != p2);}
 	vector3d get_norm_dir_vect() const {return (p2 - p1).get_norm();}
+	float get_length() const {return p2p_dist(p1, p2);}
+	void translate(point const &p) {p1 += p; p2 += p;}
 };
 
 
@@ -570,6 +576,7 @@ struct cylinder_3dw : public line_3dw { // size = 32
 	cylinder_3dw() : r1(0.0), r2(0.0) {}
 	cylinder_3dw(point const &p1_, point const &p2_, float r1_, float r2_) : line_3dw(p1_, p2_), r1(r1_), r2(r2_) {}
 	void calc_bcube(cube_t &bcube) const;
+	float get_volume() const {return PI*(r1*r1 + r1*r2 + r2*r2)*get_length()/3.0;}
 };
 
 

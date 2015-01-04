@@ -380,16 +380,17 @@ public:
 	virtual float get_s_area() const = 0;
 };
 
-class ship_cylinder : public cylinder_3dw, public ship_coll_obj {
+class ship_cylinder : public cylinder_3dw, public ship_coll_obj { // more accurately a truncated cone
 
 	bool check_ends;
 
 public:
 	ship_cylinder() {}
+	ship_cylinder(cylinder_3dw const &c, bool check_ends_) : cylinder_3dw(c), check_ends(check_ends_) {}
 	ship_cylinder(point const &p1_, point const &p2_, float r1_, float r2_, bool check_ends_, float ds=1.0)
 		: cylinder_3dw(p1_, p2_, r1_, r2_), ship_coll_obj(ds), check_ends(check_ends_) {}
 	ship_cylinder* clone() const {return new ship_cylinder(*this);}
-	void translate(point const &p) {p1 += p; p2 += p;}
+	void translate(point const &p) {cylinder_3dw::translate(p);}
 	void draw_cylin(unsigned ndiv, bool textured, float tex_scale_len=1.0) const;
 	void draw(unsigned ndiv) const {draw_cylin(ndiv, 0, 1.0);}
 	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
@@ -397,8 +398,7 @@ public:
 	void get_bounding_sphere(point &c, float &r) const;
 	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Cylinder";}
-	float get_length() const {return p2p_dist(p1, p2);}
-	float get_volume() const {return PI*(r1*r1 + r1*r2 + r2*r2)*get_length()/3.0;}
+	float get_volume() const {return cylinder_3dw::get_volume();}
 	float get_s_area() const {return PI*((check_ends ? (r1*r1 + r2*r2) : 0.0) + (r1 + r2)*get_length());}
 };
 
@@ -432,8 +432,8 @@ public:
 	void get_bounding_sphere(point &c, float &r) const;
 	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
 	string get_name()  const {return "Sphere";}
-	float get_volume() const {return (4.0/3.0)*PI*radius*radius*radius;}
-	float get_s_area() const {return 4.0*PI*radius*radius;}
+	float get_volume() const {return sphere_t::get_volume();}
+	float get_s_area() const {return sphere_t::get_surf_area();}
 };
 
 class ship_torus : public ship_coll_obj {
@@ -475,6 +475,25 @@ public:
 	string get_name()  const {return "Bounded Cylinder";}
 	float get_volume() const {return min(ship_cylinder::get_volume(),   bcube.get_volume());} // ???
 	float get_s_area() const {return 0.5*(ship_cylinder::get_s_area() + bcube.get_s_area());} // ???
+};
+
+// Note: we generally use r1 == r1 for a true cylinder (not a truncated cone)
+class ship_capsule : public cylinder_3dw, public ship_coll_obj { // cylinder with hemispheres at either end
+
+public:
+	ship_capsule() {}
+	ship_capsule(point const &p1_, point const &p2_, float radius_, float ds=1.0)
+		: cylinder_3dw(p1_, p2_, radius_, radius_), ship_coll_obj(ds) {}
+	ship_capsule* clone() const {return new ship_capsule(*this);}
+	void translate(point const &p) {cylinder_3dw::translate(p);}
+	void draw(unsigned ndiv) const;
+	bool line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const;
+	bool sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const;
+	void get_bounding_sphere(point &c, float &r) const;
+	void draw_svol(point const &tpos, float cur_radius, point const &spos, int ndiv, bool player, free_obj const *const obj=NULL) const;
+	string get_name()  const {return "Capsule";}
+	float get_volume() const {return cylinder_3dw::get_volume() + (2.0/3.0)*PI*(r1*r1*r1 + r2*r2*r2);} // cylinder + two hemispheres
+	float get_s_area() const {return PI*(r1 + r2)*get_length() + 2.0*PI*(r1*r1 + r2*r2);}
 };
 
 // triangle_list inherits from sphere (used as bounding sphere) and only overrides some functions
@@ -533,6 +552,7 @@ public:
 	void add_bsphere(point const &center, float r, float dscale);
 	void add_btorus(point const &center, float ri, float ro, float dscale);
 	void add_bcylin_cube(ship_cylinder const &c, float x1, float x2, float y1, float y2, float z1, float z2);
+	void add_bcapsule(point const &p1, point const &p2, float r, float dscale);
 	void add_triangle(triangle const &tri);
 	float offense_rating() const;
 	float defense_rating() const;

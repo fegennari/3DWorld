@@ -178,6 +178,16 @@ void ship_bounded_cylinder::draw(unsigned ndiv) const {
 }
 
 
+void ship_capsule::draw(unsigned ndiv) const {
+		
+	draw_cylin(ndiv, 0, 1.0); // no draw ends?
+	glEnable(GL_CULL_FACE);
+	draw_sphere_vbo(p1, r1, ndiv, 0); // draw only half?
+	draw_sphere_vbo(p2, r2, ndiv, 0);
+	glDisable(GL_CULL_FACE);
+}
+
+
 void ship_triangle_list::finalize() {
 
 	verts.reserve(3*triangles.size());
