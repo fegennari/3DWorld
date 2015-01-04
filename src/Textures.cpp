@@ -99,7 +99,7 @@ texture_t(1, 9, 256,  256,  1, 4, 1, "@blur_inv"), // not real file
 texture_t(1, 9, 32,   32,   1, 3, 0, "@hstripe", 0, 1, 8.0), // not real file
 texture_t(1, 9, 32,   32,   1, 3, 0, "@vstripe", 0, 1, 8.0), // not real file
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube.jpg"),
-texture_t(0, 6, 0  ,  0  ,  0, 4, 1, "atlas/explosion.png", 1),
+texture_t(0, 6, 0  ,  0  ,  0, 4, 1, "atlas/explosion.png", 1, 0), // no compression
 texture_t(0, 5, 512,  512,  1, 3, 1, "shiphull.jpg"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube2.jpg"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "bcube_tactical.jpg"),
@@ -112,7 +112,7 @@ texture_t(0, 5, 512,  512,  1, 3, 1, "ice.2.jpg"),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock.03.png", 0, 1, LS_TEX_ANISO),
 texture_t(0, 6, 16,   16,   1, 3, 0, "black.png"),
 texture_t(0, 6, 16,   16,   1, 3, 0, "white.png"),
-texture_t(0, 6, 0  ,  0  ,  0, 4, 0, "atlas/fire.png"),
+texture_t(0, 6, 0  ,  0  ,  0, 4, 0, "atlas/fire.png", 0, 0), // no compression
 texture_t(0, 5, 0,    0,    1, 4, 0, "sky.jpg", 1), // 1024x1024
 texture_t(0, 6, 256,  256,  0, 4, 0, "snowflake.png", 1),
 texture_t(1, 9, 128,  128,  0, 4, 1, "@blur_center"), // not real file
@@ -123,12 +123,12 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "mossy_rock.jpg"), // 500x500
 // bark
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark1.jpg"), // 600x600
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg", 0, 0, 4.0), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark2-normal.jpg", 0, 0, 4.0, 1.0, 1), // 512x512, no compress
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_lendrick.jpg", 0, 0), // 892x892, compression is slow
 texture_t(0, 6, 0,    0,    1, 3, 1, "bark/bark_lylejk.png", 0, 0), // 1024x768, compression is slow
 // normal/caustic maps
-texture_t(0, 4, 0,    0,    1, 3, 1, "normal_maps/water_normal.tga", 0, 1, 8.0), // 512x512
-texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/ocean_water_normal.png", 0, 0, 4.0), // 1024x1024 (Note: compression disabled as it causes artifacts)
+texture_t(0, 4, 0,    0,    1, 3, 1, "normal_maps/water_normal.tga", 0, 0, 8.0, 1.0, 1), // 512x512, no compress
+texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/ocean_water_normal.png", 0, 0, 4.0, 1.0, 1), // 1024x1024 (Note: compression disabled as it causes artifacts)
 texture_t(0, 5, 0,    0,    1, 3, 1, "caustics.jpg"), // 512x512
 // noise
 texture_t(0, 6, 0,    0,    1, 1, 0, "perlin_simplex.png"), // 256x256
@@ -147,9 +147,9 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "foam1.jpg"), // 512x512
 
 texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_diffuse.jpg"), // 256x256
 texture_t(0, 5, 0,    0,    0, 1, 0, "bullet_hole/bullet_alpha.jpg"), // 256x256
-texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_normal.jpg"), // 256x256
-texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 0, 2.0), // (Note: compression disabled as it causes artifacts)
-//texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/test_normal.jpg", 0, 0, 2.0),
+texture_t(0, 5, 0,    0,    0, 3, 0, "bullet_hole/bullet_normal.jpg", 0, 0, 1.0, 1.0, 1), // 256x256, no compress
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/sand_normal.jpg", 0, 0, 2.0, 1.0, 1), // (Note: compression disabled as it causes artifacts)
+//texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/test_normal.jpg", 0, 0, 2.0, 1.0, 1),
 
 texture_t(0, 5, 0,    0,    1, 3, 1, "raindrop_dots.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship1.jpg"),
@@ -160,7 +160,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "bark/palm_bark.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 3, "daisy.jpg", 0, 1, 4.0), // 1024x1024
 texture_t(0, 5, 0,    0,    1, 3, 1, "lava.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "brickwork.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/brickwork_normal.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/brickwork_normal.jpg", 0, 0, 1.0, 1.0, 1), // 512x512, no compress
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
@@ -778,6 +778,7 @@ bool texture_t::try_compact_to_lum() {
 
 void texture_t::make_normal_map() {
 
+	normal_map = 1;
 	if (ncolors == 3) return; // already a normal map
 	
 	if (ncolors == 4) { // better not have an alpha component
