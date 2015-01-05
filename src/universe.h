@@ -239,6 +239,7 @@ public:
 	bool can_land_at(point const &p) const {return (can_land() && pt_over_land(p));}
 	bool colonizable() const;
 	bool liveable() const;
+	bool has_craters() const {return 0;} // no longer drawing with craters, but we leave the function for now
 	float get_land_value(unsigned align, point const &cur_pos, float sradius) const;
 	string get_info() const;
 	void set_owner(s_object const &sobj, unsigned owner_);

@@ -244,9 +244,6 @@ class universe_shader_t : public shader_t {
 
 public:
 	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) { // Note: planet_pos unused
-		bool const has_craters(body.type == UTYPE_MOON);
-		assert(!has_craters || !body.gas_giant);
-
 		if (!is_setup()) {
 			if (body.gas_giant) {
 				set_prefix("#define GAS_GIANT",    1); // FS
@@ -259,6 +256,7 @@ public:
 				if (body.use_vert_shader_offset()) {set_prefix("#define PROCEDURAL_DETAIL", 0);} // VS
 				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
 			}
+			bool const has_craters(body.has_craters());
 			set_prefix("#define NUM_OCTAVES 8", 1); // FS
 			if (has_craters) {set_prefix("#define HAS_CRATERS", 1);} // FS
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
@@ -372,13 +370,13 @@ public:
 
 
 class ushader_group {
-	universe_shader_t planet_shader[2][5][2]; // {without/with rings}x{rocky, procedural, all water, gas giant, proc + vert hmap}x{without/with craters (moons)} - not all variations used
+	universe_shader_t planet_shader[2][5][2]; // {without/with rings}x{rocky, procedural, all water, gas giant, proc + vert hmap}x{without/with craters} - not all variations used
 	universe_shader_t star_shader, ring_shader, cloud_shader, atmospheric_shader;
 	shader_t color_only_shader, planet_colored_shader, point_sprite_shader;
 
 	universe_shader_t &get_planet_shader(urev_body const &body, shadow_vars_t const &svars) {
 		unsigned const type(body.gas_giant ? 3 : (body.use_procedural_shader() ? ((body.water >= 1.0) ? 2 : (body.use_vert_shader_offset() ? 4 : 1)) : 0));
-		return planet_shader[svars.ring_ro > 0.0][type][body.type == UTYPE_MOON];
+		return planet_shader[svars.ring_ro > 0.0][type][body.has_craters()];
 	}
 
 public:
@@ -2021,7 +2019,7 @@ void urev_body::create_gas_giant_texture() {
 
 
 bool urev_body::use_procedural_shader() const {
-	return (!gas_giant && type == UTYPE_PLANET && water < 1.0 && (display_mode & 0x20) == 0); // only for planets
+	return (!gas_giant && water < 1.0 && (display_mode & 0x20) == 0); // for planets and moons
 }
 
 
@@ -2036,7 +2034,7 @@ void urev_body::upload_colors_to_shader(shader_t &s) const {
 	s.add_uniform_float("snow_thresh",  snow_thresh);
 	s.add_uniform_float("cold_scale",   (frozen ? 0.0 : 1.0)); // frozen ice planets don't use coldness (they're always cold)
 	s.add_uniform_float("noise_offset", orbit); // use as a random seed
-	s.add_uniform_float("terrain_scale",0.05); // divide terrain_scale by radius instead?
+	s.add_uniform_float("terrain_scale",1.25*get_hmap_scale()); // divide terrain_scale by radius instead?
 	s.add_uniform_float("nmap_mag",     CLIP_TO_01(2.0f - 0.2f*p2p_dist(pos, get_player_pos())/radius)); // 1.0 at dist < 5R, 0.0 at dist > 10R
 }
 
