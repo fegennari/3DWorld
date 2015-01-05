@@ -721,7 +721,7 @@ void undo_voxel_brush();
 void modify_voxels();
 
 // function prototypes - screenshot
-int screenshot(unsigned window_width, unsigned window_height, char *file_path);
+int screenshot(unsigned window_width, unsigned window_height, char *file_path, bool write_bmp);
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
 
 // function prototypes - spray paint

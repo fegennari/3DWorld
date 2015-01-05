@@ -16,6 +16,7 @@
 using namespace std;
 
 int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char const *const data, bool invert_y);
+bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors);
 
 
 FILE *open_screenshot_file(char *file_path, string const &extension, unsigned &id) {
@@ -49,21 +50,27 @@ void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned 
 }
 
 
-int screenshot(unsigned window_width, unsigned window_height, char *file_path) {
+int screenshot(unsigned window_width, unsigned window_height, char *file_path, bool write_bmp) {
 
 	static unsigned ss_id(0);
-	FILE *fp = open_screenshot_file(file_path, "raw", ss_id);
+	FILE *fp = open_screenshot_file(file_path, (write_bmp ? "bmp" : "raw"), ss_id);
 	if (fp == NULL) return 0;
 	vector<unsigned char> buf(window_width*window_height*3);
 	read_pixels(window_width, window_height, buf);
+	bool ret(1);
 
-	for (unsigned i = 0; i < window_height; ++i) {
-		unsigned const offset((window_height-i-1)*window_width);
-		int const num_write(fwrite(&buf[3*offset], 3, window_width, fp));
-		assert(num_write == window_width);
+	if (write_bmp) { // bmp
+		ret = write_rgb_bmp_image(fp, "<screenshot>", &buf.front(), window_width, window_height, 3); // RGB
+	}
+	else { // raw
+		for (unsigned i = 0; i < window_height; ++i) {
+			unsigned const offset((window_height-i-1)*window_width);
+			int const num_write(fwrite(&buf[3*offset], 3, window_width, fp));
+			assert(num_write == window_width);
+		}
 	}
 	fclose(fp);
-	return 1;
+	return ret;
 }
 
 

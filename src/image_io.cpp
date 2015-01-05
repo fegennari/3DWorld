@@ -281,28 +281,31 @@ void texture_t::load_raw_bmp(int index, bool allow_diff_width_height, bool allow
 }
 
 
-void texture_t::maybe_swap_rb(unsigned char *ptr) const { // ptr is assumed to be of size num_bytes()
+void maybe_swap_rb(unsigned char *ptr, unsigned num_pixels, unsigned ncolors) {
 
 	assert(ptr != NULL);
 	if (ncolors != 3 && ncolors != 4) return;
-	unsigned const size(num_pixels());
 
-	for(unsigned i = 0; i < size; ++i) {
+	for(unsigned i = 0; i < num_pixels; ++i) {
 		swap(ptr[ncolors*i+0], ptr[ncolors*i+2]); // BGR[A] => RGB[A]
 	}
 }
 
 
-int texture_t::write_to_bmp(string const &fn) const { // or RAW format?
+void texture_t::maybe_swap_rb(unsigned char *ptr) const { // ptr is assumed to be of size num_bytes()
+	::maybe_swap_rb(ptr, num_pixels(), ncolors);
+}
 
-	FILE *fp(fopen(fn.c_str(), "wb"));
 
-	if (fp == NULL) {
-		cerr << "Error opening bmp file " << fn << " for write." << endl;
-		return 0;
-	}
+bool write_rgb_bmp_image(FILE *fp, string const &fn, unsigned char *data, unsigned width, unsigned height, unsigned ncolors) {
+
+	maybe_swap_rb(data, width*height, ncolors); // Note: data not const because of this line
+	unsigned char pad[4] = {0};
+	unsigned const row_sz(width*ncolors), row_sz_mod(row_sz&3), row_pad(row_sz_mod ? 4-row_sz_mod : 0);
 	bmp_header header = {0};
 	header.type = 19778; // bitmap
+	//header.size = 54 + (row_sz + row_pad)*height + ((ncolors == 1) ? 1024 : 0); // optional
+	//header.offset = 54; // optional
 	bmp_infoheader infoheader = {0};
 	infoheader.width  = width;
 	infoheader.height = height;
@@ -313,30 +316,44 @@ int texture_t::write_to_bmp(string const &fn) const { // or RAW format?
 
 	if (fwrite(&header, 14, 1, fp) != 1 || fwrite(&infoheader, 40, 1, fp) != 1) {
 		cerr << "Error writing bitmap header/infoheader for file " << fn << endl;
-		fclose(fp);
 		return 0;
 	}
 	if (ncolors == 1) { // add color index table
 		char color_table[1024] = {0};
+		for (unsigned i = 0; i < 256; ++i) {UNROLL_3X(color_table[(i<<2)+i_] = i;)}
 
-		for (unsigned i = 0; i < 256; ++i) {
-			UNROLL_3X(color_table[(i<<2)+i_] = i;)
-		}
 		if (fwrite(color_table, 1024, 1, fp) != 1) {
 			cerr << "Error writing bitmap color table for file " << fn << endl;
-			fclose(fp);
 			return 0;
 		}
 	}
-	unsigned const size(num_bytes());
-	vector<unsigned char> data_swap_rb(data, data+size);
-	maybe_swap_rb(&data_swap_rb.front());
-
-	if (fwrite(&data_swap_rb.front(), 1, size, fp) != size) {
-		cerr << "Error writing bitmap data for file " << fn << endl;
+	for (unsigned i = 0; i < height; ++i) { // write one scanline at a time (could invert y if needed)
+		if (fwrite(data, 1, row_sz, fp) != row_sz) { // row image data
+			cerr << "Error writing bitmap data for file " << fn << endl;
+			return 0;
+		}
+		if (row_pad > 0 && fwrite(pad, 1, row_pad, fp) != row_pad) { // maybe add padding
+			cerr << "Error writing bitmap row padding for file " << fn << endl;
+			return 0;
+		}
+		data += row_sz;
 	}
-	fclose(fp);
 	return 1;
+}
+
+
+int texture_t::write_to_bmp(string const &fn) const {
+
+	FILE *fp(fopen(fn.c_str(), "wb"));
+
+	if (fp == NULL) {
+		cerr << "Error opening bmp file " << fn << " for write." << endl;
+		return 0;
+	}
+	vector<unsigned char> data_swap_rb(data, data+num_bytes());
+	bool const ret(write_rgb_bmp_image(fp, fn, &data_swap_rb.front(), width, height, ncolors));
+	fclose(fp);
+	return ret;
 }
 
 

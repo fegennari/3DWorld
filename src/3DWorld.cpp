@@ -1061,11 +1061,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (world_mode == WMODE_GROUND) {write_mesh(mesh_file);}
 		break;
 
-	// screenshots
-	case 'D': // .raw
-		screenshot(window_width, window_height, "./");
+	// screenshots (add options for raw and PNG?)
+	case 'D': // .bmp
+		screenshot(window_width, window_height, "./", 1);
 		break;
-		// *** WHAT ABOUT PNG? ***
 	case 'F': // .jpg
 		write_jpeg(window_width, window_height, "./");
 		break;
