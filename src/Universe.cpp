@@ -1819,9 +1819,8 @@ bool urev_body::create_orbit(vector<T> const &objs, int i, point const &pos0, ve
 							 float max_size, float min_size, float rspacing, float ispacing, float minspacing, float min_gap)
 {
 	radius   = (min(0.4f*radius0, max_size) - min_size)*((float)rand2d()) + min_size;
-	rev_axis = raxis;
 	float const rad2(radius + rspacing), min_orbit(max((MIN_RAD_SPACE_FACTOR*(radius + radius0) + min_gap), minspacing));
-	rev_axis += signed_rand_vector2_norm()*ORBIT_PLANE_DELTA;
+	rev_axis = raxis + signed_rand_vector2_norm()*ORBIT_PLANE_DELTA;
 	rev_axis.normalize();
 	vector3d const start_vector(signed_rand_vector2_norm()); // doesn't matter, any will do
 	cross_product(rev_axis, start_vector, v_orbit);

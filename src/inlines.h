@@ -229,10 +229,10 @@ inline point get_center_n2(point const *const pts) {
 }
 
 
-inline vector3d get_norm_rand(vector3d v) {
+inline vector3d get_norm_rand(vector3d const &v) {
 
 	float const vmag(v.mag());
-	if (vmag < TOLERANCE) return signed_rand_vector_norm();
+	if (vmag < TOLERANCE) {return signed_rand_vector_norm();}
 	return v/vmag;
 }
 
@@ -240,14 +240,14 @@ inline vector3d get_norm_rand(vector3d v) {
 template<typename T> inline void get_normal(pointT<T> const &v1, pointT<T> const &v2, pointT<T> const &v3, pointT<T> &norm, bool normalize) {
 
 	cross_product((v2 - v1), (v3 - v2), norm);
-	if (normalize) norm.normalize();
+	if (normalize) {norm.normalize();}
 }
 
 
 inline void orthogonalize_dir(vector3d const &vin, vector3d const &dir, vector3d &vortho, bool normalize) {
 
 	cross_product(dir, cross_product(vin, dir), vortho);
-	if (normalize) vortho.normalize();
+	if (normalize) {vortho.normalize();}
 }
 
 

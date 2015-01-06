@@ -622,7 +622,7 @@ void *trace_ray_block_sky(void *ptr) {
 			if (kill_raytrace) break;
 			if (data->verbose && ((p%1000) == 0)) increment_printed_number(p/1000);
 			point const pt(rgen.gen_rand_cube_point(i->bounds));
-			vector3d dir(signed_rand_vector_norm());
+			vector3d dir(signed_rand_vector_spherical().get_norm()); // need high quality distribution
 			dir.z = -fabs(dir.z); // make sure z is negative since this is supposed to be light from the sky
 			point const end_pt(pt + dir*line_length);
 			cast_light_ray(*data->lmgr, pt, end_pt, cube_weight, cube_weight, i->color, line_length, -1, LIGHTING_SKY, 0, rgen);

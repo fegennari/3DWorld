@@ -395,6 +395,8 @@ template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector(f
 }
 
 template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_norm(float scale) {
+	// FIXME: this is more correct (more uniform), but changes universe mode generated content
+	//return signed_rand_vector_spherical(scale).get_norm();
 	assert(scale > 0.0);
 
 	while (1) {
@@ -412,6 +414,12 @@ template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_s
 		if (v.mag_sq() < scale*scale) return v;
 	}
 	return zero_vector; // never gets here
+}
+
+template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_spherical_noloop(float scale) {
+	// uniform distribution of points about a sphere from http://mathworld.wolfram.com/SpherePointPicking.html
+	float const u(signed_rand_float()), theta(TWO_PI*signed_rand_float()), xy_term(sqrt(1.0-u*u));
+	return scale*vector3d(xy_term*cos(theta), xy_term*sin(theta), u);
 }
 
 template<typename base> point rand_gen_template_t<base>::gen_rand_cube_point(cube_t const &c) {
