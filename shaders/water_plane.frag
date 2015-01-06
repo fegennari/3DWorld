@@ -43,8 +43,8 @@ void main()
 		vec3 wave_n = get_wave_normal(fract(4.61*noise_time)*3.0*proj_pos.xy/proj_pos.w);
 		norm        = normalize(norm + 0.06*fg_NormalMatrix*wave_n);
 		ripple     += 0.025*wave_n.xy;
-		vec2 wtc    = 20.0*tc2 + vec2(2.7*noise_time, 2.6*noise_time);
-		add_color  += vec3(1) * (1.0 - texture(noise_tex, wtc).r); // Note that the texture is white with blue dots
+		vec2 wtc    = 20.0*tc2 + fract(vec2(1.7*noise_time, 1.6*noise_time));
+		add_color  += vec3(1.0) * (1.0 - texture(noise_tex, wtc).r); // Note that the texture is white with blue dots
 	}
 	vec3 light_norm = norm;
 	float green_scale = 0.0;

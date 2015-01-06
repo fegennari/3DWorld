@@ -1612,6 +1612,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
 	bool const use_normal_map(!reflection_pass && (display_mode & 0x08) != 0); // enabled by default
+	bool const rain_mode(is_precip_enabled() && temperature > W_FREEZE_POINT);
 	if (has_water      ) {s.set_prefix("#define HAS_WATER",       1);} // FS
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",  1);} // FS
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",  1);} // FS
@@ -1625,7 +1626,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	s.add_uniform_int("detail_tex",  1);
 	s.add_uniform_int("shadow_normal_tex", 7);
 	s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
-	s.add_uniform_float("spec_offset", ((is_precip_enabled() && temperature > W_FREEZE_POINT) ? 0.5 : 0.0)); // increase specular during rain
+	s.add_uniform_float("spec_offset", (rain_mode ? 0.5 : 0.0)); // increase specular during rain
 	if (enable_shadow_map) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());}
 	set_noise_tex(s, 8);
 	setup_cloud_plane_uniforms(s);

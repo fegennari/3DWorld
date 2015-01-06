@@ -1,4 +1,4 @@
-uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, noise_tex, caustic_tex;
+uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, caustic_tex;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
 uniform float wave_time, wave_amplitude; // water_plane_z comes from water_fog.part
@@ -34,19 +34,20 @@ vec4 get_light_specular_comp(in vec3 normal, in vec3 light_dir, in vec3 eye_pos,
 
 vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in float spec, in float shininess, in float bump_scale) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
-	vec3 light_dir = normalize(fg_LightSource[i].position.xyz);
+	vec3 light_dir  = normalize(fg_LightSource[i].position.xyz);
 	vec3 epos_final = epos.xyz;
 #ifdef USE_NORMAL_MAP
+	//bump_scale *= pow(texture(detail_tex, 11.0*tc + fract(vec2(0.0, 0.002*wave_time))).r, 3.0); // moving specular when rainy?
 	ds_scale *= clamp(5.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
 	normal    = apply_bump_map(light_dir, epos_final, normal, bump_scale);
 #endif
-		
+	
 	// compute the cos of the angle between the normal and lights direction as a dot product, constant for every vertex
 	float NdotL = dot(normal, light_dir);
 	vec4 light  = fg_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
 
 	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) {
-		normal *= 1.0 - get_cloud_plane_alpha(vertex.xyz, light);
+		ds_scale *= 1.0 - get_cloud_plane_alpha(vertex.xyz, light);
 	}
 	
 	// compute the ambient and diffuse lighting
