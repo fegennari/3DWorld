@@ -352,6 +352,42 @@ void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysiz
 }
 
 
+// ***************** Timers *****************
+
+// see http://www.lighthouse3d.com/tutorials/opengl-short-tutorials/opengl-timer-query/
+query_perf_timer_t::query_perf_timer_t () {glGenQueries   (1, &query_id);}
+query_perf_timer_t::~query_perf_timer_t() {glDeleteQueries(1, &query_id);}
+
+void query_perf_timer_t::time_query() { // records the time only after all previous commands have been completed
+	glQueryCounter(query_id, GL_TIMESTAMP);
+}
+GLuint64 query_perf_timer_t::get_query() {
+	int avail(0); // wait until the results are available
+	while (!avail) {glGetQueryObjectiv(query_id, GL_QUERY_RESULT_AVAILABLE, &avail);}
+	GLuint64 time;
+	glGetQueryObjectui64v(query_id, GL_QUERY_RESULT, &time); // get query results
+	return time;
+}
+
+gpu_timer_t::gpu_timer_t() {
+	time_query.time_query();
+	timer = get_timestamp();
+}
+void gpu_timer_t::show() {
+	query_perf_timer_t time_query2;
+	GLint64 timer2;
+	time_query2.time_query();
+	timer2 = get_timestamp();
+	cout << "GPU time: " << 1.0E-6*(time_query2.get_query() - time_query.get_query()) << ", CPU time: " << 1.0E-6*(timer2 - timer) << endl;
+}
+
+GLint64 get_timestamp() {
+	GLint64 timer;
+	glGetInteger64v(GL_TIMESTAMP, &timer);
+	return timer;
+}
+
+
 // ***************** Other *****************
 
 
@@ -363,5 +399,6 @@ bool gen_mipmaps(unsigned dim) {
 	glGenerateMipmap(tex_dims[dim-1]);
 	return 1;
 }
+
 
 

@@ -21,6 +21,7 @@
 7: Ship Engines */
 
 
+//#define USE_GPU_TIMER
 float const DSCALE             = 0.45;
 float const ASCALE             = 0.35;
 bool  const TIMETEST           = (GLOBAL_TIMETEST || 0);
@@ -752,6 +753,9 @@ void display(void) {
 	set_multisample(1);
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} else {glDisable(GL_DEPTH_CLAMP);}
 	bind_vao(0); // set to default VAO
+#ifdef USE_GPU_TIMER
+	gpu_timer_t gpu_timer;
+#endif
 
 	if (world_mode == WMODE_UNIVERSE) {
 		display_universe(); // infinite universe
@@ -970,6 +974,9 @@ void display(void) {
 			if (cdist > REL_SCROLL_DIST) scroll_scene();
 		}
 	} // not universe mode
+#ifdef USE_GPU_TIMER
+	gpu_timer.show();
+#endif
 	draw_enabled_ui_menus();
 	swap_buffers_and_redraw();
 	check_gl_error(11);

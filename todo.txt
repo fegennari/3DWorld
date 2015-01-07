@@ -9,5 +9,8 @@ Load/display model3d models in tiled terrain mode
   - Model LOD - use mesh simplification
 
 GLSL subroutine: http://www.g-truc.net/post-0269.html
+Bindless texture support on Nvidia GPUs: http://developer.download.nvidia.com/opengl/tutorials/bindless_graphics.pdf
+More cobj normal maps (mapx cblocks)
 Instanced rocks in ground mode - similar to asteroids
 Use SDL?
+Voxels on the GPU? Noise eval, marching cubes, normals, AO, etc.

@@ -303,5 +303,27 @@ template< typename T > void upload_to_dynamic_vbo(vector<T> const &v) {
 }
 
 
+class query_perf_timer_t {
+	unsigned query_id;
+
+public:
+	query_perf_timer_t();
+	~query_perf_timer_t();
+	void time_query();
+	GLuint64 get_query();
+};
+
+class gpu_timer_t {
+	query_perf_timer_t time_query;
+	GLint64 timer;
+
+public:
+	gpu_timer_t();
+	void show();
+};
+
+GLint64 get_timestamp();
+
+
 #endif // _GL_EXT_ARB_H_
 
