@@ -2187,7 +2187,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			s.set_bool_prefix("use_shadow_map", (spass == 0), 0); // VS
 			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
-			//s.set_geom_shader("ads_lighting.part*+grass_tiled");  // triangle => triangle - too slow
+			//s.set_geom_shader("grass_tiled"); // triangle => triangle - too slow
 			setup_grass_flower_shader(s, enable_wind, (spass == 0), 1.0);
 			s.add_uniform_int("weight_tex", 3);
 			set_noise_tex(s, 5);
