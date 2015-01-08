@@ -548,7 +548,7 @@ struct line_query_state {
 
 class universe_t : protected cell_block {
 
-	cube_map_sphere_manager_t cube_map_planet_manager;
+	icosphere_manager_t planet_manager;
 
 public:
 	void init();

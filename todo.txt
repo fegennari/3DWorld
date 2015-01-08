@@ -14,3 +14,6 @@ More cobj normal maps (mapx cblocks)
 Instanced rocks in ground mode - similar to asteroids
 Use SDL?
 Voxels on the GPU? Noise eval, marching cubes, normals, AO, etc.
+
+God rays between clouds in TT rain mode and between universe objects
+Displacement mapping on asteroids using tess shader

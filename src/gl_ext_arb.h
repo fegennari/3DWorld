@@ -205,22 +205,29 @@ template<unsigned N> struct indexed_vao_multi_manager_t : public indexed_vbo_man
 };
 
 
-class cube_map_sphere_drawer_t : public indexed_vao_manager_t {
+class subdiv_sphere_drawer_t : public indexed_vao_manager_t {
+protected:
 	unsigned nverts, nindices;
-
-public:
+};
+struct cube_map_sphere_drawer_t : public subdiv_sphere_drawer_t {
 	cube_map_sphere_drawer_t(unsigned ndiv);
 	void draw() const;
 };
+struct icosphere_drawer_t : public subdiv_sphere_drawer_t {
+	icosphere_drawer_t(unsigned ndiv);
+	void draw() const;
+};
 
-class cube_map_sphere_manager_t {
-	typedef map<unsigned, cube_map_sphere_drawer_t> ndiv_sphere_map_t;
+template<typename T> class subdiv_sphere_manager_t {
+	typedef map<unsigned, T> ndiv_sphere_map_t;
 	ndiv_sphere_map_t cached;
-
 public:
 	void draw_sphere(unsigned ndiv);
 	void clear();
 };
+
+typedef subdiv_sphere_manager_t<cube_map_sphere_drawer_t> cube_map_sphere_manager_t;
+typedef subdiv_sphere_manager_t<icosphere_drawer_t> icosphere_manager_t;
 
 
 class vbo_ring_buffer_t : public vbo_wrap_t {

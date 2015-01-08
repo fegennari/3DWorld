@@ -383,9 +383,9 @@ public:
 	vpc_shader_t nebula_shader;
 	shader_t asteroid_shader;
 	vector<planet_draw_data_t> atmos_to_draw, rings_to_draw;
-	cube_map_sphere_manager_t *cube_map_planet_manager;
+	icosphere_manager_t *planet_manager;
 
-	ushader_group(cube_map_sphere_manager_t *cmpm=nullptr) : cube_map_planet_manager(cmpm) {}
+	ushader_group(icosphere_manager_t *pm=nullptr) : planet_manager(pm) {}
 	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) {
 		return get_planet_shader(body, svars).enable_planet(body, svars, planet_pos, use_light2);
 	}
@@ -474,7 +474,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 	if (animate2) {cloud_time += fticks;}
 	unpack_color(water_c, P_WATER_C); // recalculate every time
 	unpack_color(ice_c,   P_ICE_C  );
-	ushader_group usg(&cube_map_planet_manager);
+	ushader_group usg(&planet_manager);
 
 	if (no_distant < 2 || clobj.type < UTYPE_SYSTEM) { // drawing pass 0
 		// gather together the set of cells that are visible and need to be drawn
@@ -2150,7 +2150,7 @@ void universe_t::free_context() { // should be OK even if universe isn't setup
 			}
 		}
 	}
-	cube_map_planet_manager.clear();
+	planet_manager.clear();
 }
 
 
@@ -2430,8 +2430,8 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		else if (use_vert_shader_offset()) { // minor issue of face alignment cracks, but better triangle distribution
 			assert(!gas_giant);
 			set_multisample(0); // prevent artifacts at face boundaries
-			assert(usg.cube_map_planet_manager);
-			usg.cube_map_planet_manager->draw_sphere(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
+			assert(usg.planet_manager);
+			usg.planet_manager->draw_sphere(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
 			set_multisample(1);
 		}
 		else { // gas giant or atmosphere: don't need high resolution since they have no heightmaps

@@ -452,6 +452,75 @@ template<typename T> void indexed_mesh_draw<T>::render_z_plane(float x1, float y
 template class indexed_mesh_draw<vert_wrap_t>;
 
 
+// adapted from http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html
+class icosphere_creator {
+public:
+	vector<vert_wrap_t> verts;
+	vector<unsigned> indices;
+
+private:
+	struct tri_ixs_t {
+		unsigned v[3];
+		tri_ixs_t(unsigned v1=0, unsigned v2=0, unsigned v3=0) {v[0] = v1; v[1] = v2; v[2] = v3;}
+	};
+	map<pair<unsigned, unsigned>, unsigned> midpoint_cache;
+
+	unsigned add_vertex(point const &p) {
+		verts.push_back(p.get_norm()); // put on unit sphere
+		return verts.size()-1;
+	}
+	unsigned get_midpoint(unsigned p1, unsigned p2) {
+		pair<unsigned, unsigned> const key(min(p1, p2), max(p1, p2));
+		auto it(midpoint_cache.find(key));
+		if (it != midpoint_cache.end()) {return it->second;} // found in cache
+		point const middle((verts[p1].v + verts[p2].v) / 2.0); // not in cache, calculate it
+		unsigned const ix(add_vertex(middle)); // calculate and add it
+		midpoint_cache[key] = ix; // store it, return index
+		return ix;
+	}
+	
+public:
+	void create(unsigned rec_level) { // final verts is around 20*4^rec_level
+		verts.clear();
+		indices.clear();
+		// create 12 vertices of a icosahedron
+		float t((1.0 + sqrt(5.0)) / 2.0);
+		point const pts[12] = {
+			point(-1,  t,  0), point(1, t,  0), point(-1, -t,  0), point(1, -t, 0), point( 0, -1,  t), point( 0, 1, t),
+			point( 0, -1, -t), point(0, 1, -t), point( t,  0, -1), point(t,  0, 1), point(-t,  0, -1), point(-t, 0, 1)};
+		for (unsigned i = 0; i < 12; ++i) {add_vertex(pts[i]);}
+		
+		// create 20 triangles of the icosahedron
+		tri_ixs_t const tixs[20] = {
+			tri_ixs_t(0, 11, 5), tri_ixs_t(0, 5, 1), tri_ixs_t(0, 1, 7), tri_ixs_t(0, 7, 10), tri_ixs_t(0, 10, 11),
+			tri_ixs_t(1, 5, 9), tri_ixs_t(5, 11, 4), tri_ixs_t(11, 10, 2), tri_ixs_t(10, 7, 6), tri_ixs_t(7, 1, 8),
+			tri_ixs_t(3, 9, 4), tri_ixs_t(3, 4, 2), tri_ixs_t(3, 2, 6), tri_ixs_t(3, 6, 8), tri_ixs_t(3, 8, 9),
+			tri_ixs_t(4, 9, 5), tri_ixs_t(2, 4, 11), tri_ixs_t(6, 2, 10), tri_ixs_t(8, 6, 7), tri_ixs_t(9, 8, 1)
+		};
+		vector<tri_ixs_t> faces(20);
+		for (unsigned i = 0; i < 20; ++i) {faces[i] = tixs[i];}
+			
+		// refine triangles
+		for (unsigned i = 0; i < rec_level; ++i) {
+			vector<tri_ixs_t> faces2;
+
+			for (auto f = faces.begin(); f != faces.end(); ++f) { // replace triangle by 4 triangles
+				unsigned mps[3];
+				UNROLL_3X(mps[i_] = get_midpoint(f->v[i_], f->v[(i_+1)%3]);)
+				UNROLL_3X(faces2.push_back(tri_ixs_t(f->v[i_], mps[i_], mps[(i_+2)%3]));)
+				faces2.push_back(tri_ixs_t(mps[0], mps[1], mps[2]));
+			}
+			faces.clear();
+			faces.swap(faces2);
+		}
+		// done, now add triangles to mesh
+		for (auto f = faces.begin(); f != faces.end(); ++f) {
+			UNROLL_3X(indices.push_back(f->v[i_]);)
+		}  
+	}
+};
+
+
 // Note: these classes are actually declared in gl_ext_arb.h
 // simplified and optimized version of draw_cube_mapped_sphere() (no center, tex coords, or normals, and radius=1.0)
 cube_map_sphere_drawer_t::cube_map_sphere_drawer_t(unsigned ndiv) {
@@ -504,15 +573,43 @@ void cube_map_sphere_drawer_t::draw() const {
 	post_render();
 }
 
-void cube_map_sphere_manager_t::draw_sphere(unsigned ndiv) {
-	ndiv_sphere_map_t::iterator it(cached.find(ndiv));
-	if (it == cached.end()) {it = cached.insert(make_pair(ndiv, cube_map_sphere_drawer_t(ndiv))).first;} // create a new one
+
+icosphere_drawer_t::icosphere_drawer_t(unsigned ndiv) {
+
+	assert(!vbo);
+	assert(ndiv > 0);
+	icosphere_creator creator;
+	// 6*ndiv*ndiv = 12*4^L => (6/12)*ndiv*ndiv = 4^L => 0.7*ndiv = 2^L => L = log2(0.7*ndiv)
+	creator.create(unsigned(ceil(log(0.7*ndiv)/log(2.0))));
+	nverts   = creator.verts.size();
+	nindices = creator.indices.size();
+	create_and_upload(creator.verts, creator.indices);
+}
+
+void icosphere_drawer_t::draw() const {
+
+	pre_render();
+	vert_wrap_t::set_vbo_arrays();
+	glDrawRangeElements(GL_TRIANGLES, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
+	post_render();
+}
+
+template<typename T> 
+void subdiv_sphere_manager_t<T>::draw_sphere(unsigned ndiv) {
+	auto it(cached.find(ndiv));
+	if (it == cached.end()) {it = cached.insert(make_pair(ndiv, T(ndiv))).first;} // create a new one
 	it->second.draw();
 }
-void cube_map_sphere_manager_t::clear() {
-	for (ndiv_sphere_map_t::iterator i = cached.begin(); i != cached.end(); ++i) {i->second.clear_vbos();}
+
+template<typename T> 
+void subdiv_sphere_manager_t<T>::clear() {
+	for (auto i = cached.begin(); i != cached.end(); ++i) {i->second.clear_vbos();}
 	cached.clear();
 }
+
+// explicit template instantiations
+template cube_map_sphere_manager_t;
+template icosphere_manager_t;
 
 
 template< typename vert_type_t >
