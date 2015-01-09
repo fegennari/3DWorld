@@ -438,6 +438,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		s.begin_shader();
 		setup_tt_fog_post(s);
 		s.add_uniform_float("water_plane_z", z1);
+		s.add_uniform_float("cloud_plane_z", z2);
 		s.add_uniform_float("cloud_scale", (is_cloudy ? 1.0 : (cloud_cover + 0.5*(1.0 - cloud_cover))));
 		s.add_uniform_vector3d("camera_pos", camera);
 		s.add_uniform_vector3d("sun_pos", get_sun_pos()); // no sun at night?

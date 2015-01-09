@@ -52,7 +52,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	float NdotL = dot(normal, light_dir);
 	vec4 light  = fg_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
 
-	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) {
+	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) { // conditionals are faster but cause seams
 		ds_scale *= 1.0 - get_cloud_plane_alpha(vertex.xyz, light);
 	}
 	
@@ -70,7 +70,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 			vec3  cval    = 4.0*mix(texture(caustic_tex, tc2).rgb, texture(caustic_tex, (tc2 + vec2(0.3, 0.6))).rgb, ntime);
 			color.rgb    *= mix(vec3(1.0), cval, cweight);
 		}
-#endif
+#endif // WATER_CAUSTICS
 		// apply underwater attenuation
 		// Note: ok if vertex is above the water, dist will come out as 0
 		vec4 eye    = fg_ModelViewMatrixInverse[3]; // local tile space
@@ -78,7 +78,12 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 		float dist  = integrate_water_dist(vertex.xyz, eye.xyz, water_plane_z) + min(4.0*depth, integrate_water_dist(vertex.xyz, light.xyz, water_plane_z)); // clamp light pos dir
 		atten_color(color, dist*water_atten);
 	}
-#endif
+#endif // HAS_WATER
+#ifdef GOD_RAYS
+	if (apply_cloud_shadows && vertex.z > water_plane_z) {
+		color.rgb += get_god_rays(vertex.xyz, fg_ModelViewMatrixInverse[3].xyz, light);
+	}
+#endif // GOD_RAYS
 	return color;
 }
 

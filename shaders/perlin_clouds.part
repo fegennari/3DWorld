@@ -1,8 +1,7 @@
 uniform sampler2D cloud_noise_tex;
-uniform vec2 dxy = vec2(0,0);
-uniform float cloud_scale = 0.5;
-uniform float noise_scale = 0.0012;
-
+uniform vec2 dxy            = vec2(0,0);
+uniform float cloud_scale   = 0.5;
+uniform float noise_scale   = 0.0012;
 uniform float cloud_alpha   = 1.0;
 uniform float cloud_plane_z = 0.0;
 uniform vec3 cloud_offset   = vec3(0.0);
@@ -36,4 +35,20 @@ float get_cloud_plane_alpha(in vec3 vertex, in vec4 light_pos) {
 	vec3 cpos = vertex.xyz + cloud_offset;
 	float d   = max(0.0, (cloud_plane_z - cpos.z)/ldir.z); // sky intersection position along vertex->light vector
 	return cloud_alpha*gen_cloud_alpha(cpos.xy + d*ldir.xy);
+}
+
+vec3 get_god_rays(in vec3 vertex, in vec3 eye, in vec4 light_pos) {
+	int nsteps = 100;
+	vec3 step  = (eye - vertex) / nsteps;
+	vec3 cur   = vertex + cloud_offset;
+	vec3 ldir  = normalize(light_pos.xyz);
+	float lval = 0.0;
+
+	for (int i = 0; i < nsteps; ++i) {
+		cur    += step;
+		float d = (cloud_plane_z - cur.z)/ldir.z;
+		float a = cloud_alpha*gen_cloud_alpha(cur.xy + d*ldir.xy);
+		lval   += max(0.0, (1.0 - a)*(1.0 - a));
+	}
+	return min(0.5, (2.0/nsteps)*lval)*vec3(1.0, 0.8, 0.2);
 }
