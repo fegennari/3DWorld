@@ -159,12 +159,6 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "lichen.jpg", 0, 0), // 1500x1500, compress
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/palm_bark.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 3, "daisy.jpg", 0, 1, 4.0), // 1024x1024
 texture_t(0, 5, 0,    0,    1, 3, 1, "lava.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 3, 1, "brickwork.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/brickwork_normal.jpg", 0, 0, 1.0, 1.0, 1), // 512x512, no compress
-//texture_t(0, 6, 0,    0,    1, 3, 1, "stone_blocks.png"), // 512x512
-//texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/stone_blocks_normal.png", 0, 0, 1.0, 1.0, 1), // 1024x1024, no compress
-//texture_t(0, 6, 0,    0,    1, 3, 1, "bricks_tan.png"), // 1024x1024
-//texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/bricks_tan_norm.png", 0, 0, 1.0, 1.0, 1), // 1024x1024, no compress
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
@@ -290,7 +284,7 @@ void load_textures() {
 }
 
 
-int get_texture_by_name(string const &name) {
+int get_texture_by_name(string const &name, bool is_normal_map) {
 
 	int const ix(atoi(name.c_str()));
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
@@ -298,6 +292,17 @@ int get_texture_by_name(string const &name) {
 	name_map_t::const_iterator it(texture_name_map.find(name));
 
 	if (it == texture_name_map.end()) {
+		if (1) {
+			// try to load/add the texture directly from a file
+			// assume it's RGB with wrap and mipmaps
+			int const tid(textures.size());
+			texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, 0, !is_normal_map, 1.0, 1.0, is_normal_map);
+			new_tex.load(tid);
+			new_tex.init();
+			textures.push_back(new_tex);
+			texture_name_map[name] = tid;
+			return tid;
+		}
 		std::cerr << "Invalid texture name: " << name << endl;
 		exit(1);
 	}

@@ -17,3 +17,4 @@ Voxels on the GPU? Noise eval, marching cubes, normals, AO, etc.
 
 God rays between clouds in TT rain mode
 Displacement mapping on asteroids using tess shader
+Only load textures during use

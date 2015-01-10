@@ -937,33 +937,22 @@ string read_filename(FILE *fp) {
 
 	while (1) {
 		int const c(getc(fp));
-
-		if (c == '\0' || c == EOF) { // end of file
-			return str;
-		}
-		else if (c == '"') { // quote
-			in_quote ^= 1;
-		}
+		if (c == '\0' || c == EOF) {return str;} // end of file
+		else if (c == '"') {in_quote ^= 1;} // quote
 		else if (isspace(c)) { // whitespace character
-			if (in_quote) {
-				str.push_back(c); // part of quoted string
-			}
-			else if (!str.empty()) { // not leading whitespace
-				return str;
-			}
+			if (in_quote) {str.push_back(c);} // part of quoted string
+			else if (!str.empty()) {return str;} // not leading whitespace
 		}
-		else {
-			str.push_back(c);
-		}
+		else {str.push_back(c);}
 	}
 	assert(0); // never gets here
 	return str;
 }
 
 
-bool read_texture(char const *const str, unsigned line_num, int &tid) {
+bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map) {
 
-	tid = get_texture_by_name(std::string(str));
+	tid = get_texture_by_name(std::string(str), is_normal_map);
 	
 	if (tid >= 0 && (unsigned)tid >= textures.size()) {
 		cout << "Illegal texture on line " << line_num << ": " << tid << ", max is " << textures.size()-1 << endl;
@@ -1483,7 +1472,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			{
 				return read_error(fp, "layer/material properties", coll_obj_file);
 			}
-			if (!read_texture(str, line_num, cobj.cp.tid)) {fclose(fp); return 0;}
+			if (!read_texture(str, line_num, cobj.cp.tid, 0)) {fclose(fp); return 0;}
 			has_layer           = 1;
 			cobj.cp.draw        = (ivals[0] != 0);
 			cobj.cp.refract_ix  = 1.0; // default
@@ -1511,7 +1500,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'X': // normal map texture id/name
 			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "normal map texture", coll_obj_file);}
-			if (!read_texture(str, line_num, cobj.cp.normal_map)) {fclose(fp); return 0;}
+			if (!read_texture(str, line_num, cobj.cp.normal_map, 1)) {fclose(fp); return 0;}
 			break;
 
 		case 'r': // set specular

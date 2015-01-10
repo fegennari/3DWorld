@@ -239,9 +239,9 @@ y 3.0
 #l 0.9 1.0 1.0 1.0 1.0 16 1 # old brick
 #l 0.9 0.8 0.5 0.5 1.0 5 1 # new brick
 l 0.9 0.8 0.5 0.5 1.0 brickwork.jpg 1 # brick with normal map
-X normal_maps/brickwork_normal.jpg # normal map test
+X normal_maps/brickwork_normal.jpg # normal map
 #l 0.9 0.8 0.5 0.5 1.0 bricks_tan.png 1 # brick with normal map
-#X normal_maps/bricks_tan_norm.png # normal map test
+#X normal_maps/bricks_tan_norm.png # normal map
 J outside_brick # define brick material
 
 # Outside Walls Top
