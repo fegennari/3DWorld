@@ -59,6 +59,7 @@ extern char *coll_obj_file;
 extern vector<point> app_spots;
 extern vector<light_source> light_sources;
 extern tree_cont_t t_trees;
+extern vector<texture_t> textures;
 
 
 int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
@@ -123,11 +124,11 @@ int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
 				 unsigned app_rate, bool init_enabled, bool reorderable, bool auto_max)
 {
 	if (num_groups > NUM_TOT_OBJS) {
-		cout << "Error: Exceeded max of " << NUM_TOT_OBJS << " object groups." << endl;
+		cerr << "Error: Exceeded max of " << NUM_TOT_OBJS << " object groups." << endl;
 		exit(1);
 	}
 	if (obj_type >= NUM_TOT_OBJS) {
-		cout << "Error: Illegal object type: " << obj_type << "." << endl;
+		cerr << "Error: Illegal object type: " << obj_type << "." << endl;
 		assert(0);
 	}
 	obj_groups[num_groups].create(obj_type, max_objects, init_objects, app_rate, init_enabled, reorderable, auto_max);
@@ -960,11 +961,15 @@ string read_filename(FILE *fp) {
 }
 
 
-int read_texture(char const *const str, unsigned line_num) {
+bool read_texture(char const *const str, unsigned line_num, int &tid) {
 
-	int const tid(get_texture_by_name(std::string(str)));
-	if (tid >= NUM_TEXTURES) {cout << "Illegal texture on line " << line_num << ": " << tid << ", max is " << NUM_TEXTURES-1 << endl;}
-	return tid;
+	tid = get_texture_by_name(std::string(str));
+	
+	if (tid >= 0 && (unsigned)tid >= textures.size()) {
+		cout << "Illegal texture on line " << line_num << ": " << tid << ", max is " << textures.size()-1 << endl;
+		return 0;
+	}
+	return 1;
 }
 
 
@@ -1478,8 +1483,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			{
 				return read_error(fp, "layer/material properties", coll_obj_file);
 			}
-			cobj.cp.tid = read_texture(str, line_num);
-			if (cobj.cp.tid >= NUM_TEXTURES) {fclose(fp); return 0;}
+			if (!read_texture(str, line_num, cobj.cp.tid)) {fclose(fp); return 0;}
 			has_layer           = 1;
 			cobj.cp.draw        = (ivals[0] != 0);
 			cobj.cp.refract_ix  = 1.0; // default
@@ -1507,8 +1511,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'X': // normal map texture id/name
 			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "normal map texture", coll_obj_file);}
-			cobj.cp.normal_map = read_texture(str, line_num);
-			if (cobj.cp.normal_map >= NUM_TEXTURES) {fclose(fp); return 0;}
+			if (!read_texture(str, line_num, cobj.cp.normal_map)) {fclose(fp); return 0;}
 			break;
 
 		case 'r': // set specular
@@ -1577,7 +1580,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		default:
-			cout << "Ignoring unrecognized symbol in collision object file line " << line_num << ": " << char(letter) << " (ASCII " << letter << ")." << endl;
+			cerr << "Ignoring unrecognized symbol in collision object file line " << line_num << ": " << char(letter) << " (ASCII " << letter << ")." << endl;
 			fclose(fp);
 			exit(1);
 			return 0;
@@ -1596,8 +1599,8 @@ int read_coll_objects(const char *coll_obj_file) {
 	cobj.cp.draw    = 1;   // default
 	if (use_voxel_cobjs) {cobj.cp.cobj_type = COBJ_TYPE_VOX_TERRAIN;}
 	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
-	if (tree_mode & 2) add_small_tree_coll_objs();
-	if (has_scenery2)  add_scenery_cobjs();
+	if (tree_mode & 2) {add_small_tree_coll_objs();}
+	if (has_scenery2)  {add_scenery_cobjs();}
 	return 1;
 }
 

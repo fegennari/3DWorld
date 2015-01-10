@@ -16,8 +16,6 @@ float const F_ATTEN_FACTOR = 0.4;
 
 
 extern int display_mode;
-extern texture_t textures[];
-
 
 
 void noise_gen_3d::gen_sines(float mag, float freq) {

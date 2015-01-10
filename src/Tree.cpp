@@ -61,7 +61,6 @@ extern int num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, dra
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh;
 extern lightning l_strike;
-extern texture_t textures[];
 extern coll_obj_group coll_objects;
 
 float get_draw_tile_dist();

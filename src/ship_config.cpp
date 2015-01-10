@@ -865,7 +865,7 @@ bool us_class::read_from_ifstream(ifstream &in, string_to_color_map_t const &str
 
 void us_class::setup(unsigned sclass_) {
 
-	if (!inited) {cout << "Error: Ship ID " << sclass_ << " was not initialized" << endl; exit(1);}
+	if (!inited) {cerr << "Error: Ship ID " << sclass_ << " was not initialized" << endl; exit(1);}
 	assert(exp_type < NUM_ETYPES);
 	assert(regen_delay  >= 0.0 && death_delay >= 0.0);
 	assert(cr_scale     >= 1.0); // might want to relax this later
@@ -962,7 +962,7 @@ bool beam_weap_params::read(ifstream &in, string_to_color_map_t const &string_to
 
 void us_weapon::setup(unsigned wclass_) {
 
-	if (!inited) {cout << "Error: Weapon ID " << wclass_ << " was not initialized" << endl; exit(1);}
+	if (!inited) {cerr << "Error: Weapon ID " << wclass_ << " was not initialized" << endl; exit(1);}
 	assert(damage == 0.0 || !ignores_shields || !shield_d_only); // otherwise there would be no damage
 	assert(int(is_beam) + int(is_fighter) + int(is_decoy) <= 1); // can only have one of these flags set
 	assert(!is_beam     || !det_on_exp);

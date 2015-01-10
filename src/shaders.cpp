@@ -760,7 +760,7 @@ bool shader_t::begin_shader(bool do_enable) {
 			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {cout << shader_names[i] + " ";}
 			cerr << "failed with status " << status << endl;
 			print_program_info_log();
-			cout << endl;
+			cerr << endl;
 			exit(1);
 		}
 		if (PRINT_LOG) print_program_info_log();

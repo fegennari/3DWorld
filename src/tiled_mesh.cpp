@@ -47,7 +47,6 @@ extern point sun_pos, moon_pos, surface_pos;
 extern water_params_t water_params;
 extern char *mh_filename_tt;
 extern float h_dirt[];
-extern texture_t textures[];
 extern tree_data_manager_t tree_data_manager;
 extern pt_line_drawer tree_scenery_pld;
 

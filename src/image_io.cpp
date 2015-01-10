@@ -40,7 +40,7 @@ FILE *open_texture_file(string const &filename) {
 	fp = fopen(filename.c_str(), "rb");
 
 	if (fp == NULL) {
-		cout << "Error loading image " << filename << endl;
+		cerr << "Error loading image " << filename << endl;
 		exit(1);
 	}
 	return fp;
@@ -378,7 +378,7 @@ void texture_t::load_targa(int index, bool allow_diff_width_height) {
 		assert(width > 0 && height > 0);
 	}
 	if (img.width != width || img.height != height) {
-		cout << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << img.width << "x" << img.height << endl;
+		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << img.width << "x" << img.height << endl;
 		exit(1);
 	}
 	alloc();
@@ -421,7 +421,7 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 		assert(width > 0 && height > 0);
 	}
 	if (cinfo.output_width != width || cinfo.output_height != height) {
-		cout << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << cinfo.output_width << "x" << cinfo.output_height << endl;
+		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << cinfo.output_width << "x" << cinfo.output_height << endl;
 		exit(1);
 	}
 	bool const want_alpha_channel(ncolors == 4 && cinfo.output_components == 3);
@@ -522,7 +522,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 		assert(width > 0 && height > 0);
 	}
 	if (w != width || h != height) {
-		cout << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << w << "x" << h << endl;
+		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << w << "x" << h << endl;
 		exit(1);
 	}
 	bool const want_alpha_channel(ncolors == 4 && png_ncolors == 3);

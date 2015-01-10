@@ -310,7 +310,7 @@ void gen_mesh(int surface_type, int keep_sin_table, int update_zvals) {
 		}
 		else {
 			if (!((surface_type == 5) ? read_mesh(mesh_file, read_mesh_zmm) : read_mesh_height_image(mh_filename))) {
-				cout << "Error reading landscape height data." << endl;
+				std::cerr << "Error reading landscape height data." << endl;
 				exit(1);
 			}
 			if (read_mh == NULL) matrix_gen_2d(read_mh); // should this be deleted later? reread?

@@ -954,7 +954,7 @@ void coll_obj_group::process_negative_shapes() { // negtive shapes should be non
 		if ((*this)[i].status != COLL_NEGATIVE) continue;
 
 		if ((*this)[i].type != COLL_CUBE) {
-			cout << "Only negative cubes are supported." << endl;
+			std::cerr << "Only negative cube shapes are supported." << endl;
 			exit(1);
 		}
 		unsigned ncobjs((unsigned)size()); // so as not to retest newly created subcubes

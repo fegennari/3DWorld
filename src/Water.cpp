@@ -1491,7 +1491,7 @@ void calc_water_flow() {
 	if (valleys.size() > 1000) cout << "Warning: This landscape contains " << valleys.size() << " water pooling locations." << endl;
 	
 	if (valleys.size() > 32767) {
-		cout << "Error: Too many water pools. Max is 32767." << endl;
+		std::cerr << "Error: Too many water pools. Max is 32767." << endl;
 		exit(1);
 	}
 	spill.init((unsigned)valleys.size());

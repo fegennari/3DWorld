@@ -33,7 +33,7 @@ float const SMOOTH_SKY_POLES   = 0.2;
 //GROUND ROCK WATER WATER2 SKY SUN MOON EARTH ICE SNOW LEAF WOOD SAND ROCK2 CAMOFLAGE GRASS PALM SMOKE PLASMA GEN LANDSCAPE TREE_END TREE_SNOW TREE_HEMI ...
 //0      1    2     3      4   5   6    7     8   9    10   11   12   13    14        15    16   17    18     19  20        21       22        23        ...
 
-texture_t textures[NUM_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
+texture_t def_textures[] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generate (not loaded from file), 10: DDS
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
@@ -161,9 +161,15 @@ texture_t(0, 5, 0,    0,    0, 4, 3, "daisy.jpg", 0, 1, 4.0), // 1024x1024
 texture_t(0, 5, 0,    0,    1, 3, 1, "lava.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "brickwork.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    1, 3, 1, "normal_maps/brickwork_normal.jpg", 0, 0, 1.0, 1.0, 1), // 512x512, no compress
+//texture_t(0, 6, 0,    0,    1, 3, 1, "stone_blocks.png"), // 512x512
+//texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/stone_blocks_normal.png", 0, 0, 1.0, 1.0, 1), // 1024x1024, no compress
+//texture_t(0, 6, 0,    0,    1, 3, 1, "bricks_tan.png"), // 1024x1024
+//texture_t(0, 6, 0,    0,    1, 3, 1, "normal_maps/bricks_tan_norm.png", 0, 0, 1.0, 1.0, 1), // 1024x1024, no compress
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
+
+vector<texture_t> textures;
 
 
 // zval should depend on def_water_level and temperature
@@ -214,8 +220,10 @@ bool is_tex_disabled(int i) {
 void load_texture_names() {
 
 	if (!texture_name_map.empty()) return; // already loaded
+	textures.resize(sizeof(def_textures)/sizeof(texture_t));
 
-	for (int i = 0; i < NUM_TEXTURES; ++i) {
+	for (unsigned i = 0; i < textures.size(); ++i) {
+		textures[i] = def_textures[i];
 		if (is_tex_disabled(i)) continue; // skip
 		//assert(texture_name_map.find(textures[i].name) == texture_name_map.end());
 		texture_name_map[textures[i].name] = i; // multiply used textures such as sky.raw will be overwritten
@@ -244,10 +252,10 @@ void load_textures() {
 	if (using_custom_landscape_texture()) {set_landscape_texture_from_file();} // must be done first
 	load_texture_names();
 
-	for (int i = 0; i < NUM_TEXTURES; ++i) {
+	for (unsigned i = 0; i < textures.size(); ++i) {
 		cout.flush();
 		cout << ".";
-		if (!is_tex_disabled(i)) textures[i].load(i);
+		if (!is_tex_disabled(i)) {textures[i].load(i);}
 	}
 	cout << endl;
 	textures[BULLET_D_TEX].merge_in_alpha_channel(textures[BULLET_A_TEX]);
@@ -268,7 +276,7 @@ void load_textures() {
 		gen_tree_hemi_texture();
 		gen_tree_end_texture();
 	}
-	for (int i = 0; i < NUM_TEXTURES; ++i) {
+	for (unsigned i = 0; i < textures.size(); ++i) {
 		if (is_tex_disabled(i)) continue; // skip
 		textures[i].init();
 	}
@@ -291,7 +299,7 @@ int get_texture_by_name(string const &name) {
 
 	if (it == texture_name_map.end()) {
 		std::cerr << "Invalid texture name: " << name << endl;
-		exit(0);
+		exit(1);
 	}
 	return it->second;
 }
@@ -304,7 +312,7 @@ void check_init_texture(int id) {
 void force_upload_all_textures() {
 
 	RESET_TIME;
-	for (int i = 0; i < NUM_TEXTURES; ++i) {check_init_texture(i);}
+	for (unsigned i = 0; i < textures.size(); ++i) {check_init_texture(i);}
 	PRINT_TIME("All Texture Upload"); // 8s
 	// bind none at end?
 }
@@ -314,7 +322,7 @@ bool select_texture(int id) {
 
 	bool const no_tex(id < 0);
 	if (no_tex) {id = WHITE_TEX;} //glBindTexture(GL_TEXTURE_2D, 0); // bind to none
-	assert(id < NUM_TEXTURES);
+	assert((unsigned)id < textures.size());
 	check_init_texture(id);
 	textures[id].bind_gl();
 	return !no_tex;
@@ -324,13 +332,13 @@ bool select_texture(int id) {
 float get_tex_ar(int id) {
 
 	if (id < 0) return 0;
-	assert(id < NUM_TEXTURES);
+	assert((unsigned)id < textures.size());
 	return (((double)textures[id].width)/((double)textures[id].height));
 }
 
 
 void free_textures() {
-	for (int i = 0; i < NUM_TEXTURES; ++i) {textures[i].gl_delete();}
+	for (unsigned i = 0; i < textures.size(); ++i) {textures[i].gl_delete();}
 }
 
 
@@ -597,16 +605,13 @@ void texture_t::set_to_color(colorRGBA const &c) {
 
 
 colorRGBA texture_color(int tid) {
-
 	if (tid < 0) {return WHITE;} // ???
-	assert(tid >= 0 && tid < NUM_TEXTURES);
+	assert(tid >= 0 && (unsigned)tid < textures.size());
 	return textures[tid].get_avg_color();
 }
 
-
 unsigned get_texture_size(int tid, bool dim) {
-
-	assert(tid >= 0 && tid < NUM_TEXTURES);
+	assert(tid >= 0 && (unsigned)tid < textures.size());
 	return (dim ? textures[tid].height : textures[tid].width);
 }
 
@@ -697,10 +702,7 @@ void texture_t::do_invert_y() {
 		
 	for(unsigned i = 0; i < h2; ++i) {
 		unsigned const off1(i*wc), off2((height-i-1)*wc);
-			
-		for(unsigned j = 0; j < wc; ++j) {
-			swap(data[off1+j], data[off2+j]); // invert y
-		}
+		for(unsigned j = 0; j < wc; ++j) {swap(data[off1+j], data[off2+j]);} // invert y
 	}
 }
 
@@ -1766,21 +1768,17 @@ colorRGBA texture_t::get_texel(unsigned ix) const {
 
 
 float texture_t::get_component(float u, float v, int comp) const {
-
 	assert(comp < ncolors);
 	return data[ncolors*get_texel_ix(u, v) + comp]/255.0;
 }
 
-
 float get_texture_component(unsigned tid, float u, float v, int comp) {
-
-	assert(tid < NUM_TEXTURES);
+	assert(tid < textures.size());
 	return textures[tid].get_component(u, v, comp);
 }
 
 colorRGBA get_texture_color(unsigned tid, float u, float v) {
-
-	assert(tid < NUM_TEXTURES);
+	assert(tid < textures.size());
 	return textures[tid].get_texel(u, v);
 }
 
