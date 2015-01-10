@@ -235,12 +235,16 @@ B 0.7 0.8  0.3 1.5 -0.03 0.05
 
 
 y 3.0
-# Outside Walls Top
 # Note" texture 3 with pink stucco looks interesting
 #l 0.9 1.0 1.0 1.0 1.0 16 1 # old brick
 #l 0.9 0.8 0.5 0.5 1.0 5 1 # new brick
 l 0.9 0.8 0.5 0.5 1.0 brickwork.jpg 1 # brick with normal map
 X normal_maps/brickwork_normal.jpg # normal map test
+#l 0.9 0.8 0.5 0.5 1.0 bricks_tan.png 1 # brick with normal map
+#X normal_maps/bricks_tan_norm.png # normal map test
+J outside_brick # define brick material
+
+# Outside Walls Top
 e 11
 B -1.8  -0.4 -2.0 -1.9 0.0   0.71 1 # Front Driveway Wall
 e 35
@@ -353,12 +357,7 @@ B 0.15 0.29 -1.51 -1.5 0.25 0.625 # Shutters
 B 0.91 1.05 -1.51 -1.5 0.25 0.625
 e 0
 
-y 3.0
-#l 0.9 1.0 1.0 1.0 1.0 16 1 # old brick
-#l 0.9 0.8 0.5 0.5 1.0 5 1 # new brick
-l 0.9 0.8 0.5 0.5 1.0 brickwork.jpg 1 # brick with normal map
-X normal_maps/brickwork_normal.jpg # normal map test
-
+j outside_brick
 B 0.3 0.9 -1.65 -1.5 0.1 0.225  # Seat on Front Porch
 
 # Outside Walls Bottom
@@ -392,10 +391,7 @@ B -1.76 -1.74 -1.67 -1.47 -0.2 -0.1
 r 0.0 1.0 # reset specularity
 a 1 # destroyable
 
-#l 0.9 1.0 1.0 1.0 1.0 16 1 # old brick
-#l 0.9 0.8 0.5 0.5 1.0 5 1 # new brick
-l 0.9 0.8 0.5 0.5 1.0 brickwork.jpg 1 # brick with normal map
-X normal_maps/brickwork_normal.jpg # normal map test
+j outside_brick
 
 # Chimney
 B 1.2 1.4 -0.5  -0.2  -0.7  1.2

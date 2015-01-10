@@ -981,12 +981,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector3d tv0, vel;
 	polygon_t poly;
 	vector<coll_tquad> ppts;
-
 	// tree state
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
 	bool enable_leaf_wind(1);
+	typedef map<string, cobj_params> material_map_t;
+	material_map_t materials;
 	
-	while (!end) { // available: uz JKUV
+	while (!end) { // available: dhkouz KUV
 		assert(fp != NULL);
 		int letter(getc(fp));
 		
@@ -1179,19 +1180,6 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			use_z = (fscanf(fp, "%f", &pos.z) == 1);
 			xf.xform_pos(pos);
 			add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
-			break;
-
-		case 'h': // place srock: xpos ypos size
-			// write
-			break;
-		case 'o': // place rock: xpos ypos size
-			// write
-			break;
-		case 'j': // place stump: xpos ypos radius height
-			// write
-			break;
-		case 'k': // place log: xpos1 ypos1 xpos2 ypos2 radius
-			// write
 			break;
 
 		case 'A': // appearance spot: xpos ypos [zpos]
@@ -1484,11 +1472,6 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'd': // define variable *** WRITE ***
-			cout << "Error: Variable definitions are not yet supported." << endl;
-			fclose(fp);
-			return 0;
-
 		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name draw [refract_ix [light_atten]]
 			if (fscanf(fp, "%f%f%f%f%f%255s%i", &cobj.cp.elastic, &cobj.cp.color.R, &cobj.cp.color.G,
 				&cobj.cp.color.B, &cobj.cp.color.A, str, &ivals[0]) != 7)
@@ -1503,6 +1486,23 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			cobj.cp.light_atten = 0.0; // default
 			fscanf(fp, "%f", &cobj.cp.refract_ix ); // optional
 			fscanf(fp, "%f", &cobj.cp.light_atten); // optional
+			break;
+
+		case 'j': // restore material <name>
+			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "restore material name", coll_obj_file);}
+			{
+				material_map_t::const_iterator it(materials.find(str));
+				if (it == materials.end()) {
+					cout << "*** Error: material '" << str << "' not defined in file '" << coll_obj_file << "'. ***" << endl;
+					fclose(fp);
+					return 0;
+				}
+				cobj.cp = it->second;
+			}
+			break;
+		case 'J': // save material <name>
+			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "save material name", coll_obj_file);}
+			materials[str] = cobj.cp; // Note: okay to overwrite/redefine a material
 			break;
 
 		case 'X': // normal map texture id/name
