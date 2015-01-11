@@ -2,8 +2,6 @@ TT mode underwater seaweed/grass
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
-http://www.decarpentier.nl/scape-procedural-extensions
-
 Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD - use mesh simplification
@@ -13,8 +11,6 @@ Bindless texture support on Nvidia GPUs: http://developer.download.nvidia.com/op
 More cobj normal maps (mapx cblocks)
 Instanced rocks in ground mode - similar to asteroids
 Use SDL?
-Voxels on the GPU? Noise eval, marching cubes, normals, AO, etc.
-
-God rays between clouds in TT rain mode
+Voxel noise eval on the GPU?
 Displacement mapping on asteroids using tess shader
 Only load textures during use
