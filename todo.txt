@@ -1,4 +1,3 @@
-TT mode underwater seaweed/grass
 Draw more distant tiles (larger/lower res at high delta-z)
   - Allow tiles to have dynamic step size (> DX_VAL/DY_VAL)
 
@@ -7,10 +6,7 @@ Load/display model3d models in tiled terrain mode
   - Model LOD - use mesh simplification
 
 GLSL subroutine: http://www.g-truc.net/post-0269.html
-Bindless texture support on Nvidia GPUs: http://developer.download.nvidia.com/opengl/tutorials/bindless_graphics.pdf
 More cobj normal maps (mapx cblocks)
-Instanced rocks in ground mode - similar to asteroids
 Use SDL?
 Voxel noise eval on the GPU?
 Displacement mapping on asteroids using tess shader
-Only load textures during use

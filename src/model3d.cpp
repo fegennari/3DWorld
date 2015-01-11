@@ -1370,11 +1370,12 @@ bool geom_xform_t::operator==(geom_xform_t const &x) const {
 }
 
 void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: RM ignored
+	// Note: since pdu's don't have an xform matrix, and don't track applied xforms, we must do the translate first
 	assert(scale != 0.0);
+	pdu.translate(-tv);
 	pdu.scale(1.0/fabs(scale)); // FIXME: what to do about negative scales?
 	//pdu.rotate(axis, -angle); // incorrect - we want to rotate about the model's origin, not the frustum/camera origin
 	if (angle != 0.0) {pdu.valid = 0;} // since we can't transform the pdu correctly, we give up and disable using it for VFC
-	pdu.translate(-tv);
 }
 
 cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const {
@@ -1737,7 +1738,10 @@ void render_models(bool shadow_pass, vector3d const &xlate) {
 }
 
 void add_transform_for_cur_model(model3d_xform_t const &xf) {
-	assert(!all_models.empty());
+	if (all_models.empty()) {
+		cerr << "No current model to transform" << endl;
+		exit(1);
+	}
 	all_models.back().add_transform(xf);
 }
 
