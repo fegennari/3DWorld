@@ -268,23 +268,41 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 		ngen.gen_sines(mag, freq); // create sine table
 		ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
 	}
-	else if (gen_mode == 3) { // GPU simplex
-		for (int y = 0; y < (int)ny; ++y) { // generate voxel values
-			for (unsigned x = 0; x < nx; ++x) {
-				for (unsigned z = 0; z < nz; ++z) {
-					float val(0.0);
-					// FIXME: WRITE
+	else {
+		gen_rx_ry(rx, ry);
+	}
+	if (gen_mode == 3) { // GPU simplex
+		RESET_TIME;
+		unsigned tid(0);
+		compute_shader_t cshader("gen_voxel_weights", nx, ny);
+		cshader.begin();
+		cshader.add_uniform_vector3d("offset", (offset + lo_pos));
+		cshader.add_uniform_vector3d("scale",  vector3d(vsz.x*nx, vsz.y*ny, vsz.z)); // Note: only x and y are scaled
+		cshader.add_uniform_float("start_mag",  mag);
+		cshader.add_uniform_float("start_freq", 0.25*freq);
+		cshader.add_uniform_float("rx", rx);
+		cshader.add_uniform_float("ry", ry);
+		vector<float> vals;
+
+		// compute values in z-slices - slow due to cache misses in the set() call due to different matrix ordering
+		for (unsigned z = 0; z < nz; ++z) {
+			cshader.add_uniform_float("zval", z);
+			cshader.gen_matrix_R32F(vals, tid, (z == 0), (z+1 == nz));
+
+			#pragma omp parallel for schedule(static,1) // ~2x faster
+			for (int y = 0; y < (int)ny; ++y) { // generate voxel values
+				for (unsigned x = 0; x < nx; ++x) {
+					float val(vals[nx*y + x] + z*zscale);
+					if (normalize_to_1) {val = CLIP_TO_pm1(val);}
 					set(x, y, z, val);
 				}
 			}
 		}
+		cshader.end_shader();
+		free_texture(tid);
 		return;
 	}
-	else {
-		gen_rx_ry(rx, ry);
-	}
-
-	#pragma omp parallel for schedule(dynamic,1)
+	#pragma omp parallel for schedule(static,1)
 	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
 		for (unsigned x = 0; x < nx; ++x) {
 			for (unsigned z = 0; z < nz; ++z) {

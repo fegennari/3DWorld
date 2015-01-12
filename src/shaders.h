@@ -161,6 +161,27 @@ public:
 };
 
 
+class compute_shader_t : public shader_t {
+
+	unsigned xsize, ysize, fbo_id;
+	string frag_shader_str;
+
+	void draw_geom() const;
+
+public:
+	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
+	  xsize(xsize_), ysize(ysize_), fbo_id(0), frag_shader_str(fstr) {
+		assert(xsize > 0 && ysize > 0);
+	}
+	void begin();
+	void pre_run();
+	void post_run();
+	void run(unsigned &tid);
+	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
+	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
+};
+
+
 template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 
 	static void enable(int start_loc, int divisor, float const *const data=NULL) {

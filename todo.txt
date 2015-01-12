@@ -8,5 +8,4 @@ Load/display model3d models in tiled terrain mode
 GLSL subroutine: http://www.g-truc.net/post-0269.html
 More cobj normal maps (mapx cblocks)
 Use SDL?
-Voxel noise eval on the GPU?
 Displacement mapping on asteroids using tess shader

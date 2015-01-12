@@ -889,6 +889,7 @@
     <None Include="shaders\fog_only.frag" />
     <None Include="shaders\fog_only.vert" />
     <None Include="shaders\fresnel.part" />
+    <None Include="shaders\gen_voxel_weights.frag" />
     <None Include="shaders\glsl_sandbox_planet.frag" />
     <None Include="shaders\glsl_sandbox_terrain.frag" />
     <None Include="shaders\grass_pp_dl.vert" />

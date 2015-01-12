@@ -976,106 +976,105 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 
 
 // compute shader
-class compute_shader_t : public shader_t {
 
-	unsigned xsize, ysize, fbo_id;
-	string frag_shader_str;
+// factored out so that we can make it virtual and override it in the future
+void compute_shader_t::draw_geom() const {
+	float const z = 0.0;
+	bind_vao(0); // bind default VBO in core_context mode - required since this is called outside the display() loop
+	vert_wrap_t verts[4] = {point(0,0,z), point(0,1,z), point(1,1,z), point(1,0,z)};
+	draw_verts(verts, 4, GL_TRIANGLE_FAN); // one quad from [0,0] to [1,1] that exactly covers the viewport
+}
 
-	void draw_geom() const { // factored out so that we can make it virtual and override it in the future
-		float const z = 0.0;
-		bind_vao(0); // bind default VBO in core_context mode - required since this is called outside the display() loop
-		vert_wrap_t verts[4] = {point(0,0,z), point(0,1,z), point(1,1,z), point(1,0,z)};
-		draw_verts(verts, 4, GL_TRIANGLE_FAN); // one quad from [0,0] to [1,1] that exactly covers the viewport
-	}
 
-public:
-	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
-	  xsize(xsize_), ysize(ysize_), fbo_id(0), frag_shader_str(fstr) {
-		assert(xsize > 0 && ysize > 0);
-	}
-	void begin() {
-		set_vert_shader("vert_xform_vpos");
-		set_frag_shader(frag_shader_str);
-		begin_shader();
-	}
-	void pre_run() { // call once before run() calls
-		// setup matrices
-		glViewport(0, 0, xsize, ysize);
-		fgMatrixMode(FG_PROJECTION);
-		fgPushMatrix();
-		fgLoadIdentity();
-		fgOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0); // [0,0] to [1,1]
-		fgMatrixMode(FG_MODELVIEW);
-		fgPushMatrix();
-		fgLoadIdentity();
-	}
-	void post_run() { // call once after run() calls
-		free_fbo(fbo_id);
-		disable_fbo();
-		// restore state
-		fgPopMatrix();
-		fgMatrixMode(FG_PROJECTION);
-		fgPopMatrix();
-		fgMatrixMode(FG_MODELVIEW);
-		set_standard_viewport();
-	}
-	void run(unsigned &tid) { // call N times between pre_run() and post_run() calls
-		// setup fbo and draw geometry
-		enable_fbo(fbo_id, tid, 0);
-		set_temp_clear_color(BLACK);
-		ensure_filled_polygons();
-		draw_geom();
-		reset_fill_mode();
-	}
-	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1) { // tid may or may not be setup prior to this call
-		if (tid == 0) {
-			setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, xsize, ysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		}
-		if (is_first) {pre_run();}
-		run(tid);
-		vals.resize(xsize*ysize);
-		vector<unsigned char> data(4*vals.size());
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
-		glReadPixels(0, 0, xsize, ysize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // GL_BGRA?
+void compute_shader_t::begin() {
+	set_vert_shader("vert_xform_vpos");
+	set_frag_shader(frag_shader_str);
+	begin_shader();
+}
 
-		for (unsigned y = 0; y < ysize; ++y) {
-			for (unsigned x = 0; x < xsize; ++x) {
-				unsigned const ix(y*xsize + x);
-				vals[ix] = data[ix<<2]; // red component [0.0, 1.0)
-			}
-		}
-		if (is_last) {post_run();}
-	}
-	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1) { // tid may or may not be setup prior to this call
-		if (tid == 0) {
-			setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, xsize, ysize, 0, GL_RED, GL_FLOAT, NULL);
-		}
-		if (is_first) {pre_run();}
-		run(tid);
-		vals.resize(xsize*ysize);
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
+void compute_shader_t::pre_run() { // call once before run() calls
+	// setup matrices
+	glViewport(0, 0, xsize, ysize);
+	fgMatrixMode(FG_PROJECTION);
+	fgPushMatrix();
+	fgLoadIdentity();
+	fgOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0); // [0,0] to [1,1]
+	fgMatrixMode(FG_MODELVIEW);
+	fgPushMatrix();
+	fgLoadIdentity();
+}
 
-		if (1) { // Note: slower on old cards, faster on new ones
-			unsigned const pbo_size(xsize*ysize*sizeof(float));
-			unsigned pbo(0);
-			glGenBuffers(1, &pbo);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-			glBufferData(GL_PIXEL_PACK_BUFFER, pbo_size, NULL, GL_STREAM_READ);
-			glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, nullptr);
-			void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT);
-			memcpy((void *)&vals.front(), ptr, pbo_size);
-			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-			glDeleteBuffers(1, &pbo);
-		}
-		else {
-			glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
-		}
-		if (is_last) {post_run();}
+void compute_shader_t::post_run() { // call once after run() calls
+	free_fbo(fbo_id);
+	disable_fbo();
+	// restore state
+	fgPopMatrix();
+	fgMatrixMode(FG_PROJECTION);
+	fgPopMatrix();
+	fgMatrixMode(FG_MODELVIEW);
+	set_standard_viewport();
+}
+
+void compute_shader_t::run(unsigned &tid) { // call N times between pre_run() and post_run() calls
+	// setup fbo and draw geometry
+	enable_fbo(fbo_id, tid, 0);
+	set_temp_clear_color(BLACK);
+	ensure_filled_polygons();
+	draw_geom();
+	reset_fill_mode();
+}
+
+// tid may or may not be setup prior to this call
+void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
+	if (tid == 0) {
+		setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, xsize, ysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
-};
+	if (is_first) {pre_run();}
+	run(tid);
+	vals.resize(xsize*ysize);
+	vector<unsigned char> data(4*vals.size());
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glReadPixels(0, 0, xsize, ysize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // GL_BGRA?
+
+	for (unsigned y = 0; y < ysize; ++y) {
+		for (unsigned x = 0; x < xsize; ++x) {
+			unsigned const ix(y*xsize + x);
+			vals[ix] = data[ix<<2]; // red component [0.0, 1.0)
+		}
+	}
+	if (is_last) {post_run();}
+}
+
+// tid may or may not be setup prior to this call
+void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
+	if (tid == 0) {
+		setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, xsize, ysize, 0, GL_RED, GL_FLOAT, NULL);
+	}
+	if (is_first) {pre_run();}
+	run(tid);
+	vals.resize(xsize*ysize);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+	if (1) { // Note: slower on old cards, faster on new ones
+		unsigned const pbo_size(xsize*ysize*sizeof(float));
+		unsigned pbo(0);
+		glGenBuffers(1, &pbo);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+		glBufferData(GL_PIXEL_PACK_BUFFER, pbo_size, NULL, GL_STREAM_READ);
+		glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, nullptr);
+		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT);
+		memcpy((void *)&vals.front(), ptr, pbo_size);
+		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		glDeleteBuffers(1, &pbo);
+	}
+	else {
+		glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
+	}
+	if (is_last) {post_run();}
+}
 
 
 // returns heights in approximately [-1,1] range

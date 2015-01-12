@@ -128,6 +128,7 @@ public:
 		size_t const old_size(cobjs.size());
 		if (old_size >= size) return; // already large enough
 		size_t const new_size(max(size, 2*old_size)); // prevent small incremental reserves
+		//cout << "Resizing cojs vector from " << old_size << " to " << new_size << endl;
 		cobjs.resize(new_size);
 		extend_index_stack(old_size, new_size);
 	}
