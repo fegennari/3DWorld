@@ -261,16 +261,28 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	vector<float> xyz_vals[3];
 	noise_gen_3d ngen;
 	float rx, ry;
+	float const zscale((params.invert ? -1.0 : 1.0)*params.z_gradient/(nz-1));
 
 	if (gen_mode == 0) {
 		ngen.set_rand_seeds(rseed1, rseed2);
 		ngen.gen_sines(mag, freq); // create sine table
 		ngen.gen_xyz_vals((lo_pos + offset), vsz, xyz_num, xyz_vals); // create xyz values
 	}
+	else if (gen_mode == 3) { // GPU simplex
+		for (int y = 0; y < (int)ny; ++y) { // generate voxel values
+			for (unsigned x = 0; x < nx; ++x) {
+				for (unsigned z = 0; z < nz; ++z) {
+					float val(0.0);
+					// FIXME: WRITE
+					set(x, y, z, val);
+				}
+			}
+		}
+		return;
+	}
 	else {
 		gen_rx_ry(rx, ry);
 	}
-	float const zscale((params.invert ? -1.0 : 1.0)*params.z_gradient/(nz-1));
 
 	#pragma omp parallel for schedule(dynamic,1)
 	for (int y = 0; y < (int)ny; ++y) { // generate voxel values
@@ -530,10 +542,16 @@ unsigned voxel_manager::add_triangles_for_voxel(tri_data_t::value_type &tri_vert
 }
 
 
+ // Note: val == isolevel is treated as outside to avoid numerical issues
+bool val_is_outside(float val, voxel_params_t const &params) {
+	return ((val == params.isolevel) ? 1 : (((val < params.isolevel) ^ params.invert) ? 1 : 0));
+}
+
+
 void voxel_manager::calc_outside_val(unsigned x, unsigned y, unsigned z, bool is_under_mesh) {
 
 	bool const on_edge(params.make_closed_surface && ((x == 0 || x == nx-1) || (y == 0 || y == ny-1) || (z == 0 || z == nz-1)));
-	unsigned char ival(on_edge? ON_EDGE_BIT : (((get(x, y, z) < params.isolevel) ^ params.invert) ? 1 : 0)); // on_edge is considered outside
+	unsigned char ival(on_edge ? ON_EDGE_BIT : val_is_outside(get(x, y, z), params)); // Note: on_edge is considered outside
 	if (is_under_mesh) {ival |= UNDER_MESH_BIT;}
 	outside.set(x, y, z, ival);
 }
@@ -1264,8 +1282,8 @@ bool voxel_model::update_voxel_sphere_region(point const &center, float radius, 
 				if (val == prev_val) continue; // no change
 				calc_outside_val(x, y, z, ((outside.get(x, y, z) & UNDER_MESH_BIT) != 0));
 				was_updated = 1;
-				((val      < params.isolevel) ? saw_outside : saw_inside) = 1;
-				((prev_val < params.isolevel) ? saw_outside : saw_inside) = 1;
+				(val_is_outside(val,      params) ? saw_outside : saw_inside) = 1;
+				(val_is_outside(prev_val, params) ? saw_outside : saw_inside) = 1;
 				if (damage_pos) {*damage_pos = pos;}
 			}
 			if (!was_updated) continue;
