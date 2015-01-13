@@ -766,11 +766,10 @@ void set_sane_light_atten(shader_t *shader=nullptr) {
 	}
 }
 
-void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
+void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
 
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
 	if (shadow_mode) {s.set_prefix("#define SHADOW_ONLY_MODE", 1);} // FS
-	if (disint_tex ) {s.set_prefix("#define BURN_MASK_TEX",    1);} // FS
 	s.set_vert_shader("ship_draw");
 	s.set_frag_shader("ads_lighting.part*+black_body_burn.part+ship_draw");
 	s.begin_shader();
@@ -778,13 +777,12 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode, bool disint_tex) {
 	s.add_uniform_float("lum_scale",  0.0);
 	s.add_uniform_float("lum_offset", 0.0);
 	set_sane_light_atten(&s);
-
-	if (disint_tex) {
-		select_multitex(DISINT_TEX, 1);
-		s.add_uniform_int ("burn_mask", 1); // used instead of alpha_mask_tex
-		s.add_uniform_float("burn_offset",   -1.0);
-		s.add_uniform_float("burn_tex_scale", 1.0);
-	}
+	// burn mask stuff
+	select_multitex(DISINT_TEX, 1);
+	s.add_uniform_int ("burn_mask", 1); // used instead of alpha_mask_tex
+	s.add_uniform_float("burn_offset",   -1.0);
+	s.add_uniform_float("burn_tex_scale", 1.0);
+	s.set_subroutine(1, "no_op");
 }
 
 
@@ -871,10 +869,8 @@ void draw_univ_objects() {
 	emissive_shader.add_uniform_float("time", emissive_time);
 
 	// draw ubojs
-	bool disint_tex(0); // this is slow, so only enable if some ship is exploding and needs this mode
-	for (vector<ship_explosion>::const_iterator i = exploding.begin(); i != exploding.end(); ++i) {disint_tex |= i->disint_tex;}
-	setup_ship_draw_shader(s[1], 1, disint_tex); // shadow shader, system lighting only
-	setup_ship_draw_shader(s[0], 0, disint_tex); // normal shader with dynamic lights
+	setup_ship_draw_shader(s[1], 1); // shadow shader, system lighting only
+	setup_ship_draw_shader(s[0], 0); // normal shader with dynamic lights
 	disable_exp_lights(&s[0]); // make sure the explosion lights start out cleared
 	for (auto i = unsorted.begin(); i != unsorted.end(); ++i) {(*i)->draw_and_reset_lights(s);}
 	for (auto i = sorted.begin();   i != sorted.end();   ++i) {i->second->draw_and_reset_lights(s);}

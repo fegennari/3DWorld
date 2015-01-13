@@ -335,10 +335,9 @@ struct ship_explosion {
 
   float bradius, damage;
   point pos;
-  bool disint_tex;
   
-  ship_explosion() : bradius(0.0), damage(0.0), pos(all_zeros), disint_tex(0) {}
-  ship_explosion(float r, float d, point const &p, bool dt) : bradius(r), damage(d), pos(p), disint_tex(dt) {}
+  ship_explosion() : bradius(0.0), damage(0.0), pos(all_zeros) {}
+  ship_explosion(float r, float d, point const &p) : bradius(r), damage(d), pos(p) {}
 };
 
 

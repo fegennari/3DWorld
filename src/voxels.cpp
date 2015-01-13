@@ -317,7 +317,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 					val = ngen.get_val(pos);
 #endif
 				}
-				else { // GLM perlin/simplex (slow; GPU simplex not needed/supported)
+				else { // GLM perlin/simplex (slow)
 					point const pos(get_pt_at(x, y, z) + offset);
 					glm::vec3 const v(pos.x, pos.y, pos.z);
 					float nmag(mag), nfreq(0.25*freq);

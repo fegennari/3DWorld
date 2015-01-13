@@ -31,6 +31,12 @@ struct gl_light_params_t {
 };
 
 
+struct zi_unsigned_t {
+	unsigned v;
+	zi_unsigned_t() : v(0) {}
+};
+
+
 class shader_t {
 
 	unsigned program; // active program
@@ -39,6 +45,7 @@ class shader_t {
 	vector<int> attrib_locs;
 	string shader_names[NUM_SHADER_TYPES];
 	colorRGBA last_spec;
+	zi_unsigned_t subroutine0[NUM_SHADER_TYPES];
 
 	struct light_loc_t {
 		int v[5];
@@ -112,9 +119,12 @@ public:
 	bool set_uniform_buffer_data (char const *name, float const *data, unsigned size, unsigned &buffer_id) const;
 
 	unsigned get_subroutine_index(int shader_type, char const *const name) const;
+	unsigned get_subroutine_uniform_loc(int shader_type, char const *const name) const;
 	void set_subroutines(int shader_type, unsigned count, unsigned const *const indices);
 	void set_subroutines(int shader_type, vector<unsigned> const &indices) {set_subroutines(shader_type, indices.size(), &indices.front());}
-	void set_subroutine (int shader_type, unsigned index) {set_subroutines(shader_type, 1, &index);}
+	void set_subroutine (int shader_type, unsigned index);
+	void set_subroutine (int shader_type, char const *const name) {set_subroutine(shader_type, get_subroutine_index(shader_type, name));}
+	void restore_subroutine0();
 
 	int attrib_loc_by_ix(unsigned ix, bool allow_fail=0) const;
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;

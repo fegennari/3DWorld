@@ -8,6 +8,13 @@ in vec2 tc;
 in vec4 epos;
 in vec3 normal; // eye space
 
+subroutine void postproc_color(); // signature
+subroutine(postproc_color) void no_op() {}
+subroutine(postproc_color) void apply_burn_mask() {
+	if (burn_offset > -1.0) {fg_FragColor = apply_burn_mask(fg_FragColor, tc);} // slow
+}
+subroutine uniform postproc_color postproc_color_op;
+
 void main()
 {
 #ifdef ALPHA_MASK_TEX
@@ -28,7 +35,5 @@ void main()
 	color = mix(color, vec3(1.0), clamp(lum_scale*(texel.r + texel.g + texel.b + lum_offset), 0.0, 1.0));
 #endif
 	fg_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly
-#ifdef BURN_MASK_TEX
-	if (burn_offset > -1.0) {fg_FragColor = apply_burn_mask(fg_FragColor, tc);} // slow, conditional may or may not help
-#endif
+	postproc_color_op();
 }

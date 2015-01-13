@@ -1,4 +1,5 @@
 layout (points) in;
+//layout (points, invocations=2) in;
 layout (triangle_strip, max_vertices=4) out;
 
 uniform float size = 1.0;

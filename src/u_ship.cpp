@@ -623,7 +623,7 @@ bool u_ship::obstacle_avoid(vector3d &orient, float target_dist, bool sobjs_only
 ship_explosion u_ship::get_explosion() const {
 
 	float const size(get_def_explode_damage());
-	return ship_explosion(size*radius, EXPLOSION_DAMAGE*size*radius, pos, sclasses[sclass].exp_disint);
+	return ship_explosion(size*radius, EXPLOSION_DAMAGE*size*radius, pos);
 }
 
 
