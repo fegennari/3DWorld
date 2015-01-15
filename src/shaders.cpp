@@ -198,6 +198,7 @@ unsigned shader_t::get_subroutine_index(int shader_type, char const *const name)
 }
 
 unsigned shader_t::get_subroutine_uniform_loc(int shader_type, char const *const name) const {
+
 	assert(program && name);
 	assert(shader_type < NUM_SHADER_TYPES);
 	unsigned const ret(glGetSubroutineUniformLocation(program, shader_type_table[shader_type], name));
@@ -205,23 +206,52 @@ unsigned shader_t::get_subroutine_uniform_loc(int shader_type, char const *const
 	return ret;
 }
 
+void shader_t::set_all_subroutines(int shader_type, unsigned count, char const *const *const uniforms, char const *const *const bindings) {
+
+	assert(shader_type < NUM_SHADER_TYPES && count > 0 && uniforms != nullptr && bindings != nullptr);
+	subroutine_val_t &val(subroutines[shader_type]);
+	val.resize(count);
+	
+	for (unsigned i = 0; i < count; ++i) {
+		unsigned const loc(get_subroutine_uniform_loc(shader_type, uniforms[i]));
+		assert(loc < count);
+		val.ixs[loc] = get_subroutine_index(shader_type, bindings[i]);
+		val.name_to_ix[uniforms[i]] = loc; // check for 1:1 mapping between name/loc and count?
+	}
+	set_subroutines(shader_type, val.ixs);
+}
+
 void shader_t::set_subroutines(int shader_type, unsigned count, unsigned const *const indices) {
 
+	assert(program);
 	assert(shader_type < NUM_SHADER_TYPES && count > 0 && indices != nullptr);
 	int const stype(shader_type_table[shader_type]);
-	//assert(count == glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, v) && all_indices < glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINES, v));
+	//assert(count == glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, v));
+	//assert(all_indices < glGetProgramStageiv(program, stype, GL_ACTIVE_SUBROUTINES, v));
 	glUniformSubroutinesuiv(stype, count, indices);
 }
 
-void shader_t::set_subroutine(int shader_type, unsigned index) {
-	set_subroutines(shader_type, 1, &index);
-	subroutine0[shader_type].v = index + 1; // add one to make it always nonzero
+void shader_t::set_subroutine(int shader_type, unsigned index) { // single subroutine version
+
+	subroutine_val_t &val(subroutines[shader_type]);
+	val.resize(1); // must be empty or already size 1
+	val.ixs[0] = index; // what about val.name_to_ix?
+	set_subroutines(shader_type, val.ixs);
 }
 
-void shader_t::restore_subroutine0() {
-	for (unsigned s = 0; s < NUM_SHADER_TYPES; ++s) {
-		if (subroutine0[s].v > 0) {set_subroutine(s, subroutine0[s].v-1);}
-	}
+void shader_t::reset_subroutine(int shader_type, char const *const uniform, char const *const binding) {
+
+	assert(uniform != nullptr && binding != nullptr);
+	subroutine_val_t &val(subroutines[shader_type]);
+	auto it(val.name_to_ix.find(uniform));
+	assert(it != val.name_to_ix.end()); // name must be known
+	assert(it->second < val.ixs.size());
+	val.ixs[it->second] = get_subroutine_index(shader_type, binding); // cache this too?
+	set_subroutines(shader_type, val.ixs);
+}
+
+void shader_t::restore_subroutines() {
+	for (auto i = subroutines.begin(); i != subroutines.end(); ++i) {set_subroutines(i->first, i->second.ixs);}
 }
 
 
@@ -836,6 +866,7 @@ void shader_t::end_shader() { // ok to call if not in a shader
 	}
 	prog_name_prefix.clear();
 	attrib_locs.clear();
+	subroutines.clear();
 	last_spec = ALPHA0;
 }
 
@@ -844,7 +875,7 @@ void shader_t::make_current() {
 
 	assert(program);
 	glUseProgram(program);
-	restore_subroutine0();
+	restore_subroutines();
 	cur_shader = this;
 }
 

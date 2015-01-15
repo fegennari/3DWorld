@@ -15,6 +15,18 @@ subroutine(postproc_color) void apply_burn_mask() {
 }
 subroutine uniform postproc_color postproc_color_op;
 
+subroutine void do_lighting(inout vec3 color, in vec4 texel, in vec3 n); // signature
+
+subroutine(do_lighting) void shadow_only(inout vec3 color, in vec4 texel, in vec3 n) {
+	color += add_pt_light_comp(n, epos, 0).rgb; // light 0 is the system light
+}
+subroutine(do_lighting) void normal_lighting(inout vec3 color, in vec4 texel, in vec3 n) {
+	for (int i = 0; i < 8; ++i) {color += add_pt_light_comp(n, epos, i).rgb;}
+	// add other emissive term based on texture luminance
+	color = mix(color, vec3(1.0), clamp(lum_scale*(texel.r + texel.g + texel.b + lum_offset), 0.0, 1.0));
+}
+subroutine uniform do_lighting do_lighting_op;
+
 void main()
 {
 #ifdef ALPHA_MASK_TEX
@@ -27,13 +39,7 @@ void main()
 	//if (texel.a <= min_alpha) discard; // slow
 	vec3 n = (gl_FrontFacing ? normalize(normal) : -normalize(normal)); // two-sided lighting
 	vec3 color = emission.rgb;
-#ifdef SHADOW_ONLY_MODE
-	color += add_pt_light_comp(n, epos, 0).rgb; // light 0 is the system light
-#else
-	for (int i = 0; i < 8; ++i) {color += add_pt_light_comp(n, epos, i).rgb;}
-	// add other emissive term based on texture luminance
-	color = mix(color, vec3(1.0), clamp(lum_scale*(texel.r + texel.g + texel.b + lum_offset), 0.0, 1.0));
-#endif
+	do_lighting_op(color, texel, n);
 	fg_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly
 	postproc_color_op();
 }

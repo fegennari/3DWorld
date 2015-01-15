@@ -304,14 +304,14 @@ void uobj_draw_data::setup_exp_scale() const {
 void uobj_draw_data::setup_exp_texture() const {
 	if (shader && t_exp > 0.0) { // drops from 1.0 to 0.0 (burn offset -0.75 to 0.5)
 		shader->add_uniform_float("burn_offset", (-0.75*t_exp + 0.5*(1.0 - t_exp)));
-		shader->set_subroutine(1, "apply_burn_mask");
+		shader->reset_subroutine(1, "postproc_color_op", "apply_burn_mask");
 	}
 }
 
 void uobj_draw_data::end_exp_texture() const {
 	if (shader && t_exp > 0.0) {
 		shader->add_uniform_float("burn_offset", -1.0);
-		shader->set_subroutine(1, "no_op");
+		shader->reset_subroutine(1, "postproc_color_op", "no_op");
 	}
 }
 

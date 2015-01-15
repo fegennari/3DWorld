@@ -769,7 +769,6 @@ void set_sane_light_atten(shader_t *shader=nullptr) {
 void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
 
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
-	if (shadow_mode) {s.set_prefix("#define SHADOW_ONLY_MODE", 1);} // FS
 	s.set_vert_shader("ship_draw");
 	s.set_frag_shader("ads_lighting.part*+black_body_burn.part+ship_draw");
 	s.begin_shader();
@@ -782,7 +781,9 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
 	s.add_uniform_int ("burn_mask", 1); // used instead of alpha_mask_tex
 	s.add_uniform_float("burn_offset",   -1.0);
 	s.add_uniform_float("burn_tex_scale", 1.0);
-	s.set_subroutine(1, "no_op");
+	char const *uniforms[] = {"postproc_color_op", "do_lighting_op"};
+	char const *bindings[] = {"no_op", (shadow_mode ? "shadow_only" : "normal_lighting")};
+	s.set_all_subroutines(1, 2, uniforms, bindings);
 }
 
 

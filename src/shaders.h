@@ -45,7 +45,6 @@ class shader_t {
 	vector<int> attrib_locs;
 	string shader_names[NUM_SHADER_TYPES];
 	colorRGBA last_spec;
-	zi_unsigned_t subroutine0[NUM_SHADER_TYPES];
 
 	struct light_loc_t {
 		int v[5];
@@ -55,6 +54,14 @@ class shader_t {
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
 	int vnct_locs[4]; // {vertex, normal, color, tex_coord}
+
+	struct subroutine_val_t {
+		vector<unsigned> ixs;
+		map<string, unsigned> name_to_ix;
+		void resize(unsigned sz) {assert(ixs.size() == 0 || ixs.size() == sz); ixs.resize(sz, 0);}
+	};
+	typedef map<unsigned, subroutine_val_t> subroutine_map_t;
+	subroutine_map_t subroutines;
 
 	int pm_loc, mvm_loc, mvmi_loc, mvpm_loc, nm_loc; // matrices
 
@@ -120,11 +127,13 @@ public:
 
 	unsigned get_subroutine_index(int shader_type, char const *const name) const;
 	unsigned get_subroutine_uniform_loc(int shader_type, char const *const name) const;
+	void set_all_subroutines(int shader_type, unsigned count, char const *const *const uniforms, char const *const *const bindings);
 	void set_subroutines(int shader_type, unsigned count, unsigned const *const indices);
 	void set_subroutines(int shader_type, vector<unsigned> const &indices) {set_subroutines(shader_type, indices.size(), &indices.front());}
-	void set_subroutine (int shader_type, unsigned index);
+	void set_subroutine (int shader_type, unsigned index); // single subroutine
 	void set_subroutine (int shader_type, char const *const name) {set_subroutine(shader_type, get_subroutine_index(shader_type, name));}
-	void restore_subroutine0();
+	void reset_subroutine(int shader_type, char const *const uniform, char const *const binding); // one of multiple
+	void restore_subroutines();
 
 	int attrib_loc_by_ix(unsigned ix, bool allow_fail=0) const;
 	int get_attrib_loc(char const *const name, bool allow_fail=0) const;
