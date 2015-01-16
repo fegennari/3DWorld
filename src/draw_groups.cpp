@@ -794,7 +794,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 	dwobject const &obj(objg.get_obj(j));
 	point pos(obj.pos);
 	vector<wap_obj> wap_vis_objs[2]; // not actually used
-	int const atype(BEAM);//get_ammo_or_obj((int)obj.direction));
+	int const atype(get_ammo_or_obj((int)obj.direction));
 	if (atype < 0) return; // can this happen?
 	obj_type const &otype(object_types[atype]);
 	check_drawing_flags(otype.flags, 1, shader);
