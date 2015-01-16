@@ -766,7 +766,7 @@ void set_sane_light_atten(shader_t *shader=nullptr) {
 	}
 }
 
-void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
+void setup_ship_draw_shader(shader_t &s) {
 
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
 	s.set_vert_shader("ship_draw");
@@ -782,7 +782,7 @@ void setup_ship_draw_shader(shader_t &s, bool shadow_mode) {
 	s.add_uniform_float("burn_offset",   -1.0);
 	s.add_uniform_float("burn_tex_scale", 1.0);
 	char const *uniforms[] = {"postproc_color_op", "do_lighting_op"};
-	char const *bindings[] = {"no_op", (shadow_mode ? "shadow_only" : "normal_lighting")};
+	char const *bindings[] = {"no_op", "normal_lighting"};
 	s.set_all_subroutines(1, 2, uniforms, bindings);
 }
 
@@ -852,7 +852,6 @@ void draw_univ_objects() {
 	}
 	sort(sorted.begin(), sorted.end()); // sort uobjs by distance to camera
 	//PRINT_TIME("Sort");
-	shader_t s[2];
 	select_texture(WHITE_TEX); // always textured (see end_texture())
 	enable_blend(); // doesn't hurt
 
@@ -870,9 +869,9 @@ void draw_univ_objects() {
 	emissive_shader.add_uniform_float("time", emissive_time);
 
 	// draw ubojs
-	setup_ship_draw_shader(s[1], 1); // shadow shader, system lighting only
-	setup_ship_draw_shader(s[0], 0); // normal shader with dynamic lights
-	disable_exp_lights(&s[0]); // make sure the explosion lights start out cleared
+	shader_t s;
+	setup_ship_draw_shader(s);
+	disable_exp_lights(&s); // make sure the explosion lights start out cleared
 	for (auto i = unsorted.begin(); i != unsorted.end(); ++i) {(*i)->draw_and_reset_lights(s);}
 	for (auto i = sorted.begin();   i != sorted.end();   ++i) {i->second->draw_and_reset_lights(s);}
 	emissive_shader.end_shader();
@@ -884,10 +883,10 @@ void draw_univ_objects() {
 		point sun_pos; // unused
 		uobject const *sobj(NULL); // unused
 		set_uobj_color(camera, 0.0, 0, 1, sun_pos, sobj, 2.0, 2.0, NULL); // increased ambient scale
-		s[0].enable();
+		s.enable();
 		particle_pld.draw_and_clear();
 	}
-	s[0].end_shader();
+	s.end_shader();
 	glDepthMask(GL_FALSE);
 	glow_psd.draw_and_clear(BLUR_TEX); // uses a point sprite shader internally
 	glDepthMask(GL_TRUE);

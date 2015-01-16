@@ -5,7 +5,6 @@ Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD - use mesh simplification
 
-GLSL subroutine: http://www.g-truc.net/post-0269.html
 More cobj normal maps (mapx cblocks)
-Use SDL?
 Displacement mapping on asteroids using tess shader
+Use SDL?

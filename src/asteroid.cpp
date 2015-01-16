@@ -123,7 +123,7 @@ public:
 		end_texture();
 		draw_sphere_vbo(all_zeros, 1.0, 3*ddata.ndiv/2, 0); // ndiv may be too large to use a vbo
 		s.disable();
-		if (ddata.final_pass && ddata.shader->is_setup()) {ddata.shader->make_current();}
+		if (ddata.shader->is_setup()) {ddata.shader->make_current();}
 	}
 };
 
@@ -364,11 +364,8 @@ public:
 		glDisable(GL_CULL_FACE);
 		if (!ddata.first_pass) {s.add_uniform_float("depth_bias", 0.0);}
 		s.disable();
-
-		if (ddata.final_pass) {
-			if (ddata.shader->is_setup()) {ddata.shader->make_current();}
-			end_texture();
-		}
+		if (ddata.shader->is_setup()) {ddata.shader->make_current();}
+		if (ddata.final_pass) {end_texture();}
 	}
 
 	virtual bool apply_damage(float damage, point &hit_pos) {
