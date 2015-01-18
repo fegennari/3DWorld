@@ -277,6 +277,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube
 		pos_dir_up const camera_pdu_(camera_pdu);
 		camera_pdu     = pdu;
 		enabled_lights = 0; // disable lighting so that shaders that auto-detect enabled lights don't try to do lighting
+		ensure_filled_polygons();
 		// render the scene
 		check_gl_error(202);
 		render_scene_shadow_pass(lpos);
@@ -286,6 +287,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube
 		disable_fbo();
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		set_standard_viewport();
+		set_fill_mode();
 	}
 	
 	// reset state
