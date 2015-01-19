@@ -2764,40 +2764,6 @@ void u_ship::draw_obj(uobj_draw_data &ddata) const { // front is in -z
 }
 
 
-// ************ ATTACHED_SHIP ************
-
-
-void attached_ship::attach(free_obj *obj) {
-		
-	assert(obj);
-	if (attached_to) unattach(); // ???
-	attached_to = obj;
-	att_pos     = attached_to->get_pos();
-	attached_to->add_mass(get_mass());
-}
-
-
-void attached_ship::unattach() {
-
-	assert(attached_to);
-	attached_to->add_mass(-get_mass()); // what if mass has changed?
-	attached_to = NULL;
-	att_pos     = get_pos();
-}
-
-
-void attached_ship::apply_physics() { // might also want to override advance_time
-
-	u_ship::apply_physics();
-
-	if (attached_to) {
-		velocity = attached_to->get_velocity();
-		pos     += attached_to->get_pos() - att_pos;
-		att_pos  = attached_to->get_pos();
-	}
-}
-
-
 // ************ MULTIPART_SHIP ************
 
 

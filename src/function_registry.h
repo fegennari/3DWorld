@@ -194,7 +194,7 @@ void end_sphere_draw();
 void bind_draw_sphere_vbo(bool textured, bool normals=1);
 void draw_sphere_vbo_pre_bound(int ndiv, bool textured, bool half=0, unsigned num_instances=1);
 void draw_sphere_vbo_raw(int ndiv, bool textured, bool half=0, unsigned num_instances=1);
-void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half=0, bool bfc=0, int shader_loc=-1);
+void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half=0, bool bfc=0);
 void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, bool textured, bool enable_front=1, bool enable_back=1);
 
 // function prototypes - draw mesh

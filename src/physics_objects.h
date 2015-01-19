@@ -115,7 +115,6 @@ struct fire : public basic_physics_obj { // size = 60
 	vector3d velocity;
 
 	void gen(point const &p, float size, float intensity, int src, bool is_static_, float light_bw);
-	colorRGBA get_fire_color() const;
 	void draw(quad_batch_draw &qbd, int &last_in_smoke) const;
 	void apply_physics(unsigned i);
 	void extinguish();

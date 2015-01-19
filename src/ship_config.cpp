@@ -1135,13 +1135,3 @@ void merge_weapons(vector<ship_weapon> &weapons, ship_weapon const &w) {
 	if (!found) weapons.push_back(w);
 }
 
-
-void clear_usc_cobjs() { // can call at the end to free up memory (but so far unused)
-
-	for (unsigned i = 0; i< sclasses.size(); ++i) {
-		sclasses[i].clear_cobjs();
-	}
-}
-
-
-

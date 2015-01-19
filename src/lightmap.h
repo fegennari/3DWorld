@@ -15,7 +15,6 @@ extern int MESH_SIZE[3];
 struct normal_cell { // size = 24, unused
 
 	vector3d n[2]; // {negative, positive}
-
 	normal_cell() {UNROLL_3X(n[0][i_] = n[1][i_] = 0.0;)}
 
 	void add_normal(vector3d const &N, float weight=1.0) { // normal should be normalized
@@ -31,18 +30,6 @@ struct normal_cell { // size = 24, unused
 		assert(dp >= 0.0);
 		return dp;
 	}
-	void pack(unsigned char *data, unsigned &pos) const {
-		assert(data);
-		for (unsigned d = 0; d < 2; ++d) {
-			UNROLL_3X(data[pos++] = (unsigned char)(255.0*CLIP_TO_01((d ? 1.0f : -1.0f)*n[d][i_]));)
-		}
-	}
-	void unpack(unsigned char const *data, unsigned &pos) {
-		assert(data);
-		for (unsigned d = 0; d < 2; ++d) {
-			UNROLL_3X(n[d][i_] = (d ? 1.0 : -1.0)*data[pos++]/255.0;)
-		}
-	}
 };
 
 
@@ -50,7 +37,6 @@ struct lmcell { // size = 52
 
 	float sc[3], sv, gc[3], gv, lc[3], smoke; // *c[3]: RGB sky, global, local colors
 	unsigned char pflow[3]; // flow: x, y, z
-	//normal_cell n;
 	
 	lmcell() : sv(0.0), gv(0.0), smoke(0.0) {
 		UNROLL_3X(sc[i_] = gc[i_] = lc[i_] = 0.0; pflow[i_] = 255;)

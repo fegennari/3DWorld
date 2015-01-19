@@ -2,25 +2,6 @@ uniform float x0, y0, dx, dy, rx, ry, zscale;
 
 in vec3 vpos;
 
-#if 0
-float swissTurbulence(float2 p, float seed, int octaves, float lacunarity=2.0, float gain=0.5, float warp=0.15)
-{
-     float sum  = 0;
-     float freq = 1.0;
-	 float amp  = 1.0;
-     vec2 dsum  = vec2(0,0);
-
-     for (int i = 0; i < octaves; ++i) {
-         vec3 n = perlinNoiseDeriv((p + warp * dsum)*freq, seed + i);
-         sum   += amp * (1 - abs(n.x));
-         dsum  += amp * n.yz * -n.x;
-         freq  *= lacunarity;
-         amp   *= gain * clamp(sum, 0.0, 1.0);
-    }
-    return sum;
-}
-#endif
-
 vec3 mod289(in vec3 x) {
 	return x - floor(x * 1.0 / 289.0) * 289.0;
 }

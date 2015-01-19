@@ -1072,22 +1072,20 @@ void draw_sphere_vbo_raw(int ndiv, bool textured, bool half, unsigned num_instan
 }
 
 
-void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc, int shader_loc) {
+void draw_sphere_vbo(point const &pos, float radius, int ndiv, bool textured, bool half, bool bfc) {
 
 	if (ndiv <= MAX_SPHERE_VBO_NDIV) { // speedup is highly variable
 		assert(ndiv > 0);
 		bool const has_xform(radius != 1.0 || pos != all_zeros);
-
-		if (shader_loc >= 0) { // unused/untested mode
-			shader_t::set_uniform_vector4d(shader_loc, vector4d(pos, radius));
-		}
-		else if (has_xform) {
+		//if (shader_loc >= 0) {shader_t::set_uniform_vector4d(shader_loc, vector4d(pos, radius));}
+		
+		if (has_xform) {
 			fgPushMatrix();
 			translate_to(pos);
 			uniform_scale(radius);
 		}
 		draw_sphere_vbo_raw(ndiv, textured, half);
-		if (has_xform && shader_loc < 0) {fgPopMatrix();}
+		if (has_xform) {fgPopMatrix();}
 	}
 	else if (half) {
 		draw_subdiv_sphere_section(pos, radius, ndiv, textured, 0.0, 1.0, 0.0, 0.5);

@@ -358,7 +358,6 @@ void gen_sound(unsigned id, point const &pos, float gain, float pitch, bool rel_
 #else
 	openal_source &source(sources.get_least_loud_source());
 	float const loudness(gain/max(SMALL_NUMBER, dist));
-	//cout << "f: " << frame_counter << " id: " << id << " loud: " << loudness << " s loud: " << source.get_loudness() << " keep: " << !(loudness < max(0.01f, source.get_loudness())) << endl; // testing
 	if (loudness < max(0.01f, source.get_loudness())) return; // too soft
 #endif
 	static int last_frame(0);

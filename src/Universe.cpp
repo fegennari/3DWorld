@@ -243,7 +243,7 @@ class universe_shader_t : public shader_t {
 	}
 
 public:
-	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) { // Note: planet_pos unused
+	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
 		if (!is_setup()) {
 			if (body.gas_giant) {
 				set_prefix("#define GAS_GIANT",    1); // FS
@@ -386,8 +386,8 @@ public:
 	icosphere_manager_t *planet_manager;
 
 	ushader_group(icosphere_manager_t *pm=nullptr) : planet_manager(pm) {}
-	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, point const &planet_pos, bool use_light2) {
-		return get_planet_shader(body, svars).enable_planet(body, svars, planet_pos, use_light2);
+	bool enable_planet_shader(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
+		return get_planet_shader(body, svars).enable_planet(body, svars, use_light2);
 	}
 	void disable_planet_shader(urev_body const &body, shadow_vars_t const &svars) {get_planet_shader(body, svars).disable_planet();}
 	bool enable_star_shader(colorRGBA const &colorA, colorRGBA const &colorB, float radius) {return star_shader.enable_star(colorA, colorB, radius);}
@@ -2405,7 +2405,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 
 	// draw as sphere
 	// Note: the following line *must* be before the local transforms are applied as it captures the current MVM in the call
-	if (texture || procedural) {usg.enable_planet_shader(*this, svars, make_pt_global(pos_), use_light2);} // always WHITE
+	if (texture || procedural) {usg.enable_planet_shader(*this, svars, use_light2);} // always WHITE
 	fgPushMatrix();
 	global_translate(pos_);
 	apply_gl_rotate();

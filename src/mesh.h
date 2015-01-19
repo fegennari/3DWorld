@@ -71,12 +71,6 @@ struct surf_adv { // size = 4
 };
 
 
-struct mesh_height_gen_t { // unused
-	virtual float get_zval_at(float xval, float yval) const = 0;
-	virtual ~mesh_height_gen_t() {}
-};
-
-
 struct hmap_params_t {
 	//int mode, shape;
 	float plat_bot, plat_h, plat_s, plat_max, crat_h, crat_s, crack_lo, crack_hi, crack_d, sine_mag, sine_freq, sine_bias;

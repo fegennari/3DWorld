@@ -288,7 +288,7 @@ void uobj_draw_data::set_color(colorRGBA const &color) const {
 }
 
 
-void uobj_draw_data::draw_bounding_sphere(colorRGBA const &color) const { // unused
+void uobj_draw_data::draw_bounding_sphere(colorRGBA const &color) const { // unused (for debugging)
 
 	glEnable(GL_CULL_FACE);
 	set_color(colorRGBA(color, 0.25)); // alpha=0.25
@@ -638,19 +638,9 @@ void uobj_draw_data::draw_usw_chaff() const {
 
 void uobj_draw_data::draw_usw_rfire() const {
 
-	if (1) {
-		if (animate2 && first_pass && (time & 1)) {add_blastr(pos, dir, 1.5*radius, 0.0, int(0.4*TICKS_PER_SECOND), -1, YELLOW, ORANGE, ETYPE_ANIM_FIRE, obj);}
-		return;
+	if (animate2 && first_pass && (time & 1)) {
+		add_blastr(pos, dir, 1.5*radius, 0.0, int(0.4*TICKS_PER_SECOND), -1, YELLOW, ORANGE, ETYPE_ANIM_FIRE, obj);
 	}
-	// Note: this version is unused
-	float const ctime(CLIP_TO_01(1.0f - ((float)time+1)/((float)lifetime+1)));
-	glEnable(GL_CULL_FACE);
-	set_emissive_color(colorRGBA(1.0, (0.5 + 0.5*ctime), (0.1 + 0.1*ctime), 1.0), shader);
-	select_texture(PLASMA_TEX);
-	draw_torus(0.12, 0.72, get_ndiv(ndiv/2), ndiv);
-	end_ship_texture();
-	glDisable(GL_CULL_FACE);
-	shader->clear_color_e();
 }
 
 
@@ -1804,17 +1794,13 @@ void uobj_draw_data::draw_abomination() const {
 		draw_sphere_vbo((point(0.0, 0.0, 0.45) + 0.5*pupil_dir), 0.4, get_ndiv(3*ndiv/4), 0, 0); // pupil
 	}
 	set_color(color_b);
-
-	if (0) {
-		draw_subdiv_sphere_section(point(0.0, 0.0, 0.5), 1.0, eyelid_ndiv, 0, 0.0, 1.0, 0.4*val, 1.0); // eye hole
-	}
-	else {
-		fgPushMatrix();
-		fgRotate(-90.0, 0.0, 1.0, 0.0);
-		fgRotate(-90.0, 0.0, 0.0, 1.0);
-		draw_subdiv_sphere_section(point(0.0, 0.5, 0.0), 1.0, eyelid_ndiv, 0, 0.18*val, (1.0-0.18*val), 0.0, 1.0); // eye slit
-		fgPopMatrix();
-	}
+	//draw_subdiv_sphere_section(point(0.0, 0.0, 0.5), 1.0, eyelid_ndiv, 0, 0.0, 1.0, 0.4*val, 1.0); // eye hole
+	fgPushMatrix();
+	fgRotate(-90.0, 0.0, 1.0, 0.0);
+	fgRotate(-90.0, 0.0, 0.0, 1.0);
+	draw_subdiv_sphere_section(point(0.0, 0.5, 0.0), 1.0, eyelid_ndiv, 0, 0.18*val, (1.0-0.18*val), 0.0, 1.0); // eye slit
+	fgPopMatrix();
+	
 	fgPopMatrix(); // undo transformations
 	assert(obj);
 	cobj_vector_t const &cobjs(obj->get_cobjs());

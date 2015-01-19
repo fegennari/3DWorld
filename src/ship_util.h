@@ -69,17 +69,6 @@ public:
 };
 
 
-struct ship_cluster { // related to us_fleet, unused
-
-	unsigned align;
-	point center;
-	vector3d velocity;
-	vector<u_ship *> ships;
-
-	void update();
-};
-
-
 struct query_data {
 	
 	vector<cached_obj> const *objs;

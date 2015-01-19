@@ -69,8 +69,6 @@ struct voxel_t {
 		if (p[1] > v.p[1]) return 0;
 		return (p[2] < v.p[2]);
 	}
-	// unused, but useful if implemented with a hash_map
-	size_t hash() const {return (345379*size_t(p[0]) + 988439*size_t(p[1]) + 632447*size_t(p[2]));}
 	bool operator==(voxel_t const &v) const {return (p[0] == v.p[0] && p[1] == v.p[1] && p[2] == v.p[2]);}
 };
 

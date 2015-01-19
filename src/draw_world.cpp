@@ -921,13 +921,6 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 }
 
 
-colorRGBA fire::get_fire_color() const { // unused
-
-	float const alpha(rand_uniform(max(0.3, (0.9 + 0.1*heat)), min(0.9, (0.8 + 0.2*heat))));
-	return colorRGBA(1.0, 0.4*heat, max(0.0f, 1.2f*(heat-1.0f)), alpha);
-}
-
-
 void fire::draw(quad_batch_draw &qbd, int &last_in_smoke) const {
 
 	assert(status);

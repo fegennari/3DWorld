@@ -830,29 +830,12 @@ void uasteroid_belt_planet::init_rings(point const &pos) {
 }
 
 
-void uasteroid_belt::draw_bounding_torus(point const &pos_, colorRGBA const &color) const { // unused
-
-	shader_t s;
-	s.begin_color_only_shader(color);
-	enable_blend();
-	fgPushMatrix();
-	global_translate(pos_ + pos);
-	rotate_into_plus_z(orbital_plane_normal);
-	scale_by(scale);
-	draw_torus(inner_radius, outer_radius, 32, 32);
-	fgPopMatrix();
-	disable_blend();
-	s.end_shader();
-}
-
-
 void uasteroid_belt::xform_to_local_torus_coord_space(point &pt) const {
 
 	pt -= pos;
 	rotate_vector3d_by_vr(orbital_plane_normal, plus_z, pt);
 	UNROLL_3X(pt[i_] /= scale[i_];) // account for squished/elliptical torus in orbital plane
 }
-
 void uasteroid_belt::xform_from_local_torus_coord_space(point &pt) const { // unused
 
 	UNROLL_3X(pt[i_] *= scale[i_];) // account for squished/elliptical torus in orbital plane

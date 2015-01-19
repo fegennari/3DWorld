@@ -1111,12 +1111,6 @@ void gen_wind_texture() {
 }
 
 
-float wrap_tc(float v) { // unused
-	float const fract(v - int(v));
-	return CLIP_TO_01((v < 0.0) ? (1.0f + fract) : fract); // Note: clamped to allow for fp error
-}
-
-
 void noise_fill(unsigned char *data, unsigned size) {
 
 	rand_gen_t rgen;

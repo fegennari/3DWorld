@@ -138,8 +138,7 @@ bool shader_t::add_uniform_matrix_4x4(char const *const name, float const *m, bo
 // unused, unfinished
 bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsigned size, unsigned &buffer_id) const {
 
-	assert(program && name);
-	assert(data && size);
+	assert(program && name && data && size);
 
 	// There's only one uniform block.
 	int const uniformBlockIndex(glGetUniformBlockIndex(program, "uniform_block"));

@@ -65,7 +65,6 @@ struct waypoint_t {
 	float get_time_since_last_visited(unsigned const smiley_id) const;
 	void clear();
 	bool unreachable() const {return prev_wpts.empty();}
-	bool operator<(waypoint_t const &w) const {return (pos < w.pos);} // unused
 };
 
 

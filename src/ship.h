@@ -1339,21 +1339,6 @@ private:
 };
 
 
-class attached_ship : public u_ship { // unused, could be used for boarding shuttle
-
-private:
-	point att_pos;
-	free_obj *attached_to;
-
-public:
-	attached_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient) :
-	  u_ship(sclass_, pos0, align, ai_type_, target_mode_, rand_orient), att_pos(all_zeros), attached_to(NULL) {}
-	void attach(free_obj *obj);
-	void unattach();
-	void apply_physics();
-};
-
-
 class orbiting_ship : public u_ship { // planetary defense, defense sat, antimiss drone
 
 private:

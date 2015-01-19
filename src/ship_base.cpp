@@ -852,28 +852,3 @@ void us_fleet::spawn() {
 }
 
 
-void ship_cluster::update() { // unused
-
-	center   = all_zeros;
-	velocity = zero_vector;
-
-	for (unsigned i = 0; i < ships.size(); ++i) {
-		assert(ships[i] != NULL);
-
-		if (ships[i]->invalid() || ships[i]->get_align() != align) { // remove this ship from the cluster
-			swap(ships[i], ships.back());
-			ships.pop_back();
-			--i;
-			continue;
-		}
-		center   += ships[i]->get_pos();
-		velocity += ships[i]->get_velocity();
-	}
-	if (!ships.empty()) {
-		center   /= ships.size();
-		velocity /= ships.size();
-	}
-}
-
-
-
