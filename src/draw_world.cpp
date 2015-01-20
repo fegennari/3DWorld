@@ -980,9 +980,9 @@ void draw_bubbles() {
 }
 
 
-void draw_part_clouds(vector<particle_cloud> const &pc, bool zoomed) {
+void draw_part_clouds(vector<particle_cloud> const &pc, int tid) {
 
-	enable_flares(zoomed);
+	enable_flares(tid);
 	//select_multitex(CLOUD_TEX, 1);
 	quad_batch_draw qbd;
 	draw_objects(pc, qbd);
@@ -1202,10 +1202,7 @@ void draw_smoke_and_fires() {
 	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1);
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
 	set_multisample(0);
-
-	if (have_part_clouds) {
-		draw_part_clouds(part_clouds, 1); // smoke: slow when a lot of smoke is up close
-	}
+	if (have_part_clouds) {draw_part_clouds(part_clouds, SMOKE_PUFF_TEX);} // smoke: slow when a lot of smoke is up close
 	order_vect_t fire_order;
 	get_draw_order(fires, fire_order);
 	

@@ -24,7 +24,7 @@ extern vector3d wind;
 extern colorRGBA sun_color, cur_fog_color;
 
 
-void draw_part_clouds(vector<particle_cloud> const &pc, bool zoomed);
+void draw_part_clouds(vector<particle_cloud> const &pc, int tid);
 
 
 struct cloud_t {
@@ -223,7 +223,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	camera_pos = origin;
 	shader_t s;
 	s.begin_simple_textured_shader(0.01);
-	draw_part_clouds(*this, 1); // draw clouds
+	draw_part_clouds(*this, SMOKE_PUFF_TEX); // draw clouds
 	s.end_shader();
 	camera_pos = orig_cpos;
 	camera_pdu.valid = was_valid;
@@ -277,6 +277,7 @@ void cloud_manager_t::draw() {
 	static bool had_sun(0);
 	static float last_sun_rot(0.0);
 	bool const need_update(!no_sun_lpos_update && (sun_rot != last_sun_rot || have_sun != had_sun));
+	int const tid(SMOKE_PUFF_TEX);
 	set_multisample(0);
 	glDisable(GL_DEPTH_TEST);
 	shader_t s;
@@ -294,7 +295,7 @@ void cloud_manager_t::draw() {
 		//if (!camera_pdu.cube_visible(bcube)) return; // incorrect, and rarely returns
 
 		create_texture(need_update);
-		enable_flares(1); // texture will be overriden
+		enable_flares(tid); // texture will be overriden
 		assert(cloud_tid);
 		bind_2d_texture(cloud_tid);
 
@@ -310,7 +311,7 @@ void cloud_manager_t::draw() {
 	}
 	else {
 		s.begin_simple_textured_shader(0.01);
-		draw_part_clouds(*this, 1);
+		draw_part_clouds(*this, tid);
 	}
 	s.end_shader();
 	glEnable(GL_DEPTH_TEST);

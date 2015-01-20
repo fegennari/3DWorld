@@ -808,16 +808,15 @@ void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_sc
 
 
 void rotate_towards_camera(point const &pos) {
-
 	rotate_into_plus_z((get_camera_pos() - pos));
 }
 
 
-void enable_flares(bool zoomed) { // used for clouds and smoke
+void enable_flares(int tid) { // used for clouds and smoke
 
 	glDepthMask(GL_FALSE); // not quite right - prevents flares from interfering with each other but causes later shapes to be drawn on top of the flares
 	enable_blend();
-	if (draw_model == 0) {select_texture(zoomed ? BLUR_CENT_TEX : BLUR_TEX);}
+	if (draw_model == 0) {select_texture((tid < 0) ? BLUR_TEX : tid);}
 }
 
 void disable_flares() {

@@ -33,7 +33,7 @@ float const SMOOTH_SKY_POLES   = 0.2;
 //GROUND ROCK WATER WATER2 SKY SUN MOON EARTH ICE SNOW LEAF WOOD SAND ROCK2 CAMOFLAGE GRASS PALM SMOKE PLASMA GEN LANDSCAPE TREE_END TREE_SNOW TREE_HEMI ...
 //0      1    2     3      4   5   6    7     8   9    10   11   12   13    14        15    16   17    18     19  20        21       22        23        ...
 
-texture_t def_textures[] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
+texture_t def_textures[NUM_PREDEF_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generate (not loaded from file), 10: DDS
 // use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
@@ -159,6 +159,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "lichen.jpg", 0, 0), // 1500x1500, compress
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/palm_bark.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 3, "daisy.jpg", 0, 1, 4.0), // 1024x1024
 texture_t(0, 5, 0,    0,    1, 3, 1, "lava.jpg"), // 512x512
+texture_t(0, 5, 0,    0,    0, 4, 1, "smoke_puff.jpg"), // 150x150
 //texture_t(0, 4, 0,    0,    1, 3, 1, "../Sponza2/textures/spnza_bricks_a_diff.tga")
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
@@ -639,7 +640,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 	int alpha_white(0);
 	unsigned char alpha(255);
 	unsigned const size(num_pixels());
-	bool const is_alpha_mask(index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX || (index >= FLARE1_TEX && index <= FLARE5_TEX));
+	bool const is_alpha_mask(index == BLUR_TEX || index == SBLUR_TEX || index == BLUR_CENT_TEX || index == SMOKE_PUFF_TEX || (index >= FLARE1_TEX && index <= FLARE5_TEX));
 	bool const is_alpha_tex(index == EXPLOSION_TEX || index == FIRE_TEX || is_alpha_mask);
 	bool has_zero_alpha(0);
 	assert(is_allocated());
