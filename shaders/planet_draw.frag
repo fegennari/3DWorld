@@ -113,6 +113,14 @@ void main()
 			else if (height_ws < 0.5) {texel = color_a;} // medium ground
 			else if (height_ws < 1.0) {texel = mix(color_a, gray, 2.0*(height_ws - 0.5));}
 			else                      {texel = gray;} // high ground
+
+			if (coldness < 0.3) { // near the equator
+				vec4 sand_color = vec4(0.8, 0.6, 0.2, 1.0);
+				float val = 2.5*coldness + 2.0*eval_terrain_noise(2.15*npos, 8) - 0.7 - 0.6*height_ws;
+				val       = clamp(2.5*val, 0.0, 1.0);
+				texel     = mix(sand_color, texel, val); // light brown desert
+				nscale   *= 0.9*val + 0.1; // smoother normals
+			}
 		}
 		else { // alien-like planet
 			texel = mix(color_b, color_a, min(1.0, height_ws));
@@ -139,7 +147,7 @@ void main()
 			}
 			else if (height_ws > 1.0 && snow_thresh < 1.0) {
 				dnval    = eval_terrain_noise_normal(bpos, NORMAL_OCTAVES);
-				float sv = 0.5 + 0.5*clamp(20.0*(1.0 - snow_thresh), 0.0, 1.0); // snow_thresh 1.0 => no snow, 0.95 => lots of snow
+				float sv = 0.5 + 0.5*(2.0*nscale - 1.0)*clamp(20.0*(1.0 - snow_thresh), 0.0, 1.0); // snow_thresh 1.0 => no snow, 0.95 => lots of snow (multiply by normal scale to exclude desert)
 				float mv = dnval * sv * sqrt(height_ws - 1.0);
 				spec_mag = 0.5*clamp((1.5*mv*mv - 0.25), 0.0, 1.0);
 				texel    = mix(texel, vec4(1,1,1,1), spec_mag); // blend in some snow on peaks
