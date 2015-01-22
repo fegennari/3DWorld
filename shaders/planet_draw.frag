@@ -108,16 +108,16 @@ void main()
 
 		if (water_val > 0.2 && atmosphere > 0.1) { // Earthlike planet
 			vec4 gray = vec4(0.4, 0.4, 0.4, 1.0); // gray rock
-			if      (height_ws < 0.1) {texel = color_b;} // low ground
+			if      (height_ws < 0.1) {texel = color_b;} // low ground (brown dirt)
 			else if (height_ws < 0.4) {texel = mix(color_b, color_a, 3.3333*(height_ws - 0.1));}
-			else if (height_ws < 0.5) {texel = color_a;} // medium ground
-			else if (height_ws < 1.0) {texel = mix(color_a, gray, 2.0*(height_ws - 0.5));}
+			else if (height_ws < 0.7) {texel = color_a;} // medium ground (green forests)
+			else if (height_ws < 1.2) {texel = mix(color_a, gray, 2.0*(height_ws - 0.7));}
 			else                      {texel = gray;} // high ground
 
-			if (coldness < 0.3) { // near the equator
+			if (coldness < 0.25) { // near the equator
 				vec4 sand_color = vec4(0.8, 0.6, 0.2, 1.0);
-				float val = 2.5*coldness + 2.0*eval_terrain_noise(2.15*npos, 8) - 0.7 - 0.6*height_ws;
-				val       = clamp(2.5*val, 0.0, 1.0);
+				float val = 2.0*coldness + 2.5*eval_terrain_noise(2.15*npos, 4) - 0.6 - 0.6*height_ws;
+				val       = clamp(1.5*val, 0.0, 1.0);
 				texel     = mix(sand_color, texel, val); // light brown desert
 				nscale   *= 0.9*val + 0.1; // smoother normals
 			}
