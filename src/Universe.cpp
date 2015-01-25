@@ -255,6 +255,10 @@ public:
 				set_prefix("uniform sampler3D cloud_noise_tex;", 0); // VS
 				if (body.use_vert_shader_offset()) {set_prefix("#define PROCEDURAL_DETAIL", 0);} // VS
 				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
+
+				// tessellation stuff
+				//set_tess_control_shader("planet_draw");
+				//set_tess_eval_shader("planet_draw");
 			}
 			bool const has_craters(body.has_craters());
 			set_prefix("#define NUM_OCTAVES 8", 1); // FS

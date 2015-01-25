@@ -109,8 +109,11 @@ float get_tt_fog_based_far_clip(float min_camera_dist) {
 
 grass_tile_manager_t grass_tile_manager;
 
-void update_tiled_terrain_grass_vbos() {
-	grass_tile_manager.clear_vbo();
+void update_tiled_terrain_grass_vbos() {grass_tile_manager.clear_vbo();}
+
+void update_tiled_grass_length_width(float lscale, float wscale) {
+	grass_tile_manager.scale_grass(lscale, wscale);
+	// FIXME: update flowers in each tile as well?
 }
 
 

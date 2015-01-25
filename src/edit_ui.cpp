@@ -194,14 +194,17 @@ public:
 };
 
 
-// ************ Leaf Colors ************
+// ************ Tree Leaf/Grass Colors/Properties ************
 
-enum {TREE_COLOR_VAR=0, LEAF_COLOR_VAR, LEAF_RED_COMP, LEAF_GREEN_COMP, LEAF_BLUE_COMP, NUM_LEAF_CONT};
-string const leaf_ctr_names[NUM_LEAF_CONT] = {"Tree Color Variance", "Leaf Color Variance", "Leaf Red Component", "Leaf Green Component", "Leaf Blue Component"};
+enum {GRASS_WIDTH=0, GRASS_LENGTH, TREE_COLOR_VAR, LEAF_COLOR_VAR, LEAF_RED_COMP, LEAF_GREEN_COMP, LEAF_BLUE_COMP, NUM_LEAF_CONT};
+string const leaf_ctr_names[NUM_LEAF_CONT] = {"Grass Width", "Grass Length", "Tree Color Variance", "Leaf Color Variance", "Leaf Red Component", "Leaf Green Component", "Leaf Blue Component"};
 
 extern int leaf_color_changed;
 extern float leaf_color_coherence, tree_color_coherence; // [0.0, 1.0] in steps of 0.1
+extern float grass_length, grass_width;
 extern colorRGBA leaf_base_color; // can set R and G in [-1.0, 1.0] in steps of 0.1
+
+void update_grass_length_width(float new_grass_length, float new_grass_width);
 
 class leaf_color_kbd_menu_t : public keyboard_menu_t {
 
@@ -221,6 +224,16 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 			spos = (1.0 - leaf_color_coherence);
 			value << spos;
 			break;
+		case GRASS_LENGTH:
+			value.precision(3);
+			spos = 10.0*grass_length - 0.05;
+			value << grass_length;
+			break;
+		case GRASS_WIDTH:
+			value.precision(3);
+			spos = 100.0*grass_width - 0.05;
+			value << grass_width;
+			break;
 		default:
 			spos = leaf_base_color[control_ix-LEAF_RED_COMP];
 			value << spos;
@@ -230,8 +243,8 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 	}
 
 public:
-	leaf_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT, "Leaf Colors") {}
-	virtual bool is_enabled() const {return (show_scores && !game_mode && world_mode == WMODE_GROUND);}
+	leaf_color_kbd_menu_t() : keyboard_menu_t(NUM_LEAF_CONT, "Tree Leaves and Grass") {}
+	virtual bool is_enabled() const {return (show_scores && !game_mode && (world_mode == WMODE_GROUND || world_mode == WMODE_INF_TERRAIN));}
 
 	virtual void change_value(int delta) {
 		switch (cur_control) {
@@ -240,6 +253,12 @@ public:
 			break;
 		case LEAF_COLOR_VAR:
 			leaf_color_coherence = CLIP_TO_01(leaf_color_coherence - 0.1f*delta); // delta is backwards
+			break;
+		case GRASS_LENGTH:
+			update_grass_length_width(max(0.005f, (grass_length + 0.005f*delta)), grass_width); // steps of 0.005
+			break;
+		case GRASS_WIDTH:
+			update_grass_length_width(grass_length, max(0.0005f, (grass_width + 0.0005f*delta))); // steps of 0.0005
 			break;
 		default:
 			leaf_base_color[cur_control-LEAF_RED_COMP] = CLIP_TO_pm1(leaf_base_color[cur_control-LEAF_RED_COMP] + 0.1f*delta);

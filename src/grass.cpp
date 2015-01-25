@@ -116,6 +116,15 @@ void grass_manager_t::add_to_vbo_data(grass_t const &g, vector<grass_data_t> &da
 	assert(ix <= data.size());
 }
 
+void grass_manager_t::scale_grass(float lscale, float wscale) {
+
+	for (auto i = grass.begin(); i != grass.end(); ++i) {
+		i->dir *= lscale;
+		i->w   *= wscale;
+	}
+	clear_vbo();
+}
+
 void grass_manager_t::begin_draw() const {
 	pre_render();
 	grass_data_t::set_vbo_arrays();
@@ -803,6 +812,17 @@ void flower_manager_t::gen_density_cache(mesh_xy_grid_cache_t density_gen[2], in
 	}
 }
 
+void flower_manager_t::scale_flowers(float lscale, float wscale) {
+
+	for (auto i = flowers.begin(); i != flowers.end(); ++i) {
+		float const old_height(i->height);
+		i->height *= lscale;
+		i->radius *= wscale;
+		i->pos.z  += i->height - old_height;
+	}
+	clear_vbo();
+}
+
 
 void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data, unsigned wd_stride, int x1, int y1) {
 
@@ -925,9 +945,9 @@ flower_manager_dynamic_t flower_manager;
 
 void setup_wind_for_shader(shader_t &s, unsigned tu_id) {
 
-	static float time(0.0);
-	if (animate2) time = tfticks;
-	s.add_uniform_float("time", 0.5*time/TICKS_PER_SECOND);
+	static float wind_time(0.0);
+	if (animate2 && ((display_mode & 0x0100) != 0)) {wind_time = tfticks;}
+	s.add_uniform_float("time", 0.5*wind_time/TICKS_PER_SECOND);
 	s.add_uniform_float("wind_x", wind.x);
 	s.add_uniform_float("wind_y", wind.y);
 	s.add_uniform_int("wind_noise_tex", tu_id);
@@ -950,6 +970,25 @@ void gen_grass() { // and flowers
 	cout << "grass: " << grass_manager.size() << " out of " << XY_MULT_SIZE*grass_density;
 	if (!flower_manager.empty()) {cout << ", flowers: " << flower_manager.size();}
 	cout << endl;
+}
+
+
+void update_tiled_grass_length_width(float lscale, float wscale);
+
+void update_grass_length_width(float new_grass_length, float new_grass_width) {
+
+	assert(new_grass_length > 0.0 && new_grass_width > 0.0);
+	float const lscale(new_grass_length/grass_length), wscale(new_grass_width/grass_width);
+	grass_length = new_grass_length;
+	grass_width  = new_grass_width;
+
+	if (world_mode == WMODE_GROUND) {
+		grass_manager.scale_grass(lscale, wscale);
+		flower_manager.scale_flowers(lscale, wscale);
+	}
+	else if (world_mode == WMODE_INF_TERRAIN) {
+		update_tiled_grass_length_width(lscale, wscale);
+	}
 }
 
 

@@ -54,6 +54,7 @@ public:
 	void add_grass_blade(point const &pos, float cscale, bool on_mesh);
 	void create_new_vbo();
 	void add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const;
+	void scale_grass(float lscale, float wscale);
 	void begin_draw() const;
 	void end_draw() const;
 };
@@ -111,6 +112,7 @@ public:
 	void draw_triangles(shader_t &shader) const;
 	void add_flowers(mesh_xy_grid_cache_t const density_gen[2], float grass_den, float hthresh, float dx, float dy, int xpos, int ypos, bool gen_zval);
 	void gen_density_cache(mesh_xy_grid_cache_t density_gen[2], int x1, int y1);
+	void scale_flowers(float lscale, float wscale);
 };
 
 
