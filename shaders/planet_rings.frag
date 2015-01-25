@@ -3,12 +3,13 @@ uniform float planet_radius, ring_ri, ring_ro, sun_radius, bf_draw_sign;
 uniform float alpha_scale = 1.0;
 uniform sampler2D noise_tex, particles_tex;
 uniform sampler1D ring_tex;
+uniform mat4 fg_ViewMatrix;
 
-in vec3 normal, world_space_pos, vertex;
+in vec3 normal, vertex;
 in vec2 tc;
 
 
-vec3 add_light_rings(in vec3 n, in vec4 epos) {
+vec3 add_light_rings(in vec3 n, in vec4 epos, in vec3 world_space_pos) {
 	vec3 color     = vec3(1.0); // always white - color comes from texture
 	vec3 light_dir = normalize(fg_LightSource[0].position.xyz - epos.xyz); // normalize the light's direction in eye space
 	vec3 diffuse   = color * fg_LightSource[0].diffuse.rgb;
@@ -22,6 +23,8 @@ vec3 add_light_rings(in vec3 n, in vec4 epos) {
 
 void main()
 {
+	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
+	vec3 world_space_pos = (inverse(fg_ViewMatrix) * epos).xyz;
 	if (bf_draw_sign*(length(world_space_pos - camera_pos) - length(planet_pos - camera_pos)) < 0.0) discard; // on the wrong side of the planet
 
 	float rval = clamp((length(vertex) - ring_ri)/(ring_ro - ring_ri), 0.0, 1.0);
@@ -30,11 +33,10 @@ void main()
 	if (texel.a < 0.01) discard;
 
 	// alpha lower when viewing edge
-	vec4 epos   = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	texel.a    *= pow(abs(dot(normal, normalize(epos.xyz))), 0.2); // 5th root
 	vec2 tcs    = 16*tc;
 	vec3 norm2  = normalize(normal + vec3(texture(noise_tex, tcs).r-0.5, texture(noise_tex, tcs+vec2(0.4,0.7)).r-0.5, texture(noise_tex, tcs+vec2(0.3,0.8)).r-0.5));
-	vec3 color  = add_light_rings(norm2, epos); // ambient, diffuse, and specular
+	vec3 color  = add_light_rings(norm2, epos, world_space_pos); // ambient, diffuse, and specular
 	float alpha = texture(particles_tex, 23 *tc).r; // add 4 octaves of random particles
 	alpha      += texture(particles_tex, 42 *tc).r;
 	alpha      += texture(particles_tex, 75 *tc).r;

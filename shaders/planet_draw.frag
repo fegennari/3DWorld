@@ -22,7 +22,7 @@ uniform vec4 water_color, color_a, color_b;
 #endif // PROCEDURAL_DETAIL
 #endif // not GAS_GIANT
 
-in vec3 normal, world_space_pos, vertex;
+in vec3 normal, vertex;
 #ifndef PROCEDURAL_DETAIL
 in vec2 tc; // not used for procedural planets
 #endif
@@ -199,6 +199,7 @@ void main()
 
 	if (sun_radius > 0.0) {
 		if (ss_radius > 0.0) {
+			vec3 world_space_pos = (inverse(fg_ViewMatrix) * epos).xyz;
 			sscale *= calc_sphere_shadow_atten(world_space_pos, sun_pos, sun_radius, ss_pos, ss_radius);
 		}
 		if (has_rings) { // calculate shadows due to rings

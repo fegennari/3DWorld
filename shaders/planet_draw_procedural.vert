@@ -1,9 +1,8 @@
-uniform mat4 fg_ViewMatrix;
 uniform float water_val = 0.0;
 uniform float lava_val  = 0.0;
 uniform float obj_radius;
 
-out vec3 normal, world_space_pos, vertex;
+out vec3 normal, vertex;
 
 float get_delta_h(in vec3 pos) {
 	float hval   = eval_terrain_noise(pos, 8);
@@ -29,8 +28,6 @@ void main()
 	float hdz   = hval - get_delta_h(npos + vec3(0.0, 0.0, delta));
 	normal      = normalize(normal + 0.5*(fg_NormalMatrix * vec3(hdx, hdy, hdz)));
 #endif
-	vec4 epos   = fg_ModelViewMatrix * vec4(vertex, 1.0);
-	world_space_pos = (inverse(fg_ViewMatrix) * epos).xyz;
-	gl_Position = fg_ProjectionMatrix * epos;
+	gl_Position = fg_ModelViewProjectionMatrix * vec4(vertex, 1.0);
 }
 
