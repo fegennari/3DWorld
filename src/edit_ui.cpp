@@ -230,7 +230,7 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 			value << grass_length;
 			break;
 		case GRASS_WIDTH:
-			value.precision(3);
+			value.precision(4);
 			spos = 100.0*grass_width - 0.05;
 			value << grass_width;
 			break;
