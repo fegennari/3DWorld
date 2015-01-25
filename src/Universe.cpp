@@ -245,6 +245,8 @@ class universe_shader_t : public shader_t {
 public:
 	bool enable_planet(urev_body const &body, shadow_vars_t const &svars, bool use_light2) {
 		if (!is_setup()) {
+			bool proc_detail_vs(0);
+
 			if (body.gas_giant) {
 				set_prefix("#define GAS_GIANT",    1); // FS
 				set_prefix("#define RIDGED_NOISE", 1); // FS
@@ -253,12 +255,14 @@ public:
 			else if (body.use_procedural_shader()) {
 				set_prefix("#define PROCEDURAL_DETAIL", 1); // FS
 				set_prefix("uniform sampler3D cloud_noise_tex;", 0); // VS
-				if (body.use_vert_shader_offset()) {set_prefix("#define PROCEDURAL_DETAIL", 0);} // VS
 				if (body.water >= 1.0) {set_prefix("#define ALL_WATER_ICE", 1);} // FS
 
-				// tessellation stuff
-				//set_tess_control_shader("planet_draw");
-				//set_tess_eval_shader("planet_draw");
+				if (body.use_vert_shader_offset()) {
+					proc_detail_vs = 1;
+					// tessellation stuff
+					//set_tess_control_shader("planet_draw");
+					//set_tess_eval_shader("planet_draw");
+				}
 			}
 			bool const has_craters(body.has_craters());
 			set_prefix("#define NUM_OCTAVES 8", 1); // FS
@@ -266,7 +270,7 @@ public:
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			string frag_shader_str("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+rand_gen.part*");
 			if (has_craters) {frag_shader_str += "+craters.part";}
-			set_vert_shader("procedural_planet.part*+planet_draw");
+			set_vert_shader(proc_detail_vs ? "procedural_planet.part*+planet_draw_procedural" : "planet_draw");
 			set_frag_shader(frag_shader_str+"+procedural_planet.part*+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", noise_tu_id);

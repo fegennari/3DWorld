@@ -23,7 +23,9 @@ uniform vec4 water_color, color_a, color_b;
 #endif // not GAS_GIANT
 
 in vec3 normal, world_space_pos, vertex;
-in vec2 tc;
+#ifndef PROCEDURAL_DETAIL
+in vec2 tc; // not used for procedural planets
+#endif
 
 
 float calc_cloud_density(in vec3 lv) {
@@ -286,5 +288,5 @@ void main()
 		float val  = max(0.0, (1.0 - dist));
 		color     += 2.5*(cloud_den - 0.5)*val*vec3(0.6, 0.8, 1.0); // lightning color
 	}
-	fg_FragColor = gl_Color * vec4(color, 1.0);
+	fg_FragColor = vec4(color, 1.0);
 }

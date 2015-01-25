@@ -1,4 +1,3 @@
-#ifdef PROCEDURAL_DETAIL
 uniform float terrain_scale, noise_offset;
 
 float eval_terrain_noise_base(in vec3 npos, const int num_octaves, const in float gain, const in float lacunarity) {
@@ -23,4 +22,3 @@ float eval_terrain_noise(in vec3 npos, const int num_octaves) {
 float eval_terrain_noise_normal(in vec3 npos, const int num_octaves) {
 	return eval_terrain_noise_base(npos, num_octaves, 0.5, 1.92);
 }
-#endif
