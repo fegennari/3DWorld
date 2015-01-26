@@ -11,6 +11,8 @@ extern int window_height, display_mode;
 extern bool use_core_context;
 extern shader_t *cur_shader;
 
+bool using_tess_shader(0);
+
 
 void colorRGBA::set_for_cur_shader() const {
 
@@ -590,7 +592,7 @@ void icosphere_drawer_t::draw() const {
 
 	pre_render();
 	vert_wrap_t::set_vbo_arrays();
-	glDrawRangeElements(GL_TRIANGLES, 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
+	glDrawRangeElements((using_tess_shader ? GL_PATCHES : GL_TRIANGLES), 0, nverts, nindices, GL_UNSIGNED_INT, nullptr);
 	post_render();
 }
 

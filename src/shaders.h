@@ -83,6 +83,7 @@ public:
 	void set_geom_shader(string const &gs_name_) {shader_names[2] = gs_name_;}
 	void set_tess_control_shader(string const &tcs_name_) {shader_names[3] = tcs_name_;}
 	void set_tess_eval_shader   (string const &tes_name_) {shader_names[4] = tes_name_;}
+	bool has_tess_shader() const {return !shader_names[4].empty();}
 
 	bool is_setup() const {return (program > 0);}
 	void enable();

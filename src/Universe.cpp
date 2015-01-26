@@ -67,7 +67,7 @@ universe_t universe; // the top level universe
 vector<uobject const *> show_info_uobjs;
 
 
-extern bool enable_multisample;
+extern bool enable_multisample, using_tess_shader;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, show_scores, iticks, frame_counter;
 extern unsigned enabled_lights;
 extern float fticks, tfticks;
@@ -259,9 +259,12 @@ public:
 
 				if (body.use_vert_shader_offset()) {
 					proc_detail_vs = 1;
+#if 0
 					// tessellation stuff
-					//set_tess_control_shader("planet_draw");
-					//set_tess_eval_shader("planet_draw");
+					set_tess_control_shader("planet_draw");
+					set_tess_eval_shader("planet_draw"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
+					glPatchParameteri(GL_PATCH_VERTICES, 3); // max is 32
+#endif
 				}
 			}
 			bool const has_craters(body.has_craters());
@@ -277,6 +280,7 @@ public:
 			add_uniform_int("ring_tex",        2);
 			add_uniform_float("time", 5.0E-6*cloud_time);
 		}
+		using_tess_shader = has_tess_shader();
 		enable();
 		set_specular(1.0, 80.0);
 		set_uniform_vector3d(get_loc("rscale"),   svars.rscale);
@@ -299,6 +303,7 @@ public:
 		return 1;
 	}
 	void disable_planet() {
+		using_tess_shader = 0; // may or may not have been set to 1
 		if (is_setup()) {clear_specular(); disable();}
 	}
 
@@ -2363,7 +2368,7 @@ bool ustar::draw(point_d pos_, ushader_group &usg, pt_line_drawer_no_lighting_t 
 
 bool urev_body::use_vert_shader_offset() const {return (atmos < 0.15);}
 
-
+void draw_sphere_vbo_pre_bound_as_patches(int ndiv, bool textured, bool half, unsigned num_instances);
 bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_plds[2], shadow_vars_t const &svars, bool use_light2, bool enable_text_tag) {
 
 	point const &camera(get_player_pos());
@@ -2428,7 +2433,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	else {
 		usg.enable_planet_colored_shader(use_light2, ocolor);
 	}
-	if (ndiv > N_SPHERE_DIV) {
+	if (using_tess_shader || ndiv > N_SPHERE_DIV) {
 		assert(texture || procedural);
 		glEnable(GL_CULL_FACE);
 
