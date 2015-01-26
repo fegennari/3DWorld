@@ -259,11 +259,12 @@ public:
 
 				if (body.use_vert_shader_offset()) {
 					proc_detail_vs = 1;
-#if 0
-					// tessellation stuff
+#if 0 // tessellation shaders
+					set_prefix("uniform sampler3D cloud_noise_tex;", 4); // TES
 					set_tess_control_shader("planet_draw");
-					set_tess_eval_shader("planet_draw"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
+					set_tess_eval_shader("procedural_planet.part*+planet_draw"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
 					glPatchParameteri(GL_PATCH_VERTICES, 3); // max is 32
+					// GL_PATCH_DEFAULT_OUTER_LEVEL GL_PATCH_DEFAULT_INNER_LEVEL
 #endif
 				}
 			}
@@ -273,7 +274,9 @@ public:
 			set_bool_prefix("has_rings", (svars.ring_ro > 0.0), 1); // FS
 			string frag_shader_str("ads_lighting.part*+perlin_clouds_3d.part*+sphere_shadow.part*+rand_gen.part*");
 			if (has_craters) {frag_shader_str += "+craters.part";}
-			set_vert_shader(proc_detail_vs ? "procedural_planet.part*+planet_draw_procedural" : "planet_draw");
+			string vert_shader_str(proc_detail_vs ? "procedural_planet.part*+planet_draw_procedural" : "planet_draw");
+			if (has_tess_shader()) {vert_shader_str += "_tess";}
+			set_vert_shader(vert_shader_str);
 			set_frag_shader(frag_shader_str+"+procedural_planet.part*+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", noise_tu_id);
@@ -289,6 +292,7 @@ public:
 		set_uniform_float(get_loc("ring_ro"),     svars.ring_ro);
 		set_uniform_float(get_loc("noise_scale"), 4.0*body.cloud_scale); // clouds / gas giant noise
 		set_uniform_float(get_loc("population"),  ((body.population >= 10.0) ? 1.0 : 0.0));
+		if (using_tess_shader) {set_uniform_vector3d(get_loc("camera_pos"), make_pt_global(get_player_pos()));}
 		
 		if (!body.gas_giant) { // else rseed_val=body.colorA.R?
 			set_uniform_float(get_loc("water_val"), body.water);

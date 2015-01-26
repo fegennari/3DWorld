@@ -7,12 +7,11 @@ uniform vec3 sun_pos, ss_pos, rscale;
 uniform float obj_radius, sun_radius, ss_radius, ring_ri, ring_ro, population;
 uniform mat4 fg_ViewMatrix;
 uniform sampler1D ring_tex;
+// water_val and lava_val come from procedural_planet.part
 
 #ifdef GAS_GIANT
 uniform sampler1D tex0;
 #else
-uniform float water_val  = 0.0;
-uniform float lava_val   = 0.0;
 uniform float crater_val = 0.0;
 uniform sampler2D tex0;
 #ifdef PROCEDURAL_DETAIL
