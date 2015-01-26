@@ -15,17 +15,19 @@ void main()
 #ifdef SIZE_FROM_ATTRIB
 	float size = size_val[0];
 #endif
-	fg_Color_vf = color[0]; // all colors are the same
 	vec4 pos    = fg_ModelViewMatrix * gl_in[0].gl_Position;
 	
+	fg_Color_vf = color[0]; // all colors are the same
 	gl_Position = fg_ProjectionMatrix * (pos + vec4(-2.0*size, -size, 0.0, 0.0));
 	tc = vec2(-0.5, 0.0);
 	EmitVertex();
 	
+	fg_Color_vf = color[0]; // all colors are the same
 	gl_Position = fg_ProjectionMatrix * (pos + vec4(0.0, 3.0*size, 0.0, 0.0));
 	tc = vec2(0.5, 2.0);
 	EmitVertex();
 	
+	fg_Color_vf = color[0]; // all colors are the same
 	gl_Position = fg_ProjectionMatrix * (pos + vec4(2.0*size, -size, 0.0, 0.0));
 	tc = vec2(1.5, 0.0);
 	EmitVertex();

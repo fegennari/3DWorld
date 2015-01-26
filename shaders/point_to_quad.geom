@@ -11,7 +11,6 @@ in VertexData {
 
 void main()
 {
-	fg_Color_vf  = vertexIn[0].color; // all colors are the same
 	vec4 pos     = gl_in[0].gl_Position; // center of the quad
 	vec3 normal  = vertexIn[0].normal;
 	vec4 tangent = vec4(vertexIn[0].tangent, 0.0); // not normalized - provides the size of the quad (half-width)
@@ -21,5 +20,5 @@ void main()
 	pts[1] = fg_ModelViewProjectionMatrix * (pos + binorm);
 	pts[2] = fg_ModelViewProjectionMatrix * (pos + tangent);
 	pts[3] = fg_ModelViewProjectionMatrix * (pos + tangent + binorm);
-	output_textured_quad(pts);
+	output_textured_quad(pts, vertexIn[0].color);
 }
