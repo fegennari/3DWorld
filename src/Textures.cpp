@@ -83,7 +83,7 @@ texture_t(0, 6, 64,   64,   1, 3, 1, "radiation.png", 1),
 texture_t(0, 6, 128,  128,  1, 3, 1, "yuck.png"),
 texture_t(0, 6, 256,  256,  0, 4, 0, "sawblade.png", 1),
 texture_t(0, 6, 256,  256,  0, 4, 0, "sawblade_b.png", 1),
-texture_t(0, 6, 256,  256,  0, 4, 1, "blur.png"),
+texture_t(0, 6, 256,  256,  0, 4, 1, "blur.png", 0, 0), // disable compression - causes artifacts when drawing star flares
 texture_t(0, 6, 256,  256,  1, 4, 1, "blur_s.png"),
 texture_t(0, 6, 256,  256,  0, 4, 3, "pine.png", 1, 1, 1.0, 0.36),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "pine.jpg", 1, 1, 1.0, 0.36), // 184x256
