@@ -88,28 +88,29 @@ bool universe_intersection_test(line_query_state &lqs, point const &pos, vector3
 
 
 
-point get_scaled_upt() {
-	return point(CELL_SIZE*uxyz[0], CELL_SIZE*uxyz[1], CELL_SIZE*uxyz[2]);
-}
+point get_scaled_upt() {return point(CELL_SIZE*uxyz[0], CELL_SIZE*uxyz[1], CELL_SIZE*uxyz[2]);}
+void offset_pos(point &pos) {pos += get_scaled_upt();}
 
-inline void offset_pos(point &pos) { // unrolled
-	pos += get_scaled_upt();
-}
+float temp_to_deg_c(float temp) {return (100.0*(temp - FREEZE_TEMP)/(BOIL_TEMP - FREEZE_TEMP));} // 10 => 0, 20 => 100
+float temp_to_deg_f(float temp) {return (1.8*temp_to_deg_c(temp) + 32.0);}
 
-inline float temp_to_deg_c(float temp) {
-	return (100.0*(temp - FREEZE_TEMP)/(BOIL_TEMP - FREEZE_TEMP)); // 10 => 0, 20 => 100
-}
-
-inline float temp_to_deg_f(float temp) {
-	return (1.8*temp_to_deg_c(temp) + 32.0);
-}
+//float get_screen_width() {return (float)window_width;}
+float get_screen_width() {return 1920.0;} // normalize to window_width=1920
 
 float calc_sphere_size(point const &pos, point const &camera, float radius, float d_adj) {
-	return ((float)window_width)*radius/max(TOLERANCE, (p2p_dist(pos, camera) + d_adj)); // approx. in pixels
+	return get_screen_width()*radius/max(TOLERANCE, (p2p_dist(pos, camera) + d_adj)); // approx. in pixels
 }
 
 bool sphere_size_less_than(point const &pos, point const &camera, float radius, float num_pixels) {
-	return (window_width*radius < num_pixels*p2p_dist(pos, camera));
+	return (get_screen_width()*radius < num_pixels*p2p_dist(pos, camera));
+}
+
+float get_pixel_size(float radius, float dist) {
+	return min(10000.0f, get_screen_width()*radius/max(dist, TOLERANCE)); // approx. in pixels
+}
+
+bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
+	return (get_pixel_size(1.0, dist)*cross_product(get_player_velocity(), vcp).mag() > 1.0*vcp_mag);
 }
 
 void set_star_light_atten(int light, float atten, shader_t *shader=NULL) {
@@ -725,15 +726,6 @@ bool ucell::is_visible() const {
 		if (univ_sphere_vis((rel_center + (*galaxies)[i].pos), (*galaxies)[i].radius)) return 1; // conservative, since galaxies are not spherical
 	}
 	return 0;
-}
-
-
-float get_pixel_size(float radius, float dist) {
-	return min(10000.0f, ((float)window_width)*radius/max(dist, TOLERANCE)); // approx. in pixels
-}
-
-inline bool get_draw_as_line(float dist, vector3d const &vcp, float vcp_mag) {
-	return (get_pixel_size(1.0, dist)*cross_product(get_player_velocity(), vcp).mag() > 1.0*vcp_mag);
 }
 
 
