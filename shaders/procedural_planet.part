@@ -26,7 +26,7 @@ float eval_terrain_noise_normal(in vec3 npos, const int num_octaves) {
 }
 
 float get_delta_h(in vec3 pos) {
-	float hval   = eval_terrain_noise(pos, 8);
+	float hval   = 0.7*eval_terrain_noise_base(pos, 8, 0.66, 2.0);
 	float cutoff = max(water_val, lava_val);
 	float height = pow((1.0 - cutoff), 0.1)*max(0.0, 1.8*(hval-0.7)); // can go outside the [0,1] range
 	float omcinv = 1.0/max(0.01, (1.0 - cutoff)); // avoid div-by-zero

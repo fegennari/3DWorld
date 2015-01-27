@@ -8,7 +8,7 @@ out vec3 vertex;
 out vec3 normal;
 
 vec3 interpolate3D(vec3 v0, vec3 v1, vec3 v2) {
-	return vec3(gl_TessCoord.x) * v0 + vec3(gl_TessCoord.y) * v1 + vec3(gl_TessCoord.z) * v2;
+	return gl_TessCoord.x * v0 + gl_TessCoord.y * v1 + gl_TessCoord.z * v2;
 }
 
 void main() {
