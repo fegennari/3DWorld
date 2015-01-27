@@ -1,6 +1,7 @@
 // define the number of CPs in the output patch
 layout (vertices = 3) out;
 
+uniform float obj_radius;
 uniform vec3 camera_pos; // in world space
 uniform mat4 fg_ViewMatrix;
 
@@ -12,9 +13,7 @@ out vec3 vertex_ES[];
 
 float get_tess_level(float d1, float d2) {
 	float dav = 0.5*(d1 + d2);
-	if      (dav <= 2.0) {return 10.0;}
-	else if (dav <= 5.0) {return 7.0;}
-	else                 {return 3.0;}
+	return clamp(60.0*obj_radius/dav, 1.0, 20.0);
 }
 float dist_to_camera(in vec3 pos, in mat4 vm_inv) {
 	vec4 epos = fg_ModelViewMatrix * vec4(pos, 1.0);

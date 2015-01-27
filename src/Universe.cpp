@@ -259,7 +259,7 @@ public:
 
 				if (body.use_vert_shader_offset()) {
 					proc_detail_vs = 1;
-#if 0 // tessellation shaders
+#if 1 // tessellation shaders
 					set_prefix("uniform sampler3D cloud_noise_tex;", 4); // TES
 					set_tess_control_shader("planet_draw");
 					set_tess_eval_shader("procedural_planet.part*+planet_draw"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
@@ -2442,16 +2442,18 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 		glEnable(GL_CULL_FACE);
 
 		if (heightmap) {
+			assert(!using_tess_shader);
 			draw_surface(pos_, size, ndiv);
 		}
 		else if (use_vert_shader_offset()) { // minor issue of face alignment cracks, but better triangle distribution
 			assert(!gas_giant);
 			set_multisample(0); // prevent artifacts at face boundaries
 			assert(usg.planet_manager);
-			usg.planet_manager->draw_sphere(ndiv); // denser and more uniform vertex distribution for vertex shader height mapping
+			usg.planet_manager->draw_sphere(using_tess_shader ? max(4, ndiv/16) : ndiv); // denser/more uniform vertex distribution for vertex/tess shader height mapping
 			set_multisample(1);
 		}
 		else { // gas giant or atmosphere: don't need high resolution since they have no heightmaps
+			assert(!using_tess_shader);
 			draw_subdiv_sphere(all_zeros, 1.0, (use_vert_shader_offset() ? 2 : 1)*ndiv, zero_vector, NULL, int(gas_giant), 1); // no back-face culling
 		}
 		glDisable(GL_CULL_FACE);
