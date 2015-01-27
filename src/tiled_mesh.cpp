@@ -115,6 +115,7 @@ void update_tiled_grass_length_width(float lscale, float wscale) {
 	grass_tile_manager.scale_grass(lscale, wscale);
 	// FIXME: update flowers in each tile as well?
 }
+void update_tiled_grass_colors() {grass_tile_manager.clear();} // regenerate grass
 
 
 void bind_texture_tu(unsigned tid, unsigned tu_id) {

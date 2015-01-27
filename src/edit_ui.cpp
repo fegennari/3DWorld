@@ -205,6 +205,7 @@ extern float grass_length, grass_width;
 extern colorRGBA leaf_base_color; // can set R and G in [-1.0, 1.0] in steps of 0.1
 
 void update_grass_length_width(float new_grass_length, float new_grass_width);
+void update_tiled_grass_colors();
 
 class leaf_color_kbd_menu_t : public keyboard_menu_t {
 
@@ -253,6 +254,7 @@ public:
 			break;
 		case LEAF_COLOR_VAR:
 			leaf_color_coherence = CLIP_TO_01(leaf_color_coherence - 0.1f*delta); // delta is backwards
+			update_tiled_grass_colors();
 			break;
 		case GRASS_LENGTH:
 			update_grass_length_width(max(0.005f, (grass_length + 0.005f*delta)), grass_width); // steps of 0.005
@@ -262,6 +264,7 @@ public:
 			break;
 		default:
 			leaf_base_color[cur_control-LEAF_RED_COMP] = CLIP_TO_pm1(leaf_base_color[cur_control-LEAF_RED_COMP] + 0.1f*delta);
+			update_tiled_grass_colors();
 			break;
 		}
 		leaf_color_changed = 1;
