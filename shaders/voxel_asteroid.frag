@@ -1,12 +1,12 @@
 uniform sampler3D ao_tex, shadow_tex;
 
-in vec3 vpos, normal, world_normal;
-in vec4 epos;
+//in vec3 vpos, eye_norm, normal; // come from bump_map.part.frag and triplanar_bump_map.part.frag
+//in vec4 epos; // comes from bump_map.part.frag
 
 void main()
 {
-	vec3 n     = normalize(normal);
-	vec4 texel = get_texture_val(normalize(world_normal), vpos);
+	vec3 n     = normalize(eye_norm);
+	vec4 texel = get_texture_val(normalize(normal), vpos);
 	vec3 color = vec3(0.0);
 	vec3 tc    = 0.5*(vpos.zxy + 1.0);
 	float light_scales[8] = float[](1,1,1,1,1,1,1,1);

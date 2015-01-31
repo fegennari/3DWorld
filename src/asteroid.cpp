@@ -297,6 +297,18 @@ public:
 };
 
 
+void enable_bump_map_pre(shader_t &shader) {
+	shader.set_prefix("#define USE_BUMP_MAP",    1); // FS
+	shader.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
+	shader.set_prefix("in vec3 vpos, normal;",   1); // FS
+}
+void enable_bump_map_post(shader_t &shader, unsigned tu_id, float tscale) {
+	select_multitex(ROCK_NORMAL_TEX, tu_id, 1);
+	shader.add_uniform_int("bump_map", tu_id);
+	shader.add_uniform_float("bump_tex_scale", tscale);
+}
+
+
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
 	mutable voxel_model_space model; // FIXME: const problems with draw()
@@ -340,10 +352,12 @@ public:
 			s.enable();
 		}
 		else {
+			bool const use_bmap = 1;
+			if (use_bmap) {enable_bump_map_pre(s);}
 			s.set_int_prefix("num_lights", num_lights, 1); // FS
 			s.set_prefix("#define NO_SPECULAR", 1); // FS (optional/optimization)
 			s.set_vert_shader("asteroid");
-			s.set_frag_shader("ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+voxel_asteroid");
+			s.set_frag_shader("bump_map.part+ads_lighting.part*+triplanar_texture.part+procedural_texture.part+voxel_texture.part+triplanar_bump_map.part+voxel_asteroid");
 			s.begin_shader();
 			s.add_uniform_int("tex0", 0);
 			s.add_uniform_int("tex1", 8);
@@ -354,6 +368,7 @@ public:
 			s.add_uniform_float("noise_scale", 0.1);
 			s.add_uniform_float("tex_mix_saturate", 5.0);
 			s.add_uniform_vector3d("tex_eval_offset", zero_vector);
+			if (use_bmap) {enable_bump_map_post(s, 11, 0.6);}
 		}
 		if ( ddata.first_pass) {model.setup_tex_gen_for_rendering(s);}
 		if (!ddata.first_pass) {s.add_uniform_float("depth_bias", -1.0E-6);} // depth bias hack (other asteroid types?)
@@ -1043,16 +1058,19 @@ void uasteroid_belt_planet::calc_shadowers() {
 void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters, bool custom_lighting) {
 
 	if (!shader.is_setup()) {
+		bool const use_bmap = 1;
 		set_shader_prefix_for_shadow_casters(shader, num_shadow_casters);
 		if (ENABLE_CRATERS ) {shader.set_prefix("#define HAS_CRATERS",      1);} // FS
 		if (ENABLE_AF_INSTS) {shader.set_prefix("#define USE_CUSTOM_XFORM", 0);} // VS
+		if (use_bmap) {enable_bump_map_pre(shader);}
 		shader.set_vert_shader("asteroid");
-		string frag_shader_str("ads_lighting.part*+triplanar_texture.part+sphere_shadow.part*+sphere_shadow_casters.part");
+		string frag_shader_str("bump_map.part+ads_lighting.part*+triplanar_texture.part+sphere_shadow.part*+triplanar_bump_map.part+sphere_shadow_casters.part");
 		if (ENABLE_CRATERS) {frag_shader_str += "+rand_gen.part*+craters.part";}
 		shader.set_frag_shader(frag_shader_str + "+asteroid");
 		shader.begin_shader();
 		shader.add_uniform_int("tex0", 0);
 		shader.add_uniform_float("tex_scale", 0.5);
+		if (use_bmap) {enable_bump_map_post(shader, 11, 0.6);}
 	}
 	shader.enable();
 	glEnable(GL_CULL_FACE);

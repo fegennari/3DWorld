@@ -2,13 +2,14 @@ uniform float tscale = 1.0;
 uniform float crater_scale = 1.0;
 uniform sampler2D tex0;
 
-in vec3 vpos, normal, world_normal, world_space_pos;
-in vec4 epos;
+in vec3 world_space_pos;
+//in vec3 vpos, eye_norm, normal; // come from bump_map.part.frag and triplanar_bump_map.part.frag
+//in vec4 epos; // comes from bump_map.part.frag
 
 void main()
 {
-	vec4 texel = lookup_triplanar_texture(tscale*vpos, normalize(world_normal), tex0, tex0, tex0);
-	vec3 norm_normal = normalize(normal);
+	vec4 texel = lookup_triplanar_texture(tscale*vpos, normalize(normal), tex0, tex0, tex0);
+	vec3 norm_normal = normalize(eye_norm);
 
 #ifdef HAS_CRATERS
 	if (crater_scale > 0.0 && dot(norm_normal, normalize(fg_LightSource[0].position.xyz - epos.xyz)) > 0.0) { // facing the sun (smoother transition?)
