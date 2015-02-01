@@ -100,7 +100,7 @@ public:
 		c_radius = (1.0 + AST_PROC_HEIGHT)*radius;
 	}
 	virtual void draw_obj(uobj_draw_data &ddata) const {
-		unsigned const num_lights(min(8U, num_exp_lights+2U));
+		unsigned const num_lights(ddata.first_pass ? min(8U, num_exp_lights+2U) : 2); // only enable exp_lights on first pass
 		shader_t &s(cached_proc_shaders[num_lights]);
 		
 		if (s.is_setup()) { // already setup
@@ -344,7 +344,7 @@ public:
 
 	virtual void draw_obj(uobj_draw_data &ddata) const {
 		if (ddata.ndiv <= 4) {ddata.draw_asteroid(model.get_params().tids[0]); return;}
-		unsigned const num_lights(min(8U, num_exp_lights+2U));
+		unsigned const num_lights(ddata.first_pass ? min(8U, num_exp_lights+2U) : 2); // only enable exp_lights on first pass
 		unsigned const lod_level(min(16U/ddata.ndiv, NUM_VOX_AST_LODS-1));
 		shader_t &s(cached_voxel_shaders[num_lights]);
 		
