@@ -66,25 +66,15 @@ void decal_obj::check_cobj() {
 	
 	if (!is_on_cobj(cid)) { // try to find the cobj this is attached to (likely a split part of the original)
 		int const xpos(get_xpos(ipos.x)), ypos(get_ypos(ipos.y));
-		
-		if (point_outside_mesh(xpos, ypos)) {
-			status = 0;
-			return;
-		}
+		if (point_outside_mesh(xpos, ypos)) {status = 0; return;}
 		vector<int> const &cvals(v_collision_matrix[ypos][xpos].cvals);
 		cid = -1;
 
 		for (unsigned i = 0; i < cvals.size(); ++i) {
-			if (is_on_cobj(cvals[i])) {
-				cid = cvals[i];
-				break;
-			}
+			if (is_on_cobj(cvals[i])) {cid = cvals[i]; break;}
 		}
 	}
-	if (cid < 0) { // not found
-		status = 0; // remove it
-		return; // no longer on a cobj
-	}
+	if (cid < 0) {status = 0; return;} // not found, no longer on a cobj so remove it
 }
 
 
@@ -592,7 +582,7 @@ void cobj_stats() {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			unsigned const sz((unsigned)v_collision_matrix[y][x].cvals.size());
 			ncv += sz;
-			if (sz > 0) ++nonempty;
+			nonempty += (sz > 0);
 		}
 	}
 	for (unsigned i = 0; i < csize; ++i) {
@@ -626,12 +616,8 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 		vector3d const range(platforms[cobj.platform_id].get_range());
 
 		if (range.x == 0.0 && range.y == 0.0) { // vertical platform
-			if (range.z > 0.0) {
-				zmaxv += range.z; // travels up
-			}
-			else {
-				zminv += range.z; // travels down
-			}
+			if (range.z > 0.0) {zmaxv += range.z;} // travels up
+			else               {zminv += range.z;} // travels down
 		}
 	}
 	if (dhcm == 0 && add_to_hcm && h_collision_matrix[i][j] < zmaxv && (mesh_height[i][j] + 2.0*object_types[SMILEY].radius) > zminv) {

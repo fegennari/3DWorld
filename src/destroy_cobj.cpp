@@ -52,7 +52,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 		for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
 			if (*i < 0) continue;
 			assert((unsigned)*i < coll_objects.size());
-			if (coll_objects[*i].waypt_id < 0) coll_objects[*i].add_connect_waypoint(); // slow
+			if (coll_objects[*i].waypt_id < 0) {coll_objects[*i].add_connect_waypoint();} // slow
 		}
 	}
 
@@ -60,7 +60,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 	update_flow_for_voxels(cube);
 
 	for (unsigned i = 0; i < cts.size(); ++i) {
-		if (cts[i].destroy >= SHATTERABLE || cts[i].unanchored) update_flow_for_voxels(cts[i]);
+		if (cts[i].destroy >= SHATTERABLE || cts[i].unanchored) {update_flow_for_voxels(cts[i]);}
 	}
 
 	// create fragments

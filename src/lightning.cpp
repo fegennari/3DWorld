@@ -38,7 +38,7 @@ void do_lightning_damage(point &pos, float damage, int hit_water);
 inline float get_lit_h(int xpos, int ypos) {
 
 	float h(h_collision_matrix[ypos][xpos]);
-	if (!v_collision_matrix[ypos][xpos].cvals.empty()) h = max(h, v_collision_matrix[ypos][xpos].zmax);
+	if (!v_collision_matrix[ypos][xpos].cvals.empty()) {h = max(h, v_collision_matrix[ypos][xpos].zmax);}
 	return h;
 }
 

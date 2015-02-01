@@ -428,11 +428,12 @@ void calc_flow_profile(r_profile flow_prof[3], int i, int j, bool proc_cobjs, fl
 	lmcell *vldata(lmap_manager.get_column(j, i));
 	if (vldata == NULL) return;
 	float const bbz[2][2] = {{get_xval(j), get_xval(j+1)}, {get_yval(i), get_yval(i+1)}}; // X x Y
-	coll_cell const &cell(v_collision_matrix[i][j]);
-	unsigned const ncv((unsigned)cell.cvals.size());
 	vector<pair<float, unsigned> > cobj_z;
 
 	if (proc_cobjs) {
+		coll_cell const &cell(v_collision_matrix[i][j]);
+		unsigned const ncv((unsigned)cell.cvals.size());
+
 		for (unsigned q = 0; q < ncv; ++q) {
 			unsigned const cid(cell.cvals[q]);
 			assert(cid < coll_objects.size());
