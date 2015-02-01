@@ -265,14 +265,18 @@ void copy_tquad_to_cobj(coll_tquad const &tquad, coll_obj &cobj);
 
 struct coll_cell { // size = 52
 
-	float zmin, zmax, occ_zmin, occ_zmax;
+	float zmin, zmax;
 	vector<int> cvals;
 
 	void clear(bool clear_vectors);
-	void update_zmm(float zmin_, float zmax_, coll_obj const &cobj);
-	
+
+	void update_zmm(float zmin_, float zmax_, coll_obj const &cobj) {
+		assert(zmin_ <= zmax_);
+		zmin = min(zmin_, zmin);
+		zmax = max(zmax_, zmax);
+	}
 	void add_entry(int index) {
-		if (INIT_CCELL_SIZE > 0 && cvals.capacity() == 0) cvals.reserve(INIT_CCELL_SIZE);
+		if (INIT_CCELL_SIZE > 0 && cvals.capacity() == 0) {cvals.reserve(INIT_CCELL_SIZE);}
 		cvals.push_back(index);
 	}
 };

@@ -578,23 +578,8 @@ void coll_cell::clear(bool clear_vectors) {
 	if (clear_vectors) {
 		if (cvals.capacity() > INIT_CCELL_SIZE) {cvals.clear();} else {cvals.resize(0);}
 	}
-	zmin = occ_zmin =  FAR_DISTANCE;
-	zmax = occ_zmax = -FAR_DISTANCE;
-}
-
-
-inline void coll_cell::update_zmm(float zmin_, float zmax_, coll_obj const &cobj) {
-		
-	assert(zmin_ <= zmax_);
-
-	if (cobj.is_occluder()) {
-		occ_zmin = min(zmin_, occ_zmin);
-		occ_zmax = max(zmax_, occ_zmax);
-	}
-	zmin = min(zmin_, zmin);
-	zmax = max(zmax_, zmax);
-	assert(zmin <= occ_zmin);
-	assert(zmax >= occ_zmax);
+	zmin =  FAR_DISTANCE;
+	zmax = -FAR_DISTANCE;
 }
 
 
@@ -725,8 +710,8 @@ void purge_coll_freed(bool force) {
 			}
 			// Note: don't actually have to recalculate zmin/zmax unless a removed object was on the top or bottom of the coll cell
 			if (!changed) continue;
-			vcm.zmin = vcm.occ_zmin = mesh_height[i][j];
-			vcm.zmax = vcm.occ_zmax = zmin;
+			vcm.zmin = mesh_height[i][j];
+			vcm.zmax = zmin;
 			vector<int>::const_iterator in(vcm.cvals.begin());
 			vector<int>::iterator o(vcm.cvals.begin());
 
