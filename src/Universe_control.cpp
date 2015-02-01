@@ -336,7 +336,7 @@ void process_univ_objects() {
 		// skip orbiting objects (no collisions or gravity effects, temperature is mostly constant)
 		s_object clobj; // closest object
 		bool const include_asteroids(!particle); // disable particle-asteroid collisions because they're too slow
-		int const found_close(orbiting ? 0 : universe.get_object_closest_to_pos(clobj, obj_pos, include_asteroids));
+		int const found_close(orbiting ? 0 : universe.get_object_closest_to_pos(clobj, obj_pos, include_asteroids, 1.0, (no_coll ? 0.0 : radius)));
 		bool temp_known(0);
 		float limit_speed_dist(clobj.dist);
 
@@ -357,7 +357,7 @@ void process_univ_objects() {
 						// FIXME: detailed collision?
 						if (projectile) {} // projectile explosions damage the asteroid (reduce its radius? what if it's instanced?)
 						float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
-						upos_point_type const cpos(asteroid.pos + norm*min(rsum, 1.05*dist)); // move exactly rsum away from the asteroid
+						upos_point_type const cpos(asteroid.pos + norm*min(rsum, 1.1*dist)); // move away from the asteroid, but limit the distance to smooth the response
 						proc_collision(uobj, cpos, asteroid.pos, asteroid.radius, asteroid.get_velocity(), 1.0, elastic, asteroid.get_fragment_tid(obj_pos));
 
 						if (is_ship && clobj.asteroid_field == AST_BELT_ID) { // ship collision with asteroid belt
@@ -700,7 +700,7 @@ bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use
 bool sphere_intersect_uobject(point const &pos, float radius, bool include_asteroids) {
 
 	s_object result;
-	if (!universe.get_closest_object(result, pos, UTYPE_MOON, include_asteroids, 1, 1.0)) return 0;
+	if (!universe.get_closest_object(result, pos, UTYPE_MOON, include_asteroids, 1, 1.0, 0, 1.0, radius)) return 0;
 	if (!result.object || !result.object->is_ok()) return 0; // can this happen?
 	if (!result.object->sphere_intersection(pos, radius)) return 0;
 	//cout << "intersects with " << result.object->get_name() << endl;

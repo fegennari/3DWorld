@@ -2660,7 +2660,7 @@ string ustar::get_info() const {
 
 // if not find_largest then find closest
 int universe_t::get_closest_object(s_object &result, point pos, int max_level, bool include_asteroids,
-	bool offset, float expand, bool get_destroyed, float g_expand) const
+	bool offset, float expand, bool get_destroyed, float g_expand, float r_add) const
 {
 	float min_gdist(CELL_SIZE);
 	if (offset) offset_pos(pos);
@@ -2684,7 +2684,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 	}
 	if (cell.galaxies == nullptr) return 0; // not yet allocated
 	pos -= cell.pos;
-	float const planet_thresh(expand*4.0*MAX_PLANET_EXTENT), moon_thresh(expand*2.0*MAX_PLANET_EXTENT);
+	float const planet_thresh(expand*4.0*MAX_PLANET_EXTENT + r_add), moon_thresh(expand*2.0*MAX_PLANET_EXTENT + r_add);
 	float const pt_sq(planet_thresh*planet_thresh), mt_sq(moon_thresh*moon_thresh);
 	static int last_galaxy(-1), last_cluster(-1), last_system(-1);
 	unsigned const ng((unsigned)cell.galaxies->size());
@@ -2696,9 +2696,9 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 		if (gc == 0) gc = go; else if (gc == go) gc = 0;
 		ugalaxy &galaxy((*cell.galaxies)[gc]);
 		float const distg(p2p_dist(pos, galaxy.pos));
-		if (distg > g_expand*(galaxy.radius + MAX_SYSTEM_EXTENT)) continue;
+		if (distg > g_expand*(galaxy.radius + MAX_SYSTEM_EXTENT) + r_add) continue;
 		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos)/distg));
-		if (distg > g_expand*(galaxy_radius + MAX_SYSTEM_EXTENT)) continue;
+		if (distg > g_expand*(galaxy_radius + MAX_SYSTEM_EXTENT) + r_add) continue;
 
 		if (max_level == UTYPE_GALAXY || result.object == NULL) { // galaxy
 			if (max_level == UTYPE_GALAXY) {
@@ -2713,11 +2713,11 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 		}
 		if (include_asteroids) { // check for asteroid field collisions
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
-				if (!dist_less_than(pos, i->pos, expand*i->radius)) continue;
+				if (!dist_less_than(pos, i->pos, expand*i->radius+r_add)) continue;
 
 				// FIXME: asteroid positions are dynamic, so spatial subdivision is difficult - we just do a slow linear iteration here
 				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) {
-					if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
+					if (!dist_less_than(pos, j->pos, expand*j->radius+r_add)) continue;
 					result.assign(gc, -1, -1, p2p_dist(pos, j->pos), UTYPE_ASTEROID, NULL);
 					result.asteroid_field = (i - galaxy.asteroid_fields.begin());
 					result.asteroid       = (j - i->begin());
@@ -2731,7 +2731,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 			unsigned cl(cl_);
 			if (cl == 0) cl = co; else if (cl == co) cl = 0;
 			ugalaxy::system_cluster const &cluster(galaxy.clusters[cl]);
-			float const testval(expand*cluster.bounds);
+			float const testval(expand*cluster.bounds + r_add);
 			if (p2p_dist_sq(pos, cluster.center) > testval*testval) continue;
 			unsigned const cs1(cluster.s1), cs2(cluster.s2);
 			unsigned const so((last_system >= int(cs1) && last_system < int(cs2) && cl == co) ? last_system : cs1);
@@ -2741,8 +2741,8 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				if (s == cs1) s = so; else if (s == so) s = cs1;
 				ussystem &system(galaxy.sols[s]);
 				assert(system.cluster_id == cl); // testing
-				float const dists_sq(p2p_dist_sq(pos, system.pos)), testval(expand*(system.radius + MAX_PLANET_EXTENT));
-				if (dists_sq > testval*testval) continue;
+				float const dists_sq(p2p_dist_sq(pos, system.pos)), testval2(expand*(system.radius + MAX_PLANET_EXTENT) + r_add);
+				if (dists_sq > testval2*testval2) continue;
 				float dists(sqrt(dists_sq));
 				found_system = (expand <= 1.0 && dists < system.radius);
 				
@@ -2760,10 +2760,10 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 				if (max_level == UTYPE_SYSTEM || max_level == UTYPE_STAR) continue; // system/star
 
 				if (include_asteroids && system.asteroid_belt != nullptr) { // check for asteroid belt collisions
-					if (system.asteroid_belt->sphere_might_intersect(pos, expand*system.asteroid_belt->get_max_asteroid_radius())) {
+					if (system.asteroid_belt->sphere_might_intersect(pos, expand*system.asteroid_belt->get_max_asteroid_radius()+r_add)) {
 						// FIXME: asteroid positions are dynamic, so spatial subdivision is difficult - we just do a slow linear iteration here
 						for (uasteroid_field::const_iterator j = system.asteroid_belt->begin(); j != system.asteroid_belt->end(); ++j) {
-							if (!dist_less_than(pos, j->pos, expand*j->radius)) continue;
+							if (!dist_less_than(pos, j->pos, expand*j->radius+r_add)) continue;
 							result.assign(gc, cl, s, p2p_dist(pos, j->pos), UTYPE_ASTEROID, NULL);
 							result.asteroid_field = AST_BELT_ID; // special asteroid belt identifier
 							result.asteroid       = (j - system.asteroid_belt->begin());
