@@ -176,7 +176,7 @@ public:
 	void adjust_colorAB(float delta);
 	void gen_colorAB(float delta);
 	void set_grav_mass();
-	bool collision(point const &p, float rad, vector3d const &v, point &cpos, float &coll_r, bool simple) const;
+	bool collision(upos_point_type const &p, float rad, vector3d const &v, upos_point_type &cpos, float &coll_r, bool simple) const;
 	bool rename(std::string const &name_) {setname(name_); return 1;}
 	int  get_type() const {return type;}
 

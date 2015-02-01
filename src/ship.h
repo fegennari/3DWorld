@@ -710,7 +710,7 @@ public:
 	void set_speed_factor(float s_fact)   {speed_factor = s_fact;}
 	void set_max_sf(float sf)             {max_sfactor  = sf;}
 	void set_time(unsigned time_)         {time         = time_;}
-	void move_to(point const &pos_)       {pos          = pos_;}
+	void move_to(upos_point_type const &pos_) {pos      = pos_;}
 	void move_reset_by(point const &pos_) {reset_pos   += pos_;}
 	void add_mass(float const m)          {extra_mass  += m; assert(extra_mass >= 0.0);} // can this be negative?
 	void add_gravity_swp(vector3d const &gravity, vector3d const &swp, float gscale, bool near_bh);

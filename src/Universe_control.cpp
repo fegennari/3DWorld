@@ -125,13 +125,12 @@ void setup_current_system(float sun_intensity, bool reflection_mode) {
 	base_sky_color   = BLUE;
 
 	if (clobj0.type == UTYPE_PLANET || clobj0.type == UTYPE_MOON) { // planet or moon
-		point const &opos(clobj0.object->get_pos());
+		upos_point_type const &opos(clobj0.object->get_pos());
 		float const oradius(clobj0.object->get_radius());
 
 		if (dist_less_than(pos, opos, 10.0*oradius)) { // fairly close to the planet
 			if (!dist_less_than(pos, opos, 1.01*oradius)) { // not at the surface
-				//cout << "distance to planet: " << p2p_dist(opos, pos) << ", planet radius: " << oradius << endl;
-				point const p_int(opos + (oradius + get_player_radius())*(pos - opos).get_norm());
+				upos_point_type const p_int(opos + (oradius + get_player_radius())*(pos - opos).get_norm());
 				player_ship().move_to(p_int); // move the player ship to the surface of the planet/moon
 			}
 		}
@@ -307,7 +306,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 }
 
 
-void proc_collision(free_obj *const uobj, point const &cpos, point const &coll_pos, float radius, vector3d const &velocity, float mass, float elastic, int coll_tid) {
+void proc_collision(free_obj *const uobj, upos_point_type const &cpos, point const &coll_pos, float radius, vector3d const &velocity, float mass, float elastic, int coll_tid) {
 
 	assert(mass > 0.0);
 	uobj->set_sobj_coll_tid(coll_tid);
@@ -348,15 +347,17 @@ void process_univ_objects() {
 				uobj->set_sobj_dist(dist_to_cobj);
 
 				if (dist_to_cobj < 0.0) { // possible collision
-					vector3d const norm(obj_pos, asteroid.pos);
+					upos_point_type norm(obj_pos, asteroid.pos);
 					vector3d const &ascale(asteroid.get_scale());
-					double const nmag(norm.mag()), rsum(asteroid.radius*(norm*ascale).mag()/nmag + radius);
+					double const dist(norm.mag());
+					norm /= dist; // normalize
+					double const a_radius(asteroid.radius*(norm*upos_point_type(ascale)).mag()), rsum(a_radius + radius);
 					
-					if (nmag < rsum) {
+					if (dist < rsum) {
 						// FIXME: detailed collision?
 						if (projectile) {} // projectile explosions damage the asteroid (reduce its radius? what if it's instanced?)
 						float const elastic((lod_coll ? 0.1 : 1.0)*SBODY_COLL_ELASTIC);
-						point const cpos(asteroid.pos + norm*(rsum/nmag)); // normalize, multiply, and add
+						upos_point_type const cpos(asteroid.pos + norm*min(rsum, 1.05*dist)); // move exactly rsum away from the asteroid
 						proc_collision(uobj, cpos, asteroid.pos, asteroid.radius, asteroid.get_velocity(), 1.0, elastic, asteroid.get_fragment_tid(obj_pos));
 
 						if (is_ship && clobj.asteroid_field == AST_BELT_ID) { // ship collision with asteroid belt
@@ -392,7 +393,7 @@ void process_univ_objects() {
 
 					if (dist_to_cobj < 0.0) { // collision (except for stars)
 						float coll_r;
-						point cpos;
+						upos_point_type cpos;
 						coll = 1;
 
 						// player_ship and possibly other ships need the more stable but less accurate algorithm
@@ -405,9 +406,9 @@ void process_univ_objects() {
 							coll = 2;
 						}
 					} // collision
-					if (is_ship) uobj->near_sobj(clobj, coll);
+					if (is_ship) {uobj->near_sobj(clobj, coll);}
 				} // planet or moon
-				if (calc_gravity) get_gravity(clobj, obj_pos, gravity, 1);
+				if (calc_gravity) {get_gravity(clobj, obj_pos, gravity, 1);}
 
 				if (clobj.type == UTYPE_PLANET) {
 					// when near a planet with rings, use the dist to the outer rings to limit speed so that we don't fly through the rings too quickly
@@ -848,7 +849,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 				oship = add_orbiting_ship(colony_types[i], 0, 1, 1, own, &world); // put a colony on world
 				
 				if (oship != NULL) {
-					vector3d const dir((own->pos - oship->pos).get_norm());
+					upos_point_type const dir((own->pos - oship->pos).get_norm());
 					own->move_to(oship->get_pos() + dir*(1.1*(own->get_c_radius() + oship->get_c_radius()))); // move away from object
 					break;
 				}
@@ -870,11 +871,11 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 // ************ UOBJ_SOLID/UREV_BODY ************
 
 
-bool uobj_solid::collision(point const &p, float rad, vector3d const &v, point &cpos, float &coll_r, bool simple) const { // maybe should be in universe.cpp
+bool uobj_solid::collision(upos_point_type const &p, float rad, vector3d const &v, upos_point_type &cpos, float &coll_r, bool simple) const { // maybe should be in universe.cpp
 
 	coll_r = radius;
 	if (!surface_test(rad, p, coll_r, simple)) return 0;
-	vector3d const norm(p, pos);
+	upos_point_type const norm(p, pos);
 	double const rsum(coll_r + rad), nmag(norm.mag());
 	if (nmag > rsum) return 0;
 	double const vmag(v.mag());
@@ -883,8 +884,10 @@ bool uobj_solid::collision(point const &p, float rad, vector3d const &v, point &
 		cpos = pos + norm*(rsum/nmag); // normalize, multiply, and add
 	}
 	else {
-		get_sphere_mov_sphere_int_pt(pos, p, v, rsum, cpos);
-		if (nmag > TOLERANCE) cpos += norm*(0.05*rad/nmag); // slight adjustment to improve stability
+		point cpos_f;
+		get_sphere_mov_sphere_int_pt(pos, p, v, rsum, cpos_f);
+		cpos = cpos_f; // FIXME: loss of precision
+		if (nmag > TOLERANCE) {cpos += norm*(0.05*rad/nmag);} // slight adjustment to improve stability
 	}
 	return 1;
 }

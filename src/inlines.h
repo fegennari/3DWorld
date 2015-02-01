@@ -160,12 +160,10 @@ inline float pt_line_dist(point const &P, point const &L1, point const &L2) {
 	vector3d const L(L2 - L1), cp(cross_product(L, (L1 - P)));
 	return cp.mag()/L.mag();
 }
-
 inline bool pt_line_dist_less_than(point const &P, point const &L1, point const &L2, float dist) {
 	vector3d const L(L2 - L1), cp(cross_product(L, (L1 - P)));
 	return (cp.mag_sq() < dist*dist*L.mag_sq());
 }
-
 inline bool pt_line_dir_dist_less_than(point const &P, point const &L1, vector3d const &Ldir, float dist) { // Ldir is normalized
 	return (cross_product(Ldir, (L1 - P)).mag_sq() < dist*dist);
 }
@@ -173,7 +171,6 @@ inline bool pt_line_dir_dist_less_than(point const &P, point const &L1, vector3d
 template<typename T, typename S> inline float p2p_dist_sq(const pointT<T> &pt1, const pointT<S> &pt2) {
 	return (pt1.x-pt2.x)*(pt1.x-pt2.x) + (pt1.y-pt2.y)*(pt1.y-pt2.y) + (pt1.z-pt2.z)*(pt1.z-pt2.z);
 }
-
 template<typename T, typename S> inline float p2p_dist(const pointT<T> &pt1, const pointT<S> &pt2) {
 	return sqrt(p2p_dist_sq(pt1, pt2));
 }
@@ -181,7 +178,6 @@ template<typename T, typename S> inline float p2p_dist(const pointT<T> &pt1, con
 template<typename T, typename S> inline float p2p_dist_xy_sq(const pointT<T> &pt1, const pointT<S> &pt2) {
 	return (pt1.x-pt2.x)*(pt1.x-pt2.x) + (pt1.y-pt2.y)*(pt1.y-pt2.y);
 }
-
 template<typename T, typename S> inline float p2p_dist_xy(const pointT<T> &pt1, const pointT<S> &pt2) {
 	return sqrt(p2p_dist_xy_sq(pt1, pt2));
 }
@@ -189,7 +185,6 @@ template<typename T, typename S> inline float p2p_dist_xy(const pointT<T> &pt1, 
 template<typename T, typename S, typename V> inline bool dist_less_than(pointT<T> const &pt1, pointT<S> const &pt2, V dval) {
 	return (p2p_dist_sq(pt1, pt2) < dval*dval);
 }
-
 template<typename T, typename S, typename V> inline bool dist_xy_less_than(pointT<T> const &pt1, pointT<S> const &pt2, V dval) {
 	return (p2p_dist_xy_sq(pt1, pt2) < dval*dval);
 }
@@ -197,15 +192,16 @@ template<typename T, typename S, typename V> inline bool dist_xy_less_than(point
 template<typename T> inline T dot_product(pointT<T> const &A, pointT<T> const &B, pointT<T> const &C) {
 	return ((B.x - A.x)*(C.x - A.x) + (B.y - A.y)*(C.y - A.y) + (B.z - A.z)*(C.z - A.z));
 }
-
 template<typename T> inline T dot_product(pointT<T> const &A, pointT<T> const &B) {
+	return (A.x*B.x + A.y*B.y + A.z*B.z);
+}
+template<typename S, typename T> inline double dot_product(pointT<S> const &A, pointT<T> const &B) {
 	return (A.x*B.x + A.y*B.y + A.z*B.z);
 }
 
 template<typename T> inline T dot_product_ptv(pointT<T> const &V, pointT<T> const &A, pointT<T> const &B) {
 	return (V.x*(A.x - B.x) + V.y*(A.y - B.y) + V.z*(A.z - B.z));
 }
-
 template<typename T> inline T dot_product_ptv_norm(pointT<T> const &V, pointT<T> const &A, pointT<T> const &B) {
 	return (V.x*(A.x - B.x) + V.y*(A.y - B.y) + V.z*(A.z - B.z))/(V.mag()*p2p_dist(A, B));
 }
