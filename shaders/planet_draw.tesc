@@ -13,7 +13,14 @@ out vec3 vertex_ES[];
 
 float get_tess_level(float d1, float d2) {
 	float dav = 0.5*(d1 + d2);
-	return clamp(60.0*obj_radius/dav, 1.0, 20.0);
+	float v   = 60.0*obj_radius/dav;
+	if (v < 1.5 ) {return 1; }
+	if (v < 3.0 ) {return 2; }
+	if (v < 6.0 ) {return 4; }
+	if (v < 10.0) {return 8; }
+	if (v < 14.0) {return 12;}
+	if (v < 18.0) {return 16;}
+	return 20;
 }
 float dist_to_camera(in vec3 pos, in mat4 vm_inv) {
 	vec4 epos = fg_ModelViewMatrix * vec4(pos, 1.0);
