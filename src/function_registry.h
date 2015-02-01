@@ -390,7 +390,6 @@ bool sphere_ext_poly_int_base(point const &pt, vector3d const &norm, point const
 							  float thickness, float &thick, float &rdist);
 bool sphere_ext_poly_intersect(point const *const points, unsigned npoints, vector3d const &norm,
 							   point const &pos, float radius, float thickness, float t_adj);
-void get_sphere_mov_sphere_int_pt(point const &p1, point const &p2, vector3d const &v, float rsum, point &cpos);
 bool sphere_test_comp(point const &p2, point const &p1, vector3d const &v1, float r2sq, float &t);
 bool line_sphere_intersect(point const &p1, point const &p2, point const &c, float r);
 bool circle_test_comp(point const &p2, point const &p1, vector3d const &v1, vector3d norm, float r2sq, float &t);

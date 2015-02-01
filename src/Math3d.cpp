@@ -365,19 +365,6 @@ bool sphere_ext_poly_intersect(point const * const points, unsigned npoints, vec
 }
 
 
-// Note: v is velocity of sphere at p2
-void get_sphere_mov_sphere_int_pt(point const &p1, point const &p2, vector3d const &v, float rsum, point &cpos) {
-
-	vector3d const norm(p2, p1);
-	double const vmag_sq(v.mag_sq());
-	if (vmag_sq < TOLERANCE) {cpos = p2; return;}
-	double const t1(-dot_product(norm, v)); // negate?
-	point const q(p2 + v*(t1/vmag_sq));
-	double const d_sq(p2p_dist_sq(p1, q)), ival(rsum*rsum - d_sq), t2((ival > 0.0) ? sqrt(ival) : 0.0);
-	cpos = q - v*(t2/sqrt(vmag_sq));
-}
-
-
 // similar to sphere_test_comp(), but needs some intermediate values and assumes the line extends infinitely
 // assumes infinite line - v12 should be normalized
 bool line_intersect_sphere(point const &p1, vector3d const &v12, point const &sc, float radius, float &rad, float &dist, float &t) {

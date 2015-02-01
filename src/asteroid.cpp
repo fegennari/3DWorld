@@ -269,7 +269,7 @@ public:
 		if (!dist_less_than(pos, c, (r + asteroid_radius))) return 0;
 	
 		if (ip.calc_int) {
-			get_sphere_mov_sphere_int_pt(pos, c, (c - ip.p_last), 1.01*(r + asteroid_radius), ip.p_int);
+			get_sphere_mov_sphere_int_pt(point(pos), c, (c - ip.p_last), 1.01*(r + asteroid_radius), ip.p_int);
 			ip.norm = (ip.p_int - pos).get_norm();
 			//ip.norm  = (c - pos).get_norm();
 			//ip.p_int = pos + ip.norm*(1.01*(r + asteroid_radius));

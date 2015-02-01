@@ -884,9 +884,7 @@ bool uobj_solid::collision(upos_point_type const &p, float rad, vector3d const &
 		cpos = pos + norm*(rsum/nmag); // normalize, multiply, and add
 	}
 	else {
-		point cpos_f;
-		get_sphere_mov_sphere_int_pt(pos, p, v, rsum, cpos_f);
-		cpos = cpos_f; // FIXME: loss of precision
+		get_sphere_mov_sphere_int_pt(pos, p, v, rsum, cpos);
 		if (nmag > TOLERANCE) {cpos += norm*(0.05*rad/nmag);} // slight adjustment to improve stability
 	}
 	return 1;

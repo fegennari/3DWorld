@@ -255,7 +255,7 @@ float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float ob
 	if (move_pos) { // start with the intersection point on the edge of the source collision object's bounding sphere
 		float const rval(obj_radius + c_radius + 0.01*min(obj_radius, c_radius)); // slightly larger than rsum
 		//new_pos += norm*rval; // move the smaller object by its radius from the collision point so as not to intersect
-		get_sphere_mov_sphere_int_pt(copos, pos, vd, rval, new_pos); // velocity with or without rotations?
+		get_sphere_mov_sphere_int_pt(copos, point(pos), vd, rval, new_pos); // velocity with or without rotations?
 			
 		if (obj_mass >= 2.0*mass0) { // does this help?
 			float const dist(p2p_dist(copos, new_pos));

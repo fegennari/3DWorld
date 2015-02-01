@@ -219,7 +219,6 @@ inline vector3d get_poly_dir_norm(vector3d const &norm, point const &p1, vector3
 	return ((dot_product_ptv(norm, p1, (p1 + v1*t)) < 0.0) ? -norm : norm);
 }
 
-
 inline point get_center_n2(point const *const pts) {
 	return ((pts[0] + pts[1])*0.5);
 }
@@ -234,14 +233,11 @@ inline vector3d get_norm_rand(vector3d const &v) {
 
 
 template<typename T> inline void get_normal(pointT<T> const &v1, pointT<T> const &v2, pointT<T> const &v3, pointT<T> &norm, bool normalize) {
-
 	cross_product((v2 - v1), (v3 - v2), norm);
 	if (normalize) {norm.normalize();}
 }
 
-
 inline void orthogonalize_dir(vector3d const &vin, vector3d const &dir, vector3d &vortho, bool normalize) {
-
 	cross_product(dir, cross_product(vin, dir), vortho);
 	if (normalize) {vortho.normalize();}
 }
@@ -260,7 +256,6 @@ inline bool is_axis_aligned(vector3d const &n) { // n must be normalized
 	return (fabs(n.x) > 0.99 || fabs(n.y) > 0.99 || fabs(n.z) > 0.99);
 }
 
-
 inline bool is_triangle_valid(point const &p1, point const &p2, point const &p3) {
 	return (!dist_less_than(p1, p2, TOLERANCE) && !dist_less_than(p2, p3, TOLERANCE) && !dist_less_than(p3, p1, TOLERANCE));
 }
@@ -277,7 +272,6 @@ inline bool line_intersect_sphere(point const &p1, vector3d const &v12, point co
 	return line_intersect_sphere(p1, v12, sc, radius, rad, dist, t);
 }
 
-
 inline bool sphere_int_cylinder_sides(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2) {
 
 	float t, rad; // unused
@@ -285,14 +279,12 @@ inline bool sphere_int_cylinder_sides(point const &sc, float sr, point const &cp
 	return sphere_int_cylinder_pretest(sc, sr, cp1, cp2, r1, r2, 0, v1, v2, t, rad);
 }
 
-
 inline bool sphere_intersect_cylinder(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2) {
 
 	point p_int; // unused
 	vector3d norm; // unused
 	return sphere_intersect_cylinder_ipt(sc, sr, cp1, cp2, r1, r2, 1, p_int, norm, 0);
 }
-
 
 // p2 = line starting point, p1 = circle center, v1 = line direction, norm = plane normal, and r2sq = square of the circle radius
 inline bool circle_test_comp(point const &p2, point const &p1, vector3d const &v1, vector3d norm, float r2sq, float &t) {
@@ -302,20 +294,16 @@ inline bool circle_test_comp(point const &p2, point const &p1, vector3d const &v
 	return (line_int_plane(p2, (v1 + p2), p1, norm, pos, t, 0) && p2p_dist_sq(p1, pos) < r2sq);
 }
 
-
 inline bool sphere_test_comp(point const &p2, point const &p1, vector3d const &v1, float r2sq) {
-
 	float t;
 	return sphere_test_comp(p2, p1, v1, r2sq, t);
 }
-
 
 inline bool line_sphere_intersect(point const &p1, point const &p2, point const &c, float r) {
 
 	vector3d const v1(p1, p2);
 	return sphere_test_comp(p1, c, v1, r*r);
 }
-
 
 inline bool line_sphere_int_cont(point const &p1, point const &p2, point const &c, float r) {
 
@@ -325,30 +313,23 @@ inline bool line_sphere_int_cont(point const &p1, point const &p2, point const &
 
 
 inline int line_int_cylinder(point const &p1, point const &p2, point const &cp1, point const &cp2, float r1, float r2, bool check_ends, float &t) {
-
 	return line_int_thick_cylinder(p1, p2, cp1, cp2, 0.0, 0.0, r1, r2, check_ends, t);
 }
 
-
 inline bool point_in_cylinder(point const &cp1, point const &cp2, point const &pos, float r1, float r2) {
-
 	return sphere_intersect_cylinder(pos, 0.0, cp1, cp2, r1, r2);
 }
 
 
 inline bool line_poly_intersect(point const &p1, point const &p2, point const *points, unsigned npts, vector3d const &norm, float &t) {
-
 	point pos;
 	return (line_int_plane(p1, p2, points[0], norm, pos, t, 0) && planar_contour_intersect(points, npts, pos, norm));
 }
 
-
 inline bool line_poly_intersect(vector3d const &v1, point const &p1, point const *points, unsigned npts, vector3d const &norm) {
-
 	float t;
 	return line_poly_intersect(p1, (p1 + v1), points, npts, norm, t);
 }
-
 
 inline bool line_poly_intersect(vector3d const &v1, point const &p1, point const *points, unsigned npts, bool bfc=0) {
 
@@ -382,6 +363,19 @@ inline bool line_is_axis_aligned(point const &p1, point const &p2) {
 	unsigned eq_dims(0);
 	UNROLL_3X(if(fabs(p1[i_] - p2[i_]) < TOLERANCE) ++eq_dims;)
 	return (eq_dims >= 2);
+}
+
+
+// Note: v is velocity of sphere at p2
+template <typename T> void get_sphere_mov_sphere_int_pt(pointT<T> const &p1, pointT<T> const &p2, vector3d const &v, float rsum, pointT<T> &cpos) {
+
+	pointT<T> const norm(p2, p1);
+	double const vmag_sq(v.mag_sq());
+	if (vmag_sq < TOLERANCE) {cpos = p2; return;}
+	double const t1(-dot_product(norm, v)); // negate?
+	pointT<T> const q(p2 + v*(t1/vmag_sq));
+	double const d_sq(p2p_dist_sq(p1, q)), ival(rsum*rsum - d_sq), t2((ival > 0.0) ? sqrt(ival) : 0.0);
+	cpos = q - v*(t2/sqrt(vmag_sq));
 }
 
 
