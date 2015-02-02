@@ -732,6 +732,18 @@ struct norm_comp { // size = 4
 	norm_comp() {}
 	norm_comp(vector3d const &n_) {set_norm(n_);}
 	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = (char)(127.0*n_[i_]);)}
+	vector3d get_norm() const {return vector3d(n[0]/127.0, n[1]/127.0, n[2]/127.0);}
+};
+
+
+// unused
+struct norm_xy { // size = 8
+	float x, y; // z can be calculated in the shader as sqrt(1 - x*x - y*y), as long as z >= 0.0
+	norm_xy() {}
+	norm_xy(vector3d const &n) {set_norm(n);}
+	void set_norm(vector3d const &n) {assert(n.z >= 0.0); x = n.x; y = n.y;} 
+	void ensure_normalized_and_set(vector3d const &n) {assert(n.z >= 0.0); float const mag(n.mag()); x = n.x/mag; y = n.y/mag;}
+	vector3d get_norm() const {return vector3d(x, y, sqrt(1.0 - x*x - y*y));}
 };
 
 
