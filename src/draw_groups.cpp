@@ -380,7 +380,7 @@ bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) { // only u
 
 	if (skipval <= 1 || (obj.time % skipval) == 0) {
 		is_shadowed = !is_visible_to_light_cobj(obj.pos, get_specular_light(), radius, obj.coll_id, 0);
-		if (is_shadowed) obj.flags |= SHADOWED; else obj.flags &= ~SHADOWED;
+		if (is_shadowed) {obj.flags |= SHADOWED;} else {obj.flags &= ~SHADOWED;}
 	}
 	return is_shadowed;
 }
@@ -554,9 +554,9 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 	} // large objects
 	else { // small objects
 		colorRGBA const &base_color(object_types[type].color);
-		quad_batch_draw particle_qbd;
 		vector<tid_color_to_ix_t> tri_fragments, sphere_fragments;
 		vector<vert_norm_color> shrapnel_verts;
+		vector<pair<float, unsigned> > particles_to_draw;
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
@@ -595,11 +595,8 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				add_rotated_triangle(obj.pos, obj.orientation, tradius, obj.angle, get_glow_color(obj, 1), shrapnel_verts);
 				break;
 			case PARTICLE:
-				{
-					colorRGBA const glow_color(get_glow_color(obj, 0));
-					if (glow_color.alpha > 0.0) {particle_qbd.add_billboard(obj.pos, get_camera_pos(), up_vector, glow_color, 1.2*tradius, 1.2*tradius);}
-					break;
-				}
+				particles_to_draw.push_back(make_pair(-distance_to_camera_sq(pos), j));
+				break;
 			case SAND:
 			case DIRT:
 			case ROCK:
@@ -663,9 +660,20 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 			select_texture(i->tid);
 			draw_sized_point(obj, obj.get_true_radius(), cd_scale, i->c, get_textured_color(tid, i->c), (i->tid >= 0), s, 2);
 		}
-		if (type == SHRAPNEL || type == PARTICLE) {
+		if (!particles_to_draw.empty() || !shrapnel_verts.empty()) { // draw particles and shrapnel as emissive
 			s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
-			if (type == SHRAPNEL) {draw_verts(shrapnel_verts, GL_TRIANGLES);} else {particle_qbd.draw();}
+			sort(particles_to_draw.begin(), particles_to_draw.end()); // sort back to front
+			quad_batch_draw particle_qbd;
+			point const camera(get_camera_pos());
+
+			for (auto i = particles_to_draw.begin(); i != particles_to_draw.end(); ++i) {
+				dwobject const &obj(objg.get_obj(i->second));
+				float const tradius(obj.get_true_radius()); // == radius in all cases?
+				colorRGBA const glow_color(get_glow_color(obj, 0));
+				if (glow_color.alpha > 0.0) {particle_qbd.add_billboard(obj.pos, camera, up_vector, glow_color, 1.2*tradius, 1.2*tradius);}
+			}
+			particle_qbd.draw();
+			draw_verts(shrapnel_verts, GL_TRIANGLES);
 			s.add_uniform_float("emissive_scale", 0.0); // reset
 		}
 	} // small object
