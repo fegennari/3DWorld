@@ -268,7 +268,10 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 			if (DYNAMIC_SMOKE_SHADOWS) {s.set_prefix("#define DYNAMIC_SMOKE_SHADOWS", d);}
 			s.set_prefix("#define SMOKE_ENABLED", d);
 		}
-		if (display_mode & 0x10) {s.set_prefix("#define SMOKE_DLIGHTS", 1);} // FS - TESTING
+		if (display_mode & 0x10) { // FS - TESTING
+			s.set_prefix("#define SMOKE_DLIGHTS",    1);
+			s.set_prefix("#define SMOKE_SHADOW_MAP", 1);
+		}
 	}
 	if (use_bmap) {
 		for (unsigned i = 0; i < 2; ++i) {

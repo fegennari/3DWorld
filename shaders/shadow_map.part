@@ -8,7 +8,7 @@ uniform mat4 smap_matrix0, smap_matrix1;
 float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in mat4 matrix, in sampler2DShadow sm_tex, in vec3 lpos) {
 #ifndef NO_SMAP_NORMAL_OFFSET
 #ifdef DYNAMIC_SMAP_BIAS
-	pos.xyz += norm_bias_scale*tan(acos(dot(normal, normalize(lpos))))*z_bias*normal;
+	pos.xyz += norm_bias_scale*tan(acos(max(0.05, dot(normal, normalize(lpos)))))*z_bias*normal;
 #else
 	pos.xyz += norm_bias_scale*z_bias*normal;
 	//pos.xyz += norm_bias_scale*z_bias*normalize(fg_ModelViewMatrixInverse[3].xyz - pos.xyz); // world space view vector

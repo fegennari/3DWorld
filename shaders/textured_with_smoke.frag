@@ -178,15 +178,22 @@ void main()
 				vec3 dl_pos = pos*scene_scale + scene_llc;
 				tex_val.rgb += add_dlights(dl_pos, normalize(dir), smoke_color); // normal points from vertex to eye
 			}
-#endif
+#endif // SMOKE_DLIGHTS
+#ifdef SMOKE_SHADOW_MAP
+#ifdef USE_SHADOW_MAP
+			vec3 dl_pos   = pos*scene_scale + scene_llc;
+			vec4 cur_epos = fg_ModelViewMatrix * vec4(dl_pos, 1.0);
+			tex_val.rgb  += 0.5 * step_weight * get_shadow_map_weight_light0(cur_epos, vec3(0.0)) * fg_LightSource[0].diffuse.rgb;
+#endif // USE_SHADOW_MAP
+#endif // SMOKE_SHADOW_MAP
 			float smoke  = smoke_sscale*tex_val.a*step_weight;
 			float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
 			float mval   = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
 			color        = mix(color, vec4((tex_val.rgb * smoke_color), alpha), mval);
 			pos         += delta*step_weight; // should be in [0.0, 1.0] range
 			step_weight  = 1.0;
-		}
-	}
+		} // for i
+	} // end smoke code
 #ifndef NO_ALPHA_TEST
 	//color.a = min(color.a, texel.a); // Note: assumes walls don't have textures with alpha < 1
 	if (color.a <= min_alpha) discard;
