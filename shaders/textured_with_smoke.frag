@@ -177,7 +177,7 @@ void main()
 #ifdef SMOKE_DLIGHTS
 			if (enable_dlights) { // dynamic lighting
 				vec3 dl_pos  = pos*scene_scale + scene_llc;
-				tex_val.rgb += add_dlights(dl_pos, norm_dir, smoke_color); // normal points from vertex to eye
+				tex_val.rgb += add_dlights(dl_pos, norm_dir, vec3(1.0)); // normal points from vertex to eye, color is applied later
 			}
 #endif // SMOKE_DLIGHTS
 #ifdef SMOKE_SHADOW_MAP
