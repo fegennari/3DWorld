@@ -162,6 +162,7 @@ void main()
 	
 	if (eye_c != vpos_c) { // smoke code
 		vec3 dir      = eye_c - vpos_c;
+		vec3 norm_dir = normalize(dir); // used for dlights
 		vec3 pos      = (vpos_c - scene_llc)/scene_scale;
 		float nsteps  = length(dir)/step_delta;
 		vec3 delta    = dir/(nsteps*scene_scale);
@@ -175,15 +176,18 @@ void main()
 			vec4 tex_val = texture(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
 #ifdef SMOKE_DLIGHTS
 			if (enable_dlights) { // dynamic lighting
-				vec3 dl_pos = pos*scene_scale + scene_llc;
-				tex_val.rgb += add_dlights(dl_pos, normalize(dir), smoke_color); // normal points from vertex to eye
+				vec3 dl_pos  = pos*scene_scale + scene_llc;
+				tex_val.rgb += add_dlights(dl_pos, norm_dir, smoke_color); // normal points from vertex to eye
 			}
 #endif // SMOKE_DLIGHTS
 #ifdef SMOKE_SHADOW_MAP
 #ifdef USE_SHADOW_MAP
-			vec3 dl_pos   = pos*scene_scale + scene_llc;
-			vec4 cur_epos = fg_ModelViewMatrix * vec4(dl_pos, 1.0);
-			tex_val.rgb  += 0.5 * step_weight * get_shadow_map_weight_light0(cur_epos, vec3(0.0)) * fg_LightSource[0].diffuse.rgb;
+			if (enable_light0) {
+				const float smoke_albedo = 0.9;
+				vec3 dl_pos   = pos*scene_scale + scene_llc;
+				vec4 cur_epos = fg_ModelViewMatrix * vec4(dl_pos, 1.0);
+				tex_val.rgb  += smoke_albedo * get_shadow_map_weight_light0_no_bias(cur_epos) * fg_LightSource[0].diffuse.rgb;
+			}
 #endif // USE_SHADOW_MAP
 #endif // SMOKE_SHADOW_MAP
 			float smoke  = smoke_sscale*tex_val.a*step_weight;

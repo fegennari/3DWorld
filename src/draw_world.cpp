@@ -41,7 +41,7 @@ vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias;
+extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
@@ -268,10 +268,8 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 			if (DYNAMIC_SMOKE_SHADOWS) {s.set_prefix("#define DYNAMIC_SMOKE_SHADOWS", d);}
 			s.set_prefix("#define SMOKE_ENABLED", d);
 		}
-		if (display_mode & 0x10) { // FS - TESTING
-			s.set_prefix("#define SMOKE_DLIGHTS",    1);
-			s.set_prefix("#define SMOKE_SHADOW_MAP", 1);
-		}
+		if (display_mode & 0x10) {s.set_prefix("#define SMOKE_DLIGHTS",    1);} // FS - TESTING
+		if (volume_lighting)     {s.set_prefix("#define SMOKE_SHADOW_MAP", 1);} // FS
 	}
 	if (use_bmap) {
 		for (unsigned i = 0; i < 2; ++i) {
@@ -308,7 +306,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_bmap     ) {s.add_uniform_int("bump_map", 5);}
 	if (use_spec_map ) {s.add_uniform_int("spec_map", 8);}
 	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
-	float const step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
+	float step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
+	if (volume_lighting && is_light_enabled(0)) {step_delta_scale *= 0.2f;} // 5 steps per texel for sun light on smoke volume
 	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
 	if (use_mvm) {upload_mvm_to_shader(s, "fg_ViewMatrix");}

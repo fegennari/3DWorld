@@ -15,10 +15,12 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in m
 #endif
 #endif
 	vec4 shadow_coord = matrix * pos;
-	// Note: was shadow2DProj()
 	return sm_scale*textureProj(sm_tex, shadow_coord + vec4(0, 0, -z_bias*shadow_coord.w, 0));
 }
 
+float get_shadow_map_weight_light0_no_bias(in vec4 pos) {
+	return sm_scale0*textureProj(sm_tex0, (smap_matrix0 * pos));
+}
 float get_shadow_map_weight_light0(in vec4 pos, in vec3 normal) {
 	return get_shadow_map_weight(pos, normal, sm_scale0, smap_matrix0, sm_tex0, fg_LightSource[0].position.xyz);
 }

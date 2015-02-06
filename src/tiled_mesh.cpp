@@ -37,7 +37,7 @@ unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 
-extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled;
+extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape;
@@ -1563,6 +1563,7 @@ void setup_tt_fog_pre(shader_t &s) {
 
 	s.set_prefix("#define USE_QUADRATIC_FOG", 1); // FS
 	if (nonunif_fog_enabled()) {s.set_prefix("#define USE_NONUNIFORM_FOG", 1);} // FS
+	if (volume_lighting && is_cloudy && light_factor >= 0.6) {s.set_prefix("#define GOD_RAYS", 1);} // FS (sun out and cloudy)
 }
 
 void setup_tt_fog_post(shader_t &s) {

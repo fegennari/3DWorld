@@ -61,7 +61,7 @@ bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil
 bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0), claim_planet(0);
 bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0);
-bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0);
+bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0), volume_lighting(0);
 bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
@@ -1310,7 +1310,8 @@ void keyboard2(int key, int x, int y) {
 	case GLUT_KEY_F11: // temporary toggle of core context mode
 		use_core_context ^= 1;
 		break;
-	case GLUT_KEY_F12: // unused
+	case GLUT_KEY_F12: // toggle volumetric lighting
+		volume_lighting ^= 1;
 		break;
 	}
 	post_window_redisplay();
