@@ -136,7 +136,7 @@ void init_objects() {
 	object_types[HAIL].health              = 30.0;
 	object_types[HAIL].color               = TRANS;
 	object_types[HAIL].color.alpha         = 0.9*ICE_ALPHA;
-	object_types[HAIL].flags               = SEMI_TRANSPARENT | BLEND | FALL_EVERYWHERE | IS_PRECIP;
+	object_types[HAIL].flags               = FALL_EVERYWHERE | IS_PRECIP;
 
 	object_types[LEAF].air_factor          = 0.5;
 	object_types[LEAF].friction_factor     = 0.9;
