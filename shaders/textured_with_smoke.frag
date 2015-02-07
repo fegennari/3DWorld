@@ -1,15 +1,14 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
-uniform float step_delta;
+uniform float step_delta, step_delta_shadow;
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform float emissive_scale = 0.0;
 uniform vec3 smoke_color, sphere_center;
+uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
 uniform vec4 emission = vec4(0,0,0,1);
 
-// clipped eye position, clipped vertex position
-in vec3 lpos0, vposl; // world space
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
 // epos, eye_norm, and tc come from bump_map.frag
 // camera_pos comes from dynamic_lighting.part
@@ -29,18 +28,23 @@ vec3 add_light0(in vec3 n) {
 #endif
 
 #ifdef DYNAMIC_SMOKE_SHADOWS
+	pt_pair res = clip_line(vpos, sun_pos, smoke_bb);
+	vec3 lpos0  = res.v1;
+	vec3 vposl  = res.v2;
+
 	if (lpos0 != vposl && nscale > 0.0) {
 		vec3 dir      = vposl - lpos0;
 		vec3 pos      = (lpos0 - scene_llc)/scene_scale;
-		vec3 delta    = normalize(dir)*step_delta/scene_scale;
-		float nsteps  = length(dir)/step_delta;
+		float nsteps  = length(dir)/step_delta_shadow;
 		int num_steps = 1 + min(100, int(nsteps)); // round up
+		float sd_ratio= max(1.0, nsteps/100.0);
+		vec3 delta    = normalize(dir)*sd_ratio*step_delta_shadow/scene_scale;
 		float step_weight  = fract(nsteps);
-		float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
+		float smoke_sscale = SMOKE_SCALE*step_delta_shadow/half_dxy;
 	
 		// smoke volume iteration using 3D texture, light0 to vposl
 		for (int i = 0; i < num_steps; ++i) {
-			float smoke = smoke_sscale*texture(smoke_and_indir_tex, pos.zxy).a*step_weight;
+			float smoke = smoke_sscale*texture(smoke_and_indir_tex, pos.zxy).a*step_weight*sd_ratio;
 			nscale     *= (1.0 - smoke);
 			pos        += delta*step_weight; // should be in [0.0, 1.0] range
 			step_weight = 1.0;
@@ -165,11 +169,16 @@ void main()
 		vec3 norm_dir = normalize(dir); // used for dlights
 		vec3 pos      = (vpos_c - scene_llc)/scene_scale;
 		float nsteps  = length(dir)/step_delta;
-		vec3 delta    = dir/(nsteps*scene_scale);
 		int num_steps = 1 + min(1000, int(nsteps)); // round up
+		float sd_ratio= max(1.0, nsteps/1000.0);
+		vec3 delta    = sd_ratio*dir/(nsteps*scene_scale);
 		float step_weight  = fract(nsteps);
 		float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
-	
+#ifdef SMOKE_SHADOW_MAP
+		vec4 cur_epos   = fg_ModelViewMatrix * vec4(vpos_c, 1.0);
+		vec3 epos_delta = fg_NormalMatrix * (delta * scene_scale); // eye space pos/delta
+#endif
+
 		// smoke volume iteration using 3D texture, pos to eye
 		for (int i = 0; i < num_steps; ++i) {
 			// Note: we could also lookup dynamic lighting here, which would be very slow but would also look really nice
@@ -184,13 +193,12 @@ void main()
 #ifdef USE_SHADOW_MAP
 			if (enable_light0) {
 				const float smoke_albedo = 0.9;
-				vec3 dl_pos   = pos*scene_scale + scene_llc;
-				vec4 cur_epos = fg_ModelViewMatrix * vec4(dl_pos, 1.0);
 				tex_val.rgb  += smoke_albedo * get_shadow_map_weight_light0_no_bias(cur_epos) * fg_LightSource[0].diffuse.rgb;
+				cur_epos.rgb += epos_delta;
 			}
 #endif // USE_SHADOW_MAP
 #endif // SMOKE_SHADOW_MAP
-			float smoke  = smoke_sscale*tex_val.a*step_weight;
+			float smoke  = smoke_sscale*tex_val.a*step_weight*sd_ratio;
 			float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
 			float mval   = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
 			color        = mix(color, vec4((tex_val.rgb * smoke_color), alpha), mval);

@@ -955,11 +955,12 @@ struct vert_norm_color_tangent : public vert_norm_color {
 };
 
 
-struct texgen_params_t { // sie = 32
+struct texgen_params_t { // size = 32
 	float st[2][4];
 	texgen_params_t() {UNROLL_4X(st[0][i_] = st[1][i_] = 0.0;)} // zero initialized
 };
 
+// Note: could probably use norm_comp, since used for cubes, cylinder ends, and polygons, but won't save much
 struct vert_norm_texp : public vert_norm, public texgen_params_t { // size = 76
 	vert_norm_texp() {}
 	vert_norm_texp(vert_norm const &vn, texgen_params_t const &tp) : vert_norm(vn), texgen_params_t(tp) {}

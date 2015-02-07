@@ -294,7 +294,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK", 1);} // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
-	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
+	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+textured_with_smoke");
 	s.begin_shader();
 
@@ -307,9 +307,10 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_spec_map ) {s.add_uniform_int("spec_map", 8);}
 	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
 	float step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
+	s.add_uniform_float("step_delta_shadow", step_delta_scale*HALF_DXY);
 	if (volume_lighting && is_light_enabled(0)) {step_delta_scale *= 0.2f;} // 5 steps per texel for sun light on smoke volume
-	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
+	s.add_uniform_float_array("smoke_bb", &cur_smoke_bb.d[0][0], 6);
 	if (use_mvm) {upload_mvm_to_shader(s, "fg_ViewMatrix");}
 	
 	if (smoke_en) {
@@ -330,7 +331,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 	bool indir_lighting(0);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
-	s.set_vert_shader("texture_gen.part+line_clip.part*+bump_map.part+no_lt_texgen_smoke");
+	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
 	common_shader_block_post(s, dlights, use_smap, 0, indir_lighting, 0.0);

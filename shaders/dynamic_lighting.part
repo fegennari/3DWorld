@@ -43,7 +43,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color) {
 		lpos_r.xyz *= scene_scale; // convert from [0,1] back into world space
 		lpos_r.xyz += scene_llc;
 		lpos_r.w   *= 0.5*scene_scale.x;
-		//if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case (not valid for line lights)
+		if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case (not valid for line lights)
 		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
 		lcolor.rgb     *= 10.0; // unscale color
 		lcolor.rgb      = 2.0*lcolor.rgb - 1.0; // map [0,1] to [-1,1] for negative light support

@@ -7,7 +7,7 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 
 in vec4 tex0_s, tex0_t;
 
-out vec3 vpos, normal, lpos0, vposl; // world space
+out vec3 vpos, normal; // world space
 out vec4 epos;
 out vec3 eye_norm;
 // tc comes from texture_gen.part.vert
@@ -42,11 +42,5 @@ void main()
 	}
 #ifdef USE_BUMP_MAP
 	setup_tbn();
-#endif
-
-#ifdef DYNAMIC_SMOKE_SHADOWS
-	pt_pair res2 = clip_line(vpos, sun_pos, smoke_bb);
-	lpos0 = res2.v1;
-	vposl = res2.v2;
 #endif
 } 

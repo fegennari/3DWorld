@@ -809,9 +809,9 @@ bool shader_t::begin_shader(bool do_enable) {
 			cerr << "failed with status " << status << endl;
 			print_program_info_log();
 			cerr << endl;
-			exit(1);
+			exit(1); // FIXME: allow retry?
 		}
-		if (PRINT_LOG) print_program_info_log();
+		if (PRINT_LOG) {print_program_info_log();}
 		prog = program_t(program, shader_ixs); // cache the program
 		//PRINT_TIME("Create Program");
 	}
