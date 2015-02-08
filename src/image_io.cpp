@@ -462,6 +462,7 @@ int write_jpeg_data(unsigned width, unsigned height, FILE *fp, unsigned char con
 	cinfo.input_components = 3;
 	cinfo.in_color_space   = JCS_RGB;
 	jpeg_set_defaults(&cinfo);
+	jpeg_set_quality (&cinfo, 100, 0); // set highest quality
 	jpeg_start_compress(&cinfo, TRUE);
 
 	while (cinfo.next_scanline < cinfo.image_height) {

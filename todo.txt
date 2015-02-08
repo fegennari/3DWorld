@@ -8,4 +8,5 @@ Load/display model3d models in tiled terrain mode
 More cobj normal maps (mapx cblocks)
 Displacement mapping on asteroids using tess shader
 Procedural smoke/fog using Perlin noise
+Real Compute Shaders?
 Use SDL?

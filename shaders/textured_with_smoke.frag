@@ -72,7 +72,6 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 
 	// smoke volume iteration using 3D texture, pos to eye
 	for (int i = 0; i < num_steps; ++i) {
-		// Note: we could also lookup dynamic lighting here, which would be very slow but would also look really nice
 		vec4 tex_val = texture(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
 #ifdef SMOKE_DLIGHTS
 		if (enable_dlights) { // dynamic lighting
