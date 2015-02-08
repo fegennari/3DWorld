@@ -788,29 +788,38 @@ bool shader_t::begin_shader(bool do_enable) {
 		program = prog.p;
 	}
 	else { // create a new program
-		program = glCreateProgram();
-		unsigned shader_ixs[NUM_SHADER_TYPES];
+		unsigned shader_ixs[NUM_SHADER_TYPES] = {0};
 		
-		for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
-			// Note: we *can* attach multiple shaders of the same type to a single program as long as only one has a main()
-			shader_ixs[i] = get_shader(shader_names[i], i);
-			if (shader_ixs[i]) {glAttachShader(program, shader_ixs[i]);}
-		}
-		assert(shader_ixs[0] && shader_ixs[1]); // vertex and fragment shaders are required, geometry shader is optional
-		if (shader_ixs[2]) {assert(GL_EXT_geometry_shader4);} // geometry shader
-		check_gl_error(300);
-		glLinkProgram(program);
-		int status(0);
-		glGetProgramiv(program, GL_LINK_STATUS, &status);
+		while (1) { // retry loop
+			program = glCreateProgram();
 
-		if (status != GL_TRUE) {
+			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {
+				// Note: we *can* attach multiple shaders of the same type to a single program as long as only one has a main()
+				shader_ixs[i] = get_shader(shader_names[i], i);
+				if (shader_ixs[i]) {glAttachShader(program, shader_ixs[i]);}
+			}
+			assert(shader_ixs[0] && shader_ixs[1]); // vertex and fragment shaders are required, geometry shader is optional
+			if (shader_ixs[2]) {assert(GL_EXT_geometry_shader4);} // geometry shader
+			check_gl_error(300);
+			glLinkProgram(program);
+			int status(0);
+			glGetProgramiv(program, GL_LINK_STATUS, &status);
+			if (status == GL_TRUE) break; // success
 			cerr << "Linking of program ";
 			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {cout << shader_names[i] + " ";}
 			cerr << "failed with status " << status << endl;
 			print_program_info_log();
 			cerr << endl;
-			exit(1); // FIXME: allow retry?
-		}
+				
+			if (!yes_no_query("Retry?")) {
+				cerr << "Exiting." << endl;
+				exit(1);
+			}
+			// do something simple and reload all shaders, rather than trying to figure out exactly what happened and what needs to be reloaded
+			// somewhat primitive, but this should rarely happen, and gets the job done
+			glDeleteProgram(program); // delete and recreate
+			shader_manager.clear_and_reload();
+		} // end retry loop
 		if (PRINT_LOG) {print_program_info_log();}
 		prog = program_t(program, shader_ixs); // cache the program
 		//PRINT_TIME("Create Program");
