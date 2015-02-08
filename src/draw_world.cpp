@@ -40,7 +40,7 @@ vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
-extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
+extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, use_smoke_for_fog;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER;
@@ -50,7 +50,7 @@ extern float temperature, atmosphere, zbottom, indir_vert_offset, NEAR_CLIP, FAR
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
-extern colorRGBA bkg_color, sun_color, base_cloud_color;
+extern colorRGBA bkg_color, sun_color, base_cloud_color, cur_fog_color;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
 extern vector<beam3d> beams;
@@ -248,6 +248,8 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 }
 
 
+bool is_smoke_in_use() {return (smoke_exists || use_smoke_for_fog);}
+
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
 	bool smoke_enabled, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
 {
@@ -268,8 +270,9 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 			if (DYNAMIC_SMOKE_SHADOWS) {s.set_prefix("#define DYNAMIC_SMOKE_SHADOWS", d);}
 			s.set_prefix("#define SMOKE_ENABLED", d);
 		}
-		if (display_mode & 0x10) {s.set_prefix("#define SMOKE_DLIGHTS",    1);} // FS - TESTING
 		if (volume_lighting)     {s.set_prefix("#define SMOKE_SHADOW_MAP", 1);} // FS
+		if (use_smoke_for_fog)   {s.set_prefix("#define NO_CLIP_SMOKE",    1);} // FS - TESTING
+		if (display_mode & 0x10) {s.set_prefix("#define SMOKE_DLIGHTS",    1);} // FS - TESTING
 	}
 	if (use_bmap) {
 		for (unsigned i = 0; i < 2; ++i) {
@@ -289,8 +292,8 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
 	bool smoke_en, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale)
 {
-	smoke_en &= (have_indir_smoke_tex && smoke_exists && smoke_tid > 0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
+	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK", 1);} // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
@@ -306,7 +309,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_bmap     ) {s.add_uniform_int("bump_map", 5);}
 	if (use_spec_map ) {s.add_uniform_int("spec_map", 8);}
 	common_shader_block_post(s, dlights, use_smap, smoke_en, indir_lighting, min_alpha);
-	float step_delta_scale(get_smoke_at_pos(get_camera_pos()) ? 1.0 : 2.0);
+	float step_delta_scale((use_smoke_for_fog || get_smoke_at_pos(get_camera_pos())) ? 1.0 : 2.0);
 	s.add_uniform_float("step_delta_shadow", step_delta_scale*HALF_DXY);
 	if (volume_lighting && is_light_enabled(0)) {step_delta_scale *= 0.2f;} // 5 steps per texel for sun light on smoke volume
 	s.add_uniform_float("step_delta", step_delta_scale*HALF_DXY);
@@ -315,7 +318,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	
 	if (smoke_en) {
 		if (DYNAMIC_SMOKE_SHADOWS) {s.add_uniform_vector3d("sun_pos", get_sun_pos());}
-		s.add_uniform_color("smoke_color", colorRGB(GRAY));
+		s.add_uniform_color("smoke_color",     (use_smoke_for_fog ? colorRGB(cur_fog_color) : colorRGB(GRAY)));
+		s.add_uniform_float("smoke_const_add", (use_smoke_for_fog ? 0.5 : 0.0));
 	}
 	if (use_burn_mask) {
 		s.add_uniform_float("burn_tex_scale", burn_tex_scale);
@@ -417,7 +421,7 @@ void draw_coll_surfaces(bool draw_trans) {
 	//RESET_TIME;
 	static vector<pair<float, int> > draw_last;
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
-	if (draw_trans && draw_last.empty() && (!smoke_exists || portals.empty())) return; // nothing transparent to draw
+	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
 	bool const has_lt_atten(draw_trans && draw_trans && coll_objects.has_lt_atten);
 	shader_t s;
@@ -482,7 +486,7 @@ void draw_coll_surfaces(bool draw_trans) {
 		cdb.flush();
 	} // end draw solid
 	else { // draw transparent
-		if (smoke_exists) {
+		if (is_smoke_in_use()) {
 			for (unsigned i = 0; i < portals.size(); ++i) {
 				if (!portals[i].is_visible()) continue;
 				draw_last.push_back(make_pair(-distance_to_camera(portals[i].get_center_pt()), -(int)(i+1)));

@@ -105,7 +105,7 @@ void add_smoke(point const &pos, float val) {
 	if (!check_smoke_bounds(pos)) return;
 	//if (!check_coll_line(pos, point(pos.x, pos.y, czmax), cindex, -1, 1, 0)) return; // too slow
 	adjust_smoke_val(lmc->smoke, SMOKE_DENSITY*val);
-	if (smoke_man.is_smoke_visible(pos)) smoke_exists = 1;
+	smoke_exists |= smoke_man.is_smoke_visible(pos);
 }
 
 
@@ -133,7 +133,6 @@ void diffuse_smoke(int x, int y, int z, lmcell &adj, float pos_rate, float neg_r
 void distribute_smoke() { // called at most once per frame
 
 	//RESET_TIME;
-	//if (display_mode & 0x10) {smoke_exists = 1;}
 	if (!DYNAMIC_SMOKE || !smoke_exists || !animate2) return;
 	assert(SMOKE_SKIPVAL > 0);
 	static int cur_skip(0);

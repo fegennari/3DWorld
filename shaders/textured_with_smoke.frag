@@ -3,6 +3,7 @@ uniform float step_delta, step_delta_shadow;
 uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform float emissive_scale = 0.0;
+uniform float smoke_const_add = 0.0;
 uniform vec3 smoke_color, sphere_center;
 uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform float light_atten = 0.0, refract_ix = 1.0;
@@ -50,8 +51,51 @@ vec3 add_light0(in vec3 n) {
 			step_weight = 1.0;
 		}
 	}
-#endif
+#endif // DYNAMIC_SMOKE_SHADOWS
 	return add_light_comp_pos0(nscale*n, epos).rgb;
+}
+
+void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
+	vec3 dir      = eye_c - vpos_c;
+	vec3 norm_dir = normalize(dir); // used for dlights
+	vec3 pos      = (vpos_c - scene_llc)/scene_scale;
+	float nsteps  = length(dir)/step_delta;
+	int num_steps = 1 + min(1000, int(nsteps)); // round up
+	float sd_ratio= max(1.0, nsteps/1000.0);
+	vec3 delta    = sd_ratio*dir/(nsteps*scene_scale);
+	float step_weight  = fract(nsteps);
+	float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
+#ifdef SMOKE_SHADOW_MAP
+	vec4 cur_epos   = fg_ModelViewMatrix * vec4(vpos_c, 1.0);
+	vec3 epos_delta = fg_NormalMatrix * (delta * scene_scale); // eye space pos/delta
+#endif
+
+	// smoke volume iteration using 3D texture, pos to eye
+	for (int i = 0; i < num_steps; ++i) {
+		// Note: we could also lookup dynamic lighting here, which would be very slow but would also look really nice
+		vec4 tex_val = texture(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
+#ifdef SMOKE_DLIGHTS
+		if (enable_dlights) { // dynamic lighting
+			vec3 dl_pos  = pos*scene_scale + scene_llc;
+			tex_val.rgb += add_dlights(dl_pos, norm_dir, vec3(1.0)); // normal points from vertex to eye, color is applied later
+		}
+#endif // SMOKE_DLIGHTS
+#ifdef SMOKE_SHADOW_MAP
+#ifdef USE_SHADOW_MAP
+		if (enable_light0) {
+			const float smoke_albedo = 0.9;
+			tex_val.rgb  += smoke_albedo * get_shadow_map_weight_light0_no_bias(cur_epos) * fg_LightSource[0].diffuse.rgb;
+			cur_epos.rgb += epos_delta;
+		}
+#endif // USE_SHADOW_MAP
+#endif // SMOKE_SHADOW_MAP
+		float smoke  = smoke_sscale*(tex_val.a + smoke_const_add)*step_weight*sd_ratio;
+		float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
+		float mval   = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
+		color        = mix(color, vec4((tex_val.rgb * smoke_color), alpha), mval);
+		pos         += delta*step_weight; // should be in [0.0, 1.0] range
+		step_weight  = 1.0;
+	} // for i
 }
 
 // Note: This may seem like it can go into the vertex shader as well,
@@ -62,11 +106,8 @@ void main()
 	vec4 texel  = texture(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
 #else
 	vec4 texel  = texture(tex0, tc);
-	//vec4 texel  = texture(tex0, vec2(atan(normal.y, normal.x)/(2.0*3.14159), tc.t)); // cylinders (small tree trunks) - no better, need ws pos relative to center line
 #endif
 	//texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
-	//texel.rgb /= texel.a; // better for edges of alpha mask texture on black background?
-
 #ifdef TEXTURE_ALPHA_MASK
 	if (texel.a < 0.99) discard;
 #endif
@@ -136,7 +177,7 @@ void main()
 #ifndef SMOKE_ENABLED
 #ifndef NO_ALPHA_TEST
 	if (color.a <= min_alpha) discard;
-#endif
+#endif // NO_ALPHA_TEST
 #ifndef NO_FOG
 	vec4 fog_out;
 	
@@ -158,59 +199,19 @@ void main()
 		fog_out = apply_fog_epos(color, epos); // apply standard fog
 	}
 	color = (keep_alpha ? vec4(fog_out.rgb, color.a) : fog_out);
-#endif
+#endif // NO_FOG
+#else // SMOKE_ENABLED
+#ifdef NO_CLIP_SMOKE
+	add_smoke_contrib(vpos, camera_pos, color);
 #else
 	pt_pair res = clip_line(vpos, camera_pos, smoke_bb);
-	vec3 eye_c  = res.v1;
-	vec3 vpos_c = res.v2;
-	
-	if (eye_c != vpos_c) { // smoke code
-		vec3 dir      = eye_c - vpos_c;
-		vec3 norm_dir = normalize(dir); // used for dlights
-		vec3 pos      = (vpos_c - scene_llc)/scene_scale;
-		float nsteps  = length(dir)/step_delta;
-		int num_steps = 1 + min(1000, int(nsteps)); // round up
-		float sd_ratio= max(1.0, nsteps/1000.0);
-		vec3 delta    = sd_ratio*dir/(nsteps*scene_scale);
-		float step_weight  = fract(nsteps);
-		float smoke_sscale = SMOKE_SCALE*step_delta/half_dxy;
-#ifdef SMOKE_SHADOW_MAP
-		vec4 cur_epos   = fg_ModelViewMatrix * vec4(vpos_c, 1.0);
-		vec3 epos_delta = fg_NormalMatrix * (delta * scene_scale); // eye space pos/delta
-#endif
-
-		// smoke volume iteration using 3D texture, pos to eye
-		for (int i = 0; i < num_steps; ++i) {
-			// Note: we could also lookup dynamic lighting here, which would be very slow but would also look really nice
-			vec4 tex_val = texture(smoke_and_indir_tex, pos.zxy); // rgba = {color.rgb, smoke}
-#ifdef SMOKE_DLIGHTS
-			if (enable_dlights) { // dynamic lighting
-				vec3 dl_pos  = pos*scene_scale + scene_llc;
-				tex_val.rgb += add_dlights(dl_pos, norm_dir, vec3(1.0)); // normal points from vertex to eye, color is applied later
-			}
-#endif // SMOKE_DLIGHTS
-#ifdef SMOKE_SHADOW_MAP
-#ifdef USE_SHADOW_MAP
-			if (enable_light0) {
-				const float smoke_albedo = 0.9;
-				tex_val.rgb  += smoke_albedo * get_shadow_map_weight_light0_no_bias(cur_epos) * fg_LightSource[0].diffuse.rgb;
-				cur_epos.rgb += epos_delta;
-			}
-#endif // USE_SHADOW_MAP
-#endif // SMOKE_SHADOW_MAP
-			float smoke  = smoke_sscale*tex_val.a*step_weight*sd_ratio;
-			float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
-			float mval   = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
-			color        = mix(color, vec4((tex_val.rgb * smoke_color), alpha), mval);
-			pos         += delta*step_weight; // should be in [0.0, 1.0] range
-			step_weight  = 1.0;
-		} // for i
-	} // end smoke code
+	if (res.v1 != res.v2) {add_smoke_contrib(res.v1, res.v2, color);}
+#endif // NO_CLIP_SMOKE
 #ifndef NO_ALPHA_TEST
 	//color.a = min(color.a, texel.a); // Note: assumes walls don't have textures with alpha < 1
 	if (color.a <= min_alpha) discard;
 #endif
-#endif
+#endif // SMOKE_ENABLED
 	//color = vec4(pow(color.r, 0.45), pow(color.g, 0.45), pow(color.b, 0.45), color.a); // gamma correction, doesn't really look right
 	fg_FragColor = color;
 }
