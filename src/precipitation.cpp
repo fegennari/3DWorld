@@ -21,8 +21,10 @@ protected:
 	typedef vert_wrap_t vert_type_t;
 	vector<vert_type_t> verts;
 	rand_gen_t rgen;
+	float prev_zmin, cur_zmin, prev_zmax, cur_zmax;
 
 public:
+	precip_manager_t() : prev_zmin(get_zmin()), cur_zmin(prev_zmin), prev_zmax(get_zmax()), cur_zmax(prev_zmax) {}
 	void clear () {verts.clear();}
 	bool empty () const {return verts.empty();}
 	size_t size() const {return verts.size();}
@@ -32,6 +34,18 @@ public:
 	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), PRECIP_DIST);}
 	vector3d get_velocity(float vz) const {return fticks*(0.02*wind + vector3d(0.0, 0.0, vz));}
 	
+	void pre_update() {
+		cur_zmin = get_zmin();
+		cur_zmax = get_zmax();
+
+		// if zmin or zmax changes by more than some amount, then clear and regen point z-values so that rain/snow stays uniformly spaced in z
+		if (fabs(prev_zmin - cur_zmin) > 0.05*(get_zmax() - cur_zmin) || fabs(prev_zmax - cur_zmax) > 0.25*(get_zmax() - cur_zmin)) {
+			clear();
+			prev_zmin = cur_zmin;
+			prev_zmax = cur_zmax;
+		}
+		check_size();
+	}
 	point gen_pt(float zval) {
 		point const camera(get_camera_pos());
 
@@ -43,9 +57,9 @@ public:
 	}
 	void check_pos(point &pos) {
 		if (0) {}
-		else if (pos == all_zeros  ) {pos = gen_pt(rgen.rand_uniform(get_zmin(), get_zmax()));} // initial location
-		else if (pos.z < get_zmin()) {pos = gen_pt(get_zmax());} // start again at the top
-		else if (!in_range(pos)    ) {pos = gen_pt(pos.z);} // move inside the range
+		else if (pos == all_zeros) {pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));} // initial location
+		else if (pos.z < cur_zmin) {pos = gen_pt(cur_zmax);} // start again near the top
+		else if (!in_range(pos)  ) {pos = gen_pt(pos.z);} // move inside the range
 	}
 	void check_size() {verts.resize(VERTS_PER_PRIM*get_num_precip(), all_zeros);}
 };
@@ -55,7 +69,7 @@ class rain_manager_t : public precip_manager_t<2> {
 public:
 	void update() {
 		//RESET_TIME;
-		check_size();
+		pre_update();
 		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
 		vector3d vcur(v);
 
@@ -96,7 +110,7 @@ public:
 class snow_manager_t : public precip_manager_t<1> {
 public:
 	void update() {
-		check_size();
+		pre_update();
 		vector3d const v(get_velocity(-0.02));
 		float const vmult(0.1/verts.size());
 
