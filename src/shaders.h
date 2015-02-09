@@ -9,11 +9,10 @@
 
 using std::string;
 
-
 unsigned const TEX0_S_ATTR       = 0;
 unsigned const TEX0_T_ATTR       = 1;
 unsigned const TANGENT_ATTR      = 2;
-unsigned const NUM_SHADER_TYPES  = 5;
+unsigned const NUM_SHADER_TYPES  = 6;
 
 
 struct gl_light_params_t {
@@ -40,7 +39,7 @@ struct zi_unsigned_t {
 class shader_t {
 
 	unsigned program; // active program
-	string prepend_string[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4
+	string prepend_string[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4, compute=5
 	string prog_name_prefix;
 	vector<int> attrib_locs;
 	string shader_names[NUM_SHADER_TYPES];
@@ -83,7 +82,9 @@ public:
 	void set_geom_shader(string const &gs_name_) {shader_names[2] = gs_name_;}
 	void set_tess_control_shader(string const &tcs_name_) {shader_names[3] = tcs_name_;}
 	void set_tess_eval_shader   (string const &tes_name_) {shader_names[4] = tes_name_;}
-	bool has_tess_shader() const {return !shader_names[4].empty();}
+	void set_comp_shader(string const &cs_name_) {shader_names[5] = cs_name_;}
+	bool has_tess_shader()   const {return !shader_names[4].empty();}
+	bool is_compute_shader() const {return !shader_names[5].empty();}
 
 	bool is_setup() const {return (program > 0);}
 	void enable();

@@ -20,9 +20,9 @@ bool const GEN_FINAL_SHADER_FILES = 0;
 
 string const shaders_dir = "shaders";
 string const shader_prefix_shared_file = "common_header_shared.part*";
-string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tesc", "tese"};
-string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "common_header", "common_header", "", ""}; // always included
-int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER};
+string const shader_name_table  [NUM_SHADER_TYPES] = {"vert", "frag", "geom", "tesc", "tese", "comp"};
+string const shader_prefix_files[NUM_SHADER_TYPES] = {"common_header", "common_header", "common_header", "", "", ""}; // always included
+int const shader_type_table[NUM_SHADER_TYPES] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, GL_GEOMETRY_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER, GL_COMPUTE_SHADER};
 
 shader_t *cur_shader(NULL);
 
@@ -429,7 +429,7 @@ void shader_t::set_bool_prefixes(char const *const name, bool val, unsigned shad
 
 	string const prefix(string("const bool ") + name + (val ? " = true;" : " = false;"));
 
-	for (unsigned s = 0; s < NUM_SHADER_TYPES; ++s) { // put into correct shader(s): V, F, G, TC, TE
+	for (unsigned s = 0; s < NUM_SHADER_TYPES; ++s) { // put into correct shader(s): V, F, G, TC, TE, C
 		if (shaders_enabled & (1<<s)) {set_prefix_str(prefix, s);}
 	}
 }
@@ -530,7 +530,7 @@ public:
 class shader_manager_t {
 
 	string_prog_map loaded_programs;
-	string_shad_map loaded_shaders[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4
+	string_shad_map loaded_shaders[NUM_SHADER_TYPES]; // vertex=0, fragment=1, geometry=2, tess_control=3, tess_eval=4, compute=5
 	map<string, string> loaded_files;
 	string shader_id_str; // here to avoid constant reallocation
 
