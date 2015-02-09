@@ -200,12 +200,8 @@ void main()
 	color = (keep_alpha ? vec4(fog_out.rgb, color.a) : fog_out);
 #endif // NO_FOG
 #else // SMOKE_ENABLED
-#ifdef NO_CLIP_SMOKE
-	add_smoke_contrib(vpos, camera_pos, color);
-#else
 	pt_pair res = clip_line(vpos, camera_pos, smoke_bb);
 	if (res.v1 != res.v2) {add_smoke_contrib(res.v1, res.v2, color);}
-#endif // NO_CLIP_SMOKE
 #ifndef NO_ALPHA_TEST
 	//color.a = min(color.a, texel.a); // Note: assumes walls don't have textures with alpha < 1
 	if (color.a <= min_alpha) discard;

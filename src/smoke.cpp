@@ -144,7 +144,6 @@ void distribute_smoke() { // called at most once per frame
 		smoke_man.adj_bbox();
 		smoke_visible = smoke_man.smoke_vis;
 		smoke_exists  = smoke_man.enabled;
-		cur_smoke_bb  = smoke_man.bbox; //cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 		next_smoke_man.reset();
 	}
 	/*if ((display_mode & 0x10) && !smoke_bounds.empty()) {
