@@ -9,6 +9,7 @@ uniform float spec_offset    = 0.0;
 uniform float caustics_weight= 1.0;
 uniform float smap_atten_cutoff = 10.0;
 uniform float smap_atten_slope  = 0.5;
+uniform float triplanar_texture_scale = 1.0;
 uniform vec3 uw_atten_max;
 uniform vec3 uw_atten_scale;
 uniform vec3 snow_cscale = vec3(1.0);
@@ -87,35 +88,46 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	return color;
 }
 
+vec3 add_texture(in sampler2D tex, in float tc_scale, in vec3 world_n) {
+	// separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
+#ifdef TRIPLANAR_TEXTURE
+	return lookup_triplanar_texture(vertex.xyz, world_n, tex, tex, tex, triplanar_texture_scale*tc_scale).rgb;
+#else
+	return texture(tex, tc_scale*tc).rgb;
+#endif
+}
+
 void main()
 {
 #ifdef REFLECTION_MODE
 	if (vertex.z < water_plane_z) {discard;}
 #endif
+	vec4 shadow_normal  = texture(shadow_normal_tex, tc);
+	float diffuse_scale = shadow_normal.w;
+	float ambient_scale = 1.5*shadow_normal.z;
+	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
+	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
+	vec3 world_n= normalize(normal);
+	normal      = normalize(fg_NormalMatrix * normal); // eye space
+
 	// sand, dirt, grass, rock, snow
-	vec2 diff_tc   = tc; // separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
-	//diff_tc.s   += 0.1*vertex.z; // we really need something like triplanar texturing here to deal with stretching on steep slopes
 	vec4 weights   = texture(weights_tex, tc);
 	float weights4 = clamp((1.0 - weights.r - weights.g - weights.b - weights.a), 0.0, 1.0);
 	weights  = smoothstep(0.0, 1.0, weights);
 	weights4 = smoothstep(0.0, 1.0, weights4);
-	vec3 texel0  = cs2*weights.r*texture(tex2, ts2*diff_tc).rgb + // sand
-	               cs3*weights.g*texture(tex3, ts3*diff_tc).rgb + // dirt
-				   cs4*weights.b*texture(tex4, ts4*diff_tc).rgb + // grass
-				   cs5*weights.a*texture(tex5, ts5*diff_tc).rgb + // rock
-				   cs6*weights4 *texture(tex6, ts6*diff_tc).rgb*snow_cscale;  // snow
-	vec3 texel1  = texture(detail_tex, 32.0*tc).rgb; // detail texture 32x scale
 
-	vec4 shadow_normal  = texture(shadow_normal_tex, tc);
-	float diffuse_scale = shadow_normal.w;
-	float ambient_scale = 1.5*shadow_normal.z;
-	float bump_scale    = 1.0 - weights.b; // bumps on everything but grass
-	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
-	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
-	normal      = normalize(fg_NormalMatrix * normal); // eye space
+	vec3 texel0  = vec3(0.0);
+	if (weights.r > 0) {texel0 += cs2*weights.r*add_texture(tex2, ts2, world_n);} // sand
+	if (weights.g > 0) {texel0 += cs3*weights.g*add_texture(tex3, ts3, world_n);} // dirt
+	if (weights.b > 0) {texel0 += cs4*weights.b*add_texture(tex4, ts4, world_n);} // grass
+	if (weights.a > 0) {texel0 += cs5*weights.a*add_texture(tex5, ts5, world_n);} // rock
+	if (weights4  > 0) {texel0 += cs6*weights4 *add_texture(tex6, ts6, world_n)*snow_cscale;} // snow
+	vec3 texel1 = add_texture(detail_tex, 32.0, world_n).rgb; // detail texture 32x scale
+
 	vec4 color  = vec4(0,0,0,1);
 	vec4 epos   = fg_ModelViewMatrix * vertex;
 	float vdist = length(epos.xyz);
+	float bump_scale = 1.0 - weights.b; // bumps on everything but grass
 	bump_scale *= clamp((2.5 - 0.1*vdist), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
 	float smap_scale = 0.0;
 	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - vdist), 0.0, 1.0);}

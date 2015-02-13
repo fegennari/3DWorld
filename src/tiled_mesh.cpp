@@ -1623,7 +1623,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	if (reflection_pass) {s.set_prefix("#define REFLECTION_MODE", 1);} // FS
 	s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
 	s.set_vert_shader("tiled_mesh");
-	s.set_frag_shader("water_fog.part*+linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+tiled_mesh");
+	s.set_frag_shader("water_fog.part*+linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+triplanar_texture.part+tiled_mesh");
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("weights_tex", 0);
@@ -1657,6 +1657,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 		s.add_uniform_float("water_plane_z", (reflection_pass ? water_plane_z : get_actual_zmin())); // used for fog calculation/clipping
 	}
 	set_landscape_texgen(1.0, -MESH_X_SIZE/2, -MESH_Y_SIZE/2, MESH_X_SIZE, MESH_Y_SIZE, s, 1);
+	s.add_uniform_float("triplanar_texture_scale", 1.0/(X_SCENE_SIZE + Y_SCENE_SIZE));
 }
 
 

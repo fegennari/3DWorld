@@ -8,16 +8,16 @@ vec3 get_blend_weights(in vec3 normal) {
 	return blend_weights;
 }
 
-vec4 lookup_triplanar_texture(in vec3 pos, in vec3 normal, in sampler2D tex_x, in sampler2D tex_y, in sampler2D tex_z) {
+vec4 lookup_triplanar_texture(in vec3 pos, in vec3 normal, in sampler2D tex_x, in sampler2D tex_y, in sampler2D tex_z, in float ts_mult=1.0) {
 	// http://http.developer.nvidia.com/GPUGems3/gpugems3_ch01.html
 	// Determine the blend weights for the 3 planar projections.
 	vec3 blend_weights = get_blend_weights(normal);
 
 	// Now determine a color value for each of the 3 projections, blend them, and store blended results
 	// Compute the UV coords for each of the 3 planar projections.
-	vec2 coord_x = pos.yz * tex_scale;
-	vec2 coord_y = pos.zx * tex_scale;
-	vec2 coord_z = pos.xy * tex_scale;
+	vec2 coord_x = pos.yz * ts_mult*tex_scale;
+	vec2 coord_y = pos.zx * ts_mult*tex_scale;
+	vec2 coord_z = pos.xy * ts_mult*tex_scale;
 
 	// Sample color maps for each projection, at those UV coords.
 	vec4 col_x = texture(tex_x, coord_x);
