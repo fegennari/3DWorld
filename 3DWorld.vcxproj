@@ -931,6 +931,7 @@
     <None Include="shaders\point_to_quad.geom" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />
+    <None Include="shaders\procedural_height_gen.comp" />
     <None Include="shaders\procedural_height_gen.frag" />
     <None Include="shaders\procedural_planet.part" />
     <None Include="shaders\procedural_rock.frag" />

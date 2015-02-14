@@ -182,24 +182,46 @@ public:
 };
 
 
-class compute_shader_t : public shader_t {
+class compute_shader_base_t : public shader_t {
 
-	unsigned xsize, ysize, fbo_id;
+protected:
+	unsigned xsize, ysize;
+
+	void setup_target_texture(unsigned &tid, bool is_R32F) const;
+public:
+	compute_shader_base_t(unsigned xsize_, unsigned ysize_) :
+	  xsize(xsize_), ysize(ysize_) {assert(xsize > 0 && ysize > 0);}
+};
+
+// "fake" compute shader implemented as a fragment shader
+class compute_shader_t : public compute_shader_base_t {
+
+	unsigned fbo_id;
 	string frag_shader_str;
 
 	void draw_geom() const;
 
 public:
 	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
-	  xsize(xsize_), ysize(ysize_), fbo_id(0), frag_shader_str(fstr) {
-		assert(xsize > 0 && ysize > 0);
-	}
+	  compute_shader_base_t(xsize_, ysize_), fbo_id(0), frag_shader_str(fstr) {}
 	void begin();
 	void pre_run();
 	void post_run();
 	void run(unsigned &tid);
 	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
 	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
+};
+
+// "real" compute shader
+class compute_shader_comp_t : public compute_shader_base_t {
+
+	string comp_shader_str;
+
+public:
+	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_) :
+	  compute_shader_base_t(xsize_, ysize_), comp_shader_str(cstr) {}
+	void begin();
+	void gen_matrix_R32F(vector<float> &vals, unsigned &tid);
 };
 
 

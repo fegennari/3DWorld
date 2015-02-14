@@ -708,7 +708,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	
 	// create a new shader
 	//string const version_info("#version 400 core\n");
-	string const version_info("#version 400\n");
+	string const version_info((type == 5) ? "#version 430\n" : "#version 400\n"); // use version 430 for compute shaders and 400 for other shaders
 	vector<string> fns;
 	shader_manager.get_shader_filenames(name, type, fns);
 	bool failed(0);
@@ -798,7 +798,8 @@ bool shader_t::begin_shader(bool do_enable) {
 				shader_ixs[i] = get_shader(shader_names[i], i);
 				if (shader_ixs[i]) {glAttachShader(program, shader_ixs[i]);}
 			}
-			assert(shader_ixs[0] && shader_ixs[1]); // vertex and fragment shaders are required, geometry shader is optional
+			// vertex and fragment shaders are required, geometry shader is optional; or only a compute shader
+			assert((shader_ixs[0] && shader_ixs[1]) || shader_ixs[5]);
 			if (shader_ixs[2]) {assert(GL_EXT_geometry_shader4);} // geometry shader
 			check_gl_error(300);
 			glLinkProgram(program);
@@ -1036,6 +1037,19 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 
 // compute shader
 
+
+void compute_shader_base_t::setup_target_texture(unsigned &tid, bool is_R32F) const {
+	if (tid > 0) return; // already setup
+	setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
+
+	if (is_R32F) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, xsize, ysize, 0, GL_RED, GL_FLOAT, NULL);
+	}
+	else {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, xsize, ysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	}
+}
+
 // factored out so that we can make it virtual and override it in the future
 void compute_shader_t::draw_geom() const {
 	float const z = 0.0;
@@ -1085,10 +1099,7 @@ void compute_shader_t::run(unsigned &tid) { // call N times between pre_run() an
 
 // tid may or may not be setup prior to this call
 void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
-	if (tid == 0) {
-		setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, xsize, ysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	}
+	setup_target_texture(tid, 0);
 	if (is_first) {pre_run();}
 	run(tid);
 	vals.resize(xsize*ysize);
@@ -1107,10 +1118,7 @@ void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool
 
 // tid may or may not be setup prior to this call
 void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
-	if (tid == 0) {
-		setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, xsize, ysize, 0, GL_RED, GL_FLOAT, NULL);
-	}
+	setup_target_texture(tid, 1);
 	if (is_first) {pre_run();}
 	run(tid);
 	vals.resize(xsize*ysize);
@@ -1135,6 +1143,22 @@ void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool 
 	if (is_last) {post_run();}
 }
 
+void compute_shader_comp_t::begin() {
+	set_comp_shader(comp_shader_str);
+	begin_shader();
+	add_uniform_int("dest_tex", 0);
+}
+
+void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid) {
+	check_gl_error(500);
+	setup_target_texture(tid, 1);
+	bind_2d_texture(tid);
+	glDispatchCompute(xsize/16, ysize/16, 1); // xsize*ysize threads in blocks of 16^2
+	vals.resize(xsize*ysize);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, &vals.front());
+	check_gl_error(501);
+}
+
 
 // returns heights in approximately [-1,1] range
 void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float zscale,
@@ -1142,6 +1166,7 @@ void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx
 {
 	unsigned tid(0);
 	compute_shader_t cshader("procedural_height_gen", xsize, ysize);
+	//compute_shader_comp_t cshader("procedural_height_gen", xsize, ysize);
 	if (shape == 1) {cshader.set_prefix("#define BILLOWY", 1);} // FS
 	if (shape == 2) {cshader.set_prefix("#define RIDGED" , 1);} // FS
 	cshader.begin();
@@ -1152,7 +1177,7 @@ void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx
 	cshader.add_uniform_float("rx", rx);
 	cshader.add_uniform_float("ry", ry);
 	cshader.add_uniform_float("zscale", zscale);
-	cshader.gen_matrix_R32F(vals, tid, 1, 1);
+	cshader.gen_matrix_R32F(vals, tid);
 	cshader.end_shader();
 	free_texture(tid);
 }
