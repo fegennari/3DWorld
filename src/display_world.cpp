@@ -290,19 +290,31 @@ void swap_buffers_and_redraw() {
 }
 
 
+float get_lf_scale(float lf)   {return CLIP_TO_01(5.0f*(lf - 0.4f));}
+float get_light_factor_scale() {return get_lf_scale(light_factor);}
+float get_moon_light_factor()  {return fabs(moon_rot/PI - 1.0);}
+
+
+float get_star_alpha(bool obscured_by_clouds) {
+
+	float star_alpha(obscured_by_clouds ? 0.0 : (1.0f - get_light_factor_scale()));
+	if (star_alpha >= 1.0) {return 1.0;}
+	//if (world_mode != WMODE_INF_TERRAIN) {return star_alpha;}
+	float const dist_above_clouds(get_camera_pos().z - get_tt_cloud_level());
+	return ((dist_above_clouds > 0.0) ? min(1.0, (star_alpha + 0.05*dist_above_clouds)) : star_alpha);
+}
+
+
 void calc_bkg_color() {
 
-	float const lfn(1.0 - 5.0*(light_factor - 0.4));
 	colorRGBA const &day_color((base_sky_color == BLUE) ? BACKGROUND_DAY : base_sky_color); // FIXME: default base_sky_color = BACKGROUND_DAY?
+	float const star_alpha(get_star_alpha());
 
-	if (!have_sun || light_factor <= 0.4) {
+	if (!have_sun) {
 		bkg_color = BACKGROUND_NIGHT;
 	}
-	else if (light_factor >= 0.6) {
-		bkg_color = day_color;
-	}
 	else {
-		blend_color(bkg_color, BACKGROUND_NIGHT, day_color, lfn, 1);
+		blend_color(bkg_color, BACKGROUND_NIGHT, day_color, star_alpha, 1);
 	}
 	if (is_cloudy) {
 		colorRGBA const orig_bkgc(bkg_color);
@@ -310,15 +322,6 @@ void calc_bkg_color() {
 		UNROLL_3X(bkg_color[i_] = min(bkg_color[i_], orig_bkgc[i_]);) // can't make it brighter
 	}
 	if (atmosphere < 1.0) {blend_color(bkg_color, bkg_color, BACKGROUND_NIGHT, atmosphere, 0);}
-}
-
-
-float get_lf_scale(float lf) {
-	return CLIP_TO_01(5.0f*(lf - 0.4f));
-}
-
-float get_moon_light_factor() {
-	return fabs(moon_rot/PI - 1.0);
 }
 
 
@@ -418,7 +421,7 @@ void setup_lighting(float depth) {
 		set_colors_and_enable_light(0, ambient, diffuse);
 	}
 	else { // sun and moon
-		float const lfd(5.0*(light_factor - 0.4)), lfn(1.0 - lfd);
+		float const lfd(get_light_factor_scale()), lfn(1.0 - lfd);
 
 		for (unsigned i = 0; i < 3; ++i) { // should diffuse depend more on angle than ambient?
 			diffuse[i] = (diffuse[i] + 0.2)*lfd;
@@ -445,19 +448,10 @@ void setup_lighting(float depth) {
 
 void draw_sun_moon_stars() {
 
-	if (light_factor <= 0.4) { // moon
-		if (!is_cloudy) {gen_stars(1.0);}
-		draw_moon();
-	}
-	else if (light_factor >= 0.6) { // sun
-		draw_sun();
-	}
-	else { // sun and moon
-		float const lfn(1.0 - 5.0*(light_factor - 0.4));
-		if (!is_cloudy) {gen_stars(lfn);}
-		draw_moon();
-		draw_sun();
-	}
+	float star_alpha(get_star_alpha(is_cloudy != 0));
+	if (star_alpha > 0.0) {gen_stars(star_alpha);}
+	if (light_factor <= 0.6) {draw_moon();} // moon
+	if (light_factor >= 0.4) {draw_sun();} // sun
 }
 
 

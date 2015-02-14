@@ -654,10 +654,11 @@ void draw_moon() {
 	draw_cube_mapped_sphere(pos, moon_radius, N_SPHERE_DIV/2, 1);
 	s.end_shader();
 	disable_light(4);
+	float const star_alpha(get_star_alpha());
 
-	if (light_factor >= 0.4) { // fade moon into background color when the sun comes up
+	if (star_alpha < 1.0) { // fade moon into background color when the sun comes up
 		enable_blend();
-		draw_single_colored_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, colorRGBA(bkg_color, 5.0*(light_factor - 0.4)));
+		draw_single_colored_sphere(pos, 1.1*moon_radius, N_SPHERE_DIV, colorRGBA(bkg_color, (1.0 - star_alpha)));
 		disable_blend();
 	}
 }
@@ -744,7 +745,6 @@ void draw_sky(int order) {
 	center.z -= 0.727*radius;
 	if ((distance_to_camera(center) > radius) != order) return;
 	colorRGBA const cloud_color(get_cloud_color());
-
 	static float sky_rot_xy[2] = {0.0, 0.0}; // x, y
 	float const wmag(sqrt(wind.x*wind.x + wind.y*wind.y));
 
@@ -759,7 +759,7 @@ void draw_sky(int order) {
 
 	if (have_sun && light_factor > 0.4) { // sun lighting of clouds
 		colorRGBA horizon_color;
-		float const blend_val(atmosphere*CLIP_TO_01(10.0f*(light_factor - 0.4f)));
+		float const blend_val(atmosphere*CLIP_TO_01(2.0f*(1.0f - get_star_alpha())));
 		blend_color(horizon_color, WHITE, ALPHA0, blend_val, 1);
 		horizon_color.alpha *= 0.5;
 		apply_red_sky(horizon_color);
