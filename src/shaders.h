@@ -187,7 +187,7 @@ class compute_shader_base_t : public shader_t {
 protected:
 	unsigned xsize, ysize;
 
-	void setup_target_texture(unsigned &tid, bool is_R32F) const;
+	bool setup_target_texture(unsigned &tid, bool is_R32F) const;
 public:
 	compute_shader_base_t(unsigned xsize_, unsigned ysize_) :
 	  xsize(xsize_), ysize(ysize_) {assert(xsize > 0 && ysize > 0);}
@@ -210,18 +210,21 @@ public:
 	void run(unsigned &tid);
 	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
 	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
+	void set_comp_prefix(char const *const prefix) {set_prefix(prefix, 1);} // FS
 };
 
 // "real" compute shader
 class compute_shader_comp_t : public compute_shader_base_t {
 
+	unsigned zsize;
 	string comp_shader_str;
 
 public:
-	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_) :
-	  compute_shader_base_t(xsize_, ysize_), comp_shader_str(cstr) {}
+	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1) :
+	  compute_shader_base_t(xsize_, ysize_), zsize(zsize_), comp_shader_str(cstr) {}
 	void begin();
-	void gen_matrix_R32F(vector<float> &vals, unsigned &tid);
+	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
+	void set_comp_prefix(char const *const prefix) {set_prefix(prefix, 5);} // CS
 };
 
 

@@ -1,11 +1,14 @@
+layout (local_size_x = 16, local_size_y = 16) in;
+
 uniform vec3 offset, scale;
 uniform float start_mag, start_freq, rx, ry, zval;
-
-in vec3 vpos;
+uniform writeonly image2D dest_tex;
 
 void main()
 {
-	vec3 pos   = offset + scale*vec3(vpos.x, vpos.y, zval);
+	float vx   = float(gl_GlobalInvocationID.x)/(gl_WorkGroupSize.x*gl_NumWorkGroups.x);
+	float vy   = float(gl_GlobalInvocationID.y)/(gl_WorkGroupSize.y*gl_NumWorkGroups.y);
+	vec3 pos   = offset + scale*vec3(vx, vy, zval);
 	float val  = 0.0;
 	float mag  = start_mag;
 	float freq = start_freq;
@@ -23,7 +26,6 @@ void main()
 		crx  *= 1.5;
 		cry  *= 1.5;
 	}
-	fg_FragColor = vec4(val, 0.0, 0.0, 1.0); // only red channel is used
+	ivec2 store_pos = ivec2(gl_GlobalInvocationID.xy);
+	imageStore(dest_tex, store_pos, vec4(val, 0.0, 0.0, 0.0)); // only red channel is used
 }
-
-

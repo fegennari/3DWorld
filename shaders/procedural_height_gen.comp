@@ -1,11 +1,37 @@
-uniform float roll = 0.0;
-uniform writeonly image2D dest_tex;
-
 layout (local_size_x = 16, local_size_y = 16) in;
 
-void main() {
-	ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
-	float localCoef = length(vec2(ivec2(gl_LocalInvocationID.xy)-8)/8.0);
-	float globalCoef = sin(float(gl_WorkGroupID.x+gl_WorkGroupID.y)*0.1 + roll)*0.5;
-	imageStore(dest_tex, storePos, vec4(1.0-globalCoef*localCoef, 0.0, 0.0, 0.0));
+uniform float x0, y0, dx, dy, rx, ry, zscale;
+uniform writeonly image2D dest_tex;
+
+void main()
+{
+	float x = x0 + dx*gl_GlobalInvocationID.x/(gl_WorkGroupSize.x*gl_NumWorkGroups.x);
+	float y = y0 + dy*gl_GlobalInvocationID.y/(gl_WorkGroupSize.y*gl_NumWorkGroups.y);
+	float zval = 0.0;
+	float mag  = 1.0;
+	float freq = 1.0;
+	float crx  = rx;
+	float cry  = ry;
+	const float lacunarity = 1.92;
+	const float gain       = 0.5;
+	const int NUM_OCTAVES  = 9;
+
+	for (int i = 0; i < NUM_OCTAVES; ++i) {
+		vec2 pos    = vec2((freq*x + crx), (freq*y + cry));
+		float noise = simplex(pos);
+#ifdef RIDGED
+		noise = 0.45 - abs(noise); // ridged
+#endif
+#ifdef BILLOWY
+		noise = abs(noise) - 0.40; // billowy
+#endif
+		zval += mag*noise;
+		mag  *= gain;
+		freq *= lacunarity;
+		crx  *= 1.5;
+		cry  *= 1.5;
+	}
+	ivec2 store_pos = ivec2(gl_GlobalInvocationID.xy);
+	imageStore(dest_tex, store_pos, vec4(zscale*zval, 0.0, 0.0, 0.0)); // only red channel is used
 }
+

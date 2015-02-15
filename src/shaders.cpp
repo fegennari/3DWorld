@@ -1038,8 +1038,8 @@ void shader_t::begin_untextured_lit_glcolor_shader() {
 // compute shader
 
 
-void compute_shader_base_t::setup_target_texture(unsigned &tid, bool is_R32F) const {
-	if (tid > 0) return; // already setup
+bool compute_shader_base_t::setup_target_texture(unsigned &tid, bool is_R32F) const {
+	if (tid > 0) return 0; // already setup
 	setup_texture(tid, 0, 0, 0, 0, 0, 1); // nearest, clamp, no mipmaps
 
 	if (is_R32F) {
@@ -1048,6 +1048,7 @@ void compute_shader_base_t::setup_target_texture(unsigned &tid, bool is_R32F) co
 	else {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, xsize, ysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
+	return 1;
 }
 
 // factored out so that we can make it virtual and override it in the future
@@ -1149,11 +1150,13 @@ void compute_shader_comp_t::begin() {
 	add_uniform_int("dest_tex", 0);
 }
 
-void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid) {
+void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
+	// Note: is_first and is_last are unused
 	check_gl_error(500);
 	setup_target_texture(tid, 1);
 	bind_2d_texture(tid);
-	glDispatchCompute(xsize/16, ysize/16, 1); // xsize*ysize threads in blocks of 16^2
+	glBindImageTexture(0, tid, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F); // use image unit 0
+	glDispatchCompute(max(1U, xsize/16), max(1U, ysize/16), max(1U, zsize/16)); // xsize*ysize threads in blocks of 16^2 (in the 2D zsize=1 case)
 	vals.resize(xsize*ysize);
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, &vals.front());
 	check_gl_error(501);
@@ -1164,11 +1167,12 @@ void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid) 
 void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float zscale,
 	float rx, float ry, unsigned xsize, unsigned ysize, int shape)
 {
+	//RESET_TIME;
 	unsigned tid(0);
-	compute_shader_t cshader("procedural_height_gen", xsize, ysize);
-	//compute_shader_comp_t cshader("procedural_height_gen", xsize, ysize);
-	if (shape == 1) {cshader.set_prefix("#define BILLOWY", 1);} // FS
-	if (shape == 2) {cshader.set_prefix("#define RIDGED" , 1);} // FS
+	compute_shader_t cshader("noise_2d_3d.part*+procedural_height_gen", xsize, ysize);
+	//compute_shader_comp_t cshader("noise_2d_3d.part*+procedural_height_gen", xsize, ysize);
+	if (shape == 1) {cshader.set_comp_prefix("#define BILLOWY");}
+	if (shape == 2) {cshader.set_comp_prefix("#define RIDGED" );}
 	cshader.begin();
 	cshader.add_uniform_float("x0", x0);
 	cshader.add_uniform_float("y0", y0);
@@ -1180,6 +1184,7 @@ void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx
 	cshader.gen_matrix_R32F(vals, tid);
 	cshader.end_shader();
 	free_texture(tid);
+	//PRINT_TIME("Gen Terrain");
 }
 
 

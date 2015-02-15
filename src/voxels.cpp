@@ -274,10 +274,10 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	if (gen_mode == 3) { // GPU simplex
 		RESET_TIME;
 		unsigned tid(0);
-		compute_shader_t cshader("gen_voxel_weights", nx, ny);
+		compute_shader_t cshader("noise_2d_3d.part*+gen_voxel_weights", nx, ny);
 		cshader.begin();
-		cshader.add_uniform_vector3d("offset", (offset + lo_pos));
-		cshader.add_uniform_vector3d("scale",  vector3d(vsz.x*nx, vsz.y*ny, vsz.z)); // Note: only x and y are scaled
+		cshader.add_uniform_vector3d("offset",  (offset + lo_pos));
+		cshader.add_uniform_vector3d("scale",   vector3d(vsz.x*nx, vsz.y*ny, vsz.z)); // Note: only x and y are scaled
 		cshader.add_uniform_float("start_mag",  mag);
 		cshader.add_uniform_float("start_freq", 0.25*freq);
 		cshader.add_uniform_float("rx", rx);
