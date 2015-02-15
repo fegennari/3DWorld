@@ -273,16 +273,17 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	}
 	if (gen_mode == 3) { // GPU simplex
 		RESET_TIME;
+		bool const real_comp_shader = 0;
 		unsigned tid(0);
-		compute_shader_t cshader("noise_2d_3d.part*+gen_voxel_weights", nx, ny);
+		vector<float> vals;
+		compute_shader_t cshader("noise_2d_3d.part*+gen_voxel_weights", nx, ny); // compute_shader_t or compute_shader_comp_t
 		cshader.begin();
 		cshader.add_uniform_vector3d("offset",  (offset + lo_pos));
-		cshader.add_uniform_vector3d("scale",   vector3d(vsz.x*nx, vsz.y*ny, vsz.z)); // Note: only x and y are scaled
+		cshader.add_uniform_vector3d("scale",   (real_comp_shader ? vsz : vector3d(vsz.x*nx, vsz.y*ny, vsz.z))); // only x and y are scaled
 		cshader.add_uniform_float("start_mag",  mag);
 		cshader.add_uniform_float("start_freq", 0.25*freq);
 		cshader.add_uniform_float("rx", rx);
 		cshader.add_uniform_float("ry", ry);
-		vector<float> vals;
 
 		// compute values in z-slices - slow due to cache misses in the set() call due to different matrix ordering
 		for (unsigned z = 0; z < nz; ++z) {

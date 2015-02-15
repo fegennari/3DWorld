@@ -61,10 +61,8 @@ void bind_3d_texture(unsigned tid) {
 }
 
 
-unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress) {
+void setup_3d_texture(unsigned &tid, unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, int filter, int wrap) {
 
-	assert(data.size() == ncomp*xsz*ysz*zsz);
-	unsigned tid(0);
 	glGenTextures(1, &tid);
 	bind_3d_texture(tid);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filter); // GL_LINEAR_MIPMAP_LINEAR?
@@ -72,6 +70,12 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, wrap);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, wrap);
 	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap);
+}
+unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress) {
+
+	assert(data.size() == ncomp*xsz*ysz*zsz);
+	unsigned tid(0);
+	setup_3d_texture(tid, xsz, ysz, zsz, ncomp, filter, wrap);
 	glTexImage3D(GL_TEXTURE_3D, 0, get_internal_texture_format(ncomp, compress), xsz, ysz, zsz, 0, get_texture_format(ncomp), GL_UNSIGNED_BYTE, &data.front());
 	//gen_mipmaps(3);
 	return tid;

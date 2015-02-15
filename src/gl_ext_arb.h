@@ -29,6 +29,7 @@ void select_multitex(int id, unsigned tu_id, bool reset=1);
 
 // 3D texture prototypes
 void bind_3d_texture(unsigned tid);
+void setup_3d_texture(unsigned &tid, unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, int filter, int wrap);
 unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress=0);
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data);

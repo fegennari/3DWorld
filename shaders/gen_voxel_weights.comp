@@ -6,9 +6,7 @@ uniform writeonly image2D dest_tex;
 
 void main()
 {
-	float vx   = float(gl_GlobalInvocationID.x)/(gl_WorkGroupSize.x*gl_NumWorkGroups.x);
-	float vy   = float(gl_GlobalInvocationID.y)/(gl_WorkGroupSize.y*gl_NumWorkGroups.y);
-	vec3 pos   = offset + scale*vec3(vx, vy, zval);
+	vec3 pos   = offset + scale*vec3(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, zval);
 	float val  = 0.0;
 	float mag  = start_mag;
 	float freq = start_freq;

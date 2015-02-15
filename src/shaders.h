@@ -221,7 +221,7 @@ class compute_shader_comp_t : public compute_shader_base_t {
 
 public:
 	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1) :
-	  compute_shader_base_t(xsize_, ysize_), zsize(zsize_), comp_shader_str(cstr) {}
+	  compute_shader_base_t(xsize_, ysize_), zsize(zsize_), comp_shader_str(cstr) {assert(zsize > 0);}
 	void begin();
 	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
 	void set_comp_prefix(char const *const prefix) {set_prefix(prefix, 5);} // CS
