@@ -40,10 +40,10 @@ vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
-extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, use_smoke_for_fog;
+extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting;
-extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, num_groups, xoff, yoff;
-extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER;
+extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
+extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, NEAR_CLIP, FAR_CLIP;
@@ -248,7 +248,10 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 }
 
 
+float const SMOKE_NOISE_MAG = 0.8;
+bool use_smoke_noise() {return (use_smoke_for_fog == 2 && SMOKE_NOISE_MAG);}
 bool is_smoke_in_use() {return (smoke_exists || use_smoke_for_fog);}
+
 
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
 	bool smoke_enabled, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
@@ -272,6 +275,12 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 		}
 		if (volume_lighting)     {s.set_prefix("#define SMOKE_SHADOW_MAP", 1);} // FS
 		if (display_mode & 0x10) {s.set_prefix("#define SMOKE_DLIGHTS",    1);} // FS - TESTING
+
+		if (use_smoke_noise()) {
+			s.set_prefix("#define SMOKE_NOISE",   1); // FS
+			s.set_prefix("#define NUM_OCTAVES 3", 1); // FS
+			//s.set_prefix("#define RIDGED_NOISE",  1); // FS
+		}
 	}
 	if (use_bmap) {
 		for (unsigned i = 0; i < 2; ++i) {
@@ -285,7 +294,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 }
 
 
-// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask
+// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask, 11: noise
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 // use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
@@ -297,7 +306,9 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
-	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+textured_with_smoke");
+	string fstr("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
+	if (smoke_en && use_smoke_noise()) {fstr += "perlin_clouds_3d.part*+";}
+	s.set_frag_shader(fstr + "textured_with_smoke");
 	s.begin_shader();
 
 	if (use_texgen == 2) {
@@ -319,7 +330,17 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_float_array("smoke_bb", (use_smoke_for_fog ? &smoke_bb.d[0][0] : &cur_smoke_bb.d[0][0]), 6);
 		if (DYNAMIC_SMOKE_SHADOWS) {s.add_uniform_vector3d("sun_pos", get_sun_pos());}
 		s.add_uniform_color("smoke_color",     (use_smoke_for_fog ? colorRGB(cur_fog_color) : colorRGB(GRAY)));
-		s.add_uniform_float("smoke_const_add", (use_smoke_for_fog ? 0.25 : 0.0));
+		s.add_uniform_float("smoke_const_add", ((use_smoke_for_fog == 1) ? 0.25 : 0.0));
+
+		if (use_smoke_noise()) {
+			set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
+			s.add_uniform_int("cloud_noise_tex", 11);
+			s.add_uniform_float("smoke_noise_mag", SMOKE_NOISE_MAG);
+			s.add_uniform_float("noise_scale", 0.45);
+			static vector3d fog_time(zero_vector);
+			if (animate2) {fog_time += 0.0005*fticks*wind;} // fog moves with the wind
+			s.add_uniform_vector3d("fog_time", fog_time);
+		}
 	}
 	if (use_burn_mask) {
 		s.add_uniform_float("burn_tex_scale", burn_tex_scale);

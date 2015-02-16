@@ -4,8 +4,10 @@ uniform sampler2D tex0;
 uniform float min_alpha = 0.0;
 uniform float emissive_scale = 0.0;
 uniform float smoke_const_add = 0.0;
+uniform float smoke_noise_mag = 0.0;
 uniform vec3 smoke_color, sphere_center;
 uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
+uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
 uniform vec4 emission = vec4(0,0,0,1);
@@ -88,6 +90,10 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 		}
 #endif // USE_SHADOW_MAP
 #endif // SMOKE_SHADOW_MAP
+
+#ifdef SMOKE_NOISE
+		tex_val.a += smoke_noise_mag * max(0.0, gen_cloud_alpha_time((pos * vec3(1.0, 1.0, 0.7)), fog_time)); // stretch in z
+#endif
 		float smoke  = smoke_sscale*(tex_val.a + smoke_const_add)*step_weight*sd_ratio;
 		float alpha  = (keep_alpha ? color.a : ((color.a == 0.0) ? smoke : 1.0));
 		float mval   = ((!keep_alpha && color.a == 0.0) ? 1.0 : smoke);
