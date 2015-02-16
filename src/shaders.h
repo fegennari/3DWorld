@@ -196,14 +196,14 @@ public:
 // "fake" compute shader implemented as a fragment shader
 class compute_shader_t : public compute_shader_base_t {
 
-	unsigned fbo_id;
+	unsigned fbo_id, pbo;
 	string frag_shader_str;
 
 	void draw_geom() const;
 
 public:
 	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
-	  compute_shader_base_t(xsize_, ysize_), fbo_id(0), frag_shader_str(fstr) {}
+	  compute_shader_base_t(xsize_, ysize_), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
 	void begin();
 	void pre_run();
 	void post_run();

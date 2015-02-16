@@ -272,7 +272,6 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 		gen_rx_ry(rx, ry);
 	}
 	if (gen_mode == 3) { // GPU simplex
-		RESET_TIME;
 		bool const real_comp_shader = 0;
 		unsigned tid(0);
 		vector<float> vals;
@@ -284,19 +283,18 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 		cshader.add_uniform_float("start_freq", 0.25*freq);
 		cshader.add_uniform_float("rx", rx);
 		cshader.add_uniform_float("ry", ry);
+		int const zval_loc(cshader.get_uniform_loc("zval"));
+		assert(zval_loc >= 0);
 
 		// compute values in z-slices - slow due to cache misses in the set() call due to different matrix ordering
 		for (unsigned z = 0; z < nz; ++z) {
-			cshader.add_uniform_float("zval", z);
+			cshader.set_uniform_float(zval_loc, z);
 			cshader.gen_matrix_R32F(vals, tid, (z == 0), (z+1 == nz));
 
-			#pragma omp parallel for schedule(static,1) // ~2x faster
-			for (int y = 0; y < (int)ny; ++y) { // generate voxel values
-				for (unsigned x = 0; x < nx; ++x) {
-					float val(vals[nx*y + x] + z*zscale);
-					if (normalize_to_1) {val = CLIP_TO_pm1(val);}
-					set(x, y, z, val);
-				}
+			#pragma omp parallel for schedule(static,1) // ~2.5x faster
+			for (int i = 0; i < (int)vals.size(); ++i) { // generate voxel values
+				float val(vals[i] + z*zscale);
+				operator[](z + i*nz) = (normalize_to_1 ? CLIP_TO_pm1(val) : val);
 			}
 		}
 		cshader.end_shader();

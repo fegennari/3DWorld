@@ -1127,16 +1127,22 @@ void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool 
 
 	if (1) { // Note: slower on old cards, faster on new ones
 		unsigned const pbo_size(xsize*ysize*sizeof(float));
-		unsigned pbo(0);
-		glGenBuffers(1, &pbo);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-		glBufferData(GL_PIXEL_PACK_BUFFER, pbo_size, NULL, GL_STREAM_READ);
+
+		if (is_first) {
+			glGenBuffers(1, &pbo);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+			glBufferData(GL_PIXEL_PACK_BUFFER, pbo_size, NULL, GL_STREAM_READ);
+		}
 		glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, nullptr);
 		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, pbo_size, GL_MAP_READ_BIT);
 		memcpy((void *)&vals.front(), ptr, pbo_size);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		glDeleteBuffers(1, &pbo);
+
+		if (is_last) {
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			glDeleteBuffers(1, &pbo);
+			pbo = 0;
+		}
 	}
 	else {
 		glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
