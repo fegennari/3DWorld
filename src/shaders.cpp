@@ -1150,17 +1150,21 @@ void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool 
 	if (is_last) {post_run();}
 }
 
+
 void compute_shader_comp_t::begin() {
+	ostringstream oss;
+	oss << "layout (local_size_x = " << block_sz_x << ", local_size_y = " << block_sz_y << ", local_size_z = " << block_sz_z << ") in;";
+	set_prefix(oss.str().c_str(), 5);
 	set_comp_shader(comp_shader_str);
 	begin_shader();
 	add_uniform_int("dest_tex", 0);
 }
 
-unsigned div_by_group_sz(unsigned const sz) {
-	unsigned const group_sz = 16;
-	if (sz == 1) return 1;
-	assert((sz % group_sz) == 0);
-	return sz/group_sz;
+unsigned div_by_block_sz(unsigned sz, unsigned block_sz) {
+	//if (sz == 1) return 1;
+	assert(block_sz > 0);
+	assert((sz % block_sz) == 0);
+	return sz/block_sz;
 }
 
 void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
@@ -1170,7 +1174,7 @@ void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, 
 
 	if (is_3d) {
 		if (tid == 0) {
-			setup_3d_texture(tid, xsize, ysize, zsize, 1, GL_NEAREST, GL_CLAMP_TO_EDGE);
+			setup_3d_texture(tid, GL_NEAREST, GL_CLAMP_TO_EDGE);
 			glTexImage3D(GL_TEXTURE_3D, 0, GL_R32F, xsize, ysize, zsize, 0, GL_RED, GL_FLOAT, nullptr);
 		}
 		bind_3d_texture(tid);
@@ -1179,8 +1183,10 @@ void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, 
 		setup_target_texture(tid, 1);
 		bind_2d_texture(tid);
 	}
-	glBindImageTexture(0, tid, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32F); // use image unit 0
-	glDispatchCompute(div_by_group_sz(xsize), div_by_group_sz(ysize), div_by_group_sz(zsize)); // xsize*ysize*zsize threads in blocks of 16^2 or 16^3
+	glBindImageTexture(0, tid, 0, (is_3d ? GL_TRUE : GL_FALSE), 0, GL_WRITE_ONLY, GL_R32F); // use image unit 0, layered if 3D texture
+	// num threads = div_by_block_sz(xsize, block_sz_x)*div_by_block_sz(ysize, block_sz_y)*div_by_block_sz(zsize, block_sz_z)
+	// block size  = block_sz_x*block_sz_y*block_sz_z
+	glDispatchCompute(div_by_block_sz(xsize, block_sz_x), div_by_block_sz(ysize, block_sz_y), div_by_block_sz(zsize, block_sz_z));
 	vals.resize(xsize*ysize*zsize);
 	glGetTexImage((is_3d ? GL_TEXTURE_3D : GL_TEXTURE_2D), 0, GL_RED, GL_FLOAT, &vals.front());
 	check_gl_error(501);

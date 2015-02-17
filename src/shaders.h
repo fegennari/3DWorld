@@ -216,12 +216,14 @@ public:
 // "real" compute shader
 class compute_shader_comp_t : public compute_shader_base_t {
 
-	unsigned zsize;
+	unsigned zsize, block_sz_x, block_sz_y, block_sz_z;
 	string comp_shader_str;
 
 public:
-	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1) :
-	  compute_shader_base_t(xsize_, ysize_), zsize(zsize_), comp_shader_str(cstr) {assert(zsize > 0);}
+	compute_shader_comp_t(string const &cstr, unsigned xsize_, unsigned ysize_, unsigned zsize_=1, unsigned bsx=16, unsigned bsy=16, unsigned bsz=1) :
+	  compute_shader_base_t(xsize_, ysize_), zsize(zsize_), block_sz_x(bsx), block_sz_y(bsy), block_sz_z(bsz), comp_shader_str(cstr) {
+		  assert(zsize > 0 && block_sz_x > 0 && block_sz_y > 0 && block_sz_z > 0);
+	  }
 	void begin();
 	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
 	void set_comp_prefix(char const *const prefix) {set_prefix(prefix, 5);} // CS

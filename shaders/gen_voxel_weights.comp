@@ -1,12 +1,10 @@
-layout (local_size_x = 16, local_size_y = 16) in;
-
 uniform vec3 offset, scale;
-uniform float start_mag, start_freq, rx, ry, zval;
-uniform writeonly image2D dest_tex;
+uniform float start_mag, start_freq, rx, ry;
+uniform writeonly image3D dest_tex;
 
 void main()
 {
-	vec3 pos   = offset + scale*vec3(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, zval);
+	vec3 pos   = offset + scale*vec3(gl_GlobalInvocationID.zxy); // Note: {x,y,z} is reordered to {z,x,y}
 	float val  = 0.0;
 	float mag  = start_mag;
 	float freq = start_freq;
@@ -24,6 +22,6 @@ void main()
 		crx  *= 1.5;
 		cry  *= 1.5;
 	}
-	ivec2 store_pos = ivec2(gl_GlobalInvocationID.xy);
+	ivec3 store_pos = ivec3(gl_GlobalInvocationID);
 	imageStore(dest_tex, store_pos, vec4(val, 0.0, 0.0, 0.0)); // only red channel is used
 }

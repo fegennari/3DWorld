@@ -272,31 +272,17 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 		gen_rx_ry(rx, ry);
 	}
 	if (gen_mode == 3) { // GPU simplex
-		bool const real_comp_shader = 0;
 		unsigned tid(0);
-		vector<float> vals;
-		compute_shader_t cshader("noise_2d_3d.part*+gen_voxel_weights", nx, ny); // compute_shader_t or compute_shader_comp_t
+		compute_shader_comp_t cshader("noise_2d_3d.part*+gen_voxel_weights", nz, nx, ny, 16, 16, 1); // Note: {x,y,z} is reordered to {z,x,y}
 		cshader.begin();
-		cshader.add_uniform_vector3d("offset",  (offset + lo_pos));
-		cshader.add_uniform_vector3d("scale",   (real_comp_shader ? vsz : vector3d(vsz.x*nx, vsz.y*ny, vsz.z))); // only x and y are scaled
+		cshader.add_uniform_vector3d("offset", (offset + lo_pos));
+		cshader.add_uniform_vector3d("scale",   vsz);
 		cshader.add_uniform_float("start_mag",  mag);
 		cshader.add_uniform_float("start_freq", 0.25*freq);
 		cshader.add_uniform_float("rx", rx);
 		cshader.add_uniform_float("ry", ry);
-		int const zval_loc(cshader.get_uniform_loc("zval"));
-		assert(zval_loc >= 0);
-
-		// compute values in z-slices - slow due to cache misses in the set() call due to different matrix ordering
-		for (unsigned z = 0; z < nz; ++z) {
-			cshader.set_uniform_float(zval_loc, z);
-			cshader.gen_matrix_R32F(vals, tid, (z == 0), (z+1 == nz));
-
-			#pragma omp parallel for schedule(static,1) // ~2.5x faster
-			for (int i = 0; i < (int)vals.size(); ++i) { // generate voxel values
-				float val(vals[i] + z*zscale);
-				operator[](z + i*nz) = (normalize_to_1 ? CLIP_TO_pm1(val) : val);
-			}
-		}
+		cshader.gen_matrix_R32F(*this, tid); // write directly to voxel values
+		if (normalize_to_1) {for (iterator i = begin(); i != end(); ++i) {*i = CLIP_TO_pm1(*i);}}
 		cshader.end_shader();
 		free_texture(tid);
 		return;

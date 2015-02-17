@@ -61,7 +61,7 @@ void bind_3d_texture(unsigned tid) {
 }
 
 
-void setup_3d_texture(unsigned &tid, unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, int filter, int wrap) {
+void setup_3d_texture(unsigned &tid, int filter, int wrap) {
 
 	glGenTextures(1, &tid);
 	bind_3d_texture(tid);
@@ -75,7 +75,7 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 
 	assert(data.size() == ncomp*xsz*ysz*zsz);
 	unsigned tid(0);
-	setup_3d_texture(tid, xsz, ysz, zsz, ncomp, filter, wrap);
+	setup_3d_texture(tid, filter, wrap);
 	glTexImage3D(GL_TEXTURE_3D, 0, get_internal_texture_format(ncomp, compress), xsz, ysz, zsz, 0, get_texture_format(ncomp), GL_UNSIGNED_BYTE, &data.front());
 	//gen_mipmaps(3);
 	return tid;
