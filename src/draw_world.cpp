@@ -598,11 +598,12 @@ void draw_coll_surfaces(bool draw_trans) {
 
 bool portal::is_visible() const {
 
-	point center;
-	float rad;
-	polygon_bounding_sphere(pts, 4, 0.0, center, rad);
+	cube_t bcube(pts, 4);
+	point const center(bcube.get_cube_center());
 	if (normal != zero_vector && dot_product_ptv(normal, get_camera_pos(), center) < 0.0) return 0; // back facing
-	return sphere_in_camera_view(center, rad, 2);
+	if (!camera_pdu.cube_visible(bcube)) return 0;
+	if ((display_mode & 0x08) && have_occluders() && cobj_contained(get_camera_pos(), center, pts, 4, -1)) return 0;
+	return 1;
 }
 
 void portal::pre_draw(vector<vert_wrap_t> &verts) {
