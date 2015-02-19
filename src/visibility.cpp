@@ -185,9 +185,8 @@ void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but coul
 
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
-	if (radius*radius < 1.0E-6*p2p_dist_sq(viewer, sc)) { // small and far away
-		return cobj_contained(viewer, sc, &sc, 1, -1);
-	}
+	if (!have_occluders()) return 0;
+	if (radius*radius < 1.0E-6*p2p_dist_sq(viewer, sc)) {return cobj_contained(viewer, sc, &sc, 1, -1);} // small and far away
 	point pts[8];
 	
 	for (unsigned i = 0; i < 8; ++i) { // really only need 4 points
@@ -196,6 +195,15 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 		}
 	}
 	return cobj_contained(viewer, sc, pts, 8, -1);
+}
+
+
+bool cube_cobj_occluded(point const &viewer, cube_t const &cube) {
+
+	if (!have_occluders()) return 0;
+	point pts[8];
+	cube.get_points(pts);
+	return cobj_contained(viewer, cube.get_cube_center(), pts, 8, -1);
 }
 
 

@@ -1419,10 +1419,16 @@ struct camera_pdu_transform_wrapper {
 };
 
 
+bool is_cube_visible_to_camera(cube_t const &cube) {
+	if (!camera_pdu.cube_visible(cube)) return 0;
+	return (!(display_mode & 0x08) || !cube_cobj_occluded(camera_pdu.pos, cube));
+}
+
+
 // non-const due to vbo caching, normal computation, etc.
 void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate) {
 
-	if (transforms.empty() && !camera_pdu.cube_visible(bcube + xlate)) return;
+	if (transforms.empty() && !is_cube_visible_to_camera(bcube + xlate)) return;
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xf(xlate);
 	camera_pdu_transform_wrapper cptw(xf);
@@ -1435,7 +1441,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 		render_materials_def(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
 	}
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		if (!camera_pdu.cube_visible(xf->get_xformed_cube(bcube))) continue; // Note: xlate has already been applied to camera_pdu
+		if (!is_cube_visible_to_camera(xf->get_xformed_cube(bcube))) continue; // Note: xlate has already been applied to camera_pdu
 		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 		// Note: currently, only translate is supported (and somewhat scale)
 		camera_pdu_transform_wrapper cptw2(*xf);

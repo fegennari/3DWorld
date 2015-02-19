@@ -39,6 +39,7 @@ bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cob
 bool coll_pt_vis_test(point pos, point pos2, float dist, int &index, int cobj, int skip_dynamic, int test_alpha);
 void set_camera_pdu();
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius);
+bool cube_cobj_occluded(point const &viewer, cube_t const &cube);
 bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int max_level, bool no_frustum_test=0);
 int  get_light_pos(point &lpos, int light);
 void update_sun_shadows();
