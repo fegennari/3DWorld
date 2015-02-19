@@ -18,6 +18,11 @@ float get_point_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // No
 	return rscale*rscale; // quadratic 1/r^2 attenuation
 }
 
+float get_sphere_intensity_at(in vec3 pos, in vec3 lpos, in float radius, in float inner_radius) { // Note: doesn't handle the radius==0 case
+	float rscale = clamp((radius - distance(pos, lpos))/(radius - inner_radius), 0.0, 1.0);
+	return rscale*rscale; // quadratic 1/r^2 attenuation
+}
+
 float get_line_intensity_at(in vec3 pos, in vec3 lpos1, in vec3 lpos2, in float radius, out vec3 lpos) { // Note: doesn't handle the radius==0 case
 	vec3 L = (lpos2 - lpos1);
 	lpos   = lpos1 + L*clamp(dot((pos - lpos1), L)/dot(L,L), 0.0, 1.0);
@@ -63,6 +68,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bum
 		if (true) { // always a point light
 #endif
 			intensity = get_point_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
+			//intensity = get_sphere_intensity_at(dlpos, lpos_r.xyz, lpos_r.w, 0.1*lpos_r.w);
 #ifdef HAS_SPOTLIGHTS
 			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
 #endif
