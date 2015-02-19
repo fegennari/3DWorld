@@ -575,10 +575,13 @@ void draw_coll_surfaces(bool draw_trans) {
 		nms.add_uniform_float("bump_b_scale", 1.0);
 		int nm_tid(-1);
 
+		// Note: could stable_sort normal_map_cobjs by normal_map tid, but the normal map is already part of the layer sorting,
+		// so the normal maps are probably already grouped together
 		for (auto i = normal_map_cobjs.begin(); i != normal_map_cobjs.end(); ++i) {
 			coll_obj const &c(coll_objects[*i]);
 
-			if (c.cp.normal_map != nm_tid) {
+			if (c.cp.normal_map != nm_tid) { // normal map change
+				cdb.flush();
 				nm_tid = c.cp.normal_map;
 				select_multitex(nm_tid, 5);
 			}

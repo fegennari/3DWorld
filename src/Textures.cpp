@@ -56,7 +56,7 @@ texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png", 0, 1, LS_TEX_ANISO),
 texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg", 0, 0), // 1024x1024, compression is slow
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
-texture_t(0, 0, 512,  512,  1, 3, 1, "manhole.bmp", 1),
+texture_t(0, 5, 512,  512,  1, 3, 1, "manhole.jpg", 1),
 texture_t(0, 6, 128,  128,  1, 4, 3, "palmtree.png", 1),
 texture_t(1, 9, 256,  256,  1, 4, 1, "@smoke"),  // not real file
 texture_t(1, 9, 64,   64,   1, 4, 1, "@plasma"), // not real file
@@ -285,7 +285,7 @@ void load_textures() {
 }
 
 
-int get_texture_by_name(string const &name, bool is_normal_map) {
+int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y) {
 
 	int const ix(atoi(name.c_str()));
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
@@ -297,7 +297,7 @@ int get_texture_by_name(string const &name, bool is_normal_map) {
 			// try to load/add the texture directly from a file
 			// assume it's RGB with wrap and mipmaps
 			int const tid(textures.size());
-			texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, 0, !is_normal_map, 1.0, 1.0, is_normal_map);
+			texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, invert_y, !is_normal_map, 1.0, 1.0, is_normal_map);
 			new_tex.load(tid);
 			new_tex.init();
 			textures.push_back(new_tex);

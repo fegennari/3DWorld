@@ -950,9 +950,9 @@ string read_filename(FILE *fp) {
 }
 
 
-bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map) {
+bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_normal_map, bool invert_y=0) {
 
-	tid = get_texture_by_name(std::string(str), is_normal_map);
+	tid = get_texture_by_name(std::string(str), is_normal_map, invert_y);
 	
 	if (tid >= 0 && (unsigned)tid >= textures.size()) {
 		cout << "Illegal texture on line " << line_num << ": " << tid << ", max is " << textures.size()-1 << endl;
@@ -1498,9 +1498,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			materials[str] = cobj.cp; // Note: okay to overwrite/redefine a material
 			break;
 
-		case 'X': // normal map texture id/name
+		case 'X': // normal map texture id/name [invert_y=0]
 			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "normal map texture", coll_obj_file);}
-			if (!read_texture(str, line_num, cobj.cp.normal_map, 1)) {fclose(fp); return 0;}
+			{
+				int invert_y(0);
+				fscanf(fp, "%i", &invert_y ); // optional
+				if (!read_texture(str, line_num, cobj.cp.normal_map, 1, (invert_y != 0))) {fclose(fp); return 0;}
+			}
 			break;
 
 		case 'r': // set specular
