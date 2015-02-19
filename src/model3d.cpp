@@ -1434,7 +1434,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
 	}
-	for (vector<model3d_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
+	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		if (!camera_pdu.cube_visible(xf->get_xformed_cube(bcube))) continue; // Note: xlate has already been applied to camera_pdu
 		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 		// Note: currently, only translate is supported (and somewhat scale)
@@ -1484,6 +1484,19 @@ void model3d::setup_shadow_maps() {
 }
 
 
+cube_t model3d::calc_bcube_including_transforms() const {
+
+	if (transforms.empty()) {return bcube;} // no transforms case
+	cube_t bcube_xf(all_zeros_cube); // will return this if transforms.empty()
+	
+	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
+		cube_t const bc(xf->get_xformed_cube(bcube));
+		if (bcube_xf == all_zeros_cube) {bcube_xf = bc;} else {bcube_xf.union_with_cube(bc);}
+	}
+	return bcube_xf;
+}
+
+
 void model3d::build_cobj_tree(bool verbose) {
 
 	if (!coll_tree.is_empty() || has_cobjs) return; // already built or not needed because cobjs will be used instead
@@ -1501,7 +1514,7 @@ bool model3d::check_coll_line(point const &p1, point const &p2, point &cpos, vec
 	point cur(p2);
 
 	// Note: this case unused/untested
-	for (vector<model3d_xform_t>::const_iterator xf = transforms.begin(); xf != transforms.end(); ++xf) {
+	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		point p1x(p1), p2x(cur);
 		xf->inv_xform_pos(p1x);
 		xf->inv_xform_pos(p2x);
@@ -1690,7 +1703,7 @@ cube_t model3ds::get_bcube() const {
 	cube_t bcube(all_zeros_cube); // will return this if empty()
 
 	for (const_iterator m = begin(); m != end(); ++m) {
-		cube_t const &bb(m->get_bcube());
+		cube_t const bb(m->calc_bcube_including_transforms());
 		if (m == begin()) {bcube = bb;} else {bcube.union_with_cube(bb);}
 	}
 	return bcube;
@@ -1744,5 +1757,7 @@ void add_transform_for_cur_model(model3d_xform_t const &xf) {
 	}
 	all_models.back().add_transform(xf);
 }
+
+cube_t get_all_models_bcube() {return all_models.get_bcube();}
 
 

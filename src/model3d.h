@@ -401,6 +401,7 @@ public:
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
+	cube_t calc_bcube_including_transforms() const;
 	void build_cobj_tree(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
@@ -454,9 +455,8 @@ void free_model_context();
 void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
 
-bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
-	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file,
-	bool recalc_normals, bool write_file, bool verbose);
+bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, geom_xform_t const &xf, int def_tid,
+	colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
 
 
 #endif // _MODEL3D_H_

@@ -630,9 +630,8 @@ bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t co
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 
 
-bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, cube_t &model_bcube,
-	geom_xform_t const &xf, int def_tid, colorRGBA const &def_c, float voxel_xy_spacing, bool load_models,
-	bool recalc_normals, bool write_file, bool verbose)
+bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, geom_xform_t const &xf, int def_tid,
+	colorRGBA const &def_c, float voxel_xy_spacing, bool load_models, bool recalc_normals, bool write_file, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
@@ -670,7 +669,6 @@ bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cu
 			//cur_model.set_has_cobjs(); // billboard cobjs are not added, and the colors/textures are missing
 			PRINT_TIME("Create Model3d Cubes");
 		}
-		model_bcube = cur_model.get_bcube();
 		return 1;
 	}
 	else {

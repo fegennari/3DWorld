@@ -29,9 +29,10 @@ float const ROTATE_RATE           = 25.0;
 
 
 // object variables
-bool printed_ngsp_warning(0);
+bool printed_ngsp_warning(0), using_model_bcube(0);
 int num_groups(0), used_objs(0);
 unsigned next_cobj_group_id(0);
+float model_czmin(czmin), model_czmax(czmax);
 obj_group obj_groups[NUM_TOT_OBJS];
 dwobject def_objects[NUM_TOT_OBJS];
 int coll_id[NUM_TOT_OBJS] = {0};
@@ -47,7 +48,7 @@ extern bool clear_landscape_vbo, scene_smap_vbo_invalid, use_voxel_cobjs;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
-extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, model_czmin, model_czmax;
+extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
 extern point cpos2, orig_camera, orig_cdir;
 extern unsigned create_voxel_landscape, init_item_counts[];
 extern obj_type object_types[];
@@ -71,6 +72,7 @@ int gen_game_obj(int type);
 point get_sstate_pos(int id);
 void reset_smoke_tex_data();
 void calc_uw_atten_colors();
+cube_t get_all_models_bcube();
 
 
 
@@ -1027,10 +1029,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				bool const use_cubes  (ivals[0] == 5);
 				ppts.resize(0);
 				vector<cube_t> cubes;
-				cube_t model_bcube(0,0,0,0,0,0);
 				unsigned char const cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
 				
-				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), model_bcube, xf, cobj.cp.tid,
+				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), xf, cobj.cp.tid,
 					cobj.cp.color, voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), 1))
 				{
 					return read_error(fp, "model file data", coll_obj_file);
@@ -1060,10 +1061,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					}
 				}
 				else if (use_model3d) {
-					model_czmin = min(czmin, model_bcube.d[2][0]);
-					model_czmax = max(czmax, model_bcube.d[2][1]);
-					czmin = min(czmin, model_czmin);
-					czmax = max(czmax, model_czmax);
+					using_model_bcube = 1;
 				}
 				PRINT_TIME("Obj File Load/Process");
 				break;
@@ -1592,6 +1590,14 @@ int read_coll_objects(const char *coll_obj_file) {
 	cobj.cp.draw    = 1;   // default
 	if (use_voxel_cobjs) {cobj.cp.cobj_type = COBJ_TYPE_VOX_TERRAIN;}
 	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
+
+	if (using_model_bcube) {
+		cube_t const model_bcube(get_all_models_bcube());
+		model_czmin = min(czmin, model_bcube.d[2][0]);
+		model_czmax = max(czmax, model_bcube.d[2][1]);
+		czmin = min(czmin, model_czmin);
+		czmax = max(czmax, model_czmax);
+	}
 	if (tree_mode & 2) {add_small_tree_coll_objs();}
 	if (has_scenery2)  {add_scenery_cobjs();}
 	return 1;

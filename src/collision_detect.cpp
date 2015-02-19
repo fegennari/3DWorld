@@ -19,7 +19,7 @@ float const CAMERA_MESH_DZ   = 0.1; // max dz on mesh
 // Global Variables
 bool camera_on_snow(0);
 int camera_coll_id(-1);
-float czmin(FAR_DISTANCE), czmax(-FAR_DISTANCE), coll_rmax(0.0), model_czmin(czmin), model_czmax(czmax);
+float czmin(FAR_DISTANCE), czmax(-FAR_DISTANCE), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 coll_obj_group coll_objects;
 
