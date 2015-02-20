@@ -35,7 +35,7 @@ coll_tquad::coll_tquad(polygon_t const &p) : tquad_t((unsigned)p.size()) {
 	color.set_c4(p.color);
 	for (unsigned i = 0; i < npts; ++i) {pts[i]  = p[i].v;}
 	if (npts == 3) pts[3] = pts[2]; // duplicate the last point so that it's valid
-	get_normal(pts[0], pts[1], pts[2], normal, 1);
+	update_normal();
 }
 
 
@@ -43,7 +43,7 @@ coll_tquad::coll_tquad(triangle const &t, colorRGBA const &c) {
 
 	npts = 3;
 	UNROLL_3X(pts[i_] = t.pts[i_];);
-	get_normal(pts[0], pts[1], pts[2], normal, 1);
+	update_normal();
 	color.set_c4(c);
 }
 

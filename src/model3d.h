@@ -56,7 +56,7 @@ struct geom_xform_t { // should be packed, can read/write as POD
 		pos /= scale;
 		inv_xform_pos_rm(pos);
 	}
-	void xform_pos(point &pos) const {
+	void xform_pos(point &pos) const { // rotate, mirror, scale, translate
 		xform_pos_rms(pos);
 		pos += tv;
 	}
@@ -76,13 +76,15 @@ struct geom_xform_t { // should be packed, can read/write as POD
 struct model3d_xform_t : public geom_xform_t { // should be packed, can read/write as POD
 
 	vector3d axis;
-	float angle;
+	float angle; // in degrees
 	colorRGBA color;
 	int tid;
 
 	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), axis(zero_vector), angle(0.0), color(ALPHA0), tid(-1) {}
+	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), axis(zero_vector), angle(0.0), color(ALPHA0), tid(-1) {}
 	cube_t get_xformed_cube(cube_t const &cube) const;
 	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
+	void apply_to_tquad(coll_tquad &tquad) const;
 	void apply_gl() const;
 
 	bool eq_xforms(model3d_xform_t const &x) const {
@@ -93,6 +95,17 @@ struct model3d_xform_t : public geom_xform_t { // should be packed, can read/wri
 	}
 	bool operator!=(model3d_xform_t const &x) const {return !operator==(x);}
 	bool is_identity() const {return eq_xforms(model3d_xform_t());}
+
+	void xform_pos(point &pos) const { // rotate, mirror, scale, arb_rotate, translate
+		xform_pos_rms(pos);
+		rotate_vector3d(axis, TO_RADIANS*angle, pos);
+		pos += tv;
+	}
+	void inv_xform_pos(point &pos) const {
+		pos -= tv;
+		rotate_vector3d(axis, -TO_RADIANS*angle, pos);
+		inv_xform_pos_rms(pos);
+	}
 };
 
 
@@ -381,7 +394,7 @@ public:
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id=-1, unsigned obj_id=0);
-	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0) const;
+	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0) const;
 	void get_cubes(vector<cube_t> &cubes, float spacing) const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
@@ -453,10 +466,13 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
 void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
+void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t());
+void get_cur_model_as_cubes(vector<cube_t> &cubes, geom_xform_t const &xf, float voxel_xy_spacing);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
+cube_t get_all_models_bcube();
 
-bool read_model_file(string const &filename, vector<coll_tquad> *ppts, vector<cube_t> *cubes, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, float voxel_xy_spacing, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
+bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
+	colorRGBA const &def_c, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
 
 
 #endif // _MODEL3D_H_

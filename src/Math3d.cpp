@@ -1103,6 +1103,7 @@ void vproj_plane(vector3d const &vin, vector3d const &n, vector3d &vout) { // pr
 
 
 // OK if vrot is zero_vector, sin = sqrt(1 - cos^2) ???
+// Note: angle is in radians
 #define CREATE_ROT_MATRIX(vrot, angle) \
 	double const mag(vrot.mag()); assert(mag != 0.0); \
 	double const X(vrot.x/mag), Y(vrot.y/mag), Z(vrot.z/mag), c(cos(angle)), s(sin(angle)); \

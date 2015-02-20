@@ -243,6 +243,7 @@ struct coll_tquad : public tquad_t { // size = 68
 	coll_tquad(coll_obj const &c);
 	coll_tquad(polygon_t const &p);
 	coll_tquad(triangle const &t, colorRGBA const &c=WHITE);
+	void update_normal() {get_normal(pts[0], pts[1], pts[2], normal, 1);}
 
 	static bool is_cobj_valid(coll_obj const &c) {
 		return (!c.disabled() && c.type == COLL_POLYGON && (c.npoints == 3 || c.npoints == 4) && c.thickness <= MIN_POLY_THICK);

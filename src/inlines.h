@@ -516,7 +516,7 @@ template<typename T> inline void global_translate(pointT<T> const &pos) {
 	translate_to(make_pt_global(pos));
 }
 
-inline void rotate_about(float angle, vector3d const &v) {
+inline void rotate_about(float angle, vector3d const &v) { // Note: angle is in degrees
 	fgRotate(angle, v.x, v.y, v.z);
 }
 
@@ -533,11 +533,11 @@ inline void uniform_scale(float scale) {
 }
 
 
-template<typename T> inline void rotate_vector3d(pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vout by angle about vrot
+template<typename T> inline void rotate_vector3d(pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vout by angle (radians) about vrot
 	rotate_vector3d(vout, vrot, angle, vout);
 }
 
-template<typename T> inline void rotate_vector3d_norm(pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vout by angle about vrot
+template<typename T> inline void rotate_vector3d_norm(pointT<T> const &vrot, double angle, pointT<T> &vout) { // rotate vout by angle (radians) about vrot
 
 	rotate_vector3d(vout, vrot, angle, vout);
 	vout.normalize();

@@ -176,7 +176,7 @@ void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but coul
 
 	if (angle == 0.0) return;
 	vector3d v[2] = {dir, upv};
-	rotate_vector3d_multi(axis, TO_RADIANS*angle, v, 2);
+	rotate_vector3d_multi(axis, TO_RADIANS*angle, v, 2); // angle is in degrees
 	dir = v[0]; upv = v[1]; // renormalize?
 	orthogonalize_up_dir();
 	// FIXME: what about pos?

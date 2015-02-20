@@ -72,7 +72,6 @@ int gen_game_obj(int type);
 point get_sstate_pos(int id);
 void reset_smoke_tex_data();
 void calc_uw_atten_colors();
-cube_t get_all_models_bcube();
 
 
 
@@ -1027,13 +1026,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				bool const use_model3d(ivals[0] >= 3);
 				bool const no_cobjs   (ivals[0] >= 4);
 				bool const use_cubes  (ivals[0] == 5);
-				ppts.resize(0);
-				vector<cube_t> cubes;
 				unsigned char const cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
+				ppts.clear();
 				
-				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), (use_cubes ? &cubes : NULL), xf, cobj.cp.tid,
-					cobj.cp.color, voxel_xy_spacing, use_model3d, (recalc_normals != 0), (write_file != 0), 1))
-				{
+				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
 					return read_error(fp, "model file data", coll_obj_file);
 				}
 				if (!no_cobjs) {
@@ -1052,6 +1048,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					cur_cube.type         = COLL_CUBE;
 					cur_cube.cp.cobj_type = cobj_type;
 					if (cobj_type != COBJ_TYPE_STD) {cur_cube.cp.draw = 0;}
+					vector<cube_t> cubes;
+					get_cur_model_as_cubes(cubes, xf, voxel_xy_spacing);
 					maybe_reserve_fixed_cobjs(cubes.size());
 
 					for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
@@ -1067,16 +1065,23 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				break;
 			}
 
-		case 'Z': // add model3d transform: tx ty tz [scale [rx ry rz angle]]
+		case 'Z': // add model3d transform: add_cobjs tx ty tz [scale [rx ry rz angle]]
 			{
 				model3d_xform_t model_xf;
-				int const num_args(fscanf(fp, "%f%f%f%f%f%f%f%f", &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
+				int const num_args(fscanf(fp, "%i%f%f%f%f%f%f%f%f", &ivals[0], &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
 					&model_xf.axis.x, &model_xf.axis.y, &model_xf.axis.z, &model_xf.angle));
-				if (num_args != 3 && num_args != 4 && num_args != 8) {return read_error(fp, "model3d transform", coll_obj_file);}
+				if (num_args != 4 && num_args != 5 && num_args != 9) {return read_error(fp, "model3d transform", coll_obj_file);}
 				if (model_xf.scale == 0.0) {return read_error(fp, "model3d transform scale", coll_obj_file);} // what about negative scales?
 				model_xf.color = cobj.cp.color;
 				model_xf.tid   = cobj.cp.tid;
 				add_transform_for_cur_model(model_xf);
+
+				if (ivals[0]) { // add cobjs
+					check_layer(has_layer);
+					get_cur_model_polygons(ppts, model_xf);
+					int group_ids[3] = {-1, -1, -1}; // one for each primary dim
+					add_polygons_to_cobj_vector(ppts, cobj, group_ids, COBJ_TYPE_MODEL3D);
+				}
 			}
 			break;
 
@@ -1464,19 +1469,15 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name draw [refract_ix [light_atten]]
-			if (fscanf(fp, "%f%f%f%f%f%255s%i", &cobj.cp.elastic, &cobj.cp.color.R, &cobj.cp.color.G,
-				&cobj.cp.color.B, &cobj.cp.color.A, str, &ivals[0]) != 7)
-			{
+		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name [draw=1 [refract_ix=1.0 [light_atten=0.0]]]
+			if (fscanf(fp, "%f%f%f%f%f%255s", &cobj.cp.elastic, &cobj.cp.color.R, &cobj.cp.color.G, &cobj.cp.color.B, &cobj.cp.color.A, str) != 6) {
 				return read_error(fp, "layer/material properties", coll_obj_file);
 			}
 			if (!read_texture(str, line_num, cobj.cp.tid, 0)) {fclose(fp); return 0;}
-			has_layer           = 1;
-			cobj.cp.draw        = (ivals[0] != 0);
-			cobj.cp.refract_ix  = 1.0; // default
-			cobj.cp.light_atten = 0.0; // default
-			fscanf(fp, "%f", &cobj.cp.refract_ix ); // optional
-			fscanf(fp, "%f", &cobj.cp.light_atten); // optional
+			has_layer = 1;
+			cobj.cp.draw = (fscanf(fp, "%i", &ivals[0]) ? (ivals[0] != 0) : 1); // optional
+			if (!fscanf(fp, "%f", &cobj.cp.refract_ix )) {cobj.cp.refract_ix  = 1.0;} // optional
+			if (!fscanf(fp, "%f", &cobj.cp.light_atten)) {cobj.cp.light_atten = 0.0;} // optional
 			break;
 
 		case 'j': // restore material <name>

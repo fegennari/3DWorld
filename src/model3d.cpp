@@ -1064,14 +1064,16 @@ void model3d::update_bbox(polygon_t const &poly) {
 }
 
 
-void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only) const {
+void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool apply_transforms) const {
 
-	if (polygons.empty()) { // Note: we count quads as 1.5 polygons because some of them may be split into triangles
+	unsigned const start_pix(polygons.size());
+
+	if (start_pix == 0) { // Note: we count quads as 1.5 polygons because some of them may be split into triangles
 		model3d_stats_t stats;
 		get_stats(stats);
-		polygons.reserve((quads_only ? stats.quads : (stats.tris + 1.5*stats.quads)));
+		unsigned const num_copies((!apply_transforms || transforms.empty()) ? 1 : transforms.size());
+		polygons.reserve(num_copies*(quads_only ? stats.quads : (stats.tris + 1.5*stats.quads)));
 	}
-	// transforms?
 	colorRGBA def_color(WHITE);
 	if (unbound_tid >= 0) {def_color.modulate_with(texture_color(unbound_tid));}
 	unbound_geom.get_polygons(polygons, def_color, quads_only);
@@ -1080,6 +1082,21 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only) const 
 		colorRGBA const color(m->get_avg_color(tmgr, unbound_tid));
 		m->geom.get_polygons    (polygons, color, quads_only);
 		m->geom_tan.get_polygons(polygons, color, quads_only);
+	}
+	if (apply_transforms && !transforms.empty()) { // handle transforms
+		// first clone the polygons for each transform; first transform is done already
+		unsigned const num_polys(polygons.size() - start_pix);
+
+		for (unsigned i = 1; i < transforms.size(); ++i) { // N-1 block copies
+			for (unsigned p = 0; p < num_polys; ++p) {polygons.push_back(polygons[start_pix + p]);}
+		}
+		assert(polygons.size() == start_pix + transforms.size()*num_polys); // can be removed later
+		unsigned pix(start_pix);
+
+		for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
+			for (unsigned p = 0; p < num_polys; ++p) {xf->apply_to_tquad(polygons[pix++]);}
+		}
+		assert(pix == polygons.size());
 	}
 	::remove_excess_cap(polygons); // probably a good idea
 }
@@ -1373,16 +1390,21 @@ void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: R
 	// Note: since pdu's don't have an xform matrix, and don't track applied xforms, we must do the translate first
 	assert(scale != 0.0);
 	pdu.translate(-tv);
+	//pdu.rotate(axis, -angle); // FIXME: incorrect - we want to rotate about the model's origin, not the frustum/camera origin
 	pdu.scale(1.0/fabs(scale)); // FIXME: what to do about negative scales?
-	//pdu.rotate(axis, -angle); // incorrect - we want to rotate about the model's origin, not the frustum/camera origin
 	if (angle != 0.0) {pdu.valid = 0;} // since we can't transform the pdu correctly, we give up and disable using it for VFC
 }
 
-cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const {
+void model3d_xform_t::apply_to_tquad(coll_tquad &tquad) const {
+	for (unsigned i = 0; i < 4; ++i) {xform_pos(tquad.pts[i]);}
+	tquad.update_normal(); // simplest to recalculate it
+}
+
+cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const { // Note: RM ignored
 	if (angle == 0.0) {return cube*scale + tv;} // optimization
 	point pts[8];
 	(cube*scale).get_points(pts);
-	rotate_vector3d_multi(axis, angle, pts, 8);
+	rotate_vector3d_multi(axis, TO_RADIANS*angle, pts, 8);
 	return cube_t(pts, 8) + tv;
 }
 
@@ -1757,12 +1779,38 @@ void render_models(bool shadow_pass, vector3d const &xlate) {
 	all_models.render(shadow_pass, xlate);
 }
 
-void add_transform_for_cur_model(model3d_xform_t const &xf) {
+model3d &get_cur_model(string const &operation) {
+
 	if (all_models.empty()) {
-		cerr << "No current model to transform" << endl;
+		cerr << "No current model to " << operation << endl;
 		exit(1);
 	}
-	all_models.back().add_transform(xf);
+	return all_models.back();
+}
+
+void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf) {
+	RESET_TIME;
+	unsigned const start_ix(ppts.size());
+	model3d &cur_model(get_cur_model("extract polygons from"));
+	cur_model.get_polygons(ppts);
+	cur_model.set_has_cobjs();
+	
+	if (!xf.is_identity()) {
+		for (unsigned i = start_ix; i < ppts.size(); ++i) {xf.apply_to_tquad(ppts[i]);}
+	}
+	PRINT_TIME("Create Model3d Polygons");
+}
+
+void get_cur_model_as_cubes(vector<cube_t> &cubes, geom_xform_t const &xf, float voxel_xy_spacing) { // Note: only xf.scale is used
+	RESET_TIME;
+	model3d &cur_model(get_cur_model("extract cubes from"));
+	cur_model.get_cubes(cubes, xf.scale*voxel_xy_spacing);
+	//cur_model.set_has_cobjs(); // billboard cobjs are not added, and the colors/textures are missing
+	PRINT_TIME("Create Model3d Cubes");
+}
+
+void add_transform_for_cur_model(model3d_xform_t const &xf) {
+	get_cur_model("transform").add_transform(xf);
 }
 
 cube_t get_all_models_bcube() {return all_models.get_bcube();}
