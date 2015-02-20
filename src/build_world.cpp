@@ -1065,7 +1065,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				break;
 			}
 
-		case 'Z': // add model3d transform: add_cobjs tx ty tz [scale [rx ry rz angle]]
+		case 'Z': // add model3d transform: add_cobjs_lod tx ty tz [scale [rx ry rz angle]]
 			{
 				model3d_xform_t model_xf;
 				int const num_args(fscanf(fp, "%i%f%f%f%f%f%f%f%f", &ivals[0], &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
@@ -1076,9 +1076,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				model_xf.tid   = cobj.cp.tid;
 				add_transform_for_cur_model(model_xf);
 
-				if (ivals[0]) { // add cobjs
+				if (ivals[0] > 0) { // add cobjs
 					check_layer(has_layer);
-					get_cur_model_polygons(ppts, model_xf);
+					get_cur_model_polygons(ppts, model_xf, ivals[0]);
 					int group_ids[3] = {-1, -1, -1}; // one for each primary dim
 					add_polygons_to_cobj_vector(ppts, cobj, group_ids, COBJ_TYPE_MODEL3D);
 				}

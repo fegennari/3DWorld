@@ -161,6 +161,16 @@ typedef vertex_map_t<vert_norm_tc_tan> vntct_map_t;
 
 template<typename T> void clear_cont(T &cont) {T().swap(cont);}
 
+struct get_polygon_args_t {
+	vector<coll_tquad> &polygons;
+	colorRGBA color;
+	bool quads_only;
+	unsigned lod_level;
+
+	get_polygon_args_t(vector<coll_tquad> &polygons_, colorRGBA const &color_, bool quads_only_=0, unsigned lod_level_=0)
+		: polygons(polygons_), color(color_), quads_only(quads_only_), lod_level(lod_level_) {}
+};
+
 
 template<typename T> class vntc_vect_t : public vector<T>, public indexed_vao_manager_t {
 
@@ -219,7 +229,7 @@ public:
 	T       &get_vert(unsigned i)       {return (*this)[indices.empty() ? i : indices[i]];}
 	T const &get_vert(unsigned i) const {return (*this)[indices.empty() ? i : indices[i]];}
 	unsigned get_ix  (unsigned i) const {assert(i < indices.size()); return indices[i];}
-	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts, bool quads_only) const;
+	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	void write(ostream &out) const;
 	void read(istream &in);
 	bool indexing_enabled() const {return !indices.empty();}
@@ -237,7 +247,7 @@ template<typename T> struct vntc_vect_block_t : public deque<indexed_vntc_vect_t
 	unsigned num_verts() const;
 	unsigned num_unique_verts() const;
 	void get_stats(model3d_stats_t &stats) const {stats.blocks += (unsigned)size(); stats.verts += num_unique_verts();}
-	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, unsigned npts, bool quads_only) const;
+	void get_polygons(get_polygon_args_t &args, unsigned npts) const;
 	bool write(ostream &out) const;
 	bool read(istream &in);
 };
@@ -254,7 +264,7 @@ template<typename T> struct geometry_t {
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
-	void get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, bool quads_only) const;
+	void get_polygons(get_polygon_args_t &args) const;
 	cube_t get_bcube() const;
 	void optimize()  {triangles.optimize(3); quads.optimize(4);}
 	void free_vbos() {triangles.free_vbos(); quads.free_vbos();}
@@ -394,7 +404,7 @@ public:
 	unsigned add_triangles(vector<triangle> const &triangles, colorRGBA const &color, int mat_id=-1, unsigned obj_id=0);
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id=-1, unsigned obj_id=0);
-	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0) const;
+	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0, unsigned lod_level=0) const;
 	void get_cubes(vector<cube_t> &cubes, float spacing) const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
@@ -466,7 +476,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
 void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
-void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t());
+void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
 void get_cur_model_as_cubes(vector<cube_t> &cubes, geom_xform_t const &xf, float voxel_xy_spacing);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube();

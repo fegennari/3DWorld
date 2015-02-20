@@ -540,13 +540,20 @@ struct shared_vertex_t {
 };
 
 
-template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad> &polygons,
-	colorRGBA const &color, unsigned npts, bool quads_only) const
-{
+template<typename T> void indexed_vntc_vect_t<T>::get_polygons(get_polygon_args_t &args, unsigned npts) const {
+
+	if (args.lod_level > 1 && !indices.empty()) {
+		indexed_vntc_vect_t<T> simplified_this(*this); // FIXME: inefficient to copy everything
+		simplify(simplified_this.indices, 1.0/args.lod_level);
+		get_polygon_args_t args2(args);
+		args2.lod_level = 0;
+		simplified_this.get_polygons(args2, npts);
+		return;
+	}
 	unsigned const nv(num_verts());
 	if (nv == 0) return;
 	assert((nv % npts) == 0);
-	polygon_t poly(color), quad_poly(color);
+	polygon_t poly(args.color), quad_poly(args.color);
 	poly.resize(npts);
 	quad_poly.resize(4);
 
@@ -576,7 +583,7 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 				quad_poly[3] = get_vert(i+nsb+3);
 
 				if (quad_poly.is_coplanar(POLY_COPLANAR_THRESH) && quad_poly.is_convex()) {
-					polygons.push_back(quad_poly);
+					args.polygons.push_back(quad_poly);
 					i += npts;
 					continue;
 				}
@@ -584,12 +591,12 @@ template<typename T> void indexed_vntc_vect_t<T>::get_polygons(vector<coll_tquad
 		}
 		for (unsigned p = 0; p < npts; ++p) {poly[p] = get_vert(i+p);}
 
-		if (quads_only) {
+		if (args.quads_only) {
 			assert(npts == 4);
-			polygons.push_back(poly);
+			args.polygons.push_back(poly);
 		}
 		else {
-			split_polygon(poly, polygons, POLY_COPLANAR_THRESH);
+			split_polygon(poly, args.polygons, POLY_COPLANAR_THRESH);
 		}
 	}
 }
@@ -717,12 +724,8 @@ template<typename T> float vntc_vect_block_t<T>::calc_draw_order_score() const {
 }
 
 
-template<typename T> void vntc_vect_block_t<T>::get_polygons(vector<coll_tquad> &polygons,
-	colorRGBA const &color, unsigned npts, bool quads_only) const
-{
-	for (const_iterator i = begin(); i != end(); ++i) {
-		i->get_polygons(polygons, color, npts, quads_only);
-	}
+template<typename T> void vntc_vect_block_t<T>::get_polygons(get_polygon_args_t &args, unsigned npts) const {
+	for (const_iterator i = begin(); i != end(); ++i) {i->get_polygons(args, npts);}
 }
 
 
@@ -799,10 +802,9 @@ template<typename T> void geometry_t<T>::add_poly(polygon_t const &poly, vertex_
 }
 
 
-template<typename T> void geometry_t<T>::get_polygons(vector<coll_tquad> &polygons, colorRGBA const &color, bool quads_only) const {
-
-	triangles.get_polygons(polygons, color, 3, quads_only); // should be empty in quads_only mode (will be checked)
-	quads.get_polygons    (polygons, color, 4, quads_only);
+template<typename T> void geometry_t<T>::get_polygons(get_polygon_args_t &args) const {
+	triangles.get_polygons(args, 3); // should be empty in quads_only mode (will be checked)
+	quads.get_polygons    (args, 4);
 }
 
 
@@ -1064,7 +1066,7 @@ void model3d::update_bbox(polygon_t const &poly) {
 }
 
 
-void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool apply_transforms) const {
+void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool apply_transforms, unsigned lod_level) const {
 
 	unsigned const start_pix(polygons.size());
 
@@ -1076,12 +1078,13 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool a
 	}
 	colorRGBA def_color(WHITE);
 	if (unbound_tid >= 0) {def_color.modulate_with(texture_color(unbound_tid));}
-	unbound_geom.get_polygons(polygons, def_color, quads_only);
+	get_polygon_args_t args(polygons, def_color, quads_only, lod_level);
+	unbound_geom.get_polygons(args);
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		colorRGBA const color(m->get_avg_color(tmgr, unbound_tid));
-		m->geom.get_polygons    (polygons, color, quads_only);
-		m->geom_tan.get_polygons(polygons, color, quads_only);
+		args.color = m->get_avg_color(tmgr, unbound_tid);
+		m->geom.get_polygons    (args);
+		m->geom_tan.get_polygons(args);
 	}
 	if (apply_transforms && !transforms.empty()) { // handle transforms
 		// first clone the polygons for each transform; first transform is done already
@@ -1128,7 +1131,7 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 	cont.get_stats(stats);
 	polygons.resize(0);
 	polygons.reserve(stats.quads);
-	cont.get_polygons(polygons, WHITE, 1);
+	cont.get_polygons(get_polygon_args_t(polygons, WHITE, 1));
 	
 	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
 		assert(i->npts == 4);
@@ -1788,11 +1791,11 @@ model3d &get_cur_model(string const &operation) {
 	return all_models.back();
 }
 
-void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf) {
+void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned lod_level) {
 	RESET_TIME;
 	unsigned const start_ix(ppts.size());
 	model3d &cur_model(get_cur_model("extract polygons from"));
-	cur_model.get_polygons(ppts);
+	cur_model.get_polygons(ppts, 0, 0, lod_level);
 	cur_model.set_has_cobjs();
 	
 	if (!xf.is_identity()) {
