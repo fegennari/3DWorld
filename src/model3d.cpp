@@ -223,9 +223,11 @@ template<typename T> void indexed_vntc_vect_t<T>::finalize(unsigned npts) {
 
 	bool const do_simplify = 0; // TESTING, maybe this doesn't really go here
 	if (do_simplify && npts == 3) {
-		vector<unsigned> v;
-		simplify(v, 0.5);
-		indices.swap(v);
+		for (unsigned n = 0; n < 1; ++n) {
+			vector<unsigned> v;
+			simplify(v, 0.5);
+			indices.swap(v);
+		}
 	}
 	finalized = 1;
 	//optimize(npts); // now optimized in the object file loading phase
@@ -1140,7 +1142,7 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 		if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
 		int cbounds[2][2];
 		calc_bounds(bcube, cbounds, spacing);
-		bool const is_top(i->normal.z > 0.0);
+		bool const is_top(i->normal.z > 0.1);
 		++nhq;
 		
 		for (int y = cbounds[1][0]; y < cbounds[1][1]; ++y) {
@@ -1399,7 +1401,7 @@ void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: R
 }
 
 void model3d_xform_t::apply_to_tquad(coll_tquad &tquad) const {
-	for (unsigned i = 0; i < 4; ++i) {xform_pos(tquad.pts[i]);}
+	for (unsigned i = 0; i < tquad.npts; ++i) {xform_pos(tquad.pts[i]);}
 	tquad.update_normal(); // simplest to recalculate it
 }
 
@@ -1804,12 +1806,73 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf,
 	PRINT_TIME("Create Model3d Polygons");
 }
 
-void get_cur_model_as_cubes(vector<cube_t> &cubes, geom_xform_t const &xf, float voxel_xy_spacing) { // Note: only xf.scale is used
+#include "voxels.h"
+
+void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing) {
+
+	assert(grid_spacing > 0.0);
+	vector<coll_tquad> ppts;
+	get_cur_model_polygons(ppts, xf);
+	cube_t bcube(get_cur_model("get bcube").get_bcube());
+	bcube = xf.get_xformed_cube(bcube); // ???
+	vector3d const csz(bcube.get_size());
+	unsigned ndiv[3];
+	for (unsigned i = 0; i < 3; ++i) {ndiv[i] = max(2U, min(1024U, unsigned(csz[i]/grid_spacing)));} // clamp to [2,1024] range
+	cout << "bcube: "; bcube.print(); cout << endl;
+	cout << "polygons: " << ppts.size() << ", grid: " << ndiv[0] << "x" << ndiv[1] << "x" << ndiv[2] << endl;
+	RESET_TIME;
+	voxel_grid<cube_t> grid;
+	grid.init(ndiv[0], ndiv[1], ndiv[2], bcube, all_zeros_cube);
+
+	for (auto i = ppts.begin(); i != ppts.end(); ++i) { // rasterize ppts to cubes in {x,y,z}
+		cube_t const c(i->get_bcube());
+		int llc[3], urc[3]; // {low, high} indices
+		grid.get_bcube_ix_bounds(c, llc, urc);
+
+		for (int y = llc[1]; y <= urc[1]; ++y) {
+			for (int x = llc[0]; x <= urc[0]; ++x) {
+				for (int z = llc[2]; z <= urc[2]; ++z) {
+					point const llc(grid.get_pt_at(x, y, z));
+					cube_t const gc_max(llc, llc+grid.vsz);
+					cube_t &gc(grid.get_ref(x, y, z));
+
+					if (gc_max.contains_cube(c)) { // optimization for contained case
+						if (gc == all_zeros_cube) {gc = c;} else {gc.union_with_cube(c);}
+						break;
+					}
+					// FIXME: polygon-cube intersection test between *i and gc_max
+					// FIXME: clip polygon to cube; see subtract_from_polygon()
+					for (unsigned p = 0; p < i->npts; ++p) {
+						point pt(i->pts[p]);
+						gc_max.clamp_pt(pt); // clamp point to grid cell extents - conservative
+						if (gc == all_zeros_cube) {gc.set_from_point(pt);} else {gc.union_with_pt(pt);}
+					}
+					assert(gc_max.contains_cube(gc));
+				} // for z
+			} // for x
+		} // for y
+	} // for i
+	for (auto i = grid.begin(); i != grid.end(); ++i) {
+		if (!i->is_near_zero_area()) {cubes.push_back(*i);} // add nonzero area cubes
+	}
+	PRINT_TIME("Model3d Polygons to Cubes");
+	cout << "grid size: " << grid.size() << ", cubes out: " << cubes.size() << endl;
+}
+
+void get_cur_model_edges_as_spheres(vector<sphere_t> &spheres, model3d_xform_t const &xf, float grid_spacing) {
+	// FIXME - WRITE
+}
+
+void get_cur_model_as_cubes(vector<cube_t> &cubes, float voxel_xy_spacing) { // Note: only xf.scale is used
+#if 0
+	get_cur_model_edges_as_cubes(cubes, geom_xform_t(), voxel_xy_spacing);
+#else
 	RESET_TIME;
 	model3d &cur_model(get_cur_model("extract cubes from"));
-	cur_model.get_cubes(cubes, xf.scale*voxel_xy_spacing);
+	cur_model.get_cubes(cubes,voxel_xy_spacing);
 	//cur_model.set_has_cobjs(); // billboard cobjs are not added, and the colors/textures are missing
 	PRINT_TIME("Create Model3d Cubes");
+#endif
 }
 
 void add_transform_for_cur_model(model3d_xform_t const &xf) {

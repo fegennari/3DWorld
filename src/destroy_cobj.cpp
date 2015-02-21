@@ -540,6 +540,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 				if (sphere_ext_poly_intersect(c.points, c.npoints, c.norm, get_cube_center(), 0.0, c.thickness, MIN_POLY_THICK)) return 1;
 				return 0;
 			}
+			// FIXME: what about the case where the polygon completely cuts through/contains the cube? do we need to run polygon clipping?
 			return 0;
 		default: assert(0);
 		}

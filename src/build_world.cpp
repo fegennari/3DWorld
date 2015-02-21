@@ -963,6 +963,37 @@ bool read_texture(char const *const str, unsigned line_num, int &tid, bool is_no
 }
 
 
+void add_model_polygons_to_cobjs(vector<coll_tquad> const &ppts, coll_obj &cobj, bool group_cobjs, bool use_vbo, unsigned cobj_type, bool has_layer, float scale) {
+
+	int group_ids[3] = {-1, -1, -1}; // one for each primary dim
+	if (group_cobjs) {create_xyz_groups(group_ids, use_vbo);}
+	check_layer(has_layer);
+	float const prev_thick(cobj.thickness);
+	cobj.thickness *= scale;
+	if (cobj.thickness == 0.0) {cobj.thickness = MIN_POLY_THICK;} // optional - will be set to this value later anyway
+	else if (group_cobjs) {cobj.thickness = min(cobj.thickness, MIN_POLY_THICK);} // grouping code requires thin polygons
+	add_polygons_to_cobj_vector(ppts, cobj, group_ids, cobj_type);
+	cobj.group_id   = -1; // reset
+	cobj.thickness  = prev_thick;
+}
+
+void add_model_cubes_to_cobjs(vector<cube_t> const &cubes, coll_obj &cobj, unsigned cobj_type, bool has_layer) {
+
+	check_layer(has_layer);
+	coll_obj cur_cube(cobj); // color and tid left as-is for now
+	cur_cube.type         = COLL_CUBE;
+	cur_cube.cp.cobj_type = cobj_type;
+	if (cobj_type != COBJ_TYPE_STD) {cur_cube.cp.draw = 0;}
+	maybe_reserve_fixed_cobjs(cubes.size());
+
+	for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
+		cur_cube.copy_from(*i);
+		cur_cube.id = (int)fixed_cobjs.size();
+		fixed_cobjs.push_back(cur_cube);
+	}
+}
+
+
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
 
 	assert(coll_obj_file != NULL);
@@ -1010,14 +1041,14 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'O': // load *.obj file: <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]
+		case 'O': // load *.obj | *.3ds | *.model3d file: <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]
 			{
 				string const fn(read_filename(fp));
 				int recalc_normals(0), write_file(0);
 				float voxel_xy_spacing(0.0);
 
 				if (fn.empty() || fscanf(fp, "%i%i%i%f", &ivals[0], &recalc_normals, &write_file, &voxel_xy_spacing) < 3) {
-					return read_error(fp, "load object file command", coll_obj_file);
+					return read_error(fp, "load model file command", coll_obj_file);
 				}
 				RESET_TIME;
 				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from voxels
@@ -1026,42 +1057,26 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				bool const use_model3d(ivals[0] >= 3);
 				bool const no_cobjs   (ivals[0] >= 4);
 				bool const use_cubes  (ivals[0] == 5);
-				unsigned char const cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
+				unsigned char cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
 				ppts.clear();
 				
 				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
 					return read_error(fp, "model file data", coll_obj_file);
 				}
 				if (!no_cobjs) {
-					int group_ids[3] = {-1, -1, -1}; // one for each primary dim
-					if (group_cobjs) {create_xyz_groups(group_ids, use_vbo);}
-					check_layer(has_layer);
-					cobj.thickness *= xf.scale;
-					if (cobj.thickness == 0.0) {cobj.thickness = MIN_POLY_THICK;} // optional - will be set to this value later anyway
-					add_polygons_to_cobj_vector(ppts, cobj, group_ids, cobj_type);
-					cobj.group_id   = -1; // reset
+					add_model_polygons_to_cobjs(ppts, cobj, group_cobjs, use_vbo, cobj_type, has_layer, xf.scale);
 				}
 				else if (use_cubes) {
-					assert(voxel_xy_spacing > 0.0);
-					check_layer(has_layer);
-					coll_obj cur_cube(cobj); // color and tid left as-is for now
-					cur_cube.type         = COLL_CUBE;
-					cur_cube.cp.cobj_type = cobj_type;
-					if (cobj_type != COBJ_TYPE_STD) {cur_cube.cp.draw = 0;}
+					if (voxel_xy_spacing <= 0.0) {return read_error(fp, "model file voxel_spacing", coll_obj_file);}
+					//cobj.cp.color = BLUE; cobj_type = COBJ_TYPE_STD; // FIXME - testing
 					vector<cube_t> cubes;
-					get_cur_model_as_cubes(cubes, xf, voxel_xy_spacing);
-					maybe_reserve_fixed_cobjs(cubes.size());
-
-					for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
-						cur_cube.copy_from(*i);
-						cur_cube.id = (int)fixed_cobjs.size();
-						fixed_cobjs.push_back(cur_cube);
-					}
+					get_cur_model_as_cubes(cubes, xf.scale*voxel_xy_spacing);
+					add_model_cubes_to_cobjs(cubes, cobj, cobj_type, has_layer);
 				}
 				else if (use_model3d) {
 					using_model_bcube = 1;
 				}
-				PRINT_TIME("Obj File Load/Process");
+				PRINT_TIME("Model File Load/Process");
 				break;
 			}
 
@@ -1076,11 +1091,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				model_xf.tid   = cobj.cp.tid;
 				add_transform_for_cur_model(model_xf);
 
-				if (ivals[0] > 0) { // add cobjs
-					check_layer(has_layer);
+				if (ivals[0] > 0) { // add cobjs for collision detection
 					get_cur_model_polygons(ppts, model_xf, ivals[0]);
-					int group_ids[3] = {-1, -1, -1}; // one for each primary dim
-					add_polygons_to_cobj_vector(ppts, cobj, group_ids, COBJ_TYPE_MODEL3D);
+					add_model_polygons_to_cobjs(ppts, cobj, 0, 0, COBJ_TYPE_MODEL3D, has_layer, model_xf.scale);
 				}
 			}
 			break;

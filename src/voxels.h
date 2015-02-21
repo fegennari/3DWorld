@@ -114,14 +114,16 @@ public:
 
 // stored internally in yxz order
 template<typename V> class voxel_grid : public vector<V> {
+	void init_grid(unsigned nx_, unsigned ny_, unsigned nz_, V default_val, unsigned num_blocks);
 public:
 	unsigned nx, ny, nz, xblocks, yblocks;
 	vector3d vsz; // size of a voxel in x,y,z
 	point center, lo_pos;
 
 	voxel_grid() : nx(0), ny(0), nz(0), xblocks(0), yblocks(0), vsz(zero_vector) {}
-	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V default_val, unsigned num_blocks);
-	void init_from_heightmap(float **height, unsigned mesh_nx, unsigned mesh_ny, unsigned zsteps, float mesh_xsize, float mesh_ysize, unsigned num_blocks, bool invert);
+	void init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_, point const &center_, V const &default_val, unsigned num_blocks=1);
+	void init(unsigned nx_, unsigned ny_, unsigned nz_, cube_t const &bcube, V const &default_val, unsigned num_blocks=1);
+	void init_from_heightmap(float **height, unsigned mesh_nx, unsigned mesh_ny, unsigned zsteps, float mesh_xsize, float mesh_ysize, unsigned num_blocks=1, bool invert=0);
 	void downsample_2x();
 	bool is_valid_range(int i[3]) const {return (i[0] >= 0 && i[1] >= 0 && i[2] >= 0 && i[0] < (int)nx && i[1] < (int)ny && i[2] < (int)nz);}
 	float get_xv(int x) const {return (x*vsz.x + lo_pos.x);}
@@ -142,6 +144,7 @@ public:
 		//assert(x < nx && y < ny && z < nz);
 		return (z + (x + y*nx)*nz);
 	}
+	void get_bcube_ix_bounds(cube_t const &bcube, int llc[3], int urc[3]) const;
 	point get_pt_at(unsigned x, unsigned y, unsigned z) const  {return (point(x, y, z)*vsz + lo_pos);}
 	V const &get   (unsigned x, unsigned y, unsigned z) const  {return operator[](get_ix(x, y, z));}
 	V &get_ref     (unsigned x, unsigned y, unsigned z)        {return operator[](get_ix(x, y, z));}

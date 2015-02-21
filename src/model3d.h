@@ -477,7 +477,9 @@ void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_t
 void free_model_context();
 void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
-void get_cur_model_as_cubes(vector<cube_t> &cubes, geom_xform_t const &xf, float voxel_xy_spacing);
+void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing);
+void get_cur_model_edges_as_spheres(vector<sphere_t> &spheres, model3d_xform_t const &xf, float grid_spacing);
+void get_cur_model_as_cubes(vector<cube_t> &cubes, float voxel_xy_spacing);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube();
 

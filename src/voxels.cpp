@@ -35,7 +35,8 @@ extern float tfticks, FAR_CLIP;
 extern coll_obj_group coll_objects;
 
 
-template class voxel_grid<float>; // explicit instantiation
+template class voxel_grid<float>;  // explicit instantiation
+template class voxel_grid<cube_t>; // explicit instantiation
 
 int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos);
 bool read_voxel_brushes();
@@ -54,41 +55,29 @@ void noise_texture_manager_t::procedural_gen(unsigned size, int rseed, float mag
 	voxels.create_procedural(mag, freq, offset, 1, rseed, 654+rand_gen_index, 0); // always use sines
 }
 
-
 void noise_texture_manager_t::ensure_tid() {
-
 	if (noise_tid) return; // already created
 	noise_tid = voxels.upload_to_3d_texture(GL_MIRRORED_REPEAT);
 	assert(noise_tid);
 }
 
-
 void noise_texture_manager_t::bind_texture(unsigned tu_id) const {
-
 	set_3d_texture_as_current(noise_tid, tu_id);
 }
 
-
 void noise_texture_manager_t::clear() {
-
 	free_texture(noise_tid);
 	tsize = 0;
 }
 
-
 float noise_texture_manager_t::eval_at(point const &pos) const {
-
 	unsigned ix;
 	if (!voxels.get_ix(pos, ix)) return 0.0; // off the voxel grid
 	return voxels[ix];
 }
 
 
-template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_,
-	point const &center_, V default_val, unsigned num_blocks)
-{
-	vsz = vsz_;
-	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
+template<typename V> void voxel_grid<V>::init_grid(unsigned nx_, unsigned ny_, unsigned nz_, V default_val, unsigned num_blocks) {
 	nx = nx_; ny = ny_; nz = nz_;
 	xblocks = 1+(nx-1)/num_blocks; // ceil
 	yblocks = 1+(ny-1)/num_blocks; // ceil
@@ -96,13 +85,30 @@ template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsign
 	assert(tot_size > 0);
 	clear();
 	resize(tot_size, default_val);
+}
+
+template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, vector3d const &vsz_,
+	point const &center_, V const &default_val, unsigned num_blocks)
+{
+	init_grid(nx_, ny_, nz_, default_val, num_blocks);
+	vsz = vsz_;
+	assert(vsz.x > 0.0 && vsz.y > 0.0 && vsz.z > 0.0);
 	center = center_;
-	lo_pos = center - 0.5*point((nx-1)*vsz.x, (ny-1)*vsz.y, (nz-1)*vsz.z);
+	lo_pos = center - 0.5*vector3d((nx-1)*vsz.x, (ny-1)*vsz.y, (nz-1)*vsz.z);
+}
+
+template<typename V> void voxel_grid<V>::init(unsigned nx_, unsigned ny_, unsigned nz_, cube_t const &bcube, V const &default_val, unsigned num_blocks) {
+	init_grid(nx_, ny_, nz_, default_val, num_blocks);
+	assert(!bcube.is_zero_area());
+	vector3d const csz(bcube.get_size());
+	center = bcube.get_cube_center();
+	lo_pos = bcube.get_llc();
+	vsz    = vector3d(csz.x/(nx-1), csz.y/(ny-1), csz.z/(nz-1));
 }
 
 
 // Note: assumes mesh is centered around 0,0
-template<typename V> void voxel_grid<V>::init_from_heightmap(float **height, unsigned mesh_nx, unsigned mesh_ny,
+template<> void voxel_grid<float>::init_from_heightmap(float **height, unsigned mesh_nx, unsigned mesh_ny,
 	unsigned zsteps, float mesh_xsize, float mesh_ysize, unsigned num_blocks, bool invert)
 {
 	assert(mesh_nx > 0 && mesh_ny > 0 && zsteps > 0);
@@ -120,7 +126,7 @@ template<typename V> void voxel_grid<V>::init_from_heightmap(float **height, uns
 		}
 	}
 	assert(mzmin < mzmax); // can't be completely flat
-	V const under_mesh_val(invert ? 1.0 : -1.0), over_mesh_val(1.0 - under_mesh_val);
+	value_type const under_mesh_val(invert ? 1.0 : -1.0), over_mesh_val(1.0 - under_mesh_val);
 	point const mesh_center(0.0, 0.0, 0.5*(mzmin + mzmax));
 	vector3d const voxel_sz(mesh_xsize/mesh_nx, mesh_ysize/mesh_ny, (mzmax - mzmin)/zsteps);
 	init(mesh_nx, mesh_ny, zsteps, voxel_sz, mesh_center, over_mesh_val, num_blocks); // init with air
@@ -132,21 +138,21 @@ template<typename V> void voxel_grid<V>::init_from_heightmap(float **height, uns
 			assert(zpos < nz);
 			float const remainder(zval - zpos);
 			set(x, y, zpos, (remainder*over_mesh_val + (1.0 - remainder)*under_mesh_val)); // voxel containing height value
-
-			for (unsigned z = 0; z < zpos; ++z) {
-				set(x, y, zpos, under_mesh_val);
-			}
+			for (unsigned z = 0; z < zpos; ++z) {set(x, y, zpos, under_mesh_val);}
 		}
 	}
 }
 
+template<> void voxel_grid<cube_t>::init_from_heightmap(float **height, unsigned mesh_nx, unsigned mesh_ny,
+	unsigned zsteps, float mesh_xsize, float mesh_ysize, unsigned num_blocks, bool invert) {assert(0);} // not supported
 
-template<typename V> void voxel_grid<V>::downsample_2x() { // modify in place, perserving total size, center, and lo_pos
+
+template<> void voxel_grid<float>::downsample_2x() { // modify in place, perserving total size, center, and lo_pos
 
 	assert(nx > 1 && ny > 1 && nz > 1);
 	assert(!(nx&1) && !(ny&1) && !(nz&1));
 	unsigned const dsnx(nx/2), dsny(ny/2), dsnz(nz/2);
-	vector<V> dsv(dsnx*dsny*dsnz, 0);
+	vector<value_type> dsv(dsnx*dsny*dsnz, 0);
 
 	for (unsigned y = 0; y < ny; ++y) {
 		for (unsigned x = 0; x < nx; ++x) {
@@ -159,6 +165,19 @@ template<typename V> void voxel_grid<V>::downsample_2x() { // modify in place, p
 	for (iterator i = begin(); i != end(); ++i) {*i /= 8;} // average voxel values
 	nx = dsnx; ny = dsny; nz = dsnz;
 	vsz *= 2.0;
+}
+
+template<> void voxel_grid<cube_t>::downsample_2x() {assert(0);} // not supported
+
+
+template<typename V> void voxel_grid<V>::get_bcube_ix_bounds(cube_t const &bcube, int llc[3], int urc[3]) const {
+
+	get_xyz(bcube.get_llc(), llc);
+	get_xyz(bcube.get_urc(), urc);
+	UNROLL_3X(assert(llc[i_] <= urc[i_]);)
+	int const num[3] = {nx, ny, nz};
+	UNROLL_3X(llc[i_] = max(0, llc[i_]);)
+	UNROLL_3X(urc[i_] = min(num[i_]-1, urc[i_]);)
 }
 
 
@@ -340,16 +359,15 @@ void voxel_manager::add_cobj_voxels(coll_obj &cobj, float filled_val) {
 	cobj.calc_bcube(); // this is why cobj is passed by non-const reference
 	cube_t const &bcube(cobj);
 	int llc[3], urc[3];
-	get_xyz(bcube.get_llc(), llc);
-	get_xyz(bcube.get_urc(), urc);
+	get_bcube_ix_bounds(bcube, llc, urc);
 	float const sphere_radius(0.5*vsz.mag()/num_test_pts); // FIXME: step the radius to generate grayscale intersection values?
 	float const dv(1.0/(num_test_pts*num_test_pts*num_test_pts));
 	vector3d const step_sz(vsz / num_test_pts);
 
 	// Note: if we can get the normals from the cobjs here we can use dual contouring for a more exact voxel model
-	for (int y = max(0, llc[1]); y <= min(int(ny)-1, urc[1]); ++y) {
-		for (int x = max(0, llc[0]); x <= min(int(nx)-1, urc[0]); ++x) {
-			for (int z = max(0, llc[2]); z <= min(int(nz)-1, urc[2]); ++z) {
+	for (int y = llc[1]; y <= urc[1]; ++y) {
+		for (int x = llc[0]; x <= urc[0]; ++x) {
+			for (int z = llc[2]; z <= urc[2]; ++z) {
 				point const pos(get_pt_at(x, y, z));
 				float val(0.0);
 
@@ -858,11 +876,7 @@ bool voxel_manager::sphere_intersect(point const &center, float radius, point *i
 	cube_t bcube;
 	bcube.set_from_sphere(center, radius);
 	int llc[3], urc[3];
-	get_xyz(bcube.get_llc(), llc);
-	get_xyz(bcube.get_urc(), urc);
-	int const num[3] = {nx, ny, nz};
-	UNROLL_3X(llc[i_] = max(0, llc[i_]);)
-	UNROLL_3X(urc[i_] = min(num[i_]-1, urc[i_]);)
+	get_bcube_ix_bounds(bcube, llc, urc);
 
 	for (int y = llc[1]; y <= urc[1]; ++y) {
 		for (int x = llc[0]; x <= urc[0]; ++x) {
