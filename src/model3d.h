@@ -98,12 +98,12 @@ struct model3d_xform_t : public geom_xform_t { // should be packed, can read/wri
 
 	void xform_pos(point &pos) const { // rotate, mirror, scale, arb_rotate, translate
 		xform_pos_rms(pos);
-		rotate_vector3d(axis, TO_RADIANS*angle, pos);
+		rotate_vector3d(axis, -TO_RADIANS*angle, pos); // negative rotate?
 		pos += tv;
 	}
 	void inv_xform_pos(point &pos) const {
 		pos -= tv;
-		rotate_vector3d(axis, -TO_RADIANS*angle, pos);
+		rotate_vector3d(axis, TO_RADIANS*angle, pos); // negative rotate?
 		inv_xform_pos_rms(pos);
 	}
 };
@@ -405,7 +405,7 @@ public:
 	unsigned add_polygon(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], int mat_id=-1, unsigned obj_id=0);
 	void add_triangle(polygon_t const &tri, vntc_map_t &vmap, int mat_id=-1, unsigned obj_id=0);
 	void get_polygons(vector<coll_tquad> &polygons, bool quads_only=0, bool apply_transforms=0, unsigned lod_level=0) const;
-	void get_cubes(vector<cube_t> &cubes, float spacing) const;
+	void get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float spacing) const;
 	int get_material_ix(string const &material_name, string const &fn, bool okay_if_exists=0);
 	int find_material(string const &material_name);
 	void mark_mat_as_used(int mat_id);
@@ -478,8 +478,7 @@ void free_model_context();
 void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing);
-void get_cur_model_edges_as_spheres(vector<sphere_t> &spheres, model3d_xform_t const &xf, float grid_spacing);
-void get_cur_model_as_cubes(vector<cube_t> &cubes, float voxel_xy_spacing);
+void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float voxel_xy_spacing);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube();
 

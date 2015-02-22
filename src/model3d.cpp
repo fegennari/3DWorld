@@ -7,6 +7,8 @@
 #include "gl_ext_arb.h"
 #include "voxels.h"
 #include "vertex_opt.h"
+#include "voxels.h" // for get_cur_model_edges_as_cubes
+#include "csg.h" // for clip_polygon_to_cube
 #include <fstream>
 #include <queue>
 
@@ -1127,13 +1129,14 @@ struct float_plus_dir {
 
 
 template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &polygons, T const &cont,
-	vector<vector<float_plus_dir> > &zvals, int bounds[2][2], int num_xy[2], float spacing, unsigned &nhq)
+	vector<vector<float_plus_dir> > &zvals, int bounds[2][2], int num_xy[2], float spacing, unsigned &nhq, model3d_xform_t const &xf)
 {
 	model3d_stats_t stats;
 	cont.get_stats(stats);
-	polygons.resize(0);
+	polygons.clear();
 	polygons.reserve(stats.quads);
 	cont.get_polygons(get_polygon_args_t(polygons, WHITE, 1));
+	xform_polygons(polygons, xf, 0);
 	
 	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
 		assert(i->npts == 4);
@@ -1157,7 +1160,8 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 }
 
 
-void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const { // Note: ignores transforms
+// Note: ignores model transforms, which is why xf is passed in
+void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float spacing) const {
 
 	assert(spacing > 0.0);
 
@@ -1179,11 +1183,11 @@ void model3d::get_cubes(vector<cube_t> &cubes, float spacing) const { // Note: i
 	{
 		// we technically only want the horizontal quads, but it's difficult to filter them out earlier
 		vector<coll_tquad> polygons;
-		num_polys += add_polygons_to_voxel_grid(polygons, unbound_geom, zvals, bounds, num_xy, spacing, num_horiz_quads);
+		num_polys += add_polygons_to_voxel_grid(polygons, unbound_geom, zvals, bounds, num_xy, spacing, num_horiz_quads, xf);
 
 		for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-			num_polys += add_polygons_to_voxel_grid(polygons, m->geom,     zvals, bounds, num_xy, spacing, num_horiz_quads);
-			num_polys += add_polygons_to_voxel_grid(polygons, m->geom_tan, zvals, bounds, num_xy, spacing, num_horiz_quads);
+			num_polys += add_polygons_to_voxel_grid(polygons, m->geom,     zvals, bounds, num_xy, spacing, num_horiz_quads, xf);
+			num_polys += add_polygons_to_voxel_grid(polygons, m->geom_tan, zvals, bounds, num_xy, spacing, num_horiz_quads, xf);
 		}
 	}
 
@@ -1409,7 +1413,7 @@ cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const { // Note: RM
 	if (angle == 0.0) {return cube*scale + tv;} // optimization
 	point pts[8];
 	(cube*scale).get_points(pts);
-	rotate_vector3d_multi(axis, TO_RADIANS*angle, pts, 8);
+	rotate_vector3d_multi(axis, -TO_RADIANS*angle, pts, 8); // negative rotate?
 	return cube_t(pts, 8) + tv;
 }
 
@@ -1793,20 +1797,20 @@ model3d &get_cur_model(string const &operation) {
 	return all_models.back();
 }
 
+void xform_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned start_ix=0) {
+	if (xf.is_identity()) return;
+	for (unsigned i = start_ix; i < ppts.size(); ++i) {xf.apply_to_tquad(ppts[i]);}
+}
+
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned lod_level) {
 	RESET_TIME;
 	unsigned const start_ix(ppts.size());
 	model3d &cur_model(get_cur_model("extract polygons from"));
 	cur_model.get_polygons(ppts, 0, 0, lod_level);
 	cur_model.set_has_cobjs();
-	
-	if (!xf.is_identity()) {
-		for (unsigned i = start_ix; i < ppts.size(); ++i) {xf.apply_to_tquad(ppts[i]);}
-	}
+	xform_polygons(ppts, xf, start_ix);
 	PRINT_TIME("Create Model3d Polygons");
 }
-
-#include "voxels.h"
 
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing) {
 
@@ -1818,11 +1822,11 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 	vector3d const csz(bcube.get_size());
 	unsigned ndiv[3];
 	for (unsigned i = 0; i < 3; ++i) {ndiv[i] = max(2U, min(1024U, unsigned(csz[i]/grid_spacing)));} // clamp to [2,1024] range
-	cout << "bcube: "; bcube.print(); cout << endl;
 	cout << "polygons: " << ppts.size() << ", grid: " << ndiv[0] << "x" << ndiv[1] << "x" << ndiv[2] << endl;
 	RESET_TIME;
 	voxel_grid<cube_t> grid;
 	grid.init(ndiv[0], ndiv[1], ndiv[2], bcube, all_zeros_cube);
+	vector<point> pts_out;
 
 	for (auto i = ppts.begin(); i != ppts.end(); ++i) { // rasterize ppts to cubes in {x,y,z}
 		cube_t const c(i->get_bcube());
@@ -1835,16 +1839,18 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 					point const llc(grid.get_pt_at(x, y, z));
 					cube_t const gc_max(llc, llc+grid.vsz);
 					cube_t &gc(grid.get_ref(x, y, z));
+					if (gc == gc_max) continue; // already at max
 
 					if (gc_max.contains_cube(c)) { // optimization for contained case
 						if (gc == all_zeros_cube) {gc = c;} else {gc.union_with_cube(c);}
 						break;
 					}
-					// FIXME: polygon-cube intersection test between *i and gc_max
-					// FIXME: clip polygon to cube; see subtract_from_polygon()
-					for (unsigned p = 0; p < i->npts; ++p) {
-						point pt(i->pts[p]);
-						gc_max.clamp_pt(pt); // clamp point to grid cell extents - conservative
+					clip_polygon_to_cube(gc_max, i->pts, i->npts, c, pts_out);
+					if (pts_out.empty()) continue; // no intersection
+
+					for (auto p = pts_out.begin(); p != pts_out.end(); ++p) {
+						point pt(*p);
+						gc_max.clamp_pt(pt); // not required, but needed for FP precision to avoid the assertion below
 						if (gc == all_zeros_cube) {gc.set_from_point(pt);} else {gc.union_with_pt(pt);}
 					}
 					assert(gc_max.contains_cube(gc));
@@ -1853,26 +1859,21 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 		} // for y
 	} // for i
 	for (auto i = grid.begin(); i != grid.end(); ++i) {
-		if (!i->is_near_zero_area()) {cubes.push_back(*i);} // add nonzero area cubes
+		if (i->is_near_zero_area()) continue; // skip zero area (volume?) cubes
+		if (cubes.empty() || !cubes.back().cube_merge(*i)) {cubes.push_back(*i);}
 	}
 	PRINT_TIME("Model3d Polygons to Cubes");
 	cout << "grid size: " << grid.size() << ", cubes out: " << cubes.size() << endl;
 }
 
-void get_cur_model_edges_as_spheres(vector<sphere_t> &spheres, model3d_xform_t const &xf, float grid_spacing) {
-	// FIXME - WRITE
-}
+//void get_cur_model_edges_as_spheres(vector<sphere_t> &spheres, model3d_xform_t const &xf, float grid_spacing) {}
 
-void get_cur_model_as_cubes(vector<cube_t> &cubes, float voxel_xy_spacing) { // Note: only xf.scale is used
-#if 0
-	get_cur_model_edges_as_cubes(cubes, geom_xform_t(), voxel_xy_spacing);
-#else
+void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float voxel_xy_spacing) { // Note: only xf.scale is used
 	RESET_TIME;
 	model3d &cur_model(get_cur_model("extract cubes from"));
-	cur_model.get_cubes(cubes,voxel_xy_spacing);
+	cur_model.get_cubes(cubes, xf, voxel_xy_spacing);
 	//cur_model.set_has_cobjs(); // billboard cobjs are not added, and the colors/textures are missing
 	PRINT_TIME("Create Model3d Cubes");
-#endif
 }
 
 void add_transform_for_cur_model(model3d_xform_t const &xf) {

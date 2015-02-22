@@ -977,20 +977,50 @@ void add_model_polygons_to_cobjs(vector<coll_tquad> const &ppts, coll_obj &cobj,
 	cobj.thickness  = prev_thick;
 }
 
-void add_model_cubes_to_cobjs(vector<cube_t> const &cubes, coll_obj &cobj, unsigned cobj_type, bool has_layer) {
+// returns error string
+string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, int group_cobjs_level, float voxel_spacing, float scale, bool has_layer, model3d_xform_t const &model_xf) {
 
-	check_layer(has_layer);
-	coll_obj cur_cube(cobj); // color and tid left as-is for now
-	cur_cube.type         = COLL_CUBE;
-	cur_cube.cp.cobj_type = cobj_type;
-	if (cobj_type != COBJ_TYPE_STD) {cur_cube.cp.draw = 0;}
-	maybe_reserve_fixed_cobjs(cubes.size());
-
-	for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
-		cur_cube.copy_from(*i);
-		cur_cube.id = (int)fixed_cobjs.size();
-		fixed_cobjs.push_back(cur_cube);
+	// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from polygons (voxels), 6=cubes from edges
+	bool const group_cobjs(group_cobjs_level >= 1);
+	bool const use_vbo    (group_cobjs_level == 2);
+	bool const use_model3d(group_cobjs_level >= 3);
+	bool const no_cobjs   (group_cobjs_level >= 4);
+	bool const use_cubes  (group_cobjs_level >= 5);
+	bool const cube_edges (group_cobjs_level >= 6);
+	
+	if (!no_cobjs) { // add cobjs for collision detection
+		add_model_polygons_to_cobjs(ppts, cobj, group_cobjs, use_vbo, (use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD), has_layer, scale);
 	}
+	else if (use_cubes) {
+		voxel_spacing *= scale;
+		if (voxel_spacing <= 0.0) {return "model file voxel_spacing (scaled)";}
+		vector<cube_t> cubes;
+
+		if (cube_edges) {
+			get_cur_model_edges_as_cubes(cubes, model_xf, voxel_spacing);
+		}
+		else {
+			get_cur_model_as_cubes(cubes, model_xf, voxel_spacing);
+		}
+		check_layer(has_layer);
+		coll_obj cur_cube(cobj); // color and tid left as-is for now
+		cur_cube.cp.draw      = 0;
+		cur_cube.cp.surfs     = 0; // clear
+		cur_cube.type         = COLL_CUBE;
+		cur_cube.cp.cobj_type = COBJ_TYPE_MODEL3D;
+		//cur_cube.cp.color = BLUE; cur_cube.cp.draw = 1; // testing
+		maybe_reserve_fixed_cobjs(cubes.size());
+
+		for (vector<cube_t>::const_iterator i = cubes.begin(); i != cubes.end(); ++i) {
+			cur_cube.copy_from(*i);
+			cur_cube.id = (int)fixed_cobjs.size();
+			fixed_cobjs.push_back(cur_cube);
+		}
+	}
+	else if (use_model3d) {
+		using_model_bcube = 1; // if any model is set (group_cobjs_level should generally agree across all models loaded)
+	}
+	return "";
 }
 
 
@@ -1050,51 +1080,36 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (fn.empty() || fscanf(fp, "%i%i%i%f", &ivals[0], &recalc_normals, &write_file, &voxel_xy_spacing) < 3) {
 					return read_error(fp, "load model file command", coll_obj_file);
 				}
-				RESET_TIME;
-				// group_cobjs_level: 0=no grouping, 1=simple grouping, 2=vbo grouping, 3=full 3d model, 4=no cobjs, 5=cubes from voxels
-				bool const group_cobjs(ivals[0] != 0);
-				bool const use_vbo    (ivals[0] == 2);
-				bool const use_model3d(ivals[0] >= 3);
-				bool const no_cobjs   (ivals[0] >= 4);
-				bool const use_cubes  (ivals[0] == 5);
-				unsigned char cobj_type(use_model3d ? COBJ_TYPE_MODEL3D : COBJ_TYPE_STD);
+				if (ivals[0] < 0 || ivals[0] > 6) {return read_error(fp, "load model file command group_cobjs_level", coll_obj_file);}
+				bool const use_model3d(ivals[0] >= 3), no_cobjs(ivals[0] >= 4);
 				ppts.clear();
+				RESET_TIME;
 				
 				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
 					return read_error(fp, "model file data", coll_obj_file);
 				}
-				if (!no_cobjs) {
-					add_model_polygons_to_cobjs(ppts, cobj, group_cobjs, use_vbo, cobj_type, has_layer, xf.scale);
-				}
-				else if (use_cubes) {
-					if (voxel_xy_spacing <= 0.0) {return read_error(fp, "model file voxel_spacing", coll_obj_file);}
-					//cobj.cp.color = BLUE; cobj_type = COBJ_TYPE_STD; // FIXME - testing
-					vector<cube_t> cubes;
-					get_cur_model_as_cubes(cubes, xf.scale*voxel_xy_spacing);
-					add_model_cubes_to_cobjs(cubes, cobj, cobj_type, has_layer);
-				}
-				else if (use_model3d) {
-					using_model_bcube = 1;
-				}
+				string const error_str(add_loaded_model(ppts, cobj, ivals[0], voxel_xy_spacing, xf.scale, has_layer, model3d_xform_t()));
+				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
 				PRINT_TIME("Model File Load/Process");
 				break;
 			}
 
-		case 'Z': // add model3d transform: add_cobjs_lod tx ty tz [scale [rx ry rz angle]]
+		case 'Z': // add model3d transform: group_cobjs_level tx ty tz [scale [rx ry rz angle [<voxel_spacing>]]]
 			{
 				model3d_xform_t model_xf;
-				int const num_args(fscanf(fp, "%i%f%f%f%f%f%f%f%f", &ivals[0], &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
-					&model_xf.axis.x, &model_xf.axis.y, &model_xf.axis.z, &model_xf.angle));
-				if (num_args != 4 && num_args != 5 && num_args != 9) {return read_error(fp, "model3d transform", coll_obj_file);}
+				float voxel_spacing(0.0);
+				int const num_args(fscanf(fp, "%i%f%f%f%f%f%f%f%f%f", &ivals[0], &model_xf.tv.x, &model_xf.tv.y, &model_xf.tv.z, &model_xf.scale,
+					&model_xf.axis.x, &model_xf.axis.y, &model_xf.axis.z, &model_xf.angle, &voxel_spacing));
+				if (num_args != 4 && num_args != 5 && num_args != 9 && num_args != 10) {return read_error(fp, "model3d transform", coll_obj_file);}
+				if (ivals[0] < 0 || ivals[0] > 6) {return read_error(fp, "add model transform command group_cobjs_level", coll_obj_file);}
 				if (model_xf.scale == 0.0) {return read_error(fp, "model3d transform scale", coll_obj_file);} // what about negative scales?
 				model_xf.color = cobj.cp.color;
 				model_xf.tid   = cobj.cp.tid;
 				add_transform_for_cur_model(model_xf);
-
-				if (ivals[0] > 0) { // add cobjs for collision detection
-					get_cur_model_polygons(ppts, model_xf, ivals[0]);
-					add_model_polygons_to_cobjs(ppts, cobj, 0, 0, COBJ_TYPE_MODEL3D, has_layer, model_xf.scale);
-				}
+				bool const no_cobjs(ivals[0] >= 4);
+				if (!no_cobjs) {get_cur_model_polygons(ppts, model_xf);} // add cobjs for collision detection
+				string const error_str(add_loaded_model(ppts, cobj, ivals[0], voxel_spacing, xf.scale, has_layer, model_xf));
+				if (!error_str.empty()) {return read_error(fp, error_str.c_str(), coll_obj_file);}
 			}
 			break;
 
