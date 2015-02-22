@@ -52,6 +52,7 @@ extern water_params_t water_params;
 void draw_sides_and_bottom(bool shadow_pass);
 void set_cloud_intersection_shader(shader_t &s);
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
+bool no_sparse_smap_update();
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -194,18 +195,22 @@ void set_landscape_texture_texgen(shader_t &shader) {
 // Note: currently we never calls this with shadow_pass set to both 0 and 1 in the same frame
 void draw_mesh_vbo(bool shadow_pass) {
 
+	static vao_manager_t mesh_data;
+
+	if (clear_landscape_vbo) {
+		mesh_data.clear();
+		clear_landscape_vbo = 0;
+	}
+	// uploading the new mesh data during the shadow pass sometimes corrupts VBO contents,
+	// so if we know that we're not in sparse update mode we can skip the shadow map update on the first frame, because we know that the next fram will create it
+	if (shadow_pass && mesh_data.vbo == 0 && no_sparse_smap_update()) return;
 	// Note: using 4-byte indexed quads takes about the same amount of GPU memory
 	// Note: ignores detail texture
 	colorRGBA const color(mesh_color_scale*DEF_DIFFUSE);
 	shader_t s;
 	s.begin_simple_textured_shader(0.0, !shadow_pass, 1, &color); // lighting + texgen
 	set_landscape_texture_texgen(s);
-	static vao_manager_t mesh_data;
 	
-	if (clear_landscape_vbo) {
-		mesh_data.clear();
-		clear_landscape_vbo = 0;
-	}
 	if (mesh_data.vbo == 0) {
 		vector<vert_norm_comp> data; // vertex and normals
 		data.reserve(2*MESH_X_SIZE*(MESH_Y_SIZE-1));
