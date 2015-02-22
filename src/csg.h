@@ -104,5 +104,8 @@ public:
 };
 
 
+void clip_polygon_to_cube(cube_t const &cube, point const *const pts_in, unsigned npts_in, cube_t const &pts_bcube, vector<point> &pts_out);
+
+
 #endif
 

@@ -560,7 +560,7 @@ bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &
 	if (contains_cube(cobj)) return 1; // contained - remove the entire cobj
 	static vector<point> cur, next, new_poly;
 	assert(cur.empty() && next.empty() && new_poly.empty());
-	for (int i = 0; i < cobj.npoints; ++i) cur.push_back(cobj.points[i]);
+	for (int i = 0; i < cobj.npoints; ++i) {cur.push_back(cobj.points[i]);}
 	size_t const init_sz(new_cobjs.size());
 
 	for (unsigned i = 0; i < 3 && !cur.empty(); ++i) {
@@ -569,21 +569,19 @@ bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &
 			bool prev_outside(0);
 			// put the outside part (tri/quad) (if any) in new_cobjs
 			// put the inside part  (tri/quad) (if any) in cur
-
 			for (unsigned p = 0; p <= cur.size(); ++p) {
-				point const &pos(cur[p%cur.size()]);
+				point const &pos(cur[(p == cur.size()) ? 0 : p]);
 				bool const cur_outside(((pos[i] < clip_val) ^ j) != 0);
 				bool write_int(0), write_cur(0);
 				
 				if (p == cur.size()) { // last point
-					if (cur_outside != prev_outside) write_int = 1; // edge crossing
+					if (cur_outside != prev_outside) {write_int = 1;} // edge crossing
 				}
 				else if (p == 0 || prev_outside == cur_outside) { // first point or no edge crossing
 					write_cur = 1;
 				}
 				else { // interior point, edge crossing
-					write_int = 1;
-					write_cur = 1;
+					write_int = write_cur = 1;
 				}
 				if (write_int) {
 					vector3d const edge(pos - cur[p-1]);
@@ -592,26 +590,69 @@ bool csg_cube::subtract_from_polygon(coll_obj_group &new_cobjs, coll_obj const &
 					new_poly.push_back(p_int);
 					next.push_back(p_int);
 				}
-				if (write_cur) (cur_outside ? new_poly : next).push_back(pos);
+				if (write_cur) {(cur_outside ? new_poly : next).push_back(pos);}
 				prev_outside = cur_outside;
-			}
+			} // for p
 			if (!new_poly.empty()) {
 				bool const split_quads(use_waypoints); // FIXME: waypoint issues with split polygons
 				split_polygon_to_cobjs(cobj, new_cobjs, new_poly, split_quads);
-				new_poly.resize(0);
+				new_poly.clear();
 			}
 			cur.swap(next);
-			next.resize(0);
-		}
-	}	
+			next.clear();
+		} // for j
+	} // for i
 	if (!cur.empty()) { // the remainder (cur) is the part to be removed
-		cur.resize(0);
+		cur.clear();
 		return 1;
 	}
 	// else nothing removed
 	assert(new_cobjs.size() >= init_sz); // can be equal if all pieces are tiny fragments that get removed
 	new_cobjs.erase(new_cobjs.begin()+init_sz, new_cobjs.end()); // remove everything that was added
 	return 0;
+}
+
+// same as above code, but ignores the outside part of the polygon
+void clip_polygon_to_cube(cube_t const &cube, point const *const pts_in, unsigned npts_in, cube_t const &pts_bcube, vector<point> &pts_out) {
+
+	if (!cube.intersects(pts_bcube)) {pts_out.clear(); return;}
+	static vector<point> next;
+	pts_out.resize(npts_in);
+	for (unsigned i = 0; i < npts_in; ++i) {pts_out[i] = pts_in[i];}
+	if (cube.contains_cube(pts_bcube)) return;
+
+	for (unsigned i = 0; i < 3 && !pts_out.empty(); ++i) {
+		for (unsigned j = 0; j < 2 && !pts_out.empty(); ++j) {
+			float const clip_val(cube.d[i][j]); // clip cur polygon by this plane
+			if (((pts_bcube.d[i][j] < clip_val) ^ j) == 0) continue; // don't need to clip in this dim
+			bool prev_outside(0); // put the inside part (if any) in pts_out
+
+			for (unsigned p = 0; p <= pts_out.size(); ++p) {
+				point const &pos(pts_out[(p == pts_out.size()) ? 0 : p]);
+				bool const cur_outside(((pos[i] < clip_val) ^ j) != 0);
+				bool write_int(0), write_cur(0);
+				
+				if (p == pts_out.size()) { // last point
+					if (cur_outside != prev_outside) {write_int = 1;} // edge crossing
+				}
+				else if (p == 0 || prev_outside == cur_outside) { // first point or no edge crossing
+					write_cur = 1;
+				}
+				else { // interior point, edge crossing
+					write_int = write_cur = 1;
+				}
+				if (write_int) {
+					vector3d const edge(pos - pts_out[p-1]);
+					float const t((clip_val - pts_out[p-1][i])/edge[i]);
+					next.push_back(pts_out[p-1] + edge*t);
+				}
+				if (write_cur && !cur_outside) {next.push_back(pos);}
+				prev_outside = cur_outside;
+			} // for p
+			pts_out.swap(next);
+			next.clear();
+		} // for j
+	} // for i
 }
 
 

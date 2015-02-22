@@ -527,6 +527,11 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 				if (contains_pt(c.points[i])) return 1; // definite intersection
 				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
 			}
+			{ // clip the polygon to the cube
+				vector<point> clipped_pts;
+				clip_polygon_to_cube(*this, c.points, c.npoints, c, clipped_pts);
+				if (!clipped_pts.empty()) return 1;
+			}
 			if (c.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
 				point pts[2][4];
 				gen_poly_planes(c.points, c.npoints, c.norm, c.thickness, pts);
@@ -540,7 +545,6 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 				if (sphere_ext_poly_intersect(c.points, c.npoints, c.norm, get_cube_center(), 0.0, c.thickness, MIN_POLY_THICK)) return 1;
 				return 0;
 			}
-			// FIXME: what about the case where the polygon completely cuts through/contains the cube? do we need to run polygon clipping?
 			return 0;
 		default: assert(0);
 		}
