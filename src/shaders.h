@@ -169,6 +169,7 @@ public:
 	void clear_color_e() {set_color_e(BLACK);}
 	void set_specular_color(colorRGB const &specular, float shininess);
 	void set_specular(float spec, float shine) {set_specular_color(colorRGB(spec, spec, spec), shine);}
+	void set_material(base_mat_t const &mat);
 	void clear_specular() {set_specular(0.0, 0.0);}
 };
 

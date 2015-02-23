@@ -1081,12 +1081,12 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool a
 		polygons.reserve(num_copies*(quads_only ? stats.quads : (stats.tris + 1.5*stats.quads)));
 	}
 	colorRGBA def_color(WHITE);
-	if (unbound_tid >= 0) {def_color.modulate_with(texture_color(unbound_tid));}
+	if (unbound_mat.tid >= 0) {def_color.modulate_with(texture_color(unbound_mat.tid));}
 	get_polygon_args_t args(polygons, def_color, quads_only, lod_level);
 	unbound_geom.get_polygons(args);
 
 	for (deque<material_t>::const_iterator m = materials.begin(); m != materials.end(); ++m) {
-		args.color = m->get_avg_color(tmgr, unbound_tid);
+		args.color = m->get_avg_color(tmgr, unbound_mat.tid);
 		m->geom.get_polygons    (args);
 		m->geom_tan.get_polygons(args);
 	}
@@ -1347,23 +1347,24 @@ void model3d::bind_all_used_tids() {
 
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask,
-	colorRGBA const &cur_ub_color, int cur_ub_tid, xform_matrix const *const mvm)
+	base_mat_t const &unbound_mat, xform_matrix const *const mvm)
 {
 	if (!is_shadow_pass) {smap_data.set_for_all_lights(shader, mvm);}
 	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
 
 	// render geom that was not bound to a material
-	if ((bmap_pass_mask & 1) && cur_ub_color.alpha > 0.0) { // enabled, not in bump map only pass
+	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0) { // enabled, not in bump map only pass
 		if (!is_shadow_pass) { // cur_ub_tid texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
-			assert(cur_ub_tid >= 0);
-			select_texture(cur_ub_tid);
-			shader.set_cur_color(cur_ub_color);
+			assert(unbound_mat.tid >= 0);
+			select_texture(unbound_mat.tid);
+			shader.set_material(unbound_mat);
 			shader.add_uniform_float("min_alpha", 0.0);
-			shader.clear_specular();
+			if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 		}
 		if (!is_shadow_pass || !enable_alpha_mask) { // skip shadow + alpha mask pass
 			unbound_geom.render(shader, is_shadow_pass);
 		}
+		if (!is_shadow_pass) {shader.clear_specular();}
 	}
 	
 	// render all materials (opaque then transparent)
@@ -1378,7 +1379,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 		sort(to_draw.begin(), to_draw.end());
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			materials[to_draw[i].second].render(shader, tmgr, cur_ub_tid, is_shadow_pass, enable_alpha_mask);
+			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, enable_alpha_mask);
 		}
 	}
 	if (group_back_face_cull) {glDisable(GL_CULL_FACE);}
@@ -1477,9 +1478,9 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
 		// Note: currently, only translate is supported (and somewhat scale)
 		camera_pdu_transform_wrapper cptw2(*xf);
-		colorRGBA const &color((xf->color != ALPHA0) ? xf->color : unbound_color);
-		int const tid((xf->tid >= 0) ? xf->tid : unbound_tid);
-		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, color, tid, &mvm);
+		base_mat_t ub_mat(unbound_mat);
+		xf->apply_material_override(ub_mat);
+		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, ub_mat, &mvm);
 		// cptw2 dtor called here
 	}
 	// cptw dtor called here

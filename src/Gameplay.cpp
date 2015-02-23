@@ -1875,7 +1875,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 		if (is_laser) {
 			get_lum_alpha(cp.color, cp.tid, luminance, alpha);
-			specular   = cp.specular;
+			specular   = cp.spec_color.get_luminance();
 			refract_ix = cp.refract_ix;
 		}
 	}

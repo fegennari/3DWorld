@@ -1119,8 +1119,8 @@ bool comp_cobjs_by_draw_params(coll_obj const &a, coll_obj const &b) {
 	if (b.group_id    < a.group_id)    return 0;
 	if (a.cp.color    < b.cp.color)    return 1;
 	if (b.cp.color    < a.cp.color)    return 0;
-	if (a.cp.specular < b.cp.specular) return 1;
-	if (b.cp.specular < a.cp.specular) return 0;
+	if (a.cp.spec_color < b.cp.spec_color) return 1;
+	if (b.cp.spec_color < a.cp.spec_color) return 0;
 	if (a.cp.shine    < b.cp.shine)    return 1;
 	if (b.cp.shine    < a.cp.shine)    return 0;
 	if (a.type        < b.type)        return 1;

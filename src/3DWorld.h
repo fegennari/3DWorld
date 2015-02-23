@@ -610,6 +610,13 @@ struct colorRGB { // size = 12
 		}
 		return R; // never gets here
 	}
+	bool operator<(const colorRGB &c) const { // greater than operation?
+		if (R < c.R) return 1;
+		if (R > c.R) return 0;
+		if (G < c.G) return 1;
+		if (G > c.G) return 0;
+		return (B < c.B);
+	}
 	colorRGB operator+ (colorRGB const &c) const {return colorRGB(R+c.R, G+c.G, B+c.B);}
 	void     operator+=(colorRGB const &c)       {R += c.R; G += c.G; B += c.B;}
 	colorRGB operator*(float val) const {return colorRGB(R*val, G*val, B*val);}
@@ -632,6 +639,7 @@ struct colorRGB { // size = 12
 		n.z = 2.0*B - 1.0;
 	}
 	void print() const {cout << "R: " << R << ", G: " << G << ", B: " << B;}
+	float get_luminance() const {return (R + G + B)/3.0;}
 };
 
 
@@ -669,11 +677,7 @@ struct colorRGBA : public colorRGB { // size = 16
 	bool operator<(const colorRGBA &c) const { // greater than operation?
 		if (A > c.A) return 1; // note: alpha less than so that low alpha colors are last
 		if (A < c.A) return 0;
-		if (R < c.R) return 1;
-		if (R > c.R) return 0;
-		if (G < c.G) return 1;
-		if (G > c.G) return 0;
-		return (B < c.B);
+		return colorRGB::operator<(c);
 	}
 	colorRGBA operator* (float val) const             {return colorRGBA(R*val, G*val, B*val, A);}
 	colorRGBA operator+ (colorRGBA const &c) const    {return colorRGBA(R+c.R, G+c.G, B+c.B, A+c.A);}
@@ -695,7 +699,6 @@ struct colorRGBA : public colorRGB { // size = 16
 	bool within_thresh_of_rgba(float thresh, colorRGBA const &c) const { // no alpha check
 		return ((fabs(R-c.R) + fabs(G-c.G) + fabs(B-c.B) + fabs(A-c.A)) < thresh);
 	}
-	float get_luminance() const {return (R + G + B)/3.0;}
 	bool is_valid() const {return (R >= 0 && G >= 0 && B >= 0 && A >= 0 && R <= 1 && G <= 1 && B <= 1 && A <= 1);}
 	void print()    const {cout << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A;}
 	void set_for_cur_shader() const;
@@ -1486,6 +1489,7 @@ enum {LIGHT_SUN = 0, LIGHT_MOON, NUM_LIGHT_SRC};
 unsigned char const EFLAGS[3][2] = {{EF_X1, EF_X2}, {EF_Y1, EF_Y2}, {EF_Z1, EF_Z2}};
 
 // forward references
+struct base_mat_t;
 class  sd_sphere_d;
 struct dwobject;
 class  obj_group;

@@ -452,7 +452,6 @@ void shader_t::set_color_e(colorRGBA const &color) {
 	add_uniform_color("emission", color); // cache the loc to make this faster?
 }
 
-
 void shader_t::set_specular_color(colorRGB const &specular, float shininess) {
 
 	assert(is_setup());
@@ -464,6 +463,11 @@ void shader_t::set_specular_color(colorRGB const &specular, float shininess) {
 		add_uniform_color("specular_color", spec_shine);
 		last_spec = spec_shine;
 	}
+}
+
+void shader_t::set_material(base_mat_t const &mat) {
+	set_specular_color(mat.spec_color, mat.shine);
+	set_cur_color(mat.color);
 }
 
 

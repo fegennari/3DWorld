@@ -34,7 +34,7 @@ void coll_obj::init() {
 	cp.coll_func = NULL;
 	cp.tscale    = 1.0;
 	cp.surfs     = 0;
-	cp.specular  = 0.0;
+	cp.spec_color= BLACK;
 	cp.shine     = 1.0;
 	norm         = zero_vector;
 	npoints      = 0;
@@ -283,11 +283,8 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		end_group(last_group_id);
 	}
 	cdb.on_new_obj_layer(cp); // may flush/draw
+	if (!in_group || start_group) {shader.set_material(cp);} // should be the same across groups
 
-	if (!in_group || start_group) { // should be the same across groups
-		shader.set_specular(cp.specular, cp.shine);
-		shader.set_cur_color(cp.color);
-	}
 	if (tid != last_tid) {
 		bool const textured(select_texture(tid));
 		assert(textured);

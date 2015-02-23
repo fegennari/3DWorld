@@ -1103,8 +1103,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (num_args != 4 && num_args != 5 && num_args != 9 && num_args != 10) {return read_error(fp, "model3d transform", coll_obj_file);}
 				if (ivals[0] < 0 || ivals[0] > 6) {return read_error(fp, "add model transform command group_cobjs_level", coll_obj_file);}
 				if (model_xf.scale == 0.0) {return read_error(fp, "model3d transform scale", coll_obj_file);} // what about negative scales?
-				model_xf.color = cobj.cp.color;
-				model_xf.tid   = cobj.cp.tid;
+				model_xf.material = cobj.cp; // copy base material from cobj
 				add_transform_for_cur_model(model_xf);
 				bool const no_cobjs(ivals[0] >= 4);
 				if (!no_cobjs) {get_cur_model_polygons(ppts, model_xf);} // add cobjs for collision detection
@@ -1534,8 +1533,18 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'r': // set specular
-			if (fscanf(fp, "%f%f", &cobj.cp.specular, &cobj.cp.shine) != 2) {return read_error(fp, "specular lighting", coll_obj_file);}
+		case 'r': // set specular: <specular intensity> <shininess> [R G B]
+			{
+				if (fscanf(fp, "%f%f", &fvals[0], &cobj.cp.shine) != 2) {return read_error(fp, "specular lighting", coll_obj_file);}
+				int const num_read(fscanf(fp, "%f%f%f", &cobj.cp.spec_color.R, &cobj.cp.spec_color.G, &cobj.cp.spec_color.B));
+				if (num_read > 0) {
+					if (num_read != 3) {return read_error(fp, "specular lighting {R,G,B} values", coll_obj_file);}
+					cobj.cp.spec_color *= fvals[0]; // multiply by intensity
+				}
+				else {
+					cobj.cp.spec_color.set_to_val(fvals[0]);
+				}
+			}
 			break;
 
 		case 't': // relative translate

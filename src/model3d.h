@@ -77,11 +77,10 @@ struct model3d_xform_t : public geom_xform_t { // should be packed, can read/wri
 
 	vector3d axis;
 	float angle; // in degrees
-	colorRGBA color;
-	int tid;
+	base_mat_t material;
 
-	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), axis(zero_vector), angle(0.0), color(ALPHA0), tid(-1) {}
-	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), axis(zero_vector), angle(0.0), color(ALPHA0), tid(-1) {}
+	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), axis(zero_vector), angle(0.0) {}
+	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), axis(zero_vector), angle(0.0) {}
 	cube_t get_xformed_cube(cube_t const &cube) const;
 	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
 	void apply_to_tquad(coll_tquad &tquad) const;
@@ -90,9 +89,7 @@ struct model3d_xform_t : public geom_xform_t { // should be packed, can read/wri
 	bool eq_xforms(model3d_xform_t const &x) const {
 		return (axis == x.axis && angle == x.angle && geom_xform_t::operator==(x));
 	}
-	bool operator==(model3d_xform_t const &x) const {
-		return (eq_xforms(x) && x.color == color && x.tid == tid);
-	}
+	bool operator==(model3d_xform_t const &x) const {return (eq_xforms(x) && material == x.material);}
 	bool operator!=(model3d_xform_t const &x) const {return !operator==(x);}
 	bool is_identity() const {return eq_xforms(model3d_xform_t());}
 
@@ -105,6 +102,12 @@ struct model3d_xform_t : public geom_xform_t { // should be packed, can read/wri
 		pos -= tv;
 		rotate_vector3d(axis, TO_RADIANS*angle, pos); // negative rotate?
 		inv_xform_pos_rms(pos);
+	}
+	void apply_material_override(base_mat_t &mat) const {
+		if (material.tid >= 0) {mat.tid = material.tid;}
+		if (material.shine > 0.0) {mat.shine = material.shine;}
+		if (material.color != ALPHA0) {mat.color = material.color;}
+		if (material.spec_color != BLACK) {mat.spec_color = material.spec_color;}
 	}
 };
 
@@ -356,8 +359,7 @@ class model3d {
 
 	// geometry
 	geometry_t<vert_norm_tc> unbound_geom;
-	int unbound_tid;
-	colorRGBA unbound_color;
+	base_mat_t unbound_mat;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bcube;
 	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps;
@@ -388,7 +390,7 @@ public:
 	texture_manager &tmgr;
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0)
-		: tmgr(tmgr_), unbound_tid((def_tid >= 0) ? def_tid : WHITE_TEX), unbound_color(def_c), bcube(all_zeros_cube),
+		: tmgr(tmgr_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube),
 		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
@@ -416,10 +418,10 @@ public:
 	void load_all_used_tids();
 	void bind_all_used_tids();
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm=nullptr) {
-		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, unbound_color, unbound_tid, mvm);
+		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, unbound_mat, mvm);
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask,
-		colorRGBA const &cur_ub_color, int cur_ub_tid, xform_matrix const *const mvm=nullptr);
+		base_mat_t const &unbound_mat, xform_matrix const *const mvm=nullptr);
 	void render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate);
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
