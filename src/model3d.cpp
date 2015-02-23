@@ -1145,14 +1145,15 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 		if ((bcube.d[2][1] - bcube.d[2][0]) > 0.5*spacing) continue; // can this happen?
 		int cbounds[2][2];
 		calc_bounds(bcube, cbounds, spacing);
-		bool const is_top(i->normal.z > 0.1);
+		bool const is_top(i->normal.z > 0.0);
+		float_plus_dir const fd(bcube.d[2][0], is_top);
 		++nhq;
 		
 		for (int y = cbounds[1][0]; y < cbounds[1][1]; ++y) {
 			for (int x = cbounds[0][0]; x < cbounds[0][1]; ++x) {
 				int const xv(x - bounds[0][0]), yv(y - bounds[1][0]);
 				assert(xv >= 0 && yv >= 0 && xv < num_xy[0] && yv < num_xy[1]);
-				zvals[xv + num_xy[0]*yv].push_back(float_plus_dir(bcube.d[2][0], is_top));
+				zvals[xv + num_xy[0]*yv].push_back(fd);
 			}
 		}
 	}
@@ -1163,6 +1164,7 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 // Note: ignores model transforms, which is why xf is passed in
 void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float spacing) const {
 
+	RESET_TIME;
 	assert(spacing > 0.0);
 
 	// calculate scene voxel bounds
@@ -1227,7 +1229,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float 
 					for (vector<cube_t>::reverse_iterator i = cubes.rbegin(); i != cubes.rend() && !merged && num < MERGE_LENGTH; ++i, ++num) {
 						merged = i->cube_merge(cube);
 					}
-					if (!merged) cubes.push_back(cube);
+					if (!merged) {cubes.push_back(cube);}
 					cube.d[2][0] = val; // next segment starts here in case we get two top edges in a row
 					++num_pre_merged_cubes;
 				}
@@ -1236,6 +1238,7 @@ void model3d::get_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float 
 			//assert(!in_cube);
 		}
 	}
+	PRINT_TIME("Get Cubes");
 	cout << "polygons: " << num_polys << ", hquads: " << num_horiz_quads << ", pre_merged_cubes: " << num_pre_merged_cubes << ", cubes: " << cubes.size() << endl;
 }
 
