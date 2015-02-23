@@ -1406,7 +1406,9 @@ void model3d_xform_t::apply_inv_xform_to_pdu(pos_dir_up &pdu) const { // Note: R
 }
 
 void model3d_xform_t::apply_to_tquad(coll_tquad &tquad) const {
-	for (unsigned i = 0; i < tquad.npts; ++i) {xform_pos(tquad.pts[i]);}
+	for (unsigned i = 0; i < tquad.npts; ++i) {xform_pos_rms(tquad.pts[i]);}
+	if (angle != 0.0) {rotate_vector3d_multi(axis, -TO_RADIANS*angle, tquad.pts, tquad.npts);} // negative rotate?
+	for (unsigned i = 0; i < tquad.npts; ++i) {tquad.pts[i] += tv;}
 	tquad.update_normal(); // simplest to recalculate it
 }
 
@@ -1800,7 +1802,8 @@ model3d &get_cur_model(string const &operation) {
 
 void xform_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned start_ix=0) {
 	if (xf.is_identity()) return;
-	for (unsigned i = start_ix; i < ppts.size(); ++i) {xf.apply_to_tquad(ppts[i]);}
+	#pragma omp parallel for schedule(static,1)
+	for (int i = start_ix; i < (int)ppts.size(); ++i) {xf.apply_to_tquad(ppts[i]);}
 }
 
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf, unsigned lod_level) {
@@ -1810,7 +1813,7 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf,
 	cur_model.get_polygons(ppts, 0, 0, lod_level);
 	cur_model.set_has_cobjs();
 	xform_polygons(ppts, xf, start_ix);
-	PRINT_TIME("Create Model3d Polygons");
+	PRINT_TIME("Create and Xform Model3d Polygons");
 }
 
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing) {
@@ -1819,7 +1822,7 @@ void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &
 	vector<coll_tquad> ppts;
 	get_cur_model_polygons(ppts, xf);
 	cube_t bcube(get_cur_model("get bcube").get_bcube());
-	bcube = xf.get_xformed_cube(bcube); // ???
+	bcube = xf.get_xformed_cube(bcube);
 	vector3d const csz(bcube.get_size());
 	unsigned ndiv[3];
 	for (unsigned i = 0; i < 3; ++i) {ndiv[i] = max(2U, min(1024U, unsigned(csz[i]/grid_spacing)));} // clamp to [2,1024] range

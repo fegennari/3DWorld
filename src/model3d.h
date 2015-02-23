@@ -95,12 +95,12 @@ struct model3d_xform_t : public geom_xform_t { // should be packed, can read/wri
 
 	void xform_pos(point &pos) const { // rotate, mirror, scale, arb_rotate, translate
 		xform_pos_rms(pos);
-		rotate_vector3d(axis, -TO_RADIANS*angle, pos); // negative rotate?
+		if (angle != 0.0) {rotate_vector3d(axis, -TO_RADIANS*angle, pos);} // negative rotate?
 		pos += tv;
 	}
 	void inv_xform_pos(point &pos) const {
 		pos -= tv;
-		rotate_vector3d(axis, TO_RADIANS*angle, pos); // negative rotate?
+		if (angle != 0.0) {rotate_vector3d(axis, TO_RADIANS*angle, pos);} // negative rotate?
 		inv_xform_pos_rms(pos);
 	}
 	void apply_material_override(base_mat_t &mat) const {
