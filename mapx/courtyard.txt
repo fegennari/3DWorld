@@ -147,14 +147,15 @@ T  0.0  0.0 -0.29
 m 1.0
 
 # flag
-l 0.8 0.7 0.7 0.7 1.0 -1 1 # silver
-r 0.9 80.0 # set specularity
+l 0.8 0.5 0.5 0.5 1.0 -1 1 # silver
+r 2.0 80.0  0.8 0.8 0.8 # set silver specular
 a 0 # non-destroyable
 e 3
 C 2.55 -3.0 0.0 2.55 -3.0 2.8 0.016 0.016
 e 0
 a 1 # destroyable
-l 0.8 0.9 0.65 0.05 1.0 -1 1 # gold
+l 0.8 0.4 0.25 0.03 1.0 -1 1 # gold
+r 2.0 80.0  0.9 0.6 0.1 # set gold specular
 S 2.55 -3.0 2.8 0.03
 r 0.0 1.0 # reset specularity
 l 0.1 1.0 1.0 1.0 1.0 37 1 # Jolly Roger
