@@ -28,7 +28,7 @@ extern int read_light_files[], write_light_files[], display_mode, DISABLE_WATER;
 extern float water_plane_z, temperature, snow_depth, indir_light_exp, first_ray_weight;
 extern char *lighting_file[];
 extern point sun_pos, moon_pos;
-extern vector<light_source> light_sources;
+extern vector<light_source> light_sources_a;
 extern coll_obj_group coll_objects;
 extern vector<beam3d> beams;
 extern lmap_manager_t lmap_manager;
@@ -688,12 +688,12 @@ void *trace_ray_block_local(void *ptr) {
 	unsigned const num_rays(max(1U, LOCAL_RAYS/data->num));
 	
 	if (data->verbose) {
-		cout << "Local light sources progress (of " << light_sources.size() << "): 0";
+		cout << "Local light sources progress (of " << light_sources_a.size() << "): 0";
 		cout.flush();
 	}
-	for (unsigned i = 0; i < light_sources.size(); ++i) {
+	for (unsigned i = 0; i < light_sources_a.size(); ++i) {
 		if (data->verbose) increment_printed_number(i);
-		ray_trace_local_light_source(*data->lmgr, light_sources[i], line_length, num_rays, rgen);
+		ray_trace_local_light_source(*data->lmgr, light_sources_a[i], line_length, num_rays, rgen);
 	}
 	if (data->verbose) {cout << endl;}
 	data->post_run();

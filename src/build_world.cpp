@@ -58,7 +58,7 @@ extern lightning l_strike;
 extern vector<int> hmv_coll_obj;
 extern char *coll_obj_file;
 extern vector<point> app_spots;
-extern vector<light_source> light_sources;
+extern vector<light_source> light_sources_a, light_sources_d;
 extern tree_cont_t t_trees;
 extern vector<texture_t> textures;
 
@@ -1215,8 +1215,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'L': // point light: size xpos ypos zpos color [direction beamwidth [inner_radius]]
-			if (fscanf(fp, "%f%f%f%f%f%f%f%f", &fvals[0], &pos.x, &pos.y, &pos.z, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 8) {
+		case 'L': // point light: ambient_size diffuse_size xpos ypos zpos color [direction beamwidth [inner_radius]]
+			// type: 0 = ambient/baked only, 1 = diffuse/dynamic only, 2 = both
+			if (fscanf(fp, "%f%f%f%f%f%f%f%f%f", &fvals[0], &fvals[1], &pos.x, &pos.y, &pos.z, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 9) {
 				return read_error(fp, "light source", coll_obj_file);
 			}
 			{
@@ -1228,7 +1229,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					xf.xform_pos_rm(vel);
 					fscanf(fp, "%f", &r_inner);
 				}
-				light_sources.push_back(light_source(fvals[0], pos, pos, lcolor, 0, vel, beamwidth, r_inner));
+				for (unsigned d = 0; d < 2; ++d) { // {ambient, diffuse}
+					if (fvals[d] != 0.0) {(d ? light_sources_d : light_sources_a).push_back(light_source(fvals[d], pos, pos, lcolor, 0, vel, beamwidth, r_inner));}
+				}
 			}
 			break;
 

@@ -44,6 +44,7 @@ bool decal_obj::is_on_cobj(int cobj) const {
 	coll_obj const &c(coll_objects[cobj]);
 	// spheres and cylinders not supported - decals look bad on rounded objects
 	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON && c.type != COLL_CYLINDER)) return 0;
+	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
 	point const center(ipos + get_platform_delta());
 	if (!sphere_cube_intersect(center, DECAL_OFFSET, c)) return 0;
 	if (c.type == COLL_CUBE) return 1;

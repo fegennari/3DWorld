@@ -30,7 +30,7 @@ float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 float dlight_bb[3][2] = {0};
 dls_cell **ldynamic = NULL;
-vector<light_source> light_sources, dl_sources, dl_sources2; // static, dynamic {cur frame, next frame}
+vector<light_source> light_sources_a, light_sources_d, dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
 lmap_manager_t lmap_manager;
 
 
@@ -146,9 +146,8 @@ void light_source::combine_with(light_source const &l) {
 
 void shift_light_sources(vector3d const &vd) {
 
-	for (unsigned i = 0; i < light_sources.size(); ++i) {
-		light_sources[i].shift_by(vd);
-	}
+	for (auto i = light_sources_a.begin(); i != light_sources_a.end(); ++i) {i->shift_by(vd);}
+	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {i->shift_by(vd);}
 }
 
 
@@ -538,10 +537,10 @@ void build_lightmap(bool verbose) {
 	// add cells surrounding static scene lights
 	// Note: this isn't really necessary when using ray casting for lighting,
 	//       but it helps ensure there are lmap cells around light sources to light the dynamic objects
-	for (unsigned i = 0; i < light_sources.size(); ++i) {
+	for (unsigned i = 0; i < light_sources_a.size(); ++i) {
 		point bounds[2]; // unused
 		int bnds[3][2];
-		light_sources[i].get_bounds(bounds, bnds, SQRT_CTHRESH);
+		light_sources_a[i].get_bounds(bounds, bnds, SQRT_CTHRESH);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
@@ -593,8 +592,8 @@ void build_lightmap(bool verbose) {
 
 	// add in static light sources
 	if (!raytrace_lights[LIGHTING_LOCAL]) {
-		for (unsigned i = 0; i < light_sources.size(); ++i) {
-			light_source &ls(light_sources[i]);
+		for (unsigned i = 0; i < light_sources_a.size(); ++i) {
+			light_source &ls(light_sources_a[i]);
 			assert(!ls.is_line_light()); // not supported here
 			point lpos(ls.get_pos()); // may be updated for line lights (if they're ever supported)
 			if (!is_over_mesh(lpos)) continue;
@@ -936,7 +935,7 @@ void clear_dynamic_lights() { // slow for large lights
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {ldynamic[y][x].clear();}
 	}
-	dl_sources.resize(0);
+	dl_sources.clear();
 }
 
 
@@ -947,6 +946,7 @@ void add_dynamic_lights_ground() {
 	assert(ldynamic);
 	clear_dynamic_lights();
 	dl_sources.swap(dl_sources2);
+	if (display_mode & 0x10) dl_sources.insert(dl_sources.end(), light_sources_d.begin(), light_sources_d.end());
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		point const pos(gen_rand_scene_pos());

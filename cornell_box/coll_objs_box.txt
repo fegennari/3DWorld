@@ -30,8 +30,8 @@ r 0.0 0.0 # reset specularity
 
 l 0.8 1.0 1.0 1.0 1.0 -1 1 # White
 S 0.0 0.0 -0.1 0.01
-# light source: radius pos color [dir beamwidth [inner_radius]
-L 0.5  0.0 0.0 -0.1  1.0 1.0 1.0 1.0  0.0 0.0 -1.0  0.5  0.0 # pointed down
+# light source: ambient_size diffuse_size radius pos color [dir beamwidth [inner_radius]
+L 0.5 0.0  0.0 0.0 -0.1  1.0 1.0 1.0 1.0  0.0 0.0 -1.0  0.5  0.0 # pointed down
 
 q # Quit
 
