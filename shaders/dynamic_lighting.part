@@ -35,6 +35,13 @@ float get_line_intensity_at(in vec3 pos, in vec3 lpos1, in vec3 lpos2, in float 
 vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale=1.0) {
 	vec3 color = vec3(0.0);
 #ifndef NO_DYNAMIC_LIGHTS
+
+#ifdef USE_BUMP_MAP_DL
+#ifndef BUMP_MAP_CUSTOM
+	mat3 TBN = get_tbn(1.0);
+#endif
+#endif
+
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
 	uint gb_ix  = texture(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFFFU); // 24 low bits
@@ -80,7 +87,11 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bum
 		vec3 lpos_eye  = (fg_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // convert from world to eye to tangent space
 		float nscale   = clamp(10.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
 		light_dir      = normalize(lpos_eye - epos.xyz);
+#ifdef BUMP_MAP_CUSTOM
 		vec3 lnorm     = nscale*apply_bump_map(light_dir, eye_pos);
+#else
+		vec3 lnorm     = nscale*apply_bump_map_for_tbn(light_dir, eye_pos, TBN);
+#endif // BUMP_MAP_CUSTOM
 		eye_pos        = -eye_pos; // ???
 		float n_dot_l  = mix(dot(normal, orig_ldir), dot(lnorm, light_dir), bump_map_normal_scale);
 #else

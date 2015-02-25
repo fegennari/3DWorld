@@ -240,6 +240,7 @@ void setup_detail_normal_map_prefix(shader_t &s, bool enable) {
 	if (enable) {
 		s.set_prefix("#define USE_BUMP_MAP",    1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_DL", 1); // FS
+		s.set_prefix("#define BUMP_MAP_CUSTOM", 1); // FS
 	}
 	s.set_prefix("in vec4 epos;", 1); // FS (needed for dynamic lighting)
 }

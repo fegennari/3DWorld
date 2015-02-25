@@ -74,11 +74,13 @@ vec3 get_bump_map_normal() {
 }
 
 // Note: we assume the bump map tex coords are the same as the object diffuse tex coords
-vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
-	mat3 TBN  = get_tbn(1.0);
+vec3 apply_bump_map_for_tbn(inout vec3 light_dir, inout vec3 eye_pos, in mat3 TBN) {
 	light_dir = normalize(TBN * light_dir);
 	eye_pos   = TBN * eye_pos;
 	return get_bump_map_normal();
+}
+vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
+	return apply_bump_map_for_tbn(light_dir, eye_pos, get_tbn(1.0));
 }
 #endif // BUMP_MAP_CUSTOM
 #endif // USE_BUMP_MAP
