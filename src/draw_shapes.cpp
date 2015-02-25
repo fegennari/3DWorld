@@ -180,7 +180,7 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 
 		for (unsigned e = 0; e < 2; ++e) {
 			unsigned const tdim(e ? t1 : t0);
-			bool const s_or_t(cp.swap_txy ^ (e != 0));
+			bool const s_or_t(cp.swap_txy() ^ (e != 0));
 			float *tg(tp.st[s_or_t]);
 
 			if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
@@ -218,7 +218,7 @@ void coll_obj::set_poly_texgen(int tid, vector3d const &normal, shader_t &shader
 
 	if (tid < 0) return; // texturing disabled
 	float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}, xlate[2] = {cp.tdx, cp.tdy};
-	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy, shader, 1);
+	setup_polygon_texgen(normal, tscale, xlate, texture_offset, cp.swap_txy(), shader, 1);
 }
 
 void coll_obj::get_polygon_tparams(int tid, vector3d const &normal, texgen_params_t &tp) const {
@@ -228,7 +228,7 @@ void coll_obj::get_polygon_tparams(int tid, vector3d const &normal, texgen_param
 	get_poly_texgen_dirs(normal, v);
 	
 	for (unsigned i = 0; i < 2; ++i) {
-		bool const d((i != 0) ^ cp.swap_txy);
+		bool const d((i != 0) ^ cp.swap_txy());
 		UNROLL_3X(tp.st[d][i_] = tscale[i]*v[i][i_];)
 		tp.st[d][3] = xlate[i] + tscale[i]*dot_product(texture_offset, v[i]);
 	}

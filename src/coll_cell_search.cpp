@@ -337,7 +337,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 
 			for (unsigned e = 0; e < 2; ++e) {
 				unsigned const tdim(e ? t1 : t0);
-				bool const s_or_t(cp.swap_txy ^ (e != 0));
+				bool const s_or_t(cp.swap_txy() ^ (e != 0));
 
 				if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
 					tc[s_or_t] = (poff[tdim] - d[tdim][0])/(d[tdim][1] - d[tdim][0]);
@@ -356,7 +356,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 			get_poly_texgen_dirs(dir.get_norm(), v);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				tc[(i != 0) ^ cp.swap_txy] = tscale[i]*dot_product(v[i], poff) + xlate[i];
+				tc[(i != 0) ^ cp.swap_txy()] = tscale[i]*dot_product(v[i], poff) + xlate[i];
 			}
 			break;
 		}
@@ -370,7 +370,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 				p1[i] = (i == dim) ? tscale[0] : 0.0;
 				p2[i] = (i == dim) ? 0.0       : tscale[1];
 			}
-			if (cp.swap_txy) {swap(p1, p2);}
+			if (cp.swap_txy()) {swap(p1, p2);}
 			tc[0] = dot_product(p1, poff);
 			tc[1] = dot_product(p2, poff);
 			break;
@@ -380,7 +380,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 		get_poly_texgen_dirs(norm, v);
 
 		for (unsigned i = 0; i < 2; ++i) {
-			tc[(i != 0) ^ cp.swap_txy] = tscale[i]*dot_product(v[i], poff) + xlate[i];
+			tc[(i != 0) ^ cp.swap_txy()] = tscale[i]*dot_product(v[i], poff) + xlate[i];
 		}
 		break;
 	}

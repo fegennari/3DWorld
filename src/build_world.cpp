@@ -1527,11 +1527,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			materials[str] = cobj.cp; // Note: okay to overwrite/redefine a material
 			break;
 
-		case 'X': // normal map texture id/name [invert_y=0]
+		case 'X': // normal map texture id/name [invert_y=0 [swap_binorm_sign=0]]
 			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "normal map texture", coll_obj_file);}
 			{
-				int invert_y(0);
-				fscanf(fp, "%i", &invert_y ); // optional
+				int invert_y(0), swap_bns(0);
+				fscanf(fp, "%i%i", &invert_y, &swap_bns); // optional
+				cobj.cp.set_swap_tcs_flag(SWAP_TCS_NM_BS, (swap_bns != 0));
 				if (!read_texture(str, line_num, cobj.cp.normal_map, 1, (invert_y != 0))) {fclose(fp); return 0;}
 			}
 			break;
@@ -1587,7 +1588,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			if (fscanf(fp, "%f%f", &cobj.cp.tdx, &cobj.cp.tdy) != 2) {return read_error(fp, "texture translate", coll_obj_file);}
 			ivals[0] = 0;
 			fscanf(fp, "%i", &ivals[0]); // optional
-			cobj.cp.swap_txy = (ivals[0] != 0);
+			cobj.cp.set_swap_tcs_flag(SWAP_TCS_XY, (ivals[0] != 0));
 			break;
 
 		case 'n': // toggle negative shape

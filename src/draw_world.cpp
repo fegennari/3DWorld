@@ -570,20 +570,26 @@ void draw_coll_surfaces(bool draw_trans) {
 	if (!normal_map_cobjs.empty()) { // draw all cobjs that use normal maps with a different shader
 		shader_t nms;
 		setup_cobj_shader(nms, has_lt_atten, 1);
-		// we use generated tangent and binormal vectors, but set the binormal scale to 1.0, which seems correct for cubes
+		// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 		// FIXME: calculate tangent and binormal using texgen parameters instead, with new shader bump map mode
-		nms.add_uniform_float("bump_b_scale", 1.0);
+		float bump_b_scale(0.0);
 		int nm_tid(-1);
 
 		// Note: could stable_sort normal_map_cobjs by normal_map tid, but the normal map is already part of the layer sorting,
 		// so the normal maps are probably already grouped together
 		for (auto i = normal_map_cobjs.begin(); i != normal_map_cobjs.end(); ++i) {
 			coll_obj const &c(coll_objects[*i]);
+			float const bbs(c.cp.negate_nm_bns() ? -1.0 : 1.0);
 
 			if (c.cp.normal_map != nm_tid) { // normal map change
 				cdb.flush();
 				nm_tid = c.cp.normal_map;
 				select_multitex(nm_tid, 5);
+			}
+			if (bbs != bump_b_scale) {
+				cdb.flush();
+				bump_b_scale = bbs;
+				nms.add_uniform_float("bump_b_scale", bump_b_scale);
 			}
 			c.draw_cobj(*i, last_tid, last_group_id, nms, cdb);
 		}
