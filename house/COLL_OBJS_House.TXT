@@ -128,9 +128,11 @@ B -0.4 1.22 -2.02 -1.5  0.0  0.1 # Porch Slab
 B -0.5 1.1  -1.9  -1.4 -0.7 -0.6 # Floor Under Porch Slab
 #a 1 # destroyable
 y 9.0
+X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco ceiling
 B -1.95 1.35 -2.15  2.95 0.7 0.75 # Ceiling + Gutter - Falling objects get stuck in the gutter
 B  1.1  1.45 -0.55 -0.15 0.7 0.75 # Around the Chimney
+X none # disable normal maps
 
 # Upstairs
 e 1 # can't disable the bottom side unless the ceiling downstairs is non-destroyable
@@ -166,8 +168,11 @@ B -0.4  0.0 1.9  2.69 0.05 0.1
 B -0.4 -0.1 1.85 1.9  0.05 0.1
 
 y 6.0
+
+X normal_maps/tile_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.75 0.3 0.3 0.3 1.0 50 1 # Front Door Tile
 B -0.5 0.0 -1.5 -0.9 0.05 0.09
+X none # disable normal map
 
 # Downstairs Floor
 e 1 # disable the bottom side
@@ -185,8 +190,10 @@ B -1.66 -1.0  2.3 2.68 -0.7 -0.6
 B -0.5   0.0  1.8 2.3  -0.7 -0.6
 
 y 10.0
+X normal_maps/tile_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.75 1.0 1.0 1.0 1.0 50 1 # Bathroom Floor Tile
 B -1.0 0.1 2.3 2.68 -0.7 -0.595
+X none # disable normal map
 
 y 5.0
 l 0.7 0.05 0.5 0.05 1.0 45 1 # Astroturf
@@ -210,29 +217,36 @@ B -0.355 -0.345 1.8 2.68 -0.07 -0.01
 a 0 # can't make destroyable unless the bottom side of the upstairs carpet is enabled
 y 4.0
 e 2
+X normal_maps/particleb_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.5 0.8 0.8 0.8 1.0 48 1 # Particle Board
 B -0.2 1.08 -1.5 0.3  -0.02 0.05
 B -0.2 0.7   0.3 1.5  -0.02 0.05
 B -0.2 0.1   1.5 1.8  -0.02 0.05
 B  0.1 1.08  1.5 2.68 -0.02 0.05
+X none # disable normal map
 
 y 8.0
+X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 0.9 0.7 0.5 1.0 36 1 # wooden slats
 B -1.66 -0.2 -0.1 2.68 0.0 0.05
 B -0.2   0.1  1.8 2.68 0.0 0.05
+X none # disable normal map
 
 y 6.0
+X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco/white paint
 B -1.66 -0.4 -1.88 -0.1 -0.01 0.05 # Above Back Room
 e 0
+X none # disable normal map
 
 a 1 # destroyable
 
 y 4.0
+X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 26 1 # paneling
 B 0.8 1.08 0.3 0.4 -0.03 0.05
 B 0.7 0.8  0.3 1.5 -0.03 0.05
-
+X none # disable normal map
 
 y 3.0
 # Note" texture 3 with pink stucco looks interesting
@@ -262,12 +276,15 @@ X none # disable normal map
 
 # Outside Wall Wood
 y 6.0
+X normal_maps/wood_NRM.jpg 1 # normal map (inverted y)
 l 0.75 1.0 1.0 1.0 1.0 46 1 # wood2
 e 7
 B -1.69 -0.48 -1.9  -1.89 0.05 0.71 1 # Front Driveway Wall
+X none # disable normal map
 
 # Outside Wall plaster/stucco
 y 9.0
+X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco
 e 19
 B -1.7  -1.69 -1.89  2.69 0.05  0.71 1 # Left Side Wall
@@ -280,6 +297,7 @@ B -0.4   1.09 -1.4  -1.39 0.05  0.71 1 # Front Porch Wall
 e 35
 B -0.5  -0.49 -1.89 -1.4  0.05  0.71 1 # Left Wall on Front Porch
 e 0
+X none # disable normal map
 
 # Negative Cubes for Windows and Doors
 n 1
@@ -314,8 +332,9 @@ r 0.0 1.0 # reset specularity
 a 1 # destroyable
 
 
-# Paneling
+# Paneling walls
 y 10.0
+X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 26 1 # paneling
 e 19
 B -1.7 -1.66 -0.05 1.85 -0.6 0.025
@@ -327,9 +346,11 @@ B  0.3  0.9   2.68 2.7  -0.1 0.025
 e 33
 B  1.07 1.1  -1.45 2.68 -0.6 0.05
 e 0
+X none # disable normal map
 
 # Concrete Block Inner
 y 10.0
+X normal_maps/cblock_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.9 1.0 1.0 1.0 1.0 27 1 # concrete block
 e 7
 B -1.66  1.08 -1.9  -1.88 -0.6  0.025
@@ -347,6 +368,7 @@ B -1.7  -1.66 1.85 2.68 -0.6 0.025
 e 11
 B -1.66 -1.05 2.68 2.7  -0.6 0.025
 e 0
+X none # disable normal map
 
 
 # Front Porch Stuff
@@ -405,7 +427,9 @@ L 0.25 0.0  0.65 -0.35 -0.18  1.0 0.3 0.05 0.5
 X none # disable normal map
 
 l 0.95 1.0 1.0 1.0 1.0 8 1 # Marble
+r 0.6 60.0 # set specularity
 B 0.85 0.95 -0.58 -0.12 -0.6 -0.58
+r 0.0 1.0 # reset specularity
 
 
 # Inside Walls Top
@@ -416,6 +440,7 @@ y 6.0
 l 0.7 0.4 0.3 0.1 1.0 11 1 # wood
 B -1.2 -1.0 -0.4 -0.1 0.05 0.15
 y 9.0
+X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco
 B -0.5 -0.4 -1.0 -0.1 0.05 0.7
 B -1.7  0.2 -0.1  0.0 0.05 0.7 
@@ -445,20 +470,27 @@ B -0.4 -0.1  1.8  1.9 0.6  0.7
 # Short Walls
 B 0.0 0.1 -1.4 -0.9 0.05 0.3 # Spindles Wall
 B 0.0 0.4  1.4  1.5 0.05 0.3 
+X none # disable normal map
+
 l 0.95 1.0 1.0 1.0 1.0 8 1 # Marble
+r 0.6 60.0 # set specularity
 B 0.0 0.41 1.39 1.51 0.3 0.31 # marble sill
+r 0.0 1.0 # reset specularity
 
 # Spindles
 y 4.0
+X normal_maps/wood_NRM.jpg 1 # normal map (inverted y)
 l 0.7 0.6 0.6 0.6 1.0 46 1 # wood2
 e 3
 C 0.05 -1.25 0.3 0.05 -1.25 0.7 0.016 0.016
 D 0.0 0.15 0.0 2
 e 0
 B -0.01 0.11 -1.4 -0.89 0.3 0.31
+X none # disable normal map
 
 # Inside Walls Bottom
 y 10.0
+X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 26 1 # paneling
 e 4
 B -0.5  1.1 -1.5 -1.4 -0.6 0.0
@@ -477,9 +509,11 @@ B -0.5  0.1  1.8  1.9 -0.6 0.0
 B  0.0  0.1  1.8  2.7 -0.6 0.0 
 
 B 0.1 0.7 0.8 0.9 -0.1 0.0  # Arches/Beam
-B -0.45 -0.2 -1.45 1.85 -0.1 0.0 
+B -0.45 -0.2 -1.45 1.85 -0.1 0.0
+X none # disable normal map
 
 # Concrete
+X normal_maps/cblock_NRM.jpg 0 1 # normal map (swap binorm sign)
 l  0.9 1.0 1.0 1.0 1.0 27 1 # concrete
 e 32
 B -0.51 -0.5  -1.51  0.0 -0.6 0.0
@@ -488,6 +522,7 @@ B -1.70 -0.8  -0.11 -0.1 -0.6 0.0
 e 8
 B -0.5   1.10 -1.51 -1.5 -0.6 0.0
 e 0
+X none # disable normal map
 
 l 0.5 0.6 0.4 0.2 1.0 45 1
 B  0.8 1.1 -1.9 -1.5 -0.6 -0.58 # Junk in back room
@@ -502,9 +537,11 @@ a 1 # destroyable
 
 # Wall/Railing by Stairs
 y 10.0
+X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 26 1 # paneling
 B 0.79 0.8 0.2 0.3 -0.59 -0.5
 D 0.0 0.1 0.0  4  0.0 0.0 0.05
+X none # disable normal map
 
 # Roof
 n 1
@@ -512,12 +549,15 @@ l 0.0 1.0 1.0 1.0 0.4 -1 1
 B -0.27 -0.11 0.9 1.2 0.7 0.75 # cut attic hole
 n 0
 y 2.5
+X normal_maps/shingles_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.75 0.6 0.6 0.6 1.0 25 1 # shingles
 a 0 # non-destroyable
 P 3  1.31 -2.11 0.75  -1.91 -2.11 0.75  -0.3  -0.2  1.45   0.0
 P 3 -0.3   1.0  1.45  -1.91  2.91 0.75   1.31  2.91 0.75   0.0
 P 4 -1.91 -2.11 0.75  -1.91  2.91 0.75  -0.3   1.0  1.45  -0.3  -0.2   1.45  0.0
 P 4  1.31 -2.11 0.75  -0.3  -0.2  1.45  -0.3   1.0  1.45   1.31   2.91 0.75  0.0
+X none # disable normal map
+
 y 3.8
 l 0.75 0.6 0.5 0.1 1.0 11 1 # wood
 a 1 # destroyable
@@ -551,19 +591,24 @@ l 0.9 0.35 0.32 0.3 1.0 45 1 # concrete
 a 0 # Not Destroyable
 B 0.1 1.1 2.8  4.0 -0.7 -0.65
 B 0.3 0.9 2.68 2.8 -0.7 -0.6
+
 a 1 # destroyable
 y 6.0
+X normal_maps/cblock_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.9 0.6 0.6 0.6 1.0 27 1 # Back Porch Wall
 B 0.0 0.1  2.8 4.0  -0.7 -0.5
 B 0.1 0.25 3.9 3.99 -0.7 -0.5
+X none # disable normal map
 
 # Back Porch Roof
 a 0 # non-destroyable
 y 2.5
+X normal_maps/shingles_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.75 0.9 0.9 0.9 1.0 25 1 # light shingles
 P 3 0.65 3.4  0.2  0.1  4.1  -0.1  1.2 4.1 -0.1  0.0
 P 4 0.65 2.79 0.2  0.1  2.79 -0.1  0.1 4.1 -0.1  0.65 3.4   0.2  0.0 # intersect the wall a bit
 P 4 0.65 2.79 0.2  0.65 3.4   0.2  1.2 4.1 -0.1  1.2  2.79 -0.1  0.0 # intersect the wall a bit
+X none # disable normal map
 
 # Back Porch Supports
 y 3.8
@@ -635,6 +680,7 @@ D -0.75 0.0 0.0 1
 
 # Driveway
 y 8.0
+X normal_maps/hb_brick_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.9 1.0 1.0 1.0 1.0 47 1 # pink brick
 a 0 # Not Destroyable
 e 1
@@ -645,9 +691,10 @@ e 1
 B -1.7 -0.4 -5.0 -2.0 -0.1 0.045
 #B -4.7  0.4 -5.0 -2.0 0.5 0.6
 B -0.4 -0.1 -2.5 -2.0 -0.1 0.045
-Q 0 # end platform
+#Q 0 # end platform
 a 1 # destroyable
 e 0
+X none # disable normal map
 
 # Front Fence
 y 5.0
@@ -683,12 +730,14 @@ C 1.65 5.3    1.5  6.7  5.3   1.5  0.016 0.016 # pole to trees
 
 # Back Fence
 y 4.0
+X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 36 1 # wooden slats
 B -1.9  5.0 6.6 6.75 -0.7 -0.3 # main section
 B -2.0 -1.9 6.6 6.75 -0.7 -0.35 # steps 1
 D -0.1 0.0 0.0  4  0.0 0.0 -0.05
 B  5.0  5.1 6.6 6.75 -0.7 -0.35 # steps 2
 D  0.1 0.0 0.0  6  0.0 0.0 -0.05
+X none # disable normal map
 
 # Pine Trees
 y 4.0
@@ -762,17 +811,21 @@ e 0
 # Closets
 y 8.0
 Y 0 0 1 # swap x and y
+X normal_maps/wood_NRM.jpg 1 # normal map (inverted y)
 l 0.8 0.6 0.5 0.35 1.0 46 1 # wood
 B -1.69 -1.21 -0.48 -0.42 0.1 0.7
 B -0.99 -0.83 -0.48 -0.42 0.1 0.7
 B -1.43 -0.81  1.42  1.48 0.1 0.7
 B -0.48 -0.42  0.01  0.33 0.1 0.7
 Y 0 0 0 # unswap x and y
+X none # disable normal map
 
 
 # Furniture
 l 0.8 0.8 0.6 0.4 1.0 8 1
+r 0.4 50.0 # set specularity
 C 0.85 2.1 0.23 0.85 2.1 0.25 0.21 0.21 # Kitchen Table (need marble texture?)
+r 0.0 1.0 # reset specularity
 l 0.9 0.0 0.0 0.0 1.0 -1 1
 e 3
 C 0.85 2.1 0.09 0.85 2.1 0.23 0.02 0.02

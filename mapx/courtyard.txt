@@ -12,7 +12,9 @@ l 0.8 0.6 0.6 1.0 1.0 49 1 # blue plaster
 y 6.0
 B 3.60  6.40  -4.98  -3.44  0.00  0.02 # bottom
 
+X normal_maps/tile_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.8 0.7 0.7 0.7 1.0 50 1 # tile
+r 0.3 30.0 # set specularity
 y 5.0
 B 3.58  3.60  -5.00  -3.42  0.00  0.08 # sides
 B 6.40  6.42  -5.00  -3.42  0.00  0.08
@@ -35,6 +37,8 @@ B 3.62  4.56  -3.30  -3.42  0.04  0.06
 D 1.82 0.0 0.0  1
 B 3.60  4.56  -3.44  -3.50  0.04  0.06
 D 1.84 0.0 0.0  1
+r 0.0 1.0 # reset specularity
+X none # disable normal map
 
 y 4.0
 l 0.1 1.0 1.0 1.0 0.4 2 1 # water
