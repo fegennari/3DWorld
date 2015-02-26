@@ -946,7 +946,7 @@ void add_dynamic_lights_ground() {
 	assert(ldynamic);
 	clear_dynamic_lights();
 	dl_sources.swap(dl_sources2);
-	if (display_mode & 0x10) dl_sources.insert(dl_sources.end(), light_sources_d.begin(), light_sources_d.end());
+	dl_sources.insert(dl_sources.end(), light_sources_d.begin(), light_sources_d.end());
 
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		point const pos(gen_rand_scene_pos());
