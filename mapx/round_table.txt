@@ -1,5 +1,6 @@
 # table
 e 0
+X normal_maps/wood_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.6 0.6 0.6 1.0 46 1 # wood
 y 5.0
 Y 0.0 0.0 1 # swap xy
@@ -13,4 +14,5 @@ B -5.0  -1.0   -0.15 0.15  0.0 0.25 # feet
 B  1.0   5.0   -0.15 0.15  0.0 0.25
 B -3.15 -2.85  -2.0  2.0   0.0 0.25
 B  2.85  3.15  -2.0  2.0   0.0 0.25
+X none # disable normal map
 

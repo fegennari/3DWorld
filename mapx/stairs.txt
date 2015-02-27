@@ -2,6 +2,7 @@
 e 0
 
 # vertical supports
+X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.9 0.9 0.9 1.0 49 1 # plaster
 y 2.5
 # outer
@@ -14,6 +15,7 @@ B 0.3 0.4 0.3 0.4 0.02 1.4
 B 1.1 1.2 0.3 0.4 0.02 1.7
 B 1.1 1.2 1.1 1.2 0.02 2.0
 B 0.3 0.4 1.1 1.2 0.02 1.1
+X none # disable normal map
 
 # landings
 l 0.6 0.9 0.9 0.9 1.0 9 1 # marble (snow)

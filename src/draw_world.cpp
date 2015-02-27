@@ -468,7 +468,7 @@ void draw_coll_surfaces(bool draw_trans) {
 				normal_map_cobjs.push_back(cix);
 				continue;
 			}
-			if (c.is_big_occluder() && c.group_id < 0) {
+			if (c.is_big_occluder() && c.group_id < 0) { // Note: doesn't apply to normal mapped objects
 				float const dist(distance_to_camera(c.get_center_pt()));
 
 				if (c.get_area() > 0.01*dist*dist) { // increases CPU time but decreases GPU time

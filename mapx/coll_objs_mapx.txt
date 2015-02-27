@@ -129,8 +129,10 @@ n 0
 # emergency exit door
 y 8.0
 a 2 # shatterable
+X normal_maps/wood_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.5 0.5 0.5 1.0 46 1 # 11/46 wood
 P 4  -8.16 5.32 -0.4  -8.0 5.2 -0.4  -8.0 5.2 -0.07  -8.16 5.32 -0.07  0.02
+X none # disable normal map
 
 y 6.0
 l 0.9 0.7 0.6 0.55 1.0 27 1 # concrete block (red/brown)
@@ -165,6 +167,7 @@ a 1 # destroyable
 #######################################
 
 # vertical supports
+X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 T -7.4  -5.4  -0.29 i mapx/vsupport.txt # 1
 T -7.4  -2.4  -0.29 i mapx/vsupport.txt
 T -7.4   0.1  -0.29 i mapx/vsupport_low.txt
@@ -190,6 +193,7 @@ T  0.0   0.0  -0.29
 
 # main floors
 e1
+X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.58 0.42 0.3 1.0 49 1 # carpet
 y 7.5
 B -7.4  -0.1  -5.4  5.9  0.47  0.6  # 1A
@@ -421,6 +425,7 @@ r 0.0 1.0 # reset specularity
 # stairwell B roof cover
 a 1 # destroyable
 e0
+X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.4 0.4 0.4 1.0 49 1 # concrete
 y 4.0
 B -7.4  -5.9  4.4  4.5  2.8 2.86
@@ -432,6 +437,7 @@ B -7.4  -7.35 4.4  5.9  2.4 2.80 # l side
 B -7.4  -7.3  4.4  4.45 2.4 2.80 # front l
 B -6.9  -5.9  4.4  4.45 2.4 2.80 # front r
 B -5.95 -5.9  4.4  5.9  2.4 2.80 # r side
+X none # disable normal map
 
 #######################################
 # access points - back doors
@@ -448,6 +454,7 @@ n 0
 # elevator
 #######################################
 e 1
+X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 0.9 0.9 0.9 1.0 49 1 # plaster
 y 5.0
 B -3.39 -3.35  5.0   5.94 -0.4   2.25 # L
@@ -469,6 +476,8 @@ y 7.5
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
 Q 1 0.01 0.01 40.0 120.0 2.2 0.2   -3.0 5.2 -0.39  0 0 1  0 # platform
 B -3.35 -2.65  5.05 5.65  -0.41 -0.39 # elevator platform
+
+X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 0.7 0.7 0.7 1.0 36 1 # wood elevator walls
 y 3.0
 B -3.35 -3.34  5.02 5.8   -0.39 -0.1  # L
@@ -479,6 +488,7 @@ B -3.34 -2.66  5.79 5.8   -0.39 -0.1  # Back
 B -3.35 -2.65  5.02 5.45  -0.1  -0.09 # Top
 Q 0 # end platform
 a 1 # destroyable
+X none # disable normal map
 
 #######################################
 # main stairwells
@@ -496,10 +506,13 @@ T  0.0  0.0 -0.29
 # stairs to roof
 T -7.4  4.4 -0.29
 e 0
+X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.9 0.9 0.9 1.0 49 1 # plaster
 y 2.5
 B 0.3 0.4 1.1 1.2 1.1 2.3 # vertical supports
 B 0.3 0.4 0.3 0.4 1.4 2.6
+X none # disable normal map
+
 l 0.6 0.9 0.9 0.9 1.0 9 1 # marble (snow)
 y 6.0
 # 4A => 4B

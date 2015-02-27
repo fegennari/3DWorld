@@ -5,8 +5,6 @@ Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD - use mesh simplification
 
-More cobj normal maps (mapx cblocks)
 Displacement mapping on asteroids using tess shader
 TT mode biomes control noise exponent
-Crazybump for bump maps (mapx and house)
 Better water splashes/particles

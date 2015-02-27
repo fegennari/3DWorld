@@ -17,11 +17,13 @@ e 0
 
 # front desk
 e 3
+X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.66 1.0 1.0 1.0 1.0 26 1 # paneling
 y 5.0
 B 1.1 1.9  1.75 1.85  0.03 0.14
 B 1.1 1.2  1.85 2.3   0.03 0.14
 B 1.8 1.9  1.85 2.3   0.03 0.14
+X none # disable normal map
 
 # place a dragon statue on the desk
 l 0.8 0.35 0.23 0.025 1.0 none 0 # gold
@@ -63,6 +65,7 @@ T  0.0  0.0 -0.29
 m 1.0
 
 # ### walls ###
+X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 0.9 0.9 0.9 1.0 49 1 # plaster
 y 5.0
 
@@ -83,3 +86,4 @@ B  3.45  3.55  4.8 5.8  0.01 0.45
 e 2
 B  3.45  3.55  1.5 2.0  0.40 0.45 # arches
 B  3.45  3.55  4.3 4.8  0.40 0.45
+X none # disable normal map

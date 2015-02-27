@@ -4,6 +4,7 @@
 
 # roads/driveways/walkways
 a 0 # non-destroyable
+X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.8 0.2 0.2 0.2 1.0 49 1 # asphalt
 y 8.0
 # front walkway
@@ -35,4 +36,5 @@ B -5.8 -4.0 6.5 9.9 -0.7 -0.55
 B -5.8 -3.9 6.5 7.5 -0.7 -0.58
 # handicap ramp
 P 4  7.99 -4.0 -0.05  7.99 -3.8 -0.05  9.0 -3.8 -0.115  9.0 -4.0 -0.115  0.1
+X none # disable normal map
 
