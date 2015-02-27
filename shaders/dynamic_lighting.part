@@ -36,10 +36,8 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bum
 	vec3 color = vec3(0.0);
 #ifndef NO_DYNAMIC_LIGHTS
 
-#ifdef USE_BUMP_MAP_DL
-#ifndef BUMP_MAP_CUSTOM
+#if defined(USE_BUMP_MAP_DL) && !defined(BUMP_MAP_CUSTOM)
 	mat3 TBN = get_tbn(1.0);
-#endif
 #endif
 
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
@@ -55,7 +53,11 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bum
 		lpos_r.xyz *= scene_scale; // convert from [0,1] back into world space
 		lpos_r.xyz += scene_llc;
 		lpos_r.w   *= 0.5*scene_scale.x;
-		if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case (not valid for line lights)
+#if !defined(USE_BUMP_MAP_DL) || defined(BUMP_MAP_CUSTOM)
+		// not valid for line lights
+		// causes problems with bump mapping TBN for some reason?
+		if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
+#endif
 		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
 		lcolor.rgb     *= 10.0; // unscale color
 		lcolor.rgb      = 2.0*lcolor.rgb - 1.0; // map [0,1] to [-1,1] for negative light support
@@ -94,7 +96,7 @@ vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bum
 #endif // BUMP_MAP_CUSTOM
 		eye_pos        = -eye_pos; // ???
 		float n_dot_l  = mix(dot(normal, orig_ldir), dot(lnorm, light_dir), bump_map_normal_scale);
-#else
+#else // !USE_BUMP_MAP_DL
 		vec3 lnorm     = normal;
 		float n_dot_l  = dot(lnorm, light_dir);
 #endif // USE_BUMP_MAP_DL
