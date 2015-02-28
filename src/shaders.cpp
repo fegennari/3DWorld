@@ -701,6 +701,23 @@ bool yes_no_query(string const &query_str) {
 }
 
 
+void write_shader_file(string const &name, string const &data, int type) {
+
+	string const out_dir("shaders/generated");
+	string filename;
+
+	for (auto i = name.begin(); i != name.end(); ++i) {
+		if (*i != '*') {filename.push_back(*i);} // skip special character
+		if (filename.size() > 160) break; // limit filename length
+	}
+	string const out_fn(out_dir + "/" + filename + "." + shader_name_table[type]);
+	cout << "writing shader file " << out_fn << endl;
+	ofstream out(out_fn);
+	assert(out.good());
+	out << data << endl;
+}
+
+
 unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	
 	//RESET_TIME;
@@ -739,21 +756,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		}
 		if (failed) continue;
 		if (DEBUG_SHADER) {cout << "final shader data for <" << name << ">:" << endl << data << endl;}
-
-		if (GEN_FINAL_SHADER_FILES) {
-			string const out_dir("shaders/generated");
-			string filename;
-
-			for (auto i = name.begin(); i != name.end(); ++i) {
-				if (*i != '*') {filename.push_back(*i);} // skip special character
-				if (filename.size() > 160) break; // limit filename length
-			}
-			string const out_fn(out_dir + "/" + filename + "." + shader_name_table[type]);
-			cout << "writing shader file " << out_fn << endl;
-			ofstream out(out_fn);
-			assert(out.good());
-			out << data << endl;
-		}
+		if (GEN_FINAL_SHADER_FILES) {write_shader_file(name, data, type);}
 		shader = glCreateShader(shader_type_table[type]);
 	
 		if (!shader) {
@@ -767,6 +770,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 		glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
 
 		if (status != GL_TRUE) {
+			write_shader_file(name, data, type); // write it out so that we can reference the correct line numbers
 			cerr << "Compilation of " << shader_name_table[type] << " shader " << name << " failed with status " << status << endl;
 			print_shader_info_log(shader);
 			cerr << endl;
