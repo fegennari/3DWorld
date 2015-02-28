@@ -8,7 +8,7 @@ vec3 get_blend_weights(in vec3 normal) {
 	return blend_weights;
 }
 
-vec4 lookup_triplanar_texture(in vec3 pos, in vec3 normal, in sampler2D tex_x, in sampler2D tex_y, in sampler2D tex_z, in float ts_mult=1.0) {
+vec4 lookup_triplanar_texture_scaled(in vec3 pos, in vec3 normal, in sampler2D tex_x, in sampler2D tex_y, in sampler2D tex_z, in float ts_mult) {
 	// http://http.developer.nvidia.com/GPUGems3/gpugems3_ch01.html
 	// Determine the blend weights for the 3 planar projections.
 	vec3 blend_weights = get_blend_weights(normal);
@@ -26,6 +26,10 @@ vec4 lookup_triplanar_texture(in vec3 pos, in vec3 normal, in sampler2D tex_x, i
 
 	// Finally, blend the results of the 3 planar projections.
 	return (col_x*blend_weights.xxxx + col_y*blend_weights.yyyy + col_z*blend_weights.zzzz);
+}
+
+vec4 lookup_triplanar_texture(in vec3 pos, in vec3 normal, in sampler2D tex_x, in sampler2D tex_y, in sampler2D tex_z) {
+	return lookup_triplanar_texture_scaled(pos, normal, tex_x, tex_y, tex_z, 1.0);
 }
 
 vec4 lookup_triplanar_texture_2sz(in vec3 pos, in vec3 normal, in sampler2D tex_x, in sampler2D tex_y, in sampler2D tex_z1, in sampler2D tex_z2) { 

@@ -91,7 +91,7 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 vec3 add_texture(in sampler2D tex, in float tc_scale, in vec3 world_n) {
 	// separate tc for diffuse texture, in case we want to sometimes mirror it to make tiling less periodic (though seems difficult and unnecessary)
 #ifdef TRIPLANAR_TEXTURE
-	return lookup_triplanar_texture(vertex.xyz, world_n, tex, tex, tex, triplanar_texture_scale*tc_scale).rgb;
+	return lookup_triplanar_texture_scaled(vertex.xyz, world_n, tex, tex, tex, triplanar_texture_scale*tc_scale).rgb;
 #else
 	return texture(tex, tc_scale*tc).rgb;
 #endif
