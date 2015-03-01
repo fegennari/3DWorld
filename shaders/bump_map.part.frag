@@ -1,6 +1,6 @@
 in vec3 eye_norm;
-in vec4 epos; // not always used
-in vec2 tc; // not always used
+in vec4 epos; // not used in USE_TANGENT_VECTOR mode
+in vec2 tc; // not used in USE_TANGENT_VECTOR mode
 
 #ifdef USE_BUMP_MAP
 uniform sampler2D bump_map;

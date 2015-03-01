@@ -768,9 +768,11 @@ void set_sane_light_atten(shader_t *shader=nullptr) {
 
 void setup_ship_draw_shader(shader_t &s) {
 
+	bool const bump_map = 0;
 	//s.set_prefix("#define ALPHA_MASK_TEX", 1); // FS
 	s.set_vert_shader("ship_draw");
-	s.set_frag_shader("ads_lighting.part*+black_body_burn.part+ship_draw");
+	s.set_frag_shader("bump_map.part+ads_lighting.part*+black_body_burn.part+ship_draw");
+	if (bump_map) {s.set_prefix("#define USE_BUMP_MAP", 1);} // FS
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("lum_scale",  0.0);
@@ -781,6 +783,11 @@ void setup_ship_draw_shader(shader_t &s) {
 	s.add_uniform_int ("burn_mask", 1); // used instead of alpha_mask_tex
 	s.add_uniform_float("burn_offset",   -1.0);
 	s.add_uniform_float("burn_tex_scale", 1.0);
+
+	if (bump_map) {
+		select_multitex(get_texture_by_name("normal_maps/shiphull_NRM.jpg", 1, 0), 2, 1); // tu_id = 2
+		s.add_uniform_int("bump_map", 2);
+	}
 	char const *uniforms[] = {"postproc_color_op", "do_lighting_op"};
 	char const *bindings[] = {"no_op", "normal_lighting"};
 	s.set_all_subroutines(1, 2, uniforms, bindings);

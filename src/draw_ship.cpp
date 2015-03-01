@@ -893,6 +893,7 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 4.0);
 	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3));
+	set_uobj_specular(0.8, 75.0);
 	begin_sphere_draw(textured);
 
 	for (unsigned i = 0; i < nengines; ++i) { // draw engine housings
@@ -931,10 +932,12 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 		fgRotate(45.0, 0.0, 0.0, 1.0);
 		fgScale(1.0, 1.0, 5.0);
 		unsigned const ndiv25(get_ndiv((2*ndiv)/5));
+		set_uobj_specular(0.6, 75.0);
 		begin_sphere_draw(textured);
 		for (unsigned i = 0; i < 4; ++i) {draw_sphere_vbo(epos2[i], 0.1, ndiv25, textured);} // draw weapon housings
 		end_sphere_draw();
 	}
+	end_specular();
 	if (textured) end_ship_texture();
 	fgPopMatrix(); // undo invert_z()
 

@@ -4,9 +4,10 @@ uniform float lum_scale  = 0.0;
 uniform float lum_offset = 0.0;
 uniform vec4  emission   = vec4(0,0,0,1);
 
-in vec2 tc;
-in vec4 epos;
-in vec3 normal; // eye space
+// thse come from bump_map.part
+//in vec2 tc;
+//in vec4 epos;
+//in vec3 eye_norm;
 
 subroutine void postproc_color(); // signature
 subroutine(postproc_color) void no_op() {}
@@ -37,7 +38,7 @@ void main()
 #endif
 	vec4 texel = texture(tex0, tc);
 	//if (texel.a <= min_alpha) discard; // slow
-	vec3 n = (gl_FrontFacing ? normalize(normal) : -normalize(normal)); // two-sided lighting
+	vec3 n = (gl_FrontFacing ? normalize(eye_norm) : -normalize(eye_norm)); // two-sided lighting
 	vec3 color = emission.rgb;
 	do_lighting_op(color, texel, n);
 	fg_FragColor = vec4(texel.rgb * clamp(color, 0.0, 1.0), texel.a * gl_Color.a); // use gl_Color alpha directly
