@@ -7,12 +7,14 @@
 e 0
 l 0.78 1.0 1.0 1.0 1.0 8 1 # marble
 y 6.5
+r 0.8 60.0 # set specularity
 C 1.5 2.0 0.0   1.5 2.0 0.03  0.8 0.8 # raised cylinder platform
 #C 1.5 -2.0 0.0  1.5 -2.0 0.03 0.8 0.8 # testing
 C 2.7 2.9 0.08  2.7 2.9 0.10  0.3 0.3 # table
 l 0.86 0.03 0.03 0.03 1.0 -1 1
 e 3
-C 2.7 2.9 0.01  2.7 2.9 0.08  0.01 0.01
+C 2.7 2.9 0.01  2.7 2.9 0.08  0.01 0.01 # table leg
+r 0.0 1.0 # reset specularity
 e 0
 
 # front desk
@@ -33,6 +35,7 @@ Z 6  1.5 1.8 -0.135  0.04  0.0 0.0 1.0 90.0  0.005 # group_cobjs_level tx ty tz 
 r 0.0 1.0 # reset specularity
 
 l 0.82 0.6 0.5 0.4 1.0 9 1 # snow texture (marble)
+r 0.8 60.0 # set specularity
 e 0
 y 7.0
 B 1.15 1.85  1.72 1.88  0.14 0.15
@@ -40,6 +43,7 @@ B 1.07 1.23  1.80 2.33  0.14 0.15
 B 1.77 1.93  1.80 2.33  0.14 0.15
 C 1.15 1.80 0.1401  1.15 1.80 0.1499  0.08 0.08
 C 1.85 1.80 0.1401  1.85 1.80 0.1499  0.08 0.08
+r 0.0 1.0 # reset specularity
 
 # chair at front desk
 m 0.036

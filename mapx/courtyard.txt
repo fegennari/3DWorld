@@ -14,7 +14,7 @@ B 3.60  6.40  -4.98  -3.44  0.00  0.02 # bottom
 
 X normal_maps/tile_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.8 0.7 0.7 0.7 1.0 50 1 # tile
-r 0.3 30.0 # set specularity
+r 0.5 35.0 # set specularity
 y 5.0
 B 3.58  3.60  -5.00  -3.42  0.00  0.08 # sides
 B 6.40  6.42  -5.00  -3.42  0.00  0.08
