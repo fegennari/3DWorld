@@ -303,7 +303,7 @@ void enable_bump_map_pre(shader_t &shader) {
 	shader.set_prefix("in vec3 vpos, normal;",   1); // FS
 }
 void enable_bump_map_post(shader_t &shader, unsigned tu_id, float tscale) {
-	select_multitex(ROCK_NORMAL_TEX, tu_id, 1);
+	select_multitex(get_texture_by_name("normal_maps/moon_NRM.jpg", 1, 0), tu_id, 1);
 	shader.add_uniform_int("bump_map", tu_id);
 	shader.add_uniform_float("bump_tex_scale", tscale);
 }
@@ -1070,7 +1070,7 @@ void uasteroid_cont::begin_render(shader_t &shader, unsigned num_shadow_casters,
 		shader.begin_shader();
 		shader.add_uniform_int("tex0", 0);
 		shader.add_uniform_float("tex_scale", 0.5);
-		if (use_bmap) {enable_bump_map_post(shader, 11, 0.6);}
+		if (use_bmap) {enable_bump_map_post(shader, 11, 1.0);}
 	}
 	shader.enable();
 	glEnable(GL_CULL_FACE);
