@@ -17,6 +17,10 @@ bool const ENABLE_ENGINE_TRAILS = 1; // slower but looks cool
 float const ET_ATTEN_CONST      = 0.15;
 float const MIN_ETRAIL_ALPHA    = 0.02;
 
+string const ship_hull_tex_nm  = "normal_maps/shiphull_NRM.jpg";
+string const spaceship1_tex_nm = "normal_maps/spaceship1_NRM.jpg";
+string const spaceship2_tex_nm = "normal_maps/spaceship2_NRM.jpg";
+
 
 extern int display_mode, animate2, frame_counter; // for testing, etc.
 extern float fticks;
@@ -300,19 +304,25 @@ void uobj_draw_data::draw_bounding_sphere(colorRGBA const &color) const { // unu
 void uobj_draw_data::setup_exp_scale() const {
 	if (t_exp > 0.0) {uniform_scale(1.0 + 0.25*(1.0 - t_exp));} // t_exp drops from 1.0 to 0.0
 }
-
 void uobj_draw_data::setup_exp_texture() const {
 	if (shader && t_exp > 0.0) { // drops from 1.0 to 0.0 (burn offset -0.75 to 0.5)
 		shader->add_uniform_float("burn_offset", (-0.75*t_exp + 0.5*(1.0 - t_exp)));
 		shader->reset_subroutine(1, "postproc_color_op", "apply_burn_mask");
 	}
 }
-
 void uobj_draw_data::end_exp_texture() const {
 	if (shader && t_exp > 0.0) {
 		shader->add_uniform_float("burn_offset", -1.0);
 		shader->reset_subroutine(1, "postproc_color_op", "no_op");
 	}
+}
+
+void uobj_draw_data::enable_normal_map(string const &name) const {
+	select_multitex(get_texture_by_name(name, 1, 0), 2, 1); // tu_id = 2
+	if (shader) {shader->reset_subroutine(1, "maybe_bump_map_op", "yes_bump_map");}
+}
+void uobj_draw_data::disable_normal_map() const {
+	if (shader) {shader->reset_subroutine(1, "maybe_bump_map_op", "no_bump_map");}
 }
 
 void uobj_draw_data::set_uobj_specular(float spec, float shine) const {
@@ -772,12 +782,12 @@ void uobj_draw_data::draw_us_frigate() const {
 	end_specular();
 	fgPopMatrix();
 
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 	fgPushMatrix();
 	fgScale(1.6, 0.28, 1.2);
 	set_color(color_a);
-	draw_sphere_vbo(all_zeros, 1.0, 3*ndiv/2, textured);
+	draw_sphere_vbo(all_zeros, 1.0, 3*ndiv/2, 1);
 	fgPopMatrix();
 	float const edx(1.5/(nengines-1));
 
@@ -787,7 +797,7 @@ void uobj_draw_data::draw_us_frigate() const {
 
 		for (unsigned i = 0; i < nengines; ++i) {
 			set_color(color_b);
-			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, 1.1), 0.2, 0.22, ndiv2, textured);
+			draw_fast_cylinder(p1, p1+vector3d(0.0, 0.0, 1.1), 0.2, 0.22, ndiv2, 1);
 			
 			if (ndiv > 10) {
 				set_color(color_b*0.2);
@@ -796,7 +806,8 @@ void uobj_draw_data::draw_us_frigate() const {
 			p1.x += edx;
 		}
 	}
-	if (textured) end_ship_texture();
+	end_ship_texture();
+	disable_normal_map();
 	fgPopMatrix(); // undo invert_z()
 
 	if (is_moving()) { // draw engine glow
@@ -815,14 +826,14 @@ void uobj_draw_data::draw_us_destroyer() const {
 
 	unsigned const ndiv25(get_ndiv(2*ndiv/5));
 	setup_draw_ship();
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 
 	fgTranslate(0.0, 0.0, -1.0);
 	draw_cylinder(1.7, 0.45, 0.45, ndiv, 1, 1, 0);
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 2.0);
-	draw_sphere_vbo(point(0.0, 0.0, 0.85), 0.45, ndiv, textured, 1);
+	draw_sphere_vbo(point(0.0, 0.0, 0.85), 0.45, ndiv, 1, 1);
 	set_cloak_color(RED);
 	
 	if (ndiv > 5) { // nose
@@ -833,8 +844,9 @@ void uobj_draw_data::draw_us_destroyer() const {
 	set_color(color_b);
 	draw_cylinder(0.05, 0.7, 0.7, ndiv, 1, 0, 0, 0.8); // front ring
 	fgPopMatrix();
-	draw_cylindrical_section(0.2, 0.85, 1.2, get_ndiv((3*ndiv)/2), textured, -0.1); // engine ring
-	if (textured) end_ship_texture();
+	draw_cylindrical_section(0.2, 0.85, 1.2, get_ndiv((3*ndiv)/2), 1, -0.1); // engine ring
+	end_ship_texture();
+	disable_normal_map();
 
 	if (ndiv > 4) { // draw engines supports
 		draw_cube(all_zeros, 1.8, 0.09, 0.18, 0);
@@ -851,7 +863,7 @@ void uobj_draw_data::draw_us_destroyer() const {
 		for (unsigned i = 0; i < nengines; ++i) {
 			float const theta(TWO_PI*i/((float)nengines));
 			point const pt(sinf(theta), cosf(theta), -0.2);
-			draw_fast_cylinder(pt, pt+point(0.0, 0.0, 0.14), 0.12, 0.1, ndiv25, textured);
+			draw_fast_cylinder(pt, pt+point(0.0, 0.0, 0.14), 0.12, 0.1, ndiv25, 0); // not textured
 		}
 		flush_cylin_vertex_buffer();
 	}
@@ -872,20 +884,20 @@ void uobj_draw_data::draw_us_destroyer() const {
 void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 
 	setup_draw_ship();
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 
 	fgTranslate(0.0, 0.0, -0.9);
-	draw_cylin_fast(0.38, 0.26, 1.8, ndiv, textured);
+	draw_cylin_fast(0.38, 0.26, 1.8, ndiv, 1);
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 1.45);
 	invert_z(); // invert for half sphere
-	draw_sphere_vbo(all_zeros, 0.38, ndiv, textured, 1); // back
+	draw_sphere_vbo(all_zeros, 0.38, ndiv, 1, 1); // back
 	fgPopMatrix();
 	fgPushMatrix();
 	fgTranslate(0.0, 0.0, 1.8);
 	fgScale(1.0, 1.0, 2.12);
-	draw_sphere_vbo(all_zeros, 0.26, ndiv, textured, 1); // front
+	draw_sphere_vbo(all_zeros, 0.26, ndiv, 1, 1); // front
 	fgPopMatrix();
 	float const escale(0.4), sz(2.0*escale);
 	point epos[4] = {point(sz, 0, 0.0), point(-sz, 0, 0), point(0, sz, 0), point(0, -sz, 0)};
@@ -894,10 +906,10 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 	fgScale(1.0, 1.0, 4.0);
 	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3));
 	set_uobj_specular(0.8, 75.0);
-	begin_sphere_draw(textured);
+	begin_sphere_draw(1);
 
 	for (unsigned i = 0; i < nengines; ++i) { // draw engine housings
-		draw_sphere_vbo(epos[i]+vector3d(0.0, 0.0, 0.12), 0.16, ndiv2, textured);
+		draw_sphere_vbo(epos[i]+vector3d(0.0, 0.0, 0.12), 0.16, ndiv2, 1);
 	}
 	end_sphere_draw();
 
@@ -906,7 +918,7 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 
 		for (unsigned i = 0; i < nengines; ++i) { // draw engine housings
 			point const pos2(epos[i]+vector3d(0.0, 0.0, 0.12));
-			draw_fast_cylinder(pos2+point(0.0, 0.0, -0.165), pos2+point(0.0, 0.0, -0.135), 0.06, 0.08, ndiv3, textured);
+			draw_fast_cylinder(pos2+point(0.0, 0.0, -0.165), pos2+point(0.0, 0.0, -0.135), 0.06, 0.08, ndiv3, 1);
 		}
 		flush_cylin_vertex_buffer();
 	}
@@ -921,7 +933,7 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 			point const pos0(epos[i]+vector3d(0.0, 0.0, 0.24));
 			point pos2(pos0);
 			pos2.x *= 0.2; pos2.y *= 0.2;
-			draw_fast_cylinder(pos0, pos2, 0.1, 0.1, ndiv2, textured);
+			draw_fast_cylinder(pos0, pos2, 0.1, 0.1, ndiv2, 1);
 		}
 		flush_cylin_vertex_buffer();
 		fgPopMatrix();
@@ -933,12 +945,13 @@ void uobj_draw_data::draw_us_cruiser(bool heavy) const {
 		fgScale(1.0, 1.0, 5.0);
 		unsigned const ndiv25(get_ndiv((2*ndiv)/5));
 		set_uobj_specular(0.6, 75.0);
-		begin_sphere_draw(textured);
-		for (unsigned i = 0; i < 4; ++i) {draw_sphere_vbo(epos2[i], 0.1, ndiv25, textured);} // draw weapon housings
+		begin_sphere_draw(1);
+		for (unsigned i = 0; i < 4; ++i) {draw_sphere_vbo(epos2[i], 0.1, ndiv25, 1);} // draw weapon housings
 		end_sphere_draw();
 	}
 	end_specular();
-	if (textured) end_ship_texture();
+	end_ship_texture();
+	disable_normal_map();
 	fgPopMatrix(); // undo invert_z()
 
 	if (is_moving()) { // draw engine glow
@@ -956,28 +969,29 @@ void uobj_draw_data::draw_us_bcruiser() const {
 	setup_draw_ship();
 	float const escale(0.35), dy(0.05), erad(0.1);
 	light_engine_pair(engine_color, 0, escale, 0.4, dy, (1.0 + 0.2*escale)); // average of two engines, eflags isn't quite right
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 
 	// body
 	fgPushMatrix();
 	fgTranslate(0.0, 0.0, -0.8);
 	fgScale(0.5, 1.5, 1.5);
 	invert_z();
-	draw_sphere_vbo(all_zeros, 0.4, ndiv, textured, 1); // rear
+	draw_sphere_vbo(all_zeros, 0.4, ndiv, 1, 1); // rear
 	invert_z();
 	draw_cylinder(0.6, 0.4, 0.3, ndiv); // main body
 	fgTranslate(0.0, 0.0, 0.55);
 	fgScale(1.0, 1.0, 3.06);
-	draw_sphere_vbo(all_zeros, 0.3, ndiv, textured, 1); // front
+	draw_sphere_vbo(all_zeros, 0.3, ndiv, 1, 1); // front
 	fgPopMatrix();
 
 	// engine support wing
 	set_color(color_b);
+	set_uobj_specular(0.8, 75.0);
 	fgPushMatrix();
 	fgTranslate(0.0, dy, -0.2);
 	fgScale(1.1, 0.18, 1.2);
-	draw_sphere_vbo(all_zeros, 0.65, ndiv, textured);
+	draw_sphere_vbo(all_zeros, 0.65, ndiv, 1);
 	fgPopMatrix();
 	set_cloak_color(GRAY);
 
@@ -988,20 +1002,22 @@ void uobj_draw_data::draw_us_bcruiser() const {
 			for (unsigned j = 0; j < 2; ++j) { // bottom, top
 				point cur(0.08*(2.0*i - 1.0), 0.16*(2.0*j - 1.0), 0.6);
 				// draw forward weapons
-				if (ndiv > 8) {draw_fast_cylinder(cur, cur+point(0.0, 0.0, 0.7), 0.04, 0.04, ndiv3, textured, ((ndiv > 16) ? 4 : 0));}
+				if (ndiv > 8) {draw_fast_cylinder(cur, cur+point(0.0, 0.0, 0.7), 0.04, 0.04, ndiv3, 1, ((ndiv > 16) ? 4 : 0));}
 				// draw engines
 				cur += vector3d(0.32*(2.0*i - 1.0), (dy + (1.5*erad - 0.16)*(2.0*j - 1.0)), -1.4);
-				draw_fast_cylinder(cur, cur+point(0.0, 0.0, 0.8), erad, erad, ndiv3, textured, ((ndiv > 12) ? 3 : 0));
-				draw_fast_cylinder(cur+point(0.0, 0.0, -0.2), cur, 0.6*erad, erad, ndiv3, textured);
+				draw_fast_cylinder(cur, cur+point(0.0, 0.0, 0.8), erad, erad, ndiv3, 1, ((ndiv > 12) ? 3 : 0));
+				draw_fast_cylinder(cur+point(0.0, 0.0, -0.2), cur, 0.6*erad, erad, ndiv3, 1);
 				fgPushMatrix();
 				translate_to(cur + vector3d(0.0, 0.0, 0.8));
 				fgScale(erad, erad, 1.6*erad);
-				draw_sphere_vbo_raw(ndiv3, textured, 1);
+				draw_sphere_vbo_raw(ndiv3, 1, 1);
 				fgPopMatrix();
 			} // for j
 		} // for i
 	}
-	if (textured) end_ship_texture();
+	end_specular();
+	end_ship_texture();
+	disable_normal_map();
 	fgPopMatrix(); // undo invert_z()
 
 	// draw engine glow (bottom, top)
@@ -1015,12 +1031,13 @@ void uobj_draw_data::draw_us_enforcer() const { // could be better
 	unsigned const ndiv32(get_ndiv(3*ndiv/2)), ndiv2(get_ndiv(ndiv/2)), nengines(nengines - 1);
 	float const epos(0.44);
 	setup_draw_ship();
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 	fgTranslate(0.0, 0.0, -1.1);
 	draw_cylinder(2.4, 0.65, 0.0, ndiv32, 1); // main body
 	set_color(color_b);
-	if (textured) end_ship_texture();
+	end_ship_texture();
+	disable_normal_map();
 
 	if (ndiv > 3) {
 		draw_cylin_fast(0.18, 0.16, 0.09, ndiv, 0, 1.0, -0.09); // big center engine
@@ -1096,7 +1113,10 @@ void uobj_draw_data::draw_us_carrier() const {
 
 	set_color(color_b);
 	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
+	set_uobj_specular(0.8, 75.0);
 	draw_ehousing_pairs(1.0, 0.13, 0.14, 0.2, -1.4, 0.0, 1, point(0.7, 0.0, -1.2));
+	disable_normal_map();
 	set_ship_texture(VSTRIPE_TEX);
 	fgPushMatrix();
 	fgTranslate(0.0, 0.19, -0.2);
@@ -1105,6 +1125,7 @@ void uobj_draw_data::draw_us_carrier() const {
 	fgScale(1.0, 1.0, 0.5);
 	draw_sphere_vbo(point(0.0, 0.0, 0.2), 0.22, ndiv2, 1, 1);
 	fgPopMatrix();
+	end_specular();
 	end_ship_texture();
 
 	if (ndiv > 9) {
@@ -1196,8 +1217,12 @@ void uobj_draw_data::draw_armageddon(mesh2d const &surface_mesh) const {
 	}
 	set_cloak_color(DK_GRAY); // draw engines
 	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
+	set_uobj_specular(0.8, 75.0);
 	draw_ehousing_pairs(0.9, 0.12, 0.12, 0.15, -0.84, 0.0, 1, point(0.42, -0.62, -0.75));
+	end_specular();
 	end_ship_texture();
+	disable_normal_map();
 	fgPopMatrix(); // undo invert_z()
 	draw_engine_pairs(engine_color, 0, 0.45, 0.42, -0.62, 0.86);
 	unlight_engine_pair();
@@ -1260,6 +1285,7 @@ void uobj_draw_data::draw_starbase() const {
 	assert(cobjs.size() == 8); // should make this more flexible later
 	setup_exp_scale();
 	set_ship_texture(SPACESHIP1_TEX);
+	enable_normal_map(spaceship1_tex_nm);
 	bool const use_lum_scale(powered && shader);
 	if (use_lum_scale) {shader->add_uniform_float("lum_scale", 2.0); shader->add_uniform_float("lum_offset", -1.0);}
 
@@ -1276,6 +1302,7 @@ void uobj_draw_data::draw_starbase() const {
 	}
 	if (use_lum_scale) {shader->add_uniform_float("lum_scale", 0.0); shader->add_uniform_float("lum_offset", 0.0);}
 	end_ship_texture();
+	disable_normal_map();
 
 	// draw center (team colored)
 	set_color(color_a);
@@ -1290,6 +1317,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 
 	if (phase1) {
 		select_texture((is_cube && is_small) ? BCUBE_T_TEX : BCUBE_TEX);
+		enable_normal_map((is_cube && is_small) ? "normal_maps/bcube_tactical_NRM.jpg" : "normal_maps/bcube_NRM.jpg");
 		set_color(color_b);
 
 		if (is_cube) {
@@ -1298,6 +1326,7 @@ void uobj_draw_data::draw_borg(bool is_cube, bool is_small) const {
 		else {
 			draw_sphere_vbo(all_zeros, 0.97, get_ndiv((3*ndiv)/2), 1); // cube mapped sphere?
 		}
+		disable_normal_map();
 	}
 	if (phase2) {
 		select_texture(SMOKE_TEX);
@@ -1346,14 +1375,15 @@ void uobj_draw_data::draw_bshuttle() const {
 
 void uobj_draw_data::draw_tractor() const { // could be better
 
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 	setup_draw_ship();
-	draw_cube(point(0.0, 0.0, -0.2), 1.6, 1.2, 2.0, textured);
+	draw_cube(point(0.0, 0.0, -0.2), 1.6, 1.2, 2.0, 1);
 	set_color(color_b);
-	draw_cube(point(0.0, 0.0, 1.0), 0.4, 0.2, 0.4, textured);
+	draw_cube(point(0.0, 0.0, 1.0), 0.4, 0.2, 0.4, 1);
 	draw_ehousing_pairs(1.0, 0.25, 0.25, 0.3, 2.1, 0.0, 1, point(-1.05, 0.25, -0.8), point(0.0, -0.5, 0.0), 2); // length r1 r2 lcone dx dy
-	if (textured) end_ship_texture();
+	end_ship_texture();
+	disable_normal_map();
 	set_cloak_color(colorRGBA(1.0, 1.0, 1.0, 0.5));
 	draw_cube(point(0.0, 0.0, 1.1), 0.8, 0.4, 0.65, 0);
 	fgPopMatrix(); // undo invert_z()
@@ -1368,14 +1398,15 @@ void uobj_draw_data::draw_gunship() const {
 	uniform_scale(1.125);
 
 	// front
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 2.0);
-	draw_sphere_vbo(point(0.0, 0.0, 0.325), 0.25, get_ndiv(2*ndiv/3), textured);
+	draw_sphere_vbo(point(0.0, 0.0, 0.325), 0.25, get_ndiv(2*ndiv/3), 1);
 	fgPopMatrix();
 
 	// body
+	set_uobj_specular(0.8, 75.0);
 	set_color(color_b);
 	fgPushMatrix();
 	fgScale(0.25, 1.0, 1.0);
@@ -1386,7 +1417,9 @@ void uobj_draw_data::draw_gunship() const {
 	fgScale(0.25, 4.0, 1.0);
 	draw_cylinder(0.2, 0.00, 0.45, ndiv2, 0, 0, 0, -1.15); // rear
 	fgPopMatrix();
-	if (textured) {end_ship_texture();}
+	end_specular();
+	end_ship_texture();
+	disable_normal_map();
 
 	// rings
 	if (shader) {set_gold_material(*shader);}
@@ -1399,7 +1432,7 @@ void uobj_draw_data::draw_gunship() const {
 		if (i < 4) {fgTranslate(0.0, 0.0, 0.3);}
 	}
 	fgPopMatrix();
-	set_uobj_specular(0.0, 1.0);
+	end_specular();
 
 	// engines
 	float const dxy[2][4] = {{-1.0, 1.0, 0.0, 0.0}, {0.0, 0.0, -1.0, 1.0}};
@@ -1560,6 +1593,7 @@ void uobj_draw_data::draw_dwexterm() const {
 
 	// the bridge
 	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 	fgPushMatrix();
 	fgTranslate(0.0, 0.12, 1.2);
 	fgScale(1.0, 1.0, 1.8);
@@ -1567,6 +1601,7 @@ void uobj_draw_data::draw_dwexterm() const {
 	draw_cylinder(0.02, 0.055, 0.04, ndiv2, 1);
 	fgPopMatrix();
 	end_ship_texture();
+	disable_normal_map();
 	set_color(LT_GRAY);
 
 	for (unsigned i = 0; i < 6; ++i) { // "ribs"
@@ -1673,11 +1708,13 @@ void uobj_draw_data::draw_dwexterm() const {
 		}
 		set_color(GRAY);
 		set_ship_texture(SHIP_HULL_TEX);
+		enable_normal_map(ship_hull_tex_nm);
 
 		for (unsigned i = 0; i < 4; ++i) { // engines
 			draw_ehousing_pairs(0.6-0.08*i, 0.04, 0.0, 0.034, 0.48+0.14*i, 0.0, 1, point(-0.24-0.07*i, 0.05-0.07*i, -1.12+0.02*i));
 		}
 		end_ship_texture();
+		disable_normal_map();
 	}
 	if (first_pass) {
 		assert(obj);
@@ -1877,27 +1914,28 @@ void uobj_draw_data::draw_supply() const {
 
 	unsigned const ndiv2(get_ndiv(ndiv/2));
 	setup_draw_ship();
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 
 	draw_cylinder_at(point(0.0, 0.0, 1.0), 0.4, 0.5, 0.5, ndiv, 1); // front ring
 	set_color(color_b);
-	draw_cylin_fast(0.45, 0.45, 0.8, ndiv, textured, 1.0, 0.8); // front cylinder
-	draw_cylin_fast(0.00, 0.45, 0.6, ndiv, textured, 1.0, 0.2);
+	draw_cylin_fast(0.45, 0.45, 0.8, ndiv, 1, 1.0, 0.8); // front cylinder
+	draw_cylin_fast(0.00, 0.45, 0.6, ndiv, 1, 1.0, 0.2);
 	fgPushMatrix();
 	fgScale(1.0, 1.8, 1.0);
-	draw_cylin_fast(0.1, 0.1, 1.8, ndiv2, textured, 1.0, -1.0); // backbone
+	draw_cylin_fast(0.1, 0.1, 1.8, ndiv2, 1, 1.0, -1.0); // backbone
 	fgScale(1.0, 0.833, 1.0);
-	draw_cylin_fast(0.3, 0.0, 0.6, ndiv, textured, 1.0, -1.0);
+	draw_cylin_fast(0.3, 0.0, 0.6, ndiv, 1, 1.0, -1.0);
 	fgScale(1.0, 0.667, 0.5);
-	draw_sphere_vbo(point(0.0, 0.0, 3.2), 0.45, ndiv, textured, 1); // front sphere
+	draw_sphere_vbo(point(0.0, 0.0, 3.2), 0.45, ndiv, 1, 1); // front sphere
 	fgPopMatrix();
-	draw_cube(point(0.0, 0.0, -1.3), 0.6, 0.9, 0.6, textured, 1); // rear
+	draw_cube(point(0.0, 0.0, -1.3), 0.6, 0.9, 0.6, 1, 1); // rear
 
 	if (ndiv > 4) { // draw engines
 		draw_ehousing_pairs(0.55, 0.2, 0.12, 0.1, 0.5, 0.0, 1, point(-0.25, -0.4, -1.7), point(0.0, 0.4, 0.0), 3);
 	}
-	if (textured) end_ship_texture();
+	end_ship_texture();
+	disable_normal_map();
 	colorRGBA light_color(BLACK);
 
 	if (powered && ((2*time/TICKS_PER_SECOND) & 1)) { // draw blinky light
@@ -2035,6 +2073,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	set_uobj_specular(0.9, 90.0);
 	if (pt_light) {setup_point_light(point(0.0, 0.0, -0.5), engine_color, 3.0*radius, ENGINE_DEF_LIGHT, shader);}
 	set_ship_texture(SPACESHIP2_TEX);
+	enable_normal_map(spaceship2_tex_nm);
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 0.1);
 	draw_sphere_vbo(all_zeros, 1.0, ndiv32, 1); // center
@@ -2042,6 +2081,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 	draw_cylin_fast(0.95, 0.15, 0.4, ndiv32, 1); // top
 	draw_cylin_fast(0.2, 0.8, 0.3, ndiv32, 1, 1.0, -0.3); // bottom
 	end_ship_texture();
+	disable_normal_map();
 	if (pt_light) {clear_colors_and_disable_light(ENGINE_DEF_LIGHT, shader);} // Note: cleared early because there's no line of sight to the engine from here
 
 	if (ndiv > 4) {
@@ -2245,13 +2285,13 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 
 	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv4(get_ndiv(ndiv/4));
 	setup_draw_ship();
-	bool const textured(1);
-	if (textured) set_ship_texture(SHIP_HULL_TEX);
+	set_ship_texture(SHIP_HULL_TEX);
+	enable_normal_map(ship_hull_tex_nm);
 	draw_cylinder(1.5, 1.0, 1.0, 3*ndiv/2, 1, 1, 0, -1.0);
 
 	fgPushMatrix();
 	fgScale(1.0, 1.0, 0.5);
-	draw_sphere_vbo(point(0.0, 0.0, 1.0), 1.0, 3*ndiv/2, textured);
+	draw_sphere_vbo(point(0.0, 0.0, 1.0), 1.0, 3*ndiv/2, 1);
 	fgPopMatrix();
 	set_color(color_b);
 
@@ -2273,15 +2313,16 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 		for (unsigned i = 0; i < 3; ++i) {
 			float const theta(TWO_PI*i/3.0), x(1.05*cosf(theta)), y(1.05*sinf(theta));
 			draw_cylinder_at(point(x, y, -0.6), 1.1, 0.2, 0.2, ndiv2, 1, 1, 0);
-			draw_sphere_vbo( point(x, y, -0.6), 0.2, ndiv2, textured);
-			draw_sphere_vbo( point(x, y,  0.5), 0.2, ndiv2, textured);
+			draw_sphere_vbo( point(x, y, -0.6), 0.2, ndiv2, 1);
+			draw_sphere_vbo( point(x, y,  0.5), 0.2, ndiv2, 1);
 		}
 	}
 	if (starport && ndiv > 3) {
 		fgTranslate(0.0, 0.0, 0.25); // Note: push/pop not needed since this is the last draw
 		draw_torus(0.2, 1.05, ndiv2, 3*ndiv/2);
 	}
-	if (textured) end_ship_texture();
+	end_ship_texture();
+	disable_normal_map();
 	fgPopMatrix();
 }
 

@@ -16,13 +16,26 @@ subroutine(postproc_color) void apply_burn_mask() {
 }
 subroutine uniform postproc_color postproc_color_op;
 
+subroutine void maybe_bump_map(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos); // signature
+subroutine(maybe_bump_map) void  no_bump_map(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos) {}
+subroutine(maybe_bump_map) void yes_bump_map(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos) {
+	maybe_apply_bump_map_self_shadowed(normal, light_dir, eye_pos);
+}
+subroutine uniform maybe_bump_map maybe_bump_map_op;
+
 subroutine void do_lighting(inout vec3 color, in vec4 texel, in vec3 n); // signature
 
+vec4 add_ship_light(in vec3 normal, in int i) {
+	vec3 light_dir = normalize(fg_LightSource[i].position.xyz - epos.xyz);
+	maybe_bump_map_op(normal, light_dir, epos.xyz);
+	return get_ads_lighting(normal, light_dir, epos, 1.0, 1.0, gl_Color, fg_LightSource[i]) * calc_light_atten(epos, i);
+}
+
 subroutine(do_lighting) void shadow_only(inout vec3 color, in vec4 texel, in vec3 n) {
-	color += add_pt_light_comp(n, epos, 0).rgb; // light 0 is the system light
+	color += add_ship_light(n, 0).rgb; // light 0 is the system light
 }
 subroutine(do_lighting) void normal_lighting(inout vec3 color, in vec4 texel, in vec3 n) {
-	for (int i = 0; i < 8; ++i) {color += add_pt_light_comp(n, epos, i).rgb;}
+	for (int i = 0; i < 8; ++i) {color += add_ship_light(n, i).rgb;}
 	// add other emissive term based on texture luminance
 	color = mix(color, vec3(1.0), clamp(lum_scale*(texel.r + texel.g + texel.b + lum_offset), 0.0, 1.0));
 }

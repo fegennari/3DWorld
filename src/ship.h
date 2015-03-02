@@ -253,6 +253,8 @@ public:
 	void setup_exp_scale() const;
 	void setup_exp_texture() const;
 	void end_exp_texture() const;
+	void enable_normal_map(string const &name) const;
+	void disable_normal_map() const;
 	void set_uobj_specular(float spec, float shine) const;
 	void end_specular()    const {set_uobj_specular(0.0, 1.0);}
 	void inverse_rotate()  const;
