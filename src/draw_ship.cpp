@@ -1107,10 +1107,10 @@ void uobj_draw_data::draw_us_carrier() const {
 	set_ship_texture(SPACESHIP2_TEX);
 	vector3d const n[4] = {vector3d(0.9, 0, 0.45), vector3d(-0.9, 0, 0.45), vector3d(0, 0.99, 0.12), vector3d(0, -0.99, 0.12)};
 	vert_norm_tc const verts[16] = {
-		vert_norm_tc(point( 0.2,-0.09,1.1), n[0], 0.0,0.0), vert_norm_tc(point( 0.4,-0.19,0.7), n[0], 1.0,0.0), vert_norm_tc(point( 0.4, 0.19,0.7), n[0], 1.0,1.0), vert_norm_tc(point( 0.2, 0.09,1.1), n[0], 0.0,1.0),
-		vert_norm_tc(point(-0.2, 0.09,1.1), n[1], 0.0,0.0), vert_norm_tc(point(-0.4, 0.19,0.7), n[1], 1.0,0.0), vert_norm_tc(point(-0.4,-0.19,0.7), n[1], 1.0,1.0), vert_norm_tc(point(-0.2,-0.09,1.1), n[1], 0.0,1.0),
-		vert_norm_tc(point( 0.2, 0.09,1.1), n[2], 0.0,0.0), vert_norm_tc(point( 0.4, 0.19,0.7), n[2], 1.0,0.0), vert_norm_tc(point(-0.4, 0.19,0.7), n[2], 1.0,1.0), vert_norm_tc(point(-0.2, 0.09,1.1), n[2], 0.0,1.0),
-		vert_norm_tc(point(-0.2,-0.09,1.1), n[3], 0.0,0.0), vert_norm_tc(point(-0.4,-0.19,0.7), n[3], 1.0,0.0), vert_norm_tc(point( 0.4,-0.19,0.7), n[3], 1.0,1.0), vert_norm_tc(point( 0.2,-0.09,1.1), n[3], 0.0,1.0)};
+		vert_norm_tc(point( 0.2,-0.09,1.1), n[0], 0.25,0.0), vert_norm_tc(point( 0.4,-0.19,0.7), n[0], 0.0,1.0), vert_norm_tc(point( 0.4, 0.19,0.7), n[0], 1.0,1.0), vert_norm_tc(point( 0.2, 0.09,1.1), n[0], 0.75,0.0),
+		vert_norm_tc(point(-0.2, 0.09,1.1), n[1], 0.25,0.0), vert_norm_tc(point(-0.4, 0.19,0.7), n[1], 0.0,1.0), vert_norm_tc(point(-0.4,-0.19,0.7), n[1], 1.0,1.0), vert_norm_tc(point(-0.2,-0.09,1.1), n[1], 0.75,0.0),
+		vert_norm_tc(point( 0.2, 0.09,1.1), n[2], 0.25,0.0), vert_norm_tc(point( 0.4, 0.19,0.7), n[2], 0.0,1.0), vert_norm_tc(point(-0.4, 0.19,0.7), n[2], 1.0,1.0), vert_norm_tc(point(-0.2, 0.09,1.1), n[2], 0.75,0.0),
+		vert_norm_tc(point(-0.2,-0.09,1.1), n[3], 0.25,0.0), vert_norm_tc(point(-0.4,-0.19,0.7), n[3], 0.0,1.0), vert_norm_tc(point( 0.4,-0.19,0.7), n[3], 1.0,1.0), vert_norm_tc(point( 0.2,-0.09,1.1), n[3], 0.75,0.0)};
 	draw_quad_verts_as_tris(verts, 16);
 	if (t_exp > 0.0) {fgPopMatrix();}
 
