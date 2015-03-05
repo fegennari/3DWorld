@@ -395,14 +395,8 @@ void setup_lighting(float depth) {
 	}
 	for (unsigned i = 0; i < 3; ++i) {
 		if (is_cloudy) {
-			if (auto_time_adv) {
-				diffuse[i] -= 0.06;
-				ambient[i] -= 0.025;
-			}
-			else {
-				diffuse[i] -= 0.15;
-				ambient[i] -= 0.06;
-			}
+			diffuse[i] -= (auto_time_adv ? 0.06  : 0.15);
+			ambient[i] -= (auto_time_adv ? 0.025 : 0.06);;
 		}
 		diffuse[i] -= 0.12*cloud_cover;
 		ambient[i] -= 0.05*cloud_cover;

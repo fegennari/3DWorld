@@ -1558,14 +1558,15 @@ void auto_advance_time() { // T = 1 hour
 	static int last_itime(0), precip_inited(0);
 	static float ftime, precip(0.0), precip_app_rate(0.0), prate(0.0), ccover(0.0);
 	static rand_gen_t rgen;
-	if (last_itime == 0) rgen.set_state(rand(), rand()); // random seed at the start
+	if (last_itime == 0) {rgen.set_state(rand(), rand());} // random seed at the start
 
 	// auto_time_adv = 0 => no change
 	// auto_time_adv = 1 => 1 hour = 60 min = 1 hour
 	// auto_time_adv = 2 => 1 hour = 6 min
 	// auto_time_adv = 3 => 1 hour = 36 sec
 	// auto_time_adv = 4 => 1 hour = 3.6 sec
-	ftime += fticks*pow(10.0, auto_time_adv-1)/56000.0;
+	float const delta_time(fticks*pow(10.0, auto_time_adv-1)/56000.0);
+	ftime += delta_time;
 	int const itime((int)ftime); // half hours
 	int const hrtime(itime/2 + 12), hrtime24(hrtime%24); // hours
 	int const date(hrtime/24); // days
@@ -1574,7 +1575,14 @@ void auto_advance_time() { // T = 1 hour
 	// move sun (daily: dt=24, every t)
 	sun_rot = (PI/24)*((itime%48) + (ftime - itime)); // 0 at 12:00 noon
 	update_sun_and_moon();
-	if (light_factor >= 0.4) vis_recalc |= SUN_SHADOW;
+	if (light_factor >= 0.4) {vis_recalc |= SUN_SHADOW;}
+
+	// change wind
+	for (unsigned d = 0; d < 3; ++d) {
+		wind[d] += 1.0*delta_time*rgen.signed_rand_float();
+		wind[d]  = CLIP_TO_pm1(wind[d]);
+	}
+	wind.z *= 0.99;
 	
 	if (itime == last_itime) {
 		no_sun_lpos_update = 1;
@@ -1585,22 +1593,15 @@ void auto_advance_time() { // T = 1 hour
 	// move moon (28 days: dt = 24*28 = 672, every 24t)
 	if (hrtime24 == 12) {
 		moon_rot += PI/14.0;
-		if (moon_rot > TWO_PI) moon_rot -= TWO_PI;
+		if (moon_rot > TWO_PI) {moon_rot -= TWO_PI;}
 		update_sun_and_moon();
-		if (light_factor <= 0.6) vis_recalc |= MOON_SHADOW;
+		if (light_factor <= 0.6) {vis_recalc |= MOON_SHADOW;}
 	}
 
 	// change cloudiness (7 days: dt = 24*7 = 168, every t)
 	ccover += 0.1*rgen.signed_rand_float();
-	if (ccover < -0.2) ccover = 0.2 - ccover;
+	if (ccover < -0.2) {ccover = 0.2 - ccover;}
 	cloud_cover = CLIP_TO_01(0.5f*max(-0.1f, precip) + 0.5f*min(1.0f, ccover));
-
-	// change wind
-	for (unsigned d = 0; d < 3; ++d) {
-		wind[d] += 0.2*rgen.signed_rand_float();
-		wind[d]  = CLIP_TO_pm1(wind[d]);
-	}
-	wind.z *= 0.1;
 
 	// change temperature (daily: dt = 24, seasonal, dt = 24*365.25 = 8766, every t)
 	float const delta_t(MAX_TEMP - MIN_TEMP);
