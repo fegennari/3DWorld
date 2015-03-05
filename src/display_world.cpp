@@ -621,14 +621,13 @@ float get_ocean_wave_height() {
 }
 
 
-void draw_sun_flare() {
+void draw_sun_flare(float intensity=1.0) {
 
 	//RESET_TIME;
 	point const sun_pos(get_sun_pos());
 
 	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, 4.0*sun_radius, 0)) { // use larger radius to include the flare/halo
 		point const viewer(get_camera_pos());
-		float intensity(1.0);
 
 		if (world_mode == WMODE_GROUND) {
 			unsigned const npts = 16;
@@ -644,7 +643,7 @@ void draw_sun_flare() {
 			}
 			pts_valid = 1;
 			if (nvis == 0) return;
-			intensity = 0.1 + 0.9*float(nvis)/float(npts);
+			intensity *= 0.1 + 0.9*float(nvis)/float(npts);
 		}
 		else if (world_mode == WMODE_INF_TERRAIN) {
 			if (sun_pos.z < zmin) return; // sun below the mesh
@@ -1072,7 +1071,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	// draw partial scene
 	if (!combined_gu) {
 		draw_sun_moon_stars();
-		draw_sun_flare();
+		draw_sun_flare(1.5);
 	}
 	draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}

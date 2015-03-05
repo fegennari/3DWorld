@@ -56,7 +56,7 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 
 	if (brightness == 0.0) return;
 	assert(brightness > 0.0);
-	if (!tex_loaded) load_flare_textures();
+	if (!tex_loaded) {load_flare_textures();}
 	float global_scale(6.0);
 	GLuint bound_to(0);
 

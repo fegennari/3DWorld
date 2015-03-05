@@ -179,7 +179,7 @@ void set_tt_water_specular(shader_t &shader) {
 
 	if (water_is_lava) {shader.set_specular(0.2, 20.0); return;} // 2x low specular
 	bool const is_ice(get_cur_temperature() <= W_FREEZE_POINT);
-	shader.set_specular(2.0*w_spec[is_ice][0], 2.0*w_spec[is_ice][1]); // 2x specular
+	shader.set_specular(2.5*w_spec[is_ice][0], 2.0*w_spec[is_ice][1]); // 2x specular
 }
 
 
