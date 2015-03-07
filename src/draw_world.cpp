@@ -1042,6 +1042,7 @@ void water_particle_manager::draw() const {
 	for (unsigned i = 0; i < parts.size(); ++i) {
 		psd.add_pt(vert_norm_color(parts[i].p, (camera - parts[i].p).get_norm(), parts[i].c.c), radius); // normal faces camera
 	}
+	psd.sort_back_to_front();
 	psd.draw(BLUR_CENT_TEX, 0.0, 1); // draw with lighting
 	disable_blend();
 }

@@ -271,6 +271,10 @@ template<> void sized_vert_t<vert_color>::set_vbo_arrays(bool set_state, void co
 }
 
 
+template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::sort_back_to_front() {
+	sort(points.begin(), points.end(), cmp_back_to_front());
+}
+
 template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int tid, float const_point_size, bool enable_lighting) const {
 
 	if (empty()) return;

@@ -1026,7 +1026,7 @@ void light_source::pack_to_floatv(float *data) const {
 }
 
 
-bool is_in_darkness(point const &pos, float radius, int cobj) {
+bool is_in_darkness(point const &pos, float radius, int cobj) { // used for AI
 
 	colorRGBA c(WHITE);
 	get_indir_light(c, pos); // this is faster so do it first
@@ -1039,7 +1039,7 @@ bool is_in_darkness(point const &pos, float radius, int cobj) {
 }
 
 
-void get_indir_light(colorRGBA &a, point const &p) { // Note: return value is unused
+void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds and is_in_darkness() test
 
 	if (!lm_alloc) return;
 	assert(lmap_manager.is_allocated());

@@ -428,6 +428,16 @@ inline vector3d get_norm_camera_orient(vector3d const &normal, point const &cent
 }
 
 
+struct cmp_back_to_front {
+	bool operator()(point const &a, point const &b) const {
+		return (distance_to_camera_sq(a) > distance_to_camera_sq(b));
+	}
+	template<typename vert_t> bool operator()(vert_t const &a, vert_t const &b) const {
+		return (distance_to_camera_sq(a.v) > distance_to_camera_sq(b.v));
+	}
+};
+
+
 // *********************** FLOATING POINT ************************
 
 

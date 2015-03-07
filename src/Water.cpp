@@ -914,10 +914,8 @@ void add_splash(point const &pos, int xpos, int ypos, float energy, float radius
 	int const x2(min((xpos + irad), MESH_X_SIZE-1)), y2(min((ypos + irad), MESH_Y_SIZE-1));
 
 	for (int i = y1; i <= y2; i++) {
-		int const di_sq((i - ypos)*(i - ypos));
-
 		for (int j = x1; j <= x2; j++) {
-			if ((di_sq + (j - xpos)*(j - ypos)) <= radsq && wminside[i][j]) ripples[i][j].rval += splash_size;
+			if (((i - ypos)*(i - ypos) + (j - xpos)*(j - ypos)) <= radsq && wminside[i][j]) {ripples[i][j].rval += splash_size;}
 		}
 	}
 	start_ripple = 1;
