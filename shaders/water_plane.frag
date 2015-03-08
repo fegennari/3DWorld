@@ -34,7 +34,10 @@ void main()
 	float depth  = water_plane_z - mesh_z;
 	if (depth <= 0.0) discard;
 #endif
-	vec3 norm   = normal_z*fg_NormalMatrix[2]; // +/- z in world space
+	vec3 norm   = normal_z*fg_NormalMatrix[2]; // eye space (+/- z in world space)
+	//norm = normalize(vec3(dot(normalize(dFdx(epos.xyz)), norm), dot(normalize(dFdy(epos.xyz)), norm), 1.0));
+	//vec3 norm = normalize(fg_NormalMatrix * (normal_z * vec3(dFdx(dz), dFdy(dz), 0.001)));
+	//if (dot(epos.xyz, norm) > 0.0) discard; // back facing
 	vec2 ripple = vec2(0,0);
 	vec3 add_color = vec3(0);
 	float foam_amt = 0.0;

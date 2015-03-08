@@ -53,6 +53,7 @@ void draw_sides_and_bottom(bool shadow_pass);
 void set_cloud_intersection_shader(shader_t &s);
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
 bool no_sparse_smap_update();
+bool use_water_plane_tess();
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -746,17 +747,27 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.set_bool_prefix("add_noise",        rain_mode,   1); // FS
 	s.set_bool_prefix("deep_water_waves", add_waves,   1); // FS (always enabled with waves for now)
 	s.set_bool_prefix("is_lava",          water_is_lava, 1); // FS
-	s.set_vert_shader("texture_gen.part+water_plane");
+	
+	if (use_water_plane_tess()) { // tessellation shaders
+		s.set_vert_shader("texture_gen.part+water_plane_tess");
+		s.set_tess_control_shader("water_plane");
+		s.set_tess_eval_shader("water_plane"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
+		glPatchParameteri(GL_PATCH_VERTICES, 4); // quads; max is 32
+	}
+	else {
+		s.set_vert_shader("texture_gen.part+water_plane");
+	}
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
 	s.begin_shader();
 	setup_tt_fog_post(s);
-	s.add_uniform_int  ("reflection_tex", 0);
-	s.add_uniform_color("water_color",    color);
-	s.add_uniform_color("reflect_color",  rcolor);
-	s.add_uniform_int  ("height_tex",     2);
+	s.add_uniform_int  ("reflection_tex",   0);
+	s.add_uniform_color("water_color",      color);
+	s.add_uniform_color("reflect_color",    rcolor);
+	s.add_uniform_int  ("height_tex",       2);
 	s.add_uniform_float("water_green_comp", water_params.green);
 	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	s.add_uniform_float("mesh_z_scale",     mesh_scale);
+	s.add_uniform_vector3d("camera_pos",    get_camera_pos()); // needed for tess shaders
 	set_water_plane_uniforms(s);
 	setup_water_plane_texgen(1.0, 1.0, s, 0);
 	if (no_specular) {s.clear_specular();} else {set_tt_water_specular(s);}

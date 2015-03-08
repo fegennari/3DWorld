@@ -826,18 +826,18 @@ void disable_flares() {
 }
 
 
-void draw_one_tquad(float x1, float y1, float x2, float y2, float z) { // Note: normal is +z
+void draw_one_tquad(float x1, float y1, float x2, float y2, float z, int prim_type) { // Note: normal is +z
 
 	vert_norm_tc verts[4];
-	verts[0] = vert_norm_tc(point(x1, y1, z), plus_z, 0, 0);
+	verts[0] = vert_norm_tc(point(x1, y1, z), plus_z, 0, 0); // clockwise
 	verts[1] = vert_norm_tc(point(x1, y2, z), plus_z, 0, 1);
 	verts[2] = vert_norm_tc(point(x2, y2, z), plus_z, 1, 1);
 	verts[3] = vert_norm_tc(point(x2, y1, z), plus_z, 1, 0);
-	draw_verts(verts, 4, GL_TRIANGLE_FAN);
+	draw_verts(verts, 4, prim_type); // GL_TRIANGLE_FAN, GL_QUADS, GL_PATCHES
 }
 
-void draw_tquad(float xsize, float ysize, float z) { // Note: normal is +z
-	draw_one_tquad(-xsize, -ysize, xsize, ysize, z);
+void draw_tquad(float xsize, float ysize, float z, int prim_type) { // Note: normal is +z
+	draw_one_tquad(-xsize, -ysize, xsize, ysize, z, prim_type);
 }
 
 

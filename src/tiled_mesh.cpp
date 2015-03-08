@@ -40,7 +40,7 @@ hmap_brush_param_t cur_brush_param;
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
-extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape;
+extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP;
 extern point sun_pos, moon_pos, surface_pos;
@@ -73,6 +73,7 @@ bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool nonunif_fog_enabled  () {return (show_fog && (display_mode & 0x10) != 0);}
+bool use_water_plane_tess () {return (cloud_model == 1);} // hack to use cloud_model (F10)
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
@@ -1288,12 +1289,15 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 }
 
 
+bool tile_t::is_water_visible() const {
+	return (!is_distant && has_water() && get_rel_dist_to_camera() < DRAW_DIST_TILES && is_visible());
+}
+
 void tile_t::draw_water(shader_t &s, float z) const {
 
-	if (is_distant || !has_water() || get_rel_dist_to_camera() > DRAW_DIST_TILES || !is_visible()) return;
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
 	bind_texture_tu(height_tid, 2);
-	draw_one_tquad(xv1, yv1, xv2, yv2, z);
+	draw_one_tquad(xv1, yv1, xv2, yv2, z, (use_water_plane_tess() ? GL_PATCHES : GL_TRIANGLE_FAN));
 }
 
 
@@ -1940,8 +1944,24 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
 void tile_draw_t::draw_water(shader_t &s, float zval) const {
 
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		i->second->draw_water(s, zval);
+	if (use_water_plane_tess()) {
+		point const camera(get_camera_pos());
+		vector<pair<float, tile_t *> > water_to_draw;
+
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+			if (i->second->is_water_visible()) {water_to_draw.push_back(make_pair(-p2p_dist_sq(camera, i->second->get_center()), i->second.get()));}
+		}
+		sort(water_to_draw.begin(), water_to_draw.end()); // back to front so that alpha blending works
+		glCullFace((camera.z < zval) ? GL_FRONT : GL_BACK);
+		glEnable(GL_CULL_FACE);
+		for (auto i = water_to_draw.begin(); i != water_to_draw.end(); ++i) {i->second->draw_water(s, zval);}
+		glDisable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
+	else {
+		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+			if (i->second->is_water_visible()) {i->second->draw_water(s, zval);}
+		}
 	}
 }
 

@@ -264,7 +264,7 @@ public:
 					set_prefix("uniform sampler3D cloud_noise_tex;", 4); // TES
 					set_tess_control_shader("planet_draw");
 					set_tess_eval_shader("procedural_planet.part*+planet_draw"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
-					glPatchParameteri(GL_PATCH_VERTICES, 3); // max is 32
+					glPatchParameteri(GL_PATCH_VERTICES, 3); // triangles; max is 32
 					// GL_PATCH_DEFAULT_OUTER_LEVEL GL_PATCH_DEFAULT_INNER_LEVEL
 #endif
 				}
