@@ -54,6 +54,7 @@ void set_cloud_intersection_shader(shader_t &s);
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
 bool no_sparse_smap_update();
 bool use_water_plane_tess();
+bool enable_ocean_waves();
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -734,10 +735,12 @@ void set_water_plane_uniforms(shader_t &s) {
 }
 
 
-void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth, colorRGBA const &color, colorRGBA const &rcolor) {
-
-	if (no_specular) {s.set_prefix("#define NO_SPECULAR",     1);} // FS
-	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH", 1);} // FS
+void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth,
+	bool depth_only, colorRGBA const &color, colorRGBA const &rcolor)
+{
+	if (no_specular) {s.set_prefix("#define NO_SPECULAR",      1);} // FS
+	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH",  1);} // FS
+	if (depth_only)  {s.set_prefix("#define WRITE_DEPTH_ONLY", 1);} // FS
 	s.setup_enabled_lights(2, 2); // FS
 	setup_tt_fog_pre(s);
 	bool const use_foam(!water_is_lava);
@@ -749,6 +752,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.set_bool_prefix("is_lava",          water_is_lava, 1); // FS
 	
 	if (use_water_plane_tess()) { // tessellation shaders
+		s.set_prefix("#define TESS_MODE", 1); // FS
 		s.set_vert_shader("texture_gen.part+water_plane_tess");
 		s.set_tess_control_shader("water_plane");
 		s.set_tess_eval_shader("water_plane"); // draw calls need to use GL_PATCHES instead of GL_TRIANGLES
@@ -804,7 +808,6 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		water_yoff -= wind.y*wwspeed;
 		wave_time  += fticks*(water_is_lava ? 0.75 : 1.0);
 	}
-	point const camera(get_camera_pos());
 	enable_blend();
 	colorRGBA rcolor;
 	set_active_texture(0);
@@ -818,21 +821,42 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		rcolor = cur_fog_color;
 		//blend_color(rcolor, bkg_color, get_cloud_color(), 0.75, 1);
 	}
-	bool const add_waves((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);
-	bool const rain_mode(add_waves && !water_is_lava && is_rain_enabled() /*&& !underwater*/);
+	bool const add_waves(enable_ocean_waves());
+	bool const camera_underwater(get_camera_pos().z < zval);
+	bool const rain_mode(add_waves && !water_is_lava && is_rain_enabled() /*&& !camera_underwater*/);
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	shader_t s;
-	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, color, rcolor); // use_depth=1
-	s.add_uniform_float("normal_z", ((camera.z < zval) ? -1.0 : 1.0));
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
+
+	if (use_water_plane_tess()) {
+		glCullFace(camera_underwater ? GL_FRONT : GL_BACK);
+		glEnable(GL_CULL_FACE);
+
+		// first path with depth only, so that we can remove water behind other water
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
+		setup_water_plane_shader(s, 0, 0, 0, 0, 0, 1, WHITE, WHITE); // depth_only=1
+		draw_tiled_terrain_water(s, zval);
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+		// second pass with colors only
+		glDepthMask(GL_FALSE); // no depth writing
+		s.end_shader();
+	}
+	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, 0, color, rcolor); // depth_only=0, use_depth=1
+	s.add_uniform_float("normal_z", (camera_underwater ? -1.0 : 1.0));
 	s.set_cur_color(WHITE);
 	draw_tiled_terrain_water(s, zval);
 	glDepthFunc(GL_LESS);
 	s.end_shader();
 
+	if (use_water_plane_tess()) {
+		glDepthMask(GL_TRUE);
+		glDisable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+	}
 	if ((display_mode & 0x10) && camera_pdu.far_ > 1.1*FAR_CLIP) { // camera is high above the mesh (Enable when extended mesh is drawn)
 		// FIXME: changes apparent water color, only draw the area not covered by tiles (somehow)?
-		setup_water_plane_shader(s, no_specular, reflections, add_waves, 0, 0, color, rcolor); // rain_mode=0, use_depth=0
+		setup_water_plane_shader(s, no_specular, reflections, add_waves, 0, 0, 0, color, rcolor); // rain_mode=0, use_depth=0
 		indexed_mesh_draw<vert_wrap_t> imd;
 		float const size(camera_pdu.far_*SQRT2);
 		imd.render_z_plane(-size, -size, size, size, (zval - SMALL_NUMBER), 8, 8); // 8x8 grid

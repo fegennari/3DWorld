@@ -44,6 +44,7 @@ extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_m
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP;
 extern point sun_pos, moon_pos, surface_pos;
+extern vector3d wind;
 extern water_params_t water_params;
 extern char *mh_filename_tt;
 extern float h_dirt[];
@@ -73,7 +74,8 @@ bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool nonunif_fog_enabled  () {return (show_fog && (display_mode & 0x10) != 0);}
-bool use_water_plane_tess () {return (cloud_model == 1);} // hack to use cloud_model (F10)
+bool enable_ocean_waves   () {return ((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);}
+bool use_water_plane_tess () {return (enable_ocean_waves() && cloud_model == 0);} // hack to use cloud_model (F10)
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
 float get_tt_cloud_level  () {return 0.5*(get_tt_fog_bot() + get_tt_fog_top());}
@@ -1944,16 +1946,8 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
 void tile_draw_t::draw_water(shader_t &s, float zval) const {
 
-	if (use_water_plane_tess()) {
-		glCullFace((get_camera_pos().z < zval) ? GL_FRONT : GL_BACK);
-		glEnable(GL_CULL_FACE);
-	}
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		i->second->draw_water(s, zval);
-	}
-	if (use_water_plane_tess()) {
-		glDisable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
 	}
 }
 

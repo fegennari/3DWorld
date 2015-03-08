@@ -5,6 +5,9 @@ uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_
 
 in vec4 epos, proj_pos;
 in vec2 tc, tc2;
+#ifdef TESS_MODE
+in float water_zval;
+#endif
 
 vec3 water_normal_lookup(in vec2 wtc) {
 	return 2.0*(texture(water_normal_tex, 0.5*wtc).rgb - 0.5);
@@ -31,9 +34,17 @@ void main()
 {
 #ifdef USE_WATER_DEPTH // else we assume water is neither too shallow nor too deep
 	float mesh_z = texture(height_tex, tc2).r;
+#ifdef TESS_MODE
+	float depth  = water_zval - mesh_z;
+#else
 	float depth  = water_plane_z - mesh_z;
-	if (depth <= 0.0) discard;
 #endif
+	if (depth <= 0.0) discard;
+#endif // USE_WATER_DEPTH
+
+#ifdef WRITE_DEPTH_ONLY
+	fg_FragColor = vec4(1.0);
+#else // !WRITE_DEPTH_ONLY
 	vec3 norm   = normal_z*fg_NormalMatrix[2]; // eye space (+/- z in world space)
 	//norm = normalize(vec3(dot(normalize(dFdx(epos.xyz)), norm), dot(normalize(dFdy(epos.xyz)), norm), 1.0));
 	//vec3 norm = normalize(fg_NormalMatrix * (normal_z * vec3(dFdx(dz), dFdy(dz), 0.001)));
@@ -93,7 +104,6 @@ void main()
 		vec4 reflect_tex = vec4(texture(reflection_tex, ref_tex_st).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);
 	}
-
 #ifdef USE_WATER_DEPTH
 	if (use_foam) {
 		// foam texture near shore (what about is_lava?)
@@ -101,9 +111,9 @@ void main()
 		color = mix(color, texture(foam_tex, 25.0*tc), foam_amt);
 	}
 #endif
-
 	// determine final color with fog
 	color.rgb   += add_color;
 	fg_FragColor = vec4(color.rgb * lighting.rgb, color.a * gl_Color.a); // use gl_Color alpha directly
 	fg_FragColor = apply_fog_epos(fg_FragColor, epos);
+#endif // WRITE_DEPTH_ONLY
 }
