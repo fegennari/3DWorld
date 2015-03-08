@@ -1,8 +1,8 @@
+uniform float normal_z = 1.0;
 uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
 
-in vec3 normal;
 in vec4 epos, proj_pos;
 in vec2 tc, tc2;
 
@@ -34,7 +34,7 @@ void main()
 	float depth  = water_plane_z - mesh_z;
 	if (depth <= 0.0) discard;
 #endif
-	vec3 norm   = normalize(normal); // renormalize
+	vec3 norm   = normal_z*fg_NormalMatrix[2]; // +/- z in world space
 	vec2 ripple = vec2(0,0);
 	vec3 add_color = vec3(0);
 	float foam_amt = 0.0;
@@ -69,9 +69,9 @@ void main()
 	}
 
 	// calculate lighting
-	vec3 epos_n   = normalize(epos.xyz);
+	vec3 epos_n          = normalize(epos.xyz);
 	float cos_view_angle = abs(dot(epos_n, norm));
-	vec4 color    = water_color;
+	vec4 color           = water_color;
 #ifdef USE_WATER_DEPTH
 	if (!is_lava) {color.a *= mix(1.0, clamp(20.0*depth, 0.0, 1.0), min(1.0, 2.5*cos_view_angle));} // blend to alpha=0 near the shore
 #endif
