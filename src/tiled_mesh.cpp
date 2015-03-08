@@ -1292,9 +1292,9 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 bool tile_t::is_water_visible() const {
 	return (!is_distant && has_water() && get_rel_dist_to_camera() < DRAW_DIST_TILES && is_visible());
 }
-
 void tile_t::draw_water(shader_t &s, float z) const {
 
+	if (!is_water_visible()) return;
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
 	bind_texture_tu(height_tid, 2);
 	draw_one_tquad(xv1, yv1, xv2, yv2, z, (use_water_plane_tess() ? GL_PATCHES : GL_TRIANGLE_FAN));
@@ -1945,23 +1945,15 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 void tile_draw_t::draw_water(shader_t &s, float zval) const {
 
 	if (use_water_plane_tess()) {
-		point const camera(get_camera_pos());
-		vector<pair<float, tile_t *> > water_to_draw;
-
-		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-			if (i->second->is_water_visible()) {water_to_draw.push_back(make_pair(-p2p_dist_sq(camera, i->second->get_center()), i->second.get()));}
-		}
-		sort(water_to_draw.begin(), water_to_draw.end()); // back to front so that alpha blending works
-		glCullFace((camera.z < zval) ? GL_FRONT : GL_BACK);
+		glCullFace((get_camera_pos().z < zval) ? GL_FRONT : GL_BACK);
 		glEnable(GL_CULL_FACE);
-		for (auto i = water_to_draw.begin(); i != water_to_draw.end(); ++i) {i->second->draw_water(s, zval);}
+	}
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		i->second->draw_water(s, zval);
+	}
+	if (use_water_plane_tess()) {
 		glDisable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
-	}
-	else {
-		for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-			if (i->second->is_water_visible()) {i->second->draw_water(s, zval);}
-		}
 	}
 }
 
