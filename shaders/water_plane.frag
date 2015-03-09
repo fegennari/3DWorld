@@ -7,6 +7,7 @@ in vec4 epos, proj_pos;
 in vec2 tc, tc2;
 #ifdef TESS_MODE
 in float water_zval;
+in vec3 normal;
 #endif
 
 vec3 water_normal_lookup(in vec2 wtc) {
@@ -45,11 +46,13 @@ void main()
 #ifdef WRITE_DEPTH_ONLY
 	fg_FragColor = vec4(1.0);
 #else // !WRITE_DEPTH_ONLY
-	vec3 norm   = normal_z*fg_NormalMatrix[2]; // eye space (+/- z in world space)
-	//norm = normalize(vec3(dot(normalize(dFdx(epos.xyz)), norm), dot(normalize(dFdy(epos.xyz)), norm), 1.0));
-	//vec3 norm = normalize(fg_NormalMatrix * (normal_z * vec3(dFdx(dz), dFdy(dz), 0.001)));
-	//if (dot(epos.xyz, norm) > 0.0) discard; // back facing
-	vec2 ripple = vec2(0,0);
+
+#ifdef TESS_MODE
+	vec3 norm = normalize(normal);
+#else
+	vec3 norm = normal_z*fg_NormalMatrix[2]; // eye space (+/- z in world space)
+#endif // TESS_MODE
+	vec2 ripple    = vec2(0,0);
 	vec3 add_color = vec3(0);
 	float foam_amt = 0.0;
 
