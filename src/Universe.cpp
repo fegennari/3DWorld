@@ -278,7 +278,7 @@ public:
 			string vert_shader_str(proc_detail_vs ? "procedural_planet.part*+planet_draw_procedural" : "planet_draw");
 			if (has_tess_shader()) {vert_shader_str += "_tess";}
 			set_vert_shader(vert_shader_str);
-			set_frag_shader(frag_shader_str+"+procedural_planet.part*+planet_draw");
+			set_frag_shader(frag_shader_str+"+fresnel.part*+procedural_planet.part*+planet_draw");
 			shared_setup();
 			add_uniform_int("cloud_noise_tex", noise_tu_id);
 			add_uniform_int("ring_tex",        2);

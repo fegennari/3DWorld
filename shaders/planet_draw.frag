@@ -53,7 +53,7 @@ vec3 calc_cloud_coord(in vec3 cloud_vertex) {
 
 void main()
 {
-	vec4 epos = fg_ModelViewMatrix * vec4(vertex, 1.0);
+	vec4 epos        = fg_ModelViewMatrix * vec4(vertex, 1.0);
 	vec3 norm        = normal;
 	float city_light = 0.0;
 	float spec_mag   = 0.0;
@@ -265,6 +265,7 @@ void main()
 #ifndef GAS_GIANT
 	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
 	float specval  = pow(max(dot(norm, half_vect), 0.0), get_shininess());
+	specval       *= min(1.0, 20.0*get_fresnel_reflection(-epos_norm, norm, 1.0, 1.333)); // water/ice fresnel reflection (heavily biased)
 	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * spec_mag * sscale;
 
 	if (lava_val > 0.0) {
