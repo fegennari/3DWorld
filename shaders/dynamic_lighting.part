@@ -32,13 +32,14 @@ float get_line_intensity_at(in vec3 pos, in vec3 lpos1, in vec3 lpos2, in float 
 
 //float get_sphere_intensity_at(in vec3 pos, in vec3 lpos, in float sradius, in float radius) {}
 
-vec3 add_dlights_bm_scaled(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale) {
-	vec3 color = vec3(0.0);
+void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale) {
 #ifndef NO_DYNAMIC_LIGHTS
 
 #if defined(USE_BUMP_MAP_DL) && !defined(BUMP_MAP_CUSTOM)
 	mat3 TBN = get_tbn(1.0);
 #endif
+	const float gamma = 2.2;
+	vec3 dl_color = vec3(0.0);
 
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
 	uint gb_ix  = texture(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
@@ -94,7 +95,7 @@ vec3 add_dlights_bm_scaled(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in
 #else
 		vec3 lnorm     = nscale*apply_bump_map_for_tbn(light_dir, eye_pos, TBN);
 #endif // BUMP_MAP_CUSTOM
-		eye_pos        = -eye_pos; // ???
+		if (dot(eye_pos, lnorm) < 0.0) {eye_pos = -eye_pos;} // better, but still not completely correct
 		float n_dot_l  = mix(dot(normal, orig_ldir), dot(lnorm, light_dir), bump_map_normal_scale);
 #else // !USE_BUMP_MAP_DL
 		vec3 lnorm     = normal;
@@ -111,10 +112,13 @@ vec3 add_dlights_bm_scaled(in vec3 dlpos, in vec3 normal, in vec3 diff_color, in
 #ifdef USE_SPEC_MAP
 		spec_color    *= get_spec_color();
 #endif
-		color += lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
+		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
+		dl_color += pow(add_color, vec3(gamma)); // add in linear space
 	}
-#endif
-	return min(color, 1.0);
+	color  = pow(color, vec3(gamma)); // to linear space
+	color += min(dl_color, 1.0); // add dlights color
+	color  = pow(color, vec3(1.0/gamma)); // back to normal color space
+#endif // NO_DYNAMIC_LIGHTS
 }
 
-vec3 add_dlights(in vec3 dlpos, in vec3 normal, in vec3 diff_color) {return add_dlights_bm_scaled(dlpos, normal, diff_color, 1.0);}
+void add_dlights(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color) {add_dlights_bm_scaled(color, dlpos, normal, diff_color, 1.0);}

@@ -34,7 +34,7 @@ void main()
 	if (enable_light1) {lit_color += add_mesh_light1(eye_norm, epos).rgb;}
 	lit_color  = clamp(lit_color, 0.0, 1.0);
 	add_indir_lighting(lit_color);
-	if (enable_dlights) {lit_color.rgb += add_dlights(vpos, normalize(normal), vec3(1.0));} // dynamic lighting
+	if (enable_dlights) {add_dlights(lit_color.rgb, vpos, normalize(normal), vec3(1.0));} // dynamic lighting
 	lit_color *= texture(tex0, tc).rgb;
 
 #ifdef MULT_DETAIL_TEXTURE // for mesh

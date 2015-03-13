@@ -21,8 +21,8 @@ void calc_leaf_lighting()
 	if (enable_light2) color += add_pt_light_comp  (normalize(normal), eye_space_pos, 2).rgb; // lightning
 
 	if (enable_dlights) {
-		vec3 vpos  = fg_Vertex.xyz + world_space_offset;
-		color += add_dlights(vpos, nscale*normalize(fg_Normal), vec3(1.0)).rgb;
+		vec3 vpos = fg_Vertex.xyz + world_space_offset;
+		add_dlights(color, vpos, nscale*normalize(fg_Normal), vec3(1.0));
 	}
 	fg_Color_vf     = vec4(min(2.0*fg_Color.rgb, clamp(color*color_scale.rgb, 0.0, 1.0)), 1.0); // limit lightning color
 	gl_FogFragCoord = length(eye_space_pos.xyz);

@@ -78,7 +78,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 #ifdef SMOKE_DLIGHTS
 		if (enable_dlights) { // dynamic lighting
 			vec3 dl_pos  = pos*scene_scale + scene_llc;
-			tex_val.rgb += add_dlights_bm_scaled(dl_pos, norm_dir, vec3(1.0), 0.0); // normal points from vertex to eye, override bump mapping, color is applied later
+			add_dlights_bm_scaled(tex_val.rgb, dl_pos, norm_dir, vec3(1.0), 0.0); // normal points from vertex to eye, override bump mapping, color is applied later
 		}
 #endif // SMOKE_DLIGHTS
 #ifdef SMOKE_SHADOW_MAP
@@ -169,9 +169,7 @@ void main()
 		if (enable_light6) ADD_LIGHT(6);
 		if (enable_light7) ADD_LIGHT(7);
 	}
-	if (enable_dlights) {
-		lit_color += add_dlights(vpos, normalize(normal_sign*normal), gl_Color.rgb); // dynamic lighting
-	}
+	if (enable_dlights) {add_dlights(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb);} // dynamic lighting
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
 
