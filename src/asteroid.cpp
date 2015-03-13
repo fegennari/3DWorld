@@ -1142,7 +1142,9 @@ void uasteroid_cont::draw(point_d const &pos_, point const &camera, shader_t &s,
 	if (!pld.empty()) {
 		end_texture();
 		s.set_attrib_float_array(loc, fgGetMVM().get_ptr(), 16);
+		set_multisample(0);
 		pld.draw();
+		set_multisample(1);
 	}
 }
 
