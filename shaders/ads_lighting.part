@@ -17,7 +17,8 @@ uniform fg_light_t fg_LightSource[MAX_LIGHTS];
 
 float get_spec_intensity(in vec3 normal, in vec3 half_vect) {
 	float n   = get_shininess();
-	float mag = pow(clamp(dot(normal, half_vect), 0.0001, 1.0), n);
+	float dp  = dot(normal, half_vect);
+	float mag = ((dp < 0.001) ? 0.0 : pow(min(dp, 1.0), n));
 	mag      *= 0.0166*(n + 8.0); // normalize for exponent of 60; normalization should be (n+8)/(8*pi);
 	return mag;
 }
