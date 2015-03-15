@@ -32,6 +32,10 @@ float get_line_intensity_at(in vec3 pos, in vec3 lpos1, in vec3 lpos2, in float 
 
 //float get_sphere_intensity_at(in vec3 pos, in vec3 lpos, in float sradius, in float radius) {}
 
+vec3 apply_power_signed(in vec3 val, in float n) {
+	return sign(val)*pow(abs(val), vec3(n)); // preserve the sign
+}
+
 void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale) {
 #ifndef NO_DYNAMIC_LIGHTS
 
@@ -113,11 +117,11 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		spec_color    *= get_spec_color();
 #endif
 		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
-		dl_color += pow(add_color, vec3(gamma)); // add in linear space
+		dl_color += apply_power_signed(add_color, gamma); // add in linear space
 	}
-	color  = pow(color, vec3(gamma)); // to linear space
-	color += min(dl_color, 1.0); // add dlights color
-	color  = pow(color, vec3(1.0/gamma)); // back to normal color space
+	color  = apply_power_signed(color, gamma); // to linear space
+	color += gamma*min(dl_color, 1.0); // add dlights color
+	color  = apply_power_signed(color, 1.0/gamma); // back to normal color space
 #endif // NO_DYNAMIC_LIGHTS
 }
 
