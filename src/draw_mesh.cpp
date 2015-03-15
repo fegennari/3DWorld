@@ -266,6 +266,7 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 	if (cloud_shadows) {s.set_prefix("#define ENABLE_CLOUD_SHADOWS", 1);} // FS
 	setup_detail_normal_map_prefix(s, detail_normal_map);
 	s.set_bool_prefix("indir_lighting", indir_lighting, 1); // FS
+	s.set_bool_prefix("hemi_lighting",  0, 1); // FS (disabled)
 	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
 	s.set_vert_shader("texture_gen.part+draw_mesh");
 	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+indir_lighting.part+linear_fog.part+detail_normal_map.part+cloud_sphere_shadow.part+draw_mesh");

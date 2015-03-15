@@ -210,6 +210,7 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
 void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, bool &indir_lighting, float min_alpha) {
 
+	bool const hemi_lighting(!have_indir_smoke_tex);
 	use_shadow_map &= shadow_map_enabled();
 	indir_lighting &= have_indir_smoke_tex;
 	dlights        &= (dl_tid > 0 && has_dl_sources);
@@ -217,6 +218,7 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	if (min_alpha == 0.0)  {s.set_prefix("#define NO_ALPHA_TEST",     1);} // FS
 	if (dynamic_smap_bias) {s.set_prefix("#define DYNAMIC_SMAP_BIAS", 1);} // FS
 	s.set_bool_prefix("indir_lighting", indir_lighting, 1); // FS
+	s.set_bool_prefix("hemi_lighting",  hemi_lighting,  1); // FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
 	set_dlights_booleans(s, dlights, 1); // FS
 }
@@ -232,6 +234,11 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 	colorRGB const indir_color((have_indir_smoke_tex && world_mode == WMODE_GROUND) ? colorRGB(0.0, 0.0, 0.0) : const_indir_color);
 	s.add_uniform_color("const_indir_color", indir_color);
 	s.add_uniform_float("ambient_scale", (use_indir ? 0.0 : 1.0)); // ambient handled by indirect lighting in the shader
+
+	// hemispherical lighting
+	s.add_uniform_color("sky_color", colorRGB(bkg_color));
+	select_multitex(LANDSCAPE_TEX, 12, 1);
+	s.add_uniform_int("ground_tex", 12);
 }
 
 
@@ -294,7 +301,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 }
 
 
-// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask, 11: noise
+// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask, 11: noise, 12: ground texture
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 // use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
@@ -364,7 +371,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 }
 
 
-// texture units used: 0,8,15: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9: AO texture, 10: voxel shadow texture, 11: normal map texture
+// texture units used: 0,8,15: object texture, 1: indir lighting texture, 2-4: dynamic lighting, 5: 3D noise texture, 6-7: shadow map, 9: AO texture, 10: voxel shadow texture, 11: normal map texture, 12: ground texture
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_bmap,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
