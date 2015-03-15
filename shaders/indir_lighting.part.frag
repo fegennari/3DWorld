@@ -13,8 +13,8 @@ vec3 indir_lookup(in vec3 pos) {
 }
 
 void add_indir_lighting(inout vec3 lit_color) {
-	lit_color += gl_Color.rgb * const_indir_color; // add constant indir
-	
+	vec3 indir_color = const_indir_color; // add constant indir
+
 	if (indir_lighting) {
 #ifdef USE_BUMP_MAP_INDIR // USE_BUMP_MAP must also be set
 		vec3 n_eye = inverse(get_tbn(1.0)) * get_bump_map_normal(); // convert tangent space to eye space
@@ -24,7 +24,8 @@ void add_indir_lighting(inout vec3 lit_color) {
 #endif
 		vec3 spos = vpos + (indir_vert_offset*half_dxy)*n; // move slightly away from the vertex
 		vec3 indir_light = indir_lookup(spos);
-		//indir_light = pow(indir_light, vec3(0.45)); // gamma correction
-		lit_color += gl_Color.rgb * indir_light; // indirect lighting
+		//indir_light    = pow(indir_light, vec3(0.45)); // gamma correction
+		indir_color     += indir_light; // indirect lighting
 	}
+	lit_color += gl_Color.rgb * indir_color;
 }
