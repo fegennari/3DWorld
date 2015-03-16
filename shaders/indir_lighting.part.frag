@@ -29,10 +29,11 @@ void add_indir_lighting(inout vec3 lit_color) {
 		vec3 spos = vpos + (indir_vert_offset*half_dxy)*n; // move slightly away from the vertex
 
 		if (hemi_lighting) {
+			float sky_lum   = max(sky_color, vec3(0.33)); // or use indir_color?
 			spos            = clamp((spos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
-			vec3 gnd_color  = texture(ground_tex, spos.xy).rgb; // FIXME: use textureLod(), which requires landscape texture mipmaps
+			vec3 gnd_color  = sky_lum*textureLod(ground_tex, spos.xy, 4).rgb; // use 4th LOD mipmap (64x64)
 			vec3 hemi_color = mix(gnd_color, sky_color, (0.5*normal.z + 0.5));
-			indir_color     = mix(indir_color, hemi_color, 0.5); // blend between the two
+			indir_color     = mix(indir_color, hemi_color, 0.75); // blend between the two
 		}
 		if (indir_lighting) {
 			vec3 indir_light = indir_lookup(spos);

@@ -22,7 +22,7 @@ float const ADJ_VALUE             = 1.0;
 float const LS_TEX_ANISO          = 2.0; // value of anisotropic texture filtering for landscape source textures
 
 bool const RELOAD_TEX_ON_HOLE  = 0;
-bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update requires mipmap updates
+bool const LANDSCAPE_MIPMAP    = 1; // looks better, but texture update requires mipmap updates
 bool const SHOW_TEXTURE_MEMORY = 0;
 bool const COMPRESS_TEXTURES   = 1;
 bool const CHECK_FOR_LUM       = 1;
@@ -1422,10 +1422,7 @@ void texture_t::update_texture_data(int x1, int y1, int x2, int y2) {
 	check_init();
 	bind_gl();
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), calc_format(), GL_UNSIGNED_BYTE, data);
-
-	if (LANDSCAPE_MIPMAP) {
-		// FIXME: WRITE
-	}
+	if (LANDSCAPE_MIPMAP) {gen_mipmaps(2);} // update mipmaps if needed (non-sparse)
 }
 
 

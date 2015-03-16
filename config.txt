@@ -65,7 +65,7 @@ unlimited_weapons 0
 crater_size 1.0
 crater_radius 4.0
 
-mesh_size  128 128 64
+mesh_size  128 128 0
 scene_size 4.0 4.0 4.0
 
 mesh_start_mag 0.02
