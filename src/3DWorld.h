@@ -1187,6 +1187,7 @@ public:
 	void gen_rand_texture(unsigned char val, unsigned char a_add=0, unsigned a_rand=256);
 	void load_from_gl();
 	void deferred_load_and_bind();
+	void update_texture_data(int x1, int y1, int x2, int y2);
 	int write_to_jpg(std::string const &fn) const;
 	int write_to_bmp(std::string const &fn) const;
 	int write_to_png(std::string const &fn) const;

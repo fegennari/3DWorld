@@ -22,7 +22,7 @@ float const ADJ_VALUE             = 1.0;
 float const LS_TEX_ANISO          = 2.0; // value of anisotropic texture filtering for landscape source textures
 
 bool const RELOAD_TEX_ON_HOLE  = 0;
-bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update doesn't recompute the mipmaps
+bool const LANDSCAPE_MIPMAP    = 0; // looks better, but texture update requires mipmap updates
 bool const SHOW_TEXTURE_MEMORY = 0;
 bool const COMPRESS_TEXTURES   = 1;
 bool const CHECK_FOR_LUM       = 1;
@@ -1145,10 +1145,10 @@ unsigned get_noise_tex_3d(unsigned tsize, unsigned ncomp) {
 
 colorRGBA get_landscape_texture_color(int xpos, int ypos) {
 
-	if (cached_ls_colors.empty()) cached_ls_colors.resize(XY_MULT_SIZE, ALPHA0);
+	if (cached_ls_colors.empty()) {cached_ls_colors.resize(XY_MULT_SIZE, ALPHA0);}
 	unsigned const ix(xpos + MESH_X_SIZE*ypos);
 	assert(ix < cached_ls_colors.size());
-	if (cached_ls_colors[ix].alpha != 0.0) return cached_ls_colors[ix];
+	if (cached_ls_colors[ix].alpha != 0.0) {return cached_ls_colors[ix];}
 	assert(!point_outside_mesh(xpos, ypos));
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	assert(tex.ncolors == 3);
@@ -1199,12 +1199,17 @@ void get_tids(float relh, int NTEXm1, float const *const h_tex, int &k1, int &k2
 }
 
 
+void clear_cached_ls_colors() {
+	for (auto i = cached_ls_colors.begin(); i != cached_ls_colors.end(); ++i) {*i = ALPHA0;}
+}
+
+
 // multiple resolution texture passes?
 void create_landscape_texture() {
 
 	RESET_TIME;
 	if (using_custom_landscape_texture() || world_mode == WMODE_INF_TERRAIN) return;
-	cached_ls_colors.clear();
+	clear_cached_ls_colors();
 	int tox0(0), toy0(0), scroll(0);
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	int const width(tex.width), height(tex.height);
@@ -1362,14 +1367,65 @@ void create_landscape_texture() {
 		}
 	}
 	if (scrolling) { // supposedly more efficient
-		tex.bind_gl();
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, tex.calc_format(), GL_UNSIGNED_BYTE, tex_data);
+		tex.update_texture_data(0, 0, width, height);
 	}
 	else {
 		tex.gl_delete(); // should we try to update rather than recreating from scratch?
 		tex.do_gl_init();
 	}
 	PRINT_TIME(" Gen Landscape Texture");
+}
+
+
+inline int get_align(int x1, int x2, unsigned am) {
+	return ((1 + am - ((x2 - x1) & am)) & am);
+}
+
+void texture_t::update_texture_data(int x1, int y1, int x2, int y2) {
+
+	if (x1 == x2 || y1 == y2) return; // nothing to update
+	assert(ncolors == 3 && width > 0 && height > 0 && is_allocated());
+
+	if (!(x1 < x2 && y1 < y2 && x1 >= 0 && y1 >= 0 && x2 <= width && y2 <= height)) {
+		cout << "x1 = " << x1 << ", y1 = " << y1 << ", x2 = " << x2 << ", y2 = " << y2 << endl;
+		assert(0);
+	}
+	unsigned const align(4), am(align - 1);
+
+	if (am > 0) { // force 4-byte alignment
+		int xadd(get_align(x1, x2, am));
+		x2   = min((x2 + xadd), width);
+		xadd = get_align(x1, x2, am);
+		x1   = max((x1 - xadd), 0);
+		assert(((x2 - x1) & am) == 0);
+	}
+	int const offset(ncolors*(x1 + y1*width));
+	unsigned char const *data(get_data() + offset);
+	vector<unsigned char> copy;
+
+	if ((x1 > 0 || x2 < width) && (y2 - y1) > 1) { // copy data if more than one row
+		if ((x2 - x1) > width/2) { // just copy the entire strip
+			x1 = 0;
+			x2 = width;
+		}
+		else { // compact into a single contiguous block of memory
+			unsigned const cw(ncolors*(x2 - x1));
+			copy.resize(cw*(y2 - y1));
+			unsigned char *ptr(&copy.front());
+
+			for (int i = 0; i < (y2 - y1); ++i) {
+				memcpy((ptr + cw*i), (data + ncolors*i*width), cw*sizeof(unsigned char));
+			}
+			data = ptr;
+		}
+	}
+	check_init();
+	bind_gl();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), calc_format(), GL_UNSIGNED_BYTE, data);
+
+	if (LANDSCAPE_MIPMAP) {
+		// FIXME: WRITE
+	}
 }
 
 
@@ -1399,9 +1455,7 @@ void regrow_landscape_texture_amt0() {
 	}
 	++counter;
 	skip_regrow = 0;
-	check_init_texture(LANDSCAPE_TEX);
-	tex.bind_gl();
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, y1, tex.width, (y2-y1), GL_RGB, GL_UNSIGNED_BYTE, (tex_data + 3*tex.width*y1));
+	tex.update_texture_data(0, y1, tex.width, y2);
 	//PRINT_TIME("Regrow");
 }
 
@@ -1434,7 +1488,7 @@ float add_crater_to_landscape_texture(float xval, float yval, float radius) {
 		}
 	}
 	lchanged0 = 1;
-	cached_ls_colors.clear();
+	clear_cached_ls_colors();
 	update_lt_section(x1, y1, x2+1, y2+1);
 	return get_rel_height(mesh_height[ypos][xpos], zmin, zmax);
 }
@@ -1590,58 +1644,12 @@ void update_landscape_texture() {
 }
 
 
-inline int get_align(int x1, int x2, unsigned am) {
-
-	return ((1 + am - ((x2 - x1) & am)) & am);
-}
-
-
 void update_lt_section(int x1, int y1, int x2, int y2) {
 
 	//RESET_TIME;
 	if (x1 == x2 || y1 == y2) return;
 	assert(!using_custom_landscape_texture());
-	texture_t const &t1(textures[LANDSCAPE_TEX]);
-	unsigned const nc(t1.ncolors);
-	int const width(t1.width), height(t1.height);
-	assert(nc == 3 && width > 0 && height > 0 && t1.is_allocated());
-
-	if (!(x1 < x2 && y1 < y2 && x1 >= 0 && y1 >= 0 && x2 <= width && y2 <= height)) {
-		cout << "x1 = " << x1 << ", y1 = " << y1 << ", x2 = " << x2 << ", y2 = " << y2 << endl;
-		assert(0);
-	}
-	unsigned const align(4), am(align - 1);
-
-	if (am > 0) { // force 4-byte alignment
-		int xadd(get_align(x1, x2, am));
-		x2   = min((x2 + xadd), width);
-		xadd = get_align(x1, x2, am);
-		x1   = max((x1 - xadd), 0);
-		assert(((x2 - x1) & am) == 0);
-	}
-	int const offset(nc*(x1 + y1*width));
-	unsigned char const *data(t1.get_data() + offset);
-	unsigned char *copy(NULL);
-
-	if ((x1 > 0 || x2 < width) && (y2 - y1) > 1) { // copy data if more than one row
-		if ((x2 - x1) > width/2) { // just copy the entire strip
-			x1 = 0;
-			x2 = width;
-		}
-		else {
-			unsigned const cw(nc*(x2 - x1));
-			copy = new unsigned char[cw*(y2 - y1)];
-
-			for (int i = 0; i < (y2 - y1); ++i) {
-				memcpy((copy + cw*i), (data + nc*i*width), cw*sizeof(unsigned char));
-			}
-			data = copy;
-		}
-	}
-	check_init_texture(LANDSCAPE_TEX);
-	t1.bind_gl();
-	glTexSubImage2D(GL_TEXTURE_2D, 0, x1, y1, (x2-x1), (y2-y1), t1.calc_format(), GL_UNSIGNED_BYTE, data);
-	delete [] copy;
+	textures[LANDSCAPE_TEX].update_texture_data(x1, y1, x2, y2);
 	//PRINT_TIME("LT Update");
 }
 

@@ -545,6 +545,7 @@ void draw_sides_and_bottom(bool shadow_pass) {
 		vert_wrap_t const bverts[4] = {point(x1, y1, botz), point(x1, y2, botz), point(x2, y2, botz), point(x2, y1, botz)};
 		draw_verts(bverts, 4, GL_TRIANGLE_FAN); // bottom
 		vector<vert_wrap_t> verts;
+		verts.reserve(2*max(MESH_X_SIZE, MESH_Y_SIZE));
 
 		for (unsigned d = 0; d < 2; ++d) {
 			float const xlimit(d ? x2 : x1), ylimit(d ? y2 : y1);
