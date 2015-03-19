@@ -112,16 +112,13 @@ template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) con
 	bool npass(0), fpass(0); // near, far
 
 	for (unsigned i = 0; i < N && !npass; ++i) {
-		npass = (dot_product(dir, vector3d(pts[i], pos)) > near_);
+		float const dp(dot_product(dir, vector3d(pts[i], pos)));
+		npass = (dp > near_);
+		fpass = (dp < far_);
 	}
-	if (!npass) return 0;
-
-	for (unsigned i = 0; i < N && !fpass; ++i) {
-		fpass = (dot_product(dir, vector3d(pts[i], pos)) < far_);
-	}
-	if (!fpass) return 0;
-	vector3d const v[2] = {upv_,  cp};
-	float    const a[2] = {sterm, x_sterm};
+	if (!npass || !fpass) return 0;
+	vector3d const v [2] = {upv_, cp};
+	float    const aa[2] = {sterm*sterm, x_sterm*x_sterm};
 
 	for (unsigned xy = 0; xy < 2; ++xy) { // y, x
 		for (unsigned d = 0; d < 2; ++d) { // lo, hi
@@ -131,7 +128,7 @@ template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) con
 			for (unsigned i = 0; i < N && !pass; ++i) {
 				vector3d const pv(pts[i], pos);
 				float const dp(w*dot_product(v[xy], pv));
-				pass = (dp <= 0.0 || dp <= a[xy]*pv.mag());
+				pass = (dp <= 0.0 || dp*dp <= aa[xy]*pv.mag_sq());
 			}
 			if (!pass) return 0;
 		}

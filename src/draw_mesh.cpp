@@ -337,9 +337,9 @@ public:
 		}
 		for (unsigned p = 0; p < 2; ++p, ++c) {
 			int const iinc(min((MESH_Y_SIZE-1), int(i+p)));
-			assert(c < data.size());
+			//assert(c < data.size());
 			data[c].v.assign(x, (y + p*DY_VAL), mesh_height[iinc][j]);
-			assert(unsigned(j) < last_rows.size());
+			//assert(unsigned(j) < last_rows.size());
 		
 			if (last_rows[j].ix == iinc) { // gets here nearly half the time
 				data[c].n = last_rows[j].n;
