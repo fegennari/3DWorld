@@ -290,7 +290,7 @@ protected:
 		color_wrapper c;
 		int ix;
 		norm_color_ix() : ix(-1) {}
-		norm_color_ix(vert_norm_color const &vnc, int ix_) : n(vnc.n), c(vnc), ix(ix_) {}
+		void assign(vert_norm_color const &vnc, int ix_) {n = vnc.n; c = vnc; ix = ix_;}
 	};
 
 	vector<vert_norm_color> data;
@@ -347,7 +347,7 @@ public:
 			}
 			else {
 				update_vertex(iinc, j);
-				last_rows[j] = norm_color_ix(data[c], iinc);
+				last_rows[j].assign(data[c], iinc);
 			}
 		}
 		return 1;

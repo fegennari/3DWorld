@@ -296,9 +296,10 @@ void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm 
 
 	for (unsigned S = 0; S <= (unsigned)ndiv; ++S) { // Note: always has tex coords
 		unsigned const s(S%ndiv), vix(2*S + ixoff);
+		float const ts(1.0 - S*ndiv_inv);
 		vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-		verts[vix+0] = create_vert(vpn.p[(s<<1)+0]+xlate, normal, (1.0 - S*ndiv_inv), 0.0, two_sided_lighting);
-		verts[vix+1] = create_vert(vpn.p[(s<<1)+1]+xlate, normal, (1.0 - S*ndiv_inv), tex_scale_len, two_sided_lighting);
+		verts[vix+0] = create_vert(vpn.p[(s<<1)+0]+xlate, normal, ts, 0.0, two_sided_lighting);
+		verts[vix+1] = create_vert(vpn.p[(s<<1)+1]+xlate, normal, ts, tex_scale_len, two_sided_lighting);
 	}
 	if (prev_strip) { // connect previous strip to current strip with degenerate triangles
 		verts[ixoff-2] = verts[ixoff-3];

@@ -337,12 +337,12 @@ void free_obj::advance_time(float timestep) {
 	if (dvel != zero_vector) {
 		velocity += dvel; // collision velocity
 		dvel      = zero_vector;
-		assert(!is_nan(velocity));
+		//assert(!is_nan(velocity));
 	}
 	UNROLL_3X(if (fabs(velocity[i_]) < TOLERANCE) {velocity[i_] = 0.0;}) // fix for denormalized numbers?
 	//if (is_ship() && !is_player_ship()) {velocity = zero_vector;} // testing
 	pos += velocity*timestep;
-	assert(!is_nan(pos));
+	//assert(!is_nan(pos));
 
 	if (rot_rate != 0.0) { // apply rotation
 		if (fabs(rot_rate) < 1.0E-6) {

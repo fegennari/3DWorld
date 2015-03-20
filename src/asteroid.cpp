@@ -416,10 +416,11 @@ public:
 		int llc[3], urc[3];
 		model.get_xyz(bcube.get_llc(), llc);
 		model.get_xyz(bcube.get_urc(), urc);
+		int const x_end(min(int(model.nx)-1, urc[0])), y_end(min(int(model.ny)-1, urc[1])), z_end(min(int(model.nz)-1, urc[2]));
 
-		for (int y = max(0, llc[1]); y <= min(int(model.ny)-1, urc[1]); ++y) {
-			for (int x = max(0, llc[0]); x <= min(int(model.nx)-1, urc[0]); ++x) {
-				for (int z = max(0, llc[2]); z <= min(int(model.nz)-1, urc[2]); ++z) {
+		for (int y = max(0, llc[1]); y <= y_end; ++y) {
+			for (int x = max(0, llc[0]); x <= x_end; ++x) {
+				for (int z = max(0, llc[2]); z <= z_end; ++z) {
 					point p(model.get_pt_at(x, y, z));
 					if (!dist_less_than(p, center, sphere_radius) || model.is_outside(model.get_ix(x, y, z))) continue;
 					xform_point_inv(p); // local to global
@@ -427,7 +428,6 @@ public:
 
 					for (cobj_vector_t::const_iterator c = cobjs.begin(); c != cobjs.end(); ++c) {
 						assert(*c);
-						
 						if ((*c)->sphere_intersect(p, sr, p_last, ip.p_int, ip.norm, ip.calc_int)) {
 							if (ip.calc_int) {
 								ship->xform_point_inv(ip.p_int);

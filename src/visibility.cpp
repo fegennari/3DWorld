@@ -111,7 +111,7 @@ template<unsigned N> bool pos_dir_up::pt_set_visible(point const *const pts) con
 
 	bool npass(0), fpass(0); // near, far
 
-	for (unsigned i = 0; i < N && !npass; ++i) {
+	for (unsigned i = 0; i < N && (!npass || !fpass); ++i) {
 		float const dp(dot_product(dir, vector3d(pts[i], pos)));
 		npass = (dp > near_);
 		fpass = (dp < far_);

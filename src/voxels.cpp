@@ -881,11 +881,11 @@ bool voxel_manager::sphere_intersect(point const &center, float radius, point *i
 	for (int y = llc[1]; y <= urc[1]; ++y) {
 		for (int x = llc[0]; x <= urc[0]; ++x) {
 			unsigned const xy_offset((x + y*nx)*nz);
+			point p(get_pt_at(x, y, llc[2]));
 
 			for (int z = llc[2]; z <= urc[2]; ++z) {
-				if (is_outside(xy_offset+z)) continue;
-				point const p(get_pt_at(x, y, z));
-				if (!dist_less_than(p, center, radius)) continue;
+				p.z += vsz.z;
+				if (is_outside(xy_offset+z) || !dist_less_than(p, center, radius)) continue;
 				if (int_pt) {*int_pt = p;}
 				return 1;
 			}
