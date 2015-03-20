@@ -682,7 +682,7 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 	for (unsigned y = 0; y < stride; ++y) {
 		for (unsigned x = 0; x < stride; ++x) {
 			unsigned const ix(y*stride + x), ix2(y*zvsize + x);
-			vector3d const norm(get_norm(y*zvsize + x));
+			vector3d const norm(get_norm(ix2));
 			min_normal_z = min(min_normal_z, norm.z);
 			UNROLL_2X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));); // Note: we only set x and y here, z is calculated in the shader
 			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
@@ -861,7 +861,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					}
 				} // end grass
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
-					weight_data[off+i] = (unsigned char)(255.0*CLIP_TO_01(weights[i]));
+					weight_data[off+i] = (weights[i] ? (unsigned char)(255.0*CLIP_TO_01(weights[i])) : 0);
 				}
 			} // for x
 		} // for y

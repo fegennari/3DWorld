@@ -648,9 +648,10 @@ void draw_stars(float alpha) {
 	glDisable(GL_DEPTH_TEST);
 	point_sprite_drawer psd;
 	psd.reserve_pts(stars.size());
+	rand_gen_t rgen;
 
 	for (unsigned i = 0; i < stars.size(); ++i) {
-		if ((rand()%400) == 0) continue; // flicker out
+		if ((rgen.rand()%400) == 0) continue; // flicker out
 
 		for (unsigned j = 0; j < 3; ++j) {
 			float const c(stars[i].color[j]*stars[i].intensity);

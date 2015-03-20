@@ -720,6 +720,17 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	gen_mode  = (force_sine_mode ? 0 : mesh_gen_mode );
 	gen_shape = (force_sine_mode ? 0 : mesh_gen_shape);
 	cached_vals.clear();
+
+	if (gen_mode == 3) { // GPU simplex noise - always cache values
+		//RESET_TIME;
+		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
+		float rx, ry;
+		gen_rx_ry(rx, ry);
+		gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, /*zscale*/1.0, rx, ry, cur_nx, cur_ny, gen_shape);
+		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
+		//PRINT_TIME("GPU Height");
+		return; // done
+	}
 	xterms.resize(nx*F_TABLE_SIZE, 0.0);
 	yterms.resize(ny*F_TABLE_SIZE, 0.0);
 	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale), msz_inv(1.0/mesh_scale_z);
@@ -739,16 +750,7 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 			yterms[i*F_TABLE_SIZE+k] = y_scale*sin_val;
 		}
 	}
-	if (gen_mode == 3) { // GPU simplex noise - always cache values
-		//RESET_TIME;
-		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
-		float rx, ry;
-		gen_rx_ry(rx, ry);
-		gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, /*zscale*/1.0, rx, ry, cur_nx, cur_ny, gen_shape);
-		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
-		//PRINT_TIME("GPU Height");
-	}
-	else if (cache_values) {
+	if (cache_values) {
 		cached_vals.resize(cur_nx*cur_ny);
 		
 		#pragma omp parallel for schedule(static,1)
@@ -797,13 +799,13 @@ float get_noise_zval(float xval, float yval, int mode, int shape) {
 float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, int min_start_sin, bool use_cache) const {
 
 	assert(x < cur_nx && y < cur_ny);
-	float const xval((x*mdx + mx0)*DX_VAL_INV), yval((y*mdy + my0)*DY_VAL_INV); // Note: is it okay to always calculate these?
 	float zval(0.0);
 
 	if ((use_cache || gen_mode == 3) && !cached_vals.empty()) {
 		zval += cached_vals[y*cur_nx + x];
 	}
 	else if (gen_mode > 0) { // perlin/simplex
+		float const xval((x*mdx + mx0)*DX_VAL_INV), yval((y*mdy + my0)*DY_VAL_INV);
 		zval += get_noise_zval(xval, yval, gen_mode, gen_shape);
 	}
 	else { // sine tables
@@ -812,7 +814,10 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 		for (int i = max(start_eval_sin, min_start_sin); i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
 		apply_noise_shape_final(zval, gen_shape);
 	}
-	if (glaciate) {apply_glaciate_and_sine(zval, xval, yval);}
+	if (glaciate) {
+		float const xval((x*mdx + mx0)*DX_VAL_INV), yval((y*mdy + my0)*DY_VAL_INV);
+		apply_glaciate_and_sine(zval, xval, yval);
+	}
 	return zval;
 }
 
