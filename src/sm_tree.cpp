@@ -579,6 +579,7 @@ small_tree::small_tree(point const &p, unsigned instance_id) {
 	float const tsize(calc_tree_size());
 	width  *= tsize;
 	height *= tsize;
+	trunk_cylin = get_trunk_cylin();
 }
 
 
@@ -620,6 +621,7 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 	default: assert(0);
 	}
 	color.alpha = 1.0;
+	trunk_cylin = get_trunk_cylin();
 }
 
 
@@ -662,7 +664,7 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 		cp.tid       = stt[type].leaf_tid;
 		cp_trunk.tid = stt[type].bark_tid;
 	}
-	if (type != T_BUSH && type != T_SH_PINE) {coll_id.push_back(add_coll_cylinder(get_trunk_cylin(), cp_trunk, -1, 1));}
+	if (type != T_BUSH && type != T_SH_PINE) {coll_id.push_back(add_coll_cylinder(trunk_cylin, cp_trunk, -1, 1));}
 	vector3d const dirh(get_rot_dir()*height);
 
 	switch (type) {
@@ -700,7 +702,7 @@ void small_tree::remove_cobjs() {
 bool small_tree::check_sphere_coll(point &center, float radius) const {
 
 	if (type == T_BUSH) return 0; // no trunk, not yet handled
-	return sphere_vert_cylin_intersect(center, radius, get_trunk_cylin());
+	return sphere_vert_cylin_intersect(center, radius, trunk_cylin);
 }
 
 
@@ -708,7 +710,7 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 
 	assert(is_pine_tree()); // Note: can work on other tree types, but it's more complex, and we only need pine trees in tiled terrain mode
 	vector3d const dirh(get_rot_dir()*height);
-	cylinder_3dw const cylins[2] = {get_trunk_cylin(), cylinder_3dw((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0)};
+	cylinder_3dw const cylins[2] = {trunk_cylin, cylinder_3dw((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0)};
 	bool coll(0);
 	
 	for (unsigned i = 0; i < 2; ++i) {
@@ -819,34 +821,33 @@ void small_tree::draw_branches(bool shadow_only, vector3d const &xlate, vector<v
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size_scale(zoom_f*stt[type].ss*width*window_width);
 	float const dist(distance_to_camera(pos + xlate));
 	if (!shadow_only && size_scale < dist) return; // too small/far
-	cylinder_3dw const cylin(get_trunk_cylin()); // cache in the tree?
 
-	if (!shadow_only && LINE_THRESH*zoom_f*(cylin.r1 + cylin.r2) < dist) { // draw as line
-		point const p2((cylin.r2 == 0.0) ? (0.2*cylin.p1 + 0.8*cylin.p2) : cylin.p2);
+	if (!shadow_only && LINE_THRESH*zoom_f*(trunk_cylin.r1 + trunk_cylin.r2) < dist) { // draw as line
+		point const p2((trunk_cylin.r2 == 0.0) ? (0.2*trunk_cylin.p1 + 0.8*trunk_cylin.p2) : trunk_cylin.p2);
 				
 		if (points) {
-			points->push_back(cylin.p1 + xlate);
+			points->push_back(trunk_cylin.p1 + xlate);
 			points->push_back(p2 + xlate);
 		}
 		else {
-			tree_scenery_pld.add_textured_line(cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
+			tree_scenery_pld.add_textured_line(trunk_cylin.p1+xlate, p2+xlate, bark_color, stt[type].bark_tid);
 		}
 	}
 	else { // draw as cylinder
 		int const nsides(max(3, min(N_CYL_SIDES, int(0.25*size_scale/dist))));
 
 		if (cylin_verts && is_pine_tree()) {
-			assert(cylin.r2 == 0.0); // cone
-			point const ce[2] = {cylin.p1, cylin.p2};
+			assert(trunk_cylin.r2 == 0.0); // cone
+			point const ce[2] = {trunk_cylin.p1, trunk_cylin.p2};
 			vector3d v12;
-			gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, cylin.r1, cylin.r2, nsides, v12));
+			gen_cone_triangles(*cylin_verts, gen_cylinder_data(ce, trunk_cylin.r1, trunk_cylin.r2, nsides, v12));
 		}
 		else {
 			if (!shadow_only) {
 				bark_color.set_for_cur_shader();
 				select_texture(stt[type].bark_tid);
 			}
-			draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, nsides, !shadow_only);
+			draw_fast_cylinder(trunk_cylin.p1, trunk_cylin.p2, trunk_cylin.r1, trunk_cylin.r2, nsides, !shadow_only);
 		}
 	}
 }
