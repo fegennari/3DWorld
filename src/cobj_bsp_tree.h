@@ -36,7 +36,7 @@ protected:
 		vector<tree_node> const &nodes;
 
 		node_ix_mgr(vector<tree_node> const &nodes_, point const &p1_, point const &p2_)
-			: nodes(nodes_), p1(p1_), p2(p2_), dinv(p2 - p1) {dinv.invert(0, 1);}
+			: nodes(nodes_), p1(p1_), p2(p2_), dinv(p2 - p1) {dinv.invert();}
 		bool check_node(unsigned &nix) const;
 	};
 

@@ -79,7 +79,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 					float line_length, int ignore_cobj, int ltype, unsigned depth, rand_gen_t &rgen)
 {
 	if (depth > MAX_RAY_BOUNCES) return;
-	assert(!is_nan(p1) && !is_nan(p2));
+	//assert(!is_nan(p1) && !is_nan(p2));
 	++tot_rays;
 
 	// find intersection point with scene cobjs

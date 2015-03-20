@@ -516,9 +516,7 @@ int line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1
 	double M[3][3];
 
 	for (unsigned i = 0; i < 3; ++i) {
-		for (unsigned j = 0; j < 3; ++j) {
-			M[i][j] = A[i]*A[j];
-		}
+		UNROLL_3X(M[i][i_] = A[i]*A[i_];)
 		M[i][i] -= g*g;
 	}
 	vector3d Md, MD;

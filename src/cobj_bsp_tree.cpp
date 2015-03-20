@@ -274,7 +274,7 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 			cpos = p1 + (p2 - p1)*t;
 			if (!exact) return 1; // return first hit
 			nixm.dinv = vector3d(cpos - p1);
-			nixm.dinv.invert(0, 1);
+			nixm.dinv.invert();
 			tmax = t;
 			ret  = 1;
 		}
@@ -436,7 +436,7 @@ bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpo
 			if (!exact && test_alpha != 2) return 1; // return first hit
 			max_alpha = c.cp.color.alpha; // we need all intersections to find the max alpha
 			nixm.dinv = vector3d(cpos - p1);
-			nixm.dinv.invert(0, 1);
+			nixm.dinv.invert();
 			tmax = t;
 			ret  = 1;
 		}

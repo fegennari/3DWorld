@@ -248,15 +248,10 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	}
 	void negate() {x = -x; y = -y; z = -z;}
 
-	void invert(bool err_div_0, bool fix_div_0) {
-		if (err_div_0) {
-			assert(x != 0.0 && y != 0.0 && z != 0.0);
-		}
-		else if (fix_div_0) {
-			if (x == 0.0) x = TOLERANCE;
-			if (y == 0.0) y = TOLERANCE;
-			if (z == 0.0) z = TOLERANCE;
-		}
+	void invert() {
+		if (x == 0.0) {x = TOLERANCE;}
+		if (y == 0.0) {y = TOLERANCE;}
+		if (z == 0.0) {z = TOLERANCE;}
 		x = 1.0/x; y = 1.0/y; z = 1.0/z;
 	}
 	pointT get_norm() const {

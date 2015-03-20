@@ -64,7 +64,7 @@ bool mesh_intersector::line_int_surface_cached() {
 bool mesh_intersector::line_intersect_surface() {
 
 	if (fast + FAST_VIS_CALC >= 3) return line_intersect_surface_fast();
-	if (bspt) return bspt->search(v1, v2, ret);
+	if (bspt) {return bspt->search(v1, v2, ret);}
 	if (!check_iter_clip(fast + FAST_VIS_CALC >= 1)) return 0;
 	int x1(get_xpos(v1.x)), y1(get_ypos(v1.y)), x2(get_xpos(v2.x)), y2(get_ypos(v2.y));
 	int &xpos(ret.xpos), &ypos(ret.ypos);
@@ -365,19 +365,17 @@ bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, uns
 
 	assert(level <= nlevels);
 	unsigned bs[2];
-	for (unsigned i = 0; i < 2; ++i) bs[i] = ((nlevels-level+(i^unsigned(!dir0))) >> 1);
-	unsigned const xy[2] = {x, y};
+	for (unsigned i = 0; i < 2; ++i) {bs[i] = ((nlevels-level+(i^unsigned(!dir0))) >> 1);}
+	unsigned const xscale(MESH_SIZE[0] >> ((nlevels>>1) - bs[0])), yscale(MESH_SIZE[1] >> ((nlevels>>1) - bs[1]));
 	unsigned const xsize(MESH_X_SIZE >> bs[0]);
 	bsp_tree_node const &node(tree[level][y*xsize + x]);
-	float const DVAL[2] = {DX_VAL, DY_VAL}; // should put these in the header
 	float d[3][2];
-
-	for (unsigned i = 0; i < 2; ++i) {
-		unsigned const scale(MESH_SIZE[i] >> ((nlevels>>1) - bs[i]));
-		d[i][0] = get_dim_val(xy[i]*scale, i); // xy1
-		d[i][1] = d[i][0] + DVAL[i]*scale;     // xy2
-		d[2][i] = node.z[i]; // z
-	}
+	d[0][0] = get_xval(x*xscale); // x1
+	d[1][0] = get_yval(y*yscale); // y1
+	d[0][1] = d[0][0] + DX_VAL*xscale; // x2
+	d[1][1] = d[1][0] + DY_VAL*yscale; // y2
+	d[2][0] = node.z[0]; // z1
+	d[2][1] = node.z[1]; // z2
 	if (!do_line_clip(v1, v2, d)) return 0;
 
 	if (level == nlevels) { // base case - at a leaf, now verify plane intersection
