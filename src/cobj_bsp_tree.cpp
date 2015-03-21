@@ -93,22 +93,23 @@ bool cobj_tree_base::check_for_leaf(unsigned num, unsigned skip_dims) {
 }
 
 
-#define TEST_CLIP_T2(va, vb, dinv, is_neg) \
-	float const t((va - vb)*dinv); \
-	 if (is_neg) {if (t < tmax) tmax = t;} else {if (t > tmin) tmin = t;} \
-	 if (tmin < tmax) {
-
 // performance critical
 template<bool xneg, bool yneg, bool zneg> bool get_line_clip(point const &p1, vector3d const &dinv, float const d[3][2]) {
 
 	float tmin(0.0), tmax(1.0);
-	TEST_CLIP_T2(d[0][0], p1.x, dinv.x,  xneg); // -x plane
-	TEST_CLIP_T2(d[0][1], p1.x, dinv.x, !xneg); // +x plane
-	TEST_CLIP_T2(d[1][0], p1.y, dinv.y,  yneg); // -y plane
-	TEST_CLIP_T2(d[1][1], p1.y, dinv.y, !yneg); // +y plane
-	TEST_CLIP_T2(d[2][0], p1.z, dinv.z,  zneg); // -z plane
-	TEST_CLIP_T2(d[2][1], p1.z, dinv.z, !zneg); // +z plane
-	return 1;}}}}}}
+	float const t1((d[0][xneg] - p1.x)*dinv.x), t2((d[0][!xneg] - p1.x)*dinv.x);
+	if (t2 < tmax) {tmax = t2;} if (t1 > tmin) {tmin = t1;}
+
+	if (tmin < tmax) {
+		float const t1((d[1][yneg] - p1.y)*dinv.y), t2((d[1][!yneg] - p1.y)*dinv.y);
+		if (t2 < tmax) {tmax = t2;} if (t1 > tmin) {tmin = t1;}
+
+		if (tmin < tmax) {
+			float const t1((d[2][zneg] - p1.z)*dinv.z), t2((d[2][!zneg] - p1.z)*dinv.z);
+			if (t2 < tmax) {tmax = t2;} if (t1 > tmin) {tmin = t1;}
+			if (tmin < tmax) {return 1;}
+		}
+	}
 	return 0;
 }
 
