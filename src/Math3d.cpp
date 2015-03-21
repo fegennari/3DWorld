@@ -903,12 +903,6 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 		if (tmin >= tmax) return 0; \
 	}
 
-#define TEST_CLIP_T2(va, vb, dinv, vcinv) \
-	{float const t((va - vb)*dinv); \
-	 if (vcinv > 0.0) {if (t > tmin) tmin = t;} else {if (t < tmax) tmax = t;} \
-	 if (tmin >= tmax) return 0;}
-
-
 // performance critical
 bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float &tmin, float &tmax) {
 
@@ -925,19 +919,6 @@ bool get_line_clip(point const &v1, point const &v2, float const d[3][2], float 
 	TEST_CLIP_T(0x08, d[1][1], v1.y, dv.y, -dv.y); // +y plane
 	TEST_CLIP_T(0x10, d[2][0], v1.z, dv.z,  dv.z); // -z plane
 	TEST_CLIP_T(0x20, d[2][1], v1.z, dv.z, -dv.z); // +z plane
-	return 1;
-}
-
-
-bool get_line_clip2(point const &v1, vector3d const &dinv, float const d[3][2]) {
-
-	float tmin(0.0), tmax(1.0);
-	TEST_CLIP_T2(d[0][0], v1.x, dinv.x,  dinv.x); // -x plane
-	TEST_CLIP_T2(d[0][1], v1.x, dinv.x, -dinv.x); // +x plane
-	TEST_CLIP_T2(d[1][0], v1.y, dinv.y,  dinv.y); // -y plane
-	TEST_CLIP_T2(d[1][1], v1.y, dinv.y, -dinv.y); // +y plane
-	TEST_CLIP_T2(d[2][0], v1.z, dinv.z,  dinv.z); // -z plane
-	TEST_CLIP_T2(d[2][1], v1.z, dinv.z, -dinv.z); // +z plane
 	return 1;
 }
 
