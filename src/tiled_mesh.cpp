@@ -801,13 +801,13 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
 					get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, &t);
 				}
-				float const vnz(get_norm(ix).z);
 				float weight_scale(1.0);
 				bool const grass(lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == GROUND_TEX), snow(lttex_dirt[k2].id == SNOW_TEX);
 				has_any_grass |= grass;
 
 				if (grass || snow) {
 					float const *const sti(sthresh[snow]);
+					float const vnz(get_norm(ix).z);
 
 					if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
 						if (grass) { // ground/grass
@@ -1085,7 +1085,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 			for (unsigned yy = y*GRASS_BLOCK_SZ; yy <= (y+1)*GRASS_BLOCK_SZ && back_facing; ++yy) {
 				for (unsigned xx = x*GRASS_BLOCK_SZ; xx <= (x+1)*GRASS_BLOCK_SZ && back_facing; ++xx) {
 					unsigned const ix(yy*zvsize + xx);
-					back_facing &= (dot_product(get_norm(ix), (adj_camera - point(llcx+xx*deltax, llcy+yy*deltay, zvals[ix]))) < 0.0);
+					back_facing &= (dot_product(get_norm_not_normalized(ix), (adj_camera - point(llcx+xx*deltax, llcy+yy*deltay, zvals[ix]))) < 0.0);
 				}
 			}
 			if (back_facing) continue;

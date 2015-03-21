@@ -306,12 +306,11 @@ class mesh_shadow_gen {
 	unsigned char *smask;
 	float const *sh_in_x, *sh_in_y;
 	float *sh_out_x, *sh_out_y;
+	float dist;
 	int xsize, ysize;
 	vector3d dir;
 
 	void trace_shadow_path(point v1) {
-		assert(smask != NULL);
-		float const dist(2.0*XY_SUM_SIZE/sqrt(dir.x*dir.x + dir.y*dir.y));
 		point v2(v1 + vector3d(dir.x*dist, dir.y*dist, 0.0));
 		float const d[3][2] = {{-X_SCENE_SIZE, get_xval(xsize)}, {-Y_SCENE_SIZE, get_yval(ysize)}, {zmin, zmax}};
 		if (!do_line_clip(v1, v2, d)) return; // edge case ([zmin, zmax] should contain 0.0)
@@ -323,8 +322,8 @@ class mesh_shadow_gen {
 		bool inited(0);
 		point cur(all_zeros);
 		int xstart(0), ystart(0), xend(xsize-1), yend(ysize-1);
-		if (dir.x <= 0.0) swap(xstart, xend);
-		if (dir.y <= 0.0) swap(ystart, yend);
+		if (dir.x <= 0.0) {swap(xstart, xend);}
+		if (dir.y <= 0.0) {swap(ystart, yend);}
 
 		for (int k = 0; ; ++k) { // DDA algorithm
 			int const xp((int)x), yp((int)y);
@@ -338,11 +337,11 @@ class mesh_shadow_gen {
 
 				// use starting shadow height value
 				if (sh_in_y != NULL && xp == xstart && sh_in_y[yp] > MESH_MIN_Z) {
-					cur    = point(pt.x, pt.y, sh_in_y[yp]);
+					cur.assign(pt.x, pt.y, sh_in_y[yp]);
 					inited = 1;
 				}
 				else if (sh_in_x != NULL && yp == ystart && sh_in_x[xp] > MESH_MIN_Z) {
-					cur    = point(pt.x, pt.y, sh_in_x[xp]);
+					cur.assign(pt.x, pt.y, sh_in_x[xp]);
 					inited = 1;
 				}
 				float const shadow_z((pt[dim] - cur[dim])*dir_ratio + cur.z);
@@ -350,20 +349,16 @@ class mesh_shadow_gen {
 				if (inited && shadow_z > pt.z) { // shadowed
 					smask[yp*xsize+xp] |= MESH_SHADOW;
 					// set ending shadow height value
-					if (sh_out_y != NULL && xp == xend) sh_out_y[yp] = shadow_z;
-					if (sh_out_x != NULL && yp == yend) sh_out_x[xp] = shadow_z;
+					if (sh_out_y != NULL && xp == xend) {sh_out_y[yp] = shadow_z;}
+					if (sh_out_x != NULL && yp == yend) {sh_out_x[xp] = shadow_z;}
 				}
-				else {
-					cur = pt; // update point
-				}
+				else {cur = pt;} // update point
 				inited = 1;
 			}
-			else if (k > steps) {
-				break;
-			}
+			else if (k > steps) {break;}
 			x += xinc;
 			y += yinc;
-		}
+		} // for k
 	}
 
 public:
@@ -373,7 +368,9 @@ public:
 	}
 
 	void run(point const &lpos) { // assumes light source directional/at infinity
-		dir = (all_zeros - lpos).get_norm();
+		assert(smask != NULL);
+		dir  = (all_zeros - lpos).get_norm();
+		dist = 2.0*XY_SUM_SIZE/sqrt(dir.x*dir.x + dir.y*dir.y);
 		#pragma omp parallel sections num_threads(2)
 		{
 			#pragma omp section

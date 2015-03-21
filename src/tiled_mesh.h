@@ -211,8 +211,11 @@ public:
 	void invalidate_shadows() {shadows_invalid = 1;}
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
 
+	vector3d get_norm_not_normalized(unsigned ix) const {
+		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy);
+	}
 	vector3d get_norm(unsigned ix) const {
-		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy).get_norm();
+		return get_norm_not_normalized(ix).get_norm();
 	}
 
 	// *** shadows ***

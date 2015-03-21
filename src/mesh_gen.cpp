@@ -736,16 +736,17 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale), msz_inv(1.0/mesh_scale_z);
 
 	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
-		float const x_const(ms2*sinTable[k][4] + sinTable[k][2]), y_const(ms2*sinTable[k][3] + sinTable[k][1]);
 		float const x_mult(msx*sinTable[k][4]), y_mult(msy*sinTable[k][3]), y_scale(msz_inv*sinTable[k][0]);
+		float const x_const(ms2*sinTable[k][4] + sinTable[k][2] + x_mult*x0), y_const(ms2*sinTable[k][3] + sinTable[k][1] + y_mult*y0);
+		float const xmdx(x_mult*dx), ymdy(y_mult*dy);
 
 		for (unsigned i = 0; i < nx; ++i) {
-			float sin_val(SINF(x_mult*(x0 + i*dx) + x_const));
+			float sin_val(SINF(xmdx*i + x_const));
 			//apply_noise_shape_per_term(sin_val, gen_shape);
 			xterms[i*F_TABLE_SIZE+k] = sin_val;
 		}
 		for (unsigned i = 0; i < ny; ++i) {
-			float sin_val(SINF(y_mult*(y0 + i*dy) + y_const));
+			float sin_val(SINF(ymdy*i + y_const));
 			//apply_noise_shape_per_term(sin_val, gen_shape);
 			yterms[i*F_TABLE_SIZE+k] = y_scale*sin_val;
 		}
