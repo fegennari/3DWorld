@@ -332,19 +332,19 @@ mesh_bsp_tree::mesh_bsp_tree() {
 				}
 			}
 			assert(mzmin <= mzmax);
-			leaves[y*MESH_X_SIZE + x].assign(mzmin-tolerance, mzmax+tolerance);
+			leaves[y*MESH_X_SIZE + x].c = cube_t(get_xval(x), get_xval(x+1), get_yval(y), get_yval(y+1), mzmin-tolerance, mzmax+tolerance);
 		}
 	}
 	bool const inv(!bool(nlevels&1));
 
 	// fill in higher levels bottom up
 	for (int level = nlevels-1; level >= 0; --level) {
-		unsigned const xsize(MESH_X_SIZE >> ((nlevels-level+!(dir0^inv)) >> 1));
-		unsigned const ysize(MESH_Y_SIZE >> ((nlevels-level+ (dir0^inv)) >> 1));
+		unsigned const bsx((nlevels-level+!(dir0^inv)) >> 1), bsy((nlevels-level+(dir0^inv)) >> 1);
+		unsigned const xsize(MESH_X_SIZE >> bsx), ysize(MESH_Y_SIZE >> bsy);
 		unsigned const last_size((xsize*ysize) << 1);
 		unsigned const dim(bool(level&1) ^ dir0 ^ inv), delta(dim ? xsize : 1); // either one scanline from the previous level or 1
 		assert(xsize > 0 && ysize > 0);
-		if (level == 0) assert(xsize == 1 && ysize == 1);
+		if (level == 0) {assert(xsize == 1 && ysize == 1);}
 		bsp_tree_node const *last_level(tree[level+1]);
 		bsp_tree_node *cur_level(tree[level]);
 
@@ -354,7 +354,9 @@ mesh_bsp_tree::mesh_bsp_tree() {
 			for (unsigned x = 0; x < xsize; ++x) {
 				unsigned const src_ix((yoff<<1) + (x<<(dim^1)));
 				assert((src_ix + delta) < last_size);
-				cur_level[yoff + x].merge(last_level[src_ix], last_level[src_ix + delta]);
+				bsp_tree_node &cur(cur_level[yoff + x]);
+				cur.c = last_level[src_ix].c;
+				cur.c.union_with_cube(last_level[src_ix + delta].c);
 			}
 		}
 	}
@@ -364,22 +366,12 @@ mesh_bsp_tree::mesh_bsp_tree() {
 bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, unsigned level, mesh_query_ret &ret) const { // recursive
 
 	assert(level <= nlevels);
-	unsigned bs[2];
-	for (unsigned i = 0; i < 2; ++i) {bs[i] = ((nlevels-level+(i^unsigned(!dir0))) >> 1);}
-	unsigned const xscale(MESH_SIZE[0] >> ((nlevels>>1) - bs[0])), yscale(MESH_SIZE[1] >> ((nlevels>>1) - bs[1]));
-	unsigned const xsize(MESH_X_SIZE >> bs[0]);
-	bsp_tree_node const &node(tree[level][y*xsize + x]);
-	float d[3][2];
-	d[0][0] = get_xval(x*xscale); // x1
-	d[1][0] = get_yval(y*yscale); // y1
-	d[0][1] = d[0][0] + DX_VAL*xscale; // x2
-	d[1][1] = d[1][0] + DY_VAL*yscale; // y2
-	d[2][0] = node.z[0]; // z1
-	d[2][1] = node.z[1]; // z2
-	if (!do_line_clip(v1, v2, d)) return 0;
+	unsigned const xsize(MESH_X_SIZE >> ((nlevels-level+unsigned(!dir0)) >> 1));
+	if (!do_line_clip(v1, v2, tree[level][y*xsize + x].c.d)) return 0;
 
 	if (level == nlevels) { // base case - at a leaf, now verify plane intersection
 		assert(x < unsigned(MESH_X_SIZE) && y < unsigned(MESH_Y_SIZE));
+		if (mesh_draw != nullptr && !mesh_draw[y][x]) return 0;
 		mesh_intersector intersector(v1, v2, 0);
 		if (!intersector.intersect_mesh_quad(x, y)) return 0; // use the intersector's line-plane intersection function
 		ret.zval = intersector.get_ret().zval;

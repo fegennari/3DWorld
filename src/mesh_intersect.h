@@ -8,22 +8,8 @@
 
 
 struct bsp_tree_node {
-
-	float z[2];
-	bsp_tree_node() {clear();}
-	void assign(float z1_, float z2_) {z[0] = z1_; z[1] = z2_;}
-
-	void z_union(bsp_tree_node const &n) {
-		z[0] = min(z[0], n.z[0]);
-		z[1] = max(z[1], n.z[1]);
-	}
-	void merge(bsp_tree_node const &n1, bsp_tree_node const &n2) {
-		z[0] = min(n1.z[0], n2.z[0]);
-		z[1] = max(n1.z[1], n2.z[1]);
-	}
-	void clear() {z[0] = z[1] = 0.0;}
+	cube_t c;
 };
-
 
 struct mesh_query_ret {
 	int xpos, ypos;
