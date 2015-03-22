@@ -731,8 +731,8 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 		//PRINT_TIME("GPU Height");
 		return; // done
 	}
-	xterms.resize(nx*F_TABLE_SIZE, 0.0);
-	yterms.resize(ny*F_TABLE_SIZE, 0.0);
+	yterms_start = nx*F_TABLE_SIZE;
+	xyterms.resize((nx + ny)*F_TABLE_SIZE, 0.0);
 	float const msx(mesh_scale*DX_VAL_INV), msy(mesh_scale*DY_VAL_INV), ms2(0.5*mesh_scale), msz_inv(1.0/mesh_scale_z);
 
 	for (int k = start_eval_sin; k < F_TABLE_SIZE; ++k) {
@@ -743,12 +743,12 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 		for (unsigned i = 0; i < nx; ++i) {
 			float sin_val(SINF(xmdx*i + x_const));
 			//apply_noise_shape_per_term(sin_val, gen_shape);
-			xterms[i*F_TABLE_SIZE+k] = sin_val;
+			xyterms[i*F_TABLE_SIZE+k] = sin_val;
 		}
 		for (unsigned i = 0; i < ny; ++i) {
 			float sin_val(SINF(ymdy*i + y_const));
 			//apply_noise_shape_per_term(sin_val, gen_shape);
-			yterms[i*F_TABLE_SIZE+k] = y_scale*sin_val;
+			xyterms[yterms_start + i*F_TABLE_SIZE+k] = y_scale*sin_val;
 		}
 	}
 	if (cache_values) {
@@ -810,8 +810,8 @@ float mesh_xy_grid_cache_t::eval_index(unsigned x, unsigned y, bool glaciate, in
 		zval += get_noise_zval(xval, yval, gen_mode, gen_shape);
 	}
 	else { // sine tables
-		float const *const xptr(&xterms.front() + x*F_TABLE_SIZE);
-		float const *const yptr(&yterms.front() + y*F_TABLE_SIZE);
+		float const *const xptr(&xyterms.front() + x*F_TABLE_SIZE);
+		float const *const yptr(&xyterms.front() + yterms_start + y*F_TABLE_SIZE);
 		for (int i = max(start_eval_sin, min_start_sin); i < F_TABLE_SIZE; ++i) {zval += xptr[i]*yptr[i];} // performance critical
 		apply_noise_shape_final(zval, gen_shape);
 	}

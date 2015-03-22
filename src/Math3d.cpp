@@ -1021,20 +1021,10 @@ unsigned get_cube_corners(float const d[3][2], point corners[8], point const &vi
 
 void get_closest_cube_norm(float const d[3][2], point const &p, vector3d &norm) {
 
-	float dmin(0.0);
-	unsigned dim(0), dir(0);
-
-	for (unsigned i = 0; i < 3; ++i) { // determine cube first side of intersection
-		for (unsigned j = 0; j < 2; ++j) {
-			float const dist(fabs(p[i] - d[i][j]));
-			
-			if ((i == 0 && j == 0) || dist < dmin) {
-				dmin = dist;
-				dim  = i;
-				dir  = j;
-			}
-		}
-	}
+	unsigned dim(2), dir(0);
+	float dmin(fabs(p[2] - d[2][0]));
+	UNROLL_2X({float const dist(fabs(p[i_] - d[i_][0])); if (dist < dmin) {dmin = dist; dim = i_;}})
+	UNROLL_3X({float const dist(fabs(p[i_] - d[i_][1])); if (dist < dmin) {dmin = dist; dim = i_; dir = 1;}})
 	norm      = all_zeros;
 	norm[dim] = (dir ? 1.0 : -1.0);
 }

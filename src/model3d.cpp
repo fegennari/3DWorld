@@ -176,7 +176,7 @@ template<typename T> void indexed_vntc_vect_t<T>::subdiv_recur(vector<unsigned> 
 	point const &v0(at(ixs.front()).v);
 	cube_t bc(v0, v0);
 	
-	for (vector<unsigned>::const_iterator i = ixs.begin(); i != ixs.end(); ++i) {
+	for (vector<unsigned>::const_iterator i = ixs.begin()+1; i != ixs.end(); ++i) {
 		bc.union_with_pt(at(*i).v); // update bounding cube
 	}
 	if (num > BLOCK_SIZE) { // subdiv case
