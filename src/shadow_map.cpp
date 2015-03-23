@@ -118,7 +118,7 @@ xform_matrix get_texture_matrix(xform_matrix const &camera_mv_matrix) {
 }
 
 
-void smap_data_t::free_gl_state() {
+void smap_data_state_t::free_gl_state() {
 	free_texture(tid);
 	free_fbo(fbo_id);
 }

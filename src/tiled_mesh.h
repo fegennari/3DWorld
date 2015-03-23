@@ -76,9 +76,20 @@ struct tile_smap_data_t : public smap_data_t {
 	int dxoff, dyoff;
 	tile_t *tile;
 
-	tile_smap_data_t(unsigned tu_id_, tile_t *tile_) : smap_data_t(tu_id_), dxoff(0), dyoff(0), tile(tile_) {}
+	tile_smap_data_t(unsigned tu_id_, tile_t *tile_, smap_data_state_t const &init_state=smap_data_state_t())
+		: smap_data_t(tu_id_, init_state), dxoff(0), dyoff(0), tile(tile_) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
+};
+
+
+class tile_shadow_map_manager {
+
+	vector<smap_data_state_t> free_list[NUM_LIGHT_SRC];
+public:
+	tile_smap_data_t new_smap_data(unsigned tu_id, tile_t *tile, unsigned light);
+	void release_smap_data(tile_smap_data_t &smd, unsigned light);
+	void clear_context();
 };
 
 
@@ -206,8 +217,8 @@ public:
 	}
 	void clear();
 	void clear_shadows();
-	void clear_shadow_map() {smap_data.clear();} // frees GL state
-	void clear_vbo_tid();
+	void clear_shadow_map(tile_shadow_map_manager *smap_manager);
+	void clear_vbo_tid(tile_shadow_map_manager *smap_manager);
 	void invalidate_shadows() {shadows_invalid = 1;}
 	void create_zvals(mesh_xy_grid_cache_t &height_gen);
 
@@ -240,7 +251,7 @@ public:
 	void apply_tree_ao_shadows();
 	void check_shadow_map_and_normal_texture();
 	void upload_shadow_map_and_normal_texture(bool tid_is_valid);
-	void setup_shadow_maps();
+	void setup_shadow_maps(tile_shadow_map_manager &smap_manager);
 	bool using_shadow_maps() const {return !smap_data.empty();}
 
 	// *** mesh creation ***
@@ -252,7 +263,7 @@ public:
 		return max(0.0f, (xy_dist ? p2p_dist_xy(get_camera_pos(), get_center()) : p2p_dist(get_camera_pos(), get_center())) - radius)/get_scaled_tile_radius();
 	}
 	float get_bsphere_radius_inc_water() const;
-	bool update_range();
+	bool update_range(tile_shadow_map_manager &smap_manager);
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), get_bsphere_radius_inc_water(), get_bcube());}
 	float get_dist_to_camera_in_tiles(bool xy_dist=1) const {return get_rel_dist_to_camera(xy_dist)*TILE_RADIUS;}
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
@@ -314,6 +325,7 @@ class tile_draw_t : public indexed_vbo_manager_t {
 	lightning_strike_t lightning_strike;
 	tree_lod_render_t lod_renderer;
 	crack_ibuf_t crack_ibuf;
+	tile_shadow_map_manager smap_manager;
 
 	struct occluder_pts_t {
 		point cube_pts[4];

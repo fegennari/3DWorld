@@ -300,12 +300,11 @@ unsigned tile_t::get_gpu_mem() const {
 
 void tile_t::clear() {
 
-	clear_vbo_tid();
+	clear_vbo_tid(nullptr);
 	tree_map.clear();
 	weight_data.clear();
 	zvals.clear();
 	clear_shadows();
-	clear_shadow_map();
 	pine_trees.clear_all();
 	decid_trees.clear();
 	scenery.clear();
@@ -317,15 +316,15 @@ void tile_t::clear_shadows() {
 
 	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
 		smask[l].clear();
-		for (unsigned d = 0; d < 2; ++d) sh_out[l][d].clear();
+		for (unsigned d = 0; d < 2; ++d) {sh_out[l][d].clear();}
 	}
 	invalidate_shadows();
 }
 
-void tile_t::clear_vbo_tid() {
+void tile_t::clear_vbo_tid(tile_shadow_map_manager *smap_manager) {
 
 	clear_shadows();
-	clear_shadow_map();
+	clear_shadow_map(smap_manager);
 	pine_trees.clear_vbos();
 	decid_trees.clear_context(); // only necessary if not using instancing
 	scenery.clear_vbos();
@@ -716,14 +715,51 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 }
 
 
-void tile_t::setup_shadow_maps() {
+tile_smap_data_t tile_shadow_map_manager::new_smap_data(unsigned tu_id, tile_t *tile, unsigned light) {
+	assert(tile != nullptr);
+	assert(light < NUM_LIGHT_SRC);
+	if (free_list[light].empty()) {return tile_smap_data_t(tu_id, tile);}
+	smap_data_state_t const state(free_list[light].back());
+	free_list[light].pop_back();
+	return tile_smap_data_t(tu_id, tile, state);
+}
+
+void tile_shadow_map_manager::release_smap_data(tile_smap_data_t &smd, unsigned light) {
+	if (!smd.is_allocated()) return;
+	assert(light < NUM_LIGHT_SRC);
+	free_list[light].push_back(smd); // adds the base class, which contains the GL state
+	smd.tid = smd.fbo_id = 0; // no longer owned by smd
+}
+
+void tile_shadow_map_manager::clear_context() {
+	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
+		for (auto i = free_list[l].begin(); i != free_list[l].end(); ++i) {i->free_gl_state();}
+		free_list[l].clear();
+	}
+}
+
+
+void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 
 	if (!shadow_map_enabled()) return; // disabled
 
 	if (get_dist_to_camera_in_tiles(1) < SMAP_NEW_THRESH && smap_data.empty()) { // allocate new shadow maps
-		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_data.push_back(tile_smap_data_t(13+i, this));} // uses tu_id 13 and 14
+		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) { // uses tu_id 13 and 14
+			smap_data.push_back(smap_manager.new_smap_data(13+i, this, i));
+		}
 	}
 	smap_data.create_if_needed(get_bcube());
+}
+
+void tile_t::clear_shadow_map(tile_shadow_map_manager *smap_manager) {
+	
+	if (smap_data.empty()) return;
+	assert(smap_data.size() == NUM_LIGHT_SRC);
+
+	if (smap_manager) {
+		for (unsigned i = 0; i < NUM_LIGHT_SRC; ++i) {smap_manager->release_smap_data(smap_data[i], i);}
+	}
+	smap_data.clear(); // also frees any leftover GL state
 }
 
 
@@ -895,12 +931,12 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 }
 
 
-bool tile_t::update_range() { // if returns 0, tile will be deleted
+bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns 0, tile will be deleted
 
 	update_pine_tree_state(0); // can free pine tree vbos
 	float const dist(get_rel_dist_to_camera());
-	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid();}
-	if (dist*TILE_RADIUS > SMAP_DEL_THRESH) {clear_shadow_map();} // too far, delete old shadow maps
+	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid(&smap_manager);}
+	if (dist*TILE_RADIUS > SMAP_DEL_THRESH) {clear_shadow_map(&smap_manager);} // too far, delete old shadow maps
 	return (dist < DELETE_DIST_TILES && !mesh_height_invalid);
 }
 
@@ -1494,7 +1530,7 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 	// Note: we may want to calculate distant low-res or larger tiles when the camera is high above the mesh
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ) { // update tiles and free old tiles (Note: no ++i)
-		if (!i->second->update_range()) {
+		if (!i->second->update_range(smap_manager)) {
 			i->second->clear();
 			tiles.erase(i++);
 			++num_erased;
@@ -1777,7 +1813,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		(*i)->update_scenery();
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) { // after everything has been setup
-		(*i)->setup_shadow_maps();
+		(*i)->setup_shadow_maps(smap_manager);
 	}
 }
 
@@ -2256,7 +2292,8 @@ void tile_draw_t::update_lightning(bool reflection_pass) {
 
 void tile_draw_t::clear_vbos_tids() {
 
-	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_vbo_tid();}
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_vbo_tid(nullptr);}
+	smap_manager.clear_context();
 	clear_vbos();
 }
 
