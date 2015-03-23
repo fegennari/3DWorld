@@ -9,7 +9,6 @@
 #include "universe.h" // for unebula
 
 
-bool     const USE_CLOUD_FBO    = 1;
 unsigned const CLOUD_GEN_TEX_SZ = 1024;
 unsigned const CLOUD_NUM_DIV = 32;
 
@@ -174,8 +173,7 @@ float cloud_manager_t::get_max_xy_extent() const {
 bool cloud_manager_t::create_texture(bool force_recreate) {
 
 	RESET_TIME;
-	unsigned const xsize(USE_CLOUD_FBO ? CLOUD_GEN_TEX_SZ : min(CLOUD_GEN_TEX_SZ, (unsigned)window_width));
-	unsigned const ysize(USE_CLOUD_FBO ? CLOUD_GEN_TEX_SZ : min(CLOUD_GEN_TEX_SZ, (unsigned)window_height));
+	unsigned const xsize(CLOUD_GEN_TEX_SZ), ysize(CLOUD_GEN_TEX_SZ);
 
 	if (txsize != xsize || tysize != ysize) {
 		free_textures();
@@ -190,7 +188,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	}
 	assert(glIsTexture(cloud_tid));
 	check_gl_error(800);
-	if (USE_CLOUD_FBO) {enable_fbo(fbo_id, cloud_tid, 0);}
+	enable_fbo(fbo_id, cloud_tid, 0);
 	check_gl_error(801);
 
 	glViewport(0, 0, xsize, ysize);
@@ -228,22 +226,13 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	camera_pos = orig_cpos;
 	camera_pdu.valid = was_valid;
 	set_red_only(0);
-
-	if (!USE_CLOUD_FBO) { // render clouds to texture
-		bind_2d_texture(cloud_tid);
-		glReadBuffer(GL_BACK);
-		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize); // copy the frame buffer to the bound texture
-	}
-
 	// reset state
 	fgMatrixMode(FG_PROJECTION);
 	fgPopMatrix();
 	fgMatrixMode(FG_MODELVIEW);
 	fgPopMatrix();
-	if (USE_CLOUD_FBO) disable_fbo();
+	disable_fbo();
 	set_standard_viewport();
-	if (!USE_CLOUD_FBO) glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
 	check_gl_error(802);
 	PRINT_TIME("Cloud Texture Gen");
 	return 1;
@@ -251,7 +240,6 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 
 
 void free_cloud_textures() {
-
 	cloud_manager.free_textures();
 }
 
