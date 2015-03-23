@@ -2294,6 +2294,7 @@ void tile_draw_t::clear_vbos_tids() {
 
 	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_vbo_tid(nullptr);}
 	smap_manager.clear_context();
+	height_gen.clear_context();
 	clear_vbos();
 }
 

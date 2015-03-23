@@ -20,17 +20,27 @@ struct ripple_state {
 };
 
 
+class compute_shader_t;
+class compute_shader_comp_t;
+
 class mesh_xy_grid_cache_t {
 
 	vector<float> xyterms, cached_vals;
-	unsigned cur_nx, cur_ny, yterms_start;
+	unsigned cur_nx, cur_ny, yterms_start, tid;
 	float mx0, my0, mdx, mdy;
 	int gen_mode, gen_shape;
 
+	// compute_shader_t or compute_shader_comp_t, but only compute_shader_t works for tiled terrain due to non-power-of-two size
+	typedef compute_shader_t grid_gen_shader_t;
+	grid_gen_shader_t *cshader;
+
 public:
-	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), yterms_start(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0), gen_mode(0), gen_shape(0) {}
+	mesh_xy_grid_cache_t() : cur_nx(0), cur_ny(0), yterms_start(0), tid(0), mx0(0.0), my0(0.0), mdx(0.0), mdy(0.0), gen_mode(0), gen_shape(0), cshader(nullptr) {}
+	~mesh_xy_grid_cache_t() {clear_context();}
 	void build_arrays(float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values=0, bool force_sine_mode=0);
 	float eval_index(unsigned x, unsigned y, bool glaciate=1, int min_start_sin=0, bool use_cache=1) const;
+	void clear_context();
+	void free_cshader();
 };
 
 

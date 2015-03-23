@@ -1074,6 +1074,11 @@ void compute_shader_t::begin() {
 	begin_shader();
 }
 
+void compute_shader_t::end_shader() {
+	shader_t::end_shader();
+	free_fbo(fbo_id);
+}
+
 void compute_shader_t::pre_run() { // call once before run() calls
 	// setup matrices
 	glViewport(0, 0, xsize, ysize);
@@ -1086,8 +1091,8 @@ void compute_shader_t::pre_run() { // call once before run() calls
 	fgLoadIdentity();
 }
 
-void compute_shader_t::post_run() { // call once after run() calls
-	free_fbo(fbo_id);
+void compute_shader_t::post_run(bool keep_fbo_for_reuse) { // call once after run() calls
+	if (!keep_fbo_for_reuse) {free_fbo(fbo_id);}
 	disable_fbo();
 	// restore state
 	fgPopMatrix();
@@ -1107,7 +1112,7 @@ void compute_shader_t::run(unsigned &tid) { // call N times between pre_run() an
 }
 
 // tid may or may not be setup prior to this call
-void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
+void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
 	setup_target_texture(tid, 0);
 	if (is_first) {pre_run();}
 	run(tid);
@@ -1122,11 +1127,11 @@ void compute_shader_t::gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool
 			vals[ix] = data[ix<<2]; // red component [0.0, 1.0)
 		}
 	}
-	if (is_last) {post_run();}
+	if (is_last) {post_run(keep_fbo_for_reuse);}
 }
 
 // tid may or may not be setup prior to this call
-void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last) {
+void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first, bool is_last, bool keep_fbo_for_reuse) {
 	setup_target_texture(tid, 1);
 	if (is_first) {pre_run();}
 	run(tid);
@@ -1155,7 +1160,7 @@ void compute_shader_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool 
 	else {
 		glReadPixels(0, 0, xsize, ysize, GL_RED, GL_FLOAT, &vals.front());
 	}
-	if (is_last) {post_run();}
+	if (is_last) {post_run(keep_fbo_for_reuse);}
 }
 
 
@@ -1198,30 +1203,6 @@ void compute_shader_comp_t::gen_matrix_R32F(vector<float> &vals, unsigned &tid, 
 	vals.resize(xsize*ysize*zsize);
 	glGetTexImage((is_3d ? GL_TEXTURE_3D : GL_TEXTURE_2D), 0, GL_RED, GL_FLOAT, &vals.front());
 	check_gl_error(501);
-}
-
-
-// returns heights in approximately [-1,1] range
-void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float zscale,
-	float rx, float ry, unsigned xsize, unsigned ysize, int shape)
-{
-	//RESET_TIME;
-	unsigned tid(0);
-	compute_shader_t cshader("noise_2d_3d.part*+procedural_height_gen", xsize, ysize); // compute_shader_t or compute_shader_comp_t
-	if (shape == 1) {cshader.set_comp_prefix("#define BILLOWY");}
-	if (shape == 2) {cshader.set_comp_prefix("#define RIDGED" );}
-	cshader.begin();
-	cshader.add_uniform_float("x0", x0);
-	cshader.add_uniform_float("y0", y0);
-	cshader.add_uniform_float("dx", dx);
-	cshader.add_uniform_float("dy", dy);
-	cshader.add_uniform_float("rx", rx);
-	cshader.add_uniform_float("ry", ry);
-	cshader.add_uniform_float("zscale", zscale);
-	cshader.gen_matrix_R32F(vals, tid);
-	cshader.end_shader();
-	free_texture(tid);
-	//PRINT_TIME("Gen Terrain");
 }
 
 

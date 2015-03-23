@@ -192,6 +192,8 @@ protected:
 public:
 	compute_shader_base_t(unsigned xsize_, unsigned ysize_) :
 	  xsize(xsize_), ysize(ysize_) {assert(xsize > 0 && ysize > 0);}
+	unsigned get_xsize() const {return xsize;}
+	unsigned get_ysize() const {return ysize;}
 };
 
 // "fake" compute shader implemented as a fragment shader
@@ -206,11 +208,12 @@ public:
 	compute_shader_t(string const &fstr, unsigned xsize_, unsigned ysize_) :
 	  compute_shader_base_t(xsize_, ysize_), fbo_id(0), pbo(0), frag_shader_str(fstr) {}
 	void begin();
+	void end_shader();
 	void pre_run();
-	void post_run();
+	void post_run(bool keep_fbo_for_reuse);
 	void run(unsigned &tid);
-	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
-	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1);
+	void gen_matrix_RGBA8(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1, bool keep_fbo_for_reuse=0);
+	void gen_matrix_R32F(vector<float> &vals, unsigned &tid, bool is_first=1, bool is_last=1, bool keep_fbo_for_reuse=0);
 	void set_comp_prefix(char const *const prefix) {set_prefix(prefix, 1);} // FS
 };
 

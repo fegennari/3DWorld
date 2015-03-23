@@ -392,10 +392,10 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 					st.setup_rotation(rgen);
 					add_tree(st);
 				}
-			}
-		}
+			} // for n
+		} // for j
 		xv = 0.0; // reset for next y iter
-	}
+	} // for i
 	if (world_mode == WMODE_GROUND) {sort_by_type();}
 }
 

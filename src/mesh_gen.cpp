@@ -7,6 +7,7 @@
 #include "textures_3dw.h"
 #include "sinf.h"
 #include "heightmap.h"
+#include "shaders.h"
 #include <glm/gtc/noise.hpp>
 
 
@@ -708,9 +709,6 @@ void gen_rx_ry(float &rx, float &ry) {
 }
 
 
-void gen_gpu_terrain_heightmap(vector<float> &vals, float x0, float y0, float dx, float dy, float zscale,
-	float rx, float ry, unsigned xsize, unsigned ysize, int shape);
-
 void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 	unsigned nx, unsigned ny, bool cache_values, bool force_sine_mode)
 {
@@ -726,7 +724,27 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 		float const xy_scale(0.0007*mesh_scale), xscale(xy_scale*DX_VAL_INV), yscale(xy_scale*DY_VAL_INV), zscale(get_hmap_scale(gen_mode));
 		float rx, ry;
 		gen_rx_ry(rx, ry);
-		gen_gpu_terrain_heightmap(cached_vals, (x0 - 0.5*dx)*xscale, (y0 - 0.5*dy)*yscale, dx*nx*xscale, dy*ny*yscale, /*zscale*/1.0, rx, ry, cur_nx, cur_ny, gen_shape);
+
+		if (cshader == nullptr) {
+			cshader = new grid_gen_shader_t("noise_2d_3d.part*+procedural_height_gen", cur_nx, cur_ny);
+			if (gen_shape == 1) {cshader->set_comp_prefix("#define BILLOWY");}
+			if (gen_shape == 2) {cshader->set_comp_prefix("#define RIDGED" );}
+			cshader->begin();
+		}
+		else {
+			assert(cshader->get_xsize() == cur_nx && cshader->get_ysize() == cur_ny); // can't reuse with different sizes
+			cshader->enable();
+		}
+		// returns heights in approximately [-1,1] range
+		cshader->add_uniform_float("x0", (x0 - 0.5*dx)*xscale);
+		cshader->add_uniform_float("y0", (y0 - 0.5*dy)*yscale);
+		cshader->add_uniform_float("dx", dx*nx*xscale);
+		cshader->add_uniform_float("dy", dy*ny*yscale);
+		cshader->add_uniform_float("rx", rx);
+		cshader->add_uniform_float("ry", ry);
+		cshader->add_uniform_float("zscale", /*zscale*/1.0);
+		cshader->gen_matrix_R32F(cached_vals, tid, 1, 1, 1); // reuse FBO
+		cshader->disable();
 		for (auto i = cached_vals.begin(); i != cached_vals.end(); ++i) {postproc_noise_zval(*i); *i *= zscale;}
 		//PRINT_TIME("GPU Height");
 		return; // done
@@ -761,6 +779,14 @@ void mesh_xy_grid_cache_t::build_arrays(float x0, float y0, float dx, float dy,
 			}
 		}
 	}
+}
+
+void mesh_xy_grid_cache_t::clear_context() { // for GPU-mode cached state
+	free_texture(tid);
+	if (cshader != nullptr) {cshader->end_shader(); free_cshader();}
+}
+void mesh_xy_grid_cache_t::free_cshader() { // don't make any GPU calls - hard reset, safe for destructors
+	delete cshader; cshader = nullptr;
 }
 
 
