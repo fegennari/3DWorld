@@ -684,6 +684,7 @@ void reload_all_shaders() { // clears and reloads *everything*
 	clear_cached_shaders();
 	shader_manager.clear_and_reload();
 	vao_cache.clear();
+	clear_tiled_terrain_shaders();
 }
 
 

@@ -2454,6 +2454,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
 void clear_tiled_terrain() {terrain_tile_draw.clear();}
 void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids();}
+void clear_tiled_terrain_shaders() {terrain_tile_draw.free_compute_shader();}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}
 bool check_player_tiled_terrain_collision() {return terrain_tile_draw.check_player_collision();}
 float get_tiled_terrain_water_level() {return (is_water_enabled() ? water_plane_z : terrain_tile_draw.get_actual_zmin());}

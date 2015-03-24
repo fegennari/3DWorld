@@ -222,6 +222,7 @@ void draw_tiled_terrain(bool reflection_pass);
 void draw_tiled_terrain_lightning(bool reflection_pass);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();
+void clear_tiled_terrain_shaders();
 float get_tiled_terrain_water_level();
 void update_tiled_terrain_grass_vbos();
 void draw_tiled_terrain_water(shader_t &s, float zval);

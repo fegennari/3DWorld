@@ -337,6 +337,7 @@ public:
 	tile_draw_t();
 	~tile_draw_t() {/*clear();*/ height_gen.free_cshader();}
 	void clear();
+	void free_compute_shader() {height_gen.clear_context();}
 	float update(float &min_camera_dist);
 	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id);
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader);
