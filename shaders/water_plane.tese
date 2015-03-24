@@ -2,6 +2,7 @@ layout(quads, equal_spacing, cw) in;
 
 uniform float wave_time = 0.0;
 uniform float normal_z  = 1.0;
+uniform vec3 camera_pos;
 
 in vec3 vertex_ES[];
 in vec2 tc_ES[], tc2_ES[];
@@ -38,9 +39,9 @@ void main() {
 	float dz    = get_delta_z(tc);
 	vertex.z   += dz;
 
-	const float intensity = 2.0;
-	float dzx   = intensity*get_delta_z(tc + vec2(0.001, 0.0)) - dz;
-	float dzy   = intensity*get_delta_z(tc + vec2(0.0, 0.001)) - dz;
+	float intensity = 200.0 * clamp((40.0/distance(vertex.xyz, camera_pos) - 1.0), 0.0, 1.0);
+	float dzx   = intensity*(get_delta_z(tc + vec2(0.001, 0.0)) - dz);
+	float dzy   = intensity*(get_delta_z(tc + vec2(0.0, 0.001)) - dz);
 	normal      = fg_NormalMatrix * normalize(vec3(-dzx, -dzy, normal_z));
 
 	water_zval  = vertex.z;

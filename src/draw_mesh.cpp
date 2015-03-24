@@ -738,7 +738,7 @@ void set_water_plane_uniforms(shader_t &s) {
 
 
 void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth,
-	bool depth_only, colorRGBA const &color, colorRGBA const &rcolor)
+	bool depth_only, colorRGBA const &color, colorRGBA const &rcolor, bool use_tess)
 {
 	if (no_specular) {s.set_prefix("#define NO_SPECULAR",      1);} // FS
 	if (use_depth)   {s.set_prefix("#define USE_WATER_DEPTH",  1);} // FS
@@ -753,7 +753,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.set_bool_prefix("deep_water_waves", add_waves,   1); // FS (always enabled with waves for now)
 	s.set_bool_prefix("is_lava",          water_is_lava, 1); // FS
 	
-	if (use_water_plane_tess()) { // tessellation shaders
+	if (use_tess) { // tessellation shaders
 		s.set_prefix("#define TESS_MODE", 1); // FS
 		s.set_vert_shader("texture_gen.part+water_plane_tess");
 		s.set_tess_control_shader("water_plane");
@@ -773,7 +773,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.add_uniform_float("water_green_comp", water_params.green);
 	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	s.add_uniform_float("mesh_z_scale",     mesh_scale);
-	s.add_uniform_vector3d("camera_pos",    get_camera_pos()); // needed for tess shaders
+	if (use_tess) {s.add_uniform_vector3d("camera_pos", get_camera_pos());} // needed for tess shaders
 	set_water_plane_uniforms(s);
 	setup_water_plane_texgen(1.0, 1.0, s, 0);
 	if (no_specular) {s.clear_specular();} else {set_tt_water_specular(s);}
@@ -826,17 +826,18 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	bool const add_waves(enable_ocean_waves());
 	bool const camera_underwater(get_camera_pos().z < zval);
 	bool const rain_mode(add_waves && !water_is_lava && is_rain_enabled() /*&& !camera_underwater*/);
+	bool const use_tess(use_water_plane_tess());
 	rcolor.alpha = 0.5*(0.5 + color.alpha);
 	shader_t s;
 	glDepthFunc(GL_LEQUAL); // helps prevent Z-fighting
 
-	if (use_water_plane_tess()) {
+	if (use_tess) {
 		glCullFace(camera_underwater ? GL_FRONT : GL_BACK);
 		glEnable(GL_CULL_FACE);
 
 		// first path with depth only, so that we can remove water behind other water
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
-		setup_water_plane_shader(s, 0, 0, 0, 0, 0, 1, WHITE, WHITE); // depth_only=1
+		setup_water_plane_shader(s, 0, 0, 0, 0, 0, 1, WHITE, WHITE, 1); // depth_only=1, use_tess=1
 		draw_tiled_terrain_water(s, zval);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
@@ -844,21 +845,21 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		glDepthMask(GL_FALSE); // no depth writing
 		s.end_shader();
 	}
-	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, 0, color, rcolor); // depth_only=0, use_depth=1
+	setup_water_plane_shader(s, no_specular, reflections, add_waves, rain_mode, 1, 0, color, rcolor, use_tess); // depth_only=0, use_depth=1
 	s.add_uniform_float("normal_z", (camera_underwater ? -1.0 : 1.0));
 	s.set_cur_color(WHITE);
 	draw_tiled_terrain_water(s, zval);
 	glDepthFunc(GL_LESS);
 	s.end_shader();
 
-	if (use_water_plane_tess()) {
+	if (use_tess) {
 		glDepthMask(GL_TRUE);
 		glDisable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 	}
 	if ((display_mode & 0x10) && camera_pdu.far_ > 1.1*FAR_CLIP) { // camera is high above the mesh (Enable when extended mesh is drawn)
 		// FIXME: changes apparent water color, only draw the area not covered by tiles (somehow)?
-		setup_water_plane_shader(s, no_specular, reflections, add_waves, 0, 0, 0, color, rcolor); // rain_mode=0, use_depth=0
+		setup_water_plane_shader(s, no_specular, reflections, add_waves, 0, 0, 0, color, rcolor, 0); // rain_mode=0, use_depth=0, use_tess=0
 		indexed_mesh_draw<vert_wrap_t> imd;
 		float const size(camera_pdu.far_*SQRT2);
 		imd.render_z_plane(-size, -size, size, size, (zval - SMALL_NUMBER), 8, 8); // 8x8 grid
