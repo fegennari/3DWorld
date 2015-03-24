@@ -617,7 +617,7 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_tes
 
 void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test) {
 
-	if (pine_trees_enabled()) {
+	if (pine_trees_enabled() && can_have_trees()) {
 		assert(pine_trees_generated());
 		point const pt_off(tile->ptree_off.subtract_from(mesh_off));
 
@@ -625,7 +625,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 			add_tree_ao_shadow((i->get_pos() + pt_off), i->get_pine_tree_radius(), no_adj_test);
 		}
 	}
-	if (decid_trees_enabled()) {
+	if (decid_trees_enabled() && can_have_trees()) {
 		assert(decid_trees.was_generated());
 		point const dt_off(tile->dtree_off.subtract_from(mesh_off));
 
@@ -945,7 +945,7 @@ bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns
 
 void tile_t::init_pine_tree_draw() {
 
-	if (is_distant) return; // no pine trees (yet)
+	if (!can_have_trees()) return; // no pine trees (yet)
 	float const density[4] = {params[0][0].veg, params[0][1].veg, params[1][0].veg, params[1][1].veg};
 	ptree_off.set_from_xyoff2();
 	if (enable_instanced_pine_trees()) {pine_trees.instanced = 1;}
@@ -984,7 +984,7 @@ void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xl
 void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_branches, bool draw_near_leaves,
 	bool draw_far_leaves, bool reflection_pass, int xlate_loc)
 {
-	if (pine_trees.empty()) return;
+	if (pine_trees.empty() || !can_have_trees()) return;
 	point const camera(get_camera_pos());
 	vector3d const xlate(ptree_off.get_xlate());
 	vector2d const camera_xlate(xlate.x-camera.x, xlate.y-camera.y);
@@ -1036,7 +1036,7 @@ void tile_t::gen_decid_trees_if_needed() {
 		cout << "Warning: max_unique_trees needs to be set to something reasonable for tiled terrain mode trees to work efficiently. Setting to 100." << endl;
 		max_unique_trees = 100;
 	}
-	if (is_distant || decid_trees.was_generated()) return; // already generated, or distant tile (no trees yet)
+	if (decid_trees.was_generated() || !can_have_trees()) return; // already generated, or distant tile (no trees yet)
 	assert(decid_trees.empty());
 	dtree_off.set_from_xyoff2();
 	decid_trees.gen_deterministic(x1+dtree_off.dxoff, y1+dtree_off.dyoff, x2+dtree_off.dxoff, y2+dtree_off.dyoff, vegetation*get_avg_veg());
@@ -1051,7 +1051,7 @@ void tile_t::update_decid_trees() {
 
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass) {
 
-	if (decid_trees.empty()) return;
+	if (decid_trees.empty() || !can_have_trees()) return;
 	// Note: shadow_only is always zero here since it's not really correct and doesn't help performance
 	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, 0, reflection_pass, dtree_off.get_xlate());
 }
@@ -1793,8 +1793,11 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 		assert(tile);
 		if (tile->get_rel_dist_to_camera() > DRAW_DIST_TILES) continue; // too far to draw
 		if (!tile->is_visible()) continue; // Note: using current camera view frustum
-		if (pine_trees_enabled() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
-		if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
+
+		if (tile->can_have_trees()) { // no trees in water or distant tiles
+			if (pine_trees_enabled() && !tile->pine_trees_generated()) {to_gen_trees.push_back(tile);}
+			if (decid_trees_enabled()) {tile->gen_decid_trees_if_needed();}
+		}
 		to_update.push_back(tile);
 	}
 	if (enable_instanced_pine_trees() && !to_gen_trees.empty()) {
@@ -1808,8 +1811,11 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		(*i)->pre_draw(height_gen);
-		(*i)->update_pine_tree_state(1);
-		(*i)->update_decid_trees();
+
+		if ((*i)->can_have_trees()) {
+			(*i)->update_pine_tree_state(1);
+			(*i)->update_decid_trees();
+		}
 		(*i)->update_scenery();
 	}
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) { // after everything has been setup
