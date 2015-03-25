@@ -44,7 +44,7 @@ void main()
 #endif // USE_WATER_DEPTH
 
 #ifdef WRITE_DEPTH_ONLY
-	fg_FragColor = vec4(1.0);
+	fg_FragColor = vec4(normal, 1.0); // Note: for some reason, we can have depth artifacts if we don't use the normal
 #else // !WRITE_DEPTH_ONLY
 
 #ifdef TESS_MODE
