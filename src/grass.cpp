@@ -357,7 +357,7 @@ public:
 						float const relh(relh_adj_tex + (mh - zmin)*dz_inv);
 						int k1, k2;
 						float t(0.0);
-						get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, &t); // t==0 => use k1, t==1 => use k2
+						get_tids(relh, k1, k2, &t); // t==0 => use k1, t==1 => use k2
 						int const id1(lttex_dirt[k1].id), id2(lttex_dirt[k2].id);
 						if (id1 != GROUND_TEX && id2 != GROUND_TEX) continue; // not ground texture
 						float density(1.0);

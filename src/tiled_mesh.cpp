@@ -827,15 +827,15 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				float const mhmin(min(min(mh00, mh01), min(mh10, mh11))), mhmax(max(max(mh00, mh01), max(mh10, mh11)));
 				float const relh1(relh_adj_tex + (mhmin - zmin)*dz_inv + rand_offset);
 				float const relh2(relh_adj_tex + (mhmax - zmin)*dz_inv + rand_offset);
-				get_tids(relh1, NTEX_DIRT-1, h_dirt, k1, k2);
-				get_tids(relh2, NTEX_DIRT-1, h_dirt, k3, k4);
+				get_tids(relh1, k1, k2);
+				get_tids(relh2, k3, k4);
 				bool const same_tid(k1 == k4);
 				float t(0.0);
 				k2 = k4;
 			
 				if (!same_tid) {
 					float const relh(relh_adj_tex + (mh00 - zmin)*dz_inv);
-					get_tids(relh, NTEX_DIRT-1, h_dirt, k1, k2, &t);
+					get_tids(relh, k1, k2, &t);
 				}
 				float weight_scale(1.0);
 				bool const grass(lttex_dirt[k1].id == GROUND_TEX || lttex_dirt[k2].id == GROUND_TEX), snow(lttex_dirt[k2].id == SNOW_TEX);
