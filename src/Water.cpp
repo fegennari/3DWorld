@@ -493,11 +493,13 @@ void draw_water() {
 	static rand_gen_t rgen;
 	
 	if (!no_grass()) {
-		for (int i = 0; i < MESH_Y_SIZE; ++i) {
-			for (int j = 0; j < MESH_X_SIZE; ++j) {
-				if (wminside[i][j] == 1 && (rgen.rand()&255) == 0 && get_water_enabled(j, i) && !is_mesh_disabled(j, i)) {
-					modify_grass_at(get_mesh_xyz_pos(j, i), HALF_DXY, 0, 0, 0, 1); // check underwater
-				}
+		unsigned const num_updates(max(1, XY_MULT_SIZE/256));
+
+		for (unsigned n = 0; n < num_updates; ++n) {
+			int const i(rgen.rand()%MESH_Y_SIZE), j(rgen.rand()%MESH_X_SIZE);; // select a random mesh element
+
+			if (wminside[i][j] == 1 && get_water_enabled(j, i) && !is_mesh_disabled(j, i)) {
+				modify_grass_at(get_mesh_xyz_pos(j, i), HALF_DXY, 0, 0, 0, 1); // check underwater
 			}
 		}
 		if (DEBUG_WATER_TIME) {PRINT_TIME("3 Grass Update");}

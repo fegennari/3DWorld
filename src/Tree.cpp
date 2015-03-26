@@ -18,9 +18,9 @@ float const BURN_DAMAGE      = 80.0;
 float const BEAM_DAMAGE      = 0.06;
 float const LEAF_DAM_SCALE   = 0.0001;
 float const LEAF_HEAL_RATE   = 0.00005;
-float const TREE_SIZE        = 0.005; // 0.0015
+float const TREE_SIZE        = 0.005;
 float const REL_LEAF_SIZE    = 3.5;
-int   const LEAF_GEN_RAND1   = 10; //500
+int   const LEAF_GEN_RAND1   = 16;
 int   const LEAF_GEN_RAND2   = 200000; // larger is fewer leaves falling
 float const DIST_C_SCALE     = 0.01;
 float const LEAF_SHADOW_VAL  = 0.25;
@@ -47,6 +47,7 @@ void rotate_all(point const &rotate, float angle, float x, float y, float z);
 
 
 // tree_mode: 0 = no trees, 1 = large only, 2 = small only, 3 = both large and small
+bool has_any_billboard_coll(0), next_has_any_billboard_coll(0);
 unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(TREE_COLL);
 float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), branch_radius_scale(1.0);
@@ -432,8 +433,15 @@ void draw_trees(bool shadow_only) {
 		draw_small_trees(shadow_only);
 	}
 	if (tree_mode & 1) { // trees
-		if (!shadow_only) {t_trees.check_leaf_shadow_change();}
-		t_trees.draw(shadow_only);
+		if (shadow_only) {
+			t_trees.draw(1);
+		}
+		else {
+			next_has_any_billboard_coll = 0; // reset for this frame
+			t_trees.check_leaf_shadow_change();
+			t_trees.draw(0);
+			has_any_billboard_coll = next_has_any_billboard_coll; // keep only if some leaf already has a coll
+		}
 	}
 	if (!shadow_only) {leaf_color_changed = 0;}
 }
@@ -699,11 +707,12 @@ void tree::drop_leaves() {
 	vector<tree_leaf> &leaves(td.get_leaves());
 	unsigned const nleaves(leaves.size());
 	if (damage >= 1.0 || nleaves == 0) return; // too damaged
+	static rand_gen_t rgen;
 	float const temp0(max(1.0f, min(0.3f, (20.0f-temperature)/30.0f)));
-	int const rgen(min(LEAF_GEN_RAND2/10, int(rand_uniform(0.5, 1.5)*temp0*LEAF_GEN_RAND2/fticks)));
+	int const rmod(min(LEAF_GEN_RAND2/10, int(rgen.rand_uniform(0.5, 1.5)*temp0*LEAF_GEN_RAND2/fticks)));
 
-	for (unsigned i = (rand()%LEAF_GEN_RAND1); i < nleaves; i += LEAF_GEN_RAND1) {
-		if ((rand()%rgen) != 0) continue;
+	for (unsigned i = (rgen.rand()%LEAF_GEN_RAND1); i < nleaves; i += LEAF_GEN_RAND1) {
+		if ((rgen.rand()%rmod) != 0) continue;
 		create_leaf_obj(i);
 		
 		if (td_is_private()) { // create a new leaf with a different color (and orient?)
@@ -1124,7 +1133,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 			}
 			wscale = dot_product(local_wind, leaves[i].norm);
 		}
-		if (i < (int)leaf_cobjs.size()) { // rotate leaves when hit by an object (plus another i update hack)
+		if (i < (int)leaf_cobjs.size() && has_any_billboard_coll) { // rotate leaves when hit by an object (plus another i update hack)
 			coll_obj &cobj(get_leaf_cobj(i));
 				
 			if (cobj.last_coll > 0) {
@@ -1150,6 +1159,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 					continue;
 				}
 				cobj.last_coll = ((hit_angle == 0.0 || cobj.last_coll < iticks) ? 0 : (cobj.last_coll - iticks));
+				if (cobj.last_coll) {next_has_any_billboard_coll = 1;}
 			}
 		}
 		if (wscale != 0.0 || hit_angle != 0.0) {

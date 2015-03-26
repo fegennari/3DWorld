@@ -330,13 +330,18 @@ void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 	assert(num <= MAX_SHADER_LIGHTS);
 	prog_name_prefix.push_back(',');
 	prog_name_prefix.push_back('L');
-	char name[14] = "enable_light0";
+	char name_0[] = "const bool enable_light0 = false;";
+	char name_1[] = "const bool enable_light0 = true;";
 
 	for (unsigned i = 0; i < num; ++i) { // 0=sun, 1=moon, ...
 		bool const enabled(is_light_enabled(i));
 		prog_name_prefix.push_back(enabled ? '1' : '0');
-		name[12] = char('0'+i);
-		set_bool_prefixes(name, enabled, shaders_enabled);
+		char *name(enabled ? name_1 : name_0);
+		name[23] = char('0'+i);
+
+		for (unsigned s = 0; s < NUM_SHADER_TYPES; ++s) { // put into correct shader(s): V, F, G, TC, TE, C
+			if (shaders_enabled & (1<<s)) {set_prefix(name, s);}
+		}
 	}
 }
 

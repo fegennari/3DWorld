@@ -15,7 +15,7 @@
 float const NDIV_SCALE = 200.0;
 
 
-extern bool group_back_face_cull;
+extern bool group_back_face_cull, has_any_billboard_coll;
 extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
 extern float temperature, tfticks;
 extern unsigned ALL_LT[];
@@ -252,7 +252,6 @@ bool coll_obj::is_occluded_from_camera() const {
 	return is_occluded(occluders, (is_thin_poly() ? points : pts), ncorners, camera);
 }
 
-
 bool coll_obj::is_cobj_visible() const {
 
 	point center;
@@ -260,6 +259,12 @@ bool coll_obj::is_cobj_visible() const {
 	bounding_sphere(center, brad);
 	if (!camera_pdu.sphere_and_cube_visible_test(center, brad, *this)) return 0;
 	return !is_occluded_from_camera();
+}
+
+void coll_obj::register_coll(unsigned char coll_time, unsigned char coll_type_) {
+	last_coll = coll_time;
+	coll_type = coll_type_;
+	has_any_billboard_coll |= is_billboard; // set global state
 }
 
 

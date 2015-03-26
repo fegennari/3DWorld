@@ -819,6 +819,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 			MESH_NOISE_FREQ*deltay, tsize, tsize, 0, 1); // force_sine_mode=1
 
 		for (unsigned y = 0; y < tsize-DEBUG_TILE_BOUNDS; ++y) { // not threadsafe
+			float const yv(float(y)*xy_mult);
+
 			for (unsigned x = 0; x < tsize-DEBUG_TILE_BOUNDS; ++x) {
 				float weights[NTEX_DIRT] = {0};
 				unsigned const ix(y*zvsize + x);
@@ -863,7 +865,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 				weights[k2] += weight_scale*t;
 				weights[k1] += weight_scale*(1.0 - t);
 				unsigned const ix_val(y*tsize + x), off(4*ix_val);
-				float const xv(float(x)*xy_mult), yv(float(y)*xy_mult);
+				float const xv(float(x)*xy_mult);
 				float const dirt_scale(BILINEAR_INTERP(params, dirt, xv, yv));
 
 				if (dirt_scale < 1.0) { // apply dirt scale: convert dirt to sand

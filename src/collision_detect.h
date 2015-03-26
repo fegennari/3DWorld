@@ -171,7 +171,7 @@ public:
 	bool intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const; // coll_cell_search.cpp
 	colorRGBA get_color_at_point(point const &pos, vector3d const &normal, bool fast) const;
 	bool is_occluded_from_camera() const;
-	void register_coll(unsigned char coll_time, unsigned char coll_type_) {last_coll = coll_time; coll_type = coll_type_;}
+	void register_coll(unsigned char coll_time, unsigned char coll_type_);
 	void create_portal() const; // destroy_cobj.cpp
 	void add_connect_waypoint(); // waypoints.cpp
 	void remove_waypoint();
