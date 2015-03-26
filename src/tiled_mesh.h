@@ -158,7 +158,7 @@ private:
 	struct norm_comp_with_shadow {
 		unsigned char v[4];
 	};
-
+	vector<norm_comp_with_shadow> norm_shadow_data;
 	terrain_params_t params[2][2]; // {ylo,yhi} x {xlo,xhi}
 
 	void update_terrain_params();

@@ -1111,7 +1111,7 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 	vector3d local_wind(zero_vector);
 	tree_data_t &td(tdata());
 	bool const do_update(td.check_if_needs_updated() || !leaf_orients_valid), priv_data(td_is_private());
-	if (!do_update && leaf_cobjs.empty()) return;
+	if (!do_update && (leaf_cobjs.empty() || !has_any_billboard_coll)) return;
 	vector<tree_leaf> const &leaves(td.get_leaves());
 	bool const heal_pass((rand()&7) == 0); // only update healed color every 8 frames
 

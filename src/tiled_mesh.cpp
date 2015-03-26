@@ -310,6 +310,7 @@ void tile_t::clear() {
 	scenery.clear();
 	grass_blocks.clear();
 	flowers.clear();
+	norm_shadow_data.clear();
 }
 
 void tile_t::clear_shadows() {
@@ -480,7 +481,7 @@ void tile_t::calc_mesh_ao_lighting() {
 						//step += step; // multiply by 2 for exponential step size
 						step += ao_dirs[d]; // linear increase (Note: must agree with max_ray_length)
 						int const xv(v.x + ray_len), yv(v.y + ray_len);
-						assert(xv >= 0 && yv >= 0 && xv < (int)context_sz && yv < (int)context_sz);
+						//assert(xv >= 0 && yv >= 0 && xv < (int)context_sz && yv < (int)context_sz);
 						
 						if (czv[yv*context_sz + xv] > z0) { // hit a higher point
 							atten += (NUM_STEPS - s);
@@ -675,20 +676,27 @@ void tile_t::check_shadow_map_and_normal_texture() {
 void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
-	vector<norm_comp_with_shadow> data(stride*stride); // stored as (n.x, n.y, ao_lighting, shadow_val)
-	min_normal_z = 1.0;
+	vector<norm_comp_with_shadow> &data(norm_shadow_data); // stored as (n.x, n.y, ao_lighting, shadow_val)
+	bool const init_data(data.empty());
 
+	if (init_data) {
+		data.resize(stride*stride);
+		min_normal_z = 1.0;
+	}
 	for (unsigned y = 0; y < stride; ++y) {
 		for (unsigned x = 0; x < stride; ++x) {
 			unsigned const ix(y*stride + x), ix2(y*zvsize + x);
-			vector3d const norm(get_norm(ix2));
-			min_normal_z = min(min_normal_z, norm.z);
-			UNROLL_2X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));); // Note: we only set x and y here, z is calculated in the shader
 			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
-			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
-			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]);
-			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*shadow_val/255.0)); // add ambient occlusion from trees
-			shadow_val    = 128 + shadow_val/2; // divide tree shadow effect by 2x to offset for shadow map effect
+
+			if (init_data) {
+				vector3d const norm(get_norm(ix2));
+				min_normal_z = min(min_normal_z, norm.z);
+				UNROLL_2X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));); // Note: we only set x and y here, z is calculated in the shader
+				// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
+				data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]);
+				data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*shadow_val/255.0)); // add ambient occlusion from trees
+			}
+			shadow_val = 128 + shadow_val/2; // divide tree shadow effect by 2x to offset for shadow map effect
 
 			if (!mesh_shadows) {
 				// do nothing
@@ -845,7 +853,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
 				if (grass || snow) {
 					float const *const sti(sthresh[snow]);
-					float const vnz(get_norm(ix).z);
+					vector3d const normal(get_norm_not_normalized(ix));
+					float const vnz(normal.z/normal.mag());
 
 					if (vnz < sti[1]) { // handle steep slopes (dirt/rock texture replaces grass texture)
 						if (grass) { // ground/grass
