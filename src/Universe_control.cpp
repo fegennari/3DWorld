@@ -122,7 +122,7 @@ void setup_current_system(float sun_intensity, bool reflection_mode) {
 	vegetation    = 0.0;
 	water_is_lava = 0;
 	base_cloud_color = WHITE;
-	base_sky_color   = BLUE;
+	base_sky_color   = BACKGROUND_DAY;
 
 	if (clobj0.type == UTYPE_PLANET || clobj0.type == UTYPE_MOON) { // planet or moon
 		upos_point_type const &opos(clobj0.object->get_pos());
