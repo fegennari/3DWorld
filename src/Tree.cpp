@@ -974,7 +974,6 @@ void tree_data_t::ensure_branch_vbo() {
 		for (unsigned j = prev_connect; j < 2; ++j) { // create vertex data
 			for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
 				float const tx(2.0*fabs(S*ndiv_inv - 0.5));
-				// FIXME: something is still wrong - twisted branch segments due to misaligned or reversed starting points
 				vector3d const n(0.5*vpn.n[S] + 0.5*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
 				data[dix++] = branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, float(cylin_id + j));
 			}

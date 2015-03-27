@@ -188,7 +188,7 @@ class uobj_asteroid_hmap : public uobj_asteroid_destroyable {
 
 	float scale_val;
 	vector3d xyz_scale;
-	mutable upsurface surface; // FIXME: mutable so that the contained sd_sphere_vbo_d can modify its vbo indexes
+	mutable upsurface surface; // mutable so that the contained sd_sphere_vbo_d can modify its vbo indexes
 	ast_instance_render_t inst_render; // could be per-LOD level (4)
 
 public:
@@ -311,7 +311,7 @@ void enable_bump_map_post(shader_t &shader, unsigned tu_id, float tscale) {
 
 class uobj_asteroid_voxel : public uobj_asteroid_destroyable {
 
-	mutable voxel_model_space model; // FIXME: const problems with draw()
+	mutable voxel_model_space model; // const problems with draw()
 	bool have_sun_pos;
 	static noise_texture_manager_t global_asteroid_ntg;
 

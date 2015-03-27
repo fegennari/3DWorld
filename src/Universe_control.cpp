@@ -272,8 +272,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 	// clobj0 will not be set - need to draw cells before there are any sobjs
 #ifdef _OPENMP
 	if (inited && !static_only && NUM_THREADS > 1 && !(display_mode & 0x40)) {
-		// FIXME: this isn't entirely thread safe, since some rare occurances can cause crashes, including
-		// when a query object that tries to access a planet/moon/star through clobj as the uobject is being deleted
+		// is this legal when a query object that tries to access a planet/moon/star through clobj as the uobject is being deleted?
 		#pragma omp parallel num_threads(2)
 		{
 			if (omp_get_thread_num() == 1) {process_ships(timer1);}

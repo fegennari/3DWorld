@@ -116,7 +116,7 @@ void update_tiled_terrain_grass_vbos() {grass_tile_manager.clear_vbo();}
 
 void update_tiled_grass_length_width(float lscale, float wscale) {
 	grass_tile_manager.scale_grass(lscale, wscale);
-	// FIXME: update flowers in each tile as well?
+	// FIXME: update flowers in each tile as well, or regenerate them?
 }
 void update_tiled_grass_colors() {grass_tile_manager.clear();} // regenerate grass
 

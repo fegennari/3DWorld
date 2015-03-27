@@ -578,7 +578,6 @@ void draw_coll_surfaces(bool draw_trans) {
 		shader_t nms;
 		setup_cobj_shader(nms, has_lt_atten, 1);
 		// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
-		// FIXME: calculate tangent and binormal using texgen parameters instead, with new shader bump map mode
 		float bump_b_scale(0.0);
 		int nm_tid(-1);
 

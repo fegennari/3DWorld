@@ -370,7 +370,7 @@ void gen_gauss_rand_arr() {
 }
 
 
-double rgen_core_t::randd() { // FIXME: for some reason, inlining this function changes the values returned
+double rgen_core_t::randd() { // for some reason, inlining this function changes the values returned
 	double rand_num;
 	randome_int(rand_num);
 	return rand_num/2147483563.;

@@ -424,7 +424,7 @@ public:
 			assert(data_ix != PRIMITIVE_RESTART_IX);
 			assert(data_ix < data.size());
 			vector3d const norm(((i & 1) ? -1.0 : 1.0), ((i < 2) ? 1.0 : -1.0), 0.0);
-			data[data_ix].n   = (data[data_ix].n + norm.get_norm())*0.5; // FIXME: very approximate
+			data[data_ix].n   = (data[data_ix].n + norm.get_norm())*0.5; // very approximate, but seems to be okay
 			data[data_ix].v.z = new_z;
 			upload_vbo_sub_data(&data[data_ix], data_ix*sizeof(vert_norm), sizeof(vert_norm), 0);
 		}

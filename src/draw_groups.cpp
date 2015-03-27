@@ -333,7 +333,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_grenade(pos, obj.init_dir, radius, ndiv, (in_ammo ? 0 : obj.time), in_ammo, 1, shader);
 		break;
 	case BALL:
-		// FIXME: this is the only place where drawing an object modifies its physics state, but it's difficult to move the code
+		// Note: this is the only place where drawing an object modifies its physics state, but it's difficult to move the code
 		draw_rolling_obj(pos, objg.get_obj(j).init_dir, radius, obj.status, ndiv, ((obj.flags & PLATFORM_COLL) != 0),
 			dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)), shader);
 		break;
