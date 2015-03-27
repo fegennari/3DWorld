@@ -53,6 +53,7 @@ void draw_sides_and_bottom(bool shadow_pass);
 void set_cloud_intersection_shader(shader_t &s);
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
 bool no_sparse_smap_update();
+bool draw_distant_water();
 bool use_water_plane_tess();
 bool enable_ocean_waves();
 
@@ -746,12 +747,11 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.setup_enabled_lights(2, 2); // FS
 	setup_tt_fog_pre(s);
 	bool const use_foam(!water_is_lava);
-	s.set_bool_prefix("use_foam",         use_foam, 1); // FS
-	s.set_bool_prefix("reflections",      reflections, 1); // FS
-	s.set_bool_prefix("add_waves",        add_waves,   1); // FS
-	s.set_bool_prefix("add_noise",        rain_mode,   1); // FS
-	s.set_bool_prefix("deep_water_waves", add_waves,   1); // FS (always enabled with waves for now)
-	s.set_bool_prefix("is_lava",          water_is_lava, 1); // FS
+	s.set_bool_prefix("use_foam",    use_foam,    1); // FS
+	s.set_bool_prefix("reflections", reflections, 1); // FS
+	s.set_bool_prefix("add_waves",   add_waves,   1); // FS
+	s.set_bool_prefix("add_noise",   rain_mode,   1); // FS
+	s.set_bool_prefix("is_lava",     water_is_lava, 1); // FS
 	
 	if (use_tess) { // tessellation shaders
 		s.set_prefix("#define TESS_MODE", 1); // FS
@@ -857,12 +857,11 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 		glDisable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 	}
-	if ((display_mode & 0x10) && camera_pdu.far_ > 1.1*FAR_CLIP) { // camera is high above the mesh (Enable when extended mesh is drawn)
-		// FIXME: changes apparent water color, only draw the area not covered by tiles (somehow)?
+	if (draw_distant_water()) { // camera is high above the mesh (Enable when extended mesh is drawn)
 		setup_water_plane_shader(s, no_specular, reflections, add_waves, 0, 0, 0, color, rcolor, 0); // rain_mode=0, use_depth=0, use_tess=0
 		indexed_mesh_draw<vert_wrap_t> imd;
 		float const size(camera_pdu.far_*SQRT2);
-		imd.render_z_plane(-size, -size, size, size, (zval - SMALL_NUMBER), 8, 8); // 8x8 grid
+		imd.render_z_plane(-size, -size, size, size, (zval - 0.01), 8, 8); // 8x8 grid slightly below tile water level
 		imd.free_context();
 		s.end_shader();
 	}

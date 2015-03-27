@@ -66,18 +66,16 @@ void main()
 	vec3 light_norm = norm;
 	float green_scale = 0.0;
 
-	if (add_waves) {
+	if (add_waves) { // deep water waves are the default
 		// calculate ripple adjustment of normal and reflection based on scaled water normal map texture
-		vec3 wave_n = wave_amplitude*get_wave_normal(tc);
+		vec4 norm_fa = get_deep_wave_normal(tc);
+		vec3 wave_n  = 1.25*wave_amplitude*normalize(norm_fa.xyz);
 #ifdef USE_WATER_DEPTH
-		if (deep_water_waves) {
-			// deep water waves shouldn't move (much) with the wind, but that would require another set of TCs, texgen matrix, etc.
-			vec4 norm_fa = get_deep_wave_normal(tc);
-			float deep_wave_scale = clamp((0.8*depth*mesh_z_scale - 0.2), 0.0, 1.0);
-			wave_n   = mix(wave_n, 1.25*wave_amplitude*normalize(norm_fa.xyz), deep_wave_scale);
-			if (use_foam) {foam_amt = deep_wave_scale*norm_fa.w;}
-		}
-#endif
+		// deep water waves shouldn't move (much) with the wind, but that would require another set of TCs, texgen matrix, etc.
+		float deep_wave_scale = clamp((0.8*depth*mesh_z_scale - 0.2), 0.0, 1.0);
+		wave_n = mix(wave_amplitude*get_wave_normal(tc), wave_n, deep_wave_scale);
+		if (use_foam) {foam_amt = deep_wave_scale*norm_fa.w;}
+#endif // USE_WATER_DEPTH
 		vec3 wave_n_eye = fg_NormalMatrix * wave_n;
 		if (reflections) {green_scale += 0.8*(1.0 - abs(dot(norm, normalize(wave_n_eye))));} // add green to sides of waves (though this increases shader time)
 		light_norm = normalize(norm + wave_n_eye);
