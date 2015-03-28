@@ -148,7 +148,8 @@ void main()
 	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
 
 	vec4 mesh_color = vec4((texel0.rgb * texel1.rgb * color.rgb), color.a);
-	float fog_coord = get_water_fog_coord(vertex, fg_ModelViewMatrixInverse[3].xyz)*get_custom_fog_scale(vertex.z);
+	vec3 clipped_vert;
+	float fog_coord = get_water_fog_coord(vertex, fg_ModelViewMatrixInverse[3].xyz, clipped_vert)*get_custom_fog_scale(clipped_vert.z);
 	fg_FragColor    = apply_fog_ffc(mesh_color, fog_coord, fog_color);
 	//fg_FragColor    = color; // untextured (white) for debugging
 }
