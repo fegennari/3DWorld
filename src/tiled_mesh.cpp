@@ -115,11 +115,6 @@ float get_tt_fog_based_far_clip(float min_camera_dist) {
 grass_tile_manager_t grass_tile_manager;
 
 void update_tiled_terrain_grass_vbos() {grass_tile_manager.clear_vbo();}
-
-void update_tiled_grass_length_width(float lscale, float wscale) {
-	grass_tile_manager.scale_grass(lscale, wscale);
-	// FIXME: update flowers in each tile as well, or regenerate them?
-}
 void update_tiled_grass_colors() {grass_tile_manager.clear();} // regenerate grass
 
 
@@ -311,7 +306,7 @@ void tile_t::clear() {
 	decid_trees.clear();
 	scenery.clear();
 	grass_blocks.clear();
-	flowers.clear();
+	clear_flowers();
 	norm_shadow_data.clear();
 }
 
@@ -2317,6 +2312,10 @@ void tile_draw_t::clear_vbos_tids() {
 	clear_vbos();
 }
 
+void tile_draw_t::clear_flowers() {
+	for (tile_map::iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->clear_flowers();}
+}
+
 
 tile_t *tile_draw_t::get_tile_from_xy(tile_xy_pair const &tp) {
 
@@ -2375,6 +2374,11 @@ bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t
 
 tile_draw_t terrain_tile_draw;
 
+
+void update_tiled_grass_length_width(float lscale, float wscale) {
+	grass_tile_manager.scale_grass(lscale, wscale);
+	terrain_tile_draw.clear_flowers();
+}
 
 void tile_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	terrain_tile_draw.draw_shadow_pass(lpos, tile);

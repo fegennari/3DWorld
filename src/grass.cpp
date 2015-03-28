@@ -829,6 +829,7 @@ void flower_tile_manager_t::gen_flowers(vector<unsigned char> const &weight_data
 	if (skip_generate()) return;
 	//RESET_TIME;
 	assert(empty()); // or call clear()?
+	rgen.set_state(x1+xoff2+123, y1+yoff2+456); // deterministic for each tile
 	mesh_xy_grid_cache_t density_gen[2]; // density thresh, color selection
 	gen_density_cache(density_gen, x1, y1);
 	assert(wd_stride >= (unsigned)MESH_X_SIZE && wd_stride >= (unsigned)MESH_Y_SIZE);

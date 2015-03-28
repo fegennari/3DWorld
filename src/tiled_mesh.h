@@ -217,6 +217,7 @@ public:
 		return (pine_trees.capacity()*sizeof(small_tree) + decid_trees.capacity()*sizeof(tree));
 	}
 	void clear();
+	void clear_flowers() {flowers.clear();}
 	void clear_shadows();
 	void clear_shadow_map(tile_shadow_map_manager *smap_manager);
 	void clear_vbo_tid(tile_shadow_map_manager *smap_manager);
@@ -364,6 +365,7 @@ public:
 	void draw_grass(bool reflection_pass);
 	void update_lightning(bool reflection_pass);
 	void clear_vbos_tids();
+	void clear_flowers();
 	tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 	bool check_player_collision() const;
 	int get_tid_under_point(point const &pos) const;
