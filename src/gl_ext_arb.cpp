@@ -65,11 +65,11 @@ void setup_3d_texture(unsigned &tid, int filter, int wrap) {
 
 	glGenTextures(1, &tid);
 	bind_3d_texture(tid);
-	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filter); // GL_LINEAR_MIPMAP_LINEAR?
-	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filter);
-	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, wrap);
-	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, wrap);
-	glTexParameterf(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filter); // GL_LINEAR_MIPMAP_LINEAR?
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filter);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, wrap);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, wrap);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap);
 }
 unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress) {
 

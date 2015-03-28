@@ -896,10 +896,10 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mi
 	bind_2d_texture(tid);
 
 	// when texture area is small, use linear filter (bilinear filter the closest mipmap)
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
 
 	// when texture area is large, bilinear filter the first mipmap
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
 
 	// enable anisotropic filtering (slower but higher quality)
 	if (anisotropy > 1.0) {glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);}
@@ -908,8 +908,8 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mi
 	// if wrap is false, the texture ends at the edges (clamp)
 	int const mode_s(wrap_s ? (mirror_s ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE); // Note: clamp is more efficient than wrap
 	int const mode_t(wrap_t ? (mirror_t ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode_s);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode_t);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode_s);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode_t);
 }
 
 
@@ -919,9 +919,9 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 	assert(!nearest || !mipmap);
 	glGenTextures(1, &tid);
 	bind_1d_texture(tid);
-	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
-	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
-	glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, (wrap ? (mirror ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE));
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
+	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, (wrap ? (mirror ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE));
 }
 
 
