@@ -72,7 +72,8 @@ bool any_trees_enabled    () {return (pine_trees_enabled() || decid_trees_enable
 bool scenery_enabled      () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
 bool gen_grass_map        () {return (GRASS_THRESH > 0.0 && grass_density > 0 && vegetation > 0.0);}
 bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());}
-bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && (display_mode & 0x40) == 0);}
+bool clouds_enabled       () {return ((display_mode & 0x40) == 0);}
+bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && clouds_enabled());}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool is_distance_mode     () {return ((display_mode & 0x10) != 0);}
 bool nonunif_fog_enabled  () {return (show_fog && is_distance_mode());}
@@ -1630,7 +1631,7 @@ void setup_tt_fog_post(shader_t &s) {
 void tile_draw_t::shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader) {
 
 	s.setup_enabled_lights(3, (1 << lighting_shader)); // sun, moon, and lightning
-	if (!underwater) {s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);} // FS
+	if (!underwater && clouds_enabled()) {s.set_prefix("#define FOG_FADE_TO_TRANSPARENT", 1);} // FS - fade distant hills into background clouds
 	setup_tt_fog_pre(s);
 }
 
