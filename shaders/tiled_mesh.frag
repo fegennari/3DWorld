@@ -9,6 +9,7 @@ uniform float spec_offset    = 0.0;
 uniform float caustics_weight= 1.0;
 uniform float smap_atten_cutoff = 10.0;
 uniform float smap_atten_slope  = 0.5;
+uniform float htex_scale = 1.0;
 uniform float triplanar_texture_scale = 1.0;
 uniform vec3 uw_atten_max;
 uniform vec3 uw_atten_scale;
@@ -20,7 +21,7 @@ in vec2 tc2; // for water caustics
 
 // underwater attenuation code
 void atten_color(inout vec4 color, in float dist) {
-	color.rgb *= vec3(1.0) - min(uw_atten_max, uw_atten_scale*dist*2.0);
+	color.rgb *= vec3(1.0) - min(uw_atten_max, mix(vec3(1.0), uw_atten_scale*dist*2.0, htex_scale)); // if not using height texture, treat as max depth
 }
 
 float integrate_water_dist(in vec3 targ_pos, in vec3 src_pos, in float water_z) {

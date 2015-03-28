@@ -58,6 +58,7 @@ void create_pine_tree_instances();
 unsigned get_pine_tree_inst_gpu_mem();
 
 void setup_detail_normal_map(shader_t &s, float tscale);
+void draw_distant_mesh_bottom(float terrain_zmin);
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -76,7 +77,7 @@ bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool is_distance_mode     () {return ((display_mode & 0x10) != 0);}
 bool nonunif_fog_enabled  () {return (show_fog && is_distance_mode());}
 bool enable_ocean_waves   () {return ((display_mode & 0x0100) != 0 && wind.mag() > TOLERANCE);}
-bool draw_distant_water   () {return (is_distance_mode() && camera_pdu.far_ > 1.1*FAR_CLIP);}
+bool draw_distant_water   () {return (is_water_enabled() && is_distance_mode() && camera_pdu.far_ > 1.1*FAR_CLIP);}
 bool use_water_plane_tess () {return (enable_ocean_waves() && cloud_model == 0 && !draw_distant_water());} // hack to use cloud_model (F10)
 float get_tt_fog_top      () {return (nonunif_fog_enabled() ? (zmax + (zmax - zmin)) : (zmax + FAR_CLIP));}
 float get_tt_fog_bot      () {return (nonunif_fog_enabled() ? zmax : (zmax + FAR_CLIP));}
@@ -1301,6 +1302,8 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 
 void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 
+	bool const dist_water(draw_distant_water());
+	//if (dist_water) return; // skip water cap
 	cube_t const bcube(get_mesh_bcube());
 	static vector<vert_wrap_t> wverts;
 	wverts.resize(0);
@@ -1317,12 +1320,12 @@ void tile_t::draw_water_cap(shader_t &s, bool textures_already_set) const {
 				if (!adj_tile->has_water ()) continue; // adj tile has no water, so we can't have any uncapped water on this edge
 				if (!adj_tile->is_visible()) continue; // adj tile not visible,  so we can't see this edge
 			}
-			float const dz(water_plane_z - mzmin);
+			float const ztop(water_plane_z - (dist_water ? 0.1 : 0.0));
 			float const x1(bcube.d[0][dim ? 0 : dir]), x2(bcube.d[0][dim ? 1 : dir]), y1(bcube.d[1][dim ? dir : 0]), y2(bcube.d[1][dim ? dir : 1]);
 			wverts.push_back(vert_wrap_t(point(x1, y1, mzmin)));
 			wverts.push_back(vert_wrap_t(point(x2, y2, mzmin)));
-			wverts.push_back(vert_wrap_t(point(x2, y2, mzmin+dz)));
-			wverts.push_back(vert_wrap_t(point(x1, y1, mzmin+dz)));
+			wverts.push_back(vert_wrap_t(point(x2, y2, ztop)));
+			wverts.push_back(vert_wrap_t(point(x1, y1, ztop)));
 		}
 	}
 	if (!wverts.empty()) {
@@ -1969,6 +1972,13 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	bind_vbo(0, 1); // unbind index buffer
 	glDisable(GL_PRIMITIVE_RESTART);
 	disable_blend();
+
+	if ((display_mode & 0x01) && draw_distant_water()) {
+		int const loc(s.get_uniform_loc("htex_scale"));
+		if (loc >= 0) {s.set_uniform_float(loc, 0.0);} // disable height texture
+		draw_distant_mesh_bottom(terrain_zmin); // Note: textures from last drawn tile are bound, but don't really affect the results
+		if (loc >= 0) {s.set_uniform_float(loc, 1.0);} // enable height texture
+	}
 	s.end_shader();
 }
 

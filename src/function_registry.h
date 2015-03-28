@@ -126,7 +126,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 void draw_sky(int order);
 void compute_brightness();
 void setup_water_plane_texgen(float s_scale, float t_scale, shader_t &shader, int mode);
-void draw_water_plane(float zval, unsigned reflection_tid);
+void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid);
 void draw_splashes();
 void draw_bubbles();
 void draw_cracks_and_decals();

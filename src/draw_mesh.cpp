@@ -796,8 +796,22 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 }
 
 
+void draw_plane_to_far_clip(float zval) {
+
+	indexed_mesh_draw<vert_wrap_t> imd;
+	float const size(camera_pdu.far_*SQRT2);
+	imd.render_z_plane(-size, -size, size, size, zval, 8, 8); // 8x8 grid
+	imd.free_context();
+}
+
+void draw_distant_mesh_bottom(float terrain_zmin) {
+	colorRGBA const uw_color(1.0-uw_atten_max.R, 1.0-uw_atten_max.G, 1.0-uw_atten_max.B);
+	draw_plane_to_far_clip(terrain_zmin); // hopefully below tile water level
+}
+
+
 // texture units used: 0: reflection texture, 1: water normal map, 2: mesh height texture, 3: rain noise, 4: deep water normal map
-void draw_water_plane(float zval, unsigned reflection_tid) {
+void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 
 	if (DISABLE_WATER) return;
 	bool const reflections(!(display_mode & 0x20));
@@ -859,10 +873,8 @@ void draw_water_plane(float zval, unsigned reflection_tid) {
 	}
 	if (draw_distant_water()) { // camera is high above the mesh (Enable when extended mesh is drawn)
 		setup_water_plane_shader(s, no_specular, reflections, add_waves, 0, 0, 0, color, rcolor, 0); // rain_mode=0, use_depth=0, use_tess=0
-		indexed_mesh_draw<vert_wrap_t> imd;
-		float const size(camera_pdu.far_*SQRT2);
-		imd.render_z_plane(-size, -size, size, size, (zval - 0.01), 8, 8); // 8x8 grid slightly below tile water level
-		imd.free_context();
+		s.set_cur_color(WHITE);
+		draw_plane_to_far_clip(zval - 0.01); // slightly below water level
 		s.end_shader();
 	}
 	disable_blend();
