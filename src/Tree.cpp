@@ -137,7 +137,7 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		s.enable();
 		tree_data_t::pre_leaf_draw(s);
 		cur_tree->gen_leaf_color();
-		cur_tree->leaf_draw_setup(0);
+		cur_tree->leaf_draw_setup(1);
 		cur_tree->draw_leaves(0.0); // sets color
 		tree_data_t::post_leaf_draw();
 		s.disable();
@@ -880,7 +880,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		if (world_mode == WMODE_GROUND && !is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
-		td.leaf_draw_setup(0);
+		td.leaf_draw_setup(1);
 		td.draw_leaves_shadow_only();
 		fgPopMatrix();
 		return;
@@ -1059,11 +1059,11 @@ void tree_data_t::draw_leaves(float size_scale) {
 }
 
 
-bool tree_data_t::leaf_draw_setup(bool leaf_dynamic_en) {
+bool tree_data_t::leaf_draw_setup(bool no_leaf_reset) {
 
 	bool const gen_arrays(!leaf_data_allocated());
 	if (gen_arrays) {alloc_leaf_data();}
-	if (gen_arrays || (reset_leaves && !leaf_dynamic_en)) {reset_leaf_pos_norm();}
+	if (gen_arrays || (reset_leaves && !no_leaf_reset)) {reset_leaf_pos_norm();}
 	// may do duplicate work, but should at least keep the cobj colors in sync
 	if (gen_arrays || leaf_color_changed) {update_all_leaf_colors();}
 	return gen_arrays;

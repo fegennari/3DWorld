@@ -247,7 +247,7 @@ public:
 	void draw_leaves(float size_scale);
 	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
 	tree_bb_tex_t const &get_render_branch_texture() const {return render_branch_texture;}
-	bool leaf_draw_setup(bool leaf_dynamic_en);
+	bool leaf_draw_setup(bool no_leaf_reset);
 	void check_render_textures();
 	void update_normal_for_leaf(unsigned i);
 	void reset_leaf_pos_norm();
