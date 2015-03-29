@@ -646,32 +646,27 @@ void calc_water_normals() {
 	if (DISABLE_WATER) return;
 	vector3d *wsn0(wat_surf_normals[0]), *wsn1(wat_surf_normals[1]);
 
-	if (temperature <= W_FREEZE_POINT) {
-		for (int i = 0; i < MESH_Y_SIZE; ++i) {
+	for (int i = 0; i < MESH_Y_SIZE; ++i) {
+		if (temperature <= W_FREEZE_POINT) { // ice
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
 				if (!point_interior_to_mesh(j, i) || wminside[i][j]) {wsn1[j] = wat_vert_normals[i][j] = plus_z;}
+			}
+		}
+		else { // water
+			for (int j = 0; j < MESH_X_SIZE; ++j) {
+				if (point_interior_to_mesh(j, i) && wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) { // inside
+					wsn1[j] = get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, j, i);
+					vector3d nv(wsn1[j]);
+					if (i > 0)          {nv += wsn0[j];}
+					if (i > 0 && j > 0) {nv += wsn0[j-1];}
+					if (j > 0)          {nv += wsn1[j-1];}
+					wat_vert_normals[i][j] = nv.get_norm();
+				}
+				else {
+					wsn1[j] = wat_vert_normals[i][j] = plus_z;
+				}
 			} // for j
-			swap(wsn0, wsn1);
-		} // for i
-		return;
-	}
-	for (int i = 0; i < MESH_Y_SIZE; ++i) {
-		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			if (!point_interior_to_mesh(j, i)) {
-				wsn1[j] = wat_vert_normals[i][j] = plus_z;
-			}
-			else if (wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) {
-				wsn1[j] = get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, j, i);
-				vector3d nv(wsn1[j]);
-				if (i > 0)          {nv += wsn0[j];}
-				if (i > 0 && j > 0) {nv += wsn0[j-1];}
-				if (j > 0)          {nv += wsn1[j-1];}
-				wat_vert_normals[i][j] = nv.get_norm();
-			} // inside
-			else {
-				wsn1[j] = wat_vert_normals[i][j] = plus_z;
-			}
-		} // for j
+		}
 		swap(wsn0, wsn1);
 	} // for i
 }
