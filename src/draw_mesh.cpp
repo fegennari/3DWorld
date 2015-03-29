@@ -39,7 +39,7 @@ vector<fp_ratio> uw_mesh_lighting; // for water caustics
 extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
-extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere;
+extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, FAR_CLIP, sun_radius;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
@@ -773,7 +773,12 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.add_uniform_float("water_green_comp", water_params.green);
 	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	s.add_uniform_float("mesh_z_scale",     mesh_scale);
-	if (use_tess) {s.add_uniform_vector3d("camera_pos", get_camera_pos());} // needed for tess shaders
+	
+	if (use_tess) {
+		s.add_uniform_vector3d("camera_pos", get_camera_pos());
+		s.add_uniform_float("wave_height",   1.0/mesh_scale_z);
+		s.add_uniform_float("wave_width",    max(1.0, 1.0/mesh_scale_z));
+	}
 	set_water_plane_uniforms(s);
 	setup_water_plane_texgen(1.0, 1.0, s, 0);
 	if (no_specular) {s.clear_specular();} else {set_tt_water_specular(s);}
