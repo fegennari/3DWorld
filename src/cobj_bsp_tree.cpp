@@ -195,10 +195,8 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 		temp_bins[bix].push_back(obj);
 	}
 	for (unsigned d = 0; d < 3; ++d) {
-		for (unsigned i = 0; i < temp_bins[d].size(); ++i) {
-			objects[pos++] = temp_bins[d][i];
-		}
 		bin_count[d] = temp_bins[d].size();
+		for (unsigned i = 0; i < bin_count[d]; ++i) {objects[pos++] = temp_bins[d][i];}
 		temp_bins[d].resize(0);
 	}
 	assert(pos == n.end);
@@ -208,7 +206,6 @@ template<typename T> void cobj_tree_simple_type_t<T>::build_tree(unsigned nix, u
 		build_tree(nix, (skip_dims | (1 << dim)), depth); // single bin, rebin with a different dim
 		return;
 	}
-
 	// create child nodes and call recursively
 	unsigned cur(n.start);
 
@@ -251,10 +248,7 @@ void cobj_tree_tquads_t::calc_node_bbox(tree_node &n) const {
 	assert(n.start < n.end);
 	cube_t &c(n);
 	c = cube_t(X_SCENE_SIZE, -X_SCENE_SIZE, Y_SCENE_SIZE, -Y_SCENE_SIZE, czmax, czmin);
-
-	for (unsigned i = n.start; i < n.end; ++i) { // bbox union
-		objects[i].update_bcube(c);
-	}
+	for (unsigned i = n.start; i < n.end; ++i) {objects[i].update_bcube(c);} // bbox union
 	c.expand_by(POLY_TOLER);
 }
 
@@ -280,10 +274,7 @@ void cobj_tree_tquads_t::add_polygons(vector<polygon_t> const &polygons, bool ve
 	RESET_TIME;
 	clear();
 	objects.reserve(polygons.size());
-		
-	for (vector<polygon_t>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {
-		objects.push_back(coll_tquad(*i));
-	}
+	for (vector<polygon_t>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {objects.push_back(coll_tquad(*i));}
 	build_tree_top(verbose);
 	PRINT_TIME(" Cobj Tree Triangles Create (from Polygons)");
 }
@@ -378,10 +369,7 @@ bool cobj_bvh_tree::create_cixs() {
 	}
 	else {
 		if (is_static && !occluders_only && !cubes_only) {cixs.reserve(cobjs->size());} // normal static mode
-		
-		for (unsigned i = 0; i < cobjs->size(); ++i) {
-			add_cobj(i);
-		}
+		for (unsigned i = 0; i < cobjs->size(); ++i) {add_cobj(i);}
 	}
 	assert(cixs.size() < (1 << 29));
 	return !cixs.empty();
@@ -392,10 +380,7 @@ void cobj_bvh_tree::calc_node_bbox(tree_node &n) const {
 
 	assert(n.start < n.end);
 	n.copy_from(get_cobj(n.start));
-
-	for (unsigned i = n.start+1; i < n.end; ++i) { // bbox union
-		n.union_with_cube(get_cobj(i));
-	}
+	for (unsigned i = n.start+1; i < n.end; ++i) {n.union_with_cube(get_cobj(i));} // bbox union
 }
 
 
@@ -639,7 +624,7 @@ void cobj_bvh_tree::build_tree_top_level_omp() { // single octtree level
 		build_tree(kid, ((count == num) ? 7 : 0), 1, ptd); // if all in one bin, make that bin a leaf
 		unsigned const next_kid(ptd.get_next_node_ix());
 		assert(next_kid <= end_nix);
-		if (next_kid < end_nix) nodes[next_kid].next_node_id = end_nix; // close the gap of unused nodes
+		if (next_kid < end_nix) {nodes[next_kid].next_node_id = end_nix;} // close the gap of unused nodes
 		nodes[kid].next_node_id = end_nix;
 	}
 	nodes.resize(cur_nix);
@@ -674,17 +659,15 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 		unsigned bix(2);
 		float const *vals(get_cobj(i).d[dim]);
 		assert(vals[0] <= vals[1]);
-		if (vals[1] <= sval_lo) bix =  (depth&1); // ends   before the split, put in bin 0
-		if (vals[0] >= sval_hi) bix = !(depth&1); // starts after  the split, put in bin 1
-		if (bix == 0) cixs[pos++] = cixs[i]; else ptd.temp_bins[bix].push_back(cixs[i]);
+		if (vals[1] <= sval_lo) {bix =  (depth&1);} // ends   before the split, put in bin 0
+		if (vals[0] >= sval_hi) {bix = !(depth&1);} // starts after  the split, put in bin 1
+		if (bix == 0) {cixs[pos++] = cixs[i];} else {ptd.temp_bins[bix].push_back(cixs[i]);}
 	}
 	bin_count[0] = (pos - n.start);
 
 	for (unsigned d = 1; d < 3; ++d) {
-		for (unsigned i = 0; i < ptd.temp_bins[d].size(); ++i) {
-			cixs[pos++] = ptd.temp_bins[d][i];
-		}
 		bin_count[d] = ptd.temp_bins[d].size();
+		for (unsigned i = 0; i < bin_count[d]; ++i) {cixs[pos++] = ptd.temp_bins[d][i];}
 		ptd.temp_bins[d].resize(0);
 	}
 	assert(pos == n.end);
@@ -694,7 +677,6 @@ void cobj_bvh_tree::build_tree(unsigned nix, unsigned skip_dims, unsigned depth,
 		build_tree(nix, (skip_dims | (1 << dim)), depth, ptd); // single bin, rebin with a different dim
 		return;
 	}
-
 	// create child nodes and call recursively
 	unsigned cur(n.start);
 
