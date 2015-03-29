@@ -264,7 +264,7 @@ void process_groups() {
 	int const lcf(camera_follow);
 	++scounter;
 	camera_follow = 0;
-	if (begin_motion) build_cobj_tree(1, 0); // could also do after group processing
+	if (begin_motion) {build_cobj_tree(1, 0);} // could also do after group processing
 	
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
@@ -531,7 +531,7 @@ void process_groups() {
 
 void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only) {
 	
-	cout << "Generating scene..." << endl;
+	cout << "Generating Scene..." << endl;
 	RESET_TIME;
 	static int st_valid(0);
 	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
@@ -758,7 +758,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 
 	if (!init) {
 		if (load_coll_objs) {
-			if (!read_coll_objects(coll_obj_file)) exit(1);
+			if (!read_coll_objects(coll_obj_file)) {exit(1);}
 			fixed_cobjs.finalize();
 			bool const has_voxel_cobjs(gen_voxels_from_cobjs(fixed_cobjs));
 			unsigned const ncobjs(fixed_cobjs.size());
@@ -788,13 +788,14 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 	
 	if (re_add) {
 		if (num_trees == 0) {
-			if (tree_mode & 1) add_tree_cobjs(); // multiple adds?
-			if (tree_mode & 2) add_small_tree_coll_objs();
+			if (tree_mode & 1) {add_tree_cobjs();} // multiple adds?
+			if (tree_mode & 2) {add_small_tree_coll_objs();}
 		}
-		if (has_scenery2) add_scenery_cobjs();
+		if (has_scenery2) {add_scenery_cobjs();}
 	}
-	cobj_stats();
-	build_cobj_tree();
+	bool const verbose(!scrolling);
+	if (verbose) {cobj_stats();}
+	build_cobj_tree(0, verbose);
 	check_contained_cube_sides();
 }
 

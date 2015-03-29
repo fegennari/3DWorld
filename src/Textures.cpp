@@ -1373,7 +1373,7 @@ void create_landscape_texture() {
 		tex.gl_delete(); // should we try to update rather than recreating from scratch?
 		tex.do_gl_init();
 	}
-	PRINT_TIME(" Gen Landscape Texture");
+	if (!scrolling) {PRINT_TIME(" Gen Landscape Texture");}
 }
 
 

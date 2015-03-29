@@ -660,7 +660,7 @@ void update_temperature(bool verbose) {
 	else if (rel_h > 0.2) {
 		alt_temp -= 60.0*(rel_h - 0.2); // in snow covered mountains
 	}
-	if (verbose /*&& temperature != alt_temp*/) cout << "Temperature = " << alt_temp << endl;
+	if (verbose && !scrolling /*&& temperature != alt_temp*/) {cout << "Temperature = " << alt_temp << endl;}
 	temperature = alt_temp;
 }
 

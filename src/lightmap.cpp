@@ -34,7 +34,7 @@ vector<light_source> light_sources_a, light_sources_d, dl_sources, dl_sources2; 
 lmap_manager_t lmap_manager;
 
 
-extern int animate2, display_mode, frame_counter, camera_coll_id, read_light_files[], write_light_files[];
+extern int animate2, display_mode, frame_counter, camera_coll_id, scrolling, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
 extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
 extern colorRGB cur_ambient, cur_diffuse;
@@ -632,9 +632,8 @@ void build_lightmap(bool verbose) {
 			} // for y
 		} // for i
 	}
-	if (verbose) PRINT_TIME(" Lighting Setup + XYZ Passes");
-
 	if (nbins > 0) {
+		if (verbose) PRINT_TIME(" Lighting Setup + XYZ Passes");
 		// Note: sky and global lighting use the same data structure for reading/writing, so they should have the same filename if used together
 		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local"};
 
@@ -647,7 +646,7 @@ void build_lightmap(bool verbose) {
 	}
 	reset_cobj_counters();
 	matrix_delete_2d(need_lmcell);
-	PRINT_TIME(" Lighting Total");
+	if (!scrolling) {PRINT_TIME(" Lighting Total");}
 }
 
 

@@ -2137,7 +2137,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 
 void regen_trees(bool keep_old) {
 
-	cout << "vegetation: " << vegetation << endl;
+	if (!scrolling) {cout << "vegetation: " << vegetation << endl;}
 	RESET_TIME;
 	static int init(0), last_rgi(0), last_xoff2(0), last_yoff2(0);
 	static float last_ts(0.0);
@@ -2152,7 +2152,6 @@ void regen_trees(bool keep_old) {
 		if (keep_old && init && last_rgi == rand_gen_index && last_xoff2 == xoff2 && last_yoff2 == yoff2 && last_ts == tree_scale)
 		{ // keep old trees
 			add_tree_cobjs();
-			PRINT_TIME(" gen tree fast");
 			return;
 		}
 		int const border(1), ext_x1(border), ext_x2(MESH_X_SIZE-border), ext_y1(border), ext_y2(MESH_Y_SIZE-border);
@@ -2163,7 +2162,6 @@ void regen_trees(bool keep_old) {
 		else {
 			t_trees.resize(0);
 		}
-		PRINT_TIME(" Delete Trees");
 		t_trees.gen_deterministic(ext_x1, ext_y1, ext_x2, ext_y2, vegetation);
 		if (!scrolling) {cout << "Num trees = " << t_trees.size() << endl;}
 		last_rgi   = rand_gen_index;
@@ -2172,7 +2170,7 @@ void regen_trees(bool keep_old) {
 		last_ts    = tree_scale;
 		init       = 1;
 	}
-	PRINT_TIME(" Gen Trees");
+	if (!scrolling) {PRINT_TIME(" Gen Trees");}
 }
 
 

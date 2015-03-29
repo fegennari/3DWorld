@@ -588,7 +588,7 @@ void scroll_scene() {
 
 	RESET_TIME;
 	point const camera(get_camera_pos());
-	cout << "Shifting Scene..." << endl;
+	cout << endl << "Shifting + "; // will produce "Shifting + Generating scene"
 	camera_change = 1;
 	scrolling     = 1;
 	dx_scroll     = int(camera.x*DX_VAL_INV);
@@ -598,9 +598,7 @@ void scroll_scene() {
 	xoff2        += dx_scroll;
 	yoff2        += dy_scroll;
 	shift_all_objs(vd);
-	//PRINT_TIME("*** Top Level: Shift All Objects");
 	gen_scene(1, 1, 1, 0, 0);
-	//PRINT_TIME("*** Top Level: Gen Scene");
 	regen_lightmap(); // not shiftable
 	if (display_mode & 0x04) {water_plane_z = get_water_z_height();}
 	update_temperature(0);
@@ -615,7 +613,7 @@ float get_ocean_wave_height() {
 
 	if (water_is_lava || !(display_mode & 0x0100)) return 0.0;
 	static float time(0.0);
-	if (animate2 && temperature > W_FREEZE_POINT) time += fticks;
+	if (animate2 && temperature > W_FREEZE_POINT) {time += fticks;}
 	return ocean_wave_height*sin(1.0*time/TICKS_PER_SECOND); // add small waves
 }
 

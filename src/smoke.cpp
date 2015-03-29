@@ -29,7 +29,7 @@ vector<unsigned char> smoke_tex_data; // several MB
 
 extern bool no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
-extern int animate2, display_mode;
+extern int animate2, display_mode, scrolling;
 extern float czmin0;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
@@ -251,7 +251,9 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 		update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
 	}
 	if (smoke_tid == 0) { // create texture
-		cout << "Allocating " << MESH_SIZE[2] << " by " << MESH_X_SIZE << " by " << MESH_Y_SIZE << " smoke texture of " << smoke_tex_data.size() << " bytes." << endl;
+		static bool was_printed(0);
+		if (!was_printed) {cout << "Allocating " << MESH_SIZE[2] << " by " << MESH_X_SIZE << " by " << MESH_Y_SIZE << " smoke texture of " << smoke_tex_data.size() << " bytes." << endl;}
+		was_printed = 1;
 		smoke_tid = create_3d_texture(MESH_SIZE[2], MESH_X_SIZE, MESH_Y_SIZE, ncomp, smoke_tex_data, GL_LINEAR, GL_CLAMP_TO_EDGE);
 	}
 	else { // update region/sync texture
