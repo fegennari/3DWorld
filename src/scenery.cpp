@@ -292,7 +292,6 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 }
 
 void rock_shape3d::add_cobjs() {
-
 	coll_id = add_coll_sphere(pos, 0.5*radius, cobj_params(0.9, BROWN, 0, 0, rock_collision, 0, DARK_ROCK_TEX));
 }
 
@@ -332,14 +331,12 @@ void rock_shape3d::draw_using_vbo() const {
 	bind_vbo(0);
 }
 
-
 bool rock_shape3d::update_zvals(int x1, int y1, int x2, int y2) {
 
 	if (!scenery_obj::update_zvals(x1, y1, x2, y2)) return 0;
 	clear_vbo(); // clear and recreate points if pos changes
 	return 1;
 }
-
 
 void rock_shape3d::clear_vbo() {
 	delete_and_zero_vbo(vbo);
@@ -368,7 +365,6 @@ p_upsurface surface_cache::get_surface(bool fixed_sz_rock_cache) {
 	surface->inc_ref();
 	return surface;
 }
-
 
 void surface_cache::clear_unref() {
 
@@ -919,6 +915,7 @@ void scenery_group::clear_vbos() {
 
 void scenery_group::clear() {
 
+	clear_vbos();
 	free_scenery();
 	rock_shapes.clear();
 	surface_rocks.clear();
@@ -927,7 +924,6 @@ void scenery_group::clear() {
 	logs.clear();
 	stumps.clear();
 	plants.clear();
-	clear_vbos();
 	generated = 0;
 }
 
