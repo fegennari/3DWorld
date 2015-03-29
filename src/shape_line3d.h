@@ -24,7 +24,6 @@ public:
 	bool update_zvals(int x1, int y1, int x2, int y2);
 	bool in_camera_view(float brad=0.0, vector3d const &xlate=zero_vector) const;
 	bool is_visible(bool shadow_only, float bradius, vector3d const &xlate) const;
-	float get_shadowed_color(point const &p, float eff_radius) const;
 	float get_size_scale(float dist_to_camera, float scale_val, float scale_exp=8.0) const;
 	colorRGBA get_atten_color(colorRGBA c, vector3d const &xlate) const;
 	void remove_cobjs();

@@ -3,9 +3,11 @@ uniform mat4 fg_ViewMatrix;
 uniform float tex_scale_s  = 1.0;
 uniform float tex_scale_t  = 1.0;
 uniform vec3 world_space_offset = vec3(0.0);
+uniform float vertex_offset_scale = 0.0; // hack to make vertex_offset ignored when unused/unset
 uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 
 in vec4 tex0_s, tex0_t;
+in vec3 vertex_offset; // not always used
 
 out vec3 vpos, normal; // world space
 out vec4 epos;
@@ -27,7 +29,8 @@ void main()
 		tc = fg_TexCoord * vec2(tex_scale_s, tex_scale_t);
 	}
 	fg_Color_vf = fg_Color;
-	epos        = fg_ModelViewMatrix * fg_Vertex;
+	vec4 vertex = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
+	epos        = fg_ModelViewMatrix * vertex;
 	gl_Position = fg_ProjectionMatrix * epos;
 
 	if (use_fg_ViewMatrix) {
@@ -37,7 +40,7 @@ void main()
 	}
 	else {
 		eye_norm = normalize(mat3(fg_ModelViewMatrix) * fg_Normal); // Note: avoids the fg_NormalMatrix upload
-		vpos     = fg_Vertex.xyz + world_space_offset;
+		vpos     = vertex.xyz + world_space_offset;
 		normal   = normalize(fg_Normal);
 	}
 #ifdef USE_BUMP_MAP

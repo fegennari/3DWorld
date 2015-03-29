@@ -116,11 +116,6 @@ bool scenery_obj::is_visible(bool shadow_only, float bradius, vector3d const &xl
 	return (shadow_only || !skip_uw_draw(pos+xlate, radius));
 }
 
-float scenery_obj::get_shadowed_color(point const &p, float eff_radius) const { // not used on rock_shapes
-	if (world_mode != WMODE_GROUND) return 1.0;
-	return (is_visible_to_light_cobj(p, get_light(), eff_radius, coll_id, 0) ? 1.0 : SHADOW_VAL);
-}
-
 float scenery_obj::get_size_scale(float dist_to_camera, float scale_val, float scale_exp) const {
 	return ((scale_val == 0.0) ? 1.0 : min(1.0f, pow(scale_val/dist_to_camera, scale_exp)));
 }
@@ -310,7 +305,7 @@ void rock_shape3d::draw(bool shadow_only, bool reflection_pass, vector3d const &
 
 	if (!is_visible(shadow_only, 0.0, xlate))     return;
 	if (reflection_pass && pos.z < water_plane_z) return;
-	(shadow_only ? WHITE : get_atten_color(color*get_shadowed_color(pos, 0.5*radius), xlate)).set_for_cur_shader();
+	(shadow_only ? WHITE : get_atten_color(color, xlate)).set_for_cur_shader();
 	draw_using_vbo();
 }
 
@@ -407,7 +402,7 @@ void surface_rock::draw(float sscale, bool shadow_only, bool reflection_pass,
 	assert(surface);
 	if (!is_visible(shadow_only, 0.0, xlate))     return;
 	if (reflection_pass && pos.z < water_plane_z) return;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, radius));
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate));
 	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
@@ -469,10 +464,9 @@ void s_rock::add_cobjs() {
 
 void s_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
-	float const rmax(1.3*radius);
-	if (!is_visible(shadow_only, rmax, xlate))    return;
-	if (reflection_pass && pos.z < water_plane_z) return;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, rmax));
+	if (!is_visible(shadow_only, 1.3*radius, xlate)) return;
+	if (reflection_pass && pos.z < water_plane_z)    return;
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate));
 	float const dist(distance_to_camera(pos+xlate));
 
 	if (!shadow_only && 2*get_pt_line_thresh()*radius < dist) { // draw as point
@@ -514,7 +508,7 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 	if (!is_visible(shadow_only, radius, xlate))  return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	unsigned const lod_level = 0;
-	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate)*get_shadowed_color(pos+xlate, radius));
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(WHITE, xlate));
 	color.set_for_cur_shader();
 	fgPushMatrix();
 	translate_to(pos);
@@ -577,11 +571,10 @@ void s_log::add_cobjs() {
 
 void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
-	float const sz(max(length, max(radius, radius2)));
 	point const center((pos + pt2)*0.5 + xlate);
-	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz, xlate))) return;
+	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(max(length, max(radius, radius2)), xlate))) return;
 	if (reflection_pass && 0.5*(pos.z + pt2.z) < water_plane_z) return;
-	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
+	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0));
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
@@ -638,11 +631,10 @@ bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {
 
 void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
-	float const sz(max(height, max(radius, radius2)));
 	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
-	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(sz, xlate))) return;
+	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(max(height, max(radius, radius2)), xlate))) return;
 	if (reflection_pass && pos.z < water_plane_z) return;
-	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0)*get_shadowed_color(center, sz));
+	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0));
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
@@ -1128,7 +1120,13 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 
 	if (draw_opaque) { // draw stems, rocks, logs, and stumps
 		shader_t s;
-		s.begin_simple_textured_shader(0.0, !shadow_only); // with lighting, unless shadow_only
+
+		if (!shadow_only) {
+			setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1); // direct lighting + dlights + shadow map
+		}
+		else {
+			s.begin_simple_textured_shader(0.0, !shadow_only); // with lighting, unless shadow_only
+		}
 		draw_opaque_objects(s, shadow_only, xlate, 1);
 		s.end_shader();
 	}

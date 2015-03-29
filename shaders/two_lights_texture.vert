@@ -1,10 +1,10 @@
 uniform float alpha = 1.0;
 uniform vec4 emission = vec4(0,0,0,1);
-uniform float vertex_offset_scale = 0.0;// hack to make vertex_offset ignored when unused/unset
+uniform float vertex_offset_scale = 0.0; // hack to make vertex_offset ignored when unused/unset
 uniform vec3 xlate = vec3(0);
 uniform vec3 scale = vec3(1);
 
-in vec3 vertex_offset;
+in vec3 vertex_offset; // not always used
 
 out vec2 tc;
 
