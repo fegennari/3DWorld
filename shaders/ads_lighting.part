@@ -16,9 +16,9 @@ uniform fg_light_t fg_LightSource[MAX_LIGHTS];
 
 
 float get_spec_intensity(in vec3 normal, in vec3 light_dir, in vec3 eye_dir) {
-#if 1 // new mode
+#if 0 // Phong
 	float dp  = dot(eye_dir, reflect(-light_dir, normal));
-#else // old approximation
+#else // Blinn-Phong
 	vec3 half_vect = normalize(light_dir + eye_dir); // Eye + L = -eye_space_pos + L
 	float dp  = dot(normal, half_vect);
 #endif
