@@ -87,7 +87,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
 #endif
 		}
-		vec3 eye_pos   = camera_pos - dlpos;
+		vec3 eye_dir   = normalize(camera_pos - dlpos);
 		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
 #ifdef USE_BUMP_MAP_DL
 		vec3 orig_ldir = light_dir;
@@ -95,11 +95,11 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		float nscale   = clamp(10.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
 		light_dir      = normalize(lpos_eye - epos.xyz);
 #ifdef BUMP_MAP_CUSTOM
-		vec3 lnorm     = nscale*apply_bump_map(light_dir, eye_pos);
+		vec3 lnorm     = nscale*apply_bump_map(light_dir, eye_dir);
 #else
-		vec3 lnorm     = nscale*apply_bump_map_for_tbn(light_dir, eye_pos, TBN);
+		vec3 lnorm     = nscale*apply_bump_map_for_tbn(light_dir, eye_dir, TBN);
 #endif // BUMP_MAP_CUSTOM
-		if (dot(eye_pos, lnorm) < 0.0) {eye_pos = -eye_pos;} // better, but still not completely correct
+		if (dot(eye_dir, lnorm) < 0.0) {eye_dir = -eye_dir;} // better, but still not completely correct
 		float n_dot_l  = mix(dot(normal, orig_ldir), dot(lnorm, light_dir), bump_map_normal_scale);
 #else // !USE_BUMP_MAP_DL
 		vec3 lnorm     = normal;
@@ -107,8 +107,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #endif // USE_BUMP_MAP_DL
 		float diff_mag = max(0.0, n_dot_l); // diffuse
 #ifndef NO_DL_SPECULAR
-		vec3 half_vect = normalize(normalize(eye_pos) + light_dir); // Eye + L (in world space)
-		float spec_mag = clamp(10.0*n_dot_l, 0.0, 1.0)*get_spec_intensity(lnorm, half_vect);
+		float spec_mag = clamp(10.0*n_dot_l, 0.0, 1.0)*get_spec_intensity(lnorm, light_dir, eye_dir);
 #else
 		float spec_mag = 0.0;
 #endif // NO_DL_SPECULAR

@@ -251,9 +251,9 @@ void main()
 		cloud_shadow = 0.25*cloud_den;
 #endif
 	}
-	vec3 epos_norm = normalize(epos.xyz);
-	vec3 ambient   = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
-	vec3 diffuse   = (fg_LightSource[0].diffuse.rgb * dterm0 * lscale0 * sscale);
+	vec3 eye_dir = normalize(-epos.xyz);
+	vec3 ambient = (fg_LightSource[0].ambient.rgb * atten0) + (fg_LightSource[1].ambient.rgb * light_scale[1]);
+	vec3 diffuse = (fg_LightSource[0].diffuse.rgb * dterm0 * lscale0 * sscale);
 	
 	if (light_scale[2] > 0.0) {
 		float dterm2 = max(dot(norm, ldir2), 0.0);
@@ -263,9 +263,8 @@ void main()
 	vec3 color = (texel.rgb * (ambient + diffuse*(1.0 - cloud_shadow))); // add light cloud shadows
 
 #ifndef GAS_GIANT
-	vec3 half_vect = normalize(ldir0 - epos_norm); // Eye + L = -eye_space_pos + L
-	float specval  = get_spec_intensity(norm, half_vect);
-	specval       *= min(1.0, 20.0*get_fresnel_reflection(-epos_norm, norm, 1.0, 1.333)); // water/ice fresnel reflection (heavily biased)
+	float specval  = get_spec_intensity(norm, ldir0, eye_dir);
+	specval       *= min(1.0, 20.0*get_fresnel_reflection(eye_dir, norm, 1.0, 1.333)); // water/ice fresnel reflection (heavily biased)
 	color         += ((water_val > 0.0) ? 1.0 : 0.0) * fg_LightSource[0].specular.rgb*specular_color.rgb * specval * spec_mag * sscale;
 
 	if (lava_val > 0.0) {

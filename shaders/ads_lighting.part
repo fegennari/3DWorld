@@ -15,20 +15,24 @@ const int MAX_LIGHTS = 8;
 uniform fg_light_t fg_LightSource[MAX_LIGHTS];
 
 
-float get_spec_intensity(in vec3 normal, in vec3 half_vect) {
-	float n   = get_shininess();
+float get_spec_intensity(in vec3 normal, in vec3 light_dir, in vec3 eye_dir) {
+#if 1 // new mode
+	float dp  = dot(eye_dir, reflect(-light_dir, normal));
+#else // old approximation
+	vec3 half_vect = normalize(light_dir + eye_dir); // Eye + L = -eye_space_pos + L
 	float dp  = dot(normal, half_vect);
+#endif
+	float n   = get_shininess();
 	float mag = pow(clamp(dp, 0.01, 1.0), n);
 	mag      *= 0.0166*(n + 8.0); // normalize for exponent of 60; normalization should be (n+8)/(8*pi);
 	return mag;
 }
 
 vec3 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec3 spec_light_color) {
-	vec3 half_vect = normalize(light_dir - normalize(eye_pos)); // Eye + L = -eye_space_pos + Lq
 #ifdef USE_SPEC_MAP
 	spec_light_color *= get_spec_color();
 #endif
-	return spec_light_color * specular_color.rgb * get_spec_intensity(normal, half_vect);
+	return spec_light_color * specular_color.rgb * get_spec_intensity(normal, light_dir, normalize(-eye_pos));
 }
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later
