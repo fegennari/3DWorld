@@ -211,6 +211,6 @@ void main()
 	if (color.a <= min_alpha) discard;
 #endif
 #endif // SMOKE_ENABLED
-	//color = vec4(pow(color.r, 0.45), pow(color.g, 0.45), pow(color.b, 0.45), color.a); // gamma correction, doesn't really look right
+	//color = vec4(pow(color.rgb, vec3(0.45)), color.a); // gamma correction, doesn't really look right, and should un-gamma-correct textures when loading
 	fg_FragColor = color;
 }

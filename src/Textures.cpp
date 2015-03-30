@@ -389,13 +389,10 @@ void texture_t::alloc() {
 	}
 }
 
-
 void texture_t::bind_gl() const {
-	
 	assert(tid > 0);
 	bind_2d_texture(tid);
 }
-
 
 void texture_t::free_mm_data() {
 
@@ -415,23 +412,19 @@ void texture_t::free_data() {
 }
 
 void texture_t::gl_delete() {
-
 	free_texture(tid);
 }
 
-
 void texture_t::init() {
-
 	calc_color();
 	build_mipmaps();
 }
-
 
 GLenum texture_t::calc_internal_format() const {
 
 	assert(ncolors >= 1 && ncolors <= 4);
 	if (is_16_bit_gray) {return GL_R16;} // compressed?
-	return get_internal_texture_format(ncolors, (COMPRESS_TEXTURES && do_compress && type != 2));
+	return get_internal_texture_format(ncolors, (COMPRESS_TEXTURES && do_compress && type != 2), 0); // linear_space=0
 }
 
 GLenum texture_t::calc_format() const {

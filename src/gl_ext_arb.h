@@ -8,10 +8,13 @@
 unsigned const PRIMITIVE_RESTART_IX = 0xFFFFFFFF;
 
 
-inline GLenum get_internal_texture_format(int ncolors, bool compressed=0) { // Note: ncolors=2 is unused
-	GLenum const cformats[4] = {GL_COMPRESSED_RED, GL_COMPRESSED_RG, GL_COMPRESSED_RGB, GL_COMPRESSED_RGBA};
-	GLenum const formats [4] = {GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
-	return (compressed ? cformats : formats)[ncolors-1];
+inline GLenum get_internal_texture_format(int ncolors, bool compressed=0, bool linear_space=0) { // Note: ncolors=2 is unused
+	GLenum const cformats [4] = {GL_COMPRESSED_RED, GL_COMPRESSED_RG, GL_COMPRESSED_RGB, GL_COMPRESSED_RGBA};
+	GLenum const formats  [4] = {GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
+	// Note: only supports linear space for RGB and RGBA texture formats (others not checked)
+	GLenum const scformats[4] = {GL_COMPRESSED_RED, GL_COMPRESSED_RG, GL_COMPRESSED_SRGB, GL_COMPRESSED_SRGB_ALPHA};
+	GLenum const sformats [4] = {GL_R8, GL_RG8, GL_SRGB8, GL_SRGB8_ALPHA8};
+	return (linear_space ? (compressed ? scformats : sformats) : (compressed ? cformats : formats))[ncolors-1];
 }
 
 inline GLenum get_texture_format(int ncolors) {
