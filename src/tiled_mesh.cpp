@@ -211,7 +211,7 @@ tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_
 tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
 	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
-	is_distant(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
+	is_distant(0), no_trees(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
 {
 	assert(size > 0);
 	x1 = x*size;
@@ -406,6 +406,7 @@ void tile_t::create_zvals(mesh_xy_grid_cache_t &height_gen) {
 	assert(mzmin <= mzmax);
 	radius = 0.5*sqrt((deltax*deltax + deltay*deltay)*size*size + (mzmax - mzmin)*(mzmax - mzmin));
 	ptzmax = dtzmax = mzmin; // no trees yet
+	if (!can_have_trees()) {no_trees = 1;} // mark as no_trees so that trees don't pop when water is disabled later
 	//PRINT_TIME("Create Zvals");
 	if (DEBUG_TILES) {cout << "new tile coords: " << x1 << " " << y1 << " " << x2 << " " << y2 << endl;}
 }

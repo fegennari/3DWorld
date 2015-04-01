@@ -129,7 +129,7 @@ private:
 	unsigned weight_tid, height_tid, shadow_normal_tid;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
-	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass, is_distant;
+	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass, is_distant, no_trees;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
@@ -176,7 +176,7 @@ public:
 	float get_zval(int x, int y) const {assert(!zvals.empty()); assert(x >= 0 && y >= 0 && x < (int)zvsize && y < (int)zvsize); return zvals[y*zvsize + x];}
 	bool has_water() const {return (mzmin < water_plane_z);}
 	bool all_water() const {return (mzmax < water_plane_z);} // get_tile_zmax()? - grass and trees should not be underwater
-	bool can_have_trees() const {return (!is_distant && !all_water());}
+	bool can_have_trees() const {return (!no_trees && !is_distant && !all_water());}
 	bool pine_trees_generated() const {return pine_trees.generated;}
 	bool has_pine_trees() const {return (pine_trees_generated() && !pine_trees.empty());}
 	void invalidate_mesh_height() {mesh_height_invalid = 1;}
