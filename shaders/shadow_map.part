@@ -4,6 +4,15 @@ uniform float sm_scale0, sm_scale1;
 uniform sampler2DShadow sm_tex0, sm_tex1;
 uniform mat4 smap_matrix0, smap_matrix1;
 
+float calc_shadow_pcf(in sampler2DShadow sm_tex, in vec4 shadow_coord) {
+	const float v = 0.01;
+	float ret = 0.0;
+	for (int x = -1; x <= 1; ++x) {
+		for (int y = -1; y <= 1; ++y) {ret += textureProj(sm_tex, shadow_coord+vec4(v*x,v*y,0,0));}
+	}
+	return ret/9.0; // 9-tap PCF
+}
+
 // pos and normal are in eye space
 float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in mat4 matrix, in sampler2DShadow sm_tex, in vec3 lpos) {
 #ifndef NO_SMAP_NORMAL_OFFSET
@@ -16,13 +25,8 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in m
 #endif
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.z += -z_bias*shadow_coord.w;
-#if 1 // 9-tap PCF
-	const float v = 0.01;
-	float ret = 0.0;
-	for (int x = -1; x <= 1; ++x) {
-		for (int y = -1; y <= 1; ++y) {ret += textureProj(sm_tex, shadow_coord+vec4(v*x,v*y,0,0));}
-	}
-	return sm_scale*ret/9.0;
+#if 1
+	return sm_scale*calc_shadow_pcf(sm_tex, shadow_coord);
 #else
 	return sm_scale*textureProj(sm_tex, shadow_coord);
 #endif
@@ -31,7 +35,11 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in m
 }
 
 float get_shadow_map_weight_light0_no_bias(in vec4 pos) {
+#if 0
+	return sm_scale0*calc_shadow_pcf(sm_tex0, (smap_matrix0 * pos));
+#else
 	return sm_scale0*textureProj(sm_tex0, (smap_matrix0 * pos));
+#endif
 }
 float get_shadow_map_weight_light0(in vec4 pos, in vec3 normal) {
 	return get_shadow_map_weight(pos, normal, sm_scale0, smap_matrix0, sm_tex0, fg_LightSource[0].position.xyz);
