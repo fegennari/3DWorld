@@ -12,23 +12,20 @@
 #include "sinf.h"
 #include "cobj_bsp_tree.h"
 
-
 float const BURN_RADIUS      = 0.2;
 float const BURN_DAMAGE      = 80.0;
 float const BEAM_DAMAGE      = 0.06;
 float const LEAF_DAM_SCALE   = 0.0001;
 float const LEAF_HEAL_RATE   = 0.00005;
 float const TREE_SIZE        = 0.005;
-float const REL_LEAF_SIZE    = 3.5;
 int   const LEAF_GEN_RAND1   = 16;
 int   const LEAF_GEN_RAND2   = 200000; // larger is fewer leaves falling
 float const DIST_C_SCALE     = 0.01;
 float const LEAF_SHADOW_VAL  = 0.25;
-float const BR_SHADOW_VAL    = 0.6;
 float const BASE_LEN_SCALE   = 0.8; // determines base cylinder overlap
 float const BRANCH_LEN_SCALE = 0.9; // determines branch cylinder overlap
-int const TREE_4TH_LEAVES    = 0;
-int const TREE_COLL          = 2;
+float const REL_LEAF_SIZE    = 3.5;
+int const TREE_4TH_LEAVES    = 1;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
 int const TLEAF_START_TUID   = 9;
@@ -47,9 +44,9 @@ void rotate_all(point const &rotate, float angle, float x, float y, float z);
 
 
 // tree_mode: 0 = no trees, 1 = large only, 2 = small only, 3 = both large and small
-bool has_any_billboard_coll(0), next_has_any_billboard_coll(0);
+bool has_any_billboard_coll(0), next_has_any_billboard_coll(0), tree_4th_branches(0);
 unsigned max_unique_trees(0);
-int tree_mode(1), tree_coll_level(TREE_COLL);
+int tree_mode(1), tree_coll_level(2);
 float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), branch_radius_scale(1.0);
 float tree_lod_scales[4] = {0, 0, 0, 0}; // branch_start, branch_end, leaf_start, leaf_end
 colorRGBA leaf_base_color(BLACK);
@@ -936,24 +933,14 @@ template <typename T> void add_cylin_indices_tris(vector<T> &idata, unsigned ndi
 	}
 }
 
-void tree_data_t::ensure_branch_vbo() {
+template<typename branch_index_t> void tree_data_t::create_branch_vbo() {
 
-	if (branch_manager.vbo != 0) return; // vbos already created
-	assert(branch_manager.ivbo == 0);
-	assert(num_branch_quads == 0 && num_unique_pts == 0);
 	vector<branch_vert_type_t> data; // static/reused?
 	vector<branch_index_t> idata;
 	unsigned const numcylin((unsigned)all_cylins.size());
 	unsigned cylin_id(0), data_pos(0), quad_id(0), dix(0), idix(0);
-	num_branch_quads = 0;
-
-	for (unsigned i = 0; i < numcylin; ++i) { // determine required data size
-		bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
-		unsigned const ndiv(all_cylins[i].get_num_div());
-		num_branch_quads += ndiv;
-		num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
-	}
-	assert(num_unique_pts < (1ULL << 8*sizeof(branch_index_t)));
+	branch_index_bytes = sizeof(branch_index_t);
+	assert(num_unique_pts < (1ULL << 8*branch_index_bytes));
 	data.resize(num_unique_pts);
 	idata.resize(9*num_branch_quads); // quads + quads/2 for LOD
 	unsigned idix2(6*num_branch_quads);
@@ -989,6 +976,23 @@ void tree_data_t::ensure_branch_vbo() {
 	branch_manager.create_and_upload(data, idata); // ~350KB data + ~75KB idata (with 16-bit index)
 }
 
+void tree_data_t::ensure_branch_vbo() {
+
+	if (branch_manager.vbo != 0) return; // vbos already created
+	assert(branch_manager.ivbo == 0);
+	assert(num_branch_quads == 0 && num_unique_pts == 0);
+	num_branch_quads = 0;
+
+	for (unsigned i = 0; i < (unsigned)all_cylins.size(); ++i) { // determine required data size
+		bool const prev_connect(i > 0 && all_cylins[i].can_merge(all_cylins[i-1]));
+		unsigned const ndiv(all_cylins[i].get_num_div());
+		num_branch_quads += ndiv;
+		num_unique_pts   += (prev_connect ? 1 : 2)*ndiv;
+	}
+	// determine 16 vs. 32 bits for branch index buffer based on number of branch points
+	if (num_unique_pts >= (1 << 16)) {create_branch_vbo<unsigned>();} else {create_branch_vbo<unsigned short>();}
+}
+
 
 void tree_data_t::draw_branches(shader_t &s, float size_scale, bool reflection_pass) {
 
@@ -1000,14 +1004,12 @@ void tree_data_t::draw_branches(shader_t &s, float size_scale, bool reflection_p
 
 void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail) {
 
-#ifdef TREE_4TH_BRANCHES
-	low_detail = 0; // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
-#endif
+	if (has_4th_branches) {low_detail = 0;} // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
 	ensure_branch_vbo();
 	branch_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0);
-	int const index_type((sizeof(branch_index_t) == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
-	unsigned const idata_sz(6*num_branch_quads*sizeof(branch_index_t));
+	int const index_type((branch_index_bytes == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT);
+	unsigned const idata_sz(6*num_branch_quads*branch_index_bytes);
 	glDrawRangeElements(GL_TRIANGLES, 0, num_unique_pts, (low_detail ? 3 : 6)*num, index_type, (void *)(low_detail ? idata_sz : 0));
 	branch_manager.post_render();
 }
@@ -1204,7 +1206,7 @@ unsigned tree_cont_t::delete_all() {
 	unsigned deleted(0);
 
 	for (reverse_iterator i = rbegin(); i != rend(); ++i) { // delete backwards (pop collision stack)
-		if (i->delete_tree()) ++deleted;
+		if (i->delete_tree()) {++deleted;}
 	}
 	generated = 0;
 	return deleted;
@@ -1212,14 +1214,12 @@ unsigned tree_cont_t::delete_all() {
 
 
 void delete_trees() {
-
 	t_trees.delete_all();
 	if (tree_coll_level && !t_trees.empty()) {purge_coll_freed(1);} // MUST do this for collision detection to work
 }
 
 
 void tree::clear_context() {
-	
 	if (td_is_private()) {tdata().clear_context();}
 }
 
@@ -1246,13 +1246,12 @@ void tree_data_t::clear_data() {
 
 
 void copy_cylins(tree_cylin *start_cylin, int num, tree_cylin *&cur_cylin) {
-
 	for (int i = 0; i < num; ++i) {*cur_cylin = *(start_cylin+i); ++cur_cylin;}
 }
 
 
 void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
-	int tree_type, float deadness, float br_scale, float nl_scale)
+	int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches)
 {
 	// compact the cylinders into a contiguous block
 	assert(all_cylins.empty());
@@ -1297,12 +1296,14 @@ void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins
 
 	// add leaves
 	if (deadness < 1.0) {
-		float const leaf_size(REL_LEAF_SIZE*TREE_SIZE/(sqrt(nl_scale*nleaves_scale)*tree_scale));
+		float const leaf_size(REL_LEAF_SIZE*TREE_SIZE*(has_4th_branches ? 0.4 : 1.0)/(sqrt(nl_scale*nleaves_scale)*tree_scale));
 		float const rel_leaf_size(2.0*leaf_size*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
+		//cout << "branch cylinders: " << num_total_cylins << ", leaves: " << nl << endl;
 		leaves.reserve(nl);
+
 		for (unsigned i = 0; i < num_total_cylins; ++i) {
-			if (cylins[i].p2 != cylins[i].p1 && cylins[i].level > 1 && (cylins[i].level < 4 || TREE_4TH_LEAVES)) { // leaves will still be allocated
+			if (cylins[i].p2 != cylins[i].p1 && cylins[i].level > 1 && (TREE_4TH_LEAVES || cylins[i].level < 4)) { // leaves will still be allocated
 				add_leaves_to_cylin(i, tree_type, rel_leaf_size, deadness, leaves);
 			}
 		}
@@ -1402,8 +1403,9 @@ float get_default_tree_depth() {
 
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
 //gen_tree(pos, 0, -1, 1, 1, 0);
-void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, float height_scale, float br_scale_mult, float nl_scale) {
-
+void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed,
+	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches)
+{
 	assert(calc_z || user_placed);
 	tree_center = pos;
 	created     = 1;
@@ -1436,7 +1438,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
 		cube_t const cc(clip_cube - tree_center);
-		td.gen_tree_data(type, size, tree_depth, height_scale, br_scale_mult, nl_scale, (use_clip_cube ? &cc : NULL)); // create the tree here
+		td.gen_tree_data(type, size, tree_depth, height_scale, br_scale_mult, nl_scale, has_4th_branches, (use_clip_cube ? &cc : NULL)); // create the tree here
 	}
 	assert(type < NUM_TREE_TYPES);
 	unsigned const nleaves(td.get_leaves().size());
@@ -1446,9 +1448,11 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 }
 
 
-void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale, cube_t const *clip_cube) {
-
+void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale,
+	float br_scale_mult, float nl_scale, bool has_4th_branches_, cube_t const *clip_cube)
+{
 	tree_type = tree_type_;
+	has_4th_branches = has_4th_branches_;
 	assert(tree_type < NUM_TREE_TYPES);
 	leaf_data.clear();
 	clear_vbo_ixs();
@@ -1462,8 +1466,8 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	
 	// create leaves and all_cylins
 	br_scale    = br_scale_mult*branch_radius_scale*tree_types[tree_type].branch_radius;
-	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, height_scale, br_scale, nl_scale);
-	builder.create_all_cylins_and_leaves(all_cylins, leaves, tree_type, deadness, br_scale, nl_scale);
+	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, height_scale, br_scale, nl_scale, has_4th_branches);
+	builder.create_all_cylins_and_leaves(all_cylins, leaves, tree_type, deadness, br_scale, nl_scale, has_4th_branches);
 
 	// set the bounding sphere center
 	assert(!all_cylins.empty());
@@ -1500,8 +1504,9 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 }
 
 
-float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color, float height_scale, float br_scale, float nl_scale) {
-
+float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
+	float height_scale, float br_scale, float nl_scale, bool has_4th_branches)
+{
 	//fixed tree variables
 	ncib                 = 10;
 	base_num_cylins      = 5;
@@ -1516,11 +1521,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	num_34_branches[0]   = 0; // this should start out 0
 	num_3_branches_min   = 6;
 	num_3_branches_max   = 10;
-#ifdef TREE_4TH_BRANCHES
-	num_34_branches[1]   = 2000;
-#else
-	num_34_branches[1]   = 0;
-#endif
+	num_34_branches[1]   = (has_4th_branches ? 2000 : 0);
 	if (size <= 0) size  = rand_gen(40, 80); // tree size
 	base_radius            = size * (0.1*TREE_SIZE*tree_types[tree_type].branch_size/tree_scale);
 	num_leaves_per_occ     = 0.01*nl_scale*nleaves_scale*(rand_gen(30, 60) + size);
@@ -1625,10 +1626,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	}
 	
 	//done with base ------------------------------------------------------------------
-#ifdef TREE_4TH_BRANCHES
-	create_4th_order_branches(nbranches);
-#endif
-
+	if (has_4th_branches) {create_4th_order_branches(nbranches);}
 	root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
 
 	for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) { // add roots
@@ -2128,7 +2126,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 			}
 			push_back(tree());
 			if (tree_id >= 0) {back().bind_to_td(&shared_tree_data[tree_id]);}
-			back().gen_tree(pos, 0, ttype, 1, 1, 0);
+			back().gen_tree(pos, 0, ttype, 1, 1, 0, 1.0, 1.0, 1.0, tree_4th_branches);
 		}
 	}
 	generated = 1;

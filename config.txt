@@ -1,10 +1,14 @@
 use_core_context 0
+
 ntrees 100
 max_unique_trees 100
+tree_4th_branches 0
 nleaves_scale 2.0
 tree_branch_radius 0.5
 tree_lod_scale 0.48 0.4 0.36 0.3
 tree_density_thresh 0.4
+tree_coll_level 4
+
 nsmileys 6
 verbose 0
 rand_seed 0
@@ -43,7 +47,6 @@ camera_height 0.0
 tree_size 1.0
 sm_tree_density 2.0
 sun_rot 0.4
-tree_coll_level 4
 default_ground_tex -1
 
 #mesh_seed 1

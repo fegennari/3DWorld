@@ -44,7 +44,7 @@ vector<teleporter> teleporters;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, scene_smap_vbo_invalid, use_voxel_cobjs;
+extern bool clear_landscape_vbo, scene_smap_vbo_invalid, use_voxel_cobjs, tree_4th_branches;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
@@ -1143,9 +1143,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				cout << "Must set ntrees to zero in order to add trees through collision objects file." << endl;
 			}
 			else {
+				// FIXME: read local tree_4th_branches from cobjs file
 				xf.xform_pos(pos);
 				t_trees.push_back(tree(enable_leaf_wind));
-				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale);
+				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, tree_4th_branches);
 				tree_mode |= 1; // enable trees
 			}
 			break;
@@ -1178,7 +1179,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				for (int i = 0; i < ivals[0]; ++i) {
 					t_trees.push_back(tree(enable_leaf_wind));
 					if (use_clip_cube) {t_trees.back().enable_clip_cube(cube_t(ccp[0], ccp[1]));}
-					t_trees.back().gen_tree(cur, max(1, int(fvals[2]*xf.scale)), ivals[1], 1, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale);
+					t_trees.back().gen_tree(cur, max(1, int(fvals[2]*xf.scale)), ivals[1], 1, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, 0); // no 4th branches
 					cur += delta;
 				}
 				tree_mode |= 1; // enable trees

@@ -12,8 +12,6 @@
 float const TREE_DIST_SCALE = 100.0;
 float const TREE_DEPTH      = 0.1;
 
-//#define TREE_4TH_BRANCHES
-
 
 struct blastr; // forward reference
 class tree_data_t;
@@ -174,9 +172,10 @@ class tree_builder_t : public tree_xform_t {
 
 public:
 	tree_builder_t(cube_t const *clip_cube_) : branches(NULL), clip_cube(clip_cube_) {branches_34[0] = branches_34[1] = NULL;}
-	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color, float height_scale, float br_scale, float nl_scale);
+	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
+		float height_scale, float br_scale, float nl_scale, bool has_4th_branches);
 	void create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
-		int tree_type, float deadness, float br_scale, float nl_scale);
+		int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches);
 };
 
 
@@ -193,14 +192,9 @@ class tree_data_t {
 
 	typedef vert_norm_comp_color leaf_vert_type_t;
 	typedef vert_norm_comp_tc branch_vert_type_t;
-#ifdef TREE_4TH_BRANCHES
-	typedef unsigned branch_index_t;
-#else
-	typedef unsigned short branch_index_t;
-#endif
 
 	indexed_vbo_manager_t branch_manager;
-	unsigned leaf_vbo, num_branch_quads, num_unique_pts;
+	unsigned leaf_vbo, num_branch_quads, num_unique_pts, branch_index_bytes;
 	int tree_type;
 	colorRGBA base_color, leaf_color;
 	vector<leaf_vert_type_t> leaf_data;
@@ -209,22 +203,24 @@ class tree_data_t {
 	tree_bb_tex_t render_leaf_texture, render_branch_texture;
 	int last_update_frame;
 	unsigned leaf_change_start, leaf_change_end;
-	bool reset_leaves;
+	bool reset_leaves, has_4th_branches;
 
 	void clear_vbo_ixs();
+	template<typename branch_index_t> void create_branch_vbo();
 
 public:
 	float base_radius, sphere_radius, sphere_center_zoff, br_scale;
 	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
 
-	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), tree_type(-1), last_update_frame(0),
-		leaf_change_start(0), leaf_change_end(0), reset_leaves(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
+	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), branch_index_bytes(0), tree_type(-1), last_update_frame(0),
+		leaf_change_start(0), leaf_change_end(0), reset_leaves(0), has_4th_branches(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
 		br_scale(1.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void make_private_copy(tree_data_t &dest) const;
-	void gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale, float br_scale_mult, float nl_scale, cube_t const *clip_cube);
+	void gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale,
+		float br_scale_mult, float nl_scale, bool has_4th_branches_, cube_t const *clip_cube);
 	void mark_leaf_changed(unsigned ix);
 	void gen_leaf_color();
 	void update_all_leaf_colors();
@@ -304,7 +300,8 @@ public:
 		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0) {}
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
-	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed, float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0);
+	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed,
+		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0);
 	void calc_leaf_shadows();
 	void add_tree_collision_objects();
 	void remove_collision_objects();

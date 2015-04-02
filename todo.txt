@@ -6,4 +6,3 @@ Load/display model3d models in tiled terrain mode
   - Model LOD - use mesh simplification
 
 TT mode biomes control noise exponent
-Better water splashes/particles

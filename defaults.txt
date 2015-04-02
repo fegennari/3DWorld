@@ -6,6 +6,7 @@ mapx/config_mapx.txt
 #cornell_box/config_box.txt
 #config_scrolling.txt
 #config.txt
+#config_t.txt
 #config_voxels.txt
 #config_voxels2.txt
 #config_voxels_grass.txt
