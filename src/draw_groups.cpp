@@ -473,7 +473,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				colorRGBA const dry_color(1.0, 0.7, 0.1); // this is the final color, even for partially burnt leaves - oh well
 				colorRGBA leaf_color(WHITE);
 				UNROLL_3X(leaf_color[i_] *= obj.vdeform[i_];) // vdeform is the color
-				if (leaf_color != BLACK) {blend_color(leaf_color, dry_color, leaf_color, t, 0);}
+				if (leaf_color.get_luminance() > 0.1) {blend_color(leaf_color, dry_color, leaf_color, t, 0);} // not mostly burned
 				vector3d dirs[2] = {(leaf_points[3] - leaf_points[0]), (leaf_points[1] - leaf_points[0])};
 				
 				for (unsigned d = 0; d < 2; ++d) {
