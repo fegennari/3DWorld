@@ -229,6 +229,8 @@ public:
 	bool leaf_data_allocated() const {return !leaf_data.empty();}
 	bool is_created() const {return !all_cylins.empty();} // as good a check as any
 	bool leaf_vbo_valid() const {return (leaf_vbo > 0);}
+	bool get_has_4th_branches() const {return has_4th_branches;}
+	float get_size_scale_mult() const;
 	bool check_if_needs_updated();
 	void remove_leaf_ix(unsigned i, bool update_data);
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color, bool check_only);

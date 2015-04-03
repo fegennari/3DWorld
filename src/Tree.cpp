@@ -25,6 +25,7 @@ float const LEAF_SHADOW_VAL  = 0.25;
 float const BASE_LEN_SCALE   = 0.8; // determines base cylinder overlap
 float const BRANCH_LEN_SCALE = 0.9; // determines branch cylinder overlap
 float const REL_LEAF_SIZE    = 3.5;
+float const LEAF_4TH_SCALE   = 0.4;
 int const TREE_4TH_LEAVES    = 1;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
@@ -707,8 +708,9 @@ void tree::drop_leaves() {
 	static rand_gen_t rgen;
 	float const temp0(max(1.0f, min(0.3f, (20.0f-temperature)/30.0f)));
 	int const rmod(min(LEAF_GEN_RAND2/10, int(rgen.rand_uniform(0.5, 1.5)*temp0*LEAF_GEN_RAND2/fticks)));
+	int const rstep((td.get_has_4th_branches() ? 10 : 1)*LEAF_GEN_RAND1);
 
-	for (unsigned i = (rgen.rand()%LEAF_GEN_RAND1); i < nleaves; i += LEAF_GEN_RAND1) {
+	for (unsigned i = (rgen.rand()%rstep); i < nleaves; i += rstep) {
 		if ((rgen.rand()%rmod) != 0) continue;
 		create_leaf_obj(i);
 		
@@ -825,6 +827,8 @@ float tree::calc_size_scale(point const &draw_pos) const {
 	return (do_zoom ? ZOOM_FACTOR : 1.0)*tdata().base_radius/(dist_to_camera*DIST_C_SCALE);
 }
 
+float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_4TH_SCALE : 1.0);}
+
 
 void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc) {
 
@@ -909,7 +913,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	}
 	bool const leaf_dynamic_en(!shadow_only && !has_snow && enable_leaf_wind && (display_mode & 0x0100) != 0);
 	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
-	if (!gen_arrays && leaf_dynamic_en && size_scale > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
+	if (!gen_arrays && leaf_dynamic_en && size_scale*td.get_size_scale_mult() > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
 
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
@@ -997,14 +1001,14 @@ void tree_data_t::ensure_branch_vbo() {
 void tree_data_t::draw_branches(shader_t &s, float size_scale, bool reflection_pass) {
 
 	bool const low_detail(reflection_pass || ((size_scale == 0.0) ? 0 : (size_scale < 2.0)));
-	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale)))); // branch LOD
+	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale*get_size_scale_mult())))); // branch LOD
 	draw_branch_vbo(s, num, low_detail);
 }
 
 
 void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail) {
 
-	if (has_4th_branches) {low_detail = 0;} // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
+	if (has_4th_branches && num > num_branch_quads/5) {low_detail = 0;} // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
 	ensure_branch_vbo();
 	branch_manager.pre_render();
 	vert_norm_comp_tc::set_vbo_arrays(0);
@@ -1056,7 +1060,7 @@ void tree_data_t::draw_leaves(float size_scale) {
 
 	ensure_leaf_vbo();
 	unsigned nl(leaves.size());
-	if (ENABLE_CLIP_LEAVES && size_scale > 0.0) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale)));} // leaf LOD
+	if (ENABLE_CLIP_LEAVES && size_scale > 0.0) {nl = min(nl, max((nl/8), unsigned(4.0*nl*size_scale*get_size_scale_mult())));} // leaf LOD
 	draw_leaf_quads_from_vbo(nl);
 }
 
@@ -1296,7 +1300,7 @@ void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins
 
 	// add leaves
 	if (deadness < 1.0) {
-		float const leaf_size(REL_LEAF_SIZE*TREE_SIZE*(has_4th_branches ? 0.4 : 1.0)/(sqrt(nl_scale*nleaves_scale)*tree_scale));
+		float const leaf_size(REL_LEAF_SIZE*TREE_SIZE*(has_4th_branches ? LEAF_4TH_SCALE : 1.0)/(sqrt(nl_scale*nleaves_scale)*tree_scale));
 		float const rel_leaf_size(2.0*leaf_size*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
 		//cout << "branch cylinders: " << num_total_cylins << ", leaves: " << nl << endl;
@@ -1307,6 +1311,10 @@ void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins
 				add_leaves_to_cylin(i, tree_type, rel_leaf_size, deadness, leaves);
 			}
 		}
+		// randomly reorder leaves so that LOD produces more even partial coverage
+		rand_gen_t rgen;
+		unsigned const nleaves(leaves.size());
+		for (unsigned i = 0; i < nleaves; ++i) {swap(leaves[i], leaves[rgen.rand()%nleaves]);}
 		//remove_excess_cap(leaves);
 	}
 
