@@ -308,7 +308,6 @@ void set_temp_clear_color(colorRGBA const &clear_color) {
 }
 
 
-// Note: default viewing in -z dir
 void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
 	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap)
 {

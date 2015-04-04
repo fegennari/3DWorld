@@ -73,16 +73,12 @@ inline colorRGBA get_leaf_base_color(int type) {
 	return color;
 }
 
-
 colorRGBA get_leaf_texture_color(unsigned type) {
-
 	// alpha is always 1.0 - texture alpha is handled by check_poly_billboard_alpha()
 	return colorRGBA(texture_color(tree_types[type].leaf_tex), 1.0);
 }
 
-
 colorRGBA get_avg_leaf_color(unsigned type) {
-
 	return get_leaf_base_color(type).modulate_with(get_leaf_texture_color(type));
 }
 
@@ -109,7 +105,6 @@ struct render_to_texture_shader_t : public render_to_texture_t {
 	virtual void set_other_shader_consts(bool ix) {}
 };
 
-
 struct render_tree_to_texture_t : public render_to_texture_shader_t {
 
 	tree_data_t *cur_tree;
@@ -120,7 +115,6 @@ struct render_tree_to_texture_t : public render_to_texture_shader_t {
 		return tree_types[cur_tree->get_tree_type()];
 	}
 };
-
 
 struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 
@@ -140,16 +134,15 @@ struct render_tree_leaves_to_texture_t : public render_tree_to_texture_t {
 		tree_data_t::post_leaf_draw();
 		s.disable();
 	}
-	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
+	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex, vector3d const &view_dir=plus_y) {
 		if (!shaders[0].is_setup()) {setup_shader("texture_gen.part+tree_leaves_no_lighting", "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("texture_gen.part+tree_leaves_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
 		colorRGBA const leaf_bkg_color(get_avg_leaf_color(t.get_tree_type()), 0.0); // transparent
 		bool const use_depth_buffer(1), mipmap(0); // Note: for some reason mipmaps are slow and don't look any better
-		render(ttex, t.lr_x, t.lr_z, vector3d(0.0, 0.0, t.lr_z_cent), plus_y, leaf_bkg_color, use_depth_buffer, mipmap);
+		render(ttex, t.lr_x, t.lr_z, vector3d(0.0, 0.0, t.lr_z_cent), view_dir, leaf_bkg_color, use_depth_buffer, mipmap);
 	}
 };
-
 
 struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 
@@ -165,20 +158,21 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 		tree_data_t::post_branch_draw(0);
 		s.disable();
 	}
-	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex) {
+	void render_tree(tree_data_t &t, tree_bb_tex_t &ttex, vector3d const &view_dir=plus_y) {
 		if (!shaders[0].is_setup()) {setup_shader("no_lighting_tex_coord",     "simple_texture",        0);} // colors
 		if (!shaders[1].is_setup()) {setup_shader("tree_branches_no_lighting", "write_normal_textured", 1);} // normals
 		cur_tree = &t;
 		t.ensure_branch_vbo(); // Note: for some reason, this *must* be called before we get into draw_geom()
 		colorRGBA const branch_bkg_color(texture_color(get_tree_type().bark_tex), 0.0); // transparent
-		render(ttex, t.br_x, t.br_z, t.get_center(), plus_y, branch_bkg_color, 1, 0);
+		bool const use_depth_buffer(1), mipmap(0); // Note: for some reason mipmaps are slow and don't look any better
+		render(ttex, t.br_x, t.br_z, t.get_center(), view_dir, branch_bkg_color, use_depth_buffer, mipmap);
 	}
 };
 
 
 void tree_lod_render_t::finalize() {
 	
-	sort(leaf_vect.begin(), leaf_vect.end());
+	sort(leaf_vect.begin(),   leaf_vect.end());
 	sort(branch_vect.begin(), branch_vect.end());
 }
 
@@ -188,7 +182,7 @@ void upload_draw_and_clear(vector<vert_color> &pts) {
 	pts.clear();
 }
 
-void tree_lod_render_t::render_billboards(bool render_branches) const {
+void tree_lod_render_t::render_billboards(bool render_branches) const { // branches or leaves
 
 	vector<entry_t> const &data(render_branches ? branch_vect : leaf_vect);
 	if (data.empty()) return;
@@ -207,7 +201,7 @@ void tree_lod_render_t::render_billboards(bool render_branches) const {
 		if (!render_branches) {pos += 0.5*i->td->lr_x*(camera - i->pos).get_norm();}
 		vector3d const vdir(camera - pos); // z
 		vector3d const v1(cross_product(vdir, up_vector).get_norm()*(render_branches ? i->td->br_x : i->td->lr_x)); // x (what if colinear?)
-		vector3d const v2((render_branches ? up_vector : cross_product(v1, vdir).get_norm())*(render_branches ? i->td->br_z : i->td->lr_z)); // y
+		vector3d const v2((render_branches ? i->td->br_z*up_vector : i->td->lr_z*cross_product(v1, vdir).get_norm())); // y
 		pts.push_back(vert_color((pos - v1 - v2), i->cw.c));
 		pts.push_back(vert_color((pos + v1 - v2), i->cw.c));
 		pts.push_back(vert_color((pos + v1 + v2), i->cw.c));
@@ -228,8 +222,6 @@ inline int rand_gen(int start, int end) {
 float get_tree_z_bottom(float z, point const &pos) {
 	return ((world_mode == WMODE_GROUND && is_over_mesh(pos)) ? max(zbottom, (z - TREE_DEPTH)) : (z - TREE_DEPTH));
 }
-
-bool lightning_enabled() {return (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled);}
 
 
 bool tree::is_over_mesh() const {
@@ -350,7 +342,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 	}
 	if (gen_tex_coords) {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	s.setup_enabled_lights(2, 1); // VS
-	s.set_bool_prefix("enable_light2", lightning_enabled(), 0); // VS
+	s.set_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled), 0); // VS - lightning
 	s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
 	set_dlights_booleans(s, !no_dlights, 0); // VS
 	s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+dynamic_lighting.part*+leaf_lighting.part+texture_gen.part+tree_leaves");
