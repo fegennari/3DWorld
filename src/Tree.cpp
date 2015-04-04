@@ -807,16 +807,11 @@ void tree_data_t::draw_leaf_quads_from_vbo(unsigned max_leaves) const {
 }
 
 
-void tree_data_t::draw_leaves_shadow_only() {
+void tree_data_t::draw_leaves_shadow_only(float size_scale) {
 
 	if (leaves.empty()) return;
-	ensure_leaf_vbo();
 	select_texture(tree_types[tree_type].leaf_tex);
-	draw_leaf_quads_from_vbo(leaves.size()); // could also disable normals and colors, but that doesn't seem to help much
-}
-
-void tree_data_t::draw_branches_shadow_only(shader_t &s) {
-	draw_branch_vbo(s, num_branch_quads, 1); // draw branches (untextured), low_detail=1
+	draw_leaves(size_scale); // could disable normals and colors, but that doesn't seem to help much
 }
 
 
@@ -834,17 +829,19 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 
 	if (!created || not_visible) return;
 	tree_data_t &td(tdata());
+	bool const wind_enabled((display_mode & 0x0100) != 0);
 
 	if (shadow_only) {
 		if (world_mode == WMODE_GROUND && !is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
-		td.draw_branches_shadow_only(s);
+		td.draw_branches(s, (wind_enabled ? last_size_scale : 0.0), 1); // draw branches (untextured), low_detail=1
 		fgPopMatrix();
 		return;
 	}
 	point const draw_pos(sphere_center() + xlate);
 	float const size_scale(calc_size_scale(draw_pos));
+	last_size_scale = size_scale;
 	if (size_scale < 0.05) return; // if too far away, don't draw any branches
 	bcolor = tree_types[type].barkc;
 	float const dval(1.0f - 0.95f*damage);
@@ -876,13 +873,15 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (!created) return;
 	tree_data_t &td(tdata());
 	td.gen_leaf_color();
+	bool const wind_enabled((display_mode & 0x0100) != 0);
 
 	if (shadow_only) {
 		if (world_mode == WMODE_GROUND && !is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
 		td.leaf_draw_setup(1);
-		td.draw_leaves_shadow_only();
+		// Note: since the shadow map is updated every frame when wind is enabled, we can use dynamic LOD without locking in a low-LOD static shadow map
+		td.draw_leaves_shadow_only(wind_enabled ? last_size_scale : 0.0);
 		fgPopMatrix();
 		return;
 	}
@@ -898,6 +897,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (!has_leaves) return; // only after not_visible is calculated
 	point const draw_pos(sphere_center() + xlate);
 	float const size_scale(calc_size_scale(draw_pos));
+	last_size_scale = size_scale;
 	if (size_scale == 0.0) return;
 
 	if (lod_renderer.is_enabled()) {
@@ -911,8 +911,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		if (geom_opacity == 0.0) return;
 		s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
 	}
-	bool const leaf_dynamic_en(!shadow_only && !has_snow && enable_leaf_wind && (display_mode & 0x0100) != 0);
-	bool const gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
+	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && wind_enabled), gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
 	if (!gen_arrays && leaf_dynamic_en && size_scale*td.get_size_scale_mult() > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
 
 	if (gen_arrays || leaf_color_changed) {
@@ -998,16 +997,10 @@ void tree_data_t::ensure_branch_vbo() {
 }
 
 
-void tree_data_t::draw_branches(shader_t &s, float size_scale, bool reflection_pass) {
+void tree_data_t::draw_branches(shader_t &s, float size_scale, bool force_low_detail) {
 
-	bool const low_detail(reflection_pass || ((size_scale == 0.0) ? 0 : (size_scale < 2.0)));
 	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale*get_size_scale_mult())))); // branch LOD
-	draw_branch_vbo(s, num, low_detail);
-}
-
-
-void tree_data_t::draw_branch_vbo(shader_t &s, unsigned num, bool low_detail) {
-
+	bool low_detail(force_low_detail || ((size_scale == 0.0) ? 0 : (size_scale < 2.0)));
 	if (has_4th_branches && num > num_branch_quads/5) {low_detail = 0;} // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
 	ensure_branch_vbo();
 	branch_manager.pre_render();

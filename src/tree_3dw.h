@@ -236,11 +236,9 @@ public:
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color, bool check_only);
 	void bend_leaf(unsigned i, float angle);
 	void draw_leaf_quads_from_vbo(unsigned max_leaves) const;
-	void draw_leaves_shadow_only();
-	void draw_branches_shadow_only(shader_t &s);
+	void draw_leaves_shadow_only(float size_scale);
 	void ensure_branch_vbo();
-	void draw_branches(shader_t &s, float size_scale, bool reflection_pass);
-	void draw_branch_vbo(shader_t &s, unsigned num, bool low_detail);
+	void draw_branches(shader_t &s, float size_scale, bool force_low_detail);
 	void ensure_leaf_vbo();
 	void draw_leaves(float size_scale);
 	tree_bb_tex_t const &get_render_leaf_texture  () const {return render_leaf_texture  ;}
@@ -275,7 +273,7 @@ class tree {
 	int type, created; // should type be a member of tree_data_t?
 	bool no_delete, not_visible, leaf_orients_valid, enable_leaf_wind, use_clip_cube;
 	point tree_center;
-	float damage, damage_scale;
+	float damage, damage_scale, last_size_scale;
 	colorRGBA tree_color, bcolor;
 	vector<int> branch_cobjs, leaf_cobjs;
 	cube_t clip_cube;
@@ -299,7 +297,7 @@ class tree {
 
 public:
 	tree(bool en_lw=1) : type(-1), tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0),
-		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0) {}
+		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0), last_size_scale(0.0) {}
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed,
