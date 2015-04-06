@@ -2034,7 +2034,7 @@ void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs) {
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("branch_tex", 0);
-	s.add_uniform_float("min_alpha", 0.75);
+	s.add_uniform_float("min_alpha", 0.5);
 	set_tree_dither_noise_tex(s, 1); // TU=1
 	check_gl_error(302);
 }

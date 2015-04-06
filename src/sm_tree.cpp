@@ -543,7 +543,7 @@ void draw_small_trees(bool shadow_only) {
 	// draw leaves
 	if (small_trees.num_pine_trees > 0) { // pine trees
 		small_trees.vbo_manager[0].upload();
-		setup_smoke_shaders(s, 0.75, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke, texgen
+		setup_smoke_shaders(s, 0.5, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke, texgen
 		small_trees.draw_pine_leaves(shadow_only);
 		s.end_shader();
 	}
@@ -770,7 +770,7 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	else { // low detail billboard
 		assert(!update_mode);
 		vert_norm points[4];
-		vert_norm vn(pos, vector3d(1.5*sz_scale/calc_tree_size(), 0.0, 0.0)); // ranges from around 0.25 to 0.75
+		vert_norm vn(pos, vector3d(2.25*sz_scale/calc_tree_size(), 0.0, 0.0)); // ranges from around 0.25 to 0.75
 		vn.v.z = pos.z + dz + 1.45*sz_scale + 0.1*height;
 		points[0] = points[1] = vn; // top two vertices
 		vn.v.z = pos.z + dz - 0.55*sz_scale - 0.2*height;
