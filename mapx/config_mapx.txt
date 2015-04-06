@@ -1,6 +1,6 @@
 include mapx/config_mapx_base.txt
 
-grass_density 500
+grass_density 600
 grass_size 0.025 0.002
 
 use_waypoints 1

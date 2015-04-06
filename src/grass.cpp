@@ -263,6 +263,7 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	bool has_voxel_grass;
 	int last_light;
 	point last_lpos;
+	rand_gen_t occ_rgen;
 
 	bool hcm_chk(int x, int y) const {
 		return (!point_outside_mesh(x, y) && (mesh_height[y][x] + SMALL_NUMBER < h_collision_matrix[y][x]));
@@ -294,7 +295,30 @@ public:
 		object_types[GRASS].radius = 0.0;
 		rgen.pregen_floats(10000);
 		unsigned num_voxel_polys(0), num_voxel_blades(0);
+		bool const grass_tex_enabled(default_ground_tex < 0 || default_ground_tex == GROUND_TEX);
+		unsigned const om_stride(MESH_X_SIZE+1);
+		vector<unsigned char> occ_map;
+		unsigned const SAMPLES_PER_TILE(min(grass_density, 16U));
+
+		if (grass_tex_enabled) {
+			occ_map.resize(om_stride*(MESH_Y_SIZE+1), 0);
 		
+			#pragma omp parallel for schedule(dynamic,1)
+			for (int y = 0; y <= MESH_Y_SIZE; ++y) {
+				for (int x = 0; x <= MESH_X_SIZE; ++x) {
+					if (is_mesh_disabled(x, y)) continue;
+					point const start_pt(get_xval(x), get_yval(y), mesh_height[min(y, MESH_Y_SIZE-1)][min(x, MESH_X_SIZE-1)]);
+					unsigned char &val(occ_map[y*om_stride + x]);
+
+					for (unsigned n = 0; n < SAMPLES_PER_TILE; ++n) {
+						point const end_pt(start_pt + Z_SCENE_SIZE*vector3d(0.5*occ_rgen.signed_rand_float(), 0.5*occ_rgen.signed_rand_float(), 1.0));
+						int cindex(-1);
+						if (check_coll_line(start_pt, end_pt, cindex, -1, 1, 0, 0)) {++val;} // ignore alpha value (even for leaves, to incrase their influence)
+					}
+				}
+			}
+			//PRINT_TIME("Grass Occlusion");
+		}
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
 				mesh_to_grass_map[y*MESH_X_SIZE+x] = (unsigned)grass.size();
@@ -334,7 +358,7 @@ public:
 				}
 
 				// create mesh grass
-				if (default_ground_tex >= 0 && default_ground_tex != GROUND_TEX) continue; // no grass
+				if (!grass_tex_enabled) continue; // no grass
 				if (x == MESH_X_SIZE-1 || y == MESH_Y_SIZE-1) continue; // mesh not drawn
 				if (is_mesh_disabled(x, y) || is_mesh_disabled(x+1, y) || is_mesh_disabled(x, y+1) || is_mesh_disabled(x+1, y+1)) continue; // mesh disabled
 				if (mesh_height[y][x] < water_matrix[y][x])   continue; // underwater (make this dynamically update?)
@@ -345,7 +369,14 @@ public:
 				if (vnz < sti[1]) {slope_scale = CLIP_TO_01((vnz - sti[0])/(sti[1] - sti[0]));} // handle steep slopes (dirt/rock texture replaces grass texture)
 				if (slope_scale == 0.0) continue; // no grass
 				assert(vnz > 0.0);
-				unsigned const tile_density(round_fp(grass_density/vnz)); // slightly more grass on steep slopes so that we have equal density over the surface, not just the XY projection
+				float mod_den(grass_density/vnz); // slightly more grass on steep slopes so that we have equal density over the surface, not just the XY projection
+				
+				if (!occ_map.empty()) { // check 4 corners of occlusion map
+					unsigned const occ_cnt(occ_map[y*om_stride + x] + occ_map[y*om_stride + x+1] + occ_map[(y+1)*om_stride + x] + occ_map[(y+1)*om_stride + x+1]);
+					float const sunlight(1.0 - occ_cnt/(4.0*SAMPLES_PER_TILE));
+					mod_den *= min(1.0f, 2.0f*sunlight); // more than half occluded reduces grass density
+				}
+				unsigned const tile_density(round_fp(mod_den));
 
 				for (unsigned n = 0; n < tile_density; ++n) {
 					float const xv(rgen.rand_uniform(xval, xval + DX_VAL));
@@ -363,7 +394,8 @@ public:
 						float density(1.0);
 						if (id1 != GROUND_TEX) {density = t;}
 						if (id2 != GROUND_TEX) {density = 1.0 - t;}
-						if (rgen.randd() >= slope_scale*density) continue; // skip - density too low
+						density *= slope_scale;
+						if (density < 1.0 && rgen.randd() >= density) continue; // skip - density too low
 					}
 					// skip grass intersecting cobjs
 					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection

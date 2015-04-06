@@ -26,6 +26,8 @@ in vec3 normal, vertex;
 in vec2 tc; // not used for procedural planets
 #endif
 
+//precision highp float; // does this do anything?
+
 
 float calc_cloud_density(in vec3 lv) {
 	float cloud_den = atmosphere*gen_cloud_alpha(lv);
