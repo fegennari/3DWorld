@@ -263,7 +263,6 @@ class grass_manager_dynamic_t : public grass_manager_t {
 	bool has_voxel_grass;
 	int last_light;
 	point last_lpos;
-	rand_gen_t occ_rgen;
 
 	bool hcm_chk(int x, int y) const {
 		return (!point_outside_mesh(x, y) && (mesh_height[y][x] + SMALL_NUMBER < h_collision_matrix[y][x]));
@@ -305,6 +304,9 @@ public:
 		
 			#pragma omp parallel for schedule(dynamic,1)
 			for (int y = 0; y <= MESH_Y_SIZE; ++y) {
+				rand_gen_t occ_rgen;
+				occ_rgen.set_state(y, 123);
+
 				for (int x = 0; x <= MESH_X_SIZE; ++x) {
 					if (is_mesh_disabled(x, y)) continue;
 					point const start_pt(get_xval(x), get_yval(y), mesh_height[min(y, MESH_Y_SIZE-1)][min(x, MESH_X_SIZE-1)]);
