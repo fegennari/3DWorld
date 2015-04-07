@@ -16,7 +16,8 @@ bool const SMILEY_GAS        = 1;
 bool const FADE_MESSAGE_ALPHA= 1;
 float const SHADOW_COL_VAL   = 0.5;
 float const UWATER_FERR_ADD  = 0.05;
-float const UWATER_FERR_MUL  = 2.0;
+float const UWATER_FERR_MUL  = 2.0; // lower accuracy
+float const ZOOM_FERR_MULT   = 0.5; // higher accuracy
 float const LASER_REFL_ATTEN = 0.95;
 
 // should put these in a file
@@ -1582,10 +1583,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	if (weapon == W_BLADE   && (wmode&1)) {weapon_id = W_SAWBLADE;}
 	if (weapon_id == W_M16 && (wmode&1) == 1) ++rot_counter;
 	int const dtime(int(get_fspeed_scale()*(frame_counter - timer)*fticks));
-	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1));
+	bool const rapid_fire(weapon_id == W_ROCKET && (wmode&1)), is_player(shooter == CAMERA_ID);
 	weapon_t const &w(weapons[weapon_id]);
 	int fire_delay((int)w.fire_delay);
-	if (UNLIMITED_WEAPONS && shooter != CAMERA_ID && weapon_id == W_LANDMINE) fire_delay *= 2; // avoid too many landmines
+	if (UNLIMITED_WEAPONS && !is_player && weapon_id == W_LANDMINE) {fire_delay *= 2;} // avoid too many landmines
 	if (rapid_fire) fire_delay /= 3;
 	float const radius(get_sstate_radius(shooter));
 
@@ -1594,13 +1595,15 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		damage_scale = fticks/fire_delay;
 	}
 	else if (dtime < fire_delay) { // add light between firing frames to avoid tearing
-		if (!vsync_enabled && shooter == CAMERA_ID && weapon_id == W_M16) {add_dynamic_light(1.0, fpos, YELLOW);}
+		if (!vsync_enabled && is_player && weapon_id == W_M16) {add_dynamic_light(1.0, fpos, YELLOW);}
 		return 0;
 	}
 	timer = frame_counter;
 	bool const underwater(is_underwater(fpos));
-	float firing_error(w.firing_error*(underwater ? UWATER_FERR_MUL : 1.0));
-	if (rapid_fire) firing_error *= 20.0;
+	float firing_error(w.firing_error);
+	if (underwater) {firing_error *= UWATER_FERR_MUL;}
+	if (is_player && do_zoom) {firing_error *= ZOOM_FERR_MULT;} // higher accuracy when zooming in
+	if (rapid_fire) {firing_error *= 20.0;} // rockets
 	dir.normalize();
 	point pos(fpos + dir*(0.1*radius));
 	fire_frame = max(1, fire_delay);
@@ -1617,11 +1620,11 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		gen_sound(SOUND_GUNSHOT, fpos, 0.5);
 
 		if ((wmode&1) != 1) { // not firing shrapnel
-			if (dtime > 10) firing_error *= 0.1;
-			if (underwater) firing_error += UWATER_FERR_ADD;
+			if (dtime > 10) {firing_error *= 0.1;}
+			if (underwater) {firing_error += UWATER_FERR_ADD;}
 			projectile_test(fpos, dir, firing_error, damage, shooter, range);
 			create_shell_casing(fpos, dir, shooter, radius, 0);
-			if (shooter != CAMERA_ID && range > 0.1*radius) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0));} // generate bullet light trail
+			if (!is_player && range > 0.1*radius) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0));} // generate bullet light trail
 			return 1;
 		} // fallthrough to shotgun case
 	case W_SHOTGUN:
