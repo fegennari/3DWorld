@@ -1382,14 +1382,15 @@ void keyboard(unsigned char key, int x, int y) {
 		if (kbd_text_mode) {exec_text(user_text);}
 		user_text.clear();
 		kbd_text_mode = !kbd_text_mode;
-		return;
+		if (!kbd_text_mode) return;
 	}
 	if (kbd_text_mode) {
 		if (key == 8) { // delete key
 			if (!user_text.empty()) {user_text.erase(user_text.begin()+user_text.size()-1);} // pop_back() for string
 			return;
 		}
-		user_text.push_back(key);
+		if (key != 13) {user_text.push_back(key);} // not the enter key from above (fallthrough case)
+		print_text_onscreen((string("Enter Text: ") + user_text), WHITE, 1.0, 10*TICKS_PER_SECOND, 999);
 		return;
 	}
 	if (!kbd_remap.remap_key(key, 0, 0)) return;
@@ -1397,7 +1398,6 @@ void keyboard(unsigned char key, int x, int y) {
 
 	if (keys.find(key) != keys.end()) { // can happen with control clicks
 		cout << "Warning: Keyboard event for key " << key << " (" << int(key) << ") which has alredy been pressed." << endl;
-		//assert(0); // too strong?
 		return;
 	}
 	keys.insert(key);
