@@ -1282,7 +1282,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			
 			if (type == BALL && cobj.status == COLL_STATIC) { // only static collisions to avoid camera/smiley bounce sounds
 				float const vmag(obj.velocity.mag());
-				if (vmag > 1.0) gen_sound(SOUND_BOING, obj.pos, min(1.0, 0.1*vmag));
+				if (vmag > 1.0) {gen_sound(SOUND_BOING, obj.pos, min(1.0, 0.1*vmag));}
 			}
 			else if (type == SAWBLADE && cobj.status == COLL_STATIC) { // only static collisions
 				gen_sound(SOUND_RICOCHET, obj.pos, 1.0, 0.5);

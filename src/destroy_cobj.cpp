@@ -123,9 +123,9 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 			float const time_mult((hotness > 0.0) ? 0.0 : 0.5*rand_float());
 			gen_fragment(fpos, velocity, size_scale, time_mult, cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments, hotness);
 		}
-		if (shattered && tri_fragments && cts[i].color.alpha < 0.5) maybe_is_glass = 1;
+		if (shattered && tri_fragments && cts[i].color.alpha < 0.5) {maybe_is_glass = 1;}
 	} // for i
-	if (maybe_is_glass) gen_sound(SOUND_GLASS, pos);
+	if (maybe_is_glass) {gen_delayed_from_player_sound(SOUND_GLASS, pos);}
 	//PRINT_TIME("Destroy Cobjs");
 }
 

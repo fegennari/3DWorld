@@ -386,7 +386,7 @@ void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, f
 
 	if (disable_sound) return;
 
-	if (delay == 0.0) {
+	if (delay < 0.01) { // less than 10ms
 		gen_sound(id, pos, gain, pitch, rel_to_listener);
 	}
 	else {
@@ -395,6 +395,14 @@ void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain, f
 		sound_params_t params(pos, gain, pitch, rel_to_listener);
 		delayed_sounds.push_back(delayed_sound_t(params, id, delay_time));
 	}
+}
+
+
+void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain, float pitch) {
+
+	float const SPEED_OF_SOUND = 16.0; // in world units per second
+	float const dist(distance_to_camera(pos));
+	gen_delayed_sound(((dist < CAMERA_RADIUS) ? 0.0 : dist/SPEED_OF_SOUND), id, pos, gain, pitch);
 }
 
 

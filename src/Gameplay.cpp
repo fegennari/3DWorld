@@ -1232,7 +1232,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		add_splash(pos, xpos, ypos, 0.002*damage/depth, (0.4 + 2.0*depth)*size, 1);
 	}
 	if (damage > 500.0) { // everything except for plasma
-		gen_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
+		gen_delayed_from_player_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
 	}
 	if (type == GRENADE) { // shrapnel fragments
 		unsigned const num(weapons[W_GRENADE].nfragments + rand()%(weapons[W_GRENADE].nfragments/4));
@@ -2333,7 +2333,7 @@ bool check_underwater(int who, float &depth) { // check if player is drowning
 		}
 	}
 	else {
-		if (dtime > 0) gen_sound(SOUND_GASP, pos);
+		if (dtime > 0) {gen_sound(SOUND_GASP, pos);}
 		sstates[who].uw_time = 0;
 	}
 	return underwater;
