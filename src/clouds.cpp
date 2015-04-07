@@ -100,7 +100,7 @@ void cloud_manager_t::update_lighting() {
 		}
 	}
 
-#pragma omp parallel for schedule(static) num_threads(2)
+#pragma omp parallel for schedule(dynamic) if (calc_sun_light)
 	for (int i = 0; i < (int)num_clouds; ++i) {
 		particle_cloud &pc((*this)[i]);
 		float light(0.25); // night time sky
