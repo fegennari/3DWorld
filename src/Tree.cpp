@@ -366,7 +366,7 @@ void tree_cont_t::check_leaf_shadow_change() {
 		
 	if (!no_sun_lpos_update && lpos != last_lpos) {
 		//RESET_TIME;
-		//#pragma omp parallel for schedule(dynamic,1)
+		#pragma omp parallel for schedule(dynamic,1) if (size() >= 16)
 		for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_leaf_shadows();}
 		//PRINT_TIME("Leaf Shadows");
 	}
