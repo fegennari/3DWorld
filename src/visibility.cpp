@@ -35,12 +35,12 @@ bool is_visible_to_light_cobj(point const &pos, int light, float radius, int cob
 		int index;
 
 		if (!coll_pt_vis_test(pos, lpos, 1.5*radius, index, cobj, skip_dynamic, 3)) { // test alpha?
-			if (cobj_ix) *cobj_ix = index;
+			if (cobj_ix) {*cobj_ix = index;}
 			return 0; // test collision objects
 		}
 	}
 	if (is_visible_from_light(pos, lpos, 1+FAST_LIGHT_VIS)) return 1; // test mesh
-	if (cobj_ix) *cobj_ix = -1;
+	if (cobj_ix) {*cobj_ix = -1;}
 	return 0;
 }
 

@@ -365,8 +365,10 @@ void tree_cont_t::check_leaf_shadow_change() {
 	point const lpos(get_light_pos());
 		
 	if (!no_sun_lpos_update && lpos != last_lpos) {
-		#pragma omp parallel for schedule(dynamic,1)
+		//RESET_TIME;
+		//#pragma omp parallel for schedule(dynamic,1)
 		for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_leaf_shadows();}
+		//PRINT_TIME("Leaf Shadows");
 	}
 	last_lpos = lpos;
 }
@@ -1175,15 +1177,31 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 	tree_data_t &td(tdata());
 	if (!td.leaf_data_allocated() || !td_is_private()) return; // leaf data not yet created (can happen if called when light source changes), or shared data
 	int const light(get_light());
+	point lpos;
+	bool const has_light(get_light_pos(lpos, light) != 0);
 	vector<tree_leaf> &leaves(td.get_leaves());
 
-	for (unsigned i = 0; i < leaves.size(); i++) {
+	#pragma omp parallel for schedule(dynamic,1)
+	for (int i = 0; i < (int)leaves.size(); i++) {
 		tree_leaf &l(leaves[i]);
 		l.shadow_bits = 0;
 
-		for (unsigned j = 0; j < 4; ++j) {
-			bool const shadowed(!leaf_cobjs.empty() && !is_visible_to_light_cobj(l.pts[j]+tree_center, light, 0.0, leaf_cobjs[i], 1));
-			l.shadow_bits |= (int(shadowed) << j);
+		if (has_light && !leaf_cobjs.empty()) {
+			if (td.get_has_4th_branches()) { // leaves are too many and too small - use a single center point
+				point const p1(l.get_center() + tree_center);
+				if (!is_visible_to_light_cobj(p1, light, 0.0, leaf_cobjs[i], 1)) {l.shadow_bits = 15;} // all corners are shadowed
+			}
+			else { // use 4 corner points
+				int cobj_ix(-1);
+
+				for (unsigned j = 0; j < 4; ++j) {
+					point const p1(l.pts[j] + tree_center);
+					// Note: skips the alpha test, but can only get here if the alpha test passed previously
+					bool shadowed(cobj_ix >= 0 && coll_objects[cobj_ix].line_intersect(p1, lpos));
+					if (!shadowed) {shadowed = !is_visible_to_light_cobj(p1, light, 0.0, leaf_cobjs[i], 1, &cobj_ix);}
+					l.shadow_bits |= (int(shadowed) << j);
+				}
+			}
 		}
 		td.update_normal_for_leaf(i);
 	}
