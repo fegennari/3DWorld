@@ -905,9 +905,7 @@ void particle_cloud::draw(quad_batch_draw &qbd) const {
 		color *= (no_lighting ? 1.0 : brightness)*(0.5*(1.0 - darkness));
 	}
 	if (parts.empty()) {
-		if (status && sphere_in_camera_view(pos, radius, 0)) {
-			draw_part(pos, radius, color, qbd);
-		}
+		if (status && sphere_in_camera_view(pos, radius, 0)) {draw_part(pos, radius, color, qbd);}
 	}
 	else {
 		order.resize(0);
@@ -962,7 +960,7 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 	}
 	if (red_only) c.G = c.B = 0.0; // for special luminosity cloud texture rendering
 	// Note: Can disable smoke volume integration for close smoke, but very close smoke (< 1 grid unit) is infrequent
-	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, tex_range_t(), MIN_PARTICLE_FILL);
+	qbd.add_billboard(p, camera, up_vector, c, 4.0*r, 4.0*r, tex_range_t(), (MIN_PARTICLE_FILL && !no_lighting)); // use quads for clouds
 }
 
 
@@ -1029,9 +1027,9 @@ void draw_part_clouds(vector<particle_cloud> const &pc, int tid) {
 
 	enable_flares(tid);
 	//select_multitex(CLOUD_TEX, 1);
-	quad_batch_draw qbd;
+	static quad_batch_draw qbd;
 	draw_objects(pc, qbd);
-	qbd.draw(); // color will be set per object
+	qbd.draw_and_clear(); // color will be set per object
 	disable_flares();
 	//set_active_texture(0);
 }

@@ -7,6 +7,7 @@
 #include "gl_ext_arb.h"
 #include "draw_utils.h"
 #include "universe.h" // for unebula
+#include "cobj_bsp_tree.h"
 
 
 unsigned const CLOUD_GEN_TEX_SZ = 1024;
@@ -24,15 +25,6 @@ extern colorRGBA sun_color, cur_fog_color;
 
 
 void draw_part_clouds(vector<particle_cloud> const &pc, int tid);
-
-
-struct cloud_t {
-	unsigned b, e;
-	point p;
-	float r;
-	cloud_t(unsigned b_=0, unsigned e_=0, point const &p_=all_zeros, float r_=0.0)
-		: b(b_), e(e_), p(p_), r(r_) {}
-};
 
 
 void cloud_manager_t::create_clouds() { // 3D cloud puffs
@@ -70,75 +62,78 @@ void cloud_manager_t::create_clouds() { // 3D cloud puffs
 }
 
 
+class cloud_bvh_t : public cobj_tree_sphere_t {
+
+	cloud_manager_t &mgr;
+
+public:
+	cloud_bvh_t(cloud_manager_t &mgr_) : mgr(mgr_) {}
+
+	void setup(bool verbose) {
+		objects.resize(mgr.size());
+		for (unsigned i = 0; i < mgr.size(); ++i) {objects[i] = sphere_with_id_t(mgr[i].pos, mgr[i].radius, i);}
+		build_tree_top(verbose);
+	}
+	float calc_light_value(point const &pos, point const &sun_pos) const {
+		vector3d const v1(sun_pos - pos);
+		float const dist_sq(v1.mag_sq());
+		vector3d const v1n(v1/dist_sq);
+		float light(1.0); // start off fully lit
+		node_ix_mgr nixm(nodes, pos, sun_pos);
+		unsigned const num_nodes((unsigned)nodes.size());
+
+		for (unsigned nix = 0; nix < num_nodes;) {
+			tree_node const &n(nodes[nix]);
+			if (!nixm.check_node(nix)) continue;
+
+			for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+				particle_cloud const &pc(mgr[objects[i].id]);
+				vector3d const v2(sun_pos, pc.pos);
+				if (v2.mag_sq() > dist_sq) continue; // further from the sun
+				float const dotp(dot_product(v1, v2));
+				float const dsq((dotp > dist_sq) ? p2p_dist_sq(v1, v2) : (v2 - v1n*dotp).mag_sq());
+				if (dsq > pc.radius*pc.radius) continue; // no intersection
+				float const alpha(2.0*pc.base_color.alpha*pc.density*((pc.radius - sqrt(dsq))/pc.radius));
+				light *= 1.0 - CLIP_TO_01(alpha);
+			} // for i
+		} // for nix
+		return light;
+	}
+};
+
+
 void cloud_manager_t::update_lighting() {
 
 	RESET_TIME;
 	point const sun_pos(get_sun_pos());
 	bool const calc_sun_light(have_sun && light_factor > 0.4);
 	unsigned const num_clouds((unsigned)size());
-	vector<cloud_t> clouds;
 
-	if (calc_sun_light) {
-		int last_src(0);
-
+	if (!calc_sun_light) {
 		for (unsigned i = 0; i < num_clouds; ++i) {
-			particle_cloud &c((*this)[i]);
-
-			if (i == 0 || c.source != last_src) {
-				last_src = c.source;
-				if (i > 0) clouds.back().e = i; // end the last cloud
-				clouds.push_back(cloud_t(i));   // begin a new cloud
-			}
+			particle_cloud &pc((*this)[i]);
+			pc.darkness   = 0.5; // night time sky
+			pc.base_color = WHITE;
+			apply_red_sky(pc.base_color);
 		}
-		clouds.back().e = num_clouds; // end the last cloud
-
-		for (unsigned i = 0; i < clouds.size(); ++i) {
-			cloud_t &c(clouds[i]);
-			for (unsigned j = c.b; j < c.e; ++j) {c.p += (*this)[j].pos;}
-			c.p /= (c.e - c.b);
-			for (unsigned j = c.b; j < c.e; ++j) {c.r = max(c.r, (p2p_dist(c.p, (*this)[j].pos) + (*this)[j].radius));}
-		}
+		return;
 	}
+	cloud_bvh_t bvh(*this);
+	bvh.setup(0);
 
-#pragma omp parallel for schedule(dynamic) if (calc_sun_light)
+#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < (int)num_clouds; ++i) {
 		particle_cloud &pc((*this)[i]);
-		float light(0.25); // night time sky
+		float light(max(0.5f, bvh.calc_light_value(pc.pos, sun_pos)));
 
-		if (calc_sun_light) {
-			vector3d const v1(sun_pos - pc.pos);
-			float const dist_sq(v1.mag_sq());
-			vector3d const v1n(v1/dist_sq);
-			light = 1.0; // start off fully lit
-
-			for (unsigned p = 0; p < clouds.size(); ++p) {
-				cloud_t &c(clouds[p]);
-				float t; // unused
-
-				if (sphere_test_comp(sun_pos, c.p, v1, c.r*c.r, t)) {
-					for (unsigned j = c.b; j < c.e; ++j) {
-						particle_cloud const &c2((*this)[j]);
-						vector3d const v2(sun_pos, c2.pos);
-						if (v2.mag_sq() > dist_sq) continue; // further from the sun
-						float const dotp(dot_product(v1, v2));
-						float const dsq((dotp > dist_sq) ? p2p_dist_sq(v1, v2) : (v2 - v1n*dotp).mag_sq());
-						if (dsq > c2.radius*c2.radius) continue; // no intersection
-						float const alpha(2.0*c2.base_color.alpha*c2.density*((c2.radius - sqrt(dsq))/c2.radius));
-						light *= 1.0 - CLIP_TO_01(alpha);
-					}
-				}
-			}
-			light = max(0.5f, light);
-
-			if (light_factor < 0.6) {
-				float const blend(sqrt(5.0*(light_factor - 0.4)));
-				light = light*blend + 0.25f*(1.0 - blend);
-			}
+		if (light_factor < 0.6) {
+			float const blend(sqrt(5.0*(light_factor - 0.4)));
+			light = light*blend + 0.25f*(1.0 - blend);
 		}
 		pc.darkness   = 1.0 - 2.0*light;
 		pc.base_color = WHITE;
 		apply_red_sky(pc.base_color);
-	} // for i
+	}
 	PRINT_TIME("Cloud Lighting");
 }
 
