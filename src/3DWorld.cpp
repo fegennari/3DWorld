@@ -114,7 +114,7 @@ extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, ons
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale, flower_density;
-extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale;
+extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
 extern point hmv_pos, camera_last_pos;
 extern int coll_id[];
@@ -1631,6 +1631,7 @@ int load_config(string const &config_file) {
 	kwmf.add("model3d_texture_anisotropy", model3d_texture_anisotropy);
 	kwmf.add("near_clip_dist", NEAR_CLIP);
 	kwmf.add("far_clip_dist", FAR_CLIP);
+	kwmf.add("tree_height_scale", tree_height_scale);
 
 	kwmf.add("hmap_plat_bot",    hmap_params.plat_bot);
 	kwmf.add("hmap_plat_height", hmap_params.plat_h);

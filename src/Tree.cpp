@@ -48,7 +48,7 @@ void rotate_all(point const &rotate, float angle, float x, float y, float z);
 bool has_any_billboard_coll(0), next_has_any_billboard_coll(0), tree_4th_branches(0);
 unsigned max_unique_trees(0);
 int tree_mode(1), tree_coll_level(2);
-float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), branch_radius_scale(1.0);
+float leaf_color_coherence(0.5), tree_color_coherence(0.2), tree_deadness(-1.0), nleaves_scale(1.0), branch_radius_scale(1.0), tree_height_scale(1.0);
 float tree_lod_scales[4] = {0, 0, 0, 0}; // branch_start, branch_end, leaf_start, leaf_end
 colorRGBA leaf_base_color(BLACK);
 tree_data_manager_t tree_data_manager;
@@ -1442,6 +1442,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	}
 	else {
 		type = ((ttype < 0) ? rand2() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
+		tree_type const &ttype(tree_types[type]);
 		float tree_depth(get_default_tree_depth());
 	
 		if (calc_z) {
@@ -1449,7 +1450,8 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
 		cube_t const cc(clip_cube - tree_center);
-		td.gen_tree_data(type, size, tree_depth, height_scale, br_scale_mult, nl_scale, has_4th_branches, (use_clip_cube ? &cc : NULL)); // create the tree here
+		td.gen_tree_data(type, size, tree_depth, ((height_scale == 1.0) ? ttype.height_scale : height_scale), ((br_scale_mult == 1.0) ? ttype.branch_radius : br_scale_mult),
+			nl_scale, ((height_scale == 1.0) ? ttype.branch_break_off : 1.0), has_4th_branches, (use_clip_cube ? &cc : NULL)); // create the tree here
 	}
 	assert(type < NUM_TREE_TYPES);
 	unsigned const nleaves(td.get_leaves().size());
@@ -1460,7 +1462,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 
 
 void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale,
-	float br_scale_mult, float nl_scale, bool has_4th_branches_, cube_t const *clip_cube)
+	float br_scale_mult, float nl_scale, float bbo_scale, bool has_4th_branches_, cube_t const *clip_cube)
 {
 	tree_type = tree_type_;
 	has_4th_branches = has_4th_branches_;
@@ -1476,8 +1478,8 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	tree_builder_t builder(clip_cube);
 	
 	// create leaves and all_cylins
-	br_scale    = br_scale_mult*branch_radius_scale*tree_types[tree_type].branch_radius;
-	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, height_scale, br_scale, nl_scale, has_4th_branches);
+	br_scale    = br_scale_mult*branch_radius_scale;
+	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, height_scale, br_scale, nl_scale, bbo_scale, has_4th_branches);
 	builder.create_all_cylins_and_leaves(all_cylins, leaves, tree_type, deadness, br_scale, nl_scale, has_4th_branches);
 
 	// set the bounding sphere center
@@ -1507,23 +1509,19 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	sphere_radius = sqrt(sphere_radius);
 	lr_z_cent     = 0.5*(lr_z1 + lr_z2);
 	lr_z          = 0.5*(lr_z2 - lr_z1);
-
-	/*for (unsigned i = 0; i < leaves.size(); ++i) { // scramble leaves so that LOD is unbiased/randomly sampled
-		swap(leaves[i], leaves[(i + 1572869)%leaves.size()]);
-	}*/
 	reverse(leaves.begin(), leaves.end()); // order leaves so that LOD removes from the center first, which is less noticeable
 }
 
 
 float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
-	float height_scale, float br_scale, float nl_scale, bool has_4th_branches)
+	float height_scale, float br_scale, float nl_scale, float bbo_scale, bool has_4th_branches)
 {
 	//fixed tree variables
 	ncib                 = 10;
-	base_num_cylins      = 5;
+	base_num_cylins      = round_fp(5 * max(1.0f, tree_height_scale));
 	num_cylin_factor     = 10.0;
-	base_cylin_factor    = 5.0; //(type == TREE_A) ? 2.0 : 5.0;
-	base_break_off       = 3;
+	base_cylin_factor    = 1.0*base_num_cylins; //(type == TREE_A) ? 0.4 : 1.0;
+	base_break_off       = max(1, min(base_num_cylins-1, round_fp(bbo_scale*(2 + base_num_cylins/5.0)))); // controls the point at which branches start on the base
 	num_1_branches       = 8;
 	num_big_branches_min = 3;
 	num_big_branches_max = 4;
@@ -1533,10 +1531,10 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	num_3_branches_min   = 6;
 	num_3_branches_max   = 10;
 	num_34_branches[1]   = (has_4th_branches ? 2000 : 0);
-	if (size <= 0) size  = rand_gen(40, 80); // tree size
+	if (size <= 0) {size  = rand_gen(40, 80);} // tree size
 	base_radius            = size * (0.1*TREE_SIZE*tree_types[tree_type].branch_size/tree_scale);
 	num_leaves_per_occ     = 0.01*nl_scale*nleaves_scale*(rand_gen(30, 60) + size);
-	base_length_min        = rand_gen(4, 6) * height_scale * base_radius;
+	base_length_min        = rand_gen(4, 6) * height_scale * base_radius * tree_height_scale;
 	base_length_max        = base_length_min * 1.5;
 	angle_rotate           = 60.0;
 	base_curveness         = 10.0;
@@ -1559,8 +1557,8 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	max_2_angle_rotate     = 50.0;
 	max_3_angle_rotate     = 50.0;
 	leaf_acc               = 0.0;
-	float const base_rad_var = 0.85;
-	float const base_len_var = 0.8;
+	float const base_rad_var = 1.0 - 0.75/base_num_cylins;
+	float const base_len_var = 1.0 - 1.0/base_num_cylins;
 	float const branch_1_random_rotate = 40.0;
 	int const min_num_roots(10), max_num_roots(12);
 	base_color = colorRGBA(0.5*signed_rand_float2(), 0.5*signed_rand_float2(), 0.0, 1.0); // no blue
@@ -1612,12 +1610,12 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		else {
 			tree_cylin &lcylin(base.cylin[i-1]);
 			cylin.assign_params(0, 0, lcylin.r2, lcylin.r2*base_rad_var, lcylin.length*base_len_var*(base_cylin_factor/base_num_cylins),
-				int(sinf(-PI_TWO + i*PI/base_num_cylins)*base_curveness));
+				sinf(-PI_TWO + i*PI/base_num_cylins + ((tree_height_scale > 1.0) ? 10.0*base_color.R : 0))*base_curveness); // "hash" the color to get a unique curve
 			cylin.rotate.assign(lcylin.rotate.x, lcylin.rotate.y, 0.0);
 			rotate_cylin(lcylin);
 			add_rotation(cylin.p1, lcylin.p1, BASE_LEN_SCALE);
 		}
-		if (i == (base_num_cylins-1)) rotate_cylin(cylin); // last cylin
+		if (i == (base_num_cylins-1)) {rotate_cylin(cylin);} // last cylin
 
 		if (base_break_off <= (i+1)) {
 			int const init_num_cyl(base_num_cylins - base_break_off + 1);

@@ -27,7 +27,7 @@ pt_line_drawer tree_scenery_pld;
 extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern unsigned max_unique_trees;
-extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh;
+extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale;
 
 
 struct sm_tree_type {
@@ -586,6 +586,7 @@ small_tree::small_tree(point const &p, unsigned instance_id) {
 small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen) :
 	type(t), inst_id(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
+	height *= tree_height_scale;
 	clear_vbo_mgr_ix();
 	bark_color = stt[type].c;
 	if (!is_pine_tree()) {UNROLL_3X(bark_color[i_] = min(1.0, bark_color[i_]*(0.85 + 0.3f*rgen.randd()));)} // gen bark color for decid trees
@@ -733,7 +734,7 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 
 float small_tree::get_pine_tree_radius() const {
 
-	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height);
+	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height/tree_height_scale);
 	return 0.35*(height0 + 0.03/tree_scale);
 }
 

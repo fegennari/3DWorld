@@ -5,6 +5,7 @@ max_unique_trees 100
 tree_4th_branches 0
 nleaves_scale 2.0
 tree_branch_radius 0.5
+tree_height_scale 1.5
 tree_lod_scale 0.48 0.4 0.36 0.3
 tree_density_thresh 0.4
 tree_coll_level 4

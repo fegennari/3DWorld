@@ -173,7 +173,7 @@ class tree_builder_t : public tree_xform_t {
 public:
 	tree_builder_t(cube_t const *clip_cube_) : branches(NULL), clip_cube(clip_cube_) {branches_34[0] = branches_34[1] = NULL;}
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
-		float height_scale, float br_scale, float nl_scale, bool has_4th_branches);
+		float height_scale, float br_scale, float nl_scale, float bbo_scale, bool has_4th_branches);
 	void create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
 		int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches);
 };
@@ -220,7 +220,7 @@ public:
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
 	void make_private_copy(tree_data_t &dest) const;
 	void gen_tree_data(int tree_type_, int size, float tree_depth, float height_scale,
-		float br_scale_mult, float nl_scale, bool has_4th_branches_, cube_t const *clip_cube);
+		float br_scale_mult, float nl_scale, float bbo_scale, bool has_4th_branches_, cube_t const *clip_cube);
 	void mark_leaf_changed(unsigned ix);
 	void gen_leaf_color();
 	void update_all_leaf_colors();
