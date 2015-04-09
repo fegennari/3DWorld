@@ -959,7 +959,7 @@ template<typename branch_index_t> void tree_data_t::create_branch_vbo() {
 			for (unsigned S = 0; S < ndiv; ++S) { // first cylin: 0,1 ; other cylins: 1
 				float const tx(2.0*fabs(S*ndiv_inv - 0.5));
 				vector3d const n(0.5*vpn.n[S] + 0.5*vpn.n[(S+ndiv-1)%ndiv]); // average face normals to get vert normals
-				data[dix++] = branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, float(cylin_id + j));
+				data[dix++] = branch_vert_type_t(vpn.p[(S<<1)+j], n, tx, b_tex_scale*(cylin_id + j));
 			}
 		}
 		add_cylin_indices_tris(idata, ndiv, (data_pos + quad_id), idix,  1); // create index data
@@ -1479,6 +1479,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	
 	// create leaves and all_cylins
 	br_scale    = br_scale_mult*branch_radius_scale;
+	b_tex_scale = height_scale/br_scale;
 	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, height_scale, br_scale, nl_scale, bbo_scale, has_4th_branches);
 	builder.create_all_cylins_and_leaves(all_cylins, leaves, tree_type, deadness, br_scale, nl_scale, has_4th_branches);
 

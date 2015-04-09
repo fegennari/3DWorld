@@ -209,12 +209,12 @@ class tree_data_t {
 	template<typename branch_index_t> void create_branch_vbo();
 
 public:
-	float base_radius, sphere_radius, sphere_center_zoff, br_scale;
+	float base_radius, sphere_radius, sphere_center_zoff, br_scale, b_tex_scale;
 	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
 
 	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), branch_index_bytes(0), tree_type(-1), last_update_frame(0),
 		leaf_change_start(0), leaf_change_end(0), reset_leaves(0), has_4th_branches(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
-		br_scale(1.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
+		br_scale(1.0), b_tex_scale(1.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}
 	vector<tree_leaf>  const &get_leaves    () const {return leaves;}
 	vector<tree_leaf>        &get_leaves    ()       {return leaves;}
