@@ -28,8 +28,8 @@ mat3 cotangent_frame(in vec3 N, in vec3 p, in vec2 uv, in float bscale)
     // solve the linear system
     vec3 dp2perp = cross(dp2, N);
     vec3 dp1perp = cross(N, dp1);
-    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
-    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x + vec3(0, 0, 1.0E-12);
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y + vec3(0, 0, 1.0E-12);
  
     // construct a scale-invariant frame 
     float invmax = bump_tb_scale * inversesqrt(max(dot(T,T), dot(B,B)));
