@@ -57,11 +57,13 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 	}
 
 	// update voxel pflow map for removal
-	update_flow_for_voxels(cube);
+	vector<cube_t> cubes;
+	cubes.push_back(cube);
 
 	for (unsigned i = 0; i < cts.size(); ++i) {
-		if (cts[i].destroy >= SHATTERABLE || cts[i].unanchored) {update_flow_for_voxels(cts[i]);}
+		if (cts[i].destroy >= SHATTERABLE || cts[i].unanchored) {cubes.push_back(cts[i]);}
 	}
+	update_flow_for_voxels(cubes);
 
 	// create fragments
 	float const cdir_mag(cdir.mag());
@@ -250,7 +252,6 @@ void add_to_falling_cobjs(set<unsigned> const &ids) {
 
 
 void invalidate_static_cobjs() {
-
 	build_cobj_tree(0, 0);
 }
 

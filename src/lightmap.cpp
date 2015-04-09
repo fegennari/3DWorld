@@ -650,21 +650,42 @@ void build_lightmap(bool verbose) {
 }
 
 
-void update_flow_for_voxels(cube_t const &cube) {
+int get_clamped_xpos(float xval) {return max(0, min(MESH_X_SIZE-1, get_xpos(xval)));}
+int get_clamped_ypos(float yval) {return max(0, min(MESH_Y_SIZE-1, get_ypos(yval)));}
 
-	if (!lm_alloc || !lmap_manager.is_allocated()) return;
-	int const cx1(max(0, get_xpos(cube.d[0][0]))), cx2(min(MESH_X_SIZE-1, get_xpos(cube.d[0][1])));
-	int const cy1(max(0, get_ypos(cube.d[1][0]))), cy2(min(MESH_Y_SIZE-1, get_ypos(cube.d[1][1])));
-	float const zstep(calc_czspan()/MESH_SIZE[2]);
-	r_profile flow_prof[3];
 
-	for (int y = cy1; y <= cy2; ++y) {
-		for (int x = cx1; x <= cx2; ++x) {
-			assert(!point_outside_mesh(x, y));
-			bool const fixed(!coll_objects.empty() && has_fixed_cobjs(x, y));
-			calc_flow_profile(flow_prof, y, x, (use_dense_voxels || fixed), zstep);
-		} // for x
-	} //for y
+void update_flow_for_voxels(vector<cube_t> const &cubes) {
+
+	//RESET_TIME;
+	if (!lm_alloc || !lmap_manager.is_allocated() || cubes.empty()) return;
+	cube_t bcube(cubes.front());
+	for (auto i = cubes.begin()+1; i != cubes.end(); ++i) {bcube.union_with_cube(*i);}
+	int const bcx1(get_clamped_xpos(bcube.d[0][0])), bcx2(get_clamped_xpos(bcube.d[0][1]));
+	int const bcy1(get_clamped_xpos(bcube.d[1][0])), bcy2(get_clamped_xpos(bcube.d[1][1])); // what if entirely off the mesh?
+	int const dx(bcx2 - bcx1 + 1), dy(bcy2 - bcy1 + 1);
+	vector<unsigned char> updated;
+	if (cubes.size() > 1) {updated.resize(dx*dy, 0);}
+
+	for (auto i = cubes.begin(); i != cubes.end(); ++i) {
+		int const cx1(get_clamped_xpos(i->d[0][0])), cx2(get_clamped_xpos(i->d[0][1]));
+		int const cy1(get_clamped_xpos(i->d[1][0])), cy2(get_clamped_xpos(i->d[1][1]));
+		float const zstep(calc_czspan()/MESH_SIZE[2]);
+		r_profile flow_prof[3];
+
+		for (int y = cy1; y <= cy2; ++y) {
+			for (int x = cx1; x <= cx2; ++x) {
+				if (cubes.size() > 1) {
+					unsigned const ix((y - bcy1)*dx + (x - bcx1));
+					if (updated[ix]) continue;
+					updated[ix] = 1;
+				}
+				assert(!point_outside_mesh(x, y));
+				bool const fixed(!coll_objects.empty() && has_fixed_cobjs(x, y));
+				calc_flow_profile(flow_prof, y, x, (use_dense_voxels || fixed), zstep);
+			} // for x
+		} //for y
+	}
+	//PRINT_TIME("Update Flow");
 }
 
 

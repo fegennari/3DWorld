@@ -18,6 +18,7 @@
 bool const MORE_COLL_TSTEPS       = 1; // slow
 bool const SHOW_PROC_TIME         = 0;
 bool const FIXED_COBJS_SWAP       = 1; // attempt to swap fixed_cobjs with coll_objects to reduce peak memory
+bool const EXPLODE_EVERYTHING     = 0; // for debugging/fun
 unsigned const MAX_OBJ_ON_MESH    = 4;
 unsigned const BLOOD_PER_SMILEY   = 300;
 unsigned const LG_STEPS_PER_FRAME = 10;
@@ -1600,7 +1601,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'a': // toggle destroyability
 			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy shape", coll_obj_file);}
-			cobj.destroy = (char)ivals[0];
+			cobj.destroy = (EXPLODE_EVERYTHING ? EXPLODEABLE : (char)ivals[0]);
 			break;
 
 		case 'v': // set voxel mode
@@ -1632,6 +1633,7 @@ int read_coll_objects(const char *coll_obj_file) {
 	cobj.init();
 	cobj.cp.elastic = 0.5; // default
 	cobj.cp.draw    = 1;   // default
+	if (EXPLODE_EVERYTHING) {cobj.destroy = EXPLODEABLE;}
 	if (use_voxel_cobjs) {cobj.cp.cobj_type = COBJ_TYPE_VOX_TERRAIN;}
 	if (!read_coll_obj_file(coll_obj_file, xf, cobj, 0, WHITE)) return 0;
 

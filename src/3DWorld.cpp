@@ -1091,7 +1091,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (world_mode == WMODE_GROUND && camera_mode == 1 && camera_surf_collide && passive_motion) { // jump
 			if (!spectate && sstates != nullptr) {sstates[CAMERA_ID].jump(get_camera_pos());}
 		}
-		else if (world_mode == WMODE_GROUND && game_mode && camera_mode == 0 && !spectate && sstates != nullptr && sstates[CAMERA_ID].deaths > 0) { // respawn
+		else if (world_mode == WMODE_GROUND && game_mode && camera_mode == 0 && !spectate && sstates != nullptr && sstates[CAMERA_ID].deaths > 0 && !(sstates[CAMERA_ID].wmode&1)) { // respawn
 			gamemode_rand_appear();
 			toggle_camera_mode();
 			sstates[CAMERA_ID].jump_time = 0.25*TICKS_PER_SECOND; // suppress extra jump if space is held down too long

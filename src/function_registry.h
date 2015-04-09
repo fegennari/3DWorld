@@ -637,7 +637,7 @@ void clear_univ_obj_contexts();
 void clear_cached_shaders();
 
 // function prototypes - lightmap
-void update_flow_for_voxels(cube_t const &cube);
+void update_flow_for_voxels(vector<cube_t> const &cubes);
 void shift_light_sources(vector3d const &vd);
 void regen_lightmap();
 void clear_lightmap();
