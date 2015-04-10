@@ -722,6 +722,7 @@ void undo_voxel_brush();
 void modify_voxels();
 
 // function prototypes - screenshot
+void read_depth_buffer(unsigned window_width, unsigned window_height, vector<float> &depth, bool normalize=0);
 int screenshot(unsigned window_width, unsigned window_height, char *file_path, bool write_bmp);
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
 

@@ -42,11 +42,29 @@ FILE *open_screenshot_file(char *file_path, string const &extension, unsigned &i
 }
 
 
+void read_depth_buffer(unsigned window_width, unsigned window_height, vector<float> &depth, bool normalize) {
+
+	glReadBuffer(GL_FRONT);
+	glReadPixels(0, 0, window_width, window_height, GL_DEPTH_COMPONENT, GL_FLOAT, &depth.front());
+	if (!normalize) return; // done
+	float dmin(1.0), dmax(0.0);
+	for (auto i = depth.begin(); i != depth.end(); ++i) {dmin = min(*i, dmin); dmax = max(*i, dmax);}
+	if (dmax == dmin) return; // all the same depth, can't normalize
+	float const dmult(1.0/(dmax - dmin));
+	for (auto i = depth.begin(); i != depth.end(); ++i) {*i = (*i - dmin)*dmult;}
+}
+
 void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned char> &buf) {
 
+#if 0 // for debugging depth buffer
+	vector<float> depth(window_width*window_height, 0.0);
+	read_depth_buffer(window_width, window_height, depth, 1); // normalized
+	for (unsigned i = 0; i < depth.size(); ++i) {buf[3*i+0] = buf[3*i+1] = buf[3*i+2] = (unsigned char)(255.0*depth[i]);}
+#else
 	glReadBuffer(GL_FRONT);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, window_width, window_height, GL_RGB, GL_UNSIGNED_BYTE, &buf.front());
+#endif
 }
 
 
