@@ -1163,6 +1163,8 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		camera_pdu.near_ = near_clip; // override camera frustum near/far clip so that VFC will be correct
 		camera_pdu.far_  = far_clip;
 	}
+	draw_camera_weapon(0);
+	draw_camera_weapon(1);
 	bool const camera_above_clouds(camera.z > get_tt_cloud_level());
 	draw_cloud_planes(terrain_zmin, 0, !camera_above_clouds, 1); // these two lines could go in either order
 	draw_sun_flare();
