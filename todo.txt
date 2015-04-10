@@ -6,3 +6,16 @@ Load/display model3d models in tiled terrain mode
   - Model LOD - use mesh simplification
 
 TT mode biomes control noise exponent
+Sun flare larger radius and smoother edges
+Better explosions with glowing particles trailing smoke
+
+God rays:
+  - http://www.perilouspenguin.com/glfps/?m=201204
+  - http://fabiensanglard.net/lightScattering/index.php
+
+Gameplay in tiled terrain mode
+  - Weapons
+  - Pickup items
+  - Projectile and object collision detection
+
+Backup
