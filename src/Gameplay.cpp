@@ -1234,6 +1234,8 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 	}
 	if (damage > 500.0) { // everything except for plasma
 		gen_delayed_from_player_sound((underwater? SOUND_SPLASH2 : SOUND_EXPLODE), pos, min(1.5, max(0.5, damage/1000.0)));
+		float const blast_force(size/distance_to_camera(pos));
+		if (!underwater && blast_force > 0.5) {camera_shake = min(1.0, 2.0*blast_force);}
 	}
 	if (type == GRENADE) { // shrapnel fragments
 		unsigned const num(weapons[W_GRENADE].nfragments + rand()%(weapons[W_GRENADE].nfragments/4));
@@ -2364,7 +2366,8 @@ void player_fall(int id) { // smileys and the player (camera)
 	if (!game_mode) return;
 	assert(id >= CAMERA_ID && id < num_smileys);
 	float const zvel(sstates[id].last_zvel), dz(sstates[id].last_dz);
-	float const vel(-zvel - FALL_HURT_VEL), dz2(-dz - FALL_HURT_HEIGHT*CAMERA_RADIUS);
+	float const vel(-zvel - FALL_HURT_VEL), fall_hurt_dist(FALL_HURT_HEIGHT*CAMERA_RADIUS), dz2(-dz - fall_hurt_dist);
+	if (id == CAMERA_ID && -dz > CAMERA_RADIUS) {camera_shake = min(1.0f, -dz/fall_hurt_dist);}
 	if (dz2 < 0.0) return;
 	smiley_collision(id, id, vector3d(0.0, 0.0, -zvel), get_sstate_pos(id), 5.0*vel*vel, FELL);
 }
