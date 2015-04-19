@@ -18,4 +18,5 @@ Gameplay in tiled terrain mode
   - Pickup items
   - Projectile and object collision detection
 
-Backup
+Camera shake when falling and on large explosions
+Less sun flare when cloudy/foggy

@@ -2069,6 +2069,22 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			add_laser_beam_segment(coll_pos, end_pos, vref, coll2, (range0 > 0.9*MAX_RANGE), atten*intensity);
 		}
 	}
+
+	// process bullet ricochets for M16
+	if (coll && wtype == W_M16 && hardness > 0.5) { // hit coll obj
+		float const dp(-dot_product(vcf, coll_norm));
+
+		if (dp > 0.0) { // collision on correct side (always gets here?)
+			float const dvel(hardness*(1.0 - dp)), rdscale(0.9*dvel*dvel);
+
+			if (rdscale > 0.4) {
+				float range0(MAX_RANGE);
+				vector3d vref(vcf);
+				calc_reflection_angle(vcf, vref, coll_norm);
+				projectile_test(coll_pos, vref, 0.0, rdscale*damage, shooter, range0, rdscale*intensity);
+			}
+		}
+	}
 	float const dscale((shooter >= CAMERA_ID) ? sstate.get_damage_scale() : 1.0);
 
 	if (closest < 0) { // not a dynamic object (static object)
