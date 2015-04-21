@@ -553,10 +553,12 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 		}
 	} // large objects
 	else { // small objects
-		colorRGBA const &base_color(object_types[type].color);
+		colorRGBA const &base_color(otype.color);
 		vector<tid_color_to_ix_t> tri_fragments, sphere_fragments;
 		vector<vert_norm_color> shrapnel_verts;
 		vector<pair<float, unsigned> > particles_to_draw;
+		int selected_particle(-1);
+		if (type == PARTICLE && (rand()&3) == 0) {selected_particle = rand()%objg.end_id;}
 
 		for (unsigned j = 0; j < objg.end_id; ++j) {
 			dwobject &obj(objg.get_obj(j));
@@ -596,6 +598,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				break;
 			case PARTICLE:
 				particles_to_draw.push_back(make_pair(-distance_to_camera_sq(pos), j));
+				if (animate2 && j == selected_particle && obj.time < otype.lifetime/3) {gen_smoke(pos, 0.25, 0.1);} // max one particle per frame
 				break;
 			case SAND:
 			case DIRT:
@@ -1151,7 +1154,7 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 	draw_sphere_vbo_raw(ndiv, 0);
 	draw_cylinder(-1.1, 1.0, 1.0, ndiv);
 	fgPopMatrix();
-	if (type == ROCKET) gen_rocket_smoke(pos, orient, radius);
+	if (type == ROCKET) {gen_rocket_smoke(pos, orient, radius);}
 }
 
 
@@ -1172,7 +1175,7 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	draw_sphere_vbo_raw(ndiv, 1);
 	select_no_texture();
 	fgPopMatrix();
-	if (type == SEEK_D) gen_rocket_smoke(pos, orient, radius);
+	if (type == SEEK_D) {gen_rocket_smoke(pos, orient, radius);}
 }
 
 
