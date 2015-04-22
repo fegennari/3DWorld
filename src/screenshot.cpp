@@ -44,6 +44,7 @@ FILE *open_screenshot_file(char *file_path, string const &extension, unsigned &i
 
 void read_depth_buffer(unsigned window_width, unsigned window_height, vector<float> &depth, bool normalize) {
 
+	depth.resize(window_width*window_height, 0.0);
 	glReadBuffer(GL_FRONT);
 	glReadPixels(0, 0, window_width, window_height, GL_DEPTH_COMPONENT, GL_FLOAT, &depth.front());
 	if (!normalize) return; // done
@@ -57,7 +58,7 @@ void read_depth_buffer(unsigned window_width, unsigned window_height, vector<flo
 void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned char> &buf) {
 
 #if 0 // for debugging depth buffer
-	vector<float> depth(window_width*window_height, 0.0);
+	vector<float> depth;
 	read_depth_buffer(window_width, window_height, depth, 1); // normalized
 	for (unsigned i = 0; i < depth.size(); ++i) {buf[3*i+0] = buf[3*i+1] = buf[3*i+2] = (unsigned char)(255.0*depth[i]);}
 #else
