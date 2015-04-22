@@ -355,6 +355,14 @@ indexed_mesh_draw<vert_wrap_t> cloud_imd;
 void free_cloud_context() {cloud_imd.free_context();}
 
 
+vector3d get_cloud_offset(float rel_vel_scale) {
+
+	float const cloud_rel_vel = 1.0; // relative cloud velocity compared to camera velocity (0: clouds follow the camera, 1: clouds are stationary)
+	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
+	return -camera + rel_vel_scale*cloud_rel_vel*world_pos;
+}
+
+
 // not a plane, but a spherical section
 void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil, bool draw_floor) {
 
@@ -380,8 +388,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 	float const rval(0.94*size), rval_inv(1.0/rval); // extends to at least the far clipping plane
 	float const cloud_z(get_tt_cloud_level()); // halfway between the top of the mountains and the end of the atmosphere
 	float const z1(min(zmin, min_terrain_zmin)), z2(min(cloud_z, get_cloud_zmax())), ndiv_inv(1.0/CLOUD_NUM_DIV);
-	point const camera(get_camera_pos()), world_pos(camera + vector3d((xoff2-xoff)*DX_VAL, (yoff2-yoff)*DY_VAL, 0.0));
-	vector3d const offset(-camera + cloud_rel_vel*world_pos);
+	vector3d const offset(get_cloud_offset(1.0));
 	colorRGBA const cloud_color(get_cloud_color());
 
 	if (animate2) {
@@ -402,7 +409,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		float const xy_scale(0.02), z_offset(0.01*size);
 		float const sx(1.0/(1.0 + min(2.0, 0.5*fabs(wind.x))));
 		float const sy(1.0/(1.0 + min(2.0, 0.5*fabs(wind.y))));
-		vector3d const offset2(xy_scale*(-camera + 0.7*cloud_rel_vel*world_pos));
+		vector3d const offset2(xy_scale*get_cloud_offset(0.7));
 		setup_texgen(sx*xy_scale, sy*xy_scale, sx*offset2.x, sy*offset2.y, 0.0, s, 0);
 		colorRGBA cloud_color2(cloud_color);
 		cloud_color2.alpha *= (is_cloudy ? 1.0 : 0.5);
@@ -424,7 +431,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 		s.add_uniform_float("water_plane_z", z1);
 		s.add_uniform_float("cloud_plane_z", z2);
 		s.add_uniform_float("cloud_scale", (is_cloudy ? 1.0 : (cloud_cover + 0.5*(1.0 - cloud_cover))));
-		s.add_uniform_vector3d("camera_pos", camera);
+		s.add_uniform_vector3d("camera_pos", get_camera_pos());
 		s.add_uniform_vector3d("sun_pos", get_sun_pos()); // no sun at night?
 		s.add_uniform_color("sun_color", sun_color);
 		set_cloud_uniforms(s, 0);

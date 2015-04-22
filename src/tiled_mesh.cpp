@@ -1643,12 +1643,13 @@ void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighti
 	s.set_bool_prefix("apply_cloud_shadows", cloud_shadows, lighting_shader); // FS
 }
 
-void tile_draw_t::setup_cloud_plane_uniforms(shader_t &s) {
+void setup_cloud_plane_uniforms(shader_t &s, float cloud_cover_factor=0.535, bool match_cloud_layer=0) {
 
-	//float const cloud_zmax(get_cloud_zmax()); // follows the camera zval - matches the drawn cloud layer but moves clouds on the terrain
-	float const cloud_zmax(0.5*(zmin + zmax) + max(zmax, CLOUD_CEILING)); // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
+	float cloud_zmax;
+	if (match_cloud_layer) {cloud_zmax = get_cloud_zmax();} // follows the camera zval - matches the drawn cloud layer but moves clouds on the terrain
+	else {cloud_zmax = 0.5*(zmin + zmax) + max(zmax, CLOUD_CEILING);} // fixed z value - independent of camera z so stays in place, but disagrees with drawn clouds
 	set_cloud_uniforms(s, 9);
-	s.add_uniform_float("cloud_scale",   (is_cloudy ? 1.0 : (cloud_cover + 0.535*(1.0 - cloud_cover))));
+	s.add_uniform_float("cloud_scale",   (is_cloudy ? 1.0 : (cloud_cover + cloud_cover_factor*(1.0 - cloud_cover))));
 	s.add_uniform_float("cloud_alpha",   (is_cloudy ? 0.8 : 0.75)*atmosphere);
 	s.add_uniform_float("cloud_plane_z", cloud_zmax);
 }

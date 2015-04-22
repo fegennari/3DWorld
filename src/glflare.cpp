@@ -32,6 +32,7 @@ unsigned char *ft_buf[num_flare_tex];
 int ft_width[num_flare_tex], ft_height[num_flare_tex], ft_components[num_flare_tex];
 
 
+extern int display_mode, is_cloudy;
 extern float brightness;
 extern colorRGBA sun_color;
 
@@ -49,6 +50,8 @@ Flare flare[num_flares] = {
 
 
 unsigned char *load_luminance(std::string const &filename, int *width, int *height, int *components);
+void setup_cloud_plane_uniforms(shader_t &s, float cloud_cover_factor, bool match_cloud_layer);
+vector3d get_cloud_offset(float rel_vel_scale);
 
 
 
@@ -56,14 +59,27 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 
 	if (brightness == 0.0) return;
 	assert(brightness > 0.0);
+	float mod_brightness(brightness);
 	if (!tex_loaded) {load_flare_textures();}
 	float global_scale(6.0);
 	GLuint bound_to(0);
-
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader("simple_texture_luminance");
-	s.begin_shader();
+
+	if (world_mode == WMODE_INF_TERRAIN && (display_mode & 0x40) == 0) {
+		s.set_prefix("#define NUM_OCTAVES 8", 1); // FS
+		s.set_frag_shader("perlin_clouds.part*+sun_flare_with_clouds");
+		s.begin_shader();
+		setup_cloud_plane_uniforms(s, 0.5, 1); // tu_id=9, cloud_cover_factor=0.5 to agree with cloud plane, match cloud layer
+		s.add_uniform_vector3d("cloud_offset", get_cloud_offset(1.0));
+		s.add_uniform_vector3d("sun_pos", get_sun_pos());
+		s.add_uniform_vector3d("camera", get_camera_pos());
+		if (is_cloudy) {mod_brightness *= 2.0;} // undo cloudy brightness scale since we handle brightness dynamically in the shader
+	}
+	else {
+		s.set_frag_shader("simple_texture_luminance");
+		s.begin_shader();
+	}
 	s.add_uniform_int("tex0", 0);
 	glDisable(GL_DEPTH_TEST);
 	enable_blend();
@@ -81,7 +97,7 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 
 	// dy = cross(dx,view_dir)
 	vector3d const dy(cross_product(dx2, dx).get_norm());
-	float const cscale(intensity*pow((double)max(brightness, 0.6f), 1.5));
+	float const cscale(intensity*pow((double)max(mod_brightness, 0.6f), 1.5));
 	quad_batch_draw qbd;
 
 	for (int i = start_ix; i < num_flares; i++) {

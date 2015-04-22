@@ -6,7 +6,6 @@ Load/display model3d models in tiled terrain mode
   - Model LOD - use mesh simplification
 
 TT mode biomes control noise exponent
-Sun flare larger radius and smoother edges
 Better explosions with glowing particles trailing smoke
 
 God rays:
@@ -14,9 +13,9 @@ God rays:
   - http://fabiensanglard.net/lightScattering/index.php
 
 Gameplay in tiled terrain mode
-  - Weapons
+  - Dynamic Objects
   - Pickup items
   - Projectile and object collision detection
 
-Camera shake when falling and on large explosions
-Less sun flare when cloudy/foggy
+Birch tree texture two bark layers using alpha mask
+Puffy clouds in tiled terrain mode

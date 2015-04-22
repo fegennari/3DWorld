@@ -840,20 +840,13 @@ void draw_sky(int order) {
 void compute_brightness() {
 
 	brightness = 0.8 + 0.2*light_factor;
-	if (!have_sun) brightness *= 0.25;
-	if (is_cloudy) brightness *= 0.5;
+	if (!have_sun) {brightness *= 0.25;}
+	if (is_cloudy) {brightness *= 0.5;}
 	float const sun_bright(0.5 + 0.5*max(0.0f, sun_pos.z/sun_pos.mag()));
 	float const moon_bright(combined_gu ? 0.1 : 0.3*(0.5 + 0.5*max(0.0f, moon_pos.z/moon_pos.mag())));
-	
-	if (light_factor >= 0.6) {
-		brightness *= sun_bright;
-	}
-	else if (light_factor <= 0.4) {
-		brightness *= moon_bright;
-	}
-	else {
-		brightness *= 5.0*((light_factor - 0.4)*sun_bright + (0.6 - light_factor)*moon_bright);
-	}
+	if      (light_factor >= 0.6) {brightness *= sun_bright;}
+	else if (light_factor <= 0.4) {brightness *= moon_bright;}
+	else {brightness *= 5.0*((light_factor - 0.4)*sun_bright + (0.6 - light_factor)*moon_bright);}
 	brightness = min(0.99f, max(0.0f, brightness));
 }
 
