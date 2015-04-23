@@ -1421,7 +1421,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	tree_center = pos;
 	created     = 1;
 	tree_color.alpha = 1.0;
-	UNROLL_3X(tree_color[i_] = 0.01*rand_gen(80, 120);) // rand_gen() called outside gen_tree_data()
+	vector3d const color_var(signed_rand_vector2()); // rand_gen() called outside gen_tree_data()
 	tree_data_t &td(tdata());
 
 	if (td.is_created()) { // pre-allocated, shared tree
@@ -1439,10 +1439,12 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			// but then the leaf and branch sizes/colors couldn't be different per tree
 			assert(type == td_type); // up to the caller to ensure this
 		}
+		UNROLL_3X(tree_color[i_] = 1.0 + tree_types[type].branch_color_var*color_var[i_];)
 	}
 	else {
 		type = ((ttype < 0) ? rand2() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
-		tree_type const &ttype(tree_types[type]);
+		tree_type const &treetype(tree_types[type]);
+		UNROLL_3X(tree_color[i_] = 1.0 + treetype.branch_color_var*color_var[i_];)
 		float tree_depth(get_default_tree_depth());
 	
 		if (calc_z) {
@@ -1450,8 +1452,8 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 			if (user_placed) {tree_depth = tree_center.z - get_tree_z_bottom(tree_center.z, tree_center);} // more accurate
 		}
 		cube_t const cc(clip_cube - tree_center);
-		td.gen_tree_data(type, size, tree_depth, ((height_scale == 1.0) ? ttype.height_scale : height_scale), ((br_scale_mult == 1.0) ? ttype.branch_radius : br_scale_mult),
-			nl_scale, ((height_scale == 1.0) ? ttype.branch_break_off : 1.0), has_4th_branches, (use_clip_cube ? &cc : NULL)); // create the tree here
+		td.gen_tree_data(type, size, tree_depth, ((height_scale == 1.0) ? treetype.height_scale : height_scale), ((br_scale_mult == 1.0) ? treetype.branch_radius : br_scale_mult),
+			nl_scale, ((height_scale == 1.0) ? treetype.branch_break_off : 1.0), has_4th_branches, (use_clip_cube ? &cc : NULL)); // create the tree here
 	}
 	assert(type < NUM_TREE_TYPES);
 	unsigned const nleaves(td.get_leaves().size());
@@ -1479,7 +1481,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	
 	// create leaves and all_cylins
 	br_scale    = br_scale_mult*branch_radius_scale;
-	b_tex_scale = height_scale/br_scale;
+	b_tex_scale = tree_types[tree_type].branch_tscale*height_scale/br_scale;
 	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, height_scale, br_scale, nl_scale, bbo_scale, has_4th_branches);
 	builder.create_all_cylins_and_leaves(all_cylins, leaves, tree_type, deadness, br_scale, nl_scale, has_4th_branches);
 
@@ -1523,7 +1525,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	num_cylin_factor     = 10.0;
 	base_cylin_factor    = 1.0*base_num_cylins; //(type == TREE_A) ? 0.4 : 1.0;
 	base_break_off       = max(1, min(base_num_cylins-1, round_fp(bbo_scale*(2 + base_num_cylins/5.0)))); // controls the point at which branches start on the base
-	num_1_branches       = 8;
+	num_1_branches       = 8; // max value
 	num_big_branches_min = 3;
 	num_big_branches_max = 4;
 	num_2_branches_min   = 4;
@@ -1565,7 +1567,6 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	base_color = colorRGBA(0.5*signed_rand_float2(), 0.5*signed_rand_float2(), 0.0, 1.0); // no blue
 
 	//temporary variables
-	int num_b_so_far(0);
 	int const nbr(num_1_branches*(num_2_branches_max+1)), nbranches(nbr*num_3_branches_max);
 	
 	//allocate all the memory required for the tree------------------------------------------------
@@ -1599,6 +1600,8 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	}
 
 	//create tree base -------------------------------------------------------------
+	int num_b_so_far(0);
+
 	for (int i = 0; i < base_num_cylins; i++) {
 		tree_cylin &cylin(base.cylin[i]);
 
@@ -1618,22 +1621,24 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		}
 		if (i == (base_num_cylins-1)) {rotate_cylin(cylin);} // last cylin
 
-		if (base_break_off <= (i+1)) {
+		if (base_break_off <= (i+1) && num_b_so_far < num_1_branches) {
 			int const init_num_cyl(base_num_cylins - base_break_off + 1);
-			float const temp_num(branch_distribution*((float)num_1_branches)/init_num_cyl*(float(i+2-base_break_off))/(float(num_b_so_far+1)));
+			float const temp_num(branch_distribution*float(num_1_branches)/init_num_cyl*float(i+2-base_break_off)/float(num_b_so_far+1));
 			float rotate_start(rand_gen(0, 259));
 			int num_b_to_create(0);
 
 			if (temp_num >= 1.0) {
-				float const temp2(((float)num_1_branches - num_b_so_far)/(float(base_num_cylins - i)));
-				num_b_to_create = min(num_1_branches, ((temp2 <= 3.0) ? max(1, int(ceil(temp2))) : int(temp_num + 0.5)));
+				float const temp2((float(num_1_branches) - num_b_so_far)/float(base_num_cylins - i));
+				num_b_to_create = min(num_1_branches-num_b_so_far, ((temp2 <= 3.0) ? max(1, int(ceil(temp2))) : int(temp_num + 0.5)));
 			}
 			for (int j = 0; j < num_b_to_create; j++) {
-				if (num_b_so_far < num_1_branches) create_1_order_branch(i, rotate_start, num_b_so_far++);
-				rotate_start += 360.0/((float)num_b_to_create) + (3 - 2*rand_gen(1,2))*rand_gen(0,int(branch_1_random_rotate));
+				assert(num_b_so_far < num_1_branches);
+				create_1_order_branch(i, rotate_start, num_b_so_far++);
+				rotate_start += 360.0/float(num_b_to_create) + (3 - 2*rand_gen(1,2))*rand_gen(0,int(branch_1_random_rotate));
 			}
 		}
-	}
+	} // for i
+	num_1_branches = num_b_so_far; // clamp to the number actually created
 	
 	//done with base ------------------------------------------------------------------
 	if (has_4th_branches) {create_4th_order_branches(nbranches);}

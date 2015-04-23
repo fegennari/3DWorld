@@ -50,7 +50,7 @@ texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg", 0, 0), // or marble2.jpg, compression is slow
 texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg", 0, 1, LS_TEX_ANISO),
 texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1, 1, 4.0), // 128x128
-texture_t(0, 5, 0,    0,    1, 3, 1, "bark2.jpg"), // bark.jpg: 224x224, bark2.jpg: 400x400 (Note: must match baseball bat texture size)
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark2.jpg"), // 512x512 (Note: must match baseball bat texture size)
 texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg", 0, 1, LS_TEX_ANISO),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png", 0, 1, LS_TEX_ANISO),
 texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
@@ -159,6 +159,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "bark/palm_bark.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 3, "daisy.jpg", 0, 1, 4.0), // 1024x1024
 texture_t(0, 5, 0,    0,    1, 3, 1, "lava.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 1, "smoke_puff.jpg"), // 150x150
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_birch.jpg", 0, 0), // 512x512, no compress
+texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark6.jpg", 0, 0), // 894x894, no compress
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
 
