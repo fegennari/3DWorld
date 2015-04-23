@@ -185,7 +185,7 @@ unsigned char *landscape0 = NULL;
 extern bool mesh_difuse_tex_comp, water_is_lava;
 extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid;
 extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
-extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only;
+extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only, window_width, window_height;
 extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation, fticks;
 extern char *mesh_diffuse_tex_fn;
 
@@ -916,6 +916,15 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
 	glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, (wrap ? (mirror ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE));
+}
+
+
+void depth_buffer_to_texture(unsigned &tid) {
+
+	if (tid) {bind_2d_texture(tid);} else {setup_texture(tid, 0, 0, 0);}
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, window_width, window_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+	glReadBuffer(GL_BACK);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, window_width, window_height);
 }
 
 
