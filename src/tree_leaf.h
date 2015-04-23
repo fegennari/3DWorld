@@ -26,11 +26,11 @@ struct tree_type {
 
 // bark_tex, leaf_tex, branch_size, branch_radius, leaf_size, leaf_x_ar, height_scale, branch_break_off, branch_tscale, branch_color_var, barkc, leafc
 tree_type const tree_types[NUM_TREE_TYPES] = {
-	tree_type(BARK3_TEX, LEAF_TEX,     1.0, 0.7, 1.0, 1.00, 1.0, 1.0, 1.0, 0.1,  colorRGBA(0.7, 0.7, 0.5, 1.0), colorRGBA(0.2, 1.0, 0.2, 1.0)),
-	tree_type(BARK4_TEX, LIVE_OAK_TEX, 1.0, 1.0, 1.0, 0.63, 1.0, 1.0, 1.5, 0.1,  colorRGBA(1.0, 0.9, 0.8, 1.0), WHITE),
-	tree_type(BARK1_TEX, LEAF2_TEX,    1.0, 1.0, 1.0, 0.82, 2.0, 0.5, 1.0, 0.1,  colorRGBA(0.8, 0.5, 0.3, 1.0), WHITE),
-	tree_type(BARK5_TEX, LEAF3_TEX,    1.0, 0.7, 1.5, 0.81, 1.0, 1.0, 0.3, 0.01, colorRGBA(1.0, 0.9, 0.7, 1.0), WHITE), // birch bark
-	tree_type(BARK6_TEX, PAPAYA_TEX,   1.0, 1.0, 1.0, 1.00, 2.0, 2.0, 0.5, 0.1,  colorRGBA(0.7, 0.6, 0.5, 1.0), WHITE)
+	tree_type(BARK3_TEX, LEAF_TEX,     1.0, 0.7, 1.0, 1.00, 1.0, 1.0, 1.0, 0.1,  colorRGBA(0.7, 0.7,  0.5,  1.0), colorRGBA(0.2, 1.0, 0.2, 1.0)),
+	tree_type(BARK4_TEX, LIVE_OAK_TEX, 1.0, 1.0, 1.0, 0.63, 1.0, 1.0, 1.5, 0.1,  colorRGBA(1.0, 0.9,  0.8,  1.0), WHITE),
+	tree_type(BARK1_TEX, LEAF2_TEX,    1.0, 1.0, 1.0, 0.82, 2.0, 0.5, 1.0, 0.1,  colorRGBA(0.8, 0.5,  0.3,  1.0), WHITE),
+	tree_type(BARK5_TEX, LEAF3_TEX,    1.0, 0.7, 1.5, 0.81, 1.0, 1.0, 0.3, 0.01, colorRGBA(0.8, 0.75, 0.65, 1.0), WHITE), // birch bark
+	tree_type(BARK6_TEX, PAPAYA_TEX,   1.0, 1.0, 1.0, 1.00, 2.0, 2.0, 0.5, 0.1,  colorRGBA(0.7, 0.6,  0.5,  1.0), WHITE)
 };
 
 
