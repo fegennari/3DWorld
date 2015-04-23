@@ -686,16 +686,16 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 	for (unsigned y = 0; y < stride; ++y) {
 		for (unsigned x = 0; x < stride; ++x) {
 			unsigned const ix(y*stride + x), ix2(y*zvsize + x);
-			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
 
 			if (init_data) {
 				vector3d const norm(get_norm(ix2));
 				min_normal_z = min(min_normal_z, norm.z);
 				UNROLL_2X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));); // Note: we only set x and y here, z is calculated in the shader
-				// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
-				data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]);
-				data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*shadow_val/255.0)); // add ambient occlusion from trees
 			}
+			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
+			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
+			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
+			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*shadow_val/255.0)); // add ambient occlusion from trees
 			shadow_val = 128 + shadow_val/2; // divide tree shadow effect by 2x to offset for shadow map effect
 
 			if (!mesh_shadows) {
