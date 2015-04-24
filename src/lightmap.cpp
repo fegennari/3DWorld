@@ -36,16 +36,13 @@ lmap_manager_t lmap_manager;
 
 extern int animate2, display_mode, frame_counter, camera_coll_id, scrolling, read_light_files[], write_light_files[];
 extern unsigned create_voxel_landscape;
-extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, indir_light_exp, light_int_scale[];
+extern float czmin, czmax, fticks, zbottom, ztop, XY_SCENE_SIZE, FAR_CLIP, indir_light_exp, light_int_scale[];
 extern colorRGB cur_ambient, cur_diffuse;
 extern coll_obj_group coll_objects;
 extern vector<light_source> enabled_lights;
 
 
-// *** USEFUL INLINES ***
-
 inline bool add_cobj_ok(coll_obj const &cobj) { // skip small things like tree leaves and such
-	
 	return (cobj.fixed && !cobj.disabled() && cobj.volume > 0.0001); // cobj.type == COLL_CUBE
 }
 
@@ -73,13 +70,11 @@ void light_source::add_color(colorRGBA const &c) {
 float light_source::get_intensity_at(point const &p, point &updated_lpos) const {
 
 	if (radius == 0.0) return color[3]; // no falloff
+	updated_lpos = pos;
 
 	if (is_line_light()) {
 		vector3d const L(pos2 - pos);
-		updated_lpos = pos + L*CLIP_TO_01(dot_product((p - pos), L)/L.mag_sq());
-	}
-	else {
-		updated_lpos = pos;
+		updated_lpos += L*CLIP_TO_01(dot_product((p - pos), L)/L.mag_sq());
 	}
 	if (fabs(p.z - updated_lpos.z) > radius) return 0.0; // fast test
 	float const dist_sq(p2p_dist_sq(updated_lpos, p));
@@ -115,10 +110,7 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh
 		for (unsigned d = 0; d < 3; ++d) {
 			bounds[0][d] = min(pos[d], pos2[d]) - rb; // lower
 			bounds[1][d] = max(pos[d], pos2[d]) + rb; // upper
-
-			for (unsigned j = 0; j < 2; ++j) {
-				bnds[d][j] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bounds[j][d] + bounds_offset[d]), d)));
-			}
+			UNROLL_2X(bnds[d][i_] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bounds[i_][d] + bounds_offset[d]), d)));)
 		}
 	}
 }
@@ -126,9 +118,37 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh
 
 bool light_source::is_visible() const {
 
-	if (radius == 0.0 || sphere_in_camera_view(pos, radius, 0)) return 1; // max_level?
-	if (is_line_light() && sphere_in_camera_view(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)), 0)) return 1; // use bounding sphere
-	return 0;
+	if (radius == 0.0) return 1;
+	if (is_line_light()) {return sphere_in_camera_view(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)), 0);} // use bounding sphere
+	if (!sphere_in_camera_view(pos, radius, 0)) return 0; // view frustum culling
+	if (radius < 0.8) return 1; // don't do anything more expensive for small light sources
+	point const camera(get_camera_pos());
+	//if (!(display_mode & 0x10)) {return !sphere_cobj_occluded(camera, pos, radius);} // occlusion culling
+	if (sphere_cobj_occluded(camera, pos, 0.5*radius)) return 0; // approximate occlusion culling, can miss lights but rarely happens
+	if (dynamic || radius < 1.0 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
+	unsigned const num_rays = 64;
+	unsigned num_hits(0);
+	static bool dirs_valid(0);
+	static vector3d dirs[num_rays];
+
+	if (!dirs_valid) {
+		rand_gen_t rgen;
+		for (unsigned n = 0; n < num_rays; ++n) {dirs[n] = rgen.signed_rand_vector_norm();}
+		dirs_valid = 1;
+	}
+	for (unsigned n = 0; n < num_rays; ++n) { // for static scene lights we do ray queries
+		point const pos2(pos + FAR_CLIP*dirs[n]);
+		point cpos;
+		vector3d cnorm; // unused
+		int cindex(-1); // unused
+		
+		if (check_coll_line_exact_tree(pos, pos2, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) {
+			cpos -= SMALL_NUMBER*dirs[n]; // move away from coll pos
+			if (!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1;
+			++num_hits;
+		}
+	}
+	return (num_hits < num_rays/2); // if most of the rays fail to hit something we return visible for safety
 }
 
 
