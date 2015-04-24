@@ -82,7 +82,7 @@ B 7.5    8.0   6.4   6.5  -0.4  -0.05 # corner support 1
 B 7.9    8.0   6.0   6.5  -0.4  -0.05 # corner support 2
 B 5.0    6.5   2.9   3.05 -0.4  -0.05 # stairs south
 B 5.0    6.5   3.35  3.5  -0.4  -0.05 # stairs north
-B -6.3  -6.2   4.5   5.9  -0.4  -0.05 # stairs west
+B -6.32 -6.2   4.5   5.9  -0.4  -0.05 # stairs west
 B -6.0  -5.9   4.5   5.9  -0.4  -0.05 # stairs east
 B -6.75 -5.8   6.4   6.5  -0.4  -0.05 # back wall
 
@@ -91,11 +91,11 @@ l 0.9 0.7 0.6 0.55 1.0 27 1 # concrete block (red/brown)
 y 6.0
 a 0 # non-destroyable
 e 0
-B -8.0   8.0  -1.0   2.9  -0.1   0.0  # top
+B -8.0   8.0  -1.0   2.9  -0.12  0.0  # top
 e 1
 B -8.0   8.0  -1.0   2.9  -0.5  -0.4  # bottom
 e 3
-B -8.0   8.0  -1.0  -0.9  -0.4  -0.1  # front
+B -8.0   8.0  -1.0  -0.85 -0.4  -0.1  # front
 B -8.0   0.2   2.6   2.9  -0.4  -0.1  # back left
 B  0.6   8.0   2.6   2.9  -0.4  -0.1  # back right
 B -8.0  -7.7  -0.9   2.6  -0.4  -0.1  1  # left  (remove T-junctions)

@@ -17,4 +17,3 @@ Gameplay in tiled terrain mode
 TT mode biomes control noise exponent
 Better explosions with glowing particles trailing smoke
 Puffy clouds in tiled terrain mode
-Fix light leaking in mapx and house levels
