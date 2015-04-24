@@ -121,11 +121,11 @@ bool light_source::is_visible() const {
 	if (radius == 0.0) return 1;
 	if (is_line_light()) {return sphere_in_camera_view(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)), 0);} // use bounding sphere
 	if (!sphere_in_camera_view(pos, radius, 0)) return 0; // view frustum culling
-	if (radius < 0.8) return 1; // don't do anything more expensive for small light sources
+	if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
 	point const camera(get_camera_pos());
 	//if (!(display_mode & 0x10)) {return !sphere_cobj_occluded(camera, pos, radius);} // occlusion culling
 	if (sphere_cobj_occluded(camera, pos, 0.5*radius)) return 0; // approximate occlusion culling, can miss lights but rarely happens
-	if (dynamic || radius < 1.0 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
+	if (dynamic || radius < 0.8 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
 	unsigned const num_rays = 64;
 	unsigned num_hits(0);
 	static bool dirs_valid(0);
