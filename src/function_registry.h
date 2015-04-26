@@ -135,6 +135,7 @@ void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned 
 void draw_camera_filters(vector<camera_filter> &cfs);
 point world_space_to_screen_space(point const &pos);
 void restore_prev_mvm_pjm_state();
+bool is_sun_flare_visible();
 void draw_projectile_effects();
 void draw_splash(float x, float y, float z, float size, colorRGBA color=WATER_C);
 void draw_framerate(float val);

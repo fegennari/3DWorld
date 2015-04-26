@@ -1321,10 +1321,21 @@ void restore_prev_mvm_pjm_state() {
 }
 
 
+bool is_sun_flare_visible() {
+
+	if (!have_sun || light_factor < 0.4) return 0; // sun below the horizon, or doesn't exist
+	point const cur_sun_pos(get_sun_pos());
+	if (dot_product(cview_dir, (cur_sun_pos - get_camera_pos())) < 0.0) return 0; // sun behind the camera
+	if (!sphere_in_camera_view(cur_sun_pos, 4.0*sun_radius, 0)) return 0; // use larger radius to include the flare/halo
+	return 1;
+}
+
+
+// add God rays as a fullscreen shader pass using the depth texture
 void add_god_rays() {
 
-	if (!(display_mode & 0x10)) return;
-	// add God rays as a fullscreen shader pass using the depth texture
+	if (world_mode == WMODE_UNIVERSE) return; // not in universe mode
+	if (!is_sun_flare_visible()) return; // sun not visible
 	depth_buffer_to_texture(depth_tid);
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
@@ -1355,7 +1366,7 @@ void add_god_rays() {
 }
 
 void run_postproc_effects() {
-	if (light_factor >= 0.4 && world_mode != WMODE_UNIVERSE) {add_god_rays();}
+	if ((display_mode & 0x10) || (show_fog && world_mode == WMODE_GROUND)) {add_god_rays();}
 }
 
 

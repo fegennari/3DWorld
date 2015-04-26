@@ -149,8 +149,8 @@ point get_sun_pos() {
 	// however, it also makes the shadows misalign slightly, especially for large scenes;
 	// we can't have the shadows move with the camera either because then we would have to recompute them every time the player moves
 	// Note: if this line is commented out, we must also change inf terrain mode sun drawing
-	if (camera_mode == 1) pos += surface_pos;
-	if (camera_mode != 1 && combined_gu) pos += get_camera_pos(); // universe is always centered around the camera
+	if (camera_mode == 1) {pos += surface_pos;}
+	if (camera_mode != 1 && combined_gu) {pos += get_camera_pos();} // universe is always centered around the camera
 	return pos;
 }
 
@@ -623,39 +623,36 @@ float get_ocean_wave_height() {
 void draw_sun_flare(float intensity=1.0) {
 
 	//RESET_TIME;
-	point const sun_pos(get_sun_pos());
+	if (!is_sun_flare_visible()) return;
+	point const sun_pos(get_sun_pos()), viewer(get_camera_pos());
+	//if (is_cloudy) {intensity *= 0.7;}
 
-	if (have_sun && light_factor >= 0.4 && sphere_in_camera_view(sun_pos, 4.0*sun_radius, 0)) { // use larger radius to include the flare/halo
-		point const viewer(get_camera_pos());
-		//if (is_cloudy) {intensity *= 0.7;}
-
-		if (world_mode == WMODE_GROUND) {
-			unsigned const npts = 16;
-			static point pts[npts];
-			static bool pts_valid(0);
-			float tot_light(0.0);
-			vector3d const view_dir((sun_pos - viewer).get_norm());
+	if (world_mode == WMODE_GROUND) {
+		unsigned const npts = 16;
+		static point pts[npts];
+		static bool pts_valid(0);
+		float tot_light(0.0);
+		vector3d const view_dir((sun_pos - viewer).get_norm());
 		
-			for (unsigned i = 0; i < npts; ++i) {
-				int index; // unused
-				if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
-				point const pos(sun_pos + pts[i]*sun_radius);
+		for (unsigned i = 0; i < npts; ++i) {
+			int index; // unused
+			if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
+			point const pos(sun_pos + pts[i]*sun_radius);
 
-				if (coll_pt_vis_test(pos, viewer, 0.0, index, camera_coll_id, 0, 1) && (!(display_mode & 0x01) || !line_intersect_mesh(pos, viewer, 0))) {
-					tot_light += 1.0 - get_cloud_density(viewer, view_dir);
-				}
+			if (coll_pt_vis_test(pos, viewer, 0.0, index, camera_coll_id, 0, 1) && (!(display_mode & 0x01) || !line_intersect_mesh(pos, viewer, 0))) {
+				tot_light += 1.0 - get_cloud_density(viewer, view_dir);
 			}
-			pts_valid = 1;
-			if (tot_light == 0) return;
-			intensity *= 0.1 + 0.9*tot_light/npts;
-			if (show_fog)  {intensity *= 0.4;}
 		}
-		else if (world_mode == WMODE_INF_TERRAIN) {
-			if (sun_pos.z < zmin) return; // sun below the mesh
-			if (viewer.z < water_plane_z) {intensity *= CLIP_TO_01(1.0f - 1.0f*(water_plane_z - viewer.z));} // attenuate sun flare when underwater
-		}
-		DoFlares(viewer, camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0), intensity);
+		pts_valid = 1;
+		if (tot_light == 0) return;
+		intensity *= 0.1 + 0.9*tot_light/npts;
+		if (show_fog)  {intensity *= 0.4;}
 	}
+	else if (world_mode == WMODE_INF_TERRAIN) {
+		if (sun_pos.z < zmin) return; // sun below the mesh
+		if (viewer.z < water_plane_z) {intensity *= CLIP_TO_01(1.0f - 1.0f*(water_plane_z - viewer.z));} // attenuate sun flare when underwater
+	}
+	DoFlares(viewer, camera_origin, sun_pos, 1.0, (combined_gu ? 15.0*univ_sun_rad : 1.0), intensity);
 	//PRINT_TIME("Query + Flare");
 }
 
