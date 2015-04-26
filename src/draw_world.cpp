@@ -1321,8 +1321,41 @@ void restore_prev_mvm_pjm_state() {
 }
 
 
-void run_postproc_effects() {
+void add_god_rays() {
 
+	if (!(display_mode & 0x10)) return;
+	// add God rays as a fullscreen shader pass using the depth texture
+	depth_buffer_to_texture(depth_tid);
+	shader_t s;
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("god_rays");
+	s.begin_shader();
+	s.add_uniform_int("depth_tex", 0);
+	s.set_cur_color(WHITE);
+	s.add_uniform_color("sun_color", sun_color);
+	s.add_uniform_vector3d("sun_pos", world_space_to_screen_space(get_sun_pos()));
+	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
+	glDisable(GL_DEPTH_TEST);
+	enable_blend();
+	bind_2d_texture(depth_tid);
+
+	// setup matrices
+	fgMatrixMode(FG_PROJECTION);
+	fgPushIdentityMatrix();
+	fgOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+	fgMatrixMode(FG_MODELVIEW);
+	fgPushIdentityMatrix();
+
+	draw_tquad(1.0, 1.0, 0.0);
+
+	restore_prev_mvm_pjm_state();
+	disable_blend();
+	glEnable(GL_DEPTH_TEST);
+	s.end_shader();
+}
+
+void run_postproc_effects() {
+	if (light_factor >= 0.4 && world_mode != WMODE_UNIVERSE) {add_god_rays();}
 }
 
 

@@ -5,15 +5,12 @@ Load/display model3d models in tiled terrain mode
   - Model Shadow Maps - Fix Scale and Rotations
   - Model LOD - use mesh simplification
 
-God rays:
-  - http://www.perilouspenguin.com/glfps/?m=201204
-  - http://fabiensanglard.net/lightScattering/index.php
-
 Gameplay in tiled terrain mode
   - Dynamic Objects
   - Pickup items
   - Projectile and object collision detection
 
 TT mode biomes control noise exponent
-Better explosions with glowing particles trailing smoke
 Puffy clouds in tiled terrain mode
+Working doors?
+Light switches?
