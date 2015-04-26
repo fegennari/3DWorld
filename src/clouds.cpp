@@ -190,8 +190,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	glClearColor(1.0, 1.0, 1.0, 1.0); // white
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	fgMatrixMode(FG_PROJECTION);
-	fgPushMatrix();
-	fgLoadIdentity();
+	fgPushIdentityMatrix();
 
 	// setup projection matrix
 	cube_t const bcube(get_bcube());
@@ -203,8 +202,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	//fgPerspective(2.0*angle/TO_RADIANS, 1.0, cloud_bot-frustum_z, cloud_top+(cloud_top - cloud_bot)-frustum_z);
 	fgPerspective(2.0*angle/TO_RADIANS, 1.0, NEAR_CLIP, FAR_CLIP);
 	fgMatrixMode(FG_MODELVIEW);
-	fgPushMatrix();
-	fgLoadIdentity();
+	fgPushIdentityMatrix();
 	vector3d const up_dir(plus_y);
 	point const origin(0.0, 0.0, frustum_z), center(0.0, 0.0, cloud_bot);
 	fgLookAt(origin.x, origin.y, origin.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);

@@ -746,6 +746,7 @@ void fgMatrixMode(int val);
 void fgPushMatrix();
 void fgPopMatrix();
 void fgLoadIdentity();
+void fgPushIdentityMatrix();
 void fgTranslate(float x, float y, float z);
 void fgScale(float x, float y, float z);
 void fgScale(float s);

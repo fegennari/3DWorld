@@ -63,9 +63,10 @@ void fgMatrixMode(int val) {
 	matrix_mode = val;
 }
 
-void fgPushMatrix  () {get_matrix_stack().push();} // matrix not change
+void fgPushMatrix  () {get_matrix_stack().push();} // matrix not changed
 void fgPopMatrix   () {get_matrix_stack().pop();      mark_matrix_changed();}
 void fgLoadIdentity() {get_matrix_stack().identity(); mark_matrix_changed();}
+void fgPushIdentityMatrix() {get_matrix_stack().push_identity(); mark_matrix_changed();}
 
 void assign_cur_matrix(glm::mat4 const &m) {
 	get_matrix_stack().assign(m);

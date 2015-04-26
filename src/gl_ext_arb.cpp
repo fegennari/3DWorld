@@ -275,12 +275,10 @@ void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsi
 	// setup matrices
 	glViewport(0, 0, nx*tsize, ny*tsize);
 	fgMatrixMode(FG_PROJECTION);
-	fgPushMatrix();
-	fgLoadIdentity();
+	fgPushIdentityMatrix();
 	fgOrtho(-xsize, xsize, -ysize, ysize, -(xsize + ysize), (xsize + ysize));
 	fgMatrixMode(FG_MODELVIEW);
-	fgPushMatrix();
-	fgLoadIdentity();
+	fgPushIdentityMatrix();
 	rotate_from_v2v(-plus_z, view_dir);
 	translate_to(-center);
 }

@@ -1089,12 +1089,10 @@ void compute_shader_t::pre_run() { // call once before run() calls
 	// setup matrices
 	glViewport(0, 0, xsize, ysize);
 	fgMatrixMode(FG_PROJECTION);
-	fgPushMatrix();
-	fgLoadIdentity();
+	fgPushIdentityMatrix();
 	fgOrtho(0.0, 1.0, 0.0, 1.0, -1.0, 1.0); // [0,0] to [1,1]
 	fgMatrixMode(FG_MODELVIEW);
-	fgPushMatrix();
-	fgLoadIdentity();
+	fgPushIdentityMatrix();
 }
 
 void compute_shader_t::post_run(bool keep_fbo_for_reuse) { // call once after run() calls
