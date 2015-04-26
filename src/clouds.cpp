@@ -221,11 +221,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	camera_pos = orig_cpos;
 	camera_pdu.valid = was_valid;
 	set_red_only(0);
-	// reset state
-	fgMatrixMode(FG_PROJECTION);
-	fgPopMatrix();
-	fgMatrixMode(FG_MODELVIEW);
-	fgPopMatrix();
+	restore_prev_mvm_pjm_state();
 	disable_fbo();
 	set_standard_viewport();
 	check_gl_error(802);

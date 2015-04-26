@@ -30,6 +30,7 @@ struct sky_pos_orient {
 
 
 // Global Variables
+unsigned depth_tid(0);
 float sun_radius, moon_radius, earth_radius, brightness(1.0);
 colorRGB cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
@@ -1268,9 +1269,9 @@ void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned 
 }
 
 
-void camera_filter::draw() {
+void camera_filter::draw(bool apply_texture) {
 
-	select_texture(tid); // use WHITE_TEX if tid < 0
+	if (apply_texture) {select_texture(tid);} // use WHITE_TEX if tid < 0
 	float const zval(-1.1*perspective_nclip), tan_val(tan(perspective_fovy/TO_DEG));
 	float const y(0.5*zval*tan_val), x((y*window_width)/window_height);
 	colorRGBA cur_color(color);
@@ -1296,6 +1297,32 @@ void draw_camera_filters(vector<camera_filter> &cfs) {
 	disable_blend();
 	glEnable(GL_DEPTH_TEST);
 	s.end_shader();
+}
+
+
+point world_space_to_screen_space(point const &pos) { // returns screen space normalized to [0.0, 1.0]
+
+	double mats[2][16];
+	fgGetMVM().get_as_doubles(mats[0]); // Model = MVM
+	fgGetPJM().get_as_doubles(mats[1]); // Proj
+	int const view[4] = {0, 0, 1, 1};
+	vector3d_d pss;
+	gluProject(pos.x, pos.y, pos.z, mats[0], mats[1], view, &pss.x, &pss.y, &pss.z);
+	return point(pss);
+}
+
+
+void restore_prev_mvm_pjm_state() {
+
+	fgMatrixMode(FG_PROJECTION);
+	fgPopMatrix();
+	fgMatrixMode(FG_MODELVIEW);
+	fgPopMatrix();
+}
+
+
+void run_postproc_effects() {
+	
 }
 
 

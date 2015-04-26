@@ -1100,12 +1100,8 @@ void compute_shader_t::pre_run() { // call once before run() calls
 void compute_shader_t::post_run(bool keep_fbo_for_reuse) { // call once after run() calls
 	if (!keep_fbo_for_reuse) {free_fbo(fbo_id);}
 	disable_fbo();
-	// restore state
-	fgPopMatrix();
-	fgMatrixMode(FG_PROJECTION);
-	fgPopMatrix();
-	fgMatrixMode(FG_MODELVIEW);
-	set_standard_viewport();
+	restore_prev_mvm_pjm_state();
+	set_standard_viewport(); // restore state
 }
 
 void compute_shader_t::run(unsigned &tid) { // call N times between pre_run() and post_run() calls

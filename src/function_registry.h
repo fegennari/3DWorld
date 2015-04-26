@@ -133,6 +133,8 @@ void draw_cracks_and_decals();
 void draw_smoke_and_fires();
 void add_camera_filter(colorRGBA const &color, unsigned time, int tid, unsigned ix, bool fades=0);
 void draw_camera_filters(vector<camera_filter> &cfs);
+point world_space_to_screen_space(point const &pos);
+void restore_prev_mvm_pjm_state();
 void draw_projectile_effects();
 void draw_splash(float x, float y, float z, float size, colorRGBA color=WATER_C);
 void draw_framerate(float val);
@@ -483,6 +485,7 @@ void bind_2d_texture(unsigned tid);
 void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t,
 	bool mirror_s=0, bool mirror_t=0, bool nearest=0, float anisotropy=1.0);
 void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool nearest);
+void depth_buffer_to_texture(unsigned &tid);
 void free_textures();
 void reset_textures();
 void free_texture(unsigned &tid);

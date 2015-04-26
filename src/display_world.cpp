@@ -64,6 +64,7 @@ void update_sound_loops();
 bool indir_lighting_updated();
 point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
+void run_postproc_effects();
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -276,7 +277,8 @@ float get_framerate(int &timer_b) {
 void final_draw(float framerate) {
 
 	fog_enabled = 0;
-	fgLoadIdentity();
+	run_postproc_effects();
+	check_zoom(); // also resets MVM to identity
 	draw_camera_filters(cfilters);
 	draw_frame_rate(framerate);
 	show_other_messages();
@@ -931,7 +933,6 @@ void display(void) {
 			//draw_scene_bounds_and_light_frustum(get_light_pos()); // TESTING
 		} // WMODE_GROUND
 		check_gl_error(13);
-		check_zoom();
 		final_draw(framerate);
 		purge_coll_freed(0); // optional
 		camera_flight = 0;
@@ -1079,7 +1080,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	if (get_camera_pos().z <= get_tt_cloud_level()) {draw_tiled_terrain(1);} // camera is below the clouds
-	fgPopMatrix(); // end mirror transform
+	// end mirror transform
 
 	// render reflection to texture
 	bind_2d_texture(tid);
@@ -1089,9 +1090,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 
 	// reset state
 	camera_pdu = old_camera_pdu; // restore camera_pdu
-	fgMatrixMode(FG_PROJECTION);
-	fgPopMatrix();
-	fgMatrixMode(FG_MODELVIEW);
+	restore_prev_mvm_pjm_state();
 	set_standard_viewport();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	//PRINT_TIME("Create Reflection Texture");

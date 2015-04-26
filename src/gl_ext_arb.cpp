@@ -288,10 +288,7 @@ void render_to_texture_t::pre_render(float xsize, float ysize, unsigned nx, unsi
 
 void render_to_texture_t::post_render() {
 
-	fgPopMatrix();
-	fgMatrixMode(FG_PROJECTION);
-	fgPopMatrix();
-	fgMatrixMode(FG_MODELVIEW);
+	restore_prev_mvm_pjm_state();
 	//glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	disable_fbo();
 	set_standard_viewport();

@@ -23,6 +23,7 @@ struct xform_matrix : public glm::mat4 {
 	xform_matrix(glm::mat4 const &m) : glm::mat4(m) {}
 	float *get_ptr();
 	float const *get_ptr() const;
+	void get_as_doubles(double md[16]) const;
 	void normalize();
 	void apply_to_vector3d(vector3d &v) const;
 };

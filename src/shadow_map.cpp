@@ -289,13 +289,7 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube
 		set_standard_viewport();
 		set_fill_mode();
 	}
-	
-	// reset state
-	fgMatrixMode(FG_PROJECTION);
-	fgPopMatrix();
-	fgMatrixMode(FG_MODELVIEW);
-	fgPopMatrix();
-
+	restore_prev_mvm_pjm_state();
 	// Now rendering from the camera POV, using the FBO to generate shadows
 	check_gl_error(203);
 }

@@ -22,6 +22,12 @@ float       *xform_matrix::get_ptr()       {glm::mat4       &m(*this); return gl
 float const *xform_matrix::get_ptr() const {glm::mat4 const &m(*this); return glm::value_ptr(m);}
 
 
+void xform_matrix::get_as_doubles(double md[16]) const {
+	float const *const ptr(get_ptr());
+	for (unsigned i = 0; i < 16; ++i) {md[i] = ptr[i];}
+}
+
+
 void xform_matrix::normalize() {
 
 	float *m(get_ptr());
