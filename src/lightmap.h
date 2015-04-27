@@ -81,14 +81,15 @@ public:
 
 class light_source { // size = 64
 
-	bool dynamic;
+protected:
+	bool dynamic, enabled;
 	float radius, radius_inv, r_inner, bwidth;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
 	colorRGBA color;
 
 public:
-	light_source() {}
+	light_source() : enabled(0) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=plus_z, float bw=1.0, float ri=0.0);
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
@@ -104,12 +105,38 @@ public:
 	bool is_line_light()  const {return (pos != pos2);} // technically cylinder light
 	bool is_dynamic()     const {return dynamic;}
 	bool is_neg_light()   const {return (color.R < 0.0 || color.G < 0.0 || color.B < 0.0);}
+	bool is_enabled()     const {return enabled;}
+	void set_enabled(bool enabled_) {enabled = enabled_;}
 	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
 	void combine_with(light_source const &l);
 	void pack_to_floatv(float *data) const;
 	bool try_merge_into(light_source &ls) const;
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
+};
+
+struct light_trigger_params_t {
+	point pos;
+	float dist, time;
+	bool player_only;
+
+	light_trigger_params_t() : dist(0.0), time(0.0), player_only(0) {}
+	light_trigger_params_t(point const &p, float d, float t, bool po) : pos(all_zeros), dist(d), time(t), player_only(po) {}
+};
+
+class light_source_trig : public light_source {
+
+	float off_time; // constant
+	float active_time;
+	trigger_t trigger;
+
+public:
+	light_source_trig() {}
+	light_source_trig(light_source const &ls) : light_source(ls), off_time(0.0), active_time(0.0), trigger(pos) {}
+	void set_trigger_timing(light_trigger_params_t const &params);
+	bool check_activate(point const &p, float radius, int activator);
+	void advance_timestep();
+	void shift_by(vector3d const &vd) {light_source::shift_by(vd); trigger.shift_by(vd);}
 };
 
 

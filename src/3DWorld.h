@@ -1350,6 +1350,19 @@ struct text_drawer_t {
 };
 
 
+struct trigger_t {
+
+	point act_pos;
+	float act_dist;
+	bool player_only;
+
+	trigger_t(point const &ap=all_zeros, float ad=0.0, bool po=0) : act_pos(ap), act_dist(ad), player_only(po) {}
+	bool register_player_pos(point const &p, float act_radius, int activator);
+	bool is_active() const {return (act_dist > 0.0);}
+	void shift_by(vector3d const &val) {act_pos += val;}
+};
+
+
 // colors
 colorRGBA const RED      (1.0,  0.0,  0.0,  1.0);
 colorRGBA const GREEN    (0.0,  1.0,  0.0,  1.0);

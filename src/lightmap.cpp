@@ -30,7 +30,8 @@ float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
 float dlight_bb[3][2] = {0};
 dls_cell **ldynamic = NULL;
-vector<light_source> light_sources_a, light_sources_d, dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
+vector<light_source> light_sources_a, /* light_sources_d, */ dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
+vector<light_source_trig> light_sources_d;
 lmap_manager_t lmap_manager;
 
 
@@ -52,7 +53,7 @@ inline bool add_cobj_ok(coll_obj const &cobj) { // skip small things like tree l
 
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri) :
-	dynamic(id), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
+	dynamic(id), enabled(1), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
 	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
@@ -118,6 +119,7 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh
 
 bool light_source::is_visible() const {
 
+	if (!enabled) return 0;
 	if (radius == 0.0) return 1;
 	if (is_line_light()) {return sphere_in_camera_view(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)), 0);} // use bounding sphere
 	if (!sphere_in_camera_view(pos, radius, 0)) return 0; // view frustum culling
@@ -161,6 +163,29 @@ void light_source::combine_with(light_source const &l) {
 	pos       *= wa;
 	pos       += l.pos*wb; // weighted average
 	blend_color(color, color, l.color, wa, 1);
+}
+
+
+void light_source_trig::set_trigger_timing(light_trigger_params_t const &params) {
+
+	active_time = 0.0; // reset just in case
+	off_time    = params.time;
+	trigger     = trigger_t(params.pos, params.dist, params.player_only);
+}
+
+void light_source_trig::advance_timestep() {
+
+	if (!trigger.is_active()) return; // trigger not active
+	enabled = (active_time > 0.0); // light on by default
+	if (enabled) {active_time = max(0.0f, (active_time - fticks/TICKS_PER_SECOND));} // decrease active time
+}
+
+bool light_source_trig::check_activate(point const &p, float radius, int activator) {
+
+	//if (active_time > 0.0) return 1; // already activated, don't reset timing
+	if (!trigger.register_player_pos(p, radius, activator)) return 0; // not yet triggered
+	active_time = off_time; // reset active time
+	return 1;
 }
 
 
@@ -564,7 +589,7 @@ void build_lightmap(bool verbose) {
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
-				if (!need_lmcell[y][x]) ++nonempty;
+				if (!need_lmcell[y][x]) {++nonempty;}
 				need_lmcell[y][x] |= 2;
 			}
 		}
@@ -986,8 +1011,10 @@ void add_dynamic_lights_ground() {
 	assert(ldynamic);
 	clear_dynamic_lights();
 	dl_sources.swap(dl_sources2);
-	dl_sources.insert(dl_sources.end(), light_sources_d.begin(), light_sources_d.end());
 
+	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {
+		if (i->is_enabled()) {dl_sources.push_back(*i);}
+	}
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		point const pos(gen_rand_scene_pos());
 		dl_sources.push_back(light_source(0.94, pos, pos, BLUE, 1));

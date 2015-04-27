@@ -12,5 +12,5 @@ Gameplay in tiled terrain mode
 
 TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
-Working doors?
-Light switches?
+player action trigger for platforms and lights
+support platform rotate (doors)

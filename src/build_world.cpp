@@ -59,7 +59,8 @@ extern lightning l_strike;
 extern vector<int> hmv_coll_obj;
 extern char *coll_obj_file;
 extern vector<point> app_spots;
-extern vector<light_source> light_sources_a, light_sources_d;
+extern vector<light_source> light_sources_a;
+extern vector<light_source_trig> light_sources_d;
 extern tree_cont_t t_trees;
 extern vector<texture_t> textures;
 
@@ -208,15 +209,19 @@ void dwobject::update_precip_type() {
 }
 
 
-void process_platforms() {
+void process_platforms_and_light_triggers() {
 
-	if (animate2 && !coll_objects.platform_ids.empty()) {
-		int const max_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
+	if (!animate2) return; // no updates
+	int const start_i((camera_mode == 1) ? CAMERA_ID : 0);
+	int const end_i(obj_groups[coll_id[SMILEY]].is_enabled() ? num_smileys : 0);
 
-		for (int i = ((camera_mode == 1) ? CAMERA_ID : 0); i < max_i; ++i) {
-			platforms.check_activate(get_sstate_pos(i), CAMERA_RADIUS);
-		}
+	if (!coll_objects.platform_ids.empty()) { // update platforms
+		for (int i = start_i; i < end_i; ++i) {platforms.check_activate(get_sstate_pos(i), CAMERA_RADIUS, i);}
 		platforms.advance_timestep();
+	}
+	for (auto l = light_sources_d.begin(); l != light_sources_d.end(); ++l) { // update scene lights
+		for (int i = start_i; i < end_i; ++i) {l->check_activate(get_sstate_pos(i), CAMERA_RADIUS, i);}
+		l->advance_timestep();
 	}
 }
 
@@ -1044,8 +1049,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	bool enable_leaf_wind(1);
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
+	light_trigger_params_t lt_params;
 	
-	while (!end) { // available: dhkouz KUV
+	while (!end) { // available: dhkouz UV
 		assert(fp != NULL);
 		int letter(getc(fp));
 		
@@ -1233,8 +1239,27 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					fscanf(fp, "%f", &r_inner);
 				}
 				for (unsigned d = 0; d < 2; ++d) { // {ambient, diffuse}
-					if (fvals[d] != 0.0) {(d ? light_sources_d : light_sources_a).push_back(light_source(fvals[d], pos, pos, lcolor, 0, vel, beamwidth, r_inner));}
+					if (fvals[d] == 0.0) continue;
+					light_source ls(fvals[d], pos, pos, lcolor, 0, vel, beamwidth, r_inner);
+					
+					if (d) {
+						light_sources_d.push_back(light_source_trig(ls));
+						if (lt_params.dist > 0.0) {light_sources_d.back().set_trigger_timing(lt_params);}
+					}
+					else {
+						light_sources_a.push_back(ls);
+					}
 				}
+			}
+			break;
+
+		case 'K': // scene diffuse point light trigger: x y z  activate_dist active_time player_only
+			{
+				if (fscanf(fp, "%f%f%f%f%f%i", &lt_params.pos.x, &lt_params.pos.y, &lt_params.pos.z, &lt_params.dist, &lt_params.time, &ivals[0]) != 6) {
+					return read_error(fp, "light source trigger", coll_obj_file);
+				}
+				lt_params.dist *= xf.scale;
+				lt_params.player_only = (ivals[0] != 0);
 			}
 			break;
 

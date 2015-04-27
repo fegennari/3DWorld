@@ -779,7 +779,7 @@ void display(void) {
 			timer_a = GET_TIME_MS();
 			show_framerate = 2;
 		}
-		if (world_mode == WMODE_GROUND) {process_platforms();} // must be before camera code
+		if (world_mode == WMODE_GROUND) {process_platforms_and_light_triggers();} // must be before camera code
 		if (world_mode == WMODE_INF_TERRAIN) {camera_mode = 1;} // force to ground/walking mode
 
 		// camera position code
@@ -1165,6 +1165,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 		camera_pdu.near_ = near_clip; // override camera frustum near/far clip so that VFC will be correct
 		camera_pdu.far_  = far_clip;
 	}
+	//draw_puffy_clouds(0);
 	draw_camera_weapon(0);
 	draw_camera_weapon(1);
 	bool const camera_above_clouds(camera.z > get_tt_cloud_level());

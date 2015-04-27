@@ -329,6 +329,8 @@ class platform { // animated (player controlled) scene object
 	point pos; // current position - dist is calculated from this point (delta = pos-origin)
 	vector3d delta; // last change in position
 
+	trigger_t trigger;
+
 public:
 	// other data
 	vector<unsigned> cobjs; // collision object(s) bound to this platform
@@ -346,7 +348,7 @@ public:
 	void shift_by(vector3d const &val);
 	void reset();
 	void activate();
-	bool check_activate(point const &p, float radius);
+	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_moving() const {return (state == ST_FWD || state == ST_REV);}
 };
@@ -355,7 +357,7 @@ public:
 struct platform_cont : public deque<platform> {
 
 	bool add_from_file(FILE *fp);
-	void check_activate(point const &p, float radius);
+	void check_activate(point const &p, float radius, int activator);
 	void shift_by(vector3d const &val);
 	void advance_timestep();
 };

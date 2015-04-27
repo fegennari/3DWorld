@@ -60,7 +60,7 @@ void create_object_groups();
 bool is_precip_enabled();
 bool is_rain_enabled();
 void shift_all_objs(vector3d const &vd);
-void process_platforms();
+void process_platforms_and_light_triggers();
 void set_global_state();
 void process_groups();
 void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_zvals, int rgt_only);

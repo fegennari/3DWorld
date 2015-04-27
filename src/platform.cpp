@@ -8,14 +8,22 @@
 platform_cont platforms;
 
 extern int animate2;
-extern float fticks;
+extern float fticks, CAMERA_RADIUS;
 extern coll_obj_group coll_objects;
+
+
+bool trigger_t::register_player_pos(point const &p, float act_radius, int activator) {
+
+	if (player_only && activator != CAMERA_ID) return 0; // not activated by player
+	if (act_dist == 0.0) return 0; // act_dist of 0 disables this trigger
+	return dist_less_than(p, act_pos, (act_dist + act_radius));
+}
 
 
 platform::platform(float fs, float rs, float sd, float rd, float dst, float ad,
 				   point const &o, vector3d const &dir_, bool c)
 				   : cont(c), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst),
-				   act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros)
+				   act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros), trigger(origin, act_dist, 0)
 {
 	assert(dir_ != all_zeros);
 	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
@@ -41,15 +49,12 @@ void platform::activate() {
 }
 
 
-bool platform::check_activate(point const &p, float radius) {
+bool platform::check_activate(point const &p, float radius, int activator) {
 
 	if (cont || state != ST_NOACT || cobjs.empty()) return 1; // continuous, already activated, or no cobjs
-	
-	if (dist_less_than(p, pos, (act_dist + radius))) {
-		activate();
-		return 1;
-	}
-	return 0;
+	if (!trigger.register_player_pos(p, radius, activator)) return 0; // not yet triggered
+	activate();
+	return 1;
 }
 
 
@@ -141,12 +146,8 @@ void platform::advance_timestep() {
 
 vector3d platform::get_velocity() const {
 
-	if (state == ST_FWD) {
-		return dir*fspeed;
-	}
-	else if (state == ST_REV) {
-		return dir*-rspeed;
-	}
+	if (state == ST_FWD) {return dir*fspeed;}
+	else if (state == ST_REV) {return dir*-rspeed;}
 	return zero_vector;
 }
 
@@ -162,6 +163,7 @@ void platform::shift_by(vector3d const &val) {
 	
 	origin += val;
 	pos    += val;
+	trigger.shift_by(val);
 }
 
 
@@ -184,36 +186,26 @@ bool platform_cont::add_from_file(FILE *fp) {
 }
 
 
-void platform_cont::check_activate(point const &p, float radius) {
-
-	for (unsigned i = 0; i < size(); ++i) {
-		operator[](i).check_activate(p, radius);
-	}
+void platform_cont::check_activate(point const &p, float radius, int activator) {
+	for (auto i = begin(); i != end(); ++i) {i->check_activate(p, radius, activator);}
 }
 
-
 void platform_cont::shift_by(vector3d const &val) {
-
-	for (unsigned i = 0; i < size(); ++i) {
-		operator[](i).shift_by(val);
-	}
+	for (auto i = begin(); i != end(); ++i) {i->shift_by(val);}
 }
 
 
 void platform_cont::advance_timestep() {
 
-	for (unsigned i = 0; i < size(); ++i) { // cache this?
-		operator[](i).next_frame();
-	}
+	for (auto i = begin(); i != end(); ++i) {i->next_frame();} // cache this?
+
 	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
 		assert(*i < coll_objects.size());
 		int const pid(coll_objects[*i].platform_id);
 		assert(pid >= 0 && pid < (int)size());
 		operator[](pid).add_cobj(*i);
 	}
-	for (unsigned i = 0; i < size(); ++i) {
-		operator[](i).advance_timestep();
-	}
+	for (auto i = begin(); i != end(); ++i) {i->advance_timestep();}
 }
 
 
