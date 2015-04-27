@@ -12,5 +12,7 @@ Gameplay in tiled terrain mode
 
 TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
-player action trigger for platforms and lights
-support platform rotate (doors)
+
+Place room lights in house and finish mapx
+Player action trigger for platforms
+Support platform rotate (doors)

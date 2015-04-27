@@ -3,16 +3,23 @@
 #######################################
 
 # add basement lights
-l 0.8  1.0 1.0 1.0 1.0  -1 1 # light blue plastic
+l 0.8  1.0 1.0 1.0 1.0  -1 1 # white plastic
 S -6.55 4.8 -0.03  0.03
 S -6.55 5.1 -0.03  0.03
 S -6.55 5.4 -0.03  0.03
-#K -6.55 5.1 -0.5  0.2 5.0 0 # 5s player trigger
-K -6.55 5.1 -0.5  0.2 5.0 0  -6.7 -6.38 4.5 6.2 -0.5 -0.2 # 5s player trigger region
+#K -6.55 5.1 -0.5  0.2 5.0 0 # 5s player auto trigger
+K -6.55 5.1 -0.5  0.2 5.0 0 0  -6.7 -6.38 4.5 6.2 -0.5 -0.2 # 5s player auto trigger region
 L 0.0 1.2  -6.55 4.8 -0.1  0.6 0.6 1.0 1.0
 L 0.0 1.2  -6.55 5.1 -0.1  0.6 0.6 1.0 1.0
 L 0.0 1.2  -6.55 5.4 -0.1  0.6 0.6 1.0 1.0
-K 0 0 0 0 0 0 # disable trigger
+K # disable trigger
+
+l 0.8  1.0 1.0 1.0 1.0  -1 1 # white plastic (FIXME: button with radiation symbol)
+B -6.32 -6.30  2.59 2.60  -0.30 -0.28
+K -6.31 2.59 -0.29  0.06 0.0 1 1 # player manual toggle trigger
+L 0.0 2.0  -6.0 1.0 -0.2  1.0 0.4 0.0 1.0
+
+K # disable trigger
 
 n 1 # cut out left side basement entrance
 l 0.0 1.0 1.0 1.0 0.0 -1 0 # invisible

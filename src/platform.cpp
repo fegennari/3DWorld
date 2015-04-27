@@ -7,6 +7,7 @@
 
 platform_cont platforms;
 
+extern bool user_action_key;
 extern int animate2;
 extern float fticks, CAMERA_RADIUS;
 extern coll_obj_group coll_objects;
@@ -14,7 +15,13 @@ extern coll_obj_group coll_objects;
 
 bool trigger_t::register_player_pos(point const &p, float act_radius, int activator) {
 
-	if (player_only && activator != CAMERA_ID) return 0; // not activated by player
+	// Note: since only the camera/player can issue an action, we assume requires_action implies player_only
+	if ((player_only || requires_action) && activator != CAMERA_ID) return 0; // not activated by player
+
+	if (requires_action) {
+		if (!user_action_key) return 0; // check action key
+		if (!use_act_region && !camera_pdu.point_visible_test(act_pos)) return 0; // player not looking at the activation pos
+	}
 	if (use_act_region) {return act_region.contains_pt(p);}
 	else if (act_dist == 0.0) return 0; // act_dist of 0 disables this trigger
 	else {return dist_less_than(p, act_pos, (act_dist + act_radius));}

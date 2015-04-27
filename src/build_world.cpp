@@ -1259,19 +1259,20 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'K': // scene diffuse point light trigger: x y z  activate_dist active_time player_only [act_cube_region x1 x2 y1 y2 z1 z2]
+		case 'K': // scene diffuse point light trigger: x y z  activate_dist active_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 			{
 				lt_params = light_trigger_params_t(); // make sure to reset all fields
-
-				if (fscanf(fp, "%f%f%f%f%f%i", &lt_params.act_pos.x, &lt_params.act_pos.y, &lt_params.act_pos.z, &lt_params.act_dist, &lt_params.active_time, &ivals[0]) != 6) {
-					return read_error(fp, "light source trigger", coll_obj_file);
-				}
-				lt_params.act_dist   *= xf.scale;
-				lt_params.player_only = (ivals[0] != 0);
+				unsigned const num_read(fscanf(fp, "%f%f%f%f%f%i%i", &lt_params.act_pos.x, &lt_params.act_pos.y, &lt_params.act_pos.z, &lt_params.act_dist, &lt_params.active_time, &ivals[0], &ivals[1]));
+				if (num_read == 0) break; // bare K, just reset params and disable the trigger
+				if (num_read != 7) {return read_error(fp, "light source trigger", coll_obj_file);}
+				xf.xform_pos(lt_params.act_pos);
+				lt_params.act_dist       *= xf.scale;
+				lt_params.player_only     = (ivals[0] != 0);
+				lt_params.requires_action = (ivals[1] != 0);
 				cube_t act_region;
-				unsigned const num_read(read_cube(fp, xf, act_region));
-				if (num_read == 6) {lt_params.set_act_region(act_region);}
-				else if (num_read > 0) {return read_error(fp, "light source trigger activation cube", coll_obj_file);}
+				unsigned const num_read2(read_cube(fp, xf, act_region));
+				if (num_read2 == 6) {lt_params.set_act_region(act_region);}
+				else if (num_read2 > 0) {return read_error(fp, "light source trigger activation cube", coll_obj_file);}
 			}
 			break;
 

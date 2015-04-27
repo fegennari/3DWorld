@@ -177,14 +177,15 @@ void light_source_trig::advance_timestep() {
 
 	if (!trigger.is_active()) return; // trigger not active
 	enabled = (active_time > 0.0); // light on by default
-	if (enabled) {active_time = max(0.0f, (active_time - fticks/TICKS_PER_SECOND));} // decrease active time
+	if (enabled && off_time > 0.0) {active_time = max(0.0f, (active_time - fticks/TICKS_PER_SECOND));} // decrease active time in auto off mode
 }
 
 bool light_source_trig::check_activate(point const &p, float radius, int activator) {
 
 	//if (active_time > 0.0) return 1; // already activated, don't reset timing
 	if (!trigger.register_player_pos(p, radius, activator)) return 0; // not yet triggered
-	active_time = off_time; // reset active time
+	if (off_time == 0.0) {active_time = ((active_time == 0.0) ? 1.0 : 0.0);} // toggle mode
+	else {active_time = off_time;} // reset active time (on duration)
 	return 1;
 }
 
