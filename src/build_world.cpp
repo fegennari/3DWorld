@@ -1031,6 +1031,20 @@ string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, int group
 }
 
 
+// returns the number of values read
+unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c) {
+
+	point pt[2];
+
+	for (unsigned d = 0; d < 6; ++d) {
+		if (fscanf(fp, "%f", &pt[d&1][d>>1]) != 1) return d;
+	}
+	for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(pt[i]);}
+	c = cube_t(pt[0], pt[1]);
+	return 6;
+}
+
+
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
 
 	assert(coll_obj_file != NULL);
@@ -1166,18 +1180,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				cout << "Must set ntrees to zero in order to add hedges through collision objects file." << endl;
 			}
 			else {
-				point ccp[2];
-				bool use_clip_cube(1);
-
-				for (unsigned i = 0; i < 3 && use_clip_cube; ++i) { // x,y,z
-					for (unsigned j = 0; j < 2; ++j) { // hi, lo
-						if (fscanf(fp, "%f", &ccp[j][i]) != 1) {
-							if (i == 0 && j == 0) {use_clip_cube = 0; break;} // no values, not using clip cube
-							return read_error(fp, "hedges bounding cube", coll_obj_file); // partial clip cube, error
-						}
-					}
-				}
-				if (use_clip_cube) {for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(ccp[i]);}}
+				cube_t clip_cube;
+				unsigned const num_read(read_cube(fp, xf, clip_cube));
+				bool const use_clip_cube(num_read == 6);
+				if (num_read > 0 && !use_clip_cube) {return read_error(fp, "hedges bounding cube", coll_obj_file);}
 				xf.xform_pos(pos);
 				point cur(pos);
 				vector3d delta(fvals[0], fvals[1], 0.0);
@@ -1185,7 +1191,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 				for (int i = 0; i < ivals[0]; ++i) {
 					t_trees.push_back(tree(enable_leaf_wind));
-					if (use_clip_cube) {t_trees.back().enable_clip_cube(cube_t(ccp[0], ccp[1]));}
+					if (use_clip_cube) {t_trees.back().enable_clip_cube(clip_cube);}
 					t_trees.back().gen_tree(cur, max(1, int(fvals[2]*xf.scale)), ivals[1], 1, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, 0); // no 4th branches
 					cur += delta;
 				}
@@ -1244,7 +1250,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					
 					if (d) {
 						light_sources_d.push_back(light_source_trig(ls));
-						if (lt_params.dist > 0.0) {light_sources_d.back().set_trigger_timing(lt_params);}
+						if (lt_params.is_active()) {light_sources_d.back().set_trigger_timing(lt_params);}
 					}
 					else {
 						light_sources_a.push_back(ls);
@@ -1253,30 +1259,30 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'K': // scene diffuse point light trigger: x y z  activate_dist active_time player_only
+		case 'K': // scene diffuse point light trigger: x y z  activate_dist active_time player_only [act_cube_region x1 x2 y1 y2 z1 z2]
 			{
-				if (fscanf(fp, "%f%f%f%f%f%i", &lt_params.pos.x, &lt_params.pos.y, &lt_params.pos.z, &lt_params.dist, &lt_params.time, &ivals[0]) != 6) {
+				lt_params = light_trigger_params_t(); // make sure to reset all fields
+
+				if (fscanf(fp, "%f%f%f%f%f%i", &lt_params.act_pos.x, &lt_params.act_pos.y, &lt_params.act_pos.z, &lt_params.act_dist, &lt_params.active_time, &ivals[0]) != 6) {
 					return read_error(fp, "light source trigger", coll_obj_file);
 				}
-				lt_params.dist *= xf.scale;
+				lt_params.act_dist   *= xf.scale;
 				lt_params.player_only = (ivals[0] != 0);
+				cube_t act_region;
+				unsigned const num_read(read_cube(fp, xf, act_region));
+				if (num_read == 6) {lt_params.set_act_region(act_region);}
+				else if (num_read > 0) {return read_error(fp, "light source trigger activation cube", coll_obj_file);}
 			}
 			break;
 
 		case 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
 			{
-				point p1, p2;
 				cube_light_src cls;
+				if (read_cube(fp, xf, cls.bounds) != 6) {return read_error(fp, "cube volume global light", coll_obj_file);}
 				
-				if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%u%i%u", &p1.x, &p2.x, &p1.y, &p2.y, &p1.z, &p2.z,
-					&cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays, &ivals[0], &cls.disabled_edges) < 12)
-				{
+				if (fscanf(fp, "%f%f%f%f%u%i%u", &cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays, &ivals[0], &cls.disabled_edges) < 6) {
 					return read_error(fp, "cube volume global light", coll_obj_file);
 				}
-				xf.xform_pos(p1);
-				xf.xform_pos(p2);
-				cls.bounds = cube_t(p1, p2);
-
 				switch (ivals[0]) {
 				case LIGHTING_SKY:    sky_cube_lights.push_back   (cls); break;
 				case LIGHTING_GLOBAL: global_cube_lights.push_back(cls); break;
@@ -1350,25 +1356,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'B': // cube: xmin xmax ymin ymax zmin zmax [remove_t_junctions=0]
-			{
-				point pt[2];
-
-				for (unsigned d = 0; d < 3; ++d) {
-					if (fscanf(fp, "%f%f", &pt[0][d], &pt[1][d]) != 2) {
-						return read_error(fp, "collision cube", coll_obj_file);
-					}
-				}
-				for (unsigned i = 0; i < 2; ++i) xf.xform_pos(pt[i]);
-				check_layer(has_layer);
-
-				for (unsigned d = 0; d < 3; ++d) {
-					for (unsigned e = 0; e < 2; ++e) cobj.d[d][e] = pt[e][d];
-					if (cobj.d[d][0] > cobj.d[d][1]) swap(cobj.d[d][0], cobj.d[d][1]);
-				}
-				cobj.counter = ((fscanf(fp, "%i", &ivals[0]) == 1 && ivals[0] != 0) ? OBJ_CNT_REM_TJ : 0); // remove T-junctions
-				cobj.add_to_vector(fixed_cobjs, COLL_CUBE);
-				cobj.counter = 0;
-			}
+			if (read_cube(fp, xf, cobj) != 6) {return read_error(fp, "collision cube", coll_obj_file);}
+			check_layer(has_layer);
+			cobj.counter = ((fscanf(fp, "%i", &ivals[0]) == 1 && ivals[0] != 0) ? OBJ_CNT_REM_TJ : 0); // remove T-junctions
+			cobj.add_to_vector(fixed_cobjs, COLL_CUBE);
+			cobj.counter = 0;
 			break;
 
 		case 'S': // sphere: x y z radius
@@ -1459,10 +1451,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					vector3d const extend((deltas[1] - deltas[0]).get_norm()*edist);
 					deltas[0] -= extend;
 					deltas[1] += extend;
-
-					for (unsigned j = 0; j < 4; ++j) {
-						cobj.points[j] = pt[j>>1] + deltas[(j>>1)^(j&1)];
-					}
+					for (unsigned j = 0; j < 4; ++j) {cobj.points[j] = pt[j>>1] + deltas[(j>>1)^(j&1)];}
 					cobj.npoints = 4; // have to reset every time in case it was a cube
 					cobj.add_to_vector(fixed_cobjs, COLL_POLYGON);
 				}
@@ -1473,9 +1462,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			{
 				portal p;
 				for (unsigned i = 0; i < 4; ++i) {
-					if (fscanf(fp, "%f%f%f", &p.pts[i].x, &p.pts[i].y, &p.pts[i].z) != 3) {
-						return read_error(fp, "portal", coll_obj_file);
-					}
+					if (fscanf(fp, "%f%f%f", &p.pts[i].x, &p.pts[i].y, &p.pts[i].z) != 3) {return read_error(fp, "portal", coll_obj_file);}
 					xf.xform_pos(p.pts[i]);
 				}
 				fscanf(fp, "%f%f%f", &p.normal.x, &p.normal.y, &p.normal.z); // optional/can fail

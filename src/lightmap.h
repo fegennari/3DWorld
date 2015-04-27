@@ -115,13 +115,11 @@ public:
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };
 
-struct light_trigger_params_t {
-	point pos;
-	float dist, time;
-	bool player_only;
+struct light_trigger_params_t : public trigger_t {
+	float active_time;
 
-	light_trigger_params_t() : dist(0.0), time(0.0), player_only(0) {}
-	light_trigger_params_t(point const &p, float d, float t, bool po) : pos(all_zeros), dist(d), time(t), player_only(po) {}
+	light_trigger_params_t() : active_time(0.0) {}
+	light_trigger_params_t(point const &p, float d, float t, bool po) : trigger_t(all_zeros, d, po), active_time(t) {}
 };
 
 class light_source_trig : public light_source {

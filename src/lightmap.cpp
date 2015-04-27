@@ -169,8 +169,8 @@ void light_source::combine_with(light_source const &l) {
 void light_source_trig::set_trigger_timing(light_trigger_params_t const &params) {
 
 	active_time = 0.0; // reset just in case
-	off_time    = params.time;
-	trigger     = trigger_t(params.pos, params.dist, params.player_only);
+	off_time    = params.active_time;
+	trigger     = params;
 }
 
 void light_source_trig::advance_timestep() {
