@@ -1354,10 +1354,10 @@ struct trigger_t {
 
 	point act_pos;
 	float act_dist;
-	bool player_only, use_act_region;
+	bool player_only, use_act_region, requires_action;
 	cube_t act_region;
 
-	trigger_t(point const &ap=all_zeros, float ad=0.0, bool po=0) : act_pos(ap), act_dist(ad), player_only(po), use_act_region(0) {}
+	trigger_t(point const &ap=all_zeros, float ad=0.0, bool po=0) : act_pos(ap), act_dist(ad), player_only(po), use_act_region(0), requires_action(0) {}
 	void set_act_region(cube_t const ar) {act_region = ar; use_act_region = 1; act_dist = 0.0;}
 	bool register_player_pos(point const &p, float act_radius, int activator);
 	bool is_active() const {return (act_dist > 0.0 || use_act_region);}

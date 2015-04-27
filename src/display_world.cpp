@@ -42,7 +42,7 @@ upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava, user_action_key;
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
@@ -282,6 +282,7 @@ void final_draw(float framerate) {
 	draw_camera_filters(cfilters);
 	draw_frame_rate(framerate);
 	show_other_messages();
+	user_action_key = 0;
 }
 
 
