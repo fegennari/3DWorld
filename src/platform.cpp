@@ -3,6 +3,7 @@
 // 9/25/09
 
 #include "collision_detect.h"
+#include "openal_wrap.h"
 
 
 platform_cont platforms;
@@ -13,7 +14,7 @@ extern float fticks, CAMERA_RADIUS;
 extern coll_obj_group coll_objects;
 
 
-bool trigger_t::register_player_pos(point const &p, float act_radius, int activator) {
+bool trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
 
 	// Note: since only the camera/player can issue an action, we assume requires_action implies player_only
 	if ((player_only || requires_action) && activator != CAMERA_ID) return 0; // not activated by player
@@ -22,9 +23,11 @@ bool trigger_t::register_player_pos(point const &p, float act_radius, int activa
 		if (!user_action_key) return 0; // check action key
 		if (!use_act_region && !camera_pdu.point_visible_test(act_pos)) return 0; // player not looking at the activation pos
 	}
-	if (use_act_region) {return act_region.contains_pt(p);}
-	else if (act_dist == 0.0) return 0; // act_dist of 0 disables this trigger
-	else {return dist_less_than(p, act_pos, (act_dist + act_radius));}
+	if (use_act_region) {return act_region.contains_pt(p);} // check active region containment
+	else if (act_dist == 0.0) {return 0;} // act_dist of 0 disables this trigger
+	if (!dist_less_than(p, act_pos, (act_dist + act_radius))) {return 0;} // too far to activate
+	if (requires_action && clicks) {gen_sound(SOUND_CLICK, act_pos, 1.0);}
+	return 1;
 }
 
 
@@ -60,7 +63,7 @@ void platform::activate() {
 bool platform::check_activate(point const &p, float radius, int activator) {
 
 	if (cont || state != ST_NOACT || cobjs.empty()) return 1; // continuous, already activated, or no cobjs
-	if (!trigger.register_player_pos(p, radius, activator)) return 0; // not yet triggered
+	if (!trigger.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
 	activate();
 	return 1;
 }

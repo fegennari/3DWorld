@@ -13,6 +13,6 @@ Gameplay in tiled terrain mode
 TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
 
-Light switch sound
+Emissive lighting in cobj file
 Player action trigger for platforms
 Support platform rotate (doors)
