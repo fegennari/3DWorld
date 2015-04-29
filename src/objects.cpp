@@ -36,6 +36,7 @@ void coll_obj::init() {
 	cp.surfs     = 0;
 	cp.spec_color= BLACK;
 	cp.shine     = 1.0;
+	cp.is_emissive = 0;
 	norm         = zero_vector;
 	npoints      = 0;
 	type         = COLL_NULL;
@@ -289,6 +290,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	}
 	cdb.on_new_obj_layer(cp); // may flush/draw
 	if (!in_group || start_group) {shader.set_material(cp);} // should be the same across groups
+	if (cp.is_emissive) {assert(!in_group); cdb.flush(); shader.add_uniform_float("emissive_scale", 1.0);} // Note: slow (causes flush)
 
 	if (tid != last_tid) {
 		bool const textured(select_texture(tid));
@@ -348,6 +350,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		draw_extruded_polygon(tid, cdb);
 		break;
 	}
+	if (cp.is_emissive) {cdb.flush(); shader.add_uniform_float("emissive_scale", 0.0);} // reset to default
 }
 
 

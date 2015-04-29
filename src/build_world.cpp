@@ -1515,15 +1515,17 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name [draw=1 [refract_ix=1.0 [light_atten=0.0]]]
+		case 'l': // object layer/material: elasticity R G B A texture_id/texture_name [draw=1 [refract_ix=1.0 [light_atten=0.0 [emissive=0]]]]
 			if (fscanf(fp, "%f%f%f%f%f%255s", &cobj.cp.elastic, &cobj.cp.color.R, &cobj.cp.color.G, &cobj.cp.color.B, &cobj.cp.color.A, str) != 6) {
 				return read_error(fp, "layer/material properties", coll_obj_file);
 			}
 			if (!read_texture(str, line_num, cobj.cp.tid, 0)) {fclose(fp); return 0;}
-			has_layer = 1;
+			has_layer    = 1;
 			cobj.cp.draw = (fscanf(fp, "%i", &ivals[0]) ? (ivals[0] != 0) : 1); // optional
 			if (!fscanf(fp, "%f", &cobj.cp.refract_ix )) {cobj.cp.refract_ix  = 1.0;} // optional
 			if (!fscanf(fp, "%f", &cobj.cp.light_atten)) {cobj.cp.light_atten = 0.0;} // optional
+			if (!fscanf(fp, "%i", &ivals[0])) {ivals[0] = 0;} // optional
+			cobj.cp.is_emissive = (ivals[0] != 0);
 			break;
 
 		case 'j': // restore material <name>

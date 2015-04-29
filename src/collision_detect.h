@@ -39,14 +39,14 @@ unsigned char const SWAP_TCS_NM_BS = 0x02; // swap normal map bitangent sign
 
 struct obj_layer : public base_mat_t { // size = 72
 
-	bool draw;
+	bool draw, is_emissive;
 	unsigned char swap_tcs, cobj_type;
 	float elastic, tscale, tdx, tdy, refract_ix, light_atten;
 	int normal_map;
 	collision_func coll_func;
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1, float ts=1.0, float spec=0.0, float shi=0.0)
-		: base_mat_t(ti, c, colorRGB(spec, spec, spec), shi), draw(d), swap_tcs(0), cobj_type(COBJ_TYPE_STD),
+		: base_mat_t(ti, c, colorRGB(spec, spec, spec), shi), draw(d), is_emissive(0), swap_tcs(0), cobj_type(COBJ_TYPE_STD),
 		elastic(e), tscale(ts), tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), normal_map(-1), coll_func(cf) {}
 
 	// assumes obj_layer contained classes are POD with no padding
