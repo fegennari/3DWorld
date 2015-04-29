@@ -39,14 +39,14 @@ unsigned char const SWAP_TCS_NM_BS = 0x02; // swap normal map bitangent sign
 
 struct obj_layer : public base_mat_t { // size = 72
 
-	bool draw, shadow;
+	bool draw;
 	unsigned char swap_tcs, cobj_type;
 	float elastic, tscale, tdx, tdy, refract_ix, light_atten;
 	int normal_map;
 	collision_func coll_func;
 
 	obj_layer(float e=0.0, colorRGBA const &c=WHITE, bool d=0, const collision_func cf=NULL, int ti=-1, float ts=1.0, float spec=0.0, float shi=0.0)
-		: base_mat_t(ti, c, colorRGB(spec, spec, spec), shi), draw(d), shadow(1), swap_tcs(0), cobj_type(COBJ_TYPE_STD),
+		: base_mat_t(ti, c, colorRGB(spec, spec, spec), shi), draw(d), swap_tcs(0), cobj_type(COBJ_TYPE_STD),
 		elastic(e), tscale(ts), tdx(0.0), tdy(0.0), refract_ix(1.0), light_atten(0.0), normal_map(-1), coll_func(cf) {}
 
 	// assumes obj_layer contained classes are POD with no padding
@@ -151,8 +151,7 @@ public:
 	bool is_player()      const;
 	bool is_invis_player()const;
 	bool truly_static()   const;
-	bool no_shadow()      const {return (status != COLL_STATIC || !cp.shadow || cp.color.alpha < MIN_SHADOW_ALPHA || maybe_is_moving());}
-	bool no_shadow_map()  const {return (no_draw() || no_shadow());}
+	bool no_shadow_map()  const {return (no_draw() || status != COLL_STATIC || cp.color.alpha < MIN_SHADOW_ALPHA || maybe_is_moving());}
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	bool is_tree_leaf()   const {return is_billboard;} // we assume that a billboard cobj is a tree leaf

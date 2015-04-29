@@ -174,8 +174,6 @@ void small_tree_group::add_cobjs_range(iterator b, iterator e) {
 	assert(b < e && e <= end());
 	cobj_params cp      (0.65, GREEN, DRAW_COBJS, 0, NULL, 0, -1);
 	cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, -1);
-	cp.shadow       = 0;
-	cp_trunk.shadow = 0;
 	for (iterator i = b; i < e; ++i) {i->add_cobjs(cp, cp_trunk);}
 }
 

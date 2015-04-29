@@ -243,7 +243,6 @@ void tree::add_tree_collision_objects() {
 	assert(type < NUM_TREE_TYPES);
 	int const btid(tree_types[type].bark_tex), branch_coll_level(min(tree_coll_level, 4));
 	cobj_params cp(0.8, tree_types[type].barkc, 0, 0, NULL, 0, btid, 4.0, 1, 0);
-	cp.shadow = 0;
 	assert(branch_cobjs.empty());
 	vector<draw_cylin> const &cylins(tdata().get_all_cylins());
 
@@ -258,7 +257,6 @@ void tree::add_tree_collision_objects() {
 		int const ltid(tree_types[type].leaf_tex);
 		colorRGBA const lcolor(get_avg_leaf_color(type)); // will be reset in update_leaf_cobj_color()
 		cobj_params cpl(0.3, lcolor, 0, 0, NULL, 0, ltid, 1.0, 0, 0);
-		cpl.shadow         = 0;
 		cpl.is_destroyable = 1; // so that truly_static() returns false
 		point const xlate(all_zeros); // for now
 		vector<tree_leaf> const &leaves(tdata().get_leaves());
