@@ -15,16 +15,16 @@ L 0.0 1.2  -6.55 5.4 -0.1  0.6 0.6 1.0 1.0
 K # disable trigger
 
 # lights for connector hallway
-S -6.55 3.0 -0.10  0.03
-S -6.55 3.5 -0.10  0.03
-S -6.55 4.0 -0.10  0.03
+S -6.55 3.0 -0.105  0.03
+S -6.55 3.5 -0.105  0.03
+S -6.55 4.0 -0.105  0.03
 K -6.3 2.59 -0.29  0.06 0.0 1 1 # player manual toggle trigger
 y 100.0 Y 0.1 0.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
 B -6.31 -6.29  2.59 2.60  -0.30 -0.28
-L 0.0 0.7  -6.55 3.0 -0.17  0.6 0.6 1.0 1.0
-L 0.0 0.7  -6.55 3.5 -0.17  0.6 0.6 1.0 1.0
-L 0.0 0.7  -6.55 4.0 -0.17  0.6 0.6 1.0 1.0
+L 0.0 0.7  -6.55 3.0 -0.175  0.6 0.6 1.0 1.0
+L 0.0 0.7  -6.55 3.5 -0.175  0.6 0.6 1.0 1.0
+L 0.0 0.7  -6.55 4.0 -0.175  0.6 0.6 1.0 1.0
 
 # basement spotlights
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white plastic
@@ -45,7 +45,7 @@ K # disable light trigger
 
 n 1 # cut out left side basement entrance
 l 0.0 1.0 1.0 1.0 0.0 -1 0 # invisible
-B -6.65 -6.45  2.6 4.5  -0.4 -0.12  # Bb
+B -6.66 -6.44  2.6 4.5  -0.4 -0.12  # Bb
 
 # windows
 B -8.0  -7.7  -0.6  -0.4  -0.25 -0.18 # left
@@ -54,6 +54,14 @@ B -8.0  -7.7   2.0   2.2  -0.25 -0.18
 B  7.7   8.0   0.7   0.9  -0.25 -0.18 # right
 B  7.7   8.0   2.0   2.2  -0.25 -0.18
 n 0
+
+l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco walls for hallway
+X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
+y 16.0
+B -6.66 -6.65  2.6 4.5  -0.4 -0.12
+B -6.45 -6.44  2.6 4.5  -0.4 -0.12
+B -6.65 -6.45  2.6 4.5  -0.125 -0.12
+X none # disable normal map
 
 # add some exploding tanks
 m 0.18
