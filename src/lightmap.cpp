@@ -131,21 +131,31 @@ bool light_source::is_visible() const {
 	unsigned const num_rays = 64;
 	unsigned num_hits(0);
 	static bool dirs_valid(0);
-	static vector3d dirs[num_rays];
+	static vector3d dirs[num_rays], spot_dirs[num_rays];
 
-	if (!dirs_valid) {
+	if (is_directional()) {
+		rand_gen_t rgen;
+		for (unsigned n = 0; n < num_rays; ++n) {
+			while (1) {
+				spot_dirs[n] = rgen.signed_rand_vector_norm();
+				if (get_dir_intensity(-spot_dirs[n]) > 0.0) break;
+			}
+		}
+	}
+	else if (!dirs_valid) {
 		rand_gen_t rgen;
 		for (unsigned n = 0; n < num_rays; ++n) {dirs[n] = rgen.signed_rand_vector_norm();}
 		dirs_valid = 1;
 	}
 	for (unsigned n = 0; n < num_rays; ++n) { // for static scene lights we do ray queries
-		point const pos2(pos + FAR_CLIP*dirs[n]);
+		vector3d const &ray_dir(is_directional() ? spot_dirs[n] : dirs[n]);
+		point const pos2(pos + FAR_CLIP*ray_dir);
 		point cpos;
 		vector3d cnorm; // unused
 		int cindex(-1); // unused
 		
 		if (check_coll_line_exact_tree(pos, pos2, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) {
-			cpos -= SMALL_NUMBER*dirs[n]; // move away from coll pos
+			cpos -= SMALL_NUMBER*ray_dir; // move away from coll pos
 			if (!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1;
 			++num_hits;
 		}
