@@ -117,6 +117,8 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh
 }
 
 
+map<pair<point, vector3d>, point> ray_map;
+
 bool light_source::is_visible() const {
 
 	if (!enabled) return 0;
@@ -131,35 +133,45 @@ bool light_source::is_visible() const {
 	unsigned const num_rays = 100;
 	unsigned num_hits(0);
 	static bool dirs_valid(0);
-	static vector3d dirs[num_rays], spot_dirs[num_rays];
+	static vector3d dirs[num_rays];
+	//RESET_TIME;
+	//shader_t shader;
+	//shader.begin_color_only_shader(RED);
+	rand_gen_t rgen;
 
-	if (is_directional()) {
-		rand_gen_t rgen;
-		for (unsigned n = 0; n < num_rays; ++n) {
-			while (1) {
-				spot_dirs[n] = rgen.signed_rand_vector_norm();
-				if (get_dir_intensity(-spot_dirs[n]) > 0.0) break;
-			}
-		}
-	}
-	else if (!dirs_valid) {
-		rand_gen_t rgen;
+	if (!dirs_valid) {
 		for (unsigned n = 0; n < num_rays; ++n) {dirs[n] = rgen.signed_rand_vector_norm();}
 		dirs_valid = 1;
 	}
 	for (unsigned n = 0; n < num_rays; ++n) { // for static scene lights we do ray queries
-		vector3d const &ray_dir(is_directional() ? spot_dirs[n] : dirs[n]);
-		point const pos2(pos + FAR_CLIP*ray_dir);
-		point cpos;
-		vector3d cnorm; // unused
-		int cindex(-1); // unused
+		vector3d ray_dir;
 		
-		if (check_coll_line_exact_tree(pos, pos2, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) {
-			cpos -= SMALL_NUMBER*ray_dir; // move away from coll pos
-			if (!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1;
-			++num_hits;
+		if (is_directional()) {
+			while (1) {
+				ray_dir = rgen.signed_rand_vector_norm();
+				if (get_dir_intensity(-ray_dir) > 0.0) break;
+			}
 		}
+		else {ray_dir = dirs[n];}
+		int cindex(-1); // unused
+		pair<point, vector3d> const key(pos, ray_dir);
+		auto it(ray_map.find(key));
+		point cpos;
+		
+		if (it != ray_map.end()) {cpos = it->second;} // intersection point is cached
+		else { // not found in cache, computer intersection point and add it
+			point const pos2(pos + FAR_CLIP*ray_dir);
+			vector3d cnorm; // unused
+			if (!check_coll_line_exact_tree(pos, pos2, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) continue;
+			if (coll_objects[cindex].fixed) {ray_map[key] = cpos;}
+		}
+		cpos -= SMALL_NUMBER*ray_dir; // move away from coll pos
+		//draw_subdiv_sphere(cpos, 0.01, N_SPHERE_DIV/2, 0, 0);
+		if (!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1;
+		++num_hits;
 	}
+	//shader.end_shader();
+	//PRINT_TIME("Light Source Vis");
 	return (num_hits < num_rays/2); // if most of the rays fail to hit something we return visible for safety
 }
 
