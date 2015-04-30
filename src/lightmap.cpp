@@ -209,7 +209,7 @@ bool light_source_trig::check_activate(point const &p, float radius, int activat
 
 	//if (active_time > 0.0) return 1; // already activated, don't reset timing
 	if (!trigger.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
-	if (off_time == 0.0) {active_time = ((active_time == 0.0) ? 1.0 : 0.0);} // toggle mode
+	if (off_time == 0.0 || trigger.requires_action) {active_time = ((active_time == 0.0) ? ((off_time == 0.0) ? 1.0 : off_time) : 0.0);} // toggle mode
 	else {active_time = off_time;} // reset active time (on duration)
 	return 1;
 }
