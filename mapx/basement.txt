@@ -14,7 +14,7 @@ L 0.0 1.2  -6.55 5.1 -0.1  0.6 0.6 1.0 1.0
 L 0.0 1.2  -6.55 5.4 -0.1  0.6 0.6 1.0 1.0
 K # disable trigger
 
-K -6.3 2.53 -0.29  0.4 1.0 0 0 # 5s player auto trigger for switch
+K -6.3 2.53 -0.29  0.4 1.0 0 0 # 1s player auto trigger for switch
 L 0.0 0.5  -6.3 2.55 -0.29  1.0 0.4 0.7 1.0
 K # disable trigger
 
@@ -22,7 +22,7 @@ K # disable trigger
 S -6.55 3.0 -0.105  0.03
 S -6.55 3.5 -0.105  0.03
 S -6.55 4.0 -0.105  0.03
-K -6.3 2.59 -0.29  0.06 0.0 1 1 # player manual toggle trigger
+K -6.3 2.59 -0.29  0.06 60.0 1 1 # player manual toggle trigger, off after 60s
 y 100.0 Y 0.1 0.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
 B -6.31 -6.29  2.59 2.60  -0.30 -0.28
