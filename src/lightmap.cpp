@@ -138,6 +138,7 @@ bool light_source::is_visible() const {
 	//shader_t shader;
 	//shader.begin_color_only_shader(RED);
 	rand_gen_t rgen;
+	int prev_cindex(-1);
 
 	if (!dirs_valid) {
 		for (unsigned n = 0; n < num_rays; ++n) {dirs[n] = rgen.signed_rand_vector_norm();}
@@ -153,7 +154,7 @@ bool light_source::is_visible() const {
 			}
 		}
 		else {ray_dir = dirs[n];}
-		int cindex(-1); // unused
+		int cindex(-1);
 		pair<point, vector3d> const key(pos, ray_dir);
 		auto it(ray_map.find(key));
 		point cpos;
@@ -167,7 +168,9 @@ bool light_source::is_visible() const {
 		}
 		cpos -= SMALL_NUMBER*ray_dir; // move away from coll pos
 		//draw_subdiv_sphere(cpos, 0.01, N_SPHERE_DIV/2, 0, 0);
-		if (!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1;
+		if ((prev_cindex < 0 || !coll_objects[prev_cindex].line_intersect(cpos, camera)) &&
+			!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1;
+		prev_cindex = cindex;
 		++num_hits;
 	}
 	//shader.end_shader();
