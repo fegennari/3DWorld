@@ -12,7 +12,7 @@ T 0.0 0.0 -0.29
 
 # platform test
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
-#Q 1 0.05 0.05 40.0 40.0 20.0 1.0   8.0 -8.0 2.8  -1 1 0  1 # platform
+#Q 1 2.0 2.0 1.0 1.0 20.0 1.0   8.0 -8.0 2.8  -1 1 0  1 # platform
 #l 0.8 0.7 0.7 0.7 1.0 -1 1 # silver
 #B  7.8 8.2  -8.2 -7.8  2.8 2.85
 #Q 0
@@ -348,7 +348,7 @@ X none # disable normal map
 
 # sliding/moving front door
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
-Q 1 0.02 0.01 0.0 200.0 0.46 0.7   1.26 0.075 0.05  1 0 0  0 # platform
+Q 1 0.8 0.4 0.0 5.0 0.46 0.7   1.26 0.075 0.05  1 0 0  0 # platform
 a 0 # non-destroyable
 l 0.8 0.7 0.7 0.7 1.0 -1 1 # silver
 r 0.9 80.0 # set specularity
@@ -476,7 +476,7 @@ a 0 # non-destroyable
 l 0.7 0.58 0.42 0.3 1.0 49 1 # carpet
 y 7.5
 # Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
-Q 1 0.01 0.01 40.0 120.0 2.2 0.2   -3.0 5.2 -0.39  0 0 1  0 # platform
+Q 1 0.4 0.4 1.0 3.0 2.2 0.2   -3.0 5.2 -0.39  0 0 1  0 # platform
 B -3.35 -2.65  5.05 5.65  -0.41 -0.39 # elevator platform
 
 X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)

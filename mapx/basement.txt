@@ -7,11 +7,15 @@ l 0.8  1.0 1.0 1.0 1.0  -1 1 # white plastic
 S -6.55 4.8 -0.03  0.03
 S -6.55 5.1 -0.03  0.03
 S -6.55 5.4 -0.03  0.03
-#K -6.55 5.1 -0.5  0.2 5.0 0 # 5s player auto trigger
+#K -6.55 5.1 -0.5  0.2 5.0 0 0 # 5s player auto trigger
 K -6.55 5.1 -0.5  0.2 5.0 0 0  -6.7 -6.38 4.5 6.2 -0.5 -0.2 # 5s player auto trigger region
 L 0.0 1.2  -6.55 4.8 -0.1  0.6 0.6 1.0 1.0
 L 0.0 1.2  -6.55 5.1 -0.1  0.6 0.6 1.0 1.0
 L 0.0 1.2  -6.55 5.4 -0.1  0.6 0.6 1.0 1.0
+K # disable trigger
+
+K -6.3 2.53 -0.29  0.4 1.0 0 0 # 5s player auto trigger for switch
+L 0.0 0.5  -6.3 2.55 -0.29  1.0 0.4 0.7 1.0
 K # disable trigger
 
 # lights for connector hallway
@@ -41,7 +45,22 @@ L 0.0 2.0  -6.3 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15
 L 0.0 2.0  -5.3 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15
 L 0.0 2.0  -4.3 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15
 #L 0.0 2.0  -6.0 1.0 -0.25  1.0 0.4 0.0 1.0
-K # disable light trigger
+
+# crusher platform
+K -6.3 -0.849 -0.29  0.06 0.0 1 1 # player manual toggle trigger
+y 100.0 Y 0.1 0.0
+l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
+B -6.31 -6.29  -0.85 -0.849  -0.30 -0.28
+# Q enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
+Q 1 0.8 0.3 0.2 1.0 0.26 0.0   -6.3 -0.65 -0.28  0 0 -1.0  0 # platform
+l 0.99  1.0 1.0 1.0 1.0  lichen.jpg 1 # rock
+y 1.0
+B -6.5 -6.1  -0.85 -0.45 -0.14 -0.04
+Q 0
+
+K -6.3 -0.65 -0.29  0.4 1.0 0 0 # 5s player auto trigger for switch
+L 0.0 0.5  -6.3 -0.845 -0.29  1.0 0.4 0.7 1.0
+K # disable trigger
 
 n 1 # cut out left side basement entrance
 l 0.0 1.0 1.0 1.0 0.0 -1 0 # invisible

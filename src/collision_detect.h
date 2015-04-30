@@ -18,6 +18,8 @@ enum {COBJ_TYPE_STD = 0, COBJ_TYPE_MODEL3D, COBJ_TYPE_VOX_TERRAIN};
 
 unsigned const OBJ_CNT_REM_TJ = 1;
 
+struct geom_xform_t;
+
 
 struct base_mat_t { // size = 36
 	
@@ -336,6 +338,7 @@ public:
 	
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
 		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0);
+	void set_trigger(trigger_t const &trigger_) {trigger = trigger_;}
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
 	vector3d get_delta()       const {return (pos - origin);}
 	vector3d get_range()       const {return dir*ext_dist;}
@@ -355,7 +358,7 @@ public:
 
 struct platform_cont : public deque<platform> {
 
-	bool add_from_file(FILE *fp);
+	bool add_from_file(FILE *fp, geom_xform_t const &xf, trigger_t const &trigger);
 	void check_activate(point const &p, float radius, int activator);
 	void shift_by(vector3d const &val);
 	void advance_timestep();

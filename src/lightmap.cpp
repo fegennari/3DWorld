@@ -128,7 +128,7 @@ bool light_source::is_visible() const {
 	//if (!(display_mode & 0x10)) {return !sphere_cobj_occluded(camera, pos, radius);} // occlusion culling
 	if (sphere_cobj_occluded(camera, pos, 0.5*radius)) return 0; // approximate occlusion culling, can miss lights but rarely happens
 	if (dynamic || radius < 0.8 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
-	unsigned const num_rays = 64;
+	unsigned const num_rays = 100;
 	unsigned num_hits(0);
 	static bool dirs_valid(0);
 	static vector3d dirs[num_rays], spot_dirs[num_rays];

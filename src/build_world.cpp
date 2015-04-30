@@ -1135,7 +1135,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
-			if (fscanf(fp, "%i", &ivals[0]) != 1) return read_error(fp, "platform", coll_obj_file);
+			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "platform", coll_obj_file);}
 			assert(ivals[0] == 0 || ivals[0] == 1); // boolean
 			
 			if (ivals[0] == 0) { // disable platforms
@@ -1143,7 +1143,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			else {
 				cobj.platform_id = (short)platforms.size();
-				if (!platforms.add_from_file(fp)) return read_error(fp, "platform", coll_obj_file);
+				if (!platforms.add_from_file(fp, xf, lt_params)) {return read_error(fp, "platform", coll_obj_file);}
 				assert(cobj.platform_id < (int)platforms.size());
 			}
 			break;
@@ -1259,7 +1259,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'K': // scene diffuse point light trigger: x y z  activate_dist active_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
+		case 'K': // scene diffuse point light or platform trigger: x y z  activate_dist active_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 			{
 				lt_params = light_trigger_params_t(); // make sure to reset all fields
 				unsigned const num_read(fscanf(fp, "%f%f%f%f%f%i%i", &lt_params.act_pos.x, &lt_params.act_pos.y, &lt_params.act_pos.z, &lt_params.act_dist, &lt_params.active_time, &ivals[0], &ivals[1]));

@@ -4,6 +4,7 @@
 
 #include "collision_detect.h"
 #include "openal_wrap.h"
+#include "model3d.h" //for geom_xform_t
 
 
 platform_cont platforms;
@@ -178,10 +179,10 @@ void platform::shift_by(vector3d const &val) {
 }
 
 
-bool platform_cont::add_from_file(FILE *fp) {
+bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, trigger_t const &trigger) {
 
 	assert(fp);
-	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist;
+	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist; // in seconds/units-per-second
 	point origin;
 	vector3d dir;
 	int cont;
@@ -192,7 +193,14 @@ bool platform_cont::add_from_file(FILE *fp) {
 		return 0;
 	}
 	if (cont != 0 && cont != 1) return 0; // not a bool
+	sdelay *= TICKS_PER_SECOND;
+	rdelay *= TICKS_PER_SECOND;
+	fspeed /= TICKS_PER_SECOND;
+	rspeed /= TICKS_PER_SECOND;
+	xf.xform_pos(origin);
+	xf.xform_pos_rm(dir);
 	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0)));
+	if (trigger.is_active()) {back().set_trigger(trigger);}
 	return 1;
 }
 

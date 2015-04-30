@@ -694,8 +694,8 @@ a 0 # Not Destroyable
 e 1
 #e 0 # testing
 # enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
-#Q 1 0.005 0.01 40.0 80.0 0.5 1.0   -1.05 -3.5 0.045  0 0 1  2 1 # platform (testing) - up and down
-#Q 1 0.005 0.01 40.0 80.0 0.5 10.0   -1.05 -3.5 0.045  1 1 0  2 1 # platform (testing) - sideways
+#Q 1 0.2 0.4 1.0 2.0 0.5 1.0   -1.05 -3.5 0.045  0 0 1  2 1 # platform (testing) - up and down
+#Q 1 0.2 0.4 1.0 2.0 0.5 10.0   -1.05 -3.5 0.045  1 1 0  2 1 # platform (testing) - sideways
 B -1.7 -0.4 -5.0 -2.0 -0.1 0.045
 #B -4.7  0.4 -5.0 -2.0 0.5 0.6
 B -0.4 -0.1 -2.5 -2.0 -0.1 0.045
