@@ -116,21 +116,21 @@ public:
 };
 
 struct light_trigger_params_t : public trigger_t {
-	float active_time;
+	float auto_off_time, auto_on_time;
 
-	light_trigger_params_t() : active_time(0.0) {}
-	light_trigger_params_t(point const &p, float d, float t, bool po) : trigger_t(all_zeros, d, po), active_time(t) {}
+	light_trigger_params_t() : auto_off_time(0.0), auto_on_time(0.0) {}
+	light_trigger_params_t(point const &p, float d=0.0, float off_t=0.0, float on_t=0.0, bool po=0) : trigger_t(all_zeros, d, po), auto_off_time(off_t), auto_on_time(on_t) {}
+	bool is_active() const {return (trigger_t::is_active() || auto_on_time > 0.0);}
 };
 
 class light_source_trig : public light_source {
 
-	float off_time; // constant
-	float active_time;
-	trigger_t trigger;
+	float active_time, inactive_time;
+	light_trigger_params_t trigger;
 
 public:
 	light_source_trig() {}
-	light_source_trig(light_source const &ls) : light_source(ls), off_time(0.0), active_time(0.0), trigger(pos) {}
+	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0), trigger(pos) {}
 	void set_trigger_timing(light_trigger_params_t const &params);
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();

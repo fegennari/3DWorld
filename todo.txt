@@ -13,5 +13,4 @@ Gameplay in tiled terrain mode
 TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
 
-Blinking lights
 Support platform rotate (doors)

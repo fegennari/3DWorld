@@ -117,8 +117,6 @@ void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh
 }
 
 
-map<pair<point, vector3d>, point> ray_map;
-
 bool light_source::is_visible() const {
 
 	if (!enabled) return 0;
@@ -127,37 +125,38 @@ bool light_source::is_visible() const {
 	if (!sphere_in_camera_view(pos, radius, 0)) return 0; // view frustum culling
 	if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
 	point const camera(get_camera_pos());
-	//if (!(display_mode & 0x10)) {return !sphere_cobj_occluded(camera, pos, radius);} // occlusion culling
 	if (sphere_cobj_occluded(camera, pos, 0.5*radius)) return 0; // approximate occlusion culling, can miss lights but rarely happens
-	if (dynamic || radius < 0.8 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
+	if (dynamic || radius < 0.75 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
 	unsigned const num_rays = 100;
 	unsigned num_hits(0);
-	static bool dirs_valid(0);
-	static vector3d dirs[num_rays];
+	static rand_gen_t rgen;
+	static vector<vector3d> dirs;
+	static map<pair<point, vector3d>, point> ray_map;
+	int prev_cindex(-1);
+	unsigned cur_dir(0);
 	//RESET_TIME;
 	//shader_t shader;
 	//shader.begin_color_only_shader(RED);
-	rand_gen_t rgen;
-	int prev_cindex(-1);
 
-	if (!dirs_valid) {
-		for (unsigned n = 0; n < num_rays; ++n) {dirs[n] = rgen.signed_rand_vector_norm();}
-		dirs_valid = 1;
-	}
 	for (unsigned n = 0; n < num_rays; ++n) { // for static scene lights we do ray queries
 		vector3d ray_dir;
 		
 		if (is_directional()) {
 			while (1) {
-				ray_dir = rgen.signed_rand_vector_norm();
+				if (cur_dir >= dirs.size()) {dirs.push_back(rgen.signed_rand_vector_norm());}
+				ray_dir = dirs[cur_dir++];
+				if ((bwidth + LT_DIR_FALLOFF) < 0.5 && dot_product(ray_dir, dir) < 0.0) {ray_dir = -ray_dir;} // backwards
 				if (get_dir_intensity(-ray_dir) > 0.0) break;
 			}
 		}
-		else {ray_dir = dirs[n];}
-		int cindex(-1);
+		else {
+			if (n >= dirs.size()) {dirs.push_back(rgen.signed_rand_vector_norm());}
+			ray_dir = dirs[n];
+		}
 		pair<point, vector3d> const key(pos, ray_dir);
 		auto it(ray_map.find(key));
 		point cpos;
+		int cindex(-1);
 		
 		if (it != ray_map.end()) {cpos = it->second;} // intersection point is cached
 		else { // not found in cache, computer intersection point and add it
@@ -168,8 +167,10 @@ bool light_source::is_visible() const {
 		}
 		cpos -= SMALL_NUMBER*ray_dir; // move away from coll pos
 		//draw_subdiv_sphere(cpos, 0.01, N_SPHERE_DIV/2, 0, 0);
-		if ((prev_cindex < 0 || !coll_objects[prev_cindex].line_intersect(cpos, camera)) &&
-			!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1;
+
+		if (dist_less_than(cpos, pos, radius) && // hit point within light radius
+			(prev_cindex < 0 || !coll_objects[prev_cindex].line_intersect(cpos, camera)) && // doesn't intersect the previous cobj
+			!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1; // visible
 		prev_cindex = cindex;
 		++num_hits;
 	}
@@ -194,7 +195,6 @@ void light_source::combine_with(light_source const &l) {
 void light_source_trig::set_trigger_timing(light_trigger_params_t const &params) {
 
 	active_time = 0.0; // reset just in case
-	off_time    = params.active_time;
 	trigger     = params;
 }
 
@@ -202,23 +202,33 @@ void light_source_trig::advance_timestep() {
 
 	if (!trigger.is_active()) return; // trigger not active
 	enabled = (active_time > 0.0); // light on by default
-	if (enabled && off_time > 0.0) {active_time = max(0.0f, (active_time - fticks/TICKS_PER_SECOND));} // decrease active time in auto off mode
+	
+	if (enabled) {
+		if (trigger.auto_off_time > 0.0) {active_time = max(0.0f, (active_time - fticks));} // decrease active time in auto off mode
+	}
+	else {
+		if (trigger.auto_on_time  > 0.0) {inactive_time += fticks;} // increase inactive time in auto on mode
+	}
 }
 
 bool light_source_trig::check_activate(point const &p, float radius, int activator) {
 
 	//if (active_time > 0.0) return 1; // already activated, don't reset timing
-	if (!trigger.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
-	if (off_time == 0.0 || trigger.requires_action) {active_time = ((active_time == 0.0) ? ((off_time == 0.0) ? 1.0 : off_time) : 0.0);} // toggle mode
-	else {active_time = off_time;} // reset active time (on duration)
+	if (trigger.auto_on_time > 0.0 && inactive_time > TICKS_PER_SECOND*trigger.auto_on_time) {inactive_time = 0.0;} // turn on, reset inactive_time
+	else if (!trigger.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
+	if (trigger.auto_off_time == 0.0 || trigger.requires_action) {active_time = ((active_time == 0.0) ? ((trigger.auto_off_time == 0.0) ? 1.0 : trigger.auto_off_time) : 0.0);} // toggle mode
+	else {active_time = trigger.auto_off_time;} // reset active time (on duration)
+	active_time *= TICKS_PER_SECOND; // convert from seconds to ticks
 	return 1;
 }
 
 
+template<typename T> void shift_ls_vect(T &v, vector3d const &vd) {
+	for (auto i = v.begin(); i != v.end(); ++i) {i->shift_by(vd);}
+}
 void shift_light_sources(vector3d const &vd) {
-
-	for (auto i = light_sources_a.begin(); i != light_sources_a.end(); ++i) {i->shift_by(vd);}
-	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {i->shift_by(vd);}
+	shift_ls_vect(light_sources_a, vd);
+	shift_ls_vect(light_sources_d, vd);
 }
 
 
