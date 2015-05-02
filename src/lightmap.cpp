@@ -949,12 +949,12 @@ void add_camera_flashlight() {
 }
 
 
-void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d const &d, float bw, point *line_end_pos) {
+void add_dynamic_light(float sz, point const &p, colorRGBA const &c, vector3d const &d, float bw, point *line_end_pos, bool is_static_pos) {
 
 	if (!animate2) return;
 	if (XY_MULT_SIZE >= 512*512) return; // mesh is too large for dynamic lighting
 	float const sz_scale((world_mode == WMODE_UNIVERSE) ? 1.0 : sqrt(0.1*XY_SCENE_SIZE));
-	dl_sources2.push_back(light_source(sz_scale*sz, p, (line_end_pos ? *line_end_pos : p), c, 1, d, bw));
+	dl_sources2.push_back(light_source(sz_scale*sz, p, (line_end_pos ? *line_end_pos : p), c, !is_static_pos, d, bw));
 }
 
 
