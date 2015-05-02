@@ -121,11 +121,16 @@ bool light_source::is_visible() const {
 
 	if (!enabled) return 0;
 	if (radius == 0.0) return 1;
-	if (is_line_light()) {return sphere_in_camera_view(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)), 0);} // use bounding sphere
-	if (!sphere_in_camera_view(pos, radius, 0)) return 0; // view frustum culling
-	if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
-	point const camera(get_camera_pos());
-	if (sphere_cobj_occluded(camera, pos, 0.5*radius)) return 0; // approximate occlusion culling, can miss lights but rarely happens
+	bool const line_light(is_line_light());
+	
+	if (line_light) {
+		if (!sphere_in_camera_view(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)), 0)) return 0; // use bounding sphere
+	}
+	else {
+		if (!sphere_in_camera_view(pos, radius, 0)) return 0; // view frustum culling
+		if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
+		if (sphere_cobj_occluded(get_camera_pos(), pos, 0.5*radius)) return 0; // approximate occlusion culling, can miss lights but rarely happens
+	}
 	if (dynamic || radius < 0.75 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
 	unsigned const num_rays = 100;
 	unsigned num_hits(0);
@@ -134,14 +139,17 @@ bool light_source::is_visible() const {
 	static map<pair<point, vector3d>, point> ray_map;
 	int prev_cindex(-1);
 	unsigned cur_dir(0);
+	bool const directional(is_directional());
+	point const camera(get_camera_pos());
 	//RESET_TIME;
 	//shader_t shader;
 	//shader.begin_color_only_shader(RED);
 
 	for (unsigned n = 0; n < num_rays; ++n) { // for static scene lights we do ray queries
 		vector3d ray_dir;
+		point start_pos(pos);
 		
-		if (is_directional()) {
+		if (directional) {
 			while (1) {
 				if (cur_dir >= dirs.size()) {dirs.push_back(rgen.signed_rand_vector_norm());}
 				ray_dir = dirs[cur_dir++];
@@ -153,22 +161,23 @@ bool light_source::is_visible() const {
 			if (n >= dirs.size()) {dirs.push_back(rgen.signed_rand_vector_norm());}
 			ray_dir = dirs[n];
 		}
-		pair<point, vector3d> const key(pos, ray_dir);
+		if (line_light) {start_pos += (float(n)/float(num_rays-1))*(pos2 - pos);} // fixed spacing along the length of the line
+		pair<point, vector3d> const key(start_pos, ray_dir);
 		auto it(ray_map.find(key));
 		point cpos;
 		int cindex(-1);
 		
 		if (it != ray_map.end()) {cpos = it->second;} // intersection point is cached
 		else { // not found in cache, computer intersection point and add it
-			point const pos2(pos + FAR_CLIP*ray_dir);
+			point const end_pos(start_pos + FAR_CLIP*ray_dir);
 			vector3d cnorm; // unused
-			if (!check_coll_line_exact_tree(pos, pos2, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) continue;
+			if (!check_coll_line_exact_tree(start_pos, end_pos, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) continue;
 			if (coll_objects[cindex].fixed) {ray_map[key] = cpos;}
 		}
 		cpos -= SMALL_NUMBER*ray_dir; // move away from coll pos
 		//draw_subdiv_sphere(cpos, 0.01, N_SPHERE_DIV/2, 0, 0);
 
-		if (dist_less_than(cpos, pos, radius) && // hit point within light radius
+		if (dist_less_than(cpos, start_pos, radius) && // hit point within light radius
 			(prev_cindex < 0 || !coll_objects[prev_cindex].line_intersect(cpos, camera)) && // doesn't intersect the previous cobj
 			!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1; // visible
 		prev_cindex = cindex;
@@ -180,7 +189,7 @@ bool light_source::is_visible() const {
 }
 
 
-void light_source::combine_with(light_source const &l) {
+void light_source::combine_with(light_source const &l) { // Note: unused
 
 	assert(radius > 0.0);
 	float const w1(radius*radius*radius), w2(l.radius*l.radius*l.radius), wsum(w1 + w2), wa(w1/wsum), wb(w2/wsum);
