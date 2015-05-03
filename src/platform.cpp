@@ -15,7 +15,7 @@ extern float fticks, CAMERA_RADIUS;
 extern coll_obj_group coll_objects;
 
 
-bool trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
+unsigned trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
 
 	// Note: since only the camera/player can issue an action, we assume requires_action implies player_only
 	if ((player_only || requires_action) && activator != CAMERA_ID) return 0; // not activated by player
@@ -24,16 +24,16 @@ bool trigger_t::register_player_pos(point const &p, float act_radius, int activa
 		if (!user_action_key) return 0; // check action key
 		if (!use_act_region && !camera_pdu.point_visible_test(act_pos)) return 0; // player not looking at the activation pos
 	}
-	if (use_act_region) {return act_region.contains_pt(p);} // check active region containment
+	if (use_act_region) {return (act_region.contains_pt(p) ? (requires_action ? 2 : 1) : 0);} // check active region containment
 	else if (act_dist == 0.0) {return 0;} // act_dist of 0 disables this trigger
 	if (!dist_less_than(p, act_pos, (act_dist + act_radius))) {return 0;} // too far to activate
 	if (requires_action && clicks) {gen_sound(SOUND_CLICK, act_pos, 1.0);}
-	return 1;
+	return (requires_action ? 2 : 1); // triggered by proximity = 1, triggered by player action = 2
 }
 
 
-bool multi_trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
-	bool ret(0);
+unsigned multi_trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
+	unsigned ret(0);
 	for (iterator i = begin(); i != end(); ++i) {ret |= i->register_player_pos(p, act_radius, activator, clicks);}
 	return ret;
 }
@@ -57,13 +57,12 @@ float multi_trigger_t::get_auto_off_time() const { // the last trigger to deacti
 }
 
 
-platform::platform(float fs, float rs, float sd, float rd, float dst, float ad,
-				   point const &o, vector3d const &dir_, bool c)
-				   : cont(c), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst),
-				   act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros), trigger(origin, act_dist, 0)
+platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c)
+				   : cont(c), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros)
 {
 	assert(dir_ != all_zeros);
 	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
+	if (act_dist > 0.0) {triggers.push_back(trigger_t(origin, act_dist));}
 	reset();
 }
 
@@ -89,7 +88,7 @@ void platform::activate() {
 bool platform::check_activate(point const &p, float radius, int activator) {
 
 	if (cont || state != ST_NOACT || cobjs.empty()) return 1; // continuous, already activated, or no cobjs
-	if (!trigger.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
+	if (!triggers.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
 	activate();
 	return 1;
 }
@@ -200,11 +199,11 @@ void platform::shift_by(vector3d const &val) {
 	
 	origin += val;
 	pos    += val;
-	trigger.shift_by(val);
+	triggers.shift_by(val);
 }
 
 
-bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, trigger_t const &trigger) {
+bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers) {
 
 	assert(fp);
 	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist; // in seconds/units-per-second
@@ -225,7 +224,7 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, trigger_t co
 	xf.xform_pos(origin);
 	xf.xform_pos_rm(dir);
 	push_back(platform(fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist, origin, dir, (cont != 0)));
-	if (trigger.is_active()) {back().set_trigger(trigger);}
+	if (!triggers.empty()) {back().add_triggers(triggers);} // if a custom trigger is used, reset any built-in trigger
 	return 1;
 }
 

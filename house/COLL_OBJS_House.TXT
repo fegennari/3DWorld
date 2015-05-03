@@ -856,6 +856,7 @@ l 0.5 1.0 1.0 1.0 1.0 -1 0
 B -2.0 -1.8 -1.77 -1.37 -0.3 -0.15 # Invisible block so that smileys don't get stuck in the hole
 
 # downstairs lights
+a 0 # non-destroyable
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
 S -0.91 -0.11 -0.2  0.01
 S -0.91  0.0  -0.2  0.01
@@ -874,8 +875,10 @@ l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
 C 0.395 -0.6 -0.02  0.395 -0.2 -0.02  0.008 0.008
 C 0.395  1.4 -0.02  0.395  1.8 -0.02  0.008 0.008
 l 0.8  0.0 0.0 0.0 1.0  -1 1 # black plastic
-B 0.95 0.97  2.67 2.68  -0.35 -0.37
-K 0.96 2.67 -0.36  0.06 0.0 30.0 1 1 # player manual toggle trigger, off after 30s
+B 0.95 0.97  2.67 2.68  -0.35 -0.37 #1
+B 0.80 0.81  1.44 1.46   0.27  0.29 #2
+K 0.96 2.67 -0.36  0.06 0.0 30.0 1 1 # player manual toggle trigger #1, off after 30s
+K 0.81 1.45  0.28  0.06 0.0 30.0 1 1 # player manual toggle trigger #2, off after 30s
 L 0.0 1.0  0.395 -0.6 -0.06  1.0 1.0 1.2 1.0  0.395 -0.2 -0.06  1.0 0.0 1
 L 0.0 1.0  0.395  1.4 -0.06  1.0 1.0 1.2 1.0  0.395  1.8 -0.06  1.0 0.0 1
 K # disable light trigger

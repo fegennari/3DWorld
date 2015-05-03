@@ -202,24 +202,31 @@ void light_source::combine_with(light_source const &l) { // Note: unused
 
 void light_source_trig::advance_timestep() {
 
-	if (!trigger.is_active()) return; // trigger not active
+	if (!triggers.is_active()) return; // trigger not active
 	enabled = (active_time > 0.0); // light on by default
 	
 	if (enabled) {
-		if (trigger.auto_off_time > 0.0) {active_time = max(0.0f, (active_time - fticks));} // decrease active time in auto off mode
+		if (triggers.get_auto_off_time() > 0.0) {active_time = max(0.0f, (active_time - fticks));} // decrease active time in auto off mode
 	}
 	else {
-		if (trigger.auto_on_time  > 0.0) {inactive_time += fticks;} // increase inactive time in auto on mode
+		if (triggers.get_auto_on_time()  > 0.0) {inactive_time += fticks;} // increase inactive time in auto on mode
 	}
 }
 
 bool light_source_trig::check_activate(point const &p, float radius, int activator) {
 
 	//if (active_time > 0.0) return 1; // already activated, don't reset timing
-	if (trigger.auto_on_time > 0.0 && inactive_time > TICKS_PER_SECOND*trigger.auto_on_time) {inactive_time = 0.0;} // turn on, reset inactive_time
-	else if (!trigger.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
-	if (trigger.auto_off_time == 0.0 || trigger.requires_action) {active_time = ((active_time == 0.0) ? ((trigger.auto_off_time == 0.0) ? 1.0 : trigger.auto_off_time) : 0.0);} // toggle mode
-	else {active_time = trigger.auto_off_time;} // reset active time (on duration)
+	float const auto_on_time(triggers.get_auto_on_time());
+	unsigned trigger_mode(0); // 0 = not triggered, 1 bit = proximity, 2 bit = action, 4 bit = auto on
+	if (auto_on_time > 0.0 && inactive_time > TICKS_PER_SECOND*auto_on_time) {inactive_time = 0.0; trigger_mode = 4;} // turn on, reset inactive_time
+	trigger_mode |= triggers.register_player_pos(p, radius, activator, 1);
+	if (trigger_mode == 0) return 0; // not yet triggered
+	float const auto_off_time(triggers.get_auto_off_time());
+	bool const is_off(active_time == 0.0);
+	//if (auto_off_time == 0.0 || trigger.requires_action) {active_time = (is_off ? ((auto_off_time == 0.0) ? 1.0 : auto_off_time) : 0.0);} // toggle mode
+	if (auto_off_time == 0.0)         {active_time = (is_off ? 1.0 : 0.0);} // toggle mode
+	else if ((trigger_mode & 2) != 0) {active_time = (is_off ? auto_off_time : 0.0);} // toggle mode from user action with auto off
+	else {active_time = auto_off_time;} // reset active time (on duration)
 	active_time *= TICKS_PER_SECOND; // convert from seconds to ticks
 	return 1;
 }

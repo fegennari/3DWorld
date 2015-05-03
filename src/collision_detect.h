@@ -331,7 +331,7 @@ class platform { // animated (player controlled) scene object
 	point pos; // current position - dist is calculated from this point (delta = pos-origin)
 	vector3d delta; // last change in position
 
-	trigger_t trigger;
+	multi_trigger_t triggers;
 
 public:
 	// other data
@@ -339,7 +339,7 @@ public:
 	
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
 		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0);
-	void set_trigger(trigger_t const &trigger_) {trigger = trigger_;}
+	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
 	vector3d get_delta()       const {return (pos - origin);}
 	vector3d get_range()       const {return dir*ext_dist;}
@@ -359,7 +359,7 @@ public:
 
 struct platform_cont : public deque<platform> {
 
-	bool add_from_file(FILE *fp, geom_xform_t const &xf, trigger_t const &trigger);
+	bool add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers);
 	void check_activate(point const &p, float radius, int activator);
 	void shift_by(vector3d const &val);
 	void advance_timestep();

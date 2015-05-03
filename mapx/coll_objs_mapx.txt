@@ -471,7 +471,21 @@ D 0.0 0.0 0.6  2 # 3-4
 e 0
 B -3.35 -2.65  5.0   5.8   2.2   2.43 # Top Top
 
+# elevator buttons (triggering system)
 a 0 # non-destroyable
+l 0.8  0.0 0.0 0.0 1.0  -1 1 # black plastic
+C -2.72 4.998 -0.26  -2.72 5.0 -0.26  0.01 0.01
+C -2.72 4.998  0.16  -2.72 5.0  0.16  0.01 0.01
+C -2.72 4.998  0.74  -2.72 5.0  0.74  0.01 0.01
+C -2.72 4.998  1.34  -2.72 5.0  1.34  0.01 0.01
+C -2.72 4.998  1.94  -2.72 5.0  1.94  0.01 0.01
+# x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
+K -2.72 5.0 -0.26  0.06 0.0 0.0 1 1 # player manual toggle trigger
+K -2.72 5.0  0.16  0.06 0.0 0.0 1 1 # player manual toggle trigger
+K -2.72 5.0  0.74  0.06 0.0 0.0 1 1 # player manual toggle trigger
+K -2.72 5.0  1.34  0.06 0.0 0.0 1 1 # player manual toggle trigger
+K -2.72 5.0  1.94  0.06 0.0 0.0 1 1 # player manual toggle trigger
+
 #a 1 # destroyable
 l 0.7 0.58 0.42 0.3 1.0 49 1 # carpet
 y 7.5

@@ -120,15 +120,15 @@ public:
 class light_source_trig : public light_source {
 
 	float active_time, inactive_time;
-	trigger_t trigger;
+	multi_trigger_t triggers;
 
 public:
 	light_source_trig() {}
-	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0), trigger(pos) {}
-	void set_trigger_timing(trigger_t const &trigger_) {active_time = 0.0; trigger = trigger_;}
+	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0) {}
+	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
-	void shift_by(vector3d const &vd) {light_source::shift_by(vd); trigger.shift_by(vd);}
+	void shift_by(vector3d const &vd) {light_source::shift_by(vd); triggers.shift_by(vd);}
 };
 
 
