@@ -15,9 +15,9 @@ L 0.0 1.2  -6.55 5.1 -0.1  0.6 0.6 1.0 1.0
 L 0.0 1.2  -6.55 5.4 -0.1  0.6 0.6 1.0 1.0
 K # disable trigger
 
-K -6.3 2.53 -0.29  0.4 0.0 1.0 0 0 # 1s player auto trigger for switch
-L 0.0 0.5  -6.3 2.55 -0.29  1.0 0.4 0.7 1.0
-K # disable trigger
+trigger -6.3 2.53 -0.29  0.4 0.0 1.0 0 0 # 1s player auto trigger for switch
+light 0.0 0.5  -6.3 2.55 -0.29  1.0 0.4 0.7 1.0
+trigger # disable trigger
 
 # lights for connector hallway
 S -6.55 3.0 -0.105  0.03
@@ -50,6 +50,7 @@ L 0.0 2.0  -4.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15
 # point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]
 C -4.0 -0.85 -0.2  -2.0 -0.85 -0.2  0.01 0.01
 L 0.0 1.2  -4.0 -0.83 -0.2  0.6 0.6 1.0 1.0  -2.0 -0.83 -0.2  1.0 0.0 1
+K # disable trigger
 
 # crusher platform
 K -6.3 -0.849 -0.29  0.06 0.0 0.0 1 1 # player manual toggle trigger
@@ -62,6 +63,8 @@ l 0.99  1.0 1.0 1.0 1.0  lichen.jpg 1 # rock
 y 1.0
 B -6.5 -6.1  -0.85 -0.45 -0.14 -0.04
 Q 0
+K # disable trigger
+
 
 K -6.3 -0.65 -0.29  0.4 0.0 1.0 0 0 # 5s player auto trigger for switch
 L 0.0 0.5  -6.3 -0.845 -0.29  1.0 0.4 0.7 1.0

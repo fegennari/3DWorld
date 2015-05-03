@@ -192,7 +192,7 @@ T  7.4   5.9  -0.29 i mapx/vsupport_low.txt
 T  0.0   0.0  -0.29
 
 # main floors
-e1
+e 1
 X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.58 0.42 0.3 1.0 49 1 # carpet
 y 7.5
@@ -208,7 +208,7 @@ B -7.4  -0.1  -5.4  5.9  2.27  2.4  # 4A
 B -0.1   7.4   0.1  5.9  2.27  2.4  # 4B
 
 # main ceilings
-e2
+e 2
 X normal_maps/particleb_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.45 0.95 0.95 0.95 1.0 48 1 # particle board
 y 2.5
@@ -426,7 +426,7 @@ r 0.0 1.0 # reset specularity
 
 # stairwell B roof cover
 a 1 # destroyable
-e0
+e 0
 X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.4 0.4 0.4 1.0 49 1 # concrete
 y 4.0

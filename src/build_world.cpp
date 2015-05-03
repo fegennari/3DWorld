@@ -1045,6 +1045,9 @@ unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c) {
 }
 
 
+bool is_end_of_string(int v) {return (v == '#' || v == EOF || v == 0 || isspace(v));}
+
+
 int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj, bool has_layer, colorRGBA lcolor) {
 
 	assert(coll_obj_file != NULL);
@@ -1068,7 +1071,25 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	while (!end) { // available: dhkouz UV
 		assert(fp != NULL);
 		int letter(getc(fp));
-		
+
+		if (!is_end_of_string(letter)) {
+			int const next_letter(getc(fp));
+
+			if (!is_end_of_string(next_letter)) {
+				string keyword;
+				keyword.push_back(letter);
+				letter = next_letter;
+				while (!is_end_of_string(letter)) {keyword.push_back(letter); letter = getc(fp);}
+
+				if (0) {}
+				else if (keyword == "trigger") {letter = 'K';}
+				else if (keyword == "light"  ) {letter = 'L';}
+				else {
+					string const error_str(string("unrecognized keyword: '") + keyword + "'");
+					return read_error(fp, error_str.c_str(), coll_obj_file);
+				}
+			}
+		}
 		switch (letter) {
 		case 0:
 		case EOF:
@@ -1082,13 +1103,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case '#': // line comment
 			do {letter = getc(fp);} while (letter != '\n' && letter != EOF && letter != 0);
-			if (letter == '\n') ++line_num;
+			if (letter == '\n') {++line_num;}
 			break;
 
 		case 'i': // include file (only translation and scale are saved state)
 			{
 				string const fn(read_filename(fp));
-				if (fn.empty()) return read_error(fp, "include file", coll_obj_file);
+				if (fn.empty()) {return read_error(fp, "include file", coll_obj_file);}
 				if (!read_coll_obj_file(fn.c_str(), xf, cobj, has_layer, lcolor)) {return read_error(fp, "include file", coll_obj_file);}
 			}
 			break;
