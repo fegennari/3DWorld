@@ -14,3 +14,4 @@ TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
 
 Support platform rotate (doors)
+Shared/multiple triggers

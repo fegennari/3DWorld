@@ -32,6 +32,31 @@ bool trigger_t::register_player_pos(point const &p, float act_radius, int activa
 }
 
 
+bool multi_trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
+	bool ret(0);
+	for (iterator i = begin(); i != end(); ++i) {ret |= i->register_player_pos(p, act_radius, activator, clicks);}
+	return ret;
+}
+
+void multi_trigger_t::shift_by(vector3d const &val) {
+	for (iterator i = begin(); i != end(); ++i) {i->shift_by(val);}
+}
+
+float multi_trigger_t::get_auto_on_time() const { // the first trigger to activate activates the group
+	float min_aot(0.0);
+	for (const_iterator i = begin(); i != end(); ++i) {
+		if (i->auto_on_time > 0.0) {min_aot = ((min_aot == 0.0) ? i->auto_on_time : min(min_aot, i->auto_on_time));}
+	}
+	return min_aot;
+}
+
+float multi_trigger_t::get_auto_off_time() const { // the last trigger to deactivate deactivates the group
+	float max_aot(0.0);
+	for (const_iterator i = begin(); i != end(); ++i) {max_aot = max(max_aot, i->auto_off_time);}
+	return max_aot;
+}
+
+
 platform::platform(float fs, float rs, float sd, float rd, float dst, float ad,
 				   point const &o, vector3d const &dir_, bool c)
 				   : cont(c), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst),

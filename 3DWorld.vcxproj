@@ -784,6 +784,7 @@
     <ClInclude Include="src\transform_obj.h" />
     <ClInclude Include="src\tree_3dw.h" />
     <ClInclude Include="src\tree_leaf.h" />
+    <ClInclude Include="src\trigger.h" />
     <ClInclude Include="src\triListOpt.h" />
     <ClInclude Include="src\u_event.h" />
     <ClInclude Include="src\explosion.h" />

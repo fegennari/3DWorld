@@ -1063,7 +1063,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	bool enable_leaf_wind(1);
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
-	light_trigger_params_t lt_params;
+	trigger_t trigger;
 	
 	while (!end) { // available: dhkouz UV
 		assert(fp != NULL);
@@ -1143,7 +1143,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			else {
 				cobj.platform_id = (short)platforms.size();
-				if (!platforms.add_from_file(fp, xf, lt_params)) {return read_error(fp, "platform", coll_obj_file);}
+				if (!platforms.add_from_file(fp, xf, trigger)) {return read_error(fp, "platform", coll_obj_file);}
 				assert(cobj.platform_id < (int)platforms.size());
 			}
 			break;
@@ -1252,7 +1252,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					
 					if (d) {
 						light_sources_d.push_back(light_source_trig(ls));
-						if (lt_params.is_active()) {light_sources_d.back().set_trigger_timing(lt_params);}
+						if (trigger.is_active()) {light_sources_d.back().set_trigger_timing(trigger);}
 					}
 					else {light_sources_a.push_back(ls);}
 				}
@@ -1261,18 +1261,18 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 			{
-				lt_params = light_trigger_params_t(); // make sure to reset all fields
-				unsigned const num_read(fscanf(fp, "%f%f%f%f%f%f%i%i", &lt_params.act_pos.x, &lt_params.act_pos.y, &lt_params.act_pos.z,
-					&lt_params.act_dist, &lt_params.auto_on_time, &lt_params.auto_off_time, &ivals[0], &ivals[1]));
+				trigger = trigger_t(); // make sure to reset all fields
+				unsigned const num_read(fscanf(fp, "%f%f%f%f%f%f%i%i", &trigger.act_pos.x, &trigger.act_pos.y, &trigger.act_pos.z,
+					&trigger.act_dist, &trigger.auto_on_time, &trigger.auto_off_time, &ivals[0], &ivals[1]));
 				if (num_read == 0) break; // bare K, just reset params and disable the trigger
 				if (num_read != 8) {return read_error(fp, "light source trigger", coll_obj_file);}
-				xf.xform_pos(lt_params.act_pos);
-				lt_params.act_dist       *= xf.scale;
-				lt_params.player_only     = (ivals[0] != 0);
-				lt_params.requires_action = (ivals[1] != 0);
+				xf.xform_pos(trigger.act_pos);
+				trigger.act_dist       *= xf.scale;
+				trigger.player_only     = (ivals[0] != 0);
+				trigger.requires_action = (ivals[1] != 0);
 				cube_t act_region;
 				unsigned const num_read2(read_cube(fp, xf, act_region));
-				if (num_read2 == 6) {lt_params.set_act_region(act_region);}
+				if (num_read2 == 6) {trigger.set_act_region(act_region);}
 				else if (num_read2 > 0) {return read_error(fp, "light source trigger activation cube", coll_obj_file);}
 			}
 			break;

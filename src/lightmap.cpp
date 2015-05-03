@@ -200,13 +200,6 @@ void light_source::combine_with(light_source const &l) { // Note: unused
 	blend_color(color, color, l.color, wa, 1);
 }
 
-
-void light_source_trig::set_trigger_timing(light_trigger_params_t const &params) {
-
-	active_time = 0.0; // reset just in case
-	trigger     = params;
-}
-
 void light_source_trig::advance_timestep() {
 
 	if (!trigger.is_active()) return; // trigger not active
