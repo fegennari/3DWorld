@@ -74,7 +74,7 @@ K # disable trigger
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white plastic
 S -3.0 4.8 -0.03  0.03
 K -3.0 4.8 -0.28  0.0 0.5 0.5 0 0 # blinking red light
-L 0.0 0.6  -3.0 4.8 -0.1  1.0 0.2 0.1 1.0
+L 0.0 0.75  -3.0 4.8 -0.1  1.0 0.2 0.1 1.0
 K # disable trigger
 
 n 1 # cut out left side basement entrance
