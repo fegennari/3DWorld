@@ -1154,7 +1154,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist act_dist origin<x,y,z> dir<x,y,z> cont]
+		case 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
 			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "platform", coll_obj_file);}
 			assert(ivals[0] == 0 || ivals[0] == 1); // boolean
 			
@@ -1384,6 +1384,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			cobj.counter = ((fscanf(fp, "%i", &ivals[0]) == 1 && ivals[0] != 0) ? OBJ_CNT_REM_TJ : 0); // remove T-junctions
 			cobj.add_to_vector(fixed_cobjs, COLL_CUBE);
 			cobj.counter = 0;
+			if (cobj.platform_id >= 0 && platforms[cobj.platform_id].is_rotation()) {return read_error(fp, "collision cube: cannot use a rotation platform", coll_obj_file);}
 			break;
 
 		case 'S': // sphere: x y z radius

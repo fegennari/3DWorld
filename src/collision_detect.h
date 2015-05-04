@@ -318,6 +318,7 @@ class platform { // animated (player controlled) scene object
 
 	// constants
 	bool const cont; // continuous - always in motion
+	bool const is_rot; // motion is rotation rather than translation
 	float const fspeed, rspeed; // velocity of forward/reverse motion in units per tick (can be negative)
 	float const sdelay, rdelay; // start delay / reverse delay in ticks
 	float const ext_dist, act_dist; // distance traveled, activation distance
@@ -333,12 +334,14 @@ class platform { // animated (player controlled) scene object
 
 	multi_trigger_t triggers;
 
+	void move_platform(float dist_traveled);
+
 public:
 	// other data
 	vector<unsigned> cobjs; // collision object(s) bound to this platform
 	
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
-		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0);
+		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0, bool ir=0);
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool has_dynamic_shadows() const {return (cont || state >= ST_FWD);}
 	vector3d get_delta()       const {return (pos - origin);}
@@ -353,7 +356,8 @@ public:
 	void activate();
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
-	bool is_moving() const {return (state == ST_FWD || state == ST_REV);}
+	bool is_moving  () const {return (state == ST_FWD || state == ST_REV);}
+	bool is_rotation() const {return is_rot;}
 };
 
 

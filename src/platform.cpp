@@ -57,8 +57,8 @@ float multi_trigger_t::get_auto_off_time() const { // the last trigger to deacti
 }
 
 
-platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c)
-				   : cont(c), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros)
+platform::platform(float fs, float rs, float sd, float rd, float dst, float ad, point const &o, vector3d const &dir_, bool c, bool ir)
+				   : cont(c), is_rot(ir), fspeed(fs), rspeed(rs), sdelay(sd), rdelay(rd), ext_dist(dst), act_dist(ad), origin(o), dir(dir_.get_norm()), delta(all_zeros)
 {
 	assert(dir_ != all_zeros);
 	assert(fspeed > 0.0 && rspeed > 0.0 && sdelay >= 0.0 && ext_dist > 0.0 && act_dist >= 0.0);
@@ -101,6 +101,12 @@ void platform::next_frame() {
 }
 
 
+void platform::move_platform(float dist_traveled) {
+	if (is_rot) {assert(0);} // FIXME: WRITE
+	else {pos += dir*dist_traveled;}
+}
+
+
 void platform::advance_timestep() {
 
 	if (fticks == 0.0 || cobjs.empty()) return; // no progress or no cobjs
@@ -130,10 +136,8 @@ void platform::advance_timestep() {
 						ns_time      += max(0.0f, rdelay); // add in reverse delay (ns_time can be pos or neg)
 						state         = ST_CHDIR;
 					}
-					else { // keep moving forward
-						ns_time = 0.0;
-					}
-					pos += dir*dist_traveled;
+					else {ns_time = 0.0;} // keep moving forward
+					move_platform(dist_traveled);
 				}
 				break;
 
@@ -153,7 +157,7 @@ void platform::advance_timestep() {
 					}
 					else { // keep moving in reverse
 						ns_time = 0.0;
-						pos    += dir*dist_traveled;
+						move_platform(dist_traveled);
 					}
 				}
 				break;
@@ -180,9 +184,9 @@ void platform::advance_timestep() {
 }
 
 
-vector3d platform::get_velocity() const {
+vector3d platform::get_velocity() const { // Note: linear velocity, or angular velocity if is_rot==1
 
-	if (state == ST_FWD) {return dir*fspeed;}
+	if      (state == ST_FWD) {return dir* fspeed;}
 	else if (state == ST_REV) {return dir*-rspeed;}
 	return zero_vector;
 }
@@ -208,8 +212,8 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigge
 	assert(fp);
 	float fspeed, rspeed, sdelay, rdelay, ext_dist, act_dist; // in seconds/units-per-second
 	point origin;
-	vector3d dir;
-	int cont;
+	vector3d dir; // or rot_axis
+	int cont(0), is_rotation(0);
 	
 	if (fscanf(fp, "%f%f%f%f%f%f%f%f%f%f%f%f%i", &fspeed, &rspeed, &sdelay, &rdelay, &ext_dist,
 		&act_dist, &origin.x, &origin.y, &origin.z, &dir.x, &dir.y, &dir.z, &cont) != 13)
@@ -217,6 +221,8 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigge
 		return 0;
 	}
 	if (cont != 0 && cont != 1) return 0; // not a bool
+	fscanf(fp, "%i", &is_rotation); // try to read is_rotation - if fails, leave at 0
+	if (is_rotation != 0 && is_rotation != 1) return 0; // not a bool
 	sdelay *= TICKS_PER_SECOND;
 	rdelay *= TICKS_PER_SECOND;
 	fspeed /= TICKS_PER_SECOND;
