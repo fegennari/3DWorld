@@ -18,8 +18,6 @@ float const CTHRESH          = 0.025;
 float const SQRT_CTHRESH     = sqrt(CTHRESH);
 float const DZ_VAL_SCALE     = 2.0;
 float const SHIFT_VAL        = 0.5; // hack to fix some offset problem
-float const LT_DIR_FALLOFF   = 0.005;
-float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
 float const DARKNESS_THRESH  = 0.1;
 float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
 
@@ -28,7 +26,7 @@ bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_l
 unsigned dl_tid(0), elem_tid(0), gb_tid(0);
 float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
-float dlight_bb[3][2] = {0};
+cube_t dlight_bcube(0,0,0,0,0,0);
 dls_cell **ldynamic = NULL;
 vector<light_source> light_sources_a, /* light_sources_d, */ dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
 vector<light_source_trig> light_sources_d;
@@ -87,7 +85,7 @@ float light_source::get_intensity_at(point const &p, point &updated_lpos) const 
 
 float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 
-	if (bwidth == 1.0) return 1.0;
+	if (!is_directional()) return 1.0;
 	float const dp(dot_product(obj_dir, dir));
 	if (dp >= 0.0 && (bwidth + LT_DIR_FALLOFF) < 0.5) return 0.0;
 	float const dp_norm(0.5*(-dp*InvSqrt(obj_dir.mag_sq()) + 1.0)); // dp = -1.0 to 1.0, bw = 0.0 to 1.0
@@ -95,25 +93,47 @@ float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 }
 
 
-void light_source::get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset) const {
+cube_t light_source::calc_bcube(float sqrt_thresh) const {
+
+	assert(radius > 0.0);
+	assert(sqrt_thresh < 1.0);
+	cube_t bcube(pos, pos2);
+	bcube.expand_by(radius*(1.0 - sqrt_thresh));
+
+	if (is_very_directional()) {
+		cube_t bcube2;
+		calc_bounding_cylin().calc_bcube(bcube2);
+		bcube2.expand_by(vector3d(DX_VAL, DY_VAL, DZ_VAL)); // add one grid unit
+		bcube.intersect_with_cube(bcube2);
+	}
+	return bcube;
+}
+
+void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset) const {
 
 	if (radius == 0.0) { // global light source
 		for (unsigned d = 0; d < 3; ++d) {
-			bounds[0][d] = -SCENE_SIZE[d];
-			bounds[1][d] =  SCENE_SIZE[d];
-			bnds[d][0]   = 0;
-			bnds[d][1]   = MESH_SIZE[d]-1;
+			bcube.d[d][0] = -SCENE_SIZE[d];
+			bcube.d[d][1] =  SCENE_SIZE[d];
+			bnds[d][0]    = 0;
+			bnds[d][1]    = MESH_SIZE[d]-1;
 		}
 	}
-	else {
-		float const rb(radius*(1.0 - sqrt_thresh));
+	else { // local point/spot/line light source
+		bcube = calc_bcube(sqrt_thresh);
 
 		for (unsigned d = 0; d < 3; ++d) {
-			bounds[0][d] = min(pos[d], pos2[d]) - rb; // lower
-			bounds[1][d] = max(pos[d], pos2[d]) + rb; // upper
-			UNROLL_2X(bnds[d][i_] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bounds[i_][d] + bounds_offset[d]), d)));)
+			UNROLL_2X(bnds[d][i_] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bcube.d[d][i_] + bounds_offset[d]), d)));)
 		}
 	}
+}
+
+cylinder_3dw light_source::calc_bounding_cylin() const {
+
+	if (is_line_light()) {return cylinder_3dw(pos, pos2, radius, radius);}
+	assert(is_very_directional()); // not for use with point lights or spotlights larger than a hemisphere
+	float const d(1.0 - 2.0*(bwidth + LT_DIR_FALLOFF)), end_radius(radius*sqrt(1.0/(d*d) - 1.0));
+	return cylinder_3dw(pos, pos+dir*radius, 0.0, end_radius);
 }
 
 
@@ -124,10 +144,12 @@ bool light_source::is_visible() const {
 	bool const line_light(is_line_light());
 	
 	if (line_light) {
-		if (!sphere_in_camera_view(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)), 0)) return 0; // use bounding sphere
+		if (!camera_pdu.sphere_visible_test(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)))) return 0; // use capsule bounding sphere
+		if (!camera_pdu.cube_visible(calc_bcube())) return 0;
 	}
 	else {
-		if (!sphere_in_camera_view(pos, radius, 0)) return 0; // view frustum culling
+		if (!camera_pdu.sphere_visible_test(pos, radius)) return 0; // view frustum culling
+		if (is_very_directional() && !camera_pdu.cube_visible(calc_bcube())) return 0;
 		if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
 		if (sphere_cobj_occluded(get_camera_pos(), pos, 0.5*radius)) return 0; // approximate occlusion culling, can miss lights but rarely happens
 	}
@@ -144,6 +166,7 @@ bool light_source::is_visible() const {
 	//RESET_TIME;
 	//shader_t shader;
 	//shader.begin_color_only_shader(RED);
+	//if (is_very_directional() && (display_mode & 0x10)) {cylinder_3dw const cylin(calc_bounding_cylin()); draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, 64, 0, 0);}
 
 	for (unsigned n = 0; n < num_rays; ++n) { // for static scene lights we do ray queries
 		vector3d ray_dir;
@@ -628,9 +651,9 @@ void build_lightmap(bool verbose) {
 	// Note: this isn't really necessary when using ray casting for lighting,
 	//       but it helps ensure there are lmap cells around light sources to light the dynamic objects
 	for (unsigned i = 0; i < light_sources_a.size(); ++i) {
-		point bounds[2]; // unused
+		cube_t bcube; // unused
 		int bnds[3][2];
-		light_sources_a[i].get_bounds(bounds, bnds, SQRT_CTHRESH);
+		light_sources_a[i].get_bounds(bcube, bnds, SQRT_CTHRESH);
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 			for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
@@ -688,13 +711,13 @@ void build_lightmap(bool verbose) {
 			point lpos(ls.get_pos()); // may be updated for line lights (if they're ever supported)
 			if (!is_over_mesh(lpos)) continue;
 			colorRGBA const &lcolor(ls.get_color());
-			point bounds[2];
+			cube_t bcube; // unused
 			int bnds[3][2], cent[3], cobj(-1), last_cobj(-1);
 			
 			for (unsigned i = 0; i < 3; ++i) {
 				cent[i] = max(0, min(MESH_SIZE[i]-1, get_dim_pos(lpos[i], i))); // clamp to mesh bounds
 			}
-			ls.get_bounds(bounds, bnds, SQRT_CTHRESH);
+			ls.get_bounds(bcube, bnds, SQRT_CTHRESH);
 			check_coll_line(lpos, lpos, cobj, -1, 1, 2, 1); // check cobj containment and ignore that shape (ignore voxels)
 
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
@@ -1082,18 +1105,13 @@ void add_dynamic_lights_ground() {
 		bool const line_light(ls.is_line_light());
 		int const xcent(get_xpos(lpos.x)), ycent(get_ypos(lpos.y));
 		if (!line_light && !point_outside_mesh(xcent, ycent) && !ldynamic[ycent][xcent].check_add_light(i)) continue;
-		point bounds[2];
+		cube_t bcube;
 		int bnds[3][2];
 		unsigned const ix(i);
-		ls.get_bounds(bounds, bnds, sqrt_dlight_add_thresh, dlight_shift);
-		
-		for (unsigned j = 0; j < 3; ++j) {
-			dlight_bb[j][0] = (first ? bounds[0][j] : min(dlight_bb[j][0], bounds[0][j]));
-			dlight_bb[j][1] = (first ? bounds[1][j] : max(dlight_bb[j][1], bounds[1][j]));
-		}
+		ls.get_bounds(bcube, bnds, sqrt_dlight_add_thresh, dlight_shift);
+		if (first) {dlight_bcube = bcube;} else {dlight_bcube.union_with_cube(bcube);}
 		first = 0;
-		int const xsize(bnds[0][1]-bnds[0][0]), ysize(bnds[1][1]-bnds[1][0]);
-		int const radius((max(xsize, ysize)>>1)+2), rsq(radius*radius);
+		int const radius(int(ls.get_radius()*max(DX_VAL_INV, DY_VAL_INV)) + 2), rsq(radius*radius);
 		float const line_rsq((ls_radius + HALF_DXY)*(ls_radius + HALF_DXY));
 
 		for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
@@ -1108,7 +1126,7 @@ void add_dynamic_lights_ground() {
 					}
 					else if (((x-xcent)*(x-xcent) + y_sq) > rsq) {continue;} // skip
 				}
-				ldynamic[y][x].add_light(ix, bounds[0][2], bounds[1][2]); // could do flow clipping here?
+				ldynamic[y][x].add_light(ix, bcube.d[2][0], bcube.d[2][1]); // could do flow clipping here?
 			}
 		}
 	}
@@ -1167,7 +1185,7 @@ void get_indir_light(colorRGBA &a, point const &p) { // used for particle clouds
 		else if (val < 1.0) {
 			cscale *= val;
 		}
-		if (!dl_sources.empty() && p.z < dlight_bb[2][1] && p.z > dlight_bb[2][0]) {
+		if (!dl_sources.empty() && dlight_bcube.contains_pt(p)) {
 			dls_cell const &ldv(ldynamic[y][x]);
 		
 			if (ldv.check_z(p[2])) {

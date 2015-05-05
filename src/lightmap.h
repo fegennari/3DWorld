@@ -12,6 +12,9 @@ extern int MESH_SIZE[3];
 
 #define ADD_LIGHT_CONTRIB(c, C) {C[0] += c[0]; C[1] += c[1]; C[2] += c[2];}
 
+float const LT_DIR_FALLOFF   = 0.005;
+float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
+
 
 struct normal_cell { // size = 24, unused
 
@@ -100,9 +103,12 @@ public:
 	point const &get_pos2()      const {return pos2;}
 	float get_intensity_at(point const &p, point &updated_lpos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;
-	void get_bounds(point bounds[2], int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
+	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
+	cube_t calc_bcube(float sqrt_thresh=0.0) const;
+	cylinder_3dw calc_bounding_cylin() const;
 	bool is_visible()     const;
 	bool is_directional() const {return (bwidth < 1.0);}
+	bool is_very_directional() const {return ((bwidth + LT_DIR_FALLOFF) < 0.5);}
 	bool is_line_light()  const {return (pos != pos2);} // technically cylinder light
 	bool is_dynamic()     const {return dynamic;}
 	bool is_neg_light()   const {return (color.R < 0.0 || color.G < 0.0 || color.B < 0.0);}
