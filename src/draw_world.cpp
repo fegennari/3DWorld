@@ -1331,12 +1331,45 @@ bool is_sun_flare_visible() {
 }
 
 
+void ensure_depth_buffer_this_frame() {
+
+	static int prev_frame_counter(-1);
+	if (frame_counter == prev_frame_counter) return; // depth texture is already valid for this frame
+	prev_frame_counter = frame_counter;
+	depth_buffer_to_texture(depth_tid);
+}
+
+void bind_depth_buffer() {
+
+	ensure_depth_buffer_this_frame();
+	assert(depth_tid >= 0);
+	bind_2d_texture(depth_tid);
+}
+
+void draw_ortho_screen_space_quad() {
+
+	// setup matrices
+	fgMatrixMode(FG_PROJECTION);
+	fgPushIdentityMatrix();
+	fgOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+	fgMatrixMode(FG_MODELVIEW);
+	fgPushIdentityMatrix();
+
+	enable_blend();
+	glDisable(GL_DEPTH_TEST);
+	draw_tquad(1.0, 1.0, 0.0);
+	glEnable(GL_DEPTH_TEST);
+	disable_blend();
+
+	restore_prev_mvm_pjm_state();
+}
+
 // add God rays as a fullscreen shader pass using the depth texture
 void add_god_rays() {
 
 	if (world_mode == WMODE_UNIVERSE) return; // not in universe mode
 	if (!is_sun_flare_visible()) return; // sun not visible
-	depth_buffer_to_texture(depth_tid);
+	bind_depth_buffer();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
 	s.set_frag_shader("god_rays");
@@ -1346,27 +1379,27 @@ void add_god_rays() {
 	s.add_uniform_color("sun_color", sun_color);
 	s.add_uniform_vector3d("sun_pos", world_space_to_screen_space(get_sun_pos()));
 	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
-	glDisable(GL_DEPTH_TEST);
-	enable_blend();
-	bind_2d_texture(depth_tid);
+	draw_ortho_screen_space_quad();
+	s.end_shader();
+}
 
-	// setup matrices
-	fgMatrixMode(FG_PROJECTION);
-	fgPushIdentityMatrix();
-	fgOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
-	fgMatrixMode(FG_MODELVIEW);
-	fgPushIdentityMatrix();
+void add_ssao() {
 
-	draw_tquad(1.0, 1.0, 0.0);
-
-	restore_prev_mvm_pjm_state();
-	disable_blend();
-	glEnable(GL_DEPTH_TEST);
+	bind_depth_buffer();
+	shader_t s;
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader(""); // FIXME
+	s.begin_shader();
+	s.add_uniform_int("depth_tex", 0);
+	// FIXME: WRITE
+	s.set_cur_color(WHITE);
+	draw_ortho_screen_space_quad();
 	s.end_shader();
 }
 
 void run_postproc_effects() {
 	if ((display_mode & 0x10) || (show_fog && world_mode == WMODE_GROUND)) {add_god_rays();}
+	//add_ssao();
 }
 
 
