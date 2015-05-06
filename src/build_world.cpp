@@ -1250,7 +1250,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'L': // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]
+		case 'L': // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]]
 			// type: 0 = ambient/baked only, 1 = diffuse/dynamic only, 2 = both
 			if (fscanf(fp, "%f%f%f%f%f%f%f%f%f", &fvals[0], &fvals[1], &pos.x, &pos.y, &pos.z, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A) != 9) {
 				return read_error(fp, "light source", coll_obj_file);
@@ -1258,13 +1258,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			{
 				xf.xform_pos(pos);
 				float beamwidth(1.0), r_inner(0.0);
-				vector3d dir(plus_z); // defaults to +z
+				vector3d dir(zero_vector); // defaults to (0,0,0)
 				ivals[0] = 0; // default is point/spotlight
 				point pos2(pos);
 
-				if (fscanf(fp, "%f%f%f%f%f%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0]) >= 4) { // direction|pos2 beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]
-					if (ivals[0] != 0) {pos2 = dir; dir = plus_z; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
-					else {xf.xform_pos_rm(dir);} // spotlight
+				if (fscanf(fp, "%f%f%f%f%f%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0]) >= 3) { // direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]
+					if (ivals[0] != 0) {pos2 = dir; dir = zero_vector; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
+					else {xf.xform_pos_rm(dir);} // spotlight (or hemispherical light ray culling if beamwidth == 1.0)
 				}
 				for (unsigned d = 0; d < 2; ++d) { // {ambient, diffuse}
 					if (fvals[d] == 0.0) continue;

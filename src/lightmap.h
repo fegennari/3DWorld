@@ -92,9 +92,11 @@ protected:
 	vector3d dir;
 	colorRGBA color;
 
+	float calc_cylin_end_radius() const;
+
 public:
 	light_source() : enabled(0) {}
-	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=plus_z, float bw=1.0, float ri=0.0);
+	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0);
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
 	float get_radius()           const {return radius;}

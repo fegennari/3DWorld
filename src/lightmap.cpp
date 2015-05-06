@@ -7,6 +7,7 @@
 #include "lightmap.h"
 #include "gl_ext_arb.h"
 #include "shaders.h"
+#include "sinf.h"
 
 
 unsigned const NUM_RAND_LTS  = 0;
@@ -55,6 +56,7 @@ light_source::light_source(float sz, point const &p, point const &p2, colorRGBA 
 	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c)
 {
 	assert(bw > 0.0 && bw <= 1.0);
+	assert(r_inner <= radius);
 	assert(!(is_directional() && is_line_light())); // can't be both
 }
 
@@ -128,12 +130,15 @@ void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, 
 	}
 }
 
+float light_source::calc_cylin_end_radius() const {
+	float const d(1.0 - 2.0*(bwidth + LT_DIR_FALLOFF));
+	return radius*sqrt(1.0/(d*d) - 1.0);
+}
 cylinder_3dw light_source::calc_bounding_cylin() const {
 
 	if (is_line_light()) {return cylinder_3dw(pos, pos2, radius, radius);}
 	assert(is_very_directional()); // not for use with point lights or spotlights larger than a hemisphere
-	float const d(1.0 - 2.0*(bwidth + LT_DIR_FALLOFF)), end_radius(radius*sqrt(1.0/(d*d) - 1.0));
-	return cylinder_3dw(pos, pos+dir*radius, 0.0, end_radius);
+	return cylinder_3dw(pos, pos+dir*radius, 0.0, calc_cylin_end_radius());
 }
 
 
@@ -151,28 +156,44 @@ bool light_source::is_visible() const {
 		if (!camera_pdu.sphere_visible_test(pos, radius)) return 0; // view frustum culling
 		if (is_very_directional() && !camera_pdu.cube_visible(calc_bcube())) return 0;
 		if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
-		if (sphere_cobj_occluded(get_camera_pos(), pos, 0.5*radius)) return 0; // approximate occlusion culling, can miss lights but rarely happens
+		if (sphere_cobj_occluded(get_camera_pos(), pos, max(0.5f*radius, r_inner))) return 0; // approximate occlusion culling, can miss lights but rarely happens
 	}
-	if (dynamic || radius < 0.75 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
+	if (dynamic || radius < 0.65 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
 	unsigned const num_rays = 100;
-	unsigned num_hits(0);
 	static rand_gen_t rgen;
 	static vector<vector3d> dirs;
-	static map<pair<point, vector3d>, point> ray_map;
-	int prev_cindex(-1);
-	unsigned cur_dir(0);
-	bool const directional(is_directional());
-	point const camera(get_camera_pos());
-	//RESET_TIME;
+	static map<pair<point, point>, point> ray_map;
 	//shader_t shader;
 	//shader.begin_color_only_shader(RED);
-	//if (is_very_directional() && (display_mode & 0x10)) {cylinder_3dw const cylin(calc_bounding_cylin()); draw_fast_cylinder(cylin.p1, cylin.p2, cylin.r1, cylin.r2, 64, 0, 0);}
+	//RESET_TIME;
+	point const camera(get_camera_pos());
+	int prev_cindex(-1);
+	if (!check_coll_line_tree(pos, camera, prev_cindex, camera_coll_id, 0, 1, 1, 0)) return 1; // light center is visible
+	unsigned cur_dir(0);
+	bool const directional(is_directional()), very_dir(is_very_directional());
+	vector3d vortho[2];
+	if (very_dir) {get_ortho_vectors(dir, vortho);}
+	float const cylin_end_radius(very_dir ? calc_cylin_end_radius() : 0.0);
 
+	if (dirs.empty()) { // start with 26 uniformly distributed directions
+		for (int x = -1; x <= 1; ++x) {
+			for (int y = -1; y <= 1; ++y) {
+				for (int z = -1; z <= 1; ++z) {
+					if (x == 0 && y == 0 && z == 0) continue;
+					dirs.push_back(vector3d(x, y, z).get_norm());
+				}
+			}
+		}
+	}
 	for (unsigned n = 0; n < num_rays; ++n) { // for static scene lights we do ray queries
 		vector3d ray_dir;
 		point start_pos(pos);
 		
-		if (directional) {
+		if (very_dir && n < num_rays/4) { // uniformly spaced around the cylinder perimeter
+			float const theta(TWO_PI*float(n)/float(num_rays/4));
+			ray_dir = radius*dir + cylin_end_radius*(SINF(theta)*vortho[0] + COSF(theta)*vortho[1]);
+		}
+		else if (directional) { // randomly spaced within cylinder volume
 			while (1) {
 				if (cur_dir >= dirs.size()) {dirs.push_back(rgen.signed_rand_vector_norm());}
 				ray_dir = dirs[cur_dir++];
@@ -180,35 +201,33 @@ bool light_source::is_visible() const {
 				if (get_dir_intensity(-ray_dir) > 0.0) break;
 			}
 		}
-		else {
-			if (n >= dirs.size()) {dirs.push_back(rgen.signed_rand_vector_norm());}
-			ray_dir = dirs[n];
+		else { // randomly spaced around the unit sphere
+			if (cur_dir >= dirs.size()) {dirs.push_back(rgen.signed_rand_vector_norm());}
+			ray_dir = dirs[cur_dir++];
+			if (cur_dir > 26 && dir != zero_vector && dot_product(dir, ray_dir) < 0.0) {ray_dir = -ray_dir;} // invert direction
 		}
 		if (line_light) {start_pos += (float(n)/float(num_rays-1))*(pos2 - pos);} // fixed spacing along the length of the line
-		pair<point, vector3d> const key(start_pos, ray_dir);
+		point const end_pos(start_pos + radius*ray_dir);
+		pair<point, point> const key(start_pos, end_pos);
 		auto it(ray_map.find(key));
 		point cpos;
 		int cindex(-1);
 		
 		if (it != ray_map.end()) {cpos = it->second;} // intersection point is cached
 		else { // not found in cache, computer intersection point and add it
-			point const end_pos(start_pos + FAR_CLIP*ray_dir);
 			vector3d cnorm; // unused
-			if (!check_coll_line_exact_tree(start_pos, end_pos, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) continue;
-			if (coll_objects[cindex].fixed) {ray_map[key] = cpos;}
+			if (check_coll_line_exact_tree(start_pos, end_pos, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) {cpos -= SMALL_NUMBER*ray_dir;} // move away from coll pos
+			else {cpos = end_pos;} // clamp to end_pos if no int
+			if (cindex < 0 || coll_objects[cindex].truly_static()) {ray_map[key] = cpos;}
 		}
-		cpos -= SMALL_NUMBER*ray_dir; // move away from coll pos
 		//draw_subdiv_sphere(cpos, 0.01, N_SPHERE_DIV/2, 0, 0);
-
-		if (dist_less_than(cpos, start_pos, radius) && // hit point within light radius
-			(prev_cindex < 0 || !coll_objects[prev_cindex].line_intersect(cpos, camera)) && // doesn't intersect the previous cobj
+		if ((prev_cindex < 0 || !coll_objects[prev_cindex].line_intersect(cpos, camera)) && // doesn't intersect the previous cobj
 			!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1; // visible
 		prev_cindex = cindex;
-		++num_hits;
 	}
 	//shader.end_shader();
 	//PRINT_TIME("Light Source Vis");
-	return (num_hits < num_rays/2); // if most of the rays fail to hit something we return visible for safety
+	return 0; // not visible
 }
 
 
@@ -1048,9 +1067,9 @@ bool light_source::try_merge_into(light_source &ls) const {
 	if (ls.radius < radius) return 0; // shouldn't get here because of radius sort
 	if (!dist_less_than(pos, ls.pos, 0.2*min(HALF_DXY, radius))) return 0;
 	if (ls.bwidth != bwidth || ls.r_inner != r_inner || ls.dynamic != dynamic) return 0;
-	if (bwidth < 1.0 && dot_product(dir, ls.dir) < 0.95) return 0;
-	if (pos != pos2 || ls.pos != ls.pos2)    return 0; // don't merge line lights
-	if (is_neg_light() != ls.is_neg_light()) return 0; // don't merge neg lights (looks bad)
+	if (is_directional() && dot_product(dir, ls.dir) < 0.95) return 0;
+	if (is_line_light() || ls.is_line_light()) return 0; // don't merge line lights
+	if (is_neg_light () != ls.is_neg_light ()) return 0; // don't merge neg lights (looks bad)
 	colorRGBA lcolor(color);
 	float const rr(radius/ls.radius);
 	lcolor.alpha *= rr*rr; // scale by radius ratio squared
