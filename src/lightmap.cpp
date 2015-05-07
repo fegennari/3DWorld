@@ -104,7 +104,7 @@ cube_t light_source::calc_bcube(float sqrt_thresh) const {
 
 	if (is_very_directional()) {
 		cube_t bcube2;
-		calc_bounding_cylin().calc_bcube(bcube2);
+		calc_bounding_cylin(sqrt_thresh).calc_bcube(bcube2);
 		bcube2.expand_by(vector3d(DX_VAL, DY_VAL, DZ_VAL)); // add one grid unit
 		bcube.intersect_with_cube(bcube2);
 	}
@@ -134,11 +134,12 @@ float light_source::calc_cylin_end_radius() const {
 	float const d(1.0 - 2.0*(bwidth + LT_DIR_FALLOFF));
 	return radius*sqrt(1.0/(d*d) - 1.0);
 }
-cylinder_3dw light_source::calc_bounding_cylin() const {
+cylinder_3dw light_source::calc_bounding_cylin(float sqrt_thresh) const {
 
-	if (is_line_light()) {return cylinder_3dw(pos, pos2, radius, radius);}
+	float const rad(radius*(1.0 - sqrt_thresh));
+	if (is_line_light()) {return cylinder_3dw(pos, pos2, rad, rad);}
 	assert(is_very_directional()); // not for use with point lights or spotlights larger than a hemisphere
-	return cylinder_3dw(pos, pos+dir*radius, 0.0, calc_cylin_end_radius());
+	return cylinder_3dw(pos, pos+dir*rad, 0.0, (1.0 - sqrt_thresh)*calc_cylin_end_radius());
 }
 
 
@@ -173,7 +174,7 @@ bool light_source::is_visible() const {
 	bool const directional(is_directional()), very_dir(is_very_directional());
 	vector3d vortho[2];
 	if (very_dir) {get_ortho_vectors(dir, vortho);}
-	float const cylin_end_radius(very_dir ? calc_cylin_end_radius() : 0.0);
+	float const cylin_end_radius(very_dir ? calc_cylin_end_radius() : 0.0), radius_adj(radius*(1.0 - SQRT_CTHRESH));
 
 	if (dirs.empty()) { // start with 26 uniformly distributed directions
 		for (int x = -1; x <= 1; ++x) {
@@ -207,7 +208,7 @@ bool light_source::is_visible() const {
 			if (cur_dir > 26 && dir != zero_vector && dot_product(dir, ray_dir) < 0.0) {ray_dir = -ray_dir;} // invert direction
 		}
 		if (line_light) {start_pos += (float(n)/float(num_rays-1))*(pos2 - pos);} // fixed spacing along the length of the line
-		point const end_pos(start_pos + radius*ray_dir);
+		point const end_pos(start_pos + radius_adj*ray_dir);
 		pair<point, point> const key(start_pos, end_pos);
 		auto it(ray_map.find(key));
 		point cpos;
@@ -221,6 +222,7 @@ bool light_source::is_visible() const {
 			if (cindex < 0 || coll_objects[cindex].truly_static()) {ray_map[key] = cpos;}
 		}
 		//draw_subdiv_sphere(cpos, 0.01, N_SPHERE_DIV/2, 0, 0);
+		if (!camera_pdu.sphere_visible_test(cpos, 0.1*radius)) continue; // point not visible
 		if ((prev_cindex < 0 || !coll_objects[prev_cindex].line_intersect(cpos, camera)) && // doesn't intersect the previous cobj
 			!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1; // visible
 		prev_cindex = cindex;
