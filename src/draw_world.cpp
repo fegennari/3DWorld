@@ -1375,10 +1375,10 @@ void add_god_rays() {
 	s.set_frag_shader("god_rays");
 	s.begin_shader();
 	s.add_uniform_int("depth_tex", 0);
-	s.set_cur_color(WHITE);
 	s.add_uniform_color("sun_color", sun_color);
 	s.add_uniform_vector3d("sun_pos", world_space_to_screen_space(get_sun_pos()));
 	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
+	s.set_cur_color(WHITE);
 	draw_ortho_screen_space_quad();
 	s.end_shader();
 }
@@ -1388,10 +1388,10 @@ void add_ssao() {
 	bind_depth_buffer();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader(""); // FIXME
+	s.set_frag_shader("screen_space_ao");
 	s.begin_shader();
 	s.add_uniform_int("depth_tex", 0);
-	// FIXME: WRITE
+	s.add_uniform_vector2d("xy_step", vector2d(1.0/window_width, 1.0/window_height));
 	s.set_cur_color(WHITE);
 	draw_ortho_screen_space_quad();
 	s.end_shader();
@@ -1399,7 +1399,7 @@ void add_ssao() {
 
 void run_postproc_effects() {
 	if ((display_mode & 0x10) || (show_fog && world_mode == WMODE_GROUND)) {add_god_rays();}
-	//add_ssao();
+	if (display_mode & 0x20) {add_ssao();}
 }
 
 
