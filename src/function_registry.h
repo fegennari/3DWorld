@@ -696,6 +696,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 void check_falling_cobjs();
 
 // function prototypes - shadow_map
+cube_t get_scene_bounds();
 bool shadow_map_enabled();
 int get_smap_ndiv(float radius);
 void set_smap_shader_for_all_lights(shader_t &s, float z_bias=DEF_Z_BIAS);

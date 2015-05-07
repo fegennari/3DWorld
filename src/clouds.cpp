@@ -140,19 +140,13 @@ void cloud_manager_t::update_lighting() {
 
 cube_t cloud_manager_t::get_bcube() const {
 
-	cube_t bcube;
+	cube_t bcube(get_scene_bounds()); // default is scene bounds in case of empty clouds (not yet inited)
 
 	for (unsigned i = 0; i < size(); ++i) {
 		point const &pos((*this)[i].pos);
 		float const radius((*this)[i].radius);
-
-		if (i == 0) {
-			bcube = cube_t(pos, pos);
-			bcube.expand_by(radius);
-		}
-		else {
-			bcube.union_with_sphere(pos, radius);
-		}
+		if (i == 0) {bcube = cube_t(pos, pos); bcube.expand_by(radius);}
+		else {bcube.union_with_sphere(pos, radius);}
 	}
 	return bcube;
 }
@@ -265,13 +259,13 @@ void cloud_manager_t::draw() {
 		update_lighting();
 	}
 	if (cloud_model == 0) { // faster billboard texture mode
+		create_texture(need_update);
 		point const camera(get_camera_pos());
 		cube_t const bcube(get_bcube());
 		float const cloud_bot(bcube.d[2][0]), cloud_top(bcube.d[2][1]), cloud_xy(get_max_xy_extent());
 		float const xy_exp((cloud_top - frustum_z)/(cloud_bot - frustum_z));
 		//if (!camera_pdu.cube_visible(bcube)) return; // incorrect, and rarely returns
 
-		create_texture(need_update);
 		enable_flares(tid); // texture will be overriden
 		assert(cloud_tid);
 		bind_2d_texture(cloud_tid);
@@ -299,14 +293,9 @@ void cloud_manager_t::draw() {
 
 void draw_puffy_clouds(int order) {
 
-	if (cloud_manager.is_inited() && (get_camera_pos().z > cloud_manager.get_z_plane()) != order) return;
-
-	if (atmosphere < 0.01) {
-		cloud_manager.clear();
-	}
-	else if (((display_mode & 0x40) != 0) ^ is_cloudy) { // key 7
-		cloud_manager.draw();
-	}
+	if (get_camera_pos().z > cloud_manager.get_z_plane() != order) return;
+	if (atmosphere < 0.01) {cloud_manager.clear();}
+	else if (((display_mode & 0x40) != 0) ^ is_cloudy) {cloud_manager.draw();} // key 7
 }
 
 
