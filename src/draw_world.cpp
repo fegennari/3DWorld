@@ -527,6 +527,9 @@ void draw_coll_surfaces(bool draw_trans) {
 		if (has_lt_atten) {lt_atten_manager.enable();}
 		vector<vert_wrap_t> portal_verts;
 		bool in_portal(0);
+		// disable depth writing so that other partially transparent objects drawn in the wrong alpha order (fires, smoke, decals, particles)
+		// aren't discarded by the depth buffer, even though they won't be properly alpha blended, assuming alpha value is small (windows, portals, etc.)
+		glDepthMask(GL_FALSE);
 
 		for (unsigned i = 0; i < draw_last.size(); ++i) {
 			int const ix(draw_last[i].second);
@@ -571,6 +574,7 @@ void draw_coll_surfaces(bool draw_trans) {
 		cdb.flush();
 		disable_blend();
 		draw_last.resize(0);
+		glDepthMask(GL_TRUE); // re-enable depth writing
 	} // end draw_trans
 	s.clear_specular(); // may be unnecessary
 	s.end_shader();
