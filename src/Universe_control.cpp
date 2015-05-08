@@ -595,7 +595,7 @@ void send_warning_message(string const &msg) {
 	
 	if ((frame_counter - last_warning_frame) > 5.0*TICKS_PER_SECOND) {
 		print_text_onscreen(msg.c_str(), RED, 1.0, TICKS_PER_SECOND, 1);
-		gen_sound(SOUND_ALERT, get_player_pos2());
+		gen_sound(SOUND_ALERT, get_player_pos2(), 0.75);
 	}
 	last_warning_frame = frame_counter;
 }

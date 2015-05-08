@@ -2384,16 +2384,16 @@ void init_game_mode() {
 
 	string const str(string("Playing ") + ((game_mode == 1) ? "Deathmatch" : "Dodgeball") + " as " + player_name);
 	print_text_onscreen(str, WHITE, 2.0, MESSAGE_TIME, 4);
-	if (!free_for_all) teams = 0;
+	if (!free_for_all) {teams = 0;}
 	free_dodgeballs(1, 1);
 	init_sstate(CAMERA_ID, (game_mode == 1));
-	if (game_mode == 2) init_smileys();
+	if (game_mode == 2) {init_smileys();}
 	
 	for (int i = CAMERA_ID; i < num_smileys; ++i) {
 		sstates[i].killer = NO_SOURCE; // no one
-		if (game_mode == 1) init_sstate(i, 1); // ???
+		if (game_mode == 1) {init_sstate(i, 1);} // ???
 	}
-	gen_sound(SOUND_ALERT, get_camera_pos());
+	gen_sound(SOUND_ALERT, get_camera_pos(), 0.5);
 }
 
 
@@ -2401,18 +2401,15 @@ void update_game_frame() {
 
 	assert(sstates != NULL);
 	sstates[CAMERA_ID].update_camera_frame();
-	
-	for (int i = CAMERA_ID; i < num_smileys; ++i) {
-		sstates[i].update_sstate_game_frame(i);
-	}
+	for (int i = CAMERA_ID; i < num_smileys; ++i) {sstates[i].update_sstate_game_frame(i);}
 }
 
 
 void player_state::update_camera_frame() {
 
-	if (powerup_time < 0.0)   print_text_onscreen("Powerup Expired", WHITE, 1.0, MESSAGE_TIME/2, 1);
-	if (powerup == PU_REGEN ) camera_health = min(MAX_REGEN_HEALTH, camera_health + 0.1f*fticks);
-	if (powerup == PU_FLIGHT) camera_flight = 1;
+	if (powerup_time < 0.0)   {print_text_onscreen("Powerup Expired", WHITE, 1.0, MESSAGE_TIME/2, 1);}
+	if (powerup == PU_REGEN ) {camera_health = min(MAX_REGEN_HEALTH, camera_health + 0.1f*fticks);}
+	if (powerup == PU_FLIGHT) {camera_flight = 1;}
 	kill_time += max(1, iticks);
 }
 
@@ -2424,9 +2421,9 @@ void player_state::update_sstate_game_frame(int i) {
 	}
 	else if (animate2) {
 		powerup_time -= iticks;
-		if (powerup_time < 0) powerup_time = 0;
+		if (powerup_time < 0) {powerup_time = 0;}
 	}
-	if (powerup == PU_REGEN && shields > 1.0) shields = min(MAX_SHIELDS, shields + 0.075f*fticks);
+	if (powerup == PU_REGEN && shields > 1.0) {shields = min(MAX_SHIELDS, shields + 0.075f*fticks);}
 		
 	if (plasma_loaded && weapon == W_PLASMA) {
 		plasma_size += get_fspeed_scale()*fticks*PLASMA_SIZE_INCREASE;
