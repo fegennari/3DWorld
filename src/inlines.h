@@ -574,10 +574,10 @@ inline void fix_nsides(int &nsides) { // use discrete steps
 inline int get_min_dim(vector3d const &v) {
 	return ((fabs(v[0]) < fabs(v[1])) ? ((fabs(v[0]) < fabs(v[2])) ? 0:2) : ((fabs(v[1]) < fabs(v[2])) ? 1:2));
 }
-
 inline int get_max_dim(vector3d const &v) {
 	return ((fabs(v[0]) > fabs(v[1])) ? ((fabs(v[0]) > fabs(v[2])) ? 0:2) : ((fabs(v[1]) > fabs(v[2])) ? 1:2));
 }
+inline int get_min_dim(cube_t const &c) {return get_min_dim(c.get_size());}
 
 
 inline int get_light()          {return ((light_factor >= 0.5) ? LIGHT_SUN : LIGHT_MOON);}

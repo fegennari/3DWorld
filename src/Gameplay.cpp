@@ -1836,6 +1836,31 @@ void add_laser_beam_segment(point const &start_pos, point coll_pos, vector3d con
 }
 
 
+void gen_glass_shard_from_cube_window(cube_t const &cube, cobj_params const &cp, point const &pos) {
+
+	int const dmin(get_min_dim(cube)), dim1((dmin+1)%3), dim2((dmin+2)%3); // min cube dim
+	point const center(cube.get_cube_center());
+	float const val(center[dmin]);
+	point points[3]; // triangle
+	points[0][dim1] = pos[dim1]; points[0][dim2] = pos[dim2];
+
+	while (1) {
+		bool const dir(rand()&1);
+		int const edim(dir ? dim2 : dim1), sdim(dir ? dim1 : dim2);
+		points[1][edim] = points[2][edim] = (((pos[edim] - cube.d[edim][0]) < (cube.d[edim][1] - pos[edim])) ? cube.d[edim][0] : cube.d[edim][1]);
+
+		for (unsigned d = 0; d < 2; ++d) {
+			points[1+d][sdim] = rand_uniform(cube.d[sdim][d], pos[sdim]); // random pos between cube corner and perpendicular to center pos
+		}
+		float const base(fabs(points[2][sdim] - points[1][sdim])), height(fabs(points[1][edim] - pos[edim]));
+		if (base > 0.75*height && height > 0.5*base) break; // keep if not a high aspect ratio triangle
+	}
+	UNROLL_3X(points[i_][dmin] = val;)
+	int const cindex(add_coll_polygon(points, 3, cp, cube.min_len())); // should reuse index slot and not invalidate cobj
+	coll_objects[cindex].destroy = SHATTERABLE;
+}
+
+
 point projectile_test(point const &pos, vector3d const &vcf_, float firing_error, float damage,
 					  int shooter, float &range, float intensity, int ignore_cobj)
 {
@@ -1952,18 +1977,30 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	if (coll && cindex >= 0 && closest < 0) {
 		coll_obj &cobj(coll_objects[cindex]);
 		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), proj_type);
+		bool const is_glass(cobj.cp.is_glass());
 
 		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
 			float const decal_radius(rand_uniform(0.004, 0.006));
 
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, decal_radius, get_max_dim(coll_norm))) {
 				colorRGBA dcolor;
-				int decal_tid;
+				int decal_tid(-1);
 
 				if (is_laser) {
 					decal_tid = FLARE3_TEX; dcolor = BLACK;
 				}
-				else if (cobj.cp.is_glass()) {
+				else if (is_glass) {
+#if 0
+					if (cobj.type == COLL_CUBE && !cobj.maybe_is_moving()) {
+						cobj_params const cp(cobj.cp); // deep copy so that removal doesn't destroy it
+						cube_t const cube(cobj);
+						cobj.clear_internal_data();
+						cobj.remove_waypoint(); // can windows have waypoints? they shouldn't contribute to the shadow map
+						remove_coll_object(cindex); // later uses of cobj should be okay even if it's removed
+						gen_glass_shard_from_cube_window(cube, cp, coll_pos); // should reuse index slot and not invalidate cobj
+						build_cobj_tree(0, 0); // ???
+					} else
+#endif
 					decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
 				}
 				else {
@@ -1973,7 +2010,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					dcolor.alpha = 1.0;
 					//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
 				}
-				gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, cobj.cp.is_glass(), 1); // inherit partial glass color
+				if (decal_tid >= 0) {gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, is_glass, 1);} // inherit partial glass color
 			}
 		}
 		if (wtype == W_M16 && !cobj.is_tree_leaf() && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
@@ -1986,15 +2023,16 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				projectile_test(coll_pos, vcf, firing_error, damage, shooter, range_unused, 1.0, cindex); // return value is unused
 				no_spark = 1;
 			}
-			else if (cobj.cp.is_glass() && (rand()&1) == 0) { // projectile, 50% chance of continuing through glass with twice the firing error and 75% the damage
+			else if (is_glass && (rand()&1) == 0) { // projectile, 50% chance of continuing through glass with twice the firing error and 75% the damage
 				projectile_test(coll_pos, vcf, 2.0*firing_error, 0.75*damage, shooter, range_unused, 1.0, cindex); // return value is unused
 				no_spark = 1;
 			}
 		}
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((rand()%50) == 0)) || (cobj.destroy >= EXPLODEABLE && ((rand()%10) == 0))) {
+			if (is_glass && cobj.type == COLL_CUBE && !cobj.maybe_is_moving() && (rand()&7) != 0) {gen_glass_shard_from_cube_window(cobj, cobj.cp, coll_pos);}
 			destroy_coll_objs(coll_pos, 500.0, shooter, PROJECTILE, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
 		}
-		if (!is_laser && cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && destroy_thresh == 0) {
+		else if (!is_laser && cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && destroy_thresh == 0) {
 			update_voxel_sphere_region(coll_pos, object_types[PROJC].radius, -0.04, shooter, 0);
 		}
 	}
