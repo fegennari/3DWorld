@@ -1,3 +1,4 @@
+uniform float znear, zfar;
 uniform vec2 xy_step;
 uniform sampler2D depth_tex;
 uniform int NUM_DIRS  = 8;
@@ -5,9 +6,15 @@ uniform int NUM_STEPS = 4;
 
 in vec2 tc;
 
+float get_linear_depth(in vec2 pos) {
+	float d = texture(depth_tex, pos).r;
+	return (2.0 * znear) / (zfar + znear - d * (zfar - znear));
+}
+
 void main()
 {
-	float depth0   = texture(depth_tex, tc).r - 0.0001;
+	//gl_FragColor = vec4(vec3(get_linear_depth(tc)),1); return;
+	float depth0   = get_linear_depth(tc) - 0.0001;
 	float dir_mul  = 2.0 * 3.14159 / NUM_DIRS;
 	float step_mul = 1.0 / NUM_STEPS;
 	float weight   = 0.0;
@@ -21,7 +28,8 @@ void main()
 
 		for (int s = 0; s < NUM_STEPS; s++) {
 			pos += step;
-			float depth = texture(depth_tex, pos).r;
+			float depth = get_linear_depth(pos);
+			if (depth + 0.1 < depth0) {break;} // large depth disconuity, skip this dir
 
 			if (depth < depth0) {
 				//if (s == 0) {denom -= 1.0; break;} // if first sample is closer, assume this is the edge of the feature and the back of the face and discard
@@ -30,5 +38,6 @@ void main()
 			}
 		}
 	}
-	gl_FragColor = vec4(0.0, 0.0, 0.0, 0.8*weight/denom); // darken by weight
+	float darken = max(0.0, 1.0*weight/max(denom, 1.0)-0.1);
+	gl_FragColor = vec4(0.0, 0.0, 0.0, darken); // darken by weight
 }

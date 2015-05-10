@@ -822,6 +822,7 @@ void draw_sky(int order) {
 		setup_gl_light_atten(light_id, 0.0, 0.01, 0.01);
 	}
 	if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
+	glDepthMask(GL_FALSE); // disable depth writing
 	shader_t s;
 	s.setup_enabled_lights(5, 1); // sun, moon, and L4 VS lighting (L2 and L3 are set but unused)
 	s.set_vert_shader("ads_lighting.part*+texture_gen.part+cloud_sphere");
@@ -838,6 +839,7 @@ void draw_sky(int order) {
 	s.end_shader();
 	disable_blend();
 	disable_light(light_id);
+	glDepthMask(GL_TRUE); // enable depth writing
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 }
 
@@ -1396,6 +1398,8 @@ void add_ssao() {
 	s.begin_shader();
 	s.add_uniform_int("depth_tex", 0);
 	s.add_uniform_vector2d("xy_step", vector2d(1.0/window_width, 1.0/window_height));
+	s.add_uniform_float("znear", NEAR_CLIP);
+	s.add_uniform_float("zfar",  FAR_CLIP);
 	s.set_cur_color(WHITE);
 	draw_ortho_screen_space_quad();
 	s.end_shader();
