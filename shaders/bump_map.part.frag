@@ -5,6 +5,10 @@ in vec2 tc; // not used in USE_TANGENT_VECTOR mode
 #ifdef USE_BUMP_MAP
 uniform sampler2D bump_map;
 
+vec3 bump_map_blend(in vec3 n1, in vec3 n2) {
+	return normalize(vec3(n1.xy + n2.xy, n1.z*n2.z)); // Whiteout blending; drop the n2.z term for UDN blending
+}
+
 #ifdef USE_TANGENT_VECTOR
 in vec4 tangent_v;
 
