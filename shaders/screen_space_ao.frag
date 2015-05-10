@@ -13,7 +13,7 @@ float get_linear_depth(in vec2 pos) {
 
 void main()
 {
-	//gl_FragColor = vec4(vec3(get_linear_depth(tc)),1); return;
+	//fg_FragColor = vec4(vec3(get_linear_depth(tc)),1); return;
 	float depth0   = get_linear_depth(tc) - 0.0001;
 	float dir_mul  = 2.0 * 3.14159 / NUM_DIRS;
 	float step_mul = 1.0 / NUM_STEPS;
@@ -39,5 +39,5 @@ void main()
 		}
 	}
 	float darken = max(0.0, 1.0*weight/max(denom, 1.0)-0.1);
-	gl_FragColor = vec4(0.0, 0.0, 0.0, darken); // darken by weight
+	fg_FragColor = vec4(0.0, 0.0, 0.0, darken); // darken by weight
 }

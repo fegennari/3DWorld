@@ -30,5 +30,5 @@ void main()
 		weight += get_sample(pos) * illumination_decay;
 		illumination_decay *= decay;
 	}
-	gl_FragColor = sun_color * weight * exposure / float(NUM_SAMPLES);
+	fg_FragColor = sun_color * weight * exposure / float(NUM_SAMPLES);
 }
