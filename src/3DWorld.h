@@ -386,6 +386,7 @@ struct cube_t { // size = 24
 		UNROLL_3X(if (d[i_][1] != c.d[i_][1]) return 0;)
 		return 1;
 	}
+	bool operator!=(cube_t const &c) const {return !operator==(c);}
 	cube_t operator+ (vector3d const &p) const {cube_t c(*this); c += p; return c;}
 	cube_t operator- (vector3d const &p) const {cube_t c(*this); c -= p; return c;}
 	cube_t operator* (float scale      ) const {cube_t c(*this); c *= scale; return c;}

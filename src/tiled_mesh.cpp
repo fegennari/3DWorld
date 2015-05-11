@@ -36,6 +36,7 @@ bool tt_lightning_enabled(0);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
+tile_t::offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
@@ -756,7 +757,12 @@ void tile_t::setup_shadow_maps(tile_shadow_map_manager &smap_manager) {
 			smap_data.push_back(smap_manager.new_smap_data(13+i, this, i));
 		}
 	}
-	smap_data.create_if_needed(get_bcube());
+	cube_t bcube(get_bcube());
+	// extend bcube upwards to include any models above the mesh that cast shadows on this tile
+	// FIXME: still not correct for low sun pos - need a more accurate way to determine which models can shadow this tile
+	cube_t const models_bcube(get_all_models_bcube());
+	if (models_bcube != all_zeros_cube) {bcube.d[2][1] = max(bcube.d[2][1], models_bcube.d[2][1]);}
+	smap_data.create_if_needed(bcube);
 }
 
 void tile_t::clear_shadow_map(tile_shadow_map_manager *smap_manager) {
@@ -2002,6 +2008,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0);}
+	render_models(1, model3d_offset.get_xlate()); // VFC should work here (somewhat?) for models
 	fog_enabled = orig_fog_enabled;
 	//PRINT_TIME("Draw Shadow Pass");
 }
@@ -2431,8 +2438,6 @@ bool line_intersect_tiled_mesh_get_tile(point const &v1, point const &v2, point 
 int get_tiled_terrain_tid_under_point(point const &pos) {
 	return terrain_tile_draw.get_tid_under_point(pos);
 }
-
-tile_t::offset_t model3d_offset;
 
 void draw_tiled_terrain(bool reflection_pass) {
 

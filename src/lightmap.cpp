@@ -27,7 +27,7 @@ bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_l
 unsigned dl_tid(0), elem_tid(0), gb_tid(0);
 float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
-cube_t dlight_bcube(0,0,0,0,0,0);
+cube_t dlight_bcube(all_zeros_cube);
 dls_cell **ldynamic = NULL;
 vector<light_source> light_sources_a, /* light_sources_d, */ dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
 vector<light_source_trig> light_sources_d;
