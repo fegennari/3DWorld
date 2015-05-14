@@ -414,7 +414,7 @@ void create_shadow_map() {
 	if (scene_smap_vbo_invalid) {free_smap_vbo();}
 
 	// render shadow maps to textures
-	add_coll_shadow_objs(0); // no VFC
+	add_coll_shadow_objs();
 	ensure_smap_data();
 	
 	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}

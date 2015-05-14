@@ -30,7 +30,7 @@ public:
 	void draw() const; // lights, color, texture, shadowed
 	void apply_physics(float stepsize, int index); // begin_motion, move, random dir change, collision (mesh and cobjs), forces applied to?
 	void add_light() const; // dynamic lights
-	void add_cobj_shadows(bool enable_vfc) const; // cobjs, dynamic objects
+	void add_cobj_shadows() const; // cobjs, dynamic objects
 	void add_cobj();
 	void remove_cobj();
 };
@@ -51,7 +51,7 @@ public:
 	void draw() const;
 	void apply_physics(float stepsize=1.0);
 	void add_light() const;
-	void add_cobj_shadows(bool enable_vfc) const;
+	void add_cobj_shadows() const;
 	void build_lookup_matrix();
 };
 

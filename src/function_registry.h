@@ -152,8 +152,8 @@ void set_brass_material (shader_t &shader, float alpha=1.0);
 bool is_above_mesh(point const &pos);
 bool check_face_containment(cube_t const &cube, int dim, int dir, int cobj);
 float get_mesh_zmax(point const *const pts, unsigned npts);
-void add_shadow_obj(point const &pos, float radius, int coll_id, bool enable_vfc);
-void add_coll_shadow_objs(bool enable_vfc);
+void add_shadow_obj(point const &pos, float radius, int coll_id);
+void add_coll_shadow_objs();
 void get_occluders();
 
 // function prototypes - draw primitives

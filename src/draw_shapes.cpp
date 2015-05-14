@@ -350,13 +350,13 @@ void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
 }
 
 
-void add_shadow_obj(point const &pos, float radius, int coll_id, bool enable_vfc) {
-	if (enable_vfc && !camera_pdu.sphere_visible_test(pos, radius)) return;
+void add_shadow_obj(point const &pos, float radius, int coll_id) {
+	//if (enable_vfc && !camera_pdu.sphere_visible_test(pos, radius)) return;
 	shadow_objs.push_back(shadow_sphere(pos, radius, coll_id));
 }
 
 
-void add_shadow_cobj(int cid, bool enable_vfc) {
+void add_shadow_cobj(int cid) {
 
 	if (cid < 0) return;
 	assert((unsigned)cid < coll_objects.size());
@@ -364,11 +364,11 @@ void add_shadow_cobj(int cid, bool enable_vfc) {
 	point center;
 	float radius;
 	coll_objects[cid].bounding_sphere(center, radius);
-	add_shadow_obj(center, radius, cid, enable_vfc);
+	add_shadow_obj(center, radius, cid);
 }
 
 
-void add_coll_shadow_objs(bool enable_vfc) {
+void add_coll_shadow_objs() {
 	
 	//RESET_TIME;
 	shadow_objs.resize(0);
@@ -378,7 +378,7 @@ void add_coll_shadow_objs(bool enable_vfc) {
 	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID) && no_sparse_smap_update()) { // shadow the camera even when in the air (but not when dead)
 		point camera_pos(camera);
 		if (camera_mode == 1 && !spectate) {camera_pos.z -= 0.5*camera_zh;} // cancel out the z height that was previously added
-		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id, enable_vfc);
+		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id);
 	}
 	if (begin_motion) { // can ignore if behind camera and light in front of camera
 		for (int i = 0; i < num_groups; ++i) { // can we simply use the collision objects for this?
@@ -390,17 +390,17 @@ void add_coll_shadow_objs(bool enable_vfc) {
 			for (unsigned j = 0; j < objg.end_id; ++j) {
 				dwobject const &obj(objg.get_obj(j));
 				if (obj.disabled() || !objg.obj_has_shadow(j)) continue;
-				add_shadow_obj(obj.pos, radius, obj.coll_id, enable_vfc);
+				add_shadow_obj(obj.pos, radius, obj.coll_id);
 			}
 		}
 	}
-	for (unsigned i = 0; i < weap_cobjs.size(); ++i) {add_shadow_cobj(weap_cobjs[i], enable_vfc);}
+	for (unsigned i = 0; i < weap_cobjs.size(); ++i) {add_shadow_cobj(weap_cobjs[i]);}
 
 	for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
-		for (vector<unsigned>::const_iterator j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {add_shadow_cobj(*j, enable_vfc);}
+		for (vector<unsigned>::const_iterator j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {add_shadow_cobj(*j);}
 	}
-	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {add_shadow_cobj(falling_cobjs[i], enable_vfc);}
-	if (display_mode & 0x0200) {d_part_sys.add_cobj_shadows(enable_vfc);}
+	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {add_shadow_cobj(falling_cobjs[i]);}
+	if (display_mode & 0x0200) {d_part_sys.add_cobj_shadows();}
 	//PRINT_TIME(" Shadow Object Creation");
 }
 
