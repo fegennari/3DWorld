@@ -92,7 +92,7 @@ double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
-colorRGBA bkg_color;
+colorRGBA bkg_color, flower_color(ALPHA0);
 set<unsigned char> keys, keyset;
 char game_mode_string[MAX_CHARS] = {"640x480"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
@@ -1743,6 +1743,10 @@ int load_config(string const &config_file) {
 			if (fscanf(fp, "%f%f%f%f%f", &leaf_base_color.R, &leaf_base_color.G, &leaf_base_color.B, &leaf_color_coherence, &tree_color_coherence) != 5) {
 				cfg_err("leaf_color command", error);
 			}
+		}
+		else if (str == "flower_color") {
+			if (fscanf(fp, "%f%f%f", &flower_color.R, &flower_color.G, &flower_color.B) != 3) {cfg_err("flower_color command", error);}
+			flower_color.A = 1.0;
 		}
 		else if (str == "floating_light_params") { // rmin, rmax, vmin, vmax, imin, imax
 			if (fscanf(fp, "%f%f%f%f%f%f", &dp_params.rmin, &dp_params.rmax, &dp_params.vmin, &dp_params.vmax, &dp_params.imin, &dp_params.imax) != 6) {

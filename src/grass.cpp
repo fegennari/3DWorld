@@ -19,7 +19,7 @@ float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter, draw_model;
 extern unsigned create_voxel_landscape;
 extern float vegetation, zmin, zmax, fticks, tfticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex, zmax_est;
-extern colorRGBA leaf_base_color;
+extern colorRGBA leaf_base_color, flower_color;
 extern vector3d wind;
 extern obj_type object_types[];
 extern coll_obj_group coll_objects;
@@ -833,8 +833,15 @@ void flower_manager_t::add_flowers(mesh_xy_grid_cache_t const density_gen[2],
 		if (gen_zval) {pos.z += interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 1);}
 		vector3d const normal((plus_z + rgen.signed_rand_vector(0.2)).get_norm()); // facing mostly up (or face toward sun?)
 		float const radius(grass_width*rgen.rand_uniform(1.5, 2.5));
-		float const color_val(cval + 0.25*rgen.signed_rand_float());
-		colorRGBA const &color(colors[int(0.5*NUM_COLORS*color_val)%NUM_COLORS]);
+		colorRGBA color;
+
+		if (flower_color.alpha > 0.0) {
+			color = flower_color;
+		}
+		else {
+			float const color_val(cval + 0.25*rgen.signed_rand_float());
+			color = colors[int(0.5*NUM_COLORS*color_val)%NUM_COLORS];
+		}
 		flowers.push_back(flower_t(pos, normal, radius, height, color));
 	}
 }

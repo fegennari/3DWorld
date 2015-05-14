@@ -40,6 +40,8 @@ wind_velocity 0.4 0.2 0.0
 
 grass_density 250
 grass_size 0.02 0.002
+flower_density 0.5
+flower_color 1.0 1.0 0.0 # yellow
 
 use_waypoints 1
 
