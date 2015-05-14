@@ -474,7 +474,7 @@ void s_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d
 		return;
 	}
 	color.set_for_cur_shader();
-	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(radius) : int(sscale*radius/dist)))));
+	int const ndiv(max(4, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(radius) : int(sscale*radius/dist)))));
 	fgPushMatrix();
 	translate_to(pos);
 	rotate_about(angle, dir);
@@ -582,7 +582,7 @@ void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d 
 		return;
 	}
 	color.set_for_cur_shader();
-	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
+	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_def_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
 	fgPushMatrix();
 	translate_to(pos);
 	rotate_by_vector(dir);
@@ -642,7 +642,7 @@ void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3
 		return;
 	}
 	color.set_for_cur_shader();
-	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
+	int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_def_smap_ndiv(2.2*radius) : int(2.2*sscale*radius/dist)))));
 	if (!shadow_only) {select_texture(TREE_END_TEX);}
 	draw_circle_normal(0.0, radius2, ndiv, 0, pos+vector3d(0.0, 0.0, height));
 	if (!shadow_only) {select_texture(get_tid());}
@@ -797,7 +797,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 		tree_scenery_pld.add_textured_line((pos+xlate - point(0.0, 0.0, 0.1*height)), (pos+xlate + point(0.0, 0.0, 0.75*height)), color, WOOD_TEX);
 	}
 	else {
-		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
+		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_def_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
 		color.set_for_cur_shader();
 		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1, 0, 0, NULL, 6.0);
 	}

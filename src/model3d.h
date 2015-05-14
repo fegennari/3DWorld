@@ -377,7 +377,7 @@ class model3d {
 	struct model_smap_data_t : public smap_data_t {
 		model3d *model;
 
-		model_smap_data_t(unsigned tu_id_, model3d *model_) : smap_data_t(tu_id_), model(model_) {assert(model);}
+		model_smap_data_t(unsigned tu_id_, unsigned smap_sz_, model3d *model_) : smap_data_t(tu_id_, smap_sz_), model(model_) {assert(model);}
 		virtual void render_scene_shadow_pass(point const &lpos);
 		//virtual bool needs_update(point const &lpos);
 	};

@@ -727,10 +727,10 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 tile_smap_data_t tile_shadow_map_manager::new_smap_data(unsigned tu_id, tile_t *tile, unsigned light) {
 	assert(tile != nullptr);
 	assert(light < NUM_LIGHT_SRC);
-	if (free_list[light].empty()) {return tile_smap_data_t(tu_id, tile);}
+	if (free_list[light].empty()) {return tile_smap_data_t(tu_id, shadow_map_sz, tile);}
 	smap_data_state_t const state(free_list[light].back());
 	free_list[light].pop_back();
-	return tile_smap_data_t(tu_id, tile, state);
+	return tile_smap_data_t(tu_id, shadow_map_sz, tile, state);
 }
 
 void tile_shadow_map_manager::release_smap_data(tile_smap_data_t &smd, unsigned light) {

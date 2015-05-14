@@ -76,8 +76,8 @@ struct tile_smap_data_t : public smap_data_t {
 	int dxoff, dyoff;
 	tile_t *tile;
 
-	tile_smap_data_t(unsigned tu_id_, tile_t *tile_, smap_data_state_t const &init_state=smap_data_state_t())
-		: smap_data_t(tu_id_, init_state), dxoff(0), dyoff(0), tile(tile_) {}
+	tile_smap_data_t(unsigned tu_id_, unsigned smap_sz_, tile_t *tile_, smap_data_state_t const &init_state=smap_data_state_t())
+		: smap_data_t(tu_id_, smap_sz_, init_state), dxoff(0), dyoff(0), tile(tile_) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
 };

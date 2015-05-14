@@ -879,7 +879,7 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 		scale = width*vector3d(1.2, 1.2, 0.5);
 		break;
 	}
-	int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
+	int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
 
 	if (r_angle != 0.0) {
 		fgPushMatrix();

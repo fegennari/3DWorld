@@ -116,8 +116,8 @@ void dynamic_particle::add_light() const { // dynamic lights
 	if (lighted) {add_dynamic_light(intensity, pos, color, velocity, bwidth);} // beam in direction of velocity
 }
 
-void dynamic_particle::add_cobj_shadows() const { // cobjs, dynamic objects
-	add_shadow_obj(pos, radius, -1);
+void dynamic_particle::add_cobj_shadows(bool enable_vfc) const { // cobjs, dynamic objects
+	add_shadow_obj(pos, radius, -1, enable_vfc);
 }
 
 void dynamic_particle::add_cobj() {
@@ -170,8 +170,8 @@ void dynamic_particle_system::add_light() const {
 	for (unsigned i = 0; i < size(); ++i) {particles[i].add_light();}
 }
 
-void dynamic_particle_system::add_cobj_shadows() const {
-	for (unsigned i = 0; i < size(); ++i) {particles[i].add_cobj_shadows();}
+void dynamic_particle_system::add_cobj_shadows(bool enable_vfc) const {
+	for (unsigned i = 0; i < size(); ++i) {particles[i].add_cobj_shadows(enable_vfc);}
 }
 
 

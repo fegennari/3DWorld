@@ -32,27 +32,41 @@ cube_t get_scene_bounds() {
 	return cube_t(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, min(zbottom, czmin), max(ztop, czmax));
 }
 
+float approx_pixel_width(unsigned smap_sz) {
+	return 0.5*sqrt(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE) / smap_sz;
+}
+int get_smap_ndiv(float radius, unsigned smap_sz) {
+	// dynamic based on distance(camera, line(lpos, scene_center))?
+	return min(N_SPHERE_DIV, max(4, int(0.5*radius/approx_pixel_width(smap_sz))));
+}
+int get_def_smap_ndiv(float radius) {return get_smap_ndiv(radius, shadow_map_sz);}
+
 
 struct ground_mode_smap_data_t : public smap_data_t {
 
 	bool last_has_dynamic;
 
-	ground_mode_smap_data_t(unsigned tu_id_) : smap_data_t(tu_id_), last_has_dynamic(0) {}
+	ground_mode_smap_data_t(unsigned tu_id_) : smap_data_t(tu_id_, shadow_map_sz), last_has_dynamic(0) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
 };
 
-ground_mode_smap_data_t smap_data[NUM_LIGHT_SRC] = {ground_mode_smap_data_t(6), ground_mode_smap_data_t(7)};
+vector<ground_mode_smap_data_t> smap_data;
+
+void ensure_smap_data() {
+
+	if (smap_data.empty()) {
+		for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {smap_data.push_back(ground_mode_smap_data_t(6+l));} // tu_ids 6 and 7
+	}
+	assert(smap_data.size() == NUM_LIGHT_SRC);
+}
 
 
 class smap_vertex_cache_t : public vbo_wrap_t {
 
 	unsigned num_verts1, num_verts2;
-
-public:
 	vector<vert_wrap_t> dverts;
 
-	smap_vertex_cache_t() : num_verts1(0), num_verts2(0) {}
 	void end_block1(unsigned size) {num_verts1 = size;}
 
 	void upload(vector<vert_wrap_t> const &verts) {
@@ -60,6 +74,7 @@ public:
 		assert(vbo_valid());
 		num_verts2 = verts.size();
 	}
+public:
 	void render() const {
 		if (num_verts2 == 0) return; // empty
 		shader_t s;
@@ -81,10 +96,77 @@ public:
 	void render_dynamic() {
 		draw_and_clear_verts(dverts, GL_TRIANGLES);
 	}
+	smap_vertex_cache_t() : num_verts1(0), num_verts2(0) {}
+
 	void free() {
 		clear_vbo();
 		num_verts1 = num_verts2 = 0;
 		dverts.clear();
+	}
+
+	void add_cobjs(unsigned smap_sz, bool enable_vfc) {
+		if (coll_objects.drawn_ids.empty()) return;	// do nothing
+		if (vbo_valid()) return; // already valid
+		// only valid if drawing trees, small trees, and scenery separately
+		vector<vert_wrap_t> verts;
+		vector<pair<float, unsigned> > z_sorted;
+
+		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
+			coll_obj const &c(coll_objects[*i]);
+			assert(c.cp.draw);
+			if (c.no_shadow_map()) continue;
+			// Note: since these are static/drawn once, we can't do any VFC for the camera, but we can do VFC for the light frustum of local light sources 
+			if (enable_vfc && !c.is_cobj_visible()) continue; // Note: assumes camera_du == light_pdu
+			int ndiv(1);
+
+			if (c.type == COLL_CUBE) {
+				z_sorted.push_back(make_pair(-c.d[2][1], *i));
+				continue;
+			}
+			else if (c.type == COLL_SPHERE) {
+				ndiv = get_smap_ndiv(c.radius, smap_sz);
+			}
+			else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {
+				ndiv = get_smap_ndiv(max(c.radius, c.radius2), smap_sz);
+			}
+			c.get_shadow_triangle_verts(verts, ndiv);
+		}
+		end_block1(verts.size());
+		sort(z_sorted.begin(), z_sorted.end());
+
+		for (vector<pair<float, unsigned> >::const_iterator i = z_sorted.begin(); i != z_sorted.end(); ++i) {
+			coll_objects[i->second].get_shadow_triangle_verts(verts, 1);
+		}
+		upload(verts);
+	}
+
+	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz) {
+		if (shadow_objs.empty()) return; // no dynamic objects
+		shader_t shader;
+		shader.set_vert_shader("vertex_xlate_scale");
+		shader.set_frag_shader("color_only");
+		shader.begin_shader();
+		int const shader_loc(shader.get_uniform_loc("xlate_scale"));
+		assert(shader_loc >= 0);
+		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
+
+		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
+			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
+			int const ndiv(get_smap_ndiv(i->radius, smap_sz));
+
+			if (i->ctype != COLL_SPHERE) {
+				assert((unsigned)i->cid < coll_objects.size());
+				coll_objects[i->cid].get_shadow_triangle_verts(dverts, ndiv);
+			}
+			else {
+				shader_t::set_uniform_vector4d(shader_loc, vector4d(i->pos, i->radius));
+				draw_sphere_vbo_pre_bound(ndiv, 0);
+			}
+		}
+		bind_vbo(0); // clear any bound sphere VBOs
+		shader.set_uniform_vector4d(shader_loc, vector4d(all_zeros, 1.0)); // reset to identity transform
+		render_dynamic();
+		shader.end_shader();
 	}
 };
 
@@ -92,16 +174,6 @@ smap_vertex_cache_t smap_vertex_cache;
 
 
 bool shadow_map_enabled() {return (shadow_map_sz > 0);}
-
-float approx_pixel_width() {
-	return 0.5*sqrt(X_SCENE_SIZE*X_SCENE_SIZE + Y_SCENE_SIZE*Y_SCENE_SIZE) / shadow_map_sz;
-}
-
-int get_smap_ndiv(float radius) {
-	// dynamic based on distance(camera, line(lpos, scene_center))?
-	return min(N_SPHERE_DIV, max(4, int(0.5*radius/approx_pixel_width())));
-}
-
 void free_smap_vbo() {smap_vertex_cache.free();}
 
 
@@ -151,7 +223,7 @@ void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 
 	s.add_uniform_float("z_bias", z_bias);
 
-	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
+	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}
 		smap_data[l].set_smap_shader_for_light(s, l);
 	}
 }
@@ -246,9 +318,10 @@ bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 }
 
 
-void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube_t const &bounds) { // Note: light is unused
+void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const &bounds) {
 
 	// setup render state
+	assert(smap_sz > 0);
 	bool const do_update(needs_update(lpos)); // must be called first, because this may indirectly update bounds
 	xform_matrix const camera_mv_matrix(fgGetMVM()); // cache the camera modelview matrix before we change it
 	fgPushMatrix();
@@ -265,11 +338,11 @@ void smap_data_t::create_shadow_map_for_light(int light, point const &lpos, cube
 			bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
 			setup_texture(tid, 0, 0, 0, 0, 0, nearest);
 			set_shadow_tex_params();
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadow_map_sz, shadow_map_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 		}
 		// render from the light POV to a FBO, store depth values only
 		enable_fbo(fbo_id, tid, 1);
-		glViewport(0, 0, shadow_map_sz, shadow_map_sz);
+		glViewport(0, 0, smap_sz, smap_sz);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 		// save state and update variables for fast rendering with correct clipping
@@ -301,72 +374,11 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	camera_pos = lpos;
 
 	// add static objects
-	if (coll_objects.drawn_ids.empty()) {
-		// do nothing
-	}
-	else if (!smap_vertex_cache.vbo_valid()) {
-		// only valid if drawing trees, small trees, and scenery separately
-		vector<vert_wrap_t> verts;
-		vector<pair<float, unsigned> > z_sorted;
-
-		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
-			coll_obj const &c(coll_objects[*i]);
-			assert(c.cp.draw);
-			if (c.no_shadow_map()) continue;
-			int ndiv(1);
-
-			if (c.type == COLL_CUBE) {
-				z_sorted.push_back(make_pair(-c.d[2][1], *i));
-				continue;
-			}
-			else if (c.type == COLL_SPHERE) {
-				ndiv = get_smap_ndiv(c.radius);
-			}
-			else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {
-				ndiv = get_smap_ndiv(max(c.radius, c.radius2));
-			}
-			c.get_shadow_triangle_verts(verts, ndiv);
-		}
-		smap_vertex_cache.end_block1(verts.size());
-		sort(z_sorted.begin(), z_sorted.end());
-
-		for (vector<pair<float, unsigned> >::const_iterator i = z_sorted.begin(); i != z_sorted.end(); ++i) {
-			coll_objects[i->second].get_shadow_triangle_verts(verts, 1);
-		}
-		smap_vertex_cache.upload(verts);
-	}
+	smap_vertex_cache.add_cobjs(smap_sz, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 	render_models(1);
 	render_voxel_data(1);
-
-	if (!shadow_objs.empty()) { // add dynamic objects
-		vector<vert_wrap_t> &dverts(smap_vertex_cache.dverts);
-		shader_t shader;
-		shader.set_vert_shader("vertex_xlate_scale");
-		shader.set_frag_shader("color_only");
-		shader.begin_shader();
-		int const shader_loc(shader.get_uniform_loc("xlate_scale"));
-		assert(shader_loc >= 0);
-		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
-
-		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
-			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue;
-			int const ndiv(get_smap_ndiv(i->radius));
-
-			if (i->ctype != COLL_SPHERE) {
-				assert((unsigned)i->cid < coll_objects.size());
-				coll_objects[i->cid].get_shadow_triangle_verts(dverts, ndiv);
-			}
-			else {
-				shader_t::set_uniform_vector4d(shader_loc, vector4d(i->pos, i->radius));
-				draw_sphere_vbo_pre_bound(ndiv, 0);
-			}
-		}
-		bind_vbo(0); // clear any bound sphere VBOs
-		shader.set_uniform_vector4d(shader_loc, vector4d(all_zeros, 1.0)); // reset to identity transform
-		smap_vertex_cache.render_dynamic();
-		shader.end_shader();
-	}
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz);
 	// add snow, trees, scenery, and mesh
 	if (snow_shadows) {draw_snow(1);} // slow
 	draw_trees(1);
@@ -375,7 +387,7 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	if ((display_mode & 0x01) && ground_effects_level != 0) { // draw mesh
 		fgPushMatrix();
 		float const val(1.0/dot_product(lpos.get_norm(), plus_z));
-		fgTranslate(0.0, 0.0, -val*approx_pixel_width()); // translate down slightly to reduce shadow aliasing problems
+		fgTranslate(0.0, 0.0, -val*approx_pixel_width(smap_sz)); // translate down slightly to reduce shadow aliasing problems
 		display_mesh(1);
 		fgPopMatrix();
 	}
@@ -402,11 +414,12 @@ void create_shadow_map() {
 	if (scene_smap_vbo_invalid) {free_smap_vbo();}
 
 	// render shadow maps to textures
-	add_coll_shadow_objs();
+	add_coll_shadow_objs(0); // no VFC
+	ensure_smap_data();
 	
-	for (int l = 0; l < NUM_LIGHT_SRC; ++l) { // {sun, moon}
+	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}
 		point lpos;
-		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(l, lpos, get_scene_bounds());}
+		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(lpos, get_scene_bounds());}
 	}
 	scene_smap_vbo_invalid = 0;
 
@@ -421,9 +434,7 @@ void create_shadow_map() {
 
 void free_shadow_map_textures() {
 
-	for (unsigned l = 0; l < NUM_LIGHT_SRC; ++l) {
-		smap_data[l].free_gl_state();
-	}
+	for (unsigned l = 0; l < smap_data.size(); ++l) {smap_data[l].free_gl_state();}
 	free_smap_vbo();
 }
 

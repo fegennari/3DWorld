@@ -152,8 +152,8 @@ void set_brass_material (shader_t &shader, float alpha=1.0);
 bool is_above_mesh(point const &pos);
 bool check_face_containment(cube_t const &cube, int dim, int dir, int cobj);
 float get_mesh_zmax(point const *const pts, unsigned npts);
-void add_shadow_obj(point const &pos, float radius, int coll_id);
-void add_coll_shadow_objs();
+void add_shadow_obj(point const &pos, float radius, int coll_id, bool enable_vfc);
+void add_coll_shadow_objs(bool enable_vfc);
 void get_occluders();
 
 // function prototypes - draw primitives
@@ -698,7 +698,7 @@ void check_falling_cobjs();
 // function prototypes - shadow_map
 cube_t get_scene_bounds();
 bool shadow_map_enabled();
-int get_smap_ndiv(float radius);
+int get_def_smap_ndiv(float radius);
 void set_smap_shader_for_all_lights(shader_t &s, float z_bias=DEF_Z_BIAS);
 pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds, bool set_matrix);
 void draw_scene_bounds_and_light_frustum(point const &lpos);
