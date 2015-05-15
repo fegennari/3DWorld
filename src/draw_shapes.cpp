@@ -375,11 +375,6 @@ void add_coll_shadow_objs() {
 	if (!shadow_map_enabled()) return;
 	point const camera(get_camera_pos());
 
-	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID) && no_sparse_smap_update()) { // shadow the camera even when in the air (but not when dead)
-		point camera_pos(camera);
-		if (camera_mode == 1 && !spectate) {camera_pos.z -= 0.5*camera_zh;} // cancel out the z height that was previously added
-		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id);
-	}
 	if (begin_motion) { // can ignore if behind camera and light in front of camera
 		for (int i = 0; i < num_groups; ++i) { // can we simply use the collision objects for this?
 			obj_group const &objg(obj_groups[i]);
@@ -401,6 +396,12 @@ void add_coll_shadow_objs() {
 	}
 	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {add_shadow_cobj(falling_cobjs[i]);}
 	if (display_mode & 0x0200) {d_part_sys.add_cobj_shadows();}
+
+	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID) && no_sparse_smap_update()) { // shadow the camera even when in the air (but not when dead)
+		point camera_pos(camera);
+		if (camera_mode == 1 && !spectate) {camera_pos.z -= 0.5*camera_zh;} // cancel out the z height that was previously added
+		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id);
+	}
 	//PRINT_TIME(" Shadow Object Creation");
 }
 
