@@ -169,7 +169,7 @@ bool light_source::is_visible() const {
 	//RESET_TIME;
 	point const camera(get_camera_pos());
 	int prev_cindex(-1);
-	if (!check_coll_line_tree(pos, camera, prev_cindex, camera_coll_id, 0, 1, 1, 0)) return 1; // light center is visible
+	if (!check_coll_line_tree(pos, camera, prev_cindex, camera_coll_id, 0, 1, 1, 0, 1)) return 1; // light center is visible
 	unsigned cur_dir(0);
 	bool const directional(is_directional()), very_dir(is_very_directional());
 	vector3d vortho[2];
@@ -217,14 +217,13 @@ bool light_source::is_visible() const {
 		if (it != ray_map.end()) {cpos = it->second;} // intersection point is cached
 		else { // not found in cache, computer intersection point and add it
 			vector3d cnorm; // unused
-			if (check_coll_line_exact_tree(start_pos, end_pos, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0)) {cpos -= SMALL_NUMBER*ray_dir;} // move away from coll pos
-			else {cpos = end_pos;} // clamp to end_pos if no int
+			if (!check_coll_line_exact_tree(start_pos, end_pos, cpos, cnorm, cindex, camera_coll_id, 0, 1, 1, 0, 1)) {cpos = end_pos;} // clamp to end_pos if no int
 			if (cindex < 0 || coll_objects[cindex].truly_static()) {ray_map[key] = cpos;}
 		}
 		//draw_subdiv_sphere(cpos, 0.01, N_SPHERE_DIV/2, 0, 0);
 		if (!camera_pdu.sphere_visible_test(cpos, 0.1*radius)) continue; // point not visible
 		if ((prev_cindex < 0 || !coll_objects[prev_cindex].line_intersect(cpos, camera)) && // doesn't intersect the previous cobj
-			!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0)) return 1; // visible
+			!check_coll_line_tree(cpos, camera, cindex, camera_coll_id, 0, 1, 1, 0, 1)) return 1; // visible
 		prev_cindex = cindex;
 	}
 	//shader.end_shader();

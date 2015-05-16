@@ -290,7 +290,7 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
-		if (!nixm.check_node(nix)) continue;
+		if (!nixm.check_node(nix)) continue; // Note: modifies nix
 
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
@@ -428,8 +428,8 @@ void cobj_bvh_tree::build_tree_from_cixs(bool do_mt_build) {
 
 
 // test_alpha: 0 = allow any alpha value, 1 = require alpha = 1.0, 2 = get intersected cobj with max alpha, 3 = require alpha >= MIN_SHADOW_ALPHA
-bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpos,
-	vector3d &cnorm, int &cindex, int ignore_cobj, bool exact, int test_alpha, bool skip_non_drawn) const
+bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm,
+	int &cindex, int ignore_cobj, bool exact, int test_alpha, bool skip_non_drawn, bool skip_init_colls) const
 {
 	if (nodes.empty()) return 0;
 	bool ret(0);
@@ -439,19 +439,21 @@ bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpo
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
-		if (!nixm.check_node(nix)) continue;
+		if (!nixm.check_node(nix)) continue; // Note: modifies nix
 
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 			// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
-			if ((int)cixs[i] == ignore_cobj)  continue;
+			if ((int)cixs[i] == ignore_cobj) continue;
 			coll_obj const &c(get_cobj(i));
-			if (!obj_ok(c))                   continue;
+			if (!obj_ok(c))                  continue;
 			if (skip_non_drawn && !c.cp.might_be_drawn())               continue;
 			if (test_alpha == 1 && c.is_semi_trans())                   continue; // semi-transparent, can see through
 			if (test_alpha == 2 && c.cp.color.alpha <= max_alpha)       continue; // lower alpha than an earlier object
 			if (test_alpha == 3 && c.cp.color.alpha < MIN_SHADOW_ALPHA) continue; // less than min alpha
 			if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;
+			//if (skip_init_colls && c.contains_point(p1))                continue;
+			//if (skip_init_colls) {cout << c.contains_point(p1);}
 			cindex = cixs[i];
 			cpos   = p1 + (p2 - p1)*t;
 			//if (c.type == COLL_POLYGON && dot_product((p2 - p1), c.norm) < 0.0) {} // back-facing polygon test
@@ -464,6 +466,23 @@ bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpo
 		}
 	}
 	return ret;
+}
+
+
+bool cobj_bvh_tree::check_point_contained(point const &p, int &cindex) const {
+
+	unsigned const num_nodes((unsigned)nodes.size());
+
+	for (unsigned nix = 0; nix < num_nodes;) {
+		tree_node const &n(nodes[nix]);
+		if (!n.contains_pt(p)) continue;
+
+		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
+			coll_obj const &c(get_cobj(i));
+			if (obj_ok(c) && c.contains_point(p)) {cindex = cixs[i]; return 1;}
+		}
+	}
+	return 0;
 }
 
 
@@ -503,7 +522,7 @@ bool cobj_bvh_tree::is_cobj_contained(point const &p1, point const &p2, point co
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
-		if (!nixm.check_node(nix)) continue;
+		if (!nixm.check_node(nix)) continue; // Note: modifies nix
 
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			if ((int)cixs[i] == ignore_cobj) continue;
@@ -529,7 +548,7 @@ void cobj_bvh_tree::get_coll_line_cobjs(point const &pos1, point const &pos2,
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
-		if (!nixm.check_node(nix)) continue;
+		if (!nixm.check_node(nix)) continue; // Note: modifies nix
 			
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			if ((int)cixs[i] == ignore_cobj) continue;
@@ -739,25 +758,25 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 
 // can use with ray trace lighting, snow collision?, maybe water reflections
 bool check_coll_line_exact_tree(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex,
-	int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels)
+	int ignore_cobj, bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels, bool skip_init_colls)
 {
 	cindex = -1;
 	//return cobj_tree_triangles.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1);
-	bool ret(get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn));
-	if (!dynamic) {ret |= cobj_tree_static_moving.check_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn);}
+	bool ret(get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn, skip_init_colls));
+	if (!dynamic) {ret |= cobj_tree_static_moving.check_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1, test_alpha, skip_non_drawn, skip_init_colls);}
 	if (!dynamic && include_voxels) {ret |= check_voxel_coll_line(p1, (ret ? cpos : p2), cpos, cnorm, cindex, ignore_cobj, 1);}
 	return ret;
 }
 
 // can use with snow shadows, grass shadows, tree leaf shadows
 bool check_coll_line_tree(point const &p1, point const &p2, int &cindex, int ignore_cobj,
-	bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels)
+	bool dynamic, int test_alpha, bool skip_non_drawn, bool include_voxels, bool skip_init_colls)
 {
 	vector3d cnorm; // unused
 	point cpos; // unused
 	cindex = -1;
-	if (get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn)) return 1;
-	if (!dynamic && cobj_tree_static_moving.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn)) return 1;
+	if (get_tree(dynamic).check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn, skip_init_colls)) return 1;
+	if (!dynamic && cobj_tree_static_moving.check_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0, test_alpha, skip_non_drawn, skip_init_colls)) return 1;
 	if (!dynamic && include_voxels && check_voxel_coll_line(p1, p2, cpos, cnorm, cindex, ignore_cobj, 0)) return 1;
 	return 0;
 }
@@ -790,6 +809,12 @@ void get_coll_sphere_cobjs_tree(point const &center, float radius, int cobj, ver
 	get_tree(dynamic).get_coll_sphere_cobjs(center, radius, cobj, vcd);
 	if (!dynamic) {cobj_tree_static_moving.get_coll_sphere_cobjs(center, radius, cobj, vcd);}
 	if (!dynamic) {get_voxel_coll_sphere_cobjs(center, radius, cobj, vcd);}
+}
+
+bool check_point_contained_tree(point const &p, int &cindex, bool dynamic) { // Note: doesn't test voxels
+	if (get_tree(dynamic).check_point_contained(p, cindex)) return 1;
+	if (!dynamic && cobj_tree_static_moving.check_point_contained(p, cindex)) return 1;
+	return 0;
 }
 
 

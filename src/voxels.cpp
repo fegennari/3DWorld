@@ -1806,7 +1806,7 @@ bool voxel_query_tree::check_coll_line(point const &p1, point const &p2, point &
 			point p1d(p1c), p2d(p2c);
 			if (!do_line_clip(p1d, p2d, bcube.d)) continue;
 
-			if (row[j].check_coll_line(p1d, p2d, cpos, cnorm, cindex, ignore_cobj, exact, 0, 0)) {
+			if (row[j].check_coll_line(p1d, p2d, cpos, cnorm, cindex, ignore_cobj, exact, 0, 0, 0)) {
 				if (!exact) return 1; // return the first hit
 				ret = 1;
 				p2c = p2b = cpos; // clip the line so that t always decreases
