@@ -887,6 +887,7 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 }
 
 
+// Note: only used for waypoints
 bool is_point_interior(point const &pos, float radius) { // is query point interior to mesh, cobjs, or voxels
 
 	if (!is_over_mesh(pos)) return 0; // off scene bounds, outside

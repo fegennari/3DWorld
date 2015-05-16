@@ -182,7 +182,7 @@ public:
 	int cube_intersects(cube_t const &cube) const;
 	int sphere_intersects(point const &pos, float radius) const;
 	int sphere_intersects(sphere_t const &sphere) const {return sphere_intersects(sphere.pos, sphere.radius);}
-	int contains_point(point const &pos) const {return sphere_intersects(pos, 0.0);} // not efficient/might not be correct in all cases
+	int contains_point(point const &pos) const;
 
 	// drawing code
 	void draw_coll_cube(int tid, cobj_draw_buffer &cdb) const;

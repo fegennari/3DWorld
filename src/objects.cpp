@@ -541,10 +541,7 @@ point coll_obj::get_center_pt() const {
 float coll_obj::get_max_dim() const {
 
 	float md(0.0);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		md = max(md, fabs(d[i][1] - d[i][0]));
-	}
+	for (unsigned i = 0; i < 3; ++i) {md = max(md, fabs(d[i][1] - d[i][0]));}
 	return md;
 }
 
@@ -559,15 +556,27 @@ float coll_obj::get_light_transmit(point v1, point v2) const {
 
 
 bool coll_obj::check_poly_billboard_alpha(point const &p1, point const &p2, float t) const {
-
 	return (!has_poly_billboard_alpha() || !is_billboard_texture_transparent(points, (p1 + (p2 - p1)*t), cp.tid));
+}
+
+
+int coll_obj::contains_point(point const &pos) const {
+	
+	if (!contains_pt(pos)) return 0; // test bounding cube
+	switch (type) {
+	case COLL_CUBE:     return 1; // if bcube contains the point, we're done
+	case COLL_SPHERE:   return dist_less_than   (pos, points[0], radius);
+	case COLL_CYLINDER: return dist_xy_less_than(pos, points[0], radius); // z has been checked above
+	case COLL_POLYGON:  if (is_thin_poly()) return 0; // thin polygons are effectively 2D and can't contain a point (not a volume)
+	}
+	return sphere_intersects(pos, 0.0); // slow solution for rotated cylinders and extruded polygons
 }
 
 
 coll_obj test_cobj; // reused to aviod slow constructor calls
 
 // Note: these two intersection functions are inexact: they return 0 for no intersection, 1 for intersection, and 2 for maybe intersection
-int coll_obj::cube_intersects(cube_t const &cube) const {
+int coll_obj::cube_intersects(cube_t const &cube) const { // Note: unused
 
 	test_cobj.type = COLL_CUBE;
 	test_cobj.copy_from(cube);
