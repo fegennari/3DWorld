@@ -51,6 +51,17 @@ struct ground_mode_smap_data_t : public smap_data_t {
 	virtual bool needs_update(point const &lpos);
 };
 
+struct local_smap_data_t : public smap_data_t {
+	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=1024) : smap_data_t(tu_id_, smap_sz_) {}
+	
+	virtual void render_scene_shadow_pass(point const &lpos) {
+		// WRITE
+	}
+	virtual bool needs_update(point const &lpos) {
+		// WRITE
+	}
+};
+
 vector<ground_mode_smap_data_t> smap_data;
 
 void ensure_smap_data() {
