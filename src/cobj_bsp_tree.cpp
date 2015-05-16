@@ -452,8 +452,7 @@ bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpo
 			if (test_alpha == 2 && c.cp.color.alpha <= max_alpha)       continue; // lower alpha than an earlier object
 			if (test_alpha == 3 && c.cp.color.alpha < MIN_SHADOW_ALPHA) continue; // less than min alpha
 			if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;
-			//if (skip_init_colls && c.contains_point(p1))                continue;
-			//if (skip_init_colls) {cout << c.contains_point(p1);}
+			if (skip_init_colls && c.contains_point(p1))                continue;
 			cindex = cixs[i];
 			cpos   = p1 + (p2 - p1)*t;
 			//if (c.type == COLL_POLYGON && dot_product((p2 - p1), c.norm) < 0.0) {} // back-facing polygon test

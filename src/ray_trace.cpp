@@ -91,17 +91,8 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 	float t, zval;
 	bool snow_coll(0), ice_coll(0), water_coll(0), mesh_coll(0);
 	vector3d const dir((p2 - p1).get_norm());
-	bool coll(check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, ignore_cobj, 1, 0, 1)); // fast=1
+	bool coll(check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, ignore_cobj, 1, 0, 1, 1, (p1 == orig_p1))); // fast=1, exclude voxels, maybe skip init colls
 	assert(coll ? (cindex >= 0 && cindex < (int)coll_objects.size()) : (cindex == -1));
-
-	// p1 starts inside a cobj, so find the intersection point with a reverse ray
-	if (depth == 0 && coll && cpos == orig_p1) {
-		if (coll_objects[cindex].line_int_exact(p2, p1, t, cnorm, 0.0, 1.0)) {
-			cpos = (p2 + (p1 - p2)*t);
-			cast_light_ray(lmgr, cpos, p2, weight, weight0, color, line_length, cindex, ltype, depth+1, rgen);
-			return;
-		}
-	}
 
 	// find the intersection point with the model3ds
 	colorRGBA model_color;
