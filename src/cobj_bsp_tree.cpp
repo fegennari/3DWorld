@@ -447,12 +447,12 @@ bool cobj_bvh_tree::check_coll_line(point const &p1, point const &p2, point &cpo
 			if ((int)cixs[i] == ignore_cobj) continue;
 			coll_obj const &c(get_cobj(i));
 			if (!obj_ok(c))                  continue;
-			if (skip_non_drawn && !c.cp.might_be_drawn())               continue;
-			if (test_alpha == 1 && c.is_semi_trans())                   continue; // semi-transparent, can see through
-			if (test_alpha == 2 && c.cp.color.alpha <= max_alpha)       continue; // lower alpha than an earlier object
-			if (test_alpha == 3 && c.cp.color.alpha < MIN_SHADOW_ALPHA) continue; // less than min alpha
-			if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))        continue;
-			if (skip_init_colls && c.contains_point(p1))                continue;
+			if (skip_non_drawn && !c.cp.might_be_drawn())                     continue;
+			if (test_alpha == 1 && c.is_semi_trans())                         continue; // semi-transparent, can see through
+			if (test_alpha == 2 && c.cp.color.alpha <= max_alpha)             continue; // lower alpha than an earlier object
+			if (test_alpha == 3 && c.cp.color.alpha < MIN_SHADOW_ALPHA)       continue; // less than min alpha
+			if (skip_init_colls && c.contains_pt(p1) && c.contains_point(p1)) continue;
+			if (!c.line_int_exact(p1, p2, t, cnorm, tmin, tmax))              continue;
 			cindex = cixs[i];
 			cpos   = p1 + (p2 - p1)*t;
 			//if (c.type == COLL_POLYGON && dot_product((p2 - p1), c.norm) < 0.0) {} // back-facing polygon test
