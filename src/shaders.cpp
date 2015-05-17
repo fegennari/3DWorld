@@ -328,6 +328,7 @@ bool shader_t::add_attrib_int(unsigned ix, int val) const {
 void shader_t::setup_enabled_lights(unsigned num, unsigned shaders_enabled) {
 
 	assert(num <= MAX_SHADER_LIGHTS);
+	if (prog_name_prefix.empty()) {prog_name_prefix.reserve(num+2);}
 	prog_name_prefix.push_back(',');
 	prog_name_prefix.push_back('L');
 	char name_0[] = "const bool enable_light0 = false;";
@@ -415,6 +416,7 @@ void shader_t::check_for_fog_disabled() {
 void shader_t::set_prefix(char const *const prefix, unsigned shader_type) {
 
 	assert(shader_type < NUM_SHADER_TYPES);
+	if (prog_name_prefix.empty()) {prog_name_prefix.reserve(strlen(prefix) + 4);} // optimization
 	prog_name_prefix.push_back(',');
 	prog_name_prefix.push_back('s');
 	prog_name_prefix.push_back('0'+shader_type);
