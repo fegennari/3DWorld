@@ -474,12 +474,17 @@ bool cobj_bvh_tree::check_point_contained(point const &p, int &cindex) const {
 
 	for (unsigned nix = 0; nix < num_nodes;) {
 		tree_node const &n(nodes[nix]);
-		if (!n.contains_pt(p)) continue;
 
+		if (!n.contains_pt(p)) {
+			assert(n.next_node_id > nix);
+			nix = n.next_node_id; // failed the bbox test
+			continue;
+		}
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			coll_obj const &c(get_cobj(i));
 			if (obj_ok(c) && c.contains_point(p)) {cindex = cixs[i]; return 1;}
 		}
+		++nix;
 	}
 	return 0;
 }
