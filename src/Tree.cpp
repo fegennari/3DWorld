@@ -835,7 +835,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	float const size_scale(calc_size_scale(draw_pos));
 	last_size_scale = size_scale;
 	if (size_scale < 0.05) return; // if too far away, don't draw any branches
-	bcolor = tree_types[type].barkc;
+	colorRGBA bcolor(tree_types[type].barkc);
 	if (world_mode == WMODE_INF_TERRAIN) {bcolor *= 0.8;} // darken slightly in TT mode to account for lack of shadowing on tree branches/trunk
 	float const dval(1.0f - 0.95f*damage);
 	UNROLL_3X(bcolor[i_] *= min(1.0f, dval*tree_color[i_]);)

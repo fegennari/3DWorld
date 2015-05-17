@@ -274,7 +274,7 @@ class tree {
 	bool no_delete, not_visible, leaf_orients_valid, enable_leaf_wind, use_clip_cube;
 	point tree_center;
 	float damage, damage_scale, last_size_scale;
-	colorRGBA tree_color, bcolor;
+	colorRGBA tree_color;
 	vector<int> branch_cobjs, leaf_cobjs;
 	cube_t clip_cube;
 
