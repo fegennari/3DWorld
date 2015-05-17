@@ -125,7 +125,22 @@ public:
 };
 
 
-class light_source_trig : public light_source {
+class bind_point_t {
+
+	bool bound, valid;
+	int bind_cobj;
+	point bind_pos;
+
+public:
+	bind_point_t() : bound(0), valid(1), bind_cobj(-1) {}
+	bind_point_t(point const &pos) : bound(1), valid(1), bind_cobj(-1), bind_pos(pos) {}
+	void bind_to_pos(point const &pos) {bind_pos = pos; bound = 1;}
+	bool is_valid();
+	void shift_by(vector3d const &vd) {bind_pos += vd;} // invalidate bind_cobj?
+};
+
+
+class light_source_trig : public light_source, public bind_point_t {
 
 	float active_time, inactive_time;
 	multi_trigger_t triggers;
@@ -136,7 +151,8 @@ public:
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
-	void shift_by(vector3d const &vd) {light_source::shift_by(vd); triggers.shift_by(vd);}
+	bool is_enabled() {return (light_source::is_enabled() && bind_point_t::is_valid());}
+	void shift_by(vector3d const &vd) {light_source::shift_by(vd); bind_point_t::shift_by(vd); triggers.shift_by(vd);}
 };
 
 

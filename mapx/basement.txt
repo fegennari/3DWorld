@@ -3,7 +3,8 @@
 #######################################
 
 # add basement lights near emergency exit
-l 0.8  1.0 1.0 1.0 1.0  -1 1 # white plastic
+l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
+a 2 # destroyable/shatterable
 S -6.55 4.8 -0.03  0.03
 S -6.55 5.1 -0.03  0.03
 S -6.55 5.4 -0.03  0.03
@@ -11,8 +12,11 @@ S -6.55 5.4 -0.03  0.03
 #K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0 # 5s player auto trigger
 K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0  -6.7 -6.38 4.5 6.2 -0.5 -0.2 # 5s player auto trigger region
 L 0.0 1.0  -6.55 4.8 -0.1  0.6 0.6 1.0 1.0  0 0 -1 # samples face down
+V -6.55 4.8 -0.055 # light fixture at this pos and light will be disabled if shattered
 L 0.0 1.0  -6.55 5.1 -0.1  0.6 0.6 1.0 1.0  0 0 -1
+V -6.55 5.1 -0.055
 L 0.0 1.0  -6.55 5.4 -0.1  0.6 0.6 1.0 1.0  0 0 -1
+V -6.55 5.4 -0.055
 K # disable trigger
 
 trigger -6.3 2.53 -0.29  0.4 0.0 1.0 0 0 # 1s player auto trigger for switch
@@ -23,33 +27,48 @@ trigger # disable trigger
 S -6.55 3.0 -0.105  0.03
 S -6.55 3.5 -0.105  0.03
 S -6.55 4.0 -0.105  0.03
+a 0 # non-destroyable
 K -6.3 2.59 -0.29  0.06 0.0 60.0 1 1 # player manual toggle trigger, off after 60s
 y 100.0 Y 0.1 0.0
 l 0.8  1.0 1.0 1.0 1.0  38 1 1.0 0.0 1 # emissive radiation texture
 B -6.31 -6.29  2.59 2.60  -0.30 -0.28
 L 0.0 0.7  -6.55 3.0 -0.175  0.6 0.6 1.0 1.0  0 0 -1 # samples face down
+V -6.55 3.0 -0.13
 L 0.0 0.7  -6.55 3.5 -0.175  0.6 0.6 1.0 1.0  0 0 -1
+V -6.55 3.5 -0.13
 L 0.0 0.7  -6.55 4.0 -0.175  0.6 0.6 1.0 1.0  0 0 -1
+V -6.55 4.0 -0.13
 
 # basement spotlights
-l 0.8  1.0 1.0 1.0 1.0  -1 1 # white plastic
+l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
+a 2 # destroyable/shatterable
 C -7.2 2.6 -0.15  -7.2 2.58 -0.164  0.004 0.012
 C -6.2 2.6 -0.15  -6.2 2.58 -0.164  0.004 0.012
 C -5.2 2.6 -0.15  -5.2 2.58 -0.164  0.004 0.012
 C -4.2 2.6 -0.15  -4.2 2.58 -0.164  0.004 0.012
 L 0.0 0.2  -7.2 2.56 -0.178  0.6 0.6 1.0 1.0
+V -7.2 2.59 -0.16
 L 0.0 0.2  -6.2 2.56 -0.178  0.6 0.6 1.0 1.0
+V -6.2 2.59 -0.16
 L 0.0 0.2  -5.2 2.56 -0.178  0.6 0.6 1.0 1.0
+V -5.2 2.59 -0.16
 L 0.0 0.2  -4.2 2.56 -0.178  0.6 0.6 1.0 1.0
+V -4.2 2.59 -0.16
 L 0.0 2.0  -7.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15
+V -7.2 2.59 -0.16
 L 0.0 2.0  -6.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15
+V -6.2 2.59 -0.16
 L 0.0 2.0  -5.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15
+V -5.2 2.59 -0.16
 L 0.0 2.0  -4.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15
+V -4.2 2.59 -0.16
 #L 0.0 2.0  -6.0 1.0 -0.25  1.0 0.4 0.0 1.0
 
 # point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]
 C -4.0 -0.85 -0.2  -2.0 -0.85 -0.2  0.01 0.01
+a 0 # non-destroyable
 L 0.0 1.2  -4.0 -0.83 -0.2  0.6 0.6 1.0 1.0  -2.0 -0.83 -0.2  1.0 0.0 1 # line light
+V -3.0 -0.845 -0.2
 K # disable trigger
 
 # crusher platform
@@ -71,10 +90,13 @@ L 0.0 0.5  -6.3 -0.845 -0.29  1.0 0.4 0.7 1.0
 K # disable trigger
 
 # blinking red light at elevator entrance
-l 0.8  1.0 1.0 1.0 1.0  -1 1 # white plastic
+l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
+a 2 # destroyable/shatterable
 S -3.0 4.8 -0.03  0.03
+a 0 # non-destroyable
 K -3.0 4.8 -0.28  0.0 0.5 0.5 0 0 # blinking red light
 L 0.0 0.75  -3.0 4.8 -0.1  1.0 0.2 0.1 1.0  0 0 -1 # samples face down
+V -3.0 4.8 -0.055
 K # disable trigger
 
 n 1 # cut out left side basement entrance

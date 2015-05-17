@@ -47,6 +47,22 @@ inline bool add_cobj_ok(coll_obj const &cobj) { // skip small things like tree l
 }
 
 
+bool bind_point_t::is_valid() { // used with placed dlights
+
+	if (!bound) return 1; // if no binding point, always valid
+	if (!valid) return 0; // already determined to be invalid
+
+	if (bind_cobj < 0) { // cobj not yet found
+		if (!check_point_contained_tree(bind_pos, bind_cobj, 0)) {valid = 0; return 0;}
+		return 1;
+	}
+	assert((unsigned)bind_cobj < coll_objects.size());
+	coll_obj const &cobj(coll_objects[bind_cobj]);
+	if (cobj.status != COLL_STATIC || !cobj.contains_point(bind_pos)) {valid = 0; return 0;} // check status and also containment, in case coll id was reused
+	return 1;
+}
+
+
 // *** LIGHT_SOURCE IMPLEMENTATION ***
 
 

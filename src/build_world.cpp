@@ -1067,7 +1067,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	material_map_t materials;
 	multi_trigger_t triggers;
 	
-	while (!end) { // available: dhkouz UV
+	while (!end) { // available: dhkouz U
 		assert(fp != NULL);
 		int letter(getc(fp));
 
@@ -1083,6 +1083,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (0) {}
 				else if (keyword == "trigger") {letter = 'K';}
 				else if (keyword == "light"  ) {letter = 'L';}
+				else if (keyword == "bind_light") {letter = 'V';}
 				else {
 					string const error_str(string("unrecognized keyword: '") + keyword + "'");
 					return read_error(fp, error_str.c_str(), coll_obj_file);
@@ -1296,6 +1297,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (num_read2 > 0) {return read_error(fp, "light source trigger activation cube", coll_obj_file);}
 				triggers.push_back(trigger);
 			}
+			break;
+
+		case 'V': // bind prev light source to cobj at location <x y z>
+			if (fscanf(fp, "%f%f%f", &pos.x, &pos.y, &pos.z) != 3) {return read_error(fp, "light source", coll_obj_file);}
+			if (light_sources_d.empty()) {return read_error(fp, "light source <no previous light source to bind to>", coll_obj_file);}
+			xf.xform_pos(pos);
+			light_sources_d.back().bind_to_pos(pos);
 			break;
 
 		case 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
