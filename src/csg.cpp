@@ -1149,5 +1149,9 @@ color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thicknes
 	max_frag_sz = ((cobj.type == COLL_SPHERE || cobj.type == COLL_CYLINDER || cobj.type == COLL_CYLINDER_ROT) ? 0.5*max(cobj.radius, cobj.radius2) : second_largest_len());
 }
 
+bool color_tid_vol::maybe_is_glass() const {
+	return ((color.alpha < 0.5) || (tid < 0 || tid == WHITE_TEX)); // partially transparent or untextured
+}
+
 
 

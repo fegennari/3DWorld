@@ -1977,7 +1977,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	if (coll && cindex >= 0 && closest < 0) {
 		coll_obj &cobj(coll_objects[cindex]);
 		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), proj_type);
-		bool const is_glass(cobj.cp.is_glass());
+		bool const is_glass(cobj.cp.is_glass(cobj.destroy == SHATTERABLE));
 
 		if ((!is_laser || (cobj.cp.color.alpha == 1.0 && intensity >= 0.5)) && cobj.can_be_scorched()) { // lasers only scorch opaque surfaces
 			float const decal_radius(rand_uniform(0.004, 0.006));
@@ -2028,7 +2028,9 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				no_spark = 1;
 			}
 		}
-		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((rand()%50) == 0)) || (cobj.destroy >= EXPLODEABLE && ((rand()%10) == 0))) {
+		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((is_glass && cobj.type != COLL_CUBE) || (rand()%50) == 0)) || // shattered
+			(cobj.destroy >= EXPLODEABLE && (rand()%10) == 0)) // exploded
+		{
 			if (is_glass && cobj.type == COLL_CUBE && !cobj.maybe_is_moving() && (rand()&7) != 0) {gen_glass_shard_from_cube_window(cobj, cobj.cp, coll_pos);}
 			destroy_coll_objs(coll_pos, 500.0, shooter, PROJECTILE, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
 		}

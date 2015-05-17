@@ -125,7 +125,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 			float const time_mult((hotness > 0.0) ? 0.0 : 0.5*rand_float());
 			gen_fragment(fpos, velocity, size_scale, time_mult, cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments, hotness);
 		}
-		if (shattered && tri_fragments && cts[i].color.alpha < 0.5) {maybe_is_glass = 1;}
+		if (shattered && tri_fragments && cts[i].maybe_is_glass()) {maybe_is_glass = 1;}
 	} // for i
 	if (maybe_is_glass) {gen_delayed_from_player_sound(SOUND_GLASS, pos);}
 	//PRINT_TIME("Destroy Cobjs");
@@ -251,11 +251,10 @@ void add_to_falling_cobjs(set<unsigned> const &ids) {
 }
 
 
-void invalidate_static_cobjs() {
-	build_cobj_tree(0, 0);
-}
+void invalidate_static_cobjs() {build_cobj_tree(0, 0);}
 
 
+// Note: should be named partially_destroy_cube_area() or something like that
 unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int min_destroy) {
 
 	if (destroy_thresh >= EXPLODEABLE) return 0;
