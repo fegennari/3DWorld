@@ -308,7 +308,7 @@ struct color_tid_vol : public cube_t {
 
 	int cid, tid, destroy;
 	bool draw, unanchored, is_2d;
-	float volume, thickness, tscale;
+	float volume, thickness, tscale, max_frag_sz;
 	colorRGBA color;
 	color_tid_vol(coll_obj const &cobj, float volume_, float thickness_, bool ua);
 };

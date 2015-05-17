@@ -84,13 +84,13 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 		if (cts[i].volume < (tri_fragments ? MIN_POLY_THICK : frag_radius)*frag_radius*frag_radius) continue;
 
 		if (tri_fragments) {
-			float const sll(cts[i].second_largest_len());
-			if (sll < 1.2*max_frag_dia) size_scale *= sll/max_frag_dia;
+			float const mfs(cts[i].max_frag_sz);
+			if (mfs < 1.2*max_frag_dia) {size_scale *= mfs/max_frag_dia;}
 			float const dia(size_scale*avg_frag_dia);
 			num_parts = cts[i].volume/(thickness*dia*dia);
 		}
 		else {
-			if (thickness < 1.2*max_frag_dia) size_scale *= thickness/max_frag_dia;
+			if (thickness < 1.2*max_frag_dia) {size_scale *= thickness/max_frag_dia;}
 			float const dia(size_scale*avg_frag_dia);
 			num_parts = cts[i].volume/(dia*dia*dia);
 		}
