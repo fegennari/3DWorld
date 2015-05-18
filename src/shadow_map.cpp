@@ -26,6 +26,7 @@ extern coll_obj_group coll_objects;
 extern platform_cont platforms;
 
 void draw_trees(bool shadow_only=0);
+void free_light_source_gl_state();
 
 
 cube_t get_scene_bounds() {
@@ -49,17 +50,6 @@ struct ground_mode_smap_data_t : public smap_data_t {
 	ground_mode_smap_data_t(unsigned tu_id_) : smap_data_t(tu_id_, shadow_map_sz), last_has_dynamic(0) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
-};
-
-struct local_smap_data_t : public smap_data_t {
-	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=1024) : smap_data_t(tu_id_, smap_sz_) {}
-	
-	virtual void render_scene_shadow_pass(point const &lpos) {
-		// WRITE
-	}
-	virtual bool needs_update(point const &lpos) {
-		// WRITE
-	}
 };
 
 vector<ground_mode_smap_data_t> smap_data;
@@ -447,6 +437,7 @@ void free_shadow_map_textures() {
 
 	for (unsigned l = 0; l < smap_data.size(); ++l) {smap_data[l].free_gl_state();}
 	free_smap_vbo();
+	free_light_source_gl_state(); // free any shadow maps within light sources
 }
 
 

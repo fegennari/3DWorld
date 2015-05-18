@@ -14,6 +14,8 @@ extern int MESH_SIZE[3];
 
 float const LT_DIR_FALLOFF   = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
+float const CTHRESH          = 0.025;
+float const SQRT_CTHRESH     = sqrt(CTHRESH);
 
 
 struct normal_cell { // size = 24, unused
@@ -140,19 +142,24 @@ public:
 };
 
 
+struct local_smap_data_t;
+
 class light_source_trig : public light_source, public bind_point_t {
 
 	float active_time, inactive_time;
 	multi_trigger_t triggers;
+	local_smap_data_t *smap_data;
 
 public:
-	light_source_trig() {}
-	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0) {}
+	light_source_trig() : smap_data(nullptr) {}
+	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0), smap_data(nullptr) {}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_enabled() {return (light_source::is_enabled() && bind_point_t::is_valid());}
 	void shift_by(vector3d const &vd) {light_source::shift_by(vd); bind_point_t::shift_by(vd); triggers.shift_by(vd);}
+	void ensure_shadow_map(unsigned tu_id);
+	void free_gl_state();
 };
 
 
