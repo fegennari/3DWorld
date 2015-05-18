@@ -499,8 +499,8 @@ void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, b
 
 	assert(radius > 0.0 && ndiv > 0);
 	float const tstep(1.0/ndiv), vstep(2.0*tstep);
-	vector<vert_norm> verts;
-	vector<vert_norm_tc> tverts;
+	static vector<vert_norm> verts;
+	static vector<vert_norm_tc> tverts;
 
 	for (unsigned i = 0; i < 3; ++i) { // iterate over dimensions
 		unsigned const d1(i), d2((i+1)%3), dn((i+2)%3);

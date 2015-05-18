@@ -662,7 +662,6 @@ public:
 				unsigned const ix(y*MESH_X_SIZE + x);
 				if (mesh_to_grass_map[ix] == mesh_to_grass_map[ix+1]) continue; // empty section
 				point const mpos(get_mesh_xyz_pos(x, y));
-				float const grass_zmax((has_voxel_grass ? max(mpos.z, czmax) : mpos.z) + grass_length);
 				bool visible(1);
 
 				if (x+1 < MESH_X_SIZE && y+1 < MESH_Y_SIZE &&
@@ -674,6 +673,7 @@ public:
 					visible = 0;
 				}
 				else {
+					float const grass_zmax((has_voxel_grass ? max(mpos.z, czmax) : mpos.z) + grass_length);
 					cube_t const cube(mpos.x-grass_length, mpos.x+DX_VAL+grass_length,
 									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], grass_zmax);
 					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
