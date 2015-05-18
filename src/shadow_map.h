@@ -32,6 +32,19 @@ struct smap_data_t : public smap_data_state_t {
 	virtual bool needs_update(point const &lpos);
 };
 
+struct cached_dynamic_smap_data_t : public smap_data_t {
+
+	bool last_has_dynamic;
+	cached_dynamic_smap_data_t(unsigned tu_id_, unsigned smap_sz_) : smap_data_t(tu_id_, smap_sz_), last_has_dynamic(0) {}
+};
+
+struct local_smap_data_t : public cached_dynamic_smap_data_t {
+
+	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=1024) : cached_dynamic_smap_data_t(tu_id_, smap_sz_) {}
+	virtual void render_scene_shadow_pass(point const &lpos);
+	virtual bool needs_update(point const &lpos);
+};
+
 
 template<class SD> struct vect_smap_t : public vector<SD> { // one per light source (sun, moon)
 	void set_for_all_lights(shader_t &s, xform_matrix const *const mvm) const {

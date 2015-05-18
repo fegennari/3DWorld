@@ -15,4 +15,21 @@ Puffy clouds in tiled terrain mode
 
 Support platform rotate (doors)
 SSAO using depth map and postprocessing pass
-Spotlight shadow maps
+
+Local light source shadow maps
+  - Light types:
+    - Spotlight: single 2D texture
+	- Hemisphere (on wall/ceiling): is 2D texture facing away from wall/ceiling okay?
+	- Point Light: cube map
+	- Line light: skip
+  - Shadow map size:
+    * User-specified or based on sun shadow map?
+	* Depends on light size?
+  - What fixed/limited set of shader TU ID(s) do we use?
+    * Texture Array? Texture atlas? 3D texture?
+  - How does dlights shader determine which texture/smap to use for each light?
+    * Extra channel in light info texture
+	* Texture array for each light with "null"/degenerate texture layer for lights with no smap
+	* Pack all textures with smaps at front of light list using 1:1 mapping and pass num to the shader
+	* Small array of [dlight_id, texture/tu_id] pairs in the shader that require iteration
+

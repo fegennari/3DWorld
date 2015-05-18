@@ -43,11 +43,9 @@ int get_smap_ndiv(float radius, unsigned smap_sz) {
 int get_def_smap_ndiv(float radius) {return get_smap_ndiv(radius, shadow_map_sz);}
 
 
-struct ground_mode_smap_data_t : public smap_data_t {
+struct ground_mode_smap_data_t : public cached_dynamic_smap_data_t {
 
-	bool last_has_dynamic;
-
-	ground_mode_smap_data_t(unsigned tu_id_) : smap_data_t(tu_id_, shadow_map_sz), last_has_dynamic(0) {}
+	ground_mode_smap_data_t(unsigned tu_id_) : cached_dynamic_smap_data_t(tu_id_, shadow_map_sz) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
 };
@@ -369,6 +367,16 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const &b
 }
 
 
+void draw_mesh_shadow_pass(point const &lpos, unsigned smap_sz) {
+
+	if (!(display_mode & 0x01) || ground_effects_level == 0) return;
+	fgPushMatrix();
+	float const val(1.0/dot_product(lpos.get_norm(), plus_z));
+	fgTranslate(0.0, 0.0, -val*approx_pixel_width(smap_sz)); // translate down slightly to reduce shadow aliasing problems
+	display_mesh(1);
+	fgPopMatrix();
+}
+
 void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 
 	point const camera_pos_(camera_pos);
@@ -384,16 +392,42 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	if (snow_shadows) {draw_snow(1);} // slow
 	draw_trees(1);
 	draw_scenery(1, 1, 1);
-
-	if ((display_mode & 0x01) && ground_effects_level != 0) { // draw mesh
-		fgPushMatrix();
-		float const val(1.0/dot_product(lpos.get_norm(), plus_z));
-		fgTranslate(0.0, 0.0, -val*approx_pixel_width(smap_sz)); // translate down slightly to reduce shadow aliasing problems
-		display_mesh(1);
-		fgPopMatrix();
-	}
+	draw_mesh_shadow_pass(lpos, smap_sz);
 	voxel_shadows_updated = 0;
 	camera_pos = camera_pos_;
+}
+
+
+// Note: not meant to shadow voxel terrain, snow, trees, scenery, mesh, etc. - basically designed to shadow cobjs and dynamic objects
+void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
+	
+	point const camera_pos_(camera_pos);
+	camera_pos = lpos;
+#if 0 // higher memory usage but faster updates - better for smaps that are generated each frame
+	smap_vertex_cache_t per_light_smap_vertex_cache; // in light/smap_data
+	per_light_smap_vertex_cache.add_cobjs(smap_sz, 1); // enable VFC
+	per_light_smap_vertex_cache.render();
+#else // simpler but slower since there is no VFC - better for mostly static smaps
+	smap_vertex_cache.add_cobjs(smap_sz, 0); // no VFC for static cobjs
+	smap_vertex_cache.render();
+#endif
+	render_models(1); // ???
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz);
+	camera_pos = camera_pos_;
+}
+
+bool local_smap_data_t::needs_update(point const &lpos) {
+	
+	// Note/FIXME: scene_smap_vbo_invalid is reset at the end of the global create_shadow_map() call, so this call must be done before that
+	bool has_dynamic(!tid || scene_smap_vbo_invalid);
+	//has_dynamic |= !platforms.empty(); // FIXME: check for platsforms within light radius/frustum/etc. and active?
+	
+	for (auto i = shadow_objs.begin(); i != shadow_objs.end() && !has_dynamic; ++i) {
+		has_dynamic |= pdu.sphere_visible_test(i->pos, i->radius);
+	}
+	bool const ret(smap_data_t::needs_update(lpos) || has_dynamic || last_has_dynamic);
+	last_has_dynamic = has_dynamic;
+	return ret;
 }
 
 

@@ -36,7 +36,7 @@ bool bind_point_t::is_valid() { // used with placed dlights
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri) :
 	dynamic(id), enabled(1), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
-	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c)
+	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_data(nullptr)
 {
 	assert(bw > 0.0 && bw <= 1.0);
 	assert(r_inner <= radius);
@@ -265,6 +265,7 @@ void light_source::pack_to_floatv(float *data) const {
 
 void light_source_trig::advance_timestep() {
 
+	if (!bind_point_t::valid) {free_gl_state();} // free shadow map if invalid as an optimization
 	if (!triggers.is_active()) return; // trigger not active
 	enabled = (active_time > 0.0); // light on by default
 	
@@ -294,21 +295,14 @@ bool light_source_trig::check_activate(point const &p, float radius, int activat
 	return 1;
 }
 
+void light_source_trig::check_shadow_map(unsigned tu_id) {
 
-struct local_smap_data_t : public smap_data_t {
-	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=1024) : smap_data_t(tu_id_, smap_sz_) {}
-	
-	virtual void render_scene_shadow_pass(point const &lpos) {
-		// WRITE
-	}
-	virtual bool needs_update(point const &lpos) {
-		return 0; // WRITE
-	}
-};
-
-void light_source_trig::ensure_shadow_map(unsigned tu_id) {
+	if (is_line_light())    return; // line lights don't support shadow maps
+	if (dir == zero_vector) return; // point light: need cube map, skip for now
+	if (is_directional()) {} // directional vs. hemisphere: use 2D shadow map for both
+	if (!is_enabled())      return; // disabled or destroyed
 	if (!smap_data) {smap_data = new local_smap_data_t(tu_id);}
-	// FIXME: WRITE
+	smap_data->create_shadow_map_for_light(pos, calc_bcube()); // FIXME: need to calculate frustum from dir and bwidth, not bounding cube
 }
 
 void light_source_trig::free_gl_state() { // free shadow maps

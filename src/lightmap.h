@@ -85,7 +85,9 @@ public:
 };
 
 
-class light_source { // size = 64
+struct local_smap_data_t;
+
+class light_source { // size = 68
 
 protected:
 	bool dynamic, enabled;
@@ -93,11 +95,13 @@ protected:
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
 	colorRGBA color;
+	// Note: smap is in the base class, though it can't be created/freed here, it can only be copied from light_source_trig in copy constructor
+	local_smap_data_t *smap_data;
 
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : enabled(0) {}
+	light_source() : enabled(0), smap_data(nullptr) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0);
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
@@ -129,6 +133,7 @@ public:
 
 class bind_point_t {
 
+protected:
 	bool bound, valid;
 	int bind_cobj;
 	point bind_pos;
@@ -142,23 +147,20 @@ public:
 };
 
 
-struct local_smap_data_t;
-
 class light_source_trig : public light_source, public bind_point_t {
 
 	float active_time, inactive_time;
 	multi_trigger_t triggers;
-	local_smap_data_t *smap_data;
 
 public:
-	light_source_trig() : smap_data(nullptr) {}
-	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0), smap_data(nullptr) {}
+	light_source_trig() {}
+	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0) {}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_enabled() {return (light_source::is_enabled() && bind_point_t::is_valid());}
 	void shift_by(vector3d const &vd) {light_source::shift_by(vd); bind_point_t::shift_by(vd); triggers.shift_by(vd);}
-	void ensure_shadow_map(unsigned tu_id);
+	void check_shadow_map(unsigned tu_id);
 	void free_gl_state();
 };
 
