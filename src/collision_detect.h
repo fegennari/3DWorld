@@ -369,6 +369,7 @@ struct platform_cont : public deque<platform> {
 	void check_activate(point const &p, float radius, int activator);
 	void shift_by(vector3d const &val);
 	void advance_timestep();
+	bool any_active() const;
 };
 
 

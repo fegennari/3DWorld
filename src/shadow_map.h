@@ -7,6 +7,8 @@
 
 #include "transform_obj.h" // for xform_matrix
 
+unsigned const DEF_LOCAL_SMAP_SZ = 1024;
+
 
 struct smap_data_state_t {
 
@@ -27,7 +29,7 @@ struct smap_data_t : public smap_data_state_t {
 		: smap_data_state_t(init_state), tu_id(tu_id_), smap_sz(smap_sz_), last_lpos(all_zeros) {}
 	virtual ~smap_data_t() {} // free_gl_state()?
 	bool set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm=nullptr) const;
-	void create_shadow_map_for_light(point const &lpos, cube_t const &bounds);
+	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds);
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(point const &lpos);
 };
@@ -40,9 +42,13 @@ struct cached_dynamic_smap_data_t : public smap_data_t {
 
 struct local_smap_data_t : public cached_dynamic_smap_data_t {
 
-	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=1024) : cached_dynamic_smap_data_t(tu_id_, smap_sz_) {}
+	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ) : cached_dynamic_smap_data_t(tu_id_, smap_sz_) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
+};
+
+struct local_cube_map_smap_data_t : public local_smap_data_t { // to be implemented/used later
+	local_cube_map_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ) : local_smap_data_t(tu_id_, smap_sz_) {}
 };
 
 
@@ -58,7 +64,7 @@ template<class SD> struct vect_smap_t : public vector<SD> { // one per light sou
 		for (unsigned i = 0; i < size(); ++i) {
 			point lpos;
 			if (!light_valid_and_enabled(i, lpos)) continue;
-			operator[](i).create_shadow_map_for_light(lpos, bcube);
+			operator[](i).create_shadow_map_for_light(lpos, &bcube);
 		}
 	}
 };

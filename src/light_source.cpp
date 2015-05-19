@@ -302,7 +302,8 @@ void light_source_trig::check_shadow_map(unsigned tu_id) {
 	if (is_directional()) {} // directional vs. hemisphere: use 2D shadow map for both
 	if (!is_enabled())      return; // disabled or destroyed
 	if (!smap_data) {smap_data = new local_smap_data_t(tu_id);}
-	smap_data->create_shadow_map_for_light(pos, calc_bcube()); // FIXME: need to calculate frustum from dir and bwidth, not bounding cube
+	//smap_data->pdu = pos_dir_up(pos, dir, up, angle, 0.0001*radius, radius, 1.0, 1); // FIXME: calculate up and angle
+	smap_data->create_shadow_map_for_light(pos, nullptr);
 }
 
 void light_source_trig::free_gl_state() { // free shadow maps

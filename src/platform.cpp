@@ -257,6 +257,12 @@ void platform_cont::advance_timestep() {
 	for (auto i = begin(); i != end(); ++i) {i->advance_timestep();}
 }
 
+bool platform_cont::any_active() const {
+
+	for (auto i = begin(); i != end(); ++i) {if (i->is_moving()) return 1;}
+	return 0;
+}
+
 
 void coll_obj::add_to_platform() const {
 

@@ -294,7 +294,7 @@ bool no_sparse_smap_update() {
 
 	if (world_mode != WMODE_GROUND) return 0;
 	bool const leaf_wind(num_trees > 0 && (display_mode & 0x0100) != 0 && (tree_mode & 1) != 0 && tree_deadness < 1.0 && vegetation > 0.0);
-	if (leaf_wind || !shadow_objs.empty() || !platforms.empty()) return 1;
+	if (leaf_wind || !shadow_objs.empty() || platforms.any_active()) return 1;
 	//return !coll_objects.drawn_ids.empty();
 	//return !coll_objects.dynamic_ids.empty();
 	return 0;
@@ -317,7 +317,8 @@ bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 }
 
 
-void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const &bounds) {
+// if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu
+void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds) {
 
 	// setup render state
 	assert(smap_sz > 0);
@@ -327,7 +328,7 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const &b
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
-	pdu = get_pt_cube_frustum_pdu(lpos, bounds, 1);
+	if (bounds) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds, 1);}
 	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
 
@@ -420,7 +421,7 @@ bool local_smap_data_t::needs_update(point const &lpos) {
 	
 	// Note/FIXME: scene_smap_vbo_invalid is reset at the end of the global create_shadow_map() call, so this call must be done before that
 	bool has_dynamic(!tid || scene_smap_vbo_invalid);
-	//has_dynamic |= !platforms.empty(); // FIXME: check for platsforms within light radius/frustum/etc. and active?
+	//has_dynamic |= platforms.any_active(); // FIXME: check for platsforms within light radius/frustum/etc.
 	
 	for (auto i = shadow_objs.begin(); i != shadow_objs.end() && !has_dynamic; ++i) {
 		has_dynamic |= pdu.sphere_visible_test(i->pos, i->radius);
@@ -451,10 +452,11 @@ void create_shadow_map() {
 	// render shadow maps to textures
 	add_coll_shadow_objs();
 	ensure_smap_data();
+	cube_t const bounds(get_scene_bounds());
 	
 	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}
 		point lpos;
-		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(lpos, get_scene_bounds());}
+		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(lpos, &bounds);}
 	}
 	scene_smap_vbo_invalid = 0;
 
