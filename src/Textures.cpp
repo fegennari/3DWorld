@@ -168,6 +168,7 @@ vector<texture_t> textures;
 
 
 // zval should depend on def_water_level and temperature
+int max_tius(0), max_ctius(0); // cached in case they are needed somewhere (for shadow map logic, etc.)
 float h_dirt[NTEX_DIRT], clip_hd1;
 std::set<int> ls_color_texels;
 vector<colorRGBA> cached_ls_colors;
@@ -277,10 +278,9 @@ void load_textures() {
 	}
 	textures[TREE_HEMI_TEX].set_color_alpha_to_one();
 
-	int max_tiu(0), max_ctiu(0);
-	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_tiu);
-	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &max_ctiu);
-	cout << "max TIUs: " << max_tiu << ", max combined TIUs: " << max_ctiu << endl;
+	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_tius);
+	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &max_ctius);
+	cout << "max TIUs: " << max_tius << ", max combined TIUs: " << max_ctius << endl;
 	//force_upload_all_textures();
 }
 

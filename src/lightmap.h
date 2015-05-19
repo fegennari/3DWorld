@@ -91,17 +91,16 @@ class light_source { // size = 68
 
 protected:
 	bool dynamic, enabled;
+	unsigned smap_index; // index of shadow map texture/data
 	float radius, radius_inv, r_inner, bwidth;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
 	vector3d dir;
 	colorRGBA color;
-	// Note: smap is in the base class, though it can't be created/freed here, it can only be copied from light_source_trig in copy constructor
-	local_smap_data_t *smap_data;
 
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : enabled(0), smap_data(nullptr) {}
+	light_source() : enabled(0), smap_index(0) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0);
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
@@ -160,8 +159,8 @@ public:
 	void advance_timestep();
 	bool is_enabled() {return (light_source::is_enabled() && bind_point_t::is_valid());}
 	void shift_by(vector3d const &vd) {light_source::shift_by(vd); bind_point_t::shift_by(vd); triggers.shift_by(vd);}
-	void check_shadow_map(unsigned tu_id);
-	void free_gl_state();
+	bool check_shadow_map();
+	void release_smap();
 };
 
 

@@ -7,7 +7,7 @@
 #include "sinf.h"
 #include "shadow_map.h"
 
-extern int display_mode, camera_coll_id;
+extern int display_mode, camera_coll_id, max_tius;
 extern float fticks;
 extern vector<light_source> light_sources_a;
 extern vector<light_source_trig> light_sources_d;
@@ -36,7 +36,7 @@ bool bind_point_t::is_valid() { // used with placed dlights
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri) :
 	dynamic(id), enabled(1), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
-	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_data(nullptr)
+	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_index(0)
 {
 	assert(bw > 0.0 && bw <= 1.0);
 	assert(r_inner <= radius);
@@ -244,7 +244,7 @@ bool light_source::try_merge_into(light_source &ls) const {
 
 void light_source::pack_to_floatv(float *data) const {
 
-	// store light_source as: {pos.xyz, radius}, {color.rgba}, {dir.xyz|pos2.xyz, bwidth}
+	// store light_source as: {pos.xyz, radius} {color.rgba} {dir.xyz|pos2.xyz, bwidth} [smap_index]
 	// Note: we don't really need to store the z-component of dir because we can calculate it from sqrt(1 - x*x - y*y),
 	//       but doing this won't save us any texture data so it's not worth the trouble
 	assert(data);
@@ -261,11 +261,12 @@ void light_source::pack_to_floatv(float *data) const {
 		UNROLL_3X(*(data++) = 0.5*(1.0 + dir[i_]);) // map [-1,1] to [0,1]
 		*(data++) = bwidth; // [0,1]
 	}
+	if (smap_index > 0) {*(data++) = smap_index;} // FIXME
 }
 
 void light_source_trig::advance_timestep() {
 
-	if (!bind_point_t::valid) {free_gl_state();} // free shadow map if invalid as an optimization
+	if (!bind_point_t::valid) {release_smap();} // free shadow map if invalid as an optimization
 	if (!triggers.is_active()) return; // trigger not active
 	enabled = (active_time > 0.0); // light on by default
 	
@@ -295,19 +296,93 @@ bool light_source_trig::check_activate(point const &p, float radius, int activat
 	return 1;
 }
 
-void light_source_trig::check_shadow_map(unsigned tu_id) {
+// ************ SHADOW MAPS ***********
 
-	if (is_line_light())    return; // line lights don't support shadow maps
-	if (dir == zero_vector) return; // point light: need cube map, skip for now
+unsigned const LOCAL_SMAP_START_TU_ID = 16;
+
+class local_smap_manager_t {
+
+	unsigned next_tex_index;
+	vector<local_smap_data_t> smap_data;
+	vector<unsigned> free_list;
+
+public:
+	local_smap_manager_t() : next_tex_index(0) {}
+
+	unsigned new_smap(unsigned size=0) {
+		unsigned index(0);
+		
+		if (free_list.empty()) { // allocate a new smap
+			index = smap_data.size();
+			unsigned const tu_id(LOCAL_SMAP_START_TU_ID + index);
+			if ((int)tu_id >= max_tius) return 0; // not enough TIU's - fail
+			smap_data.push_back(local_smap_data_t(tu_id));
+		}
+		else { // use free list element
+			index = free_list.back(); // most recently used
+			free_list.pop_back();
+		}
+		local_smap_data_t &smd(smap_data[index]);
+		assert(!smd.used);
+		smd.used = 1; // mark as used (for error checking)
+		smd.last_has_dynamic = 1; // force recreation
+
+		if (size > 0 && smd.smap_sz != size) { // size change - free and reallocate
+			smd.free_gl_state();
+			smd.smap_sz = size;
+		}
+		return index + 1; // offset by 1
+	}
+	void free_smap(unsigned index) {
+		assert(index > 0 && index <= smap_data.size());
+		assert(smap_data[index-1].used);
+		smap_data[index-1].used = 0;
+		free_list.push_back(index-1);
+	}
+	local_smap_data_t &get(unsigned index) { // Note: index is offset by 1; index 0 is invalid
+		assert(index > 0 && index <= smap_data.size());
+		assert(smap_data[index-1].used);
+		return smap_data[index-1];
+	}
+	void free_gl_state() {
+		for (auto i = smap_data.begin(); i != smap_data.end(); ++i) {i->free_gl_state();}
+	}
+	void clear() {
+		free_gl_state();
+		smap_data.clear();
+		free_list.clear();
+	}
+};
+
+local_smap_manager_t local_smap_manager;
+
+void free_light_source_gl_state() {local_smap_manager.free_gl_state();} // free shadow maps
+
+
+bool light_source_trig::check_shadow_map() {
+
+	if (is_line_light())    return 0; // line lights don't support shadow maps
+	if (dir == zero_vector) return 0; // point light: need cube map, skip for now
 	if (is_directional()) {} // directional vs. hemisphere: use 2D shadow map for both
-	if (!is_enabled())      return; // disabled or destroyed
-	if (!smap_data) {smap_data = new local_smap_data_t(tu_id);}
-	//smap_data->pdu = pos_dir_up(pos, dir, up, angle, 0.0001*radius, radius, 1.0, 1); // FIXME: calculate up and angle
-	smap_data->create_shadow_map_for_light(pos, nullptr);
+	if (!is_enabled())      return 0; // disabled or destroyed
+	
+	if (smap_index == 0) {
+		smap_index = local_smap_manager.new_smap();
+		if (smap_index == 0) return 0; // allocation failed (at max)
+	}
+	float const angle = 0.0; // FIXME: calculate from bwidth clamped to some value
+	int const dim(get_min_dim(dir));
+	vector3d temp(zero_vector), up_dir;
+	temp[dim] = 1.0; // choose up axis
+	orthogonalize_dir(temp, dir, up_dir, 1);
+	local_smap_data_t &smap(local_smap_manager.get(smap_index));
+	smap.pdu = pos_dir_up(pos, dir, up_dir, angle, 0.0001*radius, radius, 1.0, 1);
+	smap.create_shadow_map_for_light(pos, nullptr); // no bcube
+	return 1;
 }
 
-void light_source_trig::free_gl_state() { // free shadow maps
-	if (smap_data) {smap_data->free_gl_state(); delete smap_data;}
+void light_source_trig::release_smap() {
+	if (smap_index > 0) {local_smap_manager.free_smap(smap_index); smap_index = 0;}
 }
 
 
@@ -318,9 +393,4 @@ void shift_light_sources(vector3d const &vd) {
 	shift_ls_vect(light_sources_a, vd);
 	shift_ls_vect(light_sources_d, vd);
 }
-
-void free_light_source_gl_state() { // free shadow maps
-	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {i->free_gl_state();}
-}
-
 

@@ -42,7 +42,9 @@ struct cached_dynamic_smap_data_t : public smap_data_t {
 
 struct local_smap_data_t : public cached_dynamic_smap_data_t {
 
-	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ) : cached_dynamic_smap_data_t(tu_id_, smap_sz_) {}
+	bool used;
+
+	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ) : cached_dynamic_smap_data_t(tu_id_, smap_sz_), used(0) {}
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
 };
