@@ -151,12 +151,13 @@ public:
 
 class light_source_trig : public light_source, public bind_point_t {
 
+	bool use_smap;
 	float active_time, inactive_time;
 	multi_trigger_t triggers;
 
 public:
-	light_source_trig() {}
-	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0) {user_placed = 1;}
+	light_source_trig() : use_smap(0) {}
+	light_source_trig(light_source const &ls, bool smap=0) : light_source(ls), use_smap(smap), active_time(0.0), inactive_time(0.0) {user_placed = 1;}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();

@@ -848,6 +848,7 @@ void add_dynamic_lights_ground() {
 	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {
 		// Note: more efficient to do VFC here, but won't apply to get_indir_light() (or is_in_darkness())
 		if (!i->is_enabled() || !i->is_visible()) continue;
+		i->check_shadow_map();
 		dl_sources.push_back(*i);
 		dl_smap_enabled |= i->smap_enabled();
 	}

@@ -1262,8 +1262,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				vector3d dir(zero_vector); // defaults to (0,0,0)
 				ivals[0] = 0; // default is point/spotlight
 				point pos2(pos);
+				int use_smap(0);
 
-				if (fscanf(fp, "%f%f%f%f%f%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0]) >= 3) { // direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]
+				if (fscanf(fp, "%f%f%f%f%f%i%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0], &use_smap) >= 3) { // direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]
 					if (ivals[0] != 0) {pos2 = dir; dir = zero_vector; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
 					else {xf.xform_pos_rm(dir);} // spotlight (or hemispherical light ray culling if beamwidth == 1.0)
 				}
@@ -1272,7 +1273,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					light_source ls(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner);
 					
 					if (d) {
-						light_sources_d.push_back(light_source_trig(ls));
+						light_sources_d.push_back(light_source_trig(ls, (use_smap != 0)));
 						light_sources_d.back().add_triggers(triggers);
 					}
 					else {light_sources_a.push_back(ls);}
