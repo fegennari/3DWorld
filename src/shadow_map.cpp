@@ -305,7 +305,7 @@ bool smap_data_t::needs_update(point const &lpos) {
 
 	bool const ret(lpos != last_lpos);
 	last_lpos = lpos;
-	return ret;
+	return (ret && !tid);
 }
 
 bool ground_mode_smap_data_t::needs_update(point const &lpos) {
@@ -458,7 +458,7 @@ void create_shadow_map() {
 		point lpos;
 		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(lpos, &bounds);}
 	}
-	scene_smap_vbo_invalid = 0;
+	//scene_smap_vbo_invalid = 0; // needs to be after dlights update
 
 	// restore old state
 	check_gl_error(200);

@@ -19,7 +19,7 @@ float const DARKNESS_THRESH  = 0.1;
 float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
 
 
-bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0);
+bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0), dl_smap_enabled(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0);
 float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
@@ -609,9 +609,10 @@ void upload_dlights_textures(cube_t const &bounds) {
 	last_dlights_empty = cur_dlights_empty;
 
 	// step 1: the light sources themselves
-	unsigned const max_dlights      = 1024;
-	unsigned const floats_per_light = 12;
-	float dl_data[max_dlights*floats_per_light] = {0.0};
+	unsigned const max_dlights           = 1024;
+	unsigned const base_floats_per_light = 12;
+	unsigned const floats_per_light      = base_floats_per_light + dl_smap_enabled;
+	float dl_data[max_dlights*(base_floats_per_light + 1)] = {0.0}; // use max possible size
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
 	unsigned const ysz(floats_per_light/4);
 	float const radius_scale(1.0/(0.5*(bounds.d[0][1] - bounds.d[0][0]))); // bounds x radius inverted
@@ -842,9 +843,13 @@ void add_dynamic_lights_ground() {
 	assert(ldynamic);
 	clear_dynamic_lights();
 	dl_sources.swap(dl_sources2);
+	dl_smap_enabled = 0;
 
 	for (auto i = light_sources_d.begin(); i != light_sources_d.end(); ++i) {
-		if (i->is_enabled()) {dl_sources.push_back(*i);}
+		// Note: more efficient to do VFC here, but won't apply to get_indir_light() (or is_in_darkness())
+		if (!i->is_enabled() || !i->is_visible()) continue;
+		dl_sources.push_back(*i);
+		dl_smap_enabled |= i->smap_enabled();
 	}
 	for (unsigned i = 0; i < NUM_RAND_LTS; ++i) { // add some random lights (omnidirectional)
 		point const pos(gen_rand_scene_pos());
@@ -861,7 +866,7 @@ void add_dynamic_lights_ground() {
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		light_source &ls(dl_sources[i]);
-		if (!ls.is_visible()) continue; // view culling
+		if (!ls.is_user_placed() && !ls.is_visible()) continue; // view culling (user placed lights are culled above as light_sources_d)
 		float const ls_radius(ls.get_radius());
 		if ((min(ls.get_pos().z, ls.get_pos2().z) - ls_radius) > max(ztop, czmax)) continue; // above everything, rarely occurs
 		point const &lpos(ls.get_pos()), &lpos2(ls.get_pos2());

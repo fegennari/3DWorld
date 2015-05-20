@@ -41,8 +41,8 @@ vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
-extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting;
-extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting;
+extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, scene_smap_vbo_invalid;
+extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
@@ -205,6 +205,7 @@ void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 	if (!enable)         {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights
 	if (has_spotlights)  {s.set_prefix("#define HAS_SPOTLIGHTS",    shader_type);}
 	if (has_line_lights) {s.set_prefix("#define HAS_LINE_LIGHTS",   shader_type);}
+	if (dl_smap_enabled) {s.set_prefix("#define HAS_DLIGHT_SMAP",   shader_type);}
 	s.set_bool_prefix("enable_dlights", (enable && dl_tid > 0 && has_dl_sources), shader_type);
 }
 
@@ -425,6 +426,7 @@ void setup_object_render_data() {
 	if (TIMETEST) {PRINT_TIME("4 Dlights Textures");}
 	get_occluders();
 	if (TIMETEST) {PRINT_TIME("5 Get Occluders");}
+	scene_smap_vbo_invalid = 0; // needs to be after dlights update
 }
 
 

@@ -7,6 +7,8 @@
 #include "sinf.h"
 #include "shadow_map.h"
 
+
+extern bool dl_smap_enabled;
 extern int display_mode, camera_coll_id, max_tius;
 extern float fticks;
 extern vector<light_source> light_sources_a;
@@ -35,7 +37,7 @@ bool bind_point_t::is_valid() { // used with placed dlights
 
 // radius == 0.0 is really radius == infinity (no attenuation)
 light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri) :
-	dynamic(id), enabled(1), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
+	dynamic(id), enabled(1), user_placed(0), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
 	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_index(0)
 {
 	assert(bw > 0.0 && bw <= 1.0);
@@ -261,7 +263,7 @@ void light_source::pack_to_floatv(float *data) const {
 		UNROLL_3X(*(data++) = 0.5*(1.0 + dir[i_]);) // map [-1,1] to [0,1]
 		*(data++) = bwidth; // [0,1]
 	}
-	if (smap_index > 0) {*(data++) = smap_index;} // FIXME
+	if (smap_enabled()) {assert(dl_smap_enabled); *(data++) = smap_index;}
 }
 
 void light_source_trig::advance_timestep() {
@@ -359,24 +361,30 @@ local_smap_manager_t local_smap_manager;
 void free_light_source_gl_state() {local_smap_manager.free_gl_state();} // free shadow maps
 
 
-bool light_source_trig::check_shadow_map() {
+pos_dir_up light_source::calc_pdu() const {
 
-	if (is_line_light())    return 0; // line lights don't support shadow maps
-	if (dir == zero_vector) return 0; // point light: need cube map, skip for now
-	if (is_directional()) {} // directional vs. hemisphere: use 2D shadow map for both
-	if (!is_enabled())      return 0; // disabled or destroyed
-	
-	if (smap_index == 0) {
-		smap_index = local_smap_manager.new_smap();
-		if (smap_index == 0) return 0; // allocation failed (at max)
-	}
-	float const angle = 0.0; // FIXME: calculate from bwidth clamped to some value
+	float const cos_theta(1.0 - min(1.0f, (bwidth + LT_DIR_FALLOFF))), angle(2.0*acosf(cos_theta));
 	int const dim(get_min_dim(dir));
 	vector3d temp(zero_vector), up_dir;
 	temp[dim] = 1.0; // choose up axis
 	orthogonalize_dir(temp, dir, up_dir, 1);
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
-	smap.pdu = pos_dir_up(pos, dir, up_dir, angle, 0.0001*radius, radius, 1.0, 1);
+	return pos_dir_up(pos, dir, up_dir, angle, 0.0001*radius, radius, 1.0, 1);
+}
+
+bool light_source_trig::check_shadow_map() {
+
+	if (is_line_light())    return 0; // line lights don't support shadow maps
+	if (dir == zero_vector) return 0; // point light: need cube map, skip for now
+	if (!is_enabled())      return 0; // disabled or destroyed
+	if (is_directional()) {} // directional vs. hemisphere: use 2D shadow map for both
+	
+	if (smap_index == 0) {
+		smap_index = local_smap_manager.new_smap();
+		if (smap_index == 0) return 0; // allocation failed (at max)
+	}
+	local_smap_data_t &smap(local_smap_manager.get(smap_index));
+	smap.pdu = calc_pdu();
 	smap.create_shadow_map_for_light(pos, nullptr); // no bcube
 	return 1;
 }

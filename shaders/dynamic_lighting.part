@@ -71,6 +71,11 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		// fetch another texture block which contains some combination of dir, bw, and lpos2
 		vec4 dir_w = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // {light direction, beamwidth} - OR - {light pos 2, 0.0}
 #endif
+
+#ifdef HAS_DLIGHT_SMAP
+		// FIXME: handle dlight shadow maps
+#endif
+
 		float intensity;
 #ifdef HAS_LINE_LIGHTS // technically cylinder light
 		if (dir_w.w == 0.0) { // this is a line light
@@ -118,7 +123,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		// FIXME: specular should have a lower falloff and its own intensity - however, this will require a larger radius and impact performance
 		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space
-	}
+	} // for i
 	color  = apply_power_signed(color, gamma); // to linear space
 	color += gamma*min(dl_color, 1.0); // add dlights color
 	color  = apply_power_signed(color, 1.0/gamma); // back to normal color space

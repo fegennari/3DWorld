@@ -90,7 +90,7 @@ struct local_smap_data_t;
 class light_source { // size = 68
 
 protected:
-	bool dynamic, enabled;
+	bool dynamic, enabled, user_placed;
 	unsigned smap_index; // index of shadow map texture/data
 	float radius, radius_inv, r_inner, bwidth;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
@@ -100,7 +100,7 @@ protected:
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : enabled(0), smap_index(0) {}
+	light_source() : enabled(0), user_placed(0), smap_index(0) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0);
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
@@ -113,6 +113,7 @@ public:
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
 	cube_t calc_bcube(float sqrt_thresh=0.0) const;
 	cylinder_3dw calc_bounding_cylin(float sqrt_thresh=0.0) const;
+	pos_dir_up calc_pdu() const;
 	bool is_visible()     const;
 	bool is_directional() const {return (bwidth < 1.0);}
 	bool is_very_directional() const {return ((bwidth + LT_DIR_FALLOFF) < 0.5);}
@@ -120,6 +121,8 @@ public:
 	bool is_dynamic()     const {return dynamic;}
 	bool is_neg_light()   const {return (color.R < 0.0 || color.G < 0.0 || color.B < 0.0);}
 	bool is_enabled()     const {return enabled;}
+	bool is_user_placed() const {return user_placed;}
+	bool smap_enabled()   const {return (smap_index != 0);}
 	void set_enabled(bool enabled_) {enabled = enabled_;}
 	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
 	void combine_with(light_source const &l);
@@ -153,7 +156,7 @@ class light_source_trig : public light_source, public bind_point_t {
 
 public:
 	light_source_trig() {}
-	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0) {}
+	light_source_trig(light_source const &ls) : light_source(ls), active_time(0.0), inactive_time(0.0) {user_placed = 1;}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
