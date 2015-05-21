@@ -71,9 +71,15 @@ pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, flo
 	assert(near_ >= 0.0 && far_ > 0.0 && far_ > near_);
 	if (A == 0.0) {A = double(window_width)/double(window_height);} // not yet cacluated, use default window
 	if (angle == 0.0) {angle = 0.5*TO_RADIANS*PERSP_ANGLE*((do_zoom && !no_zoom) ? 1.0/ZOOM_FACTOR : 1.0);} // not yet cacluated
-	tterm   = tanf(angle);
-	sterm   = sinf(angle);
-	x_sterm = (atanf(A*tterm)/angle)*sterm; // ratio of X-angle to Y-angle
+	tterm = tanf(angle);
+	sterm = sinf(angle);
+
+	if (A == 1.0) {x_sterm = sterm;} // common/simple case
+	else {
+		float atan_val(atanf(A*tterm));
+		if (atan_val < 1.0) {atan_val += PI;}
+		x_sterm = (atan_val/angle)*sterm; // ratio of X-angle to Y-angle
+	}
 	tterm_sq2_inv = 2.0/(tterm*tterm*(1.0 + A*A));
 	orthogonalize_up_dir();
 }

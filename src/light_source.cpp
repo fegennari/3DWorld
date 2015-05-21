@@ -387,6 +387,12 @@ bool light_source_trig::check_shadow_map() {
 	}
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
 	smap.pdu = calc_pdu();
+#if 0
+	shader_t shader;
+	shader.begin_color_only_shader(RED);
+	smap.pdu.draw_frustum();
+	shader.end_shader();
+#endif
 	smap.create_shadow_map_for_light(pos, nullptr); // no bcube
 	return 1;
 }
