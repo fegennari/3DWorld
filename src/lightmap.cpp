@@ -614,7 +614,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 	unsigned const floats_per_light      = base_floats_per_light + dl_smap_enabled;
 	float dl_data[max_dlights*(base_floats_per_light + 1)] = {0.0}; // use max possible size
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
-	unsigned const ysz(floats_per_light/4);
+	unsigned const ysz((floats_per_light+3)/4); // round up
 	float const radius_scale(1.0/(0.5*(bounds.d[0][1] - bounds.d[0][0]))); // bounds x radius inverted
 	vector3d const poff(bounds.get_llc()), psize(bounds.get_urc() - poff);
 	vector3d const pscale(1.0/psize.x, 1.0/psize.y, 1.0/psize.z);
@@ -622,7 +622,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 
 	for (unsigned i = 0; i < ndl; ++i) {
 		bool const line_light(dl_sources[i].is_line_light());
-		float *data(dl_data + i*floats_per_light);
+		float *data(dl_data + 4*i*ysz); // stride is texel RGBA
 		dl_sources[i].pack_to_floatv(data); // {center,radius, color, dir,beamwidth}
 		UNROLL_3X(data[i_] = (data[i_] - poff[i_])*pscale[i_];) // scale to [0,1] range
 		UNROLL_3X(data[i_+4] *= 0.1;) // scale color down
