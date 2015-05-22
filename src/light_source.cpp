@@ -299,9 +299,8 @@ bool light_source_trig::check_activate(point const &p, float radius, int activat
 	return 1;
 }
 
-// ************ SHADOW MAPS ***********
 
-unsigned const LOCAL_SMAP_START_TU_ID = 16;
+// ************ SHADOW MAPS ***********
 
 class local_smap_manager_t {
 
@@ -361,6 +360,10 @@ local_smap_manager_t local_smap_manager;
 
 void free_light_source_gl_state() {local_smap_manager.free_gl_state();} // free shadow maps
 
+
+void light_source::setup_and_bind_smap_texture(shader_t &s) const {
+	if (smap_index > 0) {local_smap_manager.get(smap_index).set_smap_shader_for_light(s);}
+}
 
 pos_dir_up light_source::calc_pdu() const {
 

@@ -3,6 +3,12 @@ uniform vec3 camera_pos; // world space
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
+#ifdef HAS_DLIGHT_SMAP
+const int NUM_DLIGHT_SMAPS = 16;
+uniform sampler2DShadow sm_tex_dl[NUM_DLIGHT_SMAPS];
+uniform mat4 smap_matrix[NUM_DLIGHT_SMAPS];
+#endif
+
 const float LT_DIR_FALLOFF = 0.005;
 
 float get_dir_light_scale(in vec3 pos, in vec3 lpos, in vec3 dir, in float bwidth) {

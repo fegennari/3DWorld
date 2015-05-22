@@ -7,7 +7,8 @@
 
 #include "transform_obj.h" // for xform_matrix
 
-unsigned const DEF_LOCAL_SMAP_SZ = 1024;
+unsigned const DEF_LOCAL_SMAP_SZ      = 1024;
+unsigned const LOCAL_SMAP_START_TU_ID = 16;
 
 
 struct smap_data_state_t {
@@ -29,6 +30,7 @@ struct smap_data_t : public smap_data_state_t {
 		: smap_data_state_t(init_state), tu_id(tu_id_), smap_sz(smap_sz_), last_lpos(all_zeros) {}
 	virtual ~smap_data_t() {} // free_gl_state()?
 	bool set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm=nullptr) const;
+	void bind_smap_texture(bool light_valid=1) const;
 	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds);
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(point const &lpos);
@@ -45,6 +47,7 @@ struct local_smap_data_t : public cached_dynamic_smap_data_t {
 	bool used;
 
 	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ) : cached_dynamic_smap_data_t(tu_id_, smap_sz_), used(0) {}
+	bool set_smap_shader_for_light(shader_t &s) const;
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
 };

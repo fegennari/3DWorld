@@ -125,9 +125,10 @@ public:
 	bool smap_enabled()   const {return (smap_index != 0);}
 	void set_enabled(bool enabled_) {enabled = enabled_;}
 	void shift_by(vector3d const &vd) {pos += vd; pos2 += vd;}
-	void combine_with(light_source const &l);
 	void pack_to_floatv(float *data) const;
+	void combine_with(light_source const &l);
 	bool try_merge_into(light_source &ls) const;
+	void setup_and_bind_smap_texture(shader_t &s) const;
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };

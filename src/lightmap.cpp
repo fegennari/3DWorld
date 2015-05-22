@@ -693,6 +693,11 @@ void upload_dlights_textures(cube_t const &bounds) {
 }
 
 
+void setup_dlight_shadow_maps(shader_t &s) {
+	for (auto i = dl_sources.begin(); i != dl_sources.end(); ++i) {i->setup_and_bind_smap_texture(s);}
+}
+
+
 void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name) {
 
 	set_active_texture(tu_id); // texture unit
@@ -708,6 +713,7 @@ void setup_dlight_textures(shader_t &s) {
 	set_one_texture(s, elem_tid, 3, "dlelm_tex");
 	set_one_texture(s, gb_tid,   4, "dlgb_tex");
 	set_active_texture(0);
+	if (shadow_map_enabled()) {setup_dlight_shadow_maps(s);}
 }
 
 

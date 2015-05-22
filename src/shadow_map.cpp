@@ -204,6 +204,25 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 	xform_matrix tm(texture_matrix);
 	if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // Note: works for translate, but not scale?
 	s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), tm.get_ptr(), 0);
+	bind_smap_texture(light_valid);
+	return 1;
+}
+
+bool local_smap_data_t::set_smap_shader_for_light(shader_t &s) const {
+
+	if (!shadow_map_enabled()) return 0;
+	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
+	char str[20] = {0};
+	sprintf(str, "sm_tex_dl[%u]", tu_id-LOCAL_SMAP_START_TU_ID);
+	s.add_uniform_int(str, tu_id);
+	sprintf(str, "smap_matrix_dl[%u]", tu_id-LOCAL_SMAP_START_TU_ID);
+	s.add_uniform_matrix_4x4(str, texture_matrix.get_ptr(), 0);
+	bind_smap_texture();
+	return 1;
+}
+
+void smap_data_t::bind_smap_texture(bool light_valid) const {
+
 	set_active_texture(tu_id);
 
 	if (light_valid) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
@@ -214,7 +233,6 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 		select_texture(WHITE_TEX); // default white texture
 	}
 	set_active_texture(0);
-	return 1;
 }
 
 
