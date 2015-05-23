@@ -631,7 +631,7 @@ public:
 		setup_shaders_pre(s);
 		if (distant) {s.set_prefix("#define NO_GRASS_TEXTURE", 1);} // FS
 		s.set_vert_shader("wind.part*+grass_texture.part+grass_pp_dl");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+grass_with_dlights");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+grass_with_dlights");
 		//s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass_texture.part+grass");
 		//s.set_frag_shader("linear_fog.part+textured_with_fog");
 		setup_shaders_post(s);
@@ -972,7 +972,7 @@ public:
 		shader_t s;
 		setup_shaders_pre(s);
 		s.set_vert_shader("texture_gen.part+wind.part*+flowers_pp_dl");
-		s.set_frag_shader("linear_fog.part+ads_lighting.part*+dynamic_lighting.part*+shadow_map.part*+flowers");
+		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+flowers");
 		setup_shaders_post(s);
 		setup_flower_shader_post(s);
 		draw_triangles(s);

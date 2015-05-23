@@ -316,6 +316,7 @@ public:
 		
 		if (free_list.empty()) { // allocate a new smap
 			index = smap_data.size();
+			if (index >= MAX_DLIGHT_SMAPS) return 0; // not enough shader uniforms
 			unsigned const tu_id(LOCAL_SMAP_START_TU_ID + index);
 			if ((int)tu_id >= max_tius) return 0; // not enough TIU's - fail
 			smap_data.push_back(local_smap_data_t(tu_id));

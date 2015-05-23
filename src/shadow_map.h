@@ -9,6 +9,7 @@
 
 unsigned const DEF_LOCAL_SMAP_SZ      = 1024;
 unsigned const LOCAL_SMAP_START_TU_ID = 16;
+unsigned const MAX_DLIGHT_SMAPS       = 16;
 
 
 struct smap_data_state_t {
