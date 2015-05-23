@@ -4,9 +4,9 @@ uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
 #ifdef HAS_DLIGHT_SMAP
-const int NUM_DLIGHT_SMAPS = 16;
-uniform sampler2DShadow sm_tex_dl[NUM_DLIGHT_SMAPS];
-uniform mat4 smap_matrix[NUM_DLIGHT_SMAPS];
+const int MAX_DLIGHT_SMAPS = 16;
+uniform sampler2DShadow sm_tex_dl[MAX_DLIGHT_SMAPS];
+uniform mat4 smap_matrix[MAX_DLIGHT_SMAPS];
 #endif
 
 const float LT_DIR_FALLOFF = 0.005;
@@ -78,10 +78,6 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		vec4 dir_w = texelFetch(dlight_tex, ivec2(2, dl_ix), 0); // {light direction, beamwidth} - OR - {light pos 2, 0.0}
 #endif
 
-#ifdef HAS_DLIGHT_SMAP
-		// FIXME: handle dlight shadow maps
-#endif
-
 		float intensity;
 #ifdef HAS_LINE_LIGHTS // technically cylinder light
 		if (dir_w.w == 0.0) { // this is a line light
@@ -126,6 +122,16 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #ifdef USE_SPEC_MAP
 		spec_color    *= get_spec_color();
 #endif
+
+#if defined(HAS_DLIGHT_SMAP) && !defined(NO_SHADOW_MAP)
+		int smap_index = int(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r);
+		if (smap_index > 0) { // has a shadow map
+			// FIXME: what coordinate space is everything in?
+			// FIXME: more efficient (no PCF, normal bias, etc.)?
+			intensity *= get_shadow_map_weight(vec4(dlpos, 1.0), lnorm, 1.0, smap_matrix[smap_index-1], sm_tex_dl[smap_index-1], lpos_r.xyz);
+		}
+#endif
+
 		// FIXME: specular should have a lower falloff and its own intensity - however, this will require a larger radius and impact performance
 		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space
