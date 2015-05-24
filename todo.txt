@@ -24,5 +24,4 @@ Local light source shadow maps
 	- Line light: skip
   - What fixed/limited set of shader TU ID(s) do we use?
     * Texture Array? Texture atlas? 3D texture?
-  - Fix multiple lights/init light on case
   - fragment outside light frustum is always lit

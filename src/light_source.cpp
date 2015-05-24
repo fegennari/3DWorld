@@ -264,7 +264,7 @@ void light_source::pack_to_floatv(float *data) const {
 		UNROLL_3X(*(data++) = 0.5*(1.0 + dir[i_]);) // map [-1,1] to [0,1]
 		*(data++) = bwidth; // [0,1]
 	}
-	if (smap_enabled()) {assert(dl_smap_enabled); *(data++) = smap_index;}
+	if (smap_enabled()) {assert(dl_smap_enabled); *(data++) = float(smap_index)/float(MAX_DLIGHT_SMAPS);}
 }
 
 void light_source_trig::advance_timestep() {
