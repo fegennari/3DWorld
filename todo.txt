@@ -17,11 +17,6 @@ Support platform rotate (doors)
 SSAO using depth map and postprocessing pass
 
 Local light source shadow maps
-  - Light types:
-    - Spotlight: single 2D texture
-	- Hemisphere (on wall/ceiling): is 2D texture facing away from wall/ceiling okay?
-	- Point Light: cube map
-	- Line light: skip
   - What fixed/limited set of shader TU ID(s) do we use?
     * Texture Array? Texture atlas? 3D texture?
   - fragment outside light frustum is always lit
