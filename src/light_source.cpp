@@ -368,7 +368,7 @@ void light_source::setup_and_bind_smap_texture(shader_t &s) const {
 
 pos_dir_up light_source::calc_pdu() const {
 
-	float const cos_theta(1.0 - min(1.0f, (bwidth + LT_DIR_FALLOFF))), angle(2.0*acosf(cos_theta));
+	float const cos_theta(1.0 - min(0.16f, (bwidth + LT_DIR_FALLOFF))), angle(2.0*acosf(cos_theta));
 	int const dim(get_min_dim(dir));
 	vector3d temp(zero_vector), up_dir;
 	temp[dim] = 1.0; // choose up axis
@@ -398,7 +398,7 @@ bool light_source_trig::check_shadow_map() {
 	smap.pdu.draw_frustum();
 	shader.end_shader();
 #endif
-	smap.create_shadow_map_for_light(pos, nullptr); // no bcube
+	smap.create_shadow_map_for_light(pos, nullptr, 1); // no bcube, in world space
 	return 1;
 }
 

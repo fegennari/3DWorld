@@ -103,8 +103,8 @@ public:
 		dverts.clear();
 	}
 
-	void add_cobjs(unsigned smap_sz, bool enable_vfc) {
-		if (coll_objects.drawn_ids.empty()) return;	// do nothing
+	void add_cobjs(unsigned smap_sz, unsigned fixed_ndiv, bool enable_vfc) {
+		if (coll_objects.drawn_ids.empty()) return; // do nothing
 		if (vbo_valid()) return; // already valid
 		// only valid if drawing trees, small trees, and scenery separately
 		vector<vert_wrap_t> verts;
@@ -116,17 +116,15 @@ public:
 			if (c.no_shadow_map()) continue;
 			// Note: since these are static/drawn once, we can't do any VFC for the camera, but we can do VFC for the light frustum of local light sources 
 			if (enable_vfc && !c.is_cobj_visible()) continue; // Note: assumes camera_du == light_pdu
-			int ndiv(1);
+			int ndiv(fixed_ndiv);
 
 			if (c.type == COLL_CUBE) {
 				z_sorted.push_back(make_pair(-c.d[2][1], *i));
 				continue;
 			}
-			else if (c.type == COLL_SPHERE) {
-				ndiv = get_smap_ndiv(c.radius, smap_sz);
-			}
-			else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {
-				ndiv = get_smap_ndiv(max(c.radius, c.radius2), smap_sz);
+			if (ndiv == 0) {
+				if (c.type == COLL_SPHERE) {ndiv = get_smap_ndiv(c.radius, smap_sz);}
+				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {ndiv = get_smap_ndiv(max(c.radius, c.radius2), smap_sz);}
 			}
 			c.get_shadow_triangle_verts(verts, ndiv);
 		}
@@ -139,7 +137,7 @@ public:
 		upload(verts);
 	}
 
-	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz) {
+	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv) {
 		if (shadow_objs.empty()) return; // no dynamic objects
 		shader_t shader;
 		shader.set_vert_shader("vertex_xlate_scale");
@@ -151,7 +149,7 @@ public:
 
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
-			int const ndiv(get_smap_ndiv(i->radius, smap_sz));
+			int const ndiv(fixed_ndiv ? fixed_ndiv : get_smap_ndiv(i->radius, smap_sz));
 
 			if (i->ctype != COLL_SPHERE) {
 				assert((unsigned)i->cid < coll_objects.size());
@@ -213,8 +211,8 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s) const {
 	if (!shadow_map_enabled()) return 0;
 	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
 	char str[20] = {0};
-	sprintf(str, "sm_tex_dl[%u]", tu_id-LOCAL_SMAP_START_TU_ID);
-	s.add_uniform_int(str, tu_id);
+	sprintf(str, "smap_tex_dl[%u]",    tu_id-LOCAL_SMAP_START_TU_ID);
+	s.add_uniform_int(str, tu_id); // Note: we can assert this returns true, though it makes shader debugging harder
 	sprintf(str, "smap_matrix_dl[%u]", tu_id-LOCAL_SMAP_START_TU_ID);
 	s.add_uniform_matrix_4x4(str, texture_matrix.get_ptr(), 0);
 	bind_smap_texture();
@@ -337,17 +335,18 @@ bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 
 
 // if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu
-void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds) {
+void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space) {
 
 	// setup render state
 	assert(smap_sz > 0);
 	bool const do_update(needs_update(lpos)); // must be called first, because this may indirectly update bounds
-	xform_matrix const camera_mv_matrix(fgGetMVM()); // cache the camera modelview matrix before we change it
+	xform_matrix camera_mv_matrix; // starts as identity matrix
+	if (!use_world_space) {camera_mv_matrix = fgGetMVM();} // cache the camera modelview matrix before we change it
 	fgPushMatrix();
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
-	if (bounds) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);}
+	if (bounds) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);} // else pdu should have been set by the caller
 	set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_);
 	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
@@ -404,11 +403,11 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	camera_pos = lpos;
 
 	// add static objects
-	smap_vertex_cache.add_cobjs(smap_sz, 0); // no VFC for static cobjs
+	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 	render_models(1);
 	render_voxel_data(1);
-	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz);
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, 0);
 	// add snow, trees, scenery, and mesh
 	if (snow_shadows) {draw_snow(1);} // slow
 	draw_trees(1);
@@ -424,16 +423,17 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	
 	point const camera_pos_(camera_pos);
 	camera_pos = lpos;
+	unsigned const fixed_ndiv = 24;
 #if 0 // higher memory usage but faster updates - better for smaps that are generated each frame
 	smap_vertex_cache_t per_light_smap_vertex_cache; // in light/smap_data
-	per_light_smap_vertex_cache.add_cobjs(smap_sz, 1); // enable VFC
+	per_light_smap_vertex_cache.add_cobjs(smap_sz, fixed_ndiv, 1); // enable VFC
 	per_light_smap_vertex_cache.render();
 #else // simpler but slower since there is no VFC - better for mostly static smaps
-	smap_vertex_cache.add_cobjs(smap_sz, 0); // no VFC for static cobjs
+	smap_vertex_cache.add_cobjs(smap_sz, fixed_ndiv, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 #endif
 	render_models(1); // ???
-	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz);
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv);
 	camera_pos = camera_pos_;
 }
 

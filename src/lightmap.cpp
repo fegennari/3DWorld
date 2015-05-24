@@ -611,10 +611,11 @@ void upload_dlights_textures(cube_t const &bounds) {
 	// step 1: the light sources themselves
 	unsigned const max_dlights           = 1024;
 	unsigned const base_floats_per_light = 12;
+	unsigned const max_floats_per_light  = base_floats_per_light + 1;
 	unsigned const floats_per_light      = base_floats_per_light + dl_smap_enabled;
-	float dl_data[max_dlights*(base_floats_per_light + 1)] = {0.0}; // use max possible size
+	float dl_data[max_dlights*max_floats_per_light] = {0.0}; // use max possible size
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));
-	unsigned const ysz((floats_per_light+3)/4); // round up
+	unsigned const ysz((max_floats_per_light+3)/4); // round up
 	float const radius_scale(1.0/(0.5*(bounds.d[0][1] - bounds.d[0][0]))); // bounds x radius inverted
 	vector3d const poff(bounds.get_llc()), psize(bounds.get_urc() - poff);
 	vector3d const pscale(1.0/psize.x, 1.0/psize.y, 1.0/psize.z);
@@ -706,14 +707,14 @@ void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *cons
 }
 
 
-void setup_dlight_textures(shader_t &s) {
+void setup_dlight_textures(shader_t &s, bool enable_dlights_smap) {
 
 	assert(dl_tid > 0 && elem_tid > 0 && gb_tid > 0 );
 	set_one_texture(s, dl_tid,   2, "dlight_tex");
 	set_one_texture(s, elem_tid, 3, "dlelm_tex");
 	set_one_texture(s, gb_tid,   4, "dlgb_tex");
 	set_active_texture(0);
-	if (shadow_map_enabled()) {setup_dlight_shadow_maps(s);}
+	if (enable_dlights_smap && shadow_map_enabled()) {setup_dlight_shadow_maps(s);}
 }
 
 

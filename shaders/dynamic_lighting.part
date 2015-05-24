@@ -5,8 +5,8 @@ uniform usampler2D dlelm_tex, dlgb_tex;
 
 #ifdef HAS_DLIGHT_SMAP
 const int MAX_DLIGHT_SMAPS = 16;
-uniform sampler2DShadow sm_tex_dl[MAX_DLIGHT_SMAPS];
-uniform mat4 smap_matrix[MAX_DLIGHT_SMAPS];
+uniform sampler2DShadow smap_tex_dl[MAX_DLIGHT_SMAPS];
+uniform mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];
 #endif
 
 const float LT_DIR_FALLOFF = 0.005;
@@ -41,6 +41,15 @@ float get_line_intensity_at(in vec3 pos, in vec3 lpos1, in vec3 lpos2, in float 
 vec3 apply_power_signed(in vec3 val, in float n) {
 	return sign(val)*pow(abs(val), vec3(n)); // preserve the sign
 }
+
+#ifndef NO_SHADOW_MAP
+float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DShadow sm_tex) {
+	pos.xyz += norm_bias_scale*z_bias*normal; // world space
+	vec4 shadow_coord = matrix * pos;
+	shadow_coord.z   += -z_bias*shadow_coord.w;
+	return textureProj(sm_tex, shadow_coord);
+}
+#endif
 
 void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale) {
 #ifndef NO_DYNAMIC_LIGHTS
@@ -123,15 +132,12 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		spec_color    *= get_spec_color();
 #endif
 
-#if defined(HAS_DLIGHT_SMAP) && !defined(NO_SHADOW_MAP)
+#if defined(HAS_DLIGHT_SMAP) && !defined(NO_SHADOW_MAP) // Note: all math is in world space
 		int smap_index = int(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r);
 		if (smap_index > 0) { // has a shadow map
-			// FIXME: what coordinate space is everything in?
-			// FIXME: more efficient (no PCF, normal bias, etc.)?
-			intensity *= get_shadow_map_weight(vec4(dlpos, 1.0), lnorm, 1.0, smap_matrix[smap_index-1], sm_tex_dl[smap_index-1], lpos_r.xyz);
+			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), lnorm, smap_matrix_dl[smap_index-1], smap_tex_dl[smap_index-1]);
 		}
 #endif
-
 		// FIXME: specular should have a lower falloff and its own intensity - however, this will require a larger radius and impact performance
 		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space

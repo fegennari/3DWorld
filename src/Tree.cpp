@@ -347,7 +347,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 	s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+dynamic_lighting.part*+leaf_lighting.part+texture_gen.part+tree_leaves");
 	s.begin_shader();
 	s.setup_scene_bounds();
-	if (!no_dlights) {setup_dlight_textures(s);}
+	if (!no_dlights) {setup_dlight_textures(s, 0);} // no dlight smap
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);} else {s.setup_fog_scale();}
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_active_texture(0);
