@@ -324,7 +324,7 @@ bool smap_data_t::needs_update(point const &lpos) {
 
 	bool const ret(lpos != last_lpos);
 	last_lpos = lpos;
-	return (ret && !tid);
+	return (ret || !tid);
 }
 
 bool ground_mode_smap_data_t::needs_update(point const &lpos) {
