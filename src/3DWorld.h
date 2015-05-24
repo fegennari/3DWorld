@@ -547,12 +547,12 @@ struct pos_dir_up { // defines a view frustum
 
 	point pos;
 	vector3d dir, upv, upv_, cp;
-	float tterm, sterm, x_sterm, tterm_sq2_inv, near_, far_;
-	double A;
+	float angle, tterm, sterm, x_sterm, tterm_sq2_inv, near_, far_;
+	double A; // aspect ratio x/y
 	bool valid;
 
 	pos_dir_up(void) : valid(0) {}
-	pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float angle, float n, float f, float a=0.0, bool no_zoom=0);
+	pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float angle_, float n, float f, float a=0.0, bool no_zoom=0);
 	void orthogonalize_up_dir();
 	bool point_visible_test(point const &pos_) const;
 	bool sphere_visible_test(point const &pos_, float radius) const;

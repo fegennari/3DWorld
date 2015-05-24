@@ -11,7 +11,7 @@
 extern bool dl_smap_enabled;
 extern int display_mode, camera_coll_id, max_tius;
 extern unsigned shadow_map_sz;
-extern float fticks;
+extern float fticks, CAMERA_RADIUS;
 extern vector<light_source> light_sources_a;
 extern vector<light_source_trig> light_sources_d;
 extern coll_obj_group coll_objects;
@@ -374,7 +374,8 @@ pos_dir_up light_source::calc_pdu() const {
 	temp[dim] = 1.0; // choose up axis
 	orthogonalize_dir(temp, dir, up_dir, 1);
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
-	return pos_dir_up(pos, dir, up_dir, angle, 0.0001*radius, radius, 1.0, 1);
+	float const near_clip(min(0.1f*radius, max(0.0001f*radius, CAMERA_RADIUS))); // clamp to camera radius as a hack to avoid shadows from light fixtures
+	return pos_dir_up(pos, dir, up_dir, angle, near_clip, radius, 1.0, 1);
 }
 
 bool light_source_trig::check_shadow_map() {

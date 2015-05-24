@@ -65,8 +65,8 @@ void set_camera_pdu() {
 // Note: near and far clip aren't flat planes like a true frustum - they're curved like a spherical section
 // this is close enough to a frustum in practice, and makes sphere intersection much easier and faster
 // Note: angle is in radians
-pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float angle, float n, float f, float a, bool no_zoom)
-		: pos(p), dir(d), upv(u), near_(n), far_(f), A(a), valid(1)
+pos_dir_up::pos_dir_up(point const &p, vector3d const &d, vector3d const &u, float angle_, float n, float f, float a, bool no_zoom)
+		: pos(p), dir(d), upv(u), angle(angle_), near_(n), far_(f), A(a), valid(1)
 {
 	assert(near_ >= 0.0 && far_ > 0.0 && far_ > near_);
 	if (A == 0.0) {A = double(window_width)/double(window_height);} // not yet cacluated, use default window

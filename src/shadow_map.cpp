@@ -246,7 +246,18 @@ void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 }
 
 
-pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds, bool set_matrix) {
+// should this be a pos_dir_up member function?
+void set_smap_mvm_pjm(point const &eye, point const &center, vector3d const &up_dir, float angle, float aspect, float near_clip, float far_clip) {
+
+	fgMatrixMode(FG_PROJECTION);
+	fgLoadIdentity();
+	fgPerspective(2.0*angle/TO_RADIANS, aspect, near_clip, far_clip);
+	fgMatrixMode(FG_MODELVIEW);
+	fgLoadIdentity();
+	fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
+}
+
+pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds) {
 
 	point const center(bounds.get_cube_center());
 	vector3d const light_dir((center - pos).get_norm()); // almost equal to lpos (point light)
@@ -270,17 +281,7 @@ pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds, bool 
 	}
 	float const frustum_skew_val(1.0 + 0.5*(bounds.d[2][1] - bounds.d[2][0])/dist);
 	float const angle(atan2(frustum_skew_val*ry, 1.0f)), aspect(rx/ry);
-	pos_dir_up const pdu(pos, light_dir, up_dir, angle, max(NEAR_CLIP, dist-radius), dist+radius, aspect);
-
-	if (set_matrix) {
-		fgMatrixMode(FG_PROJECTION);
-		fgLoadIdentity();
-		fgPerspective(2.0*angle/TO_RADIANS, aspect, pdu.near_, pdu.far_);
-		fgMatrixMode(FG_MODELVIEW);
-		fgLoadIdentity();
-		fgLookAt(pos.x, pos.y, pos.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
-	}
-	return pdu;
+	return pos_dir_up(pos, light_dir, up_dir, angle, max(NEAR_CLIP, dist-radius), dist+radius, aspect);
 }
 
 
@@ -294,7 +295,7 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 
 	// draw light frustum
 	s.begin_color_only_shader(colorRGBA(1.0, 1.0, 0.0, 0.25)); // yellow
-	get_pt_cube_frustum_pdu(lpos, get_scene_bounds(), 0).draw_frustum();
+	get_pt_cube_frustum_pdu(lpos, get_scene_bounds()).draw_frustum();
 	disable_blend();
 	s.end_shader();
 }
@@ -346,7 +347,8 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	fgMatrixMode(FG_MODELVIEW);
-	if (bounds) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds, 1);}
+	if (bounds) {pdu = get_pt_cube_frustum_pdu(lpos, *bounds);}
+	set_smap_mvm_pjm(pdu.pos, (pdu.pos + pdu.dir), pdu.upv, pdu.angle, pdu.A, pdu.near_, pdu.far_);
 	texture_matrix = get_texture_matrix(camera_mv_matrix);
 	check_gl_error(201);
 
