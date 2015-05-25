@@ -1557,7 +1557,7 @@ void uobj_draw_data::draw_dwcarrier() const {
 			begin_sphere_draw(0);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				draw_sphere_vbo(point(0.06*(1.0 - 2.0*i), 0.1, 0.4), 0.025, ndiv4, 0);
+				draw_sphere_vbo(point(0.06*(1.0 - 2.0*i), 0.1, 0.4), 0.025, ndiv2, 0);
 			}
 			end_sphere_draw();
 			fgPopMatrix();
