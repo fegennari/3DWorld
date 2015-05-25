@@ -11,7 +11,7 @@
 extern bool dl_smap_enabled;
 extern int display_mode, camera_coll_id, max_tius;
 extern unsigned shadow_map_sz;
-extern float fticks, CAMERA_RADIUS;
+extern float fticks;
 extern vector<light_source> light_sources_a;
 extern vector<light_source_trig> light_sources_d;
 extern coll_obj_group coll_objects;
@@ -374,7 +374,17 @@ pos_dir_up light_source::calc_pdu() const {
 	temp[dim] = 1.0; // choose up axis
 	orthogonalize_dir(temp, dir, up_dir, 1);
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
-	float const near_clip(min(0.1f*radius, max(0.0001f*radius, CAMERA_RADIUS))); // clamp to camera radius as a hack to avoid shadows from light fixtures
+	int cindex(-1);
+	float t(0.0);
+	vector3d cnorm; // unused
+	float near_clip(0.001*radius); // min value
+
+	// if light is inside a light fixture, move the near clip plane so that the light fixture cobj is outside the view frustum
+	if (check_point_contained_tree(pos, cindex, 0)) {
+		assert(cindex >= 0);
+		point const start_pos(pos + dir*radius);
+		if (coll_objects[cindex].line_int_exact(start_pos, pos, t, cnorm)) {near_clip += (1.0 - t)*radius;}
+	}
 	return pos_dir_up(pos, dir, up_dir, angle, near_clip, radius, 1.0, 1);
 }
 
@@ -391,8 +401,8 @@ bool light_source_trig::check_shadow_map() {
 		if (smap_index == 0) return 0; // allocation failed (at max)
 	}
 	local_smap_data_t &smap(local_smap_manager.get(smap_index));
-	smap.pdu = calc_pdu();
-#if 0
+	smap.pdu = calc_pdu(); // Note: could cache this in the light source for static lights
+#if 0 // draw light/shadow frustum for debugging
 	shader_t shader;
 	shader.begin_color_only_shader(RED);
 	smap.pdu.draw_frustum();

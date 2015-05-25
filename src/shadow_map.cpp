@@ -17,7 +17,7 @@ bool scene_smap_vbo_invalid(0), voxel_shadows_updated(0);
 unsigned shadow_map_sz(0);
 pos_dir_up orig_camera_pdu;
 
-extern bool snow_shadows;
+extern bool snow_shadows, enable_depth_clamp;
 extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
 extern float NEAR_CLIP, tree_deadness, vegetation;
@@ -428,16 +428,18 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	// however, it's simpler and more efficient for memory usage since there is only one buffer shared across all smaps, plus dlight smaps aren't generated each frame
 	// Note: don't use fixed_ndiv in this call: since this may be shared with the global smap, both control flow paths should generate the same cobjs geometry;
 	// it likely doesn't matter, since cobj geometry will generally be cached during the global smap pass (which is run first)
+	if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);} // no depth clamping (due to light fixtures in front of the near clip plane)
 	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 	render_models(1);
 	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv);
+	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 	camera_pos = camera_pos_;
 }
 
 bool local_smap_data_t::needs_update(point const &lpos) {
 	
-	// Note/FIXME: scene_smap_vbo_invalid is reset at the end of the global create_shadow_map() call, so this call must be done before that
+	// Note: scene_smap_vbo_invalid is reset at the end of the global create_shadow_map() call, so this call must be done before that
 	bool has_dynamic(!tid || scene_smap_vbo_invalid);
 	
 	for (auto i = shadow_objs.begin(); i != shadow_objs.end() && !has_dynamic; ++i) { // test dynamic objects

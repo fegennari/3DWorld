@@ -236,7 +236,7 @@ void cast_light_ray(lmap_manager_t &lmgr, point p1, point p2, float weight, floa
 						vector3d cnorm2;
 
 						// test for collision with reversed ray to get the other intersection point
-						if (cobj.line_int_exact(p_end, p2, t, cnorm2, 0.0, 1.0)) { // not sure what to do if fails or tmax >= 1.0
+						if (cobj.line_int_exact(p_end, p2, t, cnorm2)) { // not sure what to do if fails or tmax >= 1.0
 							point const p_int(p_end + (p2 - p_end)*t);
 							if (!dist_less_than(p2, p_int, get_step_size())) {add_path_to_lmcs(lmgr, p2, p_int, weight, color, ltype, (depth == 0));}
 							

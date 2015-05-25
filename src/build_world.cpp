@@ -230,7 +230,7 @@ void object_line_coll(dwobject &obj, point const &old_pos, float radius, unsigne
 	vector3d cnorm(zero_vector);
 	point cpos(obj.pos);
 
-	//if (coll_objects[cindex].line_int_exact(old_pos, pos, t, cnorm, 0.0, 1.0)) {
+	//if (coll_objects[cindex].line_int_exact(old_pos, pos, t, cnorm)) {
 	if (check_coll_line_exact(old_pos, obj.pos, cpos, cnorm, cindex)) { // slower, but more correct
 		assert(cnorm != zero_vector);
 		obj.flags |= OBJ_COLLIDED;
