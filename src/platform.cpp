@@ -263,6 +263,19 @@ bool platform_cont::any_active() const {
 	return 0;
 }
 
+bool platform_cont::any_moving_platforms_in_view(pos_dir_up const &pdu) const { // Note: untested
+
+	for (auto i = begin(); i != end(); ++i) {
+		if (!i->is_moving()) continue;
+
+		for (auto j = i->cobjs.begin(); j != i->cobjs.end(); ++j) {
+			coll_obj const &cobj(coll_objects[*j]);
+			if (!cobj.disabled() && pdu.cube_visible(cobj)) return 1; // test cube in view frustum
+		}
+	}
+	return 0;
+}
+
 
 void coll_obj::add_to_platform() const {
 
@@ -270,6 +283,5 @@ void coll_obj::add_to_platform() const {
 	assert(size_t(platform_id) < platforms.size());
 	platforms[platform_id].add_cobj(id);
 }
-
 
 

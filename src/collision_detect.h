@@ -370,6 +370,7 @@ struct platform_cont : public deque<platform> {
 	void shift_by(vector3d const &val);
 	void advance_timestep();
 	bool any_active() const;
+	bool any_moving_platforms_in_view(pos_dir_up const &pdu) const;
 };
 
 

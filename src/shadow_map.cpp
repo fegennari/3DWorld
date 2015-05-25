@@ -432,7 +432,7 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	smap_vertex_cache.add_cobjs(smap_sz, fixed_ndiv, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 #endif
-	render_models(1); // ???
+	render_models(1);
 	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv);
 	camera_pos = camera_pos_;
 }
@@ -441,11 +441,11 @@ bool local_smap_data_t::needs_update(point const &lpos) {
 	
 	// Note/FIXME: scene_smap_vbo_invalid is reset at the end of the global create_shadow_map() call, so this call must be done before that
 	bool has_dynamic(!tid || scene_smap_vbo_invalid);
-	//has_dynamic |= platforms.any_active(); // FIXME: check for platsforms within light radius/frustum/etc.
 	
-	for (auto i = shadow_objs.begin(); i != shadow_objs.end() && !has_dynamic; ++i) {
+	for (auto i = shadow_objs.begin(); i != shadow_objs.end() && !has_dynamic; ++i) { // test dynamic objects
 		has_dynamic |= pdu.sphere_visible_test(i->pos, i->radius);
 	}
+	if (!has_dynamic) {has_dynamic |= platforms.any_moving_platforms_in_view(pdu);} // test platforms
 	bool const ret(smap_data_t::needs_update(lpos) || has_dynamic || last_has_dynamic);
 	last_has_dynamic = has_dynamic;
 	return ret;
