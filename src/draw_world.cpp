@@ -420,7 +420,7 @@ void setup_object_render_data() {
 	if (TIMETEST) {PRINT_TIME("1 Distribute Smoke");}
 	upload_smoke_indir_texture();
 	if (TIMETEST) {PRINT_TIME("2 Upload Smoke");}
-	add_dynamic_lights_ground();
+	add_dynamic_lights_ground(); // and create dlights shadow maps
 	if (TIMETEST) {PRINT_TIME("3 Add Dlights");}
 	cube_t const dlight_bounds(-X_SCENE_SIZE, X_SCENE_SIZE, -Y_SCENE_SIZE, Y_SCENE_SIZE, get_zval_min(), get_zval_max());
 	upload_dlights_textures(dlight_bounds); // get_scene_bounds()

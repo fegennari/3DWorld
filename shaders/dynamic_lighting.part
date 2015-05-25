@@ -3,6 +3,9 @@ uniform vec3 camera_pos; // world space
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
+const float SPOTLIGHT_LEAKAGE = 0.0; // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
+const float SHADOW_LEAKAGE    = 0.1; // simulates indirect lighting
+
 #ifdef HAS_DLIGHT_SMAP
 const int MAX_DLIGHT_SMAPS = 16;
 uniform sampler2DShadow smap_tex_dl[MAX_DLIGHT_SMAPS];
@@ -16,7 +19,7 @@ float get_dir_light_scale(in vec3 pos, in vec3 lpos, in vec3 dir, in float bwidt
 	float dp      = dot(obj_dir, (2.0*dir - 1.0)); // map dir [0,1] to [-1,1]
 	float dp_norm = 0.5*(1.0 - dp); // dp = -1.0 to 1.0, bw = 0.0 to 1.0
 	float v       = clamp(2.0*(dp_norm + bwidth + LT_DIR_FALLOFF - 1.0)/LT_DIR_FALLOFF, 0.0, 1.0);
-	return smoothstep(0.0, 1.0, v);
+	return mix(smoothstep(0.0, 1.0, v), 1.0, SPOTLIGHT_LEAKAGE);
 }
 
 float get_point_intensity_at(in vec3 pos, in vec3 lpos, in float radius) { // Note: doesn't handle the radius==0 case
@@ -51,7 +54,7 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.z   += -z_bias*shadow_coord.w;
-	return textureProj(sm_tex, shadow_coord);
+	return mix(textureProj(sm_tex, shadow_coord), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
 }
 #endif
 

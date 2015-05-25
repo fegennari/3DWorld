@@ -424,14 +424,12 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	point const camera_pos_(camera_pos);
 	camera_pos = lpos;
 	unsigned const fixed_ndiv = 24;
-#if 0 // higher memory usage but faster updates - better for smaps that are generated each frame
-	smap_vertex_cache_t per_light_smap_vertex_cache; // in light/smap_data
-	per_light_smap_vertex_cache.add_cobjs(smap_sz, fixed_ndiv, 1); // enable VFC
-	per_light_smap_vertex_cache.render();
-#else // simpler but slower since there is no VFC - better for mostly static smaps
-	smap_vertex_cache.add_cobjs(smap_sz, fixed_ndiv, 0); // no VFC for static cobjs
+	// Note: using the global cobjs here may be less efficient for smap generation since we can't VFC (due to caching/sharing with other shadow maps)
+	// however, it's simpler and more efficient for memory usage since there is only one buffer shared across all smaps, plus dlight smaps aren't generated each frame
+	// Note: don't use fixed_ndiv in this call: since this may be shared with the global smap, both control flow paths should generate the same cobjs geometry;
+	// it likely doesn't matter, since cobj geometry will generally be cached during the global smap pass (which is run first)
+	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
-#endif
 	render_models(1);
 	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv);
 	camera_pos = camera_pos_;
