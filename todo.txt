@@ -15,8 +15,4 @@ Puffy clouds in tiled terrain mode
 
 Support platform rotate (doors)
 SSAO using depth map and postprocessing pass
-
-Local light source shadow maps
-  - What fixed/limited set of shader TU ID(s) do we use?
-    * Texture Array? Texture atlas? 3D texture?
-  - fragment outside light frustum is always lit
+Skip model draw during shadow pass if occluded from light source (already fully in shadow)

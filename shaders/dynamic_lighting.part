@@ -43,6 +43,10 @@ vec3 apply_power_signed(in vec3 val, in float n) {
 }
 
 #ifndef NO_SHADOW_MAP
+// Note: for non-spotlights where the shadow frustum doesn't cover the entire light angle,
+// the lookup is clamped to the edge texel of the shadow map, which stretches the shadow to the sides;
+// it may make more sense to clip the shadower to the frustum so that all the area outside the shadow frustum is unshadowed,
+// but it's not clear how to do that cleanly/efficiently or if it would look any better
 float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DShadow sm_tex) {
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
 	vec4 shadow_coord = matrix * pos;

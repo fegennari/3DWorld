@@ -244,10 +244,10 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 }
 
 
-void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bool use_smoke, bool use_indir, float min_alpha) {
+void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bool use_smoke, bool use_indir, float min_alpha, bool enable_dlights_smap=1) {
 
 	s.setup_fog_scale(); // fog scale for the case where smoke is disabled
-	if (dlights) {setup_dlight_textures(s);}
+	if (dlights) {setup_dlight_textures(s, enable_dlights_smap);}
 	set_indir_lighting_block(s, use_smoke, use_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
@@ -363,12 +363,13 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap) {
 
 	bool indir_lighting(0);
+	s.set_prefix("#define NO_SHADOW_MAP", 0); // VS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
-	common_shader_block_post(s, dlights, use_smap, 0, indir_lighting, 0.0);
+	common_shader_block_post(s, dlights, use_smap, 0, indir_lighting, 0.0, 0); // no dlights smap
 	check_gl_error(400);
 }
 
