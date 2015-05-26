@@ -4,7 +4,8 @@
 
 #include "collision_detect.h"
 #include "openal_wrap.h"
-#include "model3d.h" //for geom_xform_t
+#include "model3d.h"  // for geom_xform_t
+#include "lightmap.h" // for light_source_trig
 
 
 platform_cont platforms;
@@ -13,6 +14,7 @@ extern bool user_action_key;
 extern int animate2;
 extern float fticks, CAMERA_RADIUS;
 extern coll_obj_group coll_objects;
+extern vector<light_source_trig> light_sources_d;
 
 
 unsigned trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
@@ -87,7 +89,7 @@ void platform::activate() {
 
 bool platform::check_activate(point const &p, float radius, int activator) {
 
-	if (cont || state != ST_NOACT || cobjs.empty()) return 1; // continuous, already activated, or no cobjs
+	if (cont || state != ST_NOACT || empty()) return 1; // continuous, already activated, or no cobjs/lights
 	if (!triggers.register_player_pos(p, radius, activator, 1)) return 0; // not yet triggered
 	activate();
 	return 1;
@@ -96,7 +98,7 @@ bool platform::check_activate(point const &p, float radius, int activator) {
 
 void platform::next_frame() {
 	
-	cobjs.clear();
+	cobjs.clear(); // lights is constant
 	delta = all_zeros;
 }
 
@@ -109,7 +111,7 @@ void platform::move_platform(float dist_traveled) {
 
 void platform::advance_timestep() {
 
-	if (fticks == 0.0 || cobjs.empty()) return; // no progress or no cobjs
+	if (fticks == 0.0 || empty()) return; // no progress or no cobjs/lights
 	
 	if (state == ST_NOACT) { // not activated
 		assert(pos == origin);
@@ -175,10 +177,14 @@ void platform::advance_timestep() {
 			coll_obj &cobj(coll_objects[*i]);
 			// need to update collision structure when there is an x/y delta by removing/adding to coll_cells (except for cubes)
 			bool const update_colls(cobj.type != COLL_CUBE && (delta.x != 0.0 || delta.y != 0.0));
-			if (update_colls) remove_coll_object(*i, 0);
+			if (update_colls) {remove_coll_object(*i, 0);}
 			cobj.shift_by(delta); // move object
-			if (update_colls) cobj.re_add_coll_cobj(*i, 0);
+			if (update_colls) {cobj.re_add_coll_cobj(*i, 0);}
 			// squish player or stop when hit player?
+		}
+		for (vector<unsigned>::const_iterator i = lights.begin(); i != lights.end(); ++i) {
+			assert(*i < light_sources_d.size());
+			light_sources_d[*i].shift_by(delta);
 		}
 	} // pos != last_pos
 }

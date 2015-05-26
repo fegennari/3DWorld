@@ -1272,15 +1272,20 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (fvals[d] == 0.0) continue;
 					light_source ls(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner);
 					
-					if (d) {
-						light_sources_d.push_back(light_source_trig(ls, (use_smap != 0)));
+					if (d) { // diffuse
+						if (cobj.platform_id >= 0) {
+							assert(cobj.platform_id < (int)platforms.size());
+							platforms[cobj.platform_id].add_light(light_sources_d.size());
+						}
+						light_sources_d.push_back(light_source_trig(ls, (use_smap != 0), cobj.platform_id));
 						light_sources_d.back().add_triggers(triggers);
 					}
-					else {light_sources_a.push_back(ls);}
+					else {light_sources_a.push_back(ls);} // ambient
 				}
 			}
 			break;
 
+			// FIXME: should region option use first {x,y,z} as the region LLC and only specify the region URC?
 		case 'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 			{
 				trigger_t trigger;

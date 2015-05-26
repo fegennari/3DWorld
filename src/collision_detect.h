@@ -337,10 +337,12 @@ class platform { // animated (player controlled) scene object
 	multi_trigger_t triggers;
 
 	void move_platform(float dist_traveled);
+	bool empty() const {return (cobjs.empty() && lights.empty());}
 
 public:
 	// other data
-	vector<unsigned> cobjs; // collision object(s) bound to this platform
+	vector<unsigned> cobjs;  // collision object(s) bound to this platform
+	vector<unsigned> lights; // dynamic light source(s) bound to this platform
 	
 	platform(float fs=1.0, float rs=1.0, float sd=0.0, float rd=0.0, float dst=1.0, float ad=0.0,
 		point const &o=all_zeros, vector3d const &dir_=plus_z, bool c=0, bool ir=0);
@@ -352,6 +354,7 @@ public:
 	vector3d get_velocity()    const;
 	void clear_last_delta() {delta = all_zeros;}
 	void add_cobj(unsigned cobj);
+	void add_light(unsigned light) {lights.push_back(light);}
 	void next_frame();
 	void shift_by(vector3d const &val);
 	void reset();

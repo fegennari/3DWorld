@@ -145,7 +145,7 @@ bool light_source::is_visible() const {
 		if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
 		if (sphere_cobj_occluded(get_camera_pos(), pos, max(0.5f*radius, r_inner))) return 0; // approximate occlusion culling, can miss lights but rarely happens
 	}
-	if (dynamic || radius < 0.65 || !(display_mode & 0x08)) return 1; // dynamic lights (common case), small/medium lights, or occlusion culling disabled
+	if (dynamic || radius < 0.65 || !(display_mode & 0x08)) return 1; // dynamic/platform lights (common case), small/medium lights, or occlusion culling disabled
 	unsigned const num_rays = 100;
 	static rand_gen_t rgen;
 	static vector<vector3d> dirs;
@@ -279,6 +279,13 @@ void light_source_trig::advance_timestep() {
 	else {
 		if (triggers.get_auto_on_time()  > 0.0) {inactive_time += fticks;} // increase inactive time in auto on mode
 	}
+}
+
+void light_source_trig::shift_by(vector3d const &vd) {
+	
+	light_source::shift_by(vd);
+	bind_point_t::shift_by(vd);
+	triggers.shift_by(vd);
 }
 
 bool light_source_trig::check_activate(point const &p, float radius, int activator) {

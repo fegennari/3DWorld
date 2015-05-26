@@ -153,17 +153,19 @@ public:
 class light_source_trig : public light_source, public bind_point_t {
 
 	bool use_smap;
+	short platform_id;
 	float active_time, inactive_time;
 	multi_trigger_t triggers;
 
 public:
 	light_source_trig() : use_smap(0) {}
-	light_source_trig(light_source const &ls, bool smap=0) : light_source(ls), use_smap(smap), active_time(0.0), inactive_time(0.0) {user_placed = 1;}
+	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1)
+		: light_source(ls), use_smap(smap), platform_id(platform_id_), active_time(0.0), inactive_time(0.0) {user_placed = 1; dynamic = (platform_id >= 0);}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_enabled() {return (light_source::is_enabled() && bind_point_t::is_valid());}
-	void shift_by(vector3d const &vd) {light_source::shift_by(vd); bind_point_t::shift_by(vd); triggers.shift_by(vd);}
+	void shift_by(vector3d const &vd);
 	bool check_shadow_map();
 	void release_smap();
 };
