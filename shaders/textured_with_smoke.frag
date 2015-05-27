@@ -148,15 +148,14 @@ void main()
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
 #endif
 
-	vec3 lit_color = emission.rgb + emissive_scale*gl_Color.rgb;
-	add_indir_lighting(lit_color);
-	//lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
-
 #ifdef USE_WINDING_RULE_FOR_NORMAL
 	float normal_sign = ((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
 #else
 	float normal_sign = ((!two_sided_lighting || (dot(eye_norm, epos.xyz) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
 #endif
+	vec3 lit_color = emission.rgb + emissive_scale*gl_Color.rgb;
+	add_indir_lighting(lit_color, normal_sign);
+	//lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
 	
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(normal_sign*eye_norm);

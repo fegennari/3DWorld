@@ -16,7 +16,7 @@ vec3 indir_lookup(in vec3 pos) {
 	return texture(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
 }
 
-void add_indir_lighting(inout vec3 lit_color) {
+void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
 	vec3 indir_color = const_indir_color; // add constant indir
 
 	if (indir_lighting || hemi_lighting) {
@@ -32,7 +32,7 @@ void add_indir_lighting(inout vec3 lit_color) {
 			float sky_lum   = max(get_luminance(sky_color), 0.33); // or use indir_color?
 			spos            = clamp((spos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
 			vec3 gnd_color  = sky_lum*textureLod(ground_tex, spos.xy, 4).rgb; // use 4th LOD mipmap (64x64)
-			vec3 hemi_color = mix(gnd_color, sky_color, (0.5*normal.z + 0.5));
+			vec3 hemi_color = mix(gnd_color, sky_color, (0.5*normal_sign*normal.z + 0.5));
 			indir_color     = mix(indir_color, hemi_color, 0.5); // blend between the two
 		}
 		if (indir_lighting) {

@@ -26,9 +26,9 @@ void main()
 			texel = lookup_triplanar_texture(vpos, norm_normal, tex0, tex0, tex0) * color0;
 		}
 	}
-	float alpha = gl_Color.a;
+	float alpha    = gl_Color.a;
 	vec3 lit_color = vec3(0.0);
-	add_indir_lighting(lit_color);
+	add_indir_lighting(lit_color, 1.0);
 	vec4 epos = get_epos();
 	
 	// directional light sources with no attenuation (Note: could add other lights later)
