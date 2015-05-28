@@ -17,6 +17,7 @@ ground_effects_level 0
 toggle_mesh_enabled # disable mesh draw by default
 destroy_thresh 1
 use_dense_voxels 1
+skip_light_vis_test 1 # light visibility doesn't work well for model3d scenes, especially ones that include light fixtures
 
 gravity 1.0
 mesh_scale 1.0

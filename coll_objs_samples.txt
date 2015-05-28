@@ -2,6 +2,14 @@ t 0.0 0.0 0.0
 l 0.8 1.0 1.0 1.0 1.0 -1 1 # elasticity R G B A texture_id draw
 y 4.0
 
+# lights for museum scene
+L 1.0 1.0   2.05996 -0.427597 0.448725  1.0 0.9 0.7 1.0
+L 1.0 1.0   2.06170 -0.927074 0.447361  1.0 0.9 0.7 1.0
+L 1.0 1.0  -2.67584 -0.192044 0.096642  0.8 0.8 1.0 1.0
+L 1.0 1.0  -2.67120 -1.159200 0.095833  0.8 0.8 1.0 1.0
+L 1.0 1.0  -2.66392 -1.157500 0.590717  0.8 0.8 1.0 1.0
+L 1.0 1.0  -2.67432 -0.190132 0.591055  0.8 0.8 1.0 1.0
+
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
 
 #m 0.05  O Samples/Generator2_TS/generator_small_high.obj 3 0 0
@@ -10,7 +18,7 @@ y 4.0
 #s 0 2  m 0.1  O Samples/ak47.obj 3 0 0
 
 #t 0 0 1.0  s 1 2  M 0  m 4.0  O ../models/dragon.model3d 4 0 0
-t 0 0 1.0  s 1 2  M 0  m 4.0  O ../models/dragon.model3d 6 0 0 0.02
+#t 0 0 1.0  s 1 2  M 0  m 4.0  O ../models/dragon.model3d 6 0 0 0.02
 #t 0 0 1.5  s 1 2  M 0  m 4.0  O ../models/buddha.model3d 4 0 0
 #t 0 0 2.0  M 0  m 0.5  O ../models/hairball.model3d 4 0 0
 #t 0 0 0  s 1 2  M 0  m 0.002  O ../models/conference/conference.model3d 3 1 0
@@ -35,6 +43,7 @@ t 0 0 1.0  s 1 2  M 0  m 4.0  O ../models/dragon.model3d 6 0 0 0.02
 #t 0 0 0  s 1 2  M 0  m 0.07  O "..\models\street_environment\Street environment_V01.obj" 3 0 0
 #t 1.00 0.0 -0.4  M 0  m 0.001  O "..\models\building_model\building.obj" 3 1 0
 #t 0 0 0  s 1 2  M 0  m 0.0002  O "..\models\Castle\Castle01.obj" 3 1 0
+t 1.0 0 0.3  s 1 2  M 0  m 0.05  O ../models/museum/museumhallRD.obj 3 1 0
 
 l 0.8 1.0 1.0 1.0 1.0 68 1 # 27 = cblock texture, 102 = spaceship texture, 68 = white texture
 #t 0 -2.0 0.2  M 0  m 0.002  O "..\models\stealth\stealth.3ds" 3 0 0 # flat face normals

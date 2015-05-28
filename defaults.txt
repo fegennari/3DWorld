@@ -25,4 +25,4 @@ mapx/config_mapx.txt
 #model_data/config_soda.txt
 #config_samples.txt
 #config_minecraft.txt
-
+#config_museum.txt

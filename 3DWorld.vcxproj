@@ -800,6 +800,7 @@
     <ClInclude Include="Targa\targa.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="coll_objs\COLL_OBJS_museum.txt" />
     <None Include="coll_objs_minecraft.txt" />
     <None Include="coll_objs_samples.txt" />
     <None Include="coll_objs_transformed.txt" />
@@ -810,6 +811,7 @@
     <None Include="config_hetch.txt" />
     <None Include="config_ice_caves.txt" />
     <None Include="config_minecraft.txt" />
+    <None Include="config_museum.txt" />
     <None Include="config_puget_sound.txt" />
     <None Include="config_puget_sound_tt.txt" />
     <None Include="config_resolution.txt" />
