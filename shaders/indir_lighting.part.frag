@@ -26,7 +26,7 @@ void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
 #else
 		vec3 n = normal;
 #endif
-		vec3 spos = vpos + (indir_vert_offset*half_dxy)*n; // move slightly away from the vertex
+		vec3 spos = vpos + (normal_sign*indir_vert_offset*half_dxy)*n; // move slightly away from the vertex
 
 		if (hemi_lighting) {
 			float sky_lum   = max(get_luminance(sky_color), 0.33); // or use indir_color?
