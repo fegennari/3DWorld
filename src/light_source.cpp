@@ -8,7 +8,7 @@
 #include "shadow_map.h"
 
 
-extern bool dl_smap_enabled;
+extern bool dl_smap_enabled, skip_light_vis_test;
 extern int display_mode, camera_coll_id, max_tius;
 extern unsigned shadow_map_sz;
 extern float fticks;
@@ -145,6 +145,7 @@ bool light_source::is_visible() const {
 		if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
 		if (sphere_cobj_occluded(get_camera_pos(), pos, max(0.5f*radius, r_inner))) return 0; // approximate occlusion culling, can miss lights but rarely happens
 	}
+	if (skip_light_vis_test) return 1;
 	if (dynamic || radius < 0.65 || !(display_mode & 0x08)) return 1; // dynamic/platform lights (common case), small/medium lights, or occlusion culling disabled
 	unsigned const num_rays = 100;
 	static rand_gen_t rgen;
