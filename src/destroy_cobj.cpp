@@ -493,7 +493,7 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
-// 15 total: 10 complete, 5 partial
+// 15 total: 10 complete, 5 partial (all cylinder cases)
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	if (c.type < type) return c.intersects_cobj(*this, toler); // swap arguments
@@ -523,12 +523,14 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			}
 			return 2; // FIXME: finish
 		case COLL_POLYGON:
-			for (int i = 0; i < c.npoints; ++i) {
+			for (int i = 0; i < c.npoints; ++i) { // check points (fast)
 				if (contains_pt(c.points[i])) return 1; // definite intersection
+			}
+			for (int i = 0; i < c.npoints; ++i) { // check edges
 				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
 			}
 			{ // clip the polygon to the cube
-				vector<point> clipped_pts;
+				static vector<point> clipped_pts;
 				clip_polygon_to_cube(*this, c.points, c.npoints, c, clipped_pts);
 				if (!clipped_pts.empty()) return 1;
 			}
