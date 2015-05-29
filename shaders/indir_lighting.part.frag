@@ -11,6 +11,13 @@ uniform sampler2D ground_tex;
 
 in vec3 vpos, normal; // world space
 
+// unused, but could be used for indir lighting with 6 directional components
+float cube_light_lookup(in vec3 normal_in, in vec3 plus_xyz, in vec3 minus_xyz) {
+	vec3 normal = normalize(normal_in);
+	normal      = sign(normal) * normal * normal;
+	return dot(clamp(normal, 0.0, 1.0), plus_xyz) + dot(clamp(-normal, 0.0, 1.0), minus_xyz);
+}
+
 vec3 indir_lookup(in vec3 pos) {
 	vec3 spos = clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
 	return texture(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
