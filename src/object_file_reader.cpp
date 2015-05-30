@@ -10,6 +10,7 @@
 #include "fast_atof.h"
 
 
+extern float model_auto_tc_scale;
 extern model3ds all_models;
 
 // hack to avoid slow multithreaded locking in getc()/ungetc() in MSVC++
@@ -155,13 +156,10 @@ public:
 					if (c == '/') {
 						read_int(ix); // text coord index, ok to fail
 						int const c2(get_next_char());
-
-						if (c2 == '/') {
-							read_int(ix); // normal index, ok to fail
-						}
-						else unget_last_char(c2);
+						if (c2 == '/') {read_int(ix);} // normal index, ok to fail
+						else {unget_last_char(c2);}
 					}
-					else unget_last_char(c);
+					else {unget_last_char(c);}
 				}
 				if (ppts) {split_polygon(poly, *ppts, POLY_COPLANAR_THRESH);}
 			}
@@ -434,9 +432,9 @@ public:
 								vntc_ix.nix = nix+1; // account for n[0]
 							} // else the normal will be recalculated later
 						}
-						else unget_last_char(c2);
+						else {unget_last_char(c2);}
 					}
-					else unget_last_char(c);
+					else {unget_last_char(c);}
 					pb.pts.push_back(vntc_ix);
 					++npts;
 				} // end while vertex
@@ -582,7 +580,15 @@ public:
 						if (normal == zero_vector) normal = j->n;
 					}
 					assert(V.vix < v.size() && V.tix < tc.size());
-					poly[p] = vert_norm_tc(v[V.vix], normal, tc[V.tix].x, tc[V.tix].y);
+					point2d<float> tcoord;
+
+					if (V.tix == 0 && model_auto_tc_scale > 0.0) { // generate tc since it wasn't read from the file
+						unsigned const dim(get_max_dim(normal)), dimx((dim == 0) ? 1 : 0), dimy((dim == 2) ? 1 : 2); // looks better for brick textures on walls
+						tcoord.x = model_auto_tc_scale*v[V.vix][dimx];
+						tcoord.y = model_auto_tc_scale*v[V.vix][dimy];
+					}
+					else {tcoord = tc[V.tix];}
+					poly[p] = vert_norm_tc(v[V.vix], normal, tcoord.x, tcoord.y);
 				}
 				num_faces += model.add_polygon(poly, vmap, vmap_tan, j->mat_id, j->obj_id);
 				pix += j->npts;

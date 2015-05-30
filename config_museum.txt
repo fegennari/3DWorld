@@ -4,6 +4,10 @@ camera_height 0.08
 group_back_face_cull 0 # doesn't work
 model3d_winding_number_normal 1 # works better
 
+# one of these is required for texturing since this OBJ file doesn't have tcs for most objects
+model_auto_tc_scale 10.0 # more efficient, and preserves existing object tcs, but has bad stretching artifacts where surface normals change
+#model_triplanar_tc_scale 10.0 # has some artifacts due to texture blending
+
 mesh_size  256 128 64
 scene_size 4.0 2.0 2.0
 
