@@ -107,11 +107,16 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
 {
-#ifdef ENABLE_PARALLAX_MAP
-	vec4 texel  = texture(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
+#ifdef TRIPLANAR_TEXTURE
+	vec4 texel = lookup_triplanar_texture(vpos, normal, tex0, tex0, tex0);
 #else
-	vec4 texel  = texture(tex0, tc);
-#endif
+#ifdef ENABLE_PARALLAX_MAP
+	vec4 texel = texture(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
+#else
+	vec4 texel = texture(tex0, tc);
+#endif // ENABLE_PARALLAX_MAP
+#endif // TRIPLANAR_TEXTURE
+
 	//texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
 #ifdef TEXTURE_ALPHA_MASK
 	if (texel.a < 0.99) discard;
