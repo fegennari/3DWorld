@@ -25,6 +25,7 @@ extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
+extern vector<texture_t> textures;
 
 
 model3ds all_models;
@@ -58,7 +59,6 @@ unsigned texture_manager::create_texture(string const &fn, bool is_alpha_mask, b
 	return tid; // can't fail
 }
 
-
 void texture_manager::clear() {
 
 	free_textures();
@@ -66,38 +66,27 @@ void texture_manager::clear() {
 	tex_map.clear();
 }
 
-
 void texture_manager::free_tids() {
-
-	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {
-		t->gl_delete();
-	}
+	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {t->gl_delete();}
 }
-
 void texture_manager::free_textures() {
-
-	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {
-		t->free_data();
-	}
+	for (deque<texture_t>::iterator t = textures.begin(); t != textures.end(); ++t) {t->free_data();}
 }
-
 
 void texture_manager::ensure_texture_loaded(texture_t &t, int tid, bool is_bump) {
 
-	if (!t.is_loaded()) {
-		//if (is_bump) {t.do_compress = 0;} // don't compress normal maps
-		t.load(-1);
+	if (t.is_loaded()) return;
+	//if (is_bump) {t.do_compress = 0;} // don't compress normal maps
+	t.load(-1);
 		
-		if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
-			ensure_tid_loaded(t.alpha_tid, 0);
-			t.copy_alpha_from_texture(get_texture(t.alpha_tid), texture_alpha_in_red_comp);
-		}
-		if (is_bump) {t.make_normal_map();}
-		t.init(); // must be after alpha copy
+	if (t.alpha_tid >= 0 && t.alpha_tid != tid) { // if alpha is the same texture then the alpha channel should already be set
+		ensure_tid_loaded(t.alpha_tid, 0);
+		t.copy_alpha_from_texture(get_texture(t.alpha_tid), texture_alpha_in_red_comp);
 	}
+	if (is_bump) {t.make_normal_map();}
+	t.init(); // must be after alpha copy
 	assert(t.is_loaded());
 }
-
 
 void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 
@@ -106,11 +95,27 @@ void texture_manager::bind_alpha_channel_to_texture(int tid, int alpha_tid) {
 	texture_t &t(get_texture(tid));
 	assert(t.ncolors == 3 || t.ncolors == 4);
 	if (t.alpha_tid == alpha_tid) return; // already bound
+	assert(tid < BUILTIN_TID_START); // can't modify builtin textures
 	assert(t.alpha_tid < 0); // can't rebind to a different value
 	assert(!t.is_allocated()); // must not yet be loaded
 	t.alpha_tid = alpha_tid;
 	t.ncolors   = 4; // add alpha channel
 	if (t.use_mipmaps) {t.use_mipmaps = 3;} // generate custom alpha mipmaps
+}
+
+texture_t &get_builtin_texture(int tid) {
+	assert((unsigned)tid < textures.size());
+	return textures[tid];
+}
+texture_t const &texture_manager::get_texture(int tid) const {
+	if (tid >= BUILTIN_TID_START) {return get_builtin_texture(tid - BUILTIN_TID_START);} // global textures lookup
+	assert((unsigned)tid < textures.size());
+	return textures[tid]; // local textures lookup
+}
+texture_t &texture_manager::get_texture(int tid) {
+	if (tid >= BUILTIN_TID_START) {return get_builtin_texture(tid - BUILTIN_TID_START);} // global textures lookup
+	assert((unsigned)tid < textures.size());
+	return textures[tid]; // local textures lookup
 }
 
 

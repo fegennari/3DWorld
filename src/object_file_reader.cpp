@@ -204,6 +204,8 @@ string model_from_file_t::get_path(string const &fn) const {
 }
 
 int model_from_file_t::get_texture(string const &fn, bool is_alpha_mask, bool verbose, bool invert_alpha, bool wrap, bool mirror) {
+	int const existing_tid(texture_lookup(fn));
+	if (existing_tid >= 0) {return (BUILTIN_TID_START + existing_tid);}
 	ifstream tex_in; // used only for determining file location
 	string const fn_used(open_include_file(fn, "texture", tex_in));
 	if (fn_used.empty()) return -1;

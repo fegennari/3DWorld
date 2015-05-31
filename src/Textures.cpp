@@ -285,15 +285,22 @@ void load_textures() {
 }
 
 
+int texture_lookup(string const &name) {
+	
+	name_map_t::const_iterator it(texture_name_map.find(name));
+	return ((it != texture_name_map.end()) ? it->second : -1);
+}
+
+
 int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y) {
 
 	int const ix(atoi(name.c_str()));
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
 	if (name == "none" || name == "null")  return -1; // no texture
-	name_map_t::const_iterator it(texture_name_map.find(name));
-	if (it != texture_name_map.end()) return it->second;
+	int tid(texture_lookup(name));
+	if (tid >= 0) {assert(tid < textures.size()); return tid;}
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
-	int const tid(textures.size());
+	tid = textures.size();
 	texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, invert_y, !is_normal_map, 2.0, 1.0, is_normal_map); // anisotropy=2.0
 	new_tex.load(tid);
 	new_tex.init();

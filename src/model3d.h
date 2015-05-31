@@ -16,6 +16,7 @@ using namespace std;
 typedef map<string, unsigned> string_map_t;
 
 unsigned const MAX_VMAP_SIZE     = (1 << 18); // 256K
+unsigned const BUILTIN_TID_START = (1 << 16); // 65K
 float const POLY_COPLANAR_THRESH = 0.98;
 
 
@@ -297,15 +298,8 @@ public:
 	colorRGBA get_tex_avg_color(int tid) const {return get_texture(tid).get_avg_color();}
 	bool has_binary_alpha(int tid) const {return get_texture(tid).has_binary_alpha;}
 	bool might_have_alpha_comp(int tid) const {return (tid >= 0 && get_texture(tid).ncolors == 4);}
-
-	texture_t const &get_texture(int tid) const {
-		assert((unsigned)tid < textures.size());
-		return textures[tid];
-	}
-	texture_t &get_texture(int tid) {
-		assert((unsigned)tid < textures.size());
-		return textures[tid];
-	}
+	texture_t const &get_texture(int tid) const;
+	texture_t &get_texture(int tid);
 };
 
 
