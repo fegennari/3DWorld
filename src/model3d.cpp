@@ -14,9 +14,10 @@
 
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
-bool const CALC_TANGENT_VECT = 1; // slower and more memory but sometimes better quality/smoother transitions
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
+
+bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal;
@@ -975,7 +976,7 @@ bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t
 	
 	if (skip) return 0;
 
-	if (CALC_TANGENT_VECT && use_bump_map()) {
+	if (model_calc_tan_vect && use_bump_map()) {
 		geom_tan.add_poly(poly, vmap_tan, obj_id);
 	}
 	else {
@@ -1339,7 +1340,7 @@ void model3d::bind_all_used_tids() {
 		tmgr.ensure_tid_bound(m->get_render_texture()); // only one tid for now
 		
 		if (m->use_bump_map()) {
-			if (CALC_TANGENT_VECT && !m->geom.empty()) {
+			if (model_calc_tan_vect && !m->geom.empty()) {
 				cerr << "Error loading model3d material " << m->name << ": Geometry is missing tangent vectors, so bump map cannot be enabled." << endl;
 				m->bump_tid = -1; // disable bump map
 			}
@@ -1718,7 +1719,7 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 				setup_smap_shader(s, (sam_pass != 0));
 			}
 			else if (shader_effects) {
-				int const use_bmap((bmap_pass == 0) ? 0 : (CALC_TANGENT_VECT ? 2 : 1));
+				int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
 				bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
 				float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 				if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS

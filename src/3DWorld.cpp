@@ -109,7 +109,7 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, scene_smap_vbo_invalid, tree_4th_branches;
+extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, scene_smap_vbo_invalid, tree_4th_branches, model_calc_tan_vect;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters;
@@ -1553,6 +1553,7 @@ int load_config(string const &config_file) {
 	kwmb.add("snow_shadows", snow_shadows);
 	kwmb.add("tree_4th_branches", tree_4th_branches);
 	kwmb.add("skip_light_vis_test", skip_light_vis_test);
+	kwmb.add("model_calc_tan_vect", model_calc_tan_vect);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);
