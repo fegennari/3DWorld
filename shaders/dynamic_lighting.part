@@ -58,7 +58,7 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 }
 #endif
 
-void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale) {
+void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale, in float bump_map_normal_sign) {
 #ifndef NO_DYNAMIC_LIGHTS
 
 #if defined(USE_BUMP_MAP_DL) && !defined(BUMP_MAP_CUSTOM)
@@ -115,7 +115,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #ifdef USE_BUMP_MAP_DL
 		vec3 orig_ldir = light_dir;
 		vec3 lpos_eye  = (fg_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // convert from world to eye to tangent space
-		float nscale   = clamp(10.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
+		float nscale   = bump_map_normal_sign*clamp(10.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
 		light_dir      = normalize(lpos_eye - epos.xyz);
 #ifdef BUMP_MAP_CUSTOM
 		vec3 lnorm     = nscale*apply_bump_map(light_dir, eye_dir);
@@ -155,4 +155,4 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #endif // NO_DYNAMIC_LIGHTS
 }
 
-void add_dlights(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color) {add_dlights_bm_scaled(color, dlpos, normal, diff_color, 1.0);}
+void add_dlights(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color) {add_dlights_bm_scaled(color, dlpos, normal, diff_color, 1.0, 1.0);}

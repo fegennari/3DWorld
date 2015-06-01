@@ -37,11 +37,11 @@ vec3 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in v
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later
 
-void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos) {
+void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos, in float normal_scale) {
 #ifdef USE_BUMP_MAP
 	float atten = length(normal); // multiply by length of eye norm to account for shadow map attenuation
 	atten *= clamp(5.0*dot(normal/atten, light_dir), 0.0, 1.0); // fix self-shadowing
-	normal = atten*apply_bump_map(light_dir, eye_pos);
+	normal = normal_scale*atten*apply_bump_map(light_dir, eye_pos);
 #endif
 }
 
@@ -56,10 +56,10 @@ vec4 get_ads_lighting(in vec3 normal, in vec3 light_dir, in vec4 epos, in float 
 	return vec4((ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), ad_color.a);
 }
 
-vec4 add_light_comp_pos_scaled_light(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color, in fg_light_t light) {
+vec4 add_light_comp_pos_scaled_light(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color, in fg_light_t light, in float bump_map_normal_scale) {
 	// normalize the light's direction in eye space; for directional light, position field is actually direction
 	vec3 light_dir = normalize(light.position.xyz - epos.xyz);
-	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz);
+	maybe_apply_bump_map_self_shadowed(normal, light_dir, epos.xyz, bump_map_normal_scale);
 	return get_ads_lighting(normal, light_dir, epos, ds_scale, a_scale, ad_color, light);
 }
 
@@ -67,13 +67,13 @@ vec4 add_light_comp_pos_scaled_light(in vec3 normal, in vec4 epos, in float ds_s
 
 // Note: eye space point light computation with no attenuation, or use vec3(0.0) for directional
 vec4 add_light_comp_pos_scaled(in vec3 normal, in vec4 epos, in int i, in float ds_scale, in float a_scale, in vec4 ad_color) {
-	return add_light_comp_pos_scaled_light(normal, epos, ds_scale, a_scale, ad_color, fg_LightSource[i]);
+	return add_light_comp_pos_scaled_light(normal, epos, ds_scale, a_scale, ad_color, fg_LightSource[i], 1.0);
 }
 vec4 add_light_comp_pos_scaled0(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color) {
-	return add_light_comp_pos_scaled_light(normal, epos, ds_scale, a_scale, ad_color, fg_LightSource[0]);
+	return add_light_comp_pos_scaled_light(normal, epos, ds_scale, a_scale, ad_color, fg_LightSource[0], 1.0);
 }
 vec4 add_light_comp_pos_scaled1(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color) {
-	return add_light_comp_pos_scaled_light(normal, epos, ds_scale, a_scale, ad_color, fg_LightSource[1]);
+	return add_light_comp_pos_scaled_light(normal, epos, ds_scale, a_scale, ad_color, fg_LightSource[1], 1.0);
 }
 
 vec4 add_light_comp_pos (in vec3 normal, in vec4 epos, in int i) {return add_light_comp_pos_scaled (normal, epos, i, 1.0, 1.0, gl_Color);}

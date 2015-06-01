@@ -22,7 +22,7 @@ const float SMOKE_SCALE = 0.25;
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
-vec3 add_light0(in vec3 n) {
+vec3 add_light0(in vec3 n, in float normal_sign) {
 	vec3 light_dir = normalize(fg_LightSource[0].position.xyz - epos.xyz); // Note: could drop the -epos.xyz for a directional light
 	float nscale   = 1.0;
 #ifdef USE_SHADOW_MAP
@@ -54,7 +54,7 @@ vec3 add_light0(in vec3 n) {
 		}
 	}
 #endif // DYNAMIC_SMOKE_SHADOWS
-	return add_light_comp_pos0(nscale*n, epos).rgb;
+	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, 1.0, gl_Color, fg_LightSource[0], normal_sign).rgb;
 }
 
 void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
@@ -78,7 +78,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 #ifdef SMOKE_DLIGHTS
 		if (enable_dlights) { // dynamic lighting
 			vec3 dl_pos  = pos*scene_scale + scene_llc;
-			add_dlights_bm_scaled(tex_val.rgb, dl_pos, norm_dir, vec3(1.0), 0.0); // normal points from vertex to eye, override bump mapping, color is applied later
+			add_dlights_bm_scaled(tex_val.rgb, dl_pos, norm_dir, vec3(1.0), 0.0, 1.0); // normal points from vertex to eye, override bump mapping, color is applied later
 		}
 #endif // SMOKE_DLIGHTS
 #ifdef SMOKE_SHADOW_MAP
@@ -164,16 +164,16 @@ void main()
 	
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(normal_sign*eye_norm);
-		if (enable_light0) lit_color += add_light0(n);
-		if (enable_light1) lit_color += add_light_comp_pos_smap_light1(n, epos).rgb;
-		if (enable_light2) ADD_LIGHT(2);
-		if (enable_light3) ADD_LIGHT(3);
-		if (enable_light4) ADD_LIGHT(4);
-		if (enable_light5) ADD_LIGHT(5);
-		if (enable_light6) ADD_LIGHT(6);
-		if (enable_light7) ADD_LIGHT(7);
+		if (enable_light0) {lit_color += add_light0(n, normal_sign);}
+		if (enable_light1) {lit_color += add_light_comp_pos_scaled_light(n, epos, 1.0, 1.0, gl_Color, fg_LightSource[1], normal_sign).rgb;}
+		if (enable_light2) {ADD_LIGHT(2);}
+		if (enable_light3) {ADD_LIGHT(3);}
+		if (enable_light4) {ADD_LIGHT(4);}
+		if (enable_light5) {ADD_LIGHT(5);}
+		if (enable_light6) {ADD_LIGHT(6);}
+		if (enable_light7) {ADD_LIGHT(7);}
 	}
-	if (enable_dlights) {add_dlights(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb);} // dynamic lighting
+	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb, 1.0, normal_sign);} // dynamic lighting
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
 

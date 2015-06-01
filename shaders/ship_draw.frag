@@ -19,7 +19,7 @@ subroutine uniform postproc_color postproc_color_op;
 subroutine void maybe_bump_map(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos); // signature
 subroutine(maybe_bump_map) void  no_bump_map(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos) {}
 subroutine(maybe_bump_map) void yes_bump_map(inout vec3 normal, inout vec3 light_dir, inout vec3 eye_pos) {
-	maybe_apply_bump_map_self_shadowed(normal, light_dir, eye_pos);
+	maybe_apply_bump_map_self_shadowed(normal, light_dir, eye_pos, 1.0);
 }
 subroutine uniform maybe_bump_map maybe_bump_map_op;
 
