@@ -403,6 +403,10 @@ template<typename T> void indexed_vntc_vect_t<T>::clear() {
 }
 
 
+void ensure_valid_tangent(vector4d &tangent) {
+	if ((vector3d)tangent == zero_vector) {tangent.assign(0.0, 0.0, 1.0, tangent.w);}
+}
+
 template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned npts) {
 
 	if (has_tangents) return; // already computed
@@ -416,12 +420,14 @@ template<> void indexed_vntc_vect_t<vert_norm_tc_tan>::calc_tangents(unsigned np
 		vector3d const v1(A.v - B.v), v2(C.v - B.v);
 		float const t1(A.t[1] - B.t[1]), t2(C.t[1] - B.t[1]), s1(A.t[0] - B.t[0]), s2(C.t[0] - B.t[0]);
 		float const val(s1*t2 - s2*t1), w((val < 0.0) ? -1.0 : 1.0);
-		vector4d const tangent((v1*t2 - v2*t1).get_norm(), w);
+		vector4d tangent((v1*t2 - v2*t1).get_norm(), w);
+		ensure_valid_tangent(tangent);
 		for (unsigned j = i; j < i+npts; ++j) {get_vert(j).tangent += tangent;}
 	}
 	for (iterator i = begin(); i != end(); ++i) { // need to renormalize tangents
 		i->tangent.normalize();
 		i->tangent.w = ((i->tangent.w < 0.0) ? -1.0 : 1.0);
+		ensure_valid_tangent(i->tangent);
 	}
 }
 
