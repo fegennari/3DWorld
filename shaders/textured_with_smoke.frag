@@ -57,6 +57,13 @@ vec3 add_light0(in vec3 n, in float normal_sign) {
 	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, 1.0, gl_Color, fg_LightSource[0], normal_sign).rgb;
 }
 
+vec3 add_light1(in vec3 n, in float normal_sign) {
+#ifdef USE_SHADOW_MAP
+	if (use_shadow_map) {n *= get_shadow_map_weight_light1(epos, n);}
+#endif
+	return add_light_comp_pos_scaled_light(n, epos, 1.0, 1.0, gl_Color, fg_LightSource[1], normal_sign).rgb;
+}
+
 void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 	vec3 dir      = eye_c - vpos_c;
 	vec3 norm_dir = normalize(dir); // used for dlights
@@ -165,7 +172,7 @@ void main()
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(normal_sign*eye_norm);
 		if (enable_light0) {lit_color += add_light0(n, normal_sign);}
-		if (enable_light1) {lit_color += add_light_comp_pos_scaled_light(n, epos, 1.0, 1.0, gl_Color, fg_LightSource[1], normal_sign).rgb;}
+		if (enable_light1) {lit_color += add_light1(n, normal_sign);}
 		if (enable_light2) {ADD_LIGHT(2);}
 		if (enable_light3) {ADD_LIGHT(3);}
 		if (enable_light4) {ADD_LIGHT(4);}
