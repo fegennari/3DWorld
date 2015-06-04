@@ -46,6 +46,13 @@ void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
 			vec3 indir_light = indir_lookup(spos);
 			//indir_light    = pow(indir_light, vec3(0.45)); // gamma correction
 			indir_color     += indir_light; // indirect lighting
+#if 0 // add faked indir specular
+			vec3 eye_vect   = normalize(fg_ModelViewMatrixInverse[3].xyz - vpos);
+			vec3 eye_ref    = reflect(eye_vect, normal_sign*normal);
+			vec3 spos_spec  = vpos + (indir_vert_offset*half_dxy)*eye_ref;
+			float spec_mag  = 1.0*pow(min(1.0, (1.0 - dot(eye_vect, normal))), 4.0);
+			indir_color    += spec_mag*specular_color.rgb*indir_lookup(spos_spec);
+#endif
 		}
 	}
 	lit_color += gl_Color.rgb * indir_color;

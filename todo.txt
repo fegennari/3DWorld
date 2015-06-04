@@ -12,7 +12,4 @@ Gameplay in tiled terrain mode
 
 TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
-
-Support platform rotate (doors)
 SSAO using depth map and postprocessing pass
-Cube env map for reflections in universe mode
