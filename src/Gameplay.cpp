@@ -1524,7 +1524,7 @@ void add_laser_beam(beam3d const &beam) {
 
 	beams.push_back(beam);
 	add_line_light(beam.pts[0], beam.pts[1], RED, 0.35, min(1.0f, sqrt(beam.intensity)));
-	//if (smoke_visible) {} // FIXME: check for smoke along laser beam path and add glow halo
+	//if (smoke_visible) {} // check for smoke along laser beam path and add glow halo? or just enable smoke dynamic lighting?
 }
 
 

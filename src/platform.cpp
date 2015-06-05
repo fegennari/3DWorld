@@ -104,7 +104,7 @@ void platform::next_frame() {
 
 
 void platform::move_platform(float dist_traveled) {
-	if (is_rot) {assert(0);} // FIXME: WRITE
+	if (is_rot) {assert(0);} // FIXME: WRITE - difficult because rotations may change cobj type (such as cube -> extruded polygon)
 	else {pos += dir*dist_traveled;}
 }
 

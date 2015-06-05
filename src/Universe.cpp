@@ -2715,7 +2715,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
 				if (!dist_less_than(pos, i->pos, expand*i->radius+r_add)) continue;
 
-				// FIXME: asteroid positions are dynamic, so spatial subdivision is difficult - we just do a slow linear iteration here
+				// asteroid positions are dynamic, so spatial subdivision is difficult - we just do a slow linear iteration here
 				for (uasteroid_field::const_iterator j = i->begin(); j != i->end(); ++j) {
 					if (!dist_less_than(pos, j->pos, expand*j->radius+r_add)) continue;
 					result.assign(gc, -1, -1, p2p_dist(pos, j->pos), UTYPE_ASTEROID, NULL);
@@ -2761,7 +2761,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 
 				if (include_asteroids && system.asteroid_belt != nullptr) { // check for asteroid belt collisions
 					if (system.asteroid_belt->sphere_might_intersect(pos, expand*system.asteroid_belt->get_max_asteroid_radius()+r_add)) {
-						// FIXME: asteroid positions are dynamic, so spatial subdivision is difficult - we just do a slow linear iteration here
+						// asteroid positions are dynamic, so spatial subdivision is difficult - we just do a slow linear iteration here
 						for (uasteroid_field::const_iterator j = system.asteroid_belt->begin(); j != system.asteroid_belt->end(); ++j) {
 							if (!dist_less_than(pos, j->pos, expand*j->radius+r_add)) continue;
 							result.assign(gc, cl, s, p2p_dist(pos, j->pos), UTYPE_ASTEROID, NULL);
