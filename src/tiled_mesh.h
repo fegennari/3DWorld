@@ -210,7 +210,8 @@ public:
 	void fill_adj_mask(bool mask[3][3], int x, int y) const;
 	float get_min_dist_to_pt(point const &pt, bool xy_only=0, bool mesh_only=1) const;
 	float get_max_xy_dist_to_pt(point const &pt) const;
-	bool contains_camera() const {return get_bcube().contains_pt_xy(get_camera_pos());}
+	bool contains_point(point const &pos) const {return get_bcube().contains_pt_xy(pos);}
+	bool contains_camera() const {return contains_point(get_camera_pos());}
 	unsigned get_gpu_mem() const;
 
 	unsigned get_tree_mem() const { // only accounts for top-level class memory
@@ -305,6 +306,7 @@ public:
 	void draw_water_cap(shader_t &s, bool textures_already_set) const;
 	void draw_water(shader_t &s, float z) const;
 	bool is_water_visible() const;
+	bool check_sphere_collision(point &pos, float radius) const;
 	bool check_player_collision() const;
 	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const;

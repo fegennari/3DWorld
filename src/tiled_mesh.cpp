@@ -1358,36 +1358,42 @@ void tile_t::draw_water(shader_t &s, float z) const {
 }
 
 
-bool tile_t::check_player_collision() const {
+bool tile_t::check_sphere_collision(point &pos, float radius) const {
 
-	if (is_distant || !contains_camera()) return 0;
-	point camera(get_camera_pos());
-	if (camera.z > get_tile_zmax() + CAMERA_RADIUS) return 0; // camera is completely above the tile
+	if (is_distant || !contains_point(pos)) return 0;
+	if (pos.z > get_tile_zmax() + radius)   return 0; // sphere is completely above the tile
 	bool coll(0);
 
 	if (!pine_trees.empty()) {
-		camera -= ptree_off.get_xlate();
-		coll   |= pine_trees.check_sphere_coll(camera, CAMERA_RADIUS);
-		camera += ptree_off.get_xlate();
+		pos  -= ptree_off.get_xlate();
+		coll |= pine_trees.check_sphere_coll(pos, radius);
+		pos  += ptree_off.get_xlate();
 	}
 	if (!decid_trees.empty()) {
-		camera -= dtree_off.get_xlate();
-		coll   |= decid_trees.check_sphere_coll(camera, CAMERA_RADIUS);
-		camera += dtree_off.get_xlate();
+		pos  -= dtree_off.get_xlate();
+		coll |= decid_trees.check_sphere_coll(pos, radius);
+		pos  += dtree_off.get_xlate();
 	}
 	if (scenery.generated) {
-		camera -= scenery_off.get_xlate();
-		coll   |= scenery.check_sphere_coll(camera, CAMERA_RADIUS);
-		camera += scenery_off.get_xlate();
+		pos  -= scenery_off.get_xlate();
+		coll |= scenery.check_sphere_coll(pos, radius);
+		pos  += scenery_off.get_xlate();
 	}
-	if (coll) {surface_pos = camera;}
 	return coll;
+}
+
+bool tile_t::check_player_collision() const {
+
+	point camera(get_camera_pos());
+	if (!check_sphere_collision(camera, CAMERA_RADIUS)) return 0;
+	surface_pos = camera;
+	return 1;
 }
 
 
 int tile_t::get_tid_under_point(point const &pos) const {
 
-	if (is_distant || !get_bcube().contains_pt_xy(pos)) return -1;
+	if (is_distant || !contains_point(pos)) return -1;
 	int const xpos(max(0, min((int)size, (get_xpos(pos.x) - x1 - xoff + xoff2)))); // min/max not needed?
 	int const ypos(max(0, min((int)size, (get_ypos(pos.y) - y1 - yoff + yoff2))));
 	unsigned const ix(4*(ypos*stride + xpos));
