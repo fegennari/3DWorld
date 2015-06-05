@@ -1176,7 +1176,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			enable_leaf_wind = (ivals[0] != 0);
 			break;
 
-		case 'E': // place tree: xpos ypos size type [zpos], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
+		case 'E': // place tree: xpos ypos size type [zpos [tree_4th_branches]], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
 			if (fscanf(fp, "%f%f%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0]) != 4) {return read_error(fp, "tree", coll_obj_file);}
 			assert(fvals[0] > 0.0);
 			use_z = (fscanf(fp, "%f", &pos.z) == 1);
@@ -1185,10 +1185,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				cout << "Must set ntrees to zero in order to add trees through collision objects file." << endl;
 			}
 			else {
-				// FIXME: read local tree_4th_branches from cobjs file
+				bool local_tree_4th_branches(tree_4th_branches);
+				if (fscanf(fp, "%i", &ivals[1])) {local_tree_4th_branches = (ivals[1] != 0);}
 				xf.xform_pos(pos);
 				t_trees.push_back(tree(enable_leaf_wind));
-				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, tree_4th_branches);
+				t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, local_tree_4th_branches);
 				tree_mode |= 1; // enable trees
 			}
 			break;
