@@ -307,7 +307,6 @@ public:
 	void draw_water(shader_t &s, float z) const;
 	bool is_water_visible() const;
 	bool check_sphere_collision(point &pos, float radius) const;
-	bool check_player_collision() const;
 	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, int &xpos, int &ypos) const;
 }; // tile_t
@@ -367,7 +366,9 @@ public:
 	void update_lightning(bool reflection_pass);
 	void clear_vbos_tids();
 	void clear_flowers();
-	tile_t *get_tile_from_xy(tile_xy_pair const &tp);
+	tile_t *get_tile_from_xy(tile_xy_pair const &tp) const;
+	tile_t *get_tile_containing_point(point const &pos) const;
+	bool check_sphere_collision(point &pos, float radius) const;
 	bool check_player_collision() const;
 	int get_tid_under_point(point const &pos) const;
 	bool line_intersect_mesh(point const &v1, point const &v2, float &t, tile_t *&intersected_tile, int &xpos, int &ypos) const;

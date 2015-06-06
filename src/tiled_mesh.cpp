@@ -547,7 +547,7 @@ void tile_t::proc_tile_queue(tile_t *init_tile, unsigned l) {
 		t->calc_shadows_for_light(l);
 		tile_xy_pair const tp(t->x1/int(t->size), t->y1/int(t->size));
 		tile_xy_pair const adj_tp2[2] = {tile_xy_pair((tp.x + ((lpos.x < 0.0) ? 1 : -1)), tp.y),
-											tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? 1 : -1)))}; // away from the light source
+										 tile_xy_pair(tp.x, (tp.y + ((lpos.y < 0.0) ? 1 : -1)))}; // away from the light source
 
 		for (unsigned d = 0; d < 2; ++d) { // d = tile adjacency dimension, shared edge is in !d
 			if (t->sh_out[l][!d] == prev_sh_out[!d]) continue; // unchanged, no update needed
@@ -1382,14 +1382,6 @@ bool tile_t::check_sphere_collision(point &pos, float radius) const {
 	return coll;
 }
 
-bool tile_t::check_player_collision() const {
-
-	point camera(get_camera_pos());
-	if (!check_sphere_collision(camera, CAMERA_RADIUS)) return 0;
-	surface_pos = camera;
-	return 1;
-}
-
 
 int tile_t::get_tid_under_point(point const &pos) const {
 
@@ -2021,10 +2013,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
 
 void tile_draw_t::draw_water(shader_t &s, float zval) const {
-
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		i->second->draw_water(s, zval);
-	}
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_water(s, zval);}
 }
 
 
@@ -2343,34 +2332,29 @@ void tile_draw_t::clear_flowers() {
 }
 
 
-tile_t *tile_draw_t::get_tile_from_xy(tile_xy_pair const &tp) {
-
-	tile_map::iterator it(tiles.find(tp));
-	if (it != tiles.end()) {return it->second.get();}
-	return nullptr;
+tile_t *tile_draw_t::get_tile_from_xy(tile_xy_pair const &tp) const {
+	tile_map::const_iterator it(tiles.find(tp));
+	return ((it != tiles.end()) ? it->second.get() : nullptr);
+}
+tile_t *tile_draw_t::get_tile_containing_point(point const &pos) const {
+	tile_xy_pair const tp(round_fp(0.5*(pos.x - (xoff - xoff2)*DX_VAL)/X_SCENE_SIZE), round_fp(0.5*(pos.y - (yoff - yoff2)*DY_VAL)/Y_SCENE_SIZE));
+	return get_tile_from_xy(tp);
 }
 
-
+bool tile_draw_t::check_sphere_collision(point &pos, float radius) const { // Note: pos is modified
+	tile_t const *const tile(get_tile_containing_point(pos)); // can return null for camera during tile generation frames
+	return (tile ? tile->check_sphere_collision(pos, radius) : 0);
+}
 bool tile_draw_t::check_player_collision() const {
-
-	bool coll(0);
-
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		assert(i->second);
-		coll |= i->second->check_player_collision();
-	}
-	return coll;
+	point camera(get_camera_pos());
+	if (!check_sphere_collision(camera, CAMERA_RADIUS)) return 0;
+	surface_pos = camera; // write modified camera pos back to the scene state
+	return 1;
 }
-
 
 int tile_draw_t::get_tid_under_point(point const &pos) const {
-
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		assert(i->second);
-		int const tid(i->second->get_tid_under_point(pos));
-		if (tid >= 0) return tid;
-	}
-	return 0;
+	tile_t const *const tile(get_tile_containing_point(pos));
+	return (tile ? tile->get_tid_under_point(pos) : -1);
 }
 
 
@@ -2379,6 +2363,7 @@ bool tile_draw_t::line_intersect_mesh(point const &v1, point const &v2, float &t
 	t = 2.0; // > 1.0
 	intersected_tile = nullptr;
 
+	// Note: could start with get_tile_containing_point(v1) and walk the line to v2 using DDA, etc.
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		float tn(1.0);
 		int new_xpos(0), new_ypos(0);
