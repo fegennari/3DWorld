@@ -497,7 +497,7 @@ void draw_coll_surfaces(bool draw_trans) {
 				if (c.type == COLL_SPHERE) { // distance to surface closest to the camera
 					dist -= c.radius;
 				}
-				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) { // approx distance to surface closest to the camera
+				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT || c.type == COLL_CAPSULE) { // approx distance to surface closest to the camera
 					dist -= min(0.5*(c.radius + c.radius2), 0.5*p2p_dist(c.points[0], c.points[1]));
 				}
 				draw_last.push_back(make_pair(-dist, cix)); // negative distance

@@ -328,13 +328,10 @@ void cobj_triangle_visitor::proc_cobj(coll_obj const &c) {
 				proc_quad(side_pts);
 			}
 		}
-		else {
-			proc_poly(c.points, c.npoints);
-		}
+		else {proc_poly(c.points, c.npoints);}
 		break;
 
-	default:
-		assert(0);
+	default: assert(0);
 	}
 }
 

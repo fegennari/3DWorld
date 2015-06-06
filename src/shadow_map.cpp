@@ -124,7 +124,7 @@ public:
 			}
 			if (ndiv == 0) {
 				if (c.type == COLL_SPHERE) {ndiv = get_smap_ndiv(c.radius, smap_sz);}
-				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT) {ndiv = get_smap_ndiv(max(c.radius, c.radius2), smap_sz);}
+				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT || c.type == COLL_CAPSULE) {ndiv = get_smap_ndiv(max(c.radius, c.radius2), smap_sz);}
 			}
 			c.get_shadow_triangle_verts(verts, ndiv);
 		}

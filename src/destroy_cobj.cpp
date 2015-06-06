@@ -465,8 +465,7 @@ int coll_obj::is_anchored() const {
 			}
 		}
 		return 0;
-	default:
-		assert(0);
+	default: assert(0);
 	}
 	return 0;
 }
@@ -617,8 +616,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			sphere_ext_poly_intersect(  points,   npoints,   norm, c.points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
 		return 0;
 
-	default:
-		assert(0);
+	default: assert(0);
 	}
 	return 0;
 }

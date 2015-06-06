@@ -94,6 +94,7 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 				return check_poly_billboard_alpha(p1, p2, t);
 			}
 			break;
+		default: assert(0);
 	}
 	return 0;
 }
@@ -190,6 +191,7 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 				cnorm = get_poly_dir_norm(norm, p1, (p2 - p1), t);
 				return 1;
 			}
+		default: assert(0);
 	}
 	return 0;
 }
@@ -383,6 +385,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 			tc[(i != 0) ^ cp.swap_txy()] = tscale[i]*dot_product(v[i], poff) + xlate[i];
 		}
 		break;
+	default: assert(0);
 	}
 	return cp.color.modulate_with(get_texture_color(cp.tid, tc[0], tc[1])); // Note: slow due to texture memory access
 }

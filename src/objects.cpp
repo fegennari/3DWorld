@@ -77,6 +77,8 @@ void coll_obj::bb_union(float bb[3][2], int init) {
 
 void coll_obj::calc_size() {
 
+	volume = 0.0;
+
 	switch (type) {
 	case COLL_CUBE: // use bbox
 		volume = get_volume();
@@ -87,9 +89,12 @@ void coll_obj::calc_size() {
 	case COLL_POLYGON:
 		volume = polygon_area(points, npoints)*thickness; // Note: thickness is 0 for voxel polygons
 		break;
+	case COLL_CAPSULE:
+		volume = (2.0/3.0)*PI*(radius*radius*radius + radius2*radius2*radius2); // two hemispheres
+		// fallthrough
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		volume = PI*(radius*radius+radius*radius2+radius2*radius2)*p2p_dist(points[0], points[1])/3.0;
+		volume += PI*(radius*radius+radius*radius2+radius2*radius2)*p2p_dist(points[0], points[1])/3.0;
 		break;
 	default: assert(0);
 	}
@@ -117,6 +122,14 @@ void coll_obj::calc_bcube() {
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
 		cylinder_3dw(points[0], points[1], radius, radius2).calc_bcube(*this);
+		break;
+	case COLL_CAPSULE:
+		{
+			cube_t bcube2;
+			set_from_sphere(points[0], radius);
+			bcube2.set_from_sphere(points[1], radius2);
+			union_with_cube(bcube2); // union of bboxes of two end spheres
+		}
 		break;
 	default: assert(0);
 	}
@@ -170,6 +183,7 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 		return 1;
 
 	case COLL_CYLINDER_ROT:
+	case COLL_CAPSULE: // ???
 		val = d[d3][dir];
 		// should really do something with this - can be very inaccurate
 		return 1;
@@ -207,15 +221,12 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 void coll_obj::set_npoints() {
 
 	switch (type) {
-	case COLL_CUBE:
-		npoints = 1; break;
-	case COLL_SPHERE:
-		npoints = 1; break;
-	case COLL_CYLINDER:
-	case COLL_CYLINDER_ROT:
-		npoints = 2; break;
-	case COLL_POLYGON:
-		break; // 3 or 4, should be set at another time
+	case COLL_CUBE:         npoints = 1; break;
+	case COLL_SPHERE:       npoints = 1; break;
+	case COLL_CYLINDER:     npoints = 2; break;
+	case COLL_CYLINDER_ROT: npoints = 2; break;
+	case COLL_CAPSULE:      npoints = 2; break;
+	case COLL_POLYGON:      break; // 3 or 4, should be set at another time
 	default: assert(0);
 	}
 }
@@ -349,6 +360,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	case COLL_POLYGON:
 		draw_extruded_polygon(tid, cdb);
 		break;
+	default: assert(0);
 	}
 	if (cp.is_emissive) {cdb.flush(); shader.add_uniform_float("emissive_scale", 0.0);} // reset to default
 }
@@ -462,6 +474,7 @@ void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) c
 	case COLL_POLYGON:
 		get_extruded_polygon_triangles(verts, thickness, points, npoints);
 		break;
+	default: assert(0);
 	}
 	assert((verts.size()%3) == 0);
 }
@@ -499,6 +512,10 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 	case COLL_CYLINDER_ROT:
 		cylinder_bounding_sphere(points, radius, radius2, center, brad);
 		break;
+	case COLL_CAPSULE:
+		center = get_center_n2(points);
+		brad   = p2p_dist(center, points[0]) + max(radius, radius2); // conservative
+		break;
 	case COLL_POLYGON:
 		center = get_center(points, npoints);
 		brad   = radius;
@@ -522,17 +539,13 @@ bool coll_obj::truly_static() const {
 point coll_obj::get_center_pt() const {
 
 	switch (type) {
-	case COLL_CUBE:
-	case COLL_SPHERE:
-		return points[0];
-	case COLL_CYLINDER:
-		return point(points[0].x, points[0].y, 0.5*(points[0].z + points[1].z));
-	case COLL_CYLINDER_ROT:
-		return get_center_n2(points);
-	case COLL_POLYGON:
-		return get_center(points, npoints);
-	default:
-		assert(0);
+	case COLL_CUBE:         return points[0];
+	case COLL_SPHERE:       return points[0];
+	case COLL_CYLINDER:     return point(points[0].x, points[0].y, 0.5*(points[0].z + points[1].z));
+	case COLL_CYLINDER_ROT: return get_center_n2(points);
+	case COLL_CAPSULE:      return get_center_n2(points); // approximate
+	case COLL_POLYGON:      return get_center(points, npoints);
+	default: assert(0);
 	}
 	return all_zeros; // never gets here
 }

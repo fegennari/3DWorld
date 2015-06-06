@@ -662,9 +662,7 @@ void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) 
 
 	if (!fixed && !force) return;
 
-	for (unsigned j = 0; j < unsigned(npoints); ++j) {
-		points[j] += vd;
-	}
+	for (unsigned j = 0; j < unsigned(npoints); ++j) {points[j] += vd;}
 	cube_t::translate(vd);
 	if (!no_texture_offset) texture_offset -= vd;
 }
@@ -1539,13 +1537,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 						break;
 					case COLL_CYLINDER:
 					case COLL_CYLINDER_ROT:
+					case COLL_CAPSULE:
 						cobj.points[1] += vel; // just increase the length?
 						break;
-					case COLL_POLYGON:
-					case COLL_SPHERE:
-						break; // nothing to translate by
-					default:
-						assert(0);
+					case COLL_POLYGON: break; // nothing to translate by
+					case COLL_SPHERE:  break; // nothing to translate by
+					default: assert(0);
 					}
 				}
 				cobj.shift_by(pos, 1, 1);

@@ -314,11 +314,9 @@ int add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2
 	radius2 = fabs(radius2);
 	assert(radius > 0.0 || radius2 > 0.0);
 	bool const nonvert(x1 != x2 || y1 != y2 || (fabs(radius - radius2)/max(radius, radius2)) > 0.2);
+	type = (nonvert ? COLL_CYLINDER_ROT : COLL_CYLINDER);
 
-	if (nonvert) {
-		type = COLL_CYLINDER_ROT;
-	}
-	else { // standard vertical constant-radius cylinder
+	if (!nonvert) { // standard vertical constant-radius cylinder
 		if (z2 < z1) swap(z2, z1);
 		type = COLL_CYLINDER;
 	}
@@ -877,6 +875,7 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 				}
 			}
 			break;
+		default: assert(0);
 		}
 		if (coll) {
 			cindex = index;
@@ -1224,6 +1223,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			} // end sphere int check
 		} // end COLL_POLY scope
 		break;
+	default: assert(0);
 	} // switch
 	if (!lcoll) return; // no collision
 	assert(norm != zero_vector);
@@ -1671,6 +1671,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				zb = max(cobj.d[2][0], min(cobj.d[2][1], zb));
 			}
 			break;
+		default: assert(0);
 		} // end switch
 		if (cobj.platform_id >= 0) {zt -= 1.0E-6;} // subtract a small value so that camera still collides with cobj
 

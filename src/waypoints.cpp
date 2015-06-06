@@ -278,6 +278,7 @@ public:
 
 		case COLL_SPHERE:       break; // not supported (can't stand on)
 		case COLL_CYLINDER_ROT: break; // not supported (can't stand on)
+		case COLL_CAPSULE:      break; // not supported (can't stand on)
 		default: assert(0);
 		}
 	}
