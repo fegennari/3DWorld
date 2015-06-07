@@ -399,8 +399,12 @@ void add_coll_shadow_objs() {
 
 	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID) && no_sparse_smap_update()) { // shadow the camera even when in the air (but not when dead)
 		point camera_pos(camera);
-		if (camera_mode == 1 && !spectate) {camera_pos.z -= 0.5*camera_zh;} // cancel out the z height that was previously added
 		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id);
+
+		// if camera_zh has been set, draw the player's shadow as multiple spheres like a capsule
+		for (float r = 0.0; r < camera_zh; r += 0.25*CAMERA_RADIUS) {
+			add_shadow_obj(camera_pos-point(0.0, 0.0, r), CAMERA_RADIUS, camera_coll_id);
+		}
 	}
 	//PRINT_TIME(" Shadow Object Creation");
 }
