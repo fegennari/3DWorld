@@ -1204,7 +1204,7 @@ void maybe_add_blood_trail(decal_obj const &d, line_tquad_draw_t &blood_tqd) {
 	blood_tqd.add_line_as_tris(start, end, width, width, color, color); // trail
 	if (is_distant) return;
 	blood_tqd.add_line_as_tris(d.pos, start, 0.6*width, width, colorRGBA(color, 0.0), color); // transition
-	blood_tqd.add_line_as_tris(end, end2, width, 0.01*width, color, color); // end - circle?
+	blood_tqd.add_line_as_tris(end, end2, width, 0.0, color, color); // end - circle?
 }
 
 

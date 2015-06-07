@@ -845,9 +845,10 @@ void draw_tquad(float xsize, float ysize, float z, int prim_type) { // Note: nor
 // ordered p1+, p1-, p2-, p2+
 bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]) {
 
+	assert(w1 > 0.0 && w2 > 0.0);
 	int npts(0);
 	vector3d const v1(get_camera_pos(), (p1 + p2)*0.5);
-	float const dmax(1.0E5*min(w1, w2));
+	float const dmax(1.0E5*max(w1, w2));
 	if (v1.mag_sq() > dmax*dmax) return 0; // too far away
 	vector3d v2; // unused
 	cylinder_quad_projection(pts, cylinder_3dw(p1, p2, w1, w2), v1, v2, npts);
@@ -859,10 +860,11 @@ bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, 
 void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 	point const* const prev, point const *const next, bool make_global)
 {
-	point pts[5];
-	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
-	assert(w1 > 0.0 && w2 > 0.0);
 	assert(color1.is_valid() && color2.is_valid()); // validate
+	point pts[5];
+	w1 = max(w1, 0.01f*w2); // must be nonzero
+	w2 = max(w2, 0.01f*w1); // must be nonzero
+	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
 
 	if (prev && *prev != p1) {
 		vector3d const dv(w1*cross_product((get_camera_pos() - (*prev + p1)*0.5), (p1 - *prev)).get_norm());
