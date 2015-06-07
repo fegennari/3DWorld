@@ -2107,13 +2107,11 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			end_pos = projectile_test(coll_pos, vref, 0.0, atten*damage, shooter, range0, atten*intensity);
 			coll2   = (end_pos != coll_pos);
 		}
-		if (reflects && atten > 0.0) {
-			add_laser_beam_segment(coll_pos, end_pos, vref, coll2, (range0 > 0.9*MAX_RANGE), atten*intensity);
-		}
+		if (reflects && atten > 0.0) {add_laser_beam_segment(coll_pos, end_pos, vref, coll2, (range0 > 0.9*MAX_RANGE), atten*intensity);}
 	}
 
 	// process bullet ricochets for M16
-	if (coll && wtype == W_M16 && hardness > 0.5) { // hit coll obj
+	if (coll && wtype == W_M16 && hardness > 0.5 && damage > 5.0) { // hit coll obj
 		float const dp(-dot_product(vcf, coll_norm));
 
 		if (dp > 0.0) { // collision on correct side (always gets here?)
