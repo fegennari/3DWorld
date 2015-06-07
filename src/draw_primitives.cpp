@@ -890,6 +890,7 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 
 void line_tquad_draw_t::draw() const { // supports quads and triangles
 
+	if (empty()) return;
 	shader_t s;
 
 	if (0) { // probably more efficient, and preserves sharp/bright lines
@@ -902,7 +903,7 @@ void line_tquad_draw_t::draw() const { // supports quads and triangles
 		select_texture((draw_model != 0) ? WHITE_TEX : BLUR_TEX);
 	}
 	enable_blend();
-	draw_verts(verts, GL_TRIANGLES);
+	draw_tri_verts();
 	disable_blend();
 	s.end_shader();
 }

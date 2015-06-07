@@ -1472,7 +1472,6 @@ void decal_obj::apply_physics(unsigned i) {
 }
 
 float decal_obj::get_alpha() const {
-
 	return alpha*CLIP_TO_01(2.0f - 2.0f*float(time)/float(lifetime)); // first half alpha=1, second half fade to 0
 }
 

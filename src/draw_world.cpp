@@ -986,17 +986,18 @@ void fire::draw(quad_batch_draw &qbd, int &last_in_smoke) const {
 }
 
 
-void decal_obj::draw(quad_batch_draw &qbd) const {
+bool decal_obj::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
 	point const cur_pos(get_pos());
-	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) return; // back face culling
+	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) return 0; // back face culling
 	float const alpha_val(get_alpha());
-	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return; // distance culling
+	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return 0; // distance culling
 	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	rotate_vector3d(orient, rot_angle, upv);
 	// move slightly away from the object to blend properly with cracks
 	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, colorRGBA(color, alpha_val), radius, radius, tex_range);
+	return 1;
 }
 
 
@@ -1182,12 +1183,38 @@ void create_and_draw_cracks() { // adds to beams
 }
 
 
+// drawn a line of blood running down a vertical surface
+void maybe_add_blood_trail(decal_obj const &d, line_tquad_draw_t &blood_tqd) {
+
+	// FIXME: incorrect VFC
+	if (d.orient.z != 0.0)  return; // not a vertical surface
+	if (d.color != BLOOD_C) return; // not blood
+	if (d.cid < 0)          return; // no cobj (can this happen?)
+	int const hashval(int(1000.0*d.pos.z));
+	if (hashval & 1) return; // only half of them have blood
+	assert((unsigned)d.cid < coll_objects.size());
+	coll_obj const &cobj(coll_objects[d.cid]);
+	if (cobj.type != COLL_CUBE) return; // only cubes for now
+	float const dz_max(min(min((d.pos.z - cobj.d[2][0]), 100.0f*d.radius), 2.0f*CAMERA_RADIUS)), dz(((hashval&63)+1)/64.0 * dz_max);
+	if (dz < d.radius) return; // too small
+	colorRGBA const color(d.color, d.get_alpha());
+	float const width(0.15*d.radius);
+	point const start(d.pos - vector3d(0,0, 1.0*d.radius)), end(d.pos - vector3d(0,0, dz)), end2(end - vector3d(0,0, 0.14*d.radius));
+	bool const is_distant(0); // FIXME
+	blood_tqd.add_line_as_tris(start, end, width, width, color, color); // trail
+	if (is_distant) return;
+	blood_tqd.add_line_as_tris(d.pos, start, 0.6*width, width, colorRGBA(color, 0.0), color); // transition
+	blood_tqd.add_line_as_tris(end, end2, width, 0.01*width, color, color); // end - circle?
+}
+
+
 void draw_cracks_and_decals() {
 
 	if (!decals.any_active()) return;
 	create_and_draw_cracks(); // adds to beams
 	map<int, quad_batch_draw> batches; // maps from {tid, is_black} to quad batches
 	vector<pair<int, unsigned> > sorted_decals;
+	line_tquad_draw_t blood_tqd;
 
 	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
 		if (i->status && sphere_in_camera_view(i->get_pos(), i->radius, 0)) {
@@ -1199,7 +1226,7 @@ void draw_cracks_and_decals() {
 
 	for (unsigned i = 0; i < sorted_decals.size(); ++i) {
 		decal_obj const &d(decals[sorted_decals[i].second]);
-		d.draw(batches[(d.tid << 1) + (d.color == BLACK)]);
+		if (d.draw(batches[(d.tid << 1) + (d.color == BLACK)])) {maybe_add_blood_trail(d, blood_tqd);}
 	}
 	glDepthMask(GL_FALSE);
 	enable_blend();
@@ -1209,7 +1236,7 @@ void draw_cracks_and_decals() {
 		int const tid(i->first >> 1);
 		bool const is_black(i->first & 1);
 
-		if (tid == BULLET_D_TEX) {
+		if (tid == BULLET_D_TEX) { // use bullet shader
 			if (!bullet_shader.is_setup()) {
 				// see http://cowboyprogramming.com/2007/01/05/parallax-mapped-bullet-holes/
 				bullet_shader.set_prefix("#define TEXTURE_ALPHA_MASK",  1); // FS
@@ -1223,15 +1250,19 @@ void draw_cracks_and_decals() {
 			}
 			bullet_shader.enable();
 		}
-		else if (is_black) {
+		else if (is_black) { // use black shader
 			if (!black_shader.is_setup()) {setup_smoke_shaders(black_shader, 0.01, 0, 1, 0, 0, 0, 1);} // no lighting
 			black_shader.enable();
 		}
-		else {
-			if (!lighting_shader.is_setup()) {
-				setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
-			}
+		else { // use normal lighting shader
+			if (!lighting_shader.is_setup()) {setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);}
 			lighting_shader.enable();
+
+			if (!blood_tqd.empty()) {
+				select_texture(WHITE_TEX);
+				blood_tqd.draw_tri_verts();
+				blood_tqd.clear();
+			}
 		}
 		select_texture(tid);
 		i->second.draw();
