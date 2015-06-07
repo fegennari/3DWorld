@@ -43,7 +43,7 @@ extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_m
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
-extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP;
+extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
 extern water_params_t water_params;
@@ -1698,8 +1698,11 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	set_tile_xy_vals(s);
 	s.add_uniform_int("height_tex", 12);
 	if (use_normal_map) {setup_detail_normal_map(s, 2.0);}
-	if (enable_shadow_map) {s.add_uniform_float("z_bias", DEF_Z_BIAS);}
-
+	
+	if (enable_shadow_map) {
+		s.add_uniform_float("z_bias", DEF_Z_BIAS);
+		s.add_uniform_float("pcf_offset", shadow_map_pcf_offset);
+	}
 	if (has_water) {
 		set_water_plane_uniforms(s);
 		s.add_uniform_float("water_atten",    WATER_COL_ATTEN*mesh_scale);

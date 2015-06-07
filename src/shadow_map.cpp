@@ -20,7 +20,7 @@ pos_dir_up orig_camera_pdu;
 extern bool snow_shadows, enable_depth_clamp;
 extern int window_width, window_height, animate2, display_mode, tree_mode, ground_effects_level, num_trees, camera_coll_id;
 extern unsigned enabled_lights;
-extern float NEAR_CLIP, tree_deadness, vegetation;
+extern float NEAR_CLIP, tree_deadness, vegetation, shadow_map_pcf_offset;
 extern vector<shadow_sphere> shadow_objs;
 extern coll_obj_group coll_objects;
 extern platform_cont platforms;
@@ -237,6 +237,7 @@ void smap_data_t::bind_smap_texture(bool light_valid) const {
 void set_smap_shader_for_all_lights(shader_t &s, float z_bias) {
 
 	s.add_uniform_float("z_bias", z_bias);
+	s.add_uniform_float("pcf_offset", shadow_map_pcf_offset);
 
 	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}
 		smap_data[l].set_smap_shader_for_light(s, l);
