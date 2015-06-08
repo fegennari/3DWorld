@@ -13,3 +13,4 @@ Gameplay in tiled terrain mode
 TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
 SSAO using depth map and postprocessing pass
+COLL_CAPSULE

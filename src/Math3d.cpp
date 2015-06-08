@@ -963,7 +963,7 @@ void cylinder_quad_projection(point *pts, cylinder_3dw const &c, vector3d const 
 	vector3d const crossp(cross_product(v1, v2).get_norm());
 	gen_cylin_pts(pts, npts, c.p1, c.r1, crossp);
 	gen_cylin_pts(pts, npts, c.p2, c.r2, crossp);
-	if (npts == 4) swap(pts[2], pts[3]);
+	if (npts == 4) {swap(pts[2], pts[3]);}
 }
 
 

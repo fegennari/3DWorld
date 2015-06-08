@@ -990,7 +990,10 @@ bool decal_obj::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
 	point const cur_pos(get_pos());
-	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) return 0; // back face culling
+	
+	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) { // back face culling
+		if (cid < 0 || !coll_objects[cid].cp.is_glass()) return 0;
+	}
 	float const alpha_val(get_alpha());
 	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return 0; // distance culling
 	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
@@ -998,6 +1001,33 @@ bool decal_obj::draw(quad_batch_draw &qbd) const {
 	// move slightly away from the object to blend properly with cracks
 	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, colorRGBA(color, alpha_val), radius, radius, tex_range);
 	return 1;
+}
+
+// drawn a line of blood running down a vertical surface
+void decal_obj::maybe_draw_blood_trail(line_tquad_draw_t &blood_tqd) const {
+
+	assert(status);
+	if (orient.z != 0.0)  return; // not a vertical surface
+	if (color != BLOOD_C) return; // not blood
+	if (cid < 0)          return; // no cobj (can this happen?)
+	int const hashval(int(1000.0*pos.z));
+	if (hashval & 1)      return; // only half of them have blood
+	assert((unsigned)cid < coll_objects.size());
+	coll_obj const &cobj(coll_objects[cid]);
+	if (cobj.type != COLL_CUBE) return; // only cubes for now
+	point const cur_pos(get_pos()), camera(get_camera_pos());
+	if (!cobj.cp.is_glass() && dot_product_ptv(orient, cur_pos, camera) > 0.0) return; // back face culling
+	float const alpha_val(get_alpha()), view_thresh(max(window_width, window_height)*radius*alpha_val);
+	if (!dist_less_than(cur_pos, get_camera_pos(), 0.7*view_thresh)) return; // distance culling
+	float const dz_max(min(min((cur_pos.z - cobj.d[2][0]), 100.0f*radius), 2.0f*CAMERA_RADIUS)), dz(((hashval&63)+1)/64.0 * dz_max);
+	if (dz < radius) return; // too small
+	if (!sphere_in_camera_view(cur_pos-vector3d(0,0, 0.5*dz), radius+0.5*dz, 0)) return; // VFC
+	colorRGBA const c(color, alpha_val);
+	float const width(0.15*radius);
+	point const start(cur_pos - vector3d(0,0, 1.0*radius)), end(cur_pos - vector3d(0,0, dz)), end2(end - vector3d(0,0, 0.15*radius));
+	blood_tqd.add_line_as_tris(start, end, width, width, c, c); // trail
+	if (dist_less_than(cur_pos, camera, 0.25*view_thresh)) {blood_tqd.add_line_as_tris(cur_pos, start, 0.6*width, width, colorRGBA(c, 0.0), c);} // transition
+	if (dist_less_than(end,     camera, 0.10*view_thresh)) {blood_tqd.add_line_as_tris(end, end2, width, 0.0, c, c);} // end - circle?
 }
 
 
@@ -1183,31 +1213,6 @@ void create_and_draw_cracks() { // adds to beams
 }
 
 
-// drawn a line of blood running down a vertical surface
-void maybe_add_blood_trail(decal_obj const &d, line_tquad_draw_t &blood_tqd) {
-
-	// FIXME: incorrect VFC
-	if (d.orient.z != 0.0)  return; // not a vertical surface
-	if (d.color != BLOOD_C) return; // not blood
-	if (d.cid < 0)          return; // no cobj (can this happen?)
-	int const hashval(int(1000.0*d.pos.z));
-	if (hashval & 1) return; // only half of them have blood
-	assert((unsigned)d.cid < coll_objects.size());
-	coll_obj const &cobj(coll_objects[d.cid]);
-	if (cobj.type != COLL_CUBE) return; // only cubes for now
-	float const dz_max(min(min((d.pos.z - cobj.d[2][0]), 100.0f*d.radius), 2.0f*CAMERA_RADIUS)), dz(((hashval&63)+1)/64.0 * dz_max);
-	if (dz < d.radius) return; // too small
-	colorRGBA const color(d.color, d.get_alpha());
-	float const width(0.15*d.radius);
-	point const start(d.pos - vector3d(0,0, 1.0*d.radius)), end(d.pos - vector3d(0,0, dz)), end2(end - vector3d(0,0, 0.14*d.radius));
-	bool const is_distant(0); // FIXME
-	blood_tqd.add_line_as_tris(start, end, width, width, color, color); // trail
-	if (is_distant) return;
-	blood_tqd.add_line_as_tris(d.pos, start, 0.6*width, width, colorRGBA(color, 0.0), color); // transition
-	blood_tqd.add_line_as_tris(end, end2, width, 0.0, color, color); // end - circle?
-}
-
-
 void draw_cracks_and_decals() {
 
 	if (!decals.any_active()) return;
@@ -1217,21 +1222,31 @@ void draw_cracks_and_decals() {
 	line_tquad_draw_t blood_tqd;
 
 	for (obj_vector_t<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
-		if (i->status && sphere_in_camera_view(i->get_pos(), i->radius, 0)) {
+		if (!i->status) continue;
+
+		if (sphere_in_camera_view(i->get_pos(), i->radius, 0)) {
 			sorted_decals.push_back(make_pair(-i->time, (i - decals.begin()))); // negate time, so largest time is first
 		}
+		i->maybe_draw_blood_trail(blood_tqd);
 	}
 	if (sorted_decals.empty()) return;
 	sort(sorted_decals.begin(), sorted_decals.end()); // sort by time, so that spraypaint works (later paint is drawn after/over earlier paint)
 
 	for (unsigned i = 0; i < sorted_decals.size(); ++i) {
 		decal_obj const &d(decals[sorted_decals[i].second]);
-		if (d.draw(batches[(d.tid << 1) + (d.color == BLACK)])) {maybe_add_blood_trail(d, blood_tqd);}
+		d.draw(batches[(d.tid << 1) + (d.color == BLACK)]);
 	}
 	glDepthMask(GL_FALSE);
 	enable_blend();
 	shader_t black_shader, lighting_shader, bullet_shader;
 
+	if (!blood_tqd.empty()) { // use normal lighting shader
+		setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
+		lighting_shader.enable();
+		select_texture(WHITE_TEX);
+		blood_tqd.draw_tri_verts();
+		blood_tqd.clear();
+	}
 	for (map<int, quad_batch_draw>::const_iterator i = batches.begin(); i != batches.end(); ++i) {
 		int const tid(i->first >> 1);
 		bool const is_black(i->first & 1);
@@ -1257,12 +1272,6 @@ void draw_cracks_and_decals() {
 		else { // use normal lighting shader
 			if (!lighting_shader.is_setup()) {setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);}
 			lighting_shader.enable();
-
-			if (!blood_tqd.empty()) {
-				select_texture(WHITE_TEX);
-				blood_tqd.draw_tri_verts();
-				blood_tqd.clear();
-			}
 		}
 		select_texture(tid);
 		i->second.draw();

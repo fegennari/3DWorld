@@ -843,17 +843,16 @@ void draw_tquad(float xsize, float ysize, float z, int prim_type) { // Note: nor
 
 
 // ordered p1+, p1-, p2-, p2+
-bool get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]) {
+int get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, point pts[4]) {
 
-	assert(w1 > 0.0 && w2 > 0.0);
 	int npts(0);
 	vector3d const v1(get_camera_pos(), (p1 + p2)*0.5);
 	float const dmax(1.0E5*max(w1, w2));
 	if (v1.mag_sq() > dmax*dmax) return 0; // too far away
 	vector3d v2; // unused
 	cylinder_quad_projection(pts, cylinder_3dw(p1, p2, w1, w2), v1, v2, npts);
-	assert(npts == 4);
-	return 1;
+	assert(npts == 3 || npts == 4);
+	return npts;
 }
 
 
@@ -861,11 +860,18 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 	point const* const prev, point const *const next, bool make_global)
 {
 	assert(color1.is_valid() && color2.is_valid()); // validate
+	if (prev || next) {assert(w1 > 0.0 && w2 > 0.0);} else {assert(w1 >= 0.0 && w2 >= 0.0);}
 	point pts[5];
-	w1 = max(w1, 0.01f*w2); // must be nonzero
-	w2 = max(w2, 0.01f*w1); // must be nonzero
-	if (!get_line_as_quad_pts(p1, p2, w1, w2, pts)) return;
+	int const npts(get_line_as_quad_pts(p1, p2, w1, w2, pts));
+	if (npts == 0) return;
 
+	if (npts == 3) { // single triangle
+		assert(!prev && !next);
+		verts.push_back(vert_tc_color(pts[0], 0.0, 0.5, color1));
+		verts.push_back(vert_tc_color(pts[1], ((w1 == 0.0) ? 1.0 : 0.0), 0.5, ((w1 == 0.0) ? color2 : color1)));
+		verts.push_back(vert_tc_color(pts[2], 1.0, 0.5, color2));
+		return;
+	}
 	if (prev && *prev != p1) {
 		vector3d const dv(w1*cross_product((get_camera_pos() - (*prev + p1)*0.5), (p1 - *prev)).get_norm());
 		pts[0] = 0.5*(pts[0] + (p1 + dv)); // average the points
@@ -880,10 +886,8 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 	int const ptix   [9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
 	float const tc   [9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
 	bool const colors[9] = {1, 0, 1, 1, 0, 0, 1, 0, 1};
+	if (make_global) {for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}}
 
-	if (make_global) {
-		for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}
-	}
 	for (unsigned i = 0; i < 9; ++i) { // draw as 3 triangles
 		verts.push_back(vert_tc_color(pts[ptix[i]], tc[i], 0.5, (colors[i] ? color2 : color1))); // tc for 1D blur texture
 	}

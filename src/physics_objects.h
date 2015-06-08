@@ -160,6 +160,7 @@ struct decal_obj : public basic_physics_obj { // size = 76
 	void gen(point const &p, float r, float ang, vector3d const &o, int lt, int tid_, int cid_=-1, colorRGBA const &color_=BLACK,
 		bool is_glass_=0, tex_range_t const &tr=tex_range_t());
 	bool draw(quad_batch_draw &qbd) const;
+	void maybe_draw_blood_trail(line_tquad_draw_t &blood_tqd) const;
 	bool is_on_cobj(int cobj) const;
 	void check_cobj();
 	void apply_physics(unsigned i);
