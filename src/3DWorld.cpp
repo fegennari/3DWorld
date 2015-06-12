@@ -130,6 +130,7 @@ extern hmap_params_t hmap_params;
 
 void init_keyset();
 int load_config(string const &config_file);
+void init_lights();
 
 bool export_modmap(string const &filename);
 void reset_planet_defaults();
@@ -1972,6 +1973,7 @@ int main(int argc, char** argv) {
 		t_trees.resize(num_trees);
 		init_models();
 		init_terrain_mesh();
+		init_lights();
 		gen_scene(1, (world_mode == WMODE_GROUND), 0, 0, 0);
 		gen_snow_coverage();
 		create_object_groups();

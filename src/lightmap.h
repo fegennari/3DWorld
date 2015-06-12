@@ -12,6 +12,8 @@ extern int MESH_SIZE[3];
 
 #define ADD_LIGHT_CONTRIB(c, C) {C[0] += c[0]; C[1] += c[1]; C[2] += c[2];}
 
+unsigned const FLASHLIGHT_LIGHT_ID = 0;
+
 float const LT_DIR_FALLOFF   = 0.005;
 float const LT_DIR_FALLOFF_INV(1.0/LT_DIR_FALLOFF);
 float const CTHRESH          = 0.025;
@@ -102,6 +104,7 @@ protected:
 public:
 	light_source() : enabled(0), user_placed(0), smap_index(0) {}
 	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0);
+	void set_dynamic_state(point const &pos_, vector3d const &dir_, bool enabled_) {pos = pos2 = pos_; dir = dir_; enabled = enabled_;}
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}
 	float get_radius()           const {return radius;}

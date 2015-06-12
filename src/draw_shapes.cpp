@@ -26,7 +26,7 @@ vector<shadow_sphere> shadow_objs;
 bool no_sparse_smap_update();
 
 
-shadow_sphere::shadow_sphere(point const &pos0, float radius0, int cid0) : sphere_t(pos0, radius0), cid(cid0) {
+shadow_sphere::shadow_sphere(point const &pos0, float radius0, int cid0, bool is_player_) : sphere_t(pos0, radius0), is_player(is_player_), cid(cid0) {
 
 	if (cid < 0) {
 		ctype = COLL_SPHERE; // sphere is the default
@@ -399,11 +399,11 @@ void add_coll_shadow_objs() {
 
 	if ((camera_mode == 1 || camera_view == 0) && !has_invisibility(CAMERA_ID) && no_sparse_smap_update()) { // shadow the camera even when in the air (but not when dead)
 		point camera_pos(camera);
-		add_shadow_obj(camera_pos, CAMERA_RADIUS, camera_coll_id);
+		shadow_objs.push_back(shadow_sphere(camera_pos, CAMERA_RADIUS, camera_coll_id, 1));
 
 		// if camera_zh has been set, draw the player's shadow as multiple spheres like a capsule
 		for (float r = 0.0; r < camera_zh; r += 0.25*CAMERA_RADIUS) {
-			add_shadow_obj(camera_pos-point(0.0, 0.0, r), CAMERA_RADIUS, camera_coll_id);
+			shadow_objs.push_back(shadow_sphere(camera_pos-point(0.0, 0.0, r), CAMERA_RADIUS, camera_coll_id, 1));
 		}
 	}
 	//PRINT_TIME(" Shadow Object Creation");

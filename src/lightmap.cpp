@@ -17,9 +17,11 @@ float const DZ_VAL_SCALE     = 2.0;
 float const SHIFT_VAL        = 0.5; // hack to fix some offset problem
 float const DARKNESS_THRESH  = 0.1;
 float const DEF_SKY_GLOBAL_LT= 0.25; // when ray tracing is not used
+float const FLASHLIGHT_BW    = 0.02;
+float const FLASHLIGHT_RAD   = 4.0;
 
 
-bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0), dl_smap_enabled(0);
+bool using_lightmap(0), lm_alloc(0), has_dl_sources(0), has_spotlights(0), has_line_lights(0), use_dense_voxels(0), has_indir_lighting(0), dl_smap_enabled(0), flashlight_on(0);
 unsigned dl_tid(0), elem_tid(0), gb_tid(0);
 float DZ_VAL2(DZ_VAL/DZ_VAL_SCALE), DZ_VAL_INV2(1.0/DZ_VAL2), SHIFT_DX(SHIFT_VAL*DX_VAL), SHIFT_DY(SHIFT_VAL*DY_VAL);
 float czmin0(0.0), lm_dz_adj(0.0), dlight_add_thresh(0.0);
@@ -737,14 +739,13 @@ void add_camera_candlelight() {
 
 void add_camera_flashlight() {
 
-	float const bwidth = 0.02;
-	float const radius = 4.0;
 	point const camera(get_camera_pos());
-	add_dynamic_light(radius, camera, SUN_C, cview_dir, bwidth);
+	//add_dynamic_light(FLASHLIGHT_RAD, camera, SUN_C, cview_dir, FLASHLIGHT_BW);
+	flashlight_on = 1;
 
 	if (display_mode & 0x10) { // add one bounce of indirect lighting
 		unsigned const NUM_VPLS = 32;
-		float const theta(acosf(1.0f - bwidth /*- 0.5*LT_DIR_FALLOFF*/)); // flashlight beam angle
+		float const theta(acosf(1.0f - FLASHLIGHT_BW /*- 0.5*LT_DIR_FALLOFF*/)); // flashlight beam angle
 		float const rad_per_len(tan(theta));
 		vector3d vab[2];
 		get_ortho_vectors(cview_dir, vab);
@@ -757,14 +758,28 @@ void add_camera_flashlight() {
 			point cpos;
 			vector3d cnorm;
 			
-			if (check_coll_line_exact(camera, (camera + 0.5*radius*dir), cpos, cnorm, cindex, 0.0, camera_coll_id, 1, 0, 0)) {
-				cpos -= 0.0001*radius*cnorm; // move behind the collision plane so as not to multiply light
+			if (check_coll_line_exact(camera, (camera + 0.5*FLASHLIGHT_RAD*dir), cpos, cnorm, cindex, 0.0, camera_coll_id, 1, 0, 0)) {
+				cpos -= 0.0001*FLASHLIGHT_RAD*cnorm; // move behind the collision plane so as not to multiply light
 				assert(cindex >= 0);
 				colorRGBA const color(SUN_C.modulate_with(coll_objects[cindex].get_avg_color()));
-				add_dynamic_light(0.1*radius, cpos, color*0.15, cnorm, 0.5); // wide angle (almost hemisphere)
+				add_dynamic_light(0.1*FLASHLIGHT_RAD, cpos, color*0.15, cnorm, 0.5); // wide angle (almost hemisphere)
 			}
 		}
 	}
+}
+
+void init_lights() {
+
+	assert(light_sources_d.size() == FLASHLIGHT_LIGHT_ID); // must be empty at this point (first light is added here)
+	bool const use_smap = 0; // not yet enabled
+	point const camera(get_camera_pos());
+	light_sources_d.push_back(light_source_trig(light_source(FLASHLIGHT_RAD, camera, camera, SUN_C, 1, cview_dir, FLASHLIGHT_BW), use_smap));
+}
+
+void sync_flashlight() {
+
+	assert(FLASHLIGHT_LIGHT_ID < light_sources_d.size());
+	light_sources_d[FLASHLIGHT_LIGHT_ID].set_dynamic_state(get_camera_pos(), cview_dir, flashlight_on);
 }
 
 
@@ -846,6 +861,7 @@ void clear_dynamic_lights() { // slow for large lights
 void add_dynamic_lights_ground() {
 
 	//RESET_TIME;
+	sync_flashlight();
 	if (!animate2) return;
 	assert(ldynamic);
 	clear_dynamic_lights();

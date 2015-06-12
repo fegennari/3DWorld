@@ -377,14 +377,14 @@ struct platform_cont : public deque<platform> {
 };
 
 
-class shadow_sphere : public sphere_t {
+struct shadow_sphere : public sphere_t {
 
-public:
+	bool is_player;
 	char ctype;
 	int cid;
 
-	shadow_sphere() : ctype(COLL_NULL), cid(-1) {}
-	shadow_sphere(point const &pos0, float radius0, int cid0);
+	shadow_sphere() : is_player(0), ctype(COLL_NULL), cid(-1) {}
+	shadow_sphere(point const &pos0, float radius0, int cid0, bool is_player_=0);
 	
 	inline bool line_intersect(point const &p1, point const &p2) const {
 		return (line_sphere_intersect(p1, p2, pos, radius) && (ctype == COLL_SPHERE || line_intersect_cobj(p1, p2)));

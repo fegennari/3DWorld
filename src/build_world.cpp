@@ -1306,7 +1306,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'V': // bind prev light source to cobj at location <x y z>
 			if (fscanf(fp, "%f%f%f", &pos.x, &pos.y, &pos.z) != 3) {return read_error(fp, "light source", coll_obj_file);}
-			if (light_sources_d.empty()) {return read_error(fp, "light source <no previous light source to bind to>", coll_obj_file);}
+			if (light_sources_d.size() <= FLASHLIGHT_LIGHT_ID+1) {return read_error(fp, "light source <no previous light source to bind to>", coll_obj_file);}
 			xf.xform_pos(pos);
 			light_sources_d.back().bind_to_pos(pos);
 			break;
@@ -1708,7 +1708,6 @@ void init_models() {
 
 
 void free_models() {
-
 	delete_hmv_shape();
 }
 

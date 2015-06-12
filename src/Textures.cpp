@@ -298,7 +298,7 @@ int get_texture_by_name(string const &name, bool is_normal_map, bool invert_y) {
 	if (ix > 0 || ix == -1 || name == "0") return ix; // a number was specified
 	if (name == "none" || name == "null")  return -1; // no texture
 	int tid(texture_lookup(name));
-	if (tid >= 0) {assert(tid < textures.size()); return tid;}
+	if (tid >= 0) {assert((unsigned)tid < textures.size()); return tid;}
 	// try to load/add the texture directly from a file: assume it's RGB with wrap and mipmaps
 	tid = textures.size();
 	texture_t new_tex(0, 7, 0, 0, 1, 3, 1, name, invert_y, !is_normal_map, 2.0, 1.0, is_normal_map); // anisotropy=2.0

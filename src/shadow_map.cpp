@@ -146,9 +146,11 @@ public:
 		int const shader_loc(shader.get_uniform_loc("xlate_scale"));
 		assert(shader_loc >= 0);
 		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
+		bool const is_camera(pdu.pos == get_camera_pos());
 
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
+			if (is_camera && i->is_player) continue; // skip the camera shadow for flashlight
 			int const ndiv(fixed_ndiv ? fixed_ndiv : get_smap_ndiv(i->radius, smap_sz));
 
 			if (i->ctype != COLL_SPHERE) {
