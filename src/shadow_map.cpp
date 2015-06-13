@@ -137,7 +137,7 @@ public:
 		upload(verts);
 	}
 
-	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv) {
+	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv, point const &camera_pos) {
 		if (shadow_objs.empty()) return; // no dynamic objects
 		shader_t shader;
 		shader.set_vert_shader("vertex_xlate_scale");
@@ -146,11 +146,13 @@ public:
 		int const shader_loc(shader.get_uniform_loc("xlate_scale"));
 		assert(shader_loc >= 0);
 		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
-		bool const is_camera(pdu.pos == get_camera_pos());
+		bool const is_camera(pdu.pos == camera_pos);
 
 		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
 			if (is_camera && i->is_player) continue; // skip the camera shadow for flashlight
+			if (i->pos == pdu.pos) continue; // this sphere must be casting the light
+			//if (i->contains_point(pdu.pos)) continue; too strong
 			int const ndiv(fixed_ndiv ? fixed_ndiv : get_smap_ndiv(i->radius, smap_sz));
 
 			if (i->ctype != COLL_SPHERE) {
@@ -410,7 +412,7 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	smap_vertex_cache.render();
 	render_models(1);
 	render_voxel_data(1);
-	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, 0);
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, 0, camera_pos_);
 	// add snow, trees, scenery, and mesh
 	if (snow_shadows) {draw_snow(1);} // slow
 	draw_trees(1);
@@ -435,7 +437,7 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
 	render_models(1);
-	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv);
+	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_);
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 	camera_pos = camera_pos_;
 }

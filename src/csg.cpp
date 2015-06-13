@@ -22,6 +22,9 @@ float const REL_DMAX          = 0.2;
 extern bool use_waypoints;
 
 
+bool sphere_t::contains_point(point const &p) const {return dist_less_than(pos, p, radius);}
+
+
 // *** RECT IMPLEMENTATION ***
 
 

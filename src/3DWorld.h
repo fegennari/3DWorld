@@ -354,6 +354,7 @@ struct sphere_t {
 	float get_radius()     const {return radius;}
 	float get_volume()     const {return (4.0/3.0)*PI*radius*radius*radius;}
 	float get_surf_area()  const {return 4.0*PI*radius*radius;}
+	bool contains_point(point const &p) const;
 };
 
 
