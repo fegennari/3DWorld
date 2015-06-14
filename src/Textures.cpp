@@ -184,7 +184,7 @@ unsigned char *landscape0 = NULL;
 
 
 extern bool mesh_difuse_tex_comp, water_is_lava;
-extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid, depth_tid;
+extern unsigned smoke_tid, dl_tid, elem_tid, gb_tid, reflection_tid, depth_tid, frame_buffer_RGB_tid;
 extern int world_mode, read_landscape, default_ground_tex, xoff2, yoff2, DISABLE_WATER;
 extern int scrolling, dx_scroll, dy_scroll, display_mode, iticks, universe_only, window_width, window_height;
 extern float zmax, zmin, glaciate_exp, relh_adj_tex, vegetation, fticks;
@@ -361,6 +361,7 @@ void reset_textures() {
 	free_texture(gb_tid);
 	free_texture(reflection_tid);
 	free_texture(depth_tid);
+	free_texture(frame_buffer_RGB_tid);
 	free_font_texture_atlas();
 
 	for (texture_map_t::iterator i = noise_tex_3ds.begin(); i != noise_tex_3ds.end(); ++i) {
@@ -927,13 +928,17 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 }
 
 
-void depth_buffer_to_texture(unsigned &tid) {
+void frame_buffer_to_texture(unsigned &tid, bool is_depth) {
 
 	if (tid) {bind_2d_texture(tid);} else {setup_texture(tid, 0, 0, 0);}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, window_width, window_height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, (is_depth ? GL_DEPTH_COMPONENT : GL_RGB8), window_width, window_height, 0,
+		(is_depth ? GL_DEPTH_COMPONENT : GL_RGB), (is_depth ? GL_FLOAT : GL_UNSIGNED_BYTE), 0);
 	glReadBuffer(GL_BACK);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, window_width, window_height);
 }
+
+void depth_buffer_to_texture    (unsigned &tid) {frame_buffer_to_texture(tid, 1);}
+void frame_buffer_RGB_to_texture(unsigned &tid) {frame_buffer_to_texture(tid, 0);}
 
 
 void texture_t::gen_rand_texture(unsigned char val, unsigned char a_add, unsigned a_rand) {

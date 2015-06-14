@@ -950,6 +950,7 @@
     <None Include="shaders\procedural_texture.part.frag" />
     <None Include="shaders\rand_gen.part" />
     <None Include="shaders\screen_space_ao.frag" />
+    <None Include="shaders\screen_space_blur.frag" />
     <None Include="shaders\shadow_map.part" />
     <None Include="shaders\ship_draw.frag" />
     <None Include="shaders\ship_draw.vert" />

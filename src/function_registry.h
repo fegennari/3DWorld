@@ -492,6 +492,7 @@ void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t,
 	bool mirror_s=0, bool mirror_t=0, bool nearest=0, float anisotropy=1.0);
 void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool nearest);
 void depth_buffer_to_texture(unsigned &tid);
+void frame_buffer_RGB_to_texture(unsigned &tid);
 void free_textures();
 void reset_textures();
 void free_texture(unsigned &tid);
@@ -733,6 +734,7 @@ void modify_voxels();
 
 // function prototypes - screenshot
 void read_depth_buffer(unsigned window_width, unsigned window_height, vector<float> &depth, bool normalize=0);
+void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned char> &buf);
 int screenshot(unsigned window_width, unsigned window_height, char *file_path, bool write_bmp);
 int write_jpeg(unsigned window_width, unsigned window_height, char *file_path);
 

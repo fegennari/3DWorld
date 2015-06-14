@@ -30,7 +30,7 @@ struct sky_pos_orient {
 
 
 // Global Variables
-unsigned depth_tid(0);
+unsigned depth_tid(0), frame_buffer_RGB_tid(0);
 float sun_radius, moon_radius, earth_radius, brightness(1.0);
 colorRGB cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
@@ -1384,19 +1384,22 @@ bool is_sun_flare_visible() {
 }
 
 
-void ensure_depth_buffer_this_frame() {
-
-	static int prev_frame_counter(-1);
-	if (frame_counter == prev_frame_counter) return; // depth texture is already valid for this frame
-	prev_frame_counter = frame_counter;
-	depth_buffer_to_texture(depth_tid);
-}
-
 void bind_depth_buffer() {
 
-	ensure_depth_buffer_this_frame();
+	static int prev_frame_counter(-1);
+	if (frame_counter != prev_frame_counter) {depth_buffer_to_texture(depth_tid);} // depth texture is not valid for this frame
+	prev_frame_counter = frame_counter;
 	assert(depth_tid >= 0);
 	bind_2d_texture(depth_tid);
+}
+
+void bind_frame_buffer_RGB() {
+	
+	static int prev_frame_counter(-1);
+	if (frame_counter != prev_frame_counter) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame
+	prev_frame_counter = frame_counter;
+	assert(frame_buffer_RGB_tid >= 0);
+	bind_2d_texture(frame_buffer_RGB_tid);
 }
 
 void draw_ortho_screen_space_quad() {
@@ -1452,9 +1455,24 @@ void add_ssao() {
 	s.end_shader();
 }
 
+void add_color_blur() {
+
+	bind_frame_buffer_RGB();
+	shader_t s;
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("screen_space_blur");
+	s.begin_shader();
+	s.add_uniform_int("frame_buffer_tex", 0);
+	s.add_uniform_vector2d("xy_step", vector2d(1.0/window_width, 1.0/window_height));
+	s.set_cur_color(WHITE);
+	draw_ortho_screen_space_quad();
+	s.end_shader();
+}
+
 void run_postproc_effects() {
 	if ((display_mode & 0x10) || (show_fog && world_mode == WMODE_GROUND)) {add_god_rays();}
 	if (display_mode & 0x20) {add_ssao();}
+	if (world_mode != WMODE_UNIVERSE && is_underwater(get_camera_pos())) {add_color_blur();}
 }
 
 

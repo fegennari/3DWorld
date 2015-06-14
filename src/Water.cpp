@@ -1661,11 +1661,11 @@ void update_water_zval(int x, int y, float old_mh) {
 
 bool is_underwater(point const &pos, int check_bottom, float *depth) { // or under ice
 	
-	if (depth) *depth = 0.0;
+	if (depth) {*depth = 0.0;}
 	if (DISABLE_WATER || !(display_mode & 0x04)) return 0; // water disabled
 
 	if (world_mode == WMODE_INF_TERRAIN) {
-		if (depth) *depth = max(0.0f, (water_plane_z - pos.z));
+		if (depth) {*depth = max(0.0f, (water_plane_z - pos.z));}
 		return (pos.z < water_plane_z);
 	}
 	assert(water_matrix && mesh_height);

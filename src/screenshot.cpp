@@ -57,6 +57,8 @@ void read_depth_buffer(unsigned window_width, unsigned window_height, vector<flo
 
 void read_pixels(unsigned window_width, unsigned window_height, vector<unsigned char> &buf) {
 
+	unsigned const num_bytes(window_width*window_height*3);
+	if (buf.size() < num_bytes) {buf.resize(num_bytes);}
 #if 0 // for debugging depth buffer
 	vector<float> depth;
 	read_depth_buffer(window_width, window_height, depth, 1); // normalized
@@ -74,7 +76,7 @@ int screenshot(unsigned window_width, unsigned window_height, char *file_path, b
 	static unsigned ss_id(0);
 	FILE *fp = open_screenshot_file(file_path, (write_bmp ? "bmp" : "raw"), ss_id);
 	if (fp == NULL) return 0;
-	vector<unsigned char> buf(window_width*window_height*3);
+	vector<unsigned char> buf;
 	read_pixels(window_width, window_height, buf);
 	bool ret(1);
 

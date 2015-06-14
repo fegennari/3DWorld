@@ -12,8 +12,7 @@ float get_linear_depth(in vec2 pos) {
 	//return 2.0 * zfar * znear / (zfar + znear - (zfar - znear)*(2*d -1)); // actual z-value
 }
 
-void main()
-{
+void main() {
 	//fg_FragColor = vec4(vec3(get_linear_depth(tc)),1); return;
 	float depth0   = get_linear_depth(tc) - 0.0001;
 	//if (depth0 > 0.25) discard; // skip SSAO for high depth (sky/background)
