@@ -1470,7 +1470,7 @@ void add_color_blur() {
 }
 
 void run_postproc_effects() {
-	if ((display_mode & 0x10) || (show_fog && world_mode == WMODE_GROUND)) {add_god_rays();}
+	if (show_fog && world_mode == WMODE_GROUND) {add_god_rays();}
 	if (display_mode & 0x20) {add_ssao();}
 	if (world_mode != WMODE_UNIVERSE && is_underwater(get_camera_pos())) {add_color_blur();}
 }
