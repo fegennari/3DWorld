@@ -227,7 +227,9 @@ void smap_data_t::bind_smap_texture(bool light_valid) const {
 
 	set_active_texture(tu_id);
 
-	if (light_valid) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
+	// FIXME: the is_allocate() check shouldn't be required, but can happen in tiled terrain mode when switching between combined_gu mode
+	// due to some disagreement between the update pass and draw pass during reflection drawing
+	if (light_valid && is_allocated()) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
 		assert(tid > 0);
 		bind_2d_texture(tid);
 	}
