@@ -725,6 +725,7 @@ void display(void) {
 
 		if (world_mode == WMODE_INF_TERRAIN) { // map mode infinite terrain
 			camera_origin = surface_pos;
+			update_cpos();
 			apply_camera_offsets(get_camera_pos());
 		}
 		swap_buffers_and_redraw();

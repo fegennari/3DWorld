@@ -16,3 +16,4 @@ SSAO using depth map and postprocessing pass
 COLL_CAPSULE
 Cube map point light shadows
 More particle effects (explosion dust and sparks)
+Museum normal map direction
