@@ -20,7 +20,7 @@ unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
-extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal;
+extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale;
 extern unsigned shadow_map_sz;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
@@ -1719,6 +1719,7 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 	}
 	for (unsigned bmap_pass = 0; bmap_pass < (needs_bump_maps ? 2U : 1U); ++bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
+			bool reset_bscale(0);
 			shader_t s;
 
 			if (is_shadow_pass) {
@@ -1731,6 +1732,7 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 				if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
 				setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting, 0.0, model_triplanar_tc_scale);
 				if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
+				if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
 			}
 			else {
 				s.begin_simple_textured_shader(0.0, 1); // with lighting
@@ -1739,6 +1741,7 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 			for (iterator m = begin(); m != end(); ++m) { // non-const
 				m->render(s, is_shadow_pass, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), xlate);
 			}
+			if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
 			s.clear_specular(); // may be unnecessary
 			s.end_shader();
 		} // sam_pass
