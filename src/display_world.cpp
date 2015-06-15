@@ -535,10 +535,7 @@ void draw_game_elements(int timer1) {
 
 
 void setup_basic_fog() {
-
-	if (!show_fog) return;
-	setup_linear_fog(GRAY, 2.5*Z_SCENE_SIZE);
-	fog_enabled = 1;
+	if (show_fog) {reset_fog();	fog_enabled = 1;}
 }
 
 
@@ -840,9 +837,7 @@ void display(void) {
 			display_inf_terrain(depth);
 		}
 		else { // finite terrain mode
-			if (combined_gu) { // light from current system's star
-				draw_universe_bkg(depth, 0); // infinite universe as background
-			}
+			if (combined_gu) {draw_universe_bkg(depth, 0);} // infinite universe as background
 			if (TIMETEST) PRINT_TIME("C");
 
 			if (mesh_invalidated) {

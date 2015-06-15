@@ -6,5 +6,8 @@ void main()
 {
 	vec4 texel = texture(tex0, tc);
 	if (texel.a <= min_alpha) discard;
-	fg_FragColor = apply_fog(gl_Color*texel);
+	fg_FragColor = gl_Color*texel;
+#ifndef NO_FOG
+	fg_FragColor = apply_fog(fg_FragColor);
+#endif
 }
