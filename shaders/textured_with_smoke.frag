@@ -1,8 +1,9 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta, step_delta_shadow;
 uniform sampler2D tex0;
-uniform float min_alpha = 0.0;
-uniform float emissive_scale = 0.0;
+uniform float min_alpha       = 0.0;
+uniform float water_depth     = 0.0;
+uniform float emissive_scale  = 0.0;
 uniform float smoke_const_add = 0.0;
 uniform float smoke_noise_mag = 0.0;
 uniform vec3 smoke_color, sphere_center;
@@ -193,25 +194,29 @@ void main()
 	if (color.a <= min_alpha) discard;
 #endif // NO_ALPHA_TEST
 #ifndef NO_FOG
-	vec4 fog_out;
+	vec4 fcolor = fog_color;
 	
 	if (indir_lighting) {
-		vec3 scene_urc    = scene_llc + scene_scale;
+		vec3 scene_urc  = scene_llc + scene_scale;
 		float scene_bb[6]; scene_bb[0]=scene_llc.x; scene_bb[1]=scene_urc.x; scene_bb[2]=scene_llc.y; scene_bb[3]=scene_urc.y; scene_bb[4]=scene_llc.z; scene_bb[5]=scene_urc.z;
-		float view_dist   = distance(vpos, camera_pos);
-		vec3 end_pos      = camera_pos + (vpos - camera_pos)*(min(fog_end, view_dist)/view_dist);
-		pt_pair cres      = clip_line(end_pos, camera_pos, scene_bb);
-		float scene_len   = distance(cres.v2, cres.v1)/distance(end_pos, camera_pos);
-		float pixel_lum;
-		if (indir_lighting) {pixel_lum = mix(get_luminance(indir_lookup(cres.v1)), get_luminance(indir_lookup(cres.v2)), 0.75);} // FIXME: use multiple steps?
-		else {pixel_lum = get_luminance(lit_color.rgb)/max(0.01, get_luminance(gl_Color.rgb));}
-		vec4 fcolor  = fog_color;
-		fcolor.rgb  *= mix(1.0, min(2.0*pixel_lum, 1.0), scene_len);
-		fog_out = apply_fog_ffc(color, length(epos.xyz)*get_custom_fog_scale_epos(epos), fcolor); // apply standard fog
+		float view_dist = distance(vpos, camera_pos);
+		vec3 end_pos    = camera_pos + (vpos - camera_pos)*(min(fog_end, view_dist)/view_dist);
+		pt_pair cres    = clip_line(end_pos, camera_pos, scene_bb);
+		float scene_len = distance(cres.v2, cres.v1)/distance(end_pos, camera_pos);
+		float pixel_lum = get_luminance(indir_lookup(cres.v1)); // camera pos
+		if (!underwater) {pixel_lum = mix(pixel_lum, get_luminance(indir_lookup(cres.v2)), 0.75);} // FIXME: use multiple steps?
+		//pixel_lum = get_luminance(lit_color.rgb)/max(0.01, get_luminance(gl_Color.rgb));
+		fcolor.rgb *= mix(1.0, min(2.0*pixel_lum, 1.0), scene_len);
 	}
-	else {
-		fog_out = apply_fog_epos(color, epos); // apply standard fog
-	}
+	// FIXME: more physically correct to clip the view ray by the distance traveled through the water,
+	// but not all shaders use this flow (leaves, plants, scenery, etc.)
+#if 0
+	vec3 vpos_clip   = (underwater ? mix(camera_pos, vpos.xyz, min(1.0, water_depth/max(0.0001, (vpos.z - camera_pos.z)))) : vpos);
+	float fog_length = length(vpos_clip - camera_pos);
+#else
+	float fog_length = length(epos.xyz);
+#endif
+	vec4 fog_out     = apply_fog_ffc(color, fog_length*get_custom_fog_scale_epos(epos), fcolor); // apply standard fog
 	color = (keep_alpha ? vec4(fog_out.rgb, color.a) : fog_out);
 #endif // NO_FOG
 #else // SMOKE_ENABLED

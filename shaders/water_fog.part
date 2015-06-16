@@ -1,9 +1,18 @@
 uniform float water_plane_z;
 
 float get_water_fog_coord(in vec4 vertex, in vec3 eye, inout vec3 clipped_vert) {
-	// clip the line to the water plane if the eye is above the water
-	// could use different terms/fog scaling/color for inside/outside water?
-	float t   = min(1.0, (eye.z - water_plane_z)/max(0.0001, (eye.z - vertex.z)));
+	float t;
+#if 0
+	// FIXME: more physically correct to clip the view ray by the distance traveled through the water,
+	// but fails to add the regular air fog attenuation, and not all shaders use this flow (leaves, plants, scenery, etc.)
+	if (eye.z < water_plane_z) {t = min(1.0, (water_plane_z - eye.z)/max(0.0001, (vertex.z - eye.z)));} // underwater
+	else // above the water
+#endif
+	{
+		// clip the line to the water plane if the eye is above the water
+		// could use different terms/fog scaling/color for inside/outside water?
+		t = min(1.0, (eye.z - water_plane_z)/max(0.0001, (eye.z - vertex.z)));
+	}
 	clipped_vert = mix(eye, vertex.xyz, ((t < 0.0) ? 1.0 : t));
 	return length(clipped_vert - eye);
 }

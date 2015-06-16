@@ -42,7 +42,7 @@ vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, scene_smap_vbo_invalid;
-extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled;
+extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
@@ -303,17 +303,25 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 }
 
 
+void setup_underwater_fog(shader_t &s, float &water_depth) {
+	bool const underwater(is_underwater(get_camera_pos(), 1, &water_depth));
+	s.set_bool_prefix("underwater", underwater, 1); // FS
+}
+
+
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask, 11: noise, 12: ground texture
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 // use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
 	bool smoke_en, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale)
 {
+	float water_depth(0.0);
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK",   1);} // FS
 	if (triplanar_tex) {s.set_prefix("#define TRIPLANAR_TEXTURE", 1);} // FS
+	setup_underwater_fog(s, water_depth);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
@@ -322,6 +330,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (triplanar_tex) {fstr += "triplanar_texture.part+";}
 	s.set_frag_shader(fstr + "textured_with_smoke");
 	s.begin_shader();
+	s.add_uniform_float("water_depth", water_depth);
 
 	if (use_texgen == 2) {
 		s.register_attrib_name("tex0_s", TEX0_S_ATTR);
@@ -366,13 +375,16 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap) {
 
+	float water_depth(0.0);
 	bool indir_lighting(0);
 	s.set_prefix("#define NO_SHADOW_MAP", 0); // VS
+	setup_underwater_fog(s, water_depth);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
+	s.add_uniform_float("water_depth", water_depth);
 	common_shader_block_post(s, dlights, use_smap, 0, indir_lighting, 0.0, 0); // no dlights smap
 	check_gl_error(400);
 }
