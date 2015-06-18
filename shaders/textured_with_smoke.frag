@@ -210,12 +210,8 @@ void main()
 	}
 	// FIXME: more physically correct to clip the view ray by the distance traveled through the water,
 	// but not all shaders use this flow (leaves, plants, scenery, etc.)
-#if 0
-	vec3 vpos_clip   = (underwater ? mix(camera_pos, vpos.xyz, min(1.0, water_depth/max(0.0001, (vpos.z - camera_pos.z)))) : vpos);
-	float fog_length = length(vpos_clip - camera_pos);
-#else
+	//float fog_length = (underwater ? get_underwater_fog_length(water_depth, camera_pos, vpos) : length(epos.xyz));
 	float fog_length = length(epos.xyz);
-#endif
 	vec4 fog_out     = apply_fog_ffc(color, fog_length*get_custom_fog_scale_epos(epos), fcolor); // apply standard fog
 	color = (keep_alpha ? vec4(fog_out.rgb, color.a) : fog_out);
 #endif // NO_FOG

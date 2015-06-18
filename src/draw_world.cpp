@@ -303,9 +303,11 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 }
 
 
-void setup_underwater_fog(shader_t &s, float &water_depth) {
+float setup_underwater_fog(shader_t &s) {
+	float water_depth(0.0);
 	bool const underwater(is_underwater(get_camera_pos(), 1, &water_depth));
 	s.set_bool_prefix("underwater", underwater, 1); // FS
+	return water_depth;
 }
 
 
@@ -315,13 +317,12 @@ void setup_underwater_fog(shader_t &s, float &water_depth) {
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
 	bool smoke_en, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale)
 {
-	float water_depth(0.0);
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK",   1);} // FS
 	if (triplanar_tex) {s.set_prefix("#define TRIPLANAR_TEXTURE", 1);} // FS
-	setup_underwater_fog(s, water_depth);
+	float const water_depth(setup_underwater_fog(s));
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
@@ -375,10 +376,9 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap) {
 
-	float water_depth(0.0);
 	bool indir_lighting(0);
 	s.set_prefix("#define NO_SHADOW_MAP", 0); // VS
-	setup_underwater_fog(s, water_depth);
+	float const water_depth(setup_underwater_fog(s));
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");

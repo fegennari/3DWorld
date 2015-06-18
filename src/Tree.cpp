@@ -340,6 +340,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 	}
 	if (gen_tex_coords) {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	s.set_prefix("#define NO_SHADOW_MAP", 0); // VS
+	//float const water_depth(setup_underwater_fog(s));
 	s.check_for_fog_disabled();
 	s.setup_enabled_lights(2, 1); // VS
 	s.set_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled), 0); // VS - lightning
@@ -350,6 +351,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 	s.setup_scene_bounds();
 	if (!no_dlights) {setup_dlight_textures(s, 0);} // no dlight smap
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);} else {s.setup_fog_scale();}
+	//s.add_uniform_float("water_depth", water_depth);
 	s.add_uniform_float("min_alpha", min_alpha);
 	set_active_texture(0);
 	s.add_uniform_int("tex0", 0);

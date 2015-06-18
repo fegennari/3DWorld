@@ -78,3 +78,9 @@ vec4 apply_fog_colored(in vec4  color,    // original color of the pixel
 #endif
 }
 
+// inputs are in world space
+float get_underwater_fog_length(in float water_depth, in vec3 eye, in vec3 vpos) {
+	vec3 vpos_clip = mix(eye, vpos, min(1.0, water_depth/max(0.0001, (vpos.z - eye.z))));
+	return length(vpos_clip - eye);
+}
+
