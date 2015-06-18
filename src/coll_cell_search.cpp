@@ -76,7 +76,9 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 		case COLL_CYLINDER:
 		case COLL_CYLINDER_ROT:
 			return line_intersect_cylinder(p1, p2, cylinder_3dw(points[0], points[1], radius, radius2), !(cp.surfs & 1));
-		//case COLL_CAPSULE: // WRITE
+		case COLL_CAPSULE:
+			return (line_sphere_intersect(p1, p2, points[0], radius) || line_sphere_intersect(p1, p2, points[1], radius2) ||
+				line_intersect_cylinder(p1, p2, cylinder_3dw(points[0], points[1], radius, radius2), 0));
 		case COLL_POLYGON: // must be coplanar
 			assert(npoints >= 3);
 

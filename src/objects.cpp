@@ -461,7 +461,11 @@ void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) c
 	case COLL_CYLINDER_ROT:
 		get_cylinder_triangles(verts, points[0], points[1], radius, radius2, ndiv, !(cp.surfs & 1));
 		break;
-	//case COLL_CAPSULE: // WRITE
+	case COLL_CAPSULE:
+		get_sphere_triangles(verts, points[0], radius, ndiv); // some extra triangles (only need hemisphere), but okay
+		get_sphere_triangles(verts, points[1], radius2, ndiv);
+		get_cylinder_triangles(verts, points[0], points[1], radius, radius2, ndiv, 0);
+		break;
 	case COLL_SPHERE:
 		get_sphere_triangles(verts, points[0], radius, ndiv);
 		break;
@@ -475,13 +479,10 @@ void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) c
 
 
 bool obj_layer::has_alpha_texture() const {
-
 	return (tid >= 0 && textures[tid].has_alpha());
 }
 
-
 bool coll_obj::is_player() const { // sort of a hack
-	
 	return ((cp.coll_func == camera_collision) || (cp.coll_func == smiley_collision));
 }
 

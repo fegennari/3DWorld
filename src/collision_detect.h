@@ -141,8 +141,7 @@ public:
 	void add_to_platform() const;
 	bool cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const;
 	bool operator<(const coll_obj &cobj) const {return (volume < cobj.volume);} // sort by size
-	bool equal_params(const coll_obj &c) const {return (type == c.type && status == c.status &&
-		platform_id == c.platform_id && group_id == c.group_id && cp == c.cp);}
+	bool equal_params(const coll_obj &c) const {return (type == c.type && status == c.status && platform_id == c.platform_id && group_id == c.group_id && cp == c.cp);}
 	bool no_draw()        const {return (status == COLL_UNUSED || status == COLL_FREED || cp.no_draw());}
 	bool disabled()       const {return (status != COLL_DYNAMIC && status != COLL_STATIC);}
 	bool no_collision()   const {return (disabled() || cp.no_coll);}
@@ -158,6 +157,7 @@ public:
 	bool is_cylinder()    const {return (type == COLL_CYLINDER || type == COLL_CYLINDER_ROT);}
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	bool is_tree_leaf()   const {return is_billboard;} // we assume that a billboard cobj is a tree leaf
+	bool is_cylin_vertical() const {return (points[0].x == points[1].x && points[0].y == points[1].y);}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
 	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)));}
 	point get_center_pt() const;

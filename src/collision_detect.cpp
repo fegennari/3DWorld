@@ -864,9 +864,17 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 			coll = dist_xy_less_than(pval, cobj.points[0], (cobj.radius + radius));
 			break;
 		case COLL_CYLINDER_ROT:
-			coll = (sphere_int_cylinder_sides(pval, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2));
+			coll = sphere_int_cylinder_sides(pval, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2);
 			break;
-		//case COLL_CAPSULE: // WRITE
+		case COLL_CAPSULE:
+			coll = (dist_less_than(pval, cobj.points[0], (cobj.radius + radius)) || dist_less_than(pval, cobj.points[1], (cobj.radius2 + radius)));
+			if (!coll && cobj.is_cylin_vertical() && cobj.radius == cobj.radius2) { // vertical, constant radius
+				coll = dist_xy_less_than(pval, cobj.points[0], (cobj.radius + radius));
+			}
+			else if (!coll) { // non-vertical or variable radius
+				coll = sphere_int_cylinder_sides(pval, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2);
+			}
+			break;
 		case COLL_POLYGON: { // must be coplanar
 			float thick, rdist;
 
