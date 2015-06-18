@@ -76,6 +76,7 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 		case COLL_CYLINDER:
 		case COLL_CYLINDER_ROT:
 			return line_intersect_cylinder(p1, p2, cylinder_3dw(points[0], points[1], radius, radius2), !(cp.surfs & 1));
+		//case COLL_CAPSULE: // WRITE
 		case COLL_POLYGON: // must be coplanar
 			assert(npoints >= 3);
 
@@ -107,90 +108,87 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 		                         || clip_tmin > tmax || clip_tmax < tmin)) return 0;
 	
 	switch (type) {
-		case COLL_CUBE:
-			{
-				t = clip_tmin;
-				if (t > tmax || t < tmin) return 0;
-				get_closest_cube_norm(d, (p1 + (p2 - p1)*t), cnorm);
-				return 1;
-			}
-		case COLL_SPHERE:
-			{
-				point coll_pos;
-				vector3d const v1((p2 - p1).get_norm());
-				if (!line_sphere_int(v1, p1, points[0], radius, coll_pos, 0)) return 0;
-				t = -1.0; // start at a bad value
+		case COLL_CUBE: {
+			t = clip_tmin;
+			if (t > tmax || t < tmin) return 0;
+			get_closest_cube_norm(d, (p1 + (p2 - p1)*t), cnorm);
+			return 1;
+		}
+		case COLL_SPHERE: {
+			point coll_pos;
+			vector3d const v1((p2 - p1).get_norm());
+			if (!line_sphere_int(v1, p1, points[0], radius, coll_pos, 0)) return 0;
+			t = -1.0; // start at a bad value
 				
-				for (unsigned i = 0; i < 3; ++i) {
-					if (fabs(p2[i] - p1[i]) > TOLERANCE) {
-						t = (coll_pos[i] - p1[i])/(p2[i] - p1[i]);
-						break;
-					}
+			for (unsigned i = 0; i < 3; ++i) {
+				if (fabs(p2[i] - p1[i]) > TOLERANCE) {
+					t = (coll_pos[i] - p1[i])/(p2[i] - p1[i]);
+					break;
 				}
-				if (t > tmax || t < tmin) return 0;
-				cnorm = (coll_pos - points[0]);
-				if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
-				return 1;
 			}
+			if (t > tmax || t < tmin) return 0;
+			cnorm = (coll_pos - points[0]);
+			if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
+			return 1;
+		}
 		case COLL_CYLINDER:
-		case COLL_CYLINDER_ROT:
-			{
-				int const int_type(line_int_thick_cylinder(p1, p2, points[0], points[1], 0.0, 0.0, radius, radius2, 1, t));
-				if (!int_type || t > tmax || t < tmin) return 0;
+		case COLL_CYLINDER_ROT: {
+			int const int_type(line_int_thick_cylinder(p1, p2, points[0], points[1], 0.0, 0.0, radius, radius2, 1, t));
+			if (!int_type || t > tmax || t < tmin) return 0;
 				
-				if (int_type == 1) { // side intersection
-					vector3d const cv(points[0] - points[1]);
-					point const cpos(p1 + (p2 - p1)*t);
-					orthogonalize_dir((cpos - points[0]), cv, cnorm, 0);
+			if (int_type == 1) { // side intersection
+				vector3d const cv(points[0] - points[1]);
+				point const cpos(p1 + (p2 - p1)*t);
+				orthogonalize_dir((cpos - points[0]), cv, cnorm, 0);
 
-					if (radius != radius2) {
-						if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
-						float const len(cv.mag());
-						if (len > TOLERANCE) cnorm = cnorm*len + cv*((radius2 - radius)/len); // will be normalized later
-					}
+				if (radius != radius2) {
+					if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
+					float const len(cv.mag());
+					if (len > TOLERANCE) cnorm = cnorm*len + cv*((radius2 - radius)/len); // will be normalized later
 				}
-				else { // top/bottom intersection
-					cnorm = (points[1] - points[0]);
-					if ((int_type == 2) ^ (radius >= radius2)) cnorm.negate(); // r1 >= r2 => swap
-				}
-				if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
-				return 1;
 			}
-		case COLL_POLYGON: // must be coplanar
-			{
-				assert(npoints >= 3);
+			else { // top/bottom intersection
+				cnorm = (points[1] - points[0]);
+				if ((int_type == 2) ^ (radius >= radius2)) cnorm.negate(); // r1 >= r2 => swap
+			}
+			if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
+			return 1;
+		}
+		//case COLL_CAPSULE: // WRITE
+		case COLL_POLYGON: { // must be coplanar
+			assert(npoints >= 3);
 
-				if (thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
-					t = 2.0; // start at a bad value
-					float tval;
-					point pts[2][4];
-					gen_poly_planes(points, npoints, norm, thickness, pts);
-					bool const test_side(dot_product((p2 - p1), norm) > 0.0);
-					point const *const points2(pts[test_side]);
+			if (thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
+				t = 2.0; // start at a bad value
+				float tval;
+				point pts[2][4];
+				gen_poly_planes(points, npoints, norm, thickness, pts);
+				bool const test_side(dot_product((p2 - p1), norm) > 0.0);
+				point const *const points2(pts[test_side]);
 					
-					if (line_poly_intersect(p1, p2, points2, npoints, norm, tval) && (tval <= tmax && tval >= tmin)) {
-						t     = tval;
-						cnorm = get_poly_dir_norm(norm, p1, (p2 - p1), t);
-					}
-					for (int j = 0; j < npoints; ++j) { // now test the <npoints> sides
-						unsigned const jnext((j+1)%npoints);
-						point const side_pts[4] = {pts[0][j], pts[0][jnext], pts[1][jnext], pts[1][j]};
-						vector3d const side_norm(get_poly_norm(side_pts));
+				if (line_poly_intersect(p1, p2, points2, npoints, norm, tval) && (tval <= tmax && tval >= tmin)) {
+					t     = tval;
+					cnorm = get_poly_dir_norm(norm, p1, (p2 - p1), t);
+				}
+				for (int j = 0; j < npoints; ++j) { // now test the <npoints> sides
+					unsigned const jnext((j+1)%npoints);
+					point const side_pts[4] = {pts[0][j], pts[0][jnext], pts[1][jnext], pts[1][j]};
+					vector3d const side_norm(get_poly_norm(side_pts));
 					
-						if (line_poly_intersect(p1, p2, side_pts, 4, side_norm, tval)) {
-							if (tval < t && (tval <= tmax && tval >= tmin)) {
-								t     = tval;
-								cnorm = get_poly_dir_norm(side_norm, p1, (p2 - p1), t);
-							}
+					if (line_poly_intersect(p1, p2, side_pts, 4, side_norm, tval)) {
+						if (tval < t && (tval <= tmax && tval >= tmin)) {
+							t     = tval;
+							cnorm = get_poly_dir_norm(side_norm, p1, (p2 - p1), t);
 						}
 					}
-					return (t <= tmax && t >= tmin);
 				}
-				if (!line_poly_intersect(p1, p2, points, npoints, norm, t) || t > tmax || t < tmin) return 0;
-				if (!check_poly_billboard_alpha(p1, p2, t)) return 0;
-				cnorm = get_poly_dir_norm(norm, p1, (p2 - p1), t);
-				return 1;
+				return (t <= tmax && t >= tmin);
 			}
+			if (!line_poly_intersect(p1, p2, points, npoints, norm, t) || t > tmax || t < tmin) return 0;
+			if (!check_poly_billboard_alpha(p1, p2, t)) return 0;
+			cnorm = get_poly_dir_norm(norm, p1, (p2 - p1), t);
+			return 1;
+		}
 		default: assert(0);
 	}
 	return 0;
@@ -332,24 +330,23 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 	point const poff(pos + texture_offset);
 
 	switch (type) {
-	case COLL_CUBE:
-		{
-			int const dim(::get_max_dim(normal)); // Note: dir doesn't matter
-			unsigned const t0((2-dim)>>1), t1(1+((2-dim)>0));
+	case COLL_CUBE: {
+		int const dim(::get_max_dim(normal)); // Note: dir doesn't matter
+		unsigned const t0((2-dim)>>1), t1(1+((2-dim)>0));
 
-			for (unsigned e = 0; e < 2; ++e) {
-				unsigned const tdim(e ? t1 : t0);
-				bool const s_or_t(cp.swap_txy() ^ (e != 0));
+		for (unsigned e = 0; e < 2; ++e) {
+			unsigned const tdim(e ? t1 : t0);
+			bool const s_or_t(cp.swap_txy() ^ (e != 0));
 
-				if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
-					tc[s_or_t] = (poff[tdim] - d[tdim][0])/(d[tdim][1] - d[tdim][0]);
-				}
-				else {
-					tc[s_or_t] = poff[tdim]*tscale[e];
-				}
+			if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
+				tc[s_or_t] = (poff[tdim] - d[tdim][0])/(d[tdim][1] - d[tdim][0]);
 			}
-			break;
+			else {
+				tc[s_or_t] = poff[tdim]*tscale[e];
+			}
 		}
+		break;
+	}
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
 		dir = points[1] - points[0];
@@ -363,20 +360,19 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 			break;
 		}
 		// else assume we hit the cylinder sides, and fall through
-	case COLL_SPHERE: // dir will be +z
-		{
-			int const dim(::get_max_dim(dir));
-			point p1, p2;
+	case COLL_SPHERE: { // dir will be +z
+		int const dim(::get_max_dim(dir));
+		point p1, p2;
 	
-			for (unsigned i = 0; i < 3; ++i) {
-				p1[i] = (i == dim) ? tscale[0] : 0.0;
-				p2[i] = (i == dim) ? 0.0       : tscale[1];
-			}
-			if (cp.swap_txy()) {swap(p1, p2);}
-			tc[0] = dot_product(p1, poff);
-			tc[1] = dot_product(p2, poff);
-			break;
+		for (unsigned i = 0; i < 3; ++i) {
+			p1[i] = (i == dim) ? tscale[0] : 0.0;
+			p2[i] = (i == dim) ? 0.0       : tscale[1];
 		}
+		if (cp.swap_txy()) {swap(p1, p2);}
+		tc[0] = dot_product(p1, poff);
+		tc[1] = dot_product(p2, poff);
+		break;
+	}
 	case COLL_POLYGON: // we assume normal == norm
 		if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
 		get_poly_texgen_dirs(norm, v);

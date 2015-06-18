@@ -516,6 +516,7 @@ int coll_obj::add_coll_cobj() {
 	case COLL_CYLINDER_ROT:
 		cid = add_coll_cylinder(points[0], points[1], radius, radius2, cp, platform_id);
 		break;
+	//case COLL_CAPSULE: // WRITE
 	case COLL_POLYGON:
 		cid = add_coll_polygon(points, npoints, cp, thickness, platform_id);
 		break;
@@ -550,6 +551,7 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 	case COLL_CYLINDER_ROT:
 		add_coll_cylinder_to_matrix(index, 0);
 		break;
+	//case COLL_CAPSULE: // WRITE
 	case COLL_POLYGON:
 		add_coll_polygon_to_matrix(index, 0);
 		break;
@@ -864,17 +866,17 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 		case COLL_CYLINDER_ROT:
 			coll = (sphere_int_cylinder_sides(pval, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2));
 			break;
-		case COLL_POLYGON: // must be coplanar
-			{
-				float thick, rdist;
+		//case COLL_CAPSULE: // WRITE
+		case COLL_POLYGON: { // must be coplanar
+			float thick, rdist;
 
-				if (sphere_ext_poly_int_base(cobj.points[0], cobj.norm, pval, radius, cobj.thickness, thick, rdist)) {
-					point const pos(pval - cobj.norm*rdist);
-					assert(cobj.npoints > 0);
-					coll = planar_contour_intersect(cobj.points, cobj.npoints, pos, cobj.norm);
-				}
+			if (sphere_ext_poly_int_base(cobj.points[0], cobj.norm, pval, radius, cobj.thickness, thick, rdist)) {
+				point const pos(pval - cobj.norm*rdist);
+				assert(cobj.npoints > 0);
+				coll = planar_contour_intersect(cobj.points, cobj.npoints, pos, cobj.norm);
 			}
 			break;
+		}
 		default: assert(0);
 		}
 		if (coll) {
@@ -1063,166 +1065,161 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 
 	switch (cobj.type) { // within bounding box of collision object
-	case COLL_CUBE:
-		{
-			if (!sphere_cube_intersect(pos, o_radius, cobj, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much when this fails
-			coll_top = (cdir == 5);
-			coll_bot = (cdir == 4);
-			lcoll    = 1;
+	case COLL_CUBE: {
+		if (!sphere_cube_intersect(pos, o_radius, cobj, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much when this fails
+		coll_top = (cdir == 5);
+		coll_bot = (cdir == 4);
+		lcoll    = 1;
 
-			if (!coll_top && !coll_bot && player_step) {
-				lcoll   = 0; // can step up onto the object
-				obj.pos = pos; // reset pos
-				norm    = zero_vector;
-				break;
-			}
-			if (coll_top) { // +z collision
-				if (cobj.contains_pt_xy(pos)) lcoll = 2;
-				float const rdist(max(max(max((pos.x-(cobj.d[0][1]+o_radius)), ((cobj.d[0][0]-o_radius)-pos.x)),
-					(pos.y-(cobj.d[1][1]+o_radius))), ((cobj.d[1][0]-o_radius)-pos.y)));
+		if (!coll_top && !coll_bot && player_step) {
+			lcoll   = 0; // can step up onto the object
+			obj.pos = pos; // reset pos
+			norm    = zero_vector;
+			break;
+		}
+		if (coll_top) { // +z collision
+			if (cobj.contains_pt_xy(pos)) lcoll = 2;
+			float const rdist(max(max(max((pos.x-(cobj.d[0][1]+o_radius)), ((cobj.d[0][0]-o_radius)-pos.x)),
+				(pos.y-(cobj.d[1][1]+o_radius))), ((cobj.d[1][0]-o_radius)-pos.y)));
 				
+			if (rdist > 0.0) {
+				obj.pos.z -= o_radius;
+				if (o_radius > rdist) obj.pos.z += sqrt(o_radius*o_radius - rdist*rdist);
+			}
+			break;
+		}
+		break;
+	}
+	case COLL_SPHERE: {
+		float const radius(cobj.radius + o_radius);
+		float rad(p2p_dist_sq(pos, cobj.points[0])), reff(radius);
+
+		if (player && cobj.cp.coll_func == landmine_collision) {
+			reff += 1.5*object_types[type].radius; // landmine
+		}
+		if (type == LANDMINE && cobj.is_player()) {
+			reff += 1.5*object_types[cobj.type].radius; // landmine
+		}
+		if (rad <= reff*reff) {
+			lcoll = 1;
+			rad   = sqrt(rad);
+			if (!safe_norm_div(rad, radius, norm)) break;
+			norm  = (pos - cobj.points[0])/rad;
+
+			if (rad <= radius) {
+				obj.pos = cobj.points[0] + norm*radius;
+				assert(!is_nan(obj.pos));
+			}
+		}
+		break;
+	}
+	case COLL_CYLINDER: {
+		point const center(cobj.get_center_pt());
+		float rad(p2p_dist_xy_sq(pos, center)), radius(cobj.radius); // rad is xy dist
+
+		if (rad <= (radius + o_radius)*(radius + o_radius)) {
+			rad    = sqrt(rad);
+			lcoll  = 1;
+			zmaxc += o_radius;
+			zminc -= o_radius;
+			float const pozm(pold.z - mdir.z);
+
+			if (!(cobj.cp.surfs & 1) && pozm > (zmaxc - SMALL_NUMBER) && pos.z <= zmaxc) { // collision with top
+				if (rad <= radius) lcoll = 2;
+				norm.assign(0.0, 0.0, 1.0);
+				float const rdist(rad - radius);
+				obj.pos.z = zmaxc;
+				coll_top  = 1;
+					
 				if (rdist > 0.0) {
 					obj.pos.z -= o_radius;
-					if (o_radius > rdist) obj.pos.z += sqrt(o_radius*o_radius - rdist*rdist);
+					if (o_radius >= rdist) obj.pos.z += sqrt(o_radius*o_radius - rdist*rdist);
 				}
-				break;
 			}
-		}
-		break;
-
-	case COLL_SPHERE:
-		{
-			float const radius(cobj.radius + o_radius);
-			float rad(p2p_dist_sq(pos, cobj.points[0])), reff(radius);
-
-			if (player && cobj.cp.coll_func == landmine_collision) {
-				reff += 1.5*object_types[type].radius; // landmine
+			else if (!(cobj.cp.surfs & 1) && pozm < (zminc + SMALL_NUMBER) && pos.z >= zminc) { // collision with bottom
+				norm.assign(0.0, 0.0, -1.0);
+				obj.pos.z = zminc - o_radius;
+				coll_bot  = 1;
 			}
-			if (type == LANDMINE && cobj.is_player()) {
-				reff += 1.5*object_types[cobj.type].radius; // landmine
-			}
-			if (rad <= reff*reff) {
-				lcoll = 1;
-				rad   = sqrt(rad);
+			else { // collision with side
+				if (player_step) {
+					norm = plus_z;
+					break; // OK, can step up onto cylinder
+				}
+				radius += o_radius;
 				if (!safe_norm_div(rad, radius, norm)) break;
-				norm  = (pos - cobj.points[0])/rad;
+				//float const objz(obj.pos.z);
+				norm.assign((pos.x - center.x)/rad, (pos.y - center.y)/rad, 0.0);
+				for (unsigned d = 0; d < 2; ++d) obj.pos[d] = center[d] + norm[d]*radius;
 
-				if (rad <= radius) {
-					obj.pos = cobj.points[0] + norm*radius;
-					assert(!is_nan(obj.pos));
+				/*if (objz > (zmaxc - o_radius) && objz < zmaxc) { // hit on the top edge
+					obj.pos.x -= norm.x*o_radius;
+					obj.pos.y -= norm.y*o_radius;
+					norm.z += (objz - (zmaxc - o_radius))/o_radius; // denominator isn't exactly correct
+					norm.normalize();
+					obj.pos += norm*o_radius;
 				}
+				else if (objz < (zminc + o_radius) && objz > zminc) { // hit on the bottom edge
+					obj.pos.x -= norm.x*o_radius;
+					obj.pos.y -= norm.y*o_radius;
+					norm.z -= ((zminc + o_radius) - objz)/o_radius; // denominator isn't exactly correct
+					norm.normalize();
+					obj.pos += norm*o_radius;
+				}*/
 			}
 		}
 		break;
-
-	case COLL_CYLINDER:
-		{
-			point const center(cobj.get_center_pt());
-			float rad(p2p_dist_xy_sq(pos, center)), radius(cobj.radius); // rad is xy dist
-
-			if (rad <= (radius + o_radius)*(radius + o_radius)) {
-				rad    = sqrt(rad);
-				lcoll  = 1;
-				zmaxc += o_radius;
-				zminc -= o_radius;
-				float const pozm(pold.z - mdir.z);
-
-				if (!(cobj.cp.surfs & 1) && pozm > (zmaxc - SMALL_NUMBER) && pos.z <= zmaxc) { // collision with top
-					if (rad <= radius) lcoll = 2;
-					norm.assign(0.0, 0.0, 1.0);
-					float const rdist(rad - radius);
-					obj.pos.z = zmaxc;
-					coll_top  = 1;
-					
-					if (rdist > 0.0) {
-						obj.pos.z -= o_radius;
-						if (o_radius >= rdist) obj.pos.z += sqrt(o_radius*o_radius - rdist*rdist);
-					}
-				}
-				else if (!(cobj.cp.surfs & 1) && pozm < (zminc + SMALL_NUMBER) && pos.z >= zminc) { // collision with bottom
-					norm.assign(0.0, 0.0, -1.0);
-					obj.pos.z = zminc - o_radius;
-					coll_bot  = 1;
-				}
-				else { // collision with side
-					if (player_step) {
-						norm = plus_z;
-						break; // OK, can step up onto cylinder
-					}
-					radius += o_radius;
-					if (!safe_norm_div(rad, radius, norm)) break;
-					//float const objz(obj.pos.z);
-					norm.assign((pos.x - center.x)/rad, (pos.y - center.y)/rad, 0.0);
-					for (unsigned d = 0; d < 2; ++d) obj.pos[d] = center[d] + norm[d]*radius;
-
-					/*if (objz > (zmaxc - o_radius) && objz < zmaxc) { // hit on the top edge
-						obj.pos.x -= norm.x*o_radius;
-						obj.pos.y -= norm.y*o_radius;
-						norm.z += (objz - (zmaxc - o_radius))/o_radius; // denominator isn't exactly correct
-						norm.normalize();
-						obj.pos += norm*o_radius;
-					}
-					else if (objz < (zminc + o_radius) && objz > zminc) { // hit on the bottom edge
-						obj.pos.x -= norm.x*o_radius;
-						obj.pos.y -= norm.y*o_radius;
-						norm.z -= ((zminc + o_radius) - objz)/o_radius; // denominator isn't exactly correct
-						norm.normalize();
-						obj.pos += norm*o_radius;
-					}*/
-				}
-			}
-		}
-		break;
-
+	}
 	case COLL_CYLINDER_ROT:
 		if (sphere_intersect_cylinder_ipt(pos, o_radius, cobj.points[0], cobj.points[1],
 			cobj.radius, cobj.radius2, !(cobj.cp.surfs & 1), obj.pos, norm, 1)) lcoll = 1;
 		break;
 
-	case COLL_POLYGON: // must be coplanar
-		{
-			float thick, rdist;
-			norm = cobj.norm;
-			if (dot_product_ptv(norm, (pold - mdir), cobj.points[0]) < 0.0) norm.negate(); // pos or cobj.points[0]?
+	//case COLL_CAPSULE: // WRITE
 
-			if (sphere_ext_poly_int_base(cobj.points[0], norm, pos, o_radius, cobj.thickness, thick, rdist)) {
-				//if (rdist < 0) {rdist = -rdist; norm.negate();}
+	case COLL_POLYGON: { // must be coplanar
+		float thick, rdist;
+		norm = cobj.norm;
+		if (dot_product_ptv(norm, (pold - mdir), cobj.points[0]) < 0.0) norm.negate(); // pos or cobj.points[0]?
 
-				if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) {
-					float val;
+		if (sphere_ext_poly_int_base(cobj.points[0], norm, pos, o_radius, cobj.thickness, thick, rdist)) {
+			//if (rdist < 0) {rdist = -rdist; norm.negate();}
 
-					if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
-						vector<tquad_t> pts;
-						thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
-						if (!sphere_intersect_poly_sides(pts, pos, o_radius, val, norm, 1)) break; // no collision
-						bool intersects(0), inside(1);
+			if (sphere_poly_intersect(cobj.points, cobj.npoints, pos, norm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) {
+				float val;
+
+				if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
+					vector<tquad_t> pts;
+					thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
+					if (!sphere_intersect_poly_sides(pts, pos, o_radius, val, norm, 1)) break; // no collision
+					bool intersects(0), inside(1);
 						
-						for (unsigned i = 0; i < pts.size(); ++i) { // inefficient and inexact, but closer to correct
-							vector3d const norm2(pts[i].get_norm());
-							float rdist2(dot_product_ptv(norm2, pos, cobj.points[0]));
+					for (unsigned i = 0; i < pts.size(); ++i) { // inefficient and inexact, but closer to correct
+						vector3d const norm2(pts[i].get_norm());
+						float rdist2(dot_product_ptv(norm2, pos, cobj.points[0]));
 							
-							if (sphere_poly_intersect(pts[i].pts, pts[i].npts, pos, norm2, rdist2, o_radius)) {
-								intersects = 1;
-								break;
-							}
-							if (rdist2 > 0.0) inside = 0;
+						if (sphere_poly_intersect(pts[i].pts, pts[i].npts, pos, norm2, rdist2, o_radius)) {
+							intersects = 1;
+							break;
 						}
-						if (!intersects && !inside) break; // doesn't intersect any face and isn't completely inside
+						if (rdist2 > 0.0) inside = 0;
 					}
-					else {
-						val = 1.01*(thick - rdist); // non-thick polygon
-					}
-					if (fabs(norm.z) < 0.5 && player_step) { // more horizontal than vertical edge
-						norm = zero_vector;
-						break; // can step up onto the object
-					}
-					assert(!is_nan(norm));
-					obj.pos += norm*val; // calculate intersection point
-					lcoll    = (norm.z > 0.99) ? 2 : 1; // top collision if normal is nearly vertical
-				} // end sphere poly int
-			} // end sphere int check
-		} // end COLL_POLY scope
+					if (!intersects && !inside) break; // doesn't intersect any face and isn't completely inside
+				}
+				else {
+					val = 1.01*(thick - rdist); // non-thick polygon
+				}
+				if (fabs(norm.z) < 0.5 && player_step) { // more horizontal than vertical edge
+					norm = zero_vector;
+					break; // can step up onto the object
+				}
+				assert(!is_nan(norm));
+				obj.pos += norm*val; // calculate intersection point
+				lcoll    = (norm.z > 0.99) ? 2 : 1; // top collision if normal is nearly vertical
+			} // end sphere poly int
+		} // end sphere int check
 		break;
+	} // end COLL_POLY scope
 	default: assert(0);
 	} // switch
 	if (!lcoll) return; // no collision
@@ -1602,75 +1599,72 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			}
 			break;
 
-		case COLL_SPHERE:
-			{
-				vector3d const vtemp(pos, cobj.points[0]);
+		case COLL_SPHERE: {
+			vector3d const vtemp(pos, cobj.points[0]);
 
-				if (vtemp.mag_sq() <= cobj.radius*cobj.radius) {
-					float const arg(cobj.radius*cobj.radius - vtemp.x*vtemp.x - vtemp.y*vtemp.y);
-					assert(arg >= 0.0);
-					float const sqrt_arg(sqrt(arg));
-					zt   = cobj.points[0].z + sqrt_arg;
-					zb   = cobj.points[0].z - sqrt_arg;
-					coll = 1;
-				}
+			if (vtemp.mag_sq() <= cobj.radius*cobj.radius) {
+				float const arg(cobj.radius*cobj.radius - vtemp.x*vtemp.x - vtemp.y*vtemp.y);
+				assert(arg >= 0.0);
+				float const sqrt_arg(sqrt(arg));
+				zt   = cobj.points[0].z + sqrt_arg;
+				zb   = cobj.points[0].z - sqrt_arg;
+				coll = 1;
 			}
 			break;
+		}
+		case COLL_CYLINDER_ROT: {
+			float t, rad;
+			vector3d v1, v2;
 
-		case COLL_CYLINDER_ROT:
-			{
-				float t, rad;
-				vector3d v1, v2;
-
-				if (sphere_int_cylinder_pretest(pos, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, 0, v1, v2, t, rad)) {
-					float const rdist(v2.mag());
+			if (sphere_int_cylinder_pretest(pos, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, 0, v1, v2, t, rad)) {
+				float const rdist(v2.mag());
 					
-					if (fabs(rdist) > TOLERANCE) {
-						float const val(fabs((rad/rdist - 1.0)*v2.z));
-						zt   = pos.z + val;
-						zb   = pos.z - val;
-						coll = 1;
-					}
-				}
-			}
-			break;
-
-		case COLL_POLYGON: // must be coplanar, may not work correctly if vertical (but check_vert_collision() should take care of that case)
-			{
-				coll = 0;
-				float const thick(0.5*cobj.thickness);
-				bool const poly_z(fabs(cobj.norm.z) > 0.5); // hack to fix bouncy polygons and such - should use a better fix eventually
-
-				if (cobj.thickness > MIN_POLY_THICK && !poly_z) {
-					float val;
-					vector3d norm;
-					vector<tquad_t> pts;
-					thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
-					if (!sphere_intersect_poly_sides(pts, pos, radius, val, norm, 0)) break; // no collision
-					float const zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]);
-					zb = zmaxc;
-					zt = zminc;
-
-					if (get_poly_zvals(pts, pos.x, pos.y, zb, zt)) {
-						zb   = max(zminc, zb);
-						zt   = min(zmaxc, zt);
-						coll = (zb < zt);
-					}
-				}
-				else if (point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints, 0, 1)) {
-					float const rdist(dot_product_ptv(cobj.norm, pos, cobj.points[0]));
-					// works best if the polygon has a face oriented in +z or close
-					// note that we don't care if the polygon is intersected in z
-					zt   = pos.z + cobj.norm.z*(-rdist + thick);
-					zb   = pos.z + cobj.norm.z*(-rdist - thick);
+				if (fabs(rdist) > TOLERANCE) {
+					float const val(fabs((rad/rdist - 1.0)*v2.z));
+					zt   = pos.z + val;
+					zb   = pos.z - val;
 					coll = 1;
-					if (zt < zb) swap(zt, zb);
 				}
-				// clamp to actual polygon bounds (for cases where the object intersects the polygon's plane but not the polygon)
-				zt = max(cobj.d[2][0], min(cobj.d[2][1], zt));
-				zb = max(cobj.d[2][0], min(cobj.d[2][1], zb));
 			}
 			break;
+		}
+		//case COLL_CAPSULE: // WRITE
+
+		case COLL_POLYGON: { // must be coplanar, may not work correctly if vertical (but check_vert_collision() should take care of that case)
+			coll = 0;
+			float const thick(0.5*cobj.thickness);
+			bool const poly_z(fabs(cobj.norm.z) > 0.5); // hack to fix bouncy polygons and such - should use a better fix eventually
+
+			if (cobj.thickness > MIN_POLY_THICK && !poly_z) {
+				float val;
+				vector3d norm;
+				vector<tquad_t> pts;
+				thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
+				if (!sphere_intersect_poly_sides(pts, pos, radius, val, norm, 0)) break; // no collision
+				float const zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]);
+				zb = zmaxc;
+				zt = zminc;
+
+				if (get_poly_zvals(pts, pos.x, pos.y, zb, zt)) {
+					zb   = max(zminc, zb);
+					zt   = min(zmaxc, zt);
+					coll = (zb < zt);
+				}
+			}
+			else if (point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints, 0, 1)) {
+				float const rdist(dot_product_ptv(cobj.norm, pos, cobj.points[0]));
+				// works best if the polygon has a face oriented in +z or close
+				// note that we don't care if the polygon is intersected in z
+				zt   = pos.z + cobj.norm.z*(-rdist + thick);
+				zb   = pos.z + cobj.norm.z*(-rdist - thick);
+				coll = 1;
+				if (zt < zb) swap(zt, zb);
+			}
+			// clamp to actual polygon bounds (for cases where the object intersects the polygon's plane but not the polygon)
+			zt = max(cobj.d[2][0], min(cobj.d[2][1], zt));
+			zb = max(cobj.d[2][0], min(cobj.d[2][1], zb));
+			break;
+		}
 		default: assert(0);
 		} // end switch
 		if (cobj.platform_id >= 0) {zt -= 1.0E-6;} // subtract a small value so that camera still collides with cobj

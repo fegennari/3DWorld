@@ -14,6 +14,6 @@ TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
 SSAO using depth map and postprocessing pass
 COLL_CAPSULE
-Cube map point light shadows
+Dynamic spotlight shadows (dodgeball?)
 More particle effects (explosion dust and sparks)
 Underwater fog distance clip in all shaders

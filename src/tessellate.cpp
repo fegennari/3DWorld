@@ -259,62 +259,58 @@ void cobj_triangle_visitor::proc_cobj(coll_obj const &c) {
 		}
 		break;
 
-	case COLL_SPHERE:
-		{
-			unsigned const ndiv(N_SPHERE_DIV);
-			sd_sphere_d sd(c.points[0], c.radius, ndiv);
-			sd.gen_points_norms_static();
-			point **points = sd.get_points();
+	case COLL_SPHERE: {
+		unsigned const ndiv(N_SPHERE_DIV);
+		sd_sphere_d sd(c.points[0], c.radius, ndiv);
+		sd.gen_points_norms_static();
+		point **points = sd.get_points();
 	
-			for (unsigned s = 0; s < ndiv; ++s) {
-				unsigned const sn((s+1)%ndiv);
+		for (unsigned s = 0; s < ndiv; ++s) {
+			unsigned const sn((s+1)%ndiv);
 
-				for (unsigned t = 0; t < ndiv; ++t) {
-					point const pts[4] = {points[s][t], points[sn][t], points[sn][t+1], points[s][t+1]};
-					proc_quad(pts);
-				}
-			}
-		}
-		break;
-
-	case COLL_CYLINDER:
-	case COLL_CYLINDER_ROT:
-		{
-			unsigned const ndiv(N_CYL_SIDES);
-			assert(c.radius > 0.0 || c.radius2 > 0.0);
-			bool const draw_ends(!(c.cp.surfs & 1));
-			point const ce[2] = {c.points[0], c.points[1]};
-			vector3d v12; // (ce[1] - ce[0]).get_norm()
-			vector_point_norm const &vpn(gen_cylinder_data(ce, c.radius, c.radius2, ndiv, v12));
-
-			for (unsigned S = 0; S < ndiv; ++S) { // ndiv can change
-				unsigned const s[2] = {S, (S+ndiv-1)%ndiv};
-				point pts[4];
-
-				for (unsigned i = 0; i < 4; ++i) {
-					unsigned const ss(s[i>>1]);
-					pts[i] = vpn.p[(ss<<1) + (i==1||i==2)];
-				}
+			for (unsigned t = 0; t < ndiv; ++t) {
+				point const pts[4] = {points[s][t], points[sn][t], points[sn][t+1], points[s][t+1]};
 				proc_quad(pts);
 			}
-			if (draw_ends) {
-				float const r[2] = {c.radius, c.radius2};
+		}
+		break;
+	}
+	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT: {
+		unsigned const ndiv(N_CYL_SIDES);
+		assert(c.radius > 0.0 || c.radius2 > 0.0);
+		bool const draw_ends(!(c.cp.surfs & 1));
+		point const ce[2] = {c.points[0], c.points[1]};
+		vector3d v12; // (ce[1] - ce[0]).get_norm()
+		vector_point_norm const &vpn(gen_cylinder_data(ce, c.radius, c.radius2, ndiv, v12));
 
-				for (unsigned i = 0; i < 2; ++i) {
-					if (r[i] == 0.0) continue;
-					point pts[3];
-					pts[0] = ce[i];
+		for (unsigned S = 0; S < ndiv; ++S) { // ndiv can change
+			unsigned const s[2] = {S, (S+ndiv-1)%ndiv};
+			point pts[4];
 
-					for (unsigned s = 0; s < ndiv; ++s) { // ndiv can change
-						pts[1] = vpn.p[(s<<1)+i];
-						pts[1] = vpn.p[(((s+1)%ndiv)<<1)+i];
-						proc_tri(pts);
-					}
+			for (unsigned i = 0; i < 4; ++i) {
+				unsigned const ss(s[i>>1]);
+				pts[i] = vpn.p[(ss<<1) + (i==1||i==2)];
+			}
+			proc_quad(pts);
+		}
+		if (draw_ends) {
+			float const r[2] = {c.radius, c.radius2};
+
+			for (unsigned i = 0; i < 2; ++i) {
+				if (r[i] == 0.0) continue;
+				point pts[3];
+				pts[0] = ce[i];
+
+				for (unsigned s = 0; s < ndiv; ++s) { // ndiv can change
+					pts[1] = vpn.p[(s<<1)+i];
+					pts[1] = vpn.p[(((s+1)%ndiv)<<1)+i];
+					proc_tri(pts);
 				}
 			}
 		}
 		break;
-
+	}
 	case COLL_POLYGON:
 		if (c.thickness > MIN_POLY_THICK) { // thick polygon
 			vector3d const norm(get_poly_norm(c.points));

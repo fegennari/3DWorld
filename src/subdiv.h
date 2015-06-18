@@ -90,6 +90,7 @@ public:
 };
 
 
+// the rest of these classes are unused
 class cobj_triangle_visitor {
 
 protected:

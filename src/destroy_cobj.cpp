@@ -438,22 +438,22 @@ int coll_obj::is_anchored() const {
 	if (d[2][0] > ztop)                            return 0; // above the mesh
 
 	switch (type) {
-	case COLL_CUBE:
-		{
-			int const x1(get_xpos(d[0][0])), x2(get_xpos(d[0][1]));
-			int const y1(get_ypos(d[1][0])), y2(get_ypos(d[1][1]));
+	case COLL_CUBE: {
+		int const x1(get_xpos(d[0][0])), x2(get_xpos(d[0][1]));
+		int const y1(get_ypos(d[1][0])), y2(get_ypos(d[1][1]));
 			
-			for (int y = max(0, y1); y <= min(MESH_Y_SIZE-1, y2); ++y) {
-				for (int x = max(0, x1); x <= min(MESH_X_SIZE-1, x2); ++x) {
-					if (d[2][0] < mesh_height[y][x]) return 1;
-				}
+		for (int y = max(0, y1); y <= min(MESH_Y_SIZE-1, y2); ++y) {
+			for (int x = max(0, x1); x <= min(MESH_X_SIZE-1, x2); ++x) {
+				if (d[2][0] < mesh_height[y][x]) return 1;
 			}
-			return 0;
 		}
+		return 0;
+	}
 	case COLL_SPHERE:
 		return is_pt_under_mesh((points[0] - vector3d(0.0, 0.0, radius)));
 	case COLL_CYLINDER: // should really test the entire top/bottom surface
 	case COLL_CYLINDER_ROT:
+	case COLL_CAPSULE:
 		return is_pt_under_mesh(points[0]) || is_pt_under_mesh(points[1]);
 	case COLL_POLYGON: // should really test the entire surface(s)
 		for (int i = 0; i < npoints; ++i) {
@@ -508,19 +508,18 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			return circle_rect_intersect(c.points[0], c.radius, *this, 2); // in z
 		case COLL_SPHERE:
 			return sphere_cube_intersect(c.points[0], c.radius, *this);
-		case COLL_CYLINDER_ROT:
-			{
-				if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
-				bool deq[3];
-				UNROLL_3X(deq[i_] = (c.points[0][i_] == c.points[1][i_]);)
+		case COLL_CYLINDER_ROT: {
+			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
+			bool deq[3];
+			UNROLL_3X(deq[i_] = (c.points[0][i_] == c.points[1][i_]);)
 
-				for (unsigned d = 0; d < 3; ++d) { // approximate projected circle test for x/y/z oriented cylinders
-					if (!deq[(d+1)%3] || !deq[(d+2)%3]) continue; // not oriented in direction d
-					if (circle_rect_intersect(c.points[0], min(c.radius, c.radius2), *this, d)) return 1;
-					if (c.radius == c.radius2) return 0; // no intersection
-				}
+			for (unsigned d = 0; d < 3; ++d) { // approximate projected circle test for x/y/z oriented cylinders
+				if (!deq[(d+1)%3] || !deq[(d+2)%3]) continue; // not oriented in direction d
+				if (circle_rect_intersect(c.points[0], min(c.radius, c.radius2), *this, d)) return 1;
+				if (c.radius == c.radius2) return 0; // no intersection
 			}
 			return 2; // FIXME: finish
+		}
 		case COLL_POLYGON:
 			for (int i = 0; i < c.npoints; ++i) { // check points (fast)
 				if (contains_pt(c.points[i])) return 1; // definite intersection
@@ -584,22 +583,20 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		default: assert(0);
 		}
 
-	case COLL_POLYGON:
+	case COLL_POLYGON: {
 		assert(c.type == COLL_POLYGON);
-		{
-			float const poly_toler(max(toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
+		float const poly_toler(max(toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
 
-			if (poly_toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons, sponza polygons, etc.)
-				for (int i = 0; i < c.npoints; ++i) {
-					for (int j = 0; j < npoints; ++j) {
-						if (dist_less_than(points[j], c.points[i], poly_toler)) return 1;
-					}
+		if (poly_toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons, sponza polygons, etc.)
+			for (int i = 0; i < c.npoints; ++i) {
+				for (int j = 0; j < npoints; ++j) {
+					if (dist_less_than(points[j], c.points[i], poly_toler)) return 1;
 				}
-				for (int i = 0; i < c.npoints; ++i) {
-					for (int j = 0; j < npoints; ++j) {
-						if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], poly_toler)) return 1;
-						if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], poly_toler)) return 1;
-					}
+			}
+			for (int i = 0; i < c.npoints; ++i) {
+				for (int j = 0; j < npoints; ++j) {
+					if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], poly_toler)) return 1;
+					if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], poly_toler)) return 1;
 				}
 			}
 		}
@@ -615,7 +612,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		if (  thickness > MIN_POLY_THICK &&
 			sphere_ext_poly_intersect(  points,   npoints,   norm, c.points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
 		return 0;
-
+	}
 	default: assert(0);
 	}
 	return 0;

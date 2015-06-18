@@ -123,14 +123,13 @@ void coll_obj::calc_bcube() {
 	case COLL_CYLINDER_ROT:
 		cylinder_3dw(points[0], points[1], radius, radius2).calc_bcube(*this);
 		break;
-	case COLL_CAPSULE:
-		{
-			cube_t bcube2;
-			set_from_sphere(points[0], radius);
-			bcube2.set_from_sphere(points[1], radius2);
-			union_with_cube(bcube2); // union of bboxes of two end spheres
-		}
+	case COLL_CAPSULE: {
+		cube_t bcube2;
+		set_from_sphere(points[0], radius);
+		bcube2.set_from_sphere(points[1], radius2);
+		union_with_cube(bcube2); // union of bboxes of two end spheres
 		break;
+	}
 	default: assert(0);
 	}
 }
@@ -155,20 +154,18 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 		val = d[d3][dir];
 		return 1;
 
-	case COLL_SPHERE:
-		{
-			cube_t cube;
+	case COLL_SPHERE: {
+		cube_t cube;
 
-			for (unsigned i = 0; i < 2; ++i) {
-				cube.d[d1][i] = bb[0][i];
-				cube.d[d2][i] = bb[1][i];
-				cube.d[d3][i] = (i ? SCENE_SIZE[d3] : -SCENE_SIZE[d3]);
-			}
-			if (!sphere_cube_intersect(points[0], radius, cube)) return 0; //val = d[d3][dir];
-			val = points[0][d3] + pow((PI/6.0), (1.0/3.0))*(dir ? radius : -radius); // doesn't seem to help
+		for (unsigned i = 0; i < 2; ++i) {
+			cube.d[d1][i] = bb[0][i];
+			cube.d[d2][i] = bb[1][i];
+			cube.d[d3][i] = (i ? SCENE_SIZE[d3] : -SCENE_SIZE[d3]);
 		}
+		if (!sphere_cube_intersect(points[0], radius, cube)) return 0; //val = d[d3][dir];
+		val = points[0][d3] + pow((PI/6.0), (1.0/3.0))*(dir ? radius : -radius); // doesn't seem to help
 		return 1;
-
+	}
 	case COLL_CYLINDER:
 		if (d3 == 2) {
 			val = d[d3][dir]; // can be inaccurate, especially if radius1 != radius2 (cone, etc.)
@@ -188,30 +185,29 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 		// should really do something with this - can be very inaccurate
 		return 1;
 
-	case COLL_POLYGON:
-		{
-			bool in_poly(0);
+	case COLL_POLYGON: {
+		bool in_poly(0);
 
-			for (unsigned i = 0; i < (unsigned)npoints && !in_poly; ++i) {
-				if (points[i][d1] > bb[0][0] && points[i][d1] < bb[0][1] && points[i][d2] > bb[1][0] && points[i][d2] < bb[1][1]) {
-					in_poly = 1; // polygon has a point inside bb
-				}
+		for (unsigned i = 0; i < (unsigned)npoints && !in_poly; ++i) {
+			if (points[i][d1] > bb[0][0] && points[i][d1] < bb[0][1] && points[i][d2] > bb[1][0] && points[i][d2] < bb[1][1]) {
+				in_poly = 1; // polygon has a point inside bb
 			}
-			for (unsigned i = 0; i < 4 && !in_poly; ++i) {
-				if (point_in_polygon_2d(bb[0][i>>1], bb[1][i&&(i<3)], points, npoints, d1, d2)) {
-					in_poly = 1; // bb has a point inside polygon
-				}
-			}
-			if (!in_poly) return 0;
-			val = d[d3][dir];
-			
-			if (fabs(norm[d3]) > 0.01 && thickness <= MIN_POLY_THICK) { // doesn't work on thick or vertical polygons
-				float const dval(-dot_product(norm, points[0]));
-				float const cent[2] = {0.5*(bb[0][0] + bb[0][1]), 0.5*(bb[1][0] + bb[1][1])};
-				val = -(cent[0]*norm[d1] + cent[1]*norm[d2] + dval)/norm[d3] + (dir ? 1.0 : -1.0)*0.5*fabs(norm[d3]*thickness);
-			}
-			return (val >= d[d3][0] && val <= d[d3][1]);
 		}
+		for (unsigned i = 0; i < 4 && !in_poly; ++i) {
+			if (point_in_polygon_2d(bb[0][i>>1], bb[1][i&&(i<3)], points, npoints, d1, d2)) {
+				in_poly = 1; // bb has a point inside polygon
+			}
+		}
+		if (!in_poly) return 0;
+		val = d[d3][dir];
+			
+		if (fabs(norm[d3]) > 0.01 && thickness <= MIN_POLY_THICK) { // doesn't work on thick or vertical polygons
+			float const dval(-dot_product(norm, points[0]));
+			float const cent[2] = {0.5*(bb[0][0] + bb[0][1]), 0.5*(bb[1][0] + bb[1][1])};
+			val = -(cent[0]*norm[d1] + cent[1]*norm[d2] + dval)/norm[d3] + (dir ? 1.0 : -1.0)*0.5*fabs(norm[d3]*thickness);
+		}
+		return (val >= d[d3][0] && val <= d[d3][1]);
+	}
 	default: assert(0);
 	}
 	return 0;
@@ -334,29 +330,26 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		break;
 
 	case COLL_CYLINDER:
-	case COLL_CYLINDER_ROT:
-		{
-			float const scale(NDIV_SCALE*get_zoom_scale());
-			float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera((points[0] + points[1])*0.5),
-				min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
-			int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
-			bool const draw_ends(!(cp.surfs & 1));
-			setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader, cp.swap_txy());
-			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, !draw_ends); // Note: using texgen, not textured
-			if (draw_ends) {draw_cylin_ends(tid, ndiv, cdb);}
-		}
+	case COLL_CYLINDER_ROT: {
+		float const scale(NDIV_SCALE*get_zoom_scale());
+		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera((points[0] + points[1])*0.5),
+			min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
+		int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
+		bool const draw_ends(!(cp.surfs & 1));
+		setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader, cp.swap_txy());
+		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, !draw_ends); // Note: using texgen, not textured
+		if (draw_ends) {draw_cylin_ends(tid, ndiv, cdb);}
 		break;
-
-	case COLL_SPHERE:
-		{
-			float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
-			int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
-			setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader, cp.swap_txy());
-			//draw_cube_mapped_sphere(points[0], radius, ndiv/2, 0);
-			draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured; Note2: *no* transforms, so no draw_sphere_vbo()
-		}
+	}
+	//case COLL_CAPSULE: // WRITE
+	case COLL_SPHERE: {
+		float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
+		int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
+		setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader, cp.swap_txy());
+		//draw_cube_mapped_sphere(points[0], radius, ndiv/2, 0);
+		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured; Note2: *no* transforms, so no draw_sphere_vbo()
 		break;
-
+	}
 	case COLL_POLYGON:
 		draw_extruded_polygon(tid, cdb);
 		break;
@@ -468,6 +461,7 @@ void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) c
 	case COLL_CYLINDER_ROT:
 		get_cylinder_triangles(verts, points[0], points[1], radius, radius2, ndiv, !(cp.surfs & 1));
 		break;
+	//case COLL_CAPSULE: // WRITE
 	case COLL_SPHERE:
 		get_sphere_triangles(verts, points[0], radius, ndiv);
 		break;
