@@ -328,8 +328,8 @@ float highest_mesh_point(point const &pt, float radius);
 void reserve_coll_objects(unsigned size);
 bool swap_and_set_as_coll_objects(coll_obj_group &new_cobjs);
 int  add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
-int  add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2,
-					   float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
+int  add_coll_cylinder(point const &p1, point const &p2, float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
+int  add_coll_capsule (point const &p1, point const &p2, float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
 int  add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
 int  add_coll_polygon(const point *points, int npoints, cobj_params const &cparams, float thickness, int platform_id=-1, int dhcm=0);
 int  add_simple_coll_polygon(const point *points, int npoints, cobj_params const &cparams, vector3d const &normal, int dhcm=0);

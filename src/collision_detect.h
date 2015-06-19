@@ -127,6 +127,7 @@ public:
 	void print_bounds() const;
 	void bb_union(float bb[3][2], int init);
 	bool is_cobj_visible() const;
+	void setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const;
 	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const;
 	void get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) const;
 	void add_to_vector(coll_obj_group &cobjs, int type_);

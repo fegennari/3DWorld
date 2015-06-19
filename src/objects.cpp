@@ -237,20 +237,6 @@ void coll_obj::set_from_pts(point const *const pts, unsigned npts) {
 }
 
 
-void setup_sphere_cylin_texgen(float s_scale, float t_scale, vector3d const &dir, vector3d const &offset, shader_t &shader, bool swap_st) { // dir does not need to be normalized
-
-	int const dim(get_max_dim(dir));
-	point p1, p2;
-	
-	for (unsigned i = 0; i < 3; ++i) {
-		p1[i] = (i == dim) ? s_scale : 0.0;
-		p2[i] = (i == dim) ? 0.0     : t_scale;
-	}
-	if (swap_st) {swap(p1, p2);}
-	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, offset), p2.x, p2.y, p2.z, dot_product(p2, offset), shader, 1);
-}
-
-
 bool coll_obj::is_occluded_from_camera() const {
 
 	if (!(display_mode & 0x08) || occluders.empty()) return 0;
@@ -275,6 +261,20 @@ void coll_obj::register_coll(unsigned char coll_time, unsigned char coll_type_) 
 	has_any_billboard_coll |= is_billboard; // set global state
 }
 
+
+void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const { // dir does not need to be normalized
+
+	float const tscale(((cp.tid >= 0) ? get_tex_ar(cp.tid) : 1.0)*cp.tscale);
+	int const dim(::get_max_dim(dir));
+	point p1, p2;
+	
+	for (unsigned i = 0; i < 3; ++i) {
+		p1[i] = (i == dim) ? cp.tscale : 0.0;
+		p2[i] = (i == dim) ? 0.0       : tscale;
+	}
+	if (cp.swap_txy()) {swap(p1, p2);}
+	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, texture_offset), p2.x, p2.y, p2.z, dot_product(p2, texture_offset), shader, 1);
+}
 
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const {
 
@@ -336,16 +336,33 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 		int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 		bool const draw_ends(!(cp.surfs & 1));
-		setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, (points[1] - points[0]), texture_offset, shader, cp.swap_txy());
+		setup_cobj_sc_texgen((points[1] - points[0]), shader);
 		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, !draw_ends); // Note: using texgen, not textured
 		if (draw_ends) {draw_cylin_ends(tid, ndiv, cdb);}
 		break;
 	}
-	//case COLL_CAPSULE: // WRITE
+	case COLL_CAPSULE: {
+		float const scale(NDIV_SCALE*get_zoom_scale());
+		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(points[0]), distance_to_camera(points[1])))));
+		int const ndiv(min(N_SPHERE_DIV, max(4, (int)size)) & (~1)); // make sure ndiv is even
+		setup_cobj_sc_texgen((points[1] - points[0]), shader);
+		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, 0); // Note: using texgen, not textured
+		float const r[2] = {radius, radius2};
+
+		if (is_cylin_vertical()) { // not tested - is the hemisphere optimization worth the trouble?
+			bool const d(points[1].z > points[0].z);
+			draw_subdiv_sphere_section(points[!d], r[!d], ndiv, 0, 0.0, 1.0, 0.0, 0.5);
+			draw_subdiv_sphere_section(points[ d], r[ d], ndiv, 0, 0.0, 1.0, 0.5, 1.0);
+		}
+		else {
+			for (unsigned d = 0; d < 2; ++d) {draw_subdiv_sphere(points[d], r[d], ndiv, 0, 1);}
+		}
+		break;
+	}
 	case COLL_SPHERE: {
 		float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 		int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
-		setup_sphere_cylin_texgen(cp.tscale, get_tex_ar(tid)*cp.tscale, plus_z, texture_offset, shader, cp.swap_txy());
+		setup_cobj_sc_texgen(plus_z, shader);
 		//draw_cube_mapped_sphere(points[0], radius, ndiv/2, 0);
 		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured; Note2: *no* transforms, so no draw_sphere_vbo()
 		break;

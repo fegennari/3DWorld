@@ -375,6 +375,8 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 		tc[1] = dot_product(p2, poff);
 		break;
 	}
+	case COLL_CAPSULE:
+		return get_avg_color(); // not going to attempt to calculate this, since a capsule has multiple surfaces - use average color
 	case COLL_POLYGON: // we assume normal == norm
 		if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
 		get_poly_texgen_dirs(norm, v);

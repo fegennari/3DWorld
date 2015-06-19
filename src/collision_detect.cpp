@@ -187,7 +187,7 @@ inline void get_params(int &x1, int &y1, int &x2, int &y2, const float d[3][2]) 
 void add_coll_cube_to_matrix(int index, int dhcm) {
 
 	int x1, x2, y1, y2;
-	coll_obj &cobj(coll_objects[index]);
+	coll_obj const &cobj(coll_objects[index]);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	float ds[3][2];
 	vector3d delta(zero_vector);
@@ -205,12 +205,9 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 	get_params(x1, y1, x2, y2, ds);
 
 	for (int i = y1; i <= y2; ++i) {
-		for (int j = x1; j <= x2; ++j) {
-			add_coll_point(i, j, index, ds[2][0], ds[2][1], 1, is_dynamic, dhcm);
-		}
+		for (int j = x1; j <= x2; ++j) {add_coll_point(i, j, index, ds[2][0], ds[2][1], 1, is_dynamic, dhcm);}
 	}
 }
-
 
 int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int dhcm) {
 
@@ -229,7 +226,7 @@ int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int
 void add_coll_cylinder_to_matrix(int index, int dhcm) {
 
 	int xx1, xx2, yy1, yy2;
-	coll_obj &cobj(coll_objects[index]);
+	coll_obj const &cobj(coll_objects[index]);
 	float zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]), zmin0(zminc), zmax0(zmaxc);
 	point const p1(cobj.points[0]), p2(cobj.points[1]);
 	float const x1(p1.x), x2(p2.x), y1(p1.y), y2(p2.y), z1(p1.z), z2(p2.z);
@@ -297,35 +294,30 @@ void add_coll_cylinder_to_matrix(int index, int dhcm) {
 		for (int i = yy1; i <= yy2; ++i) {
 			for (int j = xx1; j <= xx2; ++j) {
 				int const distsq((i - ypos)*(i - ypos) + (j - xpos)*(j - xpos));
-				if (distsq <= crsq) add_coll_point(i, j, index, z1, z2, (distsq <= rxry), is_dynamic, dhcm);
+				if (distsq <= crsq) {add_coll_point(i, j, index, z1, z2, (distsq <= rxry), is_dynamic, dhcm);}
 			}
 		}
 	}
 }
 
+int add_coll_cylinder(point const &p1, point const &p2, float radius, float radius2, cobj_params const &cparams, int platform_id, int dhcm) {
 
-int add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2, float radius, float radius2,
-					  cobj_params const &cparams, int platform_id, int dhcm)
-{
 	int type;
 	int const index(cobj_manager.get_next_avail_index());
 	coll_obj &cobj(coll_objects[index]);
 	radius  = fabs(radius);
 	radius2 = fabs(radius2);
 	assert(radius > 0.0 || radius2 > 0.0);
-	bool const nonvert(x1 != x2 || y1 != y2 || (fabs(radius - radius2)/max(radius, radius2)) > 0.2);
+	bool const nonvert(p1.x != p2.x || p1.y != p2.y || (fabs(radius - radius2)/max(radius, radius2)) > 0.2);
 	type = (nonvert ? COLL_CYLINDER_ROT : COLL_CYLINDER);
-
-	if (!nonvert) { // standard vertical constant-radius cylinder
-		if (z2 < z1) swap(z2, z1);
-		type = COLL_CYLINDER;
-	}
-	point *points = cobj.points;
-	points[0].x = x1; points[0].y = y1; points[0].z = z1;
-	points[1].x = x2; points[1].y = y2; points[1].z = z2;
+	cobj.points[0] = p1;
+	cobj.points[1] = p2;
 	
-	if (dist_less_than(points[0], points[1], TOLERANCE)) { // no near zero length cylinders
-		cout << "pt0 = "; points[0].print(); cout << ", pt1 = "; points[1].print(); cout << endl;
+	if (!nonvert) { // standard vertical constant-radius cylinder
+		if (p2.z < p1.z) {swap(cobj.points[0], cobj.points[1]);}
+	}
+	if (dist_less_than(cobj.points[0], cobj.points[1], TOLERANCE)) { // no near zero length cylinders
+		cout << "pt0 = "; cobj.points[0].print(); cout << ", pt1 = "; cobj.points[1].print(); cout << endl;
 		assert(0);
 	}
 	coll_objects.set_coll_obj_props(index, type, radius, radius2, platform_id, cparams);
@@ -334,10 +326,47 @@ int add_coll_cylinder(float x1, float y1, float z1, float x2, float y2, float z2
 }
 
 
+void add_coll_capsule_to_matrix(int index, int dhcm) {
+
+	coll_obj &cobj(coll_objects[index]);
+	coll_obj const orig_cobj(cobj); // make a copy of the cobj so that we can modify it then restore it
+	cobj.type = ((cobj.is_cylin_vertical() && cobj.radius == cobj.radius2) ? COLL_CYLINDER : COLL_CYLINDER_ROT);
+	vector3d const dir(cobj.points[1] - cobj.points[0]);
+	float const len(dir.mag());
+	assert(len > 0.0);
+	cobj.points[0] -= (cobj.radius /len)*dir; // extend cylinder out by radius to get a bounding cylinder for this capsule
+	cobj.points[1] += (cobj.radius2/len)*dir;
+	bool const swap_r(cobj.radius2 < cobj.radius);
+	if (swap_r) {swap(cobj.radius, cobj.radius2);}
+	
+	if (cobj.radius < cobj.radius2) { // update radius values
+		cobj.radius  *= max(0.0f, (len - cobj.radius))/len;
+		cobj.radius2 *= (len + cobj.radius2)/len;
+	}
+	if (swap_r) {swap(cobj.radius, cobj.radius2);}
+	cobj.calc_bcube();
+	add_coll_cylinder_to_matrix(index, dhcm);
+	cobj = orig_cobj; // restore the original
+}
+
+int add_coll_capsule(point const &p1, point const &p2, float radius, float radius2, cobj_params const &cparams, int platform_id, int dhcm) {
+
+	assert(radius > 0.0 && radius2 > 0.0);
+	assert(p1 != p2);
+	int const index(cobj_manager.get_next_avail_index());
+	coll_obj &cobj(coll_objects[index]);
+	cobj.points[0] = p1;
+	cobj.points[1] = p2;
+	coll_objects.set_coll_obj_props(index, COLL_CAPSULE, radius, radius2, platform_id, cparams);
+	add_coll_capsule_to_matrix(index, dhcm);
+	return index;
+}
+
+
 void add_coll_sphere_to_matrix(int index, int dhcm) {
 
 	int x1, x2, y1, y2;
-	coll_obj &cobj(coll_objects[index]);
+	coll_obj const &cobj(coll_objects[index]);
 	point const pt(cobj.points[0]);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	float const radius(cobj.radius);
@@ -358,7 +387,6 @@ void add_coll_sphere_to_matrix(int index, int dhcm) {
 	}
 }
 
-
 // doesn't work for ellipses when X != Y
 int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id, int dhcm) {
 
@@ -374,7 +402,7 @@ int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, i
 void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member function?
 
 	int x1, x2, y1, y2;
-	coll_obj &cobj(coll_objects[index]);
+	coll_obj const &cobj(coll_objects[index]);
 	get_params(x1, y1, x2, y2, cobj.d);
 	bool const is_dynamic(cobj.status == COLL_DYNAMIC);
 	float const zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]); // thickness has already been added/subtracted
@@ -423,9 +451,7 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 				}
 				if (!inside) continue;
 			}
-			else if (!get_poly_zminmax(cobj.points, cobj.npoints, norm, dval, cube, z1, z2)) {
-				continue;
-			}
+			else if (!get_poly_zminmax(cobj.points, cobj.npoints, norm, dval, cube, z1, z2)) continue;
 			// adjust z bounds so that they are for the entire cell x/y bounds, not a single point (conservative)
 			z1 = max(zminc, (z1 - delta_z));
 			z2 = min(zmaxc, (z2 + delta_z));
@@ -433,7 +459,6 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 		} // for j
 	} // for i
 }
-
 
 void set_coll_polygon(coll_obj &cobj, const point *points, int npoints, vector3d const &normal, float thickness) {
 
@@ -445,7 +470,6 @@ void set_coll_polygon(coll_obj &cobj, const point *points, int npoints, vector3d
 	cobj.npoints   = npoints;
 	cobj.thickness = thickness;
 }
-
 
 // must be planar, convex polygon with unique consecutive points
 int add_coll_polygon(const point *points, int npoints, cobj_params const &cparams, float thickness, int platform_id, int dhcm) {
@@ -516,7 +540,9 @@ int coll_obj::add_coll_cobj() {
 	case COLL_CYLINDER_ROT:
 		cid = add_coll_cylinder(points[0], points[1], radius, radius2, cp, platform_id);
 		break;
-	//case COLL_CAPSULE: // WRITE
+	case COLL_CAPSULE:
+		cid = add_coll_capsule(points[0], points[1], radius, radius2, cp, platform_id);
+		break;
 	case COLL_POLYGON:
 		cid = add_coll_polygon(points, npoints, cp, thickness, platform_id);
 		break;
@@ -542,21 +568,17 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 
 	switch (type) {
 	case COLL_CUBE:
-		add_coll_cube_to_matrix(index, 0);
-		break;
+		add_coll_cube_to_matrix(index, 0); break;
 	case COLL_SPHERE:
-		add_coll_sphere_to_matrix(index, 0);
-		break;
+		add_coll_sphere_to_matrix(index, 0); break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		add_coll_cylinder_to_matrix(index, 0);
-		break;
-	//case COLL_CAPSULE: // WRITE
+		add_coll_cylinder_to_matrix(index, 0); break;
+	case COLL_CAPSULE:
+		add_coll_capsule_to_matrix(index, 0); break;
 	case COLL_POLYGON:
-		add_coll_polygon_to_matrix(index, 0);
-		break;
-	default:
-		assert(0);
+		add_coll_polygon_to_matrix(index, 0); break;
+	default: assert(0);
 	}
 	cp.is_dynamic = 0;
 	status        = COLL_STATIC;
@@ -1179,12 +1201,24 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		break;
 	}
 	case COLL_CYLINDER_ROT:
-		if (sphere_intersect_cylinder_ipt(pos, o_radius, cobj.points[0], cobj.points[1],
-			cobj.radius, cobj.radius2, !(cobj.cp.surfs & 1), obj.pos, norm, 1)) lcoll = 1;
+		if (sphere_intersect_cylinder_ipt(pos, o_radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, !(cobj.cp.surfs & 1), obj.pos, norm, 1)) {lcoll = 1;}
 		break;
 
-	//case COLL_CAPSULE: // WRITE
+	case COLL_CAPSULE: {
+		float const r[2] = {cobj.radius, cobj.radius2};
 
+		for (unsigned d = 0; d < 2; ++d) { // sphere cases
+			float const radius(r[d] + o_radius), rad(p2p_dist_sq(pos, cobj.points[d]));
+
+			if (rad <= radius*radius) {
+				lcoll   = 1;
+				norm    = (pos - cobj.points[d])/sqrt(rad);
+				obj.pos = cobj.points[d] + norm*radius;
+			}
+		}
+		if (sphere_intersect_cylinder_ipt(pos, o_radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, 0, obj.pos, norm, 1)) {lcoll = 1;}
+		break;
+	}
 	case COLL_POLYGON: { // must be coplanar
 		float thick, rdist;
 		norm = cobj.norm;
@@ -1540,6 +1574,32 @@ void force_onto_surface_mesh(point &pos) { // for camera
 }
 
 
+bool calc_sphere_z_bounds(point const &sc, float sr, point &pos, float &zt, float &zb) {
+
+	vector3d const vtemp(pos, sc);
+	if (vtemp.mag_sq() > sr*sr) return 0;
+	float const arg(sr*sr - vtemp.x*vtemp.x - vtemp.y*vtemp.y);
+	assert(arg >= 0.0);
+	float const sqrt_arg(sqrt(arg));
+	zt = sc.z + sqrt_arg;
+	zb = sc.z - sqrt_arg;
+	return 1;
+}
+
+bool calc_cylin_z_bounds(point const &p1, point const &p2, float r1, float r2, point const &pos, float radius, float &zt, float &zb) {
+
+	float t, rad;
+	vector3d v1, v2;
+	if (!sphere_int_cylinder_pretest(pos, radius, p1, p2, r1, r2, 0, v1, v2, t, rad)) return 0;
+	float const rdist(v2.mag());
+	if (fabs(rdist) < TOLERANCE) return 0;
+	float const val(fabs((rad/rdist - 1.0)*v2.z));
+	zt = pos.z + val;
+	zb = pos.z - val;
+	return 1;
+}
+
+
 // 0 = no change, 1 = moved up, 2 = falling (unused), 3 = stuck
 int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id,
 	bool flight, bool on_snow, bool skip_dynamic, bool test_only)
@@ -1607,36 +1667,25 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 			}
 			break;
 
-		case COLL_SPHERE: {
-			vector3d const vtemp(pos, cobj.points[0]);
-
-			if (vtemp.mag_sq() <= cobj.radius*cobj.radius) {
-				float const arg(cobj.radius*cobj.radius - vtemp.x*vtemp.x - vtemp.y*vtemp.y);
-				assert(arg >= 0.0);
-				float const sqrt_arg(sqrt(arg));
-				zt   = cobj.points[0].z + sqrt_arg;
-				zb   = cobj.points[0].z - sqrt_arg;
-				coll = 1;
-			}
+		case COLL_SPHERE:
+			coll = calc_sphere_z_bounds(cobj.points[0], cobj.radius, pos, zt, zb);
 			break;
-		}
-		case COLL_CYLINDER_ROT: {
-			float t, rad;
-			vector3d v1, v2;
+		case COLL_CYLINDER_ROT:
+			coll = calc_cylin_z_bounds(cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, pos, radius, zt, zb);
+			break;
 
-			if (sphere_int_cylinder_pretest(pos, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, 0, v1, v2, t, rad)) {
-				float const rdist(v2.mag());
-					
-				if (fabs(rdist) > TOLERANCE) {
-					float const val(fabs((rad/rdist - 1.0)*v2.z));
-					zt   = pos.z + val;
-					zb   = pos.z - val;
-					coll = 1;
+		case COLL_CAPSULE:
+			coll = calc_cylin_z_bounds(cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, pos, radius, zt, zb);
+
+			for (unsigned d = 0; d < 2; ++d) {
+				float zt2, zb2;
+
+				if (calc_sphere_z_bounds(cobj.points[d], (d ? cobj.radius2 : cobj.radius), pos, zt2, zb2)) {
+					if (coll) {zt = max(zt, zt2); zb = min(zb, zb2);}
+					else {zt = zt2; zb = zb2; coll = 1;}
 				}
 			}
 			break;
-		}
-		//case COLL_CAPSULE: // WRITE
 
 		case COLL_POLYGON: { // must be coplanar, may not work correctly if vertical (but check_vert_collision() should take care of that case)
 			coll = 0;

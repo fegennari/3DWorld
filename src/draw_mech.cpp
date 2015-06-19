@@ -27,27 +27,17 @@ void build_hmv_shape() {
 	delete_hmv_shape();
 	hmv_shape.set_shape_color(WHITE);
 	cout << "Reading mesh hmv.mesh." << endl;
-
-	if (!hmv_shape.read_from_file("hmv.mesh")) {
-		load_hmv = 0;
-	}
-	else {
-		hmv_shape.gen_face_normals();
-	}
+	if (!hmv_shape.read_from_file("hmv.mesh")) {load_hmv = 0;}
+	else {hmv_shape.gen_face_normals();}
 	hmv_shape.set_scale(hmv_scale);
 	hmv_shape.move_to(hmv_pos);
 }
 
 
-void delete_hmv_shape() {
-
-	hmv_shape.destroy();
-}
-
+void delete_hmv_shape() {hmv_shape.destroy();}
 
 // well, not actually a draw function...
 void add_shape_coll_objs() {
-
 	if (load_hmv) add_hmv_coll_objs(hmv_pos, hmv_scale);
 }
 
@@ -60,25 +50,21 @@ void add_hmv_coll_objs(point &pos, float scale) {
 		hmv_coll_obj.reserve(hmv_shape.get_num_faces() + 4);
 	}
 	else {
-		for (unsigned i = 0; i < hmv_coll_obj.size(); ++i) {
-			remove_reset_coll_obj(hmv_coll_obj[i]);
-		}
+		for (unsigned i = 0; i < hmv_coll_obj.size(); ++i) {remove_reset_coll_obj(hmv_coll_obj[i]);}
 		purge_coll_freed(1);
 	}
 	// wheels
 	cobj_params const cp(0.9, BKGRAY, 1, 0); // drawn
-	hmv_coll_obj.push_back(add_coll_cylinder(x+0.19*scale, y+0.08*scale, z, x+0.19*scale, y,            z, wheelr, wheelr, cp));
-	hmv_coll_obj.push_back(add_coll_cylinder(x+0.19*scale, y+0.5*scale,  z, x+0.19*scale, y+0.42*scale, z, wheelr, wheelr, cp));
-	hmv_coll_obj.push_back(add_coll_cylinder(x+0.81*scale, y+0.08*scale, z, x+0.81*scale, y,            z, wheelr, wheelr, cp));
-	hmv_coll_obj.push_back(add_coll_cylinder(x+0.81*scale, y+0.5*scale,  z, x+0.81*scale, y+0.42*scale, z, wheelr, wheelr, cp));
-
+	hmv_coll_obj.push_back(add_coll_cylinder(point(x+0.19*scale, y+0.08*scale, z), point(x+0.19*scale, y,            z), wheelr, wheelr, cp));
+	hmv_coll_obj.push_back(add_coll_cylinder(point(x+0.19*scale, y+0.5*scale,  z), point(x+0.19*scale, y+0.42*scale, z), wheelr, wheelr, cp));
+	hmv_coll_obj.push_back(add_coll_cylinder(point(x+0.81*scale, y+0.08*scale, z), point(x+0.81*scale, y,            z), wheelr, wheelr, cp));
+	hmv_coll_obj.push_back(add_coll_cylinder(point(x+0.81*scale, y+0.5*scale,  z), point(x+0.81*scale, y+0.42*scale, z), wheelr, wheelr, cp));
 	// body
 	hmv_shape.add_cobjs(hmv_coll_obj, 1); // drawn
 }
 
 
 void shift_hmv(vector3d const &vd) {
-
 	hmv_pos += vd;
 	hmv_shape.translate(vd);
 }
