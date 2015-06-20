@@ -1002,16 +1002,15 @@ bool decal_obj::draw(quad_batch_draw &qbd) const {
 
 	assert(status);
 	point const cur_pos(get_pos());
-	
-	if (dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0) { // back face culling
-		if (cid < 0 || !coll_objects[cid].cp.is_glass()) return 0;
-	}
+	bool const back_facing(dot_product_ptv(orient, cur_pos, get_camera_pos()) > 0.0);
+	if (back_facing && (cid < 0 || !coll_objects[cid].cp.is_glass())) return 0; // back face culling
 	float const alpha_val(get_alpha());
 	if (!dist_less_than(cur_pos, get_camera_pos(), max(window_width, window_height)*radius*alpha_val)) return 0; // distance culling
 	vector3d upv(orient.y, orient.z, orient.x); // swap the xyz values to get an orthogonal vector
 	rotate_vector3d(orient, rot_angle, upv);
 	// move slightly away from the object to blend properly with cracks
-	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), (cur_pos + orient), upv, colorRGBA(color, alpha_val), radius, radius, tex_range);
+	point const viewer(cur_pos + (back_facing ? -orient : orient));
+	qbd.add_billboard((cur_pos + DECAL_OFFSET*orient), viewer, upv, colorRGBA(color, alpha_val), radius, radius, tex_range);
 	return 1;
 }
 
