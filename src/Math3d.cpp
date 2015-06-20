@@ -499,7 +499,7 @@ float get_cylinder_params(point const &cp1, point const &cp2, point const &pos, 
 
 // radius == 0.0 at cp1
 int line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1, point const &cp2,
-							  float r1, float r2, bool check_ends, float &t)
+							  float r1, float r2, bool check_ends, float &t, bool swap_ends)
 {
 	// P = p1, V = cp1
 	// M = A*A'*g*g*I, c2 = D'*M*D, c1 = D'*M*d, c0 = d'*M*d
@@ -559,7 +559,7 @@ int line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1
 			if (r[i] > 0.0 && circle_test_comp(p1, cp[i], D, A, r[i]*r[i], ti)) {
 				if (ti >= 0.0 && ti <= 1.0 && (!t_set || ti < t)) {
 					t     = ti;
-					t_set = i + 2;
+					t_set = (i ^ unsigned(swap_ends)) + 2;
 				}
 			}
 		}
@@ -616,10 +616,10 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 
 	if (ri1 == 0.0 && ri2 == 0.0 && (ro1 != ro2)) {
 		if (ro1 < ro2) {
-			return line_intersect_trunc_cone(p1, p2, cp1, cp2, ro1, ro2, check_ends, t);
+			return line_intersect_trunc_cone(p1, p2, cp1, cp2, ro1, ro2, check_ends, t, 0);
 		}
 		else {
-			return line_intersect_trunc_cone(p1, p2, cp2, cp1, ro2, ro1, check_ends, t); // reverse the ends
+			return line_intersect_trunc_cone(p1, p2, cp2, cp1, ro2, ro1, check_ends, t, 1); // reverse the ends
 		}
 	}
 	assert(ri1 == ri2 && ro1 == ro2);
@@ -634,7 +634,7 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 	float const dz(v2.z - v1.z);
 	float ta((0.0 - v1.z)/dz), tb((len - v1.z)/dz);
 	bool const swapped(tb < ta);
-	if (swapped) swap(ta, tb);
+	if (swapped) {swap(ta, tb);}
 	if (ta > 1.0 || tb < 0.0) return 0; // doesn't cross between the cylinder ends
 	float const dx(v2.x - v1.x), dy(v2.y - v1.y), dr2(dx*dx + dy*dy);
 	
@@ -643,7 +643,7 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 			float const xval(v1.x + ta*dx), yval(v1.y + ta*dy), dist_sq(xval*xval + yval*yval);
 			if (dist_sq <= (swapped ? ro2*ro2 : ro1*ro1) && dist_sq >= (swapped ? ri2*ri2 : ri1*ri1)) {
 				t = ta;
-				return 2; // intersects the end circle
+				return (swapped ? 3 : 2); // intersects the end circle
 			}
 		}
 	}

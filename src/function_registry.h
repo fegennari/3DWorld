@@ -425,7 +425,7 @@ bool check_line_clip_expand(point const &v1, point const &v2, float const d[3][2
 float line_line_dist(point const &p1a, point const &p1b, point const &p2a, point const &p2b);
 float get_cylinder_params(point const &cp1, point const &cp2, point const &pos, vector3d &v1, vector3d &v2);
 int  line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp1, point const &cp2,
-							   float r1, float r2, bool check_ends, float &t);
+							   float r1, float r2, bool check_ends, float &t, bool swap_ends=0);
 bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw const &c, bool check_ends);
 int  line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, point const &cp2,
 							 float ri1, float ri2, float ro1, float ro2, bool check_ends, float &t);

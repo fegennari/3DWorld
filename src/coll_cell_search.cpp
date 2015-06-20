@@ -130,7 +130,7 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 			}
 			if (t > tmax || t < tmin) return 0;
 			cnorm = (coll_pos - points[0]);
-			if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
+			if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
 			return 1;
 		}
 		case COLL_CYLINDER:
@@ -144,16 +144,15 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 				orthogonalize_dir((cpos - points[0]), cv, cnorm, 0);
 
 				if (radius != radius2) {
-					if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
+					if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
 					float const len(cv.mag());
-					if (len > TOLERANCE) cnorm = cnorm*len + cv*((radius2 - radius)/len); // will be normalized later
+					if (len > TOLERANCE) {cnorm = cnorm*len + cv*((radius2 - radius)/len);} // will be normalized later
 				}
 			}
-			else { // top/bottom intersection
-				cnorm = (points[1] - points[0]);
-				if ((int_type == 2) ^ (radius >= radius2)) cnorm.negate(); // r1 >= r2 => swap
+			else { // top/bottom intersection (3/2)
+				cnorm = (points[int_type != 2] - points[int_type == 2]); // use int_type to determine correct dir
 			}
-			if (!cnorm.normalize_test()) cnorm = plus_z; // arbitrary
+			if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
 			return 1;
 		}
 		//case COLL_CAPSULE: // WRITE
