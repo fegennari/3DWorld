@@ -42,8 +42,8 @@ bool decal_obj::is_on_cobj(int cobj) const {
 	if (cobj < 0) return 0;
 	assert((unsigned)cobj < coll_objects.size()); // can this fail if the cobj was destroyed? coll_objects only increases in size
 	coll_obj const &c(coll_objects[cobj]);
-	// spheres and cylinders not supported - decals look bad on rounded objects
-	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON && c.type != COLL_CYLINDER)) return 0;
+	// spheres and cylinder sides not supported - decals look bad on rounded objects
+	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON && c.type != COLL_CYLINDER && c.type != COLL_CYLINDER_ROT)) return 0;
 	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
 	point const center(ipos + get_platform_delta());
 	if (!sphere_cube_intersect(center, DECAL_OFFSET, c)) return 0;
@@ -51,7 +51,13 @@ bool decal_obj::is_on_cobj(int cobj) const {
 
 	if (c.type == COLL_CYLINDER) {
 		if (orient != plus_z && orient != -plus_z) return 0; // not on the cylinder end
-		return dist_xy_less_than(center, c.points[0], (c.radius + radius));
+		return dist_xy_less_than(center, c.points[orient == plus_z], (c.radius + radius));
+	}
+	if (c.type == COLL_CYLINDER_ROT) {
+		vector3d const cylin_dir((c.points[1] - c.points[0]).get_norm());
+		float const dp(dot_product(orient, cylin_dir));
+		if (fabs(dp) < 0.99) return 0; // not on the cylinder end
+		return dist_less_than(center, c.points[dp > 0.0], (((dp > 0.0) ? c.radius2 : c.radius) + radius));
 	}
 	assert(c.type == COLL_POLYGON);
 	if (c.thickness > MIN_POLY_THICK) {return (c.sphere_intersects(center, DECAL_OFFSET) == 1);} // thick polygon
