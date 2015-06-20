@@ -201,9 +201,17 @@ class waypoint_builder {
 
 		if (coll_id >= 0) {
 			assert((unsigned)coll_id < coll_objects.size());
+			coll_obj &cobj(coll_objects[coll_id]);
 			// must be the same or uninitialized - if a cobj has more than one waypoint then they should be sequential
-			assert(coll_objects[coll_id].waypt_id < 0 || coll_objects[coll_id].waypt_id+1 == ix);
-			coll_objects[coll_id].waypt_id = ix; // the last waypoint for this cobj
+			if (cobj.waypt_id < 0 || cobj.waypt_id+1 == ix) {
+				cobj.waypt_id = ix; // the last waypoint for this cobj
+			}
+			else if (cobj.waypt_id == ix+1) { // previous ix
+				// waypoint is already correct/sequential - no update needed
+			}
+			else { // can happen when a multi-waypoint polygon (extruded or quad) is updated with a non-sequential waypoint index from the free list
+				remove_waypoint(ix); // give up and remove the newly created waypoint (or could also remove previous waypoint(s))
+			}
 		}
 		return ix;
 	}
@@ -231,7 +239,7 @@ class waypoint_builder {
 		assert(npoints == 3 || npoints == 4);
 		if (fabs(norm.z) < 0.5) return; // need a mostly vertical polygon to stand on
 		add_waypoint_triangle(points[0], points[1], points[2], coll_id, connect);
-		if (npoints == 4) add_waypoint_triangle(points[0], points[2], points[3], coll_id, connect); // quad only
+		if (npoints == 4) {add_waypoint_triangle(points[0], points[2], points[3], coll_id, connect);} // quad only
 	}
 
 public:
