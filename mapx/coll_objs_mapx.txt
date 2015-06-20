@@ -216,6 +216,7 @@ B -7.4  -0.1  -5.4  5.9  0.45  0.47 # 1A - 4A
 D 0.0 0.0 0.6  3
 B -0.1   7.4   0.1  5.9  0.45  0.47 # 1B - 4B
 D 0.0 0.0 0.6  3
+e 0
 X none # disable normal map
 
 #######################################
@@ -229,7 +230,7 @@ B  0.4  3.1  0.5  3.2  0.4  0.65 # lobby
 B -3.5 -0.5  0.5  3.0  2.2  2.45 # skylight
 B -3.3 -0.7  0.7  2.8  1.6  1.85 # glass floor
 n 0
-e 0
+e 60 # top and bottom only
 a 3 # destroyable/shatterable to portal
 l 0.7  0.8 0.8 0.8 0.15 -1 1 1.55 20.0 # semi-transparent glass
 B -3.5 -0.5  0.5  3.0  2.36  2.38 # skylight
@@ -237,6 +238,7 @@ a 2 # destroyable/shatterable
 l 0.76 0.8 0.8 0.8 0.2 -1 1 1.55 20.0 # opaque glass
 B -3.3 -0.7  0.7  2.8  1.76 1.79 # glass floor
 a 1 # destroyable
+e 0
 
 # railings
 r 0.8 60.0 # set specularity
@@ -418,7 +420,7 @@ r 0.0 1.0 # reset specularity
 
 # skylights
 r 0.9 100.0 # set specularity
-e 60
+e 60 # top and bottom only
 B -1.5   -0.2   -5.3   -4.0   2.355 2.37  # A
 B -7.3   -6.0    4.5    5.8   2.840 2.855 # B
 B  6.0    7.3    0.2    1.5   2.355 2.37  # C
