@@ -235,9 +235,9 @@ class waypoint_builder {
 		// could try more points (corners?)
 	}
 
-	void add_waypoint_poly(point const *const points, unsigned npoints, vector3d const &norm, int coll_id, bool connect) {
+	void add_waypoint_poly(point const *const points, unsigned npoints, vector3d const &norm, int coll_id, bool double_sided, bool connect) {
 		assert(npoints == 3 || npoints == 4);
-		if (fabs(norm.z) < 0.5) return; // need a mostly vertical polygon to stand on
+		if ((double_sided ? fabs(norm.z) : norm.z) < 0.5) return; // need a mostly vertical polygon to stand on
 		add_waypoint_triangle(points[0], points[1], points[2], coll_id, connect);
 		if (npoints == 4) {add_waypoint_triangle(points[0], points[2], points[3], coll_id, connect);} // quad only
 	}
@@ -257,15 +257,9 @@ public:
 			break;
 
 		case COLL_CYLINDER: // can stand on the top
-			if (c.cp.surfs & 1) { // ends not drawn
-				// do nothing
-			}
-			else if (c.points[0].z > c.points[1].z) {
-				add_waypoint_circle(c.points[0], c.radius,  c.id, connect);
-			}
-			else {
-				add_waypoint_circle(c.points[1], c.radius2, c.id, connect);
-			}
+			if (c.cp.surfs & 1) {} // ends not drawn - do nothing
+			else if (c.points[0].z > c.points[1].z) {add_waypoint_circle(c.points[0], c.radius,  c.id, connect);}
+			else {add_waypoint_circle(c.points[1], c.radius2, c.id, connect);}
 			break;
 
 		case COLL_POLYGON:
@@ -274,14 +268,9 @@ public:
 			if (c.thickness > MIN_POLY_THICK) { // extruded polygon
 				vector<tquad_t> pts;
 				thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness, pts);
-
-				for (unsigned j = 0; j < pts.size(); ++j) {
-					add_waypoint_poly(pts[j].pts, pts[j].npts, pts[j].get_norm(), c.id, connect);
-				}
+				for (unsigned j = 0; j < pts.size(); ++j) {add_waypoint_poly(pts[j].pts, pts[j].npts, pts[j].get_norm(), c.id, 0, connect);}
 			}
-			else {
-				add_waypoint_poly(c.points, c.npoints, c.norm, c.id, connect);
-			}
+			else {add_waypoint_poly(c.points, c.npoints, c.norm, c.id, 1, connect);} // double sided
 			break;
 
 		case COLL_SPHERE:       break; // not supported (can't stand on)
