@@ -1990,17 +1990,6 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					decal_tid = FLARE3_TEX; dcolor = BLACK;
 				}
 				else if (is_glass) {
-#if 0
-					if (cobj.type == COLL_CUBE && !cobj.maybe_is_moving()) {
-						cobj_params const cp(cobj.cp); // deep copy so that removal doesn't destroy it
-						cube_t const cube(cobj);
-						cobj.clear_internal_data();
-						cobj.remove_waypoint(); // can windows have waypoints? they shouldn't contribute to the shadow map
-						remove_coll_object(cindex); // later uses of cobj should be okay even if it's removed
-						gen_glass_shard_from_cube_window(cube, cp, coll_pos); // should reuse index slot and not invalidate cobj
-						build_cobj_tree(0, 0); // ???
-					} else
-#endif
 					decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
 				}
 				else {

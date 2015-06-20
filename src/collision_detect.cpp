@@ -60,7 +60,10 @@ bool decal_obj::is_on_cobj(int cobj) const {
 		return dist_less_than(center, c.points[dp > 0.0], (((dp > 0.0) ? c.radius2 : c.radius) + radius));
 	}
 	assert(c.type == COLL_POLYGON);
-	if (c.thickness > MIN_POLY_THICK) {return (c.sphere_intersects(center, DECAL_OFFSET) == 1);} // thick polygon
+
+	if (c.thickness > MIN_POLY_THICK) {
+		return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, (center - orient*DECAL_OFFSET), -0.5*DECAL_OFFSET, c.thickness, MIN_POLY_THICK);
+	}
 	float t; // thin polygon case
 	point const p1(center - orient*MIN_POLY_THICK), p2(center + orient*MIN_POLY_THICK);
 	return line_poly_intersect(p1, p2, c.points, c.npoints, c.norm, t); // doesn't really work on extruded polygons
