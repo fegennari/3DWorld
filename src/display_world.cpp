@@ -242,9 +242,7 @@ void draw_frame_rate(float framerate) {
 
 	if (show_framerate) {
 		point const camera((world_mode == WMODE_UNIVERSE) ? get_universe_display_camera_pos() : get_camera_pos());
-		cout << "FPS: " << framerate << "  loc: (";
-		camera.print();
-		cout << ") @ frame " << frame_counter << endl;
+		cout << "FPS: " << framerate << "  loc: (" << camera.str() << ") @ frame " << frame_counter << endl;
 		log_location(camera);
 		show_framerate = 0;
 	}

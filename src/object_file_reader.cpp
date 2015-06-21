@@ -363,7 +363,7 @@ public:
 		model.load_all_used_tids();
 
 		if (verbose) {
-			cout << "bcube: "; model.get_bcube().print(); cout << endl;
+			cout << "bcube: " << model.get_bcube().str() << endl;
 			cout << "model stats: "; model.show_stats();
 		}
 		PRINT_TIME("Model3d Load");
@@ -604,8 +604,7 @@ public:
 			size_t const nn(recalc_normals ? vn.size() : n.size());
 			cout << "verts: " << v.size() << ", normals: " << nn << ", tcs: " << tc.size() << ", faces: " << num_faces << ", objects: " << num_objects
 				 << ", groups: " << num_groups << ", blocks: " << num_blocks << endl;
-			cout << "bcube: "; model.get_bcube().print(); cout << endl;
-			cout << "model stats: "; model.show_stats();
+			cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();
 		}
 		return 1;
 	}

@@ -623,7 +623,7 @@ public:
 		if (goal.mode == 6) goal.wpt = wb.find_closest_waypoint(goal.pos, 1);
 		if (goal.mode == 7) goal.wpt = wb.add_new_waypoint(goal.pos, -1, 1, 1, 1, 1); // goal position - add temp waypoint
 		if (goal.mode == 7) has_wpt_goal = 1;
-		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: "; goal.pos.print(); cout << ", wpt: " << goal.wpt << endl;
+		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: " << goal.pos.str() << ", wpt: " << goal.wpt << endl;
 		
 		std::priority_queue<pair<float, unsigned> > open_queue;
 		wc.open.resize(waypoints.size(), 0); // already resized after the first call

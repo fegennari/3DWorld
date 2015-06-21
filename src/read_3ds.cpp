@@ -546,11 +546,7 @@ public:
 	bool read(geom_xform_t const &xf, bool verbose) {
 		if (!file_reader_3ds::read(xf, verbose)) return 0;
 		model.optimize(); // optimize vertices and remove excess capacity
-
-		if (verbose) {
-			cout << "bcube: "; model.get_bcube().print(); cout << endl;
-			cout << "model stats: "; model.show_stats();
-		}
+		if (verbose) {cout << "bcube: " << model.get_bcube().str() << endl << "model stats: "; model.show_stats();}
 		return 1;
 	}
 };

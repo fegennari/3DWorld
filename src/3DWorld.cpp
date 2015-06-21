@@ -1146,7 +1146,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 }
 
 
-void print_wind() {cout << "wind: "; wind.print(); cout << endl;}
+void print_wind() {cout << "wind: " << wind.str() << endl;}
 int get_map_shift_val() {return int(map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1));}
 
 

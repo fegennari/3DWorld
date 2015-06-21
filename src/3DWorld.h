@@ -197,7 +197,6 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	pointT(pointT const &p1, pointT const &p2) : x(p1.x-p2.x), y(p1.y-p2.y), z(p1.z-p2.z) {} // take the difference (vector)
 	template<typename S> pointT(S const &p) : x(p.x), y(p.y), z(p.z) {}
 
-	void print() const {cout << x << ", " << y << ", " << z;}
 	std::string str() const {std::ostringstream oss; oss << x << ", " << y << ", " << z; return oss.str();}
 	template<typename S> void operator=(pointT<S> const &p) {x = p.x; y = p.y; z = p.z;}
 	bool operator==(const pointT &p) const {return (p.x == x && p.y == y && p.z == z);}
@@ -320,7 +319,7 @@ struct vector4d : public vector3d { // size = 16
 	vector4d(float x_, float y_, float z_, float w_) : vector3d(x_, y_, z_), w(w_) {}
 	vector4d(vector3d const &v, float w_) : vector3d(v), w(w_) {}
 	void assign(float x_, float y_, float z_, float w_)    {x = x_; y = y_; z = z_; w = w_;}
-	void print() const {cout << x << ", " << y << ", " << z << ", " << w;}
+	std::string str() const {std::ostringstream oss; oss << x << ", " << y << ", " << z << ", " << w; return oss.str();}
 	vector4d operator+ (vector4d const &p) const {return vector4d((x+p.x), (y+p.y), (z+p.z), (w+p.w));}
 	vector4d operator- (vector4d const &p) const {return vector4d((x-p.x), (y-p.y), (z-p.z), (w-p.w));}
 	void     operator+=(vector4d const &p) {x += p.x; y += p.y; z += p.z; w += p.w;}
@@ -400,7 +399,7 @@ struct cube_t { // size = 24
 		UNROLL_3X(d[i_][0] += p[i_]; d[i_][1] += p[i_];)
 	}
 	void set_from_points(point const *const pts, unsigned npts);
-	void print() const;
+	std::string str() const;
 	bool is_near_zero_area() const;
 
 	void union_with_pt(point const &pt) {
@@ -637,7 +636,7 @@ struct colorRGB { // size = 12
 		n.y = 2.0*G - 1.0;
 		n.z = 2.0*B - 1.0;
 	}
-	void print() const {cout << "R: " << R << ", G: " << G << ", B: " << B;}
+	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B; return oss.str();}
 	float get_luminance() const {return (R + G + B)/3.0;}
 };
 
@@ -699,7 +698,7 @@ struct colorRGBA : public colorRGB { // size = 16
 		return ((fabs(R-c.R) + fabs(G-c.G) + fabs(B-c.B) + fabs(A-c.A)) < thresh);
 	}
 	bool is_valid() const {return (R >= 0 && G >= 0 && B >= 0 && A >= 0 && R <= 1 && G <= 1 && B <= 1 && A <= 1);}
-	void print()    const {cout << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A;}
+	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A; return oss.str();}
 	void set_for_cur_shader() const;
 };
 

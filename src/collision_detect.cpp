@@ -326,7 +326,7 @@ int add_coll_cylinder(point const &p1, point const &p2, float radius, float radi
 		if (p2.z < p1.z) {swap(cobj.points[0], cobj.points[1]);}
 	}
 	if (dist_less_than(cobj.points[0], cobj.points[1], TOLERANCE)) { // no near zero length cylinders
-		cout << "pt0 = "; cobj.points[0].print(); cout << ", pt1 = "; cobj.points[1].print(); cout << endl;
+		cout << "pt0 = " << cobj.points[0].str() << ", pt1 = " << cobj.points[1].str() << endl;
 		assert(0);
 	}
 	coll_objects.set_coll_obj_props(index, type, radius, radius2, platform_id, cparams);
@@ -497,7 +497,7 @@ int add_coll_polygon(const point *points, int npoints, cobj_params const &cparam
 	}
 	if (normal == zero_vector) {
 		cout << "degenerate polygon created: points:" << endl;
-		for (int i = 0; i < npoints; ++i) {points[i].print(); cout << endl;}
+		for (int i = 0; i < npoints; ++i) {cout << points[i].str() << endl;}
 		cout << "valid: " << is_poly_valid(points) << endl;
 		normal = plus_z; // this shouldn't be possible, but FP accuracy/errors make this tough to prevent
 	}

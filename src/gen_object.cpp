@@ -109,9 +109,7 @@ void basic_physics_obj::init_gen_rand(point const &p, float rxy, float rz) {
 
 void dwobject::print_and_terminate() const { // only called when there is an error
 
-	cout << "pos = "; pos.print();
-	cout << ", vel = "; velocity.print();
-	cout << ", type = " << int(type) << ", status = " << int(status) << endl;
+	cout << "pos = " << pos.str() << ", vel = " << velocity.str() << ", type = " << int(type) << ", status = " << int(status) << endl;
 	assert(0);
 }
 

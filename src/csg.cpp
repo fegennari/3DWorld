@@ -139,9 +139,9 @@ void rect::print() const {
 	for (unsigned i = 0; i < 2; ++i) {
 		for (unsigned j = 0; j < 2; ++j) {
 			cout << d[i][j];
-			if (j == 0) cout << " ";
+			if (j == 0) {cout << " ";}
 		}
-		if (i == 0) cout << ", ";
+		if (i == 0) {cout << ", ";}
 	}
 }
 
@@ -157,15 +157,18 @@ void cube_t::set_from_points(point const *const pts, unsigned npts) {
 }
 
 
-void cube_t::print() const {
+std::string cube_t::str() const {
+
+	std::ostringstream oss;
 
 	for (unsigned i = 0; i < 3; ++i) {
 		for (unsigned j = 0; j < 2; ++j) {
-			cout << d[i][j];
-			if (i < 2 || j < 1) cout << ",";
+			oss << d[i][j];
+			if (i < 2 || j < 1) {oss << ",";}
 		}
-		cout << " ";
+		oss << " ";
 	}
+	return oss.str();
 }
 
 
@@ -837,7 +840,7 @@ void coll_obj_group::check_cubes() {
 		csg_cube const cube((*this)[i]);
 		
 		if (cube.is_zero_area()) {
-		  cout << "Zero area cube: "; cube.print(); cout << endl;
+		  cout << "Zero area cube: " << cube.str() << endl;
 		  assert(0);
 		}
 	}
