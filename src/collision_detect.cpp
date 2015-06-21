@@ -50,10 +50,12 @@ bool decal_obj::is_on_cobj(int cobj) const {
 	if (c.type == COLL_CUBE) return 1;
 
 	if (c.type == COLL_CYLINDER) {
+		if (c.cp.surfs & 1) return 0; // draw_ends=0
 		if (orient != plus_z && orient != -plus_z) return 0; // not on the cylinder end
 		return dist_xy_less_than(center, c.points[orient == plus_z], (c.radius + radius));
 	}
 	if (c.type == COLL_CYLINDER_ROT) {
+		if (c.cp.surfs & 1) return 0; // draw_ends=0
 		vector3d const cylin_dir((c.points[1] - c.points[0]).get_norm());
 		float const dp(dot_product(orient, cylin_dir));
 		if (fabs(dp) < 0.99) return 0; // not on the cylinder end
