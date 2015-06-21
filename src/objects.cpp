@@ -349,10 +349,10 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, 0); // Note: using texgen, not textured
 		float const r[2] = {radius, radius2};
 
-		if (is_cylin_vertical()) { // not tested - is the hemisphere optimization worth the trouble?
+		if (is_cylin_vertical()) { // is the hemisphere optimization worth the trouble?
 			bool const d(points[1].z > points[0].z);
-			draw_subdiv_sphere_section(points[!d], r[!d], ndiv, 0, 0.0, 1.0, 0.0, 0.5);
-			draw_subdiv_sphere_section(points[ d], r[ d], ndiv, 0, 0.0, 1.0, 0.5, 1.0);
+			draw_subdiv_sphere_section(points[ d], r[ d], ndiv, 0, 0.0, 1.0, 0.0, 0.5);
+			draw_subdiv_sphere_section(points[!d], r[!d], ndiv, 0, 0.0, 1.0, 0.5, 1.0);
 		}
 		else {
 			for (unsigned d = 0; d < 2; ++d) {draw_subdiv_sphere(points[d], r[d], ndiv, 0, 1);}
