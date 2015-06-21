@@ -492,7 +492,7 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
-// 15 total: 10 complete, 5 partial (all cylinder cases)
+// 20 total: 15 complete, 5 partial (all cylinder cases)
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	if (c.type < type) return c.intersects_cobj(*this, toler); // swap arguments
@@ -502,12 +502,12 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 	switch (type) {
 	case COLL_CUBE:
 		switch (c.type) {
-		case COLL_CUBE:
-			return 1; // as simple as that
-		case COLL_CYLINDER:
-			return circle_rect_intersect(c.points[0], c.radius, *this, 2); // in z
-		case COLL_SPHERE:
-			return sphere_cube_intersect(c.points[0], c.radius, *this);
+		case COLL_CUBE:     return 1; // as simple as that
+		case COLL_CYLINDER: return circle_rect_intersect(c.points[0], c.radius, *this, 2); // in z
+		case COLL_SPHERE:   return sphere_cube_intersect(c.points[0], c.radius, *this);
+		case COLL_CAPSULE:
+			if (sphere_cube_intersect(c.points[0], c.radius, *this) || sphere_cube_intersect(c.points[1], c.radius2, *this)) return 1;
+			// fallthrough
 		case COLL_CYLINDER_ROT: {
 			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
 			bool deq[3];
@@ -550,68 +550,73 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		}
 
 	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT:
 		switch (c.type) {
 		case COLL_CYLINDER:
+			assert(type == COLL_CYLINDER);
 			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius));
 		case COLL_SPHERE:
-			if (dist_xy_less_than(points[0], c.points[0], (c.radius+radius))) return 1;
+			if (type == COLL_CYLINDER && dist_xy_less_than(points[0], c.points[0], (c.radius+radius))) return 1;
 			return sphere_intersect_cylinder(c.points[0], c.radius, points[0], points[1], radius, radius2);
-		case COLL_CYLINDER_ROT:
-			return cylin_cylin_int(c, *this);
-		case COLL_POLYGON:
-			return poly_cylin_int(c, *this);
+		case COLL_CAPSULE:
+			if (type == COLL_CYLINDER && (dist_xy_less_than(points[0], c.points[0], (c.radius+radius)) ||
+				                          dist_xy_less_than(points[0], c.points[1], (c.radius2+radius)))) return 1;
+			if (sphere_intersect_cylinder(c.points[0], c.radius,  points[0], points[1], radius, radius2)) return 1;
+			if (sphere_intersect_cylinder(c.points[1], c.radius2, points[0], points[1], radius, radius2)) return 1;
+			// fallthrough
+		case COLL_CYLINDER_ROT: return cylin_cylin_int(c, *this);
+		case COLL_POLYGON:      return poly_cylin_int (c, *this);
 		default: assert(0);
 		}
 
 	case COLL_SPHERE:
 		switch (c.type) {
-		case COLL_SPHERE:
-			return dist_less_than(points[0], c.points[0], (c.radius+radius));
-		case COLL_CYLINDER_ROT:
-			return sphere_intersect_cylinder(points[0], radius, c.points[0], c.points[1], c.radius, c.radius2);
-		case COLL_POLYGON:
-			return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK);
-		default: assert(0);
-		}
-
-	case COLL_CYLINDER_ROT:
-		switch (c.type) {
-		case COLL_CYLINDER_ROT:
-			return cylin_cylin_int(c, *this);
-		case COLL_POLYGON:
-			return poly_cylin_int (c, *this);
+		case COLL_SPHERE:       return dist_less_than(points[0], c.points[0], (c.radius+radius));
+		case COLL_CAPSULE:
+			if (dist_less_than(points[0], c.points[0], (c.radius+radius)) || dist_less_than(points[0], c.points[1], (c.radius2+radius))) return 1;
+			// fallthrough
+		case COLL_CYLINDER_ROT: return sphere_intersect_cylinder(points[0], radius, c.points[0], c.points[1], c.radius, c.radius2);
+		case COLL_POLYGON:      return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK);
 		default: assert(0);
 		}
 
 	case COLL_POLYGON: {
-		assert(c.type == COLL_POLYGON);
-		float const poly_toler(max(toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
+		switch (c.type) {
+		case COLL_CAPSULE:
+			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[0], c.radius,  thickness, MIN_POLY_THICK)) return 1;
+			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[1], c.radius2, thickness, MIN_POLY_THICK)) return 1;
+			return poly_cylin_int(*this, c);
+		case COLL_POLYGON: {
+			float const poly_toler(max(toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
 
-		if (poly_toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons, sponza polygons, etc.)
-			for (int i = 0; i < c.npoints; ++i) {
-				for (int j = 0; j < npoints; ++j) {
-					if (dist_less_than(points[j], c.points[i], poly_toler)) return 1;
+			if (poly_toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons, sponza polygons, etc.)
+				for (int i = 0; i < c.npoints; ++i) {
+					for (int j = 0; j < npoints; ++j) {
+						if (dist_less_than(points[j], c.points[i], poly_toler)) return 1;
+					}
+				}
+				for (int i = 0; i < c.npoints; ++i) {
+					for (int j = 0; j < npoints; ++j) {
+						if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], poly_toler)) return 1;
+						if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], poly_toler)) return 1;
+					}
 				}
 			}
 			for (int i = 0; i < c.npoints; ++i) {
-				for (int j = 0; j < npoints; ++j) {
-					if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], poly_toler)) return 1;
-					if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], poly_toler)) return 1;
-				}
+				if (line_intersect(c.points[i], c.points[(i+1)%c.npoints])) return 1;
 			}
+			for (int i = 0; i <   npoints; ++i) {
+				if (line_intersect(  points[i],   points[(i+1)%  npoints])) return 1;
+			}
+			// need to handle one polygon completely insde of a thick polygon
+			if (c.thickness > MIN_POLY_THICK &&
+				sphere_ext_poly_intersect(c.points, c.npoints, c.norm,   points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
+			if (  thickness > MIN_POLY_THICK &&
+				sphere_ext_poly_intersect(  points,   npoints,   norm, c.points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
+			return 0;
 		}
-		for (int i = 0; i < c.npoints; ++i) {
-			if (line_intersect(c.points[i], c.points[(i+1)%c.npoints])) return 1;
+		default: assert(0);
 		}
-		for (int i = 0; i <   npoints; ++i) {
-			if (line_intersect(  points[i],   points[(i+1)%  npoints])) return 1;
-		}
-		// need to handle one polygon completely insde of a thick polygon
-		if (c.thickness > MIN_POLY_THICK &&
-			sphere_ext_poly_intersect(c.points, c.npoints, c.norm,   points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
-		if (  thickness > MIN_POLY_THICK &&
-			sphere_ext_poly_intersect(  points,   npoints,   norm, c.points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
-		return 0;
 	}
 	default: assert(0);
 	}
