@@ -2020,7 +2020,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((is_glass && cobj.type != COLL_CUBE) || (rand()%50) == 0)) || // shattered
 			(cobj.destroy >= EXPLODEABLE && (rand()%10) == 0)) // exploded
 		{
-			if (is_glass && cobj.type == COLL_CUBE && !cobj.maybe_is_moving() && (rand()&7) != 0) {gen_glass_shard_from_cube_window(cobj, cobj.cp, coll_pos);}
+			if (is_glass && cobj.type == COLL_CUBE && !cobj.maybe_is_moving() && (rand()&15) != 0) {gen_glass_shard_from_cube_window(cobj, cobj.cp, coll_pos);}
 			destroy_coll_objs(coll_pos, 500.0, shooter, PROJECTILE, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
 		}
 		else if (!is_laser && cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && destroy_thresh == 0) {

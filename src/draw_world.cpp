@@ -1130,7 +1130,7 @@ struct ray2d {
 };
 
 
-void create_and_draw_cracks() { // adds to beams
+void create_and_draw_cracks(quad_batch_draw &qbd) { // adds to beams
 
 	vector<crack_point> cpts;  // static?
 	vector<ray2d> crack_lines; // static?
@@ -1142,20 +1142,12 @@ void create_and_draw_cracks() { // adds to beams
 		if (i->status == 0 || !i->is_glass || i->cid < 0) continue;
 		if (i->cid == last_cobj && skip_cobj)             continue;
 		point const pos(i->get_pos());
-		if (!dist_less_than(camera, pos, 1000*i->radius)) continue; // too far away
+		if (!dist_less_than(camera, pos, 2000*i->radius)) continue; // too far away
 		assert((unsigned)i->cid < coll_objects.size());
 		coll_obj const &cobj(coll_objects[i->cid]);
 		skip_cobj = (cobj.status != COLL_STATIC || cobj.type != COLL_CUBE || !camera_pdu.cube_visible(cobj) || cobj.is_occluded_from_camera());
 		last_cobj = i->cid;
-		if (skip_cobj) continue;
-		int const face(cobj.closest_face(pos)), dim(face >> 1), dir(face & 1);
-		vector3d dpos(all_zeros);
-		
-		if ((pos[dim] - camera[dim] < 0) ^ dir) { // back facing - render the crack on the other side of the glass
-			dpos = 2*(cobj.get_center_pt() - i->pos);
-			UNROLL_3X(dpos[i_] *= fabs(i->orient[i_]);)
-		}
-		cpts.push_back(crack_point(pos+dpos, i->pos+dpos, i->cid, face, i->time, i->get_alpha(), i->color));
+		if (!skip_cobj) {cpts.push_back(crack_point(pos, i->pos, i->cid, cobj.closest_face(pos), i->time, i->get_alpha(), i->color));}
 	}
 	stable_sort(cpts.begin(), cpts.end());
 
@@ -1164,7 +1156,8 @@ void create_and_draw_cracks() { // adds to beams
 		for (++i; i < cpts.size() && cpts[i].cid == cpts[s].cid && cpts[i].face == cpts[s].face; ++i) {}
 		// all cpts in [s,i) have the same {cid, face}
 		crack_lines.resize(0);
-		cube_t const &cube(coll_objects[cpts[s].cid]);
+		coll_obj const &cobj(coll_objects[cpts[s].cid]);
+		cube_t const &cube(cobj);
 		float const diameter(cube.get_bsphere_radius());
 		
 		for (unsigned j = s; j < i; ++j) { // generated cracks to the edge of the glass cube
@@ -1207,13 +1200,17 @@ void create_and_draw_cracks() { // adds to beams
 						if (attempt > 0 && p2p_dist_sq(cpt1.pos, p2) >= min_dist_sq) break;
 					}
 					float const dist_sq(p2p_dist_sq(cpt1.pos, p2));
-
-					if (attempt == 0 || dist_sq < min_dist_sq) {
-						epos = p2;
-						min_dist_sq = dist_sq;
-					}
+					if (attempt == 0 || dist_sq < min_dist_sq) {epos = p2; min_dist_sq = dist_sq;}
 				} // for attempt
-				if (cpt1.pos != epos) {beams.push_back(beam3d(0, NO_SOURCE, cpt1.pos, epos, cpt1.color, 0.05*cpt1.alpha));}
+				if (cpt1.pos != epos) {
+					//beams.push_back(beam3d(0, NO_SOURCE, cpt1.pos, epos, cpt1.color, 0.05*cpt1.alpha));
+					point pts[4] = {cpt1.pos, cpt1.pos, epos, epos};
+					for (unsigned d = 0; d < 4; ++d) {pts[d][dim] = cube.d[dim][d == 1 || d == 2];}
+					vector3d const normal(get_poly_norm(pts));
+					colorRGBA color(cpt1.color);
+					color.alpha *= min(0.5, 1.5*cobj.cp.color.alpha); // 1.5x glass alpha value
+					qbd.add_quad_pts(pts, color, ((dot_product_ptv(normal, camera, pts[0]) < 0.0) ? -normal : normal));
+				}
 				epts[n] = epos;
 			} // for n
 			for (unsigned n = 0; n < ncracks; ++n) {
@@ -1227,7 +1224,8 @@ void create_and_draw_cracks() { // adds to beams
 void draw_cracks_and_decals() {
 
 	if (!decals.any_active()) return;
-	create_and_draw_cracks(); // adds to beams
+	quad_batch_draw crack_qbd;
+	create_and_draw_cracks(crack_qbd); // adds to beams
 	map<int, quad_batch_draw> batches; // maps from {tid, is_black} to quad batches
 	vector<pair<int, unsigned> > sorted_decals;
 	line_tquad_draw_t blood_tqd;
@@ -1240,7 +1238,7 @@ void draw_cracks_and_decals() {
 		}
 		i->maybe_draw_blood_trail(blood_tqd);
 	}
-	if (sorted_decals.empty()) return;
+	if (sorted_decals.empty() && crack_qbd.empty()) return;
 	sort(sorted_decals.begin(), sorted_decals.end()); // sort by time, so that spraypaint works (later paint is drawn after/over earlier paint)
 
 	for (unsigned i = 0; i < sorted_decals.size(); ++i) {
@@ -1251,12 +1249,13 @@ void draw_cracks_and_decals() {
 	enable_blend();
 	shader_t black_shader, lighting_shader, bullet_shader;
 
-	if (!blood_tqd.empty()) { // use normal lighting shader
+	if (!blood_tqd.empty() || !crack_qbd.empty()) { // use normal lighting shader
 		setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
 		lighting_shader.enable();
 		select_texture(WHITE_TEX);
 		blood_tqd.draw_tri_verts();
 		blood_tqd.clear();
+		crack_qbd.draw_and_clear();
 	}
 	for (map<int, quad_batch_draw>::const_iterator i = batches.begin(); i != batches.end(); ++i) {
 		int const tid(i->first >> 1);
