@@ -103,6 +103,49 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 }
 
 
+bool check_line_sphere_int(point const &sc, float sr, point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) {
+
+	point coll_pos;
+	vector3d const v1((p2 - p1).get_norm());
+	if (!line_sphere_int(v1, p1, sc, sr, coll_pos, 0)) return 0;
+	t = -1.0; // start at a bad value
+				
+	for (unsigned i = 0; i < 3; ++i) {
+		if (fabs(p2[i] - p1[i]) > TOLERANCE) {
+			t = (coll_pos[i] - p1[i])/(p2[i] - p1[i]);
+			break;
+		}
+	}
+	if (t > tmax || t < tmin) return 0;
+	cnorm = (coll_pos - sc);
+	if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
+	return 1;
+}
+
+bool check_line_cylin_int(point const points[2], float radius, float radius2, point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) {
+
+	int const int_type(line_int_thick_cylinder(p1, p2, points[0], points[1], 0.0, 0.0, radius, radius2, 1, t));
+	if (!int_type || t > tmax || t < tmin) return 0;
+				
+	if (int_type == 1) { // side intersection
+		vector3d const cv(points[0] - points[1]);
+		point const cpos(p1 + (p2 - p1)*t);
+		orthogonalize_dir((cpos - points[0]), cv, cnorm, 0);
+
+		if (radius != radius2) {
+			if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
+			float const len(cv.mag());
+			if (len > TOLERANCE) {cnorm = cnorm*len + cv*((radius2 - radius)/len);} // will be normalized later
+		}
+	}
+	else { // top/bottom intersection (3/2)
+		cnorm = (points[int_type != 2] - points[int_type == 2]); // use int_type to determine correct dir
+	}
+	if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
+	return 1;
+}
+
+
 bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const {
 
 	float clip_tmin, clip_tmax;
@@ -110,52 +153,21 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 		                         || clip_tmin > tmax || clip_tmax < tmin)) return 0;
 	
 	switch (type) {
-		case COLL_CUBE: {
+		case COLL_CUBE:
 			t = clip_tmin;
 			if (t > tmax || t < tmin) return 0;
 			get_closest_cube_norm(d, (p1 + (p2 - p1)*t), cnorm);
 			return 1;
-		}
-		case COLL_SPHERE: {
-			point coll_pos;
-			vector3d const v1((p2 - p1).get_norm());
-			if (!line_sphere_int(v1, p1, points[0], radius, coll_pos, 0)) return 0;
-			t = -1.0; // start at a bad value
-				
-			for (unsigned i = 0; i < 3; ++i) {
-				if (fabs(p2[i] - p1[i]) > TOLERANCE) {
-					t = (coll_pos[i] - p1[i])/(p2[i] - p1[i]);
-					break;
-				}
-			}
-			if (t > tmax || t < tmin) return 0;
-			cnorm = (coll_pos - points[0]);
-			if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
-			return 1;
-		}
+		case COLL_SPHERE:
+			return check_line_sphere_int(points[0], radius, p1, p2, t, cnorm, tmin, tmax);
 		case COLL_CYLINDER:
-		case COLL_CYLINDER_ROT: {
-			int const int_type(line_int_thick_cylinder(p1, p2, points[0], points[1], 0.0, 0.0, radius, radius2, 1, t));
-			if (!int_type || t > tmax || t < tmin) return 0;
-				
-			if (int_type == 1) { // side intersection
-				vector3d const cv(points[0] - points[1]);
-				point const cpos(p1 + (p2 - p1)*t);
-				orthogonalize_dir((cpos - points[0]), cv, cnorm, 0);
+		case COLL_CYLINDER_ROT:
+			return check_line_cylin_int(points, radius, radius2, p1, p2, t, cnorm, tmin, tmax);
+		case COLL_CAPSULE:
+			return (check_line_sphere_int(points[0], radius,  p1, p2, t, cnorm, tmin, tmax) ||
+				    check_line_sphere_int(points[1], radius2, p1, p2, t, cnorm, tmin, tmax) ||
+				    check_line_cylin_int(points, radius, radius2, p1, p2, t, cnorm, tmin, tmax));
 
-				if (radius != radius2) {
-					if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
-					float const len(cv.mag());
-					if (len > TOLERANCE) {cnorm = cnorm*len + cv*((radius2 - radius)/len);} // will be normalized later
-				}
-			}
-			else { // top/bottom intersection (3/2)
-				cnorm = (points[int_type != 2] - points[int_type == 2]); // use int_type to determine correct dir
-			}
-			if (!cnorm.normalize_test()) {cnorm = plus_z;} // arbitrary
-			return 1;
-		}
-		//case COLL_CAPSULE: // WRITE
 		case COLL_POLYGON: { // must be coplanar
 			assert(npoints >= 3);
 

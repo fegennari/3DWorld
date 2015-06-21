@@ -1065,7 +1065,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	material_map_t materials;
 	multi_trigger_t triggers;
 	
-	while (!end) { // available: dhkouz U
+	while (!end) { // available: dhouz U
 		assert(fp != NULL);
 		int letter(getc(fp));
 
@@ -1411,17 +1411,18 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		case 'C': // cylinder: x1 y1 z1 x2 y2 z2 r1 r2
+		case 'k': // capsule: x1 y1 z1 x2 y2 z2 r1 r2
 			if (fscanf(fp, "%f%f%f%f%f%f%f%f", &cobj.points[0].x, &cobj.points[0].y, &cobj.points[0].z, &cobj.points[1].x, &cobj.points[1].y, &cobj.points[1].z, &cobj.radius, &cobj.radius2) != 8) {
-				return read_error(fp, "collision cylinder", coll_obj_file);
+				return read_error(fp, "collision cylinder/capsule", coll_obj_file);
 			}
 			assert(cobj.radius >  0.0 || cobj.radius2 >  0.0);
 			assert(cobj.radius >= 0.0 && cobj.radius2 >= 0.0);
 			check_layer(has_layer);
 			cobj.radius  *= xf.scale;
 			cobj.radius2 *= xf.scale;
-			for (unsigned i = 0; i < 2; ++i) xf.xform_pos(cobj.points[i]);
-			// surfs: 0 = draw ends + bfc (solid), 1 = no draw ends + no bfc (hollow), 3 = no draw ends + bfc (ends are hidden)
-			cobj.add_to_vector(fixed_cobjs, COLL_CYLINDER);
+			for (unsigned i = 0; i < 2; ++i) {xf.xform_pos(cobj.points[i]);}
+			// cylinder surfs: 0 = draw ends + bfc (solid), 1 = no draw ends + no bfc (hollow), 3 = no draw ends + bfc (ends are hidden)
+			cobj.add_to_vector(fixed_cobjs, ((letter == 'k') ? COLL_CAPSULE : COLL_CYLINDER));
 			break;
 
 		case 'P': // polygon: npts (x y z)* thickness
