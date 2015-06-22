@@ -163,11 +163,14 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 		case COLL_CYLINDER:
 		case COLL_CYLINDER_ROT:
 			return check_line_cylin_int(points, radius, radius2, p1, p2, t, cnorm, tmin, tmax);
-		case COLL_CAPSULE:
-			return (check_line_sphere_int(points[0], radius,  p1, p2, t, cnorm, tmin, tmax) ||
-				    check_line_sphere_int(points[1], radius2, p1, p2, t, cnorm, tmin, tmax) ||
-				    check_line_cylin_int(points, radius, radius2, p1, p2, t, cnorm, tmin, tmax));
-
+		case COLL_CAPSULE: {
+			bool ret(0);
+			if (check_line_sphere_int(points[0], radius,       p1, p2, t, cnorm, tmin, tmax)) {ret = 1; tmax = t;}
+			if (check_line_sphere_int(points[1], radius2,      p1, p2, t, cnorm, tmin, tmax)) {ret = 1; tmax = t;}
+			if (check_line_cylin_int (points, radius, radius2, p1, p2, t, cnorm, tmin, tmax)) {ret = 1; tmax = t;}
+			if (ret) {t = tmax;}
+			return ret;
+		}
 		case COLL_POLYGON: { // must be coplanar
 			assert(npoints >= 3);
 
