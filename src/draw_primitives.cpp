@@ -412,18 +412,16 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 	float const ndiv_inv(1.0/float(ndiv)), rv(def_pert + radius), rv_sq(rv*rv), tscale(texture);
 	float const toler(1.0E-6*radius*radius + rv_sq), dmax(rv + 0.1*radius), dmax_sq(dmax*dmax);
 	bool const use_quads(render_map || pt_shift || exp_map || expand != 0.0);
-	if (expand != 0.0) expand *= 0.25; // 1/4, for normalization
+	if (expand != 0.0) {expand *= 0.25;} // 1/4, for normalization
 	unsigned const s0(NDIV_SCALE(s_beg)), s1(NDIV_SCALE(s_end)), t0(NDIV_SCALE(t_beg)), t1(NDIV_SCALE(t_end));
 	static vector<vert_norm> vn;
 	static vector<vertex_type_t> vntc;
 
 	for (unsigned s = s0; s < s1; ++s) {
-		s = min(s, s1-1);
 		unsigned const sn((s+1)%ndiv), snt(s+1);
 
 		if (use_quads) { // use slower quads - no back face culling
 			for (unsigned t = t0; t < t1; ++t) {
-				t = min(t, t1);
 				unsigned const ix(s*(ndiv+1)+t), tn(t+1);
 				if (render_map && !render_map[ix]) continue;
 				float const exp(expand + (exp_map ? exp_map[ix] : 0.0));
@@ -436,25 +434,17 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 				}
 				for (unsigned i = 0; i < 4; ++i) {
 					if (pt_shift) {pts[i] += pt_shift[ix];}
-
-					if (texture) {
-						vntc.push_back(vertex_type_t(pts[i], normals[i], tscale*(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), tscale*(1.0f - ((i>>1) ? tn : t)*ndiv_inv)));
-					}
-					else {
-						vn.push_back(vert_norm(pts[i], normals[i]));
-					}
+					if (texture) {vntc.push_back(vertex_type_t(pts[i], normals[i], tscale*(1.0f - (((i&1)^(i>>1)) ? snt : s)*ndiv_inv), tscale*(1.0f - ((i>>1) ? tn : t)*ndiv_inv)));}
+					else {vn.push_back(vert_norm(pts[i], normals[i]));}
 				}
 			} // for t
 		}
 		else { // use triangle strip
-			if (s != s0) { // add degenerate triangle to preserve the triangle strip (only slightly faster than using multiple triangle strips)
+			if (s != s0) { // add degenerate triangles to preserve the triangle strip (only slightly faster than using multiple triangle strips)
 				for (unsigned d = 0; d < 2; ++d) {
-					if (texture) {
-						vntc.push_back(vertex_type_t(points[s][t0], zero_vector, 0.0, 0.0));
-					}
-					else {
-						vn.push_back(vert_norm(points[s][t0], zero_vector));
-					}
+					unsigned const T(d ? t0 : t1);
+					if (texture) {vntc.push_back(vertex_type_t(points[s][T], norms[s][T], 0.0, 0.0));}
+					else {vn.push_back(vert_norm(points[s][T], norms[s][T]));}
 				}
 			}
 			for (unsigned t = t0; t <= t1; ++t) {
@@ -464,24 +454,17 @@ void sd_sphere_d::draw_subdiv_sphere(point const &vfrom, int texture, bool disab
 
 				for (unsigned d = 0; d < 2 && !draw; ++d) {
 					float const dp(dot_product_ptv(normals[d], vfrom, pts[d]));
-					
-					if (dp >= 0.0) {
-						draw = 1;
-					}
+					if (dp >= 0.0) {draw = 1;}
 					else if (perturb_map != NULL) { // sort of a hack, not always correct but good enough in most cases
 						float const dist_sq(p2p_dist_sq(pos, pts[d]));
-						if (dist_sq > toler && (dist_sq > dmax_sq || dp > -0.3*p2p_dist(vfrom, pts[d]))) draw = 1;
+						if (dist_sq > toler && (dist_sq > dmax_sq || dp > -0.3*p2p_dist(vfrom, pts[d]))) {draw = 1;}
 					}
 				}
 				if (!draw) {continue;}
 
 				for (unsigned i = 0; i < 2; ++i) {
-					if (texture) {
-						vntc.push_back(vertex_type_t(pts[i], normals[i], tscale*(1.0f - (i ? snt : s)*ndiv_inv), tscale*(1.0f - t*ndiv_inv)));
-					}
-					else {
-						vn.push_back(vert_norm(pts[i], normals[i]));
-					}
+					if (texture) {vntc.push_back(vertex_type_t(pts[i], normals[i], tscale*(1.0f - (i ? snt : s)*ndiv_inv), tscale*(1.0f - t*ndiv_inv)));}
+					else {vn.push_back(vert_norm(pts[i], normals[i]));}
 				}
 			} // for t
 		}
@@ -583,7 +566,7 @@ void sd_sphere_d::get_triangle_strip_pow2(vector<vertex_type_t> &verts, unsigned
 		unsigned const sn((s+skip)%ndiv), snt(min((s+skip), ndiv));
 
 		if (s != s0) { // add degenerate triangle to preserve the triangle strip
-			for (unsigned d = 0; d < 2; ++d) {verts.push_back(vertex_type_t(points[s][d ? t0 : t1], zero_vector, 0, 0));}
+			for (unsigned d = 0; d < 2; ++d) {verts.push_back(vertex_type_t(points[s][d ? t0 : t1], norms[s][d ? t0 : t1], 0, 0));}
 		}
 		for (unsigned t = t0; t <= t1; t += skip) {
 			t = min(t, ndiv);
