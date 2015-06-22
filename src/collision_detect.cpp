@@ -557,8 +557,7 @@ int coll_obj::add_coll_cobj() {
 	case COLL_POLYGON:
 		cid = add_coll_polygon(points, npoints, cp, thickness, platform_id);
 		break;
-	default:
-		assert(0);
+	default: assert(0);
 	}
 	assert(cid >= 0 && size_t(cid) < coll_objects.size());
 	coll_objects[cid].destroy  = destroy;
@@ -578,17 +577,12 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 	if (remove_old) remove_coll_object(id, 0); // might already have been removed
 
 	switch (type) {
-	case COLL_CUBE:
-		add_coll_cube_to_matrix(index, 0); break;
-	case COLL_SPHERE:
-		add_coll_sphere_to_matrix(index, 0); break;
-	case COLL_CYLINDER:
-	case COLL_CYLINDER_ROT:
-		add_coll_cylinder_to_matrix(index, 0); break;
-	case COLL_CAPSULE:
-		add_coll_capsule_to_matrix(index, 0); break;
-	case COLL_POLYGON:
-		add_coll_polygon_to_matrix(index, 0); break;
+	case COLL_CUBE:         add_coll_cube_to_matrix    (index, 0); break;
+	case COLL_SPHERE:       add_coll_sphere_to_matrix  (index, 0); break;
+	case COLL_CYLINDER:     add_coll_cylinder_to_matrix(index, 0); break;
+	case COLL_CYLINDER_ROT: add_coll_cylinder_to_matrix(index, 0); break;
+	case COLL_CAPSULE:      add_coll_capsule_to_matrix (index, 0); break;
+	case COLL_POLYGON:      add_coll_polygon_to_matrix (index, 0); break;
 	default: assert(0);
 	}
 	cp.is_dynamic = 0;
