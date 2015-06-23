@@ -26,9 +26,10 @@ subroutine uniform maybe_bump_map maybe_bump_map_op;
 subroutine void do_lighting(inout vec3 color, in vec4 texel, in vec3 n); // signature
 
 vec4 add_ship_light(in vec3 normal, in int i) {
-	vec3 light_dir = normalize(fg_LightSource[i].position.xyz - epos.xyz);
-	maybe_bump_map_op(normal, light_dir, epos.xyz);
-	return get_ads_lighting(normal, light_dir, epos, 1.0, 1.0, gl_Color, fg_LightSource[i]) * calc_light_atten(epos, i);
+	vec4 epos2     = epos; // copy so that we can modify it
+	vec3 light_dir = normalize(fg_LightSource[i].position.xyz - epos2.xyz);
+	maybe_bump_map_op(normal, light_dir, epos2.xyz);
+	return get_ads_lighting(normal, light_dir, epos2, 1.0, 1.0, gl_Color, fg_LightSource[i]) * calc_light_atten(epos2, i);
 }
 
 subroutine(do_lighting) void shadow_only(inout vec3 color, in vec4 texel, in vec3 n) {
