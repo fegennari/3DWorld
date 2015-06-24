@@ -1,5 +1,6 @@
 uniform int num_dlights = 0;
 uniform float normal_scale = 1.0;
+uniform float water_depth = 0.0;
 uniform vec4 color_scale = vec4(1.0);
 uniform vec3 world_space_offset = vec3(0.0);
 
@@ -24,6 +25,13 @@ void calc_leaf_lighting()
 		vec3 vpos = fg_Vertex.xyz + world_space_offset;
 		add_dlights(color, vpos, nscale*normalize(fg_Normal), vec3(1.0));
 	}
-	fg_Color_vf     = vec4(min(2.0*fg_Color.rgb, clamp(color*color_scale.rgb, 0.0, 1.0)), 1.0); // limit lightning color
-	gl_FogFragCoord = length(eye_space_pos.xyz);
+	fg_Color_vf = vec4(min(2.0*fg_Color.rgb, clamp(color*color_scale.rgb, 0.0, 1.0)), 1.0); // limit lightning color
+
+	if (underwater) {
+		vec3 eye        = fg_ModelViewMatrixInverse[3].xyz;
+		gl_FogFragCoord = length(mix(eye, fg_Vertex.xyz, min(1.0, water_depth/max(0.0001, (fg_Vertex.z - eye.z)))) - eye);
+	}
+	else {
+		gl_FogFragCoord = length(eye_space_pos.xyz);
+	}
 }
