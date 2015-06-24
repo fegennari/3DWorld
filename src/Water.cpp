@@ -694,7 +694,8 @@ void compute_ripples() {
 	RESET_TIME;
 
 	if (temperature > W_FREEZE_POINT && (start_ripple || first_water_run)) {
-		float const rm_atten(pow(RIPPLE_MAT_ATTEN, fticks)), rdamp1(pow(RIPPLE_DAMP1, fticks)), rdamp2(RIPPLE_DAMP2*fticks);
+		float const tstep(max(fticks, 0.25f)); // ensure some min amount of damping to prevent unstable ripples when the framerate is very high
+		float const rm_atten(pow(RIPPLE_MAT_ATTEN, tstep)), rdamp1(pow(RIPPLE_DAMP1, tstep)), rdamp2(RIPPLE_DAMP2*tstep);
 		start_ripple = 0;
 
 		for (int i = 0; i < MESH_Y_SIZE; ++i) {
