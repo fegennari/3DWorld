@@ -10,11 +10,8 @@ Gameplay in tiled terrain mode
   - Pickup items
   - Projectile and object collision detection
 
-TT mode biomes control noise exponent
 Puffy clouds in tiled terrain mode
 SSAO using depth map and postprocessing pass
-Dynamic spotlight shadows (dodgeball?)
 More particle effects (explosion dust and sparks)
-Underwater fog distance clip in all shaders
 Physics with connected spheres
-Cracks bound to moving cobjs (automatic door window)
+Faster shader loading (dlight shadows?)

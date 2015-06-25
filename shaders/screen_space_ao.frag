@@ -1,20 +1,12 @@
-uniform float znear, zfar;
 uniform vec2 xy_step;
-uniform sampler2D depth_tex;
 uniform int NUM_DIRS  = 8;
 uniform int NUM_STEPS = 4;
 
 in vec2 tc;
 
-float get_linear_depth(in vec2 pos) {
-	float d = texture(depth_tex, pos).r;
-	return (2.0 * znear) / (zfar + znear - d * (zfar - znear)); // [0,1] range
-	//return 2.0 * zfar * znear / (zfar + znear - (zfar - znear)*(2*d -1)); // actual z-value
-}
-
 void main() {
-	//fg_FragColor = vec4(vec3(get_linear_depth(tc)),1); return;
-	float depth0   = get_linear_depth(tc) - 0.0001;
+	//fg_FragColor = vec4(vec3(get_linear_depth_01(tc)),1); return;
+	float depth0   = get_linear_depth_01(tc) - 0.0001;
 	//if (depth0 > 0.25) discard; // skip SSAO for high depth (sky/background)
 	float dir_mul  = 2.0 * 3.14159 / NUM_DIRS;
 	float step_mul = 1.0 / NUM_STEPS;
@@ -29,7 +21,7 @@ void main() {
 
 		for (int s = 0; s < NUM_STEPS; s++) {
 			pos += step;
-			float depth = get_linear_depth(pos);
+			float depth = get_linear_depth_01(pos);
 			if (depth + 0.01 < depth0) {break;} // large depth disconuity, skip this dir
 
 			if (depth < depth0) {

@@ -2140,11 +2140,11 @@ float get_projectile_range(point const &pos, vector3d vcf, float dist, float ran
 	if (check_coll_line_exact(pos1, pos2, coll_pos, coll_norm, cindex, splash_val, ignore_cobj)) {
 		assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
 		coll_obj &cobj(coll_objects[cindex]);
-		if (cobj.cp.coll_func) cobj.cp.coll_func(cobj.cp.cf_index, 0, zero_vector, pos, 0.0, PROJC); // apply collision function
+		if (cobj.cp.coll_func) {cobj.cp.coll_func(cobj.cp.cf_index, 0, zero_vector, pos, 0.0, PROJC);} // apply collision function
 		coll  = 1;
 		range = p2p_dist(coll_pos, pos);
 	}
-	if (splash_val > 0.0 && is_underwater(pos1)) gen_line_of_bubbles(pos1, (pos + vcf*range));
+	if (splash_val > 0.0 && is_underwater(pos1)) {gen_line_of_bubbles(pos1, (pos + vcf*range));}
 	return range;
 }
 

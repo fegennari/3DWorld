@@ -44,7 +44,7 @@ pt_line_drawer bubble_pld;
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, scene_smap_vbo_invalid;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
-extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2;
+extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, NEAR_CLIP, FAR_CLIP;
@@ -1430,6 +1430,23 @@ void draw_ortho_screen_space_quad() {
 	restore_prev_mvm_pjm_state();
 }
 
+void set_xy_step(shader_t &s) {s.add_uniform_vector2d("xy_step", vector2d(1.0/window_width, 1.0/window_height));}
+
+void setup_depth_tex(shader_t &s, int tu_id) {
+
+	set_xy_step(s);
+	s.add_uniform_int("depth_tex", tu_id);
+	s.add_uniform_float("znear", NEAR_CLIP);
+	s.add_uniform_float("zfar",  FAR_CLIP);
+}
+
+void draw_white_quad_and_end_shader(shader_t &s) {
+
+	s.set_cur_color(WHITE);
+	draw_ortho_screen_space_quad();
+	s.end_shader();
+}
+
 // add God rays as a fullscreen shader pass using the depth texture
 void add_god_rays() {
 
@@ -1444,9 +1461,7 @@ void add_god_rays() {
 	s.add_uniform_color("sun_color", sun_color);
 	s.add_uniform_vector3d("sun_pos", world_space_to_screen_space(get_sun_pos()));
 	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
-	s.set_cur_color(WHITE);
-	draw_ortho_screen_space_quad();
-	s.end_shader();
+	draw_white_quad_and_end_shader(s);
 }
 
 void add_ssao() {
@@ -1454,15 +1469,10 @@ void add_ssao() {
 	bind_depth_buffer();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader("screen_space_ao");
+	s.set_frag_shader("depth_utils.part+screen_space_ao");
 	s.begin_shader();
-	s.add_uniform_int("depth_tex", 0);
-	s.add_uniform_vector2d("xy_step", vector2d(1.0/window_width, 1.0/window_height));
-	s.add_uniform_float("znear", NEAR_CLIP);
-	s.add_uniform_float("zfar",  FAR_CLIP);
-	s.set_cur_color(WHITE);
-	draw_ortho_screen_space_quad();
-	s.end_shader();
+	setup_depth_tex(s, 0);
+	draw_white_quad_and_end_shader(s);
 }
 
 void add_color_blur() {
@@ -1473,16 +1483,44 @@ void add_color_blur() {
 	s.set_frag_shader("screen_space_blur");
 	s.begin_shader();
 	s.add_uniform_int("frame_buffer_tex", 0);
-	s.add_uniform_vector2d("xy_step", vector2d(1.0/window_width, 1.0/window_height));
-	s.set_cur_color(WHITE);
-	draw_ortho_screen_space_quad();
-	s.end_shader();
+	set_xy_step(s);
+	draw_white_quad_and_end_shader(s);
+}
+
+void add_depth_of_field(float focus_depth, float dof_val) {
+
+	set_active_texture(1);
+	bind_depth_buffer();
+	set_active_texture(0);
+	bind_frame_buffer_RGB();
+	shader_t s;
+	s.set_vert_shader("no_lighting_tex_coord");
+	s.set_frag_shader("depth_utils.part+depth_of_field");
+	s.begin_shader();
+	setup_depth_tex(s, 1);
+	s.add_uniform_float("focus_depth", focus_depth);
+	s.add_uniform_float("dof_val",     dof_val);
+	draw_white_quad_and_end_shader(s);
 }
 
 void run_postproc_effects() {
+
+	point const camera(get_camera_pos());
 	if (show_fog && world_mode == WMODE_GROUND) {add_god_rays();}
 	if (display_mode & 0x20) {add_ssao();}
-	if (world_mode != WMODE_UNIVERSE && is_underwater(get_camera_pos())) {add_color_blur();}
+	if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {add_color_blur();}
+	
+	if (display_mode & 0x10) {
+		point const pos2(camera + cview_dir*FAR_CLIP);
+		point cpos(pos2);
+		vector3d cnorm; // unused
+		int cindex(-1), xpos, ypos; // unused
+		float focus_depth(FAR_CLIP), zval;
+		if (check_coll_line_exact(camera, pos2, cpos, cnorm, cindex, 0.0, camera_coll_id)) {focus_depth = p2p_dist(camera, cpos);}
+		if (line_intersect_mesh(camera, cpos, xpos, ypos, zval)) {focus_depth = p2p_dist(camera, (camera + (cpos - camera)*(zval - camera.z)/(cpos.z - camera.z)));}
+		float const dof_val(0.04*FAR_CLIP);
+		add_depth_of_field(focus_depth, dof_val);
+	}
 }
 
 
