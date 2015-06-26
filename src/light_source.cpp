@@ -8,7 +8,7 @@
 #include "shadow_map.h"
 
 
-extern bool dl_smap_enabled, skip_light_vis_test;
+extern bool dl_smap_enabled, skip_light_vis_test, enable_dlight_shadows;
 extern int display_mode, camera_coll_id, max_tius;
 extern unsigned shadow_map_sz;
 extern float fticks;
@@ -398,7 +398,7 @@ pos_dir_up light_source::calc_pdu() const {
 
 bool light_source_trig::check_shadow_map() {
 
-	if (!use_smap || shadow_map_sz == 0) return 0;
+	if (!use_smap || shadow_map_sz == 0 || !enable_dlight_shadows) return 0;
 	if (is_line_light())    return 0; // line lights don't support shadow maps
 	if (dir == zero_vector) return 0; // point light: need cube map, skip for now
 	if (!is_enabled())      return 0; // disabled or destroyed
