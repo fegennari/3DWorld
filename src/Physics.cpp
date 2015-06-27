@@ -1437,19 +1437,12 @@ void fire::apply_physics(unsigned i) {
 			extinguish();
 			return;
 		}
-		if (status != 2) { // near mesh
-			surface_damage[ypos][xpos] += 20.0*radius*heat;
-		}
+		if (status != 2) {surface_damage[ypos][xpos] += 20.0*radius*heat;} // near mesh
+
 		if (radius > 0.04) { // split into smaller fires
-			for (unsigned i = 0; i < 2; ++i) {
-				pos2[i] = pos[i] + rand_uniform(-0.05, 0.05);
-			}
-			if (rand()&1) {
-				pos2.z = pos.z = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.3*radius;
-			}
-			else {
-				pos2.z = pos.z + rand_uniform(-0.05, 0.05);
-			}
+			for (unsigned i = 0; i < 2; ++i) {pos2[i] = pos[i] + rand_uniform(-0.05, 0.05);}
+			if (rand() & 1) {pos2.z = pos.z = interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0) + 0.3*radius;}
+			else {pos2.z = pos.z + rand_uniform(-0.05, 0.05);}
 			gen_fire(pos2, 1.0, source, 1);
 			radius -= 0.017;
 		}
@@ -1475,29 +1468,33 @@ float decal_obj::get_alpha() const {
 	return alpha*CLIP_TO_01(2.0f - 2.0f*float(time)/float(lifetime)); // first half alpha=1, second half fade to 0
 }
 
-bool water_particle_manager::is_pos_valid(point const &pos) const {
+
+bool physics_particle_manager::is_pos_valid(point const &pos) const {
 
 	if (!is_over_mesh(pos))    return 0; // outside simulation region
-	if (pos.z < water_plane_z) return 0;
+	if (pos.z < water_plane_z) return 0; // underwater
 	if (!dist_less_than(pos, get_camera_pos(), 8.0)) return 0; // too far away
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 	if (point_outside_mesh(xpos, ypos)) return 0; // can this fail?
-	return (pos.z > max(mesh_height[ypos][xpos], water_matrix[ypos][xpos]));
+	return (pos.z > mesh_height[ypos][xpos] && pos.z > water_matrix[ypos][xpos]); // above mesh and water
 }
 
-
-void water_particle_manager::apply_physics() {
+void physics_particle_manager::apply_physics(float gravity, float terminal_velocity) {
 
 	unsigned o(0);
-	float const g_acc(base_gravity*GRAVITY*tstep*object_types[DROPLET].gravity), terminal_v(object_types[DROPLET].terminal_vel);
+	float const g_acc(base_gravity*GRAVITY*tstep*gravity);
 
 	for (unsigned i = 0; i < parts.size(); ++i) {
 		part_t &part(parts[i]);
-		part.v.z = max(-terminal_v, (part.v.z - g_acc)); // apply gravity + terminal velocity
+		part.v.z = max(-terminal_velocity, (part.v.z - g_acc)); // apply gravity + terminal velocity
 		part.p  += tstep*part.v; // add velocity to position
 		if (is_pos_valid(part.p)) {parts[o++] = part;} // above water and mesh - copy/compact
 	}
 	parts.resize(o);
+}
+
+void water_particle_manager::apply_physics() {
+	physics_particle_manager::apply_physics(object_types[DROPLET].gravity, object_types[DROPLET].terminal_vel);
 }
 
 

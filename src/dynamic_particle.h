@@ -15,7 +15,7 @@ struct dpart_params_t {
 };
 
 
-class dynamic_particle : public sphere_t { // size = 60
+class dynamic_particle : public sphere_t { // size = 68
 
 	bool moves, lighted, collides, chdir, gravity;
 	int tid, cid;

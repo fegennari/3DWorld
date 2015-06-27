@@ -337,7 +337,7 @@ void gen_leaf_at(point const *const points, vector3d const &normal, int type, co
 }
 
 
-void water_particle_manager::gen_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num) {
+void physics_particle_manager::gen_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num) {
 
 	if (!is_pos_valid(pos)) return; // origin invalid
 
@@ -349,7 +349,6 @@ void water_particle_manager::gen_particles(point const &pos, vector3d const &vad
 		parts.push_back(part_t(ppos, pvel, color));
 	}
 }
-
 
 void add_water_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, float mud_mix, float blood_mix, unsigned num) {
 	water_part_man.gen_particles(pos, vadd, vmag, gen_radius, water_part_man.calc_color(mud_mix, blood_mix), num);

@@ -1088,14 +1088,13 @@ void draw_part_clouds(vector<particle_cloud> const &pc, int tid) {
 }
 
 
-void water_particle_manager::draw() const {
+void physics_particle_manager::draw(float radius) const {
 
 	if (parts.empty()) return;
 	point const camera(get_camera_pos());
 	enable_blend();
 	point_sprite_drawer_norm psd;
 	psd.reserve_pts(parts.size());
-	float const radius(0.5*object_types[DROPLET].radius); // constant value, half the size of regular droplets
 
 	for (unsigned i = 0; i < parts.size(); ++i) {
 		psd.add_pt(vert_norm_color(parts[i].p, (camera - parts[i].p).get_norm(), parts[i].c.c), radius); // normal faces camera
@@ -1103,6 +1102,10 @@ void water_particle_manager::draw() const {
 	psd.sort_back_to_front();
 	psd.draw(BLUR_CENT_TEX, 0.0, 1); // draw with lighting
 	disable_blend();
+}
+
+void water_particle_manager::draw() const {
+	physics_particle_manager::draw(0.5*object_types[DROPLET].radius); // constant value, half the size of regular droplets
 }
 
 
