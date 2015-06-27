@@ -44,7 +44,6 @@ int      const EROSION_DIST        = 4;
 float    const EROSION_RATE        = 0.0; //0.01
 bool     const DEBUG_WATER_TIME    = 0; // DEBUGGING
 bool     const DEBUG_RIPPLE_TIME   = 0;
-bool     const FAST_WATER_RIPPLE   = 0;
 bool     const NO_ICE_RIPPLES      = 0;
 bool     const USE_SEA_FOAM        = 1;
 int      const UPDATE_UW_LANDSCAPE = 2;
@@ -515,11 +514,9 @@ void draw_water() {
 	int const time_mod(1);
 
 	if (animate2 && (time_mod <= 1 || (wcounter%time_mod) == 0)) {
-		unsigned num_steps;
+		unsigned num_steps(1);
 
-		if (FAST_WATER_RIPPLE || !(start_ripple || first_water_run) || is_ice || (!start_ripple && first_water_run)) {
-			num_steps = 1;
-		}
+		if (!(start_ripple || first_water_run) || is_ice || (!start_ripple && first_water_run)) {}
 		else {
 			assert(I_TIMESCALE2 > 0);
 			num_steps = max(1U, min(MAX_RIPPLE_STEPS, unsigned(min(3.0f, fticks)*min(MAX_I_TIMESCALE, I_TIMESCALE2))));

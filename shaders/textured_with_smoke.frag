@@ -172,14 +172,9 @@ void main()
 	
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(normal_sign*eye_norm);
-		if (enable_light0) {lit_color += add_light0(n, normal_sign);}
-		if (enable_light1) {lit_color += add_light1(n, normal_sign);}
-		if (enable_light2) {ADD_LIGHT(2);}
-		if (enable_light3) {ADD_LIGHT(3);}
-		if (enable_light4) {ADD_LIGHT(4);}
-		if (enable_light5) {ADD_LIGHT(5);}
-		if (enable_light6) {ADD_LIGHT(6);}
-		if (enable_light7) {ADD_LIGHT(7);}
+		if (enable_light0) {lit_color += add_light0(n, normal_sign);} // sun
+		if (enable_light1) {lit_color += add_light1(n, normal_sign);} // moon
+		if (enable_light2) {ADD_LIGHT(2);} // lightning
 	}
 	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb, 1.0, normal_sign);} // dynamic lighting
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));

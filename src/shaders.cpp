@@ -771,11 +771,13 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 			cerr << "Error: Failed to create " << shader_name_table[type] << " shader " << name << "." << endl;
 			failed = 1; continue;
 		}
+		//RESET_TIME;
 		const char *src(data.c_str());
 		glShaderSource(shader, 1, &src, 0);
 		glCompileShader(shader);
 		int status(0);
 		glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+		//PRINT_TIME("Compile Shader");
 
 		if (status != GL_TRUE) {
 			write_shader_file(name, data, type); // write it out so that we can reference the correct line numbers

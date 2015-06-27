@@ -14,11 +14,6 @@ void main()
 	if (enable_light0) color += add_light_comp_pos_smap_light0(normal, epos).rgb;
 	if (enable_light1) color += add_light_comp_pos_smap_light1(normal, epos).rgb;
 	if (enable_light2) color += add_pt_light_comp(n, epos, 2).rgb;
-	if (enable_light3) color += add_pt_light_comp(n, epos, 3).rgb;
-	if (enable_light4) color += add_pt_light_comp(n, epos, 4).rgb;
-	if (enable_light5) color += add_pt_light_comp(n, epos, 5).rgb;
-	if (enable_light6) color += add_pt_light_comp(n, epos, 6).rgb;
-	if (enable_light7) color += add_pt_light_comp(n, epos, 7).rgb;
 	fg_Color_vf = vec4(color, 1.0);
 #ifndef NO_FOG
 	gl_FogFragCoord = length(epos.xyz);

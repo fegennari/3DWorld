@@ -176,9 +176,9 @@ void draw_camera_weapon(bool want_has_trans) {
 }
 
 
-bool is_light_enabled(int l) {assert(l < 8); return ((enabled_lights & (1<<l)) != 0);}
-void enable_light    (int l) {assert(l < 8); enabled_lights |=  (1<<l);}
-void disable_light   (int l) {assert(l < 8); enabled_lights &= ~(1<<l);}
+bool is_light_enabled(int l) {assert(l < MAX_SHADER_LIGHTS); return ((enabled_lights & (1<<l)) != 0);}
+void enable_light    (int l) {assert(l < MAX_SHADER_LIGHTS); enabled_lights |=  (1<<l);}
+void disable_light   (int l) {assert(l < MAX_SHADER_LIGHTS); enabled_lights &= ~(1<<l);}
 
 
 void calc_cur_ambient_diffuse() {
@@ -200,13 +200,18 @@ void calc_cur_ambient_diffuse() {
 }
 
 
-void set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
+bool set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 
-	if (!enable)         {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights
-	if (has_spotlights)  {s.set_prefix("#define HAS_SPOTLIGHTS",    shader_type);}
-	if (has_line_lights) {s.set_prefix("#define HAS_LINE_LIGHTS",   shader_type);}
-	if (dl_smap_enabled) {s.set_prefix("#define HAS_DLIGHT_SMAP",   shader_type);}
-	s.set_bool_prefix("enable_dlights", (enable && dl_tid > 0 && has_dl_sources), shader_type);
+	if (!enable) {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights
+	bool const dl_en(enable && dl_tid > 0 && has_dl_sources);
+	
+	if (dl_en) {
+		if (has_spotlights)  {s.set_prefix("#define HAS_SPOTLIGHTS",  shader_type);}
+		if (has_line_lights) {s.set_prefix("#define HAS_LINE_LIGHTS", shader_type);}
+		if (dl_smap_enabled) {s.set_prefix("#define HAS_DLIGHT_SMAP", shader_type);}
+	}
+	s.set_bool_prefix("enable_dlights", dl_en, shader_type);
+	return dl_en;
 }
 
 
@@ -217,8 +222,8 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	indir_lighting &= have_indir_smoke_tex;
 	dlights        &= (dl_tid > 0 && has_dl_sources);
 	s.check_for_fog_disabled();
-	if (min_alpha == 0.0)  {s.set_prefix("#define NO_ALPHA_TEST",     1);} // FS
-	if (dynamic_smap_bias) {s.set_prefix("#define DYNAMIC_SMAP_BIAS", 1);} // FS
+	if (min_alpha == 0.0) {s.set_prefix("#define NO_ALPHA_TEST", 1);} // FS
+	if (use_shadow_map && dynamic_smap_bias) {s.set_prefix("#define DYNAMIC_SMAP_BIAS", 1);} // FS
 	s.set_bool_prefix("indir_lighting", indir_lighting, 1); // FS
 	s.set_bool_prefix("hemi_lighting",  hemi_lighting,  1); // FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
@@ -282,8 +287,8 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 			if (DYNAMIC_SMOKE_SHADOWS) {s.set_prefix("#define DYNAMIC_SMOKE_SHADOWS", d);}
 			s.set_prefix("#define SMOKE_ENABLED", d);
 		}
-		if (volume_lighting)     {s.set_prefix("#define SMOKE_SHADOW_MAP", 1);} // FS
-		if (display_mode & 0x10) {s.set_prefix("#define SMOKE_DLIGHTS",    1);} // FS - TESTING
+		if (volume_lighting && use_smap) {s.set_prefix("#define SMOKE_SHADOW_MAP", 1);} // FS
+		if (display_mode & 0x10) {s.set_prefix("#define SMOKE_DLIGHTS", 1);} // FS - TESTING
 
 		if (use_smoke_noise()) {
 			s.set_prefix("#define SMOKE_NOISE",   1); // FS
@@ -299,7 +304,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 		s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS
 		s.set_prefix("#define USE_BUMP_MAP_DL",    1); // FS
 	}
-	s.setup_enabled_lights(8, 2); // FS
+	s.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
 }
 
 
@@ -377,7 +382,6 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap) {
 
 	bool indir_lighting(0);
-	s.set_prefix("#define NO_SHADOW_MAP", 0); // VS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
@@ -471,7 +475,7 @@ void draw_coll_surfaces(bool draw_trans) {
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	bool const has_lt_atten(draw_trans && draw_trans && coll_objects.has_lt_atten);
+	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
 	shader_t s;
 	setup_cobj_shader(s, has_lt_atten, 0);
 	int last_tid(-1), last_group_id(-1);
@@ -600,7 +604,7 @@ void draw_coll_surfaces(bool draw_trans) {
 	
 	if (!normal_map_cobjs.empty()) { // draw all cobjs that use normal maps with a different shader
 		shader_t nms;
-		setup_cobj_shader(nms, has_lt_atten, 1);
+		setup_cobj_shader(nms, 0, 1); // no lt_atten
 		// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 		float bump_b_scale(0.0);
 		int nm_tid(-1);

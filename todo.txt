@@ -14,4 +14,3 @@ Puffy clouds in tiled terrain mode
 SSAO using depth map and postprocessing pass
 More particle effects (explosion dust and sparks)
 Physics with connected spheres
-Faster shader loading (dlight shadows?)

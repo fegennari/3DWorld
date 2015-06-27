@@ -413,7 +413,7 @@ void tree_cont_t::draw(bool shadow_only) {
 
 	// draw branches
 	shader_t bs;
-	bool const branch_smap(1 && !shadow_only); // looks better, but slower
+	bool const branch_smap(!shadow_only); // looks better, but slower
 	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
 	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, 0, zero_vector);
 	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
