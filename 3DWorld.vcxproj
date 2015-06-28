@@ -544,6 +544,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <ClCompile Include="src\platform.cpp" />
+    <ClCompile Include="src\postproc_effects.cpp" />
     <ClCompile Include="src\precipitation.cpp" />
     <ClCompile Include="src\profiler.cpp" />
     <ClCompile Include="src\ray_trace.cpp" />
