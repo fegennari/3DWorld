@@ -13,19 +13,19 @@ extern float NEAR_CLIP, FAR_CLIP;
 extern colorRGBA sun_color;
 
 
-void bind_depth_buffer() {
+void bind_depth_buffer(bool force_regen=0) {
 
 	static int prev_frame_counter(-1);
-	if (frame_counter != prev_frame_counter) {depth_buffer_to_texture(depth_tid);} // depth texture is not valid for this frame
+	if (force_regen || frame_counter != prev_frame_counter) {depth_buffer_to_texture(depth_tid);} // depth texture is not valid for this frame
 	prev_frame_counter = frame_counter;
 	assert(depth_tid >= 0);
 	bind_2d_texture(depth_tid);
 }
 
-void bind_frame_buffer_RGB() {
+void bind_frame_buffer_RGB(bool force_regen=0) {
 	
 	static int prev_frame_counter(-1);
-	if (frame_counter != prev_frame_counter) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame
+	if (force_regen || frame_counter != prev_frame_counter) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame
 	prev_frame_counter = frame_counter;
 	assert(frame_buffer_RGB_tid >= 0);
 	bind_2d_texture(frame_buffer_RGB_tid);
@@ -113,13 +113,18 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 	set_active_texture(0);
 	bind_frame_buffer_RGB();
 	shader_t s;
-	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader("depth_utils.part+depth_of_field");
-	s.begin_shader();
-	setup_depth_tex(s, 1);
-	s.add_uniform_float("focus_depth", focus_depth);
-	s.add_uniform_float("dof_val",     dof_val);
-	draw_white_quad_and_end_shader(s);
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		if (dim) {bind_frame_buffer_RGB(1);} // force recreation of texture for second pass
+		s.set_vert_shader("no_lighting_tex_coord");
+		s.set_frag_shader("depth_utils.part+depth_of_field");
+		s.begin_shader();
+		setup_depth_tex(s, 1);
+		s.add_uniform_float("dim_val",     (dim ? 1.0 : 0.0));
+		s.add_uniform_float("focus_depth", focus_depth);
+		s.add_uniform_float("dof_val",     dof_val);
+		draw_white_quad_and_end_shader(s);
+	}
 }
 
 void run_postproc_effects() {
