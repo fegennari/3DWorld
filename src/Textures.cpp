@@ -156,7 +156,7 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "spaceship2.jpg"),
 texture_t(0, 6, 0,    0,    0, 4, 1, "atlas/blood.png"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "lichen.jpg", 0, 0), // 1500x1500, compression is probably slow
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/palm_bark.jpg"), // 512x512
-texture_t(0, 5, 0,    0,    0, 4, 3, "daisy.jpg", 0, 1, 4.0), // 1024x1024
+texture_t(0, 5, 0,    0,    0, 4, 0, "daisy.jpg", 0, 1, 4.0), // 1024x1024 - no mipmap to avoid filtering artifacts making distant flowers look square (but not too bad with mode 3)
 texture_t(0, 5, 0,    0,    1, 3, 1, "lava.jpg"), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 1, "smoke_puff.jpg"), // 150x150
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_birch.jpg", 0, 0), // 512x512, no compress
