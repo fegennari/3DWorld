@@ -279,6 +279,7 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 
 	if (empty()) return;
 	shader_t s;
+	bool const textured(tid >= 0);
 #if 1 // point sprite variant
 	if (const_point_size) {s.set_prefix("#define CONSTANT_PT_SIZE", 0);} // VS
 
@@ -290,7 +291,7 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 	else {
 		s.set_vert_shader("point_sprite");
 	}
-	s.set_frag_shader("point_sprite_texture");
+	s.set_frag_shader(textured ? "point_sprite_texture" : "point_sprite_circle");
 	s.begin_shader();
 	s.add_uniform_float("point_scale", 2.0*(const_point_size ? const_point_size : window_height)); // diameter = 2*radius
 #else // geometry shader variant - doesn't support const_point_size or lighting
@@ -300,26 +301,22 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 	s.set_geom_shader("pt_billboard_tri"); // point => 1 triangle
 	s.begin_shader();
 #endif
-	s.add_uniform_int("tex0", 0);
-	s.add_uniform_float("min_alpha", 0.0);
+	if (textured) {
+		s.add_uniform_int("tex0", 0);
+		s.add_uniform_float("min_alpha", 0.0);
+		select_texture(tid);
+	}
 	set_point_sprite_mode(1);
-	select_texture(tid);
-
-	if (!const_point_size) { // use variable attribute point size
-		assert(points.size() == sizes.size());
-		vector<sized_vert_t<vert_type_t> > verts(points.size());
-		for (unsigned i = 0; i < points.size(); ++i) {verts[i] = sized_vert_t<vert_type_t>(points[i], sizes[i]);}
-		draw_verts(verts, GL_POINTS);
-	}
-	else {
-		draw_verts(points, GL_POINTS);
-	}
+	draw_verts(points, GL_POINTS);
 	set_point_sprite_mode(0);
 	s.end_shader();
 }
 
-template class point_sprite_drawer_t<vert_color     >;
+// explicit instantiations
+template class point_sprite_drawer_t<vert_color>;
+template class point_sprite_drawer_t<sized_vert_t<vert_color>>;
 template class point_sprite_drawer_t<vert_norm_color>;
+template class point_sprite_drawer_t<sized_vert_t<vert_norm_color>>;
 
 
 void quad_batch_draw::add_quad_pts(point const pts[4], colorRGBA const &c, vector3d const &n, tex_range_t const &tr) {

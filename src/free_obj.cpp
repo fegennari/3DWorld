@@ -45,7 +45,7 @@ extern pos_dir_up player_pdu;
 extern vector<us_weapon> us_weapons;
 extern exp_type_params et_params[];
 extern pt_line_drawer particle_pld;
-extern point_sprite_drawer glow_psd;
+extern point_sprite_drawer_sized glow_psd;
 
 
 // ************ FREE_OBJ ************
@@ -878,7 +878,7 @@ void uparticle::draw_obj(uobj_draw_data &ddata) const {
 	case PTYPE_GLOW:
 		if ((texture_id == BLUR_TEX || texture_id == BLUR_CENT_TEX) && ((texture_id == BLUR_TEX) ? 60.0 : 90.0)*radius < ddata.dist) {
 			// Note: may not be in correct back to front ordering for alpha blending
-			glow_psd.add_pt(vert_color(make_pt_global(pos), color), ((texture_id == BLUR_TEX) ? 2.0 : 3.0)*radius);
+			glow_psd.add_pt(sized_vert_t<vert_color>(vert_color(make_pt_global(pos), color), ((texture_id == BLUR_TEX) ? 2.0 : 3.0)*radius));
 		}
 		else {
 			assert(texture_id >= 0);

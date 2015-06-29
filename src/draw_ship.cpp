@@ -25,7 +25,7 @@ string const spaceship2_tex_nm = "normal_maps/spaceship2_NRM.jpg";
 extern int display_mode, animate2, frame_counter; // for testing, etc.
 extern float fticks;
 extern usw_ray_group t_wrays;
-extern point_sprite_drawer glow_psd;
+extern point_sprite_drawer_sized glow_psd;
 extern shader_t emissive_shader;
 
 
@@ -557,7 +557,7 @@ void uobj_draw_data::draw_usw_torpedo() const {
 void uobj_draw_data::draw_spherical_shot(colorRGBA const &color, bool glow) const {
 
 	if (ndiv <= 3) {
-		glow_psd.add_pt(vert_color(make_pt_global(pos), color), 2.0*radius);
+		glow_psd.add_pt(sized_vert_t<vert_color>(vert_color(make_pt_global(pos), color), 2.0*radius));
 		return;
 	}
 	set_emissive_color(color, shader);

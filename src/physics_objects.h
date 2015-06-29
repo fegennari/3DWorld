@@ -138,7 +138,7 @@ public:
 	void clear() {parts.clear();}
 	void gen_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num);
 	void apply_physics(float gravity, float terminal_velocity);
-	void draw(float radius) const;
+	void draw(float radius, int tid) const;
 	bool is_pos_valid(point const &pos) const;
 };
 

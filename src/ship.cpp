@@ -36,7 +36,7 @@ vector<cached_obj> c_uobjs;
 usw_ray_group t_wrays; // beams and engine trails
 vector<temp_source> temp_sources;
 pt_line_drawer particle_pld;
-point_sprite_drawer glow_psd;
+point_sprite_drawer_sized glow_psd;
 shader_t emissive_shader;
 
 float weap_damage[NUM_UWEAP+NUM_EXTRA_DAM] = {0};
