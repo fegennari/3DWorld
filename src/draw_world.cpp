@@ -64,6 +64,7 @@ extern cloud_manager_t cloud_manager;
 extern obj_vector_t<fire> fires;
 extern obj_vector_t<decal_obj> decals;
 extern water_particle_manager water_part_man;
+extern physics_particle_manager explosion_part_man;
 extern cube_t cur_smoke_bb;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
@@ -1437,6 +1438,7 @@ void draw_projectile_effects() {
 	draw_blasts();
 	draw_beams();
 	draw_sparks();
+	explosion_part_man.draw(0.004);
 	water_part_man.draw(); // not really a projectile effect, but it's drawn with them
 }
 

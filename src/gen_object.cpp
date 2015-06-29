@@ -23,6 +23,7 @@ obj_vector_t<particle_cloud> part_clouds(MAX_PART_CLOUDS);
 obj_vector_t<fire> fires(MAX_FIRES);
 obj_vector_t<decal_obj> decals(MAX_DECALS);
 water_particle_manager water_part_man;
+physics_particle_manager explosion_part_man;
 float gauss_rand_arr[N_RAND_DIST+2];
 rand_gen_t global_rand_gen;
 
@@ -352,6 +353,10 @@ void physics_particle_manager::gen_particles(point const &pos, vector3d const &v
 
 void add_water_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, float mud_mix, float blood_mix, unsigned num) {
 	water_part_man.gen_particles(pos, vadd, vmag, gen_radius, water_part_man.calc_color(mud_mix, blood_mix), num);
+}
+
+void add_explosion_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num) {
+	explosion_part_man.gen_particles(pos, vadd, vmag, gen_radius, color, num);
 }
 
 

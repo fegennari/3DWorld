@@ -52,6 +52,7 @@ extern obj_vector_t<particle_cloud> part_clouds;
 extern obj_vector_t<fire> fires;
 extern obj_vector_t<decal_obj> decals;
 extern water_particle_manager water_part_man;
+extern physics_particle_manager explosion_part_man;
 
 
 int get_obj_zval(point &pt, float &dz, float z_offset);
@@ -1528,11 +1529,9 @@ void advance_physics_objects() {
 	apply_obj_physics(part_clouds);
 	apply_obj_physics(fires);
 	apply_obj_physics(decals);
+	explosion_part_man.apply_physics(1.0, 4.0);
 	water_part_man.apply_physics();
-
-	for (unsigned i = 0; i < decals.size(); ++i) {
-		decals[i].check_cobj();
-	}
+	for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
 	check_falling_cobjs();
 }
 

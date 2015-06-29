@@ -264,6 +264,7 @@ int gen_fragment(point const &pos, vector3d const &velocity, float size_mult, fl
 	colorRGBA const &color, int tid, float tscale, int source, bool tri_fragment, float hotness=0.0);
 void gen_leaf_at(point const *const points, vector3d const &normal, int type, colorRGB const &color);
 void add_water_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, float mud_mix, float blood_mix, unsigned num);
+void add_explosion_particles(point const &pos, vector3d const &vadd, float vmag, float gen_radius, colorRGBA const &color, unsigned num);
 void gen_gauss_rand_arr();
 
 // function prototypes - mesh_gen
