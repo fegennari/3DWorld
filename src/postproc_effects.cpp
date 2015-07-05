@@ -134,7 +134,7 @@ void run_postproc_effects() {
 	if (display_mode & 0x20) {add_ssao();}
 	if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {add_color_blur();}
 	
-	if (display_mode & 0x10) {
+	if (display_mode & 0x80) {
 		point const pos2(camera + cview_dir*FAR_CLIP);
 		point cpos(pos2);
 		vector3d cnorm; // unused
