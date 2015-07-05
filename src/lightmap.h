@@ -167,7 +167,7 @@ public:
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
-	bool is_enabled() {return (light_source::is_enabled() && bind_point_t::is_valid());}
+	bool is_enabled() {return (bind_point_t::is_valid() && light_source::is_enabled());}
 	void shift_by(vector3d const &vd);
 	bool check_shadow_map();
 	void release_smap();
