@@ -311,7 +311,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 
 float setup_underwater_fog(shader_t &s, int shader_type) {
 	float water_depth(0.0);
-	bool const underwater(is_underwater(get_camera_pos(), 1, &water_depth));
+	bool const underwater((world_mode == WMODE_GROUND) ? is_underwater(get_camera_pos(), 1, &water_depth) : 0);
 	s.set_bool_prefix("underwater", underwater, shader_type);
 	return water_depth;
 }
