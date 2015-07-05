@@ -1439,7 +1439,7 @@ void draw_projectile_effects() {
 	draw_blasts();
 	draw_beams();
 	draw_sparks();
-	explosion_part_man.draw(0.004, -1); // untextured
+	explosion_part_man.draw(0.002, -1); // untextured
 	water_part_man.draw(); // not really a projectile effect, but it's drawn with them
 }
 

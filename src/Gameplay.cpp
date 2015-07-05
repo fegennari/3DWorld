@@ -1267,6 +1267,21 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 			obj.source   = shooter;
 		}
 	}
+	if (size > 0.3) {
+		cube_t bcube(pos, pos);
+		bcube.expand_by(0.25*bradius);
+		vector<unsigned> cobjs;
+		get_intersecting_cobjs_tree(bcube, cobjs, -1, 0.0, 0, 0, -1); // get candidates
+
+		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) { // find closest cobj(s), use normal and color
+			coll_obj const &cobj(coll_objects[*i]);
+			if (!cobj.sphere_intersects(pos, 0.5*bradius)) continue;
+			colorRGBA color(cobj.get_avg_color(), 1.0); // alpha is always 1.0
+			vector3d normal((plus_z + (pos - cobj.get_center_pt()).get_norm()).get_norm()); // FIXME: too inexact
+			unsigned const num(rand() % int(10000*size/cobjs.size())); // not entirely correct, since this ignores non-intersecting cobjs
+			add_explosion_particles(pos, 10.0*normal, 5.0, 0.25*bradius, color, num);
+		}
+	}
 	if (size > 0.2) {gen_particles(pos, (rand() % int(50*size)));}
 	
 	// large damage - throws up dirt and makes craters (later destroys trees)
