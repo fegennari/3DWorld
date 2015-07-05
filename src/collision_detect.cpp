@@ -1079,6 +1079,75 @@ void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_no
 }
 
 
+bool get_sphere_poly_int_val(point const &sc, float sr, point const *const points, unsigned npoints, vector3d const &normal, float thickness, float &val, vector3d &cnorm) {
+
+	// compute normal based on extruded sides
+	vector<tquad_t> pts;
+	thick_poly_to_sides(points, npoints, normal, thickness, pts);
+	if (!sphere_intersect_poly_sides(pts, sc, sr, val, cnorm, 1)) return 0; // no collision
+	bool intersects(0), inside(1);
+						
+	for (unsigned i = 0; i < pts.size(); ++i) { // inefficient and inexact, but closer to correct
+		vector3d const norm2(pts[i].get_norm());
+		float rdist2(dot_product_ptv(norm2, sc, points[0]));
+							
+		if (sphere_poly_intersect(pts[i].pts, pts[i].npts, sc, norm2, rdist2, sr)) {
+			intersects = 1;
+			break;
+		}
+		if (rdist2 > 0.0) {inside = 0;}
+	}
+	return (intersects || inside); // intersects some face or is completely inside
+}
+
+
+bool sphere_sphere_int(point const &sc1, point const &sc2, float sr1, float sr2, vector3d &cnorm, point &new_sc) {
+	
+	float dist_sq(p2p_dist_sq(sc1, sc2)), radius(sr1 + sr2);
+	if (dist_sq > radius*radius) return 0;
+	cnorm  = (sc1 - sc2)/sqrt(dist_sq);
+	new_sc = sc2 + cnorm*radius;
+	return 1;
+}
+
+
+bool coll_obj::sphere_intersects_exact(point const &sc, float sr, vector3d &cnorm, point &new_sc) const {
+
+	switch (type) { // within bounding box of collision object
+	case COLL_CUBE: {
+		unsigned cdir(0); // unused
+		return sphere_cube_intersect(sc, sr, *this, sc, new_sc, cnorm, cdir, 0);
+	}
+	case COLL_SPHERE:
+		return sphere_sphere_int(sc, points[0], sr, radius, cnorm, new_sc);
+	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT:
+		return sphere_intersect_cylinder_ipt(sc, sr, points[0], points[1], radius, radius2, !(cp.surfs & 1), new_sc, cnorm, 1);
+	case COLL_CAPSULE:
+		if (sphere_sphere_int(sc, points[0], sr, radius,  cnorm, new_sc)) return 1;
+		if (sphere_sphere_int(sc, points[1], sr, radius2, cnorm, new_sc)) return 1;
+		return sphere_intersect_cylinder_ipt(sc, sr, points[0], points[1], radius, radius2, 0, new_sc, cnorm, 1);
+	case COLL_POLYGON: { // must be coplanar
+		float thick, rdist;
+		cnorm = norm;
+		if (dot_product_ptv(cnorm, sc, points[0]) < 0.0) {cnorm.negate();} // sc or points[0]?
+		if (!sphere_ext_poly_int_base(points[0], cnorm, sc, sr, thickness, thick, rdist)) return 0;
+		if (!sphere_poly_intersect(points, npoints, sc, cnorm, rdist, max(0.0f, (thick - MIN_POLY_THICK)))) return 0;
+		float val;
+
+		if (thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
+			if (!get_sphere_poly_int_val(sc, sr, points, npoints, norm, thickness, val, cnorm)) return 0;
+		}
+		else {val = 1.01*(thick - rdist);} // non-thick polygon
+		new_sc += cnorm*val; // calculate intersection point
+		return 1;
+	}
+	default: assert(0);
+	} // switch
+	return 0;
+}
+
+
 void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool player_step) {
 
 	coll_obj const &cobj(coll_objects[index]);
@@ -1119,7 +1188,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 				
 			if (rdist > 0.0) {
 				obj.pos.z -= o_radius;
-				if (o_radius > rdist) obj.pos.z += sqrt(o_radius*o_radius - rdist*rdist);
+				if (o_radius > rdist) {obj.pos.z += sqrt(o_radius*o_radius - rdist*rdist);}
 			}
 			break;
 		}
@@ -1128,23 +1197,15 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	case COLL_SPHERE: {
 		float const radius(cobj.radius + o_radius);
 		float rad(p2p_dist_sq(pos, cobj.points[0])), reff(radius);
-
-		if (player && cobj.cp.coll_func == landmine_collision) {
-			reff += 1.5*object_types[type].radius; // landmine
-		}
-		if (type == LANDMINE && cobj.is_player()) {
-			reff += 1.5*object_types[cobj.type].radius; // landmine
-		}
+		if (player && cobj.cp.coll_func == landmine_collision) {reff += 1.5*object_types[type].radius;} // landmine
+		if (type == LANDMINE && cobj.is_player()) {reff += 1.5*object_types[cobj.type].radius;} // landmine
+		
 		if (rad <= reff*reff) {
 			lcoll = 1;
 			rad   = sqrt(rad);
 			if (!safe_norm_div(rad, radius, norm)) break;
 			norm  = (pos - cobj.points[0])/rad;
-
-			if (rad <= radius) {
-				obj.pos = cobj.points[0] + norm*radius;
-				assert(!is_nan(obj.pos));
-			}
+			if (rad <= radius) {obj.pos = cobj.points[0] + norm*radius;}
 		}
 		break;
 	}
@@ -1160,7 +1221,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			float const pozm(pold.z - mdir.z);
 
 			if (!(cobj.cp.surfs & 1) && pozm > (zmaxc - SMALL_NUMBER) && pos.z <= zmaxc) { // collision with top
-				if (rad <= radius) lcoll = 2;
+				if (rad <= radius) {lcoll = 2;}
 				norm.assign(0.0, 0.0, 1.0);
 				float const rdist(rad - radius);
 				obj.pos.z = zmaxc;
@@ -1168,7 +1229,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 					
 				if (rdist > 0.0) {
 					obj.pos.z -= o_radius;
-					if (o_radius >= rdist) obj.pos.z += sqrt(o_radius*o_radius - rdist*rdist);
+					if (o_radius >= rdist) {obj.pos.z += sqrt(o_radius*o_radius - rdist*rdist);}
 				}
 			}
 			else if (!(cobj.cp.surfs & 1) && pozm < (zminc + SMALL_NUMBER) && pos.z >= zminc) { // collision with bottom
@@ -1185,7 +1246,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 				if (!safe_norm_div(rad, radius, norm)) break;
 				//float const objz(obj.pos.z);
 				norm.assign((pos.x - center.x)/rad, (pos.y - center.y)/rad, 0.0);
-				for (unsigned d = 0; d < 2; ++d) obj.pos[d] = center[d] + norm[d]*radius;
+				for (unsigned d = 0; d < 2; ++d) {obj.pos[d] = center[d] + norm[d]*radius;}
 
 				/*if (objz > (zmaxc - o_radius) && objz < zmaxc) { // hit on the top edge
 					obj.pos.x -= norm.x*o_radius;
@@ -1210,24 +1271,15 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		break;
 
 	case COLL_CAPSULE: {
-		float const r[2] = {cobj.radius, cobj.radius2};
-
-		for (unsigned d = 0; d < 2; ++d) { // sphere cases
-			float const radius(r[d] + o_radius), rad(p2p_dist_sq(pos, cobj.points[d]));
-
-			if (rad <= radius*radius) {
-				lcoll   = 1;
-				norm    = (pos - cobj.points[d])/sqrt(rad);
-				obj.pos = cobj.points[d] + norm*radius;
-			}
-		}
+		if (sphere_sphere_int(pos, cobj.points[0], o_radius, cobj.radius,  norm, obj.pos)) {lcoll = 1;}
+		if (sphere_sphere_int(pos, cobj.points[1], o_radius, cobj.radius2, norm, obj.pos)) {lcoll = 1;}
 		if (sphere_intersect_cylinder_ipt(pos, o_radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, 0, obj.pos, norm, 1)) {lcoll = 1;}
 		break;
 	}
 	case COLL_POLYGON: { // must be coplanar
 		float thick, rdist;
 		norm = cobj.norm;
-		if (dot_product_ptv(norm, (pold - mdir), cobj.points[0]) < 0.0) norm.negate(); // pos or cobj.points[0]?
+		if (dot_product_ptv(norm, (pold - mdir), cobj.points[0]) < 0.0) {norm.negate();} // pos or cobj.points[0]?
 
 		if (sphere_ext_poly_int_base(cobj.points[0], norm, pos, o_radius, cobj.thickness, thick, rdist)) {
 			//if (rdist < 0) {rdist = -rdist; norm.negate();}
@@ -1236,26 +1288,10 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 				float val;
 
 				if (cobj.thickness > MIN_POLY_THICK) { // compute norm based on extruded sides
-					vector<tquad_t> pts;
-					thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
-					if (!sphere_intersect_poly_sides(pts, pos, o_radius, val, norm, 1)) break; // no collision
-					bool intersects(0), inside(1);
-						
-					for (unsigned i = 0; i < pts.size(); ++i) { // inefficient and inexact, but closer to correct
-						vector3d const norm2(pts[i].get_norm());
-						float rdist2(dot_product_ptv(norm2, pos, cobj.points[0]));
-							
-						if (sphere_poly_intersect(pts[i].pts, pts[i].npts, pos, norm2, rdist2, o_radius)) {
-							intersects = 1;
-							break;
-						}
-						if (rdist2 > 0.0) inside = 0;
-					}
-					if (!intersects && !inside) break; // doesn't intersect any face and isn't completely inside
+					if (!get_sphere_poly_int_val(pos, o_radius, cobj.points, cobj.npoints, cobj.norm, cobj.thickness, val, norm)) break;
 				}
-				else {
-					val = 1.01*(thick - rdist); // non-thick polygon
-				}
+				else {val = 1.01*(thick - rdist);} // non-thick polygon
+
 				if (fabs(norm.z) < 0.5 && player_step) { // more horizontal than vertical edge
 					norm = zero_vector;
 					break; // can step up onto the object

@@ -1268,18 +1268,23 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		}
 	}
 	if (size > 0.3) {
+		float const search_radius(0.25*bradius);
 		cube_t bcube(pos, pos);
-		bcube.expand_by(0.25*bradius);
+		bcube.expand_by(search_radius);
 		vector<unsigned> cobjs;
 		get_intersecting_cobjs_tree(bcube, cobjs, -1, 0.0, 0, 0, -1); // get candidates
+		// not entirely correct, since this ignores non-intersecting cobjs (bcube intersects but sphere does not)
+		unsigned const max_parts(cobjs.empty() ? 0 : unsigned(10000*size/cobjs.size()));
 
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) { // find closest cobj(s), use normal and color
 			coll_obj const &cobj(coll_objects[*i]);
-			if (!cobj.sphere_intersects(pos, 0.5*bradius)) continue;
-			colorRGBA color(cobj.get_avg_color(), 1.0); // alpha is always 1.0
-			vector3d normal((plus_z + (pos - cobj.get_center_pt()).get_norm()).get_norm()); // FIXME: too inexact
-			unsigned const num(rand() % int(10000*size/cobjs.size())); // not entirely correct, since this ignores non-intersecting cobjs
-			add_explosion_particles(pos, 10.0*normal, 5.0, 0.25*bradius, color, num);
+			vector3d normal(plus_z);
+			point cpos; // unused
+			if (!cobj.sphere_intersects_exact(pos, search_radius, normal, cpos)) continue;
+			//if (!cobj.sphere_intersects(pos, search_radius)) continue;
+			//vector3d normal((plus_z + (pos - cobj.get_center_pt()).get_norm()).get_norm()); // too inexact
+			colorRGBA color(cobj.get_avg_color(), 1.0); // ignore texture since this is an area effect; alpha is always 1.0
+			add_explosion_particles(pos, 10.0*normal, 5.0, 0.25*bradius, color, (rand() % max_parts));
 		}
 	}
 	if (size > 0.2) {gen_particles(pos, (rand() % int(50*size)));}

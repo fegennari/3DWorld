@@ -1529,7 +1529,7 @@ void advance_physics_objects() {
 	apply_obj_physics(part_clouds);
 	apply_obj_physics(fires);
 	apply_obj_physics(decals);
-	explosion_part_man.apply_physics(1.0, 4.0);
+	explosion_part_man.apply_physics(1.0, 4.0); // gravity=1.0, air_factor=0.25
 	water_part_man.apply_physics();
 	for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
 	check_falling_cobjs();
