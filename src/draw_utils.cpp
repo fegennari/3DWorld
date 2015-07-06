@@ -285,8 +285,9 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 
 	if (enable_lighting) {
 		s.setup_enabled_lights(2, 1); // sun and moon VS lighting
+		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 0); // VS
 		s.set_prefix("#define ENABLE_LIGHTING", 0); // VS
-		s.set_vert_shader("ads_lighting.part*+point_sprite"); // no fog
+		s.set_vert_shader("ads_lighting.part*+shadow_map.part*+point_sprite"); // no fog
 	}
 	else {
 		s.set_vert_shader("point_sprite");
@@ -294,6 +295,10 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 	s.set_frag_shader(textured ? "point_sprite_texture" : "point_sprite_circle");
 	s.begin_shader();
 	s.add_uniform_float("point_scale", 2.0*(const_point_size ? const_point_size : window_height)); // diameter = 2*radius
+
+	if (enable_lighting) {
+		if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
+	}
 #else // geometry shader variant - doesn't support const_point_size or lighting
 	s.set_prefix("#define SIZE_FROM_ATTRIB", 2); // GS
 	s.set_vert_shader("particle_draw");

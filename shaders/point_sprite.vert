@@ -14,8 +14,8 @@ void main()
 #ifdef ENABLE_LIGHTING
 	vec3 normal = normalize(fg_NormalMatrix * fg_Normal); // eye space
 	vec3 color  = vec3(0.0);
-	if (enable_light0) color += add_light_comp_pos0(normal, epos).rgb;
-	if (enable_light1) color += add_light_comp_pos1(normal, epos).rgb;
+	if (enable_light0) {color += add_light_comp_pos_smap_light0(normal, epos).rgb;}
+	if (enable_light1) {color += add_light_comp_pos_smap_light0(normal, epos).rgb;}
 	fg_Color_vf = vec4(color, fg_Color.a);
 #else
 	fg_Color_vf = fg_Color;
