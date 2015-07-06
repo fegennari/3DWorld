@@ -3,7 +3,7 @@ in float point_size; // world space
 
 #ifdef ENABLE_LIGHTING
 uniform float half_dxy;
-uniform vec3 scene_llc, scene_scale; // scene bounds (world space)
+//uniform vec3 scene_llc, scene_scale; // scene bounds (world space), comes from dynamic_lighting.part
 uniform sampler3D smoke_and_indir_tex;
 uniform vec3 const_indir_color = vec3(0.0);
 
@@ -36,7 +36,7 @@ void main()
 	if (enable_light0) {color += add_light_comp_pos_smap_light0(normal, epos).rgb;}
 	if (enable_light1) {color += add_light_comp_pos_smap_light0(normal, epos).rgb;}
 	add_indir_lighting(color);
-	//if (enable_dlights) {add_dlights(color.rgb, fg_Vertex.xyz, normalize(fg_Normal), vec3(1.0));} // dynamic lighting
+	if (enable_dlights) {add_dlights(color.rgb, fg_Vertex.xyz, normalize(fg_Normal), vec3(1.0));} // dynamic lighting
 	fg_Color_vf = vec4(color, fg_Color.a);
 	//fg_Color_vf = apply_fog_epos(fg_Color_vf, epos);
 #else
