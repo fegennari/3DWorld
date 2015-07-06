@@ -273,9 +273,8 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+indir_lighting.part+linear_fog.part+detail_normal_map.part+cloud_sphere_shadow.part+draw_mesh");
 	s.begin_shader();
 	if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
-	set_indir_lighting_block(s, 0, indir_lighting);
+	set_indir_lighting_block(s, 0, indir_lighting); // calls setup_scene_bounds()
 	s.setup_fog_scale();
-	s.setup_scene_bounds();
 	setup_dlight_textures(s);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 10);

@@ -8,10 +8,12 @@
 
 
 extern int window_height, display_mode;
-extern bool use_core_context;
+extern bool use_core_context, using_lightmap, have_indir_smoke_tex;
 extern shader_t *cur_shader;
 
 bool using_tess_shader(0);
+
+void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir);
 
 
 void colorRGBA::set_for_cur_shader() const {
@@ -279,13 +281,14 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 
 	if (empty()) return;
 	shader_t s;
-	bool const textured(tid >= 0);
+	bool const textured(tid >= 0), indir_lighting(using_lightmap && have_indir_smoke_tex);
 #if 1 // point sprite variant
 	if (const_point_size) {s.set_prefix("#define CONSTANT_PT_SIZE", 0);} // VS
 
 	if (enable_lighting) {
 		s.setup_enabled_lights(2, 1); // sun and moon VS lighting
 		s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 0); // VS
+		s.set_bool_prefix("indir_lighting", indir_lighting, 0); // VS
 		s.set_prefix("#define ENABLE_LIGHTING", 0); // VS
 		s.set_vert_shader("ads_lighting.part*+shadow_map.part*+point_sprite"); // no fog
 	}
@@ -298,6 +301,7 @@ template<class vert_type_t> void point_sprite_drawer_t<vert_type_t>::draw(int ti
 
 	if (enable_lighting) {
 		if (shadow_map_enabled()) {set_smap_shader_for_all_lights(s);}
+		set_indir_lighting_block(s, 0, indir_lighting);
 	}
 #else // geometry shader variant - doesn't support const_point_size or lighting
 	s.set_prefix("#define SIZE_FROM_ATTRIB", 2); // GS
