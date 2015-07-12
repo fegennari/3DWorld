@@ -12,5 +12,5 @@ Gameplay in tiled terrain mode
 
 Puffy clouds in tiled terrain mode
 SSAO using depth map and postprocessing pass
-More particle effects (explosion dust and sparks)
 Physics with connected spheres
+Heat wave postproc shader

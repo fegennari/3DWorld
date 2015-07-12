@@ -1482,16 +1482,29 @@ bool physics_particle_manager::is_pos_valid(point const &pos) const {
 
 void physics_particle_manager::apply_physics(float gravity, float terminal_velocity) {
 
+	if (parts.empty()) return;
+	//RESET_TIME;
 	unsigned o(0);
-	float const g_acc(base_gravity*GRAVITY*tstep*gravity);
+	float const g_acc(base_gravity*GRAVITY*tstep*gravity), xy_damp(pow(0.98f, fticks));
 
 	for (unsigned i = 0; i < parts.size(); ++i) {
 		part_t &part(parts[i]);
-		part.v.z = max(-terminal_velocity, (part.v.z - g_acc)); // apply gravity + terminal velocity
-		part.p  += tstep*part.v; // add velocity to position
+		part.v.z  = max(-terminal_velocity, (part.v.z - g_acc)); // apply gravity + terminal velocity
+		part.v.x *= xy_damp;
+		part.v.y *= xy_damp;
+		//point const p0(part.p);
+		part.p   += tstep*part.v; // add velocity to position
+		int cindex;
+		
+		//if (check_coll_line(p0, part.p, cindex, -1, 1, 0)) { // skip dynamic
+		if (check_point_contained_tree(part.p, cindex, 0)) { // skip dynamic
+			continue; // destroy particle, don't bounce
+			//part.p = cpos; vector3d bounce_v; calc_reflection_angle(part.v.get_norm(), bounce_v, cnorm); part.v = 0.9*part.v.mag()*bounce_v;
+		}
 		if (is_pos_valid(part.p)) {parts[o++] = part;} // above water and mesh - copy/compact
 	}
 	parts.resize(o);
+	//PRINT_TIME("Particle Physics"); // 0.07ms average / 0.24ms with collisions
 }
 
 void water_particle_manager::apply_physics() {
