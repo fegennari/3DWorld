@@ -737,7 +737,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 	
 	// create a new shader
 	//string const version_info("#version 400 core\n");
-	string const version_info((type == 5) ? "#version 430\n" : "#version 400\n"); // use version 430 for compute shaders and 400 for other shaders
+	string const version_info((type == 5) ? "#version 430\n" : "#version 430\n"); // use version 430 for compute shaders and 430 for other shaders
 	vector<string> fns;
 	shader_manager.get_shader_filenames(name, type, fns);
 	bool failed(0);

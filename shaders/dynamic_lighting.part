@@ -8,6 +8,7 @@ const float SHADOW_LEAKAGE    = 0.1; // simulates indirect lighting
 
 #ifdef HAS_DLIGHT_SMAP
 const int MAX_DLIGHT_SMAPS = 16;
+//uniform sampler2DArrayShadow smap_tex_dl;
 uniform sampler2DShadow smap_tex_dl[MAX_DLIGHT_SMAPS];
 uniform mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];
 #endif
