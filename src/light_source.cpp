@@ -416,7 +416,7 @@ bool light_source_trig::check_shadow_map() {
 	smap.pdu.draw_frustum();
 	shader.end_shader();
 #endif
-	smap.create_shadow_map_for_light(pos, nullptr, 1); // no bcube, in world space
+	smap.create_shadow_map_for_light(pos, nullptr, 1); // no bcube, in world space, no texture array (layer=nullptr)
 	return 1;
 }
 

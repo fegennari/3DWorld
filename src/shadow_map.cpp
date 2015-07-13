@@ -342,7 +342,7 @@ bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 
 
 // if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu
-void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space) {
+void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space, unsigned *layer) {
 
 	// setup render state
 	assert(smap_sz > 0);
@@ -364,10 +364,10 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 			bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
 			setup_texture(tid, 0, 0, 0, 0, 0, nearest);
 			set_shadow_tex_params();
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+			glTexImage2D((layer ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D), 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 		}
 		// render from the light POV to a FBO, store depth values only
-		enable_fbo(fbo_id, tid, 1);
+		enable_fbo(fbo_id, tid, 1, layer);
 		glViewport(0, 0, smap_sz, smap_sz);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer

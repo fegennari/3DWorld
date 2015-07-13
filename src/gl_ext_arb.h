@@ -48,8 +48,8 @@ void upload_vbo_sub_data_no_sync(void const *data, unsigned start_byte, unsigned
 unsigned create_vao();
 void bind_vao(unsigned vao);
 void delete_vao(unsigned vao);
-void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo);
-void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo);
+void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo, unsigned *layer=nullptr);
+void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *layer=nullptr);
 void disable_fbo();
 void free_fbo(unsigned &fbo_id);
 unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize);

@@ -202,7 +202,7 @@ void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned 
 // ***************** FBOs *****************
 
 
-void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
+void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *layer) {
 	
 	// Create a framebuffer object
 	glGenFramebuffers(1, &fbo_id);
@@ -216,8 +216,13 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
 	
 	// Attach the texture to FBO depth or color attachment point
 	assert(glIsTexture(tid));
-	glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), GL_TEXTURE_2D, tid, 0);
-	
+
+	if (layer) {
+		glFramebufferTextureLayer(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), tid, 0, *layer);
+	}
+	else {
+		glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), GL_TEXTURE_2D, tid, 0);
+	}
 	// Check FBO status
 	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	assert(status == GL_FRAMEBUFFER_COMPLETE);
@@ -227,9 +232,9 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
 }
 
 
-void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo) {
+void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *layer) {
 
-	if (!fbo_id) {create_fbo(fbo_id, tid, is_depth_fbo);}
+	if (!fbo_id) {create_fbo(fbo_id, tid, is_depth_fbo, layer);}
 	assert(fbo_id > 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
 }
