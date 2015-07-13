@@ -34,9 +34,9 @@ void main() {
 
 	// Calculate the distance from the camera to the three control points
 	mat4 vm_inv = inverse(fg_ViewMatrix);
-	float dist0 = dist_to_camera(vertex_ES[0], vm_inv);
-	float dist1 = dist_to_camera(vertex_ES[1], vm_inv);
-	float dist2 = dist_to_camera(vertex_ES[2], vm_inv);
+	float dist0 = dist_to_camera(vertex[0], vm_inv);
+	float dist1 = dist_to_camera(vertex[1], vm_inv);
+	float dist2 = dist_to_camera(vertex[2], vm_inv);
 
 	// Calculate the tessellation levels
 	gl_TessLevelOuter[0] = get_tess_level(dist1, dist2);

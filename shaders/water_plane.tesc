@@ -23,10 +23,10 @@ void main() {
 	tc2_ES   [gl_InvocationID] = tc2   [gl_InvocationID];
 
 	// Calculate the distance from the camera to the three control points
-	float dist0 = distance(vertex_ES[0], camera_pos); // SW
-	float dist1 = distance(vertex_ES[3], camera_pos); // SE
-	float dist2 = distance(vertex_ES[2], camera_pos); // NE
-	float dist3 = distance(vertex_ES[1], camera_pos); // NW
+	float dist0 = distance(vertex[0], camera_pos); // SW
+	float dist1 = distance(vertex[3], camera_pos); // SE
+	float dist2 = distance(vertex[2], camera_pos); // NE
+	float dist3 = distance(vertex[1], camera_pos); // NW
 
 	// Calculate the tessellation levels
 	gl_TessLevelOuter[0] = get_tess_level(dist0, dist1); // south
