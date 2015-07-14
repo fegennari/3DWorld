@@ -488,10 +488,10 @@ int get_texture_by_name(std::string const &name, bool is_normal_map=0, bool inve
 bool select_texture(int id);
 void update_player_bbb_texture(float extra_blood, bool recreate);
 float get_tex_ar(int id);
-void bind_1d_texture(unsigned tid);
-void bind_2d_texture(unsigned tid);
+void bind_1d_texture(unsigned tid, bool is_array=0);
+void bind_2d_texture(unsigned tid, bool is_array=0);
 void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t,
-	bool mirror_s=0, bool mirror_t=0, bool nearest=0, float anisotropy=1.0);
+	bool mirror_s=0, bool mirror_t=0, bool nearest=0, float anisotropy=1.0, bool is_array=0);
 void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool nearest);
 void depth_buffer_to_texture(unsigned &tid);
 void frame_buffer_RGB_to_texture(unsigned &tid);

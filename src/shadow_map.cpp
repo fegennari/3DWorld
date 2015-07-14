@@ -191,9 +191,30 @@ xform_matrix get_texture_matrix(xform_matrix const &camera_mv_matrix) {
 }
 
 
+void smap_texture_array_t::reserve_num_layers(unsigned num) {
+	if (num <= num_layers) return; // have enough layers
+	free_gl_state();
+	num_layers = num;
+}
+
+unsigned smap_texture_array_t::new_layer() {
+	assert(num_layers_used <= num_layers);
+	if (num_layers_used == num_layers) {reserve_num_layers(max(2U*num_layers, 1U));} // double in size
+	assert(num_layers_used < num_layers);
+	return num_layers_used++;
+}
+
+void smap_texture_array_t::free_gl_state() {free_texture(tid);}
+
 void smap_data_state_t::free_gl_state() {
-	free_texture(tid);
+	if (is_arrayed()) {local_tid = 0;} else {free_texture(local_tid);}
 	free_fbo(fbo_id);
+}
+
+void smap_data_state_t::bind_tex_array(smap_texture_array_t *tex_arr_) { // must be unbound and bound to non-null
+	assert(tex_arr_); assert(!tex_arr);
+	tex_arr  = tex_arr_;
+	layer_id = tex_arr->new_layer();
 }
 
 bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm) const {
@@ -230,8 +251,7 @@ void smap_data_t::bind_smap_texture(bool light_valid) const {
 	// FIXME: the is_allocate() check shouldn't be required, but can happen in tiled terrain mode when switching between combined_gu mode
 	// due to some disagreement between the update pass and draw pass during reflection drawing
 	if (light_valid && is_allocated()) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
-		assert(tid > 0);
-		bind_2d_texture(tid);
+		bind_2d_texture(get_tid());
 	}
 	else {
 		select_texture(WHITE_TEX); // default white texture
@@ -306,11 +326,13 @@ void draw_scene_bounds_and_light_frustum(point const &lpos) {
 }
 
 
-void set_shadow_tex_params() {
+void set_shadow_tex_params(unsigned &tid, bool is_array) {
 
+	bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
+	setup_texture(tid, 0, 0, 0, 0, 0, nearest, 1.0, is_array);
 	// This is to allow usage of textureProj function in the shader
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	glTexParameteri((is_array ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glTexParameteri((is_array ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 }
 
 
@@ -329,12 +351,12 @@ bool smap_data_t::needs_update(point const &lpos) {
 
 	bool const ret(lpos != last_lpos);
 	last_lpos = lpos;
-	return (ret || !tid);
+	return (ret || !is_allocated());
 }
 
 bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 
-	bool const has_dynamic(!tid || scene_smap_vbo_invalid || no_sparse_smap_update()); // Note: force two frames of updates the first time the smap is created by setting has_dynamic
+	bool const has_dynamic(!is_allocated() || scene_smap_vbo_invalid || no_sparse_smap_update()); // Note: force two frames of updates the first time the smap is created by setting has_dynamic
 	bool const ret(smap_data_t::needs_update(lpos) || has_dynamic || last_has_dynamic || voxel_shadows_updated); // Note: see view clipping in indexed_vntc_vect_t<T>::render()
 	last_has_dynamic = has_dynamic;
 	return ret;
@@ -342,7 +364,7 @@ bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 
 
 // if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu
-void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space, unsigned *layer) {
+void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space) {
 
 	// setup render state
 	assert(smap_sz > 0);
@@ -360,14 +382,22 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 
 	if (do_update) {
 		// setup textures and framebuffer
-		if (!tid) {
-			bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
-			setup_texture(tid, 0, 0, 0, 0, 0, nearest);
-			set_shadow_tex_params();
-			glTexImage2D((layer ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D), 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+		if (!is_allocated()) {
+			if (is_arrayed()) {
+				if (!tex_arr->tid) { // need to create array texture
+					set_shadow_tex_params(tex_arr->tid, 1);
+					glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, smap_sz, smap_sz, tex_arr->get_num_layers());
+					glTexImage2D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+				}
+				local_tid = tex_arr->tid; // point local to array texture so that we know it's bound
+			}
+			else { // non-arrayed
+				set_shadow_tex_params(local_tid, 0);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+			}
 		}
 		// render from the light POV to a FBO, store depth values only
-		enable_fbo(fbo_id, tid, 1, layer);
+		enable_fbo(fbo_id, get_tid(), 1, get_layer());
 		glViewport(0, 0, smap_sz, smap_sz);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
@@ -447,7 +477,7 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 bool local_smap_data_t::needs_update(point const &lpos) {
 	
 	// Note: scene_smap_vbo_invalid is reset at the end of the global create_shadow_map() call, so this call must be done before that
-	bool has_dynamic(!tid || scene_smap_vbo_invalid);
+	bool has_dynamic(!get_tid() || scene_smap_vbo_invalid);
 	
 	for (auto i = shadow_objs.begin(); i != shadow_objs.end() && !has_dynamic; ++i) { // test dynamic objects
 		has_dynamic |= pdu.sphere_visible_test(i->pos, i->radius);

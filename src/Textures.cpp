@@ -874,45 +874,46 @@ void texture_t::load_from_gl() { // also set tid?
 }
 
 
-void bind_1d_texture(unsigned tid) {
+void bind_1d_texture(unsigned tid, bool is_array) {
 
-	glBindTexture(GL_TEXTURE_1D, tid);
+	glBindTexture((is_array ? GL_TEXTURE_1D_ARRAY : GL_TEXTURE_1D), tid);
 	assert(glIsTexture(tid)); // too slow?
 }
 
 
-void bind_2d_texture(unsigned tid) {
+void bind_2d_texture(unsigned tid, bool is_array) {
 
-	glBindTexture(GL_TEXTURE_2D, tid);
+	glBindTexture((is_array ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D), tid);
 	assert(glIsTexture(tid)); // too slow?
 }
 
 
 // 2D texture
-void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy) {
+void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy, bool is_array) {
 
 	assert(tid == 0);
 	assert(!nearest || !mipmap);
+	int const target(is_array ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D);
 	glGenTextures(1, &tid);
 
 	// select our current texture
-	bind_2d_texture(tid);
+	bind_2d_texture(tid, is_array);
 
 	// when texture area is small, use linear filter (bilinear filter the closest mipmap)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
+	glTexParameteri(target, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
 
 	// when texture area is large, bilinear filter the first mipmap
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
+	glTexParameteri(target, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
 
 	// enable anisotropic filtering (slower but higher quality)
-	if (anisotropy > 1.0) {glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);}
+	if (anisotropy > 1.0) {glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);}
 
 	// if wrap is true,  the texture wraps over at the edges (repeat) or is mirrored
 	// if wrap is false, the texture ends at the edges (clamp)
 	int const mode_s(wrap_s ? (mirror_s ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE); // Note: clamp is more efficient than wrap
 	int const mode_t(wrap_t ? (mirror_t ? GL_MIRRORED_REPEAT : GL_REPEAT) : GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode_s);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode_t);
+	glTexParameteri(target, GL_TEXTURE_WRAP_S, mode_s);
+	glTexParameteri(target, GL_TEXTURE_WRAP_T, mode_t);
 }
 
 

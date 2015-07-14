@@ -310,14 +310,17 @@ bool light_source_trig::check_activate(point const &p, float radius, int activat
 
 // ************ SHADOW MAPS ***********
 
+smap_texture_array_t local_smap_tex_arr;
+
 class local_smap_manager_t {
 
+	bool use_tex_array;
 	unsigned next_tex_index;
 	vector<local_smap_data_t> smap_data;
 	vector<unsigned> free_list;
 
 public:
-	local_smap_manager_t() : next_tex_index(0) {}
+	local_smap_manager_t(bool use_tex_array_) : use_tex_array(use_tex_array_), next_tex_index(0) {}
 
 	unsigned new_smap(unsigned size=0) {
 		unsigned index(0);
@@ -325,9 +328,12 @@ public:
 		if (free_list.empty()) { // allocate a new smap
 			index = smap_data.size();
 			if (index >= MAX_DLIGHT_SMAPS) return 0; // not enough shader uniforms
-			unsigned const tu_id(LOCAL_SMAP_START_TU_ID + index);
+			unsigned tu_id(LOCAL_SMAP_START_TU_ID);
+			if (!use_tex_array) {tu_id += index;} // if not using texture arrays, we need to allocate a unique tu_id for each shadow map
 			if ((int)tu_id >= max_tius) return 0; // not enough TIU's - fail
-			smap_data.push_back(local_smap_data_t(tu_id));
+			local_smap_data_t smd(tu_id);
+			if (use_tex_array) {smd.bind_tex_array(&local_smap_tex_arr);}
+			smap_data.push_back(smd);
 		}
 		else { // use free list element
 			index = free_list.back(); // most recently used
@@ -365,9 +371,12 @@ public:
 	}
 };
 
-local_smap_manager_t local_smap_manager;
+local_smap_manager_t local_smap_manager(0);
 
-void free_light_source_gl_state() {local_smap_manager.free_gl_state();} // free shadow maps
+void free_light_source_gl_state() { // free shadow maps
+	local_smap_manager.free_gl_state();
+	local_smap_tex_arr.free_gl_state();
+}
 
 
 void light_source::setup_and_bind_smap_texture(shader_t &s) const {
@@ -396,13 +405,20 @@ pos_dir_up light_source::calc_pdu() const {
 	return pos_dir_up(pos, dir, up_dir, angle, near_clip, radius, 1.0, 1);
 }
 
-bool light_source_trig::check_shadow_map() {
+bool light_source_trig::is_shadow_map_enabled() const {
 
 	if (!use_smap || shadow_map_sz == 0 || !enable_dlight_shadows) return 0;
 	if (is_line_light())    return 0; // line lights don't support shadow maps
 	if (dir == zero_vector) return 0; // point light: need cube map, skip for now
-	if (!is_enabled())      return 0; // disabled or destroyed
+	//if (!is_enabled())      return 0; // disabled or destroyed
 	if (is_directional()) {} // directional vs. hemisphere: use 2D shadow map for both
+	return 1;
+}
+
+bool light_source_trig::check_shadow_map() {
+
+	if (!is_shadow_map_enabled()) return 0;
+	if (!is_enabled())            return 0; // disabled or destroyed
 	
 	if (smap_index == 0) {
 		smap_index = local_smap_manager.new_smap();

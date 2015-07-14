@@ -737,7 +737,7 @@ void tile_shadow_map_manager::release_smap_data(tile_smap_data_t &smd, unsigned 
 	if (!smd.is_allocated()) return;
 	assert(light < NUM_LIGHT_SRC);
 	free_list[light].push_back(smd); // adds the base class, which contains the GL state
-	smd.tid = smd.fbo_id = 0; // no longer owned by smd
+	smd.disown(); // no longer owned by smd
 }
 
 void tile_shadow_map_manager::clear_context() {

@@ -169,6 +169,7 @@ public:
 	void advance_timestep();
 	bool is_enabled() {return (bind_point_t::is_valid() && light_source::is_enabled());}
 	void shift_by(vector3d const &vd);
+	bool is_shadow_map_enabled() const;
 	bool check_shadow_map();
 	void release_smap();
 };

@@ -12,12 +12,36 @@ unsigned const LOCAL_SMAP_START_TU_ID = 16;
 unsigned const MAX_DLIGHT_SMAPS       = 16;
 
 
-struct smap_data_state_t {
+class smap_texture_array_t {
 
-	unsigned tid, fbo_id;
-	smap_data_state_t() : tid(0), fbo_id(0) {}
+	unsigned num_layers, num_layers_used;
+
+public:
+	unsigned tid;
+
+	smap_texture_array_t() : num_layers(0), num_layers_used(0), tid(0) {}
 	bool is_allocated() const {return (tid > 0);}
 	void free_gl_state();
+	void reserve_num_layers(unsigned num);
+	unsigned new_layer();
+	unsigned get_num_layers() const {return num_layers;}
+};
+
+class smap_data_state_t {
+
+protected:
+	smap_texture_array_t *tex_arr;
+	unsigned fbo_id, local_tid, layer_id;
+
+public:
+	smap_data_state_t() : tex_arr(nullptr), fbo_id(0), local_tid(0), layer_id(0) {}
+	bool is_arrayed() const {return (tex_arr != nullptr);}
+	void bind_tex_array(smap_texture_array_t *tex_arr_);
+	unsigned get_tid() const {return (is_arrayed() ? tex_arr->tid : local_tid);}
+	bool is_allocated() const {return (local_tid > 0 && get_tid() > 0);} // (has local tid || (arrayed && has_array_tid))
+	unsigned *get_layer() {return (tex_arr ? &layer_id : nullptr);}
+	void free_gl_state();
+	void disown() {assert(!is_arrayed()); local_tid = fbo_id = 0;}
 };
 
 struct smap_data_t : public smap_data_state_t {
@@ -32,7 +56,7 @@ struct smap_data_t : public smap_data_state_t {
 	virtual ~smap_data_t() {} // free_gl_state()?
 	bool set_smap_shader_for_light(shader_t &s, int light, xform_matrix const *const mvm=nullptr) const;
 	void bind_smap_texture(bool light_valid=1) const;
-	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds=nullptr, bool use_world_space=0, unsigned *layer=nullptr);
+	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds=nullptr, bool use_world_space=0);
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(point const &lpos);
 };
