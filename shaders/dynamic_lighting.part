@@ -8,10 +8,29 @@ const float SHADOW_LEAKAGE    = 0.1; // simulates indirect lighting
 
 #ifdef HAS_DLIGHT_SMAP
 const int MAX_DLIGHT_SMAPS = 16;
-//uniform sampler2DArrayShadow smap_tex_dl;
+uniform sampler2DArrayShadow smap_tex_arr_dl;
 uniform sampler2DShadow smap_tex_dl[MAX_DLIGHT_SMAPS];
 uniform mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];
-#endif
+
+// Note: for non-spotlights where the shadow frustum doesn't cover the entire light angle,
+// the lookup is clamped to the edge texel of the shadow map, which stretches the shadow to the sides;
+// it may make more sense to clip the shadower to the frustum so that all the area outside the shadow frustum is unshadowed,
+// but it's not clear how to do that cleanly/efficiently or if it would look any better
+float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DShadow sm_tex) {
+	pos.xyz += norm_bias_scale*z_bias*normal; // world space
+	vec4 shadow_coord = matrix * pos;
+	shadow_coord.z   += -z_bias*shadow_coord.w;
+	return mix(textureProj(sm_tex, shadow_coord), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
+}
+float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DArrayShadow sm_tex, in int layer) {
+	pos.xyz += norm_bias_scale*z_bias*normal; // world space
+	vec4 shadow_coord = matrix * pos;
+	shadow_coord.xyz /= shadow_coord.w;
+	shadow_coord.z   += -z_bias;
+	shadow_coord.w    = layer;
+	return mix(texture(sm_tex, shadow_coord.xywz), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
+}
+#endif // HAS_DLIGHT_SMAP
 
 const float LT_DIR_FALLOFF = 0.005;
 
@@ -46,18 +65,6 @@ vec3 apply_power_signed(in vec3 val, in float n) {
 	return sign(val)*pow(abs(val), vec3(n)); // preserve the sign
 }
 
-#ifndef NO_SHADOW_MAP
-// Note: for non-spotlights where the shadow frustum doesn't cover the entire light angle,
-// the lookup is clamped to the edge texel of the shadow map, which stretches the shadow to the sides;
-// it may make more sense to clip the shadower to the frustum so that all the area outside the shadow frustum is unshadowed,
-// but it's not clear how to do that cleanly/efficiently or if it would look any better
-float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DShadow sm_tex) {
-	pos.xyz += norm_bias_scale*z_bias*normal; // world space
-	vec4 shadow_coord = matrix * pos;
-	shadow_coord.z   += -z_bias*shadow_coord.w;
-	return mix(textureProj(sm_tex, shadow_coord), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
-}
-#endif
 
 void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale, in float bump_map_normal_sign) {
 #ifndef NO_DYNAMIC_LIGHTS
@@ -140,12 +147,13 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		spec_color    *= get_spec_color();
 #endif
 
-#if defined(HAS_DLIGHT_SMAP) && !defined(NO_SHADOW_MAP) // Note: all math is in world space
+#ifdef HAS_DLIGHT_SMAP // Note: all math is in world space
 		int smap_index = int(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r*MAX_DLIGHT_SMAPS);
 		if (smap_index > 0) { // has a shadow map
 			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), lnorm, smap_matrix_dl[smap_index-1], smap_tex_dl[smap_index-1]);
+			//intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), lnorm, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);
 		}
-#endif
+#endif // HAS_DLIGHT_SMAP
 		// FIXME: specular should have a lower falloff and its own intensity - however, this will require a larger radius and impact performance
 		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space

@@ -809,6 +809,7 @@ bool shader_t::begin_shader(bool do_enable) {
 		unsigned shader_ixs[NUM_SHADER_TYPES] = {0};
 		
 		while (1) { // retry loop
+			check_gl_error(299);
 			program = glCreateProgram();
 
 			for (unsigned i = 0; i < NUM_SHADER_TYPES; ++i) {

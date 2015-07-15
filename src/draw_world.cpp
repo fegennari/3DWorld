@@ -201,7 +201,7 @@ void calc_cur_ambient_diffuse() {
 }
 
 
-bool set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
+bool set_dlights_booleans(shader_t &s, bool enable, int shader_type, bool no_dl_smap) {
 
 	if (!enable) {s.set_prefix("#define NO_DYNAMIC_LIGHTS", shader_type);} // if we're not even enabling dlights
 	bool const dl_en(enable && dl_tid > 0 && has_dl_sources);
@@ -209,14 +209,14 @@ bool set_dlights_booleans(shader_t &s, bool enable, int shader_type) {
 	if (dl_en) {
 		if (has_spotlights)  {s.set_prefix("#define HAS_SPOTLIGHTS",  shader_type);}
 		if (has_line_lights) {s.set_prefix("#define HAS_LINE_LIGHTS", shader_type);}
-		if (dl_smap_enabled) {s.set_prefix("#define HAS_DLIGHT_SMAP", shader_type);}
+		if (dl_smap_enabled && !no_dl_smap) {s.set_prefix("#define HAS_DLIGHT_SMAP", shader_type);}
 	}
 	s.set_bool_prefix("enable_dlights", dl_en, shader_type);
 	return dl_en;
 }
 
 
-void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, bool &indir_lighting, float min_alpha) {
+void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, bool &indir_lighting, float min_alpha, bool no_dl_smap) {
 
 	bool const hemi_lighting(!have_indir_smoke_tex);
 	use_shadow_map &= shadow_map_enabled();
@@ -228,7 +228,7 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	s.set_bool_prefix("indir_lighting", indir_lighting, 1); // FS
 	s.set_bool_prefix("hemi_lighting",  hemi_lighting,  1); // FS
 	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
-	set_dlights_booleans(s, dlights, 1); // FS
+	set_dlights_booleans(s, dlights, 1, no_dl_smap); // FS
 }
 
 
@@ -329,7 +329,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK",   1);} // FS
 	if (triplanar_tex) {s.set_prefix("#define TRIPLANAR_TEXTURE", 1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
-	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
+	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
 	string fstr("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
@@ -384,7 +384,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 
 	bool indir_lighting(0);
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
-	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0);
+	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0, 1); // no_dl_smap=1
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
 	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
@@ -399,7 +399,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_bmap,
 	bool use_noise_tex, bool z_top_test, float tex_scale, float noise_scale, float tex_mix_saturate)
 {
-	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha);
+	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	
 	if (use_bmap) {
 		// FIXME: only looks correct with sun/moon lighting - dynamic and indirect lighting doesn't work with triplanar bump mapping for some reason, but it's too slow anyway

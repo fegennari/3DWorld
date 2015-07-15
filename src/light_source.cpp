@@ -332,7 +332,7 @@ public:
 			if (!use_tex_array) {tu_id += index;} // if not using texture arrays, we need to allocate a unique tu_id for each shadow map
 			if ((int)tu_id >= max_tius) return 0; // not enough TIU's - fail
 			local_smap_data_t smd(tu_id);
-			if (use_tex_array) {smd.bind_tex_array(&local_smap_tex_arr);}
+			if (use_tex_array) {smd.bind_tex_array(&local_smap_tex_arr); assert(*smd.get_layer() == index);}
 			smap_data.push_back(smd);
 		}
 		else { // use free list element
@@ -379,8 +379,8 @@ void free_light_source_gl_state() { // free shadow maps
 }
 
 
-void light_source::setup_and_bind_smap_texture(shader_t &s) const {
-	if (smap_index > 0) {local_smap_manager.get(smap_index).set_smap_shader_for_light(s);}
+void light_source::setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const {
+	if (smap_index > 0) {local_smap_manager.get(smap_index).set_smap_shader_for_light(s, arr_tex_set);}
 }
 
 pos_dir_up light_source::calc_pdu() const {

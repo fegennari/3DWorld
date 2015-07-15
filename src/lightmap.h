@@ -131,7 +131,7 @@ public:
 	void pack_to_floatv(float *data) const;
 	void combine_with(light_source const &l);
 	bool try_merge_into(light_source &ls) const;
-	void setup_and_bind_smap_texture(shader_t &s) const;
+	void setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const;
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };

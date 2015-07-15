@@ -205,6 +205,7 @@ void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned 
 void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *layer) {
 	
 	// Create a framebuffer object
+	check_gl_error(500);
 	glGenFramebuffers(1, &fbo_id);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
 	
@@ -223,6 +224,7 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *lay
 	else {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), GL_TEXTURE_2D, tid, 0);
 	}
+	check_gl_error(501);
 	// Check FBO status
 	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	assert(status == GL_FRAMEBUFFER_COMPLETE);

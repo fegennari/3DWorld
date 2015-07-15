@@ -207,7 +207,7 @@ unsigned smap_texture_array_t::new_layer() {
 void smap_texture_array_t::free_gl_state() {free_texture(tid);}
 
 void smap_data_state_t::free_gl_state() {
-	if (is_arrayed()) {local_tid = 0;} else {free_texture(local_tid);}
+	if (is_arrayed()) {gen_id = 0;} else {free_texture(local_tid);}
 	free_fbo(fbo_id);
 }
 
@@ -231,16 +231,26 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 	return 1;
 }
 
-bool local_smap_data_t::set_smap_shader_for_light(shader_t &s) const {
+bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const {
 
 	if (!shadow_map_enabled()) return 0;
 	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
 	char str[20] = {0};
-	sprintf(str, "smap_tex_dl[%u]",    tu_id-LOCAL_SMAP_START_TU_ID);
-	s.add_uniform_int(str, tu_id); // Note: we can assert this returns true, though it makes shader debugging harder
+
+	if (!is_arrayed()) { // local texture
+		bind_smap_texture();
+		sprintf(str, "smap_tex_dl[%u]", tu_id-LOCAL_SMAP_START_TU_ID);
+	}
+	else if (!arr_tex_set) { // Note: assumes all lights use the same texture array
+		bind_smap_texture();
+		sprintf(str, "smap_tex_arr_dl");
+		arr_tex_set = 1;
+	}
+	bool const tex_ret(s.add_uniform_int(str, tu_id));
+	assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
 	sprintf(str, "smap_matrix_dl[%u]", tu_id-LOCAL_SMAP_START_TU_ID);
-	s.add_uniform_matrix_4x4(str, texture_matrix.get_ptr(), 0);
-	bind_smap_texture();
+	bool const mat_ret(s.add_uniform_matrix_4x4(str, texture_matrix.get_ptr(), 0));
+	assert(mat_ret);
 	return 1;
 }
 
@@ -251,7 +261,7 @@ void smap_data_t::bind_smap_texture(bool light_valid) const {
 	// FIXME: the is_allocate() check shouldn't be required, but can happen in tiled terrain mode when switching between combined_gu mode
 	// due to some disagreement between the update pass and draw pass during reflection drawing
 	if (light_valid && is_allocated()) { // otherwise, we know that sm_scale will be 0.0 and we won't do the lookup
-		bind_2d_texture(get_tid());
+		bind_2d_texture(get_tid(), is_arrayed());
 	}
 	else {
 		select_texture(WHITE_TEX); // default white texture
@@ -363,6 +373,17 @@ bool ground_mode_smap_data_t::needs_update(point const &lpos) {
 }
 
 
+void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
+
+	assert(xsize > 0 && ysize > 0 && num_layers > 0);
+	if (tid) {return;}
+	++gen_id;
+	set_shadow_tex_params(tid, 1);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT, xsize, ysize, num_layers, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	check_gl_error(630);
+}
+
+
 // if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu
 void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space) {
 
@@ -384,18 +405,15 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 		// setup textures and framebuffer
 		if (!is_allocated()) {
 			if (is_arrayed()) {
-				if (!tex_arr->tid) { // need to create array texture
-					set_shadow_tex_params(tex_arr->tid, 1);
-					glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, smap_sz, smap_sz, tex_arr->get_num_layers());
-					glTexImage2D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
-				}
-				local_tid = tex_arr->tid; // point local to array texture so that we know it's bound
+				tex_arr->ensure_tid(smap_sz, smap_sz); // create texture array if needed; point local to array texture so that we know it's bound
+				gen_id = tex_arr->gen_id; // tag with current generation
 			}
 			else { // non-arrayed
 				set_shadow_tex_params(local_tid, 0);
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, smap_sz, smap_sz, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
 			}
 		}
+		assert(is_allocated());
 		// render from the light POV to a FBO, store depth values only
 		enable_fbo(fbo_id, get_tid(), 1, get_layer());
 		glViewport(0, 0, smap_sz, smap_sz);

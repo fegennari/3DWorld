@@ -17,31 +17,32 @@ class smap_texture_array_t {
 	unsigned num_layers, num_layers_used;
 
 public:
-	unsigned tid;
+	unsigned tid, gen_id;
 
-	smap_texture_array_t() : num_layers(0), num_layers_used(0), tid(0) {}
+	smap_texture_array_t() : num_layers(0), num_layers_used(0), tid(0), gen_id(1) {} // gen_id starts at 1
 	bool is_allocated() const {return (tid > 0);}
 	void free_gl_state();
+	void ensure_tid(unsigned xsize, unsigned ysize);
 	void reserve_num_layers(unsigned num);
 	unsigned new_layer();
-	unsigned get_num_layers() const {return num_layers;}
+	void clear() {num_layers = num_layers_used = 0; free_gl_state();}
 };
 
 class smap_data_state_t {
 
 protected:
 	smap_texture_array_t *tex_arr;
-	unsigned fbo_id, local_tid, layer_id;
+	unsigned fbo_id, local_tid, gen_id, layer_id;
 
 public:
-	smap_data_state_t() : tex_arr(nullptr), fbo_id(0), local_tid(0), layer_id(0) {}
+	smap_data_state_t() : tex_arr(nullptr), fbo_id(0), local_tid(0), gen_id(0), layer_id(0) {}
 	bool is_arrayed() const {return (tex_arr != nullptr);}
 	void bind_tex_array(smap_texture_array_t *tex_arr_);
 	unsigned get_tid() const {return (is_arrayed() ? tex_arr->tid : local_tid);}
-	bool is_allocated() const {return (local_tid > 0 && get_tid() > 0);} // (has local tid || (arrayed && has_array_tid))
+	bool is_allocated() const {return (get_tid() > 0 && (!is_arrayed() || gen_id == tex_arr->gen_id));}
 	unsigned *get_layer() {return (tex_arr ? &layer_id : nullptr);}
 	void free_gl_state();
-	void disown() {assert(!is_arrayed()); local_tid = fbo_id = 0;}
+	void disown() {assert(!is_arrayed()); local_tid = gen_id = fbo_id = 0;}
 };
 
 struct smap_data_t : public smap_data_state_t {
@@ -72,7 +73,7 @@ struct local_smap_data_t : public cached_dynamic_smap_data_t {
 	bool used;
 
 	local_smap_data_t(unsigned tu_id_, unsigned smap_sz_=DEF_LOCAL_SMAP_SZ) : cached_dynamic_smap_data_t(tu_id_, smap_sz_), used(0) {}
-	bool set_smap_shader_for_light(shader_t &s) const;
+	bool set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const;
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
 };
