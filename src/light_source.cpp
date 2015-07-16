@@ -330,7 +330,7 @@ public:
 			if (index >= MAX_DLIGHT_SMAPS) return 0; // not enough shader uniforms
 			unsigned tu_id(LOCAL_SMAP_START_TU_ID);
 			if (!use_tex_array) {tu_id += index;} // if not using texture arrays, we need to allocate a unique tu_id for each shadow map
-			if ((int)tu_id >= max_tius) return 0; // not enough TIU's - fail
+			if ((int)tu_id >= max_tius) return 0; // not enough TIU's (none for texture array) - fail
 			local_smap_data_t smd(tu_id);
 			if (use_tex_array) {smd.bind_tex_array(&local_smap_tex_arr); assert(*smd.get_layer() == index);}
 			smap_data.push_back(smd);
@@ -371,7 +371,7 @@ public:
 	}
 };
 
-local_smap_manager_t local_smap_manager(0);
+local_smap_manager_t local_smap_manager(1);
 
 void free_light_source_gl_state() { // free shadow maps
 	local_smap_manager.free_gl_state();

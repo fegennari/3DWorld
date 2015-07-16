@@ -236,19 +236,26 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	if (!shadow_map_enabled()) return 0;
 	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
 	char str[20] = {0};
+	unsigned smap_ix(0);
 
 	if (!is_arrayed()) { // local texture
+		smap_ix = tu_id - LOCAL_SMAP_START_TU_ID; // use texture unit id offset
 		bind_smap_texture();
-		sprintf(str, "smap_tex_dl[%u]", tu_id-LOCAL_SMAP_START_TU_ID);
+		sprintf(str, "smap_tex_dl[%u]", smap_ix);
 	}
-	else if (!arr_tex_set) { // Note: assumes all lights use the same texture array
-		bind_smap_texture();
-		sprintf(str, "smap_tex_arr_dl");
-		arr_tex_set = 1;
+	else {
+		if (!arr_tex_set) { // Note: assumes all lights use the same texture array
+			bind_smap_texture();
+			sprintf(str, "smap_tex_arr_dl");
+			arr_tex_set = 1;
+		}
+		smap_ix = layer_id; // user texture array layer id
 	}
-	bool const tex_ret(s.add_uniform_int(str, tu_id));
-	assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
-	sprintf(str, "smap_matrix_dl[%u]", tu_id-LOCAL_SMAP_START_TU_ID);
+	if (str[0]) { // str was set to something
+		bool const tex_ret(s.add_uniform_int(str, tu_id));
+		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
+	}
+	sprintf(str, "smap_matrix_dl[%u]", smap_ix);
 	bool const mat_ret(s.add_uniform_matrix_4x4(str, texture_matrix.get_ptr(), 0));
 	assert(mat_ret);
 	return 1;
@@ -404,6 +411,8 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 	if (do_update) {
 		// setup textures and framebuffer
 		if (!is_allocated()) {
+			free_fbo(fbo_id); // free existing fbo so that it can be recreated and bound to the new texture
+
 			if (is_arrayed()) {
 				tex_arr->ensure_tid(smap_sz, smap_sz); // create texture array if needed; point local to array texture so that we know it's bound
 				gen_id = tex_arr->gen_id; // tag with current generation
