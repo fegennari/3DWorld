@@ -11,7 +11,5 @@ Gameplay in tiled terrain mode
   - Projectile and object collision detection
 
 Puffy clouds in tiled terrain mode
-SSAO using depth map and postprocessing pass
 Physics with connected spheres
-Heat wave postproc shader
-Fix dlight shadows on ATI: sampler2DArrayShadow
+Cascaded shadow maps for sun/moon
