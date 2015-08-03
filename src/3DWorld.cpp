@@ -424,16 +424,20 @@ void update_cpos() {
 }
 
 
+void move_camera_pos_xy(vector3d const &v, float dist) {
+
+	// normal ground movement - should speed depend on orientation or not?
+	float const xy_scale(dist*(v.mag()/v.xy_mag()));
+	surface_pos.x += xy_scale*v.x;
+	surface_pos.y += xy_scale*v.y;
+}
+
+
 void move_camera_pos(vector3d const &v, float dist) { // remember that dist is negative
 
-	if (!camera_surf_collide || camera_flight) {
-		surface_pos += v*dist;
-	}
-	else { // normal ground movement - should speed depend on orientation or not?
-		float const xy_scale(dist*(v.mag()/v.xy_mag()));
-		surface_pos.x += xy_scale*v.x;
-		surface_pos.y += xy_scale*v.y;
-	}
+	if (dist == 0.0) return;
+	if (!camera_surf_collide || camera_flight) {surface_pos += v*dist;}
+	else {move_camera_pos_xy(v, dist);}
 }
 
 
@@ -443,13 +447,13 @@ void advance_camera(int dir) {
 
 	if (world_mode == WMODE_UNIVERSE) { // universe
 		bool const hyperspeed(do_run == 2);
-		if (player_ship_inited()) player_ship().thrust(dir, speed_mult, hyperspeed);
+		if (player_ship_inited()) {player_ship().thrust(dir, speed_mult, hyperspeed);}
 		return;
 	}
 	if (camera_mode != 1 || (map_mode && world_mode != WMODE_INF_TERRAIN)) return;
 	vector3d v;
 	float dist(fticks*speed_mult*player_speed*GROUND_SPEED*calc_speed());
-	if (game_mode && sstates != NULL) dist *= sstates[CAMERA_ID].get_rspeed_scale();
+	if (game_mode && sstates != NULL) {dist *= sstates[CAMERA_ID].get_rspeed_scale();}
 		
 	switch (dir) {
 	case MOVE_BACK: // backward

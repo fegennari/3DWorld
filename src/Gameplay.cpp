@@ -1464,15 +1464,9 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 	fire_frame = frame_counter;
 
 	if (!game_mode) { // flashlight/candlelight/spraypaint mode only
-		if (voxel_editing) {
-			modify_voxels();
-		}
-		else if (spraypaint_mode) {
-			spray_paint((wmode & 1) != 0);
-		}
-		else {
-			if (wmode & 1) {add_camera_candlelight();} else {add_camera_flashlight();}
-		}
+		if (voxel_editing) {modify_voxels();}
+		else if (spraypaint_mode) {spray_paint((wmode & 1) != 0);}
+		else if (wmode & 1) {add_camera_candlelight();} else {add_camera_flashlight();}
 		return;
 	}
 	if (!camera_reset) return;
@@ -1588,12 +1582,10 @@ void create_shrapnel(point const &pos, vector3d const &dir, float firing_error, 
 }
 
 
-float weapon_t::get_fire_vel() const {
-
-	return (v_add + ball_velocity*v_mult);
-}
+float weapon_t::get_fire_vel() const {return (v_add + ball_velocity*v_mult);}
 
 
+// returns: 0=not fired, 1=fired (projectile or impact), 2=fired object, 3=fired (no object)
 int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &chosen_obj) {
 
 	chosen_obj = -1;
@@ -1609,7 +1601,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	weapon_t const &w(weapons[weapon_id]);
 	int fire_delay((int)w.fire_delay);
 	if (UNLIMITED_WEAPONS && !is_player && weapon_id == W_LANDMINE) {fire_delay *= 2;} // avoid too many landmines
-	if (rapid_fire) fire_delay /= 3;
+	if (rapid_fire) {fire_delay /= 3;}
 	float const radius(get_sstate_radius(shooter));
 
 	if (weapon_id == W_LASER) { // always fires
@@ -1630,6 +1622,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	point pos(fpos + dir*(0.1*radius));
 	fire_frame = max(1, fire_delay);
 	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
+	if (is_player) {move_camera_pos(dir, -w.recoil);} // recoil (only for player)
 
 	switch (weapon_id) {
 		case W_M16:     add_dynamic_light(1.0, fpos, YELLOW); break;
@@ -1661,9 +1654,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			}
 		}
 		if (weapon_id == W_SHOTGUN) {
-			for (unsigned i = 0; i < 2; ++i) {
-				create_shell_casing(fpos, dir, shooter, radius, 1);
-			}
+			for (unsigned i = 0; i < 2; ++i) {create_shell_casing(fpos, dir, shooter, radius, 1);}
 			gen_sound(SOUND_SHOTGUN, fpos);
 		}
 		return 1;
@@ -1719,7 +1710,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 				start_pos   += dir*(0.5*r);
 				start_pos.z -= 0.25*r;
 				vector3d dir2(dir);
-				if (firing_error != 0.0) vadd_rand(dir2, firing_error);
+				if (firing_error != 0.0) {vadd_rand(dir2, firing_error);}
 				bool const is_fire(wmode & 1);
 				vector3d const gas_vel(dir2*vel + vector3d(0.0, 0.0, 0.2));
 				colorRGBA const color(is_fire ? colorRGBA(1.0, 0.75, 0.0) : GREEN);
@@ -1793,7 +1784,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			break;
 		}
 	}
-	if ((wmode&1) == 0 && weapon_id == W_PLASMA) plasma_size = 1.0;
+	if ((wmode&1) == 0 && weapon_id == W_PLASMA) {plasma_size = 1.0;}
 	return 2;
 }
 
