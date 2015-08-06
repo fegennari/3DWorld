@@ -34,6 +34,7 @@ extern float czmin0;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
 extern vector<cube_t> smoke_bounds;
+extern vector<light_volume_local> local_light_volumes;
 
 
 
@@ -88,11 +89,7 @@ struct smoke_manager {
 smoke_manager smoke_man, next_smoke_man;
 
 
-inline void adjust_smoke_val(float &val, float delta) {
-
-	val = max(0.0f, min(SMOKE_MAX_VAL, (val + delta)));
-}
-
+inline void adjust_smoke_val(float &val, float delta) {val = max(0.0f, min(SMOKE_MAX_VAL, (val + delta)));}
 
 void add_smoke(point const &pos, float val) {
 
@@ -190,10 +187,7 @@ float get_smoke_at_pos(point const &pos) {
 }
 
 
-void reset_smoke_tex_data() {
-
-	smoke_tex_data.clear();
-}
+void reset_smoke_tex_data() {smoke_tex_data.clear();}
 
 
 void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, unsigned x_start, unsigned x_end, unsigned y, bool update_lighting) {
@@ -229,6 +223,7 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 				else {
 					if (vlm == NULL) {color = default_color;} else {vlm[z].get_final_color(color, 1.0, 1.0);}
 				}
+				for (auto i = local_light_volumes.begin(); i != local_light_volumes.end(); ++i) {i->add_lighting(color, off+z);} // add local light volumes
 				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
 			}
 		} // for z
@@ -288,21 +283,16 @@ bool upload_smoke_indir_texture() {
 	}
 	check_for_lighting_finished();
 	static colorRGB last_cur_ambient(BLACK), last_cur_diffuse(BLACK);
-	bool const lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
+	bool lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
+	
+	for (auto i = local_light_volumes.begin(); i != local_light_volumes.end(); ++i) { // check to see if any local light volumes have changed
+		if (i->needs_update()) {i->mark_updated(); lighting_changed = 1;}
+	}
 	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed));
 	bool const could_have_smoke(smoke_exists || last_smoke_update > 0);
 	if (!full_update && !could_have_smoke && !lmap_manager.was_updated && !lighting_changed) return 0; // return 1?
-
-	if (full_update) {
-		last_cur_ambient = cur_ambient;
-		last_cur_diffuse = cur_diffuse;
-	}
-	if (smoke_exists) {
-		last_smoke_update = SMOKE_SEND_SKIP;
-	}
-	else if (last_smoke_update > 0) {
-		--last_smoke_update;
-	}
+	if (full_update ) {last_cur_ambient  = cur_ambient; last_cur_diffuse = cur_diffuse;}
+	if (smoke_exists) {last_smoke_update = SMOKE_SEND_SKIP;} else if (last_smoke_update > 0) {--last_smoke_update;}
 	static int cur_block(0);
 	unsigned const skipval(could_have_smoke ? SMOKE_SEND_SKIP : INDIR_LT_SEND_SKIP);
 	unsigned const block_size(MESH_Y_SIZE/skipval);

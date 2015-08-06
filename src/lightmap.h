@@ -46,9 +46,7 @@ struct lmcell { // size = 52
 	float sc[3], sv, gc[3], gv, lc[3], smoke; // *c[3]: RGB sky, global, local colors
 	unsigned char pflow[3]; // flow: x, y, z
 	
-	lmcell() : sv(0.0), gv(0.0), smoke(0.0) {
-		UNROLL_3X(sc[i_] = gc[i_] = lc[i_] = 0.0; pflow[i_] = 255;)
-	}
+	lmcell() : sv(0.0), gv(0.0), smoke(0.0) {UNROLL_3X(sc[i_] = gc[i_] = lc[i_] = 0.0; pflow[i_] = 255;)}
 	float       *get_offset(int ltype)       {return (sc + 4*ltype);}
 	float const *get_offset(int ltype) const {return (sc + 4*ltype);}
 	static unsigned get_dsz(int ltype)       {return ((ltype == LIGHTING_LOCAL) ? 3 : 4);}
@@ -62,7 +60,7 @@ class lmap_manager_t {
 
 	vector<lmcell> vldata_alloc;
 	unsigned lm_zsize;
-	lmcell ***vlmap; // y, x, z (size is determined by {MESH_X_SIZE, MESH_Y_SIZE, MESH_Z_SIZE}
+	lmcell ***vlmap; // y, x, z (size is determined by {MESH_Y_SIZE, MESH_X_SIZE, MESH_Z_SIZE}
 
 	lmap_manager_t(lmap_manager_t const &); // forbidden
 	void operator=(lmap_manager_t const &); // forbidden
@@ -84,6 +82,33 @@ public:
 	template<typename T> void alloc(unsigned nbins, unsigned zsize, T **nonempty_bins, lmcell const &init_lmcell);
 	void init_from(lmap_manager_t const &src);
 	void copy_data(lmap_manager_t const &src, float blend_weight=1.0);
+};
+
+
+struct lmcell_local { // size = 12
+	float lc[3];
+	lmcell_local() {lc[0] = lc[1] = lc[2] = 0.0;}
+};
+
+class light_volume_local {
+
+	vector<lmcell_local> data;
+	float scale;
+	bool changed;
+
+public:
+	light_volume_local(float scale_=1.0) : scale(scale_), changed(0) {}
+	bool is_allocated() const {return !data.empty();}
+	bool needs_update() const {return (changed && is_allocated());}
+	void mark_updated() {changed = 0;}
+	void allocate();
+
+	void add_lighting(colorRGB &color, unsigned ix) const {
+		if (!is_allocated()) return; // not yet allocated
+		assert(ix < data.size());
+		UNROLL_3X(color[i_] = min(1.0f, color[i_]+data[ix].lc[i_]*scale);)
+	}
+	void add_color(point const &p, colorRGBA const &color);
 };
 
 

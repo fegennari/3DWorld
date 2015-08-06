@@ -32,6 +32,7 @@ extern vector<light_source> light_sources_a;
 extern coll_obj_group coll_objects;
 extern vector<beam3d> beams;
 extern lmap_manager_t lmap_manager;
+extern vector<light_volume_local> local_light_volumes;
 extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 extern model3ds all_models;
 
@@ -50,26 +51,37 @@ void increment_printed_number(unsigned num) {
 
 void add_path_to_lmcs(lmap_manager_t &lmgr, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
-	if (first_pt && ltype == LIGHTING_GLOBAL) weight *= first_ray_weight; // lower weight - handled by direct illumination
+	if (first_pt && ltype == LIGHTING_GLOBAL) {weight *= first_ray_weight;} // lower weight - handled by direct illumination
 	if (weight < TOLERANCE) return;
 	assert(lmgr.is_allocated());
 	colorRGBA const cw(color*weight);
-	float const dist(p2p_dist(p1, p2)); // dist can be 0
-	unsigned const nsteps(1 + unsigned(dist/get_step_size())); // round up
+	unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)/get_step_size())); // round up (dist can be 0)
 	vector3d const step((p2 - p1)/nsteps); // at least two points
-	if (!first_pt) p1 += step; // move past the first step so we don't double count
+	if (!first_pt) {p1 += step;} // move past the first step so we don't double count
 
-	for (unsigned s = 0; s < nsteps+first_pt; ++s) {
-		lmcell *lmc(lmgr.get_lmcell(p1));
-		
-		if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
-			float *color(lmc->get_offset(ltype));
-			ADD_LIGHT_CONTRIB(cw, color);
-			if (ltype != LIGHTING_LOCAL) color[3] += weight;
+	if (ltype >= NUM_LIGHTING_TYPES) { // it's a local lighting volume
+		unsigned const llvol_ix(ltype - NUM_LIGHTING_TYPES);
+		assert(llvol_ix < local_light_volumes.size());
+		light_volume_local &lvol(local_light_volumes[llvol_ix]);
+
+		for (unsigned s = 0; s < nsteps+first_pt; ++s) {
+			lvol.add_color(p1, cw);
+			p1 += step;
 		}
-		p1 += step;
 	}
-	lmgr.was_updated = 1;
+	else { // use the lmgr
+		for (unsigned s = 0; s < nsteps+first_pt; ++s) {
+			lmcell *lmc(lmgr.get_lmcell(p1));
+		
+			if (lmc != NULL) { // could use a pthread_mutex_t here, but it seems too slow
+				float *color(lmc->get_offset(ltype));
+				ADD_LIGHT_CONTRIB(cw, color);
+				if (ltype != LIGHTING_LOCAL) {color[3] += weight;}
+			}
+			p1 += step;
+		}
+		lmgr.was_updated = 1;
+	}
 	cells_touched += nsteps;
 	++num_hits;
 }

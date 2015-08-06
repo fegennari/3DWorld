@@ -13,3 +13,4 @@ Gameplay in tiled terrain mode
 Puffy clouds in tiled terrain mode
 Physics with connected spheres
 Cascaded shadow maps for sun/moon
+Multiple local light matrices

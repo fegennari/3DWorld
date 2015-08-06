@@ -30,6 +30,7 @@ dls_cell **ldynamic = NULL;
 vector<light_source> light_sources_a, /* light_sources_d, */ dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
 vector<light_source_trig> light_sources_d;
 lmap_manager_t lmap_manager;
+vector<light_volume_local> local_light_volumes;
 
 
 extern int animate2, display_mode, frame_counter, camera_coll_id, scrolling, read_light_files[], write_light_files[];
@@ -171,10 +172,7 @@ void r_profile::clear_within(float const c[2]) {
 
 
 void reset_cobj_counters() {
-
-	for (unsigned i = 0; i < (unsigned)coll_objects.size(); ++i) {
-		coll_objects[i].counter = -1;
-	}
+	for (unsigned i = 0; i < (unsigned)coll_objects.size(); ++i) {coll_objects[i].counter = -1;}
 }
 
 
@@ -186,7 +184,7 @@ void lmcell::get_final_color(colorRGB &color, float max_indir, float indir_scale
 	float const gv_scaled((max_g > 0.0 && gv > 0.0) ? min(1.0f, gv*light_int_scale[LIGHTING_GLOBAL])/max_g : 0.0);
 
 	UNROLL_3X(float indir_term((sv_scaled*sc[i_] + extra_ambient)*cur_ambient[i_] + gv_scaled*gc[i_]*cur_diffuse[i_]); \
-			  if (indir_term > 0.0 && indir_light_exp != 1.0) indir_term = pow(indir_term, indir_light_exp); \
+			  if (indir_term > 0.0 && indir_light_exp != 1.0) {indir_term = pow(indir_term, indir_light_exp);} \
 			  color[i_] = min(max_indir, indir_scale*indir_term) + min(1.0f, lc[i_]*light_int_scale[LIGHTING_LOCAL]);)
 }
 
@@ -199,9 +197,8 @@ void lmcell::set_outside_colors() {
 }
 
 
-bool lmap_manager_t::is_valid_cell(int x, int y, int z) const {
-	return (z >= 0 && z < MESH_SIZE[2] && !point_outside_mesh(x, y) && vlmap[y][x] != NULL);
-}
+inline bool is_inside_lmap(int x, int y, int z) {return (z >= 0 && z < MESH_SIZE[2] && !point_outside_mesh(x, y));}
+bool lmap_manager_t::is_valid_cell(int x, int y, int z) const {return (is_inside_lmap(x, y, z) && vlmap[y][x] != NULL);}
 
 
 lmcell *lmap_manager_t::get_lmcell(point const &p) {
@@ -279,6 +276,19 @@ void lmcell::mix_lighting_with(lmcell const &lmc, float val) {
 	UNROLL_3X(sc[i_] = val*lmc.sc[i_] + omv*sc[i_];)
 	UNROLL_3X(gc[i_] = val*lmc.gc[i_] + omv*gc[i_];)
 	UNROLL_3X(lc[i_] = val*lmc.lc[i_] + omv*lc[i_];)
+}
+
+
+void light_volume_local::allocate() {data.resize(MESH_X_SIZE * MESH_Y_SIZE * MESH_SIZE[2]);} // init to all zeros
+
+void light_volume_local::add_color(point const &p, colorRGBA const &color) { // inlined in the header?
+
+	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
+	if (!is_inside_lmap(x, y, z)) return;
+	unsigned const ix((y*MESH_X_SIZE + x)*MESH_SIZE[2] + z);
+	assert(ix < data.size());
+	UNROLL_3X(data[ix].lc[i_] += color[i_]*color.alpha;)
+	changed = 1;
 }
 
 
