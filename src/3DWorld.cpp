@@ -88,7 +88,7 @@ float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25), sm_tree_density(1.0);
 float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(0.6), waypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), model3d_texture_anisotropy(1.0), dist_to_fire_sq(0.0);
 float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model_auto_tc_scale(0.0), model_triplanar_tc_scale(0.0), shadow_map_pcf_offset(0.01);
-float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0};
+float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
 string user_text;
@@ -113,7 +113,7 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, scene_smap_vbo_invalid, tree_4th_branches, model_calc_tan_vect;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale, flower_density;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
@@ -1865,8 +1865,8 @@ int load_config(string const &config_file) {
 		else if (str == "lighting_file_local") {
 			read_write_lighting_setup(fp, LIGHTING_LOCAL, error); // <filename> <write_mode> <scale>
 		}
-		else if (str == "num_light_rays") { // GLOBAL_RAYS is optional
-			if (fscanf(fp, "%u%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS, &GLOBAL_RAYS) < 3) cfg_err("num_light_rays command", error);
+		else if (str == "num_light_rays") { // GLOBAL_RAYS and DYNAMIC_RAYS are optional
+			if (fscanf(fp, "%u%u%u%u%u", &NPTS, &NRAYS, &LOCAL_RAYS, &GLOBAL_RAYS, &DYNAMIC_RAYS) < 3) cfg_err("num_light_rays command", error);
 		}
 		else if (str == "num_threads") {
 			if (!read_nonzero_uint(fp, NUM_THREADS) || NUM_THREADS > 100) cfg_err("num_threads", error);

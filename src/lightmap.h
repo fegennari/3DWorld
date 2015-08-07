@@ -94,17 +94,26 @@ class light_volume_local {
 
 	vector<lmcell_local> data;
 	float scale;
-	bool changed;
+	bool enabled, changed;
 
 public:
-	light_volume_local(float scale_=1.0) : scale(scale_), changed(0) {}
+	vector<unsigned> dlight_ixs;
+
+	light_volume_local(float scale_=1.0) : scale(scale_), changed(0), enabled(0) {}
+	void set_enabled(bool enabled_) {changed |= (enabled != enabled_); enabled = enabled_;} // changing the enabled state counts as changed
 	bool is_allocated() const {return !data.empty();}
 	bool needs_update() const {return (changed && is_allocated());}
 	void mark_updated() {changed = 0;}
 	void allocate();
-
+	void clear() {data.clear(); dlight_ixs.clear();} // reset enabled?
+	
+	void reset_to_zero() {
+		if (!is_allocated()) return;
+		clear(); allocate(); // clear + resize should re-construct the cells to all zeros
+		changed = 1;
+	}
 	void add_lighting(colorRGB &color, unsigned ix) const {
-		if (!is_allocated()) return; // not yet allocated
+		if (!enabled || !is_allocated()) return; // not yet allocated
 		assert(ix < data.size());
 		UNROLL_3X(color[i_] = min(1.0f, color[i_]+data[ix].lc[i_]*scale);)
 	}

@@ -292,6 +292,25 @@ void light_volume_local::add_color(point const &p, colorRGBA const &color) { // 
 }
 
 
+void init_light_volume(unsigned lvol_ix, bool enabled, bool compute) {
+
+	assert(lvol_ix < local_light_volumes.size());
+	local_light_volumes[lvol_ix].allocate();
+	local_light_volumes[lvol_ix].set_enabled(enabled);
+	if (compute) {compute_ray_trace_lighting(LIGHTING_DYNAMIC + lvol_ix);}
+}
+
+unsigned add_light_volume_for_dlight(unsigned dlight_ix, float scale=1.0, bool enabled=0, bool compute=0) {
+
+	assert(dlight_ix < light_sources_d.size());
+	unsigned const lvol_ix(local_light_volumes.size());
+	local_light_volumes.push_back(light_volume_local(scale)); // FIXME: by unique_ptr<>?
+	local_light_volumes[lvol_ix].dlight_ixs.push_back(dlight_ix);
+	init_light_volume(lvol_ix, enabled, compute);
+	return lvol_ix;
+}
+
+
 bool has_fixed_cobjs(int x, int y) {
 
 	assert(!point_outside_mesh(x, y));
@@ -470,7 +489,7 @@ void build_lightmap(bool verbose) {
 	float const zstep(czspan/zsize), scene_scale(MESH_X_SIZE/128.0);
 	if (verbose) {cout << "Lightmap zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;}
 	assert(zstep > 0.0);
-	bool raytrace_lights[3];
+	bool raytrace_lights[NUM_LIGHTING_TYPES] = {0};
 	UNROLL_3X(raytrace_lights[i_] = (read_light_files[i_] || write_light_files[i_]););
 	has_indir_lighting = (raytrace_lights[LIGHTING_SKY] || raytrace_lights[LIGHTING_GLOBAL] || create_voxel_landscape);
 	lmcell init_lmcell;
@@ -539,7 +558,7 @@ void build_lightmap(bool verbose) {
 	if (nbins > 0) {
 		if (verbose) PRINT_TIME(" Lighting Setup + XYZ Passes");
 		// Note: sky and global lighting use the same data structure for reading/writing, so they should have the same filename if used together
-		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local"};
+		string const type_names[NUM_LIGHTING_TYPES] = {" Sky", " Global", " Local", " Dynamic"};
 
 		for (unsigned ltype = 0; ltype < NUM_LIGHTING_TYPES; ++ltype) {
 			if (raytrace_lights[ltype]) {
