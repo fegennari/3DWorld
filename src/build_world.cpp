@@ -1330,9 +1330,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'U': // indir dlight group name
-			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "indir dlight group name", coll_obj_file);}
-			indir_dlight_ix = indir_dlight_group_manager.get_ix_for_name(str);
+		case 'U': // indir dlight group: name [scale]
+			fvals[0] = 1.0; // default scale
+			if (fscanf(fp, "%255s%f", str, &fvals[0]) < 1) {return read_error(fp, "indir dlight group name", coll_obj_file);}
+			indir_dlight_ix = indir_dlight_group_manager.get_ix_for_name(str, fvals[0]);
 			break;
 
 		case 'f': // place fire: size light_beamwidth intensity xpos ypos zpos

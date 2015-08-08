@@ -134,17 +134,17 @@ public:
 class indir_dlight_group_manager_t : public tag_ix_map {
 
 	struct group_t {
-		// Note: dynamic lights should all share the same trigger;
-		// the first light's state is checked to determine when the group's light volume is created
-		vector<unsigned> dlight_ixs;
 		int llvol_ix;
-		group_t() : llvol_ix(-1) {}
+		float scale;
+		vector<unsigned> dlight_ixs; // Note: dynamic lights should all share the same trigger
+		group_t(float scale_=1.0) : llvol_ix(-1), scale(scale_) {}
 	};
 	vector<group_t> groups;
 public:
-	unsigned get_ix_for_name(std::string const &name) {
+	unsigned get_ix_for_name(std::string const &name, float scale=1.0) {
 		unsigned const tag_ix(tag_ix_map::get_ix_for_name(name));
 		if (tag_ix >= groups.size()) {groups.resize(tag_ix+1);}
+		groups[tag_ix].scale = scale; // FIXME: check if already set to a different value?
 		return tag_ix;
 	}
 	void add_dlight_ix_for_tag_ix(unsigned tag_ix, unsigned dlight_ix) {

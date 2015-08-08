@@ -18,7 +18,7 @@ float const ICE_ALBEDO    = 0.8;
 
 bool keep_beams(0); // debugging mode
 bool kill_raytrace(0);
-unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), DYNAMIC_RAYS(200000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
+unsigned NPTS(50000), NRAYS(40000), LOCAL_RAYS(1000000), GLOBAL_RAYS(1000000), DYNAMIC_RAYS(1000000), NUM_THREADS(1), MAX_RAY_BOUNCES(20);
 unsigned long long tot_rays(0), num_hits(0), cells_touched(0);
 unsigned const NUM_RAY_SPLITS [NUM_LIGHTING_TYPES] = {1, 1, 1, 1}; // sky, global, local, dynamic
 unsigned const INIT_RAY_SPLITS[NUM_LIGHTING_TYPES] = {1, 4, 1, 1}; // sky, global, local, dynamic
@@ -719,7 +719,6 @@ void *trace_ray_block_dynamic(void *ptr) {
 
 	assert(ptr);
 	if (DYNAMIC_RAYS == 0) return 0; // nothing to do
-	//RESET_TIME;
 	rt_data *data(static_cast<rt_data *>(ptr));
 	light_volume_local const &lvol(get_local_light_volume(data->ltype));
 	vector<unsigned> const &dlight_ixs(indir_dlight_group_manager.get_dlight_ixs_for_tag_ix(lvol.get_tag_ix()));
@@ -729,7 +728,6 @@ void *trace_ray_block_dynamic(void *ptr) {
 	rgen.set_state(data->rseed, 1);
 	float const line_length(2.0*get_scene_radius());
 	unsigned const num_rays(max(1U, DYNAMIC_RAYS/data->num));
-	cout << "Ray trace dynamic light " << TXT(dlight_ixs.size()) << TXT(num_rays) << TXT(DYNAMIC_RAYS) << endl; // TESTING
 	
 	for (auto i = dlight_ixs.begin(); i != dlight_ixs.end(); ++i) {
 		assert(*i < light_sources_d.size());
@@ -737,7 +735,6 @@ void *trace_ray_block_dynamic(void *ptr) {
 		ray_trace_local_light_source(nullptr, light_sources_d[*i], line_length, num_rays, rgen, data->ltype, DYNAMIC_RAYS); // lmgr is unused, so leave it as null
 	}
 	data->post_run();
-	//PRINT_TIME();
 	return 0;
 }
 
@@ -749,15 +746,16 @@ ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_
 void compute_ray_trace_lighting(unsigned ltype) {
 
 	bool const dynamic(is_ltype_dynamic(ltype));
-	assert(dynamic || ltype < NUM_LIGHTING_TYPES);
+	unsigned const c_ltype(clamp_ltype_range(ltype));
+	assert(c_ltype < NUM_LIGHTING_TYPES);
 
-	if (!dynamic && read_light_files[ltype]) {lmap_manager.read_data_from_file(lighting_file[ltype], ltype);}
+	if (!dynamic && read_light_files[c_ltype]) {lmap_manager.read_data_from_file(lighting_file[c_ltype], c_ltype);}
 	else {
-		if (ltype != LIGHTING_LOCAL && !dynamic) {cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;}
+		if (c_ltype != LIGHTING_LOCAL && !dynamic) {cout << X_SCENE_SIZE << " " << Y_SCENE_SIZE << " " << Z_SCENE_SIZE << " " << czmin << " " << czmax << endl;}
 		all_models.build_cobj_trees(1);
-		launch_threaded_job(NUM_THREADS, rt_funcs[ltype], 1, 1, 0, 0, ltype);
+		launch_threaded_job(NUM_THREADS, rt_funcs[c_ltype], 1, 1, 0, 0, ltype);
 	}
-	if (!dynamic && write_light_files[ltype]) {lmap_manager.write_data_to_file(lighting_file[ltype], ltype);}
+	if (!dynamic && write_light_files[c_ltype]) {lmap_manager.write_data_to_file(lighting_file[c_ltype], c_ltype);}
 }
 
 
