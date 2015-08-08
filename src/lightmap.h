@@ -92,20 +92,20 @@ struct lmcell_local { // size = 12
 
 class light_volume_local {
 
-	vector<lmcell_local> data;
-	float scale;
 	bool enabled, changed;
-
+	unsigned tag_ix;
+	float scale;
+	vector<lmcell_local> data;
 public:
-	vector<unsigned> dlight_ixs;
 
-	light_volume_local(float scale_=1.0) : scale(scale_), changed(0), enabled(0) {}
+	light_volume_local(unsigned tag_ix_, float scale_=1.0) : enabled(0), changed(0), tag_ix(tag_ix_), scale(scale_) {}
 	void set_enabled(bool enabled_) {changed |= (enabled != enabled_); enabled = enabled_;} // changing the enabled state counts as changed
 	bool is_allocated() const {return !data.empty();}
 	bool needs_update() const {return (changed && is_allocated());}
 	void mark_updated() {changed = 0;}
 	void allocate();
-	void clear() {data.clear(); dlight_ixs.clear();} // reset enabled?
+	void clear() {data.clear();} // reset enabled?
+	unsigned get_tag_ix() const {return tag_ix;}
 	
 	void reset_to_zero() {
 		if (!is_allocated()) return;
@@ -118,6 +118,45 @@ public:
 		UNROLL_3X(color[i_] = min(1.0f, color[i_]+data[ix].lc[i_]*scale);)
 	}
 	void add_color(point const &p, colorRGBA const &color);
+};
+
+
+class tag_ix_map {
+
+	map<std::string, unsigned> name_to_ix;
+	unsigned next_ix;
+
+public:
+	tag_ix_map() : next_ix(1) {} // ix starts at 1, 0 is a special value for "none"
+	unsigned get_ix_for_name(std::string const &name);
+};
+
+class indir_dlight_group_manager_t : public tag_ix_map {
+
+	struct group_t {
+		// Note: dynamic lights should all share the same trigger;
+		// the first light's state is checked to determine when the group's light volume is created
+		vector<unsigned> dlight_ixs;
+		int llvol_ix;
+		group_t() : llvol_ix(-1) {}
+	};
+	vector<group_t> groups;
+public:
+	unsigned get_ix_for_name(std::string const &name) {
+		unsigned const tag_ix(tag_ix_map::get_ix_for_name(name));
+		if (tag_ix >= groups.size()) {groups.resize(tag_ix+1);}
+		return tag_ix;
+	}
+	void add_dlight_ix_for_tag_ix(unsigned tag_ix, unsigned dlight_ix) {
+		if (tag_ix == 0) return; // first group is empty
+		assert(tag_ix < groups.size());
+		groups[tag_ix].dlight_ixs.push_back(dlight_ix); // check valid dlight_ix?
+	}
+	vector<unsigned> const &get_dlight_ixs_for_tag_ix(unsigned tag_ix) const {
+		assert(tag_ix < groups.size());
+		return groups[tag_ix].dlight_ixs;
+	}
+	void create_needed_llvols();
 };
 
 
@@ -191,13 +230,14 @@ class light_source_trig : public light_source, public bind_point_t {
 
 	bool use_smap;
 	short platform_id;
+	unsigned indir_dlight_ix;
 	float active_time, inactive_time;
 	multi_trigger_t triggers;
 
 public:
-	light_source_trig() : use_smap(0) {}
-	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1)
-		: light_source(ls), use_smap(smap), platform_id(platform_id_), active_time(0.0), inactive_time(0.0) {user_placed = 1; dynamic = (platform_id >= 0);}
+	light_source_trig() : use_smap(0), platform_id(-1), indir_dlight_ix(0), active_time(0.0), inactive_time(0.0) {}
+	light_source_trig(light_source const &ls, bool smap=0, short platform_id_=-1, unsigned lix=0)
+		: light_source(ls), use_smap(smap), platform_id(platform_id_), indir_dlight_ix(lix), active_time(0.0), inactive_time(0.0) {user_placed = 1; dynamic = (platform_id >= 0);}
 	void add_triggers(multi_trigger_t const &t) {triggers.add_triggers(t);} // deep copy
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
@@ -206,6 +246,7 @@ public:
 	bool is_shadow_map_enabled() const;
 	bool check_shadow_map();
 	void release_smap();
+	unsigned get_indir_dlight_ix() const {return indir_dlight_ix;}
 };
 
 

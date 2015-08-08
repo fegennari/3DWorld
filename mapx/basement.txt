@@ -53,6 +53,9 @@ V -6.2 2.59 -0.16
 L 0.0 0.2  -5.2 2.56 -0.178  0.6 0.6 1.0 1.0
 V -5.2 2.59 -0.16
 L 0.0 0.2  -4.2 2.56 -0.178  0.6 0.6 1.0 1.0
+
+#indir_dlight_group idg1 # FIXME
+
 V -4.2 2.59 -0.16
 L 0.0 2.0  -7.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15  0.0 0 1 # with shadow map
 V -7.2 2.59 -0.16
@@ -64,12 +67,16 @@ L 0.0 2.0  -4.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15  0.0 0 1 # with
 V -4.2 2.59 -0.16
 #L 0.0 2.0  -6.0 1.0 -0.25  1.0 0.4 0.0 1.0
 
+indir_dlight_group none # FIXME: remove when line lights work
+
 # point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]
 C -4.0 -0.85 -0.2  -2.0 -0.85 -0.2  0.01 0.01
 a 0 # non-destroyable
 L 0.0 1.2  -4.0 -0.83 -0.2  0.6 0.6 1.0 1.0  -2.0 -0.83 -0.2  1.0 0.0 1 # line light
 V -3.0 -0.845 -0.2
 K # disable trigger
+
+indir_dlight_group none
 
 # crusher platform
 K -6.3 -0.849 -0.29  0.06 0.0 0.0 1 1 # player manual toggle trigger

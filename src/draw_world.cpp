@@ -69,6 +69,7 @@ extern cube_t cur_smoke_bb;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
 
+void create_dlight_volumes();
 
 
 void set_fill_mode() {
@@ -437,6 +438,7 @@ void setup_object_render_data() {
 	RESET_TIME;
 	bool const TIMETEST(0);
 	calc_cur_ambient_diffuse();
+	create_dlight_volumes();
 	distribute_smoke();
 	if (TIMETEST) {PRINT_TIME("1 Distribute Smoke");}
 	upload_smoke_indir_texture();

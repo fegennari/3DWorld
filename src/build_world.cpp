@@ -61,6 +61,7 @@ extern char *coll_obj_file;
 extern vector<point> app_spots;
 extern vector<light_source> light_sources_a;
 extern vector<light_source_trig> light_sources_d;
+extern indir_dlight_group_manager_t indir_dlight_group_manager;
 extern tree_cont_t t_trees;
 extern vector<texture_t> textures;
 
@@ -1051,7 +1052,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
 	char str[MAX_CHARS];
-	unsigned line_num(1), npoints;
+	unsigned line_num(1), npoints(0), indir_dlight_ix(0);
 	int end(0), use_z(0), use_vel(0), ivals[3];
 	float fvals[3];
 	point pos(all_zeros);
@@ -1065,7 +1066,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	material_map_t materials;
 	multi_trigger_t triggers;
 	
-	while (!end) { // available: dhouz U
+	while (!end) { // available: dhouz
 		assert(fp != NULL);
 		int letter(getc(fp));
 
@@ -1082,6 +1083,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "trigger") {letter = 'K';}
 				else if (keyword == "light"  ) {letter = 'L';}
 				else if (keyword == "bind_light") {letter = 'V';}
+				else if (keyword == "indir_dlight_group") {letter = 'U';}
 				else {
 					string const error_str(string("unrecognized keyword: '") + keyword + "'");
 					return read_error(fp, error_str.c_str(), coll_obj_file);
@@ -1276,7 +1278,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 							assert(cobj.platform_id < (int)platforms.size());
 							platforms[cobj.platform_id].add_light(light_sources_d.size());
 						}
-						light_sources_d.push_back(light_source_trig(ls, (use_smap != 0), cobj.platform_id));
+						indir_dlight_group_manager.add_dlight_ix_for_tag_ix(indir_dlight_ix, light_sources_d.size());
+						light_sources_d.push_back(light_source_trig(ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix));
 						light_sources_d.back().add_triggers(triggers);
 					}
 					else {light_sources_a.push_back(ls);} // ambient
@@ -1325,6 +1328,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				default: return read_error(fp, "cube volume global light ltype param", coll_obj_file);
 				}
 			}
+			break;
+
+		case 'U': // indir dlight group name
+			if (fscanf(fp, "%255s", str) != 1) {return read_error(fp, "indir dlight group name", coll_obj_file);}
+			indir_dlight_ix = indir_dlight_group_manager.get_ix_for_name(str);
 			break;
 
 		case 'f': // place fire: size light_beamwidth intensity xpos ypos zpos

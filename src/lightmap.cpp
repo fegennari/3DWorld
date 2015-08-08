@@ -31,6 +31,7 @@ vector<light_source> light_sources_a, /* light_sources_d, */ dl_sources, dl_sour
 vector<light_source_trig> light_sources_d;
 lmap_manager_t lmap_manager;
 vector<light_volume_local> local_light_volumes;
+indir_dlight_group_manager_t indir_dlight_group_manager;
 
 
 extern int animate2, display_mode, frame_counter, camera_coll_id, scrolling, read_light_files[], write_light_files[];
@@ -300,15 +301,50 @@ void init_light_volume(unsigned lvol_ix, bool enabled, bool compute) {
 	if (compute) {compute_ray_trace_lighting(LIGHTING_DYNAMIC + lvol_ix);}
 }
 
-unsigned add_light_volume_for_dlight(unsigned dlight_ix, float scale=1.0, bool enabled=0, bool compute=0) {
 
-	assert(dlight_ix < light_sources_d.size());
-	unsigned const lvol_ix(local_light_volumes.size());
-	local_light_volumes.push_back(light_volume_local(scale)); // FIXME: by unique_ptr<>?
-	local_light_volumes[lvol_ix].dlight_ixs.push_back(dlight_ix);
-	init_light_volume(lvol_ix, enabled, compute);
-	return lvol_ix;
+unsigned tag_ix_map::get_ix_for_name(string const &name) {
+
+	if (name == "none" || name == "null" || name.empty()) return 0;
+	auto ret(name_to_ix.insert(make_pair(name, next_ix)));
+	if (ret.second) {++next_ix;} // increment next_ix if a new value was inserted
+	return ret.first->second;
 }
+
+void indir_dlight_group_manager_t::create_needed_llvols() {
+
+	for (unsigned i = 0; i < groups.size(); ++i) {
+		group_t &g(groups[i]);
+		if (g.dlight_ixs.empty()) continue; // no lights for this group (including empty group 0)
+		if (g.llvol_ix >= 0) continue; // already valid
+		bool any_light_enabled(0);
+
+		for (auto l = g.dlight_ixs.begin(); l != g.dlight_ixs.end(); ++l) {
+			assert(*l < light_sources_d.size());
+			assert(light_sources_d[*l].get_indir_dlight_ix() == i);
+			any_light_enabled = light_sources_d[*l].is_enabled();
+		}
+		if (any_light_enabled) {
+			unsigned const lvol_ix(local_light_volumes.size());
+			cout << TXT(i) << TXT(g.dlight_ixs.size()) << TXT(lvol_ix) << endl; // TESTING
+			local_light_volumes.push_back(light_volume_local(i, light_int_scale[LIGHTING_DYNAMIC])); // FIXME: by unique_ptr<>?
+			init_light_volume(lvol_ix, 1, 1); // enabled=1, compute=1
+		}
+	}
+}
+
+// TODO:
+// support for tray tracing line light sources
+// local_light_volumes by shared_ptr
+// enable disk caching of llvols (tag => filename)
+// compress light volumes (interior cube, zero elements, float=>char)
+// build list of enabled llvols for faster shader upload
+// limit ray length based on N*light_radius
+// one dlight per llvol to handle light destruction
+// change intensity based on # enabled lights
+// specify indir intensity scale in cobjs file
+
+
+void create_dlight_volumes() {indir_dlight_group_manager.create_needed_llvols();}
 
 
 bool has_fixed_cobjs(int x, int y) {

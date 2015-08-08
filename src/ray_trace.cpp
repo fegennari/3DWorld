@@ -34,6 +34,7 @@ extern coll_obj_group coll_objects;
 extern vector<beam3d> beams;
 extern lmap_manager_t lmap_manager;
 extern vector<light_volume_local> local_light_volumes;
+extern indir_dlight_group_manager_t indir_dlight_group_manager;
 extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 extern model3ds all_models;
 
@@ -718,27 +719,31 @@ void *trace_ray_block_dynamic(void *ptr) {
 
 	assert(ptr);
 	if (DYNAMIC_RAYS == 0) return 0; // nothing to do
+	//RESET_TIME;
 	rt_data *data(static_cast<rt_data *>(ptr));
 	light_volume_local const &lvol(get_local_light_volume(data->ltype));
-	if (lvol.dlight_ixs.empty()) return 0; // error?
+	vector<unsigned> const &dlight_ixs(indir_dlight_group_manager.get_dlight_ixs_for_tag_ix(lvol.get_tag_ix()));
+	assert(!dlight_ixs.empty());
 	data->pre_run();
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
 	float const line_length(2.0*get_scene_radius());
 	unsigned const num_rays(max(1U, DYNAMIC_RAYS/data->num));
+	cout << "Ray trace dynamic light " << TXT(dlight_ixs.size()) << TXT(num_rays) << TXT(DYNAMIC_RAYS) << endl; // TESTING
 	
-	for (auto i = lvol.dlight_ixs.begin(); i != lvol.dlight_ixs.end(); ++i) {
+	for (auto i = dlight_ixs.begin(); i != dlight_ixs.end(); ++i) {
 		assert(*i < light_sources_d.size());
-		if (!light_sources_d[*i].is_enabled()) continue; // error?
+		//if (!light_sources_d[*i].is_enabled()) continue; // error?
 		ray_trace_local_light_source(nullptr, light_sources_d[*i], line_length, num_rays, rgen, data->ltype, DYNAMIC_RAYS); // lmgr is unused, so leave it as null
 	}
 	data->post_run();
+	//PRINT_TIME();
 	return 0;
 }
 
 
 typedef void *(*ray_trace_func)(void *);
-ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_local};
+ray_trace_func const rt_funcs[NUM_LIGHTING_TYPES] = {trace_ray_block_sky, trace_ray_block_global, trace_ray_block_local, trace_ray_block_dynamic};
 
 
 void compute_ray_trace_lighting(unsigned ltype) {
