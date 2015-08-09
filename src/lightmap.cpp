@@ -293,17 +293,65 @@ void light_volume_local::add_color(point const &p, colorRGBA const &color) { // 
 	changed = 1;
 }
 
+bool light_volume_local::read(string const &filename) {
 
-void light_volume_local::init(unsigned lvol_ix, float scale_, bool compute) {
+	assert(is_allocated());
+	if (filename.empty()) return 0;
+	FILE *fp(fopen(filename.c_str(), "rb")); // read a binary file
+	if (fp == nullptr) return 0; // file doesn't exist yet
+	unsigned num_data(0);
 
+	if (fread(&num_data, sizeof(unsigned), 1, fp) != 1) {
+		std::cerr << "Error: Failed to read header from light volume file '" << filename << "'." << endl;
+		fclose(fp); return 0;
+	}
+	if (num_data != data.size()) {
+		std::cerr << "Error: Incorrect num_data in header for light volume file '" << filename << "'." << endl;
+		fclose(fp); return 0;
+	}
+	if (fread(&data.front(), sizeof(lmcell_local), num_data, fp) != num_data) {
+		std::cerr << "Error: Failed to read data from light volume file '" << filename << "'." << endl;
+		fclose(fp); return 0;
+	}
+	fclose(fp);
+	cout << "Read light volume file '" << filename << "'." << endl;
+	changed = 1;
+	return 1;
+}
+
+bool light_volume_local::write(string const &filename) const {
+
+	assert(is_allocated());
+	if (filename.empty()) return 1;
+	FILE *fp(fopen(filename.c_str(), "wb")); // write a binary file
+	unsigned const num_data(data.size());
+
+	if (fp == nullptr) {
+		std::cerr << "Error: Failed to open light volume file '" << filename << "' for write." << endl;
+		return 0;
+	}
+	if (fwrite(&num_data, sizeof(unsigned), 1, fp) != 1) {
+		std::cerr << "Error: Failed to write header to light volume file '" << filename << "'." << endl;
+		fclose(fp); return 0;
+	}
+	if (fwrite(&data.front(), sizeof(lmcell_local), num_data, fp) != num_data) {
+		std::cerr << "Error: Failed to write data to light volume file '" << filename << "'." << endl;
+		fclose(fp); return 0;
+	}
+	fclose(fp);
+	cout << "Wrote light volume file '" << filename << "'." << endl;
+	return 1;
+}
+
+void light_volume_local::init(unsigned lvol_ix, float scale_, string const &filename) {
+
+	RESET_TIME;
 	allocate();
 	set_scale(scale_);
-	
-	if (compute) {
-		RESET_TIME;
-		compute_ray_trace_lighting(LIGHTING_DYNAMIC + lvol_ix);
-		PRINT_TIME("Local Dlight Volume Creation");
-	}
+	if (read(filename)) return; // see if there is an existing file to read
+	compute_ray_trace_lighting(LIGHTING_DYNAMIC + lvol_ix);
+	write(filename); // write the output file
+	PRINT_TIME("Local Dlight Volume Creation");
 }
 
 
@@ -313,6 +361,22 @@ unsigned tag_ix_map::get_ix_for_name(string const &name) {
 	auto ret(name_to_ix.insert(make_pair(name, next_ix)));
 	if (ret.second) {++next_ix;} // increment next_ix if a new value was inserted
 	return ret.first->second;
+}
+
+unsigned indir_dlight_group_manager_t::get_ix_for_name(std::string const &name, float scale) {
+
+	unsigned const tag_ix(tag_ix_map::get_ix_for_name(name));
+	if (tag_ix >= groups.size()) {groups.resize(tag_ix+1);}
+	groups[tag_ix].scale = scale; // FIXME: check if already set to a different value?
+	if (name.find_last_of('.') != string::npos) {groups[tag_ix].filename = name;} // if it has a file extension (.), assume it's a filename
+	return tag_ix;
+}
+
+void indir_dlight_group_manager_t::add_dlight_ix_for_tag_ix(unsigned tag_ix, unsigned dlight_ix) {
+
+	if (tag_ix == 0) return; // first group is empty
+	assert(tag_ix < groups.size());
+	groups[tag_ix].dlight_ixs.push_back(dlight_ix); // check valid dlight_ix?
 }
 
 void indir_dlight_group_manager_t::create_needed_llvols() {
@@ -336,13 +400,12 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 		else if (num_enabled > 0) { // not valid but needed - create
 			g.llvol_ix = local_light_volumes.size();
 			local_light_volumes.push_back(std::unique_ptr<light_volume_local>(new light_volume_local(i)));
-			local_light_volumes[g.llvol_ix]->init(g.llvol_ix, scale, 1); // enabled=1, compute=1
+			local_light_volumes[g.llvol_ix]->init(g.llvol_ix, scale, g.filename);
 		}
 	}
 }
 
 // TODO:
-// enable disk caching of llvols (tag => filename)
 // compress light volumes (interior cube, zero elements, float=>char)
 // one dlight per llvol to handle light destruction
 // more basement pillars to test lighting

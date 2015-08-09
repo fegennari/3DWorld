@@ -85,7 +85,7 @@ public:
 };
 
 
-struct lmcell_local { // size = 12
+struct lmcell_local { // size = 12 (must be packed)
 	float lc[3];
 	lmcell_local() {lc[0] = lc[1] = lc[2] = 0.0;}
 };
@@ -96,6 +96,9 @@ class light_volume_local {
 	unsigned tag_ix;
 	float scale; // 0 => disabled
 	vector<lmcell_local> data;
+
+	bool read(std::string const &filename);
+	bool write(std::string const &filename) const;
 public:
 
 	light_volume_local(unsigned tag_ix_) : changed(0), tag_ix(tag_ix_), scale(0.0) {}
@@ -107,7 +110,7 @@ public:
 	void allocate();
 	void clear() {data.clear();} // reset enabled?
 	unsigned get_tag_ix() const {return tag_ix;}
-	void init(unsigned lvol_ix, float scale_, bool compute);
+	void init(unsigned lvol_ix, float scale_, std::string const &filename);
 	
 	void reset_to_zero() {
 		if (!is_allocated()) return;
@@ -140,22 +143,14 @@ class indir_dlight_group_manager_t : public tag_ix_map {
 	struct group_t {
 		int llvol_ix;
 		float scale;
+		std::string filename;
 		vector<unsigned> dlight_ixs; // Note: dynamic lights should all share the same trigger
 		group_t(float scale_=1.0) : llvol_ix(-1), scale(scale_) {}
 	};
 	vector<group_t> groups;
 public:
-	unsigned get_ix_for_name(std::string const &name, float scale=1.0) {
-		unsigned const tag_ix(tag_ix_map::get_ix_for_name(name));
-		if (tag_ix >= groups.size()) {groups.resize(tag_ix+1);}
-		groups[tag_ix].scale = scale; // FIXME: check if already set to a different value?
-		return tag_ix;
-	}
-	void add_dlight_ix_for_tag_ix(unsigned tag_ix, unsigned dlight_ix) {
-		if (tag_ix == 0) return; // first group is empty
-		assert(tag_ix < groups.size());
-		groups[tag_ix].dlight_ixs.push_back(dlight_ix); // check valid dlight_ix?
-	}
+	unsigned get_ix_for_name(std::string const &name, float scale=1.0);
+	void add_dlight_ix_for_tag_ix(unsigned tag_ix, unsigned dlight_ix);
 	vector<unsigned> const &get_dlight_ixs_for_tag_ix(unsigned tag_ix) const {
 		assert(tag_ix < groups.size());
 		return groups[tag_ix].dlight_ixs;

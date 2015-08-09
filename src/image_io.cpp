@@ -55,7 +55,7 @@ string get_file_extension(string const &filename, unsigned level, bool make_lowe
 	string ext;
 
 	for (unsigned i = 0; i < 2; ++i) {
-		if (spos[i] != string::npos) smax = max(smax, spos[i]);
+		if (spos[i] != string::npos) {smax = max(smax, spos[i]);}
 	}
 	if (epos != string::npos && epos > smax) { // make sure the dot is after the last slash (part of the filename, not part of the path)
 		ext = string(filename, epos+1, filename.length()-1);

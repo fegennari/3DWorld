@@ -54,7 +54,7 @@ L 0.0 0.2  -5.2 2.56 -0.178  0.6 0.6 1.0 1.0
 V -5.2 2.59 -0.16
 L 0.0 0.2  -4.2 2.56 -0.178  0.6 0.6 1.0 1.0
 
-#indir_dlight_group idg1 # FIXME
+indir_dlight_group mapx/basement_spotlights.data 0.02
 
 V -4.2 2.59 -0.16
 L 0.0 2.0  -7.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15  0.0 0 1 # with shadow map
@@ -67,7 +67,7 @@ L 0.0 2.0  -4.2 2.56 -0.178  0.6 0.6 1.0 1.0  0.0 -1.0 -0.7 0.15  0.0 0 1 # with
 V -4.2 2.59 -0.16
 #L 0.0 2.0  -6.0 1.0 -0.25  1.0 0.4 0.0 1.0
 
-indir_dlight_group none # FIXME: remove when line lights work
+indir_dlight_group mapx/basement_line_light.data 0.08
 
 # point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]
 C -4.0 -0.85 -0.2  -2.0 -0.85 -0.2  0.01 0.01
