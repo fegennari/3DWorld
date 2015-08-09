@@ -3,8 +3,8 @@ uniform vec3 camera_pos; // world space
 uniform sampler2D dlight_tex;
 uniform usampler2D dlelm_tex, dlgb_tex;
 
-const float SPOTLIGHT_LEAKAGE = 0.0; // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
-const float SHADOW_LEAKAGE    = 0.1; // simulates indirect lighting
+const float SPOTLIGHT_LEAKAGE = 0.0;  // simulates indirect lighting - however, doesn't match dlights XY grid, so has artifacts, and doesn't look right
+const float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir may already be enabled for this light
 
 #ifdef HAS_DLIGHT_SMAP
 const int MAX_DLIGHT_SMAPS = 16;

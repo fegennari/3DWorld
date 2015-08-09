@@ -63,14 +63,16 @@ light_volume_local &get_local_light_volume(int ltype) {
 
 void add_path_to_lmcs(lmap_manager_t *lmgr, point p1, point const &p2, float weight, colorRGBA const &color, int ltype, bool first_pt) {
 
+	bool const dynamic(is_ltype_dynamic(ltype));
+	if (first_pt && dynamic) return; // since dynamic lights already have a direct lighting component, we skip the first ray here to avoid double counting it
 	if (first_pt && ltype == LIGHTING_GLOBAL) {weight *= first_ray_weight;} // lower weight - handled by direct illumination
-	if (weight < TOLERANCE) return;
+	if (weight < TOLERANCE)  return;
 	colorRGBA const cw(color*weight);
 	unsigned const nsteps(1 + unsigned(p2p_dist(p1, p2)/get_step_size())); // round up (dist can be 0)
 	vector3d const step((p2 - p1)/nsteps); // at least two points
 	if (!first_pt) {p1 += step;} // move past the first step so we don't double count
 
-	if (is_ltype_dynamic(ltype)) { // it's a local lighting volume
+	if (dynamic) { // it's a local lighting volume
 		light_volume_local &lvol(get_local_light_volume(ltype));
 
 		for (unsigned s = 0; s < nsteps+first_pt; ++s) {
@@ -194,8 +196,8 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		// Therefore, we simply multiply by the base water color and attenuate by 2x the incident optical path
 		vector3d const delta(p2 - p1);
 		if (delta.z > -TOLERANCE) return; // too shallow of an angle, assume attenuated to nothing
-		float const depth(water_plane_z - cpos.z);
-		float const dist(-2*depth*delta.mag()/delta.z); // multiply by 2 to account for both directions
+		float const wdepth(water_plane_z - cpos.z);
+		float const dist(-2*wdepth*delta.mag()/delta.z); // multiply by 2 to account for both directions
 		assert(dist >= 0.0);
 		colorRGBA water_color(WATER_C);
 		water_color.A = 1.0;  // make solid for volume attenuation (not surface)
@@ -278,7 +280,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 						no_transmit = 1; // total internal reflection (could process an internal reflection)
 					}
 				}
-				if (!no_transmit) cast_light_ray(lmgr, p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1, rgen); // transmitted
+				if (!no_transmit) {cast_light_ray(lmgr, p2, p_end, tweight, weight0, color, line_length, cindex, ltype, depth+1, rgen);} // transmitted
 			}
 			weight *= rweight; // reflected weight
 		}
