@@ -656,15 +656,16 @@ void *trace_ray_block_sky(void *ptr) {
 
 void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, float line_length, unsigned num_rays, rand_gen_t &rgen, int ltype, unsigned N_RAYS) {
 
-	assert(!ls.is_line_light());
-	point const &lpos(ls.get_pos());
 	colorRGBA lcolor(ls.get_color());
 	if (N_RAYS == 0 || lcolor.alpha == 0.0) return; // nothing to do
+	point const &lpos(ls.get_pos()), &lpos2(ls.get_pos2());
+	vector3d const delta(lpos2 - lpos); // only nonzero for line lights
 	float const ray_wt(1000.0*lcolor.alpha*ls.get_radius()/N_RAYS), r_inner(ls.get_r_inner());
 	assert(ray_wt > 0.0);
 	int init_cobj(-1);
-	check_coll_line(lpos, lpos, init_cobj, -1, 1, 2); // find most opaque (max alpha) containing object
+	check_coll_line(lpos, lpos2, init_cobj, -1, 1, 2); // find most opaque (max alpha) containing object
 	assert(init_cobj < (int)coll_objects.size());
+	bool const line_light(ls.is_line_light());
 	
 	for (unsigned n = 0; n < num_rays; ++n) {
 		if (kill_raytrace) break;
@@ -685,6 +686,7 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 			// move r_inner away from the light source
 			// necessary for sources contained in more than one cobj (like the lamps in mapx)
 			start_pt = lpos + dir*r_inner;
+			if (line_light) {start_pt += rgen.rand_vector()*delta;}
 		}
 		point const end_pt(start_pt + dir*line_length);
 		cast_light_ray(lmgr, start_pt, end_pt, weight, weight, lcolor, line_length, init_cobj, ltype, 0, rgen);

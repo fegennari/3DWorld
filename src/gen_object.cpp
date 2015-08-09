@@ -394,6 +394,10 @@ double rgen_pregen_t::randd() {
 	return val;
 }
 
+template<typename base> vector3d rand_gen_template_t<base>::rand_vector(float scale=1.0) {
+	assert(scale > 0.0);
+	return vector3d(scale*randd(), scale*randd(), scale*randd());
+}
 template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector(float scale) {
 	assert(scale > 0.0);
 	return vector3d(scale*signed_rand_float(), scale*signed_rand_float(), scale*signed_rand_float());

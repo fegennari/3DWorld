@@ -342,7 +342,6 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 }
 
 // TODO:
-// support for tray tracing line light sources
 // local_light_volumes by shared_ptr
 // enable disk caching of llvols (tag => filename)
 // compress light volumes (interior cube, zero elements, float=>char)
