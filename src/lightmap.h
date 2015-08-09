@@ -92,22 +92,22 @@ struct lmcell_local { // size = 12
 
 class light_volume_local {
 
-	bool enabled, changed;
+	bool changed;
 	unsigned tag_ix;
-	float scale;
+	float scale; // 0 => disabled
 	vector<lmcell_local> data;
 public:
 
-	light_volume_local(unsigned tag_ix_, float scale_=1.0) : enabled(0), changed(0), tag_ix(tag_ix_), scale(scale_) {}
-	void set_enabled(bool enabled_) {changed |= (enabled != enabled_); enabled = enabled_;} // changing the enabled state counts as changed
+	light_volume_local(unsigned tag_ix_) : changed(0), tag_ix(tag_ix_), scale(0.0) {}
+	void set_scale(float scale_) {changed |= (scale != scale_); scale = scale_;} // changing the scale counts as changed
 	bool is_allocated() const {return !data.empty();}
-	bool needs_update() const {return (changed && is_allocated());}
-	bool is_active   () const {return (enabled && is_allocated());}
+	bool needs_update() const {return (changed     && is_allocated());}
+	bool is_active   () const {return (scale > 0.0 && is_allocated());}
 	void mark_updated() {changed = 0;}
 	void allocate();
 	void clear() {data.clear();} // reset enabled?
 	unsigned get_tag_ix() const {return tag_ix;}
-	void init(unsigned lvol_ix, bool enabled, bool compute);
+	void init(unsigned lvol_ix, float scale_, bool compute);
 	
 	void reset_to_zero() {
 		if (!is_allocated()) return;
@@ -115,7 +115,7 @@ public:
 		changed = 1;
 	}
 	void add_lighting(colorRGB &color, unsigned ix) const {
-		if (!enabled || !is_allocated()) return; // not yet allocated
+		//if (!is_active()) return; // not yet allocated - caller should check this
 		assert(ix < data.size());
 		UNROLL_3X(color[i_] = min(1.0f, color[i_]+data[ix].lc[i_]*scale);)
 	}

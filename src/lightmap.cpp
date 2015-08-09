@@ -294,10 +294,10 @@ void light_volume_local::add_color(point const &p, colorRGBA const &color) { // 
 }
 
 
-void light_volume_local::init(unsigned lvol_ix, bool enabled, bool compute) {
+void light_volume_local::init(unsigned lvol_ix, float scale_, bool compute) {
 
 	allocate();
-	set_enabled(enabled);
+	set_scale(scale_);
 	
 	if (compute) {
 		RESET_TIME;
@@ -320,21 +320,23 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 	for (unsigned i = 0; i < groups.size(); ++i) {
 		group_t &g(groups[i]);
 		if (g.dlight_ixs.empty()) continue; // no lights for this group (including empty group 0)
-		bool any_light_enabled(0);
+		unsigned num_enabled(0);
 
 		for (auto l = g.dlight_ixs.begin(); l != g.dlight_ixs.end(); ++l) {
 			assert(*l < light_sources_d.size());
 			assert(light_sources_d[*l].get_indir_dlight_ix() == i);
-			any_light_enabled = light_sources_d[*l].is_enabled();
+			num_enabled += light_sources_d[*l].is_enabled();
 		}
+		float const scale(g.scale*light_int_scale[LIGHTING_DYNAMIC]*(float(num_enabled)/g.dlight_ixs.size()));
+
 		if (g.llvol_ix >= 0) { // already valid - check enabled state
 			assert((unsigned)g.llvol_ix < local_light_volumes.size());
-			local_light_volumes[g.llvol_ix]->set_enabled(any_light_enabled); // FIXME: what if some but not all lights are enabled?
+			local_light_volumes[g.llvol_ix]->set_scale(scale); // FIXME: what if some but not all lights are enabled?
 		}
-		else if (any_light_enabled) { // not valid but needed - create
+		else if (num_enabled > 0) { // not valid but needed - create
 			g.llvol_ix = local_light_volumes.size();
-			local_light_volumes.push_back(std::unique_ptr<light_volume_local>(new light_volume_local(i, g.scale*light_int_scale[LIGHTING_DYNAMIC])));
-			local_light_volumes[g.llvol_ix]->init(g.llvol_ix, 1, 1); // enabled=1, compute=1
+			local_light_volumes.push_back(std::unique_ptr<light_volume_local>(new light_volume_local(i)));
+			local_light_volumes[g.llvol_ix]->init(g.llvol_ix, scale, 1); // enabled=1, compute=1
 		}
 	}
 }
@@ -343,7 +345,6 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 // enable disk caching of llvols (tag => filename)
 // compress light volumes (interior cube, zero elements, float=>char)
 // one dlight per llvol to handle light destruction
-// change intensity based on # enabled lights
 // more basement pillars to test lighting
 
 
