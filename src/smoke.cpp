@@ -34,7 +34,7 @@ extern float czmin0;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
 extern vector<cube_t> smoke_bounds;
-extern vector<light_volume_local> local_light_volumes;
+extern llv_vect local_light_volumes;
 
 
 
@@ -190,7 +190,7 @@ float get_smoke_at_pos(point const &pos) {
 void reset_smoke_tex_data() {smoke_tex_data.clear();}
 
 
-void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, unsigned x_start, unsigned x_end, unsigned y, bool update_lighting) {
+void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol_ixs, lmcell const &default_lmc, unsigned x_start, unsigned x_end, unsigned y, bool update_lighting) {
 
 	unsigned const zsize(MESH_SIZE[2]), ncomp(4);
 	float const smoke_scale(1.0/SMOKE_MAX_CELL);
@@ -223,7 +223,7 @@ void update_smoke_row(vector<unsigned char> &data, lmcell const &default_lmc, un
 				else {
 					if (vlm == NULL) {color = default_color;} else {vlm[z].get_final_color(color, 1.0, 1.0);}
 				}
-				for (auto i = local_light_volumes.begin(); i != local_light_volumes.end(); ++i) {i->add_lighting(color, off+z);} // add local light volumes
+				for (auto i = llvol_ixs.begin(); i != llvol_ixs.end(); ++i) {local_light_volumes[*i]->add_lighting(color, off+z);} // add local light volumes
 				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
 			}
 		} // for z
@@ -240,10 +240,14 @@ void update_smoke_indir_tex_range(unsigned x_start, unsigned x_end, unsigned y_s
 	default_lmc.set_outside_colors();
 	default_lmc.get_final_color(const_indir_color, 1.0);
 	bool const no_parallel(lmap_manager.was_updated || !update_lighting); // if running with multiple threads, don't use openmp
+	vector<unsigned> llvol_ixs;
 	
+	for (unsigned i = 0; i < local_light_volumes.size(); ++i) { // sparse active optimization
+		if (local_light_volumes[i]->is_active()) {llvol_ixs.push_back(i);}
+	}
 	#pragma omp parallel for schedule(static,1) if (!no_parallel)
 	for (int y = y_start; y < (int)y_end; ++y) { // split the computation across several frames
-		update_smoke_row(smoke_tex_data, default_lmc, x_start, x_end, y, update_lighting);
+		update_smoke_row(smoke_tex_data, llvol_ixs, default_lmc, x_start, x_end, y, update_lighting);
 	}
 	if (smoke_tid == 0) { // create texture
 		static bool was_printed(0);
@@ -286,7 +290,7 @@ bool upload_smoke_indir_texture() {
 	bool lighting_changed(cur_ambient != last_cur_ambient || cur_diffuse != last_cur_diffuse);
 	
 	for (auto i = local_light_volumes.begin(); i != local_light_volumes.end(); ++i) { // check to see if any local light volumes have changed
-		if (i->needs_update()) {i->mark_updated(); lighting_changed = 1;}
+		if ((*i)->needs_update()) {(*i)->mark_updated(); lighting_changed = 1;}
 	}
 	bool const full_update(smoke_tid == 0 || (!no_sun_lpos_update && lighting_changed));
 	bool const could_have_smoke(smoke_exists || last_smoke_update > 0);

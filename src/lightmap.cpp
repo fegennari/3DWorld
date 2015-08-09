@@ -30,7 +30,7 @@ dls_cell **ldynamic = NULL;
 vector<light_source> light_sources_a, /* light_sources_d, */ dl_sources, dl_sources2; // static ambient, static diffuse, dynamic {cur frame, next frame}
 vector<light_source_trig> light_sources_d;
 lmap_manager_t lmap_manager;
-vector<light_volume_local> local_light_volumes;
+llv_vect local_light_volumes;
 indir_dlight_group_manager_t indir_dlight_group_manager;
 
 
@@ -294,11 +294,10 @@ void light_volume_local::add_color(point const &p, colorRGBA const &color) { // 
 }
 
 
-void init_light_volume(unsigned lvol_ix, bool enabled, bool compute) {
+void light_volume_local::init(unsigned lvol_ix, bool enabled, bool compute) {
 
-	assert(lvol_ix < local_light_volumes.size());
-	local_light_volumes[lvol_ix].allocate();
-	local_light_volumes[lvol_ix].set_enabled(enabled);
+	allocate();
+	set_enabled(enabled);
 	
 	if (compute) {
 		RESET_TIME;
@@ -330,25 +329,21 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 		}
 		if (g.llvol_ix >= 0) { // already valid - check enabled state
 			assert((unsigned)g.llvol_ix < local_light_volumes.size());
-			local_light_volumes[g.llvol_ix].set_enabled(any_light_enabled); // FIXME: what if some but not all lights are enabled?
+			local_light_volumes[g.llvol_ix]->set_enabled(any_light_enabled); // FIXME: what if some but not all lights are enabled?
 		}
 		else if (any_light_enabled) { // not valid but needed - create
 			g.llvol_ix = local_light_volumes.size();
-			//cout << TXT(i) << TXT(g.dlight_ixs.size()) << TXT(g.llvol_ix) << endl; // TESTING
-			local_light_volumes.push_back(light_volume_local(i, g.scale*light_int_scale[LIGHTING_DYNAMIC])); // FIXME: by unique_ptr<>?
-			init_light_volume(g.llvol_ix, 1, 1); // enabled=1, compute=1
+			local_light_volumes.push_back(std::unique_ptr<light_volume_local>(new light_volume_local(i, g.scale*light_int_scale[LIGHTING_DYNAMIC])));
+			local_light_volumes[g.llvol_ix]->init(g.llvol_ix, 1, 1); // enabled=1, compute=1
 		}
 	}
 }
 
 // TODO:
-// local_light_volumes by shared_ptr
 // enable disk caching of llvols (tag => filename)
 // compress light volumes (interior cube, zero elements, float=>char)
-// build list of enabled llvols for faster shader upload
 // one dlight per llvol to handle light destruction
 // change intensity based on # enabled lights
-// specify indir intensity scale in cobjs file
 // more basement pillars to test lighting
 
 

@@ -102,10 +102,12 @@ public:
 	void set_enabled(bool enabled_) {changed |= (enabled != enabled_); enabled = enabled_;} // changing the enabled state counts as changed
 	bool is_allocated() const {return !data.empty();}
 	bool needs_update() const {return (changed && is_allocated());}
+	bool is_active   () const {return (enabled && is_allocated());}
 	void mark_updated() {changed = 0;}
 	void allocate();
 	void clear() {data.clear();} // reset enabled?
 	unsigned get_tag_ix() const {return tag_ix;}
+	void init(unsigned lvol_ix, bool enabled, bool compute);
 	
 	void reset_to_zero() {
 		if (!is_allocated()) return;
@@ -119,6 +121,8 @@ public:
 	}
 	void add_color(point const &p, colorRGBA const &color);
 };
+
+typedef vector<std::unique_ptr<light_volume_local>> llv_vect;
 
 
 class tag_ix_map {

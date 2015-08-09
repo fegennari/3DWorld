@@ -33,7 +33,7 @@ extern vector<light_source_trig> light_sources_d;
 extern coll_obj_group coll_objects;
 extern vector<beam3d> beams;
 extern lmap_manager_t lmap_manager;
-extern vector<light_volume_local> local_light_volumes;
+extern llv_vect local_light_volumes;
 extern indir_dlight_group_manager_t indir_dlight_group_manager;
 extern cube_light_src_vect sky_cube_lights, global_cube_lights;
 extern model3ds all_models;
@@ -57,7 +57,7 @@ light_volume_local &get_local_light_volume(int ltype) {
 	assert(is_ltype_dynamic(ltype)); // it's a local lighting volume
 	unsigned const llvol_ix(ltype - LIGHTING_DYNAMIC);
 	assert(llvol_ix < local_light_volumes.size());
-	return local_light_volumes[llvol_ix];
+	return *local_light_volumes[llvol_ix];
 }
 
 
