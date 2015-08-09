@@ -669,9 +669,15 @@ void ray_trace_local_light_source(lmap_manager_t *lmgr, light_source const &ls, 
 	
 	for (unsigned n = 0; n < num_rays; ++n) {
 		if (kill_raytrace) break;
-		vector3d const dir(rgen.signed_rand_vector_spherical(1.0).get_norm());
-		float const weight(ray_wt*ls.get_dir_intensity(-dir));
-		if (weight == 0.0) continue;
+		vector3d dir;
+		float weight(0.0);
+
+		for (unsigned tries = 0; tries < 10; ++tries) { // make up to 10 attempts
+			dir    = rgen.signed_rand_vector_spherical(1.0).get_norm();
+			weight = ray_wt*ls.get_dir_intensity(-dir);
+			if (weight > 0.0) break; // success
+		}
+		if (weight == 0.0) continue; // failed to choose a dir
 		point start_pt;
 
 		if (init_cobj >= 0 && r_inner == 0.0) { // use a volume light source
