@@ -285,7 +285,8 @@ void light_volume_local::allocate() {data.resize(MESH_X_SIZE * MESH_Y_SIZE * MES
 void light_volume_local::add_color(point const &p, colorRGBA const &color) { // inlined in the header?
 
 	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
-	if (!is_inside_lmap(x, y, z)) return;
+	//if (!is_inside_lmap(x, y, z)) return;
+	if (!lmap_manager.is_valid_cell(x, y, z)) return; // if the global lightmap doesn't have this cell, the local lmap shouldn't need it
 	unsigned const ix((y*MESH_X_SIZE + x)*MESH_SIZE[2] + z);
 	assert(ix < data.size());
 	UNROLL_3X(data[ix].lc[i_] += color[i_]*color.alpha;)
@@ -344,10 +345,8 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 // support for tray tracing line light sources
 // local_light_volumes by shared_ptr
 // enable disk caching of llvols (tag => filename)
-// skip adding to empty lmcells
 // compress light volumes (interior cube, zero elements, float=>char)
 // build list of enabled llvols for faster shader upload
-// limit ray length based on N*light_radius
 // one dlight per llvol to handle light destruction
 // change intensity based on # enabled lights
 // specify indir intensity scale in cobjs file

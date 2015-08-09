@@ -728,13 +728,15 @@ void *trace_ray_block_dynamic(void *ptr) {
 	data->pre_run();
 	rand_gen_t rgen;
 	rgen.set_state(data->rseed, 1);
-	float const line_length(2.0*get_scene_radius());
+	float const max_line_length(2.0*get_scene_radius());
 	unsigned const num_rays(max(1U, DYNAMIC_RAYS/data->num));
 	
 	for (auto i = dlight_ixs.begin(); i != dlight_ixs.end(); ++i) {
 		assert(*i < light_sources_d.size());
-		//if (!light_sources_d[*i].is_enabled()) continue; // error?
-		ray_trace_local_light_source(nullptr, light_sources_d[*i], line_length, num_rays, rgen, data->ltype, DYNAMIC_RAYS); // lmgr is unused, so leave it as null
+		light_source_trig const &ls(light_sources_d[*i]);
+		//if (!ls.is_enabled()) continue; // error?
+		float const line_length(min(4.0f*ls.get_radius(), max_line_length)); // limit ray length to improve perf
+		ray_trace_local_light_source(nullptr, ls, line_length, num_rays, rgen, data->ltype, DYNAMIC_RAYS); // lmgr is unused, so leave it as null
 	}
 	data->post_run();
 	return 0;
