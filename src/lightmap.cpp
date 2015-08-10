@@ -456,10 +456,6 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 	}
 }
 
-// TODO:
-// one dlight per llvol to handle light destruction
-// more basement pillars to test lighting
-
 
 void create_dlight_volumes() {indir_dlight_group_manager.create_needed_llvols();}
 
