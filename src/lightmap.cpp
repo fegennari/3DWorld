@@ -280,61 +280,72 @@ void lmcell::mix_lighting_with(lmcell const &lmc, float val) {
 }
 
 
-void light_volume_local::allocate() {data.resize(MESH_X_SIZE * MESH_Y_SIZE * MESH_SIZE[2]);} // init to all zeros
+void light_volume_local::allocate() {
+	set_bounds(0, MESH_X_SIZE, 0, MESH_Y_SIZE, 0, MESH_SIZE[2]);
+	data.resize(get_num_data()); // init to all zeros
+}
 
 void light_volume_local::add_color(point const &p, colorRGBA const &color) { // inlined in the header?
 
+	assert(!compressed); // compressed is read only
 	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
-	//if (!is_inside_lmap(x, y, z)) return;
 	if (!lmap_manager.is_valid_cell(x, y, z)) return; // if the global lightmap doesn't have this cell, the local lmap shouldn't need it
-	unsigned const ix((y*MESH_X_SIZE + x)*MESH_SIZE[2] + z);
+	unsigned const ix(get_ix(x, y, z));
 	assert(ix < data.size());
 	UNROLL_3X(data[ix].lc[i_] += color[i_]*color.alpha;)
 	changed = 1;
 }
 
+void light_volume_local::add_lighting(colorRGB &color, int x, int y, int z) const {
+
+	//if (!is_active()) return; // not yet allocated - caller should check this
+	if (x < bounds[0][0] || x >= bounds[0][1] || y < bounds[1][0] || y >= bounds[1][1] || z < bounds[2][0] || z >= bounds[2][1]) return;
+	unsigned const ix(((y - bounds[1][0])*(bounds[0][1] - bounds[0][0]) + (x - bounds[0][0]))*(bounds[2][1] - bounds[2][0]) + (z - bounds[2][0]));
+	assert(ix < data.size());
+	UNROLL_3X(color[i_] = min(1.0f, color[i_]+data[ix].lc[i_]*scale);)
+}
+
 bool light_volume_local::read(string const &filename) {
 
-	assert(is_allocated());
+	assert(!is_allocated());
 	if (filename.empty()) return 0;
 	FILE *fp(fopen(filename.c_str(), "rb")); // read a binary file
 	if (fp == nullptr) return 0; // file doesn't exist yet
-	unsigned num_data(0);
 
-	if (fread(&num_data, sizeof(unsigned), 1, fp) != 1) {
+	if (fread(bounds, sizeof(int), 6, fp) != 6) {
 		std::cerr << "Error: Failed to read header from light volume file '" << filename << "'." << endl;
 		fclose(fp); return 0;
 	}
-	if (num_data != data.size()) {
-		std::cerr << "Error: Incorrect num_data in header for light volume file '" << filename << "'." << endl;
-		fclose(fp); return 0;
-	}
-	if (fread(&data.front(), sizeof(lmcell_local), num_data, fp) != num_data) {
+	data.resize(get_num_data());
+	assert(is_allocated());
+
+	if (fread(&data.front(), sizeof(lmcell_local), data.size(), fp) != data.size()) {
 		std::cerr << "Error: Failed to read data from light volume file '" << filename << "'." << endl;
 		fclose(fp); return 0;
 	}
 	fclose(fp);
+	compressed = 1; // llvols are always written compressed
+	changed    = 1;
 	cout << "Read light volume file '" << filename << "'." << endl;
-	changed = 1;
 	return 1;
 }
 
 bool light_volume_local::write(string const &filename) const {
 
 	assert(is_allocated());
+	assert(compressed); // llvols are always written compressed
 	if (filename.empty()) return 1;
 	FILE *fp(fopen(filename.c_str(), "wb")); // write a binary file
-	unsigned const num_data(data.size());
 
 	if (fp == nullptr) {
 		std::cerr << "Error: Failed to open light volume file '" << filename << "' for write." << endl;
 		return 0;
 	}
-	if (fwrite(&num_data, sizeof(unsigned), 1, fp) != 1) {
+	if (fwrite(bounds, sizeof(int), 6, fp) != 6) {
 		std::cerr << "Error: Failed to write header to light volume file '" << filename << "'." << endl;
 		fclose(fp); return 0;
 	}
-	if (fwrite(&data.front(), sizeof(lmcell_local), num_data, fp) != num_data) {
+	if (fwrite(&data.front(), sizeof(lmcell_local), data.size(), fp) != data.size()) {
 		std::cerr << "Error: Failed to write data to light volume file '" << filename << "'." << endl;
 		fclose(fp); return 0;
 	}
@@ -343,13 +354,53 @@ bool light_volume_local::write(string const &filename) const {
 	return 1;
 }
 
+void light_volume_local::set_bounds(int x1, int x2, int y1, int y2, int z1, int z2) {
+	bounds[0][0] = x1; bounds[0][1] = x2; bounds[1][0] = y1; bounds[1][1] = y2; bounds[2][0] = z1; bounds[2][1] = z2;
+}
+
+void update_range(int bnds[2], int v) {bnds[0] = min(bnds[0], v); bnds[1] = max(bnds[1], v+1);} // max is one past the end
+
+void light_volume_local::compress() {
+
+	if (compressed) return; // already compressed
+	assert(is_allocated());
+	set_bounds(MESH_X_SIZE, 0, MESH_Y_SIZE, 0, MESH_SIZE[2], 0);
+
+	for (int y = 0; y < MESH_Y_SIZE; ++y) {
+		for (int x = 0; x < MESH_X_SIZE; ++x) {
+			for (int z = 0; z < MESH_SIZE[2]; ++z) {
+				if (data[get_ix(x, y, z)].is_near_zero()) continue;
+				update_range(bounds[0], x);
+				update_range(bounds[1], y);
+				update_range(bounds[2], z);
+			}
+		}
+	}
+	vector<lmcell_local> comp_data(get_num_data());
+	unsigned data_pos(0);
+	
+	for (int y = bounds[1][0]; y < bounds[1][1]; ++y) {
+		for (int x = bounds[0][0]; x < bounds[0][1]; ++x) {
+			for (int z = bounds[2][0]; z < bounds[2][1]; ++z) {
+				comp_data[data_pos++] = data[get_ix(x, y, z)];
+			}
+		}
+	}
+	assert(data_pos == comp_data.size());
+	cout << "uncomp size: " << data.size() << ", bounds: {" << bounds[0][0] << "," << bounds[0][1] << "},{" << bounds[1][0] << ","
+		 << bounds[1][1] << "},{" << bounds[2][0] << "," << bounds[2][1] << "}" << " comp size: " << comp_data.size() << endl;
+	data.swap(comp_data);
+	compressed = 1;
+}
+
 void light_volume_local::init(unsigned lvol_ix, float scale_, string const &filename) {
 
 	RESET_TIME;
-	allocate();
 	set_scale(scale_);
 	if (read(filename)) return; // see if there is an existing file to read
+	allocate();
 	compute_ray_trace_lighting(LIGHTING_DYNAMIC + lvol_ix);
+	compress();
 	write(filename); // write the output file
 	PRINT_TIME("Local Dlight Volume Creation");
 }
@@ -406,7 +457,6 @@ void indir_dlight_group_manager_t::create_needed_llvols() {
 }
 
 // TODO:
-// compress light volumes (interior cube, zero elements, float=>char)
 // one dlight per llvol to handle light destruction
 // more basement pillars to test lighting
 

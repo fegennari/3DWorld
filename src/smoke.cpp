@@ -223,7 +223,7 @@ void update_smoke_row(vector<unsigned char> &data, vector<unsigned> const &llvol
 				else {
 					if (vlm == NULL) {color = default_color;} else {vlm[z].get_final_color(color, 1.0, 1.0);}
 				}
-				for (auto i = llvol_ixs.begin(); i != llvol_ixs.end(); ++i) {local_light_volumes[*i]->add_lighting(color, off+z);} // add local light volumes
+				for (auto i = llvol_ixs.begin(); i != llvol_ixs.end(); ++i) {local_light_volumes[*i]->add_lighting(color, x, y, z);} // add local light volumes
 				UNROLL_3X(data[off2+i_] = (unsigned char)(255*CLIP_TO_01(color[i_]));) // lmc.pflow[i_]
 			}
 		} // for z
@@ -306,7 +306,7 @@ bool upload_smoke_indir_texture() {
 	cur_block = (full_update ? 0 : (cur_block+1) % skipval);
 	if (cur_block == 0) {lmap_manager.was_updated = 0;} // only stop updating after we wrap around to the beginning again
 	have_indir_smoke_tex = 1;
-	//PRINT_TIME("Smoke Upload");
+	//PRINT_TIME("Smoke + Indir Upload");
 	return 1;
 }
 

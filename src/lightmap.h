@@ -8,7 +8,7 @@
 #include "3DWorld.h"
 #include "trigger.h"
 
-extern int MESH_SIZE[3];
+extern int MESH_X_SIZE, MESH_Y_SIZE, MESH_SIZE[3];
 
 #define ADD_LIGHT_CONTRIB(c, C) {C[0] += c[0]; C[1] += c[1]; C[2] += c[2];}
 
@@ -88,40 +88,44 @@ public:
 struct lmcell_local { // size = 12 (must be packed)
 	float lc[3];
 	lmcell_local() {lc[0] = lc[1] = lc[2] = 0.0;}
+	bool is_near_zero() const {
+		float const toler = 0.001;
+		return (lc[0] < toler && lc[1] < toler && lc[2] < toler);
+	}
 };
 
 class light_volume_local {
 
-	bool changed;
+	bool changed, compressed;
 	unsigned tag_ix;
 	float scale; // 0 => disabled
+	int bounds[3][2];
 	vector<lmcell_local> data;
 
+	unsigned get_num_data() const {return (bounds[0][1] - bounds[0][0])*(bounds[1][1] - bounds[1][0])*(bounds[2][1] - bounds[2][0]);}
 	bool read(std::string const &filename);
 	bool write(std::string const &filename) const;
+	void compress();
+	unsigned get_ix(int x, int y, int z) const {return ((y*MESH_X_SIZE + x)*MESH_SIZE[2] + z);}
 public:
 
-	light_volume_local(unsigned tag_ix_) : changed(0), tag_ix(tag_ix_), scale(0.0) {}
+	light_volume_local(unsigned tag_ix_) : changed(0), compressed(0), tag_ix(tag_ix_), scale(0.0) {}
+	void set_bounds(int x1, int x2, int y1, int y2, int z1, int z2);
 	void set_scale(float scale_) {changed |= (scale != scale_); scale = scale_;} // changing the scale counts as changed
 	bool is_allocated() const {return !data.empty();}
 	bool needs_update() const {return (changed     && is_allocated());}
 	bool is_active   () const {return (scale > 0.0 && is_allocated());}
 	void mark_updated() {changed = 0;}
 	void allocate();
-	void clear() {data.clear();} // reset enabled?
 	unsigned get_tag_ix() const {return tag_ix;}
 	void init(unsigned lvol_ix, float scale_, std::string const &filename);
 	
 	void reset_to_zero() {
 		if (!is_allocated()) return;
-		clear(); allocate(); // clear + resize should re-construct the cells to all zeros
+		data.clear(); allocate(); // clear + resize should re-construct the cells to all zeros
 		changed = 1;
 	}
-	void add_lighting(colorRGB &color, unsigned ix) const {
-		//if (!is_active()) return; // not yet allocated - caller should check this
-		assert(ix < data.size());
-		UNROLL_3X(color[i_] = min(1.0f, color[i_]+data[ix].lc[i_]*scale);)
-	}
+	void add_lighting(colorRGB &color, int x, int y, int z) const;
 	void add_color(point const &p, colorRGBA const &color);
 };
 
