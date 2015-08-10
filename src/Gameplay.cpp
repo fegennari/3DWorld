@@ -59,7 +59,7 @@ extern int free_for_all, teams, show_scores, camera_view, xoff, yoff, display_mo
 extern unsigned create_voxel_landscape;
 extern float temperature, ball_velocity, water_plane_z, zmin, zmax, ztop, zbottom, czmax, fticks, crater_depth, crater_radius;
 extern float max_water_height, XY_SCENE_SIZE, TIMESTEP, FAR_CLIP, atmosphere, camera_shake, base_gravity, dist_to_fire_sq;
-extern double camera_zh;
+extern double camera_zh, c_phi;
 extern point surface_pos, camera_last_pos;
 extern int coll_id[];
 extern obj_type object_types[];
@@ -1622,8 +1622,12 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	point pos(fpos + dir*(0.1*radius));
 	fire_frame = max(1, fire_delay);
 	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
-	if (is_player) {move_camera_pos(dir, -w.recoil);} // recoil (only for player)
-
+	
+	if (is_player) { // recoil (only for player)
+		move_camera_pos(dir, -w.recoil); // backwards recoil
+		if (weapon_id == W_M16 || weapon_id == W_SHOTGUN) {c_phi += 0.25*w.recoil;} // upward recoil
+		update_cpos();
+	}
 	switch (weapon_id) {
 		case W_M16:     add_dynamic_light(1.0, fpos, YELLOW); break;
 		case W_SHOTGUN: add_dynamic_light(1.3, fpos, YELLOW); break;

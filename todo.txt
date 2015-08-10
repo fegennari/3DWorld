@@ -11,6 +11,4 @@ Gameplay in tiled terrain mode
   - Projectile and object collision detection
 
 Puffy clouds in tiled terrain mode
-Physics with connected spheres
 Cascaded shadow maps for sun/moon
-Better weapon recoil
