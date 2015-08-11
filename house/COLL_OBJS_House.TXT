@@ -865,14 +865,17 @@ l 0.8  0.0 0.0 0.0 1.0  -1 1 # black plastic
 B -0.9 -0.92  -0.12 -0.11 -0.35 -0.37
 B -0.9 -0.92   0.00  0.01 -0.35 -0.37
 # x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
+indir_dlight_group house/light1.data 0.02
 K -0.91 -0.12 -0.36  0.06 0.0 0.0 1 1 # player manual toggle trigger
 L 0.0 1.2  -0.91 -0.18 -0.2  1.0 0.9 0.7 1.0  #0.0 -1.0 0.0 0.5
 V -0.91 -0.115 -0.2
+indir_dlight_group house/light2.data 0.2
 K # disable trigger
 K -0.91  0.02 -0.36  0.06 0.0 0.0 1 1 # player manual toggle trigger
 L 0.0 1.2  -0.91  0.07 -0.2  1.0 0.9 0.7 1.0
 V -0.91  0.005  -0.2
 K # disable trigger
+indir_dlight_group none
 
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
 a 2 # destroyable/shatterable
