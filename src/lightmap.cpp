@@ -363,13 +363,14 @@ void update_range(int bnds[2], int v) {bnds[0] = min(bnds[0], v); bnds[1] = max(
 void light_volume_local::compress() {
 
 	if (compressed) return; // already compressed
+	float const toler(0.001/max(0.001f, scale));
 	assert(is_allocated());
 	set_bounds(MESH_X_SIZE, 0, MESH_Y_SIZE, 0, MESH_SIZE[2], 0);
 
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
 		for (int x = 0; x < MESH_X_SIZE; ++x) {
 			for (int z = 0; z < MESH_SIZE[2]; ++z) {
-				if (data[get_ix(x, y, z)].is_near_zero()) continue;
+				if (data[get_ix(x, y, z)].is_near_zero(toler)) continue;
 				update_range(bounds[0], x);
 				update_range(bounds[1], y);
 				update_range(bounds[2], z);

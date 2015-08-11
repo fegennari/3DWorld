@@ -88,10 +88,7 @@ public:
 struct lmcell_local { // size = 12 (must be packed)
 	float lc[3];
 	lmcell_local() {lc[0] = lc[1] = lc[2] = 0.0;}
-	bool is_near_zero() const {
-		float const toler = 0.001;
-		return (lc[0] < toler && lc[1] < toler && lc[2] < toler);
-	}
+	bool is_near_zero(float toler) const {return (lc[0] < toler && lc[1] < toler && lc[2] < toler);}
 };
 
 class light_volume_local {
