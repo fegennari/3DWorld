@@ -9,19 +9,12 @@ const float SHADOW_LEAKAGE    = 0.05; // simulates indirect lighting, but indir 
 #ifdef HAS_DLIGHT_SMAP
 const int MAX_DLIGHT_SMAPS = 16;
 uniform sampler2DArrayShadow smap_tex_arr_dl;
-uniform sampler2DShadow smap_tex_dl[MAX_DLIGHT_SMAPS];
 uniform mat4 smap_matrix_dl[MAX_DLIGHT_SMAPS];
 
 // Note: for non-spotlights where the shadow frustum doesn't cover the entire light angle,
 // the lookup is clamped to the edge texel of the shadow map, which stretches the shadow to the sides;
 // it may make more sense to clip the shadower to the frustum so that all the area outside the shadow frustum is unshadowed,
 // but it's not clear how to do that cleanly/efficiently or if it would look any better
-float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DShadow sm_tex) {
-	pos.xyz += norm_bias_scale*z_bias*normal; // world space
-	vec4 shadow_coord = matrix * pos;
-	shadow_coord.z   += -z_bias*shadow_coord.w;
-	return mix(textureProj(sm_tex, shadow_coord), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
-}
 float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in sampler2DArrayShadow sm_tex, in int layer) {
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
 	vec4 shadow_coord = matrix * pos;
@@ -151,7 +144,6 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		int smap_index = int(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r*MAX_DLIGHT_SMAPS);
 		if (smap_index > 0) { // has a shadow map
 			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
-			//intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_dl[smap_index-1]);
 			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);
 		}
 #endif // HAS_DLIGHT_SMAP

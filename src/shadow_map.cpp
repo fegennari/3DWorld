@@ -235,27 +235,19 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 
 	if (!shadow_map_enabled()) return 0;
 	assert(tu_id >= LOCAL_SMAP_START_TU_ID);
+	assert(is_arrayed());
 	char str[20] = {0};
-	unsigned smap_ix(0);
 
-	if (!is_arrayed()) { // local texture
-		smap_ix = tu_id - LOCAL_SMAP_START_TU_ID; // use texture unit id offset
+	if (!arr_tex_set) { // Note: assumes all lights use the same texture array
 		bind_smap_texture();
-		sprintf(str, "smap_tex_dl[%u]", smap_ix);
-	}
-	else {
-		if (!arr_tex_set) { // Note: assumes all lights use the same texture array
-			bind_smap_texture();
-			sprintf(str, "smap_tex_arr_dl");
-			arr_tex_set = 1;
-		}
-		smap_ix = layer_id; // user texture array layer id
+		sprintf(str, "smap_tex_arr_dl");
+		arr_tex_set = 1;
 	}
 	if (str[0]) { // str was set to something
 		bool const tex_ret(s.add_uniform_int(str, tu_id));
 		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
 	}
-	sprintf(str, "smap_matrix_dl[%u]", smap_ix);
+	sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id
 	bool const mat_ret(s.add_uniform_matrix_4x4(str, texture_matrix.get_ptr(), 0));
 	assert(mat_ret);
 	return 1;
