@@ -19,7 +19,7 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 	pos.xyz += norm_bias_scale*z_bias*normal; // world space
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.xyz /= shadow_coord.w;
-	shadow_coord.z   += -z_bias;
+	shadow_coord.z   += -0.1*z_bias; // lower z-bias for local shadow maps
 	shadow_coord.w    = layer;
 	return mix(texture(sm_tex, shadow_coord.xywz), 1.0, SHADOW_LEAKAGE); // allow a small amount of transmitted light to simulate indirect lighting
 }
