@@ -299,7 +299,7 @@ void light_volume_local::add_color(point const &p, colorRGBA const &color) { // 
 void light_volume_local::add_lighting(colorRGB &color, int x, int y, int z) const {
 
 	//if (!is_active()) return; // not yet allocated - caller should check this
-	if (x < bounds[0][0] || x >= bounds[0][1] || y < bounds[1][0] || y >= bounds[1][1] || z < bounds[2][0] || z >= bounds[2][1]) return;
+	if (!check_xy_bounds(x, y) || z < bounds[2][0] || z >= bounds[2][1]) return;
 	unsigned const ix(((y - bounds[1][0])*(bounds[0][1] - bounds[0][0]) + (x - bounds[0][0]))*(bounds[2][1] - bounds[2][0]) + (z - bounds[2][0]));
 	assert(ix < data.size());
 	UNROLL_3X(color[i_] = min(1.0f, color[i_]+data[ix].lc[i_]*scale);)
@@ -667,7 +667,7 @@ void build_lightmap(bool verbose) {
 	if (!raytrace_lights[LIGHTING_LOCAL]) {
 		for (unsigned i = 0; i < light_sources_a.size(); ++i) {
 			light_source &ls(light_sources_a[i]);
-			assert(!ls.is_line_light()); // not supported here
+			assert(!ls.is_line_light()); // FIXME: not supported here
 			point lpos(ls.get_pos()); // may be updated for line lights (if they're ever supported)
 			if (!is_over_mesh(lpos)) continue;
 			colorRGBA const &lcolor(ls.get_color());

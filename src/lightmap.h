@@ -122,6 +122,7 @@ public:
 		data.clear(); allocate(); // clear + resize should re-construct the cells to all zeros
 		changed = 1;
 	}
+	bool check_xy_bounds(int x, int y) const {return (x >= bounds[0][0] && x < bounds[0][1] && y >= bounds[1][0] && y < bounds[1][1]);}
 	void add_lighting(colorRGB &color, int x, int y, int z) const;
 	void add_color(point const &p, colorRGBA const &color);
 };
