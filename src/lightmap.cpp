@@ -667,18 +667,17 @@ void build_lightmap(bool verbose) {
 	if (!raytrace_lights[LIGHTING_LOCAL]) {
 		for (unsigned i = 0; i < light_sources_a.size(); ++i) {
 			light_source &ls(light_sources_a[i]);
-			assert(!ls.is_line_light()); // FIXME: not supported here
-			point lpos(ls.get_pos()); // may be updated for line lights (if they're ever supported)
-			if (!is_over_mesh(lpos)) continue;
+			point const lpos1(ls.get_pos()), lpos2(ls.get_pos()), lposc(0.5*(lpos1 + lpos2)); // start, end, center
+			if (!is_over_mesh(lposc)) continue;
 			colorRGBA const &lcolor(ls.get_color());
 			cube_t bcube; // unused
 			int bnds[3][2], cent[3], cobj(-1), last_cobj(-1);
 			
 			for (unsigned i = 0; i < 3; ++i) {
-				cent[i] = max(0, min(MESH_SIZE[i]-1, get_dim_pos(lpos[i], i))); // clamp to mesh bounds
+				cent[i] = max(0, min(MESH_SIZE[i]-1, get_dim_pos(lposc[i], i))); // clamp to mesh bounds
 			}
 			ls.get_bounds(bcube, bnds, SQRT_CTHRESH);
-			check_coll_line(lpos, lpos, cobj, -1, 1, 2, 1); // check cobj containment and ignore that shape (ignore voxels)
+			check_coll_line(lpos1, lpos2, cobj, -1, 1, 2, 1); // check cobj containment and ignore that shape (ignore voxels)
 
 			for (int y = bnds[1][0]; y <= bnds[1][1]; ++y) {
 				for (int x = bnds[0][0]; x <= bnds[0][1]; ++x) {
@@ -688,6 +687,7 @@ void build_lightmap(bool verbose) {
 					for (int z = bnds[2][0]; z <= bnds[2][1]; ++z) {
 						assert(unsigned(z) < zsize);
 						point const p(xv, yv, get_zval(z));
+						point lpos(lposc); // will be updated for line lights
 						float cscale(ls.get_intensity_at(p, lpos));
 						if (cscale < CTHRESH) {if (z > cent[2]) break; else continue;}
 				
