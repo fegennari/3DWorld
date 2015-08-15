@@ -1158,7 +1158,10 @@ void create_and_draw_cracks(quad_batch_draw &qbd) { // adds to beams
 		coll_obj const &cobj(coll_objects[i->cid]);
 		skip_cobj = (cobj.status != COLL_STATIC || cobj.type != COLL_CUBE || !camera_pdu.cube_visible(cobj) || cobj.is_occluded_from_camera());
 		last_cobj = i->cid;
-		if (!skip_cobj) {cpts.push_back(crack_point(pos, i->pos, i->cid, cobj.closest_face(pos), i->time, i->get_alpha(), i->color));}
+		if (skip_cobj) continue;
+		int const face(cobj.closest_face(pos));
+		if ((face >> 1) != get_min_dim(cobj)) continue; // only draw cracks in the plane of the min dimension/thickness
+		cpts.push_back(crack_point(pos, i->pos, i->cid, face, i->time, i->get_alpha(), i->color));
 	}
 	stable_sort(cpts.begin(), cpts.end());
 
