@@ -878,10 +878,7 @@ void draw_teleporters() {
 	s.add_uniform_float("noise_scale", 1.2);
 	s.set_cur_color(WHITE);
 	enable_blend();
-
-	for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
-		i->draw(s);
-	}
+	for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {i->draw(s);}
 	disable_blend();
 }
 

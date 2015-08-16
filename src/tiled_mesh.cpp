@@ -1175,13 +1175,26 @@ void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 }
 
 
+void tile_cloud_t::draw(vpc_shader_t &s, vector3d const &xlate) const {
+
+	s.set_uniform_color(s.c1i_loc, colorRGBA(0.6, 0.6, 0.6));
+	s.set_uniform_color(s.c1o_loc, colorRGBA(0.9, 0.9, 0.9));
+	s.set_uniform_float(s.rad_loc, get_rmax()); // FIXME: nonuniform scale
+	s.set_uniform_float(s.off_loc, (pos.x + 0.0005*tfticks)); // used as a hash
+	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - (pos + xlate)).get_norm()); // local object space
+	fgPushMatrix();
+	translate_to(pos + xlate);
+	draw_quads(1); // depth map is disabled in the caller
+	fgPopMatrix();
+}
+
 void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 
 	if (generated) return; // already generated
 	generated = 1;
 	rand_gen_t rgen;
 	rgen.set_state(x1, y1);
-	unsigned const num(rgen.rand()%5); // 1-4
+	unsigned const num(max(0.0f, rgen.rand_gaussian(1.0, 4.0)));
 	resize(num);
 	if (num == 0) return;
 	float const z_range(zmax - zmin);
@@ -1189,36 +1202,33 @@ void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 
 	for (auto i = begin(); i != end(); ++i) {
 		i->pos  = rgen.gen_rand_cube_point(range);
-		i->size = rgen.rand_uniform(0.5, 1.0)*vector3d(1.0, 1.0, 1.0);
-		// more
+		i->size = rgen.rand_uniform(1.0, 2.0)*vector3d(1.0, 1.0, 1.0); // FIXME: make smaller in z
+		i->gen_pts(i->size);
 		cube_t cloud_bcube(i->pos, i->pos);
 		cloud_bcube.expand_by(i->size);
 		if (i == begin()) {bcube = cloud_bcube;} else {bcube.union_with_cube(cloud_bcube);}
 	}
 }
 
-void tile_cloud_manager_t::draw(vector3d const &xlate) const {
+void tile_cloud_manager_t::draw(vpc_shader_t &s, vector3d const &xlate) const {
 
 	if (empty()) return;
 	if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
+	vector<pair<float, unsigned>> sorted;
+	point const camera(get_camera_pos());
 
-	if (xlate != zero_vector) {
-		fgPushMatrix();
-		translate_to(xlate);
-	}
 	for (auto i = begin(); i != end(); ++i) {
-		float const rmax(i->size.get_max_val());
-		if (!camera_pdu.sphere_visible_test((i->pos + xlate), rmax)) continue; // VFC
-		draw_sphere_vbo(i->pos, rmax, N_SPHERE_DIV, 0);
+		if (!camera_pdu.sphere_visible_test((i->pos + xlate), i->get_rmax())) continue; // VFC
+		sorted.push_back(make_pair(-p2p_dist_sq(camera, (i->pos + xlate)), i-begin()));
 	}
-	if (xlate != zero_vector) {fgPopMatrix();}
+	sort(sorted.begin(), sorted.end()); // sort back-to-front
+	for (auto i = sorted.begin(); i != sorted.end(); ++i) {operator[](i->second).draw(s, xlate);}
 }
 
-void tile_t::draw_tile_clouds(bool reflection_pass) {
+void tile_t::draw_tile_clouds(vpc_shader_t &s, bool reflection_pass) {
 
-	return; // not yet ready
 	clouds.gen(x1, y1, x2, y2);
-	clouds.draw(vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
+	clouds.draw(s, vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
 }
 
 
@@ -2003,7 +2013,6 @@ void tile_draw_t::draw(bool reflection_pass) {
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
 	if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
-	if (clouds_enabled     ()) {draw_tile_clouds(reflection_pass);}
 	lightning_strike.end_draw(); // in case it was enabled
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 }
@@ -2365,9 +2374,23 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 void tile_draw_t::draw_tile_clouds(bool reflection_pass) {
 
-	shader_t s; // see draw_scenery()
-	s.begin_color_only_shader(WHITE);
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_tile_clouds(reflection_pass);}
+	if (!clouds_enabled()) return;
+	draw_vect_t to_draw_clouds; // FIXME: reuse to_draw?
+	to_draw_clouds.reserve(tiles.size());
+
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
+		to_draw_clouds.push_back(make_pair(-i->second->get_rel_dist_to_camera(), i->second.get())); // FIXME: check VFC with tile xy and conservative z bounds?
+	}
+	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
+	vpc_shader_t s; // see draw_scenery()
+	tile_cloud_t::shader_setup(s, 1, 0); // grayscale, not ridged
+	s.add_uniform_float("noise_scale", 0.05);
+	s.set_cur_color(WHITE); // unnecessary?
+	enable_blend();
+	glDepthMask(GL_FALSE); // no depth writing
+	for (auto i = to_draw_clouds.begin(); i != to_draw_clouds.end(); ++i) {i->second->draw_tile_clouds(s, reflection_pass);}
+	glDepthMask(GL_TRUE);
+	disable_blend();
 	s.end_shader();
 }
 
@@ -2539,6 +2562,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
 void clear_tiled_terrain() {terrain_tile_draw.clear();}
+void draw_tiled_terrain_clouds(bool reflection_pass) {terrain_tile_draw.draw_tile_clouds(reflection_pass);}
 void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids();}
 void clear_tiled_terrain_shaders() {terrain_tile_draw.free_compute_shader();}
 void draw_tiled_terrain_water(shader_t &s, float zval) {terrain_tile_draw.draw_water(s, zval);}

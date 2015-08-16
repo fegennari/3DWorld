@@ -1072,7 +1072,11 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	}
 	draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
 	if (show_lightning) {draw_tiled_terrain_lightning(1);}
-	if (get_camera_pos().z <= get_tt_cloud_level()) {draw_tiled_terrain(1);} // camera is below the clouds
+	
+	if (get_camera_pos().z <= get_tt_cloud_level()) { // camera is below the clouds
+		draw_tiled_terrain(1);
+		draw_tiled_terrain_clouds(1);
+	}
 	// end mirror transform
 
 	// render reflection to texture
@@ -1175,6 +1179,7 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (TIMETEST) PRINT_TIME("3.3");
 	//if (underwater ) {draw_tiled_terrain_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, reflection_tid);}
+	if (!underwater) {draw_tiled_terrain_clouds(0);}
 	if (!underwater) {draw_tiled_terrain_precipitation();}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)

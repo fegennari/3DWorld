@@ -113,8 +113,12 @@ tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 
 struct tile_cloud_t : public volume_part_cloud {
+
 	point pos;
 	vector3d size; // {x, y, z}
+
+	float get_rmax() const {return size.get_max_val();}
+	void draw(vpc_shader_t &s, vector3d const &xlate) const;
 };
 
 class tile_cloud_manager_t : public vector<tile_cloud_t> {
@@ -124,7 +128,7 @@ class tile_cloud_manager_t : public vector<tile_cloud_t> {
 public:
 	tile_cloud_manager_t() : generated(0) {}
 	void gen(int x1, int y1, int x2, int y2);
-	void draw(vector3d const &xlate) const;
+	void draw(vpc_shader_t &s, vector3d const &xlate) const;
 };
 
 
@@ -314,7 +318,7 @@ public:
 	void pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const;
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 	void draw_flowers(shader_t &s, bool use_cloud_shadows);
-	void draw_tile_clouds(bool reflection_pass);
+	void draw_tile_clouds(vpc_shader_t &s, bool reflection_pass);
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);

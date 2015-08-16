@@ -443,7 +443,7 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 
 /*static*/ vector<volume_part_cloud::vert_type_t> volume_part_cloud::unscaled_points;
 
-/*static*/ void volume_part_cloud::cacl_unscaled_points() {
+/*static*/ void volume_part_cloud::calc_unscaled_points() {
 
 	unsigned ix(0);
 	unscaled_points.resize(4*13);
@@ -470,11 +470,13 @@ void move_in_front_of_far_clip(point_d &pos, point const &camera, float &size, f
 }
 
 
-void volume_part_cloud::gen_pts(float radius) {
+// Note: the nebula shader generally requires the part cloud origin to be at (0,0,0), so we wouldn't want to add a pos here;
+// however, we allow it (but default it to (0,0,0)), since the part cloud could be drawn using a different shader
+void volume_part_cloud::gen_pts(vector3d const &size, point const &pos) {
 
-	if (unscaled_points.empty()) {cacl_unscaled_points();}
-	points = unscaled_points;
-	for (unsigned i = 0; i < points.size(); ++i) {points[i].v *= radius;}
+	if (unscaled_points.empty()) {calc_unscaled_points();}
+	points = unscaled_points; // deep copy
+	for (unsigned i = 0; i < points.size(); ++i) {points[i].v *= size; points[i].v += pos;}
 }
 
 
@@ -493,13 +495,13 @@ void vpc_shader_t::cache_locs() {
 }
 
 
-/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp) {
+/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged) {
 
 	assert(noise_ncomp == 1 || noise_ncomp == 4);
 	bind_3d_texture(get_noise_tex_3d(32, noise_ncomp));
 	if (s.is_setup()) return; // nothing else to do
 	s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
-	s.set_prefix("#define RIDGED_NOISE",  1); // FS
+	if (ridged) {s.set_prefix("#define RIDGED_NOISE", 1);} // FS
 	s.set_int_prefix("noise_ncomp", noise_ncomp, 1); // FS
 	s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
 	s.set_vert_shader("nebula");
@@ -510,11 +512,11 @@ void vpc_shader_t::cache_locs() {
 }
 
 
-void volume_part_cloud::draw_quads() const {
+void volume_part_cloud::draw_quads(bool depth_map_already_disabled) const {
 
-	glDepthMask(GL_FALSE); // no depth writing
+	if (!depth_map_already_disabled) {glDepthMask(GL_FALSE);} // no depth writing
 	draw_quad_verts_as_tris(points);
-	glDepthMask(GL_TRUE);
+	if (!depth_map_already_disabled) {glDepthMask(GL_TRUE);}
 }
 
 
