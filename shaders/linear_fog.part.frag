@@ -71,8 +71,7 @@ vec4 apply_fog_colored(in vec4  color,    // original color of the pixel
 #ifdef USE_QUADRATIC_FOG // hack to make this only apply to tiled terrain mode, which uses custom quadratic fog
     float sun_amount = ((sun_dir.z > 0.0) ? max(cscale*dot(ray_dir, sun_dir), 0.0) : 0.0);
 	vec4 sun_color   = vec4(max(fog_color.r, fog_color.b), max(fog_color.g, fog_color.b), 0.5*(fog_color.r + fog_color.g), fog_color.a);
-    vec4 fog_color   = mix(fog_color, sun_color, pow(sun_amount, 8.0));
-	return apply_fog_ffc(color, distance, fog_color);
+	return apply_fog_ffc(color, distance, mix(fog_color, sun_color, pow(sun_amount, 8.0)));
 #else
 	return apply_fog_ffc(color, distance, fog_color);
 #endif

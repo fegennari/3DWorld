@@ -10,5 +10,5 @@ Gameplay in tiled terrain mode
   - Pickup items
   - Projectile and object collision detection
 
-Puffy clouds in tiled terrain mode
 Cascaded shadow maps for sun/moon
+Indir lighting for outdoor parts (trees, etc.)

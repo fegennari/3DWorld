@@ -1177,14 +1177,17 @@ void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
 void tile_cloud_t::draw(vpc_shader_t &s, vector3d const &xlate) const {
 
-	// FIXME: make color alpha fade with distance
-	// FIXME: make color change with lighting conditions
-	s.set_uniform_color(s.c1i_loc, colorRGBA(0.65, 0.65, 0.65));
-	s.set_uniform_color(s.c1o_loc, colorRGBA(0.9, 0.9, 0.9));
+	vector3d const view_dir(get_camera_pos() - (pos + xlate));
+	float const view_dist(view_dir.mag()), max_dist(max(get_draw_tile_dist(), get_inf_terrain_fog_dist()));
+	if (view_dist >= max_dist) return; // too distant to draw
+	float const val(1.0 - (max_dist - view_dist)/max_dist), alpha(1.0 - val*val);
+	colorRGBA const cloud_color(get_cloud_color());
+	s.set_uniform_color(s.c1i_loc, colorRGBA(cloud_color*0.75, alpha)); // inner color
+	s.set_uniform_color(s.c1o_loc, colorRGBA(cloud_color*1.00, alpha)); // outer color
 	s.set_uniform_float(s.rad_loc, get_rmax());
 	s.set_uniform_float(s.off_loc, (pos.x + 0.002*tfticks)); // used as a hash
-	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - (pos + xlate)).get_norm()); // local object space
-	s.set_uniform_vector3d(s.rs_loc, size/get_rmax()); // FIXME: cache in the shader?
+	s.set_uniform_vector3d(s.vd_loc, view_dir/view_dist); // local object space
+	s.set_uniform_vector3d(s.rs_loc, size/get_rmax());
 	fgPushMatrix();
 	translate_to(pos + xlate);
 	draw_quads(1); // depth map is disabled in the caller
@@ -1206,7 +1209,7 @@ void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 	for (auto i = begin(); i != end(); ++i) {
 		i->pos   = rgen.gen_rand_cube_point(range);
 		i->size  = vector3d(rgen.rand_uniform(1.0, 2.0), rgen.rand_uniform(1.0, 2.0), rgen.rand_uniform(0.6, 1.0)); // smaller in z
-		i->size *= rgen.rand_uniform(1.5, 4.0);
+		i->size *= rgen.rand_uniform(2.0, 4.0);
 		i->gen_pts(i->size);
 		cube_t cloud_bcube(i->pos, i->pos);
 		cloud_bcube.expand_by(i->size);
@@ -2387,7 +2390,7 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) {
 	}
 	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
 	vpc_shader_t s; // see draw_scenery()
-	tile_cloud_t::shader_setup(s, 1, 0, -0.2, -0.3); // grayscale, not ridged, with custom alpha/dist bias
+	tile_cloud_t::shader_setup(s, 1, 0, -0.12, -0.3); // grayscale, not ridged, with custom alpha/dist bias
 	s.add_uniform_float("noise_scale", 0.02);
 	s.set_cur_color(WHITE); // unnecessary?
 	enable_blend();
