@@ -131,7 +131,7 @@ void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
 	if (show_fog && world_mode == WMODE_GROUND) {add_god_rays();}
-	if (display_mode & 0x20) {add_ssao();}
+	//if (display_mode & 0x20) {add_ssao();}
 	if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {add_color_blur();}
 	
 	if (display_mode & 0x80) {
