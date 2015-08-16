@@ -247,17 +247,6 @@ vector3d cube_t::closest_side_dir(point const &pos) const { // for fragment velo
 }
 
 
-point cube_t::gen_rand_pt_in_cube() const {
-
-	point pt;
-
-	for (unsigned j = 0; j < 3; ++j) {
-		pt[j] = rand_uniform(d[j][0], d[j][1]);
-	}
-	return pt;
-}
-
-
 int cube_t::closest_face(point const &pos) const {
 
 	int face(0);

@@ -112,6 +112,22 @@ struct tile_xy_pair {
 tile_t *get_tile_from_xy(tile_xy_pair const &tp);
 
 
+struct tile_cloud_t : public volume_part_cloud {
+	point pos;
+	vector3d size; // {x, y, z}
+};
+
+class tile_cloud_manager_t : public vector<tile_cloud_t> {
+
+	bool generated;
+	cube_t bcube;
+public:
+	tile_cloud_manager_t() : generated(0) {}
+	void gen(int x1, int y1, int x2, int y2);
+	void draw(vector3d const &xlate) const;
+};
+
+
 class tile_t {
 
 public:
@@ -141,6 +157,7 @@ private:
 	scenery_group scenery;
 	tree_cont_t decid_trees;
 	flower_tile_manager_t flowers;
+	tile_cloud_manager_t clouds;
 
 	struct grass_block_t {
 		unsigned ix; // 0 is unused
@@ -291,12 +308,13 @@ public:
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass);
 	void update_decid_trees();
 
-	// *** scenery/grass ***
+	// *** scenery/grass/clouds ***
 	void update_scenery();
 	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass);
 	void pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const;
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 	void draw_flowers(shader_t &s, bool use_cloud_shadows);
+	void draw_tile_clouds(bool reflection_pass);
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
@@ -363,6 +381,7 @@ public:
 	void draw_scenery(bool reflection_pass);
 	static void setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult);
 	void draw_grass(bool reflection_pass);
+	void draw_tile_clouds(bool reflection_pass);
 	void update_lightning(bool reflection_pass);
 	void clear_vbos_tids();
 	void clear_flowers();

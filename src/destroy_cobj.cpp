@@ -106,7 +106,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 
 		for (unsigned o = 0; o < num; ++o) {
 			vector3d velocity(cdir);
-			point fpos(frag_cube.gen_rand_pt_in_cube()); // only accurate for COLL_CUBE
+			point fpos(global_rand_gen.gen_rand_cube_point(frag_cube)); // only accurate for COLL_CUBE
 			float hotness(0.0);
 
 			if (non_csg) {

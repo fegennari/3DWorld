@@ -1074,7 +1074,7 @@ void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool
 }
 
 
-// *** scenery/grass ***
+// *** scenery/grass/clouds ***
 
 void tile_t::update_scenery() {
 
@@ -1172,6 +1172,53 @@ void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	flowers.check_vbo();
 	flowers.draw_triangles(s);
+}
+
+
+void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
+
+	if (generated) return; // already generated
+	generated = 1;
+	rand_gen_t rgen;
+	rgen.set_state(x1, y1);
+	unsigned const num(rgen.rand()%5); // 1-4
+	resize(num);
+	if (num == 0) return;
+	float const z_range(zmax - zmin);
+	cube_t const range(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), (zmax + 0.0*z_range), (zmax + 0.5*z_range));
+
+	for (auto i = begin(); i != end(); ++i) {
+		i->pos  = rgen.gen_rand_cube_point(range);
+		i->size = rgen.rand_uniform(0.5, 1.0)*vector3d(1.0, 1.0, 1.0);
+		// more
+		cube_t cloud_bcube(i->pos, i->pos);
+		cloud_bcube.expand_by(i->size);
+		if (i == begin()) {bcube = cloud_bcube;} else {bcube.union_with_cube(cloud_bcube);}
+	}
+}
+
+void tile_cloud_manager_t::draw(vector3d const &xlate) const {
+
+	if (empty()) return;
+	if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
+
+	if (xlate != zero_vector) {
+		fgPushMatrix();
+		translate_to(xlate);
+	}
+	for (auto i = begin(); i != end(); ++i) {
+		float const rmax(i->size.get_max_val());
+		if (!camera_pdu.sphere_visible_test((i->pos + xlate), rmax)) continue; // VFC
+		draw_sphere_vbo(i->pos, rmax, N_SPHERE_DIV, 0);
+	}
+	if (xlate != zero_vector) {fgPopMatrix();}
+}
+
+void tile_t::draw_tile_clouds(bool reflection_pass) {
+
+	return; // not yet ready
+	clouds.gen(x1, y1, x2, y2);
+	clouds.draw(vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
 }
 
 
@@ -1956,6 +2003,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
 	if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
+	if (clouds_enabled     ()) {draw_tile_clouds(reflection_pass);}
 	lightning_strike.end_draw(); // in case it was enabled
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 }
@@ -2312,6 +2360,15 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		disable_blend();
 		s.end_shader();
 	}
+}
+
+
+void tile_draw_t::draw_tile_clouds(bool reflection_pass) {
+
+	shader_t s; // see draw_scenery()
+	s.begin_color_only_shader(WHITE);
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_tile_clouds(reflection_pass);}
+	s.end_shader();
 }
 
 

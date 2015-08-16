@@ -281,6 +281,7 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	T mag()       const {return sqrt(mag_sq());}
 	T xy_mag_sq() const {return (x*x + y*y);}
 	T xy_mag()    const {return sqrt(xy_mag_sq());}
+	T get_max_val()   const {return max(x, max(y, z));}
 	bool is_nonzero() const {return (x != 0.0 || y != 0.0 || z != 0.0);}
 
 	bool operator<(pointT const &p) const { // needed for maps and stuff
@@ -488,7 +489,6 @@ struct cube_t { // size = 24
 		UNROLL_3X(pt[i_] = max(d[i_][0], min(d[i_][1], pos[i_]));)
 		return pt;
 	}
-	point gen_rand_pt_in_cube() const;
 	int closest_face(point const &pos) const;
 	bool cube_merge(cube_t const &cube);
 	void get_points(point pts[8]) const;
