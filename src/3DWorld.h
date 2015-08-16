@@ -1324,7 +1324,7 @@ public:
 	static void calc_unscaled_points();
 	void gen_pts(vector3d const &size, point const &pos=all_zeros);
 	void gen_pts(float radius, point const &pos=all_zeros) {gen_pts(vector3d(radius, radius, radius), pos);}
-	static void shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged=1);
+	static void shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged=1, float alpha_bias=-0.4, float dist_bias=0.0);
 	void draw_quads(bool depth_map_already_disabled=0) const;
 };
 

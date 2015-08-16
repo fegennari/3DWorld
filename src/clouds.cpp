@@ -490,12 +490,13 @@ void vpc_shader_t::cache_locs() {
 	c3i_loc = get_uniform_loc("color3i");
 	c3o_loc = get_uniform_loc("color3o");
 	rad_loc = get_uniform_loc("radius");
+	rs_loc  = get_uniform_loc("rscale");
 	off_loc = get_uniform_loc("offset");
 	vd_loc  = get_uniform_loc("view_dir");
 }
 
 
-/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged) {
+/*static*/ void volume_part_cloud::shader_setup(vpc_shader_t &s, unsigned noise_ncomp, bool ridged, float alpha_bias, float dist_bias) {
 
 	assert(noise_ncomp == 1 || noise_ncomp == 4);
 	bind_3d_texture(get_noise_tex_3d(32, noise_ncomp));
@@ -509,6 +510,9 @@ void vpc_shader_t::cache_locs() {
 	s.begin_shader();
 	s.add_uniform_int("noise_tex", 0);
 	s.cache_locs();
+	s.set_uniform_vector3d(s.rs_loc, vector3d(1.0, 1.0, 1.0)); // set the default value
+	s.add_uniform_float("alpha_bias", alpha_bias);
+	s.add_uniform_float("dist_bias",  dist_bias);
 }
 
 

@@ -1177,11 +1177,14 @@ void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
 void tile_cloud_t::draw(vpc_shader_t &s, vector3d const &xlate) const {
 
-	s.set_uniform_color(s.c1i_loc, colorRGBA(0.6, 0.6, 0.6));
+	// FIXME: make color alpha fade with distance
+	// FIXME: make color change with lighting conditions
+	s.set_uniform_color(s.c1i_loc, colorRGBA(0.65, 0.65, 0.65));
 	s.set_uniform_color(s.c1o_loc, colorRGBA(0.9, 0.9, 0.9));
-	s.set_uniform_float(s.rad_loc, get_rmax()); // FIXME: nonuniform scale
-	s.set_uniform_float(s.off_loc, (pos.x + 0.0005*tfticks)); // used as a hash
+	s.set_uniform_float(s.rad_loc, get_rmax());
+	s.set_uniform_float(s.off_loc, (pos.x + 0.002*tfticks)); // used as a hash
 	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - (pos + xlate)).get_norm()); // local object space
+	s.set_uniform_vector3d(s.rs_loc, size/get_rmax()); // FIXME: cache in the shader?
 	fgPushMatrix();
 	translate_to(pos + xlate);
 	draw_quads(1); // depth map is disabled in the caller
@@ -1194,15 +1197,16 @@ void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 	generated = 1;
 	rand_gen_t rgen;
 	rgen.set_state(x1, y1);
-	unsigned const num(max(0.0f, rgen.rand_gaussian(1.0, 4.0)));
+	unsigned const num(max(0.0f, rgen.rand_gaussian(0.5, 4.0)));
 	resize(num);
 	if (num == 0) return;
 	float const z_range(zmax - zmin);
-	cube_t const range(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), (zmax + 0.0*z_range), (zmax + 0.5*z_range));
+	cube_t const range(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), (zmax + 0.0*z_range), (zmax + 0.9*z_range));
 
 	for (auto i = begin(); i != end(); ++i) {
-		i->pos  = rgen.gen_rand_cube_point(range);
-		i->size = rgen.rand_uniform(1.0, 2.0)*vector3d(1.0, 1.0, 1.0); // FIXME: make smaller in z
+		i->pos   = rgen.gen_rand_cube_point(range);
+		i->size  = vector3d(rgen.rand_uniform(1.0, 2.0), rgen.rand_uniform(1.0, 2.0), rgen.rand_uniform(0.6, 1.0)); // smaller in z
+		i->size *= rgen.rand_uniform(1.5, 4.0);
 		i->gen_pts(i->size);
 		cube_t cloud_bcube(i->pos, i->pos);
 		cloud_bcube.expand_by(i->size);
@@ -2383,8 +2387,8 @@ void tile_draw_t::draw_tile_clouds(bool reflection_pass) {
 	}
 	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
 	vpc_shader_t s; // see draw_scenery()
-	tile_cloud_t::shader_setup(s, 1, 0); // grayscale, not ridged
-	s.add_uniform_float("noise_scale", 0.05);
+	tile_cloud_t::shader_setup(s, 1, 0, -0.2, -0.3); // grayscale, not ridged, with custom alpha/dist bias
+	s.add_uniform_float("noise_scale", 0.02);
 	s.set_cur_color(WHITE); // unnecessary?
 	enable_blend();
 	glDepthMask(GL_FALSE); // no depth writing

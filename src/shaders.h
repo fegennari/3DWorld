@@ -177,8 +177,8 @@ public:
 // special shader used with volume particle clouds (nebulas, explosions, teleporters) that caches uniform locs
 class vpc_shader_t : public shader_t { // move somewhere else?
 public:
-	int ns_loc, c1i_loc, c1o_loc, c2i_loc, c2o_loc, c3i_loc, c3o_loc, rad_loc, off_loc, vd_loc;
-	vpc_shader_t() : ns_loc(0), c1i_loc(0), c1o_loc(0), c2i_loc(0), c2o_loc(0), c3i_loc(0), c3o_loc(0), rad_loc(0), off_loc(0), vd_loc(0) {}
+	int ns_loc, c1i_loc, c1o_loc, c2i_loc, c2o_loc, c3i_loc, c3o_loc, rad_loc, rs_loc, off_loc, vd_loc;
+	vpc_shader_t() : ns_loc(0), c1i_loc(0), c1o_loc(0), c2i_loc(0), c2o_loc(0), c3i_loc(0), c3o_loc(0), rad_loc(0), rs_loc(0), off_loc(0), vd_loc(0) {}
 	void cache_locs();
 };
 
