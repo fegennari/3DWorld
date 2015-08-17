@@ -1217,12 +1217,15 @@ void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 	}
 }
 
-void tile_cloud_manager_t::draw(vpc_shader_t &s, vector3d const &xlate) const {
+bool tile_cloud_manager_t::any_visible(vector3d const &xlate) const {
+	return (!empty() && camera_pdu.cube_visible(bcube + xlate));
+}
+
+void tile_cloud_manager_t::draw(vpc_shader_t &s, vector3d const &xlate) { // not const (sorted is modified)
 
 	if (empty()) return;
-	if (!camera_pdu.cube_visible(bcube + xlate)) return; // VFC
-	vector<pair<float, unsigned>> sorted;
-	point const camera(get_camera_pos());
+	point const camera(get_camera_pos()); // Note: VFC done by the caller
+	sorted.clear();
 
 	for (auto i = begin(); i != end(); ++i) {
 		if (!camera_pdu.sphere_visible_test((i->pos + xlate), i->get_rmax())) continue; // VFC
@@ -1232,11 +1235,13 @@ void tile_cloud_manager_t::draw(vpc_shader_t &s, vector3d const &xlate) const {
 	for (auto i = sorted.begin(); i != sorted.end(); ++i) {operator[](i->second).draw(s, xlate);}
 }
 
+bool tile_t::any_clouds_visible() const {
+	return clouds.any_visible(vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
+}
 void tile_t::draw_tile_clouds(vpc_shader_t &s, bool reflection_pass) {
-
-	clouds.gen(x1, y1, x2, y2);
 	clouds.draw(s, vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
 }
+void tile_t::gen_tile_clouds() {clouds.gen(x1, y1, x2, y2);}
 
 
 // *** rendering ***
@@ -2379,15 +2384,17 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 }
 
 
-void tile_draw_t::draw_tile_clouds(bool reflection_pass) {
+void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 
 	if (!clouds_enabled()) return;
-	draw_vect_t to_draw_clouds; // FIXME: reuse to_draw?
-	to_draw_clouds.reserve(tiles.size());
+	draw_vect_t to_draw_clouds;
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
-		to_draw_clouds.push_back(make_pair(-i->second->get_rel_dist_to_camera(), i->second.get())); // FIXME: check VFC with tile xy and conservative z bounds?
+		i->second->gen_tile_clouds();
+		if (!i->second->any_clouds_visible()) continue;
+		to_draw_clouds.push_back(make_pair(-i->second->get_rel_dist_to_camera(), i->second.get()));
 	}
+	if (to_draw_clouds.empty()) return;
 	sort(to_draw_clouds.begin(), to_draw_clouds.end()); // back-to-front
 	vpc_shader_t s; // see draw_scenery()
 	tile_cloud_t::shader_setup(s, 1, 0, -0.12, -0.3); // grayscale, not ridged, with custom alpha/dist bias

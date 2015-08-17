@@ -125,10 +125,12 @@ class tile_cloud_manager_t : public vector<tile_cloud_t> {
 
 	bool generated;
 	cube_t bcube;
+	vector<pair<float, unsigned>> sorted;
 public:
 	tile_cloud_manager_t() : generated(0) {}
 	void gen(int x1, int y1, int x2, int y2);
-	void draw(vpc_shader_t &s, vector3d const &xlate) const;
+	bool any_visible(vector3d const &xlate) const;
+	void draw(vpc_shader_t &s, vector3d const &xlate);
 };
 
 
@@ -312,13 +314,17 @@ public:
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass);
 	void update_decid_trees();
 
-	// *** scenery/grass/clouds ***
+	// *** scenery/grass ***
 	void update_scenery();
 	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass);
 	void pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const;
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 	void draw_flowers(shader_t &s, bool use_cloud_shadows);
+
+	// *** clouds ***
+	bool any_clouds_visible() const;
 	void draw_tile_clouds(vpc_shader_t &s, bool reflection_pass);
+	void gen_tile_clouds();
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
