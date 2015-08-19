@@ -24,6 +24,7 @@ small_tree_group small_trees;
 small_tree_group tree_instances;
 pt_line_drawer tree_scenery_pld;
 
+extern bool tree_indir_lighting;
 extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern unsigned max_unique_trees;
@@ -530,7 +531,7 @@ void draw_small_trees(bool shadow_only) {
 		s.begin_color_only_shader();
 	}
 	else {
-		setup_smoke_shaders(s, 0.0, 0, 0, 0, 1, 1, 0, 0, 1, use_bump_map, 0, 1); // dynamic lights, but no smoke
+		setup_smoke_shaders(s, 0.0, 0, 0, tree_indir_lighting, 1, 1, 0, 0, 1, use_bump_map, 0, 1); // dynamic lights, but no smoke
 		s.add_uniform_float("tex_scale_t", 5.0);
 	}
 	if (use_bump_map) {select_multitex(BARK2_NORMAL_TEX, 5, 1);}
@@ -541,7 +542,7 @@ void draw_small_trees(bool shadow_only) {
 	// draw leaves
 	if (small_trees.num_pine_trees > 0) { // pine trees
 		small_trees.vbo_manager[0].upload();
-		setup_smoke_shaders(s, 0.5, 3, 0, 0, v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke, texgen
+		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke, texgen
 		small_trees.draw_pine_leaves(shadow_only);
 		s.end_shader();
 	}

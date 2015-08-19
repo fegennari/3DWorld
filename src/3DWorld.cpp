@@ -63,7 +63,7 @@ bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0), invert_model_nmap_bscale(0);
 bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0), volume_lighting(0);
 bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0), user_action_key(0);
-bool enable_dlight_shadows(1);
+bool enable_dlight_shadows(1), tree_indir_lighting(0);
 int xoff(0), yoff(0), xoff2(0), yoff2(0), rand_gen_index(0), camera_change(1), camera_in_air(0), auto_time_adv(0);
 int animate(1), animate2(1), begin_motion(0), draw_model(0), init_x(STARTING_INIT_X), fire_key(0), do_run(0);
 int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0), screen_reset(0), mesh_seed(0);
@@ -320,7 +320,6 @@ void set_additive_blend_mode() {
 
 
 void reset_fog() {
-
 	setup_linear_fog(GRAY, ((world_mode == WMODE_INF_TERRAIN) ? get_inf_terrain_fog_dist() : 2.5*Z_SCENE_SIZE));
 }
 
@@ -1562,6 +1561,7 @@ int load_config(string const &config_file) {
 	kwmb.add("model_calc_tan_vect", model_calc_tan_vect);
 	kwmb.add("invert_model_nmap_bscale", invert_model_nmap_bscale);
 	kwmb.add("enable_dlight_shadows", enable_dlight_shadows);
+	kwmb.add("tree_indir_lighting", tree_indir_lighting);
 
 	kw_to_val_map_t<int> kwmi(error);
 	kwmi.add("verbose", verbose_mode);

@@ -33,6 +33,7 @@ disabled_mesh_z -0.8
 camera_height 0.08
 player_start 1.0 -1.0 0.0
 tree_size 1.0
+tree_indir_lighting 1
 sun_rot 0.5
 tree_coll_level 4
 # default_ground_tex 0
