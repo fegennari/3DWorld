@@ -371,7 +371,7 @@ extern float base_gravity, temperature, cloud_cover, sun_rot, moon_rot, ball_vel
 extern vector3d wind;
 
 enum {PW_GRAVITY=0, PW_TEMP, PW_WATER, PW_VEG, PW_ATMOS, PW_CLOUD, PW_PRECIP, PW_WIND_X, PW_WIND_Y, PW_SUN_POS, PW_MOON_POS, PW_TIMESTEP, PW_WVEL, NUM_PW_CONT};
-string const phys_weather_names[NUM_PW_CONT] = {"Gravity", "Temperature", "Water Level", "Vegetation", "Atmosphere", "Cloudiness", "Precipitation", "Wind X", "Wind Y", "Sun Position", "Moon Position", "Physics Timestep", "Weapon Velocity"};
+string const phys_weather_names[NUM_PW_CONT] = {"Gravity", "Temperature", "Water Level", "Vegetation", "Atmosphere", "Cloudiness", "Precipitation", "Wind X", "Wind Y", "Sun Angle", "Moon Angle", "Physics Timestep", "Weapon Velocity"};
 
 class phys_weather_kbd_menu_t : public keyboard_menu_t {
 

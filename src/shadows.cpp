@@ -24,12 +24,19 @@ void update_sun_shadows() {
 	calc_visibility(SUN_SHADOW);
 }
 
+void fix_sun_moon_rot(float &angle) {
+
+	angle = fix_angle(angle);
+	// FIXME: this part is required to prevent shadow map singularities when the sun/moon is directly overhead
+	float const toler = 0.001;
+	if (fabs(angle) < toler || fabs(angle - TWO_PI) < toler) {angle = toler;}
+}
 
 void update_sun_and_moon() {
 
 	float const radius(0.6*(FAR_CLIP+X_SCENE_SIZE));
-	sun_rot      = fix_angle(sun_rot);
-	moon_rot     = fix_angle(moon_rot);
+	fix_sun_moon_rot(sun_rot);
+	fix_sun_moon_rot(moon_rot);
 	light_factor = fabs(sun_rot/PI - 1.0);
 	moon_pos     = mesh_origin + rtp_to_xyz(radius, MOON_THETA, moon_rot);
 	sun_pos      = mesh_origin + rtp_to_xyz(radius,  SUN_THETA, sun_rot);

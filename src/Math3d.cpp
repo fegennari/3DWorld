@@ -17,15 +17,11 @@ bool line_intersect_torus(double ax, double ay, double az, double bx, double by,
 // ************ BASIC VECTOR MATH, ETC. ************
 
 
-float fix_angle(float angle) {
+float fix_angle(float angle) { // not sure if this is really necessary since sin/cos functions should be able to handle large angles
 
-	if (angle >  TWO_PI) { // not sure if this is really necessary since sin/cos functions should be able to handle large angles
-		angle -= TWO_PI;
-	}
-	else if (angle < 0.0) {
-		angle += TWO_PI;
-	}
-	if (angle == -0.0) angle = 0.0; // stupid -0
+	if      (angle > TWO_PI) {angle -= TWO_PI;}
+	else if (angle < 0.0)    {angle += TWO_PI;}
+	if (angle == -0.0)       {angle = 0.0;} // stupid -0
 	return angle;
 }
 
