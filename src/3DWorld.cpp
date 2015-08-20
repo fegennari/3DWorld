@@ -530,6 +530,7 @@ void change_world_mode() { // switch terrain mode: 0 = normal, 1 = universe, 3 =
 	update_grass_vbos();
 	clear_vbo_ring_buffer();
 	obj_pld.free_mem();
+	invalidate_cached_stars();
 	glDrawBuffer(GL_BACK);
 	post_window_redisplay();
 	if (world_mode == WMODE_GROUND && combined_gu) {regen_trees(0);}
