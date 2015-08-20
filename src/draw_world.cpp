@@ -233,6 +233,11 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 }
 
 
+void set_indir_color(shader_t &s) {
+	colorRGB const indir_color((have_indir_smoke_tex && world_mode == WMODE_GROUND) ? colorRGB(0.0, 0.0, 0.0) : const_indir_color);
+	s.add_uniform_color("const_indir_color", indir_color);
+}
+
 void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 
 	s.setup_scene_bounds();
@@ -240,9 +245,8 @@ void set_indir_lighting_block(shader_t &s, bool use_smoke, bool use_indir) {
 	s.add_uniform_int("smoke_and_indir_tex", 1);
 	s.add_uniform_float("half_dxy", HALF_DXY);
 	s.add_uniform_float("indir_vert_offset", indir_vert_offset);
-	colorRGB const indir_color((have_indir_smoke_tex && world_mode == WMODE_GROUND) ? colorRGB(0.0, 0.0, 0.0) : const_indir_color);
-	s.add_uniform_color("const_indir_color", indir_color);
 	s.add_uniform_float("ambient_scale", (use_indir ? 0.0 : 1.0)); // ambient handled by indirect lighting in the shader
+	set_indir_color(s);
 
 	// hemispherical lighting
 	s.add_uniform_color("sky_color", colorRGB(bkg_color));

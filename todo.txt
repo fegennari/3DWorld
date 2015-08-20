@@ -11,4 +11,4 @@ Gameplay in tiled terrain mode
   - Projectile and object collision detection
 
 Cascaded shadow maps for sun/moon
-Indir lighting for tree leaves
+Use bounding sphere for tree normals: http://oceanquigley.blogspot.com/2010/11/lighting-3d-trees.html

@@ -58,11 +58,13 @@ tree_cont_t t_trees(tree_data_manager);
 extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lightning_enabled, tree_indir_lighting;
 extern int num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
+extern unsigned smoke_tid;
 extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh;
 extern lightning l_strike;
 extern coll_obj_group coll_objects;
 
 float get_draw_tile_dist();
+void set_indir_color(shader_t &s);
 
 
 
@@ -317,16 +319,16 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
 	assert(draw_branches != draw_leaves); // must enable only one
+	int const shader_loc(s.get_uniform_loc("world_space_offset"));
 
 	if (draw_branches) {
-		int const shader_loc(s.get_uniform_loc("world_space_offset"));
 		tree_data_t::pre_branch_draw(s, shadow_only);
 		for (iterator i = begin(); i != end(); ++i) {i->draw_branches_top(s, lod_renderer, shadow_only, reflection_pass, xlate, shader_loc);}
 		tree_data_t::post_branch_draw(shadow_only);
 	}
 	else { // draw_leaves
 		tree_data_t::pre_leaf_draw(s);
-		for (iterator i = begin(); i != end(); ++i) {i->draw_leaves_top(s, lod_renderer, shadow_only, xlate);}
+		for (iterator i = begin(); i != end(); ++i) {i->draw_leaves_top(s, lod_renderer, shadow_only, xlate, shader_loc);}
 		tree_data_t::post_leaf_draw();
 	}
 }
@@ -338,9 +340,10 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 		no_dlights = 1;
 		setup_tt_fog_pre(s); // FS
 	}
-	if (gen_tex_coords) {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
-	if (tree_indir_lighting) {} // FIXME: can indir lighting be made to work in the leaf vertex shader?
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
+	bool const use_indir(tree_indir_lighting && smoke_tid);
+	s.set_bool_prefix("indir_lighting", use_indir, 0); // VS
+	if (gen_tex_coords) {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
 	s.check_for_fog_disabled();
 	s.setup_enabled_lights(2, 1); // VS
 	s.set_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled), 0); // VS - lightning
@@ -357,6 +360,12 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 	s.add_uniform_int("tex0", 0);
 	if (gen_tex_coords) {s.add_uniform_int("tc_start_ix", tc_start_ix);}
 	s.add_uniform_vector3d("world_space_offset", zero_vector); // reset
+
+	if (use_indir) {
+		set_3d_texture_as_current(smoke_tid, 1);
+		s.add_uniform_int("smoke_and_indir_tex", 1);
+		set_indir_color(s);
+	}
 	check_gl_error(301);
 }
 
@@ -865,7 +874,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 }
 
 
-void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate) {
+void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate, int shader_loc) {
 
 	if (!created) return;
 	tree_data_t &td(tdata());
@@ -915,7 +924,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
-	if (has_dl_sources && world_mode == WMODE_GROUND) {s.add_uniform_vector3d("world_space_offset", (tree_center + xlate));}
+	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && world_mode == WMODE_GROUND) {s.set_uniform_vector3d(shader_loc, (tree_center + xlate));}
 	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
 	fgPushMatrix();
 	translate_to(tree_center + xlate);

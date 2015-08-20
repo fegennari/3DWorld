@@ -308,7 +308,7 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	float calc_size_scale(point const &draw_pos) const;
 	void draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc);
-	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate);
+	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate, int shader_loc);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	void clear_context();
 	int delete_tree();
