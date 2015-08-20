@@ -73,7 +73,7 @@ bool any_trees_enabled    () {return (pine_trees_enabled() || decid_trees_enable
 bool scenery_enabled      () {return (inf_terrain_scenery && SCENERY_THRESH > 0.0);}
 bool gen_grass_map        () {return (GRASS_THRESH > 0.0 && grass_density > 0 && vegetation > 0.0);}
 bool is_grass_enabled     () {return ((display_mode & 0x02) && gen_grass_map());}
-bool clouds_enabled       () {return ((display_mode & 0x40) == 0);}
+bool clouds_enabled       () {return ((display_mode & 0x40) == 0 && atmosphere > 0.0);}
 bool cloud_shadows_enabled() {return (ground_effects_level >= 2 && clouds_enabled());}
 bool mesh_shadows_enabled () {return (ground_effects_level >= 1);}
 bool is_distance_mode     () {return ((display_mode & 0x10) != 0);}
@@ -2386,7 +2386,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 void tile_draw_t::draw_tile_clouds(bool reflection_pass) { // 0.15ms
 
-	if (!clouds_enabled()) return;
+	if (!clouds_enabled() || atmosphere < 0.5) return; // only for high atmosphere
 	draw_vect_t to_draw_clouds;
 
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
