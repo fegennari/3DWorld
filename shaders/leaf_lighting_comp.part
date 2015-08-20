@@ -1,11 +1,11 @@
-vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i)
+vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i, in float ambient_scale=1.0)
 {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 lightDir = normalize(fg_LightSource[i].position.xyz);
 	
 	// compute the ambient and diffuse terms
-	vec3 diffuse = (gl_Color * fg_LightSource[i].diffuse).rgb;
-	vec3 ambient = (gl_Color * fg_LightSource[i].ambient).rgb;
+	vec3 diffuse = (gl_Color * fg_LightSource[i].diffuse).rgb * (shadowed ? 0.0 : 1.0);
+	vec3 ambient = (gl_Color * fg_LightSource[i].ambient).rgb * ambient_scale;
 	
 	// calculate specular lighting and normal effects
 	vec3 dir_to_camera = normalize(vec3(0.0,0.0,0.0) - eye_space_pos.xyz);
