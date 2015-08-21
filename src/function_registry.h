@@ -82,7 +82,7 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12);
 void set_fill_mode();
 void ensure_filled_polygons();
 void reset_fill_mode();
-int get_universe_ambient_light();
+int get_universe_ambient_light(bool for_universe_draw);
 void set_gl_light_pos(int light, point const &pos, float w, shader_t *shader=NULL);
 void set_light_ds_color(int light, colorRGBA const &diffuse, shader_t *shader=NULL);
 void set_light_a_color(int light, colorRGBA const &ambient, shader_t *shader=NULL);

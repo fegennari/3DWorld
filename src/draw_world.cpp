@@ -84,9 +84,7 @@ void reset_fill_mode() {
 	if (draw_model != 0) {set_fill_mode();}
 }
 
-int get_universe_ambient_light() {
-	return ((world_mode == WMODE_UNIVERSE) ? 1 : 3);
-}
+int get_universe_ambient_light(bool for_universe_draw) {return (for_universe_draw ? 1 : 3);}
 
 
 void gl_light_params_t::set_pos(point const &p, float w) {

@@ -985,7 +985,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			
 			if (!combined_gu) {
 				setup_landscape_tex_colors(ALPHA0, ALPHA0);
-				disable_light(get_universe_ambient_light());
+				disable_light(get_universe_ambient_light(1)); // disable universe ambient (not required?)
 				calc_visibility(SUN_SHADOW); // reclaculate sun
 				DISABLE_WATER = INIT_DISABLE_WATER;
 			}

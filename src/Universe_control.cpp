@@ -50,7 +50,7 @@ void setup_universe_fog(s_object const &closest);
 void set_current_system_light(s_object const &clobj, point const &pspos, float a_scale, float d_scale);
 void destroy_sobj(s_object const &target);
 bool get_gravity(s_object &result, point pos, vector3d &gravity, int offset);
-void set_lighting_params();
+void set_universe_lighting_params(bool for_universe_draw);
 point get_scaled_upt();
 void add_player_ship_engine_light();
 
@@ -101,7 +101,7 @@ void do_univ_init() {
 bool player_near_system() {return (clobj0.system >= 0);}
 
 
-void setup_current_system(float sun_intensity, bool reflection_mode) {
+void setup_current_system(float sun_intensity, bool reflection_mode) { // called in ground mode
 	
 	bool regen_mesh(0);
 	static bool last_is_lava(0);
@@ -249,7 +249,7 @@ void process_ships(int timer1) {
 
 void draw_universe_all(bool static_only, bool skip_closest, int no_distant, bool gen_only) {
 
-	set_lighting_params();
+	set_universe_lighting_params(1); // for universe drawing
 	universe.get_object_closest_to_pos(clobj0, get_player_pos2(), 0, 4.0);
 	if (!static_only) {setup_universe_fog(clobj0);}
 	check_gl_error(120);
@@ -297,7 +297,7 @@ void draw_universe(bool static_only, bool skip_closest, int no_distant, bool gen
 		if (TIMETEST) PRINT_TIME(" Free Obj Draw");
 	}
 	check_shift_universe();
-	disable_light(get_universe_ambient_light());
+	disable_light(get_universe_ambient_light(1)); // for universe draw
 	enable_light(0);
 	//draw_universe_sun_flare(); // doesn't look right
 	inited = 1;

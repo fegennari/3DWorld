@@ -712,7 +712,8 @@ bool set_af_color_from_system(point_d const &afpos, float radius, shader_t *shad
 
 	point sun_pos; // unused
 	uobject const *sobj(NULL); // unused
-	return (set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader) >= 0);
+	int const ret(set_uobj_color(afpos, radius, 0, 1, sun_pos, sobj, AST_AMBIENT_S, AST_AMBIENT_NO_S, shader));
+	return (ret >= 0);
 }
 
 

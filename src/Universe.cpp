@@ -81,8 +81,8 @@ unsigned get_texture_size(float psize);
 bool get_gravity(s_object &result, point pos, vector3d &gravity, int offset);
 void set_sun_loc_color(point const &pos, colorRGBA const &color, float radius, bool shadowed, bool no_ambient, float a_scale, float d_scale, shader_t *shader=NULL);
 void set_light_galaxy_ambient_only(shader_t *shader=NULL);
-void set_ambient_color(colorRGBA const &color, shader_t *shader=NULL);
-void set_lighting_params();
+void set_universe_ambient_color(colorRGBA const &color, shader_t *shader=NULL);
+void set_universe_lighting_params(bool for_universe_draw);
 void get_point_of_collision(s_object const &result, point const &pos, point &cpos);
 bool universe_intersection_test(line_query_state &lqs, point const &pos, vector3d const &dir, float range, bool include_asteroids);
 
@@ -536,7 +536,7 @@ void universe_t::draw_all_cells(s_object const &clobj, bool skip_closest, bool n
 }
 
 
-void set_current_system_light(s_object const &clobj, point const &pspos, float a_scale, float d_scale) {
+void set_current_system_light(s_object const &clobj, point const &pspos, float a_scale, float d_scale) { // called in ground mode
 
 	if (clobj.has_valid_system() && clobj.get_star().is_ok()) { // in a system
 		ustar const &sun(clobj.get_star());
@@ -559,7 +559,7 @@ void set_current_system_light(s_object const &clobj, point const &pspos, float a
 	}
 	else {
 		//set_light_galaxy_ambient_only();
-		set_lighting_params(); // ending light default
+		set_universe_lighting_params(0); // ending light default (for for universe draw)
 		univ_sun_pos = point(0.0, 0.0, 1.0);
 		univ_sun_rad = AVG_STAR_SIZE;
 		univ_temp    = 0.0;
@@ -627,7 +627,6 @@ bool get_universe_sun_pos(point const &pos, point &spos) {
 
 
 bool has_sun_lighting(point const &pos) {
-
 	s_object result;
 	return (universe.get_close_system(pos, result, 2.0) != 0);
 }
@@ -665,13 +664,12 @@ int set_uobj_color(point const &pos, float radius, bool known_shadowed, int shad
 			//atten_color(color, pos2, galaxy.pos, (galaxy.radius + MAX_SYSTEM_EXTENT), expand);
 		}
 		if (ambient_scale > 0.0) {
-			set_ambient_color(color*ambient_scale, shader);
+			set_universe_ambient_color(color*ambient_scale, shader);
 			ambient_color_set = 1;
 		}
 	}
-	if (!ambient_color_set) {
-		set_light_a_color(get_universe_ambient_light(), BLACK, shader); // light is not enabled or disabled
-	}
+	if (!ambient_color_set) {set_light_a_color(get_universe_ambient_light(1), BLACK, shader);} // light is not enabled or disabled
+	
 	if (!found && !blend) { // no sun
 		set_light_galaxy_ambient_only(shader);
 		return -1;
@@ -803,7 +801,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 		galaxy.process(*this);
 
 		if (!gen_only && pass == 0 && sel_g && !galaxy.asteroid_fields.empty()) { // draw asteroid fields (sel_g?)
-			set_ambient_color(galaxy.color);
+			set_universe_ambient_color(galaxy.color);
 			uasteroid_field::begin_render(usg.asteroid_shader, 0, 1);
 
 			for (vector<uasteroid_field>::iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
@@ -817,7 +815,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 			if (!univ_sphere_vis(cpos, galaxy.clusters[c].bounds)) continue;
 			float const max_size(calc_sphere_size(cpos, camera, STAR_MAX_SIZE));
 			ugalaxy::system_cluster const &cl(galaxy.clusters[c]);
-			//set_ambient_color((galaxy.color + cl.color)*0.5); // average the galaxy and cluster colors (but probably always reset below)
+			//set_universe_ambient_color((galaxy.color + cl.color)*0.5); // average the galaxy and cluster colors (but probably always reset below)
 
 			for (unsigned j = cl.s1; j < cl.s2; ++j) {
 				bool const sel_s(sel_g && (int)j == clobj.system);
@@ -869,7 +867,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						else {
 							set_sun_loc_color(spos, sol.sun.get_light_color(), sradius, 0, 0, BASE_AMBIENT, BASE_DIFFUSE); // slow - can this be made faster?
 						}
-						set_ambient_color(sol.get_galaxy_color());
+						set_universe_ambient_color(sol.get_galaxy_color());
 					}
 					else { // we know all planets are too far away
 						if (!sel_g) sol.free_planets(); // optional
@@ -2397,7 +2395,7 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 
 	// calculate ndiv
 	bool const texture(size > MIN_TEX_OBJ_SZ && tid > 0), procedural(use_procedural_shader()), heightmap(has_heightmap());
-	float const ndiv_factor(heightmap ? ((world_mode == WMODE_UNIVERSE) ? 1.0 : 0.5) : 0.25); // lower res when in background
+	float const ndiv_factor(heightmap ? (universe_mode ? 1.0 : 0.5) : 0.25); // lower res when in background
 	int ndiv(ndiv_factor*NDIV_SIZE_SCALE*sqrt(size));
 		
 	if (size < 64.0) {
@@ -3192,9 +3190,9 @@ void set_light_galaxy_ambient_only(shader_t *shader) {
 }
 
 
-void set_ambient_color(colorRGBA const &color, shader_t *shader) {
+void set_universe_ambient_color(colorRGBA const &color, shader_t *shader) {
 
-	int const light(get_universe_ambient_light());
+	int const light(get_universe_ambient_light(1)); // always for universe mode
 	enable_light(light);
 	colorRGBA ambient(BLACK);
 	UNROLL_3X(ambient[i_] = GLOBAL_AMBIENT*BASE_AMBIENT*(WHITE_COMP_A + OM_AAV*OM_WCA*color[i_]);)
@@ -3203,9 +3201,9 @@ void set_ambient_color(colorRGBA const &color, shader_t *shader) {
 }
 
 
-void set_lighting_params() {
+void set_universe_lighting_params(bool for_universe_draw) { // called for both universe and ground mode
 
-	int const a_light(get_universe_ambient_light()), s_light(0);
+	int const a_light(get_universe_ambient_light(for_universe_draw)), s_light(0);
 	set_colors_and_enable_light(s_light, GRAY, WHITE); // single star diffuse + ambient
 	set_gl_light_pos(s_light, all_zeros, 0.0); // directional light
 	set_colors_and_enable_light(a_light, GRAY, BLACK); // universe + galaxy ambient
