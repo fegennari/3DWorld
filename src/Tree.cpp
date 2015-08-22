@@ -728,7 +728,6 @@ void tree::drop_leaves() {
 
 
 inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
-
 	return ((shadow_bits & (1 << pt_ix)) ? LEAF_SHADOW_VAL : 1.0);
 }
 
@@ -1021,7 +1020,9 @@ void tree_data_t::draw_branches(shader_t &s, float size_scale, bool force_low_de
 void tree_data_t::update_normal_for_leaf(unsigned i) {
 
 	assert(i < leaves.size());
-	UNROLL_4X(leaf_data[i_+(i<<2)].set_norm(leaves[i].norm*leaves[i].get_norm_scale(i_));)
+	vector3d const &normal(leaves[i].norm); // standard leaf plane normal
+	//vector3d const &normal(leaves[i].get_center().get_norm()); // use position of leaf relative to tree center (could also mix in leaf normal)
+	UNROLL_4X(leaf_data[i_+(i<<2)].set_norm(normal*leaves[i].get_norm_scale(i_));)
 	mark_leaf_changed(i);
 }
 
