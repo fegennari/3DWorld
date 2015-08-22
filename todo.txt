@@ -12,4 +12,3 @@ Gameplay in tiled terrain mode
 
 Cascaded shadow maps for sun/moon
 Plants move in the wind
-Why is the sky so blue in combined_gu mode?

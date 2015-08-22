@@ -367,6 +367,8 @@ void reset_planet_defaults() {
 	have_sun   = 1;
 	atmosphere = def_atmosphere;
 	vegetation = def_vegetation;
+	base_cloud_color = WHITE;
+	base_sky_color   = BACKGROUND_DAY;
 }
 
 
