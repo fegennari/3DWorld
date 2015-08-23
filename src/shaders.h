@@ -105,6 +105,7 @@ public:
 	void set_cur_color(colorRGBA const &color) const;
 
 	int get_uniform_loc(char const *const name) const;
+	void ensure_loc(int &loc, char const *const name) const {if (loc < 0) {loc = get_uniform_loc(name);}}
 	static bool set_uniform_float_array(int loc, float const *const val, unsigned num);
 	static bool set_uniform_float      (int loc, float val);
 	static bool set_uniform_int        (int loc, int val);

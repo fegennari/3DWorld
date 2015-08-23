@@ -135,6 +135,12 @@ class s_plant : public scenery_obj { // size = 56
 	void create_leaf_points(vector<vert_norm> &points) const;
 
 public:
+	struct shader_state_t {
+		int color_scale_loc, normal_scale_loc, wind_scale_loc;
+		float wind_scale;
+		shader_state_t() : color_scale_loc(-1), normal_scale_loc(-1), wind_scale_loc(-1), wind_scale(0.0) {}
+	};
+
 	s_plant() : no_leaves(0), coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
 	void disable_leaves() {no_leaves = 1;}
 	bool operator<(s_plant const &p) const {return (type < p.type);}
@@ -147,7 +153,7 @@ public:
 	bool update_zvals(int x1, int y1, int x2, int y2, vbo_vnc_block_manager_t &vbo_manager);
 	bool is_shadowed() const;
 	void draw_stem(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate) const;
-	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate) const;
+	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const;
 	void draw_berries(shader_t &s, vector3d const &xlate) const;
 	void remove_cobjs();
 	void destroy();

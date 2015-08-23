@@ -368,9 +368,10 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 		set_indir_color(s);
 	}
 	if (wind_mag > 0.0) {
-		s.add_uniform_float("wind_mag",  wind_mag);
-		s.add_uniform_float("wind_time", tfticks);
-		s.add_uniform_float("wind_freq", 80.0*tree_scale);
+		s.add_uniform_float("wind_mag",   wind_mag);
+		s.add_uniform_float("wind_scale", 1.0);
+		s.add_uniform_float("wind_time",  tfticks);
+		s.add_uniform_float("wind_freq",  80.0*tree_scale);
 	}
 	check_gl_error(301);
 }

@@ -804,7 +804,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	}
 }
 
-void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
+void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const {
 
 	if (no_leaves) return;
 	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
@@ -812,13 +812,26 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, 0.5*(height + radius), 0)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
-	if (is_water_plant) {s.add_uniform_color("color_scale", get_atten_color(WHITE, xlate));}
-	if (shadowed) {s.add_uniform_float("normal_scale", 0.0);}
+	float const wind_scale(berries.empty() ? 1.0 : 0.0); // no wind if this plant type has berries
+	
+	if (is_water_plant) {
+		s.ensure_loc(state.color_scale_loc, "color_scale");
+		s.set_uniform_color(state.color_scale_loc, get_atten_color(WHITE, xlate));
+	}
+	if (shadowed) {
+		s.ensure_loc(state.normal_scale_loc, "normal_scale");
+		s.set_uniform_float(state.normal_scale_loc, 0.0);
+	}
+	if (wind_scale != state.wind_scale) {
+		s.ensure_loc(state.wind_scale_loc, "wind_scale");
+		s.set_uniform_float(state.wind_scale_loc, wind_scale);
+		state.wind_scale = wind_scale;
+	}
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-	if (is_water_plant) {s.add_uniform_color("color_scale", WHITE);}
-	if (shadowed) {s.add_uniform_float("normal_scale", 1.0);}
+	if (is_water_plant) {s.set_uniform_color(state.color_scale_loc, WHITE);}
+	if (shadowed) {s.set_uniform_float(state.normal_scale_loc, 1.0);}
 }
 
 void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
@@ -1070,9 +1083,10 @@ void scenery_group::draw_plant_leaves(shader_t &s, bool shadow_only, vector3d co
 	s.set_specular(0.25, 20.0); // a small amount of specular
 	plant_vbo_manager.upload();
 	plant_vbo_manager.begin_render();
+	s_plant::shader_state_t state;
 
 	for (unsigned i = 0; i < plants.size(); ++i) {
-		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate);
+		plants[i].draw_leaves(s, plant_vbo_manager, shadow_only, reflection_pass, xlate, state);
 	}
 	plant_vbo_manager.end_render();
 	s.clear_specular();
