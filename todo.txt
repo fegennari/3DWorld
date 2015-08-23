@@ -11,4 +11,4 @@ Gameplay in tiled terrain mode
   - Projectile and object collision detection
 
 Cascaded shadow maps for sun/moon
-Plants move in the wind
+Plants move in the wind - fix berries

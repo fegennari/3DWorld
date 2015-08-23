@@ -59,7 +59,8 @@ extern bool has_snow, no_sun_lpos_update, has_dl_sources, gen_tree_roots, tt_lig
 extern int num_trees, do_zoom, begin_motion, display_mode, animate2, iticks, draw_model, frame_counter;
 extern int xoff2, yoff2, rand_gen_index, game_mode, leaf_color_changed, scrolling, dx_scroll, dy_scroll, window_width, window_height;
 extern unsigned smoke_tid;
-extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh;
+extern float zmin, zmax_est, zbottom, water_plane_z, tree_scale, temperature, fticks, vegetation, tree_density_thresh, tfticks;
+extern vector3d wind;
 extern lightning l_strike;
 extern coll_obj_group coll_objects;
 
@@ -334,7 +335,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned tc_start_ix, bool enable_opacity, bool no_dlights) {
+void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag) {
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		no_dlights = 1;
@@ -343,7 +344,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid);
 	s.set_bool_prefix("indir_lighting", use_indir, 0); // VS
-	if (gen_tex_coords) {s.set_prefix("#define GEN_QUAD_TEX_COORDS", 0);} // VS
+	if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 	s.check_for_fog_disabled();
 	s.setup_enabled_lights(2, 1); // VS
 	s.set_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled), 0); // VS - lightning
@@ -358,13 +359,18 @@ void set_leaf_shader(shader_t &s, float min_alpha, bool gen_tex_coords, unsigned
 	s.add_uniform_float("min_alpha",   min_alpha);
 	set_active_texture(0);
 	s.add_uniform_int("tex0", 0);
-	if (gen_tex_coords) {s.add_uniform_int("tc_start_ix", tc_start_ix);}
+	s.add_uniform_int("tc_start_ix", tc_start_ix);
 	s.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 
 	if (use_indir) {
 		set_3d_texture_as_current(smoke_tid, 1);
 		s.add_uniform_int("smoke_and_indir_tex", 1);
 		set_indir_color(s);
+	}
+	if (wind_mag > 0.0) {
+		s.add_uniform_float("wind_mag",  wind_mag);
+		s.add_uniform_float("wind_time", tfticks);
+		s.add_uniform_float("wind_freq", 80.0*tree_scale);
 	}
 	check_gl_error(301);
 }
@@ -387,11 +393,10 @@ void tree_cont_t::check_leaf_shadow_change() {
 
 void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only) {
 	
-	if (shader.is_setup()) {
-		shader.enable();
-	}
+	if (shader.is_setup()) {shader.enable();}
 	else {
-		set_leaf_shader(shader, 0.75, 1, 3, enable_opacity, shadow_only);
+		float const wind_mag(0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
+		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag);
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
 			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);

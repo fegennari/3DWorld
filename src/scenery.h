@@ -185,6 +185,7 @@ public:
 	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
+	static float get_plant_leaf_wind_mag();
 };
 
 
