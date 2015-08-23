@@ -138,7 +138,7 @@ public:
 	struct shader_state_t {
 		int color_scale_loc, normal_scale_loc, wind_scale_loc;
 		float wind_scale;
-		shader_state_t() : color_scale_loc(-1), normal_scale_loc(-1), wind_scale_loc(-1), wind_scale(0.0) {}
+		shader_state_t() : color_scale_loc(-1), normal_scale_loc(-1), wind_scale_loc(-1), wind_scale(1.0) {}
 	};
 
 	s_plant() : no_leaves(0), coll_id2(-1), vbo_mgr_ix(-1), height(1.0) {}
