@@ -2294,7 +2294,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass) {
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 1, 0, reflection_pass);} // opaque
 	tree_scenery_pld.draw_and_clear();
 	s.end_shader();
-	set_leaf_shader(s, 0.9, 0, 0, 1, scenery_group::get_plant_leaf_wind_mag());
+	set_leaf_shader(s, 0.9, 0, 0, 1, scenery_group::get_plant_leaf_wind_mag(), underwater);
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass);} // leaves
 	s.end_shader();
 }

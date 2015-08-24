@@ -335,7 +335,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 }
 
 
-void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag) {
+void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag, bool underwater) {
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		no_dlights = 1;
@@ -370,7 +370,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	if (wind_mag > 0.0) {
 		s.add_uniform_float("wind_mag",   wind_mag);
 		s.add_uniform_float("wind_scale", 1.0);
-		s.add_uniform_float("wind_time",  tfticks);
+		s.add_uniform_float("wind_time",  (underwater ? 0.025 : 0.1)*tfticks); // lower frequency movement for underwater seaweed (but applies to all plants)
 		s.add_uniform_float("wind_freq",  80.0*tree_scale);
 	}
 	check_gl_error(301);
@@ -397,7 +397,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 	if (shader.is_setup()) {shader.enable();}
 	else {
 		float const wind_mag(0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
-		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag);
+		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0); // no underwater trees
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
 			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);

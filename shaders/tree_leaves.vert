@@ -12,7 +12,7 @@ void main() {
 	float wmag = wind_mag * wind_scale;
 
 	if (wmag > 0.0 && tc_table_ix < 2) { // only move the tip verts (not the end verts)
-		float t   = 0.1*wind_time;
+		float t   = wind_time;
 		vec3 pos  = wind_freq*vpos.xyz;
 		vpos.xyz += wmag*vec3(sin(1.00*t + pos.x) + sin(2.75*t + 1.5*pos.x),
 		                      sin(1.13*t + pos.y) + sin(2.66*t + 1.5*pos.y),
