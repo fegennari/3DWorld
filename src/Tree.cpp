@@ -1660,7 +1660,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	num_1_branches = num_b_so_far; // clamp to the number actually created
 	
 	//done with base ------------------------------------------------------------------
-	if (has_4th_branches) {create_4th_order_branches(nbranches);}
+	if (has_4th_branches) {create_4th_order_branches(nbranches, tree_type, br_scale);}
 	root_num_cylins = (gen_tree_roots ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
 
 	for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) { // add roots
@@ -1920,10 +1920,10 @@ void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int num_4_bran
 }
 
 
-void tree_builder_t::create_4th_order_branches(int nbranches) {
+void tree_builder_t::create_4th_order_branches(int nbranches, int tree_type, float br_scale) {
 
 	int num_4_branches  = 2;
-	branch_4_length     = 0.006; //0.03;
+	branch_4_length     = 1.2*TREE_SIZE*br_scale*tree_types[tree_type].branch_size/tree_scale; //0.03;
 	branch_4_max_radius = 0.008;
 	assert(num_34_branches[1] > 0);
 	int branch_num(0);
