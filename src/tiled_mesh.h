@@ -330,7 +330,7 @@ public:
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);
 	void shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
 	void bind_textures() const;
-	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass) const;
+	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const;
 	void draw_water_cap(shader_t &s, bool textures_already_set) const;
 	void draw_water(shader_t &s, float z) const;
 	bool is_water_visible() const;

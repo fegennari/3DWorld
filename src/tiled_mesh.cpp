@@ -1339,7 +1339,7 @@ unsigned crack_ibuf_t::get_index(unsigned dim, unsigned dir, unsigned cur_lod, u
 }
 
 
-void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass) const {
+void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const {
 
 	assert(size > 0);
 	fgPushMatrix();
@@ -1349,9 +1349,13 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	bool const draw_near_water(!is_distant && !reflection_pass && is_water_enabled() && has_water());
 
 	if (!reflection_pass && cloud_shadows_enabled()) {
-		s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));
+		s.ensure_uniform_loc(shader_locs[0], "cloud_offset");
+		s.set_uniform_vector3d(shader_locs[0], vector3d(get_xval(x1), get_yval(y1), 0.0));
 	}
-	if (draw_near_water) {s.add_uniform_vector3d("tc_xlate", xlate);} // for underwater caustics texture
+	if (draw_near_water) { // for underwater caustics texture
+		s.ensure_uniform_loc(shader_locs[1], "tc_xlate");
+		s.set_uniform_vector3d(shader_locs[1], xlate);
+	}
 	shader_shadow_map_setup(s);
 	unsigned const lod_level(get_lod_level(reflection_pass)), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
 	vbo_mgr.pre_render();
@@ -2040,10 +2044,11 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	enable_blend(); // for fog transparency
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
+	int shader_locs[2] = {-1, -1};
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) {
 		if (to_draw[i].second->using_shadow_maps() != enable_shadow_map) continue; // draw in another pass
-		to_draw[i].second->draw(s, *this, ivbo_ixs, crack_ibuf, reflection_pass);
+		to_draw[i].second->draw(s, *this, ivbo_ixs, crack_ibuf, reflection_pass, shader_locs);
 	}
 	if (!enable_shadow_map && !reflection_pass && is_water_enabled()) { // draw all water caps (required, even for occluded tiles)
 		for (auto i = occluded_tiles.begin(); i != occluded_tiles.end(); ++i) {(*i)->draw_water_cap(s, 0);}

@@ -628,7 +628,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 		sort(tri_fragments.begin(), tri_fragments.end()); // sort by tid
 		vector<vert_norm_color> fragment_vn;
 		vector<vert_norm_tc_color> fragment_vntc;
-		int last_tid(-1);
+		int last_tid(-1), emission_loc(-1);
 
 		for (vector<tid_color_to_ix_t>::const_iterator i = tri_fragments.begin(); i != tri_fragments.end(); ++i) { // Note: needs 2-sided lighting
 			dwobject const &obj(objg.get_obj(i->ix));
@@ -650,9 +650,10 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				colorRGBA emissive_color(get_glow_color(obj, 1));
 				emissive_color *= 2.0*(obj.direction/255.0); // can be greater than 1.0
 				emissive_color.alpha = i->c.alpha;
-				s.add_uniform_color("emission", emissive_color);
+				s.ensure_uniform_loc(emission_loc, "emission");
+				s.set_uniform_color(emission_loc, emissive_color);
 				draw_and_clear_tris(fragment_vn, fragment_vntc); // emit immediately
-				s.add_uniform_color("emission", BLACK); // clear
+				s.set_uniform_color(emission_loc, BLACK); // clear
 			}
 		}
 		draw_and_clear_tris(fragment_vn, fragment_vntc); // draw any remaining triangles

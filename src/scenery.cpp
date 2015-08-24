@@ -815,15 +815,15 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	float const wind_scale(berries.empty() ? 1.0 : 0.0); // no wind if this plant type has berries
 	
 	if (is_water_plant) {
-		s.ensure_loc(state.color_scale_loc, "color_scale");
+		s.ensure_uniform_loc(state.color_scale_loc, "color_scale");
 		s.set_uniform_color(state.color_scale_loc, get_atten_color(WHITE, xlate));
 	}
 	if (shadowed) {
-		s.ensure_loc(state.normal_scale_loc, "normal_scale");
+		s.ensure_uniform_loc(state.normal_scale_loc, "normal_scale");
 		s.set_uniform_float(state.normal_scale_loc, 0.0);
 	}
 	if (wind_scale != state.wind_scale) {
-		s.ensure_loc(state.wind_scale_loc, "wind_scale");
+		s.ensure_uniform_loc(state.wind_scale_loc, "wind_scale");
 		s.set_uniform_float(state.wind_scale_loc, wind_scale);
 		state.wind_scale = wind_scale;
 	}
@@ -845,12 +845,12 @@ void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 	s.set_cur_color(pltype[type].berryc);
 	fgPushMatrix();
 	uniform_scale(0.25*radius);
-	s.add_uniform_float("vertex_offset_scale", 1.0/(0.25*radius)); // enable
-	int const loc(s.get_attrib_loc("vertex_offset", 0));
-	shader_float_matrix_uploader<3,1>::enable(loc, 1, (float const *)get_dynamic_vbo_ptr(&berries.front().v.x, berries.size()*sizeof(point)));
+	int const vo_loc(s.get_attrib_loc("vertex_offset", 0)), vos_loc(s.get_uniform_loc("vertex_offset_scale"));
+	s.set_uniform_float(vos_loc, 1.0/(0.25*radius)); // enable
+	shader_float_matrix_uploader<3,1>::enable(vo_loc, 1, (float const *)get_dynamic_vbo_ptr(&berries.front().v.x, berries.size()*sizeof(point)));
 	draw_sphere_vbo_raw(ndiv, 0, 0, berries.size()); // untextured
-	shader_float_matrix_uploader<3,1>::disable(loc);
-	s.add_uniform_float("vertex_offset_scale", 0.0); // disable
+	shader_float_matrix_uploader<3,1>::disable(vo_loc);
+	s.set_uniform_float(vos_loc, 0.0); // disable
 	fgPopMatrix();
 }
 

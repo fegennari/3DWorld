@@ -456,7 +456,8 @@ void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_t
 
 
 void shader_t::set_color_e(colorRGBA const &color) {
-	add_uniform_color("emission", color); // cache the loc to make this faster?
+	ensure_uniform_loc(emission_loc, "emission");
+	set_uniform_color(emission_loc, color);
 }
 
 void shader_t::set_specular_color(colorRGB const &specular, float shininess) {
@@ -467,7 +468,8 @@ void shader_t::set_specular_color(colorRGB const &specular, float shininess) {
 	if (is_cloudy && world_mode != WMODE_UNIVERSE) {spec_shine *= 0.5;}
 
 	if (spec_shine != last_spec) {
-		add_uniform_color("specular_color", spec_shine);
+		ensure_uniform_loc(specular_color_loc, "specular_color");
+		set_uniform_color(specular_color_loc, spec_shine);
 		last_spec = spec_shine;
 	}
 }
@@ -846,6 +848,7 @@ bool shader_t::begin_shader(bool do_enable) {
 	}
 	cache_vnct_locs();
 	cache_matrix_locs();
+	emission_loc = specular_color_loc = -1;
 	if (do_enable) {enable();}
 	return 1;
 }

@@ -320,16 +320,16 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 	bool draw_branches, bool draw_leaves, bool shadow_only, bool reflection_pass, vector3d const &xlate)
 {
 	assert(draw_branches != draw_leaves); // must enable only one
-	int const shader_loc(s.get_uniform_loc("world_space_offset"));
+	int const wsoff_loc(s.get_uniform_loc("world_space_offset")), tex0_loc(s.get_uniform_loc("tex0"));
 
 	if (draw_branches) {
 		tree_data_t::pre_branch_draw(s, shadow_only);
-		for (iterator i = begin(); i != end(); ++i) {i->draw_branches_top(s, lod_renderer, shadow_only, reflection_pass, xlate, shader_loc);}
+		for (iterator i = begin(); i != end(); ++i) {i->draw_branches_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc);}
 		tree_data_t::post_branch_draw(shadow_only);
 	}
 	else { // draw_leaves
 		tree_data_t::pre_leaf_draw(s);
-		for (iterator i = begin(); i != end(); ++i) {i->draw_leaves_top(s, lod_renderer, shadow_only, xlate, shader_loc);}
+		for (iterator i = begin(); i != end(); ++i) {i->draw_leaves_top(s, lod_renderer, shadow_only, xlate, wsoff_loc, tex0_loc);}
 		tree_data_t::post_leaf_draw();
 	}
 }
@@ -835,7 +835,7 @@ float tree::calc_size_scale(point const &draw_pos) const {
 float tree_data_t::get_size_scale_mult() const {return (has_4th_branches ? LEAF_4TH_SCALE : 1.0);}
 
 
-void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int shader_loc) {
+void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc) {
 
 	if (!created || not_visible) return;
 	tree_data_t &td(tdata());
@@ -871,7 +871,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	}
 	select_texture(tree_types[type].bark_tex);
 	s.set_cur_color(bcolor);
-	s.set_uniform_vector3d(shader_loc, (tree_center + xlate));
+	s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate));
 	fgPushMatrix();
 	translate_to(tree_center + xlate);
 	td.draw_branches(s, size_scale, reflection_pass);
@@ -879,7 +879,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 }
 
 
-void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate, int shader_loc) {
+void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate, int wsoff_loc, int tex0_off) {
 
 	if (!created) return;
 	tree_data_t &td(tdata());
@@ -929,8 +929,8 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
-	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && world_mode == WMODE_GROUND) {s.set_uniform_vector3d(shader_loc, (tree_center + xlate));}
-	s.add_uniform_int("tex0", TLEAF_START_TUID+type); // what about texture color mod?
+	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && world_mode == WMODE_GROUND) {s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate));}
+	s.set_uniform_int(tex0_off, TLEAF_START_TUID+type); // what about texture color mod?
 	fgPushMatrix();
 	translate_to(tree_center + xlate);
 	td.draw_leaves(size_scale);

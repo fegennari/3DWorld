@@ -44,7 +44,7 @@ class shader_t {
 	vector<int> attrib_locs;
 	string shader_names[NUM_SHADER_TYPES];
 	colorRGBA last_spec;
-
+	
 	struct light_loc_t {
 		int v[5];
 		bool valid;
@@ -53,6 +53,7 @@ class shader_t {
 	light_loc_t light_locs[MAX_SHADER_LIGHTS];
 	gl_light_params_t prev_lps[MAX_SHADER_LIGHTS];
 	int vnct_locs[4]; // {vertex, normal, color, tex_coord}
+	int emission_loc, specular_color_loc;
 
 	struct subroutine_val_t {
 		vector<unsigned> ixs;
@@ -71,7 +72,7 @@ class shader_t {
 	void cache_matrix_locs();
 
 public:
-	shader_t() : program(0), last_spec(ALPHA0), pm_loc(-1), mvm_loc(-1), mvmi_loc(-1), mvpm_loc(-1), nm_loc(-1) {
+	shader_t() : program(0), last_spec(ALPHA0), emission_loc(-1), specular_color_loc(-1), pm_loc(-1), mvm_loc(-1), mvmi_loc(-1), mvpm_loc(-1), nm_loc(-1) {
 		vnct_locs[0] = vnct_locs[1] = vnct_locs[2] = vnct_locs[3] = -1;
 	}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
@@ -105,7 +106,7 @@ public:
 	void set_cur_color(colorRGBA const &color) const;
 
 	int get_uniform_loc(char const *const name) const;
-	void ensure_loc(int &loc, char const *const name) const {if (loc < 0) {loc = get_uniform_loc(name);}}
+	void ensure_uniform_loc(int &loc, char const *const name) const {if (loc < 0) {loc = get_uniform_loc(name);}}
 	static bool set_uniform_float_array(int loc, float const *const val, unsigned num);
 	static bool set_uniform_float      (int loc, float val);
 	static bool set_uniform_int        (int loc, int val);
