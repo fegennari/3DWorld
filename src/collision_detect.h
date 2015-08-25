@@ -67,17 +67,23 @@ struct obj_layer : public base_mat_t { // size = 72
 };
 
 
+unsigned const COBJ_DYNAMIC     = 0x01;
+unsigned const COBJ_DESTROYABLE = 0x02;
+unsigned const COBJ_NO_COLL     = 0x04;
+unsigned const COBJ_MOVEABLE    = 0x08;
+
 struct cobj_params : public obj_layer { // size = 80
 
 	int cf_index;
-	unsigned char surfs;
-	bool is_dynamic, is_destroyable, no_coll;
+	unsigned char surfs, flags;
 	//obj_layer *layer;
 
-	cobj_params() : cf_index(-1), surfs(0), is_dynamic(0), is_destroyable(0), no_coll(0) {}
-	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf=NULL, int ci=0,
-		int ti=-1, float ts=1.0, int s=0, float spec=0.0, float shi=0.0, bool nc=0) :
-		obj_layer(e, c, d, cf, ti, ts, spec, shi), cf_index(ci), surfs(s), is_dynamic(id), is_destroyable(0), no_coll(nc) {}
+	cobj_params() : cf_index(-1), surfs(0), flags(0) {}
+	cobj_params(float e, colorRGBA const &c, bool d, bool id, const collision_func cf=NULL, int ci=0, int ti=-1, float ts=1.0, int s=0,
+		float spec=0.0, float shi=0.0, bool nc=0) : obj_layer(e, c, d, cf, ti, ts, spec, shi), cf_index(ci), surfs(s), flags(0) {
+			if (id) {flags |= COBJ_DYNAMIC;}
+			if (nc) {flags |= COBJ_NO_COLL;}
+		}
 };
 
 
@@ -145,7 +151,7 @@ public:
 	bool equal_params(const coll_obj &c) const {return (type == c.type && status == c.status && platform_id == c.platform_id && group_id == c.group_id && cp == c.cp);}
 	bool no_draw()        const {return (status == COLL_UNUSED || status == COLL_FREED || cp.no_draw());}
 	bool disabled()       const {return (status != COLL_DYNAMIC && status != COLL_STATIC);}
-	bool no_collision()   const {return (disabled() || cp.no_coll);}
+	bool no_collision()   const {return (disabled() || (cp.flags & COBJ_NO_COLL));}
 	bool is_semi_trans()  const {return cp.is_semi_trans();}
 	bool freed_unused()   const {return (status == COLL_FREED || status == COLL_UNUSED);}
 	bool is_occluder()    const;// {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}

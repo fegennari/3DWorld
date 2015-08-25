@@ -380,7 +380,7 @@ bool is_object_shadowed(dwobject &obj, float cd_scale, float radius) { // only u
 
 	if (skipval <= 1 || (obj.time % skipval) == 0) {
 		is_shadowed = !is_visible_to_light_cobj(obj.pos, get_specular_light(), radius, obj.coll_id, 0);
-		if (is_shadowed) {obj.flags |= SHADOWED;} else {obj.flags &= ~SHADOWED;}
+		set_bit_flag_to(obj.flags, SHADOWED, is_shadowed);
 	}
 	return is_shadowed;
 }

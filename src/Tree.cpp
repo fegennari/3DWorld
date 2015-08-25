@@ -260,7 +260,7 @@ void tree::add_tree_collision_objects() {
 		int const ltid(tree_types[type].leaf_tex);
 		colorRGBA const lcolor(get_avg_leaf_color(type)); // will be reset in update_leaf_cobj_color()
 		cobj_params cpl(0.3, lcolor, 0, 0, NULL, 0, ltid, 1.0, 0, 0);
-		cpl.is_destroyable = 1; // so that truly_static() returns false
+		cpl.flags |= COBJ_DESTROYABLE; // so that truly_static() returns false
 		point const xlate(all_zeros); // for now
 		vector<tree_leaf> const &leaves(tdata().get_leaves());
 		leaf_cobjs.resize(leaves.size());

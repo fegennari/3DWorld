@@ -1066,7 +1066,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	material_map_t materials;
 	multi_trigger_t triggers;
 	
-	while (!end) { // available: dhouz
+	while (!end) { // available: houz
 		assert(fp != NULL);
 		int letter(getc(fp));
 
@@ -1084,6 +1084,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "light"  ) {letter = 'L';}
 				else if (keyword == "bind_light") {letter = 'V';}
 				else if (keyword == "indir_dlight_group") {letter = 'U';}
+				else if (keyword == "moveable") {letter = 'd';}
 				else {
 					string const error_str(string("unrecognized keyword: '") + keyword + "'");
 					return read_error(fp, error_str.c_str(), coll_obj_file);
@@ -1656,12 +1657,15 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'n': // toggle negative shape
 			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "negative shape", coll_obj_file);}
-			if (ivals[0]) cobj.status |= COLL_NEGATIVE; else cobj.status &= ~COLL_NEGATIVE;
+			set_bit_flag_to(cobj.status, COLL_NEGATIVE, (ivals[0] != 0));
 			break;
-
 		case 'a': // toggle destroyability
 			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy shape", coll_obj_file);}
 			cobj.destroy = (EXPLODE_EVERYTHING ? EXPLODEABLE : (char)ivals[0]);
+			break;
+		case 'd': // toggle moveable
+			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "moveable", coll_obj_file);}
+			set_bit_flag_to(cobj.cp.flags, COBJ_MOVEABLE, (ivals[0] != 0));
 			break;
 
 		case 'v': // set voxel mode

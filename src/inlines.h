@@ -702,5 +702,9 @@ template<typename T> inline std::string make_string(T const val) {
 }
 
 
+template<typename T> void set_bit_flag_to(T &flags, unsigned mask, bool val) {
+	if (val) {flags |= mask;} else {flags &= ~mask;}
+}
+
 #endif
 

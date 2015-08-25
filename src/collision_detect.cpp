@@ -538,7 +538,7 @@ void coll_obj::add_as_fixed_cobj() {
 int coll_obj::add_coll_cobj() {
 
 	int cid(-1);
-	cp.is_dynamic = (status == COLL_DYNAMIC);
+	set_bit_flag_to(cp.flags, COBJ_DYNAMIC, (status == COLL_DYNAMIC));
 
 	switch (type) {
 	case COLL_CUBE:
@@ -585,10 +585,10 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 	case COLL_POLYGON:      add_coll_polygon_to_matrix (index, 0); break;
 	default: assert(0);
 	}
-	cp.is_dynamic = 0;
-	status        = COLL_STATIC;
-	counter       = 0;
-	id            = index;
+	cp.flags &= ~COBJ_DYNAMIC;
+	status    = COLL_STATIC;
+	counter   = 0;
+	id        = index;
 }
 
 void coll_cell::clear(bool clear_vectors) {
@@ -774,7 +774,7 @@ void remove_all_coll_obj() {
 void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams) {
 	
 	coll_obj &cobj(at(index)); // Note: this is the *only* place a new cobj is allocated/created
-	cobj.status      = (cparams.is_dynamic ? COLL_DYNAMIC : COLL_STATIC);
+	cobj.status      = ((cparams.flags & COBJ_DYNAMIC) ? COLL_DYNAMIC : COLL_STATIC);
 	cobj.texture_offset = zero_vector;
 	cobj.cp          = cparams;
 	cobj.id          = index;
@@ -794,7 +794,7 @@ void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float
 	cobj.calc_size();
 	cobj.set_npoints();
 	cobj.calc_bcube();
-	if (cparams.is_dynamic) dynamic_ids.must_insert (index);
+	if (cparams.flags & COBJ_DYNAMIC) dynamic_ids.must_insert (index);
 	if (cparams.draw      ) drawn_ids.must_insert   (index);
 	if (platform_id >= 0  ) platform_ids.must_insert(index);
 	if ((type == COLL_CUBE) && cparams.light_atten != 0.0) {has_lt_atten = 1;}

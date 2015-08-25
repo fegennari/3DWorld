@@ -306,8 +306,7 @@ float free_obj::coll_physics(point const &copos, vector3d const &vcoll, float ob
 
 
 void free_obj::check_distant() {
-	
-	if (is_distant(pos, get_draw_radius())) {flags |= OBJ_FLAGS_DIST;} else {flags &= ~OBJ_FLAGS_DIST;}
+	set_bit_flag_to(flags, OBJ_FLAGS_DIST, is_distant(pos, get_draw_radius()));
 }
 
 
@@ -999,12 +998,12 @@ void us_projectile::set_type(unsigned type) {
 	radius   = specs().radius;
 	c_radius = specs().c_radius;
 	armor    = specs().armor;
-	if (specs().no_coll)    flags |= OBJ_FLAGS_NCOL;
-	if (specs().no_exp_dam) flags |= OBJ_FLAGS_NEXD;
-	if (specs().is_decoy)   flags |= OBJ_FLAGS_DECY;
-	if (specs().no_light)   flags |= OBJ_FLAGS_NOLT;
-	if (!us_weapons[type].hit_proj) flags |= OBJ_FLAGS_NOPC; else flags &= ~OBJ_FLAGS_NOPC;
-	if ( us_weapons[type].c2_flag)  flags |= OBJ_FLAGS_NOC2; else flags &= ~OBJ_FLAGS_NOC2;
+	if (specs().no_coll)    {flags |= OBJ_FLAGS_NCOL;}
+	if (specs().no_exp_dam) {flags |= OBJ_FLAGS_NEXD;}
+	if (specs().is_decoy)   {flags |= OBJ_FLAGS_DECY;}
+	if (specs().no_light)   {flags |= OBJ_FLAGS_NOLT;}
+	set_bit_flag_to(flags, OBJ_FLAGS_NOPC, !us_weapons[type].hit_proj);
+	set_bit_flag_to(flags, OBJ_FLAGS_NOC2,  us_weapons[type].c2_flag);
 }
 
 
