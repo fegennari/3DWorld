@@ -620,16 +620,11 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 
 
 void shift_point_vector(vector<point> &pts, vector3d const &vd) {
-
 	for (unsigned i = 0; i < pts.size(); ++i) pts[i] += vd;
 }
 
-
 void shift_all_cobjs(vector3d const &vd) {
-
-	for (unsigned i = 0; i < coll_objects.size(); ++i) {
-		coll_objects[i].shift_by(vd);
-	}
+	for (unsigned i = 0; i < coll_objects.size(); ++i) {coll_objects[i].shift_by(vd);}
 }
 
 
@@ -645,16 +640,11 @@ void shift_all_objs(vector3d const &vd) {
 	shift_light_sources(vd);
 	platforms.shift_by(vd);
 	shift_waypoints(vd); // is this correct?
-
-	for (vector<user_waypt_t>::iterator i = user_waypoints.begin(); i != user_waypoints.end(); ++i) {
-		i->pos += vd;
-	}
+	for (vector<user_waypt_t>::iterator i = user_waypoints.begin(); i != user_waypoints.end(); ++i) {i->pos += vd;}
 	//shift_point_vector(app_spots, vd); // what if an appearance spot shifts off the map?
 
 	if (begin_motion) {
-		for (int i = 0; i < num_groups; ++i) {
-			obj_groups[i].shift(vd);
-		}
+		for (int i = 0; i < num_groups; ++i) {obj_groups[i].shift(vd);}
 	}
 }
 
@@ -662,10 +652,9 @@ void shift_all_objs(vector3d const &vd) {
 void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) {
 
 	if (!fixed && !force) return;
-
 	for (unsigned j = 0; j < unsigned(npoints); ++j) {points[j] += vd;}
 	cube_t::translate(vd);
-	if (!no_texture_offset) texture_offset -= vd;
+	if (!no_texture_offset && cp.tscale != 0.0) {texture_offset -= vd;}
 }
 
 
