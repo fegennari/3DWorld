@@ -1,5 +1,6 @@
 ntrees 0
 tree_4th_branches 1
+nleaves_scale 0.5
 nsmileys 9
 num_items 4 4 4 12 12
 verbose 0
