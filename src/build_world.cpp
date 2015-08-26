@@ -270,7 +270,7 @@ void process_groups() {
 	int const lcf(camera_follow);
 	++scounter;
 	camera_follow = 0;
-	if (begin_motion) {build_cobj_tree(1, 0);} // could also do after group processing
+	build_cobj_tree(1, 0); // could also do after group processing
 	
 	for (int i = 0; i < num_groups; ++i) {
 		obj_group &objg(obj_groups[i]);
@@ -695,7 +695,7 @@ void free_all_coll_objects() {
 void check_contained_cube_sides() {
 
 	for (coll_obj_group::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
-		if (i->status != COLL_STATIC || !i->fixed || i->platform_id >= 0 || i->type != COLL_CUBE || i->is_semi_trans()) continue;
+		if (!i->fixed || i->may_be_dynamic() || i->type != COLL_CUBE || i->is_semi_trans()) continue;
 
 		for (unsigned dim = 0; dim < 3; ++dim) {
 			for (unsigned dir = 0; dir < 2; ++dir) {

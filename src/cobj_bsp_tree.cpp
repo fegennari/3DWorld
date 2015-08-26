@@ -15,6 +15,7 @@ extern bool mt_cobj_tree_build;
 extern int display_mode, frame_counter, cobj_counter, begin_motion;
 extern coll_obj_group coll_objects;
 extern vector<unsigned> falling_cobjs;
+extern set<unsigned> moving_cobjs;
 extern platform_cont platforms;
 
 
@@ -739,17 +740,21 @@ cobj_bvh_tree &get_tree(bool dynamic) {
 }
 
 void build_cobj_tree(bool dynamic, bool verbose) {
-
-	get_tree(dynamic).add_cobjs(verbose);
 	
 	if (!dynamic) { // static
+		get_tree(0).add_cobjs(verbose);
 		cobj_tree_occlude.add_cobjs(verbose);
 		//cobj_tree_triangles.add_cobjs(coll_objects, verbose);
 	}
 	else { // dynamic
+		if (begin_motion) {get_tree(1).add_cobjs(verbose);}
 		cobj_tree_static_moving.clear();
 		vector<unsigned> moving_cids(falling_cobjs);
-
+		
+		for (auto i = moving_cobjs.begin(); i != moving_cobjs.end();) {
+			assert(*i < coll_objects.size());
+			if (coll_objects[*i].status != COLL_STATIC) {moving_cobjs.erase(i++);} else {moving_cids.push_back(*i); ++i;}
+		}
 		for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
 			copy(i->cobjs.begin(), i->cobjs.end(), back_inserter(moving_cids));
 		}

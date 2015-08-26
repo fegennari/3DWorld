@@ -157,6 +157,7 @@ public:
 	bool is_occluder()    const;// {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}
 	bool is_big_occluder()const {return (is_occluder() && fixed && volume > 0.001);}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
+	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || (cp.flags & COBJ_MOVEABLE));}
 	bool is_player()      const;
 	bool is_invis_player()const;
 	bool truly_static()   const;

@@ -540,10 +540,10 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 
 bool coll_obj::truly_static() const {
 
-	if (status != COLL_STATIC || maybe_is_moving())    return 0;
-	if (cp.flags & (COBJ_DESTROYABLE | COBJ_MOVEABLE)) return 0;
-	if (cp.cobj_type == COBJ_TYPE_MODEL3D)             return 1;
-	if (cp.cobj_type == COBJ_TYPE_VOX_TERRAIN)         return 0; // ???
+	if (may_be_dynamic())                      return 0;
+	if (cp.flags & COBJ_DESTROYABLE)           return 0;
+	if (cp.cobj_type == COBJ_TYPE_MODEL3D)     return 1;
+	if (cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) return 0; // ???
 	return (destroy < max((int)SHATTERABLE, destroy_thresh+1));
 }
 

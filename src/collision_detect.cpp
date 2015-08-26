@@ -22,7 +22,9 @@ int camera_coll_id(-1);
 float czmin(FAR_DISTANCE), czmax(-FAR_DISTANCE), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 coll_obj_group coll_objects;
+set<unsigned> moving_cobjs;
 
+extern bool scene_smap_vbo_invalid;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys, iticks;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
@@ -1170,16 +1172,24 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 
 	switch (cobj.type) { // within bounding box of collision object
 	case COLL_CUBE: {
+		point const orig_pos(obj.pos);
 		if (!sphere_cube_intersect(pos, o_radius, cobj, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much when this fails
 		coll_top = (cdir == 5);
 		coll_bot = (cdir == 4);
 		lcoll    = 1;
 
-		if (!coll_top && !coll_bot && player_step) {
-			lcoll   = 0; // can step up onto the object
+		if (!coll_top && !coll_bot && player_step) { // can step up onto the object
+			lcoll   = 0;
 			obj.pos = pos; // reset pos
 			norm    = zero_vector;
 			break;
+		}
+		if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY) && (cobj.cp.flags & COBJ_MOVEABLE)) { // move object
+			vector3d const delta(orig_pos - obj.pos);
+			obj.pos = orig_pos;
+			coll_objects[index].shift_by(1.01*delta); // move the cobj instead of the player
+			moving_cobjs.insert(index);
+			scene_smap_vbo_invalid = 1;
 		}
 		if (coll_top) { // +z collision
 			if (cobj.contains_pt_xy(pos)) lcoll = 2;
@@ -1319,9 +1329,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		is_moving = (lcoll == 2 || friction >= STICK_THRESHOLD);
 
 		if (animate2 && do_coll_funcs && enable_cfs && iter == 0) {
-			if (is_moving) { // move with the platform (clip v if large -z?)
-				obj.pos += pf.get_last_delta();
-			}
+			if (is_moving) {obj.pos += pf.get_last_delta();} // move with the platform (clip v if large -z?)
 			// the coll_top part isn't really right - we want to check for collsion with another object above
 			else if ((coll_bot && pf.get_last_delta().z < 0.0) /*|| (coll_top && pf.get_last_delta().z > 0.0)*/) {
 				if (player) {

@@ -502,6 +502,7 @@ bool local_smap_data_t::needs_update(point const &lpos) {
 		has_dynamic |= pdu.sphere_visible_test(i->pos, i->radius);
 	}
 	if (!has_dynamic) {has_dynamic |= platforms.any_moving_platforms_in_view(pdu);} // test platforms
+	// Note: maybe should check for moving objects as well - but they can only move if pushed by a dynamic shadow object (player) which is probably also in the light's view
 	bool const ret(smap_data_t::needs_update(lpos) || has_dynamic || last_has_dynamic);
 	last_has_dynamic = has_dynamic;
 	return ret;
