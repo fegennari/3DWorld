@@ -495,7 +495,7 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 // 20 total: 15 complete, 5 partial (all cylinder cases)
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
-	if (c.type < type) return c.intersects_cobj(*this, toler); // swap arguments
+	if (c.type < type) {return c.intersects_cobj(*this, toler);} // swap arguments
 	if (!intersects(c, toler)) return 0; // cube-cube intersection
 
 	// c.type >= type
