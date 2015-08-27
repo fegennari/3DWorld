@@ -144,10 +144,10 @@ T -5.33 3.37 -0.69  m 0.1  i mapx/crate.txt
 T -5.18 3.42 -0.69  m 0.1  i mapx/crate.txt
 T -4.75 3.11 -0.69  m 0.1  i mapx/crate.txt
 
-# in the dark basement
+# add some crates in the dark basement
 T -4.00 1.90 -0.69  m 0.1  i mapx/crate.txt
-T -7.55 1.70 -0.69  m 0.1  i mapx/crate.txt
-T -7.50 1.72 -0.59  m 0.07 i mapx/crate.txt
+T -7.50 1.90 -0.69  m 0.1  i mapx/crate.txt
+T -7.45 1.92 -0.59  m 0.07 i mapx/crate.txt
 
 # rotated destroyable crate
 a 2 # destroyable/shatterable
