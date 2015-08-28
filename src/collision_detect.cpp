@@ -24,7 +24,7 @@ point camera_last_pos(all_zeros); // not sure about this, need to reset sometime
 coll_obj_group coll_objects;
 set<unsigned> moving_cobjs;
 
-extern bool scene_smap_vbo_invalid;
+extern bool scene_smap_vbo_invalid, lm_alloc;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys, iticks;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
@@ -655,8 +655,11 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 	}
 	if (add_to_hcm || ALWAYS_ADD_TO_HCM) {
 		vcm.update_zmm(zminv, zmaxv, cobj);
-		czmin = min(zminv, czmin);
-		czmax = max(zmaxv, czmax);
+
+		if (!lm_alloc) { // if the lighting has already been computed, we can't change czmin/czmax/get_zval()/get_zpos()
+			czmin = min(zminv, czmin);
+			czmax = max(zmaxv, czmax);
+		}
 	}
 }
 
@@ -1186,7 +1189,7 @@ void try_drop_moveable_cobj(unsigned index) {
 	assert(index < coll_objects.size());
 	coll_obj &cobj(coll_objects[index]);
 	cobj.v_fall += accel; // terminal velocity?
-	float const cobj_zmin(czmin); // min(czmin, zbottom) works better, but causes problems with volume textures (lighting and smoke) as it modifies czmin
+	float const cobj_zmin(min(czmin, zbottom));
 	float max_dz(-tstep*cobj.v_fall);
 	max_dz = min(max_dz, cobj.d[2][0]-cobj_zmin);
 	if (max_dz < tolerance) {cobj.v_fall = 0.0; return;} // can't drop further

@@ -21,9 +21,8 @@ dpart_params_t dp_params;
 
 
 extern int window_width, iticks, begin_motion, animate2, display_mode, frame_counter;
-extern float zbottom, ztop, czmin, czmax, fticks, base_gravity, TIMESTEP, XY_SCENE_SIZE;
+extern float zbottom, ztop, fticks, base_gravity, TIMESTEP, XY_SCENE_SIZE;
 extern obj_type object_types[];
-
 
 
 // ************ dynamic_particle ************
