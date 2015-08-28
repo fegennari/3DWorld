@@ -308,10 +308,11 @@ int is_in_ice(int xpos, int ypos) {
 
 
 // This really solves for the z value of an x/y point on the mesh plane, but it is somewhat like interpolation.
-float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equation, int ignore_ice) {
+float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equation, int ignore_ice, bool clamp_xy) {
 
 	if (world_mode == WMODE_INF_TERRAIN) {return get_exact_zval(xval, yval);}
-	int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
+	int xpos(get_xpos(xval)), ypos(get_ypos(yval));
+	if (clamp_xy) {xpos = max(0, min(MESH_X_SIZE-1, xpos)); ypos = max(0, min(MESH_Y_SIZE-1, ypos));}
 	if (point_outside_mesh(xpos, ypos)) {return (use_real_equation ? get_exact_zval(xval, yval) : (zbottom - MESH_LOWEST_DZ));}
 	assert(mesh_height != NULL);
 	float const xp((xval + X_SCENE_SIZE)*DX_VAL_INV), yp((yval + Y_SCENE_SIZE)*DY_VAL_INV);

@@ -1183,18 +1183,24 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 
 bool proc_pushable_cobj(point const &orig_pos, point &player_pos, unsigned index) {
 
-	float const tolerance = 1.0E-6;
 	coll_obj &cobj(coll_objects[index]);
 	if (!(cobj.cp.flags & COBJ_MOVEABLE)) return 0; // not moveable
 	vector3d delta(orig_pos - player_pos);
-	if (delta.mag() < tolerance) return 0;
+	float const tolerance(1.0E-6), toler_sq(tolerance*tolerance);
+	if (delta.mag_sq() < toler_sq) return 0;
+
+	// make sure the cobj center stays within the scene bounds
+	for (unsigned d = 0; d < 2; ++d) { // x/y
+		if      (delta[d] > 0.0) {delta[d] = min(delta[d], ( SCENE_SIZE[d]-HALF_DXY - cobj.d[d][1]));} // pos scene edge
+		else if (delta[d] < 0.0) {delta[d] = max(delta[d], (-SCENE_SIZE[d] - cobj.d[d][0]));} // neg scene edge
+	}
+	if (delta.mag_sq() < toler_sq) return 0;
 
 	// determine if this cobj can be moved by checking other static objects
 	// dynamic objects should move out of the way of this cobj by themselves
 	cube_t bcube(cobj); // orig pos
 	bcube += delta; // move to new pos
 	bcube.union_with_cube(cobj); // union of original and new pos
-	// FIXME: clip final cube pos to scene bounds
 	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return 0;
@@ -1222,7 +1228,7 @@ bool proc_pushable_cobj(point const &orig_pos, point &player_pos, unsigned index
 	delta.assign(0.0, 0.0, z_bot-cobj.d[2][0]); // Note: dz can be positive if the cobj is on the mesh below czmin
 	if (delta.z < 0.0 && !binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return 1;
 	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj (FIXME?)
-	float const mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 0));
+	float const mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 0, 1)); // clamped xy
 	float const mesh_dz(mesh_zval - cobj.d[2][0]);
 	if (!had_any_int_cobjs && cobjs.empty()) {delta.z = mesh_dz;} // no cobjs around, place this cobj on top of the mesh
 	else {delta.z = max(delta.z, mesh_dz);} // don't let it go below the mesh

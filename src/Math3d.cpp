@@ -226,10 +226,7 @@ void gen_poly_planes(point const *const points, unsigned npoints, vector3d const
 
 	for (unsigned i = 0; i < 2; ++i) { // back face cull?
 		float const tv(0.5*(i ? -thick : thick));
-		
-		for (unsigned j = 0; j < npoints; ++j) {
-			pts[i][j] = points[j] + norm*tv;
-		}
+		for (unsigned j = 0; j < npoints; ++j) {pts[i][j] = points[j] + norm*tv;}
 	}
 }
 
@@ -237,18 +234,14 @@ void gen_poly_planes(point const *const points, unsigned npoints, vector3d const
 void thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick, vector<tquad_t> &sides) {
 
 	assert(npoints >= 3);
-	sides.clear();
 	sides.resize(npoints + 2);
 
 	for (unsigned i = 0; i < 2; ++i) { // same as gen_poly_planes()
 		float const tv(0.5*(i ? -thick : thick));
-		
-		for (unsigned j = 0; j < npoints; ++j) {
-			sides[i][j] = points[j] + norm*tv;
-		}
+		for (unsigned j = 0; j < npoints; ++j) {sides[i][j] = points[j] + norm*tv;}
 		sides[i].npts = npoints;
 	}
-	for (unsigned i = 0; i < npoints; ++i) { // test the <npoints> sides
+	for (unsigned i = 0; i < npoints; ++i) { // create the <npoints> sides
 		unsigned const inext((i+1)%npoints);
 		sides[i+2].npts = 4;
 		sides[i+2][0] = sides[0][i];

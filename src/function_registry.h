@@ -322,7 +322,7 @@ void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **
 void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize);
 void get_matrix_point(int xpos, int ypos, point &pt);
 int  is_in_ice(int xpos, int ypos);
-float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equation, int ignore_ice);
+float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equation, int ignore_ice, bool clamp_xy=0);
 float int_mesh_zval_pt_off(point const &pos, int use_real_equation, int ignore_ice);
 void calc_motion_direction();
 float lowest_mesh_point(point const &pt, float radius);

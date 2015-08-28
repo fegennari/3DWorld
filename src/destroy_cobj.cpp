@@ -527,23 +527,31 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			for (int i = 0; i < c.npoints; ++i) { // check edges
 				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
 			}
-			{ // clip the polygon to the cube
+			{ // open a scope
 				static vector<point> clipped_pts;
-				clip_polygon_to_cube(*this, c.points, c.npoints, c, clipped_pts);
+				clip_polygon_to_cube(*this, c.points, c.npoints, c, clipped_pts); // clip the polygon to the cube
 				if (!clipped_pts.empty()) return 1;
-			}
-			if (c.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
-				point pts[2][4];
-				gen_poly_planes(c.points, c.npoints, c.norm, c.thickness, pts);
+
+				if (c.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
+					point pts[2][4];
+					gen_poly_planes(c.points, c.npoints, c.norm, c.thickness, pts);
 				
-				for (unsigned j = 0; j < 2; ++j) {
-					for (int i = 0; i < c.npoints; ++i) {
-						if (check_line_clip(pts[j][i], pts[j][(i+1)%c.npoints], d)) return 1; // definite intersection
+					for (unsigned j = 0; j < 2; ++j) {
+						for (int i = 0; i < c.npoints; ++i) {
+							if (check_line_clip(pts[j][i], pts[j][(i+1)%c.npoints], d)) return 1; // definite intersection
+						}
 					}
+					// need to handle cube completely insde of a thick polygon
+					if (sphere_ext_poly_intersect(c.points, c.npoints, c.norm, get_cube_center(), 0.0, c.thickness, MIN_POLY_THICK)) return 1;
+					static vector<tquad_t> side_pts;
+					thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness, side_pts);
+
+					for (auto i = side_pts.begin(); i != side_pts.end(); ++i) { // clip each face to the cube
+						clip_polygon_to_cube(*this, i->pts, i->npts, c, clipped_pts);
+						if (!clipped_pts.empty()) return 1;
+					}
+					return 0;
 				}
-				// need to handle cube completely insde of a thick polygon
-				if (sphere_ext_poly_intersect(c.points, c.npoints, c.norm, get_cube_center(), 0.0, c.thickness, MIN_POLY_THICK)) return 1;
-				return 0;
 			}
 			return 0;
 		default: assert(0);
