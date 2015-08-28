@@ -1203,6 +1203,7 @@ bool proc_pushable_cobj(point const &orig_pos, point &player_pos, unsigned index
 	cube_t bcube(cobj); // orig pos
 	bcube += delta; // move to new pos
 	bcube.union_with_cube(cobj); // union of original and new pos
+	bcube.expand_by(-tolerance); // shrink slightly to avoid false collisions (in prticular with extruded polygons)
 	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return 0;
@@ -1258,10 +1259,10 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	}
 	vector3d const mdir(motion_dir - pvel*fticks); // not sure if this helps
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
+	point const orig_pos(obj.pos);
 
 	switch (cobj.type) { // within bounding box of collision object
 	case COLL_CUBE: {
-		point const orig_pos(obj.pos);
 		if (!sphere_cube_intersect(pos, o_radius, cobj, (pold - mdir), obj.pos, norm, cdir, 0)) break; // shouldn't get here much when this fails
 		coll_top = (cdir == 5);
 		coll_bot = (cdir == 4);
@@ -1272,9 +1273,6 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			obj.pos = pos; // reset pos
 			norm    = zero_vector;
 			break;
-		}
-		if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY)) { // try to move object
-			proc_pushable_cobj(orig_pos, obj.pos, index, type);
 		}
 		if (coll_top) { // +z collision
 			if (cobj.contains_pt_xy(pos)) {lcoll = 2;}
@@ -1400,6 +1398,9 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	} // end COLL_POLY scope
 	default: assert(0);
 	} // switch
+	if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY)) { // try to move object
+		proc_pushable_cobj(orig_pos, obj.pos, index, type);
+	}
 	if (!lcoll) return; // no collision
 	assert(norm != zero_vector);
 	assert(!is_nan(norm));

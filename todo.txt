@@ -12,4 +12,10 @@ Gameplay in tiled terrain mode
 
 Cascaded shadow maps for sun/moon
 Heat haze
+Fix grass texture dist
 Box physics
+
+Moveable cobjs:
+- Fall over time
+- Rotations/torque
+- Allow pushing up planes

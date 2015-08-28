@@ -185,6 +185,17 @@ l 0.7 0.1 0.1 0.1 1.0 -1 1 # steel band
 C 0.2 -0.2 0.06  0.2 -0.2 0.075  0.076 0.077
 G 0.2 -0.2 0.6 0.006 0 0.05 # mj plant
 
+# add some moveable objects
+a 2 # destroyable/shatterable
+X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
+l 0.6 1.0 1.0 1.0 1.0 36 1 # wooden slats
+y 8.0
+moveable 1
+B 4.0 4.1  -1.0 -0.9  0.0 0.1
+B 3.4 3.6  -0.7 -0.5  0.0 0.1
+C 4.5 -1.2 0.0  4.5 -1.2 0.1  0.05 0.05
+S 5.0 -1.4 0.05  0.05
+moveable 0
 
 # testing
 #B 1.0 2.0  -2.0 -1.0  1.0 2.0
