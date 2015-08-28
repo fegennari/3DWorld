@@ -144,6 +144,7 @@ public:
 	bool subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cube, bool include_polys);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
 	int  is_anchored() const;
+	void move_cobj(vector3d const &vd, bool update_colls=1);
 	void shift_by(vector3d const &vd, bool force=0, bool no_texture_offset=0);
 	void add_to_platform() const;
 	bool cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const;

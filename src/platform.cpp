@@ -177,9 +177,7 @@ void platform::advance_timestep() {
 			coll_obj &cobj(coll_objects[*i]);
 			// need to update collision structure when there is an x/y delta by removing/adding to coll_cells (except for cubes)
 			bool const update_colls(cobj.type != COLL_CUBE && (delta.x != 0.0 || delta.y != 0.0));
-			if (update_colls) {remove_coll_object(*i, 0);}
-			cobj.shift_by(delta); // move object
-			if (update_colls) {cobj.re_add_coll_cobj(*i, 0);}
+			cobj.move_cobj(delta, update_colls); // move object
 			// squish player or stop when hit player?
 		}
 		for (vector<unsigned>::const_iterator i = lights.begin(); i != lights.end(); ++i) {

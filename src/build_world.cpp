@@ -657,6 +657,13 @@ void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) 
 	if (!no_texture_offset && cp.tscale != 0.0) {texture_offset -= vd;}
 }
 
+void coll_obj::move_cobj(vector3d const &vd, bool update_colls) {
+
+	if (update_colls) {remove_coll_object(id, 0);}
+	shift_by(vd); // move object
+	if (update_colls) {re_add_coll_cobj(id, 0);}
+}
+
 
 void free_all_coll_objects() {
 

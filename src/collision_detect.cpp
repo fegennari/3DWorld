@@ -1181,11 +1181,13 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 	return 1;
 }
 
-bool proc_pushable_cobj(point const &orig_pos, point &player_pos, unsigned index) {
+bool proc_pushable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
 
+	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
 	coll_obj &cobj(coll_objects[index]);
 	if (!(cobj.cp.flags & COBJ_MOVEABLE)) return 0; // not moveable
 	vector3d delta(orig_pos - player_pos);
+	delta.z = 0.0; // for now, objects can only be pushed in xy
 	float const tolerance(1.0E-6), toler_sq(tolerance*tolerance);
 	if (delta.mag_sq() < toler_sq) return 0;
 
@@ -1207,7 +1209,7 @@ bool proc_pushable_cobj(point const &orig_pos, point &player_pos, unsigned index
 	bool const had_any_int_cobjs(!cobjs.empty());
 	cobjs.clear();
 	player_pos += delta; // restore player pos, at least partially
-	cobj.shift_by(delta); // move the cobj instead of the player (1.01x?)
+	cobj.move_cobj(delta, 1); // move the cobj instead of the player and re-add to coll structure
 	moving_cobjs.insert(index);
 	scene_smap_vbo_invalid = 1;
 
@@ -1272,10 +1274,10 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			break;
 		}
 		if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY)) { // try to move object
-			proc_pushable_cobj(orig_pos, obj.pos, index);
+			proc_pushable_cobj(orig_pos, obj.pos, index, type);
 		}
 		if (coll_top) { // +z collision
-			if (cobj.contains_pt_xy(pos)) lcoll = 2;
+			if (cobj.contains_pt_xy(pos)) {lcoll = 2;}
 			float const rdist(max(max(max((pos.x-(cobj.d[0][1]+o_radius)), ((cobj.d[0][0]-o_radius)-pos.x)),
 				(pos.y-(cobj.d[1][1]+o_radius))), ((cobj.d[1][0]-o_radius)-pos.y)));
 				
