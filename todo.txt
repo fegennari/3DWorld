@@ -16,6 +16,6 @@ Fix grass texture dist
 Box physics
 
 Moveable cobjs:
-- Fall over time
+- Fix czmin vs. zbottom problem
 - Rotations/torque
 - Allow pushing up planes

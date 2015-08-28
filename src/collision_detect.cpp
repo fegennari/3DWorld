@@ -1158,7 +1158,6 @@ float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d c
 	for (float t = 0.5, step = 0.25; step > step_thresh; step *= 0.5) { // initial guess is the midpoint
 		coll_obj test_cobj(c1); // deep copy
 		test_cobj.shift_by(t*delta);
-		//cout << TXT(t) << TXT(step) << " ret " << test_cobj.intersects_cobj(c2, tolerance) << endl;
 		if (test_cobj.intersects_cobj(c2, tolerance)) {t -= step;} else {valid_t = t; t += step;}
 	}
 	return valid_t;
@@ -1181,9 +1180,35 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 	return 1;
 }
 
-bool proc_pushable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
+void try_drop_moveable_cobj(unsigned index) {
+
+	float const tolerance(1.0E-6), accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
+	assert(index < coll_objects.size());
+	coll_obj &cobj(coll_objects[index]);
+	cobj.v_fall += accel; // terminal velocity?
+	float const cobj_zmin(czmin); // min(czmin, zbottom) works better, but causes problems with volume textures (lighting and smoke) as it modifies czmin
+	float max_dz(-tstep*cobj.v_fall);
+	max_dz = min(max_dz, cobj.d[2][0]-cobj_zmin);
+	if (max_dz < tolerance) {cobj.v_fall = 0.0; return;} // can't drop further
+	cube_t bcube(cobj); // start at the current cobj xy
+	bcube.d[2][1]  = cobj.d[2][0]; // top = cobj bottom
+	bcube.d[2][0] -= max_dz; // bottom (height = max_dz)
+	vector<unsigned> cobjs;
+	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
+	vector3d delta(0.0, 0.0, -max_dz);
+	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) {cobj.v_fall = 0.0; return;} // stuck
+	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj (FIXME?)
+	float const mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 0, 1)); // clamped xy
+	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
+	if (delta.z < mesh_dz) {cobj.v_fall = 0.0; delta.z = mesh_dz;} // don't let it go below the mesh
+	cobj.shift_by(delta); // move cobj down
+	scene_smap_vbo_invalid = 1;
+}
+
+bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
 
 	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
+	assert(index < coll_objects.size());
 	coll_obj &cobj(coll_objects[index]);
 	if (!(cobj.cp.flags & COBJ_MOVEABLE)) return 0; // not moveable
 	vector3d delta(orig_pos - player_pos);
@@ -1207,36 +1232,20 @@ bool proc_pushable_cobj(point const &orig_pos, point &player_pos, unsigned index
 	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return 0;
-	bool const had_any_int_cobjs(!cobjs.empty());
-	cobjs.clear();
 	player_pos += delta; // restore player pos, at least partially
 	cobj.move_cobj(delta, 1); // move the cobj instead of the player and re-add to coll structure
-	moving_cobjs.insert(index);
+	moving_cobjs.insert(index); // may already be there
 	scene_smap_vbo_invalid = 1;
-
-	// now determine if this cobj was moved over a ledge and can fall in -z
-	// keep searching for z-slices below the cobj until we find one that's nonempty
-	float const z_step(max(2.0f*DZ_VAL, cobj.get_size().z));
-	bcube = cobj; // start at the current cobj xy
-	bcube.d[2][1]  = cobj.d[2][0]; // top = cobj bottom
-	bcube.d[2][0] -= z_step; // bottom (height = z_step)
-
-	while (bcube.d[2][1] > czmin) { // while the query cube's top is above the min (overlaps the cobj range)
-		cobjs.clear();
-		get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
-		if (!cobjs.empty()) break;
-		bcube.d[2][0] -= z_step; bcube.d[2][1] -= z_step; // move down one step in z
-	}
-	float z_bot(max(czmin, bcube.d[2][0])); // furthest extent down
-	delta.assign(0.0, 0.0, z_bot-cobj.d[2][0]); // Note: dz can be positive if the cobj is on the mesh below czmin
-	if (delta.z < 0.0 && !binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return 1;
-	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj (FIXME?)
-	float const mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 0, 1)); // clamped xy
-	float const mesh_dz(mesh_zval - cobj.d[2][0]);
-	if (!had_any_int_cobjs && cobjs.empty()) {delta.z = mesh_dz;} // no cobjs around, place this cobj on top of the mesh
-	else {delta.z = max(delta.z, mesh_dz);} // don't let it go below the mesh
-	cobj.shift_by(delta); // move cobj down
 	return 1; // moved
+}
+
+void proc_moving_cobjs() {
+
+	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end();) {
+		assert(*i < coll_objects.size());
+		if (coll_objects[*i].status != COLL_STATIC) {moving_cobjs.erase(i++);} // remove if destroyed
+		else {try_drop_moveable_cobj(*i); ++i;} // otherwise try to drop it
+	}
 }
 
 
@@ -1399,7 +1408,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	default: assert(0);
 	} // switch
 	if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY)) { // try to move object
-		proc_pushable_cobj(orig_pos, obj.pos, index, type);
+		proc_moveable_cobj(orig_pos, obj.pos, index, type);
 	}
 	if (!lcoll) return; // no collision
 	assert(norm != zero_vector);

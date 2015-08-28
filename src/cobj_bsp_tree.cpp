@@ -751,9 +751,9 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 		cobj_tree_static_moving.clear();
 		vector<unsigned> moving_cids(falling_cobjs);
 		
-		for (auto i = moving_cobjs.begin(); i != moving_cobjs.end();) {
+		for (auto i = moving_cobjs.begin(); i != moving_cobjs.end(); ++i) {
 			assert(*i < coll_objects.size());
-			if (coll_objects[*i].status != COLL_STATIC) {moving_cobjs.erase(i++);} else {moving_cids.push_back(*i); ++i;}
+			if (coll_objects[*i].status == COLL_STATIC) {moving_cids.push_back(*i);}
 		}
 		for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
 			copy(i->cobjs.begin(), i->cobjs.end(), back_inserter(moving_cids));

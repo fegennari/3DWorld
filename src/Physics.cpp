@@ -57,13 +57,10 @@ extern physics_particle_manager explosion_part_man;
 
 int get_obj_zval(point &pt, float &dz, float z_offset);
 int snow_height(point pos);
+void proc_moving_cobjs();
 
 
-
-float get_max_t(int obj_type) {
-
-	return object_types[obj_type].max_t;
-}
+float get_max_t(int obj_type) {return object_types[obj_type].max_t;}
 
 
 void init_objects() {
@@ -1515,15 +1512,12 @@ void water_particle_manager::apply_physics() {
 template<typename T> void shift_objs(vector<T> &objs, vector3d const &vd) {
 
 	for (unsigned i = 0; i < objs.size(); ++i) {
-		if (objs[i].status) objs[i].pos += vd;
+		if (objs[i].status) {objs[i].pos += vd;}
 	}
 }
 
 template<typename T> void apply_obj_physics(vector<T> &objs) {
-
-	for (unsigned i = 0; i < objs.size(); ++i) {
-		objs[i].apply_physics(i);
-	}
+	for (unsigned i = 0; i < objs.size(); ++i) {objs[i].apply_physics(i);}
 }
 
 
@@ -1546,6 +1540,7 @@ void advance_physics_objects() {
 	water_part_man.apply_physics();
 	for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
 	check_falling_cobjs();
+	proc_moving_cobjs();
 }
 
 

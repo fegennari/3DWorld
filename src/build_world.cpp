@@ -254,7 +254,7 @@ void set_global_state() {
 
 void process_groups() {
 
-	if (animate2) advance_physics_objects();
+	if (animate2) {advance_physics_objects();}
 
 	if (display_mode & 0x0200) {
 		d_part_sys.create_particles(NUM_DYNAM_PARTS, 1);
