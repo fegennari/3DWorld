@@ -1234,7 +1234,22 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 	bcube.expand_by(-tolerance); // shrink slightly to avoid false collisions (in prticular with extruded polygons)
 	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
-	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return 0;
+	vector3d const start_delta(delta);
+	
+	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // failed to move
+		float const step_height(0.4*C_STEP_HEIGHT*CAMERA_RADIUS); // cobj can be lifted by 40% of the player step height
+		bool success(0);
+		
+		for (unsigned n = 0; n < 10; ++n) { // try raising the cobj in 10 steps
+			delta = start_delta; // reset to try again
+			cobj.shift_by(vector3d(0.0, 0.0, 0.1*step_height)); // shift up slightly to see if it can be moved now
+			if (binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) {success = 1; break;}
+		}
+		if (!success) {
+			cobj.shift_by(vector3d(0.0, 0.0, -step_height)); // shift down to original position
+			return 0; // can't move
+		}
+	}
 	player_pos += delta; // restore player pos, at least partially
 	cobj.move_cobj(delta, 1); // move the cobj instead of the player and re-add to coll structure
 	moving_cobjs.insert(index); // may already be there
@@ -1627,9 +1642,7 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 
 
 void add_camera_cobj(point const &pos) {
-
-	camera_coll_id = add_coll_sphere(pos, CAMERA_RADIUS,
-		cobj_params(object_types[CAMERA].elasticity, object_types[CAMERA].color, 0, 1, camera_collision, 1));
+	camera_coll_id = add_coll_sphere(pos, CAMERA_RADIUS, cobj_params(object_types[CAMERA].elasticity, object_types[CAMERA].color, 0, 1, camera_collision, 1));
 }
 
 

@@ -17,4 +17,4 @@ Box physics
 
 Moveable cobjs:
 - Rotations/torque
-- Allow pushing up planes
+- Handle pushing into dynamic cobjs
