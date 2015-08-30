@@ -1202,20 +1202,25 @@ void try_drop_moveable_cobj(unsigned index) {
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
 
 	// see if this cobj's bottom edge is colliding with a platform that's moving up (elevator)
+	// also, if the cobj is currently intersecting another moveable cobj, try to resolve the intersection so that stacking works by moving the cobj up
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		assert(*i < coll_objects.size());
 		coll_obj const &c(coll_objects[*i]);
-		if (c.platform_id < 0) continue; // not a platform
-		assert(c.platform_id < (int)platforms.size());
-		if (!platforms[c.platform_id].is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
-		if (c.d[2][1] < cobj.d[2][0] || c.d[2][1] > cobj.d[2][1]) continue; // bottom platform edge not intersecting
-		
-		if (cobj.intersects_cobj(c, tolerance)) {
-			cobj.shift_by(vector3d(0.0, 0.0, c.d[2][1]-cobj.d[2][0])); // move cobj up
-			scene_smap_vbo_invalid = 1;
-			return; // or test other cobjs?
+
+		if (c.cp.flags & COBJ_MOVEABLE) { // both cobjs are moveable - is this a stack?
+			// assume it's a stack and treat it like a moving platform
 		}
-	}
+		else {
+			if (c.platform_id < 0) continue; // not a platform
+			assert(c.platform_id < (int)platforms.size());
+			if (!platforms[c.platform_id].is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
+		}
+		if (c.d[2][1] < cobj.d[2][0] || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
+		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
+		cobj.shift_by(vector3d(0.0, 0.0, c.d[2][1]-cobj.d[2][0])); // move cobj up
+		scene_smap_vbo_invalid = 1;
+		return; // or test other cobjs?
+	} // for i
 	vector3d delta(0.0, 0.0, -test_dz);
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return; // stuck
 	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj (FIXME?)
