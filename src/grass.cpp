@@ -634,7 +634,7 @@ public:
 		//s.set_vert_shader("ads_lighting.part*+shadow_map.part*+wind.part*+grass_texture.part+grass");
 		//s.set_frag_shader("linear_fog.part+textured_with_fog");
 		setup_shaders_post(s);
-		s.add_uniform_color("color_scale", (distant ? texture_color(GRASS_BLADE_TEX)*1.06 : WHITE));
+		s.add_uniform_color("color_scale", (distant ? texture_color(GRASS_BLADE_TEX) : WHITE));
 		s.add_uniform_float("height", grass_length);
 		s.set_specular(0.2, 20.0);
 	}
@@ -698,7 +698,7 @@ public:
 						}
 					}
 				}
-				if (visible && dist_less_than(camera, mpos, 500.0*grass_width)) { // nearby grass
+				if (visible && dist_less_than(camera, mpos, 1000.0*grass_width)) { // nearby grass
 					nearby_ixs.push_back(ix);
 					visible = 0; // drawn in the second pass
 				}
