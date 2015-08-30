@@ -1287,11 +1287,15 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 
 void proc_moving_cobjs() {
 
+	vector<pair<float, unsigned>> by_z1;
+
 	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end();) {
 		assert(*i < coll_objects.size());
 		if (coll_objects[*i].status != COLL_STATIC) {moving_cobjs.erase(i++);} // remove if destroyed
-		else {try_drop_moveable_cobj(*i); ++i;} // otherwise try to drop it
+		else {by_z1.push_back(make_pair(coll_objects[*i].d[2][0], *i)); ++i;} // otherwise try to drop it
 	}
+	sort(by_z1.begin(), by_z1.end()); // sort by z1 so that stacked cobjs work correctly (processed bottom to top)
+	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {try_drop_moveable_cobj(i->second);}
 }
 
 
