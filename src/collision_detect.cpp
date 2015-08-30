@@ -1185,25 +1185,48 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 
 void try_drop_moveable_cobj(unsigned index) {
 
-	float const tolerance(1.0E-6), accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
+	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
+	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
 	assert(index < coll_objects.size());
 	coll_obj &cobj(coll_objects[index]);
-	cobj.v_fall += accel; // terminal velocity?
-	float const cobj_zmin(min(czmin, zbottom));
-	float max_dz(-tstep*cobj.v_fall);
-	max_dz = min(max_dz, cobj.d[2][0]-cobj_zmin);
-	if (max_dz < tolerance) {cobj.v_fall = 0.0; return;} // can't drop further
+	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]);
+	float const cur_v_fall(cobj.v_fall + accel);
+	cobj.v_fall = 0.0; // assume the cobj stops falling; compute the correct v_fall if we reach the end without returning
+	float const max_dz(min(-tstep*cur_v_fall, cobj.d[2][0]-cobj_zmin)); // usually positive
+	if (max_dz < tolerance) return; // can't drop further
+	float const test_dz(max(max_dz, 0.25f*cobj_height)); // use a min value to ensure the z-slice isn't too small, to prevent instability (for example when riding down on an elevator)
 	cube_t bcube(cobj); // start at the current cobj xy
-	bcube.d[2][1]  = cobj.d[2][0]; // top = cobj bottom
-	bcube.d[2][0] -= max_dz; // bottom (height = max_dz)
+	//bcube.d[2][1]  = cobj.d[2][0]; // top = cobj bottom (Note: more efficient, but doesn't work correctly for elevators)
+	bcube.d[2][0] -= test_dz; // bottom (height = test_dz)
 	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
-	vector3d delta(0.0, 0.0, -max_dz);
-	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) {cobj.v_fall = 0.0; return;} // stuck
+
+	// see if this cobj's bottom edge is colliding with a platform that's moving up (elevator)
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+		assert(*i < coll_objects.size());
+		coll_obj const &c(coll_objects[*i]);
+		if (c.platform_id < 0) continue; // not a platform
+		assert(c.platform_id < (int)platforms.size());
+		if (!platforms[c.platform_id].is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
+		if (c.d[2][1] < cobj.d[2][0] || c.d[2][1] > cobj.d[2][1]) continue; // bottom platform edge not intersecting
+		
+		if (cobj.intersects_cobj(c, tolerance)) {
+			cobj.shift_by(vector3d(0.0, 0.0, c.d[2][1]-cobj.d[2][0])); // move cobj up
+			scene_smap_vbo_invalid = 1;
+			return; // or test other cobjs?
+		}
+	}
+	vector3d delta(0.0, 0.0, -test_dz);
+	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return; // stuck
 	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj (FIXME?)
 	float const mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 0, 1)); // clamped xy
 	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
-	if (delta.z < mesh_dz) {cobj.v_fall = 0.0; delta.z = mesh_dz;} // don't let it go below the mesh
+	if (delta.z < mesh_dz) {delta.z = mesh_dz;} // don't let it go below the mesh
+	else if (delta.z == -test_dz) { // cobj falls the entire max distance without colliding, accelerate it
+		// set terminal velocity to one cobj_height per timestep to avoid falling completely through another moving cobj (such as an elevator)
+		cobj.v_fall = max(cur_v_fall, -cobj_height/tstep);
+		delta.z     = -max_dz; // clamp to the real max value
+	} // else |delta.z| may be > |max_dz|, but it was only falling for one frame so should not be noticeable (and should be more stable for small tstep/accel)
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
 }

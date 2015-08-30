@@ -372,6 +372,7 @@ public:
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_moving  () const {return (state == ST_FWD || state == ST_REV);}
+	bool is_active  () const {return (state != ST_NOACT);}
 	bool is_rotation() const {return is_rot;}
 };
 

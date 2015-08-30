@@ -199,17 +199,13 @@ void dwobject::update_precip_type() {
 
 	int const ptype(get_precip_type());
 	if (type == ptype) return;
-	
-	if (status == 4) {
-		status = 1;
-		flags  = 0;
-	}
+	if (status == 4) {status = 1; flags  = 0;}
 	type   = ptype;
 	health = def_objects[type].health;
 }
 
 
-void process_platforms_and_light_triggers() {
+void process_platforms_falling_moving_and_light_triggers() {
 
 	if (!animate2) return; // no updates
 	int const start_i((camera_mode == 1) ? CAMERA_ID : 0);
@@ -219,6 +215,10 @@ void process_platforms_and_light_triggers() {
 		for (int i = start_i; i < end_i; ++i) {platforms.check_activate(get_sstate_pos(i), CAMERA_RADIUS, i);}
 		platforms.advance_timestep();
 	}
+	proc_moving_cobjs(); // Note: depends on platforms and uses+modified the cobj BVHs
+	check_falling_cobjs();
+	build_static_moving_cobj_tree();
+
 	for (auto l = light_sources_d.begin(); l != light_sources_d.end(); ++l) { // update scene lights
 		for (int i = start_i; i < end_i; ++i) {l->check_activate(get_sstate_pos(i), CAMERA_RADIUS, i);}
 		l->advance_timestep();

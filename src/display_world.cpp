@@ -779,7 +779,7 @@ void display(void) {
 			timer_a = GET_TIME_MS();
 			show_framerate = 2;
 		}
-		if (world_mode == WMODE_GROUND) {process_platforms_and_light_triggers();} // must be before camera code
+		if (world_mode == WMODE_GROUND) {process_platforms_falling_moving_and_light_triggers();} // must be before camera code
 		if (world_mode == WMODE_INF_TERRAIN) {camera_mode = 1;} // force to ground/walking mode
 
 		// camera position code

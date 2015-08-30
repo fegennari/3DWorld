@@ -57,7 +57,6 @@ extern physics_particle_manager explosion_part_man;
 
 int get_obj_zval(point &pt, float &dz, float z_offset);
 int snow_height(point pos);
-void proc_moving_cobjs();
 
 
 float get_max_t(int obj_type) {return object_types[obj_type].max_t;}
@@ -1539,8 +1538,6 @@ void advance_physics_objects() {
 	explosion_part_man.apply_physics(1.0, 4.0); // gravity=1.0, air_factor=0.25
 	water_part_man.apply_physics();
 	for (unsigned i = 0; i < decals.size(); ++i) {decals[i].check_cobj();}
-	check_falling_cobjs();
-	proc_moving_cobjs();
 }
 
 

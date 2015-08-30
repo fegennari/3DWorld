@@ -799,7 +799,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 	case 't': // animation - movement (freeze frame on objects), show star streams in universe mode
 		animate2 = !animate2;
-		if (animate2) reset_timing = 1;
+		if (animate2) {reset_timing = 1;}
 		break;
 
 	case 'b': // begin motion animation
