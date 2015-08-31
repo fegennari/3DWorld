@@ -622,6 +622,8 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[1], c.radius2, thickness, MIN_POLY_THICK)) return 1;
 			return poly_cylin_int(*this, c);
 		case COLL_POLYGON: {
+			if (thickness   > MIN_POLY_THICK && !cube_polygon_intersect(c, *this)) return 0;
+			if (c.thickness > MIN_POLY_THICK && !cube_polygon_intersect(*this, c)) return 0;
 			float const poly_toler(max(toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
 
 			if (poly_toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons, sponza polygons, etc.)
