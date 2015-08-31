@@ -1223,8 +1223,15 @@ void try_drop_moveable_cobj(unsigned index) {
 	} // for i
 	vector3d delta(0.0, 0.0, -test_dz);
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return; // stuck
-	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj (FIXME?)
-	float const mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 0, 1)); // clamped xy
+	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj
+	float mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 1, 1)); // clamped xy
+
+	// check for ice
+	int xpos(get_xpos(center.x)), ypos(get_ypos(center.y));
+	if (is_in_ice(xpos, ypos)) { // on ice
+		float const water_zval(water_matrix[ypos][xpos]);
+		if (center.z > water_zval) {mesh_zval = max(mesh_zval, water_zval);} // use water zval if cobj center is above the ice
+	}
 	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
 	if (delta.z < mesh_dz) {delta.z = mesh_dz;} // don't let it go below the mesh
 	else if (delta.z == -test_dz) { // cobj falls the entire max distance without colliding, accelerate it

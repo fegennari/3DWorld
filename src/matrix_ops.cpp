@@ -340,7 +340,6 @@ float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equa
 
 
 float int_mesh_zval_pt_off(point const &pos, int use_real_equation, int ignore_ice) {
-	
 	return interpolate_mesh_zval((pos.x-DX_VAL*xoff), (pos.y-DY_VAL*yoff), 0.0, use_real_equation, ignore_ice);
 }
 
