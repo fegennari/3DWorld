@@ -471,6 +471,42 @@ int coll_obj::is_anchored() const {
 }
 
 
+bool cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
+
+	for (int i = 0; i < p.npoints; ++i) { // check points (fast)
+		if (c.contains_pt(p.points[i])) return 1; // definite intersection
+	}
+	for (int i = 0; i < p.npoints; ++i) { // check edges
+		if (check_line_clip(p.points[i], p.points[(i+1)%p.npoints], c.d)) return 1; // definite intersection
+	}
+	static vector<point> clipped_pts;
+	clip_polygon_to_cube(c, p.points, p.npoints, p, clipped_pts); // clip the polygon to the cube
+	if (!clipped_pts.empty()) return 1;
+
+	if (p.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
+		point pts[2][4];
+		gen_poly_planes(p.points, p.npoints, p.norm, p.thickness, pts);
+				
+		for (unsigned j = 0; j < 2; ++j) {
+			for (int i = 0; i < p.npoints; ++i) {
+				if (check_line_clip(pts[j][i], pts[j][(i+1)%p.npoints], c.d)) return 1; // definite intersection
+			}
+		}
+		// need to handle cube completely insde of a thick polygon
+		if (sphere_ext_poly_intersect(p.points, p.npoints, p.norm, c.get_cube_center(), 0.0, p.thickness, MIN_POLY_THICK)) return 1;
+		static vector<tquad_t> side_pts;
+		thick_poly_to_sides(p.points, p.npoints, p.norm, p.thickness, side_pts);
+
+		for (auto i = side_pts.begin(); i != side_pts.end(); ++i) { // clip each face to the cube
+			clip_polygon_to_cube(c, i->pts, i->npts, p, clipped_pts);
+			if (!clipped_pts.empty()) return 1;
+		}
+		return 0;
+	}
+	return 0;
+}
+
+
 int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 
 	if (line_line_dist(c2.points[0], c2.points[1], c1.points[0], c1.points[1]) > (max(c2.radius, c2.radius2) + max(c1.radius, c1.radius2))) return 0;
@@ -486,6 +522,11 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 
 	for (int i = 0; i < p.npoints; ++i) {
 		if (c.line_intersect(p.points[i], p.points[(i+1)%p.npoints])) return 1; // definite intersection
+	}
+	if (!cube_polygon_intersect(c, p)) return 0;
+
+	if (p.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
+		// WRITE
 	}
 	return 2; // FIXME: finish
 }
@@ -520,40 +561,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			}
 			return 2; // FIXME: finish
 		}
-		case COLL_POLYGON:
-			for (int i = 0; i < c.npoints; ++i) { // check points (fast)
-				if (contains_pt(c.points[i])) return 1; // definite intersection
-			}
-			for (int i = 0; i < c.npoints; ++i) { // check edges
-				if (check_line_clip(c.points[i], c.points[(i+1)%c.npoints], d)) return 1; // definite intersection
-			}
-			{ // open a scope
-				static vector<point> clipped_pts;
-				clip_polygon_to_cube(*this, c.points, c.npoints, c, clipped_pts); // clip the polygon to the cube
-				if (!clipped_pts.empty()) return 1;
-
-				if (c.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
-					point pts[2][4];
-					gen_poly_planes(c.points, c.npoints, c.norm, c.thickness, pts);
-				
-					for (unsigned j = 0; j < 2; ++j) {
-						for (int i = 0; i < c.npoints; ++i) {
-							if (check_line_clip(pts[j][i], pts[j][(i+1)%c.npoints], d)) return 1; // definite intersection
-						}
-					}
-					// need to handle cube completely insde of a thick polygon
-					if (sphere_ext_poly_intersect(c.points, c.npoints, c.norm, get_cube_center(), 0.0, c.thickness, MIN_POLY_THICK)) return 1;
-					static vector<tquad_t> side_pts;
-					thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness, side_pts);
-
-					for (auto i = side_pts.begin(); i != side_pts.end(); ++i) { // clip each face to the cube
-						clip_polygon_to_cube(*this, i->pts, i->npts, c, clipped_pts);
-						if (!clipped_pts.empty()) return 1;
-					}
-					return 0;
-				}
-			}
-			return 0;
+		case COLL_POLYGON: return cube_polygon_intersect(*this, c);
 		default: assert(0);
 		}
 
