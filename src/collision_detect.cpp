@@ -1292,9 +1292,21 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 	vector3d const start_delta(delta);
 	
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // failed to move
-		float const step_height(0.4*C_STEP_HEIGHT*CAMERA_RADIUS); // cobj can be lifted by 40% of the player step height
-		bool success(0);
+		// if there is a ledge (cobj z top) slightly above the bottom of the cobj, maybe we can lift it up;
+		// meant to work with ramps and small steps, but not stairs or tree trunks (obviously)
+		float step_height(0.4*C_STEP_HEIGHT*CAMERA_RADIUS); // cobj can be lifted by 40% of the player step height
+		bool has_ledge(0), has_ramp(0), success(0);
 		
+		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+			assert(*i < coll_objects.size());
+			coll_obj const &c(coll_objects[*i]);
+			if (c.type == COLL_POLYGON) {has_ramp = 1;} // Note: can only push cobjs up polygon ramps, not cylinders
+			else if (c.d[2][1] - cobj.d[2][0] < step_height) {has_ledge = 1; break;} // c_top - cobj_bot < step_height
+		}
+		if (!has_ledge) {
+			if (!has_ramp) return 0; // stuck
+			step_height = min(step_height, delta.mag()); // if there is no ledge, limit step height to delta length (45 degree inclination)
+		}
 		for (unsigned n = 0; n < 10; ++n) { // try raising the cobj in 10 steps
 			delta = start_delta; // reset to try again
 			cobj.shift_by(vector3d(0.0, 0.0, 0.1*step_height)); // shift up slightly to see if it can be moved now
