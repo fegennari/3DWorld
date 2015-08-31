@@ -814,7 +814,8 @@ bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube, i
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube) {
 
 	float const r2(radius*radius);
-	UNROLL_3X(float dmin(0.0); DMIN_CHECK(i_));
+	float dmin(0.0);
+	UNROLL_3X(DMIN_CHECK(i_));
 	return 1;
 }
 
