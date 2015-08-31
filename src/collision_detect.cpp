@@ -1249,7 +1249,16 @@ void try_drop_moveable_cobj(unsigned index) {
 		if (center.z > water_zval) {mesh_zval = max(mesh_zval, water_zval);} // use water zval if cobj center is above the ice
 	}
 	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
-	if (delta.z < mesh_dz) {delta.z = mesh_dz;} // don't let it go below the mesh
+	
+	if (delta.z < mesh_dz) {
+		delta.z = mesh_dz; // don't let it go below the mesh
+		bool const dim(abs(delta.y) < abs(delta.x));
+		float radius(0.5*(cobj.d[dim][1] - cobj.d[dim][0])); // perpendicular to direction of movement
+		if      (cobj.type == COLL_CUBE    ) {radius *= 1.4;}
+		else if (cobj.type == COLL_SPHERE  ) {radius *= 0.2;} // smaller since bottom surface area is small (maybe also not-vert cylinder?)
+		else if (cobj.type == COLL_CYLINDER) {radius  = min(radius, cobj.radius);}
+		modify_grass_at(center, radius, 1); // crush grass
+	}
 	else if (delta.z == -test_dz) { // cobj falls the entire max distance without colliding, accelerate it
 		// set terminal velocity to one cobj_height per timestep to avoid falling completely through another moving cobj (such as an elevator)
 		cobj.v_fall = max(cur_v_fall, -cobj_height/tstep);
