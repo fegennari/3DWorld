@@ -471,7 +471,7 @@ int coll_obj::is_anchored() const {
 }
 
 
-bool cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
+int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
 
 	for (int i = 0; i < p.npoints; ++i) { // check points (fast)
 		if (c.contains_pt(p.points[i])) return 1; // definite intersection
@@ -506,7 +506,6 @@ bool cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
 	return 0;
 }
 
-
 int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 
 	if (line_line_dist(c2.points[0], c2.points[1], c1.points[0], c1.points[1]) > (max(c2.radius, c2.radius2) + max(c1.radius, c1.radius2))) return 0;
@@ -514,7 +513,6 @@ int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 	if (c2.line_intersect(c1.points[0], c1.points[1])) return 1;
 	return 2; // FIXME: finish
 }
-
 
 int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 
@@ -529,6 +527,27 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 		// WRITE
 	}
 	return 2; // FIXME: finish
+}
+
+int poly_poly_int_test(coll_obj const &p1, coll_obj const &p2) {
+
+	for (int i = 0; i < p1.npoints; ++i) {
+		if (p2.line_intersect(p1.points[i], p1.points[(i+1)%p1.npoints])) return 1;
+	}
+	if (p1.thickness <= MIN_POLY_THICK) return 0;
+	// Note: this is inefficient since all edges belong to two faces and are checked twice, but probably doesn't matter
+	// maybe we should call gen_poly_planes() instead and check top/bot faces, but this will miss 4 of the edges parallel to the normal
+	static vector<tquad_t> side_pts;
+	thick_poly_to_sides(p1.points, p1.npoints, p1.norm, p1.thickness, side_pts);
+
+	for (auto i = side_pts.begin(); i != side_pts.end(); ++i) { // intersect the edges from each face
+		for (unsigned j = 0; j < i->npts; ++j) {
+			if (p2.line_intersect(i->pts[j], i->pts[(j+1)%i->npts])) return 1;
+		}
+	}
+	// need to handle one polygon completely insde of a thick polygon (Note: calls thick_poly_to_sides() again)
+	if (sphere_ext_poly_intersect(p1.points, p1.npoints, p1.norm, p2.points[0], 0.0, p1.thickness, MIN_POLY_THICK)) return 1;
+	return 0;
 }
 
 
@@ -606,30 +625,19 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			float const poly_toler(max(toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
 
 			if (poly_toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons, sponza polygons, etc.)
-				for (int i = 0; i < c.npoints; ++i) {
+				for (int i = 0; i < c.npoints; ++i) { // test point adjacency
 					for (int j = 0; j < npoints; ++j) {
 						if (dist_less_than(points[j], c.points[i], poly_toler)) return 1;
 					}
 				}
-				for (int i = 0; i < c.npoints; ++i) {
+				for (int i = 0; i < c.npoints; ++i) { // test edges
 					for (int j = 0; j < npoints; ++j) {
 						if (pt_line_seg_dist_less_than(c.points[i],   points[j],   points[(j+1)%  npoints], poly_toler)) return 1;
 						if (pt_line_seg_dist_less_than(  points[j], c.points[i], c.points[(i+1)%c.npoints], poly_toler)) return 1;
 					}
 				}
 			}
-			for (int i = 0; i < c.npoints; ++i) {
-				if (line_intersect(c.points[i], c.points[(i+1)%c.npoints])) return 1;
-			}
-			for (int i = 0; i <   npoints; ++i) {
-				if (line_intersect(  points[i],   points[(i+1)%  npoints])) return 1;
-			}
-			// need to handle one polygon completely insde of a thick polygon
-			if (c.thickness > MIN_POLY_THICK &&
-				sphere_ext_poly_intersect(c.points, c.npoints, c.norm,   points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
-			if (  thickness > MIN_POLY_THICK &&
-				sphere_ext_poly_intersect(  points,   npoints,   norm, c.points[0], 0.0, c.thickness, MIN_POLY_THICK)) return 1;
-			return 0;
+			return (poly_poly_int_test(c, *this) || poly_poly_int_test(*this, c));
 		}
 		default: assert(0);
 		}
