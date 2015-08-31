@@ -181,6 +181,7 @@ public:
 	bool line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin=0.0, float tmax=1.0) const;
 	bool sphere_intersects_exact(point const &sc, float sr, vector3d &cnorm, point &new_sc) const;
 	bool intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const; // coll_cell_search.cpp
+	void convert_cube_to_ext_polygon();
 	colorRGBA get_color_at_point(point const &pos, vector3d const &normal, bool fast) const;
 	bool is_occluded_from_camera() const;
 	void register_coll(unsigned char coll_time, unsigned char coll_type_);

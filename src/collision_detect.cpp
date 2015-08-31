@@ -1153,6 +1153,22 @@ bool coll_obj::sphere_intersects_exact(point const &sc, float sr, vector3d &cnor
 }
 
 
+void coll_obj::convert_cube_to_ext_polygon() {
+
+	assert(type == COLL_CUBE);
+	type      = COLL_POLYGON;
+	npoints   = 4;
+	thickness = d[2][1] - d[2][0]; // height
+	assert(thickness > 0.0);
+	norm      = plus_z;
+	cp.surfs  = 0;
+	if (cp.tscale == 0.0) {cp.tscale = 1.0/thickness;}
+	float const z(0.5*(d[2][1] + d[2][0]));
+	for (unsigned i = 0; i < 4; ++i) {points[i].assign(d[0][(i>>1)^(i&1)], d[1][i>>1], z);} // CCW
+	// Note: bounding cube, volume, area, vcm, cobj bvh, etc. remain unchanged
+}
+
+
 float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d const &delta, float step_thresh, float tolerance) {
 
 	float valid_t(0.0);
@@ -1239,6 +1255,10 @@ void try_drop_moveable_cobj(unsigned index) {
 		cobj.v_fall = max(cur_v_fall, -cobj_height/tstep);
 		delta.z     = -max_dz; // clamp to the real max value
 	} // else |delta.z| may be > |max_dz|, but it was only falling for one frame so should not be noticeable (and should be more stable for small tstep/accel)
+	if (cobj.v_fall == 0.0 && cobj.type == COLL_CUBE && 0) { // Note: disabled until rotation is handled
+		cobj.convert_cube_to_ext_polygon();
+		// FIXME: apply rotation if not stable at rest
+	}
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
 }
