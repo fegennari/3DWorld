@@ -54,7 +54,8 @@ int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
 
 int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 
-	if (line_line_dist(c2.points[0], c2.points[1], c1.points[0], c1.points[1]) > (max(c2.radius, c2.radius2) + max(c1.radius, c1.radius2))) return 0;
+	float const line_dist(line_line_dist(c2.points[0], c2.points[1], c1.points[0], c1.points[1]));
+	if (line_dist > (max(c2.radius, c2.radius2) + max(c1.radius, c1.radius2))) return 0;
 	if (c1.line_intersect(c2.points[0], c2.points[1])) return 1;
 	if (c2.line_intersect(c1.points[0], c1.points[1])) return 1;
 	return 2; // FIXME: finish

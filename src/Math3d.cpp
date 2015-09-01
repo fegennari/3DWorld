@@ -472,7 +472,13 @@ bool line_sphere_intersect_s_t(point const &p1, point const &p2, point const &sc
 float line_line_dist(point const &p1a, point const &p1b, point const &p2a, point const &p2b) {
 
 	vector3d const a(p1b, p1a), b(p2b, p2a), cp(cross_product(a, b));
-	return fabs(dot_product_ptv(cp, p2a, p1a))/cp.mag();
+	float const cp_mag(cp.mag());
+
+	if (fabs(cp_mag) < TOLERANCE) { // lines are parallel
+		vector3d const w(p2a - p1a), v_para(a*(dot_product(a, w)/a.mag_sq())), v_perp(w - v_para);
+		return v_perp.mag();
+	}
+	return fabs(dot_product_ptv(cp, p2a, p1a))/cp_mag;
 }
 
 
