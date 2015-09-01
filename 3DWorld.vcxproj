@@ -524,6 +524,7 @@
     </ClCompile>
     <ClCompile Include="src\mesh_intersect.cpp" />
     <ClCompile Include="src\model3d.cpp" />
+    <ClCompile Include="src\moveable_cobj.cpp" />
     <ClCompile Include="src\objects.cpp" />
     <ClCompile Include="src\object_file_reader.cpp" />
     <ClCompile Include="src\openal_wrap.cpp" />
