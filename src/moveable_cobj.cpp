@@ -52,12 +52,27 @@ int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
 	return 0;
 }
 
+int cylin_cube_int_aa_via_circle_rect(coll_obj const &cube, coll_obj const &cylin) {
+
+	bool deq[3];
+	UNROLL_3X(deq[i_] = (cylin.points[0][i_] == cylin.points[1][i_]);)
+
+	for (unsigned d = 0; d < 3; ++d) { // approximate projected circle test for x/y/z oriented cylinders
+		if (!deq[(d+1)%3] || !deq[(d+2)%3]) continue; // not oriented in direction d
+		if ( circle_rect_intersect(cylin.points[0], min(cylin.radius, cylin.radius2), cube, d)) return 1;
+		if (!circle_rect_intersect(cylin.points[0], max(cylin.radius, cylin.radius2), cube, d)) return 0; // no intersection
+	}
+	return 2; // FIXME: finish
+}
+
 int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 
 	float const line_dist(line_line_dist(c2.points[0], c2.points[1], c1.points[0], c1.points[1]));
 	if (line_dist > (max(c2.radius, c2.radius2) + max(c1.radius, c1.radius2))) return 0;
 	if (c1.line_intersect(c2.points[0], c2.points[1])) return 1;
 	if (c2.line_intersect(c1.points[0], c1.points[1])) return 1;
+	if (!cylin_cube_int_aa_via_circle_rect(c1, c2))    return 0;
+	if (!cylin_cube_int_aa_via_circle_rect(c2, c1))    return 0;
 	return 2; // FIXME: finish
 }
 
@@ -69,6 +84,7 @@ int poly_cylin_int(coll_obj const &p, coll_obj const &c) {
 		if (c.line_intersect(p.points[i], p.points[(i+1)%p.npoints])) return 1; // definite intersection
 	}
 	if (!cube_polygon_intersect(c, p)) return 0;
+	if (!cylin_cube_int_aa_via_circle_rect(p, c)) return 0;
 
 	if (p.thickness > MIN_POLY_THICK) { // test extruded (3D) polygon
 		// WRITE
@@ -117,15 +133,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			// fallthrough
 		case COLL_CYLINDER_ROT: {
 			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
-			bool deq[3];
-			UNROLL_3X(deq[i_] = (c.points[0][i_] == c.points[1][i_]);)
-
-			for (unsigned d = 0; d < 3; ++d) { // approximate projected circle test for x/y/z oriented cylinders
-				if (!deq[(d+1)%3] || !deq[(d+2)%3]) continue; // not oriented in direction d
-				if ( circle_rect_intersect(c.points[0], min(c.radius, c.radius2), *this, d)) return 1;
-				if (!circle_rect_intersect(c.points[0], max(c.radius, c.radius2), *this, d)) return 0; // no intersection
-			}
-			return 2; // FIXME: finish
+			return cylin_cube_int_aa_via_circle_rect(*this, c);
 		}
 		case COLL_POLYGON: return cube_polygon_intersect(*this, c);
 		default: assert(0);
@@ -139,6 +147,7 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius));
 		case COLL_SPHERE:
 			if (type == COLL_CYLINDER && dist_xy_less_than(points[0], c.points[0], (c.radius+radius))) return 1;
+			if (!sphere_cube_intersect(c.points[0], c.radius, *this)) return 0; // test bcube
 			return sphere_intersect_cylinder(c.points[0], c.radius, points[0], points[1], radius, radius2);
 		case COLL_CAPSULE:
 			if (type == COLL_CYLINDER && (dist_xy_less_than(points[0], c.points[0], (c.radius+radius)) ||
@@ -153,12 +162,14 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	case COLL_SPHERE:
 		switch (c.type) {
-		case COLL_SPHERE:       return dist_less_than(points[0], c.points[0], (c.radius+radius));
+		case COLL_SPHERE: return dist_less_than(points[0], c.points[0], (c.radius+radius));
 		case COLL_CAPSULE:
 			if (dist_less_than(points[0], c.points[0], (c.radius+radius)) || dist_less_than(points[0], c.points[1], (c.radius2+radius))) return 1;
 			// fallthrough
-		case COLL_CYLINDER_ROT: return sphere_intersect_cylinder(points[0], radius, c.points[0], c.points[1], c.radius, c.radius2);
-		case COLL_POLYGON:      return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK);
+		case COLL_CYLINDER_ROT:
+			if (!sphere_cube_intersect(points[0], radius, c)) return 0; // test bcube
+			return sphere_intersect_cylinder(points[0], radius, c.points[0], c.points[1], c.radius, c.radius2);
+		case COLL_POLYGON: return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK);
 		default: assert(0);
 		}
 
