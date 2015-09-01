@@ -1271,10 +1271,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					light_source ls(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner);
 					
 					if (d) { // diffuse
-						if (cobj.platform_id >= 0) {
-							assert(cobj.platform_id < (int)platforms.size());
-							platforms[cobj.platform_id].add_light(light_sources_d.size());
-						}
+						if (cobj.platform_id >= 0) {platforms.get_cobj_platform(cobj).add_light(light_sources_d.size());}
 						indir_dlight_group_manager.add_dlight_ix_for_tag_ix(indir_dlight_ix, light_sources_d.size());
 						light_sources_d.push_back(light_source_trig(ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix));
 						light_sources_d.back().add_triggers(triggers);

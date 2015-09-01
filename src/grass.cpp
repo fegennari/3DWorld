@@ -335,8 +335,7 @@ public:
 					for (unsigned k = 0; k < cell.cvals.size(); ++k) {
 						int const index(cell.cvals[k]);
 						if (index < 0) continue;
-						assert(unsigned(index) < coll_objects.size());
-						coll_obj const &cobj(coll_objects[index]);
+						coll_obj const &cobj(coll_objects.get_cobj(index));
 						if (cobj.type != COLL_POLYGON || cobj.cp.cobj_type != COBJ_TYPE_VOX_TERRAIN) continue;
 						if (cobj.norm.z < nz_thresh)     continue; // not oriented upward
 						if (!cobj.intersects(test_cube)) continue;

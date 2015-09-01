@@ -42,8 +42,7 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 bool decal_obj::is_on_cobj(int cobj) const {
 
 	if (cobj < 0) return 0;
-	assert((unsigned)cobj < coll_objects.size()); // can this fail if the cobj was destroyed? coll_objects only increases in size
-	coll_obj const &c(coll_objects[cobj]);
+	coll_obj const &c(coll_objects.get_cobj(cobj)); // can this fail if the cobj was destroyed? coll_objects only increases in size
 	// spheres and cylinder sides not supported - decals look bad on rounded objects
 	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON && c.type != COLL_CYLINDER && c.type != COLL_CYLINDER_ROT)) return 0;
 	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
@@ -94,15 +93,7 @@ void decal_obj::check_cobj() {
 
 vector3d decal_obj::get_platform_delta() const {
 
-	if (cid >= 0) {
-		assert((unsigned)cid < coll_objects.size());
-		int const pid(coll_objects[cid].platform_id);
-		
-		if (pid >= 0) {
-			assert((unsigned)pid < platforms.size());
-			return platforms[pid].get_delta();
-		}
-	}
+	if (cid >= 0 && coll_objects.get_cobj(cid).platform_id >= 0) {return platforms.get_cobj_platform(coll_objects.get_cobj(cid)).get_delta();}
 	return all_zeros;
 }
 
@@ -207,10 +198,8 @@ void add_coll_cube_to_matrix(int index, int dhcm) {
 
 	// we adjust the size of the cube to account for all possible platform locations
 	// if delta is not aligned with x/y/z axes then the boundary will be an over approximation, which is inefficient but ok
-	if (cobj.platform_id >= 0) {
-		assert(cobj.platform_id < (int)platforms.size());
-		delta = platforms[cobj.platform_id].get_range();
-	}
+	if (cobj.platform_id >= 0) {delta = platforms.get_cobj_platform(cobj).get_range();}
+
 	for (unsigned j = 0; j < 3; ++j) {
 		ds[j][0] = cobj.d[j][0] + min(delta[j], 0.0f);
 		ds[j][1] = cobj.d[j][1] + max(delta[j], 0.0f);
@@ -629,9 +618,8 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 
 	assert(!point_outside_mesh(j, i));
 	coll_cell &vcm(v_collision_matrix[i][j]);
-	assert((unsigned)index < coll_objects.size());
 	vcm.add_entry(index);
-	coll_obj const &cobj(coll_objects[index]);
+	coll_obj const &cobj(coll_objects.get_cobj(index));
 	unsigned const size((unsigned)vcm.cvals.size());
 
 	if (size > 1 && cobj.status == COLL_STATIC && coll_objects[vcm.cvals[size-2]].status == COLL_DYNAMIC) {
@@ -642,8 +630,7 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 	// update the z values if this cobj is part of a vertically moving platform
 	// if it's a cube then it's handled in add_coll_cube_to_matrix()
 	if (cobj.type != COLL_CUBE && cobj.platform_id >= 0) {
-		assert(cobj.platform_id < (int)platforms.size());
-		vector3d const range(platforms[cobj.platform_id].get_range());
+		vector3d const range(platforms.get_cobj_platform(cobj).get_range());
 
 		if (range.x == 0.0 && range.y == 0.0) { // vertical platform
 			if (range.z > 0.0) {zmaxv += range.z;} // travels up
@@ -667,8 +654,7 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 int remove_coll_object(int index, bool reset_draw) {
 
 	if (index < 0) return 0;
-	assert((size_t)index < coll_objects.size());
-	coll_obj &c(coll_objects[index]);
+	coll_obj &c(coll_objects.get_cobj(index));
 
 	if (c.status == COLL_UNUSED) {
 		assert(REMOVE_ALL_COLL);
@@ -874,8 +860,7 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 	for (int k = (int)cell.cvals.size()-1; k >= 0; --k) { // iterate backwards
 		int const index(cell.cvals[k]);
 		if (index < 0) continue;
-		assert(unsigned(index) < coll_objects.size());
-		coll_obj &cobj(coll_objects[index]);
+		coll_obj &cobj(coll_objects.get_cobj(index));
 		if (cobj.no_collision()) continue;
 		if (cobj.status == COLL_STATIC) {
 			if (z1 > cell.zmax || z2 < cell.zmin) return 1; // should be OK here since this is approximate, not quite right with, but not quite right without
@@ -948,8 +933,7 @@ bool is_point_interior(point const &pos, float radius) { // is query point inter
 				int cindex;
 
 				if (check_coll_line_exact(pos, pos2, cpos, cnorm, cindex, 0.0, -1, 0, 0, 1)) {
-					assert((unsigned)cindex < coll_objects.size());
-					coll_obj const &cobj(coll_objects[cindex]);
+					coll_obj const &cobj(coll_objects.get_cobj(cindex));
 					if (radius > 0.0 && cobj.line_intersect(pos, (pos + dir*radius))) return 1; // intersects a short line, so inside/close to a cobj
 
 					if (cobj.type == COLL_CUBE) { // cube
@@ -1181,11 +1165,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	}
 	vector3d norm(zero_vector), pvel(zero_vector);
 	bool coll_top(0), coll_bot(0);
-	
-	if (cobj.platform_id >= 0) { // calculate platform velocity
-		assert(cobj.platform_id < (int)platforms.size());
-		pvel = platforms[cobj.platform_id].get_velocity();
-	}
+	if (cobj.platform_id >= 0) {pvel = platforms.get_cobj_platform(cobj).get_velocity();} // calculate platform velocity
 	vector3d const mdir(motion_dir - pvel*fticks); // not sure if this helps
 	float zmaxc(cobj.d[2][1]), zminc(cobj.d[2][0]);
 	point const orig_pos(obj.pos);
@@ -1337,8 +1317,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 
 	// collision with the top of a cube attached to a platform (on first iteration only)
 	if (cobj.platform_id >= 0) {
-		assert(cobj.platform_id < (int)platforms.size());
-		platform const &pf(platforms[cobj.platform_id]);
+		platform const &pf(platforms.get_cobj_platform(cobj));
 		is_moving = (lcoll == 2 || friction >= STICK_THRESHOLD);
 
 		if (animate2 && do_coll_funcs && enable_cfs && iter == 0) {
@@ -1702,8 +1681,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	for (int k = (int)cell.cvals.size()-1; k >= 0; --k) { // iterate backwards
 		int const index(cell.cvals[k]);
 		if (index < 0) continue;
-		assert(unsigned(index) < coll_objects.size());
-		coll_obj const &cobj(coll_objects[index]);
+		coll_obj const &cobj(coll_objects.get_cobj(index));
 		if (cobj.d[2][0] > z2)         continue; // above the top of the object - can't affect it
 		if (any_coll && cobj.d[2][1] < min(z1, min(zmu, zfloor))) continue; // top below a previously seen floor
 		if (!cobj.contains_pt_xy(pos)) continue; // test bounding cube

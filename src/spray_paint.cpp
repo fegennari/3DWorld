@@ -38,8 +38,7 @@ colorRGBA sample_cobj_color(point const &p1, point const &p2, colorRGBA const &d
 	vector3d cnorm;
 	int cindex;
 	if (!check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, camera_coll_id, 0, 0, 0)) {return def_color;}
-	assert(cindex >= 0 && cindex < (int)coll_objects.size());
-	return coll_objects[cindex].get_color_at_point(cpos, cnorm, 0); // return true color
+	return coll_objects.get_cobj(cindex).get_color_at_point(cpos, cnorm, 0); // return true color
 }
 
 colorRGBA sample_cview_cobj_color() {
@@ -112,8 +111,7 @@ void spray_paint(bool mode) {
 		coll_pos.z += SMALL_NUMBER;
 	}
 	if (check_coll_line_exact(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 0)) { // hit cobjs (skip_dynamic=1), ignore voxels
-		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
-		coll_obj &cobj(coll_objects[cindex]);
+		coll_obj &cobj(coll_objects.get_cobj(cindex));
 		float const radius(get_spray_radius(coll_pos, color.alpha));
 
 		if (cobj.status == COLL_STATIC && (!cobj.no_draw() || (cobj.cp.cobj_type != COBJ_TYPE_STD))) { // similar to cobj.can_be_scorched()

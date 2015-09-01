@@ -28,20 +28,13 @@ bool no_sparse_smap_update();
 
 shadow_sphere::shadow_sphere(point const &pos0, float radius0, int cid0, bool is_player_) : sphere_t(pos0, radius0), is_player(is_player_), cid(cid0) {
 
-	if (cid < 0) {
-		ctype = COLL_SPHERE; // sphere is the default
-	}
-	else {
-		assert(size_t(cid) < coll_objects.size());
-		ctype = coll_objects[cid].type;
-	}
+	if (cid < 0) {ctype = COLL_SPHERE;} // sphere is the default
+	else {ctype = coll_objects.get_cobj(cid).type;}
 }
 
 
 bool shadow_sphere::line_intersect_cobj(point const &p1, point const &p2) const {
-
-	assert(cid >= 0 && cid < (int)coll_objects.size());
-	return coll_objects[cid].line_intersect(p1, p2);
+	return coll_objects.get_cobj(cid).line_intersect(p1, p2);
 }
 
 
@@ -358,9 +351,7 @@ void add_shadow_obj(point const &pos, float radius, int coll_id) {
 
 void add_shadow_cobj(int cid) {
 
-	if (cid < 0) return;
-	assert((unsigned)cid < coll_objects.size());
-	if (coll_objects[cid].disabled() || coll_objects[cid].cp.color.alpha < MIN_SHADOW_ALPHA) return;
+	if (cid < 0 || coll_objects.get_cobj(cid).disabled() || coll_objects.get_cobj(cid).cp.color.alpha < MIN_SHADOW_ALPHA) return;
 	point center;
 	float radius;
 	coll_objects[cid].bounding_sphere(center, radius);

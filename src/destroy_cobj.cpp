@@ -50,9 +50,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 		vector<int> const &cvals(v_collision_matrix[ypos][xpos].cvals);
 
 		for (vector<int>::const_iterator i = cvals.begin(); i != cvals.end(); ++i) {
-			if (*i < 0) continue;
-			assert((unsigned)*i < coll_objects.size());
-			if (coll_objects[*i].waypt_id < 0) {coll_objects[*i].add_connect_waypoint();} // slow
+			if (*i >= 0 && coll_objects.get_cobj(*i).waypt_id < 0) {coll_objects.get_cobj(*i).add_connect_waypoint();} // slow
 		}
 	}
 
@@ -179,9 +177,7 @@ void coll_obj::create_portal() const {
 
 
 void get_all_connected(unsigned cobj, vector<unsigned> &out) {
-
-	assert(cobj < coll_objects.size());
-	get_intersecting_cobjs_tree(coll_objects[cobj], out, cobj, TOLERANCE, 0, 1, cobj);
+	get_intersecting_cobjs_tree(coll_objects.get_cobj(cobj), out, cobj, TOLERANCE, 0, 1, cobj);
 }
 
 
@@ -244,8 +240,7 @@ void check_cobjs_anchored(vector<unsigned> to_check, set<unsigned> anchored[2]) 
 void add_to_falling_cobjs(set<unsigned> const &ids) {
 
 	for (set<unsigned>::const_iterator i = ids.begin(); i != ids.end(); ++i) {
-		assert(*i < coll_objects.size());
-		coll_objects[*i].falling = 1;
+		coll_objects.get_cobj(*i).falling = 1;
 		falling_cobjs.push_back(*i);
 	}
 }
@@ -386,16 +381,15 @@ void check_falling_cobjs() {
 
 	for (unsigned i = 0; i < falling_cobjs.size(); ++i) {
 		unsigned const ix(falling_cobjs[i]);
-		assert(ix < coll_objects.size());
 	
-		if (coll_objects[ix].status != COLL_STATIC) { // disable
+		if (coll_objects.get_cobj(ix).status != COLL_STATIC) { // disable
 			falling_cobjs[i] = falling_cobjs.back();
 			falling_cobjs.pop_back();
 			--i; // wraparound is ok
 			continue;
 		}
 		// translate, add the new, then remove the old
-		coll_objects[ix].clear_internal_data();
+		coll_objects.get_cobj(ix).clear_internal_data();
 		coll_obj cobj(coll_objects[ix]); // make a copy
 		cobj.v_fall += accel; // terminal velocity?
 		cobj.shift_by(point(0.0, 0.0, tstep*cobj.v_fall), 1); // translate down

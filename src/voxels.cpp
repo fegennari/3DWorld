@@ -1150,8 +1150,7 @@ void voxel_model_ground::create_block_hook(unsigned block_ix) { // lod_level == 
 		}
 #endif
 		if (cindex < 0) {cindex = add_simple_coll_polygon(pts, 3, cparams[cp_ix], normal);}
-		assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
-		if (add_as_fixed) {coll_objects[cindex].fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
+		if (add_as_fixed) {coll_objects.get_cobj(cindex).fixed = 1;} // mark as fixed so that lmap cells will be generated and cobjs will be re-added
 		data_blocks[block_ix].cids.push_back(cindex);
 	}
 	// Note: this call is really only safe to do without trying to the add_coll_polygon critical section because
@@ -2259,8 +2258,7 @@ void modify_voxels() {
 	if (get_range_to_mesh(pos, cview_dir, coll_pos, xpos, ypos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
 
 	if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, -1, 1)) { // hit voxel cobjs
-		assert(cindex >= 0 && unsigned(cindex) < coll_objects.size());
-		assert(coll_objects[cindex].cp.cobj_type == COBJ_TYPE_VOX_TERRAIN);
+		assert(coll_objects.get_cobj(cindex).cp.cobj_type == COBJ_TYPE_VOX_TERRAIN);
 		voxel_brush_params.weight_scale = ((voxel_editing == 2) ? -0.1 : 0.1);
 		brush_manager.apply_and_add_brush(voxel_brush_t(voxel_brush_params, coll_pos));
 	}

@@ -493,8 +493,7 @@ void draw_coll_surfaces(bool draw_trans) {
 
 		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 			unsigned cix(*i);
-			assert(cix < coll_objects.size());
-			coll_obj const &c(coll_objects[cix]);
+			coll_obj const &c(coll_objects.get_cobj(cix));
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
 
@@ -574,8 +573,7 @@ void draw_coll_surfaces(bool draw_trans) {
 			else { // cobj
 				if (in_portal) {portal::post_draw(portal_verts); in_portal = 0;}
 				unsigned cix(ix);
-				assert(cix < coll_objects.size());
-				coll_obj const &c(coll_objects[cix]);
+				coll_obj const &c(coll_objects.get_cobj(cix));
 				cdb.on_new_obj_layer(c.cp);
 				bool using_lt_atten(0);
 				
@@ -965,11 +963,8 @@ void particle_cloud::draw_part(point const &p, float r, colorRGBA c, quad_batch_
 		bool const outside_scene(p.z > czmax || !is_over_mesh(p));
 		bool known_coll(0);
 		static int last_cid(-1);
-		
-		if (!outside_scene && last_cid >= 0) {
-			assert(last_cid < (int)coll_objects.size());
-			known_coll = coll_objects[last_cid].line_intersect(p, lpos);
-		}
+		if (!outside_scene && last_cid >= 0) {known_coll = coll_objects.get_cobj(last_cid).line_intersect(p, lpos);}
+
 		if (outside_scene || (!known_coll && !check_coll_line(p, lpos, last_cid, -1, 1, 1))) { // not shadowed (slow, especially for lots of smoke near trees)
 			// Note: This can be moved into a shader, but the performance and quality improvement might not be significant
 			vector3d const dir((p - get_camera_pos()).get_norm());
@@ -1032,8 +1027,7 @@ void decal_obj::maybe_draw_blood_trail(line_tquad_draw_t &blood_tqd) const {
 	if (cid < 0)          return; // no cobj (can this happen?)
 	int const hashval(int(1000.0*pos.z));
 	if (hashval & 1)      return; // only half of them have blood
-	assert((unsigned)cid < coll_objects.size());
-	coll_obj const &cobj(coll_objects[cid]);
+	coll_obj const &cobj(coll_objects.get_cobj(cid));
 	if (cobj.type != COLL_CUBE) return; // only cubes for now
 	point const cur_pos(get_pos()), camera(get_camera_pos());
 	if (!cobj.cp.is_glass() && dot_product_ptv(orient, cur_pos, camera) > 0.0) return; // back face culling
@@ -1156,8 +1150,7 @@ void create_and_draw_cracks(quad_batch_draw &qbd) { // adds to beams
 		if (i->cid == last_cobj && skip_cobj)             continue;
 		point const pos(i->get_pos());
 		if (!dist_less_than(camera, pos, 2000*i->radius)) continue; // too far away
-		assert((unsigned)i->cid < coll_objects.size());
-		coll_obj const &cobj(coll_objects[i->cid]);
+		coll_obj const &cobj(coll_objects.get_cobj(i->cid));
 		skip_cobj = (cobj.status != COLL_STATIC || cobj.type != COLL_CUBE || !camera_pdu.cube_visible(cobj) || cobj.is_occluded_from_camera());
 		last_cobj = i->cid;
 		if (skip_cobj) continue;

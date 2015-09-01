@@ -26,8 +26,7 @@ bool bind_point_t::is_valid() { // used with placed dlights
 		if (!check_point_contained_tree(bind_pos, bind_cobj, 0)) {valid = 0; return 0;}
 		return 1;
 	}
-	assert((unsigned)bind_cobj < coll_objects.size());
-	coll_obj const &cobj(coll_objects[bind_cobj]);
+	coll_obj const &cobj(coll_objects.get_cobj(bind_cobj));
 	if (cobj.status != COLL_STATIC || !cobj.contains_point(bind_pos)) {valid = 0; return 0;} // check status and also containment, in case coll id was reused
 	return 1;
 }

@@ -207,8 +207,7 @@ colorRGBA get_landscape_color(int xpos, int ypos) {
 
 void get_object_color(int cindex, colorRGBA &color) {
 
-	assert(unsigned(cindex) < coll_objects.size());
-	coll_obj const &cobj(coll_objects[cindex]);
+	coll_obj const &cobj(coll_objects.get_cobj(cindex));
 	if (cobj.cp.coll_func == smiley_collision && has_invisibility(cobj.cp.cf_index)) return; // invisible simleys don't have a reflection
 	color = cobj.get_avg_color();
 }

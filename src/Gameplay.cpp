@@ -873,8 +873,7 @@ void gen_landmine_scorch(point const &pos) {
 	int cindex(-1);
 	
 	if (check_coll_line_exact(pos, (pos - vector3d(0.0, 0.0, 1.2*o_radius)), coll_pos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 0) && coll_norm == plus_z) { // no voxels
-		assert(cindex >= 0 && cindex < (int)coll_objects.size());
-		gen_explosion_decal(point(pos.x, pos.y, coll_objects[cindex].d[2][1]), o_radius, coll_norm, coll_objects[cindex], 2); // top of cube
+		gen_explosion_decal(point(pos.x, pos.y, coll_objects.get_cobj(cindex).d[2][1]), o_radius, coll_norm, coll_objects[cindex], 2); // top of cube
 	}
 }
 
@@ -1115,8 +1114,7 @@ bool check_explosion_damage(point const &p1, point const &p2, int cobj) {
 	int cindex;
 	if (line_intersect_mesh(p1, p2)) return 0;
 	if (!check_coll_line(p1, p2, cindex, cobj, 1, 0)) return 1;
-	assert((unsigned)cindex < coll_objects.size());
-	return (coll_objects[cindex].destroy >= SHATTERABLE); // blocked by a non destroyable static object
+	return (coll_objects.get_cobj(cindex).destroy >= SHATTERABLE); // blocked by a non destroyable static object
 }
 
 
@@ -1911,11 +1909,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	int const laser_m2(SELF_LASER_DAMAGE && is_laser && (wmode&1) && intensity < 1.0);
 	int const proj_type(is_laser ? BEAM : PROJECTILE);
 	range = get_projectile_range(pos, vcf, 0.01*radius, range, coll_pos, coll_norm, coll, cindex, shooter, !is_laser, ignore_cobj);
-	if (cindex >= 0) assert(unsigned(cindex) < coll_objects.size());
 	point p_int(pos), lsip(pos);
 
 	if (cindex >= 0) {
-		cobj_params const &cp(coll_objects[cindex].cp);
+		cobj_params const &cp(coll_objects.get_cobj(cindex).cp);
 		hardness = cp.elastic;
 
 		if (is_laser) {
@@ -2153,8 +2150,7 @@ float get_projectile_range(point const &pos, vector3d vcf, float dist, float ran
 	coll = 0;
 
 	if (check_coll_line_exact(pos1, pos2, coll_pos, coll_norm, cindex, splash_val, ignore_cobj)) {
-		assert(cindex >= 0 && (unsigned)cindex < coll_objects.size());
-		coll_obj &cobj(coll_objects[cindex]);
+		coll_obj &cobj(coll_objects.get_cobj(cindex));
 		if (cobj.cp.coll_func) {cobj.cp.coll_func(cobj.cp.cf_index, 0, zero_vector, pos, 0.0, PROJC);} // apply collision function
 		coll  = 1;
 		range = p2p_dist(coll_pos, pos);
@@ -2191,10 +2187,7 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 			}
 			if (CBLADE_EXT_PT*ff > (range - 0.8f*cradius)) {modify_grass_at(coll_pos, 0.75*cradius, 0, 0, 1);} // cut grass
 		}
-		if (cobj_coll) {
-			assert(unsigned(cindex) < coll_objects.size());
-			coll_objects[cindex].register_coll(TICKS_PER_SECOND/2, IMPACT);
-		}
+		if (cobj_coll) {coll_objects.get_cobj(cindex).register_coll(TICKS_PER_SECOND/2, IMPACT);}
 		sstate.dpos = max(0.0f, min(CBLADE_EXT_PT*ff, (range - 0.8f*cradius)));
 		pos += dir*sstate.dpos;
 	}

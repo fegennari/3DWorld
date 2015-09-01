@@ -156,8 +156,7 @@ public:
 			int const ndiv(fixed_ndiv ? fixed_ndiv : get_smap_ndiv(i->radius, smap_sz));
 
 			if (i->ctype != COLL_SPHERE) {
-				assert((unsigned)i->cid < coll_objects.size());
-				coll_objects[i->cid].get_shadow_triangle_verts(dverts, ndiv);
+				coll_objects.get_cobj(i->cid).get_shadow_triangle_verts(dverts, ndiv);
 			}
 			else {
 				shader_t::set_uniform_vector4d(shader_loc, vector4d(i->pos, i->radius));

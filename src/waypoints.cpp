@@ -200,8 +200,8 @@ class waypoint_builder {
 		unsigned const ix(add_new_waypoint(pos, coll_id, connect, connect, 0, 0));
 
 		if (coll_id >= 0) {
-			assert((unsigned)coll_id < coll_objects.size());
-			coll_obj &cobj(coll_objects[coll_id]);
+			coll_obj &cobj(coll_objects.get_cobj(coll_id));
+			
 			// must be the same or uninitialized - if a cobj has more than one waypoint then they should be sequential
 			if (cobj.waypt_id < 0 || cobj.waypt_id+1 == ix) {
 				cobj.waypt_id = ix; // the last waypoint for this cobj
@@ -437,11 +437,7 @@ public:
 			for (unsigned j = to_start; j < to_end; ++j) {
 				if (i == j || waypoints[j].disabled) continue;
 				point const end(waypoints[j].pos);
-
-				if (cindex >= 0) {
-					assert((unsigned)cindex < coll_objects.size());
-					if (coll_objects[cindex].line_intersect(start, end)) continue; // hit last cobj
-				}
+				if (cindex >= 0 && coll_objects.get_cobj(cindex).line_intersect(start, end)) continue; // hit last cobj
 				if (fast && !dist_less_than(start, end, fast_dmax)) continue; // too far away
 				if (check_coll_line(start, end, cindex, -1, 1, 0))  continue; // no line of sight
 				waypoints[i].visible_wpts.push_back(j);

@@ -484,8 +484,7 @@ void tree::bind_to_td(tree_data_t *td) {
 coll_obj &tree::get_leaf_cobj(unsigned i) const {
 
 	assert(i < leaf_cobjs.size());
-	assert(leaf_cobjs[i] < (int)coll_objects.size());
-	return coll_objects[leaf_cobjs[i]];
+	return coll_objects.get_cobj(leaf_cobjs[i]);
 }
 
 

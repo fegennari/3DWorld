@@ -745,8 +745,7 @@ void build_static_moving_cobj_tree() {
 	vector<unsigned> moving_cids(falling_cobjs);
 		
 	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end(); ++i) {
-		assert(*i < coll_objects.size());
-		if (coll_objects[*i].status == COLL_STATIC) {moving_cids.push_back(*i);}
+		if (coll_objects.get_cobj(*i).status == COLL_STATIC) {moving_cids.push_back(*i);}
 	}
 	for (platform_cont::const_iterator i = platforms.begin(); i != platforms.end(); ++i) {
 		copy(i->cobjs.begin(), i->cobjs.end(), back_inserter(moving_cids));

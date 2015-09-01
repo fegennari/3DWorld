@@ -238,6 +238,11 @@ public:
 	void sort_cobjs_for_rendering();
 	void set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams);
 	void remove_index_from_ids(int index);
+	
+	coll_obj &get_cobj(int index) {
+		assert(index >= 0 && index < (int)size());
+		return operator[](index);
+	}
 };
 
 
@@ -386,6 +391,11 @@ struct platform_cont : public deque<platform> {
 	void advance_timestep();
 	bool any_active() const;
 	bool any_moving_platforms_in_view(pos_dir_up const &pdu) const;
+	
+	platform &get_cobj_platform(coll_obj const &cobj) {
+		assert(cobj.platform_id >= 0 && cobj.platform_id < (int)size());
+		return operator[](cobj.platform_id);
+	}
 };
 
 

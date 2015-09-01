@@ -214,8 +214,7 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 	float step_thresh(0.001);
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-		assert(*i < coll_objects.size());
-		coll_obj const &c(coll_objects[*i]);
+		coll_obj const &c(coll_objects.get_cobj(*i));
 		if (c.cp.flags & COBJ_MOVEABLE) {} // FIXME: allow moveable cobjs to stack?
 		if (cobj.intersects_cobj(c, tolerance)) {return 0;} // intersects at the starting location, don't allow it to move (stuck)
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));
@@ -230,8 +229,7 @@ void try_drop_moveable_cobj(unsigned index) {
 
 	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
 	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
-	assert(index < coll_objects.size());
-	coll_obj &cobj(coll_objects[index]);
+	coll_obj &cobj(coll_objects.get_cobj(index));
 	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]);
 	float const cur_v_fall(cobj.v_fall + accel);
 	cobj.v_fall = 0.0; // assume the cobj stops falling; compute the correct v_fall if we reach the end without returning
@@ -247,16 +245,14 @@ void try_drop_moveable_cobj(unsigned index) {
 	// see if this cobj's bottom edge is colliding with a platform that's moving up (elevator)
 	// also, if the cobj is currently intersecting another moveable cobj, try to resolve the intersection so that stacking works by moving the cobj up
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-		assert(*i < coll_objects.size());
-		coll_obj const &c(coll_objects[*i]);
+		coll_obj const &c(coll_objects.get_cobj(*i));
 
 		if (c.cp.flags & COBJ_MOVEABLE) { // both cobjs are moveable - is this a stack?
 			// assume it's a stack and treat it like a moving platform
 		}
 		else {
 			if (c.platform_id < 0) continue; // not a platform
-			assert(c.platform_id < (int)platforms.size());
-			if (!platforms[c.platform_id].is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
+			if (!platforms.get_cobj_platform(c).is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
 		}
 		if (c.d[2][1] < cobj.d[2][0] || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
@@ -302,8 +298,7 @@ void try_drop_moveable_cobj(unsigned index) {
 bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
 
 	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
-	assert(index < coll_objects.size());
-	coll_obj &cobj(coll_objects[index]);
+	coll_obj &cobj(coll_objects.get_cobj(index));
 	if (!(cobj.cp.flags & COBJ_MOVEABLE)) return 0; // not moveable
 	vector3d delta(orig_pos - player_pos);
 	delta.z = 0.0; // for now, objects can only be pushed in xy
@@ -334,8 +329,7 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 		bool has_ledge(0), has_ramp(0), success(0);
 		
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-			assert(*i < coll_objects.size());
-			coll_obj const &c(coll_objects[*i]);
+			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (c.type == COLL_POLYGON) {has_ramp = 1;} // Note: can only push cobjs up polygon ramps, not cylinders
 			else if (c.d[2][1] - cobj.d[2][0] < step_height) {has_ledge = 1; break;} // c_top - cobj_bot < step_height
 		}
@@ -365,9 +359,8 @@ void proc_moving_cobjs() {
 	vector<pair<float, unsigned>> by_z1;
 
 	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end();) {
-		assert(*i < coll_objects.size());
-		if (coll_objects[*i].status != COLL_STATIC) {moving_cobjs.erase(i++);} // remove if destroyed
-		else {by_z1.push_back(make_pair(coll_objects[*i].d[2][0], *i)); ++i;} // otherwise try to drop it
+		if (coll_objects.get_cobj(*i).status != COLL_STATIC) {moving_cobjs.erase(i++);} // remove if destroyed
+		else {by_z1.push_back(make_pair(coll_objects.get_cobj(*i).d[2][0], *i)); ++i;} // otherwise try to drop it
 	}
 	sort(by_z1.begin(), by_z1.end()); // sort by z1 so that stacked cobjs work correctly (processed bottom to top)
 	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {try_drop_moveable_cobj(i->second);}

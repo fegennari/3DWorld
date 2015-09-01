@@ -173,8 +173,7 @@ void platform::advance_timestep() {
 		delta = (pos - last_pos); // can accumulate error, fix?
 
 		for (vector<unsigned>::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-			assert(*i < coll_objects.size());
-			coll_obj &cobj(coll_objects[*i]);
+			coll_obj &cobj(coll_objects.get_cobj(*i));
 			// need to update collision structure when there is an x/y delta by removing/adding to coll_cells (except for cubes)
 			bool const update_colls(cobj.type != COLL_CUBE && (delta.x != 0.0 || delta.y != 0.0));
 			cobj.move_cobj(delta, update_colls); // move object
@@ -253,10 +252,7 @@ void platform_cont::advance_timestep() {
 	for (auto i = begin(); i != end(); ++i) {i->next_frame();} // cache this?
 
 	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
-		assert(*i < coll_objects.size());
-		int const pid(coll_objects[*i].platform_id);
-		assert(pid >= 0 && pid < (int)size());
-		operator[](pid).add_cobj(*i);
+		get_cobj_platform(coll_objects.get_cobj(*i)).add_cobj(*i);
 	}
 	for (auto i = begin(); i != end(); ++i) {i->advance_timestep();}
 }
@@ -282,10 +278,6 @@ bool platform_cont::any_moving_platforms_in_view(pos_dir_up const &pdu) const { 
 
 
 void coll_obj::add_to_platform() const {
-
-	if (platform_id < 0) return; // no platform
-	assert(size_t(platform_id) < platforms.size());
-	platforms[platform_id].add_cobj(id);
+	if (platform_id >= 0) {platforms.get_cobj_platform(*this).add_cobj(id);}
 }
-
 
