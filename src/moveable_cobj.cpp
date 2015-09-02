@@ -113,9 +113,15 @@ int poly_poly_int_test(coll_obj const &p1, coll_obj const &p2) {
 	return 0;
 }
 
+bool coll_sphere_cylin_int(point const &sc, float sr, coll_obj const &c) {
+
+	if (!sphere_cube_intersect(sc, sr, c)) return 0; // test bcube
+	return sphere_intersect_cylinder(sc, sr, c.points[0], c.points[1], c.radius, c.radius2);
+}
+
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
-// 20 total: 15 complete, 5 partial (all cylinder cases)
+// 21 total: 15 complete, 5 partial (all cylinder cases), 1 incomplete (capsule-capsule)
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	if (c.type < type) {return c.intersects_cobj(*this, toler);} // swap arguments
@@ -147,13 +153,12 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius));
 		case COLL_SPHERE:
 			if (type == COLL_CYLINDER && dist_xy_less_than(points[0], c.points[0], (c.radius+radius))) return 1;
-			if (!sphere_cube_intersect(c.points[0], c.radius, *this)) return 0; // test bcube
-			return sphere_intersect_cylinder(c.points[0], c.radius, points[0], points[1], radius, radius2);
+			return coll_sphere_cylin_int(c.points[0], c.radius, *this);
 		case COLL_CAPSULE:
 			if (type == COLL_CYLINDER && (dist_xy_less_than(points[0], c.points[0], (c.radius+radius)) ||
 				                          dist_xy_less_than(points[0], c.points[1], (c.radius2+radius)))) return 1;
-			if (sphere_intersect_cylinder(c.points[0], c.radius,  points[0], points[1], radius, radius2)) return 1;
-			if (sphere_intersect_cylinder(c.points[1], c.radius2, points[0], points[1], radius, radius2)) return 1;
+			if (coll_sphere_cylin_int(c.points[0], c.radius , *this)) return 1;
+			if (coll_sphere_cylin_int(c.points[1], c.radius2, *this)) return 1;
 			// fallthrough
 		case COLL_CYLINDER_ROT: return cylin_cylin_int(c, *this);
 		case COLL_POLYGON:      return poly_cylin_int (c, *this);
@@ -200,6 +205,21 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			return (poly_poly_int_test(c, *this) || poly_poly_int_test(*this, c));
 		}
 		default: assert(0);
+		}
+
+	case COLL_CAPSULE: {
+			assert(c.type == COLL_CAPSULE);
+			sphere_t const sa[2] = {sphere_t(  points[0],   radius), sphere_t(  points[1],   radius2)};
+			sphere_t const sb[2] = {sphere_t(c.points[0], c.radius), sphere_t(c.points[1], c.radius2)};
+
+			for (unsigned i = 0; i < 4; ++i) { // 4 sphere-sphere intersections
+				if (dist_less_than(sa[i&1].pos, sb[i>>1].pos, (sa[i&1].radius + sb[i>>1].radius))) return 1;
+			}
+			for (unsigned i = 0; i < 2; ++i) { // 4 sphere-cylinder intersections
+				if (coll_sphere_cylin_int(sa[i].pos, sa[i].radius, c    )) return 1;
+				if (coll_sphere_cylin_int(sb[i].pos, sb[i].radius, *this)) return 1;
+			}
+			return cylin_cylin_int(c, *this); // cylinder-cylinder intersection
 		}
 	}
 	default: assert(0);
