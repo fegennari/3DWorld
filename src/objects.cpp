@@ -603,6 +603,7 @@ coll_obj test_cobj; // reused to aviod slow constructor calls
 // Note: these two intersection functions are inexact: they return 0 for no intersection, 1 for intersection, and 2 for maybe intersection
 int coll_obj::cube_intersects(cube_t const &cube) const { // Note: unused
 
+	if (!cube.intersects(*this, 0.0)) return 0; // optimization
 	test_cobj.type = COLL_CUBE;
 	test_cobj.copy_from(cube);
 	return intersects_cobj(test_cobj); // Note: no toler
@@ -610,6 +611,7 @@ int coll_obj::cube_intersects(cube_t const &cube) const { // Note: unused
 
 int coll_obj::sphere_intersects(point const &pos, float radius) const {
 
+	if (!sphere_cube_intersect(pos, radius, *this)) return 0; // optimization
 	test_cobj.type      = COLL_SPHERE;
 	test_cobj.radius    = radius;
 	test_cobj.points[0] = pos;

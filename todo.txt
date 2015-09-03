@@ -16,5 +16,5 @@ Light probes - render from points in the scene and store in cube maps blurred
 Box physics
 
 Moveable cobjs:
+- Round cobjs roll over ledges
 - Rotations/torque
-- Handle pushing into dynamic cobjs

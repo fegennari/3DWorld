@@ -11,10 +11,13 @@
 set<unsigned> moving_cobjs;
 
 extern bool scene_smap_vbo_invalid;
+extern int num_groups;
 extern float base_gravity, tstep;
 extern coll_obj_group coll_objects;
 extern player_state *sstates;
 extern platform_cont platforms;
+extern obj_type object_types[NUM_TOT_OBJS];
+extern obj_group obj_groups[NUM_TOT_OBJS];
 
 
 int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
@@ -257,6 +260,30 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 	return 1;
 }
 
+void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
+
+	coll_obj &cobj(coll_objects.get_cobj(index));
+	vector<unsigned> cobjs;
+	get_intersecting_cobjs_tree(cobj, cobjs, -1, 0.0, 1, 0, -1); // duplicates are okay
+	if (cobjs.empty()) return;
+
+	// some dynamic object collided, but we can't tell which one, so iterate over the groups and test them all
+	for (int g = 0; g < num_groups; ++g) {
+		obj_group &objg(obj_groups[g]);
+		if (!objg.enabled || !objg.large_radius()) continue;
+		float const robj(object_types[objg.type].radius);
+		
+		for (unsigned i = 0; i < objg.end_id; ++i) {
+			dwobject &obj(objg.get_obj(i));
+			if (obj.status != 4) continue; // not stopped
+			if (!cobj.sphere_intersects(obj.pos, robj)) continue;
+			obj.flags |= WAS_PUSHED;
+			obj.flags &= ~ALL_COLL_STOPPED;
+			obj.status = 1;
+		}
+	} // for g
+}
+
 void try_drop_moveable_cobj(unsigned index) {
 
 	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
@@ -328,6 +355,7 @@ void try_drop_moveable_cobj(unsigned index) {
 	}
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
+	check_moving_cobj_int_with_dynamic_objs(index);
 }
 
 bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
@@ -386,6 +414,7 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 	cobj.move_cobj(delta, 1); // move the cobj instead of the player and re-add to coll structure
 	moving_cobjs.insert(index); // may already be there
 	scene_smap_vbo_invalid = 1;
+	check_moving_cobj_int_with_dynamic_objs(index);
 	return 1; // moved
 }
 
