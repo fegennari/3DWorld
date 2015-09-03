@@ -280,16 +280,19 @@ void try_drop_moveable_cobj(unsigned index) {
 		coll_obj const &c(coll_objects.get_cobj(*i));
 
 		if (c.cp.flags & COBJ_MOVEABLE) { // both cobjs are moveable - is this a stack?
-			// assume it's a stack and treat it like a moving platform
+			if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
+			// else assume it's a stack and treat it like a moving platform
 		}
 		else {
 			if (c.platform_id < 0) continue; // not a platform
 			if (!platforms.get_cobj_platform(c).is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
 		}
-		if (c.d[2][1] < cobj.d[2][0] || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
+		float const dz(c.d[2][1] - cobj.d[2][0]);
+		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
-		cobj.shift_by(vector3d(0.0, 0.0, c.d[2][1]-cobj.d[2][0])); // move cobj up
+		cobj.shift_by(vector3d(0.0, 0.0, dz)); // move cobj up
 		scene_smap_vbo_invalid = 1;
+		cobj.v_fall = 0.01*dz/tstep; // rising velocity (positive) - but use a tiny velocity to prevent instability (just flag as positive so that above check works for child cobj)
 		return; // or test other cobjs?
 	} // for i
 	vector3d delta(0.0, 0.0, -test_dz);
