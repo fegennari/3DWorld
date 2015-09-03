@@ -488,7 +488,7 @@ float get_cylinder_params(point const &cp1, point const &cp2, point const &pos, 
 	v2 = cp1 - pos; // cylinder->object vector
 	float const c_len(v1.mag_sq());
 	assert(c_len > 0.0/*TOLERANCE*/);
-	return dot_product(v1, v2)/c_len;
+	return dot_product(v1, v2)/c_len; // position of pos along cylinder center line often in [0,1]
 }
 
 
@@ -669,9 +669,17 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2,
 								 bool check_ends, vector3d &v1, vector3d &v2, float &t, float &rad)
 {
-	t   = get_cylinder_params(cp1, cp2, sc, v1, v2);
-	rad = (r1 - t*(r1 - r2)) + sr;
-	
+	t   = get_cylinder_params(cp1, cp2, sc, v1, v2); // v1 = cylinder vector, v2 = cylinder_p1-sphere vector
+	float const t_clipped(CLIP_TO_01(t));
+	rad = (r1 + t_clipped*(r2 - r1)); // radius of cylinder at closest point to sphere
+
+	if (cp1.z == cp2.z) {
+		float const closest_z(cp1.z + t_clipped*(cp2.z - cp1.z)), sphere_dist(fabs(closest_z - sc.z));
+		if (sphere_dist < sr) {rad += sqrt(sr*sr - sphere_dist*sphere_dist);}
+	}
+	else {
+		rad += sr; // add sphere radius (FIXME: inaccurate)
+	}
 	if (check_ends || (t >= 0.0 && t <= 1.0)) {
 		v2 -= v1*t; // vector from point to collision point along cylinder axis
 		if (v2.mag_sq() <= rad*rad) return 1;
@@ -683,8 +691,8 @@ bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, po
 	float const mag(cpb.mag());
 	
 	if (mag > TOLERANCE) {
-		if (r1 != 0.0) l1 -= cpb*(r1/mag);
-		if (r2 != 0.0) l2 -= cpb*(r2/mag);
+		if (r1 != 0.0) {l1 -= cpb*(r1/mag);}
+		if (r2 != 0.0) {l2 -= cpb*(r2/mag);}
 	}
 	return line_sphere_intersect(l1, l2, sc, sr); // r1 != r2 - do a line/sphere intersection
 }

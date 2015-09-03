@@ -114,9 +114,12 @@ int poly_poly_int_test(coll_obj const &p1, coll_obj const &p2) {
 }
 
 bool coll_sphere_cylin_int(point const &sc, float sr, coll_obj const &c) {
-
 	if (!sphere_cube_intersect(sc, sr, c)) return 0; // test bcube
 	return sphere_intersect_cylinder(sc, sr, c.points[0], c.points[1], c.radius, c.radius2);
+}
+
+bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, point const &cp2, float cr) {
+	return (sc.z >= min(cp1.z, cp2.z) && sc.z <= max(cp1.z, cp2.z) && dist_xy_less_than(sc, cp1, (sr + cr)));
 }
 
 
@@ -150,13 +153,13 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		switch (c.type) {
 		case COLL_CYLINDER:
 			assert(type == COLL_CYLINDER);
-			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius));
+			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius)); // bcube test guarantees overlap in z
 		case COLL_SPHERE:
-			if (type == COLL_CYLINDER && dist_xy_less_than(points[0], c.points[0], (c.radius+radius))) return 1;
+			if (type == COLL_CYLINDER && sphere_def_coll_vert_cylin(c.points[0], c.radius, points[0], points[1], radius)) return 1;
 			return coll_sphere_cylin_int(c.points[0], c.radius, *this);
 		case COLL_CAPSULE:
-			if (type == COLL_CYLINDER && (dist_xy_less_than(points[0], c.points[0], (c.radius+radius)) ||
-				                          dist_xy_less_than(points[0], c.points[1], (c.radius2+radius)))) return 1;
+			if (type == COLL_CYLINDER && (sphere_def_coll_vert_cylin(c.points[0], c.radius,  points[0], points[1], radius) ||
+				                          sphere_def_coll_vert_cylin(c.points[1], c.radius2, points[0], points[1], radius))) return 1;
 			if (coll_sphere_cylin_int(c.points[0], c.radius , *this)) return 1;
 			if (coll_sphere_cylin_int(c.points[1], c.radius2, *this)) return 1;
 			// fallthrough
@@ -168,12 +171,9 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 	case COLL_SPHERE:
 		switch (c.type) {
 		case COLL_SPHERE: return dist_less_than(points[0], c.points[0], (c.radius+radius));
-		case COLL_CAPSULE:
-			if (dist_less_than(points[0], c.points[0], (c.radius+radius)) || dist_less_than(points[0], c.points[1], (c.radius2+radius))) return 1;
+		case COLL_CAPSULE: if (dist_less_than(points[0], c.points[0], (c.radius+radius)) || dist_less_than(points[0], c.points[1], (c.radius2+radius))) return 1;
 			// fallthrough
-		case COLL_CYLINDER_ROT:
-			if (!sphere_cube_intersect(points[0], radius, c)) return 0; // test bcube
-			return sphere_intersect_cylinder(points[0], radius, c.points[0], c.points[1], c.radius, c.radius2);
+		case COLL_CYLINDER_ROT: return coll_sphere_cylin_int(points[0], radius, c);
 		case COLL_POLYGON: return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK);
 		default: assert(0);
 		}
