@@ -670,11 +670,11 @@ bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, po
 								 bool check_ends, vector3d &v1, vector3d &v2, float &t, float &rad)
 {
 	t   = get_cylinder_params(cp1, cp2, sc, v1, v2); // v1 = cylinder vector, v2 = cylinder_p1-sphere vector
-	float const t_clipped(CLIP_TO_01(t));
-	rad = (r1 + t_clipped*(r2 - r1)); // radius of cylinder at closest point to sphere
+	float const t_clamped(CLIP_TO_01(t));
+	rad = (r1 + t_clamped*(r2 - r1)); // radius of cylinder at closest point to sphere
 
 	if (cp1.z == cp2.z) {
-		float const closest_z(cp1.z + t_clipped*(cp2.z - cp1.z)), sphere_dist(fabs(closest_z - sc.z));
+		float const closest_z(cp1.z + t_clamped*(cp2.z - cp1.z)), sphere_dist(fabs(closest_z - sc.z));
 		if (sphere_dist < sr) {rad += sqrt(sr*sr - sphere_dist*sphere_dist);}
 	}
 	else {
@@ -732,14 +732,14 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 	}
 	if (check_ends) {
 		for (unsigned d = 0; d < 2; ++d) {
-			float const tv(d ? (1.0 - t) : t);
+			float const t_clamped(CLIP_TO_01(t)), tv(d ? (1.0f - t) : t), tv_clamped(d ? (1.0f - t_clamped) : t_clamped);
 
-			if (((d ? r2 : r1) > 0.0) && (fabs(tv)*len < min(sr, rdist))) { // collision with p1/p2
+			if (((d ? r2 : r1) > 0.0) && (fabs(tv_clamped)*len < min(sr, rdist))) { // collision with p1/p2
 				if (!calc_int) return 1;
 				cpos[npos]  = sc;
 				norms[npos] = v1; // might be negative v1?
-				if (d) norms[npos].negate();
-				if (len > TOLERANCE) cpos[npos] += v1*((d ? -1.0 : 1.0)*(tv + (sr + toler)/len));
+				if (d) {norms[npos].negate();}
+				if (len > TOLERANCE) {cpos[npos] += v1*((d ? -1.0 : 1.0)*(tv + (sr + toler)/len));}
 				++npos;
 			}
 		}
