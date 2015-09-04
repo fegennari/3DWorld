@@ -284,6 +284,8 @@ void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
 	} // for g
 }
 
+float get_cobj_step_height() {return 0.4*C_STEP_HEIGHT*CAMERA_RADIUS;} // cobj can be lifted by 40% of the player step height
+
 void try_drop_moveable_cobj(unsigned index) {
 
 	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
@@ -305,23 +307,27 @@ void try_drop_moveable_cobj(unsigned index) {
 	// also, if the cobj is currently intersecting another moveable cobj, try to resolve the intersection so that stacking works by moving the cobj up
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		coll_obj const &c(coll_objects.get_cobj(*i));
+		float const dz(c.d[2][1] - cobj.d[2][0]);
+		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 
 		if (c.cp.flags & COBJ_MOVEABLE) { // both cobjs are moveable - is this a stack?
-			if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
-			// else assume it's a stack and treat it like a moving platform
+			if (c.type == COLL_CUBE || c.type == COLL_CYLINDER || (c.type == COLL_POLYGON && c.norm.x == 0.0 && c.norm.y == 0.0)) {} // flat cobjs can always be stacked
+			else if (dz < get_cobj_step_height()) {} // c_top - cobj_bot < step_height
+			else if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
+			// assume it's a stack and treat it like a moving platform
 		}
 		else {
 			if (c.platform_id < 0) continue; // not a platform
 			if (!platforms.get_cobj_platform(c).is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
 		}
-		float const dz(c.d[2][1] - cobj.d[2][0]);
-		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
 		cobj.shift_by(vector3d(0.0, 0.0, dz)); // move cobj up
 		scene_smap_vbo_invalid = 1;
-		cobj.v_fall = 0.01*dz/tstep; // rising velocity (positive) - but use a tiny velocity to prevent instability (just flag as positive so that above check works for child cobj)
+		//cobj.v_fall = 0.01*dz/tstep; // rising velocity (positive) - but use a tiny velocity to prevent instability
 		return; // or test other cobjs?
 	} // for i
+	
+	// check other cobjs and the mesh to see if this cobj can be dropped
 	vector3d delta(0.0, 0.0, -test_dz);
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return; // stuck
 	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj
@@ -388,7 +394,7 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // failed to move
 		// if there is a ledge (cobj z top) slightly above the bottom of the cobj, maybe we can lift it up;
 		// meant to work with ramps and small steps, but not stairs or tree trunks (obviously)
-		float step_height(0.4*C_STEP_HEIGHT*CAMERA_RADIUS); // cobj can be lifted by 40% of the player step height
+		float step_height(get_cobj_step_height());
 		bool has_ledge(0), has_ramp(0), success(0);
 		
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
