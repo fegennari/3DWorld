@@ -390,7 +390,7 @@ float get_coll_energy(vector3d const &v1, vector3d const &v2, float mass);
 float triangle_area(point const *const points);
 float polygon_area(point const *const points, unsigned npoints);
 bool planar_contour_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm);
-bool point_in_polygon_2d(float xval, float yval, const point *points, int npts, int dx, int dy);
+bool point_in_polygon_2d(float xval, float yval, const point *points, int npts, int dx=0, int dy=1);
 bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &norm, float dval,
 					  cube_t const &cube, float &z1, float &z2);
 bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, float &z2);

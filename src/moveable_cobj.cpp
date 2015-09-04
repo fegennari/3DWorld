@@ -20,6 +20,9 @@ extern obj_type object_types[NUM_TOT_OBJS];
 extern obj_group obj_groups[NUM_TOT_OBJS];
 
 
+bool push_cobj(unsigned index, vector3d &delta);
+
+
 int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
 
 	for (int i = 0; i < p.npoints; ++i) { // check points (fast)
@@ -249,11 +252,12 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 	float step_thresh(0.001);
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+		if (*i < 0) continue; // cobj marked as remove, skip
 		coll_obj const &c(coll_objects.get_cobj(*i));
 		if (c.cp.flags & COBJ_MOVEABLE) {} // FIXME: allow moveable cobjs to stack?
-		if (cobj.intersects_cobj(c, tolerance)) {return 0;} // intersects at the starting location, don't allow it to move (stuck)
+		if (cobj.intersects_cobj(c, tolerance)) return 0; // intersects at the starting location, don't allow it to move (stuck)
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));
-		if (valid_t == 0.0) {return 0;} // can't move
+		if (valid_t == 0.0) return 0; // can't move
 		step_thresh /= valid_t; // adjust thresh to avoid tiny steps for large number of cobjs
 		delta       *= valid_t;
 	} // for i
@@ -282,6 +286,45 @@ void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
 			obj.status = 1;
 		}
 	} // for g
+}
+
+bool is_point_supported(coll_obj const &cobj, point const &pos) {
+
+	switch (cobj.type) {
+	case COLL_CUBE:     return cobj.contains_pt_xy(pos);
+	case COLL_CYLINDER: return dist_xy_less_than(pos, cobj.points[0], cobj.radius);
+	case COLL_SPHERE:   return 0; // not flat
+	case COLL_CYLINDER_ROT:
+		if (cobj.points[0].x != cobj.points[1].x || cobj.points[0].y != cobj.points[1].y) return 0; // non-vertical/not flat
+		return dist_xy_less_than(pos, cobj.points[0], ((cobj.points[0].z < cobj.points[1].z) ? cobj.radius2 : cobj.radius)); // use radius at the top
+	case COLL_CAPSULE:  return 0; // not flat
+	case COLL_POLYGON:
+		if (fabs(cobj.norm.z) < 0.9) {return point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints);}
+		
+		if (cobj.thickness > MIN_POLY_THICK) { // non-vertical thick polygon
+			vector<tquad_t> pts;
+			thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
+			
+			for (auto i = pts.begin(); i != pts.end(); ++i) {
+				if (fabs(i->get_norm().z) < 0.9) {return point_in_polygon_2d(pos.x, pos.y, i->pts, i->npts);}
+			}
+		}
+		return 0; // not flat
+	default: assert(0);
+	} // end switch
+	return 0; // never gets here
+}
+
+bool is_rolling_cobj(coll_obj const &cobj) {
+
+	if (cobj.type == COLL_SPHERE) return 1;
+#if 0 // the other cases don't work
+	if ((cobj.type == COLL_CYLINDER || cobj.type == COLL_CAPSULE) && cobj.radius == cobj.radius2) { // cylinder/capsule with uniform radius
+		vector3d const dir(cobj.points[1] - cobj.points[0]);
+		return (dir.z == 0.0 && (dir.x == 0.0 || dir.y == 0.0)); // oriented in either X or Y
+	}
+#endif
+	return 0;
 }
 
 float get_cobj_step_height() {return 0.4*C_STEP_HEIGHT*CAMERA_RADIUS;} // cobj can be lifted by 40% of the player step height
@@ -329,9 +372,20 @@ void try_drop_moveable_cobj(unsigned index) {
 	
 	// check other cobjs and the mesh to see if this cobj can be dropped
 	vector3d delta(0.0, 0.0, -test_dz);
-	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) return; // stuck
-	point const center(cobj.get_center_pt()); // Note: uses center point, not max mesh height under the cobj
-	float mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 1, 1)); // clamped xy
+	point const center(cobj.get_center_pt()); // Note: not an accurate center of mass for polygons and truncated cones
+	
+	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // stuck
+		// check for rolling cobjs that can roll downhill
+		if (cobjs.size() != 1) return; // can only handle a single supporting cobj
+		if (!is_rolling_cobj(cobj)) return; // not rolling
+		coll_obj const &c(coll_objects.get_cobj(cobjs.front()));
+		if (is_point_supported(c, center)) return; // center of gravity is resting stably, it's stuck
+		vector3d const move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for cube/polygon
+		delta = 0.05*cobj_height*move_dir; // move 5% of cobj height
+		push_cobj(index, delta); // return value is ignored
+		return; // done
+	}
+	float mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 1, 1)); // Note: uses center point, not max mesh height under the cobj; clamped xy
 
 	// check for ice
 	int xpos(get_xpos(center.x)), ypos(get_ypos(center.y));
@@ -364,12 +418,10 @@ void try_drop_moveable_cobj(unsigned index) {
 	check_moving_cobj_int_with_dynamic_objs(index);
 }
 
-bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
+bool push_cobj(unsigned index, vector3d &delta) {
 
-	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	if (!(cobj.cp.flags & COBJ_MOVEABLE)) return 0; // not moveable
-	vector3d delta(orig_pos - player_pos);
 	delta.z = 0.0; // for now, objects can only be pushed in xy
 	float const tolerance(1.0E-6), toler_sq(tolerance*tolerance);
 	if (delta.mag_sq() < toler_sq) return 0;
@@ -416,11 +468,19 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 			return 0; // can't move
 		}
 	}
-	player_pos += delta; // restore player pos, at least partially
 	cobj.move_cobj(delta, 1); // move the cobj instead of the player and re-add to coll structure
 	moving_cobjs.insert(index); // may already be there
 	scene_smap_vbo_invalid = 1;
 	check_moving_cobj_int_with_dynamic_objs(index);
+	return 1; // moved
+}
+
+bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
+
+	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
+	vector3d delta(orig_pos - player_pos);
+	if (!push_cobj(index, delta)) return 0;
+	player_pos += delta; // restore player pos, at least partially
 	return 1; // moved
 }
 
