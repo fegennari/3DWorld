@@ -468,7 +468,17 @@ bool push_cobj(unsigned index, vector3d &delta) {
 			return 0; // can't move
 		}
 	}
-	cobj.move_cobj(delta, 1); // move the cobj instead of the player and re-add to coll structure
+	// cobj moved, see if it gets teleported
+	vector3d cobj_delta(delta);
+	float const radius(cobj.get_bsphere_radius());
+	point const center(cobj.get_center_pt());
+	point cobj_pos(center + cobj_delta); // post-move pos
+	
+	if (maybe_teleport_object(cobj_pos, 0.5*radius, NO_SOURCE)) { // was teleported
+		cobj_delta = cobj_pos - center + delta.get_norm()*radius; // move radius past the teleport end position so that the player doesn't get stuck on the cobj when going through
+	}
+	// move the cobj and update various state
+	cobj.move_cobj(cobj_delta, 1); // move the cobj instead of the player and re-add to coll structure
 	moving_cobjs.insert(index); // may already be there
 	scene_smap_vbo_invalid = 1;
 	check_moving_cobj_int_with_dynamic_objs(index);
