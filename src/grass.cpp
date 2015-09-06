@@ -451,9 +451,9 @@ public:
 			float const height(pos.z - (mh + grass_length));
 			if (height > 0.0) {radius = sqrt(max(1.0E-6f, (radius*radius - height*height)));}
 		}
-		x1 = get_xpos(pos.x - radius);
+		x1 = get_xpos(pos.x - radius) - 1;
 		x2 = get_xpos(pos.x + radius);
-		y1 = get_ypos(pos.y - radius);
+		y1 = get_ypos(pos.y - radius) - 1;
 		y2 = get_ypos(pos.y + radius);
 		return radius;
 	}
