@@ -674,7 +674,7 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	}
 	else { // choose health/attack based on distance
 		// want to get powerup badly if you don't have one
-		float const pu_wt((powerup == 0) ? 1.5 : (1.0 - float(powerup_time)/POWERUP_TIME));
+		float const pu_wt((powerup == PU_NONE) ? 1.5 : (1.0 - float(powerup_time)/POWERUP_TIME));
 		types.push_back(type_wt_t(POWERUP, pu_wt));
 		types.push_back(type_wt_t(WEAPON,  0.8));
 		types.push_back(type_wt_t(AMMO,    0.7));
@@ -1277,7 +1277,7 @@ void player_state::smiley_action(int smiley_id) {
 	dwobject &smiley(obj_groups[coll_id[SMILEY]].get_obj(smiley_id));
 	int const in_range(target_in_range(smiley.pos));
 	if (in_range == 1) smiley_fire_weapon(smiley_id);
-	if (powerup == PU_REGEN) smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);
+	if (powerup == PU_REGEN) {smiley.health = min(MAX_REGEN_HEALTH, smiley.health + 0.1f*fticks);}
 	if ((rand()%((in_range == 0) ? 50 : 500)) == 0) check_switch_weapon(smiley_id); // change weapons
 	if (was_hit > 0) --was_hit;
 	kill_time += max(1, iticks);
@@ -1464,12 +1464,12 @@ void player_state::init(bool w_start) {
 
 	if (game_mode == 1) {
 		shields       = INIT_SHIELDS;
-		powerup       = ((INIT_PU_SH_TIME > 0) ? PU_SHIELD : -1);
+		powerup       = ((INIT_PU_SH_TIME > 0) ? PU_SHIELD : PU_NONE);
 		powerup_time  = INIT_PU_SH_TIME;
 	}
 	else {
 		shields       = 0.0;
-		powerup       = -1;
+		powerup       = PU_NONE;
 		powerup_time  = 0;
 	}
 	//powerup = PU_FLIGHT; powerup_time = 1000000; // testing

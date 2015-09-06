@@ -867,6 +867,7 @@ void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, 
 colorRGBA get_powerup_color(int powerup) {
 
 	switch (powerup) {
+	case PU_NONE:         return BLACK;
 	case PU_DAMAGE:       return CYAN;
 	case PU_REGEN:        return BLUE;
 	case PU_SHIELD:       return GREEN;

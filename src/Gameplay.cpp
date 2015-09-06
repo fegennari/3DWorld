@@ -528,7 +528,7 @@ bool camera_collision(int index, int obj_index, vector3d const &velocity, point 
 	else { // dead
 		camera_mode = !camera_mode;
 		reset_camera_pos();
-		sstate.powerup         = -1;
+		sstate.powerup         = PU_NONE;
 		sstate.powerup_time    = 0;
 		camera_health          = 100.0;
 		cam_filter_color.alpha = 1.0;
@@ -717,7 +717,7 @@ bool smiley_collision(int index, int obj_index, vector3d const &velocity, point 
 	if (alive) return 1;
 
 	// dead
-	sstate.powerup      = -1;
+	sstate.powerup      = PU_NONE;
 	sstate.powerup_time = 0;
 	gen_dead_smiley(source, index, energy, obj_pos, velocity, coll_dir, damage_type, obji.health, radius, blood_v, burned, type);
 	player_state &ssource(sstates[source]);
@@ -2029,8 +2029,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				no_spark = 1;
 			}
 		}
-		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((is_glass && cobj.type != COLL_CUBE) || (rand()%50) == 0)) || // shattered
-			(cobj.destroy >= EXPLODEABLE && (rand()%10) == 0)) // exploded
+		unsigned const shatter_prob((sstate.powerup == PU_DAMAGE) ? 2 : 10);
+
+		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((is_glass && cobj.type != COLL_CUBE) || (rand()%(5*shatter_prob)) == 0)) || // shattered
+			(cobj.destroy >= EXPLODEABLE && (rand()%shatter_prob) == 0)) // exploded
 		{
 			if (is_glass && cobj.type == COLL_CUBE && !cobj.maybe_is_moving() && (rand()&15) != 0) {gen_glass_shard_from_cube_window(cobj, cobj.cp, coll_pos);}
 			destroy_coll_objs(coll_pos, 500.0, shooter, PROJECTILE, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
@@ -2241,7 +2243,7 @@ void show_user_stats() {
 			sstate.kills, max(sstate.max_kills, -sstate.deaths), sstate.tot_kills, sstate.deaths);
 		draw_text(RED, -0.014, -0.012, -0.022, text);
 
-		if (sstate.powerup_time > 0 && sstate.powerup >= 0) {
+		if (sstate.powerup_time > 0 && sstate.powerup != PU_NONE) {
 			sprintf(text, "%is %s", int(sstate.powerup_time/TICKS_PER_SECOND + 0.5), powerup_names[sstate.powerup].c_str());
 			draw_text(get_powerup_color(sstate.powerup), -0.015, -0.012, -0.025, text);
 		}
@@ -2452,7 +2454,7 @@ void player_state::update_camera_frame() {
 void player_state::update_sstate_game_frame(int i) {
 
 	if (powerup_time == 0) {
-		powerup = -1;
+		powerup = PU_NONE;
 	}
 	else if (animate2) {
 		powerup_time -= iticks;
@@ -2487,9 +2489,8 @@ void player_state::update_sstate_game_frame(int i) {
 		float const damage(1.0*fticks/max(atmosphere, 0.01f));
 		smiley_collision(i, NO_SOURCE, zero_vector, pos, damage, SUFFOCATED);
 	}
-	if (powerup >= 0 && powerup_time > 0 && obj_enabled) {
-		add_dynamic_light(1.3, pos, get_powerup_color(powerup));
-	}
+	if (powerup != PU_NONE && powerup_time > 0 && obj_enabled) {add_dynamic_light(1.3, pos, get_powerup_color(powerup));}
+
 	if (SMILEY_GAS && game_mode == 1 && obj_enabled && powerup == PU_SHIELD && powerup_time > INIT_PU_SH_TIME && !(rand()&31)) {
 		vector3d const dir(get_sstate_dir(i)), vel(velocity*0.5 - dir*1.2);
 		point const spos(pos - dir*get_sstate_radius(i)); // generate gas

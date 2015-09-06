@@ -125,8 +125,7 @@ string const obj_type_names[NUM_TOT_OBJS] = {
 	"Waypoint", "Smoke", "Dynamic Particle", "Skull", "Grass", "Teleport", "Saw Blade" // Telefrag?
 };
 
-string const powerup_names[NUM_POWERUPS] =
-	{"Quad Damage", "Regeneration", "Shielding", "Haste", "Flight", "Invisibility"};
+string const powerup_names[NUM_POWERUPS] = {"Quad Damage", "Regeneration", "Shielding", "Haste", "Flight", "Invisibility"};
 
 
 point get_sstate_pos(int id);
