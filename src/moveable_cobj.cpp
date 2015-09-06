@@ -413,6 +413,9 @@ void try_drop_moveable_cobj(unsigned index) {
 		cobj.convert_cube_to_ext_polygon();
 		// FIXME: apply rotation if not stable at rest
 	}
+	if (mesh_dz < -0.1*cobj_height && is_underwater(center)) { // sinking in the water
+		for (unsigned n = 0; n < 4; ++n) {gen_bubble(global_rand_gen.gen_rand_cube_point(cobj));}
+	}
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
 	check_moving_cobj_int_with_dynamic_objs(index);
