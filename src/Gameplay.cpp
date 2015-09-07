@@ -2029,7 +2029,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				no_spark = 1;
 			}
 		}
-		unsigned const shatter_prob(1/*(sstate.powerup == PU_DAMAGE) ? 2 : 10*/);
+		unsigned const shatter_prob((sstate.powerup == PU_DAMAGE) ? 2 : 10);
 
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((is_glass && cobj.type != COLL_CUBE) || (rand()%(5*shatter_prob)) == 0)) || // shattered
 			(cobj.destroy >= EXPLODEABLE && (rand()%shatter_prob) == 0)) // exploded

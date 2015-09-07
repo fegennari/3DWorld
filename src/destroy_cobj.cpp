@@ -293,9 +293,9 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		}
 		if (shatter || cobjs[i].subtract_from_cobj(new_cobjs, cube, 1)) {
 			bool no_new_cobjs(shatter || volume < TOLERANCE);
-			if (no_new_cobjs) new_cobjs.clear(); // completely destroyed
-			if (is_cube)      cdir += cube2.closest_side_dir(center); // inexact
-			if (D == SHATTER_TO_PORTAL) cobjs[i].create_portal();
+			if (no_new_cobjs) {new_cobjs.clear();} // completely destroyed
+			if (is_cube)      {cdir += cube2.closest_side_dir(center);} // inexact
+			if (D == SHATTER_TO_PORTAL) {cobjs[i].create_portal();}
 
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
@@ -432,6 +432,7 @@ bool is_pt_under_mesh(point const &p) {
 int coll_obj::is_anchored() const {
 
 	if (platform_id >= 0 || status != COLL_STATIC) return 0; // platforms and dynamic objects are never connecting
+	if (cp.flags & COBJ_MOVEABLE)                  return 0; // moveable cobjs aren't anchored
 	if (destroy <= destroy_thresh)                 return 2; // can't be destroyed, so it never moves
 	if (d[2][0] <= min(zbottom, czmin))            return 1; // below the scene
 	if (d[2][0] > ztop)                            return 0; // above the mesh
