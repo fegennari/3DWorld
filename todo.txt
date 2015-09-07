@@ -14,5 +14,7 @@ Cascaded shadow maps for sun/moon
 Heat haze
 Light probes - render from points in the scene and store in cube maps blurred
 Box physics
+Ground snow cover in TT mode
 
-Moveable cobjs rotations/torque
+Moveable cobjs:
+- Rotations/torque
