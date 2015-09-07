@@ -32,6 +32,7 @@ extern dwobject def_objects[];
 extern obj_type object_types[];
 extern player_state *sstates;
 extern platform_cont platforms;
+extern set<unsigned> moving_cobjs;
 
 
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
@@ -46,6 +47,10 @@ bool decal_obj::is_on_cobj(int cobj) const {
 	// spheres and cylinder sides not supported - decals look bad on rounded objects
 	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON && c.type != COLL_CYLINDER && c.type != COLL_CYLINDER_ROT)) return 0;
 	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
+
+	if ((c.cp.flags & COBJ_MOVEABLE) && moving_cobjs.find(cobj) != moving_cobjs.end()) {
+		return 0; // FIXME: handle this case somehow, by either storing a velocity in the cobj or storing a cobj-local position within the decal
+	}
 	point const center(ipos + get_platform_delta());
 	if (!sphere_cube_intersect(center, DECAL_OFFSET, c)) return 0;
 	if (c.type == COLL_CUBE) return 1;

@@ -1081,6 +1081,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "bind_light") {letter = 'V';}
 				else if (keyword == "indir_dlight_group") {letter = 'U';}
 				else if (keyword == "moveable") {letter = 'd';}
+				else if (keyword == "density") {
+					if (fscanf(fp, "%f", &cobj.cp.density) != 1) {return read_error(fp, "density", coll_obj_file);}
+				}
 				else {
 					string const error_str(string("unrecognized keyword: '") + keyword + "'");
 					return read_error(fp, error_str.c_str(), coll_obj_file);

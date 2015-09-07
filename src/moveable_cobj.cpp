@@ -12,7 +12,7 @@ set<unsigned> moving_cobjs;
 
 extern bool scene_smap_vbo_invalid;
 extern int num_groups;
-extern float base_gravity, tstep;
+extern float base_gravity, tstep, temperature;
 extern coll_obj_group coll_objects;
 extern player_state *sstates;
 extern platform_cont platforms;
@@ -334,10 +334,9 @@ void try_drop_moveable_cobj(unsigned index) {
 	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
 	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
 	coll_obj &cobj(coll_objects.get_cobj(index));
-	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]);
-	float const cur_v_fall(cobj.v_fall + accel);
+	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]), cur_v_fall(cobj.v_fall + accel);
 	cobj.v_fall = 0.0; // assume the cobj stops falling; compute the correct v_fall if we reach the end without returning
-	float const max_dz(min(-tstep*cur_v_fall, cobj.d[2][0]-cobj_zmin)); // usually positive
+	float gravity_dz(-tstep*cur_v_fall), max_dz(min(gravity_dz, cobj.d[2][0]-cobj_zmin)); // usually positive
 	if (max_dz < tolerance) return; // can't drop further
 	float const test_dz(max(max_dz, 0.25f*cobj_height)); // use a min value to ensure the z-slice isn't too small, to prevent instability (for example when riding down on an elevator)
 	cube_t bcube(cobj); // start at the current cobj xy
@@ -395,7 +394,7 @@ void try_drop_moveable_cobj(unsigned index) {
 	}
 	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
 	
-	if (delta.z < mesh_dz) {
+	if (max(delta.z, -max_dz) < mesh_dz) { // under the mesh
 		delta.z = mesh_dz; // don't let it go below the mesh
 		bool const dim(abs(delta.y) < abs(delta.x));
 		float radius(0.5*(cobj.d[dim][1] - cobj.d[dim][0])); // perpendicular to direction of movement
@@ -407,15 +406,35 @@ void try_drop_moveable_cobj(unsigned index) {
 	else if (delta.z == -test_dz) { // cobj falls the entire max distance without colliding, accelerate it
 		// set terminal velocity to one cobj_height per timestep to avoid falling completely through another moving cobj (such as an elevator)
 		cobj.v_fall = max(cur_v_fall, -cobj_height/tstep);
-		delta.z     = -max_dz; // clamp to the real max value
 	} // else |delta.z| may be > |max_dz|, but it was only falling for one frame so should not be noticeable (and should be more stable for small tstep/accel)
+	// handle water
+	float depth(0.0);
+	point const bot_cent(center.x, center.y, cobj.d[2][0]);
+
+	if (is_underwater(bot_cent, 0, &depth)) {
+		if (temperature > W_FREEZE_POINT) { // water
+			if (cobj.cp.density <= 1.0) { // floats
+				if (delta.z <= 0.0) { // falling
+					cobj.v_fall = 0.0;
+					delta.z     = depth - cobj.cp.density*cobj_height; // adjust z for constant depth - cobj moves with the water surface
+				}
+			}
+			else { // sinks
+				if (depth > 0.5*cobj_height && mesh_dz < -0.1*cobj_height) { // sinking below the water
+					for (unsigned n = 0; n < 4; ++n) {gen_bubble(global_rand_gen.gen_rand_cube_point(cobj));}
+				}
+				float const fall_rate((cobj.cp.density - 1.0)/cobj.cp.density); // falling velocity (approaches to 1.0 as density increases)
+				max_dz      = min(gravity_dz*fall_rate, max_dz);
+				cobj.v_fall = max(cobj.v_fall, -0.001f/tstep); // use a lower terminal velocity in water
+			}
+		}
+		else if (depth > 0.5*cobj_height) return; // stuck in ice
+	}
 	if (cobj.v_fall == 0.0 && cobj.type == COLL_CUBE && 0) { // Note: disabled until rotation is handled
 		cobj.convert_cube_to_ext_polygon();
 		// FIXME: apply rotation if not stable at rest
 	}
-	if (mesh_dz < -0.1*cobj_height && is_underwater(center)) { // sinking in the water
-		for (unsigned n = 0; n < 4; ++n) {gen_bubble(global_rand_gen.gen_rand_cube_point(cobj));}
-	}
+	delta.z = max(delta.z, -max_dz); // clamp to the real max value
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
 	check_moving_cobj_int_with_dynamic_objs(index);
