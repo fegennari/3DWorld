@@ -143,20 +143,54 @@ T -5.01 3.17 -0.59  m 0.1  i mapx/crate.txt
 T -5.33 3.37 -0.69  m 0.1  i mapx/crate.txt
 T -5.18 3.42 -0.69  m 0.1  i mapx/crate.txt
 T -4.75 3.11 -0.69  m 0.1  i mapx/crate.txt
+T  7.6  5.3  -0.69  m 0.1  i mapx/crate.txt
 
 # add some crates in the dark basement
 T -4.00 1.90 -0.69  m 0.1  i mapx/crate.txt
 T -7.50 1.90 -0.69  m 0.1  i mapx/crate.txt
 T -7.45 1.92 -0.59  m 0.07 i mapx/crate.txt
+e 0
 
+moveable 1
 # rotated destroyable crate
 a 2 # destroyable/shatterable
-e 0
 l 0.6 1.0 1.0 1.0 1.0 60 1 # borg cube
 T -5.56 3.23 -0.69
-moveable 1
+density 4.0
 P 4  0.0 0.0 0.0  0.0 0.0 1.0  0.6 0.8 1.0  0.6 0.8 0.0  1.0
-moveable 0
 T 0.0 0.0 0.0
+
+m 0.1
+a 1 # destroyable
+l 0.9 0.8 0.5 0.5 1.0 brickwork.jpg 1 # brick with normal map
+X normal_maps/brickwork_normal.jpg # normal map
+y 8.0
+density 2.0
+T  7.4  4.2  -0.69
+B  0 1  0 1  0 1 # unit cube
+
+l 0.7 1.0 1.0 1.0 1.0 3 1 # styrofoam
+X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
+y 20.0
+density 0.2
+T  7.3  3.9  -0.69
+B  0 1  0 1  0 1 # unit cube
+
+l 0.95 1.0 1.0 1.0 1.0 8 1 # Marble
+r 0.6 60.0 # set specularity
+X none
+y 8.0
+density 2.8
+T  6.9  4.4  -0.69
+B  0 1  0 1  0 1 # unit cube
+r 0.0 1.0 # reset specularity
+
+# reset state
+T 0.0 0.0 0.0
+m 1.0
+X none
+density 1.0
+y 1.0
 a 0 # non-destroyable
+moveable 0
 
