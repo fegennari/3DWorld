@@ -334,7 +334,7 @@ void try_drop_moveable_cobj(unsigned index) {
 	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
 	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
 	coll_obj &cobj(coll_objects.get_cobj(index));
-	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]), cur_v_fall(cobj.v_fall + accel);
+	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]), prev_v_fall(cobj.v_fall), cur_v_fall(prev_v_fall + accel);
 	cobj.v_fall = 0.0; // assume the cobj stops falling; compute the correct v_fall if we reach the end without returning
 	float gravity_dz(-tstep*cur_v_fall), max_dz(min(gravity_dz, cobj.d[2][0]-cobj_zmin)); // usually positive
 	if (max_dz < tolerance) return; // can't drop further
@@ -393,7 +393,6 @@ void try_drop_moveable_cobj(unsigned index) {
 		if (center.z > water_zval) {mesh_zval = max(mesh_zval, water_zval);} // use water zval if cobj center is above the ice
 	}
 	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
-	bool clamp_delta_z(0);
 	
 	if (max(delta.z, -max_dz) < mesh_dz) { // under the mesh
 		delta.z = mesh_dz; // don't let it go below the mesh
@@ -403,13 +402,14 @@ void try_drop_moveable_cobj(unsigned index) {
 		else if (cobj.type == COLL_SPHERE  ) {radius *= 0.2;} // smaller since bottom surface area is small (maybe also not-vert cylinder?)
 		else if (cobj.type == COLL_CYLINDER) {radius  = min(radius, cobj.radius);}
 		modify_grass_at(center, radius, 1); // crush grass
-		clamp_delta_z = 1;
 	}
 	else if (delta.z == -test_dz) { // cobj falls the entire max distance without colliding, accelerate it
 		// set terminal velocity to one cobj_height per timestep to avoid falling completely through another moving cobj (such as an elevator)
-		cobj.v_fall   = max(cur_v_fall, -cobj_height/tstep);
-		clamp_delta_z = 1;
+		cobj.v_fall = max(cur_v_fall, -cobj_height/tstep);
 	} // else |delta.z| may be > |max_dz|, but it was only falling for one frame so should not be noticeable (and should be more stable for small tstep/accel)
+	else if (delta.z < 0.0) { // falling the partial distance
+		cobj.v_fall = prev_v_fall; // maintain previous falling velocity (no acceleration)
+	}
 	// handle water
 	float depth(0.0);
 	point const bot_cent(center.x, center.y, cobj.d[2][0]);
@@ -437,9 +437,7 @@ void try_drop_moveable_cobj(unsigned index) {
 		cobj.convert_cube_to_ext_polygon();
 		// FIXME: apply rotation if not stable at rest
 	}
-	// FIXME: clamp_delta_z is really a hack to avoid instability when going down an elevator (maybe in a stack)
-	// normally, to be physically correct, we always want to do the clamp - but it makes little difference visually
-	if (clamp_delta_z) {delta.z = max(delta.z, -max_dz);} // clamp to the real max value if in freefall
+	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
 	check_moving_cobj_int_with_dynamic_objs(index);
