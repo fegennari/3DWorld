@@ -160,7 +160,7 @@ struct decal_obj : public basic_physics_obj { // size = 76
 	int cid, tid, lifetime;
 	float radius, alpha, rot_angle;
 	colorRGBA color;
-	point ipos;
+	point ipos, cobj_llc;
 	vector3d orient;
 	tex_range_t tex_range;
 
@@ -169,7 +169,7 @@ struct decal_obj : public basic_physics_obj { // size = 76
 		bool is_glass_=0, tex_range_t const &tr=tex_range_t());
 	bool draw(quad_batch_draw &qbd) const;
 	void maybe_draw_blood_trail(line_tquad_draw_t &blood_tqd) const;
-	bool is_on_cobj(int cobj) const;
+	bool is_on_cobj(int cobj, vector3d *delta=nullptr) const;
 	void check_cobj();
 	void apply_physics(unsigned i);
 	float get_alpha() const;

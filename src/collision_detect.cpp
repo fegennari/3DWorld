@@ -40,18 +40,20 @@ void free_all_coll_objects();
 bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type);
 
 
-bool decal_obj::is_on_cobj(int cobj) const {
+bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 
 	if (cobj < 0) return 0;
 	coll_obj const &c(coll_objects.get_cobj(cobj)); // can this fail if the cobj was destroyed? coll_objects only increases in size
 	// spheres and cylinder sides not supported - decals look bad on rounded objects
 	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON && c.type != COLL_CYLINDER && c.type != COLL_CYLINDER_ROT)) return 0;
 	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
+	point center(ipos + get_platform_delta());
 
 	if ((c.cp.flags & COBJ_MOVEABLE) && moving_cobjs.find(cobj) != moving_cobjs.end()) {
-		return 0; // FIXME: handle this case somehow, by either storing a velocity in the cobj or storing a cobj-local position within the decal
+		vector3d const local_delta(c.get_llc() - cobj_llc); // look at cobj LLC delta
+		center += local_delta;
+		if (delta) {*delta = local_delta;}
 	}
-	point const center(ipos + get_platform_delta());
 	if (!sphere_cube_intersect(center, DECAL_OFFSET, c)) return 0;
 	if (c.type == COLL_CUBE) return 1;
 
@@ -81,8 +83,12 @@ bool decal_obj::is_on_cobj(int cobj) const {
 void decal_obj::check_cobj() {
 
 	if (!status || cid < 0) return; // already disabled, or no bound cobj
+	vector3d delta(zero_vector);
 	
-	if (!is_on_cobj(cid)) { // try to find the cobj this is attached to (likely a split part of the original)
+	if (is_on_cobj(cid, &delta)) { // try to find the cobj this is attached to (likely a split part of the original)
+		pos += delta; ipos += delta; cobj_llc += delta; // move by this delta
+	}
+	else {
 		int const xpos(get_xpos(ipos.x)), ypos(get_ypos(ipos.y));
 		if (point_outside_mesh(xpos, ypos)) {status = 0; return;}
 		vector<int> const &cvals(v_collision_matrix[ypos][xpos].cvals);
@@ -91,6 +97,7 @@ void decal_obj::check_cobj() {
 		for (unsigned i = 0; i < cvals.size(); ++i) {
 			if (is_on_cobj(cvals[i])) {cid = cvals[i]; break;}
 		}
+		if (cid >= 0) {cobj_llc = coll_objects.get_cobj(cid).get_llc();}
 	}
 	if (cid < 0) {status = 0; return;} // not found, no longer on a cobj so remove it
 }
