@@ -151,7 +151,7 @@ T -7.50 1.90 -0.69  m 0.1  i mapx/crate.txt
 T -7.45 1.92 -0.59  m 0.07 i mapx/crate.txt
 e 0
 
-moveable 1
+movable 1
 # rotated destroyable crate
 a 2 # destroyable/shatterable
 l 0.6 1.0 1.0 1.0 1.0 60 1 # borg cube
@@ -192,5 +192,5 @@ X none
 density 1.0
 y 1.0
 a 0 # non-destroyable
-moveable 0
+movable 0
 

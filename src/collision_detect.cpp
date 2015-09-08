@@ -37,7 +37,7 @@ extern set<unsigned> moving_cobjs;
 
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
 void free_all_coll_objects();
-bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type);
+bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type);
 
 
 bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
@@ -49,7 +49,7 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
 	point center(ipos + get_platform_delta());
 
-	if ((c.cp.flags & COBJ_MOVEABLE) && moving_cobjs.find(cobj) != moving_cobjs.end()) {
+	if ((c.cp.flags & COBJ_MOVABLE) && moving_cobjs.find(cobj) != moving_cobjs.end()) {
 		vector3d const local_delta(c.get_llc() - cobj_llc); // look at cobj LLC delta
 		center += local_delta;
 		if (delta) {*delta = local_delta;}
@@ -1319,7 +1319,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	} // end COLL_POLY scope
 	default: assert(0);
 	} // switch
-	if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY)) {proc_moveable_cobj(orig_pos, obj.pos, index, type);} // try to move object
+	if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY)) {proc_movable_cobj(orig_pos, obj.pos, index, type);} // try to move object
 	if (!lcoll) return; // no collision
 	assert(norm != zero_vector);
 	assert(!is_nan(norm));

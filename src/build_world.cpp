@@ -1080,7 +1080,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "light"  ) {letter = 'L';}
 				else if (keyword == "bind_light") {letter = 'V';}
 				else if (keyword == "indir_dlight_group") {letter = 'U';}
-				else if (keyword == "moveable") {letter = 'd';}
+				else if (keyword == "movable") {letter = 'd';}
 				else if (keyword == "density") {
 					if (fscanf(fp, "%f", &cobj.cp.density) != 1) {return read_error(fp, "density", coll_obj_file);}
 				}
@@ -1659,9 +1659,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy shape", coll_obj_file);}
 			cobj.destroy = (EXPLODE_EVERYTHING ? EXPLODEABLE : (char)ivals[0]);
 			break;
-		case 'd': // toggle moveable
-			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "moveable", coll_obj_file);}
-			set_bit_flag_to(cobj.cp.flags, COBJ_MOVEABLE, (ivals[0] != 0));
+		case 'd': // toggle movable
+			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "movable", coll_obj_file);}
+			set_bit_flag_to(cobj.cp.flags, COBJ_MOVABLE, (ivals[0] != 0));
 			break;
 
 		case 'v': // set voxel mode

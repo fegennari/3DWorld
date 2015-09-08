@@ -5,11 +5,11 @@ e 0
 X normal_maps/bcube_tactical_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 60 1 # borg cube
 y 0 # force texture to fit to the cube
-moveable 1
+movable 1
 density 4.0
 B  0 1  0 1  0 1 # unit cube
 density 1.0
-moveable 0
+movable 0
 a 1 # destroyable
 X none # disable normal map
 

@@ -328,7 +328,7 @@ bool is_rolling_cobj(coll_obj const &cobj) {
 
 float get_cobj_step_height() {return 0.4*C_STEP_HEIGHT*CAMERA_RADIUS;} // cobj can be lifted by 40% of the player step height
 
-void try_drop_moveable_cobj(unsigned index) {
+void try_drop_movable_cobj(unsigned index) {
 
 	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
 	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
@@ -345,13 +345,13 @@ void try_drop_moveable_cobj(unsigned index) {
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
 
 	// see if this cobj's bottom edge is colliding with a platform that's moving up (elevator)
-	// also, if the cobj is currently intersecting another moveable cobj, try to resolve the intersection so that stacking works by moving the cobj up
+	// also, if the cobj is currently intersecting another movable cobj, try to resolve the intersection so that stacking works by moving the cobj up
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		coll_obj const &c(coll_objects.get_cobj(*i));
 		float const dz(c.d[2][1] - cobj.d[2][0]);
 		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 
-		if (c.cp.flags & COBJ_MOVEABLE) { // both cobjs are moveable - is this a stack?
+		if (c.cp.flags & COBJ_MOVABLE) { // both cobjs are movable - is this a stack?
 			if (c.type == COLL_CUBE || c.type == COLL_CYLINDER || (c.type == COLL_POLYGON && c.norm.x == 0.0 && c.norm.y == 0.0)) {} // flat cobjs can always be stacked
 			else if (dz < get_cobj_step_height()) {} // c_top - cobj_bot < step_height
 			else if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
@@ -455,7 +455,7 @@ void try_drop_moveable_cobj(unsigned index) {
 bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
-	if (!(cobj.cp.flags & COBJ_MOVEABLE)) return 0; // not moveable
+	if (!(cobj.cp.flags & COBJ_MOVABLE)) return 0; // not movable
 	delta.z = 0.0; // for now, objects can only be pushed in xy
 	float const tolerance(1.0E-6), toler_sq(tolerance*tolerance);
 	if (delta.mag_sq() < toler_sq) return 0;
@@ -477,13 +477,13 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
 	vector3d const start_delta(delta);
 	
-	if (cobj.type == COLL_CUBE) { // check for horizontally stackable moveable cobjs - limited to cubes for now
+	if (cobj.type == COLL_CUBE) { // check for horizontally stackable movable cobjs - limited to cubes for now
 		seen.insert(index);
 
 		for (unsigned i = 0; i < cobjs.size(); ++i) {
 			unsigned const cid(cobjs[i]);
 			coll_obj const &c(coll_objects.get_cobj(cid));
-			if (!(c.cp.flags & COBJ_MOVEABLE) || c.type != COLL_CUBE) continue;
+			if (!(c.cp.flags & COBJ_MOVABLE) || c.type != COLL_CUBE) continue;
 			if (!cobj.intersects_cobj(c, -tolerance)) continue; // no initial intersection/adjacency
 			if (seen.find(cid) != seen.end()) continue; // prevent infinite recursion
 			seen.insert(cid);
@@ -535,7 +535,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 	return 1; // moved
 }
 
-bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
+bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
 
 	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
 	vector3d delta(orig_pos - player_pos);
@@ -554,6 +554,6 @@ void proc_moving_cobjs() {
 		else {by_z1.push_back(make_pair(coll_objects.get_cobj(*i).d[2][0], *i)); ++i;} // otherwise try to drop it
 	}
 	sort(by_z1.begin(), by_z1.end()); // sort by z1 so that stacked cobjs work correctly (processed bottom to top)
-	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {try_drop_moveable_cobj(i->second);}
+	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {try_drop_movable_cobj(i->second);}
 }
 

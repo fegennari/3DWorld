@@ -70,7 +70,7 @@ struct obj_layer : public base_mat_t { // size = 76
 unsigned const COBJ_DYNAMIC     = 0x01;
 unsigned const COBJ_DESTROYABLE = 0x02;
 unsigned const COBJ_NO_COLL     = 0x04;
-unsigned const COBJ_MOVEABLE    = 0x08;
+unsigned const COBJ_MOVABLE     = 0x08;
 
 struct cobj_params : public obj_layer { // size = 84
 
@@ -158,7 +158,7 @@ public:
 	bool is_occluder()    const;// {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}
 	bool is_big_occluder()const {return (is_occluder() && fixed && volume > 0.001);}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
-	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || (cp.flags & COBJ_MOVEABLE));}
+	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || (cp.flags & COBJ_MOVABLE));}
 	bool is_player()      const;
 	bool is_invis_player()const;
 	bool truly_static()   const;
