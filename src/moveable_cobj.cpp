@@ -20,7 +20,7 @@ extern obj_type object_types[NUM_TOT_OBJS];
 extern obj_group obj_groups[NUM_TOT_OBJS];
 
 
-bool push_cobj(unsigned index, vector3d &delta);
+bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen);
 
 
 int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
@@ -131,20 +131,22 @@ bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, poi
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
 // 21 total: 15 complete, 5 partial (all cylinder cases), 1 incomplete (capsule-capsule)
+// Note: pos toler => adjacency doesn't count; neg toler => adjacency counts
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	if (c.type < type) {return c.intersects_cobj(*this, toler);} // swap arguments
 	if (!intersects(c, toler)) return 0; // cube-cube intersection
+	float const r1(radius-toler), r2(radius2-toler), cr1(c.radius-toler), cr2(c.radius2-toler);
 
 	// c.type >= type
 	switch (type) {
 	case COLL_CUBE:
 		switch (c.type) {
 		case COLL_CUBE:     return 1; // as simple as that
-		case COLL_CYLINDER: return circle_rect_intersect(c.points[0], c.radius, *this, 2); // in z
-		case COLL_SPHERE:   return sphere_cube_intersect(c.points[0], c.radius, *this);
+		case COLL_CYLINDER: return circle_rect_intersect(c.points[0], cr1, *this, 2); // in z
+		case COLL_SPHERE:   return sphere_cube_intersect(c.points[0], cr1, *this);
 		case COLL_CAPSULE:
-			if (sphere_cube_intersect(c.points[0], c.radius, *this) || sphere_cube_intersect(c.points[1], c.radius2, *this)) return 1;
+			if (sphere_cube_intersect(c.points[0], cr1, *this) || sphere_cube_intersect(c.points[1], cr2, *this)) return 1;
 			// fallthrough
 		case COLL_CYLINDER_ROT: {
 			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
@@ -159,15 +161,14 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		switch (c.type) {
 		case COLL_CYLINDER:
 			assert(type == COLL_CYLINDER);
-			return dist_xy_less_than(points[0], c.points[0], (c.radius+radius)); // bcube test guarantees overlap in z
+			return dist_xy_less_than(points[0], c.points[0], (cr1+radius)); // bcube test guarantees overlap in z
 		case COLL_SPHERE:
-			if (type == COLL_CYLINDER && sphere_def_coll_vert_cylin(c.points[0], c.radius, points[0], points[1], radius)) return 1;
-			return coll_sphere_cylin_int(c.points[0], c.radius, *this);
+			if (type == COLL_CYLINDER && sphere_def_coll_vert_cylin(c.points[0], cr1, points[0], points[1], r1)) return 1;
+			return coll_sphere_cylin_int(c.points[0], cr1, *this);
 		case COLL_CAPSULE:
-			if (type == COLL_CYLINDER && (sphere_def_coll_vert_cylin(c.points[0], c.radius,  points[0], points[1], radius) ||
-				                          sphere_def_coll_vert_cylin(c.points[1], c.radius2, points[0], points[1], radius))) return 1;
-			if (coll_sphere_cylin_int(c.points[0], c.radius , *this)) return 1;
-			if (coll_sphere_cylin_int(c.points[1], c.radius2, *this)) return 1;
+			if (type == COLL_CYLINDER && (sphere_def_coll_vert_cylin(c.points[0], cr1, points[0], points[1], radius) ||
+				                          sphere_def_coll_vert_cylin(c.points[1], cr2, points[0], points[1], radius))) return 1;
+			if (coll_sphere_cylin_int(c.points[0], cr1, *this) || coll_sphere_cylin_int(c.points[1], cr2, *this)) return 1;
 			// fallthrough
 		case COLL_CYLINDER_ROT: return cylin_cylin_int(c, *this);
 		case COLL_POLYGON:      return poly_cylin_int (c, *this);
@@ -176,19 +177,19 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	case COLL_SPHERE:
 		switch (c.type) {
-		case COLL_SPHERE: return dist_less_than(points[0], c.points[0], (c.radius+radius));
-		case COLL_CAPSULE: if (dist_less_than(points[0], c.points[0], (c.radius+radius)) || dist_less_than(points[0], c.points[1], (c.radius2+radius))) return 1;
+		case COLL_SPHERE: return dist_less_than(points[0], c.points[0], (cr1+radius));
+		case COLL_CAPSULE: if (dist_less_than(points[0], c.points[0], (cr1+radius)) || dist_less_than(points[0], c.points[1], (cr2+radius))) return 1;
 			// fallthrough
-		case COLL_CYLINDER_ROT: return coll_sphere_cylin_int(points[0], radius, c);
-		case COLL_POLYGON: return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], radius, c.thickness, MIN_POLY_THICK);
+		case COLL_CYLINDER_ROT: return coll_sphere_cylin_int(points[0], r1, c);
+		case COLL_POLYGON: return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], r1, c.thickness, MIN_POLY_THICK);
 		default: assert(0);
 		}
 
 	case COLL_POLYGON: {
 		switch (c.type) {
 		case COLL_CAPSULE:
-			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[0], c.radius,  thickness, MIN_POLY_THICK)) return 1;
-			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[1], c.radius2, thickness, MIN_POLY_THICK)) return 1;
+			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[0], cr1, thickness, MIN_POLY_THICK)) return 1;
+			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[1], cr2, thickness, MIN_POLY_THICK)) return 1;
 			return poly_cylin_int(*this, c);
 		case COLL_POLYGON: {
 			if (thickness   > MIN_POLY_THICK && !cube_polygon_intersect(c, *this)) return 0;
@@ -215,8 +216,8 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
 	case COLL_CAPSULE: {
 			assert(c.type == COLL_CAPSULE);
-			sphere_t const sa[2] = {sphere_t(  points[0],   radius), sphere_t(  points[1],   radius2)};
-			sphere_t const sb[2] = {sphere_t(c.points[0], c.radius), sphere_t(c.points[1], c.radius2)};
+			sphere_t const sa[2] = {sphere_t(  points[0],  r1), sphere_t(  points[1],  r2)};
+			sphere_t const sb[2] = {sphere_t(c.points[0], cr1), sphere_t(c.points[1], cr2)};
 
 			for (unsigned i = 0; i < 4; ++i) { // 4 sphere-sphere intersections
 				if (dist_less_than(sa[i&1].pos, sb[i>>1].pos, (sa[i&1].radius + sb[i>>1].radius))) return 1;
@@ -252,9 +253,7 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 	float step_thresh(0.001);
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-		if (*i < 0) continue; // cobj marked as remove, skip
 		coll_obj const &c(coll_objects.get_cobj(*i));
-		if (c.cp.flags & COBJ_MOVEABLE) {} // FIXME: allow moveable cobjs to stack?
 		if (cobj.intersects_cobj(c, tolerance)) return 0; // intersects at the starting location, don't allow it to move (stuck)
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));
 		if (valid_t == 0.0) return 0; // can't move
@@ -379,9 +378,19 @@ void try_drop_moveable_cobj(unsigned index) {
 		if (!is_rolling_cobj(cobj)) return; // not rolling
 		coll_obj const &c(coll_objects.get_cobj(cobjs.front()));
 		if (is_point_supported(c, center)) return; // center of gravity is resting stably, it's stuck
-		vector3d const move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for cube/polygon
+		vector3d move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for cube/polygon
+		
+		if (c.type == COLL_CUBE) { // chose +/- x|y for cubes
+			if (fabs(move_dir.x) < fabs(move_dir.y)) { // y-edge
+				move_dir = ((move_dir.y < 0.0) ? -plus_y : plus_y);
+			}
+			else { // x-edge
+				move_dir = ((move_dir.x < 0.0) ? -plus_x : plus_x);
+			}
+		}
 		delta = 0.05*cobj_height*move_dir; // move 5% of cobj height
-		push_cobj(index, delta); // return value is ignored
+		set<unsigned> seen;
+		push_cobj(index, delta, seen); // return value is ignored
 		return; // done
 	}
 	float mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 1, 1)); // Note: uses center point, not max mesh height under the cobj; clamped xy
@@ -443,7 +452,7 @@ void try_drop_moveable_cobj(unsigned index) {
 	check_moving_cobj_int_with_dynamic_objs(index);
 }
 
-bool push_cobj(unsigned index, vector3d &delta) {
+bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	if (!(cobj.cp.flags & COBJ_MOVEABLE)) return 0; // not moveable
@@ -468,6 +477,22 @@ bool push_cobj(unsigned index, vector3d &delta) {
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
 	vector3d const start_delta(delta);
 	
+	if (cobj.type == COLL_CUBE) { // check for horizontally stackable moveable cobjs - limited to cubes for now
+		seen.insert(index);
+
+		for (unsigned i = 0; i < cobjs.size(); ++i) {
+			unsigned const cid(cobjs[i]);
+			coll_obj const &c(coll_objects.get_cobj(cid));
+			if (!(c.cp.flags & COBJ_MOVEABLE) || c.type != COLL_CUBE) continue;
+			if (!cobj.intersects_cobj(c, -tolerance)) continue; // no initial intersection/adjacency
+			if (seen.find(cid) != seen.end()) continue; // prevent infinite recursion
+			seen.insert(cid);
+			vector3d delta2(delta);
+			if (!push_cobj(cid, delta2, seen)) return 0; // can't push (recursive call)
+			delta = delta2; // update with maybe reduced delta
+			cobjs[i] = cobjs.back(); cobjs.pop_back(); --i; // remove this cobj
+		}
+	}
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // failed to move
 		// if there is a ledge (cobj z top) slightly above the bottom of the cobj, maybe we can lift it up;
 		// meant to work with ramps and small steps, but not stairs or tree trunks (obviously)
@@ -514,7 +539,8 @@ bool proc_moveable_cobj(point const &orig_pos, point &player_pos, unsigned index
 
 	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
 	vector3d delta(orig_pos - player_pos);
-	if (!push_cobj(index, delta)) return 0;
+	set<unsigned> seen;
+	if (!push_cobj(index, delta, seen)) return 0;
 	player_pos += delta; // restore player pos, at least partially
 	return 1; // moved
 }
