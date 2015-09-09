@@ -74,6 +74,11 @@ void setup_sounds() {
 	sounds.add_file_buffer("rockfall.wav"   ); // SOUND_ROCK_FALL // bricksfall.wav
 	sounds.add_file_buffer("spray.wav"      ); // SOUND_SPRAY
 	sounds.add_file_buffer("click.wav"      ); // SOUND_CLICK
+	sounds.add_file_buffer("shell_casing.wav");// SOUND_SHELLC
+	sounds.add_file_buffer("short_drop.wav" ); // SOUND_SH_DROP (unused)
+	sounds.add_file_buffer("water_drop.wav" ); // SOUND_WATER_DROP (unused, cartoony)
+	sounds.add_file_buffer("sliding.wav"    ); // SOUND_SLIDING
+	sounds.add_file_buffer("obj_fall.wav"   ); // SOUND_OBJ_FALL
 	cout << endl;
 
 	// create sources
