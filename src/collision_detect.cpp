@@ -1371,14 +1371,15 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		}
 		else {
 			already_bounced = 1;
-			if (otype.flags & OBJ_IS_CYLIN) obj.init_dir.x += PI*signed_rand_float();
+			if (otype.flags & OBJ_IS_CYLIN) {obj.init_dir.x += PI*signed_rand_float();}
 			
-			if (type == BALL && cobj.status == COLL_STATIC) { // only static collisions to avoid camera/smiley bounce sounds
-				float const vmag(obj.velocity.mag());
-				if (vmag > 1.0) {gen_sound(SOUND_BOING, obj.pos, min(1.0, 0.1*vmag));}
-			}
-			else if (type == SAWBLADE && cobj.status == COLL_STATIC) { // only static collisions
-				gen_sound(SOUND_RICOCHET, obj.pos, 1.0, 0.5);
+			if (cobj.status == COLL_STATIC) { // only static collisions to avoid camera/smiley bounce sounds
+				if (type == BALL) {
+					float const vmag(obj.velocity.mag());
+					if (vmag > 1.0) {gen_sound(SOUND_BOING, obj.pos, min(1.0, 0.1*vmag));}
+				}
+				else if (type == SAWBLADE) {gen_sound(SOUND_RICOCHET, obj.pos, 1.0, 0.5);}
+				else if (type == SHELLC && obj.direction == 0) {gen_sound(SOUND_SHELLC, obj.pos, 0.1, 1.0);} // M16
 			}
 		}
 	}

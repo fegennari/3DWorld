@@ -7,6 +7,7 @@
 #include "mesh.h"
 #include "player_state.h"
 #include "csg.h"
+#include "openal_wrap.h"
 
 set<unsigned> moving_cobjs;
 
@@ -373,6 +374,7 @@ void try_drop_movable_cobj(unsigned index) {
 	point const center(cobj.get_center_pt()); // Note: not an accurate center of mass for polygons and truncated cones
 	
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // stuck
+		if (prev_v_fall < 4.0*accel) {gen_sound(SOUND_OBJ_FALL, center, 0.5, 1.2);}
 		// check for rolling cobjs that can roll downhill
 		if (cobjs.size() != 1) return; // can only handle a single supporting cobj
 		if (!is_rolling_cobj(cobj)) return; // not rolling
@@ -402,8 +404,10 @@ void try_drop_movable_cobj(unsigned index) {
 		if (center.z > water_zval) {mesh_zval = max(mesh_zval, water_zval);} // use water zval if cobj center is above the ice
 	}
 	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
-	
+	if (fabs(mesh_dz) < tolerance) {return;} // resting on the mesh (never happens?)
+
 	if (max(delta.z, -max_dz) < mesh_dz) { // under the mesh
+		if (prev_v_fall < 10.0*accel) {gen_sound(SOUND_OBJ_FALL, center, 0.2, 0.8);}
 		delta.z = mesh_dz; // don't let it go below the mesh
 		bool const dim(abs(delta.y) < abs(delta.x));
 		float radius(0.5*(cobj.d[dim][1] - cobj.d[dim][0])); // perpendicular to direction of movement
@@ -439,6 +443,7 @@ void try_drop_movable_cobj(unsigned index) {
 				max_dz      = min(gravity_dz*fall_rate, max_dz);
 				cobj.v_fall = max(cobj.v_fall, -0.001f/tstep); // use a lower terminal velocity in water
 			}
+			if (prev_v_fall < 4.0*accel) {add_splash(center, xpos, ypos, -5000*prev_v_fall*cobj.volume*cobj.cp.density, cobj.get_bsphere_radius(), 1);}
 		}
 		else if (depth > 0.5*cobj_height) return; // stuck in ice
 	}
@@ -532,6 +537,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 	moving_cobjs.insert(index); // may already be there
 	scene_smap_vbo_invalid = 1;
 	check_moving_cobj_int_with_dynamic_objs(index);
+	if ((rand2()%1000) == 0) {gen_sound(SOUND_SLIDING, center, 0.1, 1.0);}
 	return 1; // moved
 }
 
