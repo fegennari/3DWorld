@@ -12,7 +12,6 @@ Gameplay in tiled terrain mode
 
 Cascaded shadow maps for sun/moon
 Heat haze
-Light probes - render from points in the scene and store in cube maps blurred
 Ground snow cover in TT mode
 
 Moveable cobjs:
