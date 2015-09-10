@@ -22,6 +22,7 @@ extern int window_width, window_height, animate2, display_mode, tree_mode, groun
 extern unsigned enabled_lights;
 extern float NEAR_CLIP, tree_deadness, vegetation, shadow_map_pcf_offset;
 extern vector<shadow_sphere> shadow_objs;
+extern set<unsigned> moving_cobjs;
 extern coll_obj_group coll_objects;
 extern platform_cont platforms;
 
@@ -495,10 +496,15 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 bool local_smap_data_t::needs_update(point const &lpos) {
 	
 	// Note: scene_smap_vbo_invalid is reset at the end of the global create_shadow_map() call, so this call must be done before that
-	bool has_dynamic(!get_tid() || scene_smap_vbo_invalid);
+	bool has_dynamic(!get_tid() || scene_smap_vbo_invalid); // Note: scene_smap_vbo_invalid test is conservative
 	
 	for (auto i = shadow_objs.begin(); i != shadow_objs.end() && !has_dynamic; ++i) { // test dynamic objects
 		has_dynamic |= pdu.sphere_visible_test(i->pos, i->radius);
+	}
+	if (scene_smap_vbo_invalid) { // maybe invalid due to moving cobjs (normally can't get here due to conservative test above)
+		for (auto i = moving_cobjs.begin(); i != moving_cobjs.end() && !has_dynamic; ++i) {
+			has_dynamic |= pdu.cube_visible(coll_objects.get_cobj(*i));
+		}
 	}
 	if (!has_dynamic) {has_dynamic |= platforms.any_moving_platforms_in_view(pdu);} // test platforms
 	// Note: maybe should check for moving objects as well - but they can only move if pushed by a dynamic shadow object (player) which is probably also in the light's view
