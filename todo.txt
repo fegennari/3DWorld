@@ -15,4 +15,6 @@ Heat haze
 Ground snow cover in TT mode
 
 Moveable cobjs:
+- Trigger dlight shadow map updates
+- Underwater destroy causes too much of a wave
 - Rotations/torque

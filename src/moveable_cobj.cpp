@@ -443,7 +443,7 @@ void try_drop_movable_cobj(unsigned index) {
 				max_dz      = min(gravity_dz*fall_rate, max_dz);
 				cobj.v_fall = max(cobj.v_fall, -0.001f/tstep); // use a lower terminal velocity in water
 			}
-			if (prev_v_fall < 4.0*accel) {add_splash(center, xpos, ypos, -5000*prev_v_fall*cobj.volume*cobj.cp.density, cobj.get_bsphere_radius(), 1);}
+			if (prev_v_fall < 8.0*accel) {add_splash(center, xpos, ypos, min(100.0f, -5000*prev_v_fall*cobj.volume*cobj.cp.density), min(2.0f*CAMERA_RADIUS, cobj.get_bsphere_radius()), 1);}
 		}
 		else if (depth > 0.5*cobj_height) return; // stuck in ice
 	}
