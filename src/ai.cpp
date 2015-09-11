@@ -1240,7 +1240,7 @@ void player_state::check_switch_weapon(int smiley_id) {
 float player_state::get_rel_enemy_vel(point const &pos) const {
 
 	if (target_type != 1 || target == NO_SOURCE) return 0.0;
-	vector3d const enemy_vel(sstates[target].velocity);
+	vector3d const &enemy_vel(sstates[target].velocity);
 	vector3d const enemy_dir((target_pos - pos).get_norm());
 	return dot_product(enemy_vel, enemy_dir);
 }

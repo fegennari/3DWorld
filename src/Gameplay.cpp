@@ -1588,7 +1588,6 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	chosen_obj = -1;
 	float damage_scale(1.0), range(0.0);
-	vector3d velocity(zero_vector);
 	assert(UNLIMITED_WEAPONS || !no_weap_or_ammo());
 	int weapon_id(weapon);
 	if (weapon == W_GRENADE && (wmode&1)) {weapon_id = W_CGRENADE;}
@@ -1622,8 +1621,11 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
 	
 	if (is_player) { // recoil (only for player)
-		move_camera_pos(dir, -w.recoil); // backwards recoil
-		if (weapon_id == W_M16 || weapon_id == W_SHOTGUN) {c_phi += 0.25*w.recoil;} // upward recoil
+		float recoil(w.recoil);
+		if (is_jumping || fall_counter > 0 ) {recoil *= 2.5;} // low friction when in the air
+		else if (velocity.mag() < TOLERANCE) {recoil *= 0.4;} // only static (not kinetic) friction (Note: only player velocity is correct)
+		move_camera_pos(dir, -recoil); // backwards recoil
+		if (weapon_id == W_M16 || weapon_id == W_SHOTGUN) {c_phi += 0.25*w.recoil;} // upward recoil (tilt backwards)
 		update_cpos();
 	}
 	switch (weapon_id) {
@@ -1759,11 +1761,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			vadd_rand(dir2, firing_error);
 			dir2.normalize();
 		}
-		velocity = dir2*vel;
 		objg.create_object_at(chosen, fpos);
 		dwobject &obj(objg.get_obj(chosen));
 		obj.pos      += dir2*(rdist*radius2);
-		obj.velocity  = velocity;
+		obj.velocity  = dir2*vel;
 		obj.init_dir  = dir2;
 		obj.init_dir.negate();
 		obj.time      = -1;
