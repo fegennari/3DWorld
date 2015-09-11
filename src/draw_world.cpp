@@ -55,6 +55,7 @@ extern colorRGBA bkg_color, sun_color, base_cloud_color, cur_fog_color;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
 extern vector<beam3d> beams;
+extern set<unsigned> moving_cobjs;
 extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
 extern obj_type object_types[];
@@ -1146,10 +1147,11 @@ void create_and_draw_cracks(quad_batch_draw &qbd) { // adds to beams
 	point const camera(get_camera_pos());
 
 	for (vector<decal_obj>::const_iterator i = decals.begin(); i != decals.end(); ++i) {
-		if (i->status == 0 || !i->is_glass || i->cid < 0) continue;
-		if (i->cid == last_cobj && skip_cobj)             continue;
+		if (i->status == 0 || !i->is_glass || i->cid < 0)    continue;
+		if (i->cid == last_cobj && skip_cobj)                continue;
+		if (moving_cobjs.find(i->cid) != moving_cobjs.end()) continue;
 		point const pos(i->get_pos());
-		if (!dist_less_than(camera, pos, 2000*i->radius)) continue; // too far away
+		if (!dist_less_than(camera, pos, 2000*i->radius))    continue; // too far away
 		coll_obj const &cobj(coll_objects.get_cobj(i->cid));
 		skip_cobj = (cobj.status != COLL_STATIC || cobj.type != COLL_CUBE || !camera_pdu.cube_visible(cobj) || cobj.is_occluded_from_camera());
 		last_cobj = i->cid;
