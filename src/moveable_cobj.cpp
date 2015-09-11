@@ -365,7 +365,6 @@ void try_drop_movable_cobj(unsigned index) {
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
 		cobj.shift_by(vector3d(0.0, 0.0, dz)); // move cobj up
 		scene_smap_vbo_invalid = 1;
-		//cobj.v_fall = 0.01*dz/tstep; // rising velocity (positive) - but use a tiny velocity to prevent instability
 		return; // or test other cobjs?
 	} // for i
 	
@@ -416,7 +415,7 @@ void try_drop_movable_cobj(unsigned index) {
 		else if (cobj.type == COLL_CYLINDER) {radius  = min(radius, cobj.radius);}
 		modify_grass_at(center, radius, 1); // crush grass
 	}
-	else if (delta.z == -test_dz) { // cobj falls the entire max distance without colliding, accelerate it
+	else if (delta.z <= -max_dz) { // cobj falls the entire max distance without colliding, accelerate it
 		// set terminal velocity to one cobj_height per timestep to avoid falling completely through another moving cobj (such as an elevator)
 		cobj.v_fall = max(cur_v_fall, -cobj_height/tstep);
 	} // else |delta.z| may be > |max_dz|, but it was only falling for one frame so should not be noticeable (and should be more stable for small tstep/accel)
@@ -429,21 +428,44 @@ void try_drop_movable_cobj(unsigned index) {
 
 	if (is_underwater(bot_cent, 0, &depth)) {
 		if (temperature > W_FREEZE_POINT) { // water
-			if (cobj.cp.density <= 1.0) { // floats
+			float const cobj_mass(cobj.get_mass());
+			float density(cobj.cp.density);
+
+			if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) { // has a flat top surface that other cobjs can rest on (what about extruded polygons?)
+				cobjs.clear();
+				cube_t bcube(cobj); // start at the current cobj xy
+				bcube.d[2][1] += 0.1*cobj_height; // z-slice slightly above cobj
+				bcube.d[2][0]  = cobj.d[2][0]; // top of cobj
+				get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
+				float tot_mass(cobj_mass);
+
+				// since the z-slice is so thin/small, we simply assume that any cobj intersecting it is resting on the current cobj
+				for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+					coll_obj const &c(coll_objects.get_cobj(*i));
+
+					if (is_underwater(c.get_center_pt(), 0)) { // top cobj is also underwater
+						if (c.cp.density > 1.0) {tot_mass += c.volume * (c.cp.density - 1.0);} // if c sinks, add it's net mass when submerged in water
+					}
+					else {tot_mass += c.get_mass();} // above the water - add the full mass
+				}
+				density *= tot_mass / cobj_mass; // density is effective total mass / volume
+			}
+			if (density <= 1.0) { // floats
 				if (delta.z <= 0.0) { // falling
+					float const target_z(depth - density*cobj_height); // adjust z for constant depth - cobj moves with the water surface
+					delta.z     = 0.1*target_z; // smoothly transition from current z to target z
 					cobj.v_fall = 0.0;
-					delta.z     = depth - cobj.cp.density*cobj_height; // adjust z for constant depth - cobj moves with the water surface
 				}
 			}
 			else { // sinks
 				if (depth > 0.5*cobj_height && mesh_dz < -0.1*cobj_height) { // sinking below the water
 					for (unsigned n = 0; n < 4; ++n) {gen_bubble(global_rand_gen.gen_rand_cube_point(cobj));}
 				}
-				float const fall_rate((cobj.cp.density - 1.0)/cobj.cp.density); // falling velocity (approaches to 1.0 as density increases)
+				float const fall_rate((density - 1.0)/density); // falling velocity (approaches to 1.0 as density increases)
 				max_dz      = min(gravity_dz*fall_rate, max_dz);
 				cobj.v_fall = max(cobj.v_fall, -0.001f/tstep); // use a lower terminal velocity in water
 			}
-			if (prev_v_fall < 8.0*accel) {add_splash(center, xpos, ypos, min(100.0f, -5000*prev_v_fall*cobj.volume*cobj.cp.density), min(2.0f*CAMERA_RADIUS, cobj.get_bsphere_radius()), 1);}
+			if (prev_v_fall < 8.0*accel) {add_splash(center, xpos, ypos, min(100.0f, -5000*prev_v_fall*cobj_mass), min(2.0f*CAMERA_RADIUS, cobj.get_bsphere_radius()), 1);}
 		}
 		else if (depth > 0.5*cobj_height) return; // stuck in ice
 	}

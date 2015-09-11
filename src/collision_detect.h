@@ -172,6 +172,7 @@ public:
 	point get_center_pt() const;
 	float get_max_dim()   const;
 	float get_light_transmit(point v1, point v2) const;
+	float get_mass()      const {return volume*cp.density;}
 	colorRGBA get_avg_color() const {return ((cp.tid >= 0) ? cp.color.modulate_with(texture_color(cp.tid)) : cp.color);}
 	void bounding_sphere(point &center, float &brad) const;
 	bool is_billboard_cobj() const {return (is_billboard && is_thin_poly() && npoints == 4);}
