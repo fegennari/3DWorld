@@ -13,6 +13,7 @@ Gameplay in tiled terrain mode
 Cascaded shadow maps for sun/moon
 Heat haze
 Ground snow cover in TT mode
+Pine tree leaf wind
 
 Moveable cobjs:
 - Underwater destroy causes too much of a wave

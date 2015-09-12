@@ -396,7 +396,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 	
 	if (shader.is_setup()) {shader.enable();}
 	else {
-		float const wind_mag(0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
+		float const wind_mag(has_snow ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
 		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0); // no underwater trees
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
