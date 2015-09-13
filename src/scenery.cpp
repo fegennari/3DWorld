@@ -36,7 +36,6 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 extern bool underwater, has_snow;
 extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, draw_model, DISABLE_WATER;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
-extern vector3d wind;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 
 
@@ -1132,8 +1131,6 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 }
 
 
-/*static*/ float scenery_group::get_plant_leaf_wind_mag() {return 0.002*min(2.0f, wind.mag())/tree_scale;}
-
 void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate) {
 
 	if (draw_opaque) { // draw stems, rocks, logs, and stumps
@@ -1150,7 +1147,7 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 	}
 	if (draw_transparent && !plants.empty()) { // draw leaves
 		shader_t s;
-		set_leaf_shader(s, 0.9, 0, 0, shadow_only, (has_snow ? 0.0 : get_plant_leaf_wind_mag()), underwater);
+		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
 	}

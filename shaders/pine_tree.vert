@@ -13,6 +13,7 @@ void main()
 	vertex.xyz *= vertex_scale;
 	vertex.xyz += xlate;
 #endif
+	add_leaf_wind(vertex);
 	world_space_zval = vertex.z;
 	vec4 epos        = fg_ModelViewMatrix  * vertex;
 	gl_Position      = fg_ProjectionMatrix * epos;

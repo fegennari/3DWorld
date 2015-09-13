@@ -542,7 +542,10 @@ void draw_small_trees(bool shadow_only) {
 	// draw leaves
 	if (small_trees.num_pine_trees > 0) { // pine trees
 		small_trees.vbo_manager[0].upload();
+		float const wind_mag(get_plant_leaf_wind_mag(shadow_only));
+		if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke, texgen
+		setup_leaf_wind(s, wind_mag, 0);
 		small_trees.draw_pine_leaves(shadow_only);
 		s.end_shader();
 	}

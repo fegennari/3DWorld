@@ -335,7 +335,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
-	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
+	s.set_vert_shader("texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	string fstr("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
 	if (smoke_en && use_smoke_noise()) {fstr += "perlin_clouds_3d.part*+";}
 	if (triplanar_tex) {fstr += "triplanar_texture.part+";}
@@ -390,7 +390,7 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 	bool indir_lighting(direct_lighting && tree_indir_lighting);
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, 0.0, 1); // no_dl_smap=1
 	set_smoke_shader_prefixes(s, 0, 0, direct_lighting, 0, 0, use_smap, 0, 0, 0, 0);
-	s.set_vert_shader("texture_gen.part+bump_map.part+no_lt_texgen_smoke");
+	s.set_vert_shader("texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	s.set_frag_shader("fresnel.part*+linear_fog.part+bump_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+textured_with_smoke");
 	s.begin_shader();
 	s.add_uniform_float("water_depth", water_depth);

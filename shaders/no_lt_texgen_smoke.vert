@@ -30,6 +30,7 @@ void main()
 	}
 	fg_Color_vf = fg_Color;
 	vec4 vertex = vec4((vertex_offset_scale*vertex_offset), 0.0) + fg_Vertex;
+	add_leaf_wind(vertex);
 	epos        = fg_ModelViewMatrix * vertex;
 	gl_Position = fg_ProjectionMatrix * epos;
 

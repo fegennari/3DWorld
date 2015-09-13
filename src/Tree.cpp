@@ -335,6 +335,20 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 }
 
 
+float get_plant_leaf_wind_mag(bool shadow_only) {
+	//if (shadow_only) return 0.0; // faster, but looks odd
+	return (has_snow ? 0.0 : 0.002*min(2.0f, wind.mag())/tree_scale);
+}
+
+void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
+
+	if (wind_mag == 0.0) return;
+	s.add_uniform_float("wind_mag",   wind_mag);
+	s.add_uniform_float("wind_scale", 1.0);
+	s.add_uniform_float("wind_time",  (underwater ? 0.025 : 0.1)*tfticks); // lower frequency movement for underwater seaweed (but applies to all plants)
+	s.add_uniform_float("wind_freq",  80.0*tree_scale);
+}
+
 void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag, bool underwater) {
 
 	if (world_mode == WMODE_INF_TERRAIN) {
@@ -350,7 +364,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	s.set_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled), 0); // VS - lightning
 	s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
 	set_dlights_booleans(s, !no_dlights, 0, 1); // VS; no_dl_smap=1
-	s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+dynamic_lighting.part*+leaf_lighting.part+texture_gen.part+tree_leaves");
+	s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+dynamic_lighting.part*+leaf_lighting.part+texture_gen.part+leaf_wind.part+tree_leaves");
 	s.begin_shader();
 	s.setup_scene_bounds();
 	if (!no_dlights) {setup_dlight_textures(s, 0);} // no dlight smap
@@ -367,12 +381,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 		s.add_uniform_int("smoke_and_indir_tex", 1);
 		set_indir_color(s);
 	}
-	if (wind_mag > 0.0) {
-		s.add_uniform_float("wind_mag",   wind_mag);
-		s.add_uniform_float("wind_scale", 1.0);
-		s.add_uniform_float("wind_time",  (underwater ? 0.025 : 0.1)*tfticks); // lower frequency movement for underwater seaweed (but applies to all plants)
-		s.add_uniform_float("wind_freq",  80.0*tree_scale);
-	}
+	setup_leaf_wind(s, wind_mag, underwater);
 	check_gl_error(301);
 }
 
@@ -395,8 +404,8 @@ void tree_cont_t::check_leaf_shadow_change() {
 void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only) {
 	
 	if (shader.is_setup()) {shader.enable();}
-	else {
-		float const wind_mag(has_snow ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
+	else { // Note: disabling leaf wind when shadow_only is faster but looks odd
+		float const wind_mag((has_snow /*|| shadow_only*/) ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
 		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0); // no underwater trees
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {

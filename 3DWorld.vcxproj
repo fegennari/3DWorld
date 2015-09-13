@@ -915,6 +915,7 @@
     <None Include="shaders\indir_lighting.part.frag" />
     <None Include="shaders\leaf_lighting.part.vert" />
     <None Include="shaders\leaf_lighting_comp.part" />
+    <None Include="shaders\leaf_wind.part.vert" />
     <None Include="shaders\line_draw_halo.frag" />
     <None Include="shaders\moon_draw.frag" />
     <None Include="shaders\moon_draw.vert" />

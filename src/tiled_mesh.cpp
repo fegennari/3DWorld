@@ -2145,9 +2145,12 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	}
 	// near leaves
 	shader_t s;
-	if (shadow_pass) {s.set_prefix("#define NO_NOISE", 1);} // FS
+	float const wind_mag(get_plant_leaf_wind_mag(shadow_pass));
+	if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
+	if (shadow_pass   ) {s.set_prefix("#define NO_NOISE",    1);} // FS
 	if (enable_instanced_pine_trees()) {s.set_prefix("#define ENABLE_INSTANCING", 0);} // VS
-	set_pine_tree_shader(s, "pine_tree");
+	set_pine_tree_shader(s, "leaf_wind.part+pine_tree");
+	setup_leaf_wind(s, wind_mag, 0);
 	int xlate_loc(-1);
 	
 	if (enable_instanced_pine_trees()) {
@@ -2294,7 +2297,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass) {
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 1, 0, reflection_pass);} // opaque
 	tree_scenery_pld.draw_and_clear();
 	s.end_shader();
-	set_leaf_shader(s, 0.9, 0, 0, 1, scenery_group::get_plant_leaf_wind_mag(), underwater);
+	set_leaf_shader(s, 0.9, 0, 0, 1, get_plant_leaf_wind_mag(0), underwater);
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass);} // leaves
 	s.end_shader();
 }
