@@ -169,6 +169,47 @@ void r_profile::clear_within(float const c[2]) {
 }
 
 
+// *** light_dir_grid ***
+
+
+void light_dir_grid::alloc() {
+	data.clear();
+	data.resize(XY_MULT_SIZE*MESH_Z_SIZE); // FIXME: should this be sparse like the lmap?
+}
+
+void light_dir_grid::add_intensity(point const &p, vector3d const &dir, float val) { // Note: dir should be normalized
+	int const ix(check_lmap_get_grid_index(p));
+	if (ix < 0) return; // if the global lightmap doesn't have this cell, it's not needed here
+	assert((unsigned)ix < data.size());
+	data[ix].add_normal(dir, val);
+}
+
+void light_dir_grid::normalize() {
+	for (auto i = data.begin(); i != data.end(); ++i) {i->normalize();}
+}
+
+void light_dir_grid::write_to_texture(vector<unsigned char> tex_data[2]) const {
+	for (unsigned d = 0; d < 2; ++d) {
+		tex_data[d].resize(3*data.size()); // pack XYZ into RGB (3 colors)
+		unsigned pos(0);
+
+		for (auto i = data.begin(); i != data.end(); ++i) {
+			UNROLL_3X(tex_data[d][pos+i_] = (unsigned char)(255.0*i->n[d][i_]);)
+			pos += 3;
+		}
+	}
+}
+
+bool light_dir_grid::read(std::string const &filename) {
+	// WRITE
+	return 0;
+}
+bool light_dir_grid::write(std::string const &filename) const {
+	// WRITE
+	return 0;
+}
+
+
 // *** MAIN LIGHTMAP CODE ***
 
 
@@ -280,6 +321,13 @@ void lmcell::mix_lighting_with(lmcell const &lmc, float val) {
 }
 
 
+int light_grid_base::check_lmap_get_grid_index(point const &p) const {
+	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
+	if (!lmap_manager.is_valid_cell(x, y, z)) return -1; // the global lightmap doesn't have this cell
+	return get_ix(x, y, z);
+}
+
+
 void light_volume_local::allocate() {
 	set_bounds(0, MESH_X_SIZE, 0, MESH_Y_SIZE, 0, MESH_SIZE[2]);
 	data.resize(get_num_data()); // init to all zeros
@@ -288,10 +336,9 @@ void light_volume_local::allocate() {
 void light_volume_local::add_color(point const &p, colorRGBA const &color) { // inlined in the header?
 
 	assert(!compressed); // compressed is read only
-	int const x(get_xpos(p.x - SHIFT_DX)), y(get_ypos(p.y - SHIFT_DY)), z(get_zpos(p.z));
-	if (!lmap_manager.is_valid_cell(x, y, z)) return; // if the global lightmap doesn't have this cell, the local lmap shouldn't need it
-	unsigned const ix(get_ix(x, y, z));
-	assert(ix < data.size());
+	int const ix(check_lmap_get_grid_index(p));
+	if (ix < 0) return; // if the global lightmap doesn't have this cell, the local lmap shouldn't need it
+	assert((unsigned)ix < data.size());
 	UNROLL_3X(data[ix].lc[i_] += color[i_]*color.alpha;)
 	changed = 1;
 }

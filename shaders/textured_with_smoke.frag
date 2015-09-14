@@ -198,8 +198,8 @@ void main()
 		vec3 end_pos    = camera_pos + (vpos - camera_pos)*(min(fog_end, view_dist)/view_dist);
 		pt_pair cres    = clip_line(end_pos, camera_pos, scene_bb);
 		float scene_len = distance(cres.v2, cres.v1)/distance(end_pos, camera_pos);
-		float pixel_lum = get_luminance(indir_lookup(cres.v1)); // camera pos
-		if (!underwater) {pixel_lum = mix(pixel_lum, get_luminance(indir_lookup(cres.v2)), 0.75);} // FIXME: use multiple steps?
+		float pixel_lum = get_luminance(indir_lookup(cres.v1, normal)); // camera pos
+		if (!underwater) {pixel_lum = mix(pixel_lum, get_luminance(indir_lookup(cres.v2, normal)), 0.75);} // FIXME: use multiple steps?
 		//pixel_lum = get_luminance(lit_color.rgb)/max(0.01, get_luminance(gl_Color.rgb));
 		fcolor.rgb *= mix(1.0, min(2.0*pixel_lum, 1.0), scene_len);
 	}

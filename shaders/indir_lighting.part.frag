@@ -13,15 +13,25 @@ in vec3 vpos, normal; // world space
 
 // unused, but could be used for indir lighting with 6 directional components
 float cube_light_lookup(in vec3 normal_in, in vec3 plus_xyz, in vec3 minus_xyz) {
-	vec3 normal = normalize(normal_in);
-	normal      = sign(normal) * normal * normal;
-	return dot(clamp(normal, 0.0, 1.0), plus_xyz) + dot(clamp(-normal, 0.0, 1.0), minus_xyz);
+	vec3 n = normalize(normal_in);
+	n      = sign(n) * n * n;
+	return dot(max(n, 0.0), plus_xyz) + dot(max(-n, 0.0), minus_xyz);
 }
 
-vec3 indir_lookup(in vec3 pos) {
+#ifdef DIRECTIONAL_INDIR_LIGHTING
+uniform sampler3D dir_light_pos_tex, dir_light_neg_tex;
+
+vec3 indir_lookup(in vec3 pos, in vec3 n) {
+	vec3 spos  = clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
+	vec3 color = texture(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
+	return color * cube_light_lookup(n, texture(dir_light_pos_tex, spos.zxy).xyz, texture(dir_light_neg_tex, spos.zxy).xyz);
+}
+#else
+vec3 indir_lookup(in vec3 pos, in vec3 n) {
 	vec3 spos = clamp((pos - scene_llc)/scene_scale, 0.0, 1.0); // should be in [0.0, 1.0] range
 	return texture(smoke_and_indir_tex, spos.zxy).rgb; // add indir light color from texture
 }
+#endif
 
 void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
 	vec3 indir_color = const_indir_color; // add constant indir
@@ -43,7 +53,7 @@ void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
 			indir_color     = mix(indir_color, hemi_color, 0.5); // blend between the two
 		}
 		if (indir_lighting) {
-			vec3 indir_light = indir_lookup(spos);
+			vec3 indir_light = indir_lookup(spos, n);
 			//indir_light    = pow(indir_light, vec3(0.45)); // gamma correction
 			indir_color     += indir_light; // indirect lighting
 #if 0 // add faked indir specular
@@ -51,7 +61,7 @@ void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
 			vec3 eye_ref    = reflect(eye_vect, normal_sign*normal);
 			vec3 spos_spec  = vpos + (indir_vert_offset*half_dxy)*eye_ref;
 			float spec_mag  = 1.0*pow(min(1.0, (1.0 - dot(eye_vect, normal))), 4.0);
-			indir_color    += spec_mag*specular_color.rgb*indir_lookup(spos_spec);
+			indir_color    += spec_mag*specular_color.rgb*indir_lookup(spos_spec, n);
 #endif
 		}
 	}

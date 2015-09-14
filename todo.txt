@@ -12,6 +12,7 @@ Gameplay in tiled terrain mode
 
 Cascaded shadow maps for sun/moon
 Heat haze
+Store indir light weights for 6 directions
 
 Moveable cobjs:
 - Underwater destroy causes too much of a wave

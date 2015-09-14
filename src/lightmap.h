@@ -20,7 +20,14 @@ float const CTHRESH          = 0.025;
 float const SQRT_CTHRESH     = sqrt(CTHRESH);
 
 
-struct normal_cell { // size = 24, unused
+class light_grid_base {
+protected:
+	unsigned get_ix(int x, int y, int z) const {return ((y*MESH_X_SIZE + x)*MESH_SIZE[2] + z);}
+	int check_lmap_get_grid_index(point const &p) const;
+};
+
+
+struct normal_cell { // size = 24, must be packed, unused
 
 	vector3d n[2]; // {negative, positive}
 	normal_cell() {UNROLL_3X(n[0][i_] = n[1][i_] = 0.0;)}
@@ -29,6 +36,7 @@ struct normal_cell { // size = 24, unused
 		UNROLL_3X(n[N[i_] > 0.0][i_] += weight*N[i_];)
 	}
 	void normalize() {
+		UNROLL_3X(assert(n[0][i_] >= 0.0 && n[1][i_] >= 0.0);)
 		float const mag(sqrt(n[0].mag_sq() + n[1].mag_sq()));
 		n[0] /= mag; n[1] /= mag;
 	}
@@ -38,6 +46,21 @@ struct normal_cell { // size = 24, unused
 		assert(dp >= 0.0);
 		return dp;
 	}
+};
+
+class light_dir_grid : public light_grid_base { // unused
+
+	vector<normal_cell> data;
+
+public:
+	bool is_allocated() const {return !data.empty();}
+	void alloc();
+	void add_intensity(point const &p, vector3d const &dir, float val);
+	void add_intensity(point const &p, vector3d const &dir, colorRGBA const &color) {add_intensity(p, dir, color.get_luminance()*color.A);}
+	void normalize();
+	void write_to_texture(vector<unsigned char> tex_data[2]) const;
+	bool read(std::string const &filename);
+	bool write(std::string const &filename) const;
 };
 
 
@@ -91,7 +114,7 @@ struct lmcell_local { // size = 12 (must be packed)
 	bool is_near_zero(float toler) const {return (lc[0] < toler && lc[1] < toler && lc[2] < toler);}
 };
 
-class light_volume_local {
+class light_volume_local : public light_grid_base {
 
 	bool changed, compressed;
 	unsigned tag_ix;
@@ -103,7 +126,6 @@ class light_volume_local {
 	bool read(std::string const &filename);
 	bool write(std::string const &filename) const;
 	void compress();
-	unsigned get_ix(int x, int y, int z) const {return ((y*MESH_X_SIZE + x)*MESH_SIZE[2] + z);}
 public:
 
 	light_volume_local(unsigned tag_ix_) : changed(0), compressed(0), tag_ix(tag_ix_), scale(0.0) {}
