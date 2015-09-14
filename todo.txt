@@ -15,5 +15,4 @@ Heat haze
 Store indir light weights for 6 directions
 
 Moveable cobjs:
-- Underwater destroy causes too much of a wave
 - Rotations/torque

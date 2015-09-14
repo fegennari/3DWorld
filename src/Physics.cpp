@@ -1101,7 +1101,8 @@ int dwobject::check_water_collision(float vz_old) {
 					if (type == SHRAPNEL) {
 						if (rand()%10 < 6) {energy = 0.0;} else {energy *= 0.2;}
 					}
-					if (energy > 0.0) add_splash(pos, xpos, ypos, energy, radius, (radius >= LARGE_OBJ_RAD));
+					else if (type == FRAGMENT) {energy *= 0.2;} // too many fragments adding energy gives too large of a splash
+					if (energy > 0.0) {add_splash(pos, xpos, ypos, energy, radius, (radius >= LARGE_OBJ_RAD));}
 				}
 			}
 		}
