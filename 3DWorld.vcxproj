@@ -912,6 +912,7 @@
     <None Include="shaders\grass_tiled.geom" />
     <None Include="shaders\grass_tiled.vert" />
     <None Include="shaders\grass_with_dlights.frag" />
+    <None Include="shaders\heat_waves.frag" />
     <None Include="shaders\indir_lighting.part.frag" />
     <None Include="shaders\leaf_lighting.part.vert" />
     <None Include="shaders\leaf_lighting_comp.part" />
