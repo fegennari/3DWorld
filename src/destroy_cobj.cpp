@@ -121,6 +121,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 				hotness = 1.0 - (explodeable ? 0.0 : p2p_dist(fpos, pos)/blacken_radius);
 				cts[i].color *= 1.0 - hotness; // blacken due to heat from explosion
 			}
+			if (is_underwater(fpos)) {velocity *= 0.1;} // make it slow when underwater
 			float const time_mult((hotness > 0.0) ? 0.0 : 0.5*rand_float());
 			gen_fragment(fpos, velocity, size_scale, time_mult, cts[i].color, cts[i].tid, cts[i].tscale, shooter, tri_fragments, hotness);
 		}
