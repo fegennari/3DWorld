@@ -189,6 +189,7 @@ public:
 	void create_portal() const; // destroy_cobj.cpp
 	void add_connect_waypoint(); // waypoints.cpp
 	void remove_waypoint();
+	void write_to_cobj_file(std::ofstream &out) const;
 
 	// inexact primitive intersections
 	int cube_intersects(cube_t const &cube) const;

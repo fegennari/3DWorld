@@ -198,6 +198,7 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	template<typename S> pointT(S const &p) : x(p.x), y(p.y), z(p.z) {}
 
 	std::string str() const {std::ostringstream oss; oss << x << ", " << y << ", " << z; return oss.str();}
+	std::string raw_str() const {std::ostringstream oss; oss << x << " " << y << " " << z; return oss.str();}
 	template<typename S> void operator=(pointT<S> const &p) {x = p.x; y = p.y; z = p.z;}
 	bool operator==(const pointT &p) const {return (p.x == x && p.y == y && p.z == z);}
 	bool operator!=(const pointT &p) const {return !operator==(p);}

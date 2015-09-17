@@ -1710,6 +1710,61 @@ int read_coll_objects(const char *coll_obj_file) {
 }
 
 
+void coll_obj::write_to_cobj_file(ofstream &out) const {
+
+#if 0
+	"density" cobj.cp.density
+	'e': // cobj.cp.surfs
+	'l': // object layer/material: elasticity R G B A texture_id/texture_name [draw=1 [refract_ix=1.0 [light_atten=0.0 [emissive=0]]]]:
+		cobj.cp.elastic cobj.cp.color.R cobj.cp.color.G cobj.cp.color.B cobj.cp.color.A cobj.cp.tid [cobj.cp.draw cobj.cp.refract_ix cobj.cp.light_atten cobj.cp.is_emissive]
+	'X': // normal map texture id/name [invert_y=0 [swap_binorm_sign=0]] cobj.cp.normal_map
+	'r': // set specular: <specular intensity> <shininess> [R G B]: 1.0 cobj.cp.shine [cobj.cp.spec_color.R cobj.cp.spec_color.G cobj.cp.spec_color.B]
+	'y': // cobj.cp.tscale
+	'Y': // <tdx> <tdy> [<swap_xy>]: cobj.cp.tdx cobj.cp.tdy cobj.cp.set_swap_tcs_flag(SWAP_TCS_XY)
+	'a': // cobj.destroy
+	'd': or "moveable" // set_bit_flag_to(cobj.cp.flags, COBJ_MOVABLE)
+
+	'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
+	'L': // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
+	'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
+	'V': // bind prev light source to cobj at location <x y z>
+	'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
+	'N': // portal: xyz1 xyz2 xyz3 xyz4 [nx ny nz]
+	'x': // teleporter sx sy sz  dx dy dz  radius
+#endif
+
+	switch (type) {
+	case COLL_CUBE: // 'B': cube: xmin xmax ymin ymax zmin zmax
+		out << "B " << d[0][0] << " " << d[0][1] << " " << d[1][0] << " " << d[1][1] << " " << d[2][0] << " " << d[2][1] << endl;
+		break;
+	case COLL_SPHERE: // 'S': sphere: x y z radius
+		out << "S " << points[0].raw_str() << endl;
+		break;
+	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT: // 'C': cylinder: x1 y1 z1 x2 y2 z2 r1 r2
+		out << "C " << points[0].raw_str() << " " << points[1].raw_str() << " " << radius << " " << radius2 << endl;
+		break;
+	case COLL_CAPSULE: // 'k': capsule: x1 y1 z1 x2 y2 z2 r1 r2
+		out << "k " << points[0].raw_str() << " " << points[1].raw_str() << " " << radius << " " << radius2 << endl;
+		break;
+	case COLL_POLYGON: // 'P': polygon: npts (x y z)* thickness
+		out << "p " << npoints << " ";
+		for (unsigned n = 0; n < npoints; ++n) {out << points[n].raw_str() << " ";}
+		out << thickness << endl;
+		break;
+	default: assert(0);
+	}
+}
+
+bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { // call on fixed_cobjs
+
+	ofstream out(fn);
+	if (!out.good()) {cerr << "Error opening coll object file '" << fn << "' for output" << endl; return 0;}
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {i->write_to_cobj_file(out);}
+	return 1;
+}
+
+
 void init_models() {
 
 	build_hmv_shape();
