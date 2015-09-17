@@ -1620,7 +1620,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	fire_frame = max(1, fire_delay);
 	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
 	
-	if (is_player) { // recoil (only for player)
+	if (is_player && powerup != PU_FLIGHT) { // recoil (only for player)
 		float recoil(w.recoil);
 		if (is_jumping || fall_counter > 0 ) {recoil *= 2.5;} // low friction when in the air
 		else if (velocity.mag() < TOLERANCE) {recoil *= 0.4;} // only static (not kinetic) friction (Note: only player velocity is correct)
