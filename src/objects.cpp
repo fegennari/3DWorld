@@ -35,13 +35,13 @@ void coll_obj::init() {
 	cp.tscale    = 1.0;
 	cp.surfs     = 0;
 	cp.spec_color= BLACK;
-	cp.shine     = 1.0;
+	cp.shine     = 0.0;
 	cp.is_emissive = 0;
 	norm         = zero_vector;
 	npoints      = 0;
 	type         = COLL_NULL;
 	status       = COLL_UNUSED;
-	destroy      = 1;
+	destroy      = NON_DEST;
 	fixed        = 1;
 	id           = -1;
 }

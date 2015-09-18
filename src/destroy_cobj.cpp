@@ -243,7 +243,7 @@ void add_to_falling_cobjs(set<unsigned> const &ids) {
 
 	for (set<unsigned>::const_iterator i = ids.begin(); i != ids.end(); ++i) {
 		coll_obj &cobj(coll_objects.get_cobj(*i));
-		if (cobj.cp.flags & COBJ_MOVABLE) {moving_cobjs.insert(*i); continue;} // move instead of fall
+		if (cobj.is_movable()) {moving_cobjs.insert(*i); continue;} // move instead of fall
 		cobj.falling = 1;
 		falling_cobjs.push_back(*i);
 	}
@@ -357,7 +357,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 		if (REMOVE_UNANCHORED) {
 			for (set<unsigned>::const_iterator i = anchored[0].begin(); i != anchored[0].end(); ++i) {
 				coll_obj &cobj(coll_objects.get_cobj(*i));
-				if (cobj.cp.flags & COBJ_MOVABLE) {moving_cobjs.insert(*i); continue;} // move/fall instead of destroy
+				if (cobj.is_movable()) {moving_cobjs.insert(*i); continue;} // move/fall instead of destroy
 				if (cobj.destroy <= max(destroy_thresh, (min_destroy-1))) continue; // can't destroy (can't get here?)
 				cts.push_back(color_tid_vol(cobj, cobj.volume, cobj.calc_min_dim(), 1));
 				cobj.clear_internal_data();
@@ -433,7 +433,7 @@ bool is_pt_under_mesh(point const &p) {
 int coll_obj::is_anchored() const {
 
 	if (platform_id >= 0 || status != COLL_STATIC) return 0; // platforms and dynamic objects are never connecting
-	if (cp.flags & COBJ_MOVABLE)                   return 0; // movable cobjs aren't anchored
+	if (is_movable())                              return 0; // movable cobjs aren't anchored
 	if (destroy <= destroy_thresh)                 return 2; // can't be destroyed, so it never moves
 	if (d[2][0] <= min(zbottom, czmin))            return 1; // below the scene
 	if (d[2][0] > ztop)                            return 0; // above the mesh

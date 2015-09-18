@@ -352,7 +352,7 @@ void try_drop_movable_cobj(unsigned index) {
 		float const dz(c.d[2][1] - cobj.d[2][0]);
 		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 
-		if (c.cp.flags & COBJ_MOVABLE) { // both cobjs are movable - is this a stack?
+		if (c.is_movable()) { // both cobjs are movable - is this a stack?
 			if (c.type == COLL_CUBE || c.type == COLL_CYLINDER || (c.type == COLL_POLYGON && c.norm.x == 0.0 && c.norm.y == 0.0)) {} // flat cobjs can always be stacked
 			else if (dz < get_cobj_step_height()) {} // c_top - cobj_bot < step_height
 			else if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
@@ -482,7 +482,7 @@ void try_drop_movable_cobj(unsigned index) {
 bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
-	if (!(cobj.cp.flags & COBJ_MOVABLE)) return 0; // not movable
+	if (!cobj.is_movable()) return 0; // not movable
 	delta.z = 0.0; // for now, objects can only be pushed in xy
 	float const tolerance(1.0E-6), toler_sq(tolerance*tolerance);
 	if (delta.mag_sq() < toler_sq) return 0;
@@ -510,9 +510,9 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 		for (unsigned i = 0; i < cobjs.size(); ++i) {
 			unsigned const cid(cobjs[i]);
 			coll_obj const &c(coll_objects.get_cobj(cid));
-			if (!(c.cp.flags & COBJ_MOVABLE) || c.type != COLL_CUBE) continue;
-			if (!cobj.intersects_cobj(c, -tolerance)) continue; // no initial intersection/adjacency
-			if (seen.find(cid) != seen.end()) continue; // prevent infinite recursion
+			if (!c.is_movable() || c.type != COLL_CUBE) continue;
+			if (!cobj.intersects_cobj(c, -tolerance))   continue; // no initial intersection/adjacency
+			if (seen.find(cid) != seen.end())           continue; // prevent infinite recursion
 			seen.insert(cid);
 			vector3d delta2(delta);
 			if (!push_cobj(cid, delta2, seen)) return 0; // can't push (recursive call)

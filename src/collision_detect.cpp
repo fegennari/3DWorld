@@ -49,7 +49,7 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
 	point center(ipos + get_platform_delta());
 
-	if ((c.cp.flags & COBJ_MOVABLE) && moving_cobjs.find(cobj) != moving_cobjs.end()) {
+	if (c.is_movable() && moving_cobjs.find(cobj) != moving_cobjs.end()) {
 		vector3d const local_delta(c.get_llc() - cobj_llc); // look at cobj LLC delta
 		center += local_delta;
 		if (delta) {*delta = local_delta;}

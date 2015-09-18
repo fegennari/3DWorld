@@ -17,6 +17,9 @@ enum {COLL_UNUSED   = 0, COLL_FREED,    COLL_PENDING,  COLL_STATIC,  COLL_DYNAMI
 enum {OBJ_STAT_BAD  = 0, OBJ_STAT_AIR,  OBJ_STAT_COLL, OBJ_STAT_GND, OBJ_STAT_STOP,     OBJ_STAT_RES};
 enum {COBJ_TYPE_STD = 0, COBJ_TYPE_MODEL3D, COBJ_TYPE_VOX_TERRAIN};
 
+// collision object destroyability
+enum {NON_DEST=0, DESTROYABLE, SHATTERABLE, SHATTER_TO_PORTAL, EXPLODEABLE};
+
 unsigned const OBJ_CNT_REM_TJ = 1;
 
 struct geom_xform_t;
@@ -119,7 +122,7 @@ public:
 	vector3d norm, texture_offset;
 	vector<int> occluders;
 
-	coll_obj() : type(COLL_NULL), destroy(0), status(COLL_UNUSED), last_coll(0), coll_type(0), fixed(0), is_billboard(0),
+	coll_obj() : type(COLL_NULL), destroy(NON_DEST), status(COLL_UNUSED), last_coll(0), coll_type(0), fixed(0), is_billboard(0),
 		falling(0), radius(0.0), radius2(0.0), thickness(0.0), volume(0.0), v_fall(0.0), counter(0), id(-1), platform_id(-1),
 		group_id(-1), waypt_id(-1), npoints(0), norm(zero_vector), texture_offset(zero_vector) {}
 	void init();
@@ -158,7 +161,8 @@ public:
 	bool is_occluder()    const;// {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}
 	bool is_big_occluder()const {return (is_occluder() && fixed && volume > 0.001);}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
-	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || (cp.flags & COBJ_MOVABLE));}
+	bool is_movable()     const {return ((cp.flags & COBJ_MOVABLE) != 0);}
+	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || is_movable());}
 	bool is_player()      const;
 	bool is_invis_player()const;
 	bool truly_static()   const;
@@ -189,7 +193,7 @@ public:
 	void create_portal() const; // destroy_cobj.cpp
 	void add_connect_waypoint(); // waypoints.cpp
 	void remove_waypoint();
-	void write_to_cobj_file(std::ofstream &out) const;
+	void write_to_cobj_file(std::ofstream &out, coll_obj const &prev) const;
 
 	// inexact primitive intersections
 	int cube_intersects(cube_t const &cube) const;

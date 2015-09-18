@@ -15,7 +15,3 @@ Heat haze
 Store indir light weights for 6 directions
 Game editor
   - Cobj file writer
-
-Moveable cobjs:
-- Rotations/torque
-

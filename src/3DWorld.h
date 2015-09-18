@@ -639,6 +639,7 @@ struct colorRGB { // size = 12
 		n.z = 2.0*B - 1.0;
 	}
 	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B; return oss.str();}
+	std::string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B; return oss.str();}
 	float get_luminance() const {return (R + G + B)/3.0;}
 };
 
@@ -701,6 +702,7 @@ struct colorRGBA : public colorRGB { // size = 16
 	}
 	bool is_valid() const {return (R >= 0 && G >= 0 && B >= 0 && A >= 0 && R <= 1 && G <= 1 && B <= 1 && A <= 1);}
 	std::string str() const {std::ostringstream oss; oss << "R: " << R << ", G: " << G << ", B: " << B << ", A: " << A; return oss.str();}
+	std::string raw_str() const {std::ostringstream oss; oss << R << " " << G << " " << B << " " << A; return oss.str();}
 	void set_for_cur_shader() const;
 };
 
