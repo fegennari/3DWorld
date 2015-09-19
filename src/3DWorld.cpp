@@ -368,14 +368,8 @@ void set_perspective(float fovy, float nc_scale) {
 void check_zoom() {
 
 	float fovy(PERSP_ANGLE);
-
-	if (do_zoom == 1) {
-		fovy /= ZOOM_FACTOR;
-		do_zoom = 2;
-	}
-	else if (do_zoom == 2) {
-		do_zoom = 1;
-	}
+	if      (do_zoom == 1) {do_zoom = 2; fovy /= ZOOM_FACTOR;}
+	else if (do_zoom == 2) {do_zoom = 1;}
 	set_perspective(fovy, 1.0);
 }
 
@@ -383,23 +377,11 @@ void check_zoom() {
 void check_xy_offsets() {
 
 	if (camera_view) return;
-
-	while (xoff >= MAX_RUN_DIST) { // increase distance in tiled terrain mode to reduce shadow map updates?
-		xoff          -= MAX_RUN_DIST;
-		surface_pos.x -= MAX_RUN_DIST*DX_VAL;
-	}
-	while (xoff <= -MAX_RUN_DIST) {
-		xoff          += MAX_RUN_DIST;
-		surface_pos.x += MAX_RUN_DIST*DX_VAL;
-	}
-	while (yoff >= MAX_RUN_DIST) {
-		yoff          -= MAX_RUN_DIST;
-		surface_pos.y -= MAX_RUN_DIST*DY_VAL;
-	}
-	while (yoff <= -MAX_RUN_DIST) {
-		yoff          += MAX_RUN_DIST;
-		surface_pos.y += MAX_RUN_DIST*DY_VAL;
-	}
+	int const mrd(((world_mode == WMODE_INF_TERRAIN) ? 4 : 1)*MAX_RUN_DIST); // increase distance in TT mode to reduce shadow map updates
+	while (xoff >=  mrd) {xoff -= mrd; surface_pos.x -= mrd*DX_VAL;}
+	while (xoff <= -mrd) {xoff += mrd; surface_pos.x += mrd*DX_VAL;}
+	while (yoff >=  mrd) {yoff -= mrd; surface_pos.y -= mrd*DY_VAL;}
+	while (yoff <= -mrd) {yoff += mrd; surface_pos.y += mrd*DY_VAL;}
 }
 
 
