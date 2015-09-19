@@ -10,7 +10,7 @@ Gameplay in tiled terrain mode
   - Pickup items
   - Projectile and object collision detection
 
-Cascaded shadow maps for sun/moon
+Lower res distant shadow map for tiled terrain mode with smooth blend
 Heat haze
 Store indir light weights for 6 directions
 Game editor

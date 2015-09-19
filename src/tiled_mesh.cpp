@@ -624,7 +624,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 		point const pt_off(tile->ptree_off.subtract_from(mesh_off));
 
 		for (small_tree_group::const_iterator i = tile->pine_trees.begin(); i != tile->pine_trees.end(); ++i) {
-			add_tree_ao_shadow((i->get_pos() + pt_off), i->get_pine_tree_radius(), no_adj_test);
+			add_tree_ao_shadow((i->get_pos() + pt_off), 1.8*i->get_pine_tree_radius(), no_adj_test);
 		}
 	}
 	if (decid_trees_enabled() && can_have_trees()) {
@@ -632,7 +632,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 		point const dt_off(tile->dtree_off.subtract_from(mesh_off));
 
 		for (tree_cont_t::const_iterator i = tile->decid_trees.begin(); i != tile->decid_trees.end(); ++i) {
-			add_tree_ao_shadow((i->get_center() + dt_off), 0.6*i->get_radius(), no_adj_test); // less dense => smaller radius
+			add_tree_ao_shadow((i->get_center() + dt_off), 0.5*i->get_radius(), no_adj_test); // less dense => smaller radius
 		}
 	}
 	if (!no_adj_test && !is_distant) { // pull mode
@@ -688,6 +688,7 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 		for (unsigned x = 0; x < stride; ++x) {
 			unsigned const ix(y*stride + x), ix2(y*zvsize + x);
 
+			// Note: shadow_normal texture is stored as {normal.x, normal.y, ambient_occlusion, diffuse_shadow}
 			if (init_data) {
 				vector3d const norm(get_norm(ix2));
 				min_normal_z = min(min_normal_z, norm.z);
@@ -697,19 +698,15 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
 			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
 			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*shadow_val/255.0)); // add ambient occlusion from trees
-			shadow_val = 128 + shadow_val/2; // divide tree shadow effect by 2x to offset for shadow map effect
+			//shadow_val = 128 + shadow_val/2; // divide tree shadow effect by 2x to offset for shadow map effect
 
-			if (!mesh_shadows) {
-				// do nothing
-			}
+			if (!mesh_shadows) {} // do nothing
 			else if (has_sun && has_moon) {
 				bool const no_sun( (smask[LIGHT_SUN ][ix2] & SHADOWED_ALL) != 0);
 				bool const no_moon((smask[LIGHT_MOON][ix2] & SHADOWED_ALL) != 0);
 				shadow_val *= blend_light(light_factor, !no_sun, !no_moon);
 			}
-			else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {
-				shadow_val = 0; // fully in shadow
-			}
+			else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {shadow_val = 0;} // fully in shadow
 			data[ix].v[3] = shadow_val;
 		}
 	}

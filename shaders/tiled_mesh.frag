@@ -131,8 +131,15 @@ void main()
 	float bump_scale = 1.0 - weights.b; // bumps on everything but grass
 	bump_scale *= clamp((2.5 - 0.1*vdist), 0.0, 1.0); // decrease scale with distance to reduce tiling artifacts on sand and snow
 	float smap_scale = 0.0;
-	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - vdist), 0.0, 1.0);}
 	
+	if (use_shadow_map) {
+		float sm_val = smap_atten_slope*(smap_atten_cutoff - vdist);
+		smap_scale   = clamp(sm_val, 0.0, 1.0);
+		
+		if (diffuse_scale > 0.01) { // not completely in shadow (soft tree shadows, not mesh shadows)
+			diffuse_scale = mix(diffuse_scale, 1.0, clamp(sm_val-1.0, 0.0, 1.0)); // fade out the soft shadow when the shadow map is active
+		}
+	}
 	if (enable_light0) { // sun
 		float spec      = spec_scale*(spec_offset + 0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 80.0*spec_offset + 20.0*weights.b + 40.0*weights4;
