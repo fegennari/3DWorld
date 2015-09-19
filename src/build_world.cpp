@@ -53,6 +53,7 @@ extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, t
 extern point cpos2, orig_camera, orig_cdir;
 extern unsigned create_voxel_landscape, init_item_counts[];
 extern obj_type object_types[];
+extern string cobjs_out_fn;
 extern coll_obj_group coll_objects;
 extern platform_cont platforms;
 extern lightning l_strike;
@@ -70,6 +71,7 @@ int create_group(int obj_type, unsigned max_objects, unsigned init_objects,
 				 unsigned app_rate, bool init_enabled, bool reorderable, bool auot_max);
 void add_all_coll_objects(const char *coll_obj_file, bool re_add);
 int read_coll_objects(const char *coll_obj_file);
+bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn);
 void gen_star_points();
 int gen_game_obj(int type);
 point get_sstate_pos(int id);
@@ -775,13 +777,12 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 			PRINT_TIME(" Add Fixed Cobjs");
 			fixed_cobjs.clear();
 			remove_excess_cap(fixed_cobjs); // free the memory
+			if (!cobjs_out_fn.empty()) {write_coll_objects_file(coll_objects, cobjs_out_fn);} // after fixed cobjs processing
 		}
 		init = 1;
 	}
 	else {
-		for (unsigned i = 0; i < coll_objects.size(); ++i) {
-			coll_objects[i].re_add_coll_cobj(i);
-		}
+		for (unsigned i = 0; i < coll_objects.size(); ++i) {coll_objects[i].re_add_coll_cobj(i);}
 	}
 	purge_coll_freed(1);
 	add_shape_coll_objs();
@@ -1720,25 +1721,27 @@ string texture_str(int tid) {
 
 void coll_obj::write_to_cobj_file(ofstream &out, coll_obj const &prev) const {
 
-	if (cp != prev.cp) { // material parameters changed
-		out << "l " << cp.elastic << " " << cp.color.raw_str() << " " << texture_str(cp.tid);
-		if (cp.draw != prev.cp.draw || cp.refract_ix != prev.cp.refract_ix || cp.light_atten != prev.cp.light_atten || cp.is_emissive != prev.cp.is_emissive) {
-			out << " " << cp.draw << " " << cp.refract_ix << " " << cp.light_atten << " " << cp.is_emissive; // uncommon optional values
-		}
-		out << endl;
-		if (cp.shine != prev.cp.shine || cp.spec_color != prev.cp.spec_color) {out << "r 1.0 " << cp.shine << " " << cp.spec_color.raw_str() << endl;}
-		if (cp.density != prev.cp.density) {cout << "density " << cp.density << endl;}
-		if (cp.tscale  != prev.cp.tscale ) {cout << "y " << cp.tscale << endl;}
-		if (cp.tdx != prev.cp.tdx || cp.tdy != prev.cp.tdy || cp.swap_txy() != prev.cp.swap_txy()) {out << "y " << cp.tdx << " " << cp.tdy << " " << cp.swap_txy() << endl;}
+	if (type == COLL_NULL || !fixed) return; // unused/non-fixed cobj
+	bool const diff2(cp.draw != prev.cp.draw || cp.refract_ix != prev.cp.refract_ix || cp.light_atten != prev.cp.light_atten || cp.is_emissive != prev.cp.is_emissive);
 
-		if (cp.normal_map != prev.cp.normal_map) {
-			out << "X " << texture_str(cp.normal_map);
-			if (cp.normal_map >= 0) {out << " " << textures[textures.size()].invert_y << " " << cp.negate_nm_bns() << endl;}
-		}
+	if (diff2 || cp.elastic != prev.cp.elastic || cp.color != prev.cp.color || cp.tid != prev.cp.tid) { // material parameters changed
+		out << "l " << cp.elastic << " " << cp.color.raw_str() << " " << texture_str(cp.tid);
+		if (diff2) {out << " " << cp.draw << " " << cp.refract_ix << " " << cp.light_atten << " " << cp.is_emissive;} // uncommon optional values
+		out << endl;
 	}
-	if (cp.surfs != prev.cp.surfs) {cout << "e " << cp.surfs << endl;}
-	if (is_movable() != prev.is_movable()) {cout << "movable " << is_movable() << endl;} // or 'd'
-	if (destroy != prev.destroy) {cout << "a " << destroy << endl;}
+	if (cp.shine != prev.cp.shine || cp.spec_color != prev.cp.spec_color) {out << "r 1.0 " << cp.shine << " " << cp.spec_color.raw_str() << endl;}
+	if (cp.density != prev.cp.density) {out << "density " << cp.density << endl;}
+	if (cp.tscale  != prev.cp.tscale ) {out << "y " << cp.tscale << endl;}
+	if (cp.tdx != prev.cp.tdx || cp.tdy != prev.cp.tdy || cp.swap_txy() != prev.cp.swap_txy()) {out << "y " << cp.tdx << " " << cp.tdy << " " << cp.swap_txy() << endl;}
+
+	if (cp.normal_map != prev.cp.normal_map) {
+		out << "X " << texture_str(cp.normal_map);
+		if (cp.normal_map >= 0) {out << " " << (textures[textures.size()].invert_y != 0) << " " << cp.negate_nm_bns();}
+		out << endl;
+	}
+	if (cp.surfs != prev.cp.surfs) {out << "e " << (unsigned)cp.surfs << endl;}
+	if (is_movable() != prev.is_movable()) {out << "movable " << is_movable() << endl;} // or 'd'
+	if (destroy != prev.destroy) {out << "a " << (unsigned)destroy << endl;}
 
 	switch (type) {
 	case COLL_CUBE: // 'B': cube: xmin xmax ymin ymax zmin zmax

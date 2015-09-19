@@ -54,6 +54,7 @@ inline bool read_type_t(FILE *fp, int       &val) {return read_int   (fp, val);}
 inline bool read_type_t(FILE *fp, unsigned  &val) {return read_uint  (fp, val);}
 inline bool read_type_t(FILE *fp, float     &val) {return read_float (fp, val);}
 inline bool read_type_t(FILE *fp, char      *val) {return read_str   (fp, val);}
+inline bool read_type_t(FILE *fp, std::string &val) {return read_string(fp, val);}
 inline bool read_type_t(FILE *fp, vector3d  &val) {return read_vector(fp, val);}
 inline bool read_type_t(FILE *fp, colorRGBA &val) {return read_color (fp, val);}
 inline bool read_type_t(FILE *fp,     bool  &val) {return read_bool  (fp, val);}
