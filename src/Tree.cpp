@@ -853,7 +853,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 		if (ground_mode && !is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
-		td.draw_branches(s, ((wind_enabled || !ground_mode) ? last_size_scale : 0.0), 1); // draw branches (untextured), low_detail=1
+		td.draw_branches(s, (ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 1.0), 1); // draw branches (untextured), low_detail=1
 		fgPopMatrix();
 		return;
 	}
@@ -901,7 +901,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		translate_to(tree_center + xlate);
 		td.leaf_draw_setup(1);
 		// Note: since the shadow map is updated every frame when wind is enabled, we can use dynamic LOD without locking in a low-LOD static shadow map
-		td.draw_leaves_shadow_only((wind_enabled || !ground_mode) ? last_size_scale : 0.0);
+		td.draw_leaves_shadow_only((ground_mode ? (wind_enabled ? last_size_scale : 0.0) : 0.5));
 		fgPopMatrix();
 		return;
 	}
