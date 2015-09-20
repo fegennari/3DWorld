@@ -279,14 +279,8 @@ bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int m
 
 int get_light_pos(point &lpos, int light) {
 
-	if (light == LIGHT_SUN) {
-		lpos = sun_pos;
-		return 1;
-	}
-	else if (light == LIGHT_MOON) {
-		lpos = moon_pos;
-		return 1;
-	}
+	if      (light == LIGHT_SUN ) {lpos = sun_pos;  return 1;}
+	else if (light == LIGHT_MOON) {lpos = moon_pos; return 1;}
 	return 0;
 }
 
