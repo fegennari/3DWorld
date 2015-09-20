@@ -847,7 +847,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 
 	if (!created || not_visible) return;
 	tree_data_t &td(tdata());
-	bool const wind_enabled((display_mode & 0x0100) != 0), ground_mode(world_mode == WMODE_GROUND);
+	bool const ground_mode(world_mode == WMODE_GROUND), wind_enabled(ground_mode && (display_mode & 0x0100) != 0);
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
@@ -892,7 +892,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (!created) return;
 	tree_data_t &td(tdata());
 	td.gen_leaf_color();
-	bool const wind_enabled((display_mode & 0x0100) != 0), ground_mode(world_mode == WMODE_GROUND);
+	bool const ground_mode(world_mode == WMODE_GROUND), wind_enabled(ground_mode && (display_mode & 0x0100) != 0);
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
