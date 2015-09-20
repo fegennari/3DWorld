@@ -896,7 +896,11 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 
 	if (shadow_only) {
 		if (ground_mode && !is_over_mesh()) return;
-		if (!ground_mode && !is_visible_to_camera(xlate)) return;
+		
+		if (!ground_mode) { // still need VFC in tiled terrain mode since the shadow volume doesn't include the entire scene
+			not_visible = !is_visible_to_camera(xlate); // first pass only
+			if (not_visible) return;
+		}
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
 		td.leaf_draw_setup(1);
