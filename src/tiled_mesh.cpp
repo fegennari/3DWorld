@@ -968,7 +968,6 @@ void tile_t::init_pine_tree_draw() {
 	postproc_trees(pine_trees, ptzmax);
 }
 
-
 void tile_t::update_pine_tree_state(bool upload_if_needed) {
 
 	if (!pine_trees_enabled() || pine_trees.empty()) return;
@@ -985,14 +984,12 @@ void tile_t::update_pine_tree_state(bool upload_if_needed) {
 	}
 }
 
-
 // non-const because of cached instance data within pine_trees
 void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xlate_loc) {
 
 	bool const draw_all(low_detail || camera_pdu.point_visible_test(get_center())); // tile center is in view
 	pine_trees.draw_pine_leaves(0, low_detail, draw_all, contains_camera(), xlate, xlate_loc);
 }
-
 
 // Note: xlate has different meanings here: for near leaves, it's a vec3 attribute; for far leaves, it's a vec2 uniform; for branches, it's -1
 void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_branches, bool draw_near_leaves,
@@ -1057,17 +1054,15 @@ void tile_t::gen_decid_trees_if_needed() {
 	postproc_trees(decid_trees, dtzmax);
 }
 
-
 void tile_t::update_decid_trees() {
 	if (decid_trees_enabled()) {decid_trees.check_render_textures();}
 }
 
-
-void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass) {
+void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass) {
 
 	if (decid_trees.empty() || !can_have_trees()) return;
-	// Note: shadow_only is always zero here since it's not really correct and doesn't help performance
-	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, 0, reflection_pass, dtree_off.get_xlate());
+	// Note: shadow_only mode doesn't help performance much
+	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, shadow_pass, reflection_pass, dtree_off.get_xlate());
 }
 
 
@@ -2192,10 +2187,10 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 }
 
 
-void tile_draw_t::draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass) {
+void tile_draw_t::draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass, bool shadow_pass) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
-		to_draw[i].second->draw_decid_trees(s, lod_renderer, branches, leaves, reflection_pass);
+		to_draw[i].second->draw_decid_trees(s, lod_renderer, branches, leaves, reflection_pass, shadow_pass);
 	}
 }
 
@@ -2233,7 +2228,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 		set_tree_dither_noise_tex(ls, 1); // TU=1
 		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass);
+		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass, shadow_pass);
 		ls.add_uniform_color("color_scale", WHITE);
 		tree_cont_t::post_leaf_draw(ls);
 	}
@@ -2249,7 +2244,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		set_tree_dither_noise_tex(bs, 1); // TU=1
 		bs.add_uniform_int("tex0", 0);
 		bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
-		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass);
+		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass);
 		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 		bs.end_shader();
 	}

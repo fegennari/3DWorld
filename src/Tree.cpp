@@ -847,13 +847,13 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 
 	if (!created || not_visible) return;
 	tree_data_t &td(tdata());
-	bool const wind_enabled((display_mode & 0x0100) != 0);
+	bool const wind_enabled((display_mode & 0x0100) != 0), ground_mode(world_mode == WMODE_GROUND);
 
 	if (shadow_only) {
-		if (world_mode == WMODE_GROUND && !is_over_mesh()) return;
+		if (ground_mode && !is_over_mesh()) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
-		td.draw_branches(s, (wind_enabled ? last_size_scale : 0.0), 1); // draw branches (untextured), low_detail=1
+		td.draw_branches(s, ((wind_enabled || !ground_mode) ? last_size_scale : 0.0), 1); // draw branches (untextured), low_detail=1
 		fgPopMatrix();
 		return;
 	}
@@ -862,7 +862,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 	last_size_scale = size_scale;
 	if (size_scale < 0.05) return; // if too far away, don't draw any branches
 	colorRGBA bcolor(tree_types[type].barkc);
-	if (world_mode == WMODE_INF_TERRAIN) {bcolor *= 0.8;} // darken slightly in TT mode to account for lack of shadowing on tree branches/trunk
+	if (!ground_mode) {bcolor *= 0.8;} // darken slightly in TT mode to account for lack of shadowing on tree branches/trunk
 	float const dval(1.0f - 0.95f*damage);
 	UNROLL_3X(bcolor[i_] *= min(1.0f, dval*tree_color[i_]);)
 
@@ -892,21 +892,22 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (!created) return;
 	tree_data_t &td(tdata());
 	td.gen_leaf_color();
-	bool const wind_enabled((display_mode & 0x0100) != 0);
+	bool const wind_enabled((display_mode & 0x0100) != 0), ground_mode(world_mode == WMODE_GROUND);
 
 	if (shadow_only) {
-		if (world_mode == WMODE_GROUND && !is_over_mesh()) return;
+		if (ground_mode && !is_over_mesh()) return;
+		if (!ground_mode && !is_visible_to_camera(xlate)) return;
 		fgPushMatrix();
 		translate_to(tree_center + xlate);
 		td.leaf_draw_setup(1);
 		// Note: since the shadow map is updated every frame when wind is enabled, we can use dynamic LOD without locking in a low-LOD static shadow map
-		td.draw_leaves_shadow_only(wind_enabled ? last_size_scale : 0.0);
+		td.draw_leaves_shadow_only((wind_enabled || !ground_mode) ? last_size_scale : 0.0);
 		fgPopMatrix();
 		return;
 	}
 	bool const has_leaves(!td.get_leaves().empty());
 	
-	if (has_leaves && world_mode == WMODE_GROUND) {
+	if (has_leaves && ground_mode) {
 		burn_leaves();
 		if (l_strike.enabled == 1 && animate2) {lightning_damage(l_strike.end);}
 		if (begin_motion && animate2) {drop_leaves();}
@@ -937,7 +938,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
 	if (gen_arrays) {calc_leaf_shadows();}
-	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && world_mode == WMODE_GROUND) {s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate));}
+	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && ground_mode) {s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate));}
 	s.set_uniform_int(tex0_off, TLEAF_START_TUID+type); // what about texture color mod?
 	fgPushMatrix();
 	translate_to(tree_center + xlate);
@@ -1019,7 +1020,7 @@ void tree_data_t::ensure_branch_vbo() {
 void tree_data_t::draw_branches(shader_t &s, float size_scale, bool force_low_detail) {
 
 	unsigned const num((size_scale == 0.0) ? num_branch_quads : min(num_branch_quads, max((num_branch_quads/40), unsigned(1.5*num_branch_quads*size_scale*get_size_scale_mult())))); // branch LOD
-	bool low_detail(force_low_detail || ((size_scale == 0.0) ? 0 : (size_scale < 2.0)));
+	bool low_detail(force_low_detail || (size_scale > 0.0 && size_scale < 2.0));
 	if (has_4th_branches && num > num_branch_quads/5) {low_detail = 0;} // need high detail when using 4th order branches, since otherwise they would only have ndiv=2 (zero width)
 	ensure_branch_vbo();
 	branch_manager.pre_render();
