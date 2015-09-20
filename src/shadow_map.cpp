@@ -291,11 +291,19 @@ void set_smap_mvm_pjm(point const &eye, point const &center, vector3d const &up_
 	fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_dir.x, up_dir.y, up_dir.z);
 }
 
-pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds) {
+pos_dir_up get_pt_cube_frustum_pdu(point const &pos_, cube_t const &bounds) {
 
 	point const center(bounds.get_cube_center());
-	vector3d const light_dir((center - pos).get_norm()); // almost equal to lpos (point light)
+	point pos(pos_);
+	
+	if (world_mode == WMODE_INF_TERRAIN) { // in TT mode, the tile shadow maps must be more stable so that they don't jitter when the scene shifts
+		// making light_dir constant causes perf problems due to detection of dir changes causing spurious updates
+		//pos += center; // this works, but makes shadows misalign at tile boundaries
+		pos *= 10.0; // move the light further away (closer to infinite) to reduce the problem at the cost of some precision loss
+		// maybe a better solution is to use a real directional light + ortho projection here?
+	}
 	float const dist(p2p_dist(pos, center));
+	vector3d const light_dir((center - pos)/dist); // almost equal to lpos (point light)
 	vector3d up_dir(zero_vector);
 	up_dir[get_min_dim(light_dir)] = 1.0;
 	point corners[8];
