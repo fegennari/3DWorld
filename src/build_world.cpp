@@ -932,7 +932,7 @@ void read_or_calc_zval(FILE *fp, point &pos, float interp_rad, float radius, geo
 }
 
 
-string read_filename(FILE *fp) {
+string read_filename(FILE *fp, unsigned &line_num) {
 
 	assert(fp);
 	string str;
@@ -943,6 +943,7 @@ string read_filename(FILE *fp) {
 		if (c == '\0' || c == EOF) {return str;} // end of file
 		else if (c == '"') {in_quote ^= 1;} // quote
 		else if (isspace(c)) { // whitespace character
+			if (c == '\n') {++line_num;}
 			if (in_quote) {str.push_back(c);} // part of quoted string
 			else if (!str.empty()) {return str;} // not leading whitespace
 		}
@@ -1115,7 +1116,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'i': // include file (only translation and scale are saved state)
 			{
-				string const fn(read_filename(fp));
+				string const fn(read_filename(fp, line_num));
 				if (fn.empty()) {return read_error(fp, "include file", coll_obj_file);}
 				if (!read_coll_obj_file(fn.c_str(), xf, cobj, has_layer, lcolor)) {return read_error(fp, "include file", coll_obj_file);}
 			}
@@ -1123,7 +1124,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'O': // load *.obj | *.3ds | *.model3d file: <filename> <group_cobjs_level> <recalc_normals/use_vertex_normals> <write_file> [<voxel_xy_spacing>]
 			{
-				string const fn(read_filename(fp));
+				string const fn(read_filename(fp, line_num));
 				int recalc_normals(0), write_file(0);
 				float voxel_xy_spacing(0.0);
 
