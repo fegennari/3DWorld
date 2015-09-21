@@ -1087,8 +1087,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (fscanf(fp, "%f", &cobj.cp.density) != 1) {return read_error(fp, "density", coll_obj_file);}
 				}
 				else {
-					string const error_str(string("unrecognized keyword: '") + keyword + "'");
-					return read_error(fp, error_str.c_str(), coll_obj_file);
+					ostringstream oss;
+					oss << "unrecognized keyword: '" << keyword << "' on line " << line_num;
+					return read_error(fp, oss.str().c_str(), coll_obj_file);
 				}
 			}
 		}
@@ -1724,6 +1725,7 @@ void coll_obj::write_to_cobj_file(ofstream &out, coll_obj const &prev) const {
 
 	if (type == COLL_NULL || !fixed) return; // unused/non-fixed cobj
 	if (is_near_zero_area() || min_len() < 1.0E-5) return; // near zero area (use lower tolerance due to limited file write precision)
+	if (!cp.draw) return; // don't write out non-drawn collision hulls as they're generally not useful by themselves
 	bool const diff2(cp.draw != prev.cp.draw || cp.refract_ix != prev.cp.refract_ix || cp.light_atten != prev.cp.light_atten || cp.is_emissive != prev.cp.is_emissive);
 
 	if (diff2 || cp.elastic != prev.cp.elastic || cp.color != prev.cp.color || cp.tid != prev.cp.tid) { // material parameters changed
