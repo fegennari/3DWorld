@@ -8,7 +8,6 @@
 
 
 bool const VOXEL_MERGE        = 0;
-bool const SUB_CUBE_MERGE     = 1;
 bool const UNOVERLAP_COBJS    = 1;
 bool const MERGE_COBJS        = 1;
 bool const CHECK_COBJS        = 1;
@@ -309,7 +308,7 @@ void cube_t::get_points(point pts[8]) const {
 
 
 // returns 1 if entire cube is removed
-bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &output) const { // subtract ourself from cube
+bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &output, bool do_merge) const { // subtract ourself from cube
 
 	if (contains_cube(cube)) return 1;
 	unsigned const u[3][3] = {{1,0,0}, {0,1,0}, {0,0,1}}; // unit vectors
@@ -403,7 +402,7 @@ bool csg_cube::subtract_from_internal(const csg_cube &cube, vector<csg_cube> &ou
 						ncube.d[l][m] = vals[l][i3[l]+m];
 					}
 				}
-				if (SUB_CUBE_MERGE) {
+				if (do_merge) {
 					bool merged(0);
 					for (unsigned c = 0; c < output.size() && !merged; ++c) {
 						if (output[c].cube_merge(ncube)) merged = 1;
@@ -450,7 +449,8 @@ bool csg_cube::subtract_from_cube(coll_obj_group &new_cobjs, coll_obj const &cob
 	if (!intersects(cube, TOLER))    return 0; // no intersection
 	if (cube.is_zero_area())         return 1; // if zero area then remove it entirely
 	vector<csg_cube> output;
-	subtract_from_internal(cube, output);
+	bool const do_merge(cobj.counter != OBJ_CNT_REM_TJ); // if we're removing T-junctions for this cobj, then don't try to merge the parts
+	subtract_from_internal(cube, output, do_merge);
 	
 	for (unsigned i = 0; i < output.size(); ++i) {
 		new_cobjs.push_back(cobj); // keep properties of old coll cube

@@ -57,7 +57,7 @@ class csg_cube : public cube_t {
 	unsigned char eflags;
 
 	csg_cube(unsigned char eflags0) : eflags(eflags0) {} // eflags constructor (internal)
-	bool subtract_from_internal(const csg_cube &cube, vector<csg_cube> &output) const;
+	bool subtract_from_internal(const csg_cube &cube, vector<csg_cube> &output, bool do_merge=1) const;
 
 public:
 	csg_cube() : eflags(0) {}
