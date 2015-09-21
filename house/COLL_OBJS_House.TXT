@@ -262,18 +262,19 @@ X normal_maps/brickwork_normal.jpg # normal map
 J outside_brick # define brick material
 
 # Outside Walls Top
+tj 1 # remove T-junctions
 e 11
-B -1.8  -0.4 -2.0 -1.9 0.0   0.71 1 # Front Driveway Wall
+B -1.8  -0.4 -2.0 -1.9 0.0   0.71 # Front Driveway Wall
 e 35
-B -1.8  -1.7 -1.9  2.7 0.0   0.71 1 # Left Side Wall
+B -1.8  -1.7 -1.9  2.7 0.0   0.71 # Left Side Wall
 e 7
-B -1.8   1.2  2.7  2.8 0.0   0.71 1 # Back Wall
+B -1.8   1.2  2.7  2.8 0.0   0.71 # Back Wall
 e 19
-B  1.1   1.2 -1.4  2.7 0.0   0.71 1 # Right Side Wall
+B  1.1   1.2 -1.4  2.7 0.0   0.71 # Right Side Wall
 e 11
-B  -0.4  1.2 -1.4 -1.5 0.0   0.71 1 # Front Porch Wall
+B  -0.4  1.2 -1.4 -1.5 0.0   0.71 # Front Porch Wall
 e 19
-B -0.49 -0.4 -1.9 -1.5 0.05  0.71 1 # Left Wall on Front Porch
+B -0.49 -0.4 -1.9 -1.5 0.05  0.71 # Left Wall on Front Porch
 e 0
 X none # disable normal map
 
@@ -282,7 +283,7 @@ y 6.0
 X normal_maps/wood_NRM.jpg 1 # normal map (inverted y)
 l 0.75 1.0 1.0 1.0 1.0 46 1 # wood2
 e 7
-B -1.69 -0.48 -1.9  -1.89 0.05 0.71 1 # Front Driveway Wall
+B -1.69 -0.48 -1.9  -1.89 0.05 0.71 # Front Driveway Wall
 X none # disable normal map
 
 # Outside Wall plaster/stucco
@@ -290,17 +291,18 @@ y 9.0
 X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco
 e 19
-B -1.7  -1.69 -1.89  2.69 0.05  0.71 1 # Left Side Wall
+B -1.7  -1.69 -1.89  2.69 0.05  0.71 # Left Side Wall
 e 11
-B -1.69  1.09  2.69  2.7  0.05  0.71 1 # Back Wall
+B -1.69  1.09  2.69  2.7  0.05  0.71 # Back Wall
 e 35
-B  1.09  1.1  -1.39  2.69 0.05  0.71 1 # Right Side Wall
+B  1.09  1.1  -1.39  2.69 0.05  0.71 # Right Side Wall
 e 7
-B -0.4   1.09 -1.4  -1.39 0.05  0.71 1 # Front Porch Wall
+B -0.4   1.09 -1.4  -1.39 0.05  0.71 # Front Porch Wall
 e 35
-B -0.5  -0.49 -1.89 -1.4  0.05  0.71 1 # Left Wall on Front Porch
+B -0.5  -0.49 -1.89 -1.4  0.05  0.71 # Left Wall on Front Porch
 e 0
 X none # disable normal map
+tj 0
 
 # Negative Cubes for Windows and Doors
 n 1
@@ -358,7 +360,9 @@ l 0.9 1.0 1.0 1.0 1.0 27 1 # concrete block
 e 7
 B -1.64  1.08 -1.9  -1.88 -0.6  0.025
 e 19
-B -1.7  -1.64 -1.88 -0.05 -0.6  0.025 1
+tj 1 # remove T-junctions
+B -1.7  -1.64 -1.88 -0.05 -0.6  0.025
+tj 0
 e 35
 B 1.08   1.1  -1.88 -1.45 -0.6  0.025
 e 3
@@ -389,7 +393,9 @@ B 0.3 0.9 -1.65 -1.5 0.1 0.225  # Seat on Front Porch
 e 11
 B -1.8 1.2  -2.0  -1.9  -0.7  0.0  # Brick Outer
 e 35
-B -1.8 -1.7 -1.9   2.7  -0.7  0.0 1
+tj 1 # remove T-junctions
+B -1.8 -1.7 -1.9   2.7  -0.7  0.0
+tj 0
 e 7
 B -1.8  0.3  2.7   2.8  -0.7  0.0
 B  0.9  1.2  2.7   2.8  -0.7  0.0

@@ -101,11 +101,13 @@ e 3
 B -8.0   8.0  -1.0  -0.85 -0.4  -0.12  # front
 B -8.0   0.2   2.6   2.9  -0.4  -0.12  # back left
 B  0.6   8.0   2.6   2.9  -0.4  -0.12  # back right
-B -8.0  -7.7  -0.9   0.7  -0.4  -0.12  1  # left 1  (remove T-junctions)
-B -8.0  -7.7   0.7   2.0  -0.4  -0.12  1  # left 2  (remove T-junctions)
-B -8.0  -7.7   2.0   2.6  -0.4  -0.12  1  # left 3  (remove T-junctions)
-B  7.7   8.0  -0.9   2.0  -0.4  -0.12  1  # right 1 (remove T-junctions)
-B  7.7   8.0   2.0   2.6  -0.4  -0.12  1  # right 2 (remove T-junctions)
+tj 1 # remove T-junctions
+B -8.0  -7.7  -0.9   0.7  -0.4  -0.12 # left 1
+B -8.0  -7.7   0.7   2.0  -0.4  -0.12 # left 2
+B -8.0  -7.7   2.0   2.6  -0.4  -0.12 # left 3
+B  7.7   8.0  -0.9   2.0  -0.4  -0.12 # right 1
+B  7.7   8.0   2.0   2.6  -0.4  -0.12 # right 2
+tj 0
 # add some small polygon slices to prevent light leakage at the top and bottom edges of the walls, at the expense of texture misalignment
 Y 0.0 0.0 1
 P 4 -7.4 -0.9 -0.4   -7.7 -0.9 -0.39  -7.7 2.6 -0.39  -7.4 2.6 -0.4   0.0
