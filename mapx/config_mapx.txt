@@ -5,6 +5,7 @@ grass_size 0.025 0.002
 
 use_waypoints 1
 dynamic_smap_bias 1
+#cobjs_out_filename mapx/cobjs_out.txt
 
 #end # uncomment to disable lighting files
 

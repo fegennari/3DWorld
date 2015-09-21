@@ -1,3 +1,6 @@
+#i mapx/cobjs_out.txt
+#end
+
 # range is -10, 10 in X and Y
 T 0.0 0.0 -0.29
 #v 1 # enable voxel mode

@@ -1678,7 +1678,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			break;
 
 		default:
-			cerr << "Ignoring unrecognized symbol in collision object file line " << line_num << ": " << char(letter) << " (ASCII " << letter << ")." << endl;
+			cerr << "Error: unrecognized symbol in collision object file line " << line_num << ": " << char(letter) << " (ASCII " << letter << ")." << endl;
 			fclose(fp);
 			exit(1);
 			return 0;
@@ -1723,6 +1723,7 @@ string texture_str(int tid) {
 void coll_obj::write_to_cobj_file(ofstream &out, coll_obj const &prev) const {
 
 	if (type == COLL_NULL || !fixed) return; // unused/non-fixed cobj
+	if (is_near_zero_area() || min_len() < 1.0E-5) return; // near zero area (use lower tolerance due to limited file write precision)
 	bool const diff2(cp.draw != prev.cp.draw || cp.refract_ix != prev.cp.refract_ix || cp.light_atten != prev.cp.light_atten || cp.is_emissive != prev.cp.is_emissive);
 
 	if (diff2 || cp.elastic != prev.cp.elastic || cp.color != prev.cp.color || cp.tid != prev.cp.tid) { // material parameters changed
@@ -1733,7 +1734,7 @@ void coll_obj::write_to_cobj_file(ofstream &out, coll_obj const &prev) const {
 	if (cp.shine != prev.cp.shine || cp.spec_color != prev.cp.spec_color) {out << "r 1.0 " << cp.shine << " " << cp.spec_color.raw_str() << endl;}
 	if (cp.density != prev.cp.density) {out << "density " << cp.density << endl;}
 	if (cp.tscale  != prev.cp.tscale ) {out << "y " << cp.tscale << endl;}
-	if (cp.tdx != prev.cp.tdx || cp.tdy != prev.cp.tdy || cp.swap_txy() != prev.cp.swap_txy()) {out << "y " << cp.tdx << " " << cp.tdy << " " << cp.swap_txy() << endl;}
+	if (cp.tdx != prev.cp.tdx || cp.tdy != prev.cp.tdy || cp.swap_txy() != prev.cp.swap_txy()) {out << "Y " << cp.tdx << " " << cp.tdy << " " << cp.swap_txy() << endl;}
 
 	if (cp.normal_map != prev.cp.normal_map) {
 		out << "X " << texture_str(cp.normal_map);
@@ -1749,7 +1750,7 @@ void coll_obj::write_to_cobj_file(ofstream &out, coll_obj const &prev) const {
 		out << "B " << d[0][0] << " " << d[0][1] << " " << d[1][0] << " " << d[1][1] << " " << d[2][0] << " " << d[2][1] << endl;
 		break;
 	case COLL_SPHERE: // 'S': sphere: x y z radius
-		out << "S " << points[0].raw_str() << endl;
+		out << "S " << points[0].raw_str() << " " << radius << endl;
 		break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT: // 'C': cylinder: x1 y1 z1 x2 y2 z2 r1 r2
@@ -1759,7 +1760,7 @@ void coll_obj::write_to_cobj_file(ofstream &out, coll_obj const &prev) const {
 		out << "k " << points[0].raw_str() << " " << points[1].raw_str() << " " << radius << " " << radius2 << endl;
 		break;
 	case COLL_POLYGON: // 'P': polygon: npts (x y z)* thickness
-		out << "p " << npoints << " ";
+		out << "P " << npoints << " ";
 		for (int n = 0; n < npoints; ++n) {out << points[n].raw_str() << " ";}
 		out << thickness << endl;
 		break;
