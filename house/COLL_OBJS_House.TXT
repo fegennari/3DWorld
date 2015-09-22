@@ -493,7 +493,7 @@ X normal_maps/wood_NRM.jpg 1 # normal map (inverted y)
 l 0.7 0.6 0.6 0.6 1.0 46 1 # wood2
 e 3
 C 0.05 -1.25 0.3 0.05 -1.25 0.7 0.016 0.016
-D 0.0 0.15 0.0 2
+D 0.0 0.15 0.0 2 # step delta
 e 0
 B -0.01 0.11 -1.4 -0.89 0.3 0.31
 X none # disable normal map
@@ -543,7 +543,7 @@ a 0 # non-destroyable
 X normal_maps/dirt_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.36 0.22 0.15 1.0 45 1 # Downstairs Carpet
 B 0.8 1.1 1.4 1.5 -0.05  0.05
-D 0.0 -0.1 -0.05 12
+D 0.0 -0.1 -0.05 12 # step delta
 a 1 # destroyable
 
 # Wall/Railing by Stairs
@@ -551,7 +551,7 @@ y 10.0
 X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 26 1 # paneling
 B 0.79 0.8 0.2 0.3 -0.59 -0.5
-D 0.0 0.1 0.0  4  0.0 0.0 0.05
+D 0.0 0.1 0.0  4  0.0 0.0 0.05 # step delta
 X none # disable normal map
 
 # Roof
@@ -651,7 +651,7 @@ B 1.2  1.6 -0.1 0.9 -0.7 -0.2
 
 # Kitchen Porch Stairs
 B 1.2 1.5 1.3 1.4 -0.7  0.05
-D 0.0 -0.1 0.0  4  0.0 0.0 -0.05
+D 0.0 -0.1 0.0  4  0.0 0.0 -0.05 # step delta
 a 1 # destroyable
 X none # disable normal map
 
@@ -673,7 +673,7 @@ r 0.0 0.0 # reset specularity
 r 0.6 40.0 # set specularity
 l 0.6 0.0 0.1 0.0 1.0 -1 1
 C 1.35 0.05 -0.2 1.35 0.05 0.05 0.08 0.08
-D 0.0 0.2 0.0 1
+D 0.0 0.2 0.0 1 # step delta
 r 0.0 0.0 # reset specularity
 
 # Negative Cubes
@@ -687,12 +687,12 @@ y 1.0
 l 0.7 1.0 1.0 1.0 1.0 -1 1 # white painted metal
 e 3 # no top/bottom
 C 1.15 -1.95 0.1 1.15 -1.95 0.7 0.05 0.05
-D -0.75 0.0 0.0 1
+D -0.75 0.0 0.0 1 # step delta
 e 0
 B 1.1  1.2  -2.0 -1.9 0.1  0.12
-D -0.75 0.0 0.0 1
+D -0.75 0.0 0.0 1 # step delta
 B 1.1  1.2  -2.0 -1.9 0.68 0.7
-D -0.75 0.0 0.0 1
+D -0.75 0.0 0.0 1 # step delta
 
 # Driveway
 y 8.0
@@ -716,12 +716,12 @@ y 5.0
 X normal_maps/bark2_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.7 0.4 0.2 1.0 11 1 # wood
 C -0.225 -4.825 -0.1 -0.225 -4.825 0.3 0.03 0.03
-D 0.6 0.0 0.0 3
+D 0.6 0.0 0.0 3 # step delta
 a 2 # shatterable
 B -0.23 0.36 -4.845 -4.805 0.22 0.26 # add a gap so that they aren't merged
-D 0.6 0.0 0.0 2
+D 0.6 0.0 0.0 2 # step delta
 B -0.23 0.36 -4.845 -4.805 0.08 0.12
-D 0.6 0.0 0.0 2
+D 0.6 0.0 0.0 2 # step delta
 a 1 # destroyable
 y 1.0
 
@@ -751,9 +751,9 @@ X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 36 1 # wooden slats
 B -1.9  5.0 6.6 6.75 -0.7 -0.3 # main section
 B -2.0 -1.9 6.6 6.75 -0.7 -0.35 # steps 1
-D -0.1 0.0 0.0  4  0.0 0.0 -0.05
+D -0.1 0.0 0.0  4  0.0 0.0 -0.05 # step delta
 B  5.0  5.1 6.6 6.75 -0.7 -0.35 # steps 2
-D  0.1 0.0 0.0  6  0.0 0.0 -0.05
+D  0.1 0.0 0.0  6  0.0 0.0 -0.05 # step delta
 X none # disable normal map
 
 # Pine Trees
@@ -762,7 +762,7 @@ Y 0 0 1 # swap x and y
 l 0.1 0.1 0.4 0.2 1.0 15 1 # pine tree leaves - hedge texture
 e 1
 C 0.1 -2.18 -0.05 0.1 -2.18 0.75 0.28 0.0 # Front Yard
-D 0.9 0.0 0.0 1
+D 0.9 0.0 0.0 1 # step delta
 Y 0 0 0 # unswap x and y
 e 0
 B 0.13 0.97 -2.33 -2.0 -0.1 0.23
@@ -770,10 +770,10 @@ B 0.13 0.97 -2.33 -2.0 -0.1 0.23
 Y 0 0 1 # swap x and y
 e 3
 C -0.12 3.1 -0.65 -0.12 3.1 -0.35 0.15 0.15 # Back Yard
-D 0.0 0.3 0.0 2
+D 0.0 0.3 0.0 2 # step delta
 e 0
 S -0.12 3.1 -0.35 0.15
-D 0.0 0.3 0.0 2
+D 0.0 0.3 0.0 2 # step delta
 Y 0 0 0 # unswap x and y
 
 # Hedges
@@ -781,10 +781,10 @@ l 0.1 0.3 0.5 0.3 1.0 15 1 # pine tree leaves - hedge texture
 #B -2.2 -2.0 -4.8 -2.5 0.0 0.2 # Front Main 1
 #B -3.2 -2.0 -4.8 -4.6 0.0 0.2 # Front Main 2
 #B -3.3 -3.2 -4.8 -4.6 0.0 0.15
-#D -0.1 0.0 0.0  2  0.0 0.0 -0.05
+#D -0.1 0.0 0.0  2  0.0 0.0 -0.05 # step delta
 #B -5.5 -2.2 3.4 3.65 -0.3 0.25 # Back
 #B -5.6 -5.5 3.4 3.65 -0.3 0.2
-#D -0.1 0.0 0.0  3  0.0 0.0 -0.05
+#D -0.1 0.0 0.0  3  0.0 0.0 -0.05 # step delta
 
 # placeholder cobjs to preserve filled voxels for indir lighting
 e 63 # no sides visible
