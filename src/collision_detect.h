@@ -193,7 +193,7 @@ public:
 	void create_portal() const; // destroy_cobj.cpp
 	void add_connect_waypoint(); // waypoints.cpp
 	void remove_waypoint();
-	void write_to_cobj_file(std::ofstream &out, coll_obj const &prev) const;
+	void write_to_cobj_file(std::ostream &out, coll_obj &prev) const;
 
 	// inexact primitive intersections
 	int cube_intersects(cube_t const &cube) const;
@@ -386,6 +386,7 @@ public:
 	bool is_moving  () const {return (state == ST_FWD || state == ST_REV);}
 	bool is_active  () const {return (state != ST_NOACT);}
 	bool is_rotation() const {return is_rot;}
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 
@@ -394,6 +395,7 @@ struct platform_cont : public deque<platform> {
 	bool add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigger_t const &triggers);
 	void check_activate(point const &p, float radius, int activator);
 	void shift_by(vector3d const &val);
+	void add_current_cobjs();
 	void advance_timestep();
 	bool any_active() const;
 	bool any_moving_platforms_in_view(pos_dir_up const &pdu) const;

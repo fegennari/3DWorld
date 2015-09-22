@@ -1726,7 +1726,7 @@ string texture_str(int tid) {
 	return textures[tid].name;
 }
 
-void coll_obj::write_to_cobj_file(ofstream &out, coll_obj const &prev) const {
+void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 
 	if (type == COLL_NULL || !fixed) return; // unused/non-fixed cobj
 	if (is_near_zero_area() || min_len() < 1.0E-5) return; // near zero area (use lower tolerance due to limited file write precision)
@@ -1773,24 +1773,61 @@ void coll_obj::write_to_cobj_file(ofstream &out, coll_obj const &prev) const {
 		break;
 	default: assert(0);
 	}
+	prev = *this; // update previous cobj
 }
 
 bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { // call on fixed_cobjs
 
-#if 0
-	'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
-	'L': // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
-	'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
-	'V': // bind prev light source to cobj at location <x y z>
-	'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
-	'N': // portal: xyz1 xyz2 xyz3 xyz4 [nx ny nz]
-	'x': // teleporter sx sy sz  dx dy dz  radius
-#endif
-
 	ofstream out(fn);
 	if (!out.good()) {cerr << "Error opening coll object file '" << fn << "' for output" << endl; return 0;}
+	
+	// add normal drawn cobjs
 	coll_obj prev_cobj; // starts as default cobj
-	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {i->write_to_cobj_file(out, prev_cobj); prev_cobj = *i;}
+
+	for (auto c = cobjs.begin(); c != cobjs.end(); ++c) {
+		if (c->platform_id >= 0) continue; // platforms are written out below
+		c->write_to_cobj_file(out, prev_cobj);
+	}
+	out << endl;
+	
+	// add platforms
+	platforms.add_current_cobjs(); // to ensure cobjs are valid for each platform
+
+	for (auto p = platforms.begin(); p != platforms.end(); ++p) {
+		p->write_to_cobj_file(out);
+
+		for (auto c = p->cobjs.begin(); c != p->cobjs.end(); ++c) {
+			assert(*c < cobjs.size());
+			cobjs[*c].write_to_cobj_file(out, prev_cobj);
+		}
+		out << endl; // separate with a blank line for readability
+	}
+	if (!platforms.empty()) {out << "Q 0" << endl << endl;} // end platforms section
+	
+	// add teleporters
+	for (auto t = teleporters.begin(); t != teleporters.end(); ++t) {
+		out << "x " << t->pos.raw_str() << " " << t->dest.raw_str() << " " << t->radius << endl;
+	}
+	
+	// add portals
+	for (auto p = portals.begin(); p != portals.end(); ++p) {
+		out << "N ";
+		for (unsigned i = 0; i < 4; ++i) {out << p->pts[i].raw_str() << " ";}
+		out << p->normal.raw_str() << endl;
+	}
+	
+	// add light sources
+	// 'L': // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
+	// 'V': // bind prev light source to cobj at location <x y z>
+	for (auto l = light_sources_a.begin(); l != light_sources_a.end(); ++l) {
+		// WRITE
+	}
+	for (auto l = light_sources_d.begin(); l != light_sources_d.end(); ++l) {
+		// WRITE
+	}
+
+	// 'K': // scene diffuse point light or platform trigger: multi_trigger_t::write_to_cobj_file(out)
+	// 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
 	return 1;
 }
 

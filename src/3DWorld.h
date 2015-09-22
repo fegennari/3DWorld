@@ -403,6 +403,7 @@ struct cube_t { // size = 24
 	}
 	void set_from_points(point const *const pts, unsigned npts);
 	std::string str() const;
+	std::string raw_str() const;
 	bool is_near_zero_area() const;
 
 	void union_with_pt(point const &pt) {

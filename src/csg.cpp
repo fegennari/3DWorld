@@ -170,6 +170,13 @@ std::string cube_t::str() const {
 	return oss.str();
 }
 
+std::string cube_t::raw_str() const {
+	
+	std::ostringstream oss;
+	for (unsigned i = 0; i < 6; ++i) {oss << d[i&1][i>>1]; if (i < 5) {oss << " ";}}
+	return oss.str();
+}
+
 
 bool cube_t::is_near_zero_area() const {
 		

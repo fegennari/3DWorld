@@ -20,6 +20,7 @@ struct trigger_t {
 	unsigned register_player_pos(point const &p, float act_radius, int activator, bool clicks=0);
 	bool is_active() const {return (act_dist > 0.0 || use_act_region || auto_on_time > 0.0);}
 	void shift_by(vector3d const &val) {act_pos += val; if (use_act_region) {act_region.translate(val);}}
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 
@@ -30,6 +31,7 @@ struct multi_trigger_t : public vector<trigger_t> {
 	void shift_by(vector3d const &val);
 	float get_auto_on_time() const;
 	float get_auto_off_time() const;
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 

@@ -33,6 +33,12 @@ unsigned trigger_t::register_player_pos(point const &p, float act_radius, int ac
 	return (requires_action ? 2 : 1); // triggered by proximity = 1, triggered by player action = 2
 }
 
+void trigger_t::write_to_cobj_file(std::ostream &out) const {
+	out << "K " << act_pos.raw_str() << " " << act_dist << " " << auto_on_time << " " << auto_off_time << " " << (player_only != 0) << " " << (requires_action != 0);
+	if (use_act_region) {out << " " << act_region.raw_str();}
+	out << endl;
+}
+
 
 unsigned multi_trigger_t::register_player_pos(point const &p, float act_radius, int activator, bool clicks) {
 	unsigned ret(0);
@@ -56,6 +62,10 @@ float multi_trigger_t::get_auto_off_time() const { // the last trigger to deacti
 	float max_aot(0.0);
 	for (const_iterator i = begin(); i != end(); ++i) {max_aot = max(max_aot, i->auto_off_time);}
 	return max_aot;
+}
+
+void multi_trigger_t::write_to_cobj_file(std::ostream &out) const {
+	for (const_iterator i = begin(); i != end(); ++i) {i->write_to_cobj_file(out);}
 }
 
 
@@ -237,6 +247,13 @@ bool platform_cont::add_from_file(FILE *fp, geom_xform_t const &xf, multi_trigge
 	return 1;
 }
 
+void platform::write_to_cobj_file(std::ostream &out) const {
+
+	// 'Q': // platform: enabled [fspeed rspeed sdelay rdelay ext_dist|rot_angle act_dist origin<x,y,z> dir|rot_axis<x,y,z> cont [is_rotation=0]]
+	out << "Q 1 " << fspeed*TICKS_PER_SECOND << " " << rspeed*TICKS_PER_SECOND << " " << sdelay/TICKS_PER_SECOND << " " << rdelay/TICKS_PER_SECOND << " " << ext_dist << " " << act_dist
+		<< " " << origin.raw_str() << " " << dir.raw_str() << " " << cont << " " << is_rotation() << endl; // always enabled
+}
+
 
 void platform_cont::check_activate(point const &p, float radius, int activator) {
 	for (auto i = begin(); i != end(); ++i) {i->check_activate(p, radius, activator);}
@@ -247,13 +264,16 @@ void platform_cont::shift_by(vector3d const &val) {
 }
 
 
-void platform_cont::advance_timestep() {
-
-	for (auto i = begin(); i != end(); ++i) {i->next_frame();} // cache this?
-
+void platform_cont::add_current_cobjs() {
 	for (cobj_id_set_t::const_iterator i = coll_objects.platform_ids.begin(); i != coll_objects.platform_ids.end(); ++i) {
 		get_cobj_platform(coll_objects.get_cobj(*i)).add_cobj(*i);
 	}
+}
+
+void platform_cont::advance_timestep() {
+
+	for (auto i = begin(); i != end(); ++i) {i->next_frame();} // cache this?
+	add_current_cobjs();
 	for (auto i = begin(); i != end(); ++i) {i->advance_timestep();}
 }
 
