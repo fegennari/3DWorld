@@ -576,19 +576,24 @@ void tile_t::calc_shadows(bool calc_sun, bool calc_moon, bool no_push) {
 }
 
 
-void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius) const {
+void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius, float center_height) const {
 
 	tile_t *const adj_tile(get_adj_tile_smap(dx, dy));
 	if (!adj_tile || adj_tile->is_distant) return;
 	point const pos2(pos + mesh_off.subtract_from(adj_tile->mesh_off));
-	adj_tile->add_tree_ao_shadow(pos2, tradius, 1);
+	adj_tile->add_tree_ao_shadow(pos2, tradius, center_height, 1);
 }
 
 
-void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_test) {
+void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_height, bool no_adj_test) {
 
+	// FIXME: use two tree_map channels: one for AO and one for shadows;
+	// the AO version uses the normal (xc, yc) but the shadow version uses the light dir (+ mesh normal?) to offset (xc, yc) and maybe adjust rval to be elliptical;
+	// unfortunately, this requires updating all tree shadows and recreating the AO/normal map each time the light source changes, which can be slow
+	//vector3d const light_dir(get_light_pos().get_norm()); // directional light
+	//point pos(pos_ - light_dir*(center_height/max(0.1f, light_dir.z)));
 	int const xc(round_fp((pos.x - xstart)/deltax)), yc(round_fp((pos.y - ystart)/deltay));
-	int rval(max(int(tradius/deltax), int(tradius/deltay)) + 1);
+	int const rval(max(int(tradius/deltax), int(tradius/deltay)) + 1);
 	int const x1(max(0, xc-rval)), y1(max(0, yc-rval)), x2(min((int)size, xc+rval)), y2(min((int)size, yc+rval));
 	float const scale(0.6/rval);
 	bool updated(0);
@@ -606,7 +611,7 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, bool no_adj_tes
 		for (int dy = -1; dy <= 1; ++dy) {
 			for (int dx = -1; dx <= 1; ++dx) {
 				if (dx == 0 && dy == 0) continue;
-				if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, tradius);}
+				if (x_test[dx+1] && y_test[dy+1]) {push_tree_ao_shadow(dx, dy, pos, tradius, center_height);}
 			}
 		}
 	}
@@ -624,7 +629,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 		point const pt_off(tile->ptree_off.subtract_from(mesh_off));
 
 		for (small_tree_group::const_iterator i = tile->pine_trees.begin(); i != tile->pine_trees.end(); ++i) {
-			add_tree_ao_shadow((i->get_pos() + pt_off), 1.8*i->get_pine_tree_radius(), no_adj_test);
+			add_tree_ao_shadow((i->get_pos() + pt_off), 1.8*i->get_pine_tree_radius(), 0.5*i->get_height(), no_adj_test);
 		}
 	}
 	if (decid_trees_enabled() && can_have_trees()) {
@@ -632,7 +637,7 @@ void tile_t::apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_te
 		point const dt_off(tile->dtree_off.subtract_from(mesh_off));
 
 		for (tree_cont_t::const_iterator i = tile->decid_trees.begin(); i != tile->decid_trees.end(); ++i) {
-			add_tree_ao_shadow((i->get_center() + dt_off), 0.5*i->get_radius(), no_adj_test); // less dense => smaller radius
+			add_tree_ao_shadow((i->get_center() + dt_off), 0.5*i->get_radius(), i->get_height_offset(), no_adj_test); // less dense => smaller radius
 		}
 	}
 	if (!no_adj_test && !is_distant) { // pull mode
@@ -694,10 +699,11 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 				min_normal_z = min(min_normal_z, norm.z);
 				UNROLL_2X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));); // Note: we only set x and y here, z is calculated in the shader
 			}
-			unsigned char shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
+			unsigned char const tree_shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
+			unsigned char shadow_val(tree_shadow_val);
 			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
 			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
-			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*shadow_val/255.0)); // add ambient occlusion from trees
+			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*tree_shadow_val/255.0)); // add ambient occlusion from trees
 			//shadow_val = 128 + shadow_val/2; // divide tree shadow effect by 2x to offset for shadow map effect
 
 			if (!mesh_shadows) {} // do nothing
