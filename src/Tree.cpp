@@ -337,7 +337,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 
 float get_plant_leaf_wind_mag(bool shadow_only) {
 	//if (shadow_only) return 0.0; // faster, but looks odd
-	return (has_snow ? 0.0 : 0.002*min(2.0f, wind.mag())/tree_scale);
+	return ((has_snow || !animate2) ? 0.0 : 0.002*min(2.0f, wind.mag())/tree_scale);
 }
 
 void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
@@ -405,7 +405,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 	
 	if (shader.is_setup()) {shader.enable();}
 	else { // Note: disabling leaf wind when shadow_only is faster but looks odd
-		float const wind_mag((has_snow /*|| shadow_only*/) ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
+		float const wind_mag((has_snow || !animate2 /*|| shadow_only*/) ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
 		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0); // no underwater trees
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
