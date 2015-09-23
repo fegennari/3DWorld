@@ -1300,7 +1300,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				trigger_t trigger;
 				int const num_read(fscanf(fp, "%f%f%f%f%f%f%i%i", &trigger.act_pos.x, &trigger.act_pos.y, &trigger.act_pos.z,
 					&trigger.act_dist, &trigger.auto_on_time, &trigger.auto_off_time, &ivals[0], &ivals[1]));
-				if (num_read == 0) {triggers.clear(); break;} // bare K, just reset params and disable the trigger
+				if (num_read <= 0) {triggers.clear(); break;} // bare K, just reset params and disable the trigger, or EOF
 				if (num_read != 8) {return read_error(fp, "light source trigger", coll_obj_file, line_num);}
 				xf.xform_pos(trigger.act_pos);
 				trigger.act_dist       *= xf.scale;
