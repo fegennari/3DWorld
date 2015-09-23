@@ -802,15 +802,17 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 
 
 int read_error(FILE *fp, const char *param, const char *filename) {
-
 	cout << "*** Error reading " << param << " from file '" << filename << "'. ***" << endl;
 	fclose(fp);
 	return 0;
 }
-
+int read_error(FILE *fp, const char *param, const char *filename, unsigned line_num) {
+	cout << "*** Error reading " << param << " from file '" << filename << "' on line " << line_num << ". ***" << endl;
+	fclose(fp);
+	return 0;
+}
 
 void check_layer(bool has_layer) {
-
 	if (!has_layer) cout << "* Warning: Shape found before a layer specification in config file. Using default layer." << endl;
 }
 
@@ -1296,16 +1298,16 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'K': // scene diffuse point light or platform trigger: x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 			{
 				trigger_t trigger;
-				unsigned const num_read(fscanf(fp, "%f%f%f%f%f%f%i%i", &trigger.act_pos.x, &trigger.act_pos.y, &trigger.act_pos.z,
+				int const num_read(fscanf(fp, "%f%f%f%f%f%f%i%i", &trigger.act_pos.x, &trigger.act_pos.y, &trigger.act_pos.z,
 					&trigger.act_dist, &trigger.auto_on_time, &trigger.auto_off_time, &ivals[0], &ivals[1]));
 				if (num_read == 0) {triggers.clear(); break;} // bare K, just reset params and disable the trigger
-				if (num_read != 8) {return read_error(fp, "light source trigger", coll_obj_file);}
+				if (num_read != 8) {return read_error(fp, "light source trigger", coll_obj_file, line_num);}
 				xf.xform_pos(trigger.act_pos);
 				trigger.act_dist       *= xf.scale;
 				trigger.player_only     = (ivals[0] != 0);
 				trigger.requires_action = (ivals[1] != 0);
 				cube_t act_region;
-				unsigned const num_read2(read_cube(fp, xf, act_region));
+				int const num_read2(read_cube(fp, xf, act_region));
 				if (num_read2 == 6) {trigger.set_act_region(act_region);}
 				else if (num_read2 > 0) {return read_error(fp, "light source trigger activation cube", coll_obj_file);}
 				triggers.push_back(trigger);
@@ -1663,7 +1665,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "negative shape", coll_obj_file);}
 			set_bit_flag_to(cobj.status, COLL_NEGATIVE, (ivals[0] != 0));
 			break;
-		case 'a': // toggle destroyability
+		case 'a': // set destroyability
 			if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy shape", coll_obj_file);}
 			cobj.destroy = (EXPLODE_EVERYTHING ? EXPLODEABLE : (char)ivals[0]);
 			break;
@@ -1724,6 +1726,30 @@ string texture_str(int tid) {
 	if (tid < 0) {return "none";} // or -1
 	assert((unsigned)tid < textures.size());
 	return textures[tid].name;
+}
+
+void light_source::write_to_cobj_file(ostream &out, bool is_diffuse) const {
+
+	// 'L'/"light": // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
+	//fscanf(fp, "%f%f%f%f%f%f%f%f%f", &fvals[0], &fvals[1], &pos.x, &pos.y, &pos.z, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A);
+	//fscanf(fp, "%f%f%f%f%f%i%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0], &use_smap); // direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]
+	//light_source ls(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner);
+	out << "light " << (is_diffuse ? 0.0 : radius) << " " << (is_diffuse ? radius : 0.0) << " " << pos.raw_str() << " " << color.raw_str() << " "
+		<< (is_line_light() ? pos2 : dir).raw_str() << " " << bwidth << " " << r_inner << " " << is_line_light();
+}
+void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const {
+
+	triggers.write_to_cobj_file(out);
+	if (platform_id >= 0) {} // FIXME
+	// FIXME: use indir_dlight_group_manager
+	if (indir_dlight_ix == 0) {out << "indir_dlight_group none" << endl;}
+	else {out << "indir_dlight_group light_group" << indir_dlight_ix << " 1.0" << endl;} // 'U'/"indir_dlight_group": // indir dlight group: name [scale]
+	light_source::write_to_cobj_file(out, is_diffuse);
+	out << " " << (use_smap != 0) << endl;
+	if (bound) {out << "bind_light " << bind_pos.raw_str() << endl;} // 'V'/"bind_light": // bind prev light source to cobj at location <x y z>
+	triggers.write_end_triggers_cobj_file(out);
+	//if (cobj.platform_id >= 0) {platforms.get_cobj_platform(cobj).add_light(light_sources_d.size());}
+	//light_sources_d.push_back(light_source_trig(ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix));
 }
 
 void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
@@ -1804,30 +1830,49 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 	}
 	if (!platforms.empty()) {out << "Q 0" << endl << endl;} // end platforms section
 	
-	// add teleporters
+	// add teleporters, portals, and appearance spots
 	for (auto t = teleporters.begin(); t != teleporters.end(); ++t) {
 		out << "x " << t->pos.raw_str() << " " << t->dest.raw_str() << " " << t->radius << endl;
 	}
-	
-	// add portals
+	out << endl;
 	for (auto p = portals.begin(); p != portals.end(); ++p) {
 		out << "N ";
 		for (unsigned i = 0; i < 4; ++i) {out << p->pts[i].raw_str() << " ";}
 		out << p->normal.raw_str() << endl;
 	}
+	out << endl;
+	for (auto i = app_spots.begin(); i != app_spots.end(); ++i) {out << "A " << i->raw_str() << endl;}
+	out << endl;
 	
 	// add light sources
-	// 'L': // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
-	// 'V': // bind prev light source to cobj at location <x y z>
-	for (auto l = light_sources_a.begin(); l != light_sources_a.end(); ++l) {
-		// WRITE
-	}
-	for (auto l = light_sources_d.begin(); l != light_sources_d.end(); ++l) {
-		// WRITE
+	for (auto l = light_sources_a.begin(); l != light_sources_a.end(); ++l) {l->write_to_cobj_file(out, 0); out << endl;}
+	out << endl;
+	for (auto l = light_sources_d.begin()+FLASHLIGHT_LIGHT_ID+1; l != light_sources_d.end(); ++l) {l->write_to_cobj_file(out, 1); out << endl;}
+
+	// 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
+	for (unsigned d = 0; d < 2; ++d) {
+		auto lsv(d ? global_cube_lights : sky_cube_lights);
+		for (auto i = lsv.begin(); i != lsv.end(); ++i ) {
+			//read_cube(fp, xf, cls.bounds);
+			//fscanf(fp, "%f%f%f%f%u%i%u", &cls.color.R, &cls.color.G, &cls.color.B, &cls.intensity, &cls.num_rays, &ivals[0], &cls.disabled_edges);
+		}
 	}
 
-	// 'K': // scene diffuse point light or platform trigger: multi_trigger_t::write_to_cobj_file(out)
-	// 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
+	// 'E': // place tree: xpos ypos size type [zpos [tree_4th_branches]], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
+	//fscanf(fp, "%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0], &pos.z, local_tree_4th_branches)
+	//t_trees.push_back(tree(enable_leaf_wind));
+	//t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, local_tree_4th_branches);
+	//out << "g " << tree_height << " " << tree_br_scale_mult << " " << tree_nl_scale << " " << enable_leaf_wind << endl;
+
+	// 'F': // place small tree: xpos ypos height width type [zpos], type: T_PINE = 0, T_DECID = 1, T_TDECID = 2, T_BUSH = 3, T_PALM = 4, T_SH_PINE = 5
+	//fscanf(fp, "%f%f%f%f%i%f", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &pos.z)
+	//add_small_tree(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z)
+
+	// 'G': // place plant: xpos ypos radius height type [zpos], type: PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4
+	//fscanf(fp, "%f%f%f%f%i%f", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &pos.z)
+	//add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
+
+	out << "end" << endl;
 	return 1;
 }
 

@@ -32,6 +32,7 @@ struct multi_trigger_t : public vector<trigger_t> {
 	float get_auto_on_time() const;
 	float get_auto_off_time() const;
 	void write_to_cobj_file(std::ostream &out) const;
+	void write_end_triggers_cobj_file(std::ostream &out) const;
 };
 
 

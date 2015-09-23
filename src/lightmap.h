@@ -228,6 +228,7 @@ public:
 	void combine_with(light_source const &l);
 	bool try_merge_into(light_source &ls) const;
 	void setup_and_bind_smap_texture(shader_t &s, bool &arr_tex_set) const;
+	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
 	bool operator<(light_source const &l) const {return (radius < l.radius);} // compare radius
 	bool operator>(light_source const &l) const {return (radius > l.radius);} // compare radius
 };
@@ -270,6 +271,7 @@ public:
 	bool check_shadow_map();
 	void release_smap();
 	unsigned get_indir_dlight_ix() const {return indir_dlight_ix;}
+	void write_to_cobj_file(std::ostream &out, bool is_diffuse) const;
 };
 
 
