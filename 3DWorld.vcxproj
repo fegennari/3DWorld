@@ -888,6 +888,7 @@
     <None Include="shaders\detail_normal_map.part.frag" />
     <None Include="shaders\draw_mesh.frag" />
     <None Include="shaders\draw_mesh.vert" />
+    <None Include="shaders\drunken_wave.frag" />
     <None Include="shaders\dynamic_lighting.part" />
     <None Include="shaders\exponential_fog.part.frag" />
     <None Include="shaders\flowers.frag" />

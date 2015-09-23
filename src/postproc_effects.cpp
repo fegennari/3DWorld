@@ -8,9 +8,11 @@
 
 
 extern unsigned depth_tid, frame_buffer_RGB_tid;
-extern int frame_counter, display_mode, show_fog, camera_coll_id, window_width, window_height;
+extern int frame_counter, display_mode, show_fog, camera_coll_id, window_width, window_height, animate2;
 extern float NEAR_CLIP, FAR_CLIP, fticks;
 extern colorRGBA sun_color;
+
+bool player_is_drowning();
 
 
 void bind_depth_buffer(bool force_regen=0) {
@@ -94,29 +96,18 @@ void add_ssao() {
 	draw_white_quad_and_end_shader(s);
 }
 
-void add_color_blur() {
-
-	bind_frame_buffer_RGB();
-	shader_t s;
-	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader("screen_space_blur");
-	s.begin_shader();
-	s.add_uniform_int("frame_buffer_tex", 0);
-	set_xy_step(s);
-	draw_white_quad_and_end_shader(s);
-}
-
-void add_heat_waves() {
+void add_color_only_effect(string const &frag_shader) {
 
 	static float time(0.0);
-	time += fticks;
+	if (animate2) {time += fticks;}
 	bind_frame_buffer_RGB();
 	shader_t s;
 	s.set_vert_shader("no_lighting_tex_coord");
-	s.set_frag_shader("heat_waves");
+	s.set_frag_shader(frag_shader);
 	s.begin_shader();
 	s.add_uniform_int("frame_buffer_tex", 0);
-	s.add_uniform_float("time", time);
+	s.add_uniform_float("time", time); // may not be used
+	set_xy_step(s); // may not be used
 	draw_white_quad_and_end_shader(s);
 }
 
@@ -144,10 +135,12 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
-	if (show_fog && world_mode == WMODE_GROUND) {add_god_rays();}
-	//if (display_mode & 0x20) {add_ssao();}
-	//if (display_mode & 0x20) {add_heat_waves();}
-	if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {add_color_blur();}
+	if (0) {}
+	//else if (display_mode & 0x20) {add_ssao();}
+	//else if (display_mode & 0x20) {add_color_only_effect("heat_waves");}
+	else if (player_is_drowning()) {add_color_only_effect("drunken_wave");}
+	else if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {add_color_only_effect("screen_space_blur");}
+	else if (show_fog && world_mode == WMODE_GROUND) {add_god_rays();}
 	
 	if (display_mode & 0x80) {
 		point const pos2(camera + cview_dir*FAR_CLIP);

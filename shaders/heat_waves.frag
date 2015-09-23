@@ -14,7 +14,6 @@ float hash(vec3 p) {
 
 void main() {
 	vec2 pos     = tc;
-	//pos.x       += 0.01*sin(20.0*pos.x + 10.0*pos.y + 0.01*time); // drunk mode
 	pos.x       += 0.01*sin(124.0*pos.x + 437.0*pos.y - 0.1*time) * (0.5 - abs(tc.x - 0.5)) * (0.5 - abs(tc.y - 0.5));
 	vec3 color   = texture(frame_buffer_tex, pos).rgb;
 	//color.rgb = color.brg;
