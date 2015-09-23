@@ -2375,25 +2375,31 @@ int get_damage_source(int type, int index, int questioner) {
 }
 
 
+int player_state::get_drown_time() const {return (game_mode ? (uw_time - DROWN_TIME) : 0);}
+
+bool player_is_drowning() {return (sstates != nullptr && sstates[CAMERA_ID].get_drown_time() > 0);}
+
 bool check_underwater(int who, float &depth) { // check if player is drowning
 
 	assert(who >= CAMERA_ID && who < num_smileys);
 	point const pos(get_sstate_pos(who));
 	bool const underwater(is_underwater(pos, 1, &depth));
-	if (sstates == NULL) return underwater; // assert(0)?
-	int const dtime(game_mode ? int(sstates[who].uw_time - int((float)DROWN_TIME)/fticks) : 0);
+	if (sstates == nullptr) return underwater; // assert(0)?
+	player_state &state(sstates[who]);
+	int const dtime(state.get_drown_time());
 
 	if (underwater) {
-		++sstates[who].uw_time;
+		int const prev_uw_time(state.uw_time); // in ticks
+		state.uw_time += iticks;
 
-		if (dtime > 0 && (sstates[who].uw_time%TICKS_PER_SECOND) == 0) {
+		if (dtime > 0 && (state.uw_time/TICKS_PER_SECOND > prev_uw_time/TICKS_PER_SECOND)) { // once per second
 			float const damage(2.0*fticks*dtime);
 			smiley_collision(who, who, zero_vector, pos, damage, DROWNED);
 		}
 	}
 	else {
 		if (dtime > 0) {gen_sound(SOUND_GASP, pos);}
-		sstates[who].uw_time = 0;
+		state.uw_time = 0;
 	}
 	return underwater;
 }

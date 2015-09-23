@@ -200,6 +200,7 @@ struct player_state { // size = big
 	float get_rspeed_scale() const {return ((powerup == PU_SPEED)  ? 1.5 : 1.0);}
 	float get_fspeed_scale() const {return ((powerup == PU_SPEED)  ? 2.0 : 1.0);}
 	float get_shield_scale() const {return ((powerup == PU_SHIELD) ? 0.5 : 1.0);}
+	int get_drown_time() const;
 
 	void register_kill() {++kills; ++tot_kills; max_kills = max(max_kills, kills); kill_time = 0;}
 	void register_team_kill() {++team_kills;}
