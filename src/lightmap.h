@@ -175,6 +175,7 @@ class indir_dlight_group_manager_t : public tag_ix_map {
 public:
 	unsigned get_ix_for_name(std::string const &name, float scale=1.0);
 	void add_dlight_ix_for_tag_ix(unsigned tag_ix, unsigned dlight_ix);
+	void write_entry_to_cobj_file(unsigned tag_ix, std::ostream &out) const;
 	vector<unsigned> const &get_dlight_ixs_for_tag_ix(unsigned tag_ix) const {
 		assert(tag_ix < groups.size());
 		return groups[tag_ix].dlight_ixs;
@@ -266,6 +267,7 @@ public:
 	bool check_activate(point const &p, float radius, int activator);
 	void advance_timestep();
 	bool is_enabled() {return (bind_point_t::is_valid() && light_source::is_enabled());}
+	bool has_bound_platform() const {return (platform_id >= 0);}
 	void shift_by(vector3d const &vd);
 	bool is_shadow_map_enabled() const;
 	bool check_shadow_map();

@@ -1731,25 +1731,24 @@ string texture_str(int tid) {
 void light_source::write_to_cobj_file(ostream &out, bool is_diffuse) const {
 
 	// 'L'/"light": // point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
-	//fscanf(fp, "%f%f%f%f%f%f%f%f%f", &fvals[0], &fvals[1], &pos.x, &pos.y, &pos.z, &lcolor.R, &lcolor.G, &lcolor.B, &lcolor.A);
-	//fscanf(fp, "%f%f%f%f%f%i%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0], &use_smap); // direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]
-	//light_source ls(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner);
 	out << "light " << (is_diffuse ? 0.0 : radius) << " " << (is_diffuse ? radius : 0.0) << " " << pos.raw_str() << " " << color.raw_str() << " "
 		<< (is_line_light() ? pos2 : dir).raw_str() << " " << bwidth << " " << r_inner << " " << is_line_light();
 }
 void light_source_trig::write_to_cobj_file(ostream &out, bool is_diffuse) const {
 
 	triggers.write_to_cobj_file(out);
-	if (platform_id >= 0) {} // FIXME
-	// FIXME: use indir_dlight_group_manager
-	if (indir_dlight_ix == 0) {out << "indir_dlight_group none" << endl;}
-	else {out << "indir_dlight_group light_group" << indir_dlight_ix << " 1.0" << endl;} // 'U'/"indir_dlight_group": // indir dlight group: name [scale]
+	indir_dlight_group_manager.write_entry_to_cobj_file(indir_dlight_ix, out);
 	light_source::write_to_cobj_file(out, is_diffuse);
 	out << " " << (use_smap != 0) << endl;
 	if (bound) {out << "bind_light " << bind_pos.raw_str() << endl;} // 'V'/"bind_light": // bind prev light source to cobj at location <x y z>
 	triggers.write_end_triggers_cobj_file(out);
-	//if (cobj.platform_id >= 0) {platforms.get_cobj_platform(cobj).add_light(light_sources_d.size());}
-	//light_sources_d.push_back(light_source_trig(ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix));
+	out << endl; // separate with a blank line
+}
+
+void indir_dlight_group_manager_t::write_entry_to_cobj_file(unsigned tag_ix, ostream &out) const {
+	if (tag_ix == 0) {out << "indir_dlight_group none" << endl; return;}
+	assert(tag_ix < groups.size());
+	out << "indir_dlight_group " << groups[tag_ix].filename << " " << groups[tag_ix].scale << endl; // 'U'/"indir_dlight_group": name [scale]
 }
 
 void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
@@ -1827,6 +1826,10 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 			cobjs[*c].write_to_cobj_file(out, prev_cobj);
 		}
 		out << endl; // separate with a blank line for readability
+		for (auto l = p->lights.begin(); l != p->lights.end(); ++l) {
+			assert(*l < light_sources_d.size());
+			light_sources_d[*l].write_to_cobj_file(out, 1);
+		}
 	}
 	if (!platforms.empty()) {out << "Q 0" << endl << endl;} // end platforms section
 	
@@ -1845,9 +1848,14 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 	out << endl;
 	
 	// add light sources
-	for (auto l = light_sources_a.begin(); l != light_sources_a.end(); ++l) {l->write_to_cobj_file(out, 0); out << endl;}
+	for (auto l = light_sources_a.begin(); l != light_sources_a.end(); ++l) {
+		l->write_to_cobj_file(out, 0); out << endl;
+	}
 	out << endl;
-	for (auto l = light_sources_d.begin()+FLASHLIGHT_LIGHT_ID+1; l != light_sources_d.end(); ++l) {l->write_to_cobj_file(out, 1); out << endl;}
+	for (auto l = light_sources_d.begin()+FLASHLIGHT_LIGHT_ID+1; l != light_sources_d.end(); ++l) {
+		if (l->has_bound_platform()) continue; // already output during the platform pass
+		l->write_to_cobj_file(out, 1);
+	}
 
 	// 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]
 	for (unsigned d = 0; d < 2; ++d) {
