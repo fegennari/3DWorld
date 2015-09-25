@@ -34,6 +34,7 @@ void coll_obj::init() {
 	cp.coll_func = NULL;
 	cp.tscale    = 1.0;
 	cp.surfs     = 0;
+	cp.flags     = 0;
 	cp.spec_color= BLACK;
 	cp.shine     = 0.0;
 	cp.is_emissive = 0;
