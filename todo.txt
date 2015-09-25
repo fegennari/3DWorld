@@ -15,5 +15,8 @@ TT shadows:
   - Lower res distant shadow map for tiled terrain mode with smooth blend
 
 Store indir light weights for 6 directions
+Fast sky lighting by casting rays into the sky
+More sounds
+Box physics
 Game editor
   - Cobj file writer

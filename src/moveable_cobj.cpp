@@ -235,6 +235,25 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 	return 0;
 }
 
+point coll_obj::get_center_of_mass() const {
+
+	if ((type == COLL_CYLINDER_ROT || type == COLL_CAPSULE) && radius != radius2) {
+		float const r1s(radius*radius), r2s(radius2*radius2), r1r2(radius*radius2), t((r1s + 2*r1r2 + 3*r2s)/(4*(r1s + r1r2 + r2s)));
+		return t*points[1] + (1.0 - t)*points[0]; // correct for cylinder, approximate for capsule
+	}
+	else if (type == COLL_POLYGON) { // polygon centroid (approximate), should be correct for both thick and thin polygons
+		assert(npoints == 3 || npoints == 4);
+		point const ca(triangle_centroid(points[0], points[1], points[2]));
+		
+		if (npoints == 4) {
+			point const cb(triangle_centroid(points[2], points[3], points[0]));
+			float const aa(triangle_area(points[0], points[1], points[2])), ab(triangle_area(points[2], points[3], points[0]));
+			return (ca*aa + cb*ab)/(aa + ab); // centroid points weighted by triangle area (extruded cobj volume)
+		}
+	}
+	return get_center_pt();
+}
+
 
 float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d const &delta, float step_thresh, float tolerance) {
 
@@ -370,7 +389,7 @@ void try_drop_movable_cobj(unsigned index) {
 	
 	// check other cobjs and the mesh to see if this cobj can be dropped
 	vector3d delta(0.0, 0.0, -test_dz);
-	point const center(cobj.get_center_pt()); // Note: not an accurate center of mass for polygons and truncated cones
+	point const center(cobj.get_center_pt());
 	
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // stuck
 		if (prev_v_fall < 4.0*accel) {gen_sound(SOUND_OBJ_FALL, center, 0.5, 1.2);}
@@ -378,16 +397,13 @@ void try_drop_movable_cobj(unsigned index) {
 		if (cobjs.size() != 1) return; // can only handle a single supporting cobj
 		if (!is_rolling_cobj(cobj)) return; // not rolling
 		coll_obj const &c(coll_objects.get_cobj(cobjs.front()));
-		if (is_point_supported(c, center)) return; // center of gravity is resting stably, it's stuck
+		point const center_of_mass(cobj.get_center_of_mass());
+		if (is_point_supported(c, center_of_mass)) return; // center of mass is resting stably, it's stuck
 		vector3d move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for cube/polygon
 		
 		if (c.type == COLL_CUBE) { // chose +/- x|y for cubes
-			if (fabs(move_dir.x) < fabs(move_dir.y)) { // y-edge
-				move_dir = ((move_dir.y < 0.0) ? -plus_y : plus_y);
-			}
-			else { // x-edge
-				move_dir = ((move_dir.x < 0.0) ? -plus_x : plus_x);
-			}
+			if (fabs(move_dir.x) < fabs(move_dir.y)) {move_dir = ((move_dir.y < 0.0) ? -plus_y : plus_y);} // y-edge
+			else                                     {move_dir = ((move_dir.x < 0.0) ? -plus_x : plus_x);} // x-edge
 		}
 		delta = 0.05*cobj_height*move_dir; // move 5% of cobj height
 		set<unsigned> seen;

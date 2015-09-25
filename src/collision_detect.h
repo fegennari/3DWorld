@@ -174,6 +174,7 @@ public:
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
 	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)));}
 	point get_center_pt() const;
+	point get_center_of_mass() const;
 	float get_max_dim()   const;
 	float get_light_transmit(point v1, point v2) const;
 	float get_mass()      const {return volume*cp.density;}

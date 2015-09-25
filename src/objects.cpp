@@ -503,7 +503,6 @@ bool coll_obj::is_player() const { // sort of a hack
 	return ((cp.coll_func == camera_collision) || (cp.coll_func == smiley_collision));
 }
 
-
 bool coll_obj::is_invis_player() const { // sort of a hack
 	
 	if (cp.coll_func == smiley_collision && has_invisibility(cp.cf_index)) return 1;
@@ -511,6 +510,14 @@ bool coll_obj::is_invis_player() const { // sort of a hack
 	return 0;
 }
 
+bool coll_obj::truly_static() const {
+
+	if (may_be_dynamic())                      return 0;
+	if (cp.flags & COBJ_DESTROYABLE)           return 0;
+	if (cp.cobj_type == COBJ_TYPE_MODEL3D)     return 1;
+	if (cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) return 0; // ???
+	return (destroy < max((int)SHATTERABLE, destroy_thresh+1));
+}
 
 void coll_obj::bounding_sphere(point &center, float &brad) const {
 
@@ -537,17 +544,6 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 	}
 }
 
-
-bool coll_obj::truly_static() const {
-
-	if (may_be_dynamic())                      return 0;
-	if (cp.flags & COBJ_DESTROYABLE)           return 0;
-	if (cp.cobj_type == COBJ_TYPE_MODEL3D)     return 1;
-	if (cp.cobj_type == COBJ_TYPE_VOX_TERRAIN) return 0; // ???
-	return (destroy < max((int)SHATTERABLE, destroy_thresh+1));
-}
-
-
 point coll_obj::get_center_pt() const {
 
 	switch (type) {
@@ -562,14 +558,12 @@ point coll_obj::get_center_pt() const {
 	return all_zeros; // never gets here
 }
 
-
 float coll_obj::get_max_dim() const {
 
 	float md(0.0);
 	for (unsigned i = 0; i < 3; ++i) {md = max(md, fabs(d[i][1] - d[i][0]));}
 	return md;
 }
-
 
 float coll_obj::get_light_transmit(point v1, point v2) const {
 
@@ -579,11 +573,9 @@ float coll_obj::get_light_transmit(point v1, point v2) const {
 	return exp(-cp.light_atten*p2p_dist(v1, v2));
 }
 
-
 bool coll_obj::check_poly_billboard_alpha(point const &p1, point const &p2, float t) const {
 	return (!has_poly_billboard_alpha() || !is_billboard_texture_transparent(points, (p1 + (p2 - p1)*t), cp.tid));
 }
-
 
 int coll_obj::contains_point(point const &pos) const {
 	
