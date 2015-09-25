@@ -84,6 +84,14 @@ float polygon_area(point const *const points, unsigned npoints) {
 	return area;
 }
 
+float get_closest_pt_on_line_t(point const &pos, point const &l1, point const &l2) { // use for line lights as well?
+	vector3d const L(l2 - l1);
+	return CLIP_TO_01(dot_product((pos - l1), L)/L.mag_sq()); // clipped: line segment, not infinite line
+}
+point get_closest_pt_on_line(point const &pos, point const &l1, point const &l2) {
+	return l1 + get_closest_pt_on_line_t(pos, l1, l2)*(l2 - l1);
+}
+
 
 // ************ SHAPE INTERSECTION ************
 
@@ -132,7 +140,6 @@ bool planar_contour_intersect(point const *points, unsigned npoints, point const
 	return 0;
 }
 
-
 bool point_in_polygon_2d(float sval, float tval, const point *points, int npts, int ds, int dt) {
 
 	assert(ds >= 0 && ds <= 3 && dt >= 0 && dt <= 3 && ds != dt);
@@ -155,11 +162,18 @@ bool point_in_polygon_2d(float sval, float tval, const point *points, int npts, 
 	return (nint != 0);
 }
 
+bool point_in_convex_planar_polygon(vector<point> const &pts, point const &normal, point const &pt) {
+
+	if (pts.size() < 3) return 0; // not a polygon
+	// Note: use the 2D projection method; could also use the normal and cross products
+	int const proj_dim(get_min_dim(normal)), d1((proj_dim+1)%3), d2((proj_dim+2)%3);
+	return point_in_polygon_2d(pt[d1], pt[d2], &pts.front(), pts.size(), d1, d2);
+}
+
 
 // z1 and z2 must be initialized (z1 > z2 to start)
-bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &norm, float dval,
-					  cube_t const &cube, float &z1, float &z2)
-{
+bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &norm, float dval, cube_t const &cube, float &z1, float &z2) {
+
 	assert(pts && npts >= 3);
 	unsigned num_inside[2] = {0, 0};
 

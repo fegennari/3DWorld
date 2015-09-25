@@ -1158,6 +1158,7 @@ void coll_obj::convert_cube_to_ext_polygon() {
 	assert(thickness > 0.0);
 	norm      = plus_z;
 	cp.surfs  = 0;
+	cp.flags |= COBJ_WAS_CUBE;
 	if (cp.tscale == 0.0) {cp.tscale = 1.0/thickness;}
 	float const z(0.5*(d[2][1] + d[2][0]));
 	for (unsigned i = 0; i < 4; ++i) {points[i].assign(d[0][(i>>1)^(i&1)], d[1][i>>1], z);} // CCW

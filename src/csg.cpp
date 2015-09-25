@@ -468,13 +468,6 @@ bool csg_cube::subtract_from_cube(coll_obj_group &new_cobjs, coll_obj const &cob
 }
 
 
-float get_closest_pt_on_line_t(point const &pos, point const &l1, point const &l2) { // use for line lights as well?
-
-	vector3d const L(l2 - l1);
-	return CLIP_TO_01(dot_product((pos - l1), L)/L.mag_sq());
-}
-
-
 // subtract ourself from cobj; returns 1 if some work is done
 bool csg_cube::subtract_from_cylinder(coll_obj_group &new_cobjs, coll_obj &cobj) const { // subtract ourself from cobjs[index]
 

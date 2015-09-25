@@ -242,6 +242,7 @@ point coll_obj::get_center_of_mass() const {
 		return t*points[1] + (1.0 - t)*points[0]; // correct for cylinder, approximate for capsule
 	}
 	else if (type == COLL_POLYGON) { // polygon centroid (approximate), should be correct for both thick and thin polygons
+		if (cp.flags & COBJ_WAS_CUBE) {return get_center_pt();} // optimization
 		assert(npoints == 3 || npoints == 4);
 		point const ca(triangle_centroid(points[0], points[1], points[2]));
 		
@@ -252,6 +253,97 @@ point coll_obj::get_center_of_mass() const {
 		}
 	}
 	return get_center_pt();
+}
+
+void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle) {
+
+	if (angle == 0.0) return;
+	assert(axis != zero_vector);
+
+	switch (type) {
+	case COLL_SPHERE:
+		// FIXME: translate only (pt - points[0])
+		break;
+	case COLL_CYLINDER: // axis-aligned, not normally rotated
+		coll_type = COLL_CYLINDER_ROT; // convert to rotated cylinder, then fallthrough
+		radius2   = radius; // ???
+	case COLL_CAPSULE:
+	case COLL_CYLINDER_ROT:
+		// FIXME: translate + rotate centerline points[1]-points[0]
+		break;
+	case COLL_CUBE: // axis-aligned, not normally rotated
+		convert_cube_to_ext_polygon(); // convert to extruded polygon, then fallthrough
+	case COLL_POLYGON:
+		for (int i = 0; i < npoints; ++i) {
+			// FIXME: translate + rotate points
+		}
+		norm = get_poly_norm(points);
+		break;
+	default: assert(0);
+	}
+	calc_bcube(); // may not always be needed
+}
+
+
+void convex_hull(vector<point> const &pts, point const &normal, vector<point> &hull) {
+
+	assert(!pts.empty());
+	if (pts.size() <= 3) {hull = pts; return;} // <= 3 points must be convex
+	hull.clear();
+	int const max_dim(get_max_dim(normal));
+	point min_pt(pts.front());
+
+	for (auto i = pts.begin()+1; i != pts.end(); ++i) { // skip first point
+		if ((*i)[max_dim] < min_pt[max_dim]) {min_pt = *i;}
+	}
+	hull.push_back(min_pt); // start with min pt in this dim, which must be on the convex hull
+
+	for (auto i = pts.begin(); i != pts.end(); ++i) {
+		// FIXME: WRITE
+	}
+}
+
+vector3d get_lever_rot_axis(point const &support_pt, point const &center_of_mass, vector3d const &gravity=plus_z) {
+	return cross_product((center_of_mass - support_pt), gravity).get_norm();
+}
+
+point get_hull_closest_pt(vector<point> const &hull, point const &pt) {
+
+	assert(hull.size() >= 3);
+	float dmin(0.0);
+	point min_pt(hull.front());
+	point prev(hull.back());
+
+	for (auto i = hull.begin(); i != hull.end(); ++i) {
+		float const dist(pt_line_dist(pt, prev, *i));
+		if (dmin == 0.0 || dist < dmin) {min_pt = get_closest_pt_on_line(pt, prev, *i); dmin = dist;}
+		prev = *i;
+	}
+	return min_pt;
+}
+
+struct rot_val_t {
+	point pt;
+	vector3d axis;
+	rot_val_t() : pt(all_zeros), axis(zero_vector) {}
+	rot_val_t(point const &pt_, vector3d const &axis_) : pt(pt_), axis(axis_) {}
+};
+
+ // Note: unused
+// could calculate normal = get_poly_norm(&support_pts.front(), 1);
+rot_val_t get_cobj_rot_axis(vector<point> const &support_pts, point const &normal, point const &center_of_mass, vector3d const &gravity=plus_z) {
+
+	point closest_pt;
+	if      (support_pts.size() == 1) {closest_pt = support_pts[0];} // supported by a point
+	else if (support_pts.size() == 2) {closest_pt = get_closest_pt_on_line(center_of_mass, support_pts[0], support_pts[1]);} // supported by a line
+	else {
+		vector<point> hull;
+		convex_hull(support_pts, normal, hull);
+		if (point_in_convex_planar_polygon(hull, normal, center_of_mass)) return rot_val_t();
+		closest_pt = get_hull_closest_pt(hull, center_of_mass);
+	}
+	if (dist_less_than(closest_pt, center_of_mass, TOLERANCE)) return rot_val_t(); // perfect balance (avoid div-by-zero)
+	return rot_val_t(closest_pt, get_lever_rot_axis(closest_pt, center_of_mass, gravity)); // zero_vector means point is supported
 }
 
 
@@ -485,10 +577,28 @@ void try_drop_movable_cobj(unsigned index) {
 		}
 		else if (depth > 0.5*cobj_height) return; // stuck in ice
 	}
-	if (cobj.v_fall == 0.0 && cobj.type == COLL_CUBE && 0) { // Note: disabled until rotation is handled
-		cobj.convert_cube_to_ext_polygon();
-		// FIXME: apply rotation if not stable at rest
+#if 0 // Note: disabled until rotation is handled
+	if (cobj.v_fall == 0.0) {
+		point const center_of_mass(cobj.get_center_of_mass());
+		vector3d normal(plus_z); // FIXME
+		vector<point> support_pts;
+		bool supported(0);
+
+		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+			coll_obj const &c(coll_objects.get_cobj(*i));
+			if (is_point_supported(c, center_of_mass)) {supported = 1; break;}
+			// FIXME: fill in support_pts
+		}
+		if (!supported) { // can rotate due to gravity and maybe fall
+			rot_val_t const rot_val(get_cobj_rot_axis(support_pts, normal, center_of_mass));
+		
+			if (rot_val.axis != zero_vector) { // apply rotation if not stable at rest
+				float const angle(0.0); // FIXME
+				cobj.rotate_about(rot_val.pt, rot_val.axis, angle);
+			}
+		}
 	}
+#endif
 	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
