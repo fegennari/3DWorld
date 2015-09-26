@@ -422,17 +422,16 @@ public:
 	{
 		unsigned visible(0), cand_edges(0), num_edges(0), tot_steps(0);
 		float const fast_dmax(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE));
+		for (int i = from_start; i < (int)from_end; ++i) {waypoints[i].next_valid = 0;}
+		vector<pair<float, unsigned> > cands;
 
-		for (int i = from_start; i < (int)from_end; ++i) {
-			waypoints[i].next_valid = 0;
-		}
-		#pragma omp parallel for schedule(dynamic,1) // is this fully thread safe?
+		#pragma omp parallel for schedule(dynamic,1) private(cands) // is this fully thread safe?
 		for (int i = from_start; i < (int)from_end; ++i) {
 			assert(i < (int)waypoints.size());
 			if (waypoints[i].disabled) continue;
 			point const start(waypoints[i].pos);
-			vector<pair<float, unsigned> > cands;
 			int cindex(-1);
+			cands.clear();
 
 			for (unsigned j = to_start; j < to_end; ++j) {
 				if (i == j || waypoints[j].disabled) continue;
