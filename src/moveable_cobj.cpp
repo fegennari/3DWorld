@@ -255,52 +255,87 @@ point coll_obj::get_center_of_mass() const {
 	return get_center_pt();
 }
 
-void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle) {
+void rotate_point(point &pt, point const &rot_pt, vector3d const &axis, float angle) {
+	pt -= rot_pt; // translate to rotation point
+	rotate_vector3d(axis, angle, pt); // rotate the point
+	pt += rot_pt; // translate back
+}
+
+void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle) { // angle is in radians
 
 	if (angle == 0.0) return;
 	assert(axis != zero_vector);
+	remove_coll_object(id, 0);
 
 	switch (type) {
 	case COLL_SPHERE:
-		// FIXME: translate only (pt - points[0])
+		rotate_point(points[0], pt, axis, angle);
 		break;
 	case COLL_CYLINDER: // axis-aligned, not normally rotated
 		coll_type = COLL_CYLINDER_ROT; // convert to rotated cylinder, then fallthrough
 		radius2   = radius; // ???
 	case COLL_CAPSULE:
 	case COLL_CYLINDER_ROT:
-		// FIXME: translate + rotate centerline points[1]-points[0]
+		for (int i = 0; i < 2; ++i) {rotate_point(points[i], pt, axis, angle);}
 		break;
 	case COLL_CUBE: // axis-aligned, not normally rotated
 		convert_cube_to_ext_polygon(); // convert to extruded polygon, then fallthrough
 	case COLL_POLYGON:
-		for (int i = 0; i < npoints; ++i) {
-			// FIXME: translate + rotate points
-		}
+		for (int i = 0; i < npoints; ++i) {rotate_point(points[i], pt, axis, angle);}
 		norm = get_poly_norm(points);
 		break;
 	default: assert(0);
 	}
+	//if (cp.tscale != 0.0) {texture_offset -= vd;} // FIXME: what to do with texture_offset?
 	calc_bcube(); // may not always be needed
+	re_add_coll_cobj(id, 0);
 }
 
 
+float cross_mag(point const &O, point const &A, point const &B, vector3d const &normal) {
+	return dot_product(normal, cross_product(A-O, B-O));
+}
+
+struct pt_less { // override standard strange point operator<()
+	bool operator()(point const &a, point const &b) const {
+		if (a.z < b.z) return 1; if (a.z > b.z) return 0;
+		if (a.y < b.y) return 1; if (a.y > b.y) return 0;
+		return (a.x < b.x);
+	}
+};
+
+// FIXME: untested; signs/ordering may be backwards
 void convex_hull(vector<point> const &pts, point const &normal, vector<point> &hull) {
 
 	assert(!pts.empty());
 	if (pts.size() <= 3) {hull = pts; return;} // <= 3 points must be convex
+#if 1
+	// Andrew's monotone chain convex hull algorithm
+	// https://en.wikibooks.org/wiki/Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain
+	int const n(pts.size());
+	int k(0);
+	hull.resize(2*n);
+	vector<point> sorted(pts);
+	sort(sorted.begin(), sorted.end(), pt_less()); // sort points lexicographically
+
+	for (int i = 0; i < n; ++i) { // build lower hull
+		while (k >= 2 && cross_mag(hull[k-2], hull[k-1], sorted[i], normal) <= 0) {k--;}
+		hull[k++] = sorted[i];
+	}
+	for (int i = n-2, t = k+1; i >= 0; i--) { // build upper hull
+		while (k >= t && cross_mag(hull[k-2], hull[k-1], sorted[i], normal) <= 0) {k--;}
+		hull[k++] = sorted[i];
+	}
+	hull.resize(k);
+#else
 	hull.clear();
 	int const max_dim(get_max_dim(normal));
 	point min_pt(pts.front());
-
 	for (auto i = pts.begin()+1; i != pts.end(); ++i) { // skip first point
 		if ((*i)[max_dim] < min_pt[max_dim]) {min_pt = *i;}
 	}
 	hull.push_back(min_pt); // start with min pt in this dim, which must be on the convex hull
-
-	for (auto i = pts.begin(); i != pts.end(); ++i) {
-		// FIXME: WRITE
-	}
+#endif
 }
 
 vector3d get_lever_rot_axis(point const &support_pt, point const &center_of_mass, vector3d const &gravity=plus_z) {
@@ -340,6 +375,7 @@ rot_val_t get_cobj_rot_axis(vector<point> const &support_pts, point const &norma
 		vector<point> hull;
 		convex_hull(support_pts, normal, hull);
 		if (point_in_convex_planar_polygon(hull, normal, center_of_mass)) return rot_val_t();
+		// Note: if closest point is on an edge, we could use the edge dir for the rot axis; however, that doesn't work if the closest point is a corner on the convex hull
 		closest_pt = get_hull_closest_pt(hull, center_of_mass);
 	}
 	if (dist_less_than(closest_pt, center_of_mass, TOLERANCE)) return rot_val_t(); // perfect balance (avoid div-by-zero)
@@ -577,17 +613,22 @@ void try_drop_movable_cobj(unsigned index) {
 		}
 		else if (depth > 0.5*cobj_height) return; // stuck in ice
 	}
-#if 0 // Note: disabled until rotation is handled
-	if (cobj.v_fall == 0.0) {
+#if 0 // Note: disabled until support points creation is handled
+	// allow rotation of cubes, which will become extruded polygons, so polygons need to work as well;
+	// curved cobjs such as spheres, rotated cylinders, and capsules are generally unstable since they only contact the ground at a single point;
+	// spheres are handled by is_rolling_cobj() and should be okay;
+	// Z-axis cylinders can rest on a flat surface, but as soon as they start to rotate they're no longer axis aligned
+	if (cobj.v_fall == 0.0 && (cobj.type == COLL_CUBE || cobj.type == COLL_POLYGON)) {
 		point const center_of_mass(cobj.get_center_of_mass());
-		vector3d normal(plus_z); // FIXME
+		vector3d normal(plus_z); // okay for cubes and Z-oriented cylinders
 		vector<point> support_pts;
 		bool supported(0);
 
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (is_point_supported(c, center_of_mass)) {supported = 1; break;}
-			// FIXME: fill in support_pts
+			// FIXME: fill in support_pts, which generally requires determining intersection points, which is not implemented for all cobjs;
+			// this works for cubes, but as soon as the cube rotates it's no longer axis aligned
 		}
 		if (!supported) { // can rotate due to gravity and maybe fall
 			rot_val_t const rot_val(get_cobj_rot_axis(support_pts, normal, center_of_mass));

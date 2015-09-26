@@ -287,10 +287,8 @@ template<typename T> struct pointT { // size = 12 (float), 24(double)
 	bool is_nonzero() const {return (x != 0.0 || y != 0.0 || z != 0.0);}
 
 	bool operator<(pointT const &p) const { // needed for maps and stuff
-		if (z > p.z) return 1; // greater than operation?
-		if (z < p.z) return 0;
-		if (y < p.y) return 1;
-		if (y > p.y) return 0;
+		if (z > p.z) return 1; if (z < p.z) return 0; // greater than operation?
+		if (y < p.y) return 1; if (y > p.y) return 0;
 		return (x < p.x);
 	}
 };
