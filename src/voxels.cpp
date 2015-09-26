@@ -1060,13 +1060,12 @@ bool voxel_model_ground::clear_block(unsigned block_ix) {
 
 
 // returns the number of triangles created
-unsigned voxel_model::create_block(unsigned block_ix, bool first_create, bool count_only, unsigned lod_level) {
+unsigned voxel_model::create_block(voxel_ix_cache &vix_cache, unsigned block_ix, bool first_create, bool count_only, unsigned lod_level) {
 
 	assert(lod_level < tri_data.size());
 	tri_data_t &td(tri_data[lod_level]);
 	assert(block_ix <td.size());
 	assert(td[block_ix].empty());
-	voxel_ix_cache vix_cache;
 	vix_cache.init(xblocks+1, yblocks+1, nz, vsz, zero_vector, vert_ix_cache_entry(), 1);
 	unsigned const xbix(block_ix%params.num_blocks), ybix(block_ix/params.num_blocks), step(1 << lod_level);
 	unsigned count(0);
@@ -1097,9 +1096,10 @@ unsigned voxel_model::create_block_all_lods(unsigned block_ix, bool first_create
 
 	assert(!tri_data.empty());
 	unsigned count(0);
+	voxel_ix_cache vix_cache; // reused across LODs
 
 	for (unsigned lod = 0; lod < (count_only ? 1 : tri_data.size()); ++lod) { // in count_only mode we only process the LOD 0
-		unsigned const lod_count(create_block(block_ix, first_create, count_only, lod));
+		unsigned const lod_count(create_block(vix_cache, block_ix, first_create, count_only, lod));
 		if (lod == 0) {count = lod_count;} // only count LOD 0
 	}
 	return count;
@@ -1357,7 +1357,7 @@ unsigned voxel_model::get_texture_at(point const &pos) const {
 void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 
 	if (modified_blocks.empty()) return;
-	RESET_TIME;
+	//RESET_TIME;
 
 	if (params.remove_unconnected >= 2) {
 		if (postproc_brushes_mode) { // iterate until all blocks stop falling
@@ -1369,14 +1369,13 @@ void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 				next_frame_modified_blocks.clear();
 			}
 			modified_blocks.swap(orig_modified_blocks); // restore so we can update all the original blocks that were modified
-			PRINT_TIME("  Process Brush Updates");
+			//PRINT_TIME("  Process Brush Updates");
 		}
 		else { // only call once (fall one step)
 			remove_unconnected_outside_modified_blocks(0);
 		}
 	}
 	bool something_removed(0);
-	unsigned num_added(0);
 	vector<unsigned> blocks_to_update(modified_blocks.begin(), modified_blocks.end());
 	
 	// FIXME: can we only remove/add voxels within the modified region of each block?
@@ -1385,14 +1384,17 @@ void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 		something_removed |= clear_block(blocks_to_update[i]);
 	}
 	if (something_removed) {purge_coll_freed(0);} // unecessary?
+	vector<unsigned> num_added(blocks_to_update.size(), 0);
+	unsigned tot_num_added(0);
 
 	#pragma omp parallel for schedule(dynamic,1)
 	for (int i = 0; i < (int)blocks_to_update.size(); ++i) {
-		num_added += (create_block_all_lods(blocks_to_update[i], 0, 0) > 0);
+		num_added[i] = (create_block_all_lods(blocks_to_update[i], 0, 0) > 0);
 	}
+	for (auto i = num_added.begin(); i != num_added.end(); ++i) {tot_num_added += *i;}
 
 	// Note: this part only needs to be done once per block at the end of the while loop, but in practice is fast anyway
-	if (num_added > 0 || something_removed) { // something was added or removed
+	if (tot_num_added > 0 || something_removed) { // something was added or removed
 		if (!boundary_vnmap[0].empty()) { // fix block boundary vertex normals
 			for (unsigned i = 0; i < blocks_to_update.size(); ++i) {
 				update_boundary_normals_for_block(blocks_to_update[i], 0);
@@ -1401,8 +1403,8 @@ void voxel_model::proc_pending_updates(bool postproc_brushes_mode) {
 		for (unsigned i = 0; i < blocks_to_update.size(); ++i) { // blocks will be sorted by y then x
 			calc_ao_lighting_for_block(blocks_to_update[i], !volume_added); // update can only remove, so lighting can only increase
 		}
-		update_blocks_hook(blocks_to_update, num_added);
-		PRINT_TIME(postproc_brushes_mode ? "  Process Voxel Updates" : "Process Voxel Updates");
+		update_blocks_hook(blocks_to_update, tot_num_added);
+		//PRINT_TIME(postproc_brushes_mode ? "  Process Voxel Updates" : "Process Voxel Updates");
 	}
 	modified_blocks = next_frame_modified_blocks;
 	next_frame_modified_blocks.clear();
@@ -1555,14 +1557,17 @@ void voxel_model_ground::pre_build_hook() {
 	if (!add_cobjs)       return; // nothing to do
 	data_blocks.resize(tri_data[0].size());
 	if (!PRE_ALLOC_COBJS) return; // nothing to do
-	unsigned num_triangles(0);
+	vector<unsigned> num_triangles(tri_data[0].size(), 0);
+	unsigned tot_num_triangles(0);
 
 	#pragma omp parallel for schedule(dynamic,1)
 	for (int block = 0; block < (int)tri_data[0].size(); ++block) {
-		num_triangles += create_block_all_lods(block, 1, 1);
+		num_triangles[block] = create_block_all_lods(block, 1, 1);
 	}
-	if (2*coll_objects.size() < num_triangles) {
-		reserve_coll_objects(coll_objects.size() + 1.1*num_triangles); // reserve with 10% buffer
+	for (auto i = num_triangles.begin(); i != num_triangles.end(); ++i) {tot_num_triangles += *i;}
+
+	if (2*coll_objects.size() < tot_num_triangles) {
+		reserve_coll_objects(coll_objects.size() + 1.1*tot_num_triangles); // reserve with 10% buffer
 	}
 }
 

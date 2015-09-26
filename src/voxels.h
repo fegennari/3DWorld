@@ -271,7 +271,7 @@ protected:
 	void remove_unconnected_outside_modified_blocks(bool postproc_brushes_mode);
 	unsigned get_block_ix(unsigned voxel_ix) const;
 	virtual bool clear_block(unsigned block_ix);
-	unsigned create_block(unsigned block_ix, bool first_create, bool count_only, unsigned lod_level);
+	unsigned create_block(voxel_ix_cache &vix_cache, unsigned block_ix, bool first_create, bool count_only, unsigned lod_level);
 	unsigned create_block_all_lods(unsigned block_ix, bool first_create, bool count_only);
 	void update_boundary_normals_for_block(unsigned block_ix, bool calc_average);
 	void finalize_boundary_vmap();
