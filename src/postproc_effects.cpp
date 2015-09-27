@@ -133,12 +133,30 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 	}
 }
 
+void add_bloom() {
+
+	bind_frame_buffer_RGB();
+	shader_t s;
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		if (dim) {bind_frame_buffer_RGB(1);} // force recreation of texture for second pass
+		s.set_vert_shader("no_lighting_tex_coord");
+		s.set_frag_shader("postproc_bloom");
+		s.begin_shader();
+		s.add_uniform_int("frame_buffer_tex", 0);
+		s.add_uniform_float("dim_val", (dim ? 1.0 : 0.0));
+		set_xy_step(s); // may not be used
+		draw_white_quad_and_end_shader(s);
+	}
+}
+
 void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
 	float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);
 	if (0) {}
 	//else if (display_mode & 0x20) {add_ssao();}
+	else if (display_mode & 0x20) {add_bloom();}
 	else if (player_is_drowning()) {add_color_only_effect("drunken_wave", 1.0);}
 	else if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {add_color_only_effect("screen_space_blur");}
 	else if (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
