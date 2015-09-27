@@ -478,20 +478,20 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 	unsigned const size((unsigned)objs.size());
 	static vector<cached_obj> new_objs;
 	static vector<interval> intervals;
-	new_objs.resize(0);
-	intervals.resize(0);
+	new_objs.clear();
+	intervals.clear();
 	intervals.reserve(2*size);
-	if (t == 0) new_objs.reserve(size/2);
+	if (t == 0) {new_objs.reserve(size/2);}
 
 	for (unsigned i = 0; i < size; ++i) {
 		if (objs[i].flags & OBJ_FLAGS_BAD_) continue;
 
 		if (t > 0 && (objs[i].flags & (OBJ_FLAGS_DIST | OBJ_FLAGS_ORBT))) {
-			if (t == 1) objs[i].refresh();
+			if (t == 1) {objs[i].refresh();}
 			continue;
 		}
-		if (t > 0) objs[i].refresh(); // physics advance was run since last refresh
-		if (t == 0 && !(objs[i].flags & OBJ_FLAGS_PART)) new_objs.push_back(objs[i]);
+		if (t > 0) {objs[i].refresh();} // physics advance was run since last refresh
+		if (t == 0 && !(objs[i].flags & OBJ_FLAGS_PART)) {new_objs.push_back(objs[i]);}
 		double const radius(objs[i].radius), val(objs[i].pos.x);
 		float const left(float(val - radius)), right(float(val + radius));
 		assert(radius > 0.0);
@@ -503,15 +503,15 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 	unsigned const size2((unsigned)intervals.size());
 	static vector<unsigned> locs, work;
 	locs.resize(size);
-	work.resize(0);
+	work.clear();
 	sort(intervals.begin(), intervals.end());
 
 	for (unsigned i = 0; i < size2; ++i) {
 		unsigned const ix(intervals[i].ix & ~LEFT_EDGE_BIT), ix_flags(objs[ix].flags);
 		unsigned bad_flags(OBJ_FLAGS_BAD_);
-		if ( ix_flags & OBJ_FLAGS_PART) bad_flags |= OBJ_FLAGS_PART; // skip particle-particle collisions
-		if ( ix_flags & OBJ_FLAGS_NOC2) bad_flags |= OBJ_FLAGS_NOC2; // both objects have their C2 flags set, skip the collision
-		if ((ix_flags & OBJ_FLAGS_PROJ) && (ix_flags & OBJ_FLAGS_NOPC)) bad_flags |= OBJ_FLAGS_PROJ; // no projectile-projectile collision
+		if ( ix_flags & OBJ_FLAGS_PART) {bad_flags |= OBJ_FLAGS_PART;} // skip particle-particle collisions
+		if ( ix_flags & OBJ_FLAGS_NOC2) {bad_flags |= OBJ_FLAGS_NOC2;} // both objects have their C2 flags set, skip the collision
+		if ((ix_flags & OBJ_FLAGS_PROJ) && (ix_flags & OBJ_FLAGS_NOPC)) {bad_flags |= OBJ_FLAGS_PROJ;} // no projectile-projectile collision
 		
 		if (intervals[i].ix & LEFT_EDGE_BIT) { // start a new sphere
 			unsigned const wsize((unsigned)work.size());
@@ -545,7 +545,7 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 		}
 	}
 	assert(work.empty());
-	if (t == 0) objs.swap(new_objs); // rebuild the object set without the particles
+	if (t == 0) {objs.swap(new_objs);} // rebuild the object set without the particles
 	//PRINT_TIME("Collision");
 }
 
