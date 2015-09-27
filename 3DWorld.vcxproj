@@ -948,6 +948,7 @@
     <None Include="shaders\point_sprite_circle.frag" />
     <None Include="shaders\point_sprite_texture.frag" />
     <None Include="shaders\point_to_quad.geom" />
+    <None Include="shaders\postproc_bloom.frag" />
     <None Include="shaders\procedural_gen.frag" />
     <None Include="shaders\procedural_gen.vert" />
     <None Include="shaders\procedural_height_gen.comp" />
