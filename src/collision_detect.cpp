@@ -435,7 +435,7 @@ void add_coll_polygon_to_matrix(int index, int dhcm) { // coll_obj member functi
 	float const dzx(norm.z == 0.0 ? 0.0 : DX_VAL*norm.x/norm.z), dzy(norm.z == 0.0 ? 0.0 : DY_VAL*norm.y/norm.z);
 	float const delta_z(sqrt(dzx*dzx + dzy*dzy));
 	vector<tquad_t> pts;
-	if (cobj.thickness > MIN_POLY_THICK) thick_poly_to_sides(cobj.points, cobj.npoints, norm, cobj.thickness, pts);
+	if (cobj.thickness > MIN_POLY_THICK) {thick_poly_to_sides(cobj.points, cobj.npoints, norm, cobj.thickness, pts);}
 	cube_t cube;
 	cube.d[2][0] = zminc - SMALL_NUMBER;
 	cube.d[2][1] = zmaxc + SMALL_NUMBER;

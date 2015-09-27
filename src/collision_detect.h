@@ -147,6 +147,8 @@ public:
 	void re_add_coll_cobj(int index, int remove_old=1);
 	bool subtract_from_cobj(coll_obj_group &new_cobjs, csg_cube const &cube, bool include_polys);
 	int  intersects_cobj(coll_obj const &c, float toler=0.0) const;
+	void get_side_polygons(vector<tquad_t> &sides, int top_bot_only=0) const;
+	void get_contact_points(coll_obj const &c, vector<point> &contact_pts, bool vert_only=0, float toler=0.0) const;
 	int  is_anchored() const;
 	void move_cobj(vector3d const &vd, bool update_colls=1);
 	void shift_by(vector3d const &vd, bool force=0, bool no_texture_offset=0);
@@ -173,6 +175,7 @@ public:
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	bool is_tree_leaf()   const {return is_billboard;} // we assume that a billboard cobj is a tree leaf
 	bool is_cylin_vertical() const {return (points[0].x == points[1].x && points[0].y == points[1].y);}
+	bool has_hard_edges() const {return (type == COLL_CUBE || type == COLL_POLYGON);}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
 	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)));}
 	point get_center_pt() const;

@@ -135,8 +135,8 @@ bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, poi
 // Note: pos toler => adjacency doesn't count; neg toler => adjacency counts
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
-	if (c.type < type) {return c.intersects_cobj(*this, toler);} // swap arguments
 	if (!intersects(c, toler)) return 0; // cube-cube intersection
+	if (c.type < type) {return c.intersects_cobj(*this, toler);} // swap arguments
 	float const r1(radius-toler), r2(radius2-toler), cr1(c.radius-toler), cr2(c.radius2-toler);
 
 	// c.type >= type
@@ -235,6 +235,168 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 	return 0;
 }
 
+// Note: only cubes and polygons are supported, since they have hard polygon sides
+// top_bot_only: 0 = all sides, 1 = top (+z) only, 2 = bottom (-z) only
+void coll_obj::get_side_polygons(vector<tquad_t> &sides, int top_bot_only) const {
+
+	float const norm_z_thresh = 0.01;
+	assert(has_hard_edges());
+
+	if (type == COLL_CUBE) {
+		for (unsigned dim = 0; dim < 3; ++dim) { // {x, y, z}
+			if (top_bot_only && dim != 2) continue; // not z edge
+			unsigned const dim2((dim+1)%3), dim3((dim+2)%3);
+
+			for (unsigned dir = 0; dir < 2; ++dir) { // {low, high} edges
+				if (top_bot_only && dir == (top_bot_only-1)) continue; // not z edge
+				tquad_t tq(4);
+				
+				for (unsigned i = 0; i < 4; ++i) {
+					tq.pts[i][dim ] = d[dim][dir];
+					tq.pts[i][dim2] = d[dim2][i>>1]; // 0011
+					tq.pts[i][dim3] = d[dim3][(i&1)^(i>>1)]; // 0110
+				}
+				sides.push_back(tq);
+			}
+		}
+	}
+	else if (type == COLL_POLYGON) {
+		if (thickness > MIN_POLY_THICK) { // thick polygon
+			vector<tquad_t> pts;
+			thick_poly_to_sides(points, npoints, norm, thickness, pts);
+
+			for (auto i = pts.begin(); i != pts.end(); ++i) {
+				if (top_bot_only == 1 && i->get_norm().z <  norm_z_thresh) continue; // top only
+				if (top_bot_only == 2 && i->get_norm().z > -norm_z_thresh) continue; // bot only
+				sides.push_back(*i); // keep this side
+			}
+		}
+		else { // thin polygon
+			if (!top_bot_only || fabs(norm.z) > norm_z_thresh) { // maybe skip vert edges
+				tquad_t tq(npoints);
+				for (int i = 0; i < npoints; ++i) {tq.pts[i] = points[i];}
+				sides.push_back(tq);
+			}
+		}
+	}
+}
+
+// a glorified version of intersects_cobj that works on even fewer cases
+// rather than returning the full (possibly infinite for flat surfaces) set of contact points,
+// we're free to return the convex hull of the contact area, which will be merged with the convex hulls of other interacting cobjs
+// Note: generally assumes that the two cobjs are adjacent/interacting
+// Note: contact_pts are relative to the contacting plane/line/point of *this
+// Note: for vert_only, *this is assumed to be resting on c
+void coll_obj::get_contact_points(coll_obj const &c, vector<point> &contact_pts, bool vert_only, float toler) const {
+
+	if (!intersects(c, toler)) return; // cube-cube intersection
+
+	if (type == COLL_SPHERE && c.type == COLL_SPHERE) {
+		point const p[2] = {points[0], c.points[0]};
+		if (dist_less_than(p[0], p[1], (radius + c.radius - toler))) {contact_pts.push_back(p[0] + radius*(p[1] - p[0]).get_norm());}
+		return;
+	}
+	if (vert_only && (type == COLL_CUBE && c.type == COLL_CUBE)) { // vertical cube optimization
+		if (d[2][0] - toler <= c.d[2][1]) { // bottom is intersecting c (we already know that x and y ranges overlap)
+			float const x1(max(d[0][0], c.d[0][0])), y1(max(d[1][0], c.d[1][0])), x2(min(d[0][1], c.d[0][1])), y2(min(d[1][1], c.d[1][1])), z(d[2][0]); // bottom
+			contact_pts.push_back(point(x1, y1, z));
+			contact_pts.push_back(point(x1, y2, z));
+			contact_pts.push_back(point(x2, y2, z));
+			contact_pts.push_back(point(x2, y1, z));
+		}
+		return;
+	}
+	if (has_hard_edges() && c.has_hard_edges()) { // cubes and polygons
+		vector<tquad_t> sides[2];
+		get_side_polygons  (sides[0], (vert_only ? 2 : 0));
+		c.get_side_polygons(sides[1], (vert_only ? 1 : 0));
+		
+		for (auto i = sides[0].begin(); i != sides[0].end(); ++i) {
+			vector3d const norm_i(i->get_norm());
+
+			for (auto j = sides[1].begin(); j != sides[1].end(); ++j) {
+				vector3d const norm_j(j->get_norm());
+
+				if (dot_product(norm_i, norm_j) > 0.99) {
+					// FIXME: WRITE plane case
+				}
+				else {
+					// FIXME: WRITE point/edge case
+				}
+			}
+		}
+	}
+	else {
+		// FIXME: WRITE
+	}
+}
+
+// FIXME: should these be coll_obj member functions?
+// Note: generally the returned normal should point up in +z (down in -z if bot_surf=1), but could have z == 0
+// Note: support_pos.z is ignored
+vector3d get_cobj_supporting_normal(coll_obj const &c, point const &support_pos, bool bot_surf=0) {
+
+	if (c.type == COLL_CUBE || c.type == COLL_CYLINDER) return (bot_surf ? -plus_z : plus_z); // exact since cobj is axis aligned in x
+	float const cobj_height(c.d[2][1] - c.d[2][0]);
+	point line_pts[2] = {support_pos, support_pos};
+	line_pts[0].z = c.d[2][0] - cobj_height; // make sure the line completely crosses the z range of the cobj
+	line_pts[1].z = c.d[2][1] + cobj_height;
+	float t; // unused
+	vector3d normal;
+	if (c.line_int_exact(line_pts[!bot_surf], line_pts[bot_surf], t, normal)) return normal;
+	if (c.type != COLL_POLYGON) return zero_vector;
+	float const norm_z_thresh = 0.1;
+
+	// FIXME: unclear if the code below can ever return nonzero if the line_int_exact() test fails
+	if (c.thickness > MIN_POLY_THICK) { // thick polygon
+		vector<tquad_t> pts;
+		thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness, pts);
+			
+		for (auto i = pts.begin(); i != pts.end(); ++i) {
+			vector3d const normal(i->get_norm()); // FIXME: does thick_poly_to_sides() guarantee that the sign is correct (normal facing out)?
+			if (bot_surf ? (normal.z > -norm_z_thresh) : (normal.z < norm_z_thresh)) continue; // facing down or vertical
+			if (point_in_polygon_2d(support_pos.x, support_pos.y, i->pts, i->npts)) return normal;
+		}
+	}
+	else if (fabs(c.norm.z) > norm_z_thresh) { // thin polygon, use the normal (facing up)
+		if (point_in_polygon_2d(support_pos.x, support_pos.y, c.points, c.npoints)) {return (((c.norm.z < 0.0) ^ bot_surf) ? -c.norm : c.norm);}
+	}
+	return zero_vector; // not supported at this point
+}
+vector3d get_cobj_resting_normal(coll_obj const &c) {
+	return get_cobj_supporting_normal(c, c.get_center_of_mass(), 1); // bottom normal, generally points in -z
+}
+
+vector3d get_mesh_normal_at(point const &pt) {
+
+	int xpos(max(0, min(MESH_X_SIZE-1, get_xpos(pt.x)))), ypos(max(0, min(MESH_Y_SIZE-1, get_ypos(pt.y))));
+	cout << TXT(xpos) << TXT(ypos) << endl;
+	assert(!point_outside_mesh(xpos, ypos));
+	if (is_in_ice(xpos, ypos) && pt.z > water_matrix[ypos][xpos]) return wat_vert_normals[ypos][xpos]; // on ice (no interpolation)
+	float const xp((pt.x + X_SCENE_SIZE)*DX_VAL_INV), yp((pt.y + Y_SCENE_SIZE)*DY_VAL_INV);
+	int const x0((int)xp), y0((int)yp);
+	cout << TXT(x0) << TXT(y0) << endl;
+	if (x0 < 0 || y0 < 0 || x0 >= MESH_X_SIZE-1 || y0 >= MESH_Y_SIZE-1) return surface_normals[ypos][xpos]; // Note: okay to just always return this?
+	float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0));
+	return (1.0 - xpi)*((1.0 - ypi)*vertex_normals[y0][x0] + ypi*vertex_normals[y0+1][x0]) + xpi*((1.0 - ypi)*vertex_normals[y0][x0+1] + ypi*vertex_normals[y0+1][x0+1]);
+}
+
+void adjust_cobj_resting_normal(coll_obj &c, vector3d const &supp_norm) {
+	//cout << "supp_norm: " << supp_norm.str() << endl;
+	if (supp_norm == zero_vector) return; // invalid (can this happen?)
+	vector3d const rest_norm(-get_cobj_resting_normal(c)); // negate so that it points up
+	//cout << "rest_norm: " << rest_norm.str() << endl;
+	if (rest_norm == zero_vector) return; // invalid (can this happen?)
+	if (dot_product(supp_norm, rest_norm) > 0.999) return; // normals already align, no rotation needed
+	c.rotate_about(c.get_center_of_mass(), cross_product(supp_norm, rest_norm), get_norm_angle(rest_norm, supp_norm));
+}
+void rotate_to_align_with_supporting_cobj(coll_obj &rc, coll_obj const &sc) {
+	adjust_cobj_resting_normal(rc, get_cobj_supporting_normal(sc, rc.get_center_of_mass(), 0));
+}
+void rotate_to_align_with_mesh(coll_obj &c) {
+	adjust_cobj_resting_normal(c, get_mesh_normal_at(c.get_center_of_mass()));
+}
+
 point coll_obj::get_center_of_mass() const {
 
 	if ((type == COLL_CYLINDER_ROT || type == COLL_CAPSULE) && radius != radius2) {
@@ -266,6 +428,7 @@ void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle) 
 	if (angle == 0.0) return;
 	assert(axis != zero_vector);
 	remove_coll_object(id, 0);
+	//cout << "pt: " << pt.str() << ", axis: " << axis.str() << ", angle: " << angle << endl;
 
 	switch (type) {
 	case COLL_SPHERE:
@@ -309,7 +472,6 @@ void convex_hull(vector<point> const &pts, point const &normal, vector<point> &h
 
 	assert(!pts.empty());
 	if (pts.size() <= 3) {hull = pts; return;} // <= 3 points must be convex
-#if 1
 	// Andrew's monotone chain convex hull algorithm
 	// https://en.wikibooks.org/wiki/Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain
 	int const n(pts.size());
@@ -327,15 +489,6 @@ void convex_hull(vector<point> const &pts, point const &normal, vector<point> &h
 		hull[k++] = sorted[i];
 	}
 	hull.resize(k);
-#else
-	hull.clear();
-	int const max_dim(get_max_dim(normal));
-	point min_pt(pts.front());
-	for (auto i = pts.begin()+1; i != pts.end(); ++i) { // skip first point
-		if ((*i)[max_dim] < min_pt[max_dim]) {min_pt = *i;}
-	}
-	hull.push_back(min_pt); // start with min pt in this dim, which must be on the convex hull
-#endif
 }
 
 vector3d get_lever_rot_axis(point const &support_pt, point const &center_of_mass, vector3d const &gravity=plus_z) {
@@ -437,6 +590,8 @@ void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
 
 bool is_point_supported(coll_obj const &cobj, point const &pos) {
 
+	float const norm_z_thresh = 0.9; // for polygon sides; if normal.z > this value, the surface is mostly horizontal
+
 	switch (cobj.type) {
 	case COLL_CUBE:     return cobj.contains_pt_xy(pos);
 	case COLL_CYLINDER: return dist_xy_less_than(pos, cobj.points[0], cobj.radius);
@@ -446,14 +601,14 @@ bool is_point_supported(coll_obj const &cobj, point const &pos) {
 		return dist_xy_less_than(pos, cobj.points[0], ((cobj.points[0].z < cobj.points[1].z) ? cobj.radius2 : cobj.radius)); // use radius at the top
 	case COLL_CAPSULE:  return 0; // not flat
 	case COLL_POLYGON:
-		if (fabs(cobj.norm.z) < 0.9) {return point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints);}
+		if (fabs(cobj.norm.z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints);}
 		
-		if (cobj.thickness > MIN_POLY_THICK) { // non-vertical thick polygon
+		if (cobj.thickness > MIN_POLY_THICK) { // non-horizontal thick polygon
 			vector<tquad_t> pts;
 			thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
 			
 			for (auto i = pts.begin(); i != pts.end(); ++i) {
-				if (fabs(i->get_norm().z) < 0.9) {return point_in_polygon_2d(pos.x, pos.y, i->pts, i->npts);}
+				if (fabs(i->get_norm().z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, i->pts, i->npts);}
 			}
 		}
 		return 0; // not flat
@@ -558,6 +713,7 @@ void try_drop_movable_cobj(unsigned index) {
 		else if (cobj.type == COLL_SPHERE  ) {radius *= 0.2;} // smaller since bottom surface area is small (maybe also not-vert cylinder?)
 		else if (cobj.type == COLL_CYLINDER) {radius  = min(radius, cobj.radius);}
 		modify_grass_at(center, radius, 1); // crush grass
+		rotate_to_align_with_mesh(cobj);
 	}
 	else if (delta.z <= -max_dz) { // cobj falls the entire max distance without colliding, accelerate it
 		// set terminal velocity to one cobj_height per timestep to avoid falling completely through another moving cobj (such as an elevator)
@@ -620,6 +776,7 @@ void try_drop_movable_cobj(unsigned index) {
 	// Z-axis cylinders can rest on a flat surface, but as soon as they start to rotate they're no longer axis aligned
 	if (cobj.v_fall == 0.0 && (cobj.type == COLL_CUBE || cobj.type == COLL_POLYGON)) {
 		point const center_of_mass(cobj.get_center_of_mass());
+		float const support_toler(-max(100.0*tolerance, 0.01*cobj_height)); // negative tolerance to make intersections more likely
 		vector3d normal(plus_z); // okay for cubes and Z-oriented cylinders
 		vector<point> support_pts;
 		bool supported(0);
@@ -627,8 +784,9 @@ void try_drop_movable_cobj(unsigned index) {
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (is_point_supported(c, center_of_mass)) {supported = 1; break;}
-			// FIXME: fill in support_pts, which generally requires determining intersection points, which is not implemented for all cobjs;
+			// fill in support_pts, which generally requires determining intersection points, which is not implemented for all cobjs;
 			// this works for cubes, but as soon as the cube rotates it's no longer axis aligned
+			cobj.get_contact_points(c, support_pts, 1, support_toler);
 		}
 		if (!supported) { // can rotate due to gravity and maybe fall
 			rot_val_t const rot_val(get_cobj_rot_axis(support_pts, normal, center_of_mass));
@@ -640,6 +798,11 @@ void try_drop_movable_cobj(unsigned index) {
 		}
 	}
 #endif
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+		// Note: okay to call this for each interacting cobj, as this will likely result in at most one rotation,
+		// assuming that cobj doesn't actually intersect (much) with cobjs, and cobjs don't intersect with each other
+		rotate_to_align_with_supporting_cobj(cobj, coll_objects.get_cobj(*i));
+	}
 	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
