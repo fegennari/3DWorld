@@ -205,7 +205,6 @@ k 4.9 -2.0 0.05  5.0 -2.0 0.05  0.05 0.05 # capsule
 k 5.0 -2.3 0.05  5.05 -2.35 0.05  0.05 0.05 # capsule
 S 5.0 -1.4 0.05  0.05
 P 3  6.0 -2.5 0.0  6.2 -2.5 0.0  6.0 -2.5 0.1  0.1 # ramp
-density 1.0
 
 # bricks on a wooden plank over the edge
 B 7.9 8.22  5.0 5.2  0.0 0.02
@@ -213,7 +212,9 @@ a 1 # destroyable
 l 0.9 0.8 0.5 0.5 1.0 brickwork.jpg 1 # brick with normal map
 X normal_maps/brickwork_normal.jpg # normal map
 y 8.0
+density 2.0
 B 8.05 8.15  5.05 5.15  0.02 0.1
+density 1.0
 
 e 1 # no bottom
 X none
