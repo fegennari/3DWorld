@@ -643,12 +643,18 @@ void calc_water_normals() {
 	vector3d *wsn0(wat_surf_normals[0]), *wsn1(wat_surf_normals[1]);
 
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
+		// if we have ice, the normals can't change and don't need to be updated;
+		// however, if they were never calculated, they do need to be update on the first frame;
+		// since we can't tell if the normals are valid, it's safest to always just update them
+		// *** but it's certainly not right to always set them to plus_z ***
+#if 0
 		if (temperature <= W_FREEZE_POINT) { // ice
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
 				if (!point_interior_to_mesh(j, i) || wminside[i][j]) {wsn1[j] = wat_vert_normals[i][j] = plus_z;}
 			}
-		}
-		else { // water
+		} else
+#endif
+		{ // water
 			for (int j = 0; j < MESH_X_SIZE; ++j) {
 				if (point_interior_to_mesh(j, i) && wminside[i][j] && water_matrix[i][j] >= z_min_matrix[i][j]) { // inside
 					wsn1[j] = get_matrix_surf_norm(water_matrix, NULL, MESH_X_SIZE, MESH_Y_SIZE, j, i);
