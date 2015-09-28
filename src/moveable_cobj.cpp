@@ -195,7 +195,8 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_POLYGON: {
 			if (thickness   > MIN_POLY_THICK && !cube_polygon_intersect(c, *this)) return 0;
 			if (c.thickness > MIN_POLY_THICK && !cube_polygon_intersect(*this, c)) return 0;
-			float const poly_toler(max(toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
+			//float const poly_toler(max(-toler, (thickness + c.thickness)*(1.0f - fabs(dot_product(norm, c.norm)))));
+			float const poly_toler(-toler*(1.0f - fabs(dot_product(norm, c.norm)))); // Note: not taking thickness into account, which is more correct
 
 			if (poly_toler > 0.0) { // use toler for edge adjacency tests (for adjacent roof polygons, sponza polygons, etc.)
 				for (int i = 0; i < c.npoints; ++i) { // test point adjacency
@@ -370,12 +371,10 @@ vector3d get_cobj_resting_normal(coll_obj const &c) {
 vector3d get_mesh_normal_at(point const &pt) {
 
 	int xpos(max(0, min(MESH_X_SIZE-1, get_xpos(pt.x)))), ypos(max(0, min(MESH_Y_SIZE-1, get_ypos(pt.y))));
-	cout << TXT(xpos) << TXT(ypos) << endl;
 	assert(!point_outside_mesh(xpos, ypos));
 	if (is_in_ice(xpos, ypos) && pt.z > water_matrix[ypos][xpos]) return wat_vert_normals[ypos][xpos]; // on ice (no interpolation)
 	float const xp((pt.x + X_SCENE_SIZE)*DX_VAL_INV), yp((pt.y + Y_SCENE_SIZE)*DY_VAL_INV);
 	int const x0((int)xp), y0((int)yp);
-	cout << TXT(x0) << TXT(y0) << endl;
 	if (x0 < 0 || y0 < 0 || x0 >= MESH_X_SIZE-1 || y0 >= MESH_Y_SIZE-1) return surface_normals[ypos][xpos]; // Note: okay to just always return this?
 	float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0));
 	return (1.0 - xpi)*((1.0 - ypi)*vertex_normals[y0][x0] + ypi*vertex_normals[y0+1][x0]) + xpi*((1.0 - ypi)*vertex_normals[y0][x0+1] + ypi*vertex_normals[y0+1][x0+1]);
@@ -388,9 +387,11 @@ void adjust_cobj_resting_normal(coll_obj &c, vector3d const &supp_norm) {
 	//cout << "rest_norm: " << rest_norm.str() << endl;
 	if (rest_norm == zero_vector) return; // invalid (can this happen?)
 	if (dot_product(supp_norm, rest_norm) > 0.999) return; // normals already align, no rotation needed
-	c.rotate_about(c.get_center_of_mass(), cross_product(supp_norm, rest_norm), get_norm_angle(rest_norm, supp_norm));
+	c.rotate_about(c.get_center_of_mass(), cross_product(supp_norm, rest_norm).get_norm(), get_norm_angle(rest_norm, supp_norm));
+	scene_smap_vbo_invalid = 1;
 }
 void rotate_to_align_with_supporting_cobj(coll_obj &rc, coll_obj const &sc) {
+	//if (sc.is_movable()) return; // FIXME: not yet supported in all cases
 	adjust_cobj_resting_normal(rc, get_cobj_supporting_normal(sc, rc.get_center_of_mass(), 0));
 }
 void rotate_to_align_with_mesh(coll_obj &c) {
@@ -631,6 +632,53 @@ bool is_rolling_cobj(coll_obj const &cobj) {
 
 float get_cobj_step_height() {return 0.4*C_STEP_HEIGHT*CAMERA_RADIUS;} // cobj can be lifted by 40% of the player step height
 
+bool check_top_face_agreement(vector<unsigned> const &cobjs) {
+
+	// this flow doesn't handle cobj alignment due to multiple contact points/angles;
+	// therefore, we only allow multi-cobj alignment if all supporting cobjs have the same top face height and slope,
+	// which for now only includes adjacent cubes with the same z2 value, such as those that come out of coll cube splitting
+	if (cobjs.size() <= 1) return 1;
+	coll_obj &ref_cobj(coll_objects.get_cobj(cobjs.front()));
+	if (ref_cobj.type != COLL_CUBE) return 0;
+
+	for (auto i = cobjs.begin()+1; i != cobjs.end(); ++i) {
+		coll_obj &cobj(coll_objects.get_cobj(*i));
+		if (cobj.type != COLL_CUBE || fabs(cobj.d[2][1] - ref_cobj.d[2][1]) < TOLER) return 0;
+	}
+	return 1;
+}
+
+void check_cobj_alignment(unsigned index) {
+
+	coll_obj &cobj(coll_objects.get_cobj(index));
+	if (!cobj.has_hard_edges()) return; // not yet supported
+	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]);
+	// check other static cobjs
+	cube_t context_bcube(cobj); // start at the current cobj xy
+	context_bcube.expand_by(0.25*cobj.max_len()); // expand to get the context - possible cobjs that may intersect after rotation (approximate)
+	vector<unsigned> cobjs;
+	get_intersecting_cobjs_tree(context_bcube, cobjs, index, -1.0E-6, 0, 0, -1); // include adjacencies
+
+	if (check_top_face_agreement(cobjs)) {
+		cube_t bcube(cobj);
+		bcube.d[2][1] = bcube.d[2][0]; // top edge starts at cobj bottom
+		bcube.d[2][0] -= 0.1*cobj_height; // shift down by 10% of the cobj height
+
+		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+			coll_obj const &c(coll_objects.get_cobj(*i));
+			if (!c.intersects(bcube)) continue; // context intersection, not true bottom edge intersection
+			// Note: okay to call this for each interacting cobj, as this will likely result in at most one rotation,
+			// assuming that cobj doesn't actually intersect (much) with cobjs, and cobjs don't intersect with each other
+			rotate_to_align_with_supporting_cobj(cobj, c);
+		}
+	}
+	if (cobjs.empty()) { // check the mesh only if there are no cobjs nearby
+		point const center(cobj.get_center_pt());
+		float mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 0, 1)); // Note: uses center point, not max mesh height under the cobj; clamped xy
+		if (cobj.d[2][0] < mesh_zval + 0.01*cobj_height) {rotate_to_align_with_mesh(cobj);}
+	}
+}
+
 void try_drop_movable_cobj(unsigned index) {
 
 	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
@@ -702,8 +750,8 @@ void try_drop_movable_cobj(unsigned index) {
 		if (center.z > water_zval) {mesh_zval = max(mesh_zval, water_zval);} // use water zval if cobj center is above the ice
 	}
 	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
-	if (fabs(mesh_dz) < tolerance) {return;} // resting on the mesh (never happens?)
-
+	if (fabs(mesh_dz) < tolerance) return; // resting on the mesh (never happens?)
+	
 	if (max(delta.z, -max_dz) < mesh_dz) { // under the mesh
 		if (prev_v_fall < 10.0*accel) {gen_sound(SOUND_OBJ_FALL, center, 0.2, 0.8);}
 		delta.z = mesh_dz; // don't let it go below the mesh
@@ -713,7 +761,6 @@ void try_drop_movable_cobj(unsigned index) {
 		else if (cobj.type == COLL_SPHERE  ) {radius *= 0.2;} // smaller since bottom surface area is small (maybe also not-vert cylinder?)
 		else if (cobj.type == COLL_CYLINDER) {radius  = min(radius, cobj.radius);}
 		modify_grass_at(center, radius, 1); // crush grass
-		rotate_to_align_with_mesh(cobj);
 	}
 	else if (delta.z <= -max_dz) { // cobj falls the entire max distance without colliding, accelerate it
 		// set terminal velocity to one cobj_height per timestep to avoid falling completely through another moving cobj (such as an elevator)
@@ -798,11 +845,6 @@ void try_drop_movable_cobj(unsigned index) {
 		}
 	}
 #endif
-	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-		// Note: okay to call this for each interacting cobj, as this will likely result in at most one rotation,
-		// assuming that cobj doesn't actually intersect (much) with cobjs, and cobjs don't intersect with each other
-		rotate_to_align_with_supporting_cobj(cobj, coll_objects.get_cobj(*i));
-	}
 	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
@@ -912,6 +954,10 @@ void proc_moving_cobjs() {
 		else {by_z1.push_back(make_pair(coll_objects.get_cobj(*i).d[2][0], *i)); ++i;} // otherwise try to drop it
 	}
 	sort(by_z1.begin(), by_z1.end()); // sort by z1 so that stacked cobjs work correctly (processed bottom to top)
-	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {try_drop_movable_cobj(i->second);}
+	
+	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {
+		try_drop_movable_cobj(i->second);
+		check_cobj_alignment(i->second);
+	}
 }
 
