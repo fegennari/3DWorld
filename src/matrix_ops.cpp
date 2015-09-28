@@ -285,25 +285,19 @@ void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, char **en
 	assert(matrix && vn && sn);
 
 	for (int y = 0; y < ysize; ++y) {
-		for (int x = 0; x < xsize; ++x) {
-			calc_matrix_normal_at(matrix, vn, sn, enabled, xsize, ysize, x, y);
-		}
+		for (int x = 0; x < xsize; ++x) {calc_matrix_normal_at(matrix, vn, sn, enabled, xsize, ysize, x, y);}
 	}
 }
 
 
 void get_matrix_point(int xpos, int ypos, point &pt) {
-
-	if (mesh_height != NULL && !point_outside_mesh(xpos, ypos)) {
-		pt.assign(get_xval(xpos), get_yval(ypos), mesh_height[ypos][xpos]);
-	}
+	if (mesh_height != NULL && !point_outside_mesh(xpos, ypos)) {pt.assign(get_xval(xpos), get_yval(ypos), mesh_height[ypos][xpos]);}
 }
 
 
 int is_in_ice(int xpos, int ypos) {
-
 	if (DISABLE_WATER || temperature > W_FREEZE_POINT || point_outside_mesh(xpos, ypos)) return 0;
-	return wminside[ypos][xpos];
+	return (wminside[ypos][xpos] && water_matrix[ypos][xpos] > mesh_height[ypos][xpos]);
 }
 
 
