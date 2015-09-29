@@ -429,6 +429,7 @@ void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle) 
 	if (angle == 0.0) return;
 	assert(axis != zero_vector);
 	remove_coll_object(id, 0);
+	//point const prev_pts0(points[0]);
 	//cout << "pt: " << pt.str() << ", axis: " << axis.str() << ", angle: " << angle << endl;
 
 	switch (type) {
@@ -444,13 +445,17 @@ void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle) 
 		break;
 	case COLL_CUBE: // axis-aligned, not normally rotated
 		convert_cube_to_ext_polygon(); // convert to extruded polygon, then fallthrough
-	case COLL_POLYGON:
+	case COLL_POLYGON: {
 		for (int i = 0; i < npoints; ++i) {rotate_point(points[i], pt, axis, angle);}
+		//vector3d const prev_norm(norm);
 		norm = get_poly_norm(points);
+		//if (dot_product(norm, prev_norm) < 0.0) {norm = -norm;} // keep the correct sign
+		//if (get_min_dim(norm) != get_min_dim(prev_norm)) {cp.swap_tcs ^= SWAP_TCS_XY;} // if tex coord dim changed, swap XY (doesn't work in all cases)
 		break;
+	}
 	default: assert(0);
 	}
-	//if (cp.tscale != 0.0) {texture_offset -= vd;} // FIXME: what to do with texture_offset?
+	//if (cp.tscale != 0.0) {texture_offset -= (points[0] - prev_pts0);}
 	calc_bcube(); // may not always be needed
 	re_add_coll_cobj(id, 0);
 }

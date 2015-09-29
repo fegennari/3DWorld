@@ -228,15 +228,15 @@ void coll_obj::get_polygon_tparams(int tid, vector3d const &normal, texgen_param
 }
 
 
-void coll_obj::draw_polygon(int tid, point const *points, int npoints, vector3d normal, cobj_draw_buffer &cdb) const {
+void coll_obj::draw_polygon(int tid, point const *pts, int npts, vector3d normal, cobj_draw_buffer &cdb) const {
 
-	normal = get_norm_camera_orient(normal, get_center(points, npoints));
-	assert(npoints == 3 || npoints == 4);
+	normal = get_norm_camera_orient(normal, get_center(pts, npts));
+	assert(npts == 3 || npts == 4);
 	texgen_params_t tp;
 	get_polygon_tparams(tid, normal, tp);
 
-	for (int i = 0; i < ((npoints == 3) ? 3 : 6); ++i) { // 1-2 triangles
-		cdb.add_vert(vert_norm(points[quad_to_tris_ixs[i]], normal), tp);
+	for (int i = 0; i < ((npts == 3) ? 3 : 6); ++i) { // 1-2 triangles
+		cdb.add_vert(vert_norm(pts[quad_to_tris_ixs[i]], normal), tp);
 	}
 }
 
@@ -302,10 +302,26 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 		for (unsigned fi = 0; fi < nsides; ++fi) { // draw back to front
 			unsigned const s(faces[fi].second);
 
-			if (s < 2) { // draw front and back
+			if (s < 2) { // draw back and front
 				if (bfc && (back_facing ^ (s == 0))) continue;
 				if (!s) {std::reverse(pts[s], pts[s]+npoints);}
-				draw_polygon(tid, pts[s], npoints, (s ? norm : -norm), cdb); // draw bottom surface
+
+				if (cp.flags & COBJ_WAS_CUBE) { // the primary polygon faces were the original cube top and bottom faces
+					assert(npoints == 4);
+					float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
+					unsigned const t0(0), t1(1);
+					texgen_params_t tp;
+
+					for (unsigned e = 0; e < 2; ++e) {
+						unsigned const tdim(e ? t1 : t0);
+						bool const s_or_t(cp.swap_txy() ^ (e != 0));
+						tp.st[s_or_t][tdim] = tscale[e];
+						tp.st[s_or_t][3]    = texture_offset[tdim]*tscale[e];
+					}
+					vector3d const normal(get_norm_camera_orient((s ? norm : -norm), get_center(pts[s], 4)));
+					for (int i = 0; i < 6; ++i) {cdb.add_vert(vert_norm(pts[s][quad_to_tris_ixs[i]], normal), tp);} // 2 triangles
+				}
+				else {draw_polygon(tid, pts[s], npoints, (s ? norm : -norm), cdb);} // draw top/bottom surface
 				if (!s) {std::reverse(pts[s], pts[s]+npoints);}
 			}
 			else { // draw sides
@@ -313,7 +329,32 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 				point const side_pts[4] = {pts[0][i], pts[0][ii], pts[1][ii], pts[1][i]};
 
 				if (!bfc || !camera_behind_polygon(side_pts, 4)) {
-					draw_polygon(tid, side_pts, 4, get_poly_norm(side_pts), cdb);
+					vector3d const side_norm(get_poly_norm(side_pts));
+
+					if (cp.flags & COBJ_WAS_CUBE) { // {x1,y1 x2,y1 x2,y2 x1,y2} => {-y +x +y -x}
+						float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
+						unsigned const dim((s&1) ? 0 : 1), t0((2-dim)>>1), t1(1+((2-dim)>0));
+						texgen_params_t tp;
+						
+						for (unsigned e = 0; e < 2; ++e) {
+							unsigned const tdim(e ? t1 : t0);
+							bool const s_or_t(cp.swap_txy() ^ (e != 0));
+#if 0
+							vector3d dir(zero_vector);
+							dir[tdim] = tscale[e];
+							vector3d const cns[4] = {-plus_y, plus_x, plus_y, -plus_x}, cn(cns[i]);
+							rotate_vector3d_by_vr(side_norm, cn, dir);
+							UNROLL_3X(tp.st[s_or_t][i_] = dir[i_];)
+#else
+							tp.st[s_or_t][tdim] = tscale[e];
+							tp.st[s_or_t][3]    = texture_offset[tdim]*tscale[e];
+#endif
+							tp.st[s_or_t][3]    = texture_offset[tdim]*tscale[e];
+						}
+						vector3d const normal(get_norm_camera_orient(side_norm, get_center(side_pts, 4)));
+						for (int i = 0; i < 6; ++i) {cdb.add_vert(vert_norm(side_pts[quad_to_tris_ixs[i]], normal), tp);} // 2 triangles
+					}
+					else {draw_polygon(tid, side_pts, 4, side_norm, cdb);}
 				}
 			}
 		}
