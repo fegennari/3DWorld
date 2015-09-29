@@ -282,6 +282,28 @@ void coll_obj::get_side_polygons(vector<tquad_t> &sides, int top_bot_only) const
 	}
 }
 
+void add_cube_cube_touching_face_contact_pts(cube_t const &a, cube_t const &b, unsigned dim, vector<point> &contact_pts, float toler) {
+
+	unsigned const d1((dim+1)%3), d2((dim+2)%3);
+
+	for (unsigned dir = 0; dir < 2; ++dir) { // for both combinations of the cubes
+		float const val(a.d[dim][dir]);
+		if (fabs(val - b.d[dim][!dir]) > toler) continue; // not intersecting c (we already know that orthogonal ranges overlap)
+		float const u1(max(a.d[d1][0], b.d[d1][0])), v1(max(a.d[d2][0], b.d[d2][0])), u2(min(a.d[d1][1], b.d[d1][1])), v2(min(a.d[d2][1], b.d[d2][1]));
+		point pt;
+		pt[dim] = val;
+		pt[d1] = u1;
+		pt[d2] = v1;
+		contact_pts.push_back(pt);
+		pt[d2] = v2;
+		contact_pts.push_back(pt);
+		pt[d1] = u2;
+		contact_pts.push_back(pt);
+		pt[d2] = v1;
+		contact_pts.push_back(pt);
+	} // for dir
+}
+
 // a glorified version of intersects_cobj that works on even fewer cases
 // rather than returning the full (possibly infinite for flat surfaces) set of contact points,
 // we're free to return the convex hull of the contact area, which will be merged with the convex hulls of other interacting cobjs
@@ -297,13 +319,9 @@ void coll_obj::get_contact_points(coll_obj const &c, vector<point> &contact_pts,
 		if (dist_less_than(p[0], p[1], (radius + c.radius - toler))) {contact_pts.push_back(p[0] + radius*(p[1] - p[0]).get_norm());}
 		return;
 	}
-	if (vert_only && (type == COLL_CUBE && c.type == COLL_CUBE)) { // vertical cube optimization
-		if (d[2][0] - toler <= c.d[2][1]) { // bottom is intersecting c (we already know that x and y ranges overlap)
-			float const x1(max(d[0][0], c.d[0][0])), y1(max(d[1][0], c.d[1][0])), x2(min(d[0][1], c.d[0][1])), y2(min(d[1][1], c.d[1][1])), z(d[2][0]); // bottom
-			contact_pts.push_back(point(x1, y1, z));
-			contact_pts.push_back(point(x1, y2, z));
-			contact_pts.push_back(point(x2, y2, z));
-			contact_pts.push_back(point(x2, y1, z));
+	if (type == COLL_CUBE && c.type == COLL_CUBE) { // vertical cube optimization
+		for (unsigned dim = (vert_only ? 2 : 0); dim < 3; ++dim) { // either {x,y,z} or just {z}
+			add_cube_cube_touching_face_contact_pts(*this, c, dim, contact_pts, -toler);
 		}
 		return;
 	}
@@ -391,7 +409,7 @@ void adjust_cobj_resting_normal(coll_obj &c, vector3d const &supp_norm) {
 	scene_smap_vbo_invalid = 1;
 }
 void rotate_to_align_with_supporting_cobj(coll_obj &rc, coll_obj const &sc) {
-	//if (sc.is_movable()) return; // FIXME: not yet supported in all cases
+	//if (sc.is_movable()) return;
 	adjust_cobj_resting_normal(rc, get_cobj_supporting_normal(sc, rc.get_center_of_mass(), 0));
 }
 void rotate_to_align_with_mesh(coll_obj &c) {
@@ -657,13 +675,44 @@ void check_cobj_alignment(unsigned index) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	if (!cobj.has_hard_edges()) return; // not yet supported
-	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]);
+	float const tolerance(1.0E-6), cobj_height(cobj.d[2][1] - cobj.d[2][0]);
+	point const center_of_mass(cobj.get_center_of_mass());
 	// check other static cobjs
 	cube_t context_bcube(cobj); // start at the current cobj xy
 	context_bcube.expand_by(0.25*cobj.max_len()); // expand to get the context - possible cobjs that may intersect after rotation (approximate)
 	vector<unsigned> cobjs;
-	get_intersecting_cobjs_tree(context_bcube, cobjs, index, -1.0E-6, 0, 0, -1); // include adjacencies
+	get_intersecting_cobjs_tree(context_bcube, cobjs, index, -tolerance, 0, 0, -1); // include adjacencies
 
+#if 0 // Note: disabled until support points creation is handled
+	// allow rotation of cubes, which will become extruded polygons, so polygons need to work as well;
+	// curved cobjs such as spheres, rotated cylinders, and capsules are generally unstable since they only contact the ground at a single point;
+	// spheres are handled by is_rolling_cobj() and should be okay;
+	// Z-axis cylinders can rest on a flat surface, but as soon as they start to rotate they're no longer axis aligned
+	if (cobj.v_fall == 0.0 && (cobj.type == COLL_CUBE || cobj.type == COLL_POLYGON) && !cobjs.empty()) {
+		float const support_toler(-max(100.0*tolerance, 0.01*cobj_height)); // negative tolerance to make intersections more likely
+		vector3d normal(plus_z); // okay for cubes and Z-oriented cylinders
+		vector<point> support_pts;
+		bool supported(0);
+
+		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+			coll_obj const &c(coll_objects.get_cobj(*i));
+			if (is_point_supported(c, center_of_mass)) {supported = 1; break;}
+			// fill in support_pts, which generally requires determining intersection points, which is not implemented for all cobjs;
+			// this works for cubes, but as soon as the cube rotates it's no longer axis aligned
+			cobj.get_contact_points(c, support_pts, 1, support_toler);
+		}
+		//cout << TXT(supported) << TXT(support_pts.size()) << endl;
+		if (!supported && !support_pts.empty()) { // can rotate due to gravity and maybe fall
+			rot_val_t const rot_val(get_cobj_rot_axis(support_pts, normal, center_of_mass));
+		
+			if (rot_val.axis != zero_vector) { // apply rotation if not stable at rest
+				float const angle(0.1); // FIXME
+				cobj.rotate_about(rot_val.pt, rot_val.axis, angle);
+				return;
+			}
+		}
+	}
+#endif
 	if (check_top_face_agreement(cobjs)) {
 		cube_t bcube(cobj);
 		bcube.d[2][1] = bcube.d[2][0]; // top edge starts at cobj bottom
@@ -672,6 +721,7 @@ void check_cobj_alignment(unsigned index) {
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (!c.intersects(bcube)) continue; // context intersection, not true bottom edge intersection
+			if (!is_point_supported(c, center_of_mass)) continue;
 			// Note: okay to call this for each interacting cobj, as this will likely result in at most one rotation,
 			// assuming that cobj doesn't actually intersect (much) with cobjs, and cobjs don't intersect with each other
 			rotate_to_align_with_supporting_cobj(cobj, c);
@@ -821,35 +871,6 @@ void try_drop_movable_cobj(unsigned index) {
 		}
 		else if (depth > 0.5*cobj_height) return; // stuck in ice
 	}
-#if 0 // Note: disabled until support points creation is handled
-	// allow rotation of cubes, which will become extruded polygons, so polygons need to work as well;
-	// curved cobjs such as spheres, rotated cylinders, and capsules are generally unstable since they only contact the ground at a single point;
-	// spheres are handled by is_rolling_cobj() and should be okay;
-	// Z-axis cylinders can rest on a flat surface, but as soon as they start to rotate they're no longer axis aligned
-	if (cobj.v_fall == 0.0 && (cobj.type == COLL_CUBE || cobj.type == COLL_POLYGON)) {
-		point const center_of_mass(cobj.get_center_of_mass());
-		float const support_toler(-max(100.0*tolerance, 0.01*cobj_height)); // negative tolerance to make intersections more likely
-		vector3d normal(plus_z); // okay for cubes and Z-oriented cylinders
-		vector<point> support_pts;
-		bool supported(0);
-
-		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-			coll_obj const &c(coll_objects.get_cobj(*i));
-			if (is_point_supported(c, center_of_mass)) {supported = 1; break;}
-			// fill in support_pts, which generally requires determining intersection points, which is not implemented for all cobjs;
-			// this works for cubes, but as soon as the cube rotates it's no longer axis aligned
-			cobj.get_contact_points(c, support_pts, 1, support_toler);
-		}
-		if (!supported) { // can rotate due to gravity and maybe fall
-			rot_val_t const rot_val(get_cobj_rot_axis(support_pts, normal, center_of_mass));
-		
-			if (rot_val.axis != zero_vector) { // apply rotation if not stable at rest
-				float const angle(0.0); // FIXME
-				cobj.rotate_about(rot_val.pt, rot_val.axis, angle);
-			}
-		}
-	}
-#endif
 	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
 	cobj.shift_by(delta); // move cobj down
 	scene_smap_vbo_invalid = 1;
