@@ -148,6 +148,7 @@ void gen_delayed_sound(float delay, unsigned id, point const &pos, float gain=1.
 void gen_delayed_from_player_sound(unsigned id, point const &pos, float gain=1.0, float pitch=1.0);
 void proc_delayed_sounds();
 void play_thunder(point const &pos, float gain, float delay);
+void play_switch_weapon_sound();
 void init_openal(int &argc, char** argv);
 
 

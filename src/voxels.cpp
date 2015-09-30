@@ -2243,6 +2243,7 @@ void change_voxel_editing_mode(int val) {
 	voxel_editing = (voxel_editing + NUM_MODES + val) % NUM_MODES;
 	string const modes[NUM_MODES] = {"Not Editing Voxels", "Increase Voxel Weight/Add", "Decrease Voxel Weight/Remove"};
 	print_text_onscreen(modes[voxel_editing], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
+	play_switch_weapon_sound();
 }
 
 void apply_brush(voxel_brush_t const &brush) {brush_manager.apply_brush(brush);}

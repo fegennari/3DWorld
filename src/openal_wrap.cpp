@@ -106,10 +106,7 @@ void set_sound_loop_state(unsigned id, bool play, float volume) { // volume=0.0 
 	}
 }
 
-void alut_sleep(float seconds) {
-	alutSleep(seconds);
-}
-
+void alut_sleep(float seconds) {alutSleep(seconds);}
 
 bool had_al_error  () {return (alGetError  () != AL_NO_ERROR);}
 bool had_alut_error() {return (alutGetError() != AL_NO_ERROR);}
@@ -245,10 +242,7 @@ void openal_source::rewind() const {alSourceRewind(source);}
 void openal_source::blocking_play() const {
 	play();
 	//if (buffer.time > 0.0) {alut_sleep(buffer.time); return;}
-
-	do {
-		alut_sleep(0.01); // sleep 10ms
-	} while (is_active());
+	do {alut_sleep(0.01);} while (is_active()); // sleep 10ms
 }
 
 int get_source_state(unsigned source) {
@@ -274,10 +268,7 @@ bool openal_source::is_playing() const {
 
 void source_manager_t::create_channels(unsigned num_channels) {
 	clear();
-	
-	for (unsigned i = 0; i < num_channels; ++i) {
-		new_source();
-	}
+	for (unsigned i = 0; i < num_channels; ++i) {new_source();}
 }
 
 unsigned source_manager_t::new_source() {
@@ -429,6 +420,8 @@ void proc_delayed_sounds() {
 void play_thunder(point const &pos, float gain, float delay) {
 	gen_delayed_sound(delay, ((rand()&1) ? SOUND_THUNDER : SOUND_THUNDER2), pos, gain);
 }
+
+void play_switch_weapon_sound() {gen_sound(SOUND_CLICK, get_camera_pos(), 0.1, 0.5);}
 
 
 void init_openal(int &argc, char** argv) {

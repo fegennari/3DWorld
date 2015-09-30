@@ -65,6 +65,7 @@ void change_spraypaint_color(int val) {
 	if (world_mode != WMODE_GROUND) return;
 	paint_color_ix = (paint_color_ix + TOT_PAINT_COLORS + val) % TOT_PAINT_COLORS;
 	show_cur_spraypaint_mode();
+	play_switch_weapon_sound();
 }
 
 

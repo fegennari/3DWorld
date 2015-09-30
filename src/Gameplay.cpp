@@ -1416,7 +1416,6 @@ void do_area_effect_damage(point const &pos, float effect_radius, float damage, 
 
 
 void player_teleported(point const &pos, int player_id) { // check for telefrags
-
 	do_area_effect_damage(pos, object_types[SMILEY].radius, 10000, -1, player_id, TELEPORTER);
 }
 
@@ -1448,7 +1447,8 @@ void player_state::switch_weapon(int val, int verbose) {
 		weapon = (weapon+NUM_WEAPONS+val)%NUM_WEAPONS;
 	} while (!UNLIMITED_WEAPONS && no_weap_or_ammo());
 
-	if (verbose) print_weapon(weapon);
+	if (verbose) {print_weapon(weapon);}
+	play_switch_weapon_sound();
 	wmode      = 0; // maybe don't reset this?
 	fire_frame = 0;
 	cb_hurt    = 0;

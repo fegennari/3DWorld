@@ -2602,6 +2602,7 @@ void change_inf_terrain_fire_mode(int val) {
 	inf_terrain_fire_mode = (inf_terrain_fire_mode + NUM_FIRE_MODES + val) % NUM_FIRE_MODES;
 	string const modes[NUM_FIRE_MODES] = {"Look Only", "Increase Mesh Height", "Decrease Mesh Height", "Flatten Mesh"};
 	print_text_onscreen(modes[inf_terrain_fire_mode], WHITE, 1.0, TICKS_PER_SECOND, 1); // 1 second
+	play_switch_weapon_sound();
 }
 
 tile_t *get_tile_for_xy(int x, int y) {
