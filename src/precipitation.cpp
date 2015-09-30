@@ -65,7 +65,7 @@ public:
 		else if (!in_range(pos)  ) {pos = gen_pt(pos.z);} // move inside the range
 		else if (world_mode == WMODE_GROUND) { // check bottom of raindrop below the mesh or top surface cobjs
 			int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
-			if (!point_outside_mesh(x, y) && (bot_pos.z < mesh_height[y][x] || bot_pos.z < v_collision_matrix[y][x].zmax)) {pos = gen_pt(cur_zmax);} // start again near the top
+			if (!point_outside_mesh(x, y) && (pos.z < mesh_height[y][x] || bot_pos.z < v_collision_matrix[y][x].zmax)) {pos = gen_pt(cur_zmax);} // start again near the top
 		}
 	}
 	void check_size() {verts.resize(VERTS_PER_PRIM*get_num_precip(), all_zeros);}
