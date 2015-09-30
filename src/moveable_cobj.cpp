@@ -372,7 +372,7 @@ vector3d get_cobj_supporting_normal(coll_obj const &c, point const &support_pos,
 		thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness, pts);
 			
 		for (auto i = pts.begin(); i != pts.end(); ++i) {
-			vector3d const normal(i->get_norm()); // FIXME: does thick_poly_to_sides() guarantee that the sign is correct (normal facing out)?
+			vector3d const normal(i->get_norm()); // thick_poly_to_sides() should guarantee that the sign is correct (normal facing out)
 			if (bot_surf ? (normal.z > -norm_z_thresh) : (normal.z < norm_z_thresh)) continue; // facing down or vertical
 			if (point_in_polygon_2d(support_pos.x, support_pos.y, i->pts, i->npts)) return normal;
 		}

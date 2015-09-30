@@ -5,12 +5,13 @@
 #include "physics_objects.h"
 #include "draw_utils.h"
 #include "shaders.h"
+#include "mesh.h"
 
 
-float const PRECIP_DIST = 20.0;
+float const TT_PRECIP_DIST = 20.0;
 
-extern int animate2;
-extern float temperature, fticks, zmin, water_plane_z, brightness;
+extern int animate2, display_mode;
+extern float temperature, fticks, zmin, water_plane_z, brightness, XY_SCENE_SIZE;
 extern vector3d wind;
 extern int coll_id[];
 extern obj_group obj_groups[];
@@ -28,10 +29,11 @@ public:
 	void clear () {verts.clear();}
 	bool empty () const {return verts.empty();}
 	size_t size() const {return verts.size();}
-	float get_zmin() const {return get_tiled_terrain_water_level();}
+	float get_zmin() const {return ((world_mode == WMODE_GROUND) ? zbottom : get_tiled_terrain_water_level());}
 	float get_zmax() const {return get_cloud_zmax();}
+	float get_precip_dist() const {return ((world_mode == WMODE_GROUND) ? XY_SCENE_SIZE : TT_PRECIP_DIST);}
 	size_t get_num_precip() {return obj_groups[coll_id[PRECIP]].max_objects();}
-	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), PRECIP_DIST);}
+	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), get_precip_dist());}
 	vector3d get_velocity(float vz) const {return fticks*(0.02*wind + vector3d(0.0, 0.0, vz));}
 	
 	void pre_update() {
@@ -48,18 +50,23 @@ public:
 	}
 	point gen_pt(float zval) {
 		point const camera(get_camera_pos());
+		float const precip_dist(get_precip_dist());
 
 		while (1) {
-			vector3d const off(PRECIP_DIST*rgen.signed_rand_float(), PRECIP_DIST*rgen.signed_rand_float(), zval);
-			if (off.x*off.x + off.y*off.y < PRECIP_DIST*PRECIP_DIST) {return (vector3d(camera.x, camera.y, 0.0) + off);}
+			vector3d const off(precip_dist*rgen.signed_rand_float(), precip_dist*rgen.signed_rand_float(), zval);
+			if (off.x*off.x + off.y*off.y < precip_dist*precip_dist) {return (vector3d(camera.x, camera.y, 0.0) + off);}
 		}
 		return zero_vector; // never gets here
 	}
-	void check_pos(point &pos) {
+	void check_pos(point &pos, point const &bot_pos) {
 		if (0) {}
 		else if (pos == all_zeros) {pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));} // initial location
 		else if (pos.z < cur_zmin) {pos = gen_pt(cur_zmax);} // start again near the top
 		else if (!in_range(pos)  ) {pos = gen_pt(pos.z);} // move inside the range
+		else if (world_mode == WMODE_GROUND) { // check bottom of raindrop below the mesh or top surface cobjs
+			int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
+			if (!point_outside_mesh(x, y) && (bot_pos.z < mesh_height[y][x] || bot_pos.z < v_collision_matrix[y][x].zmax)) {pos = gen_pt(cur_zmax);} // start again near the top
+		}
 	}
 	void check_size() {verts.resize(VERTS_PER_PRIM*get_num_precip(), all_zeros);}
 };
@@ -75,7 +82,7 @@ public:
 
 		//#pragma omp parallel for schedule(static,1)
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
-			check_pos(verts[i].v);
+			check_pos(verts[i].v, verts[i+1].v);
 			if (animate2) {verts[i].v += vcur; vcur += vinc;}
 			verts[i+1].v = verts[i].v + dir;
 		}
@@ -115,7 +122,7 @@ public:
 		float const vmult(0.1/verts.size());
 
 		for (unsigned i = 0; i < verts.size(); ++i) {
-			check_pos(verts[i].v);
+			check_pos(verts[i].v, verts[i].v);
 			if (animate2) {verts[i].v += (1.0 + i*vmult)*v;}
 		}
 	}
@@ -123,11 +130,8 @@ public:
 		if (empty()) return;
 		point_sprite_drawer psd;
 		psd.reserve_pts(size());
-		colorRGBA const color(brightness, brightness, brightness, 1.0); // constant
-
-		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {
-			psd.add_pt(vert_color(i->v, color));
-		}
+		colorRGBA const color(WHITE*((world_mode == WMODE_GROUND) ? 1.5 : 1.0)*brightness); // constant
+		for (vector<vert_type_t>::const_iterator i = verts.begin(); i != verts.end(); ++i) {psd.add_pt(vert_color(i->v, color));}
 		psd.draw(WHITE_TEX, 1.0); // unblended pixels
 	}
 };
@@ -137,12 +141,13 @@ rain_manager_t rain_manager;
 snow_manager_t snow_manager;
 
 
-void draw_tiled_terrain_precipitation() {
+void draw_local_precipitation() {
 
 	if (!is_precip_enabled()) return;
 
 	if (temperature <= W_FREEZE_POINT) { // draw snow
 		rain_manager.clear();
+		//if (world_mode != WMODE_INF_TERRAIN) return; // only drawn snow for tiled terrain?
 		snow_manager.update();
 		snow_manager.render();
 	}

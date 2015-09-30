@@ -211,6 +211,7 @@ void draw_stuff(int draw_uw, int timer1) {
 		if (TIMETEST) PRINT_TIME("Q");
 		draw_scenery(0, 1);
 		draw_teleporters();
+		if (!underwater) {draw_local_precipitation();}
 		check_gl_error(23);
 		if (TIMETEST) PRINT_TIME("R");
 		draw_coll_surfaces(1);
@@ -1179,10 +1180,10 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (TIMETEST) PRINT_TIME("3.26");
 	draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.3");
-	//if (underwater ) {draw_tiled_terrain_precipitation();}
+	//if (underwater ) {draw_local_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, reflection_tid);}
 	if (!underwater) {draw_tiled_terrain_clouds(0);}
-	if (!underwater) {draw_tiled_terrain_precipitation();}
+	if (!underwater) {draw_local_precipitation();}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)
 	check_xy_offsets();

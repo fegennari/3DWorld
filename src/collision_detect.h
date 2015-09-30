@@ -47,7 +47,7 @@ struct obj_layer : public base_mat_t { // size = 76
 
 	bool draw, is_emissive;
 	unsigned char swap_tcs, cobj_type;
-	float elastic, tscale, tdx, tdy, refract_ix, light_atten, density;
+	float elastic, tscale, tdx, tdy, refract_ix, light_atten, density; // Note: elastic is misnamed - it's really hardness
 	int normal_map;
 	collision_func coll_func;
 

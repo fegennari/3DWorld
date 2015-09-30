@@ -244,7 +244,7 @@ void setup_tt_fog_pre(shader_t &s);
 void setup_tt_fog_post(shader_t &s);
 
 // function prototypes - precipitation
-void draw_tiled_terrain_precipitation();
+void draw_local_precipitation();
 
 // function prototypes - map_view
 void draw_overhead_map();
