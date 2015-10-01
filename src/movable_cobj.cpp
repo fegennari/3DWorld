@@ -887,6 +887,7 @@ void try_drop_movable_cobj(unsigned index) {
 	}
 	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
 	cobj.shift_by(delta); // move cobj down
+	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
 	scene_smap_vbo_invalid = 1;
 	check_moving_cobj_int_with_dynamic_objs(index);
 }
@@ -968,6 +969,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 	}
 	// move the cobj and update various state
 	cobj.move_cobj(cobj_delta, 1); // move the cobj instead of the player and re-add to coll structure
+	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
 	moving_cobjs.insert(index); // may already be there
 	scene_smap_vbo_invalid = 1;
 	check_moving_cobj_int_with_dynamic_objs(index);
