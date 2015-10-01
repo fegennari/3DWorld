@@ -50,7 +50,7 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	point center(ipos + get_platform_delta());
 
 	if (c.is_movable() && moving_cobjs.find(cobj) != moving_cobjs.end()) {
-		vector3d const local_delta(c.get_llc() - cobj_llc); // look at cobj LLC delta
+		vector3d const local_delta(c.get_center_of_mass() - cobj_cent_mass); // look at cobj LLC delta
 		center += local_delta;
 		if (delta) {*delta = local_delta;}
 	}
@@ -86,7 +86,7 @@ void decal_obj::check_cobj() {
 	vector3d delta(zero_vector);
 	
 	if (is_on_cobj(cid, &delta)) { // try to find the cobj this is attached to (likely a split part of the original)
-		pos += delta; ipos += delta; cobj_llc += delta; // move by this delta
+		pos += delta; ipos += delta; cobj_cent_mass += delta; // move by this delta
 	}
 	else {
 		int const xpos(get_xpos(ipos.x)), ypos(get_ypos(ipos.y));
@@ -97,7 +97,7 @@ void decal_obj::check_cobj() {
 		for (unsigned i = 0; i < cvals.size(); ++i) {
 			if (is_on_cobj(cvals[i])) {cid = cvals[i]; break;}
 		}
-		if (cid >= 0) {cobj_llc = coll_objects.get_cobj(cid).get_llc();}
+		if (cid >= 0) {cobj_cent_mass = coll_objects.get_cobj(cid).get_center_of_mass();}
 	}
 	if (cid < 0) {status = 0; return;} // not found, no longer on a cobj so remove it
 }

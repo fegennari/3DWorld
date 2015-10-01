@@ -189,7 +189,7 @@ void decal_obj::gen(point const &p, float r, float ang, vector3d const &o, int l
 	lifetime  = lt;
 	ipos      = p;
 	ipos     -= get_platform_delta(); // make relative to the at-rest platform pos
-	cobj_llc  = ((cid >= 0) ? coll_objects.get_cobj(cid).get_llc() : all_zeros);
+	cobj_cent_mass = ((cid >= 0) ? coll_objects.get_cobj(cid).get_center_of_mass() : all_zeros);
 	init(ipos);
 	radius    = r;
 	rot_angle = ang;

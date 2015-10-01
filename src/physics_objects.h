@@ -160,7 +160,7 @@ struct decal_obj : public basic_physics_obj { // size = 76
 	int cid, tid, lifetime;
 	float radius, alpha, rot_angle;
 	colorRGBA color;
-	point ipos, cobj_llc;
+	point ipos, cobj_cent_mass;
 	vector3d orient;
 	tex_range_t tex_range;
 
