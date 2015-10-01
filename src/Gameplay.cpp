@@ -67,6 +67,7 @@ extern obj_group obj_groups[];
 extern char player_name[];
 extern coll_obj_group coll_objects;
 
+bool push_movable_cobj(unsigned index, vector3d &delta);
 
 
 point get_sstate_pos(int id) {
@@ -1275,7 +1276,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 		unsigned const max_parts(cobjs.empty() ? 0 : unsigned(10000*size/cobjs.size()));
 
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) { // find closest cobj(s), use normal and color
-			coll_obj const &cobj(coll_objects[*i]);
+			coll_obj const &cobj(coll_objects.get_cobj(*i));
 			vector3d normal(plus_z);
 			point cpos; // unused
 			if (!cobj.sphere_intersects_exact(pos, search_radius, normal, cpos)) continue;
@@ -1283,6 +1284,15 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 			//vector3d normal((plus_z + (pos - cobj.get_center_pt()).get_norm()).get_norm()); // too inexact
 			colorRGBA color(cobj.get_avg_color(), 1.0); // ignore texture since this is an area effect; alpha is always 1.0
 			add_explosion_particles(pos, 10.0*normal, 5.0, 0.25*bradius, color, (rand() % max_parts));
+
+			if (cobj.is_movable() && cobj.destroy <= destroy_thresh) {
+				float const dist(p2p_dist(cobj.get_cube_center(), pos)), move_radius(0.5*bradius);
+
+				if (dist > 1.0E-6 && dist < move_radius) {
+					vector3d delta(-2.0E-4*size*normal*((move_radius - dist)/move_radius)/cobj.get_mass());
+					push_movable_cobj(*i, delta);
+				}
+			}
 		}
 	}
 	if (size > 0.2) {gen_particles(pos, (rand() % int(50*size)));}
@@ -1988,7 +1998,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 	// hit cobjs (like tree leaves)
 	if (coll && cindex >= 0 && closest < 0) {
-		coll_obj &cobj(coll_objects[cindex]);
+		coll_obj &cobj(coll_objects.get_cobj(cindex));
 		cobj.register_coll(TICKS_PER_SECOND/(is_laser ? 4 : 2), proj_type);
 		bool const is_glass(cobj.cp.is_glass(cobj.destroy == SHATTERABLE));
 
@@ -2028,6 +2038,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			else if (is_glass && (rand()&1) == 0) { // projectile, 50% chance of continuing through glass with twice the firing error and 75% the damage
 				projectile_test(coll_pos, vcf, 2.0*firing_error, 0.75*damage, shooter, range_unused, 1.0, cindex); // return value is unused
 				no_spark = 1;
+			}
+			if (cobj.is_movable()) {
+				vector3d delta(4.0E-8*damage*coll_norm*dot_product(vcf, coll_norm)/cobj.get_mass());
+				push_movable_cobj(cindex, delta);
 			}
 		}
 		unsigned const shatter_prob((sstate.powerup == PU_DAMAGE) ? 2 : 10);

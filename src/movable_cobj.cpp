@@ -977,12 +977,16 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 	return 1; // moved
 }
 
+bool push_movable_cobj(unsigned index, vector3d &delta) {
+	set<unsigned> seen;
+	return push_cobj(index, delta, seen);
+}
+
 bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
 
 	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
 	vector3d delta(orig_pos - player_pos);
-	set<unsigned> seen;
-	if (!push_cobj(index, delta, seen)) return 0;
+	if (!push_movable_cobj(index, delta)) return 0;
 	player_pos += delta; // restore player pos, at least partially
 	return 1; // moved
 }
