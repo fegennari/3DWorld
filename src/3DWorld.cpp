@@ -526,6 +526,7 @@ void update_sound_loops() {
 	set_sound_loop_state(SOUND_LOOP_FIRE, (!universe && dist_to_fire_sq > 0.0 && dist_to_fire_sq < 2.0), fire_gain);
 	set_sound_loop_state(SOUND_LOOP_RAIN, (!universe && is_rain_enabled()));
 	set_sound_loop_state(SOUND_LOOP_WIND, (!universe && wind.mag() >= 1.0));
+	set_sound_loop_state(SOUND_LOOP_UNDERWATER, (!universe && underwater));
 	dist_to_fire_sq = 0.0;
 	proc_delayed_sounds();
 }

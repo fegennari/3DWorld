@@ -24,8 +24,8 @@ extern bool disable_sound;
 extern int frame_counter, iticks;
 extern float CAMERA_RADIUS;
 
-float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {0.5, 0.1, 0.1};
-float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0};
+float const loop_sound_gains  [NUM_LOOP_SOUNDS] = {0.5, 0.1, 0.1, 0.1};
+float const loop_sound_pitches[NUM_LOOP_SOUNDS] = {1.0, 1.0, 1.0, 1.0};
 
 
 // supported: au, wav
@@ -37,6 +37,7 @@ void setup_sounds() {
 	sounds.add_file_buffer("burning.wav"    ); // SOUND_BURNING
 	sounds.add_file_buffer("rain1.wav"      ); // SOUND_RAIN1
 	sounds.add_file_buffer("wind1.wav"      ); // SOUND_WIND1
+	sounds.add_file_buffer("underwater.wav" ); // SOUND_UNDERWATER
 	// regular sounds
 	sounds.add_file_buffer("explosion1.au"  ); // SOUND_EXPLODE
 	sounds.add_file_buffer("gunshot.wav"    ); // SOUND_GUNSHOT
