@@ -2426,6 +2426,7 @@ void player_fall(int id) { // smileys and the player (camera)
 	float const zvel(sstates[id].last_zvel), dz(sstates[id].last_dz);
 	float const vel(-zvel - FALL_HURT_VEL), fall_hurt_dist(FALL_HURT_HEIGHT*CAMERA_RADIUS), dz2(-dz - fall_hurt_dist);
 	if (id == CAMERA_ID && -dz > CAMERA_RADIUS) {camera_shake = min(1.0f, -dz/fall_hurt_dist);}
+	if (-dz > 0.75*CAMERA_RADIUS) {gen_sound(SOUND_OBJ_FALL, get_sstate_pos(id), min(1.0, -0.1*dz/CAMERA_RADIUS), 0.7);}
 	if (dz2 < 0.0) return;
 	smiley_collision(id, id, vector3d(0.0, 0.0, -zvel), get_sstate_pos(id), 5.0*vel*vel, FELL);
 }
