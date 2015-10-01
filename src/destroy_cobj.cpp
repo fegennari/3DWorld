@@ -275,29 +275,31 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	// determine affected cobjs
 	for (set<unsigned>::const_iterator k = unique_cobjs.begin(); k != unique_cobjs.end(); ++k) {
 		unsigned const i(*k);
-		assert(i < cobjs.size());
-		assert(cobjs[i].status == COLL_STATIC);
+		coll_obj &cobj(cobjs.get_cobj(i));
+		assert(cobj.status == COLL_STATIC);
 		// can't destroy a model3d or voxel terrain cobj because the geometry is also stored in a vbo and won't get updated here
-		if (cobjs[i].cp.cobj_type != COBJ_TYPE_STD)    continue;
-		int const D(cobjs[i].destroy);
+		if (cobj.cp.cobj_type != COBJ_TYPE_STD) continue;
+		int const D(cobj.destroy);
 		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
-		bool const is_cube(cobjs[i].type == COLL_CUBE), is_polygon(cobjs[i].type == COLL_POLYGON), shatter(D >= SHATTERABLE);
-		if (!cobjs[i].intersects(cube)) continue; // no intersection
-		csg_cube const cube2(cobjs[i], 1);
+		bool const is_cube(cobj.type == COLL_CUBE), is_polygon(cobj.type == COLL_POLYGON);
+		bool const shatter(D >= SHATTERABLE), full_destroy(shatter || cobj.is_movable());
+		if (!cobj.intersects(cube)) continue; // no intersection
+		csg_cube const cube2(cobj, 1);
 		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
-		float volume(cobjs[i].volume);
+		float volume(cobj.volume);
 		float const min_volume(0.01*min(volume, clip_cube_volume)), int_volume(cube2.get_overlap_volume(cube));
 
 		if (is_cube && !shatter && int_volume < min_volume) { // don't remove tiny bits from cobjs
-			cube.unset_intersecting_edge_flags(cobjs[i]);
+			cube.unset_intersecting_edge_flags(cobj);
 			continue;
 		}
-		if (shatter || cobjs[i].subtract_from_cobj(new_cobjs, cube, 1)) {
-			bool no_new_cobjs(shatter || volume < TOLERANCE);
+		if (full_destroy || cobj.subtract_from_cobj(new_cobjs, cube, 1)) {
+			bool no_new_cobjs(full_destroy || volume < TOLERANCE);
 			if (no_new_cobjs) {new_cobjs.clear();} // completely destroyed
 			if (is_cube)      {cdir += cube2.closest_side_dir(center);} // inexact
-			if (D == SHATTER_TO_PORTAL) {cobjs[i].create_portal();}
+			if (D == SHATTER_TO_PORTAL) {cobj.create_portal();}
 
+			// Note: cobj reference may be invalidated beyond this point
 			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
 				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 				assert(index >= 0 && (size_t)index < cobjs.size());
@@ -309,7 +311,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
 			cobjs[i].clear_internal_data();
 			to_remove.push_back(i);
-			if (shatter) mod_cubes.push_back(cobjs[i]);
+			if (full_destroy) {mod_cubes.push_back(cobjs[i]);}
 			int const gid(cobjs[i].group_id);
 
 			if (gid >= 0) { // we only check in the remove case because we can't add without removing
