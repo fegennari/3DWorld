@@ -678,10 +678,24 @@ void check_cobj_alignment(unsigned index) {
 	float const tolerance(1.0E-6), cobj_height(cobj.d[2][1] - cobj.d[2][0]);
 	point const center_of_mass(cobj.get_center_of_mass());
 	// check other static cobjs
-	cube_t context_bcube(cobj); // start at the current cobj xy
-	context_bcube.expand_by(0.25*cobj.max_len()); // expand to get the context - possible cobjs that may intersect after rotation (approximate)
+	// Note: since we're going to rotate the cobj, we need to use the bounding sphere, which is rotation invariant, so that we don't intersect a new cobj after rotation
+	point bs_center;
+	float bs_radius;
+	cobj.bounding_sphere(bs_center, bs_radius);
+	bs_radius += p2p_dist(bs_center, center_of_mass); // conservative, but probably okay since the delta will usually be small
+	cube_t context_bcube(center_of_mass, center_of_mass);
+	context_bcube.expand_by(bs_radius);
 	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(context_bcube, cobjs, index, -tolerance, 0, 0, -1); // include adjacencies
+	auto in(cobjs.begin()), out(in);
+
+	for (; in != cobjs.end(); ++in) {
+		coll_obj const &c(coll_objects.get_cobj(*in));
+		if (!c.sphere_intersects(center_of_mass, bs_radius)) continue; // no intersection with bounding sphere
+		if (c.is_movable() && c.get_center_of_mass().z > center_of_mass.z) continue; // movable cobj resting on this cobj, ignore it (let it update itself later)
+		*out++ = *in; // keep this cobj
+	}
+	cobjs.erase(out, cobjs.end());
 
 #if 0 // Note: disabled until support points creation is handled
 	// allow rotation of cubes, which will become extruded polygons, so polygons need to work as well;
