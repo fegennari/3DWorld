@@ -491,7 +491,6 @@ struct pt_less { // override standard strange point operator<()
 	}
 };
 
-// FIXME: untested; signs/ordering may be backwards
 void convex_hull(vector<point> const &pts, point const &normal, vector<point> &hull) {
 
 	assert(!pts.empty());
@@ -512,7 +511,8 @@ void convex_hull(vector<point> const &pts, point const &normal, vector<point> &h
 		while (k >= t && cross_mag(hull[k-2], hull[k-1], sorted[i], normal) <= 0) {k--;}
 		hull[k++] = sorted[i];
 	}
-	hull.resize(k);
+	assert(k > 0);
+	hull.resize(k-1); // remove the last point (duplicate)
 }
 
 vector3d get_lever_rot_axis(point const &support_pt, point const &center_of_mass, vector3d const &gravity=plus_z) {
@@ -541,7 +541,6 @@ struct rot_val_t {
 	rot_val_t(point const &pt_, vector3d const &axis_) : pt(pt_), axis(axis_) {}
 };
 
- // Note: unused
 // could calculate normal = get_poly_norm(&support_pts.front(), 1);
 rot_val_t get_cobj_rot_axis(vector<point> const &support_pts, point const &normal, point const &center_of_mass, vector3d const &gravity=plus_z) {
 
@@ -554,6 +553,9 @@ rot_val_t get_cobj_rot_axis(vector<point> const &support_pts, point const &norma
 		if (point_in_convex_planar_polygon(hull, normal, center_of_mass)) return rot_val_t();
 		// Note: if closest point is on an edge, we could use the edge dir for the rot axis; however, that doesn't work if the closest point is a corner on the convex hull
 		closest_pt = get_hull_closest_pt(hull, center_of_mass);
+		//cout << "support pts: " << endl; for (auto i = support_pts.begin(); i != support_pts.end(); ++i) {cout << i->str() << endl;}
+		//cout << "hull: " << endl; for (auto i = hull.begin(); i != hull.end(); ++i) {cout << i->str() << endl;}
+		//cout << "closest_pt: " << closest_pt.str() << endl << "center_of_mass: " << center_of_mass.str() << endl;
 	}
 	if (dist_less_than(closest_pt, center_of_mass, TOLERANCE)) return rot_val_t(); // perfect balance (avoid div-by-zero)
 	return rot_val_t(closest_pt, get_lever_rot_axis(closest_pt, center_of_mass, gravity)); // zero_vector means point is supported
@@ -697,7 +699,7 @@ void check_cobj_alignment(unsigned index) {
 	}
 	cobjs.erase(out, cobjs.end());
 
-#if 0 // Note: disabled until support points creation is handled
+#if 0 // Note: unfinished and disabled
 	// allow rotation of cubes, which will become extruded polygons, so polygons need to work as well;
 	// curved cobjs such as spheres, rotated cylinders, and capsules are generally unstable since they only contact the ground at a single point;
 	// spheres are handled by is_rolling_cobj() and should be okay;
@@ -715,9 +717,9 @@ void check_cobj_alignment(unsigned index) {
 			// this works for cubes, but as soon as the cube rotates it's no longer axis aligned
 			cobj.get_contact_points(c, support_pts, 1, support_toler);
 		}
-		//cout << TXT(supported) << TXT(support_pts.size()) << endl;
 		if (!supported && !support_pts.empty()) { // can rotate due to gravity and maybe fall
 			rot_val_t const rot_val(get_cobj_rot_axis(support_pts, normal, center_of_mass));
+			//cout << TXT(supported) << TXT(support_pts.size())<< ", normal: " << normal.str() << ", rot axis: " << rot_val.axis.str() << endl;
 		
 			if (rot_val.axis != zero_vector) { // apply rotation if not stable at rest
 				float const angle(0.1); // FIXME
