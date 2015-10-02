@@ -127,7 +127,7 @@ void destroy_coll_objs(point const &pos, float damage, int shooter, int damage_t
 		}
 		if (shattered && tri_fragments && cts[i].maybe_is_glass()) {maybe_is_glass = 1;}
 	} // for i
-	if (maybe_is_glass) {gen_delayed_from_player_sound(SOUND_GLASS, pos);}
+	gen_delayed_from_player_sound((maybe_is_glass ? SOUND_GLASS : SOUND_WOOD_CRACK), pos);
 	//PRINT_TIME("Destroy Cobjs");
 }
 

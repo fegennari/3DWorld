@@ -80,6 +80,7 @@ void setup_sounds() {
 	sounds.add_file_buffer("water_drop.wav" ); // SOUND_WATER_DROP (unused, cartoony)
 	sounds.add_file_buffer("sliding.wav"    ); // SOUND_SLIDING
 	sounds.add_file_buffer("obj_fall.wav"   ); // SOUND_OBJ_FALL
+	sounds.add_file_buffer("wood_crack.wav" ); // SOUND_WOOD_CRACK
 	cout << endl;
 
 	// create sources

@@ -14,8 +14,6 @@ TT shadows:
   - Separate tree AO vs. shadows per vertex - use light dir and mesh normal for shadow
   - Lower res distant shadow map for tiled terrain mode with smooth blend
 
-Store indir light weights for 6 directions
-More sounds: object breaking
 Box physics
 Game editor
   - Cobj file writer
