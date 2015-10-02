@@ -20,8 +20,8 @@ void main()
 	
 	vec3 color = vec3(0.0);
 	const bool shadowed = false;
-	if (enable_light0) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0).rgb;
-	if (enable_light1) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1).rgb;
-	if (enable_light2) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 2).rgb * calc_light_atten(eye_space_pos, 2);
+	if (enable_light0) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 0, 1.0).rgb;
+	if (enable_light1) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 1, 1.0).rgb;
+	if (enable_light2) color += add_leaf_light_comp(shadowed, normal, eye_space_pos, 2, 1.0).rgb * calc_light_atten(eye_space_pos, 2);
 	fg_FragColor = apply_fog_epos(vec4(clamp(color*color_scale.rgb, 0.0, 1.0)*texel.rgb, 1.0), eye_space_pos);
 }
