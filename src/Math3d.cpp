@@ -86,7 +86,8 @@ float polygon_area(point const *const points, unsigned npoints) {
 
 float get_closest_pt_on_line_t(point const &pos, point const &l1, point const &l2) { // use for line lights as well?
 	vector3d const L(l2 - l1);
-	return CLIP_TO_01(dot_product((pos - l1), L)/L.mag_sq()); // clipped: line segment, not infinite line
+	float const L_mag(L.mag_sq());
+	return ((L_mag < TOLERANCE) ? 0.0 : CLIP_TO_01(dot_product((pos - l1), L)/L_mag)); // clipped: line segment, not infinite line
 }
 point get_closest_pt_on_line(point const &pos, point const &l1, point const &l2) {
 	return l1 + get_closest_pt_on_line_t(pos, l1, l2)*(l2 - l1);

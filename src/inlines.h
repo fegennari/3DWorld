@@ -157,8 +157,9 @@ inline float get_water_coll_angle(vector3d const &v) { // normal n = (0, 0, 1.0)
 }
 
 inline float pt_line_dist(point const &P, point const &L1, point const &L2) {
-	vector3d const L(L2 - L1), cp(cross_product(L, (L1 - P)));
-	return cp.mag()/L.mag();
+	vector3d const L(L2 - L1);
+	float const L_mag(L.mag());
+	return ((L_mag < TOLERANCE) ? p2p_dist(L1, P) : cross_product(L, (L1 - P)).mag()/L_mag);
 }
 inline bool pt_line_dist_less_than(point const &P, point const &L1, point const &L2, float dist) {
 	vector3d const L(L2 - L1), cp(cross_product(L, (L1 - P)));
