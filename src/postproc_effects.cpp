@@ -12,23 +12,23 @@ extern int frame_counter, display_mode, show_fog, camera_coll_id, window_width, 
 extern float NEAR_CLIP, FAR_CLIP, fticks, dist_to_fire_sq, CAMERA_RADIUS;
 extern colorRGBA sun_color;
 
+int depth_buffer_frame(0), color_buffer_frame(0);
+
 bool player_is_drowning();
 
 
-void bind_depth_buffer(bool force_regen=0) {
+void bind_depth_buffer() {
 
-	static int prev_frame_counter(-1);
-	if (force_regen || frame_counter != prev_frame_counter) {depth_buffer_to_texture(depth_tid);} // depth texture is not valid for this frame
-	prev_frame_counter = frame_counter;
+	if (frame_counter != depth_buffer_frame) {depth_buffer_to_texture(depth_tid);} // depth texture is not valid for this frame
+	depth_buffer_frame = frame_counter;
 	assert(depth_tid >= 0);
 	bind_2d_texture(depth_tid);
 }
 
-void bind_frame_buffer_RGB(bool force_regen=0) {
+void bind_frame_buffer_RGB() {
 	
-	static int prev_frame_counter(-1);
-	if (force_regen || frame_counter != prev_frame_counter) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame
-	prev_frame_counter = frame_counter;
+	if (frame_counter != color_buffer_frame) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame
+	color_buffer_frame = frame_counter;
 	assert(frame_buffer_RGB_tid >= 0);
 	bind_2d_texture(frame_buffer_RGB_tid);
 }
@@ -83,6 +83,7 @@ void add_god_rays() {
 	s.add_uniform_vector3d("sun_pos", world_space_to_screen_space(get_sun_pos()));
 	s.add_uniform_float("aspect_ratio", float(window_width)/float(window_height));
 	draw_white_quad_and_end_shader(s);
+	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
 void add_ssao() {
@@ -110,6 +111,7 @@ void add_color_only_effect(string const &frag_shader, float intensity=1.0) {
 	s.add_uniform_float("time", time); // may not be used
 	set_xy_step(s); // may not be used
 	draw_white_quad_and_end_shader(s);
+	color_buffer_frame = 0; // reset to invalidate buffer
 }
 
 void add_depth_of_field(float focus_depth, float dof_val) {
@@ -121,7 +123,7 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 	shader_t s;
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		if (dim) {bind_frame_buffer_RGB(1);} // force recreation of texture for second pass
+		if (dim) {bind_frame_buffer_RGB();}
 		s.set_vert_shader("no_lighting_tex_coord");
 		s.set_frag_shader("depth_utils.part+depth_of_field");
 		s.begin_shader();
@@ -130,6 +132,7 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 		s.add_uniform_float("focus_depth", focus_depth);
 		s.add_uniform_float("dof_val",     dof_val);
 		draw_white_quad_and_end_shader(s);
+		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 	}
 }
 
@@ -139,7 +142,7 @@ void add_bloom() {
 	shader_t s;
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		if (dim) {bind_frame_buffer_RGB(1);} // force recreation of texture for second pass
+		if (dim) {bind_frame_buffer_RGB();}
 		s.set_vert_shader("no_lighting_tex_coord");
 		s.set_frag_shader("postproc_bloom");
 		s.begin_shader();
@@ -147,6 +150,7 @@ void add_bloom() {
 		s.add_uniform_float("dim_val", (dim ? 1.0 : 0.0));
 		set_xy_step(s); // may not be used
 		draw_white_quad_and_end_shader(s);
+		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 	}
 }
 
@@ -154,14 +158,17 @@ void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
 	float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);
-	if (0) {}
-	//else if (display_mode & 0x20) {add_ssao();}
-	else if (display_mode & 0x20) {add_bloom();}
-	else if (player_is_drowning()) {add_color_only_effect("drunken_wave", 1.0);}
-	else if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {add_color_only_effect("screen_space_blur");}
-	else if (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
-	else if (show_fog && world_mode == WMODE_GROUND) {add_god_rays();}
+	//if (display_mode & 0x20) {add_ssao();}
 	
+	if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {
+		add_color_only_effect("screen_space_blur");
+		if (player_is_drowning()) {add_color_only_effect("drunken_wave", 1.0);}
+	}
+	else {
+		if (display_mode & 0x20) {add_bloom();}
+		if (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
+		if (show_fog && world_mode == WMODE_GROUND) {add_god_rays();}
+	}
 	if (display_mode & 0x80) {
 		point const pos2(camera + cview_dir*FAR_CLIP);
 		point cpos(pos2);
