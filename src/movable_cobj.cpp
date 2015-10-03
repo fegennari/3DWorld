@@ -562,6 +562,35 @@ rot_val_t get_cobj_rot_axis(vector<point> const &support_pts, point const &norma
 }
 
 
+bool is_point_supported(coll_obj const &cobj, point const &pos) {
+
+	float const norm_z_thresh = 0.9; // for polygon sides; if normal.z > this value, the surface is mostly horizontal
+
+	switch (cobj.type) {
+	case COLL_CUBE:     return cobj.contains_pt_xy(pos);
+	case COLL_CYLINDER: return dist_xy_less_than(pos, cobj.points[0], cobj.radius);
+	case COLL_SPHERE:   return 0; // not flat
+	case COLL_CYLINDER_ROT:
+		if (cobj.points[0].x != cobj.points[1].x || cobj.points[0].y != cobj.points[1].y) return 0; // non-vertical/not flat
+		return dist_xy_less_than(pos, cobj.points[0], ((cobj.points[0].z < cobj.points[1].z) ? cobj.radius2 : cobj.radius)); // use radius at the top
+	case COLL_CAPSULE:  return 0; // not flat
+	case COLL_POLYGON:
+		if (fabs(cobj.norm.z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints);}
+		
+		if (cobj.thickness > MIN_POLY_THICK) { // non-horizontal thick polygon
+			vector<tquad_t> pts;
+			thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
+			
+			for (auto i = pts.begin(); i != pts.end(); ++i) {
+				if (fabs(i->get_norm().z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, i->pts, i->npts);}
+			}
+		}
+		return 0; // not flat
+	default: assert(0);
+	} // end switch
+	return 0; // never gets here
+}
+
 float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d const &delta, float step_thresh, float tolerance) {
 
 	float valid_t(0.0);
@@ -581,6 +610,8 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		coll_obj const &c(coll_objects.get_cobj(*i));
+		// moving object resting (stacked) on cobj, ignore it
+		if (cobj.has_hard_edges() && c.has_hard_edges() && c.is_movable() && c.get_cube_center().z > cobj.d[2][1]) continue;
 		if (cobj.intersects_cobj(c, tolerance)) return 0; // intersects at the starting location, don't allow it to move (stuck)
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));
 		if (valid_t == 0.0) return 0; // can't move
@@ -612,35 +643,6 @@ void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
 			obj.status = 1;
 		}
 	} // for g
-}
-
-bool is_point_supported(coll_obj const &cobj, point const &pos) {
-
-	float const norm_z_thresh = 0.9; // for polygon sides; if normal.z > this value, the surface is mostly horizontal
-
-	switch (cobj.type) {
-	case COLL_CUBE:     return cobj.contains_pt_xy(pos);
-	case COLL_CYLINDER: return dist_xy_less_than(pos, cobj.points[0], cobj.radius);
-	case COLL_SPHERE:   return 0; // not flat
-	case COLL_CYLINDER_ROT:
-		if (cobj.points[0].x != cobj.points[1].x || cobj.points[0].y != cobj.points[1].y) return 0; // non-vertical/not flat
-		return dist_xy_less_than(pos, cobj.points[0], ((cobj.points[0].z < cobj.points[1].z) ? cobj.radius2 : cobj.radius)); // use radius at the top
-	case COLL_CAPSULE:  return 0; // not flat
-	case COLL_POLYGON:
-		if (fabs(cobj.norm.z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints);}
-		
-		if (cobj.thickness > MIN_POLY_THICK) { // non-horizontal thick polygon
-			vector<tquad_t> pts;
-			thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
-			
-			for (auto i = pts.begin(); i != pts.end(); ++i) {
-				if (fabs(i->get_norm().z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, i->pts, i->npts);}
-			}
-		}
-		return 0; // not flat
-	default: assert(0);
-	} // end switch
-	return 0; // never gets here
 }
 
 bool is_rolling_cobj(coll_obj const &cobj) {
@@ -774,7 +776,9 @@ void try_drop_movable_cobj(unsigned index) {
 		if (dz <= 0 || c.d[2][1] > cobj.d[2][1]) continue; // bottom cobj/platform edge not intersecting
 
 		if (c.is_movable()) { // both cobjs are movable - is this a stack?
-			if (c.type == COLL_CUBE || c.type == COLL_CYLINDER || (c.type == COLL_POLYGON && c.norm.x == 0.0 && c.norm.y == 0.0)) {} // flat cobjs can always be stacked
+			// flat cobjs can always be stacked
+			if (c.type == COLL_CUBE || c.type == COLL_CYLINDER) {}
+			else if (c.type == COLL_POLYGON && ((c.norm.x == 0.0 && c.norm.y == 0.0) /*|| (c.cp.flags & COBJ_WAS_CUBE)*/)) {}
 			else if (dz < get_cobj_step_height()) {} // c_top - cobj_bot < step_height
 			else if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
 			// assume it's a stack and treat it like a moving platform
