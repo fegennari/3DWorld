@@ -328,9 +328,9 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 
 					for (unsigned e = 0; e < 2; ++e) { // {x,y}
 						bool const s_or_t(cp.swap_txy() ^ (e != 0));
-						float const tex_off(texture_offset[e]*tscale[e]); // FIXME: multiply by cube origin
+						float const tex_off(texture_offset[e]*tscale[e]);
 						tcs[s_or_t][!s] = tex_off;
-						tcs[s_or_t][ s] = tex_off + tscale[e]*cube_size[e];
+						tcs[s_or_t][ s] = tex_off + ((tscale[e] == 0.0) ? 1.0 : tscale[e]*cube_size[e]);
 					}
 					cdb_add_quad_tc(pts[s], normal, tcs, cdb);
 				}
@@ -351,9 +351,9 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 						for (unsigned e = 0; e < 2; ++e) {
 							unsigned const tdim(e ? t1 : t0);
 							bool const s_or_t(cp.swap_txy() ^ (e != 0));
-							float const tex_off(texture_offset[tdim]*tscale[e]); // FIXME: multiply by cube origin
+							float const tex_off(texture_offset[tdim]*tscale[e]);
 							tcs[s_or_t][1] = tex_off;
-							tcs[s_or_t][0] = tex_off + tscale[e]*cube_size[tdim];
+							tcs[s_or_t][0] = tex_off + ((tscale[e] == 0.0) ? 1.0 : tscale[e]*cube_size[tdim]);
 						}
 						cdb_add_quad_tc(side_pts, normal, tcs, cdb);
 					}

@@ -1159,7 +1159,7 @@ void coll_obj::convert_cube_to_ext_polygon() {
 	norm      = plus_z;
 	cp.surfs  = 0;
 	cp.flags |= COBJ_WAS_CUBE;
-	if (cp.tscale == 0.0) {cp.tscale = 1.0/thickness;} // FIXME: only works with cubes of uniform {x,y,z} size
+	if (cp.tscale != 0.0) {texture_offset += get_llc();}
 	float const z(0.5*(d[2][1] + d[2][0]));
 	for (unsigned i = 0; i < 4; ++i) {points[i].assign(d[0][(i>>1)^(i&1)], d[1][i>>1], z);} // CCW: {x1,y1 x2,y1 x2,y2 x1,y2}
 	// Note: bounding cube, volume, area, vcm, cobj bvh, etc. remain unchanged
