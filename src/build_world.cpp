@@ -1866,16 +1866,19 @@ bool write_coll_objects_file(coll_obj_group const &cobjs, string const &fn) { //
 		}
 	}
 
-	// 'E': // place tree: xpos ypos size type [zpos [tree_4th_branches]], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
-	//fscanf(fp, "%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0], &pos.z, local_tree_4th_branches)
-	//t_trees.push_back(tree(enable_leaf_wind));
-	//t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, local_tree_4th_branches);
-	//out << "g " << tree_height << " " << tree_br_scale_mult << " " << tree_nl_scale << " " << enable_leaf_wind << endl;
-
+	for (auto i = t_trees.begin(); i != t_trees.end(); ++i) {
+		//out << "g " << tree_height << " " << tree_br_scale_mult << " " << tree_nl_scale << " " << enable_leaf_wind << endl;
+		// 'E': // place tree: xpos ypos size type [zpos [tree_4th_branches]], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
+		//fscanf(fp, "%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0], &pos.z, local_tree_4th_branches)
+		//t_trees.push_back(tree(enable_leaf_wind));
+		//t_trees.back().gen_tree(pos, max(1, int(fvals[0]*xf.scale)), ivals[0], !use_z, 0, 1, tree_height, tree_br_scale_mult, tree_nl_scale, local_tree_4th_branches);
+	}
+	//write_small_trees_to_cobj_file(out);
 	// 'F': // place small tree: xpos ypos height width type [zpos], type: T_PINE = 0, T_DECID = 1, T_TDECID = 2, T_BUSH = 3, T_PALM = 4, T_SH_PINE = 5
 	//fscanf(fp, "%f%f%f%f%i%f", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &pos.z)
 	//add_small_tree(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z)
 
+	//write_plants_to_cobj_file(out);
 	// 'G': // place plant: xpos ypos radius height type [zpos], type: PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4
 	//fscanf(fp, "%f%f%f%f%i%f", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &pos.z)
 	//add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
