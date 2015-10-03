@@ -108,19 +108,18 @@ float get_mesh_zmax(point const *const pts, unsigned npts) {
 		xmin = min(xmin, xv); ymin = min(ymin, yv); xmax = max(xmax, xv); ymax = max(ymax, yv);
 	}
 	for (int i = ymin; i <= ymax; ++i) { // calculate highest mesh point for this quad/triangle
-		for (int j = xmin; j <= xmax; ++j) {
-			mesh_ztop = max(mesh_ztop, mesh_height[i][j]);
-		}
+		for (int j = xmin; j <= xmax; ++j) {mesh_ztop = max(mesh_ztop, mesh_height[i][j]);}
 	}
 	return mesh_ztop;
 }
 
 
-void cobj_draw_buffer::on_new_obj_layer(obj_layer const &layer) {
+bool cobj_draw_buffer::on_new_obj_layer(obj_layer const &l) {
 
-	if (layer.color != last_layer.color || layer.tid != last_layer.tid || layer.spec_color != last_layer.spec_color ||
-		layer.shine != last_layer.shine || layer.is_emissive != last_layer.is_emissive) {flush();}
-	last_layer = layer;
+	bool const is_new_layer(l.color != last_layer.color || l.tid != last_layer.tid || l.spec_color != last_layer.spec_color || l.shine != last_layer.shine || l.is_emissive != last_layer.is_emissive);
+	if (is_new_layer) {flush();}
+	last_layer = l;
+	return is_new_layer;
 }
 
 
@@ -283,12 +282,21 @@ void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], 
 }
 
 
+void cdb_add_quad_tc(point const *const pts, vector3d const &normal, float tcs[2][2], cobj_draw_buffer &cdb) {
+
+	for (int i = 0; i < 6; ++i) { // 2 triangles
+		unsigned const ix(quad_to_tris_ixs[i]);
+		cdb.add_vert(vert_norm_tc(pts[ix], normal, tcs[0][(ix&1)^(ix>>1)], tcs[1][ix>>1]));
+	}
+}
+
 void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 
 	assert(points != NULL && (npoints == 3 || npoints == 4));
 	float const thick(fabs(thickness));
+	bool const was_cube((cp.flags & COBJ_WAS_CUBE) != 0);
 	
-	if (thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
+	if (!was_cube && thick <= MIN_POLY_THICK) { // double_sided = 0, relies on points being specified in the correct CW/CCW order
 		draw_polygon(tid, points, npoints, norm, cdb);
 	}
 	else {
@@ -298,7 +306,15 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 		get_sorted_thick_poly_faces(pts, faces, points, npoints, norm, thick, bfc);
 		bool const back_facing(bfc && camera_back_facing(pts[1], npoints, norm));
 		unsigned const nsides(unsigned(npoints)+2);
+		float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale}; // used for was_cube case
+		float tcs[2][2] = {0.0}; // {s,t} x {min,max}
+		vector3d cube_size(zero_vector);
 
+		if (was_cube) {
+			cube_size.x = p2p_dist(points[0], points[1]);
+			cube_size.y = p2p_dist(points[1], points[2]);
+			cube_size.z = thickness;
+		}
 		for (unsigned fi = 0; fi < nsides; ++fi) { // draw back to front
 			unsigned const s(faces[fi].second);
 
@@ -306,20 +322,17 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 				if (bfc && (back_facing ^ (s == 0))) continue;
 				if (!s) {std::reverse(pts[s], pts[s]+npoints);}
 
-				if (cp.flags & COBJ_WAS_CUBE) { // the primary polygon faces were the original cube top and bottom faces
-					assert(npoints == 4);
-					float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
-					unsigned const t0(0), t1(1);
-					texgen_params_t tp;
-
-					for (unsigned e = 0; e < 2; ++e) {
-						unsigned const tdim(e ? t1 : t0);
-						bool const s_or_t(cp.swap_txy() ^ (e != 0));
-						tp.st[s_or_t][tdim] = tscale[e];
-						tp.st[s_or_t][3]    = texture_offset[tdim]*tscale[e];
-					}
+				if (was_cube) { // the primary polygon faces were the original cube top and bottom faces
+					assert(npoints == 4); // {x1,y1 x2,y1 x2,y2 x1,y2}
 					vector3d const normal(get_norm_camera_orient((s ? norm : -norm), get_center(pts[s], 4)));
-					for (int i = 0; i < 6; ++i) {cdb.add_vert(vert_norm(pts[s][quad_to_tris_ixs[i]], normal), tp);} // 2 triangles
+
+					for (unsigned e = 0; e < 2; ++e) { // {x,y}
+						bool const s_or_t(cp.swap_txy() ^ (e != 0));
+						float const tex_off(texture_offset[e]*tscale[e]); // FIXME: multiply by cube origin
+						tcs[s_or_t][!s] = tex_off;
+						tcs[s_or_t][ s] = tex_off + tscale[e]*cube_size[e];
+					}
+					cdb_add_quad_tc(pts[s], normal, tcs, cdb);
 				}
 				else {draw_polygon(tid, pts[s], npoints, (s ? norm : -norm), cdb);} // draw top/bottom surface
 				if (!s) {std::reverse(pts[s], pts[s]+npoints);}
@@ -331,28 +344,18 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 				if (!bfc || !camera_behind_polygon(side_pts, 4)) {
 					vector3d const side_norm(get_poly_norm(side_pts));
 
-					if (cp.flags & COBJ_WAS_CUBE) { // {x1,y1 x2,y1 x2,y2 x1,y2} => {-y +x +y -x}
-						float const tscale[2] = {cp.tscale, get_tex_ar(tid)*cp.tscale};
+					if (was_cube) { // {x1,y1 x2,y1 x2,y2 x1,y2} => {-y +x +y -x}
 						unsigned const dim((s&1) ? 0 : 1), t0((2-dim)>>1), t1(1+((2-dim)>0));
-						texgen_params_t tp;
-						
+						vector3d const normal(get_norm_camera_orient(side_norm, get_center(side_pts, 4)));
+
 						for (unsigned e = 0; e < 2; ++e) {
 							unsigned const tdim(e ? t1 : t0);
 							bool const s_or_t(cp.swap_txy() ^ (e != 0));
-#if 0
-							vector3d dir(zero_vector);
-							dir[tdim] = tscale[e];
-							vector3d const cns[4] = {-plus_y, plus_x, plus_y, -plus_x}, cn(cns[i]);
-							rotate_vector3d_by_vr(side_norm, cn, dir);
-							UNROLL_3X(tp.st[s_or_t][i_] = dir[i_];)
-#else
-							tp.st[s_or_t][tdim] = tscale[e];
-							tp.st[s_or_t][3]    = texture_offset[tdim]*tscale[e];
-#endif
-							tp.st[s_or_t][3]    = texture_offset[tdim]*tscale[e];
+							float const tex_off(texture_offset[tdim]*tscale[e]); // FIXME: multiply by cube origin
+							tcs[s_or_t][1] = tex_off;
+							tcs[s_or_t][0] = tex_off + tscale[e]*cube_size[tdim];
 						}
-						vector3d const normal(get_norm_camera_orient(side_norm, get_center(side_pts, 4)));
-						for (int i = 0; i < 6; ++i) {cdb.add_vert(vert_norm(side_pts[quad_to_tris_ixs[i]], normal), tp);} // 2 triangles
+						cdb_add_quad_tc(side_pts, normal, tcs, cdb);
 					}
 					else {draw_polygon(tid, side_pts, 4, side_norm, cdb);}
 				}

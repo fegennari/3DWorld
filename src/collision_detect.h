@@ -95,12 +95,14 @@ class cobj_draw_buffer {
 
 	obj_layer last_layer;
 	vector<vert_norm_texp> verts;
+	vector<vert_norm_tc> tc_verts;
 
 public:
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vert_norm_texp(vn, tp));}
-	void on_new_obj_layer(obj_layer const &layer);
-	void clear() {verts.clear();}
-	void draw() const {draw_verts(verts, GL_TRIANGLES);}
+	void add_vert(vert_norm_tc const &vntc) {tc_verts.push_back(vntc);}
+	bool on_new_obj_layer(obj_layer const &l);
+	void clear() {verts.clear(); tc_verts.clear();}
+	void draw() const {draw_verts(verts, GL_TRIANGLES); draw_verts(tc_verts, GL_TRIANGLES);}
 	void flush() {draw(); clear();}
 };
 

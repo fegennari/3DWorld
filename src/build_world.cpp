@@ -656,7 +656,7 @@ void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) 
 	if (!fixed && !force) return;
 	for (unsigned j = 0; j < unsigned(npoints); ++j) {points[j] += vd;}
 	cube_t::translate(vd);
-	if (!no_texture_offset && cp.tscale != 0.0) {texture_offset -= vd;}
+	if (!no_texture_offset && cp.tscale != 0.0 && !(cp.flags & COBJ_WAS_CUBE)) {texture_offset -= vd;}
 }
 
 void coll_obj::move_cobj(vector3d const &vd, bool update_colls) {

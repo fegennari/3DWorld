@@ -467,11 +467,46 @@ void end_group(int &last_group_id) {
 }
 
 
-void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps) {
+void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen) {
 	// Note: pass in 3 when has_lt_atten to enable sphere atten
-	setup_smoke_shaders(s, 0.0, 2, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, 0, two_sided_lighting);
+	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, 0, two_sided_lighting);
 }
 
+
+void draw_normal_map_cobjs(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int use_texgen) {
+
+	if (cobjs.empty()) return;
+	shader_t nms;
+	setup_cobj_shader(nms, 0, 1, use_texgen); // no lt_atten
+	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
+	float bump_b_scale(0.0);
+	int nm_tid(-1), last_tid(-1), last_group_id(-1);
+
+	// Note: could stable_sort normal_map_cobjs by normal_map tid, but the normal map is already part of the layer sorting,
+	// so the normal maps are probably already grouped together
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+		coll_obj const &c(coll_objects[*i]);
+		float const bbs(c.cp.negate_nm_bns() ? -1.0 : 1.0);
+
+		if (c.cp.normal_map != nm_tid) { // normal map change
+			cdb.flush();
+			nm_tid = c.cp.normal_map;
+			select_multitex(nm_tid, 5);
+		}
+		if (bbs != bump_b_scale) {
+			cdb.flush();
+			bump_b_scale = bbs;
+			nms.add_uniform_float("bump_b_scale", bump_b_scale);
+		}
+		unsigned cix(*i);
+		c.draw_cobj(cix, last_tid, last_group_id, nms, cdb);
+		assert(cix == *i); // should not have been modified
+	}
+	cdb.flush();
+	nms.clear_specular(); // may be unnecessary
+	nms.add_uniform_float("bump_b_scale", -1.0); // reset, may be unnecessary
+	nms.end_shader();
+}
 
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_trans) {
@@ -483,10 +518,10 @@ void draw_coll_surfaces(bool draw_trans) {
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
 	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
 	shader_t s;
-	setup_cobj_shader(s, has_lt_atten, 0);
+	setup_cobj_shader(s, has_lt_atten, 0, 2);
 	int last_tid(-1), last_group_id(-1);
 	cobj_draw_buffer cdb;
-	vector<unsigned> normal_map_cobjs;
+	vector<unsigned> normal_map_cobjs, rot_cube_cobjs;
 	
 	if (!draw_trans) { // draw solid
 		vector<pair<float, int> > large_cobjs;
@@ -501,7 +536,8 @@ void draw_coll_surfaces(bool draw_trans) {
 			if (c.cp.normal_map >= 0) {
 				assert(c.group_id < 0);
 				assert(!c.is_semi_trans());
-				normal_map_cobjs.push_back(cix);
+				// Note: this assumes that all textures rotated cubes have normal maps, which is currently the case
+				((c.cp.flags & COBJ_WAS_CUBE) ? rot_cube_cobjs : normal_map_cobjs).push_back(cix);
 				continue;
 			}
 			if (c.is_big_occluder() && c.group_id < 0) { // Note: doesn't apply to normal mapped objects
@@ -605,37 +641,8 @@ void draw_coll_surfaces(bool draw_trans) {
 	} // end draw_trans
 	s.clear_specular(); // may be unnecessary
 	s.end_shader();
-	
-	if (!normal_map_cobjs.empty()) { // draw all cobjs that use normal maps with a different shader
-		shader_t nms;
-		setup_cobj_shader(nms, 0, 1); // no lt_atten
-		// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
-		float bump_b_scale(0.0);
-		int nm_tid(-1);
-
-		// Note: could stable_sort normal_map_cobjs by normal_map tid, but the normal map is already part of the layer sorting,
-		// so the normal maps are probably already grouped together
-		for (auto i = normal_map_cobjs.begin(); i != normal_map_cobjs.end(); ++i) {
-			coll_obj const &c(coll_objects[*i]);
-			float const bbs(c.cp.negate_nm_bns() ? -1.0 : 1.0);
-
-			if (c.cp.normal_map != nm_tid) { // normal map change
-				cdb.flush();
-				nm_tid = c.cp.normal_map;
-				select_multitex(nm_tid, 5);
-			}
-			if (bbs != bump_b_scale) {
-				cdb.flush();
-				bump_b_scale = bbs;
-				nms.add_uniform_float("bump_b_scale", bump_b_scale);
-			}
-			c.draw_cobj(*i, last_tid, last_group_id, nms, cdb);
-		}
-		cdb.flush();
-		nms.clear_specular(); // may be unnecessary
-		nms.add_uniform_float("bump_b_scale", -1.0); // reset, may be unnecessary
-		nms.end_shader();
-	}
+	draw_normal_map_cobjs(normal_map_cobjs, cdb, 2);
+	draw_normal_map_cobjs(rot_cube_cobjs,   cdb, 0);
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }
 
