@@ -174,12 +174,18 @@ public:
 		add_points(p, npts, color);
 		return get_offset_for_last_points_added();
 	}
-	unsigned add_points_with_offset(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {return add_points_with_offset(&v.front(), v.size(), color);}
+	unsigned add_points_with_offset(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color) {
+		assert(!v.empty());
+		return add_points_with_offset(&v.front(), v.size(), color);
+	}
 	void render_range(unsigned six, unsigned eix, unsigned num_instances=1) const;
 	void render_all(unsigned num_instances=1) const {if (has_data()) {render_range(0, offsets.size()-1, num_instances);}}
 	bool upload();
 	void update_range(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color, unsigned six, unsigned eix);
-	void update_range(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color, unsigned six, unsigned eix) {update_range(&v.front(), v.size(), color, six, eix);}
+	void update_range(vector<typename vert_type_t::non_color_class> const &v, colorRGBA const &color, unsigned six, unsigned eix) {
+		assert(!v.empty());
+		update_range(&v.front(), v.size(), color, six, eix);
+	}
 	void begin_render() const;
 	void end_render() const {post_render();}
 	void clear_points() {pts.swap(vector<vert_type_t>());}
