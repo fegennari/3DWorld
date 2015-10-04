@@ -1439,9 +1439,7 @@ void tree_xform_t::gen_cylin_rotate(vector3d &rotate, vector3d &lrotate, float r
 }
 
 
-float get_default_tree_depth() {
-	return TREE_DEPTH*(0.5 + 0.5/tree_scale);
-}
+float get_default_tree_depth() {return TREE_DEPTH*(0.5 + 0.5/tree_scale);}
 
 
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
@@ -1453,6 +1451,7 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	tree_center = pos;
 	created     = 1;
 	tree_color.alpha = 1.0;
+	tree_nl_scale    = nl_scale;
 	vector3d const color_var(signed_rand_vector2()); // rand_gen() called outside gen_tree_data()
 	tree_data_t &td(tdata());
 
@@ -2216,6 +2215,21 @@ void regen_trees(bool keep_old) {
 		init       = 1;
 	}
 	if (!scrolling) {PRINT_TIME(" Gen Trees");}
+}
+
+
+void tree::write_to_cobj_file(std::ostream &out) const {
+
+	// 'E': // place tree: xpos ypos size type [zpos [tree_4th_branches]], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
+	//fscanf(fp, "%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0], &pos.z, local_tree_4th_branches)
+	tree_data_t const &td(tdata());
+	tree_type const &tt(tree_types[type]);
+	float const size(td.base_radius/(0.1*TREE_SIZE*tt.branch_size/tree_scale)); // reverse engineer these parameters from known values 
+	out << "g " << td.b_tex_scale*td.br_scale/tt.branch_tscale << " " << td.br_scale/branch_radius_scale << " " << tree_nl_scale << " " << enable_leaf_wind << endl;
+	out << "E " << tree_center.x << " " << tree_center.y << " " << size << " " << type << " " << tree_center.z << " " << tree_4th_branches << endl;
+}
+void write_trees_to_cobj_file(std::ostream &out) {
+	for (auto i = t_trees.begin(); i != t_trees.end(); ++i) {i->write_to_cobj_file(out);}
 }
 
 

@@ -273,7 +273,7 @@ class tree {
 	int type, created; // should type be a member of tree_data_t?
 	bool no_delete, not_visible, leaf_orients_valid, enable_leaf_wind, use_clip_cube;
 	point tree_center;
-	float damage, damage_scale, last_size_scale;
+	float damage, damage_scale, last_size_scale, tree_nl_scale;
 	colorRGBA tree_color;
 	vector<int> branch_cobjs, leaf_cobjs;
 	cube_t clip_cube;
@@ -297,7 +297,7 @@ class tree {
 
 public:
 	tree(bool en_lw=1) : type(-1), tree_data(NULL), created(0), no_delete(0), not_visible(0), leaf_orients_valid(0),
-		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0), last_size_scale(0.0) {}
+		enable_leaf_wind(en_lw), use_clip_cube(0), damage(0.0), damage_scale(0.0), last_size_scale(0.0), tree_nl_scale(1.0) {}
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed,
@@ -324,6 +324,7 @@ public:
 	void check_render_textures() {tdata().check_render_textures();}
 	bool spraypaint_leaves(point const &pos, float radius, colorRGBA const &color);
 	void blast_damage(blastr const *const blast_radius);
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 

@@ -49,11 +49,13 @@ public:
 	bool operator<(small_tree const &t) const {return (type < t.type);} // sort by type
 	point get_pos()     const {return pos;}
 	float get_height()  const {return height;}
+	float get_width()   const {return width;}
 	int get_type ()     const {return type;}
 	bool is_pine_tree() const {return (type == T_PINE || type == T_SH_PINE);}
 	unsigned get_inst_id() const {assert(inst_id >= 0); return inst_id;}
 	float get_pine_tree_radius() const;
 	float get_zmax() const;
+	void write_to_cobj_file(std::ostream &out) const;
 
 	struct comp_by_type_dist {
 		point pos;

@@ -898,3 +898,12 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 	if (r_angle != 0.0) {fgPopMatrix();}
 }
 
+
+void small_tree::write_to_cobj_file(std::ostream &out) const {
+	// 'F': // place small tree: xpos ypos height width type [zpos], type: T_PINE = 0, T_DECID = 1, T_TDECID = 2, T_BUSH = 3, T_PALM = 4, T_SH_PINE = 5
+	//add_small_tree(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z)
+	out << "F " << pos.x << " " << pos.y << " " << height << " " << width << " " << int(type) << " " << pos.z << endl;
+}
+void write_small_trees_to_cobj_file(std::ostream &out) {
+	for (auto i = small_trees.begin(); i != small_trees.end(); ++i) {i->write_to_cobj_file(out);}
+}
