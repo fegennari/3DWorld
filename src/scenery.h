@@ -157,6 +157,7 @@ public:
 	void draw_berries(shader_t &s, vector3d const &xlate) const;
 	void remove_cobjs();
 	void destroy();
+	void write_to_cobj_file(std::ostream &out) const;
 };
 
 
@@ -190,6 +191,7 @@ public:
 	void draw_plant_leaves(shader_t &s, bool shadow_only, vector3d const &xlate, bool reflection_pass=0);
 	void draw_opaque_objects(shader_t &s, bool shadow_only, vector3d const &xlate, bool draw_pld, float scale_val=0.0, bool reflection_pass=0);
 	void draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate=zero_vector);
+	void write_plants_to_cobj_file(std::ostream &out) const;
 	unsigned get_gpu_mem() const {return (plant_vbo_manager.get_gpu_mem() + rock_vbo_manager.get_gpu_mem());} // only accounts for part of the memory
 };
 

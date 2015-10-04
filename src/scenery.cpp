@@ -705,7 +705,7 @@ void s_plant::create_leaf_points(vector<vert_norm> &points) const {
 	// Note: could scale leaves for different plant types differently in x vs. y to allow for non-square textures (tighter bounds = lower fillrate)
 	float const wscale(250.0*radius*tree_scale), theta0((int(1.0E6*height)%360)*TO_RADIANS);
 	float const llen(wscale*pltype[type].leaf_length), blwidth(wscale*pltype[type].leaf_width_base), elwidth(wscale*pltype[type].leaf_width_end);
-	unsigned const nlevels(unsigned(36.0*height*tree_scale)), nrings(3);
+	unsigned const nlevels(max(1U, unsigned(36.0*height*tree_scale))), nrings(3);
 	float rdeg(30.0);
 	points.resize(4*nlevels*nrings);
 
@@ -727,6 +727,7 @@ void s_plant::gen_points(vbo_vnc_block_manager_t &vbo_manager) {
 	if (vbo_mgr_ix >= 0) return; // already generated
 	vector<vert_norm> &pts(vbo_manager.temp_points);
 	create_leaf_points(pts);
+	assert(!pts.empty());
 	vbo_mgr_ix = vbo_manager.add_points_with_offset(pts, pltype[type].leafc);
 	no_leaves  = 0;
 
@@ -1180,9 +1181,7 @@ void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
 	all_scenery.draw(draw_opaque, draw_transparent, shadow_only);
 }
 
-void add_scenery_cobjs() {
-	all_scenery.add_cobjs();
-}
+void add_scenery_cobjs() {all_scenery.add_cobjs();}
 
 void shift_scenery(vector3d const &vd) {
 	if (!has_scenery2) return; // dynamically created, not placed
@@ -1194,17 +1193,23 @@ bool update_scenery_zvals(int x1, int y1, int x2, int y2) {
 	return all_scenery.update_zvals(x1, y1, x2, y2);
 }
 
-void free_scenery() {
-	all_scenery.free_scenery();
-}
-
-void clear_scenery_vbos() {
-	all_scenery.clear_vbos();
-}
+void free_scenery() {all_scenery.free_scenery();}
+void clear_scenery_vbos() {all_scenery.clear_vbos();}
 
 void do_rock_damage(point const &pos, float radius, float damage) {
 	all_scenery.do_rock_damage(pos, radius, damage);
 }
 
+
+void s_plant::write_to_cobj_file(std::ostream &out) const {
+	// 'G': // place plant: xpos ypos height radius type [zpos], type: PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4
+	//fscanf(fp, "%f%f%f%f%i%f", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &pos.z)
+	//add_plant(pos, xf.scale*fvals[0], xf.scale*fvals[1], ivals[0], !use_z);
+	out << "G " << pos.x << " " << pos.y << " " << height << " " << radius << " " << type << " " << pos.z << endl;
+}
+void scenery_group::write_plants_to_cobj_file(ostream &out) const {
+	for (auto i = plants.begin(); i != plants.end(); ++i) {i->write_to_cobj_file(out);}
+}
+void write_plants_to_cobj_file(ostream &out) {all_scenery.write_plants_to_cobj_file(out);}
 
 
