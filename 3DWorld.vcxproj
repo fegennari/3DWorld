@@ -823,6 +823,7 @@
     <None Include="config_voxels2.txt" />
     <None Include="config_voxels_grass.txt" />
     <None Include="config_voxel_params.txt" />
+    <None Include="house\cobjs_out.txt" />
     <None Include="icon1.ico" />
     <None Include="coll_objs\COLL_OBJS_Test.TXT" />
     <None Include="config.txt" />
@@ -836,6 +837,7 @@
     <None Include="mapx\basement.txt" />
     <None Include="mapx\bench.txt" />
     <None Include="mapx\chair.txt" />
+    <None Include="mapx\cobjs_out.txt" />
     <None Include="mapx\COLL_OBJS_mapx.txt" />
     <None Include="mapx\config_mapx.txt" />
     <None Include="mapx\config_mapx_base.txt" />

@@ -1,4 +1,7 @@
-# Frank's House
+# Frank's Parents' House
+#i house/cobjs_out.txt
+#end
+
 m 0.649 # 0.59
 t 0.0 -0.015 0.203 # t 0.0 -0.015 0.185
 

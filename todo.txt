@@ -16,4 +16,3 @@ TT shadows:
 
 Box physics
 Game editor
-  - Cobj file writer
