@@ -2220,13 +2220,21 @@ void regen_trees(bool keep_old) {
 
 void tree::write_to_cobj_file(std::ostream &out) const {
 
-	// 'E': // place tree: xpos ypos size type [zpos [tree_4th_branches]], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
-	//fscanf(fp, "%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0], &pos.z, local_tree_4th_branches)
 	tree_data_t const &td(tdata());
 	tree_type const &tt(tree_types[type]);
 	float const size(td.base_radius/(0.1*TREE_SIZE*tt.branch_size/tree_scale)); // reverse engineer these parameters from known values 
 	out << "g " << td.b_tex_scale*td.br_scale/tt.branch_tscale << " " << td.br_scale/branch_radius_scale << " " << tree_nl_scale << " " << enable_leaf_wind << endl;
-	out << "E " << tree_center.x << " " << tree_center.y << " " << size << " " << type << " " << tree_center.z << " " << tree_4th_branches << endl;
+
+	if (!clip_cube.is_zero_area()) {
+		assert(!tree_4th_branches);
+		// 'H': place hedges: xstart ystart dx dy nsteps size, type [cx1 cx2 cy1 cy2 cz1 cz2]
+		out << "H " << tree_center.x << " " << tree_center.y << " 0.0 0.0 1 " << size << " " << type << " " << clip_cube.raw_str() << endl;
+	}
+	else {
+		// 'E': // place tree: xpos ypos size type [zpos [tree_4th_branches]], type: TREE_MAPLE = 0, TREE_LIVE_OAK = 1, TREE_A = 2, TREE_B = 3, 4 = TREE_PAPAYA
+		//fscanf(fp, "%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &ivals[0], &pos.z, local_tree_4th_branches)
+		out << "E " << tree_center.x << " " << tree_center.y << " " << size << " " << type << " " << tree_center.z << " " << tree_4th_branches << endl;
+	}
 }
 void write_trees_to_cobj_file(std::ostream &out) {
 	for (auto i = t_trees.begin(); i != t_trees.end(); ++i) {i->write_to_cobj_file(out);}

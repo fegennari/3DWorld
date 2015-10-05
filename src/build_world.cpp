@@ -1207,7 +1207,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			}
 			break;
 
-		case 'H': // place hedges: xstart, ystart, dx, dy, nsteps, scale, type, [cx1, cx2, cy1, cy2, cz1, cz2]
+		case 'H': // place hedges: xstart ystart dx dy nsteps size, type [cx1 cx2 cy1 cy2 cz1 cz2]
 			if (fscanf(fp, "%f%f%f%f%i%f%i", &pos.x, &pos.y, &fvals[0], &fvals[1], &ivals[0], &fvals[2], &ivals[1]) != 7 || ivals[0] <= 0) {
 				return read_error(fp, "hedges", coll_obj_file);
 			}
@@ -1221,7 +1221,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				if (num_read > 0 && !use_clip_cube) {return read_error(fp, "hedges bounding cube", coll_obj_file);}
 				xf.xform_pos(pos);
 				point cur(pos);
-				vector3d delta(fvals[0], fvals[1], 0.0);
+				vector3d delta(fvals[0], fvals[1], 0.0); // single hedge with zero delta is okay - this is just a tree with a clip cube
 				xf.xform_pos_rms(delta);
 
 				for (int i = 0; i < ivals[0]; ++i) {
