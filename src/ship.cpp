@@ -327,10 +327,20 @@ void get_cached_objs(vector<free_obj *> const &objs, vector<cached_obj> &cobjs) 
 
 	size_t const size(objs.size());
 	cobjs.resize(size);
+	for (size_t i = 0; i < size; ++i) {cobjs[i].set_obj(objs[i]);}
+}
 
-	for (size_t i = 0; i < size; ++i) {
-		cobjs[i].set_obj(objs[i]);
+void remove_bad_cobjs_and_particles(vector<cached_obj> &objs) {
+
+	auto i(objs.begin()), o(i);
+	bool had_removed(0);
+
+	for (; i != objs.end(); ++i) { // rebuild the object set without the particles
+		if (i->flags & (OBJ_FLAGS_BAD_ | OBJ_FLAGS_PART)) {had_removed = 1; continue;}
+		if (had_removed) {*o = *i;}
+		++o;
 	}
+	objs.erase(o, objs.end());
 }
 
 
@@ -416,6 +426,7 @@ void apply_univ_physics() {
 
 		for (unsigned t = 0; t < NUM_TIMESTEPS; ++t) { // here is where the objects move
 			collision_detect_objects(coll_objs, t);
+			if (t == 0) {remove_bad_cobjs_and_particles(coll_objs);}
 
 			for (unsigned i = 0; i < nobjs; ++i) {
 				if (!uobjs[i]->is_ok()) {
@@ -476,12 +487,9 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 
 	//RESET_TIME;
 	unsigned const size((unsigned)objs.size());
-	static vector<cached_obj> new_objs;
 	static vector<interval> intervals;
-	new_objs.clear();
 	intervals.clear();
 	intervals.reserve(2*size);
-	if (t == 0) {new_objs.reserve(size/2);}
 
 	for (unsigned i = 0; i < size; ++i) {
 		if (objs[i].flags & OBJ_FLAGS_BAD_) continue;
@@ -491,7 +499,6 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 			continue;
 		}
 		if (t > 0) {objs[i].refresh();} // physics advance was run since last refresh
-		if (t == 0 && !(objs[i].flags & OBJ_FLAGS_PART)) {new_objs.push_back(objs[i]);}
 		double const radius(objs[i].radius), val(objs[i].pos.x);
 		float const left(float(val - radius)), right(float(val + radius));
 		assert(radius > 0.0);
@@ -545,7 +552,6 @@ void collision_detect_objects(vector<cached_obj> &objs, unsigned t) {
 		}
 	}
 	assert(work.empty());
-	if (t == 0) {objs.swap(new_objs);} // rebuild the object set without the particles
 	//PRINT_TIME("Collision");
 }
 
