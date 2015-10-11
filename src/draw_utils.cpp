@@ -361,12 +361,12 @@ void quad_batch_draw::add_quad_dirs_single_tri(point const &pos, vector3d const 
 }
 
 void quad_batch_draw::add_xlated_billboard(point const &pos, point const &xlate, point const &viewer, vector3d const &up_dir,
-	colorRGBA const &c, float xsize, float ysize, tex_range_t const &tr, bool minimize_fill)
+	colorRGBA const &c, float xsize, float ysize, tex_range_t const &tr, bool minimize_fill, vector3d const *const normal_)
 {
 	vector3d const vdir(viewer - pos); // z
 	vector3d const v1((cross_product(vdir, up_dir).get_norm())*xsize); // x (what if colinear?)
 	vector3d const v2(cross_product(v1, vdir).get_norm()*ysize); // y
-	vector3d const normal(vdir.get_norm());
+	vector3d const normal(normal_ ? *normal_ : vdir.get_norm());
 
 	if (minimize_fill) { // draw as octagon
 		assert(tr.x1 == 0 && tr.y1 == 0 && tr.x2 == 1 && tr.y2 == 1);

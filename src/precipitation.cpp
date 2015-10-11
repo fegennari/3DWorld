@@ -10,7 +10,7 @@
 
 float const TT_PRECIP_DIST = 20.0;
 
-extern int animate2, display_mode;
+extern int animate2, display_mode, camera_coll_id;
 extern float temperature, fticks, zmin, water_plane_z, brightness, XY_SCENE_SIZE;
 extern vector3d wind;
 extern int coll_id[];
@@ -58,14 +58,34 @@ public:
 		}
 		return zero_vector; // never gets here
 	}
-	void check_pos(point &pos, point const &bot_pos) {
+	void check_pos(point &pos, point const &bot_pos, vector<point> *splashes=nullptr) {
 		if (0) {}
 		else if (pos == all_zeros) {pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));} // initial location
 		else if (pos.z < cur_zmin) {pos = gen_pt(cur_zmax);} // start again near the top
 		else if (!in_range(pos)  ) {pos = gen_pt(pos.z);} // move inside the range
 		else if (world_mode == WMODE_GROUND) { // check bottom of raindrop below the mesh or top surface cobjs
 			int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
-			if (!point_outside_mesh(x, y) && (pos.z < mesh_height[y][x] || bot_pos.z < v_collision_matrix[y][x].zmax)) {pos = gen_pt(cur_zmax);} // start again near the top
+			
+			if (!point_outside_mesh(x, y)) {
+				if (pos.z < mesh_height[y][x]) {
+					if (splashes != nullptr) {
+						float const t((mesh_height[y][x] - pos.z)/(bot_pos.z - pos.z));
+						point const cpos(pos + (bot_pos - pos)*t);
+						if (camera_pdu.point_visible_test(cpos)) {splashes->push_back(cpos);} // line_intersect_mesh(pos, bot_pos, cpos);
+					}
+					pos = gen_pt(cur_zmax); // start again near the top
+				}
+				else if (bot_pos.z < v_collision_matrix[y][x].zmax) {
+					if (splashes != nullptr) {
+						point cpos;
+						vector3d cnorm;
+						int cindex;
+						if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->push_back(cpos);}
+					}
+					pos = gen_pt(cur_zmax); // start again near the top
+				}
+				//if (add_splash) {sparks.push_back(spark_t(cpos, colorRGBA(0.7, 0.8, 1.0, 0.5), 0.01));}
+			}
 		}
 	}
 	void check_size() {verts.resize(VERTS_PER_PRIM*get_num_precip(), all_zeros);}
@@ -73,16 +93,20 @@ public:
 
 
 class rain_manager_t : public precip_manager_t<2> {
+
+	vector<point> splashes;
+
 public:
 	void update() {
 		//RESET_TIME;
 		pre_update();
 		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
 		vector3d vcur(v);
+		splashes.clear();
 
-		//#pragma omp parallel for schedule(static,1)
+		//#pragma omp parallel for schedule(static,1) // not valid for splashes
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
-			check_pos(verts[i].v, verts[i+1].v);
+			check_pos(verts[i].v, verts[i+1].v, &splashes);
 			if (animate2) {verts[i].v += vcur; vcur += vinc;}
 			verts[i+1].v = verts[i].v + dir;
 		}
@@ -110,6 +134,26 @@ public:
 		drawer.draw(); // draw nearby raindrops as triangles
 		s.end_shader();
 		disable_blend();
+
+		if (!splashes.empty()) {
+			point const camera(get_camera_pos());
+			colorRGBA const color(0.8, 0.9, 1.0, 0.75);
+			float const size(0.014); // 4x rain diameter
+			ensure_filled_polygons();
+			enable_blend();
+			shader_t s;
+			setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
+			select_texture(FLARE2_TEX);
+			quad_batch_draw qbd;
+			
+			for (auto i = splashes.begin(); i != splashes.end(); ++i) {
+				qbd.add_billboard(*i, camera, up_vector, color, size, size, tex_range_t(), 0, &plus_z); // normal always faces up
+			}
+			qbd.draw();
+			s.end_shader();
+			disable_blend();
+			reset_fill_mode();
+		}
 	}
 };
 
