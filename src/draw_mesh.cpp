@@ -116,13 +116,8 @@ void gen_uw_lighting() {
 			bool const refracted(calc_refraction_angle(dir, v_refract, wat_vert_normals[y][x], 1.0, WATER_INDEX_REFRACT));
 			assert(refracted); // can't have total internal reflection going into the water if the physics are sane
 			point const p2(p1 + v_refract.get_norm()*ssize); // distant point along refraction vector
-			int xpos(0), ypos(0);
-			float zval;
-
-			if (p1.z == p2.z || !line_intersect_mesh(p1, p2, xpos, ypos, zval, 1, 1)) continue; // no intersection
-			assert(!point_outside_mesh(xpos, ypos));
-			float const t((zval - p1.z)/(p2.z - p1.z));
-			point const cpos(p1 + (p2 - p1)*t); // collision point with underwater mesh
+			point cpos;
+			if (!line_intersect_mesh(p1, p2, cpos, 1, 1)) continue; // no intersection
 			rows[1][x] = cpos;
 			if (x == 0 || y == 0) continue; // not an interior point
 			if (rows[0][x].z == 0.0 || rows[0][x-1].z == 0.0 || rows[1][x-1].z == 0.0) continue; // incomplete block

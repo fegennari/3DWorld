@@ -137,7 +137,7 @@ void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const
 int  damage_done(int type, int index);
 void blood_on_camera(unsigned num_spots);
 void init_sstate(int id, bool w_start);
-int  get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos);
+int  get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos);
 point projectile_test(point const &pos, vector3d const &vcf_, float firing_error, float damage,
 					  int shooter, float &range, float intensity=1.0, int ignore_cobj=-1);
 float get_projectile_range(point const &pos, vector3d vcf, float dist, float range, point &coll_pos, vector3d &cnorm,

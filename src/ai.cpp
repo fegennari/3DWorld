@@ -130,13 +130,13 @@ point destination_marker::get_pos() const {
 
 bool proj_coll_test(point const &pos, point const &target_pos, vector3d const &orient, float radius, int weapon, int coll_id) {
 
-	int xpos(0), ypos(0), index(0);
+	int index(0);
 	point coll_pos;
 	int const test_alpha((weapon == W_LASER) ? 1 : 0);
 	point const pos2(target_pos - orient*(1.2*radius));
 	if (!coll_pt_vis_test(pos, pos2, 1.2*radius, index, coll_id, 0, test_alpha)) return 0; // cobj collision
 		
-	if (get_range_to_mesh(pos, orient, coll_pos, xpos, ypos)) {
+	if (get_range_to_mesh(pos, orient, coll_pos)) {
 		if ((p2p_dist(pos, coll_pos) + 2.0*radius) < p2p_dist(pos, target_pos))  return 0; // mesh collision
 	}
 	return 1;

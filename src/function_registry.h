@@ -57,6 +57,7 @@ bool is_visible_from_light(point const &pos, point const &lpos, int fast);
 bool line_intersect_surface_cached(point const &v1, point const &v2, int &xpos, int &ypos, float &zval, int fast=0);
 bool line_intersect_mesh(point const &v1, point const &v2, int &xpos, int &ypos, float &zval, int fast=0, bool cached=0);
 bool line_intersect_mesh(point const &v1, point const &v2, int fast=0);
+bool line_intersect_mesh(point const &v1, point const &v2, point &cpos, int fast=0, bool cached=0);
 void gen_mesh_bsp_tree();
 
 // function prototypes - build_world

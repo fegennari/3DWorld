@@ -265,11 +265,20 @@ bool line_intersect_mesh(point const &v1, point const &v2, int fast) {
 	return mint.get_intersection();
 }
 
-
 bool line_intersect_mesh(point const &v1, point const &v2, int &xpos, int &ypos, float &zval, int fast, bool cached) {
 
 	mesh_intersector mint(v1, v2, fast);
 	return mint.get_intersection(xpos, ypos, zval, cached);
+}
+
+bool line_intersect_mesh(point const &v1, point const &v2, point &cpos, int fast, bool cached) {
+
+	int xpos, ypos; // unused
+	float zval;
+	if (!line_intersect_mesh(v1, v2, xpos, ypos, zval, fast, cached)) return 0;
+	float const t((zval - v1.z)/(v2.z - v1.z));
+	cpos = v1 + (v2 - v1)*t;
+	return 1;
 }
 
 

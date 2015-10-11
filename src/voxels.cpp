@@ -38,7 +38,7 @@ extern coll_obj_group coll_objects;
 template class voxel_grid<float>;  // explicit instantiation
 template class voxel_grid<cube_t>; // explicit instantiation
 
-int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos);
+int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos);
 bool read_voxel_brushes();
 void gen_rx_ry(float &rx, float &ry);
 
@@ -2257,11 +2257,11 @@ void modify_voxels() {
 	if ((tfticks - last_tfticks) <= voxel_brush_params.delay) return; // limit firing rate
 	last_tfticks = tfticks;
 	point const pos(get_camera_pos());
-	int xpos(0), ypos(0), cindex(-1);
+	int cindex(-1);
 	point coll_pos;
 	vector3d coll_norm;
 	float range(FAR_CLIP);
-	if (get_range_to_mesh(pos, cview_dir, coll_pos, xpos, ypos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
+	if (get_range_to_mesh(pos, cview_dir, coll_pos) == 1) {range = p2p_dist(pos, coll_pos);} // mesh (not ice) intersection
 
 	if (check_voxel_coll_line(pos, (pos + cview_dir*range), coll_pos, coll_norm, cindex, -1, 1)) { // hit voxel cobjs
 		assert(coll_objects.get_cobj(cindex).cp.cobj_type == COBJ_TYPE_VOX_TERRAIN);

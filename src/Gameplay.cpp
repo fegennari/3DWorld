@@ -1802,23 +1802,18 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 }
 
 
-int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, int &xpos, int &ypos) {
+int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos) {
 
 	bool ice_int(0);
-	int ixpos(0), iypos(0);
-	float zval;
 	vector3d const vca(pos + vcf*FAR_CLIP);
 	point ice_coll_pos(vca);
 
 	// compute range to ice surface (currently only at the default water level)
 	if (temperature <= W_FREEZE_POINT) { // firing into ice
-		ixpos = get_xpos(pos.x);
-		iypos = get_ypos(pos.y);
+		int ixpos(get_xpos(pos.x)), iypos(get_ypos(pos.y));
 
 		if (has_water(ixpos, iypos) && pos.z < water_matrix[iypos][ixpos]) {
 			coll_pos = pos;
-			xpos     = ixpos;
-			ypos     = iypos;
 			return 2; // can't get any range if under ice
 		}
 		if (vcf.z < -1.0E-6) { // firing down
@@ -1832,16 +1827,11 @@ int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos, in
 			}
 		}
 	}
-	if (fabs(vcf.z) > TOLERANCE && line_intersect_mesh(pos, vca, xpos, ypos, zval)) { // skip if dir has no z component
-		assert(!point_outside_mesh(xpos, ypos));
-		//coll_pos.assign(get_xval(xpos), get_yval(ypos), (mesh_height[ypos][xpos] + SMALL_NUMBER));
-		coll_pos = (pos + (vca - pos)*(zval - pos.z)/(vca.z - pos.z));
+	if (fabs(vcf.z) > TOLERANCE && line_intersect_mesh(pos, vca, coll_pos)) { // skip if dir has no z component
 		if (!ice_int || p2p_dist_sq(pos, ice_coll_pos) > p2p_dist_sq(pos, coll_pos)) return 1; // collides with mesh
 	}
 	if (ice_int) { // collides with ice before mesh
 		coll_pos = ice_coll_pos;
-		xpos     = ixpos;
-		ypos     = iypos;
 		return 2;
 	}
 	return 0;
@@ -1890,7 +1880,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 {
 	assert(!is_nan(damage));
 	assert(intensity <= 1.0 && LASER_REFL_ATTEN < 1.0);
-	int closest(-1), closest_t(0), coll(0), xpos(0), ypos(0), cindex(-1);
+	int closest(-1), closest_t(0), coll(0), cindex(-1);
 	point coll_pos(pos);
 	vector3d vcf(vcf_), vca(pos), coll_norm(plus_z);
 	float const vcf_mag(vcf.mag()), MAX_RANGE(min((float)FAR_CLIP, 2.0f*(X_SCENE_SIZE + Y_SCENE_SIZE + Z_SCENE_SIZE)));
@@ -1908,7 +1898,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	}
 	vector3d const vcf0(vcf*vcf_mag);
 	vca += vcf*FAR_CLIP;
-	int const intersect(get_range_to_mesh(pos, vcf, coll_pos, xpos, ypos));
+	int const intersect(get_range_to_mesh(pos, vcf, coll_pos));
 
 	if (intersect) {
 		range = p2p_dist(pos, coll_pos);
@@ -2121,9 +2111,13 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			}
 		}
 		else { // hit ice - ice may not actually be in +z (if it has frozen ripples)
-			calc_reflection_angle(vcf, vref, wat_vert_normals[ypos][xpos]); // don't have water surface normals
-			end_pos = projectile_test(coll_pos, vref, 0.0, atten*damage, shooter, range0, atten*intensity);
-			coll2   = (end_pos != coll_pos);
+			int const xpos(get_xpos(coll_pos.x)), ypos(get_ypos(coll_pos.y));
+
+			if (!point_outside_mesh(xpos, ypos)) { // can this ever fail?
+				calc_reflection_angle(vcf, vref, wat_vert_normals[ypos][xpos]); // don't have water surface normals
+				end_pos = projectile_test(coll_pos, vref, 0.0, atten*damage, shooter, range0, atten*intensity);
+				coll2   = (end_pos != coll_pos);
+			}
 		}
 		if (reflects && atten > 0.0) {add_laser_beam_segment(coll_pos, end_pos, vref, coll2, (range0 > 0.9*MAX_RANGE), atten*intensity);}
 	}
@@ -2147,7 +2141,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 	if (closest < 0) { // not a dynamic object (static object)
 		if (intersect == 1 && !coll) { // mesh intersection
-			//surface_damage[ypos][xpos] += dscale;
+			//surface_damage[get_ypos(coll_pos.y)][get_xpos(coll_pos.x)] += dscale;
 			if (is_laser) {modify_grass_at(coll_pos, 0.25*HALF_DXY, 0, 1);} // burn
 		}
 	}
@@ -2190,12 +2184,12 @@ void do_cblade_damage_and_update_pos(point &pos, int shooter) {
 	if (fframe > 0 && !(sstate.wmode&1)) { // carnage blade extension
 		point coll_pos;
 		vector3d coll_norm; // unused
-		int coll, xpos, ypos, cindex;
+		int coll, cindex;
 		int const fdir(fframe > (delay/2)), ff(fdir ? (delay - fframe) : fframe); // fdir = forward
 		float range(get_projectile_range(pos, dir, 1.1*cradius, 1.5*cradius+CBLADE_EXT, coll_pos, coll_norm, coll, cindex, shooter, 0));
 		bool cobj_coll(coll && cindex >= 0);
 
-		if (get_range_to_mesh(pos, dir, coll_pos, xpos, ypos)) {
+		if (get_range_to_mesh(pos, dir, coll_pos)) {
 			float const mesh_range(p2p_dist(pos, coll_pos)-0.1f);
 
 			if (mesh_range < range) {

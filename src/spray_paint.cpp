@@ -100,11 +100,11 @@ void spray_paint(bool mode) {
 	// spray paint affects flat cobjs (cubes and polygons), mesh, grass, and tree leaves - also adds/removes volume to voxels
 	point const pos(get_camera_pos());
 	colorRGBA color(get_cur_paint_color());
-	int xpos(0), ypos(0), cindex(-1);
+	int cindex(-1);
 	point coll_pos;
 	vector3d coll_norm(plus_z);
 	float range(FAR_CLIP);
-	bool const mesh_int(get_range_to_mesh(pos, cview_dir, coll_pos, xpos, ypos) == 1);
+	bool const mesh_int(get_range_to_mesh(pos, cview_dir, coll_pos) == 1);
 
 	if (mesh_int) { // mesh (not ice) intersection
 		range    = p2p_dist(pos, coll_pos);

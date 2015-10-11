@@ -173,10 +173,10 @@ void run_postproc_effects() {
 		point const pos2(camera + cview_dir*FAR_CLIP);
 		point cpos(pos2);
 		vector3d cnorm; // unused
-		int cindex(-1), xpos, ypos; // unused
-		float focus_depth(FAR_CLIP), zval;
+		int cindex(-1); // unused
+		float focus_depth(FAR_CLIP);
 		if (check_coll_line_exact(camera, pos2, cpos, cnorm, cindex, 0.0, camera_coll_id)) {focus_depth = p2p_dist(camera, cpos);}
-		if (line_intersect_mesh(camera, cpos, xpos, ypos, zval)) {focus_depth = p2p_dist(camera, (camera + (cpos - camera)*(zval - camera.z)/(cpos.z - camera.z)));}
+		if (line_intersect_mesh(camera, cpos, cpos)) {focus_depth = p2p_dist(camera, cpos);}
 		float const dof_val(0.04*FAR_CLIP);
 		add_depth_of_field(focus_depth, dof_val);
 	}
