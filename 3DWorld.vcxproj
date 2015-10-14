@@ -94,7 +94,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>jpeg-9a;glew-1.10.0\include;Targa;pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;tiff-4.0.3\libtiff;glm;freeglut-2.8.1\include\GL;gli-0.5.1.0\gli</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>jpeg-9a;glew-1.10.0\include;Targa;pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;tiff-4.0.3\libtiff;glm;freeglut-2.8.1\include\GL;gli-0.5.1.0\gli;D:\Frank\Desktop\Graphics\bullet3-master\src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -125,7 +125,7 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>jpeg-9a\Release;glew-1.10.0\lib\Release\Win32;pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;freealut-1.1.0-bin\lib;libpng-1.2.20\projects\visualc71\Win32_LIB_Release;zlib-1.2.1;tiff-4.0.3\libtiff;freeglut-2.8.1\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>jpeg-9a\Release;glew-1.10.0\lib\Release\Win32;pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;freealut-1.1.0-bin\lib;libpng-1.2.20\projects\visualc71\Win32_LIB_Release;zlib-1.2.1;tiff-4.0.3\libtiff;freeglut-2.8.1\lib\x86;D:\Frank\Desktop\Graphics\bullet3-master\lib</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>.\Debug/3DWorld.pdb</ProgramDatabaseFile>
@@ -196,7 +196,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>jpeg-9a;glew-1.10.0\include;Targa;pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;tiff-4.0.3\libtiff;glm;freeglut-2.8.1\include\GL;gli-0.5.1.0\gli</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>jpeg-9a;glew-1.10.0\include;Targa;pthreads-dll-2004-05-16\include;C:\Program Files %28x86%29\OpenAL 1.1 SDK\include;freealut-1.1.0-bin\include;libpng-1.2.20;zlib-1.2.1;tiff-4.0.3\libtiff;glm;freeglut-2.8.1\include\GL;gli-0.5.1.0\gli;D:\Frank\Desktop\Graphics\bullet3-master\src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CONSOLE;ENABLE_JPEG;ENABLE_PNG;ENABLE_TIFF;ENABLE_DDS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -225,7 +225,7 @@
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Release/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <AdditionalLibraryDirectories>jpeg-9a\Release;glew-1.10.0\lib\Release\Win32;pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;freealut-1.1.0-bin\lib;libpng-1.2.20\projects\visualc71\Win32_LIB_Release;zlib-1.2.1;tiff-4.0.3\libtiff;freeglut-2.8.1\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>jpeg-9a\Release;glew-1.10.0\lib\Release\Win32;pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;freealut-1.1.0-bin\lib;libpng-1.2.20\projects\visualc71\Win32_LIB_Release;zlib-1.2.1;tiff-4.0.3\libtiff;freeglut-2.8.1\lib\x86;D:\Frank\Desktop\Graphics\bullet3-master\lib</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>MSVCRT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <SubSystem>Console</SubSystem>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
@@ -312,6 +312,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</BrowseInformation>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
+    <ClCompile Include="src\bullet_physics.cpp" />
     <ClCompile Include="src\clouds.cpp" />
     <ClCompile Include="src\cobj_bsp_tree.cpp" />
     <ClCompile Include="src\coll_cell_search.cpp" />

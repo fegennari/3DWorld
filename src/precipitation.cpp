@@ -84,7 +84,6 @@ public:
 					}
 					pos = gen_pt(cur_zmax); // start again near the top
 				}
-				//if (add_splash) {sparks.push_back(spark_t(cpos, colorRGBA(0.7, 0.8, 1.0, 0.5), 0.01));}
 			}
 		}
 	}
