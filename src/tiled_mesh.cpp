@@ -1668,13 +1668,12 @@ float tile_draw_t::get_actual_zmin() const {return min(zmin, terrain_zmin);}
 void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
 
 	unsigned const base_tsize(NORM_TEXELS);
+	float const mesh_tex_cscale[NTEX_DIRT] = {1.0, 1.0, TT_GRASS_COLOR_SCALE, 0.5, 1.0}; // darker grass and rock
+	float const mesh_tex_scale [NTEX_DIRT] = {1.0, 1.0, 1.0, 1.0, 1.0};
 
 	for (int i = 0; i < NTEX_DIRT; ++i) {
 		int const tid(lttex_dirt[i].id);
-		float const tscale(float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
-		float cscale(1.0);
-		if (tid == GROUND_TEX) {cscale = TT_GRASS_COLOR_SCALE;} // darker grass
-		if (tid == ROCK_TEX  ) {cscale = 0.5;} // darker rock
+		float const tscale(mesh_tex_scale[i]*float(base_tsize)/float(get_texture_size(tid, 0))); // assumes textures are square
 		unsigned const tu_id(start_tu_id + i);
 		select_multitex(tid, tu_id);
 		std::ostringstream oss1, oss2, oss3;
@@ -1683,7 +1682,7 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
 		oss3 << "cs"  << tu_id;
 		s.add_uniform_int(  oss1.str().c_str(), tu_id);
 		s.add_uniform_float(oss2.str().c_str(), tscale);
-		s.add_uniform_float(oss3.str().c_str(), cscale);
+		s.add_uniform_float(oss3.str().c_str(), mesh_tex_cscale[i]);
 	}
 	s.add_uniform_color("snow_cscale", colorRGB(1.0, 1.0, 1.2)); // increased blue
 }
