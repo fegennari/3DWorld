@@ -67,7 +67,7 @@ extern obj_group obj_groups[];
 extern char player_name[];
 extern coll_obj_group coll_objects;
 
-bool push_movable_cobj(unsigned index, vector3d &delta);
+bool push_movable_cobj(unsigned index, vector3d &delta, point const &pushed_from);
 
 
 point get_sstate_pos(int id) {
@@ -1290,7 +1290,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 
 				if (dist > 1.0E-6 && dist < move_radius) {
 					vector3d delta(-2.0E-4*size*normal*((move_radius - dist)/move_radius)/cobj.get_mass());
-					push_movable_cobj(*i, delta);
+					push_movable_cobj(*i, delta, pos);
 				}
 			}
 		}
@@ -2031,7 +2031,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			}
 			if (cobj.is_movable()) {
 				vector3d delta(4.0E-8*damage*coll_norm*dot_product(vcf, coll_norm)/cobj.get_mass());
-				push_movable_cobj(cindex, delta);
+				push_movable_cobj(cindex, delta, coll_pos);
 			}
 		}
 		unsigned const shatter_prob((sstate.powerup == PU_DAMAGE) ? 2 : 10);

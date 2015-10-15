@@ -21,7 +21,7 @@ extern obj_type object_types[NUM_TOT_OBJS];
 extern obj_group obj_groups[NUM_TOT_OBJS];
 
 
-bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen);
+bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from);
 
 
 int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
@@ -813,7 +813,7 @@ void try_drop_movable_cobj(unsigned index) {
 		}
 		delta = 0.05*cobj_height*move_dir; // move 5% of cobj height
 		set<unsigned> seen;
-		push_cobj(index, delta, seen); // return value is ignored
+		push_cobj(index, delta, seen, all_zeros); // return value is ignored
 		return; // done
 	}
 	float mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 1, 1)); // Note: uses center point, not max mesh height under the cobj; clamped xy
@@ -898,7 +898,7 @@ void try_drop_movable_cobj(unsigned index) {
 	check_moving_cobj_int_with_dynamic_objs(index);
 }
 
-bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
+bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	if (!cobj.is_movable()) return 0; // not movable
@@ -934,7 +934,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 			if (seen.find(cid) != seen.end())           continue; // prevent infinite recursion
 			seen.insert(cid);
 			vector3d delta2(delta);
-			if (!push_cobj(cid, delta2, seen)) return 0; // can't push (recursive call)
+			if (!push_cobj(cid, delta2, seen, cobj.get_cube_center())) return 0; // can't push (recursive call)
 			delta = delta2; // update with maybe reduced delta
 			cobjs[i] = cobjs.back(); cobjs.pop_back(); --i; // remove this cobj
 		}
@@ -964,6 +964,35 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 			return 0; // can't move
 		}
 	}
+
+	// if the cobj is a cylinder or capsule, try to rotate it about its center
+	// cubes and polygons don't rotate because they have more contact area on the bottom that contributes to friction
+	// spheres don't rotate because they're rotationally invariant, except for their textures, which don't rotate properly anyway
+	if (pushed_from != all_zeros) { // pushed from a valid position
+		if (cobj.is_cylinder() || cobj.type == COLL_CAPSULE) {
+			if (cobj.cp.tid < 0) { // not if textured (since textures don't rotate)
+				if (fabs(cobj.points[0].z - cobj.points[1].z) < TOLER) { // oriented in the XY plane, rotates around z
+					vector3d const cdir(cobj.points[1] - cobj.points[0]);
+
+					if (fabs(dot_product(delta.get_norm(), cdir.get_norm())) < 0.5) { // pushed from the side, not the end
+						float const line_t(get_closest_pt_on_line_t(pushed_from, cobj.points[0], cobj.points[1]));
+						float const torque(CLIP_TO_pm1(2.0f*(line_t - 0.5f))); // 0.0 at center, +/-1.0 at cylinder ends
+						float const abs_torque(fabs(torque));
+						float const friction_factor = 0.3;
+
+						if (abs_torque > friction_factor) { // pushed near the end of the cylinder, so there is some torque
+							point const closest_pt(cobj.points[0] + line_t*cdir);
+							float const net_torque((abs_torque - friction_factor)/(1.0 - friction_factor)); // shift the torque curve
+							float const angle(0.01*net_torque*SIGN(torque)*SIGN(cross_product(cdir, pushed_from-closest_pt).z));
+							cobj.rotate_about(cobj.get_center_of_mass(), plus_z, angle);
+							delta *= 1.0 - net_torque; // this is the remaining translation component
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// cobj moved, see if it gets teleported
 	vector3d cobj_delta(delta);
 	float const radius(cobj.get_bsphere_radius());
@@ -983,16 +1012,16 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen) {
 	return 1; // moved
 }
 
-bool push_movable_cobj(unsigned index, vector3d &delta) {
+bool push_movable_cobj(unsigned index, vector3d &delta, point const &pushed_from) {
 	set<unsigned> seen;
-	return push_cobj(index, delta, seen);
+	return push_cobj(index, delta, seen, pushed_from);
 }
 
 bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index, int type) {
 
 	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
 	vector3d delta(orig_pos - player_pos);
-	if (!push_movable_cobj(index, delta)) return 0;
+	if (!push_movable_cobj(index, delta, player_pos)) return 0;
 	player_pos += delta; // restore player pos, at least partially
 	return 1; // moved
 }

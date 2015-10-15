@@ -26,11 +26,9 @@ extern rand_gen_t global_rand_gen;
 // ***************** MATH FUNCTIONS ********************
 
 
-inline float safe_acosf(float val) {
+inline float SIGN(float v) {return (v < 0.0) ? -1.0 : 1.0;}
 
-	return acos(max(-1.0f, min(1.0f, val)));
-}
-
+inline float safe_acosf(float val) {return acos(max(-1.0f, min(1.0f, val)));}
 
 // fast 1/sqrt(x), accurate to ~0.17% error
 inline float InvSqrt(float x) {
@@ -45,7 +43,6 @@ inline float InvSqrt(float x) {
 	float const y(tmp.f);
 	return y*(1.5f - 0.5f*x*y*y); // repeat this iteration for more accuracy
 }
-
 
 #define INTERP_1D(v, s, t, n, i) t*(s*v[2]i + (1.0-s)*v[n-1]i) + (1.0-t)*(s*v[1]i + (1.0-s)*v[0]i)
 
