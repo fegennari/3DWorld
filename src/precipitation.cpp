@@ -58,7 +58,7 @@ public:
 		}
 		return zero_vector; // never gets here
 	}
-	void check_pos(point &pos, point const &bot_pos, vector<point> *splashes=nullptr) {
+	void check_pos(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
 		if (0) {}
 		else if (pos == all_zeros) {pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));} // initial location
 		else if (pos.z < cur_zmin) {pos = gen_pt(cur_zmax);} // start again near the top
@@ -71,7 +71,7 @@ public:
 					if (splashes != nullptr) {
 						float const t((mesh_height[y][x] - pos.z)/(bot_pos.z - pos.z));
 						point const cpos(pos + (bot_pos - pos)*t);
-						if (camera_pdu.point_visible_test(cpos)) {splashes->push_back(cpos);} // line_intersect_mesh(pos, bot_pos, cpos);
+						if (camera_pdu.point_visible_test(cpos)) {splashes->push_back(sphere_t(cpos, 1.0));} // line_intersect_mesh(pos, bot_pos, cpos);
 					}
 					pos = gen_pt(cur_zmax); // start again near the top
 				}
@@ -80,7 +80,7 @@ public:
 						point cpos;
 						vector3d cnorm;
 						int cindex;
-						if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->push_back(cpos);}
+						if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->push_back(sphere_t(cpos, 1.0));}
 					}
 					pos = gen_pt(cur_zmax); // start again near the top
 				}
@@ -93,7 +93,7 @@ public:
 
 class rain_manager_t : public precip_manager_t<2> {
 
-	vector<point> splashes;
+	deque<sphere_t> splashes;
 
 public:
 	void update() {
@@ -101,7 +101,8 @@ public:
 		pre_update();
 		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
 		vector3d vcur(v);
-		splashes.clear();
+		while (!splashes.empty() && splashes.front().radius > 4.0) {splashes.pop_front();} // remove old splashes from the front
+		for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->radius += 0.2*fticks;}
 
 		//#pragma omp parallel for schedule(static,1) // not valid for splashes
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
@@ -136,8 +137,7 @@ public:
 
 		if (!splashes.empty()) {
 			point const camera(get_camera_pos());
-			colorRGBA const color(0.8, 0.9, 1.0, 0.75);
-			float const size(0.014); // 4x rain diameter
+			float const size = 0.004; // 2x-8x rain line diameter
 			ensure_filled_polygons();
 			enable_blend();
 			shader_t s;
@@ -145,8 +145,9 @@ public:
 			select_texture(FLARE2_TEX);
 			quad_batch_draw qbd;
 			
-			for (auto i = splashes.begin(); i != splashes.end(); ++i) {
-				qbd.add_billboard(*i, camera, up_vector, color, size, size, tex_range_t(), 0, &plus_z); // normal always faces up
+			for (auto i = splashes.begin(); i != splashes.end(); ++i) { // normal always faces up;
+				float const sz(i->radius*size), alpha(0.75*(4.0 - i->radius)/3.0); // size increases with radius/time; alpha decreases with radius/time
+				qbd.add_billboard(i->pos, camera, up_vector, colorRGBA(0.8, 0.9, 1.0, alpha), sz, sz, tex_range_t(), 0, &plus_z);
 			}
 			qbd.draw();
 			s.end_shader();
