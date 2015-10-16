@@ -336,9 +336,9 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera((points[0] + points[1])*0.5),
 			min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
 		int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
-		bool const draw_ends(!(cp.surfs & 1));
-		setup_cobj_sc_texgen((points[1] - points[0]), shader);
-		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, !draw_ends); // Note: using texgen, not textured
+		bool const draw_ends(!(cp.surfs & 1)), use_tcs(cp.tscale == 0.0);
+		if (!use_tcs) {setup_cobj_sc_texgen((points[1] - points[0]), shader);} // use texgen
+		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, 0, !draw_ends); // Note: using texgen, not textured
 		if (draw_ends) {draw_cylin_ends(tid, ndiv, cdb);}
 		break;
 	}
@@ -346,14 +346,15 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		float const scale(NDIV_SCALE*get_zoom_scale());
 		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(points[0]), distance_to_camera(points[1])))));
 		int const ndiv(min(N_SPHERE_DIV, max(4, (int)size)) & (~1)); // make sure ndiv is even
-		setup_cobj_sc_texgen((points[1] - points[0]), shader);
-		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, 0, 0, 0); // Note: using texgen, not textured
+		bool const use_tcs(cp.tscale == 0.0);
+		if (!use_tcs) {setup_cobj_sc_texgen((points[1] - points[0]), shader);} // use texgen
+		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, 0, 0); // Note: using texgen, not textured
 		float const r[2] = {radius, radius2};
 
 		if (is_cylin_vertical()) { // is the hemisphere optimization worth the trouble?
 			bool const d(points[1].z > points[0].z);
-			draw_subdiv_sphere_section(points[ d], r[ d], ndiv, 0, 0.0, 1.0, 0.0, 0.5);
-			draw_subdiv_sphere_section(points[!d], r[!d], ndiv, 0, 0.0, 1.0, 0.5, 1.0);
+			draw_subdiv_sphere_section(points[ d], r[ d], ndiv, use_tcs, 0.0, 1.0, 0.0, 0.5);
+			draw_subdiv_sphere_section(points[!d], r[!d], ndiv, use_tcs, 0.0, 1.0, 0.5, 1.0);
 		}
 		else {
 			for (unsigned d = 0; d < 2; ++d) {draw_subdiv_sphere(points[d], r[d], ndiv, 0, 1);}
@@ -363,9 +364,10 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	case COLL_SPHERE: {
 		float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 		int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
-		setup_cobj_sc_texgen(plus_z, shader);
-		//draw_cube_mapped_sphere(points[0], radius, ndiv/2, 0);
-		draw_subdiv_sphere(points[0], radius, ndiv, 0, 1); // Note: using texgen, not textured; Note2: *no* transforms, so no draw_sphere_vbo()
+		bool const use_tcs(cp.tscale == 0.0);
+		if (!use_tcs) {setup_cobj_sc_texgen(plus_z, shader);} // use texgen
+		//draw_cube_mapped_sphere(points[0], radius, ndiv/2, use_tcs);
+		draw_subdiv_sphere(points[0], radius, ndiv, use_tcs, 1); // Note: using texgen, not textured; Note2: *no* transforms, so no draw_sphere_vbo()
 		break;
 	}
 	case COLL_POLYGON:
