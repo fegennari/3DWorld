@@ -760,7 +760,7 @@ D  0.1 0.0 0.0  6  0.0 0.0 -0.05 # step delta
 X none # disable normal map
 
 # Pine Trees
-y 4.0
+y 0.0 # 4.0
 Y 0 0 1 # swap x and y
 l 0.1 0.1 0.4 0.2 1.0 15 1 # pine tree leaves - hedge texture
 e 1
