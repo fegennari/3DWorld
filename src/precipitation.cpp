@@ -10,7 +10,7 @@
 
 float const TT_PRECIP_DIST = 20.0;
 
-extern int animate2, display_mode, camera_coll_id;
+extern int animate2, begin_motion, display_mode, camera_coll_id, precip_mode;
 extern float temperature, fticks, zmin, water_plane_z, brightness, XY_SCENE_SIZE;
 extern vector3d wind;
 extern int coll_id[];
@@ -32,7 +32,7 @@ public:
 	float get_zmin() const {return ((world_mode == WMODE_GROUND) ? zbottom : get_tiled_terrain_water_level());}
 	float get_zmax() const {return get_cloud_zmax();}
 	float get_precip_dist() const {return ((world_mode == WMODE_GROUND) ? XY_SCENE_SIZE : TT_PRECIP_DIST);}
-	size_t get_num_precip() {return obj_groups[coll_id[PRECIP]].max_objects();}
+	size_t get_num_precip() {return 700*get_precip_rate();} // similar to precip max objects
 	bool in_range(point const &pos) const {return dist_xy_less_than(pos, get_camera_pos(), get_precip_dist());}
 	vector3d get_velocity(float vz) const {return fticks*(0.02*wind + vector3d(0.0, 0.0, vz));}
 	
@@ -106,7 +106,7 @@ public:
 
 		//#pragma omp parallel for schedule(static,1) // not valid for splashes
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
-			check_pos(verts[i].v, verts[i+1].v, &splashes);
+			check_pos(verts[i].v, verts[i+1].v, (begin_motion ? &splashes : nullptr));
 			if (animate2) {verts[i].v += vcur; vcur += vinc;}
 			verts[i+1].v = verts[i].v + dir;
 		}
@@ -187,7 +187,7 @@ snow_manager_t snow_manager;
 
 void draw_local_precipitation() {
 
-	if (!is_precip_enabled()) return;
+	if (!(precip_mode & 1)) return;
 
 	if (temperature <= W_FREEZE_POINT) { // draw snow
 		rain_manager.clear();

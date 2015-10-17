@@ -41,7 +41,7 @@ tile_t::offset_t model3d_offset;
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
-extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model;
+extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
 extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset;
 extern point sun_pos, moon_pos, surface_pos;
@@ -1746,7 +1746,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
 	bool const use_normal_map(!reflection_pass && (display_mode & 0x08) != 0); // enabled by default
-	bool const rain_mode(is_precip_enabled() && temperature > W_FREEZE_POINT);
+	bool const rain_mode((precip_mode > 0) && temperature > W_FREEZE_POINT);
 	if (has_water      ) {s.set_prefix("#define HAS_WATER",       1);} // FS
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",  1);} // FS
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",  1);} // FS

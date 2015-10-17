@@ -1403,11 +1403,9 @@ colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale) {
 
 
 void update_precip_rate(float val) {
-
 	obj_groups[coll_id[PRECIP]].update_app_rate(val, 2, 1000);
 	if (val < 1.0) {obj_pld.free_mem();}
 }
 
-unsigned get_precip_rate() {
-	return obj_groups[coll_id[PRECIP]].app_rate;
-}
+unsigned get_precip_rate() {return obj_groups[coll_id[PRECIP]].app_rate;}
+

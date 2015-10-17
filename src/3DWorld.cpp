@@ -73,7 +73,7 @@ int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), cam
 int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
 int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), verbose_mode(0), leaf_color_changed(0);
-int do_zoom(0), disable_universe(0), disable_inf_terrain(0);
+int do_zoom(0), disable_universe(0), disable_inf_terrain(0), precip_mode(0);
 int num_trees(0), num_smileys(1), gmww(640), gmwh(480), srand_param(3), left_handed(0), mesh_scale_change(0);
 int pause_frame(0), show_fog(0), spectate(0), b2down(0), free_for_all(0), teams(2), show_scores(0), universe_only(0);
 int reset_timing(0), read_heightmap(0), default_ground_tex(-1), num_dodgeballs(1), INIT_DISABLE_WATER, ground_effects_level(2);
@@ -1017,7 +1017,8 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			add_other_ships(ALIGN_NEUTRAL); // neutral
 			break;
 		}
-		obj_groups[coll_id[PRECIP]].toggle_enable();
+		precip_mode = (precip_mode + 1) & ((world_mode == WMODE_INF_TERRAIN) ? 1 : 3); // 4 modes: 0=none, 1=new, 2=old, 3=new+old
+		if (!(precip_mode & 1)) {obj_groups[coll_id[PRECIP]].toggle_enable();}
 		//if (obj_groups[coll_id[PRECIP]].is_enabled()) {seed_water_on_mesh(10.0);} // instantly seed the mesh with water
 		break;
 

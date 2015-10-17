@@ -46,7 +46,7 @@ vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
 extern bool clear_landscape_vbo, scene_smap_vbo_invalid, use_voxel_cobjs, tree_4th_branches;
-extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs;
+extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs, precip_mode;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
@@ -190,14 +190,10 @@ void dwobject::add_obj_dynamic_light(int index) const {
 }
 
 
-bool is_precip_enabled() {return (begin_motion && obj_groups[coll_id[PRECIP]].is_enabled());}
-bool is_rain_enabled  () {return (temperature > W_FREEZE_POINT && is_precip_enabled());}
-int get_precip_type   () {return ((temperature > RAIN_MIN_TEMP) ? RAIN : ((temperature > SNOW_MAX_TEMP) ? HAIL : SNOW));}
+bool is_rain_enabled() {return (temperature > W_FREEZE_POINT && precip_mode != 0);}
+int get_precip_type () {return ((temperature > RAIN_MIN_TEMP) ? RAIN : ((temperature > SNOW_MAX_TEMP) ? HAIL : SNOW));}
 
-
-int obj_group::get_ptype() const {
-	return ((flags & PRECIPITATION) ? get_precip_type() : type);
-}
+int obj_group::get_ptype() const {return ((flags & PRECIPITATION) ? get_precip_type() : type);}
 
 
 void dwobject::update_precip_type() {
@@ -253,7 +249,7 @@ void set_global_state() {
 
 	camera_view = 0;
 	used_objs   = 0;
-	is_cloudy   = obj_groups[coll_id[PRECIP]].enabled;
+	is_cloudy   = (precip_mode > 0);
 }
 
 
