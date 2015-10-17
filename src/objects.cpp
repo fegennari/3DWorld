@@ -338,8 +338,8 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 		bool const draw_ends(!(cp.surfs & 1)), use_tcs(cp.tscale == 0.0);
 		if (!use_tcs) {setup_cobj_sc_texgen((points[1] - points[0]), shader);} // use texgen
-		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, 0, !draw_ends); // Note: using texgen, not textured
-		if (draw_ends) {draw_cylin_ends(tid, ndiv, cdb);}
+		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends); // Note: using texgen, not textured
+		if (draw_ends && !use_tcs) {draw_cylin_ends(tid, ndiv, cdb);}
 		break;
 	}
 	case COLL_CAPSULE: {
@@ -357,7 +357,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			draw_subdiv_sphere_section(points[!d], r[!d], ndiv, use_tcs, 0.0, 1.0, 0.5, 1.0);
 		}
 		else {
-			for (unsigned d = 0; d < 2; ++d) {draw_subdiv_sphere(points[d], r[d], ndiv, 0, 1);}
+			for (unsigned d = 0; d < 2; ++d) {draw_subdiv_sphere(points[d], r[d], ndiv, use_tcs, 1);}
 		}
 		break;
 	}
