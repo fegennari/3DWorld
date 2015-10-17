@@ -970,7 +970,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 	// spheres don't rotate because they're rotationally invariant, except for their textures, which don't rotate properly anyway
 	if (pushed_from != all_zeros) { // pushed from a valid position
 		if (cobj.is_cylinder() || cobj.type == COLL_CAPSULE) {
-			if (cobj.cp.tid < 0) { // not if textured (since textures don't rotate)
+			if (cobj.cp.tid < 0 || cobj.cp.tscale == 0.0) { // not if textured or using tex coords (since texgen textures don't rotate)
 				if (fabs(cobj.points[0].z - cobj.points[1].z) < TOLER) { // oriented in the XY plane, rotates around z
 					vector3d const cdir(cobj.points[1] - cobj.points[0]);
 
