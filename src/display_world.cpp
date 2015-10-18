@@ -948,7 +948,7 @@ void display(void) {
 		else if (spraypaint_mode) {
 			draw_spraypaint_crosshair();
 		}
-		if (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1)) {
+		if (display_framerate && (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1))) {
 			draw_compass_and_alt();
 		}
 		if (indir_lighting_updated()) {
