@@ -40,6 +40,7 @@ texture_t def_textures[NUM_PREDEF_TEXTURES] = { // 4 colors without wrap sometim
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 //texture_t(0, 6, 512,  512,  1, 3, 0, "ground.png"),
 texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png", 0, 1, LS_TEX_ANISO), // mipmap for small trees?
+//texture_t(0, 5, 0,    0,    1, 3, 2, "grass_new.jpg", 0, 1, LS_TEX_ANISO), // 1024x1024; has texture seams, not as bright as other grass
 texture_t(0, 6, 256,  256,  1, 3, 1, "rock.png"),
 texture_t(0, 5, 512,  512,  1, 3, 1, "water.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "stucco.jpg", 0, 0), // compression is slow
