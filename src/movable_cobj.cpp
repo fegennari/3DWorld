@@ -350,26 +350,25 @@ void coll_obj::get_contact_points(coll_obj const &c, vector<point> &contact_pts,
 	}
 }
 
-// FIXME: should these be coll_obj member functions?
 // Note: generally the returned normal should point up in +z (down in -z if bot_surf=1), but could have z == 0
 // Note: support_pos.z is ignored
-vector3d get_cobj_supporting_normal(coll_obj const &c, point const &support_pos, bool bot_surf=0) {
+vector3d coll_obj::get_cobj_supporting_normal(point const &support_pos, bool bot_surf) const {
 
-	if (c.type == COLL_CUBE || c.type == COLL_CYLINDER) return (bot_surf ? -plus_z : plus_z); // exact since cobj is axis aligned in x
-	float const cobj_height(c.d[2][1] - c.d[2][0]);
+	if (type == COLL_CUBE || type == COLL_CYLINDER) return (bot_surf ? -plus_z : plus_z); // exact since cobj is axis aligned in x
+	float const cobj_height(d[2][1] - d[2][0]);
 	point line_pts[2] = {support_pos, support_pos};
-	line_pts[0].z = c.d[2][0] - cobj_height; // make sure the line completely crosses the z range of the cobj
-	line_pts[1].z = c.d[2][1] + cobj_height;
+	line_pts[0].z = d[2][0] - cobj_height; // make sure the line completely crosses the z range of the cobj
+	line_pts[1].z = d[2][1] + cobj_height;
 	float t; // unused
 	vector3d normal;
-	if (c.line_int_exact(line_pts[!bot_surf], line_pts[bot_surf], t, normal)) return normal;
-	if (c.type != COLL_POLYGON) return zero_vector;
+	if (line_int_exact(line_pts[!bot_surf], line_pts[bot_surf], t, normal)) return normal;
+	if (type != COLL_POLYGON) return zero_vector;
 	float const norm_z_thresh = 0.1;
 
-	// FIXME: unclear if the code below can ever return nonzero if the line_int_exact() test fails
-	if (c.thickness > MIN_POLY_THICK) { // thick polygon
+	// unclear if the code below can ever return nonzero if the line_int_exact() test fails
+	if (thickness > MIN_POLY_THICK) { // thick polygon
 		vector<tquad_t> pts;
-		thick_poly_to_sides(c.points, c.npoints, c.norm, c.thickness, pts);
+		thick_poly_to_sides(points, npoints, norm, thickness, pts);
 			
 		for (auto i = pts.begin(); i != pts.end(); ++i) {
 			vector3d const normal(i->get_norm()); // thick_poly_to_sides() should guarantee that the sign is correct (normal facing out)
@@ -377,13 +376,13 @@ vector3d get_cobj_supporting_normal(coll_obj const &c, point const &support_pos,
 			if (point_in_polygon_2d(support_pos.x, support_pos.y, i->pts, i->npts)) return normal;
 		}
 	}
-	else if (fabs(c.norm.z) > norm_z_thresh) { // thin polygon, use the normal (facing up)
-		if (point_in_polygon_2d(support_pos.x, support_pos.y, c.points, c.npoints)) {return (((c.norm.z < 0.0) ^ bot_surf) ? -c.norm : c.norm);}
+	else if (fabs(norm.z) > norm_z_thresh) { // thin polygon, use the normal (facing up)
+		if (point_in_polygon_2d(support_pos.x, support_pos.y, points, npoints)) {return (((norm.z < 0.0) ^ bot_surf) ? -norm : norm);}
 	}
 	return zero_vector; // not supported at this point
 }
-vector3d get_cobj_resting_normal(coll_obj const &c) {
-	return get_cobj_supporting_normal(c, c.get_center_of_mass(), 1); // bottom normal, generally points in -z
+vector3d coll_obj::get_cobj_resting_normal() const {
+	return get_cobj_supporting_normal(get_center_of_mass(), 1); // bottom normal, generally points in -z
 }
 
 vector3d get_mesh_normal_at(point const &pt) {
@@ -401,7 +400,7 @@ vector3d get_mesh_normal_at(point const &pt) {
 void adjust_cobj_resting_normal(coll_obj &c, vector3d const &supp_norm) {
 	//cout << "supp_norm: " << supp_norm.str() << endl;
 	if (supp_norm == zero_vector) return; // invalid (can this happen?)
-	vector3d const rest_norm(-get_cobj_resting_normal(c)); // negate so that it points up
+	vector3d const rest_norm(-c.get_cobj_resting_normal()); // negate so that it points up
 	//cout << "rest_norm: " << rest_norm.str() << endl;
 	if (rest_norm == zero_vector) return; // invalid (can this happen?)
 	if (dot_product(supp_norm, rest_norm) > 0.999) return; // normals already align, no rotation needed
@@ -410,7 +409,7 @@ void adjust_cobj_resting_normal(coll_obj &c, vector3d const &supp_norm) {
 }
 void rotate_to_align_with_supporting_cobj(coll_obj &rc, coll_obj const &sc) {
 	//if (sc.is_movable()) return;
-	adjust_cobj_resting_normal(rc, get_cobj_supporting_normal(sc, rc.get_center_of_mass(), 0));
+	adjust_cobj_resting_normal(rc, sc.get_cobj_supporting_normal(rc.get_center_of_mass(), 0));
 }
 void rotate_to_align_with_mesh(coll_obj &c) {
 	adjust_cobj_resting_normal(c, get_mesh_normal_at(c.get_center_of_mass()));

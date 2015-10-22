@@ -208,6 +208,8 @@ public:
 	int sphere_intersects(point const &pos, float radius) const;
 	int sphere_intersects(sphere_t const &sphere) const {return sphere_intersects(sphere.pos, sphere.radius);}
 	int contains_point(point const &pos) const;
+	vector3d get_cobj_supporting_normal(point const &support_pos, bool bot_surf=0) const;
+	vector3d get_cobj_resting_normal() const;
 
 	// drawing code
 	void draw_coll_cube(int tid, cobj_draw_buffer &cdb) const;
