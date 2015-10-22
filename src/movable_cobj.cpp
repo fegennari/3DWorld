@@ -561,24 +561,24 @@ rot_val_t get_cobj_rot_axis(vector<point> const &support_pts, point const &norma
 }
 
 
-bool is_point_supported(coll_obj const &cobj, point const &pos) {
+bool coll_obj::is_point_supported(point const &pos) const {
 
 	float const norm_z_thresh = 0.9; // for polygon sides; if normal.z > this value, the surface is mostly horizontal
 
-	switch (cobj.type) {
-	case COLL_CUBE:     return cobj.contains_pt_xy(pos);
-	case COLL_CYLINDER: return dist_xy_less_than(pos, cobj.points[0], cobj.radius);
+	switch (type) {
+	case COLL_CUBE:     return contains_pt_xy(pos);
+	case COLL_CYLINDER: return dist_xy_less_than(pos, points[0], radius);
 	case COLL_SPHERE:   return 0; // not flat
 	case COLL_CYLINDER_ROT:
-		if (cobj.points[0].x != cobj.points[1].x || cobj.points[0].y != cobj.points[1].y) return 0; // non-vertical/not flat
-		return dist_xy_less_than(pos, cobj.points[0], ((cobj.points[0].z < cobj.points[1].z) ? cobj.radius2 : cobj.radius)); // use radius at the top
+		if (points[0].x != points[1].x || points[0].y != points[1].y) return 0; // non-vertical/not flat
+		return dist_xy_less_than(pos, points[0], ((points[0].z < points[1].z) ? radius2 : radius)); // use radius at the top
 	case COLL_CAPSULE:  return 0; // not flat
 	case COLL_POLYGON:
-		if (fabs(cobj.norm.z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, cobj.points, cobj.npoints);}
+		if (fabs(norm.z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, points, npoints);}
 		
-		if (cobj.thickness > MIN_POLY_THICK) { // non-horizontal thick polygon
+		if (thickness > MIN_POLY_THICK) { // non-horizontal thick polygon
 			vector<tquad_t> pts;
-			thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
+			thick_poly_to_sides(points, npoints, norm, thickness, pts);
 			
 			for (auto i = pts.begin(); i != pts.end(); ++i) {
 				if (fabs(i->get_norm().z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, i->pts, i->npts);}
@@ -738,7 +738,7 @@ void check_cobj_alignment(unsigned index) {
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (!c.intersects(bcube)) continue; // context intersection, not true bottom edge intersection
-			if (!is_point_supported(c, center_of_mass)) continue;
+			if (!c.is_point_supported(center_of_mass)) continue;
 			// Note: okay to call this for each interacting cobj, as this will likely result in at most one rotation,
 			// assuming that cobj doesn't actually intersect (much) with cobjs, and cobjs don't intersect with each other
 			rotate_to_align_with_supporting_cobj(cobj, c);
@@ -802,13 +802,17 @@ void try_drop_movable_cobj(unsigned index) {
 		if (cobjs.size() != 1) return; // can only handle a single supporting cobj
 		if (!is_rolling_cobj(cobj)) return; // not rolling
 		coll_obj const &c(coll_objects.get_cobj(cobjs.front()));
-		point const center_of_mass(cobj.get_center_of_mass());
-		if (is_point_supported(c, center_of_mass)) return; // center of mass is resting stably, it's stuck
+		if (c.is_point_supported(cobj.get_center_of_mass())) return; // center of mass is resting stably, it's stuck
 		vector3d move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for cube/polygon
 		
 		if (c.type == COLL_CUBE) { // chose +/- x|y for cubes
 			if (fabs(move_dir.x) < fabs(move_dir.y)) {move_dir = ((move_dir.y < 0.0) ? -plus_y : plus_y);} // y-edge
 			else                                     {move_dir = ((move_dir.x < 0.0) ? -plus_x : plus_x);} // x-edge
+			if (cobj.type == COLL_SPHERE) { // more accurate for cube vs. sphere
+				point p_int; // unused
+				unsigned cdir(0); // unused
+				sphere_cube_intersect(center, cobj.radius, c, center-delta, p_int, move_dir, cdir, 0, 1); // return value ignored; should always return 1
+			}
 		}
 		delta = 0.05*cobj_height*move_dir; // move 5% of cobj height
 		set<unsigned> seen;
