@@ -11,8 +11,9 @@ Gameplay in tiled terrain mode
   - Projectile and object collision detection
 
 TT shadows:
-  - Separate tree AO vs. shadows per vertex - use light dir and mesh normal for shadow
+  - Separate tree AO vs. shadows per texel - use light dir and mesh normal for shadow
   - Lower res distant shadow map for tiled terrain mode with smooth blend
 
-Box physics
+Bullet physics for movable boxes
 Game editor
+Better grass, rock, and dirt textures
