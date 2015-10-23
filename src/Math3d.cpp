@@ -673,10 +673,28 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 }
 
 
+// spheres and vertical cylinders are rotationally invariant about z, so we can rotate a non-axis aligned cylinder about z
+// to make it axis aligned, and compute a tighter bounding cube to use with a separating axis test
+bool cylin_proj_circle_z_SAT_test(point const &cc, float cr, point const &cp1, point const &cp2, float r1, float r2) {
+	point pts[2] = {cp1, cp2};
+	vector3d const dir(cp2 - cp1);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		pts[d] -= cc; // translate to circle center
+		rotate_vector3d_by_vr(dir, plus_x, pts[d]); // rotate around vert cylinder
+		pts[d] += cc; // translate back
+	}
+	cube_t bcube;
+	cylinder_3dw(pts[0], pts[1], r1, r2).calc_bcube(bcube);
+	return circle_rect_intersect(cc, cr, bcube, 2); // in z
+}
+
+
 // inaccurate if fabs(r2 - r1) > p2p_dist(cp1, cp2) == radius difference > cylinder length
 bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2,
 								 bool check_ends, vector3d &v1, vector3d &v2, float &t, float &rad)
 {
+	if (!cylin_proj_circle_z_SAT_test(sc, sr, cp1, cp2, r1, r2)) return 0;
 	t   = get_cylinder_params(cp1, cp2, sc, v1, v2); // v1 = cylinder vector, v2 = cylinder_p1-sphere vector
 	float const t_clamped(CLIP_TO_01(t));
 	rad = (r1 + t_clamped*(r2 - r1)); // radius of cylinder at closest point to sphere

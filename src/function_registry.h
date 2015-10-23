@@ -439,6 +439,7 @@ int  line_intersect_trunc_cone(point const &p1, point const &p2, point const &cp
 bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw const &c, bool check_ends);
 int  line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, point const &cp2,
 							 float ri1, float ri2, float ro1, float ro2, bool check_ends, float &t);
+bool cylin_proj_circle_z_SAT_test(point const &cc, float cr, point const &cp1, point const &cp2, float r1, float r2);
 bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2,
 								 bool check_ends, vector3d &v1, vector3d &v2, float &t, float &rad);
 bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2,
