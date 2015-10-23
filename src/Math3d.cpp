@@ -489,6 +489,7 @@ float line_line_dist(point const &p1a, point const &p1b, point const &p2a, point
 }
 
 
+// similar to get_closest_pt_on_line_t(), but without the [0,1] clamp
 float get_cylinder_params(point const &cp1, point const &cp2, point const &pos, vector3d &v1, vector3d &v2) {
 
 	v1 = cp1 - cp2; // vector along length of cylinder
@@ -744,9 +745,14 @@ bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, 
 			if (((d ? r2 : r1) > 0.0) && (fabs(tv_clamped)*len < min(sr, rdist))) { // collision with p1/p2
 				if (!calc_int) return 1;
 				cpos[npos]  = sc;
-				norms[npos] = v1; // might be negative v1?
+				norms[npos] = v1;
 				if (d) {norms[npos].negate();}
-				if (len > TOLERANCE) {cpos[npos] += v1*((d ? -1.0 : 1.0)*(tv + (sr + toler)/len));}
+				
+				if (len > TOLERANCE) {
+					float const adj(tv + (sr + toler)/len);
+					if (adj < 0.0) continue; // not a real intersection (due to fp error, etc.)
+					cpos[npos] += norms[npos]*adj;
+				}
 				++npos;
 			}
 		}

@@ -1044,6 +1044,11 @@ bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index,
 
 	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
 	vector3d delta(orig_pos - player_pos);
+
+	if (dot_product(delta, (coll_objects.get_cobj(index).get_center_pt() - player_pos)) < 0.0) {
+		player_pos = orig_pos; // don't allow the player to be moved
+		return 0; // this is a pull rather than a push (due to fp error?), and we don't support pulling cobjs, so ignore it
+	}
 	if (!push_movable_cobj(index, delta, player_pos)) return 0;
 	player_pos += delta; // restore player pos, at least partially
 	return 1; // moved
