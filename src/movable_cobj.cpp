@@ -80,6 +80,7 @@ int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 	if (c2.line_intersect(c1.points[0], c1.points[1])) return 1;
 	if (!cylin_cube_int_aa_via_circle_rect(c1, c2))    return 0;
 	if (!cylin_cube_int_aa_via_circle_rect(c2, c1))    return 0;
+	// see http://www.geometrictools.com/Documentation/IntersectionOfCylinders.pdf
 	return 2; // FIXME: finish
 }
 
@@ -441,7 +442,7 @@ void rotate_point(point &pt, point const &rot_pt, vector3d const &axis, float an
 	pt += rot_pt; // translate back
 }
 
-void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle) { // angle is in radians
+void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle, bool do_re_add) { // angle is in radians
 
 	if (angle == 0.0) return;
 	assert(axis != zero_vector);
@@ -474,7 +475,7 @@ void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle) 
 	}
 	//if (cp.tscale != 0.0) {texture_offset -= (points[0] - prev_pts0);}
 	calc_bcube(); // may not always be needed
-	re_add_coll_cobj(id, 0);
+	if (do_re_add) {re_add_coll_cobj(id, 0);}
 }
 
 
@@ -590,7 +591,7 @@ bool coll_obj::is_point_supported(point const &pos) const {
 	return 0; // never gets here
 }
 
-float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d const &delta, float step_thresh, float tolerance) {
+float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d const &delta, float step_thresh, float tolerance=0.0) {
 
 	float valid_t(0.0);
 
@@ -603,7 +604,7 @@ float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d c
 	return valid_t;
 }
 
-bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const &cobjs, vector3d &delta, float tolerance) {
+bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const &cobjs, vector3d &delta, float tolerance=0.0) {
 
 	float step_thresh(0.001);
 
@@ -618,6 +619,14 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 		delta       *= valid_t;
 	} // for i
 	return 1;
+}
+
+bool intersects_any_cobj(coll_obj const &cobj, vector<unsigned> const &cobjs, float tolerance=0.0) {
+
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+		if (cobj.intersects_cobj(coll_objects.get_cobj(*i), tolerance)) return 1;
+	}
+	return 0;
 }
 
 void check_moving_cobj_int_with_dynamic_objs(unsigned index) {
@@ -803,7 +812,7 @@ void try_drop_movable_cobj(unsigned index) {
 		if (!is_rolling_cobj(cobj)) return; // not rolling
 		coll_obj const &c(coll_objects.get_cobj(cobjs.front()));
 		if (c.is_point_supported(cobj.get_center_of_mass())) return; // center of mass is resting stably, it's stuck
-		vector3d move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for cube/polygon
+		vector3d move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for polygon
 		
 		if (c.type == COLL_CUBE) { // chose +/- x|y for cubes
 			if (fabs(move_dir.x) < fabs(move_dir.y)) {move_dir = ((move_dir.y < 0.0) ? -plus_y : plus_y);} // y-edge
@@ -987,8 +996,19 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 							point const closest_pt(cobj.points[0] + line_t*cdir);
 							float const net_torque((abs_torque - friction_factor)/(1.0 - friction_factor)); // shift the torque curve
 							float const angle(0.01*net_torque*SIGN(torque)*SIGN(cross_product(cdir, pushed_from-closest_pt).z));
-							cobj.rotate_about(cobj.get_center_of_mass(), plus_z, angle);
-							delta *= 1.0 - net_torque; // this is the remaining translation component
+							coll_obj const before_rotate(cobj);
+							cobj.rotate_about(cobj.get_center_of_mass(), plus_z, angle, 0); // don't re-add yet
+							cobjs.clear();
+							cube_t bcube(cobj);
+							float const dh(0.01*(cobj.d[2][1] - cobj.d[2][0]));
+							bcube.d[2][0] += dh; bcube.d[2][1] -= dh; // shrink slightly in z to exclude cobjs above (resting on) and below (resting on)
+							get_intersecting_cobjs_tree(bcube, cobjs, index, -tolerance, 0, 0, -1); // duplicates should be okay, include adjacent cobjs
+							// FIXME: only partially effective
+							if (intersects_any_cobj(cobj, cobjs, -tolerance)) {cobj = before_rotate;} // restore the cobj to undo the rotation
+							else {
+								cobj.re_add_coll_cobj(cobj.id, 0);
+								delta *= 1.0 - net_torque; // this is the remaining translation component
+							}
 						}
 					}
 				}

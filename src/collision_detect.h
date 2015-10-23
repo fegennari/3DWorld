@@ -154,7 +154,7 @@ public:
 	int  is_anchored() const;
 	void move_cobj(vector3d const &vd, bool update_colls=1);
 	void shift_by(vector3d const &vd, bool force=0, bool no_texture_offset=0);
-	void rotate_about(point const &pt, vector3d const &axis, float angle);
+	void rotate_about(point const &pt, vector3d const &axis, float angle, bool do_re_add=1);
 	void add_to_platform() const;
 	bool cobj_plane_side_test(point const *pts, unsigned npts, point const &lpos) const;
 	bool operator<(const coll_obj &cobj) const {return (volume < cobj.volume);} // sort by size
