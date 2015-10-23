@@ -72,6 +72,24 @@ int cylin_cube_int_aa_via_circle_rect(coll_obj const &cube, coll_obj const &cyli
 	return 2; // FIXME: finish
 }
 
+// vertical cylinders are rotationally invariant about z, so we can rotate a non-axis aligned cylinder about z
+// to make it axis aligned, and compute a tighter bounding cube to use with a separating axis test
+int vert_cylin_cylin_SAT_test(coll_obj const &vc, coll_obj const &nvc) {
+
+	if (!vc.is_cylin_vertical()) return 2;
+	point pts[2] = {nvc.points[0], nvc.points[1]};
+	vector3d const dir(pts[1] - pts[0]);
+
+	for (unsigned d = 0; d < 2; ++d) {
+		pts[d] -= vc.points[0]; // translate to vert clinder end pt
+		rotate_vector3d_by_vr(dir, plus_x, pts[d]); // rotate around vert cylinder
+		pts[d] += vc.points[0]; // translate back
+	}
+	cube_t bcube;
+	cylinder_3dw(pts[0], pts[1], nvc.radius, nvc.radius2).calc_bcube(bcube);
+	return circle_rect_intersect(vc.points[0], max(vc.radius, vc.radius2), bcube, 2); // in z
+}
+
 int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 
 	float const line_dist(line_line_dist(c2.points[0], c2.points[1], c1.points[0], c1.points[1]));
@@ -80,6 +98,7 @@ int cylin_cylin_int(coll_obj const &c1, coll_obj const &c2) {
 	if (c2.line_intersect(c1.points[0], c1.points[1])) return 1;
 	if (!cylin_cube_int_aa_via_circle_rect(c1, c2))    return 0;
 	if (!cylin_cube_int_aa_via_circle_rect(c2, c1))    return 0;
+	if (!vert_cylin_cylin_SAT_test(c1, c2) || !vert_cylin_cylin_SAT_test(c2, c1)) return 0;
 	// see http://www.geometrictools.com/Documentation/IntersectionOfCylinders.pdf
 	return 2; // FIXME: finish
 }
