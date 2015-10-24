@@ -1384,9 +1384,9 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 	}
 	
 	// render all materials (opaque then transparent)
-	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
-		vector<pair<float, unsigned> > to_draw;
+	vector<pair<float, unsigned> > to_draw;
 
+	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
 		for (unsigned i = 0; i < materials.size(); ++i) {
 			if (materials[i].is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(materials[i].use_bump_map())))) {
 				to_draw.push_back(make_pair(materials[i].draw_order_score, i));
@@ -1397,6 +1397,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, enable_alpha_mask);
 		}
+		to_draw.clear();
 	}
 	if (group_back_face_cull) {glDisable(GL_CULL_FACE);}
 }
@@ -1717,7 +1718,9 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 		if (shader_effects  ) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 		if (use_custom_smaps) {m->setup_shadow_maps();} else if (!is_shadow_pass) {m->clear_smaps();}
 	}
-	for (unsigned bmap_pass = 0; bmap_pass < (needs_bump_maps ? 2U : 1U); ++bmap_pass) {
+
+	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
+	for (int bmap_pass = (needs_bump_maps ? 2 : 1); bmap_pass >= 0; --bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
 			bool reset_bscale(0);
 			shader_t s;
