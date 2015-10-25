@@ -349,7 +349,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		bool const use_tcs(cp.tscale == 0.0); // even if not textured
 		vector3d const dir(points[1] - points[0]);
 		if (!use_tcs) {setup_cobj_sc_texgen(dir, shader);} // use texgen
-		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, 0, 0); // Note: using texgen, not textured
+		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, 0, 0, nullptr, 1.0, (use_tcs ? 0.5 : 0.0)); // Note: using texgen, not textured
 		float const r[2] = {radius, radius2};
 
 		if (is_cylin_vertical()) { // is the hemisphere optimization worth the trouble?

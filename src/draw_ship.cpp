@@ -747,7 +747,7 @@ void uobj_draw_data::draw_base_fighter(vector3d const &scale) const {
 		point const p1(0.0, -0.75, -2.0);
 		point inst_pts[3] = {p1, p1, p1}; // Note: nengines assumed to be 3 here
 		for (unsigned i = 0; i < nengines; ++i) {inst_pts[i].y += i*edy;}
-		draw_fast_cylinder(all_zeros, vector3d(0.0, 0.0, 0.25), 0.3, 0.25, ndiv2, 0, 0, 0, NULL, 1.0, inst_pts, 3);
+		draw_fast_cylinder(all_zeros, vector3d(0.0, 0.0, 0.25), 0.3, 0.25, ndiv2, 0, 0, 0, NULL, 1.0, 0.0, inst_pts, 3);
 	}
 	fgPopMatrix(); // undo invert_z()
 

@@ -169,10 +169,10 @@ void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_norma
 void draw_circle_normal(float r_inner, float r_outer, int ndiv, int invert_normals, float zval=0.0);
 void begin_cylin_vertex_buffering();
 void flush_cylin_vertex_buffer();
-void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting=0, float tex_scale_len=1.0, vector3d const &xlate=zero_vector);
-void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting=0, float tex_scale_len=1.0, vector3d const &xlate=zero_vector);
+void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting=0, float tc_t0=0.0, float tc_t1=1.0, vector3d const &xlate=zero_vector);
+void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting=0, float tc_t0=0.0, float tc_t1=1.0, vector3d const &xlate=zero_vector);
 void draw_fast_cylinder(point const &p1, point const &p2, float radius1, float radius2, int ndiv, bool texture,
-	int draw_sides_ends=0, bool two_sided_lighting=0, float const *const perturb_map=NULL, float tex_scale_len=1.0, point const *inst_pos=NULL, unsigned num_insts=0);
+	int draw_sides_ends=0, bool two_sided_lighting=0, float const *const perturb_map=NULL, float tex_scale_len=1.0, float tex_t_start=0.0, point const *inst_pos=NULL, unsigned num_insts=0);
 void draw_cylindrical_section(float length, float r_inner, float r_outer, int ndiv, bool texture=0, float tex_scale_len=1.0, float z_offset=0.0);
 void draw_cube_mapped_sphere(point const &center, float radius, unsigned ndiv, bool texture=0);
 void get_sphere_triangles(vector<vert_wrap_t> &verts, point const &pos, float radius, int ndiv);
