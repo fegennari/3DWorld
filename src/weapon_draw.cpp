@@ -289,12 +289,6 @@ void update_weapon_cobjs() { // and update cblade and lighting
 }
 
 
-inline void rotate_to_dir(vector3d const &dir, float vadd, float vmult) {
-
-	fgRotate(TO_DEG*vmult*atan2(dir.y, dir.x) + vadd, 0.0, 0.0, 1.0);
-}
-
-
 int select_dodgeball_texture(int shooter) {
 
 	if (UNLIMITED_WEAPONS && game_mode == 2 && !obj_groups[coll_id[BALL]].reorderable) { // can change when other players throw a ball 

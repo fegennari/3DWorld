@@ -191,14 +191,17 @@ movable 1
 density 19.3
 l 0.8 0.4 0.25 0.03 1.0 -1 1 # gold
 r 2.0 40.0  0.9 0.6 0.1 # set gold specular
+y 0.0 # use tex coords instead of texgen (force sphere rotation to make vertices and vertex normals agree)
 k 3.3 -1.4 0.04  3.3 -1.6 0.04  0.04 0.04
 r 0.0 1.0 # reset specularity
 
 a 2 # destroyable/shatterable
-X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 36 1 # wooden slats
 density 0.7
-y 0.0
+y 0.0 # use tex coords instead of texgen
+#X normal_maps/fence_NRM.jpg 0 1 # disable normap map since it causes incorrect normals during rotation
+k 5.8 -1.5 0.04  5.8 -1.65 0.04  0.04 0.04 # rotateable
+X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
 C 6.3 -1.5 0.04  6.3 -1.65 0.04  0.04 0.04 # rotateable
 y 8.0
 B 6.0 6.1  4.0 4.1  -0.4 -0.32 # testing

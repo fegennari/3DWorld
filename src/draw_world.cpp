@@ -469,7 +469,7 @@ void end_group(int &last_group_id) {
 
 void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen) {
 	// Note: pass in 3 when has_lt_atten to enable sphere atten
-	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, 0, two_sided_lighting);
+	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting);
 }
 
 
