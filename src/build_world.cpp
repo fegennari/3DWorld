@@ -1060,7 +1060,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector<coll_tquad> ppts;
 	// tree state
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
-	bool enable_leaf_wind(1), remove_t_junctions(0);
+	bool enable_leaf_wind(1), remove_t_junctions(0), reflective(0);
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
 	multi_trigger_t triggers;
@@ -1091,6 +1091,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "tj") {
 					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "remove t junctions", coll_obj_file);}
 					remove_t_junctions = (ivals[0] != 0);
+				}
+				else if (keyword == "reflective") {
+					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "reflective", coll_obj_file);}
+					reflective = (ivals[0] != 0);
 				}
 				else {
 					ostringstream oss;
@@ -1137,7 +1141,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				ppts.clear();
 				RESET_TIME;
 				
-				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
+				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
 					return read_error(fp, "model file data", coll_obj_file);
 				}
 				string const error_str(add_loaded_model(ppts, cobj, ivals[0], voxel_xy_spacing, xf.scale, has_layer, model3d_xform_t()));

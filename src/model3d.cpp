@@ -1488,6 +1488,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
+	if (reflective && !is_shadow_pass && bmap_pass_mask == 1) {} // FIXME: reflection texture setup
 
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
@@ -1710,11 +1711,12 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
 	set_fill_mode();
-	bool needs_alpha_test(0), needs_bump_maps(0);
+	bool needs_alpha_test(0), needs_bump_maps(0), any_reflective(0);
 	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
+		any_reflective   |= m->is_reflective();
 		if (shader_effects  ) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 		if (use_custom_smaps) {m->setup_shadow_maps();} else if (!is_shadow_pass) {m->clear_smaps();}
 	}
@@ -1731,8 +1733,10 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 			else if (shader_effects) {
 				int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
 				bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
+				bool const enable_reflect(any_reflective && !is_shadow_pass && bmap_pass == 0); // assumes bump mapped objects aren't reflective
 				float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 				if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
+				if (enable_reflect)    {s.set_prefix("#define ENABLE_REFLECTIONS",          1);} // FS
 				setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting, 0.0, model_triplanar_tc_scale);
 				if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 				if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}

@@ -177,6 +177,12 @@ void main()
 		if (enable_light2) {ADD_LIGHT(2);} // lightning
 	}
 	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb, 1.0, normal_sign);} // dynamic lighting
+
+#ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
+	//float reflect_w = get_fresnel_reflection(normalize(camera_pos - vpos), normalize(normal), 1.0, refract_ix);
+	//lit_color += vec3(0.0, 0.0, 1.0); // FIXME: debugging
+#endif
+
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
 

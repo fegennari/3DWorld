@@ -356,7 +356,7 @@ class model3d {
 	base_mat_t unbound_mat;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bcube;
-	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps;
+	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, reflective;
 
 	// materials
 	deque<material_t> materials;
@@ -383,9 +383,9 @@ public:
 	// textures
 	texture_manager &tmgr;
 
-	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool ignore_a=0)
+	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool reflective_=0, bool ignore_a=0)
 		: tmgr(tmgr_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube),
-		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0) {}
+		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), reflective(reflective_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -425,6 +425,7 @@ public:
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
 	bool get_needs_bump_maps () const {return needs_bump_maps;}
+	bool is_reflective() const {return reflective;}
 	void get_stats(model3d_stats_t &stats) const;
 	void show_stats() const;
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
@@ -479,7 +480,7 @@ void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube();
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
+	colorRGBA const &def_c, bool reflective, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
 
 
 #endif // _MODEL3D_H_

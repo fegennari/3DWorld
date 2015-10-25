@@ -638,14 +638,14 @@ bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xf
 
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, bool load_models, bool recalc_normals, bool write_file, bool verbose)
+	colorRGBA const &def_c, bool reflective, bool load_models, bool recalc_normals, bool write_file, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
-		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c));
+		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, reflective, 0));
 		model3d &cur_model(all_models.back());
 
 		if (ext == "3ds") {
