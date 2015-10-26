@@ -19,7 +19,7 @@ bool player_is_drowning();
 
 void bind_depth_buffer() {
 
-	if (frame_counter != depth_buffer_frame) {depth_buffer_to_texture(depth_tid);} // depth texture is not valid for this frame
+	if (frame_counter != depth_buffer_frame) {depth_buffer_to_texture(depth_tid);} // depth texture is not valid for this frame, create it
 	depth_buffer_frame = frame_counter;
 	assert(depth_tid >= 0);
 	bind_2d_texture(depth_tid);
@@ -27,7 +27,7 @@ void bind_depth_buffer() {
 
 void bind_frame_buffer_RGB() {
 	
-	if (frame_counter != color_buffer_frame) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame
+	if (frame_counter != color_buffer_frame) {frame_buffer_RGB_to_texture(frame_buffer_RGB_tid);} // FB RGB texture is not valid for this frame, create it
 	color_buffer_frame = frame_counter;
 	assert(frame_buffer_RGB_tid >= 0);
 	bind_2d_texture(frame_buffer_RGB_tid);

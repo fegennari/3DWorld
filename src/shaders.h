@@ -260,6 +260,7 @@ template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 
 unsigned get_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
 void bind_vao_for_vbo(unsigned vbo, shader_t const *shader=nullptr);
+void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name);
 
 
 #endif // _SHADERS_H_

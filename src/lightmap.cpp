@@ -928,14 +928,6 @@ void setup_dlight_shadow_maps(shader_t &s) {
 }
 
 
-void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name) {
-
-	set_active_texture(tu_id); // texture unit
-	bind_2d_texture(tid);
-	s.add_uniform_int(name, tu_id);
-}
-
-
 void setup_dlight_textures(shader_t &s, bool enable_dlights_smap) {
 
 	assert(dl_tid > 0 && elem_tid > 0 && gb_tid > 0 );

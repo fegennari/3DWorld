@@ -34,6 +34,14 @@ extern colorRGBA cur_fog_color;
 extern gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
 
 
+void set_one_texture(shader_t &s, unsigned tid, unsigned tu_id, const char *const name) {
+
+	set_active_texture(tu_id); // texture unit
+	bind_2d_texture(tid);
+	s.add_uniform_int(name, tu_id);
+}
+
+
 // *** uniform variables setup ***
 
 

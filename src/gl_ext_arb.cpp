@@ -60,7 +60,6 @@ void bind_3d_texture(unsigned tid) {
 	assert(glIsTexture(tid));
 }
 
-
 void setup_3d_texture(unsigned &tid, int filter, int wrap) {
 
 	glGenTextures(1, &tid);
@@ -71,6 +70,7 @@ void setup_3d_texture(unsigned &tid, int filter, int wrap) {
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, wrap);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, wrap);
 }
+
 unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned ncomp, vector<unsigned char> const &data, int filter, int wrap, bool compress) {
 
 	assert(data.size() == ncomp*xsz*ysz*zsz);
@@ -81,14 +81,12 @@ unsigned create_3d_texture(unsigned xsz, unsigned ysz, unsigned zsz, unsigned nc
 	return tid;
 }
 
-
 void update_3d_texture(unsigned tid, unsigned xoff, unsigned yoff, unsigned zoff, unsigned xsz, unsigned ysz, unsigned zsz,
 					   unsigned ncomp, unsigned char const *const data)
 {
 	bind_3d_texture(tid);
 	glTexSubImage3D(GL_TEXTURE_3D, 0, xoff, yoff, zoff, xsz, ysz, zsz, get_texture_format(ncomp), GL_UNSIGNED_BYTE, data);
 }
-
 
 void set_3d_texture_as_current(unsigned tid, unsigned tu_id) { // end with active tu_id = 0
 
