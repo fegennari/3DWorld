@@ -18,6 +18,10 @@ uniform vec4 emission = vec4(0,0,0,1);
 // epos, eye_norm, and tc come from bump_map.frag
 // camera_pos comes from dynamic_lighting.part
 
+#ifdef ENABLE_REFLECTIONS
+uniform sampler2D reflection_tex;
+#endif
+
 const float SMOKE_SCALE = 0.25;
 
 // Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
@@ -181,7 +185,8 @@ void main()
 
 #ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
 	//float reflect_w = get_fresnel_reflection(normalize(camera_pos - vpos), normalize(normal), 1.0, refract_ix);
-	//lit_color += vec3(0.0, 0.0, 1.0); // FIXME: debugging
+	// use vpos and normal (world space)
+	//lit_color = mix(lit_color, texture(reflection_tex, vec2(x, y)), 0.5);
 #endif
 
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));

@@ -1488,8 +1488,13 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
-	if (reflective && !is_shadow_pass && bmap_pass_mask == 1) {} // FIXME: reflection texture setup
 
+	if (reflective && !is_shadow_pass && bmap_pass_mask == 1) {
+		if (reflection_tid == 0) {
+			// FIXME: reflection texture setup (needs to be created elsewhere)
+		}
+		if (reflection_tid > 0) {bind_texture_tu(reflection_tid, 14);} // tu_id=14
+	}
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
 	}

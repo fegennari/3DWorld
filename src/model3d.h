@@ -356,6 +356,7 @@ class model3d {
 	base_mat_t unbound_mat;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bcube;
+	unsigned reflection_tid;
 	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, reflective;
 
 	// materials
@@ -380,12 +381,11 @@ class model3d {
 	void update_bbox(polygon_t const &poly);
 
 public:
-	// textures
-	texture_manager &tmgr;
+	texture_manager &tmgr; // stores all textures
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool reflective_=0, bool ignore_a=0)
-		: tmgr(tmgr_), unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube),
-		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), reflective(reflective_) {}
+		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), reflection_tid(0), from_model3d_file(0),
+		has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), reflective(reflective_), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
