@@ -725,7 +725,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 	int mtime2;
 
-    switch (key) { // available: OP,. somtimes Zi
+    switch (key) { // available: O,. somtimes Zi
 	case 0x1B: // ESC key (27)
 		quit_3dworld();
 		break;
@@ -1054,12 +1054,15 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		if (world_mode == WMODE_GROUND) {write_mesh(mesh_file);}
 		break;
 
-	// screenshots (add options for raw and PNG?)
+	// screenshots/video (add options for raw and PNG?)
 	case 'D': // .bmp
 		screenshot(window_width, window_height, "./", 1);
 		break;
 	case 'F': // .jpg
 		write_jpeg(window_width, window_height, "./");
+		break;
+	case 'P': // start/stop video recording
+		toggle_video_capture();
 		break;
 
 	// rotate sun/moon

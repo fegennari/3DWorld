@@ -790,6 +790,11 @@ void draw_text(colorRGBA const &color, float x, float y, float z, char const *te
 void set_xy_step(shader_t &s);
 void setup_depth_tex(shader_t &s, int tu_id);
 
+// function prototypes - video_capture
+void start_video_capture(std::string const &fn);
+void end_video_capture();
+void toggle_video_capture();
+void video_capture_end_frame();
 
 #include "inlines.h"
 
