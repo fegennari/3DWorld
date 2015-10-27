@@ -108,7 +108,7 @@ colorRGBA get_plasma_color(float size);
 bool set_dlights_booleans(shader_t &s, bool enable, int shader_type, bool no_dl_smap=0);
 float setup_underwater_fog(shader_t &s, int shader_type);
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
-	int has_lt_atten=0, bool use_smap=0, int use_bmap=0, bool use_spec_map=0, bool use_mvm=0, bool force_tsl=0, float burn_tex_scale=0.0, float triplanar_texture_scale=0.0);
+	int has_lt_atten=0, bool use_smap=0, int use_bmap=0, bool use_spec_map=0, bool use_mvm=0, bool force_tsl=0, float burn_tex_scale=0.0, float triplanar_texture_scale=0.0, bool use_depth_trans=0);
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap);
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_bmap, bool use_noise_tex,
 	bool z_top_test, float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
@@ -785,6 +785,10 @@ void update_deformation(dwobject &obj);
 void load_font_texture_atlas(std::string const &fn="");
 void free_font_texture_atlas();
 void draw_text(colorRGBA const &color, float x, float y, float z, char const *text, float tsize=1.0);
+
+// function prototypes - postproc_effects
+void set_xy_step(shader_t &s);
+void setup_depth_tex(shader_t &s, int tu_id);
 
 
 #include "inlines.h"

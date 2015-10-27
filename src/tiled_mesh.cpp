@@ -121,15 +121,6 @@ void update_tiled_terrain_grass_vbos() {grass_tile_manager.clear_vbo();}
 void update_tiled_grass_colors() {grass_tile_manager.clear();} // regenerate grass
 
 
-void bind_texture_tu(unsigned tid, unsigned tu_id) {
-
-	assert(tid);
-	set_active_texture(tu_id);
-	bind_2d_texture(tid);
-	set_active_texture(0);
-}
-
-
 #define BILINEAR_INTERP(arr, var, x, y) (y*(x*arr[1][1].var + (1.0-x)*arr[1][0].var) + (1.0-y)*(x*arr[0][1].var + (1.0-x)*arr[0][0].var))
 
 

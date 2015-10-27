@@ -1,5 +1,4 @@
 uniform sampler2D frame_buffer_tex;
-uniform vec2 xy_step;
 uniform float focus_depth;
 uniform float dof_val;
 uniform float dim_val;

@@ -11,6 +11,7 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
+uniform float depth_trans_bias;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -225,4 +226,9 @@ void main()
 #endif // SMOKE_ENABLED
 	//color = vec4(pow(color.rgb, vec3(0.45)), color.a); // gamma correction, doesn't really look right, and should un-gamma-correct textures when loading
 	fg_FragColor = color;
+
+#ifdef USE_DEPTH_TRANSPARENCY
+	float d_delta = log_to_linear_depth(get_depth_at_fragment()) - log_to_linear_depth(gl_FragCoord.z);
+	fg_FragColor.a *= clamp(d_delta/depth_trans_bias, 0.0, 1.0);
+#endif
 }

@@ -1,4 +1,3 @@
-uniform vec2 xy_step;
 uniform int NUM_DIRS  = 8;
 uniform int NUM_STEPS = 4;
 

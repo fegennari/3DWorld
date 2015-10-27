@@ -321,17 +321,18 @@ float setup_underwater_fog(shader_t &s, int shader_type) {
 }
 
 
-// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask, 11: noise, 12: ground texture
+// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: specular map, 9: depth map, 10: burn mask, 11: noise, 12: ground texture, 13: depth texture
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 // use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
-void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights,
-	bool smoke_en, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale)
+void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
+	int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale, bool use_depth_trans)
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
-	if (use_burn_mask) {s.set_prefix("#define APPLY_BURN_MASK",   1);} // FS
-	if (triplanar_tex) {s.set_prefix("#define TRIPLANAR_TEXTURE", 1);} // FS
+	if (use_burn_mask  ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
+	if (triplanar_tex  ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
+	if (use_depth_trans) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
@@ -339,6 +340,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	string fstr("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
 	if (smoke_en && use_smoke_noise()) {fstr += "perlin_clouds_3d.part*+";}
 	if (triplanar_tex) {fstr += "triplanar_texture.part+";}
+	if (use_depth_trans) {fstr += "depth_utils.part+";}
 	s.set_frag_shader(fstr + "textured_with_smoke");
 	s.begin_shader();
 	s.add_uniform_float("water_depth", water_depth);
@@ -1321,19 +1323,36 @@ void draw_cracks_and_decals() {
 }
 
 
+void setup_depth_trans_texture(shader_t &s, unsigned &depth_tid) {
+
+	unsigned const depth_tu_id = 13;
+	setup_depth_tex(s, depth_tu_id);
+	depth_buffer_to_texture(depth_tid);
+	bind_texture_tu(depth_tid, depth_tu_id);
+	set_active_texture(0);
+}
+
 void draw_smoke_and_fires() {
 
+	bool const use_depth_trans = 1;
 	bool const have_part_clouds(part_clouds.any_active());
 	if (!have_part_clouds && !fires.any_active()) return; // nothing to draw
 	shader_t s;
-	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1);
+	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans);
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
 	set_multisample(0);
-	if (have_part_clouds) {draw_part_clouds(part_clouds, SMOKE_PUFF_TEX);} // smoke: slow when a lot of smoke is up close
+	unsigned depth_tid(0);
+	if (use_depth_trans) {setup_depth_trans_texture(s, depth_tid);}
+
+	if (have_part_clouds) { // smoke: slow when a lot of smoke is up close
+		if (use_depth_trans) {s.add_uniform_float("depth_trans_bias", 0.1);}
+		draw_part_clouds(part_clouds, SMOKE_PUFF_TEX);
+	}
 	order_vect_t fire_order;
 	get_draw_order(fires, fire_order);
 	
 	if (!fire_order.empty()) {
+		if (use_depth_trans) {s.add_uniform_float("depth_trans_bias", 0.01);}
 		enable_blend();
 		quad_batch_draw qbd;
 		select_texture(FIRE_TEX);
@@ -1346,6 +1365,7 @@ void draw_smoke_and_fires() {
 	s.add_uniform_float("emissive_scale", 0.0); // reset
 	s.end_shader();
 	set_multisample(1);
+	free_texture(depth_tid);
 }
 
 
