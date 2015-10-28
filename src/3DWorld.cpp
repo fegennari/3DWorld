@@ -70,7 +70,7 @@ int game_mode(0), map_mode(0), load_hmv(0), load_coll_objs(1), read_landscape(0)
 int display_framerate(1), init_resize(1), temp_change(0), is_cloudy(0), recreated(1), cloud_model(0), force_tree_class(-1);
 int invert_mh_image(0), voxel_editing(0), displayed(0), min_time(0), show_framerate(0), preproc_cube_cobjs(0);
 int camera_view(0), camera_reset(1), camera_mode(0), camera_surf_collide(1), camera_coll_smooth(0), use_smoke_for_fog(0);
-int window_width(0), window_height(0), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
+int window_width(0), window_height(0), init_window_width(512), init_window_height(512), ww2(0), wh2(0), map_color(1); // window dimensions, etc.
 int border_height(20), border_width(4), world_mode(START_MODE), display_mode(INIT_DMODE), do_read_mesh(0);
 int last_mouse_x(0), last_mouse_y(0), m_button(0), mouse_state(1), maximized(0), verbose_mode(0), leaf_color_changed(0);
 int do_zoom(0), disable_universe(0), disable_inf_terrain(0), precip_mode(0);
@@ -1710,6 +1710,12 @@ int load_config(string const &config_file) {
 		else if (str == "window_height") {
 			if (!read_int(fp, gmwh) || gmwh < 1) cfg_err("window_height command", error);
 		}
+		else if (str == "init_window_width") {
+			if (!read_int(fp, init_window_width) || init_window_width < 1) cfg_err("init_window_width command", error);
+		}
+		else if (str == "init_window_height") {
+			if (!read_int(fp, init_window_height) || init_window_height < 1) cfg_err("init_window_height command", error);
+		}
 		else if (str == "mesh_size") {
 			if (fscanf(fp, "%i%i%i", &MESH_X_SIZE, &MESH_Y_SIZE, &MESH_Z_SIZE) != 3) cfg_err("mesh size command", error);
 		}
@@ -1941,6 +1947,7 @@ int main(int argc, char** argv) {
 	progress();
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
 	//glutInitDisplayString("rgba double depth>=16 samples>=8");
+	glutInitWindowSize(init_window_width, init_window_height);
 
 	if (use_core_context) {
 		glutInitContextVersion(4, 2);
