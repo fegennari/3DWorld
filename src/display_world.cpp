@@ -289,8 +289,8 @@ void final_draw(float framerate) {
 void swap_buffers_and_redraw() {
 
 	glutSwapBuffers();
-	video_capture_end_frame(); // only does something when video capture is enabled
 	if (animate) {post_window_redisplay();} // before glutSwapBuffers()?
+	video_capture_end_frame(); // only does something when video capture is enabled
 }
 
 
