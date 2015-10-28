@@ -544,6 +544,7 @@ void resize(int x, int y) {
 	else {
 		add_uevent_resize(x, y);
 	}
+	y = y & (~1); // make sure y is even (required for video encoding)
     glViewport(0, 0, x, y);
     window_width  = x;
     window_height = y;

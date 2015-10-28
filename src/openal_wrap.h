@@ -140,6 +140,7 @@ public:
 };
 
 
+void alut_sleep(float seconds);
 void set_sound_loop_state(unsigned id, bool play, float volume=0.0);
 void setup_openal_listener(point const &pos, vector3d const &vel, openal_orient const &orient);
 void set_openal_listener_as_player();
