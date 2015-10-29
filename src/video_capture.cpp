@@ -8,7 +8,7 @@
 
 using namespace std;
 
-bool const USE_WRITE_THREAD = 1;
+unsigned const MAX_FRAMES_BUFFERED = 128;
 
 extern int window_width, window_height;
 
@@ -84,91 +84,97 @@ class video_capture_t {
 	};
 
 	unsigned video_id, pbo, start_sz;
-	FILE* ffmpeg;
+	string filename;
 
 	// multithreaded writing support
-	bool end_data, write_active;
+	bool is_recording, is_writing;
 	video_buffer buffer;
 	pthread_t write_thread;
 
 	void wait_for_write_complete() {
-		end_data = 1;
-		cout << "Wating for " << buffer.num_pending_frames() << " frames to be written" << endl;
+		if (!is_writing) return;
+		is_recording = 0;
+		cout << "Wating for " << buffer.num_pending_frames() << " video frames to be written" << endl;
 		pthread_join(write_thread, nullptr);
-		assert(!write_active);
-		end_data = 0;
+		assert(!is_writing);
 	}
-	void queue_frame(void const *const data) {buffer.push_frame(data, get_num_bytes());}
+	void queue_frame(void const *const data) {
+		buffer.push_frame(data, get_num_bytes());
+		
+		while (buffer.num_pending_frames() > MAX_FRAMES_BUFFERED) { // sleep for 10ms until buffer is partially emptied
+			cout << "Waiting for video write buffer to empty" << endl;
+			alut_sleep(0.01);
+		}
+	}
 
 	static unsigned get_num_bytes() {return 4*window_width*window_height;}
 
 public:
-	video_capture_t() : video_id(0), pbo(0), start_sz(0), ffmpeg(nullptr), end_data(0), write_active(0) {}
+	video_capture_t() : video_id(0), pbo(0), start_sz(0), is_recording(0), is_writing(0) {}
 
 	void start(string const &fn) {
-		assert(ffmpeg == nullptr); // must end() before calling start() again
+		assert(!is_recording); // must end() before calling start() again
+		wait_for_write_complete();
+		assert(!is_writing);
+		is_recording = 1;
+		start_sz     = get_num_bytes();
 		assert(pbo == 0);
-		assert(!write_active);
-		// start ffmpeg telling it to expect raw RGBA, 60 FPS
-		// -i - tells it to read frames from stdin
-		ostringstream oss;
-		oss << "ffmpeg.exe.lnk -r 60 -f rawvideo -pix_fmt rgba -s " << window_width << "x" << window_height << " -i - -threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip " << fn;
-		// open pipe to ffmpeg's stdin in binary write mode
-		start_sz = get_num_bytes();
-		ffmpeg   = _popen(oss.str().c_str(), "wb");
 		glGenBuffers(1, &pbo);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
 		glBufferData(GL_PIXEL_PACK_BUFFER, start_sz, NULL, GL_STREAM_READ);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-		if (USE_WRITE_THREAD) { // start in a different thread
-			pthread_attr_t attr;
-			pthread_attr_init(&attr);
-			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-			int const rc(pthread_create(&write_thread, &attr, write_video, nullptr)); 
-			if (rc) {cout << "Error: Return code from pthread_create() is " << rc << endl; assert(0);}
-			pthread_attr_destroy(&attr);
-		}
+		// start writing in a different thread
+		filename = fn;
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+		int const rc(pthread_create(&write_thread, &attr, write_video, nullptr)); 
+		if (rc) {cout << "Error: Return code from pthread_create() is " << rc << endl; assert(0);}
+		pthread_attr_destroy(&attr);
 	}
 	void write_buffer() {
-		write_active = 1;
-		while (!end_data) {buffer.write_frames(ffmpeg);}
-		write_active = 0;
-	}
-	void end(bool called_from_dtor=0) {
-		if (ffmpeg == nullptr) return;
-		// Note: if a write thread is active, this will block until writing is complete
-		// FIXME: if !called_from_dtor, we may want to let writing continue in the background, but force it to finish if we plan to start recording again
-		if (USE_WRITE_THREAD) {wait_for_write_complete();} // only needs to wait if the write thread is active
+		assert(!filename.empty());
+		// start ffmpeg telling it to expect raw RGBA, 60 FPS
+		// -i - tells it to read frames from stdin
+		// Note: 0 = max threads; the more threads the lower the frame rate, as video compression competes with 3DWorld for CPU cycles;
+		// however, more threads is less likely to fill the buffer and block, producing heavy lag
+		ostringstream oss;
+		oss << "ffmpeg.exe.lnk -r 60 -f rawvideo -pix_fmt rgba -s " << window_width << "x" << window_height << " -i - -threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip " << filename;
+		// open pipe to ffmpeg's stdin in binary write mode
+		FILE* ffmpeg = _popen(oss.str().c_str(), "wb");
+		assert(ffmpeg != nullptr);
+		is_writing   = 1;
+		while (is_recording || !buffer.empty()) {buffer.write_frames(ffmpeg); alut_sleep(0.001);} // 1ms sleep
 		_pclose(ffmpeg);
-		ffmpeg = nullptr;
-		if (called_from_dtor) return; // don't try to free the pbo
+		is_writing   = 0;
+	}
+	void end() {
+		is_recording = 0; // signal writer to finish
 		glDeleteBuffers(1, &pbo);
 		pbo = 0;
 	}
 	void toggle_start_stop() {
-		if (ffmpeg != nullptr) {end(); return;} // start=>end
+		if (is_recording) {end(); return;} // start=>end
 		ostringstream oss;
 		oss << "video_out" << video_id++ << ".mp4";
 		start(oss.str()); // end=>start
 	}
 	void end_frame() {
-		if (ffmpeg == nullptr) return;
+		if (!is_recording) return;
 		assert(pbo != 0);
-		assert(start_sz == get_num_bytes());
+		assert(start_sz == get_num_bytes()); // make sure the resolution hasn't changed since recording started
 		//RESET_TIME;
 		glReadBuffer(GL_FRONT);
 		glPixelStorei(GL_PACK_ALIGNMENT, 1);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
 		glReadPixels(0, 0, window_width, window_height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr); // use PBO
-		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, get_num_bytes(), GL_MAP_READ_BIT);
-		//PRINT_TIME("Read");
-		if (write_active) {queue_frame(ptr);} else {fwrite(ptr, get_num_bytes(), 1, ffmpeg);} // queue it or write it directly
-		//PRINT_TIME("Write");
+		void *ptr = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, start_sz, GL_MAP_READ_BIT);
+		queue_frame(ptr);
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		//PRINT_TIME("Frame");
 	}
-	~video_capture_t() {end(1);}
+	~video_capture_t() {wait_for_write_complete();} // wait for write to complete; don't try to free the pbo
 };
 
 video_capture_t video_capture;
