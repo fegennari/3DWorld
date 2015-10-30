@@ -77,6 +77,8 @@ public:
 	}
 	//~shader_t() {assert(!program);} // end_shader() should have been called (but not for cached global variables)
 	unsigned get_program() const {return program;} // semi-private, for internal use as map key in vao_cache_t
+	void get_program_binary(vector<unsigned char> &binary_data, GLenum &binary_format) const;
+	void set_program_binary(vector<unsigned char> const &binary_data, GLenum const binary_format);
 
 	void set_vert_shader(string const &vs_name_) {shader_names[0] = vs_name_;}
 	void set_frag_shader(string const &fs_name_) {shader_names[1] = fs_name_;}

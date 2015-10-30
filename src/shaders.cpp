@@ -1,4 +1,4 @@
-// 3D World - Vertex and Fragment GLSL Shader Framework
+﻿// 3D World - Vertex and Fragment GLSL Shader Framework
 // by Frank Gennari
 // 11/1/10
 #include "shaders.h"
@@ -851,6 +851,12 @@ bool shader_t::begin_shader(bool do_enable) {
 			shader_manager.clear_and_reload();
 		} // end retry loop
 		if (PRINT_LOG) {print_program_info_log();}
+#if 0 // debugging
+		GLenum binary_format(0);
+		vector<unsigned char> binary_data;
+		get_program_binary(binary_data, binary_format);
+		set_program_binary(binary_data, binary_format);
+#endif
 		prog = program_t(program, shader_ixs); // cache the program
 		//PRINT_TIME("Create Program");
 	}
@@ -859,6 +865,19 @@ bool shader_t::begin_shader(bool do_enable) {
 	emission_loc = specular_color_loc = -1;
 	if (do_enable) {enable();}
 	return 1;
+}
+
+void shader_t::get_program_binary(vector<unsigned char> &binary_data, GLenum &binary_format) const {
+	int prog_length(0), length(0);
+	glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &prog_length);
+	//cout << TXT(prog_length) << endl;
+	assert(prog_length > 0);
+	binary_data.resize(prog_length);
+	glGetProgramBinary(program, prog_length, &length, &binary_format, &binary_data.front());
+	assert(length == prog_length);
+}
+void shader_t::set_program_binary(vector<unsigned char> const &binary_data, GLenum const binary_format) {
+	glProgramBinary(program, binary_format, &binary_data.front(), binary_data.size());
 }
 
 
@@ -874,7 +893,6 @@ void shader_t::print_shader_info_log(unsigned shader) {
 		cout << "Info log: " << string(info_log_msg.begin(), info_log_msg.end());
 	}
 }
-
 
 void shader_t::print_program_info_log() const {
 
