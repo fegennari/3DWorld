@@ -97,8 +97,8 @@ struct particle_cloud : public basic_physics_obj { // size = 88
 	mutable vector<part> render_parts;
 	static order_vect_t order;
 
-	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r,
-		float den, float dark, float dam, int src, int dt, bool as, bool use_parts=1, bool nl=0);
+	void gen(point const &p, colorRGBA const &bc, vector3d const &iv, float r, float den, float dark, float dam,
+		int src, int dt, bool as, bool use_parts=1, bool nl=0, float spread=1.0);
 	void draw(quad_batch_draw &qbd) const;
 	void draw_part(point const &p, float r, colorRGBA c, quad_batch_draw &qbd) const;
 	void apply_physics(unsigned i);

@@ -16,7 +16,6 @@ TT shadows:
 
 Bullet physics for movable boxes
 Game editor
-Smoke effects for bullets, shell casings, and gun fire
 
 Reflections on specular surfaces (such as the gold dragon)
   - Ray traced at low res and filtered (like the water surface in ground mode)

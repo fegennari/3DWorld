@@ -1647,6 +1647,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	switch (weapon_id) {
 	case W_M16: // line of sight damage
 		gen_sound(SOUND_GUNSHOT, fpos, 0.5);
+		gen_arb_smoke((fpos + ((wmode&1) ? 1.5 : 1.8)*radius*dir + vector3d(0.0, 0.0, -0.4*radius)), WHITE, vector3d(0.0, 0.0, 0.15), ((wmode&1) ? 0.0025 : 0.0015), 0.25, 0.2, 0.0, shooter, SMOKE, 1, 0.01);
 
 		if ((wmode&1) != 1) { // not firing shrapnel
 			if (dtime > 10) {firing_error *= 0.1;}
@@ -1670,6 +1671,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		if (weapon_id == W_SHOTGUN) {
 			for (unsigned i = 0; i < 2; ++i) {create_shell_casing(fpos, dir, shooter, radius, 1);}
 			gen_sound(SOUND_SHOTGUN, fpos);
+			gen_arb_smoke((fpos + 1.4*radius*dir + vector3d(0.0, 0.0, -0.4*radius)), WHITE, vector3d(0.0, 0.0, 0.3), 0.003, 0.8, 0.7, 0.0, shooter, SMOKE, 1, 0.01);
 		}
 		return 1;
 
