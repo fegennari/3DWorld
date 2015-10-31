@@ -902,16 +902,15 @@ bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, p
 	float min_dist(0.0);
 	bool found(0);
 
-	// first iteration:  find closest side where object is crossed a face of the cube, and if not found
+	// first iteration:  find closest side where object has crossed a face of the cube, and if not found
 	// second iteration: find closest side with no constraints
 	// Note: still not exactly correct, but close, and OK in most cases
-	for (unsigned iter = 0; iter < 2 && !found; ++iter) {
+	for (unsigned iter = (pos == p_last); iter < 2 && !found; ++iter) {
 		for (unsigned i = 0; i < unsigned(2 + !skip_z); ++i) {
 			for (unsigned j = 0; j < 2; ++j) {
 				//if (iter == 0 && pos[i] != p_last[i] && ((pos[i] - p_last[i]) < 0) ^ j) continue; // ignore back-facing sides (is this correct?)
-				float const dval(cube.d[i][j]), delta(j ? 1.0 : -1.0), side_pos(dval + delta*radius);
-				bool intersects(iter ? 1 : (((p_last[i] < side_pos) ^ j) && ((pos[i] >= side_pos) ^ j)));
-				if (!intersects) continue;
+				float const delta(j ? 1.0 : -1.0), side_pos(cube.d[i][j] + delta*radius);
+				if (iter == 0 && !((p_last[i] < side_pos) ^ j) && ((pos[i] >= side_pos) ^ j)) continue;
 				float const dist(fabs(pos[i] - side_pos));
 
 				if (!found || dist < min_dist) {

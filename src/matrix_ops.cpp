@@ -320,7 +320,7 @@ float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equa
 		zval = (-norm.x*(xval - get_xval(xpos)) - norm.y*(yval - get_yval(ypos)) + norm.z*mesh_height[ypos][xpos])/norm.z;
 	}
 	else {
-		float const xpi(fabs(xp - (float)x0)), ypi(fabs(yp - (float)y0));
+		float const xpi(xp - (float)x0), ypi(yp - (float)y0); // always positive
 		zval = (1.0 - xpi)*((1.0 - ypi)*mesh_height[y0][x0] + ypi*mesh_height[y0+1][x0]) + xpi*((1.0 - ypi)*mesh_height[y0][x0+1] + ypi*mesh_height[y0+1][x0+1]);
 	}
 	if (rad > 0.0 && !xy0_bad) {

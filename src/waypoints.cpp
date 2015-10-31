@@ -498,10 +498,9 @@ public:
 		}
 	}
 
-
 	bool check_cobj_placement(point &pos, int coll_id, bool check_uw) const {
 		if (check_uw && is_underwater(pos)) return 0;
-		dwobject obj(def_objects[WAYPOINT]); // create a fake temporary smiley object
+		dwobject obj(def_objects[WAYPOINT]); // create a temporary object
 		obj.pos     = pos;
 		obj.coll_id = coll_id; // ignore collisions with the current object
 		bool const ret(!obj.check_vert_collision(0, 0, 0, NULL, all_zeros, 1, 0, -1)); // return true if no collision (skip dynamic objects)
