@@ -544,6 +544,7 @@ void draw_small_trees(bool shadow_only) {
 		small_trees.vbo_manager[0].upload();
 		float const wind_mag(get_plant_leaf_wind_mag(shadow_only));
 		if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
+		s.set_prefix("#define NO_SPECULAR", 1); // FS - disable rain effect
 		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke, texgen
 		setup_leaf_wind(s, wind_mag, 0);
 		small_trees.draw_pine_leaves(shadow_only);

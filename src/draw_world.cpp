@@ -384,7 +384,9 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_int("burn_mask", 10);
 		select_multitex(DISINT_TEX, 10); // PLASMA_TEX?
 	}
-	//s.add_uniform_float("wet_effect", (is_rain_enabled() ? 1.0 : 0.0)); // FIXME: need to handle wet/outside vs. dry/inside surfaces differently
+	// FIXME: need to handle wet/outside vs. dry/inside surfaces differently
+	// but in practice, since this only applies to sun/moon lighting, indoor surfaces aren't affected much
+	s.add_uniform_float("wet_effect", (is_rain_enabled() ? 1.0 : 0.0)); // only enable when drawing cobjs?
 }
 
 
