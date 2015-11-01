@@ -131,6 +131,7 @@ public:
 				drawer.add_line_as_tris(verts[i].v, verts[i+1].v, width, width, color, color);
 			}
 		}
+		glDepthMask(GL_FALSE); // disable depth test
 		drawer.draw(); // draw nearby raindrops as triangles
 		s.end_shader();
 		disable_blend();
@@ -154,6 +155,7 @@ public:
 			disable_blend();
 			reset_fill_mode();
 		}
+		glDepthMask(GL_TRUE);
 	}
 };
 
