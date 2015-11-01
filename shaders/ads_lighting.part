@@ -1,4 +1,5 @@
 uniform float ambient_scale = 1.0;
+uniform float wet_effect    = 0.0;
 uniform vec4 specular_color = vec4(0,0,0,1); // enocded as {color.rgb, shininess}
 float get_shininess() {return specular_color.a;}
 
@@ -22,7 +23,7 @@ float get_spec_intensity(in vec3 normal, in vec3 light_dir, in vec3 eye_dir) {
 	vec3 half_vect = normalize(light_dir + eye_dir); // Eye + L = -eye_space_pos + L
 	float dp  = dot(normal, half_vect);
 #endif
-	float n   = get_shininess();
+	float n   = get_shininess()*mix(1.0, 2.5, wet_effect);
 	float mag = pow(clamp(dp, 0.01, 1.0), n);
 	mag      *= 0.0166*(n + 8.0); // normalize for exponent of 60; normalization should be (n+8)/(8*pi);
 	return mag;
@@ -46,7 +47,7 @@ void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir,
 }
 
 vec4 get_ads_lighting(in vec3 normal, in vec3 light_dir, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color, in fg_light_t light) {
-	vec3 diffuse = (ad_color * light.diffuse).rgb;
+	vec3 diffuse = (ad_color * light.diffuse).rgb*mix(1.0, 0.3, wet_effect);
 	vec3 ambient = (ad_color * light.ambient).rgb;
 #ifdef NO_SPECULAR
 	vec3 specular = vec3(0.0);
