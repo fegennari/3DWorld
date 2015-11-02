@@ -285,7 +285,7 @@ void coll_obj::check_indoors_outdoors() {
 		break;
 	case COLL_CYLINDER_ROT:
 	case COLL_CAPSULE:
-		if (points[0].z != points[1].z) { // assumed to be horizontal, but probably good enough for any non-vertical angle
+		if (!is_cylin_vertical()) { // assumed to be horizontal, but probably good enough for any non-vertical angle
 			test_pts[npts++] = points[0] + vector3d(0.0, 0.0, radius ); // first end
 			test_pts[npts++] = points[1] + vector3d(0.0, 0.0, radius2); // first end
 			test_pts[npts++] = 0.5*(test_pts[0] + test_pts[1]); // center point
