@@ -231,6 +231,7 @@ void main()
 #endif // SMOKE_ENABLED
 	//color = vec4(pow(color.rgb, vec3(0.45)), color.a); // gamma correction, doesn't really look right, and should un-gamma-correct textures when loading
 	fg_FragColor = color;
+	//fg_FragColor.r = wet_effect; fg_FragColor.b = 1.0-wet_effect;
 
 #ifdef USE_DEPTH_TRANSPARENCY
 	float d_delta = log_to_linear_depth(get_depth_at_fragment()) - log_to_linear_depth(gl_FragCoord.z);
