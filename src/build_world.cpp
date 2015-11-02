@@ -663,6 +663,7 @@ void coll_obj::move_cobj(vector3d const &vd, bool update_colls) {
 	if (update_colls) {remove_coll_object(id, 0);}
 	shift_by(vd); // move object
 	if (update_colls) {re_add_coll_cobj(id, 0);}
+	if (update_colls && is_rain_enabled()) {check_indoors_outdoors();}
 }
 
 
@@ -711,6 +712,13 @@ void check_contained_cube_sides() {
 				if (check_face_containment(*i, dim, dir, (i - coll_objects.begin()))) {i->cp.surfs |= EFLAGS[dim][dir];} // set this flag bit
 			}
 		}
+	}
+}
+
+void flag_cobjs_indoors_outdoors() {
+
+	for (coll_obj_group::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
+		if (i->fixed && !i->no_draw()) {i->check_indoors_outdoors();}
 	}
 }
 
@@ -797,6 +805,7 @@ void add_all_coll_objects(const char *coll_obj_file, bool re_add) {
 	if (verbose) {cobj_stats();}
 	build_cobj_tree(0, verbose);
 	check_contained_cube_sides();
+	flag_cobjs_indoors_outdoors();
 }
 
 

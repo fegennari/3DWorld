@@ -75,6 +75,7 @@ unsigned const COBJ_DESTROYABLE = 0x02;
 unsigned const COBJ_NO_COLL     = 0x04;
 unsigned const COBJ_MOVABLE     = 0x08;
 unsigned const COBJ_WAS_CUBE    = 0x10;
+unsigned const COBJ_IS_INDOORS  = 0x20;
 
 struct cobj_params : public obj_layer { // size = 84
 
@@ -98,6 +99,9 @@ class cobj_draw_buffer {
 	vector<vert_norm_tc> tc_verts;
 
 public:
+	bool is_wet;
+
+	cobj_draw_buffer() : is_wet(0) {}
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vert_norm_texp(vn, tp));}
 	void add_vert(vert_norm_tc const &vntc) {tc_verts.push_back(vntc);}
 	bool on_new_obj_layer(obj_layer const &l);
@@ -168,6 +172,7 @@ public:
 	bool is_big_occluder()const {return (is_occluder() && fixed && volume > 0.001);}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
 	bool is_movable()     const {return ((cp.flags & COBJ_MOVABLE) != 0);}
+	bool is_wet()         const {return (!(cp.flags & COBJ_IS_INDOORS) && is_rain_enabled());}
 	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || is_movable());}
 	bool is_player()      const;
 	bool is_invis_player()const;
@@ -201,6 +206,7 @@ public:
 	void create_portal() const; // destroy_cobj.cpp
 	void add_connect_waypoint(); // waypoints.cpp
 	void remove_waypoint();
+	void check_indoors_outdoors();
 	void write_to_cobj_file(std::ostream &out, coll_obj &prev) const;
 
 	// inexact primitive intersections

@@ -262,6 +262,64 @@ void coll_obj::register_coll(unsigned char coll_time, unsigned char coll_type_) 
 	has_any_billboard_coll |= is_billboard; // set global state
 }
 
+void coll_obj::check_indoors_outdoors() {
+
+	point test_pts[10];
+	unsigned npts(0);
+
+	switch (type) {
+	case COLL_CUBE:
+		test_pts[npts++].assign(0.5*(d[0][0] + d[0][1]), 0.5*(d[1][0] + d[1][1]), d[2][1]); // cube center
+
+		if (radius > HALF_DXY) { // large cube
+			for (unsigned i = 0; i < 4; ++i) {
+				float const xv(0.99*d[0][i&1] + 0.01*d[0][(i&1)^1]), yv(0.99*d[1][i>>1] + 0.01*d[1][(i>>1)^1]);
+				test_pts[npts++].assign(xv, yv, d[2][1]); // use points near the top 4 corners
+				test_pts[npts  ] = test_pts[0]; // start at top center
+				test_pts[npts++][i>>1] = 0.99*d[i>>1][i&1] + 0.01*d[i>>1][(i&1)^1];
+			}
+		}
+		break;
+	case COLL_SPHERE:
+		test_pts[npts++] = points[0] + vector3d(0.0, 0.0, radius); // top point of the sphere
+		break;
+	case COLL_CYLINDER_ROT:
+	case COLL_CAPSULE:
+		if (points[0].z != points[1].z) { // assumed to be horizontal, but probably good enough for any non-vertical angle
+			test_pts[npts++] = points[0] + vector3d(0.0, 0.0, radius ); // first end
+			test_pts[npts++] = points[1] + vector3d(0.0, 0.0, radius2); // first end
+			test_pts[npts++] = 0.5*(test_pts[0] + test_pts[1]); // center point
+			break;
+		}
+		// else fallthrough to vertical cylinder case
+	case COLL_CYLINDER:
+		test_pts[npts++] = ((points[0].z < points[1].z) ? points[1] : points[0]); // center of top circle
+		if (type == COLL_CAPSULE) {test_pts[0].z += ((points[0].z < points[1].z) ? radius2 : radius);}
+		break;
+	case COLL_POLYGON:
+		assert(npoints <= 4);
+		if (thickness > MIN_POLY_THICK) { // extruded polygon
+			vector3d const delta(norm*(0.5*thickness));
+			for (int i = 0; i < npoints; ++i) {
+				test_pts[npts++] = points[i] - delta; // neg side
+				test_pts[npts++] = points[i] + delta; // neg side
+			}
+		}
+		else {
+			test_pts[npts++] = get_center_pt();
+			if (radius > HALF_DXY) { // large polygon, use all points
+				for (int i = 0; i < npoints; ++i) {test_pts[npts++] = points[i];}
+			}
+		}
+		break;
+	default: assert(0);
+	}
+	unsigned num_blocked(0);
+	int cindex(-1); // unused
+	for (unsigned i = 0; i < npts; ++i) {num_blocked += check_coll_line(test_pts[i], point(test_pts[i].x, test_pts[i].y, czmax), cindex, id, 1, 0, 1, 0);}
+	if (num_blocked == npts) {cp.flags |= COBJ_IS_INDOORS;} else {cp.flags &= ~COBJ_IS_INDOORS;} // only indoors if all rays are blocked
+}
+
 
 void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const { // dir does not need to be normalized
 
@@ -310,7 +368,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	if (in_group) {
 		if (start_group) { // start rendering a new group
 			// Note: this can be done between the begin/end of a group and is more efficient in some cases, but less efficient in others
-			if (group_back_face_cull) glEnable(GL_CULL_FACE);
+			if (group_back_face_cull) {glEnable(GL_CULL_FACE);}
 			vector3d tex_dir(0,0,0);
 			tex_dir[::get_max_dim(norm)] = 1.0;
 			set_poly_texgen(tid, tex_dir, shader);
@@ -324,6 +382,11 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		assert(is_thin_poly()); // thin triangle/quad
 		obj_draw_groups[group_id].add_draw_polygon(points, norm, npoints, cix);
 		return;
+	}
+	else if (is_wet() != cdb.is_wet) { // check raining state when not in a group
+		cdb.flush();
+		cdb.is_wet ^= 1;
+		shader.add_uniform_float("wet_effect", (cdb.is_wet ? 1.0 : 0.0));
 	}
 	switch (type) {
 	case COLL_CUBE:

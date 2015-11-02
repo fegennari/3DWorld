@@ -484,6 +484,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 	if (cobjs.empty()) return;
 	shader_t s;
 	setup_cobj_shader(s, 0, use_normal_map, use_texgen); // no lt_atten
+	cdb.is_wet = is_rain_enabled(); // initial value
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 	float bump_b_scale(0.0);
 	int nm_tid(-2), last_tid(-2), last_group_id(-1); // Note: use -2 as unset tid so that it differs from "no texture" of -1
@@ -530,6 +531,7 @@ void draw_coll_surfaces(bool draw_trans) {
 	setup_cobj_shader(s, has_lt_atten, 0, 2);
 	int last_tid(-2), last_group_id(-1);
 	cobj_draw_buffer cdb;
+	cdb.is_wet = is_rain_enabled(); // initial value
 	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs;
 	
 	if (!draw_trans) { // draw solid
