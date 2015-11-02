@@ -250,7 +250,7 @@ public:
 };
 
 
-bool check_coll_line(point pos1, point pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool include_voxels, bool skip_init_colls) {
+bool check_coll_line(point const &pos1, point const &pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool include_voxels, bool skip_init_colls) {
 
 	if (world_mode != WMODE_GROUND) return 0;
 	if (check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2), include_voxels, skip_init_colls))   return 1; // static cobjs + voxels
@@ -285,7 +285,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 }
 
 
-bool cobj_contained_ref(point pos1, point center, const point *pts, unsigned npts, int cobj, int &last_cobj) {
+bool cobj_contained_ref(point const &pos1, point const &center, const point *pts, unsigned npts, int cobj, int &last_cobj) {
 
 	if (!have_occluders()) return 0;
 	assert(npts > 0);
@@ -296,7 +296,7 @@ bool cobj_contained_ref(point pos1, point center, const point *pts, unsigned npt
 	return cobj_contained_tree(pos1, center, pos1, pts, npts, cobj, last_cobj);
 }
 
-bool cobj_contained(point pos1, point center, const point *pts, unsigned npts, int cobj) {
+bool cobj_contained(point const &pos1, point const &center, const point *pts, unsigned npts, int cobj) {
 	static int last_cobj(-1);
 	return cobj_contained_ref(pos1, center, pts, npts, cobj, last_cobj);
 }
