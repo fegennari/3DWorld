@@ -135,8 +135,10 @@ B -0.5 1.1  -1.9  -1.4 -0.7 -0.6 # Floor Under Porch Slab
 y 9.0
 X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco ceiling
+r 0.4 30.0 # set specularity
 B -1.95 1.35 -2.15  2.95 0.7 0.75 # Ceiling + Gutter - Falling objects get stuck in the gutter
 B  1.1  1.45 -0.55 -0.15 0.7 0.75 # Around the Chimney
+r 0.0 1.0 # reset specularity
 X none # disable normal maps
 
 # Upstairs
@@ -293,6 +295,7 @@ X none # disable normal map
 y 9.0
 X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco
+r 0.4 30.0 # set specularity
 e 19
 B -1.7  -1.69 -1.89  2.69 0.05  0.71 # Left Side Wall
 e 11
@@ -304,6 +307,7 @@ B -0.4   1.09 -1.4  -1.39 0.05  0.71 # Front Porch Wall
 e 35
 B -0.5  -0.49 -1.89 -1.4  0.05  0.71 # Left Wall on Front Porch
 e 0
+r 0.0 1.0 # reset specularity
 X none # disable normal map
 tj 0
 
@@ -455,6 +459,7 @@ B -1.2 -1.0 -0.4 -0.1 0.05 0.15
 y 9.0
 X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco
+r 0.4 30.0 # set specularity
 B -0.5 -0.4 -1.0 -0.1 0.05 0.7
 B -1.7  0.2 -0.1  0.0 0.05 0.7 
 B  0.6  1.1 -0.1  0.0 0.05 0.7 
@@ -482,7 +487,8 @@ B -0.4 -0.1  1.8  1.9 0.6  0.7
 
 # Short Walls
 B 0.0 0.1 -1.4 -0.9 0.05 0.3 # Spindles Wall
-B 0.0 0.4  1.4  1.5 0.05 0.3 
+B 0.0 0.4  1.4  1.5 0.05 0.3
+r 0.0 1.0 # reset specularity
 X none # disable normal map
 
 l 0.95 1.0 1.0 1.0 1.0 8 1 # Marble

@@ -122,10 +122,12 @@ n 0
 
 l 0.7 1.0 1.0 1.0 1.0 3 1 # plaster/stucco walls for hallway
 X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
+r 0.5 40.0 # set specularity
 y 16.0
 B -6.66 -6.65  2.6 4.5  -0.4 -0.12
 B -6.45 -6.44  2.6 4.5  -0.4 -0.12
 B -6.65 -6.45  2.6 4.5  -0.125 -0.12
+r 0.0 1.0 # reset specularity
 X none # disable normal map
 
 # add some exploding tanks
