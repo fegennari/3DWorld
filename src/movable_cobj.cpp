@@ -685,7 +685,7 @@ bool check_top_face_agreement(vector<unsigned> const &cobjs) {
 
 	for (auto i = cobjs.begin()+1; i != cobjs.end(); ++i) {
 		coll_obj &cobj(coll_objects.get_cobj(*i));
-		if (cobj.type != COLL_CUBE || fabs(cobj.d[2][1] - ref_cobj.d[2][1]) < TOLER) return 0;
+		if (cobj.type != COLL_CUBE || fabs(cobj.d[2][1] - ref_cobj.d[2][1]) > TOLER) return 0;
 	}
 	return 1;
 }
