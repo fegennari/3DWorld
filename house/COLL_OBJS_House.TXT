@@ -791,7 +791,7 @@ l 0.1 0.3 0.5 0.3 1.0 15 1 # pine tree leaves - hedge texture
 
 # placeholder cobjs to preserve filled voxels for indir lighting
 e 63 # no sides visible
-B -5.9 -2.2  3.4  3.65 -0.4 -0.3 # Back
+B -5.9 -2.2  3.4  3.6  -0.4 -0.3 # Back
 B -2.2 -2.0 -4.8 -2.5  -0.2 -0.1 # Front Main 1
 B -3.5 -2.0 -4.8 -4.6  -0.2 -0.1 # Front Main 2
 e 0
