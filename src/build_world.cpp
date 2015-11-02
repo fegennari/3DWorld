@@ -1563,6 +1563,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					switch (cobj.type) {
 					case COLL_CUBE:
 						for (unsigned j = 0; j < 3; ++j) {cobj.d[j][1] += vel[j];}
+						cobj.normalize();
 						break;
 					case COLL_CYLINDER:
 					case COLL_CYLINDER_ROT:
