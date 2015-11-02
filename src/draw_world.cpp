@@ -544,7 +544,7 @@ void draw_coll_surfaces(bool draw_trans) {
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
 			bool const cube_poly((c.cp.flags & COBJ_WAS_CUBE) != 0);
-			bool const use_tex_coords(cube_poly || ((c.is_cylinder() || c.type == COLL_SPHERE || c.type == COLL_CAPSULE) && c.cp.tscale == 0.0));
+			bool const use_tex_coords((cube_poly && c.cp.tid >= 0) || ((c.is_cylinder() || c.type == COLL_SPHERE || c.type == COLL_CAPSULE) && c.cp.tscale == 0.0));
 
 			if (c.cp.normal_map >= 0) {
 				assert(c.group_id < 0);
