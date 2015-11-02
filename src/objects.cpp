@@ -314,10 +314,10 @@ void coll_obj::check_indoors_outdoors() {
 		break;
 	default: assert(0);
 	}
-	unsigned num_blocked(0);
+	bool all_blocked(1);
 	int cindex(-1); // unused
-	for (unsigned i = 0; i < npts; ++i) {num_blocked += check_coll_line(test_pts[i], point(test_pts[i].x, test_pts[i].y, czmax), cindex, id, 1, 0, 1, 0);}
-	if (num_blocked == npts) {cp.flags |= COBJ_IS_INDOORS;} else {cp.flags &= ~COBJ_IS_INDOORS;} // only indoors if all rays are blocked
+	for (unsigned i = 0; i < npts && all_blocked; ++i) {all_blocked &= check_coll_line(test_pts[i], point(test_pts[i].x, test_pts[i].y, czmax), cindex, id, 1, 0, 1, 0);}
+	if (all_blocked) {cp.flags |= COBJ_IS_INDOORS;} else {cp.flags &= ~COBJ_IS_INDOORS;} // only indoors if all rays are blocked
 }
 
 
