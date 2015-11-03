@@ -49,8 +49,8 @@ void upload_vbo_sub_data_no_sync(void const *data, unsigned start_byte, unsigned
 unsigned create_vao();
 void bind_vao(unsigned vao);
 void delete_vao(unsigned vao);
-void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo, unsigned *layer=nullptr);
-void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *layer=nullptr);
+void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo=0, bool multisample=0, unsigned *layer=nullptr);
+void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo=0, bool multisample=0, unsigned *layer=nullptr);
 void disable_fbo();
 void free_fbo(unsigned &fbo_id);
 unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize);
@@ -256,15 +256,16 @@ inline void align_vbo_ptr(unsigned &pos) {if (pos & 15) {pos = (pos + 16) & (~15
 
 
 void const *get_dynamic_vbo_ptr(void const *const verts, unsigned size_bytes);
-void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest);
+void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest, bool multisample=0);
 void build_texture_mipmaps(unsigned tid, unsigned dim);
 
 
 struct texture_pair_t {
 
 	unsigned tids[2]; // color, normal
+	bool multisample;
 
-	texture_pair_t() {tids[0] = tids[1] = 0;}
+	texture_pair_t(bool multisample_=0) : multisample(multisample_) {tids[0] = tids[1] = 0;}
 	bool is_valid() const {return (tids[0] > 0 && tids[1] > 0);}
 	void free_context();
 	void bind_texture() const;
@@ -278,8 +279,10 @@ struct texture_pair_t {
 struct texture_atlas_t {
 
 	unsigned tid, nx, ny;
+	bool multisample;
 
-	texture_atlas_t(unsigned nx_=1, unsigned ny_=1) : tid(0), nx(nx_), ny(ny_) {}
+	texture_atlas_t(bool multisample_=0) : tid(0), nx(1), ny(1), multisample(multisample_) {}
+	texture_atlas_t(unsigned nx_, unsigned ny_, bool multisample_=0) : tid(0), nx(nx_), ny(ny_), multisample(multisample_) {}
 	bool is_valid() const {return (tid > 0);}
 	void free_context();
 	void bind_texture() const;
@@ -335,6 +338,10 @@ public:
 };
 
 GLint64 get_timestamp();
+
+inline int get_2d_texture_target(bool is_array=0, bool multisample=0) {
+	return (is_array ? (multisample ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY) : (multisample ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D));
+}
 
 
 #endif // _GL_EXT_ARB_H_

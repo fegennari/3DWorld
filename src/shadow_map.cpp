@@ -348,8 +348,8 @@ void set_shadow_tex_params(unsigned &tid, bool is_array) {
 	bool const nearest(0); // nearest filter: sharper shadow edges, but needs more biasing
 	setup_texture(tid, 0, 0, 0, 0, 0, nearest, 1.0, is_array);
 	// This is to allow usage of textureProj function in the shader
-	glTexParameteri((is_array ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
-	glTexParameteri((is_array ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	glTexParameteri(get_2d_texture_target(is_array), GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+	glTexParameteri(get_2d_texture_target(is_array), GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 }
 
 
@@ -424,7 +424,7 @@ void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *c
 		}
 		assert(is_allocated());
 		// render from the light POV to a FBO, store depth values only
-		enable_fbo(fbo_id, get_tid(), 1, get_layer());
+		enable_fbo(fbo_id, get_tid(), 1, 0, get_layer());
 		glViewport(0, 0, smap_sz, smap_sz);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer

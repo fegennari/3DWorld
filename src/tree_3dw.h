@@ -187,6 +187,8 @@ typedef texture_atlas_t tree_bb_tex_t;
 typedef texture_pair_t tree_bb_tex_t;
 #endif
 
+bool const TREE_BILLBOARD_MULTISAMPLE = 0;
+
 
 class tree_data_t {
 
@@ -213,6 +215,7 @@ public:
 	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
 
 	tree_data_t(bool priv=1) : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), branch_index_bytes(0), tree_type(-1), last_update_frame(0),
+		render_leaf_texture(TREE_BILLBOARD_MULTISAMPLE), render_branch_texture(TREE_BILLBOARD_MULTISAMPLE),
 		leaf_change_start(0), leaf_change_end(0), reset_leaves(0), has_4th_branches(0), base_radius(0.0), sphere_radius(0.0), sphere_center_zoff(0.0),
 		br_scale(1.0), b_tex_scale(1.0), lr_z_cent(0.0), lr_x(0.0), lr_y(0.0), lr_z(0.0), br_x(0.0), br_y(0.0), br_z(0.0) {}
 	vector<draw_cylin> const &get_all_cylins() const {return all_cylins;}

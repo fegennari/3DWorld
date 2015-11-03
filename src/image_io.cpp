@@ -36,7 +36,7 @@ FILE *open_texture_file(string const &filename) {
 	FILE *fp = fopen(append_texture_dir(filename).c_str(), "rb");
 	if (fp != NULL) return fp;
 
-	// if not in the current directory, then look in the current directory
+	// if not in the texture directory, then look in the current directory
 	fp = fopen(filename.c_str(), "rb");
 
 	if (fp == NULL) {

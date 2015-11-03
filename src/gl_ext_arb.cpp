@@ -207,10 +207,10 @@ void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned 
 // ***************** FBOs *****************
 
 
-void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *layer) {
+void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, unsigned *layer) {
 	
 	// Create a framebuffer object
-	check_gl_error(500);
+	check_gl_error(550);
 	glGenFramebuffers(1, &fbo_id);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
 	
@@ -227,9 +227,9 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *lay
 		glFramebufferTextureLayer(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), tid, 0, *layer);
 	}
 	else {
-		glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), GL_TEXTURE_2D, tid, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), get_2d_texture_target(0, multisample), tid, 0);
 	}
-	check_gl_error(501);
+	check_gl_error(551);
 	// Check FBO status
 	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	assert(status == GL_FRAMEBUFFER_COMPLETE);
@@ -239,9 +239,9 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *lay
 }
 
 
-void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, unsigned *layer) {
+void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisample, unsigned *layer) {
 
-	if (!fbo_id) {create_fbo(fbo_id, tid, is_depth_fbo, layer);}
+	if (!fbo_id) {create_fbo(fbo_id, tid, is_depth_fbo, multisample, layer);}
 	assert(fbo_id > 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
 }
@@ -318,6 +318,7 @@ void set_temp_clear_color(colorRGBA const &clear_color) {
 void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize, point const &center, vector3d const &view_dir,
 	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap)
 {
+	assert(!(mipmap && tpair.multisample));
 	pre_render(xsize, ysize, 1, 1, center, view_dir); // setup matrices, etc.
 	tpair.ensure_tid(tsize, mipmap);
 	colorRGBA const clear_normal(0.5, 0.5, 0.5, 0.0);
@@ -325,7 +326,7 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 
 	for (unsigned d = 0; d < 2; ++d) { // {color, normal}
 		unsigned fbo_id(0);
-		enable_fbo(fbo_id, tpair.tids[d], 0); // too slow to create and free fbos every time?
+		enable_fbo(fbo_id, tpair.tids[d], 0, tpair.multisample); // too slow to create and free fbos every time?
 		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
 		set_temp_clear_color(clear_colors[d]);
 		draw_geom(d != 0);
@@ -340,11 +341,12 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysize, point const &center, vector3d const &view_dir,
 	colorRGBA const &bkg_color, bool use_depth_buffer, bool mipmap)
 {
+	assert(!(mipmap && atlas.multisample));
 	assert(atlas.nx == 2 && atlas.ny == 1); // for now
 	pre_render(atlas.nx*xsize, atlas.ny*ysize, atlas.nx, atlas.ny, center, view_dir); // setup matrices, etc.
 	atlas.ensure_tid(tsize, mipmap);
 	unsigned fbo_id(0);
-	enable_fbo(fbo_id, atlas.tid, 0); // too slow to create and free fbos every time?
+	enable_fbo(fbo_id, atlas.tid, 0, atlas.multisample); // too slow to create and free fbos every time?
 	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(atlas.nx*tsize, atlas.ny*tsize) : 0);
 	set_temp_clear_color(bkg_color); // FIXME: can only set a single clear color, should we draw a full quad to set the clear normal?
 	vector3d xlate(2.0*xsize, 0.0, 0.0);

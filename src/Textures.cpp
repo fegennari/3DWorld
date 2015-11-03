@@ -877,36 +877,33 @@ void texture_t::load_from_gl() { // also set tid?
 
 
 void bind_1d_texture(unsigned tid, bool is_array) {
-
 	glBindTexture((is_array ? GL_TEXTURE_1D_ARRAY : GL_TEXTURE_1D), tid);
 	assert(glIsTexture(tid)); // too slow?
 }
 
-
-void bind_2d_texture(unsigned tid, bool is_array) {
-
-	glBindTexture((is_array ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D), tid);
+void bind_2d_texture(unsigned tid, bool is_array, bool multisample) {
+	glBindTexture(get_2d_texture_target(is_array, multisample), tid);
 	assert(glIsTexture(tid)); // too slow?
 }
 
 
 // 2D texture
-void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy, bool is_array) {
+void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy, bool is_array, bool multisample) {
 
 	assert(tid == 0);
 	assert(!nearest || !mipmap);
-	int const target(is_array ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D);
+	int const target(get_2d_texture_target(is_array, multisample));
 	glGenTextures(1, &tid);
+	check_gl_error(600);
 
 	// select our current texture
-	bind_2d_texture(tid, is_array);
+	bind_2d_texture(tid, is_array, multisample);
+	if (multisample) return; // don't set any other state
 
 	// when texture area is small, use linear filter (bilinear filter the closest mipmap)
 	glTexParameteri(target, GL_TEXTURE_MIN_FILTER, (nearest ? GL_NEAREST : (mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR))); // GL_LINEAR_MIPMAP_NEAREST?
-
 	// when texture area is large, bilinear filter the first mipmap
 	glTexParameteri(target, GL_TEXTURE_MAG_FILTER, (nearest ? GL_NEAREST : GL_LINEAR));
-
 	// enable anisotropic filtering (slower but higher quality)
 	if (anisotropy > 1.0) {glTexParameterf(target, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);}
 
@@ -1824,17 +1821,18 @@ bool is_billboard_texture_transparent(point const *const points, point const &po
 }
 
 
-void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest) { // used with texture_pair_t/render-to-texture RGBA
+void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool mipmap, bool nearest, bool multisample) { // used with texture_pair_t/render-to-texture RGBA
 
 	assert(txsize > 0 && tysize > 0);
 	if (tid) return; // already created
-	setup_texture(tid, mipmap, 0, 0, 0, 0, nearest);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	setup_texture(tid, mipmap, 0, 0, 0, 0, nearest, 1.0, 0, multisample);
+	glTexImage2D(get_2d_texture_target(0, multisample), 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	unsigned const num_samples = 4;
+	if (multisample) {glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, num_samples, GL_RGBA8, txsize, tysize, false);}
 }
 
 
 void build_texture_mipmaps(unsigned tid, unsigned dim) {
-
 	bind_2d_texture(tid);
 	gen_mipmaps(dim);
 }
@@ -1848,15 +1846,15 @@ void texture_pair_t::free_context() {
 void texture_pair_t::bind_texture() const {
 
 	assert(is_valid());
-	bind_2d_texture(tids[0]);
+	bind_2d_texture(tids[0], 0, multisample);
 	set_active_texture(1);
-	bind_2d_texture(tids[1]);
+	bind_2d_texture(tids[1], 0, multisample);
 	set_active_texture(0);
 }
 
 void texture_pair_t::ensure_tid(unsigned tsize, bool mipmap) {
-	ensure_texture_loaded(tids[0], tsize, tsize, mipmap, 0); // color
-	ensure_texture_loaded(tids[1], tsize, tsize, mipmap, 0); // normal
+	ensure_texture_loaded(tids[0], tsize, tsize, mipmap, 0, multisample); // color
+	ensure_texture_loaded(tids[1], tsize, tsize, mipmap, 0, multisample); // normal
 }
 
 
@@ -1864,12 +1862,12 @@ void texture_atlas_t::free_context() {free_texture(tid);}
 
 void texture_atlas_t::bind_texture() const {
 	assert(tid);
-	bind_2d_texture(tid);
+	bind_2d_texture(tid, 0, multisample);
 }
 
 void texture_atlas_t::ensure_tid(unsigned base_tsize, bool mipmap) {
 	assert(nx > 0 && ny > 0);
-	ensure_texture_loaded(tid, nx*base_tsize, ny*base_tsize, mipmap, 0);
+	ensure_texture_loaded(tid, nx*base_tsize, ny*base_tsize, mipmap, 0, multisample);
 }
 
 
