@@ -42,8 +42,9 @@ vector3d  **vertex_normals = NULL;
 float     **charge_dist = NULL;
 float     **surface_damage = NULL;
 ripple_state **ripples = NULL;
-char      **mesh_draw = NULL;
-char      **water_enabled = NULL;
+unsigned char **mesh_draw = NULL;
+unsigned char **water_enabled = NULL;
+unsigned char **flower_weight = NULL;
 short     ***volume_matrix = NULL;
 
 extern bool last_int, mesh_invalidated;
@@ -246,7 +247,7 @@ void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, 
 
 // not always correct if !enabled[i][j]
 // Note: may be more accurate if we look at pairs of heights on both sides of {x,y}
-vector3d get_matrix_surf_norm(float **matrix, char **enabled, int xsize, int ysize, int x, int y) {
+vector3d get_matrix_surf_norm(float **matrix, unsigned char **enabled, int xsize, int ysize, int x, int y) {
 
 	assert(matrix);
 	float nx(0.0), ny(0.0);
@@ -272,7 +273,7 @@ vector3d get_matrix_surf_norm(float **matrix, char **enabled, int xsize, int ysi
 }
 
 
-void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize, int xpos, int ypos) {
+void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, unsigned char **enabled, int xsize, int ysize, int xpos, int ypos) {
 
 	vector3d const norm(get_matrix_surf_norm(matrix, enabled, xsize, ysize, xpos, ypos));
 	sn[ypos][xpos] = norm;
@@ -280,7 +281,7 @@ void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **
 }
 
 
-void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize) {
+void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, unsigned char **enabled, int xsize, int ysize) {
 
 	assert(matrix && vn && sn);
 

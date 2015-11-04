@@ -271,7 +271,7 @@ void add_explosion_particles(point const &pos, vector3d const &vadd, float vmag,
 void gen_gauss_rand_arr();
 
 // function prototypes - mesh_gen
-bool bmp_to_chars(char *fname, char **&data);
+bool bmp_to_chars(char const *const fname, unsigned char **&data);
 void gen_mesh(int surface_type, int keep_sin_table, int update_zvals);
 float do_glaciate_exp(float value);
 float get_rel_wpz();
@@ -317,9 +317,9 @@ void delete_matrices();
 void compute_matrices();
 void update_matrix_element(int xpos, int ypos);
 void update_mesh_height(int xpos, int ypos, int rad, float scale, float offset, int mode, bool is_large_change);
-vector3d get_matrix_surf_norm(float **matrix, char **enabled, int xsize, int ysize, int x, int y);
-void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize, int xpos, int ypos);
-void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, char **enabled, int xsize, int ysize);
+vector3d get_matrix_surf_norm(float **matrix, unsigned char **enabled, int xsize, int ysize, int x, int y);
+void calc_matrix_normal_at(float **matrix, vector3d **vn, vector3d **sn, unsigned char **enabled, int xsize, int ysize, int xpos, int ypos);
+void calc_matrix_normals(float **matrix, vector3d **vn, vector3d **sn, unsigned char **enabled, int xsize, int ysize);
 void get_matrix_point(int xpos, int ypos, point &pt);
 int  is_in_ice(int xpos, int ypos);
 float interpolate_mesh_zval(float xval, float yval, float rad, int use_real_equation, int ignore_ice, bool clamp_xy=0);

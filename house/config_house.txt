@@ -41,7 +41,7 @@ wind_velocity 0.4 0.2 0.0
 
 grass_density 250
 grass_size 0.02 0.002
-flower_density 0.5
+flower_density 0.8
 flower_color 1.0 1.0 0.0 # yellow
 
 use_waypoints 1
@@ -71,6 +71,7 @@ ship_def_file universe/ship_defs.txt
 mh_filename house/heightmap_house.bmp 1.1 0.0
 mesh_draw_bmp house/mesh_draw.bmp
 water_enabled_bmp house/water_enable.bmp
+flower_weight_bmp house/flower_weight.bmp
 
 #cobjs_out_filename house/cobjs_out.txt
 

@@ -30,7 +30,7 @@ extern int uxyz[], window_width, window_height, do_run, fire_key, display_mode, 
 extern unsigned NUM_THREADS;
 extern float zmax, zmin, fticks, univ_temp, temperature, atmosphere, vegetation, base_gravity, urm_static;
 extern float water_h_off_rel, init_temperature, camera_shake;
-extern char **water_enabled;
+extern unsigned char **water_enabled;
 extern unsigned team_credits[];
 extern colorRGBA base_cloud_color, base_sky_color;
 extern string user_text;

@@ -18,7 +18,7 @@ extern upos_point_type cur_origin;
 extern vector3d up_vector;
 extern colorRGB uw_atten_max, uw_atten_scale;
 extern pos_dir_up camera_pdu, player_pdu;
-extern char **mesh_draw;
+extern unsigned char **mesh_draw;
 extern float SCENE_SIZE[];
 extern rand_gen_t global_rand_gen;
 

@@ -97,17 +97,21 @@ void matrix_min_max(float **matrix, float &minval, float &maxval) {
 }
 
 void calc_zminmax() {
-
 	matrix_min_max(mesh_height, zmin, zmax);
 }
 
 
-bool bmp_to_chars(char *fname, char **&data) { // Note: supports all image formats
+bool bmp_to_chars(char const *const fname, unsigned char **&data) { // Note: supports all image formats
 
-	assert(fname != NULL);
+	assert(fname != nullptr);
 	texture_t texture(0, 7, MESH_X_SIZE, MESH_Y_SIZE, 0, 1, 0, fname, 0); // invert_y=0
 	texture.load(-1, 0, 0, 1); // generates fatal internal errors if load() fails, so return is always 1
-	assert(texture.width == MESH_X_SIZE && texture.height == MESH_Y_SIZE); // could make into an error
+	
+	if (texture.width != MESH_X_SIZE || texture.height != MESH_Y_SIZE || texture.ncolors != 1) {
+		std::cerr << "Error loading BMP file '" << fname << "': Expected image to be " << MESH_X_SIZE << "x" << MESH_Y_SIZE << "x" << 1
+			      << " but it was " << texture.width << "x" << texture.height << "x" << texture.ncolors << endl;
+		exit(1);
+	}
 	matrix_gen_2d(data);
 	memcpy(data[0], texture.get_data(), XY_MULT_SIZE*sizeof(char));
 	texture.free_data();

@@ -1508,12 +1508,18 @@ public:
 };
 
 
+bool bmp_file_to_binary_array(char const *const fn, unsigned char **&data) {
+	if (strlen(fn) > 0) {if (!bmp_to_chars(fn, data)) return 0;}
+	return 1;
+}
+
+
 // should be moved to another file eventually...
 // should use a hashtable here
 int load_config(string const &config_file) {
 
 	int gms_set(0), error(0);
-	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
+	char strc[MAX_CHARS] = {0}, md_fname[MAX_CHARS] = {0}, we_fname[MAX_CHARS] = {0}, fw_fname[MAX_CHARS] = {0}, include_fname[MAX_CHARS] = {0};
 	FILE *fp;
 	if (!open_file(fp, config_file.c_str(), "input configuration file")) return 0;
 
@@ -1893,6 +1899,9 @@ int load_config(string const &config_file) {
 		else if (str == "water_enabled_bmp") {
 			if (!read_str(fp, we_fname)) cfg_err("water_enabled_bmp command", error);
 		}
+		else if (str == "flower_weight_bmp") {
+			if (!read_str(fp, fw_fname)) cfg_err("flower_weight_bmp command", error);
+		}
 		else if (str == "end") {
 			break;
 		}
@@ -1916,8 +1925,9 @@ int load_config(string const &config_file) {
 	DISABLE_WATER = INIT_DISABLE_WATER;
 	XY_MULT_SIZE  = MESH_X_SIZE*MESH_Y_SIZE; // for bmp_to_chars() allocation
 	if (!gms_set) {sprintf(game_mode_string, "%ix%i", gmww, gmwh);}
-	if (strlen(md_fname) > 0) {if (!bmp_to_chars(md_fname, mesh_draw))     error = 1;}
-	if (strlen(we_fname) > 0) {if (!bmp_to_chars(we_fname, water_enabled)) error = 1;}
+	if (!bmp_file_to_binary_array(md_fname, mesh_draw    )) {error = 1;}
+	if (!bmp_file_to_binary_array(we_fname, water_enabled)) {error = 1;}
+	if (!bmp_file_to_binary_array(fw_fname, flower_weight)) {error = 1;}
 	if (error) exit(1);
 	return 1;
 }

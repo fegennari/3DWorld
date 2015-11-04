@@ -897,7 +897,11 @@ public:
 
 		for (unsigned y = 0; y < (unsigned)MESH_Y_SIZE; ++y) {
 			for (unsigned x = 0; x < (unsigned)MESH_X_SIZE; ++x) {
-				add_flowers(density_gen, get_grass_density(point(get_xval(x), get_yval(y), 0.0)), hthresh, -X_SCENE_SIZE, -Y_SCENE_SIZE, x, y, 1);
+				float density(1.0);
+				if (flower_weight != nullptr) {density *= flower_weight[y][x]/255.0;}
+				if (density == 0.0) continue;
+				density *= get_grass_density(point(get_xval(x), get_yval(y), 0.0));
+				add_flowers(density_gen, density, hthresh, -X_SCENE_SIZE, -Y_SCENE_SIZE, x, y, 1);
 			}
 		}
 		generated = 1;

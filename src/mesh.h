@@ -114,8 +114,9 @@ extern vector3d  **vertex_normals;
 extern float     **charge_dist;
 extern float     **surface_damage;
 extern ripple_state **ripples;
-extern char      **mesh_draw;
-extern char      **water_enabled;
+extern unsigned char **mesh_draw;
+extern unsigned char **water_enabled;
+extern unsigned char **flower_weight;
 extern short     ***volume_matrix;
 
 
