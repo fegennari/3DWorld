@@ -51,7 +51,7 @@ hmap_params_t hmap_params;
 
 
 extern bool combined_gu;
-extern int xoff, yoff, xoff2, yoff2, world_mode, rand_gen_index, mesh_scale_change, display_mode;
+extern int xoff, yoff, xoff2, yoff2, world_mode, rand_gen_index, mesh_rgen_index, mesh_scale_change, display_mode;
 extern int read_heightmap, read_landscape, do_read_mesh, mesh_seed, scrolling, camera_mode, invert_mh_image;
 extern double c_radius, c_phi, c_theta;
 extern float water_plane_z, temperature, mesh_file_scale, mesh_file_tz, MESH_HEIGHT, XY_SCENE_SIZE;
@@ -198,7 +198,7 @@ void gen_mesh_sine_table(float **matrix, int x_offset, int y_offset, int xsize, 
 
 void apply_mesh_rand_seed(rand_gen_t &rgen) {
 	if (mesh_seed != 0) {rgen.set_state(mesh_seed, 12345);}
-	else if (mesh_gen_mode > 0) {rgen.set_state(rand_gen_index+1, 12345);}
+	else if (mesh_gen_mode > 0) {rgen.set_state(mesh_rgen_index+1, 12345);}
 }
 
 
@@ -1047,6 +1047,7 @@ bool load_state(const char *filename) {
 		}
 	}
 	fclose(fp);
+	mesh_rgen_index = rand_gen_index;
 	update_cpos();
 	if (world_mode == WMODE_GROUND) {gen_scene(1, (world_mode == WMODE_GROUND), 1, 1, 0);}
 	cout << "State file '" << filename << "' has been loaded." << endl;
