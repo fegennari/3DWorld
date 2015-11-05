@@ -45,7 +45,7 @@ vector<teleporter> teleporters;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, scene_smap_vbo_invalid, use_voxel_cobjs, tree_4th_branches;
+extern bool clear_landscape_vbo, scene_smap_vbo_invalid, use_voxel_cobjs, tree_4th_branches, lm_alloc;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs, precip_mode;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
@@ -696,8 +696,10 @@ void free_all_coll_objects() {
 		assert(coll_objects.drawn_ids.empty());
 		assert(coll_objects.platform_ids.empty());
 	}
-	czmin = model_czmin; // reset zmin/zmax to original values before cobjs were added
-	czmax = model_czmax;
+	if (!lm_alloc) { // if the lighting has already been computed, we can't change czmin/czmax/get_zval()/get_zpos()
+		czmin = model_czmin; // reset zmin/zmax to original values before cobjs were added
+		czmax = model_czmax;
+	}
 }
 
 
