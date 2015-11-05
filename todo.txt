@@ -14,10 +14,15 @@ TT shadows:
   - Separate tree AO vs. shadows per texel - use light dir and mesh normal for shadow
   - Lower res distant shadow map for tiled terrain mode with smooth blend
 
-Bullet physics for movable boxes
-Game editor
-
 Reflections on specular surfaces (such as the gold dragon)
   - Ray traced at low res and filtered (like the water surface in ground mode)
   - Second rendering pass with one or more frustum (like tiled terrain mirrored water)
   - Precomputed cube map
+
+Indirect lighting magnitude in 6 directions (+/- x,y,z)
+  - how to combine sun, moon, sky, and local lighting values?
+
+Bullet physics for movable boxes
+In-Game cobjs editor
+Render tree billboard images at 2x resolution or use multisample
+Sand dunes normal map texture for tiled terrain mode
