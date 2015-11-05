@@ -518,11 +518,24 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 	s.end_shader();
 }
 
+typedef vector<pair<float, int> > vect_sorted_ix;
+
+bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { // Note: increases CPU time but decreases GPU time
+
+	//return 0; // doesn't make much difference
+	if (!c.is_big_occluder() || c.group_id >= 0) return 0;
+	float const dist(distance_to_camera(c.get_center_pt()));
+	if (c.get_area() < 0.05*dist*dist) return 0;
+	if (!camera_pdu.cube_visible(c)) return 0;
+	out.push_back(make_pair(dist, cix));
+	return 1;
+}
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_trans) {
 
 	//RESET_TIME;
-	static vector<pair<float, int> > draw_last;
+	static vect_sorted_ix draw_last;
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
@@ -535,8 +548,8 @@ void draw_coll_surfaces(bool draw_trans) {
 	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs;
 	
 	if (!draw_trans) { // draw solid
-		vector<pair<float, int> > large_cobjs;
-		draw_last.resize(0);
+		vect_sorted_ix large_cobjs[2]; // {normal_map=0, normal_map=1}
+		draw_last.clear();
 
 		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 			unsigned cix(*i);
@@ -546,26 +559,21 @@ void draw_coll_surfaces(bool draw_trans) {
 			bool const cube_poly((c.cp.flags & COBJ_WAS_CUBE) != 0);
 			bool const use_tex_coords((cube_poly && c.cp.tid >= 0) || ((c.is_cylinder() || c.type == COLL_SPHERE || c.type == COLL_CAPSULE) && c.cp.tscale == 0.0));
 
-			if (c.cp.normal_map >= 0) {
+			if (c.cp.normal_map >= 0) { // common case
 				assert(c.group_id < 0);
 				assert(!c.is_semi_trans());
+				if (!use_tex_coords && check_big_occluder(c, cix, large_cobjs[1])) continue;
 				(use_tex_coords ? tex_coord_nm_cobjs : normal_map_cobjs).push_back(cix);
 				continue;
 			}
-			if (use_tex_coords) {
+			if (use_tex_coords) { // uncommon case (typically movable objects)
 				assert(c.group_id < 0);
 				assert(!c.is_semi_trans());
 				tex_coord_cobjs.push_back(cix); 
 				continue;
 			}
-			if (c.is_big_occluder() && c.group_id < 0) { // Note: doesn't apply to normal mapped objects
-				float const dist(distance_to_camera(c.get_center_pt()));
+			if (check_big_occluder(c, cix, large_cobjs[0])) continue;
 
-				if (c.get_area() > 0.01*dist*dist) { // increases CPU time but decreases GPU time
-					if (camera_pdu.cube_visible(c)) {large_cobjs.push_back(make_pair(dist, *i));}
-					continue;
-				}
-			}
 			if (c.is_semi_trans()) { // slow when polygons are grouped
 				float dist(distance_to_camera(c.get_center_pt()));
 				if (c.type == COLL_SPHERE) {dist -= c.radius;} // distance to surface closest to the camera
@@ -583,15 +591,17 @@ void draw_coll_surfaces(bool draw_trans) {
 				}
 			}
 		} // for i
+		//cout << "cobjs: " << coll_objects.drawn_ids.size() << ", nm: " << normal_map_cobjs.size() << ", tc: " << tex_coord_cobjs.size() << ", tcnm: " << tex_coord_nm_cobjs.size() << ", lg0: " << large_cobjs[0].size() << ", lg1: " << large_cobjs[1].size() << ", trans: " << draw_last.size() << endl;
 		end_group(last_group_id);
 		cdb.flush();
-		sort(large_cobjs.begin(), large_cobjs.end()); // sort front to back for early z culling
+		for (unsigned d = 0; d < 2; ++d) {sort(large_cobjs[d].begin(), large_cobjs[d].end());} // sort front to back for early z culling
 
-		for (vector<pair<float, int> >::const_iterator i = large_cobjs.begin(); i != large_cobjs.end(); ++i) {
+		for (auto i = large_cobjs[0].begin(); i != large_cobjs[0].end(); ++i) { // not normal mapped
 			unsigned cix(i->second);
 			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, s, cdb);
 		}
 		cdb.flush();
+		for (auto i = large_cobjs[1].begin(); i != large_cobjs[1].end(); ++i) {normal_map_cobjs.push_back(i->second);} // normal mapped
 	} // end draw solid
 	else { // draw transparent
 		if (is_smoke_in_use()) {
