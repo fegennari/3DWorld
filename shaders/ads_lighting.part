@@ -30,12 +30,14 @@ float get_spec_intensity(in vec3 normal, in vec3 light_dir, in vec3 eye_dir) {
 	return mag;
 }
 
+vec3 get_wet_specular_color(in float wet_scale) {
+	return mix(specular_color.rgb, min(vec3(1.0), specular_color.rgb+vec3(0.7)), wet_scale*wet_effect);
+}
 vec3 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec3 spec_light_color) {
 #ifdef USE_SPEC_MAP
 	spec_light_color *= get_spec_color();
 #endif
-	vec3 sc = mix(specular_color.rgb, min(vec3(1.0), specular_color.rgb+vec3(0.7)), wet_effect);
-	return spec_light_color * sc * get_spec_intensity(normal, light_dir, normalize(-eye_pos));
+	return spec_light_color * get_wet_specular_color(1.0) * get_spec_intensity(normal, light_dir, normalize(-eye_pos));
 }
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later

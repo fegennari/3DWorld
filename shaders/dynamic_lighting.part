@@ -66,6 +66,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 	mat3 TBN = get_tbn(1.0);
 #endif
 	const float gamma = 2.2;
+	float wet_scale = max(normal.z, 0.0); // only enable the wet effect when the normal points up (top surface) - doesn't apply to spec shininess though
 	vec3 dl_color = vec3(0.0);
 
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
@@ -135,7 +136,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #else
 		float spec_mag = 0.0;
 #endif // NO_DL_SPECULAR
-		vec3 spec_color= specular_color.rgb;
+		vec3 spec_color= get_wet_specular_color(wet_scale);
 #ifdef USE_SPEC_MAP
 		spec_color    *= get_spec_color();
 #endif
@@ -148,7 +149,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		}
 #endif // HAS_DLIGHT_SMAP
 		// FIXME: specular should have a lower falloff and its own intensity - however, this will require a larger radius and impact performance
-		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
+		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag*mix(1.0, 0.3, wet_scale*wet_effect)) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space
 	} // for i
 	color  = apply_power_signed(color, gamma); // to linear space
