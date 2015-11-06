@@ -6,6 +6,7 @@
 #define _GL_EXT_ARB_H_
 
 unsigned const PRIMITIVE_RESTART_IX = 0xFFFFFFFF;
+unsigned const NUM_TEX_MS_SAMPLES   = 4; // or 8
 
 
 inline GLenum get_internal_texture_format(int ncolors, bool compressed=0, bool linear_space=0) { // Note: ncolors=2 is unused
@@ -53,7 +54,7 @@ void create_fbo(unsigned &fbo_id, unsigned depth_tid, bool is_depth_fbo=0, bool 
 void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo=0, bool multisample=0, unsigned *layer=nullptr);
 void disable_fbo();
 void free_fbo(unsigned &fbo_id);
-unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize);
+unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisample=0);
 void disable_and_free_render_buffer(unsigned &render_buffer);
 bool gen_mipmaps(unsigned dim=2);
 

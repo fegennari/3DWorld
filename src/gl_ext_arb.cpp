@@ -214,8 +214,7 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 	glGenFramebuffers(1, &fbo_id);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id);
 	
-	if (is_depth_fbo) {
-		// Instruct openGL that we won't bind a color texture with the currently binded FBO
+	if (is_depth_fbo) { // Instruct openGL that we won't bind a color texture with the currently binded FBO
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
 	}
@@ -224,6 +223,7 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 	assert(glIsTexture(tid));
 
 	if (layer) {
+		assert(!multisample); // untested; probably doesn't work
 		glFramebufferTextureLayer(GL_FRAMEBUFFER, (is_depth_fbo ? GL_DEPTH_ATTACHMENT : GL_COLOR_ATTACHMENT0), tid, 0, *layer);
 	}
 	else {
@@ -232,6 +232,7 @@ void create_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 	check_gl_error(551);
 	// Check FBO status
 	GLenum const status(glCheckFramebufferStatus(GL_FRAMEBUFFER));
+	assert(status != GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE);
 	assert(status == GL_FRAMEBUFFER_COMPLETE);
 	
 	// Switch back to window-system-provided framebuffer
@@ -246,26 +247,24 @@ void enable_fbo(unsigned &fbo_id, unsigned tid, bool is_depth_fbo, bool multisam
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_id); // Rendering offscreen
 }
 
-
 void disable_fbo() {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-
 void free_fbo(unsigned &fbo_id) {
-
 	if (fbo_id > 0) {glDeleteFramebuffers(1, &fbo_id);}
 	fbo_id = 0;
 }
 
 
-unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize) {
+unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisample) {
 
 	unsigned depthrenderbuffer(0);
 	glGenRenderbuffers(1, &depthrenderbuffer);
 	assert(depthrenderbuffer > 0);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthrenderbuffer);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, xsize, ysize);
+	if (multisample) {glRenderbufferStorageMultisample(GL_RENDERBUFFER, NUM_TEX_MS_SAMPLES, GL_DEPTH_COMPONENT16, xsize, ysize);}
+	else {glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, xsize, ysize);}
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthrenderbuffer);
 	return depthrenderbuffer;
 }
@@ -327,9 +326,10 @@ void render_to_texture_t::render(texture_pair_t &tpair, float xsize, float ysize
 	for (unsigned d = 0; d < 2; ++d) { // {color, normal}
 		unsigned fbo_id(0);
 		enable_fbo(fbo_id, tpair.tids[d], 0, tpair.multisample); // too slow to create and free fbos every time?
-		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize) : 0);
+		unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(tsize, tsize, tpair.multisample) : 0);
 		set_temp_clear_color(clear_colors[d]);
 		draw_geom(d != 0);
+		//if (tpair.multisample) {glBlitFramebuffer(...);} // ???
 		if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
 		free_fbo(fbo_id);
 		if (mipmap) {build_texture_mipmaps(tpair.tids[d], 2);}
@@ -347,7 +347,7 @@ void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysiz
 	atlas.ensure_tid(tsize, mipmap);
 	unsigned fbo_id(0);
 	enable_fbo(fbo_id, atlas.tid, 0, atlas.multisample); // too slow to create and free fbos every time?
-	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(atlas.nx*tsize, atlas.ny*tsize) : 0);
+	unsigned render_buffer(use_depth_buffer ? create_depth_render_buffer(atlas.nx*tsize, atlas.ny*tsize, atlas.multisample) : 0);
 	set_temp_clear_color(bkg_color); // FIXME: can only set a single clear color, should we draw a full quad to set the clear normal?
 	vector3d xlate(2.0*xsize, 0.0, 0.0);
 	rotate_vector3d_by_vr(-plus_z, view_dir, xlate);
@@ -357,6 +357,7 @@ void render_to_texture_t::render(texture_atlas_t &atlas, float xsize, float ysiz
 		draw_geom(d != 0);
 		translate_to(xlate); // shift to next sub-texture region
 	}
+	//if (tpair.multisample) {glBlitFramebuffer(...);} // ???
 	if (use_depth_buffer) {disable_and_free_render_buffer(render_buffer);}
 	free_fbo(fbo_id);
 	if (mipmap) {build_texture_mipmaps(atlas.tid, 2);} // Note: if mipmapping is enabled, we should use a buffer region between the two sub-textures

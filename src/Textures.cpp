@@ -1826,9 +1826,8 @@ void ensure_texture_loaded(unsigned &tid, unsigned txsize, unsigned tysize, bool
 	assert(txsize > 0 && tysize > 0);
 	if (tid) return; // already created
 	setup_texture(tid, mipmap, 0, 0, 0, 0, nearest, 1.0, 0, multisample);
-	glTexImage2D(get_2d_texture_target(0, multisample), 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	unsigned const num_samples = 4;
-	if (multisample) {glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, num_samples, GL_RGBA8, txsize, tysize, false);}
+	if (multisample) {glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, NUM_TEX_MS_SAMPLES, GL_RGBA8, txsize, tysize, false);}
+	else {glTexImage2D(get_2d_texture_target(0, multisample), 0, GL_RGBA8, txsize, tysize, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);}
 }
 
 
