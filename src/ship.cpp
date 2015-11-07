@@ -814,6 +814,20 @@ void add_player_ship_engine_light() {
 }
 
 
+void setup_shield_shader(shader_t &shader, int noise_tu_id) {
+	shader.set_vert_shader("no_lighting_pos_tc");
+	shader.set_frag_shader("ship_shields");
+	shader.begin_shader();
+	shader.add_uniform_float("min_alpha", 0.001);
+	shader.add_uniform_int("tex0", 0);
+	shader.add_uniform_int("noise_tex", noise_tu_id);
+	set_3d_texture_as_current(get_noise_tex_3d(64, 1), noise_tu_id); // grayscale noise
+	static float shields_time(0.0);
+	if (animate2) {shields_time += fticks; if (shields_time > 1.0E4) {shields_time = 0.0;}} // reset when large to avoid FP error
+	shader.add_uniform_float("time", shields_time);
+}
+
+
 void draw_univ_objects() {
 
 	//RESET_TIME;
@@ -865,16 +879,7 @@ void draw_univ_objects() {
 
 	// setup emissive shader, which is used for ship shields and EMP (will be disabled by ship draw shader)
 	//emissive_shader.begin_simple_textured_shader(0.001); // textured, no lighting
-	emissive_shader.set_vert_shader("no_lighting_pos_tc");
-	emissive_shader.set_frag_shader("ship_shields");
-	emissive_shader.begin_shader();
-	emissive_shader.add_uniform_float("min_alpha", 0.001);
-	emissive_shader.add_uniform_int("tex0", 0);
-	emissive_shader.add_uniform_int("noise_tex", 1);
-	set_3d_texture_as_current(get_noise_tex_3d(64, 1), 1); // grayscale noise
-	static float emissive_time(0.0);
-	if (animate2) {emissive_time += fticks; if (emissive_time > 1.0E4) {emissive_time = 0.0;}}
-	emissive_shader.add_uniform_float("time", emissive_time);
+	setup_shield_shader(emissive_shader, 1);
 
 	// draw ubojs
 	shader_t s;

@@ -13,6 +13,7 @@ float const JUMP_COOL  = 0.6; // cooloff time between jumps
 float const JUMP_TIME  = 0.2; // time of jump acceleration
 float const JUMP_ACCEL = 1.0; // jump acceleration
 
+unsigned const HIT_TIME     = 6;
 int const NUM_WEAPONS       = 15;
 unsigned const POWERUP_TIME = unsigned(40*TICKS_PER_SECOND);
 int const dodgeball_tids[]  = {SKULL_TEX, RADIATION_TEX, YUCK_TEX};

@@ -13,8 +13,6 @@
 
 unsigned const SMILEY_MAX_TRIES   = 100;
 float const SMILEY_DIR_FACTOR     = 0.05;
-unsigned const HIT_TIME           = 6;
-
 float const HEALTH_PER_DAMAGE     = 0.1;
 
 unsigned const NUM_BS             = 100;

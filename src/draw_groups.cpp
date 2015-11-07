@@ -63,6 +63,7 @@ colorRGBA get_glow_color(dwobject const &obj, bool shrapnel_cscale);
 
 int same_team(int source, int target); // gameplay
 void draw_one_star(colorRGBA const &colorA, colorRGBA const &colorB, point const &pos, float radius, int ndiv, bool add_halo); // universe
+void setup_shield_shader(shader_t &shader, int noise_tu_id); // ship.cpp
 
 
 
@@ -301,8 +302,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	switch (type) {
 	case SMILEY:
 		if (!(obj.flags & CAMERA_VIEW)) {
-			draw_smiley(pos, obj.orientation, radius, ndiv, obj.time, obj.health, j,
-				(in_ammo ? NULL : &objg.get_td()->get_mesh(j)), shader);
+			draw_smiley(pos, obj.orientation, radius, ndiv, obj.time, obj.health, j, (in_ammo ? NULL : &objg.get_td()->get_mesh(j)), shader);
 		}
 		break;
 	case SFPART:
@@ -989,16 +989,10 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			fgPopMatrix();
 			break;
 
-		case PU_INVISIBILITY:
-			{
+		case PU_INVISIBILITY: {
 				float const put(float(sstates[id].powerup_time)/TICKS_PER_SECOND), init_put(float(POWERUP_TIME)/TICKS_PER_SECOND);
-
-				if ((init_put - put) < 1.0) { // fading out
-					alpha = (1.0 - (init_put - put));
-				}
-				else if (put < 1.0) { // fading in
-					alpha = (1.0 - put);
-				}
+				if ((init_put - put) < 1.0) {alpha = (1.0 - (init_put - put));} // fading out
+				else if (put < 1.0)         {alpha = (1.0 - put);} // fading in
 				else { // fully invisible
 					fgPopMatrix();
 					return;
@@ -1071,16 +1065,29 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	int const hit(get_smiley_hit(hit_dir, id));
 
 	if (hit > 0) { // hit - draw damage or shields
-		select_texture(SBLUR_TEX);
 		enable_blend();
-		colorRGBA const color2((sstates[id].shields < 0.01) ? BLOOD_C : GREEN); // black color for burns?
-		shader.set_cur_color(colorRGBA(color2, alpha*hit/6.0));
 		fgPushMatrix();
-		shader.add_uniform_float("min_alpha", 0.05);
 		translate_to(pos);
 		rotate_sphere_tex_to_dir(hit_dir);
-		draw_sphere_vbo(all_zeros, 1.015*radius, ndiv, 1);
-		shader.add_uniform_float("min_alpha", 0.01);
+		select_texture(SBLUR_TEX);
+
+		if (powerup == PU_SHIELD || sstates[id].shields > 0.01) { // new shields mode
+			shader.disable();
+			shader_t shield_shader;
+			setup_shield_shader(shield_shader, 11);
+			shield_shader.set_cur_color(colorRGBA(GREEN, alpha*hit/HIT_TIME));
+			set_additive_blend_mode();
+			draw_sphere_vbo(all_zeros, 1.015*radius, ndiv, 1);
+			set_std_blend_mode();
+			shield_shader.end_shader();
+			shader.enable();
+		}
+		else {
+			shader.set_cur_color(colorRGBA(BLOOD_C, alpha*hit/HIT_TIME)); // black color for burns?
+			shader.add_uniform_float("min_alpha", 0.05);
+			draw_sphere_vbo(all_zeros, 1.015*radius, ndiv, 1);
+			shader.add_uniform_float("min_alpha", 0.01);
+		}
 		fgPopMatrix();
 
 		if (powerup == PU_SHIELD) {
@@ -1088,10 +1095,10 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			shader.set_cur_color(colorRGBA(PURPLE, alpha)); // not scaled
 			draw_sphere_vbo(pos, 1.05*radius, ndiv, 1);
 		}
-		disable_blend();
 		select_no_texture();
+		disable_blend();
 	}
-	if (alpha < 1.0) disable_blend();
+	if (alpha < 1.0) {disable_blend();}
 }
 
 
