@@ -30,4 +30,3 @@ Sand dunes normal map texture for tiled terrain mode
 Smiley hit shields use shader like ships
 Code to render the scene to a custom view frustum for reflections
 Online 3D models for weapons
-Rain affects physics/friction

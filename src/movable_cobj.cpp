@@ -997,7 +997,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 						float const line_t(get_closest_pt_on_line_t(pushed_from, cobj.points[0], cobj.points[1]));
 						float const torque(CLIP_TO_pm1(2.0f*(line_t - 0.5f))); // 0.0 at center, +/-1.0 at cylinder ends
 						float const abs_torque(fabs(torque));
-						float const friction_factor = 0.3;
+						float const friction_factor(cobj.is_wet() ? 0.15 : 0.3);
 
 						if (abs_torque > friction_factor) { // pushed near the end of the cylinder, so there is some torque
 							point const closest_pt(cobj.points[0] + line_t*cdir);

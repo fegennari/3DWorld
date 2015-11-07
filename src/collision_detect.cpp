@@ -1358,12 +1358,14 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		if (otype.elasticity == 0.0 || cobj.cp.elastic == 0.0 || !obj.object_bounce(3, norm, cobj.cp.elastic, 0.0, pvel)) {
 			if (static_top_coll) {
 				obj.flags |= STATIC_COBJ_COLL; // collision with top
-				if (otype.flags & OBJ_IS_DROP) obj.velocity = zero_vector;
+				if (otype.flags & OBJ_IS_DROP) {obj.velocity = zero_vector;}
 			}
 			if (type != DYNAM_PART && obj.velocity != zero_vector) {
 				assert(TIMESTEP > 0.0);
-				if (friction > 0.0) obj.velocity *= (1.0 - min(1.0f, (tstep/TIMESTEP)*friction)); // apply kinetic friction
-				//for (unsigned i = 0; i < 3; ++i) obj.velocity[i] *= (1.0 - fabs(norm[i])); // norm must be normalized
+				float friction_adj(friction);
+				if (norm.z > 0.25 && cobj.is_wet()) {friction_adj *= 0.25;} // slippery when wet
+				if (friction_adj > 0.0) {obj.velocity *= (1.0 - min(1.0f, (tstep/TIMESTEP)*friction_adj));} // apply kinetic friction
+				//for (unsigned i = 0; i < 3; ++i) {obj.velocity[i] *= (1.0 - fabs(norm[i]));} // norm must be normalized
 				orthogonalize_dir(obj.velocity, norm, obj.velocity, 0); // rolling friction model
 			}
 		}

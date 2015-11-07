@@ -699,7 +699,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 					vector3d const wnorm(has_water(xpos, ypos) ? wat_vert_normals[ypos][xpos] : plus_z);
 					set_orient_for_coll(&wnorm);
 				}
-				if (WATER_SURF_FRICTION < 1.0) air_factor = (1.0 - WATER_SURF_FRICTION)*otype.air_factor;
+				if (WATER_SURF_FRICTION < 1.0) {air_factor = (1.0 - WATER_SURF_FRICTION)*otype.air_factor;}
 			}
 			else {
 				air_factor = otype.air_factor;
@@ -708,9 +708,7 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 		if (flags & Z_STOPPED) {
 			int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
-			if (!point_outside_mesh(xpos, ypos) && (pos.z - radius) > water_matrix[ypos][xpos] &&
-				((friction < 2.0*STICK_THRESHOLD) || (friction < rand_uniform(2.0, 2.5)*STICK_THRESHOLD)))
-			{
+			if (!point_outside_mesh(xpos, ypos) && (pos.z - radius) > water_matrix[ypos][xpos] && ((friction < 2.0*STICK_THRESHOLD) || (friction < rand_uniform(2.0, 2.5)*STICK_THRESHOLD))) {
 				flags &= ~Z_STOPPED;
 			}
 			else {
@@ -886,13 +884,9 @@ int dwobject::object_still_stopped(int obj_index) {
 	float const mh(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 
 	if ((zval - SMALL_NUMBER) <= mh) {
-		if (object_types[type].friction_factor >= STICK_THRESHOLD) {
-			return 1;
-		}
-		else {
-			if (status == 1 || status == 2) status = 3;
-			return 0;
-		}
+		if (object_types[type].friction_factor >= STICK_THRESHOLD) return 1;
+		if (status == 1 || status == 2) status = 3;
+		return 0;
 	}
 	point const old_pos(pos);
 	pos.z = zval;
@@ -920,7 +914,7 @@ int dwobject::surface_advance() {
 		if (pos.z < (mesh_height - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
 		pos.z = mesh_height; // recover it
 	}
-	float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos));
+	float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos)*(is_rain_enabled() ? 0.5 : 1.0));
 	float const friction(otype.friction_factor + grass_friction);
 	
 	if (friction >= STICK_THRESHOLD) { // stopped by grass
