@@ -10,7 +10,7 @@
 
 float const TT_PRECIP_DIST = 20.0;
 
-extern int animate2, begin_motion, display_mode, camera_coll_id, precip_mode;
+extern int animate2, begin_motion, display_mode, camera_coll_id, precip_mode, DISABLE_WATER;
 extern float temperature, fticks, zmin, water_plane_z, brightness, XY_SCENE_SIZE;
 extern vector3d wind;
 extern int coll_id[];
@@ -58,6 +58,14 @@ public:
 		}
 		return zero_vector; // never gets here
 	}
+	void maybe_add_rain_splash(point const &pos, point const &bot_pos, float z_int, deque<sphere_t> *splashes, int x, int y, bool in_water) {
+		if (splashes == nullptr) return;
+		float const t((z_int - pos.z)/(bot_pos.z - pos.z));
+		point const cpos(pos + (bot_pos - pos)*t);
+		if (!camera_pdu.point_visible_test(cpos)) return;
+		splashes->push_back(sphere_t(cpos, 1.0));
+		if (in_water && (rgen.rand() & 1)) {add_splash(cpos, x, y, 0.5, 0.01, 0);} // 50% of the time
+	}
 	void check_pos(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
 		if (0) {}
 		else if (pos == all_zeros) {pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));} // initial location
@@ -67,15 +75,15 @@ public:
 			int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
 			
 			if (!point_outside_mesh(x, y)) {
-				if (pos.z < mesh_height[y][x]) {
-					if (splashes != nullptr) {
-						float const t((mesh_height[y][x] - pos.z)/(bot_pos.z - pos.z));
-						point const cpos(pos + (bot_pos - pos)*t);
-						if (camera_pdu.point_visible_test(cpos)) {splashes->push_back(sphere_t(cpos, 1.0));} // line_intersect_mesh(pos, bot_pos, cpos);
-					}
+				if (!DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
+					if (rgen.rand() & 1) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], splashes, x, y, 1);} // 50% of the time
 					pos = gen_pt(cur_zmax); // start again near the top
 				}
-				else if (bot_pos.z < v_collision_matrix[y][x].zmax) {
+				else if (pos.z < mesh_height[y][x]) { // mesh collision
+					maybe_add_rain_splash(pos, bot_pos, mesh_height[y][x], splashes, x, y, 0); // line_intersect_mesh(pos, bot_pos, cpos);
+					pos = gen_pt(cur_zmax); // start again near the top
+				}
+				else if (bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
 					if (splashes != nullptr) {
 						point cpos;
 						vector3d cnorm;
