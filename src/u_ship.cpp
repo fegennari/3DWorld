@@ -1408,10 +1408,11 @@ bool u_ship::test_self_intersect(point const &fpos, point const &tpos, vector3d 
 
 bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 
-	unsigned const wcount(get_weapon().wcount);
-	if (reset_timer > 0 || wcount == 0)          return 0; // can't fire when dying or have no weapon
-	bool const is_player(is_player_ship());
-	unsigned const weapon_id((is_player && ctrl_key_pressed) ? UWEAP_QUERY : get_weapon_id()); // player control click => query
+	bool const is_player(is_player_ship()), use_query(is_player && ctrl_key_pressed);
+	ship_weapon const &weapon(get_weapon());
+	unsigned const wcount(weapon.wcount);
+	if (!use_query && (reset_timer > 0 || wcount == 0)) return 0; // can't fire when dying or have no weapon
+	unsigned const weapon_id(use_query ? UWEAP_QUERY : weapon.wclass); // player control click => query
 	assert(weapon_id < us_weapons.size());
 	us_weapon const &weap(us_weapons[weapon_id]);
 	if (!weap.hyper_fire && !check_fire_speed()) return 0;
@@ -1423,7 +1424,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 	int intersect_type(base_intersect_type);
 	if (weap.hit_proj) intersect_type |= OBJ_TYPE_PROJ;
 	if (weap.hit_all)  intersect_type |= OBJ_TYPE_FREE;
-	unsigned num_shots(1), shots_per_round(1), remainder(0), used_ammo;
+	unsigned num_shots(1), shots_per_round(1), remainder(0), used_ammo(0);
 	free_obj *fobj;
 	static vector<point> offsets;
 	offsets.resize(0);
@@ -1436,18 +1437,14 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 	}
 	else {
 		if (weap.parallel_fire || specs().parallel_fire) {
-			if (nwpts > 1) {
-				num_shots = nwpts;
-			}
-			else if (wspread > 1) {
-				num_shots = wspread;
-			}
+			if      (nwpts   > 1) {num_shots = nwpts;  }
+			else if (wspread > 1) {num_shots = wspread;}
 		}
 		used_ammo = num_shots;
 	}
 	if (weap.need_ammo()) {
-		num_shots = min(num_shots, get_weapon().ammo);
-		used_ammo = min(used_ammo, get_weapon().ammo);
+		num_shots = min(num_shots, weapon.ammo);
+		used_ammo = min(used_ammo, weapon.ammo);
 	}
 	assert(num_shots > 0);
 
@@ -1557,6 +1554,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 			case UWEAP_QUERY:
 				{
 					assert(is_player);
+					used_ammo = 0;
 					bool const rename(weapon_id == UWEAP_RENAME), query(weapon_id == UWEAP_TARGET), target(weapon_id == UWEAP_TARGET);
 					line_int_data li_data(fpos, fdir, wrange, this, NULL, 0, (query ? 2 : 0));
 					uobject *sobj(line_intersect_objects(li_data, fobj, (target ? OBJ_TYPE_SHIP : intersect_type)));
