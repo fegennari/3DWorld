@@ -82,6 +82,7 @@ void grass_manager_t::add_grass_blade(point const &pos, float cscale, bool on_me
 	vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
 	vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
 	float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
+	float const grass_color_var((world_mode == WMODE_INF_TERRAIN) ? 0.5 : 1.0); // less color variation in tiled terrain mode (to match ground texture)
 	float const base_color[3] = {0.25, 0.6, 0.08};
 	float const mod_color [3] = {0.3,  0.3, 0.12};
 	float const lbc_mult  [3] = {0.2,  0.4, 0.0 };
@@ -89,7 +90,7 @@ void grass_manager_t::add_grass_blade(point const &pos, float cscale, bool on_me
 	unsigned char color[3];
 
 	for (unsigned i = 0; i < 3; ++i) {
-		float const ccomp(CLIP_TO_01(cscale*(base_color[i] + lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float())));
+		float const ccomp(CLIP_TO_01(cscale*(base_color[i] + grass_color_var*lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float())));
 		color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
 	}
 	float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
