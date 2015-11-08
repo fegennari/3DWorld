@@ -952,14 +952,12 @@ void display(void) {
 		if (display_framerate && (world_mode == WMODE_INF_TERRAIN || (world_mode == WMODE_GROUND && !game_mode && camera_mode == 1))) {
 			draw_compass_and_alt();
 		}
-		if (indir_lighting_updated()) {
-			draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");
-		}
+		if (indir_lighting_updated()) {draw_text(PURPLE, 0.007*(float)window_width/(float)window_height, -0.009, -0.02, "Lighting Updating");}
 		if (TIMETEST) PRINT_TIME("X");
 
 		if (dynamic_mesh_scroll && world_mode == WMODE_GROUND && camera_mode == 1 && !camera_view) {
 			float const cdist(max(fabs(camera.x/X_SCENE_SIZE), fabs(camera.y/Y_SCENE_SIZE)));
-			if (cdist > REL_SCROLL_DIST) scroll_scene();
+			if (cdist > REL_SCROLL_DIST) {scroll_scene();}
 		}
 	} // not universe mode
 #ifdef USE_GPU_TIMER
@@ -969,6 +967,38 @@ void display(void) {
 	swap_buffers_and_redraw();
 	check_gl_error(11);
 	if (TIMETEST) PRINT_TIME("Y");
+}
+
+
+// Note: assumes the camera is not underwater
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
+
+	pos_dir_up const prev_camera_pdu(camera_pdu);
+	camera_pdu = pdu;
+	
+	// draw background
+	if (combined_gu) {draw_universe_bkg(0.0, 1);} // infinite universe as background in reflection mode
+	else {draw_sun_moon_stars(); draw_earth();}
+	draw_sky(0);
+	draw_puffy_clouds(0);
+	// draw the scene
+	draw_camera_weapon(0);
+	draw_coll_surfaces(0);
+	if (display_mode & 0x01) {display_mesh();} // draw mesh
+	draw_grass();
+	draw_scenery(1, 0);
+	draw_solid_object_groups();
+	draw_stuff(1, 0);
+	if (display_mode & 0x04) {draw_water();}
+	draw_stuff(0, 0);
+	draw_game_elements(0);
+	setup_basic_fog();
+	draw_sky(1);
+	draw_puffy_clouds(1);
+	draw_sun_flare();
+
+	// restore original values
+	camera_pdu = prev_camera_pdu;
 }
 
 
@@ -1023,12 +1053,8 @@ void display_universe() { // infinite universe
 
 void draw_transparent(bool above_water) {
 
-	if (above_water) {
-		draw_transparent_object_groups();
-	}
-	else {
-		draw_bubbles();
-	}
+	if (above_water) {draw_transparent_object_groups();}
+	else {draw_bubbles();}
 }
 
 
