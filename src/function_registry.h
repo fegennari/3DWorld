@@ -129,7 +129,7 @@ void draw_puffy_clouds(int order);
 float get_cloud_zmax();
 void set_cloud_uniforms(shader_t &s, unsigned tu_id);
 void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil, bool draw_floor);
-void draw_sky(int order);
+void draw_sky(bool camera_side, bool no_update=0);
 void compute_brightness();
 void setup_water_plane_texgen(float s_scale, float t_scale, shader_t &shader, int mode);
 void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid);
@@ -212,7 +212,7 @@ void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, boo
 float integrate_water_dist(point const &targ_pos, point const &src_pos, float const water_z);
 void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2);
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, shader_t &shader, unsigned detail_tu_id);
-void display_mesh(bool shadow_pass=0);
+void display_mesh(bool shadow_pass=0, bool no_update=0);
 void draw_water_sides(shader_t &shader, int check_zvals);
 float get_tt_fog_top();
 float get_tt_fog_bot();
@@ -251,7 +251,7 @@ void draw_local_precipitation();
 void draw_overhead_map();
 
 // function prototypes - gen_obj
-void gen_stars(float alpha, int half_sphere=0);
+void gen_and_draw_stars(float alpha, bool half_sphere=0, bool no_update=0);
 void gen_star(star &star1, int half_sphere=0);
 void rand_xy_point(float zval, point &pt, unsigned flags);
 void gen_object_pos(point &position, unsigned flags);
@@ -654,7 +654,7 @@ void set_player_up(vector3d const &upv_);
 void stop_player_ship();
 void init_universe_display();
 void set_univ_pdu();
-void setup_current_system(float sun_intensity=1.0, bool reflection_mode=0);
+void setup_current_system(float sun_intensity=1.0);
 void apply_univ_physics();
 void draw_universe(bool static_only=0, bool skip_closest=0, int no_distant=0, bool gen_only=0);
 void draw_universe_stats();

@@ -840,21 +840,19 @@ float get_cloud_density(point const &pt, vector3d const &dir) { // optimize?
 }
 
 
-void draw_sky(int order) {
+void draw_sky(bool camera_side, bool no_update) {
 
 	if (atmosphere < 0.01) return; // no atmosphere
 	float radius(0.55*(FAR_CLIP+X_SCENE_SIZE));
 	point center((camera_mode == 1) ? surface_pos : mesh_origin);
 	center.z -= 0.727*radius;
-	if ((distance_to_camera(center) > radius) != order) return;
+	if ((distance_to_camera(center) > radius) != camera_side) return;
 	colorRGBA const cloud_color(get_cloud_color());
 	static float sky_rot_xy[2] = {0.0, 0.0}; // x, y
 	float const wmag(sqrt(wind.x*wind.x + wind.y*wind.y));
 
-	if (wmag > TOLERANCE) {
-		for (unsigned d = 0; d < 2; ++d) {
-			sky_rot_xy[d] -= fticks*CLOUD_WIND_SPEED*(wmag + 0.5*WIND_ADJUST)*wind[d]/wmag;
-		}
+	if (!no_update && wmag > TOLERANCE) {
+		for (unsigned d = 0; d < 2; ++d) {sky_rot_xy[d] -= fticks*CLOUD_WIND_SPEED*(wmag + 0.5*WIND_ADJUST)*wind[d]/wmag;}
 	}
 	cur_spo = sky_pos_orient(center, radius, sky_rot_xy[0], sky_rot_xy[1]);
 	int const light_id(4);
@@ -1488,7 +1486,6 @@ void draw_sparks() {
 
 void draw_projectile_effects() {
 
-	update_blasts(); // not really an update, but needed for draw_blasts
 	draw_blasts();
 	draw_beams();
 	draw_sparks();
@@ -1539,10 +1536,7 @@ void draw_splashes() {
 	if (splashes.empty()) return;
 	shader_t s;
 	s.begin_untextured_lit_glcolor_shader();
-
-	for (vector<splash_ring_t>::const_iterator i = splashes.begin(); i != splashes.end(); ++i) {
-		i->draw(s);
-	}
+	for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->draw(s);}
 	s.end_shader();
 	splashes.clear(); // only last one frame
 }

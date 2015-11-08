@@ -432,7 +432,7 @@ void draw_mesh_mvd() {
 }
 
 
-void display_mesh(bool shadow_pass) { // fast array version
+void display_mesh(bool shadow_pass, bool no_update) { // fast array version
 
 	if (mesh_height == NULL) return; // no mesh to display
 	if (clear_landscape_vbo) {clear_mvd_vbo = 1;}
@@ -490,7 +490,7 @@ void display_mesh(bool shadow_pass) { // fast array version
 		}
 		s.end_shader();
 	}
-	update_landscape_texture();
+	if (!no_update) {update_landscape_texture();}
 	if (SHOW_MESH_TIME) PRINT_TIME("Landscape Texture");
 
 	if (ground_effects_level == 0) { // simpler, more efficient mesh draw

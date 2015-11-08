@@ -210,12 +210,11 @@ void draw_solid_object_groups() {
 
 	draw_waypoints();
 	draw_select_groups(1);
-	if (display_mode & 0x0200) d_part_sys.draw();
+	if (display_mode & 0x0200) {d_part_sys.draw();}
 }
 
 
 void draw_transparent_object_groups() {
-
 	draw_select_groups(0);
 }
 
@@ -297,7 +296,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	dwobject const &obj(objg.get_obj(j));
 	point const &pos(obj.pos);
 	bool const cull_face(get_cull_face(type, color));
-	if (cull_face) glEnable(GL_CULL_FACE);
+	if (cull_face) {glEnable(GL_CULL_FACE);}
 	
 	switch (type) {
 	case SMILEY:
@@ -367,7 +366,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 			draw_sphere_vbo(pos, radius, ndiv, 0); // (object_types[type].tid >= 0)
 		}
 	}
-	if (cull_face) glDisable(GL_CULL_FACE);
+	if (cull_face) {glDisable(GL_CULL_FACE);}
 }
 
 
@@ -1123,7 +1122,7 @@ void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, i
 	translate_to(pos);
 	
 	if (matrix) {
-		if (on_platform) lpos = pos; // reset now so there's no rotation
+		if (on_platform) {lpos = pos;} // reset now so there's no rotation
 		apply_obj_mesh_roll(*matrix, pos, lpos, radius, ((status == 1) ? 0.01 : 0.0), ((status == 1) ? 0.2 : 1.0));
 	}
 	//draw_sphere_vbo(all_zeros, radius, 2*ndiv, 1);

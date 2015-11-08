@@ -58,7 +58,7 @@ extern vector<camera_filter> cfilters;
 void check_xy_offsets();
 void post_window_redisplay();
 void display_universe();
-void display_inf_terrain(float uw_depth);
+void display_inf_terrain();
 void update_temperature(bool verbose);
 void update_sound_loops();
 bool indir_lighting_updated();
@@ -192,7 +192,7 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 }
 
 
-void draw_stuff(int draw_uw, int timer1) {
+void draw_stuff(int draw_uw, int timer1, bool reflection_pass=0) {
 
 	if (draw_uw) {
 		draw_bubbles();
@@ -207,14 +207,15 @@ void draw_stuff(int draw_uw, int timer1) {
 		render_models(0);
 		check_gl_error(21);
 		if (TIMETEST) PRINT_TIME("P");
-		check_gl_error(22);
-		if (TIMETEST) PRINT_TIME("Q");
 		draw_scenery(0, 1);
 		draw_teleporters();
-		if (!underwater) {draw_local_precipitation();}
-		check_gl_error(23);
-		if (TIMETEST) PRINT_TIME("R");
-		draw_coll_surfaces(1);
+		
+		if (!underwater && !reflection_pass) { // don't draw precip in reflections
+			draw_local_precipitation();
+			check_gl_error(23);
+			if (TIMETEST) PRINT_TIME("R");
+		}
+		draw_coll_surfaces(1); // transparent
 		check_gl_error(24);
 		if (TIMETEST) PRINT_TIME("S");
 		draw_cracks_and_decals();
@@ -356,7 +357,7 @@ void auto_advance_camera() {
 }
 
 
-void config_bkg_color_and_clear(float depth, bool no_fog) {
+void config_bkg_color_and_clear(bool no_fog) {
 
 	calc_bkg_color();
 	glClearColor_rgba((!no_fog && show_fog) ? GRAY : bkg_color);
@@ -379,10 +380,10 @@ float get_light_pos_scale() {
 }
 
 
-void setup_lighting(float depth) {
+void setup_lighting() {
 	
 	// background color code
-	config_bkg_color_and_clear(depth, (world_mode == WMODE_INF_TERRAIN));
+	config_bkg_color_and_clear(world_mode == WMODE_INF_TERRAIN);
 
 	// lighting code - RGB intensity for ambient and diffuse (specular is set elsewhere per object)
 	float const mlf(get_moon_light_factor());
@@ -445,16 +446,16 @@ void setup_lighting(float depth) {
 }
 
 
-void draw_sun_moon_stars() {
+void draw_sun_moon_stars(bool no_update) {
 
 	float star_alpha(get_star_alpha(is_cloudy != 0));
-	if (star_alpha > 0.0) {gen_stars(star_alpha);}
+	if (star_alpha > 0.0) {gen_and_draw_stars(star_alpha, 0, no_update);}
 	if (light_factor <= 0.6) {draw_moon();} // moon
-	if (light_factor >= 0.4) {draw_sun();} // sun
+	if (light_factor >= 0.4) {draw_sun ();} // sun
 }
 
 
-void draw_universe_bkg(float depth, bool reflection_mode) {
+void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0) { // Note: reflection_mode is for tiled terrain only
 
 	RESET_TIME;
 
@@ -486,14 +487,14 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 	}
 
 	// draw universe as background
-	if (!reflection_mode) {config_bkg_color_and_clear(depth, 1);}
+	if (!reflection_mode) {config_bkg_color_and_clear(1);}
 	point const camera_pos_orig(camera_pos);
 	camera_pos = player_pos; // trick universe code into thinking the camera is at the player's ship
 	stop_player_ship();
 	if (TIMETEST) PRINT_TIME("0.1");
 	bool const camera_above_clouds(world_mode == WMODE_INF_TERRAIN && camera_pos_orig.z > get_tt_cloud_level());
 	bool const no_stars((is_cloudy || (atmosphere > 0.8 && light_factor >= 0.6)) && !camera_above_clouds);
-	no_asteroid_dust = (reflection_mode || no_stars); // FIXME: should really pass this down (5 levels of function calls)
+	no_asteroid_dust = (disable_asteroid_dust || reflection_mode || no_stars); // FIXME: should really pass this down (5 levels of function calls)
 	draw_universe(1, 1, (no_stars ? 2 : 0)); // could clip by horizon?
 	no_asteroid_dust = 0;
 	if (TIMETEST) PRINT_TIME("0.2");
@@ -502,7 +503,7 @@ void draw_universe_bkg(float depth, bool reflection_mode) {
 
 	// setup sun light source
 	float const sun_intensity(max(0.25f, min(4.0f, 1000.0f*univ_sun_rad/sun_pos.mag())));
-	setup_current_system(sun_intensity, reflection_mode);
+	setup_current_system(sun_intensity);
 	set_gl_light_pos(0, sun_pos*get_light_pos_scale(), LIGHT_W_VAL);
 	disable_light(1); // no moonlight (for now)
 	if (!have_sun || light_factor < 0.5) {set_light_ds_color(0, BLACK);} // sun below horizon: no diffuse or specular
@@ -811,15 +812,13 @@ void display(void) {
 			camera_origin = cpos2;
 			if (camera_mode == 1 && !spectate) camera_origin.z += camera_zh;
 		}
-		else {
-			if (temp_c_radius >= C_RADIUS0) {
-				c_radius      = temp_c_radius;
-				temp_c_radius = 0.0;
-			}
+		else if (temp_c_radius >= C_RADIUS0) {
+			c_radius      = temp_c_radius;
+			temp_c_radius = 0.0;
 		}
 		update_cpos();
 		point const camera(get_camera_pos());
-		float depth;
+		float depth(0.0); // used for underwater fog calculation
 		underwater = check_underwater(CAMERA_ID, depth);
 		auto_advance_time();
 		if (animate2) {total_wind += wind*fticks;}
@@ -831,15 +830,15 @@ void display(void) {
 			sun_color = SUN_LT_C;
 			apply_red_sky(sun_color);
 			reset_planet_defaults();
-			setup_lighting(depth);
+			setup_lighting();
 			check_gl_error(4);
 			if (TIMETEST) PRINT_TIME("B");
 		}
 		if (world_mode == WMODE_INF_TERRAIN) { // infinite terrain mode
-			display_inf_terrain(depth);
+			display_inf_terrain();
 		}
 		else { // finite terrain mode
-			if (combined_gu) {draw_universe_bkg(depth, 0);} // infinite universe as background
+			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background
 			if (TIMETEST) PRINT_TIME("C");
 
 			if (mesh_invalidated) {
@@ -848,7 +847,7 @@ void display(void) {
 				mesh_invalidated    = 0;
 			}
 			// draw background
-			if (!combined_gu) {draw_sun_moon_stars();}
+			if (!combined_gu) {draw_sun_moon_stars(0);}
 			if (show_fog || underwater) {fog_enabled = 1;}
 			if (!show_lightning) {l_strike.enabled = 0;}
 			compute_brightness();
@@ -921,6 +920,7 @@ void display(void) {
 			if (TIMETEST) PRINT_TIME("N");
 			draw_stuff(underwater, timer1);
 			if (TIMETEST) PRINT_TIME("T");
+			update_blasts(); // not really an update, but needed for draw_blasts
 			draw_game_elements(timer1);
 			setup_basic_fog();
 			draw_sky(1);
@@ -975,30 +975,33 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
 
 	pos_dir_up const prev_camera_pdu(camera_pdu);
 	camera_pdu = pdu;
-	
+	point const prev_camera_pos(camera_pos);
+	camera_pos = pdu.pos;
+
 	// draw background
-	if (combined_gu) {draw_universe_bkg(0.0, 1);} // infinite universe as background in reflection mode
-	else {draw_sun_moon_stars(); draw_earth();}
-	draw_sky(0);
+	if (combined_gu) {draw_universe_bkg(0, 1);} // infinite universe as background with no asteroid dust
+	else {draw_sun_moon_stars(1); draw_earth();}
+	draw_sky(0, 1);
 	draw_puffy_clouds(0);
 	// draw the scene
 	draw_camera_weapon(0);
-	draw_coll_surfaces(0);
-	if (display_mode & 0x01) {display_mesh();} // draw mesh
+	draw_coll_surfaces(0); // FIXME: disable occlusion culling
+	if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
 	draw_grass();
 	draw_scenery(1, 0);
 	draw_solid_object_groups();
-	draw_stuff(1, 0);
-	if (display_mode & 0x04) {draw_water();}
-	draw_stuff(0, 0);
+	draw_stuff(1, 0, 1);
+	if (display_mode & 0x04) {draw_water();} // FIXME: disable ripples and waves
+	draw_stuff(0, 0, 1);
 	draw_game_elements(0);
 	setup_basic_fog();
-	draw_sky(1);
+	draw_sky(1, 1);
 	draw_puffy_clouds(1);
 	draw_sun_flare();
 
 	// restore original values
 	camera_pdu = prev_camera_pdu;
+	camera_pos = prev_camera_pos;
 }
 
 
@@ -1083,7 +1086,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 	// setup viewport and projection matrix
 	glViewport(0, 0, xsize, ysize);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	if (combined_gu && !is_cloudy) {draw_universe_bkg(0.0, 1);} // infinite universe as background
+	if (combined_gu && !is_cloudy) {draw_universe_bkg(1);} // infinite universe as background
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	set_perspective(PERSP_ANGLE, 1.0);
@@ -1097,7 +1100,7 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 
 	// draw partial scene
 	if (!combined_gu) {
-		draw_sun_moon_stars();
+		draw_sun_moon_stars(1);
 		draw_sun_flare(1.5);
 	}
 	draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
@@ -1146,7 +1149,7 @@ unsigned create_reflection(float terrain_zmin) {
 }
 
 
-void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses light params from ground mode)
+void display_inf_terrain() { // infinite terrain mode (Note: uses light params from ground mode)
 
 	static int init_xx(1);
 	RESET_TIME;
@@ -1180,12 +1183,12 @@ void display_inf_terrain(float uw_depth) { // infinite terrain mode (Note: uses 
 	if (draw_water && !underwater) {reflection_tid = create_reflection(terrain_zmin);}
 
 	if (combined_gu) {
-		draw_universe_bkg(uw_depth, 0); // infinite universe as background
+		draw_universe_bkg(0); // infinite universe as background
 		check_gl_error(4);
 	}
 	else {
-		config_bkg_color_and_clear(uw_depth, 1);
-		draw_sun_moon_stars();
+		config_bkg_color_and_clear(1);
+		draw_sun_moon_stars(0);
 	}
 	if (change_near_far_clip) {
 		float const near_clip(NEAR_CLIP + 0.01*min_camera_dist);

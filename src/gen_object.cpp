@@ -37,7 +37,7 @@ extern coll_obj_group coll_objects;
 
 
 
-void gen_stars(float alpha, int half_sphere) {
+void gen_and_draw_stars(float alpha, bool half_sphere, bool no_update) {
 
 	if (world_mode == WMODE_GROUND && show_fog) return;
 
@@ -45,7 +45,7 @@ void gen_stars(float alpha, int half_sphere) {
 		stars.resize(NUM_STARS);
 		for (unsigned i = 0; i < stars.size(); ++i) {gen_star(stars[i], half_sphere);}
 	}
-	if ((rand()&15) == 0) {
+	if (!no_update && (rand()&15) == 0) {
 		float const cmin[3] = {0.7, 0.9, 0.6};
 
 		for (unsigned i = 0; i < stars.size(); ++i) {
