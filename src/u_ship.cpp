@@ -52,7 +52,7 @@ float const FAST_TARG_DIST     = 1.0; // fast speed if target dist > this value
 float const SHIP_GMAX          = 10.0*MAX_SOBJ_GRAVITY;
 
 
-extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits, respawn_req_hw, hold_fighters, dock_fighters, build_any;
+extern bool player_autopilot, player_auto_stop, player_enemy, regen_uses_credits, respawn_req_hw, hold_fighters, dock_fighters, build_any, ctrl_key_pressed;
 extern int frame_counter, iticks, begin_motion, onscreen_display, display_mode, animate2;
 extern float fticks, urm_proj, global_regen, hyperspeed_mult, player_turn_rate, rand_spawn_ship_dmax;
 extern unsigned alloced_fobjs[], team_credits[], init_credits[], ind_ships_used[];
@@ -1410,7 +1410,8 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 
 	unsigned const wcount(get_weapon().wcount);
 	if (reset_timer > 0 || wcount == 0)          return 0; // can't fire when dying or have no weapon
-	unsigned const weapon_id(get_weapon_id());
+	bool const is_player(is_player_ship());
+	unsigned const weapon_id((is_player && ctrl_key_pressed) ? UWEAP_QUERY : get_weapon_id()); // player control click => query
 	assert(weapon_id < us_weapons.size());
 	us_weapon const &weap(us_weapons[weapon_id]);
 	if (!weap.hyper_fire && !check_fire_speed()) return 0;
@@ -1555,7 +1556,7 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 			case UWEAP_TARGET:
 			case UWEAP_QUERY:
 				{
-					assert(is_player_ship());
+					assert(is_player);
 					bool const rename(weapon_id == UWEAP_RENAME), query(weapon_id == UWEAP_TARGET), target(weapon_id == UWEAP_TARGET);
 					line_int_data li_data(fpos, fdir, wrange, this, NULL, 0, (query ? 2 : 0));
 					uobject *sobj(line_intersect_objects(li_data, fobj, (target ? OBJ_TYPE_SHIP : intersect_type)));
@@ -1638,8 +1639,8 @@ bool u_ship::fire_weapon(vector3d const &fire_dir, float target_dist) {
 	if (used_ammo > 0) {dec_ammo(used_ammo);}
 
 	// generate weapon fire sounds
-	if (fired && (is_player_ship() || dist_less_than(get_camera_pos(), pos, 0.1))) {
-		float const gain(is_player_ship() ? 1.0 : 0.1);
+	if (fired && (is_player || dist_less_than(get_camera_pos(), pos, 0.1))) {
+		float const gain(is_player ? 1.0 : 0.1);
 		switch (weapon_id) {
 		//case UWEAP_PBEAM: case UWEAP_EBEAM: case UWEAP_REPULSER: case UWEAP_TRACTORB: case UWEAP_FUSCUT: case UWEAP_LITNING: case UWEAP_PARALYZE: case UWEAP_MIND_C: case UWEAP_ESTEAL
 		case UWEAP_DESTROY: break;
