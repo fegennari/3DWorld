@@ -299,7 +299,7 @@ void draw_puffy_clouds(int order) {
 }
 
 
-float get_cloud_zmax() {return get_camera_pos().z + max(zmax, CLOUD_CEILING);}
+float get_cloud_zmax() {return max(max(czmax, ztop), get_camera_pos().z) + max(zmax, CLOUD_CEILING);}
 
 
 void set_cloud_uniforms(shader_t &s, unsigned tu_id) {
