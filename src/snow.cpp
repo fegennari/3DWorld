@@ -695,7 +695,7 @@ void draw_snow(bool shadow_only) {
 	//RESET_TIME;
 	shader_t s;
 	bool const use_smap(!shadow_only && shadow_map_enabled());
-	bool const detail_normal_map(!shadow_only && camera_mode == 1 && (display_mode & 0x08) != 0); // aliasing when viewed from above, so only use for ground camera
+	bool const detail_normal_map(!shadow_only && camera_mode == 1); // aliasing when viewed from above, so only use for ground camera
 	bool const enable_dlights(!shadow_only && ENABLE_SNOW_DLIGHTS);
 	s.setup_enabled_lights(2, 2); // FS
 	s.set_prefix("#define BLEND_DIST_DETAIL_NMAP", 1); // FS

@@ -1736,7 +1736,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	bool const has_water(is_water_enabled() && !reflection_pass);
 	lighting_with_cloud_shadows_setup(s, 1, (cloud_shadows_enabled() && !reflection_pass));
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
-	bool const use_normal_map(!reflection_pass && (display_mode & 0x08) != 0); // enabled by default
+	bool const use_normal_map(!reflection_pass); // enabled by default
 	bool const rain_mode((precip_mode > 0) && temperature > W_FREEZE_POINT);
 	if (has_water      ) {s.set_prefix("#define HAS_WATER",       1);} // FS
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",  1);} // FS

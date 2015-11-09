@@ -414,7 +414,7 @@ void draw_mesh_mvd() {
 
 	shader_t s;
 	s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
-	setup_mesh_and_water_shader(s, (detail_normal_map && (display_mode & 0x08)));
+	setup_mesh_and_water_shader(s, detail_normal_map);
 	set_landscape_texture_texgen(s);
 
 	if (use_core_context) {
