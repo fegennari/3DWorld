@@ -109,7 +109,7 @@ extern water_params_t water_params;
 
 void calc_water_normals();
 void compute_ripples();
-void update_valleys();
+void update_valleys_and_draw_spillover();
 void update_water_volumes();
 void draw_spillover(vector<vert_norm_color> &verts, int i, int j, int si, int sj, int index, int vol_over, float blood_mix, float mud_mix);
 int  calc_rest_pos(vector<int> &path_x, vector<int> &path_y, vector<char> &rp_set, int &x, int &y);
@@ -432,17 +432,19 @@ public:
 };
 
 
-void draw_water() {
+void draw_water(bool no_update) {
 
 	RESET_TIME;
 	int wsi(0), last_water(2), last_draw(0), lc0(landscape_changed);
 	colorRGBA color(WHITE);
-	static int wcounter(0);
 	static float tdx(0.0), tdy(0.0);
 	float const tx_scale(W_TEX_STRETCH/TWO_XSS), ty_scale(W_TEX_STRETCH/TWO_YSS);
-	process_water_springs();
-	add_waves();
-	if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
+	
+	if (!no_update) {
+		process_water_springs();
+		add_waves();
+		if (DEBUG_WATER_TIME) {PRINT_TIME("0 Add Waves");}
+	}
 	if (DISABLE_WATER) return;
 	bool const use_foam(USE_SEA_FOAM && !water_is_lava);
 	shader_t s;
@@ -505,25 +507,25 @@ void draw_water() {
 	select_water_ice_texture(s, color);
 	setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
 	enable_blend();
-	update_valleys(); // draws spillover sections using the same shader
-	if (DEBUG_WATER_TIME) {PRINT_TIME("4 Water Valleys Update");}
+	
+	if (!no_update) {
+		update_valleys_and_draw_spillover(); // draws spillover sections using the same shader
+		if (DEBUG_WATER_TIME) {PRINT_TIME("4 Water Valleys Update");}
+		assert(fticks != 0.0);
 
-	// call the function that computes the ripple effect
-	assert(fticks != 0.0);
-	int const time_mod(1);
+		if (animate2) { // call the function that computes the ripple effect
+			unsigned num_steps(1);
 
-	if (animate2 && (time_mod <= 1 || (wcounter%time_mod) == 0)) {
-		unsigned num_steps(1);
-
-		if (!(start_ripple || first_water_run) || is_ice || (!start_ripple && first_water_run)) {}
-		else {
-			assert(I_TIMESCALE2 > 0);
-			num_steps = max(1U, min(MAX_RIPPLE_STEPS, unsigned(min(3.0f, fticks)*min(MAX_I_TIMESCALE, I_TIMESCALE2))));
+			if (!(start_ripple || first_water_run) || is_ice || (!start_ripple && first_water_run)) {}
+			else {
+				assert(I_TIMESCALE2 > 0);
+				num_steps = max(1U, min(MAX_RIPPLE_STEPS, unsigned(min(3.0f, fticks)*min(MAX_I_TIMESCALE, I_TIMESCALE2))));
+			}
+			for (unsigned i = 0; i < num_steps; ++i) {compute_ripples();}
+			calc_water_normals();
 		}
-		for (unsigned i = 0; i < num_steps; ++i) {compute_ripples();}
-		calc_water_normals();
+		if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
 	}
-	if (DEBUG_WATER_TIME) {PRINT_TIME("5 Water Ripple Update");}
 	unsigned nin(0);
 	int xin[4], yin[4], last_wsi(-1);
 	bool const disp_snow((display_mode & 0x40) && temperature <= SNOW_MAX_TEMP);
@@ -534,7 +536,7 @@ void draw_water() {
 	// draw interior water (ponds)
 	for (int i = 0; i < MESH_Y_SIZE; ++i) {
 		for (int j = 0; j < MESH_X_SIZE; ++j) {
-			if (!is_ice && has_snow_accum) {update_accumulation(j, i);}
+			if (!is_ice && has_snow_accum && !no_update) {update_accumulation(j, i);}
 			nin = 0;
 
 			if (wminside[i][j] == 1) {
@@ -543,7 +545,7 @@ void draw_water() {
 				float const z_min(z_min_matrix[i][j]), zval(valleys[wsi].zval), wzval(water_matrix[i][j]), wzmax(max(zval, wzval));
 
 				if (wzmax >= z_min - G_W_STOP_DEPTH) {
-					if (!is_ice && UPDATE_UW_LANDSCAPE && (rgen.rand()&63) == 0) {
+					if (!is_ice && UPDATE_UW_LANDSCAPE && !no_update && (rgen.rand()&63) == 0) {
 						add_hole_in_landscape_texture(j, i, 1.2*fticks*(0.02 + wzmax - z_min));
 					}
 					float delta_area(1.0);
@@ -558,7 +560,7 @@ void draw_water() {
 						}
 						delta_area /= 9.0;
 					}
-					valleys[wsi].area += SQUARE_S_AREA*delta_area;
+					valleys[wsi].area += SQUARE_S_AREA*delta_area; // if !no_update?
 					
 					if (wzmax >= z_min && i < MESH_Y_SIZE-1 && j < MESH_X_SIZE-1) {
 						xin[nin] = j; yin[nin] = i; ++nin;
@@ -571,9 +573,7 @@ void draw_water() {
 							}
 						}
 						if (nin == 4) {
-							if (disp_snow && accumulation_matrix[i][j] >= SNOW_THRESHOLD &&
-								(mesh_height[i][j] <= zval || (i > 0 && j > 0 && mesh_height[i-1][j-1] <= zval)))
-							{
+							if (disp_snow && accumulation_matrix[i][j] >= SNOW_THRESHOLD && (mesh_height[i][j] <= zval || (i > 0 && j > 0 && mesh_height[i-1][j-1] <= zval))) {
 								if (last_water != 0) { // snow
 									wsd.end_strip();
 									select_texture(SNOW_TEX);
@@ -592,9 +592,7 @@ void draw_water() {
 								float const blood_mix(valleys[wsi].blood_mix), mud_mix(valleys[wsi].mud_mix);
 								wcolor = color;
 
-								if (blood_mix > 0.99) { // all blood
-									wcolor = RED;
-								}
+								if (blood_mix > 0.99) {wcolor = RED;} // all blood
 								else {
 									wcolor.alpha *= 0.5;
 									if (mud_mix   > 0.0) {blend_color(wcolor, (!is_ice ? MUD_S_C : LT_BROWN), wcolor, mud_mix, 1);}
@@ -629,10 +627,12 @@ void draw_water() {
 	disable_blend();
 	s.clear_specular();
 	s.end_shader();
-	update_water_volumes();
-	if (!lc0 && rgen.rand()%5 != 0) landscape_changed = 0; // reset, only update landscape 20% of the time
-	++wcounter;
-	first_water_run = 0;
+
+	if (!no_update) {
+		update_water_volumes();
+		if (!lc0 && rgen.rand()%5 != 0) {landscape_changed = 0;} // reset, only update landscape 20% of the time
+		first_water_run = 0;
+	}
 	if (DEBUG_WATER_TIME) {PRINT_TIME("6 Water Draw");}
 }
 
@@ -999,7 +999,7 @@ void sync_water_height(int wsi, int skip_ix, float zval, float z_over, vector<un
 }
 
 
-void update_valleys() {
+void update_valleys_and_draw_spillover() {
 
 	for (unsigned i = 0; i < valleys.size(); ++i) {
 		valley &v(valleys[i]);
@@ -1132,13 +1132,8 @@ void update_water_volumes() {
 	for (unsigned i = 0; i < valleys.size(); ++i) {
 		valley &v(valleys[i]);
 		bool const has_lwv(v.lwv > 0.0);
-
-		if (v.has_spilled) {
-			v.w_volume = v.lwv; // spilled into another pool, reset to last value
-		}
-		else {
-			v.lwv += min((v.w_volume - v.lwv), MAX_WATER_ACC); // update (with thresh)
-		}
+		if (v.has_spilled) {v.w_volume = v.lwv;} // spilled into another pool, reset to last value
+		else {v.lwv += min((v.w_volume - v.lwv), MAX_WATER_ACC);} // update (with thresh)
 		v.w_volume += v.spill_vol; // new water added from other pools this frame
 
 		if (temperature > EVAP_TEMP_POINT && v.w_volume > 0.0) { // apply evaporation
@@ -1151,12 +1146,7 @@ void update_water_volumes() {
 		//if (v.w_volume == 0.0 && v.depth > 0.0 && v.area > 0.0) v.w_volume = v.lwv = TOLERANCE;
 		
 		if (has_lwv && v.w_volume == 0.0) { // no more water (all evaporated)
-			if (v.zval < v.min_zval) {
-				v.zval = v.min_zval;
-			}
-			else {
-				v.lwv = 1.0;
-			}
+			if (v.zval < v.min_zval) {v.zval = v.min_zval;} else {v.lwv = 1.0;}
 			v.has_spilled = 0;
 			spill.remove_all_i(i); // reset connectivity graph entry
 		}

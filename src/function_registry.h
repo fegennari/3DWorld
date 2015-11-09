@@ -474,7 +474,7 @@ void water_color_atten_at_pos(colorRGBA &c, point const &pos);
 void select_water_ice_texture(shader_t &shader, colorRGBA &color);
 void set_tt_water_specular(shader_t &shader);
 colorRGBA get_tt_water_color();
-void draw_water();
+void draw_water(bool no_update=0);
 void add_splash(point const &pos, int xpos, int ypos, float energy, float radius, bool add_sound, vector3d const &vadd=zero_vector);
 bool add_water_section(float x1, float y1, float x2, float y2, float zval, float wvol);
 void float_downstream(point &pos, float radius);

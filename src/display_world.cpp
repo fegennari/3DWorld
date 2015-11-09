@@ -977,6 +977,8 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
 	camera_pdu = pdu;
 	point const prev_camera_pos(camera_pos);
 	camera_pos = pdu.pos;
+	//bool const occ_cull_enabled(display_mode & 0x08); // is occlusion culling okay to enable or not?
+	//if (occ_cull_enabled && camera_pos != prev_camera_pos) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location)
 
 	// draw background
 	if (combined_gu) {draw_universe_bkg(0, 1);} // infinite universe as background with no asteroid dust
@@ -985,13 +987,13 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
 	draw_puffy_clouds(0);
 	// draw the scene
 	draw_camera_weapon(0);
-	draw_coll_surfaces(0); // FIXME: disable occlusion culling
+	draw_coll_surfaces(0);
 	if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
 	draw_grass();
 	draw_scenery(1, 0);
 	draw_solid_object_groups();
 	draw_stuff(1, 0, 1);
-	if (display_mode & 0x04) {draw_water();} // FIXME: disable ripples and waves
+	if (display_mode & 0x04) {draw_water(1);}
 	draw_stuff(0, 0, 1);
 	draw_game_elements(0);
 	setup_basic_fog();
@@ -1002,6 +1004,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
 	// restore original values
 	camera_pdu = prev_camera_pdu;
 	camera_pos = prev_camera_pos;
+	//if (occ_cull_enabled) {display_mode |= 0x08;}
 }
 
 
