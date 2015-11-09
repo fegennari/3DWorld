@@ -28,7 +28,9 @@ vec4 get_deep_wave_normal(in vec2 wtc) {
 	float ntime = 2.0*abs(fract(0.011*wave_time) - 0.5);
 	vec3 n1 = deep_water_normal_lookup(wtc);
 	vec3 n2 = deep_water_normal_lookup(wtc + vec2(0.5, 0.5));
-	return mix(get_norm_foam_val(n1), get_norm_foam_val(n2), ntime);
+	// reduce the pulsing effect by increasing normal map amplitude when two normal maps are averaged together
+	float mag = 1.0/sqrt(2.0 - 2.0*abs(ntime - 0.5)); 
+	return mix(get_norm_foam_val(n1), get_norm_foam_val(n2), ntime)*mag;
 }
 
 void main()
