@@ -1,7 +1,7 @@
 uniform float dist_const = 10.0;
 uniform float dist_slope = 0.5;
 uniform float x1, y1, dx_inv, dy_inv;
-uniform sampler2D height_tex, shadow_normal_tex, weight_tex, noise_tex;
+uniform sampler2D height_tex, normal_tex, shadow_tex, weight_tex, noise_tex;
 uniform vec2 xlate = vec2(0.0);
 
 in vec2 local_translate;
@@ -34,13 +34,12 @@ void main()
 	float noise_weight = texture(noise_tex, 10.0*vec2(fg_Color.r, fg_Color.g)).r; // "hash" the color
 	
 	// calculate lighting
-	vec4 shadow_normal  = texture(shadow_normal_tex, tc2);
-	float ambient_scale = 1.5*shadow_normal.z * (1.5 - 0.75*tc.s); // decreased ambient at base, increased ambient at tip
-	vec2 nxy      = (2.0*shadow_normal.xy - 1.0);
-	vec3 eye_norm = vec3(nxy, (1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
-	eye_norm      = normalize(fg_NormalMatrix * eye_norm); // eye space
+	vec3 shadow  = texture(shadow_tex, tc2).rgb; // {mesh_shadow, tree_shadow, ambient_occlusion}
+	float ambient_scale = 1.5*shadow.b * (1.5 - 0.75*tc.s); // decreased ambient at base, increased ambient at tip
+	vec3 eye_norm = normalize(fg_NormalMatrix * (2.0*texture(normal_tex, tc2).xyz - vec3(1.0))); // eye space
 	vec4 ad_color = mix(gl_Color, vec4(1.0, 0.7, 0.4, 1.0), weights.r); // mix in yellow-brown grass color to match sand
-	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, shadow_normal.w);
+	float diffuse_scale = min(shadow.r, shadow.g); // min of mesh and tree shadow
+	vec3 color    = do_shadowed_lighting(vertex, epos, eye_norm, ad_color, ambient_scale, diffuse_scale);
 	float alpha   = fg_Color.a * ascale * ((grass_weight < noise_weight) ? 0.0 : 1.0); // skip some grass blades by making them transparent
 	fg_Color_vf   = vec4(color, alpha);
 } 

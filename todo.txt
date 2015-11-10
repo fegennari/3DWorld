@@ -11,7 +11,7 @@ Gameplay in tiled terrain mode
   - Projectile and object collision detection
 
 TT shadows:
-  - Separate tree AO vs. shadows per texel - use light dir and mesh normal for shadow
+  - Use light dir and mesh normal for tree soft shadow
   - Lower res distant shadow map for tiled terrain mode with smooth blend
 
 Reflections on specular surfaces (such as the gold dragon)
@@ -26,3 +26,4 @@ Bullet physics for movable boxes
 In-Game cobjs editor
 Render tree billboard images at 2x resolution or use multisample
 Online 3D models for weapons
+TT water shadows

@@ -1,4 +1,4 @@
-uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, shadow_normal_tex, caustic_tex;
+uniform sampler2D weights_tex, detail_tex, tex2, tex3, tex4, tex5, tex6, normal_tex, shadow_tex, caustic_tex;
 uniform float ts2, ts3, ts4, ts5, ts6; // texture scales
 uniform float cs2, cs3, cs4, cs5, cs6; // color scales
 uniform float wave_time, wave_amplitude; // water_plane_z comes from water_fog.part
@@ -98,16 +98,14 @@ vec3 add_texture(in sampler2D tex, in float tc_scale, in vec3 world_n) {
 #endif
 }
 
-void main()
-{
+void main() {
 #ifdef REFLECTION_MODE
 	if (vertex.z < water_plane_z) {discard;}
 #endif
-	vec4 shadow_normal  = texture(shadow_normal_tex, tc);
-	float diffuse_scale = shadow_normal.w;
-	float ambient_scale = 1.5*shadow_normal.z;
-	vec2 nxy    = (2.0*shadow_normal.xy - 1.0);
-	vec3 normal = vec3(nxy, normal_z_scale*(1.0 - sqrt(nxy.x*nxy.x + nxy.y*nxy.y))); // calculate n.z from n.x and n.y (we know it's always positive)
+	vec3 shadow         = texture(shadow_tex, tc).rgb; // {mesh_shadow, tree_shadow, ambient_occlusion}
+	float diffuse_scale = shadow.g; // tree shadow (soft)
+	float ambient_scale = 1.5*shadow.b;
+	vec3 normal = (2.0*texture(normal_tex, tc).xyz - vec3(1.0));
 	vec3 world_n= normalize(normal);
 	normal      = normalize(fg_NormalMatrix * normal); // eye space
 
@@ -133,13 +131,12 @@ void main()
 	float smap_scale = 0.0;
 	
 	if (use_shadow_map) {
-		float sm_val = smap_atten_slope*(smap_atten_cutoff - vdist);
-		smap_scale   = clamp(sm_val, 0.0, 1.0);
-		
-		if (diffuse_scale > 0.01) { // not completely in shadow (soft tree shadows, not mesh shadows)
-			diffuse_scale = mix(diffuse_scale, 1.0, clamp(sm_val-1.0, 0.0, 1.0)); // fade out the soft shadow when the shadow map is active
-		}
+		float sm_val  = smap_atten_slope*(smap_atten_cutoff - vdist);
+		smap_scale    = clamp(sm_val, 0.0, 1.0);
+		diffuse_scale = mix(diffuse_scale, 1.0, clamp(sm_val-1.0, 0.0, 1.0)); // fade out the soft shadow when the shadow map is active
 	}
+	diffuse_scale = min(diffuse_scale, shadow.r); // min with mesh shadow (hard)
+
 	if (enable_light0) { // sun
 		float spec      = spec_scale*(spec_offset + 0.2*weights.b + 0.25*weights4); // grass and snow
 		float shininess = 80.0*spec_offset + 20.0*weights.b + 40.0*weights4;

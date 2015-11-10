@@ -197,10 +197,10 @@ bool write_default_hmap_modmap() {
 
 // *** tile_t ***
 
-tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0), size(0), stride(0),
+tile_t::tile_t() : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0), size(0), stride(0),
 	zvsize(0), gen_tsize(0), decid_trees(tree_data_manager) {}
 
-tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), shadow_normal_tid(0),
+tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_tid(0), height_tid(0), normal_tid(0), shadow_tid(0),
 	size(size_), stride(size+1), zvsize(stride+1), gen_tsize(0), trmax(0.0), min_normal_z(0.0), deltax(DX_VAL), deltay(DY_VAL),
 	shadows_invalid(1), recalc_tree_grass_weights(1), mesh_height_invalid(0), in_queue(0), last_occluded(0), has_any_grass(0),
 	is_distant(0), no_trees(0), mesh_off(xoff-xoff2, yoff-yoff2), decid_trees(tree_data_manager)
@@ -278,9 +278,10 @@ unsigned tile_t::get_gpu_mem() const {
 
 	unsigned mem(pine_trees.get_gpu_mem() + decid_trees.get_gpu_mem() + scenery.get_gpu_mem());
 	unsigned const num_texels(stride*stride);
-	if (weight_tid        > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
-	if (height_tid        > 0) mem += 4*num_texels; // 4 bytes per texel (F32)
-	if (shadow_normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
+	if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
+	if (height_tid > 0) mem += 4*num_texels; // 4 bytes per texel (F32)
+	if (normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
+	if (shadow_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
 	
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
 		if (smap_data[i].is_allocated()) {mem += 4*shadow_map_sz*shadow_map_sz;} // FBO textures
@@ -301,7 +302,7 @@ void tile_t::clear() {
 	scenery.clear();
 	grass_blocks.clear();
 	clear_flowers();
-	norm_shadow_data.clear();
+	shadow_data.clear();
 }
 
 void tile_t::clear_shadows() {
@@ -323,7 +324,8 @@ void tile_t::clear_vbo_tid(tile_shadow_map_manager *smap_manager) {
 	flowers.clear_vbo();
 	free_texture(weight_tid);
 	free_texture(height_tid);
-	free_texture(shadow_normal_tid);
+	free_texture(normal_tid);
+	free_texture(shadow_tid);
 	gen_tsize = 0;
 }
 
@@ -655,47 +657,67 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 
 void tile_t::check_shadow_map_and_normal_texture() {
 
-	if (shadow_normal_tid && !shadows_invalid) return; // up-to-date
+	if (!normal_tid) {
+		setup_texture(normal_tid, 0, 0, 0, 0, 0);
+		upload_normal_texture(0); // created once, never updated (so never valid here)
+	}
+	if (shadow_tid && !shadows_invalid) return; // up-to-date
 	//RESET_TIME;
-	bool const tid_is_valid(shadow_normal_tid != 0);
-	if (!tid_is_valid) {setup_texture(shadow_normal_tid, 0, 0, 0, 0, 0);}
+	bool const tid_is_valid(shadow_tid != 0);
+	if (!tid_is_valid) {setup_texture(shadow_tid, 0, 0, 0, 0, 0);}
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
 	assert(has_sun || has_moon);
 	if (mesh_shadows) {calc_shadows(has_sun, has_moon);}
 	//PRINT_TIME("Calc Shadows");
 	if (enable_tiled_mesh_ao && ao_lighting.empty()) {calc_mesh_ao_lighting();}
-	upload_shadow_map_and_normal_texture(tid_is_valid);
+	upload_shadow_map_texture(tid_is_valid);
 	shadows_invalid = 0;
 	//PRINT_TIME("Calc and Upload Shadows + AO");
 }
 
 
-void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
+// Note: all of these textures are really RGB, but we upload them as RGBA for proper 4-byte alignment (since they are a power of 2 + 1)
+void create_or_update_texture(unsigned &tid, bool tid_is_valid, unsigned stride, vector<unsigned char> const &data) {
 
-	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
-	vector<norm_comp_with_shadow> &data(norm_shadow_data); // stored as (n.x, n.y, ao_lighting, shadow_val)
-	bool const init_data(data.empty());
+	bind_2d_texture(tid);
 
-	if (init_data) {
-		data.resize(stride*stride);
-		min_normal_z = 1.0;
+	if (tid_is_valid) { // overwrite old data
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, stride, stride, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
 	}
+	else { // allocate and write
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
+	}
+}
+
+void tile_t::upload_normal_texture(bool tid_is_valid) {
+
+	vector<unsigned char> normal_data(4*stride*stride);
+	min_normal_z = 1.0;
+
 	for (unsigned y = 0; y < stride; ++y) {
 		for (unsigned x = 0; x < stride; ++x) {
-			unsigned const ix(y*stride + x), ix2(y*zvsize + x);
+			unsigned const ix(y*stride + x), ix2(y*zvsize + x), ix_off(4*ix);
+			vector3d const norm(get_norm(ix2));
+			min_normal_z = min(min_normal_z, norm.z);
+			UNROLL_3X(normal_data[ix_off+i_] = (unsigned char)(127.0*(norm[i_] + 1.0)););
+		}
+	}
+	create_or_update_texture(normal_tid, tid_is_valid, stride, normal_data);
+}
 
-			// Note: shadow_normal texture is stored as {normal.x, normal.y, ambient_occlusion, diffuse_shadow}
-			if (init_data) {
-				vector3d const norm(get_norm(ix2));
-				min_normal_z = min(min_normal_z, norm.z);
-				UNROLL_2X(data[ix].v[i_] = (unsigned char)(127.0*(norm[i_] + 1.0));); // Note: we only set x and y here, z is calculated in the shader
-			}
+void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
+
+	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
+	shadow_data.resize(4*stride*stride, 0); // may already be resized to the correct value
+
+	for (unsigned y = 0; y < stride; ++y) { // Note: shadow texture is stored as {mesh_shadow, tree_shadow, ambient_occlusion}
+		for (unsigned x = 0; x < stride; ++x) {
+			unsigned const ix(y*stride + x), ix2(y*zvsize + x), ix_off(4*ix);
 			unsigned char const tree_shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
-			unsigned char shadow_val(tree_shadow_val);
 			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
-			data[ix].v[2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
-			data[ix].v[2] = (unsigned char)(data[ix].v[2] * (0.3 + 0.7*tree_shadow_val/255.0)); // add ambient occlusion from trees
-			//shadow_val = 128 + shadow_val/2; // divide tree shadow effect by 2x to offset for shadow map effect
+			shadow_data[ix_off+2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
+			shadow_data[ix_off+2] = (unsigned char)(shadow_data[ix_off+2] * (0.3 + 0.7*tree_shadow_val/255.0)); // add ambient occlusion from trees
+			unsigned char shadow_val(255);
 
 			if (!mesh_shadows) {} // do nothing
 			else if (has_sun && has_moon) {
@@ -704,17 +726,11 @@ void tile_t::upload_shadow_map_and_normal_texture(bool tid_is_valid) {
 				shadow_val *= blend_light(light_factor, !no_sun, !no_moon);
 			}
 			else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {shadow_val = 0;} // fully in shadow
-			data[ix].v[3] = shadow_val;
+			shadow_data[ix_off+0] = shadow_val; // mesh shadow
+			shadow_data[ix_off+1] = tree_shadow_val;
 		}
 	}
-	bind_2d_texture(shadow_normal_tid);
-
-	if (tid_is_valid) { // overwrite old data
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, stride, stride, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
-	}
-	else { // allocate and write
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, stride, stride, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
-	}
+	create_or_update_texture(shadow_tid, tid_is_valid, stride, shadow_data);
 }
 
 
@@ -1092,7 +1108,8 @@ void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool 
 void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 
 	bind_texture_tu(height_tid, 2);
-	bind_texture_tu(shadow_normal_tid, 4);
+	bind_texture_tu(normal_tid, 4);
+	bind_texture_tu(shadow_tid, 6);
 	shader_shadow_map_setup(s);
 	if (use_cloud_shadows) {s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));}
 	s.add_uniform_vector2d("xlate", vector2d(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2)));
@@ -1279,10 +1296,11 @@ void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm)
 
 void tile_t::bind_textures() const {
 
-	assert(weight_tid > 0 && height_tid > 0 && shadow_normal_tid > 0);
+	assert(weight_tid > 0 && height_tid > 0 && normal_tid > 0 && shadow_tid > 0);
 	bind_2d_texture(weight_tid);
 	bind_texture_tu(height_tid, 12);
-	bind_texture_tu(shadow_normal_tid, 7);
+	bind_texture_tu(normal_tid, 7);
+	bind_texture_tu(shadow_tid, 15);
 }
 
 
@@ -1348,7 +1366,7 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	shader_shadow_map_setup(s);
 	unsigned const lod_level(get_lod_level(reflection_pass)), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
 	vbo_mgr.pre_render();
-	vert_wrap_t::set_vbo_arrays(0); // normals are stored in shadow_normal_tid, tex coords come from texgen, color is constant
+	vert_wrap_t::set_vbo_arrays(0); // normals are stored in normal_tid, tex coords come from texgen, color is constant
 	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
 	
 	// draw cracks
@@ -1729,7 +1747,7 @@ void set_tile_xy_vals(shader_t &s) {
 }
 
 
-// uses texture units 0-11 (12 if using hmap texture, 13-14 if using shadow maps)
+// uses texture units 0-11 and 15 (12 if using hmap texture, 13-14 if using shadow maps)
 // Note: could be static, except uses get_actual_zmin()
 void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const {
 
@@ -1749,7 +1767,8 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	setup_tt_fog_post(s);
 	s.add_uniform_int("weights_tex", 0);
 	s.add_uniform_int("detail_tex",  1);
-	s.add_uniform_int("shadow_normal_tex", 7);
+	s.add_uniform_int("normal_tex",  7);
+	s.add_uniform_int("shadow_tex",  15);
 	s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 	s.add_uniform_float("spec_offset", (rain_mode ? 0.5 : 0.0)); // increase specular during rain
 	if (enable_shadow_map) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());}
@@ -2298,7 +2317,8 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 	if (use_smap   ) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());}
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("height_tex", 2);
-	s.add_uniform_int("shadow_normal_tex", 4);
+	s.add_uniform_int("normal_tex", 4);
+	s.add_uniform_int("shadow_tex", 6);
 	s.add_uniform_float("dist_const", dist_const_mult*get_grass_thresh());
 	s.add_uniform_float("dist_slope", GRASS_DIST_SLOPE);
 	setup_tt_fog_post(s);
@@ -2307,7 +2327,7 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 }
 
 
-// tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: shadow map, 5: noise, 9: cloud noise
+// tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: normal map, 5: noise, 6: shadow map, 9: cloud noise
 void tile_draw_t::draw_grass(bool reflection_pass) {
 
 	if (reflection_pass) return; // no grass reflection (yet)

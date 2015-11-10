@@ -148,7 +148,7 @@ public:
 
 private:
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
-	unsigned weight_tid, height_tid, shadow_normal_tid;
+	unsigned weight_tid, height_tid, normal_tid, shadow_tid;
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass, is_distant, no_trees;
@@ -178,10 +178,7 @@ private:
 		terrain_params_t() : hoff(0.0), hscale(1.0), veg(1.0), grass(1.0), dirt(0.0) {}
 	};
 
-	struct norm_comp_with_shadow {
-		unsigned char v[4];
-	};
-	vector<norm_comp_with_shadow> norm_shadow_data;
+	vector<unsigned char> shadow_data;
 	terrain_params_t params[2][2]; // {ylo,yhi} x {xlo,xhi}
 
 	void update_terrain_params();
@@ -276,7 +273,8 @@ public:
 	void apply_ao_shadows_for_trees(tile_t const *const tile, bool no_adj_test);
 	void apply_tree_ao_shadows();
 	void check_shadow_map_and_normal_texture();
-	void upload_shadow_map_and_normal_texture(bool tid_is_valid);
+	void upload_normal_texture(bool tid_is_valid);
+	void upload_shadow_map_texture(bool tid_is_valid);
 	void setup_shadow_maps(tile_shadow_map_manager &smap_manager);
 	bool using_shadow_maps() const {return !smap_data.empty();}
 
