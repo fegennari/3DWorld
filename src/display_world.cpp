@@ -970,44 +970,6 @@ void display(void) {
 }
 
 
-// Note: assumes the camera is not underwater
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
-
-	pos_dir_up const prev_camera_pdu(camera_pdu);
-	camera_pdu = pdu;
-	point const prev_camera_pos(camera_pos);
-	camera_pos = pdu.pos;
-	//bool const occ_cull_enabled(display_mode & 0x08); // is occlusion culling okay to enable or not?
-	//if (occ_cull_enabled && camera_pos != prev_camera_pos) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location)
-
-	// draw background
-	if (combined_gu) {draw_universe_bkg(0, 1);} // infinite universe as background with no asteroid dust
-	else {draw_sun_moon_stars(1); draw_earth();}
-	draw_sky(0, 1);
-	draw_puffy_clouds(0);
-	// draw the scene
-	draw_camera_weapon(0);
-	draw_coll_surfaces(0);
-	if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
-	draw_grass();
-	draw_scenery(1, 0);
-	draw_solid_object_groups();
-	draw_stuff(1, 0, 1);
-	if (display_mode & 0x04) {draw_water(1);}
-	draw_stuff(0, 0, 1);
-	draw_game_elements(0);
-	setup_basic_fog();
-	draw_sky(1, 1);
-	draw_puffy_clouds(1);
-	draw_sun_flare();
-
-	// restore original values
-	camera_pdu = prev_camera_pdu;
-	camera_pos = prev_camera_pos;
-	//if (occ_cull_enabled) {display_mode |= 0x08;}
-}
-
-
 void display_universe() { // infinite universe
 
 	int timer_b;
@@ -1064,41 +1026,101 @@ void draw_transparent(bool above_water) {
 }
 
 
+// Note: assumes the camera is not underwater
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
+
+	pos_dir_up const prev_camera_pdu(camera_pdu);
+	camera_pdu = pdu;
+	point const prev_camera_pos(camera_pos);
+	camera_pos = pdu.pos;
+	//bool const occ_cull_enabled(display_mode & 0x08); // is occlusion culling okay to enable or not?
+	//if (occ_cull_enabled && camera_pos != prev_camera_pos) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location)
+
+	// draw background
+	if (combined_gu) {draw_universe_bkg(0, 1);} // infinite universe as background with no asteroid dust
+	else {draw_sun_moon_stars(1); draw_earth();}
+	draw_sky(0, 1);
+	draw_puffy_clouds(0);
+	// draw the scene
+	draw_camera_weapon(0);
+	draw_coll_surfaces(0);
+	if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
+	draw_grass();
+	draw_scenery(1, 0);
+	draw_solid_object_groups();
+	draw_stuff(1, 0, 1);
+	if (display_mode & 0x04) {draw_water(1);}
+	draw_stuff(0, 0, 1);
+	draw_game_elements(0);
+	setup_basic_fog();
+	draw_sky(1, 1);
+	draw_puffy_clouds(1);
+	draw_sun_flare();
+
+	// restore original values
+	camera_pdu = prev_camera_pdu;
+	camera_pos = prev_camera_pos;
+	//if (occ_cull_enabled) {display_mode |= 0x08;}
+}
+
+
 void apply_z_mirror(float zval) {
 
+	fgMatrixMode(FG_MODELVIEW);
+	fgPushMatrix();
 	fgTranslate(0.0, 0.0, 2*zval); // translate to zval and back
 	fgScale(1.0, 1.0, -1.0); // scale in z
 	//mirror_about_plane(plus_z, point(0.0, 0.0, zval));
 }
 
+void setup_viewport_and_proj_matrix(unsigned xsize, unsigned ysize) {
 
-// render scene reflection to texture
-void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float terrain_zmin) {
-
-	//RESET_TIME;
-	// setup reflected camera frustum
-	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
-	camera_pdu.pos.z = 2*water_plane_z - camera_pdu.pos.z;
-	camera_pdu.dir.z = -camera_pdu.dir.z; // mirror
-	camera_pdu.upv_  = -camera_pdu.upv_;
-	camera_pdu.orthogonalize_up_dir();
-	pos_dir_up const refl_camera_pdu(camera_pdu);
-
-	pre_draw_tiled_terrain();
-
-	// setup viewport and projection matrix
 	glViewport(0, 0, xsize, ysize);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	if (combined_gu && !is_cloudy) {draw_universe_bkg(1);} // infinite universe as background
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
 	set_perspective(PERSP_ANGLE, 1.0);
 	do_look_at();
+}
 
-	// setup mirror transform
-	fgMatrixMode(FG_MODELVIEW);
-	fgPushMatrix();
-	apply_z_mirror(water_plane_z);
+void render_to_texture(unsigned tid, unsigned xsize, unsigned ysize) {
+
+	bind_2d_texture(tid);
+	glReadBuffer(GL_BACK);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize); // glCopyTexSubImage2D copies the frame buffer to the bound texture
+}
+
+void restore_matrices_and_clear() {
+
+	restore_prev_mvm_pjm_state();
+	set_standard_viewport();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+}
+
+
+// render scene reflection to texture (ground mode and tiled terrain mode)
+void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval) {
+
+	//RESET_TIME;
+	pos_dir_up pdu(camera_pdu); // reflect camera frustum used for VFC
+	pdu.apply_z_mirror(zval); // setup reflected camera frustum
+	setup_viewport_and_proj_matrix(xsize, ysize);
+	apply_z_mirror(zval); // setup mirror transform
+	draw_scene_from_custom_frustum(pdu);
+	render_to_texture(tid, xsize, ysize); // render reflection to texture
+	restore_matrices_and_clear(); // reset state
+	//PRINT_TIME("Create Reflection Texture");
+}
+
+void create_tt_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float terrain_zmin) {
+
+	//RESET_TIME;
+	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
+	camera_pdu.apply_z_mirror(water_plane_z); // setup reflected camera frustum
+	pos_dir_up const refl_camera_pdu(camera_pdu);
+	pre_draw_tiled_terrain();
+	setup_viewport_and_proj_matrix(xsize, ysize);
+	apply_z_mirror(water_plane_z); // setup mirror transform
 	camera_pdu = refl_camera_pdu; // reset reflected PDU
 
 	// draw partial scene
@@ -1113,40 +1135,46 @@ void create_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, flo
 		draw_tiled_terrain(1);
 		draw_tiled_terrain_clouds(1);
 	}
-	// end mirror transform
-
-	// render reflection to texture
-	bind_2d_texture(tid);
-	glReadBuffer(GL_BACK);
-	// glCopyTexSubImage2D copies the frame buffer to the bound texture
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize);
-
-	// reset state
+	render_to_texture(tid, xsize, ysize); // render reflection to texture
 	camera_pdu = old_camera_pdu; // restore camera_pdu
-	restore_prev_mvm_pjm_state();
-	set_standard_viewport();
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	restore_matrices_and_clear(); // reset state
 	//PRINT_TIME("Create Reflection Texture");
 }
 
 
-unsigned create_reflection(float terrain_zmin) {
+// Note: reflection_tid is shared between tiled terrain mode and ground mode, since it's the same size and only one can be used at a time
+void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize) {
 
-	if (display_mode & 0x20) return 0; // reflections not enabled
 	static unsigned last_xsize(0), last_ysize(0);
-	unsigned const xsize(window_width/2), ysize(window_height/2);
 
 	if (last_xsize != xsize || last_ysize != ysize) {
-		free_texture(reflection_tid);
+		free_texture(tid);
 		last_xsize = xsize;
 		last_ysize = ysize;
 	}
-	if (!reflection_tid) {
-		setup_texture(reflection_tid, 0, 0, 0);
+	if (!tid) {
+		setup_texture(tid, 0, 0, 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
-	assert(glIsTexture(reflection_tid));
-	create_reflection_texture(reflection_tid, xsize, ysize, terrain_zmin);
+	assert(glIsTexture(tid));
+}
+
+unsigned create_gm_z_reflection(float zval) {
+
+	if (display_mode & 0x20) return 0; // reflections not enabled
+	unsigned const xsize(window_width/2), ysize(window_height/2);
+	setup_reflection_texture(reflection_tid, xsize, ysize);
+	create_gm_reflection_texture(reflection_tid, xsize, ysize, zval);
+	check_gl_error(999);
+	return reflection_tid;
+}
+
+unsigned create_tt_reflection(float terrain_zmin) {
+
+	if (display_mode & 0x20) return 0; // reflections not enabled
+	unsigned const xsize(window_width/2), ysize(window_height/2);
+	setup_reflection_texture(reflection_tid, xsize, ysize);
+	create_tt_reflection_texture(reflection_tid, xsize, ysize, terrain_zmin);
 	check_gl_error(999);
 	return reflection_tid;
 }
@@ -1182,8 +1210,8 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	bool const change_near_far_clip(!camera_surf_collide && min_camera_dist > 0.0);
 	bool const draw_water(water_enabled && water_plane_z >= terrain_zmin);
 	if (show_fog || underwater) {set_inf_terrain_fog(underwater, terrain_zmin);}
-	unsigned reflection_tid(0);
-	if (draw_water && !underwater) {reflection_tid = create_reflection(terrain_zmin);}
+	unsigned tt_reflection_tid(0);
+	if (draw_water && !underwater) {tt_reflection_tid = create_tt_reflection(terrain_zmin);}
 
 	if (combined_gu) {
 		draw_universe_bkg(0); // infinite universe as background
@@ -1214,7 +1242,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	draw_tiled_terrain(0);
 	if (TIMETEST) PRINT_TIME("3.3");
 	//if (underwater ) {draw_local_precipitation();}
-	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, reflection_tid);}
+	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, tt_reflection_tid);}
 	if (!underwater) {draw_tiled_terrain_clouds(0);}
 	if (!underwater) {draw_local_precipitation();}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);

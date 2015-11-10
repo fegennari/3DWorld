@@ -187,6 +187,14 @@ void pos_dir_up::rotate(vector3d const &axis, float angle) { // unused, but coul
 	// FIXME: what about pos?
 }
 
+void pos_dir_up::apply_z_mirror(float zval) {
+
+	pos.z = 2*zval - pos.z;
+	dir.z = -dir.z; // mirror
+	upv_  = -upv_;
+	orthogonalize_up_dir();
+}
+
 
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
