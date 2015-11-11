@@ -302,7 +302,6 @@ void tile_t::clear() {
 	scenery.clear();
 	grass_blocks.clear();
 	clear_flowers();
-	shadow_data.clear();
 }
 
 void tile_t::clear_shadows() {
@@ -691,7 +690,7 @@ void create_or_update_texture(unsigned &tid, bool tid_is_valid, unsigned stride,
 
 void tile_t::upload_normal_texture(bool tid_is_valid) {
 
-	vector<unsigned char> normal_data(4*stride*stride);
+	vector<unsigned char> normal_data(4*stride*stride, 0);
 	min_normal_z = 1.0;
 
 	for (unsigned y = 0; y < stride; ++y) {
@@ -708,7 +707,7 @@ void tile_t::upload_normal_texture(bool tid_is_valid) {
 void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 
 	bool const has_sun(light_factor >= 0.4), has_moon(light_factor <= 0.6), mesh_shadows(mesh_shadows_enabled());
-	shadow_data.resize(4*stride*stride, 0); // may already be resized to the correct value
+	vector<unsigned char> shadow_data(4*stride*stride, 0);
 
 	for (unsigned y = 0; y < stride; ++y) { // Note: shadow texture is stored as {mesh_shadow, tree_shadow, ambient_occlusion}
 		for (unsigned x = 0; x < stride; ++x) {

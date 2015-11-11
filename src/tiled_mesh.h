@@ -178,7 +178,6 @@ private:
 		terrain_params_t() : hoff(0.0), hscale(1.0), veg(1.0), grass(1.0), dirt(0.0) {}
 	};
 
-	vector<unsigned char> shadow_data;
 	terrain_params_t params[2][2]; // {ylo,yhi} x {xlo,xhi}
 
 	void update_terrain_params();
