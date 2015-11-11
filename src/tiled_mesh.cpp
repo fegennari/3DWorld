@@ -579,9 +579,8 @@ void tile_t::push_tree_ao_shadow(int dx, int dy, point const &pos, float tradius
 
 void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_height, bool no_adj_test) {
 
-	// FIXME: use two tree_map channels: one for AO and one for shadows;
-	// the AO version uses the normal (xc, yc) but the shadow version uses the light dir (+ mesh normal?) to offset (xc, yc) and maybe adjust rval to be elliptical;
-	// unfortunately, this requires updating all tree shadows and recreating the AO/normal map each time the light source changes, which can be slow
+	// FIXME: AO uses the normal (xc, yc) but shadow uses the light dir (+ mesh normal?) to offset (xc, yc) and maybe adjust rval to be elliptical;
+	// unfortunately, this requires updating all tree shadows and recreating the AO each time the light source changes, which can be slow
 	//vector3d const light_dir(get_light_pos().get_norm()); // directional light
 	//point pos(pos_ - light_dir*(center_height/max(0.1f, light_dir.z)));
 	int const xc(round_fp((pos.x - xstart)/deltax)), yc(round_fp((pos.y - ystart)/deltay));
@@ -593,7 +592,13 @@ void tile_t::add_tree_ao_shadow(point const &pos, float tradius, float center_he
 	for (int y = y1; y <= y2; ++y) {
 		for (int x = x1; x <= x2; ++x) {
 			float const dx(abs(x - xc)), dy(abs(y - yc)), dist(sqrt(dx*dx + dy*dy));
-			if (dist < rval) {tree_map[y*stride + x] *= (0.2 + 0.8*scale*dist); updated = 1;}
+			
+			if (dist < rval) {
+				float const mult(0.2 + 0.8*scale*dist);
+				tree_map[y*stride + x].ao *= mult;
+				tree_map[y*stride + x].sh *= mult;
+				updated = 1;
+			}
 		}
 	}
 	if (!no_adj_test) {
@@ -648,7 +653,7 @@ void tile_t::apply_tree_ao_shadows() { // should this generate a float or unsign
 
 	if (is_distant) return; // not needed/used
 	tree_map.resize(0);
-	tree_map.resize(stride*stride, 255);
+	tree_map.resize(stride*stride);
 	bool const no_adj_test(trmax < min(deltax, deltay));
 	apply_ao_shadows_for_trees(this, no_adj_test);
 }
@@ -712,10 +717,10 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 	for (unsigned y = 0; y < stride; ++y) { // Note: shadow texture is stored as {mesh_shadow, tree_shadow, ambient_occlusion}
 		for (unsigned x = 0; x < stride; ++x) {
 			unsigned const ix(y*stride + x), ix2(y*zvsize + x), ix_off(4*ix);
-			unsigned char const tree_shadow_val(tree_map.empty() ? 255 : tree_map[ix]); // fully lit (if not nearby trees)
+			unsigned char const tree_ao_val(tree_map.empty() ? 255 : tree_map[ix].ao); // fully lit (if not nearby trees)
 			// 67% ambient if AO lighting is disabled (to cancel out with the scale by 1.5 in the shaders)
-			shadow_data[ix_off+2] = (ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
-			shadow_data[ix_off+2] = (unsigned char)(shadow_data[ix_off+2] * (0.3 + 0.7*tree_shadow_val/255.0)); // add ambient occlusion from trees
+			unsigned char const base_ao(ao_lighting.empty() ? 170 : ao_lighting[ix]); // Note: must always do this so that adj tiles can update tree AO at tile borders
+			shadow_data[ix_off+2] = (unsigned char)(base_ao * (0.3 + 0.7*tree_ao_val/255.0)); // add ambient occlusion from trees
 			unsigned char shadow_val(255);
 
 			if (!mesh_shadows) {} // do nothing
@@ -726,7 +731,7 @@ void tile_t::upload_shadow_map_texture(bool tid_is_valid) {
 			}
 			else if (smask[has_sun ? LIGHT_SUN : LIGHT_MOON][ix2] & SHADOWED_ALL) {shadow_val = 0;} // fully in shadow
 			shadow_data[ix_off+0] = shadow_val; // mesh shadow
-			shadow_data[ix_off+1] = tree_shadow_val;
+			shadow_data[ix_off+1] = (tree_map.empty() ? 255 : (unsigned char)(63.75 + 0.75*tree_map[ix].sh)); // 75% tree shadow: fully lit if not nearby trees
 		}
 	}
 	create_or_update_texture(shadow_tid, tid_is_valid, stride, shadow_data);
@@ -937,8 +942,8 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	if (!tree_map.empty()) {
 		for (unsigned i = 0; i < tsize*tsize; ++i) { // replace grass under trees with dirt
 			unsigned const off(4*i);
-			if (tree_map[i] == 255 || data[off+grass_tex_ix] == 0) continue; // no trees or no grass
-			float const v(tree_map[i]/255.0);
+			if (tree_map[i].ao == 255 || data[off+grass_tex_ix] == 0) continue; // no trees or no grass
+			float const v(tree_map[i].ao/255.0);
 			data[off+dirt_tex_ix]   = (unsigned char)(max(0.0, min(255.0, (data[off+dirt_tex_ix] + (1.0 - v)*data[off+grass_tex_ix]))));
 			data[off+grass_tex_ix] *= v;
 		}

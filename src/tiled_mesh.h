@@ -145,6 +145,10 @@ public:
 		vector3d get_xlate() const {return vector3d(((xoff - xoff2) - dxoff)*DX_VAL, ((yoff - yoff2) - dyoff)*DY_VAL, 0.0);}
 		vector3d subtract_from(offset_t const &o) const {return vector3d((o.dxoff - dxoff)*DX_VAL, (o.dyoff - dyoff)*DY_VAL, 0.0);}
 	};
+	struct tree_map_val {
+		unsigned char ao, sh;
+		tree_map_val() : ao(255), sh(255) {}
+	};
 
 private:
 	int x1, y1, x2, y2, wx1, wy1, wx2, wy2, last_occluded_frame;
@@ -155,7 +159,8 @@ private:
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
-	vector<unsigned char> tree_map, weight_data, ao_lighting;
+	vector<tree_map_val> tree_map;
+	vector<unsigned char> weight_data, ao_lighting;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	vect_smap_t<tile_smap_data_t> smap_data;
