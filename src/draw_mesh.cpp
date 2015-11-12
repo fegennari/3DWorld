@@ -764,6 +764,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.add_uniform_color("water_color",      color);
 	s.add_uniform_color("reflect_color",    rcolor);
 	s.add_uniform_int  ("height_tex",       2);
+	s.add_uniform_int  ("shadow_tex",       6);
 	s.add_uniform_float("water_green_comp", water_params.green);
 	s.add_uniform_float("reflect_scale",    water_params.reflect);
 	s.add_uniform_float("mesh_z_scale",     mesh_scale);

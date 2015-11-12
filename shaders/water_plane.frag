@@ -1,5 +1,5 @@
 uniform float normal_z = 1.0;
-uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex;
+uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex, shadow_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
 
@@ -92,10 +92,20 @@ void main()
 #ifdef USE_WATER_DEPTH
 	if (!is_lava) {color.a *= mix(1.0, clamp(20.0*depth, 0.0, 1.0), min(1.0, 2.5*cos_view_angle));} // blend to alpha=0 near the shore
 #endif
+
+#ifdef ENABLE_WATER_SHADOWS // looks okay for shallow water, but bad for deep water since we get underwater shadows on the water surface
+	vec3 shadow = texture(shadow_tex, tc2).rgb; // {mesh_shadow, tree_shadow, ambient_occlusion}
+	float ambient_scale = shadow.b;
+	float diffuse_scale = min(shadow.r, shadow.g);
+#else
+	float ambient_scale = 1.0;
+	float diffuse_scale = 1.0;
+#endif
+
 	vec4 lighting = vec4(0,0,0,1);
 	if (is_lava) {lighting += vec4(0.3, 0.05, 0.0, 0.0);} // add emissive light
-	if (enable_light0) {lighting += add_light_comp_pos0(light_norm, epos);}
-	if (enable_light1) {lighting += add_light_comp_pos1(light_norm, epos);}
+	if (enable_light0) {lighting += add_light_comp_pos_scaled0(light_norm, epos, diffuse_scale, ambient_scale, gl_Color);}
+	if (enable_light1) {lighting += add_light_comp_pos_scaled1(light_norm, epos, diffuse_scale, ambient_scale, gl_Color);}
 	
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);
