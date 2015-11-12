@@ -1760,10 +1760,12 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	bool const water_caustics(has_water && !(display_mode & 0x80) && (display_mode & 0x100) && water_params.alpha < 1.5);
 	bool const use_normal_map(!reflection_pass); // enabled by default
 	bool const rain_mode((precip_mode > 0) && temperature > W_FREEZE_POINT);
+	bool const triplanar_tex = 0; // slower, looks somewhat better on steep terrain
 	if (has_water      ) {s.set_prefix("#define HAS_WATER",       1);} // FS
 	if (water_caustics ) {s.set_prefix("#define WATER_CAUSTICS",  1);} // FS
 	if (use_normal_map ) {s.set_prefix("#define USE_NORMAL_MAP",  1);} // FS
 	if (reflection_pass) {s.set_prefix("#define REFLECTION_MODE", 1);} // FS
+	if (triplanar_tex  ) {s.set_prefix("#define TRIPLANAR_TEXTURE", 1);} // FS
 	s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
 	s.set_vert_shader("tiled_mesh");
 	s.set_frag_shader("water_fog.part*+linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+triplanar_texture.part+tiled_mesh");
