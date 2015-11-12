@@ -746,6 +746,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.set_bool_prefix("add_waves",   add_waves,   1); // FS
 	s.set_bool_prefix("add_noise",   rain_mode,   1); // FS
 	s.set_bool_prefix("is_lava",     water_is_lava, 1); // FS
+	//s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
 	
 	if (use_tess) { // tessellation shaders
 		s.set_prefix("#define TESS_MODE", 1); // FS

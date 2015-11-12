@@ -1439,6 +1439,7 @@ void tile_t::draw_water(shader_t &s, float z) const {
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(shadow_tid, 6);
+	//shader_shadow_map_setup(s);
 	draw_one_tquad(xv1, yv1, xv2, yv2, z, (use_water_plane_tess() ? GL_PATCHES : GL_TRIANGLE_FAN));
 }
 
@@ -1751,6 +1752,13 @@ void set_tile_xy_vals(shader_t &s) {
 	s.add_uniform_float("dy_inv", inv_scale*DY_VAL_INV);
 }
 
+void setup_tile_shader_shadow_map(shader_t &s) {
+
+	s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());
+	s.add_uniform_float("z_bias", DEF_Z_BIAS);
+	s.add_uniform_float("pcf_offset", shadow_map_pcf_offset);
+}
+
 
 // uses texture units 0-11 and 15 (12 if using hmap texture, 13-14 if using shadow maps)
 // Note: could be static, except uses get_actual_zmin()
@@ -1778,18 +1786,14 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	s.add_uniform_int("shadow_tex",  15);
 	s.add_uniform_float("normal_z_scale", (reflection_pass ? -1.0 : 1.0));
 	s.add_uniform_float("spec_offset", (rain_mode ? 0.5 : 0.0)); // increase specular during rain
-	if (enable_shadow_map) {s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());}
 	set_noise_tex(s, 8);
 	setup_cloud_plane_uniforms(s);
 	setup_terrain_textures(s, 2);
 	set_tile_xy_vals(s);
 	s.add_uniform_int("height_tex", 12);
-	if (use_normal_map) {setup_detail_normal_map(s, 2.0);}
-	
-	if (enable_shadow_map) {
-		s.add_uniform_float("z_bias", DEF_Z_BIAS);
-		s.add_uniform_float("pcf_offset", shadow_map_pcf_offset);
-	}
+	if (use_normal_map   ) {setup_detail_normal_map(s, 2.0);}
+	if (enable_shadow_map) {setup_tile_shader_shadow_map(s);}
+
 	if (has_water) {
 		set_water_plane_uniforms(s);
 		s.add_uniform_float("water_atten",    WATER_COL_ATTEN*mesh_scale);
