@@ -2,6 +2,8 @@ uniform float normal_z = 1.0;
 uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex, shadow_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
+uniform float smap_atten_cutoff = 10.0;
+uniform float smap_atten_slope  = 0.5;
 
 in vec4 epos, proj_pos;
 in vec2 tc, tc2;
@@ -101,12 +103,24 @@ void main()
 	float ascale = 1.0;
 	float dscale = 1.0;
 #endif
-	//if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, norm), 1.0));} // smap_scale = 1.0
-
 	vec4 lighting = vec4(0,0,0,1);
 	if (is_lava) {lighting += vec4(0.3, 0.05, 0.0, 0.0);} // add emissive light
-	if (enable_light0) {lighting += add_light_comp_pos_scaled0(light_norm, epos, dscale, ascale, gl_Color);}
-	if (enable_light1) {lighting += add_light_comp_pos_scaled1(light_norm, epos, dscale, ascale, gl_Color);}
+	float smap_scale = 0.0;
+	// Note: when drawing the mesh we use two passes, one with shadow maps enabled and one without
+	// for water we only have one pass, and the shadow map texture may not be bound/valid in all cases,
+	// but we know that it's valid when smap_scale > 0.0, so we can/must use this test to control the shadow map texture lookup
+	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - length(epos.xyz)), 0.0, 1.0);} // atten shadow with view dist
+
+	if (enable_light0) {
+		float dscale2 = dscale;
+		if (use_shadow_map && smap_scale > 0.0) {dscale2 = min(dscale2, mix(1.0, get_shadow_map_weight_light0(epos, norm), smap_scale));}
+		lighting += add_light_comp_pos_scaled0(light_norm, epos, dscale2, ascale, gl_Color);
+	}
+	if (enable_light1) {
+		float dscale2 = dscale;
+		if (use_shadow_map && smap_scale > 0.0) {dscale2 = min(dscale2, mix(1.0, get_shadow_map_weight_light1(epos, norm), smap_scale));}
+		lighting += add_light_comp_pos_scaled1(light_norm, epos, dscale2, ascale, gl_Color);
+	}
 	
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);

@@ -56,6 +56,7 @@ bool no_sparse_smap_update();
 bool draw_distant_water();
 bool use_water_plane_tess();
 bool enable_ocean_waves();
+void setup_tile_shader_shadow_map(shader_t &s);
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -740,13 +741,13 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	if (depth_only)  {s.set_prefix("#define WRITE_DEPTH_ONLY", 1);} // FS
 	s.setup_enabled_lights(2, 2); // FS
 	setup_tt_fog_pre(s);
-	bool const use_foam(!water_is_lava);
+	bool const use_foam(!water_is_lava), enable_shadow_maps(use_depth); // shadow maps are enabled during the normal pass that uses depth
 	s.set_bool_prefix("use_foam",    use_foam,    1); // FS
 	s.set_bool_prefix("reflections", reflections, 1); // FS
 	s.set_bool_prefix("add_waves",   add_waves,   1); // FS
 	s.set_bool_prefix("add_noise",   rain_mode,   1); // FS
 	s.set_bool_prefix("is_lava",     water_is_lava, 1); // FS
-	//s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
+	s.set_bool_prefix("use_shadow_map", enable_shadow_maps, 1); // FS
 	
 	if (use_tess) { // tessellation shaders
 		s.set_prefix("#define TESS_MODE", 1); // FS
@@ -758,7 +759,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	else {
 		s.set_vert_shader("texture_gen.part+water_plane");
 	}
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+water_plane");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+shadow_map.part*+water_plane");
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int  ("reflection_tex",   0);
@@ -775,6 +776,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 		s.add_uniform_float("wave_height",   1.0/mesh_scale_z);
 		s.add_uniform_float("wave_width",    max(1.0, 1.0/mesh_scale_z));
 	}
+	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
 	set_water_plane_uniforms(s);
 	setup_water_plane_texgen(1.0, 1.0, s, 0);
 	if (no_specular) {s.clear_specular();} else {set_tt_water_specular(s);}
