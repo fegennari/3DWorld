@@ -1118,7 +1118,7 @@ void model3d::get_polygons(vector<coll_tquad> &polygons, bool quads_only, bool a
 		}
 		assert(pix == polygons.size());
 	}
-	::remove_excess_cap(polygons); // probably a good idea
+	//::remove_excess_cap(polygons); // slightly slower, but slightly less memory usage
 }
 
 
