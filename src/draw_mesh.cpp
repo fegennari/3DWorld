@@ -826,6 +826,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 		water_xoff -= wind.x*wwspeed;
 		water_yoff -= wind.y*wwspeed;
 		wave_time  += fticks*(water_is_lava ? 0.75 : 1.0);
+		if (wave_time > 4000.0) {wave_time = 0.0;} // reset at 4000 ticks (2 min. or so) to avoid FP error
 	}
 	enable_blend();
 	colorRGBA rcolor;

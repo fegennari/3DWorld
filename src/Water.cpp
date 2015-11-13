@@ -934,6 +934,7 @@ void add_waves() { // add waves due to wind
 	float const fticks_clamped(min(fticks, 10.0f));
 	static float wave_time(0.0);
 	wave_time += fticks_clamped;
+	if (wave_time > 4000.0) {wave_time = 0.0;} // reset at 4000 ticks (2 min. or so) to avoid FP error
 	
 #pragma omp parallel for schedule(static) num_threads(2)
 	for (int y = 0; y < MESH_Y_SIZE; ++y) {
