@@ -76,11 +76,11 @@ vector3d grass_manager_t::interpolate_mesh_normal(point const &pos) const {
 		    + vertex_normals[y0+1][x0+1]*(xpi*ypi);
 }
 
-void grass_manager_t::add_grass_blade(point const &pos, float cscale, bool on_mesh) {
+void grass_manager_t::add_grass_blade_int(point const &pos, float cscale, bool on_mesh, vector<grass_t> &grass_, rand_gen_pregen_t &rgen_) const {
 
 	vector3d const base_dir(on_mesh ? 0.5*(plus_z + interpolate_mesh_normal(pos)) : plus_z); // average mesh normal and +z for grass on mesh
-	vector3d const dir((base_dir + rgen.signed_rand_vector(0.3)).get_norm());
-	vector3d const norm(cross_product(dir, rgen.signed_rand_vector()).get_norm());
+	vector3d const dir((base_dir + rgen_.signed_rand_vector(0.3)).get_norm());
+	vector3d const norm(cross_product(dir, rgen_.signed_rand_vector()).get_norm());
 	float const ilch(1.0 - leaf_color_coherence), dead_scale(CLIP_TO_01(tree_deadness));
 	float const grass_color_var((world_mode == WMODE_INF_TERRAIN) ? 0.5 : 1.0); // less color variation in tiled terrain mode (to match ground texture)
 	float const base_color[3] = {0.25, 0.6, 0.08};
@@ -90,12 +90,12 @@ void grass_manager_t::add_grass_blade(point const &pos, float cscale, bool on_me
 	unsigned char color[3];
 
 	for (unsigned i = 0; i < 3; ++i) {
-		float const ccomp(CLIP_TO_01(cscale*(base_color[i] + grass_color_var*lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen.rand_float())));
+		float const ccomp(CLIP_TO_01(cscale*(base_color[i] + grass_color_var*lbc_mult[i]*leaf_base_color[i] + ilch*mod_color[i]*rgen_.rand_float())));
 		color[i] = (unsigned char)(255.0*(dead_scale*dead_color[i] + (1.0 - dead_scale)*ccomp));
 	}
-	float const length(grass_length*rgen.rand_uniform(0.7, 1.3));
-	float const width( grass_width *rgen.rand_uniform(0.7, 1.3));
-	grass.push_back(grass_t(pos, dir*length, norm, color, width, on_mesh));
+	float const length(grass_length*rgen_.rand_uniform(0.7, 1.3));
+	float const width( grass_width *rgen_.rand_uniform(0.7, 1.3));
+	grass_.push_back(grass_t(pos, dir*length, norm, color, width, on_mesh));
 }
 
 void grass_manager_t::create_new_vbo() {
@@ -290,7 +290,6 @@ public:
 	void gen_grass() {
 		RESET_TIME;
 		float const dz_inv(1.0/(zmax - zmin));
-		mesh_to_grass_map.resize(XY_MULT_SIZE+1, 0);
 		object_types[GRASS].radius = 0.0;
 		rgen.pregen_floats(10000);
 		unsigned num_voxel_polys(0), num_voxel_blades(0);
@@ -321,9 +320,20 @@ public:
 			}
 			//PRINT_TIME("Grass Occlusion");
 		}
+		vector<vector<unsigned>> mesh_to_grass_local(MESH_Y_SIZE); // one per Y row
+		vector<vector<grass_t>> grass_local(MESH_Y_SIZE); // one per Y row
+
+		#pragma omp parallel for schedule(dynamic,1)
 		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			// create thread private copies of these three variables
+			vector<unsigned> &mesh_to_grass(mesh_to_grass_local[y]);
+			mesh_to_grass.resize(MESH_X_SIZE);
+			vector<grass_t> &grass_(grass_local[y]);
+			rand_gen_pregen_t rgen_(rgen); // deep copy
+			rgen_.set_state(123, 456*y); // unique state for each y row
+
 			for (int x = 0; x < MESH_X_SIZE; ++x) {
-				mesh_to_grass_map[y*MESH_X_SIZE+x] = (unsigned)grass.size();
+				mesh_to_grass[x] = (unsigned)grass_.size();
 				float const xval(get_xval(x)), yval(get_yval(y));
 
 				//if (create_voxel_landscape) {
@@ -346,12 +356,12 @@ public:
 						++num_voxel_polys;
 
 						for (unsigned n = 0; n < num_blades; ++n) {
-							float const r1(rgen.randd()), r2(rgen.randd()), sqrt_r1(sqrt(r1));
+							float const r1(rgen_.randd()), r2(rgen_.randd()), sqrt_r1(sqrt(r1));
 							unsigned const ptix((cobj.npoints == 4 && n < num_blades/2) ? 3 : 1); // handle both triangles and quads
 							point const pos((1 - sqrt_r1)*cobj.points[0] + (sqrt_r1*(1 - r2))*cobj.points[ptix] + (sqrt_r1*r2)*cobj.points[2]);
 							if (!test_cube.contains_pt(pos)) continue; // bbox test
 							if (ao_lighting_too_low(pos))    continue; // too dark
-							add_grass_blade(pos, 0.8, 0); // use cobj.norm instead of mesh normal?
+							add_grass_blade_int(pos, 0.8, 0, grass_, rgen_); // use cobj.norm instead of mesh normal?
 							++num_voxel_blades;
 							has_voxel_grass = 1;
 						}
@@ -380,8 +390,8 @@ public:
 				unsigned const tile_density(round_fp(mod_den));
 
 				for (unsigned n = 0; n < tile_density; ++n) {
-					float const xv(rgen.rand_uniform(xval, xval + DX_VAL));
-					float const yv(rgen.rand_uniform(yval, yval + DY_VAL));
+					float const xv(rgen_.rand_uniform(xval, xval + DX_VAL));
+					float const yv(rgen_.rand_uniform(yval, yval + DY_VAL));
 					float const mh(interpolate_mesh_zval(xv, yv, 0.0, 0, 1));
 					point const pos(xv, yv, mh);
 
@@ -396,7 +406,7 @@ public:
 						if (id1 != GROUND_TEX) {density = t;}
 						if (id2 != GROUND_TEX) {density = 1.0 - t;}
 						density *= slope_scale;
-						if (density < 1.0 && rgen.randd() >= density) continue; // skip - density too low
+						if (density < 1.0 && rgen_.randd() >= density) continue; // skip - density too low
 					}
 					// skip grass intersecting cobjs
 					if (do_cobj_check && dwobject(GRASS, pos).check_vert_collision(0, 0, 0)) continue; // make a GRASS object for collision detection
@@ -405,14 +415,22 @@ public:
 						if (point_inside_voxel_terrain(pos)) continue; // inside voxel volume
 						if (ao_lighting_too_low(pos))        continue; // too dark
 					}
-					add_grass_blade(pos, 0.8, 1);
+					add_grass_blade_int(pos, 0.8, 1, grass_, rgen_);
 				} // for n
 			} // for x
 		} // for y
-		if (has_voxel_grass) {cout << "voxel_polys: " << num_voxel_polys << ", voxel_blades: " << num_voxel_blades << endl;}
-		mesh_to_grass_map[XY_MULT_SIZE] = (unsigned)grass.size();
-		remove_excess_cap(grass);
+		unsigned num_grass(0);
+		for (auto i = grass_local.begin(); i != grass_local.end(); ++i) {num_grass += i->size();}
+		grass.reserve(num_grass);
+		mesh_to_grass_map.reserve(XY_MULT_SIZE+1);
+
+		for (int y = 0; y < MESH_Y_SIZE; ++y) {
+			for (auto i = mesh_to_grass_local[y].begin(); i != mesh_to_grass_local[y].end(); ++i) {mesh_to_grass_map.push_back(*i + grass.size());}
+			std::copy(grass_local[y].begin(), grass_local[y].end(), back_inserter(grass));
+		}
+		mesh_to_grass_map.push_back(num_grass);
 		PRINT_TIME("Grass Generation");
+		if (has_voxel_grass) {cout << "voxel_polys: " << num_voxel_polys << ", voxel_blades: " << num_voxel_blades << endl;}
 	}
 
 	void upload_data_to_vbo(unsigned start, unsigned end, bool alloc_data) const {

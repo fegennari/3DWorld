@@ -43,6 +43,7 @@ protected:
 	typedef vert_norm_comp_color grass_data_t;
 
 	vector3d interpolate_mesh_normal(point const &pos) const;
+	void add_grass_blade_int(point const &pos, float cscale, bool on_mesh, vector<grass_t> &grass_, rand_gen_pregen_t &rgen_) const;
 
 public:
 	grass_manager_t() : data_valid(0) {}
@@ -51,7 +52,7 @@ public:
 	size_t size() const {return grass.size ();} // 2 points per grass blade
 	bool empty()  const {return grass.empty();}
 	void clear();
-	void add_grass_blade(point const &pos, float cscale, bool on_mesh);
+	void add_grass_blade(point const &pos, float cscale, bool on_mesh) {add_grass_blade_int(pos, cscale, on_mesh, grass, rgen);}
 	void create_new_vbo();
 	void add_to_vbo_data(grass_t const &g, vector<grass_data_t> &data, unsigned &ix, vector3d &norm) const;
 	void scale_grass(float lscale, float wscale);
