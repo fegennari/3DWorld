@@ -1,10 +1,13 @@
 include config.txt
 
 # overrides for trees
-ntrees 60
+ntrees 100
 max_unique_trees 50
 tree_4th_branches 1
 nleaves_scale 2.0
 tree_coll_level 3
 
+# enable these for dense tree coverage
+#ntrees 500
+#tree_density_thresh 0.9
 

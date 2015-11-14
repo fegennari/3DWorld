@@ -2109,7 +2109,7 @@ void tree_cont_t::post_scroll_remove() {
 void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegetation_) {
 
 	bool const NONUNIFORM_TREE_DEN = 1; // based on world_mode?
-	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? tree_density_thresh : 1.0));
+	unsigned const mod_num_trees(num_trees/(NONUNIFORM_TREE_DEN ? sqrt(tree_density_thresh) : 1.0));
 	
 	if (mod_num_trees == 0) { // no trees
 		generated = 1;
@@ -2176,6 +2176,7 @@ void tree_cont_t::gen_deterministic(int x1, int y1, int x2, int y2, float vegeta
 		}
 	}
 	generated = 1;
+	//cout << TXT(mod_num_trees) << TXT(size()) << endl;
 }
 
 

@@ -127,6 +127,7 @@ void main()
 	vec4 texel = texture(tex0, apply_parallax_map()); // FIXME: tex coord offset should apply to normal maps as well
 #else
 	vec4 texel = texture(tex0, tc);
+	//texel = mix(vec4(1.0), texel, 0.001); // for debugging untextured
 #endif // ENABLE_PARALLAX_MAP
 #endif // TRIPLANAR_TEXTURE
 

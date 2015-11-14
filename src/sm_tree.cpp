@@ -744,7 +744,7 @@ float small_tree::get_pine_tree_radius() const {
 
 void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
 
-	if (type != T_PINE && type != T_SH_PINE) return; // only for pine trees
+	if (!is_pine_tree()) return; // only for pine trees
 	float const sz_scale(SQRT2*get_pine_tree_radius()), dz((type == T_PINE) ? 0.35*height : 0.0);
 
 	if (!low_detail) { // high detail
@@ -789,7 +789,8 @@ void small_tree::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool lo
 }
 
 
-float small_tree::get_zmax() const {return (pos.z + height);} // approximate
+// approximate, trunk_cylin part is generally smaller so may not need to be added
+float small_tree::get_zmax() const {return max((pos.z + height), trunk_cylin.p2.z);}
 
 
 void small_tree::add_trunk_as_line(vector<point> &points) const {
