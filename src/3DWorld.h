@@ -1261,7 +1261,7 @@ public:
 
 class rgen_pregen_t : public rgen_core_t {
 
-	vector<double> pregen_rand_reals;
+	std::shared_ptr<vector<double>> pregen_rand_reals;
 	unsigned cur_pos;
 
 public:

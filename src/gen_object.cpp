@@ -384,15 +384,15 @@ double rgen_core_t::randd() { // for some reason, inlining this function changes
 }
 
 void rgen_pregen_t::pregen_floats(unsigned num) {
-	pregen_rand_reals.resize(num);
-	for (unsigned i = 0; i < num; ++i) {pregen_rand_reals[i] = rgen_core_t::randd();}
+	pregen_rand_reals.reset(new vector<double>(num));
+	for (unsigned i = 0; i < num; ++i) {(*pregen_rand_reals)[i] = rgen_core_t::randd();}
 	cur_pos = 0;
 }
 
 double rgen_pregen_t::randd() {
-	if (pregen_rand_reals.empty()) {return rgen_core_t::randd();}
-	float const val(pregen_rand_reals[cur_pos++]);
-	if (cur_pos == pregen_rand_reals.size()) {cur_pos = 0;}
+	if (pregen_rand_reals == nullptr || pregen_rand_reals->empty()) {return rgen_core_t::randd();}
+	float const val((*pregen_rand_reals)[cur_pos++]);
+	if (cur_pos == pregen_rand_reals->size()) {cur_pos = 0;}
 	return val;
 }
 
