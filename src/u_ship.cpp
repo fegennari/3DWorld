@@ -2912,9 +2912,7 @@ void orbiting_ship::ai_action() {
 				set<unsigned> unique_sc;
 
 				if (build_any) {
-					for (unsigned i = 0; i < USC_COLONY; ++i) {
-						unique_sc.insert(i);
-					}
+					for (unsigned i = 0; i < USC_COLONY; ++i) {unique_sc.insert(i);}
 				}
 				else {
 					copy(btypes.begin(), btypes.end(), inserter(unique_sc, unique_sc.begin()));
