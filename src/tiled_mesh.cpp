@@ -1729,7 +1729,7 @@ void tile_draw_t::lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighti
 
 	shared_shader_lighting_setup(s, lighting_shader);
 	s.set_prefix("#define NUM_OCTAVES 4", lighting_shader); // for clouds
-	s.set_bool_prefix("apply_cloud_shadows", cloud_shadows, lighting_shader); // FS
+	if (cloud_shadows) {s.set_prefix("#define APPLY_CLOUD_SHADOWS", lighting_shader);}
 }
 
 void setup_cloud_plane_uniforms(shader_t &s, float cloud_cover_factor=0.535, bool match_cloud_layer=0) {

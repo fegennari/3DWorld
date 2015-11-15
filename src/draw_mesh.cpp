@@ -742,12 +742,13 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.setup_enabled_lights(2, 2); // FS
 	setup_tt_fog_pre(s);
 	bool const use_foam(!water_is_lava), enable_shadow_maps(use_depth); // shadow maps are enabled during the normal pass that uses depth
-	s.set_bool_prefix("use_foam",    use_foam,    1); // FS
-	s.set_bool_prefix("reflections", reflections, 1); // FS
-	s.set_bool_prefix("add_waves",   add_waves,   1); // FS
-	s.set_bool_prefix("add_noise",   rain_mode,   1); // FS
+	s.set_bool_prefix("use_foam",    use_foam,      1); // FS
+	s.set_bool_prefix("reflections", reflections,   1); // FS
+	s.set_bool_prefix("add_waves",   add_waves,     1); // FS
+	s.set_bool_prefix("add_noise",   rain_mode,     1); // FS
 	s.set_bool_prefix("is_lava",     water_is_lava, 1); // FS
 	s.set_bool_prefix("use_shadow_map", enable_shadow_maps, 1); // FS
+	s.set_bool_prefix("enable_light2", 0, 1); // FS (no light2)
 	
 	if (use_tess) { // tessellation shaders
 		s.set_prefix("#define TESS_MODE", 1); // FS
@@ -759,7 +760,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	else {
 		s.set_vert_shader("texture_gen.part+water_plane");
 	}
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+shadow_map.part*+water_plane");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+shadow_map.part*+tiled_shadow_map.part*+water_plane");
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int  ("reflection_tex",   0);

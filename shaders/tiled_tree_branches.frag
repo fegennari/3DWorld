@@ -2,7 +2,7 @@ uniform sampler2D tex0;
 uniform float opacity = 1.0;
 
 in vec4 epos;
-in vec3 normal;
+in vec3 normal; // eye space
 in vec2 tc;
 
 void main()

@@ -1,7 +1,7 @@
 uniform float point_size_pixels = 1.0; // for point sprite mode
 
 out vec4 epos;
-out vec3 normal;
+out vec3 normal; // eye space
 out vec2 tc;
 
 void main()

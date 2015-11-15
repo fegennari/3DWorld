@@ -1,11 +1,12 @@
 uniform float smap_atten_cutoff = 10.0;
 uniform float smap_atten_slope  = 0.5;
 
+#ifdef APPLY_CLOUD_SHADOWS
 float calc_light_scale(in vec3 vertex, in vec4 light_pos) {
-	if (!apply_cloud_shadows) {return 1.0;}
 	vec4 light = fg_ModelViewMatrixInverse * light_pos; // world space
 	return 1.0 - get_cloud_plane_alpha(vertex, light);
 }
+#endif
 
 vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm, in vec4 ad_color, in float ambient_scale, in float diffuse_scale) {
 
@@ -15,13 +16,19 @@ vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm, in vec
 
 	if (enable_light0) {
 		float dscale = diffuse_scale;
-		if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, eye_norm), smap_scale));}
-		color += add_light_comp_pos_scaled0(eye_norm, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[0].position), ambient_scale, ad_color).rgb;
+		if (use_shadow_map && smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, eye_norm), smap_scale));}
+#ifdef APPLY_CLOUD_SHADOWS
+		dscale *= calc_light_scale(vertex.xyz, fg_LightSource[0].position);
+#endif
+		color += add_light_comp_pos_scaled0(eye_norm, epos, dscale, ambient_scale, ad_color).rgb;
 	}
 	if (enable_light1) {
 		float dscale = diffuse_scale;
-		if (use_shadow_map) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, eye_norm), smap_scale));}
-		color += add_light_comp_pos_scaled1(eye_norm, epos, dscale*calc_light_scale(vertex.xyz, fg_LightSource[1].position), ambient_scale, ad_color).rgb;
+		if (use_shadow_map && smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, eye_norm), smap_scale));}
+#ifdef APPLY_CLOUD_SHADOWS
+		dscale *= calc_light_scale(vertex.xyz, fg_LightSource[1].position);
+#endif
+		color += add_light_comp_pos_scaled1(eye_norm, epos, dscale, ambient_scale, ad_color).rgb;
 	}
 	if (enable_light2) {color += add_pt_light_comp(eye_norm, epos, 2).rgb;} // lightning (can't override color)
 	return color;

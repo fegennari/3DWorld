@@ -54,10 +54,11 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	float NdotL = dot(normal, light_dir);
 	vec4 light  = fg_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
 
-	if (apply_cloud_shadows /*&& vertex.z > water_plane_z*//*&& vertex.z < cloud_plane_z*/) { // conditionals are faster but cause seams
-		ds_scale *= 1.0 - get_cloud_plane_alpha(vertex.xyz, light);
-	}
-	
+#ifdef APPLY_CLOUD_SHADOWS
+	//if (vertex.z > water_plane_z && vertex.z < cloud_plane_z) // conditionals are faster but cause seams
+	ds_scale *= 1.0 - get_cloud_plane_alpha(vertex.xyz, light);
+#endif
+
 	// compute the ambient and diffuse lighting
 	vec4 color = a_scale*fg_LightSource[i].ambient + ds_scale*max(dot(normal, light_dir), 0.0)*fg_LightSource[i].diffuse;
 	if (enable_light0) {color += get_light_specular_comp(normal, light_dir, epos_final, ds_scale*spec, shininess);}
@@ -82,9 +83,9 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	}
 #endif // HAS_WATER
 #ifdef GOD_RAYS
-	if (apply_cloud_shadows && vertex.z > water_plane_z) {
-		color.rgb += get_god_rays(vertex.xyz, fg_ModelViewMatrixInverse[3].xyz, light);
-	}
+#ifdef APPLY_CLOUD_SHADOWS
+	if (vertex.z > water_plane_z) {color.rgb += get_god_rays(vertex.xyz, fg_ModelViewMatrixInverse[3].xyz, light);}
+#endif // APPLY_CLOUD_SHADOWS
 #endif // GOD_RAYS
 	return color;
 }
