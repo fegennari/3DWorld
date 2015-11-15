@@ -1075,9 +1075,14 @@ void tile_t::update_decid_trees() {
 	if (decid_trees_enabled()) {decid_trees.check_render_textures();}
 }
 
-void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass) {
+void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap) {
 
 	if (decid_trees.empty() || !can_have_trees()) return;
+	
+	if (enable_smap) {
+		bind_texture_tu(shadow_tid, 6);
+		shader_shadow_map_setup(s);
+	}
 	// Note: shadow_only mode doesn't help performance much
 	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, shadow_pass, reflection_pass, dtree_off.get_xlate());
 }
@@ -2189,8 +2194,9 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	s.end_shader();
 
 	// nearby trunks
+	bool const use_smap(0); // not yet supported
 	setup_tt_fog_pre(s);
-	setup_smoke_shaders(s, 0.0, 0, 0, 0, !shadow_pass, 0, 0, 0, 0, 0, 0, 1);
+	setup_smoke_shaders(s, 0.0, 0, 0, 0, !shadow_pass, 0, 0, 0, use_smap, 0, 0, 1);
 	setup_tt_fog_post(s);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 	s.add_uniform_float("tex_scale_t", 5.0);
@@ -2213,10 +2219,10 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 }
 
 
-void tile_draw_t::draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass, bool shadow_pass) {
+void tile_draw_t::draw_decid_tree_bl(shader_t &s, tree_lod_render_t &lod_renderer, bool branches, bool leaves, bool reflection_pass, bool shadow_pass, bool enable_smap) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
-		to_draw[i].second->draw_decid_trees(s, lod_renderer, branches, leaves, reflection_pass, shadow_pass);
+		to_draw[i].second->draw_decid_trees(s, lod_renderer, branches, leaves, reflection_pass, shadow_pass, enable_smap);
 	}
 }
 
@@ -2254,23 +2260,27 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 		set_tree_dither_noise_tex(ls, 1); // TU=1
 		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass, shadow_pass);
+		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass, shadow_pass, 0); // no shadow map (due to high fill rate perf issues)
 		ls.add_uniform_color("color_scale", WHITE);
 		tree_cont_t::post_leaf_draw(ls);
 	}
 	{ // draw branches
+		bool const enable_shadow_maps(!shadow_pass); // && !reflection_pass?
 		shader_t bs;
 		bs.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
 		setup_tt_fog_pre(bs);
+		bs.set_bool_prefix("use_shadow_map", enable_shadow_maps, 1); // FS
 		bs.set_vert_shader("per_pixel_lighting");
-		bs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tiled_tree_branches");
+		bs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+tiled_tree_branches");
 		bs.begin_shader();
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
 		setup_tt_fog_post(bs);
 		set_tree_dither_noise_tex(bs, 1); // TU=1
 		bs.add_uniform_int("tex0", 0);
+		bs.add_uniform_int("shadow_tex", 6);
 		bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
-		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass);
+		if (enable_shadow_maps) {setup_tile_shader_shadow_map(bs);}
+		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);
 		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 		bs.end_shader();
 	}
