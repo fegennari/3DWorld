@@ -2052,9 +2052,10 @@ void tile_draw_t::draw(bool reflection_pass) {
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
 	if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
-	lightning_strike.end_draw(); // in case it was enabled
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 }
+
+void tile_draw_t::end_lightning() const {lightning_strike.end_draw();} // in case it was enabled
 
 
 void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const {
@@ -2606,6 +2607,7 @@ void draw_tiled_terrain(bool reflection_pass) {
 }
 
 void draw_tiled_terrain_lightning(bool reflection_pass) {terrain_tile_draw.update_lightning(reflection_pass);}
+void end_tiled_terrain_lightning() {terrain_tile_draw.end_lightning();}
 void clear_tiled_terrain() {terrain_tile_draw.clear();}
 void draw_tiled_terrain_clouds(bool reflection_pass) {terrain_tile_draw.draw_tile_clouds(reflection_pass);}
 void reset_tiled_terrain_state() {terrain_tile_draw.clear_vbos_tids();}

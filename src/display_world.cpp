@@ -1129,10 +1129,11 @@ void create_tt_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 		draw_sun_flare(1.5);
 	}
 	draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
-	if (show_lightning) {draw_tiled_terrain_lightning(1);}
 	
 	if (get_camera_pos().z <= get_tt_cloud_level()) { // camera is below the clouds
+		if (show_lightning) {draw_tiled_terrain_lightning(1);}
 		draw_tiled_terrain(1);
+		if (show_lightning) {end_tiled_terrain_lightning();}
 		draw_tiled_terrain_clouds(1);
 	}
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
@@ -1243,6 +1244,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (TIMETEST) PRINT_TIME("3.3");
 	//if (underwater ) {draw_local_precipitation();}
 	if (draw_water ) {draw_water_plane(water_plane_z, terrain_zmin, tt_reflection_tid);}
+	if (show_lightning) {end_tiled_terrain_lightning();}
 	if (!underwater) {draw_tiled_terrain_clouds(0);}
 	if (!underwater) {draw_local_precipitation();}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);

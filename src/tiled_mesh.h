@@ -382,6 +382,7 @@ public:
 	void draw_tiles(bool reflection_pass, bool enable_shadow_map) const;
 	void draw_shadow_pass(point const &lpos, tile_t *tile);
 	void draw_water(shader_t &s, float zval) const;
+	void end_lightning() const;
 	static void set_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_tree_dither_noise_tex(shader_t &s, unsigned tu_id);
 	static void set_pine_tree_shader(shader_t &s, string const &vs);

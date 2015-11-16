@@ -229,6 +229,7 @@ float update_tiled_terrain(float &min_camera_dist);
 void pre_draw_tiled_terrain();
 void draw_tiled_terrain(bool reflection_pass);
 void draw_tiled_terrain_lightning(bool reflection_pass);
+void end_tiled_terrain_lightning();
 void draw_tiled_terrain_clouds(bool reflection_pass);
 void clear_tiled_terrain();
 void reset_tiled_terrain_state();
