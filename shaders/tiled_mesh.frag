@@ -62,6 +62,15 @@ vec4 add_light_comp(in vec3 normal, in vec4 epos, in int i, in float ds_scale, i
 	// compute the ambient and diffuse lighting
 	vec4 color = a_scale*fg_LightSource[i].ambient + ds_scale*max(dot(normal, light_dir), 0.0)*fg_LightSource[i].diffuse;
 	if (enable_light0) {color += get_light_specular_comp(normal, light_dir, epos_final, ds_scale*spec, shininess);}
+
+#ifdef ADD_INDIR_REFL_LIGHT
+	// back-facing light to approximate indirect light reflection
+	vec4 light_ws      = fg_ModelViewMatrixInverse * fg_LightSource[i].position; // world space
+	vec4 ref_light_ws  = vec4(-light.x, -light.y, 0.0, light.w); // negate X and Y, zero Z
+	vec4 ref_light     = fg_ModelViewMatrix * ref_light_ws; // back to eye space
+	vec3 ref_light_dir = normalize(ref_light.xyz);
+	color.rgb += 0.2*max(dot(normal, ref_light_dir), 0.0)*fg_LightSource[i].diffuse.rgb;
+#endif
 	
 #ifdef HAS_WATER
 	if (vertex.z < water_plane_z) { // underwater
