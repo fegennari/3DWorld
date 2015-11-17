@@ -278,10 +278,10 @@ unsigned tile_t::get_gpu_mem() const {
 
 	unsigned mem(pine_trees.get_gpu_mem() + decid_trees.get_gpu_mem() + scenery.get_gpu_mem());
 	unsigned const num_texels(stride*stride);
-	if (weight_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
-	if (height_tid > 0) mem += 4*num_texels; // 4 bytes per texel (F32)
-	if (normal_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
-	if (shadow_tid > 0) mem += 4*num_texels; // 4 bytes per texel (RGBA8)
+	if (weight_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (RGBA8)
+	if (height_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (F32)
+	if (normal_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (RGBA8)
+	if (shadow_tid > 0) {mem += 4*num_texels;} // 4 bytes per texel (RGBA8)
 	
 	for (unsigned i = 0; i < smap_data.size(); ++i) {
 		if (smap_data[i].is_allocated()) {mem += 4*shadow_map_sz*shadow_map_sz;} // FBO textures
@@ -294,6 +294,7 @@ void tile_t::clear() {
 
 	clear_vbo_tid(nullptr);
 	tree_map.clear();
+	mesh_weight_data.clear();
 	weight_data.clear();
 	zvals.clear();
 	clear_shadows();
@@ -832,7 +833,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	if (weight_tid == 0) { // create weights
 		has_any_grass = 0;
 		grass_blocks.clear();
-		weight_data.resize(4*tsize*tsize); // RGBA
+		mesh_weight_data.resize(4*tsize*tsize); // RGBA
 		unsigned const grass_block_dim(get_grass_block_dim());
 		float const xy_mult(1.0/float(size)), water_level(get_water_z_height());
 		float const MESH_NOISE_SCALE = 0.003;
@@ -928,34 +929,34 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 					}
 				} // end grass
 				for (unsigned i = 0; i < NTEX_DIRT-1; ++i) { // Note: weights should sum to 1.0, so we can calculate w4 as 1.0-w0-w1-w2-w3
-					weight_data[off+i] = (weights[i] ? (unsigned char)(255.0*CLIP_TO_01(weights[i])) : 0);
+					mesh_weight_data[off+i] = (weights[i] ? (unsigned char)(255.0*CLIP_TO_01(weights[i])) : 0);
 				}
 			} // for x
 		} // for y
 	}
 	else { // use existing weights
 		assert(recalc_tree_grass_weights); // can only get here in this case
-		assert(weight_data.size() == 4*tsize*tsize);
+		assert(mesh_weight_data.size() == 4*tsize*tsize);
 	}
-	vector<unsigned char> data(weight_data); // deep copy so that tree_map doesn't alter original weights
+	weight_data = mesh_weight_data; // deep copy so that tree_map doesn't alter original weights
 
 	if (!tree_map.empty()) {
 		for (unsigned i = 0; i < tsize*tsize; ++i) { // replace grass under trees with dirt
 			unsigned const off(4*i);
-			if (tree_map[i].ao == 255 || data[off+grass_tex_ix] == 0) continue; // no trees or no grass
+			if (tree_map[i].ao == 255 || weight_data[off+grass_tex_ix] == 0) continue; // no trees or no grass
 			float const v(tree_map[i].ao/255.0);
-			data[off+dirt_tex_ix]   = (unsigned char)(max(0.0, min(255.0, (data[off+dirt_tex_ix] + (1.0 - v)*data[off+grass_tex_ix]))));
-			data[off+grass_tex_ix] *= v;
+			weight_data[off+dirt_tex_ix]   = (unsigned char)(max(0.0, min(255.0, (weight_data[off+dirt_tex_ix] + (1.0 - v)*weight_data[off+grass_tex_ix]))));
+			weight_data[off+grass_tex_ix] *= v;
 		}
 	}
 	if (weight_tid == 0) { // create weight texture
 		setup_texture(weight_tid, 0, 0, 0, 0, 0);
 		assert(weight_tid > 0 && glIsTexture(weight_tid));
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, &data.front()); // internal_format = GL_COMPRESSED_RGBA - too slow
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tsize, tsize, 0, GL_RGBA, GL_UNSIGNED_BYTE, &weight_data.front()); // internal_format = GL_COMPRESSED_RGBA - too slow
 	}
 	else { // update texture
 		bind_2d_texture(weight_tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, &data.front());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tsize, tsize, GL_RGBA, GL_UNSIGNED_BYTE, &weight_data.front());
 	}
 	recalc_tree_grass_weights = 0;
 	//PRINT_TIME("Texture Upload");
@@ -1182,7 +1183,7 @@ void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 	if (grass_blocks.empty()) return; // no grass, no flowers
 	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
 	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return; // too far away to draw
-	flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2);
+	flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2); // mesh weight + tree dirt
 	if (flowers.empty()) return; // no flowers generated
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	flowers.check_vbo();
@@ -1484,7 +1485,7 @@ int tile_t::get_tid_under_point(point const &pos) const {
 	unsigned max_weight(0), max_weight_ix(0), weight_sum(0);
 
 	for (unsigned i = 0; i < 4; ++i) {
-		unsigned const w(weight_data[ix + i]);
+		unsigned const w(weight_data[ix + i]); // mesh weight + tree dirt
 		weight_sum += w;
 		if (w > max_weight) {max_weight = w; max_weight_ix = i;}
 	}

@@ -160,7 +160,7 @@ private:
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
 	vector<tree_map_val> tree_map;
-	vector<unsigned char> weight_data, ao_lighting;
+	vector<unsigned char> mesh_weight_data, weight_data, ao_lighting;
 	vector<unsigned char> smask[NUM_LIGHT_SRC];
 	vector<float> sh_out[NUM_LIGHT_SRC][2];
 	vect_smap_t<tile_smap_data_t> smap_data;

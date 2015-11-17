@@ -836,7 +836,7 @@ void flower_manager_t::draw_triangles(shader_t &shader) const {
 void flower_manager_t::add_flowers(mesh_xy_grid_cache_t const density_gen[2],
 	float grass_den, float hthresh, float dx, float dy, int xpos, int ypos, bool gen_zval) 
 {
-	if (grass_den < 0.5) return; // no grass
+	if (grass_den < 0.5) return; // no flowers
 	unsigned const NUM_COLORS(3), start_eval_sine(50);
 	colorRGBA const colors[NUM_COLORS] = {WHITE, YELLOW, LT_BLUE};
 	float const dval(density_gen[0].eval_index(xpos, ypos, 0, start_eval_sine));
