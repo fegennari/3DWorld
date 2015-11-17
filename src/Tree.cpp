@@ -35,6 +35,15 @@ unsigned const CYLINS_PER_ROOT     = 3;
 unsigned const TREE_BILLBOARD_SIZE = 256;
 
 
+// bark_tex, leaf_tex, branch_size, branch_radius, leaf_size, leaf_x_ar, height_scale, branch_break_off, branch_tscale, branch_color_var, bush_prob, barkc, leafc
+tree_type tree_types[NUM_TREE_TYPES] = { // not const - config file can override parameters (such as bush_prob)
+	tree_type(BARK3_TEX, LEAF_TEX,     1.0, 0.7, 1.0, 1.00, 1.0, 1.0, 1.0, 0.1,  0.0, colorRGBA(0.7, 0.7,  0.5,  1.0), colorRGBA(0.2, 1.0, 0.2, 1.0)),
+	tree_type(BARK4_TEX, LIVE_OAK_TEX, 1.0, 1.0, 1.0, 0.63, 1.0, 1.0, 1.5, 0.1,  0.0, colorRGBA(1.0, 0.9,  0.8,  1.0), WHITE),
+	tree_type(BARK1_TEX, LEAF2_TEX,    1.0, 1.0, 1.0, 0.82, 2.0, 0.5, 1.0, 0.1,  0.0, colorRGBA(0.8, 0.5,  0.3,  1.0), WHITE),
+	tree_type(BARK5_TEX, LEAF3_TEX,    1.0, 0.7, 1.5, 0.81, 1.0, 1.0, 0.3, 0.01, 0.0, colorRGBA(0.8, 0.75, 0.65, 1.0), WHITE), // birch bark
+	tree_type(BARK6_TEX, PAPAYA_TEX,   1.0, 1.0, 1.0, 1.00, 2.0, 2.0, 0.5, 0.1,  0.0, colorRGBA(0.7, 0.6,  0.5,  1.0), WHITE)
+};
+
 vector<tree_cylin >   tree_builder_t::cylin_cache;
 vector<tree_branch>   tree_builder_t::branch_cache;
 vector<tree_branch *> tree_builder_t::branch_ptr_cache;
@@ -1445,12 +1454,11 @@ float get_default_tree_depth() {return TREE_DEPTH*(0.5 + 0.5/tree_scale);}
 //gen_tree(pos, size, ttype>=0, calc_z, 0, 1);
 //gen_tree(pos, 0, -1, 1, 1, 0);
 void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed,
-	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches, bool create_bush)
+	float height_scale, float br_scale_mult, float nl_scale, bool has_4th_branches)
 {
 	assert(calc_z || user_placed);
-	tree_center = pos;
-	created     = 1;
-	create_bush = 0; // for debugging
+	tree_center      = pos;
+	created          = 1;
 	tree_color.alpha = 1.0;
 	tree_nl_scale    = nl_scale;
 	vector3d const color_var(signed_rand_vector2()); // rand_gen() called outside gen_tree_data()
@@ -1475,6 +1483,10 @@ void tree::gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_
 	}
 	else {
 		type = ((ttype < 0) ? rand2() : ttype) % NUM_TREE_TYPES; // maybe should be an error if > NUM_TREE_TYPES
+		float const bush_prob(tree_types[type].bush_prob);
+		bool create_bush(0);
+		if (bush_prob > 0.0) {create_bush = (bush_prob >= 1.0 || rand_float2() < bush_prob);}
+		if (create_bush) {type = (type + 1) % NUM_TREE_TYPES;} // mix up the tree types so that bushes stand out from trees
 		tree_type const &treetype(tree_types[type]);
 		UNROLL_3X(tree_color[i_] = 1.0 + treetype.branch_color_var*color_var[i_];)
 		float tree_depth(get_default_tree_depth());
@@ -1552,7 +1564,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	float height_scale, float br_scale, float nl_scale, float bbo_scale, bool has_4th_branches, bool create_bush)
 {
 	// fixed tree variables
-	// bush: minimal trunk, no roots, starts below the ground
+	// bush: minimal trunk, no roots, starts below the ground, smaller, fewer leaves
 	ncib                 = 10;
 	base_num_cylins      = (create_bush ? 1 : round_fp(5 * max(1.0f, tree_height_scale)));
 	num_cylin_factor     = 10.0;
@@ -1567,10 +1579,11 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	num_3_branches_min   = 6;
 	num_3_branches_max   = 10;
 	num_34_branches[1]   = (has_4th_branches ? 2000 : 0);
-	if (size <= 0) {size  = rand_gen(40, 80);} // tree size
-	base_radius            = size * (0.1*TREE_SIZE*tree_types[tree_type].branch_size/tree_scale);
-	num_leaves_per_occ     = 0.01*nl_scale*nleaves_scale*(rand_gen(30, 60) + size);
-	base_length_min        = rand_gen(4, 6) * height_scale * base_radius * tree_height_scale * (create_bush ? 0.05 : 1.0);
+	if (size <= 0) {size = rand_gen(40, 80);} // tree size
+	float const size_scale(TREE_SIZE*tree_types[tree_type].branch_size/tree_scale * (create_bush ? 0.7 : 1.0));
+	base_radius            = size * (0.1*size_scale);
+	num_leaves_per_occ     = 0.01*nl_scale*nleaves_scale*(rand_gen(30, 60) + size) * (create_bush ? 0.3 : 1.0);
+	base_length_min        = rand_gen(4, 6) * height_scale * base_radius * tree_height_scale * (create_bush ? 0.05 : 1.0); // short trunk for bushes
 	base_length_max        = base_length_min * 1.5;
 	angle_rotate           = 60.0;
 	base_curveness         = 10.0;
@@ -1595,7 +1608,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	leaf_acc               = 0.0;
 	float const base_rad_var = (1.0 - 0.75/base_num_cylins);
 	float const base_len_var = (1.0 - 1.0 /base_num_cylins);
-	float const height_offset(create_bush ? -1.0*height_scale*base_radius*tree_height_scale : 0);
+	float const height_offset(create_bush ? -2.0*height_scale*base_radius*tree_height_scale : 0);
 	float const branch_1_random_rotate = 40.0;
 	int const min_num_roots(10), max_num_roots(12);
 	base_color = colorRGBA(0.5*signed_rand_float2(), 0.5*signed_rand_float2(), 0.0, 1.0); // no blue
@@ -1675,7 +1688,7 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 	num_1_branches = num_b_so_far; // clamp to the number actually created
 	
 	//done with base ------------------------------------------------------------------
-	if (has_4th_branches) {create_4th_order_branches(nbranches, tree_type, br_scale);}
+	if (has_4th_branches) {create_4th_order_branches(nbranches, size_scale*br_scale);}
 	root_num_cylins = ((gen_tree_roots && !create_bush) ? CYLINS_PER_ROOT*rand_gen(min_num_roots, max_num_roots) : 0);
 
 	for (int i = 0; i < root_num_cylins; i += CYLINS_PER_ROOT) { // add roots
@@ -1935,10 +1948,10 @@ void tree_builder_t::gen_b4(tree_branch &branch, int &branch_num, int num_4_bran
 }
 
 
-void tree_builder_t::create_4th_order_branches(int nbranches, int tree_type, float br_scale) {
+void tree_builder_t::create_4th_order_branches(int nbranches, float branch_scale) {
 
 	int num_4_branches  = 2;
-	branch_4_length     = 6.0*TREE_SIZE*br_scale*tree_types[tree_type].branch_size/tree_scale; //0.03;
+	branch_4_length     = 6.0*branch_scale; //0.03;
 	branch_4_max_radius = 0.008;
 	assert(num_34_branches[1] > 0);
 	int branch_num(0);

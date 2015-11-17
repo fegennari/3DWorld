@@ -15,6 +15,7 @@
 #include "openal_wrap.h"
 #include "file_utils.h"
 #include "draw_utils.h"
+#include "tree_leaf.h"
 #include <set>
 #include <GL/wglew.h> // for wglSwapIntervalEXT
 
@@ -1759,6 +1760,11 @@ int load_config(string const &config_file) {
 		}
 		else if (str == "tree_branch_radius") {
 			if (!read_float(fp, branch_radius_scale) || branch_radius_scale <= 0.0) cfg_err("tree_branch_radius command", error);
+		}
+		else if (str == "bush_probability") {
+			for (unsigned i = 0; i < NUM_TREE_TYPES; ++i) { // read a list of floating-point numbers (could allow a partial set to be read)
+				if (!read_float(fp, tree_types[i].bush_prob)) {cfg_err("bush_probability command", error); break;}
+			}
 		}
 		else if (str == "leaf_color") {
 			if (fscanf(fp, "%f%f%f%f%f", &leaf_base_color.R, &leaf_base_color.G, &leaf_base_color.B, &leaf_color_coherence, &tree_color_coherence) != 5) {

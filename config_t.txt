@@ -1,7 +1,7 @@
 include config.txt
 
 # overrides for trees
-ntrees 100
+ntrees 150
 max_unique_trees 50
 tree_4th_branches 1
 nleaves_scale 2.0

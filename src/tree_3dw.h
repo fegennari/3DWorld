@@ -165,7 +165,7 @@ class tree_builder_t : public tree_xform_t {
 	void create_2nd_order_branch(int i, int j, int cylin_num, bool branch_deflected, int rotation);
 	void create_3rd_order_branch(int i, int j, int cylin_num, int branch_num, bool branch_deflected, int rotation);
 	void gen_b4(tree_branch &branch, int &branch_num, int num_4_branches, int i, int k);
-	void create_4th_order_branches(int nbranches, int tree_type, float br_scale);
+	void create_4th_order_branches(int nbranches, float branch_scale);
 	void generate_4th_order_branch(tree_branch &src_branch, int j, float rotate_start, float temp_deg, int branch_num);
 	int generate_next_cylin(int cylin_num, int ncib, bool branch_just_created, bool &branch_deflected);
 	void add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float rel_leaf_size, float deadness, vector<tree_leaf> &leaves);
@@ -304,7 +304,7 @@ public:
 	void enable_clip_cube(cube_t const &cc) {clip_cube = cc; use_clip_cube = 1;}
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed,
-		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0, bool create_bush=0);
+		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0);
 	void calc_leaf_shadows();
 	void add_tree_collision_objects();
 	void remove_collision_objects();
