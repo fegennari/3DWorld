@@ -51,6 +51,7 @@ tree_size 1.0
 sm_tree_density 2.0
 sun_rot 0.4
 default_ground_tex -1
+#cloud_height_offset -1.0
 
 #mesh_seed 1
 mesh_gen_mode 3 # 0=sine tables, 1=simplex, 2=perlin, 3=GPU simplex

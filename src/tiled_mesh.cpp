@@ -42,7 +42,7 @@ extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, 
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
-extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks;
+extern float zmax, zmin, water_plane_z, mesh_scale, mesh_scale_z, vegetation, relh_adj_tex, grass_length, grass_width, fticks, tfticks, cloud_height_offset;
 extern float ocean_wave_height, sm_tree_density, tree_scale, atmosphere, cloud_cover, temperature, flower_density, FAR_CLIP, shadow_map_pcf_offset;
 extern point sun_pos, moon_pos, surface_pos;
 extern vector3d wind;
@@ -1215,8 +1215,8 @@ void tile_cloud_manager_t::gen(int x1, int y1, int x2, int y2) {
 	unsigned const num(max(0.0f, rgen.rand_gaussian(0.5, 4.0)));
 	resize(num);
 	if (num == 0) return;
-	float const z_range(zmax - zmin);
-	cube_t const range(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), (zmax + 0.0*z_range), (zmax + 0.9*z_range));
+	float const z_range(zmax - zmin), z_cloud_bot(zmax + cloud_height_offset*z_range + 2.0); // shift up slightly so that bottom of cloud is here
+	cube_t const range(get_xval(x1), get_xval(x2), get_yval(y1), get_yval(y2), (z_cloud_bot + 0.0*z_range), (z_cloud_bot + 0.9*z_range));
 
 	for (auto i = begin(); i != end(); ++i) {
 		i->pos   = rgen.gen_rand_cube_point(range);
