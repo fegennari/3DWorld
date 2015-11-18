@@ -354,9 +354,10 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 
 	// draw a plane at terrain_zmin to properly blend the fog (needs to be first when camera is above the clouds)
 	if (draw_floor && !reflection_pass && fog_enabled) {
+		float const size_exp(size*SQRT2);
 		glDepthMask(GL_FALSE);
 		s.begin_color_only_shader(cur_fog_color);
-		cloud_imd.render_z_plane(-size, -size, size, size, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
+		cloud_imd.render_z_plane(-size_exp, -size_exp, size_exp, size_exp, (terrain_zmin - SMALL_NUMBER), CLOUD_NUM_DIV, CLOUD_NUM_DIV);
 		s.end_shader();
 		glDepthMask(GL_TRUE);
 	}
