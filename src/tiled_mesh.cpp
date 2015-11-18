@@ -2180,18 +2180,13 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	if (enable_instanced_pine_trees()) {
 		s.add_uniform_float("vertex_scale", calc_tree_size()); // default is 0.8
 		xlate_loc = s.get_attrib_loc("xlate");
-		glEnableVertexAttribArray(xlate_loc);
-		glVertexAttribDivisor(xlate_loc, 1);
+		enable_instancing_for_shader_loc(xlate_loc);
 	}
 	s.set_specular(0.2, 8.0);
 	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass, xlate_loc);
 	assert(tree_trunk_pts.empty());
 	s.clear_specular();
-	
-	if (xlate_loc >= 0) {
-		glVertexAttribDivisor(xlate_loc, 0);
-		glDisableVertexAttribArray(xlate_loc);
-	}
+	if (xlate_loc >= 0) {disable_instancing_for_shader_loc(xlate_loc);}
 	s.end_shader();
 
 	// nearby trunks
@@ -2379,16 +2374,14 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			grass_tile_manager.begin_draw();
 
 			int const lt_loc(s.get_attrib_loc("local_translate"));
-			glEnableVertexAttribArray(lt_loc);
-			glVertexAttribDivisor(lt_loc, 1);
+			enable_instancing_for_shader_loc(lt_loc);
 
 			for (unsigned i = 0; i < to_draw.size(); ++i) {
 				if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
 				if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5) != wpass) continue; // xyz dist
 				to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
 			}
-			glVertexAttribDivisor(lt_loc, 0);
-			glDisableVertexAttribArray(lt_loc);
+			disable_instancing_for_shader_loc(lt_loc);
 			grass_tile_manager.end_draw();
 			s.end_shader();
 		} // for spass

@@ -57,6 +57,8 @@ void free_fbo(unsigned &fbo_id);
 unsigned create_depth_render_buffer(unsigned xsize, unsigned ysize, bool multisample=0);
 void disable_and_free_render_buffer(unsigned &render_buffer);
 bool gen_mipmaps(unsigned dim=2);
+void enable_instancing_for_shader_loc(int loc);
+void disable_instancing_for_shader_loc(int loc);
 
 inline void delete_and_zero_vbo(unsigned &vbo) {delete_vbo(vbo); vbo = 0;}
 inline void delete_and_zero_vao(unsigned &vao) {delete_vao(vao); vao = 0;}

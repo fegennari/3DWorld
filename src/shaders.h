@@ -251,11 +251,7 @@ template<unsigned M, unsigned N> struct shader_float_matrix_uploader {
 		}
 	}
 	static void disable(int start_loc) {
-		for (unsigned i = 0; i < N; ++i) {
-			int const loc(start_loc + i);
-			glVertexAttribDivisor(loc, 0);
-			glDisableVertexAttribArray(loc);
-		}
+		for (unsigned i = 0; i < N; ++i) {disable_instancing_for_shader_loc(start_loc + i);}
 	}
 };
 

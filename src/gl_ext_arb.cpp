@@ -413,5 +413,14 @@ bool gen_mipmaps(unsigned dim) {
 	return 1;
 }
 
+void enable_instancing_for_shader_loc(int loc) {
+	glEnableVertexAttribArray(loc);
+	glVertexAttribDivisor(loc, 1);
+}
+void disable_instancing_for_shader_loc(int loc) {
+	glVertexAttribDivisor(loc, 0);
+	glDisableVertexAttribArray(loc);
+}
+
 
 
