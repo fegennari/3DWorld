@@ -18,8 +18,7 @@ void add_indir_lighting(inout vec3 lit_color, in vec3 vpos) {
 	lit_color += gl_Color.rgb * indir_color;
 }
 
-void calc_leaf_lighting()
-{
+void calc_leaf_lighting() {
 	// transform the normal into eye space, but don't normalize because it may be scaled for shadows
 	vec3 normal = fg_NormalMatrix * fg_Normal * normal_scale;
 	

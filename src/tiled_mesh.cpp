@@ -1024,6 +1024,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 		float const dscale(get_tree_dist_scale());
 
 		if (dscale < 1.0) { // close, draw as polygons
+			bind_and_setup_shadow_map(s);
 			pine_trees.draw_branches(0, xlate, &trunk_pts);
 		}
 		else if (dscale < 2.0 && get_tree_far_weight() < 0.5) { // far away, use low detail branches
@@ -1079,11 +1080,7 @@ void tile_t::update_decid_trees() {
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap) {
 
 	if (decid_trees.empty() || !can_have_trees()) return;
-	
-	if (enable_smap) {
-		bind_texture_tu(shadow_tid, 6);
-		shader_shadow_map_setup(s);
-	}
+	if (enable_smap) {bind_and_setup_shadow_map(s);}
 	// Note: shadow_only mode doesn't help performance much
 	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, shadow_pass, reflection_pass, dtree_off.get_xlate());
 }
@@ -1119,8 +1116,7 @@ void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(normal_tid, 4);
-	bind_texture_tu(shadow_tid, 6);
-	shader_shadow_map_setup(s);
+	bind_and_setup_shadow_map(s);
 	if (use_cloud_shadows) {s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));}
 	s.add_uniform_vector2d("xlate", vector2d(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2)));
 }
@@ -1297,10 +1293,13 @@ unsigned tile_t::get_lod_level(bool reflection_pass) const {
 
 
 void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm) const {
-
 	// Note: some part of this call is shared across all tiles; however, in the case where more than one smap light is enabled,
 	// the tu_id and enables may alternate between values for each tile, requiring every uniform to be reset per tile anyway
 	smap_data.set_for_all_lights(s, mvm);
+}
+void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
+	bind_texture_tu(shadow_tid, 6);
+	shader_shadow_map_setup(s);
 }
 
 
@@ -1444,8 +1443,7 @@ void tile_t::draw_water(shader_t &s, float z) const {
 	if (!is_water_visible()) return;
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
 	bind_texture_tu(height_tid, 2);
-	bind_texture_tu(shadow_tid, 6);
-	shader_shadow_map_setup(s); // okay if shadow maps haven't been created yet
+	bind_and_setup_shadow_map(s); // okay if shadow maps haven't been created yet
 	draw_one_tquad(xv1, yv1, xv2, yv2, z, (use_water_plane_tess() ? GL_PATCHES : GL_TRIANGLE_FAN));
 }
 
@@ -2197,11 +2195,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	s.end_shader();
 
 	// nearby trunks
-	bool const use_smap(0); // not yet supported
-	setup_tt_fog_pre(s);
-	setup_smoke_shaders(s, 0.0, 0, 0, 0, !shadow_pass, 0, 0, 0, use_smap, 0, 0, 1);
-	setup_tt_fog_post(s);
-	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
+	tree_branch_shader_setup(s, !shadow_pass, 0); // enable_opacity=0
 	s.add_uniform_float("tex_scale_t", 5.0);
 	draw_pine_tree_bl(s, 1, 0, 0, reflection_pass); // branches
 	s.add_uniform_float("tex_scale_t", 1.0);
@@ -2250,6 +2244,23 @@ void tile_draw_t::billboard_tree_shader_setup(shader_t &s) {
 }
 
 
+void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity) {
+
+	if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY", 1);} // FS
+	s.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
+	setup_tt_fog_pre(s);
+	s.set_bool_prefix("use_shadow_map", enable_shadow_maps, 1); // FS
+	s.set_vert_shader("per_pixel_lighting");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+tiled_tree_branches");
+	s.begin_shader();
+	setup_tt_fog_post(s);
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_int("shadow_tex", 6);
+	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
+	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
+}
+
+
 void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
@@ -2270,19 +2281,9 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	{ // draw branches
 		bool const enable_shadow_maps(!shadow_pass); // && !reflection_pass?
 		shader_t bs;
-		bs.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
-		setup_tt_fog_pre(bs);
-		bs.set_bool_prefix("use_shadow_map", enable_shadow_maps, 1); // FS
-		bs.set_vert_shader("per_pixel_lighting");
-		bs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+tiled_tree_branches");
-		bs.begin_shader();
+		tree_branch_shader_setup(bs, enable_shadow_maps, 1); // enable_opacity=1
+		set_tree_dither_noise_tex(bs, 1); // TU=1 (for opacity)
 		if (enable_billboards) {lod_renderer.branch_opacity_loc = bs.get_uniform_loc("opacity");}
-		setup_tt_fog_post(bs);
-		set_tree_dither_noise_tex(bs, 1); // TU=1
-		bs.add_uniform_int("tex0", 0);
-		bs.add_uniform_int("shadow_tex", 6);
-		bs.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
-		if (enable_shadow_maps) {setup_tile_shader_shadow_map(bs);}
 		draw_decid_tree_bl(bs, lod_renderer, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);
 		bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 		bs.end_shader();

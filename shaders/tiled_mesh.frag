@@ -160,6 +160,7 @@ void main() {
 		color += add_light_comp(normal, epos, 1, dscale, ambient_scale, 0.0, 1.0, bump_scale);
 	}
 	if (enable_light2) {color += add_light_comp(normal, epos, 2, 1.0, 1.0, 0.0, 1.0, bump_scale) * calc_light_atten(epos, 2);} // lightning
+	//color = vec4(pow(color.rgb, vec3(0.45)), color.a); // gamma correction
 
 	vec4 mesh_color = vec4((texel0.rgb * texel1.rgb * color.rgb), color.a);
 	vec3 clipped_vert;
