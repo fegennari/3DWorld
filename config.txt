@@ -6,7 +6,8 @@ tree_4th_branches 0
 nleaves_scale 2.0
 tree_branch_radius 0.6
 tree_height_scale 1.5
-tree_lod_scale 0.48 0.4 0.36 0.3
+#tree_lod_scale 0.48 0.4 0.36 0.3
+tree_lod_scale 0.36 0.3 0.36 0.3
 tree_density_thresh 0.4
 bush_probability 0.3 0.25 0.1 0.2 0.15
 tree_coll_level 4

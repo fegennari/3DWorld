@@ -3,7 +3,7 @@ max_unique_trees 0 # infinite
 tree_4th_branches 0
 nleaves_scale 1.0
 tree_branch_radius 0.75
-tree_lod_scale 0.48 0.4 0.36 0.3
+tree_lod_scale 0.36 0.3 0.36 0.3
 tree_coll_level 0
 
 nsmileys 6
