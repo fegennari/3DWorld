@@ -2,6 +2,7 @@ uniform sampler2D tex0;
 uniform float opacity     = 1.0;
 uniform float tex_scale_s = 1.0;
 uniform float tex_scale_t = 1.0;
+uniform vec3 ambient_color = vec3(0.0);
 
 in vec4 epos;
 in vec3 normal; // eye space

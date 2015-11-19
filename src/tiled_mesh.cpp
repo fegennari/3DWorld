@@ -54,12 +54,11 @@ extern pt_line_drawer tree_scenery_pld;
 
 bool enable_terrain_env(ENABLE_TERRAIN_ENV);
 void set_water_plane_uniforms(shader_t &s);
-
 void create_pine_tree_instances();
 unsigned get_pine_tree_inst_gpu_mem();
-
 void setup_detail_normal_map(shader_t &s, float tscale);
 void draw_distant_mesh_bottom(float terrain_zmin);
+colorRGBA get_avg_color_for_landscape_tex(unsigned id); // defined later in this file
 
 
 float get_inf_terrain_fog_dist() {return FOG_DIST_TILES*get_scaled_tile_radius();}
@@ -815,7 +814,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 
 	assert(zvals.size() == zvsize*zvsize);
 	//RESET_TIME;
-	unsigned const tsize(stride);
+	unsigned const tsize(stride), num_texels(tsize*tsize);
 	int sand_tex_ix(-1), dirt_tex_ix(-1), grass_tex_ix(-1), rock_tex_ix(-1), snow_tex_ix(-1);
 
 	for (unsigned i = 0; i < NTEX_DIRT; ++i) {
@@ -833,7 +832,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	if (weight_tid == 0) { // create weights
 		has_any_grass = 0;
 		grass_blocks.clear();
-		mesh_weight_data.resize(4*tsize*tsize); // RGBA
+		mesh_weight_data.resize(4*num_texels); // RGBA
 		unsigned const grass_block_dim(get_grass_block_dim());
 		float const xy_mult(1.0/float(size)), water_level(get_water_z_height());
 		float const MESH_NOISE_SCALE = 0.003;
@@ -936,12 +935,12 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	}
 	else { // use existing weights
 		assert(recalc_tree_grass_weights); // can only get here in this case
-		assert(mesh_weight_data.size() == 4*tsize*tsize);
+		assert(mesh_weight_data.size() == 4*num_texels);
 	}
 	weight_data = mesh_weight_data; // deep copy so that tree_map doesn't alter original weights
 
 	if (!tree_map.empty()) {
-		for (unsigned i = 0; i < tsize*tsize; ++i) { // replace grass under trees with dirt
+		for (unsigned i = 0; i < num_texels; ++i) { // replace grass under trees with dirt
 			unsigned const off(4*i);
 			if (tree_map[i].ao == 255 || weight_data[off+grass_tex_ix] == 0) continue; // no trees or no grass
 			float const v(tree_map[i].ao/255.0);
@@ -960,6 +959,20 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 	}
 	recalc_tree_grass_weights = 0;
 	//PRINT_TIME("Texture Upload");
+
+	// determine average mesh color - doesn't work well due to discontinuities at the tile boundaries, would be better if adjacent tile was known
+	unsigned tot_weights[NTEX_DIRT] = {0};
+	avg_mesh_tex_color = BLACK;
+
+	for (unsigned i = 0; i < num_texels; ++i) {
+		unsigned const off(4*i);
+		for (unsigned j = 0; j < 4; ++j) {tot_weights[j] += weight_data[off+j];}
+		tot_weights[4] += (255 - weight_data[off+0] - weight_data[off+1] - weight_data[off+2] - weight_data[off+3]);
+	}
+	for (unsigned i = 0; i < NTEX_DIRT; ++i) {avg_mesh_tex_color += get_avg_color_for_landscape_tex(i) * (tot_weights[i] / (255.0*num_texels));}
+	//avg_mesh_tex_color *= (1.0/avg_mesh_tex_color.get_luminance());
+	avg_mesh_tex_color *= 5.0;
+	avg_mesh_tex_color  = (avg_mesh_tex_color*0.2 + WHITE*0.8); // 20% tinted
 }
 
 
@@ -1025,6 +1038,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 
 		if (dscale < 1.0) { // close, draw as polygons
 			bind_and_setup_shadow_map(s);
+			if (draw_branches) {set_mesh_ambient_color(s);}
 			pine_trees.draw_branches(0, xlate, &trunk_pts);
 		}
 		else if (dscale < 2.0 && get_tree_far_weight() < 0.5) { // far away, use low detail branches
@@ -1077,10 +1091,13 @@ void tile_t::update_decid_trees() {
 	if (decid_trees_enabled()) {decid_trees.check_render_textures();}
 }
 
+void tile_t::set_mesh_ambient_color(shader_t &s) const {s.add_uniform_color("ambient_tint", avg_mesh_tex_color);}
+
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap) {
 
 	if (decid_trees.empty() || !can_have_trees()) return;
 	if (enable_smap) {bind_and_setup_shadow_map(s);}
+	if (draw_branches) {set_mesh_ambient_color(s);}
 	// Note: shadow_only mode doesn't help performance much
 	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, shadow_pass, reflection_pass, dtree_off.get_xlate());
 }
@@ -1684,11 +1701,17 @@ float tile_draw_t::update(float &min_camera_dist) { // view-independent updates;
 float tile_draw_t::get_actual_zmin() const {return min(zmin, terrain_zmin);}
 
 
-void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
+float const mesh_tex_cscale[NTEX_DIRT] = {1.0, 1.0, TT_GRASS_COLOR_SCALE, 0.5, 1.0}; // darker grass and rock
+float const mesh_tex_scale [NTEX_DIRT] = {1.0, 1.0, 1.0, 1.0, 1.0};
+
+colorRGBA get_avg_color_for_landscape_tex(unsigned id) {
+	assert(id < NTEX_DIRT);
+	return texture_color(lttex_dirt[id].id) * mesh_tex_cscale[id];
+}
+
+/*static*/ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
 
 	unsigned const base_tsize(NORM_TEXELS);
-	float const mesh_tex_cscale[NTEX_DIRT] = {1.0, 1.0, TT_GRASS_COLOR_SCALE, 0.5, 1.0}; // darker grass and rock
-	float const mesh_tex_scale [NTEX_DIRT] = {1.0, 1.0, 1.0, 1.0, 1.0};
 
 	for (int i = 0; i < NTEX_DIRT; ++i) {
 		int const tid(lttex_dirt[i].id);
@@ -1704,6 +1727,15 @@ void tile_draw_t::setup_terrain_textures(shader_t &s, unsigned start_tu_id) {
 		s.add_uniform_float(oss3.str().c_str(), mesh_tex_cscale[i]);
 	}
 	s.add_uniform_color("snow_cscale", colorRGB(1.0, 1.0, 1.2)); // increased blue
+}
+
+/*static*/ void tile_draw_t::add_texture_colors(shader_t &s, unsigned start_tu_id) {
+
+	for (int i = 0; i < NTEX_DIRT; ++i) { // for future use with weights_tex and hemispherical lighting
+		std::ostringstream oss;
+		oss << "texture_color" << (start_tu_id + i);
+		s.add_uniform_color(oss.str().c_str(), get_avg_color_for_landscape_tex(i));
+	}
 }
 
 

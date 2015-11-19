@@ -1,5 +1,6 @@
 uniform float ambient_scale = 1.0;
 uniform float wet_effect    = 0.0;
+uniform vec3 ambient_tint   = vec3(1);
 uniform vec4 specular_color = vec4(0,0,0,1); // enocded as {color.rgb, shininess}
 float get_shininess() {return specular_color.a;}
 
@@ -58,7 +59,7 @@ vec4 get_ads_lighting(in vec3 normal, in vec3 light_dir, in vec4 epos, in float 
 #else
 	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, light.specular.rgb);
 #endif
-	return vec4((ambient_scale*a_scale*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), ad_color.a);
+	return vec4((ambient_scale*a_scale*ambient_tint*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), ad_color.a);
 }
 
 vec4 add_light_comp_pos_scaled_light(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color, in fg_light_t light, in float bump_map_normal_scale) {

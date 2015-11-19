@@ -156,6 +156,7 @@ private:
 	unsigned size, stride, zvsize, base_tsize, gen_tsize;
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass, is_distant, no_trees;
+	colorRGB avg_mesh_tex_color;
 	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
@@ -313,6 +314,7 @@ public:
 	void draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_branches, bool draw_near_leaves, bool draw_far_leaves, bool reflection_pass, int xlate_loc=-1);
 	unsigned num_decid_trees() const {return decid_trees.size();}
 	void gen_decid_trees_if_needed();
+	void set_mesh_ambient_color(shader_t &s) const;
 	void draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap);
 	void update_decid_trees();
 
@@ -373,6 +375,7 @@ public:
 	void free_compute_shader() {height_gen.clear_context();}
 	float update(float &min_camera_dist);
 	static void setup_terrain_textures(shader_t &s, unsigned start_tu_id);
+	static void add_texture_colors(shader_t &s, unsigned start_tu_id);
 	static void shared_shader_lighting_setup(shader_t &s, unsigned lighting_shader);
 	static void lighting_with_cloud_shadows_setup(shader_t &s, unsigned lighting_shader, bool cloud_shadows);
 	void setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, bool enable_shadow_map) const;
