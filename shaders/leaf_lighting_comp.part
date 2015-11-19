@@ -1,10 +1,9 @@
-vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos, in int i, in float ambient_scale)
-{
+vec4 add_leaf_light_comp(in vec3 normal, in vec4 eye_space_pos, in int i, in float ambient_scale, float diffuse_scale) {
 	// normalize the light's direction in eye space, directional light: position field is actually direction
 	vec3 lightDir = normalize(fg_LightSource[i].position.xyz);
 	
 	// compute the ambient and diffuse terms
-	vec3 diffuse = (gl_Color * fg_LightSource[i].diffuse).rgb * (shadowed ? 0.0 : 1.0);
+	vec3 diffuse = (gl_Color * fg_LightSource[i].diffuse).rgb * diffuse_scale;
 	vec3 ambient = (gl_Color * fg_LightSource[i].ambient).rgb * ambient_scale;
 	
 	// calculate specular lighting and normal effects
@@ -13,7 +12,7 @@ vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos
 	float dp1 = dot(normal, dir_to_camera);
 	float dp2 = dot(normal, dir_to_light);
 	
-	if (!shadowed && (dp1 < 0.0) != (dp2 < 0.0)) { // looking at unlit side
+	if ((diffuse_scale > 0.5) && (dp1 < 0.0) != (dp2 < 0.0)) { // looking at unlit side
 		normal *= -0.5; // reverse and halve
 		float dp3 = dot(dir_to_camera, dir_to_light);
 
@@ -24,6 +23,6 @@ vec4 add_leaf_light_comp(in bool shadowed, in vec3 normal, in vec4 eye_space_pos
 	}
 	
 	// compute the specular and diffuse terms if not shadowed
-	vec3 specular = (shadowed ? 0.0 : 1.0) * get_light_specular(normal, dir_to_light, eye_space_pos.xyz, fg_LightSource[i].specular.rgb);
+	vec3 specular = diffuse_scale * get_light_specular(normal, dir_to_light, eye_space_pos.xyz, fg_LightSource[i].specular.rgb);
 	return vec4((ambient + specular + max(dot(normal, lightDir), 0.0)*diffuse), gl_Color.a);
 }

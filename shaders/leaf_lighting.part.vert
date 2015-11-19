@@ -1,4 +1,3 @@
-uniform int num_dlights = 0;
 uniform float normal_scale = 1.0;
 uniform float water_depth = 0.0;
 uniform vec4 color_scale = vec4(1.0);
@@ -23,18 +22,16 @@ void calc_leaf_lighting() {
 	vec3 normal = fg_NormalMatrix * fg_Normal * normal_scale;
 	
 	vec4 eye_space_pos = fg_ModelViewMatrix * fg_Vertex;
-	//if (dot(normal, eye_space_pos.xyz) > 0.0) normal = -normal; // facing away from the eye, so reverse (could use faceforward())
-	float nscale = ((dot(normal, eye_space_pos.xyz) > 0.0) ? -1.0 : 1.0);
+	float nscale = ((dot(normal, eye_space_pos.xyz) > 0.0) ? -1.0 : 1.0); // facing away from the eye, so reverse (could use faceforward())
 	normal *= nscale;
 	
-	// Compute the globalAmbient term
-	bool shadowed = (sqrt(dot(fg_Normal, fg_Normal)) < 0.4);
 	vec3 color    = vec3(0.0);
 	vec3 vpos     = fg_Vertex.xyz + world_space_offset;
 	float ambient_scale = (indir_lighting ? 0.0 : 1.0);
+	float diffuse_scale = sqrt(dot(fg_Normal, fg_Normal));
 	add_indir_lighting(color, vpos);
-	if (enable_light0)  {color += add_leaf_light_comp(shadowed, normal,  eye_space_pos, 0, ambient_scale).rgb;}
-	if (enable_light1)  {color += add_leaf_light_comp(shadowed, normal,  eye_space_pos, 1, ambient_scale).rgb;}
+	if (enable_light0)  {color += add_leaf_light_comp(normal,  eye_space_pos, 0, ambient_scale, diffuse_scale).rgb;}
+	if (enable_light1)  {color += add_leaf_light_comp(normal,  eye_space_pos, 1, ambient_scale, diffuse_scale).rgb;}
 	if (enable_light2)  {color += add_pt_light_comp  (normalize(normal), eye_space_pos, 2).rgb;} // lightning
 	if (enable_dlights) {add_dlights(color, vpos, nscale*normalize(fg_Normal), vec3(1.0));}
 	fg_Color_vf = vec4(min(2.0*fg_Color.rgb, clamp(color*color_scale.rgb, 0.0, 1.0)), 1.0); // limit lightning color
