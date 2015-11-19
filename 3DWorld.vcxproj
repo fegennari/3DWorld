@@ -923,6 +923,7 @@
     <None Include="shaders\indir_lighting.part.frag" />
     <None Include="shaders\leaf_lighting.part.vert" />
     <None Include="shaders\leaf_lighting_comp.part" />
+    <None Include="shaders\leaf_lighting_ppl.frag" />
     <None Include="shaders\leaf_wind.part.vert" />
     <None Include="shaders\line_draw_halo.frag" />
     <None Include="shaders\moon_draw.frag" />
@@ -990,6 +991,7 @@
     <None Include="shaders\tree_leaves_billboard.frag" />
     <None Include="shaders\tree_leaves_billboard.vert" />
     <None Include="shaders\tree_leaves_no_lighting.vert" />
+    <None Include="shaders\tree_leaves_ppl.vert" />
     <None Include="shaders\triplanar_bump_map.part.frag" />
     <None Include="shaders\triplanar_texture.part.frag" />
     <None Include="shaders\vertex_xlate_scale.vert" />
