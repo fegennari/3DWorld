@@ -11,6 +11,9 @@ void main() {
 	float step_mul = 1.0 / NUM_STEPS;
 	float weight   = 0.0;
 	float denom    = NUM_DIRS;
+
+	// http://www.digitalrune.com/Support/Blog/tabid/719/EntryId/178/Decal-Rendering-Preview.aspx
+	//vec3 normal = normalize(cross(dFdy(position), dFdx(position))); 
 	
 	for (int d = 0; d < NUM_DIRS; d++) {
 		vec2 pos    = tc;
