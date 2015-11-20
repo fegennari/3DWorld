@@ -320,7 +320,7 @@ public:
 
 	// *** scenery/grass ***
 	void update_scenery();
-	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass);
+	void draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass=0);
 	void pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const;
 	void draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc);
 	void draw_flowers(shader_t &s, bool use_cloud_shadows);
@@ -396,7 +396,7 @@ public:
 	static void billboard_tree_shader_setup(shader_t &s);
 	static void tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps, bool enable_opacity);
 	void draw_decid_trees(bool reflection_pass, bool shadow_pass=0);
-	void draw_scenery(bool reflection_pass);
+	void draw_scenery(bool reflection_pass, bool shadow_pass=0);
 	static void setup_grass_flower_shader(shader_t &s, bool enable_wind, bool use_smap, float dist_const_mult);
 	void draw_grass(bool reflection_pass);
 	void draw_tile_clouds(bool reflection_pass);

@@ -1116,15 +1116,15 @@ void tile_t::update_scenery() {
 }
 
 
-void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass) {
+void tile_t::draw_scenery(shader_t &s, bool draw_opaque, bool draw_leaves, bool reflection_pass, bool shadow_pass) {
 
 	if (!scenery.generated || get_scenery_dist_scale(reflection_pass) > 1.0) return;
 	fgPushMatrix();
 	vector3d const xlate(scenery_off.get_xlate());
 	translate_to(xlate);
 	float const scale_val(get_scenery_thresh(reflection_pass)*get_tile_width());
-	if (draw_opaque) {scenery.draw_opaque_objects(s, 0, xlate, 0, scale_val, reflection_pass);} // shader not passed in here
-	if (draw_leaves) {scenery.draw_plant_leaves  (s, 0, xlate, reflection_pass);}
+	if (draw_opaque) {scenery.draw_opaque_objects(s, shadow_pass, xlate, 0, scale_val, reflection_pass);} // shader not passed in here
+	if (draw_leaves) {scenery.draw_plant_leaves  (s, shadow_pass, xlate, reflection_pass);}
 	fgPopMatrix();
 }
 
@@ -2138,7 +2138,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 	}
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
-	if (scenery_enabled    ()) {draw_scenery    (0);}
+	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
 	render_models(1, model3d_offset.get_xlate()); // VFC should work here (somewhat?) for models
 	fog_enabled = orig_fog_enabled;
 	//PRINT_TIME("Draw Shadow Pass");
@@ -2344,7 +2344,7 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 }
 
 
-void tile_draw_t::draw_scenery(bool reflection_pass) {
+void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 
 	shader_t s;
 	shared_shader_lighting_setup(s, 0);
@@ -2353,11 +2353,11 @@ void tile_draw_t::draw_scenery(bool reflection_pass) {
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("tex0", 0);
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 1, 0, reflection_pass);} // opaque
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 1, 0, reflection_pass, shadow_pass);} // opaque
 	tree_scenery_pld.draw_and_clear();
 	s.end_shader();
-	set_leaf_shader(s, 0.9, 0, 0, 1, get_plant_leaf_wind_mag(0), underwater);
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass);} // leaves
+	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater);
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass, shadow_pass);} // leaves
 	s.end_shader();
 }
 
