@@ -358,13 +358,13 @@ void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
 	s.add_uniform_float("wind_freq",  80.0*tree_scale);
 }
 
-void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag, bool underwater) {
+void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag, bool underwater, bool use_fs_smap) {
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		no_dlights = 1;
 		setup_tt_fog_pre(s); // FS
 	}
-	int const shader_type((display_mode & 0x10) ? 1 : 0); // VS/FS (for lighting)
+	int const shader_type((use_fs_smap || (display_mode & 0x10)) ? 1 : 0); // VS/FS (for lighting)
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid);
 	bool const use_smap(world_mode == WMODE_GROUND && shader_type == 1 && shadow_map_enabled());

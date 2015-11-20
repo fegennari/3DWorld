@@ -9,6 +9,7 @@
 
 
 bool     const USE_VOXEL_ROCKS = 0;
+bool const ENABLE_PLANT_SHADOWS= 1;
 unsigned const ROCK_NDIV       = 24;
 unsigned const ROCK_VOX_SZ     = 32;
 float    const SHADOW_VAL      = 0.5;
@@ -812,7 +813,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	if (is_water_plant && (reflection_pass || (pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, 0.5*(height + radius), 0)) return;
-	bool const shadowed(shadow_only ? 0 : is_shadowed());
+	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
 	float const wind_scale(berries.empty() ? 1.0 : 0.0); // no wind if this plant type has berries
 	
 	if (is_water_plant) {
@@ -1148,7 +1149,7 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 	}
 	if (draw_transparent && !plants.empty()) { // draw leaves
 		shader_t s;
-		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater);
+		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
 	}
