@@ -367,7 +367,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	int const shader_type((use_fs_smap || (display_mode & 0x10)) ? 1 : 0); // VS/FS (for lighting)
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid);
-	bool const use_smap(world_mode == WMODE_GROUND && shader_type == 1 && shadow_map_enabled());
+	bool const use_smap(shader_type == 1 && shadow_map_enabled());
 	s.set_bool_prefix("indir_lighting", use_indir, shader_type);
 	if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 	s.check_for_fog_disabled();
@@ -387,7 +387,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	}
 	s.begin_shader();
 	s.setup_scene_bounds();
-	if (use_smap) {set_smap_shader_for_all_lights(s);}
+	if (world_mode == WMODE_GROUND && use_smap) {set_smap_shader_for_all_lights(s);}
 	if (!no_dlights) {setup_dlight_textures(s, 0);} // no dlight smap
 	if (world_mode == WMODE_INF_TERRAIN) {setup_tt_fog_post(s);} else {s.setup_fog_scale();}
 	s.add_uniform_float("water_depth", water_depth);
