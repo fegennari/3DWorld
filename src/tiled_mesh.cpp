@@ -1316,6 +1316,7 @@ void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm)
 	smap_data.set_for_all_lights(s, mvm);
 }
 void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
+	if (!shadow_map_enabled()) return;
 	bind_texture_tu(shadow_tid, 6);
 	shader_shadow_map_setup(s);
 }
