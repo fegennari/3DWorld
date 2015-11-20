@@ -114,7 +114,7 @@ bool scenery_obj::check_visible(bool shadow_only, float bradius, point const &p)
 }
 bool scenery_obj::is_visible(bool shadow_only, float bradius, vector3d const &xlate) const {
 	if (!check_visible(shadow_only, bradius, pos+xlate)) return 0;
-	return (world_mode != WMODE_GROUND || shadow_only || !skip_uw_draw(pos+xlate, radius));
+	return (shadow_only || !skip_uw_draw(pos+xlate, radius));
 }
 
 float scenery_obj::get_size_scale(float dist_to_camera, float scale_val, float scale_exp) const {
@@ -787,7 +787,7 @@ bool s_plant::is_shadowed() const {
 void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate) const {
 
 	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
-	if (is_water_plant && (reflection_pass || (pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
+	if (is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, (height + radius), pos2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
@@ -809,7 +809,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 
 	if (no_leaves) return;
 	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
-	if (is_water_plant && (reflection_pass || (pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
+	if (is_water_plant && (reflection_pass || (!shadow_only && pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
 	if (!check_visible(shadow_only, 0.5*(height + radius), pos2)) return;
 	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
