@@ -108,14 +108,13 @@ bool scenery_obj::update_zvals(int x1, int y1, int x2, int y2) {
 	return 1;
 }
 
-
-bool scenery_obj::in_camera_view(float brad, vector3d const &xlate) const {
-	return sphere_in_camera_view(pos+xlate, ((brad == 0.0) ? radius : brad), 0);
+bool scenery_obj::check_visible(bool shadow_only, float bradius, point const &p) const {
+	if (world_mode != WMODE_GROUND) return 1;
+	return (shadow_only ? is_over_mesh(p) : sphere_in_camera_view(p, ((bradius == 0.0) ? radius : bradius), 0));
 }
-
 bool scenery_obj::is_visible(bool shadow_only, float bradius, vector3d const &xlate) const {
-	if (shadow_only ? !is_over_mesh(pos+xlate) : !in_camera_view(bradius, xlate)) return 0;
-	return (shadow_only || !skip_uw_draw(pos+xlate, radius));
+	if (!check_visible(shadow_only, bradius, pos+xlate)) return 0;
+	return (world_mode != WMODE_GROUND || shadow_only || !skip_uw_draw(pos+xlate, radius));
 }
 
 float scenery_obj::get_size_scale(float dist_to_camera, float scale_val, float scale_exp) const {
@@ -127,9 +126,7 @@ colorRGBA scenery_obj::get_atten_color(colorRGBA c, vector3d const &xlate) const
 	return c;
 }
 
-void scenery_obj::remove_cobjs() {
-	remove_reset_coll_obj(coll_id);
-}
+void scenery_obj::remove_cobjs() {remove_reset_coll_obj(coll_id);}
 
 
 void rock_shape3d::create(int x, int y, bool use_xy) {
@@ -573,8 +570,9 @@ void s_log::add_cobjs() {
 
 void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
+	if (type < 0) return;
 	point const center((pos + pt2)*0.5 + xlate);
-	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(max(length, max(radius, radius2)), xlate))) return;
+	if (!check_visible(shadow_only, max(length, max(radius, radius2)), center)) return;
 	if (reflection_pass && 0.5*(pos.z + pt2.z) < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0));
 	float const dist(distance_to_camera(center));
@@ -633,8 +631,9 @@ bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {
 
 void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
 
+	if (type < 0) return;
 	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
-	if (type < 0 || (shadow_only ? !is_over_mesh(center) : !in_camera_view(max(height, max(radius, radius2)), xlate))) return;
+	if (!check_visible(shadow_only, max(height, max(radius, radius2)), center)) return;
 	if (reflection_pass && pos.z < water_plane_z) return;
 	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0));
 	float const dist(distance_to_camera(center));
@@ -790,7 +789,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
 	if (is_water_plant && (reflection_pass || (pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	if (shadow_only ? !is_over_mesh(pos+xlate) : !sphere_in_camera_view(pos2, (height + radius), 0)) return;
+	if (!check_visible(shadow_only, (height + radius), pos2)) return;
 	bool const shadowed(shadow_only ? 0 : is_shadowed());
 	colorRGBA color(pltype[type].stemc*(shadowed ? SHADOW_VAL : 1.0));
 	if (is_water_plant) {water_color_atten_at_pos(color, pos+xlate);}
@@ -812,7 +811,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	bool const is_water_plant(type >= NUM_LAND_PLANT_TYPES);
 	if (is_water_plant && (reflection_pass || (pos.z < water_plane_z && get_camera_pos().z > water_plane_z))) return; // underwater, skip
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	if (shadow_only ? !is_over_mesh(pos2) : !sphere_in_camera_view(pos2, 0.5*(height + radius), 0)) return;
+	if (!check_visible(shadow_only, 0.5*(height + radius), pos2)) return;
 	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
 	float const wind_scale(berries.empty() ? 1.0 : 0.0); // no wind if this plant type has berries
 	
