@@ -1126,10 +1126,12 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x40;   break;
 	case '8': // toggle water caustics/smoke
 		display_mode ^= 0x80;   break;
-	case '9': // toggle leaf wind
+	case '9': // toggle leaf wind and ocean waves
 		display_mode ^= 0x0100; break;
-	case '0': // toggle universe stencil shadows / toggle spraypaint mode
-		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;} else {toggle_spraypaint_mode();}
+	case '0': // toggle universe stencil shadows / toggle spraypaint mode / toggle TT tree leaf shadows
+		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;}
+		else if (world_mode == WMODE_GROUND) {toggle_spraypaint_mode();}
+		else {display_mode ^= 0x0200;}
 		break;
 
 	case '\\': // enable dynamic particles (to test dynamic lighting, dynamic shadows, and collision detection)

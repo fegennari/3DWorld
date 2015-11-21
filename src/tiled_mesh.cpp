@@ -1096,7 +1096,7 @@ void tile_t::set_mesh_ambient_color(shader_t &s) const {s.add_uniform_color("amb
 void tile_t::draw_decid_trees(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves, bool reflection_pass, bool shadow_pass, bool enable_smap) {
 
 	if (decid_trees.empty() || !can_have_trees()) return;
-	if (enable_smap) {bind_and_setup_shadow_map(s);}
+	if (enable_smap  ) {bind_and_setup_shadow_map(s);}
 	if (draw_branches) {set_mesh_ambient_color(s);}
 	// Note: shadow_only mode doesn't help performance much
 	decid_trees.draw_branches_and_leaves(s, lod_renderer, draw_branches, draw_leaves, shadow_pass, reflection_pass, dtree_off.get_xlate());
@@ -1134,6 +1134,7 @@ void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 
 	bind_texture_tu(height_tid, 2);
 	bind_texture_tu(normal_tid, 4);
+	bind_texture_tu(shadow_tid, 6);
 	bind_and_setup_shadow_map(s);
 	if (use_cloud_shadows) {s.add_uniform_vector3d("cloud_offset", vector3d(get_xval(x1), get_yval(y1), 0.0));}
 	s.add_uniform_vector2d("xlate", vector2d(get_xval(x1 + xoff - xoff2), get_yval(y1 + yoff - yoff2)));
@@ -1316,9 +1317,7 @@ void tile_t::shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm)
 	smap_data.set_for_all_lights(s, mvm);
 }
 void tile_t::bind_and_setup_shadow_map(shader_t &s) const {
-	if (!shadow_map_enabled()) return;
-	bind_texture_tu(shadow_tid, 6);
-	shader_shadow_map_setup(s);
+	if (shadow_map_enabled()) {shader_shadow_map_setup(s);}
 }
 
 
@@ -1462,6 +1461,7 @@ void tile_t::draw_water(shader_t &s, float z) const {
 	if (!is_water_visible()) return;
 	float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), xv2(xv1+(x2-x1)*deltax), yv2(yv1+(y2-y1)*deltay);
 	bind_texture_tu(height_tid, 2);
+	//bind_texture_tu(shadow_tid, 6); // Note: only needed if ENABLE_WATER_SHADOWS is enabled in the water plane shader
 	bind_and_setup_shadow_map(s); // okay if shadow maps haven't been created yet
 	draw_one_tquad(xv1, yv1, xv2, yv2, z, (use_water_plane_tess() ? GL_PATCHES : GL_TRIANGLE_FAN));
 }
@@ -2284,7 +2284,7 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("tex0", 0);
-	s.add_uniform_int("shadow_tex", 6);
+	//s.add_uniform_int("shadow_tex", 6);
 	s.add_uniform_color("const_indir_color", colorRGB(0,0,0)); // don't want indir lighting for tree trunks
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
 }
@@ -2294,21 +2294,24 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	float const cscale(0.8*(cloud_shadows_enabled() ? 0.75 : 1.0));
 	bool const enable_billboards(USE_TREE_BILLBOARDS && !shadow_pass);
+	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
 	lod_renderer.resize_zero();
 	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
 
 	{ // draw leaves
+		bool const leaf_shadow_maps((display_mode & 0x0200) && enable_shadow_maps);
 		shader_t ls;
-		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass);
+		if (leaf_shadow_maps) {ls.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
+		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, leaf_shadow_maps);
+		if (leaf_shadow_maps ) {setup_tile_shader_shadow_map(ls);}
 		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 		set_tree_dither_noise_tex(ls, 1); // TU=1
 		ls.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
-		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass, shadow_pass, 0); // no shadow map (due to high fill rate perf issues)
+		draw_decid_tree_bl(ls, lod_renderer, 0, 1, reflection_pass, shadow_pass, leaf_shadow_maps);
 		ls.add_uniform_color("color_scale", WHITE);
 		tree_cont_t::post_leaf_draw(ls);
 	}
 	{ // draw branches
-		bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled()); // && !reflection_pass?
 		shader_t bs;
 		tree_branch_shader_setup(bs, enable_shadow_maps, 1); // enable_opacity=1
 		set_tree_dither_noise_tex(bs, 1); // TU=1 (for opacity)

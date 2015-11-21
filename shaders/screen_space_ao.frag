@@ -13,6 +13,7 @@ void main() {
 	float denom    = NUM_DIRS;
 
 	// http://www.digitalrune.com/Support/Blog/tabid/719/EntryId/178/Decal-Rendering-Preview.aspx
+	// https://mtnphil.wordpress.com/2014/05/24/decals-deferred-rendering/
 	//vec3 normal = normalize(cross(dFdy(position), dFdx(position))); 
 	
 	for (int d = 0; d < NUM_DIRS; d++) {

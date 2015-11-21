@@ -29,7 +29,7 @@ float const LEAF_4TH_SCALE   = 0.4;
 int const TREE_4TH_LEAVES    = 1;
 int const DISABLE_LEAVES     = 0;
 int const ENABLE_CLIP_LEAVES = 1;
-int const TLEAF_START_TUID   = 9;
+int const TLEAF_START_TUID   = 8; // trees use texture units 8-12
 bool const FORCE_TREE_TYPE   = 1;
 unsigned const CYLINS_PER_ROOT     = 3;
 unsigned const TREE_BILLBOARD_SIZE = 256;
@@ -364,7 +364,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 		no_dlights = 1;
 		setup_tt_fog_pre(s); // FS
 	}
-	int const shader_type((use_fs_smap || (display_mode & 0x10)) ? 1 : 0); // VS/FS (for lighting)
+	int const shader_type((use_fs_smap || (world_mode == WMODE_GROUND && max_unique_trees > 0 && (display_mode & 0x10))) ? 1 : 0); // VS/FS (for lighting)
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid);
 	bool const use_smap(shader_type == 1 && shadow_map_enabled());
@@ -422,12 +422,12 @@ void tree_cont_t::check_leaf_shadow_change() {
 }
 
 
-void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only) {
+void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only, bool use_fs_smap) {
 	
 	if (shader.is_setup()) {shader.enable();}
 	else { // Note: disabling leaf wind when shadow_only is faster but looks odd
 		float const wind_mag((has_snow || !animate2 /*|| shadow_only*/) ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
-		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0); // no underwater trees
+		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0, use_fs_smap); // no underwater trees
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
 			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);
@@ -1228,7 +1228,8 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 
 	if (!physics_enabled()) return;
 	tree_data_t &td(tdata());
-	if (!td.leaf_data_allocated() || !td_is_private()) return; // leaf data not yet created (can happen if called when light source changes), or shared data
+	if (!td.leaf_data_allocated()) return; // leaf data not yet created (can happen if called when light source changes), or shared data
+	if (!td_is_private()) return; // FIXME: instanced tree lighting, local using BVH of leaves (and maybe branches)
 	int const light(get_light());
 	point lpos;
 	bool const has_light(get_light_pos(lpos, light) != 0);
