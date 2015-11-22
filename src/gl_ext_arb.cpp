@@ -192,7 +192,7 @@ void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned 
 	bind_vbo(vbo, is_index);
 
 	if (pos + size_bytes > size) { // end of buffer space
-		upload_vbo_data(NULL, size, is_index); // orphan the buffer
+		upload_vbo_data(NULL, size, is_index); // orphan the buffer (Note: fast on ATI, slow on Nvidia - pipeline flush?)
 		pos = 0; // wraparound to the beginning
 	}
 	assert(pos + size_bytes <= size);

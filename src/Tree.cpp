@@ -190,7 +190,9 @@ void tree_lod_render_t::finalize() {
 
 
 void upload_draw_and_clear(vector<vert_color> &pts) {
-	if (!pts.empty()) {upload_to_dynamic_vbo(pts); draw_quads_as_tris(pts.size());}
+	if (pts.empty()) return;
+	//upload_to_dynamic_vbo(pts); draw_quads_as_tris(pts.size()); // slow on Nvidia cards, but okay on ATI cards - compatible with core context
+	draw_quad_verts_as_tris(pts);
 	pts.clear();
 }
 
