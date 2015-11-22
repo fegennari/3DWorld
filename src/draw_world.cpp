@@ -1292,6 +1292,7 @@ void draw_cracks_and_decals() {
 	glDepthMask(GL_FALSE);
 	enable_blend();
 	shader_t black_shader, lighting_shader, bullet_shader;
+	bool is_emissive(0);
 
 	if (!blood_tqd.empty() || !crack_qbd.empty()) { // use normal lighting shader
 		setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);
@@ -1326,6 +1327,7 @@ void draw_cracks_and_decals() {
 		else { // use normal lighting shader
 			if (!lighting_shader.is_setup()) {setup_smoke_shaders(lighting_shader, 0.01, 0, 1, 1, 1, 1, 1, 0, 1);}
 			lighting_shader.enable();
+			if (0 && !is_emissive) {lighting_shader.add_uniform_float("emissive_scale", 1.0); is_emissive = 1;} // make colors emissive
 		}
 		select_texture(tid);
 		i->second.draw();
@@ -1333,6 +1335,7 @@ void draw_cracks_and_decals() {
 	disable_blend();
 	glDepthMask(GL_TRUE);
 	if (bullet_shader.is_setup()) {bullet_shader.enable(); bullet_shader.add_uniform_float("bump_tb_scale", 1.0);} // reset
+	if (is_emissive) {lighting_shader.add_uniform_float("emissive_scale", 0.0);} // reset emissive
 	black_shader.end_shader();
 	lighting_shader.end_shader();
 	bullet_shader.end_shader();
