@@ -347,6 +347,7 @@ public:
 class tree_cont_t : public vector<tree> {
 
 	tree_data_manager_t &shared_tree_data;
+	vector<pair<float, unsigned>> sorted;
 	bool generated;
 
 public:

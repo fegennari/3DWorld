@@ -340,7 +340,13 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 	}
 	else { // draw_leaves
 		tree_data_t::pre_leaf_draw(s);
-		for (iterator i = begin(); i != end(); ++i) {i->draw_leaves_top(s, lod_renderer, shadow_only, xlate, wsoff_loc, tex0_loc);}
+		sorted.resize(size());
+		for (unsigned i = 0; i < size(); ++i) {sorted[i] = make_pair(distance_to_camera(operator[](i).sphere_center() + xlate), i);}
+		sort(sorted.begin(), sorted.end()); // sort front to back for better early z culling
+
+		for (auto i = sorted.begin(); i != sorted.end(); ++i) {
+			operator[](i->second).draw_leaves_top(s, lod_renderer, shadow_only, xlate, wsoff_loc, tex0_loc);
+		}
 		tree_data_t::post_leaf_draw();
 	}
 }
