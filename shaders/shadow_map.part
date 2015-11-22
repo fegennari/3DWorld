@@ -25,7 +25,7 @@ float get_shadow_map_weight(in vec4 pos, in vec3 normal, in float sm_scale, in m
 #endif
 	vec4 shadow_coord = matrix * pos;
 	shadow_coord.z += -z_bias*shadow_coord.w;
-#if 1
+#ifndef NO_SHADOW_PCF
 	return sm_scale*calc_shadow_pcf(sm_tex, shadow_coord);
 #else
 	return sm_scale*textureProj(sm_tex, shadow_coord);
