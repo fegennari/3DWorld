@@ -1794,7 +1794,7 @@ void setup_tile_shader_shadow_map(shader_t &s) {
 
 	s.add_uniform_float("smap_atten_cutoff", get_smap_atten_val());
 	s.add_uniform_float("z_bias", DEF_Z_BIAS);
-	s.add_uniform_float("pcf_offset", shadow_map_pcf_offset);
+	s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 }
 
 
