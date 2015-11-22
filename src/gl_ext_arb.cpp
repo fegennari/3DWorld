@@ -184,18 +184,21 @@ void vbo_ring_buffer_t::ensure_vbo(unsigned min_size) {
 	pos = 0;
 }
 
+void vbo_ring_buffer_t::orphan_buffer_and_reset() {
+	bind_vbo(vbo, is_index);
+	upload_vbo_data(NULL, size, is_index); // orphan the buffer (Note: fast on ATI, slow on Nvidia - pipeline flush?)
+	bind_vbo(0, is_index); // not necessary?
+	pos = 0; // wraparound to the beginning
+}
+
 void const *vbo_ring_buffer_t::add_verts_bind_vbo(void const *const v, unsigned size_bytes) {
 
 	assert(v != NULL);
 	assert(size_bytes > 0);
 	ensure_vbo(4*size_bytes); // at least 4x the current data size
+	if (!has_space_for(size_bytes)) {orphan_buffer_and_reset();} // end of buffer space
 	bind_vbo(vbo, is_index);
-
-	if (pos + size_bytes > size) { // end of buffer space
-		upload_vbo_data(NULL, size, is_index); // orphan the buffer (Note: fast on ATI, slow on Nvidia - pipeline flush?)
-		pos = 0; // wraparound to the beginning
-	}
-	assert(pos + size_bytes <= size);
+	assert(has_space_for(size_bytes));
 	upload_vbo_sub_data_no_sync(v, pos, size_bytes, is_index);
 	void const *ret((unsigned char const *)pos);
 	pos += size_bytes; // data allocated

@@ -252,6 +252,9 @@ public:
 		assert(!v.empty());
 		return add_verts_bind_vbo(&v.front(), v.size()*sizeof(T));
 	}
+	bool has_space_for(unsigned size_bytes) const {return (pos + size_bytes <= size);}
+	void mark_as_filled() {pos = size;}
+	void orphan_buffer_and_reset();
 	void const *add_verts_bind_vbo(void const *const v, unsigned size_bytes);
 };
 

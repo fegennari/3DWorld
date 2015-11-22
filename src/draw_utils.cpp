@@ -174,13 +174,25 @@ void vert_norm_texp::unset_attrs() {
 
 
 // required when using a core context, but slow
-vbo_ring_buffer_t vbo_ring_buffer(1 << 23); // 8MB
+vbo_ring_buffer_t vbo_ring_buffer[2] = {vbo_ring_buffer_t(1 << 23), vbo_ring_buffer_t(1 << 23)}; // 2x8MB
+unsigned active_buffer(0);
 
-void clear_vbo_ring_buffer() {vbo_ring_buffer.clear();}
+void clear_vbo_ring_buffer() {
+	vbo_ring_buffer[0].clear();
+	vbo_ring_buffer[1].clear();
+}
 
 void const *get_dynamic_vbo_ptr(void const *const verts, unsigned size_bytes) {
 	assert(verts != NULL && size_bytes > 0);
-	return vbo_ring_buffer.add_verts_bind_vbo(verts, size_bytes);
+
+	if (!vbo_ring_buffer[active_buffer].has_space_for(size_bytes)) {
+		// if we're out of space in this buffer, switch to using the other buffer while waiting for the contents of this buffer to be used;
+		// if the other buffer is also full it will be orphaned and maybe flushed, but it should contain older data that may no longer be in use;
+		// hopefully we won't fill up both buffers in the same frame and cause a pipeline flush/stall
+		vbo_ring_buffer[active_buffer].mark_as_filled(); // to prevent any smaller blocks of data from being added
+		active_buffer ^= 1;
+	}
+	return vbo_ring_buffer[active_buffer].add_verts_bind_vbo(verts, size_bytes);
 }
 
 bool bind_temp_vbo_from_verts(void const *const verts, unsigned count, unsigned vert_size, void const *&vbo_ptr_offset) {
