@@ -638,7 +638,7 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only);
 int get_tree_type_from_height(float zpos, rand_gen_t &rgen);
 float get_plant_leaf_wind_mag(bool shadow_only);
 void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater);
-void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix=0, bool enable_opacity=0, bool no_dlights=0, float wind_mag=0.0, bool underwater=0, bool use_fs_smap=0);
+void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix=0, bool enable_opacity=0, bool no_dlights=0, float wind_mag=0.0, bool underwater=0, bool use_fs_smap=0, bool enable_smap=1);
 bool update_decid_tree_zvals(int x1, int y1, int x2, int y2);
 bool update_small_tree_zvals(int x1, int y1, int x2, int y2);
 void exp_damage_trees(point const &epos, float damage, float bradius, int type);

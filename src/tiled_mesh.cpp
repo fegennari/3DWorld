@@ -2299,10 +2299,10 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
 
 	{ // draw leaves
-		bool const leaf_shadow_maps(enable_shadow_maps);
+		bool const leaf_shadow_maps((display_mode & 0x0200) && enable_shadow_maps);
 		shader_t ls;
 		if (leaf_shadow_maps) {ls.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
-		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, (display_mode & 0x0200));
+		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, 0, leaf_shadow_maps);
 		if (leaf_shadow_maps ) {setup_tile_shader_shadow_map(ls);}
 		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 		set_tree_dither_noise_tex(ls, 1); // TU=1
@@ -2363,7 +2363,7 @@ void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 	s.end_shader();
 	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled());
 	if (enable_shadow_maps) {s.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
-	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps);
+	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps);
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
 	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);} // leaves
 	s.end_shader();

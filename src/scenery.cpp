@@ -1148,7 +1148,7 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 	}
 	if (draw_transparent && !plants.empty()) { // draw leaves
 		shader_t s;
-		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS);
+		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, ENABLE_PLANT_SHADOWS);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
 	}

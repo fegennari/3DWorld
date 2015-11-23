@@ -21,7 +21,6 @@ float const TREE_SIZE        = 0.005;
 int   const LEAF_GEN_RAND1   = 16;
 int   const LEAF_GEN_RAND2   = 200000; // larger is fewer leaves falling
 float const DIST_C_SCALE     = 0.01;
-float const LEAF_SHADOW_VAL  = 0.25;
 float const BASE_LEN_SCALE   = 0.8; // determines base cylinder overlap
 float const BRANCH_LEN_SCALE = 0.9; // determines branch cylinder overlap
 float const REL_LEAF_SIZE    = 3.5;
@@ -366,16 +365,16 @@ void setup_leaf_wind(shader_t &s, float wind_mag, bool underwater) {
 	s.add_uniform_float("wind_freq",  80.0*tree_scale);
 }
 
-void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag, bool underwater, bool use_fs_smap) {
+void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool enable_opacity, bool no_dlights, float wind_mag, bool underwater, bool use_fs_smap, bool enable_smap) {
 
 	if (world_mode == WMODE_INF_TERRAIN) {
 		no_dlights = 1;
 		setup_tt_fog_pre(s); // FS
 	}
-	int const shader_type((use_fs_smap || (world_mode == WMODE_GROUND && max_unique_trees > 0 && (display_mode & 0x10))) ? 1 : 0); // VS/FS (for lighting)
+	int const shader_type((use_fs_smap || (world_mode == WMODE_GROUND && (display_mode & 0x10))) ? 1 : 0); // VS/FS (for lighting)
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid);
-	bool const use_smap(shadow_map_enabled());
+	bool const use_smap(enable_smap && shadow_map_enabled());
 	s.set_bool_prefix("indir_lighting", use_indir, shader_type);
 	if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 	s.check_for_fog_disabled();
@@ -416,28 +415,13 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 }
 
 
-void tree_cont_t::check_leaf_shadow_change() {
-
-	static point last_lpos(all_zeros);
-	point const lpos(get_light_pos());
-		
-	if (!no_sun_lpos_update && lpos != last_lpos) {
-		//RESET_TIME;
-		#pragma omp parallel for schedule(dynamic,1) if (size() >= 16)
-		for (int i = 0; i < (int)size(); ++i) {operator[](i).calc_leaf_shadows();}
-		//PRINT_TIME("Leaf Shadows");
-	}
-	last_lpos = lpos;
-}
-
-
-void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only, bool use_fs_smap) {
+void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only, bool use_fs_smap, bool enable_smap) {
 	
 	if (shader.is_setup()) {shader.enable();}
 	else { // Note: disabling leaf wind when shadow_only is faster but looks odd
 		float const wind_mag((has_snow || !animate2 /*|| shadow_only*/) ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
 		if (use_fs_smap) {shader.set_prefix("#define NO_SHADOW_PCF",  1);} // FS - faster shadows
-		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0, use_fs_smap); // no underwater trees
+		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0, use_fs_smap, enable_smap); // no underwater trees
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
 			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);
@@ -448,7 +432,6 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 
 
 void tree_cont_t::post_leaf_draw(shader_t &shader) {
-
 	shader.clear_specular();
 	shader.disable();
 }
@@ -478,16 +461,12 @@ void tree_cont_t::draw(bool shadow_only) {
 
 void draw_trees(bool shadow_only) {
 
-	if (tree_mode & 2) { // small trees
-		draw_small_trees(shadow_only);
-	}
+	if (tree_mode & 2) {draw_small_trees(shadow_only);} // small trees
+
 	if (tree_mode & 1) { // trees
-		if (shadow_only) {
-			t_trees.draw(1);
-		}
+		if (shadow_only) {t_trees.draw(1);}
 		else {
 			next_has_any_billboard_coll = 0; // reset for this frame
-			t_trees.check_leaf_shadow_change();
 			t_trees.draw(0);
 			has_any_billboard_coll = next_has_any_billboard_coll; // keep only if some leaf already has a coll
 		}
@@ -497,7 +476,6 @@ void draw_trees(bool shadow_only) {
 
 
 void tree_data_t::make_private_copy(tree_data_t &dest) const {
-	
 	dest = *this;
 	dest.clear_vbo_ixs();
 }
@@ -772,13 +750,7 @@ void tree::drop_leaves() {
 }
 
 
-inline float tree_leaf::get_norm_scale(unsigned pt_ix) const {
-	return ((shadow_bits & (1 << pt_ix)) ? LEAF_SHADOW_VAL : 1.0);
-}
-
-
 void tree_data_t::clear_vbo_ixs() {
-
 	leaf_vbo = num_branch_quads = num_unique_pts = 0;
 	branch_manager.reset_vbos_to_zero();
 }
@@ -972,7 +944,6 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	if (gen_arrays || leaf_color_changed) {
 		for (unsigned i = 0; i < leaf_cobjs.size(); ++i) {update_leaf_cobj_color(i);}
 	}
-	if (gen_arrays) {calc_leaf_shadows();}
 	if ((has_dl_sources || (tree_indir_lighting && smoke_tid)) && ground_mode) {s.set_uniform_vector3d(wsoff_loc, (tree_center + xlate));}
 	s.set_uniform_int(tex0_off, TLEAF_START_TUID+type); // what about texture color mod?
 	fgPushMatrix();
@@ -1072,7 +1043,8 @@ void tree_data_t::update_normal_for_leaf(unsigned i) {
 	assert(i < leaves.size());
 	vector3d const &normal(leaves[i].norm); // standard leaf plane normal
 	//vector3d const &normal(leaves[i].get_center().get_norm()); // use position of leaf relative to tree center (could also mix in leaf normal)
-	UNROLL_4X(leaf_data[i_+(i<<2)].set_norm(normal*leaves[i].get_norm_scale(i_));)
+	norm_comp const nc(normal);
+	UNROLL_4X(leaf_data[i_+(i<<2)].set_norm(nc);)
 	mark_leaf_changed(i);
 }
 
@@ -1139,14 +1111,8 @@ void tree_data_t::bend_leaf(unsigned i, float angle) { // Note: slow
 	unsigned const ix(i<<2);
 	leaf_data[ix+1].v = l.pts[1] + delta;
 	leaf_data[ix+2].v = l.pts[2] + delta;
-
-	if (l.shadow_bits == 0) {
-		norm_comp nc(normal);
-		UNROLL_4X((norm_comp)leaf_data[i_+ix] = nc;)
-	}
-	else { // update the normals, even though this slows the algorithm down
-		UNROLL_4X(leaf_data[i_+ix].set_norm(normal*l.get_norm_scale(i_));) // almost update_normal_for_leaf(i);
-	}
+	norm_comp const nc(normal);
+	UNROLL_4X(leaf_data[i_+ix].set_norm(nc);) // similar to update_normal_for_leaf()
 	mark_leaf_changed(i);
 	reset_leaves = 1; // do we want to update the normals as well?
 }
@@ -1231,43 +1197,6 @@ void tree::update_leaf_orients() { // leaves move in wind or when struck by an o
 		}
 	} // for i
 	leaf_orients_valid = 1;
-}
-
-
-void tree::calc_leaf_shadows() { // process leaf shadows/normals
-
-	if (!physics_enabled()) return;
-	tree_data_t &td(tdata());
-	if (!td.leaf_data_allocated() || !td_is_private()) return; // leaf data not yet created (can happen if called when light source changes), or shared data
-	int const light(get_light());
-	point lpos;
-	bool const has_light(get_light_pos(lpos, light) != 0);
-	vector<tree_leaf> &leaves(td.get_leaves());
-
-	#pragma omp parallel for schedule(dynamic,1)
-	for (int i = 0; i < (int)leaves.size(); ++i) {
-		tree_leaf &l(leaves[i]);
-		l.shadow_bits = 0;
-
-		if (has_light && !leaf_cobjs.empty()) {
-			if (td.get_has_4th_branches()) { // leaves are too many and too small - use a single center point
-				point const p1(l.get_center() + tree_center);
-				if (!is_visible_to_light_cobj(p1, light, 0.0, leaf_cobjs[i], 1)) {l.shadow_bits = 15;} // all corners are shadowed
-			}
-			else { // use 4 corner points
-				int cobj_ix(-1);
-
-				for (unsigned j = 0; j < 4; ++j) {
-					point const p1(l.pts[j] + tree_center);
-					// Note: skips the alpha test, but can only get here if the alpha test passed previously
-					bool shadowed(cobj_ix >= 0 && coll_objects[cobj_ix].line_intersect(p1, lpos));
-					if (!shadowed) {shadowed = !is_visible_to_light_cobj(p1, light, 0.0, leaf_cobjs[i], 1, &cobj_ix);}
-					l.shadow_bits |= (int(shadowed) << j);
-				}
-			}
-		}
-		td.update_normal_for_leaf(i);
-	}
 }
 
 
@@ -2224,27 +2153,17 @@ void regen_trees(bool keep_old) {
 	RESET_TIME;
 	static int init(0), last_rgi(0), last_xoff2(0), last_yoff2(0);
 	static float last_ts(0.0);
-	
-	if (tree_mode & 2) {
-		gen_small_trees();
-	}
-	else {
-		//remove_small_tree_cobjs();
-	}
+	if (tree_mode & 2) {gen_small_trees();}
+	//else {remove_small_tree_cobjs();}
+
 	if ((tree_mode & 1) && num_trees > 0) {
-		if (keep_old && init && last_rgi == rand_gen_index && last_xoff2 == xoff2 && last_yoff2 == yoff2 && last_ts == tree_scale)
-		{ // keep old trees
-			add_tree_cobjs();
+		if (keep_old && init && last_rgi == rand_gen_index && last_xoff2 == xoff2 && last_yoff2 == yoff2 && last_ts == tree_scale) {
+			add_tree_cobjs(); // keep old trees
 			return;
 		}
 		int const border(1), ext_x1(border), ext_x2(MESH_X_SIZE-border), ext_y1(border), ext_y2(MESH_Y_SIZE-border);
-
-		if (scrolling && t_trees.scroll_trees(ext_x1, ext_x2, ext_y1, ext_y2)) {
-			t_trees.post_scroll_remove();
-		}
-		else {
-			t_trees.resize(0);
-		}
+		if (scrolling && t_trees.scroll_trees(ext_x1, ext_x2, ext_y1, ext_y2)) {t_trees.post_scroll_remove();}
+		else {t_trees.resize(0);}
 		t_trees.gen_deterministic(ext_x1, ext_y1, ext_x2, ext_y2, vegetation);
 		if (!scrolling) {cout << "Num trees = " << t_trees.size() << endl;}
 		last_rgi   = rand_gen_index;
@@ -2302,9 +2221,7 @@ bool tree_cont_t::update_zvals(int x1, int y1, int x2, int y2) {
 void tree_cont_t::spraypaint_leaves(point const &pos, float radius, colorRGBA const &color) {
 
 	for (iterator i = begin(); i != end(); ++i) {
-		if (dist_less_than(pos, i->sphere_center(), (radius + i->get_radius()))) {
-			i->spraypaint_leaves(pos, radius, color);
-		}
+		if (dist_less_than(pos, i->sphere_center(), (radius + i->get_radius()))) {i->spraypaint_leaves(pos, radius, color);}
 	}
 }
 

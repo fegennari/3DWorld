@@ -12,9 +12,8 @@ void calc_leaf_lighting() {
 	normal *= nscale;
 
 	vec3 vpos      = fg_Vertex.xyz + world_space_offset;
-	float dscale   = sqrt(dot(fg_Normal, fg_Normal));
 	vec3 ws_normal = nscale*normalize(fg_Normal);
-	vec3 color     = get_tree_leaf_lighting(epos, normal, vpos, ws_normal, dscale);
+	vec3 color     = get_tree_leaf_lighting(epos, normal, vpos, ws_normal);
 	fg_Color_vf    = vec4(min(2.0*fg_Color.rgb, clamp(color*color_scale.rgb, 0.0, 1.0)), 1.0); // limit lightning color
 
 	if (underwater) {

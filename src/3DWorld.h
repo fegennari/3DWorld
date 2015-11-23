@@ -738,6 +738,7 @@ struct norm_comp { // size = 4
 	char n[3];
 	norm_comp() {}
 	norm_comp(vector3d const &n_) {set_norm(n_);}
+	void set_norm(norm_comp const &n_) {UNROLL_3X(n[i_] = n_.n[i_];)}
 	void set_norm(vector3d const &n_) {UNROLL_3X(n[i_] = (char)(127.0*n_[i_]);)}
 	vector3d get_norm() const {return vector3d(n[0]/127.0, n[1]/127.0, n[2]/127.0);}
 };

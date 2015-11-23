@@ -59,17 +59,15 @@ public:
 };
 
 
-struct tree_leaf { // size = 28 + 48 = 76
+struct tree_leaf { // size = 24 + 48 = 72
 
-	int shadow_bits;
 	float color, lred, lgreen;
 	vector3d norm;
 	point pts[4];
 
-	tree_leaf() : shadow_bits(0), color(0.0), lred(0.0), lgreen(0.0) {}
+	tree_leaf() : color(0.0), lred(0.0), lgreen(0.0) {}
 	void create_init_color(bool deterministic);
 	colorRGB calc_leaf_color(colorRGBA const &leaf_color, colorRGBA const &base_color) const;
-	float get_norm_scale(unsigned pt_ix) const;
 	point get_center() const {return 0.25*(pts[0] + pts[1] + pts[2] + pts[3]);} // average of all 4 leaf points
 };
 
@@ -305,7 +303,6 @@ public:
 	void bind_to_td(tree_data_t *td);
 	void gen_tree(point const &pos, int size, int ttype, int calc_z, bool add_cobjs, bool user_placed,
 		float height_scale=1.0, float br_scale_mult=1.0, float nl_scale=1.0, bool has_4th_branches=0);
-	void calc_leaf_shadows();
 	void add_tree_collision_objects();
 	void remove_collision_objects();
 	bool check_sphere_coll(point &center, float radius) const;
@@ -357,8 +354,7 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	void draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_renderer, bool draw_branches, bool draw_leaves,
 		bool shadow_only, bool reflection_pass, vector3d const &xlate);
-	void check_leaf_shadow_change();
-	static void pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only=0, bool use_fs_smap=0);
+	static void pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only=0, bool use_fs_smap=0, bool enable_smap=1);
 	static void post_leaf_draw(shader_t &shader);
 	void draw(bool shadow_only);
 	unsigned delete_all();

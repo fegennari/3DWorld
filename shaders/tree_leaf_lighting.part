@@ -16,7 +16,7 @@ void add_indir_lighting(inout vec3 lit_color, in vec3 vpos) {
 	lit_color += gl_Color.rgb * indir_color;
 }
 
-vec3 get_tree_leaf_lighting(in vec4 epos, in vec3 normal, in vec3 vpos, in vec3 ws_normal, in float diffuse_scale) {
+vec3 get_tree_leaf_lighting(in vec4 epos, in vec3 normal, in vec3 vpos, in vec3 ws_normal) {
 	vec3 color = vec3(0.0);
 	add_indir_lighting(color, vpos);
 	float ambient_scale = (indir_lighting ? 0.0 : 1.0);
@@ -24,8 +24,8 @@ vec3 get_tree_leaf_lighting(in vec4 epos, in vec3 normal, in vec3 vpos, in vec3 
 #ifdef USE_SMAP_SCALE
 	smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - length(epos.xyz)), 0.0, 1.0);
 #endif
-	if (enable_light0)  {color += add_leaf_light_comp(normal, epos, 0, ambient_scale, diffuse_scale*((use_shadow_map && smap_scale > 0.0) ? mix(1.0, get_shadow_map_weight_light0(epos, normal), smap_scale) : 1.0)).rgb;}
-	if (enable_light1)  {color += add_leaf_light_comp(normal, epos, 1, ambient_scale, diffuse_scale*((use_shadow_map && smap_scale > 0.0) ? mix(1.0, get_shadow_map_weight_light1(epos, normal), smap_scale) : 1.0)).rgb;}
+	if (enable_light0)  {color += add_leaf_light_comp(normal, epos, 0, ambient_scale, ((use_shadow_map && smap_scale > 0.0) ? mix(1.0, get_shadow_map_weight_light0(epos, normal), smap_scale) : 1.0)).rgb;}
+	if (enable_light1)  {color += add_leaf_light_comp(normal, epos, 1, ambient_scale, ((use_shadow_map && smap_scale > 0.0) ? mix(1.0, get_shadow_map_weight_light1(epos, normal), smap_scale) : 1.0)).rgb;}
 	if (enable_light2)  {color += add_pt_light_comp  (normalize(normal), epos, 2).rgb;} // lightning
 	if (enable_dlights) {add_dlights(color, vpos, ws_normal, vec3(1.0));}
 	return color;
