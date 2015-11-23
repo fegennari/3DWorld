@@ -375,22 +375,23 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	int const shader_type((use_fs_smap || (world_mode == WMODE_GROUND && max_unique_trees > 0 && (display_mode & 0x10))) ? 1 : 0); // VS/FS (for lighting)
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid);
-	bool const use_smap(shader_type == 1 && shadow_map_enabled());
+	bool const use_smap(shadow_map_enabled());
 	s.set_bool_prefix("indir_lighting", use_indir, shader_type);
 	if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 	s.check_for_fog_disabled();
 	s.setup_enabled_lights(2, (1<<shader_type));
 	s.set_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled), shader_type);
 	set_dlights_booleans(s, !no_dlights, shader_type, 1); // no_dl_smap=1
+	s.set_bool_prefix("use_shadow_map", use_smap, shader_type);
+	string const ls_str("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+leaf_lighting_comp.part*+tree_leaf_lighting.part*");
 
 	if (shader_type == 0) { // VS
 		s.set_frag_shader(enable_opacity ? "linear_fog.part+noise_dither.part+textured_with_fog_opacity" : "linear_fog.part+textured_with_fog");
-		s.set_vert_shader("ads_lighting.part*+leaf_lighting_comp.part*+dynamic_lighting.part*+leaf_lighting.part+texture_gen.part+leaf_wind.part+tree_leaves");
+		s.set_vert_shader(ls_str + "+leaf_lighting.part+texture_gen.part+leaf_wind.part+tree_leaves");
 	}
 	else { // FS
-		s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
 		if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY", shader_type);}
-		s.set_frag_shader(string(enable_opacity ? "noise_dither.part+" : "") + "ads_lighting.part*+shadow_map.part*+leaf_lighting_comp.part*+dynamic_lighting.part*+linear_fog.part+leaf_lighting_ppl");
+		s.set_frag_shader(ls_str + (enable_opacity ? "+noise_dither.part" : "") + "+linear_fog.part+leaf_lighting_ppl");
 		s.set_vert_shader("texture_gen.part+leaf_wind.part+tree_leaves_ppl");
 	}
 	s.begin_shader();

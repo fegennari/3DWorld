@@ -2299,10 +2299,10 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 	lod_renderer.set_enabled(enable_billboards); // need full detail rendering in shadow pass, since billboards project poor shadows
 
 	{ // draw leaves
-		bool const leaf_shadow_maps((display_mode & 0x0200) && enable_shadow_maps);
+		bool const leaf_shadow_maps(enable_shadow_maps);
 		shader_t ls;
 		if (leaf_shadow_maps) {ls.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
-		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, leaf_shadow_maps);
+		tree_cont_t::pre_leaf_draw(ls, enable_billboards, shadow_pass, (display_mode & 0x0200));
 		if (leaf_shadow_maps ) {setup_tile_shader_shadow_map(ls);}
 		if (enable_billboards) {lod_renderer.leaf_opacity_loc = ls.get_uniform_loc("opacity");}
 		set_tree_dither_noise_tex(ls, 1); // TU=1

@@ -988,6 +988,7 @@
     <None Include="shaders\tree_branches_billboard.frag" />
     <None Include="shaders\tree_branches_billboard.vert" />
     <None Include="shaders\tree_branches_no_lighting.vert" />
+    <None Include="shaders\tree_leaf_lighting.part" />
     <None Include="shaders\tree_leaves_billboard.frag" />
     <None Include="shaders\tree_leaves_billboard.vert" />
     <None Include="shaders\tree_leaves_no_lighting.vert" />
