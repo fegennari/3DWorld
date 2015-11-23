@@ -1238,46 +1238,12 @@ void tree::calc_leaf_shadows() { // process leaf shadows/normals
 
 	if (!physics_enabled()) return;
 	tree_data_t &td(tdata());
-	if (!td.leaf_data_allocated()) return; // leaf data not yet created (can happen if called when light source changes), or shared data
+	if (!td.leaf_data_allocated() || !td_is_private()) return; // leaf data not yet created (can happen if called when light source changes), or shared data
 	int const light(get_light());
 	point lpos;
 	bool const has_light(get_light_pos(lpos, light) != 0);
 	vector<tree_leaf> &leaves(td.get_leaves());
 
-	if (!td_is_private()) {
-		return; // Note: doesn't work well: too slow, not called in TT mode, no shadowing between trees, doesn't check leaf alpha channel
-		if (!td.check_if_needs_updated()) return; // conflicts with usage in update_leaf_orients()?
-		// create BVH of leaves (and branches?)
-		cobj_tree_tquads_t bvh;
-		vector<coll_tquad> &tquads(bvh.get_tquads_ref());
-		tquads.resize(leaves.size());
-
-		for (unsigned i = 0; i < leaves.size(); ++i) {
-			tquads[i].npts   = 4;
-			tquads[i].normal = leaves[i].norm;
-			tquads[i].cid    = i; // encode leaf index into color id
-			for (unsigned n = 0; n < 4; ++n) {tquads[i].pts[n] = leaves[i].pts[n];}
-		}
-		bvh.build_tree_top(0);
-		for (unsigned i = 0; i < leaves.size(); ++i) {leaves[tquads[i].cid].shadow_bits = i;} // cache tquad id into shadow bits
-
-		// determine shadows in parallel
-		#pragma omp parallel for schedule(dynamic,1)
-		for (int i = 0; i < (int)leaves.size(); ++i) {
-			tree_leaf &l(leaves[i]);
-			int const tquad_id(l.shadow_bits);
-			l.shadow_bits = 0;
-
-			if (has_light) { // use a single center point
-				vector3d cnorm; // unused
-				point cpos; // unused
-				point const p1(l.get_center() + 0.001*lpos.get_norm()), p2(p1 + lpos); // treat lpos as a light direction
-				if (bvh.check_coll_line(p1, p2, cpos, cnorm, nullptr, nullptr, tquad_id, 0)) {l.shadow_bits = 15;} // all corners are shadowed
-			}
-			td.update_normal_for_leaf(i);
-		}
-		return;
-	}
 	#pragma omp parallel for schedule(dynamic,1)
 	for (int i = 0; i < (int)leaves.size(); ++i) {
 		tree_leaf &l(leaves[i]);
