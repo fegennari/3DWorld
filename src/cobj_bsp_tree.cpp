@@ -296,7 +296,7 @@ bool cobj_tree_tquads_t::check_coll_line(point const &p1, point const &p2, point
 		for (unsigned i = n.start; i < n.end; ++i) { // check leaves
 			// Note: we test cobj against the original (unclipped) p1 and p2 so that t is correct
 			// Note: we probably don't need to return cnorm and cpos in inexact mode, but it shouldn't be too expensive to do so
-			if (cindex && (int)objects[i].cid == ignore_cobj)             continue;
+			if (ignore_cobj >= 0 && (int)objects[i].cid == ignore_cobj)   continue;
 			if (!objects[i].line_int_exact(p1, p2, t, cnorm, tmin, tmax)) continue;
 			if (cindex) *cindex = objects[i].cid;
 			if (color ) *color  = objects[i].color.get_c4();

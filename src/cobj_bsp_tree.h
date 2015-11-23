@@ -82,7 +82,7 @@ public:
 		return check_coll_line(p1, p2, cpos, cnorm, NULL, &cindex, ignore_cobj, exact);
 	}
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const {
-		return check_coll_line(p1, p2, cpos, cnorm, &color, NULL, 0, exact);
+		return check_coll_line(p1, p2, cpos, cnorm, &color, NULL, -1, exact);
 	}
 };
 
