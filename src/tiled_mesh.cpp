@@ -1024,7 +1024,7 @@ void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xl
 
 // Note: xlate has different meanings here: for near leaves, it's a vec3 attribute; for far leaves, it's a vec2 uniform; for branches, it's -1
 void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_branches, bool draw_near_leaves,
-	bool draw_far_leaves, bool reflection_pass, int xlate_loc)
+	bool draw_far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
 	if (pine_trees.empty() || !can_have_trees()) return;
 	point const camera(get_camera_pos());
@@ -1037,7 +1037,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 		float const dscale(get_tree_dist_scale());
 
 		if (dscale < 1.0) { // close, draw as polygons
-			bind_and_setup_shadow_map(s);
+			if (enable_smap) {bind_and_setup_shadow_map(s);}
 			if (draw_branches) {set_mesh_ambient_color(s);}
 			pine_trees.draw_branches(0, xlate, &trunk_pts);
 		}
@@ -1054,6 +1054,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 		}
 		if (weight > 0.0 && weight < 1.0) { // use geomorphing with dithering (since alpha doesn't blend in the correct order)
 			if (draw_near_leaves) {
+				if (enable_smap) {bind_and_setup_shadow_map(s);}
 				int const loc(s.get_uniform_loc("max_noise"));
 				s.set_uniform_float(loc, weight);
 				draw_tree_leaves_lod(xlate, 0, xlate_loc); // near leaves
@@ -1067,6 +1068,7 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 			}
 		}
 		else if ((weight == 0.0) ? draw_far_leaves : draw_near_leaves) {
+			if (enable_smap) {bind_and_setup_shadow_map(s);}
 			draw_tree_leaves_lod(xlate, (weight == 0.0), xlate_loc);
 		}
 	}
@@ -2152,23 +2154,26 @@ void tile_draw_t::draw_water(shader_t &s, float zval) const {
 }
 
 
-void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
+/*static*/ void tile_draw_t::set_noise_tex(shader_t &s, unsigned tu_id) {
 
 	select_multitex(DITHER_NOISE_TEX, tu_id, 1);
 	s.add_uniform_int("noise_tex", tu_id);
 }
 
-void tile_draw_t::set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {
+/*static*/ void tile_draw_t::set_tree_dither_noise_tex(shader_t &s, unsigned tu_id) {
 
 	set_noise_tex(s, tu_id);
 	s.add_uniform_float("noise_tex_size", get_texture_size(DITHER_NOISE_TEX, 0));
 }
 
-void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs) {
+/*static*/ void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs) {
 
-	shared_shader_lighting_setup(s, 0);
+	shared_shader_lighting_setup(s, 0); // VS
 	s.set_vert_shader("ads_lighting.part*+texture_gen.part+" + vs);
 	s.set_frag_shader("linear_fog.part+noise_dither.part+pine_tree");
+	set_pine_tree_shader_post(s);
+}
+/*static*/ void tile_draw_t::set_pine_tree_shader_post(shader_t &s) {
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("branch_tex", 0);
@@ -2178,10 +2183,10 @@ void tile_draw_t::set_pine_tree_shader(shader_t &s, string const &vs) {
 }
 
 
-void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass, int xlate_loc) {
+void tile_draw_t::draw_pine_tree_bl(shader_t &s, bool branches, bool near_leaves, bool far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc) {
 
 	for (unsigned i = 0; i < to_draw.size(); ++i) { // near leaves
-		to_draw[i].second->draw_pine_trees(s, tree_trunk_pts, branches, near_leaves, far_leaves, reflection_pass, xlate_loc);
+		to_draw[i].second->draw_pine_trees(s, tree_trunk_pts, branches, near_leaves, far_leaves, reflection_pass, enable_smap, xlate_loc);
 	}
 }
 
@@ -2196,7 +2201,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		s.add_uniform_float("radius_scale", calc_tree_size());
 		s.add_uniform_float("ambient_scale", 1.5);
 		s.set_specular(0.2, 8.0);
-		draw_pine_tree_bl(s, 0, 0, 1, reflection_pass, s.get_uniform_loc("xlate"));
+		draw_pine_tree_bl(s, 0, 0, 1, reflection_pass, 0, s.get_uniform_loc("xlate"));
 		s.clear_specular();
 		s.end_shader();
 		disable_blend();
@@ -2207,7 +2212,20 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 	if (shadow_pass   ) {s.set_prefix("#define NO_NOISE",    1);} // FS
 	if (enable_instanced_pine_trees()) {s.set_prefix("#define ENABLE_INSTANCING", 0);} // VS
-	set_pine_tree_shader(s, "leaf_wind.part+pine_tree");
+	bool const enable_smap(!shadow_pass && shadow_map_enabled()), enable_leaf_smap((display_mode & 0x0200) && enable_smap);
+
+	if (enable_leaf_smap) { // per-pixel lighting/shadows
+		shared_shader_lighting_setup(s, 1); // FS
+		s.set_bool_prefix("use_shadow_map", 1, 1); // FS
+		s.set_prefix("#define NO_SHADOW_PCF", 1); // FS
+		s.set_vert_shader("texture_gen.part+leaf_wind.part+pine_tree_ppl");
+		s.set_frag_shader("ads_lighting.part*+linear_fog.part+noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+pine_tree_ppl");
+		set_pine_tree_shader_post(s);
+		setup_tile_shader_shadow_map(s);
+	}
+	else {
+		set_pine_tree_shader(s, "leaf_wind.part+pine_tree");
+	}
 	setup_leaf_wind(s, wind_mag, 0);
 	int xlate_loc(-1);
 	
@@ -2217,20 +2235,20 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 		enable_instancing_for_shader_loc(xlate_loc);
 	}
 	s.set_specular(0.2, 8.0);
-	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass, xlate_loc);
+	draw_pine_tree_bl(s, 0, 1, 0, reflection_pass, enable_leaf_smap, xlate_loc);
 	assert(tree_trunk_pts.empty());
 	s.clear_specular();
 	if (xlate_loc >= 0) {disable_instancing_for_shader_loc(xlate_loc);}
 	s.end_shader();
 
-	// nearby trunks
-	tree_branch_shader_setup(s, (!shadow_pass && shadow_map_enabled()), 0); // enable_opacity=0
+	// near trunks
+	tree_branch_shader_setup(s, enable_smap, 0); // enable_opacity=0
 	s.add_uniform_float("tex_scale_t", 5.0);
-	draw_pine_tree_bl(s, 1, 0, 0, reflection_pass); // branches
+	draw_pine_tree_bl(s, 1, 0, 0, reflection_pass, enable_smap, -1); // branches
 	s.add_uniform_float("tex_scale_t", 1.0);
 	s.end_shader();
 
-	// distant trunks
+	// distant/far trunks
 	if (!shadow_pass && !tree_trunk_pts.empty()) { // color/texture already set above
 		enable_blend(); // for fog transparency
 		set_pine_tree_shader(s, "xy_billboard");

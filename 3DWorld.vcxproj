@@ -943,6 +943,8 @@
     <None Include="shaders\pine_tree.frag" />
     <None Include="shaders\pine_tree.vert" />
     <None Include="shaders\pine_tree_billboard_auto_orient.vert" />
+    <None Include="shaders\pine_tree_ppl.frag" />
+    <None Include="shaders\pine_tree_ppl.vert" />
     <None Include="shaders\planet_draw.frag" />
     <None Include="shaders\planet_draw.tesc" />
     <None Include="shaders\planet_draw.tese" />
