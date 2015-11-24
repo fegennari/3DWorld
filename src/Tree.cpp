@@ -422,16 +422,15 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 		float const wind_mag((has_snow || !animate2 /*|| shadow_only*/) ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
 		if (enable_smap) {shader.set_prefix("#define NO_SHADOW_PCF", (use_fs_smap ? 1 : 0));} // faster shadows
 		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0, use_fs_smap, enable_smap); // no underwater trees
-
-		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
-			select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);
-		}
+		for (int i = 0; i < NUM_TREE_TYPES; ++i) {select_multitex(((draw_model == 0) ? tree_types[i].leaf_tex : WHITE_TEX), TLEAF_START_TUID+i);}
 	}
-	shader.set_specular(0.1, 10.0); // small amount of specular
+	shader.set_specular(0.2, 20.0); // small amount of specular
+	set_multisample(0); // disable AA to prevent bright pixel artifacts and to improve frame rate
 }
 
 
 void tree_cont_t::post_leaf_draw(shader_t &shader) {
+	set_multisample(1); // re-enable AA
 	shader.clear_specular();
 	shader.disable();
 }
