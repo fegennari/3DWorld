@@ -371,7 +371,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 		no_dlights = 1;
 		setup_tt_fog_pre(s); // FS
 	}
-	int const shader_type((use_fs_smap || (world_mode == WMODE_GROUND && (display_mode & 0x10))) ? 1 : 0); // VS/FS (for lighting)
+	int const shader_type(use_fs_smap ? 1 : 0); // VS/FS (for lighting)
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid);
 	bool const use_smap(enable_smap && shadow_map_enabled());
@@ -420,7 +420,7 @@ void tree_cont_t::pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shad
 	if (shader.is_setup()) {shader.enable();}
 	else { // Note: disabling leaf wind when shadow_only is faster but looks odd
 		float const wind_mag((has_snow || !animate2 /*|| shadow_only*/) ? 0.0 : 0.05*REL_LEAF_SIZE*TREE_SIZE/(sqrt(nleaves_scale)*tree_scale)*min(2.0f, wind.mag()));
-		if (use_fs_smap) {shader.set_prefix("#define NO_SHADOW_PCF",  1);} // FS - faster shadows
+		if (enable_smap) {shader.set_prefix("#define NO_SHADOW_PCF", (use_fs_smap ? 1 : 0));} // faster shadows
 		set_leaf_shader(shader, 0.75, 3, enable_opacity, shadow_only, wind_mag, 0, use_fs_smap, enable_smap); // no underwater trees
 
 		for (int i = 0; i < NUM_TREE_TYPES; ++i) {
