@@ -15,19 +15,31 @@ vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm, in vec
 	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - length(epos.xyz)), 0.0, 1.0);}
 
 	if (enable_light0) {
+		vec4 lpos    = fg_LightSource[0].position;
 		float dscale = diffuse_scale;
-		if (use_shadow_map && smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, eye_norm), smap_scale));}
-#ifdef APPLY_CLOUD_SHADOWS
-		dscale *= calc_light_scale(vertex.xyz, fg_LightSource[0].position);
+#ifdef TEST_BACK_FACING
+		if (dot((lpos.xyz - epos.xyz), eye_norm) > 0.0)
 #endif
+		{
+			if (use_shadow_map && smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, eye_norm), smap_scale));}
+#ifdef APPLY_CLOUD_SHADOWS
+			dscale *= calc_light_scale(vertex.xyz, lpos);
+#endif
+		}
 		color += add_light_comp_pos_scaled0(eye_norm, epos, dscale, ambient_scale, ad_color).rgb;
 	}
 	if (enable_light1) {
+		vec4 lpos    = fg_LightSource[1].position;
 		float dscale = diffuse_scale;
-		if (use_shadow_map && smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, eye_norm), smap_scale));}
-#ifdef APPLY_CLOUD_SHADOWS
-		dscale *= calc_light_scale(vertex.xyz, fg_LightSource[1].position);
+#ifdef TEST_BACK_FACING
+		if (dot((lpos.xyz - epos.xyz), eye_norm) > 0.0)
 #endif
+		{
+			if (use_shadow_map && smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, eye_norm), smap_scale));}
+#ifdef APPLY_CLOUD_SHADOWS
+			dscale *= calc_light_scale(vertex.xyz, lpos);
+#endif
+		}
 		color += add_light_comp_pos_scaled1(eye_norm, epos, dscale, ambient_scale, ad_color).rgb;
 	}
 	if (enable_light2) {color += add_pt_light_comp(eye_norm, epos, 2).rgb;} // lightning (can't override color)

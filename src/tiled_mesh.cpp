@@ -2216,8 +2216,9 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 
 	if (enable_leaf_smap) { // per-pixel lighting/shadows
 		shared_shader_lighting_setup(s, 1); // FS
-		s.set_bool_prefix("use_shadow_map", 1, 1); // FS
-		s.set_prefix("#define NO_SHADOW_PCF", 1); // FS
+		s.set_bool_prefix("use_shadow_map", 1,   1); // FS
+		s.set_prefix("#define NO_SHADOW_PCF",    1); // FS
+		s.set_prefix("#define TEST_BACK_FACING", 1); // FS
 		s.set_vert_shader("texture_gen.part+leaf_wind.part+pine_tree_ppl");
 		s.set_frag_shader("ads_lighting.part*+linear_fog.part+noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+pine_tree_ppl");
 		set_pine_tree_shader_post(s);
