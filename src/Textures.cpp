@@ -673,7 +673,7 @@ void texture_t::auto_insert_alpha_channel(int index) {
 					alpha = ((buf[0] == 255 && buf[1] == 255 && buf[2] == 255) ? 0 : 255); // all white = transparent
 				}
 				else if (alpha_white) {
-					float const thresh((index == LEAF3_TEX) ? 700.0 : 600.0);
+					float const thresh(600.0);
 					alpha = ((val > thresh) ? 0 : ((val < thresh-100.0) ? 255 : (unsigned char)(2.55*(thresh - val))));
 				}
 				else {
