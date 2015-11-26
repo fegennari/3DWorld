@@ -125,13 +125,9 @@ void texture_t::load(int index, bool allow_diff_width_height, bool allow_two_byt
 		//assert(is_allocated());
 		assert(is_loaded());
 		if (invert_y) {do_invert_y();} // upside down
-
-		if (want_alpha_channel && ncolors < 4) {
-			add_alpha_channel();
-		}
-		else if (want_luminance && ncolors == 3) {
-			try_compact_to_lum();
-		}
+		if (want_alpha_channel && ncolors < 4) {add_alpha_channel();}
+		else if (want_luminance && ncolors == 3) {try_compact_to_lum();}
+		//if (want_alpha_channel) {fill_transparent_with_avg_color();}
 		if (!ignore_word_alignment) {fix_word_alignment();}
 
 		if (invert_alpha) {

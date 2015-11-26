@@ -698,6 +698,27 @@ void texture_t::auto_insert_alpha_channel(int index) {
 }
 
 
+void texture_t::fill_transparent_with_avg_color() { // unused
+
+	unsigned const size(num_pixels());
+	assert(ncolors == 4);
+	colorRGBA avg_color(0.0, 0.0, 0.0, 1.0);
+
+	for(unsigned i = 0; i < size; ++i) {
+		float const cscale(data[(i<<2)+3]/255.0); // alpha scale
+		avg_color.A += cscale;
+		UNROLL_3X(avg_color[i_] += cscale*data[(i<<2)+i_];);
+	}
+	UNROLL_3X(avg_color[i_] /= avg_color.A;);
+	color_wrapper cw;
+	cw.set_c3(avg_color);
+
+	for(unsigned i = 0; i < size; ++i) {
+		if (data[(i<<2)+3] == 0) {UNROLL_3X(data[(i<<2)+i_] = cw.c[i_];);} // reassign transparent pixels
+	}
+}
+
+
 void texture_t::do_invert_y() {
 
 	assert(is_allocated());
