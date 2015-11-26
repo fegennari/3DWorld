@@ -1023,7 +1023,7 @@ void tile_t::draw_tree_leaves_lod(vector3d const &xlate, bool low_detail, int xl
 }
 
 // Note: xlate has different meanings here: for near leaves, it's a vec3 attribute; for far leaves, it's a vec2 uniform; for branches, it's -1
-void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_branches, bool draw_near_leaves,
+void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool draw_trunks, bool draw_near_leaves,
 	bool draw_far_leaves, bool reflection_pass, bool enable_smap, int xlate_loc)
 {
 	if (pine_trees.empty() || !can_have_trees()) return;
@@ -1033,13 +1033,13 @@ void tile_t::draw_pine_trees(shader_t &s, vector<vert_wrap_t> &trunk_pts, bool d
 	fgPushMatrix();
 	translate_to(xlate);
 	
-	if (draw_branches) {
+	if (draw_trunks) {
 		float const dscale(get_tree_dist_scale());
 
 		if (dscale < 1.0) { // close, draw as polygons
 			if (enable_smap) {bind_and_setup_shadow_map(s);}
-			if (draw_branches) {set_mesh_ambient_color(s);}
-			pine_trees.draw_branches(0, xlate, &trunk_pts);
+			set_mesh_ambient_color(s);
+			pine_trees.draw_trunks(0, xlate, &trunk_pts);
 		}
 		else if (dscale < 2.0 && get_tree_far_weight() < 0.5) { // far away, use low detail branches
 			pine_trees.add_trunk_pts(xlate, trunk_pts);

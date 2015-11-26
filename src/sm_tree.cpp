@@ -45,7 +45,7 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
 	sm_tree_type(0.00, 0.10, 0.35, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_PINE
 	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // HEDGE_TEX?
 	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_TDECID
-	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   HEDGE_TEX,     BARK4_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
+	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   HEDGE_TEX,     BARK1_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
 	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX,      PALM_BARK_TEX), // T_PALM
 	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
@@ -216,13 +216,11 @@ void small_tree_group::translate_by(vector3d const &vd) {
 }
 
 
-void small_tree_group::draw_branches(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
+void small_tree_group::draw_trunks(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points) const {
 
 	static vector<vert_norm_tc> cylin_verts; // class member?
+	for (const_iterator i = begin(); i != end(); ++i) {i->draw_trunks(shadow_only, xlate, points, &cylin_verts);}
 
-	for (const_iterator i = begin(); i != end(); ++i) {
-		i->draw_branches(shadow_only, xlate, points, &cylin_verts);
-	}
 	if (!cylin_verts.empty()) {
 		if (!shadow_only) {
 			get_tree_trunk_color(T_PINE, 0).set_for_cur_shader(); // all a constant color
@@ -387,9 +385,7 @@ void small_tree_group::gen_trees(int x1, int y1, int x2, int y2, float const den
 					float const height(tsize*rgen.rand_uniform(0.4, 1.0)), width(height*rgen.rand_uniform(0.25, 0.35));
 					point const pos(xval, yval, zpos+zval_adj*height);
 					if (point_inside_voxel_terrain(pos)) continue; // don't create trees that start inside voxels (but what about trees that grow into voxels?)
-					small_tree st(pos, height, width, ttype, 0, rgen);
-					st.setup_rotation(rgen);
-					add_tree(st);
+					add_tree(small_tree(pos, height, width, ttype, 0, rgen, 1)); // allow_rotation=1
 				}
 			} // for n
 		} // for j
@@ -535,7 +531,7 @@ void draw_small_trees(bool shadow_only) {
 		s.add_uniform_float("tex_scale_t", 5.0);
 	}
 	if (use_bump_map) {select_multitex(BARK2_NORMAL_TEX, 5, 1);}
-	small_trees.draw_branches(shadow_only);
+	small_trees.draw_trunks(shadow_only);
 	if (!shadow_only) {s.add_uniform_float("tex_scale_t", 1.0);}
 	s.end_shader();
 
@@ -586,7 +582,7 @@ small_tree::small_tree(point const &p, unsigned instance_id) {
 }
 
 
-small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen) :
+small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, rand_gen_t &rgen, bool allow_rotation) :
 	type(t), inst_id(-1), height(h), width(w), r_angle(0.0), rx(0.0), ry(0.0), pos(p)
 {
 	height *= tree_height_scale;
@@ -625,6 +621,7 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 	default: assert(0);
 	}
 	color.alpha = 1.0;
+	if (allow_rotation) {setup_rotation(rgen);}
 	trunk_cylin = get_trunk_cylin();
 }
 
@@ -653,7 +650,7 @@ cylinder_3dw small_tree::get_trunk_cylin() const {
 	if (type == T_BUSH) {return cylinder_3dw();}
 	vector3d const dir(get_rot_dir());
 	bool const is_pine(is_pine_tree());
-	float const hval(is_pine ? 1.0 : 0.75), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
+	float const hval(is_pine ? 1.0 : 0.8), zb(pos.z - 0.2*width), zbot(get_tree_z_bottom(zb, pos)), len(hval*height + (zb - zbot));
 	float const mod_width(width*(is_pine ? 0.8*len/(hval*height) : 1.0));
 	point const p1((pos + dir*(zbot - pos.z)));
 	return cylinder_3dw(p1, (p1 + dir*len), stt[type].ws*mod_width, stt[type].w2*mod_width);
@@ -819,7 +816,7 @@ void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, ve
 }
 
 
-void small_tree::draw_branches(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const {
+void small_tree::draw_trunks(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const {
 
 	if (!(tree_mode & 2) || type == T_BUSH) return; // disabled, or no trunk/bark
 	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_visible_pine(xlate)) return;
