@@ -10,7 +10,7 @@
 
 enum {TREE_MAPLE = 0, TREE_LIVE_OAK, TREE_A, TREE_B, PAPAYA, NUM_TREE_TYPES};
 
-point const leaf_points[4] = {point(-1,0,0), point(-1,0,2), point(1,0,2), point(1,0,0)};
+point const leaf_points[4] = {point(-1,0,0), point(-1,0,2), point(1,0,2), point(1,0,0)}; // LL, UL, UR, LR
 
 // should have this for small trees as well
 struct tree_type {

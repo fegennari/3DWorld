@@ -1972,36 +1972,31 @@ void tree_builder_t::add_leaves_to_cylin(unsigned cylin_ix, int tree_type, float
 	for (int l = 0; l < temp; l++) {
 		if (deadness > 0 && deadness > rand_float2()) continue;
 		float const rotate_start(360.0*l/temp);
-		unsigned const max_attempts = 10;
+		point start;
+		vector3d rotate;
+		setup_rotate(rotate, (rotate_start + rand_gen(1,30)), temp_deg);
+		rotate_around_axis(cylin);
+		add_rotation(start, cylin.p1, 0.9);
+		tree_leaf leaf;
+		int const val(rand_gen(0,60));
+		float const deg_rotate(cylin.deg_rotate + ((cylin.deg_rotate > 0.0) ? val : -val));
+		float const lsize(rel_leaf_size*(0.7*rand2d() + 0.3));
 
-		for (unsigned attempt = 0; attempt < max_attempts; ++attempt) {
-			point start;
-			vector3d rotate;
-			setup_rotate(rotate, (rotate_start + rand_gen(1,30)), temp_deg);
-			rotate_around_axis(cylin);
-			add_rotation(start, cylin.p1, 0.9);
-			tree_leaf leaf;
-			int const val(rand_gen(0,60));
-			float const deg_rotate(cylin.deg_rotate + ((cylin.deg_rotate > 0.0) ? val : -val));
-			float const lsize(rel_leaf_size*(0.7*rand2d() + 0.3));
-
-			for (int p = 0; p < 4; ++p) {
-				point lpts(leaf_points[p]*lsize);
-				lpts.x *= tree_types[tree_type].leaf_x_ar;
-				rotate_pts_around_axis(lpts, rotate, deg_rotate);
-				add_rotation(leaf.pts[p], start, 1.0);
-			}
-			point const center(leaf.get_center());
-			vector3d const xlate(cylin.r1*(center - cylin.p1).get_norm());
-			for (unsigned i = 0; i < 4; ++i) {leaf.pts[i] += xlate;} // move away from the branch centerline by radius
-			point lpts(0.0, 1.0, 0.0); // normal starts off in y-direction
+		for (int p = 0; p < 4; ++p) {
+			point lpts(leaf_points[p]*lsize);
+			lpts.x *= tree_types[tree_type].leaf_x_ar;
 			rotate_pts_around_axis(lpts, rotate, deg_rotate);
-			leaf.create_init_color(1);
-			leaf.norm.assign(re_matrix[0], re_matrix[1], re_matrix[2]);
-			leaf.norm.normalize(); // should already be normalized
-			leaves.push_back(leaf);
-			break;
-		} // for attempt
+			add_rotation(leaf.pts[p], start, 1.0);
+		}
+		point const base_pt((leaf.pts[0] + leaf.pts[3])*0.5);
+		vector3d const xlate(cylin.r1*(base_pt - cylin.p1).get_norm());
+		for (unsigned i = 0; i < 4; ++i) {leaf.pts[i] += xlate;} // move away from the branch centerline by radius
+		point lpts(0.0, 1.0, 0.0); // normal starts off in y-direction
+		rotate_pts_around_axis(lpts, rotate, deg_rotate);
+		leaf.create_init_color(1);
+		leaf.norm.assign(re_matrix[0], re_matrix[1], re_matrix[2]);
+		leaf.norm.normalize(); // should already be normalized
+		leaves.push_back(leaf);
 	} // for l
 }
 
