@@ -50,7 +50,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "moon.jpg"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg", 0, 0), // or marble2.jpg, compression is slow
 texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg", 0, 1, LS_TEX_ANISO),
-texture_t(0, 5, 0,    0,    0, 4, 3, "leaf.jpg", 1, 1, 4.0), // 128x128
+texture_t(0, 5, 0,    0,    0, 4, 3, "leaves/green_maple_leaf.jpg", 1, 1, 4.0), // 960x744
+//texture_t(0, 6, 0,    0,    0, 4, 3, "leaves/maple_leaf.png", 1, 1, 4.0), // 344x410
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark2.jpg"), // 512x512 (Note: must match baseball bat texture size)
 texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg", 0, 1, LS_TEX_ANISO),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png", 0, 1, LS_TEX_ANISO),
@@ -69,15 +70,15 @@ texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, 0, 8.0), // compression 
 texture_t(0, 6, 256,  256,  1, 3, 1, "paneling.png", 0, 1, 16.0),
 texture_t(0, 6, 256,  256,  1, 3, 1, "cblock.png", 0, 1, 8.0),
 texture_t(0, 5, 0,    0,    0, 4, 3, "mj_leaf.jpg", 1), // 128x128
-texture_t(0, 5, 0,    0,    0, 4, 3, "live_oak.jpg", 1, 1, 4.0), // 80x128
-texture_t(0, 5, 0,    0,    0, 4, 3, "leaf2.jpg", 1, 1, 4.0), // 212x256
-texture_t(0, 5, 0,    0,    0, 4, 3, "leaf3c.jpg", 1, 1, 4.0), // 208x256
+texture_t(0, 6, 0,    0,    0, 4, 3, "leaves/oak_leaf.png", 1, 1, 4.0), // 208x350
+texture_t(0, 6, 0,    0,    0, 4, 3, "leaves/cherry_leaf.png", 1, 1, 4.0), // 576x1220
+texture_t(0, 6, 0,    0,    0, 4, 3, "leaves/birch_leaf.png", 1, 1, 4.0), // 838x1372
 texture_t(0, 5, 0,    0,    0, 4, 3, "plant1.jpg", 1), // 256x256
 texture_t(0, 6, 256,  256,  0, 4, 3, "plant2.png", 1),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "plant2.jpg", 1), // 160x256
 texture_t(0, 6, 256,  256,  0, 4, 3, "plant3.png", 1),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "plant3.jpg", 1), // 176x256
-texture_t(0, 5, 0,    0,    0, 4, 3, "hibiscus.jpg", 1), // 64x64
+texture_t(0, 5, 0,    0,    0, 4, 3, "leaves/leaf_d.jpg", 1), // 200x500
 texture_t(0, 5, 0,    0,    1, 3, 1, "fence.jpg", 0, 0, 8.0), // 896x896, compression is slow
 texture_t(0, 6, 128,  128,  1, 3, 1, "skull.png"),
 texture_t(0, 6, 64,   64,   1, 3, 1, "radiation.png", 1),
