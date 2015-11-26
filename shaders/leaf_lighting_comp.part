@@ -12,7 +12,7 @@ vec4 add_leaf_light_comp(in vec3 normal, in vec4 eye_space_pos, in int i, in flo
 	float dp1 = dot(normal, dir_to_camera);
 	float dp2 = dot(normal, dir_to_light);
 	
-	if ((diffuse_scale > 0.5) && (dp1 < 0.0) != (dp2 < 0.0)) { // looking at unlit side
+	if (/*(diffuse_scale > 0.5) &&*/ (dp1 < 0.0) != (dp2 < 0.0)) { // looking at unlit side
 		normal *= -0.5; // reverse and halve
 		float dp3 = dot(dir_to_camera, dir_to_light);
 
