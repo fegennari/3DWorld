@@ -5,6 +5,9 @@
 #include "3DWorld.h"
 #include "physics_objects.h"
 
+//#define ENABLE_BULLET_PHYSICS
+
+#ifdef ENABLE_BULLET_PHYSICS
 #include "btBulletCollisionCommon.h"
 #include "btBulletDynamicsCommon.h"
 #include "Bullet3AppSupport/CommonRigidBodySetup.h"
@@ -18,6 +21,8 @@ struct PhysicsSetup3DWorld : public CommonRigidBodySetup {
 void test() {
 	PhysicsSetup3DWorld world;
 }
+
+#endif // ENABLE_BULLET_PHYSICS
 
 
 
