@@ -45,7 +45,7 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
 	sm_tree_type(0.00, 0.10, 0.35, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_PINE
 	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // HEDGE_TEX?
 	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_TDECID
-	sm_tree_type(0.00, 0.15, 0.00, 0.8, WHITE,   HEDGE_TEX,     BARK1_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
+	sm_tree_type(0.00, 0.15, 0.00, 0.8, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
 	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX,      PALM_BARK_TEX), // T_PALM
 	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
@@ -56,12 +56,9 @@ int get_bark_tex_for_tree_type(int type) {
 }
 
 colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
-	assert(type < NUM_ST_TYPES);
+	int const bark_tid(get_bark_tex_for_tree_type(type));
 	colorRGBA c(stt[type].c);
-	
-	if (modulate_with_texture && stt[type].bark_tid >= 0) {
-		return c.modulate_with(texture_color(stt[type].bark_tid));
-	}
+	if (modulate_with_texture && bark_tid >= 0) {return c.modulate_with(texture_color(bark_tid));}
 	return c;
 }
 
