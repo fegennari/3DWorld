@@ -2370,21 +2370,24 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 void tile_draw_t::draw_scenery(bool reflection_pass, bool shadow_pass) {
 
+	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled());
 	shader_t s;
-	shared_shader_lighting_setup(s, 0);
-	s.set_vert_shader("ads_lighting.part*+two_lights_texture");
-	s.set_frag_shader("linear_fog.part+textured_with_fog"); // Note: no shadow maps
+
+	// draw opaque objects
+	// rocks, stumps, and logs are close enough to tree branches that we can reuse the shader
+	tree_branch_shader_setup(s, enable_shadow_maps, 0); // no opacity
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int("tex0", 0);
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 1, 0, reflection_pass, shadow_pass, 0);} // opaque
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 1, 0, reflection_pass, shadow_pass, enable_shadow_maps);}
 	tree_scenery_pld.draw_and_clear();
 	s.end_shader();
-	bool const enable_shadow_maps(!shadow_pass && shadow_map_enabled());
+
+	// draw leaves
 	if (enable_shadow_maps) {s.set_prefix("#define USE_SMAP_SCALE", 1);} // FS
 	set_leaf_shader(s, 0.9, 0, 0, 1, (shadow_pass ? 0.0 : get_plant_leaf_wind_mag(0)), underwater, enable_shadow_maps, enable_shadow_maps);
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);} // leaves
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_scenery(s, 0, 1, reflection_pass, shadow_pass, enable_shadow_maps);}
 	s.end_shader();
 }
 
