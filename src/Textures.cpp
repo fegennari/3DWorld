@@ -137,7 +137,7 @@ texture_t(1, 9, 128,  128,  1, 1, 0, "@noise_gen"), // not real file
 texture_t(1, 9, 128,  128,  1, 1, 1, "@noise_gen_mipmap"), // not real file
 texture_t(1, 9, 256,  256,  1, 1, 1, "@noise_gen_sparse"), // not real file
 texture_t(1, 9, 400,  400,  1, 3, 1, "@player_bbb_tex"), // not real file (Note: must match bark texture size)
-texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves2.jpg", 1, 0, 1.0, 0.28), // 512x512
+texture_t(0, 5, 0,    0,    0, 4, 3, "pine_tree_leaves2.jpg", 1, 0, 1.0, 0.5), // 512x512
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare1.jpg"), // 384x384
 texture_t(0, 5, 0,    0,    0, 4, 1, "flare2.jpg"), // 128x128 (Note: low resolution)
 texture_t(0, 5, 0,    0,    0, 4, 1, "Flare3.jpg"), // 256x256

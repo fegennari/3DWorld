@@ -80,10 +80,7 @@ void small_tree_group::calc_trunk_pts() {
 
 	if (!trunk_pts.empty()) return; // already calculated
 	trunk_pts.reserve(2*size());
-
-	for (iterator i = begin(); i != end(); ++i) {
-		i->add_trunk_as_line(trunk_pts);
-	}
+	for (iterator i = begin(); i != end(); ++i) {i->add_trunk_as_line(trunk_pts);}
 }
 
 
@@ -118,20 +115,13 @@ void small_tree_group::finalize_upload_and_clear_pts(bool low_detail) {
 
 
 void small_tree_group::add_trunk_pts(point const &xlate, vector<vert_wrap_t> &pts) const {
-
-	for (vector<point>::const_iterator i = trunk_pts.begin(); i != trunk_pts.end(); ++i) {
-		pts.push_back(*i + xlate);
-	}
+	for (vector<point>::const_iterator i = trunk_pts.begin(); i != trunk_pts.end(); ++i) {pts.push_back(*i + xlate);}
 }
 
 
 void small_tree_group::clear_vbos() {
-	
-	for (unsigned i = 0; i < 2; ++i) {
-		vbo_manager[i].clear_vbo();
-	}
+	for (unsigned i = 0; i < 2; ++i) {vbo_manager[i].clear_vbo();}
 }
-
 
 void small_tree_group::clear_vbo_manager(int which) {
 	
@@ -139,7 +129,6 @@ void small_tree_group::clear_vbo_manager(int which) {
 		if (which & (1<<d)) {vbo_manager[d].clear();}
 	}
 }
-
 
 void small_tree_group::clear_vbo_manager_and_ids(int which) {
 	
@@ -149,9 +138,7 @@ void small_tree_group::clear_vbo_manager_and_ids(int which) {
 	clear_vbo_manager(which);
 }
 
-
 void small_tree_group::clear_vbo_and_ids_if_needed(bool low_detail) {
-	
 	if (is_uploaded(low_detail)) {clear_vbo_manager_and_ids(low_detail ? 2 : 1);}
 }
 
@@ -177,7 +164,6 @@ void small_tree_group::add_cobjs_range(iterator b, iterator e) {
 
 
 void small_tree_group::remove_cobjs() {
-
 	for (iterator i = begin(); i != end(); ++i) {i->remove_cobjs();}
 }
 
@@ -743,17 +729,19 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 
 	if (!low_detail) { // high detail
 		unsigned const npts(4*N_PT_LEVELS*N_PT_RINGS);
-		float const rd(0.5), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
+		float const rd(0.45), height0(((type == T_PINE) ? 0.75 : 1.0)*height), theta0((int(1.0E6*height0)%360)*TO_RADIANS);
+		float level_dz(height0/(N_PT_LEVELS + 1.2)), rd_scale(1.0), height_off(1.8*level_dz);
 		point const center(pos + point(0.0, 0.0, dz));
 		vert_norm points[npts];
 
 		for (unsigned j = 0, ix = 0; j < N_PT_LEVELS; ++j) {
-			float const sz(sz_scale*(N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS);
-			float const z((j + 1.8)*height0/(N_PT_LEVELS + 2.8) - rd*sz);
+			level_dz *= 0.9; rd_scale *= 1.2; // higher slope, closer spacing near the top levels
+			float const sz(sz_scale*(N_PT_LEVELS - j - 0.4)/(float)N_PT_LEVELS), z(height_off - rd*sz);
+			height_off += level_dz;
 
 			for (unsigned k = 0; k < N_PT_RINGS; ++k) {
 				float const theta(TWO_PI*(3.3*j + k/(float)N_PT_RINGS) + theta0);
-				add_rotated_quad_pts(points, ix, theta, z, center, sz, sz, sz, rd*sz); // bounds are (sz, sz, rd*sz+z)
+				add_rotated_quad_pts(points, ix, theta, z, center, sz, sz, sz, rd_scale*rd*sz); // bounds are (sz, sz, rd*sz+z)
 			}
 		}
 		if (update_mode) {
@@ -769,9 +757,9 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		assert(!update_mode);
 		vert_norm points[4];
 		vert_norm vn(pos, vector3d(2.25*sz_scale/calc_tree_size(), 0.0, 0.0)); // ranges from around 0.25 to 0.75
-		vn.v.z = pos.z + dz + 1.45*sz_scale + 0.1*height;
+		vn.v.z = pos.z + dz + 1.8*sz_scale + 0.1*height;
 		points[0] = points[1] = vn; // top two vertices
-		vn.v.z = pos.z + dz - 0.55*sz_scale - 0.2*height;
+		vn.v.z = pos.z + dz - 0.1*sz_scale - 0.2*height;
 		points[2] = points[3] = vn; // bottom two vertices
 		vbo_manager.add_points(points, 4, color);
 	}
