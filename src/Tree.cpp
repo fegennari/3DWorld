@@ -1601,17 +1601,17 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 
 	for (int i = 0; i < base_num_cylins; i++) {
 		tree_cylin &cylin(base.cylin[i]);
+		float const deg_rot(sinf(-PI_TWO + i*PI/base_num_cylins + ((tree_height_scale > 1.0) ? 100.0*base_color.R : 0))*base_curveness); // "hash" the color to get a unique curve
 
 		if (i == 0) {
 			float const length((base_length_max - base_length_min)/2.0);
-			cylin.assign_params(0, 0, base_radius, base_radius*base_rad_var, length*(num_cylin_factor/base_num_cylins), 0.0);
+			cylin.assign_params(0, 0, base_radius, base_radius*base_rad_var, length*(num_cylin_factor/base_num_cylins), deg_rot);
 			cylin.p1 = point(0.0, 0.0, height_offset);
 			cylin.rotate.assign(cosf(angle_rotate/TO_DEG), sinf(angle_rotate/TO_DEG), 0.0);
 		}
 		else {
 			tree_cylin &lcylin(base.cylin[i-1]);
-			cylin.assign_params(0, 0, lcylin.r2, lcylin.r2*base_rad_var, lcylin.length*base_len_var*(base_cylin_factor/base_num_cylins),
-				sinf(-PI_TWO + i*PI/base_num_cylins + ((tree_height_scale > 1.0) ? 10.0*base_color.R : 0))*base_curveness); // "hash" the color to get a unique curve
+			cylin.assign_params(0, 0, lcylin.r2, lcylin.r2*base_rad_var, lcylin.length*base_len_var*(base_cylin_factor/base_num_cylins), deg_rot);
 			cylin.rotate.assign(lcylin.rotate.x, lcylin.rotate.y, 0.0);
 			rotate_cylin(lcylin);
 			add_rotation(cylin.p1, lcylin.p1, BASE_LEN_SCALE);
@@ -1651,9 +1651,9 @@ float tree_builder_t::create_tree_branches(int tree_type, int size, float tree_d
 		cylin1.p1     = cylin1.p2 = point(0.0, 0.0, 0.75*br_scale*base_radius);
 		cylin1.rotate = dir;
 		rotate_cylin(cylin1);
-		cylin1.p1    += (0.3*br_scale*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
-		cylin1.p1    *= 2.0;
-		cylin1.p2    *= 1.3;
+		cylin1.p1 += (0.3*br_scale*base_radius/cylin1.length)*(cylin1.p2 - cylin1.p1); // move away from the tree centerline
+		cylin1.p1 *= 1.6; // 2.0 is okay for non-curved trunks
+		cylin1.p2 *= 1.3;
 
 		cylin2.assign_params(1, i, 0.75*root_radius, 0.5*root_radius, 2.0*base_radius, deg_rot+10.0);
 		cylin2.p1     = cylin1.p2 = cylin1.p2;
