@@ -173,7 +173,7 @@ public:
 	float create_tree_branches(int tree_type, int size, float tree_depth, colorRGBA &base_color,
 		float height_scale, float br_scale, float nl_scale, float bbo_scale, bool has_4th_branches, bool create_bush);
 	void create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
-		int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches);
+		int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches, int tree_size);
 };
 
 

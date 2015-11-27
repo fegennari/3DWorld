@@ -1249,7 +1249,7 @@ void copy_cylins(tree_cylin *start_cylin, int num, tree_cylin *&cur_cylin) {
 
 
 void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins, vector<tree_leaf> &leaves,
-	int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches)
+	int tree_type, float deadness, float br_scale, float nl_scale, bool has_4th_branches, int tree_size)
 {
 	// compact the cylinders into a contiguous block
 	assert(all_cylins.empty());
@@ -1295,7 +1295,8 @@ void tree_builder_t::create_all_cylins_and_leaves(vector<draw_cylin> &all_cylins
 	// add leaves
 	if (deadness < 1.0) {
 		float const leaf_size(REL_LEAF_SIZE*TREE_SIZE*(has_4th_branches ? LEAF_4TH_SCALE : 1.0)/(sqrt(nl_scale*nleaves_scale)*tree_scale));
-		float const rel_leaf_size(2.0*leaf_size*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
+		float rel_leaf_size(2.0*leaf_size*tree_types[tree_type].leaf_size*(tree_scale*base_radius/TREE_SIZE + 10.0)/18.0);
+		if (tree_size > 100) {rel_leaf_size *= sqrt(tree_size/100.0);} // scale leaf size to match branch size for large custom trees
 		unsigned nl(unsigned((1.0 - deadness)*num_leaves_per_occ*num_total_cylins) + 1); // determine the number of leaves
 		//cout << "branch cylinders: " << num_total_cylins << ", leaves: " << nl << endl;
 		leaves.reserve(nl);
@@ -1477,7 +1478,7 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	br_scale    = br_scale_mult*branch_radius_scale;
 	b_tex_scale = tree_types[tree_type].branch_tscale*height_scale/br_scale;
 	base_radius = builder.create_tree_branches(tree_type, size, tree_depth, base_color, height_scale, br_scale, nl_scale, bbo_scale, has_4th_branches, create_bush);
-	builder.create_all_cylins_and_leaves(all_cylins, leaves, tree_type, deadness, br_scale, nl_scale, has_4th_branches);
+	builder.create_all_cylins_and_leaves(all_cylins, leaves, tree_type, deadness, br_scale, nl_scale, has_4th_branches, size);
 
 	// set the bounding sphere center
 	assert(!all_cylins.empty());
