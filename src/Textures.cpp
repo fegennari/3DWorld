@@ -36,7 +36,7 @@ float const SMOOTH_SKY_POLES   = 0.2;
 texture_t def_textures[NUM_PREDEF_TEXTURES] = { // 4 colors without wrap sometimes has a bad transparent strip on spheres
 // type: 0 = read from file, 1 = generated, 2 generated and dynamically updated
 // format: 0 = RGB RAW, 1 = BMP, 2 = RGB RAW, 3 = RGBA RAW, 4: targa (*tga), 5: jpeg, 6: png, 7: auto, 8: tiff, 9: generate (not loaded from file), 10: DDS
-// use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL
+// use_mipmaps: 0 = none, 1 = standard OpenGL, 2 = openGL + CPU data, 3 = custom alpha OpenGL, 4 = custom alpha OpenGL using average texture color for transparent pixels
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 //texture_t(0, 6, 512,  512,  1, 3, 0, "ground.png"),
 texture_t(0, 6, 128,  128,  1, 3, 2, "grass.png", 0, 1, LS_TEX_ANISO), // mipmap for small trees?
@@ -50,8 +50,8 @@ texture_t(0, 5, 0,    0,    1, 3, 1, "moon.jpg"),
 texture_t(0, 6, 256,  256,  0, 3, 1, "earth.png", 1),
 texture_t(0, 5, 0,    0,    1, 3, 1, "marble.jpg", 0, 0), // or marble2.jpg, compression is slow
 texture_t(0, 7, 0,    0,    1, 3, 2, "snow2.jpg", 0, 1, LS_TEX_ANISO),
-texture_t(0, 5, 0,    0,    0, 4, 3, "leaves/green_maple_leaf.jpg", 1, 1, 4.0), // 960x744
-//texture_t(0, 6, 0,    0,    0, 4, 3, "leaves/maple_leaf.png", 1, 1, 4.0), // 344x410
+texture_t(0, 5, 0,    0,    0, 4, 4, "leaves/green_maple_leaf.jpg", 1, 1, 4.0), // 960x744
+//texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/maple_leaf.png", 1, 1, 4.0), // 344x410
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark2.jpg"), // 512x512 (Note: must match baseball bat texture size)
 texture_t(0, 5, 512,  512,  1, 3, 2, "desert_sand.jpg", 0, 1, LS_TEX_ANISO),
 texture_t(0, 6, 256,  256,  1, 3, 2, "rock2.png", 0, 1, LS_TEX_ANISO),
@@ -70,15 +70,15 @@ texture_t(0, 5, 0  ,  0,    1, 3, 1, "shingles.jpg", 0, 0, 8.0), // compression 
 texture_t(0, 6, 256,  256,  1, 3, 1, "paneling.png", 0, 1, 16.0),
 texture_t(0, 6, 256,  256,  1, 3, 1, "cblock.png", 0, 1, 8.0),
 texture_t(0, 5, 0,    0,    0, 4, 3, "mj_leaf.jpg", 1), // 128x128
-texture_t(0, 6, 0,    0,    0, 4, 3, "leaves/oak_leaf.png", 1, 1, 4.0), // 208x350
-texture_t(0, 6, 0,    0,    0, 4, 3, "leaves/cherry_leaf.png", 1, 1, 4.0), // 576x1220
-texture_t(0, 6, 0,    0,    0, 4, 3, "leaves/birch_leaf.png", 1, 1, 4.0), // 838x1372
+texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/oak_leaf.png", 1, 1, 4.0), // 208x350
+texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/cherry_leaf.png", 1, 1, 4.0), // 576x1220
+texture_t(0, 6, 0,    0,    0, 4, 4, "leaves/birch_leaf.png", 1, 1, 4.0), // 838x1372
 texture_t(0, 5, 0,    0,    0, 4, 3, "plant1.jpg", 1), // 256x256
 texture_t(0, 6, 256,  256,  0, 4, 3, "plant2.png", 1),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "plant2.jpg", 1), // 160x256
 texture_t(0, 6, 256,  256,  0, 4, 3, "plant3.png", 1),
 //texture_t(0, 5, 0,    0,    0, 4, 3, "plant3.jpg", 1), // 176x256
-texture_t(0, 5, 0,    0,    0, 4, 3, "leaves/leaf_d.jpg", 1), // 200x500
+texture_t(0, 5, 0,    0,    0, 4, 4, "leaves/leaf_d.jpg", 1), // 200x500
 texture_t(0, 5, 0,    0,    1, 3, 1, "fence.jpg", 0, 0, 8.0), // 896x896, compression is slow
 texture_t(0, 6, 128,  128,  1, 3, 1, "skull.png"),
 texture_t(0, 6, 64,   64,   1, 3, 1, "radiation.png", 1),
@@ -450,7 +450,7 @@ void texture_t::do_gl_init() {
 	if (SHOW_TEXTURE_MEMORY) {
 		static unsigned tmem(0);
 		unsigned tsize(num_bytes());
-		if (use_mipmaps) tsize = 4*tsize/3;
+		if (use_mipmaps) {tsize = 4*tsize/3;}
 		tmem += tsize;
 		cout << "tex vmem = " << tmem << endl;
 	}
@@ -465,7 +465,7 @@ void texture_t::do_gl_init() {
 		assert(is_allocated() && width > 0 && height > 0);
 		glTexImage2D(GL_TEXTURE_2D, 0, calc_internal_format(), width, height, 0, calc_format(), get_data_format(), data);
 		if (use_mipmaps == 1 || use_mipmaps == 2) {gen_mipmaps();}
-		if (use_mipmaps == 3) {create_custom_mipmaps();}
+		if (use_mipmaps == 3 || use_mipmaps == 4) {create_custom_mipmaps();}
 	}
 	assert(glIsTexture(tid));
 	//PRINT_TIME("Texture Init");
@@ -852,6 +852,7 @@ void texture_t::create_custom_mipmaps() {
 	vector<unsigned char> idata, odata;
 	idata.resize(tsize);
 	memcpy(&idata.front(), data, tsize);
+	color_wrapper cw; cw.set_c4(color);
 
 	for (unsigned w = width, h = height, level = 1; w > 1 || h > 1; w >>= 1, h >>= 1, ++level) {
 		unsigned const w1(max(w,    1U)), h1(max(h,    1U));
@@ -874,12 +875,21 @@ void texture_t::create_custom_mipmaps() {
 					unsigned const a1(idata[ix2+3]), a2(idata[ix2+xinc+3]), a3(idata[ix2+yinc+3]), a4(idata[ix2+yinc+xinc+3]);
 					unsigned const a_sum(a1 + a2 + a3 + a4);
 
-					if (a_sum == 0) { // fully transparent - color is average of all 4 values
-						UNROLL_3X(odata[ix1+i_] = (unsigned char)((idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) / 4);)
+					if (a_sum == 0) { // fully transparent
+						if (use_mipmaps == 4) {UNROLL_3X(odata[ix1+i_] = cw.c[i_];)} // use average texture color
+						else { // color is average of all 4 values
+							UNROLL_3X(odata[ix1+i_] = (unsigned char)((idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) / 4);)
+						}
 						odata[ix1+3] = 0;
 					}
 					else {
-						UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_]) / a_sum);)
+						if (use_mipmaps == 4) {
+							unsigned const a_cw(1020 - a_sum); // use average texture color for transparent pixels
+							UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_] + a_cw*cw.c[i_]) / 1020);)
+						}
+						else {
+							UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_]) / a_sum);)
+						}
 						odata[ix1+3] = min(255U, min(max(max(a1, a2), max(a3, a4)), unsigned(mipmap_alpha_weight*a_sum)));
 					}
 				}
