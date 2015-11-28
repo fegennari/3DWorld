@@ -74,7 +74,7 @@ float const CBLADE_EXT_PT = 0.04;
 float const CBLADE_EXT(0.5*CBLADE_EXT_PT*CBFD);
 
 
-// self_damage use_underwater need_weapon need_ammo def_ammo max_ammo obj_id fire_delay nshots nfragments v_mult v_add blast_damage blast_radius firing_error range1 range2 name
+// self_damage use_underwater need_weapon need_ammo def_ammo max_ammo obj_id fire_delay nshots nfragments v_mult v_add blast_damage blast_radius firing_error range1 range2 recoil name
 weapon_t const weapons[NUM_WEAPONS+2] = {
 	weapon_t(0, 1, 0, 0, 0,   0,   UNDEF,    0,   0,  0,   0.0,  0.0, 0.0,    0.0,  0.0,   0.0,  0.0,  0.00, "Unarmed"         ),
 	weapon_t(0, 1, 0, 0, 0,   0,   UNDEF,    23,  1,  1,   0.0,  0.0, 500.0,  0.25, 0.0,   0.25, 0.25, 0.00, "Baseball Bat"    ),
@@ -87,7 +87,7 @@ weapon_t const weapons[NUM_WEAPONS+2] = {
 	weapon_t(0, 1, 1, 1, 100, 600, UNDEF,    2,   1,  1,   0.0,  0.0, 70.0,   0.0,  0.02,  0.0,  2.8,  0.01, "M16"             ),
 	weapon_t(0, 1, 1, 1, 12,  100, UNDEF,    27,  24, 1,   0.0,  0.0, 50.0,   0.0,  0.08,  5.0,  2.5,  0.03, "Shotgun"         ),
 	weapon_t(1, 0, 0, 1, 12,  60,  GRENADE,  22,  1,  140, 1.0,  1.2, 700.0,  0.44, 0.01,  1.5,  1.6,  0.02, "Grenade"         ),
-	weapon_t(0, 1, 1, 1, 200, 800, UNDEF,    1,   1,  1,   0.0,  0.0, 16.0,   0.0,  0.0,   0.0,  0.0,  0.00, "Laser"           ),
+	weapon_t(0, 1, 1, 1, 200, 800, UNDEF,    1,   1,  1,   0.0,  0.0, 16.0,   0.0,  0.002, 0.0,  0.0,  0.00, "Laser"           ),
 	weapon_t(1, 0, 1, 1, 20,  200, PLASMA,   13,  1,  1,   1.4,  3.5, 200.0,  0.43, 0.0,   3.8,  4.5,  0.00, "Plasma Cannon"   ),
 	weapon_t(0, 1, 1, 0, 1,   10,  UNDEF,    CBFD,1,  1,   1.5,  4.0, 40.0,   0.2,  0.0, CBLADE_EXT, CBLADE_EXT, 0.00, "Carnage Blade"),
 	weapon_t(0, 0, 1, 1, 60,  250, GASSED,   4,   1,  1,   1.2,  2.8, 100.0,  0.07, 0.1,   2.8,  2.8,  0.00, "Gasser"),

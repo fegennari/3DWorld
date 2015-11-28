@@ -271,7 +271,7 @@ void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, 
 	bool is_glass, bool rand_angle, int lifetime, tex_range_t const &tr)
 {
 	static point last_pos(all_zeros);
-	if (dist_less_than(pos, last_pos, 0.5*radius)) return; // skip duplicate/close locations
+	if (dist_less_than(pos, last_pos, 1.0*radius)) return; // skip duplicate/close locations
 	last_pos = pos;
 	float const rot_angle(rand_angle ? rand_uniform(0.0, TWO_PI) : 0.0);
 	decal_obj decal;
