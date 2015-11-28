@@ -1647,7 +1647,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	switch (weapon_id) {
 	case W_M16: // line of sight damage
 		gen_sound(SOUND_GUNSHOT, fpos, 0.5);
-		gen_arb_smoke((fpos + ((wmode&1) ? 1.5 : 1.8)*radius*dir + vector3d(0.0, 0.0, -0.4*radius)), WHITE, vector3d(0.0, 0.0, 0.15), ((wmode&1) ? 0.0025 : 0.0015), 0.25, 0.2, 0.0, shooter, SMOKE, 1, 0.01);
+		gen_arb_smoke((fpos + ((wmode&1) ? 1.5 : 1.8)*radius*dir + vector3d(0.0, 0.0, -0.4*radius)), WHITE, vector3d(0.0, 0.0, 0.15), ((wmode&1) ? 0.0025 : 0.0015), 0.25, 0.2, 0.0, shooter, SMOKE, 0, 0.01);
 
 		if ((wmode&1) != 1) { // not firing shrapnel
 			if (dtime > 10) {firing_error *= 0.1;}
@@ -1671,7 +1671,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		if (weapon_id == W_SHOTGUN) {
 			for (unsigned i = 0; i < 2; ++i) {create_shell_casing(fpos, dir, shooter, radius, 1);}
 			gen_sound(SOUND_SHOTGUN, fpos);
-			gen_arb_smoke((fpos + 1.4*radius*dir + vector3d(0.0, 0.0, -0.4*radius)), WHITE, vector3d(0.0, 0.0, 0.3), 0.003, 0.8, 0.7, 0.0, shooter, SMOKE, 1, 0.01);
+			gen_arb_smoke((fpos + 1.4*radius*dir + vector3d(0.0, 0.0, -0.4*radius)), WHITE, vector3d(0.0, 0.0, 0.3), 0.003, 0.8, 0.7, 0.0, shooter, SMOKE, 0, 0.01);
 		}
 		return 1;
 
@@ -1904,7 +1904,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 
 	if (intersect) {
 		range = p2p_dist(pos, coll_pos);
-		if (intersect == 1) coll_pos = pos + vcf*(range - 0.01); // not an ice intersection - simple and inexact, but seems OK
+		if (intersect == 1) {coll_pos = pos + vcf*(range - 0.01);} // not an ice intersection - simple and inexact, but seems OK
 		coll_pos.z += SMALL_NUMBER;
 	}
 
@@ -2015,6 +2015,12 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
 				}
 				if (decal_tid >= 0) {gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, is_glass, 1);} // inherit partial glass color
+
+				if (coll_norm.z > -0.5 && !is_glass && ((is_laser & (rand()&1)) || wtype == W_M16)) { // create small dust clouds/smoke at hit locations
+					point const smoke_pos(coll_pos + decal_radius*coll_norm);
+					vector3d const smoke_vel(vector3d(0.1*coll_norm.x, 0.1*coll_norm.y, 0.1));
+					gen_arb_smoke(smoke_pos, WHITE, smoke_vel, 0.2*decal_radius, 1.0, (is_laser ? 1.0 : 0.5), 0.0, shooter, SMOKE, 0, 0.01);
+				}
 			}
 		}
 		if (wtype == W_M16 && !cobj.is_tree_leaf() && shooter != CAMERA_ID && cindex != camera_coll_id && distance_to_camera(coll_pos) < 2.5*CAMERA_RADIUS) {
