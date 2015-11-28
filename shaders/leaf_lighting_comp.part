@@ -18,7 +18,7 @@ vec4 add_leaf_light_comp(in vec3 normal, in vec4 eye_space_pos, in int i, in flo
 
 		if (i == 0 && dp3 < -0.95) { // leaf between light source and eye
 			float val = -20.0*(dp3 + 0.95);
-			normal = normal*(1.0 - val) + 2.0*dir_to_light*((dp2 < 0.0) ? val : -val); // max light
+			normal = normal*(1.0 - val) + clamp(100.0*(dp3-0.98), 1.0, 2.0)*dir_to_light*((dp2 < 0.0) ? val : -val); // max light
 		}
 	}
 	
