@@ -35,12 +35,13 @@ int DISABLE_SCENERY(0), has_scenery(0), has_scenery2(0);
 
 
 extern bool underwater, has_snow;
-extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, draw_model, DISABLE_WATER;
+extern int num_trees, xoff2, yoff2, rand_gen_index, window_width, do_zoom, display_mode, tree_mode, draw_model, DISABLE_WATER;
 extern float zmin, zmax_est, water_plane_z, tree_scale, vegetation, fticks, ocean_wave_height;
 extern pt_line_drawer tree_scenery_pld; // we can use this for plant trunks
 
 
 int get_bark_tex_for_tree_type(int type);
+bool is_pine_tree_type(int type);
 
 
 inline float get_pt_line_thresh   () {return PT_LINE_THRESH*(do_zoom ? ZOOM_FACTOR : 1.0);}
@@ -512,21 +513,29 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(radius*get_size_scale(distance_to_camera(pos+xlate), scale_val));
-	
-	if (use_model_texgen) {
-		model.setup_tex_gen_for_rendering(s);
-	}
-	else {
-		select_texture(get_tid());
-	}
+	if (use_model_texgen) {model.setup_tex_gen_for_rendering(s);} else {select_texture(get_tid());}
 	model.core_render(s, lod_level, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 	fgPopMatrix();
 }
 
 void voxel_rock::destroy() {
-
 	model.clear();
 	scenery_obj::destroy();
+}
+
+
+void wood_scenery_obj::calc_type() {type = (char)get_tree_type_from_height(pos.z, global_rand_gen);}
+
+int wood_scenery_obj::get_tid() const {
+
+	if (tree_mode == 0 || // no trees enabled: any solution is acceptable, so use the simplest one
+		tree_mode == 2 || // small trees only: correct/simple
+		(tree_mode == 3 && is_pine_tree_type(type))) // both large and small trees: choose based on pine vs. decid tree type
+	{
+		return get_bark_tex_for_tree_type(type);
+	}
+	// else large trees only, or large (non-pine) trees at this height
+	return BARK1_TEX; // FIXME: placeholder
 }
 
 
@@ -560,12 +569,12 @@ int s_log::create(int x, int y, int use_xy, float minz) {
 	dir.z  = (pt2.z - pos.z);
 	length = dir.mag(); // recalculate
 	dir   /= -length; // something is backwards
-	type   = (char)get_tree_type_from_height(max(pos.z, pt2.z), global_rand_gen);
+	calc_type();
 	return (type >= 0);
 }
 
 void s_log::add_cobjs() {
-	coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
+	coll_id = add_coll_cylinder(pos, pt2, radius, radius2, cobj_params(0.8, get_tree_trunk_color(type, 1), 0, 0, NULL, 0, get_tid()));
 }
 
 void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
@@ -617,12 +626,13 @@ int s_stump::create(int x, int y, int use_xy, float minz) {
 		radius  *= 1.5;
 		radius2 *= 1.3;
 	}
-	type = (char)get_tree_type_from_height(pos.z, global_rand_gen);
+	calc_type();
 	return (type >= 0);
 }
 
 void s_stump::add_cobjs() {
-	coll_id = add_coll_cylinder(pos-point(0.0, 0.0, 0.2*height), pos+point(0.0, 0.0, height), radius, radius2, cobj_params(0.8, BROWN, 0, 0, NULL, 0, get_tid()));
+	coll_id = add_coll_cylinder(pos-point(0.0, 0.0, 0.2*height), pos+point(0.0, 0.0, height),
+		radius, radius2, cobj_params(0.8, get_tree_trunk_color(type, 1), 0, 0, NULL, 0, get_tid()));
 }
 
 bool s_stump::check_sphere_coll(point &center, float sphere_radius) const {

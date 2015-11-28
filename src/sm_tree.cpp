@@ -50,6 +50,8 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
 	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
 
+bool is_pine_tree_type(int type) {return (type == T_PINE || type == T_SH_PINE);}
+
 int get_bark_tex_for_tree_type(int type) {
 	assert(type < NUM_ST_TYPES);
 	return stt[type].bark_tid;

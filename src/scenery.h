@@ -12,9 +12,6 @@
 #include "voxels.h"
 
 
-int get_bark_tex_for_tree_type(int type);
-
-
 enum {PLANT_MJ = 0, PLANT1, PLANT2, PLANT3, PLANT4, COFFEE, SEAWEED, NUM_PLANT_TYPES};
 unsigned const NUM_LAND_PLANT_TYPES  = 6;
 unsigned const NUM_WATER_PLANT_TYPES = NUM_PLANT_TYPES - NUM_LAND_PLANT_TYPES;
@@ -91,13 +88,18 @@ public:
 };
 
 
-class s_log : public scenery_obj { // size = 57 (60)
+class wood_scenery_obj : public scenery_obj {
+protected:
+	void calc_type();
+	int get_tid() const;
+};
+
+
+class s_log : public wood_scenery_obj { // size = 57 (60)
 
 	float length, radius2;
 	point pt2;
 	vector3d dir;
-
-	int get_tid() const {return get_bark_tex_for_tree_type(type);}
 
 public:
 	s_log() : length(0.0), radius2(0.0) {}
@@ -110,11 +112,9 @@ public:
 };
 
 
-class s_stump : public scenery_obj { // size = 29 (32)
+class s_stump : public wood_scenery_obj { // size = 29 (32)
 
 	float radius2, height;
-
-	int get_tid() const {return get_bark_tex_for_tree_type(type);}
 
 public:
 	s_stump() : radius2(0.0), height(0.0) {}
