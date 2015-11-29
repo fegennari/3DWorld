@@ -2142,7 +2142,7 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	s.end_shader();
 }
 
-void tile_draw_t::draw_tiles_shadow_pass() { // not const because creates height_tid
+void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, point const &recv_cent) { // not const because creates height_tid
 
 	shader_t s;
 	s.set_vert_shader("tiled_mesh_shadow");
@@ -2154,7 +2154,12 @@ void tile_draw_t::draw_tiles_shadow_pass() { // not const because creates height
 	s.enable_vnct_atribs(1, 0, 0, 0);
 	glEnable(GL_PRIMITIVE_RESTART);
 	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_shadow_pass(s, *this, ivbo_ixs);}
+
+	for (unsigned i = 0; i < to_draw.size(); ++i) {
+		if (p2p_dist_xy_sq(lpos, to_draw[i].second->get_center()) <= p2p_dist_xy_sq(lpos, recv_cent)) { // this tile is closer to the light than the recv tile
+			to_draw[i].second->draw_shadow_pass(s, *this, ivbo_ixs);
+		}
+	}
 	bind_vbo(0, 1); // unbind index buffer
 	glDisable(GL_PRIMITIVE_RESTART);
 	s.end_shader();
@@ -2175,7 +2180,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 		//i->second->update_decid_trees(); // not legal
 		to_draw.push_back(make_pair(0.0, i->second.get())); // distance is unused so set to 0.0
 	}
-	draw_tiles_shadow_pass();
+	draw_tiles_shadow_pass(lpos, tile->get_center());
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
