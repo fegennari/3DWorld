@@ -7,8 +7,7 @@ uniform sampler2D height_tex;
 out vec4 vertex;
 out vec2 tc, tc2;
 
-void main()
-{
+void main() {
 	vec4 vert = fg_Vertex + vec4(tc_xlate, 0.0);
 	tc        = vec2(dot(fg_Vertex, texgen_s ), dot(fg_Vertex, texgen_t ));
 	tc2       = vec2(dot(vert,      texgen2_s), dot(vert,      texgen2_t));

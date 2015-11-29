@@ -253,9 +253,8 @@ public:
 	vector3d get_norm_not_normalized(unsigned ix) const {
 		return vector3d(DY_VAL*(zvals[ix] - zvals[ix + 1]), DX_VAL*(zvals[ix] - zvals[ix + zvsize]), dxdy);
 	}
-	vector3d get_norm(unsigned ix) const {
-		return get_norm_not_normalized(ix).get_norm();
-	}
+	vector3d get_norm(unsigned ix) const {return get_norm_not_normalized(ix).get_norm();}
+	vector3d get_mesh_xlate() const {return mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0);}
 
 	// *** shadows ***
 	void calc_mesh_ao_lighting();
@@ -335,7 +334,9 @@ public:
 	void shader_shadow_map_setup(shader_t &s, xform_matrix const *const mvm=nullptr) const;
 	void bind_and_setup_shadow_map(shader_t &s) const;
 	void bind_textures() const;
+	void draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], unsigned lod_level) const;
 	void draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const;
+	void draw_shadow_pass(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1]);
 	void draw_water_cap(shader_t &s, bool textures_already_set) const;
 	void draw_water(shader_t &s, float z) const;
 	bool is_water_visible() const;
@@ -384,6 +385,7 @@ public:
 	void pre_draw();
 	void draw(bool reflection_pass);
 	void draw_tiles(bool reflection_pass, bool enable_shadow_map) const;
+	void draw_tiles_shadow_pass();
 	void draw_shadow_pass(point const &lpos, tile_t *tile);
 	void draw_water(shader_t &s, float zval) const;
 	void end_lightning() const;

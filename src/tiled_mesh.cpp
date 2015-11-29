@@ -801,9 +801,7 @@ void tile_t::ensure_height_tid() {
 	vector<float> data(stride*stride);
 
 	for (unsigned y = 0; y < stride; ++y) {
-		for (unsigned x = 0; x < stride; ++x) {
-			data[y*stride+x] = zvals[y*zvsize+x]; // remove the last column
-		}
+		for (unsigned x = 0; x < stride; ++x) {data[y*stride+x] = zvals[y*zvsize+x];} // remove the last column
 	}
 	setup_texture(height_tid, 0, 0, 0, 0, 0);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, stride, stride, 0, GL_RED, GL_FLOAT, &data.front());
@@ -1375,11 +1373,19 @@ unsigned crack_ibuf_t::get_index(unsigned dim, unsigned dir, unsigned cur_lod, u
 }
 
 
-void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const {
+void tile_t::draw_mesh_vbo(indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], unsigned lod_level) const {
 
 	assert(size > 0);
+	unsigned const num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
+	vbo_mgr.pre_render();
+	vert_wrap_t::set_vbo_arrays(0); // normals are stored in normal_tid, tex coords come from texgen, color is constant
+	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
+}
+
+void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1], crack_ibuf_t const &crack_ibuf, bool reflection_pass, int shader_locs[2]) const {
+
 	fgPushMatrix();
-	vector3d const xlate(mesh_off.get_xlate() + vector3d(xstart, ystart, 0.0));
+	vector3d const xlate(get_mesh_xlate());
 	translate_to(xlate); // Note: not easy to replace with a uniform, due to texgen and fog dist calculations in the shader
 	bind_textures();
 	bool const draw_near_water(!is_distant && !reflection_pass && is_water_enabled() && has_water());
@@ -1393,10 +1399,8 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 		s.set_uniform_vector3d(shader_locs[1], xlate);
 	}
 	shader_shadow_map_setup(s);
-	unsigned const lod_level(get_lod_level(reflection_pass)), num_ixs(ivbo_ixs[lod_level+1] - ivbo_ixs[lod_level]);
-	vbo_mgr.pre_render();
-	vert_wrap_t::set_vbo_arrays(0); // normals are stored in normal_tid, tex coords come from texgen, color is constant
-	glDrawRangeElements(GL_TRIANGLE_STRIP, 0, stride*stride, num_ixs, GL_UNSIGNED_INT, (void *)(ivbo_ixs[lod_level]*sizeof(unsigned)));
+	unsigned const lod_level(get_lod_level(reflection_pass));
+	draw_mesh_vbo(vbo_mgr, ivbo_ixs, lod_level);
 	
 	// draw cracks
 	for (unsigned dim = 0; dim < 2; ++dim) { // x,y
@@ -1414,6 +1418,18 @@ void tile_t::draw(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned co
 	bind_vbo(0, 0); // unbind vertex buffer
 	fgPopMatrix();
 	if (draw_near_water) {draw_water_cap(s, 1);}
+}
+
+void tile_t::draw_shadow_pass(shader_t &s, indexed_vbo_manager_t const &vbo_mgr, unsigned const ivbo_ixs[NUM_LODS+1]) { // not const because creates height_tid
+
+	ensure_height_tid();
+	fgPushMatrix();
+	translate_to(get_mesh_xlate());
+	assert(height_tid > 0);
+	bind_texture_tu(height_tid, 12);
+	draw_mesh_vbo(vbo_mgr, ivbo_ixs, 0); // LOD is always 0
+	bind_vbo(0, 0); // unbind vertex buffer
+	fgPopMatrix();
 }
 
 
@@ -2126,6 +2142,24 @@ void tile_draw_t::draw_tiles(bool reflection_pass, bool enable_shadow_map) const
 	s.end_shader();
 }
 
+void tile_draw_t::draw_tiles_shadow_pass() { // not const because creates height_tid
+
+	shader_t s;
+	s.set_vert_shader("tiled_mesh_shadow");
+	s.set_frag_shader("color_only");
+	s.begin_shader();
+	set_tile_xy_vals(s);
+	s.add_uniform_int("height_tex", 12);
+	s.add_uniform_float("delta_z", -0.5*grass_length); // move mesh down by half the grass length so that the bottoms of the grass blades aren't shadowed
+	s.enable_vnct_atribs(1, 0, 0, 0);
+	glEnable(GL_PRIMITIVE_RESTART);
+	glPrimitiveRestartIndex(PRIMITIVE_RESTART_IX);
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_shadow_pass(s, *this, ivbo_ixs);}
+	bind_vbo(0, 1); // unbind index buffer
+	glDisable(GL_PRIMITIVE_RESTART);
+	s.end_shader();
+}
+
 
 void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
@@ -2134,12 +2168,14 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 	fog_enabled = 0; // optimization?
 	to_draw.clear();
 
+	// FIXME: only looks a tile or so away in each direction, so won't pick up distant mountains that shadow this tile
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		if (!i->second->is_visible()) continue;
 		i->second->update_pine_tree_state(1);
 		//i->second->update_decid_trees(); // not legal
 		to_draw.push_back(make_pair(0.0, i->second.get())); // distance is unused so set to 0.0
 	}
+	draw_tiles_shadow_pass();
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
