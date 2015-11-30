@@ -38,7 +38,7 @@ string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
 tile_t::offset_t model3d_offset;
 
-extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu;
+extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
 extern int DISABLE_WATER, display_mode, tree_mode, leaf_color_changed, ground_effects_level, animate2, iticks, num_trees;
 extern int invert_mh_image, is_cloudy, camera_surf_collide, show_fog, mesh_gen_mode, mesh_gen_shape, cloud_model, precip_mode;
@@ -2169,23 +2169,27 @@ void tile_draw_t::draw_tiles_shadow_pass(point const &lpos, point const &recv_ce
 void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 
 	//RESET_TIME;
+	float const orig_near_plane(camera_pdu.near_);
 	bool const orig_fog_enabled(fog_enabled);
-	fog_enabled = 0; // optimization?
+	camera_pdu.near_ = 0.0; // move the near clipping plane to zero to prevent clipping of tiles that are between the light and the target but not in the shadow frustum
+	fog_enabled      = 0; // optimization?
 	to_draw.clear();
 
-	// FIXME: only looks a tile or so away in each direction, so won't pick up distant mountains that shadow this tile
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {
 		if (!i->second->is_visible()) continue;
 		i->second->update_pine_tree_state(1);
 		//i->second->update_decid_trees(); // not legal
 		to_draw.push_back(make_pair(0.0, i->second.get())); // distance is unused so set to 0.0
 	}
+	if (!enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);} // enable depth clamping so that shadow casters aren't clipped by the shadow frustum
 	draw_tiles_shadow_pass(lpos, tile->get_center());
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
 	render_models(1, model3d_offset.get_xlate()); // VFC should work here (somewhat?) for models
-	fog_enabled = orig_fog_enabled;
+	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
+	fog_enabled      = orig_fog_enabled;
+	camera_pdu.near_ = orig_near_plane;
 	//PRINT_TIME("Draw Shadow Pass");
 }
 
