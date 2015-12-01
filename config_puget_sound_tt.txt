@@ -2,6 +2,7 @@ include config_landscape.txt
 
 ocean_wave_height 0.0005
 camera_height 0.08
+cloud_height_offset -1.0
 
 ntrees 20
 max_unique_trees 100
