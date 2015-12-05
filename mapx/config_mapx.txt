@@ -3,6 +3,8 @@ include mapx/config_mapx_base.txt
 grass_density 600
 grass_size 0.025 0.002
 
+reflect_plane_z -0.3 -0.27 # this range includes the coutyard block floor and first floor tile floor
+
 use_waypoints 1
 dynamic_smap_bias 1
 #cobjs_out_filename mapx/cobjs_out.txt

@@ -46,7 +46,7 @@ extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_dept
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
-extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
+extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, reflect_plane_zmin, reflect_plane_zmax;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
@@ -533,6 +533,10 @@ bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { 
 	return 1;
 }
 
+bool use_reflect_plane(coll_obj const &c) {
+	return (c.type == COLL_CUBE && c.d[2][1] >= reflect_plane_zmin && c.d[2][1] <= reflect_plane_zmax && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25));
+}
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_trans) {
 
@@ -564,6 +568,12 @@ void draw_coll_surfaces(bool draw_trans) {
 			if (c.cp.normal_map >= 0) { // common case
 				assert(c.group_id < 0);
 				assert(!c.is_semi_trans());
+
+				if (use_reflect_plane(c)) {
+					// FIXME: WRITE
+					//unsigned const reflect_tid(create_gm_z_reflection(0.5*(reflect_plane_zmin + reflect_plane_zmax)));
+					//coll_objects.get_cobj(cix).cp.color = BLUE;
+				}
 				if (!use_tex_coords && check_big_occluder(c, cix, large_cobjs[1])) continue;
 				(use_tex_coords ? tex_coord_nm_cobjs : normal_map_cobjs).push_back(cix);
 				continue;
