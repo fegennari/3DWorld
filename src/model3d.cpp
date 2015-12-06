@@ -1741,7 +1741,7 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 				bool const enable_reflect(any_reflective && !is_shadow_pass && bmap_pass == 0); // assumes bump mapped objects aren't reflective
 				float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 				if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
-				if (enable_reflect)    {s.set_prefix("#define ENABLE_REFLECTIONS",          1);} // FS
+				//if (enable_reflect)    {s.set_prefix("#define ENABLE_REFLECTIONS",          1);} // FS - FIXME: incomplete
 				setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting, 0.0, model_triplanar_tc_scale);
 				if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 				if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}

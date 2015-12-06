@@ -65,6 +65,9 @@ bool indir_lighting_updated();
 point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
 void run_postproc_effects();
+bool use_reflection_plane();
+float get_reflection_plane();
+unsigned create_gm_z_reflection(float zval);
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -215,7 +218,7 @@ void draw_stuff(int draw_uw, int timer1, bool reflection_pass=0) {
 			check_gl_error(23);
 			if (TIMETEST) PRINT_TIME("R");
 		}
-		draw_coll_surfaces(1); // transparent
+		draw_coll_surfaces(1, reflection_pass); // transparent
 		check_gl_error(24);
 		if (TIMETEST) PRINT_TIME("S");
 		draw_cracks_and_decals();
@@ -838,23 +841,14 @@ void display(void) {
 			display_inf_terrain();
 		}
 		else { // finite terrain mode
-			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background
-			if (TIMETEST) PRINT_TIME("C");
-
 			if (mesh_invalidated) {
 				gen_mesh_bsp_tree();
 				clear_landscape_vbo = 1;
 				mesh_invalidated    = 0;
 			}
-			// draw background
-			if (!combined_gu) {draw_sun_moon_stars(0);}
 			if (show_fog || underwater) {fog_enabled = 1;}
 			if (!show_lightning) {l_strike.enabled = 0;}
 			compute_brightness();
-			if (!combined_gu) {draw_earth();}
-			draw_sky(0);
-			draw_puffy_clouds(0);
-			check_gl_error(5);
 			if (TIMETEST) PRINT_TIME("D");
 
 			// run physics and collision detection
@@ -877,6 +871,19 @@ void display(void) {
 			setup_object_render_data();
 			check_gl_error(101);
 
+			if (use_reflection_plane()) {create_gm_z_reflection(get_reflection_plane());}
+
+			// draw background
+			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background
+			else {
+				draw_sun_moon_stars(0);
+				draw_earth();
+			}
+			draw_sky(0);
+			draw_puffy_clouds(0);
+			check_gl_error(5);
+			if (TIMETEST) PRINT_TIME("G2");
+
 			if (underwater) {
 				colorRGBA fog_color(((water_is_lava ? LAVA_COLOR : (temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C)), 1.0); // under ice/water, alpha = 1.0
 				select_liquid_color(fog_color, camera);
@@ -889,7 +896,7 @@ void display(void) {
 			draw_camera_weapon(0);
 			if (TIMETEST) PRINT_TIME("H");
 
-			draw_coll_surfaces(0);
+			draw_coll_surfaces(0, 0);
 			if (TIMETEST) PRINT_TIME("I");
 			
 			if (display_mode & 0x01) {display_mesh();} // draw mesh
@@ -1027,30 +1034,33 @@ void draw_transparent(bool above_water) {
 
 
 // Note: assumes the camera is not underwater
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass, bool include_mesh, bool disable_occ_cull) {
 
 	pos_dir_up const prev_camera_pdu(camera_pdu);
 	camera_pdu = pdu;
 	point const prev_camera_pos(camera_pos);
 	camera_pos = pdu.pos;
-	//bool const occ_cull_enabled(display_mode & 0x08); // is occlusion culling okay to enable or not?
-	//if (occ_cull_enabled && camera_pos != prev_camera_pos) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location)
+	bool const occ_cull_enabled(display_mode & 0x08); // disable occlusion culling
+	if (occ_cull_enabled && disable_occ_cull && camera_pos != prev_camera_pos) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location)
 
 	// draw background
-	if (combined_gu) {draw_universe_bkg(0, 1);} // infinite universe as background with no asteroid dust
+	if (combined_gu) {draw_universe_bkg(reflection_pass, 1);} // infinite universe as background with no asteroid dust
 	else {draw_sun_moon_stars(1); draw_earth();}
 	draw_sky(0, 1);
 	draw_puffy_clouds(0);
 	// draw the scene
 	draw_camera_weapon(0);
-	draw_coll_surfaces(0);
-	if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
-	draw_grass();
+	draw_coll_surfaces(0, reflection_pass);
+	
+	if (include_mesh) {
+		if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
+		draw_grass();
+	}
 	draw_scenery(1, 0);
 	draw_solid_object_groups();
-	draw_stuff(1, 0, 1);
+	draw_stuff(1, 0, reflection_pass);
 	if (display_mode & 0x04) {draw_water(1);}
-	draw_stuff(0, 0, 1);
+	draw_stuff(0, 0, reflection_pass);
 	draw_game_elements(0);
 	setup_basic_fog();
 	draw_sky(1, 1);
@@ -1060,7 +1070,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu) {
 	// restore original values
 	camera_pdu = prev_camera_pdu;
 	camera_pos = prev_camera_pos;
-	//if (occ_cull_enabled) {display_mode |= 0x08;}
+	if (occ_cull_enabled) {display_mode |= 0x08;}
 }
 
 
@@ -1102,12 +1112,17 @@ void restore_matrices_and_clear() {
 void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval) {
 
 	//RESET_TIME;
-	pos_dir_up pdu(camera_pdu); // reflect camera frustum used for VFC
-	pdu.apply_z_mirror(zval); // setup reflected camera frustum
+	// Note: we need to transform the camera frustum here, even though it's also done when drawing, because we need to get the correct projection matrix
+	pos_dir_up const old_camera_pdu(camera_pdu);
+	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
+	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
-	draw_scene_from_custom_frustum(pdu);
+	// FIXME: set clip plane at zval
+	// FIXME: must disable occlusion culling to avoid treating objects below the clip plane as occluders
+	draw_scene_from_custom_frustum(refl_camera_pdu, 1, 0, 1); // reflection_pass=1, include_mesh=0, disable_occ_cull=1
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
+	camera_pdu = old_camera_pdu;
 	restore_matrices_and_clear(); // reset state
 	//PRINT_TIME("Create Reflection Texture");
 }
@@ -1154,7 +1169,8 @@ void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize) {
 		last_ysize = ysize;
 	}
 	if (!tid) {
-		setup_texture(tid, 0, 0, 0);
+		bool const wrap = 0; // set to 1 for debugging
+		setup_texture(tid, 0, wrap, wrap);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	}
 	assert(glIsTexture(tid));

@@ -183,15 +183,24 @@ void main()
 		if (enable_light2) {ADD_LIGHT(2);} // lightning
 	}
 	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb, 1.0, normal_sign);} // dynamic lighting
-
-#ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
-	//float reflect_w = get_fresnel_reflection(normalize(camera_pos - vpos), normalize(normal), 1.0, refract_ix);
-	// use vpos and normal (world space)
-	//lit_color = mix(lit_color, texture(reflection_tex, vec2(x, y)), 0.5);
-#endif
-
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
+
+#ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
+	if (normal.z > 0.5) { // top surface
+		vec3 ws_normal;
+#ifdef USE_BUMP_MAP
+		ws_normal = get_bump_map_normal();
+#else
+		ws_normal = normalize(normal);
+#endif
+		// Note: this doesn't work for refact_ix == 1, so we choose an arbitrary value of 1.3 (metals are lower, dielectrics are higher)
+		float reflect_w = get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.3 : refract_ix));
+		vec4 proj_pos   = fg_ProjectionMatrix * epos;
+		vec2 ref_tex_st = clamp(0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5), 0.0, 1.0);
+		color.rgb = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wet_effect), reflect_w);
+	}
+#endif
 
 #ifdef APPLY_BURN_MASK
 	color = apply_burn_mask(color, tc);

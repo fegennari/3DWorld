@@ -45,7 +45,7 @@ extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_l
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
-extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights;
+extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, reflect_plane_zmin, reflect_plane_zmax;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
@@ -465,6 +465,16 @@ void setup_object_render_data() {
 }
 
 
+bool use_reflection_plane() {return ((display_mode & 0x10) && reflect_plane_zmin < reflect_plane_zmax && get_camera_pos().z > reflect_plane_zmin);}
+
+bool use_reflect_plane_for_cobj(coll_obj const &c) {
+	return (use_reflection_plane() && reflection_tid > 0 && c.type == COLL_CUBE &&
+		c.d[2][1] >= reflect_plane_zmin && c.d[2][1] <= reflect_plane_zmax && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25));
+}
+
+float get_reflection_plane() {return 0.5*(reflect_plane_zmin + reflect_plane_zmax);}
+
+
 void end_group(int &last_group_id) {
 
 	if (last_group_id < 0) return;
@@ -474,18 +484,22 @@ void end_group(int &last_group_id) {
 	last_group_id = -1;
 }
 
-
 void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen) {
 	// Note: pass in 3 when has_lt_atten to enable sphere atten
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting);
 }
 
-
-void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int use_texgen, bool use_normal_map) {
+void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
 
 	if (cobjs.empty()) return;
 	shader_t s;
+	if (use_reflect_tex) {s.set_prefix("#define ENABLE_REFLECTIONS", 1);} // FS
 	setup_cobj_shader(s, 0, use_normal_map, use_texgen); // no lt_atten
+	
+	if (use_reflect_tex) {
+		s.add_uniform_int("reflection_tex", 14);
+		bind_texture_tu(reflection_tid, 14);
+	}
 	cdb.is_wet = is_rain_enabled(); // initial value
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 	float bump_b_scale(0.0);
@@ -513,6 +527,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 		unsigned cix(*i);
 		c.draw_cobj(cix, last_tid, last_group_id, s, cdb);
 		assert(cix == *i); // should not have been modified
+		//if (use_reflect_tex) {bind_2d_texture(reflection_tid);} // overwrite texture binding (FIXME: temporary)
 	}
 	cdb.flush();
 	s.clear_specular(); // may be unnecessary
@@ -533,12 +548,8 @@ bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { 
 	return 1;
 }
 
-bool use_reflect_plane(coll_obj const &c) {
-	return (c.type == COLL_CUBE && c.d[2][1] >= reflect_plane_zmin && c.d[2][1] <= reflect_plane_zmax && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25));
-}
-
 // should always have draw_solid enabled on the first call for each frame
-void draw_coll_surfaces(bool draw_trans) {
+void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 
 	//RESET_TIME;
 	static vect_sorted_ix draw_last;
@@ -551,7 +562,7 @@ void draw_coll_surfaces(bool draw_trans) {
 	int last_tid(-2), last_group_id(-1);
 	cobj_draw_buffer cdb;
 	cdb.is_wet = is_rain_enabled(); // initial value
-	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs;
+	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs;
 	
 	if (!draw_trans) { // draw solid
 		vect_sorted_ix large_cobjs[2]; // {normal_map=0, normal_map=1}
@@ -562,6 +573,7 @@ void draw_coll_surfaces(bool draw_trans) {
 			coll_obj const &c(coll_objects.get_cobj(cix));
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
+			if (reflection_pass && c.d[2][1] < get_reflection_plane()) continue; // below the reflection plane (approximate) (optimization)
 			bool const cube_poly((c.cp.flags & COBJ_WAS_CUBE) != 0);
 			bool const use_tex_coords((cube_poly && c.cp.tid >= 0) || ((c.is_cylinder() || c.type == COLL_SPHERE || c.type == COLL_CAPSULE) && c.cp.tscale == 0.0));
 
@@ -569,10 +581,11 @@ void draw_coll_surfaces(bool draw_trans) {
 				assert(c.group_id < 0);
 				assert(!c.is_semi_trans());
 
-				if (use_reflect_plane(c)) {
-					// FIXME: WRITE
-					//unsigned const reflect_tid(create_gm_z_reflection(0.5*(reflect_plane_zmin + reflect_plane_zmax)));
+				// Note: only normal mapped tex coord cube top surfaces support reflections
+				if (!use_tex_coords && use_reflect_plane_for_cobj(c)) {
 					//coll_objects.get_cobj(cix).cp.color = BLUE;
+					if (!reflection_pass) {reflect_cobjs.push_back(cix);} // the reflection surface is not drawn in the reflection pass (receiver only)
+					continue;
 				}
 				if (!use_tex_coords && check_big_occluder(c, cix, large_cobjs[1])) continue;
 				(use_tex_coords ? tex_coord_nm_cobjs : normal_map_cobjs).push_back(cix);
@@ -678,9 +691,10 @@ void draw_coll_surfaces(bool draw_trans) {
 	} // end draw_trans
 	s.clear_specular(); // may be unnecessary
 	s.end_shader();
-	draw_cobjs_group(normal_map_cobjs,   cdb, 2, 1);
-	draw_cobjs_group(tex_coord_nm_cobjs, cdb, 0, 1);
-	draw_cobjs_group(tex_coord_cobjs,    cdb, 0, 0);
+	draw_cobjs_group(normal_map_cobjs,   cdb, 2, 1, 0);
+	draw_cobjs_group(tex_coord_nm_cobjs, cdb, 0, 1, 0);
+	draw_cobjs_group(tex_coord_cobjs,    cdb, 0, 0, 0);
+	draw_cobjs_group(reflect_cobjs,      cdb, 2, 1, 1);
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }
 
