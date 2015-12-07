@@ -191,6 +191,7 @@ void main()
 		vec3 ws_normal;
 #ifdef USE_BUMP_MAP
 		ws_normal = get_bump_map_normal();
+		//ws_normal = normalize(mix(ws_normal, normalize(normal), 0.5));
 #else
 		ws_normal = normalize(normal);
 #endif

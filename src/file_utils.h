@@ -59,5 +59,8 @@ inline bool read_type_t(FILE *fp, vector3d  &val) {return read_vector(fp, val);}
 inline bool read_type_t(FILE *fp, colorRGBA &val) {return read_color (fp, val);}
 inline bool read_type_t(FILE *fp,     bool  &val) {return read_bool  (fp, val);}
 
+struct geom_xform_t;
+unsigned read_cube(FILE *fp, geom_xform_t const &xf, cube_t &c);
+
 #endif // _FILE_UTILS_H_
 

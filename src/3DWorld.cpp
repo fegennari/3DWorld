@@ -84,7 +84,7 @@ int read_light_files[NUM_LIGHTING_TYPES] = {0}, write_light_files[NUM_LIGHTING_T
 unsigned num_snowflakes(0), create_voxel_landscape(0), hmap_filter_width(0);
 float NEAR_CLIP(DEF_NEAR_CLIP), FAR_CLIP(DEF_FAR_CLIP);
 float water_plane_z(0.0), base_gravity(1.0), crater_depth(1.0), crater_radius(1.0), disabled_mesh_z(FAR_CLIP), vegetation(1.0), atmosphere(1.0);
-float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0), reflect_plane_zmin(0.0), reflect_plane_zmax(0.0);
+float mesh_file_scale(1.0), mesh_file_tz(0.0), speed_mult(1.0), mesh_z_cutoff(-FAR_CLIP), relh_adj_tex(0.0), first_ray_weight(1.0);
 float water_h_off(0.0), water_h_off_rel(0.0), perspective_fovy(0.0), perspective_nclip(0.0), read_mesh_zmm(0.0), indir_light_exp(1.0), cloud_height_offset(0.0);
 float snow_depth(0.0), snow_random(0.0), cobj_z_bias(DEF_Z_BIAS), init_temperature(DEF_TEMPERATURE), indir_vert_offset(0.25), sm_tree_density(1.0);
 float CAMERA_RADIUS(DEF_CAMERA_RADIUS), C_STEP_HEIGHT(0.6), waypoint_sz_thresh(1.0), model3d_alpha_thresh(0.9), model3d_texture_anisotropy(1.0), dist_to_fire_sq(0.0);
@@ -92,6 +92,7 @@ float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
+cube_t reflect_plane_bcube(0,0,0,0,0,0);
 string user_text, cobjs_out_fn;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color, flower_color(ALPHA0);
@@ -1873,7 +1874,7 @@ int load_config(string const &config_file) {
 			smoke_bounds.push_back(sb);
 		}
 		else if (str == "reflect_plane_z") {
-			if (!(read_float(fp, reflect_plane_zmin) && read_float(fp, reflect_plane_zmax))) cfg_err("reflect_plane_z command", error);
+			if (!read_cube(fp, geom_xform_t(), reflect_plane_bcube)) cfg_err("reflect_plane_z command", error);
 		}
 		// lighting
 		else if (str == "lighting_file_sky") {
