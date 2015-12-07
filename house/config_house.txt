@@ -63,6 +63,7 @@ include config_resolution.txt
 shadow_map_sz 3072
 
 smoke_bounds -1.17 0.8 -1.32 1.81  -0.22 1.15
+reflect_plane_z -4.5 4.5  -1.3 -4.5  0.23 0.24
 
 state_file house/state.txt
 coll_obj_file house/COLL_OBJS_House.TXT
