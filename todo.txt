@@ -14,10 +14,6 @@ TT shadows:
   - Use light dir and mesh normal for tree soft shadow
   - Lower res distant shadow map for tiled terrain mode with smooth blend
 
-Reflections on specular surfaces (such as the gold dragon)
-  - Second rendering pass with one or more frustum (like tiled terrain mirrored water)
-  - Precomputed cube map
-
 Indirect lighting magnitude in 6 directions (+/- x,y,z)
   - how to combine sun, moon, sky, and local lighting values?
 
@@ -25,3 +21,4 @@ Bullet physics for movable boxes
 In-Game cobjs editor
 Better Palm Trees
 Plants with low large leaves
+Precomputed cube map reflections on specular surfaces (such as the gold dragon)
