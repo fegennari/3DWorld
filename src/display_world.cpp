@@ -1040,7 +1040,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass,
 	camera_pdu = pdu;
 	point const prev_camera_pos(camera_pos);
 	camera_pos = pdu.pos;
-	bool const occ_cull_enabled(display_mode & 0x08); // disable occlusion culling
+	bool const occ_cull_enabled((display_mode & 0x08) != 0); // disable occlusion culling
 	if (occ_cull_enabled && disable_occ_cull && camera_pos != prev_camera_pos) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location)
 
 	// draw background

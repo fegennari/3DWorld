@@ -235,9 +235,10 @@ bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int m
 
 	if (!no_frustum_test && !pdu.sphere_visible_test(pos, radius)) return 0;
 	if (max_level == 0 || world_mode != WMODE_GROUND)              return 1;
+	if (!(display_mode & 0x08)) return 1; // occlusion culling disabled
 	point const &viewer(pdu.pos);
 	
-	if (is_over_mesh(viewer)) {
+	if (is_over_mesh(viewer)) { // mesh occlusion culling
 		float const zmax(pos.z + radius);
 		int const cxpos(get_xpos(viewer.x)), cypos(get_ypos(viewer.y));
 
@@ -263,7 +264,7 @@ bool sphere_in_view(pos_dir_up const &pdu, point const &pos, float radius, int m
 		}
 	}
 	if (max_level == 1) return 1;
-	if ((display_mode & 0x08) && sphere_cobj_occluded(viewer, pos, radius)) return 0; // intersect view with cobjs
+	if (sphere_cobj_occluded (viewer, pos, radius)) return 0; // intersect view with cobjs
 	if (!sphere_visible_to_pt(viewer, pos, radius)) return 0; // intersect view with mesh
 	if (max_level == 2) return 1;
 	
