@@ -65,9 +65,11 @@ bool indir_lighting_updated();
 point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
 void run_postproc_effects();
+
 bool use_reflection_plane();
 float get_reflection_plane();
-unsigned create_gm_z_reflection(float zval);
+bool get_reflection_plane_bounds(cube_t &bcube);
+unsigned create_gm_z_reflection();
 
 
 void glClearColor_rgba(const colorRGBA &color) {
@@ -871,7 +873,7 @@ void display(void) {
 			setup_object_render_data();
 			check_gl_error(101);
 
-			if (use_reflection_plane()) {create_gm_z_reflection(get_reflection_plane());}
+			if (use_reflection_plane()) {create_gm_z_reflection();}
 
 			// draw background
 			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background
@@ -1176,9 +1178,14 @@ void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize) {
 	assert(glIsTexture(tid));
 }
 
-unsigned create_gm_z_reflection(float zval) {
+unsigned create_gm_z_reflection() {
 
 	if (display_mode & 0x20) return 0; // reflections not enabled
+	cube_t bcube;
+	if (!get_reflection_plane_bounds(bcube)) return 0; // no reflective surfaces
+	float zval(get_reflection_plane());
+	zval = max(bcube.d[2][0], min(bcube.d[2][1], zval)); // clamp to bounds of actual reflecting cobj top surfaces
+	// FIXME: use x/y bcube bounds to clip reflected view frustum
 	unsigned const xsize(window_width/2), ysize(window_height/2);
 	setup_reflection_texture(reflection_tid, xsize, ysize);
 	create_gm_reflection_texture(reflection_tid, xsize, ysize, zval);

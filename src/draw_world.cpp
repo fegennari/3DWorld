@@ -469,8 +469,24 @@ bool  use_reflection_plane() {return ((display_mode & 0x10) && !reflect_plane_bc
 float get_reflection_plane() {return 0.5*(reflect_plane_bcube.d[2][0] + reflect_plane_bcube.d[2][1]);}
 
 bool use_reflect_plane_for_cobj(coll_obj const &c) {
-	return (reflection_tid > 0 && (c.type == COLL_CUBE || c.type == COLL_CYLINDER) && c.intersects(reflect_plane_bcube) &&
-		c.d[2][1] <= reflect_plane_bcube.d[2][1] && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25));
+	return ((c.type == COLL_CUBE || c.type == COLL_CYLINDER) && c.intersects(reflect_plane_bcube) &&
+		c.d[2][1] <= reflect_plane_bcube.d[2][1] && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25) && camera_pdu.cube_visible(c));
+}
+
+bool get_reflection_plane_bounds(cube_t &bcube) {
+
+	if (!use_reflection_plane()) return 0;
+	bool bcube_set(0);
+
+	for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
+		unsigned cix(*i);
+		coll_obj const &c(coll_objects.get_cobj(cix));
+		if (c.no_draw() || !use_reflect_plane_for_cobj(c)) continue;
+		cube_t cc(c);
+		cc.d[2][0] = cc.d[2][1]; // shrink to top surface only
+		if (bcube_set) {bcube.union_with_cube(cc);} else {bcube = cc; bcube_set = 1;}
+	}
+	return bcube_set;
 }
 
 
@@ -555,7 +571,8 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	if (coll_objects.empty() || coll_objects.drawn_ids.empty() || world_mode != WMODE_GROUND) return;
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
-	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten), use_ref_plane(reflection_pass || use_reflection_plane());
+	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
+	bool const use_ref_plane(reflection_pass || (reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(get_reflection_plane());
 	shader_t s;
 	setup_cobj_shader(s, has_lt_atten, 0, 2);
@@ -581,7 +598,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 			if (!use_tex_coords && use_ref_plane && use_reflect_plane_for_cobj(c)) {
 				assert(c.group_id < 0);
 				if (reflection_pass) continue; // the reflection surface is not drawn in the reflection pass (receiver only)
-				((c.cp.normal_map >= 0) ? reflect_cobjs_nm : reflect_cobjs).push_back(cix); // the reflection surface is not drawn in the reflection pass (receiver only)
+				((c.cp.normal_map >= 0) ? reflect_cobjs_nm : reflect_cobjs).push_back(cix);
 				continue;
 			}
 			if (c.cp.normal_map >= 0) { // common case
@@ -594,7 +611,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 			if (use_tex_coords) { // uncommon case (typically movable objects)
 				assert(c.group_id < 0);
 				assert(!c.is_semi_trans());
-				tex_coord_cobjs.push_back(cix); 
+				if (camera_pdu.cube_visible(c)) {tex_coord_cobjs.push_back(cix);}
 				continue;
 			}
 			if (check_big_occluder(c, cix, large_cobjs[0])) continue;
