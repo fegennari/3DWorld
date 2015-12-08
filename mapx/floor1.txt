@@ -9,8 +9,8 @@ e 0
 l 0.78 1.0 1.0 1.0 1.0 8 1 # marble
 y 6.5
 r 0.8 60.0 # set specularity
-C 1.5 2.0 0.0   1.5 2.0 0.03  0.8 0.8 # raised cylinder platform
-#C 1.5 -2.0 0.0  1.5 -2.0 0.03 0.8 0.8 # testing
+C 1.5 2.0 0.0   1.5 2.0 0.019  0.8 0.8 # raised cylinder platform
+#C 1.5 -2.0 0.0  1.5 -2.0 0.019 0.8 0.8 # testing
 C 2.7 2.9 0.08  2.7 2.9 0.10  0.3 0.3 # table
 l 0.86 0.03 0.03 0.03 1.0 -1 1
 e 3
@@ -23,9 +23,9 @@ e 3
 X normal_maps/paneling_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.66 1.0 1.0 1.0 1.0 26 1 # paneling
 y 5.0
-B 1.1 1.9  1.75 1.85  0.03 0.14
-B 1.1 1.2  1.85 2.3   0.03 0.14
-B 1.8 1.9  1.85 2.3   0.03 0.14
+B 1.1 1.9  1.75 1.85  0.019 0.14
+B 1.1 1.2  1.85 2.3   0.019 0.14
+B 1.8 1.9  1.85 2.3   0.019 0.14
 X none # disable normal map
 
 # place a dragon statue on the desk
@@ -50,7 +50,7 @@ r 0.0 1.0 # reset specularity
 
 # chair at front desk
 m 0.036
-T 1.5  2.1 -0.26  i mapx/chair.txt
+T 1.5  2.1 -0.261  i mapx/chair.txt
 T 0.0  0.0 -0.29
 m 1.0
 

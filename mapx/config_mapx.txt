@@ -3,7 +3,7 @@ include mapx/config_mapx_base.txt
 grass_density 600
 grass_size 0.025 0.002
 
-reflect_plane_z -8.0 8.0  -6.6 6.6  -0.296 -0.256 # this range includes the coutyard block floor and first floor tile floor
+reflect_plane_z -8.0 8.0  -6.6 6.6  -0.29 -0.27 # this range includes the coutyard block floor and first floor tile floor
 
 use_waypoints 1
 dynamic_smap_bias 1
