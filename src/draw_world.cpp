@@ -469,7 +469,7 @@ bool  use_reflection_plane() {return ((display_mode & 0x10) && !reflect_plane_bc
 float get_reflection_plane() {return 0.5*(reflect_plane_bcube.d[2][0] + reflect_plane_bcube.d[2][1]);}
 
 bool use_reflect_plane_for_cobj(coll_obj const &c) {
-	return ((c.type == COLL_CUBE || c.type == COLL_CYLINDER) && c.intersects(reflect_plane_bcube) &&
+	return ((c.type == COLL_CUBE || (c.type == COLL_CYLINDER && !(c.cp.surfs & 1))) && c.intersects(reflect_plane_bcube) &&
 		c.d[2][1] <= reflect_plane_bcube.d[2][1] && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25) && camera_pdu.cube_visible(c));
 }
 
