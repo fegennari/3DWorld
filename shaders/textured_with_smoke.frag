@@ -11,7 +11,7 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
-uniform float depth_trans_bias;
+uniform float depth_trans_bias, clip_plane_z;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -120,6 +120,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
 {
+	if (enable_clip_plane_z && vpos.z < clip_plane_z) discard;
 #ifdef TRIPLANAR_TEXTURE
 	vec4 texel = lookup_triplanar_texture(vpos, normal, tex0, tex0, tex0);
 #else

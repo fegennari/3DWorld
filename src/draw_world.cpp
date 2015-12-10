@@ -29,9 +29,9 @@ struct sky_pos_orient {
 };
 
 
-// Global Variables
+bool enable_clip_plane_z(0);
 unsigned depth_tid(0), frame_buffer_RGB_tid(0);
-float sun_radius, moon_radius, earth_radius, brightness(1.0);
+float sun_radius(0.0), moon_radius(0.0), earth_radius(0.0), brightness(1.0), clip_plane_z(0.0);
 colorRGB cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
 gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
@@ -263,6 +263,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	set_indir_lighting_block(s, use_smoke, use_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
+	if (enable_clip_plane_z) {s.add_uniform_float("clip_plane_z", clip_plane_z);}
 	if (use_shadow_map && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
 	set_active_texture(0);
 	s.clear_specular();
@@ -277,13 +278,14 @@ bool is_smoke_in_use() {return (smoke_exists || use_smoke_for_fog);}
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
 	bool smoke_enabled, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
 {
-	s.set_int_prefix ("use_texgen",         use_texgen,      0); // VS
-	s.set_bool_prefix("keep_alpha",         keep_alpha,      1); // FS
-	s.set_bool_prefix("direct_lighting",    direct_lighting, 1); // FS
-	s.set_bool_prefix("do_cube_lt_atten",   ((has_lt_atten & 1) != 0), 1); // FS
-	s.set_bool_prefix("do_sphere_lt_atten", ((has_lt_atten & 2) != 0), 1); // FS
-	s.set_bool_prefix("two_sided_lighting", use_tsl,         1); // FS
-	s.set_bool_prefix("use_fg_ViewMatrix",  use_mvm,         0); // VS
+	s.set_int_prefix ("use_texgen",          use_texgen,      0); // VS
+	s.set_bool_prefix("keep_alpha",          keep_alpha,      1); // FS
+	s.set_bool_prefix("direct_lighting",     direct_lighting, 1); // FS
+	s.set_bool_prefix("do_cube_lt_atten",    ((has_lt_atten & 1) != 0), 1); // FS
+	s.set_bool_prefix("do_sphere_lt_atten",  ((has_lt_atten & 2) != 0), 1); // FS
+	s.set_bool_prefix("two_sided_lighting",  use_tsl,         1); // FS
+	s.set_bool_prefix("use_fg_ViewMatrix",   use_mvm,         0); // VS
+	s.set_bool_prefix("enable_clip_plane_z", enable_clip_plane_z, 1); // FS
 	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP",   1);} // FS
 	if (use_smap)     {s.set_prefix("#define USE_SHADOW_MAP", 1);} // FS
 

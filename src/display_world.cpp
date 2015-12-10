@@ -42,12 +42,13 @@ upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY);
 
 
-extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava, user_action_key, flashlight_on;
+extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
+extern bool user_action_key, flashlight_on, enable_clip_plane_z;
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, NEAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
-extern float def_atmosphere, def_vegetation;
+extern float def_atmosphere, def_vegetation, clip_plane_z;
 extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
 extern vector3d total_wind;
@@ -1115,17 +1116,19 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 
 	//RESET_TIME;
 	// Note: we need to transform the camera frustum here, even though it's also done when drawing, because we need to get the correct projection matrix
+	enable_clip_plane_z = 1;
+	clip_plane_z        = zval; // hack to tell the shader setup code to use this z clip plane
 	pos_dir_up const old_camera_pdu(camera_pdu);
 	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
-	// FIXME: set clip plane at zval
 	// FIXME: must disable occlusion culling to avoid treating objects below the clip plane as occluders
 	draw_scene_from_custom_frustum(refl_camera_pdu, 1, 0, 1); // reflection_pass=1, include_mesh=0, disable_occ_cull=1
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
 	camera_pdu = old_camera_pdu;
 	restore_matrices_and_clear(); // reset state
+	enable_clip_plane_z = 0;
 	//PRINT_TIME("Create Reflection Texture");
 }
 
