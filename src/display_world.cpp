@@ -641,14 +641,16 @@ void draw_sun_flare(float intensity=1.0) {
 		static bool pts_valid(0);
 		float tot_light(0.0);
 		vector3d const view_dir((sun_pos - viewer).get_norm());
+		point viewer_pos(viewer);
+		if (enable_clip_plane_z && view_dir.z > 0.0 && viewer.z < clip_plane_z) {viewer_pos += view_dir*((clip_plane_z - viewer.z)/view_dir.z);} // move above clip plane
 		
 		for (unsigned i = 0; i < npts; ++i) {
 			int index; // unused
 			if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
 			point const pos(sun_pos + pts[i]*sun_radius);
 
-			if (coll_pt_vis_test(pos, viewer, 0.0, index, camera_coll_id, 0, 1) && (!(display_mode & 0x01) || !line_intersect_mesh(pos, viewer, 0))) {
-				tot_light += 1.0 - get_cloud_density(viewer, view_dir);
+			if (coll_pt_vis_test(pos, viewer_pos, 0.0, index, camera_coll_id, 0, 1) && (!(display_mode & 0x01) || !line_intersect_mesh(pos, viewer_pos, 0))) {
+				tot_light += 1.0 - get_cloud_density(viewer_pos, view_dir);
 			}
 		}
 		pts_valid = 1;
@@ -1040,22 +1042,27 @@ void draw_transparent(bool above_water) {
 void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass, bool include_mesh, bool disable_occ_cull) {
 
 	pos_dir_up const prev_camera_pdu(camera_pdu);
-	camera_pdu = pdu;
 	point const prev_camera_pos(camera_pos);
+	camera_pdu = pdu;
 	camera_pos = pdu.pos;
 	bool const occ_cull_enabled((display_mode & 0x08) != 0); // disable occlusion culling
 	if (occ_cull_enabled && disable_occ_cull && camera_pos != prev_camera_pos) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location)
 
 	// draw background
-	if (combined_gu) {draw_universe_bkg(reflection_pass, 1);} // infinite universe as background with no asteroid dust
-	else {draw_sun_moon_stars(1); draw_earth();}
+	if (combined_gu) { // FIXME: universe alignment is wrong, and occlusion is wrong (due to differing depth ranges)
+		//draw_universe_bkg(reflection_pass, 1); // infinite universe as background with no asteroid dust
+	}
+	else {
+		draw_sun_moon_stars(1);
+		draw_earth();
+	}
 	draw_sky(0, 1);
-	draw_puffy_clouds(0);
+	draw_puffy_clouds(0, 1);
 	// draw the scene
-	draw_camera_weapon(0);
+	draw_camera_weapon(0); // unnecessary?
 	draw_coll_surfaces(0, reflection_pass);
 	
-	if (include_mesh) {
+	if (include_mesh) { // the mesh and grass are generally under the reflection plane, so can be skipped
 		if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
 		draw_grass();
 	}
@@ -1112,7 +1119,7 @@ void restore_matrices_and_clear() {
 
 
 // render scene reflection to texture (ground mode and tiled terrain mode)
-void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval) {
+void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval, cube_t const &bcube) {
 
 	//RESET_TIME;
 	// Note: we need to transform the camera frustum here, even though it's also done when drawing, because we need to get the correct projection matrix
@@ -1120,6 +1127,8 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	clip_plane_z        = zval; // hack to tell the shader setup code to use this z clip plane
 	pos_dir_up const old_camera_pdu(camera_pdu);
 	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
+	// FIXME: use x/y bcube bounds to clip reflected view frustum
+	camera_pdu.near_ = max(camera_pdu.near_, p2p_dist(camera_pdu.pos, bcube.closest_pt(camera_pdu.pos))); // move near clip plane to closest edge of ref plane bcube (optimization)
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
@@ -1188,10 +1197,9 @@ unsigned create_gm_z_reflection() {
 	if (!get_reflection_plane_bounds(bcube)) return 0; // no reflective surfaces
 	float zval(get_reflection_plane());
 	zval = max(bcube.d[2][0], min(bcube.d[2][1], zval)); // clamp to bounds of actual reflecting cobj top surfaces
-	// FIXME: use x/y bcube bounds to clip reflected view frustum
 	unsigned const xsize(window_width/2), ysize(window_height/2);
 	setup_reflection_texture(reflection_tid, xsize, ysize);
-	create_gm_reflection_texture(reflection_tid, xsize, ysize, zval);
+	create_gm_reflection_texture(reflection_tid, xsize, ysize, zval, bcube);
 	check_gl_error(999);
 	return reflection_tid;
 }

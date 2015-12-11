@@ -125,7 +125,7 @@ colorRGBA get_cloud_color();
 void get_avg_sky_color(colorRGBA &avg_color);
 float get_cloud_density(point const &pt, vector3d const &dir);
 void free_cloud_textures();
-void draw_puffy_clouds(int order);
+void draw_puffy_clouds(int order, bool no_update=0);
 float get_cloud_zmax();
 void set_cloud_uniforms(shader_t &s, unsigned tu_id);
 void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil, bool draw_floor);

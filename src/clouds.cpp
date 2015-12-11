@@ -235,7 +235,7 @@ void cloud_manager_t::free_textures() {
 
 
 //http://www.gamedev.net/reference/articles/article2273.asp
-void cloud_manager_t::draw() {
+void cloud_manager_t::draw(bool no_update) {
 
 	if (atmosphere < 0.01) return; // no atmosphere
 	create_clouds();
@@ -247,7 +247,7 @@ void cloud_manager_t::draw() {
 	// light source code
 	static bool had_sun(0);
 	static float last_sun_rot(0.0);
-	bool const need_update(!no_sun_lpos_update && (sun_rot != last_sun_rot || have_sun != had_sun));
+	bool const need_update(!no_sun_lpos_update && !no_update && (sun_rot != last_sun_rot || have_sun != had_sun));
 	int const tid(SMOKE_PUFF_TEX);
 	set_multisample(0);
 	glDisable(GL_DEPTH_TEST);
@@ -291,11 +291,11 @@ void cloud_manager_t::draw() {
 }
 
 
-void draw_puffy_clouds(int order) {
+void draw_puffy_clouds(int order, bool no_update) {
 
 	if (get_camera_pos().z > cloud_manager.get_z_plane() != order) return;
 	if (atmosphere < 0.01) {cloud_manager.clear();}
-	else if (((display_mode & 0x40) != 0) ^ is_cloudy) {cloud_manager.draw();} // key 7
+	else if (((display_mode & 0x40) != 0) ^ is_cloudy) {cloud_manager.draw(no_update);} // key 7
 }
 
 
