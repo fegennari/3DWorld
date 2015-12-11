@@ -69,7 +69,7 @@ void run_postproc_effects();
 
 bool use_reflection_plane();
 float get_reflection_plane();
-bool get_reflection_plane_bounds(cube_t &bcube);
+bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist);
 unsigned create_gm_z_reflection();
 
 
@@ -1119,7 +1119,7 @@ void restore_matrices_and_clear() {
 
 
 // render scene reflection to texture (ground mode and tiled terrain mode)
-void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval, cube_t const &bcube) {
+void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval, cube_t const &bcube, float min_camera_dist) {
 
 	//RESET_TIME;
 	// Note: we need to transform the camera frustum here, even though it's also done when drawing, because we need to get the correct projection matrix
@@ -1128,7 +1128,7 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	pos_dir_up const old_camera_pdu(camera_pdu);
 	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
 	// FIXME: use x/y bcube bounds to clip reflected view frustum
-	camera_pdu.near_ = max(camera_pdu.near_, p2p_dist(camera_pdu.pos, bcube.closest_pt(camera_pdu.pos))); // move near clip plane to closest edge of ref plane bcube (optimization)
+	camera_pdu.near_ = max(camera_pdu.near_, min_camera_dist); // move near clip plane to closest edge of ref plane bcube (optimization)
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
@@ -1194,12 +1194,13 @@ unsigned create_gm_z_reflection() {
 
 	if (display_mode & 0x20) return 0; // reflections not enabled
 	cube_t bcube;
-	if (!get_reflection_plane_bounds(bcube)) return 0; // no reflective surfaces
+	float min_camera_dist(0.0);
+	if (!get_reflection_plane_bounds(bcube, min_camera_dist)) return 0; // no reflective surfaces
 	float zval(get_reflection_plane());
 	zval = max(bcube.d[2][0], min(bcube.d[2][1], zval)); // clamp to bounds of actual reflecting cobj top surfaces
 	unsigned const xsize(window_width/2), ysize(window_height/2);
 	setup_reflection_texture(reflection_tid, xsize, ysize);
-	create_gm_reflection_texture(reflection_tid, xsize, ysize, zval, bcube);
+	create_gm_reflection_texture(reflection_tid, xsize, ysize, zval, bcube, min_camera_dist);
 	check_gl_error(999);
 	return reflection_tid;
 }

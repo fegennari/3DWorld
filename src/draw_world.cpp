@@ -475,18 +475,29 @@ bool use_reflect_plane_for_cobj(coll_obj const &c) {
 		c.d[2][1] <= reflect_plane_bcube.d[2][1] && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25) && camera_pdu.cube_visible(c));
 }
 
-bool get_reflection_plane_bounds(cube_t &bcube) {
+bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist) {
 
 	if (!use_reflection_plane()) return 0;
 	bool bcube_set(0);
+	point const camera(get_camera_pos());
 
 	for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 		unsigned cix(*i);
 		coll_obj const &c(coll_objects.get_cobj(cix));
-		if (c.no_draw() || !use_reflect_plane_for_cobj(c)) continue;
+		if (c.no_draw() || c.d[2][1] >= get_camera_pos().z || !use_reflect_plane_for_cobj(c)) continue;
 		cube_t cc(c);
 		cc.d[2][0] = cc.d[2][1]; // shrink to top surface only
-		if (bcube_set) {bcube.union_with_cube(cc);} else {bcube = cc; bcube_set = 1;}
+		float const dist(p2p_dist(camera, c.closest_pt(camera)));
+		
+		if (bcube_set) {
+			bcube.union_with_cube(cc);
+			min_camera_dist = min(dist, min_camera_dist);
+		}
+		else {
+			bcube = cc;
+			bcube_set = 1;
+			min_camera_dist = dist;
+		}
 	}
 	return bcube_set;
 }
