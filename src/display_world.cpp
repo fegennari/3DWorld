@@ -206,7 +206,7 @@ void draw_stuff(int draw_uw, int timer1, bool reflection_pass=0) {
 	else {
 		draw_splashes();
 		draw_snow();
-		draw_trees();
+		draw_trees(0, reflection_pass);
 		render_voxel_data(0);
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("O");
@@ -1058,8 +1058,13 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass,
 	}
 	draw_sky(0, 1);
 	draw_puffy_clouds(0, 1);
+	
 	// draw the scene
-	draw_camera_weapon(0); // unnecessary?
+	if (1) { // unnecessary?
+		camera_pos = prev_camera_pos; // temporarily set the camera pos back so that this works
+		draw_camera_weapon(0);
+		camera_pos = pdu.pos;
+	}
 	draw_coll_surfaces(0, reflection_pass);
 	
 	if (include_mesh) { // the mesh and grass are generally under the reflection plane, so can be skipped

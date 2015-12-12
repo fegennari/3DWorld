@@ -344,7 +344,7 @@ void tree_cont_t::draw_branches_and_leaves(shader_t &s, tree_lod_render_t &lod_r
 		sort(sorted.begin(), sorted.end()); // sort front to back for better early z culling
 
 		for (auto i = sorted.begin(); i != sorted.end(); ++i) {
-			operator[](i->second).draw_leaves_top(s, lod_renderer, shadow_only, xlate, wsoff_loc, tex0_loc);
+			operator[](i->second).draw_leaves_top(s, lod_renderer, shadow_only, reflection_pass, xlate, wsoff_loc, tex0_loc);
 		}
 		tree_data_t::post_leaf_draw();
 	}
@@ -436,7 +436,7 @@ void tree_cont_t::post_leaf_draw(shader_t &shader) {
 }
 
 
-void tree_cont_t::draw(bool shadow_only) {
+void tree_cont_t::draw(bool shadow_only, bool reflection_pass) {
 
 	if (empty()) return;
 	tree_lod_render_t lod_renderer(0); // disabled
@@ -445,28 +445,28 @@ void tree_cont_t::draw(bool shadow_only) {
 	// draw leaves
 	shader_t ls;
 	pre_leaf_draw(ls, 0, shadow_only);
-	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, 0, zero_vector);
+	draw_branches_and_leaves(ls, lod_renderer, 0, 1, shadow_only, reflection_pass, zero_vector);
 	post_leaf_draw(ls);
 
 	// draw branches
 	shader_t bs;
 	bool const branch_smap(!shadow_only); // looks better, but slower
 	set_tree_branch_shader(bs, !shadow_only, !shadow_only, branch_smap);
-	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, 0, zero_vector);
+	draw_branches_and_leaves(bs, lod_renderer, 1, 0, shadow_only, reflection_pass, zero_vector);
 	bs.add_uniform_vector3d("world_space_offset", zero_vector); // reset
 	bs.end_shader();
 }
 
 
-void draw_trees(bool shadow_only) {
+void draw_trees(bool shadow_only, bool reflection_pass) {
 
 	if (tree_mode & 2) {draw_small_trees(shadow_only);} // small trees
 
 	if (tree_mode & 1) { // trees
-		if (shadow_only) {t_trees.draw(1);}
+		if (shadow_only) {t_trees.draw(1, reflection_pass);}
 		else {
 			next_has_any_billboard_coll = 0; // reset for this frame
-			t_trees.draw(0);
+			t_trees.draw(0, reflection_pass);
 			has_any_billboard_coll = next_has_any_billboard_coll; // keep only if some leaf already has a coll
 		}
 	}
@@ -889,7 +889,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 }
 
 
-void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate, int wsoff_loc, int tex0_off) {
+void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc, int tex0_off) {
 
 	if (!created) return;
 	tree_data_t &td(tdata());
@@ -913,7 +913,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	}
 	bool const has_leaves(!td.get_leaves().empty());
 	
-	if (has_leaves && ground_mode) {
+	if (has_leaves && ground_mode && !reflection_pass) {
 		burn_leaves();
 		if (l_strike.enabled == 1 && animate2) {lightning_damage(l_strike.end);}
 		if (begin_motion && animate2) {drop_leaves();}
@@ -937,7 +937,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 		if (geom_opacity == 0.0) return;
 		s.set_uniform_float(lod_renderer.leaf_opacity_loc, geom_opacity);
 	}
-	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && wind_enabled), gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
+	bool const leaf_dynamic_en(!has_snow && enable_leaf_wind && wind_enabled && !reflection_pass), gen_arrays(td.leaf_draw_setup(leaf_dynamic_en));
 	if (!gen_arrays && leaf_dynamic_en && size_scale*td.get_size_scale_mult() > (leaf_orients_valid ? 0.75 : 0.2)) {update_leaf_orients();}
 
 	if (gen_arrays || leaf_color_changed) {

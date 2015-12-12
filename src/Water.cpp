@@ -94,11 +94,11 @@ vector<water_spring> water_springs;
 vector<water_section> wsections;
 spillover spill;
 
-extern bool using_lightmap, has_snow, fast_water_reflect;
+extern bool using_lightmap, has_snow, fast_water_reflect, enable_clip_plane_z;
 extern int display_mode, frame_counter, game_mode, TIMESCALE2, I_TIMESCALE2;
 extern int world_mode, rand_gen_index, begin_motion, animate, animate2, blood_spilled;
 extern int landscape_changed, xoff2, yoff2, scrolling, dx_scroll, dy_scroll, INIT_DISABLE_WATER;
-extern float temperature, zmax, zmin, zbottom, ztop, light_factor, water_plane_z, fticks, mesh_scale, water_h_off_rel;
+extern float temperature, zmax, zmin, zbottom, ztop, light_factor, water_plane_z, fticks, mesh_scale, water_h_off_rel, clip_plane_z;
 extern float TIMESTEP, TWO_XSS, TWO_YSS, XY_SCENE_SIZE;
 extern vector3d up_norm, wind, total_wind;
 extern int coll_id[];
@@ -462,37 +462,38 @@ void draw_water(bool no_update) {
 	if (DEBUG_WATER_TIME) {PRINT_TIME("1 Init");}
 
 	// draw exterior water (oceans)
-	if (camera.z >= water_plane_z) {draw_water_sides(s, 1);}
-	if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
-	enable_blend();
-	select_water_ice_texture(s, color);
-	setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
-	if (!water_is_lava) {color.alpha *= 0.5;} // increase alpha for water
-	int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
+	if (!enable_clip_plane_z || water_plane_z > clip_plane_z) { // outside water
+		if (camera.z >= water_plane_z) {draw_water_sides(s, 1);}
+		if (DEBUG_WATER_TIME) {PRINT_TIME("2.1 Draw Water Sides");}
+		enable_blend();
+		select_water_ice_texture(s, color);
+		setup_texgen(tx_scale, ty_scale, tx_val, ty_val, 0.0, s, 0);
+		if (!water_is_lava) {color.alpha *= 0.5;} // increase alpha for water
+		int const xend(MESH_X_SIZE-1), yend(MESH_Y_SIZE-1);
 
-	if (use_foam) { // use sea foam texture
-		select_multitex(FOAM_TEX, 1, 0);
-		setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0, 0.0, s, 0);
-		set_active_texture(0);
-		s.add_uniform_float("detail_tex_scale", 1.0);
+		if (use_foam) { // use sea foam texture
+			select_multitex(FOAM_TEX, 1, 0);
+			setup_texgen(20.0*tx_scale, 20.0*ty_scale, 0.0, 0.0, 0.0, s, 0);
+			set_active_texture(0);
+			s.add_uniform_float("detail_tex_scale", 1.0);
+		}
+		water_strip_drawer wsdraw;
+		// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
+		point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
+		int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
+		wsdraw.draw_outside_water_range(cxpos, cypos, xend, yend,  1,  1);
+		wsdraw.draw_outside_water_range(cxpos, cypos, xend, 0,     1, -1);
+		wsdraw.draw_outside_water_range(cxpos, cypos, 0,    yend, -1,  1);
+		wsdraw.draw_outside_water_range(cxpos, cypos, 0,    0,    -1, -1);
+		wsdraw.calc_vertex_colors_normals(color);
+		wsdraw.draw();
+		if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
+		if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
+		if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
 	}
-	// outside water
-	water_strip_drawer wsdraw;
-	// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
-	point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
-	int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
-	wsdraw.draw_outside_water_range(cxpos, cypos, xend, yend,  1,  1);
-	wsdraw.draw_outside_water_range(cxpos, cypos, xend, 0,     1, -1);
-	wsdraw.draw_outside_water_range(cxpos, cypos, 0,    yend, -1,  1);
-	wsdraw.draw_outside_water_range(cxpos, cypos, 0,    0,    -1, -1);
-	wsdraw.calc_vertex_colors_normals(color);
-	wsdraw.draw();
-	if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
-	if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
-	if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
 	static rand_gen_t rgen;
 	
-	if (!no_grass()) {
+	if (!no_update && !no_grass()) {
 		unsigned const num_updates(max(1, XY_MULT_SIZE/256));
 
 		for (unsigned n = 0; n < num_updates; ++n) {

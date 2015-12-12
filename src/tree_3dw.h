@@ -308,7 +308,7 @@ public:
 	bool check_sphere_coll(point &center, float radius) const;
 	float calc_size_scale(point const &draw_pos) const;
 	void draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc);
-	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, vector3d const &xlate, int wsoff_loc, int tex0_loc);
+	void draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool shadow_only, bool reflection_pass, vector3d const &xlate, int wsoff_loc, int tex0_loc);
 	void shift_tree(vector3d const &vd) {tree_center += vd;}
 	void clear_context();
 	int delete_tree();
@@ -356,7 +356,7 @@ public:
 		bool shadow_only, bool reflection_pass, vector3d const &xlate);
 	static void pre_leaf_draw(shader_t &shader, bool enable_opacity, bool shadow_only=0, bool use_fs_smap=0, bool enable_smap=1);
 	static void post_leaf_draw(shader_t &shader);
-	void draw(bool shadow_only);
+	void draw(bool shadow_only, bool reflection_pass=0);
 	unsigned delete_all();
 	unsigned scroll_trees(int ext_x1, int ext_x2, int ext_y1, int ext_y2);
 	void post_scroll_remove();
@@ -378,7 +378,7 @@ public:
 // function prototypes - tree
 float get_tree_z_bottom(float z, point const &pos);
 void remove_tree_cobjs();
-void draw_trees(bool shadow_only=0);
+void draw_trees(bool shadow_only=0, bool reflection_pass=0);
 void delete_trees();
 void regen_trees(bool keep_old);
 void shift_trees(vector3d const &vd);

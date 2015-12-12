@@ -26,7 +26,7 @@ extern set<unsigned> moving_cobjs;
 extern coll_obj_group coll_objects;
 extern platform_cont platforms;
 
-void draw_trees(bool shadow_only=0);
+void draw_trees(bool shadow_only=0, bool reflection_pass=0);
 void free_light_source_gl_state();
 
 
