@@ -136,8 +136,8 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 		float const dist(NEAR_CLIP + CAMERA_RADIUS);
 		inside = 1;
 
-		for (unsigned i = 0; i < 3 && inside; ++i) {
-			if (camera[i] <= d[i][0]-dist || camera[i] >= d[i][1]+dist) inside = 0;
+		for (unsigned i = 0; i < 3; ++i) {
+			if (camera[i] <= d[i][0]-dist || camera[i] >= d[i][1]+dist) {inside = 0; break;}
 		}
 	}
 	pair<float, unsigned> faces[6];
@@ -161,19 +161,18 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 		point pts[4], p;
 		p[dim] = d[dim][dir];
 		p[d0 ] = d[d0][0];
-		p[d1 ] = d[d1][0]; pts[0] = p;
-		p[d0 ] = d[d0][1]; pts[1] = p;
-		p[d1 ] = d[d1][1]; pts[2] = p;
-		p[d0 ] = d[d0][0]; pts[3] = p;
-		if (!dir) {swap(pts[0], pts[3]); swap(pts[1], pts[2]);}
-		vector3d normal(zero_vector);
-		normal[dim] = (dir ? 1.0 : -1.0);
-		texgen_params_t tp;
+		p[d1 ] = d[d1][0]; pts[dir ? 0 : 3] = p;
+		p[d0 ] = d[d0][1]; pts[dir ? 1 : 2] = p;
+		p[d1 ] = d[d1][1]; pts[dir ? 2 : 1] = p;
+		p[d0 ] = d[d0][0]; pts[dir ? 3 : 0] = p;
+		vert_norm_texp vnt;
+		vnt.n      = zero_vector;
+		vnt.n[dim] = (dir ? 1.0 : -1.0);
 
 		for (unsigned e = 0; e < 2; ++e) {
 			unsigned const tdim(e ? t1 : t0);
 			bool const s_or_t(cp.swap_txy() ^ (e != 0));
-			float *tg(tp.st[s_or_t]);
+			float *tg(vnt.st[s_or_t]);
 
 			if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
 				tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
@@ -185,7 +184,8 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 			}
 		}
 		for (unsigned i = 0; i < 6; ++i) { // quads (2 triangles)
-			cdb.add_vert(vert_norm(pts[quad_to_tris_ixs[i]], normal), tp);
+			vnt.v = pts[quad_to_tris_ixs[i]];
+			cdb.add_vert(vnt);
 		}
 	} // for i
 }
@@ -227,15 +227,16 @@ void coll_obj::get_polygon_tparams(int tid, vector3d const &normal, texgen_param
 }
 
 
-void coll_obj::draw_polygon(int tid, point const *pts, int npts, vector3d normal, cobj_draw_buffer &cdb) const {
+void coll_obj::draw_polygon(int tid, point const *pts, int npts, vector3d const &normal, cobj_draw_buffer &cdb) const {
 
-	normal = get_norm_camera_orient(normal, get_center(pts, npts));
 	assert(npts == 3 || npts == 4);
-	texgen_params_t tp;
-	get_polygon_tparams(tid, normal, tp);
+	vert_norm_texp vnt;
+	vnt.n = get_norm_camera_orient(normal, get_center(pts, npts));
+	get_polygon_tparams(tid, vnt.n, vnt);
 
 	for (int i = 0; i < ((npts == 3) ? 3 : 6); ++i) { // 1-2 triangles
-		cdb.add_vert(vert_norm(pts[quad_to_tris_ixs[i]], normal), tp);
+		vnt.v = pts[quad_to_tris_ixs[i]];
+		cdb.add_vert(vnt);
 	}
 }
 
@@ -369,19 +370,19 @@ void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
 
 	vector3d v12; // (ce[1] - ce[0]).get_norm()
 	vector_point_norm const &vpn(gen_cylinder_data(points, radius, radius2, ndiv, v12));
-	texgen_params_t tp;
-	get_polygon_tparams(tid, v12, tp);
+	vert_norm_texp vnt;
+	get_polygon_tparams(tid, v12, vnt);
 	float const r[2] = {radius, radius2};
 
 	for (unsigned i = 0; i < 2; ++i) {
 		if (r[i] == 0.0) continue;
-		vector3d const normal(i ? v12 : -v12);
+		vnt.n = (i ? v12 : -v12);
 
 		for (unsigned s = 0; s < (unsigned)ndiv; ++s) {
 			unsigned const sn((s+1)%ndiv);
-			cdb.add_vert(vert_norm(points[i],        normal), tp); // center point
-			cdb.add_vert(vert_norm(vpn.p[(s <<1)+i], normal), tp);
-			cdb.add_vert(vert_norm(vpn.p[(sn<<1)+i], normal), tp);
+			vnt.v = points[i];        cdb.add_vert(vnt); // center point
+			vnt.v = vpn.p[(s <<1)+i]; cdb.add_vert(vnt);
+			vnt.v = vpn.p[(sn<<1)+i]; cdb.add_vert(vnt);
 		}
 	}
 }

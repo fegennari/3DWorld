@@ -570,10 +570,10 @@ bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { 
 
 	//return 0; // doesn't make much difference
 	if (!c.is_big_occluder() || c.group_id >= 0) return 0;
-	float const dist(distance_to_camera(c.get_center_pt()));
-	if (c.get_area() < 0.05*dist*dist) return 0;
+	float const dist_sq(distance_to_camera_sq(c.get_center_pt()));
+	if (c.get_area() < 0.05*dist_sq) return 0;
 	if (!camera_pdu.cube_visible(c)) return 0;
-	out.push_back(make_pair(dist, cix));
+	out.push_back(make_pair(dist_sq, cix));
 	return 1;
 }
 
@@ -591,7 +591,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	shader_t s;
 	setup_cobj_shader(s, has_lt_atten, 0, 2);
 	int last_tid(-2), last_group_id(-1);
-	cobj_draw_buffer cdb;
+	static cobj_draw_buffer cdb;
 	cdb.is_wet = is_rain_enabled(); // initial value
 	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm;
 	

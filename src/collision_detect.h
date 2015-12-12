@@ -102,6 +102,7 @@ public:
 	bool is_wet;
 
 	cobj_draw_buffer() : is_wet(0) {}
+	void add_vert(vert_norm_texp const &vnt) {verts.push_back(vnt);}
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vert_norm_texp(vn, tp));}
 	void add_vert(vert_norm_tc const &vntc) {tc_verts.push_back(vntc);}
 	bool on_new_obj_layer(obj_layer const &l);
@@ -223,7 +224,7 @@ public:
 	void draw_coll_cube(int tid, cobj_draw_buffer &cdb) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t &shader) const;
 	void get_polygon_tparams(int tid, vector3d const &normal, texgen_params_t &tp) const;
-	void draw_polygon(int tid, point const *pts, int npts, vector3d normal, cobj_draw_buffer &cdb) const;
+	void draw_polygon(int tid, point const *pts, int npts, vector3d const &normal, cobj_draw_buffer &cdb) const;
 	void draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const;
 	void draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const;
 };
