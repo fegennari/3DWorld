@@ -924,7 +924,7 @@ void teleporter::draw(vpc_shader_t &s) const {
 			s.enable();
 		}
 	}
-	if ((display_mode & 0x10) && camera_pdu.sphere_visible_test(dest, 0.25*radius)) { // draw dest (debugging)
+	if (0 && camera_pdu.sphere_visible_test(dest, 0.25*radius)) { // draw dest (debugging)
 		draw_single_colored_sphere(dest, 0.25*radius, N_SPHERE_DIV, BLUE);
 		s.enable();
 	}
