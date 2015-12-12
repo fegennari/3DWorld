@@ -263,7 +263,8 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	set_indir_lighting_block(s, use_smoke, use_indir);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
-	if (enable_clip_plane_z) {s.add_uniform_float("clip_plane_z", clip_plane_z);}
+	// the z plane bias is somewhat of a hack, set experimentally; maybe should be one pixel in world space?
+	if (enable_clip_plane_z) {s.add_uniform_float("clip_plane_z", (clip_plane_z - 0.005));} // 10.0*cobj_z_bias? 0.2/window_height?
 	if (use_shadow_map && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
 	set_active_texture(0);
 	s.clear_specular();

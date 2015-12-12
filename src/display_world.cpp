@@ -1132,7 +1132,6 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
-	// FIXME: must disable occlusion culling to avoid treating objects below the clip plane as occluders
 	draw_scene_from_custom_frustum(refl_camera_pdu, 1, 0, 1); // reflection_pass=1, include_mesh=0, disable_occ_cull=1
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
 	camera_pdu = old_camera_pdu;
