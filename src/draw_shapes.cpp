@@ -14,6 +14,7 @@ float const TOLER_ = 1.0E-6;
 extern int begin_motion, num_groups, camera_coll_id, spectate, display_mode, camera_mode, camera_view;
 extern float zmin, NEAR_CLIP;
 extern double camera_zh;
+extern vector_point_norm cylinder_vpn;
 extern vector<int> weap_cobjs;
 extern vector<unsigned> falling_cobjs;
 extern coll_obj_group coll_objects;
@@ -368,8 +369,9 @@ void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
 
 void coll_obj::draw_cylin_ends(int tid, int ndiv, cobj_draw_buffer &cdb) const {
 
-	vector3d v12; // (ce[1] - ce[0]).get_norm()
-	vector_point_norm const &vpn(gen_cylinder_data(points, radius, radius2, ndiv, v12));
+	vector3d const v12((points[1] - points[0]).get_norm());
+	vector_point_norm const &vpn(cylinder_vpn); // hack: since we know the caller already filled in the cached cylinder points, we don't need to recalculate them
+	//vector_point_norm const &vpn(gen_cylinder_data(points, radius, radius2, ndiv, v12));
 	vert_norm_texp vnt;
 	get_polygon_tparams(tid, v12, vnt);
 	float const r[2] = {radius, radius2};

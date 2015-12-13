@@ -709,7 +709,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 					}
 				}
 				c.draw_cobj(cix, last_tid, last_group_id, s, cdb);
-				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[1] is per-cube
+				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube
 				assert(cix == ix); // should not have changed
 			}
 		} // for i
