@@ -452,7 +452,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 			if (s.is_setup()) {s.disable();}
 			shader_t ls;
 			setup_smoke_shaders(ls, 0.99, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1); // TSL=1
-			ls.set_specular(0.1, 10.0);
+			ls.set_specular(0.75, 25.0);
 			static quad_batch_draw qbd;
 
 			for (unsigned j = 0; j < ordering.size(); ++j) {

@@ -143,7 +143,7 @@ void init_objects() {
 	object_types[LEAF].density             = 0.3;
 	object_types[LEAF].health              = 4000.0;
 	object_types[LEAF].color               = LEAF_C;
-	object_types[LEAF].flags               = NO_WATER_DAMAGE | OBJ_IS_FLAT;
+	object_types[LEAF].flags               = NO_WATER_DAMAGE | OBJ_IS_FLAT | LOW_SPECULAR;
 	object_types[LEAF].tid                 = LEAF_TEX;
 
 	object_types[BALL].air_factor          = 0.05;
