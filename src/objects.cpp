@@ -394,46 +394,45 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		break;
 
 	case COLL_CYLINDER:
-	case COLL_CYLINDER_ROT: {
-		float const scale(NDIV_SCALE*get_zoom_scale());
-		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera((points[0] + points[1])*0.5),
-			min(distance_to_camera(points[0]), distance_to_camera(points[1]))))));
-		int const ndiv(min(N_CYL_SIDES, max(4, (int)size)));
-		bool const draw_ends(!(cp.surfs & 1)), use_tcs(cp.tscale == 0.0);
-		if (!use_tcs) {setup_cobj_sc_texgen((points[1] - points[0]), shader);} // use texgen
-		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends); // Note: using texgen, not textured
-		if (draw_ends && !use_tcs) {draw_cylin_ends(tid, ndiv, cdb);}
-		break;
-	}
+	case COLL_CYLINDER_ROT:
 	case COLL_CAPSULE: {
 		float const scale(NDIV_SCALE*get_zoom_scale());
-		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/min(distance_to_camera(points[0]), distance_to_camera(points[1])))));
-		int const ndiv(min(N_SPHERE_DIV, max(4, (int)size)) & (~1)); // make sure ndiv is even
+		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/distance_to_camera(get_closest_pt_on_line(get_camera_pos(), points[0], points[1])))));
+		int ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 		bool const use_tcs(cp.tscale == 0.0); // even if not textured
 		vector3d const dir(points[1] - points[0]);
 		if (!use_tcs) {setup_cobj_sc_texgen(dir, shader);} // use texgen
-		draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, 0, 0, nullptr, 1.0, (use_tcs ? 0.5 : 0.0)); // Note: using texgen, not textured
-		float const r[2] = {radius, radius2};
 
-		if (is_cylin_vertical()) { // is the hemisphere optimization worth the trouble?
-			bool const d(points[1].z > points[0].z);
-			draw_subdiv_sphere_section(points[ d], r[ d], ndiv, use_tcs, 0.0, 1.0, 0.0, 0.5);
-			draw_subdiv_sphere_section(points[!d], r[!d], ndiv, use_tcs, 0.0, 1.0, 0.5, 1.0);
-		}
-		else {
-			for (unsigned d = 0; d < 2; ++d) {
-				// if using tex coords, rotate the sphere so that textures line up in at least one dim
-				// Note: when normal maps are enabled, rotation doesn't correclty rotate the normals
-				if (use_tcs && cp.normal_map < 0) {
-					fgPushMatrix();
-					translate_to(points[d]);
-					rotate_from_v2v(dir, plus_z);
-					rotate_to_dir(dir, 90.0);
-					draw_subdiv_sphere(all_zeros, r[d], ndiv, use_tcs, 1);
-					fgPopMatrix();
-				}
-				else {draw_subdiv_sphere(points[d], r[d], ndiv, use_tcs, 1);}
+		if (type == COLL_CAPSULE) {
+			ndiv &= (~1); // make sure ndiv is even
+			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, 0, 0, nullptr, 1.0, (use_tcs ? 0.5 : 0.0)); // Note: using texgen, not textured
+			float const r[2] = {radius, radius2};
+
+			if (is_cylin_vertical()) { // is the hemisphere optimization worth the trouble?
+				bool const d(points[1].z > points[0].z);
+				draw_subdiv_sphere_section(points[ d], r[ d], ndiv, use_tcs, 0.0, 1.0, 0.0, 0.5);
+				draw_subdiv_sphere_section(points[!d], r[!d], ndiv, use_tcs, 0.0, 1.0, 0.5, 1.0);
 			}
+			else {
+				for (unsigned d = 0; d < 2; ++d) {
+					// if using tex coords, rotate the sphere so that textures line up in at least one dim
+					// Note: when normal maps are enabled, rotation doesn't correclty rotate the normals
+					if (use_tcs && cp.normal_map < 0) {
+						fgPushMatrix();
+						translate_to(points[d]);
+						rotate_from_v2v(dir, plus_z);
+						rotate_to_dir(dir, 90.0);
+						draw_subdiv_sphere(all_zeros, r[d], ndiv, use_tcs, 1);
+						fgPopMatrix();
+					}
+					else {draw_subdiv_sphere(points[d], r[d], ndiv, use_tcs, 1);}
+				}
+			}
+		}
+		else { // cylinder
+			bool const draw_ends(!(cp.surfs & 1));
+			draw_fast_cylinder(points[0], points[1], radius, radius2, ndiv, use_tcs, (draw_ends && use_tcs), !draw_ends); // Note: using texgen, not textured
+			if (draw_ends && !use_tcs) {draw_cylin_ends(tid, ndiv, cdb);}
 		}
 		break;
 	}
