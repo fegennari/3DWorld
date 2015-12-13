@@ -863,7 +863,7 @@ void apply_red_sky(colorRGBA &color) {
 
 colorRGBA get_cloud_color() {
 
-	colorRGBA color(brightness, brightness, brightness, atmosphere);
+	colorRGBA color(brightness, brightness, min(1.0, 1.2*brightness), atmosphere); // more blue when cloudy/rainy
 	apply_red_sky(color);
 	return color.modulate_with(base_cloud_color);
 }
