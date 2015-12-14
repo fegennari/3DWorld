@@ -247,6 +247,7 @@ public:
 	bind_point_t(point const &pos) : bound(1), valid(1), bind_cobj(-1), bind_pos(pos) {}
 	void bind_to_pos(point const &pos) {bind_pos = pos; bound = 1;}
 	bool is_valid();
+	point get_updated_bind_pos() const;
 	void shift_by(vector3d const &vd) {bind_pos += vd;} // invalidate bind_cobj?
 };
 

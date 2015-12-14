@@ -24,11 +24,20 @@ bool bind_point_t::is_valid() { // used with placed dlights
 
 	if (bind_cobj < 0) { // cobj not yet found
 		if (!check_point_contained_tree(bind_pos, bind_cobj, 0)) {valid = 0; return 0;}
+		bind_pos = get_updated_bind_pos(); // update bind_pos to point to center of cobj, if movable
 		return 1;
 	}
 	coll_obj const &cobj(coll_objects.get_cobj(bind_cobj));
 	if (cobj.status != COLL_STATIC || !cobj.contains_point(bind_pos)) {valid = 0; return 0;} // check status and also containment, in case coll id was reused
 	return 1;
+}
+
+point bind_point_t::get_updated_bind_pos() const {
+	// if bound to a movable cobj, return the cobj center so that this object moves with the cobj
+	// Note: movable cobjs can only be created during scene loading, so we don't need to worry about the cobj slot being reused after the original cobj is destroyed
+	if (!bound || !valid || bind_cobj < 0) return bind_pos; // no change
+	coll_obj const &cobj(coll_objects.get_cobj(bind_cobj));
+	return (cobj.is_movable() ? cobj.get_center_pt() : bind_pos);
 }
 
 
@@ -269,6 +278,10 @@ void light_source::pack_to_floatv(float *data) const {
 
 void light_source_trig::advance_timestep() {
 
+	if (bind_point_t::valid && bound) {
+		point const new_bind_pos(get_updated_bind_pos());
+		if (new_bind_pos != bind_pos) {shift_by(new_bind_pos - bind_pos);} // shift light if bound to a movable cobj
+	}
 	if (!bind_point_t::valid) {release_smap();} // free shadow map if invalid as an optimization
 	if (!triggers.is_active()) return; // trigger not active
 	enabled = (active_time > 0.0); // light on by default
