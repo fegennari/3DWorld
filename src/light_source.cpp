@@ -344,7 +344,7 @@ public:
 			if (!use_tex_array) {tu_id += index;} // if not using texture arrays, we need to allocate a unique tu_id for each shadow map
 			if ((int)tu_id >= max_tius) return 0; // not enough TIU's (none for texture array) - fail
 			local_smap_data_t smd(tu_id);
-			if (use_tex_array) {smd.bind_tex_array(&local_smap_tex_arr); assert(*smd.get_layer() == index);}
+			if (use_tex_array) {smd.bind_tex_array(&local_smap_tex_arr); assert(*smd.get_layer() == index);} // Note: must be <= GL_MAX_ARRAY_TEXTURE_LAYERS (which is 2048)
 			smap_data.push_back(smd);
 		}
 		else { // use free list element
