@@ -28,7 +28,7 @@ bool bind_point_t::is_valid() { // used with placed dlights
 		return 1;
 	}
 	coll_obj const &cobj(coll_objects.get_cobj(bind_cobj));
-	if (cobj.status != COLL_STATIC || !cobj.contains_point(bind_pos)) {valid = 0; return 0;} // check status and also containment, in case coll id was reused
+	if (cobj.status != COLL_STATIC || !cobj.contains_point(get_updated_bind_pos())) {valid = 0; return 0;} // check status and also containment, in case coll id was reused
 	return 1;
 }
 
