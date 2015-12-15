@@ -189,7 +189,7 @@ struct local_smap_data_t;
 class light_source { // size = 68
 
 protected:
-	bool dynamic, enabled, user_placed;
+	bool dynamic, enabled, user_placed, is_cube_face;
 	unsigned smap_index; // index of shadow map texture/data
 	float radius, radius_inv, r_inner, bwidth;
 	point pos, pos2; // point/sphere light: use pos; line/cylinder light: use pos and pos2
@@ -199,8 +199,8 @@ protected:
 	float calc_cylin_end_radius() const;
 
 public:
-	light_source() : enabled(0), user_placed(0), smap_index(0) {}
-	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0);
+	light_source() : enabled(0), user_placed(0), is_cube_face(0), smap_index(0) {}
+	light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d=zero_vector, float bw=1.0, float ri=0.0, bool icf=0);
 	void set_dynamic_state(point const &pos_, vector3d const &dir_, bool enabled_) {pos = pos2 = pos_; dir = dir_; enabled = enabled_;}
 	void add_color(colorRGBA const &c);
 	colorRGBA const &get_color() const {return color;}

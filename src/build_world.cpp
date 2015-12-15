@@ -1062,7 +1062,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	FILE *fp;
 	if (!open_file(fp, coll_obj_file, "collision object")) return 0;
 	char str[MAX_CHARS];
-	unsigned line_num(1), npoints(0), indir_dlight_ix(0);
+	unsigned line_num(1), npoints(0), indir_dlight_ix(0), prev_light_ix_start(0);
 	int end(0), use_z(0), use_vel(0), ivals[3];
 	float fvals[3];
 	point pos(all_zeros);
@@ -1282,28 +1282,48 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				return read_error(fp, "light source", coll_obj_file);
 			}
 			{
+				prev_light_ix_start = light_sources_d.size(); // capture start of range so that we can allow binding of grouped lights (from cube map)
 				xf.xform_pos(pos);
 				float beamwidth(1.0), r_inner(0.0);
 				vector3d dir(zero_vector); // defaults to (0,0,0)
 				ivals[0] = 0; // default is point/spotlight
 				point pos2(pos);
-				int use_smap(0);
+				int use_smap(0); // 0=none, 1=spotlight, 2=point light/cube map
 
-				if (fscanf(fp, "%f%f%f%f%f%i%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0], &use_smap) >= 3) { // direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]
+				// direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]
+				if (fscanf(fp, "%f%f%f%f%f%i%i", &dir.x, &dir.y, &dir.z, &beamwidth, &r_inner, &ivals[0], &use_smap) >= 3) {
+					if (use_smap < 0 || use_smap > 2) {return read_error(fp, "light source use_smap (must be 0, 1, or 2)", coll_obj_file);}
 					if (ivals[0] != 0) {pos2 = dir; dir = zero_vector; beamwidth = 1.0; xf.xform_pos(pos2);} // line light
 					else {xf.xform_pos_rm(dir);} // spotlight (or hemispherical light ray culling if beamwidth == 1.0)
 				}
 				for (unsigned d = 0; d < 2; ++d) { // {ambient, diffuse}
 					if (fvals[d] == 0.0) continue;
-					light_source ls(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner);
-					
-					if (d) { // diffuse
-						if (cobj.platform_id >= 0) {platforms.get_cobj_platform(cobj).add_light(light_sources_d.size());}
-						indir_dlight_group_manager.add_dlight_ix_for_tag_ix(indir_dlight_ix, light_sources_d.size());
-						light_sources_d.push_back(light_source_trig(ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix));
-						light_sources_d.back().add_triggers(triggers);
+					vector<light_source> lss;
+
+					if (use_smap == 2 && ivals[0] == 0 && beamwidth == 1.0) { // special case for shadowed point light with cube map
+						if (dir != zero_vector) {return read_error(fp, "light source point light smap (dir must be all zeros)", coll_obj_file);}
+						beamwidth = 0.4; // 0.3 to 0.5 are okay
+
+						for (unsigned ldim = 0; ldim < 3; ++ldim) {
+							dir = zero_vector;
+							for (unsigned ldir = 0; ldir < 2; ++ldir) {
+								dir[ldim] = (ldir ? 1.0 : -1.0);
+								lss.push_back(light_source(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner, (use_smap == 2))); // add lights for each cube face
+							}
+						}
 					}
-					else {light_sources_a.push_back(ls);} // ambient
+					else {
+						lss.push_back(light_source(fvals[d], pos, pos2, lcolor, 0, dir, beamwidth, r_inner, (use_smap == 2)));
+					}
+					for (auto ls = lss.begin(); ls != lss.end(); ++ls) {
+						if (d) { // diffuse
+							if (cobj.platform_id >= 0) {platforms.get_cobj_platform(cobj).add_light(light_sources_d.size());}
+							indir_dlight_group_manager.add_dlight_ix_for_tag_ix(indir_dlight_ix, light_sources_d.size());
+							light_sources_d.push_back(light_source_trig(*ls, (use_smap != 0), cobj.platform_id, indir_dlight_ix));
+							light_sources_d.back().add_triggers(triggers);
+						}
+						else {light_sources_a.push_back(*ls);} // ambient
+					}
 				}
 			}
 			break;
@@ -1330,9 +1350,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 
 		case 'V': // bind prev light source to cobj at location <x y z>
 			if (fscanf(fp, "%f%f%f", &pos.x, &pos.y, &pos.z) != 3) {return read_error(fp, "light source", coll_obj_file);}
-			if (light_sources_d.size() <= FLASHLIGHT_LIGHT_ID+1) {return read_error(fp, "light source <no previous light source to bind to>", coll_obj_file);}
+			if (prev_light_ix_start == 0 || prev_light_ix_start == light_sources_d.size()) {return read_error(fp, "light source <no previous dynamic light source to bind to>", coll_obj_file);}
+			assert(prev_light_ix_start > FLASHLIGHT_LIGHT_ID);
 			xf.xform_pos(pos);
-			light_sources_d.back().bind_to_pos(pos);
+			for (unsigned i = prev_light_ix_start; i < light_sources_d.size(); ++i) {light_sources_d[i].bind_to_pos(pos);} // bind the group of light sources
 			break;
 
 		case 'b': // cube volume light (for sky/global indirect): x1 x2 y1 y2 z1 z2  color.R color.G color.B  intensity num_rays ltype [disabled_edges_bits]

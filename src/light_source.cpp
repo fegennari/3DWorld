@@ -45,8 +45,8 @@ point bind_point_t::get_updated_bind_pos() const {
 
 
 // radius == 0.0 is really radius == infinity (no attenuation)
-light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri) :
-	dynamic(id), enabled(1), user_placed(0), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
+light_source::light_source(float sz, point const &p, point const &p2, colorRGBA const &c, bool id, vector3d const &d, float bw, float ri, bool icf) :
+	dynamic(id), enabled(1), user_placed(0), is_cube_face(icf), radius(sz), radius_inv((radius == 0.0) ? 0.0 : 1.0/radius),
 	r_inner(ri), bwidth(bw), pos(p), pos2(p2), dir(d.get_norm()), color(c), smap_index(0)
 {
 	assert(bw > 0.0 && bw <= 1.0);
@@ -273,7 +273,12 @@ void light_source::pack_to_floatv(float *data) const {
 		UNROLL_3X(*(data++) = 0.5*(1.0 + dir[i_]);) // map [-1,1] to [0,1]
 		*(data++) = bwidth; // [0,1]
 	}
-	if (smap_enabled()) {assert(dl_smap_enabled); *(data++) = float(smap_index)/float(MAX_DLIGHT_SMAPS);}
+	if (smap_enabled()) {
+		assert(dl_smap_enabled);
+		// the smap index is stored as a float in [0,1] and converted to an 8-bit int by multiplying by 255;
+		// the int contains 7 index bits for up to 127 shadow maps + the 8th bit stores is_cube_face
+		*(data++) = float(smap_index + (is_cube_face ? 128 : 0))/255.0;
+	}
 }
 
 void light_source_trig::advance_timestep() {

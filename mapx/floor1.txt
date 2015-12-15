@@ -102,19 +102,12 @@ l 0.75 1.0 0.7 0.3 1.0 -1 1 1.0 0.0 1 # emissive orange
 movable 1
 B -3.1 -3.0  -1.1 -1.0  0.014 0.114
 movable 0
+
 # x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 K -3.05 -1.05 0.064  1.0  0.0  5.0  0 0 # 5s trigger
-L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0 # point light
+# point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
+#L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0 # point light
+L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0  0 0 0 1.0  0.0 0 2 # point light with shadows
 bind_light -3.05 -1.05 0.064 # bind light to cube position
-#L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0   1  0 0 0.3  0.0 0 1 # spotlight in +x with shadows
-#bind_light -3.05 -1.05 0.064 # bind light to cube position
-#L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0  -1  0 0 0.3  0.0 0 1 # spotlight in -x with shadows
-#bind_light -3.05 -1.05 0.064 # bind light to cube position
-#L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0   0  1 0 0.3  0.0 0 1 # spotlight in +y with shadows
-#bind_light -3.05 -1.05 0.064 # bind light to cube position
-#L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0   0 -1 0 0.3  0.0 0 1 # spotlight in -y with shadows
-#bind_light -3.05 -1.05 0.064 # bind light to cube position
-#L 0.0 1.2  -3.05 -1.05 0.064  1.0 0.7 0.3 1.0   0  0 1 0.3  0.0 0 1 # spotlight in +z with shadows
-#bind_light -3.05 -1.05 0.064 # bind light to cube position
 K # disable trigger
 

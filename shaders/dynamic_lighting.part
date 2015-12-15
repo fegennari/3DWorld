@@ -27,9 +27,8 @@ float get_shadow_map_weight_dl(in vec4 pos, in vec3 normal, in mat4 matrix, in s
 
 const float LT_DIR_FALLOFF = 0.005;
 
-float get_dir_light_scale(in vec3 pos, in vec3 lpos, in vec3 dir, in float bwidth) {
-	vec3 obj_dir  = normalize(lpos - pos);
-	float dp      = dot(obj_dir, (2.0*dir - 1.0)); // map dir [0,1] to [-1,1]
+float get_dir_light_scale(in vec3 light_dir, in vec3 dir, in float bwidth) {
+	float dp      = dot(light_dir, dir); // map dir [0,1] to [-1,1]
 	float dp_norm = 0.5*(1.0 - dp); // dp = -1.0 to 1.0, bw = 0.0 to 1.0
 	float v       = clamp(2.0*(dp_norm + bwidth + LT_DIR_FALLOFF - 1.0)/LT_DIR_FALLOFF, 0.0, 1.0);
 	return mix(smoothstep(0.0, 1.0, v), 1.0, SPOTLIGHT_LEAKAGE);
@@ -56,6 +55,15 @@ float get_line_intensity_at(in vec3 pos, in vec3 lpos1, in vec3 lpos2, in float 
 
 vec3 apply_power_signed(in vec3 val, in float n) {
 	return sign(val)*pow(abs(val), vec3(n)); // preserve the sign
+}
+
+vec3 get_dominant_dir(in vec3 v) {
+	if (abs(v.x) > abs(v.y)) {
+		if (abs(v.x) > abs(v.z)) {return vec3(sign(v.x),0,0);} else {return vec3(0,0,sign(v.z));}
+	}
+	else {
+		if (abs(v.y) > abs(v.z)) {return vec3(0,sign(v.y),0);} else {return vec3(0,0,sign(v.z));}
+	}
 }
 
 
@@ -87,9 +95,10 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		// causes problems with bump mapping TBN for some reason?
 		if (abs(dlpos.z - lpos_r.z) > lpos_r.w) continue; // hurts in the close-up case but helps in the distant case
 #endif
-		vec4 lcolor     = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
-		lcolor.rgb     *= 10.0; // unscale color
-		lcolor.rgb      = 2.0*lcolor.rgb - 1.0; // map [0,1] to [-1,1] for negative light support
+		vec4 lcolor    = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
+		lcolor.rgb    *= 10.0; // unscale color
+		lcolor.rgb     = 2.0*lcolor.rgb - 1.0; // map [0,1] to [-1,1] for negative light support
+		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
 
 #if defined(HAS_LINE_LIGHTS) || defined(HAS_SPOTLIGHTS)
 		// fetch another texture block which contains some combination of dir, bw, and lpos2
@@ -109,11 +118,27 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 			intensity = get_point_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
 			//intensity = get_sphere_intensity_at(dlpos, lpos_r.xyz, lpos_r.w, 0.1*lpos_r.w);
 #ifdef HAS_SPOTLIGHTS
-			intensity *= get_dir_light_scale(dlpos, lpos_r.xyz, dir_w.xyz, dir_w.w);
+			dir_w.xyz  = (2.0*dir_w.xyz - 1.0); // expand from [0,1] to [-1,1] range
+			intensity *= get_dir_light_scale(light_dir, dir_w.xyz, dir_w.w);
 #endif
 		}
+
+#ifdef HAS_DLIGHT_SMAP
+		// Note: all math is in world space
+		// the smap index is stored as a float in [0,1] and converted to an 8-bit int by multiplying by 255;
+		// the int contains 7 index bits for up to 127 shadow maps + the 8th bit stores is_cube_face
+		int smap_index = int(round(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r*255.0)); // make sure to round to nearest int
+		if (smap_index > 0) { // has a shadow map
+#ifdef HAS_SPOTLIGHTS
+			if ((smap_index >= 128) && dot(get_dominant_dir(-light_dir), dir_w.xyz) < 0.9) continue; // skip lights not facing the splotlight dir (for cube maps)
+#endif
+			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
+			smap_index = smap_index & 127; // mask off 7 LSB bits / strip off is_cube_face flag bit
+			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);
+		}
+#endif // HAS_DLIGHT_SMAP
+
 		vec3 eye_dir   = normalize(camera_pos - dlpos);
-		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
 #ifdef USE_BUMP_MAP_DL
 		vec3 orig_ldir = light_dir;
 		vec3 lpos_eye  = (fg_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // convert from world to eye to tangent space
@@ -141,13 +166,6 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		spec_color    *= get_spec_color();
 #endif
 
-#ifdef HAS_DLIGHT_SMAP // Note: all math is in world space
-		int smap_index = int(round(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r*MAX_DLIGHT_SMAPS)); // make sure to round to nearest int
-		if (smap_index > 0) { // has a shadow map
-			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
-			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);
-		}
-#endif // HAS_DLIGHT_SMAP
 		// FIXME: specular should have a lower falloff and its own intensity - however, this will require a larger radius and impact performance
 		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag*mix(1.0, 0.3, wet_scale*wet_effect)) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space

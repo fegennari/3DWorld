@@ -71,7 +71,7 @@ V -4.2 2.59 -0.16
 
 indir_dlight_group mapx/basement_line_light.data 0.05
 
-# point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 beamwidth=1.0 [inner_radius=0.0 [is_line_light=0]]]
+# point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
 C -4.0 -0.85 -0.2  -2.0 -0.85 -0.2  0.01 0.01
 a 0 # non-destroyable
 L 0.0 1.2  -4.0 -0.83 -0.2  0.6 0.6 1.0 1.0  -2.0 -0.83 -0.2  1.0 0.0 1 # line light
