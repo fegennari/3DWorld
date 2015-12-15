@@ -142,7 +142,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #endif
 
 #ifdef HAS_DLIGHT_SMAP // Note: all math is in world space
-		int smap_index = int(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r*MAX_DLIGHT_SMAPS + 0.5); // make sure to round to nearest int
+		int smap_index = int(round(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r*MAX_DLIGHT_SMAPS)); // make sure to round to nearest int
 		if (smap_index > 0) { // has a shadow map
 			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
 			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);
