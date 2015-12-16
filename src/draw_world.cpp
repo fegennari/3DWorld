@@ -41,11 +41,11 @@ vector3d up_norm(plus_z);
 vector<camera_filter> cfilters;
 pt_line_drawer bubble_pld;
 
-extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, scene_smap_vbo_invalid, tree_indir_lighting;
+extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
-extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid;
+extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;

@@ -11,7 +11,7 @@
 
 set<unsigned> moving_cobjs;
 
-extern bool scene_smap_vbo_invalid;
+extern unsigned scene_smap_vbo_invalid;
 extern int num_groups;
 extern float base_gravity, tstep, temperature;
 extern coll_obj_group coll_objects;
@@ -22,6 +22,10 @@ extern obj_group obj_groups[NUM_TOT_OBJS];
 
 
 bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from);
+
+void mark_movable_cobj_smap_update() {
+	scene_smap_vbo_invalid |= 1; // mark for rebuild, but don't force full update
+}
 
 
 int cube_polygon_intersect(coll_obj const &c, coll_obj const &p) {
@@ -413,7 +417,7 @@ void adjust_cobj_resting_normal(coll_obj &c, vector3d const &supp_norm) {
 	if (rest_norm == zero_vector) return; // invalid (can this happen?)
 	if (dot_product(supp_norm, rest_norm) > 0.999) return; // normals already align, no rotation needed
 	c.rotate_about(c.get_center_of_mass(), cross_product(supp_norm, rest_norm).get_norm(), get_norm_angle(rest_norm, supp_norm));
-	scene_smap_vbo_invalid = 1;
+	mark_movable_cobj_smap_update();
 }
 void rotate_to_align_with_supporting_cobj(coll_obj &rc, coll_obj const &sc) {
 	//if (sc.is_movable()) return;
@@ -804,7 +808,7 @@ void try_drop_movable_cobj(unsigned index) {
 		}
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
 		cobj.shift_by(vector3d(0.0, 0.0, dz)); // move cobj up
-		scene_smap_vbo_invalid = 1;
+		mark_movable_cobj_smap_update();
 		return; // or test other cobjs?
 	} // for i
 	
@@ -913,7 +917,7 @@ void try_drop_movable_cobj(unsigned index) {
 	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
 	cobj.shift_by(delta); // move cobj down
 	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
-	scene_smap_vbo_invalid = 1;
+	mark_movable_cobj_smap_update();
 	check_moving_cobj_int_with_dynamic_objs(index);
 }
 
@@ -1036,7 +1040,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 	cobj.move_cobj(cobj_delta, 1); // move the cobj instead of the player and re-add to coll structure
 	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
 	moving_cobjs.insert(index); // may already be there
-	scene_smap_vbo_invalid = 1;
+	mark_movable_cobj_smap_update();
 	check_moving_cobj_int_with_dynamic_objs(index);
 	if ((rand2()%1000) == 0) {gen_sound(SOUND_SLIDING, center, 0.1, 1.0);}
 	return 1; // moved

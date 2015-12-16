@@ -45,13 +45,13 @@ vector<teleporter> teleporters;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, scene_smap_vbo_invalid, use_voxel_cobjs, tree_4th_branches, lm_alloc;
+extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs, precip_mode;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
 extern point cpos2, orig_camera, orig_cdir;
-extern unsigned create_voxel_landscape, init_item_counts[];
+extern unsigned create_voxel_landscape, scene_smap_vbo_invalid, init_item_counts[];
 extern obj_type object_types[];
 extern string cobjs_out_fn;
 extern coll_obj_group coll_objects;
@@ -542,7 +542,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	RESET_TIME;
 	static int st_valid(0);
 	bool const inf_terrain(world_mode == WMODE_INF_TERRAIN);
-	scene_smap_vbo_invalid = 1; // needed to force smap update
+	scene_smap_vbo_invalid = 2; // needed to force smap update - full rebuild of shadowers
 
 	if (!st_valid) {
 		keep_sin_table = 0;

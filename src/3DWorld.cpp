@@ -112,10 +112,10 @@ char player_name[MAX_CHARS] = "Player";
 bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 
-extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, scene_smap_vbo_invalid, tree_4th_branches, model_calc_tan_vect;
+extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, tree_4th_branches, model_calc_tan_vect;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter;
 extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape;
-extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters;
+extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters, scene_smap_vbo_invalid;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale, flower_density;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
@@ -474,7 +474,7 @@ void change_terrain_zoom(float val) {
 		calc_watershed();
 	}
 	compute_volume_matrix(); // make lightning strike the new tree(s)
-	scene_smap_vbo_invalid = 1;
+	scene_smap_vbo_invalid = 2; // full rebuild of shadowers
 }
 
 

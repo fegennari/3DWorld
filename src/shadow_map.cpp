@@ -13,8 +13,8 @@
 #include <glm/gtc/matrix_inverse.hpp>
 
 
-bool scene_smap_vbo_invalid(0), voxel_shadows_updated(0);
-unsigned shadow_map_sz(0);
+bool voxel_shadows_updated(0);
+unsigned shadow_map_sz(0), scene_smap_vbo_invalid(0);
 pos_dir_up orig_camera_pdu;
 
 extern bool snow_shadows, enable_depth_clamp;
@@ -66,6 +66,7 @@ class smap_vertex_cache_t : public vbo_wrap_t {
 
 	unsigned num_verts1, num_verts2;
 	vector<vert_wrap_t> dverts;
+	vector<unsigned> movable_cids;
 
 	void end_block1(unsigned size) {num_verts1 = size;}
 
@@ -73,6 +74,12 @@ class smap_vertex_cache_t : public vbo_wrap_t {
 		if (!verts.empty()) {create_and_upload(verts);}
 		assert(vbo_valid());
 		num_verts2 = verts.size();
+	}
+	int get_ndiv(coll_obj const &c, unsigned smap_sz, unsigned fixed_ndiv) {
+		if (fixed_ndiv) return fixed_ndiv;
+		if (c.type == COLL_SPHERE) {return get_smap_ndiv(c.radius, smap_sz);}
+		if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT || c.type == COLL_CAPSULE) {return get_smap_ndiv(max(c.radius, c.radius2), smap_sz);}
+		return 0; // ndiv is unused
 	}
 public:
 	void render() const {
@@ -102,6 +109,7 @@ public:
 		clear_vbo();
 		num_verts1 = num_verts2 = 0;
 		dverts.clear();
+		movable_cids.clear();
 	}
 
 	void add_cobjs(unsigned smap_sz, unsigned fixed_ndiv, bool enable_vfc) {
@@ -110,24 +118,21 @@ public:
 		// only valid if drawing trees, small trees, and scenery separately
 		vector<vert_wrap_t> verts;
 		vector<pair<float, unsigned> > z_sorted;
+		movable_cids.clear();
 
 		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
-			coll_obj const &c(coll_objects[*i]);
+			coll_obj const &c(coll_objects.get_cobj(*i));
 			assert(c.cp.draw);
 			if (c.no_shadow_map()) continue;
 			// Note: since these are static/drawn once, we can't do any VFC for the camera, but we can do VFC for the light frustum of local light sources 
 			if (enable_vfc && !c.is_cobj_visible()) continue; // Note: assumes camera_du == light_pdu
-			int ndiv(fixed_ndiv);
+			if (!enable_vfc && c.is_movable()) {movable_cids.push_back(*i); continue;}
 
 			if (c.type == COLL_CUBE) {
 				z_sorted.push_back(make_pair(-c.d[2][1], *i));
 				continue;
 			}
-			if (ndiv == 0) {
-				if (c.type == COLL_SPHERE) {ndiv = get_smap_ndiv(c.radius, smap_sz);}
-				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT || c.type == COLL_CAPSULE) {ndiv = get_smap_ndiv(max(c.radius, c.radius2), smap_sz);}
-			}
-			c.get_shadow_triangle_verts(verts, ndiv);
+			c.get_shadow_triangle_verts(verts, get_ndiv(c, smap_sz, fixed_ndiv));
 		}
 		end_block1(verts.size());
 		sort(z_sorted.begin(), z_sorted.end());
@@ -149,7 +154,12 @@ public:
 		bind_draw_sphere_vbo(0, 0); // no tex coords or normals
 		bool const is_camera(pdu.pos == camera_pos);
 
-		for (vector<shadow_sphere>::const_iterator i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
+		for (auto i = movable_cids.begin(); i != movable_cids.end(); ++i) {
+			coll_obj const &c(coll_objects.get_cobj(*i));
+			if (c.no_shadow_map() || !c.is_movable()) continue; // should we remove it from the list in this case?
+			c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv));
+		}
+		for (auto i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
 			if (is_camera && i->is_player) continue; // skip the camera shadow for flashlight
 			if (i->pos == pdu.pos) continue; // this sphere must be casting the light
@@ -537,7 +547,7 @@ void create_shadow_map() {
 	display_mode &= ~0x08; // disable occlusion culling
 
 	// check VBO
-	if (scene_smap_vbo_invalid) {free_smap_vbo();}
+	if (scene_smap_vbo_invalid == 2) {free_smap_vbo();} // force rebuild of VBO
 
 	// render shadow maps to textures
 	add_coll_shadow_objs();
