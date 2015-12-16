@@ -60,6 +60,7 @@ struct smap_data_t : public smap_data_state_t {
 	void create_shadow_map_for_light(point const &lpos, cube_t const *const bounds=nullptr, bool use_world_space=0);
 	virtual void render_scene_shadow_pass(point const &lpos) = 0;
 	virtual bool needs_update(point const &lpos);
+	virtual bool is_local() const {return 0;} // for debugging only
 };
 
 struct cached_dynamic_smap_data_t : public smap_data_t {
@@ -76,6 +77,7 @@ struct local_smap_data_t : public cached_dynamic_smap_data_t {
 	bool set_smap_shader_for_light(shader_t &s, bool &arr_tex_set) const;
 	virtual void render_scene_shadow_pass(point const &lpos);
 	virtual bool needs_update(point const &lpos);
+	virtual bool is_local() const {return 1;} // for debugging only
 };
 
 struct local_cube_map_smap_data_t : public local_smap_data_t { // to be implemented/used later

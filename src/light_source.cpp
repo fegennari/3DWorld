@@ -283,9 +283,9 @@ void light_source::pack_to_floatv(float *data) const {
 
 void light_source_trig::advance_timestep() {
 
-	if (bind_point_t::valid && bound) {
+	if (bind_point_t::valid && bound) { // shift light if bound to a movable cobj
 		point const new_bind_pos(get_updated_bind_pos());
-		if (new_bind_pos != bind_pos) {shift_by(new_bind_pos - bind_pos);} // shift light if bound to a movable cobj
+		if (new_bind_pos != bind_pos) {shift_by(new_bind_pos - bind_pos); dynamic = 1;} // if the light moves, flag it as dynamic
 	}
 	if (!bind_point_t::valid) {release_smap();} // free shadow map if invalid as an optimization
 	if (!triggers.is_active()) return; // trigger not active
