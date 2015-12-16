@@ -256,8 +256,8 @@ void draw_frame_rate(float framerate) {
 	}
 	if (display_framerate) {
 		static int fr_counter(0);
-		static float fr2(0.0);
-		if (fr_counter%5 == 0) fr2 = framerate;
+		static float fr2(0.0), last_tfticks(0.0);
+		if (tfticks > last_tfticks + 0.1*TICKS_PER_SECOND) {fr2 = framerate; last_tfticks = tfticks;} // update every 100ms
 		draw_framerate(fr2);
 		++fr_counter;
 	}
