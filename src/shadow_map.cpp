@@ -157,7 +157,7 @@ public:
 		for (auto i = movable_cids.begin(); i != movable_cids.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (c.no_shadow_map() || !c.is_movable()) continue; // should we remove it from the list in this case?
-			c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv));
+			if (c.check_pdu_visible(pdu)) {c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv));}
 		}
 		for (auto i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)

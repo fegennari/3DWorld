@@ -248,12 +248,15 @@ bool coll_obj::is_occluded_from_camera() const {
 }
 
 bool coll_obj::is_cobj_visible() const {
+	return (check_pdu_visible(camera_pdu) && !is_occluded_from_camera());
+}
+bool coll_obj::check_pdu_visible(pos_dir_up const &pdu) const {
 
+	if (!pdu.valid) return 1;
 	point center;
 	float brad;
 	bounding_sphere(center, brad);
-	if (!camera_pdu.sphere_and_cube_visible_test(center, brad, *this)) return 0;
-	return !is_occluded_from_camera();
+	return pdu.sphere_and_cube_visible_test(center, brad, *this);
 }
 
 void coll_obj::register_coll(unsigned char coll_time, unsigned char coll_type_) {
