@@ -98,7 +98,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		vec4 lcolor    = texelFetch(dlight_tex, ivec2(1, dl_ix), 0); // light color
 		lcolor.rgb    *= 10.0; // unscale color
 		lcolor.rgb     = 2.0*lcolor.rgb - 1.0; // map [0,1] to [-1,1] for negative light support
-		vec3 light_dir = normalize(lpos_r.xyz - dlpos);
+		vec3 light_dir;
 
 #if defined(HAS_LINE_LIGHTS) || defined(HAS_SPOTLIGHTS)
 		// fetch another texture block which contains some combination of dir, bw, and lpos2
@@ -110,11 +110,13 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		if (dir_w.w == 0.0) { // this is a line light
 			vec3 lpos2 = dir_w.xyz*scene_scale + scene_llc; // other end point of line
 			intensity  = get_line_intensity_at(dlpos, lpos_r.xyz, lpos2, lpos_r.w, lpos_r.xyz); // put the point used for lighting into lpos_r.xyz
+			light_dir  = normalize(lpos_r.xyz - dlpos); // since lpos_r is updated, we need to defer calculation of light_dir until here
 		}
 		else { // point light
 #else
 		if (true) { // always a point light
 #endif
+			light_dir = normalize(lpos_r.xyz - dlpos);
 			intensity = get_point_intensity_at(dlpos, lpos_r.xyz, lpos_r.w);
 			//intensity = get_sphere_intensity_at(dlpos, lpos_r.xyz, lpos_r.w, 0.1*lpos_r.w);
 #ifdef HAS_SPOTLIGHTS
@@ -122,25 +124,10 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 			intensity *= get_dir_light_scale(light_dir, dir_w.xyz, dir_w.w);
 #endif
 		}
-
-#ifdef HAS_DLIGHT_SMAP
-		// Note: all math is in world space
-		// the smap index is stored as a float in [0,1] and converted to an 8-bit int by multiplying by 255;
-		// the int contains 7 index bits for up to 127 shadow maps + the 8th bit stores is_cube_face
-		int smap_index = int(round(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r*255.0)); // make sure to round to nearest int
-		if (smap_index > 0) { // has a shadow map
-#ifdef HAS_SPOTLIGHTS
-			if ((smap_index >= 128) && dot(get_dominant_dir(-light_dir), dir_w.xyz) < 0.9) continue; // skip lights not facing the splotlight dir (for cube maps)
-#endif
-			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
-			smap_index = smap_index & 127; // mask off 7 LSB bits / strip off is_cube_face flag bit
-			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);
-		}
-#endif // HAS_DLIGHT_SMAP
-
-		vec3 eye_dir   = normalize(camera_pos - dlpos);
-#ifdef USE_BUMP_MAP_DL
 		vec3 orig_ldir = light_dir;
+		vec3 eye_dir   = normalize(camera_pos - dlpos);
+
+#ifdef USE_BUMP_MAP_DL
 		vec3 lpos_eye  = (fg_ModelViewMatrix * vec4(lpos_r.xyz, 1.0)).xyz; // convert from world to eye to tangent space
 		float nscale   = bump_map_normal_sign*clamp(10.0*dot(normal, light_dir), 0.0, 1.0); // fix self-shadowing
 		light_dir      = normalize(lpos_eye - epos.xyz);
@@ -155,6 +142,23 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		vec3 lnorm     = normal;
 		float n_dot_l  = dot(lnorm, light_dir);
 #endif // USE_BUMP_MAP_DL
+		if (intensity < 0.001) continue; // usually faster
+
+#ifdef HAS_DLIGHT_SMAP
+		// Note: all math is in world space
+		// the smap index is stored as a float in [0,1] and converted to an 8-bit int by multiplying by 255;
+		// the int contains 7 index bits for up to 127 shadow maps + the 8th bit stores is_cube_face
+		int smap_index = int(round(texelFetch(dlight_tex, ivec2(3, dl_ix), 0).r*255.0)); // make sure to round to nearest int
+		if (smap_index > 0) { // has a shadow map
+#ifdef HAS_SPOTLIGHTS
+			if ((smap_index >= 128) && dot(get_dominant_dir(-orig_ldir), dir_w.xyz) < 0.9) continue; // skip lights not facing the splotlight dir (for cube maps)
+#endif
+			// Note: we can use either lnorm or normal for the smap offset, but normal seems to have less artifacts
+			smap_index = smap_index & 127; // mask off 7 LSB bits / strip off is_cube_face flag bit
+			intensity *= get_shadow_map_weight_dl(vec4(dlpos, 1.0), normal, smap_matrix_dl[smap_index-1], smap_tex_arr_dl, smap_index-1);
+		}
+#endif // HAS_DLIGHT_SMAP
+
 		float diff_mag = max(0.0, n_dot_l); // diffuse
 #ifndef NO_DL_SPECULAR
 		float spec_mag = clamp(10.0*n_dot_l, 0.0, 1.0)*get_spec_intensity(lnorm, light_dir, eye_dir);
