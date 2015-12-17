@@ -1010,6 +1010,7 @@
     <None Include="shaders\water_plane.tese" />
     <None Include="shaders\water_plane.vert" />
     <None Include="shaders\water_plane_tess.vert" />
+    <None Include="shaders\water_ripples.part.frag" />
     <None Include="shaders\wind.part" />
     <None Include="shaders\write_depth.frag" />
     <None Include="shaders\write_normal.frag" />

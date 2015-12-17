@@ -1,5 +1,5 @@
 uniform float normal_z = 1.0;
-uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex, shadow_tex, ripple_tex;
+uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex, shadow_tex;
 uniform vec4 water_color, reflect_color;
 uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
 
@@ -33,38 +33,8 @@ vec4 get_deep_wave_normal(in vec2 wtc) {
 	return mix(get_norm_foam_val(n1), get_norm_foam_val(n2), ntime)*mag;
 }
 
-vec3 compute_ripple(in vec2 uv, in float time, in float weight) {
-	vec4 ripple        = texture(ripple_tex, uv);
-    ripple.yz          = ripple.yz * 2 - 1; // decompress perturbation
-    float drop_fract   = fract(ripple.w + time); // apply time shift
-    float time_fract   = drop_fract - 1.0 + ripple.x;
-    float drop_factor  = clamp((0.2 + weight * 0.8 - drop_fract), 0.0, 1.0);
-    float final_factor = drop_factor * ripple.x * sin(clamp(time_fract * 9.0, 0.0, 3.0) * 3.14159);
-    return vec3(ripple.yz * final_factor * 0.35, 1.0);
-}
-vec3 get_ripple_normal() {
-	//return compute_ripple(12.0*tc, 0.08*wave_time, 1.0);
-	vec2 uv = 12.0*tc;
-	vec4 time_mul = vec4(1.0, 0.85, 0.93, 1.13); 
-	vec4 time_add = vec4(0.0, 0.2,  0.45, 0.7 );
-	vec4 times = (0.05*wave_time * time_mul + time_add) * 1.6;
-	times = fract(times);
-	float rain_intensity = 1.0;
-	vec4 weights = rain_intensity - vec4(0, 0.25, 0.5, 0.75);
-	weights = clamp(4.0*weights, 0.0, 1.0);
-	// generate four shifted layer of animated circle
-	vec3 ripple1 = compute_ripple(uv + vec2( 0.25, 0.0), times.x, weights.x);
-	vec3 ripple2 = compute_ripple(uv + vec2(-0.55, 0.3), times.y, weights.y);
-	vec3 ripple3 = compute_ripple(uv + vec2(0.6,  0.85), times.z, weights.z);
-	vec3 ripple4 = compute_ripple(uv + vec2(0.5, -0.75), times.w, weights.w);
-	// enable one layer by quarter intensity and progressively blend in the current layer
-	// compose normal of the four layer based on weights
-	vec4 z = mix(vec4(1.0), vec4(ripple1.z, ripple2.z, ripple3.z, ripple4.z), weights);
-	return vec3(weights.x*ripple1.xy + weights.y*ripple2.xy + weights.z*ripple3.xy + weights.w*ripple4.xy, z.x*z.y*z.z*z.w);
-}
 
-void main()
-{
+void main() {
 #ifdef USE_WATER_DEPTH // else we assume water is neither too shallow nor too deep
 	float mesh_z = texture(height_tex, tc2).r;
 #ifdef TESS_MODE
@@ -115,9 +85,11 @@ void main()
 		ripple    += 0.05*wave_n.xy;
 	}
 	if (add_rain) {
-		vec3 ripple_norm = (fg_NormalMatrix * get_ripple_normal()); // in eye space
-		light_norm = normalize(ripple_norm + light_norm);
-		norm       = normalize(ripple_norm + norm);
+		vec3 ripple_norm = get_ripple_normal(12.0*tc, 0.2*wave_time, 1.0);
+		ripple_norm.z = 0.0; // clear z-component so that the non-rippled parts of the texture don't affect the wave normals
+		ripple_norm = (fg_NormalMatrix * ripple_norm); // in eye space
+		light_norm  = normalize(ripple_norm + light_norm);
+		norm        = normalize(ripple_norm + norm);
 	}
 
 	// calculate lighting
