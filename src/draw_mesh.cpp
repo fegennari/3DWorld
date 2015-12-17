@@ -733,6 +733,7 @@ void set_water_plane_uniforms(shader_t &s) {
 }
 
 
+// textures used: 0=reflection, 1=normal map, 2=mesh height map, 3=raindrops, 4=ocean normal map, 5=foam, 6=shadow map, 7=raindrops
 void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, bool add_waves, bool rain_mode, bool use_depth,
 	bool depth_only, colorRGBA const &color, colorRGBA const &rcolor, bool use_tess)
 {
@@ -745,7 +746,8 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.set_bool_prefix("use_foam",    use_foam,      1); // FS
 	s.set_bool_prefix("reflections", reflections,   1); // FS
 	s.set_bool_prefix("add_waves",   add_waves,     1); // FS
-	s.set_bool_prefix("add_noise",   rain_mode,     1); // FS
+	s.set_bool_prefix("add_rain",    (rain_mode && 1), 1); // FS
+	s.set_bool_prefix("add_noise",   (rain_mode && 0), 1); // FS
 	s.set_bool_prefix("is_lava",     water_is_lava, 1); // FS
 	s.set_bool_prefix("use_shadow_map", enable_shadow_maps, 1); // FS
 	
@@ -793,6 +795,8 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 		select_multitex(RAINDROP_TEX, 3);
 		s.add_uniform_int  ("noise_tex", 3);
 		s.add_uniform_float("noise_time", frame_counter); // rain ripples
+		select_multitex(RIPPLE_MAP_TEX, 7);
+		s.add_uniform_int("ripple_tex", 7);
 	}
 	select_multitex(FOAM_TEX, 5);
 	s.add_uniform_int("foam_tex", 5);
