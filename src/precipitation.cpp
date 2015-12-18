@@ -71,7 +71,8 @@ public:
 		else if (pos == all_zeros) {pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));} // initial location
 		else if (pos.z < cur_zmin) {pos = gen_pt(cur_zmax);} // start again near the top
 		else if (!in_range(pos)  ) {pos = gen_pt(pos.z);} // move inside the range
-		else if (world_mode == WMODE_GROUND) { // check bottom of raindrop below the mesh or top surface cobjs
+
+		if (world_mode == WMODE_GROUND) { // check bottom of raindrop below the mesh or top surface cobjs (even if just created)
 			int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
 			
 			if (!point_outside_mesh(x, y)) {
