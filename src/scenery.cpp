@@ -825,7 +825,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	bool const shadowed((shadow_only || (ENABLE_PLANT_SHADOWS && shadow_map_enabled())) ? 0 : is_shadowed());
 	float const wind_scale(berries.empty() ? 1.0 : 0.0); // no wind if this plant type has berries
 	
-	if (is_water_plant) {
+	if (is_water_plant && !shadow_only) {
 		s.ensure_uniform_loc(state.color_scale_loc, "color_scale");
 		s.set_uniform_color(state.color_scale_loc, get_atten_color(WHITE, xlate));
 	}
@@ -841,7 +841,7 @@ void s_plant::draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, boo
 	select_texture((draw_model == 0) ? pltype[type].tid : WHITE_TEX); // could pre-bind textures and select using shader int, but probably won't improve performance
 	assert(vbo_mgr_ix >= 0);
 	vbo_manager.render_range(vbo_mgr_ix, vbo_mgr_ix+1);
-	if (is_water_plant) {s.set_uniform_color(state.color_scale_loc, WHITE);}
+	if (is_water_plant && !shadow_only) {s.set_uniform_color(state.color_scale_loc, WHITE);}
 	if (shadowed) {s.set_uniform_float(state.normal_scale_loc, 1.0);}
 }
 
