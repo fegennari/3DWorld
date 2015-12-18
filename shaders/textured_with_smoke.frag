@@ -11,7 +11,7 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
-uniform float depth_trans_bias, clip_plane_z;
+uniform float depth_trans_bias, clip_plane_z, ripple_time;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -189,12 +189,15 @@ void main()
 
 #ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
 	if (normal.z > 0.5) { // top surface
-		vec3 ws_normal;
+		vec3 ws_normal = normalize(normal);
+		float ripple_mag = wet_effect * clamp(2.0*(1.0 - 0.5*length(epos.xyz)), 0.0, 1.0);
+
+		if (ripple_mag > 0.0) {
+			// Note: since reflections are only enabled on vertical surfaces with normals in +z (world space), and the ripple normal map defaults to +z, no transforms are necessary
+			ws_normal = normalize(mix(ws_normal, get_ripple_normal(1.0*tc, 0.2*ripple_time, wet_effect), ripple_mag));
+		}
 #ifdef USE_BUMP_MAP
-		ws_normal = get_bump_map_normal();
-		ws_normal = normalize(mix(ws_normal, normalize(normal), 0.25*wet_effect));
-#else
-		ws_normal = normalize(normal);
+		ws_normal = normalize(mix(get_bump_map_normal(), ws_normal, 0.5*wet_effect));
 #endif
 		// Note: this doesn't work for refact_ix == 1, so we choose an arbitrary value of 1.3 (metals are lower, dielectrics are higher)
 		float reflect_w = get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.3 : refract_ix));

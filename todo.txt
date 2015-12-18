@@ -23,4 +23,3 @@ Better Palm Trees
 Plants with low large leaves
 Precomputed cube map reflections on specular surfaces (such as the gold dragon)
 Render particles/smoke at half resolution?
-Ripple normal map for wet surfaces

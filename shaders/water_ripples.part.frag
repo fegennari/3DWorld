@@ -26,6 +26,6 @@ vec3 get_ripple_normal(in vec2 uv, in float time, in float rain_intensity) {
 	// enable one layer by quarter intensity and progressively blend in the current layer
 	// compose normal of the four layer based on weights
 	vec4 z = mix(vec4(1.0), vec4(ripple1.z, ripple2.z, ripple3.z, ripple4.z), weights);
-	return vec3(weights.x*ripple1.xy + weights.y*ripple2.xy + weights.z*ripple3.xy + weights.w*ripple4.xy, z.x*z.y*z.z*z.w);
+	return normalize(vec3(weights.x*ripple1.xy + weights.y*ripple2.xy + weights.z*ripple3.xy + weights.w*ripple4.xy, z.x*z.y*z.z*z.w));
 }
 

@@ -326,25 +326,28 @@ float setup_underwater_fog(shader_t &s, int shader_type) {
 }
 
 
-// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map,
-//                     8: specular map, 9: depth map, 10: burn mask, 11: noise, 12: ground texture, 13: depth texture, 14: reflection texture
+// texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7: shadow map,
+//                     8: specular map, 9: depth map, 10: burn mask, 11: noise, 12: ground texture, 13: depth, 14: reflection, 15: ripples, 16-31: dlight shadow maps
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 // use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
-	int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale, bool use_depth_trans)
+	int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
+	bool use_depth_trans, bool enable_reflections)
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
-	if (use_burn_mask  ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
-	if (triplanar_tex  ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
-	if (use_depth_trans) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
+	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
+	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
+	if (use_depth_trans   ) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
+	if (enable_reflections) {s.set_prefix("#define ENABLE_REFLECTIONS",     1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	string fstr("fresnel.part*+linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
 	if (smoke_en && use_smoke_noise()) {fstr += "perlin_clouds_3d.part*+";}
+	if (enable_reflections) {fstr += "water_ripples.part+";}
 	if (triplanar_tex) {fstr += "triplanar_texture.part+";}
 	if (use_depth_trans) {fstr += "depth_utils.part+";}
 	s.set_frag_shader(fstr + "textured_with_smoke");
@@ -379,7 +382,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 			s.add_uniform_float("smoke_noise_mag", SMOKE_NOISE_MAG);
 			s.add_uniform_float("noise_scale", 0.45);
 			static vector3d fog_time(zero_vector);
-			if (animate2) {fog_time += 0.0005*fticks*wind;} // fog moves with the wind
+			static int update_frame(0);
+			if (animate2 && frame_counter > update_frame) {fog_time += 0.001*fticks*wind; update_frame = frame_counter;} // fog moves with the wind (once per frame)
 			s.add_uniform_vector3d("fog_time", fog_time);
 		}
 	}
@@ -388,6 +392,15 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_float("burn_offset", -1.0); // starts disabled
 		s.add_uniform_int("burn_mask", 10);
 		select_multitex(DISINT_TEX, 10); // PLASMA_TEX?
+	}
+	if (enable_reflections) {
+		s.add_uniform_int("reflection_tex", 14);
+		select_multitex(RIPPLE_MAP_TEX, 15);
+		s.add_uniform_int("ripple_tex", 15);
+		static float ripple_time(0.0);
+		static int update_frame(0);
+		if (animate2 && frame_counter > update_frame) {ripple_time += fticks; update_frame = frame_counter;} // once per frame
+		s.add_uniform_float("ripple_time", ripple_time);
 	}
 	// FIXME: need to handle wet/outside vs. dry/inside surfaces differently
 	// but in practice, since this only applies to sun/moon lighting, indoor surfaces aren't affected much
@@ -513,22 +526,17 @@ void end_group(int &last_group_id) {
 	last_group_id = -1;
 }
 
-void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen) {
+void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, bool enable_reflections) {
 	// Note: pass in 3 when has_lt_atten to enable sphere atten
-	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting);
+	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
 void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
 
 	if (cobjs.empty()) return;
 	shader_t s;
-	if (use_reflect_tex) {s.set_prefix("#define ENABLE_REFLECTIONS", 1);} // FS
-	setup_cobj_shader(s, 0, use_normal_map, use_texgen); // no lt_atten
-	
-	if (use_reflect_tex) {
-		s.add_uniform_int("reflection_tex", 14);
-		bind_texture_tu(reflection_tid, 14);
-	}
+	setup_cobj_shader(s, 0, use_normal_map, use_texgen, use_reflect_tex); // no lt_atten
+	if (use_reflect_tex) {bind_texture_tu(reflection_tid, 14);}
 	cdb.is_wet = is_rain_enabled(); // initial value
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 	float bump_b_scale(0.0);
@@ -589,7 +597,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	bool const use_ref_plane(reflection_pass || (reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(get_reflection_plane());
 	shader_t s;
-	setup_cobj_shader(s, has_lt_atten, 0, 2);
+	setup_cobj_shader(s, has_lt_atten, 0, 2, 0);
 	int last_tid(-2), last_group_id(-1);
 	static cobj_draw_buffer cdb;
 	cdb.is_wet = is_rain_enabled(); // initial value

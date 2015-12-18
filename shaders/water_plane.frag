@@ -85,11 +85,15 @@ void main() {
 		ripple    += 0.05*wave_n.xy;
 	}
 	if (add_rain) {
-		vec3 ripple_norm = get_ripple_normal(12.0*tc, 0.2*wave_time, 1.0);
-		ripple_norm.z = 0.0; // clear z-component so that the non-rippled parts of the texture don't affect the wave normals
-		ripple_norm = (fg_NormalMatrix * ripple_norm); // in eye space
-		light_norm  = normalize(ripple_norm + light_norm);
-		norm        = normalize(ripple_norm + norm);
+		float ripple_mag = clamp(2.0*(1.0 - 0.25*length(epos.xyz)), 0.0, 1.0);
+
+		if (ripple_mag > 0.0) {
+			vec3 ripple_norm = get_ripple_normal(12.0*tc, 0.2*wave_time, 1.0);
+			ripple_norm.z = 0.0; // clear z-component so that the non-rippled parts of the texture don't affect the wave normals
+			ripple_norm = 2.0*ripple_mag * (fg_NormalMatrix * ripple_norm); // in eye space, not normalized
+			light_norm  = normalize(ripple_norm + light_norm);
+			norm        = normalize(ripple_norm + norm);
+		}
 	}
 
 	// calculate lighting
