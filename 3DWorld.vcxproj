@@ -122,7 +122,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/FIXED:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;libtiff.lib;freeglut.lib;Bullet3AppSupport_vs2010.lib;BulletDynamics_vs2010.lib;BulletCollision_vs2010.lib;LinearMath_vs2010.lib;Bullet3Common_vs2010.lib</AdditionalDependencies>
+      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Debug/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>jpeg-9a\Release;glew-1.10.0\lib\Release\Win32;pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;freealut-1.1.0-bin\lib;libpng-1.2.20\projects\visualc71\Win32_LIB_Release;zlib-1.2.1;tiff-4.0.3\libtiff;freeglut-2.8.1\lib\x86;D:\Frank\Desktop\Graphics\bullet3-master\bin</AdditionalLibraryDirectories>
@@ -222,7 +222,7 @@
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;libtiff.lib;freeglut.lib;Bullet3AppSupport_vs2010.lib;BulletDynamics_vs2010.lib;BulletCollision_vs2010.lib;LinearMath_vs2010.lib;Bullet3Common_vs2010.lib</AdditionalDependencies>
+      <AdditionalDependencies>odbc32.lib;odbccp32.lib;jpeg.lib;libpng.lib;zlib.lib;openal32.lib;alut.lib;pthreadVCE.lib;glew32.lib;libtiff.lib;freeglut.lib</AdditionalDependencies>
       <OutputFile>.\Release/3DWorld.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>jpeg-9a\Release;glew-1.10.0\lib\Release\Win32;pthreads-dll-2004-05-16\lib;C:\Program Files %28x86%29\OpenAL 1.1 SDK\libs\Win32;freealut-1.1.0-bin\lib;libpng-1.2.20\projects\visualc71\Win32_LIB_Release;zlib-1.2.1;tiff-4.0.3\libtiff;freeglut-2.8.1\lib\x86;D:\Frank\Desktop\Graphics\bullet3-master\bin</AdditionalLibraryDirectories>
