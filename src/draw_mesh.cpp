@@ -57,6 +57,7 @@ bool draw_distant_water();
 bool use_water_plane_tess();
 bool enable_ocean_waves();
 void setup_tile_shader_shadow_map(shader_t &s);
+void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type);
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -749,7 +750,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.set_bool_prefix("add_rain",    (rain_mode && 1), 1); // FS
 	s.set_bool_prefix("add_noise",   (rain_mode && 0), 1); // FS
 	s.set_bool_prefix("is_lava",     water_is_lava, 1); // FS
-	s.set_bool_prefix("use_shadow_map", enable_shadow_maps, 1); // FS
+	set_smap_enable_for_shader(s, enable_shadow_maps, 1); // FS
 	
 	if (use_tess) { // tessellation shaders
 		s.set_prefix("#define TESS_MODE", 1); // FS

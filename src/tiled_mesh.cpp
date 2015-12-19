@@ -1815,6 +1815,11 @@ void setup_tile_shader_shadow_map(shader_t &s) {
 	s.add_uniform_float("pcf_offset", 10.0*shadow_map_pcf_offset);
 }
 
+void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type) {
+	s.set_bool_prefix("use_shadow_map", enable_smap, shader_type);
+	if (enable_smap) {s.set_prefix("#define ENABLE_SHADOW_MAP", shader_type);} // need to set this as well
+}
+
 
 // uses texture units 0-11 and 15 (12 if using hmap texture, 13-14 if using shadow maps)
 // Note: could be static, except uses get_actual_zmin()
@@ -1832,7 +1837,7 @@ void tile_draw_t::setup_mesh_draw_shaders(shader_t &s, bool reflection_pass, boo
 	if (reflection_pass) {s.set_prefix("#define REFLECTION_MODE",      1);} // FS
 	if (triplanar_tex  ) {s.set_prefix("#define TRIPLANAR_TEXTURE",    1);} // FS
 	if (combined_gu)     {s.set_prefix("#define ADD_INDIR_REFL_LIGHT", 1);} // FS - add extra indir reflected light in combined_gu mode to offset the low ambient
-	s.set_bool_prefix("use_shadow_map", enable_shadow_map, 1); // FS
+	set_smap_enable_for_shader(s, enable_shadow_map, 1); // FS
 	s.set_vert_shader("tiled_mesh");
 	s.set_frag_shader("water_fog.part*+linear_fog.part+perlin_clouds.part*+ads_lighting.part*+shadow_map.part*+detail_normal_map.part+triplanar_texture.part+tiled_mesh");
 	s.begin_shader();
@@ -2261,7 +2266,7 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 
 	if (enable_leaf_smap) { // per-pixel lighting/shadows
 		shared_shader_lighting_setup(s, 1); // FS
-		s.set_bool_prefix("use_shadow_map", 1,   1); // FS
+		set_smap_enable_for_shader(s, 1, 1); // FS - smap always enabled
 		s.set_prefix("#define NO_SHADOW_PCF",    1); // FS
 		s.set_prefix("#define TEST_BACK_FACING", 1); // FS
 		s.set_vert_shader("texture_gen.part+leaf_wind.part+pine_tree_ppl");
@@ -2342,7 +2347,7 @@ void tile_draw_t::tree_branch_shader_setup(shader_t &s, bool enable_shadow_maps,
 	if (enable_opacity) {s.set_prefix("#define ENABLE_OPACITY", 1);} // FS
 	s.setup_enabled_lights(3, 2); // FS; sun, moon, and lightning
 	setup_tt_fog_pre(s);
-	s.set_bool_prefix("use_shadow_map", enable_shadow_maps, 1); // FS
+	set_smap_enable_for_shader(s, enable_shadow_maps, 1); // FS
 	s.set_vert_shader("per_pixel_lighting");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+shadow_map.part*+tiled_shadow_map.part*+tiled_tree_branches");
 	s.begin_shader();
@@ -2468,8 +2473,8 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			bool const enable_wind((display_mode & 0x0100) && wpass == 0);
 			lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
 			if (wpass == 1) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
+			set_smap_enable_for_shader(s, (spass == 0), 0); // VS
 			s.set_bool_prefix("enable_grass_wind", enable_wind, 0); // VS
-			s.set_bool_prefix("use_shadow_map", (spass == 0), 0); // VS
 			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
 			//s.set_geom_shader("grass_tiled"); // triangle => triangle - too slow
@@ -2500,7 +2505,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		if (spass == 0 && !shadow_map_enabled()) continue;
 		shader_t s;
 		lighting_with_cloud_shadows_setup(s, 1, use_cloud_shadows);
-		s.set_bool_prefix("use_shadow_map", (spass == 0), 1); // FS
+		set_smap_enable_for_shader(s, (spass == 0), 1); // FS
 		s.set_vert_shader("texture_gen.part+wind.part*+flowers_tiled");
 		//s.set_vert_shader("texture_gen.part+wind.part*+flowers_tiled_gs");
 		//s.set_geom_shader("flower_from_pt"); // point => 1 quad

@@ -12,8 +12,9 @@ vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm, in vec
 
 	vec3 color = vec3(0.0);
 	float smap_scale = 0.0;
-	if (use_shadow_map) {smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - length(epos.xyz)), 0.0, 1.0);}
-
+#ifdef ENABLE_SHADOW_MAP
+	smap_scale = clamp(smap_atten_slope*(smap_atten_cutoff - length(epos.xyz)), 0.0, 1.0);
+#endif
 	if (enable_light0) {
 		vec4 lpos    = fg_LightSource[0].position;
 		float dscale = diffuse_scale;
@@ -21,7 +22,9 @@ vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm, in vec
 		if (dot((lpos.xyz - epos.xyz), eye_norm) > 0.0)
 #endif
 		{
-			if (use_shadow_map && smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, eye_norm), smap_scale));}
+#ifdef ENABLE_SHADOW_MAP
+			if (smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light0(epos, eye_norm), smap_scale));}
+#endif
 #ifdef APPLY_CLOUD_SHADOWS
 			dscale *= calc_light_scale(vertex.xyz, lpos);
 #endif
@@ -35,7 +38,9 @@ vec3 do_shadowed_lighting(in vec4 vertex, in vec4 epos, in vec3 eye_norm, in vec
 		if (dot((lpos.xyz - epos.xyz), eye_norm) > 0.0)
 #endif
 		{
-			if (use_shadow_map && smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, eye_norm), smap_scale));}
+#ifdef ENABLE_SHADOW_MAP
+			if (smap_scale > 0.0) {dscale = min(dscale, mix(1.0, get_shadow_map_weight_light1(epos, eye_norm), smap_scale));}
+#endif
 #ifdef APPLY_CLOUD_SHADOWS
 			dscale *= calc_light_scale(vertex.xyz, lpos);
 #endif

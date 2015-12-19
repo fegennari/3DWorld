@@ -382,6 +382,7 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	s.set_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled), shader_type);
 	set_dlights_booleans(s, !no_dlights, shader_type, 1); // no_dl_smap=1
 	s.set_bool_prefix("use_shadow_map", use_smap, shader_type);
+	if (use_smap) {s.set_prefix("#define ENABLE_LEAF_SMAP", shader_type);} // need to set this as well to avoid even using the shadow texture in the shader on ATI cards
 	string const ls_str("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+leaf_lighting_comp.part*+tree_leaf_lighting.part*");
 
 	if (shader_type == 0) { // VS
