@@ -12,7 +12,7 @@ uniform vec4  emission   = vec4(0,0,0,1);
 subroutine void postproc_color(); // signature
 subroutine(postproc_color) void no_op() {}
 subroutine(postproc_color) void apply_burn_mask() {
-	if (burn_offset > -1.0) {fg_FragColor = apply_burn_mask(fg_FragColor, tc);} // slow
+	if (burn_offset > -1.0) {fg_FragColor = apply_black_body_burn_mask(fg_FragColor, tc);} // slow
 }
 subroutine uniform postproc_color postproc_color_op;
 

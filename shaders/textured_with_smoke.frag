@@ -208,7 +208,7 @@ void main()
 #endif
 
 #ifdef APPLY_BURN_MASK
-	color = apply_burn_mask(color, tc);
+	color = apply_black_body_burn_mask(color, tc);
 #endif
 
 #ifndef SMOKE_ENABLED
