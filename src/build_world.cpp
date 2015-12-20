@@ -23,7 +23,6 @@ unsigned const MAX_OBJ_ON_MESH    = 4;
 unsigned const BLOOD_PER_SMILEY   = 300;
 unsigned const LG_STEPS_PER_FRAME = 10;
 unsigned const SM_STEPS_PER_FRAME = 1;
-unsigned const NUM_DYNAM_PARTS    = 100;
 unsigned const SHRAP_DLT_IX_MOD   = 8;
 float const STAR_INNER_RAD        = 0.4;
 float const ROTATE_RATE           = 25.0;
@@ -51,7 +50,7 @@ extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
 extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
 extern point cpos2, orig_camera, orig_cdir;
-extern unsigned create_voxel_landscape, scene_smap_vbo_invalid, init_item_counts[];
+extern unsigned create_voxel_landscape, scene_smap_vbo_invalid, num_dynam_parts, init_item_counts[];
 extern obj_type object_types[];
 extern string cobjs_out_fn;
 extern coll_obj_group coll_objects;
@@ -258,7 +257,7 @@ void process_groups() {
 	if (animate2) {advance_physics_objects();}
 
 	if (display_mode & 0x0200) {
-		d_part_sys.create_particles(NUM_DYNAM_PARTS, 1);
+		d_part_sys.create_particles(num_dynam_parts, 1);
 		d_part_sys.apply_physics();
 		d_part_sys.add_light();
 	}
