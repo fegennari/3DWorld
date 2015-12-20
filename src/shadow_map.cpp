@@ -143,6 +143,12 @@ public:
 		upload(verts);
 	}
 
+	void draw_shadow_sphere(point const &pos, float radius, int shader_loc, unsigned smap_sz, unsigned fixed_ndiv) {
+		// FIXME: draw as a circle oriented towards the light source?
+		shader_t::set_uniform_vector4d(shader_loc, vector4d(pos, radius));
+		draw_sphere_vbo_pre_bound((fixed_ndiv ? fixed_ndiv : get_smap_ndiv(radius, smap_sz)), 0);
+	}
+
 	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv, point const &camera_pos) {
 		if (shadow_objs.empty()) return; // no dynamic objects
 		shader_t shader;
@@ -157,21 +163,24 @@ public:
 		for (auto i = movable_cids.begin(); i != movable_cids.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (c.no_shadow_map() || !c.is_movable()) continue; // should we remove it from the list in this case?
-			if (c.check_pdu_visible(pdu)) {c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv));}
+			if (c.check_pdu_visible(pdu)) { // handle spheres specially
+				if (c.type == COLL_CAPSULE || c.type == COLL_SPHERE) {draw_shadow_sphere(c.points[0], c.radius, shader_loc, smap_sz, fixed_ndiv);}
+				if (c.type == COLL_CAPSULE) {draw_shadow_sphere(c.points[1], c.radius2, shader_loc, smap_sz, fixed_ndiv);}
+				c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv), 1); // skip_spheres=1
+			}
 		}
 		for (auto i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
 			if (is_camera && i->is_player) continue; // skip the camera shadow for flashlight
 			if (i->pos == pdu.pos) continue; // this sphere must be casting the light
 			//if (i->contains_point(pdu.pos)) continue; too strong
-			int const ndiv(fixed_ndiv ? fixed_ndiv : get_smap_ndiv(i->radius, smap_sz));
 
 			if (i->ctype != COLL_SPHERE) {
-				coll_objects.get_cobj(i->cid).get_shadow_triangle_verts(dverts, ndiv);
+				coll_obj const &c(coll_objects.get_cobj(i->cid));
+				c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv));
 			}
 			else {
-				shader_t::set_uniform_vector4d(shader_loc, vector4d(i->pos, i->radius));
-				draw_sphere_vbo_pre_bound(ndiv, 0);
+				draw_shadow_sphere(i->pos, i->radius, shader_loc, smap_sz, fixed_ndiv);
 			}
 		}
 		bind_vbo(0); // clear any bound sphere VBOs

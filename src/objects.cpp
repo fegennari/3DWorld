@@ -549,7 +549,7 @@ void get_extruded_polygon_triangles(vector<vert_wrap_t> &verts, float thick, poi
 }
 
 
-void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) const {
+void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv, bool skip_spheres) const {
 
 	switch (type) {
 	case COLL_CUBE:
@@ -560,12 +560,14 @@ void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv) c
 		get_cylinder_triangles(verts, points[0], points[1], radius, radius2, ndiv, !(cp.surfs & 1));
 		break;
 	case COLL_CAPSULE:
-		get_sphere_triangles(verts, points[0], radius, ndiv); // some extra triangles (only need hemisphere), but okay
-		get_sphere_triangles(verts, points[1], radius2, ndiv);
+		if (!skip_spheres) {
+			get_sphere_triangles(verts, points[0], radius,  ndiv); // some extra triangles (only need hemisphere), but okay
+			get_sphere_triangles(verts, points[1], radius2, ndiv);
+		}
 		get_cylinder_triangles(verts, points[0], points[1], radius, radius2, ndiv, 0);
 		break;
 	case COLL_SPHERE:
-		get_sphere_triangles(verts, points[0], radius, ndiv);
+		if (!skip_spheres) {get_sphere_triangles(verts, points[0], radius, ndiv);}
 		break;
 	case COLL_POLYGON:
 		get_extruded_polygon_triangles(verts, thickness, points, npoints);
