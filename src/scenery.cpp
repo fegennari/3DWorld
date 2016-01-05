@@ -119,6 +119,7 @@ bool scenery_obj::is_visible(bool shadow_only, float bradius, vector3d const &xl
 }
 
 float scenery_obj::get_size_scale(float dist_to_camera, float scale_val, float scale_exp) const {
+	assert(scale_val >= 0.0);
 	return ((scale_val == 0.0) ? 1.0 : min(1.0f, pow(scale_val/dist_to_camera, scale_exp)));
 }
 

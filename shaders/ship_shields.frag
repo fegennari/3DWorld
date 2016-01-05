@@ -19,7 +19,7 @@ void main()
 	for (int i = 0; i < NUM_OCTAVES; ++i) { // use highly ridged noise
 		float v = texture(noise_tex, noise_scale*(freq*vertex + time_v)).r;
 		v = 2.0*v - 1.0; // map [0,1] range to [-1,1]
-		v = 1.0 - abs(v); // ridged noise
+		v = 1.0 - abs(v); // ridged noise in [0,1] range
 		val  += pow(v, 5.0)/freq;
 		freq *= 2.0;
 	}

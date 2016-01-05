@@ -916,6 +916,7 @@ void reset_offsets() {
 
 void update_mesh(float dms, bool do_regen_trees) { // called when mesh_scale changes
 
+	assert(dms > 0.0);
 	++cache_counter;
 	mesh_scale /= dms;
 	tree_scale  = mesh_scale;

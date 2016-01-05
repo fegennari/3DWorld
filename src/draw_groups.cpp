@@ -707,7 +707,7 @@ void draw_low_res_sphere_pair(point const &pos, float radius, vector3d const &v,
 	if (vdeform != all_ones) { // apply deformation
 		float vdmin(1.0);
 		UNROLL_3X(scale[i_] *= vdeform[i_]; vdmin = min(vdmin, vdeform[i_]);)
-		if (vdmin < 1.0) scale *= pow(1.0/vdmin, 1.0/3.0);
+		if (vdmin < 1.0) {scale *= pow(1.0/vdmin, 1.0/3.0);}
 	}
 	scale_by(scale);
 	fgRotate(360.0*(v.x - v.y), v.x, v.y, (v.z+0.01));

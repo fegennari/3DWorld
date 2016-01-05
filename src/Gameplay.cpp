@@ -1782,7 +1782,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		obj.time      = -1;
 		obj.source    = shooter;
 		obj.direction = rapid_fire;
-		if (rapid_fire) obj.time = int((1.0 - rand_uniform(0.1, 0.9)*rand_uniform(0.1, 0.9))*object_types[type].lifetime);
+		if (rapid_fire) {obj.time = int((1.0 - rand_uniform(0.1, 0.9)*rand_uniform(0.1, 0.9))*object_types[type].lifetime);}
 
 		switch (weapon_id) {
 		case W_PLASMA:

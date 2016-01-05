@@ -16,7 +16,8 @@ float get_nonuniform_fog_scale(in float vert_z, in float eye_z, in float fog_bot
 	float tv     = min(fog_top, zmax);
 	float bv     = max(fog_bot, zmin);
 	float bot_w  = max(0.0, (min(fog_bot, zmax) - zmin)*dz_inv); // constant weight of 1
-	float mid_w  = max(0.0, (tv - bv)*dz_inv)*pow((1.0 - (0.5*(tv + bv) - fog_bot)/(fog_top - fog_bot)), density_exp); // use density at midpoint
+	float val    = (1.0 - (0.5*(tv + bv) - fog_bot)/(fog_top - fog_bot));
+	float mid_w  = max(0.0, (tv - bv)*dz_inv)*pow(max(val, 0.0), density_exp); // use density at midpoint
 	return (bot_w + mid_w); // + top_w=0
 }
 

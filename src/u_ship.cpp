@@ -944,7 +944,7 @@ void u_ship::ai_action() {
 	bool const player_ship(is_player_ship());
 	
 	if (begin_motion || player_ship) {
-		if (rot_rate != 0.0) rot_rate *= pow(SHIP_ROT_ATTEN, fticks); // stabilize (should this vary per ship class?)
+		if (rot_rate != 0.0) {rot_rate *= pow(SHIP_ROT_ATTEN, fticks);} // stabilize (should this vary per ship class?)
 		fire_point_defenses(); // always, even player's ship
 	}
 	if (player_controlled() && specs().stoppable) {

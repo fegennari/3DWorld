@@ -942,7 +942,7 @@ int dwobject::surface_advance() {
 			val        = 1;
 		}
 	}
-	float const vmult((otype.flags & OBJ_IS_DROP) ? 0.0 : pow((1.0f - friction), fticks)); // droplets stick - no momentum
+	float const vmult((otype.flags & OBJ_IS_DROP) ? 0.0 : pow(max((1.0f - friction), 0.0f), fticks)); // droplets stick - no momentum
 	velocity = (mesh_vel*(1.0 - vmult) + velocity*vmult);
 	pos.x   += velocity.x*tstep;
 	pos.y   += velocity.y*tstep;

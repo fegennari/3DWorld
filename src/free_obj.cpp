@@ -586,6 +586,7 @@ void free_obj::transform_and_draw_obj(uobj_draw_data &udd, bool specular, bool f
 		gscale.normalize();
 		float volume(1.0);
 		UNROLL_3X(volume *= gscale[i_];)
+		assert(volume > 0.0);
 		gscale *= pow(1.0/volume, 1.0/3.0);
 		scale_by(gscale);
 	}
@@ -1031,7 +1032,7 @@ inline unsigned us_projectile::get_eflags() const {
 void us_projectile::ai_action() {
 
 	if (!is_ok() || !specs().seeking || time < PROJ_ARM_T || !begin_motion) return;
-	if (rot_rate != 0.0) rot_rate *= pow(PROJ_ROT_ATTEN, fticks); // stabilize
+	if (rot_rate != 0.0) {rot_rate *= pow(PROJ_ROT_ATTEN, fticks);} // stabilize
 	float const max_dist(specs().seek_dist), target_dist((target_obj == NULL) ? 0.0 : p2p_dist(pos, target_obj->get_pos()));
 	free_obj const *const ptarg((parent == NULL || !target_valid(parent->get_target())) ? NULL : parent->get_target());
 	assert(max_dist > 0.0);
