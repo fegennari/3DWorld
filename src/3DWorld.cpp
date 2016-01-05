@@ -841,7 +841,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 	case 'g': // pause/resume playback of eventlist
 		pause_frame = !pause_frame;
 		break;
-	case 'G': // toggle show framerate / voxel add/remove (used to be z)
+	case 'G': // toggle show framerate/universe stats / voxel add/remove (used to be z)
 		display_framerate = !display_framerate;
 		break;
 

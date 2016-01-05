@@ -1025,7 +1025,7 @@ void display_universe() { // infinite universe
 	if (TIMETEST) PRINT_TIME("Draw Blasts");
 	final_draw(framerate);
 	show_crosshair(WHITE, do_zoom);
-	draw_universe_stats();
+	if (display_framerate) {draw_universe_stats();}
 	camera_surf_collide = last_csc;
 	check_gl_error(33);
 }
