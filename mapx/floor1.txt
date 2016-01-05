@@ -8,7 +8,7 @@ e 0
 #X normal_maps/test_normal.jpg 0 1 # normal map (swap binorm sign)
 l 0.78 1.0 1.0 1.0 1.0 8 1 # marble
 y 6.5
-r 0.8 60.0 # set specularity
+r 0.8 60.0 # set specularity (Note: unrealistically high)
 C 1.5 2.0 0.0   1.5 2.0 0.019  0.8 0.8 # raised cylinder platform
 #C 1.5 -2.0 0.0  1.5 -2.0 0.019 0.8 0.8 # testing
 C 2.7 2.9 0.08  2.7 2.9 0.10  0.3 0.3 # table

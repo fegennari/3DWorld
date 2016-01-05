@@ -150,6 +150,7 @@ void setup_gl_light_atten(int light, float c_a, float l_a, float q_a, shader_t *
 
 
 // metal material properties - low diffuse color but very high specular of a similar color to diffuse
+// Note: diffuse color should be zero, but is set to nonzero (half albedo) due to lack of env maps, which contribute multi-directional specular reflections
 void set_silver_material(shader_t &shader, float alpha) {
 	shader.set_cur_color(colorRGBA(WHITE*0.5, alpha));
 	shader.set_specular_color(colorRGBA(0.8, 0.8, 0.8)*2.0, 50.0);

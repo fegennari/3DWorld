@@ -258,7 +258,7 @@ a 1 # destroyable
 e 0
 
 # railings
-r 0.8 60.0 # set specularity
+r 0.8 60.0 # set specularity (Note: unrealistically high)
 l 0.8 0.7 0.7 0.7 1.0 8 1 # marble
 y 2.5
 B 0.38 0.4  0.48 0.5  0.6  0.76 # uprights
@@ -404,7 +404,7 @@ l 0.7 0.95 0.95 0.95 0.1 -1 1 1.55 20.0 # semi-transparent glass
 
 # specular windows are slower, especially when light attenuation is enabled,
 # and they're so transparent that the specular reflections are almost invisible
-r 0.9 100.0 # set specularity
+r 0.9 100.0 # set specularity (Note: unrealistically high)
 # z1,z2,y1,y2,x1,x2: 1 2 4 8 16 32, small x: 15, small y: 51, small z: 60
 #e 0 B  0.0    1.0    1.07   1.08  0.1  0.4  # C1-1 TESTING
 y 0.2
@@ -561,7 +561,7 @@ B 0.3 0.4 0.3 0.4 1.4 2.6
 X none # disable normal map
 
 l 0.6 0.9 0.9 0.9 1.0 9 1 # marble (snow)
-r 0.8 60.0 # set specularity
+r 0.8 60.0 # set specularity (Note: unrealistically high)
 y 6.0
 # 4A => 4B
 B 0.0 0.3 1.2 1.5  2.06 2.1 # 2B
