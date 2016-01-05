@@ -59,6 +59,7 @@ bool coll_pt_vis_test(point pos, point pos2, float dist, int &index, int cobj, i
 
 
 void set_camera_pdu() {
+	assert(NEAR_CLIP > 0.0 && NEAR_CLIP < FAR_CLIP);
 	camera_pdu = pos_dir_up(get_camera_pos(), cview_dir, up_vector, 0.0, NEAR_CLIP, FAR_CLIP);
 }
 

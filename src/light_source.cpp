@@ -419,7 +419,7 @@ pos_dir_up light_source::calc_pdu() const {
 		point const start_pos(pos + dir*radius);
 		if (coll_objects[cindex].line_int_exact(start_pos, pos, t, cnorm)) {near_clip += (1.0 - t)*radius;}
 	}
-	return pos_dir_up(pos, dir, up_dir, angle, near_clip, radius, 1.0, 1);
+	return pos_dir_up(pos, dir, up_dir, angle, near_clip, max(radius, near_clip+0.01f*radius), 1.0, 1); // force near_clip < far_clip
 }
 
 bool light_source_trig::is_shadow_map_enabled() const {
