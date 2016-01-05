@@ -158,16 +158,15 @@ void run_postproc_effects() {
 
 	point const camera(get_camera_pos());
 	float const dist_to_fire(sqrt(dist_to_fire_sq)), fire_max_dist(4.0*CAMERA_RADIUS);
+	bool const camera_underwater(world_mode != WMODE_UNIVERSE && is_underwater(camera));
 	//if (display_mode & 0x20) {add_ssao();}
 	
-	if (world_mode != WMODE_UNIVERSE && is_underwater(camera)) {
+	if (camera_underwater) {
 		add_color_only_effect("screen_space_blur");
 		if (player_is_drowning()) {add_color_only_effect("drunken_wave", 1.0);}
 	}
 	else {
-		if (display_mode & 0x20) {add_bloom();}
 		if (dist_to_fire > 0.0 && dist_to_fire < fire_max_dist) {add_color_only_effect("heat_waves", (fire_max_dist - dist_to_fire)/fire_max_dist);}
-		if (show_fog && world_mode == WMODE_GROUND) {add_god_rays();}
 	}
 	if (display_mode & 0x80) {
 		point const pos2(camera + cview_dir*FAR_CLIP);
@@ -180,5 +179,7 @@ void run_postproc_effects() {
 		float const dof_val(0.04*FAR_CLIP);
 		add_depth_of_field(focus_depth, dof_val);
 	}
+	if (show_fog && world_mode == WMODE_GROUND && !camera_underwater) {add_god_rays();}
+	if ((display_mode & 0x20) && !camera_underwater) {add_bloom();} // add bloom last
 }
 
