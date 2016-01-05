@@ -1173,6 +1173,13 @@ void rotate_vector3d_by_vr(vector3d v1, vector3d v2, vector3d &vout) { // v1 rot
 	matrix_mult(vin, vout, m);
 }
 
+cube_t rotate_cube(cube_t const &cube, vector3d const &axis, float angle_in_radians) {
+
+	point pts[2] = {cube.get_cube_center(), 0.5*cube.get_size()}; // {center, extent}
+	rotate_vector3d_multi(axis, angle_in_radians, pts, 2);
+	return cube_t(pts[0]-pts[1], pts[0]+pts[1]);
+}
+
 
 // unused
 float angle_of_projected_vectors(vector3d const &v1, vector3d const &v2, vector3d n) {

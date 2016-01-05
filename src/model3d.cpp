@@ -1431,10 +1431,7 @@ void model3d_xform_t::apply_to_tquad(coll_tquad &tquad) const {
 
 cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const { // Note: RM ignored
 	if (angle == 0.0) {return cube*scale + tv;} // optimization
-	point pts[8];
-	(cube*scale).get_points(pts);
-	rotate_vector3d_multi(axis, -TO_RADIANS*angle, pts, 8); // negative rotate?
-	return cube_t(pts, 8) + tv;
+	return rotate_cube(cube*scale, axis, -TO_RADIANS*angle) + tv; // negative rotate?
 }
 
 void model3d_xform_t::apply_gl() const {

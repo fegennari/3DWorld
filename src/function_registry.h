@@ -459,6 +459,7 @@ template<typename T> void rotate_vector3d(pointT<T> vin, pointT<T> const &vrot, 
 template<typename T> void rotate_vector3d_multi(pointT<T> const &vrot, double angle, pointT<T> *vout, unsigned nv);
 void rotate_vector3d_x2(point const &vrot, double angle, point &vout1, point &vout2);
 void rotate_vector3d_by_vr(vector3d v1, vector3d v2, vector3d &vout);
+cube_t rotate_cube(cube_t const &cube, vector3d const &axis, float angle_in_radians);
 void mirror_about_plane(vector3d const &norm, point const &pt);
 float angle_of_projected_vectors(vector3d const &v1, vector3d const &v2, vector3d n);
 vector3d rtp_to_xyz(float radius, double theta, double phi);
