@@ -59,7 +59,8 @@ public:
 		return zero_vector; // never gets here
 	}
 	bool check_splash_dist(point const &pos) {
-		return dist_less_than(get_camera_pos(), pos, 5.0);
+		point const camera(get_camera_pos());
+		return (pos.z < camera.z && dist_less_than(camera, pos, 5.0)); // skip splashes above the camera (assuming the surface points up)
 	}
 	void maybe_add_rain_splash(point const &pos, point const &bot_pos, float z_int, deque<sphere_t> *splashes, int x, int y, bool in_water) {
 		if (splashes == nullptr) return;
@@ -84,7 +85,7 @@ public:
 			return 0;
 		}
 		else if (bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
-			if (splashes != nullptr && check_splash_dist(pos)) {
+			if (splashes != nullptr && check_splash_dist(bot_pos)) {
 				point cpos;
 				vector3d cnorm;
 				int cindex;
