@@ -58,43 +58,53 @@ public:
 		}
 		return zero_vector; // never gets here
 	}
+	bool check_splash_dist(point const &pos) {
+		return dist_less_than(get_camera_pos(), pos, 5.0);
+	}
 	void maybe_add_rain_splash(point const &pos, point const &bot_pos, float z_int, deque<sphere_t> *splashes, int x, int y, bool in_water) {
 		if (splashes == nullptr) return;
 		float const t((z_int - pos.z)/(bot_pos.z - pos.z));
 		point const cpos(pos + (bot_pos - pos)*t);
 		if (!camera_pdu.point_visible_test(cpos)) return;
-		splashes->push_back(sphere_t(cpos, 1.0));
+		if (check_splash_dist(cpos)) {splashes->push_back(sphere_t(cpos, 1.0));}
 		if (in_water && (rgen.rand() & 1)) {add_splash(cpos, x, y, 0.5, 0.01, 0);} // 50% of the time
 	}
-	void check_pos(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
-		if (0) {}
-		else if (pos == all_zeros) {pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));} // initial location
-		else if (pos.z < cur_zmin) {pos = gen_pt(cur_zmax);} // start again near the top
-		else if (!in_range(pos)  ) {pos = gen_pt(pos.z);} // move inside the range
-
-		if (world_mode == WMODE_GROUND) { // check bottom of raindrop below the mesh or top surface cobjs (even if just created)
-			int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
+	bool is_bot_pos_valid(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
+		if (world_mode != WMODE_GROUND) return 1;
+		// check bottom of raindrop/snow below the mesh or top surface cobjs (even if just created)
+		int const x(get_xpos(bot_pos.x)), y(get_ypos(bot_pos.y));
+		if (point_outside_mesh(x, y)) return 1;
 			
-			if (!point_outside_mesh(x, y)) {
-				if (!DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
-					if (rgen.rand() & 1) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], splashes, x, y, 1);} // 50% of the time
-					pos = gen_pt(cur_zmax); // start again near the top
-				}
-				else if (pos.z < mesh_height[y][x]) { // mesh collision
-					maybe_add_rain_splash(pos, bot_pos, mesh_height[y][x], splashes, x, y, 0); // line_intersect_mesh(pos, bot_pos, cpos);
-					pos = gen_pt(cur_zmax); // start again near the top
-				}
-				else if (bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
-					if (splashes != nullptr) {
-						point cpos;
-						vector3d cnorm;
-						int cindex;
-						if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->push_back(sphere_t(cpos, 1.0));}
-					}
-					pos = gen_pt(cur_zmax); // start again near the top
-				}
+		if (!DISABLE_WATER && (display_mode & 0x04) && pos.z < water_matrix[y][x]) { // water collision
+			if (rgen.rand() & 1) {maybe_add_rain_splash(pos, bot_pos, water_matrix[y][x], splashes, x, y, 1);} // 50% of the time
+			return 0;
+		}
+		else if (pos.z < mesh_height[y][x]) { // mesh collision
+			maybe_add_rain_splash(pos, bot_pos, mesh_height[y][x], splashes, x, y, 0); // line_intersect_mesh(pos, bot_pos, cpos);
+			return 0;
+		}
+		else if (bot_pos.z < v_collision_matrix[y][x].zmax) { // possible cobj collision
+			if (splashes != nullptr && check_splash_dist(pos)) {
+				point cpos;
+				vector3d cnorm;
+				int cindex;
+				if (camera_pdu.point_visible_test(bot_pos) && check_coll_line_exact(pos, bot_pos, cpos, cnorm, cindex, 0.0, camera_coll_id)) {splashes->push_back(sphere_t(cpos, 1.0));}
+			}
+			return 0;
+		}
+		return 1;
+	}
+	void check_pos(point &pos, point const &bot_pos, deque<sphere_t> *splashes=nullptr) {
+		if (pos == all_zeros) { // initial location
+			vector3d const bot_delta(bot_pos - pos);
+			for (unsigned attempt = 0; attempt < 16; ++attempt) { // make 16 attempts at choosing a valid starting z-value
+				pos = gen_pt(rgen.rand_uniform(cur_zmin, cur_zmax));
+				if (is_bot_pos_valid(pos, pos+bot_delta, nullptr)) break;
 			}
 		}
+		else if (pos.z < cur_zmin)                          {pos = gen_pt(cur_zmax);} // start again near the top
+		else if (!in_range(pos))                            {pos = gen_pt(pos.z   );} // move inside the range
+		else if (!is_bot_pos_valid(pos, bot_pos, splashes)) {pos = gen_pt(cur_zmax);} // start again near the top
 	}
 	void check_size() {verts.resize(VERTS_PER_PRIM*get_num_precip(), all_zeros);}
 };
@@ -113,16 +123,17 @@ public:
 		while (!splashes.empty() && splashes.front().radius > 4.0) {splashes.pop_front();} // remove old splashes from the front
 		for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->radius += 0.2*fticks;}
 
-		//#pragma omp parallel for schedule(static,1) // not valid for splashes
-		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
+		//#pragma omp parallel for schedule(static,1) // not valid for splashes, and actually slower for light rain
+		for (int i = 0; i < (int)verts.size(); i += 2) { // iterate in pairs
 			check_pos(verts[i].v, verts[i+1].v, (begin_motion ? &splashes : nullptr));
 			if (animate2) {verts[i].v += vcur; vcur += vinc;}
 			verts[i+1].v = verts[i].v + dir;
 		}
-		//PRINT_TIME("Rain Update");
+		//PRINT_TIME("Rain Update"); // 0.75ms for default rain intensity
 	}
 	void render() const { // partially transparent
 		if (empty()) return;
+		//RESET_TIME;
 		colorRGBA color;
 		get_avg_sky_color(color);
 		color.alpha = 0.2;
@@ -144,6 +155,7 @@ public:
 		drawer.draw(); // draw nearby raindrops as triangles
 		s.end_shader();
 		disable_blend();
+		//PRINT_TIME("Rain Draw"); // similar to update time
 
 		if (!splashes.empty()) {
 			point const camera(get_camera_pos());
@@ -163,6 +175,7 @@ public:
 			s.end_shader();
 			disable_blend();
 			reset_fill_mode();
+			//PRINT_TIME("Rain Draw + Splashes"); // 50% longer
 		}
 		glDepthMask(GL_TRUE);
 	}
