@@ -604,13 +604,16 @@ bool coll_obj::is_point_supported(point const &pos) const {
 
 float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d const &delta, float step_thresh, float tolerance=0.0) {
 
+	assert(step_thresh > 0.0);
 	float valid_t(0.0);
+	unsigned num_iters(0);
 
 	// since there is no cobj-cobj closest distance function, binary split the delta range until cobj and c no longer intersect
 	for (float t = 0.5, step = 0.25; step > step_thresh; step *= 0.5) { // initial guess is the midpoint
 		coll_obj test_cobj(c1); // deep copy
 		test_cobj.shift_by(t*delta);
 		if (test_cobj.intersects_cobj(c2, tolerance)) {t -= step;} else {valid_t = t; t += step;}
+		if (++num_iters > 1000) break; // reached max iteration count (to avoid perf problems)
 	}
 	return valid_t;
 }
@@ -625,7 +628,7 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 		if (cobj.has_hard_edges() && c.has_hard_edges() && c.is_movable() && c.get_cube_center().z > cobj.d[2][1]) continue;
 		if (cobj.intersects_cobj(c, tolerance)) return 0; // intersects at the starting location, don't allow it to move (stuck)
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));
-		if (valid_t == 0.0) return 0; // can't move
+		if (valid_t < TOLERANCE) return 0; // can't move (avoid div-by-zero and negative t)
 		step_thresh /= valid_t; // adjust thresh to avoid tiny steps for large number of cobjs
 		delta       *= valid_t;
 	} // for i
