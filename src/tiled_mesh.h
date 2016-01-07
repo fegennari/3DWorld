@@ -214,9 +214,13 @@ public:
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
 	}
 	cube_t get_bcube() const {
-		// Note: here we include the water plane's contribution to the upper z bound, since we draw the water as part of the tile contents
-		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2)), z2(max(get_tile_zmax(), water_plane_z));
-		return cube_t(xv1-trmax, xv1+(x2-x1)*deltax+trmax, yv1-trmax, yv1+(y2-y1)*deltay+trmax, mzmin-BCUBE_ZTOLER, z2+BCUBE_ZTOLER);
+		cube_t bcube(get_shadow_bcube());
+		bcube.d[2][1] = max(bcube.d[2][1], water_plane_z); // include the water plane's contribution to z2, since we draw the water as part of the tile contents
+		return bcube;
+	}
+	cube_t get_shadow_bcube() const {
+		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
+		return cube_t(xv1-trmax, xv1+(x2-x1)*deltax+trmax, yv1-trmax, yv1+(y2-y1)*deltay+trmax, mzmin-BCUBE_ZTOLER, get_tile_zmax()+BCUBE_ZTOLER);
 	}
 	cube_t get_mesh_bcube() const {
 		float const xv1(get_xval(x1 + xoff - xoff2)), yv1(get_yval(y1 + yoff - yoff2));
