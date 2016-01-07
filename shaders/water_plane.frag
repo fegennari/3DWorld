@@ -126,6 +126,7 @@ void main() {
 
 	if (reflections) { // calculate reflections
 		float reflect_w  = reflect_scale*get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
+		//float reflect_w  = reflect_scale*get_approx_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
 		vec2 ref_tex_st  = clamp(0.5*proj_pos.xy/proj_pos.w + 0.3*ripple + vec2(0.5, 0.5), 0.0, 1.0);
 		vec4 reflect_tex = vec4(texture(reflection_tex, ref_tex_st).rgb, 1.0);
 		color = mix(color, reflect_color * reflect_tex, reflect_w);

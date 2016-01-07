@@ -8,3 +8,11 @@ float get_fresnel_reflection(in vec3 v_inc, in vec3 norm, in float n1, in float 
 	float rp_sqrt = (n1*cos_theta_t - n2*cos_theta_i)/(n1*cos_theta_t + n2*cos_theta_i);
 	return min(1.0, 0.5*(rs_sqrt*rs_sqrt + rp_sqrt*rp_sqrt)); // average of rs and rp (Note: min() only needed for degenerate cases)
 }
+
+// Schlick approximation
+float get_approx_fresnel_reflection(in vec3 v_inc, in vec3 norm, in float n1, in float n2) { // vectors must be normalized
+	float cos_theta_i = dot(v_inc, norm);
+	float nv = (n1 - n2)/(n1 + n2);
+	float R0 = nv*nv; // Note: constant, could be precomputed
+	return R0 + (1.0 - R0)*pow(min(1.0, (1.0 - cos_theta_i)), 5.0);
+}
