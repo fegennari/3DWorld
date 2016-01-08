@@ -19,8 +19,10 @@ Indirect lighting magnitude in 6 directions (+/- x,y,z)
 
 Bullet physics for movable boxes
 In-Game cobjs editor
+  - In-game placement/visualization of objects, smileys, universe ships
 Better Palm Trees
 Plants with low large leaves
 Precomputed cube map reflections on specular surfaces (such as the gold dragon)
-Render particles/smoke at half resolution?
-Underwater plant shadows move when water height changes?
+
+Use shadow circles rather than spheres
+Cook-Torrence model
