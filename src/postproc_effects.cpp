@@ -179,7 +179,7 @@ void run_postproc_effects() {
 		float const dof_val(0.04*FAR_CLIP);
 		add_depth_of_field(focus_depth, dof_val);
 	}
-	if (show_fog && world_mode == WMODE_GROUND && !camera_underwater) {add_god_rays();}
+	if (show_fog && world_mode == WMODE_GROUND && !camera_underwater && !is_rain_enabled()) {add_god_rays();}
 	if ((display_mode & 0x20) && !camera_underwater) {add_bloom();} // add bloom last
 }
 
