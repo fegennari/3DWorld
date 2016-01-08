@@ -762,7 +762,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	else {
 		s.set_vert_shader("texture_gen.part+water_plane");
 	}
-	s.set_frag_shader("linear_fog.part+ads_lighting.part*+fresnel.part*+shadow_map.part*+tiled_shadow_map.part*+water_ripples.part+water_plane");
+	s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+tiled_shadow_map.part*+water_ripples.part+water_plane");
 	s.begin_shader();
 	setup_tt_fog_post(s);
 	s.add_uniform_int  ("reflection_tex",   0);

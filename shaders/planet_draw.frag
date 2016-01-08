@@ -1,3 +1,5 @@
+#include <fresnel.part>
+
 // Note: Light 0 is the sun (A+D+S point light), light 1 is universe ambient (constant A), light 2 is planet reflection (D point light)
 uniform float atmosphere = 1.0; // technically not needed for gas giants since assumed to be 1.0
 uniform vec3 cloud_freq  = vec3(1.0);

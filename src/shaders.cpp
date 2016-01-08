@@ -566,6 +566,10 @@ public:
 		loaded_files.clear();
 	}
 
+	bool check_strip_wrapper_chars(string &str, char cs, char ce) {
+		if (str.front() == cs && str.back() == ce) {str = str.substr(1, str.size()-2); return 1;} // strip off the characters
+		return 0;
+	}
 	bool load_shader_file(string const &fname, string &data) {
 		if (fname.empty()) return 0;
 		map<string, string>::const_iterator i(loaded_files.find(fname));
@@ -576,8 +580,25 @@ public:
 		}
 		ifstream in(fname.c_str());
 		if (!in.good()) return 0;
-		string line, file_contents;
-		while (std::getline(in, line)) {file_contents += line + '\n';}
+		string line, file_contents, str;
+		
+		while (std::getline(in, line)) {
+			if (line.size() > 8) { // look for include directive
+				istringstream iss(line);
+				if ((iss >> str) && str == "#include") {
+					if (!(iss >> str)) {cerr << "Error: empty shader include" << endl; return 0;}
+					// does this need to handle quoted string with spaces?
+					if      (check_strip_wrapper_chars(str, '<',  '>' )) {str = "shaders/" + str;} // strip off the angle brackets (include from shader directory)
+					else if (check_strip_wrapper_chars(str, '\"', '\"')) {} // strip off the quotes (include from local directory)
+					if (str == fname) {cerr << "Error: recusrive include of shader file '" << fname << "'" << endl; return 0;}
+					// load the contents of this shader directly into the file contents of the including shader (inline it)
+					if (!load_shader_file(str, file_contents)) {cerr << "Error: Failed to load included shader file '" << str << "'" << endl; return 0;}
+					file_contents += '\n';
+					continue;
+				}
+			}
+			file_contents += line + '\n';
+		}
 		loaded_files[fname] = file_contents;
 		if (PRINT_SHADER) cout << "shader data:" << endl << file_contents << endl;
 		data += file_contents;

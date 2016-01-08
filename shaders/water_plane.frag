@@ -1,3 +1,5 @@
+#include <fresnel.part>
+
 uniform float normal_z = 1.0;
 uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex, shadow_tex;
 uniform vec4 water_color, reflect_color;

@@ -1,3 +1,5 @@
+#include <fresnel.part>
+
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta, step_delta_shadow;
 uniform sampler2D tex0;
