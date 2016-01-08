@@ -11,12 +11,12 @@ vec3 compute_ripple(in vec2 uv, in float time, in float weight) {
     return vec3(ripple.yz * final_factor * 0.35, 1.0);
 }
 
-vec3 get_ripple_normal(in vec2 uv, in float time, in float rain_intensity) {
+vec3 get_ripple_normal(in vec2 uv, in float time, in float intensity) {
 	vec4 time_mul = vec4(1.0, 0.85, 0.93, 1.13);
 	vec4 time_add = vec4(0.0, 0.2,  0.45, 0.7 );
 	vec4 times    = (0.05*time * time_mul + time_add) * 1.6;
 	times         = fract(times);
-	vec4 weights  = rain_intensity - vec4(0, 0.25, 0.5, 0.75);
+	vec4 weights  = intensity - vec4(0, 0.25, 0.5, 0.75);
 	weights       = clamp(4.0*weights, 0.0, 1.0);
 	// generate four shifted layer of animated circle
 	vec3 ripple1 = compute_ripple(uv + vec2( 0.25, 0.0), times.x, weights.x);

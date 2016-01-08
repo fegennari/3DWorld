@@ -99,6 +99,7 @@ void draw_select_groups(int solid);
 colorRGBA get_powerup_color(int powerup);
 void update_precip_rate(float val);
 unsigned get_precip_rate();
+float get_rain_intensity();
 bool is_light_enabled(int l);
 void enable_light    (int l);
 void disable_light   (int l);

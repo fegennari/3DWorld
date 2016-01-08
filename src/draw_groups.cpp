@@ -1414,4 +1414,5 @@ void update_precip_rate(float val) {
 }
 
 unsigned get_precip_rate() {return obj_groups[coll_id[PRECIP]].app_rate;}
+float get_rain_intensity() {return min(get_precip_rate()/100.0, 1.0);}
 

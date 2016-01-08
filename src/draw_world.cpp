@@ -402,6 +402,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		static int update_frame(0);
 		if (animate2 && frame_counter > update_frame) {ripple_time += fticks; update_frame = frame_counter;} // once per frame
 		s.add_uniform_float("ripple_time", ripple_time);
+		s.add_uniform_float("rain_intensity", get_rain_intensity());
 	}
 	// FIXME: need to handle wet/outside vs. dry/inside surfaces differently
 	// but in practice, since this only applies to sun/moon lighting, indoor surfaces aren't affected much

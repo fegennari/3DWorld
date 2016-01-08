@@ -13,7 +13,7 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
-uniform float depth_trans_bias, clip_plane_z, ripple_time;
+uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -194,9 +194,9 @@ void main()
 		vec3 ws_normal = normalize(normal);
 		float ripple_mag = wet_effect * clamp(2.0*(1.0 - 0.5*length(epos.xyz)), 0.0, 1.0);
 
-		if (ripple_mag > 0.0) {
+		if (ripple_mag > 0.0 && rain_intensity > 0.0) {
 			// Note: since reflections are only enabled on vertical surfaces with normals in +z (world space), and the ripple normal map defaults to +z, no transforms are necessary
-			ws_normal = normalize(mix(ws_normal, get_ripple_normal(1.0*tc, 0.2*ripple_time, wet_effect), ripple_mag));
+			ws_normal = normalize(mix(ws_normal, get_ripple_normal(1.0*tc, 0.2*ripple_time, wet_effect*rain_intensity), ripple_mag));
 		}
 #ifdef USE_BUMP_MAP
 		ws_normal = normalize(mix(get_bump_map_normal(), ws_normal, 0.5*wet_effect));

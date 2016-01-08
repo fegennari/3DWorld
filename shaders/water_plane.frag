@@ -3,7 +3,7 @@
 uniform float normal_z = 1.0;
 uniform sampler2D reflection_tex, water_normal_tex, height_tex, noise_tex, deep_water_normal_tex, foam_tex, shadow_tex;
 uniform vec4 water_color, reflect_color;
-uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale;
+uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_comp, reflect_scale, mesh_z_scale, rain_intensity;
 
 in vec4 epos, proj_pos;
 in vec2 tc, tc2;
@@ -90,7 +90,7 @@ void main() {
 		float ripple_mag = clamp(2.0*(1.0 - 0.25*length(epos.xyz)), 0.0, 1.0);
 
 		if (ripple_mag > 0.0) {
-			vec3 ripple_norm = get_ripple_normal(12.0*tc, 0.2*wave_time, 1.0);
+			vec3 ripple_norm = get_ripple_normal(12.0*tc, 0.2*wave_time, rain_intensity);
 			ripple_norm.z = 0.0; // clear z-component so that the non-rippled parts of the texture don't affect the wave normals
 			ripple_norm = 2.0*ripple_mag * (fg_NormalMatrix * ripple_norm); // in eye space, not normalized
 			light_norm  = normalize(ripple_norm + light_norm);
