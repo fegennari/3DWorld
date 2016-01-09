@@ -31,13 +31,13 @@ float get_spec_intensity(in vec3 normal, in vec3 light_dir, in vec3 eye_dir) {
 }
 
 vec3 get_wet_specular_color(in float wet_scale) {
-	return mix(specular_color.rgb, min(vec3(1.0), specular_color.rgb+vec3(0.7)), wet_scale*wet_effect);
+	return mix(specular_color.rgb, min(vec3(1.0), specular_color.rgb+vec3(0.7)), wet_scale);
 }
 vec3 get_light_specular(in vec3 normal, in vec3 light_dir, in vec3 eye_pos, in vec3 spec_light_color) {
 #ifdef USE_SPEC_MAP
 	spec_light_color *= get_spec_color();
 #endif
-	return spec_light_color * get_wet_specular_color(1.0) * get_spec_intensity(normal, light_dir, normalize(-eye_pos));
+	return spec_light_color * get_wet_specular_color(wet_effect) * get_spec_intensity(normal, light_dir, normalize(-eye_pos));
 }
 
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos); // declare this function so we can define it later
@@ -58,8 +58,7 @@ vec4 get_ads_lighting(in vec3 normal, in vec3 light_dir, in vec4 epos, in float 
 #else
 	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, light.specular.rgb);
 #endif
-	float ad_scale = mix(1.0, 0.25, wet_effect);
-	return vec4((ambient_scale*ad_scale*a_scale*ambient_tint*ambient + ad_scale*ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), ad_color.a);
+	return vec4((ambient_scale*a_scale*ambient_tint*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), ad_color.a);
 }
 
 vec4 add_light_comp_pos_scaled_light(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color, in fg_light_t light, in float bump_map_normal_scale) {

@@ -26,6 +26,8 @@ uniform sampler2D reflection_tex;
 
 const float SMOKE_SCALE = 0.25;
 
+float get_wet_ad_scale() {return mix(1.0, 0.25, wet_effect*max(normal.z, 0.0));} // only +z surfaces are wet
+
 // Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
@@ -62,14 +64,14 @@ vec3 add_light0(in vec3 n, in float normal_sign) {
 		}
 	}
 #endif // DYNAMIC_SMOKE_SHADOWS
-	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, 1.0, gl_Color, fg_LightSource[0], normal_sign).rgb;
+	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, 1.0, gl_Color*get_wet_ad_scale(), fg_LightSource[0], normal_sign).rgb;
 }
 
 vec3 add_light1(in vec3 n, in float normal_sign) {
 #ifdef USE_SHADOW_MAP
 	if (use_shadow_map) {n *= get_shadow_map_weight_light1(epos, n);}
 #endif
-	return add_light_comp_pos_scaled_light(n, epos, 1.0, 1.0, gl_Color, fg_LightSource[1], normal_sign).rgb;
+	return add_light_comp_pos_scaled_light(n, epos, 1.0, 1.0, gl_Color*get_wet_ad_scale(), fg_LightSource[1], normal_sign).rgb;
 }
 
 void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
