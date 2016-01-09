@@ -52,14 +52,15 @@ void maybe_apply_bump_map_self_shadowed(inout vec3 normal, inout vec3 light_dir,
 }
 
 vec4 get_ads_lighting(in vec3 normal, in vec3 light_dir, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color, in fg_light_t light) {
-	vec3 diffuse = (ad_color * light.diffuse).rgb*mix(1.0, 0.25, wet_effect);
+	vec3 diffuse = (ad_color * light.diffuse).rgb;
 	vec3 ambient = (ad_color * light.ambient).rgb;
 #ifdef NO_SPECULAR
 	vec3 specular = vec3(0.0);
 #else
 	vec3 specular = get_light_specular(normal, light_dir, epos.xyz, light.specular.rgb);
 #endif
-	return vec4((ambient_scale*a_scale*ambient_tint*ambient + ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), ad_color.a);
+	float ad_scale = mix(1.0, 0.25, wet_effect);
+	return vec4((ambient_scale*ad_scale*a_scale*ambient_tint*ambient + ad_scale*ds_scale*(max(dot(normal, light_dir), 0.0)*diffuse + specular)), ad_color.a);
 }
 
 vec4 add_light_comp_pos_scaled_light(in vec3 normal, in vec4 epos, in float ds_scale, in float a_scale, in vec4 ad_color, in fg_light_t light, in float bump_map_normal_scale) {
