@@ -99,9 +99,9 @@ class cobj_draw_buffer {
 	vector<vert_norm_tc> tc_verts;
 
 public:
-	bool is_wet;
+	int is_wet; // 0=no, 1=yes, 2=unknown
 
-	cobj_draw_buffer() : is_wet(0) {}
+	cobj_draw_buffer() : is_wet(2) {}
 	void add_vert(vert_norm_texp const &vnt) {verts.push_back(vnt);}
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vert_norm_texp(vn, tp));}
 	void add_vert(vert_norm_tc const &vntc) {tc_verts.push_back(vntc);}
@@ -174,7 +174,7 @@ public:
 	bool is_big_occluder()const {return (is_occluder() && fixed && volume > 0.001);}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
 	bool is_movable()     const {return ((cp.flags & COBJ_MOVABLE) != 0);}
-	bool is_wet()         const {return (!(cp.flags & COBJ_IS_INDOORS) && is_rain_enabled());}
+	bool is_wet()         const {return (!(cp.flags & COBJ_IS_INDOORS) && is_ground_wet());}
 	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || is_movable());}
 	bool is_player()      const;
 	bool is_invis_player()const;

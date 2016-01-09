@@ -47,7 +47,7 @@ extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_f
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
-extern float temperature, atmosphere, zbottom, indir_vert_offset, NEAR_CLIP, FAR_CLIP;
+extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
@@ -406,7 +406,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	}
 	// FIXME: need to handle wet/outside vs. dry/inside surfaces differently
 	// but in practice, since this only applies to sun/moon lighting, indoor surfaces aren't affected much
-	s.add_uniform_float("wet_effect", (is_rain_enabled() ? 1.0 : 0.0)); // only enable when drawing cobjs?
+	s.add_uniform_float("wet_effect",   rain_wetness); // only enable when drawing cobjs?
+	s.add_uniform_float("reflectivity", (enable_reflections ? 1.0 : 0.0));
 }
 
 
@@ -539,7 +540,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 	shader_t s;
 	setup_cobj_shader(s, 0, use_normal_map, use_texgen, use_reflect_tex); // no lt_atten
 	if (use_reflect_tex) {bind_texture_tu(reflection_tid, 14);}
-	cdb.is_wet = is_rain_enabled(); // initial value
+	cdb.is_wet = 2; // initial value is unknown
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 	float bump_b_scale(0.0);
 	int nm_tid(-2), last_tid(-2), last_group_id(-1); // Note: use -2 as unset tid so that it differs from "no texture" of -1
@@ -602,7 +603,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	setup_cobj_shader(s, has_lt_atten, 0, 2, 0);
 	int last_tid(-2), last_group_id(-1);
 	static cobj_draw_buffer cdb;
-	cdb.is_wet = is_rain_enabled(); // initial value
+	cdb.is_wet = 2; // initial value is unknown
 	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm;
 	
 	if (!draw_trans) { // draw solid

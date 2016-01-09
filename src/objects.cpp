@@ -17,7 +17,7 @@ float const NDIV_SCALE = 200.0;
 
 extern bool group_back_face_cull, has_any_billboard_coll;
 extern int draw_model, display_mode, destroy_thresh, xoff2, yoff2;
-extern float temperature, tfticks;
+extern float temperature, tfticks, rain_wetness;
 extern unsigned ALL_LT[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
@@ -386,10 +386,11 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		obj_draw_groups[group_id].add_draw_polygon(points, norm, npoints, cix);
 		return;
 	}
-	else if (is_wet() != cdb.is_wet) { // check raining state when not in a group
+	else if (int(is_wet()) != cdb.is_wet) { // check raining state when not in a group
 		cdb.flush();
-		cdb.is_wet ^= 1;
-		shader.add_uniform_float("wet_effect", (cdb.is_wet ? 1.0 : 0.0));
+		cdb.is_wet = is_wet();
+		shader.add_uniform_float("wet_effect",   (cdb.is_wet ? rain_wetness : 0.0)); // either it's wet or it's not
+		shader.add_uniform_float("reflectivity", (cdb.is_wet ? rain_wetness : 1.0)); // either it's partially wet or dry and reflective
 	}
 	switch (type) {
 	case COLL_CUBE:

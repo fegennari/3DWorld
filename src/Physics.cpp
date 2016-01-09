@@ -31,9 +31,8 @@ bool     const PRINT_TIME_OF_DAY   = 1;
 // Global Variables
 bool no_sun_lpos_update(0);
 int TIMESCALE2(TIMESCALE), I_TIMESCALE2(0);
-float temperature(DEF_TEMPERATURE), max_obj_radius(0.0);
-float TIMESTEP(DEF_TIMESTEP), orig_timestep(DEF_TIMESTEP); // temp in degrees C
-float cloud_cover(0.0);
+float temperature(DEF_TEMPERATURE), max_obj_radius(0.0), cloud_cover(0.0), rain_wetness(0.0); // temp in degrees C
+float TIMESTEP(DEF_TIMESTEP), orig_timestep(DEF_TIMESTEP);
 vector3d wind(0.4, 0.2, 0.0), total_wind(0.0, 0.0, 0.0);
 point flow_source(0.0, 0.0, -2.0);
 obj_type object_types[NUM_TOT_OBJS];
@@ -914,7 +913,7 @@ int dwobject::surface_advance() {
 		if (pos.z < (mesh_height - KILL_DEPTH*radius)) return 0; // far below surface, it's gone
 		pos.z = mesh_height; // recover it
 	}
-	float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos)*(is_rain_enabled() ? 0.5 : 1.0));
+	float const grass_friction(0.1*min(1.0f, (grass_length/radius))*get_grass_density(pos)*(1.0 - 0.5*rain_wetness)); // half friction when wet
 	float const friction(otype.friction_factor + grass_friction);
 	
 	if (friction >= STICK_THRESHOLD) { // stopped by grass
@@ -1549,7 +1548,14 @@ void reset_other_objects_status() {
 void auto_advance_time() { // T = 1 hour
 
 	no_sun_lpos_update = 0;
-	if (!auto_time_adv || !animate2) return;
+	if (!animate2) return;
+
+	// update rain_wetness
+	float const elapsed_secs(fticks/TICKS_PER_SECOND);
+	if (is_rain_enabled()) {rain_wetness = min(1.0f, (rain_wetness + 1.0f*elapsed_secs*get_rain_intensity()));} // increase to max after 1s of heavy rain/2.5s of light rain
+	else {rain_wetness = max(0.0f, (rain_wetness - 0.1f*elapsed_secs));} // all wetness gone after 10s
+
+	if (!auto_time_adv) return;
 	static int last_itime(0), precip_inited(0);
 	static float ftime, precip(0.0), precip_app_rate(0.0), prate(0.0), ccover(0.0);
 	static rand_gen_t rgen;
@@ -1638,6 +1644,5 @@ void auto_advance_time() { // T = 1 hour
 	}
 }
 
-
-
+bool is_ground_wet() {return (rain_wetness > 0.0);}
 

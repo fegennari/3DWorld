@@ -63,6 +63,7 @@ void gen_mesh_bsp_tree();
 // function prototypes - build_world
 void create_object_groups();
 bool is_rain_enabled();
+bool is_ground_wet();
 void shift_all_objs(vector3d const &vd);
 void process_platforms_falling_moving_and_light_triggers();
 void set_global_state();
