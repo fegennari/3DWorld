@@ -171,7 +171,8 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #endif
 
 		// FIXME: specular should have a lower falloff and its own intensity - however, this will require a larger radius and impact performance
-		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag*mix(1.0, 0.3, wet_scale*wet_effect)) * (lcolor.a * intensity);
+		float wet_mag = mix(1.0, 0.3, wet_scale*wet_effect*max(normal.z, 0.0)); // only +z surfaces are wet
+		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag*wet_mag) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space
 	} // for i
 	color  = apply_power_signed(color, gamma); // to linear space

@@ -65,5 +65,5 @@ void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
 #endif
 		}
 	}
-	lit_color += gl_Color.rgb * indir_color * mix(1.0, 0.75, wet_effect);
+	lit_color += gl_Color.rgb * indir_color * mix(1.0, 0.7, wet_effect*max(normal.z, 0.0)); // only +z surfaces are wet
 }
