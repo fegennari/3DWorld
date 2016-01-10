@@ -1152,7 +1152,7 @@ public:
 		is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(0), width(0), height(0), ncolors(0), bump_tid(-1), alpha_tid(-1),
 		anisotropy(1.0), mipmap_alpha_weight(1.0), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
 
-	texture_t(char t, char f, int w, int h, bool wra, int nc, int um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0, bool nm=0)
+	texture_t(char t, char f, int w, int h, bool wra, int nc, char um, std::string const &n, bool inv=0, bool do_comp=1, float a=1.0, float maw=1.0, bool nm=0)
 		: type(t), format(f), use_mipmaps(um), defer_load_type(DEFER_TYPE_NONE), wrap(wra), mirror(0), invert_y(inv), do_compress(do_comp),
 		has_binary_alpha(0), is_16_bit_gray(0), no_avg_color_alpha_fill(0), invert_alpha(0), normal_map(nm), width(w), height(h), ncolors(nc), bump_tid(-1),
 		alpha_tid(-1), anisotropy(a), mipmap_alpha_weight(maw), name(n), data(0), orig_data(0), colored_data(0), mm_data(0), tid(0), color(DEF_TEX_COLOR) {}
@@ -1200,9 +1200,9 @@ public:
 	colorRGBA get_texel(float u, float v) const {return get_texel(get_texel_ix(u, v));}
 	float get_component(float u, float v, int comp) const;
 	void check_init() {if (tid == 0) do_gl_init();}
-	unsigned num_pixels() const {return width*height;}
+	unsigned num_pixels() const {return unsigned(width*height);}
 	unsigned num_bytes()  const {return ncolors*num_pixels();}
-	unsigned bytes_per_channel() const {return (is_16_bit_gray ? 2 : 1);}
+	unsigned bytes_per_channel() const {return (is_16_bit_gray ? 2U : 1U);}
 	void set_color_alpha_to_one() {color.alpha = 1.0;} // to make has_alpha() return 0
 	bool has_alpha()    const {return (color.alpha < 1.0 || alpha_tid >= 0);}
 	bool is_bound()     const {return (tid > 0);}
