@@ -157,7 +157,7 @@ void apply_one_exp(query_data &qdata, unsigned ix) {
 	assert(obj != NULL);
 	if ((qdata.eflags & EXP_FLAGS_NO_FFIRE) && qdata.parent != NULL && qdata.parent->is_related(obj)) return;
 	if ((qdata.eflags & EXP_FLAGS_NO_PART)  && (cobj.flags & OBJ_FLAGS_PART)) return;
-	free_obj::intersect_params ip;
+	intersect_params ip;
 	ip.calc_dscale = 1;
 	if (!obj->sphere_int_obj(qdata.pos, qdata.radius, ip)) return; // no detailed intersection
 	vector3d dist(cobj.pos, qdata.pos);

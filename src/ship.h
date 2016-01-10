@@ -463,7 +463,7 @@ class ship_bounded_cylinder : public ship_cylinder { // cylinder AND cube (can a
 
 public:
 	ship_bounded_cylinder() {}
-	ship_bounded_cylinder(ship_cylinder const &cylin, ship_cube const &cube)
+	ship_bounded_cylinder(ship_cylinder const &cylin, ship_cube const &cube, float dscale=1.0)
 		: ship_cylinder(cylin), bcube(cube) {}
 	ship_bounded_cylinder* clone() const {return new ship_bounded_cylinder(*this);}
 	void translate(point const &p) {ship_cylinder::translate(p); bcube.translate(p);}
@@ -614,25 +614,27 @@ public:
 };
 
 
-class free_obj : public uobject { // freely moving object
+struct intersect_params {
 
-public:
-	struct intersect_params {
+	bool calc_int, calc_dscale;
+	point const p_last;
+	point p_int;
+	vector3d norm;
+	float dscale;
 
-		bool calc_int, calc_dscale;
-		point const p_last;
-		point p_int;
-		vector3d norm;
-		float dscale;
-
-		intersect_params() : calc_int(0), calc_dscale(0), p_last(all_zeros), p_int(all_zeros), norm(plus_z), dscale(1.0) {}
-		intersect_params(point const &p_last_, point const &p_int_=all_zeros, vector3d const &norm_=plus_z)
-			: calc_int(1), calc_dscale(1), p_last(p_last_), p_int(p_int_), norm(norm_), dscale(1.0) {}
+	intersect_params() : calc_int(0), calc_dscale(0), p_last(all_zeros), p_int(all_zeros), norm(plus_z), dscale(1.0) {}
+	intersect_params(point const &p_last_, point const &p_int_=all_zeros, vector3d const &norm_=plus_z)
+		: calc_int(1), calc_dscale(1), p_last(p_last_), p_int(p_int_), norm(norm_), dscale(1.0) {}
 		
-		void update_int_pn(point const &p_int_, vector3d const &norm_, float dscale_) {
-			p_int = p_int_; norm = norm_; dscale = dscale_;
-		}
-	};
+	void update_int_pn(point const &p_int_, vector3d const &norm_, float dscale_) {
+		p_int = p_int_; norm = norm_; dscale = dscale_;
+	}
+};
+
+extern intersect_params def_int_params; // default value for option function arguments
+
+
+class free_obj : public uobject { // freely moving object
 
 protected:
 	bool near_b_hole;
@@ -833,9 +835,9 @@ public:
 	
 	// assumes a spherical object, and line/sphere or sphere/sphere intersect has already been tested before these are called
 	virtual bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const {return 1;}
-	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params())      const {assert(!ip.calc_int); return 1;}
-	virtual bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=intersect_params())      const;
-	virtual bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params())      const;
+	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=def_int_params) const {assert(!ip.calc_int); return 1;}
+	virtual bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=def_int_params) const;
+	virtual bool obj_int_obj (free_obj const *const obj, intersect_params &ip=def_int_params) const;
 	virtual bool sphere_intersection(point const &c, float r) const {return sphere_int_obj(c, r);} // inherited from uobject
 };
 
@@ -998,9 +1000,9 @@ public:
 
 	// no intersections (particle clouds are gasses, not solids)
 	bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const {return 0;}
-	bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params())      const {return 0;}
-	bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=intersect_params())      const {return 0;}
-	bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params())      const {return 0;}
+	bool sphere_int_obj(point const &c, float r, intersect_params &ip=def_int_params) const {return 0;}
+	bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=def_int_params) const {return 0;}
+	bool obj_int_obj (free_obj const *const obj, intersect_params &ip=def_int_params) const {return 0;}
 };
 
 
@@ -1262,7 +1264,7 @@ public:
 	void make_flagship(float csd) {is_flagship = 1; child_stray_dist = csd;}
 	float get_crew_strength() const;
 	bool is_docked()          const {return docked;}
-	bool has_homeworld()      const {return (homeworld.is_valid() && homeworld.get_owner() == (int)alignment);}
+	bool has_homeworld()      const {return (homeworld.is_valid() && homeworld.get_owner() == alignment);}
 	float get_child_stray_dist() const;
 	float min_time_to_target(point const &targ_pos) const;
 	float offense()           const {return specs().offense_rating();}
@@ -1325,10 +1327,10 @@ public:
 	u_ship_base const *get_ship_base() const {return this;}
 
 	bool line_int_obj(point const &p1, point const &p2, point *p_int=NULL, float *dscale=NULL) const;
-	bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params())      const;
-	bool ship_int_obj(u_ship const *const ship, intersect_params  &ip=intersect_params())      const;
-	bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params())      const;
-	bool cobjs_int_obj(cobj_vector_t const &cobjs2, free_obj const *const obj, intersect_params &ip=intersect_params()) const;
+	bool sphere_int_obj(point const &c, float r, intersect_params &ip=def_int_params) const;
+	bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=def_int_params) const;
+	bool obj_int_obj (free_obj const *const obj, intersect_params &ip=def_int_params) const;
+	bool cobjs_int_obj(cobj_vector_t const &cobjs2, free_obj const *const obj, intersect_params &ip=def_int_params) const;
 	bool do_sphere_int(point const &sc, float sr, intersect_params &ip, bool &intersects, point const &p_last,
 		cobj_vector_t const &cobjs) const;
 

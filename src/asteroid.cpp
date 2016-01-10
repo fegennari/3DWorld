@@ -165,12 +165,12 @@ public:
 		assert(obj);
 		return sphere_int_obj(obj->get_pos(), obj->get_c_radius(), ip);
 	}
-	virtual bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=intersect_params()) const {
+	virtual bool ship_int_obj(u_ship const *const ship,  intersect_params &ip=def_int_params) const {
 		if (!check_sphere_int(ship, ip))    return 0; // use mesh model
 		if (!ship->has_detailed_coll(this)) return 1; // simple intersection
 		return uobj_asteroid::ship_int_obj(ship, ip); // has detailed cobjs, do detailed intersection
 	}
-	virtual bool obj_int_obj (free_obj const *const obj, intersect_params &ip=intersect_params()) const {
+	virtual bool obj_int_obj (free_obj const *const obj, intersect_params &ip=def_int_params) const {
 		if (!check_sphere_int(obj, ip))    return 0; // use mesh model
 		if (!obj->has_detailed_coll(this)) return 1; // simple intersection
 		return uobj_asteroid::obj_int_obj(obj, ip);  // has detailed cobjs, do detailed intersection
@@ -263,7 +263,7 @@ public:
 		return damaged;
 	}
 
-	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const {
+	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=def_int_params) const {
 		if (r > AST_COLL_RAD*radius) return uobj_asteroid_destroyable::sphere_int_obj(c, r, ip); // use default sphere collision
 		float const asteroid_radius(get_radius_at(c));
 		if (!dist_less_than(pos, c, (r + asteroid_radius))) return 0;
@@ -401,7 +401,7 @@ public:
 	virtual bool gen_more_small_fragments() const {return 1;}
 	virtual bool check_fragment_self_coll() const {return is_ok();}
 
-	virtual bool ship_int_obj(u_ship const *const ship, intersect_params &ip=intersect_params()) const {
+	virtual bool ship_int_obj(u_ship const *const ship, intersect_params &ip=def_int_params) const {
 		if (!uobj_asteroid_destroyable::ship_int_obj(ship, ip)) return 0;
 		if (!ship->has_detailed_coll(this)) return 1; // simple intersection
 		assert(ship);
@@ -442,7 +442,7 @@ public:
 		return 0;
 	}
 
-	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=intersect_params()) const { // Note: no size check
+	virtual bool sphere_int_obj(point const &c, float r, intersect_params &ip=def_int_params) const { // Note: no size check
 		bool const contains(r > radius && dist_less_than(c, pos, r-radius)); // sphere contains asteroid
 		if (contains && !ip.calc_int) return 1;
 		r /= radius; // scale to 1.0

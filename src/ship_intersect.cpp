@@ -13,6 +13,7 @@ float const MIN_SHADOW_DIST = 0.01;
 
 extern int display_mode;
 
+intersect_params def_int_params;
 
 
 point ship_coll_obj::get_center() const { // inefficient
@@ -385,9 +386,8 @@ bool u_ship::line_int_obj(point const &p1, point const &p2, point *p_int, float 
 
 
 // returns 1 only if can terminate the collision test
-bool u_ship::do_sphere_int(point const &sc, float sr, intersect_params &ip, bool &intersects, point const &p_last,
-						   cobj_vector_t const &cobjs) const
-{
+bool u_ship::do_sphere_int(point const &sc, float sr, intersect_params &ip, bool &intersects, point const &p_last, cobj_vector_t const &cobjs) const {
+
 	for (unsigned i = 0; i < cobjs.size(); ++i) {
 		assert(cobjs[i]);
 		point pi_test(all_zeros);
@@ -413,13 +413,7 @@ bool u_ship::sphere_int_obj(point const &c, float r, intersect_params &ip) const
 	cobj_vector_t const &cobjs(get_cobjs());
 	if (cobjs.empty()) return 1;
 	point p(c), p_last(ip.p_last);
-	
-	if (ip.calc_int) {
-		xform_point_x2(p, p_last);
-	}
-	else {
-		xform_point(p);
-	}
+	if (ip.calc_int) {xform_point_x2(p, p_last);} else {xform_point(p);}
 	r /= radius; // scale to 1.0
 	bool intersects(0);
 	if (do_sphere_int(p, r, ip, intersects, p_last, cobjs)) return 1;
@@ -457,7 +451,7 @@ bool u_ship::ship_int_obj(u_ship const *const ship, intersect_params &ip) const 
 	cobj_vector_t const &cobjs2(ship->get_cobjs());
 	if (cobjs2.empty()) return sphere_int_obj(ship->get_pos(), ship->get_c_radius(), ip);
 	if (!sphere_int_obj(ship->get_pos(), ship->get_c_radius())) return 0; // bounding sphere test, no intersect calc
-	if (!ship->sphere_int_obj(pos, c_radius, (NO_OBJ_OBJ_INT ? ip : intersect_params()))) return 0; // bounding sphere test
+	if (!ship->sphere_int_obj(pos, c_radius, (NO_OBJ_OBJ_INT ? ip : def_int_params))) return 0; // bounding sphere test
 	if (NO_OBJ_OBJ_INT) return 1;
 	return (cobjs_int_obj(cobjs2, ship) && ship->cobjs_int_obj(cobjs1, this)); // *** add ip to call? ***
 }
