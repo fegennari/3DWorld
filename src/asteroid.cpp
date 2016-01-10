@@ -940,7 +940,7 @@ void uasteroid_field::apply_physics(point_d const &pos_, point const &camera) { 
 
 					for (vector<unsigned short>::const_iterator g = gv.begin(); g != gv.end(); ++g) {
 						uasteroid &j(at(*g));
-						if (j.last_coll_id == ix) continue; // already collided with this object
+						if (j.last_coll_id == (int)ix) continue; // already collided with this object
 						float const dmin(i->radius + j.radius);
 						if (!dist_less_than(i->pos, j.pos, dmin)) continue;
 						vector3d norm_dir(i->pos - j.pos);

@@ -330,7 +330,7 @@ void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const
 	int const dim(::get_max_dim(dir));
 	point p1, p2;
 	
-	for (unsigned i = 0; i < 3; ++i) {
+	for (int i = 0; i < 3; ++i) {
 		p1[i] = (i == dim) ? cp.tscale : 0.0;
 		p2[i] = (i == dim) ? 0.0       : tscale;
 	}
@@ -341,7 +341,7 @@ void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const {
 
 	if (no_draw()) return;
-	assert(id == cix); // always equal, but cix may be increased in this call
+	assert(id == (int)cix); // always equal, but cix may be increased in this call
 	assert(!disabled());
 	bool const in_group(group_id >= 0), same_group(group_id == last_group_id), start_group(in_group && !same_group);
 	if (!in_group && !is_cobj_visible()) return;

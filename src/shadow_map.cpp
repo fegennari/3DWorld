@@ -241,11 +241,12 @@ bool smap_data_t::set_smap_shader_for_light(shader_t &s, int light, xform_matrix
 	if (!shadow_map_enabled() || !is_light_enabled(light)) return 0;
 	point lpos; // unused
 	bool const light_valid(light_valid(0xFF, light, lpos));
-	s.add_uniform_int  (append_ix(string("sm_tex"),   light, 0), tu_id);
-	s.add_uniform_float(append_ix(string("sm_scale"), light, 0), (light_valid ? 1.0 : 0.0));
+	string sm_tex_str("sm_tex"), sm_scale_str("sm_scale"), smap_matrix_str("smap_matrix");
+	s.add_uniform_int  (append_ix(sm_tex_str,   light, 0), tu_id);
+	s.add_uniform_float(append_ix(sm_scale_str, light, 0), (light_valid ? 1.0 : 0.0));
 	xform_matrix tm(texture_matrix);
 	if (mvm) {tm *= (*mvm) * glm::affineInverse((glm::mat4)fgGetMVM());} // Note: works for translate, but not scale?
-	s.add_uniform_matrix_4x4(append_ix(string("smap_matrix"), light, 0), tm.get_ptr(), 0);
+	s.add_uniform_matrix_4x4(append_ix(smap_matrix_str, light, 0), tm.get_ptr(), 0);
 	bind_smap_texture(light_valid);
 	return 1;
 }

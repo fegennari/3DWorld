@@ -87,7 +87,7 @@ int screenshot(unsigned window_width, unsigned window_height, char *file_path, b
 		for (unsigned i = 0; i < window_height; ++i) {
 			unsigned const offset((window_height-i-1)*window_width);
 			int const num_write(fwrite(&buf[3*offset], 3, window_width, fp));
-			assert(num_write == window_width);
+			assert(num_write == (int)window_width);
 		}
 	}
 	fclose(fp);

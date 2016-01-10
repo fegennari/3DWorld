@@ -407,7 +407,7 @@ pos_dir_up light_source::calc_pdu() const {
 	vector3d temp(zero_vector), up_dir;
 	temp[dim] = 1.0; // choose up axis
 	orthogonalize_dir(temp, dir, up_dir, 1);
-	local_smap_data_t &smap(local_smap_manager.get(smap_index));
+	//local_smap_data_t &smap(local_smap_manager.get(smap_index));
 	int cindex(-1);
 	float t(0.0);
 	vector3d cnorm; // unused

@@ -172,7 +172,7 @@ public:
 		for (unsigned i = 0; i < ncobjs; ++i) {
 			coll_obj temp_cobj(cobjs[i]);
 			temp_cobj.add_as_fixed_cobj(); // don't need to remove it
-			assert(cobjs[i].id == i);
+			assert(cobjs[i].id == (int)i);
 		}
 		return 1;
 	}
@@ -1692,7 +1692,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	if (is_camera /*|| type == WAYPOINT*/) {z2 += camera_zh;} // add camera height
 	coll_cell const &cell(v_collision_matrix[ypos][xpos]);
 	int any_coll(0), moved(0);
-	float zceil, zfloor;
+	float zceil(0.0), zfloor(0.0);
 
 	for (int k = (int)cell.cvals.size()-1; k >= 0; --k) { // iterate backwards
 		int const index(cell.cvals[k]);
@@ -1703,7 +1703,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (!cobj.contains_pt_xy(pos)) continue; // test bounding cube
 		if (cobj.no_collision())       continue;
 		if (skip_dynamic && cobj.status == COLL_DYNAMIC) continue;
-		float zt, zb;
+		float zt(0.0), zb(0.0);
 		int coll(0);
 		
 		switch (cobj.type) {
@@ -1778,9 +1778,10 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		}
 		default: assert(0);
 		} // end switch
-		if (cobj.platform_id >= 0) {zt -= 1.0E-6;} // subtract a small value so that camera still collides with cobj
 
 		if (coll) {
+			if (cobj.platform_id >= 0) {zt -= 1.0E-6;} // subtract a small value so that camera still collides with cobj
+
 			if (zt < zb) {
 				cout << "type = " << int(cobj.type) << ", zb = " << zb << ", zt = " << zt << ", pos.z = " << pos.z << endl;
 				assert(0);

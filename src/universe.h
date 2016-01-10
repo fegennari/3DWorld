@@ -242,8 +242,8 @@ public:
 	bool has_craters() const {return 0;} // no longer drawing with craters, but we leave the function for now
 	float get_land_value(unsigned align, point const &cur_pos, float sradius) const;
 	string get_info() const;
-	void set_owner(s_object const &sobj, unsigned owner_);
-	void set_owner_int(unsigned owner_);
+	void set_owner(s_object const &sobj, int owner_);
+	void set_owner_int(int owner_);
 	void unset_owner();
 	void check_owner(s_object const &sobj);
 	void get_owner_info(ostringstream &oss, bool show_uninhabited) const;
@@ -486,8 +486,8 @@ public:
 	void print() const;
 	bool is_destroyed() const;
 	void register_destroyed_sobj() const;
-	unsigned get_owner() const;
-	void set_owner(unsigned owner) const;
+	int get_owner() const;
+	void set_owner(int owner) const;
 	bool has_valid_system() const {return (type >= UTYPE_SYSTEM && system >= 0);}
 	ucell     &get_ucell()  const;
 
@@ -538,6 +538,7 @@ struct coll_test { // size = 16
 
 	int index;
 	float dist, rad, t;
+	coll_test() : index(0) {}
 	bool operator<(const coll_test &A) const {return dist < A.dist;}
 };
 

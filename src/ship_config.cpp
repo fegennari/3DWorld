@@ -246,7 +246,7 @@ bool ship_defs_file_reader::read_weap_type(unsigned &type) {
 
 bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
-	unsigned type;
+	unsigned type(0);
 	float dscale(1.0), read_dscale;
 
 	switch (cmd) {
@@ -511,7 +511,7 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
 				if (multiplier > 0) {
 					us_fleet fleet(name, align, ai_type, targ_type, rgen_dist, (ustart_pos + pos), counts, multiplier);
-					if (using_flagship) fleet.set_flagship(type, fc_stray_dist/1000.0);
+					if (using_flagship) {fleet.set_flagship(type, fc_stray_dist/1000.0);}
 					fleet.spawn();
 				}
 			}
@@ -627,8 +627,8 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
 		case CMD_ADD_ASTEROID: // <unsigned num> <unsigned model> <float min_radius> <float max_radius> <float distribution> [px py pz]
 			{
-				unsigned model, num;
-				float r1, r2, dist(0.0);
+				unsigned model(0), num(0);
+				float r1(0.0), r2(0.0), dist(0.0);
 				point pos;
 				if (!(cfg >> num) || !read_enum(asteroid_m, model, "alignment") || !(cfg >> r1 >> r2 >> dist)) return 0;
 				assert(r1 <= r2 && model < NUM_AS_MODELS);

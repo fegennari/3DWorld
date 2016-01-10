@@ -205,7 +205,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 	surface->setup(size, max(water, lava), 1); // use_heightmap=1
 	unsigned const num_sines(surface->num_sines);
 	float const *const rdata(surface->rdata);
-	float const sizef(size/TWO_PI), mt2(0.5*(table_size-1)), scale(1.5/surface->max_mag);
+	float const mt2(0.5*(table_size-1)), scale(1.5/surface->max_mag);
 	float const delta(TWO_PI/size), sin_ds(sin(delta)), cos_ds(cos(delta));
 	unsigned const pole_thresh(size>>3);
 	wr_scale = 1.0/max(0.01, (1.0 - water));
@@ -225,7 +225,7 @@ void urev_body::gen_texture_data_and_heightmap(unsigned char *data, unsigned siz
 	for (int i = 0; i < (int)size; ++i) { // phi values
 		unsigned const hmoff(i*size), ti(size-i-1), texoff(ti*size);
 		float const phi((float(i)/(size-1))*PI);
-		float const sin_phi((i == size-1) ? 0.0 : sinf(phi)), zval((i == size-1) ? -1.0 : cosf(phi));
+		float const sin_phi((i == int(size-1)) ? 0.0 : sinf(phi)), zval((i == int(size-1)) ? -1.0 : cosf(phi));
 		float sin_s(0.0), cos_s(1.0);
 		float ztable[TOT_NUM_SINES];
 

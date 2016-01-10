@@ -1823,7 +1823,7 @@ void tree_builder_t::create_2nd_order_branch(int i, int j, int cylin_num, bool b
 	for (index = 1; index < branch.num_cylins; index++) {
 		tree_cylin &cylin(branch.cylin[index]), &lcylin(branch.cylin[index-1]);
 		gen_next_cylin(cylin, lcylin, branch_2_var, branch_2_rad_var, 2, j, (index < branch.num_cylins-1));
-		float const temp_num2(float((index+2)*branch.num_branches)/((num_3_branches_created+1)*((float)branch.num_cylins)));
+		//float const temp_num2(float((index+2)*branch.num_branches)/((num_3_branches_created+1)*((float)branch.num_cylins)));
 		if (temp_num*branch_1_distribution >= 1.0 && num_3_branches_created < branch.num_branches) branch_just_created = true;
 		int const deg_added(generate_next_cylin(index, branch.num_cylins, branch_just_created, branch_deflected));
 		gen_cylin_rotate(cylin.rotate, lcylin.rotate, deg_added*rotate_factor);

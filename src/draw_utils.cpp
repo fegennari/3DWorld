@@ -780,7 +780,7 @@ public:
 	void draw_quads_as_tris(unsigned num_quad_verts, unsigned start_quad_vert, unsigned num_instances) { // # vertices
 		if (num_quad_verts == 0) return; // nothing to do
 		assert((num_quad_verts & 3) == 0 && (start_quad_vert & 3) == 0); // must be a multiple of 4
-		unsigned const num_tri_verts(6*(num_quad_verts/4)), start_tri_vert(6*(start_quad_vert/4)); // # indices
+		unsigned const num_tri_verts(6*(num_quad_verts/4));//, start_tri_vert(6*(start_quad_vert/4)); // # indices
 		bool const use_32_bit(bind_quads_as_tris_ivbo(num_quad_verts));
 		int const index_type(use_32_bit ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT);
 

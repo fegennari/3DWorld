@@ -645,7 +645,7 @@ bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xfor
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
-		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, reflective, 0));
+		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, reflective));
 		model3d &cur_model(all_models.back());
 
 		if (ext == "3ds") {

@@ -403,7 +403,7 @@ void check_falling_cobjs() {
 		cobj.shift_by(point(0.0, 0.0, tstep*cobj.v_fall), 1); // translate down
 		int const index(cobj.add_coll_cobj());
 		remove_coll_object(ix);
-		assert(ix != index);
+		assert((int)ix != index);
 		falling_cobjs[i] = index;
 	}
 	vector<unsigned> last_falling(falling_cobjs);

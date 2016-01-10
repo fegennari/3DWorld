@@ -203,7 +203,7 @@ void lightning::gen_recur(point const &start, float strength, int xpos, int ypos
 
 	for (; zpos > 0 && i < max_points-2; --zpos, ++i) {
 		if (i > 0) {points[i].assign(get_xval(ptx), get_yval(pty), zval);}
-		int val(volume_matrix[zpos-1][pty][ptx]), val2(0), nforks(1), nforks2(0), x0(0);
+		int val(volume_matrix[zpos-1][pty][ptx]), nforks(1), nforks2(0), x0(0);
 		lforks[0][0] = ptx;
 		lforks[0][1] = pty;
 		if (pty > 0)             add_forks(lforks, nforks, val, zpos, ptx,   pty-1);

@@ -15,7 +15,7 @@ float vert_optimizer::calc_acmr() const {
 
 	for (unsigned i = 0; i < indices.size(); ++i) {
 		bool found(0);
-		unsigned best_entry(0), oldest_pos(-1);
+		unsigned best_entry(0), oldest_pos((unsigned)-1);
 
 		for (unsigned n = 0; n < VBUF_SZ; ++n) {
 			if (vbuf[n].ix == indices[i]) {found = 1; break;}

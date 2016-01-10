@@ -883,7 +883,7 @@ void ucell::draw_systems(ushader_group &usg, s_object const &clobj, unsigned pas
 						if (p_system && (pass == 2 && !sel_p)) continue; // draw in another pass
 						uplanet &planet(sol.planets[k]);
 						point_d const ppos(pos + planet.pos);
-						if (sel_s && (p2p_dist_sq(camera, ppos) < p2p_dist_sq(camera, spos)) != sol_draw_pass) continue; // don't draw planet in this pass
+						if (sel_s && (p2p_dist_sq(camera, ppos) < p2p_dist_sq(camera, spos)) != (sol_draw_pass != 0)) continue; // don't draw planet in this pass
 						float const pradius(PLANET_ATM_RSCALE*planet.radius), sizep(sscale_val*calc_sphere_size(ppos, camera, pradius));
 						bool skip_draw(!planets_visible);
 
@@ -1254,7 +1254,6 @@ void ugalaxy::process(ucell const &cell) {
 	// gen systems
 	unsigned num_systems(max(MAX_SYSTEMS_PER_GALAXY/10, rand2()%(MAX_SYSTEMS_PER_GALAXY+1)));
 	vector<point> placed;
-	vector<ugalaxy> const &galaxies(*cell.galaxies);
 
 	for (unsigned i = 0; i < cell.galaxies->size(); ++i) { // find galaxies that overlap this one
 		ugalaxy const &g((*cell.galaxies)[i]);
@@ -1287,10 +1286,7 @@ void ugalaxy::process(ucell const &cell) {
 		cl.s1     = cur;
 		cl.color  = BLACK;
 		current.cluster = c;
-		
-		for (unsigned i = 0; i < nsystems; ++i) {
-			cl.center += cl.systems[i];
-		}
+		for (unsigned i = 0; i < nsystems; ++i) {cl.center += cl.systems[i];}
 		cl.center /= nsystems;
 
 		for (unsigned i = 0; i < nsystems; ++i, ++cur) {
@@ -1857,8 +1853,8 @@ void urev_body::dec_orbiting_refs(s_object const &sobj) {
 
 	assert(sobj.object == this);
 	//assert(orbiting_refs > 0); // too strong - can fail if player leaves the galaxy and planets/moons are deleted (refs are reset)
-	if (orbiting_refs >  0) --orbiting_refs;
-	if (orbiting_refs == 0) set_owner(sobj, NO_OWNER);
+	if (orbiting_refs >  0) {--orbiting_refs;}
+	if (orbiting_refs == 0) {set_owner(sobj, NO_OWNER);}
 }
 
 
@@ -2376,7 +2372,8 @@ bool urev_body::draw(point_d pos_, ushader_group &usg, pt_line_drawer planet_pld
 	if (!univ_sphere_vis(pos_, radius))       return 1; // check if in the view volume
 		
 	if (universe_mode && !(display_mode & 0x01) && dist < UNIV_FAR_CLIP && is_owned()) { // owner color
-		usg.enable_color_only_shader(&get_owner_color());
+		colorRGBA const owner_color(get_owner_color());
+		usg.enable_color_only_shader(&owner_color);
 		draw_sphere_vbo(make_pt_global(pos_), radius*max(1.2, 3.0/size), 8, 0); // at least 3 pixels
 		usg.disable_color_only_shader();
 		return 1;
@@ -2845,7 +2842,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 	float dist, float line_radius, bool include_asteroids) const
 {
 	int cell_status(1), cs[3];
-	float rdist, ldist, t;
+	float rdist, ldist, t(0.0);
 	vector3d c1, c2, val, tv, step;
 
 	// check for simple point

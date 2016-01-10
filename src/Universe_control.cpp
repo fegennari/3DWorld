@@ -684,7 +684,7 @@ bool rename_obj(uobject *obj, unsigned alignment) { // a little difficult to use
 
 	assert(obj);
 	int const owner(obj->get_owner());
-	if (/*owner != NO_OWNER &&*/ owner != alignment) return 0;
+	if (/*owner != NO_OWNER &&*/ owner != (int)alignment) return 0;
 	if (user_text.empty()) return 0;
 
 	if (obj->rename(user_text)) {
@@ -729,7 +729,7 @@ float urev_body::get_land_value(unsigned align, point const &cur_pos, float srad
 		unsigned const res_c(sclasses[USC_COLONY].cost + max(sclasses[USC_DEFSAT].cost, sclasses[USC_ANTI_MISS].cost));
 		owner_val = ((team_credits[align] >= res_c) ? 2.5 : 0.75);
 	}
-	else if (align == owner || align == ALIGN_PIRATE) {
+	else if ((int)align == owner || align == ALIGN_PIRATE) {
 		owner_val = 1.0;
 	}
 	else if (TEAM_ALIGNED(align) && TEAM_ALIGNED(owner)) {
@@ -855,12 +855,8 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 			}
 			owned |= (oship != NULL);
 		}
-		if (owned) {
-			world.set_owner(result, owner); // only if inhabitable?
-		}
-		else {
-			assert(!world.is_owned());
-		}
+		if (owned) {world.set_owner(result, owner);} // only if inhabitable?
+		else {assert(!world.is_owned());}
 		return 1;
 	}
 	return 0;
@@ -900,14 +896,14 @@ void urev_body::get_owner_info(ostringstream &oss, bool show_uninhabited) const 
 }
 
 
-void urev_body::set_owner(s_object const &sobj, unsigned owner_) {
+void urev_body::set_owner(s_object const &sobj, int owner_) {
 
 	set_owner_int(owner_);
 	sobj.set_owner(owner_);
 }
 
 
-void urev_body::set_owner_int(unsigned owner_) {
+void urev_body::set_owner_int(int owner_) {
 
 	if (owner == owner_) return; // already set
 	unset_owner();
@@ -1085,7 +1081,7 @@ void orbiting_ship::update_state() {
 				set_pos_from_sobj(&world);
 				has_sobj = 1;
 			}
-			if (!ORBITAL_REGEN && exploding_now && world.get_owner() == alignment) { // is this correct?
+			if (!ORBITAL_REGEN && exploding_now && world.get_owner() == (int)alignment) { // is this correct?
 				world.dec_orbiting_refs(result); // will die this frame
 			}
 			else if (!is_exploding() && !world.is_owned()) {

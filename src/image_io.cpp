@@ -416,7 +416,7 @@ void texture_t::load_jpeg(int index, bool allow_diff_width_height) {
 		height = cinfo.output_height;
 		assert(width > 0 && height > 0);
 	}
-	if (cinfo.output_width != width || cinfo.output_height != height) {
+	if ((int)cinfo.output_width != width || (int)cinfo.output_height != height) {
 		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << cinfo.output_width << "x" << cinfo.output_height << endl;
 		exit(1);
 	}
@@ -518,7 +518,7 @@ void texture_t::load_png(int index, bool allow_diff_width_height, bool allow_two
 		height = h;
 		assert(width > 0 && height > 0);
 	}
-	if (w != width || h != height) {
+	if ((int)w != width || (int)h != height) {
 		cerr << "Incorrect image size for " << name << ": expected " << width << "x" << height << ", got " << w << "x" << h << endl;
 		exit(1);
 	}
@@ -576,7 +576,7 @@ int texture_t::write_to_png(string const &fn) const {
 	png_init_io(png_ptr, fp);
 
 	// Write header
-	int color_type, bit_depth;
+	int color_type(0), bit_depth;
 
 	if (is_16_bit_gray) {
 		color_type = PNG_COLOR_TYPE_GRAY;
@@ -633,7 +633,7 @@ void texture_t::load_tiff(int index, bool allow_diff_width_height, bool allow_tw
 		height = h;
 		assert(width > 0 && height > 0);
 	}
-	assert(w == width && h == height);
+	assert((int)w == width && (int)h == height);
 	
 	if (allow_two_byte_grayscale && (ncolors == 0 || ncolors == 1) && bit_depth == 16) { // 16-bit grayscale
 		ncolors        = 2; // change from 1 to 2 colors so that we can encode the high and low bytes into different channes to have 16-bit values

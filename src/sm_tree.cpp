@@ -68,7 +68,7 @@ colorRGBA get_tree_trunk_color(int type, bool modulate_with_texture) {
 unsigned get_pine_tree_inst_gpu_mem() {return tree_instances.get_gpu_mem();}
 
 
-void small_tree_group::add_tree(small_tree &st) {
+void small_tree_group::add_tree(small_tree const &st) {
 
 	if (st.is_pine_tree()) {
 		max_pt_radius = max(max_pt_radius, st.get_pine_tree_radius());

@@ -682,7 +682,7 @@ void build_lightmap(bool verbose) {
 	}
 	unsigned const nbins(nonempty*zsize);
 	MESH_SIZE[2] = zsize; // override MESH_SIZE[2]
-	float const zstep(czspan/zsize), scene_scale(MESH_X_SIZE/128.0);
+	float const zstep(czspan/zsize);
 	if (verbose) {cout << "Lightmap zsize= " << zsize << ", nonempty= " << nonempty << ", bins= " << nbins << ", czmin= " << czmin0 << ", czmax= " << czmax << endl;}
 	assert(zstep > 0.0);
 	bool raytrace_lights[NUM_LIGHTING_TYPES] = {0};
@@ -839,7 +839,7 @@ void upload_dlights_textures(cube_t const &bounds) {
 	unsigned const max_dlights           = 1024;
 	unsigned const base_floats_per_light = 12;
 	unsigned const max_floats_per_light  = base_floats_per_light + 1;
-	unsigned const floats_per_light      = base_floats_per_light + dl_smap_enabled;
+	//unsigned const floats_per_light      = base_floats_per_light + dl_smap_enabled;
 	unsigned const ysz((max_floats_per_light+3)/4); // round up
 	float dl_data[max_dlights*(4*ysz)] = {0.0}; // use max possible size
 	unsigned const ndl(min(max_dlights, (unsigned)dl_sources.size()));

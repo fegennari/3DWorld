@@ -261,7 +261,7 @@ void coll_obj::get_side_polygons(vector<tquad_t> &sides, int top_bot_only) const
 			unsigned const dim2((dim+1)%3), dim3((dim+2)%3);
 
 			for (unsigned dir = 0; dir < 2; ++dir) { // {low, high} edges
-				if (top_bot_only && dir == (top_bot_only-1)) continue; // not z edge
+				if (top_bot_only && (int)dir == (top_bot_only-1)) continue; // not z edge
 				tquad_t tq(4);
 				
 				for (unsigned i = 0; i < 4; ++i) {

@@ -148,7 +148,7 @@ bool check_line_cylin_int(point const points[2], float radius, float radius2, po
 
 bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const {
 
-	float clip_tmin, clip_tmax;
+	float clip_tmin(0.0), clip_tmax(1.0);
 	if (type != COLL_POLYGON && (!get_line_clip(p1, p2, d, clip_tmin, clip_tmax)
 		                         || clip_tmin > tmax || clip_tmax < tmin)) return 0;
 	

@@ -88,15 +88,15 @@ void s_object::register_destroyed_sobj() const {
 }
 
 
-unsigned s_object::get_owner() const {
+int s_object::get_owner() const {
 
 	modmap::const_iterator it(modmaps[MOD_OWNER].find(*this));
 	if (it == modmaps[MOD_OWNER].end() || it->second.empty()) return NO_OWNER;
-	return unsigned(it->second[0] - '0');
+	return int(it->second[0] - '0');
 }
 
 
-void s_object::set_owner(unsigned owner) const {
+void s_object::set_owner(int owner) const {
 
 	if (owner == NO_OWNER) {
 		modmaps[MOD_OWNER].erase(get_shifted_sobj(*this)); // should be OK even if doesn't exist (but should exist)

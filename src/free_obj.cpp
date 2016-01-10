@@ -682,7 +682,7 @@ void free_obj::draw(shader_t &shader) const { // view culling has already been p
 			glDepthMask(GL_FALSE);
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			glEnable(GL_STENCIL_TEST);
-			glStencilFunc(GL_ALWAYS, 0, ~0);
+			glStencilFunc(GL_ALWAYS, 0, ~0U);
 			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
 			assert(!sobjs.empty());
@@ -691,7 +691,7 @@ void free_obj::draw(shader_t &shader) const { // view culling has already been p
 				draw_shadow_volumes_from(sobjs[d], sun_pos, dscale, ndiv);
 			}
 			fgPopMatrix();
-			glStencilFunc(GL_EQUAL, 0, ~0);
+			glStencilFunc(GL_EQUAL, 0, ~0U);
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 			glDepthFunc(GL_LEQUAL); // GL_EQUAL should be used, but there are more issues with z-fighting in this mode
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

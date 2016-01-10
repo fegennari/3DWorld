@@ -383,7 +383,7 @@ class model3d {
 public:
 	texture_manager &tmgr; // stores all textures
 
-	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool reflective_=0, bool ignore_a=0)
+	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool reflective_=0)
 		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), reflection_tid(0), from_model3d_file(0),
 		has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), reflective(reflective_), tmgr(tmgr_) {}
 	~model3d() {clear();}

@@ -350,22 +350,22 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	assert(i < waypoints.size());
 	point const &wp(waypoints[i].pos);
 	float const dist_sq(p2p_dist_sq(pos, wp));
-	if (max_dist_sq > 0.0 && dist_sq > max_dist_sq && i != curw)               return; // too far away
-	bool const can_see(next || (on_waypt_path && i == curw));
+	if (max_dist_sq > 0.0 && dist_sq > max_dist_sq && (int)i != curw)          return; // too far away
+	bool const can_see(next || (on_waypt_path && (int)i == curw));
 	if (!is_over_mesh(wp) || is_underwater(wp))                                return; // invalid smiley location
 	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this directio
 	unsigned other_smiley_targets(0);
 
 	for (int s = 0; s < num_smileys; ++s) {
-		if (s != smiley_id && sstates[s].last_waypoint == i) ++other_smiley_targets;
+		if (s != smiley_id && sstates[s].last_waypoint == (int)i) ++other_smiley_targets;
 	}
 	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
 	map<unsigned, count_t>::const_iterator it(blocked_waypts.find(i));
-	if (it != blocked_waypts.end())     dmult *= (1.0 + (1 << it->second.c)); // exponential increase in cost for blocked waypoints
-	if (!waypts_used.is_valid(i))       dmult *= 100.0;
-	if (waypoints[i].next_wpts.empty()) dmult *= 10.0; // increase the cost of waypoints disconnected from the rest of the waypoint graph
-	if (i == curw)                      dmult *= 1.0E-6; // prefer the current waypoint to avoid indecision and force next connections
+	if (it != blocked_waypts.end())     {dmult *= (1.0 + (1 << it->second.c));} // exponential increase in cost for blocked waypoints
+	if (!waypts_used.is_valid(i))       {dmult *= 100.0;}
+	if (waypoints[i].next_wpts.empty()) {dmult *= 10.0;} // increase the cost of waypoints disconnected from the rest of the waypoint graph
+	if ((int)i == curw)                 {dmult *= 1.0E-6;} // prefer the current waypoint to avoid indecision and force next connections
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
 	float const tot_weight(dmult*(0.5*time_weight + dist_sq)*rand_uniform(0.8, 1.2));
 	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, can_see)); // add high weight to prefer other objects
@@ -435,7 +435,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 			float const max_dist(0.25*(X_SCENE_SIZE + Y_SCENE_SIZE)), max_dist_sq(max_dist*max_dist);
 
 			for (unsigned i = 0; i < waypoints.size(); ++i) { // inefficient - use subdivision?
-				if (waypoints[i].disabled || i == ignore_w) continue;
+				if (waypoints[i].disabled || (int)i == ignore_w) continue;
 				check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0, max_dist_sq);
 			}
 			if (curw < 0) find_optimal_waypoint(pos, oddatav, goal);
@@ -576,7 +576,7 @@ void player_state::drop_pack(point const &pos) {
 	int const ammo(p_ammo[weapon]);
 	if (!weapons[weapon].need_weapon && (!weapons[weapon].need_ammo || ammo == 0)) return; // no weapon/ammo
 	bool const dodgeball(game_mode == 2 && weapon == W_BALL); // drop their balls
-	if (dodgeball) assert(ammo == balls.size());
+	if (dodgeball) {assert(ammo == (int)balls.size());}
 	unsigned const num(dodgeball ? ammo : 1);
 	int const type(dodgeball ? BALL : WA_PACK), cid(coll_id[type]);
 	obj_group &objg(obj_groups[cid]);
@@ -653,7 +653,7 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 
 	if (obj.disabled()) return;
 	int min_ie(NO_SOURCE), min_ih(-1);
-	float diste, disth, health(obj.health);
+	float diste(0.0), disth(0.0), health(obj.health);
 	vector<type_wt_t> types;
 	point targete(all_zeros), targeth(all_zeros);
 	int const last_target_visible(target_visible), last_target_type(target_type);

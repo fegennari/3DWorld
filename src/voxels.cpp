@@ -279,7 +279,7 @@ void voxel_manager::create_procedural(float mag, float freq, vector3d const &off
 	unsigned const xyz_num[3] = {nx, ny, nz};
 	vector<float> xyz_vals[3];
 	noise_gen_3d ngen;
-	float rx, ry;
+	float rx(0.0), ry(0.0);
 	float const zscale((params.invert ? -1.0 : 1.0)*params.z_gradient/(nz-1));
 
 	if (gen_mode == 0) {

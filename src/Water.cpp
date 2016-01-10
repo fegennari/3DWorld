@@ -990,7 +990,7 @@ void sync_water_height(int wsi, int skip_ix, float zval, float z_over, vector<un
 	spill.get_connected_components(wsi, cc);
 
 	for (unsigned k = 0; k < cc.size(); ++k) {
-		if (cc[k] == wsi || cc[k] == skip_ix) continue;
+		if ((int)cc[k] == wsi || (int)cc[k] == skip_ix) continue;
 		valley &v(valleys[cc[k]]);
 		v.zval      = zval;//max(zval, v.zval);
 		v.dz       -= z_over;
@@ -1101,8 +1101,8 @@ void update_valleys_and_draw_spillover() {
 			if (v.dz > TOLERANCE) vol_over *= min(1.0f, (sf.z_over/v.dz)); // fraction of last amount that spilled
 			
 			if (sf.spill == SPILL_INSIDE && vol_over > 0.0) { // spilled into another pool (1 direction), send water to the target
-				assert(watershed_matrix[sf.si][sf.sj].wsi == i);
-				assert(sf.index != i);
+				assert(watershed_matrix[sf.si][sf.sj].wsi == (int)i);
+				assert(sf.index != (int)i);
 				valley &vs(valleys[sf.index]); // pool that is spilled into (dest)
 				float const nv_ratio(CLIP_TO_01(vol_over/max(TOLERANCE, vs.w_volume)));
 				v.dz         -= sf.z_over;

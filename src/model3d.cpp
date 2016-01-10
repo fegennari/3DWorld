@@ -305,8 +305,7 @@ template<typename T> void indexed_vntc_vect_t<T>::simplify(vector<unsigned> &out
 	if (target_num_verts <= 3) {out = indices; return;} // can't simplify
 
 	// build vertex to face/triangle mapping
-	assert((num_ixs % 3) == 0); // must be triangles
-	unsigned const num_tris(num_ixs/3);
+	assert((num_ixs % 3) == 0); // must be triangles; num_tris = num_ixs/3
 	vector<vert_to_tri_t<8>> vert_to_tri(num_verts);
 
 	for (unsigned i = 0; i < num_ixs; ++i) {
@@ -1148,7 +1147,8 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 	cont.get_stats(stats);
 	polygons.clear();
 	polygons.reserve(stats.quads);
-	cont.get_polygons(get_polygon_args_t(polygons, WHITE, 1));
+	get_polygon_args_t args(polygons, WHITE, 1);
+	cont.get_polygons(args);
 	xform_polygons(polygons, xf, 0);
 	
 	for (vector<coll_tquad>::const_iterator i = polygons.begin(); i != polygons.end(); ++i) {

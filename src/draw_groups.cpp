@@ -42,12 +42,11 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 void draw_sized_point(dwobject &obj, float radius, float cd_scale, const colorRGBA &color, const colorRGBA &tcolor,
 					  bool do_texture, shader_t &shader, int is_chunky=0);
 void draw_ammo(obj_group &objg, float radius, const colorRGBA &color, int ndiv, int j, shader_t &shader, lt_atten_manager_t &lt_atten_manager);
-void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type,
-					  int use_orient, int ndiv, shader_t &shader, float scale=1.0);
+void draw_smiley_part(point const &pos, vector3d const &orient, int type, int use_orient, int ndiv, shader_t &shader, float scale=1.0);
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
 				 float health, int id, mesh2d const *const mesh, shader_t &shader);
 void draw_powerup(point const &pos, float radius, int ndiv, int type, const colorRGBA &color, shader_t &shader, lt_atten_manager_t &lt_atten_manager);
-void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix, shader_t &shader);
+void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix);
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int time, shader_t &shader, bool burned);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
 void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, shader_t &shader);
@@ -305,7 +304,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		}
 		break;
 	case SFPART:
-		draw_smiley_part(pos, pos, obj.orientation, obj.direction, 1, ndiv, shader);
+		draw_smiley_part(pos, obj.orientation, obj.direction, 1, ndiv, shader);
 		break;
 	case CHUNK:
 		draw_chunk(pos, radius, obj.init_dir, obj.vdeform, (obj.flags & TYPE_FLAG), ndiv, shader);
@@ -334,7 +333,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 	case BALL:
 		// Note: this is the only place where drawing an object modifies its physics state, but it's difficult to move the code
 		draw_rolling_obj(pos, objg.get_obj(j).init_dir, radius, obj.status, ndiv, ((obj.flags & PLATFORM_COLL) != 0),
-			dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)), shader);
+			dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0], (in_ammo ? NULL : &objg.get_td()->get_matrix(j)));
 		break;
 	case POWERUP:
 	case HEALTH:
@@ -597,7 +596,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				break;
 			case PARTICLE:
 				particles_to_draw.push_back(make_pair(-distance_to_camera_sq(pos), j));
-				if (animate2 && j == selected_particle && obj.time < otype.lifetime/3) {gen_smoke(pos, 0.25, 0.1);} // max one particle per frame
+				if (animate2 && (int)j == selected_particle && obj.time < otype.lifetime/3) {gen_smoke(pos, 0.25, 0.1);} // max one particle per frame
 				break;
 			case SAND:
 			case DIRT:
@@ -885,7 +884,7 @@ inline void rotate_to_dir(vector3d const &dir) { // normalized to +y (for smiley
 }
 
 
-void draw_smiley_part(point const &pos, point const &pos0, vector3d const &orient, int type, int use_orient, int ndiv, shader_t &shader, float scale) {
+void draw_smiley_part(point const &pos, vector3d const &orient, int type, int use_orient, int ndiv, shader_t &shader, float scale) {
 
 	assert(type < NUM_SMILEY_PARTS);
 	float const radius(scale*object_types[SFPART].radius);
@@ -932,7 +931,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 		if (health > 10.0) {
 			float const scale((powerup == PU_SPEED) ? 1.5 : 1.0);
 			point const pos3 ((powerup == PU_SPEED) ? (pos2 + point(0.0, 0.2*radius, 0.0)) : pos2);
-			draw_smiley_part(pos3, pos, orient, SF_EYE, 0, ndiv2, shader, scale); // eyes
+			draw_smiley_part(pos3, orient, SF_EYE, 0, ndiv2, shader, scale); // eyes
 		}
 		else {
 			shader.set_cur_color(BLACK);
@@ -949,7 +948,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	// draw nose
 	if (powerup != PU_INVISIBILITY || same_team(id, -1)) { // show nose even if invisible if same team as player
 		point pos3(0.0, 1.1*radius, 0.0);
-		draw_smiley_part(pos3, pos, orient, SF_NOSE, 0, ndiv2, shader); // nose
+		draw_smiley_part(pos3, orient, SF_NOSE, 0, ndiv2, shader); // nose
 	}
 	float alpha(1.0);
 
@@ -1051,7 +1050,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	// draw tongue
 	if (sstates[id].kill_time < int(2*TICKS_PER_SECOND) || powerup == PU_DAMAGE) { // stick your tongue out at a dead enemy
 		point pos4(0.0, 0.8*radius, -0.4*radius);
-		draw_smiley_part(pos4, pos, orient, SF_TONGUE, 0, ndiv2, shader);
+		draw_smiley_part(pos4, orient, SF_TONGUE, 0, ndiv2, shader);
 	}
 	if (game_mode == 2 && (sstates[id].p_ammo[W_BALL] > 0 || UNLIMITED_WEAPONS)) { // dodgeball
 		select_texture(select_dodgeball_texture(id));
@@ -1115,7 +1114,7 @@ void draw_powerup(point const &pos, float radius, int ndiv, int type, const colo
 }
 
 
-void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix, shader_t &shader) {
+void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix) {
 
 	select_texture(tid);
 	fgPushMatrix();

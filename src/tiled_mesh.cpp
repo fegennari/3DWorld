@@ -220,15 +220,15 @@ tile_t::tile_t(unsigned size_, int x, int y) : last_occluded_frame(0), weight_ti
 
 void tile_t::update_terrain_params() {
 
-	float const off_mult(0.4), height_mult(0.8), dirt_mult(1.0), veg_mult(5.0), off_scale(1.0);
+	float const dirt_mult(1.0), veg_mult(5.0);
 	float const xv1(get_xval(x1)), xv2(xv1 + (x2-x1)*deltax), yv1(get_yval(y1)), yv2(yv1 + (y2-y1)*deltay);
 
 	for (unsigned yp = 0; yp < 2; ++yp) {
 		for (unsigned xp = 0; xp < 2; ++xp) {
 			terrain_params_t &param(params[yp][xp]);
 			float const xv(mesh_scale*(xp ? xv2 : xv1)), yv(mesh_scale*(yp ? yv2 : yv1));
-			//param.hoff   = off_scale*eval_mesh_sin_terms(off_mult*xv+123, off_mult*yv+456);
-			//param.hscale = min(2.0f, max(0.5f, 0.5f*fabs(eval_mesh_sin_terms(height_mult*xv+789, height_mult*yv+111))));
+			//param.hoff   = eval_mesh_sin_terms(0.4*xv+123, 0.4*yv+456);
+			//param.hscale = min(2.0f, max(0.5f, 0.5f*fabs(eval_mesh_sin_terms(0.8*xv+789, 0.8*yv+111))));
 			float const veg_val(eval_mesh_sin_terms(veg_mult*xv, veg_mult*yv));
 			param.veg    = CLIP_TO_01(5.000f*(veg_val + 1.5f));
 			param.grass  = CLIP_TO_01(100.0f*(veg_val + 3.0f)); // depends on hoff?
@@ -2490,7 +2490,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 			for (unsigned i = 0; i < to_draw.size(); ++i) {
 				if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
-				if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5) != wpass) continue; // xyz dist
+				if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5) != (int)wpass) continue; // xyz dist
 				to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
 			}
 			disable_instancing_for_shader_loc(lt_loc);
@@ -2695,11 +2695,11 @@ void draw_tiled_terrain(bool reflection_pass) {
 			glDepthMask(GL_FALSE);
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			glEnable(GL_STENCIL_TEST);
-			glStencilFunc(GL_ALWAYS, 0, ~0);
+			glStencilFunc(GL_ALWAYS, 0, ~0U);
 			glStencilOpSeparate(GL_FRONT, GL_INCR_WRAP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_BACK,  GL_DECR_WRAP, GL_DECR_WRAP, GL_KEEP);
 			draw_cylinder_at(p1, z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends
-			glStencilFunc(GL_NOTEQUAL, -1, ~0); // one front face only
+			glStencilFunc(GL_NOTEQUAL, -1, ~0U); // one front face only
 			glStencilOpSeparate(GL_FRONT_AND_BACK, GL_KEEP, GL_KEEP, GL_KEEP);
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			draw_cylinder_at(p1, z2-z1, radius, radius, N_CYL_SIDES, 1); // with ends

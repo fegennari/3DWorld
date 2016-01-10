@@ -32,7 +32,7 @@ struct text_message_params {
 	float size, yval;
 	colorRGBA color;
 	text_message_params() : fade(0), itime(0), mtime(0), priority(0), size(0.0), color(WHITE) {}
-	text_message_params(int t, float s, colorRGBA const &c, int p, float y=0.0, bool fade_=0)
+	text_message_params(int t, float s, colorRGBA const &c, int p, bool fade_=0)
 		: fade(fade_), itime(fade ? 3*t/2 : t), mtime(itime), priority(p), size(s), yval(0.0), color(c) {}
 };
 
@@ -345,7 +345,7 @@ bool player_state::pickup_ball(int index) {
 	dwobject &obj(obj_groups[coll_id[BALL]].get_obj(index));
 	if (obj.disabled())    return 0; // already picked up this frame?
 	if (UNLIMITED_WEAPONS) return 0; //obj.disable()?
-	assert(p_ammo[W_BALL] == balls.size());
+	assert(p_ammo[W_BALL] == (int)balls.size());
 	weapon            = W_BALL;
 	p_weapons[W_BALL] = 1;
 	++p_ammo[W_BALL];
@@ -1121,7 +1121,7 @@ bool check_explosion_damage(point const &p1, point const &p2, int cobj) {
 
 void exp_damage_groups(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview) { // slow
 
-	float dist(distance_to_camera(pos)), ssq(size*size);
+	float dist(distance_to_camera(pos));
 
 	if (!spectate && dist <= size && (type != IMPACT || shooter != CAMERA_ID) && (type != SEEK_D || !cview)) {
 		if (check_explosion_damage(pos, get_camera_pos(), camera_coll_id)) {
@@ -2302,11 +2302,11 @@ void show_other_messages() {
 	msg_params.mtime -= iticks;
 }
 
-void print_text_onscreen(string const &text, colorRGBA const &color, float size, int time, int priority, float yval) {
+void print_text_onscreen(string const &text, colorRGBA const &color, float size, int time, int priority) {
 
 	if (msg_params.mtime > 0 && msg_params.priority > priority) return; // do this before the strcpy
 	message    = text;
-	msg_params = text_message_params(time, size, color, priority, yval, FADE_MESSAGE_ALPHA);
+	msg_params = text_message_params(time, size, color, priority, FADE_MESSAGE_ALPHA);
 }
 
 void print_weapon(int weapon_id) {

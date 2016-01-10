@@ -92,7 +92,7 @@ struct small_tree_group : public vector<small_tree> {
 	void sort_by_dist_to_camera() {
 		sort(begin(), end(), small_tree::comp_by_type_dist(get_camera_pos()));
 	}
-	void add_tree(small_tree &st);
+	void add_tree(small_tree const &st);
 	void calc_trunk_pts();
 	void finalize(bool low_detail);
 	void finalize_upload_and_clear_pts(bool low_detail);

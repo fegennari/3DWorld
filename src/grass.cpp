@@ -526,7 +526,6 @@ public:
 		unsigned start, end;
 		unsigned const ix(get_start_and_end(x, y, start, end));
 		unsigned min_up(end+1), max_up(start);
-		int last_cobj(-1);
 
 		for (unsigned i = start; i < end; ++i) { // will do nothing if there's no grass here
 			grass_t &g(grass[i]);
@@ -548,7 +547,7 @@ public:
 		float const rad(get_xy_bounds(pos, radius, x1, y1, x2, y2));
 		if (rad == 0.0) return;
 		color_wrapper cw;
-		if (add_color) {cw.set_c3(color);}
+		cw.set_c3(color);
 
 		// modify grass within radius of pos
 		for (int y = y1; y <= y2; ++y) {

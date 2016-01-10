@@ -146,10 +146,11 @@ protected:
 
 	bool read_matrix(xform_matrix &matrix, unsigned short chunk_len) {
 		assert(chunk_len == 54); // header + 4*3 floats
-		float *mp(matrix.get_ptr());
 		float m[12];
 		if (!read_data(m, sizeof(float), 12, "transform matrix")) return 0;
 #if 0
+		float *mp(matrix.get_ptr());
+
 		for (unsigned i = 0; i < 4; ++i) {
 			for (unsigned j = 0; j < 3; ++j) {mp[4*i+j] = m[3*i+j];}
 		}
@@ -175,7 +176,6 @@ public:
 	virtual ~file_reader_3ds() {}
 
 	bool read(geom_xform_t const &xf, bool verbose_) {
-		RESET_TIME;
 		verbose = verbose_;
 		cur_xf = xf;
 		if (!open_file(1)) return 0; // binary file

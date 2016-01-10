@@ -1403,7 +1403,7 @@ void uobj_draw_data::draw_tractor() const { // could be better
 
 void uobj_draw_data::draw_gunship() const {
 
-	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3)), ndiv4(get_ndiv(ndiv/4));
+	unsigned const ndiv2(get_ndiv(ndiv/2)), ndiv3(get_ndiv(ndiv/3));
 	setup_draw_ship();
 	uniform_scale(1.125);
 
@@ -2144,7 +2144,7 @@ void uobj_draw_data::draw_saucer(bool rotated, bool mothership) const {
 			else {set_color(color_b); begin_sphere_draw(0);}
 
 			for (unsigned i = 0; i < nlights; ++i) {
-				if ((powered && ((i+(on_time>>2))&3) == 0) != is_lit) continue; // incorrect state
+				if ((powered && ((i+(on_time>>2))&3) == 0) != (is_lit != 0)) continue; // incorrect state
 				float const theta(TWO_PI*i/float(nlights));
 				draw_sphere_vbo(point(cosf(theta), sinf(theta), 0.0), 0.045, ndiv4, 0);
 

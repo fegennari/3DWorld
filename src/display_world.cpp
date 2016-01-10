@@ -548,7 +548,7 @@ void setup_basic_fog() {
 }
 
 
-void add_uw_light_color_comp(int light, point const &lpos, float weight, colorRGBA &color) {
+void add_uw_light_color_comp(point const &lpos, float weight, colorRGBA &color) {
 
 	// check for in shadow? what about tiled terrain?
 	weight *= 0.5 + 0.5*max(0.0f, lpos.z/lpos.mag()); // vertical component (which penetrates water)
@@ -560,9 +560,9 @@ void atten_uw_fog_color(colorRGBA &color, float depth) {
 
 	colorRGBA light_color(BLACK);
 	float const lf(get_lf_scale(light_factor));
-	if (lf > 0.0) add_uw_light_color_comp(0, sun_pos,  lf,           light_color);
-	if (lf < 1.0) add_uw_light_color_comp(1, moon_pos, 0.5*(1.0-lf), light_color);
-	if (is_cloudy) light_color *= 0.5;
+	if (lf > 0.0) {add_uw_light_color_comp(sun_pos,  lf,           light_color);}
+	if (lf < 1.0) {add_uw_light_color_comp(moon_pos, 0.5*(1.0-lf), light_color);}
+	if (is_cloudy) {light_color *= 0.5;}
 	color  = color.modulate_with(light_color);
 	atten_by_water_depth(&color.R, depth);
 	color *= FOG_COLOR_ATTEN;

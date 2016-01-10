@@ -15,7 +15,7 @@ class vert_optimizer {
 
 	struct vbuf_entry_t {
 		unsigned ix, pos;
-		vbuf_entry_t() : ix(-1), pos(0) {}
+		vbuf_entry_t() : ix((unsigned)-1), pos(0) {}
 	};
 
 	template<unsigned N> struct vert_block_t {

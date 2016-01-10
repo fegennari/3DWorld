@@ -1264,7 +1264,7 @@ public:
 	void make_flagship(float csd) {is_flagship = 1; child_stray_dist = csd;}
 	float get_crew_strength() const;
 	bool is_docked()          const {return docked;}
-	bool has_homeworld()      const {return (homeworld.is_valid() && homeworld.get_owner() == alignment);}
+	bool has_homeworld()      const {return (homeworld.is_valid() && homeworld.get_owner() == (int)alignment);}
 	float get_child_stray_dist() const;
 	float min_time_to_target(point const &targ_pos) const;
 	float offense()           const {return specs().offense_rating();}

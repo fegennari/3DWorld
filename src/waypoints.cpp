@@ -135,7 +135,7 @@ void waypoint_vector::remove(wpt_ix_t ix) {
 
 	assert(ix < size());
 	
-	if (ix+1 == size()) { // last element
+	if (unsigned(ix+1) == size()) { // last element
 		pop_back();
 		return;
 	}
@@ -189,7 +189,8 @@ class waypoint_builder {
 		player_clip_to_scene(pos); // make sure players can reach this waypoint
 		float const mesh_zval(interpolate_mesh_zval(pos.x, pos.y, 0.0, 0, 0));
 		if (!is_mesh_wpt && pos.z - radius < mesh_zval)    return 0; // bottom of smiley is under the mesh - should use a mesh waypoint here
-		if (!check_cobj_placement(point(pos), coll_id, 1)) return 0;
+		point temp_pos(pos);
+		if (!check_cobj_placement(temp_pos, coll_id, 1))   return 0;
 		if (is_point_interior(pos, 0.5*radius))            return 0;
 		if (point_inside_voxel_terrain(pos))               return 0;
 		return 1;
@@ -203,10 +204,10 @@ class waypoint_builder {
 			coll_obj &cobj(coll_objects.get_cobj(coll_id));
 			
 			// must be the same or uninitialized - if a cobj has more than one waypoint then they should be sequential
-			if (cobj.waypt_id < 0 || cobj.waypt_id+1 == ix) {
+			if (cobj.waypt_id < 0 || unsigned(cobj.waypt_id+1) == ix) {
 				cobj.waypt_id = ix; // the last waypoint for this cobj
 			}
-			else if (cobj.waypt_id == ix+1) { // previous ix
+			else if (cobj.waypt_id == int(ix+1)) { // previous ix
 				// waypoint is already correct/sequential - no update needed
 			}
 			else { // can happen when a multi-waypoint polygon (extruded or quad) is updated with a non-sequential waypoint index from the free list
@@ -434,7 +435,7 @@ public:
 			cands.clear();
 
 			for (unsigned j = to_start; j < to_end; ++j) {
-				if (i == j || waypoints[j].disabled) continue;
+				if (i == (int)j || waypoints[j].disabled) continue;
 				point const end(waypoints[j].pos);
 				if (cindex >= 0 && coll_objects.get_cobj(cindex).line_intersect(start, end)) continue; // hit last cobj
 				if (fast && !dist_less_than(start, end, fast_dmax)) continue; // too far away
@@ -775,7 +776,7 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 	unsigned const best(path[0]);
 
 	for (unsigned i = 0; i < oddatav.size(); ++i) {
-		oddatav[i].dist = ((oddatav[i].id == best) ? 1.0 : 1000.0); // large/small distance
+		oddatav[i].dist = ((oddatav[i].id == (int)best) ? 1.0 : 1000.0); // large/small distance
 	}
 }
 

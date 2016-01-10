@@ -822,7 +822,7 @@ void texture_t::make_normal_map() {
 		int const ym1((y-1+height) % height), yp1((y+1) % height);
 
 		for (int x = 0; x < width; ++x) {
-			int const xm1((x-1+width) % width), xp1((x+1) % width), off(3*(x + y*width));
+			int const xm1((x-1+width) % width), xp1((x+1) % width);
 			max_delta = max(max_delta, abs((int)data[xp1+y*width] - (int)data[xm1+y*width]));
 			max_delta = max(max_delta, abs((int)data[x+yp1*width] - (int)data[x+ym1*width]));
 		}
