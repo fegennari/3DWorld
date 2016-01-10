@@ -334,7 +334,7 @@ struct coll_cell { // size = 52
 
 	void clear(bool clear_vectors);
 
-	void update_zmm(float zmin_, float zmax_, coll_obj const &cobj) {
+	void update_zmm(float zmin_, float zmax_) {
 		assert(zmin_ <= zmax_);
 		zmin = min(zmin_, zmin);
 		zmax = max(zmax_, zmax);

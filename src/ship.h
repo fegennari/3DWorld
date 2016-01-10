@@ -463,7 +463,7 @@ class ship_bounded_cylinder : public ship_cylinder { // cylinder AND cube (can a
 
 public:
 	ship_bounded_cylinder() {}
-	ship_bounded_cylinder(ship_cylinder const &cylin, ship_cube const &cube, float dscale=1.0)
+	ship_bounded_cylinder(ship_cylinder const &cylin, ship_cube const &cube)
 		: ship_cylinder(cylin), bcube(cube) {}
 	ship_bounded_cylinder* clone() const {return new ship_bounded_cylinder(*this);}
 	void translate(point const &p) {ship_cylinder::translate(p); bcube.translate(p);}
@@ -1262,7 +1262,7 @@ public:
 	void make_flagship(float csd) {is_flagship = 1; child_stray_dist = csd;}
 	float get_crew_strength() const;
 	bool is_docked()          const {return docked;}
-	bool has_homeworld()      const {return (homeworld.is_valid() && homeworld.get_owner() == alignment);}
+	bool has_homeworld()      const {return (homeworld.is_valid() && homeworld.get_owner() == (int)alignment);}
 	float get_child_stray_dist() const;
 	float min_time_to_target(point const &targ_pos) const;
 	float offense()           const {return specs().offense_rating();}

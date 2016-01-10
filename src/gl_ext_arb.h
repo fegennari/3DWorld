@@ -88,7 +88,7 @@ template<typename T> void create_bind_vbo_and_upload(unsigned &vbo, vector<T> co
 inline void create_vbo_with_null_data(unsigned &vbo, size_t size, bool is_index=0, int dynamic_level=0) {
 	vbo = create_vbo();
 	bind_vbo(vbo, is_index);
-	upload_vbo_data(NULL, size, is_index);
+	upload_vbo_data(NULL, size, is_index, dynamic_level);
 }
 
 

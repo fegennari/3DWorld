@@ -653,7 +653,7 @@ void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_t
 		h_collision_matrix[i][j] = zmaxv;
 	}
 	if (add_to_hcm || ALWAYS_ADD_TO_HCM) {
-		vcm.update_zmm(zminv, zmaxv, cobj);
+		vcm.update_zmm(zminv, zmaxv);
 
 		if (!lm_alloc) { // if the lighting has already been computed, we can't change czmin/czmax/get_zval()/get_zpos()
 			czmin = min(zminv, czmin);
@@ -736,7 +736,7 @@ void purge_coll_freed(bool force) {
 				coll_obj &cobj(coll_objects[*in]);
 
 				if (!cobj.freed_unused()) {
-					if (cobj.status == COLL_STATIC) vcm.update_zmm(cobj.d[2][0], cobj.d[2][1], cobj);
+					if (cobj.status == COLL_STATIC) {vcm.update_zmm(cobj.d[2][0], cobj.d[2][1]);}
 					*o++ = *in;
 				}
 			}

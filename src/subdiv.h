@@ -63,7 +63,7 @@ public:
 	void set_data(point const &p, float r, int n, float const *pm, float dp=0.0, upsurface const *const s=NULL);
 
 	bool equal(point const &p, float r, int n) const {
-		return (p == pos && r == radius && n == ndiv && points != NULL);
+		return (p == pos && r == radius && n == (int)ndiv && points != NULL);
 	}
 };
 

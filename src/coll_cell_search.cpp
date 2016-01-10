@@ -384,7 +384,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 		int const dim(::get_max_dim(dir));
 		point p1, p2;
 	
-		for (unsigned i = 0; i < 3; ++i) {
+		for (int i = 0; i < 3; ++i) {
 			p1[i] = (i == dim) ? tscale[0] : 0.0;
 			p2[i] = (i == dim) ? 0.0       : tscale[1];
 		}
