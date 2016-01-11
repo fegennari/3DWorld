@@ -6,7 +6,7 @@ uniform float radius = 1.0;
 uniform float offset = 0.0;
 uniform float alpha_bias = -0.4; // intended to be changed for grayscale mode
 uniform float dist_bias  = 0.0;
-uniform vec3 rscale  = vec3(1.0);
+uniform vec3 rscale      = vec3(1.0);
 in vec3 normal, vertex; // local object space
 
 // Note: the nebula center is always assumed to be at 0,0,0 in local object space
@@ -18,7 +18,7 @@ void main()
 		float dist = length(vertex/(rscale*radius)); // 0 at center, 1 at edge
 		if (dist > 1.0) discard;
 		color      = mix(color1i, color, dist);
-		vec3  pos  = vertex + vec3(offset, offset, offset);
+		vec3  pos  = vertex + vec3(offset);
 		vec4  val  = vec4(0.0);
 		float freq = 1.0;
 

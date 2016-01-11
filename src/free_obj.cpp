@@ -950,7 +950,7 @@ uparticle_cloud::uparticle_cloud(point const &pos_, float rmin_, float rmax_, co
 	radius      = c_radius = rmin_;
 	alignment   = ALIGN_NEUTRAL;
 	draw_rscale = 1.0; // ?
-	hashval     = 1000*pos.x;
+	hashval     = 1000.0*sinf(pos.x);
 	gen_pts(1.0); // generate the points using a radius of 1.0 and scale them to the current radius during rendering
 }
 
@@ -976,7 +976,7 @@ void uparticle_cloud::draw_obj(uobj_draw_data &ddata) const { // Note: assumes G
 	s.set_uniform_color(s.c1o_loc, cur_colors[1]);
 	s.set_uniform_float(s.rad_loc, 1.0); // vertex will be scaled by radius
 	s.set_uniform_float(s.off_loc, hashval); // used as a hash
-	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - pos).get_norm()); // local object space
+	s.set_uniform_vector3d(s.vd_loc, (upos_point_type(get_camera_pos()) - pos).get_norm()); // local object space
 	draw_quads();
 	ddata.shader->make_current();
 }

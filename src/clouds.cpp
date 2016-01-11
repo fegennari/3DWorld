@@ -562,7 +562,7 @@ void unebula::draw(point_d pos_, point const &camera, float max_dist, vpc_shader
 	s.set_uniform_color(s.c3o_loc, mod_color[2]);
 	s.set_uniform_float(s.rad_loc, radius);
 	s.set_uniform_float(s.off_loc, pos.x); // used as a hash
-	s.set_uniform_vector3d(s.vd_loc, (camera - pos_).get_norm()); // local object space
+	s.set_uniform_vector3d(s.vd_loc, (upos_point_type(camera) - pos_).get_norm()); // local object space
 	s.set_cur_color(mod_color[0]);
 	enable_blend();
 	draw_quads();
