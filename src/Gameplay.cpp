@@ -2000,9 +2000,11 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, decal_radius, get_max_dim(coll_norm))) {
 				colorRGBA dcolor;
 				int decal_tid(-1);
+				point decal_pos(coll_pos);
 
 				if (is_laser) {
 					decal_tid = FLARE3_TEX; dcolor = BLACK;
+					decal_pos += signed_rand_vector(0.75*decal_radius*range); // break up the regularity of the laser beam, which has no firing error
 				}
 				else if (is_glass) {
 					decal_tid = FLARE3_TEX; dcolor = (WHITE*0.5 + cobj.cp.color*0.5);
@@ -2014,7 +2016,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 					dcolor.alpha = 1.0;
 					//dcolor.set_valid_color(); // more consisten across lighting conditions, but less aligned to the object color
 				}
-				if (decal_tid >= 0) {gen_decal(coll_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, is_glass, 1);} // inherit partial glass color
+				if (decal_tid >= 0) {gen_decal(decal_pos, decal_radius, coll_norm, decal_tid, cindex, dcolor, is_glass, 1);} // inherit partial glass color
 
 				if (coll_norm.z > -0.5 && !is_glass && ((is_laser & (rand()&1)) || wtype == W_M16)) { // create small dust clouds/smoke at hit locations
 					point const smoke_pos(coll_pos + decal_radius*coll_norm);
