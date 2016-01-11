@@ -1552,8 +1552,8 @@ void auto_advance_time() { // T = 1 hour
 
 	// update rain_wetness
 	float const elapsed_secs(fticks/TICKS_PER_SECOND);
-	if (is_rain_enabled()) {rain_wetness = min(1.0f, (rain_wetness + 1.0f*elapsed_secs*get_rain_intensity()));} // increase to max after 1s of heavy rain/2.5s of light rain
-	else {rain_wetness = max(0.0f, (rain_wetness - 0.1f*elapsed_secs));} // all wetness gone after 10s
+	if (is_rain_enabled()) {rain_wetness = min(1.0f, (rain_wetness + 0.5f*elapsed_secs*get_rain_intensity()));} // increase to max after 2s of heavy rain/5s of light rain
+	else {rain_wetness = max(0.0f, (rain_wetness - 0.05f*elapsed_secs));} // all wetness gone after 20s
 
 	if (!auto_time_adv) return;
 	static int last_itime(0), precip_inited(0);

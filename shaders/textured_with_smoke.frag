@@ -3,6 +3,7 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta, step_delta_shadow;
 uniform sampler2D tex0;
+uniform sampler3D wet_noise_tex;
 uniform float min_alpha       = 0.0;
 uniform float water_depth     = 0.0;
 uniform float emissive_scale  = 0.0;
@@ -26,13 +27,11 @@ uniform sampler2D reflection_tex;
 
 const float SMOKE_SCALE = 0.25;
 
-float get_wet_ad_scale() {return mix(1.0, 0.25, wet_effect*max(normal.z, 0.0));} // only +z surfaces are wet
-
 // Note: dynamic point lights use reflection vector for specular, and specular doesn't move when the eye rotates
 //       global directional lights use half vector for specular, which seems to be const per pixel, and specular doesn't move when the eye translates
 #define ADD_LIGHT(i) lit_color += add_pt_light_comp(n, epos, i).rgb
 
-vec3 add_light0(in vec3 n, in float normal_sign) {
+vec3 add_light0(in vec3 n, in float normal_sign, in float wet_ad_scale) {
 	vec3 light_dir = normalize(fg_LightSource[0].position.xyz - epos.xyz); // Note: could drop the -epos.xyz for a directional light
 	float nscale   = 1.0;
 #ifdef USE_SHADOW_MAP
@@ -64,14 +63,14 @@ vec3 add_light0(in vec3 n, in float normal_sign) {
 		}
 	}
 #endif // DYNAMIC_SMOKE_SHADOWS
-	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, 1.0, gl_Color*get_wet_ad_scale(), fg_LightSource[0], normal_sign).rgb;
+	return add_light_comp_pos_scaled_light(nscale*n, epos, 1.0, 1.0, gl_Color*wet_ad_scale, fg_LightSource[0], normal_sign).rgb;
 }
 
-vec3 add_light1(in vec3 n, in float normal_sign) {
+vec3 add_light1(in vec3 n, in float normal_sign, in float wet_ad_scale) {
 #ifdef USE_SHADOW_MAP
 	if (use_shadow_map) {n *= get_shadow_map_weight_light1(epos, n);}
 #endif
-	return add_light_comp_pos_scaled_light(n, epos, 1.0, 1.0, gl_Color*get_wet_ad_scale(), fg_LightSource[1], normal_sign).rgb;
+	return add_light_comp_pos_scaled_light(n, epos, 1.0, 1.0, gl_Color*wet_ad_scale, fg_LightSource[1], normal_sign).rgb;
 }
 
 void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
@@ -172,42 +171,60 @@ void main()
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
 #endif
 
+	float wetness = wet_effect;
+	float reflectivity2 = reflectivity;
+#ifdef ENABLE_PUDDLES
+	if (wetness > 0.0 && wetness < 1.0 && normal.z > 0.5) { // create puddles for partially wet top surfaces
+		float wet_val = 0.0;
+		float freq    = 1.0;
+
+		for (int i = 0; i < 4; ++i) {
+			wet_val += texture(wet_noise_tex, 0.04*freq*vpos).r/freq;
+			freq    *= 2.0;
+		}
+		wetness = sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
+		reflectivity2 = wetness;
+	}
+#endif // ENABLE_WETNESS
+
 #ifdef USE_WINDING_RULE_FOR_NORMAL
 	float normal_sign = ((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
 #else
 	float normal_sign = ((!two_sided_lighting || (dot(eye_norm, epos.xyz) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
 #endif
-	vec3 lit_color = emission.rgb + emissive_scale*gl_Color.rgb;
-	add_indir_lighting(lit_color, normal_sign);
+	float wet_surf_val = wetness*max(normal.z, 0.0); // only +z surfaces are wet; doesn't apply to spec shininess though
+	vec3 lit_color     = emission.rgb + emissive_scale*gl_Color.rgb;
+	lit_color += get_indir_lighting(normal_sign) * mix(1.0, 0.7, wet_surf_val);
 	//lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
-	
+
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(normal_sign*eye_norm);
-		if (enable_light0) {lit_color += add_light0(n, normal_sign);} // sun
-		if (enable_light1) {lit_color += add_light1(n, normal_sign);} // moon
+		float wet_ad_scale = mix(1.0, 0.25, wet_surf_val);
+		if (enable_light0) {lit_color += add_light0(n, normal_sign, wet_ad_scale);} // sun
+		if (enable_light1) {lit_color += add_light1(n, normal_sign, wet_ad_scale);} // moon
 		if (enable_light2) {ADD_LIGHT(2);} // lightning
 	}
-	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb, 1.0, normal_sign);} // dynamic lighting
+	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb, 1.0, normal_sign, wet_surf_val);} // dynamic lighting
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
 
 #ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
 	if (normal.z > 0.5) { // top surface
-		vec3 ws_normal = normalize(normal);
-		float ripple_mag = wet_effect * clamp(2.0*(1.0 - 0.5*length(epos.xyz)), 0.0, 1.0);
+		vec3 ws_normal   = normalize(normal);
+		float ripple_mag = wetness * clamp(2.0*(1.0 - 0.5*length(epos.xyz)), 0.0, 1.0);
 
 		if (ripple_mag > 0.0 && rain_intensity > 0.0) {
 			// Note: since reflections are only enabled on vertical surfaces with normals in +z (world space), and the ripple normal map defaults to +z, no transforms are necessary
-			ws_normal = normalize(mix(ws_normal, get_ripple_normal(1.0*tc, 0.2*ripple_time, wet_effect*rain_intensity), ripple_mag));
+			ws_normal = normalize(mix(ws_normal, get_ripple_normal(1.0*tc, 0.2*ripple_time, wetness*rain_intensity), ripple_mag));
 		}
 #ifdef USE_BUMP_MAP
-		ws_normal = normalize(mix(get_bump_map_normal(), ws_normal, 0.5*wet_effect));
+		ws_normal = normalize(mix(get_bump_map_normal(), ws_normal, 0.5*wetness));
 #endif
 		// Note: this doesn't work for refact_ix == 1, so we choose an arbitrary value of 1.3 (metals are lower, dielectrics are higher)
-		float reflect_w = reflectivity * get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.3 : refract_ix));
+		float reflect_w = reflectivity2 * get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.3 : refract_ix));
 		vec4 proj_pos   = fg_ProjectionMatrix * epos;
 		vec2 ref_tex_st = clamp(0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5), 0.0, 1.0);
-		color.rgb = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wet_effect), reflect_w);
+		color.rgb = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness), reflect_w);
 	}
 #endif
 

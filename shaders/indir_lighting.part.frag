@@ -33,7 +33,7 @@ vec3 indir_lookup(in vec3 pos, in vec3 n) {
 }
 #endif
 
-void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
+vec3 get_indir_lighting(in float normal_sign) {
 	vec3 indir_color = const_indir_color; // add constant indir
 
 	if (indir_lighting || hemi_lighting) {
@@ -65,5 +65,9 @@ void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
 #endif
 		}
 	}
-	lit_color += gl_Color.rgb * indir_color * mix(1.0, 0.7, wet_effect*max(normal.z, 0.0)); // only +z surfaces are wet
+	return gl_Color.rgb * indir_color;
+}
+
+void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
+	lit_color += get_indir_lighting(normal_sign);
 }

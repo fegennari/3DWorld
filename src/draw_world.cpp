@@ -337,11 +337,13 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
+	bool const enable_puddles(is_ground_wet() && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
 	if (use_depth_trans   ) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
 	if (enable_reflections) {s.set_prefix("#define ENABLE_REFLECTIONS",     1);} // FS
+	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
@@ -403,6 +405,10 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		if (animate2 && frame_counter > update_frame) {ripple_time += fticks; update_frame = frame_counter;} // once per frame
 		s.add_uniform_float("ripple_time", ripple_time);
 		s.add_uniform_float("rain_intensity", get_rain_intensity());
+	}
+	if (enable_puddles) {
+		set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
+		s.add_uniform_int("wet_noise_tex", 11);
 	}
 	// FIXME: need to handle wet/outside vs. dry/inside surfaces differently
 	// but in practice, since this only applies to sun/moon lighting, indoor surfaces aren't affected much
