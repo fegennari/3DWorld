@@ -122,7 +122,7 @@ public:
 		vector3d const v(get_velocity(-0.2)), vinc(v*(0.1/verts.size())), dir(0.1*v.get_norm()); // length is 0.1
 		vector3d vcur(v);
 		while (!splashes.empty() && splashes.front().radius > 4.0) {splashes.pop_front();} // remove old splashes from the front
-		for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->radius += 0.2*fticks;}
+		if (animate2) {for (auto i = splashes.begin(); i != splashes.end(); ++i) {i->radius += 0.2*fticks;}}
 
 		//#pragma omp parallel for schedule(static,1) // not valid for splashes, and actually slower for light rain
 		for (int i = 0; i < (int)verts.size(); i += 2) { // iterate in pairs
