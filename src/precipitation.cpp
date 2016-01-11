@@ -148,7 +148,7 @@ public:
 		float const width = 0.002;
 
 		for (unsigned i = 0; i < verts.size(); i += 2) { // iterate in pairs
-			if (dist_less_than(verts[i].v, camera, 0.5) && camera_pdu.point_visible_test(verts[i].v)) {
+			if (dist_less_than(verts[i].v, camera, 0.5) && (camera_pdu.point_visible_test(verts[i].v) || camera_pdu.point_visible_test(verts[i+1].v))) {
 				drawer.add_line_as_tris(verts[i].v, verts[i+1].v, width, width, color, color);
 			}
 		}
