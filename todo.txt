@@ -23,6 +23,3 @@ In-Game cobjs editor
 Better Palm Trees
 Plants with low large leaves
 Precomputed cube map reflections on specular surfaces (such as the gold dragon)
-
-Use shadow circles rather than spheres
-Cook-Torrence model

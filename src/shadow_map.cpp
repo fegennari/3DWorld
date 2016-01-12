@@ -144,7 +144,8 @@ public:
 	}
 
 	void draw_shadow_sphere(point const &pos, float radius, int shader_loc, unsigned smap_sz, unsigned fixed_ndiv) {
-		// FIXME: draw as a circle oriented towards the light source?
+		// it might be faster to draw circles, but probably not because VBOs can't be used,
+		// since circles aren't rotationally symmetric and would need to be rotated to align with the projection vector
 		shader_t::set_uniform_vector4d(shader_loc, vector4d(pos, radius));
 		draw_sphere_vbo_pre_bound((fixed_ndiv ? fixed_ndiv : get_smap_ndiv(radius, smap_sz)), 0);
 	}
