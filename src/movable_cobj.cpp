@@ -994,37 +994,34 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 	// if the cobj is a cylinder or capsule, try to rotate it about its center
 	// cubes and polygons don't rotate because they have more contact area on the bottom that contributes to friction
 	// spheres don't rotate because they're rotationally invariant, except for their textures, which don't rotate properly anyway
-	if (pushed_from != all_zeros) { // pushed from a valid position
-		if (cobj.is_cylinder() || cobj.type == COLL_CAPSULE) {
-			if (cobj.cp.tid < 0 || cobj.cp.tscale == 0.0) { // not if textured or using tex coords (since texgen textures don't rotate)
-				if (fabs(cobj.points[0].z - cobj.points[1].z) < TOLER) { // oriented in the XY plane, rotates around z
-					vector3d const cdir(cobj.points[1] - cobj.points[0]);
+	if (pushed_from == all_zeros) {} // not pushed from a valid position
+	else if (!cobj.is_cylinder() && cobj.type != COLL_CAPSULE) {} // not a rotatable object
+	else if (cobj.cp.tid >= 0 && cobj.cp.tscale != 0.0) {} // not if textured or using tex coords (since texgen textures don't rotate)
+	else if (fabs(cobj.points[0].z - cobj.points[1].z) < TOLER) { // oriented in the XY plane, rotates around z
+		vector3d const cdir(cobj.points[1] - cobj.points[0]);
 
-					if (fabs(dot_product(delta.get_norm(), cdir.get_norm())) < 0.5) { // pushed from the side, not the end
-						float const line_t(get_closest_pt_on_line_t(pushed_from, cobj.points[0], cobj.points[1]));
-						float const torque(CLIP_TO_pm1(2.0f*(line_t - 0.5f))); // 0.0 at center, +/-1.0 at cylinder ends
-						float const abs_torque(fabs(torque));
-						float const friction_factor(cobj.is_wet() ? 0.15 : 0.3);
+		if (fabs(dot_product(delta.get_norm(), cdir.get_norm())) < 0.5) { // pushed from the side, not the end
+			float const line_t(get_closest_pt_on_line_t(pushed_from, cobj.points[0], cobj.points[1]));
+			float const torque(CLIP_TO_pm1(2.0f*(line_t - 0.5f))); // 0.0 at center, +/-1.0 at cylinder ends
+			float const abs_torque(fabs(torque));
+			float const friction_factor(cobj.is_wet() ? 0.15 : 0.3);
 
-						if (abs_torque > friction_factor) { // pushed near the end of the cylinder, so there is some torque
-							point const closest_pt(cobj.points[0] + line_t*cdir);
-							float const net_torque((abs_torque - friction_factor)/(1.0 - friction_factor)); // shift the torque curve
-							float const angle(0.01*net_torque*SIGN(torque)*SIGN(cross_product(cdir, pushed_from-closest_pt).z));
-							coll_obj const before_rotate(cobj);
-							cobj.rotate_about(cobj.get_center_of_mass(), plus_z, angle, 0); // don't re-add yet
-							cobjs.clear();
-							cube_t bcube(cobj);
-							float const dh(0.01*(cobj.d[2][1] - cobj.d[2][0]));
-							bcube.d[2][0] += dh; bcube.d[2][1] -= dh; // shrink slightly in z to exclude cobjs above (resting on) and below (resting on)
-							get_intersecting_cobjs_tree(bcube, cobjs, index, -tolerance, 0, 0, -1); // duplicates should be okay, include adjacent cobjs
-							// FIXME: only partially effective
-							if (intersects_any_cobj(cobj, cobjs, -tolerance)) {cobj = before_rotate;} // restore the cobj to undo the rotation
-							else {
-								cobj.re_add_coll_cobj(cobj.id, 0);
-								delta *= 1.0 - net_torque; // this is the remaining translation component
-							}
-						}
-					}
+			if (abs_torque > friction_factor) { // pushed near the end of the cylinder, so there is some torque
+				point const closest_pt(cobj.points[0] + line_t*cdir);
+				float const net_torque((abs_torque - friction_factor)/(1.0 - friction_factor)); // shift the torque curve
+				float const angle(0.01*net_torque*SIGN(torque)*SIGN(cross_product(cdir, pushed_from-closest_pt).z));
+				coll_obj const before_rotate(cobj);
+				cobj.rotate_about(cobj.get_center_of_mass(), plus_z, angle, 0); // don't re-add yet
+				cobjs.clear();
+				cube_t bcube(cobj);
+				float const dh(0.01*(cobj.d[2][1] - cobj.d[2][0]));
+				bcube.d[2][0] += dh; bcube.d[2][1] -= dh; // shrink slightly in z to exclude cobjs above (resting on) and below (resting on)
+				get_intersecting_cobjs_tree(bcube, cobjs, index, -tolerance, 0, 0, -1); // duplicates should be okay, include adjacent cobjs
+				// FIXME: only partially effective
+				if (intersects_any_cobj(cobj, cobjs, -tolerance)) {cobj = before_rotate;} // restore the cobj to undo the rotation
+				else {
+					cobj.re_add_coll_cobj(cobj.id, 0);
+					delta *= 1.0 - net_torque; // this is the remaining translation component
 				}
 			}
 		}

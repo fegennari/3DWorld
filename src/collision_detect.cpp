@@ -1320,8 +1320,8 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	} // end COLL_POLY scope
 	default: assert(0);
 	} // switch
-	if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY)) {proc_movable_cobj(orig_pos, obj.pos, index, type);} // try to move object
 	if (!lcoll) return; // no collision
+	if (!coll_top && !coll_bot && (type == CAMERA || type == SMILEY)) {proc_movable_cobj(orig_pos, obj.pos, index, type);} // try to move object
 	assert(norm != zero_vector);
 	assert(!is_nan(norm));
 	bool is_moving(0);
