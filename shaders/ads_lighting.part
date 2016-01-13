@@ -24,7 +24,7 @@ float get_spec_intensity(in vec3 normal, in vec3 light_dir, in vec3 eye_dir) {
 	vec3 half_vect = normalize(light_dir + eye_dir); // Eye + L = -eye_space_pos + L
 	float dp  = dot(normal, half_vect);
 #endif
-	float n   = mix(get_shininess(), 80.0, wet_effect);
+	float n   = mix(get_shininess(), 100.0, wet_effect);
 	float mag = pow(clamp(dp, 0.01, 1.0), n);
 	mag      *= 0.0166*(n + 8.0); // normalize for exponent of 60; normalization should be (n+8)/(8*pi);
 	return mag;
