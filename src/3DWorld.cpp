@@ -1022,6 +1022,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 			break;
 		}
 		precip_mode = (precip_mode + 1) & ((world_mode == WMODE_INF_TERRAIN) ? 1 : 3); // 4 modes: 0=none, 1=new, 2=old, 3=new+old
+		is_cloudy   = (precip_mode > 0);
 		if (!(precip_mode & 1)) {obj_groups[coll_id[PRECIP]].toggle_enable();}
 		//if (obj_groups[coll_id[PRECIP]].is_enabled()) {seed_water_on_mesh(10.0);} // instantly seed the mesh with water
 		break;

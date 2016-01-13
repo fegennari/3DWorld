@@ -37,7 +37,7 @@ vector3d wind(0.4, 0.2, 0.0), total_wind(0.0, 0.0, 0.0);
 point flow_source(0.0, 0.0, -2.0);
 obj_type object_types[NUM_TOT_OBJS];
 
-extern int num_groups, display_mode, frame_counter, game_mode, camera_coll_id, precip_mode;
+extern int num_groups, display_mode, frame_counter, game_mode, camera_coll_id, precip_mode, is_cloudy;
 extern int s_ball_id, world_mode, has_accumulation, has_snow_accum, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
 extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks, water_plane_z;
 extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
@@ -1625,6 +1625,7 @@ void auto_advance_time() { // T = 1 hour
 	else if (prate >  0.5) {prate =  1.0 - prate;}
 	precip      = max(-2.0f, min(1.0f, (precip + 0.4f*prate)));
 	precip_mode = ((precip > 0.0) ? 1 : 0);
+	is_cloudy   = (precip_mode > 0);
 	obj_groups[cid].app_rate = ((precip_mode > 0) ? max(0, int(2.0*precip*precip_app_rate)) : 0.0);
 
 	// change leaf color (seasonal, dt = 24*365.25 = 8766, every 168t)
