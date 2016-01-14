@@ -1,6 +1,7 @@
 # bench
 a 2 # destroyable/shatterable
 e 0
+#start_cobj_group # make sure it all shatters together
 X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 36 1 # wooden slats
 y 4.8
@@ -18,4 +19,5 @@ B  3.0 3.2   4.9   5.1   2.0 3.0
 P 4  -1.0 -5.0 5.0  -1.0 5.0 5.0  0.2 5.0 1.6  0.2 -5.0 1.6  0.4 # back
 a 1 # destroyable
 X none # disable normal map
+#end_cobj_group
 

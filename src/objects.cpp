@@ -45,6 +45,7 @@ void coll_obj::init() {
 	destroy      = NON_DEST;
 	fixed        = 1;
 	id           = -1;
+	cgroup_id    = -1;
 }
 
 

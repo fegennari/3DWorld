@@ -22,6 +22,7 @@ extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
+extern cobj_groups_t cobj_groups;
 extern set<unsigned> moving_cobjs;
 
 
@@ -254,11 +255,12 @@ void invalidate_static_cobjs() {build_cobj_tree(0, 0);}
 
 
 // Note: should be named partially_destroy_cube_area() or something like that
-unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube, int min_destroy) {
+unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube const &cube_in, int min_destroy) {
 
 	if (destroy_thresh >= EXPLODEABLE) return 0;
-	if (cube.is_zero_area())           return 0;
+	if (cube_in.is_zero_area())        return 0;
 	//RESET_TIME;
+	csg_cube cube(cube_in); // allow cube to be modified
 	coll_obj_group &cobjs(coll_objects); // so we don't have to rename everything and can keep the shorter code
 	point center(cube.get_cube_center());
 	float const clip_cube_volume(cube.get_volume());
@@ -269,60 +271,77 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 	mod_cubes.push_back(cube);
 	vector<unsigned> int_cobjs;
 	get_intersecting_cobjs_tree(cube, int_cobjs, -1, 0.0, 0, 0, -1); // can return duplicate cobjs
-	set<unsigned> unique_cobjs; // unique cobjs here
-	copy(int_cobjs.begin(), int_cobjs.end(), inserter(unique_cobjs, unique_cobjs.begin()));
+	set<unsigned> unique_cobjs, cgroups_added;
+	copy(int_cobjs.begin(), int_cobjs.end(), inserter(unique_cobjs, unique_cobjs.begin())); // unique the cobjs
+	set<unsigned> seen_cobjs(unique_cobjs);
 
-	// determine affected cobjs
-	for (set<unsigned>::const_iterator k = unique_cobjs.begin(); k != unique_cobjs.end(); ++k) {
-		unsigned const i(*k);
-		coll_obj &cobj(cobjs.get_cobj(i));
-		assert(cobj.status == COLL_STATIC);
-		// can't destroy a model3d or voxel terrain cobj because the geometry is also stored in a vbo and won't get updated here
-		if (cobj.cp.cobj_type != COBJ_TYPE_STD) continue;
-		int const D(cobj.destroy);
-		if (D <= max(destroy_thresh, (min_destroy-1))) continue;
-		bool const is_cube(cobj.type == COLL_CUBE), is_polygon(cobj.type == COLL_POLYGON);
-		bool const shatter(D >= SHATTERABLE), full_destroy(shatter || cobj.is_movable());
-		if (!cobj.intersects(cube)) continue; // no intersection
-		csg_cube const cube2(cobj, 1);
-		//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
-		float volume(cobj.volume);
-		float const min_volume(0.01*min(volume, clip_cube_volume)), int_volume(cube2.get_overlap_volume(cube));
+	while (!unique_cobjs.empty()) {
+		set<unsigned> next_cobjs;
 
-		if (is_cube && !shatter && int_volume < min_volume) { // don't remove tiny bits from cobjs
-			cube.unset_intersecting_edge_flags(cobj);
-			continue;
-		}
-		if (full_destroy || cobj.subtract_from_cobj(new_cobjs, cube, 1)) {
-			bool no_new_cobjs(full_destroy || volume < TOLERANCE);
-			if (no_new_cobjs) {new_cobjs.clear();} // completely destroyed
-			if (is_cube)      {cdir += cube2.closest_side_dir(center);} // inexact
-			if (D == SHATTER_TO_PORTAL) {cobj.create_portal();}
+		// determine affected cobjs
+		for (set<unsigned>::const_iterator k = unique_cobjs.begin(); k != unique_cobjs.end(); ++k) {
+			unsigned const i(*k);
+			coll_obj &cobj(cobjs.get_cobj(i));
+			assert(cobj.status == COLL_STATIC);
+			// can't destroy a model3d or voxel terrain cobj because the geometry is also stored in a vbo and won't get updated here
+			if (cobj.cp.cobj_type != COBJ_TYPE_STD) continue;
+			int const D(cobj.destroy);
+			if (D <= max(destroy_thresh, (min_destroy-1))) continue;
+			if (!cobj.intersects(cube)) continue; // no intersection
+			bool const is_cube(cobj.type == COLL_CUBE), is_polygon(cobj.type == COLL_POLYGON);
+			bool const shatter(D >= SHATTERABLE), full_destroy(shatter || cobj.is_movable());
+			csg_cube const cube2(cobj, 1);
+			//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
+			float volume(cobj.volume);
+			float const min_volume(0.01*min(volume, clip_cube_volume)), int_volume(cube2.get_overlap_volume(cube));
 
-			// Note: cobj reference may be invalidated beyond this point
-			for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
-				int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
-				assert(index >= 0 && (size_t)index < cobjs.size());
-				just_added.push_back(index);
-				volume -= cobjs[index].volume;
+			if (is_cube && !shatter && int_volume < min_volume) { // don't remove tiny bits from cobjs
+				cube.unset_intersecting_edge_flags(cobj);
+				continue;
 			}
-			if (is_polygon) {volume = max(0.0f, volume);} // FIXME: remove this when polygon splitting is correct
-			assert(volume >= -TOLERANCE); // usually > 0.0
-			cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
-			cobjs[i].clear_internal_data();
-			to_remove.push_back(i);
-			if (full_destroy) {mod_cubes.push_back(cobjs[i]);}
-			int const gid(cobjs[i].group_id);
+			if (full_destroy || cobj.subtract_from_cobj(new_cobjs, cube, 1)) {
+				bool no_new_cobjs(full_destroy || volume < TOLERANCE);
+				if (no_new_cobjs) {new_cobjs.clear();} // completely destroyed
+				if (is_cube)      {cdir += cube2.closest_side_dir(center);} // inexact
+				if (D == SHATTER_TO_PORTAL) {cobj.create_portal();}
 
-			if (gid >= 0) { // we only check in the remove case because we can't add without removing
-				assert((unsigned)gid < obj_draw_groups.size());
-				// free vbo and disable vbos for this group permanently because it's too difficult to keep cobjs sorted by group
-				obj_draw_groups[gid].free_vbo();
-				obj_draw_groups[gid].set_vbo_enable(0);
+				// Note: cobj reference may be invalidated beyond this point
+				for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
+					int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
+					assert(index >= 0 && (size_t)index < cobjs.size());
+					just_added.push_back(index);
+					volume -= cobjs[index].volume;
+				}
+				if (is_polygon) {volume = max(0.0f, volume);} // FIXME: remove this when polygon splitting is correct
+				assert(volume >= -TOLERANCE); // usually > 0.0
+				int const cgid(cobjs[i].cgroup_id);
+
+				if (cgid >= 0 && cgroups_added.insert(cgid).second) { // newly inserted nonzero group
+					set<unsigned> const &group(cobj_groups.get_set(cgid));
+
+					for (auto c = group.begin(); c != group.end(); ++c) {
+						if (!seen_cobjs.insert(*c).second) continue; // already processed
+						next_cobjs.insert(*c); // add to the next wave
+					}
+				}
+				cts.push_back(color_tid_vol(cobjs[i], volume, cobjs[i].calc_min_dim(), 0));
+				cobjs[i].clear_internal_data();
+				to_remove.push_back(i);
+				if (full_destroy) {mod_cubes.push_back(cobjs[i]);}
+				int const gid(cobjs[i].group_id);
+
+				if (gid >= 0) { // we only check in the remove case because we can't add without removing
+					assert((unsigned)gid < obj_draw_groups.size());
+					// free vbo and disable vbos for this group permanently because it's too difficult to keep cobjs sorted by group
+					obj_draw_groups[gid].free_vbo();
+					obj_draw_groups[gid].set_vbo_enable(0);
+				}
 			}
-		}
-		new_cobjs.clear();
-	} // for k
+			new_cobjs.clear();
+		} // for k
+		for (auto c = next_cobjs.begin(); c != next_cobjs.end(); ++c) {cube.union_with_cube(cobjs.get_cobj(*c));} // ensure the cube fully contains each new cobj
+		unique_cobjs.swap(next_cobjs); // process next wave
+	} // end while()
 
 	// remove destroyed cobjs
 	for (vector<int>::const_iterator i = to_remove.begin(); i != to_remove.end(); ++i) {

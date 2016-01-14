@@ -1,6 +1,7 @@
 # exploding tank
 l 0.87 0.45 0.4 0.4 1.0 49 1 # gray metal - rust?, specular? use plaster texture
 a 4 # explodeable
+start_cobj_group # make sure it all explodes together
 k 0.0 0.0 0.1  0.0 0.0 1.0  0.1 0.1 # capsule
 e 3
 C 0.0 0.0 0.0   0.0 0.0 0.08  0.07 0.07
@@ -12,3 +13,4 @@ l 0.87 1.0 1.0 1.0 1.0 39 1 # Mr. Yuck
 e 3
 C 0.0 0.0 0.5  0.0 0.0 0.7  0.105 0.105
 e 0
+end_cobj_group

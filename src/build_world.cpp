@@ -54,6 +54,7 @@ extern unsigned create_voxel_landscape, scene_smap_vbo_invalid, num_dynam_parts,
 extern obj_type object_types[];
 extern string cobjs_out_fn;
 extern coll_obj_group coll_objects;
+extern cobj_groups_t cobj_groups;
 extern platform_cont platforms;
 extern lightning l_strike;
 extern vector<int> hmv_coll_obj;
@@ -1105,6 +1106,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "reflective") {
 					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "reflective", coll_obj_file);}
 					reflective = (ivals[0] != 0);
+				}
+				else if (keyword == "start_cobj_group") {
+					cobj.cgroup_id = cobj_groups.new_group();
+				}
+				else if (keyword == "end_cobj_group") {
+					cobj.cgroup_id = -1;
 				}
 				else {
 					ostringstream oss;

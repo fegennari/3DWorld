@@ -234,7 +234,7 @@ void cast_light_ray(lmap_manager_t *lmgr, point p1, point p2, float weight, floa
 		assert(cindex >= 0);
 		coll_obj const &cobj(coll_objects[cindex]);
 
-		if (cobj.platform_id > 0 || cobj.is_movable()) {
+		if (cobj.platform_id >= 0 || cobj.is_movable()) {
 			// this cobj isn't static, so maybe shouldn't be included - do we skip it in the line intersection check?
 			// maybe it's okay to keep this cobj, since it represents the intial object states, and will be correct if it's never moved
 		}

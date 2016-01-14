@@ -116,7 +116,7 @@ class coll_obj_group;
 class csg_cube;
 
 
-class coll_obj : public cube_t { // size = 240
+class coll_obj : public cube_t { // size = 244
 
 public:
 	char type, destroy, status;
@@ -125,14 +125,14 @@ public:
 	cobj_params cp; // could store unique cps in a set of material properties to reduce memory requirements slightly
 	float radius, radius2, thickness, volume, v_fall;
 	int counter, id;
-	short platform_id, group_id, waypt_id, npoints;
+	short platform_id, group_id, cgroup_id, waypt_id, npoints;
 	point points[N_COLL_POLY_PTS];
 	vector3d norm, texture_offset;
 	vector<int> occluders;
 
 	coll_obj() : type(COLL_NULL), destroy(NON_DEST), status(COLL_UNUSED), last_coll(0), coll_type(0), fixed(0), is_billboard(0),
 		falling(0), radius(0.0), radius2(0.0), thickness(0.0), volume(0.0), v_fall(0.0), counter(0), id(-1), platform_id(-1),
-		group_id(-1), waypt_id(-1), npoints(0), norm(zero_vector), texture_offset(zero_vector) {}
+		group_id(-1), cgroup_id(-1), waypt_id(-1), npoints(0), norm(zero_vector), texture_offset(zero_vector) {}
 	void init();
 	void clear_internal_data();
 	void calc_size();
@@ -242,6 +242,14 @@ struct cobj_id_set_t : public set<unsigned> {
 		assert(num_removed == 1);
 	}
 	bool has(unsigned index) {return find(index) != end();}
+};
+
+
+struct cobj_groups_t : public vector<cobj_id_set_t> {
+	unsigned new_group() {unsigned const id(size()); push_back(cobj_id_set_t()); return id;}
+	void add_cobj   (unsigned gid, unsigned cid) {assert(gid < size()); operator[](gid).must_insert(cid);}
+	void remove_cobj(unsigned gid, unsigned cid) {assert(gid < size()); operator[](gid).must_erase (cid);}
+	cobj_id_set_t const &get_set(unsigned gid) const {assert(gid < size()); return operator[](gid);}
 };
 
 
