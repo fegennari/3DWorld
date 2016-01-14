@@ -17,7 +17,15 @@ TT shadows:
 Indirect lighting magnitude in 6 directions (+/- x,y,z)
   - how to combine sun, moon, sky, and local lighting values?
 
-Bullet physics for movable boxes
+Cobjs:
+  - Cobjs have shatter/destroy HP/probability
+  - Grouped movable cobjs move together
+  - Grouped single collision cobj objects that share a multi-cobj drawable
+  - Place small destroyable physics objects in the scene
+    - Glass bottles
+  - Bullet physics for movable boxes
+
+Snow footprints + screenshot
 In-Game cobjs editor
   - In-game placement/visualization of objects, smileys, universe ships
 Better Palm Trees
