@@ -1601,10 +1601,18 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	camera_on_snow = 0;
 
 	if (display_mode & 0x10) { // walk on snow (jumping?)
+		static point prev_snow_pos(all_zeros);
+		static unsigned step_num(0);
+		static bool foot_down(0);
+		float const sz(CAMERA_RADIUS), footstep_length(1.0*sz), foot_length(0.25*sz), foot_spacing(0.25*sz); // spacing from center
+		if (!foot_down && !dist_less_than(prev_snow_pos, pos, footstep_length)) {foot_down = 1; prev_snow_pos = pos; ++step_num;} // foot down and update pos
+		else if (foot_down && !dist_less_than(prev_snow_pos, pos, foot_length)) {foot_down = 0;} // foot up
+		vector3d const right_dir(cross_product(cview_dir, up_vector).get_norm());
+		point const step_pos(pos + ((step_num&1) ? foot_spacing : -foot_spacing)*right_dir); // alternate left and right feet
 		float zval;
 		vector3d norm;
 		
-		if (get_snow_height(pos, radius, zval, norm, 1)) {
+		if (get_snow_height(step_pos, radius, zval, norm, foot_down)) {
 			pos.z = zval + radius;
 			camera_on_snow = 1;
 			camera_in_air  = 0;
@@ -1683,7 +1691,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	if ((display_mode & 0x10) && !test_only) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
 		float zval;
 		vector3d norm;
-		if (get_snow_height(pos, radius, zval, norm, 1)) {pos.z = zval + radius;}
+		if (get_snow_height(pos, radius, zval, norm, !is_camera)) {pos.z = zval + radius;}
 	}
 	if (jump_time > 0) {
 		float const jump_val((float(jump_time)/TICKS_PER_SECOND - (JUMP_COOL - JUMP_TIME))/JUMP_TIME); // jt == JC => 1.0; jt == JC-JT => 0.0
