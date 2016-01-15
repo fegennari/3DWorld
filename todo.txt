@@ -21,7 +21,6 @@ Cobjs:
   - Grouped movable cobjs move together
   - Grouped single collision cobj objects that share a multi-cobj drawable
   - Place small destroyable physics objects in the scene
-    - Glass bottles
   - Bullet physics for movable boxes
 
 Snow footprints + screenshot
