@@ -1542,6 +1542,17 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 }
 
 
+void create_snow_footprints(point const &pos, float sz, vector3d const &view_dir, point &prev_snow_pos, unsigned &step_num, bool &foot_down) {
+
+	float const stride(1.2*sz), foot_length(0.7*sz), crush_depth(1.0*sz), foot_spacing(0.25*sz); // spacing from center
+	if      (!foot_down && !dist_less_than(prev_snow_pos, pos, stride     )) {foot_down = 1; prev_snow_pos = pos; ++step_num;} // foot down and update pos
+	else if ( foot_down && !dist_less_than(prev_snow_pos, pos, foot_length)) {foot_down = 0;} // foot up
+	vector3d const right_dir(cross_product(view_dir, plus_z).get_norm());
+	point const step_pos(pos + ((step_num&1) ? foot_spacing : -foot_spacing)*right_dir - vector3d(0.0, 0.0, 0.5*sz)); // alternate left and right feet
+	if (foot_down) {crush_snow_at_pt(step_pos, crush_depth);}
+}
+
+
 void add_camera_cobj(point const &pos) {
 	camera_coll_id = add_coll_sphere(pos, CAMERA_RADIUS, cobj_params(object_types[CAMERA].elasticity, object_types[CAMERA].color, 0, 1, camera_collision, 1));
 }
@@ -1552,7 +1563,8 @@ void force_onto_surface_mesh(point &pos) { // for camera
 	bool const cflight(game_mode && camera_flight);
 	int coll(0);
 	float const radius(CAMERA_RADIUS);
-	int &jump_time(sstates[CAMERA_ID].jump_time);
+	player_state &sstate(sstates[CAMERA_ID]);
+	int &jump_time(sstate.jump_time);
 	dwobject camera_obj(def_objects[CAMERA]); // make a fresh copy
 	
 	if (maybe_teleport_object(pos, radius, CAMERA_ID)) {
@@ -1596,23 +1608,16 @@ void force_onto_surface_mesh(point &pos) { // for camera
 			jump_time     = 0;
 			return;
 		}
-		set_true_obj_height(pos, camera_last_pos, C_STEP_HEIGHT, sstates[CAMERA_ID].zvel, CAMERA, CAMERA_ID, cflight, camera_on_snow); // status return value is unused?
+		set_true_obj_height(pos, camera_last_pos, C_STEP_HEIGHT, sstate.zvel, CAMERA, CAMERA_ID, cflight, camera_on_snow); // status return value is unused?
 	}
 	camera_on_snow = 0;
 
 	if (display_mode & 0x10) { // walk on snow (jumping?)
-		static point prev_snow_pos(all_zeros);
-		static unsigned step_num(0);
-		static bool foot_down(0);
-		float const sz(CAMERA_RADIUS), footstep_length(1.0*sz), foot_length(0.25*sz), foot_spacing(0.25*sz); // spacing from center
-		if (!foot_down && !dist_less_than(prev_snow_pos, pos, footstep_length)) {foot_down = 1; prev_snow_pos = pos; ++step_num;} // foot down and update pos
-		else if (foot_down && !dist_less_than(prev_snow_pos, pos, foot_length)) {foot_down = 0;} // foot up
-		vector3d const right_dir(cross_product(cview_dir, up_vector).get_norm());
-		point const step_pos(pos + ((step_num&1) ? foot_spacing : -foot_spacing)*right_dir); // alternate left and right feet
+		create_snow_footprints(pos, radius, cview_dir, sstate.prev_snow_pos, sstate.step_num, sstate.foot_down);
 		float zval;
 		vector3d norm;
 		
-		if (get_snow_height(step_pos, radius, zval, norm, foot_down)) {
+		if (get_snow_height(pos, radius, zval, norm)) {
 			pos.z = zval + radius;
 			camera_on_snow = 1;
 			camera_in_air  = 0;
@@ -1675,23 +1680,25 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 {
 	int const xpos(get_xpos(pos.x) - xoff), ypos(get_ypos(pos.y) - yoff);
 	bool const is_camera(type == CAMERA), is_player(is_camera || (type == SMILEY && id >= 0));
-	if (is_player) {assert(id >= CAMERA_ID && id < num_smileys);}
+	if (is_player) {assert(id >= CAMERA_ID && id < num_smileys && sstates != nullptr);}
+	player_state *sstate(is_player ? &sstates[id] : nullptr);
 
 	if (point_outside_mesh(xpos, ypos)) {
-		if (is_player) {sstates[id].fall_counter = 0;}
+		if (is_player) {sstate->fall_counter = 0;}
 		zvel = 0.0;
 		return 0;
 	}
 	float const radius(object_types[type].radius), step(step_height*radius), mh(int_mesh_zval_pt_off(pos, 1, 0)); // *** step height determined by fticks? ***
 	int no_jump_placeholder(0);
-	int &jump_time((sstates == nullptr || !is_player) ? no_jump_placeholder : sstates[id].jump_time);
+	int &jump_time((sstate == nullptr || !is_player) ? no_jump_placeholder : sstate->jump_time);
 	pos.z = max(pos.z, (mh + radius));
 	bool jumping(0);
 
-	if ((display_mode & 0x10) && !test_only) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
+	if ((display_mode & 0x10) && is_player && !test_only) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
 		float zval;
 		vector3d norm;
-		if (get_snow_height(pos, radius, zval, norm, !is_camera)) {pos.z = zval + radius;}
+		create_snow_footprints(pos, radius, sstate->velocity.get_norm(), sstate->prev_snow_pos, sstate->step_num, sstate->foot_down);
+		if (get_snow_height(pos, radius, zval, norm)) {pos.z = zval + radius;}
 	}
 	if (jump_time > 0) {
 		float const jump_val((float(jump_time)/TICKS_PER_SECOND - (JUMP_COOL - JUMP_TIME))/JUMP_TIME); // jt == JC => 1.0; jt == JC-JT => 0.0
@@ -1822,7 +1829,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				}
 				else { // stuck against side of surface
 					if (jumping || pos.z > zb) { // head inside the object
-						if (is_player) {sstates[id].fall_counter = 0;}
+						if (is_player) {sstate->fall_counter = 0;}
 						jump_time = min(jump_time, (jumping ? int((JUMP_COOL - JUMP_TIME)*TICKS_PER_SECOND) : 1)); // end jump time / prevent starting a new jump
 						pos  = lpos; // reset to last known good position
 						zvel = 0.0;
@@ -1877,22 +1884,22 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	}
 	else if (flight) {
 		zvel = 0.0;
-		if (is_player) {sstates[id].fall_counter = 0;}
+		if (is_player) {sstate->fall_counter = 0;}
 	}
 	else if (falling) {
 		zvel  = max(-object_types[type].terminal_vel, (zvel - base_gravity*GRAVITY*tstep*object_types[type].gravity));
 		pos.z = max(pos.z, (lpos.z + tstep*zvel));
 		
 		if (is_player) {
-			if (sstates[id].fall_counter == 0) {sstates[id].last_dz = 0.0;}
-			++sstates[id].fall_counter;
-			sstates[id].last_dz  += (pos.z - lpos.z);
-			sstates[id].last_zvel = zvel;
+			if (sstate->fall_counter == 0) {sstate->last_dz = 0.0;}
+			++sstate->fall_counter;
+			sstate->last_dz  += (pos.z - lpos.z);
+			sstate->last_zvel = zvel;
 		}
 	}
 	else if (is_player) { // falling for several frames continuously and finally stops
-		if (sstates[id].fall_counter > 4 && sstates[id].last_dz < 0.0 && sstates[id].last_zvel < 0.0) {player_fall(id);}
-		sstates[id].fall_counter = 0;
+		if (sstate->fall_counter > 4 && sstate->last_dz < 0.0 && sstate->last_zvel < 0.0) {player_fall(id);}
+		sstate->fall_counter = 0;
 	}
 	return moved;
 }

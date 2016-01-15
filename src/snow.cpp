@@ -754,11 +754,18 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, 
 		if ((p.z - radius) < z && (p.z + radius) > z) {
 			zval = z;
 			norm = s.get_norm(pos);
-			if (crush_snow) snow_draw.update_region(i, pos, s.get_size(), min(z, max((z - 0.25f*radius), (p.z - radius))));
+			if (crush_snow) {snow_draw.update_region(i, pos, s.get_size(), min(z, max((z - 0.25f*radius), (p.z - radius))));}
 			return 1;
 		}
 	}
 	return 0;
+}
+
+void crush_snow_at_pt(point const &p, float radius) {
+
+	float zval; // unused
+	vector3d norm; // unused
+	get_snow_height(p, radius, zval, norm, 1);
 }
 
 

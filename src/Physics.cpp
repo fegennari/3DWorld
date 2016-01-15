@@ -794,7 +794,10 @@ void dwobject::advance_object(bool disable_motionless_objects, int iter, int obj
 			if (iter == 0) {surf_collide_obj();} // only supports blood and chunks for now
 			
 			if (object_bounce(0, cnorm, 0.0, radius)) {
-				if (radius >= LARGE_OBJ_RAD) {modify_grass_at(pos, 2.0*radius, 1);} // crush grass a lot
+				if (radius >= LARGE_OBJ_RAD) {
+					modify_grass_at(pos, 2.0*radius, 1); // crush grass a lot
+					crush_snow_at_pt(pos, 2.0*radius);
+				}
 				status = 1;
 				return; // objects bounce on mesh but not on collision objects
 			}

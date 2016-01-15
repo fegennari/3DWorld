@@ -23,7 +23,6 @@ Cobjs:
   - Place small destroyable physics objects in the scene
   - Bullet physics for movable boxes
 
-Snow footprints + screenshot
 In-Game cobjs editor
   - In-game placement/visualization of objects, smileys, universe ships
 Better Palm Trees
