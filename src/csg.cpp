@@ -1141,7 +1141,7 @@ color_tid_vol::color_tid_vol(coll_obj const &cobj, float volume_, float thicknes
 		tscale = 3.0/(fabs(cobj.d[0][1] - cobj.d[0][0]) + fabs(cobj.d[1][1] - cobj.d[1][0]) + fabs(cobj.d[2][1] - cobj.d[2][0]));
 	}
 	copy_from(cobj);
-	max_frag_sz = ((cobj.type == COLL_SPHERE || cobj.is_cylinder()) ? 0.5*max(cobj.radius, cobj.radius2) : second_largest_len());
+	max_frag_sz = ((cobj.type == COLL_SPHERE || cobj.type == COLL_CAPSULE || cobj.is_cylinder()) ? 0.5*max(cobj.radius, cobj.radius2) : second_largest_len());
 }
 
 bool color_tid_vol::maybe_is_glass() const {
