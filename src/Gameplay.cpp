@@ -2039,10 +2039,6 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				projectile_test(coll_pos, vcf, 2.0*firing_error, 0.75*damage, shooter, range_unused, 1.0, cindex); // return value is unused
 				no_spark = 1;
 			}
-			if (cobj.is_movable()) {
-				vector3d delta(4.0E-8*damage*coll_norm*dot_product(vcf, coll_norm)/cobj.get_mass());
-				push_movable_cobj(cindex, delta, coll_pos);
-			}
 		}
 		unsigned dest_prob(cobj.cp.destroy_prob);
 		if (dest_prob == 0) { // unspecified, use default values
@@ -2061,6 +2057,10 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		}
 		else if (!is_laser && cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && destroy_thresh == 0) {
 			update_voxel_sphere_region(coll_pos, object_types[PROJC].radius, -0.04, shooter, 0);
+		}
+		else if (!is_laser && cobj.is_movable()) { // projectile, movable, and not destroyed
+			vector3d delta(4.0E-8*damage*coll_norm*dot_product(vcf, coll_norm)/cobj.get_mass());
+			push_movable_cobj(cindex, delta, coll_pos);
 		}
 	}
 
