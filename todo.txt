@@ -18,7 +18,6 @@ Indirect lighting magnitude in 6 directions (+/- x,y,z)
   - how to combine sun, moon, sky, and local lighting values?
 
 Cobjs:
-  - Cobjs have shatter/destroy HP/probability
   - Grouped movable cobjs move together
   - Grouped single collision cobj objects that share a multi-cobj drawable
   - Place small destroyable physics objects in the scene

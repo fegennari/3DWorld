@@ -144,15 +144,17 @@ n 0
 # emergency exit door
 y 8.0
 a 2 # shatterable
+destroy_prob 100 # harder to destroy
 X normal_maps/wood_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.5 0.5 0.5 1.0 46 1 # 11/46 wood
 P 4  -8.16 5.32 -0.4  -8.0 5.2 -0.4  -8.0 5.2 -0.07  -8.16 5.32 -0.07  0.02
 X none # disable normal map
+a 0 # non-destroyable
+destroy_prob 0 # reset to default
 
 y 6.0
 X normal_maps/cblock_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.9 0.7 0.6 0.55 1.0 27 1 # concrete block (red/brown)
-a 0 # non-destroyable
 e 1
 B -8.0  -7.4   5.0   5.2  -0.4  -0.34 # emergency exit stairs
 B -7.6  -7.0   5.0   5.2  -0.4  -0.37 # emergency exit stairs
@@ -528,8 +530,10 @@ K # disable trigger
 # elevator light
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
 a 2 # destroyable/shatterable
+destroy_prob 1 # always
 C -3.0 5.25 -0.106  -3.0 5.25 -0.1  0.02 0.02
 a 0 # non-destroyable
+destroy_prob 0 # reset to default
 K -3.0 5.25 -0.12  0.2 0.0 0.1 0 0  -3.35 -2.65 5.05 5.80 -0.40 -0.1 # additional player auto trigger region
 L 0.0 1.2  -3.0 5.25 -0.12  1.0 0.9 0.7 1.0  0 0 -1 1.0 # bottom hemisphere/facing down
 V -3.0 5.25 -0.103

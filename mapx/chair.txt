@@ -1,5 +1,6 @@
 # chair
 a 2 # destroyable/shatterable
+destroy_prob 20 # easier to destroy
 e 0
 l 0.4 0.1 0.15 0.5 1.0 49 1 # fabric
 y 8.0
@@ -14,5 +15,6 @@ B -1.5 -1.1   1.1  1.5  0.0 2.4
 B  1.1  1.5  -1.5 -1.1  0.0 2.4
 B  1.1  1.5   1.1  1.5  0.0 2.4
 a 1 # destroyable
+destroy_prob 0 # reset to default
 X none # disable normal map
 

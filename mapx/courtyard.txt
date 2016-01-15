@@ -242,9 +242,11 @@ e 0
 movable 0
 
 a 2 # shatterable
+destroy_prob 10 # easier
 l 0.8 1.0 1.0 1.0 0.1 -1 1 # glass
 #B 7.5 7.8  6.4 10.0  0.0 0.025 # diving board
 a 0 # non-destroyable
+destroy_prob 0 # reset to default
 
 # testing
 #B 1.0 2.0  -2.0 -1.0  1.0 2.0

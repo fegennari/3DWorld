@@ -41,6 +41,7 @@ V -6.55 4.0 -0.13
 
 # basement spotlights
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
+destroy_prob 1 # always
 a 2 # destroyable/shatterable
 C -7.2 2.6 -0.15  -7.2 2.58 -0.164  0.004 0.012
 C -6.2 2.6 -0.15  -6.2 2.58 -0.164  0.004 0.012
@@ -74,6 +75,7 @@ indir_dlight_group mapx/basement_line_light.data 0.05
 # point/spot/line light: ambient_size diffuse_size xpos ypos zpos color [direction|pos2 [beamwidth=1.0 [inner_radius=0.0 [is_line_light=0 [use_shadow_map=0]]]]]
 C -4.0 -0.85 -0.2  -2.0 -0.85 -0.2  0.01 0.01
 a 0 # non-destroyable
+destroy_prob 0 # reset to default
 L 0.0 1.2  -4.0 -0.83 -0.2  0.6 0.6 1.0 1.0  -2.0 -0.83 -0.2  1.0 0.0 1 # line light
 V -3.0 -0.845 -0.2
 K # disable trigger
@@ -101,8 +103,10 @@ K # disable trigger
 # blinking red light at elevator entrance
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
 a 2 # destroyable/shatterable
+destroy_prob 1 # always
 S -3.0 4.8 -0.03  0.03
 a 0 # non-destroyable
+destroy_prob 0 # reset to default
 K -3.0 4.8 -0.28  0.0 0.5 0.5 0 0 # blinking red light
 L 0.0 0.75  -3.0 4.8 -0.1  1.0 0.2 0.1 1.0  0 0 -1 # samples face down
 V -3.0 4.8 -0.055

@@ -1113,6 +1113,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "end_cobj_group") {
 					cobj.cgroup_id = -1;
 				}
+				else if (keyword == "destroy_prob") {
+					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy_prob", coll_obj_file);}
+					cobj.cp.destroy_prob = (unsigned char)max(0, min(255, ivals[0])); // 0 = default
+				}
 				else {
 					ostringstream oss;
 					oss << "unrecognized keyword: '" << keyword << "' on line " << line_num;

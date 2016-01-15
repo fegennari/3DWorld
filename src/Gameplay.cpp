@@ -2044,10 +2044,17 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 				push_movable_cobj(cindex, delta, coll_pos);
 			}
 		}
-		unsigned const shatter_prob((sstate.powerup == PU_DAMAGE) ? 2 : 10);
+		unsigned dest_prob(cobj.cp.destroy_prob);
+		if (dest_prob == 0) { // unspecified, use default values
+			if (cobj.destroy == SHATTERABLE) {
+				if (is_glass && cobj.type != COLL_CUBE) {dest_prob = 1;} else {dest_prob = 50;} // shattering is less likely than exploding, except for glass spheres/cylinders
+			}
+			else {dest_prob = 10;} // base value for exploding
+		}
+		if (sstate.powerup == PU_DAMAGE) {dest_prob = max(1U, dest_prob/4);} // more likely with quad damage
 
-		if ((!is_laser && cobj.destroy >= SHATTERABLE && ((is_glass && cobj.type != COLL_CUBE) || (rand()%(5*shatter_prob)) == 0)) || // shattered
-			(cobj.destroy >= EXPLODEABLE && (rand()%shatter_prob) == 0)) // exploded
+		if ((!is_laser && cobj.destroy >= SHATTERABLE && (rand()%dest_prob) == 0) || // shattered
+			(cobj.destroy >= EXPLODEABLE && (rand()%dest_prob) == 0)) // exploded
 		{
 			if (is_glass && cobj.type == COLL_CUBE && !cobj.maybe_is_moving() && (rand()&15) != 0) {gen_glass_shard_from_cube_window(cobj, cobj.cp, coll_pos);}
 			destroy_coll_objs(coll_pos, 500.0, shooter, PROJECTILE, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
