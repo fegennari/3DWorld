@@ -54,7 +54,7 @@ T 1.5  2.1 -0.261  i mapx/chair.txt
 T 0.0  0.0 -0.29
 m 1.0
 
-# bottlea on counter and table
+# bottles on counter and table
 m 0.06
 T 1.8 1.76 -0.142  i mapx/bottle.txt
 T 2.6 2.7  -0.192  i mapx/bottle.txt
