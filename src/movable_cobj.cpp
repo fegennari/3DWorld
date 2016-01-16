@@ -15,6 +15,7 @@ extern unsigned scene_smap_vbo_invalid;
 extern int num_groups;
 extern float base_gravity, tstep, temperature;
 extern coll_obj_group coll_objects;
+extern cobj_groups_t cobj_groups;
 extern player_state *sstates;
 extern platform_cont platforms;
 extern obj_type object_types[NUM_TOT_OBJS];
@@ -924,7 +925,16 @@ void try_drop_movable_cobj(unsigned index) {
 	check_moving_cobj_int_with_dynamic_objs(index);
 }
 
-bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from) {
+void remove_cobjs_with_same_cgroup(coll_obj const &cobj, vector<unsigned> &cobjs) {
+
+	if (cobj.cgroup_id < 0) return; // not in a group
+
+	for (unsigned i = 0; i < cobjs.size(); ++i) {
+		if (coll_objects.get_cobj(cobjs[i]).cgroup_id == cobj.cgroup_id) {cobjs[i] = cobjs.back(); cobjs.pop_back(); --i;} // remove this cobj
+	}
+}
+
+bool check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	if (!cobj.is_movable()) return 0; // not movable
@@ -947,6 +957,7 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 	bcube.expand_by(-tolerance); // shrink slightly to avoid false collisions (in prticular with extruded polygons)
 	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1); // duplicates should be okay
+	remove_cobjs_with_same_cgroup(cobj, cobjs);
 	vector3d const start_delta(delta);
 	
 	if (cobj.type == COLL_CUBE) { // check for horizontally stackable movable cobjs - limited to cubes for now
@@ -1026,7 +1037,35 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 			}
 		}
 	}
+	return 1; // can be moved
+}
 
+void move_cobj_and_update_state(unsigned index, vector3d const &cobj_delta) {
+	
+	coll_obj &cobj(coll_objects.get_cobj(index));
+	cobj.move_cobj(cobj_delta, 1); // move the cobj instead of the player and re-add to coll structure
+	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
+	moving_cobjs.insert(index); // may already be there
+	check_moving_cobj_int_with_dynamic_objs(index);
+}
+
+bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from) {
+
+	coll_obj &cobj(coll_objects.get_cobj(index));
+	cobj_id_set_t const *group(nullptr);
+
+	if (cobj.cgroup_id >= 0) { // grouped cobj
+		group = &cobj_groups.get_set(cobj.cgroup_id);
+		assert(group->find(index) != group->end()); // must contain this cobj
+		
+		for (auto i = group->begin(); i != group->end(); ++i) { // if this cobj in a a group, we need to push the whole group (or fail)
+			seen.insert(*i); // prevent infinite recursion
+			if (!check_push_cobj(*i, delta, seen, pushed_from)) return 0; // not pushed
+		}
+	}
+	else { // push single cobj
+		if (!check_push_cobj(index, delta, seen, pushed_from)) return 0; // not pushed
+	}
 	// cobj moved, see if it gets teleported
 	vector3d cobj_delta(delta);
 	float const radius(cobj.get_bsphere_radius());
@@ -1036,12 +1075,13 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 	if (maybe_teleport_object(cobj_pos, 0.5*radius, NO_SOURCE)) { // was teleported
 		cobj_delta = cobj_pos - center + delta.get_norm()*radius; // move radius past the teleport end position so that the player doesn't get stuck on the cobj when going through
 	}
-	// move the cobj and update various state
-	cobj.move_cobj(cobj_delta, 1); // move the cobj instead of the player and re-add to coll structure
-	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
-	moving_cobjs.insert(index); // may already be there
+	if (group != nullptr) { // grouped cobjs
+		for (auto i = group->begin(); i != group->end(); ++i) {move_cobj_and_update_state(*i, cobj_delta);} // need to teleport any other grouped cobjs
+	}
+	else {
+		move_cobj_and_update_state(index, cobj_delta); // single cobj
+	}
 	mark_movable_cobj_smap_update();
-	check_moving_cobj_int_with_dynamic_objs(index);
 	if ((rand2()%1000) == 0) {gen_sound(SOUND_SLIDING, center, 0.1, 1.0);}
 	return 1; // moved
 }
