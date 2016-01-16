@@ -709,7 +709,7 @@ void gen_snow_coverage();
 void reset_snow_vbos();
 void draw_snow(bool shadow_only=0);
 bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, bool crush_snow=0);
-void crush_snow_at_pt(point const &p, float radius);
+bool crush_snow_at_pt(point const &p, float radius);
 
 // function prototypes - waypoints
 void create_waypoints(vector<user_waypt_t> const &user_waypoints);

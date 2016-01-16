@@ -81,6 +81,8 @@ void setup_sounds() {
 	sounds.add_file_buffer("sliding.wav"    ); // SOUND_SLIDING
 	sounds.add_file_buffer("obj_fall.wav"   ); // SOUND_OBJ_FALL
 	sounds.add_file_buffer("wood_crack.wav" ); // SOUND_WOOD_CRACK
+	sounds.add_file_buffer("footstep.wav"   ); // SOUND_FOOTSTEP
+	sounds.add_file_buffer("snow_step.wav"  ); // SOUND_SNOW_STEP
 	cout << endl;
 
 	// create sources

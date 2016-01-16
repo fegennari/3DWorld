@@ -24,7 +24,7 @@ point camera_last_pos(all_zeros); // not sure about this, need to reset sometime
 coll_obj_group coll_objects;
 cobj_groups_t cobj_groups;
 
-extern bool lm_alloc;
+extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
 extern int camera_in_air, mesh_scale_change, camera_invincible, camera_flight, do_run, num_smileys, iticks;
 extern float TIMESTEP, temperature, zmin, base_gravity, ftick, tstep, zbottom, ztop, fticks;
@@ -1542,14 +1542,20 @@ int dwobject::multistep_coll(point const &last_pos, int obj_index, unsigned nste
 }
 
 
-void create_snow_footprints(point const &pos, float sz, vector3d const &view_dir, point &prev_snow_pos, unsigned &step_num, bool &foot_down) {
+void create_snow_footprints(point const &pos, float sz, vector3d const &view_dir, point &prev_snow_pos, unsigned &step_num, bool &foot_down, bool is_camera) {
 
-	float const stride(1.2*sz), foot_length(0.7*sz), crush_depth(1.0*sz), foot_spacing(0.25*sz); // spacing from center
+	if (!has_snow) return;
+	bool const prev_foot_down(foot_down);
+	float const stride(1.8*sz), foot_length(0.5*sz), crush_depth(1.0*sz), foot_spacing(0.25*sz); // spacing from center
 	if      (!foot_down && !dist_less_than(prev_snow_pos, pos, stride     )) {foot_down = 1; prev_snow_pos = pos; ++step_num;} // foot down and update pos
 	else if ( foot_down && !dist_less_than(prev_snow_pos, pos, foot_length)) {foot_down = 0;} // foot up
 	vector3d const right_dir(cross_product(view_dir, plus_z).get_norm());
 	point const step_pos(pos + ((step_num&1) ? foot_spacing : -foot_spacing)*right_dir - vector3d(0.0, 0.0, 0.5*sz)); // alternate left and right feet
-	if (foot_down) {crush_snow_at_pt(step_pos, crush_depth);}
+	
+	if (foot_down) {
+		bool const crushed(crush_snow_at_pt(step_pos, crush_depth));
+		if (is_camera && !prev_foot_down) {gen_sound((crushed ? SOUND_SNOW_STEP : SOUND_FOOTSTEP), pos, 0.02, (crushed ? 1.5 : 1.2));} // on down step
+	}
 }
 
 
@@ -1611,9 +1617,9 @@ void force_onto_surface_mesh(point &pos) { // for camera
 		set_true_obj_height(pos, camera_last_pos, C_STEP_HEIGHT, sstate.zvel, CAMERA, CAMERA_ID, cflight, camera_on_snow); // status return value is unused?
 	}
 	camera_on_snow = 0;
-
+	//if (display_mode & 0x0100) {create_snow_footprints(pos, radius, cview_dir, sstate.prev_snow_pos, sstate.step_num, sstate.foot_down, 1);}
+	
 	if (display_mode & 0x10) { // walk on snow (jumping?)
-		create_snow_footprints(pos, radius, cview_dir, sstate.prev_snow_pos, sstate.step_num, sstate.foot_down);
 		float zval;
 		vector3d norm;
 		
@@ -1694,11 +1700,14 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 	pos.z = max(pos.z, (mh + radius));
 	bool jumping(0);
 
-	if ((display_mode & 0x10) && is_player && !test_only) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
-		float zval;
-		vector3d norm;
-		create_snow_footprints(pos, radius, sstate->velocity.get_norm(), sstate->prev_snow_pos, sstate->step_num, sstate->foot_down);
-		if (get_snow_height(pos, radius, zval, norm)) {pos.z = zval + radius;}
+	if (is_player && !test_only) {
+		if (display_mode & 0x0100) {create_snow_footprints(pos, radius, sstate->velocity.get_norm(), sstate->prev_snow_pos, sstate->step_num, sstate->foot_down, is_camera);}
+
+		/*if (display_mode & 0x10) { // walk on snow (smiley and camera, though doesn't actually set smiley z value correctly)
+			float zval;
+			vector3d norm;
+			if (get_snow_height(pos, radius, zval, norm)) {pos.z = zval + radius;}
+		}*/
 	}
 	if (jump_time > 0) {
 		float const jump_val((float(jump_time)/TICKS_PER_SECOND - (JUMP_COOL - JUMP_TIME))/JUMP_TIME); // jt == JC => 1.0; jt == JC-JT => 0.0

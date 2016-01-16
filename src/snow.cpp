@@ -761,11 +761,11 @@ bool get_snow_height(point const &p, float radius, float &zval, vector3d &norm, 
 	return 0;
 }
 
-void crush_snow_at_pt(point const &p, float radius) {
+bool crush_snow_at_pt(point const &p, float radius) {
 
 	float zval; // unused
 	vector3d norm; // unused
-	get_snow_height(p, radius, zval, norm, 1);
+	return get_snow_height(p, radius, zval, norm, 1);
 }
 
 
