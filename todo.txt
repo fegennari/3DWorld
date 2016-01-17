@@ -23,7 +23,7 @@ Cobjs:
   - Bullet physics for movable boxes
 
 In-Game cobjs editor
-  - In-game placement/visualization of objects, smileys, universe ships
+  - In-game placement/visualization of objects
 Better Palm Trees
 Plants with low large leaves
 Precomputed cube map reflections on specular surfaces (such as the gold dragon)

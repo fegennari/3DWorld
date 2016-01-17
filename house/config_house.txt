@@ -45,6 +45,7 @@ flower_density 0.8
 flower_color 1.0 1.0 0.0 # yellow
 
 use_waypoints 1
+show_waypoints 0
 
 include config_gameplay.txt
 num_dodgeballs 6

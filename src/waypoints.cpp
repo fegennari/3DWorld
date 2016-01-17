@@ -11,8 +11,6 @@
 #include <queue>
 
 
-bool const SHOW_WAYPOINTS      = 0;
-bool const SHOW_WAYPOINT_EDGES = 0;
 int const WP_RESET_FRAMES      = 100; // Note: in frames, not ticks, fix?
 int const WP_RECENT_FRAMES     = 200;
 float const MAX_FALL_DIST_MULT = 20.0;
@@ -20,6 +18,7 @@ float const STEP_SIZE_MULT     = 0.25; // waypoint connectivity algorithm (relat
 float const STEP_SIZE_MULT2    = 0.50; // reachability tests (relative to smiley radius)
 
 bool has_user_placed(0), has_item_placed(0), has_wpt_goal(0);
+int show_waypoints(0); // 0=none, 1=waypoints, 2=waypoints+edges
 waypoint_vector waypoints;
 
 extern bool use_waypoints;
@@ -29,6 +28,7 @@ extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
+extern vector<point> app_spots;
 extern coll_obj_group coll_objects;
 extern vector<teleporter> teleporters;
 
@@ -827,7 +827,7 @@ void shift_waypoints(vector3d const &vd) {
 
 void draw_waypoints() {
 
-	if (!SHOW_WAYPOINTS) return;
+	if (!show_waypoints) return;
 	shader_t s;
 	s.begin_color_only_shader();
 	vector<vert_color> verts;
@@ -844,8 +844,9 @@ void draw_waypoints() {
 		else                     color = WHITE;
 		s.set_cur_color(color);
 		draw_sphere_vbo(i->pos, 0.25*object_types[WAYPOINT].radius, N_SPHERE_DIV/2, 0);
-		if (!SHOW_WAYPOINT_EDGES) continue;
+		if (show_waypoints == 1) continue;
 
+		// show waypoint edges
 		for (waypt_adj_vect::const_iterator j = i->next_wpts.begin(); j != i->next_wpts.end(); ++j) {
 			assert(*j < waypoints.size());
 			assert(*j != wix);
@@ -860,6 +861,10 @@ void draw_waypoints() {
 				verts.push_back(vert_color(w.pos,  (bidir ? YELLOW : ORANGE)));
 			}
 		}
+	}
+	for (auto i = app_spots.begin(); i != app_spots.end(); ++i) { // show appearance spots as well
+		s.set_cur_color(BLUE);
+		draw_sphere_vbo(*i, object_types[SMILEY].radius, N_SPHERE_DIV, 0);
 	}
 	end_sphere_draw();
 	draw_verts(verts, GL_LINES);
