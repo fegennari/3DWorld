@@ -46,6 +46,7 @@ void coll_obj::init() {
 	fixed        = 1;
 	id           = -1;
 	cgroup_id    = -1;
+	dgroup_id    = -1;
 }
 
 

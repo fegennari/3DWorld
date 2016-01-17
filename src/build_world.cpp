@@ -55,6 +55,7 @@ extern obj_type object_types[];
 extern string cobjs_out_fn;
 extern coll_obj_group coll_objects;
 extern cobj_groups_t cobj_groups;
+extern cobj_draw_groups cdraw_groups;
 extern platform_cont platforms;
 extern lightning l_strike;
 extern vector<int> hmv_coll_obj;
@@ -828,6 +829,7 @@ void check_layer(bool has_layer) {
 }
 
 
+// Note: always called with cobjs == fixed_cobjs
 void coll_obj::add_to_vector(coll_obj_group &cobjs, int type_) {
 
 	type = type_;
@@ -835,6 +837,11 @@ void coll_obj::add_to_vector(coll_obj_group &cobjs, int type_) {
 	check_if_cube();
 	set_npoints();
 	if (type == COLL_POLYGON) {assert(npoints >= 3); norm = get_poly_norm(points);}
+
+	if (dgroup_id >= 0) { // grouped cobj
+		bool const is_parent(cdraw_groups.set_parent_or_add_cobj(*this));
+		if (!is_parent) return; // a child draw cobj, don't add it to cobjs
+	}
 	cobjs.push_back(*this);
 }
 
@@ -1113,6 +1120,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "end_cobj_group") {
 					cobj.cgroup_id = -1;
+				}
+				else if (keyword == "start_draw_group") {
+					cobj.dgroup_id = cdraw_groups.new_group();
+				}
+				else if (keyword == "end_draw_group") {
+					cobj.dgroup_id = -1;
 				}
 				else if (keyword == "destroy_prob") {
 					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy_prob", coll_obj_file);}

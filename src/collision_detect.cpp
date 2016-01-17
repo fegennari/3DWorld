@@ -23,6 +23,7 @@ float czmin(FAR_DISTANCE), czmax(-FAR_DISTANCE), coll_rmax(0.0);
 point camera_last_pos(all_zeros); // not sure about this, need to reset sometimes
 coll_obj_group coll_objects;
 cobj_groups_t cobj_groups;
+cobj_draw_groups cdraw_groups;
 
 extern bool lm_alloc, has_snow;
 extern int camera_coll_smooth, game_mode, world_mode, xoff, yoff, camera_change, display_mode, scrolling, animate2;
@@ -571,6 +572,7 @@ int coll_obj::add_coll_cobj() {
 	cobj.v_fall   = v_fall;
 	cobj.texture_offset = texture_offset;
 	cobj.cgroup_id = cgroup_id;
+	cobj.dgroup_id = dgroup_id;
 	if (cgroup_id >= 0) {cobj_groups.add_cobj(cgroup_id, cid);}
 	return cid;
 }
@@ -819,8 +821,7 @@ void coll_obj_group::remove_index_from_ids(int index) {
 	if (cobj.platform_id >= 0      ) {coll_objects.platform_ids.must_erase(index);}
 	if (cobj.cgroup_id >= 0)         {cobj_groups.remove_cobj(cobj.cgroup_id, index);}
 	cobj.cp.draw     = 0;
-	cobj.platform_id = -1;
-	cobj.cgroup_id   = -1;
+	cobj.platform_id = cobj.cgroup_id = cobj.dgroup_id = -1;
 }
 
 
