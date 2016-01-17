@@ -99,14 +99,14 @@ class cobj_draw_buffer {
 	vector<vert_norm_tc> tc_verts;
 
 public:
-	int is_wet; // 0=no, 1=yes, 2=unknown
+	int is_wet, is_snow_cov; // 0=no, 1=yes, 2=unknown
 
-	cobj_draw_buffer() : is_wet(2) {}
+	cobj_draw_buffer() : is_wet(2), is_snow_cov(2) {} // initial value of is_wet and is_snowy are unknown
 	void add_vert(vert_norm_texp const &vnt) {verts.push_back(vnt);}
 	void add_vert(vert_norm const &vn, texgen_params_t const &tp) {verts.push_back(vert_norm_texp(vn, tp));}
 	void add_vert(vert_norm_tc const &vntc) {tc_verts.push_back(vntc);}
 	bool on_new_obj_layer(obj_layer const &l);
-	void clear() {verts.clear(); tc_verts.clear();}
+	void clear() {verts.clear(); tc_verts.clear(); is_wet = is_snow_cov = 2;}
 	void draw() const {draw_verts(verts, GL_TRIANGLES); draw_verts(tc_verts, GL_TRIANGLES);}
 	void flush() {draw(); clear();}
 };
@@ -175,6 +175,7 @@ public:
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
 	bool is_movable()     const {return ((cp.flags & COBJ_MOVABLE) != 0);}
 	bool is_wet()         const {return (!(cp.flags & COBJ_IS_INDOORS) && is_ground_wet());}
+	bool is_snow_cov()    const {return (!(cp.flags & COBJ_IS_INDOORS) && is_ground_snowy());}
 	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || is_movable());}
 	bool is_player()      const;
 	bool is_invis_player()const;

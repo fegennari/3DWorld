@@ -1412,6 +1412,8 @@ void update_precip_rate(float val) {
 	if (val < 1.0) {obj_pld.free_mem();}
 }
 
-unsigned get_precip_rate() {return obj_groups[coll_id[PRECIP]].app_rate;}
-float get_rain_intensity() {return (is_rain_enabled() ? min(get_precip_rate()/100.0, 1.0) : 0.0);}
+unsigned get_precip_rate  () {return obj_groups[coll_id[PRECIP]].app_rate;}
+float get_norm_precip_rate() {return min(get_precip_rate()/100.0, 1.0);}
+float get_rain_intensity  () {return (is_rain_enabled() ? get_norm_precip_rate() : 0.0);}
+float get_snow_intensity  () {return (is_snow_enabled() ? get_norm_precip_rate() : 0.0);}
 

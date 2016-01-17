@@ -14,7 +14,7 @@ uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
-uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity;
+uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity, snow_cov_amt;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -171,7 +171,7 @@ void main()
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
 #endif
 
-	float wetness = wet_effect;
+	float wetness       = wet_effect;
 	float reflectivity2 = reflectivity;
 #ifdef ENABLE_PUDDLES
 	if (wetness > 0.0 && wetness < 1.0 && normal.z > 0.5) { // create puddles for partially wet top surfaces
@@ -228,6 +228,10 @@ void main()
 	}
 #endif
 
+	if (snow_cov_amt > 0.0 && normal.z > 0.5) {
+		// add in snow on top of water/texture, using ratio of lit color from base color to pick up lighting
+		color.rgb = mix(color.rgb, vec3(0.9, 0.9, 1.0)*lit_color.rgb/max(vec3(0.01), gl_Color.rgb), snow_cov_amt);
+	}
 #ifdef APPLY_BURN_MASK
 	color = apply_black_body_burn_mask(color, tc);
 #endif

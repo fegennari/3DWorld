@@ -63,7 +63,9 @@ void gen_mesh_bsp_tree();
 // function prototypes - build_world
 void create_object_groups();
 bool is_rain_enabled();
+bool is_snow_enabled();
 bool is_ground_wet();
+bool is_ground_snowy();
 void shift_all_objs(vector3d const &vd);
 void process_platforms_falling_moving_and_light_triggers();
 void set_global_state();
@@ -101,6 +103,7 @@ colorRGBA get_powerup_color(int powerup);
 void update_precip_rate(float val);
 unsigned get_precip_rate();
 float get_rain_intensity();
+float get_snow_intensity();
 bool is_light_enabled(int l);
 void enable_light    (int l);
 void disable_light   (int l);

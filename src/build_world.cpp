@@ -190,7 +190,8 @@ void dwobject::add_obj_dynamic_light(int index) const {
 }
 
 
-bool is_rain_enabled() {return (temperature > W_FREEZE_POINT && precip_mode != 0);}
+bool is_rain_enabled() {return (temperature >  W_FREEZE_POINT && precip_mode != 0);}
+bool is_snow_enabled() {return (temperature <= W_FREEZE_POINT && precip_mode != 0);}
 int get_precip_type () {return ((temperature > RAIN_MIN_TEMP) ? RAIN : ((temperature > SNOW_MAX_TEMP) ? HAIL : SNOW));}
 
 int obj_group::get_ptype() const {return ((flags & PRECIPITATION) ? get_precip_type() : type);}

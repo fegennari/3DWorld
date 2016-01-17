@@ -31,7 +31,7 @@ bool     const PRINT_TIME_OF_DAY   = 1;
 // Global Variables
 bool no_sun_lpos_update(0);
 int TIMESCALE2(TIMESCALE), I_TIMESCALE2(0);
-float temperature(DEF_TEMPERATURE), max_obj_radius(0.0), cloud_cover(0.0), rain_wetness(0.0); // temp in degrees C
+float temperature(DEF_TEMPERATURE), max_obj_radius(0.0), cloud_cover(0.0), rain_wetness(0.0), snow_cov_amt(0.0); // temp in degrees C
 float TIMESTEP(DEF_TIMESTEP), orig_timestep(DEF_TIMESTEP);
 vector3d wind(0.4, 0.2, 0.0), total_wind(0.0, 0.0, 0.0);
 point flow_source(0.0, 0.0, -2.0);
@@ -1555,9 +1555,19 @@ void auto_advance_time() { // T = 1 hour
 
 	// update rain_wetness
 	float const elapsed_secs(fticks/TICKS_PER_SECOND);
-	if (is_rain_enabled()) {rain_wetness = min(1.0f, (rain_wetness + 0.5f*elapsed_secs*get_rain_intensity()));} // increase to max after 2s of heavy rain/5s of light rain
-	else {rain_wetness = max(0.0f, (rain_wetness - 0.05f*elapsed_secs));} // all wetness gone after 20s
-
+	
+	if (is_rain_enabled()) {
+		rain_wetness = min(1.0f, (rain_wetness + 0.5f*elapsed_secs*get_rain_intensity())); // increase to max after 2s of heavy rain/5s of light rain
+		snow_cov_amt = max(0.0f, (snow_cov_amt - 0.1f*elapsed_secs*get_rain_intensity())); // all snow gone after 10s of rain
+	}
+	else if (is_snow_enabled()) {
+		snow_cov_amt = min(1.0f, (snow_cov_amt + 0.1f*elapsed_secs*get_snow_intensity())); // increase to max after 10s of heavy snow/25s of light snow
+		// rain_wetness remains constant (frozen ice)
+	}
+	else { // neither rain nor snow
+		rain_wetness = max(0.0f, (rain_wetness - 0.05f*elapsed_secs)); // all water gone after 20s
+		snow_cov_amt = max(0.0f, (snow_cov_amt - 0.02f*elapsed_secs)); // all snow  gone after 50s
+	}
 	if (!auto_time_adv) return;
 	static int last_itime(0), precip_inited(0);
 	static float ftime, precip(0.0), precip_app_rate(0.0), prate(0.0), ccover(0.0);
@@ -1648,5 +1658,6 @@ void auto_advance_time() { // T = 1 hour
 	}
 }
 
-bool is_ground_wet() {return (rain_wetness > 0.0);}
+bool is_ground_wet  () {return (rain_wetness > 0.0);}
+bool is_ground_snowy() {return (snow_cov_amt > 0.0);}
 

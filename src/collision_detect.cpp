@@ -1369,7 +1369,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			if (type != DYNAM_PART && obj.velocity != zero_vector) {
 				assert(TIMESTEP > 0.0);
 				float friction_adj(friction);
-				if (norm.z > 0.25 && cobj.is_wet()) {friction_adj *= 0.25;} // slippery when wet
+				if (norm.z > 0.25 && (cobj.is_wet() || cobj.is_snow_cov())) {friction_adj *= 0.25;} // slippery when wet, icy, or snow covered
 				if (friction_adj > 0.0) {obj.velocity *= (1.0 - min(1.0f, (tstep/TIMESTEP)*friction_adj));} // apply kinetic friction
 				//for (unsigned i = 0; i < 3; ++i) {obj.velocity[i] *= (1.0 - fabs(norm[i]));} // norm must be normalized
 				orthogonalize_dir(obj.velocity, norm, obj.velocity, 0); // rolling friction model
