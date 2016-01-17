@@ -333,7 +333,7 @@ float setup_underwater_fog(shader_t &s, int shader_type) {
 // use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
 	int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
-	bool use_depth_trans, bool enable_reflections)
+	bool use_depth_trans, bool enable_reflections, bool is_outside)
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
@@ -344,6 +344,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_depth_trans   ) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
 	if (enable_reflections) {s.set_prefix("#define ENABLE_REFLECTIONS",     1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
+	if (snow_cov_amt > 0.0) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
@@ -410,11 +411,10 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
 		s.add_uniform_int("wet_noise_tex", 11);
 	}
-	// FIXME: need to handle wet/outside vs. dry/inside surfaces differently
-	// but in practice, since this only applies to sun/moon lighting, indoor surfaces aren't affected much
-	s.add_uniform_float("wet_effect",   rain_wetness); // only enable when drawing cobjs?
+	// need to handle wet/outside vs. dry/inside surfaces differently, so the caller must either set is_outside properly or override wet and snow values
+	s.add_uniform_float("wet_effect",   (is_outside ? rain_wetness : 0.0)); // only enable when drawing cobjs?
 	s.add_uniform_float("reflectivity", (enable_reflections ? 1.0 : 0.0));
-	s.add_uniform_float("snow_cov_amt", snow_cov_amt);
+	s.add_uniform_float("snow_cov_amt", (is_outside ? snow_cov_amt : 0.0));
 }
 
 

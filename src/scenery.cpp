@@ -1149,7 +1149,7 @@ void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_on
 		shader_t s;
 
 		if (!shadow_only) {
-			setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1); // direct lighting + dlights + shadow map
+			setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // direct lighting + dlights + shadow map, is_outside=1
 		}
 		else {
 			s.begin_simple_textured_shader(0.0, !shadow_only); // with lighting, unless shadow_only

@@ -512,7 +512,7 @@ void draw_small_trees(bool shadow_only) {
 		s.begin_color_only_shader();
 	}
 	else {
-		setup_smoke_shaders(s, 0.0, 0, 0, tree_indir_lighting, 1, 1, 0, 0, 1, use_bump_map, 0, 1); // dynamic lights, but no smoke
+		setup_smoke_shaders(s, 0.0, 0, 0, tree_indir_lighting, 1, 1, 0, 0, 1, use_bump_map, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, is_outside=1
 		s.add_uniform_float("tex_scale_t", 5.0);
 	}
 	if (use_bump_map) {select_multitex(BARK2_NORMAL_TEX, 5, 1);}
@@ -526,7 +526,7 @@ void draw_small_trees(bool shadow_only) {
 		float const wind_mag(get_plant_leaf_wind_mag(shadow_only));
 		if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 		s.set_prefix("#define NO_SPECULAR", 1); // FS - disable rain effect
-		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v); // dynamic lights, but no smoke, texgen
+		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, texgen, is_outside=1
 		setup_leaf_wind(s, wind_mag, 0);
 		small_trees.draw_pine_leaves(shadow_only);
 		s.end_shader();
