@@ -231,7 +231,7 @@ void main()
 #ifdef ENABLE_SNOW_COVERAGE
 	if (snow_cov_amt > 0.0 && normal.z > 0.5) {
 		// add in snow on top of water/texture, using ratio of lit color from base color to pick up lighting
-		color.rgb = mix(color.rgb, vec3(0.9, 0.9, 1.0)*lit_color.rgb/max(vec3(0.01), gl_Color.rgb), snow_cov_amt);
+		color.rgb = mix(color.rgb, vec3(0.9, 0.9, 1.0)*lit_color.rgb/max(vec3(0.01), gl_Color.rgb), snow_cov_amt*min(1.0, 6.0*(normal.z-0.5)));
 	}
 #endif // ENABLE_SNOW_COVERAGE
 
