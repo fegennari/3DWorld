@@ -2,14 +2,15 @@
 a 2 # destroyable/shatterable
 destroy_prob 1 # always shatters
 movable 1
-start_cobj_group # make sure it all moves and explodes together
+start_draw_group # make sure it all moves and explodes together
 r 0.8 90.0 # set specularity
 e 0
 l 0.7  0.35 0.65 0.5 0.4  -1 1 1.55 # greenish glass with n=1.55
+C 0.0 0.0 0.0   0.0 0.0 1.24  0.16 0.16 # cylinder for the collision hull/parent cobj (not drawn)
 k 0.0 0.0 0.16  0.0 0.0 0.8   0.16 0.16 # capsule
 C 0.0 0.0 0.92  0.0 0.0 1.24  0.08 0.08
 r 0.0 1.0 # reset specularity
-end_cobj_group
+end_draw_group
 a 1 # destroyable
 destroy_prob 0 # back to default
 movable 0

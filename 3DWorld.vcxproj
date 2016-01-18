@@ -841,6 +841,7 @@
     <None Include="mapx\basement.txt" />
     <None Include="mapx\bench.txt" />
     <None Include="mapx\bottle.txt" />
+    <None Include="mapx\bottle2.txt" />
     <None Include="mapx\chair.txt" />
     <None Include="mapx\cobjs_out.txt" />
     <None Include="mapx\COLL_OBJS_mapx.txt" />
