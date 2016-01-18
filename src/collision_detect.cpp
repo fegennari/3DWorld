@@ -680,7 +680,7 @@ int remove_coll_object(int index, bool reset_draw) {
 	}
 	if (c.status == COLL_FREED) return 0;
 	coll_objects.remove_index_from_ids(index);
-	if (reset_draw) c.cp.draw = 0;
+	if (reset_draw) {c.cp.draw = 0;}
 	c.status   = COLL_FREED;
 	c.waypt_id = -1; // is this necessary?
 	

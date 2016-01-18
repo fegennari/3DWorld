@@ -411,7 +411,7 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 
 bool coll_obj::is_occluder() const {
 	
-	if (status != COLL_STATIC || !cp.draw || is_semi_trans()) return 0; // cp.might_be_drawn()?
+	if (status != COLL_STATIC || !cp.draw || is_semi_trans() || dgroup_id >= 0) return 0; // cp.might_be_drawn()?
 	if (type == COLL_CUBE)    return 1;
 	if (type != COLL_POLYGON) return 0;
 	unsigned big_dims(0);
@@ -457,7 +457,7 @@ void get_occluders() {
 	//#pragma omp parallel for num_threads(2) schedule(static) // helps in some cases and hurts in others
 	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
 		coll_obj &cobj(coll_objects[i]);
-		if (!cobj.fixed || cobj.group_id >= 0 || cobj.status != COLL_STATIC || cobj.cp.no_draw() || cobj.dgroup_id >= 0 || cobj.cp.surfs == EF_ALL) continue;
+		if (!cobj.fixed || cobj.group_id >= 0 || cobj.status != COLL_STATIC || cobj.cp.no_draw() || cobj.cp.surfs == EF_ALL) continue;
 		cobj.occluders.resize(0);
 		get_coll_line_cobjs_tree(camera, cobj.get_cube_center(), i, &cobj.occluders, NULL, 0, 1);
 	}
