@@ -186,7 +186,8 @@ public:
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	bool is_tree_leaf()   const {return is_billboard;} // we assume that a billboard cobj is a tree leaf
 	bool is_cylin_vertical() const {return (points[0].x == points[1].x && points[0].y == points[1].y);}
-	bool has_hard_edges() const {return (type == COLL_CUBE || type == COLL_POLYGON);}
+	bool has_hard_edges()    const {return (type == COLL_CUBE || type == COLL_POLYGON);}
+	bool has_flat_top_bot()  const {return (type == COLL_CUBE || type == COLL_POLYGON || type == COLL_CYLINDER);}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
 	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)));}
 	point get_center_pt() const;

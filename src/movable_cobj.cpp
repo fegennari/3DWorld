@@ -626,7 +626,7 @@ bool binary_step_moving_cobj_delta(coll_obj const &cobj, vector<unsigned> const 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		coll_obj const &c(coll_objects.get_cobj(*i));
 		// moving object resting (stacked) on cobj, ignore it
-		if (cobj.has_hard_edges() && c.has_hard_edges() && c.is_movable() && c.get_cube_center().z > cobj.d[2][1]) continue;
+		if (cobj.has_flat_top_bot() && c.has_flat_top_bot() && c.is_movable() && c.get_cube_center().z > cobj.d[2][1]) continue;
 		if (cobj.intersects_cobj(c, tolerance)) return 0; // intersects at the starting location, don't allow it to move (stuck)
 		float const valid_t(get_max_cobj_move_delta(cobj, c, delta, step_thresh, tolerance));
 		if (valid_t < TOLERANCE) return 0; // can't move (avoid div-by-zero and negative t)
@@ -701,7 +701,7 @@ bool check_top_face_agreement(vector<unsigned> const &cobjs) {
 void check_cobj_alignment(unsigned index) {
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
-	if (!cobj.has_hard_edges()) return; // not yet supported
+	if (!cobj.has_hard_edges()) return; // not yet supported (use has_flat_top_bot()?)
 	float const tolerance(1.0E-6), cobj_height(cobj.d[2][1] - cobj.d[2][0]);
 	point const center_of_mass(cobj.get_center_of_mass());
 	// check other static cobjs
