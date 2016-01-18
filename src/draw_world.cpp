@@ -682,7 +682,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 
 					if (draw_or_add_cobj(ix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm)) {
 						unsigned ix2(ix);
-						c.draw_cobj(ix2, last_tid, last_group_id, s, cdb); // Note: ix should not be modified
+						cdraw_groups.get_cobj(*j).draw_cobj(ix2, last_tid, last_group_id, s, cdb); // Note: ix should not be modified
 						assert(ix2 == ix); // should not have changed
 					}
 				}

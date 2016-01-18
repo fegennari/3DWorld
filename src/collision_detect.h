@@ -290,7 +290,7 @@ class cobj_draw_groups {
 		point parent_pos;
 		vector<unsigned> ids; // typically a contiguous range within dcobjs
 
-		cobj_draw_group(int p=-1) : parent(p), parent_pos(all_zeros) {}
+		cobj_draw_group() : parent(-1), parent_pos(all_zeros) {}
 		bool empty() const {return ids.empty();}
 	};
 
@@ -305,7 +305,7 @@ public:
 		assert(index < dcobjs.size());
 		return dcobjs[index];
 	}
-	unsigned new_group(int parent=-1);
+	unsigned new_group();
 	void add_to_group(coll_obj const &cobj); // Note: cobj.dgroup_id should be set correctly
 	bool set_parent_or_add_cobj(coll_obj const &cobj); // Note: cobj.dgroup_id should be set correctly
 	vector<unsigned> const &get_draw_group(int group_id, coll_obj const &parent);

@@ -970,9 +970,9 @@ bool obj_group::obj_has_shadow(unsigned obj_id) const {
 
 /// ******************* COBJ_DRAW_GROUPS MEMBERS ******************
 
-unsigned cobj_draw_groups::new_group(int parent) {
+unsigned cobj_draw_groups::new_group() {
 	unsigned const group_id(groups.size());
-	groups.push_back(cobj_draw_group(parent));
+	groups.push_back(cobj_draw_group());
 	return group_id;
 }
 
@@ -983,7 +983,7 @@ void cobj_draw_groups::add_to_group(coll_obj const &cobj) { // Note: cobj.dgroup
 }
 
 bool cobj_draw_groups::set_parent_or_add_cobj(coll_obj const &cobj) { // Note: cobj.dgroup_id should be set correctly
-	
+
 	assert(cobj.id >= 0);
 	cobj_draw_group &group(get_group(cobj.dgroup_id));
 	
