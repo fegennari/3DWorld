@@ -232,7 +232,6 @@ int add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id, int
 	cube.normalize();
 	cobj.copy_from(cube);
 	// cache the center point and radius
-	cobj.points[0] = cobj.get_cube_center();
 	coll_objects.set_coll_obj_props(index, COLL_CUBE, cobj.get_bsphere_radius(), 0.0, platform_id, cparams);
 	add_coll_cube_to_matrix(index, dhcm);
 	return index;
