@@ -189,7 +189,7 @@ public:
 	bool has_hard_edges()    const {return (type == COLL_CUBE || type == COLL_POLYGON);}
 	bool has_flat_top_bot()  const {return (type == COLL_CUBE || type == COLL_POLYGON || type == COLL_CYLINDER);}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
-	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)));}
+	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)) && dgroup_id < 0);}
 	point get_center_pt() const;
 	point get_center_of_mass() const;
 	float get_max_dim()   const;
