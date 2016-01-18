@@ -24,6 +24,7 @@ extern float NEAR_CLIP, tree_deadness, vegetation, shadow_map_pcf_offset;
 extern vector<shadow_sphere> shadow_objs;
 extern set<unsigned> moving_cobjs;
 extern coll_obj_group coll_objects;
+extern cobj_draw_groups cdraw_groups;
 extern platform_cont platforms;
 
 void draw_trees(bool shadow_only=0, bool reflection_pass=0);
@@ -128,11 +129,16 @@ public:
 			if (enable_vfc && !c.is_cobj_visible()) continue; // Note: assumes camera_du == light_pdu
 			if (!enable_vfc && c.is_movable()) {movable_cids.push_back(*i); continue;}
 
-			if (c.type == COLL_CUBE) {
-				z_sorted.push_back(make_pair(-c.d[2][1], *i));
-				continue;
+			if (c.dgroup_id >= 0) {
+				vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(c.dgroup_id, c));
+				
+				for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
+					coll_obj const &c2(cdraw_groups.get_cobj(*j));
+					c2.get_shadow_triangle_verts(verts, get_ndiv(c2, smap_sz, fixed_ndiv)); // no cube optimization here
+				}
 			}
-			c.get_shadow_triangle_verts(verts, get_ndiv(c, smap_sz, fixed_ndiv));
+			else if (c.type == COLL_CUBE) {z_sorted.push_back(make_pair(-c.d[2][1], *i));}
+			else {c.get_shadow_triangle_verts(verts, get_ndiv(c, smap_sz, fixed_ndiv));}
 		}
 		end_block1(verts.size());
 		sort(z_sorted.begin(), z_sorted.end());

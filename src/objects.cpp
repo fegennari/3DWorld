@@ -78,7 +78,16 @@ void coll_obj::bb_union(float bb[3][2], int init) {
 }
 
 
-void coll_obj::calc_size() {
+void coll_obj::setup_internal_state() {
+
+	status = ((cp.flags & COBJ_DYNAMIC) ? COLL_DYNAMIC : COLL_STATIC);
+	calc_volume();
+	set_npoints();
+	calc_bcube();
+}
+
+
+void coll_obj::calc_volume() {
 
 	volume = 0.0;
 
@@ -343,7 +352,6 @@ void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const {
 
 	if (no_draw()) return;
-	assert(id == (int)cix); // always equal, but cix may be increased in this call
 	assert(!disabled());
 	bool const in_group(group_id >= 0), same_group(group_id == last_group_id), start_group(in_group && !same_group);
 	if (!in_group && !is_cobj_visible()) return;
@@ -960,6 +968,46 @@ bool obj_group::obj_has_shadow(unsigned obj_id) const {
 }
 
 
+/// ******************* COBJ_DRAW_GROUPS MEMBERS ******************
+
+unsigned cobj_draw_groups::new_group(int parent) {
+	unsigned const group_id(groups.size());
+	groups.push_back(cobj_draw_group(parent));
+	return group_id;
+}
+
+void cobj_draw_groups::add_to_group(coll_obj const &cobj) { // Note: cobj.dgroup_id should be set correctly
+	get_group(cobj.dgroup_id).ids.push_back(dcobjs.size());
+	dcobjs.push_back(cobj);
+	dcobjs.back().setup_internal_state();
+}
+
+bool cobj_draw_groups::set_parent_or_add_cobj(coll_obj const &cobj) { // Note: cobj.dgroup_id should be set correctly
+	
+	assert(cobj.id >= 0);
+	cobj_draw_group &group(get_group(cobj.dgroup_id));
+	
+	if (group.empty() && group.parent < 0) { // this is the parent cobj
+		group.parent     = cobj.id;
+		group.parent_pos = cobj.get_cube_center();
+		return 1;
+	}
+	add_to_group(cobj); // not the parent
+	return 0;
+}
+
+// Note: better to pass the parent in rather than using group.parent, which may be stale
+vector<unsigned> const &cobj_draw_groups::get_draw_group(int group_id, coll_obj const &parent) const {
+	
+	cobj_draw_group const &group(get_group(group_id));
+	vector3d const delta(parent.get_cube_center() - group.parent_pos); // determine parent translation
+	if (delta != zero_vector) {} // FIXME: do some sort of translation
+	return group.ids;
+}
+
+
+/// ******************* OBJ_DRAW_GROUP MEMBERS ******************
+
 void obj_draw_group::free_vbo() {
 
 	assert(!inside_beg_end);
@@ -1032,10 +1080,7 @@ void obj_draw_group::add_draw_polygon(point const *const points, vector3d const 
 
 
 void free_cobj_draw_group_vbos() {
-
-	for (vector<obj_draw_group>::iterator i = obj_draw_groups.begin(); i != obj_draw_groups.end(); ++i) {
-		i->free_vbo();
-	}
+	for (vector<obj_draw_group>::iterator i = obj_draw_groups.begin(); i != obj_draw_groups.end(); ++i) {i->free_vbo();}
 }
 
 

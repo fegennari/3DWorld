@@ -534,7 +534,7 @@ int add_simple_coll_polygon(const point *points, int npoints, cobj_params const 
 
 void coll_obj::add_as_fixed_cobj() {
 
-	calc_size();
+	calc_volume();
 	fixed = 1;
 	id    = add_coll_cobj();
 }
@@ -783,7 +783,6 @@ void remove_all_coll_obj() {
 void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float radius2, int platform_id, cobj_params const &cparams) {
 	
 	coll_obj &cobj(at(index)); // Note: this is the *only* place a new cobj is allocated/created
-	cobj.status      = ((cparams.flags & COBJ_DYNAMIC) ? COLL_DYNAMIC : COLL_STATIC);
 	cobj.texture_offset = zero_vector;
 	cobj.cp          = cparams;
 	cobj.id          = index;
@@ -800,12 +799,10 @@ void coll_obj_group::set_coll_obj_props(int index, int type, float radius, float
 	cobj.last_coll   = 0;
 	cobj.is_billboard= 0;
 	cobj.falling     = 0;
-	cobj.calc_size();
-	cobj.set_npoints();
-	cobj.calc_bcube();
-	if (cparams.flags & COBJ_DYNAMIC) dynamic_ids.must_insert (index);
-	if (cparams.draw      ) drawn_ids.must_insert   (index);
-	if (platform_id >= 0  ) platform_ids.must_insert(index);
+	cobj.setup_internal_state();
+	if (cparams.flags & COBJ_DYNAMIC) {dynamic_ids.must_insert(index);}
+	if (cparams.draw      ) {drawn_ids.must_insert   (index);}
+	if (platform_id >= 0  ) {platform_ids.must_insert(index);}
 	if ((type == COLL_CUBE) && cparams.light_atten != 0.0) {has_lt_atten = 1;}
 	if (cparams.cobj_type == COBJ_TYPE_VOX_TERRAIN) {has_voxel_cobjs = 1;}
 }

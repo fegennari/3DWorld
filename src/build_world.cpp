@@ -839,6 +839,7 @@ void coll_obj::add_to_vector(coll_obj_group &cobjs, int type_) {
 	if (type == COLL_POLYGON) {assert(npoints >= 3); norm = get_poly_norm(points);}
 
 	if (dgroup_id >= 0) { // grouped cobj
+		calc_bcube(); // may be needed to get center point if this is the parent
 		bool const is_parent(cdraw_groups.set_parent_or_add_cobj(*this));
 		if (!is_parent) return; // a child draw cobj, don't add it to cobjs
 	}

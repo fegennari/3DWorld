@@ -135,7 +135,8 @@ public:
 		group_id(-1), cgroup_id(-1), dgroup_id(-1), waypt_id(-1), npoints(0), norm(zero_vector), texture_offset(zero_vector) {}
 	void init();
 	void clear_internal_data();
-	void calc_size();
+	void setup_internal_state();
+	void calc_volume();
 	void calc_bcube();
 	float calc_min_dim() const;
 	bool clip_in_2d(float const bb[2][2], float &ztop, int d1, int d2, int dir) const;
@@ -285,8 +286,10 @@ class cobj_draw_groups {
 
 	struct cobj_draw_group {
 		int parent; // -1 is unset
+		point parent_pos;
 		vector<unsigned> ids; // typically a contiguous range within dcobjs
-		cobj_draw_group(int p=-1) : parent(p) {}
+
+		cobj_draw_group(int p=-1) : parent(p), parent_pos(all_zeros) {}
 		bool empty() const {return ids.empty();}
 	};
 
@@ -297,28 +300,14 @@ class cobj_draw_groups {
 	cobj_draw_group const &get_group(int group_id) const {assert(group_id >= 0 && group_id < (int)groups.size()); return groups[group_id];}
 
 public:
-	unsigned new_group(int parent=0) {
-		unsigned const group_id(groups.size());
-		groups.push_back(cobj_draw_group(parent));
-		return group_id;
+	coll_obj const &get_cobj(unsigned index) const {
+		assert(index < dcobjs.size());
+		return dcobjs[index];
 	}
-	void add_to_group(coll_obj const &cobj) { // Note: cobj.dgroup_id should be set correctly
-		get_group(cobj.dgroup_id).ids.push_back(dcobjs.size());
-		dcobjs.push_back(cobj);
-	}
-	bool set_parent_or_add_cobj(coll_obj const &cobj) { // Note: cobj.dgroup_id should be set correctly
-		assert(cobj.id >= 0);
-		cobj_draw_group &group(get_group(cobj.dgroup_id));
-		if (group.empty() && group.parent < 0) {group.parent = cobj.id; return 1;} // this is the parent cobj
-		add_to_group(cobj); // not the parent
-		return 0;
-	}
-	void draw_group(int group_id) const {
-		if (group_id < 0) return; // error?
-		cobj_draw_group const &group(get_group(group_id));
-		if (group.empty()) return;
-		// FIXME: use group
-	}
+	unsigned new_group(int parent=-1);
+	void add_to_group(coll_obj const &cobj); // Note: cobj.dgroup_id should be set correctly
+	bool set_parent_or_add_cobj(coll_obj const &cobj); // Note: cobj.dgroup_id should be set correctly
+	vector<unsigned> const &get_draw_group(int group_id, coll_obj const &parent) const;
 };
 
 

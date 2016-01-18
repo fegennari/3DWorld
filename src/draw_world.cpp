@@ -59,6 +59,7 @@ extern vector<beam3d> beams;
 extern set<unsigned> moving_cobjs;
 extern obj_group obj_groups[];
 extern coll_obj_group coll_objects;
+extern cobj_draw_groups cdraw_groups;
 extern obj_type object_types[];
 extern obj_vector_t<bubble> bubbles;
 extern obj_vector_t<particle_cloud> part_clouds;
@@ -536,6 +537,11 @@ void end_group(int &last_group_id) {
 	last_group_id = -1;
 }
 
+coll_obj const &get_draw_cobj(unsigned index) {
+	if (index >= coll_objects.size()) {return cdraw_groups.get_cobj(index - coll_objects.size());}
+	return coll_objects.get_cobj(index);
+}
+
 void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, bool enable_reflections) {
 	// Note: pass in 3 when has_lt_atten to enable sphere atten
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
@@ -555,7 +561,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 	// Note: could stable_sort normal_map_cobjs by normal_map tid, but the normal map is already part of the layer sorting,
 	// so the normal maps are probably already grouped together
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
-		coll_obj const &c(coll_objects[*i]);
+		coll_obj const &c(get_draw_cobj(*i));
 
 		if (use_normal_map) {
 			float const bbs(c.cp.negate_nm_bns() ? -1.0 : 1.0);
@@ -595,6 +601,48 @@ bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { 
 	return 1;
 }
 
+bool draw_or_add_cobj(unsigned cix, bool reflection_pass, bool use_ref_plane, vect_sorted_ix large_cobjs[2], vect_sorted_ix &draw_last,
+	vector<unsigned> &normal_map_cobjs, vector<unsigned> &tex_coord_cobjs, vector<unsigned> &tex_coord_nm_cobjs,
+	vector<unsigned> &reflect_cobjs, vector<unsigned> &reflect_cobjs_nm)
+{
+	coll_obj const &c(get_draw_cobj(cix));
+	bool const cube_poly((c.cp.flags & COBJ_WAS_CUBE) != 0);
+	bool const use_tex_coords((cube_poly && c.cp.tid >= 0) || ((c.is_cylinder() || c.type == COLL_SPHERE || c.type == COLL_CAPSULE) && c.cp.tscale == 0.0));
+
+	// Note: only texgen cube/vert cylinder top surfaces support reflections
+	if (!use_tex_coords && use_ref_plane && use_reflect_plane_for_cobj(c)) {
+		assert(c.group_id < 0);
+		if (reflection_pass) return 0; // the reflection surface is not drawn in the reflection pass (receiver only)
+		((c.cp.normal_map >= 0) ? reflect_cobjs_nm : reflect_cobjs).push_back(cix);
+		return 0;
+	}
+	if (c.cp.normal_map >= 0) { // common case
+		assert(c.group_id < 0);
+		assert(!c.is_semi_trans());
+		if (!use_tex_coords && check_big_occluder(c, cix, large_cobjs[1])) return 0;
+		(use_tex_coords ? tex_coord_nm_cobjs : normal_map_cobjs).push_back(cix);
+		return 0;
+	}
+	if (use_tex_coords) { // uncommon case (typically movable objects)
+		assert(c.group_id < 0);
+		assert(!c.is_semi_trans());
+		if (camera_pdu.cube_visible(c)) {tex_coord_cobjs.push_back(cix);}
+		return 0;
+	}
+	if (check_big_occluder(c, cix, large_cobjs[0])) return 0;
+
+	if (c.is_semi_trans()) { // slow when polygons are grouped
+		float dist(distance_to_camera(c.get_center_pt()));
+		if (c.type == COLL_SPHERE) {dist -= c.radius;} // distance to surface closest to the camera
+		else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT || c.type == COLL_CAPSULE) { // approx distance to surface closest to the camera
+			dist -= min(0.5*(c.radius + c.radius2), 0.5*p2p_dist(c.points[0], c.points[1]));
+		}
+		draw_last.push_back(make_pair(-dist, cix)); // negative distance
+		return 0;
+	}
+	return 1;
+}
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 
@@ -623,40 +671,24 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
 			if (reflection_pass && c.d[2][1] < ref_plane_z) continue; // below the reflection plane (approximate) (optimization)
-			bool const cube_poly((c.cp.flags & COBJ_WAS_CUBE) != 0);
-			bool const use_tex_coords((cube_poly && c.cp.tid >= 0) || ((c.is_cylinder() || c.type == COLL_SPHERE || c.type == COLL_CAPSULE) && c.cp.tscale == 0.0));
+			assert(c.id == (int)cix); // should always be equal
 
-			// Note: only texgen cube/vert cylinder top surfaces support reflections
-			if (!use_tex_coords && use_ref_plane && use_reflect_plane_for_cobj(c)) {
-				assert(c.group_id < 0);
-				if (reflection_pass) continue; // the reflection surface is not drawn in the reflection pass (receiver only)
-				((c.cp.normal_map >= 0) ? reflect_cobjs_nm : reflect_cobjs).push_back(cix);
-				continue;
-			}
-			if (c.cp.normal_map >= 0) { // common case
-				assert(c.group_id < 0);
-				assert(!c.is_semi_trans());
-				if (!use_tex_coords && check_big_occluder(c, cix, large_cobjs[1])) continue;
-				(use_tex_coords ? tex_coord_nm_cobjs : normal_map_cobjs).push_back(cix);
-				continue;
-			}
-			if (use_tex_coords) { // uncommon case (typically movable objects)
-				assert(c.group_id < 0);
-				assert(!c.is_semi_trans());
-				if (camera_pdu.cube_visible(c)) {tex_coord_cobjs.push_back(cix);}
-				continue;
-			}
-			if (check_big_occluder(c, cix, large_cobjs[0])) continue;
+			if (c.dgroup_id >= 0) {
+				vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(c.dgroup_id, c));
+				//assert(!group_cids.empty()); // too strong?
 
-			if (c.is_semi_trans()) { // slow when polygons are grouped
-				float dist(distance_to_camera(c.get_center_pt()));
-				if (c.type == COLL_SPHERE) {dist -= c.radius;} // distance to surface closest to the camera
-				else if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT || c.type == COLL_CAPSULE) { // approx distance to surface closest to the camera
-					dist -= min(0.5*(c.radius + c.radius2), 0.5*p2p_dist(c.points[0], c.points[1]));
+				for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
+					unsigned const ix(*j + coll_objects.size()); // map to a range that doesn't overlap coll_objects
+
+					if (draw_or_add_cobj(ix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm)) {
+						unsigned ix2(ix);
+						c.draw_cobj(ix2, last_tid, last_group_id, s, cdb); // Note: ix should not be modified
+						assert(ix2 == ix); // should not have changed
+					}
 				}
-				draw_last.push_back(make_pair(-dist, cix)); // negative distance
+				continue; // don't draw c itself (only if group is nonempty?)
 			}
-			else {
+			if (draw_or_add_cobj(cix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm)) {
 				c.draw_cobj(cix, last_tid, last_group_id, s, cdb); // i may not be valid after this call
 				
 				if (cix != *i) {
@@ -672,7 +704,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 
 		for (auto i = large_cobjs[0].begin(); i != large_cobjs[0].end(); ++i) { // not normal mapped
 			unsigned cix(i->second);
-			coll_objects[cix].draw_cobj(cix, last_tid, last_group_id, s, cdb);
+			get_draw_cobj(cix).draw_cobj(cix, last_tid, last_group_id, s, cdb);
 		}
 		cdb.flush();
 		for (auto i = large_cobjs[1].begin(); i != large_cobjs[1].end(); ++i) {normal_map_cobjs.push_back(i->second);} // normal mapped
@@ -709,7 +741,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 			else { // cobj
 				if (in_portal) {portal::post_draw(portal_verts); in_portal = 0;}
 				unsigned cix(ix);
-				coll_obj const &c(coll_objects.get_cobj(cix));
+				coll_obj const &c(get_draw_cobj(cix));
 				cdb.on_new_obj_layer(c.cp);
 				bool using_lt_atten(0);
 				
