@@ -156,6 +156,12 @@ public:
 		draw_sphere_vbo_pre_bound((fixed_ndiv ? fixed_ndiv : get_smap_ndiv(radius, smap_sz)), 0);
 	}
 
+	void draw_shadow_cobj(coll_obj const &c, unsigned smap_sz, unsigned fixed_ndiv, int shader_loc) { // handle spheres specially
+		if (c.type == COLL_CAPSULE || c.type == COLL_SPHERE) {draw_shadow_sphere(c.points[0], c.radius, shader_loc, smap_sz, fixed_ndiv);}
+		if (c.type == COLL_CAPSULE) {draw_shadow_sphere(c.points[1], c.radius2, shader_loc, smap_sz, fixed_ndiv);}
+		c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv), 1); // skip_spheres=1
+	}
+
 	void add_draw_dynamic(pos_dir_up const &pdu, unsigned smap_sz, unsigned fixed_ndiv, point const &camera_pos) {
 		if (shadow_objs.empty()) return; // no dynamic objects
 		shader_t shader;
@@ -170,11 +176,16 @@ public:
 		for (auto i = movable_cids.begin(); i != movable_cids.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
 			if (c.no_shadow_map() || !c.is_movable()) continue; // should we remove it from the list in this case?
-			if (c.check_pdu_visible(pdu)) { // handle spheres specially
-				if (c.type == COLL_CAPSULE || c.type == COLL_SPHERE) {draw_shadow_sphere(c.points[0], c.radius, shader_loc, smap_sz, fixed_ndiv);}
-				if (c.type == COLL_CAPSULE) {draw_shadow_sphere(c.points[1], c.radius2, shader_loc, smap_sz, fixed_ndiv);}
-				c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv), 1); // skip_spheres=1
+			if (!c.check_pdu_visible(pdu)) continue;
+			
+			if (c.dgroup_id >= 0) {
+				vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(c.dgroup_id, c));
+				
+				for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
+					draw_shadow_cobj(cdraw_groups.get_cobj(*j), smap_sz, fixed_ndiv, shader_loc);
+				}
 			}
+			else {draw_shadow_cobj(c, smap_sz, fixed_ndiv, shader_loc);}
 		}
 		for (auto i = shadow_objs.begin(); i != shadow_objs.end(); ++i) {
 			if (!pdu.sphere_visible_test(i->pos, i->radius)) continue; // VFC against light volume (may be culled earlier)
