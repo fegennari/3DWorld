@@ -3,6 +3,7 @@ a 2 # destroyable/shatterable
 destroy_prob 20 # easier to destroy
 e 0
 #start_cobj_group # make sure it all shatters together
+density 0.7 # wood
 X normal_maps/fence_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.6 1.0 1.0 1.0 1.0 36 1 # wooden slats
 y 4.8
@@ -18,6 +19,7 @@ B  2.8 3.2  -5.1  -4.9   2.0 3.0
 B  0.8 1.0   4.9   5.1   2.0 3.0
 B  3.0 3.2   4.9   5.1   2.0 3.0
 P 4  -1.0 -5.0 5.0  -1.0 5.0 5.0  0.2 5.0 1.6  0.2 -5.0 1.6  0.4 # back
+density 1.0 # reset
 a 1 # destroyable
 destroy_prob 0 # reset to default
 X none # disable normal map

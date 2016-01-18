@@ -1,6 +1,13 @@
 # chair
 a 2 # destroyable/shatterable
 destroy_prob 20 # easier to destroy
+
+start_cobj_group
+movable 1
+density 0.7 # wood
+#l 0.7 0.6 0.6 0.6 1.0 46 1 # wood
+#B -1.6  1.6  -1.6  1.7  0.0 6.6 # bounding cube as parent cobj
+
 e 0
 l 0.4 0.1 0.15 0.5 1.0 49 1 # fabric
 y 8.0
@@ -18,3 +25,6 @@ a 1 # destroyable
 destroy_prob 0 # reset to default
 X none # disable normal map
 
+density 1.0 # reset
+end_cobj_group
+movable 0

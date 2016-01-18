@@ -1,7 +1,11 @@
 # table
+start_draw_group
+movable 1
+density 0.7 # wood
 e 0
 X normal_maps/wood_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.6 0.6 0.6 1.0 46 1 # wood
+B -6.0 6.0  -3.0 3.0  0.0 3.4 # bounding cube as parent cobj
 y 5.0
 Y 0.0 0.0 1 # swap xy
 B -3.0  3.0  -3.0  3.0  3.1 3.4 # top
@@ -15,4 +19,6 @@ B  1.0   5.0   -0.15 0.15  0.0 0.25
 B -3.15 -2.85  -2.0  2.0   0.0 0.25
 B  2.85  3.15  -2.0  2.0   0.0 0.25
 X none # disable normal map
-
+density 1.0 # reset
+end_draw_group
+movable 0

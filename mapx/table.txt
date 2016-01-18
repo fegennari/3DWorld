@@ -1,4 +1,5 @@
 # table
+density 0.7 # wood
 e 0
 X normal_maps/wood_NRM.jpg 0 1 # normal map (swap binorm sign)
 l 0.7 0.6 0.6 0.6 1.0 46 1 # wood
@@ -9,4 +10,5 @@ B -6.0 -5.4   2.4  3.0  0.0 3.1
 B  5.4  6.0  -3.0 -2.4  0.0 3.1
 B  5.4  6.0   2.4  3.0  0.0 3.1
 X none # disable normal map
+density 1.0 # reset
 

@@ -2,7 +2,7 @@
 a 2 # destroyable/shatterable
 destroy_prob 1 # always shatters
 movable 1
-start_draw_group # make sure it all moves and explodes together
+start_draw_group # make sure it all moves and shatters together
 r 0.8 90.0 # set specularity
 e 0
 l 0.7  0.35 0.65 0.5 0.4  -1 1 1.55 # greenish glass with n=1.55
