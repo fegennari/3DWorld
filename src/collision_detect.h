@@ -307,7 +307,7 @@ public:
 	unsigned new_group(int parent=-1);
 	void add_to_group(coll_obj const &cobj); // Note: cobj.dgroup_id should be set correctly
 	bool set_parent_or_add_cobj(coll_obj const &cobj); // Note: cobj.dgroup_id should be set correctly
-	vector<unsigned> const &get_draw_group(int group_id, coll_obj const &parent) const;
+	vector<unsigned> const &get_draw_group(int group_id, coll_obj const &parent);
 };
 
 

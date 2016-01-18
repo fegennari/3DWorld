@@ -997,11 +997,21 @@ bool cobj_draw_groups::set_parent_or_add_cobj(coll_obj const &cobj) { // Note: c
 }
 
 // Note: better to pass the parent in rather than using group.parent, which may be stale
-vector<unsigned> const &cobj_draw_groups::get_draw_group(int group_id, coll_obj const &parent) const {
+// Note: non-const because it translates the objects (which is one reason why they can't be instanced)
+vector<unsigned> const &cobj_draw_groups::get_draw_group(int group_id, coll_obj const &parent) {
 	
-	cobj_draw_group const &group(get_group(group_id));
-	vector3d const delta(parent.get_cube_center() - group.parent_pos); // determine parent translation
-	if (delta != zero_vector) {} // FIXME: do some sort of translation
+	cobj_draw_group &group(get_group(group_id));
+	point const ppos(parent.get_cube_center());
+	
+	if (ppos != group.parent_pos) { // translate the group
+		vector3d const delta(ppos - group.parent_pos); // determine parent translation
+		group.parent_pos = ppos; // update parent pos with new value
+
+		for (auto i = group.ids.begin(); i != group.ids.end(); ++i) {
+			assert(*i < dcobjs.size());
+			dcobjs[*i].shift_by(delta);
+		}
+	}
 	return group.ids;
 }
 
