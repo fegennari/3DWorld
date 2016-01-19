@@ -22,6 +22,7 @@ extern unsigned ALL_LT[];
 extern obj_type object_types[];
 extern dwobject def_objects[];
 extern vector<texture_t> textures;
+extern coll_obj_group coll_objects;
 extern platform_cont platforms;
 extern vector<obj_draw_group> obj_draw_groups;
 
@@ -952,12 +953,9 @@ bool obj_group::obj_within_dist(unsigned i, point const &pos, float dist) const 
 	return (p2p_dist_sq(objects[i].pos, pos) < dist*dist);
 }
 
-
 bool obj_group::temperature_ok() const {
-
 	return ((flags & PRECIPITATION) || type == PRECIP || (temperature >= object_types[type].min_t && temperature < object_types[type].max_t));
 }
-
 
 bool obj_group::obj_has_shadow(unsigned obj_id) const {
 
@@ -967,7 +965,25 @@ bool obj_group::obj_has_shadow(unsigned obj_id) const {
 }
 
 
-/// ******************* COBJ_DRAW_GROUPS MEMBERS ******************
+// ******************* COBJ_GROUP_T MEMBERS ******************
+
+void cobj_group_t::update_props() {
+
+	volume = mass = 0.0;
+	center_of_mass = all_zeros;
+
+	for (auto i = begin(); i != end(); ++i) {
+		coll_obj const &c(coll_objects.get_cobj(*i));
+		volume += c.volume;
+		mass   += c.get_mass();
+		center_of_mass += c.get_mass()*c.get_center_of_mass(1); // weighted average (ignore_group=1)
+	}
+	center_of_mass /= mass; // normalize
+	valid = 1;
+}
+
+
+// ******************* COBJ_DRAW_GROUPS MEMBERS ******************
 
 unsigned cobj_draw_groups::new_group() {
 	unsigned const group_id(groups.size());
@@ -1015,7 +1031,7 @@ vector<unsigned> const &cobj_draw_groups::get_draw_group(int group_id, coll_obj 
 }
 
 
-/// ******************* OBJ_DRAW_GROUP MEMBERS ******************
+// ******************* OBJ_DRAW_GROUP MEMBERS ******************
 
 void obj_draw_group::free_vbo() {
 
@@ -1091,6 +1107,4 @@ void obj_draw_group::add_draw_polygon(point const *const points, vector3d const 
 void free_cobj_draw_group_vbos() {
 	for (vector<obj_draw_group>::iterator i = obj_draw_groups.begin(); i != obj_draw_groups.end(); ++i) {i->free_vbo();}
 }
-
-
 

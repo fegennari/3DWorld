@@ -428,8 +428,12 @@ void rotate_to_align_with_mesh(coll_obj &c) {
 	adjust_cobj_resting_normal(c, get_mesh_normal_at(c.get_center_of_mass()));
 }
 
-point coll_obj::get_center_of_mass() const {
+point coll_obj::get_center_of_mass(bool ignore_group) const {
 
+	if (!ignore_group && cgroup_id >= 0) {
+		cgroup_props_t const &props(cobj_groups.get_props(cgroup_id));
+		if (props.mass > 0.0) {return props.center_of_mass;} // use precomputed group center of mass if valid
+	}
 	if ((type == COLL_CYLINDER_ROT || type == COLL_CAPSULE) && radius != radius2) {
 		float const r1s(radius*radius), r2s(radius2*radius2), r1r2(radius*radius2), t((r1s + 2*r1r2 + 3*r2s)/(4*(r1s + r1r2 + r2s)));
 		return t*points[1] + (1.0 - t)*points[0]; // correct for cylinder, approximate for capsule

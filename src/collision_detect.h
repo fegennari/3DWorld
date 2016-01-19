@@ -191,7 +191,7 @@ public:
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
 	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)) && dgroup_id < 0);}
 	point get_center_pt() const;
-	point get_center_of_mass() const;
+	point get_center_of_mass(bool ignore_group=0) const;
 	float get_max_dim()   const;
 	float get_light_transmit(point v1, point v2) const;
 	float get_mass()      const {return volume*cp.density;}
@@ -247,12 +247,31 @@ struct cobj_id_set_t : public set<unsigned> {
 	bool has(unsigned index) {return find(index) != end();}
 };
 
+struct cgroup_props_t {
 
-struct cobj_groups_t : public vector<cobj_id_set_t> {
-	unsigned new_group() {unsigned const id(size()); push_back(cobj_id_set_t()); return id;}
-	void add_cobj   (unsigned gid, unsigned cid) {assert(gid < size()); operator[](gid).must_insert(cid);}
-	void remove_cobj(unsigned gid, unsigned cid) {assert(gid < size()); operator[](gid).must_erase (cid);}
-	cobj_id_set_t const &get_set(unsigned gid) const {assert(gid < size()); return operator[](gid);}
+	bool valid;
+	float volume, mass;
+	point center_of_mass;
+	cgroup_props_t() : valid(0), volume(0.0), mass(0.0), center_of_mass(all_zeros) {}
+};
+
+struct cobj_group_t : public cobj_id_set_t, public cgroup_props_t {
+	
+	// Note inserting and erasing invalidate the props, forcing recalculation any time someone calls get_props()
+	void must_insert(unsigned index) {cobj_id_set_t::must_insert(index); valid = 0;}
+	void must_erase (unsigned index) {cobj_id_set_t::must_erase (index); valid = 0;}
+	void update_props();
+	cgroup_props_t const &get_props() {if (!valid) {update_props();} return *this;}
+};
+
+struct cobj_groups_t : public vector<cobj_group_t> {
+
+	unsigned new_group() {unsigned const id(size()); push_back(cobj_group_t()); return id;}
+	void invalidate_group(unsigned gid)               {assert(gid < size()); operator[](gid).valid = 0;}
+	void add_cobj   (unsigned gid, unsigned cid)      {assert(gid < size()); operator[](gid).must_insert(cid);}
+	void remove_cobj(unsigned gid, unsigned cid)      {assert(gid < size()); operator[](gid).must_erase (cid);}
+	cobj_id_set_t  const &get_set(unsigned gid) const {assert(gid < size()); return operator[](gid);}
+	cgroup_props_t const &get_props(unsigned gid)     {assert(gid < size()); return operator[](gid).get_props();}
 };
 
 
