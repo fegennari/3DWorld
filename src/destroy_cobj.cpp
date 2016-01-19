@@ -289,7 +289,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 			if (D <= max(destroy_thresh, (min_destroy-1))) continue;
 			if (!cobj.intersects(cube)) continue; // no intersection
 			bool const is_cube(cobj.type == COLL_CUBE), is_polygon(cobj.type == COLL_POLYGON);
-			bool const shatter(D >= SHATTERABLE), full_destroy(shatter || cobj.is_movable());
+			bool const shatter(D >= SHATTERABLE), full_destroy(shatter || cobj.is_movable()); // Note: shatter includes explode here
 			csg_cube const cube2(cobj, 1);
 			//if (is_cube && !cube2.contains_pt(cube.get_cube_center())) {} // check for non-destroyable cobj between center and cube2?
 			float volume(cobj.volume);
@@ -304,9 +304,9 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 				if (no_new_cobjs) {new_cobjs.clear();} // completely destroyed
 				if (is_cube)      {cdir += cube2.closest_side_dir(center);} // inexact
 				if (D == SHATTER_TO_PORTAL) {cobj.create_portal();}
-
+				
 				// Note: cobj reference may be invalidated beyond this point
-				for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new objects
+				for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new cobjs
 					int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 					assert(index >= 0 && (size_t)index < cobjs.size());
 					just_added.push_back(index);
@@ -314,12 +314,13 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 				}
 				if (is_polygon) {volume = max(0.0f, volume);} // FIXME: remove this when polygon splitting is correct
 				assert(volume >= -TOLERANCE); // usually > 0.0
-				int const cgid(cobjs[i].cgroup_id);
+				int const cgid(cobj.cgroup_id);
 
-				if (cgid >= 0 && cgroups_added.insert(cgid).second) { // newly inserted nonzero group
+				// Note/FIXME: all cobjs in this group should have the same destroy thresh if any are shatterable or explodeable
+				if (cgid >= 0 && full_destroy && cgroups_added.insert(cgid).second) { // newly inserted nonzero group
 					set<unsigned> const &group(cobj_groups.get_set(cgid));
 
-					for (auto c = group.begin(); c != group.end(); ++c) {
+					for (auto c = group.begin(); c != group.end(); ++c) { // destroy all cobjs in the group
 						if (!seen_cobjs.insert(*c).second) continue; // already processed
 						next_cobjs.insert(*c); // add to the next wave
 					}
