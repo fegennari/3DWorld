@@ -14,6 +14,7 @@ set<unsigned> moving_cobjs;
 extern unsigned scene_smap_vbo_invalid;
 extern int num_groups;
 extern float base_gravity, tstep, temperature;
+extern double camera_zh;
 extern coll_obj_group coll_objects;
 extern cobj_groups_t cobj_groups;
 extern player_state *sstates;
@@ -1099,10 +1100,26 @@ bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index,
 
 	if (type == CAMERA && sstates != nullptr && sstates[CAMERA_ID].jump_time > 0) return 0; // can't push while jumping (what about smileys?)
 	vector3d delta(orig_pos - player_pos);
+	coll_obj const &cobj(coll_objects.get_cobj(index));
 
-	if (dot_product(delta, (coll_objects.get_cobj(index).get_center_pt() - player_pos)) < 0.0) {
+	if (dot_product(delta, (cobj.get_center_pt() - player_pos)) < 0.0) {
 		player_pos = orig_pos; // don't allow the player to be moved
 		return 0; // this is a pull rather than a push (due to fp error?), and we don't support pulling cobjs, so ignore it
+	}
+	if (1) { // see if the player is standing on the cobj, or a cobj from the same group - if so, there is no traction, and the cobj can't be pushed
+		point bot_pos(player_pos);
+		bot_pos.z -= 1.1*CAMERA_RADIUS;
+		if (type == CAMERA) {bot_pos.z -= camera_zh;}
+		int cindex(-1);
+		point cpos; // unused
+		vector3d cnorm; // unused
+
+		if (check_coll_line_exact_tree(player_pos, bot_pos, cpos, cnorm, cindex, -1)) {
+			if (cindex == index || (cobj.cgroup_id >= 0 && coll_objects.get_cobj(cindex).cgroup_id == cobj.cgroup_id)) { // this cobj, or one in the same group
+				player_pos = orig_pos; // don't allow the player to be moved
+				return 0;
+			}
+		}
 	}
 	if (!push_movable_cobj(index, delta, player_pos)) return 0;
 	player_pos += delta; // restore player pos, at least partially
