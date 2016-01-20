@@ -1,4 +1,5 @@
 uniform float detail_tex_scale = 1.0;
+uniform float snow_cov_amt = 0.0;
 uniform sampler2D tex0, tex1;
 
 //in vec2 tc; // comes from detail_normal_map.part.frag
@@ -35,17 +36,18 @@ void main()
 	lit_color  = clamp(lit_color, 0.0, 1.0);
 	add_indir_lighting(lit_color, 1.0);
 	if (enable_dlights) {add_dlights(lit_color.rgb, vpos, normalize(normal), vec3(1.0));} // dynamic lighting
-	lit_color *= texture(tex0, tc).rgb;
+	vec3 texel = texture(tex0, tc).rgb;
 
 #ifdef MULT_DETAIL_TEXTURE // for mesh
-	lit_color *= texture(tex1, 32.0*tc).rgb; // 32x scale
+	texel *= texture(tex1, 32.0*tc).rgb; // 32x scale
 #endif
 #ifdef ADD_DETAIL_TEXTURE // for water
 	float slope_scale = clamp(50.0*(1.0 - normalize(normal).z), 0.0, 1.0); // normal.z is typically in +z
-	lit_color *= vec3(1.0) + slope_scale*detail_tex_scale*texture(tex1, 32.0*tc).rgb; // 32x scale
-	lit_color  = clamp(lit_color, 0.0, 1.0);
+	texel *= vec3(1.0) + slope_scale*detail_tex_scale*texture(tex1, 32.0*tc).rgb; // 32x scale
+	texel  = clamp(texel, 0.0, 1.0);
 #endif
 
+	lit_color *= mix(texel, vec3(1.0, 1.0, 1.1), snow_cov_amt); // combine terrain texture with snow coverage
 	fg_FragColor = vec4(lit_color, gl_Color.a);
 #ifndef NO_FOG
 	fg_FragColor = apply_fog_epos(fg_FragColor, epos);

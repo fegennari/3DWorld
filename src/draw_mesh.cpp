@@ -39,7 +39,7 @@ vector<fp_ratio> uw_mesh_lighting; // for water caustics
 extern bool using_lightmap, combined_gu, has_snow, detail_normal_map, use_core_context, underwater, water_is_lava, have_indir_smoke_tex, water_is_lava;
 extern int draw_model, num_local_minima, world_mode, xoff, yoff, xoff2, yoff2, ground_effects_level, animate2;
 extern int display_mode, frame_counter, verbose_mode, DISABLE_WATER, read_landscape, disable_inf_terrain, mesh_detail_tex;
-extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z;
+extern float zmax, zmin, ztop, zbottom, light_factor, max_water_height, init_temperature, univ_temp, atmosphere, mesh_scale_z, snow_cov_amt;
 extern float water_plane_z, temperature, fticks, mesh_scale, mesh_z_cutoff, TWO_XSS, TWO_YSS, XY_SCENE_SIZE, FAR_CLIP, sun_radius;
 extern point light_pos, litning_pos, sun_pos, moon_pos;
 extern vector3d up_norm, wind;
@@ -254,7 +254,7 @@ void setup_detail_normal_map(shader_t &s, float tscale) { // also used for tiled
 
 
 // tu_ids used: 0: diffuse map, 1: indir lighting, 2-4 dynamic lighting, 5: bump map, 6-7 shadow map, 8: cloud shadow texture, 10: detail map, 11: detail normal map
-void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
+void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_water) {
 
 	bool const cloud_shadows(!has_snow && atmosphere > 0.0 && ground_effects_level >= 2);
 	bool const indir_lighting(using_lightmap && have_indir_smoke_tex);
@@ -275,6 +275,7 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map) {
 	setup_dlight_textures(s);
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_int("tex1", 10);
+	s.add_uniform_float("snow_cov_amt", ((is_water && temperature >= W_FREEZE_POINT) ? 0.0 : snow_cov_amt)); // 0 for water; should this be set to 0 for ice?
 	if (detail_normal_map) {setup_detail_normal_map(s, 2.0);}
 	if (cloud_shadows    ) {set_cloud_intersection_shader(s);}
 }
@@ -416,7 +417,7 @@ void draw_mesh_mvd() {
 
 	shader_t s;
 	s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
-	setup_mesh_and_water_shader(s, detail_normal_map);
+	setup_mesh_and_water_shader(s, detail_normal_map, 0);
 	set_landscape_texture_texgen(s);
 
 	if (use_core_context) {

@@ -18,7 +18,7 @@ float grass_length(0.02), grass_width(0.002), flower_density(0.0);
 
 extern int default_ground_tex, read_landscape, display_mode, animate2, frame_counter, draw_model;
 extern unsigned create_voxel_landscape;
-extern float vegetation, zmin, zmax, fticks, tfticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex, zmax_est;
+extern float vegetation, zmin, zmax, fticks, tfticks, h_dirt[], leaf_color_coherence, tree_deadness, relh_adj_tex, zmax_est, snow_cov_amt;
 extern colorRGBA leaf_base_color, flower_color;
 extern vector3d wind;
 extern obj_type object_types[];
@@ -653,7 +653,9 @@ public:
 		setup_shaders_post(s);
 		s.add_uniform_color("color_scale", (distant ? texture_color(GRASS_BLADE_TEX) : WHITE));
 		s.add_uniform_float("height", grass_length);
-		s.set_specular(0.2, 20.0);
+		s.add_uniform_float("snow_cov_amt", snow_cov_amt);
+		float const spec_snow_mod(-0.15*snow_cov_amt); // Note: specular color for snow is wrong due to the way it's computed in the shader
+		s.set_specular((0.2 + 0.6*spec_snow_mod), (20.0 + 60.0*spec_snow_mod));
 	}
 
 	// texture units used: 0: grass texture, 1: wind texture

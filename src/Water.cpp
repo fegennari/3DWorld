@@ -121,7 +121,7 @@ void update_accumulation(int xpos, int ypos);
 void shift_water_springs(vector3d const &vd);
 
 void add_hole_in_landscape_texture(int xpos, int ypos, float blend);
-void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map);
+void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_water);
 
 
 
@@ -449,7 +449,7 @@ void draw_water(bool no_update) {
 	bool const use_foam(USE_SEA_FOAM && !water_is_lava);
 	shader_t s;
 	if (use_foam) {s.set_prefix("#define ADD_DETAIL_TEXTURE", 1);} // FS
-	setup_mesh_and_water_shader(s, 0);
+	setup_mesh_and_water_shader(s, 0, 1);
 	if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
 	point const camera(get_camera_pos());
 	bool const is_ice(temperature <= W_FREEZE_POINT);
