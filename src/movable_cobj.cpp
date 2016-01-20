@@ -715,6 +715,7 @@ void check_cobj_alignment(unsigned index) {
 	float bs_radius;
 	cobj.bounding_sphere(bs_center, bs_radius);
 	bs_radius += p2p_dist(bs_center, center_of_mass); // conservative, but probably okay since the delta will usually be small
+	//assert(bs_radius < 4.0); // sanity check
 	cube_t context_bcube(center_of_mass, center_of_mass);
 	context_bcube.expand_by(bs_radius);
 	vector<unsigned> cobjs;
@@ -780,21 +781,34 @@ void check_cobj_alignment(unsigned index) {
 	}
 }
 
-void try_drop_movable_cobj(unsigned index) {
 
+void remove_cobjs_with_same_cgroup(coll_obj const &cobj, vector<unsigned> &cobjs) {
+
+	if (cobj.cgroup_id < 0) return; // not in a group
+
+	for (unsigned i = 0; i < cobjs.size(); ++i) {
+		if (coll_objects.get_cobj(cobjs[i]).cgroup_id == cobj.cgroup_id) {cobjs[i] = cobjs.back(); cobjs.pop_back(); --i;} // remove this cobj
+	}
+}
+
+
+vector3d get_cobj_drop_delta(unsigned index) {
+
+	// Note: non-const because cobj.v_fall is updated - should we pass in/return v_fall and do that update elsewhere?
+	coll_obj &cobj(coll_objects.get_cobj(index));
 	float const tolerance(1.0E-6), cobj_zmin(min(czmin, zbottom));
 	float const accel(-0.5*base_gravity*GRAVITY*tstep); // half gravity
-	coll_obj &cobj(coll_objects.get_cobj(index));
 	float const cobj_height(cobj.d[2][1] - cobj.d[2][0]), prev_v_fall(cobj.v_fall), cur_v_fall(prev_v_fall + accel);
 	cobj.v_fall = 0.0; // assume the cobj stops falling; compute the correct v_fall if we reach the end without returning
 	float gravity_dz(-tstep*cur_v_fall), max_dz(min(gravity_dz, cobj.d[2][0]-cobj_zmin)); // usually positive
-	if (max_dz < tolerance) return; // can't drop further
+	if (max_dz < tolerance) return zero_vector; // can't drop further
 	float const test_dz(max(max_dz, 0.25f*cobj_height)); // use a min value to ensure the z-slice isn't too small, to prevent instability (for example when riding down on an elevator)
 	cube_t bcube(cobj); // start at the current cobj xy
 	//bcube.d[2][1]  = cobj.d[2][0]; // top = cobj bottom (Note: more efficient, but doesn't work correctly for elevators)
 	bcube.d[2][0] -= test_dz; // bottom (height = test_dz)
 	vector<unsigned> cobjs;
 	get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
+	remove_cobjs_with_same_cgroup(cobj, cobjs);
 
 	// see if this cobj's bottom edge is colliding with a platform that's moving up (elevator)
 	// also, if the cobj is currently intersecting another movable cobj, try to resolve the intersection so that stacking works by moving the cobj up
@@ -816,9 +830,7 @@ void try_drop_movable_cobj(unsigned index) {
 			if (!platforms.get_cobj_platform(c).is_active()) continue; // platform is not moving (is_moving() is faster but off by one frame on platform stop/change dir)
 		}
 		if (!cobj.intersects_cobj(c, tolerance)) continue; // no intersection
-		cobj.shift_by(vector3d(0.0, 0.0, dz)); // move cobj up
-		mark_movable_cobj_smap_update();
-		return; // or test other cobjs?
+		return vector3d(0.0, 0.0, dz); // or test other cobjs?
 	} // for i
 	
 	// check other cobjs and the mesh to see if this cobj can be dropped
@@ -828,10 +840,10 @@ void try_drop_movable_cobj(unsigned index) {
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // stuck
 		if (prev_v_fall < 4.0*accel) {gen_sound(SOUND_OBJ_FALL, center, 0.5, 1.2);}
 		// check for rolling cobjs that can roll downhill
-		if (cobjs.size() != 1) return; // can only handle a single supporting cobj
-		if (!is_rolling_cobj(cobj)) return; // not rolling
+		if (cobjs.size() != 1) return zero_vector; // can only handle a single supporting cobj
+		if (!is_rolling_cobj(cobj)) return zero_vector; // not rolling
 		coll_obj const &c(coll_objects.get_cobj(cobjs.front()));
-		if (c.is_point_supported(cobj.get_center_of_mass())) return; // center of mass is resting stably, it's stuck
+		if (c.is_point_supported(cobj.get_center_of_mass())) return zero_vector; // center of mass is resting stably, it's stuck
 		vector3d move_dir((center - c.get_center_pt()).get_norm()); // FIXME: incorrect for polygon
 		
 		if (c.type == COLL_CUBE) { // chose +/- x|y for cubes
@@ -846,7 +858,7 @@ void try_drop_movable_cobj(unsigned index) {
 		delta = 0.05*cobj_height*move_dir; // move 5% of cobj height
 		set<unsigned> seen;
 		push_cobj(index, delta, seen, all_zeros); // return value is ignored
-		return; // done
+		return zero_vector; // done
 	}
 	float mesh_zval(interpolate_mesh_zval(center.x, center.y, 0.0, 1, 1, 1)); // Note: uses center point, not max mesh height under the cobj; clamped xy
 
@@ -857,7 +869,7 @@ void try_drop_movable_cobj(unsigned index) {
 		if (center.z > water_zval) {mesh_zval = max(mesh_zval, water_zval);} // use water zval if cobj center is above the ice
 	}
 	float const mesh_dz(mesh_zval - cobj.d[2][0]); // Note: can be positive if cobj is below the mesh
-	if (fabs(mesh_dz) < tolerance) return; // resting on the mesh (never happens?)
+	if (fabs(mesh_dz) < tolerance) return zero_vector; // resting on the mesh (never happens?)
 	
 	if (max(delta.z, -max_dz) < mesh_dz) { // under the mesh
 		if (prev_v_fall < 10.0*accel) {gen_sound(SOUND_OBJ_FALL, center, 0.2, 0.8);}
@@ -891,6 +903,7 @@ void try_drop_movable_cobj(unsigned index) {
 				bcube.d[2][1] += 0.1*cobj_height; // z-slice slightly above cobj
 				bcube.d[2][0]  = cobj.d[2][0]; // top of cobj
 				get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
+				//remove_cobjs_with_same_cgroup(cobj, cobjs); // ???
 				float tot_mass(cobj_mass);
 
 				// since the z-slice is so thin/small, we simply assume that any cobj intersecting it is resting on the current cobj
@@ -921,23 +934,48 @@ void try_drop_movable_cobj(unsigned index) {
 			}
 			if (prev_v_fall < 8.0*accel) {add_splash(center, xpos, ypos, min(100.0f, -5000*prev_v_fall*cobj_mass), min(2.0f*CAMERA_RADIUS, cobj.get_bsphere_radius()), 1);}
 		}
-		else if (depth > 0.5*cobj_height) return; // stuck in ice
+		else if (depth > 0.5*cobj_height) return zero_vector; // stuck in ice
 	}
 	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
+	return delta;
+}
+
+void shift_cobj_up_down(coll_obj &cobj, unsigned index, vector3d const &delta) {
 	cobj.shift_by(delta); // move cobj down
 	cobj.cp.surfs = 0; // clear any invisible edge flags as moving may make these edges visible
-	mark_movable_cobj_smap_update();
 	check_moving_cobj_int_with_dynamic_objs(index);
 }
 
-void remove_cobjs_with_same_cgroup(coll_obj const &cobj, vector<unsigned> &cobjs) {
+void try_drop_movable_cobj(unsigned index, set<unsigned> &seen) {
 
-	if (cobj.cgroup_id < 0) return; // not in a group
+	if (seen.find(index) != seen.end()) return; // already seen (needed for grouped cobjs)
+	coll_obj &cobj(coll_objects.get_cobj(index));
+	cobj_id_set_t const *group(nullptr);
+	vector3d delta(get_cobj_drop_delta(index));
 
-	for (unsigned i = 0; i < cobjs.size(); ++i) {
-		if (coll_objects.get_cobj(cobjs[i]).cgroup_id == cobj.cgroup_id) {cobjs[i] = cobjs.back(); cobjs.pop_back(); --i;} // remove this cobj
+	if (cobj.cgroup_id >= 0) { // grouped cobj
+		group = &cobj_groups.get_set(cobj.cgroup_id);
+		assert(group->find(index) != group->end()); // must contain this cobj
+		
+		for (auto i = group->begin(); i != group->end(); ++i) { // if this cobj in a a group, we need to drop the whole group (or fail)
+			seen.insert(*i); // mark as seen so we don't try to call try_drop_movable_cobj() on it again
+			if (*i == index) continue; // already processed above
+			vector3d const delta_i(get_cobj_drop_delta(*i));
+			UNROLL_3X(delta[i_] = max(delta[i_], delta_i[i_]);) // use min fall dist or max rise dist (elevators)
+			//if (delta == zero_vector) return; // not legal, because a later cobj may be on an elevator that's going up
+		}
 	}
+	if (delta == zero_vector) return;
+	shift_cobj_up_down(cobj, index, delta);
+
+	if (group != nullptr) { // shift the group
+		for (auto i = group->begin(); i != group->end(); ++i) {
+			if (*i != index) {shift_cobj_up_down(coll_objects.get_cobj(*i), *i, delta);}
+		}
+	}
+	mark_movable_cobj_smap_update();
 }
+
 
 bool check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from) {
 
@@ -984,6 +1022,7 @@ bool check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // failed to move
 		// if there is a ledge (cobj z top) slightly above the bottom of the cobj, maybe we can lift it up;
 		// meant to work with ramps and small steps, but not stairs or tree trunks (obviously)
+		if (cobj.cgroup_id >= 0) return 0; // FIXME: doesn't work with grouped cobjs - need to check if the entire group can be moved up, which is nontrivial
 		float step_height(get_cobj_step_height());
 		bool has_ledge(0), has_ramp(0), success(0);
 		
@@ -1129,6 +1168,7 @@ bool proc_movable_cobj(point const &orig_pos, point &player_pos, unsigned index,
 void proc_moving_cobjs() {
 
 	vector<pair<float, unsigned>> by_z1;
+	set<unsigned> seen;
 
 	for (auto i = moving_cobjs.begin(); i != moving_cobjs.end();) {
 		if (coll_objects.get_cobj(*i).status != COLL_STATIC) {moving_cobjs.erase(i++);} // remove if destroyed
@@ -1137,7 +1177,7 @@ void proc_moving_cobjs() {
 	sort(by_z1.begin(), by_z1.end()); // sort by z1 so that stacked cobjs work correctly (processed bottom to top)
 	
 	for (auto i = by_z1.begin(); i != by_z1.end(); ++i) {
-		try_drop_movable_cobj(i->second);
+		try_drop_movable_cobj(i->second, seen);
 		check_cobj_alignment(i->second);
 	}
 }

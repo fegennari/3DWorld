@@ -658,13 +658,13 @@ void coll_obj::shift_by(vector3d const &vd, bool force, bool no_texture_offset) 
 	for (unsigned j = 0; j < unsigned(npoints); ++j) {points[j] += vd;}
 	cube_t::translate(vd);
 	if (!no_texture_offset && cp.tscale != 0.0 && !(cp.flags & COBJ_WAS_CUBE)) {texture_offset -= vd;}
+	if (cgroup_id >= 0) {cobj_groups.invalidate_group(cgroup_id);} // force recompute of center of mass, etc.
 }
 
 void coll_obj::move_cobj(vector3d const &vd, bool update_colls) {
 
 	if (update_colls) {remove_coll_object(id, 0);}
 	shift_by(vd); // move object
-	if (cgroup_id >= 0) {cobj_groups.invalidate_group(cgroup_id);} // force recompute of center of mass, etc.
 	if (update_colls) {re_add_coll_cobj(id, 0);}
 	if (update_colls && (is_rain_enabled() || is_wet())) {check_indoors_outdoors();} // update indoor/outdoor state if it's raining or if already wet
 }
