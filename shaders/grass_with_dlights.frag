@@ -14,15 +14,12 @@ void main()
 	if (enable_light0 ) color += add_light_comp_pos_smap_light0(eye_norm, epos).rgb;
 	if (enable_light1 ) color += add_light_comp_pos_smap_light1(eye_norm, epos).rgb;
 	if (enable_dlights) add_dlights(color, dlpos, normal, gl_Color.rgb); // dynamic lighting
-	vec4 fcolor = color_scale*vec4(color, gl_Color.a);
+	vec4 fcolor = vec4(color, gl_Color.a);
+	vec4 texel  = vec4(1.0);
 #ifndef NO_GRASS_TEXTURE
-	fcolor *= texture(tex0, tc);
+	texel = texture(tex0, tc);
 #endif
-	if (snow_cov_amt > 0.0) {
-		// add in snow on top of grass, using ratio of lit color from base color to pick up lighting
-		// FIXME: incorrect for specular component, which shouldn't be divided by the color
-		fcolor.rgb = mix(fcolor.rgb, vec3(0.9, 0.9, 1.0)*color.rgb/max(vec3(0.01), gl_Color.rgb), snow_cov_amt);
-	}
+	fcolor *= mix(color_scale*texel, vec4(1.0), snow_cov_amt);
 #ifndef NO_FOG
 	fcolor = apply_fog_epos(fcolor, epos);
 #endif
