@@ -205,6 +205,13 @@ void main()
 		if (enable_light2) {ADD_LIGHT(2);} // lightning
 	}
 	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), gl_Color.rgb, 1.0, normal_sign, wet_surf_val);} // dynamic lighting
+
+#ifdef ENABLE_SNOW_COVERAGE
+	if (snow_cov_amt > 0.0 && normal.z > 0.4) {
+		// add in snow on top of water/texture, using ratio of lit color from base color to pick up lighting
+		texel = mix(texel, vec4(0.9, 0.9, 1.0, 1.0), snow_cov_amt*min(1.0, 6.0*(normal.z-0.4)));
+	}
+#endif
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
 
@@ -227,13 +234,6 @@ void main()
 		color.rgb = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness), reflect_w);
 	}
 #endif
-
-#ifdef ENABLE_SNOW_COVERAGE
-	if (snow_cov_amt > 0.0 && normal.z > 0.5) {
-		// add in snow on top of water/texture, using ratio of lit color from base color to pick up lighting
-		color.rgb = mix(color.rgb, vec3(0.9, 0.9, 1.0)*lit_color.rgb/max(vec3(0.01), gl_Color.rgb), snow_cov_amt*min(1.0, 6.0*(normal.z-0.5)));
-	}
-#endif // ENABLE_SNOW_COVERAGE
 
 #ifdef APPLY_BURN_MASK
 	color = apply_black_body_burn_mask(color, tc);

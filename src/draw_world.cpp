@@ -346,6 +346,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_reflections) {s.set_prefix("#define ENABLE_REFLECTIONS",     1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (snow_cov_amt > 0.0) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
+	if (snow_cov_amt > 0.0) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   0);} // VS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);

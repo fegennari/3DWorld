@@ -47,7 +47,7 @@ void main()
 	texel  = clamp(texel, 0.0, 1.0);
 #endif
 
-	lit_color *= mix(texel, vec3(1.0, 1.0, 1.1), snow_cov_amt); // combine terrain texture with snow coverage
+	lit_color   *= mix(texel, vec3(1.0, 1.0, 1.1), snow_cov_amt); // combine terrain texture with snow coverage
 	fg_FragColor = vec4(lit_color, gl_Color.a);
 #ifndef NO_FOG
 	fg_FragColor = apply_fog_epos(fg_FragColor, epos);
