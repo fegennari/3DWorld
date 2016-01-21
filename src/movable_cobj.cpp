@@ -616,7 +616,7 @@ float get_max_cobj_move_delta(coll_obj const &c1, coll_obj const &c2, vector3d c
 
 	// since there is no cobj-cobj closest distance function, binary split the delta range until cobj and c no longer intersect
 	for (float t = 0.5, step = 0.25; step > step_thresh; step *= 0.5) { // initial guess is the midpoint
-		coll_obj test_cobj(c1); // deep copy
+		coll_obj test_cobj(c1); test_cobj.cgroup_id = -1; // deep copy, clear cgroup_id flag to avoid unnecessary updates
 		test_cobj.shift_by(t*delta);
 		if (test_cobj.intersects_cobj(c2, tolerance)) {t -= step;} else {valid_t = t; t += step;}
 		if (++num_iters > 1000) break; // reached max iteration count (to avoid perf problems)
@@ -977,8 +977,9 @@ void try_drop_movable_cobj(unsigned index, set<unsigned> &seen) {
 }
 
 
-bool check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from) {
+int check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const &pushed_from, float &delta_z) {
 
+	delta_z = 0.0;
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	if (!cobj.is_movable()) return 0; // not movable
 	delta.z = 0.0; // for now, objects can only be pushed in xy
@@ -1022,8 +1023,7 @@ bool check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // failed to move
 		// if there is a ledge (cobj z top) slightly above the bottom of the cobj, maybe we can lift it up;
 		// meant to work with ramps and small steps, but not stairs or tree trunks (obviously)
-		if (cobj.cgroup_id >= 0) return 0; // FIXME: doesn't work with grouped cobjs - need to check if the entire group can be moved up, which is nontrivial
-		float step_height(get_cobj_step_height());
+		float step_height(get_cobj_step_height()), moved_height(0.0);
 		bool has_ledge(0), has_ramp(0), success(0);
 		
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
@@ -1037,13 +1037,14 @@ bool check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point
 		}
 		for (unsigned n = 0; n < 10; ++n) { // try raising the cobj in 10 steps
 			delta = start_delta; // reset to try again
+			moved_height += 0.1*step_height;
 			cobj.shift_by(vector3d(0.0, 0.0, 0.1*step_height)); // shift up slightly to see if it can be moved now
 			if (binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) {success = 1; break;}
 		}
-		if (!success) {
-			cobj.shift_by(vector3d(0.0, 0.0, -step_height)); // shift down to original position
-			return 0; // can't move
-		}
+		if (!success || cobj.cgroup_id >= 0) {cobj.shift_by(vector3d(0.0, 0.0, -moved_height));} // shift down to original position on failure or grouped cobjs
+		if (!success) return 0; // can't move
+		delta_z = moved_height;
+		return 2; // success, but required moving up
 	}
 
 	// if the cobj is a cylinder or capsule, try to rotate it about its center
@@ -1097,18 +1098,26 @@ bool push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point const
 
 	coll_obj &cobj(coll_objects.get_cobj(index));
 	cobj_id_set_t const *group(nullptr);
+	float delta_z(0.0);
 
 	if (cobj.cgroup_id >= 0) { // grouped cobj
 		group = &cobj_groups.get_set(cobj.cgroup_id);
 		assert(group->find(index) != group->end()); // must contain this cobj
+		float max_dz(0.0);
 		
 		for (auto i = group->begin(); i != group->end(); ++i) { // if this cobj in a a group, we need to push the whole group (or fail)
 			seen.insert(*i); // prevent infinite recursion
-			if (!check_push_cobj(*i, delta, seen, pushed_from)) return 0; // not pushed
+			int const ret(check_push_cobj(*i, delta, seen, pushed_from, delta_z));
+			if (ret == 0) return 0; // not pushed, not moved up
+			if (ret == 2) {max_dz = max(max_dz, delta_z);}
+		}
+		if (max_dz > 0.0) { // must move all cobjs up together
+			// FIXME: still not completely correct, since this doesn't check that it's valid to move all cobjs up by this amount (no check for top collision)
+			for (auto i = group->begin(); i != group->end(); ++i) {coll_objects.get_cobj(*i).shift_by(vector3d(0.0, 0.0, max_dz));}
 		}
 	}
 	else { // push single cobj
-		if (!check_push_cobj(index, delta, seen, pushed_from)) return 0; // not pushed
+		if (!check_push_cobj(index, delta, seen, pushed_from, delta_z)) return 0; // not pushed (okay if moved up)
 	}
 	// cobj moved, see if it gets teleported
 	vector3d cobj_delta(delta);
