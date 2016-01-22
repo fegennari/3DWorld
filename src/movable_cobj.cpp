@@ -453,6 +453,10 @@ point coll_obj::get_center_of_mass(bool ignore_group) const {
 	return get_center_pt();
 }
 
+float coll_obj::get_group_mass() const {
+	return ((cgroup_id >= 0) ? cobj_groups.get_props(cgroup_id).mass : get_mass());
+}
+
 void rotate_point(point &pt, point const &rot_pt, vector3d const &axis, float angle) {
 	pt -= rot_pt; // translate to rotation point
 	rotate_vector3d(axis, angle, pt); // rotate the point
@@ -905,6 +909,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 				get_intersecting_cobjs_tree(bcube, cobjs, index, tolerance, 0, 0, -1);
 				//remove_cobjs_with_same_cgroup(cobj, cobjs); // ???
 				float tot_mass(cobj_mass);
+				if (cobj.cgroup_id >= 0) {} // Note: not meant to work with grouped cobjs - unclear what to do
 
 				// since the z-slice is so thin/small, we simply assume that any cobj intersecting it is resting on the current cobj
 				for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
@@ -934,7 +939,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 			}
 			if (prev_v_fall < 8.0*accel) {add_splash(center, xpos, ypos, min(100.0f, -5000*prev_v_fall*cobj_mass), min(2.0f*CAMERA_RADIUS, cobj.get_bsphere_radius()), 1);}
 		}
-		else if (depth > 0.5*cobj_height) return zero_vector; // stuck in ice
+		else if (depth > 0.5*cobj_height) {return zero_vector;} // stuck in ice
 	}
 	delta.z = max(delta.z, -max_dz); // clamp to the real max value if in freefall
 	return delta;
@@ -1055,6 +1060,7 @@ int check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point 
 	// cubes and polygons don't rotate because they have more contact area on the bottom that contributes to friction
 	// spheres don't rotate because they're rotationally invariant, except for their textures, which don't rotate properly anyway
 	if (pushed_from == all_zeros) {} // not pushed from a valid position
+	else if (cobj.cgroup_id >= 0) {} // grouped cobjs don't rotate (but could be made to, with some effort)
 	else if (!cobj.is_cylinder() && cobj.type != COLL_CAPSULE) {} // not a rotatable object
 	else if (cobj.cp.tid >= 0 && cobj.cp.tscale != 0.0) {} // not if textured or using tex coords (since texgen textures don't rotate)
 	else if (fabs(cobj.points[0].z - cobj.points[1].z) < TOLER) { // oriented in the XY plane, rotates around z

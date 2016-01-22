@@ -1290,7 +1290,7 @@ void create_explosion(point const &pos, int shooter, int chain_level, float dama
 				float const dist(p2p_dist(cobj.get_cube_center(), pos)), move_radius(0.5*bradius);
 
 				if (dist > 1.0E-6 && dist < move_radius) {
-					vector3d delta(-2.0E-4*size*normal*((move_radius - dist)/move_radius)/cobj.get_mass());
+					vector3d delta(-2.0E-4*size*normal*((move_radius - dist)/move_radius)/cobj.get_group_mass());
 					push_movable_cobj(*i, delta, pos);
 				}
 			}
@@ -2060,7 +2060,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 			update_voxel_sphere_region(coll_pos, object_types[PROJC].radius, -0.04, shooter, 0);
 		}
 		else if (!is_laser && cobj.is_movable()) { // projectile, movable, and not destroyed
-			vector3d delta(4.0E-8*damage*coll_norm*dot_product(vcf, coll_norm)/cobj.get_mass());
+			vector3d delta(4.0E-8*damage*coll_norm*dot_product(vcf, coll_norm)/cobj.get_group_mass());
 			push_movable_cobj(cindex, delta, coll_pos);
 		}
 	}
