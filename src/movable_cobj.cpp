@@ -1023,13 +1023,17 @@ int check_push_cobj(unsigned index, vector3d &delta, set<unsigned> &seen, point 
 	if (!binary_step_moving_cobj_delta(cobj, cobjs, delta, tolerance)) { // failed to move
 		// if there is a ledge (cobj z top) slightly above the bottom of the cobj, maybe we can lift it up;
 		// meant to work with ramps and small steps, but not stairs or tree trunks (obviously)
-		float step_height(get_cobj_step_height()), moved_height(0.0);
+		float step_height(get_cobj_step_height()), moved_height(0.0), cobj_bot(cobj.d[2][0]);
 		bool has_ledge(0), has_ramp(0), success(0);
 		
+		if (cobj.cgroup_id >= 0) { // if this isn't on the bottom of the group, don't allow a ledge
+			cobj_id_set_t const &group(cobj_groups.get_set(cobj.cgroup_id));
+			for (auto i = group.begin(); i != group.end(); ++i) {cobj_bot = min(cobj_bot, coll_objects.get_cobj(*i).d[2][0]);}
+		}
 		for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 			coll_obj const &c(coll_objects.get_cobj(*i));
-			if (c.type == COLL_POLYGON) {has_ramp = 1;} // Note: can only push cobjs up polygon ramps, not cylinders
-			else if (c.d[2][1] - cobj.d[2][0] < step_height) {has_ledge = 1; break;} // c_top - cobj_bot < step_height
+			if (c.type == COLL_POLYGON && (!c.is_thin_poly() || fabs(c.norm.z) > 0.5)) {has_ramp = 1;} // Note: can only push cobjs up polygon ramps, not cylinders
+			else if (c.has_flat_top_bot() && (c.d[2][1] - cobj_bot) < step_height) {has_ledge = 1; break;} // c_top - cobj_bot < step_height
 		}
 		if (!has_ledge) {
 			if (!has_ramp) return 0; // stuck
