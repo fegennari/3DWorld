@@ -4,6 +4,7 @@ uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform float step_delta, step_delta_shadow;
 uniform sampler2D tex0;
 uniform sampler3D wet_noise_tex;
+uniform sampler2D sky_zval_tex;
 uniform float min_alpha       = 0.0;
 uniform float water_depth     = 0.0;
 uniform float emissive_scale  = 0.0;
@@ -119,6 +120,11 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 	} // for i
 }
 
+float get_water_snow_coverage() {
+	vec3 pos = (vpos - scene_llc)/scene_scale;
+	return ((texture(sky_zval_tex, pos.xy).r < (vpos.z + 0.2*half_dxy)) ? 1.0 : 0.0);
+}
+
 // Note: This may seem like it can go into the vertex shader as well,
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
@@ -171,8 +177,10 @@ void main()
 	if (keep_alpha && (texel.a * alpha) <= min_alpha) discard;
 #endif
 
-	float wetness       = wet_effect;
+	float wetness = wet_effect;
+	//if (wetness > 0.0) {wetness *= get_water_snow_coverage();} // doesn't look quite right
 	float reflectivity2 = reflectivity;
+
 #ifdef ENABLE_PUDDLES
 	if (wetness > 0.0 && wetness < 1.0 && normal.z > 0.5) { // create puddles for partially wet top surfaces
 		float wet_val = 0.0;
@@ -185,7 +193,7 @@ void main()
 		wetness = sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
 		reflectivity2 = wetness;
 	}
-#endif // ENABLE_WETNESS
+#endif // ENABLE_PUDDLES
 
 #ifdef USE_WINDING_RULE_FOR_NORMAL
 	float normal_sign = ((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
@@ -209,7 +217,7 @@ void main()
 #ifdef ENABLE_SNOW_COVERAGE
 	if (snow_cov_amt > 0.0 && normal.z > 0.4) {
 		// add in snow on top of water/texture, using ratio of lit color from base color to pick up lighting
-		texel = mix(texel, vec4(0.9, 0.9, 1.0, 1.0), snow_cov_amt*min(1.0, 6.0*(normal.z-0.4)));
+		texel = mix(texel, vec4(0.9, 0.9, 1.0, 1.0), snow_cov_amt*get_water_snow_coverage()*min(1.0, 6.0*(normal.z-0.4)));
 	}
 #endif
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));

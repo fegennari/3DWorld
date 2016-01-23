@@ -1911,4 +1911,40 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 }
 
 
+void create_sky_vis_zval_texture(unsigned &tid) {
+
+	RESET_TIME;
+	unsigned const divs_per_cell = 2;
+	unsigned const num_samples   = 8;
+	unsigned const nx(MESH_X_SIZE*divs_per_cell), ny(MESH_Y_SIZE*divs_per_cell);
+	float const dx(DX_VAL/divs_per_cell), dy(DY_VAL/divs_per_cell);
+	vector<float> zvals;
+	zvals.resize(nx*ny, czmin);
+	rand_gen_t rgen;
+
+#pragma omp parallel for schedule(dynamic,1)
+	for (int y = 0; y < (int)ny; ++y) {
+		for (unsigned x = 0; x < nx; ++x) {
+			float const xv(-X_SCENE_SIZE + x*dx), yv(-Y_SCENE_SIZE + y*dy);
+			float &zval(zvals[y*nx + x]);
+			bool z_set(0);
+			
+			for (unsigned i = 0; i < num_samples; ++i) {
+				float const xr(2.0*dx*rgen.rand_float()), yr(2.0*dy*rgen.rand_float()); // random sampling kernel for ray offset/direction
+				float const xb(xv + xr), yb(yv + yr), xt(xb - xr), yt(yb - yr);
+				point cpos;
+				vector3d coll_norm; // unused
+				int cindex(-1); // unused
+
+				if (check_coll_line_exact(point(xt, yt, czmax), point(xb, yb, czmin), cpos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 1, 0)) {
+					zval  = (z_set ? min(zval, cpos.z) : cpos.z);
+					z_set = 1;
+				}
+			}
+		}
+	}
+	setup_texture(tid, 0, 0, 0, 0, 0, 0); // nearest=0
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, nx, ny, 0, GL_RED, GL_FLOAT, &zvals.front());
+	PRINT_TIME("Sky Zval Matrix");
+}
 

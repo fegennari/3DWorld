@@ -45,7 +45,7 @@ extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_l
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
-extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid;
+extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
 extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
@@ -73,6 +73,7 @@ extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
 
 void create_dlight_volumes();
+void create_sky_vis_zval_texture(unsigned &tid);
 
 
 void set_fill_mode() {
@@ -327,9 +328,16 @@ float setup_underwater_fog(shader_t &s, int shader_type) {
 	return water_depth;
 }
 
+unsigned get_sky_zval_texture() {
+
+	if (sky_zval_tid == 0) {create_sky_vis_zval_texture(sky_zval_tid);}
+	assert(sky_zval_tid != 0);
+	return sky_zval_tid;
+}
+
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7: shadow map,
-//                     8: specular map, 9: depth map, 10: burn mask, 11: noise, 12: ground texture, 13: depth, 14: reflection, 15: ripples, 16-31: dlight shadow maps
+//                     8: specular map, 9: depth map, 10: burn mask/sky_zval, 11: noise, 12: ground texture, 13: depth, 14: reflection, 15: ripples, 16-31: dlight shadow maps
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 // use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
@@ -338,15 +346,16 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
-	bool const enable_puddles(is_ground_wet() && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
+	bool const is_wet(is_ground_wet() && !use_burn_mask), is_snowy(is_ground_snowy() && !use_burn_mask);
+	bool const enable_puddles(is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
 	if (use_depth_trans   ) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
 	if (enable_reflections) {s.set_prefix("#define ENABLE_REFLECTIONS",     1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
-	if (snow_cov_amt > 0.0) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
-	if (snow_cov_amt > 0.0) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   0);} // VS
+	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
+	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   0);} // VS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
 	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
@@ -412,6 +421,10 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_puddles) {
 		set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
 		s.add_uniform_int("wet_noise_tex", 11);
+	}
+	if (/*is_wet ||*/ is_snowy) {
+		bind_texture_tu(get_sky_zval_texture(), 10);
+		s.add_uniform_int("sky_zval_tex", 10);
 	}
 	// need to handle wet/outside vs. dry/inside surfaces differently, so the caller must either set is_outside properly or override wet and snow values
 	s.add_uniform_float("wet_effect",   (is_outside ? rain_wetness : 0.0)); // only enable when drawing cobjs?

@@ -184,6 +184,7 @@ typedef map<string, unsigned> name_map_t;
 name_map_t texture_name_map;
 
 int landscape_changed(0), lchanged0(0), skip_regrow(0), ltx1(0), lty1(0), ltx2(0), lty2(0), ls0_invalid(1);
+unsigned sky_zval_tid;
 unsigned char *landscape0 = NULL;
 
 
@@ -365,6 +366,7 @@ void reset_textures() {
 	free_texture(gb_tid);
 	free_texture(reflection_tid);
 	free_texture(depth_tid);
+	free_texture(sky_zval_tid);
 	free_texture(frame_buffer_RGB_tid);
 	free_font_texture_atlas();
 
