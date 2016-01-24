@@ -1,3 +1,5 @@
+uniform float snow_cov_amt = 0.0;
+
 out vec3 dlpos, normal; // world space
 out vec3 eye_norm;
 
@@ -10,5 +12,5 @@ void main()
 	vec4 vertex  = fg_Vertex + vec4(gwdelta, 0.0);
 	gl_Position  = fg_ModelViewProjectionMatrix * vertex;
 	dlpos        = vertex.xyz;
-	fg_Color_vf  = fg_Color;
+	fg_Color_vf  = mix(fg_Color, vec4(0.9, 0.9, 1.0, 1.0), snow_cov_amt);
 } 

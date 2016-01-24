@@ -1,4 +1,4 @@
-uniform vec4 color_scale = vec4(1.0);
+uniform vec4 color_scale   = vec4(1.0);
 uniform float snow_cov_amt = 0.0;
 uniform sampler2D tex0;
 

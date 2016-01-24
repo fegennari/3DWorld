@@ -1,4 +1,5 @@
-uniform float min_alpha = 0.0;
+uniform float min_alpha    = 0.0;
+uniform float snow_cov_amt = 0.0;
 uniform sampler2D tex0;
 
 in vec3 dlpos, normal; // world space
@@ -17,7 +18,7 @@ void main()
 	if (enable_light0 ) color += add_light_comp_pos_smap_light0(eye_norm, epos).rgb;
 	if (enable_light1 ) color += add_light_comp_pos_smap_light1(eye_norm, epos).rgb;
 	if (enable_dlights) add_dlights(color, dlpos, normal, gl_Color.rgb); // dynamic lighting
-	fg_FragColor = texel*vec4(color, gl_Color.a);
+	fg_FragColor = mix(texel, vec4(1.0), snow_cov_amt)*vec4(color, gl_Color.a);
 #ifndef NO_FOG
 	fg_FragColor = apply_fog_epos(fg_FragColor, epos);
 #endif

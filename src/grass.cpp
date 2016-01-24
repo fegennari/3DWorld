@@ -996,6 +996,7 @@ public:
 		s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+flowers");
 		setup_shaders_post(s);
 		setup_flower_shader_post(s);
+		s.add_uniform_float("snow_cov_amt", snow_cov_amt);
 		draw_triangles(s);
 		s.end_shader();
 	}
