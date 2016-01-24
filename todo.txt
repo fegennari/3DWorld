@@ -25,7 +25,6 @@ Cobjs:
 In-Game cobjs editor
   - In-game placement/visualization of objects
 Snow mask as texture rather than per-object indoors/outdoors
-  - Fix color
 Better Palm Trees
 Plants with low large leaves
 Precomputed cube map reflections on specular surfaces (such as the gold dragon)
