@@ -125,6 +125,18 @@ float get_water_snow_coverage() {
 	return ((texture(sky_zval_tex, pos.xy).r < (vpos.z + 0.2*half_dxy)) ? 1.0 : 0.0);
 }
 
+float get_puddle_val(in float wetness) {
+
+	float wet_val = 0.0;
+	float freq    = 1.0;
+
+	for (int i = 0; i < 4; ++i) {
+		wet_val += texture(wet_noise_tex, 0.04*freq*vpos).r/freq;
+		freq    *= 2.0;
+	}
+	return sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
+}
+
 // Note: This may seem like it can go into the vertex shader as well,
 //       but we don't have the tex0 value there and can't determine the full init color
 void main()
@@ -183,14 +195,7 @@ void main()
 
 #ifdef ENABLE_PUDDLES
 	if (wetness > 0.0 && wetness < 1.0 && normal.z > 0.5) { // create puddles for partially wet top surfaces
-		float wet_val = 0.0;
-		float freq    = 1.0;
-
-		for (int i = 0; i < 4; ++i) {
-			wet_val += texture(wet_noise_tex, 0.04*freq*vpos).r/freq;
-			freq    *= 2.0;
-		}
-		wetness = sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
+		wetness       = get_puddle_val(wetness);
 		reflectivity2 = wetness;
 	}
 #endif // ENABLE_PUDDLES
