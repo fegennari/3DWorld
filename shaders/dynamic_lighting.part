@@ -170,7 +170,7 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #endif
 
 		// FIXME: specular should have a lower falloff and its own intensity - however, this will require a larger radius and impact performance
-		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag*mix(1.0, 0.25, wet_scale)) * (lcolor.a * intensity);
+		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space
 	} // for i
 	color  = apply_power_signed(color, gamma); // to linear space
@@ -179,4 +179,4 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 #endif // NO_DYNAMIC_LIGHTS
 }
 
-void add_dlights(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color) {add_dlights_bm_scaled(color, dlpos, normal, diff_color, 1.0, 1.0, 1.0);}
+void add_dlights(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color) {add_dlights_bm_scaled(color, dlpos, normal, diff_color, 1.0, 1.0, 0.0);}

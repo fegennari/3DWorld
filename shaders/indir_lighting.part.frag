@@ -65,9 +65,9 @@ vec3 get_indir_lighting(in float normal_sign) {
 #endif
 		}
 	}
-	return gl_Color.rgb * indir_color;
+	return indir_color;
 }
 
 void add_indir_lighting(inout vec3 lit_color, in float normal_sign) {
-	lit_color += get_indir_lighting(normal_sign);
+	lit_color += gl_Color.rgb * get_indir_lighting(normal_sign);
 }

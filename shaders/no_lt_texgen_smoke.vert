@@ -1,8 +1,7 @@
 uniform float smoke_bb[6]; // x1,x2,y1,y2,z1,z2
 uniform mat4 fg_ViewMatrix;
-uniform float tex_scale_s  = 1.0;
-uniform float tex_scale_t  = 1.0;
-uniform float snow_cov_amt = 0.0;
+uniform float tex_scale_s = 1.0;
+uniform float tex_scale_t = 1.0;
 uniform vec3 world_space_offset = vec3(0.0);
 uniform float vertex_offset_scale = 0.0; // hack to make vertex_offset ignored when unused/unset
 uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
@@ -45,9 +44,6 @@ void main()
 		vpos     = vertex.xyz + world_space_offset;
 		normal   = normalize(fg_Normal);
 	}
-#ifdef ENABLE_SNOW_COVERAGE
-	if (snow_cov_amt > 0.0 && normal.z > 0.4) {fg_Color_vf = mix(fg_Color_vf, vec4(1.0), snow_cov_amt*min(1.0, 6.0*(normal.z-0.4)));}
-#endif
 #ifdef USE_BUMP_MAP
 	setup_tbn();
 #endif
