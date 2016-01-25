@@ -606,6 +606,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 		PRINT_TIME("Waypoint Creation");
 	}
 	reanimate_objects(); // allow stationary/stuck objects to move about the new terrain (fast so no timing)
+	invalidate_snow_coverage();
 
 	unsigned char sflags(0);
 	float const lf(fabs(sun_rot/PI - 1.0)); // light_factor

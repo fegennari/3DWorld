@@ -335,6 +335,8 @@ unsigned get_sky_zval_texture() {
 	return sky_zval_tid;
 }
 
+void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
+
 
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7: shadow map,
 //                     8: specular map, 9: depth map, 10: burn mask/sky_zval, 11: noise, 12: ground texture, 13: depth, 14: reflection, 15: ripples, 16-31: dlight shadow maps

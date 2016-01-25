@@ -612,6 +612,7 @@ void scroll_scene() {
 	regen_lightmap(); // not shiftable
 	if (display_mode & 0x04) {water_plane_z = get_water_z_height();}
 	update_temperature(0);
+	invalidate_snow_coverage();
 	recreated = 1;
 	scrolling = 0;
 	clear_landscape_vbo = 1;

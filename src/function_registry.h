@@ -113,6 +113,8 @@ float get_landmine_sensor_height(float radius, int time);
 colorRGBA get_plasma_color(float size);
 bool set_dlights_booleans(shader_t &s, bool enable, int shader_type, bool no_dl_smap=0);
 float setup_underwater_fog(shader_t &s, int shader_type);
+unsigned get_sky_zval_texture();
+void invalidate_snow_coverage();
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
 	int has_lt_atten=0, bool use_smap=0, int use_bmap=0, bool use_spec_map=0, bool use_mvm=0, bool force_tsl=0, float burn_tex_scale=0.0,
 	float triplanar_texture_scale=0.0, bool use_depth_trans=0, bool enable_reflections=0, bool is_outside=0);
