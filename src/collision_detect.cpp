@@ -1928,9 +1928,9 @@ void create_sky_vis_zval_texture(unsigned &tid) {
 			float &zval(zvals[y*nx + x]);
 			bool z_set(0);
 			
-			for (int sy = -1; sy <= 1; ++sy) {
+			for (int sy = -1; sy <= 1; ++sy) { // take the min of 9 uniformly spaced samples in a grid pattern
 				for (int sx = -1; sx <= 1; ++sx) {
-					float const xr(dx*sx), yr(dy*sy), xb(xv + xr), yb(yv + yr), xt(xb - xr), yt(yb - yr);
+					float const xr(0.5*dx*sx), yr(0.5*dy*sy), xb(xv + xr), yb(yv + yr), xt(xb + xr), yt(yb + yr);
 					point cpos;
 					vector3d coll_norm; // unused
 					int cindex(-1); // unused

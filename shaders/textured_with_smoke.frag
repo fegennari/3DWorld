@@ -122,7 +122,7 @@ void add_smoke_contrib(in vec3 eye_c, in vec3 vpos_c, inout vec4 color) {
 
 float get_water_snow_coverage() {
 	vec3 pos    = (vpos - scene_llc)/scene_scale;
-	float cmp   = vpos.z + 0.01*half_dxy;
+	float cmp   = vpos.z + 0.1*half_dxy;
 	float delta = texture(sky_zval_tex, pos.xy).r - cmp; // incorrectly interpolated, but smooth
 	return clamp((1.0 - 5.0*delta/half_dxy), 0.0, 1.0);
 }
