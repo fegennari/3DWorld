@@ -427,8 +427,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	}
 	// need to handle wet/outside vs. dry/inside surfaces differently, so the caller must either set is_outside properly or override wet and snow values
 	s.add_uniform_float("wet_effect",   (is_outside ? rain_wetness : 0.0)); // only enable when drawing cobjs?
-	s.add_uniform_float("reflectivity", (enable_reflections ? 1.0 : 0.0));
-	s.add_uniform_float("snow_cov_amt", (is_outside ? snow_cov_amt : 0.0));
+	s.add_uniform_float("reflectivity", (enable_reflections ?  1.0 : 0.0));
+	s.add_uniform_float("snow_cov_amt", snow_cov_amt); // Note: no longer depends on is_outside
 }
 
 
