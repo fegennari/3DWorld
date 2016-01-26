@@ -873,6 +873,11 @@ void display(void) {
 			setup_object_render_data();
 			check_gl_error(101);
 
+			// create shadow map
+			if (combined_gu) {do_look_at();}
+			create_shadow_map(); // where should this go? must be after draw_universe_bkg()
+			if (TIMETEST) PRINT_TIME("G");
+
 			if (use_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
 
 			// draw background
@@ -885,10 +890,6 @@ void display(void) {
 			draw_puffy_clouds(0);
 			check_gl_error(5);
 			if (TIMETEST) PRINT_TIME("G2");
-
-			// create shadow map
-			create_shadow_map(); // where should this go? must be after draw_universe_bkg()
-			if (TIMETEST) PRINT_TIME("G");
 
 			if (underwater) {
 				colorRGBA fog_color(((water_is_lava ? LAVA_COLOR : (temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C)), 1.0); // under ice/water, alpha = 1.0
