@@ -584,7 +584,7 @@ void s_log::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d 
 	point const center((pos + pt2)*0.5 + xlate);
 	if (!check_visible(shadow_only, max(length, max(radius, radius2)), center)) return;
 	if (reflection_pass && 0.5*(pos.z + pt2.z) < water_plane_z) return;
-	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0));
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(get_tree_trunk_color(type, 0), xlate));
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
@@ -646,7 +646,7 @@ void s_stump::draw(float sscale, bool shadow_only, bool reflection_pass, vector3
 	point const center(pos + point(0.0, 0.0, 0.5*height) + xlate);
 	if (!check_visible(shadow_only, max(height, max(radius, radius2)), center)) return;
 	if (reflection_pass && pos.z < water_plane_z) return;
-	colorRGBA const color(shadow_only ? WHITE : get_tree_trunk_color(type, 0));
+	colorRGBA const color(shadow_only ? WHITE : get_atten_color(get_tree_trunk_color(type, 0), xlate));
 	float const dist(distance_to_camera(center));
 
 	if (!shadow_only && get_pt_line_thresh()*(radius + radius2) < dist) { // draw as line
