@@ -867,17 +867,13 @@ void display(void) {
 			proc_voxel_updates(); // with the update here, we avoid making the voxels and shadows out of sync
 			if (TIMETEST) PRINT_TIME("F");
 
-			// create shadow map
-			create_shadow_map(); // where should this go?
-			if (TIMETEST) PRINT_TIME("G");
-
 			//proc_voxel_updates(); // with the update here, we avoid uploading the modified voxel VBOs during shadow map rendering
 
 			// send data to GPU
 			setup_object_render_data();
 			check_gl_error(101);
 
-			if (use_reflection_plane()) {create_gm_z_reflection();}
+			if (use_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
 
 			// draw background
 			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background
@@ -889,6 +885,10 @@ void display(void) {
 			draw_puffy_clouds(0);
 			check_gl_error(5);
 			if (TIMETEST) PRINT_TIME("G2");
+
+			// create shadow map
+			create_shadow_map(); // where should this go? must be after draw_universe_bkg()
+			if (TIMETEST) PRINT_TIME("G");
 
 			if (underwater) {
 				colorRGBA fog_color(((water_is_lava ? LAVA_COLOR : (temperature <= W_FREEZE_POINT) ? ICE_C : WATER_C)), 1.0); // under ice/water, alpha = 1.0

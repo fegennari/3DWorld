@@ -503,7 +503,7 @@ void setup_object_render_data() {
 	if (TIMETEST) {PRINT_TIME("4 Dlights Textures");}
 	get_occluders();
 	if (TIMETEST) {PRINT_TIME("5 Get Occluders");}
-	scene_smap_vbo_invalid = 0; // needs to be after dlights update
+	//scene_smap_vbo_invalid = 0; // needs to be after dlights update
 }
 
 
