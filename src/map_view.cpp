@@ -25,6 +25,7 @@ extern obj_group obj_groups[];
 
 void setup_height_gen(mesh_xy_grid_cache_t &height_gen, float x0, float y0, float dx, float dy, unsigned nx, unsigned ny, bool cache_values);
 bool using_hmap_with_detail();
+void set_temp_clear_color(colorRGBA const &clear_color);
 
 
 float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, float ystart, float scale, int i, int j) {
@@ -181,8 +182,7 @@ void draw_overhead_map() {
 			}
 		}
 	}
-	glClearColor(0.0, 0.0, 0.0, 1.0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	set_temp_clear_color(BLACK);
 	shader_t s;
 	s.begin_simple_textured_shader(0.0, 0, 0, &WHITE);
 	setup_texture(tid, 0, 0, 0);

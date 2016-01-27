@@ -181,8 +181,7 @@ bool cloud_manager_t::create_texture(bool force_recreate) {
 	check_gl_error(801);
 
 	glViewport(0, 0, xsize, ysize);
-	glClearColor(1.0, 1.0, 1.0, 1.0); // white
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	set_temp_clear_color(WHITE);
 	fgMatrixMode(FG_PROJECTION);
 	fgPushIdentityMatrix();
 
