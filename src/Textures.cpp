@@ -59,7 +59,7 @@ texture_t(0, 5, 512,  512,  1, 3, 1, "camoflage.jpg"),
 texture_t(0, 5, 0,    0,    1, 3, 1, "hedges.jpg", 0, 0), // 1024x1024, compression is slow
 texture_t(0, 1, 512,  512,  1, 3, 1, "brick1.bmp", 0, 1, 8.0),
 texture_t(0, 5, 512,  512,  1, 3, 1, "manhole.jpg", 1),
-texture_t(0, 6, 128,  128,  1, 4, 3, "palmtree.png", 1),
+texture_t(0, 5, 0,    0,    0, 4, 4, "leaves/palm_frond_diff.jpg", 0, 1, 4.0), // 512x1024
 texture_t(1, 9, 256,  256,  1, 4, 1, "@smoke"),  // not real file
 texture_t(1, 9, 64,   64,   1, 4, 1, "@plasma"), // not real file
 texture_t(1, 9, 128,  128,  0, 3, 0, "@gen"),    // not real file - unused
@@ -165,7 +165,6 @@ texture_t(0, 5, 0,    0,    0, 4, 1, "smoke_puff.jpg"), // 150x150
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark_birch.jpg", 0, 0), // 512x512, no compress
 texture_t(0, 5, 0,    0,    1, 3, 1, "bark/bark6.jpg", 0, 0), // 894x894, no compress
 texture_t(0, 6, 0,    0,    1, 4, 1, "ripple_map.png", 0, 0), // 256x256, mipmaps?, no compress?
-texture_t(0, 5, 0,    0,    0, 4, 4, "leaves/palm_frond_diff.jpg", 0, 1, 4.0), // 512x1024
 // type format width height wrap ncolors use_mipmaps name [invert_y=0 [do_compress=1 [anisotropy=1.0 [mipmap_alpha_weight=1.0]]]]
 };
 
