@@ -866,6 +866,10 @@ void small_tree::draw_trunks(bool shadow_only, vector3d const &xlate, vector<ver
 				select_texture(stt[type].bark_tid);
 			}
 			draw_fast_cylinder(trunk_cylin.p1, trunk_cylin.p2, trunk_cylin.r1, trunk_cylin.r2, nsides, !shadow_only);
+			
+			if (type == T_PALM && nsides >= 8) { // end cap for top of palm tree
+				draw_fast_cylinder(trunk_cylin.p2, (trunk_cylin.p2 + 0.002*(trunk_cylin.p2 - trunk_cylin.p1)), trunk_cylin.r2, 0.0, nsides, !shadow_only);
+			}
 		}
 	}
 }
