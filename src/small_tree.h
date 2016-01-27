@@ -12,7 +12,7 @@
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
 
 
-class small_tree { // size = 117 (120)
+class small_tree { // size = 121 (124)
 
 	char type; // 0 = pine, 1 = decidious, 2 = tall, 3 = bush, 4 = palm, 5 = short pine
 	int vbo_mgr_ix; // high detail
@@ -22,6 +22,7 @@ class small_tree { // size = 117 (120)
 	colorRGBA color, bark_color;
 	cylinder_3dw trunk_cylin;
 	vector<int> coll_id;
+	std::shared_ptr<vector<vert_norm_tc>> palm_verts; // for palm trees only
 
 public:
 	small_tree() : type(-1), inst_id(-1), height(0.0), width(0.0), r_angle(0.0), rx(0.0), ry(0.0) {clear_vbo_mgr_ix();}
@@ -36,6 +37,7 @@ public:
 	bool line_intersect(point const &p1, point const &p2, float *t=NULL) const;
 	void clear_vbo_mgr_ix() {vbo_mgr_ix = -1;}
 	void calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode=0);
+	void calc_palm_tree_points();
 	void update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail);
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_leaf_color() const {return color;}
@@ -111,7 +113,7 @@ struct small_tree_group : public vector<small_tree> {
 	void get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const;
 	void draw_trunks(bool shadow_only, vector3d const &xlate=zero_vector, vector<vert_wrap_t> *points=NULL) const;
 	void draw_pine_leaves(bool shadow_only, bool low_detail=0, bool draw_all_pine=0, bool sort_front_to_back=0, vector3d const &xlate=zero_vector, int xlate_loc=-1);
-	void draw_non_pine_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate=zero_vector) const;
+	void draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc, int scale_loc, vector3d const &xlate=zero_vector) const;
 	void gen_trees(int x1, int y1, int x2, int y2, float const density[4]);
 	unsigned get_gpu_mem() const {return (vbo_manager[0].get_gpu_mem() + vbo_manager[1].get_gpu_mem());}
 	bool is_uploaded(bool low_detail) const {return vbo_manager[low_detail].is_uploaded();}

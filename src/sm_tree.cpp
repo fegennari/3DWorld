@@ -46,7 +46,7 @@ sm_tree_type const stt[NUM_ST_TYPES] = { // w2, ws, h, ss, c, tid
 	sm_tree_type(0.13, 0.15, 0.75, 0.8, TREE_C,  TREE_HEMI_TEX, BARK3_TEX), // T_DECID // HEDGE_TEX?
 	sm_tree_type(0.13, 0.15, 0.75, 0.7, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_TDECID
 	sm_tree_type(0.00, 0.15, 0.00, 0.8, TREE_C,  HEDGE_TEX,     BARK1_TEX), // T_BUSH NOTE: bark texture is not used in trees, but is used in logs
-	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_TEX,      PALM_BARK_TEX), // T_PALM
+	sm_tree_type(0.03, 0.15, 1.00, 0.6, TREE_C,  PALM_FROND_TEX,PALM_BARK_TEX), // T_PALM
 	sm_tree_type(0.00, 0.07, 0.00, 0.4, PTREE_C, PINE_TEX,      BARK2_TEX), // T_SH_PINE
 };
 
@@ -279,21 +279,20 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 			}
 		}
 		else {
-			for (const_iterator i = begin(); i != end(); ++i) {
-				i->draw_pine_leaves(vbomgr, xlate);
-			}
+			for (const_iterator i = begin(); i != end(); ++i) {i->draw_pine_leaves(vbomgr, xlate);}
 		}
 		vbomgr.end_render();
 	}
 }
 
 
-void small_tree_group::draw_non_pine_leaves(bool shadow_only, int xlate_loc, int scale_loc, vector3d const &xlate) const {
+void small_tree_group::draw_non_pine_leaves(bool shadow_only, bool draw_palm, bool draw_non_palm, int xlate_loc, int scale_loc, vector3d const &xlate) const {
 
 	for (const_iterator i = begin(); i != end(); ++i) {
 		if (i->is_pine_tree()) continue;
 		assert(!instanced); // only pine trees can be instanced
 		int const type(i->get_type());
+		if (!((type == T_PALM) ? draw_palm : draw_non_palm)) continue;
 		if (i == begin() || (i-1)->get_type() != type) {select_texture(stt[type].leaf_tid);} // first of this type
 		i->draw_leaves(shadow_only, xlate_loc, scale_loc, xlate);
 	}
@@ -417,6 +416,7 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	float const relh(get_rel_height(zpos, -zmax_est, zmax_est));
 	if (relh > 0.9) return TREE_CLASS_NONE; // too high
 	if (relh > 0.6) return TREE_CLASS_PINE;
+	//if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
 	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
 	if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
 	return TREE_CLASS_DECID;
@@ -536,8 +536,9 @@ void draw_small_trees(bool shadow_only) {
 		s.begin_simple_textured_shader(0.75, !shadow_only); // with lighting, unless shadow_only
 		int const xlate_loc(s.get_uniform_loc("xlate")), scale_loc(s.get_uniform_loc("scale"));
 		bind_draw_sphere_vbo(1, 1); // texture, even in shadow pass, to handle alpha masking of some tree types
-		small_trees.draw_non_pine_leaves(shadow_only, xlate_loc, scale_loc);
+		small_trees.draw_non_pine_leaves(shadow_only, 0, 1, xlate_loc, scale_loc); // non-palm (deciduous) trees
 		bind_vbo(0);
+		small_trees.draw_non_pine_leaves(shadow_only, 1, 0, xlate_loc, scale_loc); // palm trees
 		s.set_uniform_vector3d(xlate_loc, zero_vector);
 		s.set_uniform_vector3d(scale_loc, vector3d(1,1,1));
 		s.end_shader();
@@ -717,15 +718,44 @@ bool small_tree::line_intersect(point const &p1, point const &p2, float *t) cons
 }
 
 
+void small_tree::calc_palm_tree_points() {
+
+	if (palm_verts != nullptr) return;
+	unsigned const num_fronds = 20;
+	float const frond_l(1.6), frond_hw(0.2), frond_dz(-0.2);
+	palm_verts.reset(new vector<vert_norm_tc>(8*num_fronds));
+	vector<vert_norm_tc> &verts(*palm_verts);
+	rand_gen_t rgen;
+	rgen.set_state(long(1000*color.R), long(1000*color.G)); // seed random number generator with the tree color, which is deterministic
+
+	for (unsigned n = 0, vix = 0; n < num_fronds; ++n) {
+		vector3d const dir(rgen.signed_rand_vector_norm(1.0));
+		float const dz(-0.4*rgen.rand_float());
+		vector3d const binorm(cross_product(dir, plus_z).get_norm());
+		vector3d const pa(0.0, 0.0, dz), pb(0.0, 0.0, dz+frond_dz), dx(frond_hw*binorm), dy(frond_l*dir);
+		point const p0(pb-dx), p14(pa), p27(pa+dy), p3(pb-dx+dy), p5(pb+dx), p6(pb+dx+dy);
+		vector3d const n1(cross_product(p14-p0, p27-p14).get_norm()), n2(cross_product(p5-p14, p6-p5).get_norm());
+		verts[vix++] = vert_norm_tc(p0,  n1, 0.0, 0.0); // 0
+		verts[vix++] = vert_norm_tc(p14, n1, 0.5, 0.0); // 1
+		verts[vix++] = vert_norm_tc(p27, n1, 0.5, 1.0); // 2
+		verts[vix++] = vert_norm_tc(p3,  n1, 0.0, 1.0); // 3
+		verts[vix++] = vert_norm_tc(p14, n2, 0.5, 0.0); // 4
+		verts[vix++] = vert_norm_tc(p5,  n2, 1.0, 0.0); // 5
+		verts[vix++] = vert_norm_tc(p6,  n2, 1.0, 1.0); // 6
+		verts[vix++] = vert_norm_tc(p27, n2, 0.5, 1.0); // 7
+	}
+}
+
+
 float small_tree::get_pine_tree_radius() const {
 
 	float const height0(((type == T_PINE) ? 0.75 : 1.0)*height/tree_height_scale);
 	return 0.35*(height0 + 0.03/tree_scale);
 }
 
-
 void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_detail, bool update_mode) {
 
+	if (type == T_PALM) {calc_palm_tree_points(); return;} // palm tree
 	if (!is_pine_tree()) return; // only for pine trees
 	float const sz_scale(SQRT2*get_pine_tree_radius()), dz((type == T_PINE) ? 0.35*height : 0.0);
 
@@ -766,7 +796,6 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 		vbo_manager.add_points(points, 4, color);
 	}
 }
-
 
 void small_tree::update_points_vbo(vbo_vnc_block_manager_t &vbo_manager, bool low_detail) {
 	if (vbo_mgr_ix >= 0) {calc_points(vbo_manager, low_detail, 1);}
@@ -865,8 +894,8 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 		scale = vector3d((0.1*height+0.8*width), (0.1*height+0.8*width), width);
 		break;
 	case T_PALM: // palm tree
-		xl.z  = 0.71*height-0.5*width;
-		scale = width*vector3d(1.2, 1.2, 0.5);
+		scale = width*vector3d(1.0, 1.0, 1.0);
+		xl.z  = trunk_cylin.p2.z - pos.z;
 		break;
 	}
 	int const nsides(max(6, min(N_SPHERE_DIV, (shadow_only ? get_def_smap_ndiv(width) : (int)(size_scale/distance_to_camera(pos + xlate))))));
@@ -880,7 +909,14 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 	assert(xlate_loc >= 0 && scale_loc >= 0);
 	shader_t::set_uniform_vector3d(xlate_loc, xl);
 	shader_t::set_uniform_vector3d(scale_loc, scale);
-	draw_sphere_vbo_pre_bound(nsides, !shadow_only, (type == T_PALM));
+
+	if (type == T_PALM) {
+		assert(palm_verts != nullptr);
+		draw_verts(*palm_verts, GL_QUADS);
+	}
+	else {
+		draw_sphere_vbo_pre_bound(nsides, !shadow_only, (type == T_PALM));
+	}
 	if (r_angle != 0.0) {fgPopMatrix();}
 }
 
