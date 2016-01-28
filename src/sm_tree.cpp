@@ -679,7 +679,7 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 		coll_id.push_back(add_coll_sphere(pos, 1.2*width, cp, -1, 1));
 		break;
 	case T_PALM: // palm tree
-		coll_id.push_back(add_coll_sphere((pos + 0.7*dirh), 0.7*width, cp, -1, 1));
+		coll_id.push_back(add_coll_sphere((pos + 0.7*dirh), 0.5*width, cp, -1, 1));
 		break;
 	default: assert(0);
 	}
