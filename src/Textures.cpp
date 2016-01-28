@@ -881,11 +881,11 @@ void texture_t::create_custom_mipmaps() {
 					if (a_sum == 0) { // fully transparent
 						if (use_mipmaps == 4) {UNROLL_3X(odata[ix1+i_] = cw.c[i_];)} // use average texture color
 						else { // color is average of all 4 values
-							UNROLL_3X(odata[ix1+i_] = (unsigned char)((idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) / 4);)
+							UNROLL_3X(odata[ix1+i_] = (unsigned char)(((unsigned)idata[ix2+i_] + idata[ix2+xinc+i_] + idata[ix2+yinc+i_] + idata[ix2+yinc+xinc+i_]) / 4);)
 						}
 						odata[ix1+3] = 0;
 					}
-					else {
+					else { // pre-multiplied and normalized colors
 						if (use_mipmaps == 4) {
 							unsigned const a_cw(1020 - a_sum); // use average texture color for transparent pixels
 							UNROLL_3X(odata[ix1+i_] = (unsigned char)((a1*idata[ix2+i_] + a2*idata[ix2+xinc+i_] + a3*idata[ix2+yinc+i_] + a4*idata[ix2+yinc+xinc+i_] + a_cw*cw.c[i_]) / 1020);)
