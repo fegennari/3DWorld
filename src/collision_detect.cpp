@@ -1927,14 +1927,20 @@ void create_sky_vis_zval_texture(unsigned &tid) {
 			float const xv(-X_SCENE_SIZE + (x + 0.5)*dx), yv(-Y_SCENE_SIZE + (y + 0.5)*dy);
 			float &zval(zvals[y*nx + x]);
 			bool z_set(0);
+			int cindex(-1);
 			
 			for (int sy = -1; sy <= 1; ++sy) { // take the min of 9 uniformly spaced samples in a grid pattern
 				for (int sx = -1; sx <= 1; ++sx) {
 					float const xr(0.5*dx*sx), yr(0.5*dy*sy), xb(xv + xr), yb(yv + yr), xt(xb + xr), yt(yb + yr);
+					point const p1(xt, yt, czmax), p2(xb, yb, czmin);
+
+					if (cindex >= 0) { // check if this ray intersects the same cobj at the same z-value
+						coll_obj const &c(coll_objects.get_cobj(cindex));
+						if ((c.type == COLL_CUBE || c.type == COLL_CYLINDER || (c.type == COLL_POLYGON && fabs(c.norm.z) > 0.99)) && c.line_intersect(p1, p2)) continue;
+					}
 					point cpos;
 					vector3d coll_norm; // unused
-					int cindex(-1); // unused
-					if (!check_coll_line_exact(point(xt, yt, czmax), point(xb, yb, czmin), cpos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 1, 0)) continue;
+					if (!check_coll_line_exact(p1, p2, cpos, coll_norm, cindex, 0.0, -1, 0, 0, 1, 1, 0)) continue;
 					zval  = (z_set ? min(zval, cpos.z) : cpos.z);
 					z_set = 1;
 				}
