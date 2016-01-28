@@ -522,9 +522,10 @@ void draw_small_trees(bool shadow_only) {
 	s.end_shader();
 
 	// draw leaves
+	float const wind_mag(get_plant_leaf_wind_mag(shadow_only));
+
 	if (small_trees.num_pine_trees > 0) { // pine trees
 		small_trees.vbo_manager[0].upload();
-		float const wind_mag(get_plant_leaf_wind_mag(shadow_only));
 		if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 		s.set_prefix("#define NO_SPECULAR", 1); // FS - disable rain effect
 		setup_smoke_shaders(s, 0.5, 3, 0, (v && tree_indir_lighting), v, v, 0, 0, v, 0, 0, v, v, 0.0, 0.0, 0, 0, 1); // dynamic lights, but no smoke, texgen, is_outside=1
@@ -544,7 +545,9 @@ void draw_small_trees(bool shadow_only) {
 			s.end_shader();
 		}
 		if (small_trees.num_palm_trees > 0) { // palm trees
+			if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 			setup_smoke_shaders(s, 0.9, 0, 0, 0, v, v, 0, 0, v, 0, 0, 0, 1); // dynamic lights, but no smoke (slow, but looks better)
+			setup_leaf_wind(s, wind_mag, 0);
 			small_trees.draw_non_pine_leaves(shadow_only, 1, 0);
 			s.end_shader();
 		}
@@ -744,14 +747,14 @@ void small_tree::calc_palm_tree_points() {
 		vector3d const n1(cross_product(p14-p0, p27-p14).get_norm()), n2(cross_product(p5-p14, p6-p5).get_norm());
 		float const brownness(0.5*rgen.rand_float() + 0.5*max(0.0f, -dir.z)); // fronds pointing down are browner
 		color_wrapper_ctor cw(color.modulate_with(BROWN*brownness + WHITE*(1.0-brownness))); // random per-frond color
-		verts[vix++].assign(p0,  n1, 0.0, 0.0, cw.c); // 0
-		verts[vix++].assign(p14, n1, 0.5, 0.0, cw.c); // 1
 		verts[vix++].assign(p27, n1, 0.5, 1.0, cw.c); // 2
 		verts[vix++].assign(p3,  n1, 0.0, 1.0, cw.c); // 3
-		verts[vix++].assign(p14, n2, 0.5, 0.0, cw.c); // 4
-		verts[vix++].assign(p5,  n2, 1.0, 0.0, cw.c); // 5
+		verts[vix++].assign(p0,  n1, 0.0, 0.0, cw.c); // 0
+		verts[vix++].assign(p14, n1, 0.5, 0.0, cw.c); // 1
 		verts[vix++].assign(p6,  n2, 1.0, 1.0, cw.c); // 6
 		verts[vix++].assign(p27, n2, 0.5, 1.0, cw.c); // 7
+		verts[vix++].assign(p14, n2, 0.5, 0.0, cw.c); // 4
+		verts[vix++].assign(p5,  n2, 1.0, 0.0, cw.c); // 5
 	}
 }
 
