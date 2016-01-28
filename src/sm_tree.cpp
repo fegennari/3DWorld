@@ -24,7 +24,7 @@ small_tree_group small_trees;
 small_tree_group tree_instances;
 pt_line_drawer tree_scenery_pld;
 
-extern bool tree_indir_lighting;
+extern bool tree_indir_lighting, only_pine_palm_trees;
 extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern unsigned max_unique_trees;
@@ -420,7 +420,7 @@ int get_tree_class_from_height(float zpos, bool pine_trees_only) {
 	//if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
 	if (pine_trees_only) {return ((tree_mode == 3) ? TREE_CLASS_NONE : TREE_CLASS_PINE);}
 	if (zpos < 0.85*water_plane_z && relh < 0.435) return TREE_CLASS_PALM;
-	return TREE_CLASS_DECID;
+	return (only_pine_palm_trees ? TREE_CLASS_PINE : TREE_CLASS_DECID);
 }
 
 

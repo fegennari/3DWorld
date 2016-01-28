@@ -31,7 +31,8 @@ ground_effects_level 9
 
 #water_h_off 0.0 0.1
 #relh_adj_tex -0.1
-force_tree_class 1 # <0 : ignore
+#force_tree_class 1 # <0 : ignore
+only_pine_palm_trees 1 # pine and palm trees
 
 include config_gameplay.txt
 unlimited_weapons 0
