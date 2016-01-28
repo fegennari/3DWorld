@@ -846,7 +846,7 @@ struct vert_norm_tc_tan : public vert_norm_tc { // size = 48
 };
 
 
-struct color_wrapper { // size = 4
+struct color_wrapper { // size = 4, can be used in a union
 	unsigned char c[4]; // Note: c[3] (alpha component) is not used in all cases
 
 	template<typename T> void set_c3(T const &c_) {UNROLL_3X(c[i_] = (unsigned char)(255.0*CLIP_TO_01(c_[i_]));) c[3] = 255;}
@@ -855,6 +855,12 @@ struct color_wrapper { // size = 4
 	colorRGB  get_c3() const {return colorRGB(c[0]/255.0, c[1]/255.0, c[2]/255.0);}
 	colorRGBA get_c4() const {return colorRGBA(get_c3(), c[3]/255.0);}
 	static bool is_compressed() {return 1;}
+};
+
+struct color_wrapper_ctor : public color_wrapper { // size = 4
+	color_wrapper_ctor() {}
+	color_wrapper_ctor(colorRGB  const &color) {set_c3(color);}
+	color_wrapper_ctor(colorRGBA const &color) {set_c4(color);}
 };
 
 

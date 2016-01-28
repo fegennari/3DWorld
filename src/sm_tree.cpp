@@ -595,7 +595,7 @@ small_tree::small_tree(point const &p, float h, float w, int t, bool calc_z, ran
 		color   = colorgen(0.05, 0.1, 0.3, 0.6, 0.15, 0.35, rgen);
 		break;
 	case T_PALM: // palm tree
-		color   = colorgen(0.6, 1.0, 0.6, 1.0, 0.6, 1.0, rgen);
+		color   = colorgen(0.9, 1.0, 0.9, 1.0, 0.9, 1.0, rgen);
 		width  *= 1.4;
 		height *= 2.0;
 		break;
@@ -728,10 +728,10 @@ void small_tree::calc_palm_tree_points() {
 
 	if (palm_verts != nullptr) return;
 	unsigned const num_fronds = 20;
-	float const frond_l(1.6*width), frond_hw(0.2*width), frond_dz(-0.2*width);
+	float const frond_l(0.3*height), frond_hw(0.2*width), frond_dz(-0.2*width);
 	vector3d const dir(trunk_cylin.get_norm_dir_vect());
-	palm_verts.reset(new vector<vert_norm_tc>(8*num_fronds));
-	vector<vert_norm_tc> &verts(*palm_verts);
+	palm_verts.reset(new vector<vert_norm_tc_color>(8*num_fronds));
+	vector<vert_norm_tc_color> &verts(*palm_verts);
 	rand_gen_t rgen;
 	rgen.set_state(long(1000*color.R), long(1000*color.G)); // seed random number generator with the tree color, which is deterministic
 
@@ -742,14 +742,16 @@ void small_tree::calc_palm_tree_points() {
 		vector3d const pa(trunk_cylin.p2 + vector3d(0.0, 0.0, dz)), pb(pa + vector3d(0.0, 0.0, frond_dz)), dx(frond_hw*binorm), dy(frond_l*dir);
 		point const p0(pb-dx), p14(pa), p27(pa+dy), p3(pb-dx+dy), p5(pb+dx), p6(pb+dx+dy);
 		vector3d const n1(cross_product(p14-p0, p27-p14).get_norm()), n2(cross_product(p5-p14, p6-p5).get_norm());
-		verts[vix++] = vert_norm_tc(p0,  n1, 0.0, 0.0); // 0
-		verts[vix++] = vert_norm_tc(p14, n1, 0.5, 0.0); // 1
-		verts[vix++] = vert_norm_tc(p27, n1, 0.5, 1.0); // 2
-		verts[vix++] = vert_norm_tc(p3,  n1, 0.0, 1.0); // 3
-		verts[vix++] = vert_norm_tc(p14, n2, 0.5, 0.0); // 4
-		verts[vix++] = vert_norm_tc(p5,  n2, 1.0, 0.0); // 5
-		verts[vix++] = vert_norm_tc(p6,  n2, 1.0, 1.0); // 6
-		verts[vix++] = vert_norm_tc(p27, n2, 0.5, 1.0); // 7
+		float const brownness(0.5*rgen.rand_float() + 0.5*max(0.0f, -dir.z)); // fronds pointing down are browner
+		color_wrapper_ctor cw(color.modulate_with(BROWN*brownness + WHITE*(1.0-brownness))); // random per-frond color
+		verts[vix++].assign(p0,  n1, 0.0, 0.0, cw.c); // 0
+		verts[vix++].assign(p14, n1, 0.5, 0.0, cw.c); // 1
+		verts[vix++].assign(p27, n1, 0.5, 1.0, cw.c); // 2
+		verts[vix++].assign(p3,  n1, 0.0, 1.0, cw.c); // 3
+		verts[vix++].assign(p14, n2, 0.5, 0.0, cw.c); // 4
+		verts[vix++].assign(p5,  n2, 1.0, 0.0, cw.c); // 5
+		verts[vix++].assign(p6,  n2, 1.0, 1.0, cw.c); // 6
+		verts[vix++].assign(p27, n2, 0.5, 1.0, cw.c); // 7
 	}
 }
 
@@ -887,7 +889,6 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 	if (!(tree_mode & 2)) return; // disabled
 	assert(!is_pine_tree()); // handled through draw_pine_leaves()
 	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_visible_pine(xlate)) return;
-	if (!shadow_only) {color.set_for_cur_shader();}
 
 	if (type == T_PALM) {
 		assert(palm_verts != nullptr);
@@ -923,6 +924,7 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 	assert(xlate_loc >= 0 && scale_loc >= 0);
 	shader_t::set_uniform_vector3d(xlate_loc, xl);
 	shader_t::set_uniform_vector3d(scale_loc, scale);
+	if (!shadow_only) {color.set_for_cur_shader();}
 	draw_sphere_vbo_pre_bound(nsides, !shadow_only, (type == T_PALM));
 	if (r_angle != 0.0) {fgPopMatrix();}
 }

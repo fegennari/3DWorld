@@ -22,7 +22,7 @@ class small_tree { // size = 121 (124)
 	colorRGBA color, bark_color;
 	cylinder_3dw trunk_cylin;
 	vector<int> coll_id;
-	std::shared_ptr<vector<vert_norm_tc>> palm_verts; // for palm trees only
+	std::shared_ptr<vector<vert_norm_tc_color>> palm_verts; // for palm trees only
 
 public:
 	small_tree() : type(-1), inst_id(-1), height(0.0), width(0.0), r_angle(0.0), rx(0.0), ry(0.0) {clear_vbo_mgr_ix();}
