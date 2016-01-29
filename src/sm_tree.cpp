@@ -660,13 +660,16 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 		cp.tid       = stt[type].leaf_tid;
 		cp_trunk.tid = stt[type].bark_tid;
 	}
+	cp.color       = color;
+	cp_trunk.color = bark_color;
 	if (type != T_BUSH && type != T_SH_PINE) {coll_id.push_back(add_coll_cylinder(trunk_cylin, cp_trunk, -1, 1));}
 	vector3d const dirh(get_rot_dir()*height);
 
 	switch (type) {
 	case T_PINE: // pine tree
 	case T_SH_PINE: // short pine tree
-		// Note: smaller than the actual pine tree render at the base so that it's easier for the player to walk under pine trees
+		// Note2: smaller than the actual pine tree render at the base so that it's easier for the player to walk under pine trees
+		// Note2: could use the actual pine tree branch polygons, but that may be too conservative and too slow
 		coll_id.push_back(add_coll_cylinder((pos + ((type == T_PINE) ? 0.35*dirh : all_zeros)), (pos + dirh), get_pine_tree_radius(), 0.0, cp, -1, 1));
 		break;
 	case T_DECID: // decidious tree
@@ -679,7 +682,13 @@ void small_tree::add_cobjs(cobj_params &cp, cobj_params &cp_trunk) {
 		coll_id.push_back(add_coll_sphere(pos, 1.2*width, cp, -1, 1));
 		break;
 	case T_PALM: // palm tree
-		coll_id.push_back(add_coll_sphere((pos + 0.7*dirh), 0.5*width, cp, -1, 1));
+		assert(palm_verts != nullptr && !palm_verts->empty());
+		for (unsigned i = 0; i < palm_verts->size(); i += 4) { // iterate over the quads
+			point pts[4];
+			for (unsigned p = 0; p < 4; ++p) {pts[p] = (*palm_verts)[i+p].v;}
+			cp.color = color.modulate_with((*palm_verts)[i].get_c4());
+			coll_id.push_back(add_coll_polygon(pts, 4, cp, 0.0, -1, 1));
+		}
 		break;
 	default: assert(0);
 	}
