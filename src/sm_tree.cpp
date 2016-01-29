@@ -223,7 +223,7 @@ void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> >
 	point const ref_pos(get_camera_pos() - xlate);
 
 	for (const_iterator i = begin(); i != end(); ++i) {
-		if (i->is_visible_pine(xlate)) {to_draw.push_back(make_pair(p2p_dist_sq(i->get_pos(), ref_pos), i-begin()));}
+		if (i->is_tree_visible(xlate)) {to_draw.push_back(make_pair(p2p_dist_sq(i->get_pos(), ref_pos), i-begin()));}
 	}
 	sort(to_draw.begin(), to_draw.end()); // sort front to back for early Z culling
 }
@@ -241,7 +241,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 			insts.clear();
 
 			for (const_iterator i = begin(); i != end(); ++i) {
-				if (draw_all_pine || i->is_visible_pine(xlate)) {insts.push_back(pine_tree_inst_t(i->get_inst_id(), i->get_pos()));}
+				if (draw_all_pine || i->is_tree_visible(xlate)) {insts.push_back(pine_tree_inst_t(i->get_inst_id(), i->get_pos()));}
 			}
 			if (insts.empty()) return; // nothing to draw
 			sort(insts.begin(), insts.end());
@@ -843,20 +843,21 @@ void small_tree::draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned 
 }
 
 
-bool small_tree::is_visible_pine(vector3d const &xlate) const {
+bool small_tree::is_tree_visible(vector3d const &xlate) const {
+	// occlusion culling?
 	return camera_pdu.sphere_visible_test((pos + xlate + point(0.0, 0.0, 0.5*height)), max(1.5*width, 0.5*height));
 }
 
 
 void small_tree::draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const {
-	if (is_pine_tree() && is_visible_pine(xlate)) {draw_pine(vbo_manager);}
+	if (is_pine_tree() && is_tree_visible(xlate)) {draw_pine(vbo_manager);}
 }
 
 
 void small_tree::draw_trunks(bool shadow_only, vector3d const &xlate, vector<vert_wrap_t> *points, vector<vert_norm_tc> *cylin_verts) const {
 
 	if (!(tree_mode & 2) || type == T_BUSH) return; // disabled, or no trunk/bark
-	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_visible_pine(xlate)) return;
+	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_tree_visible(xlate)) return;
 	float const zoom_f(do_zoom ? ZOOM_FACTOR : 1.0), size_scale(zoom_f*stt[type].ss*width*window_width);
 	float const dist(distance_to_camera(pos + xlate));
 	if (!shadow_only && size_scale < dist) return; // too small/far
@@ -900,7 +901,7 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 
 	if (!(tree_mode & 2)) return; // disabled
 	assert(!is_pine_tree()); // handled through draw_pine_leaves()
-	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_visible_pine(xlate)) return;
+	if (shadow_only ? !is_over_mesh(pos + xlate + point(0.0, 0.0, 0.5*height)) : !is_tree_visible(xlate)) return;
 
 	if (type == T_PALM) {
 		assert(palm_verts != nullptr);

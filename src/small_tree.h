@@ -42,7 +42,7 @@ public:
 	void add_trunk_as_line(vector<point> &points) const;
 	colorRGBA get_leaf_color() const {return color;}
 	void draw_pine(vbo_vnc_block_manager_t const &vbo_manager, unsigned num_instances=1) const;
-	bool is_visible_pine(vector3d const &xlate) const;
+	bool is_tree_visible(vector3d const &xlate) const;
 	void draw_pine_leaves(vbo_vnc_block_manager_t const &vbo_manager, vector3d const &xlate) const;
 	void draw_trunks(bool shadow_only, vector3d const &xlate=zero_vector,
 		vector<vert_wrap_t> *points=NULL, vector<vert_norm_tc> *cylin_verts=NULL) const;
