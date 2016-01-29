@@ -225,6 +225,16 @@ class object_file_reader_model : public object_file_reader, public model_from_fi
 		return 1;
 	}
 
+	bool read_color_rgb(ifstream &in, string const &name, colorRGB &color) const {
+		// Note: does not support "xyz" CIE-XYZ color space specification
+		if (!(in >> color.R)) {cerr << "Error reading material " << name << endl; return 0;}
+		if (!(in >> color.G >> color.B)) { // G and B are optional
+			in.clear(); // clear error bits
+			color.G = color.B = color.R; // grayscale
+		}
+		return 1;
+	}
+
 public:
 	object_file_reader_model(string const &fn, model3d &model_) : object_file_reader(fn), model_from_file_t(fn, model_) {}
 
@@ -256,19 +266,19 @@ public:
 			}
 			else if (s == "ka") {
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->ka.R >> cur_mat->ka.G >> cur_mat->ka.B)) {cerr << "Error reading material Ka" << endl; return 0;}
+				if (!read_color_rgb(mat_in, "Ka", cur_mat->ka)) return 0;
 			}
 			else if (s == "kd") {
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->kd.R >> cur_mat->kd.G >> cur_mat->kd.B)) {cerr << "Error reading material Kd" << endl; return 0;}
+				if (!read_color_rgb(mat_in, "Kd", cur_mat->kd)) return 0;
 			}
 			else if (s == "ks") {
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->ks.R >> cur_mat->ks.G >> cur_mat->ks.B)) {cerr << "Error reading material Ks" << endl; return 0;}
+				if (!read_color_rgb(mat_in, "Ks", cur_mat->ks)) return 0;
 			}
 			else if (s == "ke") {
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->ke.R >> cur_mat->ke.G >> cur_mat->ke.B)) {cerr << "Error reading material Ke" << endl; return 0;}
+				if (!read_color_rgb(mat_in, "Ke", cur_mat->ke)) return 0;
 			}
 			else if (s == "ns") { // specular exponent
 				assert(cur_mat);
@@ -278,7 +288,7 @@ public:
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->ni)) {cerr << "Error reading material Ni" << endl; return 0;}
 			}
-			else if (s == "d") { // alpha
+			else if (s == "d") { // dissolve, treated as alpha
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->alpha)) {cerr << "Error reading material d" << endl; return 0;}
 			}
@@ -288,12 +298,18 @@ public:
 			}
 			else if (s == "tf") { // transmittion filter
 				assert(cur_mat);
-				if (!(mat_in >> cur_mat->tf.R >> cur_mat->tf.G >> cur_mat->tf.B)) {cerr << "Error reading material Tf" << endl; return 0;}
+				if (!read_color_rgb(mat_in, "Tf", cur_mat->tf)) return 0;
 			}
 			else if (s == "illum") { // 0 - 10
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->illum)) {cerr << "Error reading material Tr" << endl; return 0;}
 			}
+			else if (s == "sharpness") { // Note: unused
+				assert(cur_mat);
+				float sharpness; // Note: unused
+				if (!(mat_in >> sharpness)) {cerr << "Error reading material sharpness" << endl; return 0;}
+			}
+			// Note: may want to support the -clamp option to clamp textures
 			else if (s == "map_ka") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ka" << endl; return 0;}
@@ -302,14 +318,14 @@ public:
 			else if (s == "map_kd") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Kd" << endl; return 0;}
-				check_and_bind(cur_mat->d_tid, tfn, 0, verbose);
+				check_and_bind(cur_mat->d_tid, tfn, 0, verbose); // invert=0, wrap=1, mirror=0
 			}
 			else if (s == "map_ks") {
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
 				check_and_bind(cur_mat->s_tid, tfn, 0, verbose);
 			}
-			else if (s == "map_d") {
+			else if (s == "map_d") { // dissolve
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_d" << endl; return 0;}
 				check_and_bind(cur_mat->alpha_tid, tfn, 1, verbose);
@@ -329,6 +345,13 @@ public:
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_refl" << endl; return 0;}
 				check_and_bind(cur_mat->refl_tid, tfn, 0, verbose);
 			}
+			else if (s == "map_Ns") { // Note: unused
+				assert(cur_mat);
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns" << endl; return 0;}
+			}
+			//else if (s == "map_aat") {} // toggle antialiasing
+			//else if (s == "decal") {} // modifies color
+			//else if (s == "dist") {} // displacement
 			else if (s == "skip") { // skip this material
 				assert(cur_mat);
 				if (!(mat_in >> cur_mat->skip)) {cerr << "Error reading material skip" << endl; return 0;}

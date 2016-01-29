@@ -930,7 +930,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		if (ns > 0.0) {shader.set_specular_color(ks, ns);} // ns<=0 is undefined?
 		shader.set_color_e(colorRGBA(ke, alpha));
 		// Note: ka is ignored here because it represents a "fake" lighting model;
-		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material
+		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material;
+		// however, it might make sense to use ka instead of ke when ke is not specified?
 		shader.set_cur_color(get_ad_color());
 		geom.render(shader, 0);
 		geom_tan.render(shader, 0);
