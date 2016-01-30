@@ -1807,6 +1807,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos) {
 
+	if (world_mode == WMODE_INF_TERRAIN) return 0;
 	bool ice_int(0);
 	vector3d const vca(pos + vcf*FAR_CLIP);
 	point ice_coll_pos(vca);
@@ -2178,6 +2179,12 @@ float get_projectile_range(point const &pos, vector3d vcf, float dist, float ran
 	point const pos1(pos + vcf*dist), pos2(pos + vcf*range);
 	coll = 0;
 
+	if (world_mode == WMODE_INF_TERRAIN) {
+		coll = line_intersect_tiled_mesh(pos1, pos2, coll_pos);
+		if (coll) {range = p2p_dist(coll_pos, pos); coll_norm = plus_z;}
+		cindex = -1;
+		return range;
+	}
 	if (check_coll_line_exact(pos1, pos2, coll_pos, coll_norm, cindex, splash_val, ignore_cobj)) {
 		coll_obj &cobj(coll_objects.get_cobj(cindex));
 		if (cobj.cp.coll_func) {cobj.cp.coll_func(cobj.cp.cf_index, 0, zero_vector, pos, 0.0, PROJC);} // apply collision function

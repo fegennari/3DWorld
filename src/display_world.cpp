@@ -1236,6 +1236,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 		camera_surf_collide = 1;
 	}
 	camera_view = 0;
+	if (animate2) {advance_physics_objects();} // is this correct/necessary?
 	if (camera_surf_collide) {check_player_tiled_terrain_collision();}
 	update_temperature(0);
 	point const camera(get_camera_pos());
@@ -1273,7 +1274,6 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	}
 	//draw_puffy_clouds(0);
 	draw_camera_weapon(0);
-	draw_camera_weapon(1);
 	bool const camera_above_clouds(camera.z > get_tt_cloud_level());
 	draw_cloud_planes(terrain_zmin, 0, !camera_above_clouds, 1); // these two lines could go in either order
 	draw_sun_flare();
@@ -1289,6 +1289,7 @@ void display_inf_terrain() { // infinite terrain mode (Note: uses light params f
 	if (!underwater) {draw_tiled_terrain_clouds(0);}
 	if (!underwater) {draw_local_precipitation();}
 	draw_cloud_planes(terrain_zmin, 0, camera_above_clouds, 0);
+	draw_game_elements(timer1);
 	if (change_near_far_clip) {check_zoom();} // reset perspective (may be unnecessary since will be reset on the next frame)
 	check_xy_offsets();
 	init_x = 0;
