@@ -1723,12 +1723,12 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 		if (shader_effects  ) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 		if (use_custom_smaps) {m->setup_shadow_maps();} else if (!is_shadow_pass) {m->clear_smaps();}
 	}
+	shader_t s;
 
 	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
 	for (int bmap_pass = (needs_bump_maps ? 2 : 1); bmap_pass >= 0; --bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
 			bool reset_bscale(0);
-			shader_t s;
 
 			if (is_shadow_pass) {
 				setup_smap_shader(s, (sam_pass != 0));

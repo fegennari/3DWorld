@@ -562,10 +562,9 @@ void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, 
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
-void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
+void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, shader_t &s, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
 
 	if (cobjs.empty()) return;
-	shader_t s;
 	setup_cobj_shader(s, 0, use_normal_map, use_texgen, use_reflect_tex); // no lt_atten
 	if (use_reflect_tex) {bind_texture_tu(reflection_tid, 14);}
 	cdb.clear();
@@ -787,11 +786,11 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	} // end draw_trans
 	s.clear_specular(); // may be unnecessary
 	s.end_shader();
-	draw_cobjs_group(normal_map_cobjs,   cdb, 2, 1, 0);
-	draw_cobjs_group(tex_coord_nm_cobjs, cdb, 0, 1, 0);
-	draw_cobjs_group(tex_coord_cobjs,    cdb, 0, 0, 0);
-	draw_cobjs_group(reflect_cobjs,      cdb, 2, 0, 1);
-	draw_cobjs_group(reflect_cobjs_nm,   cdb, 2, 1, 1);
+	draw_cobjs_group(normal_map_cobjs,   cdb, s, 2, 1, 0);
+	draw_cobjs_group(tex_coord_nm_cobjs, cdb, s, 0, 1, 0);
+	draw_cobjs_group(tex_coord_cobjs,    cdb, s, 0, 0, 0);
+	draw_cobjs_group(reflect_cobjs,      cdb, s, 2, 0, 1);
+	draw_cobjs_group(reflect_cobjs_nm,   cdb, s, 2, 1, 1);
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }
 
