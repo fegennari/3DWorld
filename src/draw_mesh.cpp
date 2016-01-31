@@ -263,9 +263,9 @@ void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_wa
 	s.check_for_fog_disabled();
 	if (cloud_shadows) {s.set_prefix("#define ENABLE_CLOUD_SHADOWS", 1);} // FS
 	setup_detail_normal_map_prefix(s, detail_normal_map);
-	s.set_bool_prefix("indir_lighting", indir_lighting, 1); // FS
-	s.set_bool_prefix("hemi_lighting",  0, 1); // FS (disabled)
-	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("hemi_lighting",  0), 1); // FS (disabled)
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map", shadow_map_enabled()), 1); // FS
 	s.set_vert_shader("texture_gen.part+draw_mesh");
 	s.set_frag_shader("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+indir_lighting.part+linear_fog.part+detail_normal_map.part+cloud_sphere_shadow.part+draw_mesh");
 	s.begin_shader();
@@ -745,12 +745,12 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	s.setup_enabled_lights(3, 2); // FS
 	setup_tt_fog_pre(s);
 	bool const use_foam(!water_is_lava), enable_shadow_maps(use_depth && shadow_map_enabled()); // shadow maps are enabled during the normal pass that uses depth
-	s.set_bool_prefix("use_foam",    use_foam,      1); // FS
-	s.set_bool_prefix("reflections", reflections,   1); // FS
-	s.set_bool_prefix("add_waves",   add_waves,     1); // FS
-	s.set_bool_prefix("add_rain",    (rain_mode && 1), 1); // FS
-	s.set_bool_prefix("add_noise",   (rain_mode && 0), 1); // FS
-	s.set_bool_prefix("is_lava",     water_is_lava, 1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_foam",    use_foam),         1); // FS
+	s.set_prefix(make_shader_bool_prefix("reflections", reflections),      1); // FS
+	s.set_prefix(make_shader_bool_prefix("add_waves",   add_waves),        1); // FS
+	s.set_prefix(make_shader_bool_prefix("add_rain",    (rain_mode && 1)), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("add_noise",   (rain_mode && 0)), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("is_lava",     water_is_lava),    1); // FS
 	set_smap_enable_for_shader(s, enable_shadow_maps, 1); // FS
 	
 	if (use_tess) { // tessellation shaders

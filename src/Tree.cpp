@@ -375,13 +375,13 @@ void set_leaf_shader(shader_t &s, float min_alpha, unsigned tc_start_ix, bool en
 	float const water_depth(setup_underwater_fog(s, 0)); // VS
 	bool const use_indir(tree_indir_lighting && smoke_tid);
 	bool const use_smap(enable_smap && shadow_map_enabled());
-	s.set_bool_prefix("indir_lighting", use_indir, shader_type);
+	s.set_prefix(make_shader_bool_prefix("indir_lighting", use_indir), shader_type);
 	if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
 	s.check_for_fog_disabled();
 	s.setup_enabled_lights(2, (1<<shader_type));
-	s.set_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled), shader_type);
+	s.set_prefix(make_shader_bool_prefix("enable_light2", (world_mode == WMODE_INF_TERRAIN && tt_lightning_enabled)), shader_type);
 	set_dlights_booleans(s, !no_dlights, shader_type, 1); // no_dl_smap=1
-	s.set_bool_prefix("use_shadow_map", use_smap, shader_type);
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_smap), shader_type);
 	if (use_smap) {s.set_prefix("#define ENABLE_LEAF_SMAP", shader_type);} // need to set this as well to avoid even using the shadow texture in the shader on ATI cards
 	string const ls_str("ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+leaf_lighting_comp.part*+tree_leaf_lighting.part*");
 

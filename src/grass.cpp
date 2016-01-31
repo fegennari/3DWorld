@@ -33,7 +33,7 @@ void detail_scenery_t::setup_shaders_pre(shader_t &s) { // used for grass and fl
 	s.setup_enabled_lights(2, 2); // FS; L0-L1: static directional
 	if (set_dlights_booleans(s, 1, 1)) {s.set_prefix("#define NO_DL_SPECULAR", 1);} // FS
 	s.check_for_fog_disabled();
-	s.set_bool_prefix("use_shadow_map", shadow_map_enabled(), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map", shadow_map_enabled()), 1); // FS
 }
 
 void detail_scenery_t::setup_shaders_post(shader_t &s) { // used for grass and flowers

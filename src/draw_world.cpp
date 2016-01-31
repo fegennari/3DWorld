@@ -216,7 +216,7 @@ bool set_dlights_booleans(shader_t &s, bool enable, int shader_type, bool no_dl_
 		if (has_line_lights) {s.set_prefix("#define HAS_LINE_LIGHTS", shader_type);}
 		if (dl_smap_enabled && !no_dl_smap) {s.set_prefix("#define HAS_DLIGHT_SMAP", shader_type);}
 	}
-	s.set_bool_prefix("enable_dlights", dl_en, shader_type);
+	s.set_prefix(make_shader_bool_prefix("enable_dlights", dl_en), shader_type);
 	return dl_en;
 }
 
@@ -230,9 +230,9 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	s.check_for_fog_disabled();
 	if (min_alpha == 0.0) {s.set_prefix("#define NO_ALPHA_TEST", 1);} // FS
 	if (use_shadow_map && dynamic_smap_bias) {s.set_prefix("#define DYNAMIC_SMAP_BIAS", 1);} // FS
-	s.set_bool_prefix("indir_lighting", indir_lighting, 1); // FS
-	s.set_bool_prefix("hemi_lighting",  hemi_lighting,  1); // FS
-	s.set_bool_prefix("use_shadow_map", use_shadow_map, 1); // FS
+	s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("hemi_lighting",  hemi_lighting),  1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_shadow_map), 1); // FS
 	set_dlights_booleans(s, dlights, 1, no_dl_smap); // FS
 }
 
@@ -282,14 +282,14 @@ bool is_smoke_in_use() {return (smoke_exists || use_smoke_for_fog);}
 void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, bool direct_lighting,
 	bool smoke_enabled, int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool use_tsl)
 {
-	s.set_int_prefix ("use_texgen",          use_texgen,      0); // VS
-	s.set_bool_prefix("keep_alpha",          keep_alpha,      1); // FS
-	s.set_bool_prefix("direct_lighting",     direct_lighting, 1); // FS
-	s.set_bool_prefix("do_cube_lt_atten",    ((has_lt_atten & 1) != 0), 1); // FS
-	s.set_bool_prefix("do_sphere_lt_atten",  ((has_lt_atten & 2) != 0), 1); // FS
-	s.set_bool_prefix("two_sided_lighting",  use_tsl,         1); // FS
-	s.set_bool_prefix("use_fg_ViewMatrix",   use_mvm,         0); // VS
-	s.set_bool_prefix("enable_clip_plane_z", enable_clip_plane_z, 1); // FS
+	s.set_int_prefix("use_texgen", use_texgen, 0); // VS
+	s.set_prefix(make_shader_bool_prefix("keep_alpha",          keep_alpha),      1); // FS
+	s.set_prefix(make_shader_bool_prefix("direct_lighting",     direct_lighting), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("do_cube_lt_atten",    ((has_lt_atten & 1) != 0)), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("do_sphere_lt_atten",  ((has_lt_atten & 2) != 0)), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("two_sided_lighting",  use_tsl), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_fg_ViewMatrix",   use_mvm), 0); // VS
+	s.set_prefix(make_shader_bool_prefix("enable_clip_plane_z", enable_clip_plane_z), 1); // FS
 	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP",   1);} // FS
 	if (use_smap && shadow_map_enabled()) {s.set_prefix("#define USE_SHADOW_MAP", 1);} // FS
 
@@ -324,7 +324,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 float setup_underwater_fog(shader_t &s, int shader_type) {
 	float water_depth(0.0);
 	bool const underwater((world_mode == WMODE_GROUND) ? is_underwater(get_camera_pos(), 1, &water_depth) : 0);
-	s.set_bool_prefix("underwater", underwater, shader_type);
+	s.set_prefix(make_shader_bool_prefix("underwater", underwater), shader_type);
 	return water_depth;
 }
 
@@ -462,8 +462,8 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 		//s.set_prefix("#define USE_BUMP_MAP_INDIR", 1); // FS
 		//s.set_prefix("#define USE_BUMP_MAP_DL",    1); // FS
 	}
-	s.set_bool_prefix("use_noise_tex", use_noise_tex, 1); // FS
-	s.set_bool_prefix("z_top_test",    z_top_test,    1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_noise_tex", use_noise_tex), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("z_top_test",    z_top_test),    1); // FS
 	s.setup_enabled_lights(2, 2); // FS; only 2, but could be up to 8 later
 	s.set_vert_shader("procedural_gen");
 	s.set_frag_shader("linear_fog.part+bump_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+triplanar_texture.part+procedural_texture.part+indir_lighting.part+voxel_texture.part+triplanar_bump_map.part+procedural_gen");

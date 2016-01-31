@@ -14,6 +14,8 @@ unsigned const TEX0_T_ATTR       = 1;
 unsigned const TANGENT_ATTR      = 2;
 unsigned const NUM_SHADER_TYPES  = 6;
 
+#define make_shader_bool_prefix(name, val) ((val) ? ("const bool " name " = true;") : ("const bool " name " = false;"))
+
 
 struct gl_light_params_t {
 
@@ -165,8 +167,8 @@ public:
 
 	void set_prefix_str(string const &prefix, unsigned shader_type) {set_prefix(prefix.c_str(), shader_type);}
 	void set_prefix(char const *const prefix, unsigned shader_type);
-	void set_bool_prefix(char const *const name, bool val, unsigned shader_type);
-	void set_bool_prefixes(char const *const name, bool val, unsigned shaders_enabled=3);
+	void set_prefixes_str(string const &prefix, unsigned shaders_enabled=3) {set_prefixes(prefix.c_str(), shaders_enabled);}
+	void set_prefixes(char const *const prefix, unsigned shaders_enabled=3);
 	void set_int_prefix(char const *const name, int val, unsigned shader_type);
 
 	void set_color_e(colorRGBA const &color);

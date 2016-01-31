@@ -404,7 +404,7 @@ void draw_cloud_planes(float terrain_zmin, bool reflection_pass, bool draw_ceil,
 	if ((display_mode & 0x40) == 0) { // on by default
 		setup_tt_fog_pre(s);
 		s.set_prefix("#define NUM_OCTAVES 8", 1); // FS
-		s.set_bool_prefix("underwater_atten", fog_enabled, 1); // FS
+		s.set_prefix(make_shader_bool_prefix("underwater_atten", fog_enabled), 1); // FS
 		s.set_vert_shader("water_fog.part*+clouds");
 		s.set_frag_shader("linear_fog.part+perlin_clouds.part*+clouds"); // Note: could also apply water fog in fragment shader
 		s.begin_shader();
@@ -502,7 +502,7 @@ void vpc_shader_t::cache_locs() {
 	s.set_prefix("#define NUM_OCTAVES 5", 1); // FS
 	if (ridged) {s.set_prefix("#define RIDGED_NOISE", 1);} // FS
 	s.set_int_prefix("noise_ncomp", noise_ncomp, 1); // FS
-	s.set_bool_prefix("line_mode", (draw_model == 1), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("line_mode", (draw_model == 1)), 1); // FS
 	s.set_vert_shader("nebula");
 	s.set_frag_shader("nebula");
 	s.begin_shader();

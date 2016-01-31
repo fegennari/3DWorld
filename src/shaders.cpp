@@ -416,7 +416,6 @@ void shader_t::setup_fog_scale() const {
 }
 
 void shader_t::check_for_fog_disabled() {
-
 	if (!fog_enabled) {for (unsigned d = 0; d < 2; ++d) {set_prefix("#define NO_FOG", d);}} // VS/FS
 }
 
@@ -433,22 +432,12 @@ void shader_t::set_prefix(char const *const prefix, unsigned shader_type) {
 	prepend_string[shader_type].push_back('\n');
 }
 
-
-void shader_t::set_bool_prefix(char const *const name, bool val, unsigned shader_type) {
-	
-	set_prefix_str((string("const bool ") + name + (val ? " = true;" : " = false;")), shader_type);
-}
-
-
-void shader_t::set_bool_prefixes(char const *const name, bool val, unsigned shaders_enabled) {
-
-	string const prefix(string("const bool ") + name + (val ? " = true;" : " = false;"));
+void shader_t::set_prefixes(char const *const prefix, unsigned shaders_enabled) {
 
 	for (unsigned s = 0; s < NUM_SHADER_TYPES; ++s) { // put into correct shader(s): V, F, G, TC, TE, C
-		if (shaders_enabled & (1<<s)) {set_prefix_str(prefix, s);}
+		if (shaders_enabled & (1<<s)) {set_prefix(prefix, s);}
 	}
 }
-
 
 void shader_t::set_int_prefix(char const *const name, int val, unsigned shader_type) {
 	

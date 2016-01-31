@@ -702,8 +702,8 @@ void draw_snow(bool shadow_only) {
 	set_dlights_booleans(s, enable_dlights, 1); // FS
 	s.check_for_fog_disabled();
 	setup_detail_normal_map_prefix(s, detail_normal_map);
-	for (unsigned d = 0; d < 2; ++d) {s.set_bool_prefix("no_normalize", !use_smap, d);} // VS/FS
-	s.set_bool_prefix("use_shadow_map", use_smap, 1); // FS
+	s.set_prefixes(make_shader_bool_prefix("no_normalize", !use_smap), 3); // VS/FS
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_smap), 1); // FS
 	s.set_vert_shader("texture_gen.part+snow");
 	s.set_frag_shader("linear_fog.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+detail_normal_map.part+per_pixel_lighting_textured");
 	s.begin_shader();

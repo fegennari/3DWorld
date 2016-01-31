@@ -1816,7 +1816,7 @@ void setup_tile_shader_shadow_map(shader_t &s) {
 }
 
 void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type) {
-	s.set_bool_prefix("use_shadow_map", enable_smap, shader_type);
+	s.set_prefix(make_shader_bool_prefix("use_shadow_map", enable_smap), shader_type);
 	if (enable_smap) {s.set_prefix("#define ENABLE_SHADOW_MAP", shader_type);} // need to set this as well
 }
 
@@ -2474,7 +2474,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			lighting_with_cloud_shadows_setup(s, 0, use_cloud_shadows);
 			if (wpass == 1) {s.set_prefix("#define DEC_HEIGHT_WHEN_FAR", 0);} // VS
 			set_smap_enable_for_shader(s, (spass == 0), 0); // VS
-			s.set_bool_prefix("enable_grass_wind", enable_wind, 0); // VS
+			s.set_prefix(make_shader_bool_prefix("enable_grass_wind", enable_wind), 0); // VS
 			s.set_vert_shader("ads_lighting.part*+perlin_clouds.part*+shadow_map.part*+tiled_shadow_map.part*+wind.part*+grass_texture.part+grass_tiled");
 			s.set_frag_shader("linear_fog.part+grass_tiled");
 			//s.set_geom_shader("grass_tiled"); // triangle => triangle - too slow
