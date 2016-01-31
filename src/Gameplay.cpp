@@ -1807,10 +1807,10 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 int get_range_to_mesh(point const &pos, vector3d const &vcf, point &coll_pos) {
 
-	if (world_mode == WMODE_INF_TERRAIN) return 0;
-	bool ice_int(0);
 	vector3d const vca(pos + vcf*FAR_CLIP);
+	if (world_mode == WMODE_INF_TERRAIN) {return (line_intersect_tiled_mesh(pos, vca, coll_pos) ? 1 : 0);}
 	point ice_coll_pos(vca);
+	bool ice_int(0);
 
 	// compute range to ice surface (currently only at the default water level)
 	if (temperature <= W_FREEZE_POINT) { // firing into ice
@@ -2174,21 +2174,15 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 float get_projectile_range(point const &pos, vector3d vcf, float dist, float range, point &coll_pos, vector3d &coll_norm,
 						   int &coll, int &cindex, int source, int check_splash, int ignore_cobj)
 {
+	if (world_mode == WMODE_INF_TERRAIN) return range; // not yet implemented
 	vcf.normalize();
 	float const splash_val((!DISABLE_WATER && check_splash && (temperature > W_FREEZE_POINT)) ? SPLASH_BASE_SZ*100.0 : 0.0);
 	point const pos1(pos + vcf*dist), pos2(pos + vcf*range);
-	coll = 0;
+	coll = check_coll_line_exact(pos1, pos2, coll_pos, coll_norm, cindex, splash_val, ignore_cobj);
 
-	if (world_mode == WMODE_INF_TERRAIN) {
-		coll = line_intersect_tiled_mesh(pos1, pos2, coll_pos);
-		if (coll) {range = p2p_dist(coll_pos, pos); coll_norm = plus_z;}
-		cindex = -1;
-		return range;
-	}
-	if (check_coll_line_exact(pos1, pos2, coll_pos, coll_norm, cindex, splash_val, ignore_cobj)) {
+	if (coll) {
 		coll_obj &cobj(coll_objects.get_cobj(cindex));
 		if (cobj.cp.coll_func) {cobj.cp.coll_func(cobj.cp.cf_index, 0, zero_vector, pos, 0.0, PROJC);} // apply collision function
-		coll  = 1;
 		range = p2p_dist(coll_pos, pos);
 	}
 	if (splash_val > 0.0 && is_underwater(pos1)) {gen_line_of_bubbles(pos1, (pos + vcf*range));}
