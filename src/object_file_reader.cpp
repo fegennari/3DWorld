@@ -400,7 +400,7 @@ public:
 		cout << "Reading object file " << filename << endl;
 		unsigned const block_size = (1 << 18); // 256K
 		int cur_mat_id(-1);
-		unsigned smoothing_group(0), num_faces(0), num_objects(0), num_groups(0), obj_group_id(0);
+		unsigned smoothing_group(0), prev_smoothing_group(0), num_faces(0), num_objects(0), num_groups(0), obj_group_id(0);
 		vector<point> v; // vertices
 		vector<vector3d> n; // normals
 		vector<counted_normal> vn; // vertex normals
@@ -426,12 +426,13 @@ public:
 			else if (strcmp(s, "f") == 0) { // face
 				model.mark_mat_as_used(cur_mat_id);
 
-				if (pblocks.empty() || pblocks.back().pts.size() >= block_size) {
+				if (pblocks.empty() || pblocks.back().pts.size() >= block_size || smoothing_group != prev_smoothing_group) { // create a new block
 					if (!pblocks.empty()) {
 						remove_excess_cap(pblocks.back().polys);
 						remove_excess_cap(pblocks.back().pts);
 					}
 					pblocks.push_back(poly_data_block());
+					prev_smoothing_group = smoothing_group;
 				}
 				poly_data_block &pb(pblocks.back());
 				pb.polys.push_back(poly_header_t(cur_mat_id, obj_group_id));
@@ -485,7 +486,6 @@ public:
 							vn[vix].add_normal(normal);
 						}
 					}
-					//if (!smoothing_group) pv[i].n = normal;
 				}
 			}
 			else if (strcmp(s, "v") == 0) { // vertex
