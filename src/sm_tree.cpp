@@ -892,10 +892,19 @@ void small_tree::draw_trunks(bool shadow_only, vector3d const &xlate, vector<ver
 				bark_color.set_for_cur_shader();
 				select_texture(stt[type].bark_tid);
 			}
-			draw_fast_cylinder(trunk_cylin.p1, trunk_cylin.p2, trunk_cylin.r1, trunk_cylin.r2, nsides, !shadow_only);
-			
-			if (type == T_PALM && nsides >= 8) { // end cap for top of palm tree
-				draw_fast_cylinder(trunk_cylin.p2, (trunk_cylin.p2 + 0.002*(trunk_cylin.p2 - trunk_cylin.p1)), trunk_cylin.r2, 0.0, nsides, !shadow_only);
+			if (type == T_PALM && !shadow_only) {
+				point const pa(0.92*trunk_cylin.p2 + 0.08*trunk_cylin.p1);
+				draw_fast_cylinder(trunk_cylin.p1, pa, trunk_cylin.r1, trunk_cylin.r2, nsides, 1, 0, 0, nullptr, 2.0);
+
+				if (nsides >= 8) {
+					color.set_for_cur_shader(); // palm frond color
+					point const pb(0.98*trunk_cylin.p2 + 0.02*trunk_cylin.p1), pc(1.04*trunk_cylin.p2 - 0.04*trunk_cylin.p1);
+					draw_fast_cylinder(pa, pb, trunk_cylin.r2, 0.8*trunk_cylin.r2, nsides, 1);
+					draw_fast_cylinder(pb, pc, 0.8*trunk_cylin.r2, 0.0, nsides, 1);
+				}
+			}
+			else {
+				draw_fast_cylinder(trunk_cylin.p1, trunk_cylin.p2, trunk_cylin.r1, trunk_cylin.r2, nsides, !shadow_only);
 			}
 		}
 	}

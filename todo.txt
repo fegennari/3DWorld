@@ -18,7 +18,6 @@ Indirect lighting magnitude in 6 directions (+/- x,y,z)
   - how to combine sun, moon, sky, and local lighting values?
 
 Cobjs:
-  - Grouped cobjs can be pushed up onto ledges/steps?
   - Place small destroyable physics objects in the scene
   - Bullet physics for movable boxes
 
