@@ -546,7 +546,7 @@ void draw_small_trees(bool shadow_only) {
 		}
 		if (small_trees.num_palm_trees > 0) { // palm trees
 			if (wind_mag > 0.0) {s.set_prefix("#define ENABLE_WIND", 0);} // VS
-			setup_smoke_shaders(s, 0.9, 0, 0, 0, v, v, 0, 0, v, 0, 0, 0, 1); // dynamic lights, but no smoke (slow, but looks better)
+			setup_smoke_shaders(s, 0.75, 0, 0, 0, v, v, 0, 0, v, 0, 0, 0, 1); // dynamic lights, but no smoke (slow, but looks better)
 			setup_leaf_wind(s, wind_mag, 0);
 			small_trees.draw_non_pine_leaves(shadow_only, 1, 0);
 			s.end_shader();
