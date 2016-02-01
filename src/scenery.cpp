@@ -812,7 +812,7 @@ void s_plant::draw_stem(float sscale, bool shadow_only, bool reflection_pass, ve
 	else {
 		int const ndiv(max(3, min(N_CYL_SIDES, (shadow_only ? get_def_smap_ndiv(2.0*radius) : int(2.0*sscale*radius/dist)))));
 		color.set_for_cur_shader();
-		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1, 0, 0, NULL, 6.0);
+		draw_fast_cylinder((pos - point(0.0, 0.0, 0.1*height)), (pos + point(0.0, 0.0, height)), radius, 0.0, ndiv, 1, 0, 0, nullptr, 6.0);
 	}
 }
 
@@ -1143,22 +1143,21 @@ void scenery_group::draw_opaque_objects(shader_t &s, bool shadow_only, vector3d 
 }
 
 
-void scenery_group::draw(bool draw_opaque, bool draw_transparent, bool shadow_only, vector3d const &xlate) {
+void scenery_group::draw(bool shadow_only, vector3d const &xlate) {
 
-	if (draw_opaque) { // draw stems, rocks, logs, and stumps
-		shader_t s;
+	// draw stems, rocks, logs, and stumps
+	shader_t s;
 
-		if (!shadow_only) {
-			setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // direct lighting + dlights + shadow map, is_outside=1
-		}
-		else {
-			s.begin_simple_textured_shader(0.0, !shadow_only); // with lighting, unless shadow_only
-		}
-		draw_opaque_objects(s, shadow_only, xlate, 1);
-		s.end_shader();
+	if (!shadow_only) {
+		setup_smoke_shaders(s, 0.0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0.0, 0.0, 0, 0, 1); // direct lighting + dlights + shadow map, is_outside=1
 	}
-	if (draw_transparent && !plants.empty()) { // draw leaves
-		shader_t s;
+	else {
+		s.begin_simple_textured_shader(0.0, !shadow_only); // with lighting, unless shadow_only
+	}
+	draw_opaque_objects(s, shadow_only, xlate, 1);
+	s.end_shader();
+
+	if (!plants.empty()) { // draw leaves
 		set_leaf_shader(s, 0.9, 0, 0, shadow_only, get_plant_leaf_wind_mag(shadow_only), underwater, ENABLE_PLANT_SHADOWS, ENABLE_PLANT_SHADOWS);
 		draw_plant_leaves(s, shadow_only, xlate);
 		s.end_shader();
@@ -1187,9 +1186,8 @@ void add_plant(point const &pos, float height, float radius, int type, int calc_
 	has_scenery2 = 1;
 }
 
-void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only) {
-	if (!has_scenery && !has_scenery2) return;
-	all_scenery.draw(draw_opaque, draw_transparent, shadow_only);
+void draw_scenery(bool shadow_only) {
+	if (has_scenery || has_scenery2) {all_scenery.draw(shadow_only);}
 }
 
 void add_scenery_cobjs() {all_scenery.add_cobjs();}

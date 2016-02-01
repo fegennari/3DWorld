@@ -213,7 +213,6 @@ void draw_stuff(int draw_uw, int timer1, bool reflection_pass=0) {
 		render_models(0);
 		check_gl_error(21);
 		if (TIMETEST) PRINT_TIME("P");
-		draw_scenery(0, 1);
 		draw_teleporters();
 		
 		if (!underwater && !reflection_pass) { // don't draw precip in reflections
@@ -911,7 +910,7 @@ void display(void) {
 			if (TIMETEST) PRINT_TIME("J");
 
 			draw_grass();
-			draw_scenery(1, 0);
+			draw_scenery();
 			if (TIMETEST) PRINT_TIME("K");
 
 			draw_solid_object_groups();
@@ -1073,7 +1072,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass,
 		if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
 		draw_grass();
 	}
-	draw_scenery(1, 0);
+	draw_scenery();
 	draw_solid_object_groups();
 	draw_stuff(1, 0, reflection_pass);
 	if (display_mode & 0x04) {draw_water(1);}

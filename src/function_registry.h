@@ -615,7 +615,7 @@ void draw_blasts();
 
 // function prototypes - scenery
 void gen_scenery();
-void draw_scenery(bool draw_opaque, bool draw_transparent, bool shadow_only=0);
+void draw_scenery(bool shadow_only=0);
 bool update_scenery_zvals(int x1, int y1, int x2, int y2);
 void free_scenery();
 void do_rock_damage(point const &pos, float radius, float damage);

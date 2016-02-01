@@ -513,7 +513,7 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	// add snow, trees, scenery, and mesh
 	if (snow_shadows) {draw_snow(1);} // slow
 	draw_trees(1);
-	draw_scenery(1, 1, 1);
+	draw_scenery(1); // shadow_only=1
 	draw_mesh_shadow_pass(lpos, smap_sz);
 	voxel_shadows_updated = 0;
 	camera_pos = camera_pos_;
