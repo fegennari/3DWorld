@@ -475,7 +475,7 @@ void uobj_draw_data::draw_colored_flash(colorRGBA const &color, bool symmetric) 
 
 	for (unsigned i = 0; i < 2; ++i) {
 		qbd.add_xlated_billboard(pos, all_zeros, get_camera_pos(), up_vector, colorRGBA(0,0,0, color.alpha), (2.0 + 1.0*sinf(angle)), (2.0 + 1.0*cosf(angle)));
-		angle += PI;
+		if (animate2) {angle += PI;}
 	}
 	qbd.draw_as_flares_and_clear(FLARE1_TEX);
 	end_ship_texture();
@@ -664,9 +664,9 @@ void uobj_draw_data::draw_usw_shieldd() const {
 void uobj_draw_data::draw_usw_thunder() const {
 
 	static float lint(0.5);
-	lint += rand_uniform(-0.05, 0.05);
-	lint  = CLIP_TO_01(lint);
-	float const val(CLIP_TO_01(float(0.5*(rand_uniform(0.47, 0.53) + lint)))); // store last intensity per-thunder?
+	if (animate2) {lint += rand_uniform(-0.05, 0.05);}
+	lint = CLIP_TO_01(lint);
+	float const val(CLIP_TO_01(float(0.5*(0.5 + lint)))); // store last intensity per-thunder?
 	float const val2(0.001*(int(100000.0*val) % 999));
 	colorRGBA const color(0.1, (0.5 + 0.5*val2), (1.0 - 0.5*val2), 1.0);
 	setup_colors_draw_flare(pos, all_zeros, 10.0*val, 10.0*val, color);
