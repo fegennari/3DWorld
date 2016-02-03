@@ -69,13 +69,11 @@ vec3 get_dominant_dir(in vec3 v) {
 
 void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in vec3 diff_color, in float bump_map_normal_scale, in float bump_map_normal_sign, in float wet_scale) {
 #ifndef NO_DYNAMIC_LIGHTS
-
 #if defined(USE_BUMP_MAP_DL) && !defined(BUMP_MAP_CUSTOM)
 	mat3 TBN = get_tbn(1.0);
 #endif
 	const float gamma = 2.2;
-	vec3 dl_color   = vec3(0.0);
-
+	vec3 dl_color     = vec3(0.0);
 	vec2 norm_pos = clamp((dlpos.xy - scene_llc.xy)/scene_scale.xy, 0.0, 1.0); // should be in [0.0, 1.0] range
 	uint gb_ix  = texture(dlgb_tex, norm_pos).r; // get grid bag element index range (uint32)
 	uint st_ix  = (gb_ix & 0xFFFFFFU); // 24 low bits
@@ -173,9 +171,15 @@ void add_dlights_bm_scaled(inout vec3 color, in vec3 dlpos, in vec3 normal, in v
 		vec3 add_color = lcolor.rgb * (spec_color*spec_mag + diff_color*diff_mag) * (lcolor.a * intensity);
 		dl_color += apply_power_signed(add_color, gamma); // add in linear space
 	} // for i
+
+#ifdef ENABLE_GAMMA_CORRECTION // everything is in linear space
+	color += gamma*min(dl_color, 1.0); // add dlights color
+#else // perform this operation using gamma correction but input/output in log space
 	color  = apply_power_signed(color, gamma); // to linear space
 	color += gamma*min(dl_color, 1.0); // add dlights color
 	color  = apply_power_signed(color, 1.0/gamma); // back to normal color space
+#endif // ENABLE_GAMMA_CORRECTION
+
 #endif // NO_DYNAMIC_LIGHTS
 }
 

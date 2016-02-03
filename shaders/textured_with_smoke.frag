@@ -155,7 +155,10 @@ void main()
 #endif // ENABLE_PARALLAX_MAP
 #endif // TRIPLANAR_TEXTURE
 
-	//texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
+#ifdef ENABLE_GAMMA_CORRECTION
+	texel.rgb = pow(texel.rgb, vec3(2.2)); // gamma correction
+#endif // ENABLE_GAMMA_CORRECTION
+
 #ifdef TEXTURE_ALPHA_MASK
 	if (texel.a < 0.99) discard;
 #endif
@@ -220,7 +223,10 @@ void main()
 #endif
 	vec3 lit_color  = emission.rgb + emissive_scale*gl_Color.rgb;
 	lit_color      += base_color.rgb * get_indir_lighting(normal_sign) * mix(1.0, 0.7, wet_surf_val);
-	//lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
+
+#ifdef ENABLE_GAMMA_CORRECTION
+	lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
+#endif // ENABLE_GAMMA_CORRECTION
 
 	if (direct_lighting) { // directional light sources with no attenuation
 		vec3 n = normalize(normal_sign*eye_norm);
@@ -230,7 +236,10 @@ void main()
 	}
 	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), base_color.rgb, 1.0, normal_sign, wet_surf_val);} // dynamic lighting
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
-	//color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
+
+#ifdef ENABLE_GAMMA_CORRECTION
+	color.rgb = pow(color.rgb, vec3(0.45)); // gamma correction
+#endif // ENABLE_GAMMA_CORRECTION
 
 #ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
 	if (normal.z > 0.5) { // top surface
