@@ -465,6 +465,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	}
 	else if (vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
 		if (!camera_pdu.sphere_visible_test(bsphere.pos, bsphere.radius) || !camera_pdu.cube_visible(bcube)) return; // view frustum culling
+		if (indices.size() >= 100 && (display_mode & 0x08) != 0 && is_cube_occluded(bcube, camera_pdu.pos))  return; // occlusion culling
 	}
 	assert(!indices.empty()); // now always using indexed drawing
 	int prim_type(GL_TRIANGLES);

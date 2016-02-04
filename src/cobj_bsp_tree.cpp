@@ -761,6 +761,7 @@ void build_cobj_tree(bool dynamic, bool verbose) {
 	if (!dynamic) { // static
 		get_tree(0).add_cobjs(verbose);
 		cobj_tree_occlude.add_cobjs(verbose);
+		//cout << "occluders: " << cobj_tree_occlude.get_num_objs() << endl;
 		//cobj_tree_triangles.add_cobjs(coll_objects, verbose);
 	}
 	else { // dynamic

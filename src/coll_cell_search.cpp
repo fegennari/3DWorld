@@ -301,6 +301,13 @@ bool cobj_contained(point const &pos1, point const &center, const point *pts, un
 	return cobj_contained_ref(pos1, center, pts, npts, cobj, last_cobj);
 }
 
+bool is_cube_occluded(cube_t const &cube, point const &viewer) {
+
+	point pts[8];
+	cube.get_points(pts);
+	return cobj_contained(viewer, cube.get_cube_center(), pts, 8, -1);
+}
+
 
 bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const {
 
@@ -411,11 +418,11 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 
 bool coll_obj::is_occluder() const {
 	
-	if (status != COLL_STATIC || !cp.draw || is_semi_trans() || dgroup_id >= 0) return 0; // cp.might_be_drawn()?
-	if (type == COLL_CUBE)    return 1;
-	if (type != COLL_POLYGON) return 0;
+	if (status != COLL_STATIC || (!cp.draw && cp.cobj_type != COBJ_TYPE_MODEL3D) || is_semi_trans() || dgroup_id >= 0) return 0; // cp.might_be_drawn()?
+	if (type == COLL_CUBE && cp.cobj_type != COBJ_TYPE_MODEL3D) return 1;
+	if (type != COLL_CUBE && type != COLL_POLYGON) return 0;
 	unsigned big_dims(0);
-	UNROLL_3X(if ((d[i_][1] - d[i_][0]) > 0.2*SCENE_SIZE[i_]) ++big_dims;)
+	UNROLL_3X(if ((d[i_][1] - d[i_][0]) > 0.15*SCENE_SIZE[i_]) ++big_dims;)
 	return (big_dims >= 2);
 }
 
