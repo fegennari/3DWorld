@@ -533,7 +533,7 @@ bool cobj_bvh_tree::is_cobj_contained(point const &p1, point const &p2, point co
 			if ((int)cixs[i] == ignore_cobj) continue;
 			coll_obj const &c(get_cobj(i));
 				
-			if (obj_ok(c) && c.is_occluder() && c.intersects_all_pts(viewer, pts, npts)) {
+			if (obj_ok(c) && c.intersects_all_pts(viewer, pts, npts)) { // Note: already checks that c.is_occluder()
 				cobj = cixs[i];
 				return 1;
 			}
