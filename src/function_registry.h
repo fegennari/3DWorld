@@ -411,8 +411,8 @@ bool get_poly_zminmax(point const *const pts, unsigned npts, vector3d const &nor
 bool get_poly_zvals(vector<tquad_t> const &pts, float xv, float yv, float &z1, float &z2);
 void gen_poly_planes(point const *const points, unsigned npoints, vector3d const &norm, float thick, point pts[2][4]);
 void thick_poly_to_sides(point const *const points, unsigned npoints, vector3d const &norm, float thick, vector<tquad_t> &sides);
-bool line_int_plane(point const &p1, point const &p2, point const &pp0, vector3d const &norm,
-					point &p_int, float &t, bool ignore_t);
+bool line_int_plane(point const &p1, point const &p2, point const &pp0, vector3d const &norm, point &p_int, float &t, bool ignore_t);
+bool line_int_plane_test_only(point const &p1, point const &p2, point const &pp0, vector3d const &norm);
 bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &norm,
 						  point const pts[2][4], bool test_side, unsigned npoints);
 bool sphere_intersect_poly_sides(vector<tquad_t> const &pts, point const &center, float radius, float &dist, vector3d &norm, bool strict);
