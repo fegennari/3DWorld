@@ -211,13 +211,12 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 	return cobj_contained(viewer, sc, pts, 8, -1);
 }
 
-
 bool cube_cobj_occluded(point const &viewer, cube_t const &cube) {
 
 	if (!have_occluders()) return 0;
 	point pts[8];
-	cube.get_points(pts);
-	return cobj_contained(viewer, cube.get_cube_center(), pts, 8, -1);
+	unsigned const ncorners(get_cube_corners(cube.d, pts, viewer, 0)); // 8 corners allocated, but only 6 used
+	return cobj_contained(viewer, cube.get_cube_center(), pts, ncorners, -1);
 }
 
 

@@ -301,13 +301,6 @@ bool cobj_contained(point const &pos1, point const &center, const point *pts, un
 	return cobj_contained_ref(pos1, center, pts, npts, cobj, last_cobj);
 }
 
-bool is_cube_occluded(cube_t const &cube, point const &viewer) {
-
-	point pts[8];
-	cube.get_points(pts);
-	return cobj_contained(viewer, cube.get_cube_center(), pts, 8, -1);
-}
-
 
 bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsigned npts) const {
 
