@@ -886,14 +886,14 @@ void teleporter::draw(vpc_shader_t &s) const {
 	colorRGBA const c2(blend_color(WHITE,   YELLOW, use_scale, 0));
 	colorRGBA const c3(blend_color(LT_BLUE, BLUE,   use_scale, 0));
 
-	if (use_scale > 0.0 && camera_pdu.sphere_visible_test(pos, use_light_radius)) {
+	if (use_scale > 0.0 && sphere_in_camera_view(pos, use_light_radius, 2)) {
 		add_dynamic_light(use_light_radius, pos, LT_BLUE, plus_z, 1.0, nullptr, 1); // static pos
 	}
-	if (game_mode && begin_motion && camera_pdu.sphere_visible_test(pos, light_radius)) {
+	if (game_mode && begin_motion && sphere_in_camera_view(pos, light_radius, 2)) {
 		colorRGBA const lt_color(blend_color(blend_color(c1, c2, fabs(sin(0.05*tfticks)), 0), c3, fabs(cos(0.07*tfticks)), 0));
 		add_dynamic_light(light_radius, pos, lt_color, plus_z, 1.0, nullptr, 1); // static pos
 	}
-	if (camera_pdu.sphere_visible_test(pos, draw_radius)) { // draw pos
+	if (sphere_in_camera_view(pos, draw_radius, 2)) { // draw pos
 		s.set_uniform_color(s.c1i_loc, c1);
 		s.set_uniform_color(s.c1o_loc, c1);
 		s.set_uniform_color(s.c2i_loc, c2);
