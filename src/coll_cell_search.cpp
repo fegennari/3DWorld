@@ -323,16 +323,6 @@ bool coll_obj::intersects_all_pts(point const &pos, point const *const pts, unsi
 }
 
 
-void get_ortho_vectors(vector3d const &norm, vector3d v[2]) {
-
-	int const d0(get_min_dim(norm));
-	v[0] = zero_vector;
-	v[0][d0] = 1.0;
-	cross_product(norm, v[0], v[1]);
-	cross_product(norm, v[1], v[0]);
-}
-
-
 colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal, bool fast) const {
 
 	// FIXME: model3d cobjs don't have cp.tid set here, they use textures from the model3d class + per-vertex tex coords

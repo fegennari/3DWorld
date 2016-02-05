@@ -1728,29 +1728,23 @@ void set_texgen_vec4(vector4d const &v, bool s_or_t, shader_t &shader, int mode)
 	}
 }
 
-
 void setup_texgen_full(float sx, float sy, float sz, float sw, float tx, float ty, float tz, float tw, shader_t &shader, int mode) {
-
 	set_texgen_vec4(vector4d(sx, sy, sz, sw), 0, shader, mode);
 	set_texgen_vec4(vector4d(tx, ty, tz, tw), 1, shader, mode);
 }
 
-
 void setup_texgen(float xscale, float yscale, float tx, float ty, float z_off, shader_t &shader, int mode) {
-
 	assert(xscale != 0.0 && yscale != 0.0);
 	setup_texgen_full(xscale, 0.0, z_off, tx, 0.0, yscale, z_off, ty, shader, mode);
 }
 
-
-void get_poly_texgen_dirs(vector3d const &norm, vector3d v[2]) { // similar to get_ortho_vectors()
+void get_poly_texgen_dirs(vector3d const &norm, vector3d v[2]) { // similar to get_ortho_vectors(), but not normalized
 
 	v[0] = all_zeros;
 	v[0][get_min_dim(norm)] = 1.0;
 	cross_product(norm, v[0], v[1]);
 	cross_product(norm, v[1], v[0]);
 }
-
 
 void setup_polygon_texgen(vector3d const &norm, float const scale[2], float const xlate[2],
 	vector3d const &offset, bool swap_txy, shader_t &shader, int mode)

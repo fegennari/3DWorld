@@ -44,7 +44,7 @@ void get_ortho_vectors(vector3d const &v12, vector3d *vab, int force_dim) {
 	vtest[dim] += 0.5;
 	cross_product(vtest, v12,    vab[0]); // vab[0] is orthogonal to v12
 	cross_product(v12,   vab[0], vab[1]); // vab[1] is orthogonal to v12 and vab[0]
-	for (unsigned i = 0; i < 2; ++i) vab[i].normalize();
+	for (unsigned i = 0; i < 2; ++i) {vab[i].normalize();}
 }
 
 

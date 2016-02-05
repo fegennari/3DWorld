@@ -786,10 +786,9 @@ void flower_manager_t::create_verts_range(vector<vert_norm_comp_color> &verts, u
 	unsigned ix(0);
 
 	for (auto i = flowers.begin()+start; i != flowers.begin()+end; ++i) {
-		vector3d v1(zero_vector), v2;
-		v1[get_min_dim(i->normal)] = 1.0;
-		v2 = i->radius*cross_product(i->normal, v1).get_norm();
-		v1 = i->radius*cross_product(i->normal, v2).get_norm();
+		vector3d dirs[2];
+		get_ortho_vectors(i->normal, dirs);
+		vector3d const v1(i->radius*dirs[0]), v2(i->radius*dirs[1]);
 		color_wrapper cw;
 		cw.set_c4(i->color);
 		norm_comp const n(i->normal);
