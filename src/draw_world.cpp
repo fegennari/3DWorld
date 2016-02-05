@@ -856,7 +856,7 @@ void draw_stars(float alpha) {
 void draw_sun() {
 
 	point const pos(get_sun_pos());
-	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 1)) return;
+	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 2)) return;
 	colorRGBA color(SUN_C);
 	apply_red_sky(color);
 	draw_single_colored_sphere(pos, sun_radius, N_SPHERE_DIV, color);
@@ -867,7 +867,7 @@ void draw_moon() {
 
 	if (world_mode == WMODE_GROUND && show_fog) return; // don't draw when there is fog
 	point const pos(get_moon_pos());
-	if (!sphere_in_camera_view(pos, moon_radius, 1)) return;
+	if (!sphere_in_camera_view(pos, moon_radius, 2)) return;
 	colorRGBA const ambient(0.05, 0.05, 0.05, 1.0), diffuse(1.0*have_sun, 1.0*have_sun, 1.0*have_sun, 1.0);
 	set_colors_and_enable_light(4, ambient, diffuse);
 	set_gl_light_pos(4, get_sun_pos(), 0.0);
@@ -899,7 +899,7 @@ void draw_earth() {
 	if (camera_mode == 1) pos += surface_pos;
 	static float rot_angle(0.0);
 
-	if (sphere_in_camera_view(pos, earth_radius, 1)) {
+	if (sphere_in_camera_view(pos, earth_radius, 2)) {
 		shader_t s;
 		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE);
 		select_texture(EARTH_TEX);
@@ -912,7 +912,7 @@ void draw_earth() {
 		fgPopMatrix();
 		s.end_shader();
 	}
-	rot_angle += 0.2*fticks;
+	if (animate2) {rot_angle += 0.2*fticks;}
 }
 
 
