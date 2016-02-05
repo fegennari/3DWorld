@@ -201,14 +201,17 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
 	if (!have_occluders()) return 0;
 	if (radius*radius < 1.0E-6*p2p_dist_sq(viewer, sc)) {return cobj_contained(viewer, &sc, 1, -1);} // small and far away
-	point pts[8];
-	
-	for (unsigned i = 0; i < 8; ++i) { // really only need 4 points
-		for (unsigned j = 0; j < 3; ++j) {
-			pts[i][j] = sc[j] + ((i&(1<<j)) ? -1.0 : 1.0)*radius;
-		}
-	}
-	return cobj_contained(viewer, pts, 8, -1);
+	vector3d const vdir(viewer - sc);
+	vector3d dirs[2];
+	get_ortho_vectors(vdir, dirs);
+	for (unsigned d = 0; d < 2; ++d) {dirs[d] *= radius/dirs[d].mag();}
+	point const p0(sc + (radius/vdir.mag())*vdir); // move to the front face of the sphere
+	point pts[4];
+	pts[0] = p0 + dirs[0];
+	pts[1] = p0 - dirs[0];
+	pts[2] = p0 + dirs[1];
+	pts[3] = p0 - dirs[1];
+	return cobj_contained(viewer, pts, 4, -1);
 }
 
 bool cube_cobj_occluded(point const &viewer, cube_t const &cube) {

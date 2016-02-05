@@ -1576,7 +1576,7 @@ bool is_sun_flare_visible() {
 	if (!have_sun || light_factor < 0.4) return 0; // sun below the horizon, or doesn't exist
 	point const cur_sun_pos(get_sun_pos());
 	if (dot_product(cview_dir, (cur_sun_pos - get_camera_pos())) < 0.0) return 0; // sun behind the camera
-	if (!sphere_in_camera_view(cur_sun_pos, 4.0*sun_radius, 0)) return 0; // use larger radius to include the flare/halo
+	if (!sphere_in_camera_view(cur_sun_pos, 4.0*sun_radius, 2)) return 0; // use larger radius to include the flare/halo
 	return 1;
 }
 

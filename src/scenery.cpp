@@ -109,9 +109,9 @@ bool scenery_obj::update_zvals(int x1, int y1, int x2, int y2) {
 	return 1;
 }
 
-bool scenery_obj::check_visible(bool shadow_only, float bradius, point const &p) const {
+bool scenery_obj::check_visible(bool shadow_only, float bradius, point const &p, int level) const {
 	if (world_mode != WMODE_GROUND) return 1;
-	return (shadow_only ? is_over_mesh(p) : sphere_in_camera_view(p, ((bradius == 0.0) ? radius : bradius), 0));
+	return (shadow_only ? is_over_mesh(p) : sphere_in_camera_view(p, ((bradius == 0.0) ? radius : bradius), level));
 }
 bool scenery_obj::is_visible(bool shadow_only, float bradius, vector3d const &xlate) const {
 	if (!check_visible(shadow_only, bradius, pos+xlate)) return 0;
