@@ -285,7 +285,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &cnorm,
 }
 
 
-bool cobj_contained_ref(point const &pos1, point const &center, const point *pts, unsigned npts, int cobj, int &last_cobj) {
+bool cobj_contained_ref(point const &pos1, const point *pts, unsigned npts, int cobj, int &last_cobj) {
 
 	if (!have_occluders()) return 0;
 	assert(npts > 0);
@@ -293,12 +293,12 @@ bool cobj_contained_ref(point const &pos1, point const &center, const point *pts
 	if (last_cobj >= 0 && last_cobj != cobj && !coll_objects[last_cobj].disabled()) {
 		if (coll_objects[last_cobj].intersects_all_pts(pos1, pts, npts)) return 1;
 	}
-	return cobj_contained_tree(pos1, center, pos1, pts, npts, cobj, last_cobj);
+	return cobj_contained_tree(pos1, pts, npts, cobj, last_cobj);
 }
 
-bool cobj_contained(point const &pos1, point const &center, const point *pts, unsigned npts, int cobj) {
+bool cobj_contained(point const &pos1, const point *pts, unsigned npts, int cobj) {
 	static int last_cobj(-1);
-	return cobj_contained_ref(pos1, center, pts, npts, cobj, last_cobj);
+	return cobj_contained_ref(pos1, pts, npts, cobj, last_cobj);
 }
 
 

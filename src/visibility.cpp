@@ -200,7 +200,7 @@ void pos_dir_up::apply_z_mirror(float zval) {
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
 	if (!have_occluders()) return 0;
-	if (radius*radius < 1.0E-6*p2p_dist_sq(viewer, sc)) {return cobj_contained(viewer, sc, &sc, 1, -1);} // small and far away
+	if (radius*radius < 1.0E-6*p2p_dist_sq(viewer, sc)) {return cobj_contained(viewer, &sc, 1, -1);} // small and far away
 	point pts[8];
 	
 	for (unsigned i = 0; i < 8; ++i) { // really only need 4 points
@@ -208,7 +208,7 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 			pts[i][j] = sc[j] + ((i&(1<<j)) ? -1.0 : 1.0)*radius;
 		}
 	}
-	return cobj_contained(viewer, sc, pts, 8, -1);
+	return cobj_contained(viewer, pts, 8, -1);
 }
 
 bool cube_cobj_occluded(point const &viewer, cube_t const &cube) {
@@ -216,7 +216,7 @@ bool cube_cobj_occluded(point const &viewer, cube_t const &cube) {
 	if (!have_occluders()) return 0;
 	point pts[8];
 	unsigned const ncorners(get_cube_corners(cube.d, pts, viewer, 0)); // 8 corners allocated, but only 6 used
-	return cobj_contained(viewer, cube.get_cube_center(), pts, ncorners, -1);
+	return cobj_contained(viewer, pts, ncorners, -1);
 }
 
 

@@ -800,10 +800,9 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 bool portal::is_visible() const {
 
 	cube_t bcube(pts, 4);
-	point const center(bcube.get_cube_center());
-	if (normal != zero_vector && dot_product_ptv(normal, get_camera_pos(), center) < 0.0) return 0; // back facing
+	if (normal != zero_vector && dot_product_ptv(normal, get_camera_pos(), bcube.get_cube_center()) < 0.0) return 0; // back facing
 	if (!camera_pdu.cube_visible(bcube)) return 0;
-	if ((display_mode & 0x08) && cobj_contained(get_camera_pos(), center, pts, 4, -1)) return 0;
+	if ((display_mode & 0x08) && cobj_contained(get_camera_pos(), pts, 4, -1)) return 0;
 	return 1;
 }
 

@@ -518,11 +518,11 @@ void cobj_bvh_tree::get_intersecting_cobjs(cube_t const &cube, vector<unsigned> 
 }
 
 
-bool cobj_bvh_tree::is_cobj_contained(point const &p1, point const &p2, point const &viewer,
-	point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const
-{
+bool cobj_bvh_tree::is_cobj_contained(point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const {
+
+	assert(npts > 0);
 	if (nodes.empty()) return 0;
-	node_ix_mgr nixm(nodes, p1, p2);
+	node_ix_mgr nixm(nodes, viewer, pts[0]);
 	unsigned const num_nodes((unsigned)nodes.size());
 
 	for (unsigned nix = 0; nix < num_nodes;) {
@@ -804,10 +804,8 @@ void get_intersecting_cobjs_tree(cube_t const &cube, vector<unsigned> &cobjs, in
 }
 
 // used in cobj_contained_ref() for grass occlusion
-bool cobj_contained_tree(point const &p1, point const &p2, point const &viewer, point const *const pts,
-	unsigned npts, int ignore_cobj, int &cobj)
-{
-	return cobj_tree_occlude.is_cobj_contained(p1, p2, viewer, pts, npts, ignore_cobj, cobj);
+bool cobj_contained_tree(point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) {
+	return cobj_tree_occlude.is_cobj_contained(viewer, pts, npts, ignore_cobj, cobj);
 }
 
 // used in get_occluders() for occlusion culling

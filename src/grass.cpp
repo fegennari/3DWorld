@@ -709,7 +709,7 @@ public:
 							}
 							else {
 								if (last_occ_cobj < 0) {last_occ_cobj = last_occ_used;}
-								visible &= !cobj_contained_ref(camera, cube.get_cube_center(), pts, 8, -1, last_occ_cobj);
+								visible &= !cobj_contained_ref(camera, pts, 8, -1, last_occ_cobj);
 								if (visible) {last_occ_cobj = -1;}
 							}
 							if (last_occ_cobj >= 0) {last_occ_used = last_occ_cobj;}
