@@ -778,7 +778,7 @@ unsigned tree_data_t::get_gpu_mem() const {
 
 bool tree::is_visible_to_camera(vector3d const &xlate) const {
 
-	int const level((get_camera_pos().z > ztop) ? 1 : 2); // do we want to test the mesh?
+	int const level((get_camera_pos().z > max(ztop, czmax)) ? 0 : 2); // test cobjs and mesh unless camera is in the air
 	return sphere_in_camera_view((sphere_center() + xlate), 1.1*tdata().sphere_radius, level);
 }
 
