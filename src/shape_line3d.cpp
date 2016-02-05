@@ -238,7 +238,7 @@ void shape3d::destroy() {
 	colors.clear();
 	color = BLACK; // reset in case it is to be used again
 	pos   = all_zeros;
-	scenery_obj::destroy();
+	remove_cobjs();
 }
 
 

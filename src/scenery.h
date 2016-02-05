@@ -84,7 +84,6 @@ public:
 	void add_cobjs();
 	void draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen);
 	void free_context() {model.free_context();}
-	void destroy();
 };
 
 
@@ -156,7 +155,6 @@ public:
 	void draw_leaves(shader_t &s, vbo_vnc_block_manager_t &vbo_manager, bool shadow_only, bool reflection_pass, vector3d const &xlate, shader_state_t &state) const;
 	void draw_berries(shader_t &s, vector3d const &xlate) const;
 	void remove_cobjs();
-	void destroy();
 	void write_to_cobj_file(std::ostream &out) const;
 };
 
@@ -180,7 +178,7 @@ public:
 	scenery_group() : generated(0) {}
 	void clear_vbos();
 	void clear();
-	void free_scenery();
+	void free_cobjs();
 	void add_cobjs();
 	bool check_sphere_coll(point &center, float radius) const;
 	void shift(vector3d const &vd);

@@ -675,7 +675,7 @@ void free_all_coll_objects() {
 
 	// Note: all cobjs should have been removed from coll_objects/cobj_manager at the point,
 	//       but the various scene objects could still reference them and need to be cleared
-	free_scenery();
+	free_scenery_cobjs();
 	remove_small_tree_cobjs();
 	remove_tree_cobjs();
 	bool have_fixed_cobjs(0);

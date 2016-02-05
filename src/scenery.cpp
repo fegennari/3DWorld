@@ -439,11 +439,9 @@ bool surface_rock::update_zvals(int x1, int y1, int x2, int y2, vbo_vnt_block_ma
 
 void surface_rock::destroy() {
 
-	//delete surface;
-	if (surface) surface->dec_ref();
+	if (surface) {surface->dec_ref();}
 	vbo_mgr_ix = -1;
 	surface    = NULL;
-	scenery_obj::destroy();
 }
 
 
@@ -517,11 +515,6 @@ void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vect
 	if (use_model_texgen) {model.setup_tex_gen_for_rendering(s);} else {select_texture(get_tid());}
 	model.core_render(s, lod_level, shadow_only, 1); // disable view frustum culling because it's incorrect (due to transform matrices)
 	fgPopMatrix();
-}
-
-void voxel_rock::destroy() {
-	model.clear();
-	scenery_obj::destroy();
 }
 
 
@@ -850,7 +843,7 @@ void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 
 	if (berries.empty()) return;
 	point const pos2(pos + xlate + point(0.0, 0.0, 0.5*height));
-	if (!sphere_in_camera_view(pos2, 0.5*(height + radius), 0)) return;
+	if (!sphere_in_camera_view(pos2, 0.5*(height + radius), 2)) return;
 	float const size_scale(get_pt_line_thresh()*radius/distance_to_camera(pos2));
 	if (size_scale < 1.2) return; // too small/far away
 	int const ndiv(max(4, min(16, int(2.0*size_scale))));
@@ -867,16 +860,8 @@ void s_plant::draw_berries(shader_t &s, vector3d const &xlate) const {
 }
 
 void s_plant::remove_cobjs() {
-
 	remove_reset_coll_obj(coll_id2);
 	scenery_obj::remove_cobjs();
-}
-
-void s_plant::destroy() {
-
-	berries.clear();
-	remove_cobjs();
-	scenery_obj::destroy(); // will remove coll_id twice, which is OK
 }
 
 
@@ -903,8 +888,8 @@ template<typename T> void shift_scenery_vector(vector<T> &v, vector3d const &vd)
 	for (unsigned i = 0; i < v.size(); ++i) {v[i].shift_by(vd);}
 }
 
-template<typename T> void free_scenery_vector(vector<T> &v) {
-	for (unsigned i = 0; i < v.size(); ++i) {v[i].destroy();}
+template<typename T> void free_scenery_vector_cobjs(vector<T> &v) {
+	for (unsigned i = 0; i < v.size(); ++i) {v[i].remove_cobjs();}
 }
 
 template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int y1, int x2, int y2, bool &updated) {
@@ -921,20 +906,17 @@ template<typename T> void update_scenery_zvals_vector(vector<T> &v, int x1, int 
 
 void scenery_group::clear_vbos() {
 	
-	for (unsigned i = 0; i < rock_shapes.size(); ++i) {
-		rock_shapes[i].clear_vbo();
-	}
-	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {
-		voxel_rocks[i].free_context();
-	}
+	for (unsigned i = 0; i < rock_shapes.size(); ++i) {rock_shapes[i].clear_vbo();}
+	for (unsigned i = 0; i < voxel_rocks.size(); ++i) {voxel_rocks[i].free_context();}
 	plant_vbo_manager.clear_vbo();
 	rock_vbo_manager.clear_vbo();
 }
 
 void scenery_group::clear() {
 
+	for (auto i = surface_rocks.begin(); i != surface_rocks.end(); ++i) {i->destroy();}
 	clear_vbos();
-	free_scenery();
+	free_cobjs();
 	rock_shapes.clear();
 	surface_rocks.clear();
 	voxel_rocks.clear();
@@ -945,15 +927,15 @@ void scenery_group::clear() {
 	generated = 0;
 }
 
-void scenery_group::free_scenery() {
+void scenery_group::free_cobjs() {
 
-	free_scenery_vector(rock_shapes);
-	free_scenery_vector(surface_rocks);
-	free_scenery_vector(voxel_rocks);
-	free_scenery_vector(rocks);
-	free_scenery_vector(logs);
-	free_scenery_vector(stumps);
-	free_scenery_vector(plants);
+	free_scenery_vector_cobjs(rock_shapes);
+	free_scenery_vector_cobjs(surface_rocks);
+	free_scenery_vector_cobjs(voxel_rocks);
+	free_scenery_vector_cobjs(rocks);
+	free_scenery_vector_cobjs(logs);
+	free_scenery_vector_cobjs(stumps);
+	free_scenery_vector_cobjs(plants);
 }
 
 void scenery_group::add_cobjs() {
@@ -1202,7 +1184,7 @@ bool update_scenery_zvals(int x1, int y1, int x2, int y2) {
 	return all_scenery.update_zvals(x1, y1, x2, y2);
 }
 
-void free_scenery() {all_scenery.free_scenery();}
+void free_scenery_cobjs() {all_scenery.free_cobjs();}
 void clear_scenery_vbos() {all_scenery.clear_vbos();}
 
 void do_rock_damage(point const &pos, float radius, float damage) {

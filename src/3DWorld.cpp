@@ -226,7 +226,7 @@ void quit_3dworld() {
 
 	if (!universe_only) {
 		free_models();
-		free_scenery();
+		free_scenery_cobjs();
 		delete_matrices();
 	}
 	//_CrtDumpMemoryLeaks();

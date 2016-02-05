@@ -27,7 +27,6 @@ public:
 	float get_size_scale(float dist_to_camera, float scale_val, float scale_exp=8.0) const;
 	colorRGBA get_atten_color(colorRGBA c, vector3d const &xlate) const;
 	void remove_cobjs();
-	void destroy() {remove_cobjs();}
 	point get_pos() const {return pos;}
 };
 

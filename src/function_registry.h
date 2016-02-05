@@ -616,7 +616,7 @@ void draw_blasts();
 void gen_scenery();
 void draw_scenery(bool shadow_only=0);
 bool update_scenery_zvals(int x1, int y1, int x2, int y2);
-void free_scenery();
+void free_scenery_cobjs();
 void do_rock_damage(point const &pos, float radius, float damage);
 void add_scenery_cobjs();
 void shift_scenery(vector3d const &vd);
