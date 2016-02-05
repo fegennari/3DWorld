@@ -2280,10 +2280,12 @@ void show_user_stats() {
 		team_stats_t tot_stats;
 
 		for (int i = CAMERA_ID; i < num_smileys; ++i) {
+			float const yval(0.01 - 0.0014*(i+1));
 			sprintf(text, "%s: K: %i D: %i S: %i TK: %i Score: %i\n",
 				sstates[i].name.c_str(), sstates[i].tot_kills, sstates[i].deaths, sstates[i].suicides, sstates[i].team_kills, sstates[i].get_score());
-			draw_text(get_smiley_team_color(i), -0.008, 0.01-0.0014*(i+1), -0.02, text);
+			draw_text(get_smiley_team_color(i), -0.008, yval, -0.02, text);
 			tot_stats.add(sstates[i]);
+			if (sstates[i].powerup >= 0) {draw_text(get_powerup_color(sstates[i].powerup), -0.009, yval, -0.02, "O");}
 		}
 		if (teams > 1) {
 			vector<team_stats_t> team_stats(teams);
