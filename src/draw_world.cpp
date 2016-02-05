@@ -690,6 +690,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 			assert(c.id == (int)cix); // should always be equal
 
 			if (c.dgroup_id >= 0) {
+				if (!c.is_cobj_visible()) continue; // VFC/occlusion culling
 				vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(c.dgroup_id, c));
 				//assert(!group_cids.empty()); // too strong?
 
