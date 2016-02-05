@@ -204,13 +204,13 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 	vector3d const vdir(viewer - sc);
 	vector3d dirs[2];
 	get_ortho_vectors(vdir, dirs);
-	for (unsigned d = 0; d < 2; ++d) {dirs[d] *= radius/dirs[d].mag();}
+	for (unsigned d = 0; d < 2; ++d) {dirs[d] *= radius;}
 	point const p0(sc + (radius/vdir.mag())*vdir); // move to the front face of the sphere
 	point pts[4];
-	pts[0] = p0 + dirs[0];
-	pts[1] = p0 - dirs[0];
-	pts[2] = p0 + dirs[1];
-	pts[3] = p0 - dirs[1];
+	pts[0] = p0 + dirs[0] + dirs[1];
+	pts[1] = p0 - dirs[0] - dirs[1];
+	pts[2] = p0 + dirs[0] - dirs[1];
+	pts[3] = p0 - dirs[0] + dirs[1];
 	return cobj_contained(viewer, pts, 4, -1);
 }
 
