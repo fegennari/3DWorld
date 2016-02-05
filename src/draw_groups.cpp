@@ -516,12 +516,16 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 			int const ndiv(min(N_SPHERE_DIV, max(3, int(min(pt_size, 3.0f*sqrt(pt_size))))));
 			draw_obj(objg, wap_vis_objs, type, radius, color, ndiv, j, 0, s, lt_atten_manager);
 		} // for j
+		static double weapon_angle(0.0);
+		if (animate2 && !wap_vis_objs[0].empty()) {weapon_angle += 0.015*fticks;}
+		vector3d const weapon_dir(sin(weapon_angle), cos(weapon_angle), 0.0); // rotates around z-axis
+
 		for (unsigned k = 0; k < wap_vis_objs[0].size(); ++k) { // draw weapons
 			dwobject const &obj(objg.get_obj(wap_vis_objs[0][k].id));
 			int const wid((int)obj.direction);
 			vector3d v(obj.pos);
-			if (wid != W_BLADE) {v.x += 0.7*radius;}
-			draw_weapon_simple(v, -plus_x, 0.5*radius, obj.coll_id, wid, 0.25, s);
+			if (wid != W_BLADE) {v -= 0.7*radius*weapon_dir;}
+			draw_weapon_simple(v, weapon_dir, 0.5*radius, obj.coll_id, wid, 0.25, s);
 		}
 		for (unsigned k = 0; k < wap_vis_objs[1].size(); ++k) { // draw ammo
 			unsigned const j(wap_vis_objs[1][k].id);
