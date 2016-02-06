@@ -118,7 +118,7 @@ void spray_paint(bool mode) {
 		if (cobj.status == COLL_STATIC && (!cobj.no_draw() || (cobj.cp.cobj_type != COBJ_TYPE_STD))) { // similar to cobj.can_be_scorched()
 			if (decal_contained_in_cobj(cobj, coll_pos, coll_norm, radius, get_max_dim(coll_norm))) {
 				int const lifetime(((mode & 1) ? 3600 : 60)*TICKS_PER_SECOND); // 1 min / 1 hour
-				gen_decal(coll_pos, radius, coll_norm, BLUR_CENT_TEX, cindex, color, 0, 0, lifetime);
+				gen_decal(coll_pos, radius, coll_norm, BLUR_CENT_TEX, cindex, color, 0, 0, lifetime, 0.5);
 			}
 		}
 		else if (cobj.is_tree_leaf()) { // don't need to pass cindex because we spray paint all nearby leaves, not just the one that the line hit

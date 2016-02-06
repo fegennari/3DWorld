@@ -1458,7 +1458,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			float const sz(sz_scale*o_radius*rand_uniform(0.6, 1.4));
 			
 			if (decal_contained_in_cobj(cobj, obj.pos, norm, sz, (cdir >> 1))) {
-				gen_decal((obj.pos - norm*o_radius), sz, norm, blood_tid, index, color, 0, (blood_tid == BLOOD_SPLAT_TEX), 60*TICKS_PER_SECOND, tex_range);
+				gen_decal((obj.pos - norm*o_radius), sz, norm, blood_tid, index, color, 0, (blood_tid == BLOOD_SPLAT_TEX), 60*TICKS_PER_SECOND, 1.0, tex_range);
 			}
 		}
 		deform_obj(obj, norm, v0);
