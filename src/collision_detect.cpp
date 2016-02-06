@@ -81,7 +81,8 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	float t; // thin polygon case
 	vector3d const check_dir(orient*(MIN_POLY_THICK + DECAL_OFFSET));
 	point const p1(center - check_dir), p2(center + check_dir);
-	return line_poly_intersect(p1, p2, c.points, c.npoints, c.norm, t); // doesn't really work on extruded polygons; maybe should check that dist to polygon edge < draw_radius
+	if (!line_poly_intersect(p1, p2, c.points, c.npoints, c.norm, t)) return 0; // doesn't really work on extruded polygons; maybe should check that dist to polygon edge < draw_radius
+	return (draw_radius < min_dist_from_pt_to_polygon_edge(center, c.points, c.npoints));
 }
 
 
