@@ -859,9 +859,7 @@ void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const
 void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { // rocket and seekd
 
 	if (animate2) {
-		if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {
-			gen_smoke((pos + orient.get_norm()*(2.0*radius)), 0.2);
-		}
+		if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {gen_smoke((pos + orient.get_norm()*(2.0*radius)), 0.2);}
 		add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);
 	}
 }
@@ -1630,6 +1628,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 	point pos(fpos + dir*(0.1*radius));
 	fire_frame = max(1, fire_delay);
 	float const damage(damage_scale*w.blast_damage), vel(w.get_fire_vel());
+	int const ignore_cobj(get_shooter_coll_id(shooter));
 	
 	if (is_player && powerup != PU_FLIGHT) { // recoil (only for player)
 		float recoil(w.recoil);
@@ -1653,7 +1652,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 		if ((wmode&1) != 1) { // not firing shrapnel
 			if (dtime > 10) {firing_error *= 0.1;}
 			if (underwater) {firing_error += UWATER_FERR_ADD;}
-			projectile_test(fpos, dir, firing_error, damage, shooter, range);
+			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
 			create_shell_casing(fpos, dir, shooter, radius, 0);
 			if (!is_player && range > 0.1*radius) {beams.push_back(beam3d(1, shooter, fpos, (fpos + range*dir), ORANGE, 1.0));} // generate bullet light trail
 			return 1;
@@ -1666,7 +1665,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 			if (underwater) firing_error += UWATER_FERR_ADD;
 
 			for (int i = 0; i < int(w.nshots); ++i) { // can be slow if trees are involved
-				projectile_test(fpos, dir, firing_error, damage, shooter, range);
+				projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
 			}
 		}
 		if (weapon_id == W_SHOTGUN) {
@@ -1697,7 +1696,7 @@ int player_state::fire_projectile(point fpos, vector3d dir, int shooter, int &ch
 
 	case W_LASER: // line of sight damage
 		{
-			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, -1);
+			projectile_test(fpos, dir, firing_error, damage, shooter, range, 1.0, ignore_cobj);
 			if (range > 1.1*radius) {
 				beam3d const beam((range >= 0.9*FAR_CLIP), shooter, (fpos + dir*radius), (fpos + dir*range), RED);
 				add_laser_beam(beam); // might not need to actually add laser itself for camera/player

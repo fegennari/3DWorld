@@ -580,6 +580,7 @@ sphere_t get_weapon_bsphere(int weapon);
 void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int cid, int wid, float scale, shader_t &shader);
 void draw_weapon_in_hand(int shooter, shader_t &shader);
 bool weap_has_transparent(int shooter);
+int get_shooter_coll_id(int shooter);
 void draw_scheduled_weapons();
 void add_weapon_lights(int shooter);
 void show_crosshair(colorRGBA const &color, int do_zoom);

@@ -669,6 +669,11 @@ bool weap_has_transparent(int shooter) {
 }
 
 
+int get_shooter_coll_id(int shooter) {
+	return ((shooter == CAMERA_ID) ? camera_coll_id : obj_groups[coll_id[SMILEY]].get_obj(shooter).coll_id);
+}
+
+
 void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader) {
 
 	assert(shooter == CAMERA_ID || shooter < num_smileys);
@@ -699,7 +704,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader) {
 		if (sstate.powerup == PU_INVISIBILITY)         return;
 		if (sstate.weapon == W_BALL && game_mode == 2) return; // dodgeball already drawn
 	}
-	int const cid((shooter == CAMERA_ID) ? camera_coll_id : obj_groups[coll_id[SMILEY]].get_obj(shooter).coll_id);
+	int const cid(get_shooter_coll_id(shooter));
 	vector3d const dir(get_sstate_dir(shooter));
 	unsigned const delay(max(1u, weapons[wid].fire_delay));
 	float const fire_val((float)sstate.fire_frame/(float)delay);
