@@ -272,11 +272,10 @@ void gen_decal(point const &pos, float radius, vector3d const &orient, int tid, 
 {
 	static point last_pos(all_zeros);
 	if (dist_less_than(pos, last_pos, 1.0*radius)) return; // skip duplicate/close locations
-	last_pos = pos;
 	float const rot_angle(rand_angle ? rand_uniform(0.0, TWO_PI) : 0.0);
 	decal_obj decal;
 	decal.gen(pos, radius, rot_angle, orient, lifetime, tid, cid, color, is_glass, tr);
-	if (decal.is_on_cobj(cid)) {decals[decals.choose_element()] = decal;}
+	if (decal.is_on_cobj(cid)) {decals[decals.choose_element()] = decal; last_pos = pos;}
 }
 
 

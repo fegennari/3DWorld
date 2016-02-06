@@ -324,6 +324,19 @@ bool pt_line_seg_dist_less_than(point const &P, point const &L1, point const &L2
 	return pt_line_dist_less_than(P, L1, L2, dist);
 }
 
+// Note: pt should lie in the plane of the polygon and be contained within the polygon
+float min_dist_from_pt_to_polygon_edge(point const &pt, point const *const pts, unsigned npts) {
+
+	assert(pts != nullptr && npts >= 3);
+	float dmin(0.0);
+
+	for (unsigned i = 0; i < npts; ++i) {
+		float const dist(pt_line_dist(pt, pts[i], pts[(i+1 == npts) ? 0 : i+1]));
+		dmin = ((i == 0) ? dist : min(dist, dmin));
+	}
+	return dmin;
+}
+
 
 bool sphere_poly_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm, float rdist, float radius) {
 

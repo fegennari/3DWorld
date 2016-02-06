@@ -47,7 +47,7 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	if (cobj < 0) return 0;
 	coll_obj const &c(coll_objects.get_cobj(cobj)); // can this fail if the cobj was destroyed? coll_objects only increases in size
 	// spheres and cylinder sides not supported - decals look bad on rounded objects
-	if (c.status != COLL_STATIC || (c.type != COLL_CUBE && c.type != COLL_POLYGON && c.type != COLL_CYLINDER && c.type != COLL_CYLINDER_ROT)) return 0;
+	if (c.status != COLL_STATIC || (!c.has_flat_top_bot() && c.type != COLL_CYLINDER_ROT)) return 0;
 	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
 	point center(ipos + get_platform_delta());
 
@@ -58,27 +58,30 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	}
 	if (!sphere_cube_intersect(center, DECAL_OFFSET, c)) return 0;
 	if (c.type == COLL_CUBE) return 1;
+	float const draw_radius(0.75*radius);
 
 	if (c.type == COLL_CYLINDER) {
 		if (c.cp.surfs & 1) return 0; // draw_ends=0
 		if (orient != plus_z && orient != -plus_z) return 0; // not on the cylinder end
-		return dist_xy_less_than(center, c.points[orient == plus_z], (c.radius + radius));
+		return (draw_radius < c.radius && dist_xy_less_than(center, c.points[orient == plus_z], (c.radius - draw_radius)));
 	}
 	if (c.type == COLL_CYLINDER_ROT) {
 		if (c.cp.surfs & 1) return 0; // draw_ends=0
 		vector3d const cylin_dir((c.points[1] - c.points[0]).get_norm());
 		float const dp(dot_product(orient, cylin_dir));
 		if (fabs(dp) < 0.99) return 0; // not on the cylinder end
-		return dist_less_than(center, c.points[dp > 0.0], (((dp > 0.0) ? c.radius2 : c.radius) + radius));
+		float const c_radius((dp > 0.0) ? c.radius2 : c.radius);
+		return (draw_radius < c_radius && dist_less_than(center, c.points[dp > 0.0], (c_radius - draw_radius)));
 	}
 	assert(c.type == COLL_POLYGON);
 
-	if (c.thickness > MIN_POLY_THICK) {
+	if (c.thickness > MIN_POLY_THICK) { // extruded polygon
 		return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, (center - orient*DECAL_OFFSET), -0.5*DECAL_OFFSET, c.thickness, MIN_POLY_THICK);
 	}
 	float t; // thin polygon case
-	point const p1(center - orient*MIN_POLY_THICK), p2(center + orient*MIN_POLY_THICK);
-	return line_poly_intersect(p1, p2, c.points, c.npoints, c.norm, t); // doesn't really work on extruded polygons
+	vector3d const check_dir(orient*(MIN_POLY_THICK + DECAL_OFFSET));
+	point const p1(center - check_dir), p2(center + check_dir);
+	return line_poly_intersect(p1, p2, c.points, c.npoints, c.norm, t); // doesn't really work on extruded polygons; maybe should check that dist to polygon edge < draw_radius
 }
 
 
@@ -1052,7 +1055,6 @@ void vert_coll_detector::check_cobj(int index) {
 
 
 float decal_dist_to_cube_edge(cube_t const &cube, point const &pos, int dir) {
-
 	int const ds((dir+1)%3), dt((dir+2)%3);
 	return min(min((cube.d[ds][1] - pos[ds]), (pos[ds] - cube.d[ds][0])), min((cube.d[dt][1] - pos[dt]), (pos[dt] - cube.d[dt][0])));
 }
@@ -1077,8 +1079,12 @@ bool decal_contained_in_cobj(coll_obj const &cobj, point const &pos, vector3d co
 
 void gen_explosion_decal(point const &pos, float radius, vector3d const &coll_norm, coll_obj const &cobj, int dir) { // not sure this belongs here
 
-	if (cobj.type != COLL_CUBE || !cobj.can_be_scorched()) return;
-	float const sz(5.0*radius*rand_uniform(0.8, 1.2)), max_sz(decal_dist_to_cube_edge(cobj, pos, dir));
+	if (!cobj.has_flat_top_bot() && cobj.type != COLL_CYLINDER_ROT) return;
+	if (!cobj.can_be_scorched()) return;
+	float const sz(5.0*radius*rand_uniform(0.8, 1.2));
+	float max_sz(sz);
+	if      (cobj.type == COLL_CUBE   ) {max_sz = decal_dist_to_cube_edge(cobj, pos, dir);} // only compute max_sz for cubes; other cobjs use sz or fail
+	else if (cobj.type == COLL_POLYGON) {max_sz = min_dist_from_pt_to_polygon_edge(pos, cobj.points, cobj.npoints);} // may not be correct for extruded polygons
 	if (max_sz > 0.5*sz) {gen_decal(pos, min(sz, max_sz), coll_norm, FLARE3_TEX, cobj.id, colorRGBA(BLACK, 0.75), 0, 1, 240*TICKS_PER_SECOND);} // explosion (4 min.)
 }
 

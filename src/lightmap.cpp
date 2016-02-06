@@ -816,6 +816,7 @@ void setup_2d_texture(unsigned &tid) {
 }
 
 
+// Note: This technique is commonly referred to as Clustered Shading
 // texture units used:
 // 0: reserved for object textures
 // 1: reserved for indirect sky lighting and smoke (if enabled)

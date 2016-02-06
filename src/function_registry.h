@@ -415,6 +415,7 @@ bool thick_poly_intersect(vector3d const &v1, point const &p1, vector3d const &n
 						  point const pts[2][4], bool test_side, unsigned npoints);
 bool sphere_intersect_poly_sides(vector<tquad_t> const &pts, point const &center, float radius, float &dist, vector3d &norm, bool strict);
 bool pt_line_seg_dist_less_than(point const &P, point const &L1, point const &L2, float dist);
+float min_dist_from_pt_to_polygon_edge(point const &pt, point const *const pts, unsigned npts);
 bool sphere_poly_intersect(const point *points, unsigned npoints, point const &pos, vector3d const &norm, float rdist, float radius);
 bool sphere_ext_poly_int_base(point const &pt, vector3d const &norm, point const &pos, float radius,
 							  float thickness, float &thick, float &rdist);
