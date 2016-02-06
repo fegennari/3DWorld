@@ -33,7 +33,7 @@ cobj_z_bias 0.001
 indir_vert_offset 0.8
 tree_coll_level 4
 default_ground_tex -1
-# mesh_seed 1
+mesh_seed 2
 
 #snow_depth 0.05
 snow_random 0.0

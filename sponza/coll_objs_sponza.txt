@@ -1,4 +1,4 @@
-t 0.0 0.0 -0.7 # translate -Z
+t 0.0 0.0 -0.74 # translate -Z
 l 0.8 1.0 1.0 1.0 1.0 27 1 # elasticity R G B A texture_id draw
 y 4.0
 
