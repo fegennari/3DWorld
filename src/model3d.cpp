@@ -20,7 +20,7 @@ unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 bool model_calc_tan_vect(1); // slower and more memory but sometimes better quality/smoother transitions
 
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
-extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale;
+extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass;
 extern unsigned shadow_map_sz;
 extern int display_mode;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
@@ -879,7 +879,7 @@ void material_t::init_textures(texture_manager &tmgr) {
 }
 
 
-void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool enable_alpha_mask) {
+void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask) {
 
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
@@ -895,7 +895,12 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 	}
 	int const tex_id(get_render_texture());
 
-	if (is_shadow_pass) {
+	if (is_z_prepass) { // no textures
+		if (alpha < 1.0 || (tex_id >= 0 && alpha_tid >= 0)) return; // partially transparent or has alpha mask
+		geom.render(shader, 0);
+		geom_tan.render(shader, 0);
+	}
+	else if (is_shadow_pass) {
 		bool const has_alpha_mask(tex_id >= 0 && alpha_tid >= 0);
 		if (has_alpha_mask != enable_alpha_mask) return; // incorrect pass
 		if (has_alpha_mask) {tmgr.bind_texture(tex_id);} // enable alpha mask texture
@@ -1364,31 +1369,30 @@ void model3d::bind_all_used_tids() {
 }
 
 
-void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask,
-	base_mat_t const &unbound_mat, xform_matrix const *const mvm)
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask,
+	unsigned bmap_pass_mask, base_mat_t const &unbound_mat, xform_matrix const *const mvm)
 {
-	if (!is_shadow_pass) {smap_data.set_for_all_lights(shader, mvm);}
+	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass);
+	if (is_normal_pass) {smap_data.set_for_all_lights(shader, mvm);}
 	if (group_back_face_cull) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
 
 	// render geom that was not bound to a material
 	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0) { // enabled, not in bump map only pass
-		if (!is_shadow_pass) { // cur_ub_tid texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
+		if (is_normal_pass) { // cur_ub_tid texture shouldn't have an alpha mask, so we don't need to use it in the shadow pass
 			assert(unbound_mat.tid >= 0);
 			select_texture(unbound_mat.tid);
 			shader.set_material(unbound_mat);
 			shader.add_uniform_float("min_alpha", 0.0);
 			if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 		}
-		if (!is_shadow_pass || !enable_alpha_mask) { // skip shadow + alpha mask pass
-			unbound_geom.render(shader, is_shadow_pass);
-		}
-		if (!is_shadow_pass) {shader.clear_specular();}
+		if (is_normal_pass || !enable_alpha_mask) {unbound_geom.render(shader, is_shadow_pass);} // skip shadow + alpha mask pass
+		if (is_normal_pass) {shader.clear_specular();}
 	}
 	
 	// render all materials (opaque then transparent)
 	vector<pair<float, unsigned> > to_draw;
 
-	for (unsigned pass = 0; pass < 2; ++pass) { // opaque, transparent
+	for (unsigned pass = 0; pass < (is_z_prepass ? 1U : 2U); ++pass) { // opaque, transparent
 		for (unsigned i = 0; i < materials.size(); ++i) {
 			if (materials[i].is_partial_transparent() == (pass != 0) && (bmap_pass_mask & (1 << unsigned(materials[i].use_bump_map())))) {
 				to_draw.push_back(make_pair(materials[i].draw_order_score, i));
@@ -1397,7 +1401,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool enabl
 		sort(to_draw.begin(), to_draw.end());
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, enable_alpha_mask);
+			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask);
 		}
 		to_draw.clear();
 	}
@@ -1477,7 +1481,7 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
 
 
 // non-const due to vbo caching, normal computation, etc.
-void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate) {
+void model3d::render(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate) {
 
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	xform_matrix const mvm(fgGetMVM());
@@ -1488,14 +1492,14 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
 
-	if (reflective && !is_shadow_pass && bmap_pass_mask == 1) {
+	if (reflective && !is_shadow_pass && !is_z_prepass && bmap_pass_mask == 1) {
 		if (reflection_tid == 0) {
 			// FIXME: reflection texture setup (needs to be created elsewhere)
 		}
 		if (reflection_tid > 0) {bind_texture_tu(reflection_tid, 14);} // tu_id=14
 	}
 	if (transforms.empty()) { // no transforms case
-		render_materials_def(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, &mvm);
+		render_materials_def(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, &mvm);
 	}
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		if (!is_cube_visible_to_camera(xf->get_xformed_cube(bcube), is_shadow_pass)) continue; // Note: xlate has already been applied to camera_pdu
@@ -1504,7 +1508,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool enable_alpha_ma
 		camera_pdu_transform_wrapper cptw2(*xf);
 		base_mat_t ub_mat(unbound_mat);
 		xf->apply_material_override(ub_mat);
-		render_materials(shader, is_shadow_pass, enable_alpha_mask, bmap_pass_mask, ub_mat, &mvm);
+		render_materials(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, &mvm);
 		// cptw2 dtor called here
 	}
 	// cptw dtor called here
@@ -1530,7 +1534,7 @@ void model3d::model_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	for (unsigned sam_pass = 0; sam_pass < 2U; ++sam_pass) {
 		shader_t s;
 		setup_smap_shader(s, (sam_pass != 0));
-		model->render_materials_def(s, 1, (sam_pass == 1), 3); // no transforms
+		model->render_materials_def(s, 1, 0, (sam_pass == 1), 3); // no transforms
 		s.end_shader();
 	}
 }
@@ -1726,6 +1730,13 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 	}
 	shader_t s;
 
+	if (use_z_prepass) { // faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
+		s.set_prefix("#define POS_FROM_EPOS_MULT", 0); // VS - needed to make transformed vertices agree with the normal rendering flow
+		s.begin_color_only_shader(BLACK); // don't even need colors, only need depth
+		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 1, 0, 3, xlate);}
+		s.end_shader();
+		glDepthFunc(GL_LEQUAL);
+	}
 	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
 	for (int bmap_pass = (needs_bump_maps ? 2 : 1); bmap_pass >= 0; --bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
@@ -1750,13 +1761,14 @@ void model3ds::render(bool is_shadow_pass, vector3d const &xlate) {
 				s.clear_specular();
 			}
 			for (iterator m = begin(); m != end(); ++m) { // non-const
-				m->render(s, is_shadow_pass, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), xlate);
+				m->render(s, is_shadow_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), xlate);
 			}
 			if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
 			s.clear_specular(); // may be unnecessary
 			s.end_shader();
 		} // sam_pass
 	} // bmap_pass
+	if (use_z_prepass) {glDepthFunc(GL_LESS);} // reset to default
 }
 
 
@@ -1782,7 +1794,6 @@ cube_t model3ds::get_bcube() const {
 
 
 void model3ds::build_cobj_trees(bool verbose) {
-
 	for (iterator m = begin(); m != end(); ++m) {m->build_cobj_tree(verbose);}
 }
 

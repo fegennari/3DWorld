@@ -6,6 +6,7 @@ model3d_winding_number_normal 1 # works better
 global_lighting_update 0 # too slow
 model_calc_tan_vect 0
 invert_model_nmap_bscale 1
+use_z_prepass 1
 
 # one of these is required for texturing since this OBJ file doesn't have tcs for most objects
 model_auto_tc_scale 10.0 # more efficient, and preserves existing object tcs, but has bad stretching artifacts where surface normals change
