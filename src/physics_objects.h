@@ -203,7 +203,7 @@ struct dwobject : public basic_physics_obj { // size = 67(68) (dynamic world obj
 	int object_still_stopped(int obj_index);
 	void do_coll_damage();
 	int check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm=NULL,
-		vector3d const &mdir=all_zeros, bool skip_dynamic=0, bool only_drawn=0, int only_cobj=-1);
+		vector3d const &mdir=all_zeros, bool skip_dynamic=0, bool only_drawn=0, int only_cobj=-1, bool skip_movable=0);
 	int multistep_coll(point const &last_pos, int obj_index, unsigned nsteps);
 	void update_vel_from_damage(vector3d const &dv);
 	void damage_object(float damage, point const &dpos, point const &shoot_pos, int weapon);
@@ -223,7 +223,7 @@ class vert_coll_detector {
 
 	dwobject &obj;
 	int type, iter;
-	bool player, already_bounced, skip_dynamic, only_drawn;
+	bool player, already_bounced, skip_dynamic, only_drawn, skip_movable;
 	int coll, obj_index, do_coll_funcs, only_cobj;
 	unsigned cdir, lcoll;
 	float z_old, o_radius, z1, z2;
@@ -237,9 +237,9 @@ class vert_coll_detector {
 	void init_reset_pos();
 public:
 	vert_coll_detector(dwobject &obj_, int obj_index_, int do_coll_funcs_, int iter_, vector3d *cnorm_,
-		vector3d const &mdir=zero_vector, bool skip_dynamic_=0, bool only_drawn_=0, int only_cobj_=-1) :
+		vector3d const &mdir=zero_vector, bool skip_dynamic_=0, bool only_drawn_=0, int only_cobj_=-1, bool skip_movable_=0) :
 	obj(obj_), type(obj.type), iter(iter_), player(type == CAMERA || type == SMILEY || type == WAYPOINT),
-	already_bounced(0), skip_dynamic(skip_dynamic_), only_drawn(only_drawn_), coll(0), obj_index(obj_index_),
+	already_bounced(0), skip_dynamic(skip_dynamic_), only_drawn(only_drawn_), skip_movable(skip_movable_), coll(0), obj_index(obj_index_),
 	do_coll_funcs(do_coll_funcs_), only_cobj(only_cobj_), cdir(0), lcoll(0), z_old(obj.pos.z), o_radius(0.0),
 	z1(0.0), z2(0.0), cnorm(cnorm_), pos(obj.pos), pold(obj.pos), motion_dir(mdir), obj_vel(obj.velocity) {}
 

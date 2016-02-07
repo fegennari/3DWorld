@@ -249,6 +249,7 @@ public:
 	void add_one_cobj_wpt(coll_obj &c, bool connect) {
 		if (c.status != COLL_STATIC || c.platform_id >= 0) return; // only static objects (not platforms) - use c.truly_static()?
 		if (c.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN)       return; // skip voxel terrain polygons (too many, too dynamic, too hard to walk on)
+		if (c.is_movable()) return; // skip movable cobjs
 		assert(c.waypt_id < 0); // must not already be set
 
 		switch (c.type) {
@@ -285,10 +286,7 @@ public:
 		int const cc(camera_change);
 		camera_change = 0; // messes up collision detection code
 		unsigned const num_waypoints((unsigned)waypoints.size());
-
-		for (coll_obj_group::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {
-			add_one_cobj_wpt(*i, 0);
-		}
+		for (coll_obj_group::iterator i = coll_objects.begin(); i != coll_objects.end(); ++i) {add_one_cobj_wpt(*i, 0);}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " cobj waypoints" << endl;
 		camera_change = cc;
 	}
@@ -504,7 +502,7 @@ public:
 		dwobject obj(def_objects[WAYPOINT]); // create a temporary object
 		obj.pos     = pos;
 		obj.coll_id = coll_id; // ignore collisions with the current object
-		bool const ret(!obj.check_vert_collision(0, 0, 0, NULL, all_zeros, 1, 0, -1)); // return true if no collision (skip dynamic objects)
+		bool const ret(!obj.check_vert_collision(0, 0, 0, NULL, all_zeros, 1, 0, -1, 1)); // return true if no collision (skip dynamic and movable objects)
 		pos = obj.pos;
 		return ret;
 	}

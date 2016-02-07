@@ -1179,6 +1179,7 @@ void coll_obj::convert_cube_to_ext_polygon() {
 void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool player_step) {
 
 	coll_obj const &cobj(coll_objects[index]);
+	if (skip_movable && cobj.is_movable()) return;
 	
 	if (cobj.type == COLL_CUBE || cobj.type == COLL_CYLINDER) {
 		if (o_radius > 0.9*LARGE_OBJ_RAD && !sphere_cube_intersect(pos, o_radius, cobj)) return;
@@ -1508,9 +1509,9 @@ int vert_coll_detector::check_coll() {
 
 // 0 = non vert coll, 1 = X coll, 2 = Y coll, 3 = X + Y coll
 int dwobject::check_vert_collision(int obj_index, int do_coll_funcs, int iter, vector3d *cnorm,
-	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj)
+	vector3d const &mdir, bool skip_dynamic, bool only_drawn, int only_cobj, bool skip_movable)
 {
-	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_drawn, only_cobj);
+	vert_coll_detector vcd(*this, obj_index, do_coll_funcs, iter, cnorm, mdir, skip_dynamic, only_drawn, only_cobj, skip_movable);
 	return vcd.check_coll();
 }
 
