@@ -172,7 +172,7 @@ bool wpt_goal::is_reachable() const {
 bool check_step_dz(point &cur, point const &lpos, float radius) {
 
 	float zvel(0.0);
-	int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, 0, 0, 0, 1, 1));
+	int const ret(set_true_obj_height(cur, lpos, C_STEP_HEIGHT, zvel, WAYPOINT, 0, 0, 0, 1, 1, 1)); // skip dynamic/movable
 	if (ret == 3)                                      return 0; // stuck
 	if ((cur.z - lpos.z) > C_STEP_HEIGHT*radius)       return 0; // too high of a step
 	if ((cur.z - lpos.z) < -MAX_FALL_DIST_MULT*radius) return 0; // too far  of a drop
@@ -437,7 +437,7 @@ public:
 				point const end(waypoints[j].pos);
 				if (cindex >= 0 && coll_objects.get_cobj(cindex).line_intersect(start, end)) continue; // hit last cobj
 				if (fast && !dist_less_than(start, end, fast_dmax)) continue; // too far away
-				if (check_coll_line(start, end, cindex, -1, 1, 0))  continue; // no line of sight
+				if (check_coll_line(start, end, cindex, -1, 1, 0, 1, 0, 1)) continue; // no line of sight (skip dynamic/movable)
 				waypoints[i].visible_wpts.push_back(j);
 				cands.push_back(make_pair(p2p_dist_sq(start, end), j));
 				++visible;
@@ -488,7 +488,7 @@ public:
 
 			for (unsigned j = 0; j < next.size(); ++j) {
 				assert(next[j] < waypoints.size());
-				if (next[j] >= to_start && next[j] < to_end) waypoints[next[j]].prev_wpts.push_back(i);
+				if (next[j] >= to_start && next[j] < to_end) {waypoints[next[j]].prev_wpts.push_back(i);}
 			}
 		}
 		if (verbose) {
@@ -544,9 +544,8 @@ public:
 			if (waypoints[i].disabled) continue;
 			float const dist_sq(p2p_dist_sq(pos, waypoints[i].pos));
 
-			if (closest < 0 || dist_sq < closest_dsq) {
-				if (check_visible && (waypoints[i].unreachable() ||
-					check_coll_line(pos, waypoints[i].pos, cindex, -1, 1, 0))) continue; // not visible/reachable
+			if (closest < 0 || dist_sq < closest_dsq) { // skip dynamic/movable
+				if (check_visible && (waypoints[i].unreachable() || check_coll_line(pos, waypoints[i].pos, cindex, -1, 1, 0, 1, 0, 1))) continue; // not visible/reachable
 				closest_dsq = dist_sq;
 				closest     = i;
 			}
@@ -760,7 +759,7 @@ void find_optimal_waypoint(point const &pos, vector<od_data> &oddatav, wpt_goal 
 		int cindex(-1);
 		unsigned tot_steps(0);
 
-		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0) && wb.is_point_reachable(pos, wpos, tot_steps, STEP_SIZE_MULT2, 0)) {
+		if (!check_coll_line(pos, wpos, cindex, -1, 1, 0, 1, 0, 1) && wb.is_point_reachable(pos, wpos, tot_steps, STEP_SIZE_MULT2, 0)) { // skip dynamic/movable
 			min_dist = (start.empty() ? dist : min(dist, min_dist));
 			start.push_back(make_pair(id, dist));
 		}

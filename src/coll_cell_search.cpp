@@ -250,11 +250,11 @@ public:
 };
 
 
-bool check_coll_line(point const &pos1, point const &pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool include_voxels, bool skip_init_colls) {
+bool check_coll_line(point const &pos1, point const &pos2, int &cindex, int cobj, int skip_dynamic, int test_alpha, bool include_voxels, bool skip_init_colls, bool skip_movable) {
 
 	if (world_mode != WMODE_GROUND) return 0;
-	if (check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2), include_voxels, skip_init_colls))   return 1; // static cobjs + voxels
-	if (!skip_dynamic && begin_motion && check_coll_line_tree(pos1, pos2, cindex, cobj, 1, test_alpha, 0, 0, skip_init_colls)) return 1; // find dynamic cobj intersection
+	if (check_coll_line_tree(pos1, pos2, cindex, cobj, 0, test_alpha, (skip_dynamic >= 2), include_voxels, skip_init_colls, skip_movable))   return 1; // static cobjs + voxels
+	if (!skip_dynamic && begin_motion && check_coll_line_tree(pos1, pos2, cindex, cobj, 1, test_alpha, 0, 0, skip_init_colls, skip_movable)) return 1; // find dynamic cobj intersection
 	return 0;
 }
 

@@ -146,7 +146,7 @@ public:
 	void add_cobjs(bool verbose);
 	void build_tree_from_cixs(bool do_mt_build);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, int &cindex, int ignore_cobj,
-		bool exact, int test_alpha, bool skip_non_drawn, bool skip_init_colls) const;
+		bool exact, int test_alpha, bool skip_non_drawn, bool skip_init_colls, bool skip_movable) const;
 	bool check_point_contained(point const &p, int &cindex) const;
 	void get_intersecting_cobjs(cube_t const &cube, vector<unsigned> &cobjs, int ignore_cobj, float toler, bool check_ccounter, int id_for_cobj_int) const;
 	bool is_cobj_contained(point const &viewer, point const *const pts, unsigned npts, int ignore_cobj, int &cobj) const;

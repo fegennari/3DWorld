@@ -1687,7 +1687,7 @@ bool calc_cylin_z_bounds(point const &p1, point const &p2, float r1, float r2, p
 
 // 0 = no change, 1 = moved up, 2 = falling (unused), 3 = stuck
 int set_true_obj_height(point &pos, point const &lpos, float step_height, float &zvel, int type, int id,
-	bool flight, bool on_snow, bool skip_dynamic, bool test_only)
+	bool flight, bool on_snow, bool skip_dynamic, bool test_only, bool skip_movable)
 {
 	int const xpos(get_xpos(pos.x) - xoff), ypos(get_ypos(pos.y) - yoff);
 	bool const is_camera(type == CAMERA), is_player(is_camera || (type == SMILEY && id >= 0));
@@ -1738,6 +1738,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		if (!cobj.contains_pt_xy(pos)) continue; // test bounding cube
 		if (cobj.no_collision())       continue;
 		if (skip_dynamic && cobj.status == COLL_DYNAMIC) continue;
+		if (skip_movable && cobj.is_movable()) continue;
 		float zt(0.0), zb(0.0);
 		int coll(0);
 		
