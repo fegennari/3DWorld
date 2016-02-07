@@ -695,7 +695,7 @@ public:
 									  mpos.y-grass_length, mpos.y+DY_VAL+grass_length, z_min_matrix[y][x], grass_zmax);
 					visible = camera_pdu.cube_visible(cube); // could use camera_pdu.sphere_and_cube_visible_test()
 				
-					if (visible && (display_mode & 0x08)) {
+					if (visible && (display_mode & 0x08) && have_occluders()) {
 						int &last_occ_cobj(last_occluder[y*MESH_X_SIZE + x]);
 
 						if (last_occ_cobj >= 0 || ((frame_counter + y) & 7) == 0) { // only sometimes update if not previously occluded
