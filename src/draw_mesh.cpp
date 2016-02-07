@@ -58,6 +58,7 @@ bool use_water_plane_tess();
 bool enable_ocean_waves();
 void setup_tile_shader_shadow_map(shader_t &s);
 void set_smap_enable_for_shader(shader_t &s, bool enable_smap, int shader_type);
+void setup_mesh_and_water_shader(shader_t &s, bool detail_normal_map, bool is_water);
 
 
 float camera_min_dist_to_surface() { // min dist of four corners and center
@@ -208,7 +209,13 @@ void draw_mesh_vbo(bool shadow_pass) {
 	// Note: ignores detail texture
 	colorRGBA const color(mesh_color_scale*DEF_DIFFUSE);
 	shader_t s;
-	s.begin_simple_textured_shader(0.0, !shadow_pass, 1, &color); // lighting + texgen
+
+	if (!shadow_pass && shadow_map_enabled()) { // enable shadows and some other effects
+		setup_mesh_and_water_shader(s, 1, 0);
+	}
+	else {
+		s.begin_simple_textured_shader(0.0, !shadow_pass, 1, &color); // lighting + texgen
+	}
 	set_landscape_texture_texgen(s);
 	
 	if (mesh_data.vbo == 0) {
