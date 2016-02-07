@@ -403,7 +403,7 @@ bool coll_obj::is_occluder() const {
 	
 	if (status != COLL_STATIC || (!cp.draw && cp.cobj_type != COBJ_TYPE_MODEL3D) || is_semi_trans() || dgroup_id >= 0) return 0; // cp.might_be_drawn()?
 	if (type == COLL_CUBE && cp.cobj_type != COBJ_TYPE_MODEL3D) return 1;
-	if (type != COLL_CUBE && type != COLL_POLYGON) return 0;
+	if (type != COLL_POLYGON) return 0;
 	unsigned big_dims(0);
 	UNROLL_3X(if ((d[i_][1] - d[i_][0]) > 0.15*SCENE_SIZE[i_]) ++big_dims;)
 	return (big_dims >= 2);

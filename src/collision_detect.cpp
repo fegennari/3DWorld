@@ -48,7 +48,7 @@ bool decal_obj::is_on_cobj(int cobj, vector3d *delta) const {
 	coll_obj const &c(coll_objects.get_cobj(cobj)); // can this fail if the cobj was destroyed? coll_objects only increases in size
 	// spheres and cylinder sides not supported - decals look bad on rounded objects
 	if (c.status != COLL_STATIC || (!c.has_flat_top_bot() && c.type != COLL_CYLINDER_ROT)) return 0;
-	//if (c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
+	//if (c.type == COLL_CUBE && c.cp.cobj_type == COBJ_TYPE_MODEL3D) return 0; // model3d bounding volume - should we include these?
 	point center(ipos + get_platform_delta());
 
 	if (c.is_movable() && moving_cobjs.find(cobj) != moving_cobjs.end()) {
