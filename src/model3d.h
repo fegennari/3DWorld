@@ -218,7 +218,7 @@ template<typename T> class indexed_vntc_vect_t : public vntc_vect_t<T> {
 public:
 	indexed_vntc_vect_t(unsigned obj_id_=0) : vntc_vect_t(obj_id_), need_normalize(0) {}
 	void calc_tangents(unsigned npts) {assert(0);}
-	void render(shader_t &shader, bool is_shadow_pass, unsigned npts, bool no_vfc=0);
+	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc=0);
 	void reserve_for_num_verts(unsigned num_verts);
 	void add_poly(polygon_t const &poly, vertex_map_t<T> &vmap);
 	void add_triangle(triangle const &t, vertex_map_t<T> &vmap);
@@ -263,8 +263,8 @@ template<typename T> struct geometry_t {
 
 	void calc_tangents_blocks(vntc_vect_block_t<T> &blocks, unsigned npts) {assert(0);}
 	void calc_tangents();
-	void render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, unsigned npts);
-	void render(shader_t &shader, bool is_shadow_pass);
+	void render_blocks(shader_t &shader, bool is_shadow_pass, point const *const xlate, vntc_vect_block_t<T> &blocks, unsigned npts);
+	void render(shader_t &shader, bool is_shadow_pass, point const *const xlate);
 	bool empty() const {return (triangles.empty() && quads.empty());}
 	void add_poly_to_polys(polygon_t const &poly, vntc_vect_block_t<T> &v, vertex_map_t<T> &vmap, unsigned obj_id=0) const;
 	void add_poly(polygon_t const &poly, vertex_map_t<T> vmap[2], unsigned obj_id=0);
@@ -338,7 +338,7 @@ struct material_t : public material_params_t {
 	bool get_needs_alpha_test() const {return (alpha_tid >= 0 || might_have_alpha_comp);}
 	bool is_partial_transparent() const {return (alpha < 1.0 || get_needs_alpha_test());}
 	void init_textures(texture_manager &tmgr);
-	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask);
+	void render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, point const *const xlate);
 	colorRGBA get_ad_color() const;
 	colorRGBA get_avg_color(texture_manager const &tmgr, int default_tid=-1) const;
 	bool write(ostream &out) const;
@@ -411,11 +411,13 @@ public:
 	void clear_smaps() {smap_data.clear();} // frees GL state
 	void load_all_used_tids();
 	void bind_all_used_tids();
-	void render_materials_def(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, xform_matrix const *const mvm=nullptr) {
-		render_materials(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, unbound_mat, mvm);
+	void render_materials_def(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask,
+		unsigned bmap_pass_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
+	{
+		render_materials(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, unbound_mat, xlate, mvm);
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
-		base_mat_t const &unbound_mat, xform_matrix const *const mvm=nullptr);
+		base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm=nullptr);
 	void render(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate);
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}

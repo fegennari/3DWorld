@@ -1687,7 +1687,7 @@ void voxel_model::core_render(shader_t &s, unsigned lod_level, bool is_shadow_pa
 		// Note: it's possible to do per-block LOD, but the sorting is wrong, shadows look bad, and there are popping and cracks
 		//unsigned const lod_level2(min(unsigned(0.3*sqrt(distance_to_camera(i->pt))), tri_data.size()-1));
 		assert(i->ix < tri_data[lod_level].size());
-		tri_data[lod_level][i->ix].render(s, is_shadow_pass, 3, no_vfc); // triangles
+		tri_data[lod_level][i->ix].render(s, is_shadow_pass, &zero_vector, 3, no_vfc); // triangles
 	}
 }
 

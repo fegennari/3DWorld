@@ -449,7 +449,7 @@ template<typename T> void vntc_vect_t<T>::read(istream &in) {
 }
 
 
-template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, unsigned npts, bool no_vfc) {
+template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate, unsigned npts, bool no_vfc) {
 
 	if (empty()) return;
 	assert(npts == 3 || npts == 4);
@@ -465,7 +465,10 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	}
 	else if (vbo) { // don't cull if vbo hasn't yet been allocated because this will cause it to be skipped in the shadow pass
 		if (!camera_pdu.sphere_and_cube_visible_test(bsphere.pos, bsphere.radius, bcube)) return; // view frustum culling
-		if (indices.size() >= 100 && (display_mode & 0x08) != 0 && cube_cobj_occluded(camera_pdu.pos, bcube)) return; // occlusion culling
+		
+		if (indices.size() >= 100 && xlate != nullptr && (display_mode & 0x08) != 0) { // Note: null xlate implies there are transforms other than translate, so skip occlusion culling
+			if (cube_cobj_occluded((camera_pdu.pos + *xlate), (bcube + *xlate))) return; // occlusion culling
+		}
 	}
 	assert(!indices.empty()); // now always using indexed drawing
 	int prim_type(GL_TRIANGLES);
@@ -780,18 +783,18 @@ template<typename T> void geometry_t<T>::calc_tangents() {
 }
 
 
-template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, vntc_vect_block_t<T> &blocks, unsigned npts) {
+template<typename T> void geometry_t<T>::render_blocks(shader_t &shader, bool is_shadow_pass, point const *const xlate, vntc_vect_block_t<T> &blocks, unsigned npts) {
 
 	for (vntc_vect_block_t<T>::iterator i = blocks.begin(); i != blocks.end(); ++i) {
-		i->render(shader, is_shadow_pass, npts);
+		i->render(shader, is_shadow_pass, xlate, npts);
 	}
 }
 
 
-template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow_pass) {
+template<typename T> void geometry_t<T>::render(shader_t &shader, bool is_shadow_pass, point const *const xlate) {
 
-	render_blocks(shader, is_shadow_pass, triangles, 3);
-	render_blocks(shader, is_shadow_pass, quads,     4);
+	render_blocks(shader, is_shadow_pass, xlate, triangles, 3);
+	render_blocks(shader, is_shadow_pass, xlate, quads,     4);
 }
 
 
@@ -879,7 +882,7 @@ void material_t::init_textures(texture_manager &tmgr) {
 }
 
 
-void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask) {
+void material_t::render(shader_t &shader, texture_manager const &tmgr, int default_tid, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, point const *const xlate) {
 
 	if ((geom.empty() && geom_tan.empty()) || skip || alpha == 0.0) return; // empty or transparent
 	if (is_shadow_pass && alpha < MIN_SHADOW_ALPHA) return;
@@ -897,15 +900,15 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 
 	if (is_z_prepass) { // no textures
 		if (alpha < 1.0 || (tex_id >= 0 && alpha_tid >= 0)) return; // partially transparent or has alpha mask
-		geom.render(shader, 0);
-		geom_tan.render(shader, 0);
+		geom.render(shader, 0, xlate);
+		geom_tan.render(shader, 0, xlate);
 	}
 	else if (is_shadow_pass) {
 		bool const has_alpha_mask(tex_id >= 0 && alpha_tid >= 0);
 		if (has_alpha_mask != enable_alpha_mask) return; // incorrect pass
 		if (has_alpha_mask) {tmgr.bind_texture(tex_id);} // enable alpha mask texture
-		geom.render(shader, 1);
-		geom_tan.render(shader, 1);
+		geom.render(shader, 1, xlate);
+		geom_tan.render(shader, 1, xlate);
 		if (has_alpha_mask) {select_texture(WHITE_TEX);} // back to a default white texture
 	}
 	else {
@@ -939,8 +942,8 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 		// 3DWorld uses a more realistic lighting model where ambient comes from indirect lighting that's computed independently from the material;
 		// however, it might make sense to use ka instead of ke when ke is not specified?
 		shader.set_cur_color(get_ad_color());
-		geom.render(shader, 0);
-		geom_tan.render(shader, 0);
+		geom.render(shader, 0, xlate);
+		geom_tan.render(shader, 0, xlate);
 		shader.clear_color_e();
 		if (ns > 0.0) {shader.clear_specular();}
 		if (need_blend) {disable_blend();}
@@ -1370,7 +1373,7 @@ void model3d::bind_all_used_tids() {
 
 
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask,
-	unsigned bmap_pass_mask, base_mat_t const &unbound_mat, xform_matrix const *const mvm)
+	unsigned bmap_pass_mask, base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass);
 	if (is_normal_pass) {smap_data.set_for_all_lights(shader, mvm);}
@@ -1385,7 +1388,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool is_z_
 			shader.add_uniform_float("min_alpha", 0.0);
 			if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 		}
-		if (is_normal_pass || !enable_alpha_mask) {unbound_geom.render(shader, is_shadow_pass);} // skip shadow + alpha mask pass
+		if (is_normal_pass || !enable_alpha_mask) {unbound_geom.render(shader, is_shadow_pass, xlate);} // skip shadow + alpha mask pass
 		if (is_normal_pass) {shader.clear_specular();}
 	}
 	
@@ -1401,7 +1404,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool is_z_
 		sort(to_draw.begin(), to_draw.end());
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
-			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask);
+			materials[to_draw[i].second].render(shader, tmgr, unbound_mat.tid, is_shadow_pass, is_z_prepass, enable_alpha_mask, xlate);
 		}
 		to_draw.clear();
 	}
@@ -1499,7 +1502,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, b
 		if (reflection_tid > 0) {bind_texture_tu(reflection_tid, 14);} // tu_id=14
 	}
 	if (transforms.empty()) { // no transforms case
-		render_materials_def(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, &mvm);
+		render_materials_def(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, &xlate, &mvm);
 	}
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
 		if (!is_cube_visible_to_camera(xf->get_xformed_cube(bcube), is_shadow_pass)) continue; // Note: xlate has already been applied to camera_pdu
@@ -1508,7 +1511,8 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, b
 		camera_pdu_transform_wrapper cptw2(*xf);
 		base_mat_t ub_mat(unbound_mat);
 		xf->apply_material_override(ub_mat);
-		render_materials(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, &mvm);
+		point xlate2(xlate);
+		render_materials(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, nullptr, &mvm); // complex transforms, occlusion culling disabled
 		// cptw2 dtor called here
 	}
 	// cptw dtor called here
@@ -1534,7 +1538,7 @@ void model3d::model_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	for (unsigned sam_pass = 0; sam_pass < 2U; ++sam_pass) {
 		shader_t s;
 		setup_smap_shader(s, (sam_pass != 0));
-		model->render_materials_def(s, 1, 0, (sam_pass == 1), 3); // no transforms
+		model->render_materials_def(s, 1, 0, (sam_pass == 1), 3, &zero_vector); // no transforms
 		s.end_shader();
 	}
 }
