@@ -22,6 +22,7 @@ extern int window_width, window_height, do_zoom, display_mode, camera_coll_id, D
 extern float zmin, zmax, czmin, czmax, zbottom, ztop, sun_rot, moon_rot, NEAR_CLIP, FAR_CLIP;
 extern point sun_pos, moon_pos, litning_pos;
 extern obj_type object_types[];
+extern coll_obj_group coll_objects;
 
 
 
@@ -214,9 +215,53 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 	return cobj_contained(viewer, pts, 4, -1);
 }
 
+class cube_occlusion_query : public cobj_query_callback {
+
+	bool is_occluded;
+	point const &viewer;
+	cube_t const &cube;
+	unsigned npts;
+	point pts[8];
+	vector<int> cobjs;
+
+public:
+	cube_occlusion_query(point const &viewer_, cube_t const &cube_) : is_occluded(0), viewer(viewer_), cube(cube_) {
+		npts = get_cube_corners(cube.d, pts, viewer, 0); // 8 corners allocated, but only 6 used
+	}
+	virtual bool register_cobj(coll_obj const &cobj) {
+		if (cobj.intersects_all_pts(viewer, pts, npts)) {is_occluded = 1; return 0;} // done
+		return 1;
+	}
+	bool get_is_occluded() {
+		point const center(cube.get_cube_center());
+		get_coll_line_cobjs_tree(center, viewer, -1, &cobjs, this, 0, 1);
+		if (is_occluded) return 1;
+
+		for (unsigned y = 0; y < 2; ++y) {
+			for (unsigned x = 0; x < 2; ++x) {
+				for (unsigned z = 0; z < 2; ++z) {
+					cube_t sub_cube(cube);
+					sub_cube.d[0][x] = center.x;
+					sub_cube.d[1][y] = center.y;
+					sub_cube.d[2][z] = center.z;
+					npts = get_cube_corners(sub_cube.d, pts, viewer, 0); // 8 corners allocated, but only 6 used
+					bool occluded(0);
+
+					for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+						if (coll_objects.get_cobj(*i).intersects_all_pts(viewer, pts, npts)) {occluded = 1; break;}
+					}
+					if (!occluded) return 0; // this sub-cube was not occluded
+				}
+			}
+		}
+		return 1; // all sub-cubes were occluded
+	}
+};
+
 bool cube_cobj_occluded(point const &viewer, cube_t const &cube) {
 
 	if (!have_occluders() || cube.contains_pt(viewer)) return 0; // no occluders, or viewer is inside the cube
+	//return cube_occlusion_query(viewer, cube).get_is_occluded(); // Note: slower, and makes very little difference
 	point pts[8];
 	unsigned const ncorners(get_cube_corners(cube.d, pts, viewer, 0)); // 8 corners allocated, but only 6 used
 	return cobj_contained(viewer, pts, ncorners, -1);

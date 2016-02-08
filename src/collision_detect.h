@@ -333,7 +333,7 @@ public:
 
 
 struct cobj_query_callback {
-	virtual void register_cobj(coll_obj const &cobj) = 0;
+	virtual bool register_cobj(coll_obj const &cobj) = 0;
 };
 
 

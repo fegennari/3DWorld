@@ -561,8 +561,8 @@ void cobj_bvh_tree::get_coll_line_cobjs(point const &pos1, point const &pos2,
 			coll_obj const &c(get_cobj(i));
 			if (!obj_ok(c)) continue;
 			if (occlude && !(c.is_big_occluder() && check_line_clip_expand(pos1, pos2, c.d, GET_OCC_EXPAND))) continue;
+			if (cqc && !cqc->register_cobj(c)) return; // done
 			if (cobjs) cobjs->push_back(cixs[i]);
-			if (cqc  ) cqc->register_cobj(c);
 		}
 	}
 }
