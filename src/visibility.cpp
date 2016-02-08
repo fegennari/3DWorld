@@ -199,7 +199,7 @@ void pos_dir_up::apply_z_mirror(float zval) {
 
 bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
-	if (!have_occluders()) return 0;
+	if (!have_occluders() || dist_less_than(viewer, sc, radius)) return 0; // no occluders, or viewer is inside the sphere
 	if (radius*radius < 1.0E-6*p2p_dist_sq(viewer, sc)) {return cobj_contained(viewer, &sc, 1, -1);} // small and far away
 	vector3d const vdir(viewer - sc);
 	vector3d dirs[2];
@@ -216,7 +216,7 @@ bool sphere_cobj_occluded(point const &viewer, point const &sc, float radius) {
 
 bool cube_cobj_occluded(point const &viewer, cube_t const &cube) {
 
-	if (!have_occluders()) return 0;
+	if (!have_occluders() || cube.contains_pt(viewer)) return 0; // no occluders, or viewer is inside the cube
 	point pts[8];
 	unsigned const ncorners(get_cube_corners(cube.d, pts, viewer, 0)); // 8 corners allocated, but only 6 used
 	return cobj_contained(viewer, pts, ncorners, -1);
