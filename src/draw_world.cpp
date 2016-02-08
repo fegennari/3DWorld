@@ -608,11 +608,10 @@ typedef vector<pair<float, int> > vect_sorted_ix;
 
 bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { // Note: increases CPU time but decreases GPU time
 
-	//return 0; // doesn't make much difference
 	if (!c.is_big_occluder() || c.group_id >= 0) return 0;
 	float const dist_sq(distance_to_camera_sq(c.get_center_pt()));
-	if (c.get_area() < 0.05*dist_sq) return 0;
-	if (!camera_pdu.cube_visible(c)) return 0;
+	if (c.get_area() < 0.005*dist_sq) return 0;
+	if (!camera_pdu.cube_visible(c)) return 1; // skip this cobj - return 1, but don't add as an occluder
 	out.push_back(make_pair(dist_sq, cix));
 	return 1;
 }

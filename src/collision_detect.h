@@ -172,7 +172,7 @@ public:
 	bool is_semi_trans()  const {return cp.is_semi_trans();}
 	bool freed_unused()   const {return (status == COLL_FREED || status == COLL_UNUSED);}
 	bool is_occluder()    const;// {return (status == COLL_STATIC && type == COLL_CUBE && cp.draw && !is_semi_trans());}
-	bool is_big_occluder()const {return (is_occluder() && fixed && volume > 0.001);}
+	bool is_big_occluder()const {return (is_occluder() && fixed && (type == COLL_POLYGON || volume > 0.001));}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
 	bool is_movable()     const {return ((cp.flags & COBJ_MOVABLE) != 0);}
 	bool is_wet()         const {return (!(cp.flags & COBJ_IS_INDOORS) && is_ground_wet());}
