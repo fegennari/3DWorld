@@ -19,6 +19,7 @@ void reset_fog();
 void set_perspective_near_far(float near_clip, float far_clip);
 void set_perspective(float fovy, float nc_scale=1.0);
 float get_star_alpha(bool obscured_by_clouds=0);
+colorRGBA attenuate_sun_color(colorRGBA const &c);
 float get_moon_light_factor();
 void setup_basic_fog();
 void set_multisample(bool enable);

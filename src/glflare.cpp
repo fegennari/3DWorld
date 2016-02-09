@@ -34,7 +34,7 @@ int ft_width[num_flare_tex], ft_height[num_flare_tex], ft_components[num_flare_t
 
 extern int display_mode, is_cloudy;
 extern float brightness;
-extern colorRGBA sun_color;
+extern colorRGBA sun_color, sunlight_color;
 
 
 Flare flare[num_flares] = {
@@ -103,8 +103,8 @@ void DoFlares(point const &from, point const &at, point const &light, float near
 	for (int i = start_ix; i < num_flares; i++) {
 		float const scale(flare[i].scale * global_scale * size);
 		vector3d const sx(dx*scale), sy(dy*scale);
-		colorRGBA c(flare[i].color);
-		UNROLL_3X(c[i_] = cscale*CLIP_TO_01(c[i_] + (sun_color[i_] - SUN_LT_C[i_]));)
+		colorRGBA c(attenuate_sun_color(flare[i].color));
+		UNROLL_3X(c[i_] = cscale*CLIP_TO_01((c[i_] + (sun_color[i_] - sunlight_color[i_])));)
 
 		// Note logic below to eliminate duplicate texture binds.
 		if (flare[i].type < 0 || bound_to != flareTex[flare[i].type]) {

@@ -71,7 +71,7 @@ extern bool enable_multisample, using_tess_shader;
 extern int window_width, window_height, animate2, display_mode, onscreen_display, show_scores, iticks, frame_counter;
 extern unsigned enabled_lights;
 extern float fticks, tfticks;
-extern colorRGBA bkg_color;
+extern colorRGBA bkg_color, sunlight_color;
 extern exp_type_params et_params[];
 
 int gen_rand_seed1(point const &center);
@@ -541,7 +541,8 @@ void set_current_system_light(s_object const &clobj, point const &pspos, float a
 	if (clobj.has_valid_system() && clobj.get_star().is_ok()) { // in a system
 		ustar const &sun(clobj.get_star());
 		point const pos(clobj.get_ucell().rel_center + sun.pos);
-		set_sun_loc_color(pos, sun.get_light_color(), sun.radius, 0, 0, a_scale, d_scale); // ending light from current system
+		sunlight_color = sun.get_light_color();
+		set_sun_loc_color(pos, sunlight_color, sun.radius, 0, 0, a_scale, d_scale); // ending light from current system
 		univ_sun_pos = pos;
 		univ_sun_rad = sun.radius;
 		univ_temp    = sun.get_energy()/max(TOLERANCE, p2p_dist_sq(sun.pos, pspos));
@@ -563,7 +564,7 @@ void set_current_system_light(s_object const &clobj, point const &pspos, float a
 		univ_sun_pos = point(0.0, 0.0, 1.0);
 		univ_sun_rad = AVG_STAR_SIZE;
 		univ_temp    = 0.0;
-		sun_color    = SUN_LT_C;
+		sun_color    = sunlight_color;
 		have_sun     = 0;
 	}
 	univ_temp = temp_to_deg_c(univ_temp);

@@ -52,7 +52,7 @@ extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, 
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
 extern colorRGB const_indir_color, ambient_lighting_scale;
-extern colorRGBA bkg_color, sun_color, base_cloud_color, cur_fog_color;
+extern colorRGBA bkg_color, sun_color, sunlight_color, base_cloud_color, cur_fog_color;
 extern lightning l_strike;
 extern vector<spark_t> sparks;
 extern vector<star> stars;
@@ -856,7 +856,7 @@ void draw_sun() {
 
 	point const pos(get_sun_pos());
 	if (!have_sun || !sphere_in_camera_view(pos, sun_radius, 2)) return;
-	colorRGBA color(SUN_C);
+	colorRGBA color(attenuate_sun_color(SUN_C));
 	apply_red_sky(color);
 	draw_single_colored_sphere(pos, sun_radius, N_SPHERE_DIV, color);
 }

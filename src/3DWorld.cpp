@@ -120,6 +120,7 @@ extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smi
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale;
 extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
 extern point hmv_pos, camera_last_pos;
+extern colorRGBA sunlight_color;
 extern int coll_id[];
 extern float tree_lod_scales[4];
 extern string read_hmap_modmap_fn, write_hmap_modmap_fn, read_voxel_brush_fn, write_voxel_brush_fn, font_texture_atlas_fn;
@@ -1784,6 +1785,9 @@ int load_config(string const &config_file) {
 		else if (str == "flower_color") {
 			if (fscanf(fp, "%f%f%f", &flower_color.R, &flower_color.G, &flower_color.B) != 3) {cfg_err("flower_color command", error);}
 			flower_color.A = 1.0;
+		}
+		else if (str == "sunlight_color") {
+			if (fscanf(fp, "%f%f%f", &sunlight_color.R, &sunlight_color.G, &sunlight_color.B) != 3) {cfg_err("sunlight_color command", error);}
 		}
 		else if (str == "floating_light_params") { // rmin, rmax, vmin, vmax, imin, imax
 			if (fscanf(fp, "%f%f%f%f%f%f", &dp_params.rmin, &dp_params.rmax, &dp_params.vmin, &dp_params.vmax, &dp_params.imin, &dp_params.imax) != 6) {

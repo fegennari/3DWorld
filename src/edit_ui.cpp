@@ -194,15 +194,17 @@ public:
 };
 
 
-// ************ Tree Leaf/Grass Colors/Properties ************
+// ************ Sun/Tree Leaf/Grass Colors/Properties ************
 
-enum {GRASS_WIDTH=0, GRASS_LENGTH, TREE_COLOR_VAR, LEAF_COLOR_VAR, LEAF_RED_COMP, LEAF_GREEN_COMP, LEAF_BLUE_COMP, NUM_LEAF_CONT};
-string const leaf_ctr_names[NUM_LEAF_CONT] = {"Grass Width", "Grass Length", "Tree Color Variance", "Leaf Color Variance", "Leaf Red Component", "Leaf Green Component", "Leaf Blue Component"};
+enum {GRASS_WIDTH=0, GRASS_LENGTH, TREE_COLOR_VAR, LEAF_COLOR_VAR, LEAF_RED_COMP, LEAF_GREEN_COMP, LEAF_BLUE_COMP, SUN_RED, SUN_GREEN, SUN_BLUE, NUM_LEAF_CONT};
+string const leaf_ctr_names[NUM_LEAF_CONT] = {"Grass Width", "Grass Length", "Tree Color Variance", "Leaf Color Variance",
+	"Leaf Red Component", "Leaf Green Component", "Leaf Blue Component", "Sun Red Color", "Sun Green Color", "Sun Blue Color"};
 
 extern int leaf_color_changed;
 extern float leaf_color_coherence, tree_color_coherence; // [0.0, 1.0] in steps of 0.1
 extern float grass_length, grass_width;
 extern colorRGBA leaf_base_color; // can set R and G in [-1.0, 1.0] in steps of 0.1
+extern colorRGBA sunlight_color;
 
 void update_grass_length_width(float new_grass_length, float new_grass_width);
 void update_tiled_grass_colors();
@@ -235,10 +237,20 @@ class leaf_color_kbd_menu_t : public keyboard_menu_t {
 			spos = 100.0*grass_width - 0.05;
 			value << grass_width;
 			break;
-		default:
+		case LEAF_RED_COMP:
+		case LEAF_GREEN_COMP:
+		case LEAF_BLUE_COMP:
 			spos = leaf_base_color[control_ix-LEAF_RED_COMP];
 			value << spos;
 			spos = 0.5*(spos + 1.0); // center around 0.0
+			break;
+		case SUN_RED:
+		case SUN_GREEN:
+		case SUN_BLUE:
+			spos = sunlight_color[control_ix-SUN_RED];
+			value << spos;
+			break;
+		default: assert(0);
 		}
 		draw_one_control_text(control_ix, leaf_ctr_names[control_ix], value.str(), spos);
 	}
@@ -262,10 +274,18 @@ public:
 		case GRASS_WIDTH:
 			update_grass_length_width(grass_length, max(0.0005f, (grass_width + 0.0005f*delta))); // steps of 0.0005
 			break;
-		default:
-			leaf_base_color[cur_control-LEAF_RED_COMP] = CLIP_TO_pm1(leaf_base_color[cur_control-LEAF_RED_COMP] + 0.1f*delta);
+		case LEAF_RED_COMP:
+		case LEAF_GREEN_COMP:
+		case LEAF_BLUE_COMP:
+			leaf_base_color[cur_control-LEAF_RED_COMP] = CLIP_TO_pm1(leaf_base_color[cur_control-LEAF_RED_COMP] + 0.1f*delta); // steps of 0.1
 			update_tiled_grass_colors();
 			break;
+		case SUN_RED:
+		case SUN_GREEN:
+		case SUN_BLUE:
+			sunlight_color[cur_control-SUN_RED] = CLIP_TO_01(sunlight_color[cur_control-SUN_RED] + 0.05f*delta); // steps of 0.05
+			break;
+		default: assert(0);
 		}
 		leaf_color_changed = 1;
 	}

@@ -39,7 +39,7 @@ int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
 unsigned reflection_tid(0), enabled_lights(0); // 8 bit flags
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0);
 upos_point_type cur_origin(all_zeros);
-colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY);
+colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
 
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
@@ -314,6 +314,13 @@ float get_star_alpha(bool obscured_by_clouds) {
 	return ((dist_above_clouds > 0.0) ? min(1.0, (star_alpha + 0.05*dist_above_clouds)) : star_alpha);
 }
 
+colorRGBA attenuate_sun_color(colorRGBA const &c) {
+
+	colorRGBA sc;
+	sc.A = 1.0;
+	UNROLL_3X(sc[i_] = c[i_]*sunlight_color[i_]/SUN_LT_C[i_];) // scale based on ratio of sunlight color to default value
+	return sc;
+}
 
 void calc_bkg_color() {
 
@@ -323,7 +330,7 @@ void calc_bkg_color() {
 		bkg_color = BACKGROUND_NIGHT;
 	}
 	else {
-		blend_color(bkg_color, BACKGROUND_NIGHT, base_sky_color, star_alpha, 1);
+		blend_color(bkg_color, BACKGROUND_NIGHT, attenuate_sun_color(base_sky_color), star_alpha, 1);
 	}
 	if (is_cloudy) {
 		colorRGBA const orig_bkgc(bkg_color);
@@ -398,16 +405,16 @@ void setup_lighting() {
 
 	// Note: should this be set in universe lighting?
 	colorRGBA ambient_c;
-	blend_color(ambient_c, bkg_color, WHITE, 0.5, 1);
+	blend_color(ambient_c, bkg_color, attenuate_sun_color(WHITE), 0.5, 1);
 
 	for (unsigned i = 0; i < 3; ++i) {
-		diffuse[i] = DSCALE*SUN_LT_C[i];
+		diffuse[i] = DSCALE*sunlight_color[i];
 		ambient[i] = ASCALE*ambient_c[i];
 	}
 	for (unsigned i = 0; i < 3; ++i) {
 		if (is_cloudy) {
 			diffuse[i] -= (auto_time_adv ? 0.06  : 0.15);
-			ambient[i] -= (auto_time_adv ? 0.025 : 0.06);;
+			ambient[i] -= (auto_time_adv ? 0.025 : 0.06);
 		}
 		diffuse[i] -= 0.12*cloud_cover;
 		ambient[i] -= 0.05*cloud_cover;
@@ -835,7 +842,7 @@ void display(void) {
 		
 		if (!combined_gu) {
 			do_look_at();
-			sun_color = SUN_LT_C;
+			sun_color = sunlight_color;
 			apply_red_sky(sun_color);
 			reset_planet_defaults();
 			setup_lighting();
