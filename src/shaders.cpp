@@ -775,6 +775,7 @@ unsigned shader_t::get_shader(string const &name, unsigned type) const {
 			failed = 0;
 		}
 		string data(version_info + prepend_string[type]);
+		//data += "#line 1\n"; // add this to start from line 0 here to exclude header lines
 
 		for (vector<string>::const_iterator i = fns.begin(); i != fns.end(); ++i) {
 			if (!shader_manager.load_shader_file(*i, data)) {
