@@ -78,7 +78,7 @@ float triangle_area(point const &p1, point const &p2, point const &p3) {
 
 float polygon_area(point const *const points, unsigned npoints) {
 
-	assert(npoints == 3 || npoints == 4);
+	assert(npoints && (npoints == 3 || npoints == 4));
 	float area(triangle_area(points[0], points[1], points[2]));
 	if (npoints == 4) {area += triangle_area(points[2], points[3], points[0]);} // other triangle
 	return area;

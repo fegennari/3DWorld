@@ -141,6 +141,30 @@ struct model3d_stats_t {
 };
 
 
+// for computing vertex normals from face normals
+struct counted_normal : public vector3d { // size = 16
+
+	unsigned count;
+
+	counted_normal() : vector3d(zero_vector), count(0) {}
+	counted_normal(vector3d const &n) : vector3d(n), count(1) {}
+	void add_normal(vector3d const &n) {*this += n; ++count;}
+	bool is_valid() const {return (count > 0);}
+};
+
+// unused
+struct weighted_normal : public vector3d { // size = 16
+
+	float weight;
+
+	weighted_normal() : vector3d(zero_vector), weight(0.0) {}
+	weighted_normal(vector3d const &n, float w=1.0) : vector3d(w*n), weight(w) {}
+	void add_normal(vector3d const &n, float w=1.0) {*this += w*n; weight += w;}
+	void add_normal(vector3d const &n, point const *const poly_pts, unsigned npts) {add_normal(n, polygon_area(poly_pts, npts));}
+	bool is_valid() const {return (weight > 0.0);}
+};
+
+
 template<typename T> class vertex_map_t : public map<T, unsigned> {
 
 	int last_mat_id;

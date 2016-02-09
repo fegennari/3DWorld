@@ -332,17 +332,6 @@ struct vector4d : public vector3d { // size = 16
 };
 
 
-// for computing vertex normals from face normals
-struct counted_normal : public vector3d { // size = 16
-	unsigned count;
-
-	counted_normal() : vector3d(zero_vector), count(0) {}
-	counted_normal(vector3d const &n) : vector3d(n), count(1) {}
-	void add_normal(vector3d const &n) {*this += n; ++count;}
-	bool is_valid() const {return (count > 0);}
-};
-
-
 struct sphere_t {
 
 	point pos;
@@ -979,6 +968,8 @@ struct texgen_params_t { // size = 32
 struct vert_norm_texp : public vert_norm, public texgen_params_t { // size = 76
 	vert_norm_texp() {}
 	vert_norm_texp(vert_norm const &vn, texgen_params_t const &tp) : vert_norm(vn), texgen_params_t(tp) {}
+	vert_norm_texp(point const &v_, vector3d const &n_, texgen_params_t const &tp) : vert_norm(v_, n_), texgen_params_t(tp) {}
+	vert_norm_texp(float x, float y, float z, vector3d const &n_, texgen_params_t const &tp) : vert_norm(point(x, y, z), n_), texgen_params_t(tp) {}
 	static void set_vbo_arrays(bool set_state=1, void const *vbo_ptr_offset=NULL);
 	static void unset_attrs();
 };
