@@ -179,7 +179,7 @@ X normal_maps/stucco_NRM.jpg 1 # normal map (inverted y)
 y 20.0
 density 0.2
 T  7.3  3.9  -0.69
-B  0 1  0 1  0 1 # unit cube
+B  0 1  0 1  0 1  0.1 # unit cube with rounded corners
 
 l 0.95 1.0 1.0 1.0 1.0 8 1 # Marble
 r 0.6 60.0 # set specularity
@@ -187,7 +187,7 @@ X none
 y 8.0
 density 2.8
 T  6.9  4.4  -0.69
-B  0 1  0 1  0 1 # unit cube
+B  0 1  0 1  0 1  0.1 # unit cube with rounded corners
 r 0.0 1.0 # reset specularity
 
 # reset state

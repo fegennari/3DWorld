@@ -226,6 +226,7 @@ public:
 	bool is_point_supported(point const &pos) const;
 
 	// drawing code
+	void setup_cube_face_texgen(texgen_params_t &tp, unsigned tdim0, unsigned tdim1, float const tscale[2]) const;
 	void draw_coll_cube(int tid, cobj_draw_buffer &cdb) const;
 	void set_poly_texgen(int tid, vector3d const &normal, shader_t &shader) const;
 	void get_polygon_tparams(int tid, vector3d const &normal, texgen_params_t &tp) const;

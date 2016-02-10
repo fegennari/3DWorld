@@ -576,6 +576,7 @@ int coll_obj::add_coll_cobj() {
 	cobj.texture_offset = texture_offset;
 	cobj.cgroup_id = cgroup_id;
 	cobj.dgroup_id = dgroup_id;
+	if (type == COLL_CUBE) {cobj.radius2 = radius2;} // copy corner radius
 	if (cgroup_id >= 0) {cobj_groups.add_cobj(cgroup_id, cid);}
 	return cid;
 }

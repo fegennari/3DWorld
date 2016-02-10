@@ -124,6 +124,32 @@ bool cobj_draw_buffer::on_new_obj_layer(obj_layer const &l) {
 }
 
 
+void coll_obj::setup_cube_face_texgen(texgen_params_t &tp, unsigned tdim0, unsigned tdim1, float const tscale[2]) const {
+
+	for (unsigned e = 0; e < 2; ++e) {
+		unsigned const tdim(e ? tdim1 : tdim0);
+		bool const s_or_t(cp.swap_txy() ^ (e != 0));
+		float *tg(tp.st[s_or_t]);
+
+		if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
+			tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
+			tg[3]    = (-d[tdim][0] + texture_offset[tdim])*tg[tdim];
+		}
+		else {
+			tg[tdim] = tscale[e];
+			tg[3]    = texture_offset[tdim]*tscale[e];
+		}
+	}
+}
+
+void emit_cube_side(vert_norm_texp &vnt, point const pts[4], cobj_draw_buffer &cdb) {
+
+	for (unsigned i = 0; i < 6; ++i) { // quads (2 triangles)
+		vnt.v = pts[quad_to_tris_ixs[i]];
+		cdb.add_vert(vnt);
+	}
+}
+
 void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 
 	int const sides((int)cp.surfs);
@@ -155,40 +181,74 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 		}
 		sort(faces, (faces+6));
 	}
-	for (unsigned i = 0; i < 6; ++i) {
-		unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
-		if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue; // side disabled
-		unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
-		point pts[4], p;
-		p[dim] = d[dim][dir];
-		p[d0 ] = d[d0][0];
-		p[d1 ] = d[d1][0]; pts[dir ? 0 : 3] = p;
-		p[d0 ] = d[d0][1]; pts[dir ? 1 : 2] = p;
-		p[d1 ] = d[d1][1]; pts[dir ? 2 : 1] = p;
-		p[d0 ] = d[d0][0]; pts[dir ? 3 : 0] = p;
-		vert_norm_texp vnt;
-		vnt.n      = zero_vector;
-		vnt.n[dim] = (dir ? 1.0 : -1.0);
+	point pts[4], p;
 
-		for (unsigned e = 0; e < 2; ++e) {
-			unsigned const tdim(e ? t1 : t0);
-			bool const s_or_t(cp.swap_txy() ^ (e != 0));
-			float *tg(vnt.st[s_or_t]);
+	if (radius2 > 0.0) { // corner radius
+		cube_t ic(*this); // create inner cube
+		ic.expand_by(-radius2); // Note: not intended to work correctly when radius2 is >= cube half width
 
-			if (tscale[0] == 0) { // special value of tscale=0 will result in the texture being fit exactly to the cube (mapped from 0 to 1)
-				tg[tdim] = 1.0/(d[tdim][1] - d[tdim][0]);
-				tg[3]    = (-d[tdim][0] + texture_offset[tdim])*tg[tdim];
+		for (unsigned i = 0; i < 6; ++i) {
+			unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
+			unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
+			vert_norm_texp vnt;
+			vnt.n      = zero_vector;
+			vnt.n[dim] = (dir ? 1.0 : -1.0);
+			setup_cube_face_texgen(vnt, t0, t1, tscale);
+
+			if (!((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir)))) { // 6 faces
+				p[dim] = d[dim][dir];
+				p[d0 ] = ic.d[d0][0];
+				p[d1 ] = ic.d[d1][0]; pts[dir ? 0 : 3] = p;
+				p[d0 ] = ic.d[d0][1]; pts[dir ? 1 : 2] = p;
+				p[d1 ] = ic.d[d1][1]; pts[dir ? 2 : 1] = p;
+				p[d0 ] = ic.d[d0][0]; pts[dir ? 3 : 0] = p;
+				emit_cube_side(vnt, pts, cdb);
 			}
-			else {
-				tg[tdim] = tscale[e];
-				tg[3]    = texture_offset[tdim]*tscale[e];
+			for (unsigned e = 0; e < 2; ++e) { // 12 edges
+				vector3d n0(zero_vector);
+				n0[d0] = (e ? 1.0 : -1.0);
+				vert_norm_texp v[4];
+				point p;
+				p[dim] = ic.d[dim][dir]; p[d0] =    d[d0][e]; p[d1] = ic.d[d1][0]; v[0] = vert_norm_texp(p, n0,    vnt);
+				p[dim] =    d[dim][dir]; p[d0] = ic.d[d0][e]; p[d1] = ic.d[d1][0]; v[1] = vert_norm_texp(p, vnt.n, vnt);
+				p[dim] =    d[dim][dir]; p[d0] = ic.d[d0][e]; p[d1] = ic.d[d1][1]; v[2] = vert_norm_texp(p, vnt.n, vnt);
+				p[dim] = ic.d[dim][dir]; p[d0] =    d[d0][e]; p[d1] = ic.d[d1][1]; v[3] = vert_norm_texp(p, n0,    vnt);
+				for (unsigned i = 0; i < 6; ++i) {cdb.add_vert(v[quad_to_tris_ixs[i]]);} // quads (2 triangles)
+			}
+		} // for i
+		texgen_params_t tp;
+		setup_cube_face_texgen(tp, 0, 1, tscale); // arbitrarily use {x,y} texture direction
+
+		for (unsigned z = 0; z < 2; ++z) { // 8 corners
+			for (unsigned y = 0; y < 2; ++y) {
+				for (unsigned x = 0; x < 2; ++x) {
+					vert_norm_texp v[3];
+					v[0] = vert_norm_texp(point(ic.d[0][x], ic.d[1][y],    d[2][z]), (z ? plus_z : -plus_z), tp); // z-edge point
+					v[1] = vert_norm_texp(point(ic.d[0][x],    d[1][y], ic.d[2][z]), (y ? plus_y : -plus_y), tp); // y-edge point
+					v[2] = vert_norm_texp(point(   d[0][x], ic.d[1][y], ic.d[2][z]), (x ? plus_x : -plus_x), tp); // x-edge point
+					for (unsigned i = 0; i < 3; ++i) {cdb.add_vert(v[i]);}
+				}
 			}
 		}
-		for (unsigned i = 0; i < 6; ++i) { // quads (2 triangles)
-			vnt.v = pts[quad_to_tris_ixs[i]];
-			cdb.add_vert(vnt);
-		}
-	} // for i
+	}
+	else {
+		for (unsigned i = 0; i < 6; ++i) {
+			unsigned const fi(faces[i].second), dim(fi>>1), dir(fi&1);
+			if ((sides & EFLAGS[dim][dir]) || (!inside && !((camera[dim] < d[dim][dir]) ^ dir))) continue; // side disabled
+			unsigned const d0((dim+1)%3), d1((dim+2)%3), t0((2-dim)>>1), t1(1+((2-dim)>0));
+			p[dim] = d[dim][dir];
+			p[d0 ] = d[d0][0];
+			p[d1 ] = d[d1][0]; pts[dir ? 0 : 3] = p;
+			p[d0 ] = d[d0][1]; pts[dir ? 1 : 2] = p;
+			p[d1 ] = d[d1][1]; pts[dir ? 2 : 1] = p;
+			p[d0 ] = d[d0][0]; pts[dir ? 3 : 0] = p;
+			vert_norm_texp vnt;
+			vnt.n      = zero_vector;
+			vnt.n[dim] = (dir ? 1.0 : -1.0);
+			setup_cube_face_texgen(vnt, t0, t1, tscale);
+			emit_cube_side(vnt, pts, cdb);
+		} // for i
+	}
 }
 
 

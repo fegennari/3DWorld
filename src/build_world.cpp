@@ -1469,13 +1469,19 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			cobj.cp.surfs = (unsigned char)ivals[0]; // all six sides (cube) or top/bottom (cylinder)
 			break;
 
-		case 'B': // cube: xmin xmax ymin ymax zmin zmax
-			if (read_cube(fp, xf, cobj) != 6) {return read_error(fp, "collision cube", coll_obj_file);}
-			check_layer(has_layer);
-			cobj.counter = (remove_t_junctions ? OBJ_CNT_REM_TJ : 0); // remove T-junctions
-			cobj.add_to_vector(fixed_cobjs, COLL_CUBE);
-			cobj.counter = 0;
-			if (cobj.platform_id >= 0 && platforms[cobj.platform_id].is_rotation()) {return read_error(fp, "collision cube: cannot use a rotation platform", coll_obj_file);}
+		case 'B': // cube: xmin xmax ymin ymax zmin zmax [corner_radius]
+			{
+				if (read_cube(fp, xf, cobj) != 6) {return read_error(fp, "collision cube", coll_obj_file);}
+				float corner_radius(0.0);
+				fscanf(fp, "%f", &corner_radius); // okay if fails
+				check_layer(has_layer);
+				cobj.radius2 = corner_radius*xf.scale;
+				cobj.counter = (remove_t_junctions ? OBJ_CNT_REM_TJ : 0); // remove T-junctions
+				cobj.add_to_vector(fixed_cobjs, COLL_CUBE);
+				cobj.radius2 = 0.0; // reset
+				cobj.counter = 0; // reset
+				if (cobj.platform_id >= 0 && platforms[cobj.platform_id].is_rotation()) {return read_error(fp, "collision cube: cannot use a rotation platform", coll_obj_file);}
+			}
 			break;
 
 		case 'S': // sphere: x y z radius
