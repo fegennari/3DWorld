@@ -1847,8 +1847,10 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 	if (destroy != prev.destroy) {out << "a " << (unsigned)destroy << endl;}
 
 	switch (type) {
-	case COLL_CUBE: // 'B': cube: xmin xmax ymin ymax zmin zmax
-		out << "B " << d[0][0] << " " << d[0][1] << " " << d[1][0] << " " << d[1][1] << " " << d[2][0] << " " << d[2][1] << endl;
+	case COLL_CUBE: // 'B': cube: xmin xmax ymin ymax zmin zmax [corner_radius]
+		out << "B " << d[0][0] << " " << d[0][1] << " " << d[1][0] << " " << d[1][1] << " " << d[2][0] << " " << d[2][1];
+		if (radius2 > 0.0) {out << " " << radius2;} // rounded corner
+		out << endl;
 		break;
 	case COLL_SPHERE: // 'S': sphere: x y z radius
 		out << "S " << points[0].raw_str() << " " << radius << endl;
