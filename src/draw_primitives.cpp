@@ -758,7 +758,7 @@ void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorR
 // ******************** TORUS ********************
 
 
-void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i, float tex_scale_o) { // at (0,0,0) in z-plane, always textured
+void draw_torus(point const &center, float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i, float tex_scale_o) { // in z-plane, always textured
 
 	assert(ndivi > 2 && ndivo > 2);
 	float const ts(tex_scale_o/ndivo), tt(tex_scale_i/ndivi), ds(TWO_PI/ndivo), dt(TWO_PI/ndivi), cds(cos(ds)), sds(sin(ds));
@@ -780,7 +780,7 @@ void draw_torus(float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_sc
 
 			for (unsigned i = 0; i < 2; ++i) {
 				vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
-				verts[(t<<1)+i] = vert_norm_tc((pos[1-i]*ro + delta*ri), delta, ts*(s+1-i), tt*t);
+				verts[(t<<1)+i] = vert_norm_tc((center + pos[1-i]*ro + delta*ri), delta, ts*(s+1-i), tt*t);
 			}
 		}
 		draw_verts(verts, GL_TRIANGLE_STRIP);

@@ -144,7 +144,6 @@ void ship_cylinder::draw_cylin(unsigned ndiv, bool textured, float tex_scale_len
 	draw_fast_cylinder(p1, p2, r1, r2, ndiv, textured, check_ends, 0, NULL, tex_scale_len);
 }
 
-
 void ship_cube::draw(unsigned ndiv) const { // ndiv is unused
 
 	point pt;
@@ -157,7 +156,6 @@ void ship_cube::draw(unsigned ndiv) const { // ndiv is unused
 	draw_cube(pt, sz[0], sz[1], sz[2], 0);
 }
 
-
 void ship_sphere::draw(unsigned ndiv) const {
 
 	glEnable(GL_CULL_FACE);
@@ -165,22 +163,14 @@ void ship_sphere::draw(unsigned ndiv) const {
 	glDisable(GL_CULL_FACE);
 }
 
-
 void ship_torus::draw(unsigned ndiv) const {
-
-	fgPushMatrix();
-	translate_to(center);
-	draw_torus(ri, ro, max(3U, ndiv/2U), ndiv);
-	fgPopMatrix();
+	draw_torus(center, ri, ro, max(3U, ndiv/2U), ndiv);
 }
 
-
 void ship_bounded_cylinder::draw(unsigned ndiv) const {
-		
 	ship_cylinder::draw(ndiv);
 	bcube.draw(ndiv);
 }
-
 
 void ship_capsule::draw(unsigned ndiv) const {
 		
@@ -1301,7 +1291,7 @@ void uobj_draw_data::draw_starbase() const {
 
 	// draw main body
 	set_color(WHITE);
-	draw_torus(0.2, 1.0, get_ndiv(2*ndiv/3), 4*ndiv/3, 1.0, 8.0); // take from cobjs?
+	draw_torus(all_zeros, 0.2, 1.0, get_ndiv(2*ndiv/3), 4*ndiv/3, 1.0, 8.0); // take from cobjs?
 
 	if (ndiv > 4) { // draw spokes
 		set_cloak_color(color_b);
@@ -1435,11 +1425,11 @@ void uobj_draw_data::draw_gunship() const {
 	if (shader && specular_en) {set_gold_material(*shader);} else {set_color(colorRGBA(GOLD*0.5));}
 	fgPushMatrix();
 	fgScale(3.0, 1.0, 1.0);
-	fgTranslate(0.0, 0.0, -0.7);
+	point xlate(0.0, 0.0, -0.7);
 
 	for (unsigned i = 0; i < 5; ++i) {
-		draw_torus(0.02, (0.3 - 0.05*abs(int(i) - 2)), ndiv3, ndiv);
-		if (i < 4) {fgTranslate(0.0, 0.0, 0.3);}
+		draw_torus(xlate, 0.02, (0.3 - 0.05*abs(int(i) - 2)), ndiv3, ndiv);
+		xlate.z += 0.3;
 	}
 	fgPopMatrix();
 	end_specular();
@@ -1618,14 +1608,10 @@ void uobj_draw_data::draw_dwexterm() const {
 	end_ship_texture();
 	disable_normal_map();
 	set_color(LT_GRAY);
-
-	for (unsigned i = 0; i < 6; ++i) { // "ribs"
-		fgPushMatrix();
-		fgTranslate(0.0, -0.18, 0.04+0.1*i);
-		fgScale(1.4, 0.85, 1.0);
-		draw_torus(0.02, 0.25, ndiv4, ndiv);
-		fgPopMatrix();
-	}
+	fgPushMatrix();
+	fgScale(1.4, 0.85, 1.0);
+	for (unsigned i = 0; i < 6; ++i) {draw_torus(point(0.0, -0.18/0.85, 0.04+0.1*i), 0.02, 0.25, ndiv4, ndiv);} // "ribs"
+	fgPopMatrix();
 	fgPushMatrix();
 	fgTranslate(0.0, -0.38, 0.01);
 	fgScale(1.2, 0.8, 1.0);
@@ -1994,9 +1980,8 @@ void uobj_draw_data::draw_anti_miss() const {
 		fgPopMatrix();
 	}
 	fgPushMatrix();
-	fgTranslate(0.0, -0.5, 0.0);
 	fgRotate(90.0, 1.0, 0.0, 0.0);
-	draw_torus(0.2, 0.9, ndiv2, 4*ndiv/3); // ring
+	draw_torus(point(0.0, 0.0, 0.5), 0.2, 0.9, ndiv2, 4*ndiv/3); // ring
 	fgPopMatrix();
 
 	if (ndiv > 4) {
@@ -2345,10 +2330,7 @@ void uobj_draw_data::draw_colony(bool armed, bool hw, bool starport) const {
 			draw_sphere_vbo( point(x, y,  0.5), 0.2, ndiv2, 1);
 		}
 	}
-	if (starport && ndiv > 3) {
-		fgTranslate(0.0, 0.0, 0.25); // Note: push/pop not needed since this is the last draw
-		draw_torus(0.2, 1.05, ndiv2, 3*ndiv/2);
-	}
+	if (starport && ndiv > 3) {draw_torus(point(0.0, 0.0, 0.25), 0.2, 1.05, ndiv2, 3*ndiv/2);}
 	end_ship_texture();
 	disable_normal_map();
 	fgPopMatrix();
