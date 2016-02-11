@@ -875,7 +875,7 @@ void draw_moon() {
 	s.set_frag_shader("ads_lighting.part*+moon_draw");
 	s.begin_shader();
 	s.add_uniform_int("tex0", 0);
-	s.set_cur_color(WHITE);
+	s.set_cur_color(attenuate_sun_color(WHITE));
 	select_texture(MOON_TEX);
 	draw_cube_mapped_sphere(pos, moon_radius, N_SPHERE_DIV/2, 1);
 	s.end_shader();
@@ -895,12 +895,13 @@ void draw_earth() {
 
 	if (show_fog) return; // don't draw when there is fog
 	point pos(mesh_origin + earth_pos);
-	if (camera_mode == 1) pos += surface_pos;
+	if (camera_mode == 1) {pos += surface_pos;}
 	static float rot_angle(0.0);
 
 	if (sphere_in_camera_view(pos, earth_radius, 2)) {
+		colorRGBA const color(attenuate_sun_color(WHITE));
 		shader_t s;
-		s.begin_simple_textured_shader(0.0, 1, 0, &WHITE);
+		s.begin_simple_textured_shader(0.0, 1, 0, &color);
 		select_texture(EARTH_TEX);
 		fgPushMatrix();
 		translate_to(pos);
