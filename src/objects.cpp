@@ -567,35 +567,32 @@ void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point c
 void get_torus_triangles(vector<vert_wrap_t> &verts, point const &center, vector3d const &dir, float ro, float ri, int ndiv) {
 
 	assert(ro > 0.0 || ri > 0.0);
-	
-	if (dir.x == 0.0 && dir.y == 0.0) { // Note: +z torus only
-		float const ds(TWO_PI/ndiv), cds(cos(ds)), sds(sin(ds));
-		vector<float> sin_cos(2*ndiv);
+	float const ds(TWO_PI/ndiv), cds(cos(ds)), sds(sin(ds));
+	vector<float> sin_cos(2*ndiv);
+	bool const do_rotate(dir.x != 0.0 || dir.y != 0.0); // not vertical
 
-		for (unsigned t = 0; t < ndiv; ++t) {
-			float const phi(t*ds);
-			sin_cos[(t<<1)+0] = cos(phi);
-			sin_cos[(t<<1)+1] = sin(phi);
-		}
-		for (unsigned s = 0; s < ndiv; ++s) { // outer
-			float const theta(s*ds), ct(cos(theta)), st(sin(theta));
-			point const pos[2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
-
-			for (unsigned t = 0; t <= ndiv; ++t) { // inner
-				unsigned const t_((t == ndiv) ? 0 : t);
-				float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
-
-				for (unsigned i = 0; i < 2; ++i) {
-					if ((2*t+i) > 2) {tri_strip_push(verts);}
-					vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
-					verts[(t<<1)+i].v = center + pos[1-i]*ro + delta*ri;
-				}
-			} // for t
-		} // for s
+	for (unsigned t = 0; t < (unsigned)ndiv; ++t) {
+		float const phi(t*ds);
+		sin_cos[(t<<1)+0] = cos(phi);
+		sin_cos[(t<<1)+1] = sin(phi);
 	}
-	else {
-		// FIXME_TORUS: how to implement this? transform all verts by a rotation?
-	}
+	for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // outer
+		float const theta(s*ds), ct(cos(theta)), st(sin(theta));
+		point const pos[2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
+
+		for (unsigned t = 0; t <= (unsigned)ndiv; ++t) { // inner
+			unsigned const t_((t == ndiv) ? 0 : t);
+			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
+
+			for (unsigned i = 0; i < 2; ++i) {
+				if ((2*t+i) > 2) {tri_strip_push(verts);}
+				vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
+				vector3d dir_from_cent(pos[1-i]*ro + delta*ri);
+				if (do_rotate) {rotate_vector3d_by_vr(plus_z, dir, dir_from_cent);}
+				verts[(t<<1)+i].v = center + dir_from_cent;
+			}
+		} // for t
+	} // for s
 }
 
 
