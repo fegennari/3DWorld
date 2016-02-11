@@ -146,6 +146,7 @@ bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, poi
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
 // 21 total: 15 complete, 5 partial (all cylinder cases), 1 incomplete (capsule-capsule)
+// FIXME_TORUS: COLL_TORUS case is not handled here
 // Note: pos toler => adjacency doesn't count; neg toler => adjacency counts
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
@@ -450,7 +451,7 @@ point coll_obj::get_center_of_mass(bool ignore_group) const {
 			return (ca*aa + cb*ab)/(aa + ab); // centroid points weighted by triangle area (extruded cobj volume)
 		}
 	}
-	return get_center_pt();
+	return get_center_pt(); // correct for cube, sphere, and torus
 }
 
 float coll_obj::get_group_mass() const {
@@ -472,6 +473,10 @@ void coll_obj::rotate_about(point const &pt, vector3d const &axis, float angle, 
 	//cout << "pt: " << pt.str() << ", axis: " << axis.str() << ", angle: " << angle << endl;
 
 	switch (type) {
+	case COLL_TORUS:
+		rotate_vector3d(axis, angle, norm);
+		norm.normalize(); // keep it normalized
+		// fallthrough to sphere case to rotate center point
 	case COLL_SPHERE:
 		rotate_point(points[0], pt, axis, angle);
 		break;
@@ -594,6 +599,7 @@ bool coll_obj::is_point_supported(point const &pos) const {
 	case COLL_CYLINDER_ROT:
 		if (points[0].x != points[1].x || points[0].y != points[1].y) return 0; // non-vertical/not flat
 		return dist_xy_less_than(pos, points[0], ((points[0].z < points[1].z) ? radius2 : radius)); // use radius at the top
+	case COLL_TORUS:    return 0; // not flat
 	case COLL_CAPSULE:  return 0; // not flat
 	case COLL_POLYGON:
 		if (fabs(norm.z) > norm_z_thresh) {return point_in_polygon_2d(pos.x, pos.y, points, npoints);}
@@ -824,7 +830,7 @@ vector3d get_cobj_drop_delta(unsigned index) {
 		if (c.is_movable()) { // both cobjs are movable - is this a stack?
 			// flat cobjs can always be stacked
 			if (c.type == COLL_CUBE || c.type == COLL_CYLINDER) {}
-			else if (c.type == COLL_POLYGON && ((c.norm.x == 0.0 && c.norm.y == 0.0) /*|| (c.cp.flags & COBJ_WAS_CUBE)*/)) {}
+			else if (c.type == COLL_POLYGON && (c.has_z_normal() /*|| (c.cp.flags & COBJ_WAS_CUBE)*/)) {}
 			else if (dz < get_cobj_step_height()) {} // c_top - cobj_bot < step_height
 			else if (c.v_fall <= 0.0) continue; // not rising (stopped or falling)
 			// assume it's a stack and treat it like a moving platform

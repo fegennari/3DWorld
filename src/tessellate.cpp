@@ -311,6 +311,10 @@ void cobj_triangle_visitor::proc_cobj(coll_obj const &c) {
 		}
 		break;
 	}
+	case COLL_TORUS:
+		assert(0); // FIXME_TORUS: no fun!
+		break;
+
 	case COLL_POLYGON:
 		if (c.thickness > MIN_POLY_THICK) { // thick polygon
 			vector3d const norm(get_poly_norm(c.points));
@@ -333,10 +337,7 @@ void cobj_triangle_visitor::proc_cobj(coll_obj const &c) {
 
 
 void cobj_triangle_visitor::proc_cobjs(coll_obj_group const &cobjs) {
-
-	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {
-		proc_cobj(*i);
-	}
+	for (coll_obj_group::const_iterator i = cobjs.begin(); i != cobjs.end(); ++i) {proc_cobj(*i);}
 }
 
 

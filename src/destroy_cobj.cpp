@@ -476,6 +476,7 @@ int coll_obj::is_anchored() const {
 		return is_pt_under_mesh((points[0] - vector3d(0.0, 0.0, radius)));
 	case COLL_CYLINDER: // should really test the entire top/bottom surface
 	case COLL_CYLINDER_ROT:
+	case COLL_TORUS:
 	case COLL_CAPSULE:
 		return is_pt_under_mesh(points[0]) || is_pt_under_mesh(points[1]);
 	case COLL_POLYGON: // should really test the entire surface(s)

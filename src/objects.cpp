@@ -108,6 +108,9 @@ void coll_obj::calc_volume() {
 	case COLL_CYLINDER_ROT:
 		volume += PI*(radius*radius+radius*radius2+radius2*radius2)*p2p_dist(points[0], points[1])/3.0;
 		break;
+	case COLL_TORUS:
+		// FIXME_TORUS
+		break;
 	default: assert(0);
 	}
 }
@@ -134,6 +137,9 @@ void coll_obj::calc_bcube() {
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
 		cylinder_3dw(points[0], points[1], radius, radius2).calc_bcube(*this);
+		break;
+	case COLL_TORUS:
+		get_torus_bounding_cylinder().calc_bcube(*this);
 		break;
 	case COLL_CAPSULE: {
 		cube_t bcube2;
@@ -192,6 +198,7 @@ bool coll_obj::clip_in_2d(float const bb[2][2], float &val, int d1, int d2, int 
 		return 1;
 
 	case COLL_CYLINDER_ROT:
+	case COLL_TORUS: // ???
 	case COLL_CAPSULE: // ???
 		val = d[d3][dir];
 		// should really do something with this - can be very inaccurate
@@ -231,6 +238,7 @@ void coll_obj::set_npoints() {
 	switch (type) {
 	case COLL_CUBE:         npoints = 1; break;
 	case COLL_SPHERE:       npoints = 1; break;
+	case COLL_TORUS:        npoints = 1; break;
 	case COLL_CYLINDER:     npoints = 2; break;
 	case COLL_CYLINDER_ROT: npoints = 2; break;
 	case COLL_CAPSULE:      npoints = 2; break;
@@ -310,6 +318,9 @@ void coll_obj::check_indoors_outdoors() {
 	case COLL_CYLINDER:
 		test_pts[npts++] = ((points[0].z < points[1].z) ? points[1] : points[0]); // center of top circle
 		if (type == COLL_CAPSULE) {test_pts[0].z += ((points[0].z < points[1].z) ? radius2 : radius);}
+		break;
+	case COLL_TORUS:
+		// FIXME_TORUS
 		break;
 	case COLL_POLYGON:
 		assert(npoints <= 4);
@@ -410,6 +421,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
+	case COLL_TORUS:
 	case COLL_CAPSULE: {
 		float const scale(NDIV_SCALE*get_zoom_scale());
 		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/distance_to_camera(get_closest_pt_on_line(get_camera_pos(), points[0], points[1])))));
@@ -443,6 +455,9 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 					else {draw_subdiv_sphere(points[d], r[d], ndiv, use_tcs, 1);}
 				}
 			}
+		}
+		else if (type == COLL_TORUS) {
+			// FIXME_TORUS
 		}
 		else { // cylinder
 			bool const draw_ends(!(cp.surfs & 1));
@@ -571,6 +586,9 @@ void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv, b
 	case COLL_CYLINDER_ROT:
 		get_cylinder_triangles(verts, points[0], points[1], radius, radius2, ndiv, !(cp.surfs & 1));
 		break;
+	case COLL_TORUS:
+		// FIXME_TORUS
+		break;
 	case COLL_CAPSULE:
 		if (!skip_spheres) {
 			get_sphere_triangles(verts, points[0], radius,  ndiv); // some extra triangles (only need hemisphere), but okay
@@ -626,6 +644,10 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 	case COLL_CYLINDER_ROT:
 		cylinder_bounding_sphere(points, radius, radius2, center, brad);
 		break;
+	case COLL_TORUS:
+		center = points[0];
+		brad   = radius + radius2;
+		break;
 	case COLL_CAPSULE:
 		center = get_center_n2(points);
 		brad   = p2p_dist(center, points[0]) + max(radius, radius2); // conservative
@@ -639,11 +661,17 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 	}
 }
 
+cylinder_3dw coll_obj::get_torus_bounding_cylinder() const {
+	assert(type == COLL_TORUS);
+	return cylinder_3dw(points[0]-norm*radius2, points[0]+norm*radius2, radius+radius2, radius+radius2);
+}
+
 point coll_obj::get_center_pt() const {
 
 	switch (type) {
 	case COLL_CUBE:         return points[0];
 	case COLL_SPHERE:       return points[0];
+	case COLL_TORUS:        return points[0];
 	case COLL_CYLINDER:     return point(points[0].x, points[0].y, 0.5*(points[0].z + points[1].z));
 	case COLL_CYLINDER_ROT: return get_center_n2(points);
 	case COLL_CAPSULE:      return get_center_n2(points); // approximate

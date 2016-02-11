@@ -78,7 +78,8 @@ class smap_vertex_cache_t : public vbo_wrap_t {
 	}
 	int get_ndiv(coll_obj const &c, unsigned smap_sz, unsigned fixed_ndiv) {
 		if (fixed_ndiv) return fixed_ndiv;
-		if (c.type == COLL_SPHERE) {return get_smap_ndiv(c.radius, smap_sz);}
+		if (c.type == COLL_SPHERE) {return get_smap_ndiv(c.radius,  smap_sz);}
+		if (c.type == COLL_TORUS ) {return get_smap_ndiv(c.radius2, smap_sz);} // use inner radius for ndiv
 		if (c.type == COLL_CYLINDER || c.type == COLL_CYLINDER_ROT || c.type == COLL_CAPSULE) {return get_smap_ndiv(max(c.radius, c.radius2), smap_sz);}
 		return 0; // ndiv is unused
 	}

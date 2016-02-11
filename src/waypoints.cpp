@@ -275,9 +275,11 @@ public:
 			else {add_waypoint_poly(c.points, c.npoints, c.norm, c.id, 1, connect);} // double sided
 			break;
 
-		case COLL_SPHERE:       break; // not supported (can't stand on)
-		case COLL_CYLINDER_ROT: break; // not supported (can't stand on)
-		case COLL_CAPSULE:      break; // not supported (can't stand on)
+		case COLL_SPHERE:
+		case COLL_CYLINDER_ROT:
+		case COLL_TORUS:
+		case COLL_CAPSULE:
+			break; // not supported (can't stand on)
 		default: assert(0);
 		}
 	}

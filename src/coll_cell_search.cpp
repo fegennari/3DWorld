@@ -76,6 +76,9 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 		case COLL_CYLINDER:
 		case COLL_CYLINDER_ROT:
 			return line_intersect_cylinder(p1, p2, cylinder_3dw(points[0], points[1], radius, radius2), !(cp.surfs & 1));
+		case COLL_TORUS:
+			if (has_z_normal()) {float t(0.0); return line_torus_intersect(p1, p2, points[0], radius2, radius, t);} // Note: +z torus only
+			return line_intersect_cylinder(p1, p2, get_torus_bounding_cylinder(), 1); // use bounding cylinder
 		case COLL_CAPSULE:
 			return (line_sphere_intersect(p1, p2, points[0], radius) || line_sphere_intersect(p1, p2, points[1], radius2) ||
 				line_intersect_cylinder(p1, p2, cylinder_3dw(points[0], points[1], radius, radius2), 0));
@@ -163,6 +166,16 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 		case COLL_CYLINDER:
 		case COLL_CYLINDER_ROT:
 			return check_line_cylin_int(points, radius, radius2, p1, p2, t, cnorm, tmin, tmax);
+		case COLL_TORUS:
+			if (has_z_normal()) { // Note: +z torus only
+				if (!line_torus_intersect(p1, p2, points[0], radius2, radius, t) || t > tmax || t < tmin) return 0;
+				cnorm = ((p1 + (p2 - p1)*t) - points[0]).get_norm(); // approximate
+			}
+			else {
+				cylinder_3dw const cylin(get_torus_bounding_cylinder());
+				point const pts[2] = {cylin.p1, cylin.p2};
+				return check_line_cylin_int(pts, cylin.r1, cylin.r2, p1, p2, t, cnorm, tmin, tmax); // use bounding cylinder
+			}
 		case COLL_CAPSULE: {
 			bool ret(0);
 			if (check_line_sphere_int(points[0], radius,       p1, p2, t, cnorm, tmin, tmax)) {ret = 1; tmax = t;}
@@ -383,8 +396,9 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 		tc[1] = dot_product(p2, poff);
 		break;
 	}
-	case COLL_CAPSULE:
-		return get_avg_color(); // not going to attempt to calculate this, since a capsule has multiple surfaces - use average color
+	case COLL_CAPSULE: // not going to attempt to calculate this, since a capsule has multiple surfaces
+	case COLL_TORUS: // torus is also difficult
+		return get_avg_color(); // use average color
 	case COLL_POLYGON: // we assume normal == norm
 		if (fabs(thickness) > MIN_POLY_THICK) {return get_avg_color();} // thick polygon, use average color
 		get_poly_texgen_dirs(norm, v);

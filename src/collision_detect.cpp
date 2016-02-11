@@ -345,6 +345,35 @@ int add_coll_cylinder(point const &p1, point const &p2, float radius, float radi
 }
 
 
+void add_coll_torus_to_matrix(int index, int dhcm) {
+
+	coll_obj &cobj(coll_objects[index]);
+	coll_obj const orig_cobj(cobj); // make a copy of the cobj so that we can modify it then restore it
+	cylinder_3dw const cylin(cobj.get_torus_bounding_cylinder());
+	cobj.type = (cobj.is_cylin_vertical() ? COLL_CYLINDER : COLL_CYLINDER_ROT);
+	cobj.points[0] = cylin.p1;
+	cobj.points[1] = cylin.p2;
+	cobj.radius    = cylin.r1;
+	cobj.radius2   = cylin.r2;
+	cobj.calc_bcube();
+	add_coll_cylinder_to_matrix(index, dhcm);
+	cobj = orig_cobj; // restore the original
+}
+
+int add_coll_torus(point const &p1, vector3d const &dir, float ro, float ri, cobj_params const &cparams, int platform_id, int dhcm) {
+
+	assert(ro > 0.0 && ri > 0.0);
+	assert(dir != zero_vector);
+	int const index(cobj_manager.get_next_avail_index());
+	coll_obj &cobj(coll_objects[index]);
+	cobj.points[0] = p1;
+	cobj.norm      = dir.get_norm();
+	coll_objects.set_coll_obj_props(index, COLL_TORUS, ro, ri, platform_id, cparams);
+	add_coll_torus_to_matrix(index, dhcm);
+	return index;
+}
+
+
 void add_coll_capsule_to_matrix(int index, int dhcm) {
 
 	coll_obj &cobj(coll_objects[index]);
@@ -559,6 +588,9 @@ int coll_obj::add_coll_cobj() {
 	case COLL_CYLINDER_ROT:
 		cid = add_coll_cylinder(points[0], points[1], radius, radius2, cp, platform_id);
 		break;
+	case COLL_TORUS:
+		cid = add_coll_torus(points[0], norm, radius, radius2, cp, platform_id);
+		break;
 	case COLL_CAPSULE:
 		cid = add_coll_capsule(points[0], points[1], radius, radius2, cp, platform_id);
 		break;
@@ -594,6 +626,7 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 	case COLL_SPHERE:       add_coll_sphere_to_matrix  (index, 0); break;
 	case COLL_CYLINDER:     add_coll_cylinder_to_matrix(index, 0); break;
 	case COLL_CYLINDER_ROT: add_coll_cylinder_to_matrix(index, 0); break;
+	case COLL_TORUS:        add_coll_torus_to_matrix   (index, 0); break;
 	case COLL_CAPSULE:      add_coll_capsule_to_matrix (index, 0); break;
 	case COLL_POLYGON:      add_coll_polygon_to_matrix (index, 0); break;
 	default: assert(0);
@@ -891,8 +924,7 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 		
 		switch (cobj.type) {
 		case COLL_CUBE:
-			coll = ((pval.x + radius) >= cobj.d[0][0] && (pval.x - radius) <= cobj.d[0][1] &&
-				    (pval.y + radius) >= cobj.d[1][0] && (pval.y - radius) <= cobj.d[1][1]);
+			coll = ((pval.x + radius) >= cobj.d[0][0] && (pval.x - radius) <= cobj.d[0][1] && (pval.y + radius) >= cobj.d[1][0] && (pval.y - radius) <= cobj.d[1][1]);
 			break;
 		case COLL_SPHERE:
 			coll = dist_less_than(pval, cobj.points[0], (cobj.radius + radius));
@@ -902,6 +934,17 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 			break;
 		case COLL_CYLINDER_ROT:
 			coll = sphere_int_cylinder_sides(pval, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2);
+			break;
+		case COLL_TORUS:
+			if (cobj.has_z_normal()) { // Note: +z torus only
+				point p_int(all_zeros); // unused
+				vector3d norm(zero_vector); // unused
+				coll = sphere_torus_intersect(pval, radius, cobj.points[0], cobj.radius2, cobj.radius, p_int, norm, 0);
+			}
+			else {
+				cylinder_3dw const cylin(cobj.get_torus_bounding_cylinder());
+				coll = sphere_int_cylinder_sides(pval, radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2);
+			}
 			break;
 		case COLL_CAPSULE:
 			coll = (dist_less_than(pval, cobj.points[0], (cobj.radius + radius)) || dist_less_than(pval, cobj.points[1], (cobj.radius2 + radius)));
@@ -1016,6 +1059,7 @@ void vert_coll_detector::check_cobj(int index) {
 		switch (cobj.type) { // Note: cubes and polygons could be split into many small pieces, so we don't check their sizes
 		case COLL_CYLINDER:
 		case COLL_CYLINDER_ROT:
+		case COLL_TORUS:
 			if (cobj.radius2 < 0.25*object_types[type].radius) return;
 		case COLL_SPHERE: // fallthrough from above
 			if (cobj.radius  < 0.25*object_types[type].radius) return;
@@ -1135,6 +1179,14 @@ bool coll_obj::sphere_intersects_exact(point const &sc, float sr, vector3d &cnor
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
 		return sphere_intersect_cylinder_ipt(sc, sr, points[0], points[1], radius, radius2, !(cp.surfs & 1), new_sc, cnorm, 1);
+	case COLL_TORUS:
+		if (has_z_normal()) { // Note: +z torus only
+			return sphere_torus_intersect(sc, sr, points[0], radius2, radius, new_sc, cnorm, 1);
+		}
+		else {
+			cylinder_3dw const cylin(get_torus_bounding_cylinder());
+			return sphere_intersect_cylinder_ipt(sc, sr, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1, new_sc, cnorm, 1);
+		}
 	case COLL_CAPSULE:
 		if (sphere_sphere_int(sc, points[0], sr, radius,  cnorm, new_sc)) return 1;
 		if (sphere_sphere_int(sc, points[1], sr, radius2, cnorm, new_sc)) return 1;
@@ -1295,6 +1347,16 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 	}
 	case COLL_CYLINDER_ROT:
 		if (sphere_intersect_cylinder_ipt(pos, o_radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, !(cobj.cp.surfs & 1), obj.pos, norm, 1)) {lcoll = 1;}
+		break;
+
+	case COLL_TORUS:
+		if (cobj.has_z_normal()) { // Note: +z torus only
+			if (sphere_torus_intersect(pos, o_radius, cobj.points[0], cobj.radius2, cobj.radius, obj.pos, norm, 1)) {lcoll = 1;}
+		}
+		else {
+			cylinder_3dw const cylin(cobj.get_torus_bounding_cylinder());
+			if (sphere_intersect_cylinder_ipt(pos, o_radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1, obj.pos, norm, 1)) {lcoll = 1;}
+		}
 		break;
 
 	case COLL_CAPSULE: {
@@ -1745,24 +1807,29 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 		
 		switch (cobj.type) {
 		case COLL_CUBE:
-			zt   = cobj.d[2][1];
-			zb   = cobj.d[2][0];
+			zt = cobj.d[2][1]; zb = cobj.d[2][0];
 			coll = 1;
 			break;
-
 		case COLL_CYLINDER:
-			if (dist_xy_less_than(pos, cobj.points[0], cobj.radius)) {
-				zt   = cobj.d[2][1];
-				zb   = cobj.d[2][0];
-				coll = 1;
-			}
+			coll = dist_xy_less_than(pos, cobj.points[0], cobj.radius);
+			if (coll) {zt = cobj.d[2][1]; zb = cobj.d[2][0];}
 			break;
-
 		case COLL_SPHERE:
 			coll = calc_sphere_z_bounds(cobj.points[0], cobj.radius, pos, zt, zb);
 			break;
 		case COLL_CYLINDER_ROT:
 			coll = calc_cylin_z_bounds(cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2, pos, radius, zt, zb);
+			break;
+
+		case COLL_TORUS:
+			if (cobj.has_z_normal()) { // Note: +z torus only
+				coll = (dist_xy_less_than(pos, cobj.points[0], cobj.radius+cobj.radius2) && !dist_xy_less_than(pos, cobj.points[0], cobj.radius-cobj.radius2)); // check the hole
+				if (coll) {zt = cobj.d[2][1]; zb = cobj.d[2][0];}
+			}
+			else {
+				cylinder_3dw const cylin(cobj.get_torus_bounding_cylinder());
+				coll = calc_cylin_z_bounds(cylin.p1, cylin.p2, cylin.r1, cylin.r2, pos, radius, zt, zb);
+			}
 			break;
 
 		case COLL_CAPSULE:
@@ -1790,8 +1857,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				thick_poly_to_sides(cobj.points, cobj.npoints, cobj.norm, cobj.thickness, pts);
 				if (!sphere_intersect_poly_sides(pts, pos, radius, val, norm, 0)) break; // no collision
 				float const zminc(cobj.d[2][0]), zmaxc(cobj.d[2][1]);
-				zb = zmaxc;
-				zt = zminc;
+				zb = zmaxc; zt = zminc;
 
 				if (get_poly_zvals(pts, pos.x, pos.y, zb, zt)) {
 					zb   = max(zminc, zb);

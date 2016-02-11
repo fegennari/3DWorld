@@ -12,7 +12,7 @@
 typedef bool (*collision_func)(int, int, vector3d const &, point const &, float, int);
 
 // object/collision object types/status
-enum {COLL_NULL     = 0, COLL_CUBE,     COLL_CYLINDER, COLL_SPHERE,  COLL_CYLINDER_ROT, COLL_POLYGON,  COLL_CAPSULE, COLL_INVALID};
+enum {COLL_NULL     = 0, COLL_CUBE,     COLL_CYLINDER, COLL_SPHERE,  COLL_CYLINDER_ROT, COLL_POLYGON,  COLL_CAPSULE, COLL_TORUS, COLL_INVALID};
 enum {COLL_UNUSED   = 0, COLL_FREED,    COLL_PENDING,  COLL_STATIC,  COLL_DYNAMIC,      COLL_NEGATIVE, COLL_TO_REMOVE};
 enum {OBJ_STAT_BAD  = 0, OBJ_STAT_AIR,  OBJ_STAT_COLL, OBJ_STAT_GND, OBJ_STAT_STOP,     OBJ_STAT_RES};
 enum {COBJ_TYPE_STD = 0, COBJ_TYPE_MODEL3D, COBJ_TYPE_VOX_TERRAIN};
@@ -186,6 +186,7 @@ public:
 	bool is_thin_poly()   const {return (type == COLL_POLYGON && thickness <= MIN_POLY_THICK);}
 	bool is_tree_leaf()   const {return is_billboard;} // we assume that a billboard cobj is a tree leaf
 	bool is_cylin_vertical() const {return (points[0].x == points[1].x && points[0].y == points[1].y);}
+	bool has_z_normal()      const {return (norm.x == 0.0 && norm.y == 0.0);}
 	bool has_hard_edges()    const {return (type == COLL_CUBE || type == COLL_POLYGON);}
 	bool has_flat_top_bot()  const {return (type == COLL_CUBE || type == COLL_POLYGON || type == COLL_CYLINDER);}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
@@ -198,6 +199,7 @@ public:
 	float get_group_mass()const;
 	colorRGBA get_avg_color() const {return ((cp.tid >= 0) ? cp.color.modulate_with(texture_color(cp.tid)) : cp.color);}
 	void bounding_sphere(point &center, float &brad) const;
+	cylinder_3dw get_torus_bounding_cylinder() const;
 	bool is_billboard_cobj() const {return (is_billboard && is_thin_poly() && npoints == 4);}
 	bool has_poly_billboard_alpha() const {return (is_billboard_cobj() && cp.has_alpha_texture());}
 	bool check_poly_billboard_alpha(point const &p1, point const &p2, float t) const;
@@ -214,7 +216,7 @@ public:
 	void remove_waypoint();
 	void check_indoors_outdoors();
 	void write_to_cobj_file(std::ostream &out, coll_obj &prev) const;
-
+	
 	// inexact primitive intersections
 	int cube_intersects(cube_t const &cube) const;
 	int sphere_intersects(point const &pos, float radius) const;
