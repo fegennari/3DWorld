@@ -109,7 +109,7 @@ void coll_obj::calc_volume() {
 		volume += PI*(radius*radius+radius*radius2+radius2*radius2)*p2p_dist(points[0], points[1])/3.0;
 		break;
 	case COLL_TORUS:
-		// FIXME_TORUS
+		volume = (PI*radius2*radius2)*(2.0*PI*radius);
 		break;
 	default: assert(0);
 	}
@@ -320,7 +320,17 @@ void coll_obj::check_indoors_outdoors() {
 		if (type == COLL_CAPSULE) {test_pts[0].z += ((points[0].z < points[1].z) ? radius2 : radius);}
 		break;
 	case COLL_TORUS:
-		// FIXME_TORUS
+		if (has_z_normal()) { // Note: +z torus only - use 4 points on top
+			for (unsigned i = 0; i < 2; ++i) {
+				test_pts[npts++] = points[0] + vector3d((i ? radius : -radius), 0.0, radius2);
+				test_pts[npts++] = points[0] + vector3d(0.0, (i ? radius : -radius), radius2);
+			}
+		}
+		else {
+			vector3d top_dir;
+			orthogonalize_dir(plus_z, norm, top_dir, 1); // Note: not valid for norm == +/- z
+			test_pts[npts++] = points[0] + top_dir*radius + vector3d(0.0, 0.0, radius2); // should be the point with highest z-value
+		}
 		break;
 	case COLL_POLYGON:
 		assert(npoints <= 4);
@@ -457,7 +467,14 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			}
 		}
 		else if (type == COLL_TORUS) {
-			// FIXME_TORUS
+			if (!has_z_normal()) { // rotated torus
+				fgPushMatrix();
+				translate_to(points[0]);
+				rotate_from_v2v(dir, plus_z);
+				draw_torus(all_zeros, radius2, radius, ndiv, ndiv); // always textured
+				fgPopMatrix();
+			}
+			else {draw_torus(points[0], radius2, radius, ndiv, ndiv);} // always textured
 		}
 		else { // cylinder
 			bool const draw_ends(!(cp.surfs & 1));
@@ -547,6 +564,41 @@ void get_cylinder_triangles(vector<vert_wrap_t> &verts, point const &p1, point c
 }
 
 
+void get_torus_triangles(vector<vert_wrap_t> &verts, point const &center, vector3d const &dir, float ro, float ri, int ndiv) {
+
+	assert(ro > 0.0 || ri > 0.0);
+	
+	if (dir.x == 0.0 && dir.y == 0.0) { // Note: +z torus only
+		float const ds(TWO_PI/ndiv), cds(cos(ds)), sds(sin(ds));
+		vector<float> sin_cos(2*ndiv);
+
+		for (unsigned t = 0; t < ndiv; ++t) {
+			float const phi(t*ds);
+			sin_cos[(t<<1)+0] = cos(phi);
+			sin_cos[(t<<1)+1] = sin(phi);
+		}
+		for (unsigned s = 0; s < ndiv; ++s) { // outer
+			float const theta(s*ds), ct(cos(theta)), st(sin(theta));
+			point const pos[2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
+
+			for (unsigned t = 0; t <= ndiv; ++t) { // inner
+				unsigned const t_((t == ndiv) ? 0 : t);
+				float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
+
+				for (unsigned i = 0; i < 2; ++i) {
+					if ((2*t+i) > 2) {tri_strip_push(verts);}
+					vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
+					verts[(t<<1)+i].v = center + pos[1-i]*ro + delta*ri;
+				}
+			} // for t
+		} // for s
+	}
+	else {
+		// FIXME_TORUS: how to implement this? transform all verts by a rotation?
+	}
+}
+
+
 void get_polygon_triangles(vector<vert_wrap_t> &verts, point const *const points, int npoints) {
 
 	assert(npoints == 3 || npoints == 4);
@@ -587,7 +639,7 @@ void coll_obj::get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv, b
 		get_cylinder_triangles(verts, points[0], points[1], radius, radius2, ndiv, !(cp.surfs & 1));
 		break;
 	case COLL_TORUS:
-		// FIXME_TORUS
+		get_torus_triangles(verts, points[0], norm, radius, radius2, ndiv);
 		break;
 	case COLL_CAPSULE:
 		if (!skip_spheres) {

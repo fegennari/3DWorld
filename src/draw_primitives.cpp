@@ -782,9 +782,9 @@ void draw_torus(point const &center, float ri, float ro, unsigned ndivi, unsigne
 				vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
 				verts[(t<<1)+i] = vert_norm_tc((center + pos[1-i]*ro + delta*ri), delta, ts*(s+1-i), tt*t);
 			}
-		}
+		} // for t
 		draw_verts(verts, GL_TRIANGLE_STRIP);
-	}
+	} // for s
 }
 
 

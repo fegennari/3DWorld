@@ -146,7 +146,6 @@ bool sphere_def_coll_vert_cylin(point const &sc, float sr, point const &cp1, poi
 
 // 0: no intersection, 1: intersection, 2: maybe intersection (incomplete)
 // 21 total: 15 complete, 5 partial (all cylinder cases), 1 incomplete (capsule-capsule)
-// FIXME_TORUS: COLL_TORUS case is not handled here
 // Note: pos toler => adjacency doesn't count; neg toler => adjacency counts
 int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 
@@ -164,13 +163,17 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CAPSULE:
 			if (sphere_cube_intersect(c.points[0], cr1, *this) || sphere_cube_intersect(c.points[1], cr2, *this)) return 1;
 			// fallthrough
-		case COLL_CYLINDER_ROT: {
+		case COLL_CYLINDER_ROT:
 			if (check_line_clip(c.points[0], c.points[1], d)) return 1; // definite intersection
 			return cylin_cube_int_aa_via_circle_rect(*this, c);
+		case COLL_TORUS: {
+			cylinder_3dw const cylin(c.get_torus_bounding_cylinder());
+			if (check_line_clip(cylin.p1, cylin.p2, d)) return 1; // definite intersection
+			//return cylin_cube_int_aa_via_circle_rect(*this, cylin); // FIXME_TORUS
 		}
 		case COLL_POLYGON: return cube_polygon_intersect(*this, c);
 		default: assert(0);
-		}
+		} // end switch
 
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
@@ -187,9 +190,10 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 			if (coll_sphere_cylin_int(c.points[0], cr1, *this) || coll_sphere_cylin_int(c.points[1], cr2, *this)) return 1;
 			// fallthrough
 		case COLL_CYLINDER_ROT: return cylin_cylin_int(c, *this);
+		//case COLL_TORUS:        return cylin_cylin_int(c, *this); // FIXME_TORUS: use bounding cylinder
 		case COLL_POLYGON:      return poly_cylin_int (c, *this);
 		default: assert(0);
-		}
+		} // end switch
 
 	case COLL_SPHERE:
 		switch (c.type) {
@@ -197,12 +201,14 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CAPSULE: if (dist_less_than(points[0], c.points[0], (cr1+radius)) || dist_less_than(points[0], c.points[1], (cr2+radius))) return 1;
 			// fallthrough
 		case COLL_CYLINDER_ROT: return coll_sphere_cylin_int(points[0], r1, c);
+		//case COLL_TORUS: // FIXME_TORUS
 		case COLL_POLYGON: return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], r1, c.thickness, MIN_POLY_THICK);
 		default: assert(0);
-		}
+		} // end switch
 
-	case COLL_POLYGON: {
+	case COLL_POLYGON:
 		switch (c.type) {
+		//case COLL_TORUS: // FIXME_TORUS
 		case COLL_CAPSULE:
 			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[0], cr1, thickness, MIN_POLY_THICK)) return 1;
 			if (sphere_ext_poly_intersect(points, npoints, norm, c.points[1], cr2, thickness, MIN_POLY_THICK)) return 1;
@@ -227,12 +233,13 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 				}
 			}
 			return (poly_poly_int_test(c, *this) || poly_poly_int_test(*this, c));
-		}
+		} // end COLL_POLYGON
 		default: assert(0);
-		}
+		} // end switch
 
-	case COLL_CAPSULE: {
-			assert(c.type == COLL_CAPSULE);
+	case COLL_CAPSULE:
+		switch (c.type) {
+		case COLL_CAPSULE: {
 			sphere_t const sa[2] = {sphere_t(  points[0],  r1), sphere_t(  points[1],  r2)};
 			sphere_t const sb[2] = {sphere_t(c.points[0], cr1), sphere_t(c.points[1], cr2)};
 
@@ -244,10 +251,16 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 				if (coll_sphere_cylin_int(sb[i].pos, sb[i].radius, *this)) return 1;
 			}
 			return cylin_cylin_int(c, *this); // cylinder-cylinder intersection
-		}
-	}
+		} // end COLL_CAPSULE
+		//case COLL_TORUS: // FIXME_TORUS
+		default: assert(0);
+		} // end switch
+	case COLL_TORUS:
+		assert(c.type == COLL_TORUS);
+		// FIXME_TORUS
+		break;
 	default: assert(0);
-	}
+	} // end switch
 	return 0;
 }
 
