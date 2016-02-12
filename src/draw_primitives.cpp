@@ -762,25 +762,32 @@ void draw_torus(point const &center, float ri, float ro, unsigned ndivi, unsigne
 
 	assert(ndivi > 2 && ndivo > 2);
 	float const ts(tex_scale_o/ndivo), tt(tex_scale_i/ndivi), ds(TWO_PI/ndivo), dt(TWO_PI/ndivi), cds(cos(ds)), sds(sin(ds));
-	vector<float> sin_cos(2*ndivi);
-	vector<vert_norm_tc> verts(2*(ndivi+1));
+	static vector<float> sin_cos;
+	static vector<vert_norm_tc> verts;
+	verts.resize(2*(ndivi+1));
+	
+	if (sin_cos.size() != 2*ndivi) { // since sin_cos only depends on ndivi, we only need to recompute it when ndivi changes
+		sin_cos.resize(2*ndivi);
 
-	for (unsigned t = 0; t < ndivi; ++t) {
-		float const phi(t*dt);
-		sin_cos[(t<<1)+0] = cos(phi);
-		sin_cos[(t<<1)+1] = sin(phi);
+		for (unsigned t = 0; t < ndivi; ++t) {
+			float const phi(t*dt);
+			sin_cos[(t<<1)+0] = cos(phi);
+			sin_cos[(t<<1)+1] = sin(phi);
+		}
 	}
 	for (unsigned s = 0; s < ndivo; ++s) { // outer
 		float const theta(s*ds), ct(cos(theta)), st(sin(theta));
-		point const pos[2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
+		point const pos [2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
+		point const vpos[2] = {(center + pos[0]*ro), (center + pos[1]*ro)};
 
 		for (unsigned t = 0; t <= ndivi; ++t) { // inner
 			unsigned const t_((t == ndivi) ? 0 : t);
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
-				verts[(t<<1)+i] = vert_norm_tc((center + pos[1-i]*ro + delta*ri), delta, ts*(s+1-i), tt*t);
+				vector3d delta(pos[1-i]*sp);
+				delta.z += cp;
+				verts[(t<<1)+i].assign((vpos[1-i] + delta*ri), delta, ts*(s+1-i), tt*t);
 			}
 		} // for t
 		draw_verts(verts, GL_TRIANGLE_STRIP);
