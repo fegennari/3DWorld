@@ -1087,7 +1087,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	material_map_t materials;
 	multi_trigger_t triggers;
 	
-	while (!end) { // available: houz
+	while (!end) { // available: hou
 		assert(fp != NULL);
 		int letter(getc(fp));
 
@@ -1101,6 +1101,12 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				while (!is_end_of_string(letter)) {keyword.push_back(letter); letter = getc(fp);}
 
 				if (0) {}
+				else if (keyword == "cube") {letter = 'B';}
+				else if (keyword == "sphere") {letter = 'S';}
+				else if (keyword == "cylinder") {letter = 'C';}
+				else if (keyword == "capsule") {letter = 'k';}
+				else if (keyword == "polygon") {letter = 'P';}
+				else if (keyword == "torus") {letter = 'z';}
 				else if (keyword == "trigger") {letter = 'K';}
 				else if (keyword == "light"  ) {letter = 'L';}
 				else if (keyword == "bind_light") {letter = 'V';}
@@ -1118,18 +1124,10 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "reflective", coll_obj_file);}
 					reflective = (ivals[0] != 0);
 				}
-				else if (keyword == "start_cobj_group") {
-					cobj.cgroup_id = cobj_groups.new_group();
-				}
-				else if (keyword == "end_cobj_group") {
-					cobj.cgroup_id = -1;
-				}
-				else if (keyword == "start_draw_group") {
-					cobj.dgroup_id = cdraw_groups.new_group();
-				}
-				else if (keyword == "end_draw_group") {
-					cobj.dgroup_id = -1;
-				}
+				else if (keyword == "start_cobj_group") {cobj.cgroup_id = cobj_groups.new_group();}
+				else if (keyword == "end_cobj_group") {cobj.cgroup_id = -1;}
+				else if (keyword == "start_draw_group") {cobj.dgroup_id = cdraw_groups.new_group();}
+				else if (keyword == "end_draw_group") {cobj.dgroup_id = -1;}
 				else if (keyword == "destroy_prob") {
 					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "destroy_prob", coll_obj_file);}
 					cobj.cp.destroy_prob = (unsigned char)max(0, min(255, ivals[0])); // 0 = default
@@ -1509,6 +1507,19 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			cobj.add_to_vector(fixed_cobjs, ((letter == 'k') ? COLL_CAPSULE : COLL_CYLINDER));
 			break;
 
+		case 'z': // torus: x y z dir_x dir_y dir_z ro ri
+			if (fscanf(fp, "%f%f%f%f%f%f%f%f", &cobj.points[0].x, &cobj.points[0].y, &cobj.points[0].z, &cobj.norm.x, &cobj.norm.y, &cobj.norm.z, &cobj.radius, &cobj.radius2) != 8) {
+				return read_error(fp, "collision torus", coll_obj_file);
+			}
+			assert(cobj.radius >  0.0 && cobj.radius2 >  0.0);
+			check_layer(has_layer);
+			cobj.radius  *= xf.scale;
+			cobj.radius2 *= xf.scale;
+			xf.xform_pos(cobj.points[0]);
+			xf.xform_pos_rm(cobj.norm);
+			cobj.add_to_vector(fixed_cobjs, COLL_TORUS);
+			break;
+
 		case 'P': // polygon: npts (x y z)* thickness
 			if (fscanf(fp, "%u", &npoints) != 1) {return read_error(fp, "collision polygon npoints", coll_obj_file);}
 
@@ -1861,6 +1872,9 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 		break;
 	case COLL_CAPSULE: // 'k': capsule: x1 y1 z1 x2 y2 z2 r1 r2
 		out << "k " << points[0].raw_str() << " " << points[1].raw_str() << " " << radius << " " << radius2 << endl;
+		break;
+	case COLL_TORUS: // 'z': x y z dir_x dir_y dir_z ro ri
+		out << "z " << points[0].raw_str() << " " << norm.raw_str() << " " << radius << " " << radius2 << endl;
 		break;
 	case COLL_POLYGON: // 'P': polygon: npts (x y z)* thickness
 		out << "P " << npoints << " ";
