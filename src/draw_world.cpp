@@ -640,7 +640,7 @@ bool draw_or_add_cobj(unsigned cix, bool reflection_pass, bool use_ref_plane, ve
 	}
 	if (use_tex_coords) { // uncommon case (typically movable objects)
 		assert(c.group_id < 0);
-		assert(!c.is_semi_trans());
+		//assert(!c.is_semi_trans()); // too strong?
 		if (camera_pdu.cube_visible(c)) {tex_coord_cobjs.push_back(cix);}
 		return 0;
 	}
