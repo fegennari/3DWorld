@@ -199,7 +199,7 @@ public:
 	float get_group_mass()const;
 	colorRGBA get_avg_color() const {return ((cp.tid >= 0) ? cp.color.modulate_with(texture_color(cp.tid)) : cp.color);}
 	void bounding_sphere(point &center, float &brad) const;
-	cylinder_3dw get_torus_bounding_cylinder() const;
+	cylinder_3dw get_bounding_cylinder() const;
 	bool is_billboard_cobj() const {return (is_billboard && is_thin_poly() && npoints == 4);}
 	bool has_poly_billboard_alpha() const {return (is_billboard_cobj() && cp.has_alpha_texture());}
 	bool check_poly_billboard_alpha(point const &p1, point const &p2, float t) const;

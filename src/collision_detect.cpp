@@ -349,7 +349,7 @@ void add_coll_torus_to_matrix(int index, int dhcm) {
 
 	coll_obj &cobj(coll_objects[index]);
 	coll_obj const orig_cobj(cobj); // make a copy of the cobj so that we can modify it then restore it
-	cylinder_3dw const cylin(cobj.get_torus_bounding_cylinder());
+	cylinder_3dw const cylin(cobj.get_bounding_cylinder());
 	cobj.type = (cobj.is_cylin_vertical() ? COLL_CYLINDER : COLL_CYLINDER_ROT);
 	cobj.points[0] = cylin.p1;
 	cobj.points[1] = cylin.p2;
@@ -942,7 +942,7 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 				coll = sphere_torus_intersect(pval, radius, cobj.points[0], cobj.radius2, cobj.radius, p_int, norm, 0);
 			}
 			else {
-				cylinder_3dw const cylin(cobj.get_torus_bounding_cylinder());
+				cylinder_3dw const cylin(cobj.get_bounding_cylinder());
 				coll = sphere_int_cylinder_sides(pval, radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2);
 			}
 			break;
@@ -1184,7 +1184,7 @@ bool coll_obj::sphere_intersects_exact(point const &sc, float sr, vector3d &cnor
 			return sphere_torus_intersect(sc, sr, points[0], radius2, radius, new_sc, cnorm, 1);
 		}
 		else {
-			cylinder_3dw const cylin(get_torus_bounding_cylinder());
+			cylinder_3dw const cylin(get_bounding_cylinder());
 			return sphere_intersect_cylinder_ipt(sc, sr, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1, new_sc, cnorm, 1);
 		}
 	case COLL_CAPSULE:
@@ -1354,7 +1354,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 			if (sphere_torus_intersect(pos, o_radius, cobj.points[0], cobj.radius2, cobj.radius, obj.pos, norm, 1)) {lcoll = 1;}
 		}
 		else {
-			cylinder_3dw const cylin(cobj.get_torus_bounding_cylinder());
+			cylinder_3dw const cylin(cobj.get_bounding_cylinder());
 			if (sphere_intersect_cylinder_ipt(pos, o_radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1, obj.pos, norm, 1)) {lcoll = 1;}
 		}
 		break;
@@ -1827,7 +1827,7 @@ int set_true_obj_height(point &pos, point const &lpos, float step_height, float 
 				if (coll) {zt = cobj.d[2][1]; zb = cobj.d[2][0];}
 			}
 			else {
-				cylinder_3dw const cylin(cobj.get_torus_bounding_cylinder());
+				cylinder_3dw const cylin(cobj.get_bounding_cylinder());
 				coll = calc_cylin_z_bounds(cylin.p1, cylin.p2, cylin.r1, cylin.r2, pos, radius, zt, zb);
 			}
 			break;

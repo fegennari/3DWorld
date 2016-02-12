@@ -136,10 +136,8 @@ void coll_obj::calc_bcube() {
 		break;
 	case COLL_CYLINDER:
 	case COLL_CYLINDER_ROT:
-		cylinder_3dw(points[0], points[1], radius, radius2).calc_bcube(*this);
-		break;
 	case COLL_TORUS:
-		get_torus_bounding_cylinder().calc_bcube(*this);
+		get_bounding_cylinder().calc_bcube(*this);
 		break;
 	case COLL_CAPSULE: {
 		cube_t bcube2;
@@ -710,9 +708,18 @@ void coll_obj::bounding_sphere(point &center, float &brad) const {
 	}
 }
 
-cylinder_3dw coll_obj::get_torus_bounding_cylinder() const {
-	assert(type == COLL_TORUS);
-	return cylinder_3dw(points[0]-norm*radius2, points[0]+norm*radius2, radius+radius2, radius+radius2);
+cylinder_3dw coll_obj::get_bounding_cylinder() const { // Note: only valid for torus, capsule, and cylinder
+	
+	switch (type) {
+	case COLL_TORUS:
+		return cylinder_3dw(points[0]-norm*radius2, points[0]+norm*radius2, radius+radius2, radius+radius2);
+	case COLL_CYLINDER:
+	case COLL_CYLINDER_ROT:
+	case COLL_CAPSULE:
+		return cylinder_3dw(points[0], points[1], radius, radius2);
+	default: assert(0);
+	}
+	return cylinder_3dw(); // never gets here
 }
 
 point coll_obj::get_center_pt() const {
