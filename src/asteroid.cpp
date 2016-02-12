@@ -873,9 +873,8 @@ bool uasteroid_belt::line_might_intersect(point const &p1, point const &p2, floa
 	for (unsigned d = 0; d < 2; ++d) {xform_to_local_torus_coord_space(pt[d]);}
 	float t(0.0);
 	// FIXME: line_radius is incorrect in the z-dimension, should scale by <scale> to compensate for torus elliptical scaling
-	float const ri(min((inner_radius + line_radius), outer_radius)), scale(1.0/outer_radius);
-	// line_intersect_torus() seems to have some bug where small ro causes it to always return false, so we rescale so that ro == 1.0
-	if (!line_torus_intersect(scale*pt[0], scale*pt[1], all_zeros, scale*ri, 1.0, t)) {return 0;}
+	float const ri(min((inner_radius + line_radius), outer_radius));
+	if (!line_torus_intersect_rescale(pt[0], pt[1], all_zeros, plus_z, ri, outer_radius, t)) {return 0;}
 	if (p_int) {*p_int = p1 + t*(p2 - p1);} // t is independent of [affine] coordinate space, so we don't need to transform p_int
 	return 1;
 }

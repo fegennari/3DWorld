@@ -211,16 +211,11 @@ int coll_obj::intersects_cobj(coll_obj const &c, float toler) const {
 		case COLL_CAPSULE: if (dist_less_than(points[0], c.points[0], (cr1+radius)) || dist_less_than(points[0], c.points[1], (cr2+radius))) return 1;
 			// fallthrough
 		case COLL_CYLINDER_ROT: return coll_sphere_cylin_int(points[0], r1, c);
-		case COLL_TORUS:
-			if (!sphere_cube_intersect(points[0], radius, c)) return 0; // test bcube
-			if (c.has_z_normal()) { // Note: +z torus only
+		case COLL_TORUS: {
+				if (!sphere_cube_intersect(points[0], radius, c)) return 0; // test bcube
 				point p_int(all_zeros); // unused
 				vector3d norm(zero_vector); // unused
 				return sphere_torus_intersect(points[0], radius, c.points[0], c.radius2, c.radius, p_int, norm, 0);
-			}
-			else { // Note: could transform the sphere by the torus direction
-				cylinder_3dw const cylin(c.get_bounding_cylinder());
-				return sphere_intersect_cylinder(points[0], radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2);
 			}
 		case COLL_POLYGON: return sphere_ext_poly_intersect(c.points, c.npoints, c.norm, points[0], r1, c.thickness, MIN_POLY_THICK);
 		default: assert(0);

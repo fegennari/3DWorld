@@ -155,7 +155,7 @@ void ship_sphere::draw_svol(point const &tpos, float cur_radius, point const &sp
 
 
 bool ship_torus::line_intersect(point const &lp1, point const &lp2, float &t, bool calc_t) const {
-	return line_torus_intersect(lp1, lp2, center, ri, ro, t);
+	return line_torus_intersect_rescale(lp1, lp2, center, plus_z, ri, ro, t);
 }
 
 bool ship_torus::sphere_intersect(point const &sc, float sr, point const &p_last, point &p_int, vector3d &norm, bool calc_int) const {

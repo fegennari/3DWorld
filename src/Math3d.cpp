@@ -837,6 +837,29 @@ bool line_torus_intersect(point const &p1, point const &p2, point const &tc, flo
 	return line_intersect_torus(l1.x, l1.y, l1.z, v1.x/vmag, v1.y/vmag, v1.z/vmag, ro, ri, vmag, t);
 }
 
+void local_rotate(point &p, vector3d const &from, vector3d const &to, point const &center) {
+
+	p -= center; // translate to center
+	rotate_vector3d_by_vr(from, to, p); // local rotate around center
+	p += center; // translate back
+}
+
+bool line_torus_intersect(point const &p1, point const &p2, point const &tc, point const &dir, float ri, float ro, float &t) {
+	
+	point pts[2] = {p1, p2};
+	
+	if (dir.x != 0.0 || dir.y != 0.0) { // need to transform line into torus space
+		for (unsigned i = 0; i < 2; ++i) {local_rotate(pts[i], plus_z, dir, tc);}
+	}
+	return line_torus_intersect(pts[0], pts[1], tc, ri, ro, t);
+}
+
+bool line_torus_intersect_rescale(point const &p1, point const &p2, point const &tc, point const &dir, float ri, float ro, float &t) {
+	// line_intersect_torus() seems to have some bug where small ro causes it to always return false, so we rescale so that ro == 1.0
+	float const scale(1.0/ro);
+	return line_torus_intersect(scale*p1, scale*p2, scale*tc, dir, scale*ri, 1.0, t);
+}
+
 
 // torus is oriented in the z direction (for now)
 bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro, point &p_int, vector3d &norm, bool calc_int) {
@@ -860,6 +883,20 @@ bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri
 	norm     = sc - p_int;
 	norm.normalize();
 	p_int += norm*(sr + ri);
+	return 1;
+}
+
+bool sphere_torus_intersect(point const &sc, float sr, point const &tc, vector3d const &dir, float ri, float ro, point &p_int, vector3d &norm, bool calc_int) {
+
+	if (dir.x == 0.0 && dir.y == 0.0) {return sphere_torus_intersect(sc, sr, tc, ri, ro, p_int, norm, calc_int);} // no need to transform line into torus space
+	point sc_rot(sc);
+	local_rotate(sc_rot, plus_z, dir, tc);
+	if (!sphere_torus_intersect(sc_rot, sr, tc, ri, ro, p_int, norm, calc_int)) return 0;
+	
+	if (calc_int) { // transform intersection point and normal back into global space
+		local_rotate(p_int, dir, plus_z, tc);
+		rotate_vector3d_by_vr(dir, plus_z, norm);
+	}
 	return 1;
 }
 

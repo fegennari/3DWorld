@@ -436,7 +436,10 @@ bool sphere_vert_cylin_intersect(point &center, float radius, cylinder_3dw const
 void get_sphere_border_pts(point *qp, point const &pos, point const &viewed_from, float radius, unsigned num_pts);
 void get_sphere_points(point const &pos, float radius, point *pts, unsigned npts, vector3d const &dir);
 bool line_torus_intersect(point const &p1, point const &p2, point const &tc, float ri, float ro, float &t);
+bool line_torus_intersect(point const &p1, point const &p2, point const &tc, point const &dir, float ri, float ro, float &t);
+bool line_torus_intersect_rescale(point const &p1, point const &p2, point const &tc, point const &dir, float ri, float ro, float &t);
 bool sphere_torus_intersect(point const &sc, float sr, point const &tc, float ri, float ro, point &p_int, vector3d &norm, bool calc_int);
+bool sphere_torus_intersect(point const &sc, float sr, point const &tc, vector3d const &dir, float ri, float ro, point &p_int, vector3d &norm, bool calc_int);
 bool circle_rect_intersect(point const &pos, float radius, cube_t const &cube, int dim);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube);
 bool sphere_cube_intersect(point const &pos, float radius, cube_t const &cube, point const &p_last,

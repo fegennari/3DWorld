@@ -468,11 +468,11 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			if (!has_z_normal()) { // rotated torus
 				fgPushMatrix();
 				translate_to(points[0]);
-				rotate_from_v2v(dir, plus_z);
-				draw_torus(all_zeros, radius2, radius, ndiv, ndiv); // always textured
+				rotate_from_v2v(norm, plus_z);
+				draw_torus(all_zeros, radius2, radius, ndiv, 3*ndiv/2); // always textured
 				fgPopMatrix();
 			}
-			else {draw_torus(points[0], radius2, radius, ndiv, ndiv);} // always textured
+			else {draw_torus(points[0], radius2, radius, ndiv, 3*ndiv/2);} // always textured
 		}
 		else { // cylinder
 			bool const draw_ends(!(cp.surfs & 1));
@@ -587,7 +587,7 @@ void get_torus_triangles(vector<vert_wrap_t> &verts, point const &center, vector
 				vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
 				vector3d dir_from_cent(pos[1-i]*ro + delta*ri);
 				if (do_rotate) {rotate_vector3d_by_vr(plus_z, dir, dir_from_cent);}
-				verts[(t<<1)+i].v = center + dir_from_cent;
+				verts.push_back(center + dir_from_cent);
 			}
 		} // for t
 	} // for s

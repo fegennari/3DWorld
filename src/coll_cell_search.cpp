@@ -73,9 +73,7 @@ bool coll_obj::line_intersect(point const &p1, point const &p2) const {
 			return 1;
 		case COLL_SPHERE:
 			return line_sphere_intersect(p1, p2, points[0], radius);
-		case COLL_TORUS:
-			if (has_z_normal()) {float t(0.0); return line_torus_intersect(p1, p2, points[0], radius2, radius, t);} // Note: +z torus only
-			// else fallthrough to cylinder case
+		case COLL_TORUS: {float t(0.0); return line_torus_intersect_rescale(p1, p2, points[0], norm, radius2, radius, t);}
 		case COLL_CYLINDER:
 		case COLL_CYLINDER_ROT:
 			return line_intersect_cylinder(p1, p2, get_bounding_cylinder(), !(cp.surfs & 1));
@@ -152,8 +150,7 @@ bool check_line_cylin_int(point const points[2], float radius, float radius2, po
 bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector3d &cnorm, float tmin, float tmax) const {
 
 	float clip_tmin(0.0), clip_tmax(1.0);
-	if (type != COLL_POLYGON && (!get_line_clip(p1, p2, d, clip_tmin, clip_tmax)
-		                         || clip_tmin > tmax || clip_tmax < tmin)) return 0;
+	if (type != COLL_POLYGON && (!get_line_clip(p1, p2, d, clip_tmin, clip_tmax) || clip_tmin > tmax || clip_tmax < tmin)) return 0;
 	
 	switch (type) {
 		case COLL_CUBE:
@@ -167,15 +164,9 @@ bool coll_obj::line_int_exact(point const &p1, point const &p2, float &t, vector
 		case COLL_CYLINDER_ROT:
 			return check_line_cylin_int(points, radius, radius2, p1, p2, t, cnorm, tmin, tmax);
 		case COLL_TORUS:
-			if (has_z_normal()) { // Note: +z torus only
-				if (!line_torus_intersect(p1, p2, points[0], radius2, radius, t) || t > tmax || t < tmin) return 0;
-				cnorm = ((p1 + (p2 - p1)*t) - points[0]).get_norm(); // approximate
-			}
-			else {
-				cylinder_3dw const cylin(get_bounding_cylinder());
-				point const pts[2] = {cylin.p1, cylin.p2};
-				return check_line_cylin_int(pts, cylin.r1, cylin.r2, p1, p2, t, cnorm, tmin, tmax); // use bounding cylinder
-			}
+			if (!line_torus_intersect_rescale(p1, p2, points[0], norm, radius2, radius, t) || t > tmax || t < tmin) return 0;
+			cnorm = ((p1 + (p2 - p1)*t) - points[0]).get_norm(); // approximate
+			return 1;
 		case COLL_CAPSULE: {
 			bool ret(0);
 			if (check_line_sphere_int(points[0], radius,       p1, p2, t, cnorm, tmin, tmax)) {ret = 1; tmax = t;}

@@ -935,15 +935,10 @@ int check_legal_move(int x_new, int y_new, float zval, float radius, int &cindex
 		case COLL_CYLINDER_ROT:
 			coll = sphere_int_cylinder_sides(pval, radius, cobj.points[0], cobj.points[1], cobj.radius, cobj.radius2);
 			break;
-		case COLL_TORUS:
-			if (cobj.has_z_normal()) { // Note: +z torus only
+		case COLL_TORUS: {
 				point p_int(all_zeros); // unused
 				vector3d norm(zero_vector); // unused
-				coll = sphere_torus_intersect(pval, radius, cobj.points[0], cobj.radius2, cobj.radius, p_int, norm, 0);
-			}
-			else {
-				cylinder_3dw const cylin(cobj.get_bounding_cylinder());
-				coll = sphere_int_cylinder_sides(pval, radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2);
+				coll = sphere_torus_intersect(pval, radius, cobj.points[0], norm, cobj.radius2, cobj.radius, p_int, norm, 0);
 			}
 			break;
 		case COLL_CAPSULE:
@@ -1180,13 +1175,7 @@ bool coll_obj::sphere_intersects_exact(point const &sc, float sr, vector3d &cnor
 	case COLL_CYLINDER_ROT:
 		return sphere_intersect_cylinder_ipt(sc, sr, points[0], points[1], radius, radius2, !(cp.surfs & 1), new_sc, cnorm, 1);
 	case COLL_TORUS:
-		if (has_z_normal()) { // Note: +z torus only
-			return sphere_torus_intersect(sc, sr, points[0], radius2, radius, new_sc, cnorm, 1);
-		}
-		else {
-			cylinder_3dw const cylin(get_bounding_cylinder());
-			return sphere_intersect_cylinder_ipt(sc, sr, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1, new_sc, cnorm, 1);
-		}
+		return sphere_torus_intersect(sc, sr, points[0], norm, radius2, radius, new_sc, cnorm, 1);
 	case COLL_CAPSULE:
 		if (sphere_sphere_int(sc, points[0], sr, radius,  cnorm, new_sc)) return 1;
 		if (sphere_sphere_int(sc, points[1], sr, radius2, cnorm, new_sc)) return 1;
@@ -1350,13 +1339,7 @@ void vert_coll_detector::check_cobj_intersect(int index, bool enable_cfs, bool p
 		break;
 
 	case COLL_TORUS:
-		if (cobj.has_z_normal()) { // Note: +z torus only
-			if (sphere_torus_intersect(pos, o_radius, cobj.points[0], cobj.radius2, cobj.radius, obj.pos, norm, 1)) {lcoll = 1;}
-		}
-		else {
-			cylinder_3dw const cylin(cobj.get_bounding_cylinder());
-			if (sphere_intersect_cylinder_ipt(pos, o_radius, cylin.p1, cylin.p2, cylin.r1, cylin.r2, 1, obj.pos, norm, 1)) {lcoll = 1;}
-		}
+		if (sphere_torus_intersect(pos, o_radius, cobj.points[0], cobj.norm, cobj.radius2, cobj.radius, obj.pos, norm, 1)) {lcoll = 1;}
 		break;
 
 	case COLL_CAPSULE: {
