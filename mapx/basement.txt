@@ -5,18 +5,21 @@
 # add basement lights near emergency exit
 l 0.8  1.0 1.0 1.0 1.0  -1 1 # white glass
 a 2 # destroyable/shatterable
-S -6.55 4.8 -0.03  0.03
-S -6.55 5.1 -0.03  0.03
-S -6.55 5.4 -0.03  0.03
+#S -6.55 4.8 -0.03  0.03
+#S -6.55 5.1 -0.03  0.03
+#S -6.55 5.4 -0.03  0.03
+torus -6.55 4.8 -0.05  0 0 1  0.03 0.01
+torus -6.55 5.1 -0.05  0 0 1  0.03 0.01
+torus -6.55 5.4 -0.05  0 0 1  0.03 0.01
 # x y z  activate_dist auto_on_time auto_off_time player_only requires_action [act_cube_region x1 x2 y1 y2 z1 z2]
 #K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0 # 5s player auto trigger
 K -6.55 5.1 -0.5  0.2 0.0 5.0 0 0  -6.7 -6.38 4.5 6.2 -0.5 -0.2 # 5s player auto trigger region
 L 0.0 1.0  -6.55 4.8 -0.1  0.6 0.6 1.0 1.0  0 0 -1 # samples face down
-V -6.55 4.8 -0.055 # light fixture at this pos and light will be disabled if shattered
+V -6.52 4.8 -0.054 # light fixture at this pos and light will be disabled if shattered
 L 0.0 1.0  -6.55 5.1 -0.1  0.6 0.6 1.0 1.0  0 0 -1
-V -6.55 5.1 -0.055
+V -6.52 5.1 -0.054
 L 0.0 1.0  -6.55 5.4 -0.1  0.6 0.6 1.0 1.0  0 0 -1
-V -6.55 5.4 -0.055
+V -6.52 5.4 -0.054
 K # disable trigger
 
 trigger -6.3 2.53 -0.29  0.4 0.0 1.0 0 0 # 1s player auto trigger for switch
@@ -190,9 +193,16 @@ T  6.9  4.4  -0.69
 B  0 1  0 1  0 1  0.1 # unit cube with rounded corners
 r 0.0 1.0 # reset specularity
 
-# reset state
 T 0.0 0.0 0.0
 m 1.0
+
+l 0.5 0.1 0.1 0.1 1.0 -1 1 # black rubber
+density 0.1
+r 0.5 20.0 # set specularity
+z 7.0 6.4 -0.67  0.0 0.0 1.0  0.06 0.025 # vertical torus "inner tube"
+r 0.0 1.0 # reset specularity
+
+# reset state
 X none
 density 1.0
 y 1.0

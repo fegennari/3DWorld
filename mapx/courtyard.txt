@@ -205,6 +205,10 @@ l 0.8 0.4 0.25 0.03 1.0 -1 1 # gold
 r 2.0 40.0  0.9 0.6 0.1 # set gold specular
 y 0.0 # use tex coords instead of texgen (force sphere rotation to make vertices and vertex normals agree)
 k 3.3 -1.4 0.04  3.3 -1.6 0.04  0.04 0.04
+z 2.5 -1.6 0.04  0.0 0.0 1.0  0.1 0.04 # vertical torus
+z 2.3 -2.8 0.14  1.0 0.0 0.0  0.1 0.04 # horizontal torus
+#D 0.0 0.0 0.001 100
+#z 1.4 -3.4 0.22  1.0 0.0 0.0  0.2 0.02 # large horizontal torus
 r 0.0 1.0 # reset specularity
 
 a 2 # destroyable/shatterable

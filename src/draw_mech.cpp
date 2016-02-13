@@ -54,11 +54,9 @@ void add_hmv_coll_objs(point &pos, float scale) {
 		purge_coll_freed(1);
 	}
 	// wheels
-	cobj_params const cp(0.9, BKGRAY, 1, 0); // drawn
-	hmv_coll_obj.push_back(add_coll_cylinder(point(x+0.19*scale, y+0.08*scale, z), point(x+0.19*scale, y,            z), wheelr, wheelr, cp));
-	hmv_coll_obj.push_back(add_coll_cylinder(point(x+0.19*scale, y+0.5*scale,  z), point(x+0.19*scale, y+0.42*scale, z), wheelr, wheelr, cp));
-	hmv_coll_obj.push_back(add_coll_cylinder(point(x+0.81*scale, y+0.08*scale, z), point(x+0.81*scale, y,            z), wheelr, wheelr, cp));
-	hmv_coll_obj.push_back(add_coll_cylinder(point(x+0.81*scale, y+0.5*scale,  z), point(x+0.81*scale, y+0.42*scale, z), wheelr, wheelr, cp));
+	cobj_params const cp(0.9, BKGRAY, 1, 0, nullptr, 0, -1, 1.0, 0, 0.5, 20.0); // drawn
+	point const pts[4] = {point(x+0.19*scale, y+0.04*scale, z), point(x+0.19*scale, y+0.46*scale, z), point(x+0.81*scale, y+0.04*scale, z), point(x+0.81*scale, y+0.46*scale, z)};
+	for (unsigned i = 0; i < 4; ++i) {hmv_coll_obj.push_back(add_coll_torus(pts[i], plus_y, 0.6*wheelr, 0.4*wheelr, cp));}
 	// body
 	hmv_shape.add_cobjs(hmv_coll_obj, 1); // drawn
 }
