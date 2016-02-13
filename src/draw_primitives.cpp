@@ -758,26 +758,36 @@ void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorR
 // ******************** TORUS ********************
 
 
-void draw_torus(point const &center, float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i, float tex_scale_o) { // in z-plane, always textured
+vector<float> const &gen_torus_sin_cos_vals(unsigned ndivi) {
+
+	assert(ndivi > 0);
+	static vector<float> sin_cos;
+	if (sin_cos.size() == 2*ndivi) return sin_cos; // since sin_cos only depends on ndivi, we only need to recompute it when ndivi changes
+	sin_cos.resize(2*ndivi);
+	float const dt(TWO_PI/ndivi);
+
+	for (unsigned t = 0; t < ndivi; ++t) {
+		float const phi(t*dt);
+		sin_cos[(t<<1)+0] = cos(phi);
+		sin_cos[(t<<1)+1] = sin(phi);
+	}
+	return sin_cos;
+}
+
+// always textured
+void draw_rot_torus(point const &center, vector3d const &dir, float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i, float tex_scale_o) {
 
 	assert(ndivi > 2 && ndivo > 2);
-	float const ts(tex_scale_o/ndivo), tt(tex_scale_i/ndivi), ds(TWO_PI/ndivo), dt(TWO_PI/ndivi), cds(cos(ds)), sds(sin(ds));
-	static vector<float> sin_cos;
+	float const ts(tex_scale_o/ndivo), tt(tex_scale_i/ndivi), ds(TWO_PI/ndivo), cds(cos(ds)), sds(sin(ds));
 	static vector<vert_norm_tc> verts;
 	verts.resize(2*(ndivi+1));
+	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndivi));
+	vector3d vab[2];
+	get_ortho_vectors(dir, vab);
 	
-	if (sin_cos.size() != 2*ndivi) { // since sin_cos only depends on ndivi, we only need to recompute it when ndivi changes
-		sin_cos.resize(2*ndivi);
-
-		for (unsigned t = 0; t < ndivi; ++t) {
-			float const phi(t*dt);
-			sin_cos[(t<<1)+0] = cos(phi);
-			sin_cos[(t<<1)+1] = sin(phi);
-		}
-	}
 	for (unsigned s = 0; s < ndivo; ++s) { // outer
-		float const theta(s*ds), ct(cos(theta)), st(sin(theta));
-		point const pos [2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
+		float const theta(s*ds), ct(cos(theta)), st(sin(theta)), ct2(ct*cds - st*sds), st2(st*cds + ct*sds);
+		point const pos [2] = {(vab[0]*ct + vab[1]*st), (vab[0]*ct2 + vab[1]*st2)};
 		point const vpos[2] = {(center + pos[0]*ro), (center + pos[1]*ro)};
 
 		for (unsigned t = 0; t <= ndivi; ++t) { // inner
@@ -785,13 +795,17 @@ void draw_torus(point const &center, float ri, float ro, unsigned ndivi, unsigne
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
 
 			for (unsigned i = 0; i < 2; ++i) {
-				vector3d delta(pos[1-i]*sp);
-				delta.z += cp;
+				vector3d const delta(pos[1-i]*sp + dir*cp);
 				verts[(t<<1)+i].assign((vpos[1-i] + delta*ri), delta, ts*(s+1-i), tt*t);
 			}
 		} // for t
 		draw_verts(verts, GL_TRIANGLE_STRIP);
 	} // for s
+}
+
+// in z-plane, always textured
+void draw_torus(point const &center, float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i, float tex_scale_o) {
+	draw_rot_torus(center, plus_z, ri, ro, ndivi, ndivo, tex_scale_i, tex_scale_o);
 }
 
 

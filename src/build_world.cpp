@@ -1511,12 +1511,13 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 			if (fscanf(fp, "%f%f%f%f%f%f%f%f", &cobj.points[0].x, &cobj.points[0].y, &cobj.points[0].z, &cobj.norm.x, &cobj.norm.y, &cobj.norm.z, &cobj.radius, &cobj.radius2) != 8) {
 				return read_error(fp, "collision torus", coll_obj_file);
 			}
-			assert(cobj.radius >  0.0 && cobj.radius2 >  0.0);
+			assert(cobj.radius > 0.0 && cobj.radius2 > 0.0);
 			check_layer(has_layer);
 			cobj.radius  *= xf.scale;
 			cobj.radius2 *= xf.scale;
 			xf.xform_pos(cobj.points[0]);
 			xf.xform_pos_rm(cobj.norm);
+			cobj.norm.normalize();
 			cobj.add_to_vector(fixed_cobjs, COLL_TORUS);
 			break;
 

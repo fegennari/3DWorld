@@ -194,7 +194,9 @@ void draw_subdiv_sphere_section(point const &pos, float radius, int ndiv, int te
 								float s_beg, float s_end, float t_beg, float t_end);
 void rotate_sphere_tex_to_dir(vector3d const &dir);
 void draw_single_colored_sphere(point const &pos, float radius, int ndiv, colorRGBA const &color);
+vector<float> const &gen_torus_sin_cos_vals(unsigned ndivi);
 void draw_torus(point const &center, float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i=1.0, float tex_scale_o=1.0);
+void draw_rot_torus(point const &center, vector3d const &dir, float ri, float ro, unsigned ndivi, unsigned ndivo, float tex_scale_i=1.0, float tex_scale_o=1.0);
 void rotate_towards_camera(point const &pos);
 void enable_flares(int tid);
 void disable_flares();

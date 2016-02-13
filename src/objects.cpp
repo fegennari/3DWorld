@@ -465,14 +465,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 			}
 		}
 		else if (type == COLL_TORUS) {
-			if (!has_z_normal()) { // rotated torus
-				fgPushMatrix();
-				translate_to(points[0]);
-				rotate_from_v2v(norm, plus_z);
-				draw_torus(all_zeros, radius2, radius, ndiv, 3*ndiv/2); // always textured
-				fgPopMatrix();
-			}
-			else {draw_torus(points[0], radius2, radius, ndiv, 3*ndiv/2);} // always textured
+			draw_rot_torus(points[0], norm, radius2, radius, ndiv, 3*ndiv/2, cp.tscale, cp.tscale);
 		}
 		else { // cylinder
 			bool const draw_ends(!(cp.surfs & 1));
@@ -566,30 +559,24 @@ void get_torus_triangles(vector<vert_wrap_t> &verts, point const &center, vector
 
 	assert(ro > 0.0 || ri > 0.0);
 	float const ds(TWO_PI/ndiv), cds(cos(ds)), sds(sin(ds));
-	vector<float> sin_cos(2*ndiv);
-	bool const do_rotate(dir.x != 0.0 || dir.y != 0.0); // not vertical
-
-	for (unsigned t = 0; t < (unsigned)ndiv; ++t) {
-		float const phi(t*ds);
-		sin_cos[(t<<1)+0] = cos(phi);
-		sin_cos[(t<<1)+1] = sin(phi);
-	}
+	vector<float> const &sin_cos(gen_torus_sin_cos_vals(ndiv));
+	vector3d vab[2];
+	get_ortho_vectors(dir, vab);
+	
 	for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // outer
-		float const theta(s*ds), ct(cos(theta)), st(sin(theta));
-		point const pos[2] = {point(ct, st, 0.0), point((ct*cds - st*sds), (st*cds + ct*sds), 0.0)};
+		float const theta(s*ds), ct(cos(theta)), st(sin(theta)), ct2(ct*cds - st*sds), st2(st*cds + ct*sds);
+		point const pos [2] = {(vab[0]*ct + vab[1]*st), (vab[0]*ct2 + vab[1]*st2)};
+		point const vpos[2] = {(center + pos[0]*ro), (center + pos[1]*ro)};
 
 		for (unsigned t = 0; t <= (unsigned)ndiv; ++t) { // inner
 			unsigned const t_((t == ndiv) ? 0 : t);
 			float const cp(sin_cos[(t_<<1)+0]), sp(sin_cos[(t_<<1)+1]);
-
+			
 			for (unsigned i = 0; i < 2; ++i) {
 				if ((2*t+i) > 2) {tri_strip_push(verts);}
-				vector3d const delta(point(0.0, 0.0, cp) + pos[1-i]*sp);
-				vector3d dir_from_cent(pos[1-i]*ro + delta*ri);
-				if (do_rotate) {rotate_vector3d_by_vr(plus_z, dir, dir_from_cent);}
-				verts.push_back(center + dir_from_cent);
+				verts.push_back(vpos[1-i] + (pos[1-i]*sp + dir*cp)*ri);
 			}
-		} // for t
+		}
 	} // for s
 }
 

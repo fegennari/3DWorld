@@ -157,6 +157,14 @@ public:
 	}
 
 	void draw_shadow_cobj(coll_obj const &c, unsigned smap_sz, unsigned fixed_ndiv, int shader_loc) { // handle spheres specially
+		if (c.type == COLL_TORUS) { // special case optimized for torus
+			bind_vbo(0); // unbind sphere VBO
+			unsigned const ndiv(get_smap_ndiv(c.radius, smap_sz));
+			shader_t::set_uniform_vector4d(shader_loc, vector4d(all_zeros, 1.0));
+			draw_rot_torus(c.points[0], c.norm, c.radius2, c.radius, ndiv, ndiv);
+			bind_draw_sphere_vbo(0, 0); // no tex coords or normals
+			return;
+		}
 		if (c.type == COLL_CAPSULE || c.type == COLL_SPHERE) {draw_shadow_sphere(c.points[0], c.radius, shader_loc, smap_sz, fixed_ndiv);}
 		if (c.type == COLL_CAPSULE) {draw_shadow_sphere(c.points[1], c.radius2, shader_loc, smap_sz, fixed_ndiv);}
 		c.get_shadow_triangle_verts(dverts, get_ndiv(c, smap_sz, fixed_ndiv), 1); // skip_spheres=1

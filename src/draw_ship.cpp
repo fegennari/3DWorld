@@ -1979,10 +1979,7 @@ void uobj_draw_data::draw_anti_miss() const {
 		draw_cylin_fast(0.08, 0.06, 1.2, ndiv3, 1);
 		fgPopMatrix();
 	}
-	fgPushMatrix();
-	fgRotate(90.0, 1.0, 0.0, 0.0);
-	draw_torus(point(0.0, 0.0, 0.5), 0.2, 0.9, ndiv2, 4*ndiv/3); // ring
-	fgPopMatrix();
+	draw_rot_torus(point(0.0, -0.5, 0.0), plus_y, 0.2, 0.9, ndiv2, 4*ndiv/3); // ring
 
 	if (ndiv > 4) {
 		for (unsigned i = 0; i < 3; ++i) { // tripod
