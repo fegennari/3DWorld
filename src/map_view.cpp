@@ -12,8 +12,8 @@
 
 bool const MAP_VIEW_LIGHTING = 1;
 
-int map_x(0), map_y(0);
-float map_zoom(0.25);
+int map_drag_x(0), map_drag_y(0);
+float map_x(0.0), map_y(0.0), map_zoom(0.25);
 
 extern bool water_is_lava;
 extern int window_width, window_height, xoff2, yoff2, map_mode, map_color, begin_motion;
@@ -50,13 +50,20 @@ void draw_overhead_map() {
 		return;
 	}
 	int bx1(0), by1(0), bx2(0), by2(0), nx(1);
-	while (min(window_width, window_height) > 2*nx) nx *= 2;
+	while (min(window_width, window_height) > 2*nx) {nx *= 2;}
 	if (nx < 4) return;
+
 	int const ny(nx), nx2(nx/2), ny2(ny/2);
 	bool const no_water((DISABLE_WATER == 2) || !(display_mode & 0x04));
 	bool const is_ice(((world_mode == WMODE_GROUND) ? temperature : get_cur_temperature()) <= W_FREEZE_POINT);
 	float const zmax2(zmax_est*((map_color || no_water) ? 1.0 : 0.855)), hscale(0.5/zmax2);
 	float const scale(2.0*map_zoom*X_SCENE_SIZE*DX_VAL), scale_val(scale/64);
+
+	// translate map_drag_x/y (screen pixel space) into map_x/y (world unit space)
+	float const x_scale(nx*scale/window_width), y_scale(ny*scale/window_height);
+	map_x += x_scale*map_drag_x; map_drag_x = 0;
+	map_y += y_scale*map_drag_y; map_drag_y = 0;
+
 	float x0(map_x + xoff2*DX_VAL), y0(map_y + yoff2*DY_VAL);
 	float const relh_water(get_rel_height(water_plane_z, -zmax_est, zmax_est));
 	point const camera(get_camera_pos());

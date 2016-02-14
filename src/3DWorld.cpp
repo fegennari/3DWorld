@@ -114,11 +114,11 @@ bool vert_opt_flags[3] = {0}; // {enable, full_opt, verbose}
 
 extern bool clear_landscape_vbo, use_dense_voxels, kill_raytrace, tree_4th_branches, model_calc_tan_vect;
 extern int camera_flight, DISABLE_WATER, DISABLE_SCENERY, camera_invincible, onscreen_display, mesh_freq_filter, show_waypoints;
-extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape;
+extern int tree_coll_level, GLACIATE, UNLIMITED_WEAPONS, destroy_thresh, MAX_RUN_DIST, mesh_gen_mode, mesh_gen_shape, map_drag_x, map_drag_y;
 extern unsigned NPTS, NRAYS, LOCAL_RAYS, GLOBAL_RAYS, DYNAMIC_RAYS, NUM_THREADS, MAX_RAY_BOUNCES, grass_density, max_unique_trees, shadow_map_sz, erosion_iters, scene_smap_vbo_invalid;
 extern float fticks, team_damage, self_damage, player_damage, smiley_damage, smiley_speed, tree_deadness, lm_dz_adj, nleaves_scale, flower_density;
 extern float mesh_scale, tree_scale, mesh_height_scale, smiley_acc, hmv_scale, last_temp, grass_length, grass_width, branch_radius_scale, tree_height_scale;
-extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT;
+extern float MESH_START_MAG, MESH_START_FREQ, MESH_MAG_MULT, MESH_FREQ_MULT, map_x, map_y;
 extern point hmv_pos, camera_last_pos;
 extern colorRGBA sunlight_color;
 extern int coll_id[];
@@ -611,8 +611,8 @@ void mouseMotion(int x, int y) {
 	}
 	add_uevent_mmotion(x, y);
 	if (ui_intercept_mouse(0, 0, x, y, 0)) return; // already handled
-	float dx(float(x - last_mouse_x)), dy(float(y - last_mouse_y));
-	if (camera_mode == 1 && passive_motion) button = GLUT_LEFT_BUTTON;
+	int dx(x - last_mouse_x), dy(y - last_mouse_y);
+	if (camera_mode == 1 && passive_motion && !map_mode) {button = GLUT_LEFT_BUTTON;}
 
 	switch (button) {
 	case GLUT_LEFT_BUTTON: // h: longitude, v: latitude
@@ -621,21 +621,23 @@ void mouseMotion(int x, int y) {
 		if (world_mode == WMODE_UNIVERSE) {
 			vector3d delta(dx, dy, 0.0); // mouse delta
 			delta *= (1280.0/window_width); // ???
-			if (player_ship_inited()) player_ship().turn(delta);
+			if (player_ship_inited()) {player_ship().turn(delta);}
 			update_cpos();
-			break;
 		}
-		{
+		else if (map_mode) { // map mode click and drag
+			if (mouse_state == 0) {map_drag_x -= dx; map_drag_y += dy;} // mouse down
+		}
+		else {
 			float c_phi2(c_phi - MOUSE_ANG_ADJ*dy);
-			if (camera_mode && world_mode != WMODE_UNIVERSE) c_phi2 = max(0.01f, min((float)PI-0.01f, c_phi2)); // walking on ground
+			if (camera_mode && world_mode != WMODE_UNIVERSE) {c_phi2 = max(0.01f, min((float)PI-0.01f, c_phi2));} // walking on ground
 			
-			if (dy > 0.0) { // change camera y direction when camera moved through poles and jump over poles (x=0,z=0) to eliminate "singularity"
-				if (c_phi2 < 0.0 || (c_phi > PI && c_phi2 < PI)) camera_y *= -1.0;
-				if (fabs(c_phi2) < MA_TOLERANCE || fabs(c_phi2 - PI) < MA_TOLERANCE) dy += 1.0;
+			if (dy > 0) { // change camera y direction when camera moved through poles and jump over poles (x=0,z=0) to eliminate "singularity"
+				if (c_phi2 < 0.0 || (c_phi > PI && c_phi2 < PI)) {camera_y *= -1.0;}
+				if (fabs(c_phi2) < MA_TOLERANCE || fabs(c_phi2 - PI) < MA_TOLERANCE) {++dy;}
 			}
-			else if (dy < 0.0) {
-				if (c_phi2 > TWO_PI || (c_phi < PI && c_phi2 > PI)) camera_y *= -1.0;
-				if (fabs(c_phi2 - TWO_PI) < MA_TOLERANCE || fabs(c_phi2 - PI) < MA_TOLERANCE) dy -= 1.0;
+			else if (dy < 0) {
+				if (c_phi2 > TWO_PI || (c_phi < PI && c_phi2 > PI)) {camera_y *= -1.0;}
+				if (fabs(c_phi2 - TWO_PI) < MA_TOLERANCE || fabs(c_phi2 - PI) < MA_TOLERANCE) {--dy;}
 			}
 			c_theta -= MOUSE_ANG_ADJ*dx*camera_y;
 			c_theta  = fix_angle(c_theta);
@@ -685,7 +687,7 @@ void mouseMotion(int x, int y) {
 			last_mouse_y = 1;
 		}
 	}
-	if (dx != 0.0 || dy != 0.0) post_window_redisplay();
+	if (dx != 0 || dy != 0) {post_window_redisplay();}
 }
 
 
@@ -1157,7 +1159,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 
 
 void print_wind() {cout << "wind: " << wind.str() << endl;}
-int get_map_shift_val() {return int(map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1));}
+float get_map_shift_val() {return map_zoom*MAP_SHIFT*(is_shift_key_pressed() ? 8 : 1);}
 
 
 // handles user key remapping and disabling of keys in gameplay mode
@@ -1257,9 +1259,7 @@ void keyboard2(int key, int x, int y) {
 	switch (key) {
 	case GLUT_KEY_UP:
 	case GLUT_KEY_DOWN:
-		if (map_mode) {
-			map_y  += ((key == GLUT_KEY_UP) ? 1 : -1)*(get_map_shift_val() + 1);
-		}
+		if (map_mode) {map_y += ((key == GLUT_KEY_UP) ? 1 : -1)*(get_map_shift_val() + 1);}
 		else {
 			wind.y += ((key == GLUT_KEY_UP) ? 1 : -1)*WIND_ADJUST;
 			print_wind();
@@ -1268,9 +1268,7 @@ void keyboard2(int key, int x, int y) {
 
 	case GLUT_KEY_LEFT:
 	case GLUT_KEY_RIGHT:
-		if (map_mode) {
-			map_x  += ((key == GLUT_KEY_RIGHT) ? 1 : -1)*(get_map_shift_val() + 1);
-		}
+		if (map_mode) {map_x += ((key == GLUT_KEY_RIGHT) ? 1 : -1)*(get_map_shift_val() + 1);}
 		else {
 			wind.x += ((key == GLUT_KEY_RIGHT) ? 1 : -1)*WIND_ADJUST;
 			print_wind();
