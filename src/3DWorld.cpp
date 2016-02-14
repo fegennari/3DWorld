@@ -535,6 +535,11 @@ void update_sound_loops() {
 }
 
 
+void switch_weapon(bool prev) {
+	if (world_mode == WMODE_UNIVERSE) {player_ship().switch_weapon(prev);} else {switch_player_weapon(prev ? -1 : 1);}
+}
+
+
 // This function is called whenever the window is resized. 
 // Parameters are the new dimentions of the window
 void resize(int x, int y) {
@@ -578,6 +583,17 @@ void mouseButton(int button, int state, int x, int y) {
 	last_mouse_y = y;
 	mouse_state  = state;
 	if (button == GLUT_MIDDLE_BUTTON && state == 0) {user_action_key = 1;}
+	
+	if (state == 0) { // use mouse scroll wheel to switch weapons and zoom in/out in map mode
+		if (button == 3) { // mouse wheel up
+			if (map_mode) {map_zoom /= 1.2;}
+			else {switch_weapon(0);}
+		}
+		else if (button == 4) { // mouse wheel down
+			if (map_mode) {map_zoom *= 1.2;}
+			else {switch_weapon(1);}
+		}
+	}
 }
 
 
@@ -824,15 +840,9 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		break;
 
 	case 'z': // zoom / onscreen display
-		if (map_mode) {
-			map_zoom /= MAP_ZOOM;
-		}
-		else if (world_mode == WMODE_UNIVERSE) {
-			onscreen_display = !onscreen_display;
-		}
-		else if (world_mode == WMODE_GROUND) {
-			do_zoom = !do_zoom; // Note: tiled mesh reflections are incompatible with zoom
-		}
+		if (map_mode) {map_zoom /= MAP_ZOOM;}
+		else if (world_mode == WMODE_UNIVERSE) {onscreen_display = !onscreen_display;}
+		else if (world_mode == WMODE_GROUND) {do_zoom = !do_zoom;} // Note: tiled mesh reflections are incompatible with zoom
 		break;
 
 	case 'f': // print framerate and stats
@@ -888,10 +898,10 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		advance_camera(MOVE_RIGHT); break;
 
 	case 'q': // previous weapon
-		if (world_mode == WMODE_UNIVERSE) player_ship().switch_weapon(1); else switch_player_weapon(-1);
+		switch_weapon(1);
 		break;
 	case 'e': // next weapon
-		if (world_mode == WMODE_UNIVERSE) player_ship().switch_weapon(0); else switch_player_weapon(1);
+		switch_weapon(0);
 		break;
 	case 'W': // switch weapon mode
 		switch_weapon_mode();
