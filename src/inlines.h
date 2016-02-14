@@ -685,14 +685,11 @@ template<typename T> void matrix_clear_1d(T *data) {
 }
 
 template<typename T> void matrix_clear_2d(T **data) {
-
 	assert(data);
 	matrix_clear_1d(data[0]);
 }
 
-template<typename T> void remove_excess_cap(vector<T> &v) {
-	if (v.size() < v.capacity()) {vector<T>(v).swap(v);}
-}
+template<typename T> void remove_excess_cap(vector<T> &v) {v.shrink_to_fit();}
 
 
 // string converters

@@ -220,7 +220,7 @@ public:
 	point get_center () const {return bsphere.pos;}
 	float get_bradius() const {return bsphere.radius;}
 	void optimize(unsigned npts) {remove_excess_cap();}
-	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);}
+	void remove_excess_cap() {if (20*size() < 19*capacity()) vector<value_type>(*this).swap(*this);} // shrink_to_fit()?
 	void write(ostream &out) const;
 	void read(istream &in);
 };
