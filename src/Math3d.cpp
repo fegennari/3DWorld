@@ -698,12 +698,9 @@ int line_int_thick_cylinder(point const &p1, point const &p2, point const &cp1, 
 bool cylin_proj_circle_z_SAT_test(point const &cc, float cr, point const &cp1, point const &cp2, float r1, float r2) {
 	point pts[2] = {cp1, cp2};
 	vector3d const dir(cp2 - cp1);
-
-	for (unsigned d = 0; d < 2; ++d) {
-		pts[d] -= cc; // translate to circle center
-		rotate_vector3d_by_vr(dir, plus_x, pts[d]); // rotate around vert cylinder
-		pts[d] += cc; // translate back
-	}
+	pts[0] -= cc; pts[1] -= cc; // translate to circle center
+	rotate_vector3d_by_vr_multi(dir, plus_x, pts, 2); // rotate around vert cylinder
+	pts[0] += cc; pts[0] += cc; // translate back
 	cube_t bcube;
 	cylinder_3dw(pts[0], pts[1], r1, r2).calc_bcube(bcube);
 	return circle_rect_intersect(cc, cr, bcube, 2); // in z
@@ -837,20 +834,19 @@ bool line_torus_intersect(point const &p1, point const &p2, point const &tc, flo
 	return line_intersect_torus(l1.x, l1.y, l1.z, v1.x/vmag, v1.y/vmag, v1.z/vmag, ro, ri, vmag, t);
 }
 
+void local_rotate_multi(point *pts, unsigned npts, vector3d const &from, vector3d const &to, point const &center) {
+	for (unsigned i = 0; i < npts; ++i) {pts[i] -= center;} // translate to center
+	rotate_vector3d_by_vr_multi(from, to, pts, npts); // local rotate around center
+	for (unsigned i = 0; i < npts; ++i) {pts[i] += center;} // translate back
+}
 void local_rotate(point &p, vector3d const &from, vector3d const &to, point const &center) {
-
-	p -= center; // translate to center
-	rotate_vector3d_by_vr(from, to, p); // local rotate around center
-	p += center; // translate back
+	local_rotate_multi(&p, 1, from, to, center);
 }
 
 bool line_torus_intersect(point const &p1, point const &p2, point const &tc, point const &dir, float ri, float ro, float &t) {
 	
 	point pts[2] = {p1, p2};
-	
-	if (dir.x != 0.0 || dir.y != 0.0) { // need to transform line into torus space
-		for (unsigned i = 0; i < 2; ++i) {local_rotate(pts[i], plus_z, dir, tc);}
-	}
+	if (dir.x != 0.0 || dir.y != 0.0) {local_rotate_multi(pts, 2, plus_z, dir, tc);} // transform line into torus space
 	return line_torus_intersect(pts[0], pts[1], tc, ri, ro, t);
 }
 
@@ -1213,8 +1209,9 @@ template void rotate_vector3d_multi(vector3d_d const &vrot, double angle, vector
 
 
 // apply the same rotation to vout that is required to rotate v1 to v2
-void rotate_vector3d_by_vr(vector3d v1, vector3d v2, vector3d &vout) { // v1 rotated by vout = v2
+void rotate_vector3d_by_vr_multi(vector3d v1, vector3d v2, vector3d *vout, unsigned num_vout) { // v1 rotated by vout = v2
 
+	assert(vout != nullptr && num_vout > 0);
 	v1.normalize();
 	v2.normalize();
 	vector3d const v(cross_product(v2, v1));
@@ -1226,8 +1223,10 @@ void rotate_vector3d_by_vr(vector3d v1, vector3d v2, vector3d &vout) { // v1 rot
 		{tX*v.y - v.z,  tY*v.y + c,    tY*v.z    + v.x},
 		{tX*v.z + v.y,  tY*v.z - v.x,  t*v.z*v.z + c},
 	};
-	vector3d const vin(vout);
-	matrix_mult(vin, vout, m);
+	for (unsigned i = 0; i < num_vout; ++i) {
+		vector3d const vin(vout[i]);
+		matrix_mult(vin, vout[i], m);
+	}
 }
 
 cube_t rotate_cube(cube_t const &cube, vector3d const &axis, float angle_in_radians) {

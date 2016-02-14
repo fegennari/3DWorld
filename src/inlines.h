@@ -559,6 +559,10 @@ inline void rotate_into_plus_z(vector3d const &v) {
 	rotate_about(TO_DEG*safe_acosf(v.z/v.mag()), vector3d(-v.y, v.x, 0.0)); // rotate_from_v2v(v, plus_z)
 }
 
+inline void rotate_vector3d_by_vr(vector3d v1, vector3d v2, vector3d &vout) {
+	rotate_vector3d_by_vr_multi(v1, v2, &vout, 1);
+}
+
 inline void rotate_to_dir(vector3d const &dir, float vadd, float vmult=1.0) {
 	fgRotate(TO_DEG*vmult*atan2(dir.y, dir.x) + vadd, 0.0, 0.0, 1.0);
 }

@@ -801,11 +801,9 @@ void uasteroid_belt::gen_belt_placements(unsigned max_num, float belt_width, flo
 	max_asteroid_radius = 0.0;
 	resize((rand2() % max_num/2) + max_num/2); // 50% to 100% of max
 	vector3d vxy[2] = {plus_x, plus_y};
-	
-	for (unsigned d = 0; d < 2; ++d) {
-		rotate_vector3d_by_vr(plus_z, orbital_plane_normal, vxy[d]);
-		vxy[d] *= scale[d];
-	}
+	rotate_vector3d_by_vr_multi(plus_z, orbital_plane_normal, vxy, 2);
+	for (unsigned d = 0; d < 2; ++d) {vxy[d] *= scale[d];}
+
 	for (iterator i = begin(); i != end(); ++i) {
 		i->gen_belt(pos, orbital_plane_normal, vxy, outer_radius, belt_width, belt_thickness, max_ast_radius, inner_radius, plane_dmax);
 		i->is_ice = is_ice;
