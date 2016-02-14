@@ -1355,3 +1355,12 @@ vector3d get_firing_dir(vector3d const &src, vector3d const &dest, float fvel, f
 }
 
 
+// from http://github.prideout.net/emulating-double-precision
+// Note: unused, for future use with double precision floating-point coordinates (camera, etc.) in the vertex shader
+void split_double(double const input, float &hipart, float &lopart) {
+    hipart = (float)input;
+    double const delta = input - ((double)hipart);
+    lopart = (float)delta;
+}
+
+
