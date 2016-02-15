@@ -42,10 +42,11 @@ float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, floa
 
 bool is_shadowed(point const &cpos, vector3d const &cnorm, point const &lpos, int &cindex) {
 
-	if (!MAP_VIEW_SHADOWS) return 0;
+	if (!MAP_VIEW_SHADOWS)   return 0;
 	if (display_mode & 0x20) return 0;
 	point const cpos2(cpos + 0.001*cnorm);
-	return ((cindex >= 0 && coll_objects.get_cobj(cindex).line_intersect(cpos2, lpos)) || check_coll_line(cpos2, lpos, cindex, -1, 1, 3)); // static cobj shadows only for performance
+	if (cindex >= 0 && coll_objects.get_cobj(cindex).line_intersect(cpos2, lpos)) return 1;
+	return check_coll_line(cpos2, lpos, cindex, -1, 1, 3); // static cobj shadows only for performance
 }
 
 
@@ -147,8 +148,7 @@ void draw_overhead_map() {
 			}
 			else {
 				float mh(0.0);
-				bool mh_set(0);
-				bool shadowed(0);
+				bool mh_set(0), shadowed(0);
 
 				if (world_mode == WMODE_GROUND) {
 					float const xval((j - nx2)*xscale_val*(X_SCENE_SIZE/DX_VAL) + camera.x + map_x);
@@ -164,15 +164,16 @@ void draw_overhead_map() {
 						point p2(xval, yval, max(mh, czmin));
 						float t;
 						int cindex0(-1);
-						if (cindex >= 0 && coll_objects.get_cobj(cindex).line_int_exact(p1, p2, t, cnorm)) {cpos = p1 + t*(p2 - p1); p2 = cpos; cindex0 = cindex;} // previous cobj int
-						if (check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, cindex, 1, 0, 0, 0, 0)) {cindex0 = cindex;} // cobj intersection
+						if (cindex >= 0 && coll_objects.get_cobj(cindex).line_int_exact(p1, p2, t, cnorm)) {cpos = p1 + t*(p2 - p1); p2 = cpos;} // previous cobj int
+						else {cindex = -1;} // else reset
+						if (check_coll_line_exact(p1, p2, cpos, cnorm, cindex0, 0.0, cindex, 1, 0, 0, 0, 0)) {cindex = cindex0;} // cobj intersection
 
-						if (cindex0 >= 0) {
-							colorRGBA const color(get_cobj_color_at_point(cindex0, cpos, cnorm, 0));
+						if (cindex >= 0) {
+							colorRGBA const color(get_cobj_color_at_point(cindex, cpos, cnorm, 0));
 							unpack_color(rgb, color*(is_shadowed(cpos, cnorm, lpos, cindex2) ? 0.5 : 1.0));
 							continue;
 						}
-						shadowed = is_shadowed(point(xval, yval, mh), cnorm, lpos, cindex2);
+						if (mh_set) {shadowed = is_shadowed(point(xval, yval, mh), plus_z, lpos, cindex2);}
 					}
 				}
 				if (default_ground_tex >= 0 && map_color) {
