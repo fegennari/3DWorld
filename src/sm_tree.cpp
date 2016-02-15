@@ -920,7 +920,7 @@ void small_tree::draw_leaves(bool shadow_only, int xlate_loc, int scale_loc, vec
 	if (type == T_PALM) {
 		assert(palm_verts != nullptr);
 		assert(xlate == zero_vector);
-		draw_verts(*palm_verts, GL_QUADS);
+		draw_vect_quads(*palm_verts);
 		return;
 	}
 	float const size_scale((do_zoom ? ZOOM_FACTOR : 1.0)*stt[type].ss*width*window_width);

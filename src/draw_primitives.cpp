@@ -838,7 +838,7 @@ void draw_one_tquad(float x1, float y1, float x2, float y2, float z, int prim_ty
 	verts[1] = vert_norm_tc(point(x1, y2, z), plus_z, 0, 1);
 	verts[2] = vert_norm_tc(point(x2, y2, z), plus_z, 1, 1);
 	verts[3] = vert_norm_tc(point(x2, y1, z), plus_z, 1, 0);
-	draw_verts(verts, 4, prim_type); // GL_TRIANGLE_FAN, GL_QUADS, GL_PATCHES
+	draw_verts(verts, 4, prim_type); // GL_TRIANGLE_FAN (quads) or GL_PATCHES
 }
 
 void draw_tquad(float xsize, float ysize, float z, int prim_type) { // Note: normal is +z

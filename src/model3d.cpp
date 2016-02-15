@@ -477,7 +477,7 @@ template<typename T> void indexed_vntc_vect_t<T>::render(shader_t &shader, bool 
 	if (use_core_context && npts == 4) {
 		if (!ivbo) {
 			vector<unsigned> tixs;
-			convert_quad_ixs_to_tri_ixs(indices, tixs);
+			convert_quad_ixs_to_tri_ixs(indices, tixs); // Note: can use geometry shader, see http://github.prideout.net/quad-meshes
 			create_and_upload(*this, tixs);
 		}
 		ixn = 6; ixd = 4; // convert quads to 2 triangles

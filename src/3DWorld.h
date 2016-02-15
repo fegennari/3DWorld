@@ -1025,6 +1025,11 @@ template <typename T> void draw_quad_verts_as_tris_and_clear(vector<T> &verts) {
 	draw_quad_verts_as_tris(verts); verts.clear();
 }
 
+extern bool use_core_context;
+template<typename T> void draw_vect_quads(T const &verts) {
+	if (use_core_context) {draw_quad_verts_as_tris(verts);} else {draw_verts(verts, GL_QUADS);}
+}
+
 
 template <typename T> void translate_verts(vector<T> &verts, vector3d const &xlate) {
 	for (vector<T>::iterator i = verts.begin(); i != verts.end(); ++i) {i->v += xlate;}
