@@ -294,7 +294,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 	s.set_prefix(make_shader_bool_prefix("enable_clip_plane_z", enable_clip_plane_z), 1); // FS
 	if (use_spec_map) {s.set_prefix("#define USE_SPEC_MAP",   1);} // FS
 	if (use_smap && shadow_map_enabled()) {s.set_prefix("#define USE_SHADOW_MAP", 1);} // FS
-
+	
 	if (smoke_enabled) {
 		// Note: dynamic_smoke_shadows applies to light0 only
 		// Note: dynamic_smoke_shadows still uses the visible smoke bbox, so if you can't see smoke it won't cast a shadow
@@ -675,6 +675,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	static cobj_draw_buffer cdb;
 	cdb.clear();
 	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm;
+	//if (enable_clip_plane_z) {glEnable(GL_CLIP_DISTANCE0);}
 	
 	if (!draw_trans) { // draw solid
 		vect_sorted_ix large_cobjs[2]; // {normal_map=0, normal_map=1}
@@ -793,6 +794,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	draw_cobjs_group(tex_coord_cobjs,    cdb, s, 0, 0, 0);
 	draw_cobjs_group(reflect_cobjs,      cdb, s, 2, 0, 1);
 	draw_cobjs_group(reflect_cobjs_nm,   cdb, s, 2, 1, 1);
+	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }
 
