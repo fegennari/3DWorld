@@ -320,7 +320,7 @@ void init_objects() {
 	object_types[CAMERA].density           = 1.2;
 	object_types[CAMERA].elasticity        = 0.4;
 	object_types[CAMERA].health            = 100.0;
-	object_types[CAMERA].color             = WHITE;
+	object_types[CAMERA].color             = YELLOW;
 	object_types[CAMERA].flags             = NO_FALL | NO_WATER_DAMAGE;
 	object_types[CAMERA].min_t             = -50.0;
 	object_types[CAMERA].max_t             = 100.0;
