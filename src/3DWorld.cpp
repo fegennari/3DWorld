@@ -1135,7 +1135,7 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x08;   break;
 	case '5': // walk on snow/ship shadows/debugging
 		display_mode ^= 0x10;   break;
-	case '6': // toggle water reflections and bump maps
+	case '6': // toggle water reflections, bump maps, and map view lighting/shadows
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation, clouds, and universe mode multithreading
 		display_mode ^= 0x40;   break;

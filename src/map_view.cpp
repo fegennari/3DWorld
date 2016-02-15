@@ -11,6 +11,7 @@
 
 
 bool const MAP_VIEW_LIGHTING = 1;
+bool const MAP_VIEW_SHADOWS  = 1;
 
 int map_drag_x(0), map_drag_y(0);
 float map_x(0.0), map_y(0.0), map_zoom(0.0);
@@ -109,7 +110,8 @@ void draw_overhead_map() {
 	mesh_xy_grid_cache_t height_gen;
 	if (!uses_hmap) {setup_height_gen(height_gen, xstart, ystart, xscale, yscale, nx, ny, 1);} // cache_values=1
 	vector<unsigned char> buf(nx*ny*3*sizeof(unsigned char));
-	vector3d const light_dir(get_light_pos().get_norm()); // assume directional lighting to origin
+	point const lpos(get_light_pos());
+	vector3d const light_dir(lpos.get_norm()); // assume directional lighting to origin
 
 	#pragma omp parallel for schedule(static,1)
 	for (int i = 0; i < ny; ++i) {
@@ -117,7 +119,7 @@ void draw_overhead_map() {
 		float last_height(0.0);
 		point cpos;
 		vector3d cnorm;
-		int cindex(-1);
+		int cindex(-1), cindex2(-1);
 
 		for (int j = 0; j < nx; ++j) {
 			int const offset(3*(inx + j));
@@ -157,7 +159,12 @@ void draw_overhead_map() {
 						if (check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, cindex, 1, 0, 0, 0, 0)) {cindex0 = cindex;} // cobj intersection
 
 						if (cindex0 >= 0) {
-							colorRGBA const color(get_cobj_color_at_point(cindex0, cpos, cnorm, 0));
+							colorRGBA color(get_cobj_color_at_point(cindex0, cpos, cnorm, 0));
+
+							if (MAP_VIEW_SHADOWS && !(display_mode & 0x20)) { // static cobj shadows only for performance
+								point const cpos2(cpos + 0.001*cnorm);
+								if ((cindex2 >= 0 && coll_objects.get_cobj(cindex2).line_intersect(cpos2, lpos)) || check_coll_line(cpos2, lpos, cindex2, -1, 1, 3)) {color *= 0.5;}
+							}
 							unpack_color(rgb, color);
 							continue;
 						}
@@ -191,7 +198,7 @@ void draw_overhead_map() {
 						float const h(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5])), v(cubic_interpolate(h));
 						UNROLL_3X(rgb[i_] = (unsigned char)(255.0*(1.0 - v)*map_colors[5][i_] + v*rgb[i_]);)
 					}
-					if (MAP_VIEW_LIGHTING && !uses_hmap) {
+					if (MAP_VIEW_LIGHTING && !uses_hmap && !(display_mode & 0x20)) {
 						vector3d normal(plus_z);
 
 						if (height > map_heights[4]) {
