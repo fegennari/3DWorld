@@ -324,9 +324,9 @@ void process_groups() {
 		num_objs = 0;
 		float const fticks_max(min(4.0f, fticks)); // clamp effective fticks so that we don't slow the framerate down even more
 		unsigned app_rate(unsigned(((float)objg.app_rate)*fticks_max));
-		if (objg.app_rate > 0 && fticks > 0 && app_rate == 0) app_rate = 1;
+		if (objg.app_rate > 0 && fticks > 0 && app_rate == 0) {app_rate = 1;}
 		float const time(TIMESTEP*fticks_max), grav_dz(min(otype.terminal_vel*time, base_gravity*GRAVITY*time*time*otype.gravity));
-		cobj_params cp(otype.elasticity, otype.color, 0, 1, coll_func, -1, -1, 1.0, 0, 0);
+		cobj_params cp(otype.elasticity, otype.color, 0, 1, coll_func, -1, otype.tid, 1.0, 0, 0);
 		size_t const max_objs(objg.max_objects());
 
 		for (size_t jj = 0; jj < max_objs; ++jj) {
@@ -475,6 +475,7 @@ void process_groups() {
 						collision_detect_large_sphere(pos, r2, obj_flags);
 					}
 					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid())) {
+						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
 						cp.cf_index = j;
 						obj.coll_id = add_coll_sphere(pos, radius, cp);
 					}

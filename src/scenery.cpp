@@ -281,14 +281,12 @@ void rock_shape3d::gen_rock(unsigned nverts, float size, int rand_seed, int type
 	else {
 		assert(0);
 	}
-	for (unsigned i = 0; i < faces.size(); ++i) {
-		faces[i].color_id = 0;
-	}
+	for (unsigned i = 0; i < faces.size(); ++i) {faces[i].color_id = 0;}
 	gen_face_normals();
 }
 
 void rock_shape3d::add_cobjs() {
-	coll_id = add_coll_sphere(pos, 0.5*radius, cobj_params(0.9, BROWN, 0, 0, rock_collision, 0, DARK_ROCK_TEX));
+	coll_id = add_coll_sphere(pos, 0.5*radius, cobj_params(0.9, color, 0, 0, rock_collision, 0, DARK_ROCK_TEX));
 }
 
 bool rock_shape3d::do_impact_damage(point const &pos_, float radius_) {
@@ -394,7 +392,7 @@ void surface_rock::create(int x, int y, int use_xy, vbo_vnt_block_manager_t &vbo
 }
 
 void surface_rock::add_cobjs() {
-	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, WHITE, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
 void surface_rock::draw(float sscale, bool shadow_only, bool reflection_pass,
@@ -458,7 +456,7 @@ void s_rock::create(int x, int y, int use_xy) {
 }
 
 void s_rock::add_cobjs() {
-	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, BROWN, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, WHITE, 0, 0, rock_collision, 1, ROCK_SPHERE_TEX));
 }
 
 void s_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val) const {
@@ -498,7 +496,7 @@ void voxel_rock::build_model() {
 }
 
 void voxel_rock::add_cobjs() {
-	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, LT_GRAY, 0, 0, rock_collision, 1, get_tid()));
+	coll_id = add_coll_sphere(pos, radius, cobj_params(0.95, WHITE, 0, 0, rock_collision, 1, get_tid()));
 }
 
 void voxel_rock::draw(float sscale, bool shadow_only, bool reflection_pass, vector3d const &xlate, float scale_val, shader_t &s, bool use_model_texgen) {
