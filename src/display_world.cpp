@@ -736,20 +736,19 @@ void display(void) {
 	set_fill_mode();
 
 	if (map_mode && world_mode != WMODE_UNIVERSE) {
-		draw_overhead_map();
-
 		if (world_mode == WMODE_INF_TERRAIN) { // map mode infinite terrain
 			camera_origin = surface_pos;
 			update_cpos();
 			apply_camera_offsets(get_camera_pos());
+			check_xy_offsets();
 		}
+		else if (world_mode == WMODE_GROUND) {
+			process_groups();
+			build_cobj_tree(1, 0); // ensure smiley positions are valid for map mode (since framrate is low)
+			if (game_mode) {update_game_frame();} // ???
+		}
+		draw_overhead_map();
 		swap_buffers_and_redraw();
-		check_xy_offsets();
-
-		if (world_mode == WMODE_GROUND) {
-			process_groups(); // ???
-			if (game_mode) update_game_frame(); // ???
-		}
 		return;
 	}
 	displayed = 1;
@@ -768,7 +767,7 @@ void display(void) {
 		display_universe(); // infinite universe
 	}
 	else {
-		if (!pause_frame) uevent_advance_frame();
+		if (!pause_frame) {uevent_advance_frame();}
 		earth_radius = 2.0;
 		sun_radius   = 1.5;
 		moon_radius  = 2.0;
