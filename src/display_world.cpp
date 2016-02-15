@@ -736,6 +736,8 @@ void display(void) {
 	set_fill_mode();
 
 	if (map_mode && world_mode != WMODE_UNIVERSE) {
+		if (!pause_frame) {uevent_advance_frame();}
+
 		if (world_mode == WMODE_INF_TERRAIN) { // map mode infinite terrain
 			camera_origin = surface_pos;
 			update_cpos();
@@ -745,7 +747,7 @@ void display(void) {
 		else if (world_mode == WMODE_GROUND) {
 			process_groups();
 			build_cobj_tree(1, 0); // ensure smiley positions are valid for map mode (since framrate is low)
-			if (game_mode) {update_game_frame();} // ???
+			if (game_mode) {update_blasts(); update_game_frame();}
 		}
 		draw_overhead_map();
 		swap_buffers_and_redraw();
@@ -782,7 +784,7 @@ void display(void) {
 		// timing and framerate code
 		int timer_b;
 		float const framerate(get_framerate(timer_b));
-		if (global_time == 0) global_time = timer_b;
+		if (global_time == 0) {global_time = timer_b;}
 		
 		if (show_framerate == 2) {
 			cout << used_objs << " objects, time = " << (timer_b - global_time) << endl;
@@ -821,10 +823,10 @@ void display(void) {
 			camera_view = 1;
 		}
 		if (camera_view) {
-			if (c_radius >= C_RADIUS0) temp_c_radius = c_radius;
+			if (c_radius >= C_RADIUS0) {temp_c_radius = c_radius;}
 			c_radius      = CR_SCALE*C_RADIUS0;
 			camera_origin = cpos2;
-			if (camera_mode == 1 && !spectate) camera_origin.z += camera_zh;
+			if (camera_mode == 1 && !spectate) {camera_origin.z += camera_zh;}
 		}
 		else if (temp_c_radius >= C_RADIUS0) {
 			c_radius      = temp_c_radius;
@@ -866,7 +868,7 @@ void display(void) {
 			process_groups();
 			check_gl_error(12);
 			if (TIMETEST) PRINT_TIME("E");
-			if (b2down) fire_weapon();
+			if (b2down) {fire_weapon();}
 			update_weapon_cobjs(); // and update cblade
 			check_gl_error(6);
 			proc_voxel_updates(); // with the update here, we avoid making the voxels and shadows out of sync
