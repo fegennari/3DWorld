@@ -40,6 +40,14 @@ float get_mesh_height(mesh_xy_grid_cache_t const &height_gen, float xstart, floa
 	return height_gen.eval_index(j, i, 1);
 }
 
+bool is_shadowed(point const &cpos, vector3d const &cnorm, point const &lpos, int &cindex) {
+
+	if (!MAP_VIEW_SHADOWS) return 0;
+	if (display_mode & 0x20) return 0;
+	point const cpos2(cpos + 0.001*cnorm);
+	return ((cindex >= 0 && coll_objects.get_cobj(cindex).line_intersect(cpos2, lpos)) || check_coll_line(cpos2, lpos, cindex, -1, 1, 3)); // static cobj shadows only for performance
+}
+
 
 void draw_overhead_map() {
 
@@ -140,6 +148,7 @@ void draw_overhead_map() {
 			else {
 				float mh(0.0);
 				bool mh_set(0);
+				bool shadowed(0);
 
 				if (world_mode == WMODE_GROUND) {
 					float const xval((j - nx2)*xscale_val*(X_SCENE_SIZE/DX_VAL) + camera.x + map_x);
@@ -159,19 +168,15 @@ void draw_overhead_map() {
 						if (check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, cindex, 1, 0, 0, 0, 0)) {cindex0 = cindex;} // cobj intersection
 
 						if (cindex0 >= 0) {
-							colorRGBA color(get_cobj_color_at_point(cindex0, cpos, cnorm, 0));
-
-							if (MAP_VIEW_SHADOWS && !(display_mode & 0x20)) { // static cobj shadows only for performance
-								point const cpos2(cpos + 0.001*cnorm);
-								if ((cindex2 >= 0 && coll_objects.get_cobj(cindex2).line_intersect(cpos2, lpos)) || check_coll_line(cpos2, lpos, cindex2, -1, 1, 3)) {color *= 0.5;}
-							}
-							unpack_color(rgb, color);
+							colorRGBA const color(get_cobj_color_at_point(cindex0, cpos, cnorm, 0));
+							unpack_color(rgb, color*(is_shadowed(cpos, cnorm, lpos, cindex2) ? 0.5 : 1.0));
 							continue;
 						}
+						shadowed = is_shadowed(point(xval, yval, mh), cnorm, lpos, cindex2);
 					}
 				}
 				if (default_ground_tex >= 0 && map_color) {
-					unpack_color(rgb, ground_color);
+					unpack_color(rgb, ground_color*(shadowed ? 0.5 : 1.0));
 					continue;
 				}
 				if (!mh_set) {mh = get_mesh_height(height_gen, xstart, ystart, xscale, yscale, i, j);} // calculate mesh height here if not yet set
@@ -182,21 +187,22 @@ void draw_overhead_map() {
 				}
 				else {
 					height += relh_adj_tex;
-					if      (height <= map_heights[5]) {unpack_color(rgb, map_colors[5]);} // deep water
-					else if (height <= map_heights[3]) {unpack_color(rgb, map_colors[3]);} // sand
-					else if (height >= map_heights[0]) {unpack_color(rgb, map_colors[0]);} // snow
+					colorRGBA color;
+					if      (height <= map_heights[5]) {color = map_colors[5];} // deep water
+					else if (height <= map_heights[3]) {color = map_colors[3];} // sand
+					else if (height >= map_heights[0]) {color = map_colors[0];} // snow
 					else {
 						for (unsigned k = 0; k < 4; ++k) { // mixed
 							if (height > map_heights[k+1]) {
 								float const h((height - map_heights[k+1])/(map_heights[k] - map_heights[k+1])), v(cubic_interpolate(h));
-								UNROLL_3X(rgb[i_] = (unsigned char)(255.0*(v*map_colors[k][i_] + (1.0 - v)*map_colors[k+1][i_]));)
+								blend_color(color, map_colors[k], map_colors[k+1], v);
 								break;
 							}
 						}
 					}
 					if (height <= map_heights[4] && height > map_heights[5]) { // shallow water
 						float const h(0.5*(height - map_heights[5])/(map_heights[4] - map_heights[5])), v(cubic_interpolate(h));
-						UNROLL_3X(rgb[i_] = (unsigned char)(255.0*(1.0 - v)*map_colors[5][i_] + v*rgb[i_]);)
+						blend_color(color, color, map_colors[5], v);
 					}
 					if (MAP_VIEW_LIGHTING && !uses_hmap && !(display_mode & 0x20)) {
 						vector3d normal(plus_z);
@@ -207,9 +213,10 @@ void draw_overhead_map() {
 							normal = vector3d(DY_VAL*(hx - height), DX_VAL*(hy - height), dxdy).get_norm();
 						}
 						last_height = height;
-						float const light_val(0.2 + 0.8*max(0.0f, dot_product(light_dir, normal)));
-						UNROLL_3X(rgb[i_] = (unsigned char)(light_val*rgb[i_]);)
+						color *= (0.2 + (shadowed ? 0.0 : 0.8)*max(0.0f, dot_product(light_dir, normal)));
+						shadowed = 0; // handled correctly above
 					}
+					unpack_color(rgb, color*(shadowed ? 0.5 : 1.0));
 				}
 			}
 		} // for j
