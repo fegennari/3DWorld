@@ -2076,7 +2076,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 	else if ((intersect || coll) && dist_less_than(coll_pos, pos, (X_SCENE_SIZE + Y_SCENE_SIZE))) { // spark
 		if (!no_spark && !is_underwater(coll_pos)) {
 			colorRGBA scolor(is_laser ? RED : colorRGBA(1.0, 0.7, 0.0, 1.0));
-			//if (is_laser && coll && cindex >= 0 && closest < 0) {scolor = coll_objects[cindex].get_color_at_point(coll_pos, coll_norm, 0);} // testing
+			//if (is_laser && coll && cindex >= 0 && closest < 0) {scolor = get_cobj_color_at_point(cindex, coll_pos, coll_norm, 0);} // testing
 			float const ssize((is_laser ? ((wmode&1) ? 0.015 : 0.020)*intensity : 0.025)*((closest_t == CAMERA) ? 0.5 : 1.0));
 			sparks.push_back(spark_t(coll_pos, scolor, ssize));
 			point const light_pos(coll_pos - vcf*(0.1*ssize));

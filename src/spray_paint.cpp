@@ -38,7 +38,7 @@ colorRGBA sample_cobj_color(point const &p1, point const &p2, colorRGBA const &d
 	vector3d cnorm;
 	int cindex;
 	if (!check_coll_line_exact(p1, p2, cpos, cnorm, cindex, 0.0, camera_coll_id, 0, 0, 0)) {return def_color;}
-	return coll_objects.get_cobj(cindex).get_color_at_point(cpos, cnorm, 0); // return true color
+	return get_cobj_color_at_point(cindex, cpos, cnorm, 0); // return true color
 }
 
 colorRGBA sample_cview_cobj_color() {

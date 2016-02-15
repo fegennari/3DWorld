@@ -387,6 +387,7 @@ bool check_coll_line_exact(point pos1, point pos2, point &cpos, vector3d &coll_n
 						   int ignore_cobj=-1, bool fast=0, bool test_alpha=0, bool skip_dynamic=0, bool include_voxels=1, bool skip_init_colls=0);
 bool cobj_contained_ref(point const &pos1, const point *pts, unsigned npts, int cobj, int &last_cobj);
 bool cobj_contained(point const &pos1, const point *pts, unsigned npts, int cobj);
+colorRGBA get_cobj_color_at_point(int cindex, point const &pos, vector3d const &normal, bool fast);
 bool is_occluded(vector<int> const &occluders, point const *const pts0, int npts, point const &camera);
 void add_camera_cobj(point const &pos);
 void force_onto_surface_mesh(point &pos);

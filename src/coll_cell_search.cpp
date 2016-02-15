@@ -403,6 +403,10 @@ colorRGBA coll_obj::get_color_at_point(point const &pos, vector3d const &normal,
 	return cp.color.modulate_with(get_texture_color(cp.tid, tc[0], tc[1])); // Note: slow due to texture memory access
 }
 
+colorRGBA get_cobj_color_at_point(int cindex, point const &pos, vector3d const &normal, bool fast) {
+	return coll_objects.get_cobj(cindex).get_color_at_point(pos, normal, fast);
+}
+
 
 bool coll_obj::is_occluder() const {
 	
