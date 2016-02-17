@@ -16,6 +16,7 @@ uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
 uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity, snow_cov_amt;
+uniform float reflect_plane_ztop, reflect_plane_zbot;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -242,7 +243,7 @@ void main()
 #endif // ENABLE_GAMMA_CORRECTION
 
 #ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
-	if (normal.z > 0.5) { // top surface
+	if (normal.z > 0.5 && vpos.z < reflect_plane_ztop && vpos.z > reflect_plane_zbot) { // top surface
 		vec3 ws_normal   = normalize(normal);
 		float ripple_mag = wetness * clamp(2.0*(1.0 - 0.5*length(epos.xyz)), 0.0, 1.0);
 
@@ -257,7 +258,7 @@ void main()
 		float reflect_w = reflectivity2 * get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.3 : refract_ix));
 		vec4 proj_pos   = fg_ProjectionMatrix * epos;
 		vec2 ref_tex_st = clamp(0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5), 0.0, 1.0);
-		color.rgb = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness), reflect_w);
+		color.rgb       = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness), reflect_w);
 	}
 #endif
 

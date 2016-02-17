@@ -67,8 +67,6 @@ point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
 void run_postproc_effects();
 
-bool use_reflection_plane();
-float get_reflection_plane();
 bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist);
 unsigned create_gm_z_reflection();
 
@@ -210,7 +208,7 @@ void draw_stuff(int draw_uw, int timer1, bool reflection_pass=0) {
 		render_voxel_data(0);
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("O");
-		render_models(0);
+		render_models(0, reflection_pass);
 		check_gl_error(21);
 		if (TIMETEST) PRINT_TIME("P");
 		draw_teleporters();

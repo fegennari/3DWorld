@@ -2191,7 +2191,7 @@ void tile_draw_t::draw_shadow_pass(point const &lpos, tile_t *tile) {
 	if (pine_trees_enabled ()) {draw_pine_trees (0, 1);}
 	if (decid_trees_enabled()) {draw_decid_trees(0, 1);}
 	if (scenery_enabled    ()) {draw_scenery    (0, 1);}
-	render_models(1, model3d_offset.get_xlate()); // VFC should work here (somewhat?) for models
+	render_models(1, 0, model3d_offset.get_xlate()); // VFC should work here (somewhat?) for models
 	if (!enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);}
 	fog_enabled      = orig_fog_enabled;
 	camera_pdu.near_ = orig_near_plane;
@@ -2669,7 +2669,7 @@ int get_tiled_terrain_tid_under_point(point const &pos) {
 
 void draw_tiled_terrain(bool reflection_pass) {
 
-	render_models(0, model3d_offset.get_xlate()); // not sure where this goes
+	render_models(0, reflection_pass, model3d_offset.get_xlate()); // not sure where this goes
 	//RESET_TIME;
 	terrain_tile_draw.draw(reflection_pass);
 	//glFinish(); PRINT_TIME("Tiled Terrain Draw"); //exit(0);

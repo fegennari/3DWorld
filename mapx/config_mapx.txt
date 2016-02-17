@@ -5,7 +5,7 @@ grass_size 0.025 0.002
 
 sunlight_color 1.0 1.0 0.85
 
-reflect_plane_z -8.0 8.0  -6.6 6.6  -0.29 -0.27 # this range includes the coutyard block floor and first floor tile floor
+reflect_plane_z -8.0 8.0  -6.6 6.6  -0.291 -0.27 # this range includes the coutyard block floor and first floor tile floor
 
 use_waypoints 1
 show_waypoints 0

@@ -380,7 +380,7 @@ class model3d {
 	base_mat_t unbound_mat;
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bcube;
-	unsigned reflection_tid;
+	unsigned model_refl_tid;
 	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, reflective;
 
 	// materials
@@ -408,7 +408,7 @@ public:
 	texture_manager &tmgr; // stores all textures
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool reflective_=0)
-		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), reflection_tid(0), from_model3d_file(0),
+		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), model_refl_tid(0), from_model3d_file(0),
 		has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), reflective(reflective_), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
@@ -435,14 +435,14 @@ public:
 	void clear_smaps() {smap_data.clear();} // frees GL state
 	void load_all_used_tids();
 	void bind_all_used_tids();
-	void render_materials_def(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask,
+	void render_materials_def(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 		unsigned bmap_pass_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{
-		render_materials(shader, is_shadow_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, unbound_mat, xlate, mvm);
+		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, unbound_mat, xlate, mvm);
 	}
-	void render_materials(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
+	void render_materials(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
 		base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm=nullptr);
-	void render(shader_t &shader, bool is_shadow_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate);
+	void render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate);
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
@@ -467,9 +467,9 @@ struct model3ds : public deque<model3d> {
 
 	void clear();
 	void free_context();
-	void render(bool is_shadow_pass, vector3d const &xlate); // non-const
+	void render(bool is_shadow_pass, bool reflection_pass, vector3d const &xlate); // non-const
 	bool has_any_transforms() const;
-	cube_t get_bcube() const;
+	cube_t get_bcube(bool only_reflective) const;
 	void build_cobj_trees(bool verbose);
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 };
@@ -498,12 +498,12 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
-void render_models(bool shadow_pass, vector3d const &xlate=zero_vector);
+void render_models(bool shadow_pass, bool reflection_pass, vector3d const &xlate=zero_vector);
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing);
 void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float voxel_xy_spacing);
 void add_transform_for_cur_model(model3d_xform_t const &xf);
-cube_t get_all_models_bcube();
+cube_t get_all_models_bcube(bool only_reflective=0);
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
 	colorRGBA const &def_c, bool reflective, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);

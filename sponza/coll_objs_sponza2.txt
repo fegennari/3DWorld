@@ -11,8 +11,10 @@ s 1 2 # swap Y and Z
 M 2 # mirror in Z
 Y 1.0 1.0 1
 
+reflective 1
 O ..\Sponza2\sponza.model3d 3 0 0
 #O ..\Sponza2\sponza.obj 3 0 1
+reflective 0
 
 # could set transform back to the identity here...
 

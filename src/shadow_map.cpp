@@ -515,7 +515,7 @@ void ground_mode_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	// add static objects
 	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
-	render_models(1);
+	render_models(1, 0);
 	render_voxel_data(1);
 	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, 0, camera_pos_);
 	// add snow, trees, scenery, and mesh
@@ -541,7 +541,7 @@ void local_smap_data_t::render_scene_shadow_pass(point const &lpos) {
 	if (enable_depth_clamp) {glDisable(GL_DEPTH_CLAMP);} // no depth clamping (due to light fixtures in front of the near clip plane)
 	smap_vertex_cache.add_cobjs(smap_sz, 0, 0); // no VFC for static cobjs
 	smap_vertex_cache.render();
-	render_models(1);
+	render_models(1, 0);
 	smap_vertex_cache.add_draw_dynamic(pdu, smap_sz, fixed_ndiv, camera_pos_);
 	if (enable_depth_clamp) {glEnable(GL_DEPTH_CLAMP);}
 	camera_pos = camera_pos_;

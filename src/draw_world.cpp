@@ -75,6 +75,7 @@ extern vector<obj_draw_group> obj_draw_groups;
 
 void create_dlight_volumes();
 void create_sky_vis_zval_texture(unsigned &tid);
+cube_t get_all_models_bcube(bool only_reflective=0);
 
 
 void set_fill_mode() {
@@ -420,6 +421,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		if (animate2 && frame_counter > update_frame) {ripple_time += fticks; update_frame = frame_counter;} // once per frame
 		s.add_uniform_float("ripple_time", ripple_time);
 		s.add_uniform_float("rain_intensity", get_rain_intensity());
+		s.add_uniform_float("reflect_plane_zbot", reflect_plane_bcube.d[2][0]);
+		s.add_uniform_float("reflect_plane_ztop", reflect_plane_bcube.d[2][1]);
 	}
 	if (enable_puddles) {
 		set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
@@ -517,6 +520,22 @@ bool use_reflect_plane_for_cobj(coll_obj const &c) {
 		c.d[2][1] <= reflect_plane_bcube.d[2][1] && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25) && camera_pdu.cube_visible(c));
 }
 
+void proc_refl_bcube(cube_t const &c, cube_t &bcube, float &min_camera_dist, bool &bcube_set) {
+
+	point const camera(get_camera_pos());
+	float const dist(p2p_dist(camera, c.closest_pt(camera)));
+		
+	if (bcube_set) {
+		bcube.union_with_cube(c);
+		min_camera_dist = min(dist, min_camera_dist);
+	}
+	else {
+		bcube = c;
+		bcube_set = 1;
+		min_camera_dist = dist;
+	}
+}
+
 bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist) {
 
 	if (!use_reflection_plane()) return 0;
@@ -526,20 +545,15 @@ bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist) {
 	for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
 		unsigned cix(*i);
 		coll_obj const &c(coll_objects.get_cobj(cix));
-		if (c.no_draw() || c.d[2][1] >= get_camera_pos().z || !use_reflect_plane_for_cobj(c)) continue;
+		if (c.no_draw() || c.d[2][1] >= camera.z || !use_reflect_plane_for_cobj(c)) continue;
 		cube_t cc(c);
 		cc.d[2][0] = cc.d[2][1]; // shrink to top surface only
-		float const dist(p2p_dist(camera, c.closest_pt(camera)));
-		
-		if (bcube_set) {
-			bcube.union_with_cube(cc);
-			min_camera_dist = min(dist, min_camera_dist);
-		}
-		else {
-			bcube = cc;
-			bcube_set = 1;
-			min_camera_dist = dist;
-		}
+		proc_refl_bcube(cc, bcube, min_camera_dist, bcube_set);
+	}
+	cube_t const models_refl_bcube(get_all_models_bcube(1));
+	
+	if (!models_refl_bcube.is_zero_area() && models_refl_bcube.intersects(reflect_plane_bcube)) {
+		proc_refl_bcube(models_refl_bcube, bcube, min_camera_dist, bcube_set);
 	}
 	return bcube_set;
 }
