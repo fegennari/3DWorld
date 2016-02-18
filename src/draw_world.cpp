@@ -69,9 +69,10 @@ extern obj_vector_t<fire> fires;
 extern obj_vector_t<decal_obj> decals;
 extern water_particle_manager water_part_man;
 extern physics_particle_manager explosion_part_man;
-extern cube_t cur_smoke_bb, reflect_plane_bcube;
+extern cube_t cur_smoke_bb;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
+extern reflect_plane_selector reflect_planes;
 
 void create_dlight_volumes();
 void create_sky_vis_zval_texture(unsigned &tid);
@@ -419,10 +420,11 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		static float ripple_time(0.0);
 		static int update_frame(0);
 		if (animate2 && frame_counter > update_frame) {ripple_time += fticks; update_frame = frame_counter;} // once per frame
-		s.add_uniform_float("ripple_time", ripple_time);
-		s.add_uniform_float("rain_intensity", get_rain_intensity());
-		s.add_uniform_float("reflect_plane_zbot", reflect_plane_bcube.d[2][0]);
-		s.add_uniform_float("reflect_plane_ztop", reflect_plane_bcube.d[2][1]);
+		cube_t const &bcube(reflect_planes.get_selected());
+		s.add_uniform_float("ripple_time",        ripple_time);
+		s.add_uniform_float("rain_intensity",     get_rain_intensity());
+		s.add_uniform_float("reflect_plane_zbot", bcube.d[2][0]);
+		s.add_uniform_float("reflect_plane_ztop", bcube.d[2][1]);
 	}
 	if (enable_puddles) {
 		set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
@@ -512,12 +514,15 @@ void setup_object_render_data() {
 }
 
 
-bool  use_reflection_plane() {return ((display_mode & 0x10) && !reflect_plane_bcube.is_zero_area() && get_camera_pos().z > reflect_plane_bcube.d[2][0]);}
-float get_reflection_plane() {return 0.5*(reflect_plane_bcube.d[2][0] + reflect_plane_bcube.d[2][1]);}
+bool  enable_reflection_plane() {return ((display_mode & 0x10) && !reflect_planes.empty());}
+bool  use_reflection_plane   () {return (enable_reflection_plane() && reflect_planes.enabled() && get_camera_pos().z > reflect_planes.get_selected().d[2][0]);}
+float get_reflection_plane   () {return reflect_planes.get_refl_plane();}
 
 bool use_reflect_plane_for_cobj(coll_obj const &c) {
-	return ((c.type == COLL_CUBE || (c.type == COLL_CYLINDER && !(c.cp.surfs & 1))) && c.intersects(reflect_plane_bcube) &&
-		c.d[2][1] <= reflect_plane_bcube.d[2][1] && (c.is_wet() || c.cp.spec_color.get_luminance() > 0.25) && camera_pdu.cube_visible(c));
+	if (c.type != COLL_CUBE && (c.type != COLL_CYLINDER || (c.cp.surfs & 1))) return 0;
+	if (!c.is_wet() && c.cp.spec_color.get_luminance() < 0.25) return 0;
+	cube_t const &bc(reflect_planes.get_selected());
+	return (c.intersects(bc) && c.d[2][1] <= bc.d[2][1] && camera_pdu.cube_visible(c));
 }
 
 void proc_refl_bcube(cube_t const &c, cube_t &bcube, float &min_camera_dist, bool &bcube_set) {
@@ -538,6 +543,7 @@ void proc_refl_bcube(cube_t const &c, cube_t &bcube, float &min_camera_dist, boo
 
 bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist) {
 
+	reflect_planes.select_best_reflection_plane();
 	if (!use_reflection_plane()) return 0;
 	bool bcube_set(0);
 	point const camera(get_camera_pos());
@@ -552,7 +558,7 @@ bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist) {
 	}
 	cube_t const models_refl_bcube(get_all_models_bcube(1));
 	
-	if (!models_refl_bcube.is_zero_area() && models_refl_bcube.intersects(reflect_plane_bcube)) {
+	if (!models_refl_bcube.is_zero_area() && models_refl_bcube.intersects(reflect_planes.get_selected())) {
 		proc_refl_bcube(models_refl_bcube, bcube, min_camera_dist, bcube_set);
 	}
 	return bcube_set;
@@ -682,7 +688,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
 	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
 	bool const use_ref_plane(reflection_pass || (reflection_tid > 0 && use_reflection_plane()));
-	float const ref_plane_z(get_reflection_plane());
+	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);
 	shader_t s;
 	setup_cobj_shader(s, has_lt_atten, 0, 2, 0);
 	int last_tid(-2), last_group_id(-1);

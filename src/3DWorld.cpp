@@ -92,7 +92,6 @@ float ocean_wave_height(DEF_OCEAN_WAVE_HEIGHT), tree_density_thresh(0.55), model
 float light_int_scale[NUM_LIGHTING_TYPES] = {1.0, 1.0, 1.0, 1.0};
 double camera_zh(0.0);
 point mesh_origin(all_zeros), camera_pos(all_zeros);
-cube_t reflect_plane_bcube(0,0,0,0,0,0);
 string user_text, cobjs_out_fn;
 colorRGB ambient_lighting_scale(1,1,1), mesh_color_scale(1,1,1);
 colorRGBA bkg_color, flower_color(ALPHA0);
@@ -100,6 +99,7 @@ set<unsigned char> keys, keyset;
 char game_mode_string[MAX_CHARS] = {"640x480"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 vector<cube_t> smoke_bounds;
+reflect_plane_selector reflect_planes;
 
 // camera variables
 double c_radius(DEF_CRADIUS), c_theta(DEF_CTHETA), c_phi(DEF_CPHI), up_theta(DEF_UPTHETA), camera_y(DEF_CAMY);
@@ -1892,7 +1892,9 @@ int load_config(string const &config_file) {
 			smoke_bounds.push_back(sb);
 		}
 		else if (str == "reflect_plane_z") {
-			if (!read_cube(fp, geom_xform_t(), reflect_plane_bcube)) cfg_err("reflect_plane_z command", error);
+			cube_t cube;
+			if (!read_cube(fp, geom_xform_t(), cube)) cfg_err("reflect_plane_z command", error);
+			reflect_planes.add(cube);
 		}
 		// lighting
 		else if (str == "lighting_file_sky") {

@@ -124,6 +124,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	bool z_top_test, float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
 void setup_object_render_data();
 bool use_reflection_plane();
+bool enable_reflection_plane();
 float get_reflection_plane();
 void end_group(int &last_group_id);
 void draw_coll_surfaces(bool draw_trans, bool reflection_pass);

@@ -218,5 +218,21 @@ public:
 };
 
 
+class reflect_plane_selector {
+
+	vector<cube_t> bcubes;
+	int sel_cube;
+
+public:
+	reflect_plane_selector() : sel_cube(-1) {}
+	bool empty() const {return bcubes.empty();}
+	bool enabled() const {return (!empty() && sel_cube >= 0);}
+	void add(cube_t const &c) {bcubes.push_back(c);}
+	cube_t const &get_selected() const {assert(enabled()); assert(sel_cube < (int)bcubes.size()); return bcubes[sel_cube];}
+	float get_refl_plane() const {cube_t const &c(get_selected()); return 0.5*(c.d[2][0] + c.d[2][1]);}
+	void select_best_reflection_plane();
+};
+
+
 #endif // _DRAW_UTILS_H_
 

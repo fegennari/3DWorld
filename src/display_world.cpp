@@ -883,7 +883,7 @@ void display(void) {
 			create_shadow_map(); // where should this go? must be after draw_universe_bkg()
 			if (TIMETEST) PRINT_TIME("G");
 
-			if (use_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
+			if (enable_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
 
 			// draw background
 			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background
