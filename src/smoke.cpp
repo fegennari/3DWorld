@@ -29,7 +29,7 @@ vector<unsigned char> smoke_tex_data; // several MB
 
 extern bool no_smoke_over_mesh, no_sun_lpos_update;
 extern unsigned create_voxel_landscape;
-extern int animate2, display_mode, scrolling;
+extern int animate2, display_mode, scrolling, game_mode;
 extern float czmin0;
 extern colorRGB cur_ambient, cur_diffuse;
 extern lmap_manager_t lmap_manager;
@@ -93,7 +93,7 @@ inline void adjust_smoke_val(float &val, float delta) {val = max(0.0f, min(SMOKE
 
 void add_smoke(point const &pos, float val) {
 
-	if (!DYNAMIC_SMOKE || (display_mode & 0x80) || val == 0.0 || pos.z >= czmax) return;
+	if (!DYNAMIC_SMOKE || (display_mode & 0x80) || !game_mode || val == 0.0 || pos.z >= czmax) return;
 	lmcell *const lmc(lmap_manager.get_lmcell(pos));
 	if (!lmc) return;
 	int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));

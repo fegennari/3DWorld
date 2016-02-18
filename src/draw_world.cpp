@@ -43,7 +43,7 @@ pt_line_drawer bubble_pld;
 
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
-extern bool enable_gamma_correct;
+extern bool enable_gamma_correct, smoke_dlights;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
@@ -305,7 +305,7 @@ void set_smoke_shader_prefixes(shader_t &s, int use_texgen, bool keep_alpha, boo
 			s.set_prefix("#define SMOKE_ENABLED", d);
 		}
 		if (volume_lighting && use_smap) {s.set_prefix("#define SMOKE_SHADOW_MAP", 1);} // FS
-		if (display_mode & 0x10) {s.set_prefix("#define SMOKE_DLIGHTS", 1);} // FS - TESTING
+		if (smoke_dlights) {s.set_prefix("#define SMOKE_DLIGHTS", 1);} // FS - TESTING
 
 		if (use_smoke_noise()) {
 			s.set_prefix("#define SMOKE_NOISE",   1); // FS

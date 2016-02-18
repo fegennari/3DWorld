@@ -60,7 +60,7 @@ char *lighting_file[NUM_LIGHTING_TYPES] = {0};
 // Global Variables
 bool nop_frame(0), combined_gu(0), underwater(0), kbd_text_mode(0), univ_stencil_shadows(1), use_waypoint_app_spots(0), enable_tiled_mesh_ao(0);
 bool show_lightning(0), disable_shader_effects(0), use_waypoints(0), group_back_face_cull(0), start_maximized(0), claim_planet(0), skip_light_vis_test(0);
-bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1);
+bool no_smoke_over_mesh(0), enable_model3d_tex_comp(0), global_lighting_update(0), lighting_update_offline(0), mesh_difuse_tex_comp(1), smoke_dlights(0);
 bool texture_alpha_in_red_comp(0), use_model2d_tex_mipmaps(1), mt_cobj_tree_build(0), two_sided_lighting(0), inf_terrain_scenery(0), invert_model_nmap_bscale(0);
 bool gen_tree_roots(1), fast_water_reflect(0), vsync_enabled(0), use_voxel_cobjs(0), disable_sound(0), enable_depth_clamp(0), volume_lighting(0);
 bool detail_normal_map(0), use_core_context(0), enable_multisample(1), dynamic_smap_bias(0), model3d_wn_normal(0), snow_shadows(0), user_action_key(0);
@@ -1133,17 +1133,17 @@ void keyboard_proc(unsigned char key, int x, int y) {
 		display_mode ^= 0x04;   break;
 	case '4': // toggle occlusion culling / tiled terrain/voxel/mesh detail normal maps
 		display_mode ^= 0x08;   break;
-	case '5': // walk on snow/ship shadows/debugging
+	case '5': // walk on snow/ship shadows/reflection plane
 		display_mode ^= 0x10;   break;
 	case '6': // toggle water reflections, bump maps, and map view lighting/shadows
 		display_mode ^= 0x20;   break;
 	case '7': // toggle snow accumulation, clouds, and universe mode multithreading
 		display_mode ^= 0x40;   break;
-	case '8': // toggle water caustics/smoke
+	case '8': // toggle water caustics/smoke accumulation
 		display_mode ^= 0x80;   break;
 	case '9': // toggle leaf wind, ocean waves, and snow footsteps
 		display_mode ^= 0x0100; break;
-	case '0': // toggle universe stencil shadows / toggle spraypaint mode / toggle TT tree leaf shadows
+	case '0': // toggle universe stencil shadows / toggle spraypaint mode / toggle particles / toggle TT tree leaf shadows
 		if (world_mode == WMODE_UNIVERSE) {univ_stencil_shadows ^= 1;}
 		else if (world_mode == WMODE_GROUND) {toggle_spraypaint_mode();}
 		else {display_mode ^= 0x0200;}
@@ -1317,8 +1317,9 @@ void keyboard2(int key, int x, int y) {
 	case GLUT_KEY_F9: // switch to fullscreen mode
 		glutFullScreen();
 		break;
-	case GLUT_KEY_F10: // switch cloud model
+	case GLUT_KEY_F10: // switch cloud model / toggle smoke_dlights
 		cloud_model = !cloud_model;
+		smoke_dlights ^= 1;
 		break;
 	case GLUT_KEY_F11: // temporary toggle of core context mode
 		use_core_context ^= 1;
