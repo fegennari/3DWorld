@@ -1727,6 +1727,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 	bool needs_alpha_test(0), needs_bump_maps(0), any_reflective(0), any_non_reflective(0);
 	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
 	bool const enable_reflections(!is_shadow_pass && !reflection_pass && reflection_tid > 0 && use_reflection_plane());
+	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
@@ -1736,7 +1737,8 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 	}
 	shader_t s;
 
-	if (use_z_prepass && !is_shadow_pass && !reflection_pass) { // faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
+	if (use_z_prepass && !is_shadow_pass && !reflection_pass) { // check use_mvm?
+		// faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
 		s.set_prefix("#define POS_FROM_EPOS_MULT", 0); // VS - needed to make transformed vertices agree with the normal rendering flow
 		s.begin_color_only_shader(BLACK); // don't even need colors, only need depth
 		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 0, 1, 0, 3, xlate);}
@@ -1754,7 +1756,6 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 				}
 				else if (shader_effects) {
 					int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
-					bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
 					bool const enable_reflect(any_reflective && !is_shadow_pass && bmap_pass == 0); // assumes bump mapped objects aren't reflective
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
