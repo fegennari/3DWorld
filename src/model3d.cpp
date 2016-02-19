@@ -1763,10 +1763,10 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 				}
 				else if (shader_effects) {
 					int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
-					bool const enable_reflect(any_reflective && !is_shadow_pass && bmap_pass == 0); // assumes bump mapped objects aren't reflective
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
+					int const is_outside((is_shadow_pass || reflection_pass) ? 0 : 2); // enable wet effect coverage mask
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
-					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting, 0.0, model_triplanar_tc_scale, 0, (ref_pass != 0));
+					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting, 0.0, model_triplanar_tc_scale, 0, (ref_pass != 0), is_outside);
 					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
 					if (ref_pass) {bind_texture_tu(reflection_tid, 14);}

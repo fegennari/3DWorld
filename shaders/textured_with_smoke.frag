@@ -196,7 +196,7 @@ void main()
 #endif
 
 	float wetness = wet_effect;
-	//if (wetness > 0.0) {wetness *= get_water_snow_coverage();} // doesn't look quite right
+	if (use_water_coverage && wetness > 0.0) {wetness *= get_water_snow_coverage();} // doesn't look quite right
 	float reflectivity2 = reflectivity;
 
 #ifdef ENABLE_PUDDLES

@@ -224,7 +224,7 @@ bool set_dlights_booleans(shader_t &s, bool enable, int shader_type, bool no_dl_
 }
 
 
-void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, bool &indir_lighting, float min_alpha, bool no_dl_smap) {
+void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, bool &indir_lighting, float min_alpha, bool no_dl_smap, bool use_wet_mask=0) {
 
 	bool const hemi_lighting(!have_indir_smoke_tex);
 	use_shadow_map &= shadow_map_enabled();
@@ -237,6 +237,7 @@ void common_shader_block_pre(shader_t &s, bool &dlights, bool &use_shadow_map, b
 	s.set_prefix(make_shader_bool_prefix("indir_lighting", indir_lighting), 1); // FS
 	s.set_prefix(make_shader_bool_prefix("hemi_lighting",  hemi_lighting),  1); // FS
 	s.set_prefix(make_shader_bool_prefix("use_shadow_map", use_shadow_map), 1); // FS
+	s.set_prefix(make_shader_bool_prefix("use_water_coverage", use_wet_mask), 1); // FS
 	set_dlights_booleans(s, dlights, 1, no_dl_smap); // FS
 }
 
@@ -345,14 +346,15 @@ void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 // texture units used: 0: object texture, 1: smoke/indir lighting texture, 2-4 dynamic lighting, 5: bump map, 6-7: shadow map,
 //                     8: specular map, 9: depth map, 10: burn mask/sky_zval, 11: noise, 12: ground texture, 13: depth, 14: reflection, 15: ripples, 16-31: dlight shadow maps
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
-// use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
+// use_bmap  : 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
+// is_outside: 0 = inside, 1 = outside, 2 = use snow coverage mask
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
 	int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
-	bool use_depth_trans, bool enable_reflections, bool is_outside, bool enable_rain_snow)
+	bool use_depth_trans, bool enable_reflections, int is_outside, bool enable_rain_snow)
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
-	bool const is_wet(is_ground_wet() && !use_burn_mask), is_snowy(enable_rain_snow && is_ground_snowy() && !use_burn_mask);
+	bool const is_wet(is_ground_wet() && !use_burn_mask), is_snowy(enable_rain_snow && is_ground_snowy() && !use_burn_mask), use_wet_mask(is_wet && is_outside == 2);
 	bool const enable_puddles(enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
@@ -362,7 +364,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
-	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0);
+	common_shader_block_pre(s, dlights, use_smap, indir_lighting, min_alpha, 0, use_wet_mask);
 	set_smoke_shader_prefixes(s, use_texgen, keep_alpha, direct_lighting, smoke_en, has_lt_atten, use_smap, use_bmap, use_spec_map, use_mvm, force_tsl);
 	s.set_vert_shader("texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	string fstr("linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
@@ -430,7 +432,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		set_3d_texture_as_current(get_noise_tex_3d(64, 1), 11); // grayscale noise
 		s.add_uniform_int("wet_noise_tex", 11);
 	}
-	if (/*is_wet ||*/ is_snowy) {
+	if (use_wet_mask || is_snowy) {
 		bind_texture_tu(get_sky_zval_texture(), 10);
 		s.add_uniform_int("sky_zval_tex", 10);
 	}
