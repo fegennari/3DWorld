@@ -177,7 +177,7 @@ void fire::gen(point const &p, float size, float intensity, int src, bool is_sta
 	velocity     = zero_vector;
 	source       = src;
 	float const zval(interpolate_mesh_zval(pos.x, pos.y, radius, 0, 0));
-	if (fabs(pos.z - zval) > 2.0*radius) status = 2; // above the ground
+	if (fabs(pos.z - zval) > 2.0*radius) {status = 2;} // above the ground
 }
 
 
