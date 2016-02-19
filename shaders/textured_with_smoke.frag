@@ -16,7 +16,7 @@ uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float cube_bb[6], sphere_radius;
 uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity, snow_cov_amt;
-uniform float reflect_plane_ztop, reflect_plane_zbot;
+uniform float reflect_plane_ztop, reflect_plane_zbot, winding_normal_sign;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -207,7 +207,7 @@ void main()
 #endif // ENABLE_PUDDLES
 
 #ifdef USE_WINDING_RULE_FOR_NORMAL
-	float normal_sign = ((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
+	float normal_sign = winding_normal_sign*((!two_sided_lighting || gl_FrontFacing) ? 1.0 : -1.0); // two-sided lighting
 #else
 	float normal_sign = ((!two_sided_lighting || (dot(eye_norm, epos.xyz) < 0.0)) ? 1.0 : -1.0); // two-sided lighting
 #endif
@@ -224,6 +224,7 @@ void main()
 #endif
 	vec3 lit_color  = emission.rgb + emissive_scale*gl_Color.rgb;
 	lit_color      += base_color.rgb * get_indir_lighting(normal_sign) * mix(1.0, 0.7, wet_surf_val);
+	vec3 normal_s   = normal_sign*normal;
 
 #ifdef ENABLE_GAMMA_CORRECTION
 	lit_color.rgb = pow(lit_color.rgb, vec3(2.2)); // gamma correction
@@ -235,7 +236,7 @@ void main()
 		if (enable_light1) {lit_color += add_light1(n, normal_sign, base_color);} // moon
 		if (enable_light2) {ADD_LIGHT(2);} // lightning
 	}
-	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_sign*normal), base_color.rgb, 1.0, normal_sign, wet_surf_val);} // dynamic lighting
+	if (enable_dlights) {add_dlights_bm_scaled(lit_color, vpos, normalize(normal_s), base_color.rgb, 1.0, normal_sign, wet_surf_val);} // dynamic lighting
 	vec4 color = vec4((texel.rgb * lit_color), (texel.a * alpha));
 
 #ifdef ENABLE_GAMMA_CORRECTION
@@ -243,8 +244,8 @@ void main()
 #endif // ENABLE_GAMMA_CORRECTION
 
 #ifdef ENABLE_REFLECTIONS // should this be before or after multiplication with texel?
-	if (normal.z > 0.5 && vpos.z < reflect_plane_ztop && vpos.z > reflect_plane_zbot) { // top surface
-		vec3 ws_normal   = normalize(normal);
+	if (normal_s.z > 0.5 && vpos.z < reflect_plane_ztop && vpos.z > reflect_plane_zbot) { // top surface
+		vec3 ws_normal   = normalize(normal_s);
 		float ripple_mag = wetness * clamp(2.0*(1.0 - 0.5*length(epos.xyz)), 0.0, 1.0);
 
 		if (ripple_mag > 0.0 && rain_intensity > 0.0) {
