@@ -348,12 +348,12 @@ void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 // use_bmap: 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
 	int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
-	bool use_depth_trans, bool enable_reflections, bool is_outside)
+	bool use_depth_trans, bool enable_reflections, bool is_outside, bool enable_rain_snow)
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
-	bool const is_wet(is_ground_wet() && !use_burn_mask), is_snowy(is_ground_snowy() && !use_burn_mask);
-	bool const enable_puddles(is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
+	bool const is_wet(is_ground_wet() && !use_burn_mask), is_snowy(enable_rain_snow && is_ground_snowy() && !use_burn_mask);
+	bool const enable_puddles(enable_rain_snow && is_wet && !is_rain_enabled()); // enable puddles when the ground is wet but it's not raining
 	smoke_en &= (have_indir_smoke_tex && smoke_tid > 0 && is_smoke_in_use());
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
@@ -1501,7 +1501,7 @@ void draw_smoke_and_fires() {
 	bool const have_part_clouds(part_clouds.any_active());
 	if (!have_part_clouds && !fires.any_active()) return; // nothing to draw
 	shader_t s;
-	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans);
+	setup_smoke_shaders(s, 0.01, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0.0, 0.0, use_depth_trans, 0, 0, 0); // no rain, snow, or reflections
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
 	set_multisample(0);
 	unsigned depth_tid(0);
