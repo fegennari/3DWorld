@@ -1377,7 +1377,11 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool refle
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass);
 	if (is_normal_pass) {smap_data.set_for_all_lights(shader, mvm);}
-	if (group_back_face_cull && !reflection_pass) {glEnable(GL_CULL_FACE);} // could also enable culling if is_shadow_pass, on some scenes
+
+	if (group_back_face_cull) { // okay enable culling if is_shadow_pass on some scenes
+		if (reflection_pass) {glCullFace(GL_FRONT);} // the reflection pass uses a mirror, which changes the winding direction, so we cull the front faces instead
+		glEnable(GL_CULL_FACE);
+	}
 
 	// render geom that was not bound to a material
 	if ((bmap_pass_mask & 1) && unbound_mat.color.alpha > 0.0) { // enabled, not in bump map only pass
@@ -1408,7 +1412,10 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool refle
 		}
 		to_draw.clear();
 	}
-	if (group_back_face_cull && !reflection_pass) {glDisable(GL_CULL_FACE);}
+	if (group_back_face_cull) { // okay enable culling if is_shadow_pass on some scenes
+		if (reflection_pass) {glCullFace(GL_BACK);} // restore the default
+		glDisable(GL_CULL_FACE);
+	}
 }
 
 
