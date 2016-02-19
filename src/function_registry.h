@@ -746,6 +746,7 @@ void set_smap_shader_for_all_lights(shader_t &s, float z_bias=DEF_Z_BIAS);
 pos_dir_up get_pt_cube_frustum_pdu(point const &pos, cube_t const &bounds);
 void draw_scene_bounds_and_light_frustum(point const &lpos);
 void create_shadow_map();
+void update_shadow_matrices();
 void free_shadow_map_textures();
 
 // function prototypes - raytrace

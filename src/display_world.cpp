@@ -1072,6 +1072,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass,
 		draw_camera_weapon(0);
 		camera_pos = pdu.pos;
 	}
+	update_shadow_matrices();
 	draw_coll_surfaces(0, reflection_pass);
 	
 	if (include_mesh) { // the mesh and grass are generally under the reflection plane, so can be skipped
@@ -1148,6 +1149,7 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
 	camera_pdu = old_camera_pdu;
 	restore_matrices_and_clear(); // reset state
+	update_shadow_matrices(); // restore
 	enable_clip_plane_z = 0;
 	//PRINT_TIME("Create Reflection Texture");
 }

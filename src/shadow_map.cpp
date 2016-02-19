@@ -438,11 +438,11 @@ void smap_texture_array_t::ensure_tid(unsigned xsize, unsigned ysize) {
 
 
 // if bounds is passed in, calculate pdu from it; otherwise, assume the user has alreay caclulated pdu
-void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space) {
+void smap_data_t::create_shadow_map_for_light(point const &lpos, cube_t const *const bounds, bool use_world_space, bool no_update) {
 
 	// setup render state
 	assert(smap_sz > 0);
-	bool const do_update(needs_update(lpos)); // must be called first, because this may indirectly update bounds
+	bool const do_update(!no_update && needs_update(lpos)); // must be called first, because this may indirectly update bounds
 	xform_matrix camera_mv_matrix; // starts as identity matrix
 	if (!use_world_space) {camera_mv_matrix = fgGetMVM();} // cache the camera modelview matrix before we change it
 	fgPushMatrix();
@@ -568,6 +568,16 @@ bool local_smap_data_t::needs_update(point const &lpos) {
 }
 
 
+void create_shadow_map_inner(bool no_update) {
+
+	cube_t const bounds(get_scene_bounds());
+	
+	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}
+		point lpos;
+		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(lpos, &bounds, 0, no_update);}
+	}
+}
+
 void create_shadow_map() {
 
 	if (!shadow_map_enabled()) return; // disabled
@@ -588,12 +598,7 @@ void create_shadow_map() {
 	// render shadow maps to textures
 	add_coll_shadow_objs();
 	ensure_smap_data();
-	cube_t const bounds(get_scene_bounds());
-	
-	for (unsigned l = 0; l < smap_data.size(); ++l) { // {sun, moon}
-		point lpos;
-		if (light_valid_and_enabled(l, lpos)) {smap_data[l].create_shadow_map_for_light(lpos, &bounds);}
-	}
+	create_shadow_map_inner(0); // no_update=0
 	scene_smap_vbo_invalid = 0; // needs to be after dlights update
 
 	// restore old state
@@ -602,6 +607,13 @@ void create_shadow_map() {
 	animate2     = animate2_;
 	display_mode = display_mode_;
 	//PRINT_TIME("Shadow Map Creation");
+}
+
+void update_shadow_matrices() {
+
+	if (!shadow_map_enabled() || smap_data.empty()) return; // disabled
+	assert(scene_smap_vbo_invalid != 2);
+	create_shadow_map_inner(1); // no_update=1
 }
 
 
