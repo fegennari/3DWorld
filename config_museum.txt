@@ -15,6 +15,8 @@ model_auto_tc_scale 10.0 # more efficient, and preserves existing object tcs, bu
 mesh_size  256 128 64
 scene_size 4.0 2.0 2.0
 
+reflect_plane_z -3.6 3.6  -2.0 2.0  -0.088 -0.076
+
 coll_obj_file coll_objs/coll_objs_museum.txt
 
 num_threads 8

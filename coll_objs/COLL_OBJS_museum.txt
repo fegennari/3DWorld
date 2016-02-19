@@ -11,7 +11,9 @@ L 1.5 1.5  -2.47426 -0.558990 0.760717  0.8 0.8 1.0 1.0
 L 1.5 1.5  -2.47426  0.407699 0.760717  0.8 0.8 1.0 1.0
 
 # O <filename> <group_cobjs_level> <recalc_normals> <write_file>
+reflective 1
 t 1.2 0.6 0.5  s 1 2  M 0  m 0.05  O ../models/museum/museumhallRD.obj 3 1 0
+reflective 0
 end
 Z 4  -2.0  -2.0  0.0
 Z 4  -2.0  -1.0  0.0
