@@ -38,7 +38,7 @@ point flow_source(0.0, 0.0, -2.0);
 obj_type object_types[NUM_TOT_OBJS];
 
 extern int num_groups, display_mode, frame_counter, game_mode, camera_coll_id, precip_mode, is_cloudy;
-extern int s_ball_id, world_mode, has_accumulation, has_snow_accum, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2;
+extern int s_ball_id, world_mode, has_accumulation, has_snow_accum, iticks, auto_time_adv, DISABLE_WATER, enable_fsource, animate2, begin_motion;
 extern float max_water_height, zmin, zmax, ztop, zbottom, zmax_est, base_gravity, tstep, fticks, water_plane_z;
 extern float sun_rot, moon_rot, alt_temp, light_factor, XY_SCENE_SIZE, TWO_XSS, TWO_YSS, czmax, grass_length;
 extern vector3d up_norm, orig_cdir;
@@ -1441,7 +1441,7 @@ void fire::apply_physics(unsigned i) {
 			radius -= 0.017;
 		}
 	} // !is_static
-	if (animate2 && damage > 0.005 && (rand()%max(1, int(0.5/damage))) == 0) {gen_particles(pos, 1);}
+	if (begin_motion && animate2 && damage > 0.005 && (rand()%max(1, int(0.5/damage))) == 0) {gen_particles(pos, 1);}
 }
 
 void fire::extinguish() {
