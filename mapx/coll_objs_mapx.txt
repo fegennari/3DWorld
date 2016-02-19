@@ -252,10 +252,12 @@ n 0
 e 60 # top and bottom only
 a 3 # destroyable/shatterable to portal
 l 0.7  0.8 0.8 0.8 0.15 -1 1 1.55 20.0 # semi-transparent glass
+r 0.9 100.0 # set specularity
 B -3.5 -0.5  0.5  3.0  2.36  2.38 # skylight
 a 2 # destroyable/shatterable
 l 0.76 0.8 0.8 0.8 0.2 -1 1 1.55 20.0 # opaque glass
 B -3.3 -0.7  0.7  2.8  1.76 1.79 # glass floor
+r 0.0 1.0 # reset specularity
 a 1 # destroyable
 e 0
 
