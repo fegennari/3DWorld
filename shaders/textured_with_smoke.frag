@@ -220,6 +220,7 @@ void main()
 		float snow_amt = snow_cov_amt*get_water_snow_coverage()*min(1.0, 6.0*(normal.z-0.4));
 		base_color     = mix(base_color, vec4(1.0), snow_amt);
 		texel          = mix(texel, vec4(0.9, 0.9, 1.0, 1.0), snow_amt);
+		alpha          = mix(alpha, 1.0, snow_amt);
 	}
 #endif
 	vec3 lit_color  = emission.rgb + emissive_scale*gl_Color.rgb;
