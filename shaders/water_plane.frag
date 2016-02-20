@@ -81,7 +81,7 @@ void main() {
 		if (use_foam) {foam_amt = deep_wave_scale*norm_fa.w;}
 #endif // USE_WATER_DEPTH
 		vec3 wave_n_eye = fg_NormalMatrix * wave_n;
-		if (reflections) {green_scale += 0.8*(1.0 - abs(dot(norm, normalize(wave_n_eye))));} // add green to sides of waves (though this increases shader time)
+		if (reflections) {green_scale += 1.0*(1.0 - abs(dot(norm, normalize(wave_n_eye))));} // add green to sides of waves
 		light_norm = normalize(norm + wave_n_eye);
 		norm       = normalize(norm + 0.1*wave_n_eye); // lower scale for fresnel term
 		ripple    += 0.05*wave_n.xy;
@@ -124,7 +124,7 @@ void main() {
 	
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);
-	color = mix(color, vec4(0.0, 1.0, 0.5, color.a), water_green_comp*min(1.0, green_scale));
+	color = mix(color, vec4(0.0, 1.0, 0.5, color.a), min(1.0, water_green_comp*green_scale));
 
 	if (reflections) { // calculate reflections
 		float reflect_w  = reflect_scale*get_fresnel_reflection(-epos_n, norm, 1.0, 1.333);
