@@ -61,15 +61,16 @@ void draw_overhead_map() {
 		return;
 	}
 	if (map_zoom == 0.0) {map_zoom = ((world_mode == WMODE_GROUND) ? 0.08 : 0.8);} // set reasonable defaults based on mode
-	int bx1(0), by1(0), bx2(0), by2(0), nx(1);
-	while (min(window_width, window_height) > 2*nx) {nx *= 2;}
-	if (nx < 4) return;
-
-	int const ny(nx), nx2(nx/2), ny2(ny/2);
+	int bx1(0), by1(0), bx2(0), by2(0), nx(1), ny(1);
+	while (window_width  > 2*nx) {nx *= 2;}
+	while (window_height > 2*ny) {ny *= 2;}
+	//nx = (window_width & 0xFFFC); ny = (window_height & 0xFFFC); // looks nicer, but slower
+	if (nx < 4 || ny < 4) return;
+	int const nx2(nx/2), ny2(ny/2);
 	bool const no_water((DISABLE_WATER == 2) || !(display_mode & 0x04));
 	bool const is_ice(((world_mode == WMODE_GROUND) ? temperature : get_cur_temperature()) <= W_FREEZE_POINT);
 	float const zmax2(zmax_est*((map_color || no_water) ? 1.0 : 0.855)), hscale(0.5/zmax2);
-	float const window_ar(float(window_width)/float(window_height)), scene_ar(X_SCENE_SIZE/Y_SCENE_SIZE);
+	float const window_ar((float(window_width)*ny)/(float(window_height)*nx)), scene_ar(X_SCENE_SIZE/Y_SCENE_SIZE);
 	float const xscale(2.0*map_zoom*window_ar*HALF_DXY), yscale(2.0*map_zoom*scene_ar*HALF_DXY);
 	float const xscale_val(xscale/64), yscale_val(yscale/64);
 
@@ -161,6 +162,9 @@ void draw_overhead_map() {
 						mh_set = 1;
 					}
 					if (over_mesh && czmin < czmax) { // check cobjs
+						// Note: as an optimization, can skip the cobj test if no cobjs at this pos, but it makes little difference and will miss dynamic objects
+						//int const xpos(get_xpos(xval)), ypos(get_ypos(yval));
+						//if (point_outside_mesh(xpos, ypos) || v_collision_matrix[ypos][xpos].zmin == v_collision_matrix[ypos][xpos].zmax) {}
 						point p2(xval, yval, max(mh, czmin));
 						float t;
 						int cindex0(-1);
