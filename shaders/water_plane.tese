@@ -12,7 +12,7 @@ in vec2 tc_ES[], tc2_ES[];
 out vec4 epos, proj_pos;
 out vec2 tc, tc2;
 out vec4 fg_Color_vf;
-out float water_zval;
+out float water_zval, wave_dz;
 out vec3 normal;
 
 vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2, vec2 v3) {
@@ -44,12 +44,12 @@ void main() {
 	tc2         = interpolate2D(   tc2_ES[0],    tc2_ES[1],    tc2_ES[2],    tc2_ES[3]);
 	vec3 vertex = interpolate3D(vertex_ES[0], vertex_ES[1], vertex_ES[2], vertex_ES[3]);
 	vec2 wtc    = tc / wave_width;
-	float dz    = get_delta_z(wtc);
-	vertex.z   += 0.02 * wave_height * dz;
+	wave_dz     = get_delta_z(wtc);
+	vertex.z   += 0.02 * wave_height * wave_dz;
 
 	float intensity = 4.0 * clamp((40.0/distance(vertex.xyz, camera_pos) - 1.0), 0.0, 1.0);
-	float dzx   = intensity*(get_delta_z(wtc + vec2(0.001, 0.0)) - dz);
-	float dzy   = intensity*(get_delta_z(wtc + vec2(0.0, 0.001)) - dz);
+	float dzx   = intensity*(get_delta_z(wtc + vec2(0.001, 0.0)) - wave_dz);
+	float dzy   = intensity*(get_delta_z(wtc + vec2(0.0, 0.001)) - wave_dz);
 	normal      = fg_NormalMatrix * normalize(vec3(-dzx, -dzy, normal_z));
 
 	water_zval  = vertex.z;

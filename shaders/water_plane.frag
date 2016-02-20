@@ -8,7 +8,7 @@ uniform float noise_time, wave_time, wave_amplitude, water_plane_z, water_green_
 in vec4 epos, proj_pos;
 in vec2 tc, tc2;
 #ifdef TESS_MODE
-in float water_zval;
+in float water_zval, wave_dz;
 in vec3 normal;
 #endif
 
@@ -107,7 +107,7 @@ void main() {
 #endif
 
 #ifdef ENABLE_WATER_SHADOWS // looks okay for shallow water, but bad for deep water since we get underwater shadows on the water surface
-	vec3 shadow = texture(shadow_tex, tc2).rgb; // {mesh_shadow, tree_shadow, ambient_occlusion}
+	vec3 shadow  = texture(shadow_tex, tc2).rgb; // {mesh_shadow, tree_shadow, ambient_occlusion}
 	float ascale = shadow.b;
 	float dscale = min(shadow.r, shadow.g);
 #else
@@ -122,6 +122,10 @@ void main() {
 	// but we know that it's valid when smap_scale > 0.0, so we can/must use this test to control the shadow map texture lookup
 	lighting.rgb += do_shadowed_lighting(vec4(0.0), epos, light_norm, gl_Color, ascale, dscale); // Note: vertex parameter is unused
 	
+#ifdef TESS_MODE
+	float subsurf_scatter = max(0.55*(1.0 - cos_view_angle)*wave_dz, 0.0);
+	green_scale += 0.2*pow(subsurf_scatter, 4.0);
+#endif
 	// add some green at shallow view angles
 	green_scale += (1.0 - cos_view_angle);
 	color = mix(color, vec4(0.0, 1.0, 0.5, color.a), min(1.0, water_green_comp*green_scale));
