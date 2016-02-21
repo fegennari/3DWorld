@@ -193,7 +193,7 @@ void pos_dir_up::apply_z_mirror(float zval) {
 
 	pos.z = 2*zval - pos.z;
 	dir.z = -dir.z; // mirror
-	upv_  = -upv_;
+	upv   = -upv;
 	orthogonalize_up_dir();
 }
 
