@@ -47,7 +47,7 @@ extern bool user_action_key, flashlight_on, enable_clip_plane_z;
 extern unsigned inf_terrain_fire_mode;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
-extern float TIMESTEP, NEAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
+extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation, clip_plane_z;
 extern double camera_zh;
 extern point mesh_origin, surface_pos, univ_sun_pos, orig_cdir, sun_pos, moon_pos;
@@ -1130,6 +1130,33 @@ void restore_matrices_and_clear() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
+
+void create_reflection_cube_map(unsigned tid, unsigned xsize, unsigned ysize, point const &center, float near_plane, float far_plane) {
+
+	//RESET_TIME;
+	pos_dir_up const old_camera_pdu(camera_pdu);
+
+	for (unsigned dim = 0; dim < 3; ++dim) {
+		for (unsigned dir = 0; dir < 2; ++dir) {
+			vector3d const upv((dim == 2) ? plus_x : plus_z); // ???
+			vector3d view_dir(zero_vector);
+			view_dir[dim] = (dir ? 1.0 : -1.0);
+			camera_pdu    = pos_dir_up(center, view_dir, upv, 45.0, near_plane, far_plane, 1.0, 1);
+			pos_dir_up const pdu(camera_pdu);
+			setup_viewport_and_proj_matrix(xsize, ysize);
+			draw_scene_from_custom_frustum(pdu, 1, 1, 1); // reflection_pass=1, include_mesh=1, disable_occ_cull=1
+			render_to_texture(tid, xsize, ysize); // render reflection to texture
+		}
+	}
+	camera_pdu = old_camera_pdu;
+	restore_matrices_and_clear(); // reset state
+	update_shadow_matrices(); // restore
+	//PRINT_TIME("Create Reflection Cube Map");
+}
+
+void create_reflection_cube_map(unsigned tid, unsigned xsize, unsigned ysize, cube_t const &cube) {
+	create_reflection_cube_map(tid, xsize, ysize, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP);
+}
 
 // render scene reflection to texture (ground mode and tiled terrain mode)
 void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval, cube_t const &bcube, float min_camera_dist) {
