@@ -7,8 +7,7 @@
 #include "mesh_intersect.h"
 
 
-int  const FAST_VIS_CALC = 0;
-bool const USE_BSP_TREE  = 1;
+int const FAST_VIS_CALC = 0;
 
 
 bool last_int(0);
@@ -63,7 +62,7 @@ bool mesh_intersector::line_int_surface_cached() {
 
 bool mesh_intersector::line_intersect_surface() {
 
-	if (fast + FAST_VIS_CALC >= 3) return line_intersect_surface_fast();
+	if (fast + FAST_VIS_CALC >= 3) {return line_intersect_surface_fast();}
 	if (bspt) {return bspt->search(v1, v2, ret);}
 	if (!check_iter_clip(fast + FAST_VIS_CALC >= 1)) return 0;
 	int x1(get_xpos(v1.x)), y1(get_ypos(v1.y)), x2(get_xpos(v2.x)), y2(get_ypos(v2.y));
@@ -71,7 +70,7 @@ bool mesh_intersector::line_intersect_surface() {
 	xpos  = x1;
 	ypos  = y1;
 	v2_v1 = v2 - v1; // update after clip
-	if (x1 == x2 && y1 == y2) return intersect_mesh_quad(x1, y1);
+	if (x1 == x2 && y1 == y2) {return intersect_mesh_quad(x1, y1);}
 	int x_steps(x2-x1), y_steps(y2-y1), xs1, xs2, ys1, ys2, xval, yval;
 	double const slope((x_steps == 0) ? 1.0e6 : ((double)y_steps)/((double)x_steps));
 	double const s_inv((y_steps == 0) ? 1.0e6 : ((double)x_steps)/((double)y_steps));
@@ -404,7 +403,7 @@ bool mesh_bsp_tree::search_recur(point v1, point v2, unsigned x, unsigned y, uns
 
 void gen_mesh_bsp_tree() {
 
-	if (!USE_BSP_TREE || !mesh_size_ok_for_bsp_tree()) return;
+	if (!mesh_size_ok_for_bsp_tree()) return;
 	//RESET_TIME;
 	bspt.reset(new mesh_bsp_tree()); // must be created after mesh size is read from config file
 	//PRINT_TIME("BSP Tree");
