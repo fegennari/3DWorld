@@ -30,4 +30,4 @@ Reflections on specular surfaces (such as the gold dragon)
   - Ray traced and texture mapped
 
 Counted normal averages normals using face area as weights
-
+Cube map reflections

@@ -1141,10 +1141,11 @@ void create_reflection_cube_map(unsigned tid, unsigned xsize, unsigned ysize, po
 			vector3d const upv((dim == 2) ? plus_x : plus_z); // ???
 			vector3d view_dir(zero_vector);
 			view_dir[dim] = (dir ? 1.0 : -1.0);
-			camera_pdu    = pos_dir_up(center, view_dir, upv, 45.0, near_plane, far_plane, 1.0, 1);
+			camera_pdu    = pos_dir_up(center, view_dir, upv, 90.0, near_plane, far_plane, 1.0, 1);
 			pos_dir_up const pdu(camera_pdu);
 			setup_viewport_and_proj_matrix(xsize, ysize);
 			draw_scene_from_custom_frustum(pdu, 1, 1, 1); // reflection_pass=1, include_mesh=1, disable_occ_cull=1
+			// FIXME: select correct cube map face from tid
 			render_to_texture(tid, xsize, ysize); // render reflection to texture
 		}
 	}
