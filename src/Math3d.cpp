@@ -1031,14 +1031,6 @@ bool do_line_clip(point &v1, point &v2, float const d[3][2]) {
 }
 
 
-bool check_line_clip_expand(point const &v1, point const &v2, float const d[3][2], float expand) {
-
-	float de[3][2];
-	UNROLL_3X(de[i_][0]=d[i_][0]-expand; de[i_][1]=d[i_][1]+expand;)
-	return check_line_clip(v1, v2, de);
-}
-
-
 // ************ PROJECTIONS, CENTER, BOUNDING VOLUME, AND TRANSFORMS ************
 
 
