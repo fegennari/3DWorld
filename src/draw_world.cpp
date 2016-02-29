@@ -586,7 +586,7 @@ void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, 
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
-void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, shader_t &s, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
+void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, bool reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
 
 	if (cobjs.empty()) return;
 	setup_cobj_shader(s, 0, use_normal_map, use_texgen, use_reflect_tex); // no lt_atten
@@ -616,7 +616,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, shad
 			}
 		}
 		unsigned cix(*i);
-		c.draw_cobj(cix, last_tid, last_group_id, s, cdb);
+		c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
 		assert(cix == *i); // should not have been modified
 		//if (use_reflect_tex) {bind_2d_texture(reflection_tid);} // overwrite texture binding (FIXME: temporary)
 	}
@@ -721,14 +721,14 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 
 					if (draw_or_add_cobj(ix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm)) {
 						unsigned ix2(ix);
-						cdraw_groups.get_cobj(*j).draw_cobj(ix2, last_tid, last_group_id, s, cdb); // Note: ix should not be modified
+						cdraw_groups.get_cobj(*j).draw_cobj(ix2, last_tid, last_group_id, s, cdb, reflection_pass); // Note: ix should not be modified
 						assert(ix2 == ix); // should not have changed
 					}
 				}
 				continue; // don't draw c itself (only if group is nonempty?)
 			}
 			if (draw_or_add_cobj(cix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm)) {
-				c.draw_cobj(cix, last_tid, last_group_id, s, cdb); // i may not be valid after this call
+				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass); // i may not be valid after this call
 				
 				if (cix != *i) {
 					assert(cix > *i);
@@ -743,7 +743,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 
 		for (auto i = large_cobjs[0].begin(); i != large_cobjs[0].end(); ++i) { // not normal mapped
 			unsigned cix(i->second);
-			get_draw_cobj(cix).draw_cobj(cix, last_tid, last_group_id, s, cdb);
+			get_draw_cobj(cix).draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
 		}
 		cdb.flush();
 		for (auto i = large_cobjs[1].begin(); i != large_cobjs[1].end(); ++i) {normal_map_cobjs.push_back(i->second);} // normal mapped
@@ -797,7 +797,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 						lt_atten_manager.next_object(0.0, c.cp.refract_ix); // reset
 					}
 				}
-				c.draw_cobj(cix, last_tid, last_group_id, s, cdb);
+				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
 				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube
 				assert((int)cix == ix); // should not have changed
 			}
@@ -811,11 +811,11 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	} // end draw_trans
 	s.clear_specular(); // may be unnecessary
 	s.end_shader();
-	draw_cobjs_group(normal_map_cobjs,   cdb, s, 2, 1, 0);
-	draw_cobjs_group(tex_coord_nm_cobjs, cdb, s, 0, 1, 0);
-	draw_cobjs_group(tex_coord_cobjs,    cdb, s, 0, 0, 0);
-	draw_cobjs_group(reflect_cobjs,      cdb, s, 2, 0, 1);
-	draw_cobjs_group(reflect_cobjs_nm,   cdb, s, 2, 1, 1);
+	draw_cobjs_group(normal_map_cobjs,   cdb, reflection_pass, s, 2, 1, 0);
+	draw_cobjs_group(tex_coord_nm_cobjs, cdb, reflection_pass, s, 0, 1, 0);
+	draw_cobjs_group(tex_coord_cobjs,    cdb, reflection_pass, s, 0, 0, 0);
+	draw_cobjs_group(reflect_cobjs,      cdb, reflection_pass, s, 2, 0, 1);
+	draw_cobjs_group(reflect_cobjs_nm,   cdb, reflection_pass, s, 2, 1, 1);
 	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
 	//if (draw_solid) PRINT_TIME("Final Draw");
 }

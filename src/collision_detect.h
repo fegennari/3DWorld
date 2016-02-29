@@ -147,7 +147,7 @@ public:
 	bool is_cobj_visible() const;
 	bool check_pdu_visible(pos_dir_up const &pdu) const;
 	void setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const;
-	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const;
+	void draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb, bool reflection_pass) const;
 	void get_shadow_triangle_verts(vector<vert_wrap_t> &verts, int ndiv, bool skip_spheres=0) const;
 	void add_to_vector(coll_obj_group &cobjs, int type_);
 	void check_if_cube();

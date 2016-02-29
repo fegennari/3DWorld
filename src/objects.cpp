@@ -369,7 +369,7 @@ void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const
 	setup_texgen_full(p1.x, p1.y, p1.z, dot_product(p1, texture_offset), p2.x, p2.y, p2.z, dot_product(p2, texture_offset), shader, 1);
 }
 
-void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb) const {
+void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb, bool reflection_pass) const {
 
 	if (no_draw()) return;
 	assert(!disabled());
@@ -431,7 +431,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 	case COLL_CYLINDER_ROT:
 	case COLL_TORUS:
 	case COLL_CAPSULE: {
-		float const scale(NDIV_SCALE*get_zoom_scale());
+		float const scale(NDIV_SCALE*get_zoom_scale()*(reflection_pass ? 0.5 : 1.0));
 		float const size(scale*sqrt(((max(radius, radius2) + 0.002)/distance_to_camera(get_closest_pt_on_line(get_camera_pos(), points[0], points[1])))));
 		int ndiv(min(N_CYL_SIDES, max(4, (int)size)));
 		bool const use_tcs(cp.tscale == 0.0); // even if not textured
@@ -475,7 +475,7 @@ void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shade
 		break;
 	}
 	case COLL_SPHERE: {
-		float const scale(NDIV_SCALE*get_zoom_scale()), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
+		float const scale(NDIV_SCALE*get_zoom_scale()*(reflection_pass ? 0.5 : 1.0)), size(scale*sqrt((radius + 0.002)/distance_to_camera(points[0])));
 		int const ndiv(min(N_SPHERE_DIV, max(5, (int)size)));
 		bool const use_tcs(cp.tscale == 0.0);
 		if (!use_tcs) {setup_cobj_sc_texgen(plus_z, shader);} // use texgen
