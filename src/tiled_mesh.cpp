@@ -1141,12 +1141,12 @@ void tile_t::pre_draw_grass_flowers(shader_t &s, bool use_cloud_shadows) const {
 }
 
 
-void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc) {
+unsigned tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_cloud_shadows, int lt_loc) {
 
-	if (grass_blocks.empty()) return; // or can test has_any_grass
+	if (grass_blocks.empty()) return 0; // or can test has_any_grass
 	float const grass_thresh(get_grass_thresh_pad());
 	point const camera(get_camera_pos());
-	if (get_min_dist_to_pt(camera) > grass_thresh) return; // too far away to draw
+	if (get_min_dist_to_pt(camera) > grass_thresh) return 0; // too far away to draw
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	bind_texture_tu(weight_tid, 3);
 	unsigned const grass_block_dim(get_grass_block_dim());
@@ -1156,6 +1156,7 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 	float const lod_scale(GRASS_LOD_SCALE/get_scaled_tile_radius());
 	float const block_grass_thresh(grass_thresh + (SQRT2*radius)/grass_block_dim);
 	point const adj_camera(camera + point(0.0, 0.0, 2.0*grass_length));
+	unsigned num_drawn(0);
 
 	for (unsigned y = 0; y < grass_block_dim; ++y) {
 		for (unsigned x = 0; x < grass_block_dim; ++x) {
@@ -1186,23 +1187,25 @@ void tile_t::draw_grass(shader_t &s, vector<vector<vector2d> > *insts, bool use_
 			vector<vector2d> &v(insts[lod][bix]);
 			if (v.empty()) continue;
 			glVertexAttribPointer(lt_loc, 2, GL_FLOAT, GL_FALSE, sizeof(vector2d), get_dynamic_vbo_ptr(&v.front(), v.size()*sizeof(vector2d)));
-			grass_tile_manager.render_block(bix, lod, 1.0, v.size());
+			num_drawn += grass_tile_manager.render_block(bix, lod, 1.0, v.size());
 			v.clear();
 		} // for bix
 	} // for lod
+	return num_drawn;
 }
 
 
-void tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
+unsigned tile_t::draw_flowers(shader_t &s, bool use_cloud_shadows) {
 
-	if (grass_blocks.empty()) return; // no grass, no flowers
+	if (grass_blocks.empty()) return 0; // no grass, no flowers
 	float const flower_thresh(FLOWER_REL_DIST*get_grass_thresh_pad());
-	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return; // too far away to draw
+	if (get_min_dist_to_pt(get_camera_pos()) > flower_thresh) return 0; // too far away to draw
 	flowers.gen_flowers(weight_data, stride, x1-xoff2, y1-yoff2); // mesh weight + tree dirt
-	if (flowers.empty()) return; // no flowers generated
+	if (flowers.empty()) return 0; // no flowers generated
 	pre_draw_grass_flowers(s, use_cloud_shadows);
 	flowers.check_vbo();
 	flowers.draw_triangles(s);
+	return flowers.size();
 }
 
 
@@ -2465,6 +2468,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 	if (reflection_pass) return; // no grass reflection (yet)
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
+	unsigned num_grass_drawn(0), num_flowers_drawn(0);
 
 	for (unsigned wpass = 0; wpass < 2; ++wpass) { // wind, no wind
 		for (unsigned spass = 0; spass < 2; ++spass) { // shadow maps, no shadow maps
@@ -2491,7 +2495,7 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 			for (unsigned i = 0; i < to_draw.size(); ++i) {
 				if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
 				if ((to_draw[i].second->get_dist_to_camera_in_tiles(0) > 0.5) != (int)wpass) continue; // xyz dist
-				to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
+				num_grass_drawn += to_draw[i].second->draw_grass(s, insts, use_cloud_shadows, lt_loc);
 			}
 			disable_instancing_for_shader_loc(lt_loc);
 			grass_tile_manager.end_draw();
@@ -2516,11 +2520,12 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 		for (unsigned i = 0; i < to_draw.size(); ++i) {
 			if (to_draw[i].second->using_shadow_maps() != (spass == 0)) continue;
-			to_draw[i].second->draw_flowers(s, use_cloud_shadows);
+			num_flowers_drawn += to_draw[i].second->draw_flowers(s, use_cloud_shadows);
 		}
 		disable_blend();
 		s.end_shader();
 	}
+	if (DEBUG_TILES) {cout << "grass blades drawn: " << num_grass_drawn << ", flowers drawn: " << num_flowers_drawn << endl;} // up to 2M / 100K
 }
 
 
