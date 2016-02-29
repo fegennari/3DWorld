@@ -451,14 +451,15 @@ void get_occluders() {
 		last_camera   = camera;
 	}
 	first_run = 0;
-	unsigned const ncobjs((unsigned)coll_objects.size());
-
-	//#pragma omp parallel for num_threads(2) schedule(static) // helps in some cases and hurts in others
-	for (unsigned i = startval; i < ncobjs; i += max(1U, skipval)) {
-		coll_obj &cobj(coll_objects[i]);
-		if (!cobj.fixed || cobj.group_id >= 0 || cobj.status != COLL_STATIC || cobj.cp.no_draw() || cobj.cp.surfs == EF_ALL) continue;
+	unsigned ix(0);
+	
+	for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
+		if (skipval > 0 && ((*i + startval) % skipval) != 0) continue;
+		coll_obj &cobj(coll_objects.get_cobj(*i));
+		if (cobj.group_id >= 0 || cobj.no_draw()) continue;
+		//if (!cobj.is_cobj_visible()) continue; // VFC + occlusion culling (previous frame) - faster for slow moving camera, but misses occlusions for fast moving camera
 		cobj.occluders.resize(0);
-		get_coll_line_cobjs_tree(camera, cobj.get_cube_center(), i, &cobj.occluders, NULL, 0, 1);
+		get_coll_line_cobjs_tree(camera, cobj.get_cube_center(), *i, &cobj.occluders, NULL, 0, 1);
 	}
 	if (skipval == 0) {PRINT_TIME("Occlusion Preprocessing");}
 }
