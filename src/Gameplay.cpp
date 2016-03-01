@@ -2325,6 +2325,10 @@ void print_weapon(int weapon_id) {
 	print_text_onscreen(weapons[weapon_id].name, WHITE, 1.0, MESSAGE_TIME/4, 1);
 }
 
+void print_debug_text(string const &text) {
+	print_text_onscreen(text, YELLOW, 1.0, MESSAGE_TIME, 100);
+}
+
 
 // ***********************************
 // GAME CONTROL/QUERY CODE

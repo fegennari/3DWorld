@@ -762,7 +762,8 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	draw_cobjs_group(reflect_cobjs,      cdb, reflection_pass, s, 2, 0, 1);
 	draw_cobjs_group(reflect_cobjs_nm,   cdb, reflection_pass, s, 2, 1, 1);
 	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
-	//if (draw_solid) PRINT_TIME("Final Draw");
+	//if (draw_solid) {PRINT_TIME("Final Draw");}
+	//PRINT_TIME_ONSCREEN("Final Draw");
 }
 
 
