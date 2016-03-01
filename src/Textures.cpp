@@ -921,6 +921,11 @@ void bind_2d_texture(unsigned tid, bool is_array, bool multisample) {
 	assert(glIsTexture(tid)); // too slow?
 }
 
+void bind_cube_map_texture(unsigned tid, bool is_array) {
+	glBindTexture((is_array ? GL_TEXTURE_CUBE_MAP_ARRAY : GL_TEXTURE_CUBE_MAP), tid);
+	assert(glIsTexture(tid));
+}
+
 
 // 2D texture
 void setup_texture(unsigned &tid, bool mipmap, bool wrap_s, bool wrap_t, bool mirror_s, bool mirror_t, bool nearest, float anisotropy, bool is_array, bool multisample) {
@@ -963,11 +968,32 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 }
 
 
+void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate) { // Note: no mipmaps
+
+	assert(tid == 0);
+	glGenTextures(1, &tid);
+	bind_cube_map_texture(tid);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	if (allocate) {
+		glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GL_RGB8, tex_size, tex_size);
+		//for (unsigned i = 0; i < 6; ++i) {glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_RGB8, tex_size, tex_size, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);}
+	}
+	//gluBuild2DMipmaps(GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_RGB8, tex_size, tex_size, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+	//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	//glEnable(GL_TEXTURE_CUBE_MAP);
+}
+
+
 void frame_buffer_to_texture(unsigned &tid, bool is_depth) {
 
 	if (tid) {bind_2d_texture(tid);} else {setup_texture(tid, 0, 0, 0);}
 	glTexImage2D(GL_TEXTURE_2D, 0, (is_depth ? GL_DEPTH_COMPONENT : GL_RGB8), window_width, window_height, 0,
-		(is_depth ? GL_DEPTH_COMPONENT : GL_RGB), (is_depth ? GL_FLOAT : GL_UNSIGNED_BYTE), 0);
+		(is_depth ? GL_DEPTH_COMPONENT : GL_RGB), (is_depth ? GL_FLOAT : GL_UNSIGNED_BYTE), nullptr);
 	glReadBuffer(GL_BACK);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, window_width, window_height);
 }
