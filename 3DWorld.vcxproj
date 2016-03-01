@@ -553,6 +553,7 @@
     <ClCompile Include="src\profiler.cpp" />
     <ClCompile Include="src\ray_trace.cpp" />
     <ClCompile Include="src\read_3ds.cpp" />
+    <ClCompile Include="src\reflections.cpp" />
     <ClCompile Include="src\scenery.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
