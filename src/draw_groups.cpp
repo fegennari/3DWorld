@@ -229,6 +229,7 @@ void draw_select_groups(int solid) {
 	setup_smoke_shaders(s, 0.01, 0, 1, 1, 1, 1, 1, lt_atten, 1, 0, 0, 1, force_tsl, burn_tex_scale);
 	if (cobj_z_bias < 0.002)     {s.add_uniform_float("z_bias", 0.002);} // reset larger
 	if (indir_vert_offset > 0.1) {s.add_uniform_float("indir_vert_offset", 0.1);} // reset smaller
+	s.add_uniform_float("winding_normal_sign", 1.0);
 	lt_atten_manager_t lt_atten_manager(s);
 	if (!solid) {lt_atten_manager.enable();}
 	select_no_texture();
