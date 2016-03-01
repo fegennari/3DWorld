@@ -99,7 +99,6 @@ set<unsigned char> keys, keyset;
 char game_mode_string[MAX_CHARS] = {"640x480"};
 unsigned init_item_counts[] = {2, 2, 2, 6, 6}; // HEALTH, SHIELD, POWERUP, WEAPON, AMMO
 vector<cube_t> smoke_bounds;
-reflect_plane_selector reflect_planes;
 
 // camera variables
 double c_radius(DEF_CRADIUS), c_theta(DEF_CTHETA), c_phi(DEF_CPHI), up_theta(DEF_UPTHETA), camera_y(DEF_CAMY);
@@ -130,6 +129,7 @@ extern pt_line_drawer obj_pld;
 extern tree_cont_t t_trees;
 extern dpart_params_t dp_params;
 extern hmap_params_t hmap_params;
+extern reflect_plane_selector reflect_planes;
 
 
 void init_keyset();

@@ -123,9 +123,6 @@ void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, boo
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_bmap, bool use_noise_tex,
 	bool z_top_test, float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
 void setup_object_render_data();
-bool use_reflection_plane();
-bool enable_reflection_plane();
-float get_reflection_plane();
 void end_group(int &last_group_id);
 void draw_coll_surfaces(bool draw_trans, bool reflection_pass);
 void draw_stars(float alpha);
@@ -822,6 +819,14 @@ void start_video_capture(std::string const &fn);
 void end_video_capture();
 void toggle_video_capture();
 void video_capture_end_frame();
+
+// function prototypes - reflections
+bool enable_reflection_plane();
+bool use_reflection_plane();
+float get_reflection_plane();
+bool use_reflect_plane_for_cobj(coll_obj const &c);
+unsigned create_gm_z_reflection();
+unsigned create_tt_reflection(float terrain_zmin);
 
 #include "inlines.h"
 

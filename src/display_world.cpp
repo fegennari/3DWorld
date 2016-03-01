@@ -36,7 +36,7 @@ float const FOG_COLOR_ATTEN    = 0.75;
 
 bool mesh_invalidated(1), no_asteroid_dust(0), fog_enabled(0);
 int iticks(0), time0(0), scrolling(0), dx_scroll(0), dy_scroll(0), timer_a(0);
-unsigned reflection_tid(0), enabled_lights(0); // 8 bit flags
+unsigned enabled_lights(0); // 8 bit flags
 float fticks(0.0), tfticks(0.0), tstep(0.0), camera_shake(0.0), cur_fog_end(1.0);
 upos_point_type cur_origin(all_zeros);
 colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUND_DAY), sunlight_color(SUN_LT_C);
@@ -44,7 +44,7 @@ colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUN
 
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z;
-extern unsigned inf_terrain_fire_mode;
+extern unsigned inf_terrain_fire_mode, reflection_tid;
 extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
@@ -67,9 +67,6 @@ point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
 void run_postproc_effects();
 
-bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist);
-unsigned create_gm_z_reflection();
-
 
 void glClearColor_rgba(const colorRGBA &color) {
 	glClearColor(color.R, color.G, color.B, color.A);
@@ -88,7 +85,6 @@ void set_standard_viewport() {
 	glViewport(0, 0, window_width, window_height);
 }
 
-
 void set_player_pdu(vector3d const &rv1, vector3d const &rv2) {
 
 	vector3d cview_dir_n(cview_dir), upv(up_vector);
@@ -98,7 +94,6 @@ void set_player_pdu(vector3d const &rv1, vector3d const &rv2) {
 	set_player_dir(cview_dir_n.get_norm());
 	set_univ_pdu();
 }
-
 
 void do_look_at() {
 
@@ -1094,195 +1089,6 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass,
 	camera_pdu = prev_camera_pdu;
 	camera_pos = prev_camera_pos;
 	if (occ_cull_enabled) {display_mode |= 0x08;}
-}
-
-
-void apply_z_mirror(float zval) {
-
-	fgMatrixMode(FG_MODELVIEW);
-	fgPushMatrix();
-	fgTranslate(0.0, 0.0, 2*zval); // translate to zval and back
-	fgScale(1.0, 1.0, -1.0); // scale in z
-	//mirror_about_plane(plus_z, point(0.0, 0.0, zval));
-}
-
-void setup_viewport_and_proj_matrix(unsigned xsize, unsigned ysize) {
-
-	glViewport(0, 0, xsize, ysize);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	fgMatrixMode(FG_PROJECTION);
-	fgPushMatrix();
-	set_perspective(PERSP_ANGLE, 1.0);
-	do_look_at();
-}
-
-void render_to_texture(unsigned tid, unsigned xsize, unsigned ysize) {
-
-	bind_2d_texture(tid);
-	glReadBuffer(GL_BACK);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, xsize, ysize); // glCopyTexSubImage2D copies the frame buffer to the bound texture
-}
-
-void render_to_texture_cube_map(unsigned tid, unsigned tex_size, unsigned face_ix) {
-
-	assert(face_ix < 6);
-	bind_cube_map_texture(tid);
-	glReadBuffer(GL_BACK);
-	glCopyTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+face_ix, 0, 0, 0, 0, 0, tex_size, tex_size);
-}
-
-void restore_matrices_and_clear() {
-
-	restore_prev_mvm_pjm_state();
-	set_standard_viewport();
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-}
-
-
-void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &center, float near_plane, float far_plane) {
-
-	//RESET_TIME;
-	pos_dir_up const old_camera_pdu(camera_pdu);
-
-	for (unsigned dim = 0; dim < 3; ++dim) {
-		for (unsigned dir = 0; dir < 2; ++dir) {
-			unsigned const face_ix(2*dim + !dir);
-			vector3d const upv((dim == 2) ? plus_x : plus_z); // ???
-			vector3d view_dir(zero_vector);
-			view_dir[dim] = (dir ? 1.0 : -1.0);
-			camera_pdu    = pos_dir_up(center, view_dir, upv, 90.0, near_plane, far_plane, 1.0, 1);
-			pos_dir_up const pdu(camera_pdu);
-			setup_viewport_and_proj_matrix(tex_size, tex_size);
-			draw_scene_from_custom_frustum(pdu, 1, 1, 1); // reflection_pass=1, include_mesh=1, disable_occ_cull=1
-			render_to_texture_cube_map(tid, tex_size, face_ix); // render reflection to texture
-		}
-	}
-	camera_pdu = old_camera_pdu;
-	restore_matrices_and_clear(); // reset state
-	update_shadow_matrices(); // restore
-	//PRINT_TIME("Create Reflection Cube Map");
-}
-
-void create_reflection_cube_map(unsigned tid, unsigned tex_size, cube_t const &cube) {
-	create_reflection_cube_map(tid, tex_size, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP);
-}
-
-// render scene reflection to texture (ground mode and tiled terrain mode)
-void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float zval, cube_t const &bcube, float min_camera_dist) {
-
-	//RESET_TIME;
-	// Note: we need to transform the camera frustum here, even though it's also done when drawing, because we need to get the correct projection matrix
-	enable_clip_plane_z = 1;
-	clip_plane_z        = zval; // hack to tell the shader setup code to use this z clip plane
-	pos_dir_up const old_camera_pdu(camera_pdu);
-	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
-	// FIXME: use x/y bcube bounds to clip reflected view frustum
-	camera_pdu.near_ = max(camera_pdu.near_, min_camera_dist); // move near clip plane to closest edge of ref plane bcube (optimization)
-	pos_dir_up const refl_camera_pdu(camera_pdu);
-	setup_viewport_and_proj_matrix(xsize, ysize);
-	apply_z_mirror(zval); // setup mirror transform
-	draw_scene_from_custom_frustum(refl_camera_pdu, 1, 0, 1); // reflection_pass=1, include_mesh=0, disable_occ_cull=1
-	render_to_texture(tid, xsize, ysize); // render reflection to texture
-	camera_pdu = old_camera_pdu;
-	restore_matrices_and_clear(); // reset state
-	update_shadow_matrices(); // restore
-	enable_clip_plane_z = 0;
-	//PRINT_TIME("Create Reflection Texture");
-}
-
-void create_tt_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, float terrain_zmin) {
-
-	//RESET_TIME;
-	pos_dir_up const old_camera_pdu(camera_pdu); // reflect camera frustum used for VFC
-	camera_pdu.apply_z_mirror(water_plane_z); // setup reflected camera frustum
-	pos_dir_up const refl_camera_pdu(camera_pdu);
-	pre_draw_tiled_terrain();
-	setup_viewport_and_proj_matrix(xsize, ysize);
-	apply_z_mirror(water_plane_z); // setup mirror transform
-	camera_pdu = refl_camera_pdu; // reset reflected PDU
-
-	// draw partial scene
-	if (!combined_gu) {
-		draw_sun_moon_stars(1);
-		draw_sun_flare(1.5);
-	}
-	draw_cloud_planes(terrain_zmin, 1, 1, 0); // slower but a nice effect
-	
-	if (get_camera_pos().z <= get_tt_cloud_level()) { // camera is below the clouds
-		if (show_lightning) {draw_tiled_terrain_lightning(1);}
-		draw_tiled_terrain(1);
-		if (show_lightning) {end_tiled_terrain_lightning();}
-		draw_tiled_terrain_clouds(1);
-	}
-	render_to_texture(tid, xsize, ysize); // render reflection to texture
-	camera_pdu = old_camera_pdu; // restore camera_pdu
-	restore_matrices_and_clear(); // reset state
-	//PRINT_TIME("Create Reflection Texture");
-}
-
-
-// Note: reflection_tid is shared between tiled terrain mode and ground mode, since it's the same size and only one can be used at a time
-void setup_reflection_texture(unsigned &tid, unsigned xsize, unsigned ysize) {
-
-	static unsigned last_xsize(0), last_ysize(0);
-
-	if (last_xsize != xsize || last_ysize != ysize) {
-		free_texture(tid);
-		last_xsize = xsize;
-		last_ysize = ysize;
-	}
-	if (!tid) {
-		bool const wrap = 0; // set to 1 for debugging
-		setup_texture(tid, 0, wrap, wrap);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, xsize, ysize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	}
-	assert(glIsTexture(tid));
-}
-
-void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size) {
-
-	static unsigned last_size(0);
-
-	if (last_size != tex_size) {
-		free_texture(tid);
-		last_size = tex_size;
-	}
-	if (!tid) {setup_cube_map_texture(tid, tex_size, 1);} // allocate=1
-	assert(glIsTexture(tid));
-}
-
-unsigned create_gm_z_reflection() {
-
-	if (display_mode & 0x20) return 0; // reflections not enabled
-	cube_t bcube;
-	float min_camera_dist(0.0);
-	if (!get_reflection_plane_bounds(bcube, min_camera_dist)) return 0; // no reflective surfaces
-	float zval(get_reflection_plane());
-	zval = max(bcube.d[2][0], min(bcube.d[2][1], zval)); // clamp to bounds of actual reflecting cobj top surfaces
-	unsigned const xsize(window_width/2), ysize(window_height/2);
-	setup_reflection_texture(reflection_tid, xsize, ysize);
-	create_gm_reflection_texture(reflection_tid, xsize, ysize, zval, bcube, min_camera_dist);
-	check_gl_error(999);
-	return reflection_tid;
-}
-
-void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane) {
-
-	if (display_mode & 0x20) return; // reflections not enabled
-	unsigned const tex_size(min(window_width, window_height)); // FIXME: make a power of 2 rounded down?
-	setup_cube_map_reflection_texture(tid, tex_size);
-	create_reflection_cube_map(tid, tex_size, center, near_plane, FAR_CLIP);
-	check_gl_error(998);
-}
-
-unsigned create_tt_reflection(float terrain_zmin) {
-
-	if (display_mode & 0x20) return 0; // reflections not enabled
-	unsigned const xsize(window_width/2), ysize(window_height/2);
-	setup_reflection_texture(reflection_tid, xsize, ysize);
-	create_tt_reflection_texture(reflection_tid, xsize, ysize, terrain_zmin);
-	check_gl_error(999);
-	return reflection_tid;
 }
 
 

@@ -848,24 +848,3 @@ void lt_atten_manager_t::next_sphere(float light_atten, float refract_ix, point 
 	next_object(light_atten, refract_ix);
 }
 
-
-void reflect_plane_selector::select_best_reflection_plane() {
-
-	if (empty()) return;
-	point const camera(get_camera_pos());
-	float best_dist(0.0);
-	sel_cube = -1; // reset to invalid
-
-	// find the closest plane below the player
-	for (unsigned i = 0; i < bcubes.size(); ++i) {
-		// Note: reflection planes should not overlap in z; if this holds, we can use either z1 or z2 for determining ordering
-		cube_t const &c(bcubes[i]);
-		float const zval(c.d[2][0]), dist(camera.z - zval);
-		//cout << TXT(dist) << endl;
-		if (dist <= 0.0) continue; // above the camera
-		if (best_dist == 0.0 || dist < best_dist) {best_dist = dist; sel_cube = i;}
-	}
-	//cout << TXT(sel_cube) << endl;
-}
-
-

@@ -29,9 +29,8 @@ struct sky_pos_orient {
 };
 
 
-bool enable_clip_plane_z(0);
 unsigned depth_tid(0), frame_buffer_RGB_tid(0);
-float sun_radius(0.0), moon_radius(0.0), earth_radius(0.0), brightness(1.0), clip_plane_z(0.0);
+float sun_radius(0.0), moon_radius(0.0), earth_radius(0.0), brightness(1.0);
 colorRGB cur_ambient(BLACK), cur_diffuse(BLACK);
 point sun_pos, moon_pos;
 gl_light_params_t gl_light_params[MAX_SHADER_LIGHTS];
@@ -43,11 +42,11 @@ pt_line_drawer bubble_pld;
 
 extern bool have_sun, using_lightmap, has_dl_sources, has_spotlights, has_line_lights, smoke_exists, two_sided_lighting, tree_indir_lighting;
 extern bool group_back_face_cull, have_indir_smoke_tex, combined_gu, enable_depth_clamp, dynamic_smap_bias, volume_lighting, dl_smap_enabled, underwater;
-extern bool enable_gamma_correct, smoke_dlights;
+extern bool enable_gamma_correct, smoke_dlights, enable_clip_plane_z;
 extern int is_cloudy, iticks, frame_counter, display_mode, show_fog, use_smoke_for_fog, num_groups, xoff, yoff;
 extern int window_width, window_height, game_mode, draw_model, camera_mode, DISABLE_WATER, animate2, camera_coll_id;
 extern unsigned smoke_tid, dl_tid, create_voxel_landscape, enabled_lights, reflection_tid, scene_smap_vbo_invalid, sky_zval_tid;
-extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias;
+extern float zmin, light_factor, fticks, perspective_fovy, perspective_nclip, cobj_z_bias, clip_plane_z;
 extern float temperature, atmosphere, zbottom, indir_vert_offset, rain_wetness, snow_cov_amt, NEAR_CLIP, FAR_CLIP;
 extern point light_pos, mesh_origin, flow_source, surface_pos;
 extern vector3d wind;
@@ -76,17 +75,14 @@ extern reflect_plane_selector reflect_planes;
 
 void create_dlight_volumes();
 void create_sky_vis_zval_texture(unsigned &tid);
-cube_t get_all_models_bcube(bool only_reflective=0);
 
 
 void set_fill_mode() {
 	glPolygonMode(GL_FRONT_AND_BACK, ((draw_model == 0) ? GL_FILL : GL_LINE));
 }
-
 void ensure_filled_polygons() {
 	if (draw_model != 0) {glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);} // always filled
 }
-
 void reset_fill_mode() {
 	if (draw_model != 0) {set_fill_mode();}
 }
@@ -513,57 +509,6 @@ void setup_object_render_data() {
 	get_occluders();
 	if (TIMETEST) {PRINT_TIME("5 Get Occluders");}
 	//scene_smap_vbo_invalid = 0; // needs to be after dlights update
-}
-
-
-bool  enable_reflection_plane() {return ((display_mode & 0x10) && !reflect_planes.empty());}
-bool  use_reflection_plane   () {return (enable_reflection_plane() && reflect_planes.enabled() && get_camera_pos().z > reflect_planes.get_selected().d[2][0]);}
-float get_reflection_plane   () {return reflect_planes.get_refl_plane();}
-
-bool use_reflect_plane_for_cobj(coll_obj const &c) {
-	if (c.type != COLL_CUBE && (c.type != COLL_CYLINDER || (c.cp.surfs & 1))) return 0;
-	if (!c.is_wet() && c.cp.spec_color.get_luminance() < 0.25) return 0;
-	cube_t const &bc(reflect_planes.get_selected());
-	return (c.intersects(bc) && c.d[2][1] <= bc.d[2][1] && camera_pdu.cube_visible(c));
-}
-
-void proc_refl_bcube(cube_t const &c, cube_t &bcube, float &min_camera_dist, bool &bcube_set) {
-
-	point const camera(get_camera_pos());
-	float const dist(p2p_dist(camera, c.closest_pt(camera)));
-		
-	if (bcube_set) {
-		bcube.union_with_cube(c);
-		min_camera_dist = min(dist, min_camera_dist);
-	}
-	else {
-		bcube = c;
-		bcube_set = 1;
-		min_camera_dist = dist;
-	}
-}
-
-bool get_reflection_plane_bounds(cube_t &bcube, float &min_camera_dist) {
-
-	reflect_planes.select_best_reflection_plane();
-	if (!use_reflection_plane()) return 0;
-	bool bcube_set(0);
-	point const camera(get_camera_pos());
-
-	for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
-		unsigned cix(*i);
-		coll_obj const &c(coll_objects.get_cobj(cix));
-		if (c.no_draw() || c.d[2][1] >= camera.z || !use_reflect_plane_for_cobj(c)) continue;
-		cube_t cc(c);
-		cc.d[2][0] = cc.d[2][1]; // shrink to top surface only
-		proc_refl_bcube(cc, bcube, min_camera_dist, bcube_set);
-	}
-	cube_t const models_refl_bcube(get_all_models_bcube(1));
-	
-	if (!models_refl_bcube.is_zero_area() && models_refl_bcube.intersects(reflect_planes.get_selected())) {
-		proc_refl_bcube(models_refl_bcube, bcube, min_camera_dist, bcube_set);
-	}
-	return bcube_set;
 }
 
 
