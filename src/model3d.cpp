@@ -1310,7 +1310,6 @@ void model3d::mark_mat_as_used(int mat_id) {
 
 
 void model3d::optimize() {
-
 	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->optimize();}
 	unbound_geom.optimize();
 }
@@ -1336,14 +1335,12 @@ void model3d::free_context() {
 	}
 	unbound_geom.free_vbos();
 	clear_smaps();
+	free_texture(model_refl_tid);
 }
 
 
 void model3d::load_all_used_tids() {
-
-	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {
-		m->init_textures(tmgr);
-	}
+	for (deque<material_t>::iterator m = materials.begin(); m != materials.end(); ++m) {m->init_textures(tmgr);}
 }
 
 
@@ -1491,9 +1488,10 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
 
 
 // non-const due to vbo caching, normal computation, etc.
-void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate) {
+void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
 
-	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
+	cube_t bcube_xf(bcube + xlate);
+	if (transforms.empty() && !is_cube_visible_to_camera(bcube_xf, is_shadow_pass)) return;
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xf(xlate);
 	camera_pdu_transform_wrapper cptw(xf);
@@ -1501,14 +1499,15 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
-#if 0
-	if (reflective && !is_shadow_pass && !reflection_pass && !is_z_prepass) {
-		if (model_refl_tid == 0) {
-			// FIXME: reflection texture setup (needs to be created elsewhere)
+
+	if (reflective == 2 && reflect_mode == 2 && !is_shadow_pass && !reflection_pass && !is_z_prepass) { // cube map reflections
+		if (!transforms.empty()) {
+			assert(transforms.size() == 1); // FIXME: instancing not supported with a single cube map refelction texture
+			bcube_xf = transforms[0].get_xformed_cube(bcube_xf);
 		}
-		if (model_refl_tid > 0) {bind_texture_tu(model_refl_tid, 14);} // tu_id=14
+		if (!model_refl_tid) {create_cube_map_reflection(model_refl_tid, bcube_xf);}
+		if ( model_refl_tid) {bind_texture_tu(model_refl_tid, 14);} // tu_id=14
 	}
-#endif
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, &xlate, &mvm);
 	}
@@ -1718,44 +1717,49 @@ void model3ds::clear() {
 	tmgr.clear();
 }
 
-
 void model3ds::free_context() {
 
 	for (iterator m = begin(); m != end(); ++m) {m->free_context();}
 	tmgr.free_tids();
 }
 
-
 void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const &xlate) {
 	
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
-	set_fill_mode();
-	bool needs_alpha_test(0), needs_bump_maps(0), any_reflective(0), any_non_reflective(0);
+	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0);
 	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
 	bool const enable_reflections(!is_shadow_pass && !reflection_pass && reflection_tid > 0 && use_reflection_plane());
 	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
+	shader_t s;
+	set_fill_mode();
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
-		((enable_reflections && m->is_reflective()) ? any_reflective : any_non_reflective) = 1;
+		if      (enable_reflections && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
+		else if (enable_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
+		else                                                        {any_non_reflective      = 1;}
 		if (shader_effects  ) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 		if (use_custom_smaps) {m->setup_shadow_maps();} else if (!is_shadow_pass) {m->clear_smaps();}
 	}
-	shader_t s;
-
+	if (any_planar_reflective && any_cube_map_reflective) {
+		cerr << "Error: Cannot mix planar and cube map reflections for model3d" << endl;
+		exit(1); // FIXME: better/earlier error? make this work?
+	}
 	if (use_z_prepass && !is_shadow_pass && !reflection_pass) { // check use_mvm?
 		// faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
 		s.set_prefix("#define POS_FROM_EPOS_MULT", 0); // VS - needed to make transformed vertices agree with the normal rendering flow
 		s.begin_color_only_shader(BLACK); // don't even need colors, only need depth
-		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 0, 1, 0, 3, xlate);}
+		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 0, 1, 0, 3, 0, xlate);}
 		s.end_shader();
 		glDepthFunc(GL_LEQUAL);
 	}
+	int const reflect_mode(any_planar_reflective ? 1 : (any_cube_map_reflective ? 2 : 0));
+
 	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
 	for (int bmap_pass = (needs_bump_maps ? 2 : 1); bmap_pass >= 0; --bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
-			for (unsigned ref_pass = (any_non_reflective ? 0U : 1U); ref_pass < (any_reflective ? 2U : 1U); ++ref_pass) {
+			for (unsigned ref_pass = (any_non_reflective ? 0U : 1U); ref_pass < (reflect_mode ? 2U : 1U); ++ref_pass) {
 				bool reset_bscale(0);
 
 				if (is_shadow_pass) {
@@ -1766,10 +1770,11 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 					int const is_outside((is_shadow_pass || reflection_pass) ? 0 : 2); // enable wet effect coverage mask
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
-					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting, 0.0, model_triplanar_tc_scale, 0, (ref_pass != 0), is_outside);
+					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting,
+						0.0, model_triplanar_tc_scale, 0, (ref_pass ? reflect_mode : 0), is_outside);
 					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
-					if (ref_pass) {bind_texture_tu(reflection_tid, 14);}
+					if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}
 					if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", (reflection_pass ? -1.0 : 1.0));}
 				}
 				else {
@@ -1777,7 +1782,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 					s.clear_specular();
 				}
 				for (iterator m = begin(); m != end(); ++m) { // non-const
-					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), xlate);
+					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), reflect_mode, xlate);
 				}
 				if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
 				s.clear_specular(); // may be unnecessary
@@ -1790,10 +1795,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 
 
 bool model3ds::has_any_transforms() const {
-
-	for (const_iterator m = begin(); m != end(); ++m) {
-		if (m->has_any_transforms()) return 1;
-	}
+	for (const_iterator m = begin(); m != end(); ++m) {if (m->has_any_transforms()) return 1;}
 	return 0;
 }
 
@@ -1805,7 +1807,7 @@ cube_t model3ds::get_bcube(bool only_reflective) const {
 
 	for (const_iterator m = begin(); m != end(); ++m) {
 		cube_t const bb(m->calc_bcube_including_transforms());
-		if (only_reflective && !m->is_reflective()) continue;
+		if (only_reflective && !m->is_planar_reflective()) continue;
 		if (!bcube_set) {bcube = bb; bcube_set = 1;} else {bcube.union_with_cube(bb);}
 	}
 	return bcube;

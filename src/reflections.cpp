@@ -117,6 +117,7 @@ void restore_matrices_and_clear() {
 void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &center, float near_plane, float far_plane) {
 
 	//RESET_TIME;
+	assert(tid);
 	pos_dir_up const old_camera_pdu(camera_pdu);
 
 	for (unsigned dim = 0; dim < 3; ++dim) {
@@ -125,15 +126,19 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 			vector3d const upv((dim == 2) ? plus_x : plus_z); // ???
 			vector3d view_dir(zero_vector);
 			view_dir[dim] = (dir ? 1.0 : -1.0);
-			camera_pdu    = pos_dir_up(center, view_dir, upv, 90.0, near_plane, far_plane, 1.0, 1);
+			camera_pdu    = pos_dir_up(center, view_dir, upv, 45.0*TO_RADIANS, near_plane, far_plane, 1.0, 1); // 90 degree FOV
 			pos_dir_up const pdu(camera_pdu);
 			setup_viewport_and_proj_matrix(tex_size, tex_size);
 			draw_scene_from_custom_frustum(pdu, 1, 1, 1); // reflection_pass=1, include_mesh=1, disable_occ_cull=1
 			render_to_texture_cube_map(tid, tex_size, face_ix); // render reflection to texture
+			fgMatrixMode(FG_PROJECTION);
+			fgPopMatrix();
+			fgMatrixMode(FG_MODELVIEW);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // reset state
 		}
 	}
 	camera_pdu = old_camera_pdu;
-	restore_matrices_and_clear(); // reset state
+	set_standard_viewport(); // restore
 	update_shadow_matrices(); // restore
 	//PRINT_TIME("Create Reflection Cube Map");
 }
@@ -241,13 +246,17 @@ unsigned create_gm_z_reflection() {
 	return reflection_tid;
 }
 
-void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane) {
+void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane) {
 
 	if (display_mode & 0x20) return; // reflections not enabled
 	unsigned const tex_size(min(window_width, window_height)); // FIXME: make a power of 2 rounded down?
 	setup_cube_map_reflection_texture(tid, tex_size);
 	create_reflection_cube_map(tid, tex_size, center, near_plane, FAR_CLIP);
 	check_gl_error(998);
+}
+
+void create_cube_map_reflection(unsigned &tid, cube_t const &cube) {
+	create_cube_map_reflection(tid, cube.get_cube_center(), max(NEAR_CLIP, 0.51f*cube.max_len()), FAR_CLIP); // slightly more than the cube half width in max dim
 }
 
 unsigned create_tt_reflection(float terrain_zmin) {

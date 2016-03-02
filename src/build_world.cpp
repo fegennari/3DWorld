@@ -1083,7 +1083,8 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	vector<coll_tquad> ppts;
 	// tree state
 	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
-	bool enable_leaf_wind(1), remove_t_junctions(0), reflective(0);
+	bool enable_leaf_wind(1), remove_t_junctions(0);
+	int reflective(0); // reflective: 0=none, 1=planar, 2=cube map
 	typedef map<string, cobj_params> material_map_t;
 	material_map_t materials;
 	multi_trigger_t triggers;
@@ -1123,7 +1124,11 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				}
 				else if (keyword == "reflective") {
 					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "reflective", coll_obj_file);}
-					reflective = (ivals[0] != 0);
+					reflective = ((ivals[0] != 0) ? 1 : 0);
+				}
+				else if (keyword == "cube_map_ref") {
+					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "cube_map_ref", coll_obj_file);}
+					reflective = ((ivals[0] != 0) ? 2 : 0);
 				}
 				else if (keyword == "start_cobj_group") {cobj.cgroup_id = cobj_groups.new_group();}
 				else if (keyword == "end_cobj_group") {cobj.cgroup_id = -1;}

@@ -381,7 +381,8 @@ class model3d {
 	vector<polygon_t> split_polygons_buffer;
 	cube_t bcube;
 	unsigned model_refl_tid;
-	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, reflective;
+	int reflective; // reflective: 0=none, 1=planar, 2=cube map
+	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps;
 
 	// materials
 	deque<material_t> materials;
@@ -407,9 +408,9 @@ class model3d {
 public:
 	texture_manager &tmgr; // stores all textures
 
-	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, bool reflective_=0)
-		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), model_refl_tid(0), from_model3d_file(0),
-		has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), reflective(reflective_), tmgr(tmgr_) {}
+	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0)
+		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), model_refl_tid(0), reflective(reflective_),
+		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -442,7 +443,7 @@ public:
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
 		base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm=nullptr);
-	void render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, vector3d const &xlate);
+	void render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate);
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
@@ -451,7 +452,8 @@ public:
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
 	bool get_needs_bump_maps () const {return needs_bump_maps;}
-	bool is_reflective() const {return reflective;}
+	bool is_planar_reflective() const {return (reflective == 1);}
+	bool is_cube_map_reflective() const {return (reflective == 2);}
 	void get_stats(model3d_stats_t &stats) const;
 	void show_stats() const;
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
@@ -506,7 +508,7 @@ void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube(bool only_reflective=0);
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, bool reflective, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
+	colorRGBA const &def_c, int reflective, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
 
 
 #endif // _MODEL3D_H_

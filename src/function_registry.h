@@ -118,7 +118,7 @@ unsigned get_sky_zval_texture();
 void invalidate_snow_coverage();
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
 	int has_lt_atten=0, bool use_smap=0, int use_bmap=0, bool use_spec_map=0, bool use_mvm=0, bool force_tsl=0, float burn_tex_scale=0.0,
-	float triplanar_texture_scale=0.0, bool use_depth_trans=0, bool enable_reflections=0, int is_outside=0, bool enable_rain_snow=1);
+	float triplanar_texture_scale=0.0, bool use_depth_trans=0, int enable_reflect=0, int is_outside=0, bool enable_rain_snow=1);
 void set_tree_branch_shader(shader_t &s, bool direct_lighting, bool dlights, bool use_smap);
 void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting, bool dlights, bool use_smap, bool use_bmap, bool use_noise_tex,
 	bool z_top_test, float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
@@ -829,6 +829,8 @@ float get_reflection_plane();
 bool use_reflect_plane_for_cobj(coll_obj const &c);
 unsigned create_gm_z_reflection();
 unsigned create_tt_reflection(float terrain_zmin);
+void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane);
+void create_cube_map_reflection(unsigned &tid, cube_t const &cube);
 
 #include "inlines.h"
 

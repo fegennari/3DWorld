@@ -344,9 +344,10 @@ void invalidate_snow_coverage() {free_texture(sky_zval_tid);}
 // use_texgen: 0 = use texture coords, 1 = use standard texture gen matrix, 2 = use custom shader tex0_s/tex0_t, 3 = use vertex id for texture
 // use_bmap  : 0 = none, 1 = auto generate tangent vector, 2 = tangent vector in vertex attribute
 // is_outside: 0 = inside, 1 = outside, 2 = use snow coverage mask
+// enable_reflect: 0 = none, 1 = planar, 2 = cube map
 void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep_alpha, bool indir_lighting, bool direct_lighting, bool dlights, bool smoke_en,
 	int has_lt_atten, bool use_smap, int use_bmap, bool use_spec_map, bool use_mvm, bool force_tsl, float burn_tex_scale, float triplanar_texture_scale,
-	bool use_depth_trans, bool enable_reflections, int is_outside, bool enable_rain_snow)
+	bool use_depth_trans, int enable_reflect, int is_outside, bool enable_rain_snow)
 {
 	bool const triplanar_tex(triplanar_texture_scale != 0.0);
 	bool const use_burn_mask(burn_tex_scale > 0.0);
@@ -356,7 +357,8 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	if (use_burn_mask     ) {s.set_prefix("#define APPLY_BURN_MASK",        1);} // FS
 	if (triplanar_tex     ) {s.set_prefix("#define TRIPLANAR_TEXTURE",      1);} // FS
 	if (use_depth_trans   ) {s.set_prefix("#define USE_DEPTH_TRANSPARENCY", 1);} // FS
-	if (enable_reflections) {s.set_prefix("#define ENABLE_REFLECTIONS",     1);} // FS
+	if (enable_reflect ==1) {s.set_prefix("#define ENABLE_REFLECTIONS",     1);} // FS
+	if (enable_reflect ==2) {s.set_prefix("#define ENABLE_CUBE_MAP_REFLECT",1);} // FS
 	if (enable_puddles    ) {s.set_prefix("#define ENABLE_PUDDLES",         1);} // FS
 	if (is_snowy          ) {s.set_prefix("#define ENABLE_SNOW_COVERAGE",   1);} // FS
 	float const water_depth(setup_underwater_fog(s, 1)); // FS
@@ -365,7 +367,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	s.set_vert_shader("texture_gen.part+bump_map.part+leaf_wind.part+no_lt_texgen_smoke");
 	string fstr("linear_fog.part+bump_map.part+spec_map.part+ads_lighting.part*+shadow_map.part*+dynamic_lighting.part*+line_clip.part*+indir_lighting.part+black_body_burn.part+");
 	if (smoke_en && use_smoke_noise()) {fstr += "perlin_clouds_3d.part*+";}
-	if (enable_reflections) {fstr += "water_ripples.part+";}
+	if (enable_reflect == 1) {fstr += "water_ripples.part+";}
 	if (triplanar_tex) {fstr += "triplanar_texture.part+";}
 	if (use_depth_trans) {fstr += "depth_utils.part+";}
 	s.set_frag_shader(fstr + "textured_with_smoke");
@@ -411,8 +413,9 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 		s.add_uniform_int("burn_mask", 10);
 		select_multitex(DISINT_TEX, 10); // PLASMA_TEX?
 	}
-	if (enable_reflections) {
-		s.add_uniform_int("reflection_tex", 14);
+	if (enable_reflect) {s.add_uniform_int("reflection_tex", 14);}
+
+	if (enable_reflect == 1) {
 		select_multitex(RIPPLE_MAP_TEX, 15);
 		s.add_uniform_int("ripple_tex", 15);
 		static float ripple_time(0.0);
@@ -434,7 +437,7 @@ void setup_smoke_shaders(shader_t &s, float min_alpha, int use_texgen, bool keep
 	}
 	// need to handle wet/outside vs. dry/inside surfaces differently, so the caller must either set is_outside properly or override wet and snow values
 	s.add_uniform_float("wet_effect",   (is_outside ? rain_wetness : 0.0)); // only enable when drawing cobjs?
-	s.add_uniform_float("reflectivity", (enable_reflections ?  1.0 : 0.0));
+	s.add_uniform_float("reflectivity", (enable_reflect ?  1.0 : 0.0));
 	s.add_uniform_float("snow_cov_amt", snow_cov_amt); // Note: no longer depends on is_outside
 }
 

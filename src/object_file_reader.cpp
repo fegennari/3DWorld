@@ -661,7 +661,7 @@ bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xf
 
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, bool reflective, bool load_models, bool recalc_normals, bool write_file, bool verbose)
+	colorRGBA const &def_c, int reflective, bool load_models, bool recalc_normals, bool write_file, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
