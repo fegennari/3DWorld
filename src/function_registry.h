@@ -823,6 +823,7 @@ void toggle_video_capture();
 void video_capture_end_frame();
 
 // function prototypes - reflections
+bool enable_all_reflections();
 bool enable_reflection_plane();
 bool use_reflection_plane();
 float get_reflection_plane();

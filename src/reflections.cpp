@@ -21,7 +21,8 @@ void draw_sun_moon_stars(bool no_update);
 void draw_sun_flare(float intensity=1.0);
 
 
-bool  enable_reflection_plane() {return ((display_mode & 0x10) && !reflect_planes.empty());}
+bool  enable_all_reflections () {return ((display_mode & 0x10) != 0);}
+bool  enable_reflection_plane() {return (enable_all_reflections() && !reflect_planes.empty());}
 bool  use_reflection_plane   () {return (enable_reflection_plane() && reflect_planes.enabled() && get_camera_pos().z > reflect_planes.get_selected().d[2][0]);}
 float get_reflection_plane   () {return reflect_planes.get_refl_plane();}
 

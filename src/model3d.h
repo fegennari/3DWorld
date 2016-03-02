@@ -444,6 +444,7 @@ public:
 	void render_materials(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
 		base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm=nullptr);
 	void render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate);
+	void ensure_reflection_cube_maps();
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
@@ -470,6 +471,7 @@ struct model3ds : public deque<model3d> {
 	void clear();
 	void free_context();
 	void render(bool is_shadow_pass, bool reflection_pass, vector3d const &xlate); // non-const
+	void ensure_reflection_cube_maps();
 	bool has_any_transforms() const;
 	cube_t get_bcube(bool only_reflective) const;
 	void build_cobj_trees(bool verbose);
@@ -501,6 +503,7 @@ template<typename T> bool split_polygon(polygon_t const &poly, vector<T> &ppts, 
 void coll_tquads_from_triangles(vector<triangle> const &triangles, vector<coll_tquad> &ppts, colorRGBA const &color);
 void free_model_context();
 void render_models(bool shadow_pass, bool reflection_pass, vector3d const &xlate=zero_vector);
+void ensure_model_reflection_cube_maps();
 void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf=model3d_xform_t(), unsigned lod_level=0);
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing);
 void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float voxel_xy_spacing);

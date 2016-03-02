@@ -22,7 +22,7 @@ bool model_calc_tan_vect(1); // slower and more memory but sometimes better qual
 extern bool group_back_face_cull, enable_model3d_tex_comp, disable_shader_effects, texture_alpha_in_red_comp, use_model2d_tex_mipmaps;
 extern bool two_sided_lighting, have_indir_smoke_tex, use_core_context, model3d_wn_normal, invert_model_nmap_bscale, use_z_prepass;
 extern unsigned shadow_map_sz, reflection_tid;
-extern int display_mode;
+extern int display_mode, begin_motion;
 extern float model3d_alpha_thresh, model3d_texture_anisotropy, model_triplanar_tc_scale, cobj_z_bias;
 extern pos_dir_up orig_camera_pdu;
 extern bool vert_opt_flags[3];
@@ -1490,8 +1490,7 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
 // non-const due to vbo caching, normal computation, etc.
 void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
 
-	cube_t bcube_xf(bcube + xlate);
-	if (transforms.empty() && !is_cube_visible_to_camera(bcube_xf, is_shadow_pass)) return;
+	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xf(xlate);
 	camera_pdu_transform_wrapper cptw(xf);
@@ -1500,13 +1499,10 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
 
-	if (reflective == 2 && reflect_mode == 2 && !is_shadow_pass && !reflection_pass && !is_z_prepass) { // cube map reflections
-		if (!transforms.empty()) {
-			assert(transforms.size() == 1); // FIXME: instancing not supported with a single cube map refelction texture
-			bcube_xf = transforms[0].get_xformed_cube(bcube_xf);
-		}
-		if (!model_refl_tid) {create_cube_map_reflection(model_refl_tid, bcube_xf);}
-		if ( model_refl_tid) {bind_texture_tu(model_refl_tid, 14);} // tu_id=14
+	if (model_refl_tid && reflect_mode == 2 && !is_shadow_pass && !reflection_pass && !is_z_prepass) { // cube map reflections
+		set_active_texture(14); // tu_id=14
+		bind_cube_map_texture(model_refl_tid);
+		set_active_texture(0);
 	}
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, &xlate, &mvm);
@@ -1523,6 +1519,20 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 		// cptw2 dtor called here
 	}
 	// cptw dtor called here
+}
+
+void model3d::ensure_reflection_cube_maps() {
+
+	if (reflective != 2) return; // no cube map reflections
+	bool const dynamic_update(begin_motion != 0); // FIXME: do something better
+	if (model_refl_tid && !dynamic_update) return; // reflection texture is already valid
+	cube_t bcube_xf(bcube);
+
+	if (!transforms.empty()) {
+		assert(transforms.size() == 1); // FIXME: instancing not supported with a single cube map refelction texture
+		bcube_xf = transforms[0].get_xformed_cube(bcube_xf);
+	}
+	create_cube_map_reflection(model_refl_tid, bcube_xf);
 }
 
 
@@ -1723,22 +1733,24 @@ void model3ds::free_context() {
 	tmgr.free_tids();
 }
 
-void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const &xlate) {
+
+void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const &xlate) { // Note: xlate is only used in tiled terrain mode
 	
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
 	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0);
 	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
-	bool const enable_reflections(!is_shadow_pass && !reflection_pass && reflection_tid > 0 && use_reflection_plane());
+	bool const enable_planar_reflections(!is_shadow_pass && !reflection_pass && reflection_tid > 0 && use_reflection_plane());
+	bool const enable_cube_map_reflections(!is_shadow_pass && !reflection_pass && enable_all_reflections());
 	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
 	shader_t s;
 	set_fill_mode();
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
-		if      (enable_reflections && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
-		else if (enable_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
-		else                                                        {any_non_reflective      = 1;}
+		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
+		else if (enable_cube_map_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
+		else                                                                 {any_non_reflective      = 1;}
 		if (shader_effects  ) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 		if (use_custom_smaps) {m->setup_shadow_maps();} else if (!is_shadow_pass) {m->clear_smaps();}
 	}
@@ -1755,6 +1767,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 		glDepthFunc(GL_LEQUAL);
 	}
 	int const reflect_mode(any_planar_reflective ? 1 : (any_cube_map_reflective ? 2 : 0));
+	assert(!reflect_mode || xlate == all_zeros); // xlate not supported for reflections (and not used anyway)
 
 	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
 	for (int bmap_pass = (needs_bump_maps ? 2 : 1); bmap_pass >= 0; --bmap_pass) {
@@ -1791,6 +1804,11 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 		} // sam_pass
 	} // bmap_pass
 	if (use_z_prepass) {glDepthFunc(GL_LESS);} // reset to default
+}
+
+void model3ds::ensure_reflection_cube_maps() {
+	if (!enable_all_reflections()) return;
+	for (iterator m = begin(); m != end(); ++m) {m->ensure_reflection_cube_maps();}
 }
 
 
@@ -1848,9 +1866,11 @@ void model3d_stats_t::print() const {
 void free_model_context() {
 	all_models.free_context();
 }
-
 void render_models(bool shadow_pass, bool reflection_pass, vector3d const &xlate) {
 	all_models.render(shadow_pass, reflection_pass, xlate);
+}
+void ensure_model_reflection_cube_maps() {
+	all_models.ensure_reflection_cube_maps();
 }
 
 model3d &get_cur_model(string const &operation) {
