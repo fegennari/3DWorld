@@ -830,8 +830,8 @@ float get_reflection_plane();
 bool use_reflect_plane_for_cobj(coll_obj const &c);
 unsigned create_gm_z_reflection();
 unsigned create_tt_reflection(float terrain_zmin);
-void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane);
-void create_cube_map_reflection(unsigned &tid, cube_t const &cube);
+void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane, bool only_front_facing=0);
+void create_cube_map_reflection(unsigned &tid, cube_t const &cube, bool only_front_facing=0);
 
 #include "inlines.h"
 

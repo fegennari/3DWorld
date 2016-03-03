@@ -115,7 +115,7 @@ void restore_matrices_and_clear() {
 }
 
 
-void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &center, float near_plane, float far_plane) {
+void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &center, float near_plane, float far_plane, bool only_front_facing) {
 
 	//RESET_TIME;
 	assert(tid);
@@ -127,6 +127,7 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 			vector3d const upv((dim == 2) ? plus_x : plus_z); // ???
 			vector3d view_dir(zero_vector);
 			view_dir[dim] = (dir ? 1.0 : -1.0);
+			if (only_front_facing && ((old_camera_pdu.pos[dim] < center[dim]) ^ dir)) continue; // back facing
 			camera_pdu    = pos_dir_up(center, view_dir, upv, 45.0*TO_RADIANS, near_plane, far_plane, 1.0, 1); // 90 degree FOV
 			pos_dir_up const pdu(camera_pdu);
 			setup_viewport_and_proj_matrix(tex_size, tex_size);
@@ -144,8 +145,8 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 	//PRINT_TIME("Create Reflection Cube Map");
 }
 
-void create_reflection_cube_map(unsigned tid, unsigned tex_size, cube_t const &cube) {
-	create_reflection_cube_map(tid, tex_size, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP);
+void create_reflection_cube_map(unsigned tid, unsigned tex_size, cube_t const &cube, bool only_front_facing) {
+	create_reflection_cube_map(tid, tex_size, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing);
 }
 
 // render scene reflection to texture (ground mode and tiled terrain mode)
@@ -247,17 +248,17 @@ unsigned create_gm_z_reflection() {
 	return reflection_tid;
 }
 
-void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane) {
+void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane, bool only_front_facing) {
 
 	if (display_mode & 0x20) return; // reflections not enabled
 	unsigned const tex_size(min(window_width, window_height)); // FIXME: make a power of 2 rounded down?
 	setup_cube_map_reflection_texture(tid, tex_size);
-	create_reflection_cube_map(tid, tex_size, center, near_plane, FAR_CLIP);
+	create_reflection_cube_map(tid, tex_size, center, near_plane, FAR_CLIP, only_front_facing);
 	check_gl_error(998);
 }
 
-void create_cube_map_reflection(unsigned &tid, cube_t const &cube) {
-	create_cube_map_reflection(tid, cube.get_cube_center(), max(NEAR_CLIP, 0.51f*cube.max_len()), FAR_CLIP); // slightly more than the cube half width in max dim
+void create_cube_map_reflection(unsigned &tid, cube_t const &cube, bool only_front_facing) {
+	create_cube_map_reflection(tid, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing); // slightly more than the cube half width in max dim
 }
 
 unsigned create_tt_reflection(float terrain_zmin) {
