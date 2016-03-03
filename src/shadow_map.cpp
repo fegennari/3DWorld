@@ -291,6 +291,7 @@ bool local_smap_data_t::set_smap_shader_for_light(shader_t &s, bool &arr_tex_set
 	}
 	if (str[0]) { // str was set to something
 		bool const tex_ret(s.add_uniform_int(str, tu_id));
+		if (!tex_ret) {cerr << "Error: unable to set shader uniform '" << str << "'." << endl;}
 		assert(tex_ret); // Note: we can assert this returns true, though it makes shader debugging harder
 	}
 	sprintf(str, "smap_matrix_dl[%u]", layer_id); // use texture array layer id

@@ -269,6 +269,7 @@ int shader_t::get_attrib_loc(char const *const name, bool allow_fail) const {
 
 	assert(program && name);
 	int const loc(glGetAttribLocation(program, name));
+	if (!(allow_fail || loc >= 0)) {cerr << "Error: Failed to get shader attribute location '" << name << "'." << endl;}
 	assert(allow_fail || loc >= 0); // Note: if variable is unused, loc will be -1
 	return loc;
 }
