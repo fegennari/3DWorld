@@ -26,6 +26,10 @@ uniform vec4 emission = vec4(0,0,0,1);
 #ifdef ENABLE_REFLECTIONS
 uniform sampler2D reflection_tex;
 #endif
+#ifdef ENABLE_CUBE_MAP_REFLECT
+uniform samplerCube reflection_tex;
+uniform vec3 cube_map_center = vec3(0.0);
+#endif
 
 const float SMOKE_SCALE = 0.25;
 
@@ -257,12 +261,24 @@ void main()
 		ws_normal = normalize(mix(get_bump_map_normal(), ws_normal, 0.5*wetness));
 #endif
 		// Note: this doesn't work for refact_ix == 1, so we choose an arbitrary value of 1.3 (metals are lower, dielectrics are higher)
-		float reflect_w = reflectivity2 * get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.3 : refract_ix));
+		float reflect_w = reflectivity2 * get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.3 : refract_ix)); // default is water
 		vec4 proj_pos   = fg_ProjectionMatrix * epos;
 		vec2 ref_tex_st = clamp(0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5), 0.0, 1.0);
 		color.rgb       = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness), reflect_w);
 	}
-#endif
+#endif // ENABLE_REFLECTIONS
+
+#ifdef ENABLE_CUBE_MAP_REFLECT
+#ifdef USE_BUMP_MAP
+	vec3 ws_normal = get_bump_map_normal();
+#else
+	vec3 ws_normal = normalize(normal_s);
+#endif // USE_BUMP_MAP
+	float reflect_w = 1.0;//reflectivity2 * get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.5 : refract_ix)); // default is metal
+	vec3 ref_dir    = normalize(vpos - cube_map_center); // FIXME: take surface normal into account?
+	//vec3 ref_dir    = ws_normal;
+	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb, reflect_w);
+#endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK
 	color = apply_black_body_burn_mask(color, tc);

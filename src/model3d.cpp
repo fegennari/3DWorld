@@ -1491,6 +1491,20 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
 void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
 
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
+
+	if (reflective == 2 && !is_shadow_pass && !is_z_prepass) { // cube map reflections
+		point const center(get_single_transformed_bcube(xlate).get_cube_center()); // Note: xlate should be all zeros
+
+		if (reflection_pass) { // creating the reflection texture
+			if (center == camera_pdu.pos) return; // skip self reflections
+		}
+		else if (reflect_mode == 2 && model_refl_tid) { // using the reflection texture
+			shader.add_uniform_vector3d("cube_map_center", center); // world space
+			set_active_texture(14); // tu_id=14
+			bind_cube_map_texture(model_refl_tid);
+			set_active_texture(0);
+		}
+	}
 	xform_matrix const mvm(fgGetMVM());
 	model3d_xform_t const xf(xlate);
 	camera_pdu_transform_wrapper cptw(xf);
@@ -1499,11 +1513,6 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
 	bind_all_used_tids();
 
-	if (model_refl_tid && reflect_mode == 2 && !is_shadow_pass && !reflection_pass && !is_z_prepass) { // cube map reflections
-		set_active_texture(14); // tu_id=14
-		bind_cube_map_texture(model_refl_tid);
-		set_active_texture(0);
-	}
 	if (transforms.empty()) { // no transforms case
 		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, &xlate, &mvm);
 	}
@@ -1526,13 +1535,18 @@ void model3d::ensure_reflection_cube_maps() {
 	if (reflective != 2) return; // no cube map reflections
 	bool const dynamic_update(begin_motion != 0); // FIXME: do something better
 	if (model_refl_tid && !dynamic_update) return; // reflection texture is already valid
-	cube_t bcube_xf(bcube);
+	create_cube_map_reflection(model_refl_tid, get_single_transformed_bcube(), (model_refl_tid != 0));
+}
+
+cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {
+
+	cube_t bcube_xf(bcube + xlate);
 
 	if (!transforms.empty()) {
 		assert(transforms.size() == 1); // FIXME: instancing not supported with a single cube map refelction texture
 		bcube_xf = transforms[0].get_xformed_cube(bcube_xf);
 	}
-	create_cube_map_reflection(model_refl_tid, bcube_xf);
+	return bcube_xf;
 }
 
 
@@ -1738,11 +1752,12 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 	
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
-	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0);
 	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
-	bool const enable_planar_reflections(!is_shadow_pass && !reflection_pass && reflection_tid > 0 && use_reflection_plane());
-	bool const enable_cube_map_reflections(!is_shadow_pass && !reflection_pass && enable_all_reflections());
+	bool const enable_any_reflections(shader_effects && !is_shadow_pass && !reflection_pass);
+	bool const enable_planar_reflections(enable_any_reflections && reflection_tid > 0 && use_reflection_plane());
+	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
 	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
+	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0);
 	shader_t s;
 	set_fill_mode();
 
@@ -1754,8 +1769,8 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 		if (shader_effects  ) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 		if (use_custom_smaps) {m->setup_shadow_maps();} else if (!is_shadow_pass) {m->clear_smaps();}
 	}
-	if (any_planar_reflective && any_cube_map_reflective) {
-		cerr << "Error: Cannot mix planar and cube map reflections for model3d" << endl;
+	if (any_planar_reflective + any_cube_map_reflective + any_non_reflective > 1) {
+		cerr << "Error: Cannot mix planar reflections, cube map reflections, and no reflections for model3ds" << endl;
 		exit(1); // FIXME: better/earlier error? make this work?
 	}
 	if (use_z_prepass && !is_shadow_pass && !reflection_pass) { // check use_mvm?
@@ -1775,6 +1790,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 	for (int bmap_pass = (needs_bump_maps ? 2 : 1); bmap_pass >= 0; --bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
 			for (unsigned ref_pass = (any_non_reflective ? 0U : 1U); ref_pass < (reflect_mode ? 2U : 1U); ++ref_pass) {
+				int const cur_reflect_mode(ref_pass ? reflect_mode : 0);
 				bool reset_bscale(0);
 
 				if (is_shadow_pass) {
@@ -1786,7 +1802,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 					int const is_outside((is_shadow_pass || reflection_pass) ? 0 : 2); // enable wet effect coverage mask
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
 					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting,
-						0.0, model_triplanar_tc_scale, 0, (ref_pass ? reflect_mode : 0), is_outside);
+						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside);
 					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
 					if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}
@@ -1797,7 +1813,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 					s.clear_specular();
 				}
 				for (iterator m = begin(); m != end(); ++m) { // non-const
-					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), reflect_mode, xlate);
+					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), cur_reflect_mode, xlate);
 				}
 				if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary
 				s.clear_specular(); // may be unnecessary

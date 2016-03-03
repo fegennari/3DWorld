@@ -445,6 +445,7 @@ public:
 		base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm=nullptr);
 	void render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate);
 	void ensure_reflection_cube_maps();
+	cube_t get_single_transformed_bcube(vector3d const &xlate=zero_vector) const;
 	void setup_shadow_maps();
 	bool has_any_transforms() const {return !transforms.empty();}
 	cube_t const &get_bcube() const {return bcube;}
