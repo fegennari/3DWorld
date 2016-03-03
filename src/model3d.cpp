@@ -1762,7 +1762,9 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 		// faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
 		s.set_prefix("#define POS_FROM_EPOS_MULT", 0); // VS - needed to make transformed vertices agree with the normal rendering flow
 		s.begin_color_only_shader(BLACK); // don't even need colors, only need depth
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE); // Disable color rendering, we only want to write to the Z-Buffer
 		for (iterator m = begin(); m != end(); ++m) {m->render(s, 0, 0, 1, 0, 3, 0, xlate);}
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		s.end_shader();
 		glDepthFunc(GL_LEQUAL);
 	}
