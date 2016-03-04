@@ -1787,7 +1787,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 	assert(!reflect_mode || xlate == all_zeros); // xlate not supported for reflections (and not used anyway)
 
 	// the bump map pass is first and the regular pass is second; this way, transparent objects such as glass that don't have bump maps are drawn last
-	for (int bmap_pass = (needs_bump_maps ? 2 : 1); bmap_pass >= 0; --bmap_pass) {
+	for (int bmap_pass = (needs_bump_maps ? 1 : 0); bmap_pass >= 0; --bmap_pass) {
 		for (unsigned sam_pass = 0; sam_pass < (is_shadow_pass ? 2U : 1U); ++sam_pass) {
 			for (unsigned ref_pass = (any_non_reflective ? 0U : 1U); ref_pass < (reflect_mode ? 2U : 1U); ++ref_pass) {
 				int const cur_reflect_mode(ref_pass ? reflect_mode : 0);
