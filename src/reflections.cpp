@@ -13,7 +13,7 @@ reflect_plane_selector reflect_planes;
 
 extern bool combined_gu, show_lightning;
 extern int display_mode, window_width, window_height;
-extern float NEAR_CLIP, FAR_CLIP, water_plane_z;
+extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
 extern coll_obj_group coll_objects;
 
 void do_look_at();
@@ -119,28 +119,33 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 
 	//RESET_TIME;
 	assert(tid);
-	pos_dir_up const old_camera_pdu(camera_pdu);
+	pos_dir_up const prev_camera_pdu(camera_pdu);
+	glViewport(0, 0, tex_size, tex_size);
+	fgMatrixMode(FG_PROJECTION);
+	fgPushMatrix();
+	perspective_fovy = 90.0;
+	set_perspective_near_far(near_plane, far_plane, 1.0); // AR = 1.0
 
 	for (unsigned dim = 0; dim < 3; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			unsigned const face_ix(2*dim + !dir);
-			vector3d const upv((dim == 2) ? plus_x : plus_z); // ???
-			vector3d view_dir(zero_vector);
-			view_dir[dim] = (dir ? 1.0 : -1.0);
-			if (only_front_facing && ((old_camera_pdu.pos[dim] < center[dim]) ^ dir)) continue; // back facing
-			camera_pdu    = pos_dir_up(center, view_dir, upv, 45.0*TO_RADIANS, near_plane, far_plane, 1.0, 1); // 90 degree FOV
-			pos_dir_up const pdu(camera_pdu);
-			setup_viewport_and_proj_matrix(tex_size, tex_size);
-			draw_scene_from_custom_frustum(pdu, 1, 1, 1); // reflection_pass=1, include_mesh=1, disable_occ_cull=1
+			vector3d view_dir(zero_vector), upv(-plus_y);
+			view_dir[dim]  = (dir ? 1.0 : -1.0);
+			if (dim == 1) {upv = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
+			if (only_front_facing && ((prev_camera_pdu.pos[dim] > center[dim]) ^ dir)) continue; // back facing
+			camera_pdu = pos_dir_up(center, view_dir, upv, 0.5*perspective_fovy*TO_RADIANS, near_plane, far_plane, 1.0, 1); // 90 degree FOV
+			vector3d const eye(center - view_dir*cview_radius);
+			fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, upv.x, upv.y, upv.z);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			draw_scene_from_custom_frustum(camera_pdu, 2, 1, 1); // reflection_pass=2 (cube map), include_mesh=1, disable_occ_cull=1
 			render_to_texture_cube_map(tid, tex_size, face_ix); // render reflection to texture
-			fgMatrixMode(FG_PROJECTION);
-			fgPopMatrix();
-			fgMatrixMode(FG_MODELVIEW);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); // reset state
-		}
-	}
-	camera_pdu = old_camera_pdu;
-	set_standard_viewport(); // restore
+		} // for dir
+	} // for dim
+	camera_pdu = prev_camera_pdu;
+	fgMatrixMode(FG_PROJECTION);
+	fgPopMatrix();
+	fgMatrixMode(FG_MODELVIEW);
+	setup_viewport_and_proj_matrix(window_width, window_height); // restore
 	update_shadow_matrices(); // restore
 	//PRINT_TIME("Create Reflection Cube Map");
 }
@@ -163,7 +168,7 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
-	draw_scene_from_custom_frustum(refl_camera_pdu, 1, 0, 1); // reflection_pass=1, include_mesh=0, disable_occ_cull=1
+	draw_scene_from_custom_frustum(refl_camera_pdu, 1, 0, 1); // reflection_pass=1 (planar), include_mesh=0, disable_occ_cull=1
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
 	camera_pdu = old_camera_pdu;
 	restore_matrices_and_clear(); // reset state

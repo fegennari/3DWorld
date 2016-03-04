@@ -534,7 +534,7 @@ void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, 
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
-void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, bool reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
+void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
 
 	if (cobjs.empty()) return;
 	setup_cobj_shader(s, 0, use_normal_map, use_texgen, use_reflect_tex); // no lt_atten
@@ -586,7 +586,7 @@ bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { 
 	return 1;
 }
 
-bool draw_or_add_cobj(unsigned cix, bool reflection_pass, bool use_ref_plane, vect_sorted_ix large_cobjs[2], vect_sorted_ix &draw_last,
+bool draw_or_add_cobj(unsigned cix, int reflection_pass, bool use_ref_plane, vect_sorted_ix large_cobjs[2], vect_sorted_ix &draw_last,
 	vector<unsigned> &normal_map_cobjs, vector<unsigned> &tex_coord_cobjs, vector<unsigned> &tex_coord_nm_cobjs,
 	vector<unsigned> &reflect_cobjs, vector<unsigned> &reflect_cobjs_nm)
 {
@@ -597,7 +597,7 @@ bool draw_or_add_cobj(unsigned cix, bool reflection_pass, bool use_ref_plane, ve
 	// Note: only texgen cube/vert cylinder top surfaces support reflections
 	if (!use_tex_coords && use_ref_plane && use_reflect_plane_for_cobj(c)) {
 		assert(c.group_id < 0);
-		if (reflection_pass) return 0; // the reflection surface is not drawn in the reflection pass (receiver only)
+		if (reflection_pass == 1) return 0; // the reflection surface is not drawn in the reflection pass (receiver only)
 		((c.cp.normal_map >= 0) ? reflect_cobjs_nm : reflect_cobjs).push_back(cix);
 		return 0;
 	}
@@ -629,7 +629,7 @@ bool draw_or_add_cobj(unsigned cix, bool reflection_pass, bool use_ref_plane, ve
 }
 
 // should always have draw_solid enabled on the first call for each frame
-void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
+void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 
 	//RESET_TIME;
 	static vect_sorted_ix draw_last;
@@ -637,7 +637,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
 	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
-	bool const use_ref_plane(reflection_pass || (reflection_tid > 0 && use_reflection_plane()));
+	bool const use_ref_plane(reflection_pass == 1 || (reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);
 	shader_t s;
 	setup_cobj_shader(s, has_lt_atten, 0, 2, 0);
@@ -656,7 +656,7 @@ void draw_coll_surfaces(bool draw_trans, bool reflection_pass) {
 			coll_obj const &c(coll_objects.get_cobj(cix));
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
-			if (reflection_pass && c.d[2][1] < ref_plane_z) continue; // below the reflection plane (approximate) (optimization)
+			if (reflection_pass == 1 && c.d[2][1] < ref_plane_z) continue; // below the reflection plane (approximate) (optimization)
 			assert(c.id == (int)cix); // should always be equal
 
 			if (c.dgroup_id >= 0) {

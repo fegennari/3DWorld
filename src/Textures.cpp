@@ -978,14 +978,9 @@ void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate) { /
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	if (allocate) {
-		glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GL_RGB8, tex_size, tex_size);
-		//for (unsigned i = 0; i < 6; ++i) {glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, GL_RGB8, tex_size, tex_size, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);}
-	}
+	if (allocate) {glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GL_RGB8, tex_size, tex_size);}
 	//gluBuild2DMipmaps(GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_RGB8, tex_size, tex_size, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-	//glEnable(GL_TEXTURE_CUBE_MAP);
 }
 
 

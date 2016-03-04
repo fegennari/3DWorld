@@ -120,7 +120,7 @@ void do_look_at() {
 		eye        = center - cview_dir*cview_radius;
 	}
 	camera_shake = -pow(0.95f, fticks)*camera_shake;
-	if (fabs(camera_shake) < 0.1) camera_shake = 0.0;
+	if (fabs(camera_shake) < 0.1) {camera_shake = 0.0;}
 	assert(!dist_less_than(eye, center, TOLERANCE));
 	assert(up_vector != zero_vector);
 	fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
@@ -191,7 +191,7 @@ colorRGBA get_bkg_color(point const &p1, vector3d const &v12) { // optimize?
 }
 
 
-void draw_stuff(int draw_uw, int timer1, bool reflection_pass=0) {
+void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 
 	if (draw_uw) {
 		draw_bubbles();
@@ -199,11 +199,11 @@ void draw_stuff(int draw_uw, int timer1, bool reflection_pass=0) {
 	else {
 		draw_splashes();
 		draw_snow();
-		draw_trees(0, reflection_pass);
+		draw_trees(0, (reflection_pass != 0));
 		render_voxel_data(0);
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("O");
-		render_models(0, reflection_pass);
+		render_models(0, (reflection_pass != 0));
 		check_gl_error(21);
 		if (TIMETEST) PRINT_TIME("P");
 		draw_teleporters();
@@ -1043,7 +1043,7 @@ void draw_transparent(bool above_water) {
 
 
 // Note: assumes the camera is not underwater
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass, bool include_mesh, bool disable_occ_cull) {
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, bool include_mesh, bool disable_occ_cull) {
 
 	pos_dir_up const prev_camera_pdu(camera_pdu);
 	point const prev_camera_pos(camera_pos);

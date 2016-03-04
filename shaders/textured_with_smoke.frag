@@ -275,7 +275,7 @@ void main()
 	vec3 ws_normal = normalize(normal_s);
 #endif // USE_BUMP_MAP
 	float reflect_w = 1.0;//reflectivity2 * get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.5 : refract_ix)); // default is metal
-	vec3 ref_dir    = normalize(vpos - cube_map_center); // FIXME: take surface normal into account?
+	vec3 ref_dir    = vpos - cube_map_center; // FIXME: take surface normal into account?
 	//vec3 ref_dir    = ws_normal;
 	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb, reflect_w);
 #endif // ENABLE_CUBE_MAP_REFLECT

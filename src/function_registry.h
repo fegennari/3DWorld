@@ -16,7 +16,7 @@ void set_std_blend_mode();
 void set_additive_blend_mode();
 void set_array_client_state(bool va, bool tca, bool na, bool ca, bool actually_set_state=1);
 void reset_fog();
-void set_perspective_near_far(float near_clip, float far_clip);
+void set_perspective_near_far(float near_clip, float far_clip, float aspect_ratio=0.0);
 void set_perspective(float fovy, float nc_scale=1.0);
 float get_star_alpha(bool obscured_by_clouds=0);
 colorRGBA attenuate_sun_color(colorRGBA const &c);
@@ -81,7 +81,7 @@ void set_standard_viewport();
 point get_sun_pos();
 point get_moon_pos();
 colorRGBA get_bkg_color(point const &p1, vector3d const &v12);
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu, bool reflection_pass, bool include_mesh, bool disable_occ_cull);
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, bool include_mesh, bool disable_occ_cull);
 
 // function prototypes - draw_world
 void set_fill_mode();
@@ -124,7 +124,7 @@ void setup_procedural_shaders(shader_t &s, float min_alpha, bool indir_lighting,
 	bool z_top_test, float tex_scale=1.0, float noise_scale=1.0, float tex_mix_saturate=1.0);
 void setup_object_render_data();
 void end_group(int &last_group_id);
-void draw_coll_surfaces(bool draw_trans, bool reflection_pass);
+void draw_coll_surfaces(bool draw_trans, int reflection_pass);
 void draw_stars(float alpha);
 void draw_sun();
 void draw_moon();

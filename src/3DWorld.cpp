@@ -350,12 +350,12 @@ void reset_camera_pos() {
 }
 
 
-void set_perspective_near_far(float near_clip, float far_clip) {
+void set_perspective_near_far(float near_clip, float far_clip, float aspect_ratio) {
 
 	perspective_nclip = near_clip;
 	fgMatrixMode(FG_PROJECTION);
 	fgLoadIdentity();
-	fgPerspective(perspective_fovy, ((double)window_width)/window_height, perspective_nclip, far_clip);
+	fgPerspective(perspective_fovy, ((aspect_ratio == 0.0) ? ((double)window_width)/window_height : aspect_ratio), perspective_nclip, far_clip);
 	fgMatrixMode(FG_MODELVIEW);
 	fgLoadIdentity();
 }
