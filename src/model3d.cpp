@@ -1369,6 +1369,10 @@ void model3d::bind_all_used_tids() {
 }
 
 
+void set_def_spec_map() {
+	if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
+}
+
 void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 	unsigned bmap_pass_mask, base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm)
 {
@@ -1387,7 +1391,7 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool refle
 			select_texture(unbound_mat.tid);
 			shader.set_material(unbound_mat);
 			shader.add_uniform_float("min_alpha", 0.0);
-			if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
+			set_def_spec_map();
 		}
 		if (is_normal_pass || !enable_alpha_mask) {unbound_geom.render(shader, is_shadow_pass, xlate);} // skip shadow + alpha mask pass
 		if (is_normal_pass) {shader.clear_specular();}
@@ -1508,6 +1512,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 			set_active_texture(0);
 #if 0 // TESTING
 			select_texture(WHITE_TEX);
+			set_def_spec_map();
 			shader.set_cur_color(WHITE); // or BLACK
 			shader.set_specular_color(WHITE, 60.0);
 			shader.set_color_e(BLACK);
