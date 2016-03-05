@@ -157,7 +157,7 @@ point get_sun_pos() {
 point get_moon_pos() {
 
 	point pos(moon_pos);
-	if (camera_mode == 1) pos += surface_pos;
+	if (camera_mode == 1) {pos += surface_pos;}
 	return pos;
 }
 
@@ -384,6 +384,10 @@ float get_light_pos_scale() {
 	return ((world_mode == WMODE_INF_TERRAIN) ? 10.0 : 1.0); // hack: make the sun and moon far away in inf terrain mode 
 }
 
+void setup_sun_moon_light_pos() {
+	set_gl_light_pos(0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
+	set_gl_light_pos(1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
+}
 
 void setup_lighting() {
 	
@@ -445,8 +449,7 @@ void setup_lighting() {
 	}
 
 	// setup light position (after enabling lights)
-	set_gl_light_pos(0, sun_pos *get_light_pos_scale(), LIGHT_W_VAL);
-	set_gl_light_pos(1, moon_pos*get_light_pos_scale(), LIGHT_W_VAL);
+	setup_sun_moon_light_pos();
 	setup_gl_light_atten(0, 1.0, 0.0, 0.0); // reset attenuation to 1.0
 }
 

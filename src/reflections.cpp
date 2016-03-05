@@ -16,6 +16,7 @@ extern int display_mode, window_width, window_height;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
 extern coll_obj_group coll_objects;
 
+void setup_sun_moon_light_pos();
 void do_look_at();
 void draw_sun_moon_stars(bool no_update);
 void draw_sun_flare(float intensity=1.0);
@@ -140,6 +141,7 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 			vector3d const eye(center - cview_dir*cview_radius);
 			fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			setup_sun_moon_light_pos();
 			draw_scene_from_custom_frustum(camera_pdu, 2, 1, 1); // reflection_pass=2 (cube map), include_mesh=1, disable_occ_cull=1
 			render_to_texture_cube_map(tid, tex_size, face_ix); // render reflection to texture
 		} // for dir
@@ -152,6 +154,7 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 	fgMatrixMode(FG_MODELVIEW);
 	setup_viewport_and_proj_matrix(window_width, window_height); // restore
 	update_shadow_matrices(); // restore
+	setup_sun_moon_light_pos();
 	check_gl_error(531);
 	//PRINT_TIME("Create Reflection Cube Map");
 }
