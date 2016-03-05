@@ -290,8 +290,8 @@ void un_maximize() {
 	clear_context();
 	glutLeaveGameMode();
 	curr_window   = orig_window;
-	window_width  = ww2;
-	window_height = wh2;
+	window_width  = (ww2 ? ww2 : init_window_width);
+	window_height = (wh2 ? wh2 : init_window_height);
 	maximized     = 0;
 	init_context();
 	//nop_frame = 1;
