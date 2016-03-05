@@ -14,6 +14,7 @@ uniform vec3 smoke_color, sphere_center;
 uniform vec3 sun_pos; // used for dynamic smoke shadows line clipping
 uniform vec3 fog_time;
 uniform float light_atten = 0.0, refract_ix = 1.0;
+uniform float metalness   = 0.0;
 uniform float cube_bb[6], sphere_radius;
 uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity, snow_cov_amt;
 uniform float reflect_plane_ztop, reflect_plane_zbot, winding_normal_sign;
@@ -26,11 +27,9 @@ uniform vec4 emission = vec4(0,0,0,1);
 // Note: at most one of these should be enabled
 #ifdef ENABLE_REFLECTIONS
 uniform sampler2D reflection_tex;
-uniform float metalness          = 0.0;
 #endif
 #ifdef ENABLE_CUBE_MAP_REFLECT
 uniform samplerCube reflection_tex;
-uniform float metalness          = 0.0;
 uniform float cube_map_near_clip = 1.0;
 uniform vec3 cube_map_center     = vec3(0.0);
 #endif
@@ -146,6 +145,10 @@ float get_puddle_val(in float wetness) {
 		freq    *= 2.0;
 	}
 	return sqrt(min(1.0, 8.0*wetness))*min(1.0, pow((wetness + max(wet_val, 0.6) - 0.6), 8.0));
+}
+
+float get_reflect_weight(in vec3 view_dir, in vec3 ws_normal, in float reflectivity2, in float refract_ix) {
+	return reflectivity2 * mix(get_fresnel_reflection(view_dir, ws_normal, 1.0, refract_ix), 1.0, metalness);
 }
 
 // Note: This may seem like it can go into the vertex shader as well,
@@ -265,8 +268,7 @@ void main()
 		ws_normal = normalize(mix(get_bump_map_normal(), ws_normal, 0.5*wetness));
 #endif
 		// Note: this doesn't work for refact_ix == 1, so we choose an arbitrary value of 1.3 (metals are lower, dielectrics are higher)
-		float fresnel   = get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.3 : refract_ix)); // default is water
-		float reflect_w = reflectivity2 * mix(fresnel, 1.0, metalness);
+		float reflect_w = get_reflect_weight(normalize(camera_pos - vpos), ws_normal, reflectivity2, ((refract_ix == 1.0) ? 1.3 : refract_ix)); // default is water
 		vec4 proj_pos   = fg_ProjectionMatrix * epos;
 		vec2 ref_tex_st = clamp(0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5), 0.0, 1.0);
 		color.rgb       = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness), reflect_w);
@@ -280,12 +282,11 @@ void main()
 	vec3 ws_normal = normalize(normal_s);
 #endif // USE_BUMP_MAP
 	vec3 view_dir   = normalize(camera_pos - vpos);
-	float fresnel   = get_fresnel_reflection(view_dir, ws_normal, 1.0, ((refract_ix == 1.0) ? 1.5 : refract_ix)); // default is not water
-	float reflect_w = reflectivity2 * mix(fresnel, 1.0, metalness);
+	float reflect_w = get_reflect_weight(view_dir, ws_normal, reflectivity2, ((refract_ix == 1.0) ? 1.5 : refract_ix)); // default is not water
 	vec3 rel_pos    = vpos - cube_map_center;
 	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos)); // clamp to cube bounds
 	vec3 ref_dir    = rel_pos + cube_map_near_clip*ws_normal; // position offset within cube (approx.)
-	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb, reflect_w);
+	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK
