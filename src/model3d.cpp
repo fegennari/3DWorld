@@ -1491,6 +1491,7 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
 void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
 
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
+	if (reflect_mode) {shader.add_uniform_float("metalness", metalness);} // may or may not be used
 
 	if (reflective == 2 && !is_shadow_pass && !is_z_prepass) { // cube map reflections
 		cube_t const bcube_xf(get_single_transformed_bcube(xlate));
@@ -1500,7 +1501,6 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 			if (center == camera_pdu.pos) return; // skip self reflections
 		}
 		else if (reflect_mode == 2 && model_refl_tid) { // using the reflection texture
-			shader.add_uniform_float("metalness", metalness);
 			shader.add_uniform_vector3d("cube_map_center", center); // world space
 			shader.add_uniform_float("cube_map_near_clip", 0.5f*bcube_xf.max_len());
 			set_active_texture(14); // tu_id=14
