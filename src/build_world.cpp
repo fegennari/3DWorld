@@ -1082,7 +1082,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 	polygon_t poly;
 	vector<coll_tquad> ppts;
 	// tree state
-	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0);
+	float tree_br_scale_mult(1.0), tree_nl_scale(1.0), tree_height(1.0), metalness(0.0);
 	bool enable_leaf_wind(1), remove_t_junctions(0);
 	int reflective(0); // reflective: 0=none, 1=planar, 2=cube map
 	typedef map<string, cobj_params> material_map_t;
@@ -1129,6 +1129,9 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				else if (keyword == "cube_map_ref") {
 					if (fscanf(fp, "%i", &ivals[0]) != 1) {return read_error(fp, "cube_map_ref", coll_obj_file);}
 					reflective = ((ivals[0] != 0) ? 2 : 0);
+				}
+				else if (keyword == "metalness") {
+					if (fscanf(fp, "%f", &metalness) != 1) {return read_error(fp, "metalness", coll_obj_file);}
 				}
 				else if (keyword == "start_cobj_group") {cobj.cgroup_id = cobj_groups.new_group();}
 				else if (keyword == "end_cobj_group") {cobj.cgroup_id = -1;}
@@ -1183,7 +1186,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				ppts.clear();
 				RESET_TIME;
 				
-				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
+				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, metalness, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
 					return read_error(fp, "model file data", coll_obj_file);
 				}
 				string const error_str(add_loaded_model(ppts, cobj, ivals[0], voxel_xy_spacing, xf.scale, has_layer, model3d_xform_t()));

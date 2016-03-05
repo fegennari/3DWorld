@@ -660,15 +660,15 @@ bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t co
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 
 
-bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, int reflective, bool load_models, bool recalc_normals, bool write_file, bool verbose)
+bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
+	int reflective, float metalness, bool load_models, bool recalc_normals, bool write_file, bool verbose)
 {
 	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
-		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, reflective));
+		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, reflective, metalness));
 		model3d &cur_model(all_models.back());
 
 		if (ext == "3ds") {

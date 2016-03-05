@@ -28,7 +28,8 @@ uniform sampler2D reflection_tex;
 #endif
 #ifdef ENABLE_CUBE_MAP_REFLECT
 uniform samplerCube reflection_tex;
-uniform float cube_map_near_clip = 0.1;
+uniform float metalness          = 0.0;
+uniform float cube_map_near_clip = 1.0;
 uniform vec3 cube_map_center     = vec3(0.0);
 #endif
 
@@ -275,10 +276,12 @@ void main()
 #else
 	vec3 ws_normal = normalize(normal_s);
 #endif // USE_BUMP_MAP
-	float reflect_w = 1.0;//reflectivity2 * get_fresnel_reflection(normalize(camera_pos - vpos), ws_normal, 1.0, ((refract_ix == 1.0) ? 1.5 : refract_ix)); // default is metal
+	vec3 view_dir   = normalize(camera_pos - vpos);
+	float fresnel   = get_fresnel_reflection(view_dir, ws_normal, 1.0, ((refract_ix == 1.0) ? 1.5 : refract_ix)); // default is not water
+	float reflect_w = reflectivity2 * mix(fresnel, 1.0, metalness);
 	vec3 rel_pos    = vpos - cube_map_center;
-	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos));
-	vec3 ref_dir    = rel_pos + cube_map_near_clip*ws_normal;
+	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos)); // clamp to cube bounds
+	vec3 ref_dir    = rel_pos + cube_map_near_clip*ws_normal; // position offset within cube (approx.)
 	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb, reflect_w);
 #endif // ENABLE_CUBE_MAP_REFLECT
 

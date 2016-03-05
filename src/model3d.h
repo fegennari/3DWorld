@@ -383,6 +383,7 @@ class model3d {
 	unsigned model_refl_tid;
 	int reflective; // reflective: 0=none, 1=planar, 2=cube map
 	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps;
+	float metalness; // should be per-material, but not part of the material file and specified per-object instead
 
 	// materials
 	deque<material_t> materials;
@@ -408,9 +409,9 @@ class model3d {
 public:
 	texture_manager &tmgr; // stores all textures
 
-	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0)
+	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0)
 		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), model_refl_tid(0), reflective(reflective_),
-		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), tmgr(tmgr_) {}
+		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), metalness(metalness_), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -512,7 +513,7 @@ void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube(bool only_reflective=0);
 
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
-	colorRGBA const &def_c, int reflective, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
+	colorRGBA const &def_c, int reflective, float metalness, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
 
 
 #endif // _MODEL3D_H_
