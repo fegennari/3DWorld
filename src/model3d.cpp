@@ -1506,6 +1506,13 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 			set_active_texture(14); // tu_id=14
 			bind_cube_map_texture(model_refl_tid);
 			set_active_texture(0);
+#if 0 // TESTING
+			select_texture(WHITE_TEX);
+			shader.set_cur_color(WHITE);
+			//draw_cube(center, 0.1, 0.1, 0.1, 1);
+			draw_subdiv_sphere(center, 0.1, N_SPHERE_DIV, 1, 1);
+			return; // TESTING
+#endif
 		}
 	}
 	xform_matrix const mvm(fgGetMVM());
