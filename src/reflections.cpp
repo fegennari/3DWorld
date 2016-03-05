@@ -265,8 +265,10 @@ unsigned create_gm_z_reflection() {
 void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane, bool only_front_facing) {
 
 	if (display_mode & 0x20) return; // reflections not enabled
-	unsigned const tex_size(min(window_width, window_height)); // FIXME: make a power of 2 rounded down?
-	assert(tex_size > 0);
+	unsigned const max_tex_size(min(window_width, window_height));
+	assert(max_tex_size > 0);
+	unsigned tex_size(1);
+	while (2*tex_size <= max_tex_size) {tex_size *= 2;} // find the max power of 2 <= max_tex_size
 	setup_cube_map_reflection_texture(tid, tex_size);
 	create_reflection_cube_map(tid, tex_size, center, near_plane, FAR_CLIP, only_front_facing);
 	check_gl_error(998);
