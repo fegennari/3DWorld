@@ -1045,6 +1045,7 @@ void draw_transparent(bool above_water) {
 // Note: assumes the camera is not underwater
 void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, bool include_mesh, bool disable_occ_cull) {
 
+	check_gl_error(532);
 	pos_dir_up const prev_camera_pdu(camera_pdu);
 	point const prev_camera_pos(camera_pos);
 	camera_pdu = pdu;

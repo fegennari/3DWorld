@@ -17,7 +17,8 @@ uniform float light_atten = 0.0, refract_ix = 1.0;
 uniform float metalness   = 0.0;
 uniform float cube_bb[6], sphere_radius;
 uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity, snow_cov_amt;
-uniform float reflect_plane_ztop, reflect_plane_zbot, winding_normal_sign;
+uniform float reflect_plane_ztop, reflect_plane_zbot;
+uniform float winding_normal_sign = 1.0;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -285,6 +286,7 @@ void main()
 	float reflect_w = get_reflect_weight(view_dir, ws_normal, reflectivity2, ((refract_ix == 1.0) ? 1.5 : refract_ix)); // default is not water
 	vec3 rel_pos    = vpos - cube_map_center;
 	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos)); // clamp to cube bounds
+	//vec3 ref_v      = reflect(view_dir, ws_normal);
 	vec3 ref_dir    = rel_pos + cube_map_near_clip*ws_normal; // position offset within cube (approx.)
 	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
 #endif // ENABLE_CUBE_MAP_REFLECT

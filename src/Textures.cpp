@@ -970,6 +970,7 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 
 void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate) { // Note: no mipmaps
 
+	assert(tex_size > 0);
 	assert(tid == 0);
 	glGenTextures(1, &tid);
 	bind_cube_map_texture(tid);
@@ -981,6 +982,7 @@ void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate) { /
 	if (allocate) {glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GL_RGB8, tex_size, tex_size);}
 	//gluBuild2DMipmaps(GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_RGB8, tex_size, tex_size, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	check_gl_error(520);
 }
 
 

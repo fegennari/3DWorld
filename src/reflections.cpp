@@ -118,8 +118,10 @@ void restore_matrices_and_clear() {
 void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &center, float near_plane, float far_plane, bool only_front_facing) {
 
 	//RESET_TIME;
+	check_gl_error(530);
 	assert(tid);
 	pos_dir_up const prev_camera_pdu(camera_pdu);
+	vector3d const prev_up_vector(up_vector), prev_cview_dir(cview_dir);
 	glViewport(0, 0, tex_size, tex_size);
 	fgMatrixMode(FG_PROJECTION);
 	fgPushMatrix();
@@ -129,24 +131,28 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 	for (unsigned dim = 0; dim < 3; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
 			unsigned const face_ix(2*dim + !dir);
-			vector3d view_dir(zero_vector), upv(-plus_y);
-			view_dir[dim]  = (dir ? 1.0 : -1.0);
-			if (dim == 1) {upv = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
+			cview_dir = zero_vector;
+			up_vector = -plus_y;
+			cview_dir[dim] = (dir ? 1.0 : -1.0);
+			if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 			if (only_front_facing && ((prev_camera_pdu.pos[dim] > center[dim]) ^ dir)) continue; // back facing
-			camera_pdu = pos_dir_up(center, view_dir, upv, 0.5*perspective_fovy*TO_RADIANS, near_plane, far_plane, 1.0, 1); // 90 degree FOV
-			vector3d const eye(center - view_dir*cview_radius);
-			fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, upv.x, upv.y, upv.z);
+			camera_pdu = pos_dir_up(center, cview_dir, up_vector, 0.5*perspective_fovy*TO_RADIANS, near_plane, far_plane, 1.0, 1); // 90 degree FOV
+			vector3d const eye(center - cview_dir*cview_radius);
+			fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			draw_scene_from_custom_frustum(camera_pdu, 2, 1, 1); // reflection_pass=2 (cube map), include_mesh=1, disable_occ_cull=1
 			render_to_texture_cube_map(tid, tex_size, face_ix); // render reflection to texture
 		} // for dir
 	} // for dim
 	camera_pdu = prev_camera_pdu;
+	up_vector  = prev_up_vector;
+	cview_dir  = prev_cview_dir;
 	fgMatrixMode(FG_PROJECTION);
 	fgPopMatrix();
 	fgMatrixMode(FG_MODELVIEW);
 	setup_viewport_and_proj_matrix(window_width, window_height); // restore
 	update_shadow_matrices(); // restore
+	check_gl_error(531);
 	//PRINT_TIME("Create Reflection Cube Map");
 }
 
@@ -257,6 +263,7 @@ void create_cube_map_reflection(unsigned &tid, point const &center, float near_p
 
 	if (display_mode & 0x20) return; // reflections not enabled
 	unsigned const tex_size(min(window_width, window_height)); // FIXME: make a power of 2 rounded down?
+	assert(tex_size > 0);
 	setup_cube_map_reflection_texture(tid, tex_size);
 	create_reflection_cube_map(tid, tex_size, center, near_plane, FAR_CLIP, only_front_facing);
 	check_gl_error(998);

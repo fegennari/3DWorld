@@ -529,7 +529,7 @@ coll_obj const &get_draw_cobj(unsigned index) {
 	return coll_objects.get_cobj(index);
 }
 
-void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, bool enable_reflections) {
+void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, bool enable_reflections, int reflection_pass) {
 	// Note: pass in 3 when has_lt_atten to enable sphere atten
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
@@ -537,7 +537,7 @@ void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, 
 void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
 
 	if (cobjs.empty()) return;
-	setup_cobj_shader(s, 0, use_normal_map, use_texgen, use_reflect_tex); // no lt_atten
+	setup_cobj_shader(s, 0, use_normal_map, use_texgen, use_reflect_tex, reflection_pass); // no lt_atten
 	if (use_reflect_tex) {bind_texture_tu(reflection_tid, 14);}
 	cdb.clear();
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
@@ -640,7 +640,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	bool const use_ref_plane(reflection_pass == 1 || (reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);
 	shader_t s;
-	setup_cobj_shader(s, has_lt_atten, 0, 2, 0);
+	setup_cobj_shader(s, has_lt_atten, 0, 2, 0, reflection_pass);
 	int last_tid(-2), last_group_id(-1);
 	static cobj_draw_buffer cdb;
 	cdb.clear();
