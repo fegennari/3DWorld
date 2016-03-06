@@ -138,7 +138,7 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 			if (dim == 1) {up_vector = (dir ? plus_z : -plus_z);} // Note: in OpenGL, the cube map top/bottom is in Y, and up dir is special in this dim
 			if (only_front_facing && ((prev_camera_pdu.pos[dim] > center[dim]) ^ dir)) continue; // back facing
 			camera_pdu = pos_dir_up(center, cview_dir, up_vector, 0.5*perspective_fovy*TO_RADIANS, near_plane, far_plane, 1.0, 1); // 90 degree FOV
-			vector3d const eye(center - cview_dir*cview_radius);
+			vector3d const eye(center - 0.001*cview_dir);
 			fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			setup_sun_moon_light_pos();
