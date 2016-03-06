@@ -177,11 +177,13 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	pos_dir_up const refl_camera_pdu(camera_pdu);
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
+	setup_sun_moon_light_pos();
 	draw_scene_from_custom_frustum(refl_camera_pdu, 1, 0, 1); // reflection_pass=1 (planar), include_mesh=0, disable_occ_cull=1
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
 	camera_pdu = old_camera_pdu;
 	restore_matrices_and_clear(); // reset state
 	update_shadow_matrices(); // restore
+	setup_sun_moon_light_pos();
 	enable_clip_plane_z = 0;
 	//PRINT_TIME("Create Reflection Texture");
 }
