@@ -1076,7 +1076,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, 
 	update_shadow_matrices();
 	draw_coll_surfaces(0, reflection_pass);
 	
-	if (include_mesh) { // the mesh and grass are generally under the reflection plane, so can be skipped
+	if (include_mesh) { // the mesh and grass are generally under the reflection plane, so can be skipped in the reflection plane pass
 		if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
 		draw_grass();
 	}

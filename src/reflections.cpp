@@ -142,7 +142,7 @@ void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &ce
 			fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			setup_sun_moon_light_pos();
-			draw_scene_from_custom_frustum(camera_pdu, 2, 1, 1); // reflection_pass=2 (cube map), include_mesh=1, disable_occ_cull=1
+			draw_scene_from_custom_frustum(camera_pdu, 2, (cview_dir != plus_z), 1); // reflection_pass=2 (cube map), include_mesh=all dirs but up, disable_occ_cull=1
 			render_to_texture_cube_map(tid, tex_size, face_ix); // render reflection to texture
 		} // for dir
 	} // for dim
