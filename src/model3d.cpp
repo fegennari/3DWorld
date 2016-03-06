@@ -1507,9 +1507,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 		else if (reflect_mode == 2 && model_refl_tid) { // using the reflection texture
 			shader.add_uniform_vector3d("cube_map_center", center); // world space
 			shader.add_uniform_float("cube_map_near_clip", 0.5f*bcube_xf.max_len());
-			set_active_texture(14); // tu_id=14
-			bind_cube_map_texture(model_refl_tid);
-			set_active_texture(0);
+			bind_texture_tu(model_refl_tid, 14, 1); // tu_id=14, is_cube_map=1
 #if 0 // TESTING
 			select_texture(WHITE_TEX);
 			set_def_spec_map();

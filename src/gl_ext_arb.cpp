@@ -49,11 +49,11 @@ void select_multitex(int id, unsigned tu_id, bool reset) {
 	if (reset) {set_active_texture(0);}
 }
 
-void bind_texture_tu(unsigned tid, unsigned tu_id) {
+void bind_texture_tu(unsigned tid, unsigned tu_id, bool is_cube_map) {
 
 	assert(tid);
 	set_active_texture(tu_id);
-	bind_2d_texture(tid);
+	if (is_cube_map) {bind_cube_map_texture(tid);} else {bind_2d_texture(tid);}
 	set_active_texture(0);
 }
 
