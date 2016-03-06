@@ -286,8 +286,8 @@ void main()
 	float reflect_w = get_reflect_weight(view_dir, ws_normal, reflectivity2, ((refract_ix == 1.0) ? 1.5 : refract_ix)); // default is not water
 	vec3 rel_pos    = vpos - cube_map_center;
 	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos)); // clamp to cube bounds
-	//vec3 ref_v      = reflect(view_dir, ws_normal);
-	vec3 ref_dir    = rel_pos + cube_map_near_clip*ws_normal; // position offset within cube (approx.)
+	vec3 ref_v      = reflect(-view_dir, ws_normal);
+	vec3 ref_dir    = rel_pos + cube_map_near_clip*ref_v; // position offset within cube (approx.)
 	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
 #endif // ENABLE_CUBE_MAP_REFLECT
 
