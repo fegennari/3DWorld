@@ -288,7 +288,7 @@ void main()
 	vec3 rel_pos    = vpos - cube_map_center;
 	rel_pos         = max(vec3(-cube_map_near_clip), min(vec3(cube_map_near_clip), rel_pos)); // clamp to cube bounds
 	vec3 ref_v      = reflect(-view_dir, ws_normal);
-	vec3 ref_v      = refract(-view_dir, ws_normal, 1.0/ref_ix);
+	//vec3 ref_v      = refract(-view_dir, ws_normal, 1.0/ref_ix);
 	vec3 ref_dir    = rel_pos + cube_map_near_clip*ref_v; // position offset within cube (approx.)
 	// Note: could ue textureLod(reflection_tex, ref_dir, 4) if mipmaps are computed
 	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
