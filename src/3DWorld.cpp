@@ -129,6 +129,7 @@ extern tree_cont_t t_trees;
 extern dpart_params_t dp_params;
 extern hmap_params_t hmap_params;
 extern reflect_plane_selector reflect_planes;
+extern reflective_cobjs_t reflective_cobjs;
 
 
 void init_keyset();
@@ -175,13 +176,8 @@ bool check_gl_error(unsigned loc_id) {
 }
 
 
-void display_window_resized() {
-	invalidate_cached_stars();
-}
-
-void post_window_redisplay() {
-	glutPostWindowRedisplay(curr_window); // Schedule a new display event
-}
+void display_window_resized() {invalidate_cached_stars();}
+void post_window_redisplay () {glutPostWindowRedisplay(curr_window);} // Schedule a new display event
 
 
 void clear_context() {
@@ -207,6 +203,7 @@ void clear_context() {
 	clear_vbo_ring_buffer();
 	clear_default_vao();
 	free_cloud_context();
+	reflective_cobjs.free_textures();
 	clear_landscape_vbo = 1;
 }
 

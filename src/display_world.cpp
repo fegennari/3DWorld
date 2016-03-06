@@ -55,6 +55,7 @@ extern vector3d total_wind;
 extern colorRGBA sun_color, bkg_color;
 extern water_params_t water_params;
 extern vector<camera_filter> cfilters;
+extern reflective_cobjs_t reflective_cobjs;
 
 void check_xy_offsets();
 void post_window_redisplay();
@@ -884,6 +885,7 @@ void display(void) {
 			// create all reflection textures
 			if (enable_reflection_plane()) {create_gm_z_reflection();} // must be before draw background but after setup_object_render_data()
 			ensure_model_reflection_cube_maps();
+			reflective_cobjs.create_textures();
 
 			// draw background
 			if (combined_gu) {draw_universe_bkg(0);} // infinite universe as background

@@ -76,6 +76,7 @@ unsigned const COBJ_NO_COLL     = 0x04;
 unsigned const COBJ_MOVABLE     = 0x08;
 unsigned const COBJ_WAS_CUBE    = 0x10;
 unsigned const COBJ_IS_INDOORS  = 0x20;
+unsigned const COBJ_REFLECTIVE  = 0x40;
 
 struct cobj_params : public obj_layer { // size = 84
 
@@ -177,6 +178,7 @@ public:
 	bool is_movable()     const {return ((cp.flags & COBJ_MOVABLE) != 0);}
 	bool is_wet()         const {return (!(cp.flags & COBJ_IS_INDOORS) && is_ground_wet());}
 	bool is_snow_cov()    const {return (!(cp.flags & COBJ_IS_INDOORS) && is_ground_snowy());}
+	bool is_reflective()  const {return ((cp.flags & COBJ_REFLECTIVE) != 0 && !cp.no_draw());}
 	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || is_movable());}
 	bool is_player()      const;
 	bool is_invis_player()const;
@@ -215,6 +217,7 @@ public:
 	void add_connect_waypoint(); // waypoints.cpp
 	void remove_waypoint();
 	void check_indoors_outdoors();
+	void set_reflective_flag(bool val) {set_bit_flag_to(cp.flags, COBJ_REFLECTIVE, val);}
 	void write_to_cobj_file(std::ostream &out, coll_obj &prev) const;
 	
 	// inexact primitive intersections

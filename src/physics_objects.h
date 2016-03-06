@@ -421,11 +421,27 @@ public:
 
 
 template<typename T> void reset_status(vector<T> &objs) {
-
-	for (unsigned i = 0; i < objs.size(); ++i) {
-		objs[i].status = 0;
-	}
+	for (unsigned i = 0; i < objs.size(); ++i) {objs[i].status = 0;}
 }
+
+
+class reflective_cobjs_t {
+
+	struct map_val_t {
+		unsigned tid;
+		cube_t bcube; // cached bcube to determine when the cobj is moved
+		map_val_t() : tid(0) {}
+	};
+
+	map<unsigned, map_val_t> cobjs; // maps cid to tid
+
+public:
+	void add_cobj(unsigned cid);
+	void clear() {free_textures(); cobjs.clear();}
+	void free_textures();
+	void create_textures();
+	unsigned get_tid_for_cid(unsigned cid) const;
+};
 
 
 // group flag bits

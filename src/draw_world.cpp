@@ -72,6 +72,7 @@ extern cube_t cur_smoke_bb;
 extern vector<portal> portals;
 extern vector<obj_draw_group> obj_draw_groups;
 extern reflect_plane_selector reflect_planes;
+extern reflective_cobjs_t reflective_cobjs;
 
 void create_dlight_volumes();
 void create_sky_vis_zval_texture(unsigned &tid);
@@ -529,16 +530,16 @@ coll_obj const &get_draw_cobj(unsigned index) {
 	return coll_objects.get_cobj(index);
 }
 
-void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, bool enable_reflections, int reflection_pass) {
+void setup_cobj_shader(shader_t &s, bool has_lt_atten, bool enable_normal_maps, int use_texgen, int enable_reflections, int reflection_pass) {
 	// Note: pass in 3 when has_lt_atten to enable sphere atten
 	setup_smoke_shaders(s, 0.0, use_texgen, 0, 1, 1, 1, 1, has_lt_atten, 1, enable_normal_maps, 0, (use_texgen == 0), two_sided_lighting, 0.0, 0.0, 0, enable_reflections);
 }
 
-void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, bool use_reflect_tex) {
+void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int reflection_pass, shader_t &s, int use_texgen, bool use_normal_map, int enable_reflections) {
 
 	if (cobjs.empty()) return;
-	setup_cobj_shader(s, 0, use_normal_map, use_texgen, use_reflect_tex, reflection_pass); // no lt_atten
-	if (use_reflect_tex) {bind_texture_tu(reflection_tid, 14);}
+	setup_cobj_shader(s, 0, use_normal_map, use_texgen, enable_reflections, reflection_pass); // no lt_atten
+	if (enable_reflections == 1) {bind_texture_tu(reflection_tid, 14);} // planar reflections
 	cdb.clear();
 	// we use generated tangent and binormal vectors, with the binormal scale set to either 1.0 or -1.0 depending on texture coordinate system and y-inverting
 	float bump_b_scale(0.0);
@@ -549,6 +550,16 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		coll_obj const &c(get_draw_cobj(*i));
 
+		if (enable_reflections == 2) { // cube map reflections
+			assert(c.is_reflective());
+			if (c.get_cube_center() == get_camera_pos()) continue; // skip drawing the cobj in its own reflection
+			unsigned const tid(reflective_cobjs.get_tid_for_cid(*i));
+			if (tid == 0) {continue;} // reflection texture not setup - maybe this draw pass is creating the reflection texture for this cobj, so skip it
+			cdb.flush(); // all tids are unique, must flush every time
+			float const metalness = 1.0; // FIXME: make a cobj parameter
+			s.add_uniform_float("metalness", metalness);
+			setup_shader_cube_map_params(s, c, tid);
+		}
 		if (use_normal_map) {
 			float const bbs(c.cp.negate_nm_bns() ? -1.0 : 1.0);
 
@@ -644,7 +655,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	int last_tid(-2), last_group_id(-1);
 	static cobj_draw_buffer cdb;
 	cdb.clear();
-	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm;
+	vector<unsigned> normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm, cube_map_cobjs;
 	//if (enable_clip_plane_z) {glEnable(GL_CLIP_DISTANCE0);}
 	
 	if (!draw_trans) { // draw solid
@@ -660,6 +671,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 			assert(c.id == (int)cix); // should always be equal
 
 			if (c.dgroup_id >= 0) {
+				assert(!c.is_reflective()); // reflective grouped cobjs are not yet supported
 				if (!c.is_cobj_visible()) continue; // VFC/occlusion culling
 				vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(c.dgroup_id, c));
 				//assert(!group_cids.empty()); // too strong?
@@ -675,7 +687,12 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 				}
 				continue; // don't draw c itself (only if group is nonempty?)
 			}
-			if (draw_or_add_cobj(cix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm)) {
+			if (c.is_reflective() && enable_all_reflections()) {
+				assert(c.cp.normal_map < 0); // FIXME: normal mapped cobjs not yet supported
+				// Note: tex coords are not supported (but may not be used anyway for completely reflective cobjs)
+				cube_map_cobjs.push_back(cix);
+			}
+			else if (draw_or_add_cobj(cix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, tex_coord_nm_cobjs, reflect_cobjs, reflect_cobjs_nm)) {
 				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass); // i may not be valid after this call
 				
 				if (cix != *i) {
@@ -764,6 +781,8 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	draw_cobjs_group(tex_coord_cobjs,    cdb, reflection_pass, s, 0, 0, 0);
 	draw_cobjs_group(reflect_cobjs,      cdb, reflection_pass, s, 2, 0, 1);
 	draw_cobjs_group(reflect_cobjs_nm,   cdb, reflection_pass, s, 2, 1, 1);
+	draw_cobjs_group(cube_map_cobjs,     cdb, reflection_pass, s, 2, 0, 2);
+	check_gl_error(570);
 	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
 	//if (draw_solid) {PRINT_TIME("Final Draw");}
 	//PRINT_TIME_ONSCREEN("Final Draw");

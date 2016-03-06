@@ -5,16 +5,19 @@
 #include "physics_objects.h"
 #include "draw_utils.h"
 #include "model3d.h"
+#include "shaders.h"
 
 bool enable_clip_plane_z(0);
 unsigned reflection_tid(0);
 float clip_plane_z(0.0);
 reflect_plane_selector reflect_planes;
+reflective_cobjs_t reflective_cobjs;
 
 extern bool combined_gu, show_lightning;
-extern int display_mode, window_width, window_height;
+extern int display_mode, window_width, window_height, begin_motion;
 extern float NEAR_CLIP, FAR_CLIP, water_plane_z, perspective_fovy;
 extern coll_obj_group coll_objects;
+
 
 void setup_sun_moon_light_pos();
 void do_look_at();
@@ -30,6 +33,7 @@ float get_reflection_plane   () {return reflect_planes.get_refl_plane();}
 bool use_reflect_plane_for_cobj(coll_obj const &c) {
 	if (c.type != COLL_CUBE && (c.type != COLL_CYLINDER || (c.cp.surfs & 1))) return 0;
 	if (!c.is_wet() && c.cp.spec_color.get_luminance() < 0.25) return 0;
+	if (c.is_reflective()) return 0; // use cube map reflections instead
 	cube_t const &bc(reflect_planes.get_selected());
 	return (c.intersects(bc) && c.d[2][1] <= bc.d[2][1] && camera_pdu.cube_visible(c));
 }
@@ -291,6 +295,15 @@ unsigned create_tt_reflection(float terrain_zmin) {
 }
 
 
+void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid) {
+
+	assert(tid > 0);
+	shader.add_uniform_vector3d("cube_map_center", bcube.get_cube_center()); // world space
+	shader.add_uniform_float("cube_map_near_clip", 0.5f*bcube.max_len());
+	bind_texture_tu(tid, 14, 1); // tu_id=14, is_cube_map=1
+}
+
+
 void reflect_plane_selector::select_best_reflection_plane() {
 
 	if (empty()) return;
@@ -308,5 +321,36 @@ void reflect_plane_selector::select_best_reflection_plane() {
 		if (best_dist == 0.0 || dist < best_dist) {best_dist = dist; sel_cube = i;}
 	}
 	//cout << TXT(sel_cube) << endl;
+}
+
+
+void reflective_cobjs_t::add_cobj(unsigned cid) {
+	cobjs.insert(make_pair(cid, map_val_t())); // insert with empty tid; okay if already exists
+}
+
+void reflective_cobjs_t::free_textures() {
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {free_texture(i->second.tid);}
+}
+
+void reflective_cobjs_t::create_textures() {
+
+	if (!enable_all_reflections()) return;
+	bool const dynamic_update(begin_motion != 0); // FIXME: do something better
+
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
+		unsigned &tid(i->second.tid);
+		cube_t const &bcube(coll_objects.get_cobj(i->first));
+		bool const cobj_moved(i->second.bcube != bcube);
+		if (tid && !dynamic_update && !cobj_moved) continue; // reflection texture is already valid
+		create_cube_map_reflection(tid, bcube, (tid != 0 && !cobj_moved)); // enable face culling when texture is created or the cobj has moved
+		i->second.bcube = bcube;
+	}
+}
+
+unsigned reflective_cobjs_t::get_tid_for_cid(unsigned cid) const {
+
+	auto i(cobjs.find(cid));
+	assert(i != cobjs.end());
+	return i->second.tid;
 }
 

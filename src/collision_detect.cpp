@@ -35,6 +35,7 @@ extern obj_type object_types[];
 extern player_state *sstates;
 extern platform_cont platforms;
 extern set<unsigned> moving_cobjs;
+extern reflective_cobjs_t reflective_cobjs;
 
 
 void add_coll_point(int i, int j, int index, float zminv, float zmaxv, int add_to_hcm, int is_dynamic, int dhcm);
@@ -610,6 +611,7 @@ int coll_obj::add_coll_cobj() {
 	cobj.dgroup_id = dgroup_id;
 	if (type == COLL_CUBE) {cobj.radius2 = radius2;} // copy corner radius
 	if (cgroup_id >= 0) {cobj_groups.add_cobj(cgroup_id, cid);}
+	if (is_reflective()) {reflective_cobjs.add_cobj(cid);}
 	return cid;
 }
 

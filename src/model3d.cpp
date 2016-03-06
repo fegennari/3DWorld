@@ -1499,15 +1499,12 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 
 	if (reflective == 2 && !is_shadow_pass && !is_z_prepass) { // cube map reflections
 		cube_t const bcube_xf(get_single_transformed_bcube(xlate));
-		point const center(bcube_xf.get_cube_center()); // Note: xlate should be all zeros
 
 		if (reflection_pass) { // creating the reflection texture
-			if (center == camera_pdu.pos) return; // skip self reflections
+			if (bcube_xf.get_cube_center() == camera_pdu.pos) return; // skip self reflections
 		}
 		else if (reflect_mode == 2 && model_refl_tid) { // using the reflection texture
-			shader.add_uniform_vector3d("cube_map_center", center); // world space
-			shader.add_uniform_float("cube_map_near_clip", 0.5f*bcube_xf.max_len());
-			bind_texture_tu(model_refl_tid, 14, 1); // tu_id=14, is_cube_map=1
+			setup_shader_cube_map_params(shader, bcube_xf, model_refl_tid); // Note: xlate should be all zeros
 #if 0 // TESTING
 			select_texture(WHITE_TEX);
 			set_def_spec_map();
