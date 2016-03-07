@@ -556,8 +556,7 @@ void draw_cobjs_group(vector<unsigned> const &cobjs, cobj_draw_buffer &cdb, int 
 			unsigned const tid(reflective_cobjs.get_tid_for_cid(*i));
 			if (tid == 0) {continue;} // reflection texture not setup - maybe this draw pass is creating the reflection texture for this cobj, so skip it
 			cdb.flush(); // all tids are unique, must flush every time
-			float const metalness = 1.0; // FIXME: make a cobj parameter
-			s.add_uniform_float("metalness", metalness);
+			s.add_uniform_float("metalness", c.cp.metalness);
 			setup_shader_cube_map_params(s, c, tid);
 		}
 		if (use_normal_map) {

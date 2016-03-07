@@ -69,7 +69,7 @@ shadow_map_sz 4096
 
 smoke_bounds -7.45 -0.05  -5.45 0.15  -0.3  2.2
 smoke_bounds -7.45  7.45   0.05 5.95  -0.3  2.2
-smoke_bounds -8.0   8.0   -0.95 6.5    -0.7 -0.3
+smoke_bounds -8.0   8.0   -0.95 6.5   -0.7 -0.3
 
 state_file mapx/state.txt
 coll_obj_file mapx/coll_objs_mapx.txt
