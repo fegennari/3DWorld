@@ -1861,6 +1861,7 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 	if (cp.density != prev.cp.density) {out << "density " << cp.density << endl;}
 	if (cp.tscale  != prev.cp.tscale ) {out << "y " << cp.tscale << endl;}
 	if (cp.tdx != prev.cp.tdx || cp.tdy != prev.cp.tdy || cp.swap_txy() != prev.cp.swap_txy()) {out << "Y " << cp.tdx << " " << cp.tdy << " " << cp.swap_txy() << endl;}
+	if (cp.metalness != prev.cp.metalness) {out << "metalness " << cp.metalness << endl;}
 
 	if (cp.normal_map != prev.cp.normal_map) {
 		out << "X " << texture_str(cp.normal_map);
@@ -1870,6 +1871,7 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 	if (cp.surfs != prev.cp.surfs) {out << "e " << (unsigned)cp.surfs << endl;}
 	if (is_movable() != prev.is_movable()) {out << "movable " << is_movable() << endl;} // or 'd'
 	if (destroy != prev.destroy) {out << "a " << (unsigned)destroy << endl;}
+	if (is_reflective()) {out << "cube_map_ref 1" << endl;} // cube map reflections only
 
 	switch (type) {
 	case COLL_CUBE: // 'B': cube: xmin xmax ymin ymax zmin zmax [corner_radius]
@@ -1897,6 +1899,7 @@ void coll_obj::write_to_cobj_file(ostream &out, coll_obj &prev) const {
 		break;
 	default: assert(0);
 	}
+	if (is_reflective()) {out << "cube_map_ref 0" << endl;} // disable reflections
 	prev = *this; // update previous cobj
 }
 
