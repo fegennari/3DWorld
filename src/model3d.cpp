@@ -14,6 +14,7 @@
 
 bool const ENABLE_BUMP_MAPS  = 1;
 bool const ENABLE_SPEC_MAPS  = 1;
+bool const ENABLE_INTER_REFLECTIONS = 1;
 unsigned const MAGIC_NUMBER  = 42987143; // arbitrary file signature
 unsigned const BLOCK_SIZE    = 32768; // in vertex indices
 
@@ -1765,7 +1766,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
 	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
-	bool const enable_any_reflections(shader_effects && !is_shadow_pass && !reflection_pass);
+	bool const enable_any_reflections(shader_effects && !is_shadow_pass && (!reflection_pass || ENABLE_INTER_REFLECTIONS));
 	bool const enable_planar_reflections(enable_any_reflections && reflection_tid > 0 && use_reflection_plane());
 	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
 	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
