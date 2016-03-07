@@ -340,9 +340,11 @@ void reflective_cobjs_t::create_textures() {
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		unsigned &tid(i->second.tid);
-		cube_t const &bcube(coll_objects.get_cobj(i->first));
+		coll_obj const &cobj(coll_objects.get_cobj(i->first));
+		cube_t const &bcube(cobj);
 		bool const cobj_moved(i->second.bcube != bcube);
-		if (tid && !dynamic_update && !cobj_moved) continue; // reflection texture is already valid
+		if (tid && !dynamic_update && !cobj_moved) continue; // reflection texture is valid, cobj has not moved, and scene has not changed
+		if (tid && !cobj.is_cobj_visible()) continue; // reflection texture is valid but cobj is not visible (approximate)
 		create_cube_map_reflection(tid, bcube, (tid != 0 && !cobj_moved)); // enable face culling when texture is created or the cobj has moved
 		i->second.bcube = bcube;
 	}
