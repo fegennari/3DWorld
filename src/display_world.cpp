@@ -1048,7 +1048,7 @@ void draw_transparent(bool above_water) {
 
 
 // Note: assumes the camera is not underwater
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, bool include_mesh, bool disable_occ_cull) {
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, bool include_mesh, bool include_grass, bool disable_occ_cull) {
 
 	check_gl_error(532);
 	pos_dir_up const prev_camera_pdu(camera_pdu);
@@ -1078,14 +1078,13 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, 
 	update_shadow_matrices();
 	draw_coll_surfaces(0, reflection_pass);
 	
-	if (include_mesh) { // the mesh and grass are generally under the reflection plane, so can be skipped in the reflection plane pass
-		if (display_mode & 0x01) {display_mesh(0, 1);} // draw mesh
-		draw_grass();
-	}
+	// the mesh and grass are generally under the reflection plane, so can be skipped in the reflection plane pass
+	if (include_mesh && (display_mode & 0x01)) {display_mesh(0, 1);} // draw mesh
+	if (include_grass) {draw_grass();}
 	draw_scenery();
 	draw_solid_object_groups();
 	draw_stuff(1, 0, reflection_pass);
-	if (display_mode & 0x04) {draw_water(1);}
+	if (include_mesh && (display_mode & 0x04)) {draw_water(1);} // if we can exclude the mesh we can probably exclude the water as well
 	draw_stuff(0, 0, reflection_pass);
 	draw_game_elements(0);
 	setup_basic_fog();

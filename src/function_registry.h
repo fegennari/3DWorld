@@ -81,7 +81,7 @@ void set_standard_viewport();
 point get_sun_pos();
 point get_moon_pos();
 colorRGBA get_bkg_color(point const &p1, vector3d const &v12);
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, bool include_mesh, bool disable_occ_cull);
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, bool include_mesh, bool include_grass, bool disable_occ_cull);
 
 // function prototypes - draw_world
 void set_fill_mode();
@@ -830,8 +830,8 @@ float get_reflection_plane();
 bool use_reflect_plane_for_cobj(coll_obj const &c);
 unsigned create_gm_z_reflection();
 unsigned create_tt_reflection(float terrain_zmin);
-void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane, bool only_front_facing=0);
-void create_cube_map_reflection(unsigned &tid, cube_t const &cube, bool only_front_facing=0);
+void create_cube_map_reflection(unsigned &tid, point const &center, float near_plane, float far_plane, bool only_front_facing=0, bool is_indoors=0);
+void create_cube_map_reflection(unsigned &tid, cube_t const &cube, bool only_front_facing=0, bool is_indoors=0);
 void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid);
 
 #include "inlines.h"

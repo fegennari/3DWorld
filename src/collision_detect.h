@@ -176,8 +176,9 @@ public:
 	bool is_big_occluder()const {return (is_occluder() && fixed && (type == COLL_POLYGON || volume > 0.001));}
 	bool maybe_is_moving()const {return (platform_id >= 0 || falling);}
 	bool is_movable()     const {return ((cp.flags & COBJ_MOVABLE) != 0);}
-	bool is_wet()         const {return (!(cp.flags & COBJ_IS_INDOORS) && is_ground_wet());}
-	bool is_snow_cov()    const {return (!(cp.flags & COBJ_IS_INDOORS) && is_ground_snowy());}
+	bool is_indoors()     const {return ((cp.flags & COBJ_IS_INDOORS) != 0);}
+	bool is_wet()         const {return (!is_indoors() && is_ground_wet());}
+	bool is_snow_cov()    const {return (!is_indoors() && is_ground_snowy());}
 	bool is_reflective()  const {return ((cp.flags & COBJ_REFLECTIVE) != 0 && !cp.no_draw());}
 	bool may_be_dynamic() const {return (status != COLL_STATIC || maybe_is_moving() || is_movable());}
 	bool is_player()      const;
