@@ -1374,14 +1374,14 @@ void set_def_spec_map() {
 	if (enable_spec_map()) {select_multitex(WHITE_TEX, 8);} // all white/specular (no specular map texture)
 }
 
-void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
+void model3d::render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 	unsigned bmap_pass_mask, base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm)
 {
 	bool const is_normal_pass(!is_shadow_pass && !is_z_prepass);
 	if (is_normal_pass) {smap_data.set_for_all_lights(shader, mvm);}
 
-	if (group_back_face_cull) { // okay enable culling if is_shadow_pass on some scenes
-		if (reflection_pass) {glCullFace(GL_FRONT);} // the reflection pass uses a mirror, which changes the winding direction, so we cull the front faces instead
+	if (group_back_face_cull && reflection_pass != 2) { // okay enable culling if is_shadow_pass on some scenes
+		if (reflection_pass == 1) {glCullFace(GL_FRONT);} // the reflection pass uses a mirror, which changes the winding direction, so we cull the front faces instead
 		glEnable(GL_CULL_FACE);
 	}
 
@@ -1414,8 +1414,8 @@ void model3d::render_materials(shader_t &shader, bool is_shadow_pass, bool refle
 		}
 		to_draw.clear();
 	}
-	if (group_back_face_cull) { // okay enable culling if is_shadow_pass on some scenes
-		if (reflection_pass) {glCullFace(GL_BACK);} // restore the default
+	if (group_back_face_cull && reflection_pass != 2) { // okay enable culling if is_shadow_pass on some scenes
+		if (reflection_pass == 1) {glCullFace(GL_BACK);} // restore the default
 		glDisable(GL_CULL_FACE);
 	}
 }
@@ -1493,7 +1493,7 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
 
 
 // non-const due to vbo caching, normal computation, etc.
-void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
+void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
 
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
 	if (reflect_mode) {shader.add_uniform_float("metalness", metalness);} // may or may not be used
@@ -1502,7 +1502,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, bool reflection_pass
 		cube_t const bcube_xf(get_single_transformed_bcube(xlate));
 
 		if (reflection_pass) { // creating the reflection texture
-			if (bcube_xf.get_cube_center() == camera_pdu.pos) return; // skip self reflections
+			if (reflection_pass == 2 && bcube_xf.get_cube_center() == camera_pdu.pos) return; // skip self reflections
 		}
 		else if (reflect_mode == 2 && model_refl_tid) { // using the reflection texture
 			setup_shader_cube_map_params(shader, bcube_xf, model_refl_tid); // Note: xlate should be all zeros
@@ -1761,12 +1761,12 @@ void model3ds::free_context() {
 }
 
 
-void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const &xlate) { // Note: xlate is only used in tiled terrain mode
+void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &xlate) { // Note: xlate is only used in tiled terrain mode
 	
 	if (empty()) return;
 	bool const shader_effects(!disable_shader_effects && !is_shadow_pass);
 	bool const use_custom_smaps(shader_effects && shadow_map_enabled() && world_mode == WMODE_INF_TERRAIN);
-	bool const enable_any_reflections(shader_effects && !is_shadow_pass && (!reflection_pass || ENABLE_INTER_REFLECTIONS));
+	bool const enable_any_reflections(shader_effects && !is_shadow_pass && (reflection_pass == 0 || ENABLE_INTER_REFLECTIONS));
 	bool const enable_planar_reflections(enable_any_reflections && reflection_tid > 0 && use_reflection_plane());
 	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
 	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
@@ -1786,7 +1786,7 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 		cerr << "Error: Cannot mix planar reflections, cube map reflections, and no reflections for model3ds" << endl;
 		exit(1); // FIXME: better/earlier error? make this work?
 	}
-	if (use_z_prepass && !is_shadow_pass && !reflection_pass) { // check use_mvm?
+	if (use_z_prepass && !is_shadow_pass && reflection_pass == 0) { // check use_mvm?
 		// faster for scenes with high depth complexity and slow fragment shaders; slower when vertex/transform limited
 		s.set_prefix("#define POS_FROM_EPOS_MULT", 0); // VS - needed to make transformed vertices agree with the normal rendering flow
 		s.begin_color_only_shader(BLACK); // don't even need colors, only need depth
@@ -1812,14 +1812,14 @@ void model3ds::render(bool is_shadow_pass, bool reflection_pass, vector3d const 
 				else if (shader_effects) {
 					int const use_bmap((bmap_pass == 0) ? 0 : (model_calc_tan_vect ? 2 : 1));
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
-					int const is_outside((is_shadow_pass || reflection_pass) ? 0 : 2); // enable wet effect coverage mask
+					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
 					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting,
 						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside);
 					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}
 					if (ref_pass && any_planar_reflective) {bind_texture_tu(reflection_tid, 14);}
-					if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", (reflection_pass ? -1.0 : 1.0));}
+					if (model3d_wn_normal) {s.add_uniform_float("winding_normal_sign", ((reflection_pass == 1) ? -1.0 : 1.0));}
 				}
 				else {
 					s.begin_simple_textured_shader(0.0, 1); // with lighting
@@ -1897,7 +1897,7 @@ void model3d_stats_t::print() const {
 void free_model_context() {
 	all_models.free_context();
 }
-void render_models(bool shadow_pass, bool reflection_pass, vector3d const &xlate) {
+void render_models(bool shadow_pass, int reflection_pass, vector3d const &xlate) {
 	all_models.render(shadow_pass, reflection_pass, xlate);
 }
 void ensure_model_reflection_cube_maps() {

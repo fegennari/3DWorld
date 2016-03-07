@@ -204,7 +204,7 @@ void draw_stuff(int draw_uw, int timer1, int reflection_pass=0) {
 		render_voxel_data(0);
 		check_gl_error(20);
 		if (TIMETEST) PRINT_TIME("O");
-		render_models(0, (reflection_pass != 0));
+		render_models(0, reflection_pass);
 		check_gl_error(21);
 		if (TIMETEST) PRINT_TIME("P");
 		draw_teleporters();
