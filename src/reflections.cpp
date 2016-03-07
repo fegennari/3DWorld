@@ -123,6 +123,7 @@ void restore_matrices_and_clear() {
 void create_reflection_cube_map(unsigned tid, unsigned tex_size, point const &center, float near_plane, float far_plane, bool only_front_facing, bool is_indoors) {
 
 	//RESET_TIME;
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	check_gl_error(530);
 	assert(tid);
 	pos_dir_up const prev_camera_pdu(camera_pdu);
