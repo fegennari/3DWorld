@@ -6,6 +6,17 @@ y 4.0
 b -1.55 1.353  -0.244 0.365  2.05 2.15  1.0 1.0 1.0  0.5   50000000  0 # sky cube light
 b -1.55 1.353  -0.244 0.365  2.05 2.15  1.0 1.0 1.0  0.05  250000   1  61 # global cube light (+z only)
 
+# reflective shapes
+cube_map_ref 1
+metalness 1.0 # metal
+l 0.8 1.0 1.0 1.0 1.0 -1 1
+r 1.0 60.0  1.0 1.0 1.0 # silver
+#S 0.2 0.0 0.2  0.05
+#B 1.0 1.1 0.0 0.1 0.02 0.12
+#z -1.0 0.0 0.3  0.0 0.0 1.0  0.08 0.04
+cube_map_ref 0
+r 0.0 1.0 # reset specularity
+
 m 1.6E-3 # scale
 s 1 2 # swap Y and Z
 M 2 # mirror in Z
