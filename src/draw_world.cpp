@@ -647,7 +647,8 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	if (draw_trans && draw_last.empty() && (!is_smoke_in_use() || portals.empty())) return; // nothing transparent to draw
 	// Note: in draw_solid mode, we could call get_shadow_triangle_verts() on occluders to do a depth pre-pass here, but that doesn't seem to be more efficient
 	bool const has_lt_atten(draw_trans && coll_objects.has_lt_atten);
-	bool const use_ref_plane(reflection_pass == 1 || (reflection_tid > 0 && use_reflection_plane()));
+	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
+	bool const use_ref_plane(reflection_pass == 1 || (reflection_pass != 2 && reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);
 	shader_t s;
 	setup_cobj_shader(s, has_lt_atten, 0, 2, 0, reflection_pass);
