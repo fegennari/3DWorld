@@ -282,6 +282,10 @@ void main()
 #else
 	vec3 ws_normal = normalize(normal_s);
 #endif // USE_BUMP_MAP
+	vec3 spec_color = specular_color.rgb;
+#ifdef USE_SPEC_MAP
+	spec_color     *= get_spec_color();
+#endif
 	float ref_ix    = ((refract_ix == 1.0) ? 1.5 : refract_ix); // glass
 	vec3 view_dir   = normalize(camera_pos - vpos);
 	float reflect_w = get_reflect_weight(view_dir, ws_normal, reflectivity2, ref_ix); // default is not water
@@ -291,7 +295,7 @@ void main()
 	//vec3 ref_v      = refract(-view_dir, ws_normal, 1.0/ref_ix);
 	vec3 ref_dir    = rel_pos + cube_map_near_clip*ref_v; // position offset within cube (approx.)
 	// Note: could ue textureLod(reflection_tex, ref_dir, 4) if mipmaps are computed
-	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
+	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*spec_color, reflect_w);
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK
