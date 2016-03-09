@@ -1512,8 +1512,8 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 			shader.set_cur_color(WHITE); // or BLACK
 			shader.set_specular_color(WHITE, 60.0);
 			shader.set_color_e(BLACK);
-			//draw_cube(center, 0.1, 0.1, 0.1, 1);
-			draw_subdiv_sphere(center, 0.1, N_SPHERE_DIV, 1, 1);
+			//draw_cube(bcube_xf.get_cube_center(), 0.1, 0.1, 0.1, 1);
+			draw_subdiv_sphere(bcube_xf.get_cube_center(), 0.1, N_SPHERE_DIV, 1, 1);
 			return; // TESTING
 #endif
 		}
