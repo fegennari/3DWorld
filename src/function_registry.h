@@ -348,7 +348,7 @@ int  add_coll_cube(cube_t &cube, cobj_params const &cparams, int platform_id=-1,
 int  add_coll_cylinder(point const &p1, point const &p2, float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
 int  add_coll_torus(point const &p1, vector3d const &dir, float ro, float ri, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
 int  add_coll_capsule (point const &p1, point const &p2, float radius, float radius2, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
-int  add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id=-1, int dhcm=0);
+int  add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id=-1, int dhcm=0, bool reflective=0);
 int  add_coll_polygon(const point *points, int npoints, cobj_params const &cparams, float thickness, int platform_id=-1, int dhcm=0);
 int  add_simple_coll_polygon(const point *points, int npoints, cobj_params const &cparams, vector3d const &normal, int dhcm=0);
 int  remove_coll_object(int index, bool reset_draw=1);

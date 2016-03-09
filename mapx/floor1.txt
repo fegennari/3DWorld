@@ -48,7 +48,9 @@ l 0.8 1.0 1.0 1.0 1.0 -1 1
 r 1.0 60.0  1.0 1.0 1.0 # silver
 #S 1.4 1.5 0.2  0.05
 movable 1
+a 2 # destroyable/shatterable
 #B 1.46 1.54 1.36 1.44 0.02 0.12
+a 0 # non-destroyable
 movable 0
 #z 1.5 1.4 0.4  0.0 0.0 1.0  0.08 0.04
 r 1.0 60.0  0.8 0.4 0.25 # copper

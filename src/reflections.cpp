@@ -339,6 +339,15 @@ void reflective_cobjs_t::add_cobj(unsigned cid) {
 	cobjs.insert(make_pair(cid, map_val_t())); // insert with empty tid; okay if already exists
 }
 
+bool reflective_cobjs_t::remove_cobj(unsigned cid) { // okay if it doesn't exist/was already removed
+
+	auto i(cobjs.find(cid));
+	if (i == cobjs.end()) return 0; // doesn't exist
+	free_texture(i->second.tid);
+	cobjs.erase(i);
+	return 1;
+}
+
 void reflective_cobjs_t::free_textures() {
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {free_texture(i->second.tid);}
 }
@@ -347,10 +356,12 @@ void reflective_cobjs_t::create_textures() {
 
 	if (!enable_all_reflections()) return;
 	bool const dynamic_update(begin_motion != 0); // FIXME: do something better
+	vector<unsigned> to_remove;
 
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {
 		unsigned &tid(i->second.tid);
 		coll_obj const &cobj(coll_objects.get_cobj(i->first));
+		if (cobj.disabled() || !cobj.is_reflective()) {to_remove.push_back(i->first); continue;} // no longer reflective - mark for removal
 		cube_t const &bcube(cobj);
 		bool const cobj_moved(i->second.bcube != bcube);
 		bool const no_update_needed(tid && !dynamic_update && !cobj_moved);
@@ -361,6 +372,7 @@ void reflective_cobjs_t::create_textures() {
 		i->second.faces_valid = create_cube_map_reflection(tid, bcube, bfc, cobj.is_indoors());
 		i->second.bcube       = bcube;
 	}
+	for (auto i = to_remove.begin(); i != to_remove.end(); ++i) {remove_cobj(*i);}
 }
 
 unsigned reflective_cobjs_t::get_tid_for_cid(unsigned cid) const {

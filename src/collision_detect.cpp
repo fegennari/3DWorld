@@ -437,13 +437,18 @@ void add_coll_sphere_to_matrix(int index, int dhcm) {
 }
 
 // doesn't work for ellipses when X != Y
-int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id, int dhcm) {
+int add_coll_sphere(point const &pt, float radius, cobj_params const &cparams, int platform_id, int dhcm, bool reflective) {
 
 	radius = fabs(radius);
 	int const index(cobj_manager.get_next_avail_index());
 	coll_objects[index].points[0] = pt;
 	coll_objects.set_coll_obj_props(index, COLL_SPHERE, radius, radius, platform_id, cparams);
 	add_coll_sphere_to_matrix(index, dhcm);
+
+	if (reflective) {
+		coll_objects[index].set_reflective_flag(1);
+		reflective_cobjs.add_cobj(index);
+	}
 	return index;
 }
 

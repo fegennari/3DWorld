@@ -437,6 +437,7 @@ class reflective_cobjs_t {
 
 public:
 	void add_cobj(unsigned cid);
+	bool remove_cobj(unsigned cid);
 	void clear() {free_textures(); cobjs.clear();}
 	void free_textures();
 	void create_textures();

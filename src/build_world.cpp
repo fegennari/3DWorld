@@ -476,9 +476,10 @@ void process_groups() {
 						collision_detect_large_sphere(pos, r2, obj_flags);
 					}
 					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid())) {
+						bool const reflective(0 && type == BALL); // Note: doesn't work as reflective, since dodgeball cobjs aren't drawn (and only have a lifetime of one frame)
 						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
 						cp.cf_index = j;
-						obj.coll_id = add_coll_sphere(pos, radius, cp);
+						obj.coll_id = add_coll_sphere(pos, radius, cp, -1, 0, reflective);
 					}
 				}
 				if (obj_flags & CAMERA_VIEW) {
