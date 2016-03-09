@@ -968,14 +968,14 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 }
 
 
-void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate) { // Note: no mipmaps
+void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, bool use_mipmaps) { // Note: no mipmaps
 
 	assert(tex_size > 0);
 	assert(tid == 0);
 	glGenTextures(1, &tid);
 	bind_cube_map_texture(tid);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, (use_mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR));
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);

@@ -407,11 +407,11 @@ GLint64 get_timestamp() {
 // ***************** Other *****************
 
 
-bool gen_mipmaps(unsigned dim) {
+bool gen_mipmaps(unsigned dim) { // cube maps = 6
 
-	assert(dim >= 1 && dim <= 3);
+	assert((dim >= 1 && dim <= 3) || dim == 6);
 	if (!glGenerateMipmap) return 0;
-	int const tex_dims[3] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D};
+	int const tex_dims[6] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D, 0, 0, GL_TEXTURE_CUBE_MAP};
 	glGenerateMipmap(tex_dims[dim-1]);
 	return 1;
 }

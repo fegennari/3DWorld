@@ -7,6 +7,8 @@
 #include "model3d.h"
 #include "shaders.h"
 
+bool const ENABLE_CUBE_MAP_MIPMAPS = 0;
+
 bool enable_clip_plane_z(0);
 unsigned reflection_tid(0);
 float clip_plane_z(0.0);
@@ -154,6 +156,7 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, point const
 			faces_drawn |= (1 << (2*dim + dir));
 		} // for dir
 	} // for dim
+	if (ENABLE_CUBE_MAP_MIPMAPS) {gen_mipmaps(6);}
 	camera_pdu = prev_camera_pdu;
 	up_vector  = prev_up_vector;
 	cview_dir  = prev_cview_dir;
@@ -254,7 +257,7 @@ void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size) {
 		free_texture(tid);
 		last_size = tex_size;
 	}
-	if (!tid) {setup_cube_map_texture(tid, tex_size, 1);} // allocate=1
+	if (!tid) {setup_cube_map_texture(tid, tex_size, 1, ENABLE_CUBE_MAP_MIPMAPS);} // allocate=1
 	assert(glIsTexture(tid));
 }
 
