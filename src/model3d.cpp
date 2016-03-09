@@ -1364,7 +1364,10 @@ void model3d::bind_all_used_tids() {
 			}
 			needs_bump_maps = 1;
 		}
-		if (m->use_spec_map()) tmgr.ensure_tid_bound(m->s_tid);
+		if (m->use_spec_map()) {
+			tmgr.ensure_tid_bound(m->s_tid);
+			has_spec_maps = 1;
+		}
 		needs_alpha_test |= m->get_needs_alpha_test();
 	}
 }
@@ -1773,12 +1776,13 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &
 	bool const enable_planar_reflections(reflection_pass != 2 && enable_any_reflections && reflection_tid > 0 && use_reflection_plane());
 	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
 	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
-	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0);
+	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0);
 	shader_t s;
 	set_fill_mode();
 
 	for (iterator m = begin(); m != end(); ++m) {
 		needs_alpha_test |= m->get_needs_alpha_test();
+		use_spec_map     |= (enable_spec_map() && m->uses_spec_map());
 		if      (enable_planar_reflections   && m->is_planar_reflective  ()) {any_planar_reflective   = 1;}
 		else if (enable_cube_map_reflections && m->is_cube_map_reflective()) {any_cube_map_reflective = 1;}
 		else                                                                 {any_non_reflective      = 1;}
@@ -1817,7 +1821,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &
 					float const min_alpha(needs_alpha_test ? 0.5 : 0.0); // will be reset per-material, but this variable is used to enable alpha testing
 					int const is_outside((is_shadow_pass || reflection_pass == 1) ? 0 : 2); // enable wet effect coverage mask
 					if (model3d_wn_normal) {s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1);} // FS
-					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, enable_spec_map(), use_mvm, two_sided_lighting,
+					setup_smoke_shaders(s, min_alpha, 0, 0, v, 1, v, v, 0, use_smap, use_bmap, use_spec_map, use_mvm, two_sided_lighting,
 						0.0, model_triplanar_tc_scale, 0, cur_reflect_mode, is_outside);
 					if (use_custom_smaps) {s.add_uniform_float("z_bias", cobj_z_bias);} // unnecessary?
 					if (use_bmap && invert_model_nmap_bscale) {s.add_uniform_float("bump_b_scale", 1.0); reset_bscale = 1;}

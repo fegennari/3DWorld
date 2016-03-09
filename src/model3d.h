@@ -382,7 +382,7 @@ class model3d {
 	cube_t bcube;
 	unsigned model_refl_tid;
 	int reflective; // reflective: 0=none, 1=planar, 2=cube map
-	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps;
+	bool from_model3d_file, has_cobjs, needs_alpha_test, needs_bump_maps, has_spec_maps;
 	float metalness; // should be per-material, but not part of the material file and specified per-object instead
 
 	// materials
@@ -411,7 +411,7 @@ public:
 
 	model3d(texture_manager &tmgr_, int def_tid=-1, colorRGBA const &def_c=WHITE, int reflective_=0, float metalness_=0.0)
 		: unbound_mat(((def_tid >= 0) ? def_tid : WHITE_TEX), def_c), bcube(all_zeros_cube), model_refl_tid(0), reflective(reflective_),
-		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), metalness(metalness_), tmgr(tmgr_) {}
+		from_model3d_file(0), has_cobjs(0), needs_alpha_test(0), needs_bump_maps(0), has_spec_maps(0), metalness(metalness_), tmgr(tmgr_) {}
 	~model3d() {clear();}
 	size_t num_materials(void) const {return materials.size();}
 
@@ -455,6 +455,7 @@ public:
 	bool check_coll_line(point const &p1, point const &p2, point &cpos, vector3d &cnorm, colorRGBA &color, bool exact) const;
 	bool get_needs_alpha_test() const {return needs_alpha_test;}
 	bool get_needs_bump_maps () const {return needs_bump_maps;}
+	bool uses_spec_map()        const {return has_spec_maps;}
 	bool is_planar_reflective() const {return (reflective == 1);}
 	bool is_cube_map_reflective() const {return (reflective == 2);}
 	void get_stats(model3d_stats_t &stats) const;
