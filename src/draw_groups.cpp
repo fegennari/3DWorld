@@ -929,11 +929,6 @@ void draw_smiley_part(point const &pos, vector3d const &orient, int type, int us
 }
 
 
-colorRGBA mult_alpha(colorRGBA const &c, float alpha) {
-	return colorRGBA(c.R, c.G, c.B, c.A*alpha);
-}
-
-
 void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndiv, int time,
 				 float health, int id, mesh2d const *const mesh, shader_t &shader)
 {

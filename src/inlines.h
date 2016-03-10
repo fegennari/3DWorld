@@ -503,7 +503,6 @@ inline void blend_color(colorRGB &C, const colorRGB &A, const colorRGB &B, float
 }
 
 inline void blend_color(colorRGBA &C, const colorRGBA &A, const colorRGBA &B, float mix, int calc_alpha) {
-
 	UNROLL_3X(C[i_] = mix*A[i_] + (1.0 - mix)*B[i_];);
 	if (calc_alpha) C[3] = mix*A[3] + (1.0 - mix)*B[3];
 }
@@ -514,6 +513,8 @@ inline colorRGBA blend_color(const colorRGBA &A, const colorRGBA &B, float mix, 
 	blend_color(C, A, B, mix, calc_alpha);
 	return C;
 }
+
+inline colorRGBA mult_alpha(colorRGBA const &c, float alpha) {return colorRGBA(c.R, c.G, c.B, c.A*alpha);}
 
 
 inline void translate_to(point const &p) {
