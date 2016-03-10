@@ -1553,7 +1553,7 @@ void model3d::ensure_reflection_cube_map() {
 	if (model_refl_tid && !dynamic_update) return; // reflection texture is valid and scene is static
 	cube_t const bcube_xf(get_single_transformed_bcube());
 	if (model_refl_tid && !camera_pdu.cube_visible(bcube_xf)) return; // reflection texture is valid and model is not in view
-	create_cube_map_reflection(model_refl_tid, bcube_xf, (model_refl_tid != 0));
+	create_cube_map_reflection(model_refl_tid, -1, bcube_xf, (model_refl_tid != 0));
 }
 
 cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {

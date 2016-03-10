@@ -635,7 +635,7 @@ float get_ocean_wave_height() {
 }
 
 
-void draw_sun_flare(float intensity=1.0) {
+void draw_sun_flare(int ignore_cobj=-1, float intensity=1.0) {
 
 	//RESET_TIME;
 	if (!is_sun_flare_visible()) return;
@@ -656,7 +656,7 @@ void draw_sun_flare(float intensity=1.0) {
 			if (!pts_valid) {pts[i] = signed_rand_vector_norm();}
 			point const pos(sun_pos + pts[i]*sun_radius);
 
-			if (coll_pt_vis_test(pos, viewer_pos, 0.0, index, camera_coll_id, 0, 1) && (!(display_mode & 0x01) || !line_intersect_mesh(pos, viewer_pos, 0))) {
+			if (coll_pt_vis_test(pos, viewer_pos, 0.0, index, ignore_cobj, 0, 1) && (!(display_mode & 0x01) || !line_intersect_mesh(pos, viewer_pos, 0))) {
 				tot_light += 1.0 - get_cloud_density(viewer_pos, view_dir);
 			}
 		}
@@ -949,7 +949,7 @@ void display(void) {
 			setup_basic_fog();
 			draw_sky(1);
 			draw_puffy_clouds(1);
-			draw_sun_flare();
+			draw_sun_flare(camera_coll_id);
 			check_gl_error(10);
 			//draw_scene_bounds_and_light_frustum(get_light_pos()); // TESTING
 		} // WMODE_GROUND
@@ -1049,7 +1049,7 @@ void draw_transparent(bool above_water) {
 
 
 // Note: assumes the camera is not underwater
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, bool include_mesh, bool include_grass, bool disable_occ_cull) {
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int reflection_pass, bool include_mesh, bool include_grass, bool disable_occ_cull) {
 
 	check_gl_error(532);
 	pos_dir_up const prev_camera_pdu(camera_pdu);
@@ -1091,7 +1091,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, 
 	setup_basic_fog();
 	draw_sky(1, 1);
 	draw_puffy_clouds(1);
-	draw_sun_flare();
+	draw_sun_flare(cobj_id);
 
 	if (camera_mode == 1 && camera_surf_collide) { // player is on the ground and collision in enabled, draw the player smiley
 		draw_player_model(surface_pos + vector3d(0.0, 0.0, camera_zh), calc_camera_direction(), int(tfticks));
