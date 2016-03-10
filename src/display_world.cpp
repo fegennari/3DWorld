@@ -45,7 +45,7 @@ colorRGBA cur_fog_color(GRAY), base_cloud_color(WHITE), base_sky_color(BACKGROUN
 extern bool nop_frame, combined_gu, have_sun, clear_landscape_vbo, show_lightning, spraypaint_mode, enable_depth_clamp, enable_multisample, water_is_lava;
 extern bool user_action_key, flashlight_on, enable_clip_plane_z;
 extern unsigned inf_terrain_fire_mode, reflection_tid;
-extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing;
+extern int auto_time_adv, camera_flight, reset_timing, run_forward, window_width, window_height, voxel_editing, begin_motion;
 extern int advanced, b2down, dynamic_mesh_scroll, spectate, animate2, used_objs, disable_inf_terrain, curr_window, DISABLE_WATER;
 extern float TIMESTEP, NEAR_CLIP, FAR_CLIP, cloud_cover, univ_sun_rad, atmosphere, vegetation, zmin, zbottom, ztop, ocean_wave_height, brightness;
 extern float def_atmosphere, def_vegetation, clip_plane_z;
@@ -1093,7 +1093,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	draw_puffy_clouds(1);
 	draw_sun_flare(cobj_id);
 
-	if (camera_mode == 1 && camera_surf_collide) { // player is on the ground and collision in enabled, draw the player smiley
+	if (camera_mode == 1 && camera_surf_collide && begin_motion) { // player is on the ground and collision in enabled, draw the player smiley
 		draw_player_model(surface_pos + vector3d(0.0, 0.0, camera_zh), calc_camera_direction(), int(tfticks));
 	}
 	// restore original values
