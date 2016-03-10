@@ -670,7 +670,7 @@ void coll_obj::move_cobj(vector3d const &vd, bool update_colls) {
 	if (update_colls) {remove_coll_object(id, 0);}
 	shift_by(vd); // move object
 	if (update_colls) {re_add_coll_cobj(id, 0);}
-	if (update_colls && (is_rain_enabled() || is_wet())) {check_indoors_outdoors();} // update indoor/outdoor state if it's raining or if already wet
+	if (update_colls && (is_rain_enabled() || is_wet() || is_reflective())) {check_indoors_outdoors();} // update indoor/outdoor state if it's raining, reflective, or if already wet
 }
 
 
