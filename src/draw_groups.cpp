@@ -28,7 +28,7 @@ pt_line_drawer obj_pld, snow_pld;
 extern bool underwater, smoke_exists;
 extern int display_mode, num_groups, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
-extern float fticks, TIMESTEP, base_gravity, brightness, indir_vert_offset, cobj_z_bias;
+extern float fticks, TIMESTEP, base_gravity, brightness, indir_vert_offset, cobj_z_bias, camera_health;
 extern point star_pts[];
 extern vector3d up_norm;
 extern vector<spark_t> sparks;
@@ -218,10 +218,8 @@ void draw_transparent_object_groups() {
 }
 
 
-void draw_select_groups(int solid) {
+void setup_draw_groups_shader(shader_t &s, int solid) {
 
-	if (!begin_motion) return;
-	shader_t s;
 	s.set_prefix("#define USE_WINDING_RULE_FOR_NORMAL", 1); // FS
 	bool const force_tsl = 1;
 	int const lt_atten(solid ? 0 : 2); // sphere light atten
@@ -230,6 +228,21 @@ void draw_select_groups(int solid) {
 	if (cobj_z_bias < 0.002)     {s.add_uniform_float("z_bias", 0.002);} // reset larger
 	if (indir_vert_offset > 0.1) {s.add_uniform_float("indir_vert_offset", 0.1);} // reset smaller
 	s.add_uniform_float("winding_normal_sign", 1.0);
+}
+
+void draw_player_model(point const &pos, vector3d const &dir, int time) {
+
+	shader_t s;
+	setup_draw_groups_shader(s, 1);
+	draw_smiley(pos, dir, CAMERA_RADIUS, N_SPHERE_DIV, time, camera_health, CAMERA_ID, nullptr, s);
+}
+
+
+void draw_select_groups(int solid) {
+
+	if (!begin_motion) return;
+	shader_t s;
+	setup_draw_groups_shader(s, solid);
 	lt_atten_manager_t lt_atten_manager(s);
 	if (!solid) {lt_atten_manager.enable();}
 	select_no_texture();
@@ -960,8 +973,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	switch (powerup) {
 		case PU_DAMAGE: // devil horns
 			shader.set_cur_color(RED);
-			draw_cylinder_at(point( 0.3*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
-			draw_cylinder_at(point(-0.3*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);
+			for (unsigned d = 0; d < d; ++d) {draw_cylinder_at(point((d ? -3.0 : 3.0)*radius, 0.7*radius, 0.6*radius), 0.6*radius, 0.1*radius, 0.0, ndiv2, 0);}
 			break;
 
 		case PU_REGEN: // raindrops
@@ -987,8 +999,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 			fgTranslate(0.0, 0.0, 1.4*radius);
 			fgRotate(float((30*time)%360), 0.0, 0.0, 1.0);
 			fgScale(1.0, 0.25, 0.05);
-			draw_sphere_vbo(point( 0.5*radius, 0.0, 0.0), 0.5*radius, ndiv, 0); // propeller
-			draw_sphere_vbo(point(-0.5*radius, 0.0, 0.0), 0.5*radius, ndiv, 0); // propeller
+			for (unsigned d = 0; d < d; ++d) {draw_sphere_vbo(point((d ? -5.0 : 5.0)*radius, 0.0, 0.0), 0.5*radius, ndiv, 0);} // propeller
 			fgPopMatrix();
 			break;
 

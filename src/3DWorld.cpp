@@ -392,11 +392,13 @@ float calc_speed() {
 }
 
 
+vector3d calc_camera_direction() {return -rtp_to_xyz(1.0, c_theta, c_phi);}
+
 void update_cpos() {
 
 	if (world_mode != WMODE_UNIVERSE) {
 		if (fabs(c_phi) < 0.001 || fabs(c_phi - PI) < 0.001 || fabs(c_phi - TWO_PI) < 0.001) c_phi += 0.01;
-		if (!spectate) {cview_dir = -rtp_to_xyz(1.0, c_theta, c_phi);} // spherical coordinates
+		if (!spectate) {cview_dir = calc_camera_direction();} // spherical coordinates
 		cview_radius = c_radius;
 	}
 	camera_pos = camera_origin;

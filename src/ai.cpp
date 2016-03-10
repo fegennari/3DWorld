@@ -1365,6 +1365,7 @@ int gen_smiley_or_player_pos(point &pos, int index) {
 
 void select_smiley_texture(int smiley_id) {
 
+	if (smiley_id == CAMERA_ID) {select_texture(WHITE_TEX); return;} // special case for player
 	assert(smiley_id >= 0 && smiley_id < num_smileys);
 	unsigned &tid(sstates[smiley_id].tid);
 

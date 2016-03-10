@@ -68,6 +68,9 @@ point get_universe_display_camera_pos();
 colorRGBA get_inf_terrain_mod_color();
 void run_postproc_effects();
 
+vector3d calc_camera_direction();
+void draw_player_model(point const &pos, vector3d const &dir, int time);
+
 
 void glClearColor_rgba(const colorRGBA &color) {
 	glClearColor(color.R, color.G, color.B, color.A);
@@ -1041,9 +1044,7 @@ void display_universe() { // infinite universe
 
 
 void draw_transparent(bool above_water) {
-
-	if (above_water) {draw_transparent_object_groups();}
-	else {draw_bubbles();}
+	if (above_water) {draw_transparent_object_groups();} else {draw_bubbles();}
 }
 
 
@@ -1092,6 +1093,9 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int reflection_pass, 
 	draw_puffy_clouds(1);
 	draw_sun_flare();
 
+	if (camera_mode == 1 && camera_surf_collide) { // player is on the ground and collision in enabled, draw the player smiley
+		draw_player_model(surface_pos + vector3d(0.0, 0.0, camera_zh), calc_camera_direction(), int(tfticks));
+	}
 	// restore original values
 	camera_pdu = prev_camera_pdu;
 	camera_pos = prev_camera_pos;
