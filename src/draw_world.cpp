@@ -1583,7 +1583,7 @@ void spark_t::draw(quad_batch_draw &qbd) const {
 }
 
 
-void draw_sparks() {
+void draw_sparks(bool clear_at_end) {
 
 	if (sparks.empty()) return;
 	ensure_filled_polygons();
@@ -1599,15 +1599,15 @@ void draw_sparks() {
 	set_std_blend_mode();
 	disable_blend();
 	reset_fill_mode();
-	sparks.clear();
+	if (clear_at_end) {sparks.clear();}
 }
 
 
-void draw_projectile_effects() {
+void draw_projectile_effects(int reflection_pass) {
 
 	draw_blasts();
-	draw_beams();
-	draw_sparks();
+	draw_beams(reflection_pass == 0);
+	draw_sparks(reflection_pass == 0);
 	explosion_part_man.draw(0.002, -1); // untextured
 	water_part_man.draw(); // not really a projectile effect, but it's drawn with them
 }

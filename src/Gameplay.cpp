@@ -38,7 +38,7 @@ struct text_message_params {
 
 
 int following(0), camera_flight(0), blood_spilled(0);
-int fired(0), camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0);
+int camera_invincible(0), br_source(0), UNLIMITED_WEAPONS(0);
 float camera_health(100.0), team_damage(1.0), self_damage(1.0), player_damage(1.0), smiley_damage(1.0);
 point orig_camera(all_zeros), orig_cdir(plus_z);
 vector<spark_t> sparks;
@@ -1500,7 +1500,6 @@ void player_state::gamemode_fire_weapon() { // camera/player fire
 		int const psize((int)ceil(plasma_size));
 		int chosen;
 		int const status(fire_projectile(camera, cview_dir, CAMERA_ID, chosen));
-		fired = 1;
 
 		if (status == 2 && weapon == W_SEEK_D && fmode2) { // follow the seek and destroy
 			if (chosen >= 0) obj_groups[coll_id[SEEK_D]].get_obj(chosen).flags |= CAMERA_VIEW;

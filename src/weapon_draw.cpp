@@ -13,7 +13,7 @@ set<int> scheduled_weapons;
 
 extern bool keep_beams, have_indir_smoke_tex;
 extern int game_mode, window_width, window_height, frame_counter, camera_coll_id, display_mode, begin_motion;
-extern int num_smileys, left_handed, iticks, camera_view, fired, UNLIMITED_WEAPONS, animate2;
+extern int num_smileys, left_handed, iticks, camera_view, UNLIMITED_WEAPONS, animate2;
 extern float fticks, tfticks;
 extern obj_type object_types[];
 extern obj_group obj_groups[];
@@ -41,12 +41,12 @@ void beam3d::draw(line_tquad_draw_t &drawer) const {
 }
 
 
-void draw_beams() {
+void draw_beams(bool clear_at_end) {
 
 	if (beams.empty()) return;
 	line_tquad_draw_t drawer;
 	for (unsigned i = 0; i < beams.size(); ++i) {beams[i].draw(drawer);}
-	if (!keep_beams) {beams.clear();}
+	if (clear_at_end && !keep_beams) {beams.clear();}
 	drawer.draw();
 }
 
@@ -554,7 +554,7 @@ void draw_weapon(point const &pos, vector3d dir, float cradius, int cid, int wid
 			break;
 
 		case W_LASER:
-			if (shooter == CAMERA_ID && fired) {
+			if (shooter == CAMERA_ID && fire_val > 0.0) {
 				//beams.push_back(beam3d(0, shooter, (pos0 + dir*0.08), (pos0 + dir*1.08), RED)); // should probably use this instead
 				fgPushMatrix();
 				set_emissive_only(RED, shader);
@@ -712,8 +712,7 @@ void draw_weapon_in_hand_real(int shooter, bool draw_pass, shader_t &shader) {
 	select_texture(WHITE_TEX); // always textured
 	draw_weapon(pos, dir, cradius, cid, wid, sstate.wmode, sstate.fire_frame, sstate.plasma_loaded, sstate.p_ammo[wid],
 		sstate.rot_counter, delay, shooter, (sstate.cb_hurt > 20), alpha, sstate.dpos, fire_val, 1.0, draw_pass, shader);
-	if (shooter == CAMERA_ID) fired = 0;
-	if (cull_face) glDisable(GL_CULL_FACE);
+	if (cull_face) {glDisable(GL_CULL_FACE);}
 }
 
 
@@ -725,7 +724,7 @@ void draw_weapon_in_hand(int shooter, shader_t &shader) {
 }
 
 
-void draw_scheduled_weapons() {
+void draw_scheduled_weapons(bool clear_after_draw) {
 	
 	if (scheduled_weapons.empty()) return;
 	shader_t s;
@@ -735,7 +734,7 @@ void draw_scheduled_weapons() {
 		draw_weapon_in_hand_real(*i, 1, s);
 	}
 	s.end_shader();
-	scheduled_weapons.clear();
+	if (clear_after_draw) {scheduled_weapons.clear();}
 }
 
 

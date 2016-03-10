@@ -151,7 +151,7 @@ void draw_camera_filters(vector<camera_filter> &cfs);
 point world_space_to_screen_space(point const &pos);
 void restore_prev_mvm_pjm_state();
 bool is_sun_flare_visible();
-void draw_projectile_effects();
+void draw_projectile_effects(int reflection_pass=0);
 void draw_splash(float x, float y, float z, float size, colorRGBA color=WATER_C);
 void draw_framerate(float val);
 void draw_compass_and_alt();
@@ -582,7 +582,7 @@ void blast_radius(point const &pos, int type, int obj_index, int shooter, int ch
 void create_explosion(point const &pos, int shooter, int chain_level, float damage, float size, int type, bool cview);
 void do_area_effect_damage(point const &pos, float effect_radius, float damage, int index, int source, int type);
 void switch_player_weapon(int val);
-void draw_beams();
+void draw_beams(bool clear_at_end);
 void show_blood_on_camera();
 void update_weapon_cobjs();
 int select_dodgeball_texture(int shooter);
@@ -591,7 +591,7 @@ void draw_weapon_simple(point const &pos, vector3d const &dir, float radius, int
 void draw_weapon_in_hand(int shooter, shader_t &shader);
 bool weap_has_transparent(int shooter);
 int get_shooter_coll_id(int shooter);
-void draw_scheduled_weapons();
+void draw_scheduled_weapons(bool clear_after_draw);
 void add_weapon_lights(int shooter);
 void show_crosshair(colorRGBA const &color, int do_zoom);
 void show_user_stats();

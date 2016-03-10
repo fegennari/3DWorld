@@ -537,15 +537,15 @@ void draw_universe_bkg(bool reflection_mode=0, bool disable_asteroid_dust=0) { /
 }
 
 
-void draw_game_elements(int timer1) {
+void draw_game_elements(int timer1, int reflection_pass=0) {
 
 	if (TIMETEST) PRINT_TIME("U");
-	draw_camera_weapon(1);
-	draw_projectile_effects();
+	if (reflection_pass == 0) {draw_camera_weapon(1);} // FIXME: this uses camera_pos and view_dir, which aren't correct for the reflection pass, so disable it
+	draw_projectile_effects(reflection_pass);
 	if (TIMETEST) PRINT_TIME("V");
 	draw_smoke_and_fires();
 	if (TIMETEST) PRINT_TIME("W");
-	draw_scheduled_weapons();
+	draw_scheduled_weapons(reflection_pass == 0);
 }
 
 
@@ -1087,7 +1087,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	draw_stuff(1, 0, reflection_pass);
 	if (include_mesh && (display_mode & 0x04)) {draw_water(1);} // if we can exclude the mesh we can probably exclude the water as well
 	draw_stuff(0, 0, reflection_pass);
-	draw_game_elements(0);
+	draw_game_elements(0, reflection_pass);
 	setup_basic_fog();
 	draw_sky(1, 1);
 	draw_puffy_clouds(1);
