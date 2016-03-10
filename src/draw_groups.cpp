@@ -943,6 +943,7 @@ void draw_smiley(point const &pos, vector3d const &orient, float radius, int ndi
 	translate_to(pos);
 	rotate_to_dir(orient);
 	point pos2(-0.4*radius, 0.85*radius, 0.3*radius);
+	select_texture(WHITE_TEX);
 
 	// draw eyes
 	for (unsigned i = 0; i < 2; ++i) {
