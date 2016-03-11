@@ -555,7 +555,7 @@ void gen_scene(int generate_mesh, int gen_trees, int keep_sin_table, int update_
 	}
 	l_strike.time = LITNING_TIME; // reset lightning
 	kill_current_raytrace_threads();
-	if (!keep_sin_table) clear_tiled_terrain();
+	if (!keep_sin_table) {clear_tiled_terrain();}
 	calc_uw_atten_colors();
 
 	if (generate_mesh) {
@@ -707,7 +707,8 @@ void free_all_coll_objects() {
 		czmin = model_czmin; // reset zmin/zmax to original values before cobjs were added
 		czmax = model_czmax;
 	}
-	reflective_cobjs.clear();
+	//reflective_cobjs.clear(); // no longer needed or correct - reflective cobjs are tracked automatically and should not be manually cleared
+	reflective_cobjs.free_textures(); // force recreation of cube maps
 }
 
 

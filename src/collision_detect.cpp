@@ -626,7 +626,7 @@ void coll_obj::re_add_coll_cobj(int index, int remove_old) {
 	if (!fixed) return;
 	assert(index >= 0);
 	assert(id == -1 || id == (int)index);
-	if (remove_old) remove_coll_object(id, 0); // might already have been removed
+	if (remove_old) {remove_coll_object(id, 0);} // might already have been removed
 
 	switch (type) {
 	case COLL_CUBE:         add_coll_cube_to_matrix    (index, 0); break;
