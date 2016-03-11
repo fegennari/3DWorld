@@ -150,8 +150,8 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 			fgLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up_vector.x, up_vector.y, up_vector.z);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			setup_sun_moon_light_pos();
-			// reflection_pass=2 (cube map), include_mesh=all dirs but up, disable_occ_cull=1
-			draw_scene_from_custom_frustum(camera_pdu, cobj_id, 2, (cview_dir != plus_z), (cview_dir != plus_z && !is_indoors), 1);
+			bool const inc_mesh(cview_dir != plus_z), inc_grass_water(inc_mesh && !is_indoors);
+			draw_scene_from_custom_frustum(camera_pdu, cobj_id, 2, inc_mesh, inc_grass_water, inc_grass_water); // reflection_pass=2 (cube map)
 			render_to_texture_cube_map(tid, tex_size, face_ix); // render reflection to texture
 			faces_drawn |= (1 << (2*dim + dir));
 		} // for dir
@@ -190,7 +190,7 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	setup_viewport_and_proj_matrix(xsize, ysize);
 	apply_z_mirror(zval); // setup mirror transform
 	setup_sun_moon_light_pos();
-	draw_scene_from_custom_frustum(refl_camera_pdu, camera_coll_id, 1, 0, 0, 1); // reflection_pass=1 (planar), include_mesh=0, include_grass=0, disable_occ_cull=1
+	draw_scene_from_custom_frustum(refl_camera_pdu, camera_coll_id, 1, 0, 0, 0); // reflection_pass=1 (planar), no grass/mesh/water
 	render_to_texture(tid, xsize, ysize); // render reflection to texture
 	camera_pdu = old_camera_pdu;
 	restore_matrices_and_clear(); // reset state

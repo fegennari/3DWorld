@@ -81,7 +81,7 @@ void set_standard_viewport();
 point get_sun_pos();
 point get_moon_pos();
 colorRGBA get_bkg_color(point const &p1, vector3d const &v12);
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int reflection_pass, bool include_mesh, bool include_grass, bool disable_occ_cull);
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int reflection_pass, bool inc_mesh, bool inc_grass, bool inc_water);
 
 // function prototypes - draw_world
 void set_fill_mode();

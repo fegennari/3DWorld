@@ -650,6 +650,8 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	// Note: planar reflections are disabled during the cube map reflection creation pass because they don't work (wrong point is reflected)
 	bool const use_ref_plane(reflection_pass == 1 || (reflection_pass != 2 && reflection_tid > 0 && use_reflection_plane()));
 	float const ref_plane_z(use_ref_plane ? get_reflection_plane() : 0.0);
+	bool const disable_occ_cull(reflection_pass && (display_mode & 0x08) != 0); // disable occlusion culling
+	if (disable_occ_cull) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location in the reflection pass)
 	shader_t s;
 	setup_cobj_shader(s, has_lt_atten, 0, 2, 0, reflection_pass);
 	int last_tid(-2), last_group_id(-1);
@@ -782,6 +784,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	draw_cobjs_group(reflect_cobjs,      cdb, reflection_pass, s, 2, 0, 1);
 	draw_cobjs_group(reflect_cobjs_nm,   cdb, reflection_pass, s, 2, 1, 1);
 	draw_cobjs_group(cube_map_cobjs,     cdb, reflection_pass, s, 2, 0, 2);
+	if (disable_occ_cull) {display_mode |= 0x08;}
 	check_gl_error(570);
 	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
 	//if (draw_solid) {PRINT_TIME("Final Draw");}

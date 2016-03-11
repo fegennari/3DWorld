@@ -1049,15 +1049,13 @@ void draw_transparent(bool above_water) {
 
 
 // Note: assumes the camera is not underwater
-void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int reflection_pass, bool include_mesh, bool include_grass, bool disable_occ_cull) {
+void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int reflection_pass, bool inc_mesh, bool inc_grass, bool inc_water) {
 
 	check_gl_error(532);
 	pos_dir_up const prev_camera_pdu(camera_pdu);
 	point const prev_camera_pos(camera_pos);
 	camera_pdu = pdu;
 	camera_pos = pdu.pos;
-	bool const occ_cull_enabled((display_mode & 0x08) != 0); // disable occlusion culling
-	if (occ_cull_enabled && disable_occ_cull && camera_pos != prev_camera_pos) {display_mode &= ~0x08;} // disable occlusion culling (since viewer is in a different location)
 
 	// draw background
 	if (combined_gu) { // FIXME: universe alignment is wrong, and occlusion is wrong (due to differing depth ranges)
@@ -1080,12 +1078,12 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	draw_coll_surfaces(0, reflection_pass);
 	
 	// the mesh and grass are generally under the reflection plane, so can be skipped in the reflection plane pass
-	if (include_mesh && (display_mode & 0x01)) {display_mesh(0, 1);} // draw mesh
-	if (include_grass) {draw_grass();}
+	if (inc_mesh && (display_mode & 0x01)) {display_mesh(0, 1);} // draw mesh
+	if (inc_grass) {draw_grass();}
 	draw_scenery();
 	draw_solid_object_groups();
 	draw_stuff(1, 0, reflection_pass);
-	if (include_mesh && (display_mode & 0x04)) {draw_water(1);} // if we can exclude the mesh we can probably exclude the water as well
+	if (inc_water && (display_mode & 0x04)) {draw_water(1);} // if we can exclude the mesh we can probably exclude the water as well
 	draw_stuff(0, 0, reflection_pass);
 	draw_game_elements(0, reflection_pass);
 	setup_basic_fog();
@@ -1099,7 +1097,6 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	// restore original values
 	camera_pdu = prev_camera_pdu;
 	camera_pos = prev_camera_pos;
-	if (occ_cull_enabled) {display_mode |= 0x08;}
 }
 
 
