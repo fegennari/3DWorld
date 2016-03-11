@@ -1554,7 +1554,13 @@ void model3d::ensure_reflection_cube_map() {
 	cube_t const bcube_xf(get_single_transformed_bcube());
 	if (model_refl_tid && !camera_pdu.cube_visible(bcube_xf)) return; // reflection texture is valid and model is not in view
 	if (model_refl_tid && (display_mode & 0x08) != 0 && cube_cobj_occluded(get_camera_pos(), bcube_xf)) return; // occlusion culling
-	create_cube_map_reflection(model_refl_tid, -1, bcube_xf, (model_refl_tid != 0));
+
+	if (indoors == 2) { // not yet known - calculate it (very approximate but should be okay for simple/easy cases)
+		int cindex(-1); // unused
+		point const test_pt(bcube_xf.get_cube_center());
+		indoors = ::check_coll_line(point(test_pt.x, test_pt.y, bcube_xf.d[2][1]+SMALL_NUMBER), point(test_pt.x, test_pt.y, czmax), cindex, -1, 1, 0, 1, 0);
+	}
+	create_cube_map_reflection(model_refl_tid, -1, bcube_xf, (model_refl_tid != 0), (indoors == 1));
 }
 
 cube_t model3d::get_single_transformed_bcube(vector3d const &xlate) const {

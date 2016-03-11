@@ -32,7 +32,6 @@ Cube map reflections
   - Dynamic object reflections
   - Reflection mipmaps
     - Choose mipmap level based on shininess
-  - Perf improvements
 
 Spawn enemies in TT water, grass, and trees
 
