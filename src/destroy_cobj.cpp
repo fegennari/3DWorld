@@ -307,6 +307,7 @@ unsigned subtract_cube(vector<color_tid_vol> &cts, vector3d &cdir, csg_cube cons
 				
 				// Note: cobj reference may be invalidated beyond this point
 				for (unsigned j = 0; j < new_cobjs.size(); ++j) { // new cobjs
+					new_cobjs[j].set_reflective_flag(0); // the parts are not reflective
 					int const index(new_cobjs[j].add_coll_cobj()); // not sorted by alpha
 					assert(index >= 0 && (size_t)index < cobjs.size());
 					just_added.push_back(index);

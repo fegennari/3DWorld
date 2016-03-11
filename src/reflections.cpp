@@ -378,7 +378,7 @@ void reflective_cobjs_t::create_textures() {
 unsigned reflective_cobjs_t::get_tid_for_cid(unsigned cid) const {
 
 	auto i(cobjs.find(cid));
-	assert(i != cobjs.end());
-	return i->second.tid;
+	assert(i != cobjs.end()); // too strong?
+	return ((i == cobjs.end()) ? -1 : i->second.tid);
 }
 

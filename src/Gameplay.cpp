@@ -1874,6 +1874,7 @@ void gen_glass_shard_from_cube_window(cube_t const &cube, cobj_params const &cp,
 	UNROLL_3X(points[i_][dmin] = val;)
 	int const cindex(add_coll_polygon(points, 3, cp, cube.min_len())); // should reuse index slot and not invalidate cobj
 	coll_objects[cindex].destroy = SHATTERABLE;
+	coll_objects[cindex].set_reflective_flag(0); // not supported yet
 }
 
 
@@ -2052,7 +2053,7 @@ point projectile_test(point const &pos, vector3d const &vcf_, float firing_error
 		if ((!is_laser && cobj.destroy >= SHATTERABLE && (rand()%dest_prob) == 0) || // shattered
 			(cobj.destroy >= EXPLODEABLE && (rand()%dest_prob) == 0)) // exploded
 		{
-			if (is_glass && cobj.type == COLL_CUBE && !cobj.maybe_is_moving() && (rand()&15) != 0) {gen_glass_shard_from_cube_window(cobj, cobj.cp, coll_pos);}
+			if (is_glass && cobj.cp.color.alpha < 0.5 && cobj.type == COLL_CUBE && !cobj.maybe_is_moving() && (rand()&15) != 0) {gen_glass_shard_from_cube_window(cobj, cobj.cp, coll_pos);}
 			destroy_coll_objs(coll_pos, 500.0, shooter, PROJECTILE, SMALL_NUMBER); // shatter or explode the object on occasion (critical hit)
 		}
 		else if (!is_laser && cobj.cp.cobj_type == COBJ_TYPE_VOX_TERRAIN && destroy_thresh == 0) {
