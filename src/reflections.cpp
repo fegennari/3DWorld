@@ -348,6 +348,10 @@ bool reflective_cobjs_t::remove_cobj(unsigned cid) { // okay if it doesn't exist
 	return 1;
 }
 
+void reflective_cobjs_t::mark_faces_invalid() {
+	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {i->second.faces_valid = 0;}
+}
+
 void reflective_cobjs_t::free_textures() {
 	for (auto i = cobjs.begin(); i != cobjs.end(); ++i) {free_texture(i->second.tid);}
 }

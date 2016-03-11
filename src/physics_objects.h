@@ -439,6 +439,7 @@ public:
 	void add_cobj(unsigned cid);
 	bool remove_cobj(unsigned cid);
 	void clear() {free_textures(); cobjs.clear();}
+	void mark_faces_invalid();
 	void free_textures();
 	void create_textures();
 	unsigned get_tid_for_cid(unsigned cid) const;

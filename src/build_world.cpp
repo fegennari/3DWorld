@@ -708,7 +708,7 @@ void free_all_coll_objects() {
 		czmax = model_czmax;
 	}
 	//reflective_cobjs.clear(); // no longer needed or correct - reflective cobjs are tracked automatically and should not be manually cleared
-	reflective_cobjs.free_textures(); // force recreation of cube maps
+	reflective_cobjs.mark_faces_invalid(); // force recreation of cube maps
 }
 
 
