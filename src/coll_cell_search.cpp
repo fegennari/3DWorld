@@ -411,6 +411,7 @@ colorRGBA get_cobj_color_at_point(int cindex, point const &pos, vector3d const &
 bool coll_obj::is_occluder() const {
 	
 	if (status != COLL_STATIC || (!cp.draw && cp.cobj_type != COBJ_TYPE_MODEL3D) || is_semi_trans() || dgroup_id >= 0) return 0; // cp.might_be_drawn()?
+	if (is_reflective()) return 0; // prevent self occlusion during reflection rendering
 	if (type == COLL_CUBE && cp.cobj_type != COBJ_TYPE_MODEL3D) return 1;
 	if (type != COLL_POLYGON) return 0;
 	unsigned big_dims(0);
