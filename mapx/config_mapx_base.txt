@@ -22,6 +22,7 @@ enable_depth_clamp 1
 enable_dlight_shadows 1
 enable_gamma_correction 0
 use_core_context 0
+reflect_dodgeballs 0
 
 gravity 1.0
 temperature 10.0

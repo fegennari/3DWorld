@@ -25,7 +25,7 @@ quad_batch_draw puddle_qbd;
 pt_line_drawer obj_pld, snow_pld;
 
 
-extern bool underwater, smoke_exists;
+extern bool underwater, smoke_exists, reflect_dodgeballs;
 extern int display_mode, num_groups, teams, begin_motion, UNLIMITED_WEAPONS;
 extern int window_width, window_height, game_mode, draw_model, animate2;
 extern float fticks, TIMESTEP, base_gravity, brightness, indir_vert_offset, cobj_z_bias, camera_health;
@@ -430,18 +430,19 @@ void draw_and_clear_tris(vector<vert_norm_color> &vn, vector<vert_norm_tc_color>
 void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manager) {
 
 	RESET_TIME;
-	s.clear_specular();
 	int const type(objg.get_ptype());
+	if (reflect_dodgeballs && type == BALL && enable_all_reflections()) return; // drawn as a cobj
 	obj_type const &otype(object_types[type]);
 	int tid(otype.tid);
 	float const radius(otype.radius), cd_scale(NDIV_SCALE*radius*window_width);
 	unsigned const flags(otype.flags);
+	int const clip_level((type == SMILEY || type == LANDMINE || type == ROCKET || type == BALL) ? 2 : 0);
+	unsigned num_drawn(0);
 	bool do_texture(select_texture(tid));
 	colorRGBA color(otype.color);
 	s.set_cur_color(color);
+	s.clear_specular();
 	check_drawing_flags(flags, 1, s);
-	int const clip_level((type == SMILEY || type == LANDMINE || type == ROCKET || type == BALL) ? 2 : 0);
-	unsigned num_drawn(0);
 
 	if (type == LEAF) { // leaves
 		static vector<pair<unsigned, unsigned> > ordering;

@@ -44,7 +44,7 @@ vector<teleporter> teleporters;
 vector<obj_draw_group> obj_draw_groups;
 cube_light_src_vect sky_cube_lights, global_cube_lights;
 
-extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc;
+extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc, reflect_dodgeballs;
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs, precip_mode;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
@@ -327,8 +327,10 @@ void process_groups() {
 		unsigned app_rate(unsigned(((float)objg.app_rate)*fticks_max));
 		if (objg.app_rate > 0 && fticks > 0 && app_rate == 0) {app_rate = 1;}
 		float const time(TIMESTEP*fticks_max), grav_dz(min(otype.terminal_vel*time, base_gravity*GRAVITY*time*time*otype.gravity));
-		cobj_params cp(otype.elasticity, otype.color, 0, 1, coll_func, -1, otype.tid, 1.0, 0, 0);
 		size_t const max_objs(objg.max_objects());
+		bool const reflective(reflect_dodgeballs && type == BALL && enable_all_reflections()); // Note: cobjs only have a lifetime of one frame
+		cobj_params cp(otype.elasticity, otype.color, reflective, 1, coll_func, -1, otype.tid, 1.0, 0, 0);
+		if (reflective) {cp.metalness = 1.0; cp.tid = -1; cp.tscale = 0.0; cp.color = BLACK; cp.spec_color = WHITE; cp.shine = 100.0;} // reflective metal sphere
 
 		for (size_t jj = 0; jj < max_objs; ++jj) {
 			unsigned const j(unsigned((type == SMILEY) ? (jj + scounter)%objg.max_objects() : jj)); // handle smiley permutation
@@ -476,8 +478,7 @@ void process_groups() {
 						collision_detect_large_sphere(pos, r2, obj_flags);
 					}
 					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid())) {
-						bool const reflective(0 && type == BALL); // Note: doesn't work as reflective, since dodgeball cobjs aren't drawn (and only have a lifetime of one frame)
-						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
+						if (type == BALL && !reflective) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
 						cp.cf_index = j;
 						obj.coll_id = add_coll_sphere(pos, radius, cp, -1, 0, reflective);
 					}
@@ -499,7 +500,7 @@ void process_groups() {
 						}
 					}
 				}
-				obj.add_obj_dynamic_light(j);
+				if (!reflective) {obj.add_obj_dynamic_light(j);}
 			} // !obj.disabled()
 			if (!recreated && orig_status != 0 && obj.status != 1 && obj.status != OBJ_STAT_RES) {
 				if ((precip || type == BLOOD || type == WDROPLET) && obj.status == 0) {
