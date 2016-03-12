@@ -1069,7 +1069,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	draw_puffy_clouds(0, 1);
 	
 	// draw the scene
-	if (1) { // unnecessary?
+	if (0) { // unnecessary/wrong?
 		camera_pos = prev_camera_pos; // temporarily set the camera pos back so that this works
 		draw_camera_weapon(0);
 		camera_pos = pdu.pos;
