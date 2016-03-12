@@ -268,11 +268,15 @@ void main()
 #ifdef USE_BUMP_MAP
 		ws_normal = normalize(mix(get_bump_map_normal(), ws_normal, 0.5*wetness));
 #endif
+		vec3 spec_scale = vec3(1.0);
+#ifdef USE_SPEC_MAP
+		spec_scale     *= get_spec_color();
+#endif
 		// Note: this doesn't work for refact_ix == 1, so we choose an arbitrary value of 1.3 (metals are lower, dielectrics are higher)
 		float reflect_w = get_reflect_weight(normalize(camera_pos - vpos), ws_normal, reflectivity2, ((refract_ix == 1.0) ? 1.3 : refract_ix)); // default is water
 		vec4 proj_pos   = fg_ProjectionMatrix * epos;
 		vec2 ref_tex_st = clamp(0.5*proj_pos.xy/proj_pos.w + vec2(0.5, 0.5), 0.0, 1.0);
-		color.rgb       = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness), reflect_w);
+		color.rgb       = mix(color.rgb, texture(reflection_tex, ref_tex_st).rgb*get_wet_specular_color(wetness)*spec_scale, reflect_w);
 	}
 #endif // ENABLE_REFLECTIONS
 
