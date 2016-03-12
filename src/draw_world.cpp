@@ -601,8 +601,7 @@ bool draw_or_add_cobj(unsigned cix, int reflection_pass, bool use_ref_plane, vec
 	vector<unsigned> &reflect_cobjs, vector<unsigned> &reflect_cobjs_nm)
 {
 	coll_obj const &c(get_draw_cobj(cix));
-	bool const cube_poly((c.cp.flags & COBJ_WAS_CUBE) != 0);
-	bool const use_tex_coords((cube_poly && c.cp.tid >= 0) || ((c.is_cylinder() || c.type == COLL_SPHERE || c.type == COLL_CAPSULE) && c.cp.tscale == 0.0));
+	bool const cube_poly((c.cp.flags & COBJ_WAS_CUBE) != 0), use_tex_coords(c.use_tex_coords());
 
 	// Note: only texgen cube/vert cylinder top surfaces support reflections
 	if (!use_tex_coords && use_ref_plane && use_reflect_plane_for_cobj(c)) {

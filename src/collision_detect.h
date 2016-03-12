@@ -192,6 +192,7 @@ public:
 	bool has_z_normal()      const {return (norm.x == 0.0 && norm.y == 0.0);}
 	bool has_hard_edges()    const {return (type == COLL_CUBE || type == COLL_POLYGON);}
 	bool has_flat_top_bot()  const {return (type == COLL_CUBE || type == COLL_POLYGON || type == COLL_CYLINDER);}
+	bool use_tex_coords()    const {return (((cp.flags & COBJ_WAS_CUBE) != 0 && cp.tid >= 0) || ((is_cylinder() || type == COLL_SPHERE || type == COLL_CAPSULE) && cp.tscale == 0.0));}
 	// allow destroyable and transparent objects, drawn or opaque model3d shapes
 	bool can_be_scorched()const {return (status == COLL_STATIC && !cp.has_alpha_texture() && (!no_draw() || (cp.cobj_type != COBJ_TYPE_STD && cp.color.A == 1.0)) && dgroup_id < 0);}
 	point get_center_pt() const;
