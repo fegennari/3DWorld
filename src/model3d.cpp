@@ -1784,7 +1784,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &
 	bool const enable_cube_map_reflections(enable_any_reflections && enable_all_reflections());
 	bool const use_mvm(has_any_transforms()), v(world_mode == WMODE_GROUND), use_smap(1 || v);
 	bool needs_alpha_test(0), needs_bump_maps(0), any_planar_reflective(0), any_cube_map_reflective(0), any_non_reflective(0), use_spec_map(0);
-	bool const disable_occ_cull(reflection_pass && (display_mode & 0x08) != 0); // disable occlusion culling
+	bool const disable_occ_cull(reflection_pass == 1 && (display_mode & 0x08) != 0); // disable occlusion culling
 	if (disable_occ_cull) {display_mode &= ~0x08;}
 	shader_t s;
 	set_fill_mode();
