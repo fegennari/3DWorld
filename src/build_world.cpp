@@ -48,7 +48,7 @@ extern bool clear_landscape_vbo, use_voxel_cobjs, tree_4th_branches, lm_alloc, r
 extern int camera_view, camera_mode, camera_reset, begin_motion, animate2, recreated, temp_change, preproc_cube_cobjs, precip_mode;
 extern int is_cloudy, num_smileys, load_coll_objs, world_mode, start_ripple, has_snow_accum, has_accumulation, scrolling, num_items, camera_coll_id;
 extern int num_dodgeballs, display_mode, game_mode, num_trees, tree_mode, has_scenery2, UNLIMITED_WEAPONS, ground_effects_level;
-extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin;
+extern float temperature, zmin, TIMESTEP, base_gravity, orig_timestep, fticks, tstep, sun_rot, czmax, czmin, dodgeball_metalness;
 extern point cpos2, orig_camera, orig_cdir;
 extern unsigned create_voxel_landscape, scene_smap_vbo_invalid, num_dynam_parts, init_item_counts[];
 extern obj_type object_types[];
@@ -330,7 +330,7 @@ void process_groups() {
 		size_t const max_objs(objg.max_objects());
 		bool const reflective(reflect_dodgeballs && type == BALL && enable_all_reflections()); // Note: cobjs only have a lifetime of one frame
 		cobj_params cp(otype.elasticity, otype.color, reflective, 1, coll_func, -1, otype.tid, 1.0, 0, 0);
-		if (reflective) {cp.metalness = 1.0; cp.tid = -1; cp.tscale = 0.0; cp.color = BLACK; cp.spec_color = WHITE; cp.shine = 100.0;} // reflective metal sphere
+		if (reflective) {cp.metalness = dodgeball_metalness; cp.tscale = 0.0; cp.color = WHITE; cp.spec_color = WHITE; cp.shine = 100.0;} // reflective metal sphere
 
 		for (size_t jj = 0; jj < max_objs; ++jj) {
 			unsigned const j(unsigned((type == SMILEY) ? (jj + scounter)%objg.max_objects() : jj)); // handle smiley permutation
@@ -478,7 +478,7 @@ void process_groups() {
 						collision_detect_large_sphere(pos, r2, obj_flags);
 					}
 					if (type != CHUNK && (type != LANDMINE || !obj.lm_coll_invalid())) {
-						if (type == BALL && !reflective) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
+						if (type == BALL) {cp.tid = dodgeball_tids[(game_mode == 2) ? (j%NUM_DB_TIDS) : 0];}
 						cp.cf_index = j;
 						obj.coll_id = add_coll_sphere(pos, radius, cp, -1, 0, reflective);
 					}
