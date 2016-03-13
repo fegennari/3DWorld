@@ -181,7 +181,7 @@ void create_gm_reflection_texture(unsigned tid, unsigned xsize, unsigned ysize, 
 	//RESET_TIME;
 	// Note: we need to transform the camera frustum here, even though it's also done when drawing, because we need to get the correct projection matrix
 	enable_clip_plane_z = 1;
-	clip_plane_z        = zval; // hack to tell the shader setup code to use this z clip plane
+	clip_plane_z        = zval + 1.0E-6; // hack to tell the shader setup code to use this z clip plane
 	pos_dir_up const old_camera_pdu(camera_pdu);
 	camera_pdu.apply_z_mirror(zval); // setup reflected camera frustum
 	// FIXME: use x/y bcube bounds to clip reflected view frustum
