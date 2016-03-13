@@ -44,8 +44,8 @@ num_test_snowflakes 100 # in M
 floating_light_params 0.02 0.02  1.0 2.0  0.35 0.35 # rmin rmax vmin vmax imin imax
 floating_light_range  0.25 0.25  0.25 0.25  0.5 0.5 # x1 x2 y1 y2 z1 z2
 
-reflect_plane_z -2.3 2.3  -1.0 1.0  -0.19 -0.205 # lower floor
-reflect_plane_z -2.3 2.3  -1.0 1.0   0.463 0.477 # upper floor
+reflect_plane_z -2.3 2.3  -1.0 1.0  -0.205 -0.20 # lower floor
+reflect_plane_z -2.3 2.3  -1.0 1.0   0.463 0.465 # upper floor
 
 include config_gameplay.txt
 unlimited_weapons 1
