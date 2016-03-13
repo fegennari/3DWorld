@@ -1056,6 +1056,8 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 	point const prev_camera_pos(camera_pos);
 	camera_pdu = pdu;
 	camera_pos = pdu.pos;
+	bool const disable_occ_cull(reflection_pass == 1 && (display_mode & 0x08) != 0); // disable occlusion culling
+	if (disable_occ_cull) {display_mode &= ~0x08;}
 
 	// draw background
 	if (combined_gu) { // FIXME: universe alignment is wrong, and occlusion is wrong (due to differing depth ranges)
@@ -1095,6 +1097,7 @@ void draw_scene_from_custom_frustum(pos_dir_up const &pdu, int cobj_id, int refl
 		draw_player_model(surface_pos + vector3d(0.0, 0.0, camera_zh), calc_camera_direction(), int(tfticks));
 	}
 	// restore original values
+	if (disable_occ_cull) {display_mode |= 0x08;}
 	camera_pdu = prev_camera_pdu;
 	camera_pos = prev_camera_pos;
 }
