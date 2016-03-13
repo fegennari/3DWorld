@@ -269,7 +269,7 @@ void common_shader_block_post(shader_t &s, bool dlights, bool use_shadow_map, bo
 	s.add_uniform_int("tex0", 0);
 	s.add_uniform_float("min_alpha", min_alpha);
 	// the z plane bias is somewhat of a hack, set experimentally; maybe should be one pixel in world space?
-	if (enable_clip_plane_z) {s.add_uniform_float("clip_plane_z", (clip_plane_z - 0.005));} // 10.0*cobj_z_bias? 0.2/window_height?
+	if (enable_clip_plane_z) {s.add_uniform_float("clip_plane_z", clip_plane_z);}
 	if (use_shadow_map && shadow_map_enabled() && world_mode == WMODE_GROUND) {set_smap_shader_for_all_lights(s, cobj_z_bias);}
 	set_active_texture(0);
 	s.clear_specular();
@@ -660,6 +660,11 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	vector<unsigned> normal_map_cobjs;
 	vector<unsigned> tex_coord_cobjs[2], reflect_cobjs[2]; // [without, with] normal maps
 	vector<unsigned> cube_map_cobjs[2][2]; // [texgen, tex coord] x [without, with] normal maps
+
+	// bias the clip plane so that pixels slightly under the reflection plane are drawn to prevent artifacts
+	// we know this is legal because cobjs that are below the true clip/reflection plane will be dropped below
+	float const clip_plane_z_bias = -0.005; // 10.0*cobj_z_bias? 0.2/window_height?
+	clip_plane_z += clip_plane_z_bias;
 	//if (enable_clip_plane_z) {glEnable(GL_CLIP_DISTANCE0);}
 	
 	if (!draw_trans) { // draw solid
@@ -783,6 +788,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	}
 	draw_cobjs_group(normal_map_cobjs, cdb, reflection_pass, s, 2, 1, 0);
 	if (disable_occ_cull) {display_mode |= 0x08;}
+	clip_plane_z -= clip_plane_z_bias;
 	check_gl_error(570);
 	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
 	//if (draw_solid) {PRINT_TIME("Final Draw");}
