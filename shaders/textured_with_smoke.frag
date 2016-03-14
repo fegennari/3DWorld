@@ -298,8 +298,8 @@ void main()
 	vec3 ref_dir    = rel_pos + cube_map_near_clip*reflect(-view_dir, ws_normal); // position offset within cube (approx.)
 	//vec3 ref_dir    = refract(-view_dir, ws_normal, 1.0/ref_ix); // refraction
 	//vec3 ref_dir    = -view_dir; // invisible effect
-	// Note: could use textureLod(reflection_tex, ref_dir, 4) if mipmaps are computed
 	color.rgb       = mix(color.rgb, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w*spec_scale);
+	//color.rgb       = mix(color.rgb, textureLod(reflection_tex, ref_dir, 0).rgb*specular_color.rgb, reflect_w*spec_scale);
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK

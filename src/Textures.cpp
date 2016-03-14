@@ -972,6 +972,11 @@ void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, boo
 
 	assert(tex_size > 0);
 	assert(tid == 0);
+	unsigned num_levels(1);
+
+	if (use_mipmaps) { // determine the number of mipmap levels needed
+		for (unsigned sz = tex_size; sz > 1; sz >>= 1) {++num_levels;}
+	}
 	glGenTextures(1, &tid);
 	bind_cube_map_texture(tid);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, (use_mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR));
@@ -979,7 +984,7 @@ void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, boo
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	if (allocate) {glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GL_RGB8, tex_size, tex_size);}
+	if (allocate) {glTexStorage2D(GL_TEXTURE_CUBE_MAP, num_levels, GL_RGB8, tex_size, tex_size);}
 	//gluBuild2DMipmaps(GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_RGB8, tex_size, tex_size, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	check_gl_error(520);

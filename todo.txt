@@ -29,8 +29,7 @@ Plants with low large leaves
 Counted normal averages normals using face area as weights
 
 Cube map reflections
-  - Reflection mipmaps
-    - Choose mipmap level based on shininess
+  - Choose mipmap level based on shininess
 
 Spawn enemies in TT water, grass, and trees
 
