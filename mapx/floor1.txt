@@ -43,14 +43,17 @@ r 0.0 1.0 # reset specularity
 
 # reflective shapes
 cube_map_ref 1
+metalness 0.0 # glass
+r 1.0 60.0  1.0 1.0 1.0 # silver/glass
+l 0.8 1.0 1.0 1.0 0.1 -1 1 # transparent
+#S 1.6 1.5 0.2  0.05 # glass sphere
+l 0.8 1.0 1.0 1.0 1.0 -1 1 # white opaque
 metalness 1.0 # metal
-l 0.8 1.0 1.0 1.0 1.0 -1 1
-r 1.0 60.0  1.0 1.0 1.0 # silver
-#S 1.4 1.5 0.2  0.05
+#S 1.4 1.5 0.2  0.05 # silver sphere
 #D 0.0 0.1 0.0 10 # dx dy dz num
 movable 1
 a 2 # destroyable/shatterable
-#B 1.46 1.54 1.36 1.44 0.02 0.12
+#B 1.46 1.54 1.36 1.44 0.02 0.12 # silver movable cube
 a 0 # non-destroyable
 movable 0
 #z 1.5 1.4 0.4  0.0 0.0 1.0  0.08 0.04
