@@ -52,10 +52,12 @@ metalness 1.0 # metal
 #S 1.4 1.5 0.2  0.05 # silver sphere
 #D 0.0 0.1 0.0 10 # dx dy dz num
 
-movable 1
+#X normal_maps/stucco_NRM.jpg 1 0
 a 2 # destroyable/shatterable
+movable 1
 #B 1.46 1.54 1.36 1.44 0.02 0.12 # silver movable cube
 movable 0
+X none
 e 0x1F # only +x
 #B -0.05 -0.045  2.4 2.6  0.014 0.32 # mirror
 e 0
