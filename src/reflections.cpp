@@ -375,7 +375,7 @@ void reflective_cobjs_t::create_textures() {
 		if (no_update_needed && i->second.faces_valid == EF_ALL) continue; // reflection texture is valid, cobj has not moved, and scene has not changed
 		if (tid && !cobj.is_cobj_visible())                      continue; // reflection texture is valid but cobj is not visible (approximate)
 		// enable back face culling when texture is created or the cobj has moved, or on the final frame following a transition from dynamic updates (in case a new face comes into view)
-		bool const bfc(tid && !cobj_moved && !no_update_needed);
+		bool const bfc(tid && !cobj_moved && !no_update_needed && !cobj.is_semi_trans()); // semi transparent objects need back face refraction + reflection
 		unsigned skip_mask(0); // {z1, z2, y1, y2, x1, x2}
 		//if (cobj.type == COLL_CUBE) {skip_mask = cobj.cp.surfs;} // incorrect - requires cube sides for the image border to capture perspective
 		i->second.faces_valid = create_cube_map_reflection(tid, i->first, bcube, bfc, cobj.is_indoors(), skip_mask);
