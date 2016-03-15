@@ -1486,6 +1486,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 		case 'B': // cube: xmin xmax ymin ymax zmin zmax [corner_radius]
 			{
 				if (read_cube(fp, xf, cobj) != 6) {return read_error(fp, "collision cube", coll_obj_file);}
+				if (cobj.is_zero_area()) {return read_error(fp, "collision cube: zero area cube", coll_obj_file);}
 				float corner_radius(0.0);
 				fscanf(fp, "%f", &corner_radius); // okay if fails
 				check_layer(has_layer);
