@@ -123,8 +123,9 @@ void restore_matrices_and_clear() {
 }
 
 
-unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing, bool is_indoors) {
-
+unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id, point const &center,
+	float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask)
+{
 	//RESET_TIME;
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	check_gl_error(530);
@@ -140,7 +141,8 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 
 	for (unsigned dim = 0; dim < 3; ++dim) {
 		for (unsigned dir = 0; dir < 2; ++dir) {
-			unsigned const face_ix(2*dim + !dir);
+			unsigned const dir_mask(EFLAGS[dim][dir]);
+			if ((skip_mask & dir_mask) != 0) {faces_drawn |= dir_mask; continue;} // mark it as drawn but skip it
 			cview_dir = zero_vector;
 			up_vector = -plus_y;
 			cview_dir[dim] = (dir ? 1.0 : -1.0);
@@ -153,8 +155,8 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 			setup_sun_moon_light_pos();
 			bool const inc_mesh(cview_dir != plus_z), inc_grass_water(inc_mesh && !is_indoors);
 			draw_scene_from_custom_frustum(camera_pdu, cobj_id, 2, inc_mesh, inc_grass_water, inc_grass_water); // reflection_pass=2 (cube map)
-			render_to_texture_cube_map(tid, tex_size, face_ix); // render reflection to texture
-			faces_drawn |= (1 << (2*dim + dir));
+			render_to_texture_cube_map(tid, tex_size, (2*dim + !dir)); // render reflection to texture
+			faces_drawn |= dir_mask;
 		} // for dir
 	} // for dim
 	if (ENABLE_CUBE_MAP_MIPMAPS) {gen_mipmaps(6);}
@@ -172,8 +174,8 @@ unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id
 	return faces_drawn;
 }
 
-unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors) {
-	return create_reflection_cube_map(tid, tex_size, cobj_id, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing, is_indoors);
+unsigned create_reflection_cube_map(unsigned tid, unsigned tex_size, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
+	return create_reflection_cube_map(tid, tex_size, cobj_id, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing, is_indoors, skip_mask);
 }
 
 // render scene reflection to texture (ground mode and tiled terrain mode)
@@ -277,7 +279,7 @@ unsigned create_gm_z_reflection() {
 	return reflection_tid;
 }
 
-unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing, bool is_indoors) {
+unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
 
 	if (display_mode & 0x20) return 0; // reflections not enabled
 	unsigned const max_tex_size(min(window_width, window_height));
@@ -286,14 +288,14 @@ unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, point const &cen
 	while (2*tex_size <= max_tex_size) {tex_size *= 2;} // find the max power of 2 <= max_tex_size
 	tex_size = min(tex_size, 768U); // clamp to 768 to limit runtime and memory usage
 	setup_cube_map_reflection_texture(tid, tex_size);
-	unsigned const faces_drawn(create_reflection_cube_map(tid, tex_size, cobj_id, center, near_plane, FAR_CLIP, only_front_facing, is_indoors));
+	unsigned const faces_drawn(create_reflection_cube_map(tid, tex_size, cobj_id, center, near_plane, FAR_CLIP, only_front_facing, is_indoors, skip_mask));
 	check_gl_error(998);
 	return faces_drawn;
 }
 
-unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors) {
+unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, cube_t const &cube, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
 	// slightly more than the cube half width in max dim
-	return create_cube_map_reflection(tid, cobj_id, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing, is_indoors);
+	return create_cube_map_reflection(tid, cobj_id, cube.get_cube_center(), max(NEAR_CLIP, 0.5f*cube.max_len()), FAR_CLIP, only_front_facing, is_indoors, skip_mask);
 }
 
 unsigned create_tt_reflection(float terrain_zmin) {
@@ -370,11 +372,13 @@ void reflective_cobjs_t::create_textures() {
 		cube_t const &bcube(cobj);
 		bool const cobj_moved(i->second.bcube != bcube);
 		bool const no_update_needed(tid && !dynamic_update && !cobj_moved);
-		if (no_update_needed && i->second.faces_valid == 0x3F) continue; // reflection texture is valid, cobj has not moved, and scene has not changed
-		if (tid && !cobj.is_cobj_visible())                    continue; // reflection texture is valid but cobj is not visible (approximate)
+		if (no_update_needed && i->second.faces_valid == EF_ALL) continue; // reflection texture is valid, cobj has not moved, and scene has not changed
+		if (tid && !cobj.is_cobj_visible())                      continue; // reflection texture is valid but cobj is not visible (approximate)
 		// enable back face culling when texture is created or the cobj has moved, or on the final frame following a transition from dynamic updates (in case a new face comes into view)
 		bool const bfc(tid && !cobj_moved && !no_update_needed);
-		i->second.faces_valid = create_cube_map_reflection(tid, i->first, bcube, bfc, cobj.is_indoors());
+		unsigned skip_mask(0); // {z1, z2, y1, y2, x1, x2}
+		//if (cobj.type == COLL_CUBE) {skip_mask = cobj.cp.surfs;} // incorrect - requires cube sides for the image border to capture perspective
+		i->second.faces_valid = create_cube_map_reflection(tid, i->first, bcube, bfc, cobj.is_indoors(), skip_mask);
 		i->second.bcube       = bcube;
 	}
 	for (auto i = to_remove.begin(); i != to_remove.end(); ++i) {remove_cobj(*i);}

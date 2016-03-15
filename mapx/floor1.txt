@@ -51,11 +51,16 @@ l 0.8 1.0 1.0 1.0 1.0 -1 1 # white opaque
 metalness 1.0 # metal
 #S 1.4 1.5 0.2  0.05 # silver sphere
 #D 0.0 0.1 0.0 10 # dx dy dz num
+
 movable 1
 a 2 # destroyable/shatterable
 #B 1.46 1.54 1.36 1.44 0.02 0.12 # silver movable cube
-a 0 # non-destroyable
 movable 0
+e 0x1F # only +x
+#B -0.05 -0.045  2.4 2.6  0.014 0.32 # mirror
+e 0
+a 0 # non-destroyable
+
 #z 1.5 1.4 0.4  0.0 0.0 1.0  0.08 0.04
 r 1.0 60.0  0.8 0.4 0.25 # copper
 #S 1.4 1.7 0.2  0.05

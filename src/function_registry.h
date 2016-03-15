@@ -830,8 +830,8 @@ float get_reflection_plane();
 bool use_reflect_plane_for_cobj(coll_obj const &c);
 unsigned create_gm_z_reflection();
 unsigned create_tt_reflection(float terrain_zmin);
-unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing=0, bool is_indoors=0);
-unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, cube_t const &cube, bool only_front_facing=0, bool is_indoors=0);
+unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing=0, bool is_indoors=0, unsigned skip_mask=0);
+unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, cube_t const &cube, bool only_front_facing=0, bool is_indoors=0, unsigned skip_mask=0);
 void setup_shader_cube_map_params(shader_t &shader, cube_t const &bcube, unsigned tid);
 
 #include "inlines.h"
