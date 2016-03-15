@@ -7,7 +7,8 @@
 #include "model3d.h"
 #include "shaders.h"
 
-bool const ENABLE_CUBE_MAP_MIPMAPS = 0;
+bool  const ENABLE_CUBE_MAP_MIPMAPS = 1;
+float const CUBE_MAP_ANISO          = 4.0;
 
 bool enable_clip_plane_z(0);
 unsigned reflection_tid(0);
@@ -257,7 +258,7 @@ void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size) {
 		free_texture(tid);
 		last_size = tex_size;
 	}
-	if (!tid) {setup_cube_map_texture(tid, tex_size, 1, ENABLE_CUBE_MAP_MIPMAPS);} // allocate=1
+	if (!tid) {setup_cube_map_texture(tid, tex_size, 1, ENABLE_CUBE_MAP_MIPMAPS, CUBE_MAP_ANISO);} // allocate=1
 	assert(glIsTexture(tid));
 }
 

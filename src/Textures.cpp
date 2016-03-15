@@ -968,7 +968,7 @@ void setup_1d_texture(unsigned &tid, bool mipmap, bool wrap, bool mirror, bool n
 }
 
 
-void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, bool use_mipmaps) { // Note: no mipmaps
+void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, bool use_mipmaps, float aniso) { // Note: no mipmaps
 
 	assert(tex_size > 0);
 	assert(tid == 0);
@@ -984,6 +984,7 @@ void setup_cube_map_texture(unsigned &tid, unsigned tex_size, bool allocate, boo
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
 	if (allocate) {glTexStorage2D(GL_TEXTURE_CUBE_MAP, num_levels, GL_RGB8, tex_size, tex_size);}
 	//gluBuild2DMipmaps(GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_RGB8, tex_size, tex_size, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
