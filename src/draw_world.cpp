@@ -618,14 +618,6 @@ bool draw_or_add_cobj(unsigned cix, int reflection_pass, bool use_ref_plane, vec
 		if (camera_pdu.cube_visible(c)) {tex_coord_cobjs[use_normal_map].push_back(cix);}
 		return 0;
 	}
-	if (use_normal_map) { // common case
-		assert(c.group_id < 0);
-		assert(!c.is_semi_trans());
-		if (!check_big_occluder(c, cix, large_cobjs[1])) {normal_map_cobjs.push_back(cix);}
-		return 0;
-	}
-	if (check_big_occluder(c, cix, large_cobjs[0])) return 0;
-
 	if (c.is_semi_trans()) { // slow when polygons are grouped
 		float dist(distance_to_camera(c.get_center_pt()));
 		if (c.type == COLL_SPHERE) {dist -= c.radius;} // distance to surface closest to the camera
@@ -635,7 +627,12 @@ bool draw_or_add_cobj(unsigned cix, int reflection_pass, bool use_ref_plane, vec
 		draw_last.push_back(make_pair(-dist, cix)); // negative distance
 		return 0;
 	}
-	return 1;
+	if (use_normal_map) { // common case
+		assert(c.group_id < 0);
+		if (!check_big_occluder(c, cix, large_cobjs[1])) {normal_map_cobjs.push_back(cix);}
+		return 0;
+	}
+	return !check_big_occluder(c, cix, large_cobjs[0]);
 }
 
 // should always have draw_solid enabled on the first call for each frame
@@ -749,6 +746,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 				if (in_portal) {portal::post_draw(portal_verts); in_portal = 0;}
 				unsigned cix(ix);
 				coll_obj const &c(get_draw_cobj(cix));
+				if (c.cp.normal_map >= 0) {assert(c.cp.light_atten == 0.0); normal_map_cobjs.push_back(cix); continue;} // light atten not supported
 				cdb.on_new_obj_layer(c.cp);
 				bool using_lt_atten(0);
 				
@@ -773,9 +771,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 		if (in_portal) {portal::post_draw(portal_verts);}
 		end_group(last_group_id);
 		cdb.flush();
-		disable_blend();
 		draw_last.resize(0);
-		glDepthMask(GL_TRUE); // re-enable depth writing
 	} // end draw_trans
 	s.clear_specular(); // may be unnecessary
 	s.end_shader();
@@ -787,6 +783,11 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 		draw_cobjs_group(cube_map_cobjs[1][d], cdb, reflection_pass, s, 0, (d!=0), 2);
 	}
 	draw_cobjs_group(normal_map_cobjs, cdb, reflection_pass, s, 2, 1, 0);
+	
+	if (draw_trans) {
+		disable_blend();
+		glDepthMask(GL_TRUE); // re-enable depth writing
+	}
 	if (disable_occ_cull) {display_mode |= 0x08;}
 	clip_plane_z -= clip_plane_z_bias;
 	check_gl_error(570);

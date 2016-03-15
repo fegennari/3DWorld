@@ -46,7 +46,12 @@ cube_map_ref 1
 metalness 0.0 # glass
 r 1.0 60.0  1.0 1.0 1.0 # silver/glass
 l 0.8 1.0 1.0 1.0 0.1 -1 1 # transparent
+#X normal_maps/stucco_NRM.jpg 1 0
 #S 1.6 1.5 0.2  0.05 # glass sphere
+movable 1
+#B 1.26 1.34 1.36 1.44 0.02 0.12 # glass cube
+movable 0
+X none
 l 0.8 1.0 1.0 1.0 1.0 -1 1 # white opaque
 metalness 1.0 # metal
 #S 1.4 1.5 0.2  0.05 # silver sphere
