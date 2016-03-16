@@ -78,6 +78,7 @@ struct small_tree_group : public vector<small_tree> {
 	bool generated, instanced;
 	unsigned num_pine_trees, num_palm_trees;
 	float max_pt_radius;
+	point last_cpos;
 
 	struct pine_tree_inst_t {
 		unsigned id;
@@ -88,12 +89,9 @@ struct small_tree_group : public vector<small_tree> {
 	};
 	vector<pine_tree_inst_t> insts;
 	
-	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), max_pt_radius(0.0) {}
+	small_tree_group() : generated(0), instanced(0), num_pine_trees(0), num_palm_trees(0), max_pt_radius(0.0), last_cpos(all_zeros) {}
 	void sort_by_type() {stable_sort(begin(), end());}
-
-	void sort_by_dist_to_camera() {
-		sort(begin(), end(), small_tree::comp_by_type_dist(get_camera_pos()));
-	}
+	void sort_by_dist_to_camera();
 	void add_tree(small_tree const &st);
 	void calc_trunk_pts();
 	void finalize(bool low_detail);

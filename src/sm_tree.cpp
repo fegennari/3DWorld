@@ -28,7 +28,7 @@ extern bool tree_indir_lighting, only_pine_palm_trees;
 extern int window_width, draw_model, num_trees, do_zoom, tree_mode, xoff2, yoff2;
 extern int rand_gen_index, display_mode, force_tree_class;
 extern unsigned max_unique_trees;
-extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale;
+extern float zmin, zmax_est, water_plane_z, tree_scale, sm_tree_density, vegetation, tree_density_thresh, tree_height_scale, CAMERA_RADIUS;
 
 
 struct sm_tree_type {
@@ -145,7 +145,6 @@ void small_tree_group::clear_vbo_and_ids_if_needed(bool low_detail) {
 	if (is_uploaded(low_detail)) {clear_vbo_manager_and_ids(low_detail ? 2 : 1);}
 }
 
-
 void small_tree_group::clear_all() {
 
 	clear();
@@ -164,7 +163,6 @@ void small_tree_group::add_cobjs_range(iterator b, iterator e) {
 	cobj_params cp_trunk(0.9, TREE_C, DRAW_COBJS, 0, NULL, 0, -1);
 	for (iterator i = b; i < e; ++i) {i->add_cobjs(cp, cp_trunk);}
 }
-
 
 void small_tree_group::remove_cobjs() {
 	for (iterator i = begin(); i != end(); ++i) {i->remove_cobjs();}
@@ -217,6 +215,13 @@ void small_tree_group::draw_trunks(bool shadow_only, vector3d const &xlate, vect
 	}
 }
 
+void small_tree_group::sort_by_dist_to_camera() {
+
+	point const camera(get_camera_pos());
+	if (dist_less_than(camera, last_cpos, CAMERA_RADIUS)) return; // no sort needed
+	last_cpos = camera;
+	sort(begin(), end(), small_tree::comp_by_type_dist(camera));
+}
 
 void small_tree_group::get_back_to_front_ordering(vector<pair<float, unsigned> > &to_draw, vector3d const &xlate) const { // for leaves
 
@@ -503,7 +508,7 @@ void draw_small_trees(bool shadow_only) {
 
 	//RESET_TIME;
 	if (small_trees.empty() || !(tree_mode & 2)) return;
-	if (small_trees.size() < 100) {small_trees.sort_by_dist_to_camera();} // shadow_only?
+	if (!shadow_only && small_trees.size() < 100) {small_trees.sort_by_dist_to_camera();} // not in shadow pass, since trees usually don't overlap in z
 	shader_t s;
 	bool const all_pine(small_trees.num_pine_trees == small_trees.size());
 	bool const v(!shadow_only), use_bump_map(USE_BUMP_MAP && !shadow_only && all_pine); // bump maps only work with pine tree trunks
