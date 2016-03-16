@@ -223,7 +223,7 @@ void draw_sphere_vbo_back_to_front(point const &pos, float radius, int ndiv, boo
 float integrate_water_dist(point const &targ_pos, point const &src_pos, float const water_z);
 void water_color_atten_pt(float *c, int x, int y, point const &pos, point const &p1, point const &p2);
 void set_landscape_texgen(float tex_scale, int xoffset, int yoffset, int xsize, int ysize, shader_t &shader, unsigned detail_tu_id);
-void display_mesh(bool shadow_pass=0, bool no_update=0);
+void display_mesh(bool shadow_pass=0, bool reflection_pass=0);
 void draw_water_sides(shader_t &shader, int check_zvals);
 float get_tt_fog_top();
 float get_tt_fog_bot();
