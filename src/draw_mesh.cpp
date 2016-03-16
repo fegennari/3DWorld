@@ -306,7 +306,7 @@ protected:
 		float &sd(surface_damage[i][j]);
 
 		if (sd > 0.0) {
-			sd = min(MAX_SURFD, max(0.0f, (sd - fticks*SURF_HEAL_RATE)));
+			if (!no_update) {sd = min(MAX_SURFD, max(0.0f, (sd - fticks*SURF_HEAL_RATE)));}
 			color_scale *= max(0.0f, (1.0f - sd));
 		}
 		colorRGB color(mesh_color_scale*color_scale);
@@ -332,8 +332,9 @@ protected:
 
 public:
 	unsigned c;
+	bool no_update;
 
-	mesh_data_store() : c(0) {last_rows.resize(MESH_X_SIZE+1);}
+	mesh_data_store() : c(0), no_update(0) {last_rows.resize(MESH_X_SIZE+1);}
 
 	bool add_mesh_vertex_pair(int i, int j, float x, float y) {
 		if (c > 1) {
@@ -420,7 +421,7 @@ template<typename T> void draw_mesh_mvd_core(T &mvd) {
 }
 
 
-void draw_mesh_mvd() {
+void draw_mesh_mvd(bool no_update) {
 
 	shader_t s;
 	s.set_prefix("#define MULT_DETAIL_TEXTURE", 1); // FS
@@ -429,6 +430,7 @@ void draw_mesh_mvd() {
 
 	if (use_core_context) {
 		static mesh_vertex_draw_vbo mvd;
+		mvd.no_update = no_update;
 		if (clear_mvd_vbo) {mvd.clear(); clear_mvd_vbo = 0;}
 		mvd.begin_draw();
 		draw_mesh_mvd_core(mvd);
@@ -436,6 +438,7 @@ void draw_mesh_mvd() {
 	}
 	else {
 		mesh_vertex_draw mvd;
+		mvd.no_update = no_update;
 		draw_mesh_mvd_core(mvd);
 	}
 	s.end_shader();
@@ -507,7 +510,7 @@ void display_mesh(bool shadow_pass, bool no_update) { // fast array version
 		draw_mesh_vbo(0);
 	}
 	else { // slower mesh draw with more features
-		draw_mesh_mvd();
+		draw_mesh_mvd(no_update);
 	}
 	if (SHOW_MESH_TIME) PRINT_TIME("Draw");
 	set_active_texture(0);
