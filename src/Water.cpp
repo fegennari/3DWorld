@@ -1701,21 +1701,17 @@ int get_water_wsi(int xpos, int ypos) {
 	return wsi;
 }
 
-
 void select_liquid_color(colorRGBA &color, int xpos, int ypos) {
 
 	int const wsi(get_water_wsi(xpos, ypos));
 	if (wsi < 0) return;
 	if (water_is_lava) {color = LAVA_COLOR; return;}
-	float const blood_mix(valleys[wsi].blood_mix);
-	float const mud_mix(valleys[wsi].mud_mix);
-	blend_color(color, MUD_C, color, mud_mix, 1);
-	blend_color(color, BLOOD_C, color, blood_mix, 1);
+	float const blood_mix(valleys[wsi].blood_mix), mud_mix(valleys[wsi].mud_mix);
+	if (mud_mix   > 0.0) {blend_color(color, MUD_C,   color, mud_mix,   1);}
+	if (blood_mix > 0.0) {blend_color(color, BLOOD_C, color, blood_mix, 1);}
 }
 
-
 void select_liquid_color(colorRGBA &color, point const &pos) {
-
 	select_liquid_color(color, get_xpos(pos.x), get_ypos(pos.y));
 }
 

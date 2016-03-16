@@ -83,8 +83,11 @@ float integrate_water_dist(point const &targ_pos, point const &src_pos, float co
 	if (src_pos.z == targ_pos.z) return 0.0;
 	float const t(min(1.0f, (water_z - targ_pos.z)/fabs(src_pos.z - targ_pos.z))); // min(1.0,...) for underwater case
 	point p_int(targ_pos + (src_pos - targ_pos)*t);
-	int const xp(get_xpos(targ_pos.x)), yp(get_ypos(targ_pos.y));
-	if (world_mode == WMODE_GROUND && !point_outside_mesh(xp, yp)) {p_int.z = min(src_pos.z, water_matrix[yp][xp]);} // account for ripples
+	
+	if (world_mode == WMODE_GROUND) {
+		int const xp(get_xpos(targ_pos.x)), yp(get_ypos(targ_pos.y));
+		if (!point_outside_mesh(xp, yp)) {p_int.z = min(src_pos.z, water_matrix[yp][xp]);} // account for ripples
+	}
 	return p2p_dist(p_int, targ_pos)*mesh_scale;
 }
 
@@ -314,8 +317,7 @@ protected:
 
 		// water light attenuation: total distance from sun/moon, reflected off bottom, to viewer
 		if (!DISABLE_WATER && data[c].v.z < max_water_height && data[c].v.z < water_matrix[i][j]) {
-			point const pos(get_xval(j), get_yval(i), mesh_height[i][j]);
-			water_color_atten(&color.R, j, i, pos);
+			water_color_atten(&color.R, j, i, data[c].v);
 
 			if (wminside[i][j] == 1) {
 				colorRGBA wc(WHITE);
@@ -340,10 +342,10 @@ public:
 		if (is_mesh_disabled(j, i) || is_mesh_disabled(j, i+1)) return 0;
 		if (mesh_z_cutoff > -FAR_DISTANCE && mesh_z_cutoff > max(mesh_height[i][j], mesh_height[i+1][j])) return 0;
 		
-		for (unsigned p = 0; p < 2; ++p, ++c) {
+		for (unsigned p = 0; p < 2; ++p, ++c, y += DY_VAL) {
 			int const iinc(min((MESH_Y_SIZE-1), int(i+p)));
 			//assert(c < data.size());
-			data[c].v.assign(x, (y + p*DY_VAL), mesh_height[iinc][j]);
+			data[c].v.assign(x, y, mesh_height[iinc][j]);
 			//assert(unsigned(j) < last_rows.size());
 		
 			if (last_rows[j].ix == iinc) { // gets here nearly half the time
