@@ -311,7 +311,6 @@ protected:
 private:
 	vector<unsigned> pt_to_ix; // maps mesh {x,y} values to vertex index
 	vector<unsigned> indices; // indexes into verts
- 
 public:
 	mesh_strip_drawer() {pt_to_ix.resize(XY_MULT_SIZE, RESERVED_IX);}
  
@@ -330,9 +329,7 @@ public:
 		indices.push_back(ix);
 		return is_new_vertex;
 	}
-	void end_strip() {
-		indices.push_back(RESERVED_IX);
-	}
+	void end_strip() {indices.push_back(RESERVED_IX);}
 	void draw() {
 		if (verts.empty()) {assert(indices.empty()); return;} // nothing to do
 		create_and_upload(verts, indices, 2);
@@ -343,7 +340,12 @@ public:
 		glDisable(GL_PRIMITIVE_RESTART);
 		post_render();
 	}
-	~mesh_strip_drawer() {clear_vbos();}
+	void clear() {
+		clear_vbos();
+		verts.clear();
+		indices.clear();
+		for (auto i = pt_to_ix.begin(); i != pt_to_ix.end(); ++i) {*i = RESERVED_IX;}
+	}
 };
 
 
@@ -477,7 +479,7 @@ void draw_water(bool no_update) {
 			set_active_texture(0);
 			s.add_uniform_float("detail_tex_scale", 1.0);
 		}
-		water_strip_drawer wsdraw;
+		static water_strip_drawer wsdraw;
 		// draw back-to-front away from the player in 4 quadrants to make the alpha blending work correctly
 		point const camera_adj(camera - point(0.5*DX_VAL, 0.5*DY_VAL, 0.0)); // hack to fix incorrect offset
 		int const cxpos(max(0, min(xend, get_xpos(camera_adj.x)))), cypos(max(0, min(yend, get_ypos(camera_adj.y))));
@@ -487,6 +489,7 @@ void draw_water(bool no_update) {
 		wsdraw.draw_outside_water_range(cxpos, cypos, 0,    0,    -1, -1);
 		wsdraw.calc_vertex_colors_normals(color);
 		wsdraw.draw();
+		wsdraw.clear();
 		if (use_foam) {s.add_uniform_float("detail_tex_scale", 0.0);}
 		if (DEBUG_WATER_TIME) {PRINT_TIME("2.2 Water Draw Fixed");}
 		if (camera.z < water_plane_z) {draw_water_sides(s, 1);}
