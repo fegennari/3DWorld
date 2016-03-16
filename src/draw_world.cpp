@@ -591,7 +591,6 @@ bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { 
 	if (!c.is_big_occluder() || c.group_id >= 0) return 0;
 	float const dist_sq(distance_to_camera_sq(c.get_center_pt()));
 	if (c.get_area() < 0.005*dist_sq) return 0;
-	if (!camera_pdu.cube_visible(c)) return 1; // skip this cobj - return 1, but don't add as an occluder
 	out.push_back(make_pair(dist_sq, cix));
 	return 1;
 }
@@ -603,19 +602,19 @@ bool draw_or_add_cobj(unsigned cix, int reflection_pass, bool use_ref_plane, vec
 	bool const use_tex_coords(c.use_tex_coords()), use_normal_map(c.cp.normal_map >= 0);
 
 	if (c.is_reflective() && enable_all_reflections()) {
-		if (camera_pdu.cube_visible(c)) {cube_map_cobjs[use_tex_coords][use_normal_map].push_back(cix);}
+		cube_map_cobjs[use_tex_coords][use_normal_map].push_back(cix);
 		return 0;
 	}
 	// Note: only texgen cube/vert cylinder top surfaces support reflections
 	if (!use_tex_coords && use_ref_plane && use_reflect_plane_for_cobj(c)) {
 		assert(c.group_id < 0);
 		if (reflection_pass == 1) return 0; // the reflection surface is not drawn in the reflection pass (receiver only)
-		if (camera_pdu.cube_visible(c)) {reflect_cobjs[use_normal_map].push_back(cix);}
+		reflect_cobjs[use_normal_map].push_back(cix);
 		return 0;
 	}
 	if (use_tex_coords) { // uncommon case (typically movable objects); semi-transparent is okay
 		assert(c.group_id < 0);
-		if (camera_pdu.cube_visible(c)) {tex_coord_cobjs[use_normal_map].push_back(cix);}
+		tex_coord_cobjs[use_normal_map].push_back(cix);
 		return 0;
 	}
 	if (c.is_semi_trans()) { // slow when polygons are grouped
@@ -674,20 +673,22 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 			assert(c.cp.draw);
 			if (c.no_draw()) continue; // can still get here sometimes
 			if (reflection_pass == 1 && c.d[2][1] < ref_plane_z) continue; // below the reflection plane (approximate) (optimization)
+			if (c.group_id < 0 && !c.is_cobj_visible())          continue; // VFC/occlusion culling
 			assert(c.id == (int)cix); // should always be equal
 
 			if (c.dgroup_id >= 0) {
 				assert(!c.is_reflective()); // reflective grouped cobjs are not yet supported
-				if (!c.is_cobj_visible()) continue; // VFC/occlusion culling
 				vector<unsigned> const &group_cids(cdraw_groups.get_draw_group(c.dgroup_id, c));
 				//assert(!group_cids.empty()); // too strong?
 
 				for (auto j = group_cids.begin(); j != group_cids.end(); ++j) {
 					unsigned const ix(*j + coll_objects.size()); // map to a range that doesn't overlap coll_objects
+					coll_obj const &cobj(cdraw_groups.get_cobj(*j));
+					if (cobj.no_draw() || !cobj.is_cobj_visible()) continue; // VFC/occlusion culling
 
 					if (draw_or_add_cobj(ix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, reflect_cobjs, cube_map_cobjs)) {
 						unsigned ix2(ix);
-						cdraw_groups.get_cobj(*j).draw_cobj(ix2, last_tid, last_group_id, s, cdb, reflection_pass); // Note: ix should not be modified
+						cobj.draw_cobj(ix2, last_tid, last_group_id, s, cdb, reflection_pass); // Note: ix should not be modified
 						assert(ix2 == ix); // should not have changed
 					}
 				}

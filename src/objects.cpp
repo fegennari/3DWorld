@@ -371,11 +371,8 @@ void coll_obj::setup_cobj_sc_texgen(vector3d const &dir, shader_t &shader) const
 
 void coll_obj::draw_cobj(unsigned &cix, int &last_tid, int &last_group_id, shader_t &shader, cobj_draw_buffer &cdb, int reflection_pass) const {
 
-	if (no_draw()) return;
 	assert(!disabled());
 	bool const in_group(group_id >= 0), same_group(group_id == last_group_id), start_group(in_group && !same_group);
-	if (!in_group && !is_cobj_visible()) return;
-
 	// we want everything to be textured for simplicity in code/shaders,
 	// so if there is no texture specified just use a plain white texture
 	int const tid((cp.tid >= 0) ? cp.tid : WHITE_TEX);
