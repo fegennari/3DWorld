@@ -406,18 +406,21 @@ public:
 
 template<typename T> void draw_mesh_mvd_core(T &mvd) {
 
-	float y(-Y_SCENE_SIZE);
+	// clamp mesh draw range to the camera x/y value for x/y cube map faces
+	int x_start(0), x_end(MESH_X_SIZE-1), y_start(0), y_end(MESH_Y_SIZE-1);
+	if      (cview_dir ==  plus_x) {x_start = max(x_start, get_xpos(get_camera_pos().x)-1);}
+	else if (cview_dir == -plus_x) {x_end   = min(x_end,   get_xpos(get_camera_pos().x)+1);}
+	else if (cview_dir ==  plus_y) {y_start = max(y_start, get_ypos(get_camera_pos().y)-1);}
+	else if (cview_dir == -plus_y) {y_end   = min(y_end,   get_ypos(get_camera_pos().y)+1);}
 
-	for (int i = 0; i < MESH_Y_SIZE-1; ++i) {
-		float x(-X_SCENE_SIZE);
+	for (int i = y_start; i < y_end; ++i) {
+		float const y(get_yval(i));
 
-		for (int j = 0; j < MESH_X_SIZE-1; ++j) {
-			if (!mvd.add_mesh_vertex_pair(i, j, x, y)) {mvd.emit_strip();}
-			x += DX_VAL;
+		for (int j = x_start; j < x_end; ++j) {
+			if (!mvd.add_mesh_vertex_pair(i, j, get_xval(j), y)) {mvd.emit_strip();}
 		}
-		mvd.add_mesh_vertex_pair(i, (MESH_X_SIZE - 1), x, y);
+		mvd.add_mesh_vertex_pair(i, x_end, get_xval(x_end), y);
 		mvd.emit_strip();
-		y += DY_VAL;
 	} // for i
 }
 
