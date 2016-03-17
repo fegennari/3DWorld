@@ -226,7 +226,7 @@ void transform_data::reset_perturb_if_set(unsigned i) {
 
 void apply_obj_mesh_roll(xform_matrix &matrix, point const &pos, point const &lpos, float radius, float a_add, float a_mult) {
 
-	if (pos != lpos) {
+	if (!dist_less_than(pos, lpos, 0.01*radius)) {
 		int const xpos(get_xpos(pos.x)), ypos(get_ypos(pos.y));
 
 		if (!point_outside_mesh(xpos, ypos)) {
