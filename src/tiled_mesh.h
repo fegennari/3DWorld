@@ -14,6 +14,7 @@
 #include "grass.h"
 #include "tree_3dw.h"
 #include "shadow_map.h"
+#include "animals.h"
 
 
 bool const ENABLE_TREE_LOD    = 1; // faster but has popping artifacts

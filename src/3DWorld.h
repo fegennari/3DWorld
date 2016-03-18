@@ -326,9 +326,9 @@ struct vector4d : public vector3d { // size = 16
 	void     operator+=(vector4d const &p) {x += p.x; y += p.y; z += p.z; w += p.w;}
 	void     operator-=(vector4d const &p) {x -= p.x; y -= p.y; z -= p.z; w -= p.w;}
 	vector4d operator-()                   const {return vector4d(-x, -y, -z, -w);}
-	bool operator==(vector4d const &v)     const {return (v.x == x && v.y == y && v.z == z && v.w == w);}
-	bool operator!=(vector4d const &v)     const {return !operator==(v);}
-	bool operator< (vector4d const &p)     const {return ((w == p.w) ? vector3d::operator<(p) : (w < p.w));}
+	bool     operator==(vector4d const &v) const {return (v.x == x && v.y == y && v.z == z && v.w == w);}
+	bool     operator!=(vector4d const &v) const {return !operator==(v);}
+	bool     operator< (vector4d const &p) const {return ((w == p.w) ? vector3d::operator<(p) : (w < p.w));}
 };
 
 

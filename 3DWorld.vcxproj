@@ -297,6 +297,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <ClCompile Include="src\ai.cpp" />
+    <ClCompile Include="src\animals.cpp" />
     <ClCompile Include="src\asteroid.cpp" />
     <ClCompile Include="src\build_world.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
@@ -751,6 +752,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3DWorld.h" />
+    <ClInclude Include="src\animals.h" />
     <ClInclude Include="src\asteroid.h" />
     <ClInclude Include="src\cobj_bsp_tree.h" />
     <ClInclude Include="src\collision_detect.h" />
