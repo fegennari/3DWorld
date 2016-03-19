@@ -20,6 +20,7 @@ protected:
 
 public:
 	animal_t() : enabled(0) {}
+	bool is_enabled() const {return enabled;}
 	bool is_visible() const;
 };
 
@@ -42,26 +43,52 @@ public:
 };
 
 
-class animal_group_t {
-
+class animal_group_base_t {
+protected:
 	rand_gen_t rgen;
+	bool generated;
 
 public:
-	template<typename A> void update_animals(vector<A> &animals) {
-		for (auto i = animals.begin(); i != animals.end(); ++i) {i->update(rgen);}
-	}
-	template<typename A> void draw_animals(vector<A> const &animals, shader_t &s) const {
-		for (auto i = animals.begin(); i != animals.end(); ++i) {i->draw(s);}
-	}
+	animal_group_base_t() : generated(0) {}
+	bool was_generated() const {return generated;}
+	static void begin_draw(shader_t &s);
+	static void end_draw(shader_t &s);
 };
 
-struct vect_fish_t : public vector<fish_t>, public animal_group_t {
-	void update() {update_animals(*this);}
+template<typename A> class animal_group_t : public vector<A>, public animal_group_base_t {
+public:
+	void gen(unsigned num, cube_t const &range) { // Note: okay if nonempty
+		reserve(size() + num); // optional
+
+		for (unsigned n = 0; n < num; ++n) {
+			A animal;
+			if (animal.gen(rgen, range)) {push_back(animal);} // only add if generation was successful
+		}
+	}
+	void update() {
+		for (iterator i = begin(); i != end(); ++i) {i->update(rgen);}
+	}
+	void remove(unsigned ix) {
+		assert(ix < size());
+		std::swap(operator[](ix), back());
+		pop_back();
+	}
+	void remove_disabled() {
+		iterator i(begin()), o(i);
+		for (; i != end(); ++i) {if (i->is_enabled()) {*(o++) = *i;}}
+		erase(o, end());
+	}
+	void draw_animals(shader_t &s) const {
+		for (const_iterator i = begin(); i != end(); ++i) {i->draw(s);}
+	}
+	void clear() {vector<A>::clear(); generated = 0;}
+};
+
+struct vect_fish_t : public animal_group_t<fish_t> {
 	void draw() const;
 };
 
-struct vect_bird_t : public vector<bird_t>, public animal_group_t {
-	void update() {update_animals(*this);}
+struct vect_bird_t : public animal_group_t<bird_t> {
 	void draw() const;
 };
 

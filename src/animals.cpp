@@ -24,6 +24,8 @@ bool fish_t::gen(rand_gen_t &rgen, cube_t const &range) {
 	float const fzmin(mesh_height + 1.6*radius*scale.y), fzmax(water_plane_z - 2.0*radius*scale.y);
 	if (fzmin > fzmax) return 0; // water is too shallow for this size of fish
 	pos.z   = min(fzmax, max(fzmin, pos.z)); // clamp to valid depth range
+	dir     = vector3d(rgen.signed_rand_float(), rgen.signed_rand_float(), 0.0).get_norm(); // in xy plane
+	velocity= zero_vector;
 	color   = colorRGBA(rgen.rand_uniform(0.27, 0.33), rgen.rand_uniform(0.20, 0.24), rgen.rand_uniform(0.14, 0.16), 1.0);
 	enabled = 1;
 	return 1;
@@ -34,8 +36,9 @@ bool bird_t::gen(rand_gen_t &rgen, cube_t const &range) {
 	enabled = 0;
 	if (atmosphere < 0.5) return 0; // no atmosphere, no clouds, no birds
 	pos     = rgen.gen_rand_cube_point(range);
-	// FIXME: stuff
 	radius  = 0.1*rgen.rand_uniform(0.6, 1.0);
+	dir     = vector3d(rgen.signed_rand_float(), rgen.signed_rand_float(), 0.0).get_norm(); // in xy plane
+	velocity= 4.0*dir;
 	color   = BLACK;
 	enabled = 1;
 	return 1;
@@ -83,7 +86,10 @@ bool bird_t::update(rand_gen_t &rgen) {
 
 
 bool animal_t::is_visible() const {
-	return (enabled && sphere_in_camera_view(pos, radius, 0));
+
+	if (!enabled) return 0;
+	if (dist_less_than(pos, get_camera_pos(), 600.0*radius)) return 0;
+	return sphere_in_camera_view(pos, radius, 0);
 }
 
 int animal_t::get_ndiv() const {
@@ -93,7 +99,9 @@ int animal_t::get_ndiv() const {
 void fish_t::draw(shader_t &s) const {
 
 	if (!is_visible()) return;
-	s.set_cur_color(color);
+	colorRGBA draw_color(color);
+	water_color_atten_at_pos(draw_color, pos);
+	s.set_cur_color(draw_color);
 	fgPushMatrix();
 	translate_to(pos);
 	rotate_into_plus_z(dir);
@@ -105,7 +113,7 @@ void fish_t::draw(shader_t &s) const {
 void bird_t::draw(shader_t &s) const {
 
 	if (!is_visible()) return;
-	s.set_cur_color(color);
+	s.set_cur_color(color); // FIXME: fog
 	fgPushMatrix();
 	translate_to(pos);
 	uniform_scale(radius);
@@ -114,20 +122,27 @@ void bird_t::draw(shader_t &s) const {
 }
 
 
+/*static*/ void animal_group_base_t::begin_draw(shader_t &s) {
+	s.begin_color_only_shader(); // FIXME: placeholder
+}
+/*static*/ void animal_group_base_t::end_draw(shader_t &s) {
+	s.end_shader();
+}
+
 void vect_fish_t::draw() const {
 
 	shader_t s;
-	s.begin_color_only_shader(); // FIXME: placeholder
-	draw_animals(*this, s);
-	s.end_shader();
+	begin_draw(s);
+	draw_animals(s);
+	end_draw(s);
 }
 
 void vect_bird_t::draw() const {
 
 	shader_t s;
-	s.begin_color_only_shader(); // FIXME: placeholder
-	draw_animals(*this, s);
-	s.end_shader();
+	begin_draw(s);
+	draw_animals(s);
+	end_draw(s);
 }
 
 

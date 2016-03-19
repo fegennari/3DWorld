@@ -12,6 +12,7 @@
 bool const DEBUG_TILES        = 0;
 bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
+bool const ENABLE_ANIMALS     = 0;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const NUM_FIRE_MODES = 4;
@@ -977,6 +978,7 @@ void tile_t::create_texture(mesh_xy_grid_cache_t &height_gen) {
 bool tile_t::update_range(tile_shadow_map_manager &smap_manager) { // if returns 0, tile will be deleted
 
 	update_pine_tree_state(0); // can free pine tree vbos
+	update_animals(); // if any were generated
 	float const dist(get_rel_dist_to_camera());
 	if (dist > CLEAR_DIST_TILES || mesh_height_invalid) {clear_vbo_tid(&smap_manager);}
 	if (dist*TILE_RADIUS > SMAP_DEL_THRESH) {clear_shadow_map(&smap_manager);} // too far, delete old shadow maps
@@ -1276,6 +1278,63 @@ void tile_t::draw_tile_clouds(vpc_shader_t &s, bool reflection_pass) {
 	clouds.draw(s, vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0));
 }
 void tile_t::gen_tile_clouds() {clouds.gen(x1, y1, x2, y2);}
+
+
+// *** animals ***
+
+
+template<typename A> void tile_t::propagate_animals_to_neighbor_tiles(animal_group_t<A> &animals) {
+
+	if (animals.empty()) return;
+	cube_t range(get_mesh_bcube());
+
+	for (unsigned i = 0; i < animals.size(); ++i) {
+		if (!animals[i].is_enabled()) {animals.remove(i); --i; continue;} // remove disabled animals
+		point const &pos(animals[i].pos);
+		int dx(0), dy(0);
+		if      (pos.x < range.d[0][0]) {dx = -1;} // move -x
+		else if (pos.x > range.d[0][1]) {dx =  1;} // move +x
+		if      (pos.y < range.d[1][0]) {dy = -1;} // move -y
+		else if (pos.y > range.d[1][1]) {dy =  1;} // move +y
+		if (dx == 0 && dy == 0) continue; // position is within the current tile, keep this animal here
+		tile_t *adj(get_adj_tile(dx, dy));
+		if (adj != NULL) {adj->add_animal(animals[i]);} // move to adjacent tile, if one is present - pos should be valid within that tile
+		animals.remove(i); --i; // remove from current tile
+	}
+}
+
+void tile_t::update_animals() {
+
+	if (!ENABLE_ANIMALS) return;
+
+	if (!fish.was_generated()) {
+		unsigned const NUM_FISH_PER_TILE = 12;
+		cube_t range(get_mesh_bcube());
+		range.d[2][1] = water_plane_z; // z extends from lowest mesh point to water surface
+		fish.gen(NUM_FISH_PER_TILE, range); // Note: could use get_water_bcube() for tighter range
+	}
+	else {
+		fish.update();
+		propagate_animals_to_neighbor_tiles(fish);
+	}
+	if (!birds.was_generated()) {
+		unsigned const NUM_BIRDS_PER_TILE = 4;
+		cube_t range(get_mesh_bcube());
+		float const z_range(zmax - zmin);
+		range.d[2][0] = zmax + 0.05*z_range;
+		range.d[2][1] = zmax + 0.50*z_range;
+		birds.gen(NUM_BIRDS_PER_TILE, range);
+	}
+	else {
+		birds.update();
+		propagate_animals_to_neighbor_tiles(birds);
+	}
+}
+
+void tile_t::draw_animals(shader_t &s, bool reflection_pass) const {
+	if (!reflection_pass) {fish.draw_animals(s);} // fish are not reflected in the water surface, but birds are
+	birds.draw_animals(s);
+}
 
 
 // *** rendering ***
@@ -1659,9 +1718,7 @@ void tile_draw_t::clear() {
 float tile_draw_t::update(float &min_camera_dist) { // view-independent updates; returns terrain zmin
 
 	//RESET_TIME;
-	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {
-		read_default_hmap_modmap();
-	}
+	if (terrain_hmap_manager.maybe_load(mh_filename_tt, (invert_mh_image != 0))) {read_default_hmap_modmap();}
 	to_draw.clear();
 	terrain_zmin = FAR_DISTANCE;
 	grass_tile_manager.update(); // every frame, even if not in tiled terrain mode?
@@ -2112,6 +2169,7 @@ void tile_draw_t::draw(bool reflection_pass) {
 	if (decid_trees_enabled()) {draw_decid_trees(reflection_pass);}
 	if (scenery_enabled    ()) {draw_scenery    (reflection_pass);}
 	if (is_grass_enabled   ()) {draw_grass      (reflection_pass);}
+	if (ENABLE_ANIMALS)        {draw_animals    (reflection_pass);}
 	//if ((GET_TIME_MS() - timer1) > 100) {PRINT_TIME("Draw Tiled Terrain");}
 }
 
@@ -2465,7 +2523,7 @@ void tile_draw_t::setup_grass_flower_shader(shader_t &s, bool enable_wind, bool 
 // tu's used: 0: grass, 1: wind noise, 2: heightmap, 3: grass weight, 4: normal map, 5: noise, 6: shadow map, 9: cloud noise
 void tile_draw_t::draw_grass(bool reflection_pass) {
 
-	if (reflection_pass) return; // no grass reflection (yet)
+	if (reflection_pass) return; // no grass reflections (yet)
 	bool const use_cloud_shadows(GRASS_CLOUD_SHADOWS && cloud_shadows_enabled());
 	vector<vector<vector2d> > insts[NUM_GRASS_LODS];
 	unsigned num_grass_drawn(0), num_flowers_drawn(0);
@@ -2526,6 +2584,16 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 		s.end_shader();
 	}
 	if (DEBUG_TILES) {cout << "grass blades drawn: " << num_grass_drawn << ", flowers drawn: " << num_flowers_drawn << endl;} // up to 2M / 100K
+}
+
+
+void tile_draw_t::draw_animals(bool reflection_pass) {
+
+	shader_t s;
+	animal_group_base_t::begin_draw(s); // currently using the same shader for all types of animals
+	// FIXME: what about birds that are above the mesh zmax and outside the bcube tested against the view frustum?
+	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_animals(s, reflection_pass);}
+	animal_group_base_t::end_draw(s);
 }
 
 
