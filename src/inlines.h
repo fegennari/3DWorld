@@ -57,6 +57,8 @@ inline float quintic_interpolate(float x) {return ((5*x*x - 15*x + 10)*x*x*x);}
 
 inline int round_fp(double val) {return ((val > 0.0) ? int(val + 0.5) : int(val - 0.5));}
 
+template<typename T> T lerp(T const &a, T const &b, float val) {return (a*(1.0-val) + b*val);}
+
 
 // ***************** RANDOM NUMBER GENERATION ********************
 
