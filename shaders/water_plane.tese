@@ -45,7 +45,7 @@ void main() {
 	vec3 vertex = interpolate3D(vertex_ES[0], vertex_ES[1], vertex_ES[2], vertex_ES[3]);
 	vec2 wtc    = tc / wave_width;
 	wave_dz     = get_delta_z(wtc);
-	vertex.z   += 0.02 * wave_height * wave_dz;
+	vertex.z   += wave_height * wave_dz;
 
 	float intensity = 4.0 * clamp((40.0/distance(vertex.xyz, camera_pos) - 1.0), 0.0, 1.0);
 	float dzx   = intensity*(get_delta_z(wtc + vec2(0.001, 0.0)) - wave_dz);

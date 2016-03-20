@@ -2595,8 +2595,7 @@ void tile_draw_t::draw_animals(bool reflection_pass) {
 
 	shader_t s;
 	animal_group_base_t::begin_draw(s); // currently using the same shader for all types of animals
-	// FIXME: what about birds that are above the mesh zmax and outside the bcube tested against the view frustum?
-	//for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_animals(s, reflection_pass);}
+	//for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_animals(s, reflection_pass);} // doesn't work due to birds above the mesh bcube
 	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_animals(s, reflection_pass);}
 	animal_group_base_t::end_draw(s);
 }

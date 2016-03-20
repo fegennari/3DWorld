@@ -740,13 +740,14 @@ void setup_water_plane_texgen(float s_scale, float t_scale, shader_t &shader, in
 	setup_texgen_full(s_scale*xscale, s_scale*yscale, 0.0, s_scale*(tdx*wdir.x + tdy*wdir.y), -t_scale*yscale, t_scale*xscale, 0.0, t_scale*(-tdx*wdir.y + tdy*wdir.x), shader, mode);
 }
 
-
 void set_water_plane_uniforms(shader_t &s) {
 
 	s.add_uniform_float("wave_time",      wave_time);
 	s.add_uniform_float("wave_amplitude", water_params.wave_amp*min(1.0, 1.5*wind.mag())); // No waves if (temperature < W_FREEZE_POINT)?
 	s.add_uniform_float("water_plane_z",  water_plane_z);
 }
+
+float get_tess_wave_height() {return 0.02/mesh_scale_z;}
 
 
 // textures used: 0=reflection, 1=normal map, 2=mesh height map, 3=raindrops, 4=ocean normal map, 5=foam, 6=shadow map, 7=raindrops
@@ -791,7 +792,7 @@ void setup_water_plane_shader(shader_t &s, bool no_specular, bool reflections, b
 	
 	if (use_tess) {
 		s.add_uniform_vector3d("camera_pos", get_camera_pos());
-		s.add_uniform_float("wave_height",   1.0/mesh_scale_z);
+		s.add_uniform_float("wave_height",   get_tess_wave_height());
 		s.add_uniform_float("wave_width",    max(1.0, 1.0/mesh_scale_z));
 	}
 	if (enable_shadow_maps) {setup_tile_shader_shadow_map(s);}

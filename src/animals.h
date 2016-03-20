@@ -30,17 +30,20 @@ protected:
 	//tile_offset_t tile_off;
 
 	int get_ndiv(point const &pos_) const;
+	float get_alpha_at_cur_dist(point const &pos_, float vis_dist_scale=1.0) const;
 
 public:
 	animal_t() : enabled(0) {}
 	bool is_enabled() const {return enabled;}
-	bool is_visible(point const &pos_) const;
+	bool is_visible(point const &pos_, float vis_dist_scale=1.0) const;
 	point get_draw_pos() const;
 };
 
 class fish_t : public animal_t {
 
-	vector3d scale; // x = width, y = height, z = length
+	vector3d scale; // x = length, y = width, z = height
+
+	float get_mesh_zval_at_pos() const;
 
 public:
 	bool gen(rand_gen_t &rgen, cube_t const &range);
@@ -70,6 +73,8 @@ public:
 };
 
 template<typename A> class animal_group_t : public vector<A>, public animal_group_base_t {
+	cube_t bcube;
+
 public:
 	void gen(unsigned num, cube_t const &range);
 	void update();
