@@ -10,7 +10,7 @@
 #include "gl_includes.h"
 
 
-extern int MESH_X_SIZE, MESH_Y_SIZE, world_mode, do_zoom, xoff2, yoff2;
+extern int MESH_X_SIZE, MESH_Y_SIZE, world_mode, do_zoom, xoff, yoff, xoff2, yoff2;
 extern float X_SCENE_SIZE, Y_SCENE_SIZE, Z_SCENE_SIZE, DX_VAL, DY_VAL;
 extern float light_factor, relh_adj_tex, glaciate_exp_inv, cview_radius, czmin, czmax, zbottom, ztop;
 extern point cview_dir, camera_origin, camera_pos;

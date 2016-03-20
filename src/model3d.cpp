@@ -1539,7 +1539,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 		camera_pdu_transform_wrapper cptw2(*xf);
 		base_mat_t ub_mat(unbound_mat);
 		xf->apply_material_override(ub_mat);
-		point xlate2(xlate); // complex transforms, occlusion culling disabled
+		//point xlate2(xlate); // complex transforms, occlusion culling disabled
 		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, nullptr, &mvm);
 		// cptw2 dtor called here
 	}

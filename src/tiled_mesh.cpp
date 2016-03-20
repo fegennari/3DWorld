@@ -12,7 +12,7 @@
 bool const DEBUG_TILES        = 0;
 bool const DEBUG_TILE_BOUNDS  = 0;
 bool const ENABLE_INST_PINE   = 1; // faster generation, lower GPU memory, slower rendering
-bool const ENABLE_ANIMALS     = 0;
+bool const ENABLE_ANIMALS     = 1;
 int  const DITHER_NOISE_TEX   = NOISE_GEN_TEX;//PS_NOISE_TEX
 unsigned const NORM_TEXELS    = 512;
 unsigned const NUM_FIRE_MODES = 4;
@@ -37,7 +37,7 @@ bool tt_lightning_enabled(0);
 unsigned inf_terrain_fire_mode(0); // none, increase height, decrease height
 string read_hmap_modmap_fn, write_hmap_modmap_fn("heightmap.mod");
 hmap_brush_param_t cur_brush_param;
-tile_t::offset_t model3d_offset;
+tile_offset_t model3d_offset;
 
 extern bool inf_terrain_scenery, enable_tiled_mesh_ao, underwater, fog_enabled, volume_lighting, combined_gu, enable_depth_clamp;
 extern unsigned grass_density, max_unique_trees, inf_terrain_fire_mode, shadow_map_sz;
@@ -1286,7 +1286,7 @@ void tile_t::gen_tile_clouds() {clouds.gen(x1, y1, x2, y2);}
 template<typename A> void tile_t::propagate_animals_to_neighbor_tiles(animal_group_t<A> &animals) {
 
 	if (animals.empty()) return;
-	cube_t range(get_mesh_bcube());
+	cube_t range(get_mesh_bcube_global());
 
 	for (unsigned i = 0; i < animals.size(); ++i) {
 		if (!animals[i].is_enabled()) {animals.remove(i); --i; continue;} // remove disabled animals
@@ -1307,9 +1307,13 @@ void tile_t::update_animals() {
 
 	if (!ENABLE_ANIMALS) return;
 
+	// FIXME: animals are in global space, rather than camera local space like everything else;
+	// this means that there will be FP errors when the player is far from the origin - but since fish and birds are "distant" objects, that may be okay;
+	// using camera space is more difficult due to all of update code interacting with the rest of the scene, which is in global space;
+	// also, animals can move between tiles, which complicates the math (since adjacent tiles may create their animals in a different starting camera space)
 	if (!fish.was_generated()) {
 		unsigned const NUM_FISH_PER_TILE = 12;
-		cube_t range(get_mesh_bcube());
+		cube_t range(get_mesh_bcube_global());
 		range.d[2][1] = water_plane_z; // z extends from lowest mesh point to water surface
 		fish.gen(NUM_FISH_PER_TILE, range); // Note: could use get_water_bcube() for tighter range
 	}
@@ -1319,10 +1323,10 @@ void tile_t::update_animals() {
 	}
 	if (!birds.was_generated()) {
 		unsigned const NUM_BIRDS_PER_TILE = 4;
-		cube_t range(get_mesh_bcube());
+		cube_t range(get_mesh_bcube_global());
 		float const z_range(zmax - zmin);
-		range.d[2][0] = zmax + 0.05*z_range;
-		range.d[2][1] = zmax + 0.50*z_range;
+		range.d[2][0] = zmax;
+		range.d[2][1] = zmax + 0.50*z_range; // Note: may be in the clouds
 		birds.gen(NUM_BIRDS_PER_TILE, range);
 	}
 	else {
@@ -2592,7 +2596,8 @@ void tile_draw_t::draw_animals(bool reflection_pass) {
 	shader_t s;
 	animal_group_base_t::begin_draw(s); // currently using the same shader for all types of animals
 	// FIXME: what about birds that are above the mesh zmax and outside the bcube tested against the view frustum?
-	for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_animals(s, reflection_pass);}
+	//for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_animals(s, reflection_pass);}
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_animals(s, reflection_pass);}
 	animal_group_base_t::end_draw(s);
 }
 

@@ -33,9 +33,8 @@ float const SMAP_DEL_THRESH   = 1.3;
 float const BCUBE_ZTOLER      = 1.0E-6;
 
 
-extern int xoff, yoff, frame_counter;
+extern int frame_counter;
 extern float grass_length, water_plane_z;
-
 
 
 class lightning_strike_t {
@@ -138,14 +137,6 @@ public:
 class tile_t {
 
 public:
-	struct offset_t {
-		int dxoff, dyoff;
-
-		offset_t(int dxoff_=0, int dyoff_=0) : dxoff(dxoff_), dyoff(dyoff_) {}
-		void set_from_xyoff2() {dxoff = -xoff2; dyoff = -yoff2;}
-		vector3d get_xlate() const {return vector3d(((xoff - xoff2) - dxoff)*DX_VAL, ((yoff - yoff2) - dyoff)*DY_VAL, 0.0);}
-		vector3d subtract_from(offset_t const &o) const {return vector3d((o.dxoff - dxoff)*DX_VAL, (o.dyoff - dyoff)*DY_VAL, 0.0);}
-	};
 	struct tree_map_val {
 		unsigned char ao, sh;
 		tree_map_val() : ao(255), sh(255) {}
@@ -158,7 +149,7 @@ private:
 	float radius, mzmin, mzmax, ptzmax, dtzmax, trmax, xstart, ystart, min_normal_z, deltax, deltay;
 	bool shadows_invalid, recalc_tree_grass_weights, mesh_height_invalid, in_queue, last_occluded, has_any_grass, is_distant, no_trees;
 	colorRGB avg_mesh_tex_color;
-	offset_t mesh_off, ptree_off, dtree_off, scenery_off;
+	tile_offset_t mesh_off, ptree_off, dtree_off, scenery_off;
 	float sub_zmin[4][4], sub_zmax[4][4];
 	vector<float> zvals;
 	vector<tree_map_val> tree_map;
@@ -213,6 +204,7 @@ public:
 	bool was_last_occluded  () const {return (last_occluded_frame == frame_counter &&  last_occluded);}
 	bool was_last_unoccluded() const {return (last_occluded_frame == frame_counter && !last_occluded);}
 
+	// all of these are in the current camera's local coordinate space (based on xoff/yoff/xoff2/yoff2)
 	point get_center() const {
 		return point(get_xval(((x1+x2)>>1) + (xoff - xoff2)), get_yval(((y1+y2)>>1) + (yoff - yoff2)), 0.5*(mzmin + mzmax));
 	}
@@ -238,6 +230,11 @@ public:
 	cube_t get_water_bcube() const {
 		float const xv1(get_xval(wx1 + xoff - xoff2)), yv1(get_yval(wy1 + yoff - yoff2));
 		return cube_t(xv1, xv1+(wx2-wx1)*deltax, yv1, yv1+(wy2-wy1)*deltay, water_plane_z, water_plane_z); // zero area in z
+	}
+	// this is in global space
+	cube_t get_mesh_bcube_global() const {
+		float const xv1(get_xval(x1)), yv1(get_yval(y1));
+		return cube_t(xv1, xv1+(x2-x1)*deltax, yv1, yv1+(y2-y1)*deltay, mzmin, mzmax);
 	}
 	void fill_adj_mask(bool mask[3][3], int x, int y) const;
 	float get_min_dist_to_pt(point const &pt, bool xy_only=0, bool mesh_only=1) const;
