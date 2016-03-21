@@ -403,6 +403,10 @@ template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector(f
 	assert(scale > 0.0);
 	return vector3d(scale*signed_rand_float(), scale*signed_rand_float(), scale*signed_rand_float());
 }
+template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_xy(float scale) {
+	assert(scale > 0.0);
+	return vector3d(scale*signed_rand_float(), scale*signed_rand_float(), 0.0);
+}
 
 template<typename base> vector3d rand_gen_template_t<base>::signed_rand_vector_norm(float scale) {
 	// FIXME: this is more correct (more uniform), but changes universe mode generated content

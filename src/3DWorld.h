@@ -1315,6 +1315,7 @@ public:
 	float rand_gaussian(float mean, float std_dev) {return mean + std_dev*rgauss();}
 	vector3d rand_vector(float scale=1.0);
 	vector3d signed_rand_vector(float scale=1.0);
+	vector3d signed_rand_vector_xy(float scale=1.0);
 	vector3d signed_rand_vector_norm(float scale=1.0);
 	vector3d signed_rand_vector_spherical(float scale=1.0);
 	vector3d signed_rand_vector_spherical_noloop(float scale=1.0);

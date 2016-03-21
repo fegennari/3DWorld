@@ -31,6 +31,7 @@ protected:
 
 	int get_ndiv(point const &pos_) const;
 	float get_alpha_at_cur_dist(point const &pos_, float vis_dist_scale=1.0) const;
+	void gen_dir_vel(rand_gen_t &rgen, float speed);
 
 public:
 	animal_t() : enabled(0) {}
@@ -52,6 +53,8 @@ public:
 };
 
 class bird_t : public animal_t {
+
+	float time;
 
 public:
 	bool gen(rand_gen_t &rgen, cube_t const &range);
