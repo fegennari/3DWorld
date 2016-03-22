@@ -4,6 +4,7 @@
 
 #include "animals.h"
 #include "shaders.h"
+#include "gl_ext_arb.h"
 
 float const FISH_RADIUS = 0.05;
 float const BIRD_RADIUS = 0.1;
@@ -159,27 +160,29 @@ void bird_t::draw(shader_t &s) const {
 	point const pos_(get_draw_pos());
 	if (!is_visible(pos_, 1.0)) return;
 	float const alpha(get_alpha_at_cur_dist(pos_, 1.0));
-	if (alpha < 0.05) return;
+	if (alpha < 0.1) return;
 	s.set_cur_color(colorRGBA(color, alpha)); // FIXME: fog
 	int const ndiv(get_ndiv(pos_));
+	bind_draw_sphere_vbo(0, 0); // no textures or normals
 	fgPushMatrix();
 	translate_to(pos_);
 	rotate_to_plus_x(dir);
-	uniform_scale(radius);
-	fgScale(1.0, 0.2, 0.14); // x = length, y = width, z = height
-	draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // body
+	scale_by(vector3d(1.0, 0.2, 0.14)*radius); // x = length, y = width, z = height
+	draw_sphere_vbo_pre_bound(ndiv, 0); // body
 	fgTranslate(0.1, 0.0, 0.0);
+	float const angle(50.0*(sin(0.2*time) + 0.3));
 
 	for (unsigned d = 0; d < 2; ++d) {
 		float const v(d ? 1.0 : -1.0);
 		fgPushMatrix();
-		fgRotate(50.0*v*(sin(0.2*time) + 0.3), 1.0, 0.0, 0.0); // rotate about x-axis to flap wings
+		fgRotate(v*angle, 1.0, 0.0, 0.0); // rotate about x-axis to flap wings
 		fgScale(0.3, 5.0, 0.5);
 		fgTranslate(0.0, 0.8*v, 0.0);
-		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // wings
+		draw_sphere_vbo_pre_bound(ndiv, 0); // wings
 		fgPopMatrix();
 	}
 	fgPopMatrix();
+	bind_vbo(0);
 }
 
 
@@ -204,6 +207,7 @@ template<typename A> void animal_group_t<A>::gen(unsigned num, cube_t const &ran
 		A animal;
 		if (animal.gen(rgen, range)) {push_back(animal);} // only add if generation was successful
 	}
+	bcube = range; // initial value (approx)
 }
 
 template<typename A> void animal_group_t<A>::update() {
@@ -233,13 +237,14 @@ template<typename A> void animal_group_t<A>::remove_disabled() {
 }
 
 template<typename A> void animal_group_t<A>::draw_animals(shader_t &s) const {
-	if (bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_pos_offset())) return;
+	if (empty() || bcube.is_zero_area() || !camera_pdu.cube_visible(bcube + get_pos_offset())) return;
 	for (const_iterator i = begin(); i != end(); ++i) {i->draw(s);}
 }
 
 
 void vect_fish_t::draw() const {
 
+	if (empty()) return;
 	shader_t s;
 	begin_draw(s);
 	draw_animals(s);
@@ -248,6 +253,7 @@ void vect_fish_t::draw() const {
 
 void vect_bird_t::draw() const {
 
+	if (empty()) return;
 	shader_t s;
 	begin_draw(s);
 	draw_animals(s);
