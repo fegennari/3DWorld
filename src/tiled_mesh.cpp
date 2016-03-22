@@ -1322,7 +1322,7 @@ void tile_t::update_animals() {
 		propagate_animals_to_neighbor_tiles(fish);
 	}
 	if (!birds.was_generated()) {
-		unsigned const NUM_BIRDS_PER_TILE = 4;
+		unsigned const NUM_BIRDS_PER_TILE = 2;
 		cube_t range(get_mesh_bcube_global());
 		float const z_range(zmax - zmin);
 		range.d[2][0] = zmax;

@@ -103,9 +103,9 @@ bool bird_t::update(rand_gen_t &rgen) {
 
 	if (!enabled || !animate2) return 0;
 
-	if ((rand() & 3) == 0) { // randomly update direction
+	if ((rand() & 1) == 0) { // randomly update direction
 		float const speed(velocity.mag());
-		dir += rgen.signed_rand_vector_xy(0.1); // 10% change max
+		dir += rgen.signed_rand_vector_xy(0.05); // 5% change max
 		dir.normalize();
 		velocity = dir * speed; // always flies in the direction it's pointed in
 	}
@@ -168,13 +168,17 @@ void bird_t::draw(shader_t &s) const {
 	uniform_scale(radius);
 	fgScale(1.0, 0.2, 0.14); // x = length, y = width, z = height
 	draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // body
-	// wings - FIXME: flap up and down in a v-shape using time
 	fgTranslate(0.1, 0.0, 0.0);
-	fgScale(0.3, 5.0, 0.5);
-	fgTranslate(0.0,  0.8, 0.0);
-	draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // wing
-	fgTranslate(0.0, -1.6, 0.0);
-	draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // wing
+
+	for (unsigned d = 0; d < 2; ++d) {
+		float const v(d ? 1.0 : -1.0);
+		fgPushMatrix();
+		fgRotate(50.0*v*(sin(0.2*time) + 0.3), 1.0, 0.0, 0.0); // rotate about x-axis to flap wings
+		fgScale(0.3, 5.0, 0.5);
+		fgTranslate(0.0, 0.8*v, 0.0);
+		draw_sphere_vbo(all_zeros, 1.0, ndiv, 0); // wings
+		fgPopMatrix();
+	}
 	fgPopMatrix();
 }
 
