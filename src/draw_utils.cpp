@@ -606,7 +606,7 @@ icosphere_drawer_t::icosphere_drawer_t(unsigned ndiv) {
 	assert(ndiv > 0);
 	icosphere_creator creator;
 	// 6*ndiv*ndiv = 12*4^L => (6/12)*ndiv*ndiv = 4^L => 0.7*ndiv = 2^L => L = log2(0.7*ndiv)
-	creator.create(unsigned(ceil(log(0.7*ndiv)/log(2.0))));
+	creator.create(unsigned(ceil(log2(0.7*ndiv))));
 	nverts   = creator.verts.size();
 	nindices = creator.indices.size();
 	create_and_upload(creator.verts, creator.indices);

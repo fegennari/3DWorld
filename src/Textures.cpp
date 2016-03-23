@@ -1514,7 +1514,7 @@ void regrow_landscape_texture_amt0() {
 	if (ls0_invalid) create_landscape_texture();
 	texture_t &tex(textures[LANDSCAPE_TEX]);
 	assert(tex.is_allocated() && landscape0 != NULL);
-	int const regen_bshift(max(1, min(7, int(log(1.0/max(0.0001f, fticks*LANDSCAPE_REGEN_AMT))/log(2.0)))));
+	int const regen_bshift(max(1, min(7, int(log2(1.0/max(0.0001f, fticks*LANDSCAPE_REGEN_AMT))))));
 	unsigned char *tex_data(tex.get_data());
 	int const y1((counter%LANDSCAPE_REGEN_MOD)*(tex.height/LANDSCAPE_REGEN_MOD));
 	int const y2(y1 + (tex.height/LANDSCAPE_REGEN_MOD));

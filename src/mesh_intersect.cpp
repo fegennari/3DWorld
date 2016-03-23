@@ -312,7 +312,7 @@ mesh_bsp_tree::mesh_bsp_tree() {
 
 	assert(mesh_size_ok_for_bsp_tree());
 	dir0    = (MESH_X_SIZE < MESH_Y_SIZE);
-	nlevels = unsigned(floor(log(double(XY_MULT_SIZE))/log(2.0)));
+	nlevels = unsigned(floor(log2(double(XY_MULT_SIZE))));
 	unsigned const tot_alloc(XY_MULT_SIZE << 1);
 	bsp_data.resize(tot_alloc);
 	tree.resize(nlevels+1);

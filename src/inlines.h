@@ -30,6 +30,9 @@ inline float SIGN(float v) {return (v < 0.0) ? -1.0 : 1.0;}
 
 inline float safe_acosf(float val) {return acos(max(-1.0f, min(1.0f, val)));}
 
+double const LOG_2 = log(2.0);
+template<typename T> T log2(T const v) {return log(v)/LOG_2;}
+
 // fast 1/sqrt(x), accurate to ~0.17% error
 inline float InvSqrt(float x) {
 	

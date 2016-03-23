@@ -671,7 +671,7 @@ void update_temperature(bool verbose) {
 
 void compute_scale() {
 
-	int const iscale(int(log(mesh_scale)/log(2.0)));
+	int const iscale(int(log2(mesh_scale)));
 	start_eval_sin = N_RAND_SIN2*max(0, min(NUM_FREQ_COMP-MIN_FREQS, (iscale+mesh_freq_filter)));
 }
 
