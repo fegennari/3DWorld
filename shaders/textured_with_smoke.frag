@@ -19,6 +19,7 @@ uniform float cube_bb[6], sphere_radius;
 uniform float depth_trans_bias, clip_plane_z, ripple_time, rain_intensity, reflectivity, snow_cov_amt;
 uniform float reflect_plane_ztop, reflect_plane_zbot;
 uniform float winding_normal_sign = 1.0;
+uniform float cube_map_reflect_mipmap_level = 0;
 uniform vec4 emission = vec4(0,0,0,1);
 
 //in vec3 vpos, normal; // world space, come from indir_lighting.part.frag
@@ -304,8 +305,13 @@ void main()
 		t_color = mix(texture(reflection_tex, refract_dir).rgb, t_color, alpha);
 		alpha   = 1.0;
 	}
-	color.rgb       = mix(t_color, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
-	//color.rgb       = mix(t_color, textureLod(reflection_tex, ref_dir, 0).rgb*specular_color.rgb, reflect_w);
+	if (cube_map_reflect_mipmap_level >= 1.0) { // Note: no anisotropic filtering
+		float level = max(cube_map_reflect_mipmap_level, textureQueryLod(reflection_tex, ref_dir).y);
+		color.rgb = mix(t_color, textureLod(reflection_tex, ref_dir, level).rgb*specular_color.rgb, reflect_w);
+	}
+	else { // auto mipmaps + anisotropic filtering
+		color.rgb = mix(t_color, texture(reflection_tex, ref_dir).rgb*specular_color.rgb, reflect_w);
+	}
 #endif // ENABLE_CUBE_MAP_REFLECT
 
 #ifdef APPLY_BURN_MASK

@@ -18,18 +18,14 @@ Indirect lighting magnitude in 6 directions (+/- x,y,z)
   - how to combine sun, moon, sky, and local lighting values?
 
 Cobjs:
-  - Place small destroyable physics objects in the scene
   - Bullet physics for movable boxes
 
 In-Game cobjs editor
   - In-game placement/visualization of objects
 Plants with low large leaves
   - Can use palm frond texture
-
 Counted normal averages normals using face area as weights
-
-Cube map reflections
-  - Choose mipmap level based on shininess
-
+Variance shadow maps
 Spawn enemies in TT water, grass, and trees
+Multi-threaded cobj drawing - split into draw list creation + drawing
 

@@ -1499,8 +1499,11 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
 void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
 
 	if (transforms.empty() && !is_cube_visible_to_camera(bcube+xlate, is_shadow_pass)) return;
-	if (reflect_mode) {shader.add_uniform_float("metalness", metalness);} // may or may not be used
-
+	
+	if (reflect_mode) {
+		shader.add_uniform_float("metalness", metalness); // may or may not be used
+		shader.add_uniform_float("cube_map_reflect_mipmap_level", 0.0); // may or may not be used; should actually be per-material, based on specular exponent
+	}
 	if (reflective == 2 && !is_shadow_pass && !is_z_prepass) { // cube map reflections
 		cube_t const bcube_xf(get_single_transformed_bcube(xlate));
 

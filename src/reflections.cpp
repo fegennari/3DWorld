@@ -8,10 +8,11 @@
 #include "shaders.h"
 
 bool  const ENABLE_CUBE_MAP_MIPMAPS = 1;
+unsigned const MAX_CUBE_MAP_TEXT_SZ = 768;
 float const CUBE_MAP_ANISO          = 4.0;
 
 bool enable_clip_plane_z(0);
-unsigned reflection_tid(0);
+unsigned reflection_tid(0), cube_map_reflect_tex_size(MAX_CUBE_MAP_TEXT_SZ);
 float clip_plane_z(0.0);
 reflect_plane_selector reflect_planes;
 reflective_cobjs_t reflective_cobjs;
@@ -286,7 +287,8 @@ unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, point const &cen
 	assert(max_tex_size > 0);
 	unsigned tex_size(1);
 	while (2*tex_size <= max_tex_size) {tex_size *= 2;} // find the max power of 2 <= max_tex_size
-	tex_size = min(tex_size, 768U); // clamp to 768 to limit runtime and memory usage
+	tex_size = min(tex_size, MAX_CUBE_MAP_TEXT_SZ); // clamp to 768 to limit runtime and memory usage
+	cube_map_reflect_tex_size = tex_size;
 	setup_cube_map_reflection_texture(tid, tex_size);
 	unsigned const faces_drawn(create_reflection_cube_map(tid, tex_size, cobj_id, center, near_plane, FAR_CLIP, only_front_facing, is_indoors, skip_mask));
 	check_gl_error(998);
