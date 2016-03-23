@@ -341,7 +341,7 @@ bool select_texture(int id) {
 
 float get_tex_ar(int id) {
 
-	if (id < 0) return 0;
+	if (id < 0) return 1.0;
 	assert((unsigned)id < textures.size());
 	return (((double)textures[id].width)/((double)textures[id].height));
 }

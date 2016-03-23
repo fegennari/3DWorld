@@ -63,7 +63,8 @@ struct obj_layer : public base_mat_t { // size = 80
 	bool has_alpha_texture() const;
 	bool is_semi_trans()  const {return (color.alpha < 1.0 || has_alpha_texture());}
 	bool might_be_drawn() const {return (draw || cobj_type != COBJ_TYPE_STD);}
-	bool is_glass(bool shatterable=0) const {return ((tid < 0 || tid == WHITE_TEX) && (color.alpha <= 0.5 || shatterable));}
+	bool is_textured()    const {return (tid >= 0 && tid != WHITE_TEX);}
+	bool is_glass(bool shatterable=0) const {return (!is_textured() && (color.alpha <= 0.5 || shatterable));}
 	bool swap_txy()       const {return ((swap_tcs & SWAP_TCS_XY   ) != 0);}
 	bool negate_nm_bns()  const {return ((swap_tcs & SWAP_TCS_NM_BS) != 0);}
 	void set_swap_tcs_flag(unsigned char mask, bool val=1) {if (val) {swap_tcs |= mask;} else {swap_tcs &= (~mask);}}
