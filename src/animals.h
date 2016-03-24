@@ -30,7 +30,6 @@ protected:
 	//tile_offset_t tile_off;
 
 	int get_ndiv(point const &pos_) const;
-	float get_alpha_at_cur_dist(point const &pos_, float vis_dist_scale=1.0) const;
 	void gen_dir_vel(rand_gen_t &rgen, float speed);
 
 public:

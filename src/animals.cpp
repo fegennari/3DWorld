@@ -14,6 +14,7 @@ float const BIRD_SPEED  = 0.05;
 extern bool water_is_lava;
 extern int window_width, animate2;
 extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height;
+extern colorRGBA cur_fog_color;
 
 
 void animal_t::gen_dir_vel(rand_gen_t &rgen, float speed) {
@@ -130,10 +131,6 @@ int animal_t::get_ndiv(point const &pos_) const {
 vector3d get_pos_offset() {return vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0);}
 point animal_t::get_draw_pos() const {return (pos + get_pos_offset());}
 
-float animal_t::get_alpha_at_cur_dist(point const &pos_, float vis_dist_scale) const {
-	return CLIP_TO_01(2000.0f*vis_dist_scale*radius/p2p_dist(pos_, get_camera_pos()) - 2.0f); // 1.0 under half clip distance, after that linear falloff to zero
-}
-
 void rotate_to_plus_x(vector3d const &dir) {
 	rotate_about(TO_DEG*get_norm_angle(dir, plus_x), vector3d(0.0, 0.0, dir.y));
 }
@@ -141,17 +138,24 @@ void rotate_to_plus_x(vector3d const &dir) {
 void fish_t::draw(shader_t &s) const {
 
 	point const pos_(get_draw_pos());
-	if (!is_visible(pos_, 0.06)) return;
+	if (!is_visible(pos_, 0.15)) return;
 	colorRGBA draw_color(color);
-	water_color_atten_at_pos(draw_color, pos_);
-	float const alpha(get_alpha_at_cur_dist(pos_, 0.06)); // FIXME: closer to underwater fog
-	if (alpha < 0.1) return;
+	water_color_atten_at_pos(draw_color, pos_ );
+	point const camera(get_camera_pos());
+	float const t(CLIP_TO_01((water_plane_z - pos_.z)/max(1.0E-6f, fabs(camera.z - pos_.z))));
+	point const p_int(pos_ + (camera - pos_)*t); // ray-water intersection point
+	float const dist(p2p_dist(p_int, camera) + 2.0*p2p_dist(p_int, pos_)); // water is 2x as optically dense as air
+	float const alpha(min(1.0f, 1.5f*exp(-0.028f*dist/radius)));
+	if (alpha < 0.01) return;
+	if (alpha < 0.1) {glDepthMask(GL_FALSE);} // disable depth writing to avoid alpha blend order problems
+	//draw_color = lerp(cur_fog_color, draw_color, alpha);
 	s.set_cur_color(colorRGBA(draw_color, alpha));
 	fgPushMatrix();
 	translate_to(pos_);
 	rotate_to_plus_x(dir);
 	scale_by(radius*scale);
 	draw_sphere_vbo_back_to_front(all_zeros, 1.0, get_ndiv(pos_), 0);
+	if (alpha < 0.1) {glDepthMask(GL_TRUE);}
 	fgPopMatrix();
 }
 
@@ -159,8 +163,9 @@ void bird_t::draw(shader_t &s) const {
 
 	point const pos_(get_draw_pos());
 	if (!is_visible(pos_, 1.0)) return;
-	float const alpha(get_alpha_at_cur_dist(pos_, 1.0));
-	if (alpha < 0.1) return;
+	float const dist(p2p_dist(pos_, get_camera_pos()));
+	float const alpha(CLIP_TO_01(2000.0f*radius/dist - 2.0f)); // 1.0 under half clip distance, after that linear falloff to zero
+	if (alpha < 0.01) return;
 	s.set_cur_color(colorRGBA(color, alpha)); // FIXME: fog
 	int const ndiv(get_ndiv(pos_));
 	bind_draw_sphere_vbo(0, 0); // no textures or normals
