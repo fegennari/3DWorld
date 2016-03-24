@@ -599,26 +599,31 @@ bool check_big_occluder(coll_obj const &c, unsigned cix, vect_sorted_ix &out) { 
 	return 1;
 }
 
-bool draw_or_add_cobj(unsigned cix, int reflection_pass, bool use_ref_plane, vect_sorted_ix large_cobjs[2], vect_sorted_ix &draw_last,
-	vector<unsigned> &normal_map_cobjs, vector<unsigned> tex_coord_cobjs[2], vector<unsigned> reflect_cobjs[2], vector<unsigned> cube_map_cobjs[2][2])
-{
+struct cobj_proc_buf_t {
+	vector<unsigned> normal_map_cobjs;
+	vector<unsigned> tex_coord_cobjs[2], reflect_cobjs[2]; // [without, with] normal maps
+	vector<unsigned> cube_map_cobjs[2][2]; // [texgen, tex coord] x [without, with] normal maps
+	vect_sorted_ix large_cobjs[2]; // [without, with] normal maps
+};
+
+bool add_cobj_to_draw_list(unsigned cix, int reflection_pass, bool use_ref_plane, vect_sorted_ix &draw_last, cobj_proc_buf_t &pb) {
 	coll_obj const &c(get_draw_cobj(cix));
 	bool const use_tex_coords(c.use_tex_coords()), use_normal_map(c.cp.normal_map >= 0);
 
 	if (c.is_reflective() && enable_all_reflections()) {
-		cube_map_cobjs[use_tex_coords][use_normal_map].push_back(cix);
+		pb.cube_map_cobjs[use_tex_coords][use_normal_map].push_back(cix);
 		return 0;
 	}
 	// Note: only texgen cube/vert cylinder top surfaces support reflections
 	if (!use_tex_coords && use_ref_plane && use_reflect_plane_for_cobj(c)) {
 		assert(c.group_id < 0);
 		if (reflection_pass == 1) return 0; // the reflection surface is not drawn in the reflection pass (receiver only)
-		reflect_cobjs[use_normal_map].push_back(cix);
+		pb.reflect_cobjs[use_normal_map].push_back(cix);
 		return 0;
 	}
 	if (use_tex_coords) { // uncommon case (typically movable objects); semi-transparent is okay
 		assert(c.group_id < 0);
-		tex_coord_cobjs[use_normal_map].push_back(cix);
+		pb.tex_coord_cobjs[use_normal_map].push_back(cix);
 		return 0;
 	}
 	if (c.is_semi_trans()) { // slow when polygons are grouped
@@ -632,10 +637,10 @@ bool draw_or_add_cobj(unsigned cix, int reflection_pass, bool use_ref_plane, vec
 	}
 	if (use_normal_map) { // common case
 		assert(c.group_id < 0);
-		if (!check_big_occluder(c, cix, large_cobjs[1])) {normal_map_cobjs.push_back(cix);}
+		if (!check_big_occluder(c, cix, pb.large_cobjs[1])) {pb.normal_map_cobjs.push_back(cix);}
 		return 0;
 	}
-	return !check_big_occluder(c, cix, large_cobjs[0]);
+	return !check_big_occluder(c, cix, pb.large_cobjs[0]);
 }
 
 // should always have draw_solid enabled on the first call for each frame
@@ -657,9 +662,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	int last_tid(-2), last_group_id(-1);
 	static cobj_draw_buffer cdb;
 	cdb.clear();
-	vector<unsigned> normal_map_cobjs;
-	vector<unsigned> tex_coord_cobjs[2], reflect_cobjs[2]; // [without, with] normal maps
-	vector<unsigned> cube_map_cobjs[2][2]; // [texgen, tex coord] x [without, with] normal maps
+	cobj_proc_buf_t pb;
 
 	// bias the clip plane so that pixels slightly under the reflection plane are drawn to prevent artifacts
 	// we know this is legal because cobjs that are below the true clip/reflection plane will be dropped below
@@ -668,16 +671,20 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	//if (enable_clip_plane_z) {glEnable(GL_CLIP_DISTANCE0);}
 	
 	if (!draw_trans) { // draw solid
-		vect_sorted_ix large_cobjs[2]; // [without, with] normal maps
 		draw_last.clear();
+		unsigned const skip_val = (1<<31);
+		vector<unsigned> to_draw(coll_objects.drawn_ids.begin(), coll_objects.drawn_ids.end());
 
-		for (cobj_id_set_t::const_iterator i = coll_objects.drawn_ids.begin(); i != coll_objects.drawn_ids.end(); ++i) {
+#pragma omp parallel for schedule(static,64) num_threads(2)
+		for (int i = 0; i < (int)to_draw.size(); ++i) {
+			coll_obj const &c(coll_objects.get_cobj(to_draw[i]));
+			assert(c.cp.draw);
+			if (c.no_draw() || (reflection_pass == 1 && c.d[2][1] < ref_plane_z) || (c.group_id < 0 && !c.is_cobj_visible())) {to_draw[i] = skip_val;} // mark as skip
+		}
+		for (auto i = to_draw.begin(); i != to_draw.end(); ++i) {
+			if (*i == skip_val) continue; // skipped
 			unsigned cix(*i);
 			coll_obj const &c(coll_objects.get_cobj(cix));
-			assert(c.cp.draw);
-			if (c.no_draw()) continue; // can still get here sometimes
-			if (reflection_pass == 1 && c.d[2][1] < ref_plane_z) continue; // below the reflection plane (approximate) (optimization)
-			if (c.group_id < 0 && !c.is_cobj_visible())          continue; // VFC/occlusion culling
 			assert(c.id == (int)cix); // should always be equal
 
 			if (c.dgroup_id >= 0) {
@@ -690,7 +697,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 					coll_obj const &cobj(cdraw_groups.get_cobj(*j));
 					if (cobj.no_draw() || !cobj.is_cobj_visible()) continue; // VFC/occlusion culling
 
-					if (draw_or_add_cobj(ix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, reflect_cobjs, cube_map_cobjs)) {
+					if (add_cobj_to_draw_list(ix, reflection_pass, use_ref_plane, draw_last, pb)) {
 						unsigned ix2(ix);
 						cobj.draw_cobj(ix2, last_tid, last_group_id, s, cdb, reflection_pass); // Note: ix should not be modified
 						assert(ix2 == ix); // should not have changed
@@ -698,25 +705,25 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 				}
 				continue; // don't draw c itself (only if group is nonempty?)
 			}
-			if (draw_or_add_cobj(cix, reflection_pass, use_ref_plane, large_cobjs, draw_last, normal_map_cobjs, tex_coord_cobjs, reflect_cobjs, cube_map_cobjs)) {
+			if (add_cobj_to_draw_list(cix, reflection_pass, use_ref_plane, draw_last, pb)) {
 				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass); // i may not be valid after this call
 				
 				if (cix != *i) {
 					assert(cix > *i);
-					i = std::lower_bound(i, coll_objects.drawn_ids.end(), cix);
+					i = std::lower_bound(i, to_draw.end(), cix); // Note: skip_val should be okay since it's larger than the draw range and can only be after the draw range
 				}
 			}
 		} // for i
 		end_group(last_group_id);
 		cdb.flush();
-		for (unsigned d = 0; d < 2; ++d) {sort(large_cobjs[d].begin(), large_cobjs[d].end());} // sort front to back for early z culling
+		for (unsigned d = 0; d < 2; ++d) {sort(pb.large_cobjs[d].begin(), pb.large_cobjs[d].end());} // sort front to back for early z culling
 
-		for (auto i = large_cobjs[0].begin(); i != large_cobjs[0].end(); ++i) { // not normal mapped
+		for (auto i = pb.large_cobjs[0].begin(); i != pb.large_cobjs[0].end(); ++i) { // not normal mapped
 			unsigned cix(i->second);
 			get_draw_cobj(cix).draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
 		}
 		cdb.flush();
-		for (auto i = large_cobjs[1].begin(); i != large_cobjs[1].end(); ++i) {normal_map_cobjs.push_back(i->second);} // normal mapped
+		for (auto i = pb.large_cobjs[1].begin(); i != pb.large_cobjs[1].end(); ++i) {pb.normal_map_cobjs.push_back(i->second);} // normal mapped
 	} // end draw solid
 	else { // draw transparent
 		if (is_smoke_in_use()) {
@@ -751,7 +758,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 				if (in_portal) {portal::post_draw(portal_verts); in_portal = 0;}
 				unsigned cix(ix);
 				coll_obj const &c(get_draw_cobj(cix));
-				if (c.cp.normal_map >= 0) {assert(c.cp.light_atten == 0.0); normal_map_cobjs.push_back(cix); continue;} // light atten not supported
+				if (c.cp.normal_map >= 0) {assert(c.cp.light_atten == 0.0); pb.normal_map_cobjs.push_back(cix); continue;} // light atten not supported
 				cdb.on_new_obj_layer(c.cp);
 				bool using_lt_atten(0);
 				
@@ -764,9 +771,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 						lt_atten_manager.next_sphere(c.cp.light_atten, c.cp.refract_ix, c.points[0], c.radius);
 						using_lt_atten = (c.cp.light_atten > 0.0);
 					}
-					else {
-						lt_atten_manager.next_object(0.0, c.cp.refract_ix); // reset
-					}
+					else {lt_atten_manager.next_object(0.0, c.cp.refract_ix);} // reset
 				}
 				c.draw_cobj(cix, last_tid, last_group_id, s, cdb, reflection_pass);
 				if (using_lt_atten) {cdb.flush();} // must flush because ulocs[2] is per-cube
@@ -782,12 +787,12 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	s.end_shader();
 
 	for (unsigned d = 0; d < 2; ++d) {
-		draw_cobjs_group(tex_coord_cobjs  [d], cdb, reflection_pass, s, 0, (d!=0), 0);
-		draw_cobjs_group(reflect_cobjs    [d], cdb, reflection_pass, s, 2, (d!=0), 1);
-		draw_cobjs_group(cube_map_cobjs[0][d], cdb, reflection_pass, s, 2, (d!=0), 2);
-		draw_cobjs_group(cube_map_cobjs[1][d], cdb, reflection_pass, s, 0, (d!=0), 2);
+		draw_cobjs_group(pb.tex_coord_cobjs  [d], cdb, reflection_pass, s, 0, (d!=0), 0);
+		draw_cobjs_group(pb.reflect_cobjs    [d], cdb, reflection_pass, s, 2, (d!=0), 1);
+		draw_cobjs_group(pb.cube_map_cobjs[0][d], cdb, reflection_pass, s, 2, (d!=0), 2);
+		draw_cobjs_group(pb.cube_map_cobjs[1][d], cdb, reflection_pass, s, 0, (d!=0), 2);
 	}
-	draw_cobjs_group(normal_map_cobjs, cdb, reflection_pass, s, 2, 1, 0);
+	draw_cobjs_group(pb.normal_map_cobjs, cdb, reflection_pass, s, 2, 1, 0);
 	
 	if (draw_trans) {
 		disable_blend();
@@ -797,7 +802,7 @@ void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 	clip_plane_z -= clip_plane_z_bias;
 	check_gl_error(570);
 	//if (enable_clip_plane_z) {glDisable(GL_CLIP_DISTANCE0);}
-	//if (draw_solid) {PRINT_TIME("Final Draw");}
+	//if (!draw_trans) {PRINT_TIME("Final Draw");}
 	//PRINT_TIME_ONSCREEN("Final Draw");
 }
 

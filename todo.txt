@@ -25,7 +25,5 @@ In-Game cobjs editor
 Plants with low large leaves
   - Can use palm frond texture
 Counted normal averages normals using face area as weights
-Variance shadow maps
 Spawn enemies in TT water, grass, and trees
-Multi-threaded cobj drawing - split into draw list creation + drawing
 

@@ -266,6 +266,7 @@ bool coll_obj::is_occluded_from_camera() const {
 }
 
 bool coll_obj::is_cobj_visible() const {
+	if (group_id >= 0) return 1; // grouped cobjs are always visible, since the etnire group is drawn at the same time
 	return (check_pdu_visible(camera_pdu) && !is_occluded_from_camera());
 }
 bool coll_obj::check_pdu_visible(pos_dir_up const &pdu) const {
