@@ -848,7 +848,7 @@ void draw_water_plane(float zval, float terrain_zmin, unsigned reflection_tid) {
 		water_xoff -= wind.x*wwspeed;
 		water_yoff -= wind.y*wwspeed;
 		wave_time  += fticks*(water_is_lava ? 0.75 : 1.0);
-		// reset at 1800 ticks (~2 min.) to avoid FP error - this number is a multiple of shallow and deep water wave periods, but not a multiple of the tess eval period
+		// reset at 3600 ticks (90s) to avoid FP error - this number is a multiple of shallow and deep water wave periods, and of the tess eval period
 		if (wave_time > 3600.0) {wave_time = 0.0;}
 	}
 	enable_blend();

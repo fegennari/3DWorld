@@ -30,10 +30,13 @@ float wave_sin(in float v) {
 float get_delta_z(in vec2 v) {
 	vec2 val = 4.0*3.14159*v.st; // 6*PI
 	float dz = 0.0;
-	dz += wave_sin( 1.0*val.x + 0.0*val.y + 0.060*wave_time + 0.0)*wave_sin( 0.0*val.x + 1.0*val.y + 0.063*wave_time + 0.0);
-	dz += wave_sin( 0.3*val.x - 0.9*val.y - 0.053*wave_time + 0.5)*wave_sin(-0.7*val.x - 0.4*val.y - 0.050*wave_time + 0.7);
-	dz += wave_sin(-0.7*val.x + 0.4*val.y + 0.048*wave_time + 0.7)*wave_sin(-0.3*val.x + 0.6*val.y - 0.051*wave_time + 0.3);
-	dz += wave_sin(-0.2*val.x - 0.6*val.y - 0.065*wave_time + 0.2)*wave_sin( 0.9*val.x - 0.3*val.y + 0.059*wave_time + 0.8);
+	const float period     = 3600.0; // in ticks
+	const float time_scale = 2.0*3.14159/period;
+	float T = time_scale*wave_time;
+	dz += wave_sin( 1.0*val.x + 0.0*val.y + 34*T + 0.0)*wave_sin( 0.0*val.x + 1.0*val.y + 36*T + 0.0);
+	dz += wave_sin( 0.3*val.x - 0.9*val.y - 30*T + 0.5)*wave_sin(-0.7*val.x - 0.4*val.y - 28*T + 0.7);
+	dz += wave_sin(-0.7*val.x + 0.4*val.y + 27*T + 0.7)*wave_sin(-0.3*val.x + 0.6*val.y - 29*T + 0.3);
+	dz += wave_sin(-0.2*val.x - 0.6*val.y - 37*T + 0.2)*wave_sin( 0.9*val.x - 0.3*val.y + 33*T + 0.8);
 	return dz;
 }
 
