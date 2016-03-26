@@ -1335,9 +1335,14 @@ void tile_t::update_animals() {
 	}
 }
 
-void tile_t::draw_animals(shader_t &s, bool reflection_pass) const {
-	if (!reflection_pass) {fish.draw_animals(s);} // fish are not reflected in the water surface, but birds are
-	birds.draw_animals(s);
+void tile_t::draw_animals(shader_t &bs, shader_t &fs, bool reflection_pass) const {
+
+	if (!reflection_pass) { // fish are not reflected in the water surface, but birds are
+		fs.make_current();
+		fish.draw_animals(fs);
+	}
+	bs.make_current();
+	birds.draw_animals(bs);
 }
 
 
@@ -2591,11 +2596,13 @@ void tile_draw_t::draw_grass(bool reflection_pass) {
 
 void tile_draw_t::draw_animals(bool reflection_pass) {
 
-	shader_t s;
-	animal_group_base_t::begin_draw(s); // currently using the same shader for all types of animals
-	//for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_animals(s, reflection_pass);} // doesn't work due to birds above the mesh bcube
-	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_animals(s, reflection_pass);}
-	animal_group_base_t::end_draw(s);
+	shader_t bs, fs;
+	vect_bird_t::begin_draw(bs);
+	vect_fish_t::begin_draw(fs);
+	//for (unsigned i = 0; i < to_draw.size(); ++i) {to_draw[i].second->draw_animals(bs, fs, reflection_pass);} // doesn't work due to birds above the mesh bcube
+	for (tile_map::const_iterator i = tiles.begin(); i != tiles.end(); ++i) {i->second->draw_animals(bs, fs, reflection_pass);}
+	vect_bird_t::end_draw(bs);
+	vect_fish_t::end_draw(fs);
 }
 
 

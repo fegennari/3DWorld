@@ -339,7 +339,7 @@ public:
 	template<typename A> void propagate_animals_to_neighbor_tiles(animal_group_t<A> &animals);
 	void update_animals();
 	void clear_animals() {fish.clear(); birds.clear();}
-	void draw_animals(shader_t &s, bool reflection_pass) const;
+	void draw_animals(shader_t &bs, shader_t &fs, bool reflection_pass) const;
 
 	// *** rendering ***
 	void pre_draw(mesh_xy_grid_cache_t &height_gen);

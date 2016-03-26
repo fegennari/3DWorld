@@ -154,6 +154,7 @@ void clear_quad_ix_buffer_context();
 void clear_vbo_ring_buffer();
 void free_cloud_context();
 void free_universe_context();
+void free_animal_context();
 
 void setup_linear_fog(colorRGBA const &color, float fog_end);
 
@@ -203,6 +204,7 @@ void clear_context() {
 	clear_vbo_ring_buffer();
 	clear_default_vao();
 	free_cloud_context();
+	free_animal_context();
 	reflective_cobjs.free_textures();
 	clear_landscape_vbo = 1;
 }

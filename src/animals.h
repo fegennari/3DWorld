@@ -70,8 +70,6 @@ protected:
 public:
 	animal_group_base_t() : generated(0) {}
 	bool was_generated() const {return generated;}
-	static void begin_draw(shader_t &s);
-	static void end_draw(shader_t &s);
 };
 
 template<typename A> class animal_group_t : public vector<A>, public animal_group_base_t {
@@ -87,10 +85,14 @@ public:
 };
 
 struct vect_fish_t : public animal_group_t<fish_t> {
+	static void begin_draw(shader_t &s);
+	static void end_draw(shader_t &s);
 	void draw() const;
 };
 
 struct vect_bird_t : public animal_group_t<bird_t> {
+	static void begin_draw(shader_t &s);
+	static void end_draw(shader_t &s);
 	void draw() const;
 };
 

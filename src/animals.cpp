@@ -5,6 +5,7 @@
 #include "animals.h"
 #include "shaders.h"
 #include "gl_ext_arb.h"
+#include "model3d.h"
 
 float const FISH_RADIUS = 0.05;
 float const BIRD_RADIUS = 0.1;
@@ -15,6 +16,50 @@ extern bool water_is_lava;
 extern int window_width, animate2;
 extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height;
 extern colorRGBA cur_fog_color;
+
+
+class animal_model_loader_t : public model3ds {
+
+	unsigned fish_id, bird_id;
+
+public:
+	animal_model_loader_t() : fish_id(0), bird_id(0) {}
+
+	unsigned load_model(string const &fn, bool recalc_normals=1, colorRGBA const &def_color=WHITE, int def_tid=-1) {
+		unsigned const id(size());
+
+		if (!load_model_file(fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, recalc_normals, 0, 1)) {
+			cerr << "Error: Failed to read model file '" << fn << "'" << endl;
+			assert(0);
+		}
+		return id + 1;
+	}
+	void draw_model(unsigned id, shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE, bool is_shadow_pass=0) {
+		assert(id > 0 && id-1 < size()); // Note: id is vector index offset by 1
+		xform_matrix const mvm(fgGetMVM()); // FIXME: pass this in/reuse?
+		model3d_xform_t xf;
+		//xf.material.color = color; // only works for default material
+		s.add_uniform_color("color_modulate", color);
+		//rotate_to_plus_x(dir); // FIXME
+		model3d &model(operator[](id-1));
+		model.bind_all_used_tids();
+		model.set_target_translate_scale(pos, radius, xf);
+		model.render_with_xform(s, xf, mvm, is_shadow_pass, 0, 0, 1, 3, 0);
+	}
+	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
+		if (fish_id == 0) { // fish model not yet loaded
+			bool const recalc_normals = 0; // ???
+			string const fish_model_fn( "../models/fish/pez_02/fishOBJ.obj" ); // FIXME: move to a local directory, or provide in config file
+			fish_id = load_model(fish_model_fn, recalc_normals);
+		}
+		assert(fish_id > 0);
+		draw_model(fish_id, s, pos, radius, dir, color, 0); // not shadow pass
+	}
+};
+
+animal_model_loader_t animal_model_loader;
+
+void free_animal_context() {animal_model_loader.free_context();}
 
 
 void animal_t::gen_dir_vel(rand_gen_t &rgen, float speed) {
@@ -41,7 +86,8 @@ bool fish_t::gen(rand_gen_t &rgen, cube_t const &range) {
 	if (fzmin > fzmax) return 0; // water is too shallow for this size of fish
 	pos.z   = rgen.rand_uniform(fzmin, fzmax); // random depth within the valid range
 	gen_dir_vel(rgen, FISH_SPEED);
-	color   = colorRGBA(rgen.rand_uniform(0.02, 0.03), rgen.rand_uniform(0.05, 0.07), rgen.rand_uniform(0.08, 0.10), 1.0);
+	//color   = colorRGBA(rgen.rand_uniform(0.02, 0.03), rgen.rand_uniform(0.05, 0.07), rgen.rand_uniform(0.08, 0.10), 1.0);
+	color   = WHITE;
 	enabled = 1;
 	//tile_off.set_from_xyoff2(); // Note: TT specific
 	return 1;
@@ -145,18 +191,22 @@ void fish_t::draw(shader_t &s) const {
 	float const t(CLIP_TO_01((water_plane_z - pos_.z)/max(1.0E-6f, fabs(camera.z - pos_.z))));
 	point const p_int(pos_ + (camera - pos_)*t); // ray-water intersection point
 	float const dist(p2p_dist(p_int, camera) + 2.0*p2p_dist(p_int, pos_)); // water is 2x as optically dense as air
-	float const alpha(min(1.0f, 1.5f*exp(-0.028f*dist/radius)));
-	if (alpha < 0.01) return;
-	if (alpha < 0.1) {glDepthMask(GL_FALSE);} // disable depth writing to avoid alpha blend order problems
+	draw_color.alpha = min(1.0f, 1.5f*exp(-0.028f*dist/radius));
+	if (draw_color.alpha < 0.01) return;
+	if (draw_color.alpha < 0.1) {glDepthMask(GL_FALSE);} // disable depth writing to avoid alpha blend order problems
 	//draw_color = lerp(cur_fog_color, draw_color, alpha);
-	s.set_cur_color(colorRGBA(draw_color, alpha));
+#if 1
+	animal_model_loader.draw_fish_model(s, pos_, radius, dir, draw_color);
+#else
+	s.set_cur_color(draw_color);
 	fgPushMatrix();
 	translate_to(pos_);
 	rotate_to_plus_x(dir);
 	scale_by(radius*scale);
 	draw_sphere_vbo_back_to_front(all_zeros, 1.0, get_ndiv(pos_), 0);
-	if (alpha < 0.1) {glDepthMask(GL_TRUE);}
 	fgPopMatrix();
+#endif
+	if (draw_color.alpha < 0.1) {glDepthMask(GL_TRUE);}
 }
 
 void bird_t::draw(shader_t &s) const {
@@ -191,11 +241,21 @@ void bird_t::draw(shader_t &s) const {
 }
 
 
-/*static*/ void animal_group_base_t::begin_draw(shader_t &s) {
-	s.begin_color_only_shader(); // FIXME: placeholder
+/*static*/ void vect_fish_t::begin_draw(shader_t &s) {
+	s.begin_simple_textured_shader(); // no lighting
 	enable_blend(); // for distance fog
 }
-/*static*/ void animal_group_base_t::end_draw(shader_t &s) {
+/*static*/ void vect_bird_t::begin_draw(shader_t &s) {
+	s.begin_color_only_shader();
+	enable_blend(); // for distance fog
+}
+/*static*/ void vect_fish_t::end_draw(shader_t &s) {
+	disable_blend(); // for distance fog
+	s.make_current();
+	s.add_uniform_color("color_modulate", WHITE); // reset
+	s.end_shader();
+}
+/*static*/ void vect_bird_t::end_draw(shader_t &s) {
 	disable_blend(); // for distance fog
 	s.end_shader();
 }
