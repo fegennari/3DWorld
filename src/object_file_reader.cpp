@@ -660,40 +660,46 @@ bool read_3ds_file_model(string const &filename, model3d &model, geom_xform_t co
 bool read_3ds_file_pts(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, colorRGBA const &def_c, bool verbose);
 
 
+bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
+	int reflective, float metalness, bool recalc_normals, bool write_file, bool verbose)
+{
+	string const ext(get_file_extension(filename, 0, 1));
+	models.push_back(model3d(models.tmgr, def_tid, def_c, reflective, metalness));
+	model3d &cur_model(models.back());
+
+	if (ext == "3ds") {
+		if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) return 0; // recalc_normals is always true
+	}
+	else { // object/model3d file
+		object_file_reader_model reader(filename, cur_model);
+
+		if (ext == "model3d") {
+			//assert(xf == geom_xform_t()); // xf is ignored, assumed to be already applied; use transforms with loaded model3d files
+			if (!reader.load_from_model3d_file(verbose)) return 0;
+		}
+		else {
+			check_obj_file_ext(filename, ext);
+			if (!reader.read(xf, recalc_normals, verbose)) return 0;
+			if (write_file && !write_model3d_file(filename, cur_model)) return 0;
+		}
+	}
+	return 1;
+}
+
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
 	int reflective, float metalness, bool load_models, bool recalc_normals, bool write_file, bool verbose)
 {
-	string const ext(get_file_extension(filename, 0, 1));
 	std::locale::global(std::locale("C"));
 	setlocale(LC_ALL, "C");
 
 	if (load_models) {
-		all_models.push_back(model3d(all_models.tmgr, def_tid, def_c, reflective, metalness));
-		model3d &cur_model(all_models.back());
-
-		if (ext == "3ds") {
-			if (!read_3ds_file_model(filename, cur_model, xf, recalc_normals, verbose)) return 0; // recalc_normals is always true
-		}
-		else { // object/model3d file
-			object_file_reader_model reader(filename, cur_model);
-
-			if (ext == "model3d") {
-				//assert(xf == geom_xform_t()); // xf is ignored, assumed to be already applied; use transforms with loaded model3d files
-				if (!reader.load_from_model3d_file(verbose)) return 0;
-			}
-			else {
-				check_obj_file_ext(filename, ext);
-				if (!reader.read(xf, recalc_normals, verbose)) return 0;
-				if (write_file && !write_model3d_file(filename, cur_model)) return 0;
-			}
-		}
+		if (!load_model_file(filename, all_models, xf, def_tid, def_c, reflective, metalness, recalc_normals, write_file, verbose)) return 0;
 		if (ppts) {get_cur_model_polygons(*ppts);}
 		return 1;
 	}
 	else {
-		if (ext == "3ds") {
-			return read_3ds_file_pts(filename, ppts, xf, def_c, verbose);
-		}
+		string const ext(get_file_extension(filename, 0, 1));
+		if (ext == "3ds") {return read_3ds_file_pts(filename, ppts, xf, def_c, verbose);}
 		else {
 			check_obj_file_ext(filename, ext);
 			object_file_reader reader(filename);

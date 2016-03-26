@@ -438,6 +438,7 @@ public:
 	void clear_smaps() {smap_data.clear();} // frees GL state
 	void load_all_used_tids();
 	void bind_all_used_tids();
+	void set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const;
 	void render_materials_def(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask,
 		unsigned bmap_pass_mask, point const *const xlate, xform_matrix const *const mvm=nullptr)
 	{
@@ -445,6 +446,8 @@ public:
 	}
 	void render_materials(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask,
 		base_mat_t const &unbound_mat, point const *const xlate, xform_matrix const *const mvm=nullptr);
+	void render_with_xform(shader_t &shader, model3d_xform_t const &xf, xform_matrix const &mvm, bool is_shadow_pass,
+		int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode);
 	void render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate);
 	void ensure_reflection_cube_map();
 	cube_t get_single_transformed_bcube(vector3d const &xlate=zero_vector) const;
@@ -514,6 +517,8 @@ void get_cur_model_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, fl
 void add_transform_for_cur_model(model3d_xform_t const &xf);
 cube_t get_all_models_bcube(bool only_reflective=0);
 
+bool load_model_file(string const &filename, model3ds &models, geom_xform_t const &xf, int def_tid, colorRGBA const &def_c,
+	int reflective, float metalness, bool recalc_normals, bool write_file, bool verbose);
 bool read_model_file(string const &filename, vector<coll_tquad> *ppts, geom_xform_t const &xf, int def_tid,
 	colorRGBA const &def_c, int reflective, float metalness, bool load_model_file, bool recalc_normals, bool write_file, bool verbose);
 

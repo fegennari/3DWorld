@@ -1495,6 +1495,25 @@ bool is_cube_visible_to_camera(cube_t const &cube, bool is_shadow_pass) {
 }
 
 
+void model3d::set_target_translate_scale(point const &target_pos, float target_radius, geom_xform_t &xf) const {
+	xf.scale = target_radius / (0.5*bcube.max_len());
+	xf.tv    = target_pos - xf.scale*bcube.get_cube_center(); // scale is applied before translate
+}
+
+void model3d::render_with_xform(shader_t &shader, model3d_xform_t const &xf, xform_matrix const &mvm, bool is_shadow_pass,
+	int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode)
+{
+	if (!is_cube_visible_to_camera(xf.get_xformed_cube(bcube), is_shadow_pass)) return; // Note: xlate has already been applied to camera_pdu
+	// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
+	// Note: currently, only translate is supported (and somewhat scale)
+	camera_pdu_transform_wrapper cptw2(xf);
+	base_mat_t ub_mat(unbound_mat);
+	xf.apply_material_override(ub_mat);
+	//point xlate2(xlate); // complex transforms, occlusion culling disabled
+	render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, nullptr, &mvm);
+	// cptw2 dtor called here
+}
+
 // non-const due to vbo caching, normal computation, etc.
 void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass, bool is_z_prepass, bool enable_alpha_mask, unsigned bmap_pass_mask, int reflect_mode, vector3d const &xlate) {
 
@@ -1525,8 +1544,8 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 		}
 	}
 	xform_matrix const mvm(fgGetMVM());
-	model3d_xform_t const xf(xlate);
-	camera_pdu_transform_wrapper cptw(xf);
+	model3d_xform_t const xlate_xf(xlate);
+	camera_pdu_transform_wrapper cptw(xlate_xf);
 
 	// we need the vbo to be created here even in the shadow pass,
 	// and the textures are needed for determining whether or not we need to build the tanget_vectors for bump mapping
@@ -1536,15 +1555,7 @@ void model3d::render(shader_t &shader, bool is_shadow_pass, int reflection_pass,
 		render_materials_def(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, &xlate, &mvm);
 	}
 	for (auto xf = transforms.begin(); xf != transforms.end(); ++xf) {
-		if (!is_cube_visible_to_camera(xf->get_xformed_cube(bcube), is_shadow_pass)) continue; // Note: xlate has already been applied to camera_pdu
-		// Note: it's simpler and more efficient to inverse transfrom the camera frustum rather than transforming the geom/bcubes
-		// Note: currently, only translate is supported (and somewhat scale)
-		camera_pdu_transform_wrapper cptw2(*xf);
-		base_mat_t ub_mat(unbound_mat);
-		xf->apply_material_override(ub_mat);
-		//point xlate2(xlate); // complex transforms, occlusion culling disabled
-		render_materials(shader, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, ub_mat, nullptr, &mvm);
-		// cptw2 dtor called here
+		render_with_xform(shader, *xf, mvm, is_shadow_pass, reflection_pass, is_z_prepass, enable_alpha_mask, bmap_pass_mask, reflect_mode);
 	}
 	// cptw dtor called here
 }

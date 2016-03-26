@@ -1193,7 +1193,7 @@ int read_coll_obj_file(const char *coll_obj_file, geom_xform_t xf, coll_obj cobj
 				ppts.clear();
 				RESET_TIME;
 				
-				if (!read_model_file(fn, (no_cobjs ? NULL : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, cobj.cp.metalness, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
+				if (!read_model_file(fn, (no_cobjs ? nullptr : &ppts), xf, cobj.cp.tid, cobj.cp.color, reflective, cobj.cp.metalness, use_model3d, (recalc_normals != 0), (write_file != 0), 1)) {
 					return read_error(fp, "model file data", coll_obj_file);
 				}
 				string const error_str(add_loaded_model(ppts, cobj, ivals[0], voxel_xy_spacing, xf.scale, has_layer, model3d_xform_t()));
