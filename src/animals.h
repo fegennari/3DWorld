@@ -41,9 +41,8 @@ public:
 
 class fish_t : public animal_t {
 
-	vector3d scale; // x = length, y = width, z = height
-
 	float get_mesh_zval_at_pos() const;
+	float get_half_height() const {return 0.4*radius;} // approximate
 
 public:
 	bool gen(rand_gen_t &rgen, cube_t const &range);

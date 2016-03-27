@@ -18,6 +18,11 @@ extern float fticks, water_plane_z, temperature, atmosphere, ocean_wave_height;
 extern colorRGBA cur_fog_color;
 
 
+void rotate_to_plus_x(vector3d const &dir) {
+	rotate_about(TO_DEG*get_norm_angle(dir, plus_x), vector3d(0.0, 0.0, dir.y));
+}
+
+
 class animal_model_loader_t : public model3ds {
 
 	unsigned fish_id, bird_id;
@@ -34,26 +39,34 @@ public:
 		}
 		return id + 1;
 	}
-	void draw_model(unsigned id, shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE, bool is_shadow_pass=0) {
+	void draw_model(unsigned id, shader_t &s, vector3d const &pos, float radius, vector3d const &dir, rotation_t const &local_rotate=rotation_t(), colorRGBA const &color=WHITE, bool is_shadow_pass=0) {
 		assert(id > 0 && id-1 < size()); // Note: id is vector index offset by 1
-		xform_matrix const mvm(fgGetMVM()); // FIXME: pass this in/reuse?
-		model3d_xform_t xf;
-		//xf.material.color = color; // only works for default material
+		bool const camera_pdu_valid(camera_pdu.valid);
+		camera_pdu.valid = 0; // disable VFC, since we're doing custom transforms here
 		s.add_uniform_color("color_modulate", color);
-		//rotate_to_plus_x(dir); // FIXME
 		model3d &model(operator[](id-1));
 		model.bind_all_used_tids();
-		model.set_target_translate_scale(pos, radius, xf);
-		model.render_with_xform(s, xf, mvm, is_shadow_pass, 0, 0, 1, 3, 0);
+		cube_t const bcube(model.get_bcube());
+		fgPushMatrix();
+		translate_to(pos);
+		rotate_to_plus_x(dir);
+		local_rotate.apply_gl();
+		uniform_scale(radius / (0.5*bcube.max_len()));
+		translate_to(-bcube.get_cube_center()); // cancel out model local translate
+		model.render_materials(s, is_shadow_pass, 0, 0, 1, 3, model.get_unbound_material(), nullptr);
+		fgPopMatrix();
+		camera_pdu.valid = camera_pdu_valid;
 	}
 	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
 		if (fish_id == 0) { // fish model not yet loaded
-			bool const recalc_normals = 0; // ???
-			string const fish_model_fn( "../models/fish/pez_02/fishOBJ.obj" ); // FIXME: move to a local directory, or provide in config file
+			bool const recalc_normals = 0; // okay for loading model3d
+			string const fish_model_fn( "../models/fish/pez_02/fishOBJ.model3d" ); // FIXME: move to a local directory, or provide in config file
 			fish_id = load_model(fish_model_fn, recalc_normals);
 		}
 		assert(fish_id > 0);
-		draw_model(fish_id, s, pos, radius, dir, color, 0); // not shadow pass
+		vector3d const fish_dir(-dir); // fish model faces in -x, and we want it to be in +x
+		rotation_t const local_rotate(plus_y, -45.0); // fish model is angled 45 degree upward, so need to rotate it back down
+		draw_model(fish_id, s, pos, radius, fish_dir, local_rotate, color, 0); // not shadow pass
 	}
 };
 
@@ -81,12 +94,10 @@ bool fish_t::gen(rand_gen_t &rgen, cube_t const &range) {
 	float const mesh_height(get_mesh_zval_at_pos()), depth(water_plane_z - mesh_height);
 	if (depth < 0.1) return 0; // no water
 	radius  = FISH_RADIUS*rgen.rand_uniform(0.4, 1.0);
-	scale   = vector3d(1.0, 0.24*rgen.rand_uniform(0.6, 1.0), 0.4*rgen.rand_uniform(0.8, 1.0)); // x = length, y = width, z = height
-	float const fzmin(mesh_height + 1.6*radius*scale.z), fzmax(water_plane_z - ocean_wave_height - get_tess_wave_height() - 2.0*radius*scale.z);
+	float const fzmin(mesh_height + 1.6*get_half_height()), fzmax(water_plane_z - ocean_wave_height - get_tess_wave_height() - 2.0*get_half_height());
 	if (fzmin > fzmax) return 0; // water is too shallow for this size of fish
 	pos.z   = rgen.rand_uniform(fzmin, fzmax); // random depth within the valid range
 	gen_dir_vel(rgen, FISH_SPEED);
-	//color   = colorRGBA(rgen.rand_uniform(0.02, 0.03), rgen.rand_uniform(0.05, 0.07), rgen.rand_uniform(0.08, 0.10), 1.0);
 	color   = WHITE;
 	enabled = 1;
 	//tile_off.set_from_xyoff2(); // Note: TT specific
@@ -114,7 +125,7 @@ bool fish_t::update(rand_gen_t &rgen) {
 	if (!enabled || !animate2) return 0;
 	point const camera(get_camera_pos()), pos_(get_draw_pos());
 	if (!dist_less_than(pos_, camera, 200.0*radius)) return 1; // to far away to simulate (optimization)
-	if (pos.z - 1.1*radius*scale.z < get_mesh_zval_at_pos()) {enabled = 0; return 0;}
+	if (pos.z - 1.1*get_half_height() < get_mesh_zval_at_pos()) {enabled = 0; return 0;}
 	bool const chased(dist_less_than(pos_, camera, 15.0*radius));
 
 	if (chased) { // scared by the player, swim away
@@ -138,7 +149,7 @@ bool fish_t::update(rand_gen_t &rgen) {
 	point const orig_pos(pos);
 	pos += velocity*fticks; // try to move
 	
-	if (pos.z - 1.5*radius*scale.z < get_mesh_zval_at_pos()) { // water is too shallow
+	if (pos.z - 1.5*get_half_height() < get_mesh_zval_at_pos()) { // water is too shallow
 		pos = orig_pos;
 		if (chased) {velocity = zero_vector;} // stop
 		else {gen_dir_vel(rgen, FISH_SPEED);} // pick a new direction randomly
@@ -177,16 +188,12 @@ int animal_t::get_ndiv(point const &pos_) const {
 vector3d get_pos_offset() {return vector3d((xoff - xoff2)*DX_VAL, (yoff - yoff2)*DY_VAL, 0.0);}
 point animal_t::get_draw_pos() const {return (pos + get_pos_offset());}
 
-void rotate_to_plus_x(vector3d const &dir) {
-	rotate_about(TO_DEG*get_norm_angle(dir, plus_x), vector3d(0.0, 0.0, dir.y));
-}
-
 void fish_t::draw(shader_t &s) const {
 
 	point const pos_(get_draw_pos());
 	if (!is_visible(pos_, 0.15)) return;
 	colorRGBA draw_color(color);
-	water_color_atten_at_pos(draw_color, pos_ );
+	water_color_atten_at_pos(draw_color, pos_ - vector3d(0.0, 0.0, radius)); // move down slightly
 	point const camera(get_camera_pos());
 	float const t(CLIP_TO_01((water_plane_z - pos_.z)/max(1.0E-6f, fabs(camera.z - pos_.z))));
 	point const p_int(pos_ + (camera - pos_)*t); // ray-water intersection point
@@ -195,17 +202,7 @@ void fish_t::draw(shader_t &s) const {
 	if (draw_color.alpha < 0.01) return;
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_FALSE);} // disable depth writing to avoid alpha blend order problems
 	//draw_color = lerp(cur_fog_color, draw_color, alpha);
-#if 1
 	animal_model_loader.draw_fish_model(s, pos_, radius, dir, draw_color);
-#else
-	s.set_cur_color(draw_color);
-	fgPushMatrix();
-	translate_to(pos_);
-	rotate_to_plus_x(dir);
-	scale_by(radius*scale);
-	draw_sphere_vbo_back_to_front(all_zeros, 1.0, get_ndiv(pos_), 0);
-	fgPopMatrix();
-#endif
 	if (draw_color.alpha < 0.1) {glDepthMask(GL_TRUE);}
 }
 
@@ -251,7 +248,6 @@ void bird_t::draw(shader_t &s) const {
 }
 /*static*/ void vect_fish_t::end_draw(shader_t &s) {
 	disable_blend(); // for distance fog
-	s.make_current();
 	s.add_uniform_color("color_modulate", WHITE); // reset
 	s.end_shader();
 }
