@@ -35,7 +35,7 @@ public:
 
 		if (!load_model_file(fn, *this, geom_xform_t(), def_tid, def_color, 0, 0.0, recalc_normals, 0, 1)) {
 			cerr << "Error: Failed to read model file '" << fn << "'" << endl;
-			assert(0);
+			exit(1);
 		}
 		return id + 1;
 	}

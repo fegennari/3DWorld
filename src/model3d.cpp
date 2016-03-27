@@ -1810,8 +1810,8 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &
 		if (shader_effects  ) {needs_bump_maps |= m->get_needs_bump_maps();} // optimization, makes little difference
 		if (use_custom_smaps) {m->setup_shadow_maps();} else if (!is_shadow_pass) {m->clear_smaps();}
 	}
-	if (any_planar_reflective + any_cube_map_reflective + any_non_reflective > 1) {
-		cerr << "Error: Cannot mix planar reflections, cube map reflections, and no reflections for model3ds" << endl;
+	if (any_planar_reflective + any_cube_map_reflective > 1) {
+		cerr << "Error: Cannot mix planar reflections and cube map reflections for model3ds" << endl;
 		exit(1); // FIXME: better/earlier error? make this work?
 	}
 	if (use_z_prepass && !is_shadow_pass && reflection_pass == 0) { // check use_mvm?
@@ -1854,6 +1854,7 @@ void model3ds::render(bool is_shadow_pass, int reflection_pass, vector3d const &
 					s.clear_specular();
 				}
 				for (iterator m = begin(); m != end(); ++m) { // non-const
+					if (any_non_reflective && (reflect_mode != 0) && (ref_pass != 0) != m->is_reflective()) continue; // wrong reflection pass for this object
 					m->render(s, is_shadow_pass, reflection_pass, 0, (sam_pass == 1), (shader_effects ? (1 << bmap_pass) : 3), cur_reflect_mode, xlate);
 				}
 				if (reset_bscale) {s.add_uniform_float("bump_b_scale", -1.0);} // may be unnecessary

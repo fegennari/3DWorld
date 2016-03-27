@@ -473,6 +473,7 @@ public:
 	bool uses_spec_map()        const {return has_spec_maps;}
 	bool is_planar_reflective() const {return (reflective == 1);}
 	bool is_cube_map_reflective() const {return (reflective == 2);}
+	bool is_reflective()        const {return (reflective != 0);}
 	void get_stats(model3d_stats_t &stats) const;
 	void show_stats() const;
 	void get_all_mat_lib_fns(set<std::string> &mat_lib_fns) const;
