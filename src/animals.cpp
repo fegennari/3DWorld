@@ -60,7 +60,7 @@ public:
 	void draw_fish_model(shader_t &s, vector3d const &pos, float radius, vector3d const &dir, colorRGBA const &color=WHITE) {
 		if (fish_id == 0) { // fish model not yet loaded
 			bool const recalc_normals = 0; // okay for loading model3d
-			string const fish_model_fn( "../models/fish/pez_02/fishOBJ.model3d" ); // FIXME: move to a local directory, or provide in config file
+			string const fish_model_fn( "model_data/fish/fishOBJ.model3d" ); // provide in config file?
 			fish_id = load_model(fish_model_fn, recalc_normals);
 		}
 		assert(fish_id > 0);
