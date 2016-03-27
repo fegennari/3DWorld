@@ -74,34 +74,44 @@ struct geom_xform_t { // should be packed, can read/write as POD
 };
 
 
-struct model3d_xform_t : public geom_xform_t { // should be packed, can read/write as POD
-
+struct rotation_t {
 	vector3d axis;
 	float angle; // in degrees
+
+	rotation_t() : axis(zero_vector), angle(0.0) {}
+	rotation_t(vector3d const &axis_, float angle_) : axis(axis_), angle(angle_) {}
+	bool operator==(rotation_t const &r) const {return (r.axis == axis && r.angle == angle);}
+	void apply_gl() const {if (angle != 0.0) {rotate_about(angle, axis);}}
+	void rotate_point(point &pos, float sign) const {
+		if (angle != 0.0) {rotate_vector3d(axis, sign*TO_RADIANS*angle, pos);}
+	}
+};
+
+
+struct model3d_xform_t : public geom_xform_t, public rotation_t { // should be packed, can read/write as POD
+
 	base_mat_t material;
 
-	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_), axis(zero_vector), angle(0.0) {}
-	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf), axis(zero_vector), angle(0.0) {}
+	model3d_xform_t(vector3d const &tv_=zero_vector, float scale_=1.0) : geom_xform_t(tv_, scale_) {}
+	model3d_xform_t(geom_xform_t const &xf) : geom_xform_t(xf) {}
 	cube_t get_xformed_cube(cube_t const &cube) const;
 	void apply_inv_xform_to_pdu(pos_dir_up &pdu) const;
 	void apply_to_tquad(coll_tquad &tquad) const;
 	void apply_gl() const;
 
-	bool eq_xforms(model3d_xform_t const &x) const {
-		return (axis == x.axis && angle == x.angle && geom_xform_t::operator==(x));
-	}
+	bool eq_xforms(model3d_xform_t const &x) const {return (rotation_t::operator==(x) && geom_xform_t::operator==(x));}
 	bool operator==(model3d_xform_t const &x) const {return (eq_xforms(x) && material == x.material);}
 	bool operator!=(model3d_xform_t const &x) const {return !operator==(x);}
 	bool is_identity() const {return eq_xforms(model3d_xform_t());}
 
 	void xform_pos(point &pos) const { // rotate, mirror, scale, arb_rotate, translate
 		xform_pos_rms(pos);
-		if (angle != 0.0) {rotate_vector3d(axis, -TO_RADIANS*angle, pos);} // negative rotate?
+		rotate_point(pos, -1.0); // negative rotate?
 		pos += tv;
 	}
 	void inv_xform_pos(point &pos) const {
 		pos -= tv;
-		if (angle != 0.0) {rotate_vector3d(axis, TO_RADIANS*angle, pos);} // negative rotate?
+		rotate_point(pos, 1.0); // negative rotate?
 		inv_xform_pos_rms(pos);
 	}
 	void apply_material_override(base_mat_t &mat) const {
@@ -420,6 +430,7 @@ public:
 		assert(mat_id >= 0 && (unsigned)mat_id < materials.size());
 		return materials[mat_id];
 	}
+	base_mat_t const &get_unbound_material() const {return unbound_mat;}
 
 	// creation and query
 	void set_has_cobjs() {has_cobjs = 1;}

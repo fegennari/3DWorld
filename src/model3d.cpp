@@ -1458,7 +1458,7 @@ cube_t model3d_xform_t::get_xformed_cube(cube_t const &cube) const { // Note: RM
 void model3d_xform_t::apply_gl() const {
 	assert(scale != 0.0);
 	translate_to(tv);
-	rotate_about(angle, axis);
+	rotation_t::apply_gl();
 	for (unsigned i = 0; i < 3; ++i) {UNROLL_3X(assert(!swap_dim[i][i_]);)} // swap not supported
 	vector3d scale_xyz(scale, scale, scale);
 	UNROLL_3X(if (mirror[i_]) {scale_xyz[i_] = -scale_xyz[i_];}) // Note: untested
