@@ -1958,13 +1958,23 @@ void get_cur_model_polygons(vector<coll_tquad> &ppts, model3d_xform_t const &xf,
 	PRINT_TIME("Create and Xform Model3d Polygons");
 }
 
+cube_t get_polygons_bcube(vector<coll_tquad> const &ppts) {
+
+	cube_t bcube(all_zeros, all_zeros);
+
+	for (auto i = ppts.begin(); i != ppts.end(); ++i) { // rasterize ppts to cubes in {x,y,z}
+		if (i == ppts.begin()) {bcube = i->get_bcube();} else {bcube.union_with_cube(i->get_bcube());}
+	}
+	return bcube;
+}
+
 void get_cur_model_edges_as_cubes(vector<cube_t> &cubes, model3d_xform_t const &xf, float grid_spacing) {
 
 	assert(grid_spacing > 0.0);
 	vector<coll_tquad> ppts;
 	get_cur_model_polygons(ppts, xf);
-	cube_t bcube(get_cur_model("get bcube").get_bcube());
-	bcube = xf.get_xformed_cube(bcube);
+	//cube_t const bcube(xf.get_xformed_cube(get_cur_model("get bcube").get_bcube()));
+	cube_t const bcube(get_polygons_bcube(ppts));
 	vector3d const csz(bcube.get_size());
 	unsigned ndiv[3];
 	for (unsigned i = 0; i < 3; ++i) {ndiv[i] = max(2U, min(1024U, unsigned(csz[i]/grid_spacing)));} // clamp to [2,1024] range
