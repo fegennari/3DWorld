@@ -267,7 +267,6 @@ void setup_cube_map_reflection_texture(unsigned &tid, unsigned tex_size) {
 
 unsigned create_gm_z_reflection() {
 
-	if (display_mode & 0x20) return 0; // reflections not enabled
 	cube_t bcube;
 	float min_camera_dist(0.0);
 	if (!get_reflection_plane_bounds(bcube, min_camera_dist)) return 0; // no reflective surfaces
@@ -282,7 +281,6 @@ unsigned create_gm_z_reflection() {
 
 unsigned create_cube_map_reflection(unsigned &tid, int cobj_id, point const &center, float near_plane, float far_plane, bool only_front_facing, bool is_indoors, unsigned skip_mask) {
 
-	if (display_mode & 0x20) return 0; // reflections not enabled
 	unsigned const max_tex_size(min(window_width, window_height));
 	assert(max_tex_size > 0);
 	unsigned tex_size(1);
