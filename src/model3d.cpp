@@ -1158,7 +1158,7 @@ template<typename T> unsigned add_polygons_to_voxel_grid(vector<coll_tquad> &pol
 	cont.get_stats(stats);
 	polygons.clear();
 	polygons.reserve(stats.quads);
-	get_polygon_args_t args(polygons, WHITE, 1);
+	get_polygon_args_t args(polygons, WHITE, 1); // quads_only=1
 	cont.get_polygons(args);
 	xform_polygons(polygons, xf, 0);
 	

@@ -1027,13 +1027,8 @@ string add_loaded_model(vector<coll_tquad> const &ppts, coll_obj cobj, int group
 		voxel_spacing *= scale;
 		if (voxel_spacing <= 0.0) {return "model file voxel_spacing (scaled)";}
 		vector<cube_t> cubes;
-
-		if (cube_edges) {
-			get_cur_model_edges_as_cubes(cubes, model_xf, voxel_spacing);
-		}
-		else {
-			get_cur_model_as_cubes(cubes, model_xf, voxel_spacing);
-		}
+		if (cube_edges) {get_cur_model_edges_as_cubes(cubes, model_xf, voxel_spacing);}
+		else {get_cur_model_as_cubes(cubes, model_xf, voxel_spacing);}
 		check_layer(has_layer);
 		coll_obj cur_cube(cobj); // color and tid left as-is for now
 		cur_cube.cp.draw      = 0;
