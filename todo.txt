@@ -10,20 +10,12 @@ Gameplay in tiled terrain mode
   - Pickup items
   - Projectile and object collision detection
 
-TT shadows:
-  - Use light dir and mesh normal for tree soft shadow
-  - Lower res distant shadow map for tiled terrain mode with smooth blend
-
-Indirect lighting magnitude in 6 directions (+/- x,y,z)
-  - how to combine sun, moon, sky, and local lighting values?
-
-Cobjs:
-  - Bullet physics for movable boxes
-
-In-Game cobjs editor
-  - In-game placement/visualization of objects
 Plants with low large leaves
   - Can use palm frond texture
+
+TT lower res distant shadow map for tiled terrain mode with smooth blend
+Bullet physics for movable boxes
+In-Game cobjs editor
 Counted normal averages normals using face area as weights
-Spawn enemies in TT water, grass, and trees
+Scattering in glass blocks/spheres
 
