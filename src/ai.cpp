@@ -289,8 +289,8 @@ void add_target(vector<od_data> &oddatav, pos_dir_up const &pdu, point const &po
 
 	if (!sphere_in_view(pdu, pos2, radius, 0)) return; // view culling
 	float dist_sq(p2p_dist_sq(pdu.pos, pos2));
-	if (hitter == id) dist_sq *= 0.25; // perfer to attack your attacker
-	if (killer == id) dist_sq *= 0.5;  // perfer to attack your last killer in revenge
+	if (hitter == id) dist_sq *= 0.25; // prefer to attack your attacker
+	if (killer == id) dist_sq *= 0.5;  // prefer to attack your last killer in revenge
 	oddatav.push_back(od_data(((id == CAMERA_ID) ? CAMERA : SMILEY), id, dist_sq));
 }
 
