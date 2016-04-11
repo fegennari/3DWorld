@@ -1493,12 +1493,13 @@ void draw_smoke_and_fires() {
 	s.add_uniform_float("emissive_scale", 1.0); // make colors emissive
 	set_multisample(0);
 	unsigned depth_tid(0);
-	if (use_depth_trans) {setup_depth_trans_texture(s, depth_tid);}
-
-	if (have_part_clouds) { // smoke: slow when a lot of smoke is up close
-		if (use_depth_trans) {s.add_uniform_float("depth_trans_bias", 0.1);}
-		draw_part_clouds(part_clouds, SMOKE_PUFF_TEX);
+	
+	if (use_depth_trans) {
+		setup_depth_trans_texture(s, depth_tid);
+		s.add_uniform_float("depth_trans_bias", 0.1); // for part clouds and explosions
 	}
+	draw_blasts(s);
+	if (have_part_clouds) {draw_part_clouds(part_clouds, SMOKE_PUFF_TEX);} // smoke: slow when a lot of smoke is up close
 	order_vect_t fire_order;
 	get_draw_order(fires, fire_order);
 	
@@ -1623,7 +1624,6 @@ void draw_sparks(bool clear_at_end) {
 
 void draw_projectile_effects(int reflection_pass) {
 
-	draw_blasts();
 	draw_beams(reflection_pass == 0);
 	draw_sparks(reflection_pass == 0);
 	explosion_part_man.draw(0.002, -1); // untextured

@@ -625,7 +625,8 @@ void player_teleported(point const &pos, int player_id);
 
 // function prototypes - explosion
 void update_blasts();
-void draw_blasts();
+void draw_blasts(shader_t &s);
+void draw_universe_blasts();
 
 // function prototypes - scenery
 void gen_scenery();

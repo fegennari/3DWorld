@@ -205,20 +205,24 @@ struct ix_type_pair {
 };
 
 
-void draw_blasts() {
+void setup_multitex_2_shader(shader_t &s) {
+
+	s.set_vert_shader("multitex_2");
+	s.set_frag_shader("multitex_2");
+	s.begin_shader();
+	s.add_uniform_int("tex0", 0);
+	s.add_uniform_int("tex1", 1);
+}
+
+
+void draw_blasts(shader_t &s) {
 
 	if (blastrs.empty()) return;
 	//RESET_TIME;
 	bool const universe(world_mode == WMODE_UNIVERSE);
-	enable_blend();
-	shader_t s;
-	s.set_vert_shader("multitex_2");
-	s.set_frag_shader("multitex_2");
-	s.begin_shader();
 	int const min_alpha_loc(s.get_uniform_loc("min_alpha"));
-	s.add_uniform_int("tex0", 0);
-	s.add_uniform_int("tex1", 1);
 	//s.set_uniform_float(min_alpha_loc, 0.05);
+	enable_blend();
 	select_multitex(WHITE_TEX, 1);
 	vector<ix_type_pair> to_draw;
 
@@ -232,6 +236,7 @@ void draw_blasts() {
 	}
 	sort(to_draw.begin(), to_draw.end());
 	quad_batch_draw qbd;
+	shader_t sb_shader;
 
 	for (vector<ix_type_pair>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
 		blastr const &br(blastrs[i->ix]);
@@ -298,7 +303,11 @@ void draw_blasts() {
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
 				select_multitex(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? FLARE5_TEX : BLUR_TEX), 0);
-				if (br.type == ETYPE_STARB) {select_multitex(NOISE_TEX, 1);}
+				
+				if (br.type == ETYPE_STARB) {
+					setup_multitex_2_shader(sb_shader);
+					select_multitex(NOISE_TEX, 1);
+				}
 			}
 			if (universe) {
 				vector3d const dir((br.type == ETYPE_FUSION_ROT) ? (get_camera_pos() - br.pos) : br.dir); // only ETYPE_FUSION_ROT aligns to the camera
@@ -311,8 +320,13 @@ void draw_blasts() {
 			}
 			if (end_type) {
 				qbd.draw_and_clear();
-				if (br.type == ETYPE_STARB) {select_multitex(WHITE_TEX, 1);} // set back to white
 				glDepthMask(GL_TRUE);
+
+				if (br.type == ETYPE_STARB) {
+					select_multitex(WHITE_TEX, 1); // set back to white
+					sb_shader.end_shader();
+					s.make_current();
+				}
 			}
 			break;
 
@@ -321,9 +335,17 @@ void draw_blasts() {
 		} // switch
 		if (end_type) {set_std_blend_mode();}
 	} // for i
-	s.end_shader();
 	disable_blend();
 	//PRINT_TIME("Draw Blasts");
+}
+
+void draw_universe_blasts() {
+
+	if (blastrs.empty()) return;
+	shader_t s;
+	s.begin_simple_textured_shader();
+	draw_blasts(s);
+	s.end_shader();
 }
 
 

@@ -1033,7 +1033,7 @@ void display_universe() { // infinite universe
 	draw_universe();
 	check_gl_error(32);
 	if (TIMETEST) PRINT_TIME("Draw Universe");
-	draw_blasts();
+	draw_universe_blasts();
 	if (TIMETEST) PRINT_TIME("Draw Blasts");
 	final_draw(framerate);
 	show_crosshair(WHITE, do_zoom);
