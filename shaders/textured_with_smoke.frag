@@ -356,7 +356,7 @@ void main()
 	//fg_FragColor.r = wet_effect; fg_FragColor.b = 1.0-wet_effect;
 
 #ifdef USE_DEPTH_TRANSPARENCY
-	float d_delta = log_to_linear_depth(get_depth_at_fragment()) - log_to_linear_depth(gl_FragCoord.z);
-	fg_FragColor.a *= clamp(d_delta/depth_trans_bias, 0.0, 1.0);
+	float d_delta   = log_to_linear_depth(get_depth_at_fragment()) - log_to_linear_depth(gl_FragCoord.z);
+	fg_FragColor.a *= smoothstep(0.0, 1.0, clamp(d_delta/depth_trans_bias, 0.0, 1.0));
 #endif
 }
