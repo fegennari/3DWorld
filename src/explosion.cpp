@@ -205,7 +205,7 @@ struct ix_type_pair {
 };
 
 
-void setup_multitex_2_shader(shader_t &s) {
+void setup_multitex_2_shader(shader_t &s) { // unused
 
 	s.set_vert_shader("multitex_2");
 	s.set_frag_shader("multitex_2");
@@ -236,7 +236,6 @@ void draw_blasts(shader_t &s) {
 	}
 	sort(to_draw.begin(), to_draw.end());
 	quad_batch_draw qbd;
-	shader_t sb_shader;
 
 	for (vector<ix_type_pair>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
 		blastr const &br(blastrs[i->ix]);
@@ -302,12 +301,7 @@ void draw_blasts(shader_t &s) {
 		case ETYPE_SIEGE:
 			if (begin_type) {
 				glDepthMask(GL_FALSE);
-				select_multitex(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? FLARE5_TEX : BLUR_TEX), 0);
-				
-				if (br.type == ETYPE_STARB) {
-					setup_multitex_2_shader(sb_shader);
-					select_multitex(NOISE_TEX, 1);
-				}
+				select_multitex(((br.type == ETYPE_FUSION || br.type == ETYPE_FUSION_ROT) ? FLARE5_TEX : ((br.type == ETYPE_STARB) ? STARBURST_TEX : BLUR_TEX)), 0);
 			}
 			if (universe) {
 				vector3d const dir((br.type == ETYPE_FUSION_ROT) ? (get_camera_pos() - br.pos) : br.dir); // only ETYPE_FUSION_ROT aligns to the camera
@@ -321,12 +315,6 @@ void draw_blasts(shader_t &s) {
 			if (end_type) {
 				qbd.draw_and_clear();
 				glDepthMask(GL_TRUE);
-
-				if (br.type == ETYPE_STARB) {
-					select_multitex(WHITE_TEX, 1); // set back to white
-					sb_shader.end_shader();
-					s.make_current();
-				}
 			}
 			break;
 
