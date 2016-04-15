@@ -1626,7 +1626,7 @@ void draw_projectile_effects(int reflection_pass) {
 
 	draw_beams(reflection_pass == 0);
 	draw_sparks(reflection_pass == 0);
-	explosion_part_man.draw(0.002, -1); // untextured
+	explosion_part_man.draw(0.001, -1); // untextured
 	water_part_man.draw(); // not really a projectile effect, but it's drawn with them
 }
 
