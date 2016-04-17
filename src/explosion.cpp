@@ -42,7 +42,7 @@ exp_type_params et_params[NUM_ETYPES] = {
 	exp_type_params(1.2, WHITE,   WHITE),   // ETYPE_ANIM_FIRE
 	exp_type_params(0.8, PURPLE,  LT_BLUE), // ETYPE_SIEGE
 	exp_type_params(1.7, LT_BLUE, WHITE),   // ETYPE_FUSION_ROT
-	exp_type_params(3.0, WHITE,   BLACK),   // ETYPE_PART_CLOUD
+	exp_type_params(2.0, WHITE,   BLACK),   // ETYPE_PART_CLOUD
 };
 
 
@@ -205,7 +205,6 @@ struct ix_type_pair {
 /*static*/ void cloud_explosion::draw_setup(vpc_shader_t &s) {
 	shader_setup(s, 4); // RGBA noise
 	s.enable();
-	s.add_uniform_float("noise_scale", 0.8);
 	s.set_cur_color(WHITE);
 	//enable_blend();
 }
@@ -218,10 +217,10 @@ void cloud_explosion::draw(vpc_shader_t &s, point const &pos, float radius) cons
 	s.set_uniform_color(s.c3i_loc, RED);
 	s.set_uniform_color(s.c3o_loc, BLACK);
 	s.set_uniform_float(s.rad_loc, radius);
-	s.set_uniform_float(s.off_loc, (100.0*pos.x + 0.0007*tfticks)); // used as a hash
+	s.set_uniform_float(s.off_loc, (100.0*sinf(pos.x) + ((world_mode == WMODE_UNIVERSE) ? 0.00005 : 0.0004)*tfticks)); // used as a hash
 	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - pos).get_norm()); // local object space
 	fgPushMatrix();
-	translate_to(pos);
+	global_translate(pos);
 	draw_quads();
 	fgPopMatrix();
 }
@@ -334,8 +333,14 @@ void draw_blasts(shader_t &s) {
 		case ETYPE_PART_CLOUD:
 			if (begin_type) {cloud_explosion::draw_setup(vpc_shader);}
 			vpc_shader.add_uniform_color("color_mult", br.cur_color);
+			vpc_shader.add_uniform_float("noise_scale", 0.1/br.size);
 			br.cloud_exp.draw(vpc_shader, br.pos, br.cur_size); // Note: no ground mode depth-based attenuation
-			if (end_type) {vpc_shader.end_shader(); s.make_current();}
+			
+			if (end_type) {
+				vpc_shader.add_uniform_color("color_mult", WHITE); // restore default
+				vpc_shader.end_shader();
+				s.make_current();
+			}
 			break;
 
 		default:
