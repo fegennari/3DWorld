@@ -859,8 +859,10 @@ void gen_blood_velocity(vector3d &vout, vector3d const &velocity, vector3d const
 void gen_rocket_smoke(point const &pos, vector3d const &orient, float radius) { // rocket and seekd
 
 	if (animate2) {
-		if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {gen_smoke((pos + orient.get_norm()*(2.0*radius)), 0.2);}
-		add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);
+		point const dpos(pos + (3.0*radius)*orient.get_norm());
+		if (distance_to_camera_sq(pos) > 0.04 && iticks > rand()%3) {gen_smoke(dpos, 0.2);}
+		//add_blastr(pos, orient, 2.0*radius, 0.0, 4, NO_SOURCE, YELLOW, RED, ETYPE_ANIM_FIRE);
+		add_blastr(dpos, orient, 3.0*radius, 0.0, 4, NO_SOURCE, WHITE, colorRGBA(0.2,0,0,0), ETYPE_PART_CLOUD);
 	}
 }
 

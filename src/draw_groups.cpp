@@ -49,7 +49,7 @@ void draw_powerup(point const &pos, float radius, int ndiv, int type, const colo
 void draw_rolling_obj(point const &pos, point &lpos, float radius, int status, int ndiv, bool on_platform, int tid, xform_matrix *matrix);
 void draw_skull(point const &pos, vector3d const &orient, float radius, int status, int ndiv, int time, shader_t &shader, bool burned);
 void draw_rocket(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
-void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, shader_t &shader);
+void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader);
 void draw_landmine(point pos, float radius, int ndiv, int time, int source, bool in_ammo, shader_t &shader);
 void draw_plasma(point const &pos, point const &part_pos, float radius, float size, int ndiv, bool gen_parts, bool add_halo, int time, shader_t &shader);
 void draw_chunk(point const &pos, float radius, vector3d const &v, vector3d const &vdeform, int charred, int ndiv, shader_t &shader);
@@ -330,7 +330,7 @@ void draw_obj(obj_group &objg, vector<wap_obj> *wap_vis_objs, int type, float ra
 		draw_rocket(pos, obj.init_dir, radius, obj.type, ndiv, obj.time, shader);
 		break;
 	case SEEK_D:
-		draw_seekd(pos, obj.init_dir, radius, obj.type, ndiv, shader);
+		draw_seekd(pos, obj.init_dir, radius, obj.type, ndiv, obj.time, shader);
 		break;
 	case LANDMINE:
 		draw_landmine(pos, radius, ndiv, obj.time, obj.source, in_ammo, shader);
@@ -1174,11 +1174,11 @@ void draw_rocket(point const &pos, vector3d const &orient, float radius, int typ
 	draw_sphere_vbo_raw(ndiv, 0);
 	draw_cylinder(-1.1, 1.0, 1.0, ndiv);
 	fgPopMatrix();
-	if (type == ROCKET) {gen_rocket_smoke(pos, orient, radius);}
+	if (type == ROCKET && time > 0.1*TICKS_PER_SECOND) {gen_rocket_smoke(pos, orient, radius);}
 }
 
 
-void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, shader_t &shader) {
+void draw_seekd(point const &pos, vector3d const &orient, float radius, int type, int ndiv, int time, shader_t &shader) {
 
 	fgPushMatrix();
 	translate_to(pos);
@@ -1195,7 +1195,7 @@ void draw_seekd(point const &pos, vector3d const &orient, float radius, int type
 	draw_sphere_vbo_raw(ndiv, 1);
 	select_no_texture();
 	fgPopMatrix();
-	if (type == SEEK_D) {gen_rocket_smoke(pos, orient, radius);}
+	if (type == SEEK_D && time > 0.1*TICKS_PER_SECOND) {gen_rocket_smoke(pos, orient, radius);}
 }
 
 
