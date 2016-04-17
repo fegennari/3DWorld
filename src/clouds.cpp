@@ -516,6 +516,7 @@ void vpc_shader_t::cache_locs() {
 
 void volume_part_cloud::draw_quads(bool depth_map_already_disabled) const {
 
+	assert(enabled());
 	if (!depth_map_already_disabled) {glDepthMask(GL_FALSE);} // no depth writing
 	draw_quad_verts_as_tris(points);
 	if (!depth_map_already_disabled) {glDepthMask(GL_TRUE);}

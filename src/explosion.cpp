@@ -21,6 +21,7 @@ vector<unsigned> available;
 vector<explosion> explosions;
 
 extern int iticks, game_mode, display_mode, animate2;
+extern float tfticks;
 
 void calc_lit_uobjects();
 
@@ -40,25 +41,23 @@ exp_type_params et_params[NUM_ETYPES] = {
 	exp_type_params(0.8, GREEN,   WHITE),   // ETYPE_ESTEAL
 	exp_type_params(1.2, WHITE,   WHITE),   // ETYPE_ANIM_FIRE
 	exp_type_params(0.8, PURPLE,  LT_BLUE), // ETYPE_SIEGE
-	exp_type_params(1.7, LT_BLUE, WHITE)    // ETYPE_FUSION_ROT
+	exp_type_params(1.7, LT_BLUE, WHITE),   // ETYPE_FUSION_ROT
+	exp_type_params(3.0, WHITE,   BLACK),   // ETYPE_PART_CLOUD
 };
 
 
 void explosion::check_pointers() {
-
-	if (source != NULL && !source->is_ok()) source = NULL; // invalid source
-	if (parent != NULL && !parent->is_ok()) parent = NULL; // invalid parent
+	if (source != NULL && !source->is_ok()) {source = NULL;} // invalid source
+	if (parent != NULL && !parent->is_ok()) {parent = NULL;} // invalid parent
 }
 
 
 void blastr::check_pointers() {
-
-	if (parent != NULL && !parent->is_ok()) parent = NULL; // invalid parent
+	if (parent != NULL && !parent->is_ok()) {parent = NULL;} // invalid parent
 }
 
 
 void register_explosion(point const &pos, float radius, float damage, unsigned eflags, int wclass, uobject *src, free_obj const *parent) {
-
 	assert(damage >= 0.0);
 	explosions.push_back(explosion(pos, radius, damage, eflags, wclass, src, parent));
 }
@@ -76,13 +75,8 @@ void apply_explosions() {
 
 
 void check_explosion_refs() {
-
-	for (unsigned i = 0; i < explosions.size(); ++i) {
-		explosions[i].check_pointers();
-	}
-	for (unsigned i = 0; i < blastrs.size(); ++i) {
-		blastrs[i].check_pointers();
-	}
+	for (unsigned i = 0; i < explosions.size(); ++i) {explosions[i].check_pointers();}
+	for (unsigned i = 0; i < blastrs.size(); ++i) {blastrs[i].check_pointers();}
 }
 
 
@@ -94,8 +88,7 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 	if (one_frame_only) {time = 1;}
 	assert(size > 0.0 && time >= 0);
 	blastr br(time, type, src, size, damage, pos, dir, color1, color2, parent, one_frame_only);
-	if (type == ETYPE_ANIM_FIRE) {br.up_vector = signed_rand_vector_norm();}
-	br.update();
+	br.setup();
 
 	if (available.empty()) {
 		blastrs.push_back(br);
@@ -112,6 +105,13 @@ void add_blastr(point const &pos, vector3d const &dir, float size, float damage,
 }
 
 
+void blastr::setup() {
+
+	if (type == ETYPE_ANIM_FIRE ) {up_vector = signed_rand_vector_norm();}
+	if (type == ETYPE_PART_CLOUD) {cloud_exp.setup(size);}
+	update(); // initial update
+}
+
 void blastr::update() {
 
 	assert(time > 0 && st_time > 0);
@@ -121,9 +121,7 @@ void blastr::update() {
 	if (type != ETYPE_ANIM_FIRE) {cur_color.alpha *= (0.5 + 0.5*cscale);}
 }
 
-
 void blastr::add_as_dynamic_light() const {
-
 	add_dynamic_light(min(3.5, 4.0*size), pos, cur_color); // Note: 3.5 meant for ground mode, but also acceptable for universe mode (lights are never this large)
 }
 
@@ -161,6 +159,7 @@ bool blastr::next_frame(unsigned i) {
 
 		if (time <= decrement) { // just expired
 			time = 0;
+			cloud_exp.clear();
 			available.push_back(i);
 			return 0;
 		}
@@ -179,9 +178,7 @@ bool blastr::next_frame(unsigned i) {
 			if (animate2) {add_parts_projs(pos, cur_size, dir, cur_color, type, src, parent);}
 		}
 	}
-	else if (world_mode == WMODE_GROUND && game_mode && damage > 0.0) {
-		process();
-	}
+	else if (world_mode == WMODE_GROUND && game_mode && damage > 0.0) {process();}
 	one_frame_seen = 1;
 	return 1;
 }
@@ -205,13 +202,28 @@ struct ix_type_pair {
 };
 
 
-void setup_multitex_2_shader(shader_t &s) { // unused
-
-	s.set_vert_shader("multitex_2");
-	s.set_frag_shader("multitex_2");
-	s.begin_shader();
-	s.add_uniform_int("tex0", 0);
-	s.add_uniform_int("tex1", 1);
+/*static*/ void cloud_explosion::draw_setup(vpc_shader_t &s) {
+	shader_setup(s, 4); // RGBA noise
+	s.enable();
+	s.add_uniform_float("noise_scale", 0.8);
+	s.set_cur_color(WHITE);
+	//enable_blend();
+}
+void cloud_explosion::draw(vpc_shader_t &s, point const &pos, float radius) const {
+	//if (!sphere_in_camera_view(pos, radius, 0)) return; // checked by the caller
+	s.set_uniform_color(s.c1i_loc, YELLOW);
+	s.set_uniform_color(s.c1o_loc, ORANGE);
+	s.set_uniform_color(s.c2i_loc, ORANGE);
+	s.set_uniform_color(s.c2o_loc, RED);
+	s.set_uniform_color(s.c3i_loc, RED);
+	s.set_uniform_color(s.c3o_loc, BLACK);
+	s.set_uniform_float(s.rad_loc, radius);
+	s.set_uniform_float(s.off_loc, (100.0*pos.x + 0.0007*tfticks)); // used as a hash
+	s.set_uniform_vector3d(s.vd_loc, (get_camera_pos() - pos).get_norm()); // local object space
+	fgPushMatrix();
+	translate_to(pos);
+	draw_quads();
+	fgPopMatrix();
 }
 
 
@@ -236,6 +248,7 @@ void draw_blasts(shader_t &s) {
 	}
 	sort(to_draw.begin(), to_draw.end());
 	quad_batch_draw qbd;
+	vpc_shader_t vpc_shader;
 
 	for (vector<ix_type_pair>::const_iterator i = to_draw.begin(); i != to_draw.end(); ++i) {
 		blastr const &br(blastrs[i->ix]);
@@ -316,6 +329,13 @@ void draw_blasts(shader_t &s) {
 				qbd.draw_and_clear();
 				glDepthMask(GL_TRUE);
 			}
+			break;
+
+		case ETYPE_PART_CLOUD:
+			if (begin_type) {cloud_explosion::draw_setup(vpc_shader);}
+			vpc_shader.add_uniform_color("color_mult", br.cur_color);
+			br.cloud_exp.draw(vpc_shader, br.pos, br.cur_size); // Note: no ground mode depth-based attenuation
+			if (end_type) {vpc_shader.end_shader(); s.make_current();}
 			break;
 
 		default:

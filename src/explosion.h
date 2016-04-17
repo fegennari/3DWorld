@@ -21,7 +21,7 @@ unsigned const EXP_FLAGS_NO_PART  = 0x04;
 
 
 enum {ETYPE_NONE=0, ETYPE_FIRE, ETYPE_NUCLEAR, ETYPE_ENERGY, ETYPE_ATOMIC, ETYPE_PLASMA, ETYPE_EMP, ETYPE_STARB,
-	  ETYPE_FUSION, ETYPE_EBURST, ETYPE_ESTEAL, ETYPE_ANIM_FIRE, ETYPE_SIEGE, ETYPE_FUSION_ROT, NUM_ETYPES};
+	  ETYPE_FUSION, ETYPE_EBURST, ETYPE_ESTEAL, ETYPE_ANIM_FIRE, ETYPE_SIEGE, ETYPE_FUSION_ROT, ETYPE_PART_CLOUD, NUM_ETYPES};
 
 
 class free_obj; // forward references
@@ -37,6 +37,14 @@ struct exp_type_params {
 };
 
 
+struct cloud_explosion : public volume_part_cloud {
+
+	void setup(float radius) {gen_pts(radius);}
+	static void draw_setup(vpc_shader_t &s);
+	void draw(vpc_shader_t &s, point const &pos, float radius) const;
+};
+
+
 struct blastr { // size = 118 (120)
 
 	int time, st_time, type, src;
@@ -46,12 +54,14 @@ struct blastr { // size = 118 (120)
 	colorRGBA color1, color2, cur_color;
 	free_obj const *parent;
 	bool one_frame_only, one_frame_seen;
+	cloud_explosion cloud_exp; // not always used
 
 	blastr() {}
 	blastr(int tm, int ty, int sr, float sz, float dam, point const &p, vector3d const &d,
 		colorRGBA const &c1, colorRGBA const &c2, free_obj const *const pa=NULL, bool ofo=0)
 		: time(tm), st_time(tm), type(ty), src(sr), size(sz), cur_size(sz), damage(dam), pos(p), dir(d.get_norm()),
 		up_vector(plus_y), color1(c1), color2(c2), cur_color(c1), parent(pa), one_frame_only(ofo), one_frame_seen(0) {}
+	void setup();
 	void check_pointers();
 	void update();
 	void add_as_dynamic_light() const;
