@@ -1,7 +1,7 @@
 uniform sampler2D frame_buffer_tex;
 uniform float focus_depth;
 uniform float dof_val;
-uniform float dim_val;
+uniform int dim_val = 0;
 
 const int MAX_BLUR_RADIUS = 8;
 
@@ -16,8 +16,7 @@ void main() {
 
 	for (int v = -MAX_BLUR_RADIUS; v <= MAX_BLUR_RADIUS; ++v) {
 		float weight = exp(-falloff*abs(v)); // Gaussian
-		vec2 pos     = tc + vec2(v*(1.0 - dim_val), v*dim_val)*xy_step;
-		color       += weight*texture(frame_buffer_tex, pos).rgb;
+		color       += weight*textureOffset(frame_buffer_tex, tc, ivec2(v*(1 - dim_val), v*dim_val)).rgb;
 		tot_w       += weight;
 	}
 	color /= tot_w;
