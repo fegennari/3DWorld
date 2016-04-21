@@ -2452,23 +2452,25 @@ void tile_draw_t::draw_decid_trees(bool reflection_pass, bool shadow_pass) {
 
 	if (lod_renderer.has_leaves()) { // draw leaf billboards
 		shader_t lrs;
-		lrs.set_vert_shader("texture_gen.part+tree_leaves_billboard");
+		lrs.set_vert_shader("tree_billboard_gs");
+		lrs.set_geom_shader("tree_billboard"); // point => 1 quad
 		lrs.set_frag_shader("linear_fog.part+ads_lighting.part*+leaf_lighting_comp.part*+noise_dither.part+tree_leaves_billboard");
 		billboard_tree_shader_setup(lrs);
 		lrs.add_uniform_color("color_scale", colorRGBA(cscale, cscale, cscale, 1.0));
 		lrs.set_specular(0.1, 10.0);
-		lod_renderer.render_billboards(0);
+		lod_renderer.render_billboards(lrs, 0);
 		lrs.clear_specular();
 		lrs.end_shader();
 	}
 	if (lod_renderer.has_branches()) { // draw branch billboards
 		shader_t brs;
-		brs.set_vert_shader("texture_gen.part+tree_branches_billboard");
+		brs.set_prefix("#define TREE_BRANCHES", 2); // GS
+		brs.set_vert_shader("tree_billboard_gs");
+		brs.set_geom_shader("tree_billboard"); // point => 1 quad
 		brs.set_frag_shader("linear_fog.part+ads_lighting.part*+noise_dither.part+tree_branches_billboard");
 		billboard_tree_shader_setup(brs); // cscale=1.0 ?
 		brs.add_uniform_vector3d("ref_dir", plus_y);
-		brs.add_uniform_vector3d("camera_pos", get_camera_pos());
-		lod_renderer.render_billboards(1);
+		lod_renderer.render_billboards(brs, 1);
 		brs.end_shader();
 	}
 	disable_blend();

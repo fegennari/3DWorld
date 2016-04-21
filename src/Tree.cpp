@@ -182,46 +182,31 @@ struct render_tree_branches_to_texture_t : public render_tree_to_texture_t {
 
 
 void tree_lod_render_t::finalize() {
-	
 	sort(leaf_vect.begin(),   leaf_vect.end());
 	sort(branch_vect.begin(), branch_vect.end());
 }
 
-
-void upload_draw_and_clear(vector<vert_color> &pts) {
-	if (pts.empty()) return;
-	//upload_to_dynamic_vbo(pts); draw_quads_as_tris(pts.size()); // slow on Nvidia cards, but okay on ATI cards - compatible with core context
-	draw_quad_verts_as_tris(pts);
-	pts.clear();
-}
-
-void tree_lod_render_t::render_billboards(bool render_branches) const { // branches or leaves
+void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) const { // branches or leaves
 
 	vector<entry_t> const &data(render_branches ? branch_vect : leaf_vect);
 	if (data.empty()) return;
-	vector<vert_color> pts;
 	point const camera(get_camera_pos());
 	tree_data_t const *last_td(nullptr);
+	s.add_uniform_vector3d("camera_pos", camera);
+	s.add_uniform_vector3d("up_vector",  up_vector);
+	vector<vert_tc_color> pts;
 
 	for (vector<entry_t>::const_iterator i = data.begin(); i != data.end(); ++i) {
 		if (i->td != last_td) {
 			assert(i->td);
 			last_td = i->td;
-			upload_draw_and_clear(pts);
+			draw_and_clear_verts(pts, GL_POINTS);
 			(render_branches ? i->td->get_render_branch_texture() : i->td->get_render_leaf_texture()).bind_texture();
 		}
-		point pos(i->pos);
-		if (!render_branches) {pos += 0.5*i->td->lr_x*(camera - i->pos).get_norm();}
-		vector3d const vdir(camera - pos); // z
-		vector3d const v1(cross_product(vdir, up_vector).get_norm()*(render_branches ? i->td->br_x : i->td->lr_x)); // x (what if colinear?)
-		vector3d const v2((render_branches ? i->td->br_z*up_vector : i->td->lr_z*cross_product(v1, vdir).get_norm())); // y
-		pts.push_back(vert_color((pos - v1 - v2), i->cw.c));
-		pts.push_back(vert_color((pos + v1 - v2), i->cw.c));
-		pts.push_back(vert_color((pos + v1 + v2), i->cw.c));
-		pts.push_back(vert_color((pos - v1 + v2), i->cw.c));
+		pts.push_back(vert_tc_color(i->pos, (render_branches ? i->td->br_x : i->td->lr_x), (render_branches ? i->td->br_z : i->td->lr_z), i->cw.c));
 	} // for i
 	assert(!pts.empty());
-	upload_draw_and_clear(pts);
+	draw_and_clear_verts(pts, GL_POINTS);
 	bind_vbo(0);
 }
 

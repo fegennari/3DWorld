@@ -55,7 +55,7 @@ public:
 		branch_vect.push_back(entry_t(td, pos, colorRGBA(bcolor, opacity)));
 	}
 	void finalize();
-	void render_billboards(bool render_branches) const;
+	void render_billboards(shader_t &s, bool render_branches) const;
 };
 
 

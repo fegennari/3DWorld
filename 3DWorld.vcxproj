@@ -993,6 +993,7 @@
     <None Include="shaders\tiled_mesh_shadow.vert" />
     <None Include="shaders\tiled_shadow_map.part" />
     <None Include="shaders\tiled_tree_branches.frag" />
+    <None Include="shaders\tree_billboard.geom" />
     <None Include="shaders\tree_branches_billboard.frag" />
     <None Include="shaders\tree_branches_billboard.vert" />
     <None Include="shaders\tree_branches_no_lighting.vert" />
