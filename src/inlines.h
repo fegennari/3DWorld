@@ -22,6 +22,8 @@ extern unsigned char **mesh_draw;
 extern float SCENE_SIZE[];
 extern rand_gen_t global_rand_gen;
 
+template<typename T> void clear_cont(T &cont) {T().swap(cont);}
+
 
 // ***************** MATH FUNCTIONS ********************
 

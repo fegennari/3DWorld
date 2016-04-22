@@ -197,8 +197,6 @@ typedef vertex_map_t<vert_norm_tc> vntc_map_t;
 typedef vertex_map_t<vert_norm_tc_tan> vntct_map_t;
 
 
-template<typename T> void clear_cont(T &cont) {T().swap(cont);}
-
 struct get_polygon_args_t {
 	vector<coll_tquad> &polygons;
 	colorRGBA color;
