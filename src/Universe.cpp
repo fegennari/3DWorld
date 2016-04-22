@@ -1158,9 +1158,9 @@ bool ugalaxy::create(ucell const &cell, int index) {
 	cube_t const cube(-radius*scale, radius*scale);
 	point galaxy_ext(all_zeros), pts[8];
 	cube.get_points(pts);
+	rotate_vector3d_multi(axis, -xy_angle, pts, 8);
 
 	for (unsigned p = 0; p < 8; ++p) {
-		rotate_vector3d(axis, -xy_angle, pts[p]);
 		for (unsigned j = 0; j < 3; ++j) {galaxy_ext[j] = max(galaxy_ext[j], fabs(pts[p][j]));}
 	}
 	for (unsigned j = 0; j < 3; ++j) {
