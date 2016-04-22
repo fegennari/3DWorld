@@ -18,4 +18,7 @@ Bullet physics for movable boxes
 In-Game cobjs editor
 Counted normal averages normals using face area as weights
 Scattering in glass blocks/spheres
+Line drawing offset in the vetex shader
+Better 8-bit normal map compression using denormalized values
+http://sebh-blog.blogspot.com.es
 
