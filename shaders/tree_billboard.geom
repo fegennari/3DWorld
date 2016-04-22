@@ -22,7 +22,7 @@ void do_vertex(in vec4 pos, in vec3 delta, in float ts, in float tt) {
 #endif
 	eye_space_pos = fg_ModelViewMatrix * out_pos;
 	gl_Position   = fg_ProjectionMatrix * eye_space_pos;
-	tc = vec2(ts, tt);
+	tc            = vec2(ts, tt);
 	EmitVertex();
 }
 

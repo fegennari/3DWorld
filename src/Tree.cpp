@@ -190,9 +190,8 @@ void tree_lod_render_t::render_billboards(shader_t &s, bool render_branches) con
 
 	vector<entry_t> const &data(render_branches ? branch_vect : leaf_vect);
 	if (data.empty()) return;
-	point const camera(get_camera_pos());
 	tree_data_t const *last_td(nullptr);
-	s.add_uniform_vector3d("camera_pos", camera);
+	s.add_uniform_vector3d("camera_pos", get_camera_pos());
 	s.add_uniform_vector3d("up_vector",  up_vector);
 	vector<vert_tc_color> pts;
 
