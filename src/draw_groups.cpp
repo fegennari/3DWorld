@@ -492,9 +492,9 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				for (unsigned d = 0; d < 2; ++d) {
 					dirs[d]   *= 0.5*leaf_scale;
 					dirs[d].x *= leaf_x_ar;
-					rotate_vector3d(plus_z, -obj.init_dir.x, dirs[d]);
-					rotate_vector3d(obj.orientation, -obj.angle/TO_DEG, dirs[d]);
 				}
+				rotate_vector3d_multi(plus_z, -obj.init_dir.x, dirs, 2);
+				rotate_vector3d_multi(obj.orientation, -obj.angle/TO_DEG, dirs, 2);
 				qbd.add_quad_dirs((pos + dirs[1]), dirs[0], -dirs[1], leaf_color, cross_product(dirs[0], dirs[1]).get_norm());
 			} // for j
 			qbd.draw_and_clear();
@@ -686,7 +686,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 
 			if (!particles_to_draw.empty()) {
 				sort(particles_to_draw.begin(), particles_to_draw.end()); // sort back to front
-				quad_batch_draw particle_qbd;
+				static quad_batch_draw particle_qbd;
 				point const camera(get_camera_pos());
 
 				for (auto i = particles_to_draw.begin(); i != particles_to_draw.end(); ++i) {
@@ -697,7 +697,7 @@ void draw_group(obj_group &objg, shader_t &s, lt_atten_manager_t &lt_atten_manag
 				}
 				bool const can_use_additive_blend(0 && smoke_exists); // too much of a transition when smoke appears/disappears, so disable for now
 				if (can_use_additive_blend) {set_additive_blend_mode();}
-				particle_qbd.draw();
+				particle_qbd.draw_and_clear();
 				if (can_use_additive_blend) {set_std_blend_mode();}
 			}
 			draw_verts(shrapnel_verts, GL_TRIANGLES);
