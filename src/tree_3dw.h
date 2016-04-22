@@ -251,6 +251,7 @@ public:
 	void alloc_leaf_data() {leaf_data.resize(4*leaves.size());}
 	void clear_data();
 	void clear_context();
+	unsigned get_leaf_data_mem() const {return leaf_data.size()*sizeof(leaf_vert_type_t);}
 	unsigned get_gpu_mem() const;
 	int get_tree_type() const {return tree_type;}
 	point get_center() const {return point(0.0, 0.0, sphere_center_zoff);}

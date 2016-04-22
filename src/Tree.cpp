@@ -587,7 +587,7 @@ bool tree::spraypaint_leaves(point const &pos, float radius, colorRGBA const &co
 
 bool tree_data_t::spraypaint_leaves(point const &pos, float radius, colorRGBA const &color, bool check_only) {
 
-	if (leaf_data.empty()) return 0;
+	if (!leaf_data_allocated()) return 0;
 	bool changed(0);
 
 	// Note: may apply to multiple trees if instancing is used
@@ -596,7 +596,7 @@ bool tree_data_t::spraypaint_leaves(point const &pos, float radius, colorRGBA co
 		bool const center_close(dist_less_than(pos, center, radius));
 
 		for (unsigned j = 0; j < 4; ++j) { // use closest point - leaf corner or center
-			if (!dist_less_than(pos, leaves[i].pts[j], radius) && !center_close) continue;
+			if (!center_close && !dist_less_than(pos, leaves[i].pts[j], radius)) continue;
 			if (check_only) return 1; // leaf color will be changed
 			float const blend_val(color.alpha*(1.0 - min(p2p_dist(pos, leaves[i].pts[j]), p2p_dist(pos, center))/radius));
 			unsigned const ix((i<<2)+j);
@@ -739,7 +739,6 @@ void tree_data_t::clear_vbo_ixs() {
 	branch_manager.reset_vbos_to_zero();
 }
 
-
 void tree_data_t::clear_context() {
 
 	render_leaf_texture.free_context();
@@ -752,7 +751,7 @@ void tree_data_t::clear_context() {
 
 unsigned tree_data_t::get_gpu_mem() const {
 
-	unsigned mem(branch_manager.gpu_mem + (leaf_vbo ? leaf_data.size()*sizeof(leaf_vert_type_t) : 0));
+	unsigned mem(branch_manager.gpu_mem + (leaf_vbo ? get_leaf_data_mem() : 0));
 	unsigned const bbsz(TREE_BILLBOARD_SIZE*TREE_BILLBOARD_SIZE*8); // 8 bytes per pixel
 	if (render_leaf_texture.is_valid  ()) {mem += bbsz;}
 	if (render_branch_texture.is_valid()) {mem += bbsz;}
@@ -1054,8 +1053,7 @@ void tree_data_t::ensure_leaf_vbo() {
 		assert(leaf_change_end <= leaves.size());
 		bind_vbo(leaf_vbo);
 		unsigned const per_leaf_stride(4*sizeof(leaf_vert_type_t));
-		upload_vbo_sub_data((&leaf_data.front() + 4*leaf_change_start), leaf_change_start*per_leaf_stride,
-			(leaf_change_end - leaf_change_start)*per_leaf_stride);
+		upload_vbo_sub_data((&leaf_data.front() + 4*leaf_change_start), leaf_change_start*per_leaf_stride, (leaf_change_end - leaf_change_start)*per_leaf_stride);
 	}
 	leaf_change_start = leaves.size();
 	leaf_change_end   = 0;
@@ -1222,9 +1220,9 @@ int tree::delete_tree() {
 void tree_data_t::clear_data() {
 	
 	clear_context();
-	all_cylins.clear(); remove_excess_cap(all_cylins);
-	leaf_data.clear();  remove_excess_cap(leaf_data);
-	leaves.clear();     remove_excess_cap(leaves); // Note: not present in original delete_trees()
+	clear_cont(all_cylins);
+	clear_cont(leaf_data);
+	clear_cont(leaves); // Note: not present in original delete_trees()
 }
 
 
