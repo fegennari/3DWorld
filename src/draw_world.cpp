@@ -643,6 +643,13 @@ bool add_cobj_to_draw_list(unsigned cix, int reflection_pass, bool use_ref_plane
 	return !check_big_occluder(c, cix, pb.large_cobjs[0]);
 }
 
+void cobj_draw_buffer::draw() const {
+	
+	draw_verts(tri_verts, GL_TRIANGLES);
+	draw_quad_verts_as_tris(quad_verts);
+	draw_quad_verts_as_tris(tc_verts);
+}
+
 // should always have draw_solid enabled on the first call for each frame
 void draw_coll_surfaces(bool draw_trans, int reflection_pass) {
 

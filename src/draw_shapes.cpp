@@ -146,7 +146,7 @@ void emit_cube_side(vert_norm_texp &vnt, point const pts[4], cobj_draw_buffer &c
 
 	for (unsigned i = 0; i < 6; ++i) { // quads (2 triangles)
 		vnt.v = pts[quad_to_tris_ixs[i]];
-		cdb.add_vert(vnt);
+		cdb.add_vert(vnt); // Note: could use quad verts, but this increases draw calls and is actually slightly slower
 	}
 }
 
@@ -253,7 +253,6 @@ void coll_obj::draw_coll_cube(int tid, cobj_draw_buffer &cdb) const {
 
 
 bool camera_back_facing(point const *const points, int npoints, vector3d const &normal) {
-
 	return (dot_product_ptv(normal, get_camera_pos(), get_center(points, npoints)) >= 0.0);
 }
 
@@ -345,11 +344,7 @@ void get_sorted_thick_poly_faces(point pts[2][4], pair<int, unsigned> faces[6], 
 
 
 void cdb_add_quad_tc(point const *const pts, vector3d const &normal, float tcs[2][2], cobj_draw_buffer &cdb) {
-
-	for (int i = 0; i < 6; ++i) { // 2 triangles
-		unsigned const ix(quad_to_tris_ixs[i]);
-		cdb.add_vert(vert_norm_tc(pts[ix], normal, tcs[0][(ix&1)^(ix>>1)], tcs[1][ix>>1]));
-	}
+	for (int i = 0; i < 4; ++i) {cdb.add_vert_quad_tc(vert_norm_tc(pts[i], normal, tcs[0][(i&1)^(i>>1)], tcs[1][i>>1]));}
 }
 
 void coll_obj::draw_extruded_polygon(int tid, cobj_draw_buffer &cdb) const {
