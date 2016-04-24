@@ -344,6 +344,7 @@ int player_state::find_nearest_enemy(point const &pos, pos_dir_up const &pdu, po
 }
 
 
+// i = cand waypoint; curw = prev cand waypoint; sstates[smiley_id].last_waypoint is prev waypoint
 void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir, int smiley_id,
 	vector<od_data> &oddatav, unsigned i, int curw, float dmult, pos_dir_up const &pdu, bool next, float max_dist_sq)
 {
@@ -354,11 +355,12 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	bool const can_see(next || (on_waypt_path && (int)i == curw));
 	if (!is_over_mesh(wp) || is_underwater(wp))                                return; // invalid smiley location
 	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
-	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this directio
+	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this direction
+	int const last_wp(sstates[smiley_id].last_waypoint);
 	unsigned other_smiley_targets(0);
 
 	for (int s = 0; s < num_smileys; ++s) {
-		if (s != smiley_id && sstates[s].last_waypoint == (int)i) ++other_smiley_targets;
+		if (s != smiley_id && sstates[s].last_waypoint == (int)i) {++other_smiley_targets;}
 	}
 	dmult *= (1.0 + 1.0*other_smiley_targets); // increase distance cost if other smileys are going for the same waypoint
 	map<unsigned, count_t>::const_iterator it(blocked_waypts.find(i));
@@ -1033,7 +1035,9 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	assert(obj.type == SMILEY);
 	assert(obj_groups[coll_id[SMILEY]].enabled);
 	if (!check_smiley_status(obj, smiley_id)) {fall_counter = 0; return;}
-	maybe_teleport_object(obj.pos, object_types[SMILEY].radius, smiley_id);
+	// reset last waypoint if the smiley teleported;
+	// the teleporter itself was likely the last waypoint, so it has been reached even if the smiley teleported before it was in range of the waypoint
+	if (maybe_teleport_object(obj.pos, object_types[SMILEY].radius, smiley_id)) {last_waypoint = -1;}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
 	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}
