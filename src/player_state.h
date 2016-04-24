@@ -253,7 +253,8 @@ struct teleporter : public sphere_t, public volume_part_cloud {
 	float last_used_tfticks;
 
 	teleporter() : last_used_tfticks(0.0) {}
-	float get_draw_radius() const {return 1.5*radius;}
+	float get_draw_radius  () const {return 1.5*radius;}
+	float get_teleport_dist() const {return p2p_dist(pos, dest);}
 	void setup() {gen_pts(get_draw_radius());}
 	void draw(vpc_shader_t &s) const; // maybe should be static and applied to all teleporters
 	bool maybe_teleport_object(point &opos, float oradius, int player_id);
