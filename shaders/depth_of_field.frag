@@ -15,7 +15,7 @@ void main() {
 	float falloff = clamp(dof_val/max(0.001, abs(depth - focus_depth)), 0.1, 1000.0);
 
 	for (int v = -MAX_BLUR_RADIUS; v <= MAX_BLUR_RADIUS; ++v) {
-		float weight = exp(-falloff*abs(v)); // Gaussian
+		float weight = exp(-falloff*abs(v)); // Gaussian - Note: could use a lookup table, but doesn't make much difference
 		color       += weight*textureOffset(frame_buffer_tex, tc, ivec2(v*(1 - dim_val), v*dim_val)).rgb;
 		tot_w       += weight;
 	}
