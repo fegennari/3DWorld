@@ -734,6 +734,7 @@ void display(void) {
 	reset_timing = 0;
 	check_gl_error(1);
 	set_fill_mode();
+	set_std_blend_mode();
 
 	if (map_mode && world_mode != WMODE_UNIVERSE) {
 		if (!pause_frame) {uevent_advance_frame();}
