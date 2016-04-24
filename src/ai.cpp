@@ -356,7 +356,6 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	if (!is_over_mesh(wp) || is_underwater(wp))                                return; // invalid smiley location
 	if (WAYPT_VIS_LEVEL[can_see] == 0 && !sphere_in_view(pdu, wp, 0.0, 0))     return; // view culling - more detailed query later
 	if (avoid_dir != zero_vector && dot_product_ptv(wp, pos, avoid_dir) > 0.0) return; // need to avoid this direction
-	int const last_wp(sstates[smiley_id].last_waypoint);
 	unsigned other_smiley_targets(0);
 
 	for (int s = 0; s < num_smileys; ++s) {
@@ -371,6 +370,14 @@ void player_state::check_cand_waypoint(point const &pos, point const &avoid_dir,
 	float const time_weight(tfticks - waypoints[i].get_time_since_last_visited(smiley_id));
 	float const tot_weight(dmult*(0.5*time_weight + dist_sq)*rand_uniform(0.8, 1.2));
 	oddatav.push_back(od_data(WAYPOINT, i, tot_weight, can_see)); // add high weight to prefer other objects
+}
+
+
+void player_state::mark_waypoint_reached(int curw, int smiley_id) {
+
+	waypts_used.insert(curw); // insert as the last used waypoint and remove from consideration
+	waypoints[curw].mark_visited_by_smiley(smiley_id);
+	unreachable[1].clear();
 }
 
 
@@ -413,9 +420,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				assert((unsigned)curw < waypoints.size());
 
 				if (dist_less_than(waypoints[curw].pos, pos, sradius)) { // smiley has reached waypoint
-					waypts_used.insert(curw); // insert as the last used waypoint and remove from consideration
-					waypoints[curw].mark_visited_by_smiley(smiley_id);
-					unreachable[1].clear();
+					mark_waypoint_reached(curw, smiley_id);
 					waypt_adj_vect const &next(waypoints[curw].next_wpts);
 
 					if (!next.empty()) { // choose next waypoint from graph
@@ -1035,9 +1040,13 @@ void player_state::advance(dwobject &obj, int smiley_id) { // seems to slightly 
 	assert(obj.type == SMILEY);
 	assert(obj_groups[coll_id[SMILEY]].enabled);
 	if (!check_smiley_status(obj, smiley_id)) {fall_counter = 0; return;}
+	
 	// reset last waypoint if the smiley teleported;
 	// the teleporter itself was likely the last waypoint, so it has been reached even if the smiley teleported before it was in range of the waypoint
-	if (maybe_teleport_object(obj.pos, object_types[SMILEY].radius, smiley_id)) {last_waypoint = -1;}
+	if (maybe_teleport_object(obj.pos, object_types[SMILEY].radius, smiley_id)) {
+		if (last_waypoint >= 0) {mark_waypoint_reached(last_waypoint, smiley_id);} // mark this waypoint as reached
+		last_waypoint = -1;
+	}
 	smiley_select_target(obj, smiley_id);
 	obj.time += iticks;
 	if (!smiley_motion(obj, smiley_id)) {fall_counter = 0; return;}
