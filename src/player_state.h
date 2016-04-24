@@ -55,11 +55,11 @@ typedef vector<wpt_ix_t> waypt_adj_vect;
 struct waypoint_t {
 
 	bool user_placed, placed_item, goal, temp, visited, disabled, next_valid;
-	int came_from, item_group, item_ix, coll_id;
+	int came_from, item_group, item_ix, coll_id, connected_to;
 	float g_score, h_score, f_score;
 	point pos;
 	float last_smiley_time;
-	waypt_adj_vect next_wpts, prev_wpts, visible_wpts;
+	waypt_adj_vect next_wpts, prev_wpts;
 
 	waypoint_t(point const &p=all_zeros, int cid=-1, bool up=0, bool i=0, bool g=0, bool t=0);
 	void mark_visited_by_smiley(unsigned const smiley_id);

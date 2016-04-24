@@ -72,7 +72,7 @@ bool waypt_used_set::is_valid(unsigned wp) { // called to determine whether or n
 
 waypoint_t::waypoint_t(point const &p, int cid, bool up, bool i, bool g, bool t)
 	: user_placed(up), placed_item(i), goal(g), temp(t), visited(0), disabled(0), next_valid(0),
-	came_from(-1), item_group(-1), item_ix(-1), coll_id(cid), g_score(0), h_score(0), f_score(0), pos(p)
+	came_from(-1), item_group(-1), item_ix(-1), coll_id(cid), connected_to(-1), g_score(0), h_score(0), f_score(0), pos(p)
 {
 	clear();
 }
@@ -98,7 +98,6 @@ void waypoint_t::clear() {
 	last_smiley_time = tfticks;
 	next_wpts.clear();
 	prev_wpts.clear();
-	visible_wpts.clear();
 	visited = 0;
 }
 
@@ -338,8 +337,10 @@ public:
 			}
 		}
 		for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
-			int const ix(add_if_valid(i->pos, -1, 0)); // does this waypoint need any state to be set?
-			//if (ix >= 0) {waypoints[ix].goal = 1;}
+			int const six(add_if_valid(i->pos, -1, 0)); // does this waypoint need any state to be set?
+			int const eix(add_if_valid(i->dest, -1, 0)); // add teleporter destination as well, so that smileys going through the teleporter end on a waypoint
+			//if (six >= 0) {waypoints[six].goal = 1;}
+			if (six >= 0 && eix >= 0) {waypoints[six].connected_to = eix;} // connect them if both are valid
 		}
 		cout << "Added " << (waypoints.size() - num_waypoints) << " object placement waypoints" << endl;
 	}
@@ -426,7 +427,7 @@ public:
 		for (int i = from_start; i < (int)from_end; ++i) {waypoints[i].next_valid = 0;}
 		vector<pair<float, unsigned> > cands;
 
-		#pragma omp parallel for schedule(dynamic,1) private(cands) // is this fully thread safe?
+		#pragma omp parallel for schedule(dynamic,1) private(cands) // is this fully thread safe? it's not determinstic across threads
 		for (int i = from_start; i < (int)from_end; ++i) {
 			assert(i < (int)waypoints.size());
 			if (waypoints[i].disabled) continue;
@@ -436,11 +437,15 @@ public:
 
 			for (unsigned j = to_start; j < to_end; ++j) {
 				if (i == (int)j || waypoints[j].disabled) continue;
+
+				if (waypoints[i].connected_to == j) { // connected by a teleporter
+					cands.push_back(make_pair(0.0, j)); // zero distance
+					continue;
+				}
 				point const end(waypoints[j].pos);
 				if (cindex >= 0 && coll_objects.get_cobj(cindex).line_intersect(start, end)) continue; // hit last cobj
 				if (fast && !dist_less_than(start, end, fast_dmax)) continue; // too far away
 				if (check_coll_line(start, end, cindex, -1, 1, 0, 1, 0, 1)) continue; // no line of sight (skip dynamic/movable)
-				waypoints[i].visible_wpts.push_back(j);
 				cands.push_back(make_pair(p2p_dist_sq(start, end), j));
 				++visible;
 			}
@@ -476,7 +481,7 @@ public:
 				}
 				if (redundant) continue;
 
-				if (is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT, 1)) {
+				if (waypoints[i].connected_to == k || is_point_reachable(start, end, tot_steps, STEP_SIZE_MULT, 1)) {
 					next.push_back(k);
 					++num_edges;
 				}
@@ -612,13 +617,12 @@ public:
 		if (!goal.is_reachable()) return 0.0; // nothing to do
 		assert(path.empty());
 		bool const orig_has_wpt_goal(has_wpt_goal);
-		if (goal.mode == 4) goal.pos = waypoints[goal.wpt].pos; // specific waypoint
-		if (goal.mode == 5) goal.wpt = wb.find_closest_waypoint(goal.pos, 0);
-		if (goal.mode == 6) goal.wpt = wb.find_closest_waypoint(goal.pos, 1);
-		if (goal.mode == 7) goal.wpt = wb.add_new_waypoint(goal.pos, -1, 1, 1, 1, 1); // goal position - add temp waypoint
-		if (goal.mode == 7) has_wpt_goal = 1;
+		if (goal.mode == 4) {goal.pos = waypoints[goal.wpt].pos;} // specific waypoint
+		if (goal.mode == 5) {goal.wpt = wb.find_closest_waypoint(goal.pos, 0);}
+		if (goal.mode == 6) {goal.wpt = wb.find_closest_waypoint(goal.pos, 1);}
+		if (goal.mode == 7) {goal.wpt = wb.add_new_waypoint(goal.pos, -1, 1, 1, 1, 1);} // goal position - add temp waypoint
+		if (goal.mode == 7) {has_wpt_goal = 1;}
 		//cout << "start: " << start.size() << ", goal: mode: " << goal.mode << ", pos: " << goal.pos.str() << ", wpt: " << goal.wpt << endl;
-		
 		std::priority_queue<pair<float, unsigned> > open_queue;
 		wc.open.resize(waypoints.size(), 0); // already resized after the first call
 		wc.closed.resize(waypoints.size(), 0);
@@ -628,9 +632,9 @@ public:
 			unsigned const ix(i->first);
 			assert(ix < waypoints.size());
 			waypoint_t &w(waypoints[ix]);
-			w.g_score   = i->second; // Cost from start along best known path.
+			w.g_score   = i->second; // cost from start along best known path
 			w.h_score   = get_h_dist(ix);
-			w.f_score   = w.h_score; // Estimated total cost from start to goal through current.
+			w.f_score   = w.h_score; // estimated total cost from start to goal through current
 			w.came_from = -1;
 
 			if (is_goal(ix)) { // already at the goal
@@ -662,7 +666,8 @@ public:
 				if (wc.closed[*i] == wc.call_ix) continue; // already closed (duplicate)
 				assert(*i < waypoints.size());
 				waypoint_t &wn(waypoints[*i]);
-				float const new_g_score(cw.g_score + p2p_dist(cw.pos, wn.pos));
+				float new_g_score(cw.g_score);
+				if (cw.connected_to != *i) {new_g_score += p2p_dist(cw.pos, wn.pos);} // if not connected by a teleporter, use distance between the waypoints
 				bool better(0);
 
 				if (wc.open[*i] != wc.call_ix) {
