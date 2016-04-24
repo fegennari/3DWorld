@@ -23,7 +23,7 @@ waypoint_vector waypoints;
 
 extern bool use_waypoints;
 extern int DISABLE_WATER, camera_change, frame_counter, num_smileys, num_groups, display_mode;
-extern float temperature, zmin, tfticks, water_plane_z, waypoint_sz_thresh;
+extern float temperature, zmin, tfticks, water_plane_z, waypoint_sz_thresh, CAMERA_RADIUS;
 extern int coll_id[];
 extern obj_group obj_groups[];
 extern obj_type object_types[];
@@ -337,7 +337,7 @@ public:
 			}
 		}
 		for (vector<teleporter>::const_iterator i = teleporters.begin(); i != teleporters.end(); ++i) {
-			int const six(add_if_valid(i->pos, -1, 0)); // does this waypoint need any state to be set?
+			int const six(add_if_valid(i->pos,  -1, 0)); // does this waypoint need any state to be set?
 			int const eix(add_if_valid(i->dest, -1, 0)); // add teleporter destination as well, so that smileys going through the teleporter end on a waypoint
 			//if (six >= 0) {waypoints[six].goal = 1;}
 			if (six >= 0 && eix >= 0) {waypoints[six].connected_to = eix;} // connect them if both are valid
@@ -439,7 +439,7 @@ public:
 				if (i == (int)j || waypoints[j].disabled) continue;
 
 				if (waypoints[i].connected_to == j) { // connected by a teleporter
-					cands.push_back(make_pair(0.0, j)); // zero distance
+					cands.push_back(make_pair(CAMERA_RADIUS, j)); // small but nonzero distance
 					continue;
 				}
 				point const end(waypoints[j].pos);
@@ -666,8 +666,8 @@ public:
 				if (wc.closed[*i] == wc.call_ix) continue; // already closed (duplicate)
 				assert(*i < waypoints.size());
 				waypoint_t &wn(waypoints[*i]);
-				float new_g_score(cw.g_score);
-				if (cw.connected_to != *i) {new_g_score += p2p_dist(cw.pos, wn.pos);} // if not connected by a teleporter, use distance between the waypoints
+				// if not connected by a teleporter, use distance between the waypoints; otherswise, use a small but nonzero value
+				float const new_g_score(cw.g_score + ((cw.connected_to == *i) ? CAMERA_RADIUS : p2p_dist(cw.pos, wn.pos)));
 				bool better(0);
 
 				if (wc.open[*i] != wc.call_ix) {
