@@ -14,5 +14,5 @@ newmtl 02___Default
 	Ke 0.000000000000 0.000000000000 0.000000000000
 	map_Ka pez02difusa.jpg
 	map_Kd pez02difusa.jpg
-	map_bump pez02bump.jpg
-	bump pez02bump.jpg
+	#map_bump pez02bump.jpg
+	#bump pez02bump.jpg

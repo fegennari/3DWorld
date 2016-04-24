@@ -43,7 +43,7 @@ r 0.0 1.0 # reset specularity
 
 # fish on the table
 #t 0.0 0.0 0.0  s 1 2  M 0  m 0.1
-O "..\models\fish\pez_02\fishOBJ.model3d" 4 0 0
+O "model_data\fish\fishOBJ.model3d" 4 0 0
 Z 6  2.5 3.0 0.02  0.1  0.0 1.0 0.0 -45.0  0.008  # group_cobjs_level tx ty tz [scale [rx ry rz angle [<voxel_xy_spacing>]]]
 
 # reflective shapes
