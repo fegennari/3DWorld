@@ -118,11 +118,10 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 	set_active_texture(1);
 	bind_depth_buffer();
 	set_active_texture(0);
-	bind_frame_buffer_RGB();
 	shader_t s;
 
 	for (unsigned dim = 0; dim < 2; ++dim) {
-		if (dim) {bind_frame_buffer_RGB();}
+		bind_frame_buffer_RGB();
 		s.set_vert_shader("no_lighting_tex_coord");
 		s.set_frag_shader("depth_utils.part+depth_of_field");
 		s.begin_shader();
@@ -130,6 +129,22 @@ void add_depth_of_field(float focus_depth, float dof_val) {
 		s.add_uniform_int  ("dim_val",     (dim ? 1 : 0));
 		s.add_uniform_float("focus_depth", focus_depth);
 		s.add_uniform_float("dof_val",     dof_val);
+		draw_white_quad_and_end_shader(s);
+		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
+	}
+}
+
+void add_2d_blur() {
+
+	shader_t s;
+
+	for (unsigned dim = 0; dim < 2; ++dim) {
+		bind_frame_buffer_RGB();
+		s.set_vert_shader("no_lighting_tex_coord");
+		s.set_frag_shader("screen_space_blur_1d");
+		s.begin_shader();
+		s.add_uniform_int("frame_buffer_tex", 0);
+		s.add_uniform_int("dim_val", (dim ? 1 : 0));
 		draw_white_quad_and_end_shader(s);
 		color_buffer_frame = 0; // reset to invalidate buffer and force recreation of texture for second pass
 	}
@@ -160,7 +175,8 @@ void run_postproc_effects() {
 	//if (display_mode & 0x20) {add_ssao();}
 	
 	if (camera_underwater) {
-		add_color_only_effect("screen_space_blur");
+		//add_color_only_effect("screen_space_blur");
+		add_2d_blur();
 		if (player_is_drowning()) {add_color_only_effect("drunken_wave", 1.0);}
 	}
 	else {
