@@ -386,7 +386,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 	point &target_pt, float &min_dist, vector<type_wt_t> types, int last_target_visible, int last_target_type)
 {
 	assert(smiley_id < num_smileys);
-	int min_ic(-1);
+	int min_ic(-1), next_path_wpt(-1);
 	float sradius(object_types[SMILEY].radius), ra_smiley(C_STEP_HEIGHT*sradius);
 	min_dist = 0.0;
 
@@ -425,7 +425,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 
 					if (!next.empty()) { // choose next waypoint from graph
 						// FIXME: skip path waypoints that are in unreachable[1]?
-						curw = find_optimal_next_waypoint(curw, goal); // can return -1
+						curw = next_path_wpt = find_optimal_next_waypoint(curw, goal); // can return -1
 
 						for (unsigned i = 0; i < next.size(); ++i) {
 							check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, next[i], curw, dmult, pdu, 1, 0.0);
@@ -482,12 +482,12 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		assert(type >= 0 && type < NUM_TOT_OBJS);
 		point pos2;
 		dwobject const *obj(NULL);
-		bool const is_wpt(type == WAYPOINT);
+		bool const is_wpt(type == WAYPOINT), is_next_wpt(is_wpt && on_waypt_path && (id == last_waypoint || id == next_path_wpt));
 		bool no_frustum_test(0), skip_vis_test(0);
 
 		if (is_wpt) {
 			assert(size_t(id) < waypoints.size());
-			bool const can_see(oddatav[i].val != 0 || (on_waypt_path && id == last_waypoint));
+			bool const can_see(oddatav[i].val != 0 || is_next_wpt);
 			pos2 = waypoints[id].pos;
 			no_frustum_test = (WAYPT_VIS_LEVEL[can_see] == 1);
 			skip_vis_test   = (WAYPT_VIS_LEVEL[can_see] == 2);
@@ -516,7 +516,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 		}
 		if (can_reach || not_too_high2 || (is_wpt && on_waypt_path)) { // not_too_high2 - may be incorrect
 			int const max_vis_level(is_wpt ? 3 : ((type == BALL) ? 5 : 4));
-			bool skip_path_comp(target_pos == pos2 && (rand()&15) != 0); // infrequent updates if same target
+			bool skip_path_comp(is_next_wpt || (target_pos == pos2 && (rand()&15) != 0)); // infrequent updates if same target
 
 			if ((skip_vis_test || sphere_in_view(pdu, pos2, oradius, max_vis_level, no_frustum_test)) &&
 				(powerup == PU_FLIGHT || skip_path_comp || is_valid_path(pos, pos2, !is_wpt)))
