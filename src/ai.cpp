@@ -273,14 +273,14 @@ void player_state::smiley_fire_weapon(int smiley_id) {
 	}
 	int &ammo(p_ammo[weapon]);
 	assert(ammo >= 0);
-	if (weapon == W_GRENADE && (wmode&1) && ammo < 3) wmode = 0;
+	if (weapon == W_GRENADE && (wmode&1) && ammo < 3) {wmode = 0;}
 	int chosen;
 	status = fire_projectile(pos, orient, smiley_id, chosen);
 
 	if (status != 0 && !UNLIMITED_WEAPONS && !no_weap_or_ammo() && w.need_ammo) {
 		ammo -= (weapon == W_GRENADE && (wmode&1)) ? 3 : 1; // check for cluster grenade
 		assert(ammo >= 0);
-		if (ammo == 0) fire_frame = 0; // could switch weapons
+		if (ammo == 0) {fire_frame = 0;} // could switch weapons
 	}
 }
 
@@ -289,8 +289,8 @@ void add_target(vector<od_data> &oddatav, pos_dir_up const &pdu, point const &po
 
 	if (!sphere_in_view(pdu, pos2, radius, 0)) return; // view culling
 	float dist_sq(p2p_dist_sq(pdu.pos, pos2));
-	if (hitter == id) dist_sq *= 0.25; // prefer to attack your attacker
-	if (killer == id) dist_sq *= 0.5;  // prefer to attack your last killer in revenge
+	if (hitter == id) {dist_sq *= 0.25;} // prefer to attack your attacker
+	if (killer == id) {dist_sq *= 0.5;}  // prefer to attack your last killer in revenge
 	oddatav.push_back(od_data(((id == CAMERA_ID) ? CAMERA : SMILEY), id, dist_sq));
 }
 
@@ -445,7 +445,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				if (waypoints[i].disabled || (int)i == ignore_w) continue;
 				check_cand_waypoint(pos, avoid_dir, smiley_id, oddatav, i, curw, dmult, pdu, 0, max_dist_sq);
 			}
-			if (curw < 0) find_optimal_waypoint(pos, oddatav, goal);
+			if (curw < 0) {find_optimal_waypoint(pos, oddatav, goal);}
 		}
 		else { // not a waypoint (pickup item)
 			if (UNLIMITED_WEAPONS && (type == WEAPON || type == AMMO || type == WA_PACK)) continue;
@@ -523,7 +523,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 			{
 				// select this object as our target and return
 				if (is_wpt) {
-					if (id != last_waypoint) on_waypt_path = (oddatav[i].val != 0);
+					if (id != last_waypoint) {on_waypt_path = (oddatav[i].val != 0);}
 					last_waypoint = id;
 					last_wpt_dist = p2p_dist_xy(pos, pos2);
 				}
@@ -532,9 +532,7 @@ int player_state::find_nearest_obj(point const &pos, pos_dir_up const &pdu, poin
 				target_pt = pos2;
 				break;
 			}
-			else if (is_wpt && id == last_waypoint) {
-				++blocked_waypts[id].c;
-			}
+			else if (is_wpt && id == last_waypoint) {++blocked_waypts[id].c;}
 		}
 	}
 	oddatav.clear();
@@ -689,17 +687,14 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 		types.push_back(type_wt_t(WA_PACK, 1.0));
 		types.push_back(type_wt_t(SHIELD,  (almost_dead ? 10 : 1.2)*(1.0 - shields/MAX_SHIELDS))); // always below max since it ticks down over time
 		if (health < MAX_HEALTH) types.push_back(type_wt_t(HEALTH, (almost_dead ? 15 : 1.5)*(1.0 - health/MAX_HEALTH)));
-
-		if (game_mode) {
-			min_ie = find_nearest_enemy(obj.pos, pdu, avoid_dir, smiley_id, targete, target_visible, diste);
-		}
+		if (game_mode) {min_ie = find_nearest_enemy(obj.pos, pdu, avoid_dir, smiley_id, targete, target_visible, diste);}
 		min_ih = find_nearest_obj(  obj.pos, pdu, avoid_dir, smiley_id, targeth, disth, types, last_target_visible, last_target_type);
 
 		if (!target_visible) { // can't find an enemy, choose health/pickup
-			if (min_ih >= 0) target_pos = targeth;
+			if (min_ih >= 0) {target_pos = targeth;}
 		}
 		else if (min_ih < 0) { // can't find health/pickup, choose attack
-			if (target_visible) target_pos = targete;
+			if (target_visible) {target_pos = targete;}
 		}
 		else { // found both item and enemy
 			float const dp(dot_product((obj.pos - targeth).get_norm(), (obj.pos - targete).get_norm()));
@@ -747,8 +742,8 @@ void player_state::smiley_select_target(dwobject &obj, int smiley_id) {
 	else if (min_ih < 0) {
 		unreachable[0].reset_try(); // no target item
 	}
-	if (on_waypt_path)       blocked_waypts.clear();
-	if (target_visible == 1) assert(min_ie >= CAMERA_ID);
+	if (on_waypt_path)       {blocked_waypts.clear();}
+	if (target_visible == 1) {assert(min_ie >= CAMERA_ID);}
 	target = min_ie;
 }
 
@@ -797,7 +792,7 @@ float player_state::get_pos_cost(int smiley_id, point pos, point const &opos, po
 			if (range > 2.0*enemy_range && dist < enemy_range) return (2.5 + 0.01*(enemy_range - dist)); // too close to enemy weapon range
 		}
 		float const min_dist(min(0.25*range, 8.0*radius));
-		if (weapon != W_BBBAT && dist < min_dist) return (2.0 + 0.01*(min_dist    - dist)); // too close to enemy
+		if (weapon != W_BBBAT && dist < min_dist) return (2.0 + 0.01*(min_dist - dist)); // too close to enemy
 	}
 	// enforce turn speed?
 	return 0.0; // good
@@ -871,7 +866,7 @@ int player_state::smiley_motion(dwobject &obj, int smiley_id) {
 			objective_pos  = target_pos = dest_mark.get_pos();
 			using_dest_mark= 1;
 		}
-		if (dest_mark.valid) assert(dest_mark.xpos > 0);
+		if (dest_mark.valid) {assert(dest_mark.xpos > 0);}
 	}
 	else {
 		dest_mark.clear();

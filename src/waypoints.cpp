@@ -605,7 +605,7 @@ class waypoint_search {
 	}
 	void reconstruct_path(unsigned cur, vector<unsigned> &path) {
 		assert(cur >= 0 && cur < waypoints.size());
-		if (waypoints[cur].came_from >= 0) reconstruct_path(waypoints[cur].came_from, path);
+		if (waypoints[cur].came_from >= 0) {reconstruct_path(waypoints[cur].came_from, path);}
 		path.push_back(cur);
 	}
 
