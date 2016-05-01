@@ -34,7 +34,7 @@ float const BCUBE_ZTOLER      = 1.0E-6;
 
 
 extern int frame_counter;
-extern float grass_length, water_plane_z;
+extern float grass_length, water_plane_z, tree_scale;
 
 
 class lightning_strike_t {
@@ -299,7 +299,7 @@ public:
 	bool is_visible() const {return camera_pdu.sphere_and_cube_visible_test(get_center(), get_bsphere_radius_inc_water(), get_bcube());}
 	float get_dist_to_camera_in_tiles(bool xy_dist=1) const {return get_rel_dist_to_camera(xy_dist)*TILE_RADIUS;}
 	float get_scenery_thresh    (bool reflection_pass) const {return (reflection_pass ? SCENERY_THRESH_REF : SCENERY_THRESH);}
-	float get_scenery_dist_scale(bool reflection_pass) const {return get_dist_to_camera_in_tiles(0)/get_scenery_thresh(reflection_pass);}
+	float get_scenery_dist_scale(bool reflection_pass) const {return tree_scale*get_dist_to_camera_in_tiles(0)/get_scenery_thresh(reflection_pass);}
 	float get_tree_dist_scale () const {return get_dist_to_camera_in_tiles()/get_tree_scale_denom();}
 	float get_tree_far_weight () const {return (ENABLE_TREE_LOD ? CLIP_TO_01(GEOMORPH_THRESH*(get_tree_dist_scale() - 1.0f)) : 0.0);}
 
