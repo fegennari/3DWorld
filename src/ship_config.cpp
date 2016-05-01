@@ -177,6 +177,7 @@ public:
 	ship_defs_file_reader() : last_ship(NULL), cur_ship_type(NUM_US_CLASS), ship_add_mode(CMD_END),
 		is_player(0), player_setup(0), saw_end(0), add_ship_enabled(0), ship_weap_set(0), last_parent(0) {}
 	static bool read_string(ifstream &in, string &str);
+	bool setup_and_read_file(const char *fn);
 	bool read_file(const char *fn);
 };
 
@@ -184,9 +185,7 @@ public:
 void ship_defs_file_reader::print_kw_map(kw_map const &strmap) const {
 
 	cout << "stringmap:" << endl;
-	for (kw_map::const_iterator i = strmap.begin(); i != strmap.end(); ++i) {
-		cout << i->first << ":" << i->second << " ";
-	}
+	for (kw_map::const_iterator i = strmap.begin(); i != strmap.end(); ++i) {cout << i->first << ":" << i->second << " ";}
 	cout << endl;
 }
 
@@ -683,7 +682,10 @@ bool ship_defs_file_reader::parse_command(unsigned cmd) {
 
 		case CMD_PLAYER: // <enum ship_id> <enum alignment>
 			{
-				assert(!player_setup);
+				if (player_setup) {
+					cerr << "Error: $PLAYER command can be specified only once." << endl;
+					return 0;
+				}
 				unsigned align;
 				if (!read_ship_type(type)) return 0;
 				if (!read_enum(align_m, align, "alignment")) return 0;
@@ -761,6 +763,23 @@ bool ship_defs_file_reader::read_string(ifstream &in, string &str) { // can be c
 }
 
 
+bool ship_defs_file_reader::setup_and_read_file(const char *fn) {
+
+	sclasses.resize(NUM_US_CLASS);
+	us_weapons.resize(NUM_UWEAP);
+	if (!read_file(fn)) return 0;
+
+	if (!player_setup) {
+		cerr << "Error: $PLAYER command is required." << endl;
+		return 0;
+	}
+	// postprocessing and error checking
+	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {sclasses[i].setup(i);}
+	for (unsigned i = 0; i < NUM_UWEAP   ; ++i) {us_weapons[i].setup(i);}
+	return 1;
+}
+
+
 bool ship_defs_file_reader::read_file(const char *fn) {
 
 	// try to open the file
@@ -768,14 +787,12 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 	cfg.open(fn);
 
 	if (!cfg.good()) {
-		cerr << "Error: Could not open ship definitions file." << endl;
+		cerr << "Error: Could not open ship definitions file " << fn << "." << endl;
 		return 0;
 	}
-	sclasses.resize(NUM_US_CLASS);
-	us_weapons.resize(NUM_UWEAP);
+	cout << "Reading ship definitions file " << fn << "." << endl; // optional
 	setup_keywords();
 	string_to_color.populate();
-
 	// parse the file
 	string str;
 
@@ -793,6 +810,19 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 				if (c == '\n' || c == 0 || c == EOF) break;
 			}
 		}
+		else if (str == "$INCLUDE") {
+			string filename;
+
+			if (!(cfg >> filename)) {
+				cerr << "Error: Missing include file filename." << endl;
+				return 0;
+			}
+			if (filename == fn) {
+				cerr << "Error: Recursive include of file " << filename << "." << endl;
+				return 0;
+			}
+			if (!ship_defs_file_reader().read_file(filename.c_str())) return 0; // use a nested reader
+		}
 		else if (command_m.find(str) == command_m.end()) {
 			cerr << "Error: unrecognized command keyword " << str << "." << endl;
 			return 0;
@@ -806,20 +836,7 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 		cerr << "Error: Bad stream at end of read." << endl;
 		return 0;
 	}
-	if (!saw_end) cout << "Warning: Missing end of file command." << endl;
-
-	if (!player_setup) {
-		cerr << "Error: $PLAYER command is required." << endl;
-		return 0;
-	}
-
-	// postprocessing and error checking
-	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
-		sclasses[i].setup(i);
-	}
-	for (unsigned i = 0; i < NUM_UWEAP; ++i) {
-		us_weapons[i].setup(i);
-	}
+	if (!saw_end) {cout << "Warning: Missing end of file command." << endl;}
 	return 1;
 }
 
@@ -1049,7 +1066,7 @@ void init_ship_weapon_classes() {
 
 	ship_defs_file_reader reader;
 
-	if (!reader.read_file(ship_def_file)) {
+	if (!reader.setup_and_read_file(ship_def_file)) {
 		cerr << "Error reading ship definitions file '" << ship_def_file << "'." << endl;
 		exit(1);
 	}
