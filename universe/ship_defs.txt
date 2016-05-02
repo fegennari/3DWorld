@@ -60,9 +60,9 @@ $ADD UWEAP_SEIGEC
 # add fleets: name enabled <counts> [<float flagship_child_stray_dist> <enum ship_id>]
 # FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
 $FLEET "defenders" 0 RED    AI_ATT_ENEMY  TARGET_CLOSEST  0.12   0.0  0.0  0.0
-  0   0   0   0   0   0   0   0   0   2   2   30  8   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  0   0   0   0   0   0   0   0   0   0   0   30  8   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   8   0   0   0   0   8   0   0   0   0   0   0
 $FLEET "attackers" 0 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  0.24   1.5  1.5  1.5
-  4   24  20  16  8   8   5   0   3   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   4   0   0   0   0   0
+  4   24  20  16  8   8   5   0   3   3   2   0   0   0   0   0   0   0   0   4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   4   0   0   0   0   0
   
 $FLEET "Alien"     0 RED    AI_ATT_ENEMY  TARGET_CLOSEST  0.08   0.0  0.1 -0.1
   0   0   0   0   0   0   0   0   0   8   0   0   0   0   1   0   6   0   0   0   0   8   0   16  0   0   0   0   0   8   0   0   0   0   0   0   0   0   0   0
