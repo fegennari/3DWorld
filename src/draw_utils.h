@@ -156,6 +156,7 @@ template< typename vert_type_t > class vbo_block_manager_t : public vbo_wrap_t {
 
 	vector<vert_type_t> pts;
 	vector<unsigned> offsets;
+	int prim_type;
 
 	bool has_data() const {return (!pts.empty() || offsets.size() > 1);}
 	void add_points_int(vector<vert_type_t> &dest, typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color);
@@ -164,7 +165,9 @@ public:
 	vector<vert_norm> temp_points;
 
 	// can't free in the destructor because the gl context may be destroyed before this point
+	vbo_block_manager_t() : prim_type(GL_QUADS) {} // default is quads
 	//~vbo_block_manager_t() {clear_vbo();}
+	void set_prim_type(int type) {prim_type = type;}
 	bool is_uploaded() const {return (vbo != 0);}
 	void reserve_pts(unsigned num) {assert(pts.empty()); pts.reserve(num);}
 	void add_points(typename vert_type_t::non_color_class const *const p, unsigned npts, colorRGBA const &color) {add_points_int(pts, p, npts, color);}

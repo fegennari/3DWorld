@@ -667,14 +667,13 @@ void vbo_block_manager_t<vert_type_t>::render_range(unsigned six, unsigned eix, 
 
 	assert(six < eix && eix < offsets.size());
 	unsigned const count(offsets[eix] - offsets[six]);
-	// Note: currently always used to render quads, but can be made more general in the future
 	check_mvm_update();
 
-	if (use_core_context) {
+	if (use_core_context && prim_type == GL_QUADS) { // handle quads => triangles conversion
 		draw_quads_as_tris(count, offsets[six], num_instances);
 	}
 	else {
-		glDrawArraysInstanced(GL_QUADS, offsets[six], count, num_instances);
+		glDrawArraysInstanced(prim_type, offsets[six], count, num_instances); // default is quads
 	}
 }
 
