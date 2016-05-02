@@ -1384,6 +1384,7 @@ public:
 class rand_spawn_ship : public u_ship, public rand_spawn_mixin {
 
 	bool will_respawn;
+	unsigned orig_align;
 
 	void gen_valid_pos();
 	void destroy_or_respawn();

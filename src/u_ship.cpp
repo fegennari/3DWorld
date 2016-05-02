@@ -2954,7 +2954,7 @@ void orbiting_ship::ai_action() {
 // any fighters are also type rand_spawn_ship, except they don't respawn
 // can't colonize or build anything
 rand_spawn_ship::rand_spawn_ship(unsigned sclass_, point const &pos0, unsigned align, unsigned ai_type_, unsigned target_mode_, bool rand_orient, bool will_respawn_)
-	: u_ship(sclass_, all_zeros, align, ai_type_, target_mode_, rand_orient), rand_spawn_mixin(pos, radius, rand_spawn_ship_dmax), will_respawn(will_respawn_)
+	: u_ship(sclass_, all_zeros, align, ai_type_, target_mode_, rand_orient), rand_spawn_mixin(pos, radius, rand_spawn_ship_dmax), orig_align(align), will_respawn(will_respawn_)
 {
 	if (pos == all_zeros) {gen_valid_pos();} // otherwise we assume pos is where we want to start
 	//cout << "spawn " << get_name() << endl;
@@ -2963,9 +2963,7 @@ rand_spawn_ship::rand_spawn_ship(unsigned sclass_, point const &pos0, unsigned a
 
 void rand_spawn_ship::gen_valid_pos() {
 
-	do {
-		gen_rand_pos();
-	} while (!is_valid_starting_ship_pos(pos, sclass));
+	do {gen_rand_pos();} while (!is_valid_starting_ship_pos(pos, sclass));
 }
 
 
@@ -2973,7 +2971,8 @@ void rand_spawn_ship::destroy_or_respawn() {
 
 	if (will_respawn) { // respawn
 		vector<unsigned> sclasses;
-		choose_n_random_sclasses(sclasses, alignment, 1, 0, 1);
+		// cache and use original ship alignment, in case ship is captured or mind controlled and changes alignment
+		choose_n_random_sclasses(sclasses, orig_align, 1, 0, 1);
 		assert(sclasses.size() == 1);
 		sclass = sclasses.front();
 		reset();

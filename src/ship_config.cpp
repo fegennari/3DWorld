@@ -1086,7 +1086,7 @@ void choose_n_random_sclasses(vector<unsigned> &sclasses, int align, unsigned nu
 
 	for (unsigned i = 0; i < NUM_US_CLASS; ++i) {
 		psum[i] = ship_add_prob[prob_table_ix][align][i];
-		if (i > 0) psum[i] += psum[i-1];
+		if (i > 0) {psum[i] += psum[i-1];}
 	}
 	unsigned const ptot(psum[NUM_US_CLASS-1]);
 	assert(ptot > 0);
