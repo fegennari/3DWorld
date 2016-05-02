@@ -8,7 +8,6 @@
 #include "tree_3dw.h"
 #include "draw_utils.h"
 
-bool const USE_BB_GEOM_SHADER = 1;
 
 enum {TREE_NONE = -1, T_PINE, T_DECID, T_TDECID, T_BUSH, T_PALM, T_SH_PINE, NUM_ST_TYPES};
 

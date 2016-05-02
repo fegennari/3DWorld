@@ -2305,14 +2305,9 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	if (!shadow_pass) {
 		enable_blend(); // for fog transparency
 		shader_t s;
-
-		if (USE_BB_GEOM_SHADER) { // GS version
-			s.set_geom_shader("pine_tree_billboard"); // point => 1 quad
-			set_pine_tree_shader(s, "pine_tree_billboard_gs"); // FIXME: doesn't need texture_gen.part
-		}
-		else {
-			set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
-		}
+		s.set_geom_shader("pine_tree_billboard"); // point => 1 quad
+		set_pine_tree_shader(s, "pine_tree_billboard_gs"); // FIXME: doesn't need texture_gen.part
+		//set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
 		s.add_uniform_float("radius_scale", calc_tree_size());
 		s.add_uniform_float("ambient_scale", 1.5);
 		s.set_specular(0.2, 8.0);
