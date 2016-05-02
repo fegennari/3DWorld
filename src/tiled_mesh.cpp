@@ -2038,7 +2038,7 @@ void tile_draw_t::pre_draw() { // view-dependent updates/GPU uploads
 	// don't use parallel tree gen for a single tile, or when GPU heightmaps are enabled
 	#pragma omp parallel for schedule(dynamic,1) if (mesh_gen_mode != 3 && to_gen_trees.size() > 1)
 	for (int i = 0; i < (int)to_gen_trees.size(); ++i) {to_gen_trees[i]->init_pine_tree_draw();}
-	//PRINT_TIME("Gen Trees2");
+	//if (!to_gen_trees.empty()) {PRINT_TIME("Gen Trees2");}
 	
 	for (vector<tile_t *>::iterator i = to_update.begin(); i != to_update.end(); ++i) {
 		(*i)->pre_draw(height_gen);
@@ -2305,7 +2305,14 @@ void tile_draw_t::draw_pine_trees(bool reflection_pass, bool shadow_pass) {
 	if (!shadow_pass) {
 		enable_blend(); // for fog transparency
 		shader_t s;
-		set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
+
+		if (USE_BB_GEOM_SHADER) { // GS version
+			s.set_geom_shader("pine_tree_billboard"); // point => 1 quad
+			set_pine_tree_shader(s, "pine_tree_billboard_gs"); // FIXME: doesn't need texture_gen.part
+		}
+		else {
+			set_pine_tree_shader(s, "pine_tree_billboard_auto_orient");
+		}
 		s.add_uniform_float("radius_scale", calc_tree_size());
 		s.add_uniform_float("ambient_scale", 1.5);
 		s.set_specular(0.2, 8.0);

@@ -92,7 +92,7 @@ void small_tree_group::finalize(bool low_detail) {
 	if (empty()) return;
 	assert(!is_uploaded(low_detail));
 	vbo_manager[low_detail].clear();
-	vbo_manager[low_detail].reserve_pts(4*(low_detail ? 1 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
+	vbo_manager[low_detail].reserve_pts(((low_detail && USE_BB_GEOM_SHADER) ? 1 : 4)*(low_detail ? 1 : N_PT_LEVELS*N_PT_RINGS)*num_pine_trees);
 
 	#pragma omp parallel for schedule(static,1) if (!low_detail)
 	for (int i = 0; i < (int)size(); ++i) {
@@ -273,6 +273,7 @@ void small_tree_group::draw_pine_leaves(bool shadow_only, bool low_detail, bool 
 		vbomgr.begin_render();
 
 		if (draw_all_pine) {
+			if (low_detail && USE_BB_GEOM_SHADER) {vbo_manager[1].set_prim_type(GL_POINTS);}
 			vbomgr.render_all();
 		}
 		else if (sort_front_to_back) {
@@ -807,13 +808,23 @@ void small_tree::calc_points(vbo_vnc_block_manager_t &vbo_manager, bool low_deta
 	}
 	else { // low detail billboard
 		assert(!update_mode);
-		vert_norm points[4];
+		float const zv1(pos.z + dz - 0.1*sz_scale - 0.2*height), zv2(pos.z + dz + 1.8*sz_scale + 0.1*height);
+		unsigned const npts(USE_BB_GEOM_SHADER ? 1 : 4);
+		vert_norm points[npts];
 		vert_norm vn(pos, vector3d(2.25*sz_scale/calc_tree_size(), 0.0, 0.0)); // ranges from around 0.25 to 0.75
-		vn.v.z = pos.z + dz + 1.8*sz_scale + 0.1*height;
-		points[0] = points[1] = vn; // top two vertices
-		vn.v.z = pos.z + dz - 0.1*sz_scale - 0.2*height;
-		points[2] = points[3] = vn; // bottom two vertices
-		vbo_manager.add_points(points, 4, color);
+
+		if (USE_BB_GEOM_SHADER) {
+			vn.n.y    = zv2 - zv1;
+			vn.v.z    = zv1; // bottom
+			points[0] = vn;
+		}
+		else {
+			vn.v.z = zv2;
+			points[0] = points[1] = vn; // top two vertices
+			vn.v.z = zv1;
+			points[2] = points[3] = vn; // bottom two vertices
+		}
+		vbo_manager.add_points(points, npts, color);
 	}
 }
 
