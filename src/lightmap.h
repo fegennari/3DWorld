@@ -211,7 +211,7 @@ public:
 	float get_intensity_at(point const &p, point &updated_lpos) const;
 	float get_dir_intensity(vector3d const &obj_dir) const;
 	void get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, vector3d const &bounds_offset=zero_vector) const;
-	cube_t calc_bcube(float sqrt_thresh=0.0) const;
+	cube_t calc_bcube(bool add_pad=0, float sqrt_thresh=0.0) const;
 	cylinder_3dw calc_bounding_cylin(float sqrt_thresh=0.0) const;
 	pos_dir_up calc_pdu() const;
 	bool is_visible()     const;

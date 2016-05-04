@@ -89,17 +89,18 @@ float light_source::get_dir_intensity(vector3d const &obj_dir) const {
 }
 
 
-cube_t light_source::calc_bcube(float sqrt_thresh) const {
+cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh) const {
 
 	assert(radius > 0.0);
 	assert(sqrt_thresh < 1.0);
 	cube_t bcube(pos, pos2);
 	bcube.expand_by(radius*(1.0 - sqrt_thresh));
+	// FIXME: intersect bcube with scene bounds?
 
 	if (is_very_directional()) {
 		cube_t bcube2;
 		calc_bounding_cylin(sqrt_thresh).calc_bcube(bcube2);
-		bcube2.expand_by(vector3d(DX_VAL, DY_VAL, DZ_VAL)); // add one grid unit
+		if (add_pad) {bcube2.expand_by(vector3d(DX_VAL, DY_VAL, DZ_VAL));} // add one grid unit
 		bcube.intersect_with_cube(bcube2);
 	}
 	return bcube;
@@ -116,7 +117,7 @@ void light_source::get_bounds(cube_t &bcube, int bnds[3][2], float sqrt_thresh, 
 		}
 	}
 	else { // local point/spot/line light source
-		bcube = calc_bcube(sqrt_thresh);
+		bcube = calc_bcube(1, sqrt_thresh); // padded
 
 		for (unsigned d = 0; d < 3; ++d) {
 			UNROLL_2X(bnds[d][i_] = max(0, min(MESH_SIZE[d]-1, get_dim_pos((bcube.d[d][i_] + bounds_offset[d]), d)));)
