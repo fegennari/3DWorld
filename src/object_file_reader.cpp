@@ -325,6 +325,11 @@ public:
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ks" << endl; return 0;}
 				check_and_bind(cur_mat->s_tid, tfn, 0, verbose);
 			}
+			else if (s == "map_ns") {
+				assert(cur_mat);
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_ns" << endl; return 0;}
+				check_and_bind(cur_mat->ns_tid, tfn, 0, verbose);
+			}
 			else if (s == "map_d") { // dissolve
 				assert(cur_mat);
 				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_d" << endl; return 0;}

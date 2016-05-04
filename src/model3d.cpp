@@ -877,8 +877,9 @@ void material_t::init_textures(texture_manager &tmgr) {
 	int const tid(get_render_texture());
 	tmgr.bind_alpha_channel_to_texture(tid, alpha_tid);
 	tmgr.ensure_tid_loaded(tid, 0); // only one tid for now
-	if (use_bump_map()) tmgr.ensure_tid_loaded(bump_tid, 1);
-	if (use_spec_map()) tmgr.ensure_tid_loaded(s_tid, 0);
+	if (use_bump_map()) {tmgr.ensure_tid_loaded(bump_tid, 1);}
+	if (use_spec_map()) {tmgr.ensure_tid_loaded(s_tid, 0);}
+	//tmgr.ensure_tid_loaded(ns_tid, 0);
 	might_have_alpha_comp |= tmgr.might_have_alpha_comp(tid);
 }
 
@@ -932,6 +933,7 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX);}
 			set_active_texture(0);
 		}
+		//if (ns_tid >= 0) {tmgr.bind_texture(ns_tid);} // FIXME: handle this (gloss map)
 		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_ix", ni);} // FIXME: set index of refraction
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
 		if (need_blend) {enable_blend();}
@@ -954,16 +956,12 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 
 
 bool material_t::use_bump_map() const {
-
 	return (enable_bump_map() && bump_tid >= 0);
 }
 
-
 bool material_t::use_spec_map() const {
-
 	return (enable_spec_map() && s_tid >= 0);
 }
-
 
 colorRGBA material_t::get_ad_color() const {
 
@@ -971,7 +969,6 @@ colorRGBA material_t::get_ad_color() const {
 	c.set_valid_color();
 	return c;
 }
-
 
 colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid) const {
 
@@ -991,13 +988,8 @@ colorRGBA material_t::get_avg_color(texture_manager const &tmgr, int default_tid
 bool material_t::add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id) {
 	
 	if (skip) return 0;
-
-	if (model_calc_tan_vect && use_bump_map()) {
-		geom_tan.add_poly(poly, vmap_tan, obj_id);
-	}
-	else {
-		geom.add_poly(poly, vmap, obj_id);
-	}
+	if (model_calc_tan_vect && use_bump_map()) {geom_tan.add_poly(poly, vmap_tan, obj_id);}
+	else {geom.add_poly(poly, vmap, obj_id);}
 	mark_as_used();
 	return 1;
 }

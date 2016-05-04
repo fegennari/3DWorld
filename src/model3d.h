@@ -350,7 +350,7 @@ struct material_params_t {
 struct material_t : public material_params_t {
 
 	bool might_have_alpha_comp;
-	int a_tid, d_tid, s_tid, alpha_tid, bump_tid, refl_tid;
+	int a_tid, d_tid, s_tid, ns_tid, alpha_tid, bump_tid, refl_tid;
 	float draw_order_score;
 	string name, filename;
 
@@ -358,7 +358,7 @@ struct material_t : public material_params_t {
 	geometry_t<vert_norm_tc_tan> geom_tan;
 
 	material_t(string const &name_=string(), string const &fn=string())
-		: might_have_alpha_comp(0), a_tid(-1), d_tid(-1), s_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
+		: might_have_alpha_comp(0), a_tid(-1), d_tid(-1), s_tid(-1), ns_tid(-1), alpha_tid(-1), bump_tid(-1), refl_tid(-1),
 		draw_order_score(0.0), name(name_), filename(fn) {}
 	bool add_poly(polygon_t const &poly, vntc_map_t vmap[2], vntct_map_t vmap_tan[2], unsigned obj_id=0);
 	void mark_as_used() {is_used = 1;}
