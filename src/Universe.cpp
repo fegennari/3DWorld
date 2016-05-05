@@ -2668,12 +2668,8 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 		return 0;
 	}
 	ucell const &cell(get_cell(result.cellxyz));
-
-	if (max_level == UTYPE_CELL) { // cell
-		result.val = 1;
-		return 1;
-	}
-	if (cell.galaxies == nullptr) return 0; // not yet allocated
+	if (max_level == UTYPE_CELL ) {result.type = UTYPE_CELL; result.val =  1; return 1;} // cell
+	if (cell.galaxies == nullptr) {result.type = UTYPE_CELL; result.val = -1; return 0;} // not yet allocated
 	pos -= cell.pos;
 	float const planet_thresh(expand*4.0*MAX_PLANET_EXTENT + r_add), moon_thresh(expand*2.0*MAX_PLANET_EXTENT + r_add);
 	float const pt_sq(planet_thresh*planet_thresh), mt_sq(moon_thresh*moon_thresh);
@@ -2879,7 +2875,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 	{ // check for start point collision (slow but important)
 		bool const fast_test(1);
 		int const ival(get_closest_object(result, start, (fast_test ? UTYPE_CELL : UTYPE_MOON), !fast_test, 0, 1.0));
-		assert(ival != 0 || result.val != 0);
+		if (ival == 0 && result.val == 0) {coll.assign(0.0, 0.0, 0.0); return 0;} // not even inside a valid cell (FIXME: is this possible? error?)
 
 		if (!fast_test && (ival == 2 || (ival == 1 && result.dist <= line_radius))) { // collision at start
 			coll = start;
