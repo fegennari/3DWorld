@@ -327,7 +327,7 @@ public:
 			}
 			else if (s == "map_ns") {
 				assert(cur_mat);
-				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_ns" << endl; return 0;}
+				if (!read_map_name(mat_in, tfn)) {cerr << "Error reading material map_Ns" << endl; return 0;}
 				check_and_bind(cur_mat->ns_tid, tfn, 0, verbose);
 			}
 			else if (s == "map_d") { // dissolve

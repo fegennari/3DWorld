@@ -878,9 +878,17 @@ void material_t::init_textures(texture_manager &tmgr) {
 	tmgr.bind_alpha_channel_to_texture(tid, alpha_tid);
 	tmgr.ensure_tid_loaded(tid, 0); // only one tid for now
 	if (use_bump_map()) {tmgr.ensure_tid_loaded(bump_tid, 1);}
-	if (use_spec_map()) {tmgr.ensure_tid_loaded(s_tid, 0);}
-	//tmgr.ensure_tid_loaded(ns_tid, 0);
+	if (use_spec_map()) {tmgr.ensure_tid_loaded( s_tid, 0);}
+	if (use_spec_map()) {tmgr.ensure_tid_loaded(ns_tid, 0);}
 	might_have_alpha_comp |= tmgr.might_have_alpha_comp(tid);
+}
+
+
+void bind_texture_tu_or_white_tex(texture_manager const &tmgr, int tid, unsigned tu_id) {
+
+	set_active_texture(tu_id);
+	if (tid >= 0) {tmgr.bind_texture(tid);} else {select_texture(WHITE_TEX);}
+	set_active_texture(0);
 }
 
 
@@ -929,11 +937,9 @@ void material_t::render(shader_t &shader, texture_manager const &tmgr, int defau
 			set_active_texture(0);
 		}
 		if (enable_spec_map()) { // all white/specular if no specular map texture
-			set_active_texture(8);
-			if (s_tid >= 0) {tmgr.bind_texture(s_tid);} else {select_texture(WHITE_TEX);}
-			set_active_texture(0);
+			bind_texture_tu_or_white_tex(tmgr, s_tid,  8); // specular map
+			bind_texture_tu_or_white_tex(tmgr, ns_tid, 9); // gloss map (FIXME: not implemented in the shader; unclear how to interpret map_ns in object files)
 		}
-		//if (ns_tid >= 0) {tmgr.bind_texture(ns_tid);} // FIXME: handle this (gloss map)
 		//if (!disable_shader_effects && alpha < 1.0 && ni != 1.0) {shader.add_uniform_float("refract_ix", ni);} // FIXME: set index of refraction
 		bool const need_blend(is_partial_transparent()); // conservative, but should be okay
 		if (need_blend) {enable_blend();}
@@ -960,7 +966,7 @@ bool material_t::use_bump_map() const {
 }
 
 bool material_t::use_spec_map() const {
-	return (enable_spec_map() && s_tid >= 0);
+	return (enable_spec_map() && (s_tid >= 0 || ns_tid >= 0));
 }
 
 colorRGBA material_t::get_ad_color() const {
@@ -1358,6 +1364,7 @@ void model3d::bind_all_used_tids() {
 		}
 		if (m->use_spec_map()) {
 			tmgr.ensure_tid_bound(m->s_tid);
+			tmgr.ensure_tid_bound(m->ns_tid);
 			has_spec_maps = 1;
 		}
 		needs_alpha_test |= m->get_needs_alpha_test();
