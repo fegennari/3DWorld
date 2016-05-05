@@ -78,10 +78,11 @@ vec3 get_bump_map_normal() {
 }
 
 // Note: we assume the bump map tex coords are the same as the object diffuse tex coords
+// Note: light_dir and eye_pos and transformed from eye space to tangent space
 vec3 apply_bump_map_for_tbn(inout vec3 light_dir, inout vec3 eye_pos, in mat3 TBN) {
 	light_dir = normalize(TBN * light_dir);
 	eye_pos   = TBN * eye_pos;
-	return get_bump_map_normal();
+	return get_bump_map_normal(); // in tangent space
 }
 vec3 apply_bump_map(inout vec3 light_dir, inout vec3 eye_pos) {
 	return apply_bump_map_for_tbn(light_dir, eye_pos, get_tbn(1.0));
