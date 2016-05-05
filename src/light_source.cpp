@@ -95,7 +95,6 @@ cube_t light_source::calc_bcube(bool add_pad, float sqrt_thresh) const {
 	assert(sqrt_thresh < 1.0);
 	cube_t bcube(pos, pos2);
 	bcube.expand_by(radius*(1.0 - sqrt_thresh));
-	// FIXME: intersect bcube with scene bounds?
 
 	if (is_very_directional()) {
 		cube_t bcube2;
@@ -143,14 +142,17 @@ bool light_source::is_visible() const {
 	if (!enabled) return 0;
 	if (radius == 0.0) return 1;
 	bool const line_light(is_line_light());
-	
-	if (line_light) {
-		if (!camera_pdu.sphere_visible_test(0.5*(pos + pos2), (radius + 0.5*p2p_dist(pos, pos2)))) return 0; // use capsule bounding sphere
-		if (!camera_pdu.cube_visible(calc_bcube())) return 0;
+	point const lpos(line_light ? 0.5*(pos + pos2) : pos);
+	float const lradius(line_light ? (radius + 0.5*p2p_dist(pos, pos2)) : radius); // use capsule bounding sphere for line light
+	if (!camera_pdu.sphere_visible_test(lpos, lradius)) return 0; // view frustum culling
+
+	if (line_light || is_very_directional()) { // use tighter bounding cube
+		cube_t light_bc(calc_bcube());
+		// since dlights are only applied within the scene bounds, we can ignore any part of the bcube (light volume) that's outside of the scene
+		light_bc.intersect_with_cube(get_scene_bounds()); // optional optimization
+		if (!camera_pdu.cube_visible(light_bc)) return 0;
 	}
-	else {
-		if (!camera_pdu.sphere_visible_test(pos, radius)) return 0; // view frustum culling
-		if (is_very_directional() && !camera_pdu.cube_visible(calc_bcube())) return 0;
+	if (!line_light) {
 		if (radius < 0.5) return 1; // don't do anything more expensive for small light sources
 		if (sphere_cobj_occluded(get_camera_pos(), pos, max(0.5f*radius, r_inner))) return 0; // approximate occlusion culling, can miss lights but rarely happens
 	}
