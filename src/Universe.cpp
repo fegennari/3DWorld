@@ -1499,16 +1499,14 @@ bool urev_body::can_land() const {
 }
 
 bool urev_body::colonizable() const {
-	return (is_ok() && temp >= MIN_COLONY_TEMP && temp <= MAX_COLONY_TEMP && colonizable_int());
+	return (is_ok() && !gas_giant && temp >= MIN_COLONY_TEMP && temp <= MAX_COLONY_TEMP && colonizable_int());
 }
 
 bool urev_body::liveable() const { // only planets are liveable
 	return (is_ok() && !gas_giant && water > 0.15 && atmos > 0.25 && temp >= MIN_LIVE_TEMP && temp <= MAX_LIVE_TEMP);
 }
 
-
 void uplanet::calc_temperature() {
-
 	assert(orbit > TOLERANCE);
 	temp = system->sun.get_energy()/(orbit*orbit); // ~2-50
 }
@@ -1649,7 +1647,7 @@ point_d uplanet::do_update(point_d const &p0, bool update_rev, bool update_rot) 
 		moons[i].do_update(planet_pos, ok, ok);
 		if (!has_sun) {moons[i].temp = 0.0;}
 	}
-	if (ok && has_sun && is_owned()) {
+	if (ok && has_sun && is_owned() && colonizable()) {
 		float const pop_rate((population == 0) ? 1.0 : 0.0001); // init + growth
 		float const pop_scale(2.0E6*(liveable() ? 1.0 : 0.25)*radius*radius*(1.1 - water)*((water > 0.05) ? 1.0 : 0.1)*(atmos + 0.1)); // based on land area
 		population += pop_scale*pop_rate; // Note: for now, planet population only increases when the planet is visible
