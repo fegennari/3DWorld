@@ -195,6 +195,14 @@ bool shader_t::set_uniform_buffer_data(char const *name, float const *data, unsi
 // *** subroutines ***
 
 
+int shader_t::subroutine_val_t::get_ix_for_name(char const *const name) const {
+
+	for (auto i = name_to_ix.begin(); i != name_to_ix.end(); ++i) {
+		if (i->first == name) return i->second;
+	}
+	return -1; // not found
+}
+
 unsigned shader_t::get_subroutine_index(int shader_type, char const *const name) const {
 
 	assert(program && name);
@@ -223,7 +231,9 @@ void shader_t::set_all_subroutines(int shader_type, unsigned count, char const *
 		unsigned const loc(get_subroutine_uniform_loc(shader_type, uniforms[i]));
 		assert(loc < count);
 		val.ixs[loc] = get_subroutine_index(shader_type, bindings[i]);
-		val.name_to_ix[uniforms[i]] = loc; // check for 1:1 mapping between name/loc and count?
+		int const ix(val.get_ix_for_name(uniforms[i]));
+		assert(ix == -1); // no duplicate names
+		val.name_to_ix.push_back(make_pair(uniforms[i], loc)); // add a new name=>ix mapping
 	}
 	set_subroutines(shader_type, val.ixs);
 }
@@ -250,10 +260,10 @@ void shader_t::reset_subroutine(int shader_type, char const *const uniform, char
 
 	assert(uniform != nullptr && binding != nullptr);
 	subroutine_val_t &val(subroutines[shader_type]);
-	auto it(val.name_to_ix.find(uniform));
-	assert(it != val.name_to_ix.end()); // name must be known
-	assert(it->second < val.ixs.size());
-	val.ixs[it->second] = get_subroutine_index(shader_type, binding); // cache this too?
+	int const ix(val.get_ix_for_name(uniform));
+	assert(ix >= 0); // name must be known
+	assert((unsigned)ix < val.ixs.size());
+	val.ixs[ix] = get_subroutine_index(shader_type, binding); // cache this too?
 	set_subroutines(shader_type, val.ixs);
 }
 

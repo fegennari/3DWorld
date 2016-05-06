@@ -59,8 +59,9 @@ class shader_t {
 
 	struct subroutine_val_t {
 		vector<unsigned> ixs;
-		map<string, unsigned> name_to_ix;
+		vector<pair<string, unsigned>> name_to_ix;
 		void resize(unsigned sz) {assert(ixs.size() == 0 || ixs.size() == sz); ixs.resize(sz, 0);}
+		int get_ix_for_name(char const *const name) const;
 	};
 	typedef map<unsigned, subroutine_val_t> subroutine_map_t;
 	subroutine_map_t subroutines;
