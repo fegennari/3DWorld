@@ -1420,7 +1420,7 @@ void ustar::create(point const &pos_) {
 
 colorRGBA const &ussystem::get_galaxy_color() {
 
-	if (galaxy_color.alpha == 0.0) calc_color(); // lazy update
+	if (galaxy_color.alpha == 0.0) {calc_color();} // lazy update
 	assert(galaxy_color.alpha > 0.0);
 	return galaxy_color;
 }
@@ -1451,6 +1451,24 @@ void ussystem::calc_color() { // delayed until the color is actually needed
 	if (sum == 0.0) return; // no other systems
 	galaxy_color *= 1.5/((sum/sols.size())*MAX_SYSTEMS_PER_GALAXY); // remember to normalize
 	galaxy_color.set_valid_color();
+}
+
+
+uplanet *ussystem::get_planet_by_name(string const &name) {
+
+	for (unsigned i = 0; i < planets.size(); ++i) {
+		if (planets[i].getname() == name) return &planets[i];
+	}
+	return nullptr;
+}
+
+umoon *ussystem::get_moon_by_name(string const &name) { // slow
+
+	for (unsigned i = 0; i < planets.size(); ++i) {
+		umoon *moon(planets[i].get_moon_by_name(name));
+		if (moon != nullptr) return moon;
+	}
+	return nullptr;
 }
 
 
@@ -1708,6 +1726,15 @@ void uplanet::gen_prings() {
 	assert(asteroid_belt == nullptr);
 	asteroid_belt.reset(new uasteroid_belt_planet(rot_axis, this));
 	asteroid_belt->init_rings(pos); // gen_asteroids() will be called when drawing
+}
+
+
+umoon *uplanet::get_moon_by_name(string const &name) {
+
+	for (unsigned i = 0; i < moons.size(); ++i) {
+		if (moons[i].getname() == name) return &moons[i];
+	}
+	return nullptr;
 }
 
 

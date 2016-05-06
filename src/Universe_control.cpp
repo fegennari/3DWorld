@@ -898,7 +898,6 @@ void urev_body::get_owner_info(ostringstream &oss, bool show_uninhabited) const 
 
 
 void urev_body::set_owner(s_object const &sobj, int owner_) {
-
 	set_owner_int(owner_);
 	sobj.set_owner(owner_);
 }
@@ -1008,7 +1007,7 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 	assert(obj && parent);
 	//assert(obj->get_owner() == parent->get_align());
 	assert(sclass < sclasses.size());
-	if (parent->get_temp() > 0.9*TEMP_FACTOR*sclasses[sclass].max_t) return NULL; // planet/moon is too hot
+	if (parent->get_temp() > 1.0*TEMP_FACTOR*sclasses[sclass].max_t) return NULL; // planet/moon is too hot
 	if (!alloc_resources_for(sclass, parent->get_align(), 0)) return NULL;
 	obj->inc_orbiting_refs();
 	float angle(rand_uniform(0.0, TWO_PI));
@@ -1041,6 +1040,7 @@ orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, ur
 	assert(orbiting_type == UTYPE_PLANET || orbiting_type == UTYPE_MOON);
 	assert(!can_move());
 	homeworld.set_object(obj);
+	world_name = obj->getname();
 	flags |= OBJ_FLAGS_ORBT;
 
 	if (orbit_r == 0.0) {
@@ -1072,27 +1072,36 @@ void orbiting_ship::update_state() {
 	if (!(flags & OBJ_FLAGS_DIST) || exploding_now || (time&31) == 0) { // not too far away
 		s_object result;
 
-		if (get_closest_object(pos, result, orbiting_type, 0, 1)) {
-			urev_body &world(result.get_world());
+		if (get_closest_object(pos, result, UTYPE_SYSTEM, 0)) { // get the system first, since it doesn't move and should always be valid
+			urev_body *world(nullptr);
+			if      (orbiting_type == UTYPE_PLANET) {world = result.get_system().get_planet_by_name(world_name);}
+			else if (orbiting_type == UTYPE_MOON  ) {world = result.get_system().get_moon_by_name  (world_name);}
+			else {assert(0);}
 
-			if (!world.is_ok()) { // was destroyed
-				if (!is_exploding()) destroy_ship(0.0);
-				return;
+			if (world != nullptr) {
+				result.object = world;
+
+				if (!world->is_ok()) { // was destroyed
+					if (!is_exploding()) {destroy_ship(0.0);}
+					return;
+				}
+				if (homeworld.update_pos_if_close(world)) { // the object we are orbiting is still there
+					set_pos_from_sobj(world);
+					has_sobj = 1;
+				}
+				if (!ORBITAL_REGEN && exploding_now && world->get_owner() == (int)alignment) { // is this correct?
+					world->dec_orbiting_refs(result); // will die this frame
+				}
+				else if (!is_exploding() && !world->is_owned()) {
+					world->set_owner(result, alignment); // have to reset - world must have been regenerated
+				}
+				if (world->temp > get_temp()) {set_temp(FOBJ_TEMP_SCALE*world->temp, world->get_pos(), NULL);}
 			}
-			if (homeworld.update_pos_if_close(&world)) { // the object we are orbiting is still there
-				set_pos_from_sobj(&world);
-				has_sobj = 1;
-			}
-			if (!ORBITAL_REGEN && exploding_now && world.get_owner() == (int)alignment) { // is this correct?
-				world.dec_orbiting_refs(result); // will die this frame
-			}
-			else if (!is_exploding() && !world.is_owned()) {
-				world.set_owner(result, alignment); // have to reset - world must have been regenerated
-			}
-			if (world.temp > get_temp()) {set_temp(FOBJ_TEMP_SCALE*world.temp, world.get_pos(), NULL);}
+			//else {cout << TXT(orbiting_type) << TXT(world) << TXT(world_name) << endl;}
 		}
+		//else {cout << "system not found" << endl;}
 	}
-	if (!has_sobj) velocity = zero_vector; // stopped
+	if (!has_sobj) {velocity = zero_vector;} // stopped
 }
 
 
@@ -1112,8 +1121,8 @@ void orbiting_ship::set_pos_from_sobj(urev_body const *const sobj) {
 	}
 	pos       = sobj->pos + delta*double(orbit_r);
 	reset_pos = pos;
-	if (specs().max_turn  == 0.0) dir = delta; // face outward (no turning?)
-	if (specs().roll_rate == 0.0) orthogonalize_dir(axis, dir, upv, 1);
+	if (specs().max_turn  == 0.0) {dir = delta;} // face outward (no turning?)
+	if (specs().roll_rate == 0.0) {orthogonalize_dir(axis, dir, upv, 1);}
 	// ignore the rotation and revolution of the object being orbited for now
 	velocity = (GSO ? zero_vector : cross_product(delta, axis)*TWO_PI*rot_rate); // similar to calc_angular_vel()
 	invalidate_rotv();
@@ -1121,14 +1130,12 @@ void orbiting_ship::set_pos_from_sobj(urev_body const *const sobj) {
 
 
 void orbiting_ship::apply_physics() {
-	
 	update_state();
 	u_ship::apply_physics();
 }
 
 
 bool orbiting_ship::regen_enabled() const { // if has_sobj, shouldn't have to check homeworld
-	
 	return (ORBITAL_REGEN && has_sobj && has_homeworld());
 }
 

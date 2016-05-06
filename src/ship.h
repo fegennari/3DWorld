@@ -1351,6 +1351,7 @@ private:
 	float orbit_r, rot_rate, start_angle, angle;
 	vector3d axis;
 	point rel_pos;
+	string world_name;
 
 public:
 	orbiting_ship(unsigned sclass_, unsigned align, bool guardian, urev_body const *obj,

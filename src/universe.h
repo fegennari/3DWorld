@@ -295,6 +295,7 @@ public:
 	void gen_color();
 	void calc_temperature();
 	void get_valid_orbit_r(float &orbit_r, float obj_r) const;
+	umoon *get_moon_by_name(string const &name);
 	bool colonizable_int() const {return (!gas_giant && water > 0.1 && atmos > 0.1);}
 	bool has_vegetation()  const {return (!gas_giant && water > 0.2 && atmos > 0.1);}
 	bool has_ice_debris()  const;
@@ -381,6 +382,8 @@ public:
 	void calc_color();
 	void process();
 	colorRGBA const &get_galaxy_color();
+	uplanet *get_planet_by_name(string const &name);
+	umoon *get_moon_by_name(string const &name);
 	void free_uobj();
 	void free_planets();
 	string get_name() const {return "System " + sun.getname();}
