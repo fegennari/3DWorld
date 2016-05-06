@@ -120,12 +120,11 @@ bool usw_ray::either_end_visible() const {
 	//return (player_pdu.sphere_visible_test(p1, w1) || player_pdu.sphere_visible_test(p2, w2));
 }
 
-void usw_ray_group::draw() const {
+void usw_ray_group::draw() {
 
 	//if (display_mode & 0x80) return; // TESTING
 	if (empty()) return;
 	//RESET_TIME;
-	line_tquad_draw_t drawer;
 	drawer.reserve_verts(9*size()); // 3 triangles per ray
 	glDepthMask(GL_FALSE);
 
@@ -135,6 +134,7 @@ void usw_ray_group::draw() const {
 		i->draw(drawer, prev, next);
 	}
 	drawer.draw();
+	drawer.clear();
 	glDepthMask(GL_TRUE);
 	//PRINT_TIME("Ray Draw");
 }

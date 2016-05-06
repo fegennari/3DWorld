@@ -891,9 +891,10 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 	float const tc   [9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
 	bool const colors[9] = {1, 0, 1, 1, 0, 0, 1, 0, 1};
 	if (make_global) {for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}}
+	color_wrapper cw1, cw2; cw1.set_c4(color1); cw2.set_c4(color2);
 
 	for (unsigned i = 0; i < 9; ++i) { // draw as 3 triangles
-		verts.push_back(vert_tc_color(pts[ptix[i]], tc[i], 0.5, (colors[i] ? color2 : color1))); // tc for 1D blur texture
+		verts.push_back(vert_tc_color(pts[ptix[i]], tc[i], 0.5, (colors[i] ? cw2 : cw1).c)); // tc for 1D blur texture
 	}
 }
 

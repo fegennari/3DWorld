@@ -8,6 +8,7 @@
 
 #include "ship.h"
 #include "obj_sort.h"
+#include "draw_utils.h" // for line_tquad_draw_t
 
 unsigned const BLOCK_SIZE = 1000;
 
@@ -45,9 +46,13 @@ public:
 };
 
 
-struct usw_ray_group : public vector<usw_ray> {
+class usw_ray_group : public vector<usw_ray> {
+
+	line_tquad_draw_t drawer;
+
+public:
 	void add(usw_ray const &ray) {push_back(ray);}
-	void draw() const;
+	void draw();
 };
 
 
