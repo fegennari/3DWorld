@@ -824,16 +824,17 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 		urev_body &world(result.get_world());
 		if (world.is_owned() || !world.colonizable())            continue;
 		if (check_for_land && !world.can_land_at(pos))           continue; // currently player only
-		if (PRINT_OWNERSHIP) cout << world.get_name() << " is claimed by " << get_owner_name(owner) << "." << endl;
+		if (PRINT_OWNERSHIP) {cout << world.get_name() << " is claimed by " << get_owner_name(owner) << "." << endl;}
 		float defend(world.resources);
 		bool owned(0);
 
 		while (defend > 8.0) {
-			owned  |= (add_orbiting_ship(USC_DEFSAT, 0, 0, 0, own, &world) != NULL); // put a defense satellite in orbit
+			if (add_orbiting_ship(USC_DEFSAT, 0, 0, 0, own, &world) == NULL) break; // try to put a defense satellite in orbit
+			owned   = 1;
 			defend -= 12.0;
 		}
 		if (defend > 0.0 || !owned) {
-			owned  |= (add_orbiting_ship(USC_ANTI_MISS, 0, 0, 0, own, &world) != NULL); // put an anti-missile drone in orbit
+			owned |= (add_orbiting_ship(USC_ANTI_MISS, 0, 0, 0, own, &world) != NULL); // try to put an anti-missile drone in orbit
 		}
 		float const rsc_val(world.resources - (homeworld ? 0.0 : 20.0));
 
@@ -841,7 +842,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 			unsigned const colony_types[5] = {USC_COLONY, USC_ARMED_COL, USC_HW_COL, USC_STARPORT, USC_HW_SPORT};
 			unsigned start_val(0);
 			for (start_val = 0; start_val < 4 && world.resources > 10.0*(start_val+1); ++start_val) {}
-			if (start_val == 3 || (start_val == 2 && (rand()&1))) ++start_val;
+			if (start_val == 3 || (start_val == 2 && (rand()&1))) {++start_val;}
 			orbiting_ship const *oship(NULL);
 
 			for (int i = start_val; i >= 0; --i) {
@@ -1006,6 +1007,8 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 
 	assert(obj && parent);
 	//assert(obj->get_owner() == parent->get_align());
+	assert(sclass < sclasses.size());
+	if (parent->get_temp() > 0.9*TEMP_FACTOR*sclasses[sclass].max_t) return NULL; // planet/moon is too hot
 	if (!alloc_resources_for(sclass, parent->get_align(), 0)) return NULL;
 	obj->inc_orbiting_refs();
 	float angle(rand_uniform(0.0, TWO_PI));
@@ -1020,8 +1023,7 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 	// not sure what to set orbit_radius to - could collide with other orbiting objects
 	float const orbit_radius(on_surface ? 0.0 : 2.0*obj->get_radius()), rate(0.0);
 	point const start_pos((pos_from_parent && on_surface) ? point(parent->get_pos() - obj->get_pos()) : all_zeros);
-	orbiting_ship *const ship(new orbiting_ship(sclass, parent->get_align(), guardian, obj, zero_vector, start_pos,
-		orbit_radius, angle, rate));
+	orbiting_ship *const ship(new orbiting_ship(sclass, parent->get_align(), guardian, obj, zero_vector, start_pos, orbit_radius, angle, rate));
 	ship->set_parent(parent);
 	add_uobj_ship(ship);
 	return ship;
