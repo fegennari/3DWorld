@@ -56,10 +56,29 @@ class engine_trail_drawer_t {
 			return !empty();
 		}
 		void draw() const {
+			usw_ray prev_ray;
+			unsigned num_prev_rays(0);
+
 			for (const_iterator i = begin(); i+1 != end(); ++i) { // draw as a line connecting the trail points
 				usw_ray const ray(i->radius, (i+1)->radius, i->pos, (i+1)->pos, i->color, (i+1)->color);
-				if (ray.either_end_visible()) {t_wrays.push_back(ray);}
-			}
+					
+				if (ray.either_end_visible()) {
+					if (num_prev_rays) {
+						if (num_prev_rays < 4 && dot_product(prev_ray.get_norm_dir_vect(), ray.get_norm_dir_vect()) > 0.99) { // colinear - extend the ray
+							prev_ray.extend_to(ray);
+							++num_prev_rays;
+							continue; // extended
+						}
+						t_wrays.push_back(prev_ray);
+					}
+					prev_ray = ray; num_prev_rays = 1;
+				}
+				else { // not visible
+					if (num_prev_rays) {t_wrays.push_back(prev_ray);}
+					num_prev_rays = 0;
+				}
+			} // for i
+			if (num_prev_rays) {t_wrays.push_back(prev_ray);}
 		}
 	};
 

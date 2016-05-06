@@ -40,6 +40,7 @@ public:
 	{
 		assert(w1 > 0.0 && w2 > 0.0);
 	}
+	void extend_to(usw_ray const &r) {p2 = r.p2; w2 = r.w2; color2 = r.color2;}
 	point const &get_pos() const {return p1;}
 	void draw(line_tquad_draw_t &drawer, point const *prev=nullptr, point const *next=nullptr) const;
 	bool either_end_visible() const;
