@@ -268,8 +268,8 @@ void draw_cylinder(float length, float radius1, float radius2, int ndiv, bool dr
 
 
 // Note: two_sided_lighting is not entirely correct since it operates on the vertices instead of the faces/fragments
-vert_norm_tc create_vert(point const &p, vector3d const &n, float ts, float tt, bool two_sided_lighting) {
-	return vert_norm_tc(p, ((two_sided_lighting && dot_product_ptv(n, get_camera_pos(), p) < 0.0) ? -n : n), ts, tt);
+void create_vert(vert_norm_tc &v, point const &p, vector3d const &n, float ts, float tt, bool two_sided_lighting) {
+	v.assign(p, ((two_sided_lighting && dot_product_ptv(n, get_camera_pos(), p) < 0.0) ? -n : n), ts, tt);
 }
 
 void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vpn, bool two_sided_lighting, float tc_t0, float tc_t1, vector3d const &xlate) {
@@ -280,10 +280,10 @@ void gen_cone_triangles(vector<vert_norm_tc> &verts, vector_point_norm const &vp
 
 	for (unsigned s = 0; s < (unsigned)ndiv; ++s) { // Note: always has tex coords
 		unsigned const sp((s+ndiv-1)%ndiv), sn((s+1)%ndiv), vix(3*s + ixoff);
-		//verts[vix+0] = create_vert(vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
-		verts[vix+0] = create_vert(vpn.p[(s <<1)+1]+xlate, vpn.n[s], 0.5, tc_t1, two_sided_lighting); // one big discontinuity at one position
-		verts[vix+1] = create_vert(vpn.p[(sn<<1)+0]+xlate, (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
-		verts[vix+2] = create_vert(vpn.p[(s <<1)+0]+xlate, (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
+		//create_vert(verts[vix+0], vpn.p[(s <<1)+1], vpn.n[s], (1.0 - (s+0.5)*ndiv_inv), tex_scale_len, two_sided_lighting); // small discontinuities at every position
+		create_vert(verts[vix+0], vpn.p[(s <<1)+1]+xlate, vpn.n[s], 0.5, tc_t1, two_sided_lighting); // one big discontinuity at one position
+		create_vert(verts[vix+1], vpn.p[(sn<<1)+0]+xlate, (vpn.n[s] + vpn.n[sn]), (1.0 - (s+1.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
+		create_vert(verts[vix+2], vpn.p[(s <<1)+0]+xlate, (vpn.n[s] + vpn.n[sp]), (1.0 - (s+0.0)*ndiv_inv), tc_t0, two_sided_lighting); // normalize?
 	}
 }
 
@@ -298,8 +298,8 @@ void gen_cylinder_triangle_strip(vector<vert_norm_tc> &verts, vector_point_norm 
 		unsigned const s(S%ndiv), vix(2*S + ixoff);
 		float const ts(1.0 - S*ndiv_inv);
 		vector3d const normal(vpn.n[s] + vpn.n[(S+ndiv-1)%ndiv]); // normalize?
-		verts[vix+0] = create_vert(vpn.p[(s<<1)+0]+xlate, normal, ts, tc_t0, two_sided_lighting);
-		verts[vix+1] = create_vert(vpn.p[(s<<1)+1]+xlate, normal, ts, tc_t1, two_sided_lighting);
+		create_vert(verts[vix+0], vpn.p[(s<<1)+0]+xlate, normal, ts, tc_t0, two_sided_lighting);
+		create_vert(verts[vix+1], vpn.p[(s<<1)+1]+xlate, normal, ts, tc_t1, two_sided_lighting);
 	}
 	if (prev_strip) { // connect previous strip to current strip with degenerate triangles
 		verts[ixoff-2] = verts[ixoff-3];
