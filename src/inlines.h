@@ -609,7 +609,6 @@ inline void water_color_atten(float *c, int x, int y, point const &pos) {
 	water_color_atten_pt(c, x, y, pos, get_camera_pos(), get_light_pos());
 }
 
-
 inline void atten_by_water_depth(float *c, float dist) {
 	UNROLL_3X(c[i_] *= (1.0 - min(uw_atten_max[i_], uw_atten_scale[i_]*dist));)
 	//UNROLL_3X(c[i_] *= max(1.0f-m[i_], exp(-s[i_]*dist));)
@@ -622,7 +621,6 @@ inline float get_rel_height(float zval, float zmin0, float zmax0) {
 	return ((zv > 0.0) ? pow(zv, glaciate_exp_inv) : 0.0);
 }
 
-
 inline bool is_mesh_disabled(int xpos, int ypos) {
 
 	int const x(xpos + xoff2), y(ypos + yoff2);
@@ -634,16 +632,8 @@ inline int add_coll_cylinder(cylinder_3dw const &c, cobj_params const &cparams, 
 	return add_coll_cylinder(c.p1, c.p2, c.r1, c.r2, cparams, platform_id, dhcm);
 }
 
-
-inline void gen_cylin_pts(point *pts, int &npts, point const &p, float radius, vector3d const &v) {
-
-	if (radius == 0.0) {
-		pts[npts++] = p;
-	}
-	else {
-		pts[npts++] = p + v*radius;
-		pts[npts++] = p - v*radius;
-	}
+inline void cylinder_quad_projection(point *pts, cylinder_3dw const &c, vector3d const &v1, int &npts) {
+	return cylinder_quad_projection(pts, c.p1, c.p2, c.r1, c.r2, v1, npts);
 }
 
 

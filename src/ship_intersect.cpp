@@ -43,12 +43,11 @@ void ship_cylinder::draw_svol(point const &tpos, float cur_radius, point const &
 	assert(obj);
 	int npts;
 	point pts_[4];
-	vector3d v2;
 	point spos_xf(spos);
 	obj->xform_point(spos_xf);
 	point const center((p1 + p2)*0.5);
 	vector3d const v1(center - spos_xf);
-	cylinder_quad_projection(pts_, *this, v1, v2, npts);
+	cylinder_quad_projection(pts_, *this, v1, npts);
 	upos_point_type pts[4]; // 3 or 4
 	for (int i = 0; i < npts; ++i) pts[i] = pts_[i];
 	ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj).draw_geom(tpos);
@@ -173,7 +172,6 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 	assert(ro > 0.0 && ri > 0.0);
 	int npts;
 	point pts_[4];
-	vector3d v2;
 	point spos_xf(spos);
 	obj->xform_point(spos_xf);
 	double const ndiv_inv(1.0/double(ndiv)), step(PI*ro*ndiv_inv + 2.0*ri*sin(PI*ndiv_inv));
@@ -185,7 +183,7 @@ void ship_torus::draw_svol(point const &tpos, float cur_radius, point const &spo
 		double const theta(TWO_PI*i*ndiv_inv);
 		point const pos(ro*cos(theta), ro*sin(theta), 0.0), p(center + pos);
 		vector3d const delta(cross_product(pos, plus_z).get_norm() * step);
-		cylinder_quad_projection(pts_, cylinder_3dw(p-delta, p+delta, ri_mod, ri_mod), (p - spos_xf), v2, npts);
+		cylinder_quad_projection(pts_, cylinder_3dw(p-delta, p+delta, ri_mod, ri_mod), (p - spos_xf), npts);
 		upos_point_type pts[4]; // 3 or 4
 		for (int i = 0; i < npts; ++i) pts[i] = pts_[i];
 		ushadow_polygon(pts, npts, tpos, cur_radius, spos, player, obj, min_sdist).draw_geom(tpos);

@@ -853,8 +853,7 @@ int get_line_as_quad_pts(point const &p1, point const &p2, float w1, float w2, p
 	vector3d const v1(get_camera_pos(), (p1 + p2)*0.5);
 	float const dmax(1.0E5*max(w1, w2));
 	if (v1.mag_sq() > dmax*dmax) return 0; // too far away
-	vector3d v2; // unused
-	cylinder_quad_projection(pts, cylinder_3dw(p1, p2, w1, w2), v1, v2, npts);
+	cylinder_quad_projection(pts, p1, p2, w1, w2, v1, npts);
 	assert(npts == 3 || npts == 4);
 	return npts;
 }
@@ -871,6 +870,7 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 
 	if (npts == 3) { // single triangle
 		assert(!prev && !next);
+		if (make_global) {for (unsigned i = 0; i < 3; ++i) {pts[i] = make_pt_global(pts[i]);}}
 		verts.push_back(vert_tc_color(pts[0], 0.0, 0.5, color1));
 		verts.push_back(vert_tc_color(pts[1], ((w1 == 0.0) ? 1.0 : 0.0), 0.5, ((w1 == 0.0) ? color2 : color1)));
 		verts.push_back(vert_tc_color(pts[2], 1.0, 0.5, color2));
@@ -887,11 +887,11 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 		pts[3] = 0.5*(pts[3] + (p2 + dv)); // average the points
 	}
 	pts[4] = p2;
+	if (make_global) {for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}}
+	color_wrapper cw1, cw2; cw1.set_c4(color1); cw2.set_c4(color2);
 	int const ptix   [9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
 	float const tc   [9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
 	bool const colors[9] = {1, 0, 1, 1, 0, 0, 1, 0, 1};
-	if (make_global) {for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}}
-	color_wrapper cw1, cw2; cw1.set_c4(color1); cw2.set_c4(color2);
 
 	for (unsigned i = 0; i < 9; ++i) { // draw as 3 triangles
 		verts.push_back(vert_tc_color(pts[ptix[i]], tc[i], 0.5, (colors[i] ? cw2 : cw1).c)); // tc for 1D blur texture

@@ -602,8 +602,8 @@ bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw cons
 	int npts(0);
 	point pts[4];
 	vector3d const v1(p1, p2); // backwards
-	vector3d v2, norm;
-	cylinder_quad_projection(pts, c, v1, v2, npts);
+	vector3d norm;
+	cylinder_quad_projection(pts, c, v1, npts);
 	assert(npts > 2 && npts <= 4);
 	get_normal(c.p1, c.p2, pts[c.r1 == 0.0], norm, 1);
 	float const denom(dot_product(norm, v1));
@@ -623,7 +623,7 @@ bool line_intersect_cylinder(point const &p1, point const &p2, cylinder_3dw cons
 		float const cr[2] = {c.r1, c.r2};
 
 		for (unsigned d = 0; d < 2; ++d) {
-			if (cr[d] > 0.0 && circle_test_comp(p2, cp[d], v1, v2, cr[d]*cr[d], t)) return 1; // end pt
+			if (cr[d] > 0.0 && circle_test_comp(p2, cp[d], v1, (c.p2 - c.p1), cr[d]*cr[d], t)) return 1; // end pt
 			if (point_in_cylinder(c.p1, c.p2, pt[d], c.r1, c.r2)) return 1;
 		}
 	}
@@ -1034,14 +1034,19 @@ bool do_line_clip(point &v1, point &v2, float const d[3][2]) {
 // ************ PROJECTIONS, CENTER, BOUNDING VOLUME, AND TRANSFORMS ************
 
 
-void cylinder_quad_projection(point *pts, cylinder_3dw const &c, vector3d const &v1, vector3d &v2, int &npts) {
+void gen_cylin_pts(point *pts, int &npts, point const &p, vector3d const &v) {
+	pts[npts++] = p + v;
+	pts[npts++] = p - v;
+}
+
+void cylinder_quad_projection(point *pts, point const &cp1, point const &cp2, float const cr1, float const cr2, vector3d const &v1, int &npts) {
 
 	assert(pts != NULL);
 	npts = 0;
-	v2   = c.p2 - c.p1;
-	vector3d const crossp(cross_product(v1, v2).get_norm());
-	gen_cylin_pts(pts, npts, c.p1, c.r1, crossp);
-	gen_cylin_pts(pts, npts, c.p2, c.r2, crossp);
+	vector3d const crossp(cross_product(v1, (cp2 - cp1)));
+	float const cp_mag(crossp.mag());
+	if (cr1 == 0.0) {pts[npts++] = cp1;} else {gen_cylin_pts(pts, npts, cp1, (cr1/cp_mag)*crossp);}
+	if (cr2 == 0.0) {pts[npts++] = cp2;} else {gen_cylin_pts(pts, npts, cp2, (cr2/cp_mag)*crossp);}
 	if (npts == 4) {swap(pts[2], pts[3]);}
 }
 

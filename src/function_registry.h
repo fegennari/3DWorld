@@ -463,7 +463,7 @@ bool sphere_int_cylinder_pretest(point const &sc, float sr, point const &cp1, po
 								 bool check_ends, vector3d &v1, vector3d &v2, float &t, float &rad);
 bool sphere_intersect_cylinder_ipt(point const &sc, float sr, point const &cp1, point const &cp2, float r1, float r2,
 							   bool check_ends, point &p_int, vector3d &norm, bool calc_int);
-void cylinder_quad_projection(point *pts, cylinder_3dw const &c, vector3d const &v1, vector3d &v2, int &npts);
+void cylinder_quad_projection(point *pts, point const &cp1, point const &cp2, float const cr1, float const cr2, vector3d const &v1, int &npts);
 template<typename T> pointT<T> get_center_arb(pointT<T> const *const pts, int npts);
 unsigned get_cube_corners(float const d[3][2], point corners[8], point const &viewed_from=all_zeros, bool all_corners=1);
 void get_closest_cube_norm(float const d[3][2], point const &p, vector3d &norm);
