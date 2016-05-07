@@ -82,14 +82,15 @@ class engine_trail_drawer_t {
 		}
 	};
 
-	typedef pair<unsigned, int> trail_map_key;
-	map<trail_map_key, trail_t> trail_map;
-
+	map<unsigned, trail_t> trail_map;
+	
 public:
 	void add_trail_pt(free_obj const *const fobj, int eix, point const &pos, float radius, colorRGBA const &color, float alpha_scale=1.0) {
 		if (!animate2 || color.A < MIN_ETRAIL_ALPHA) return; // alpha too low to draw
 		assert(fobj != nullptr);
-		trail_t &trail(trail_map[trail_map_key(fobj->get_obj_id(), eix)]);
+		// Note: eix is negative for comets, so max with 0; obj id overflow is okay because active ship ids will usually be in a narrow range
+		unsigned const trail_map_key((fobj->get_obj_id() << 8) + max(eix, 0));
+		trail_t &trail(trail_map[trail_map_key]);
 		if (trail.extended && !trail.empty()) {trail.pop_back(); trail.extended = 0;} // remove extension
 
 		if (!trail.empty()) { // at least one previous point
