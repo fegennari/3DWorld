@@ -889,13 +889,15 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 	pts[4] = p2;
 	if (make_global) {for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}}
 	color_wrapper cw1, cw2; cw1.set_c4(color1); cw2.set_c4(color2);
-	int const ptix   [9] = {2, 1, 4, 4, 1, 0, 4, 0, 3};
-	float const tc   [9] = {0.0, 0.0, 0.5, 0.5, 0.0, 1.0, 0.5, 1.0, 1.0};
-	bool const colors[9] = {1, 0, 1, 1, 0, 0, 1, 0, 1};
-
-	for (unsigned i = 0; i < 9; ++i) { // draw as 3 triangles
-		verts.push_back(vert_tc_color(pts[ptix[i]], tc[i], 0.5, (colors[i] ? cw2 : cw1).c)); // tc for 1D blur texture
-	}
+	verts.push_back(vert_tc_color(pts[2], 0.0, 0.5, cw2.c));
+	verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
+	verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
+	verts.push_back(verts.back()); // duplicate
+	verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
+	verts.push_back(vert_tc_color(pts[0], 1.0, 0.5, cw1.c));
+	verts.push_back(verts.back()); // duplicate
+	verts.push_back(vert_tc_color(pts[3], 1.0, 0.5, cw2.c));
+	verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
 }
 
 
