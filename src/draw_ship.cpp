@@ -45,7 +45,8 @@ class engine_trail_drawer_t {
 
 	struct trail_t : public deque<trail_pt> {
 		bool extended;
-		trail_t() : extended(0) {}
+		unsigned merge_count;
+		trail_t() : extended(0), merge_count(0) {}
 
 		bool update() {
 			// attenuate color alpha based on elapsed time since last frame using exponential decay (pos and radius are unchanged)
@@ -56,29 +57,14 @@ class engine_trail_drawer_t {
 			return !empty();
 		}
 		void draw() const {
-			usw_ray prev_ray;
-			unsigned num_prev_rays(0);
+			if (empty()) return;
+			bool p1_visible(player_pdu.point_visible_test(begin()->pos));
 
 			for (const_iterator i = begin(); i+1 != end(); ++i) { // draw as a line connecting the trail points
-				usw_ray const ray(i->radius, (i+1)->radius, i->pos, (i+1)->pos, i->color, (i+1)->color);
-					
-				if (ray.either_end_visible()) {
-					if (num_prev_rays) {
-						if (num_prev_rays < 4 && dot_product(prev_ray.get_norm_dir_vect(), ray.get_norm_dir_vect()) > 0.99) { // colinear - extend the ray
-							prev_ray.extend_to(ray);
-							++num_prev_rays;
-							continue; // extended
-						}
-						t_wrays.push_back(prev_ray);
-					}
-					prev_ray = ray; num_prev_rays = 1;
-				}
-				else { // not visible
-					if (num_prev_rays) {t_wrays.push_back(prev_ray);}
-					num_prev_rays = 0;
-				}
+				bool const p2_visible(player_pdu.point_visible_test((i+1)->pos)), is_visible(p1_visible || p2_visible);
+				p1_visible = p2_visible;
+				if (is_visible) {t_wrays.push_back(usw_ray(i->radius, (i+1)->radius, i->pos, (i+1)->pos, i->color, (i+1)->color));}
 			} // for i
-			if (num_prev_rays) {t_wrays.push_back(prev_ray);}
 		}
 	};
 
@@ -91,30 +77,38 @@ public:
 		// Note: eix is negative for comets, so max with 0; obj id overflow is okay because active ship ids will usually be in a narrow range
 		unsigned const trail_map_key((fobj->get_obj_id() << 8) + max(eix, 0));
 		trail_t &trail(trail_map[trail_map_key]);
-		if (trail.extended && !trail.empty()) {trail.pop_back(); trail.extended = 0;} // remove extension
 
 		if (!trail.empty()) { // at least one previous point
-			point const &prev(trail.back().pos);
-			float const dist(p2p_dist(prev, pos));
-			if (dist < 0.5*radius) return; // too close (short segment)
+			if (dist_less_than(trail.back().pos, pos, 0.5*radius)) return; // too close (very short segment), ignore it
+			if (trail.extended) {trail.pop_back(); trail.extended = 0;} // remove extension
 
-			if (trail.size() >= 2 && dist < 4.0*radius) { // at least two previous points (one previous segment) + not too far
-				point const preprev(trail[trail.size()-2].pos);
-				float const dp(dot_product(prev-preprev, pos-prev)/(p2p_dist(preprev, prev)*p2p_dist(prev, pos)));
-				trail.extended = (dp > 0.5 && dist < 4.0*radius*pow(dp, 16.0f)); // extend short straight segments
+			if (trail.size() >= 2) { // at least two previous points (one previous segment)
+				point const &prev(trail.back().pos), &preprev(trail[trail.size()-2].pos);
+				float const dist(p2p_dist(prev, pos)), dp(dot_product(prev-preprev, pos-prev)/(p2p_dist(preprev, prev)*dist));
+				if (dp > 0.5 && dist < 4.0*radius*pow(dp, 16.0f)) {trail.extended = 1;} // extend short straight segments
+				else if (trail.merge_count < 4 && dp > 0.99) { // colinear - extend the trail up to 4 segments
+					trail.back() = trail_pt(pos, radius, colorRGBA(color, color.A*alpha_scale));
+					++trail.merge_count;
+					return;
+				}
 			}
 		}
 		trail.push_back(trail_pt(pos, radius, colorRGBA(color, color.A*alpha_scale))); // add another segment
+		if (!trail.extended) {trail.merge_count = 0;}
 	}
 	void update() {
 		if (!animate2) return;
+		//RESET_TIME;
 		for (auto i = trail_map.begin(); i != trail_map.end(); ) { // Note: no increment
 			if (!i->second.update()) {trail_map.erase(i++);} else {++i;} // update and remove if empty
 		}
+		//PRINT_TIME("Trail Update");
 	}
 	void draw() const {
 		if (!animate2) return;
+		//RESET_TIME;
 		for (auto i = trail_map.begin(); i != trail_map.end(); ++i) {i->second.draw();}
+		//PRINT_TIME("Trail Draw");
 	}
 };
 
