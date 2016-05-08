@@ -870,7 +870,8 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 
 	if (npts == 3) { // single triangle
 		assert(!prev && !next);
-		if (make_global) {for (unsigned i = 0; i < 3; ++i) {pts[i] = make_pt_global(pts[i]);}}
+		if (make_global ) {for (unsigned i = 0; i < 3; ++i) {pts[i] = make_pt_global(pts[i]);}}
+		if (indexed_mode) {for (unsigned i = 0; i < 3; ++i) {indices.push_back(verts.size()+i);}} // is this supported/tested?
 		verts.push_back(vert_tc_color(pts[0], 0.0, 0.5, color1));
 		verts.push_back(vert_tc_color(pts[1], ((w1 == 0.0) ? 1.0 : 0.0), 0.5, ((w1 == 0.0) ? color2 : color1)));
 		verts.push_back(vert_tc_color(pts[2], 1.0, 0.5, color2));
@@ -889,15 +890,43 @@ void line_tquad_draw_t::add_line_as_tris(point const &p1, point const &p2, float
 	pts[4] = p2;
 	if (make_global) {for (unsigned i = 0; i < 5; ++i) {pts[i] = make_pt_global(pts[i]);}}
 	color_wrapper cw1, cw2; cw1.set_c4(color1); cw2.set_c4(color2);
-	verts.push_back(vert_tc_color(pts[2], 0.0, 0.5, cw2.c));
-	verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
-	verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
-	verts.push_back(verts.back()); // duplicate
-	verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
-	verts.push_back(vert_tc_color(pts[0], 1.0, 0.5, cw1.c));
-	verts.push_back(verts.back()); // duplicate
-	verts.push_back(vert_tc_color(pts[3], 1.0, 0.5, cw2.c));
-	verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
+
+	if (indexed_mode) {
+		unsigned const ixs[9] = {2,1,4, 4,1,0, 0,3,4};
+		for (unsigned i = 0; i < 9; ++i) {indices.push_back(verts.size() + ixs[i]);}
+		verts.push_back(vert_tc_color(pts[0], 1.0, 0.5, cw1.c));
+		verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
+		verts.push_back(vert_tc_color(pts[2], 0.0, 0.5, cw2.c));
+		verts.push_back(vert_tc_color(pts[3], 1.0, 0.5, cw2.c));
+		verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
+	}
+	else {
+		verts.push_back(vert_tc_color(pts[2], 0.0, 0.5, cw2.c));
+		verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
+		verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
+		verts.push_back(verts.back()); // duplicate
+		verts.push_back(vert_tc_color(pts[1], 0.0, 0.5, cw1.c));
+		verts.push_back(vert_tc_color(pts[0], 1.0, 0.5, cw1.c));
+		verts.push_back(verts.back()); // duplicate
+		verts.push_back(vert_tc_color(pts[3], 1.0, 0.5, cw2.c));
+		verts.push_back(vert_tc_color(pts[4], 0.5, 0.5, cw2.c));
+	}
+}
+
+
+void line_tquad_draw_t::draw_tri_verts() const {
+
+	if (verts.empty()) return;
+	
+	if (indexed_mode) {
+		set_ptr_state(&verts.front(), verts.size());
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, &indices.front()); // FIXME: not with a core profile
+		unset_ptr_state(&verts.front());
+	}
+	else {
+		assert(indices.empty());
+		draw_verts(verts, GL_TRIANGLES);
+	}
 }
 
 
