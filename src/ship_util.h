@@ -47,11 +47,10 @@ public:
 };
 
 
-class usw_ray_group : public vector<usw_ray> {
+struct usw_ray_group : public vector<usw_ray> {
 
 	line_tquad_draw_t drawer;
 
-public:
 	void add(usw_ray const &ray) {push_back(ray);}
 	void draw();
 };

@@ -67,7 +67,7 @@ extern vector<us_weapon> us_weapons;
 
 void collision_detect_objects(vector<cached_obj> &objs0, unsigned t);
 void end_part_cloud_draw();
-void draw_and_update_engine_trails();
+void draw_and_update_engine_trails(line_tquad_draw_t &drawer);
 void add_nearby_uobj_text(text_drawer_t &text_drawer);
 
 
@@ -907,7 +907,7 @@ void draw_univ_objects() {
 	disable_blend();
 	set_additive_blend_mode();
 	maybe_draw_motion_dust();
-	draw_and_update_engine_trails();
+	draw_and_update_engine_trails(t_wrays.drawer);
 	t_wrays.draw(); // draw beam weapons, engine trails, and lightning
 	set_std_blend_mode();
 	add_nearby_uobj_text(text_drawer); // only if show_scores?

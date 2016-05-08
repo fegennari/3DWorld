@@ -56,14 +56,17 @@ class engine_trail_drawer_t {
 			if (size() == 1 && begin()->color.A < MIN_ETRAIL_ALPHA) {pop_front();} // remove last point
 			return !empty();
 		}
-		void draw() const {
+		void draw(line_tquad_draw_t &drawer) const {
 			if (empty()) return;
 			bool p1_visible(player_pdu.point_visible_test(begin()->pos));
 
 			for (const_iterator i = begin(); i+1 != end(); ++i) { // draw as a line connecting the trail points
 				bool const p2_visible(player_pdu.point_visible_test((i+1)->pos)), is_visible(p1_visible || p2_visible);
 				p1_visible = p2_visible;
-				if (is_visible) {t_wrays.push_back(usw_ray(i->radius, (i+1)->radius, i->pos, (i+1)->pos, i->color, (i+1)->color));}
+				if (!is_visible) continue;
+				point const *prev((i != begin()) ? &(i-1)->pos : nullptr);
+				point const *next((i+2 != end()) ? &(i+2)->pos : nullptr);
+				drawer.add_line_as_tris(i->pos, (i+1)->pos, i->radius, (i+1)->radius, i->color, (i+1)->color, prev, next, 1);
 			} // for i
 		}
 	};
@@ -104,19 +107,17 @@ public:
 		}
 		//PRINT_TIME("Trail Update");
 	}
-	void draw() const {
-		if (!animate2) return;
+	void draw(line_tquad_draw_t &drawer) const {
 		//RESET_TIME;
-		for (auto i = trail_map.begin(); i != trail_map.end(); ++i) {i->second.draw();}
+		for (auto i = trail_map.begin(); i != trail_map.end(); ++i) {i->second.draw(drawer);}
 		//PRINT_TIME("Trail Draw");
 	}
 };
 
 engine_trail_drawer_t engine_trail_drawer;
 
-void draw_and_update_engine_trails() {
-	//if (display_mode & 0x80) return; // TESTING
-	engine_trail_drawer.draw();
+void draw_and_update_engine_trails(line_tquad_draw_t &drawer) {
+	engine_trail_drawer.draw(drawer);
 	engine_trail_drawer.update();
 }
 
@@ -136,10 +137,9 @@ bool usw_ray::either_end_visible() const {
 
 void usw_ray_group::draw() {
 
-	//if (display_mode & 0x80) return; // TESTING
-	if (empty()) return;
+	if (empty() && drawer.empty()) return;
 	//RESET_TIME;
-	drawer.reserve_verts(9*size()); // 3 triangles per ray
+	drawer.reserve_verts(drawer.size() + 9*size()); // 3 triangles per ray
 	glDepthMask(GL_FALSE);
 
 	for (const_iterator i = begin(); i != end(); ++i) {
@@ -147,8 +147,7 @@ void usw_ray_group::draw() {
 		point const *next((i+1 != end() && (i+1)->p1 == i->p2) ? &(i+1)->p2 : nullptr);
 		i->draw(drawer, prev, next);
 	}
-	drawer.draw();
-	drawer.clear();
+	drawer.draw_and_clear();
 	glDepthMask(GL_TRUE);
 	//PRINT_TIME("Ray Draw");
 }

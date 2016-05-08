@@ -121,11 +121,13 @@ class line_tquad_draw_t {
 
 public:
 	bool empty() const {return verts.empty();}
+	size_t size() {return verts.size();}
 	void clear() {verts.clear();}
 	void reserve_verts(unsigned size) {verts.reserve(size);}
 	void add_line_as_tris(point const &p1, point const &p2, float w1, float w2, colorRGBA const &color1, colorRGBA const &color2,
 		point const* const prev=NULL, point const *const next=NULL, bool make_global=0);
 	void draw() const;
+	void draw_and_clear() {draw(); clear();}
 	void draw_tri_verts() const {draw_verts(verts, GL_TRIANGLES);}
 };
 
