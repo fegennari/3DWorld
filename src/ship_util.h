@@ -234,7 +234,7 @@ uobject const *get_closest_world_ptr(point const &pos, int type);
 uobject const *choose_dest_world(point const &pos, int exclude_id, unsigned align, float tmax);
 bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool check_for_land, bool homeworld);
 void fire_planet_killer(u_ship const *const ship, point const &ship_pos, vector3d const &fire_dir, float fire_range, int obj_types);
-orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent, free_obj const *parent, urev_body *obj);
+orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent, free_obj const *parent, s_object const &world_path);
 
 // ship.cpp
 void print_n_spaces(int n);

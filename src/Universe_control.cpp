@@ -829,12 +829,12 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 		bool owned(0);
 
 		while (defend > 8.0) {
-			if (add_orbiting_ship(USC_DEFSAT, 0, 0, 0, own, &world) == NULL) break; // try to put a defense satellite in orbit
+			if (add_orbiting_ship(USC_DEFSAT, 0, 0, 0, own, result) == NULL) break; // try to put a defense satellite in orbit
 			owned   = 1;
 			defend -= 12.0;
 		}
 		if (defend > 0.0 || !owned) {
-			owned |= (add_orbiting_ship(USC_ANTI_MISS, 0, 0, 0, own, &world) != NULL); // try to put an anti-missile drone in orbit
+			owned |= (add_orbiting_ship(USC_ANTI_MISS, 0, 0, 0, own, result) != NULL); // try to put an anti-missile drone in orbit
 		}
 		float const rsc_val(world.resources - (homeworld ? 0.0 : 20.0));
 
@@ -846,7 +846,7 @@ bool check_dest_ownership(int uobj_id, point const &pos, free_obj *own, bool che
 			orbiting_ship const *oship(NULL);
 
 			for (int i = start_val; i >= 0; --i) {
-				oship = add_orbiting_ship(colony_types[i], 0, 1, 1, own, &world); // put a colony on world
+				oship = add_orbiting_ship(colony_types[i], 0, 1, 1, own, result); // put a colony on world
 				
 				if (oship != NULL) {
 					upos_point_type const dir((own->pos - oship->pos).get_norm());
@@ -1002,27 +1002,28 @@ void u_ship::near_sobj(s_object &clobj, int coll) {
 // ************ ORBITING_SHIP ************
 
 
-orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent, free_obj const *parent, urev_body *obj) {
+orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface, bool pos_from_parent, free_obj const *parent, s_object const &world_path) {
 
-	assert(obj && parent);
-	//assert(obj->get_owner() == parent->get_align());
+	assert(parent);
+	urev_body &world(world_path.get_world());
+	//assert(world.get_owner() == parent->get_align());
 	assert(sclass < sclasses.size());
 	if (parent->get_temp() > 1.0*TEMP_FACTOR*sclasses[sclass].max_t) return NULL; // planet/moon is too hot
 	if (!alloc_resources_for(sclass, parent->get_align(), 0)) return NULL;
-	obj->inc_orbiting_refs();
+	world.inc_orbiting_refs();
 	float angle(rand_uniform(0.0, TWO_PI));
 	point const parent_pos(parent->get_pos());
 
 	if (pos_from_parent) { // set initial location based on position of ship relative to planet
-		vector3d dir((parent->get_pos() - obj->get_pos()).get_norm());
-		obj->rotate_vector(dir);
+		vector3d dir((parent->get_pos() - world.get_pos()).get_norm());
+		world.rotate_vector(dir);
 		angle = atan2(dir.y, dir.x);
 	}
 
 	// not sure what to set orbit_radius to - could collide with other orbiting objects
-	float const orbit_radius(on_surface ? 0.0 : 2.0*obj->get_radius()), rate(0.0);
-	point const start_pos((pos_from_parent && on_surface) ? point(parent->get_pos() - obj->get_pos()) : all_zeros);
-	orbiting_ship *const ship(new orbiting_ship(sclass, parent->get_align(), guardian, obj, zero_vector, start_pos, orbit_radius, angle, rate));
+	float const orbit_radius(on_surface ? 0.0 : 2.0*world.get_radius()), rate(0.0);
+	point const start_pos((pos_from_parent && on_surface) ? point(parent->get_pos() - world.get_pos()) : all_zeros);
+	orbiting_ship *const ship(new orbiting_ship(sclass, parent->get_align(), guardian, world_path, zero_vector, start_pos, orbit_radius, angle, rate));
 	ship->set_parent(parent);
 	add_uobj_ship(ship);
 	return ship;
@@ -1030,17 +1031,19 @@ orbiting_ship *add_orbiting_ship(unsigned sclass, bool guardian, bool on_surface
 
 
 // geostationary orbit (GEO) and geosynchronous orbit (GSO)
-orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, urev_body const *obj,
+orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
 							 vector3d const &axis_, point const &start_pos, float rad, float start_ang, float rate)
 	: u_ship(sclass_, all_zeros, align, (AI_ATT_ENEMY | (guardian ? AI_GUARDIAN : 0)), TARGET_CLOSEST, 0), GSO(rate == 0.0),
-	fixed_pos(start_pos != all_zeros), has_sobj(0), sobj_liveable(obj->liveable()), orbiting_type(obj->type),
+	fixed_pos(start_pos != all_zeros), has_sobj(0),
 	last_build_time(time), orbit_r(rad), start_angle(start_ang), rot_rate(rate), axis(axis_), rel_pos(start_pos)
 {
-	assert(obj);
+	urev_body &world(world_path.get_world());
+	sobj_liveable = world.liveable();
+	orbiting_type = world.type;
 	assert(orbiting_type == UTYPE_PLANET || orbiting_type == UTYPE_MOON);
 	assert(!can_move());
-	homeworld.set_object(obj);
-	world_name = obj->getname();
+	homeworld.set_object(&world);
+	world_name = world.getname();
 	flags |= OBJ_FLAGS_ORBT;
 
 	if (orbit_r == 0.0) {
@@ -1048,18 +1051,18 @@ orbiting_ship::orbiting_ship(unsigned sclass_, unsigned align, bool guardian, ur
 		// *** determine radius of orbit orbit_r based on mass? ***
 	}
 	else {
-		obj->get_valid_orbit_r(orbit_r, c_radius);
+		world.get_valid_orbit_r(orbit_r, c_radius);
 	}
-	assert(radius < obj->radius); // too strict?
-	assert(orbit_r == 0.0 || orbit_r >= obj->radius + c_radius); // too strict?
-	if (orbit_r == 0.0) orbit_r = obj->radius + 0.5*radius; // + radius?
-	if (GSO || axis == zero_vector) axis = obj->rot_axis; // GEO (orbits along the equator)
+	assert(radius < world.radius); // too strict?
+	assert(orbit_r == 0.0 || orbit_r >= world.radius + c_radius); // too strict?
+	if (orbit_r == 0.0) orbit_r = world.radius + 0.5*radius; // + radius?
+	if (GSO || axis == zero_vector) axis = world.rot_axis; // GEO (orbits along the equator)
 
 	if (fixed_pos) {
-		obj->rotate_vector(rel_pos); // convert to local object space
+		world.rotate_vector(rel_pos); // convert to local object space
 		rel_pos.normalize();
 	}
-	set_pos_from_sobj(obj);
+	set_pos_from_sobj(&world);
 }
 
 

@@ -1354,7 +1354,7 @@ private:
 	string world_name;
 
 public:
-	orbiting_ship(unsigned sclass_, unsigned align, bool guardian, urev_body const *obj,
+	orbiting_ship(unsigned sclass_, unsigned align, bool guardian, s_object const &world_path,
 		vector3d const &axis_, point const &start_pos, float rad, float start_ang, float rate);
 	void set_angle(float angle) {start_angle = angle;}
 	void update_state();
