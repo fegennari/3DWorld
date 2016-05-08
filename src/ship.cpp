@@ -57,7 +57,7 @@ float friendly_kills[NUM_ALIGNMENT]   = {0};
 
 
 extern int show_framerate, frame_counter, display_mode, animate2, do_run, show_scores;
-extern float fticks, tfticks;
+extern float fticks, tfticks, player_sensor_dist_mult;
 extern unsigned owner_counts[];
 extern float resource_counts[];
 extern exp_type_params et_params[];
@@ -837,7 +837,7 @@ void draw_univ_objects() {
 	sorted.resize(0);
 	unsorted.resize(0);
 	point const &camera(get_player_pos2());
-	float const ch_dist(player_ship().specs().sensor_dist);
+	float const ch_dist(player_ship().specs().sensor_dist*player_sensor_dist_mult);
 	pt_line_drawer ch_pld;
 	text_drawer_t text_drawer;
 

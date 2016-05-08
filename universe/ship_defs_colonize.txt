@@ -3,6 +3,8 @@
 
 $INCLUDE universe/ship_defs.txt
 
+$PLAYER_SDIST_SCALE 50.0 # 50*6.5 = 325
+
 # credits (in K)
 $TEAM_CREDITS PLAYER 1000
 $TEAM_CREDITS PIRATE 5000
