@@ -1,0 +1,41 @@
+# 3DWorld Universe Mode Ship and Weapon Definitions File
+# Frank Gennari 8/2/06
+
+$INCLUDE universe/ship_defs.txt
+
+# credits (in K)
+$TEAM_CREDITS PLAYER 1000
+$TEAM_CREDITS PIRATE 5000
+$TEAM_CREDITS RED    10000
+$TEAM_CREDITS BLUE   10000
+$TEAM_CREDITS ORANGE 10000
+$TEAM_CREDITS PURPLE 10000
+
+# x40 ships
+# some other locs: 17.1 29.4 -63.8   97.0 6.8 -3.1   -50.1 22.1 -63.9   76.1 6.2 -33.4
+# add fleets: name enabled <counts> [<float flagship_child_stray_dist> <enum ship_id>]
+# FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
+$FLEET "Team Human"  1  RED    AI_ATT_ENEMY  TARGET_CLOSEST  5.0   63.0 -50.0 45.0
+  0   1   5   6   3   3   5   2   5   0   0   0   0   0   0   0   0   0   0   6   0   0   0   0   0   0   0   4   0   0   0   0   0   0   0   0   0   0   0   0
+$FLEET "Team DW"     1  BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  5.0   0.0  -70.0 70.0
+  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   24  14  2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+$FLEET "Team Borg"   1  ORANGE AI_ATT_ENEMY  TARGET_CLOSEST  5.0   16.0 -25.0 23.0
+  0   0   0   0   0   0   0   0   0   0   0   0   0   0   4   12  24  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+$FLEET "Team Alien"  1  PURPLE AI_ATT_ENEMY  TARGET_CLOSEST  5.0   34.0 -67.0 83.0
+  0   0   0   0   0   0   0   0   0   3   6   0   0   0   0   0   0   0   0   0   0   0   0   6   4   3   4   0   0   4   4   4   2   0   0   0   0   0   0   0
+  
+$FLEET "Test"   0  RED   AI_ATT_ENEMY  TARGET_CLOSEST  0.1   0.2  0.0  0.0
+  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+$FLEET "Test"   0  BLUE  AI_ATT_ENEMY  TARGET_CLOSEST  0.1   0.2  0.0  0.0
+  0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+
+$SHIP_ADD_RAND_SPAWN 1 4.0
+#                 mult FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
+  $ALIGN NEUTRAL  4    0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   1   1   0   0   0   0   1   0   4   0   0   0   2   0   1   1   1   0   0   0   0   0   0   0   0
+  $ALIGN GOV      2    0   0   0   0   0   2   2   0   2   0   0   0   1   0   0   0   0   0   0   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   2   0   0   0   0   0
+  $ALIGN PIRATE   0    0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   0   0   0   0   0   0   0   0
+  $ALIGN RED      0    0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0
+  $ALIGN BLUE     0    0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0
+
+
+$END

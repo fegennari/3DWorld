@@ -1,0 +1,32 @@
+# 3DWorld Universe Mode Ship and Weapon Definitions File
+# Frank Gennari 8/2/06
+
+$GLOBAL_REGEN 20.0 # ship regen delay in seconds (0.0 disables)
+
+$INCLUDE universe/ship_defs.txt
+
+
+$SHIP_ADD_INIT 1
+#                 num FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
+  $ALIGN NEUTRAL  0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN PLAYER   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN GOV      0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN PIRATE   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+
+#  $ALIGN RED      25  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+#  $ALIGN BLUE     25  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+  $ALIGN RED      25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
+  $ALIGN BLUE     25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
+# $ALIGN ORANGE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
+# $ALIGN PURPLE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
+
+$SHIP_ADD_RAND_SPAWN 1 4.0
+#                 mult FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
+  $ALIGN NEUTRAL  6    0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   1   1   0   0   0   0   1   0   4   0   0   0   2   0   1   1   1   0   0   0   0   0   0   0   0
+  $ALIGN GOV      4    0   0   0   0   0   2   2   0   2   0   0   0   1   0   0   0   0   0   0   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   2   0   0   0   0   0
+  $ALIGN PIRATE   1    0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   0   0   0   0   0   0   0   0
+  $ALIGN RED      2    0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0
+  $ALIGN BLUE     2    0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0
+
+$END
+

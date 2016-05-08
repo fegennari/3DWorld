@@ -1,9 +1,6 @@
 # 3DWorld Universe Mode Ship and Weapon Definitions File
 # Frank Gennari 8/2/06
 
-$INCLUDE universe/ship_defs_base.txt
-
-$GLOBAL_REGEN 20.0 # ship regen delay in seconds (0.0 disables)
 $SPAWN_DIST   0.2
 $START_POS    -0.0796 0.3075 -0.8893  # new computer
 #$START_POS    -0.029 0.183 -0.767 # two overlapping asteroid fields
@@ -26,9 +23,10 @@ $TEAM_CREDITS PLAYER 1000
 $TEAM_CREDITS PIRATE 5000
 $TEAM_CREDITS RED    0
 $TEAM_CREDITS BLUE   0
-$TEAM_CREDITS ORANGE 10000
-$TEAM_CREDITS PURPLE 10000
+$TEAM_CREDITS ORANGE 0
+$TEAM_CREDITS PURPLE 0
 
+$INCLUDE universe/ship_defs_base.txt
 
 # configure player ship and add special weapons
 $PLAYER USC_X1EXTREME PLAYER
@@ -55,73 +53,6 @@ $ADD UWEAP_INFERNO  1
 $ADD UWEAP_PARALYZE 1
 $ADD UWEAP_MIND_C   1
 $ADD UWEAP_SEIGEC
-
-
-# add fleets: name enabled <counts> [<float flagship_child_stray_dist> <enum ship_id>]
-# FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
-$FLEET "defenders" 0 RED    AI_ATT_ENEMY  TARGET_CLOSEST  0.12   0.0  0.0  0.0
-  0   0   0   0   0   0   0   0   0   0   0   30  8   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   8   0   0   0   0   8   0   0   0   0   0   0
-$FLEET "attackers" 0 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  0.24   1.5  1.5  1.5
-  4   24  20  16  8   8   5   0   3   3   2   0   0   0   0   0   0   0   0   4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   4   0   0   0   0   0
-  
-$FLEET "Alien"     0 RED    AI_ATT_ENEMY  TARGET_CLOSEST  0.08   0.0  0.1 -0.1
-  0   0   0   0   0   0   0   0   0   8   0   0   0   0   1   0   6   0   0   0   0   8   0   16  0   0   0   0   0   8   0   0   0   0   0   0   0   0   0   0
-$FLEET "GP Gov"    0 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  0.08  -0.7  0.0  0.5
-  0   16  16  16  8   8   8   1   8   0   0   0   0   0   0   0   0   0   0   8   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-  
-$FLEET "Timetest1"  0 RED    AI_ATT_ENEMY  TARGET_CLOSEST  5.0   10.0 10.0 10.0
-  1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   0   1   1   1   1   1   1   0   0   0   0   0   1   1   1   0   0   0   0   0   0   0   0   0   0
-$FLEET "Timetest2"  0 BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  5.0   10.0 10.0 10.0
-  1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   0   1   1   1   1   1   1   0   0   0   0   0   1   1   1   0   0   0   0   0   0   0   0   0   0
-
-# x40 ships
-# some other locs: 17.1 29.4 -63.8   97.0 6.8 -3.1   -50.1 22.1 -63.9   76.1 6.2 -33.4
-$FLEET "Team Human"  0  RED    AI_ATT_ENEMY  TARGET_CLOSEST  5.0   63.0 -50.0 45.0
-  0   1   5   6   3   3   5   2   5   0   0   0   0   0   0   0   0   0   0   6   0   0   0   0   0   0   0   4   0   0   0   0   0   0   0   0   0   0   0   0
-$FLEET "Team DW"     0  BLUE   AI_ATT_ENEMY  TARGET_CLOSEST  5.0   0.0  -70.0 70.0
-  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   24  14  2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-$FLEET "Team Alien"  0  PURPLE AI_ATT_ENEMY  TARGET_CLOSEST  5.0   34.0 -67.0 83.0
-  0   0   0   0   0   0   0   0   0   3   6   0   0   0   0   0   0   0   0   0   0   0   0   6   4   3   4   0   0   4   4   4   2   0   0   0   0   0   0   0
-$FLEET "Team Borg"   0  ORANGE AI_ATT_ENEMY  TARGET_CLOSEST  5.0   16.0 -25.0 23.0
-  0   0   0   0   0   0   0   0   0   0   0   0   0   0   4   12  24  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-  
-$FLEET "Test"   0  RED   AI_ATT_ENEMY  TARGET_CLOSEST  0.1   0.2  0.0  0.0
-  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-$FLEET "Test"   0  BLUE  AI_ATT_ENEMY  TARGET_CLOSEST  0.1   0.2  0.0  0.0
-  0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-
-
-# setup ship generation probabilities: <gen/init> enabled num(per alignment)
-$SHIP_ADD_GEN  1
-#                 num FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
-  $ALIGN NEUTRAL  4   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-  $ALIGN GOV      4   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-  $ALIGN RED      4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0
-  $ALIGN BLUE     4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-
-$SHIP_ADD_INIT 1
-#                 num FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
-  $ALIGN NEUTRAL  0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-  $ALIGN PLAYER   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-  $ALIGN GOV      0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-  $ALIGN PIRATE   0   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-
-#  $ALIGN RED      25  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-#  $ALIGN BLUE     25  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
-  $ALIGN RED      25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
-  $ALIGN BLUE     25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
-# $ALIGN ORANGE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
-# $ALIGN PURPLE   25  0   1   2   2   2   2   2   0   1   1   0   0   0   0   0   0   1   0   0   2   0   1   0   2   1   1   0   1   0   1   1   1   0   0   0   0   0   0   0   0
-
-$SHIP_ADD_RAND_SPAWN 1 4.0
-#                 mult FIG X1E FRI DES LCR HCR BAT ENF CAR ARM SHA DEF STA BCU BSP BTC BFI BSH TRA GUN NIT DWC DWE WRA ABM REA DOR SUP AIM JUG SAU SA2 MOT HED SEG COL ARC HWC SPT HWS
-  $ALIGN NEUTRAL  6    0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   1   1   0   0   0   0   1   0   4   0   0   0   2   0   1   1   1   0   0   0   0   0   0   0   0
-  $ALIGN GOV      4    0   0   0   0   0   2   2   0   2   0   0   0   1   0   0   0   0   0   0   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   2   0   0   0   0   0
-  $ALIGN PIRATE   1    0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   1   0   0   0   0   0   0   0   0
-  $ALIGN RED      2    0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0
-  $ALIGN BLUE     2    0   0   1   1   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0   0   0   0   1   0   0   0   0   0   0   0   0
-
-$SHIP_BUILD           0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
 
 
 # $SHIP_NAMES 8 "foo" "bar" "baz" "foozle" "fizzle" "bob" "yomamma" "clown"

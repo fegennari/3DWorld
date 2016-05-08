@@ -1035,7 +1035,10 @@
     <None Include="universe\config_universe.txt" />
     <None Include="universe\formatting.txt" />
     <None Include="universe\ship_defs.txt" />
+    <None Include="universe\ship_defs_assault.txt" />
     <None Include="universe\ship_defs_base.txt" />
+    <None Include="universe\ship_defs_colonize.txt" />
+    <None Include="universe\ship_defs_fight.txt" />
     <None Include="universe\ship_defs_teams.txt" />
     <None Include="universe.modmap" />
     <None Include="cornell_box\coll_objs_box.txt" />

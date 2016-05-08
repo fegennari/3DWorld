@@ -799,7 +799,7 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 	while (!saw_end && (cfg >> str)) {
 		//cout << "str = " << str << endl;
 		if (!cfg.good()) {
-			cerr << "Error: Bad file stream." << endl;
+			cerr << "Error: Bad file stream or improperly terminated file." << endl;
 			return 0;
 		}
 		assert(!str.empty());
@@ -821,7 +821,10 @@ bool ship_defs_file_reader::read_file(const char *fn) {
 				cerr << "Error: Recursive include of file " << filename << "." << endl;
 				return 0;
 			}
-			if (!ship_defs_file_reader().read_file(filename.c_str())) return 0; // use a nested reader
+			ship_defs_file_reader reader; // copy state to
+			reader.player_setup = player_setup;
+			if (!reader.read_file(filename.c_str())) return 0; // use a nested reader
+			player_setup = reader.player_setup; // copy state from
 		}
 		else if (command_m.find(str) == command_m.end()) {
 			cerr << "Error: unrecognized command keyword " << str << "." << endl;
