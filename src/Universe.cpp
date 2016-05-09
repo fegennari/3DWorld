@@ -2708,23 +2708,21 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 
 	for (unsigned gc_ = 0; gc_ < ng && !found_system; ++gc_) { // find galaxy
 		unsigned gc(gc_);
-		if (gc == 0) gc = go; else if (gc == go) gc = 0;
+		if (gc == 0) {gc = go;} else if (gc == go) {gc = 0;}
 		ugalaxy &galaxy((*cell.galaxies)[gc]);
 		float const distg(p2p_dist(pos, galaxy.pos));
 		if (distg > g_expand*(galaxy.radius + MAX_SYSTEM_EXTENT) + r_add) continue;
 		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos)/max(distg, TOLERANCE)));
 		if (distg > g_expand*(galaxy_radius + MAX_SYSTEM_EXTENT) + r_add) continue;
 
-		if (max_level == UTYPE_GALAXY || result.object == NULL) { // galaxy
-			if (max_level == UTYPE_GALAXY) {
-				if (distg < result.dist) {result.assign(gc, -1, -1, distg, UTYPE_GALAXY, NULL);}
-				continue;
-			}
-			else if (distg < min_gdist) {
-				result.galaxy = gc;
-				result.type   = UTYPE_GALAXY;
-				min_gdist     = distg;
-			}
+		if (max_level == UTYPE_GALAXY) { // galaxy
+			if (distg < result.dist) {result.assign(gc, -1, -1, distg, UTYPE_GALAXY, NULL);}
+			continue;
+		}
+		else if (result.object == NULL && distg < min_gdist) {
+			result.galaxy = gc;
+			result.type   = UTYPE_GALAXY;
+			min_gdist     = distg;
 		}
 		if (include_asteroids) { // check for asteroid field collisions
 			for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
