@@ -714,7 +714,6 @@ bool get_closest_object(point const &pos, s_object &result, int obj_type, bool i
 	return (result.type == obj_type && result.object != NULL && (get_destroyed || result.object->is_ok()));
 }
 
-
 uobject const *get_closest_world_ptr(point const &pos, int type) {
 
 	s_object result;
@@ -724,19 +723,19 @@ uobject const *get_closest_world_ptr(point const &pos, int type) {
 
 float urev_body::get_land_value(unsigned align, point const &cur_pos, float sradius) const {
 
-	float owner_val(0.5);
+	float owner_val(0.5), value(2.0*rand_float());
 	
-	if (!is_owned()) {
+	if (!is_owned()) { // not yet owned
 		unsigned const res_c(sclasses[USC_COLONY].cost + max(sclasses[USC_DEFSAT].cost, sclasses[USC_ANTI_MISS].cost));
 		owner_val = ((team_credits[align] >= res_c) ? 2.5 : 0.75);
 	}
-	else if ((int)align == owner || align == ALIGN_PIRATE) {
+	else if ((int)align == owner || align == ALIGN_PIRATE) { // owned by self or pirate
 		owner_val = 1.0;
 	}
-	else if (TEAM_ALIGNED(align) && TEAM_ALIGNED(owner)) {
+	else if (TEAM_ALIGNED(align) && TEAM_ALIGNED(owner)) { // owned by enemy team
 		owner_val = 2.0;
+		if (have_excess_credits(align)) {value += 0.5*GALAXY_MIN_SIZE;} // excess_credits case - more aggressively go after enemy colonies
 	}
-	float value(2.0*rand_float());
 	value += 1.0*liveable();
 	value += (0.1*resources + 0.5)*owner_val;
 	value += sradius/PLANET_TO_SUN_MAX_SPACING; // large system bonus

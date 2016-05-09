@@ -2890,6 +2890,7 @@ void multipart_ship::check_size_scale() { // could update c_radius here instead 
 
 // ************ ORBITING_SHIP ************
 
+bool have_excess_credits(unsigned align) {return (team_credits[align] > init_credits[align]);}
 
 void orbiting_ship::ai_action() {
 
@@ -2901,7 +2902,7 @@ void orbiting_ship::ai_action() {
 	{
 		unsigned const reserve_credits(sclasses[USC_HW_SPORT].cost + 2*(sclasses[USC_DEFSAT].cost + sclasses[USC_ANTI_MISS].cost));
 		vector<unsigned> const &btypes(build_types[alignment]); // hmmm, crashes if just copy btypes...
-		bool const excess_credits(team_credits[alignment] > init_credits[alignment]);
+		bool const excess_credits(have_excess_credits(alignment));
 
 		if (team_credits[alignment] >= reserve_credits &&
 			((excess_credits && build_any) || ind_ships_used[alignment] < (excess_credits ? 2 : 1)*btypes.size())) // inefficient, but rarely called

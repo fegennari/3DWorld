@@ -160,6 +160,7 @@ inline void end_texture() {
 }
 
 void merge_weapons(vector<ship_weapon> &weapons, ship_weapon const &w); // has to be here in the header
+bool have_excess_credits(unsigned align);
 
 
 class ushadow_volume {
