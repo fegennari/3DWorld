@@ -211,6 +211,7 @@ class tree_data_t {
 public:
 	float base_radius, sphere_radius, sphere_center_zoff, br_scale, b_tex_scale;
 	float lr_z_cent, lr_x, lr_y, lr_z, br_x, br_y, br_z; // bounding cylinder data for leaves and branches
+	cube_t leaves_bcube, branches_bcube;
 
 	tree_data_t() : leaf_vbo(0), num_branch_quads(0), num_unique_pts(0), branch_index_bytes(0), tree_type(-1), last_update_frame(0),
 		render_leaf_texture(TREE_BILLBOARD_MULTISAMPLE), render_branch_texture(TREE_BILLBOARD_MULTISAMPLE),

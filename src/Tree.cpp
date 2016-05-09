@@ -833,6 +833,7 @@ void tree::draw_branches_top(shader_t &s, tree_lod_render_t &lod_renderer, bool 
 
 	if (!created || not_visible) return;
 	tree_data_t &td(tdata());
+	if (!camera_pdu.cube_visible(td.branches_bcube + tree_center + xlate)) return;
 	bool const ground_mode(world_mode == WMODE_GROUND), wind_enabled(ground_mode && (display_mode & 0x0100) != 0);
 
 	if (shadow_only) {
@@ -905,6 +906,7 @@ void tree::draw_leaves_top(shader_t &s, tree_lod_render_t &lod_renderer, bool sh
 	not_visible = !is_visible_to_camera(xlate); // first pass only
 	if (not_visible && !leaf_color_changed) return; // if leaf_color_changed=1, we always draw the leaves as that forces the leaf color update
 	if (!has_leaves) return; // only after not_visible is calculated
+	if (!leaf_color_changed && !camera_pdu.cube_visible(td.leaves_bcube + tree_center + xlate)) return;
 	point const draw_pos(sphere_center() + xlate);
 	float const size_scale(calc_size_scale(draw_pos));
 	last_size_scale = size_scale;
@@ -1477,15 +1479,20 @@ void tree_data_t::gen_tree_data(int tree_type_, int size, float tree_depth, floa
 	br_z               = 0.5*(bzmax - bzmin);
 	sphere_radius      = 0.0;
 	float lr_z1(bzmax), lr_z2(bzmin);
+	point const center(get_center());
+	leaves_bcube.set_from_point(center);
+	branches_bcube.set_from_point(center);
 
 	for (vector<draw_cylin>::const_iterator i = all_cylins.begin(); i != all_cylins.end(); ++i) {
-		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, get_center()));
+		sphere_radius = max(sphere_radius, p2p_dist_sq(i->p2, center)); // only need to check branch end points
+		branches_bcube.union_with_pt(i->p2);
 	}
 	for (vector<tree_leaf>::const_iterator i = leaves.begin(); i != leaves.end(); ++i) {
 		lr_x  = max(lr_x,  max(max(fabs(i->pts[0].x), fabs(i->pts[1].x)), max(fabs(i->pts[2].x), fabs(i->pts[3].x))));
 		lr_y  = max(lr_y,  max(max(fabs(i->pts[0].y), fabs(i->pts[1].y)), max(fabs(i->pts[2].y), fabs(i->pts[3].y))));
 		lr_z1 = min(lr_z1, min(min(i->pts[0].z, i->pts[1].z), min(i->pts[2].z, i->pts[3].z)));
 		lr_z2 = max(lr_z2, max(max(i->pts[0].z, i->pts[1].z), max(i->pts[2].z, i->pts[3].z)));
+		UNROLL_4X(leaves_bcube.union_with_pt(i->pts[i_]);)
 	}
 	sphere_radius = sqrt(sphere_radius);
 	lr_z_cent     = 0.5*(lr_z1 + lr_z2);
