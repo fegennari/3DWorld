@@ -970,30 +970,30 @@ bool have_resources_to_colonize(unsigned alignment) {
 void u_ship::near_sobj(s_object &clobj, int coll) {
 
 	if (invalid_priv() || !powered_priv()) return;
-	assert(clobj.object != NULL);
+	urev_body const &world(clobj.get_world());
 
 	if (is_player_ship()) {
 		//if (coll == 2) {
-		if (claim_planet && (coll || dist_less_than(pos, clobj.object->get_pos(), 2.0*radius))) {
+		if (claim_planet && (coll || dist_less_than(pos, world.get_pos(), 2.0*radius))) {
 			bool const homeworld(clobj.type == UTYPE_PLANET && !has_homeworld());
 
-			if (check_dest_ownership(clobj.object->get_id(), pos, this, 1, homeworld)) {
-				if (homeworld) claim_world(clobj.object);
-				string const str(string("You have claimed ") + clobj.object->get_name() + (homeworld ? " as your homeworld" : ""));
+			if (check_dest_ownership(world.get_id(), pos, this, 1, homeworld)) {
+				if (homeworld) {claim_world(&world);}
+				string const str(string("You have claimed ") + world.get_name() + (homeworld ? " as your homeworld" : ""));
 				print_text_onscreen(str, CYAN, 1.2, 2*TICKS_PER_SECOND);
 				gen_sound((homeworld ? SOUND_POWERUP : SOUND_ITEM), get_player_pos2());
 			}
 		}
 	}
-	else if (clobj.object->get_owner() == NO_OWNER && clobj.get_world().colonizable() &&
+	else if (world.get_owner() == NO_OWNER && world.colonizable() &&
 		!is_fighter() && !is_orbiting() && !is_rand_spawn() && can_move() && have_resources_to_colonize(alignment))
 	{
-		float const odist_sq(p2p_dist_sq(pos, clobj.object->get_pos()));
+		float const odist_sq(p2p_dist_sq(pos, world.get_pos()));
 
-		if (coll || !dest_mgr.is_valid() || dest_mgr.is_cur_obj(clobj.object->get_id()) || odist_sq < 0.05*p2p_dist_sq(pos, dest_mgr.get_pos())) {
+		if (coll || !dest_mgr.is_valid() || dest_mgr.is_cur_obj(world.get_id()) || odist_sq < 0.05*p2p_dist_sq(pos, dest_mgr.get_pos())) {
 			if (coll || target_obj == NULL || odist_sq < 0.5*p2p_dist_sq(pos, target_obj->get_pos())) {
 				dest_override = 1;
-				dest_mgr.set_object(clobj.object); // the original destination is lost (if there was one)
+				dest_mgr.set_object(&world); // the original destination is lost (if there was one)
 			}
 		}
 	}
