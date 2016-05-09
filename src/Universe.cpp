@@ -1127,7 +1127,6 @@ void ucell::gen_cell(int const ii[3]) {
 	radius = 0.5*CELL_SIZE;
 	set_rand2_state(gen_rand_seed1(pos), gen_rand_seed2(pos));
 	get_rseeds();
-	gen      = 1;
 	galaxies.reset(new vector<ugalaxy>);
 	galaxies->resize(rand_uniform_uint2(MIN_GALAXIES_PER_CELL, MAX_GALAXIES_PER_CELL));
 
@@ -1137,6 +1136,7 @@ void ucell::gen_cell(int const ii[3]) {
 			break;
 		}
 	}
+	gen = 1;
 }
 
 
@@ -2191,11 +2191,12 @@ void universe_t::free_context() { // should be OK even if universe isn't setup
 
 void ucell::free_uobj() {
 
+	gen = 0;
+
 	if (galaxies != nullptr) {
 		for (vector<ugalaxy>::iterator i = galaxies->begin(); i != galaxies->end(); ++i) {i->free_uobj();}
 		galaxies.reset();
 	}
-	gen = 0;
 }
 
 
@@ -2209,9 +2210,9 @@ void ugalaxy::clear_systems() {
 
 void ugalaxy::free_uobj() {
 
+	gen = 0;
 	for (unsigned i = 0; i < sols.size(); ++i) {sols[i].free_uobj();}
 	clear_systems();
-	gen = 0;
 }
 
 
@@ -2223,6 +2224,7 @@ void ussystem::free_planets() {
 
 void ussystem::free_uobj() {
 
+	gen = 0;
 	if (!planets.empty()) {free_planets();}
 	
 	if (asteroid_belt) {
@@ -2232,7 +2234,6 @@ void ussystem::free_uobj() {
 	planets.clear();
 	sun.free_uobj();
 	galaxy_color.alpha = 0.0; // set to an invalid state
-	gen = 0;
 }
 
 
@@ -2697,7 +2698,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 	}
 	ucell const &cell(get_cell(result.cellxyz));
 	if (max_level == UTYPE_CELL ) {result.type = UTYPE_CELL; result.val =  1; return 1;} // cell
-	if (cell.galaxies == nullptr) {result.type = UTYPE_CELL; result.val = -1; return 0;} // not yet allocated
+	if (cell.galaxies == nullptr) {result.type = UTYPE_CELL; result.val = -1; return 0;} // not yet generated
 	pos -= cell.pos;
 	float const planet_thresh(expand*4.0*MAX_PLANET_EXTENT + r_add), moon_thresh(expand*2.0*MAX_PLANET_EXTENT + r_add);
 	float const pt_sq(planet_thresh*planet_thresh), mt_sq(moon_thresh*moon_thresh);
@@ -2710,6 +2711,7 @@ int universe_t::get_closest_object(s_object &result, point pos, int max_level, b
 		unsigned gc(gc_);
 		if (gc == 0) {gc = go;} else if (gc == go) {gc = 0;}
 		ugalaxy &galaxy((*cell.galaxies)[gc]);
+		if (!galaxy.gen) continue; // not yet generated
 		float const distg(p2p_dist(pos, galaxy.pos));
 		if (distg > g_expand*(galaxy.radius + MAX_SYSTEM_EXTENT) + r_add) continue;
 		float const galaxy_radius(galaxy.get_radius_at((pos - galaxy.pos)/max(distg, TOLERANCE)));
@@ -2936,7 +2938,6 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 			for (unsigned d = 0; d < 3; ++d) {
 				if (dv[d] == 0) {tv[d] = 2.0;} else {tv[d] = (val[d] - start[d])/dv[d];}
 			}
-
 			// determine closest edge and update t and cell
 			unsigned const dim((tv.x < tv.y) ? ((tv.x < tv.z) ? 0 : 2) : ((tv.y < tv.z) ? 1 : 2)); // smallest dim
 			T = tv[dim];
@@ -2967,6 +2968,7 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 
 		for (unsigned gc = 0; gc < gv.size(); ++gc) {
 			ugalaxy &galaxy(galaxies[gv[gc].index]);
+			if (!galaxy.gen) continue; // not yet generated
 
 			if (include_asteroids) { // asteroid fields
 				for (vector<uasteroid_field>::const_iterator i = galaxy.asteroid_fields.begin(); i != galaxy.asteroid_fields.end(); ++i) {
@@ -3078,12 +3080,14 @@ bool universe_t::get_trajectory_collisions(line_query_state &lqs, s_object &resu
 						ctest.dist = 2.0*dist;
 					}
 					for (unsigned i = 0; i < planet.moons.size(); ++i) { // search for moons
-						if (planet.moons[i].is_ok()) {
-							float const m_radius(planet.moons[i].radius);
-							if (!dist_less_than(curr, planet.moons[i].pos, (m_radius + dist))) continue;
+						umoon const &moon(planet.moons[i]);
+
+						if (moon.is_ok()) {
+							float const m_radius(moon.radius);
+							if (!dist_less_than(curr, moon.pos, (m_radius + dist))) continue;
 
 							// FIXME: test against exact moon contour?
-							if (line_intersect_sphere(curr, dir, planet.moons[i].pos, (m_radius+line_radius), rdist, ldist, t)) {
+							if (line_intersect_sphere(curr, dir, moon.pos, (m_radius+line_radius), rdist, ldist, t)) {
 								if (t > 0.0 && ldist <= dist && ldist < ctest.dist) {
 									ctest.index = i; // line intersects moon
 									ctest.dist  = ldist;

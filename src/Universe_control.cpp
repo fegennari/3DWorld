@@ -1076,7 +1076,7 @@ void orbiting_ship::update_state() {
 	s_object result;
 	if (!get_closest_object(pos, result, UTYPE_GALAXY, 0)) return; // galaxy not found (player is in a different cell?)
 	ugalaxy &galaxy(result.get_galaxy());
-	if (galaxy.sols.empty()) return; // systems not generated for this galaxy
+	if (!galaxy.gen || galaxy.sols.empty()) return; // systems not generated for this galaxy
 	assert((unsigned)system_ix < galaxy.sols.size());
 	ussystem &system(galaxy.sols[system_ix]);
 	if (system.planets.empty()) return; // planets not generated for this system
